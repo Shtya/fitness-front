@@ -78,6 +78,7 @@ export default function Sidebar({ open, setOpen }) {
 
   const isActive = href => href === activeHref || pathname?.startsWith(href + '/');
 
+	
   return (
     <>
       <aside className=' hidden lg:flex lg:flex-col w-[300px] shrink-0 border-r border-slate-200 bg-white'>
