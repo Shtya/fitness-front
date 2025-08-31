@@ -1,0 +1,37 @@
+{
+	"Chat": {
+    "you": "أنت",
+    "received": "تم الاستلام ✅",
+    "save": "حفظ",
+    "star": "تفضيل",
+    "more": "المزيد",
+    "close": "إغلاق",
+    "allMessages": "كل الرسائل",
+    "clear": "مسح",
+    "attach": "إرفاق",
+    "emoji": "رمز تعبيري",
+    "send": "إرسال",
+    "noMatches": "لا توجد نتائج",
+    "about": "حول {name}",
+    "labels": {
+      "from": "من",
+      "onPlatform": "على المنصة",
+      "english": "الإنجليزية",
+      "otherLanguage": "لغة أخرى",
+      "level": "مستوى البائع",
+      "responseRate": "معدل الاستجابة",
+      "rating": "التقييم"
+    },
+    "placeholders": {
+      "search": "ابحث باسم العميل",
+      "message": "أرسل رسالة"
+    },
+    "menu": {
+      "markUnread": "وضع كغير مقروء",
+      "mute": "كتم المحادثة",
+      "block": "حظر المستخدم",
+      "export": "تصدير المحادثة",
+      "delete": "حذف المحادثة"
+    }
+  }
+}

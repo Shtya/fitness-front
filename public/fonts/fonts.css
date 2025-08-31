@@ -1,0 +1,55 @@
+@font-face {
+  font-family: 'SF UI Display';
+  src: url('/fonts/sf-ui-display-ultralight-58646b19bf205.otf') format('opentype');
+  font-weight: 200;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF UI Display';
+  src: url('/fonts/sf-ui-display-thin-58646e9b26e8b.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF UI Display';
+  src: url('/fonts/sf-ui-display-light-58646b33e0551.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF UI Display';
+  src: url('/fonts/sf-ui-display-medium-58646be638f96.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF UI Display';
+  src: url('/fonts/sf-ui-display-semibold-58646eddcae92.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF UI Display';
+  src: url('/fonts/sf-ui-display-bold-58646a511e3d9.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF UI Display';
+  src: url('/fonts/sf-ui-display-heavy-586470160b9e5.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF UI Display';
+  src: url('/fonts/sf-ui-display-black-58646a6b80d5a.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+}
