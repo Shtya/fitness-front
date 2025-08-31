@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, ShieldCheck, Dumbbell, ClipboardList, CalendarRange, Apple, NotebookPen, Send, LineChart, CheckCircle2, MessageSquare, Bell, Settings, FileClock, UserCog, ServerCog, X, CreditCard, QrCode, Wrench, Salad } from 'lucide-react';
+import { LayoutDashboard, Users, ShieldCheck, Dumbbell, ClipboardList, CalendarRange, Apple, NotebookPen, Send, LineChart, CheckCircle2, MessageSquare, Bell, Settings, FileClock, UserCog, ServerCog, X, CreditCard, QrCode, Wrench, Salad, Calculator } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { usePathname } from '@/i18n/navigation';
 
@@ -35,7 +35,7 @@ const nav = [
   { name: 'Reports', href: '/dashboard/reports', icon: LineChart },
   { name: 'Content', href: '/dashboard/content', icon: NotebookPen },
   { name: 'Operations', href: '/dashboard/operations', icon: Wrench },
-
+      { name: 'Calorie Calculator', href: '/dashboard/nutrition/calculator', icon: Calculator },
   { name: 'My Dashboard', href: '/dashboard/my', icon: LayoutDashboard },
   { name: 'My Workouts', href: '/dashboard/my/workouts', icon: Dumbbell },
   { name: 'My Nutrition', href: '/dashboard/my/nutrition', icon: Salad },
@@ -78,10 +78,10 @@ export default function Sidebar({ open, setOpen }) {
 
   const isActive = href => href === activeHref || pathname?.startsWith(href + '/');
 
-	
+
   return (
     <>
-      <aside className=' hidden lg:flex lg:flex-col w-[300px] shrink-0 border-r border-slate-200 bg-white'>
+      <aside className=' hidden lg:flex lg:flex-col w-[250px] shrink-0 border-r border-slate-200 bg-white'>
         <div className='flex h-screen flex-col'>
           {/* Brand */}
           <div className='sticky top-0 z-10 h-[63px] flex items-center gap-2 px-5 border-b border-slate-200 bg-white'>

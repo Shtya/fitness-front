@@ -112,7 +112,7 @@ export default function SiteHeader({ basePath = '/site', announcement }) {
         {/* Actions */}
         <div className='hidden md:flex items-center gap-2'>
           <Button as={Link} href='/dashboard' variant='ghost'>
-            Sign in
+            Dashboard
           </Button>
           <Button onClick={() => setTrialOpen(true)}>Book a trial</Button>
         </div>
@@ -152,7 +152,7 @@ export default function SiteHeader({ basePath = '/site', announcement }) {
               {/* Bottom actions pinned to safe area */}
               <div className='mt-auto pt-4 flex flex-col gap-2 pb-[max(env(safe-area-inset-bottom),8px)]'>
                 <Button as={Link} href='/dashboard' variant='ghost'>
-                  Sign in
+                  dashboard
                 </Button>
                 <Button
                   onClick={() => {

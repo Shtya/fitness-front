@@ -10,7 +10,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 
 export default function Layout({ children }) {
   const pathname = usePathname();
-  const isAuthRoute = pathname.startsWith('/auth') || pathname.startsWith("/site");
+  const isAuthRoute = pathname.startsWith('/auth') || pathname.startsWith("/site") || pathname == "/";
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
 	console.log(pathname);
