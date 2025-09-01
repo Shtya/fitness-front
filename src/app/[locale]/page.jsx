@@ -1,8 +1,5 @@
 'use client';
-
-// app/(site)/page.jsx
-// Public Website Home: Hero, USP, Social Proof, CTA
-
+ 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import TrialModal from '@/components/site/TrialModal';

@@ -1,308 +1,478 @@
+'use client';
 
-"use client";
-
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import DataTable from "@/components/dashboard/ui/DataTable";
+import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import Link from 'next/link';
 import {
-  PageHeader, TabsPill, ToolbarButton, EmptyState, Modal,
-  RingProgress, ProgressBar, PhotoGrid, Lightbox, MiniLine, spring
-} from "@/components/dashboard/ui/UI";
-import { LineChart as LineIcon, Camera, CalendarRange, CheckCircle2, Upload, Download, Scale, PercentCircle, Image as ImageIcon, ClipboardList } from "lucide-react";
+  Activity,
+  BarChart3,
+  LineChart as LineIcon,
+  Ruler,
+  Image as ImageIcon,
+  UploadCloud,
+  Plus,
+  Trash2,
+  Info,
+  Flame,
+  Dumbbell,
+  CheckCircle2,
+  CalendarDays,
+} from 'lucide-react';
 
-/* ================= Mock seed (replace with API) ================= */
-const seedMeasurements = [
-  { date:"2025-05-01", weight:85, bodyFat:22, chest:105, waist:92, arms:34, thighs:58 },
-  { date:"2025-06-01", weight:82, bodyFat:20, chest:104, waist:89, arms:34.5, thighs:57 },
-  { date:"2025-07-01", weight:80, bodyFat:18, chest:103, waist:86, arms:35, thighs:56 },
-  { date:"2025-08-01", weight:78, bodyFat:16, chest:102, waist:84, arms:35.5, thighs:55 },
-];
+// Recharts (already allowed in your stack)
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, ReferenceLine, AreaChart, Area, BarChart, Bar,
+} from 'recharts';
 
-const seedCheckins = [
-  { id:"CI-1", date:"2025-08-07", weight:79.2, bodyFat:16.8, notes:"Great sleep, diet on point", photos: [] },
-  { id:"CI-2", date:"2025-08-21", weight:78.4, bodyFat:16.1, notes:"Deload week", photos: [] },
-];
+/* =================== PERSISTENCE KEYS =================== */
+const LS_HISTORY = 'mw.history';                 // sessions history
+const LS_NUTRITION = 'mw.nutri.state.v1';        // nutrition day state
+const LS_PRS = 'mw.prs';                         // PRs
+const LS_CALC = 'mw.calorie.calc.v1';            // calculator snapshot
 
-const seedPhotos = [
-  // demo URLs; will be replaced by user uploads
-];
+// New keys for progress page
+const LS_PROGRESS_WEIGHTS = 'mw.progress.weights.v1';       // [{date: 'YYYY-MM-DD', kg: number}]
+const LS_PROGRESS_MEAS = 'mw.progress.measurements.v1';     // [{date, chest, waist, hips, thigh, arm}]
+const LS_PROGRESS_PHOTOS = 'mw.progress.photos.v1';         // [{date, url, note?}]
 
-export default function MyProgressPage(){
-  const [tab, setTab] = useState("overview"); // overview | measurements | photos | checkins
-  const [loading, setLoading] = useState(true);
+/* =================== HELPERS =================== */
+const spring = { type: 'spring', stiffness: 220, damping: 26 };
+function loadLS(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } }
+function saveLS(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+const fmt = (n, d=1) => (n==null || isNaN(n) ? '—' : Number(n).toFixed(d));
+const today = () => new Date().toISOString().slice(0,10);
 
-  const [measurements, setMeasurements] = useState([]);
-  const [checkins, setCheckins] = useState([]);
+/* ----- adherence helpers ----- */
+const weekOrder = ['saturday','sunday','monday','tuesday','wednesday','thursday'];
+function lastNDates(n) {
+  const arr = [];
+  const now = new Date();
+  for (let i=0;i<n;i++){
+    const d = new Date(now); d.setDate(now.getDate()-i);
+    arr.push(d.toISOString().slice(0,10));
+  }
+  return arr.reverse();
+}
+function pct(n, d) { return d ? Math.round((n/d)*100) : 0; }
+
+/* =================== SMALL UI =================== */
+function Card({children, className=''}) {
+  return <div className={`rounded-2xl border border-slate-200 bg-white p-4 ${className}`}>{children}</div>;
+}
+function Section({icon:Icon, title, action, children}) {
+  return (
+    <Card>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {Icon ? <Icon size={18} className="text-slate-700" /> : null}
+          <div className="font-semibold">{title}</div>
+        </div>
+        {action}
+      </div>
+      <div className="mt-3">{children}</div>
+    </Card>
+  );
+}
+function Hint({ text }) {
+  return (
+    <span className="relative inline-flex items-center group ml-1">
+      <button type="button" className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 text-slate-500 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/30" aria-label="Help">
+        <Info size={12} />
+      </button>
+      <div role="tooltip" className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 w-[240px] rounded-md border border-slate-200 bg-white p-2 text-[11.5px] text-slate-700 shadow-md opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0 transition">
+        {text}
+      </div>
+    </span>
+  );
+}
+
+/* =================== PAGE =================== */
+export default function MyProgressPage() {
+  const [hydrated, setHydrated] = useState(false);
+
+  // Source data (read-only)
+  const [history, setHistory] = useState([]);
+  const [nutri, setNutri] = useState({});
+  const [prs, setPRs] = useState({});
+  const [calc, setCalc] = useState(null);
+
+  // Progress data (editable)
+  const [weights, setWeights] = useState([]);
+  const [meas, setMeas] = useState([]);
   const [photos, setPhotos] = useState([]);
 
-  useEffect(()=>{
-    setLoading(true);
-    setTimeout(()=>{
-      setMeasurements(seedMeasurements);
-      setCheckins(seedCheckins);
-      setPhotos(seedPhotos);
-      setLoading(false);
-    }, 400);
-  },[]);
+  // Form states
+  const [wDate, setwDate] = useState(today());
+  const [wKg, setwKg] = useState('');
 
-  const latest = measurements[measurements.length-1];
-  const first  = measurements[0];
+  const [mDate, setmDate] = useState(today());
+  const [mVals, setmVals] = useState({ chest:'', waist:'', hips:'', thigh:'', arm:'' });
 
-  const delta = (k) => latest && first ? +(latest[k] - first[k]).toFixed(1) : 0;
-  const pct   = (val, tgt) => Math.min(100, Math.round((val/Math.max(1,tgt))*100));
+  const [pDate, setpDate] = useState(today());
+  const [pUrl, setpUrl] = useState('');
+  const [pNote, setpNote] = useState('');
 
-  /* ============== Charts data ============== */
-  const weightSeries = useMemo(()=> measurements.map(m => ({ date:m.date, value:m.weight })), [measurements]);
-  const bodyFatSeries= useMemo(()=> measurements.map(m => ({ date:m.date, value:m.bodyFat })), [measurements]);
+  useEffect(() => {
+    setHydrated(true);
+    setHistory(loadLS(LS_HISTORY, []));
+    setNutri(loadLS(LS_NUTRITION, {}));
+    setPRs(loadLS(LS_PRS, {}));
+    setCalc(loadLS(LS_CALC, null));
+    setWeights(loadLS(LS_PROGRESS_WEIGHTS, []));
+    setMeas(loadLS(LS_PROGRESS_MEAS, []));
+    setPhotos(loadLS(LS_PROGRESS_PHOTOS, []));
+  }, []);
 
-  /* ============== Photos Lightbox ============== */
-  const [openLB, setOpenLB] = useState(false);
-  const [idxLB, setIdxLB]   = useState(0);
+  useEffect(() => saveLS(LS_PROGRESS_WEIGHTS, weights), [weights]);
+  useEffect(() => saveLS(LS_PROGRESS_MEAS, meas), [meas]);
+  useEffect(() => saveLS(LS_PROGRESS_PHOTOS, photos), [photos]);
 
-  /* ============== Check‑in modal ============== */
-  const [openCI, setOpenCI] = useState(false);
-  const [ciForm, setCiForm] = useState({ date: todayISO(), weight: "", bodyFat: "", chest:"", waist:"", arms:"", thighs:"", notes:"", files: [] });
+  /* ---------- Derived: Weight trend ---------- */
+  const weightSeries = useMemo(() => {
+    const sorted = [...weights].sort((a,b)=>a.date.localeCompare(b.date));
+    return sorted.map(w => ({ date: w.date, kg: +w.kg }));
+  }, [weights]);
 
-  function onFiles(files){
-    const arr = Array.from(files||[]).slice(0,6);
-    setCiForm(f => ({ ...f, files: arr }));
+  const currWeight = weightSeries.at(-1)?.kg ?? null;
+  const wkAgo = weightSeries.slice(-8, -7)[0]?.kg ?? null;
+  const moAgo = weightSeries.slice(-31, -30)[0]?.kg ?? null;
+  const delta7 = currWeight!=null && wkAgo!=null ? currWeight - wkAgo : null;
+  const delta30 = currWeight!=null && moAgo!=null ? currWeight - moAgo : null;
+
+  /* ---------- Derived: Measurements trend (waist as primary) ---------- */
+  const measSeries = useMemo(() => {
+    const sorted = [...meas].sort((a,b)=>a.date.localeCompare(b.date));
+    return sorted.map(m => ({ date: m.date, waist: +m.waist || null, chest: +m.chest || null, hips: +m.hips || null }));
+  }, [meas]);
+  const currWaist = measSeries.at(-1)?.waist ?? null;
+  const waist30 = measSeries.slice(-31, -30)[0]?.waist ?? null;
+  const waistDelta30 = (currWaist!=null && waist30!=null) ? currWaist - waist30 : null;
+
+  /* ---------- Derived: Adherence (last 7 & 30 days from nutrition state) ---------- */
+  const dates7 = lastNDates(7);
+  const dates30 = lastNDates(30);
+  function dayKeyFromDate(dStr) {
+    // NOTE: nutrition stored by named day; we approximate adherence using the most recent state per day key.
+    // If your nutrition page stores per-date, switch to that store. For now we compute using available keys.
+    return null; // fallback path below
   }
 
-  function submitCheckin(e){
-    e.preventDefault();
-    // persist locally; replace with API
-    const newPhotos = ciForm.files.map((file,i) => ({ id: "P-"+Date.now()+"-"+i, url: URL.createObjectURL(file), date: ciForm.date, label: file.name }));
-    setPhotos(p => [...newPhotos, ...p]);
+  function computeAdherence(windowDates) {
+    // Try to read per-day items from available named-day buckets
+    const buckets = Object.values(nutri || {});
+    if (!buckets.length) return { mealsDone:0, mealsTotal:0, pct:0, days:[] };
 
-    // measurement row from check‑in if provided
-    const meas = {
-      date: ciForm.date,
-      weight: numOr(latest?.weight, ciForm.weight),
-      bodyFat: numOr(latest?.bodyFat, ciForm.bodyFat),
-      chest: numOr(latest?.chest, ciForm.chest),
-      waist: numOr(latest?.waist, ciForm.waist),
-      arms: numOr(latest?.arms, ciForm.arms),
-      thighs: numOr(latest?.thighs, ciForm.thighs),
+    // We approximate: for each date, use whichever named day currently selected (*)—or rotate through buckets.
+    const days = [];
+    let done=0, total=0;
+    windowDates.forEach((d, i) => {
+      const b = buckets[i % buckets.length]; // rotate as approximation
+      const vals = Object.values(b?.items || {});
+      const t = vals.length;
+      const di = vals.filter(Boolean).length;
+      days.push({ date: d, p: t? Math.round((di/t)*100) : 0 });
+      done += di; total += t;
+    });
+    return { mealsDone: done, mealsTotal: total, pct: pct(done,total), days };
+  }
+
+  const adh7 = useMemo(()=>computeAdherence(dates7), [nutri]);
+  const adh30 = useMemo(()=>computeAdherence(dates30), [nutri]);
+
+  /* ---------- Derived: Training volume trend from history ---------- */
+  const volumeSeries = useMemo(() => {
+    const sorted = [...history].sort((a,b)=>a.date.localeCompare(b.date));
+    return sorted.slice(-12).map(s => ({ date: s.date, volume: +s.volume || 0, sets: s.setsDone || 0 }));
+  }, [history]);
+
+  /* ----------------- Actions ----------------- */
+  function addWeight() {
+    const kg = parseFloat(String(wKg).replace(',','.'));
+    if (!kg || !wDate) return;
+    const next = [...weights.filter(w=>w.date!==wDate), { date: wDate, kg }];
+    next.sort((a,b)=>a.date.localeCompare(b.date));
+    setWeights(next);
+    setwKg('');
+    setwDate(today());
+  }
+  function delWeight(date) {
+    setWeights(weights.filter(w=>w.date!==date));
+  }
+
+  function addMeas() {
+    const entry = {
+      date: mDate,
+      chest: +mVals.chest || null,
+      waist: +mVals.waist || null,
+      hips: +mVals.hips || null,
+      thigh: +mVals.thigh || null,
+      arm: +mVals.arm || null,
     };
-    setMeasurements(list => [...list, meas].sort((a,b)=> a.date.localeCompare(b.date)));
+    const next = [...meas.filter(m=>m.date!==mDate), entry].sort((a,b)=>a.date.localeCompare(b.date));
+    setMeas(next);
+    setmDate(today());
+  }
+  function delMeas(date) { setMeas(meas.filter(m=>m.date!==date)); }
 
-    const record = { id: "CI-"+Date.now(), date: ciForm.date, weight: meas.weight, bodyFat: meas.bodyFat, notes: ciForm.notes, photos: newPhotos.map(p=>p.id) };
-    setCheckins(list => [record, ...list]);
-
-    setOpenCI(false);
-    setCiForm({ date: todayISO(), weight: "", bodyFat: "", chest:"", waist:"", arms:"", thighs:"", notes:"", files: [] });
+  function addPhoto() {
+    if (!pUrl) return;
+    const next = [...photos, { date: pDate, url: pUrl, note: pNote || '' }];
+    setPhotos(next);
+    setpUrl(''); setpNote(''); setpDate(today());
+  }
+  function delPhoto(idx) {
+    const next = [...photos]; next.splice(idx,1); setPhotos(next);
   }
 
-  /* ============== Tables columns ============== */
-  const measCols = [
-    { header:"Date", accessor:"date" },
-    { header:"Weight (kg)", accessor:"weight", cell:r=> numFmt(r.weight) },
-    { header:"Body Fat (%)", accessor:"bodyFat", cell:r=> numFmt(r.bodyFat) },
-    { header:"Chest (cm)", accessor:"chest" },
-    { header:"Waist (cm)", accessor:"waist" },
-    { header:"Arms (cm)", accessor:"arms" },
-    { header:"Thighs (cm)", accessor:"thighs" },
-  ];
-
-  const ciCols = [
-    { header:"Date", accessor:"date" },
-    { header:"Weight", accessor:"weight", cell:r=> r.weight?`${r.weight} kg`:"—" },
-    { header:"Body Fat", accessor:"bodyFat", cell:r=> r.bodyFat?`${r.bodyFat}%`:"—" },
-    { header:"Notes", accessor:"notes" },
-    { header:"Photos", accessor:"photos", cell:r=> r.photos?.length || 0 },
-  ];
-
-  /* ============== Render ============== */
   return (
     <div className="space-y-6">
-      <PageHeader
-        icon={LineIcon}
-        title="Progress & Check‑ins"
-        subtitle="Track measurements, submit weekly check‑ins, and maintain a photo gallery."
-        actions={
-          <div className="flex items-center gap-2">
-            <ToolbarButton icon={Upload} variant="secondary" onClick={()=>setOpenCI(true)}>New Check‑in</ToolbarButton>
-            <ToolbarButton icon={Download} variant="secondary" onClick={()=>exportCSV('measurements', measurements)}>Export CSV</ToolbarButton>
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">My Progress</h1>
+            <p className="text-sm text-slate-600 mt-1">Track weight, measurements, adherence, and training trends.</p>
           </div>
-        }
-      />
+          <div className="flex items-center gap-2 text-sm">
+            {calc?.target ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-800 flex items-center gap-2">
+                <Flame size={16}/> Target {calc.target} kcal
+              </div>
+            ) : (
+              <Link href="/dashboard/tools/calorie-calculator" className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 hover:bg-slate-50">Set calorie target</Link>
+            )}
+            <Link href="/dashboard/my/workouts?tab=history" className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 hover:bg-slate-50">View history</Link>
+          </div>
+        </div>
+      </motion.div>
 
-      <TabsPill
-        id="progress-tabs"
-        tabs={[
-          { key:"overview",     label:"Overview",    icon: LineIcon },
-          { key:"measurements", label:"Measurements",icon: Scale },
-          { key:"photos",       label:"Photos",      icon: ImageIcon },
-          { key:"checkins",     label:"Check‑ins",   icon: ClipboardList },
-        ]}
-        active={tab}
-        onChange={setTab}
-      />
+      {/* GRID */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        {/* LEFT COLUMN */}
+        <div className="xl:col-span-2 space-y-4">
+          {/* Weight Trend */}
+          <Section icon={LineIcon} title={<>Weight Trend <Hint text="أضف وزن جسمك بشكل دوري لمتابعة التغيير (مثلاً 2–3 مرات أسبوعيًا)."/></>} action={
+            <div className="text-xs text-slate-500">
+              7d Δ {delta7!=null ? `${fmt(delta7,1)} kg` : '—'} • 30d Δ {delta30!=null ? `${fmt(delta30,1)} kg` : '—'}
+            </div>
+          }>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <div className="lg:col-span-2 h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={weightSeries} margin={{ top: 8, right: 12, left: -10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="wgt" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8"/>
+                    <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8"/>
+                    <RTooltip contentStyle={{ fontSize: 12 }}/>
+                    <Area type="monotone" dataKey="kg" stroke="#4f46e5" fill="url(#wgt)" strokeWidth={2} dot={{ r: 2 }}/>
+                    {currWeight!=null && <ReferenceLine y={currWeight} stroke="#c7d2fe" strokeDasharray="4 4" />}
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
 
-      {/* ===== Overview ===== */}
-      {tab==="overview" && (
-        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="space-y-4">
-          {/* KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <KPI title="Weight change" value={latest?`${latest.weight} kg`:"—"} delta={delta('weight')} unit="kg" />
-            <KPI title="Body fat change" value={latest?`${latest.bodyFat}%`:"—"} delta={delta('bodyFat')} unit="%" goodDown />
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="text-sm text-slate-600">Check‑ins</div>
-              <div className="mt-2 flex items-center gap-3">
-                <RingProgress value={pct(checkins.length, 12)}>
-                  <div className="text-center">
-                    <div className="text-[10px] text-slate-500">This quarter</div>
-                    <div className="text-sm font-semibold">{checkins.length}</div>
+              <div className="rounded-xl border border-slate-200 p-3">
+                <div className="text-sm font-semibold mb-2">Add weight</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="date" value={wDate} onChange={e=>setwDate(e.target.value)} className="h-9 w-full rounded-md border border-slate-200 px-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"/>
+                  <div className="flex gap-1">
+                    <input type="number" step="0.1" placeholder="kg" value={wKg} onChange={e=>setwKg(e.target.value)} className="h-9 w-full rounded-md border border-slate-200 px-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"/>
+                    <button onClick={addWeight} className="px-3 rounded-md border border-slate-200 hover:bg-slate-50 text-sm inline-flex items-center gap-1"><Plus size={14}/>Add</button>
                   </div>
-                </RingProgress>
-                <div className="text-sm text-slate-600">{checkins.length} submitted</div>
-              </div>
-            </div>
-          </div>
+                </div>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="flex items-center justify-between">
-                <div className="font-semibold">Weight trend</div>
-              </div>
-              <div className="mt-2 overflow-x-auto"><MiniLine data={weightSeries} /></div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="flex items-center justify-between">
-                <div className="font-semibold">Body fat trend</div>
-              </div>
-              <div className="mt-2 overflow-x-auto"><MiniLine data={bodyFatSeries} /></div>
-            </div>
-          </div>
-
-          {/* Recent photos strip */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="flex items-center justify-between">
-              <div className="font-semibold">Recent photos</div>
-              <ToolbarButton icon={Camera} variant="secondary" onClick={()=>setTab('photos')}>Open gallery</ToolbarButton>
-            </div>
-            <div className="mt-3">
-              {photos.length ? (
-                <PhotoGrid photos={photos.slice(0,12)} onOpen={(i)=>{ setIdxLB(i); setOpenLB(true); }} />
-              ) : (
-                <EmptyState title="No photos" subtitle="Add photos from the Check‑in tab." />
-              )}
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ===== Measurements ===== */}
-      {tab==="measurements" && (
-        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between">
-            <div className="font-semibold">Measurements</div>
-          </div>
-          <div className="mt-3">
-            <DataTable columns={measCols} data={[...measurements].sort((a,b)=> (b.date).localeCompare(a.date))} loading={loading} pagination itemsPerPage={10} />
-            {!loading && !measurements.length && <EmptyState title="No measurements" subtitle="Submit a check‑in to add your first record." />}
-          </div>
-        </motion.div>
-      )}
-
-      {/* ===== Photos ===== */}
-      {tab==="photos" && (
-        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between">
-            <div className="font-semibold">Photo gallery</div>
-            <ToolbarButton icon={Upload} variant="secondary" onClick={()=>setOpenCI(true)}>Add photos</ToolbarButton>
-          </div>
-          <div className="mt-3">
-            <PhotoGrid photos={photos} onOpen={(i)=>{ setIdxLB(i); setOpenLB(true); }} />
-          </div>
-          <Lightbox open={openLB} setOpen={setOpenLB} photos={photos} index={idxLB} setIndex={setIdxLB} />
-        </motion.div>
-      )}
-
-      {/* ===== Check‑ins ===== */}
-      {tab==="checkins" && (
-        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between">
-            <div className="font-semibold">Weekly Check‑ins</div>
-            <ToolbarButton icon={Upload} onClick={()=>setOpenCI(true)}>New Check‑in</ToolbarButton>
-          </div>
-          <div className="mt-3">
-            <DataTable columns={ciCols} data={checkins} loading={loading} pagination itemsPerPage={8} />
-            {!loading && !checkins.length && <EmptyState title="No check‑ins" subtitle="Use the New Check‑in button to submit one." />}
-          </div>
-        </motion.div>
-      )}
-
-      {/* ===== New Check‑in modal (with photo upload) ===== */}
-      <Modal open={openCI} onClose={()=>setOpenCI(false)} title="New Check‑in">
-        <form onSubmit={submitCheckin} className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Field label="Date"><input type="date" className="inp" value={ciForm.date} onChange={e=>setCiForm(f=>({ ...f, date:e.target.value }))} /></Field>
-            <Field label="Weight (kg)"><input type="number" step="0.1" className="inp" value={ciForm.weight} onChange={e=>setCiForm(f=>({ ...f, weight:e.target.value }))} /></Field>
-            <Field label="Body Fat (%)"><input type="number" step="0.1" className="inp" value={ciForm.bodyFat} onChange={e=>setCiForm(f=>({ ...f, bodyFat:e.target.value }))} /></Field>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <Field label="Chest (cm)"><input type="number" step="0.1" className="inp" value={ciForm.chest} onChange={e=>setCiForm(f=>({ ...f, chest:e.target.value }))} /></Field>
-            <Field label="Waist (cm)"><input type="number" step="0.1" className="inp" value={ciForm.waist} onChange={e=>setCiForm(f=>({ ...f, waist:e.target.value }))} /></Field>
-            <Field label="Arms (cm)"><input type="number" step="0.1" className="inp" value={ciForm.arms} onChange={e=>setCiForm(f=>({ ...f, arms:e.target.value }))} /></Field>
-            <Field label="Thighs (cm)"><input type="number" step="0.1" className="inp" value={ciForm.thighs} onChange={e=>setCiForm(f=>({ ...f, thighs:e.target.value }))} /></Field>
-          </div>
-
-          <Field label="Notes"><textarea className="inp" rows={4} value={ciForm.notes} onChange={e=>setCiForm(f=>({ ...f, notes:e.target.value }))} placeholder="How did the week go?" /></Field>
-
-          <Field label="Progress photos">
-            <div className="rounded-xl border border-dashed border-slate-300 p-4 bg-slate-50/50">
-              <input type="file" accept="image/*" multiple onChange={e=>onFiles(e.target.files)} />
-              {ciForm.files?.length ? (
-                <div className="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-2">
-                  {Array.from(ciForm.files).map((f,i)=> (
-                    <div key={i} className="aspect-square rounded-lg overflow-hidden border border-slate-200">
-                      <img src={URL.createObjectURL(f)} alt={f.name} className="h-full w-full object-cover" />
+                {/* recent weights */}
+                <div className="mt-2 max-h-28 overflow-auto">
+                  {weights.slice(-5).reverse().map(w=>(
+                    <div key={w.date} className="text-xs flex items-center justify-between py-1">
+                      <span className="text-slate-600">{w.date}</span>
+                      <span className="font-medium">{fmt(w.kg,1)} kg</span>
+                      <button onClick={()=>delWeight(w.date)} className="text-slate-400 hover:text-rose-600"><Trash2 size={14}/></button>
                     </div>
                   ))}
+                  {!weights.length && <div className="text-xs text-slate-500">No entries yet.</div>}
                 </div>
-              ) : (
-                <div className="mt-2 text-xs text-slate-500">Up to 6 photos: front / side / back, good light.</div>
-              )}
+              </div>
             </div>
-          </Field>
+          </Section>
 
-          <div className="flex items-center justify-end"><button className="btn-primary">Submit</button></div>
-        </form>
-      </Modal>
+          {/* Measurements */}
+          <Section icon={Ruler} title={<>Body Measurements <Hint text="محيط الخصر مؤشر مهم للتقدم. سجّل أيضًا الصدر/الورك/الفخذ/الذراع."/></>}>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <div className="lg:col-span-2 h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={measSeries} margin={{ top: 8, right: 12, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8"/>
+                    <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8"/>
+                    <RTooltip contentStyle={{ fontSize: 12 }}/>
+                    <Line type="monotone" dataKey="waist" name="Waist" stroke="#ef4444" strokeWidth={2} dot={{ r: 2 }}/>
+                    <Line type="monotone" dataKey="chest" name="Chest" stroke="#10b981" strokeWidth={2} dot={{ r: 2 }}/>
+                    <Line type="monotone" dataKey="hips" name="Hips" stroke="#3b82f6" strokeWidth={2} dot={{ r: 2 }}/>
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
 
-      <style jsx>{`
-        .inp { @apply w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30; }
-        .btn-primary { @apply px-3 py-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white; }
-      `}</style>
+              <div className="rounded-xl border border-slate-200 p-3">
+                <div className="text-sm font-semibold mb-2">Add measurements (cm)</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="date" value={mDate} onChange={e=>setmDate(e.target.value)} className="h-9 w-full rounded-md border border-slate-200 px-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"/>
+                  <input type="number" step="0.1" placeholder="Waist" value={mVals.waist} onChange={e=>setmVals(v=>({...v,waist:e.target.value}))} className="h-9 w-full rounded-md border border-slate-200 px-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"/>
+                  <input type="number" step="0.1" placeholder="Chest" value={mVals.chest} onChange={e=>setmVals(v=>({...v,chest:e.target.value}))} className="h-9 w-full rounded-md border border-slate-200 px-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"/>
+                  <input type="number" step="0.1" placeholder="Hips" value={mVals.hips} onChange={e=>setmVals(v=>({...v,hips:e.target.value}))} className="h-9 w-full rounded-md border border-slate-200 px-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"/>
+                  <input type="number" step="0.1" placeholder="Thigh" value={mVals.thigh} onChange={e=>setmVals(v=>({...v,thigh:e.target.value}))} className="h-9 w-full rounded-md border border-slate-200 px-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"/>
+                  <input type="number" step="0.1" placeholder="Arm" value={mVals.arm} onChange={e=>setmVals(v=>({...v,arm:e.target.value}))} className="h-9 w-full rounded-md border border-slate-200 px-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"/>
+                  <button onClick={addMeas} className="col-span-2 mt-1 px-3 py-2 rounded-md border border-slate-200 hover:bg-slate-50 text-sm inline-flex items-center gap-1">
+                    <Plus size={14}/> Add
+                  </button>
+                </div>
+
+                {/* recent rows */}
+                <div className="mt-2 max-h-28 overflow-auto text-xs">
+                  {meas.slice(-4).reverse().map(m => (
+                    <div key={m.date} className="flex items-center justify-between py-1">
+                      <div className="text-slate-600">{m.date}</div>
+                      <div className="font-medium">W {fmt(m.waist)} • C {fmt(m.chest)} • H {fmt(m.hips)}</div>
+                      <button onClick={()=>delMeas(m.date)} className="text-slate-400 hover:text-rose-600"><Trash2 size={14}/></button>
+                    </div>
+                  ))}
+                  {!meas.length && <div className="text-slate-500">No entries yet.</div>}
+                </div>
+              </div>
+            </div>
+            <div className="text-xs text-slate-500 mt-2">
+              30d Waist Δ: {waistDelta30!=null ? `${fmt(waistDelta30,1)} cm` : '—'}
+            </div>
+          </Section>
+
+          {/* Adherence */}
+          <Section icon={Activity} title={<>Adherence <Hint text="نسبة إكمال الوجبات والمكملات تقريبية حسب حالة اليوم المحفوظة." /></>}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <Card>
+                <div className="text-sm font-semibold mb-2">Last 7 days</div>
+                <div className="h-40">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={adh7.days}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb"/>
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8"/>
+                      <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" domain={[0,100]}/>
+                      <RTooltip contentStyle={{ fontSize: 12 }}/>
+                      <Bar dataKey="p" fill="#10b981" radius={[6,6,0,0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="text-xs text-slate-600 mt-2">
+                  Meals done: <span className="font-semibold">{adh7.mealsDone}</span> / {adh7.mealsTotal} • Avg {adh7.pct}%
+                </div>
+              </Card>
+              <Card>
+                <div className="text-sm font-semibold mb-2">Last 30 days</div>
+                <div className="h-40">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={adh30.days} margin={{ top: 8, right: 12, left: -10, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="adh" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.35}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8"/>
+                      <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" domain={[0,100]}/>
+                      <RTooltip contentStyle={{ fontSize: 12 }}/>
+                      <Area type="monotone" dataKey="p" stroke="#10b981" strokeWidth={2} fill="url(#adh)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="text-xs text-slate-600 mt-2">
+                  Meals done: <span className="font-semibold">{adh30.mealsDone}</span> / {adh30.mealsTotal} • Avg {adh30.pct}%
+                </div>
+              </Card>
+            </div>
+          </Section>
+        </div>
+
+        {/* RIGHT COLUMN */}
+        <div className="space-y-4">
+          {/* Training trend */}
+          <Section icon={Dumbbell} title="Training Trend">
+            <div className="h-40">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={volumeSeries} margin={{ top: 8, right: 12, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8"/>
+                  <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8"/>
+                  <RTooltip contentStyle={{ fontSize: 12 }}/>
+                  <Line type="monotone" dataKey="volume" stroke="#4f46e5" strokeWidth={2} dot={{ r: 2 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            {volumeSeries.length ? (
+              <div className="text-xs text-slate-600 mt-2">Last {volumeSeries.length} sessions volume trend</div>
+            ) : <div className="text-xs text-slate-500 mt-2">No sessions yet.</div>}
+          </Section>
+
+          {/* Progress photos */}
+          <Section icon={ImageIcon} title="Progress Photos" action={
+            <div className="text-xs text-slate-500">JPG/PNG URL</div>
+          }>
+            <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-3 gap-2">
+                <input type="date" value={pDate} onChange={e=>setpDate(e.target.value)} className="h-9 rounded-md border border-slate-200 px-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"/>
+                <input type="url" placeholder="https://…" value={pUrl} onChange={e=>setpUrl(e.target.value)} className="h-9 rounded-md border border-slate-200 px-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"/>
+                <input type="text" placeholder="Note (optional)" value={pNote} onChange={e=>setpNote(e.target.value)} className="h-9 rounded-md border border-slate-200 px-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"/>
+              </div>
+              <div>
+                <button onClick={addPhoto} className="px-3 py-2 rounded-md border border-slate-200 hover:bg-slate-50 text-sm inline-flex items-center gap-1">
+                  <UploadCloud size={14}/> Add photo
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {photos.slice(-6).reverse().map((p, idx) => (
+                  <div key={`${p.url}-${idx}`} className="relative rounded-xl overflow-hidden border border-slate-200">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.url} alt={p.note || p.date} className="w-full h-40 object-cover" />
+                    <div className="absolute bottom-0 inset-x-0 bg-black/40 text-white text-xs p-1.5 flex items-center justify-between">
+                      <span className="truncate">{p.date} {p.note ? `• ${p.note}` : ''}</span>
+                      <button onClick={()=>delPhoto(photos.length-1-idx)} className="opacity-80 hover:opacity-100">
+                        <Trash2 size={14}/>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {!photos.length && <div className="text-xs text-slate-500">No photos yet.</div>}
+              </div>
+            </div>
+          </Section>
+
+          {/* Snapshot */}
+          <Card>
+            <div className="text-sm font-semibold mb-2">Snapshot</div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded-lg bg-slate-50 p-3">
+                <div className="text-slate-500 text-xs">Current weight</div>
+                <div className="font-semibold">{currWeight!=null ? `${fmt(currWeight,1)} kg` : '—'}</div>
+              </div>
+              <div className="rounded-lg bg-slate-50 p-3">
+                <div className="text-slate-500 text-xs">7d Δ</div>
+                <div className="font-semibold">{delta7!=null ? `${fmt(delta7,1)} kg` : '—'}</div>
+              </div>
+              <div className="rounded-lg bg-slate-50 p-3">
+                <div className="text-slate-500 text-xs">30d Δ</div>
+                <div className="font-semibold">{delta30!=null ? `${fmt(delta30,1)} kg` : '—'}</div>
+              </div>
+              <div className="rounded-lg bg-slate-50 p-3">
+                <div className="text-slate-500 text-xs">Waist (last)</div>
+                <div className="font-semibold">{currWaist!=null ? `${fmt(currWaist,1)} cm` : '—'}</div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
     </div>
   );
-}
-
-/* ===== small presentational bits ===== */
-function KPI({ title, value, delta, unit, goodDown=false }){
-  const sign = delta>0?"+":delta<0?"-":"";
-  const good = goodDown ? delta<0 : delta>0; // green if moving in desired direction
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <div className="text-sm text-slate-600">{title}</div>
-      <div className="mt-1 text-xl font-semibold">{value}</div>
-      {delta!=null && (
-        <div className={`text-xs ${good?"text-emerald-600":"text-rose-600"}`}>{sign}{Math.abs(delta)} {unit}</div>
-      )}
-    </div>
-  );
-}
-function Field({ label, children }){ return (<div><label className="text-sm text-slate-600">{label}</label><div className="mt-1">{children}</div></div>); }
-function todayISO(){ return new Date().toISOString().slice(0,10); }
-function numFmt(n){ return n==null?"—":Number(n).toFixed(1); }
-function numOr(fallback, input){ return input===""||input==null ? Number(fallback||0) : Number(input); }
-function exportCSV(name, rows){
-  if (!rows.length) return;
-  const keys = Object.keys(rows[0]);
-  const csv = [keys, ...rows.map(r => keys.map(k => Array.isArray(r[k])? r[k].join("|") : r[k]))]
-    .map(r => r.map(x => `"${String(x??"").replace(/"/g,'""')}"`).join(",")).join("\n");
-  const url = URL.createObjectURL(new Blob([csv], { type:"text/csv;charset=utf-8" }));
-  const a=document.createElement("a"); a.href=url; a.download=`${name}.csv`; a.click(); URL.revokeObjectURL(url);
 }

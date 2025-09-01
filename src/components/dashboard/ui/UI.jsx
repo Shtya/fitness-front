@@ -11,12 +11,12 @@ export function PageHeader({ icon: Icon, title, subtitle, actions = null }) {
   return (
     <div className='flex items-center justify-between'>
       <div className='flex items-center gap-3'>
-        <motion.div initial={{ rotate: -8, scale: 0.9 }} animate={{ rotate: 0, scale: 1 }} transition={spring} className='h-10 w-10 grid place-content-center rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-md'>
+        <motion.div initial={{ rotate: -8, scale: 0.9 }} animate={{ rotate: 0, scale: 1 }} transition={spring} className='h-10 w-10 grid place-content-center rounded-xl bg-main text-white shadow-md'>
           {Icon ? <Icon className='w-5 h-5' /> : null}
         </motion.div>
         <div>
           <h1 className='text-2xl font-semibold'>{title}</h1>
-          {subtitle ? <p className='text-sm text-slate-600'>{subtitle}</p> : null}
+          {subtitle ? <p className=' max-md:hidden text-sm text-slate-600'>{subtitle}</p> : null}
         </div>
       </div>
       {actions}
@@ -177,15 +177,15 @@ export function MacroBar({ p = 0, c = 0, f = 0, className = '' }) {
 }
 
 /* --------- TabsPill (animated tabs with shared pill) --------- */
-export function TabsPill({ tabs, active, onChange, id = 'ui-tabs-pill' }) {
+export function TabsPill({ tabs, active, onChange , className , id = 'ui-tabs-pill' }) {
   return (
     <LayoutGroup id={id}>
-      <div className='inline-flex p-1 rounded-2xl bg-slate-100/80 ring-1 ring-black/5 shadow-sm'>
+      <div className={` ${className} inline-flex p-1 rounded-2xl bg-slate-100/80 ring-1 ring-black/5 shadow-sm `}>
         {tabs.map(t => {
           const isActive = active === t.key;
           return (
             <motion.button key={t.key} type='button' onClick={() => onChange(t.key)} className='relative cursor-pointer select-none rounded-xl px-3 py-1.5 text-sm font-medium outline-none' whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 350, damping: 30 }}>
-              {isActive && <motion.span layoutId='tabs-pill' className='absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500 to-blue-500 shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
+              {isActive && <motion.span layoutId='tabs-pill' className='absolute inset-0 after:!rounded-xl !rounded-xl bg-second shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
               <span className={`relative z-10 ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-700'}`}>
                 {t.icon ? <t.icon className='inline w-4 h-4 mr-1 -mt-0.5' /> : null}
                 {t.label}
@@ -803,7 +803,7 @@ export function RingProgress({ value = 0, size = 96, stroke = 10, track = 0.12, 
   const c = 2 * Math.PI * r;
   const dash = (v / 100) * c;
   return (
-    <div style={{ width: size, height: size }} className='relative grid place-items-center'>
+    <div style={{ width: size, height: size }} className='relative grid  place-items-center'>
       <svg width={size} height={size} className='-rotate-90'>
         <circle cx={size / 2} cy={size / 2} r={r} stroke='currentColor' className='text-slate-200/70' strokeWidth={stroke} fill='none' />
         <circle cx={size / 2} cy={size / 2} r={r} stroke='currentColor' className='text-indigo-500' strokeWidth={stroke} strokeLinecap='round' fill='none' strokeDasharray={`${dash} ${c - dash}`} />
@@ -812,26 +812,7 @@ export function RingProgress({ value = 0, size = 96, stroke = 10, track = 0.12, 
     </div>
   );
 }
-
-/* --- StatCard (compact KPI) --- */
-// export function StatCard({ title, value, delta, icon:Icon }) {
-//   const good = delta == null ? null : delta >= 0;
-//   return (
-//     <div className="rounded-2xl border border-slate-200 bg-white p-4 flex items-center gap-3">
-//       {Icon && <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 grid place-items-center"><Icon className="w-5 h-5" /></div>}
-//       <div className="min-w-0">
-//         <div className="text-sm text-slate-500">{title}</div>
-//         <div className="text-xl font-semibold truncate">{value}</div>
-//       </div>
-//       {delta!=null && (
-//         <div className={`ml-auto text-xs ${good?'text-emerald-600':'text-rose-600'}`}>
-//           {good ? '↑' : '↓'} {Math.abs(delta)}%
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
-
+ 
 /* --- ProgressBar (horizontal) --- */
 export function ProgressBar({ value = 0, max = 100 }) {
   const pct = Math.min(100, Math.round((value / Math.max(1, max)) * 100));

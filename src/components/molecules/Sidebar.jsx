@@ -1,47 +1,50 @@
+
 'use client';
 
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, ShieldCheck, Dumbbell, ClipboardList, CalendarRange, Apple, NotebookPen, Send, LineChart, CheckCircle2, MessageSquare, Bell, Settings, FileClock, UserCog, ServerCog, X, CreditCard, QrCode, Wrench, Salad, Calculator } from 'lucide-react';
+import { LayoutDashboard, Users, ShieldCheck, Dumbbell, ClipboardList, CalendarRange, Apple, NotebookPen, Send, LineChart, CheckCircle2, MessageSquare, Bell, Settings, FileClock, UserCog, ServerCog, X, CreditCard, QrCode, Wrench, Salad, Calculator, User } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { usePathname } from '@/i18n/navigation';
 
 const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
-
-// /dashboard/user/id
-// /dashboard/billing
-
+  
 const nav = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Users', href: '/dashboard/users', icon: Users },
-  { name: 'Exercises', href: '/dashboard/workouts', icon: Dumbbell },
-  { name: 'Workout Plans', href: '/dashboard/workouts/plans', icon: ClipboardList },
-  { name: 'Programs', href: '/dashboard/programs', icon: CalendarRange },
-  { name: 'Food Database', href: '/dashboard/nutrition', icon: Apple },
-  { name: 'Meal Plans', href: '/dashboard/nutrition/meal-plans', icon: NotebookPen },
-  { name: 'Assignments', href: '/dashboard/assignments', icon: Send },
-  { name: 'Progress', href: '/dashboard/progress', icon: LineChart },
-  { name: 'Check-ins', href: '/dashboard/progress/check-ins', icon: CheckCircle2 },
-  { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
-  { name: 'Notifications', href: '/dashboard/notifications', icon: Bell },
-  { name: 'Admin', href: '/dashboard/admin', icon: Settings },
-  { name: 'Audit Logs', href: '/dashboard/admin/audit-logs', icon: FileClock },
-  { name: 'Profile Settings', href: '/dashboard/settings/profile', icon: UserCog },
-  { name: 'System Settings', href: '/dashboard/settings/system', icon: ServerCog },
-  { name: 'Billing', href: '/dashboard/billing', icon: CreditCard },
-  { name: 'Attendance', href: '/dashboard/attendance', icon: QrCode },
-  { name: 'Schedule', href: '/dashboard/schedule', icon: CalendarRange },
-  { name: 'CRM', href: '/dashboard/crm', icon: Users },
-  { name: 'Reports', href: '/dashboard/reports', icon: LineChart },
-  { name: 'Content', href: '/dashboard/content', icon: NotebookPen },
-  { name: 'Operations', href: '/dashboard/operations', icon: Wrench },
-      { name: 'Calorie Calculator', href: '/dashboard/nutrition/calculator', icon: Calculator },
-  { name: 'My Dashboard', href: '/dashboard/my', icon: LayoutDashboard },
-  { name: 'My Workouts', href: '/dashboard/my/workouts', icon: Dumbbell },
-  { name: 'My Nutrition', href: '/dashboard/my/nutrition', icon: Salad },
-  { name: 'My Calendar', href: '/dashboard/my/calendar', icon: CalendarRange },
-  { name: 'My Progress', href: '/dashboard/my/progress', icon: LineChart },
-  { name: 'Messages', href: '/dashboard/my/messages', icon: MessageSquare },
+  // Client-related tabs
+  { role: 'coach', name: 'Dashboard', href: '/dashboard/my', icon: LayoutDashboard },
+  { role: 'coach', name: 'My Workouts', href: '/dashboard/my/workouts', icon: Dumbbell },
+  { role: 'coach', name: 'My Nutrition', href: '/dashboard/my/nutrition', icon: Salad },
+  { role: 'coach', name: 'My Calendar', href: '/dashboard/my/calendar', icon: CalendarRange },
+  { role: 'coach', name: 'My Progress', href: '/dashboard/my/progress', icon: LineChart },
+  { role: 'coach', name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
+	{ role: "coach", name: "Profile", href: "/dashboard/my/profile", icon: User },
+  { role: "coach", name: "Notifications", href: "/dashboard/my/notifications", icon: Bell },
+  { role: 'coach', name: 'Calorie Calculator', href: '/dashboard/nutrition/calculator', icon: Calculator },
+ 
+  // Coach-related tabs
+  { role: 'coach', name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { role: 'coach', name: 'Users', href: '/dashboard/users', icon: Users },
+  { role: 'coach', name: 'Exercises', href: '/dashboard/workouts', icon: Dumbbell },
+  { role: 'coach', name: 'Workout Plans', href: '/dashboard/workouts/plans', icon: ClipboardList },
+  { role: 'coach', name: 'Programs', href: '/dashboard/programs', icon: CalendarRange },
+  { role: 'coach', name: 'Assignments', href: '/dashboard/assignments', icon: Send },
+  { role: 'coach', name: 'Progress', href: '/dashboard/progress', icon: LineChart },
+  { role: 'coach', name: 'Check-ins', href: '/dashboard/progress/check-ins', icon: CheckCircle2 },
+  { role: 'coach', name: 'Admin', href: '/dashboard/admin', icon: Settings },
+  { role: 'coach', name: 'Audit Logs', href: '/dashboard/admin/audit-logs', icon: FileClock },
+  { role: 'coach', name: 'System Settings', href: '/dashboard/settings/system', icon: ServerCog },
+  { role: 'coach', name: 'Profile Settings', href: '/dashboard/settings/profile', icon: UserCog },
+  { role: 'coach', name: 'Food Database', href: '/dashboard/nutrition', icon: Apple },
+  { role: 'coach', name: 'Meal Plans', href: '/dashboard/nutrition/meal-plans', icon: NotebookPen },
+  { role: 'coach', name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
+  { role: 'coach', name: 'Notifications', href: '/dashboard/notifications', icon: Bell },
+  { role: 'coach', name: 'Billing', href: '/dashboard/billing', icon: CreditCard },
+  { role: 'coach', name: 'Attendance', href: '/dashboard/attendance', icon: QrCode },
+  { role: 'coach', name: 'Schedule', href: '/dashboard/schedule', icon: CalendarRange },
+  { role: 'coach', name: 'CRM', href: '/dashboard/crm', icon: Users },
+  { role: 'coach', name: 'Reports', href: '/dashboard/reports', icon: LineChart },
+  { role: 'coach', name: 'Content', href: '/dashboard/content', icon: NotebookPen },
+  { role: 'coach', name: 'Operations', href: '/dashboard/operations', icon: Wrench },
 ];
 
 function NavItem({ item, isActive, isPreviewed, onMouseEnter, onMouseLeave, onClick }) {
@@ -50,9 +53,9 @@ function NavItem({ item, isActive, isPreviewed, onMouseEnter, onMouseLeave, onCl
   return (
     <Link href={item.href} className='block' onClick={onClick} aria-current={isActive ? 'page' : undefined}>
       <div className='relative'>
-        {isPreviewed && <motion.span layoutId='activePill' className='absolute inset-0 before:!rounded-md !rounded-md bg-second shadow-lg' transition={spring} />}
+        {isPreviewed && <motion.span layoutId='activePill' className='absolute inset-0 before:!rounded-md !rounded-md bg-second !ashadow-none' transition={spring} />}
 
-        <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} transition={spring} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} className={['relative z-10 flex items-center gap-3 rounded-md p-2 border transition-all shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60', isPreviewed ? 'border-transparent text-white' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'].join(' ')}>
+        <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} transition={spring} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} className={[' px-2 relative z-10 flex items-center gap-3 transition-all !shadow-none  py-2', isPreviewed ? 'border-transparent text-white' : 'text-slate-700'].join(' ')}>
           <div className={['flex items-center justify-center w-8 h-8 rounded-lg', isPreviewed ? 'bg-white/20' : 'bg-slate-100'].join(' ')}>
             <Icon className={isPreviewed ? 'size-5 text-white' : 'size-5 text-indigo-600'} />
           </div>
@@ -64,7 +67,7 @@ function NavItem({ item, isActive, isPreviewed, onMouseEnter, onMouseLeave, onCl
   );
 }
 
-export default function Sidebar({ open, setOpen }) {
+export default function Sidebar({ open, setOpen, role = 'coach' }) {
   const pathname = usePathname();
 
   const activeHref = useMemo(() => {
@@ -78,6 +81,8 @@ export default function Sidebar({ open, setOpen }) {
 
   const isActive = href => href === activeHref || pathname?.startsWith(href + '/');
 
+  // Filter nav items by the user's role
+  const filteredNav = nav.filter(item => item.role === role);
 
   return (
     <>
@@ -96,9 +101,9 @@ export default function Sidebar({ open, setOpen }) {
 
           {/* Nav */}
           <LayoutGroup id='sidebar-nav'>
-            <nav dir='rtl' className='flex-1 overflow-y-auto  ' role='navigation' aria-label='Sidebar'>
-              <div dir='ltr' className='px-2 py-4 space-y-2' >
-                {nav.map(item => {
+            <nav dir='rtl' className='flex-1 overflow-y-auto'>
+              <div dir='ltr' className='px-2 py-4 '>
+                {filteredNav.map(item => {
                   const isPreviewed = pillTarget === item.href;
                   return <NavItem key={item.href} item={item} isActive={isActive(item.href)} isPreviewed={isPreviewed} onMouseEnter={() => setHoveredHref(item.href)} onMouseLeave={() => setHoveredHref(null)} />;
                 })}
@@ -128,7 +133,7 @@ export default function Sidebar({ open, setOpen }) {
               {/* nav */}
               <LayoutGroup id='sidebar-nav-mobile'>
                 <nav className='w-full overflow-y-auto px-3 pt-4 space-y-2'>
-                  {nav.map(item => {
+                  {filteredNav.map(item => {
                     const isPreviewed = pillTarget === item.href;
                     return <NavItem key={item.href} item={item} isActive={isActive(item.href)} isPreviewed={isPreviewed} onMouseEnter={() => setHoveredHref(item.href)} onMouseLeave={() => setHoveredHref(null)} onClick={() => setOpen(false)} />;
                   })}
