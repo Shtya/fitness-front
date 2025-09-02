@@ -22,7 +22,7 @@ export default function PWAInstallPrompt() {
     setDeferredEvt(null);
   };
 
-  if (!visible) return null;
+  // if (!visible) return null;
 
   return (
     <div className=" max-md:flex hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
