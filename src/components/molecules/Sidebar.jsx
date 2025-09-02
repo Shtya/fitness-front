@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, ShieldCheck, Dumbbell, ClipboardList, CalendarRange, Apple, NotebookPen, Send, LineChart, CheckCircle2, MessageSquare, Bell, Settings, FileClock, UserCog, ServerCog, X, CreditCard, QrCode, Wrench, Salad, Calculator, User } from 'lucide-react';
+import { LayoutDashboard, Users, ShieldCheck, Dumbbell, ClipboardList, CalendarRange, Apple, NotebookPen, Send, LineChart, CheckCircle2, MessageSquare, Bell, Settings, FileClock, UserCog, ServerCog, X, CreditCard, QrCode, Wrench, Salad, Calculator, User, ChefHat, ShoppingCart } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { usePathname } from '@/i18n/navigation';
 
@@ -19,6 +19,8 @@ const nav = [
   { role: 'coach', name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
 	{ role: "coach", name: "Profile", href: "/dashboard/my/profile", icon: User },
   { role: "coach", name: "Notifications", href: "/dashboard/my/notifications", icon: Bell },
+  { role: "coach", name: "library-food-list" , href: "/dashboard/nutrition/library-food-list", icon: ChefHat },
+  { role: "coach", name: "grocery-list"      , href: "/dashboard/nutrition/grocery-list", icon: ShoppingCart },
   { role: 'coach', name: 'Calorie Calculator', href: '/dashboard/nutrition/calculator', icon: Calculator },
  
   // Coach-related tabs

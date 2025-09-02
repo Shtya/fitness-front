@@ -7,6 +7,7 @@ import Sidebar from './Sidebar';
 import ConfigAos from '@/config/Aos';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import PWAInstallPrompt from '@/app/[locale]/offline/PWAInstallPrompt';
 
 export default function Layout({ children }) {
   const pathname = usePathname();
@@ -41,7 +42,7 @@ export default function Layout({ children }) {
           </div>
         </div>
       </div>
-
+      <PWAInstallPrompt />
       <ConfigAos />
       <Toaster position='top-center' />
     </GlobalProvider>

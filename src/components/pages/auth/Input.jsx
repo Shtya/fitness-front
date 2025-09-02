@@ -24,7 +24,7 @@ export const Input = ({
           className={`
             peer w-full rounded-xl border px-4 pt-5 pb-2  
             bg-white/90 text-gray-900 text-[16px] shadow-inner transition-all
-            focus:border-transparent focus:ring-2 focus:ring-emerald-500/70
+            focus:border-transparent focus:ring-2 focus:ring-indigo-500/70
             placeholder-transparent outline-none
 			${disabled && " opacity-80 !bg-gray-200/70 border-slate-100  pointer-events-none "}
 			${cnInput}
@@ -41,7 +41,7 @@ export const Input = ({
               absolute left-4 top-2 text-gray-500 text-sm transition-all
               peer-placeholder-shown:top-4  peer-placeholder-shown:text-gray-400 
               peer-placeholder-shown:text-sm  peer-placeholder-shown:font-normal
-              peer-focus:top-2  peer-focus:text-sm peer-focus:text-emerald-600
+              peer-focus:top-2  peer-focus:text-sm peer-focus:text-indigo-600
             `}
           >
             {label}
