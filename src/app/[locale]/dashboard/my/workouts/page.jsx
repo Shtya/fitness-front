@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -600,14 +599,13 @@ export default function MyWorkoutsPage() {
                                       {/* Weight */}
                                       <td className='py-3 px-3'>
                                         <div className='relative'>
-                                          <input type='number' min={0} value={s.weight} onChange={e => setField(s.id, 'weight', +e.target.value)} className='h-9 w-24 rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition' placeholder='0' inputMode='numeric' />
-                                          <span className='absolute left-[calc(6rem-18px)] top-1/2 -translate-y-1/2 text-[11px] text-slate-400 select-none'>kg</span>
+                                          <input type='number' min={0} value={s.weight} onChange={e => setField(s.id, 'weight', +e.target.value)} className='h-9 w-[50px] !text-[16px] rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition' placeholder='0' inputMode='numeric' />
                                         </div>
                                       </td>
 
                                       {/* Reps */}
                                       <td className='py-3 px-3'>
-                                        <input type='number' min={0} value={s.reps} onChange={e => setField(s.id, 'reps', +e.target.value)} className='h-9 w-20 rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition' placeholder='0' inputMode='numeric' />
+                                        <input type='number' min={0} value={s.reps} onChange={e => setField(s.id, 'reps', +e.target.value)} className='h-9 w-[50px] !text-[16px]  rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition' placeholder='0' inputMode='numeric' />
                                       </td>
 
                                       {/* Timer */}

@@ -42,7 +42,7 @@ export default function Layout({ children }) {
           </div>
         </div>
       </div>
-      <PWAInstallPrompt />
+      {/* <PWAInstallPrompt /> */}
       <ConfigAos />
       <Toaster position='top-center' />
     </GlobalProvider>

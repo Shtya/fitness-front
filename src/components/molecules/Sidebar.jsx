@@ -103,7 +103,7 @@ export default function Sidebar({ open, setOpen, role = 'coach' }) {
 
           {/* Nav */}
           <LayoutGroup id='sidebar-nav'>
-            <nav dir='rtl' className='flex-1 overflow-y-auto'>
+            <nav dir='rtl' className='flex-1  overflow-y-auto'>
               <div dir='ltr' className='px-2 py-4 '>
                 {filteredNav.map(item => {
                   const isPreviewed = pillTarget === item.href;
@@ -134,7 +134,7 @@ export default function Sidebar({ open, setOpen, role = 'coach' }) {
 
               {/* nav */}
               <LayoutGroup id='sidebar-nav-mobile'>
-                <nav className='w-full overflow-y-auto px-3 pt-4 space-y-2'>
+                <nav className='w-full  h-[calc(100vh-100px)]  overflow-y-auto px-3 pt-4 space-y-2'>
                   {filteredNav.map(item => {
                     const isPreviewed = pillTarget === item.href;
                     return <NavItem key={item.href} item={item} isActive={isActive(item.href)} isPreviewed={isPreviewed} onMouseEnter={() => setHoveredHref(item.href)} onMouseLeave={() => setHoveredHref(null)} onClick={() => setOpen(false)} />;
