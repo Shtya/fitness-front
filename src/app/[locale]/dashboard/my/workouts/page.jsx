@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import DataTable from '@/components/dashboard/ui/DataTable';
 import { PageHeader, TabsPill, EmptyState, spring } from '@/components/dashboard/ui/UI';
-import { Dumbbell, History as HistoryIcon, Clock, Image, Video, X, Play, Pause, Settings } from 'lucide-react';
+import { Dumbbell, History as HistoryIcon, Clock, Image, Video, X, Play, Pause, Settings, Minus, Plus } from 'lucide-react';
 import CheckBox from '@/components/atoms/CheckBox';
 
 import { Image as ImageIcon, Video as VideoIcon } from 'lucide-react';
@@ -558,20 +558,20 @@ export default function MyWorkoutsPage() {
               </div>
 
               {/* Exercise Panels */}
-              <div className='rounded-2xl border border-slate-200 bg-white p-4'>
+              <div className='rounded-2xl border border-slate-200 bg-white lg:p-4'>
                 {workout && (
                   <div className='flex flex-col md:flex-row gap-4'>
                     {/* LEFT: Current exercise – media/alternatives */}
                     <div className='w-full md:flex-1 min-w-0'>
-                      <div className='rounded-2xl border border-slate-200 bg-white overflow-hidden'>
+                      <div className=' rounded-lg lg:rounded-2xl lg:border border-slate-200 bg-white overflow-hidden'>
                         {/* media + bullets */}
                         <ExerciseMedia exercise={currentExercise} items={[...(currentExercise?.video ? [{ type: 'video', src: currentExercise.video }] : []), ...(currentExercise?.img ? [{ type: 'img', src: currentExercise.img }] : []), ...(currentExercise?.gallery || [])]} />
 
                         <ExerciseSubTabs exercise={currentExercise} allExercises={workout.exercises} currentExId={currentExId} onPickAlternative={ex => setCurrentExId(ex.id)} />
 
                         {/* SETS TABLE */}
-                        <div className='mx-2 mb-4  border border-slate-200  rounded-2xl overflow-hidden '>
-                          <div className='overflow-x-auto border border-slate-200  rounded-2xl overflow-hidden'>
+                        <div className='lg:mx-2 mb-4  border border-slate-200  md:rounded-lg overflow-hidden '>
+                          <div className='overflow-x-auto border border-slate-200  md:rounded-lg overflow-hidden'>
                             <table className='w-full text-sm overflow-hidden rounded-2xl border border-slate-200 '>
                               <thead className='bg-slate-50/80 backdrop-blur sticky top-0 z-10'>
                                 <tr className='text-left text-slate-500'>
@@ -637,11 +637,11 @@ export default function MyWorkoutsPage() {
 
                                               {/* quick +/- 15s adjust */}
                                               <div className='inline-flex rounded-lg overflow-hidden border border-slate-200'>
-                                                <button onClick={() => setField(s.id, 'restTime', Math.max(0, (s.restTime || 0) - 15))} className='px-2 text-xs hover:bg-slate-50' title='-15s'>
-                                                  −15s
+                                                <button onClick={() => setField(s.id, 'restTime', Math.max(0, (s.restTime || 0) - 15))} className='px-2 py-2 text-xs hover:bg-slate-50' title='-15s'>
+                                                  <Minus size={14} />
                                                 </button>
-                                                <button onClick={() => setField(s.id, 'restTime', (s.restTime || 0) + 15)} className='px-2 text-xs hover:bg-slate-50 border-l border-slate-200' title='+15s'>
-                                                  +15s
+                                                <button onClick={() => setField(s.id, 'restTime', (s.restTime || 0) + 15)} className='px-2 py-2 text-xs hover:bg-slate-50 border-l border-slate-200' title='+15s'>
+                                                  <Plus size={14} />
                                                 </button>
                                               </div>
                                             </div>
@@ -668,7 +668,7 @@ export default function MyWorkoutsPage() {
 
                     {/* RIGHT: Exercise list */}
                     <div className='w-full md:w-80'>
-                      <div className='w-full h-full max-h-[475px] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4'>
+                      <div className='w-full h-full max-h-[475px] overflow-y-auto rounded-2xl lg:border border-slate-200 bg-white max-lg:px-2 lg:p-4'>
                         <h3 className='text-base font-semibold mb-3'>Exercises</h3>
                         <div className='space-y-2'>
                           {workout.exercises.map((ex, idx) => {
