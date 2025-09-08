@@ -180,13 +180,13 @@ export function MacroBar({ p = 0, c = 0, f = 0, className = '' }) {
 export function TabsPill({ tabs, active, onChange , className , id = 'ui-tabs-pill' }) {
   return (
     <LayoutGroup id={id}>
-      <div className={` ${className} inline-flex p-1 rounded-2xl bg-slate-100/80 ring-1 ring-black/5 shadow-sm `}>
+      <div className={` ${className} max-md:overflow-x-auto max-md:w-[calc(100vw-80px)] max-md:max-w-fit  overflow-y-hidden inline-flex p-1 rounded-2xl max-md:rounded-[10px_10px_0_0] bg-slate-100/80 ring-1 ring-black/5 shadow-sm `}>
         {tabs.map(t => {
           const isActive = active === t.key;
           return (
             <motion.button key={t.key} type='button' onClick={() => onChange(t.key)} className='relative cursor-pointer select-none rounded-xl px-3 py-1.5 text-sm font-medium outline-none' whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 350, damping: 30 }}>
               {isActive && <motion.span layoutId='tabs-pill' className='absolute inset-0 after:!rounded-xl !rounded-xl bg-second shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
-              <span className={`relative z-10 ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-700'}`}>
+              <span className={`relative z-10 ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-700'} capitalize`}>
                 {t.icon ? <t.icon className='inline w-4 h-4 mr-1 -mt-0.5' /> : null}
                 {t.label}
               </span>

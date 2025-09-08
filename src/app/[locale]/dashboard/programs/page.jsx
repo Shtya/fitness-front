@@ -5,24 +5,30 @@ import { motion, AnimatePresence } from "framer-motion";
 import DataTable from "@/components/dashboard/ui/DataTable";
 import {
   Rocket, Plus, Search, Eye, X, Edit, Trash2, Copy, Users, CheckCircle2, XCircle,
-  Layers, RefreshCcw, Calendar, Clock, DollarSign, Globe, Lock, EyeOff, Tag, Upload, Download, Settings
+  Layers, RefreshCcw, Calendar, DollarSign, Globe, Lock, EyeOff, Tag, Upload, Download, Settings, Share2, Check
 } from "lucide-react";
+import api from "@/utils/axios";
 
 const spring = { type: "spring", stiffness: 360, damping: 30, mass: 0.7 };
 
-/* ---------------- Mock API ---------------- */
+/* ---------------- Constants (UI lists) ---------------- */
 const GOALS = ["Hypertrophy", "Strength", "Fat Loss", "General Fitness", "Mobility"];
 const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 const STATUS = ["Published", "Draft", "Archived"];
 const VISIBILITY = ["Public", "Private", "Unlisted"];
 const BILLING = ["One-time", "Subscription"];
 
+/* NOTE:
+   PLANS_LIST is UI-only. IDs here are placeholders (numbers) for display.
+   For assignment, you must paste the real Plan UUID from backend into the modal.
+*/
 const PLANS_LIST = [
   { id: 201, name: "Push/Pull/Legs – 6 Weeks" },
   { id: 202, name: "Full Body – 3 Days" },
   { id: 203, name: "Fat Loss Circuit – 4 Weeks" },
 ];
 
+/* ---------------- Mock Programs (keep existing behavior) ---------------- */
 const mockPrograms = [
   {
     id: 301,
@@ -42,7 +48,7 @@ const mockPrograms = [
     coach: "Jane Smith",
     nextStart: "2025-09-15",
     updatedAt: "2025-08-24",
-    plans: [201, 202],
+    plans: [201, 202], // UI list only
     tags: ["Muscle", "Gym"],
     cohorts: ["2025-09-15", "2025-10-13"],
     capacity: 200,
@@ -98,7 +104,7 @@ const mockPrograms = [
   },
 ];
 
-const fetchPrograms = () => new Promise((res) => setTimeout(() => res(mockPrograms), 1000));
+const fetchPrograms = () => new Promise((res) => setTimeout(() => res(mockPrograms), 600));
 
 /* ---------------- Little atoms ---------------- */
 function Badge({ color = "slate", children }) {
@@ -166,6 +172,98 @@ function Modal({ open, onClose, title, children, maxW = "max-w-3xl" }) {
   );
 }
 
+/* ---------------- Assign Plan Modal (Plans module ONLY) ---------------- */
+function AssignPlanModal({ open, onClose, program, defaultPlanName }) {
+  const [planId, setPlanId] = useState("");       // REAL UUID from backend
+  const [userId, setUserId] = useState("");
+  const [coachId, setCoachId] = useState("");
+  const [setActive, setSetActive] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [okMsg, setOkMsg] = useState("");
+  const [errMsg, setErrMsg] = useState("");
+
+  useEffect(() => {
+    if (!open) {
+      setPlanId(""); setUserId(""); setCoachId(""); setSetActive(true);
+      setBusy(false); setOkMsg(""); setErrMsg("");
+    }
+  }, [open]);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true); setErrMsg(""); setOkMsg("");
+    try {
+      // Plans module endpoint
+      await api.patch(`/plans/${planId}/reassign`, {
+        newUserId: userId,
+        newCoachId: coachId ? coachId : null,
+        setActiveForNewUser: !!setActive,
+      });
+
+      setOkMsg("Assigned successfully.");
+    } catch (err) {
+      // Show backend FK messages transparently
+      const data = err?.response?.data;
+      if (data?.details) {
+        setErrMsg(`${data.message || "Error"} — ${data.details}`);
+      } else if (data?.message) {
+        setErrMsg(Array.isArray(data.message) ? data.message.join(", ") : data.message);
+      } else {
+        setErrMsg("Request failed.");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Assign Plan to User" maxW="max-w-xl">
+      <form onSubmit={submit} className="space-y-3">
+        <div className="rounded-xl border border-slate-200 p-3 bg-white">
+          <div className="text-sm text-slate-600 mb-2">
+            You’re assigning a <span className="font-medium">Plan</span> (from the Plans module) to a user/coach.  
+            <br />Program: <span className="font-medium">{program?.name || "-"}</span>{defaultPlanName ? <> — Suggested: <span className="font-medium">{defaultPlanName}</span></> : null}
+          </div>
+          <div className="grid grid-cols-1 gap-3">
+            <label className="text-sm">
+              <span className="block text-slate-600 mb-1">Plan ID (UUID from backend)</span>
+              <input value={planId} onChange={(e)=>setPlanId(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" placeholder="e.g. 08b9d9c0-4bc9-4c26-94b0-0c3a7b4e1a2f" required />
+              <p className="text-xs text-slate-500 mt-1">
+                The list in this page (201/202/203) is just for display. Paste the actual <code>planId</code> from the Plans API.
+              </p>
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="text-sm">
+                <span className="block text-slate-600 mb-1">User ID (UUID)</span>
+                <input value={userId} onChange={(e)=>setUserId(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" required placeholder="Target client userId" />
+              </label>
+              <label className="text-sm">
+                <span className="block text-slate-600 mb-1">Coach ID (UUID, optional)</span>
+                <input value={coachId} onChange={(e)=>setCoachId(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200" placeholder="Leave empty to unassign coach" />
+              </label>
+            </div>
+
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={setActive} onChange={(e)=>setSetActive(e.target.checked)} />
+              <span>Set this plan active for the new user</span>
+            </label>
+          </div>
+        </div>
+
+        {errMsg ? <div className="px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700">{errMsg}</div> : null}
+        {okMsg ? <div className="px-3 py-2 rounded-lg border border-green-200 bg-green-50 text-sm text-green-700 inline-flex items-center gap-2"><Check className="w-4 h-4" /> {okMsg}</div> : null}
+
+        <div className="flex items-center justify-end gap-2">
+          <button type="button" onClick={onClose} className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50">Close</button>
+          <button type="submit" disabled={busy} className="px-3 py-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white inline-flex items-center gap-2 disabled:opacity-60">
+            <Share2 className="w-4 h-4" /> {busy ? "Assigning…" : "Assign Plan"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 /* ---------------- Page ---------------- */
 export default function ProgramsPage() {
   const [loading, setLoading] = useState(true);
@@ -184,6 +282,11 @@ export default function ProgramsPage() {
   const [preview, setPreview] = useState(null);
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editRow, setEditRow] = useState(null);
+
+  // NEW: assign modal state (Plans module)
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignProgram, setAssignProgram] = useState(null);
+  const [assignSuggestedPlanName, setAssignSuggestedPlanName] = useState("");
 
   useEffect(() => {
     setLoading(true);
@@ -235,6 +338,23 @@ export default function ProgramsPage() {
           <button onClick={() => duplicateProgram(row, setPrograms)} className="px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 inline-flex items-center gap-1">
             <Copy className="w-4 h-4" /> Duplicate
           </button>
+
+          {/* NEW: Assign Plan (Plans module only) */}
+          <button
+            onClick={() => {
+              setAssignProgram(row);
+              // suggest a friendly name if the program references one plan in PLANS_LIST
+              const firstPlan = (row.plans || [])[0];
+              const name = PLANS_LIST.find(p => p.id === firstPlan)?.name || "";
+              setAssignSuggestedPlanName(name);
+              setAssignOpen(true);
+            }}
+            className="px-2 py-1 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 inline-flex items-center gap-1"
+            title="Assign a Plan (by planId UUID) to a user/coach"
+          >
+            <Share2 className="w-4 h-4" /> Assign
+          </button>
+
           {row.status === "Published" ? (
             <button onClick={() => setPrograms(arr => arr.map(p => p.id === row.id ? { ...p, status: "Draft" } : p))} className="px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 inline-flex items-center gap-1">
               <XCircle className="w-4 h-4" /> Unpublish
@@ -406,12 +526,17 @@ export default function ProgramsPage() {
           }}
         />
       </Modal>
+
+      {/* Assign (Plans module only) */}
+      <AssignPlanModal
+        open={assignOpen}
+        onClose={() => setAssignOpen(false)}
+        program={assignProgram}
+        defaultPlanName={assignSuggestedPlanName}
+      />
     </div>
   );
-
 }
-function onToggleRow(id) { setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]); }
-function onToggleAll(ids) { setSelected(prev => prev.length === ids.length ? [] : ids); }
 
 /* ---------------- Subcomponents ---------------- */
 
@@ -534,7 +659,7 @@ function ProgramBuilder({ initial, onSubmit }) {
         <Field label="Next Start (optional)"><input type="date" value={nextStart} onChange={(e)=>setNextStart(e.target.value)} className="inp" /></Field>
       </div>
 
-      {/* Include Plans */}
+      {/* Included Plans (UI list only) */}
       <div className="rounded-xl border border-slate-200 p-3">
         <div className="text-sm font-semibold mb-2">Included Plans</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -545,6 +670,9 @@ function ProgramBuilder({ initial, onSubmit }) {
             </label>
           ))}
         </div>
+        <p className="text-xs text-slate-500 mt-2">
+          Note: These items are for packaging only. Assignment uses your real <code>planId</code> (UUID) via the Plans API.
+        </p>
       </div>
 
       {/* Cohorts */}

@@ -98,7 +98,7 @@ body {
 .p {
   @apply text-[18px] max-md:text-[16px] text-black opacity-80 font-[500];
 }
-
+/* 
 ::-webkit-scrollbar-button:single-button:vertical:decrement {
   background: #fff;
   height: 10px;
@@ -133,7 +133,7 @@ body {
   background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg width='8' height='8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 0 L6 4 L2 8 Z' fill='%23666'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center;
-}
+} */
 
 ::-webkit-scrollbar {
   width: 8px;

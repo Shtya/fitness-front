@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 
-export const baseImg = "http://localhost:8081/"
+export const baseImg = "http://localhost:8081"
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_URL + "/api/v1",
   timeout: 30000,
@@ -11,7 +11,7 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjM2ZWFlNjc0LWEwNjMtNDI4Ny1iMzc4LWUzY2FiMDM2NGI5MSIsImlhdCI6MTc1NzIyOTM4NSwiZXhwIjoxNzU3NDAyMTg1fQ.Sr7qoyjVHLVIBk6P6tON4Cxwak0xTKk0AKxLrCr5Jes"
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
