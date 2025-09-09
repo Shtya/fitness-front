@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -8,7 +7,7 @@ import { useMemo, useState } from 'react';
 import { usePathname } from '@/i18n/navigation';
 
 const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
-  
+
 const nav = [
   // Client-related tabs
   { role: 'coach', name: 'Dashboard', href: '/dashboard/my', icon: LayoutDashboard },
@@ -16,37 +15,22 @@ const nav = [
   { role: 'coach', name: 'My Nutrition', href: '/dashboard/my/nutrition', icon: Salad },
   { role: 'coach', name: 'My Calendar', href: '/dashboard/my/calendar', icon: CalendarRange },
   { role: 'coach', name: 'My Progress', href: '/dashboard/my/progress', icon: LineChart },
-  { role: 'coach', name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
-	{ role: "coach", name: "Profile", href: "/dashboard/my/profile", icon: User },
-  { role: "coach", name: "Notifications", href: "/dashboard/my/notifications", icon: Bell },
-  { role: "coach", name: "library-food-list" , href: "/dashboard/nutrition/library-food-list", icon: ChefHat },
-  { role: "coach", name: "grocery-list"      , href: "/dashboard/nutrition/grocery-list", icon: ShoppingCart },
+  { role: 'coach', name: 'Profile', href: '/dashboard/my/profile', icon: User },
+  { role: 'coach', name: 'library-food-list', href: '/dashboard/nutrition/library-food-list', icon: ChefHat },
+  { role: 'coach', name: 'grocery-list', href: '/dashboard/nutrition/grocery-list', icon: ShoppingCart },
   { role: 'coach', name: 'Calorie Calculator', href: '/dashboard/nutrition/calculator', icon: Calculator },
- 
+
   // Coach-related tabs
   { role: 'coach', name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { role: 'coach', name: 'Users', href: '/dashboard/users', icon: Users },
   { role: 'coach', name: 'Exercises', href: '/dashboard/workouts', icon: Dumbbell },
-  // { role: 'coach', name: 'Workout Plans', href: '/dashboard/workouts/plans', icon: ClipboardList },
+  { role: 'coach', name: 'Workout Plans', href: '/dashboard/workouts/plans', icon: ClipboardList },
   { role: 'coach', name: 'Programs', href: '/dashboard/programs', icon: CalendarRange },
-  // { role: 'coach', name: 'Assignments', href: '/dashboard/assignments', icon: Send },
-  // { role: 'coach', name: 'Progress', href: '/dashboard/progress', icon: LineChart },
-  // { role: 'coach', name: 'Check-ins', href: '/dashboard/progress/check-ins', icon: CheckCircle2 },
-  { role: 'coach', name: 'Admin', href: '/dashboard/admin', icon: Settings },
-  { role: 'coach', name: 'Audit Logs', href: '/dashboard/admin/audit-logs', icon: FileClock },
-  { role: 'coach', name: 'System Settings', href: '/dashboard/settings/system', icon: ServerCog },
-  { role: 'coach', name: 'Profile Settings', href: '/dashboard/settings/profile', icon: UserCog },
+  { role: 'coach', name: 'System Settings', href: '/dashboard/settings', icon: ServerCog },
   { role: 'coach', name: 'Food Database', href: '/dashboard/nutrition', icon: Apple },
   { role: 'coach', name: 'Meal Plans', href: '/dashboard/nutrition/meal-plans', icon: NotebookPen },
   { role: 'coach', name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
-  { role: 'coach', name: 'Notifications', href: '/dashboard/notifications', icon: Bell },
   { role: 'coach', name: 'Billing', href: '/dashboard/billing', icon: CreditCard },
-  { role: 'coach', name: 'Attendance', href: '/dashboard/attendance', icon: QrCode },
-  { role: 'coach', name: 'Schedule', href: '/dashboard/schedule', icon: CalendarRange },
-  { role: 'coach', name: 'CRM', href: '/dashboard/crm', icon: Users },
-  { role: 'coach', name: 'Reports', href: '/dashboard/reports', icon: LineChart },
-  { role: 'coach', name: 'Content', href: '/dashboard/content', icon: NotebookPen },
-  { role: 'coach', name: 'Operations', href: '/dashboard/operations', icon: Wrench },
 ];
 
 function NavItem({ item, isActive, isPreviewed, onMouseEnter, onMouseLeave, onClick }) {
