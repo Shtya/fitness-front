@@ -4,9 +4,9 @@ import { FaCheck } from 'react-icons/fa';
 const CheckBox = ({ label, initialChecked, onChange, className }) => {
   const [checked, setChecked] = useState(initialChecked || false);
 
-	useEffect(()=> {
-		setChecked(initialChecked)
-	} ,[initialChecked])
+  useEffect(() => {
+    setChecked(initialChecked);
+  }, [initialChecked]);
 
   const handleCheck = () => {
     const newChecked = !checked;

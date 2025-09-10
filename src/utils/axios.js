@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 
-export const baseImg = "http://localhost:8081"
+export const baseImg = process.env.NEXT_PUBLIC_BACKEND_URL
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_URL + "/api/v1",
   timeout: 30000,

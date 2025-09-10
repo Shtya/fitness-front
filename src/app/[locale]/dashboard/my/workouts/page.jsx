@@ -1,9 +1,63 @@
 /* 
-  - Integrated backend endpoints (GET /plans/active, POST /prs, POST /prs/attempt, + history/stats) with ?userId=...
-  - Removed global timer settings; only keep the timer under the exercise preview with editable input (mm:ss), - / +, and edit icon.
-  - When timer finishes, play sound for 10s (loops during that time). Shows a Stop button to cut it.
-  - Removed trash icon in the table and removed Upload Video & its logic.
-  - Improved responsive layout (denser on small screens).
+  1:start your workout with 3 minutes dynamic stretching
+
+2:10 minutes cycling warm up in leg day
+
+3:After workout 20 minutes steady state cardio workout
+
+4:and finish your workout with 3minutes static stretching
+
+Rest time:1m :90smax
+TEMPO 1/1/1
+: ال tempo  هو سرعة ادائك لكل عده في كل مجموعه
+بمعني انك بتثبت ثانيه في نقطة البدايه وثانيه في نقطة النهايه 
+وبتتحكم في الوزن بمقادر ثانيه في الرجوع من نقطة النهايه لنقطة البدايه
+: اختيار وزن مناسب حسب العدات المطلوبه 
+: لا يتم احتساب المجاميع الغير مؤثره
+Day1:(push)
+1: machine flat chest press 3×8
+2: cable crossover press 3×15
+3: machine incline chest press 3×12
+4: 15×dumbbell lateral raises 3 
+5: machine lateral raises 3×15
+6: tricep pushdown rop 3×15
+7: tricep extension V bar 3×15
+
+Day2:(pull)
+1: machine wide grip row3×8
+2:seted row close grip 3×12
+3:lat pulldown  3×15
+4:reverse flay machine 3×15
+5:cable biceps curl 3×15
+6:wide grip barbell shurgs2×15
+7: back extension 4×20
+
+Day3:(legs)
+1: leg extension 3×20
+2: leg curl 3×20
+3: leg press3×15
+4: standing calf raises 3×20
+5: seated calf raises 3×10
+6: cable crunches 3×20
+
+
+Day4:(Push2)
+1: smith machine flat chest press 3×10
+2: dips machine 3×10
+3: smith machine incline bench press 3×10
+4: rope front raises 3×15
+5: one hand cable lateral raises 3×15
+6: one hand tricep pushdown 3×10
+7: plank 3×1m
+
+Day5:(pull2)
+1: reverse  grip seated row 3×10
+2: lat pulldown close grip 3×10
+3: one arm cable row3×10
+4: face pull 3×15
+5: bicep spider curl 3×15
+6: hammer curl 3×15
+7: Russian twist3×25
 */
 
 'use client';
@@ -43,13 +97,12 @@ const fmtVal = v => (v === null || v === undefined ? '—' : typeof v === 'strin
 async function fetchActivePlan(userId) {
   const { data } = await api.get('/plans/active', { params: { userId } });
   // if (data?.status === 'active') return data.plan;
-  return data;
+  return weeklyProgram;
 }
 
 async function fetchDaySets(userId, exerciseName, date) {
   const { data } = await api.get('/prs/day', { params: { userId, exerciseName, date } });
-  console.log(data);
-  return data?.records || [];
+   return data?.records || [];
 }
 
 async function upsertDailyPR(userId, exerciseName, date, records) {
@@ -724,8 +777,8 @@ export default function MyWorkoutsPage() {
                         {hasExercises && (
                           <>
                             {/* Banner media (switchable) */}
-                            <div className='aspect-video bg-slate-900 grid place-items-center overflow-hidden shadow-lg relative rounded-[10px_10px_0_0]'>
-                              {currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise.video ? <video key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} controls muted className='w-full h-full object-contain bg-black' /> : <img key={currentExercise?.id + '-image'} src={currentExercise?.img} alt={currentExercise?.name || 'Exercise'} className='w-full h-full object-cover' />}
+                            <div className=' w-full bg-slate-900 grid place-items-center overflow-hidden shadow-lg relative rounded-[10px_10px_0_0]'>
+                              {currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise.video ? <video key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} controls muted className='w-fit h-fit object-contain bg-black' /> : <img key={currentExercise?.id + '-image'} src={currentExercise?.img} alt={currentExercise?.name || 'Exercise'} className='w-full h-full object-cover' />}
                               {/* Simple media toggle pill */}
                               <div className='absolute bottom-2 right-2 flex items-center gap-2 bg-black/40 backdrop-blur px-2 py-1 rounded-lg'>
                                 <button onClick={() => setActiveMedia('image')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'image' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show image'>
