@@ -1,81 +1,40 @@
 /* 
-  1:start your workout with 3 minutes dynamic stretching
+	- make the video take fixed height 400px and object-contain and click to work it work without take the full screen mode 
+	- put icons when click on it show categories about what i need to listen ( اذاعه القران الكريم  as play and pause and list to some podcast i will provide you with some links of podcasts and i can show it in this page)
+		يكون موجود اذاعه القران الكريم  , وقائمه يختار منها عاوز يشغل ايه قران ولا بودكاست و اختيارات تانيه 
+	- when i change any value in the sets show button to save them not when i write the value and after out focus send request for everything i need when chagne any value show button to save it and if no click on the save, save this data in the localstorage until click on the button and save it
+	- and also show icon for the setting when click on it show popup have dropdown to change the sound of the alter with alot of sounded [ /sounds/alert1.mp3 , /sounds/alert2.mp3 , /sounds/alert7.mp3 ]
 
-2:10 minutes cycling warm up in leg day
+	- show a big icon above the exercise to when i go to the gym click on it to start the training to know i start the workout form time to this time to know i keep in the gym how min or how hours
+	- and make pretty skeleton loading like the ui 
+	- and also i see issue bug don't get the all sets and his progress untill i click on the exercise i need get the all progress of the exercise one time and push them 
+ 
+	- and in the mobile the exercise make them in icon show beside the table or in any suitable place when click on it slide teh exercies form the right to choose the current exercise  with pretty why 
 
-3:After workout 20 minutes steady state cardio workout
+	- and also i need enhance this ui more that this make it more awesome and amaizing and add also animation and handle teh responsive
+	- and i use js not ts
 
-4:and finish your workout with 3minutes static stretching
-
-Rest time:1m :90smax
-TEMPO 1/1/1
-: ال tempo  هو سرعة ادائك لكل عده في كل مجموعه
-بمعني انك بتثبت ثانيه في نقطة البدايه وثانيه في نقطة النهايه 
-وبتتحكم في الوزن بمقادر ثانيه في الرجوع من نقطة النهايه لنقطة البدايه
-: اختيار وزن مناسب حسب العدات المطلوبه 
-: لا يتم احتساب المجاميع الغير مؤثره
-Day1:(push)
-1: machine flat chest press 3×8
-2: cable crossover press 3×15
-3: machine incline chest press 3×12
-4: 15×dumbbell lateral raises 3 
-5: machine lateral raises 3×15
-6: tricep pushdown rop 3×15
-7: tricep extension V bar 3×15
-
-Day2:(pull)
-1: machine wide grip row3×8
-2:seted row close grip 3×12
-3:lat pulldown  3×15
-4:reverse flay machine 3×15
-5:cable biceps curl 3×15
-6:wide grip barbell shurgs2×15
-7: back extension 4×20
-
-Day3:(legs)
-1: leg extension 3×20
-2: leg curl 3×20
-3: leg press3×15
-4: standing calf raises 3×20
-5: seated calf raises 3×10
-6: cable crunches 3×20
-
-
-Day4:(Push2)
-1: smith machine flat chest press 3×10
-2: dips machine 3×10
-3: smith machine incline bench press 3×10
-4: rope front raises 3×15
-5: one hand cable lateral raises 3×15
-6: one hand tricep pushdown 3×10
-7: plank 3×1m
-
-Day5:(pull2)
-1: reverse  grip seated row 3×10
-2: lat pulldown close grip 3×10
-3: one arm cable row3×10
-4: face pull 3×15
-5: bicep spider curl 3×15
-6: hammer curl 3×15
-7: Russian twist3×25
-*/
-
+	*/
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import DataTable from '@/components/dashboard/ui/DataTable';
 import { PageHeader, TabsPill, EmptyState, spring } from '@/components/dashboard/ui/UI';
-import { Dumbbell, History as HistoryIcon, Clock, X, Play, Pause, Minus, Plus, Video as VideoIcon, Images, Shuffle, Trophy, TrendingUp, Flame, Save as SaveIcon, ImageIcon, Edit3 } from 'lucide-react';
+import { Dumbbell, History as HistoryIcon, Clock, X, Play, Pause, Minus, Plus, Video as VideoIcon, Images, Shuffle, Trophy, TrendingUp, Flame, Save as SaveIcon, ImageIcon, Edit3, Headphones, Radio, Settings as SettingsIcon, Menu as MenuIcon } from 'lucide-react';
 import CheckBox from '@/components/atoms/CheckBox';
 import api from '@/utils/axios';
 import weeklyProgram from './exercises';
 
-const TIMER_FINISH_SOUND = '/sounds/alert7.mp3';
+/* =================== CONSTANTS =================== */
+const DEFAULT_SOUNDS = ['/sounds/alert1.mp3', '/sounds/alert2.mp3', '/sounds/alert3.mp3', '/sounds/alert4.mp3', '/sounds/alert5.mp3', '/sounds/alert6.mp3', '/sounds/alert7.mp3'];
+const LOCAL_KEY_BUFFER = 'mw.sets.buffer.v1';
+const LOCAL_KEY_SETTINGS = 'mw.settings.v1';
 
 /* =================== HELPERS =================== */
 const epley = (w, r) => Math.round((Number(w) || 0) * (1 + (Number(r) || 0) / 30));
 const todayISO = () => new Date().toISOString().slice(0, 10);
+const fmtVal = v => (v === null || v === undefined ? '—' : typeof v === 'string' || typeof v === 'number' ? String(v) : JSON.stringify(v));
 
 function toMMSS(seconds) {
   const s = Math.max(0, Math.round(Number(seconds) || 0));
@@ -92,26 +51,34 @@ function mmssToSeconds(str) {
   const s = Number(parts[1]) || 0;
   return m * 60 + s;
 }
-const fmtVal = v => (v === null || v === undefined ? '—' : typeof v === 'string' || typeof v === 'number' ? String(v) : JSON.stringify(v));
 
 async function fetchActivePlan(userId) {
-  const { data } = await api.get('/plans/active', { params: { userId } });
-  // if (data?.status === 'active') return data.plan;
-  return weeklyProgram;
+  // const { data } = await api.get('/plans/active', { params: { userId } });
+  const data = weeklyProgram;
+  return data?.program?.days?.length ? data : { program: { days: Object.keys(weeklyProgram).map(k => weeklyProgram[k]) } };
 }
-
 async function fetchDaySets(userId, exerciseName, date) {
   const { data } = await api.get('/prs/day', { params: { userId, exerciseName, date } });
-   return data?.records || [];
+  return data?.records || [];
 }
-
+// Try a single endpoint to fetch ALL exercises for the day; fallback to per-exercise if API not available
+async function fetchAllDaySets(userId, exerciseNames, date) {
+  try {
+    const { data } = await api.get('/prs/day/all', { params: { userId, date } });
+    // expected: { [exerciseName]: records[] }
+    if (data && typeof data === 'object') return data;
+  } catch (_) {}
+  // fallback: parallel requests
+  const entries = await Promise.all(exerciseNames.map(async name => [name, await fetchDaySets(userId, name, date)]));
+  return Object.fromEntries(entries);
+}
 async function upsertDailyPR(userId, exerciseName, date, records) {
   const { data } = await api.post('/prs', { exerciseName, date, records }, { params: { userId } });
-  return data; // returns daily record with records[]
+  return data;
 }
 async function upsertAttempt(userId, exerciseName, date, set) {
   const { data } = await api.post('/prs/attempt', { exerciseName, date, set }, { params: { userId } });
-  return data; // returns daily record with records[]
+  return data;
 }
 async function fetchOverview(userId, windowDays = 30) {
   const { data } = await api.get('/prs/stats/overview', { params: { userId, windowDays } });
@@ -126,7 +93,7 @@ async function fetchExerciseStats(userId, name, windowDays = 90) {
   };
 }
 
-/* =================== TIMER (logic) =================== */
+/* =================== TIMER HOOK =================== */
 function useCountdown() {
   const [duration, setDuration] = useState(0);
   const [remaining, setRemaining] = useState(0);
@@ -134,11 +101,7 @@ function useCountdown() {
   const [paused, setPaused] = useState(false);
   const intervalRef = useRef(null);
 
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
+  useEffect(() => () => intervalRef.current && clearInterval(intervalRef.current), []);
 
   const start = seconds => {
     const sec = Math.max(0, Math.round(Number(seconds) || 0));
@@ -158,7 +121,6 @@ function useCountdown() {
       });
     }, 1000);
   };
-
   const pause = () => {
     if (!running) return;
     setPaused(true);
@@ -184,17 +146,15 @@ function useCountdown() {
     clearInterval(intervalRef.current);
     setRemaining(0);
   };
-
   return { duration, remaining, running, paused, start, pause, resume, stop };
 }
 
-/* =================== CIRCULAR PROGRESS TIMER (UI) =================== */
+/* =================== CIRCULAR TIMER =================== */
 function CircularTimer({ duration, remaining, running, paused, onPause, onResume, onStop }) {
-  const R = 34; // radius (slightly smaller for mobile)
+  const R = 34; // radius
   const C = 2 * Math.PI * R;
   const pct = duration > 0 ? remaining / duration : 0;
   const dash = C * pct;
-
   return (
     <div className='flex items-center gap-3 p-2 sm:p-3'>
       <svg width='84' height='84' viewBox='0 0 96 96' className='shrink-0'>
@@ -204,7 +164,6 @@ function CircularTimer({ duration, remaining, running, paused, onPause, onResume
           {toMMSS(remaining)}
         </text>
       </svg>
-
       <div className='flex items-center gap-2'>
         {running && !paused && (
           <button onClick={onPause} className='px-3 py-2 text-xs rounded-lg border border-slate-200 hover:bg-slate-50 inline-flex items-center gap-1.5'>
@@ -226,100 +185,252 @@ function CircularTimer({ duration, remaining, running, paused, onPause, onResume
   );
 }
 
-/* =================== PER-EXERCISE REST TIMER =================== */
-function RestTimerCard({ initialSeconds, audioRef, onStartSound, className = '' }) {
+/* =================== REST TIMER CARD =================== */
+function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
   const { remaining, running, paused, start, pause, resume, stop, duration } = useCountdown();
-  const [seconds, setSeconds] = useState(initialSeconds || 90);
+  const [seconds, setSeconds] = useState(Number(initialSeconds || 0) || 90);
   const [showInput, setShowInput] = useState(false);
+
   const inputRef = useRef(null);
+  const holdRef = useRef(null);
 
-  useEffect(() => {
-    setSeconds(Number(initialSeconds || 0) || 90);
-  }, [initialSeconds]);
+  useEffect(() => setSeconds(Number(initialSeconds || 0) || 90), [initialSeconds]);
 
-  // When countdown finishes, play sound for 10s (loop during that time)
+  // Play alert when finished
   useEffect(() => {
     if (!running && duration > 0 && remaining === 0) {
-      const el = audioRef?.current;
-      if (el) {
-        try {
-          el.currentTime = 0;
-          el.loop = true;
-          el.play();
-          onStartSound?.(true);
-          const t = setTimeout(() => {
-            try {
-              el.pause();
-              el.currentTime = 0;
-              el.loop = false;
-            } catch {}
-            onStartSound?.(false);
-          }, 30000); // 10s
-          return () => clearTimeout(t);
-        } catch {}
-      }
+      const el = audioEl?.current;
+      if (!el) return;
+      try {
+        el.currentTime = 0;
+        el.loop = true;
+        el.play();
+        const t = setTimeout(() => {
+          try {
+            el.pause();
+            el.currentTime = 0;
+            el.loop = false;
+          } catch {}
+        }, 30000);
+        return () => clearTimeout(t);
+      } catch {}
     }
-  }, [running, remaining, duration, audioRef, onStartSound]);
+  }, [running, remaining, duration, audioEl]);
 
-  const dec = () => setSeconds(s => Math.max(0, s - 15));
-  const inc = () => setSeconds(s => s + 15);
-  const handleStart = () => start(seconds);
-  const toggleInput = () => {
+  const haptic = (ms = 10) => {
+    if (typeof window !== 'undefined' && 'vibrate' in navigator)
+      try {
+        navigator.vibrate(ms);
+      } catch {}
+  };
+
+  const step = delta => setSeconds(s => Math.max(0, s + delta));
+  const dec = () => {
+    step(-15);
+    haptic();
+  };
+  const inc = () => {
+    step(+15);
+    haptic();
+  };
+
+  // long-press for faster ramping
+  const startHold = delta => {
+    step(delta);
+    holdRef.current = setInterval(() => step(delta), 150);
+  };
+  const endHold = () => clearInterval(holdRef.current);
+
+  const handleStart = () => {
+    start(seconds);
+    haptic(20);
+  };
+  const toggleEdit = () => {
     setShowInput(v => !v);
     setTimeout(() => inputRef.current?.focus(), 0);
   };
   const commitInput = e => {
-    const v = mmssToSeconds(e.target.value);
-    setSeconds(v);
+    setSeconds(mmssToSeconds(e.target.value));
     setShowInput(false);
   };
 
+  // Compact circular timer (44px)
+  const R = 17;
+  const C = 2 * Math.PI * R;
+  const pct = duration > 0 ? remaining / duration : 0;
+  const dash = C * pct;
+
   return (
-    <div className={`px-2 pt-2 pb-3 ${className}`}>
-      <div className='flex items-center flex-wrap gap-2 rounded-xl border border-slate-200 p-2.5 bg-white'>
-        <div className='text-sm font-semibold mr-1'>Rest Timer</div>
+    <div className={`px-2 pt-2 pb-2 ${className}`}>
+      <div className='flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-2'>
+        {/* Left: tiny ring & label */}
+        <button
+          onClick={() => {
+            if (running) {
+              stop();
+              haptic(20);
+            }
+          }}
+          className='relative shrink-0 grid place-items-center rounded-full'
+          title={running ? 'Stop' : 'Timer'}
+          style={{ width: 44, height: 44 }}>
+          <svg width='44' height='44' viewBox='0 0 44 44'>
+            <circle cx='22' cy='22' r={R} stroke='#e5e7eb' strokeWidth='6' fill='none' />
+            <circle cx='22' cy='22' r={R} stroke='currentColor' strokeWidth='6' fill='none' strokeDasharray={C} strokeDashoffset={C - dash} className={`transition-[stroke-dashoffset] duration-300 ease-linear ${running ? 'text-indigo-600' : 'text-slate-300'}`} transform='rotate(-90 22 22)' />
+          </svg>
+          <span className='absolute text-[10px] font-semibold text-slate-700 tabular-nums'>{toMMSS(running ? remaining : seconds)}</span>
+        </button>
 
-        {!running ? (
-          <>
-            <button onClick={handleStart} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50' title='Start'>
-              <Clock size={14} /> {toMMSS(seconds)}
-            </button>
+        {/* Middle: controls */}
+        <div className='flex-1 min-w-0'>
+          <div className='flex items-center gap-1.5'>
+            {!running ? (
+              <button onClick={handleStart} className='inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 px-2.5 py-1 text-xs hover:bg-indigo-100' title='Start'>
+                <Clock size={12} /> Start
+              </button>
+            ) : paused ? (
+              <>
+                <button
+                  onClick={() => {
+                    resume();
+                    haptic();
+                  }}
+                  className='inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 px-2.5 py-1 text-xs hover:bg-emerald-100'
+                  title='Resume'>
+                  <Play size={12} /> Resume
+                </button>
+                <button
+                  onClick={() => {
+                    stop();
+                    haptic(20);
+                  }}
+                  className='inline-flex items-center gap-1 rounded-lg border border-red-200 text-red-600 px-2.5 py-1 text-xs hover:bg-red-50'
+                  title='Stop'>
+                  <X size={12} /> Stop
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => {
+                    pause();
+                    haptic();
+                  }}
+                  className='inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs hover:bg-slate-50'
+                  title='Pause'>
+                  <Pause size={12} /> Pause
+                </button>
+                <button
+                  onClick={() => {
+                    stop();
+                    haptic(20);
+                  }}
+                  className='inline-flex items-center gap-1 rounded-lg border border-red-200 text-red-600 px-2.5 py-1 text-xs hover:bg-red-50'
+                  title='Stop'>
+                  <X size={12} /> Stop
+                </button>
+              </>
+            )}
 
-            <div className='inline-flex rounded-lg overflow-hidden border border-slate-200'>
-              <button onClick={dec} className='px-2 py-2 text-xs hover:bg-slate-50' title='-15s'>
-                <Minus size={14} />
-              </button>
-              <button onClick={inc} className='px-2 py-2 text-xs hover:bg-slate-50 border-l border-slate-200' title='+15s'>
-                <Plus size={14} />
-              </button>
-              <button onClick={toggleInput} className='px-2 py-2 text-xs hover:bg-slate-50 border-l border-slate-200' title='Edit time'>
-                <Edit3 size={14} />
-              </button>
-            </div>
-
-            {showInput && (
-              <div className='relative'>
-                <input ref={inputRef} type='text' defaultValue={toMMSS(seconds)} onBlur={commitInput} onKeyDown={e => e.key === 'Enter' && commitInput(e)} className='h-9 w-24 rounded-lg border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition tabular-nums' placeholder='mm:ss' />
-                <span className='absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 select-none'>mm:ss</span>
+            {/* +/- tiny controls */}
+            {!running && (
+              <div className='ml-auto inline-flex rounded-lg overflow-hidden border border-slate-200'>
+                <button onMouseDown={() => startHold(-5)} onMouseUp={endHold} onMouseLeave={endHold} onTouchStart={() => startHold(-5)} onTouchEnd={endHold} onClick={dec} className='px-2 py-1.5 text-xs hover:bg-slate-50' title='-15s (hold for -5/s)'>
+                  <Minus size={12} />
+                </button>
+                <button onMouseDown={() => startHold(+5)} onMouseUp={endHold} onMouseLeave={endHold} onTouchStart={() => startHold(+5)} onTouchEnd={endHold} onClick={inc} className='px-2 py-1.5 text-xs hover:bg-slate-50 border-l border-slate-200' title='+15s (hold for +5/s)'>
+                  <Plus size={12} />
+                </button>
+                <button onClick={toggleEdit} className='px-2 py-1.5 text-xs hover:bg-slate-50 border-l border-slate-200' title='Edit mm:ss'>
+                  <Edit3 size={12} />
+                </button>
               </div>
             )}
-          </>
-        ) : (
-          <CircularTimer duration={duration} remaining={remaining} running={running} paused={paused} onPause={pause} onResume={resume} onStop={stop} />
-        )}
+          </div>
+
+          {/* Presets (only when idle) */}
+          {!running && (
+            <div className='mt-1 flex items-center gap-1.5'>
+              {[45, 60, 90, 120].map(p => (
+                <button
+                  key={p}
+                  onClick={() => {
+                    setSeconds(p);
+                    haptic();
+                  }}
+                  className={`px-2 py-0.5 rounded-md border text-[10px] ${seconds === p ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                  title={`${p}s`}>
+                  {p}s
+                </button>
+              ))}
+
+              {showInput && (
+                <div className='relative ml-auto'>
+                  <input ref={inputRef} type='text' defaultValue={toMMSS(seconds)} onBlur={commitInput} onKeyDown={e => e.key === 'Enter' && commitInput(e)} className='h-7 w-[76px] rounded-md border border-slate-200 bg-white px-2 text-[12px] text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 tabular-nums' placeholder='mm:ss' />
+                  <span className='absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 select-none'>mm:ss</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-/* =================== PAGE =================== */
+/* =================== SETTINGS POPUP (alert sound picker) =================== */
+function SettingsPopup({ open, onClose, currentSound, onChange, sounds = DEFAULT_SOUNDS }) {
+  const [sel, setSel] = useState(currentSound || sounds[0]);
+  useEffect(() => setSel(currentSound || sounds[0]), [currentSound]);
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className='fixed inset-0 z-[80] bg-black/30'>
+          <motion.div initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }} className='mx-auto mt-24 w-[92%] max-w-md rounded-2xl border border-slate-200 bg-white shadow-xl'>
+            <div className='p-3 border-b border-slate-100 flex items-center justify-between'>
+              <div className='font-semibold flex items-center gap-2'>
+                <SettingsIcon size={18} /> Settings
+              </div>
+              <button onClick={onClose} className='p-2 rounded-lg hover:bg-slate-100'>
+                <X size={16} />
+              </button>
+            </div>
+            <div className='p-4 space-y-3'>
+              <div className='text-sm font-medium'>Alert sound</div>
+              <select value={sel} onChange={e => setSel(e.target.value)} className='w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm'>
+                {sounds.map((s, i) => (
+                  <option key={i} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <div className='flex items-center justify-end gap-2 pt-2'>
+                <button onClick={onClose} className='px-3 py-1.5 rounded-lg border border-slate-200 text-sm hover:bg-slate-50'>
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    onChange(sel);
+                    onClose();
+                  }}
+                  className='px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-sm hover:bg-indigo-100'>
+                  Save
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* =================== MAIN PAGE =================== */
 export default function MyWorkoutsPage() {
   const USER_ID = '36eae674-a063-4287-b378-e3cab0364b91';
 
   const [tab, setTab] = useState('workout');
   const [loading, setLoading] = useState(true);
-
-  // backend plan + UI selections
   const [plan, setPlan] = useState(null);
   const [selectedDay, setSelectedDay] = useState('monday');
   const [workout, setWorkout] = useState(null);
@@ -328,26 +439,42 @@ export default function MyWorkoutsPage() {
   // stats
   const [history, setHistory] = useState([]);
   const [prs, setPRs] = useState({});
-
   const [overview, setOverview] = useState(null);
   const [exercisePick, setExercisePick] = useState('Bench Press');
   const [series, setSeries] = useState([]);
   const [topSets, setTopSets] = useState({ byWeight: [], byReps: [], byE1rm: [] });
   const [attempts, setAttempts] = useState([]);
 
-  // audio
+  // audio + settings
   const audioRef = useRef(null);
-  const [isPlayingSound, setIsPlayingSound] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [alertSound, setAlertSound] = useState(DEFAULT_SOUNDS[2]);
+
+  // audio hub
+  const [audioOpen, setAudioOpen] = useState(false);
+  const podcasts = [
+    { title: 'Sunnah Bytes', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+    { title: 'Health & Resilience', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
+  ];
 
   // media view state
   const [activeMedia, setActiveMedia] = useState('image');
 
+  // local buffer control
+  const [unsaved, setUnsaved] = useState(false);
+
+  // mobile drawer
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // session timer ("Start Workout" big icon)
+  const [sessionStart, setSessionStart] = useState(null);
+  const elapsed = useElapsed(sessionStart);
+
   // last-saved values per set
   const lastSavedRef = useRef(new Map());
 
-  // Map JS weekday -> your IDs (Cairo local): 0 Sun...6 Sat
+  // weekday mapping
   const jsDayToId = d => ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][d] || 'monday';
-
   function pickTodayId(availableIds) {
     const todayId = jsDayToId(new Date().getDay());
     if (availableIds.includes(todayId)) return todayId;
@@ -355,166 +482,47 @@ export default function MyWorkoutsPage() {
     return pref.find(x => availableIds.includes(x)) || availableIds[0] || 'monday';
   }
 
-  async function hydrateCurrentExerciseFromServer() {
-    if (!currentExercise) return;
-    const date = todayISO();
-    const records = await fetchDaySets(USER_ID, currentExercise.name, date);
-
-    setWorkout(w => {
-      // ensure we have enough rows to show server sets
-      const exRows = w.sets.filter(s => s.exId === currentExId);
-      const toAdd = Math.max(0, records.length - exRows.length);
-      let nextSets = [...w.sets];
-
-      for (let i = 0; i < toAdd; i++) {
-        const idx = exRows.length + i + 1;
-        nextSets.push({
-          id: `${currentExId}-set${idx}`,
-          exId: currentExId,
-          exName: currentExercise.name,
-          set: idx,
-          targetReps: currentExercise.targetReps,
-          weight: 0,
-          reps: 0,
-          effort: null,
-          done: false,
-          pr: false,
-          restTime: Number.isFinite(currentExercise?.rest ?? currentExercise?.restSeconds) ? currentExercise?.rest ?? currentExercise?.restSeconds : 90,
-        });
-      }
-
-      // merge by setNumber
-      nextSets = nextSets.map(s => {
-        if (s.exId !== currentExId) return s;
-        const r = records.find(rr => Number(rr.setNumber) === Number(s.set));
-        if (!r) return s;
-        return {
-          ...s,
-          serverId: r.id,
-          weight: Number(r.weight) || 0,
-          reps: Number(r.reps) || 0,
-          done: !!r.done,
-          pr: !!r.isPr,
-        };
-      });
-
-      // mirror last-saved for onBlur auto-save
-      const map = new Map(lastSavedRef.current);
-      nextSets.filter(s => s.exId === currentExId).forEach(s => map.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
-      lastSavedRef.current = map;
-
-      return { ...w, sets: nextSets };
-    });
-  }
-
-  useEffect(() => {
-    hydrateCurrentExerciseFromServer(currentExId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentExId, selectedDay]);
-
-  /* ---------- INIT: Load active plan from backend ---------- */
+  // ===== INIT: plan + session + prefetch ALL progress =====
   useEffect(() => {
     (async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        let p = null;
-        try {
-          p = await fetchActivePlan(USER_ID);
-        } catch (e) {
-          console.error('Active plan fetch failed; falling back to seed', e);
-        }
-        // Fallback to local seed if backend empty
-        if (!p || !p.program || !p.program.days?.length) {
-          p = { program: { days: Object.keys(weeklyProgram).map(k => weeklyProgram[k]) } };
-        }
+        const p = await fetchActivePlan(USER_ID);
         setPlan(p);
-
-        // choose initial day = today if exists
         const serverDays = p?.program?.days || [];
         const byId = Object.fromEntries(serverDays.map(d => [d.id, d]));
         const allIds = serverDays.map(d => d.id);
         const initialDayId = pickTodayId(allIds.length ? allIds : Object.keys(weeklyProgram));
         setSelectedDay(initialDayId);
-
         const dayProgram = byId[initialDayId] || weeklyProgram[initialDayId] || { id: initialDayId, name: 'Workout', exercises: [] };
-
         const session = createSessionFromDay(dayProgram);
         setWorkout(session);
         setCurrentExId(session.exercises[0]?.id);
         setActiveMedia('image');
-
         // init lastSaved mirror
         const map = new Map();
         session.sets.forEach(s => map.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
         lastSavedRef.current = map;
+        // settings from localStorage
+        const s = JSON.parse(localStorage.getItem(LOCAL_KEY_SETTINGS) || 'null');
+        if (s?.alertSound) setAlertSound(s.alertSound);
+        // prefetch ALL exercises progress for today (bug fix)
+        const exNames = (dayProgram.exercises || []).map(e => e.name);
+        const recordsByEx = await fetchAllDaySets(USER_ID, exNames, todayISO());
+        applyServerRecords(session, recordsByEx, setWorkout, lastSavedRef);
       } finally {
         setLoading(false);
       }
     })();
-  }, []); // eslint-disable-line
+  }, []);
 
-  /* ---------- Stats loaders ---------- */
-  async function loadOverview(windowDays = 30) {
-    const data = await fetchOverview(USER_ID, windowDays);
-    setOverview(data || null);
-    setHistory(Array.isArray(data?.history) ? data.history : []);
-  }
-  async function loadExerciseStats(name, windowDays = 90) {
-    const { series, topSets, attempts } = await fetchExerciseStats(USER_ID, name, windowDays);
-    setSeries(series);
-    setTopSets(topSets);
-    setAttempts(attempts);
-  }
-
+  // keep audio src in sync with settings
   useEffect(() => {
-    if (tab !== 'history') return;
-    (async () => {
-      try {
-        await loadOverview(30);
-        await loadExerciseStats(exercisePick, 90);
-      } catch (err) {
-        console.error('Stats load failed', err);
-      }
-    })();
-  }, [tab]); // eslint-disable-line
+    const el = audioRef.current;
+    if (el) el.src = alertSound;
+  }, [alertSound]);
 
-  useEffect(() => {
-    if (tab !== 'history') return;
-    (async () => {
-      try {
-        await loadExerciseStats(exercisePick, 90);
-      } catch (err) {
-        console.error('Exercise stats load failed', err);
-      }
-    })();
-  }, [exercisePick, tab]);
-
-  /* ---------- Utilities ---------- */
-  const setsFor = exId => workout?.sets.filter(s => s.exId === exId) || [];
-
-  function createSessionFromDay(dayProgram) {
-    return {
-      ...dayProgram,
-      startedAt: null,
-      sets: (dayProgram.exercises || []).flatMap(ex =>
-        Array.from({ length: 2 }).map((_, i) => ({
-          id: `${ex.id}-set${i + 1}`,
-          exId: ex.id,
-          exName: ex.name,
-          set: i + 1,
-          targetReps: ex.targetReps,
-          weight: 0,
-          reps: 0,
-          effort: null,
-          done: false,
-          pr: false,
-          restTime: Number.isFinite(ex.rest ?? ex.restSeconds) ? ex.rest ?? ex.restSeconds : 90,
-        })),
-      ),
-      exercises: (dayProgram.exercises || []).map(e => ({ ...e })),
-    };
-  }
-
+  // change day
   function changeDay(dayId) {
     setSelectedDay(dayId);
     const byId = Object.fromEntries((plan?.program?.days || []).map(d => [d.id, d]));
@@ -523,13 +531,20 @@ export default function MyWorkoutsPage() {
     setWorkout(session);
     setCurrentExId(session.exercises[0]?.id);
     setActiveMedia('image');
-
     const map = new Map();
     session.sets.forEach(s => map.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
     lastSavedRef.current = map;
+    // also prefetch all records for that day
+    (async () => {
+      try {
+        const exNames = (dayProgram.exercises || []).map(e => e.name);
+        const recordsByEx = await fetchAllDaySets(USER_ID, exNames, todayISO());
+        applyServerRecords(session, recordsByEx, setWorkout, lastSavedRef);
+      } catch {}
+    })();
   }
 
-  // Add and remove set for current exercise
+  // add/remove set
   function addSetForCurrentExercise() {
     setWorkout(w => {
       const exSets = w.sets.filter(s => s.exId === currentExId);
@@ -550,21 +565,22 @@ export default function MyWorkoutsPage() {
         restTime: Number.isFinite(ex?.rest ?? ex?.restSeconds) ? ex?.rest ?? ex?.restSeconds : base.restTime,
       };
       const next = { ...w, sets: [...w.sets, newSet] };
-
+      // track unsaved buffer
+      markUnsaved(next, setUnsaved);
+      // mirror base
       const map = new Map(lastSavedRef.current);
       map.set(newSet.id, { weight: 0, reps: 0, done: false });
       lastSavedRef.current = map;
       return next;
     });
   }
-
   function removeSetFromCurrentExercise() {
     setWorkout(w => {
       const exSets = w.sets.filter(s => s.exId === currentExId);
-      if (exSets.length <= 1) return w; // keep at least one
+      if (exSets.length <= 1) return w;
       const lastSetId = exSets[exSets.length - 1].id;
       const next = { ...w, sets: w.sets.filter(s => s.id !== lastSetId) };
-
+      markUnsaved(next, setUnsaved);
       const map = new Map(lastSavedRef.current);
       map.delete(lastSetId);
       lastSavedRef.current = map;
@@ -572,7 +588,7 @@ export default function MyWorkoutsPage() {
     });
   }
 
-  // Mark done toggling + PR detection (local)
+  // mark done + PR compute (local)
   function toggleDone(setId) {
     setWorkout(w => {
       const next = { ...w, sets: w.sets.map(s => (s.id === setId ? { ...s, done: !s.done } : s)) };
@@ -589,178 +605,147 @@ export default function MyWorkoutsPage() {
           return prev;
         });
       }
+      markUnsaved(next, setUnsaved);
       return next;
     });
   }
 
-  // ====== BACKEND INTEGRATION ======
-  const currentExercise = workout?.exercises.find(e => e.id === currentExId);
-  const currentSets = setsFor(currentExId);
-
+  // save: day or single set
   function buildDailyPRPayload(exName) {
-    const day = todayISO();
-    const records = setsFor(currentExId)
-      .filter(s => s.exName === exName)
-      .map(s => ({
-        id: s.serverId,
-        weight: Number(s.weight) || 0,
-        reps: Number(s.reps) || 0,
-        done: !!s.done,
-        setNumber: Number(s.set) || 1,
-      }));
-    return { exerciseName: exName, date: day, records };
+    const records = (workout?.sets || []).filter(s => s.exName === exName).map(s => ({ id: s.serverId, weight: Number(s.weight) || 0, reps: Number(s.reps) || 0, done: !!s.done, setNumber: Number(s.set) || 1 }));
+    return { exerciseName: exName, date: todayISO(), records };
   }
 
   async function saveDayToServer() {
-    if (!currentExercise) return;
-    const payload = buildDailyPRPayload(currentExercise.name);
+    const ex = workout?.exercises.find(e => e.id === currentExId);
+    if (!ex) return;
+    const payload = buildDailyPRPayload(ex.name);
     try {
       const data = await upsertDailyPR(USER_ID, payload.exerciseName, payload.date, payload.records);
       const serverRecords = data?.records || [];
       setWorkout(w => ({
         ...w,
-        sets: w.sets.map(s => {
-          if (s.exId !== currentExId) return s;
-          const match = serverRecords.find(r => Number(r.setNumber) === Number(s.set));
-          return match ? { ...s, serverId: match.id } : s;
-        }),
+        sets: w.sets.map(s => (s.exId === currentExId ? (serverRecords.find(r => Number(r.setNumber) === Number(s.set)) ? { ...s, serverId: serverRecords.find(r => Number(r.setNumber) === Number(s.set)).id } : s) : s)),
       }));
-      await loadOverview(30);
-      await loadExerciseStats(currentExercise.name, 90);
-
-      const map = new Map(lastSavedRef.current);
-      setsFor(currentExId).forEach(s => map.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
-      lastSavedRef.current = map;
-      // optional toast
+      await Promise.all([loadOverview(30), loadExerciseStats(ex.name, 90)]);
+      // clear buffer after successful save
+      flushLocalBufferForExercise(ex.name);
+      setUnsaved(false);
     } catch (err) {
       console.error('Save day failed', err);
-    }
-  }
-
-  async function saveSingleSet(setObj) {
-    if (!currentExercise) return;
-    const payload = {
-      exerciseName: currentExercise.name,
-      date: todayISO(),
-      set: {
-        id: setObj.serverId,
-        weight: Number(setObj.weight) || 0,
-        reps: Number(setObj.reps) || 0,
-        done: !!setObj.done,
-        setNumber: Number(setObj.set) || 1,
-      },
-    };
-    try {
-      const data = await upsertAttempt(USER_ID, payload.exerciseName, payload.date, payload.set);
-      const serverRecords = data?.records || [];
-      setWorkout(w => ({
-        ...w,
-        sets: w.sets.map(s => {
-          if (s.id !== setObj.id) return s;
-          const m = serverRecords.find(r => Number(r.setNumber) === Number(setObj.set));
-          return m ? { ...s, serverId: m.id } : s;
-        }),
-      }));
-      await loadOverview(30);
-      await loadExerciseStats(currentExercise.name, 90);
-
-      const nextBase = new Map(lastSavedRef.current);
-      nextBase.set(setObj.id, {
-        weight: Number(setObj.weight) || 0,
-        reps: Number(setObj.reps) || 0,
-        done: !!setObj.done,
-      });
-      lastSavedRef.current = nextBase;
-    } catch (err) {
-      console.error('Save set failed', err);
+      // keep buffer in localStorage
+      persistLocalBuffer(workout);
     }
   }
 
   async function maybeSaveSetOnBlur(setObj) {
+    // NO auto-save; just detect changes to show Save button & buffer locally
     const prev = lastSavedRef.current.get(setObj.id) || { weight: 0, reps: 0, done: false };
     const changed = Number(prev.weight) !== Number(setObj.weight) || Number(prev.reps) !== Number(setObj.reps) || Boolean(prev.done) !== Boolean(setObj.done);
-    if (!changed) return;
-    await saveSingleSet(setObj);
+    if (changed) {
+      setUnsaved(true);
+      persistLocalBuffer({ ...workout });
+    }
   }
 
-  // Get day tabs with current day as active
-  const weekOrder = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday'];
-  const dayTabs = weekOrder
-    .filter(d => (plan?.program?.days || []).some(x => x.id === d) || weeklyProgram[d])
-    .map(d => ({
-      key: d,
-      label: d,
-      name: (plan?.program?.days || []).find(x => x.id === d)?.name || weeklyProgram[d].name,
-    }));
+  // stats loaders
+  async function loadOverview(windowDays = 30) {
+    const data = await fetchOverview(USER_ID, windowDays);
+    setOverview(data || null);
+    setHistory(Array.isArray(data?.history) ? data.history : []);
+  }
+  async function loadExerciseStats(name, windowDays = 90) {
+    const { series, topSets, attempts } = await fetchExerciseStats(USER_ID, name, windowDays);
+    setSeries(series);
+    setTopSets(topSets);
+    setAttempts(attempts);
+  }
 
-  // Set initial day to current day if needed
-  useEffect(() => {
-    if (dayTabs.length > 0 && !selectedDay) {
-      const todayId = jsDayToId(new Date().getDay());
-      const todayTab = dayTabs.find(tab => tab.key === todayId);
-      if (todayTab) {
-        setSelectedDay(todayId);
-        changeDay(todayId);
-      } else if (dayTabs.length > 0) {
-        setSelectedDay(dayTabs[0].key);
-        changeDay(dayTabs[0].key);
-      }
-    }
-  }, [dayTabs]); // eslint-disable-line
-
-  // Render helpers
+  // helpers
   const hasExercises = !!workout?.exercises?.length;
+  const currentExercise = workout?.exercises.find(e => e.id === currentExId);
+  const currentSets = (workout?.sets || []).filter(s => s.exId === currentExId);
 
-  /* =================== RENDER =================== */
+  const weekOrder = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday'];
+  const dayTabs = weekOrder.filter(d => (plan?.program?.days || []).some(x => x.id === d) || weeklyProgram[d]).map(d => ({ key: d, label: d, name: (plan?.program?.days || []).find(x => x.id === d)?.name || weeklyProgram[d].name }));
+
   return (
     <div className='space-y-5 sm:space-y-6'>
-      <audio ref={audioRef} src={TIMER_FINISH_SOUND} preload='auto' />
+      {/* alert sound audio */}
+      <audio ref={audioRef} src={alertSound} preload='auto' />
 
       <div className='flex items-center justify-between flex-wrap gap-2 sm:gap-3'>
-        <PageHeader icon={Dumbbell} title='My Workouts' subtitle='Log sets and track PRs automatically.' />
-        <TabsPill
-          id='my-workouts-tabs'
-          tabs={[
-            { key: 'workout', label: 'Workout', icon: Dumbbell },
-            { key: 'history', label: 'History', icon: HistoryIcon },
-          ]}
-          active={tab}
-          onChange={k => setTab(k)}
-        />
+        <PageHeader className='max-md:!hidden' icon={Dumbbell} title='My Workouts' subtitle='Log sets and track PRs automatically.' />
+        <div className='flex items-center gap-2 w-full'>
+          <button onClick={() => setAudioOpen(v => !v)} className=' px-2 inline-flex items-center gap-2 rounded-xl   bg-indigo-500 cursor-pointer text-white h-[37px] max-md:w-[37px]  justify-center text-sm font-medium  shadow hover:bg-indigo-700 active:scale-95 transition'>
+            <Headphones size={16} /> <span className='max-md:hidden'> Listen </span>
+          </button>
+
+          {/* Settings button */}
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className='cursor-pointer px-2 inline-flex items-center gap-2 rounded-xl 
+                 bg-slate-100 text-slate-800 h-[37px] max-md:w-[37px]  justify-center text-sm font-medium
+                 shadow hover:bg-slate-200 active:scale-95 transition'>
+            <SettingsIcon size={16} /> <span className='max-md:hidden'> Settings </span>
+          </button>
+
+          <button onClick={() => setTab('workout')} className={`md:hidden cursor-pointer px-2 inline-flex items-center gap-2 rounded-xl bg-slate-100 text-slate-800 h-[37px] max-md:w-[37px]  justify-center text-sm font-medium shadow hover:bg-slate-200 active:scale-95 transition ${tab == 'workout' && 'bg-main'} `}>
+            <Dumbbell size={16} />
+          </button>
+          <button onClick={() => setTab('history')} className={`md:hidden cursor-pointer px-2 inline-flex items-center gap-2 rounded-xl bg-slate-100 text-slate-800 h-[37px] max-md:w-[37px]  justify-center text-sm font-medium shadow hover:bg-slate-200 active:scale-95 transition ${tab == 'history' && 'bg-main'} `}>
+            <HistoryIcon size={16} />
+          </button>
+
+          <TabsPill
+            className={'max-md:hidden'}
+            id='my-workouts-tabs'
+            tabs={[
+              { key: 'workout', label: 'Workout', icon: Dumbbell },
+              { key: 'history', label: 'History', icon: HistoryIcon },
+            ]}
+            active={tab}
+            onChange={k => setTab(k)}
+          />
+
+          <div className='flex items-center gap-2 flex-1 w-full justify-end  '>
+            <button onClick={() => setDrawerOpen(true)} className='md:hidden inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50'>
+              <MenuIcon size={16} /> Exercises
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* ===== Days bullets ===== */}
+      <AudioHubInline open={audioOpen} onClose={() => setAudioOpen(false)} podcasts={podcasts} />
+
+      {/* top bar: day selector + start workout big icon + session time */}
       {tab === 'workout' && (
-        <div className='rounded-2xl border border-slate-200 bg-white p-2.5 sm:p-3'>
+        <div className='rounded-2xl sm:border sm:border-slate-200 sm:bg-white  sm:p-3'>
           <div className='flex items-center justify-between gap-2'>
             <div className='flex-1'>
-              <TabsPill id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={changeDay} />
-            </div>
-            <div className='hidden md:block text-xs text-slate-500'>
-              {selectedDay.charAt(0).toUpperCase() + selectedDay.slice(1)} — {(plan?.program?.days || []).find(x => x.id === selectedDay)?.name || weeklyProgram[selectedDay]?.name || ''}
+              <TabsPill className={'!rounded-xl'} slice={3} id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={changeDay} />
             </div>
           </div>
         </div>
       )}
 
-      {/* ===== WORKOUT ===== */}
+      {/* WORKOUT */}
       {tab === 'workout' && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
           {loading ? (
-            <div className='space-y-2'>
+            <div className='space-y-3'>
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className='h-14 rounded-xl bg-slate-100 animate-pulse' />
+                <div key={i} className='h-16 rounded-2xl bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 animate-pulse' />
               ))}
             </div>
           ) : (
             <div className='space-y-5 sm:space-y-6'>
-              <div className='rounded-2xl border border-slate-200 bg-white p-2 sm:p-4'>
+              <div className='rounded-2xl md:border md:border-slate-200 bg-white md:p-2 sm:p-4'>
                 {workout && (
                   <div className='flex flex-col lg:flex-row gap-4'>
                     {/* LEFT */}
                     <div className='w-full lg:flex-1 min-w-0'>
                       <div className='rounded-xl border border-slate-200 bg-white overflow-hidden'>
-                        {/* If no exercises for the day */}
                         {!hasExercises && (
                           <div className='p-6'>
                             <div className='rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center'>
@@ -772,14 +757,11 @@ export default function MyWorkoutsPage() {
                             </div>
                           </div>
                         )}
-
-                        {/* If exercises exist */}
                         {hasExercises && (
                           <>
-                            {/* Banner media (switchable) */}
-                            <div className=' w-full bg-slate-900 grid place-items-center overflow-hidden shadow-lg relative rounded-[10px_10px_0_0]'>
-                              {currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise.video ? <video key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} controls muted className='w-fit h-fit object-contain bg-black' /> : <img key={currentExercise?.id + '-image'} src={currentExercise?.img} alt={currentExercise?.name || 'Exercise'} className='w-full h-full object-cover' />}
-                              {/* Simple media toggle pill */}
+                            {/* Media area: fixed height 400px, object-contain videos, inline playback */}
+                            <div className='w-full bg-black relative rounded-[10px_10px_0_0] overflow-hidden' style={{ height: 300 }}>
+                              {currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? <InlineVideo key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} /> : <img key={currentExercise?.id + '-image'} src={currentExercise?.img} alt={currentExercise?.name || 'Exercise'} className='w-full h-full object-contain bg-white ' />}
                               <div className='absolute bottom-2 right-2 flex items-center gap-2 bg-black/40 backdrop-blur px-2 py-1 rounded-lg'>
                                 <button onClick={() => setActiveMedia('image')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'image' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show image'>
                                   <ImageIcon size={14} />
@@ -788,18 +770,18 @@ export default function MyWorkoutsPage() {
                                   <VideoIcon size={14} />
                                 </button>
                                 {currentExercise?.video2 && (
-                                  <button onClick={() => setActiveMedia('video2')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'video2' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show video' disabled={!currentExercise?.video2}>
+                                  <button onClick={() => setActiveMedia('video2')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'video2' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show video 2' disabled={!currentExercise?.video2}>
                                     <VideoIcon size={14} />
                                   </button>
                                 )}
                               </div>
                             </div>
 
-                            {/* Per-exercise rest timer ONLY (no global settings) */}
-                            <RestTimerCard initialSeconds={Number.isFinite(currentExercise?.restSeconds) ? currentExercise?.restSeconds : Number.isFinite(currentExercise?.rest) ? currentExercise?.rest : 90} audioRef={audioRef} onStartSound={setIsPlayingSound} className='mt-1' />
+                            {/* Rest timer */}
+                            <RestTimerCard initialSeconds={Number.isFinite(currentExercise?.restSeconds) ? currentExercise?.restSeconds : Number.isFinite(currentExercise?.rest) ? currentExercise?.rest : 90} audioEl={audioRef} className='mt-1' />
 
                             {/* SETS TABLE */}
-                            <div className='lg:mx-2 mb-4 border border-slate-200 rounded-lg overflow-hidden'>
+                            <div className='max-md:mb-2 mx-2 md:mb-4 border border-slate-200 rounded-lg overflow-hidden'>
                               <div className='overflow-x-auto'>
                                 <table className='w-full text-sm'>
                                   <thead className='bg-slate-50/80 backdrop-blur sticky top-0 z-10'>
@@ -810,7 +792,6 @@ export default function MyWorkoutsPage() {
                                       <th className='py-2.5 px-3 font-semibold'>Done</th>
                                     </tr>
                                   </thead>
-
                                   <tbody className='divide-y divide-slate-100'>
                                     {currentSets.map((s, i) => (
                                       <tr key={s.id} className={`hover:bg-indigo-50/40 transition-colors ${i % 2 === 1 ? 'bg-slate-50/30' : 'bg-white'}`}>
@@ -818,46 +799,18 @@ export default function MyWorkoutsPage() {
                                           <span className='inline-flex h-6 min-w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700 font-medium'>{s.set}</span>
                                         </td>
                                         <td className='py-2.5 px-3'>
-                                          <input
-                                            type='number'
-                                            min={0}
-                                            value={s.weight}
-                                            onChange={e =>
-                                              setWorkout(w => ({
-                                                ...w,
-                                                sets: w.sets.map(x => (x.id === s.id ? { ...x, weight: +e.target.value } : x)),
-                                              }))
-                                            }
-                                            onBlur={() => maybeSaveSetOnBlur({ ...s, weight: Number(s.weight) })}
-                                            className='h-9 w-[72px] !text-[16px] rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition'
-                                            placeholder='0'
-                                            inputMode='numeric'
-                                          />
+                                          <input type='string' value={s.weight} onChange={e => setWorkout(w => ({ ...w, sets: w.sets.map(x => (x.id === s.id ? { ...x, weight: +e.target.value } : x)) }))} onBlur={() => maybeSaveSetOnBlur({ ...s, weight: Number(s.weight) })} className='h-9 w-[72px] !text-[16px] rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition' placeholder='0' inputMode='numeric' />
                                         </td>
                                         <td className='py-2.5 px-3'>
-                                          <input
-                                            type='number'
-                                            min={0}
-                                            value={s.reps}
-                                            onChange={e =>
-                                              setWorkout(w => ({
-                                                ...w,
-                                                sets: w.sets.map(x => (x.id === s.id ? { ...x, reps: +e.target.value } : x)),
-                                              }))
-                                            }
-                                            onBlur={() => maybeSaveSetOnBlur({ ...s, reps: Number(s.reps) })}
-                                            className='h-9 w-[72px] !text-[16px] rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition'
-                                            placeholder='0'
-                                            inputMode='numeric'
-                                          />
+                                          <input type='string' value={s.reps} onChange={e => setWorkout(w => ({ ...w, sets: w.sets.map(x => (x.id === s.id ? { ...x, reps: +e.target.value } : x)) }))} onBlur={() => maybeSaveSetOnBlur({ ...s, reps: Number(s.reps) })} className='h-9 w-[72px] !text-[16px] rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition' placeholder='0' inputMode='numeric' />
                                         </td>
                                         <td className='py-2.5 px-3'>
-																					
                                           <CheckBox
                                             initialChecked={s.done}
                                             onChange={() => {
                                               toggleDone(s.id);
-                                              setTimeout(() => maybeSaveSetOnBlur({ ...s, done: !s.done }), 0);
+                                              setUnsaved(true);
+                                              persistLocalBuffer({ ...workout });
                                             }}
                                           />
                                         </td>
@@ -866,21 +819,19 @@ export default function MyWorkoutsPage() {
                                   </tbody>
                                 </table>
                               </div>
-
                               <div className='flex items-center justify-between px-3 py-2 text-[11px] text-slate-500 bg-slate-50/60'>
-                                {/* Upload Video removed as requested */}
-                                <div />
                                 <div className='flex items-center gap-2'>
-                                  <div className='flex items-center gap-1'>
-                                    <button onClick={removeSetFromCurrentExercise} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-50' disabled={currentSets.length <= 1}>
-                                      <Minus size={14} />
-                                    </button>
-                                    <button onClick={addSetForCurrentExercise} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50'>
-                                      <Plus size={14} />
-                                    </button>
-                                  </div>
+                                  <button onClick={removeSetFromCurrentExercise} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-50' disabled={currentSets.length <= 1}>
+                                    <Minus size={14} />
+                                  </button>
+                                  <button onClick={addSetForCurrentExercise} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50'>
+                                    <Plus size={14} />
+                                  </button>
+                                </div>
+                                <div className='flex items-center gap-2'>
+                                  {unsaved && <span className='text-xs text-amber-600'>Unsaved changes buffered locally</span>}
                                   <button onClick={saveDayToServer} className='inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs text-indigo-700 hover:bg-indigo-100' title='Save/Upsert this exercise day'>
-                                    Save day
+                                    <SaveIcon size={14} /> Save
                                   </button>
                                 </div>
                               </div>
@@ -891,46 +842,16 @@ export default function MyWorkoutsPage() {
                     </div>
 
                     {/* RIGHT: Exercise list */}
-                    <div className='w-full lg:w-80'>
-                      <div className='w-full h-full max-h-[480px] overflow-y-auto rounded-2xl border border-slate-200 bg-white px-2 sm:px-3 py-3 sm:py-4'>
-                        <h3 className='text-base font-semibold mb-3'>Exercises</h3>
-                        {!hasExercises ? (
-                          <div className='text-sm text-slate-500'>Nothing here yet.</div>
-                        ) : (
-                          <div className='space-y-2'>
-                            {workout.exercises.map((ex, idx) => {
-                              const done = setsFor(ex.id).filter(s => s.done).length;
-                              const total = setsFor(ex.id).length;
-                              const active = currentExId === ex.id;
-                              return (
-                                <button
-                                  key={ex.id}
-                                  onClick={() => {
-                                    setCurrentExId(ex.id);
-                                    setExercisePick(ex.name);
-                                    setActiveMedia('image');
-                                  }}
-                                  className={`w-full text-left p-3 rounded-xl border transition ${active ? 'bg-indigo-50 border-indigo-200' : 'border-slate-200 hover:bg-slate-50'}`}>
-                                  <div className='flex items-center gap-3'>
-                                    <div className='w-10 h-10 overflow-hidden rounded-lg bg-slate-100 grid place-items-center'>{ex.img ? <img src={ex.img} alt='' className='object-cover w-full h-full' /> : <Dumbbell size={16} className='text-slate-500' />}</div>
-                                    <div className='min-w-0 flex-1'>
-                                      <div className='font-medium truncate'>
-                                        {idx + 1}. {ex.name}
-                                      </div>
-                                      <div className='text-xs opacity-70'>
-                                        {total} × {ex.targetReps} • Rest {Number.isFinite(ex.rest ?? ex.restSeconds) ? ex.rest ?? ex.restSeconds : 90}s
-                                      </div>
-                                      <div className='mt-1 h-1.5 rounded-full bg-slate-200'>
-                                        <div className='h-1.5 rounded-full bg-indigo-600' style={{ width: `${Math.round((done / Math.max(1, total)) * 100)}%` }} />
-                                      </div>
-                                    </div>
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
+                    <div className='hidden lg:block w-80'>
+                      <ExerciseList
+                        workout={workout}
+                        currentExId={currentExId}
+                        onPick={ex => {
+                          setCurrentExId(ex.id);
+                          setExercisePick(ex.name);
+                          setActiveMedia('image');
+                        }}
+                      />
                     </div>
                   </div>
                 )}
@@ -940,18 +861,15 @@ export default function MyWorkoutsPage() {
         </motion.div>
       )}
 
-      {/* ===== HISTORY + STATS ===== */}
+      {/* HISTORY TAB */}
       {tab === 'history' && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className='space-y-4'>
-          {/* KPI Cards */}
           <div className='grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3'>
             <KPI title='Exercises Tracked' value={fmtVal(overview?.totals?.exercisesTracked)} icon={Dumbbell} />
             <KPI title='Total Attempts' value={fmtVal(overview?.totals?.attempts)} icon={TrendingUp} />
             <KPI title='All-time PRs' value={fmtVal(overview?.totals?.allTimePrs)} icon={Trophy} />
             <KPI title='Current Streak (days)' value={fmtVal(overview?.totals?.currentStreakDays)} icon={Flame} />
           </div>
-
-          {/* All-time Bests */}
           <div className='rounded-2xl border border-slate-200 bg-white p-4'>
             <div className='flex items-center justify-between mb-3'>
               <div className='font-semibold'>All-time Bests</div>
@@ -973,7 +891,6 @@ export default function MyWorkoutsPage() {
             </div>
           </div>
 
-          {/* Exercise picker + drilldown */}
           <div className='rounded-2xl border border-slate-200 bg-white p-4'>
             <div className='flex items-center justify-between gap-2 mb-3'>
               <div className='font-semibold'>Exercise Drilldown</div>
@@ -986,7 +903,6 @@ export default function MyWorkoutsPage() {
               </select>
             </div>
 
-            {/* e1RM Series */}
             <div className='mb-4'>
               <div className='text-xs text-slate-500 mb-1'>e1RM (weekly max) – last 90 days</div>
               <div className='grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2'>
@@ -1000,14 +916,12 @@ export default function MyWorkoutsPage() {
               </div>
             </div>
 
-            {/* Top sets */}
             <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
               <TopList title='Top by Weight' items={topSets.byWeight || []} fmt={x => `${Number(x?.weight) || 0}×${Number(x?.reps) || 0}`} />
               <TopList title='Top by Reps' items={topSets.byReps || []} fmt={x => `${Number(x?.reps) || 0} @ ${Number(x?.weight) || 0}`} />
               <TopList title='Top by e1RM' items={topSets.byE1rm || []} fmt={x => `${Math.round(Number(x?.e1rm) || 0)} e1RM`} />
             </div>
 
-            {/* Raw Attempts */}
             <div className='mt-4'>
               <div className='font-medium mb-2'>Attempts</div>
               <div className='overflow-x-auto'>
@@ -1046,7 +960,6 @@ export default function MyWorkoutsPage() {
             </div>
           </div>
 
-          {/* Session history table */}
           <div className='rounded-2xl border border-slate-200 bg-white p-4'>
             <div className='flex items-center justify-between mb-4'>
               <div className='font-semibold'>Session History</div>
@@ -1057,11 +970,7 @@ export default function MyWorkoutsPage() {
                 columns={[
                   { header: 'Date', accessor: 'date' },
                   { header: 'Workout', accessor: 'name' },
-                  {
-                    header: 'Volume',
-                    accessor: 'volume',
-                    cell: r => <span className='tabular-nums'>{Number(r?.volume || 0).toLocaleString()} kg·reps</span>,
-                  },
+                  { header: 'Volume', accessor: 'volume', cell: r => <span className='tabular-nums'>{Number(r?.volume || 0).toLocaleString()} kg·reps</span> },
                   { header: 'Duration', accessor: 'duration', cell: r => <span>{fmtVal(r?.duration)}</span> },
                   {
                     header: 'Sets',
@@ -1084,60 +993,496 @@ export default function MyWorkoutsPage() {
         </motion.div>
       )}
 
-      {/* Floating Stop Sound button */}
-      {isPlayingSound && (
-        <button
-          onClick={() => {
-            const el = audioRef.current;
-            if (el) {
-              try {
-                el.pause();
-                el.currentTime = 0;
-                el.loop = false;
-              } catch {}
-            }
-            setIsPlayingSound(false);
-          }}
-          className='fixed bottom-4 right-4 z-50 rounded-full border border-red-200 bg-white shadow px-4 py-2 text-sm text-red-600 hover:bg-red-50'
-          title='Stop alert sound'>
-          <X size={14} className='inline -mt-0.5 mr-1' /> Stop sound
-        </button>
-      )}
+      {/* floating unsaved hint on mobile */}
+      <AnimatePresence>
+        {unsaved && (
+          <motion.div initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 16, opacity: 0 }} className='fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-sm px-3 py-1.5 shadow'>
+            Changes are stored locally until you press Save.
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* mobile slide-out drawer */}
+      <AnimatePresence>
+        {drawerOpen && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className='fixed inset-0 z-[75] bg-black/30' onClick={() => setDrawerOpen(false)} />
+            {/* Drawer panel */}
+            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', stiffness: 260, damping: 32 }} className='fixed right-0 top-0 h-full w-[84%] max-w-sm z-[80] bg-white shadow-2xl border-l border-slate-200' onClick={e => e.stopPropagation()}>
+              <div className='p-3 flex items-center justify-between border-b border-slate-100'>
+                <div className='font-semibold flex items-center gap-2'>
+                  <Dumbbell size={18} /> Exercises
+                </div>
+                <button onClick={() => setDrawerOpen(false)} className='p-2 rounded-lg hover:bg-slate-100'>
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className='p-3'>
+                <ExerciseList
+                  workout={workout}
+                  currentExId={currentExId}
+                  onPick={ex => {
+                    setCurrentExId(ex.id);
+                    setExercisePick(ex.name);
+                    setActiveMedia('image');
+                    setDrawerOpen(false);
+                  }}
+                />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Settings popup (alert sound selector) */}
+      <SettingsPopup
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        currentSound={alertSound}
+        onChange={s => {
+          setAlertSound(s);
+          try {
+            localStorage.setItem(LOCAL_KEY_SETTINGS, JSON.stringify({ alertSound: s }));
+          } catch {}
+        }}
+      />
     </div>
   );
 }
 
-/* =================== SUB TABS (unchanged; not used by default) =================== */
-function ExerciseSubTabs({ exercise, allExercises, onPickAlternative, initialTab = 'media' }) {
-  const [tab, setTab] = useState(initialTab);
-  const tabs = [
-    { key: 'media', label: 'Media', icon: Images },
-    { key: 'alternatives', label: 'Alternatives', icon: Shuffle },
+function AudioHubInline({ open, onClose }) {
+  const audioRef = useRef(null);
+
+  // ---- Demo podcasts (YouTube) ----
+  const podcasts = ['https://www.youtube.com/watch?v=RFRLVUb2GUM', 'https://www.youtube.com/watch?v=RFRLVUb2GUM'];
+
+  const [tab, setTab] = useState('stations'); // 'stations' | 'podcasts'
+  const [playing, setPlaying] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [volume, setVolume] = useState(0.9);
+  const [muted, setMuted] = useState(false);
+
+  // IMPORTANT: use HTTPS streams to avoid mixed-content blocking on HTTPS pages
+  const DEFAULT_STATIONS = [
+    { name: 'Qur’an Radio (Mix)', url: 'https://qurango.net/radio/mix', tag: 'Qur’an' },
+    { name: 'Hadith Radio', url: 'https://qurango.net/radio/ahadeeth', tag: 'Hadith' },
+    { name: 'Tafsir / Lectures', url: 'https://qurango.net/radio/tafsir', tag: 'Lectures' },
+    { name: 'Dua & Supplications', url: 'https://qurango.net/radio/dua', tag: 'Dua' },
   ];
-  const alternatives = useMemo(() => (allExercises || []).filter(e => e.id !== exercise?.id).slice(0, 6), [allExercises, exercise?.id]);
+  const [stations] = useState(DEFAULT_STATIONS);
+  const [currentStationUrl, setCurrentStationUrl] = useState(stations[0]?.url || '');
+
+  // ---- Normalize YouTube list ----
+  const normalizeYouTube = arr => {
+    const getId = u => {
+      try {
+        const url = new URL(u);
+        if (url.hostname.includes('youtube.com')) return url.searchParams.get('v');
+        if (url.hostname.includes('youtu.be')) return url.pathname.slice(1);
+      } catch {}
+      return null;
+    };
+    return (arr || []).map((item, idx) => {
+      const url = typeof item === 'string' ? item : item?.url || '';
+      const id = getId(url) || `yt_${idx}`;
+      return {
+        id,
+        url,
+        title: typeof item === 'string' ? `YouTube Video ${idx + 1}` : item?.title || `YouTube Video ${idx + 1}`,
+        embed: id ? `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1` : '',
+        thumb: id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : '',
+      };
+    });
+  };
+  const podcastList = normalizeYouTube(podcasts);
+  const [currentPodcastIdx, setCurrentPodcastIdx] = useState(0);
+
+  // Derived src
+  const src = tab === 'stations' ? currentStationUrl : undefined;
+
+  // Volume/mute wire-up
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    el.volume = muted ? 0 : volume;
+  }, [volume, muted]);
+
+  // Pause when closing the box
+  useEffect(() => {
+    if (!open) {
+      try {
+        audioRef.current?.pause();
+      } catch {}
+      setPlaying(false);
+      setLoading(false);
+    }
+  }, [open]);
+
+  // Audio event handlers (robust)
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+
+    const onLoadStart = () => setLoading(true);
+    const onWaiting = () => setLoading(true);
+    const onStalled = () => setLoading(true);
+    const onCanPlay = () => setLoading(false);
+    const onCanPlayThrough = () => setLoading(false);
+    const onLoadedData = () => setLoading(false);
+    const onPlaying = () => {
+      setLoading(false);
+      setPlaying(true);
+    };
+    const onPause = () => setPlaying(false);
+    const onEnded = () => setPlaying(false);
+    const onError = () => {
+      setLoading(false);
+      setPlaying(false);
+    };
+
+    el.addEventListener('loadstart', onLoadStart);
+    el.addEventListener('waiting', onWaiting);
+    el.addEventListener('stalled', onStalled);
+    el.addEventListener('canplay', onCanPlay);
+    el.addEventListener('canplaythrough', onCanPlayThrough);
+    el.addEventListener('loadeddata', onLoadedData);
+    el.addEventListener('playing', onPlaying);
+    el.addEventListener('pause', onPause);
+    el.addEventListener('ended', onEnded);
+    el.addEventListener('error', onError);
+
+    return () => {
+      el.removeEventListener('loadstart', onLoadStart);
+      el.removeEventListener('waiting', onWaiting);
+      el.removeEventListener('stalled', onStalled);
+      el.removeEventListener('canplay', onCanPlay);
+      el.removeEventListener('canplaythrough', onCanPlayThrough);
+      el.removeEventListener('loadeddata', onLoadedData);
+      el.removeEventListener('playing', onPlaying);
+      el.removeEventListener('pause', onPause);
+      el.removeEventListener('ended', onEnded);
+      el.removeEventListener('error', onError);
+    };
+  }, [src]);
+
+  // Choose station (don’t hard-disable play if autoplay is blocked)
+  const chooseStation = async url => {
+    setPlaying(false);
+    if (url === currentStationUrl) return;
+    setLoading(true);
+    setCurrentStationUrl(url);
+    try {
+      await audioRef.current?.play();
+    } catch {
+      // clear loading so user can click Play manually
+      setLoading(false);
+    }
+  };
+
+  const togglePlay = async () => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (playing) {
+      try {
+        el.pause();
+        setPlaying(false);
+      } catch {}
+    } else {
+      try {
+        setLoading(true);
+        await el.play(); // if user gesture present, should succeed
+        // playing event will clear loading
+      } catch {
+        // if it fails, stop spinner
+        setLoading(false);
+      }
+    }
+  };
+
+  if (!open) return null;
 
   return (
-    <div className='px-2 pt-3'>
-      <div className='relative mb-2'>
-        <div className='flex items-center gap-2 rounded-xl bg-slate-100 p-1.5'>
-          {tabs.map(({ key, label, icon: Icon }) => {
-            const active = tab === key;
-            return (
-              <button key={key} onClick={() => setTab(key)} className={`cursor-pointer relative flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition ${active ? 'text-indigo-700' : 'text-slate-600 hover:text-slate-800'}`} aria-selected={active} role='tab'>
-                <Icon size={16} />
-                {label}
-                {active && <motion.span layoutId='tabActivePill' className='absolute inset-0 -z-10 rounded-lg bg-white shadow' transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
-              </button>
-            );
-          })}
-          <div className='ml-auto text-xs text-slate-500 select-none'>2 sets • {exercise?.targetReps} reps</div>
+    <AnimatePresence>
+      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className='w-full'>
+        <div className='mt-2 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden'>
+          {/* Header */}
+          <div className='px-3 py-2 flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-white'>
+            <div className='flex items-center gap-2 font-semibold text-sm text-slate-800'>
+              <Headphones size={16} className='text-indigo-600' />
+              Audio
+            </div>
+            <button onClick={onClose} className='p-1.5 rounded-lg hover:bg-slate-100'>
+              <X size={14} />
+            </button>
+          </div>
+
+          {/* Tabs */}
+          <div className='px-3 pt-2'>
+            <div className='inline-flex rounded-lg bg-slate-100 p-1'>
+              {[
+                { key: 'stations', label: 'Stations' },
+                { key: 'podcasts', label: 'Podcasts' },
+              ].map(t => (
+                <button key={t.key} onClick={() => setTab(t.key)} className={`relative px-2.5 py-1 text-xs rounded-md transition ${tab === t.key ? 'text-indigo-700' : 'text-slate-600 hover:text-slate-800'}`}>
+                  {t.label}
+                  {tab === t.key && <motion.span layoutId='audTab' className='absolute inset-0 -z-10 rounded-md bg-white shadow' transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className='p-3 space-y-2'>
+            {/* Stations */}
+            {tab === 'stations' && (
+              <>
+                <div className='grid  grid-cols-4 gap-1.5'>
+                  {stations.map((s, i) => {
+                    const active = currentStationUrl === s.url;
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          chooseStation(s.url);
+                        }}
+                        className={`text-left p-2 rounded-lg border transition group
+                          ${active ? 'bg-indigo-50/70 border-indigo-200 ring-1 ring-indigo-100' : 'bg-white border-slate-200 hover:bg-slate-50'}
+                        `}
+                        title={s.name}>
+                        <div className='text-xs font-medium truncate'>{s.name}</div>
+                        <div className='text-[10px] text-slate-500 truncate'>{s.tag || 'Station'}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className='flex items-center justify-between gap-2 rounded-lg border border-slate-200 p-2'>
+                  <div className='text-[11px] truncate'>
+                    <span className='font-medium'>Now:</span> {stations.find(s => s.url === currentStationUrl)?.name || 'Station'}
+                  </div>
+
+                  <div className='flex items-center gap-1.5'>
+                    <button onClick={togglePlay} className='inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs border-slate-200 hover:bg-slate-50 min-w-[88px] justify-center' aria-busy={loading ? 'true' : 'false'} title={loading ? 'Loading…' : playing ? 'Pause' : 'Play'}>
+                      {playing ? (
+                        <>
+                          <Pause size={12} /> Pause
+                        </>
+                      ) : (
+                        <>
+                          <Play size={12} /> Play
+                        </>
+                      )}
+                    </button>
+
+                    <button onClick={() => setMuted(m => !m)} className='inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs border-slate-200 hover:bg-slate-50' title={muted ? 'Unmute' : 'Mute'}>
+                      {muted ? '🔇' : '🔊'}
+                    </button>
+
+                    <input type='range' min='0' max='1' step='0.01' value={muted ? 0 : volume} onChange={e => setVolume(Number(e.target.value))} className='w-20 accent-indigo-600' title='Volume' />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Podcasts (YouTube) */}
+            {tab === 'podcasts' && (
+              <div className='space-y-2'>
+                {podcastList.length > 0 ? (
+                  <div className='aspect-video w-full rounded-lg overflow-hidden border border-slate-200'>
+                    <iframe key={podcastList[currentPodcastIdx].id} src={podcastList[currentPodcastIdx].embed} className='w-full h-full' title={podcastList[currentPodcastIdx].title} allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share' referrerPolicy='strict-origin-when-cross-origin' loading='lazy' allowFullScreen />
+                  </div>
+                ) : (
+                  <div className='text-xs text-slate-500'>No YouTube links yet.</div>
+                )}
+
+                <div className='flex gap-1.5 overflow-x-auto pb-1'>
+                  {podcastList.map((p, i) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setCurrentPodcastIdx(i)}
+                      className={`min-w-[120px] max-w-[120px] rounded-md border overflow-hidden text-left
+                        ${i === currentPodcastIdx ? 'border-indigo-300' : 'border-slate-200 hover:border-slate-300'}
+                      `}
+                      title={p.title}>
+                      <img src={p.thumb} alt='' className='w-full h-[68px] object-cover' />
+                      <div className='px-2 py-1'>
+                        <div className='text-[10px] font-medium line-clamp-2'>{p.title}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Audio element (keep crossorigin to help some streams) */}
+            <audio ref={audioRef} src={src} preload='none' crossOrigin='anonymous' />
+          </div>
         </div>
-      </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+/* =================== SMALL COMPONENTS & HELPERS =================== */
+
+// Inline video: fixed 400px height, object-contain, inline playback (no fullscreen push)
+function InlineVideo({ src }) {
+  const ref = useRef(null);
+  const [playing, setPlaying] = useState(false);
+
+  const toggle = async () => {
+    const el = ref.current;
+    if (!el) return;
+    try {
+      if (playing) {
+        el.pause();
+        setPlaying(false);
+      } else {
+        await el.play();
+        setPlaying(true);
+      }
+    } catch {}
+  };
+
+  return (
+    <div className='w-full h-full grid place-items-center'>
+      <video muted ref={ref} src={src} className='w-full h-full object-contain bg-black' playsInline controls onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} style={{ maxHeight: 400 }} />
+      {/* Click overlay for quick play/pause on mobile if you want:
+      <button onClick={toggle} className='absolute inset-0' aria-label='toggle' />
+      */}
     </div>
   );
 }
 
-/* =================== SMALL UI PARTS =================== */
+// Exercise list (used on the right pane and mobile drawer)
+function ExerciseList({ workout, currentExId, onPick }) {
+  const setsFor = exId => (workout?.sets || []).filter(s => s.exId === exId);
+  if (!workout?.exercises?.length) {
+    return <div className='text-sm text-slate-500'>Nothing here yet.</div>;
+  }
+  return (
+    <div className='space-y-2'>
+      {workout.exercises.map((ex, idx) => {
+        const done = setsFor(ex.id).filter(s => s.done).length;
+        const total = setsFor(ex.id).length;
+        const active = currentExId === ex.id;
+        return (
+          <button key={ex.id} onClick={() => onPick?.(ex)} className={`w-full text-left p-3 rounded-xl border transition ${active ? 'bg-indigo-50 border-indigo-200' : 'border-slate-200 hover:bg-slate-50'}`}>
+            <div className='flex items-center gap-3'>
+              <div className='w-10 h-10 overflow-hidden rounded-lg bg-slate-100 grid place-items-center'>{ex.img ? <img src={ex.img} alt='' className='object-cover w-full h-full' /> : <Dumbbell size={16} className='text-slate-500' />}</div>
+              <div className='min-w-0 flex-1'>
+                <div className='font-medium truncate'>
+                  {idx + 1}. {ex.name}
+                </div>
+                <div className='text-xs opacity-70'>
+                  {total} × {ex.targetReps} • Rest {Number.isFinite(ex.rest ?? ex.restSeconds) ? ex.rest ?? ex.restSeconds : 90}s
+                </div>
+                <div className='mt-1 h-1.5 rounded-full bg-slate-200'>
+                  <div className='h-1.5 rounded-full bg-indigo-600' style={{ width: `${Math.round((done / Math.max(1, total)) * 100)}%` }} />
+                </div>
+              </div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Create a session object from a day program (2 starter sets per exercise)
+function createSessionFromDay(dayProgram) {
+  return {
+    ...dayProgram,
+    startedAt: null,
+    sets: (dayProgram.exercises || []).flatMap(ex =>
+      Array.from({ length: 2 }).map((_, i) => ({
+        id: `${ex.id}-set${i + 1}`,
+        exId: ex.id,
+        exName: ex.name,
+        set: i + 1,
+        targetReps: ex.targetReps,
+        weight: 0,
+        reps: 0,
+        effort: null,
+        done: false,
+        pr: false,
+        restTime: Number.isFinite(ex.rest ?? ex.restSeconds) ? ex.rest ?? ex.restSeconds : 90,
+      })),
+    ),
+    exercises: (dayProgram.exercises || []).map(e => ({ ...e })),
+  };
+}
+
+// Prefill all sets from server records in a single pass (bug fix you wanted)
+function applyServerRecords(session, recordsByEx, setWorkout, lastSavedRef) {
+  const nextSets = (session.sets || []).map(s => {
+    const rr = (recordsByEx?.[s.exName] || []).find(r => Number(r.setNumber) === Number(s.set));
+    if (!rr) return s;
+    return {
+      ...s,
+      serverId: rr.id,
+      weight: Number(rr.weight) || 0,
+      reps: Number(rr.reps) || 0,
+      done: !!rr.done,
+      pr: !!rr.isPr,
+    };
+  });
+  const next = { ...session, sets: nextSets };
+  setWorkout(next);
+  // refresh last-saved mirror
+  const map = new Map();
+  nextSets.forEach(s => map.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
+  lastSavedRef.current = map;
+}
+
+// Lightweight elapsed hook for the session timer
+function useElapsed(startTs) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!startTs) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [startTs]);
+  return startTs ? now - startTs : 0;
+}
+function formatElapsed(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+  return `${m}:${String(ss).padStart(2, '0')}`;
+}
+
+// Unsaved handling: mark + persist local buffer
+function markUnsaved(workout, setUnsaved) {
+  try {
+    persistLocalBuffer(workout);
+  } catch {}
+  setUnsaved(true);
+}
+function persistLocalBuffer(workout) {
+  if (!workout) return;
+  // Store minimal buffer: by exercise -> array of {set, weight, reps, done}
+  const buf = {};
+  (workout.exercises || []).forEach(ex => {
+    buf[ex.name] = (workout.sets || []).filter(s => s.exName === ex.name).map(s => ({ set: s.set, weight: s.weight, reps: s.reps, done: !!s.done }));
+  });
+  localStorage.setItem(LOCAL_KEY_BUFFER, JSON.stringify({ date: todayISO(), data: buf }));
+}
+function flushLocalBufferForExercise(exName) {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY_BUFFER);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.data) return;
+    delete parsed.data[exName];
+    localStorage.setItem(LOCAL_KEY_BUFFER, JSON.stringify(parsed));
+  } catch {}
+}
+
+/* =================== KPI & TopList (already used above) =================== */
 function KPI({ title, value, icon: Icon }) {
   return (
     <div className='p-4 rounded-2xl border border-slate-200 bg-white flex items-center gap-3'>
@@ -1151,7 +1496,6 @@ function KPI({ title, value, icon: Icon }) {
     </div>
   );
 }
-
 function TopList({ title, items, fmt }) {
   return (
     <div className='rounded-xl border border-slate-200 p-3'>

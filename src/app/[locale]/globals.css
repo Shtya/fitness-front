@@ -319,7 +319,7 @@ body {
 /* subtle 3D lift on hover */
 .bg-main:hover,
 .bg-second:hover {
-  transform: translateY(-3px);
+  /* transform: translateY(-3px); */
   box-shadow: 0 22px 42px rgba(0, 0, 0, 0.4), 0 2px 0 rgba(255, 255, 255, 0.2) inset, 0 -12px 22px rgba(0, 0, 0, 0.38) inset;
 }
  /* Example with higher specificity */

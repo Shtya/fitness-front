@@ -7,9 +7,9 @@ import { useEffect, useState } from 'react';
 export const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
 /* --------- Page Header --------- */
-export function PageHeader({ icon: Icon, title, subtitle, actions = null }) {
+export function PageHeader({ className , icon: Icon, title, subtitle, actions = null }) {
   return (
-    <div className='flex items-center justify-between'>
+    <div className={`flex items-center justify-between ${className} `} >
       <div className='flex items-center gap-3'>
         <motion.div initial={{ rotate: -8, scale: 0.9 }} animate={{ rotate: 0, scale: 1 }} transition={spring} className='h-10 w-10 grid place-content-center rounded-xl bg-main text-white shadow-md'>
           {Icon ? <Icon className='w-5 h-5' /> : null}
@@ -177,18 +177,18 @@ export function MacroBar({ p = 0, c = 0, f = 0, className = '' }) {
 }
 
 /* --------- TabsPill (animated tabs with shared pill) --------- */
-export function TabsPill({ tabs, active, onChange , className , id = 'ui-tabs-pill' }) {
+export function TabsPill({ slice , tabs, active, onChange , className , id = 'ui-tabs-pill' }) {
   return (
-    <LayoutGroup id={id}>
-      <div className={` ${className} max-md:overflow-x-auto max-md:w-[calc(100vw-80px)] max-md:max-w-fit  overflow-y-hidden inline-flex p-1 rounded-2xl max-md:rounded-[10px_10px_0_0] bg-slate-100/80 ring-1 ring-black/5 shadow-sm `}>
+    <LayoutGroup id={id}  >
+      <div className={` ${className} max-md:overflow-x-auto max-md:w-[calc(100vw-80px)] max-md:max-w-fit  overflow-y-hidden inline-flex p-1 rounded-2xl   bg-slate-100/80 ring-1 ring-black/5 shadow-sm `}>
         {tabs.map(t => {
           const isActive = active === t.key;
           return (
-            <motion.button key={t.key} type='button' onClick={() => onChange(t.key)} className='relative cursor-pointer select-none rounded-xl px-3 py-1.5 text-sm font-medium outline-none' whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 350, damping: 30 }}>
-              {isActive && <motion.span layoutId='tabs-pill' className='absolute inset-0 after:!rounded-xl !rounded-xl bg-second shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
+            <motion.button key={t.key} type='button' onClick={() => onChange(t.key)} className='relative cursor-pointer select-none rounded-xl max-md:!rounded-[10px_10px_0_0] px-3 py-1.5 text-sm font-medium outline-none' whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 350, damping: 30 }}>
+              {isActive && <motion.span layoutId='tabs-pill' className='absolute inset-0 after:!rounded-xl !rounded-xl   bg-second shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
               <span className={`relative z-10 ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-700'} capitalize`}>
                 {t.icon ? <t.icon className='inline w-4 h-4 mr-1 -mt-0.5' /> : null}
-                {t.label}
+                {slice ? t.label?.slice(0,slice)  : t.label}
               </span>
             </motion.button>
           );
