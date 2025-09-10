@@ -760,7 +760,7 @@ export default function MyWorkoutsPage() {
                         {hasExercises && (
                           <>
                             {/* Media area: fixed height 400px, object-contain videos, inline playback */}
-                            <div className='w-full bg-black relative rounded-[10px_10px_0_0] overflow-hidden' style={{ height: 300 }}>
+                            <div className='w-full bg-black relative rounded-[10px_10px_0_0] overflow-hidden' style={{ height: 200 }}>
                               {currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? <InlineVideo key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} /> : <img key={currentExercise?.id + '-image'} src={currentExercise?.img} alt={currentExercise?.name || 'Exercise'} className='w-full h-full object-contain bg-white ' />}
                               <div className='absolute bottom-2 right-2 flex items-center gap-2 bg-black/40 backdrop-blur px-2 py-1 rounded-lg'>
                                 <button onClick={() => setActiveMedia('image')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'image' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show image'>
