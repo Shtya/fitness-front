@@ -180,7 +180,7 @@ export function MacroBar({ p = 0, c = 0, f = 0, className = '' }) {
 export function TabsPill({ slice , tabs, active, onChange , className , id = 'ui-tabs-pill' }) {
   return (
     <LayoutGroup id={id}  >
-      <div className={` ${className} max-md:overflow-x-auto max-md:w-[calc(100vw-80px)] max-md:max-w-fit  overflow-y-hidden inline-flex p-1 rounded-2xl   bg-slate-100/80 ring-1 ring-black/5 shadow-sm `}>
+      <div className={` ${className} max-md:overflow-x-auto max-md:w-[calc(100vw-20px)] max-md:max-w-fit  overflow-y-hidden inline-flex p-1 rounded-2xl   bg-slate-100/80 ring-1 ring-black/5 shadow-sm `}>
         {tabs.map(t => {
           const isActive = active === t.key;
           return (
