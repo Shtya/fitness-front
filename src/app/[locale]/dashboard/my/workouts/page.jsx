@@ -149,42 +149,7 @@ function useCountdown() {
   return { duration, remaining, running, paused, start, pause, resume, stop };
 }
 
-/* =================== CIRCULAR TIMER =================== */
-function CircularTimer({ duration, remaining, running, paused, onPause, onResume, onStop }) {
-  const R = 34; // radius
-  const C = 2 * Math.PI * R;
-  const pct = duration > 0 ? remaining / duration : 0;
-  const dash = C * pct;
-  return (
-    <div className='flex items-center gap-3 p-2 sm:p-3'>
-      <svg width='84' height='84' viewBox='0 0 96 96' className='shrink-0'>
-        <circle cx='48' cy='48' r={R} stroke='#e5e7eb' strokeWidth='8' fill='none' />
-        <circle cx='48' cy='48' r={R} stroke='currentColor' strokeWidth='8' fill='none' strokeDasharray={C} strokeDashoffset={C - dash} className='text-indigo-600 transition-[stroke-dashoffset] duration-1000 ease-linear' transform='rotate(-90 48 48)' />
-        <text x='50%' y='50%' dominantBaseline='middle' textAnchor='middle' className='fill-slate-700 text-sm font-semibold'>
-          {toMMSS(remaining)}
-        </text>
-      </svg>
-      <div className='flex items-center gap-2'>
-        {running && !paused && (
-          <button onClick={onPause} className='px-3 py-2 text-xs rounded-lg border border-slate-200 hover:bg-slate-50 inline-flex items-center gap-1.5'>
-            <Pause size={14} /> Pause
-          </button>
-        )}
-        {running && paused && (
-          <button onClick={onResume} className='px-3 py-2 text-xs rounded-lg border border-slate-200 hover:bg-slate-50 inline-flex items-center gap-1.5'>
-            <Play size={14} /> Resume
-          </button>
-        )}
-        {running && (
-          <button onClick={onStop} className='px-3 py-2 text-xs rounded-lg border border-red-200 text-red-600 hover:bg-red-50 inline-flex items-center gap-1.5'>
-            <X size={14} /> Stop
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
+ 
 /* =================== REST TIMER CARD =================== */
 function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
   const { remaining, running, paused, start, pause, resume, stop, duration } = useCountdown();
@@ -194,29 +159,59 @@ function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
   const inputRef = useRef(null);
   const holdRef = useRef(null);
 
+  // alert state/guards
+  const [alerting, setAlerting] = useState(false);
+  const alertTimeoutRef = useRef(null);
+  const hasAlertFiredRef = useRef(false); // <— prevents re-firing at 0s
+
   useEffect(() => setSeconds(Number(initialSeconds || 0) || 90), [initialSeconds]);
 
-  // Play alert when finished
+  // Stop alert helper
+  const stopAlert = () => {
+    try {
+      const el = audioEl?.current;
+      if (el) {
+        el.pause();
+        el.currentTime = 0;
+        el.loop = false;
+      }
+    } catch {}
+    if (alertTimeoutRef.current) {
+      clearTimeout(alertTimeoutRef.current);
+      alertTimeoutRef.current = null;
+    }
+    setAlerting(false);
+    // DO NOT reset hasAlertFiredRef here, or it will re-play immediately.
+    // It resets when a new countdown starts.
+  };
+
+  // Play alert when finished, only once per countdown
   useEffect(() => {
-    if (!running && duration > 0 && remaining === 0) {
+    if (!running && duration > 0 && remaining === 0 && !hasAlertFiredRef.current) {
       const el = audioEl?.current;
       if (!el) return;
       try {
         el.currentTime = 0;
         el.loop = true;
         el.play();
-        const t = setTimeout(() => {
-          try {
-            el.pause();
-            el.currentTime = 0;
-            el.loop = false;
-          } catch {}
+        setAlerting(true);
+        hasAlertFiredRef.current = true; // block re-trigger until next start
+        alertTimeoutRef.current = setTimeout(() => {
+          stopAlert();
         }, 30000);
-        return () => clearTimeout(t);
       } catch {}
     }
+    return () => {
+      if (alertTimeoutRef.current && alerting) {
+        clearTimeout(alertTimeoutRef.current);
+        alertTimeoutRef.current = null;
+      }
+    };
+    // Note: intentionally NOT depending on `alerting` to avoid re-runs caused by UI state changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, remaining, duration, audioEl]);
 
+  // Haptics (mobile)
   const haptic = (ms = 10) => {
     if (typeof window !== 'undefined' && 'vibrate' in navigator)
       try {
@@ -224,6 +219,7 @@ function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
       } catch {}
   };
 
+  // Time controls
   const step = delta => setSeconds(s => Math.max(0, s + delta));
   const dec = () => {
     step(-15);
@@ -242,9 +238,13 @@ function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
   const endHold = () => clearInterval(holdRef.current);
 
   const handleStart = () => {
+    // Reset finish guard for a fresh countdown
+    hasAlertFiredRef.current = false;
+    stopAlert(); // in case an old alert is still looping
     start(seconds);
     haptic(20);
   };
+
   const toggleEdit = () => {
     setShowInput(v => !v);
     setTimeout(() => inputRef.current?.focus(), 0);
@@ -263,12 +263,13 @@ function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
   return (
     <div className={`px-2 pt-2 pb-2 ${className}`}>
       <div className='flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-2'>
-        {/* Left: tiny ring & label */}
+        {/* Left: tiny ring (stop also silences alert) */}
         <button
           onClick={() => {
             if (running) {
               stop();
-              haptic(20);
+              stopAlert();  
+               haptic(20);
             }
           }}
           className='relative shrink-0 grid place-items-center rounded-full'
@@ -280,6 +281,13 @@ function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
           </svg>
           <span className='absolute text-[10px] font-semibold text-slate-700 tabular-nums'>{toMMSS(running ? remaining : seconds)}</span>
         </button>
+
+        {/* Stop sound (only while alert is looping) */}
+        {alerting && (
+          <button onClick={stopAlert} className='inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 text-red-600 px-2.5 py-1 text-xs hover:bg-red-100' title='Stop alert sound'>
+            <X size={12} /> Stop sound
+          </button>
+        )}
 
         {/* Middle: controls */}
         <div className='flex-1 min-w-0'>
@@ -302,6 +310,7 @@ function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
                 <button
                   onClick={() => {
                     stop();
+                    stopAlert();
                     haptic(20);
                   }}
                   className='inline-flex items-center gap-1 rounded-lg border border-red-200 text-red-600 px-2.5 py-1 text-xs hover:bg-red-50'
@@ -323,6 +332,7 @@ function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
                 <button
                   onClick={() => {
                     stop();
+                    stopAlert();
                     haptic(20);
                   }}
                   className='inline-flex items-center gap-1 rounded-lg border border-red-200 text-red-600 px-2.5 py-1 text-xs hover:bg-red-50'
@@ -332,7 +342,7 @@ function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
               </>
             )}
 
-            {/* +/- tiny controls */}
+            {/* +/- tiny controls (only when idle) */}
             {!running && (
               <div className='ml-auto inline-flex rounded-lg overflow-hidden border border-slate-200'>
                 <button onMouseDown={() => startHold(-5)} onMouseUp={endHold} onMouseLeave={endHold} onTouchStart={() => startHold(-5)} onTouchEnd={endHold} onClick={dec} className='px-2 py-1.5 text-xs hover:bg-slate-50' title='-15s (hold for -5/s)'>
@@ -351,18 +361,7 @@ function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
           {/* Presets (only when idle) */}
           {!running && (
             <div className='mt-1 flex items-center gap-1.5'>
-              {[45, 60, 90, 120].map(p => (
-                <button
-                  key={p}
-                  onClick={() => {
-                    setSeconds(p);
-                    haptic();
-                  }}
-                  className={`px-2 py-0.5 rounded-md border text-[10px] ${seconds === p ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                  title={`${p}s`}>
-                  {p}s
-                </button>
-              ))}
+               
 
               {showInput && (
                 <div className='relative ml-auto'>
@@ -760,7 +759,7 @@ export default function MyWorkoutsPage() {
                         {hasExercises && (
                           <>
                             {/* Media area: fixed height 400px, object-contain videos, inline playback */}
-                            <div className='w-full bg-black relative rounded-[10px_10px_0_0] overflow-hidden' style={{ height: 200 }}>
+                            <div className='w-full bg-black relative rounded-[10px_10px_0_0] overflow-hidden md:!h-[275px] ' style={{ height: 200 }}>
                               {currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? <InlineVideo key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} /> : <img key={currentExercise?.id + '-image'} src={currentExercise?.img} alt={currentExercise?.name || 'Exercise'} className='w-full h-full object-contain bg-white ' />}
                               <div className='absolute bottom-2 right-2 flex items-center gap-2 bg-black/40 backdrop-blur px-2 py-1 rounded-lg'>
                                 <button onClick={() => setActiveMedia('image')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'image' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show image'>
@@ -1055,7 +1054,7 @@ function AudioHubInline({ open, onClose }) {
   const audioRef = useRef(null);
 
   // ---- Demo podcasts (YouTube) ----
-  const podcasts = ['https://www.youtube.com/watch?v=RFRLVUb2GUM', 'https://www.youtube.com/watch?v=RFRLVUb2GUM'];
+  const podcasts = ['https://www.youtube.com/watch?v=PEu6zGl7qN4&ab_channel=%D9%85%D9%86%D9%8A%D8%B1%D9%85%D8%AD%D9%85%D8%AF%D8%B9%D9%84%D9%8A', 'https://www.youtube.com/watch?v=dxYI6cluroI&ab_channel=AHMEDAZAM', 'https://www.youtube.com/watch?v=y2ShgKJn1NA&ab_channel=%D9%82%D9%86%D8%A7%D8%A9%D8%A7%D9%84%D8%B4%D9%8A%D8%AE%D8%AE%D8%A7%D9%84%D8%AF%D8%A7%D9%84%D8%B1%D8%A7%D8%B4%D8%AF', 'https://www.youtube.com/watch?v=RFRLVUb2GUM'];
 
   const [tab, setTab] = useState('stations'); // 'stations' | 'podcasts'
   const [playing, setPlaying] = useState(false);
