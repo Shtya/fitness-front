@@ -149,7 +149,6 @@ function useCountdown() {
   return { duration, remaining, running, paused, start, pause, resume, stop };
 }
 
- 
 /* =================== REST TIMER CARD =================== */
 function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
   const { remaining, running, paused, start, pause, resume, stop, duration } = useCountdown();
@@ -268,8 +267,8 @@ function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
           onClick={() => {
             if (running) {
               stop();
-              stopAlert();  
-               haptic(20);
+              stopAlert();
+              haptic(20);
             }
           }}
           className='relative shrink-0 grid place-items-center rounded-full'
@@ -361,8 +360,6 @@ function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
           {/* Presets (only when idle) */}
           {!running && (
             <div className='mt-1 flex items-center gap-1.5'>
-               
-
               {showInput && (
                 <div className='relative ml-auto'>
                   <input ref={inputRef} type='text' defaultValue={toMMSS(seconds)} onBlur={commitInput} onKeyDown={e => e.key === 'Enter' && commitInput(e)} className='h-7 w-[76px] rounded-md border border-slate-200 bg-white px-2 text-[12px] text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 tabular-nums' placeholder='mm:ss' />
@@ -1064,10 +1061,7 @@ function AudioHubInline({ open, onClose }) {
 
   // IMPORTANT: use HTTPS streams to avoid mixed-content blocking on HTTPS pages
   const DEFAULT_STATIONS = [
-    { name: 'Qur’an Radio (Mix)', url: 'https://qurango.net/radio/mix', tag: 'Qur’an' },
-    { name: 'Hadith Radio', url: 'https://qurango.net/radio/ahadeeth', tag: 'Hadith' },
-    { name: 'Tafsir / Lectures', url: 'https://qurango.net/radio/tafsir', tag: 'Lectures' },
-    { name: 'Dua & Supplications', url: 'https://qurango.net/radio/dua', tag: 'Dua' },
+    { name: 'Qur’an Radio (Mix)', url: 'https://qurango.net/radio/mix', tag: 'Qur’an' }, 
   ];
   const [stations] = useState(DEFAULT_STATIONS);
   const [currentStationUrl, setCurrentStationUrl] = useState(stations[0]?.url || '');
@@ -1204,7 +1198,7 @@ function AudioHubInline({ open, onClose }) {
   return (
     <AnimatePresence>
       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className='w-full'>
-        <div className='mt-2 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden'>
+        <div className='mt-2 -mb-2 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden'>
           {/* Header */}
           <div className='px-3 py-2 flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-white'>
             <div className='flex items-center gap-2 font-semibold text-sm text-slate-800'>
@@ -1232,7 +1226,7 @@ function AudioHubInline({ open, onClose }) {
           </div>
 
           {/* Body */}
-          <div className='p-3 space-y-2'>
+          <div className='p-3 pb-0 space-y-2'>
             {/* Stations */}
             {tab === 'stations' && (
               <>
@@ -1288,7 +1282,7 @@ function AudioHubInline({ open, onClose }) {
             {tab === 'podcasts' && (
               <div className='space-y-2'>
                 {podcastList.length > 0 ? (
-                  <div className='aspect-video w-full rounded-lg overflow-hidden border border-slate-200'>
+                  <div className='aspect-video w-[calc(100%+40px)] max-md:-mt-2 -ml-[20px]  md:w-[calc(100%+20px)] md:-ml-[10px] rounded-lg overflow-hidden border border-slate-200'>
                     <iframe key={podcastList[currentPodcastIdx].id} src={podcastList[currentPodcastIdx].embed} className='w-full h-full' title={podcastList[currentPodcastIdx].title} allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share' referrerPolicy='strict-origin-when-cross-origin' loading='lazy' allowFullScreen />
                   </div>
                 ) : (
@@ -1300,14 +1294,11 @@ function AudioHubInline({ open, onClose }) {
                     <button
                       key={p.id}
                       onClick={() => setCurrentPodcastIdx(i)}
-                      className={`min-w-[120px] max-w-[120px] rounded-md border overflow-hidden text-left
+                      className={`min-w-[60px] max-w-[60px] rounded-md border overflow-hidden text-left
                         ${i === currentPodcastIdx ? 'border-indigo-300' : 'border-slate-200 hover:border-slate-300'}
                       `}
                       title={p.title}>
-                      <img src={p.thumb} alt='' className='w-full h-[68px] object-cover' />
-                      <div className='px-2 py-1'>
-                        <div className='text-[10px] font-medium line-clamp-2'>{p.title}</div>
-                      </div>
+                      <img src={p.thumb} alt='' className='w-full h-full object-cover' /> 
                     </button>
                   ))}
                 </div>
