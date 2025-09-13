@@ -16,7 +16,7 @@ export function PageHeader({ className , icon: Icon, title, subtitle, actions = 
         </motion.div>
         <div>
           <h1 className='text-2xl font-semibold'>{title}</h1>
-          {subtitle ? <p className=' max-md:hidden text-sm text-slate-600'>{subtitle}</p> : null}
+          {subtitle ? <p className=' max-md:hidden text-sm opacity-70'>{subtitle}</p> : null}
         </div>
       </div>
       {actions}

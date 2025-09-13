@@ -675,88 +675,94 @@ export default function MyWorkoutsPage() {
       {/* alert sound audio */}
       <audio ref={audioRef} src={alertSound} preload='auto' />
 
-      <div className='flex items-center justify-between flex-wrap gap-2 sm:gap-3'>
-        <PageHeader className='max-md:!hidden' icon={Dumbbell} title='My Workouts' subtitle='Log sets and track PRs automatically.' />
-        <div className='flex items-center gap-2 w-full'>
-          <button onClick={() => setAudioOpen(v => !v)} className=' px-2 inline-flex items-center gap-2 rounded-xl   bg-indigo-500 cursor-pointer text-white h-[37px] max-md:w-[37px]  justify-center text-sm font-medium  shadow hover:bg-indigo-700 active:scale-95 transition'>
-            <Headphones size={16} /> <span className='max-md:hidden'> Listen </span>
-          </button>
+      {/* ========================= WORKOUTS HEADER (Nutrition-style) ========================= */}
+      <div className='rounded-xl   md:rounded-3xl overflow-hidden border border-indigo-200'>
+        {/* Primary banner */}
+        <div className='relative p-4 md:p-8 bg-gradient-to-tr from-indigo-500 to-sky-400 text-white'>
+          <div className='absolute inset-0 opacity-20 bg-[radial-gradient(600px_200px_at_20%_-20%,white,transparent)]' />
+          <div className='relative z-10 flex flex-row md:items-center gap-3 md:gap-6 justify-between'>
+            {/* Title */}
+            <PageHeader className='max-lg:!hidden' icon={Dumbbell} title='My Workouts' subtitle='Log sets and track PRs automatically.' />
 
-          {/* Settings button */}
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className='cursor-pointer px-2 inline-flex items-center gap-2 rounded-xl 
-                 bg-slate-100 text-slate-800 h-[37px] max-md:w-[37px]  justify-center text-sm font-medium
-                 shadow hover:bg-slate-200 active:scale-95 transition'>
-            <SettingsIcon size={16} /> <span className='max-md:hidden'> Settings </span>
-          </button>
+            {/* Actions (right) */}
+            <div className='flex items-center gap-2'>
+              {/* Listen (like Nutrition's Grocery button) */}
+              <button onClick={() => setAudioOpen(v => !v)} className='px-2 inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition' aria-label='Listen'>
+                <Headphones size={16} />
+                <span className='max-md:hidden'>Listen</span>
+              </button>
 
-          <button onClick={() => setTab('workout')} className={`md:hidden cursor-pointer px-2 inline-flex items-center gap-2 rounded-xl bg-slate-100 text-slate-800 h-[37px] max-md:w-[37px]  justify-center text-sm font-medium shadow hover:bg-slate-200 active:scale-95 transition ${tab == 'workout' && 'bg-main'} `}>
-            <Dumbbell size={16} />
-          </button>
-          <button onClick={() => setTab('history')} className={`md:hidden cursor-pointer px-2 inline-flex items-center gap-2 rounded-xl bg-slate-100 text-slate-800 h-[37px] max-md:w-[37px]  justify-center text-sm font-medium shadow hover:bg-slate-200 active:scale-95 transition ${tab == 'history' && 'bg-main'} `}>
-            <HistoryIcon size={16} />
-          </button>
+              {/* Settings (like Nutrition's Calc button) */}
+              <button onClick={() => setSettingsOpen(true)} className='px-2 inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition' aria-label='Settings'>
+                <SettingsIcon size={16} />
+                <span className='max-md:hidden'>Settings</span>
+              </button>
 
-          <TabsPill
-            className={'max-md:hidden'}
-            id='my-workouts-tabs'
-            tabs={[
-              { key: 'workout', label: 'Workout', icon: Dumbbell },
-              { key: 'history', label: 'History', icon: HistoryIcon },
-            ]}
-            active={tab}
-            onChange={k => setTab(k)}
-          />
+              {/* Mobile tab toggles (icons only) */}
+              <button onClick={() => setTab('workout')} className={`md:hidden px-2 inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium hover:bg-white/20 active:scale-95 transition ${tab === 'workout' ? 'ring-1 ring-white/50' : ''}`} aria-label='Workout tab'>
+                <Dumbbell size={16} />
+              </button>
+              <button onClick={() => setTab('history')} className={`md:hidden px-2 inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium hover:bg-white/20 active:scale-95 transition ${tab === 'history' ? 'ring-1 ring-white/50' : ''}`} aria-label='History tab'>
+                <HistoryIcon size={16} />
+              </button>
 
-          <div className='flex items-center gap-2 flex-1 w-full justify-end  '>
-            <button onClick={() => setDrawerOpen(true)} className='md:hidden inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50'>
-              <MenuIcon size={16} /> Exercises
-            </button>
+              {/* Desktop tabs */}
+              <TabsPill
+                className='max-md:hidden'
+                id='my-workouts-tabs'
+                tabs={[
+                  { key: 'workout', label: 'Workout', icon: Dumbbell },
+                  { key: 'history', label: 'History', icon: HistoryIcon },
+                ]}
+                active={tab}
+                onChange={k => setTab(k)}
+              />
+            </div>
+
+            <div className='flex items-center gap-2 lg:hidden'>
+              <button onClick={() => setDrawerOpen(true)} className=' inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm cursor-pointer hover:opacity-80 '>
+                <MenuIcon size={16} /> Exercises
+              </button>
+            </div>
           </div>
+        </div>
+
+        {/* Secondary bar: right-aligned Exercises drawer on mobile */}
+        <div className='px-4 md:px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white'>
+          {tab === 'workout' && (
+            <div className='flex-1'>
+              <TabsPill className={'!rounded-xl'} slice={3} id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={changeDay} />
+            </div>
+          )}
         </div>
       </div>
 
       <AudioHubInline open={audioOpen} onClose={() => setAudioOpen(false)} podcasts={podcasts} />
 
-      {/* top bar: day selector + start workout big icon + session time */}
-      {tab === 'workout' && (
-        <div className='rounded-2xl sm:border sm:border-slate-200 sm:bg-white  sm:p-3'>
-          <div className='flex items-center justify-between gap-2'>
-            <div className='flex-1'>
-              <TabsPill className={'!rounded-xl'} slice={3} id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={changeDay} />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* WORKOUT */}
       {tab === 'workout' && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
           {loading ? (
-						<div className='grid grid-cols-[1fr_300px] max-md:grid-cols-1  gap-3 ' >
-							<motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 26 }} className='space-y-4'>
-								 
-								<div className='space-y-3'>
-									{Array.from({ length: 2 }).map((_, i) => (
-										<div key={i} className={`relative h-16 rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-100 via-white to-slate-100 shimmer`} />
-									))}
-								</div>
+            <div className='grid grid-cols-[1fr_300px] max-md:grid-cols-1  gap-3 '>
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 26 }} className='space-y-4'>
+                <div className='space-y-3'>
+                  {Array.from({ length: 2 }).map((_, i) => (
+                    <div key={i} className={`relative h-16 rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-100 via-white to-slate-100 shimmer`} />
+                  ))}
+                </div>
 
-								{/* Media panel shimmer (400px area to match video/image region) */}
-								<div className='relative h-[200px] md:h-[275px] rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-100 via-white to-slate-100 shimmer' />
-							</motion.div>
+                {/* Media panel shimmer (400px area to match video/image region) */}
+                <div className='relative h-[200px] md:h-[275px] rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-100 via-white to-slate-100 shimmer' />
+              </motion.div>
 
-							<div className='rounded-2xl h-fit  bg-white '>
-									<div className='flex flex-wrap flex-col gap-2'>
-										{Array.from({ length: 6 }).map((_, i) => (
-											<div key={i} className='relative h-8 w-full rounded-xl border border-slate-200 bg-gradient-to-r from-slate-100 via-white to-slate-100 shimmer' />
-										))}
-									</div>
-								</div>
-
-
-						</div>
+              <div className='rounded-2xl h-fit  bg-white '>
+                <div className='flex flex-wrap flex-col gap-2'>
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className='relative h-8 w-full rounded-xl border border-slate-200 bg-gradient-to-r from-slate-100 via-white to-slate-100 shimmer' />
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : (
             <div className='space-y-5 sm:space-y-6'>
               <div className='rounded-2xl md:border md:border-slate-200 bg-white md:p-2 sm:p-4'>

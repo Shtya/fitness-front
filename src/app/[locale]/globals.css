@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css?family=Cairo:200,300,regular,500,600,700,800,900');
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700&display=swap');
+
 @import 'tailwindcss';
 
 :root {
@@ -16,6 +18,8 @@ body {
 [dir='rtl'] body {
   font-family: var(--font-arabic) !important;
 }
+.font-ar { font-family: var(--font-arabic) !important }
+
 
 .scrollbar-custom {
   scrollbar-width: thin;

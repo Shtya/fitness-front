@@ -25,7 +25,7 @@ export default function Header({ onMenu }) {
               <Bell className='size-5 text-slate-600' />
               <span className='absolute -right-1 -top-1 size-2.5 rounded-full bg-rose-500' />
             </button>
-            <button className='rounded-xl size-9  bg-main text-white grid place-content-center font-semibold shadow'>MA</button>
+            <button className='rounded-xl size-9  bg-main text-white grid place-content-center font-semibold shadow'>A.S</button>
           </div>
         </div>
       </div>
