@@ -21,10 +21,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DataTable from '@/components/dashboard/ui/DataTable';
 import { PageHeader, TabsPill, EmptyState, spring } from '@/components/dashboard/ui/UI';
-import { Dumbbell, History as HistoryIcon, Clock, X, Play, Pause, Minus, Plus, Video as VideoIcon, Images, Shuffle, Trophy, TrendingUp, Flame, Save as SaveIcon, ImageIcon, Edit3, Headphones, Radio, Settings as SettingsIcon, Menu as MenuIcon } from 'lucide-react';
+import { Dumbbell, History as HistoryIcon, Clock, X, Play, Pause, Minus, Plus, Video as VideoIcon, Images, Shuffle, Trophy, TrendingUp, Flame, Save as SaveIcon, ImageIcon, Edit3, Headphones, Radio, Settings as SettingsIcon, Menu as MenuIcon, Volume2, VolumeX, RotateCw } from 'lucide-react';
 import CheckBox from '@/components/atoms/CheckBox';
 import api from '@/utils/axios';
 import weeklyProgram from './exercises';
+import Button from '@/components/atoms/Button';
 
 /* =================== CONSTANTS =================== */
 const DEFAULT_SOUNDS = ['/sounds/alert1.mp3', '/sounds/alert2.mp3', '/sounds/alert3.mp3', '/sounds/alert4.mp3', '/sounds/alert5.mp3', '/sounds/alert6.mp3', '/sounds/alert7.mp3'];
@@ -612,11 +613,13 @@ export default function MyWorkoutsPage() {
     return { exerciseName: exName, date: todayISO(), records };
   }
 
+  const [loadingSaveDays, setLoadingSaveDays] = useState(false);
   async function saveDayToServer() {
     const ex = workout?.exercises.find(e => e.id === currentExId);
     if (!ex) return;
     const payload = buildDailyPRPayload(ex.name);
     try {
+      setLoadingSaveDays(true);
       const data = await upsertDailyPR(USER_ID, payload.exerciseName, payload.date, payload.records);
       const serverRecords = data?.records || [];
       setWorkout(w => ({
@@ -632,6 +635,8 @@ export default function MyWorkoutsPage() {
       // keep buffer in localStorage
       persistLocalBuffer(workout);
     }
+
+    setLoadingSaveDays(false);
   }
 
   async function maybeSaveSetOnBlur(setObj) {
@@ -729,11 +734,29 @@ export default function MyWorkoutsPage() {
       {tab === 'workout' && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
           {loading ? (
-            <div className='space-y-3'>
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className='h-16 rounded-2xl bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 animate-pulse' />
-              ))}
-            </div>
+						<div className='grid grid-cols-[1fr_300px] max-md:grid-cols-1  gap-3 ' >
+							<motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 26 }} className='space-y-4'>
+								 
+								<div className='space-y-3'>
+									{Array.from({ length: 2 }).map((_, i) => (
+										<div key={i} className={`relative h-16 rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-100 via-white to-slate-100 shimmer`} />
+									))}
+								</div>
+
+								{/* Media panel shimmer (400px area to match video/image region) */}
+								<div className='relative h-[200px] md:h-[275px] rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-100 via-white to-slate-100 shimmer' />
+							</motion.div>
+
+							<div className='rounded-2xl h-fit  bg-white '>
+									<div className='flex flex-wrap flex-col gap-2'>
+										{Array.from({ length: 6 }).map((_, i) => (
+											<div key={i} className='relative h-8 w-full rounded-xl border border-slate-200 bg-gradient-to-r from-slate-100 via-white to-slate-100 shimmer' />
+										))}
+									</div>
+								</div>
+
+
+						</div>
           ) : (
             <div className='space-y-5 sm:space-y-6'>
               <div className='rounded-2xl md:border md:border-slate-200 bg-white md:p-2 sm:p-4'>
@@ -756,8 +779,9 @@ export default function MyWorkoutsPage() {
                         {hasExercises && (
                           <>
                             {/* Media area: fixed height 400px, object-contain videos, inline playback */}
-                            <div className='w-full bg-black relative rounded-[10px_10px_0_0] overflow-hidden md:!h-[275px] ' style={{ height: 200 }}>
-                              {currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? <InlineVideo key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} /> : <img key={currentExercise?.id + '-image'} src={currentExercise?.img} alt={currentExercise?.name || 'Exercise'} className='w-full h-full object-contain bg-white ' />}
+                            <div className='w-full relative rounded-[10px_10px_0_0] overflow-hidden md:!h-[275px] ' style={{ height: 200 }}>
+                              {currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? <InlineVideo key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} /> : <img key={currentExercise?.id + '-image'} src={currentExercise?.img} alt={currentExercise?.name} className='w-full h-full object-contain bg-white ' />}
+
                               <div className='absolute bottom-2 right-2 flex items-center gap-2 bg-black/40 backdrop-blur px-2 py-1 rounded-lg'>
                                 <button onClick={() => setActiveMedia('image')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'image' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show image'>
                                   <ImageIcon size={14} />
@@ -824,12 +848,7 @@ export default function MyWorkoutsPage() {
                                     <Plus size={14} />
                                   </button>
                                 </div>
-                                <div className='flex items-center gap-2'>
-                                  {unsaved && <span className='text-xs text-amber-600'>Unsaved changes buffered locally</span>}
-                                  <button onClick={saveDayToServer} className='inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs text-indigo-700 hover:bg-indigo-100' title='Save/Upsert this exercise day'>
-                                    <SaveIcon size={14} /> Save
-                                  </button>
-                                </div>
+                                <Button color='secondary' loading={loadingSaveDays} icon={<SaveIcon size={14} />} name={'Save'} onClick={saveDayToServer} className=' !px-2 !text-sm  !py-1 !w-fit' />
                               </div>
                             </div>
                           </>
@@ -992,7 +1011,7 @@ export default function MyWorkoutsPage() {
       {/* floating unsaved hint on mobile */}
       <AnimatePresence>
         {unsaved && (
-          <motion.div initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 16, opacity: 0 }} className='fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-sm px-3 py-1.5 shadow'>
+          <motion.div initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 16, opacity: 0 }} className='fixed bottom-4 w-[90%] max-w-fit  text-nowrap truncate left-1/2 -translate-x-1/2 z-40 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs flex justify-center text-center px-3 py-1.5 shadow'>
             Changes are stored locally until you press Save.
           </motion.div>
         )}
@@ -1050,23 +1069,41 @@ export default function MyWorkoutsPage() {
 function AudioHubInline({ open, onClose }) {
   const audioRef = useRef(null);
 
-  // ---- Demo podcasts (YouTube) ----
-  const podcasts = ['https://www.youtube.com/watch?v=PEu6zGl7qN4&ab_channel=%D9%85%D9%86%D9%8A%D8%B1%D9%85%D8%AD%D9%85%D8%AF%D8%B9%D9%84%D9%8A', 'https://www.youtube.com/watch?v=dxYI6cluroI&ab_channel=AHMEDAZAM', 'https://www.youtube.com/watch?v=y2ShgKJn1NA&ab_channel=%D9%82%D9%86%D8%A7%D8%A9%D8%A7%D9%84%D8%B4%D9%8A%D8%AE%D8%AE%D8%A7%D9%84%D8%AF%D8%A7%D9%84%D8%B1%D8%A7%D8%B4%D8%AF', 'https://www.youtube.com/watch?v=RFRLVUb2GUM'];
+  // --- Seed podcasts (YouTube) ---
+  const podcastsSeed = ['https://www.youtube.com/watch?v=PEu6zGl7qN4', 'https://www.youtube.com/watch?v=dxYI6cluroI', 'https://www.youtube.com/watch?v=y2ShgKJn1NA', 'https://www.youtube.com/watch?v=RFRLVUb2GUM'];
 
-  const [tab, setTab] = useState('stations'); // 'stations' | 'podcasts'
+  const [tab, setTab] = useState((typeof window !== 'undefined' && localStorage.getItem('audio.tab')) || 'stations');
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [volume, setVolume] = useState(0.9);
-  const [muted, setMuted] = useState(false);
+  const [volume, setVolume] = useState(() => {
+    const v = typeof window !== 'undefined' ? localStorage.getItem('audio.volume') : null;
+    return v ? Number(v) : 0.9;
+  });
+  const [muted, setMuted] = useState(() => typeof window !== 'undefined' && localStorage.getItem('audio.muted') === '1');
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [retryKey, setRetryKey] = useState(0);
+  const [watchdog, setWatchdog] = useState(null);
 
-  // IMPORTANT: use HTTPS streams to avoid mixed-content blocking on HTTPS pages
+  // --- HTTPS Qur’an stations ---
   const DEFAULT_STATIONS = [
-    { name: 'Qur’an Radio (Mix)', url: 'https://qurango.net/radio/mix', tag: 'Qur’an' }, 
+    { name: 'Qur’an Radio (Mix)', url: 'https://qurango.net/radio/mix', tag: 'General' },
+    { name: 'Abdulbasit (Murattal)', url: 'https://qurango.net/radio/abdulbasit_abdulsamad', tag: 'Recitation' },
+    { name: 'Husary (Murattal)', url: 'https://qurango.net/radio/mahmoud_khalil_alhussary', tag: 'Recitation' },
+    { name: 'Saad Al-Ghamdi', url: 'https://qurango.net/radio/saad_alghamdi', tag: 'Recitation' },
+    { name: 'Shuraim', url: 'https://qurango.net/radio/saud_alshuraim', tag: 'Recitation' },
   ];
-  const [stations] = useState(DEFAULT_STATIONS);
-  const [currentStationUrl, setCurrentStationUrl] = useState(stations[0]?.url || '');
 
-  // ---- Normalize YouTube list ----
+  const [stations] = useState(DEFAULT_STATIONS);
+  const [currentStationUrl, setCurrentStationUrl] = useState(() => {
+    if (typeof window === 'undefined') return DEFAULT_STATIONS[0]?.url || '';
+    return localStorage.getItem('audio.station') || DEFAULT_STATIONS[0]?.url || '';
+  });
+
+  // --- Podcasts: async + skeleton ---
+  const [podcastsLoading, setPodcastsLoading] = useState(true);
+  const [podcastList, setPodcastList] = useState([]);
+  const [currentPodcastIdx, setCurrentPodcastIdx] = useState(0);
+
   const normalizeYouTube = arr => {
     const getId = u => {
       try {
@@ -1077,31 +1114,70 @@ function AudioHubInline({ open, onClose }) {
       return null;
     };
     return (arr || []).map((item, idx) => {
-      const url = typeof item === 'string' ? item : item?.url || '';
-      const id = getId(url) || `yt_${idx}`;
+      const id = getId(item) || `yt_${idx}`;
       return {
         id,
-        url,
-        title: typeof item === 'string' ? `YouTube Video ${idx + 1}` : item?.title || `YouTube Video ${idx + 1}`,
+        url: item,
+        title: `Podcast ${idx + 1}`,
         embed: id ? `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1` : '',
         thumb: id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : '',
       };
     });
   };
-  const podcastList = normalizeYouTube(podcasts);
-  const [currentPodcastIdx, setCurrentPodcastIdx] = useState(0);
+
+  useEffect(() => {
+    setPodcastsLoading(true);
+    const t = setTimeout(() => {
+      setPodcastList(normalizeYouTube(podcastsSeed));
+      setPodcastsLoading(false);
+    }, 800);
+    return () => clearTimeout(t);
+  }, [retryKey]);
 
   // Derived src
   const src = tab === 'stations' ? currentStationUrl : undefined;
 
-  // Volume/mute wire-up
+  // Volume/mute
   useEffect(() => {
     const el = audioRef.current;
     if (!el) return;
     el.volume = muted ? 0 : volume;
   }, [volume, muted]);
 
-  // Pause when closing the box
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('audio.volume', String(volume));
+      localStorage.setItem('audio.muted', muted ? '1' : '0');
+    }
+  }, [volume, muted]);
+
+  // Persist choices
+  useEffect(() => {
+    if (typeof window !== 'undefined') localStorage.setItem('audio.station', currentStationUrl);
+  }, [currentStationUrl]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') localStorage.setItem('audio.tab', tab);
+  }, [tab]);
+
+  // Force load when src changes (prevents stuck spinners on some streams)
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    try {
+      el.pause();
+    } catch {}
+    // Important: call load() after src change to restart the load cycle
+    el.load();
+    setPlaying(false);
+    setLoading(false);
+    setErrorMsg(null);
+    if (tab === 'stations') {
+      // don’t autoplay here; wait for explicit user click OR chooseStation’s play
+    }
+  }, [src, tab]);
+
+  // Pause when closing
   useEffect(() => {
     if (!open) {
       try {
@@ -1109,29 +1185,60 @@ function AudioHubInline({ open, onClose }) {
       } catch {}
       setPlaying(false);
       setLoading(false);
+      setErrorMsg(null);
     }
   }, [open]);
 
-  // Audio event handlers (robust)
+  // Hook up audio events
   useEffect(() => {
     const el = audioRef.current;
     if (!el) return;
 
-    const onLoadStart = () => setLoading(true);
-    const onWaiting = () => setLoading(true);
-    const onStalled = () => setLoading(true);
-    const onCanPlay = () => setLoading(false);
-    const onCanPlayThrough = () => setLoading(false);
-    const onLoadedData = () => setLoading(false);
+    const onLoadStart = () => {
+      setErrorMsg(null);
+      setLoading(true);
+      armWatchdog();
+    };
+    const onWaiting = () => {
+      setLoading(true);
+      armWatchdog();
+    };
+    const onStalled = () => {
+      setLoading(true);
+      armWatchdog();
+    };
+    const onCanPlay = () => {
+      clearWatchdog();
+      setLoading(false);
+    };
+    const onCanPlayThrough = () => {
+      clearWatchdog();
+      setLoading(false);
+    };
+    const onLoadedData = () => {
+      clearWatchdog();
+      setLoading(false);
+    };
     const onPlaying = () => {
+      clearWatchdog();
       setLoading(false);
       setPlaying(true);
     };
-    const onPause = () => setPlaying(false);
-    const onEnded = () => setPlaying(false);
+    const onPause = () => {
+      clearWatchdog();
+      setPlaying(false);
+      setLoading(false);
+    };
+    const onEnded = () => {
+      clearWatchdog();
+      setPlaying(false);
+      setLoading(false);
+    };
     const onError = () => {
+      clearWatchdog();
       setLoading(false);
       setPlaying(false);
+      setErrorMsg('Stream error. Try again or switch station.');
     };
 
     el.addEventListener('loadstart', onLoadStart);
@@ -1156,44 +1263,84 @@ function AudioHubInline({ open, onClose }) {
       el.removeEventListener('pause', onPause);
       el.removeEventListener('ended', onEnded);
       el.removeEventListener('error', onError);
+      clearWatchdog();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src]);
 
-  // Choose station (don’t hard-disable play if autoplay is blocked)
+  // Watchdog to stop an eternally spinning loader (8s)
+  const armWatchdog = () => {
+    clearWatchdog();
+    const id = setTimeout(() => {
+      setLoading(false);
+      setErrorMsg('Taking too long to buffer. Try again or switch station.');
+    }, 8000);
+    setWatchdog(id);
+  };
+  const clearWatchdog = () => {
+    if (watchdog) {
+      clearTimeout(watchdog);
+      setWatchdog(null);
+    }
+  };
+
+  // Select station
   const chooseStation = async url => {
     setPlaying(false);
     if (url === currentStationUrl) return;
     setLoading(true);
+    setErrorMsg(null);
     setCurrentStationUrl(url);
+
+    // Try to autoplay after selection
+    const el = audioRef.current;
     try {
-      await audioRef.current?.play();
-    } catch {
-      // clear loading so user can click Play manually
+      await el.play();
+      // Don’t rely only on events; immediately reflect UI
       setLoading(false);
+      setPlaying(true);
+      clearWatchdog();
+    } catch {
+      // user gesture may be needed; leave not playing
+      setLoading(false);
+      clearWatchdog();
     }
   };
 
+  // Play / Pause
   const togglePlay = async () => {
     const el = audioRef.current;
     if (!el) return;
+    setErrorMsg(null);
+
     if (playing) {
       try {
         el.pause();
         setPlaying(false);
-      } catch {}
-    } else {
-      try {
-        setLoading(true);
-        await el.play(); // if user gesture present, should succeed
-        // playing event will clear loading
-      } catch {
-        // if it fails, stop spinner
         setLoading(false);
-      }
+      } catch {}
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const p = el.play();
+      // Some browsers resolve before "playing" fires: update UI immediately.
+      await p;
+      setLoading(false);
+      setPlaying(true);
+      clearWatchdog();
+    } catch {
+      setLoading(false);
+      setPlaying(false);
+      setErrorMsg('Autoplay blocked or stream busy. Click Play again.');
+      clearWatchdog();
     }
   };
 
   if (!open) return null;
+
+  const activeStation = stations.find(s => s.url === currentStationUrl);
 
   return (
     <AnimatePresence>
@@ -1205,7 +1352,7 @@ function AudioHubInline({ open, onClose }) {
               <Headphones size={16} className='text-indigo-600' />
               Audio
             </div>
-            <button onClick={onClose} className='p-1.5 rounded-lg hover:bg-slate-100'>
+            <button onClick={onClose} className='p-1.5 rounded-lg hover:bg-slate-100' aria-label='Close'>
               <X size={14} />
             </button>
           </div>
@@ -1217,7 +1364,7 @@ function AudioHubInline({ open, onClose }) {
                 { key: 'stations', label: 'Stations' },
                 { key: 'podcasts', label: 'Podcasts' },
               ].map(t => (
-                <button key={t.key} onClick={() => setTab(t.key)} className={`relative px-2.5 py-1 text-xs rounded-md transition ${tab === t.key ? 'text-indigo-700' : 'text-slate-600 hover:text-slate-800'}`}>
+                <button key={t.key} onClick={() => setTab(t.key)} className={`relative px-2.5 py-1 text-xs rounded-md transition ${tab === t.key ? 'text-indigo-700' : 'text-slate-600 hover:text-slate-800'}`} aria-pressed={tab === t.key}>
                   {t.label}
                   {tab === t.key && <motion.span layoutId='audTab' className='absolute inset-0 -z-10 rounded-md bg-white shadow' transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
                 </button>
@@ -1230,19 +1377,11 @@ function AudioHubInline({ open, onClose }) {
             {/* Stations */}
             {tab === 'stations' && (
               <>
-                <div className='grid  grid-cols-4 gap-1.5'>
-                  {stations.map((s, i) => {
+                <div className='grid  grid-cols-3 md:grid-cols-5 gap-1.5'>
+                  {stations.map(s => {
                     const active = currentStationUrl === s.url;
                     return (
-                      <button
-                        key={i}
-                        onClick={() => {
-                          chooseStation(s.url);
-                        }}
-                        className={`text-left p-2 rounded-lg border transition group
-                          ${active ? 'bg-indigo-50/70 border-indigo-200 ring-1 ring-indigo-100' : 'bg-white border-slate-200 hover:bg-slate-50'}
-                        `}
-                        title={s.name}>
+                      <button key={s.url} onClick={() => chooseStation(s.url)} className={`text-left p-2 rounded-lg border transition group ${active ? 'bg-indigo-50/70 border-indigo-200 ring-1 ring-indigo-100' : 'bg-white border-slate-200 hover:bg-slate-50'}`} title={s.name}>
                         <div className='text-xs font-medium truncate'>{s.name}</div>
                         <div className='text-[10px] text-slate-500 truncate'>{s.tag || 'Station'}</div>
                       </button>
@@ -1251,13 +1390,23 @@ function AudioHubInline({ open, onClose }) {
                 </div>
 
                 <div className='flex items-center justify-between gap-2 rounded-lg border border-slate-200 p-2'>
-                  <div className='text-[11px] truncate'>
-                    <span className='font-medium'>Now:</span> {stations.find(s => s.url === currentStationUrl)?.name || 'Station'}
+                  <div className='max-md:hidden text-[11px] flex items-center gap-2 min-w-0'>
+                    <span className='font-medium shrink-0'>Now:</span>
+                    <div className='relative w-full overflow-hidden'>
+                      <div className='whitespace-nowrap animate-[marquee_10s_linear_infinite]'>{activeStation?.name || 'Station'}</div>
+                    </div>
+                    <div className='flex items-end gap-[2px] h-3 w-3 ml-1' aria-hidden>
+                      {[0, 1, 2].map(i => (
+                        <span key={i} className={`w-[2px] bg-indigo-600 ${playing ? 'animate-[bounce_0.6s_ease-in-out_infinite]' : ''}`} style={{ height: playing ? (i === 1 ? '12px' : '8px') : '2px', animationDelay: `${i * 0.1}s` }} />
+                      ))}
+                    </div>
                   </div>
 
-                  <div className='flex items-center gap-1.5'>
-                    <button onClick={togglePlay} className='inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs border-slate-200 hover:bg-slate-50 min-w-[88px] justify-center' aria-busy={loading ? 'true' : 'false'} title={loading ? 'Loading…' : playing ? 'Pause' : 'Play'}>
-                      {playing ? (
+                  <div className='flex items-center gap-1.5 max-md:justify-end max-md:w-full '>
+                    <button onClick={togglePlay} className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs min-w-[92px] justify-center ${loading ? 'border-slate-200 bg-slate-50 text-slate-500' : 'border-slate-200 hover:bg-slate-50'}`} aria-busy={loading ? 'true' : 'false'} aria-label={loading ? 'Loading' : playing ? 'Pause' : 'Play'}>
+                      {loading ? (
+                        <motion.span className='inline-block h-3 w-3 rounded-full border border-slate-400 border-t-transparent' animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }} />
+                      ) : playing ? (
                         <>
                           <Pause size={12} /> Pause
                         </>
@@ -1268,45 +1417,69 @@ function AudioHubInline({ open, onClose }) {
                       )}
                     </button>
 
-                    <button onClick={() => setMuted(m => !m)} className='inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs border-slate-200 hover:bg-slate-50' title={muted ? 'Unmute' : 'Mute'}>
-                      {muted ? '🔇' : '🔊'}
+                    <button onClick={() => setMuted(m => !m)} className='inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs border-slate-200 hover:bg-slate-50' aria-label={muted ? 'Unmute' : 'Mute'}>
+                      {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
                     </button>
 
                     <input type='range' min='0' max='1' step='0.01' value={muted ? 0 : volume} onChange={e => setVolume(Number(e.target.value))} className='w-20 accent-indigo-600' title='Volume' />
                   </div>
                 </div>
+
+                {errorMsg && (
+                  <div className=' max-md:hidden flex items-center justify-between rounded-md bg-rose-50 border border-rose-200 px-2 py-1.5 text-[11px] text-rose-700'>
+                    <span className='truncate'>{errorMsg}</span>
+                    <button
+                      onClick={() => {
+                        setErrorMsg(null);
+                        setRetryKey(k => k + 1);
+                        togglePlay();
+                      }}
+                      className='inline-flex items-center gap-1 text-rose-700 hover:underline'>
+                      <RotateCw size={12} /> Retry
+                    </button>
+                  </div>
+                )}
               </>
             )}
 
-            {/* Podcasts (YouTube) */}
+            {/* Podcasts */}
             {tab === 'podcasts' && (
               <div className='space-y-2'>
-                {podcastList.length > 0 ? (
-                  <div className='aspect-video w-[calc(100%+40px)] max-md:-mt-2 -ml-[20px]  md:w-[calc(100%+20px)] md:-ml-[10px] rounded-lg overflow-hidden border border-slate-200'>
-                    <iframe key={podcastList[currentPodcastIdx].id} src={podcastList[currentPodcastIdx].embed} className='w-full h-full' title={podcastList[currentPodcastIdx].title} allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share' referrerPolicy='strict-origin-when-cross-origin' loading='lazy' allowFullScreen />
-                  </div>
+                {podcastsLoading ? (
+                  <>
+                    <div className='aspect-video w-[calc(100%+40px)] max-md:-mt-2 -ml-[20px]  md:w-[calc(100%+20px)] md:-ml-[10px] rounded-lg overflow-hidden border border-slate-200'>
+                      <div className='h-full w-full animate-pulse bg-slate-100' />
+                    </div>
+                    <div className='flex gap-1.5 pb-1'>
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className='min-w-[60px] max-w-[60px] rounded-md border border-slate-200 overflow-hidden'>
+                          <div className='h-[45px] w-full animate-pulse bg-slate-100' />
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : podcastList.length > 0 ? (
+                  <>
+                    <div className='aspect-video w-[calc(100%+40px)] max-md:-mt-2 -ml-[20px]  md:w-[calc(100%+20px)] md:-ml-[10px] rounded-lg overflow-hidden border border-slate-200'>
+                      <iframe key={podcastList[currentPodcastIdx].id} src={podcastList[currentPodcastIdx].embed} className='w-full h-full' title={podcastList[currentPodcastIdx].title} allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share' referrerPolicy='strict-origin-when-cross-origin' loading='lazy' allowFullScreen />
+                    </div>
+
+                    <div className='flex gap-1.5 overflow-x-auto pb-1'>
+                      {podcastList.map((p, i) => (
+                        <button key={p.id} onClick={() => setCurrentPodcastIdx(i)} className={`min-w-[60px] max-w-[60px] rounded-md border overflow-hidden text-left ${i === currentPodcastIdx ? 'border-indigo-300' : 'border-slate-200 hover:border-slate-300'}`} title={p.title} aria-pressed={i === currentPodcastIdx}>
+                          <img src={p.thumb} alt='' className='w-full h-full object-cover' />
+                        </button>
+                      ))}
+                    </div>
+                  </>
                 ) : (
                   <div className='text-xs text-slate-500'>No YouTube links yet.</div>
                 )}
-
-                <div className='flex gap-1.5 overflow-x-auto pb-1'>
-                  {podcastList.map((p, i) => (
-                    <button
-                      key={p.id}
-                      onClick={() => setCurrentPodcastIdx(i)}
-                      className={`min-w-[60px] max-w-[60px] rounded-md border overflow-hidden text-left
-                        ${i === currentPodcastIdx ? 'border-indigo-300' : 'border-slate-200 hover:border-slate-300'}
-                      `}
-                      title={p.title}>
-                      <img src={p.thumb} alt='' className='w-full h-full object-cover' /> 
-                    </button>
-                  ))}
-                </div>
               </div>
             )}
 
-            {/* Audio element (keep crossorigin to help some streams) */}
-            <audio ref={audioRef} src={src} preload='none' crossOrigin='anonymous' />
+            {/* Audio element */}
+            <audio key={retryKey} ref={audioRef} src={src} preload='none' crossOrigin='anonymous' />
           </div>
         </div>
       </motion.div>
@@ -1314,35 +1487,20 @@ function AudioHubInline({ open, onClose }) {
   );
 }
 
+/* Tailwind extra (optional)
+@keyframes marquee {
+  0% { transform: translateX(0%) }
+  100% { transform: translateX(-100%) }
+}
+*/
+
 /* =================== SMALL COMPONENTS & HELPERS =================== */
 
-// Inline video: fixed 400px height, object-contain, inline playback (no fullscreen push)
 function InlineVideo({ src }) {
   const ref = useRef(null);
   const [playing, setPlaying] = useState(false);
 
-  const toggle = async () => {
-    const el = ref.current;
-    if (!el) return;
-    try {
-      if (playing) {
-        el.pause();
-        setPlaying(false);
-      } else {
-        await el.play();
-        setPlaying(true);
-      }
-    } catch {}
-  };
-
-  return (
-    <div className='w-full h-full grid place-items-center'>
-      <video muted ref={ref} src={src} className='w-full h-full object-contain bg-black' playsInline controls onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} style={{ maxHeight: 400 }} />
-      {/* Click overlay for quick play/pause on mobile if you want:
-      <button onClick={toggle} className='absolute inset-0' aria-label='toggle' />
-      */}
-    </div>
-  );
+  return <video muted ref={ref} src={src} className='w-full h-full object-contain bg-black' playsInline controls onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} style={{ maxHeight: 400 }} />;
 }
 
 // Exercise list (used on the right pane and mobile drawer)

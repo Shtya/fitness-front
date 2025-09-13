@@ -98,42 +98,10 @@ body {
 .p {
   @apply text-[18px] max-md:text-[16px] text-black opacity-80 font-[500];
 }
-/* 
-::-webkit-scrollbar-button:single-button:vertical:decrement {
-  background: #fff;
-  height: 10px;
-  display: block;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg width='8' height='8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 6 L4 2 L8 6 Z' fill='%23666'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: center;
-}
 
-::-webkit-scrollbar-button:single-button:vertical:increment {
-  background: #fff;
-  height: 10px;
-  display: block;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg width='8' height='8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 2 L4 6 L8 2 Z' fill='%23666'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: center;
-}
+@keyframes marquee { 0% { transform: translateX(0%) } 100% { transform: translateX(-100%) } }
 
-::-webkit-scrollbar-button:single-button:horizontal:decrement {
-  background: #fff;
-  width: 16px;
-  display: block;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg width='8' height='8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 0 L2 4 L6 8 Z' fill='%23666'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: center;
-}
 
-::-webkit-scrollbar-button:single-button:horizontal:increment {
-  background: #fff;
-  width: 16px;
-  display: block;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg width='8' height='8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 0 L6 4 L2 8 Z' fill='%23666'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: center;
-} */
 
 ::-webkit-scrollbar {
   width: 8px;

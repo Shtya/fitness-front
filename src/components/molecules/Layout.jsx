@@ -7,12 +7,13 @@ import Sidebar from './Sidebar';
 import ConfigAos from '@/config/Aos';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import PWAInstallPrompt from '@/app/[locale]/offline/PWAInstallPrompt';
 
 export default function Layout({ children }) {
   const pathname = usePathname();
   const isAuthRoute = pathname.startsWith('/auth') || pathname.startsWith('/site') || pathname == '/';
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -24,9 +25,35 @@ export default function Layout({ children }) {
     return () => (document.body.style.overflow = '');
   }, [sidebarOpen]);
 
+  // Simulate page loading
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 800); // 0.8s spinner
+    return () => clearTimeout(timer);
+  }, [pathname]);
+
+  if (loading) {
+    return (
+      <div className='flex items-center justify-center min-h-screen bg-white space-x-1'>
+        {[0, 0.1, 0.2, 0.3, 0.4].map((delay, i) => (
+          <motion.div
+            key={i}
+            className='w-2 h-6 bg-purple-500 rounded'
+            animate={{ scaleY: [1, 2, 1] }}
+            transition={{
+              duration: 0.8,
+              repeat: Infinity,
+              delay,
+              ease: 'easeInOut',
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <GlobalProvider>
-      <div className='  bg-gradient-to-b from-slate-50 via-white to-slate-50 text-slate-800'>
+      <div className='bg-gradient-to-b from-slate-50 via-white to-slate-50 text-slate-800'>
         <div className='container !px-0 flex min-h-dvh '>
           {!isAuthRoute && <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />}
 
@@ -36,7 +63,7 @@ export default function Layout({ children }) {
 
             <AnimatePresence mode='wait'>
               <motion.main key={pathname} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}>
-                <div className={`${!isAuthRoute && ' h-[calc(100vh-65px)] overflow-auto max-md:p-3 p-6'}`}>{children}</div>
+                <div className={`${!isAuthRoute && 'h-[calc(100vh-65px)] overflow-auto max-md:p-3 p-6'}`}>{children}</div>
               </motion.main>
             </AnimatePresence>
           </div>
