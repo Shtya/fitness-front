@@ -1,27 +1,10 @@
-/* 
-	- make the video take fixed height 400px and object-contain and click to work it work without take the full screen mode 
-	- put icons when click on it show categories about what i need to listen ( اذاعه القران الكريم  as play and pause and list to some podcast i will provide you with some links of podcasts and i can show it in this page)
-		يكون موجود اذاعه القران الكريم  , وقائمه يختار منها عاوز يشغل ايه قران ولا بودكاست و اختيارات تانيه 
-	- when i change any value in the sets show button to save them not when i write the value and after out focus send request for everything i need when chagne any value show button to save it and if no click on the save, save this data in the localstorage until click on the button and save it
-	- and also show icon for the setting when click on it show popup have dropdown to change the sound of the alter with alot of sounded [ /sounds/alert1.mp3 , /sounds/alert2.mp3 , /sounds/alert7.mp3 ]
-
-	- show a big icon above the exercise to when i go to the gym click on it to start the training to know i start the workout form time to this time to know i keep in the gym how min or how hours
-	- and make pretty skeleton loading like the ui 
-	- and also i see issue bug don't get the all sets and his progress untill i click on the exercise i need get the all progress of the exercise one time and push them 
- 
-	- and in the mobile the exercise make them in icon show beside the table or in any suitable place when click on it slide teh exercies form the right to choose the current exercise  with pretty why 
-
-	- and also i need enhance this ui more that this make it more awesome and amaizing and add also animation and handle teh responsive
-	- and i use js not ts
-
-	*/
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DataTable from '@/components/dashboard/ui/DataTable';
 import { PageHeader, TabsPill, EmptyState, spring } from '@/components/dashboard/ui/UI';
-import { Dumbbell, History as HistoryIcon, Clock, X, Play, Pause, Minus, Plus, Video as VideoIcon, Images, Shuffle, Trophy, TrendingUp, Flame, Save as SaveIcon, ImageIcon, Edit3, Headphones, Radio, Settings as SettingsIcon, Menu as MenuIcon, Volume2, VolumeX, RotateCw } from 'lucide-react';
+import { Dumbbell, History as HistoryIcon, Clock, X, Play, Pause, Minus, Plus, Video as VideoIcon, Images, Shuffle, Trophy, TrendingUp, Flame, Save as SaveIcon, ImageIcon, Edit3, Headphones, Radio, Settings as SettingsIcon, Menu as MenuIcon, Volume2, VolumeX, RotateCw, Square, Activity, EyeOff, Eye } from 'lucide-react';
 import CheckBox from '@/components/atoms/CheckBox';
 import api from '@/utils/axios';
 import weeklyProgram from './exercises';
@@ -77,10 +60,7 @@ async function upsertDailyPR(userId, exerciseName, date, records) {
   const { data } = await api.post('/prs', { exerciseName, date, records }, { params: { userId } });
   return data;
 }
-async function upsertAttempt(userId, exerciseName, date, set) {
-  const { data } = await api.post('/prs/attempt', { exerciseName, date, set }, { params: { userId } });
-  return data;
-}
+
 async function fetchOverview(userId, windowDays = 30) {
   const { data } = await api.get('/prs/stats/overview', { params: { userId, windowDays } });
   return data;
@@ -151,7 +131,7 @@ function useCountdown() {
 }
 
 /* =================== REST TIMER CARD =================== */
-function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
+function RestTimerCard({ alerting, setAlerting, initialSeconds, audioEl, className = '' }) {
   const { remaining, running, paused, start, pause, resume, stop, duration } = useCountdown();
   const [seconds, setSeconds] = useState(Number(initialSeconds || 0) || 90);
   const [showInput, setShowInput] = useState(false);
@@ -159,8 +139,6 @@ function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
   const inputRef = useRef(null);
   const holdRef = useRef(null);
 
-  // alert state/guards
-  const [alerting, setAlerting] = useState(false);
   const alertTimeoutRef = useRef(null);
   const hasAlertFiredRef = useRef(false); // <— prevents re-firing at 0s
 
@@ -378,35 +356,120 @@ function RestTimerCard({ initialSeconds, audioEl, className = '' }) {
 /* =================== SETTINGS POPUP (alert sound picker) =================== */
 function SettingsPopup({ open, onClose, currentSound, onChange, sounds = DEFAULT_SOUNDS }) {
   const [sel, setSel] = useState(currentSound || sounds[0]);
-  useEffect(() => setSel(currentSound || sounds[0]), [currentSound]);
+  const [playingUrl, setPlayingUrl] = useState(null); // which sound is currently playing
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    setSel(currentSound || sounds[0]);
+  }, [currentSound, sounds]);
+
+  // Cleanup audio on unmount/close
+  useEffect(() => {
+    if (!open) stopAudio();
+    return () => stopAudio();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      } catch {}
+      audioRef.current = null;
+    }
+    setPlayingUrl(null);
+  };
+
+  const playAudio = async url => {
+    // if clicking the currently playing item => stop it
+    if (playingUrl === url) {
+      stopAudio();
+      return;
+    }
+    // stop any previous sound
+    stopAudio();
+    // start new sound
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.onended = () => setPlayingUrl(null);
+    try {
+      await audio.play();
+      setPlayingUrl(url);
+    } catch {
+      // autoplay blocked or other error
+      setPlayingUrl(null);
+    }
+  };
+
   return (
     <AnimatePresence>
       {open && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className='fixed inset-0 z-[80] bg-black/30'>
-          <motion.div initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }} className='mx-auto mt-24 w-[92%] max-w-md rounded-2xl border border-slate-200 bg-white shadow-xl'>
+          <motion.div initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }} className='mx-auto mt-24 w-[92%] max-w-md rounded-2xl border border-slate-200 bg-white shadow-xl' role='dialog' aria-modal='true' aria-label='Settings'>
+            {/* Header */}
             <div className='p-3 border-b border-slate-100 flex items-center justify-between'>
               <div className='font-semibold flex items-center gap-2'>
                 <SettingsIcon size={18} /> Settings
               </div>
-              <button onClick={onClose} className='p-2 rounded-lg hover:bg-slate-100'>
+              <button onClick={onClose} className='p-2 rounded-lg hover:bg-slate-100' aria-label='Close'>
                 <X size={16} />
               </button>
             </div>
+
+            {/* Body */}
             <div className='p-4 space-y-3'>
               <div className='text-sm font-medium'>Alert sound</div>
-              <select value={sel} onChange={e => setSel(e.target.value)} className='w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm'>
-                {sounds.map((s, i) => (
-                  <option key={i} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+
+              {/* Scrollable list: fixed height 300px with overflow */}
+              <div className='h-[300px] overflow-auto rounded-xl border border-slate-200'>
+                <ul className='divide-y divide-slate-200'>
+                  {sounds.map((url, i) => {
+                    const isSelected = sel === url;
+                    const isPlaying = playingUrl === url;
+                    return (
+                      <li
+                        key={url}
+                        className={`flex items-center justify-between gap-3 px-3 py-2 cursor-pointer
+                          ${isSelected ? 'bg-indigo-50/60' : 'bg-white hover:bg-slate-50'}`}
+                        onClick={() => setSel(url)}
+                        aria-selected={isSelected}>
+                        <div className='flex items-center gap-2'>
+                          <span className={`inline-block h-2 w-2 rounded-full ${isSelected ? 'bg-indigo-500' : 'bg-slate-300'}`} />
+                          <span className='text-sm'>{`Sound ${i + 1}`}</span>
+                          {isSelected && <span className='ml-1 text-[11px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700'>Selected</span>}
+                          {isPlaying && <span className='ml-1 text-[11px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700'>Playing</span>}
+                        </div>
+
+                        <button
+                          type='button'
+                          onClick={e => {
+                            e.stopPropagation();
+                            playAudio(url);
+                          }}
+                          className='p-2 rounded-lg hover:bg-slate-100'
+                          aria-label={isPlaying ? 'Stop preview' : 'Play preview'}>
+                          {isPlaying ? <Square size={16} /> : <Play size={16} />}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+              {/* Footer */}
               <div className='flex items-center justify-end gap-2 pt-2'>
-                <button onClick={onClose} className='px-3 py-1.5 rounded-lg border border-slate-200 text-sm hover:bg-slate-50'>
+                <button
+                  onClick={() => {
+                    stopAudio();
+                    onClose();
+                  }}
+                  className='px-3 py-1.5 rounded-lg border border-slate-200 text-sm hover:bg-slate-50'>
                   Cancel
                 </button>
                 <button
                   onClick={() => {
+                    stopAudio();
                     onChange(sel);
                     onClose();
                   }}
@@ -446,6 +509,7 @@ export default function MyWorkoutsPage() {
   const audioRef = useRef(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [alertSound, setAlertSound] = useState(DEFAULT_SOUNDS[2]);
+  const [alerting, setAlerting] = useState(false);
 
   // audio hub
   const [audioOpen, setAudioOpen] = useState(false);
@@ -678,7 +742,7 @@ export default function MyWorkoutsPage() {
       {/* ========================= WORKOUTS HEADER (Nutrition-style) ========================= */}
       <div className='rounded-xl   md:rounded-3xl overflow-hidden border border-indigo-200'>
         {/* Primary banner */}
-        <div className='relative p-4 md:p-8 bg-gradient-to-tr from-indigo-500 to-sky-400 text-white'>
+        <div className='relative p-4 md:p-8  bg-gradient text-white'>
           <div className='absolute inset-0 opacity-20 bg-[radial-gradient(600px_200px_at_20%_-20%,white,transparent)]' />
           <div className='relative z-10 flex flex-row md:items-center gap-3 md:gap-6 justify-between'>
             {/* Title */}
@@ -737,7 +801,7 @@ export default function MyWorkoutsPage() {
         </div>
       </div>
 
-      <AudioHubInline open={audioOpen} onClose={() => setAudioOpen(false)} podcasts={podcasts} />
+      <AudioHubInline alerting={alerting} setAlerting={setAlerting} open={audioOpen} onClose={() => setAudioOpen(false)} podcasts={podcasts} />
 
       {/* WORKOUT */}
       {tab === 'workout' && (
@@ -804,7 +868,7 @@ export default function MyWorkoutsPage() {
                             </div>
 
                             {/* Rest timer */}
-                            <RestTimerCard initialSeconds={Number.isFinite(currentExercise?.restSeconds) ? currentExercise?.restSeconds : Number.isFinite(currentExercise?.rest) ? currentExercise?.rest : 90} audioEl={audioRef} className='mt-1' />
+                            <RestTimerCard alerting={alerting} setAlerting={setAlerting} initialSeconds={Number.isFinite(currentExercise?.restSeconds) ? currentExercise?.restSeconds : Number.isFinite(currentExercise?.rest) ? currentExercise?.rest : 90} audioEl={audioRef} className='mt-1' />
 
                             {/* SETS TABLE */}
                             <div className='max-md:mb-2 mx-2 md:mb-4 border border-slate-200 rounded-lg overflow-hidden'>
@@ -1072,44 +1136,29 @@ export default function MyWorkoutsPage() {
   );
 }
 
-function AudioHubInline({ open, onClose }) {
+function AudioHubInline({ open, onClose, alerting }) {
   const audioRef = useRef(null);
+  const toneRef = useRef(null);
+  const wasPlayingBeforeAlertRef = useRef(false);
 
-  // --- Seed podcasts (YouTube) ---
+  // --- Stations ---
+  const DEFAULT_STATIONS = useMemo(
+    () => [
+      { name: 'Qur’an Radio (Mix)', url: 'https://qurango.net/radio/mix', tag: 'General' },
+      { name: 'Abdulbasit (Murattal)', url: 'https://qurango.net/radio/abdulbasit_abdulsamad', tag: 'Recitation' },
+      { name: 'Husary (Murattal)', url: 'https://qurango.net/radio/mahmoud_khalil_alhussary', tag: 'Recitation' },
+      { name: 'Saad Al-Ghamdi', url: 'https://qurango.net/radio/saad_alghamdi', tag: 'Recitation' },
+      { name: 'Shuraim', url: 'https://qurango.net/radio/saud_alshuraim', tag: 'Recitation' },
+    ],
+    [],
+  );
+
   const podcastsSeed = ['https://www.youtube.com/watch?v=PEu6zGl7qN4', 'https://www.youtube.com/watch?v=dxYI6cluroI', 'https://www.youtube.com/watch?v=y2ShgKJn1NA', 'https://www.youtube.com/watch?v=RFRLVUb2GUM'];
-
-  const [tab, setTab] = useState((typeof window !== 'undefined' && localStorage.getItem('audio.tab')) || 'stations');
-  const [playing, setPlaying] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [volume, setVolume] = useState(() => {
-    const v = typeof window !== 'undefined' ? localStorage.getItem('audio.volume') : null;
-    return v ? Number(v) : 0.9;
-  });
-  const [muted, setMuted] = useState(() => typeof window !== 'undefined' && localStorage.getItem('audio.muted') === '1');
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [retryKey, setRetryKey] = useState(0);
-  const [watchdog, setWatchdog] = useState(null);
-
-  // --- HTTPS Qur’an stations ---
-  const DEFAULT_STATIONS = [
-    { name: 'Qur’an Radio (Mix)', url: 'https://qurango.net/radio/mix', tag: 'General' },
-    { name: 'Abdulbasit (Murattal)', url: 'https://qurango.net/radio/abdulbasit_abdulsamad', tag: 'Recitation' },
-    { name: 'Husary (Murattal)', url: 'https://qurango.net/radio/mahmoud_khalil_alhussary', tag: 'Recitation' },
-    { name: 'Saad Al-Ghamdi', url: 'https://qurango.net/radio/saad_alghamdi', tag: 'Recitation' },
-    { name: 'Shuraim', url: 'https://qurango.net/radio/saud_alshuraim', tag: 'Recitation' },
-  ];
-
-  const [stations] = useState(DEFAULT_STATIONS);
-  const [currentStationUrl, setCurrentStationUrl] = useState(() => {
-    if (typeof window === 'undefined') return DEFAULT_STATIONS[0]?.url || '';
-    return localStorage.getItem('audio.station') || DEFAULT_STATIONS[0]?.url || '';
-  });
-
-  // --- Podcasts: async + skeleton ---
   const [podcastsLoading, setPodcastsLoading] = useState(true);
   const [podcastList, setPodcastList] = useState([]);
   const [currentPodcastIdx, setCurrentPodcastIdx] = useState(0);
 
+  // ===== Helpers =====
   const normalizeYouTube = arr => {
     const getId = u => {
       try {
@@ -1138,64 +1187,50 @@ function AudioHubInline({ open, onClose }) {
       setPodcastsLoading(false);
     }, 800);
     return () => clearTimeout(t);
-  }, [retryKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Derived src
-  const src = tab === 'stations' ? currentStationUrl : undefined;
+  // UI
+  const [tab, setTab] = useState((typeof window !== 'undefined' && localStorage.getItem('audio.tab')) || 'stations');
+  const [hidden, setHidden] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [retryKey, setRetryKey] = useState(0);
+  const [watchdog, setWatchdog] = useState(null);
 
-  // Volume/mute
+  const [stations] = useState(DEFAULT_STATIONS);
+  const [currentStationUrl, setCurrentStationUrl] = useState(() => {
+    if (typeof window === 'undefined') return DEFAULT_STATIONS[0]?.url || '';
+    return localStorage.getItem('audio.station') || DEFAULT_STATIONS[0]?.url || '';
+  });
+
+  const [volume, setVolume] = useState(() => {
+    const v = typeof window !== 'undefined' ? localStorage.getItem('audio.volume') : null;
+    return v ? Number(v) : 0.9;
+  });
+  const [muted, setMuted] = useState(() => typeof window !== 'undefined' && localStorage.getItem('audio.muted') === '1');
+
+  // Persist simple state
   useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    el.volume = muted ? 0 : volume;
-  }, [volume, muted]);
-
+    if (typeof window !== 'undefined') localStorage.setItem('audio.tab', tab);
+  }, [tab]);
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('audio.volume', String(volume));
       localStorage.setItem('audio.muted', muted ? '1' : '0');
     }
   }, [volume, muted]);
-
-  // Persist choices
   useEffect(() => {
     if (typeof window !== 'undefined') localStorage.setItem('audio.station', currentStationUrl);
   }, [currentStationUrl]);
 
+  // Apply volume/mute to element
   useEffect(() => {
-    if (typeof window !== 'undefined') localStorage.setItem('audio.tab', tab);
-  }, [tab]);
+    if (audioRef.current) audioRef.current.volume = muted ? 0 : volume;
+  }, [volume, muted]);
 
-  // Force load when src changes (prevents stuck spinners on some streams)
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    try {
-      el.pause();
-    } catch {}
-    // Important: call load() after src change to restart the load cycle
-    el.load();
-    setPlaying(false);
-    setLoading(false);
-    setErrorMsg(null);
-    if (tab === 'stations') {
-      // don’t autoplay here; wait for explicit user click OR chooseStation’s play
-    }
-  }, [src, tab]);
-
-  // Pause when closing
-  useEffect(() => {
-    if (!open) {
-      try {
-        audioRef.current?.pause();
-      } catch {}
-      setPlaying(false);
-      setLoading(false);
-      setErrorMsg(null);
-    }
-  }, [open]);
-
-  // Hook up audio events
+  // Media events
   useEffect(() => {
     const el = audioRef.current;
     if (!el) return;
@@ -1244,7 +1279,7 @@ function AudioHubInline({ open, onClose }) {
       clearWatchdog();
       setLoading(false);
       setPlaying(false);
-      setErrorMsg('Stream error. Try again or switch station.');
+      setErrorMsg('Stream error. Try another station.');
     };
 
     el.addEventListener('loadstart', onLoadStart);
@@ -1271,10 +1306,57 @@ function AudioHubInline({ open, onClose }) {
       el.removeEventListener('error', onError);
       clearWatchdog();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src]);
+  }, [currentStationUrl]);
 
-  // Watchdog to stop an eternally spinning loader (8s)
+  // Keep src in sync (don’t autoplay here; chooseStation handles it)
+  useEffect(() => {
+    if (!audioRef.current) return;
+    try {
+      audioRef.current.pause();
+    } catch {}
+    audioRef.current.load();
+    setLoading(false);
+    setErrorMsg(null);
+  }, [currentStationUrl]);
+
+  // Close = STOP audio
+  useEffect(() => {
+    if (!open) {
+      try {
+        audioRef.current?.pause();
+      } catch {}
+      setPlaying(false);
+      setLoading(false);
+      setErrorMsg(null);
+    }
+  }, [open]);
+
+  // Alerting: pause when true, resume when false if it was playing
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (alerting) {
+      wasPlayingBeforeAlertRef.current = playing;
+      try {
+        el.pause();
+      } catch {}
+      setPlaying(false);
+    } else if (wasPlayingBeforeAlertRef.current) {
+      (async () => {
+        try {
+          setLoading(true);
+          await el.play();
+          setPlaying(true);
+        } catch {
+          setPlaying(false);
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }
+  }, [alerting]); // eslint-disable-line
+
+  // Watchdog
   const armWatchdog = () => {
     clearWatchdog();
     const id = setTimeout(() => {
@@ -1290,30 +1372,33 @@ function AudioHubInline({ open, onClose }) {
     }
   };
 
-  // Select station
+  // === Controls ===
+  // Always AUTOPLAY when you change the station
   const chooseStation = async url => {
-    setPlaying(false);
-    if (url === currentStationUrl) return;
-    setLoading(true);
     setErrorMsg(null);
-    setCurrentStationUrl(url);
-
-    // Try to autoplay after selection
     const el = audioRef.current;
+    if (!el) return;
+
     try {
-      await el.play();
-      // Don’t rely only on events; immediately reflect UI
-      setLoading(false);
+      el.pause();
+    } catch {}
+    setPlaying(false);
+    setLoading(true);
+
+    setCurrentStationUrl(url); // triggers load()
+
+    try {
+      el.load();
+      await el.play(); // force play new station
       setPlaying(true);
-      clearWatchdog();
     } catch {
-      // user gesture may be needed; leave not playing
+      setPlaying(false);
+    } finally {
       setLoading(false);
       clearWatchdog();
     }
   };
 
-  // Play / Pause
   const togglePlay = async () => {
     const el = audioRef.current;
     if (!el) return;
@@ -1327,25 +1412,20 @@ function AudioHubInline({ open, onClose }) {
       } catch {}
       return;
     }
-
     try {
       setLoading(true);
-      const p = el.play();
-      // Some browsers resolve before "playing" fires: update UI immediately.
-      await p;
-      setLoading(false);
+      await el.play();
       setPlaying(true);
-      clearWatchdog();
     } catch {
-      setLoading(false);
       setPlaying(false);
       setErrorMsg('Autoplay blocked or stream busy. Click Play again.');
+    } finally {
+      setLoading(false);
       clearWatchdog();
     }
   };
 
   if (!open) return null;
-
   const activeStation = stations.find(s => s.url === currentStationUrl);
 
   return (
@@ -1355,151 +1435,233 @@ function AudioHubInline({ open, onClose }) {
           {/* Header */}
           <div className='px-3 py-2 flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-white'>
             <div className='flex items-center gap-2 font-semibold text-sm text-slate-800'>
-              <Headphones size={16} className='text-indigo-600' />
-              Audio
+              <Headphones size={16} className={`transition ${playing ? 'text-emerald-600 animate-pulse' : 'text-indigo-600'}`} />
+              <span>Audio</span>
+              {playing && (
+                <span className='ml-1 inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700'>
+                  <Activity size={12} className='animate-pulse' /> Live
+                </span>
+              )}
+              {alerting && (
+                <span className='ml-2 inline-flex items-center gap-1 text-[10px] font-semibold text-rose-700'>
+                  <Pause size={12} /> Alert active
+                </span>
+              )}
             </div>
-            <button onClick={onClose} className='p-1.5 rounded-lg hover:bg-slate-100' aria-label='Close'>
-              <X size={14} />
-            </button>
+
+            <div className='flex items-center gap-1'>
+              {/* Hide = keep playing */}
+              <button onClick={() => setHidden(h => !h)} className='p-1.5 rounded-lg hover:bg-slate-100' title={hidden ? 'Show panel' : 'Hide panel (keep playing)'} aria-label={hidden ? 'Show panel' : 'Hide panel'}>
+                {hidden ? <Eye size={14} /> : <EyeOff size={14} />}
+              </button>
+
+              {/* Close = stop + close */}
+              <button
+                onClick={() => {
+                  try {
+                    audioRef.current?.pause();
+                  } catch {}
+                  setPlaying(false);
+                  onClose?.();
+                }}
+                className='p-1.5 rounded-lg hover:bg-slate-100'
+                aria-label='Close'
+                title='Close'>
+                <X size={14} />
+              </button>
+            </div>
           </div>
 
-          {/* Tabs */}
-          <div className='px-3 pt-2'>
-            <div className='inline-flex rounded-lg bg-slate-100 p-1'>
-              {[
-                { key: 'stations', label: 'Stations' },
-                { key: 'podcasts', label: 'Podcasts' },
-              ].map(t => (
-                <button key={t.key} onClick={() => setTab(t.key)} className={`relative px-2.5 py-1 text-xs rounded-md transition ${tab === t.key ? 'text-indigo-700' : 'text-slate-600 hover:text-slate-800'}`} aria-pressed={tab === t.key}>
-                  {t.label}
-                  {tab === t.key && <motion.span layoutId='audTab' className='absolute inset-0 -z-10 rounded-md bg-white shadow' transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
+          {/* Body (minimized vs full) */}
+          {hidden ? (
+            <div className='px-3 py-2 flex items-center justify-between'>
+              <div className='text-xs text-slate-700 flex items-center gap-2'>
+                <Headphones size={14} className={playing ? 'text-emerald-600 animate-pulse' : 'text-slate-400'} />
+                <span className='truncate max-w-[260px]'>{playing ? `Playing: ${activeStation?.name || 'Station'}` : 'Paused'}</span>
+              </div>
+              <div className='flex items-center gap-1.5'>
+                <button onClick={togglePlay} className='inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs border-slate-200 hover:bg-slate-50'>
+                  {playing ? (
+                    <>
+                      <Pause size={12} /> Pause
+                    </>
+                  ) : (
+                    <>
+                      <Play size={12} /> Play
+                    </>
+                  )}
                 </button>
-              ))}
+                <button onClick={() => setHidden(false)} className='inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs border-slate-200 hover:bg-slate-50'>
+                  <Eye size={12} /> Show
+                </button>
+              </div>
             </div>
-          </div>
-
-          {/* Body */}
-          <div className='p-3 pb-0 space-y-2'>
-            {/* Stations */}
-            {tab === 'stations' && (
-              <>
-                <div className='grid  grid-cols-3 md:grid-cols-5 gap-1.5'>
-                  {stations.map(s => {
-                    const active = currentStationUrl === s.url;
+          ) : (
+            <>
+              {/* Tabs */}
+              <div className='px-3 pt-2'>
+                <div className='inline-flex rounded-lg bg-slate-100 p-1'>
+                  {[
+                    {
+                      key: 'stations',
+                      label: 'Stations',
+                      rightAdornment:
+                        playing && tab !== 'stations' ? (
+                          <span className='ml-1 inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700'>
+                            <Activity size={12} className='animate-pulse' />
+                            Live
+                          </span>
+                        ) : null,
+                    },
+                    { key: 'podcasts', label: 'Podcasts' },
+                  ].map(t => {
+                    const active = tab === t.key;
                     return (
-                      <button key={s.url} onClick={() => chooseStation(s.url)} className={`text-left p-2 rounded-lg border transition group ${active ? 'bg-indigo-50/70 border-indigo-200 ring-1 ring-indigo-100' : 'bg-white border-slate-200 hover:bg-slate-50'}`} title={s.name}>
-                        <div className='text-xs font-medium truncate'>{s.name}</div>
-                        <div className='text-[10px] text-slate-500 truncate'>{s.tag || 'Station'}</div>
+                      <button key={t.key} onClick={() => setTab(t.key)} className={`relative px-2.5 py-1 text-xs rounded-md transition flex items-center ${active ? 'text-indigo-700' : 'text-slate-600 hover:text-slate-800'}`} aria-pressed={active}>
+                        {t.label}
+                        {t.rightAdornment}
+                        {active && <motion.span layoutId='audTab' className='absolute inset-0 -z-10 rounded-md bg-white shadow' transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
                       </button>
                     );
                   })}
                 </div>
-
-                <div className='flex items-center justify-between gap-2 rounded-lg border border-slate-200 p-2'>
-                  <div className='max-md:hidden text-[11px] flex items-center gap-2 min-w-0'>
-                    <span className='font-medium shrink-0'>Now:</span>
-                    <div className='relative w-full overflow-hidden'>
-                      <div className='whitespace-nowrap animate-[marquee_10s_linear_infinite]'>{activeStation?.name || 'Station'}</div>
-                    </div>
-                    <div className='flex items-end gap-[2px] h-3 w-3 ml-1' aria-hidden>
-                      {[0, 1, 2].map(i => (
-                        <span key={i} className={`w-[2px] bg-indigo-600 ${playing ? 'animate-[bounce_0.6s_ease-in-out_infinite]' : ''}`} style={{ height: playing ? (i === 1 ? '12px' : '8px') : '2px', animationDelay: `${i * 0.1}s` }} />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className='flex items-center gap-1.5 max-md:justify-end max-md:w-full '>
-                    <button onClick={togglePlay} className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs min-w-[92px] justify-center ${loading ? 'border-slate-200 bg-slate-50 text-slate-500' : 'border-slate-200 hover:bg-slate-50'}`} aria-busy={loading ? 'true' : 'false'} aria-label={loading ? 'Loading' : playing ? 'Pause' : 'Play'}>
-                      {loading ? (
-                        <motion.span className='inline-block h-3 w-3 rounded-full border border-slate-400 border-t-transparent' animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }} />
-                      ) : playing ? (
-                        <>
-                          <Pause size={12} /> Pause
-                        </>
-                      ) : (
-                        <>
-                          <Play size={12} /> Play
-                        </>
-                      )}
-                    </button>
-
-                    <button onClick={() => setMuted(m => !m)} className='inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs border-slate-200 hover:bg-slate-50' aria-label={muted ? 'Unmute' : 'Mute'}>
-                      {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                    </button>
-
-                    <input type='range' min='0' max='1' step='0.01' value={muted ? 0 : volume} onChange={e => setVolume(Number(e.target.value))} className='w-20 accent-indigo-600' title='Volume' />
-                  </div>
-                </div>
-
-                {errorMsg && (
-                  <div className=' max-md:hidden flex items-center justify-between rounded-md bg-rose-50 border border-rose-200 px-2 py-1.5 text-[11px] text-rose-700'>
-                    <span className='truncate'>{errorMsg}</span>
-                    <button
-                      onClick={() => {
-                        setErrorMsg(null);
-                        setRetryKey(k => k + 1);
-                        togglePlay();
-                      }}
-                      className='inline-flex items-center gap-1 text-rose-700 hover:underline'>
-                      <RotateCw size={12} /> Retry
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Podcasts */}
-            {tab === 'podcasts' && (
-              <div className='space-y-2'>
-                {podcastsLoading ? (
-                  <>
-                    <div className='aspect-video w-[calc(100%+40px)] max-md:-mt-2 -ml-[20px]  md:w-[calc(100%+20px)] md:-ml-[10px] rounded-lg overflow-hidden border border-slate-200'>
-                      <div className='h-full w-full animate-pulse bg-slate-100' />
-                    </div>
-                    <div className='flex gap-1.5 pb-1'>
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className='min-w-[60px] max-w-[60px] rounded-md border border-slate-200 overflow-hidden'>
-                          <div className='h-[45px] w-full animate-pulse bg-slate-100' />
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : podcastList.length > 0 ? (
-                  <>
-                    <div className='aspect-video w-[calc(100%+40px)] max-md:-mt-2 -ml-[20px]  md:w-[calc(100%+20px)] md:-ml-[10px] rounded-lg overflow-hidden border border-slate-200'>
-                      <iframe key={podcastList[currentPodcastIdx].id} src={podcastList[currentPodcastIdx].embed} className='w-full h-full' title={podcastList[currentPodcastIdx].title} allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share' referrerPolicy='strict-origin-when-cross-origin' loading='lazy' allowFullScreen />
-                    </div>
-
-                    <div className='flex gap-1.5 overflow-x-auto pb-1'>
-                      {podcastList.map((p, i) => (
-                        <button key={p.id} onClick={() => setCurrentPodcastIdx(i)} className={`min-w-[60px] max-w-[60px] rounded-md border overflow-hidden text-left ${i === currentPodcastIdx ? 'border-indigo-300' : 'border-slate-200 hover:border-slate-300'}`} title={p.title} aria-pressed={i === currentPodcastIdx}>
-                          <img src={p.thumb} alt='' className='w-full h-full object-cover' />
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <div className='text-xs text-slate-500'>No YouTube links yet.</div>
-                )}
               </div>
-            )}
 
-            {/* Audio element */}
-            <audio key={retryKey} ref={audioRef} src={src} preload='none' crossOrigin='anonymous' />
-          </div>
+              {/* Stations (blue gradient) */}
+              {tab === 'stations' && (
+                <div className='p-3 pb-0 space-y-2'>
+                  <div className='rounded-xl overflow-hidden border border-indigo-100'>
+                    <div className='bg-gradient-to-br from-indigo-50 via-white to-indigo-50/60 p-3'>
+                      <div className='mb-2 flex items-center justify-between'>
+                        <div className='text-sm font-semibold text-slate-800'>Qur’an Stations</div>
+                        <div className='flex items-center gap-1 text-[11px] text-slate-600'>
+                          <span className='inline-flex items-center gap-1'>
+                            <Headphones size={12} /> {playing ? 'Playing' : 'Idle'}
+                          </span>
+                          <span>•</span>
+                          <span className='inline-flex items-center gap-1'>
+                            {muted ? <VolumeX size={12} /> : <Volume2 size={12} />} {muted ? 'Muted' : `${Math.round(volume * 100)}%`}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className='grid grid-cols-3 md:grid-cols-5 gap-1.5'>
+                        {stations.map(s => {
+                          const active = currentStationUrl === s.url;
+                          return (
+                            <button key={s.url} onClick={() => chooseStation(s.url)} className={`relative text-left p-2 rounded-lg border transition group ${active ? 'bg-indigo-50 border-indigo-200 ring-1 ring-indigo-100' : 'bg-white border-slate-200 hover:bg-slate-50'}`} title={s.name}>
+                              {active && (
+                                <span className='absolute right-2 top-2 inline-flex items-center gap-1 text-[10px] text-indigo-700'>
+                                  <Radio size={12} className='text-indigo-600' /> Live
+                                </span>
+                              )}
+                              <div className='text-xs font-medium truncate flex items-center gap-1 pr-8'>{s.name}</div>
+                              <div className='text-[10px] text-slate-500 truncate'>{s.tag || 'Station'}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className='flex items-center justify-between gap-2 rounded-lg border border-slate-200 p-2'>
+                    <div className='max-md:hidden text-[11px] flex items-center gap-2 min-w-0'>
+                      <span className='font-medium shrink-0'>Now:</span>
+                      <div className='relative w-full overflow-hidden'>
+                        <div className='whitespace-nowrap animate-[marquee_10s_linear_infinite]'>{activeStation?.name || 'Station'}</div>
+                      </div>
+                      <div className='flex items-end gap-[2px] h-3 w-3 ml-1' aria-hidden>
+                        {[0, 1, 2].map(i => (
+                          <span key={i} className={`w-[2px] ${playing ? 'bg-emerald-600' : 'bg-slate-300'} ${playing ? 'animate-[bounce_0.6s_ease-in-out_infinite]' : ''}`} style={{ height: playing ? (i === 1 ? '12px' : '8px') : '2px', animationDelay: `${i * 0.1}s` }} />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className='flex items-center gap-1.5 max-md:justify-end max-md:w-full '>
+                      <button onClick={togglePlay} className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs min-w-[92px] justify-center ${loading ? 'border-slate-200 bg-slate-50 text-slate-500' : 'border-slate-200 hover:bg-slate-50'}`} aria-busy={loading ? 'true' : 'false'} aria-label={loading ? 'Loading' : playing ? 'Pause' : 'Play'}>
+                        {loading ? (
+                          <motion.span className='inline-block h-3 w-3 rounded-full border border-slate-400 border-t-transparent' animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }} />
+                        ) : playing ? (
+                          <>
+                            <Pause size={12} /> Pause
+                          </>
+                        ) : (
+                          <>
+                            <Play size={12} /> Play
+                          </>
+                        )}
+                      </button>
+
+                      <button onClick={() => setMuted(m => !m)} className='inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs border-slate-200 hover:bg-slate-50' aria-label={muted ? 'Unmute' : 'Mute'}>
+                        {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                      </button>
+
+                      <input type='range' min='0' max='1' step='0.01' value={muted ? 0 : volume} onChange={e => setVolume(Number(e.target.value))} className='w-20 accent-indigo-600' title='Volume' />
+                    </div>
+                  </div>
+
+                  {errorMsg && (
+                    <div className='max-md:hidden flex items-center justify-between rounded-md bg-rose-50 border border-rose-200 px-2 py-1.5 text-[11px] text-rose-700'>
+                      <span className='truncate'>{errorMsg}</span>
+                      <button
+                        onClick={() => {
+                          setErrorMsg(null);
+                          setRetryKey(k => k + 1);
+                          togglePlay();
+                        }}
+                        className='inline-flex items-center gap-1 text-rose-700 hover:underline'>
+                        <RotateCw size={12} /> Retry
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+							{/* ===== Podcasts (stations keep playing in background) ===== */}
+                {tab === 'podcasts' && (
+                  <div className='space-y-2'>
+                    {podcastsLoading ? (
+                      <>
+                        <div className='aspect-video w-[calc(100%+40px)] max-md:-mt-2 -ml-[20px] md:w-[calc(100%+20px)] md:-ml-[10px] rounded-lg overflow-hidden border border-slate-200'>
+                          <div className='h-full w-full animate-pulse bg-slate-100' />
+                        </div>
+                        <div className='flex gap-1.5 pb-1'>
+                          {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className='min-w-[60px] max-w-[60px] rounded-md border border-slate-200 overflow-hidden'>
+                              <div className='h-[45px] w-full animate-pulse bg-slate-100' />
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : podcastList.length > 0 ? (
+                      <>
+                        <div className='aspect-video w-[calc(100%+40px)] max-md:-mt-2 -ml-[20px] md:w-[calc(100%+20px)] md:-ml-[10px] rounded-lg overflow-hidden border border-slate-200'>
+                          <iframe key={podcastList[currentPodcastIdx].id} src={podcastList[currentPodcastIdx].embed} className='w-full h-full' title={podcastList[currentPodcastIdx].title} allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share' referrerPolicy='strict-origin-when-cross-origin' loading='lazy' allowFullScreen />
+                        </div>
+
+                        <div className='flex gap-1.5 overflow-x-auto pb-1'>
+                          {podcastList.map((p, i) => (
+                            <button key={p.id} onClick={() => setCurrentPodcastIdx(i)} className={`min-w-[60px] max-w-[60px] rounded-md border overflow-hidden text-left ${i === currentPodcastIdx ? 'border-indigo-300' : 'border-slate-200 hover:border-slate-300'}`} title={p.title} aria-pressed={i === currentPodcastIdx}>
+                              <img src={p.thumb} alt='' className='w-full h-full object-cover' />
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className='text-xs text-slate-500'>No YouTube links yet.</div>
+                    )}
+                  </div>
+                )}
+            </>
+          )}
+
+          {/* IMPORTANT: keep <audio> ALWAYS mounted, even when hidden */}
+          <audio key={retryKey} ref={audioRef} src={currentStationUrl} preload='none' crossOrigin='anonymous' />
         </div>
       </motion.div>
     </AnimatePresence>
   );
 }
-
-/* Tailwind extra (optional)
-@keyframes marquee {
-  0% { transform: translateX(0%) }
-  100% { transform: translateX(-100%) }
-}
-*/
-
 /* =================== SMALL COMPONENTS & HELPERS =================== */
 
 function InlineVideo({ src }) {
