@@ -252,6 +252,12 @@ body {
   transform: translateZ(0);
  }
 
+/* Heuristics for common downloaders – not guaranteed */
+[id*="IDM"], [class*="idm"],
+[id*="download"], [class*="download"],
+[id*="realplayer"], [class*="realplayer"] {
+  display: none !important;
+}
 
 
  .bg-gradient {

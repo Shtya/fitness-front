@@ -7,9 +7,9 @@ import { useEffect, useState } from 'react';
 export const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
 /* --------- Page Header --------- */
-export function PageHeader({ className , icon: Icon, title, subtitle, actions = null }) {
+export function PageHeader({ className, icon: Icon, title, subtitle, actions = null }) {
   return (
-    <div className={`flex items-center justify-between ${className} `} >
+    <div className={`flex items-center justify-between ${className} `}>
       <div className='flex items-center gap-3'>
         <motion.div initial={{ rotate: -8, scale: 0.9 }} animate={{ rotate: 0, scale: 1 }} transition={spring} className='h-10 w-10 grid place-content-center rounded-xl bg-main text-white shadow-md'>
           {Icon ? <Icon className='w-5 h-5' /> : null}
@@ -25,9 +25,9 @@ export function PageHeader({ className , icon: Icon, title, subtitle, actions = 
 }
 
 /* --------- Stat Card --------- */
-export function StatCard({ icon: Icon, title, value, sub }) {
+export function StatCard({ icon: Icon, title, value, sub , className }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className='card-glow p-4'>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={`card-glow p-4 ${className} `}>
       <div className='flex items-center gap-3 h-full '>
         <div className='w-10 h-10 rounded-xl bg-main text-white grid place-content-center shadow-md'>{Icon ? <Icon className='w-5 h-5' /> : null}</div>
         <div>
@@ -64,7 +64,6 @@ export const StatusPill = ({ status }) =>
     </Badge>
   );
 
- 
 /* --------- Toolbar Button --------- */
 export function ToolbarButton({ icon: Icon, children, onClick, variant = 'primary' }) {
   const styles = variant === 'primary' ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white hover:opacity-95' : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200';
@@ -112,9 +111,9 @@ export function Modal({ open, onClose, title, children, maxW = 'max-w-3xl' }) {
     <AnimatePresence>
       {open && (
         <>
-          <motion.div className='fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px]' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
-          <motion.div className='fixed z-50 inset-0 grid place-items-center p-4' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} transition={spring}>
-            <div className={`w-full ${maxW} card-glow p-5`}>
+          <motion.div className='fixed backdrop-blur-[8px] inset-0 z-[100] bg-black/30  ' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+          <motion.div className='fixed z-[110] inset-0 grid place-items-center p-4' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} transition={spring}>
+            <div className={`w-full ${maxW} card-glow !bg-white/90 backdrop-blur-3xl p-5`}>
               <div className='flex items-center justify-between mb-3'>
                 <h3 className='text-lg font-semibold'>{title}</h3>
                 <button onClick={onClose} className='w-9 h-9 rounded-lg border border-slate-200 grid place-content-center bg-white hover:bg-slate-50'>
@@ -177,9 +176,9 @@ export function MacroBar({ p = 0, c = 0, f = 0, className = '' }) {
 }
 
 /* --------- TabsPill (animated tabs with shared pill) --------- */
-export function TabsPill({ slice , tabs, active, onChange , className , id = 'ui-tabs-pill' }) {
+export function TabsPill({ slice, tabs, active, onChange, className, id = 'ui-tabs-pill' }) {
   return (
-    <LayoutGroup id={id}  >
+    <LayoutGroup id={id}>
       <div className={` ${className} max-md:overflow-x-auto max-md:w-[calc(100vw-20px)] max-md:max-w-fit  overflow-y-hidden inline-flex p-1 rounded-2xl   bg-slate-100/80 ring-1 ring-black/5 shadow-sm `}>
         {tabs.map(t => {
           const isActive = active === t.key;
@@ -188,7 +187,7 @@ export function TabsPill({ slice , tabs, active, onChange , className , id = 'ui
               {isActive && <motion.span layoutId='tabs-pill' className='absolute inset-0 after:!rounded-xl !rounded-xl   bg-second shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
               <span className={`relative z-10 ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-700'} capitalize`}>
                 {t.icon ? <t.icon className='inline w-4 h-4 mr-1 -mt-0.5' /> : null}
-                {slice ? t.label?.slice(0,slice)  : t.label}
+                {slice ? t.label?.slice(0, slice) : t.label}
               </span>
             </motion.button>
           );
@@ -812,7 +811,7 @@ export function RingProgress({ value = 0, size = 96, stroke = 10, track = 0.12, 
     </div>
   );
 }
- 
+
 /* --- ProgressBar (horizontal) --- */
 export function ProgressBar({ value = 0, max = 100 }) {
   const pct = Math.min(100, Math.round((value / Math.max(1, max)) * 100));
@@ -986,10 +985,3 @@ export function MiniLine({ data = [], xKey = 'date', yKey = 'value', height = 56
     </svg>
   );
 }
-
- 
-
-
-
- 
- 

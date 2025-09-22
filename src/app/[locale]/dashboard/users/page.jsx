@@ -1,58 +1,36 @@
+/* 
+
+	- show his active plan here and get it with the id and show button to edit
+	- 
+*/
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Upload, Plus, Users as UsersIcon, Search, Filter, Calendar, CheckCircle2, XCircle, RefreshCcw, Trash2, Mail, Shield, Dumbbell } from 'lucide-react';
+import { Download, Upload, Plus, Users as UsersIcon, CheckCircle2, XCircle, RefreshCcw, Trash2, Mail, Shield, Dumbbell, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Pencil, Eye, Clock, Search } from 'lucide-react';
 import DataTable from '@/components/dashboard/ui/DataTable';
+import api from '@/utils/axios';
+import { Link } from '@/i18n/navigation';
+import { Modal, PageHeader, StatCard } from '@/components/dashboard/ui/UI';
+import Button from '@/components/atoms/Button';
+import Select from '@/components/atoms/Select';
 
-// ------- Helpers -------
+/* ---------- helpers ---------- */
 const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
-
-const roles = ['Client', 'Trainer', 'Admin'];
-const statuses = ['Active', 'Inactive'];
-
-const mockFetchUsers = () =>
-  new Promise(res =>
-    setTimeout(
-      () =>
-        res([
-          { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Client', status: 'Active', joinDate: '2023-01-15', phone: '+1 555-0101', membership: 'Gold' },
-          { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Trainer', status: 'Active', joinDate: '2023-02-20', phone: '+1 555-0102', membership: '-' },
-          { id: 3, name: 'Mike Johnson', email: 'mike@example.com', role: 'Client', status: 'Inactive', joinDate: '2023-03-10', phone: '+1 555-0103', membership: 'Basic' },
-          { id: 4, name: 'Sarah Wilson', email: 'sarah@example.com', role: 'Admin', status: 'Active', joinDate: '2023-04-05', phone: '+1 555-0104', membership: '-' },
-          { id: 5, name: 'David Brown', email: 'david@example.com', role: 'Client', status: 'Active', joinDate: '2023-05-12', phone: '+1 555-0105', membership: 'Platinum' },
-        ]),
-      1000,
-    ),
-  );
-
-// debounce
-function useDebounced(value, delay = 300) {
-  const [v, setV] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setV(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return v;
-}
-
-// ------- UI Atoms -------
-function StatCard({ icon: Icon, title, value, sub }) {
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className='card-glow p-4'>
-      <div className='flex items-center gap-3'>
-        <div className='w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white grid place-content-center shadow-md'>
-          <Icon className='w-5 h-5' />
-        </div>
-        <div>
-          <div className='text-sm text-slate-600'>{title}</div>
-          <div className='text-xl font-semibold'>{value}</div>
-          {sub ? <div className='text-xs text-slate-500 mt-0.5'>{sub}</div> : null}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
+const toTitle = s => (s ? s.toString().charAt(0).toUpperCase() + s.toString().slice(1).toLowerCase() : s);
+const normRole = r => {
+  const t = String(r || '').toUpperCase();
+  if (['ADMIN', 'TRAINER', 'CLIENT'].includes(t)) return toTitle(t);
+  if (['admin', 'trainer', 'client'].includes(String(r))) return toTitle(r);
+  return 'Client';
+};
+const normStatus = s => {
+  const t = String(s || '').toUpperCase();
+  if (['ACTIVE', 'INACTIVE', 'PENDING', 'SUSPENDED'].includes(t)) return toTitle(t);
+  if (['active', 'inactive', 'pending', 'suspended'].includes(String(s))) return toTitle(s);
+  return 'Inactive';
+};
 
 function Badge({ children, color = 'slate' }) {
   const map = {
@@ -65,21 +43,22 @@ function Badge({ children, color = 'slate' }) {
   };
   return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ring-1 ${map[color] || map.slate}`}>{children}</span>;
 }
-
 function StatusPill({ status }) {
-  const ok = status === 'Active';
+  const s = normStatus(status);
+  const ok = s === 'Active';
+  const warn = s === 'Pending';
   return (
-    <Badge color={ok ? 'green' : 'red'}>
-      {ok ? <CheckCircle2 className='w-3 h-3' /> : <XCircle className='w-3 h-3' />} {status}
+    <Badge color={ok ? 'green' : warn ? 'amber' : 'red'}>
+      {ok ? <CheckCircle2 className='w-3 h-3' /> : <XCircle className='w-3 h-3' />} {s}
     </Badge>
   );
 }
-
 function RolePill({ role }) {
-  const color = role === 'Admin' ? 'indigo' : role === 'Trainer' ? 'blue' : 'slate';
+  const r = normRole(role);
+  const color = r === 'Admin' ? 'indigo' : r === 'Trainer' ? 'blue' : 'slate';
   return (
     <Badge color={color}>
-      <Shield className='w-3 h-3' /> {role}
+      <Shield className='w-3 h-3' /> {r}
     </Badge>
   );
 }
@@ -87,268 +66,332 @@ function RolePill({ role }) {
 function ToolbarButton({ icon: Icon, children, onClick, variant = 'primary' }) {
   const styles = variant === 'primary' ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white hover:opacity-95' : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200';
   return (
-    <button onClick={onClick} className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl transition ${styles}`}>
+    <button onClick={onClick} className={` cursor-pointer hover:scale-[.95] duration-300 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl transition ${styles}`}>
       <Icon className='w-4 h-4' /> {children}
     </button>
   );
 }
 
-function SkeletonRow() {
-  return (
-    <tr className='animate-pulse'>
-      <td className='px-4 py-3'>
-        <div className='w-4 h-4 bg-slate-200 rounded' />
-      </td>
-      {[160, 220, 180, 140, 120, 120].map((w, i) => (
-        <td key={i} className='px-4 py-3'>
-          <div className='h-3 rounded bg-slate-200' style={{ width: w }} />
-        </td>
-      ))}
-      <td className='px-4 py-3'>
-        <div className='h-8 w-20 rounded bg-slate-200' />
-      </td>
-    </tr>
-  );
-}
-
-function EmptyState({ onAdd }) {
-  return (
-    <div className='text-center py-16'>
-      <div className='mx-auto w-14 h-14 rounded-2xl bg-slate-100 grid place-content-center'>
-        <UsersIcon className='w-7 h-7 text-slate-500' />
-      </div>
-      <h3 className='mt-4 text-lg font-semibold'>No users found</h3>
-      <p className='text-sm text-slate-600 mt-1'>Try adjusting filters or add a new user to your gym.</p>
-      <div className='mt-6'>
-        <ToolbarButton icon={Plus} onClick={onAdd}>
-          Add User
-        </ToolbarButton>
-      </div>
-    </div>
-  );
-}
-
-function Modal({ open, onClose, title, children }) {
-  return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div className='fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px]' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
-          <motion.div className='fixed z-50 inset-0 grid place-items-center p-4' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} transition={spring}>
-            <div className='w-full max-w-lg card-glow p-5'>
-              <div className='flex items-center justify-between mb-3'>
-                <h3 className='text-lg font-semibold'>{title}</h3>
-                <button onClick={onClose} className='w-9 h-9 rounded-lg border border-slate-200 grid place-content-center bg-white hover:bg-slate-50'>
-                  <XCircle className='w-5 h-5 text-slate-600' />
-                </button>
-              </div>
-              {children}
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
-
-// ------- Main -------
+/* ---------- main ---------- */
 export default function UsersList() {
-  const [users, setUsers] = useState([]);
+  // server params
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [sortBy, setSortBy] = useState('created_at'); // valid: created_at, name, email, role, status
+  const [sortOrder, setSortOrder] = useState('DESC'); // 'ASC' | 'DESC'
+
+  const [role, setRole] = useState(null);
+  const [status, setStatus] = useState(null);
+
+  // ui state
+  const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [err, setErr] = useState(null);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const q = useDebounced(searchTerm, 350);
+  // search with debounce (server-side)
+  const [searchText, setSearchText] = useState('');
+  const [debounced, setDebounced] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(searchText.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchText]);
 
-  const [roleFilter, setRoleFilter] = useState('All');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  // client-side filters
+  const [roleFilter, setRoleFilter] = useState('All'); // All | Admin | Trainer | Client
+  const [statusFilter, setStatusFilter] = useState('All'); // All | Active | Inactive | Pending | Suspended
+  const [hasPlanFilter, setHasPlanFilter] = useState('All'); // All | With plan | No plan
 
+  // selection
   const [selected, setSelected] = useState([]);
+
+  // modal
   const [addOpen, setAddOpen] = useState(false);
 
-	
-  const filtered = useMemo(() => {
-    if (!search) return users;
-    const s = search.toLowerCase();
-    return users.filter(u => u.name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s) || (u.phone || '').toLowerCase().includes(s) || (u.membership || '').toLowerCase().includes(s));
-  }, [users, search]);
+  // fetch
+  async function fetchUsers() {
+    setLoading(true);
+    setErr(null);
+    try {
+      const params = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+      };
+      if (debounced) params.search = debounced;
 
+      const res = await api.get('/auth/users', { params });
+
+      // normalize two shapes:
+      // A) CRUD.findAll → { total_records, current_page, per_page, records }
+      // B) Alt sample   → { users, total, page, totalPages }
+      const data = res.data || {};
+      let records = [];
+      let totalRecords = 0;
+      let currentPage = page;
+      let pagesCount = 1;
+
+      if (Array.isArray(data.records)) {
+        records = data.records;
+        totalRecords = Number(data.total_records || 0);
+        currentPage = Number(data.current_page || page);
+        pagesCount = Math.max(1, Math.ceil(totalRecords / Number(data.per_page || limit)));
+      } else if (Array.isArray(data.users)) {
+        records = data.users;
+        totalRecords = Number(data.total || data.users.length || 0);
+        currentPage = Number(data.page || page);
+        pagesCount = Number(data.totalPages || 1);
+      } else if (Array.isArray(data)) {
+        // very defensive
+        records = data;
+        totalRecords = data.length;
+        currentPage = page;
+        pagesCount = Math.max(1, Math.ceil(totalRecords / limit));
+      }
+
+      // map for UI
+      const mapped = records.map(u => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: normRole(u.role),
+        status: normStatus(u.status),
+        phone: u.phone || '',
+        membership: u.membership || '-',
+        joinDate: u.created_at ? new Date(u.created_at).toISOString().slice(0, 10) : u.joinDate || '',
+        points: u.points ?? 0,
+        activePlanId: u.activePlanId ?? null,
+      }));
+
+      setRows(mapped);
+      setTotal(totalRecords);
+      setTotalPages(pagesCount);
+    } catch (e) {
+      console.error(e);
+      setErr(e?.response?.data?.message || 'Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, limit, sortBy, sortOrder, debounced]);
+
+  // client filters
+  const filtered = useMemo(() => {
+    return rows
+      .filter(r => (roleFilter === 'All' ? true : r.role === roleFilter))
+      .filter(r => (statusFilter === 'All' ? true : r.status === statusFilter))
+      .filter(r => (hasPlanFilter === 'All' ? true : hasPlanFilter === 'With plan' ? !!r.activePlanId : !r.activePlanId));
+  }, [rows, roleFilter, statusFilter, hasPlanFilter]);
+
+  // KPIs
+  const kpiTotal = filtered.length;
+  const kpiActive = filtered.filter(u => u.status === 'Active').length;
+
+  // columns
   const columns = [
-    { header: 'Name', accessor: 'name', sortable: true },
-    { header: 'Email', accessor: 'email', sortable: true },
+    { header: 'Name', accessor: 'name', className: 'text-nowrap' },
+    { header: 'Email', accessor: 'email' },
     { header: 'Role', accessor: 'role', cell: row => <RolePill role={row.role} /> },
     { header: 'Status', accessor: 'status', cell: row => <StatusPill status={row.status} /> },
     { header: 'Phone', accessor: 'phone' },
     { header: 'Membership', accessor: 'membership' },
-    { header: 'Join Date', accessor: 'joinDate', sortable: true },
+    { header: 'Join Date', accessor: 'joinDate', className: 'text-nowrap' },
     {
       header: 'Actions',
       accessor: '_actions',
       disableSort: true,
       cell: row => (
-        <div className='flex items-center gap-2'>
-          <button className='px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50'>View</button>
-          <button className='px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50'>Edit</button>
-          <button onClick={() => setUsers(arr => arr.filter(x => x.id !== row.id))} className='px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-red-50 text-red-600'>
-            Delete
-          </button>
+        <div className='flex items-center gap-1'>
+          <Link href={'/dashboard/users/' + row?.id} className='w-[30px] h-[30px] justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 inline-flex items-center gap-1.5'>
+            <Eye size={16} />
+          </Link>
+
+          <Link href={'/dashboard/users/edit/' + row?.id} className='w-[30px] h-[30px] justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 inline-flex items-center gap-1.5'>
+            <Pencil size={16} />
+          </Link>
+
+          {/* <button
+            onClick={async () => {
+              if (!confirm('Delete this user?')) return;
+              try {
+                await api.delete(`/auth/user/${row.id}`);
+                setRows(arr => arr.filter(x => x.id !== row.id));
+              } catch (e) {
+                alert(e?.response?.data?.message || 'Delete failed');
+              }
+            }}
+            className='w-[30px] h-[30px] justify-center rounded-lg border border-slate-200 bg-white hover:bg-red-50 text-red-600 inline-flex items-center gap-1.5'>
+            <Trash2  size={16} />
+          </button> */}
         </div>
       ),
     },
   ];
 
-  useEffect(() => {
-    setLoading(true);
-    mockFetchUsers().then(data => {
-      setUsers(data);
-      setLoading(false);
-    });
-  }, []);
-
-  const allChecked = selected.length && selected.length === filtered.length;
-  const toggleAll = () => setSelected(prev => (prev.length === filtered.length ? [] : filtered.map(u => u.id)));
-  const toggleOne = id => setSelected(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
-
-  // KPIs
-  const kpiTotal = users.length;
-  const kpiActive = users.filter(u => u.status === 'Active').length;
-  const kpiTrainers = users.filter(u => u.role === 'Trainer').length;
-  const kpiClients = users.filter(u => u.role === 'Client').length;
-
-  // actions
-  const bulkSetStatus = status => {
-    setUsers(arr => arr.map(u => (selected.includes(u.id) ? { ...u, status } : u)));
-    setSelected([]);
-  };
-  const bulkDelete = () => {
-    setUsers(arr => arr.filter(u => !selected.includes(u.id)));
-    setSelected([]);
-  };
-  const refresh = () => {
-    setLoading(true);
-    setSelected([]);
-    mockFetchUsers().then(data => {
-      setUsers(data);
-      setLoading(false);
-    });
-  };
-
-  const exportCSV = () => {
-    const rows = [['id', 'name', 'email', 'role', 'status', 'joinDate', 'phone', 'membership']].concat(filtered.map(u => [u.id, u.name, u.email, u.role, u.status, u.joinDate, u.phone || '', u.membership || '']));
-    const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'users.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const importCSV = () => alert('Import CSV not wired in this mock. Hook to your uploader.');
-
-  const addUser = e => {
+  // add user
+  const addUser = async e => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const newU = {
-      id: Math.max(0, ...users.map(u => u.id)) + 1,
+    const payload = {
       name: form.get('name'),
       email: form.get('email'),
-      role: form.get('role'),
-      status: form.get('status'),
-      joinDate: form.get('joinDate'),
-      phone: form.get('phone'),
-      membership: form.get('membership'),
+      password: form.get('password'),
+      phone: form.get('phone') || undefined,
+      membership: form.get('membership') || undefined,
+      role: String(form.get('role') || '').toUpperCase() || undefined, // ADMIN/TRAINER/CLIENT (backend may ignore if dto disallows)
+      status: String(form.get('status') || '').toUpperCase() || undefined, // ACTIVE/INACTIVE/PENDING (backend may ignore)
     };
-    setUsers(arr => [newU, ...arr]);
-    setAddOpen(false);
+    try {
+      await api.post('/auth/register', payload);
+      setAddOpen(false);
+      // reload first page to include the new user
+      setPage(1);
+      fetchUsers();
+    } catch (e) {
+      alert(e?.response?.data?.message || 'Create failed');
+    }
   };
 
-  useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setUsers([
-        { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Client', status: 'Active', joinDate: '2023-01-15', phone: '+1 555-0101', membership: 'Gold' },
-        { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Trainer', status: 'Active', joinDate: '2023-02-20', phone: '+1 555-0102', membership: '-' },
-        { id: 3, name: 'Mike Johnson', email: 'mike@example.com', role: 'Client', status: 'Inactive', joinDate: '2023-03-10', phone: '+1 555-0103', membership: 'Basic' },
-        { id: 4, name: 'Sarah Wilson', email: 'sarah@example.com', role: 'Admin', status: 'Active', joinDate: '2023-04-05', phone: '+1 555-0104', membership: '-' },
-        { id: 5, name: 'David Brown', email: 'david@example.com', role: 'Client', status: 'Active', joinDate: '2023-05-12', phone: '+1 555-0105', membership: 'Platinum' },
-      ]);
-      setLoading(false);
-    }, 1000);
-  }, []);
+  // sort handlers (propagate to server)
+  const toggleSort = field => {
+    if (sortBy === field) {
+      setSortOrder(o => (o === 'ASC' ? 'DESC' : 'ASC'));
+    } else {
+      setSortBy(field);
+      setSortOrder('ASC');
+    }
+  };
 
+  const ROLE_OPTIONS = [
+    { id: 'All', name: 'All roles' },
+    { id: 'Admin', name: 'Admin' },
+    { id: 'Trainer', name: 'Trainer' },
+    { id: 'Client', name: 'Client' },
+  ];
+
+  const STATUS_OPTIONS = [
+    { id: 'All', name: 'All statuses' },
+    { id: 'Active', name: 'Active' },
+    { id: 'Inactive', name: 'Inactive' },
+    { id: 'Pending', name: 'Pending' },
+    { id: 'Suspended', name: 'Suspended' },
+  ];
+
+  const PLAN_OPTIONS = [
+    { id: 'All', name: 'All plans' },
+    { id: 'With plan', name: 'With plan' },
+    { id: 'No plan', name: 'No plan' },
+  ];
+  const toSelectOptions = arr => arr.map(o => ({ id: o.id, label: o.name }));
 
   return (
     <div className='space-y-6'>
-      {/* Header */}
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center gap-3'>
-          <motion.div initial={{ rotate: -8, scale: 0.9 }} animate={{ rotate: 0, scale: 1 }} transition={spring} className='h-10 w-10 grid place-content-center rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-md'>
-            <Dumbbell className='w-5 h-5' />
-          </motion.div>
-          <div>
-            <h1 className='text-2xl font-semibold'>User Management</h1>
-            <p className='text-sm text-slate-600'>Manage clients, trainers and admins with full control.</p>
+      <div className='rounded-xl   md:rounded-2xl overflow-hidden border border-indigo-200'>
+        <div className='relative p-4 md:p-8  bg-gradient text-white'>
+          <div className='absolute inset-0 opacity-20 bg-[radial-gradient(600px_200px_at_20%_-20%,white,transparent)]' />
+          <div className='relative z-10 flex flex-row md:items-center gap-3 md:gap-6 justify-between'>
+            {/* Title */}
+            <PageHeader className=' ' icon={Dumbbell} title='User Management' subtitle='Manage clients, trainers and admins with full control.' />
+            <ToolbarButton icon={Plus} onClick={() => setAddOpen(true)}>
+              Add User
+            </ToolbarButton>
+          </div>
+
+          {/* KPIs */}
+          <div className='flex items-center justify-start gap-3 mt-6 '>
+            <StatCard className={'max-w-[200px] w-full '} icon={UsersIcon} title='Total Users ' value={kpiTotal} />
+            <StatCard className={'max-w-[200px] w-full '} icon={CheckCircle2} title='Active' value={kpiActive} />
+            <StatCard className={'max-w-[200px] w-full '} icon={Shield} title='Admins' value={1} />
+            <StatCard className={'max-w-[200px] w-full '} icon={Shield} title='Admins' value={1} />
           </div>
         </div>
-        <div className='flex items-center gap-2'>
-          <ToolbarButton icon={Upload} onClick={importCSV} variant='ghost'>
-            Import
-          </ToolbarButton>
-          <ToolbarButton icon={Download} onClick={exportCSV} variant='ghost'>
-            Export
-          </ToolbarButton>
-          <ToolbarButton icon={Plus} onClick={() => setAddOpen(true)}>
-            Add User
-          </ToolbarButton>
+      </div>
+
+      {/* Filters + search */}
+      <div className='flex items-center gap-2 mt-12 flex-wrap'>
+        <div className='flex-1'>
+          <div className='relative w-full md:w-60  '>
+            <Search className='absolute left-3 z-[10] top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
+            <input
+              value={searchText}
+              onChange={e => {
+                setSearchText(e.target.value);
+                setPage(1);
+              }}
+              placeholder='Search name, email, phone...'
+              className={` h-[40px] w-full pl-10 pr-3 rounded-xl bg-white text-black border border-slate-300 font-medium text-sm shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-indigo-500/40 hover:border-indigo-400 transition `}
+            />
+          </div>
         </div>
+
+        <Select
+          label=''
+          className='!max-w-[150px] !w-full '
+          placeholder='Role'
+          options={toSelectOptions(ROLE_OPTIONS)}
+          value={roleFilter}
+          onChange={id => {
+            // receives the selected id
+            setRoleFilter(id);
+            setPage(1);
+          }}
+        />
+
+        <Select
+          label=''
+          className='!max-w-[150px] !w-full'
+          placeholder='Status'
+          options={toSelectOptions(STATUS_OPTIONS)}
+          value={statusFilter}
+          onChange={id => {
+            setStatusFilter(id);
+            setPage(1);
+          }}
+        />
+
+        <Select
+          label=''
+          className='!max-w-[150px] !w-full'
+          placeholder='Plan'
+          options={toSelectOptions(PLAN_OPTIONS)}
+          value={hasPlanFilter}
+          onChange={id => {
+            setHasPlanFilter(id);
+            setPage(1);
+          }}
+        />
+
+        <button onClick={() => toggleSort('created_at')} className={` bg-white inline-flex items-center h-[40px] gap-2 px-4 py-2 rounded-xl  text-black border border-slate-300   font-medium text-sm backdrop-blur-md hover:from-indigo-500/90 hover:to-sky-400/90 active:scale-[.97] transition `}>
+          <Clock size={16} />
+          <span>Newest</span>
+          {sortBy === 'created_at' ? sortOrder === 'ASC' ? <ChevronUp className='w-4 h-4 text-black transition-transform' /> : <ChevronDown className='w-4 h-4 text-black transition-transform' /> : null}
+        </button>
       </div>
 
-      {/* KPIs */}
-      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3'>
-        <StatCard icon={UsersIcon} title='Total Users' value={kpiTotal} sub={`${kpiClients} Clients · ${kpiTrainers} Trainers`} />
-        <StatCard icon={CheckCircle2} title='Active' value={kpiActive} sub={`${((kpiActive / Math.max(1, kpiTotal)) * 100).toFixed(0)}% active`} />
-        <StatCard icon={Shield} title='Admins' value={users.filter(u => u.role === 'Admin').length} />
-        <StatCard icon={RefreshCcw} title='Churn Risk' value={users.filter(u => u.status === 'Inactive').length} sub='Inactive users' />
-      </div>
-
-      {/* Filters Bar */}
- 
-        {/* Bulk actions */}
-        <AnimatePresence>
-          {selected.length > 0 && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className='mt-3 pt-3 border-t border-slate-200'>
-              <div className='flex flex-wrap items-center gap-2'>
-                <Badge color='blue'>{selected.length} selected</Badge>
-                <button onClick={() => bulkSetStatus('Active')} className='px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 inline-flex items-center gap-2'>
-                  <CheckCircle2 className='w-4 h-4' /> Activate
-                </button>
-                <button onClick={() => bulkSetStatus('Inactive')} className='px-3 py-1.5 rounded-lg bg-amber-500 text-white hover:bg-amber-600 inline-flex items-center gap-2'>
-                  <XCircle className='w-4 h-4' /> Deactivate
-                </button>
-                <button onClick={bulkDelete} className='px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 inline-flex items-center gap-2'>
-                  <Trash2 className='w-4 h-4' /> Delete
-                </button>
-                <button className='px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 inline-flex items-center gap-2'>
-                  <Mail className='w-4 h-4' /> Send Email
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
- 
       {/* Table */}
       <div className='space-y-4'>
-        {/* search input */}
-        <div className='flex items-center gap-2'>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder='Search users…' className='w-full md:w-72 px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30' />
-        </div>
+        {err ? <div className='p-3 rounded-xl bg-red-50 text-red-700 border border-red-100'>{err}</div> : null}
 
-        <div className='card-glow overflow-hidden '>
-          <DataTable columns={columns} data={filtered} loading={loading} itemsPerPage={5} pagination selectable selectedIds={selected} onToggleRow={id => setSelected(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))} onToggleAll={ids => setSelected(prev => (prev.length === ids.length ? [] : ids))} onRowClick={row => console.log('row clicked', row)} initialSort={{ key: 'name', dir: 'asc' }} />
+        <div className='card-glow overflow-hidden'>
+          <DataTable
+            columns={columns}
+            data={filtered}
+            loading={loading}
+            itemsPerPage={limit}
+            pagination
+            selectable
+            selectedIds={selected}
+            onToggleRow={id => setSelected(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))}
+            onToggleAll={ids => setSelected(prev => (prev.length === ids.length ? [] : ids))}
+            onRowClick={row => console.log('row clicked', row)}
+            initialSort={{ key: sortBy === 'created_at' ? 'joinDate' : sortBy, dir: sortOrder.toLowerCase() }} // just to align initial arrow in your table, actual sort is server-driven
+          />
         </div>
       </div>
 
@@ -365,32 +408,43 @@ export default function UsersList() {
               <input type='email' name='email' required className='mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30' />
             </div>
             <div>
+              <label className='text-sm text-slate-600'>Password</label>
+              <input type='password' name='password' required className='mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30' />
+            </div>
+            <div>
               <label className='text-sm text-slate-600'>Phone</label>
               <input name='phone' className='mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30' />
             </div>
+
             <div>
-              <label className='text-sm text-slate-600'>Role</label>
-              <select name='role' className='mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white'>
-                {roles.map(r => (
-                  <option key={r}>{r}</option>
-                ))}
-              </select>
+              <Select
+                label='Role'
+                placeholder='Select role'
+                options={['Client', 'Trainer', 'Admin'].map(r => ({
+                  id: r,
+                  label: r,
+                }))}
+                value={role}
+                onChange={id => setRole(id)}
+              />
             </div>
+
             <div>
-              <label className='text-sm text-slate-600'>Status</label>
-              <select name='status' className='mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white'>
-                {statuses.map(s => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
+              <Select
+                label='Status'
+                placeholder='Select status'
+                options={['Pending', 'Active', 'Inactive'].map(s => ({
+                  id: s,
+                  label: s,
+                }))}
+                value={status}
+                onChange={id => setStatus(id)}
+              />
             </div>
+
             <div>
               <label className='text-sm text-slate-600'>Membership</label>
-              <input name='membership' placeholder='Basic / Gold / Platinum…' className='mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white' />
-            </div>
-            <div>
-              <label className='text-sm text-slate-600'>Join Date</label>
-              <input type='date' name='joinDate' required className='mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white' />
+              <input name='membership' placeholder='Basic / Gold / Platinum…' className='mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30' />
             </div>
           </div>
           <div className='flex items-center justify-end gap-2 pt-2'>
@@ -401,6 +455,9 @@ export default function UsersList() {
               Save
             </button>
           </div>
+          <p className='text-xs text-slate-500 pt-2'>
+            Note: If your <code>RegisterDto</code> doesn’t allow <code>role</code>/<code>status</code>, backend will ignore them—no problem.
+          </p>
         </form>
       </Modal>
     </div>

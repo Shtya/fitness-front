@@ -11,7 +11,7 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjM2ZWFlNjc0LWEwNjMtNDI4Ny1iMzc4LWUzY2FiMDM2NGI5MSIsImlhdCI6MTc1NzIyOTM4NSwiZXhwIjoxNzU3NDAyMTg1fQ.Sr7qoyjVHLVIBk6P6tON4Cxwak0xTKk0AKxLrCr5Jes"
+    const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjM2ZWFlNjc0LWEwNjMtNDI4Ny1iMzc4LWUzY2FiMDM2NGI5MSIsImlhdCI6MTc1Nzg0ODQ3NSwiZXhwIjoxNzU4MDIxMjc1fQ.fBWNLL_Rmcz3AM79Vdh5fkxZ88NmFy7gViuW7QiK06o"
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

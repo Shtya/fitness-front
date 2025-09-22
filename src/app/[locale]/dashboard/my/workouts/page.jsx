@@ -11,7 +11,7 @@ import weeklyProgram from './exercises';
 import Button from '@/components/atoms/Button';
 
 /* =================== CONSTANTS =================== */
-const DEFAULT_SOUNDS = ['/sounds/alert1.mp3', '/sounds/alert2.mp3', '/sounds/alert3.mp3', '/sounds/alert4.mp3', '/sounds/alert5.mp3', '/sounds/alert6.mp3', '/sounds/alert7.mp3'];
+const DEFAULT_SOUNDS = ['/sounds/1.mp3', '/sounds/2.mp3', '/sounds/alert1.mp3', '/sounds/alert2.mp3', '/sounds/alert3.mp3', '/sounds/alert4.mp3', '/sounds/alert5.mp3', '/sounds/alert6.mp3', '/sounds/alert7.mp3', '/sounds/alert8.mp3'];
 const LOCAL_KEY_BUFFER = 'mw.sets.buffer.v1';
 const LOCAL_KEY_SETTINGS = 'mw.settings.v1';
 
@@ -37,7 +37,8 @@ function mmssToSeconds(str) {
 }
 
 async function fetchActivePlan(userId) {
-  // const { data } = await api.get('/plans/active', { params: { userId } });
+  // const { data } = await api.get('/plans/active',
+  //  { params: { userId } });
   const data = weeklyProgram;
   return data?.program?.days?.length ? data : { program: { days: Object.keys(weeklyProgram).map(k => weeklyProgram[k]) } };
 }
@@ -71,6 +72,21 @@ async function fetchExerciseStats(userId, name, windowDays = 90) {
     series: seriesRes.data || [],
     topSets: topRes.data || { byWeight: [], byReps: [], byE1rm: [] },
     attempts: histRes.data || [],
+  };
+}
+
+// ADD: fetch the last occurrence of a weekday and normalize to { [exerciseName]: records[] }
+async function fetchLastDayByName(userId, day, onOrBefore) {
+  const { data } = await api.get('/prs/last-day/by-name', {
+    params: { userId, day, onOrBefore }, // e.g. day='sunday'
+  });
+
+  const recordsByExercise = Object.fromEntries((data?.exercises || []).map(e => [e.exerciseName, e.records || []]));
+
+  return {
+    date: data?.date || null, 
+    day: data?.day || null, 
+    recordsByExercise, 
   };
 }
 
@@ -159,11 +175,8 @@ function RestTimerCard({ alerting, setAlerting, initialSeconds, audioEl, classNa
       alertTimeoutRef.current = null;
     }
     setAlerting(false);
-    // DO NOT reset hasAlertFiredRef here, or it will re-play immediately.
-    // It resets when a new countdown starts.
   };
 
-  // Play alert when finished, only once per countdown
   useEffect(() => {
     if (!running && duration > 0 && remaining === 0 && !hasAlertFiredRef.current) {
       const el = audioEl?.current;
@@ -185,8 +198,6 @@ function RestTimerCard({ alerting, setAlerting, initialSeconds, audioEl, classNa
         alertTimeoutRef.current = null;
       }
     };
-    // Note: intentionally NOT depending on `alerting` to avoid re-runs caused by UI state changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, remaining, duration, audioEl]);
 
   // Haptics (mobile)
@@ -495,6 +506,7 @@ export default function MyWorkoutsPage() {
   const [selectedDay, setSelectedDay] = useState('monday');
   const [workout, setWorkout] = useState(null);
   const [currentExId, setCurrentExId] = useState(undefined);
+  const [hidden, setHidden] = useState(false); // for hidden tap Quran 
 
   // stats
   const [history, setHistory] = useState([]);
@@ -518,23 +530,10 @@ export default function MyWorkoutsPage() {
     { title: 'Health & Resilience', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
   ];
 
-  // media view state
   const [activeMedia, setActiveMedia] = useState('image');
-
-  // local buffer control
   const [unsaved, setUnsaved] = useState(false);
-
-  // mobile drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  // session timer ("Start Workout" big icon)
-  const [sessionStart, setSessionStart] = useState(null);
-  const elapsed = useElapsed(sessionStart);
-
-  // last-saved values per set
   const lastSavedRef = useRef(new Map());
-
-  // weekday mapping
   const jsDayToId = d => ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][d] || 'monday';
   function pickTodayId(availableIds) {
     const todayId = jsDayToId(new Date().getDay());
@@ -568,9 +567,12 @@ export default function MyWorkoutsPage() {
         const s = JSON.parse(localStorage.getItem(LOCAL_KEY_SETTINGS) || 'null');
         if (s?.alertSound) setAlertSound(s.alertSound);
         // prefetch ALL exercises progress for today (bug fix)
-        const exNames = (dayProgram.exercises || []).map(e => e.name);
-        const recordsByEx = await fetchAllDaySets(USER_ID, exNames, todayISO());
-        applyServerRecords(session, recordsByEx, setWorkout, lastSavedRef);
+        // const exNames = (dayProgram.exercises || []).map(e => e.name);
+        // const recordsByEx = await fetchAllDaySets(USER_ID, exNames, todayISO());
+        // applyServerRecords(session, recordsByEx, setWorkout, lastSavedRef);
+
+        const { recordsByExercise } = await fetchLastDayByName(USER_ID, initialDayId, todayISO());
+        applyServerRecords(session, recordsByExercise, setWorkout, lastSavedRef);
       } finally {
         setLoading(false);
       }
@@ -597,10 +599,13 @@ export default function MyWorkoutsPage() {
     lastSavedRef.current = map;
     // also prefetch all records for that day
     (async () => {
-      try {
-        const exNames = (dayProgram.exercises || []).map(e => e.name);
-        const recordsByEx = await fetchAllDaySets(USER_ID, exNames, todayISO());
-        applyServerRecords(session, recordsByEx, setWorkout, lastSavedRef);
+      try { 
+        const { recordsByExercise } = await fetchLastDayByName(
+          USER_ID,
+          dayId, // the tab you clicked: 'sunday', 'monday', etc.
+          todayISO(),
+        );
+        applyServerRecords(session, recordsByExercise, setWorkout, lastSavedRef);
       } catch {}
     })();
   }
@@ -740,7 +745,7 @@ export default function MyWorkoutsPage() {
       <audio ref={audioRef} src={alertSound} preload='auto' />
 
       {/* ========================= WORKOUTS HEADER (Nutrition-style) ========================= */}
-      <div className='rounded-xl   md:rounded-3xl overflow-hidden border border-indigo-200'>
+      <div className='  rounded-xl md:rounded-2xl overflow-hidden border border-indigo-200'>
         {/* Primary banner */}
         <div className='relative p-4 md:p-8  bg-gradient text-white'>
           <div className='absolute inset-0 opacity-20 bg-[radial-gradient(600px_200px_at_20%_-20%,white,transparent)]' />
@@ -751,7 +756,7 @@ export default function MyWorkoutsPage() {
             {/* Actions (right) */}
             <div className='flex items-center gap-2'>
               {/* Listen (like Nutrition's Grocery button) */}
-              <button onClick={() => setAudioOpen(v => !v)} className='px-2 inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition' aria-label='Listen'>
+              <button onClick={() => { !hidden && setAudioOpen(v => !v); setHidden(false) }} className='px-2 inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition' aria-label='Listen'>
                 <Headphones size={16} />
                 <span className='max-md:hidden'>Listen</span>
               </button>
@@ -801,7 +806,7 @@ export default function MyWorkoutsPage() {
         </div>
       </div>
 
-      <AudioHubInline alerting={alerting} setAlerting={setAlerting} open={audioOpen} onClose={() => setAudioOpen(false)} podcasts={podcasts} />
+      <AudioHubInline hidden={hidden} setHidden={setHidden} alerting={alerting} setAlerting={setAlerting} open={audioOpen} onClose={() => setAudioOpen(false)} podcasts={podcasts} />
 
       {/* WORKOUT */}
       {tab === 'workout' && (
@@ -1136,9 +1141,8 @@ export default function MyWorkoutsPage() {
   );
 }
 
-function AudioHubInline({ open, onClose, alerting }) {
+function AudioHubInline({ open, onClose, alerting , hidden, setHidden }) {
   const audioRef = useRef(null);
-  const toneRef = useRef(null);
   const wasPlayingBeforeAlertRef = useRef(false);
 
   // --- Stations ---
@@ -1153,7 +1157,29 @@ function AudioHubInline({ open, onClose, alerting }) {
     [],
   );
 
-  const podcastsSeed = ['https://www.youtube.com/watch?v=PEu6zGl7qN4', 'https://www.youtube.com/watch?v=dxYI6cluroI', 'https://www.youtube.com/watch?v=y2ShgKJn1NA', 'https://www.youtube.com/watch?v=RFRLVUb2GUM'];
+  const podcastsSeed = [
+		"https://www.youtube.com/watch?v=kEEpRIMK6Y0&t=1597s",
+		"https://www.youtube.com/watch?v=_v05Yc7AdOQ",
+		"https://www.youtube.com/watch?v=-W6ijtUgXiU" ,
+		"https://www.youtube.com/watch?v=agFMbV32JIc&t=1516s",
+		"https://www.youtube.com/watch?v=_85D3CqkoxA",
+		"https://www.youtube.com/watch?v=DdxrQV_bkkY",
+		"https://www.youtube.com/watch?v=f8croUJLd3Y&t=152s&pp=0gcJCeAJAYcqIYzv",
+		"https://www.youtube.com/watch?v=c6cJ9bbEQa0",
+		"https://www.youtube.com/watch?v=2faCQ0oQCG4",
+		"https://www.youtube.com/watch?v=63_AOCldyXo&t=3036s",
+		"https://www.youtube.com/watch?v=nkil1U1GxdA",
+		"https://www.youtube.com/watch?v=zaA_bsanOWw",
+		"https://www.youtube.com/watch?v=RvZLqmV9_SI&t=309s&pp=0gcJCeAJAYcqIYzv",
+		"https://www.youtube.com/watch?v=yiDqY3YB9RU",
+		"https://www.youtube.com/watch?v=5F6sCVhg0uc",
+		"https://www.youtube.com/watch?v=b8O3yLCbwTg",
+		"https://www.youtube.com/watch?v=bGW1NecvGGc",
+		'https://www.youtube.com/watch?v=PEu6zGl7qN4', 
+		'https://www.youtube.com/watch?v=dxYI6cluroI', 
+		'https://www.youtube.com/watch?v=y2ShgKJn1NA', 
+		'https://www.youtube.com/watch?v=RFRLVUb2GUM'
+	];
   const [podcastsLoading, setPodcastsLoading] = useState(true);
   const [podcastList, setPodcastList] = useState([]);
   const [currentPodcastIdx, setCurrentPodcastIdx] = useState(0);
@@ -1192,7 +1218,6 @@ function AudioHubInline({ open, onClose, alerting }) {
 
   // UI
   const [tab, setTab] = useState((typeof window !== 'undefined' && localStorage.getItem('audio.tab')) || 'stations');
-  const [hidden, setHidden] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -1429,8 +1454,8 @@ function AudioHubInline({ open, onClose, alerting }) {
   const activeStation = stations.find(s => s.url === currentStationUrl);
 
   return (
-    <AnimatePresence>
-      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className='w-full'>
+    <AnimatePresence >
+      <motion.div   initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className={`w-full ${hidden && "hidden"} `}>
         <div className='mt-2 -mb-2 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden'>
           {/* Header */}
           <div className='px-3 py-2 flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-white'>
@@ -1473,30 +1498,7 @@ function AudioHubInline({ open, onClose, alerting }) {
           </div>
 
           {/* Body (minimized vs full) */}
-          {hidden ? (
-            <div className='px-3 py-2 flex items-center justify-between'>
-              <div className='text-xs text-slate-700 flex items-center gap-2'>
-                <Headphones size={14} className={playing ? 'text-emerald-600 animate-pulse' : 'text-slate-400'} />
-                <span className='truncate max-w-[260px]'>{playing ? `Playing: ${activeStation?.name || 'Station'}` : 'Paused'}</span>
-              </div>
-              <div className='flex items-center gap-1.5'>
-                <button onClick={togglePlay} className='inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs border-slate-200 hover:bg-slate-50'>
-                  {playing ? (
-                    <>
-                      <Pause size={12} /> Pause
-                    </>
-                  ) : (
-                    <>
-                      <Play size={12} /> Play
-                    </>
-                  )}
-                </button>
-                <button onClick={() => setHidden(false)} className='inline-flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs border-slate-200 hover:bg-slate-50'>
-                  <Eye size={12} /> Show
-                </button>
-              </div>
-            </div>
-          ) : (
+          { (
             <>
               {/* Tabs */}
               <div className='px-3 pt-2'>
@@ -1617,41 +1619,41 @@ function AudioHubInline({ open, onClose, alerting }) {
                 </div>
               )}
 
-							{/* ===== Podcasts (stations keep playing in background) ===== */}
-                {tab === 'podcasts' && (
-                  <div className='space-y-2'>
-                    {podcastsLoading ? (
-                      <>
-                        <div className='aspect-video w-[calc(100%+40px)] max-md:-mt-2 -ml-[20px] md:w-[calc(100%+20px)] md:-ml-[10px] rounded-lg overflow-hidden border border-slate-200'>
-                          <div className='h-full w-full animate-pulse bg-slate-100' />
-                        </div>
-                        <div className='flex gap-1.5 pb-1'>
-                          {Array.from({ length: 6 }).map((_, i) => (
-                            <div key={i} className='min-w-[60px] max-w-[60px] rounded-md border border-slate-200 overflow-hidden'>
-                              <div className='h-[45px] w-full animate-pulse bg-slate-100' />
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    ) : podcastList.length > 0 ? (
-                      <>
-                        <div className='aspect-video w-[calc(100%+40px)] max-md:-mt-2 -ml-[20px] md:w-[calc(100%+20px)] md:-ml-[10px] rounded-lg overflow-hidden border border-slate-200'>
-                          <iframe key={podcastList[currentPodcastIdx].id} src={podcastList[currentPodcastIdx].embed} className='w-full h-full' title={podcastList[currentPodcastIdx].title} allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share' referrerPolicy='strict-origin-when-cross-origin' loading='lazy' allowFullScreen />
-                        </div>
+              {/* ===== Podcasts (stations keep playing in background) ===== */}
+              {tab === 'podcasts' && (
+                <div className='space-y-2'>
+                  {podcastsLoading ? (
+                    <>
+                      <div className='aspect-video w-[calc(100%+40px)] max-md:-mt-2 -ml-[20px] md:w-[calc(100%+20px)] md:-ml-[10px] rounded-lg overflow-hidden border border-slate-200'>
+                        <div className='h-full w-full animate-pulse bg-slate-100' />
+                      </div>
+                      <div className='flex gap-1.5 pb-1'>
+                        {Array.from({ length: 6 }).map((_, i) => (
+                          <div key={i} className='min-w-[60px] max-w-[60px] rounded-md border border-slate-200 overflow-hidden'>
+                            <div className='h-[45px] w-full animate-pulse bg-slate-100' />
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : podcastList.length > 0 ? (
+                    <>
+                      <div className='aspect-video w-[calc(100%+40px)] max-md:-mt-2 -ml-[20px] md:w-[calc(100%+20px)] md:-ml-[10px] rounded-lg overflow-hidden border border-slate-200'>
+                        <iframe key={podcastList[currentPodcastIdx].id} src={podcastList[currentPodcastIdx].embed} className='w-full h-full' title={podcastList[currentPodcastIdx].title} allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share' referrerPolicy='strict-origin-when-cross-origin' loading='lazy' allowFullScreen />
+                      </div>
 
-                        <div className='flex gap-1.5 overflow-x-auto pb-1'>
-                          {podcastList.map((p, i) => (
-                            <button key={p.id} onClick={() => setCurrentPodcastIdx(i)} className={`min-w-[60px] max-w-[60px] rounded-md border overflow-hidden text-left ${i === currentPodcastIdx ? 'border-indigo-300' : 'border-slate-200 hover:border-slate-300'}`} title={p.title} aria-pressed={i === currentPodcastIdx}>
-                              <img src={p.thumb} alt='' className='w-full h-full object-cover' />
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <div className='text-xs text-slate-500'>No YouTube links yet.</div>
-                    )}
-                  </div>
-                )}
+                      <div className='flex gap-1.5 overflow-x-auto pb-1'>
+                        {podcastList.map((p, i) => (
+                          <button key={p.id} onClick={() => setCurrentPodcastIdx(i)} className={`min-w-[60px] max-w-[60px] rounded-md border overflow-hidden text-left ${i === currentPodcastIdx ? 'border-indigo-300' : 'border-slate-200 hover:border-slate-300'}`} title={p.title} aria-pressed={i === currentPodcastIdx}>
+                            <img src={p.thumb} alt='' className='w-full h-full object-cover' />
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className='text-xs text-slate-500'>No YouTube links yet.</div>
+                  )}
+                </div>
+              )}
             </>
           )}
 

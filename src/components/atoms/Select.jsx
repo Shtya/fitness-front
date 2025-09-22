@@ -1,109 +1,204 @@
-// components/atoms/Select.jsx
 'use client';
 
-import { useEffect, useRef, useState, forwardRef } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronDown, Check, X } from 'lucide-react';
 
-const Select = forwardRef(({  options, placeholder = 'Select an option', label, cnLabel, onChange, onBlur, className, cnPlaceholder , cnSelect, error = null, required = false, name, value, ...props }, ref) => {
+export default function Select({
+  options = [], // [{ id: '1', label: 'Option 1' }, ...]
+  value = null, // selected id
+  onChange = () => {},
+  placeholder = 'Select…',
+  label, // optional top label
+  disabled = false,
+  error, // optional error text
+  className = '',
+  searchable = true, // show search box
+  clearable = true, // show X to clear
+}) {
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(null);
-  const [touched, setTouched] = useState(false);
-  const selectRef = useRef(null);
+  const [query, setQuery] = useState('');
+  const [activeIndex, setActiveIndex] = useState(-1);
 
+  const rootRef = useRef(null);
+  const buttonRef = useRef(null);
+  const listRef = useRef(null);
 
-	useEffect(() => {
-    // Set the initial selected value based on the `value` prop passed from the parent component
-    if (value) {
-      const selectedOption = options.find(option => option.id == value);
-      if (selectedOption) {
-        setSelected(selectedOption.name);
-      }
-    }
-  }, [value, options]);
+  const selected = useMemo(() => options.find(o => o.id === value) || null, [options, value]);
 
-	
+  const filtered = useMemo(() => {
+    if (!searchable || !query.trim()) return options;
+    const q = query.toLowerCase();
+    return options.filter(o => String(o.label).toLowerCase().includes(q));
+  }, [options, query, searchable]);
+
+  // Close when clicking outside
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (selectRef.current && !selectRef.current.contains(event.target)) {
-        setOpen(false);
-        if (!touched) {
-          setTouched(true);
-          onBlur?.();
-        }
-      }
+    function onDocClick(e) {
+      if (!rootRef.current) return;
+      if (!rootRef.current.contains(e.target)) setOpen(false);
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [touched, onBlur]);
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
 
+  // Manage focus index each time list opens / filters change
+  useEffect(() => {
+    if (open) {
+      // Try to focus selected item, else first item
+      const ix = Math.max(
+        0,
+        filtered.findIndex(o => o.id === value),
+      );
+      setActiveIndex(filtered.length ? (ix === -1 ? 0 : ix) : -1);
+    } else {
+      setQuery('');
+    }
+  }, [open, filtered, value]);
 
-  const handleSelect = option => {
-    setSelected(option.name);
+  function handleToggle() {
+    if (disabled) return;
+    setOpen(v => !v);
+  }
+
+  function choose(idx) {
+    const item = filtered[idx];
+    if (!item) return;
+    onChange(item.id);
     setOpen(false);
-    setTouched(true);
-    onChange?.(option);
-    onBlur?.();
-  };
+    // return focus to button
+    buttonRef.current?.focus();
+  }
 
-  const handleButtonClick = () => {
-    setOpen(prev => !prev);
-    if (!touched) {
-      setTouched(true);
-      onBlur?.();
+  function clearSelection(e) {
+    e.stopPropagation();
+    onChange(null);
+    setQuery('');
+    setActiveIndex(-1);
+  }
+
+  function onKeyDown(e) {
+    if (disabled) return;
+    if (!open && (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      setOpen(true);
+      return;
     }
-  };
+    if (!open) return;
 
-  const getBorderClass = () => {
-    if (error) return 'border-red-500 ring-2 ring-red-500/20';
-    if (selected) return 'border-emerald-600';
-    if (open) return 'border-emerald-600';
-    return 'border-gray-300';
-  };
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex(i => Math.min((i < 0 ? -1 : i) + 1, filtered.length - 1));
+      scrollActiveIntoView();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex(i => Math.max((i < 0 ? filtered.length : i) - 1, 0));
+      scrollActiveIntoView();
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      setActiveIndex(0);
+      scrollActiveIntoView(true);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      setActiveIndex(filtered.length - 1);
+      scrollActiveIntoView(true);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      choose(activeIndex);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setOpen(false);
+      buttonRef.current?.focus();
+    }
+  }
+
+  function scrollActiveIntoView(forceCenter = false) {
+    requestAnimationFrame(() => {
+      const list = listRef.current;
+      const item = list?.querySelector('[data-active="true"]');
+      if (!list || !item) return;
+      const itemTop = item.offsetTop;
+      const itemBottom = itemTop + item.offsetHeight;
+      const viewTop = list.scrollTop;
+      const viewBottom = viewTop + list.clientHeight;
+      if (forceCenter) {
+        list.scrollTop = itemTop - list.clientHeight / 2 + item.offsetHeight / 2;
+      } else if (itemTop < viewTop) {
+        list.scrollTop = itemTop;
+      } else if (itemBottom > viewBottom) {
+        list.scrollTop = itemBottom - list.clientHeight;
+      }
+    });
+  }
 
   return (
-    <div className={`${className} w-full`} ref={selectRef}>
-      {label && (
-        <label className={`${cnLabel} mb-1 block text-sm font-medium text-gray-600`}>
-          {label}
-          {required && <span className='text-red-500 ml-1'>*</span>}
-        </label>
-      )}
+    <div ref={rootRef} className={`w-full relative z-[100] ${className}`}>
+      {label && <label className='mb-1.5 block text-sm font-medium text-slate-700'>{label}</label>}
 
-      <div className={`relative w-full `}>
-        <button
-          type='button'
-          onClick={handleButtonClick}
-          className={`${cnSelect} ${getBorderClass()} h-[40px] cursor-pointer w-full flex items-center justify-between rounded-md border px-4 py-2 text-sm transition
-            bg-white text-gray-700 
-            hover:bg-gray-50 hover:border-emerald-600/70 
-            focus:outline-none focus:ring-2 focus:ring-emerald-600/50`}
-          {...props}>
-          <span className={`truncate ${cnPlaceholder} ${selected ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>{selected || placeholder}</span>
-          <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${open ? 'rotate-180 text-emerald-600' : 'text-gray-400'}`} />
-        </button>
+      {/* Button */}
+      <button ref={buttonRef} type='button' aria-haspopup='listbox' aria-expanded={open} aria-controls='select-listbox' disabled={disabled} onClick={handleToggle} onKeyDown={onKeyDown} className={[' border-slate-100 shadow-none h-[40px] group relative w-full inline-flex items-center justify-between', 'rounded-xl border bg-white px-3.5 py-2.5', disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer', error ? 'border-rose-500' : 'border-slate-300 hover:border-slate-400 focus:border-indigo-500', ' focus:outline-none focus:ring-4 focus:ring-indigo-100', 'transition-colors'].join(' ')}>
+        <span className={`truncate text-left ${selected ? 'text-slate-900' : 'text-slate-400'}`}>{selected ? selected.label : placeholder}</span>
 
-        <div
-          className={`absolute left-0 right-0 mt-2 overflow-auto rounded-md border border-gray-200 bg-white shadow-lg transition-all duration-200 ease-in-out z-50
-          ${open ? 'max-h-[303px] opacity-100 scale-100' : 'max-h-0 opacity-0 scale-95 pointer-events-none'}`}>
-          <ul className='divide-y divide-gray-100'>
-            {options.map(opt => (
-              <li
-                key={opt.id}
-                onClick={() => handleSelect(opt)}
-                className={`cursor-pointer px-4 py-2 text-sm transition 
-                  ${selected === opt.name ? 'bg-emerald-600 text-white font-medium' : 'text-gray-700 hover:bg-emerald-600/90 hover:text-white'}`}>
-                {opt.name}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+        <span className='ml-3 flex items-center gap-1'>
+          {clearable && selected && !disabled && <X size={16} className='opacity-60 hover:opacity-100 transition' onClick={clearSelection} aria-label='Clear selection' />}
+          <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
+            <ChevronDown size={18} className='text-slate-600' />
+          </motion.span>
+        </span>
+      </button>
 
-      {error && <p className='text-red-500 text-sm mt-1'>{error}</p>}
+      {/* Dropdown */}
+      <AnimatePresence>
+        {open && (
+          <motion.div key='dropdown' initial={{ opacity: 0, y: -6, scale: 0.98 }} animate={{ opacity: 1, y: 6, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.98 }} transition={{ type: 'spring', stiffness: 380, damping: 28 }} className='relative'>
+            <div className={['absolute z-50 mt-2 w-full rounded-2xl border border-slate-200 bg-white', 'shadow-lg ring-1 ring-black/5 overflow-hidden'].join(' ')}>
+              {/* Search */}
+              {searchable && (
+                <div className='p-2 border-b border-slate-100'>
+                  <input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder='Type to filter…' className='w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100' />
+                </div>
+              )}
+
+              {/* List */}
+              <ul id='select-listbox' role='listbox' ref={listRef} className='max-h-56 overflow-auto py-1' aria-activedescendant={activeIndex >= 0 ? `option-${filtered[activeIndex]?.id}` : undefined} onKeyDown={onKeyDown} tabIndex={-1}>
+                {filtered.length === 0 && <li className='px-3 py-2 text-sm text-slate-400'>No results</li>}
+
+                {filtered.map((opt, idx) => {
+                  const isSelected = selected?.id === opt.id;
+                  const isActive = idx === activeIndex;
+
+                  return (
+                    <motion.li
+                      layout
+                      key={opt.id}
+                      id={`option-${opt.id}`}
+                      role='option'
+                      aria-selected={isSelected}
+                      data-active={isActive ? 'true' : undefined}
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      onMouseDown={e => e.preventDefault()} // avoid button blur
+                      onClick={() => choose(idx)}
+                      className={['mx-1 my-0.5 rounded-xl px-3 py-2 text-sm flex items-center justify-between', isActive ? 'bg-indigo-50' : 'bg-transparent', 'cursor-pointer select-none'].join(' ')}
+                      whileHover={{ scale: 1.01 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 24 }}>
+                      <span className='truncate text-slate-800'>{opt.label}</span>
+                      <AnimatePresence>
+                        {isSelected && (
+                          <motion.span key='check' initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
+                            <Check size={16} className='text-indigo-600' />
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </motion.li>
+                  );
+                })}
+              </ul>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {error && <p className='mt-1.5 text-xs text-rose-600'>{error}</p>}
     </div>
   );
-});
-
-Select.displayName = 'Select';
-
-export default Select;
+}
