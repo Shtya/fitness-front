@@ -9,7 +9,7 @@
 //         id: 'saturday',
 //         dayOfWeek: 'saturday',
 //         name: 'Push Day 1 (Chest & Triceps)',
-//         exercises: [ 
+//         exercises: [
 // 					{order : 1 , exercise : id},
 // 					{order : 2 , exercise : id},
 //         ],
@@ -54,14 +54,15 @@ const weeklyProgram = {
         name: 'Pull Day 1 (Back & Biceps)',
         exercises: [
           // Main lifts
-          { id: 'ex7', name: 'Machine Wide Grip Row', targetSets: 3, targetReps: '8', rest: 90, tempo: '1/1/1', img: '/uploads/118/container/img-1.png', video: '/uploads/118/container/vid-1.mp4', desc: 'Wide grip row on machine.' },
-          { id: 'ex8', name: 'Seated Row Close Grip', targetSets: 3, targetReps: '12', rest: 90, tempo: '1/1/1', img: '/uploads/Seated Row Close Grip/img-1.png', video: '/uploads/Seated Row Close Grip/vid-1.mp4', desc: 'Seated row with close grip.' }, // media path differentiated
+          { id: 'ex7', name: 'Pull-ups (Weighted if possible)', img: '/uploads/pull-ups/img-1.png', video: '/uploads/pull-ups/vid-1.mp4', targetSets: 3, targetReps: '6-10', rest: 120, tempo: '2/1/1', desc: 'Bodyweight pull-ups for lats and upper back.' },
+          { id: 'ex8', name: 'Barbell Row (or T-Bar Row)', img: '/uploads/T-Bar Row/img-1.png', video: '/uploads/T-Bar Row/vid-1.mp4', targetSets: 3, targetReps: '8-10', rest: 120, tempo: '2/1/1', desc: 'Heavy row for thickness and overall back.' },
+          // { id: 'ex7', name: 'Machine Wide Grip Row', targetSets: 3, targetReps: '8', rest: 90, tempo: '1/1/1', img: '/uploads/118/container/img-1.png', video: '/uploads/118/container/vid-1.mp4', desc: 'Wide grip row on machine.' },
           { id: 'ex9', name: 'Lat Pulldown', targetSets: 3, targetReps: '15', rest: 90, tempo: '1/1/1', img: '/uploads/Lat Pulldown/img-1.png', video: '/uploads/Lat Pulldown/vid-1.mp4', desc: 'Lat pulldown on machine.' },
-          { id: 'ex10', name: 'Reverse Fly Machine', targetSets: 3, targetReps: '15', rest: 90, tempo: '1/1/1', img: '/uploads/Reverse Fly Machine/img-1.png', video: '/uploads/Reverse Fly Machine/vid-1.mp4', desc: 'Reverse fly machine.' },
 
-          { id: 'ex11', name: 'Cable Biceps Curl', targetSets: 3, targetReps: '15', rest: 60, tempo: '1/1/1', img: '/uploads/Cable Biceps Curl/img-1.png', video: '/uploads/Cable Biceps Curl/vid-1.mp4', video2: '/uploads/156/container/vid-2.mp4', desc: 'Cable biceps curls.' },
-          { id: 'ex12', name: 'Wide Grip Barbell Shrugs', targetSets: 2, targetReps: '15', rest: 60, tempo: '1/1/1', img: '/uploads/Wide Grip Barbell Shrugs/img-1.png', video: '/uploads/Wide Grip Barbell Shrugs/vid-1.mp4', desc: 'Wide grip barbell shrugs.' },
-          // Fixed media to match your uploads pattern
+          { id: 'ex11', name: 'Hammer Curl', img: '/uploads/hammer-curl-dumbble/img-1.png', video: '/uploads/hammer-curl-dumbble/vid-1.mp4', targetSets: 3, targetReps: '10-12', rest: 60, tempo: '1/1/1', desc: 'Dumbbell hammer curl for brachialis and forearms.' },
+          { id: 'ex12', name: 'Incline Dumbbell Curl (optional)', img: '/uploads/Incline Dumbbell Curl/img-1.png', video: '/uploads/Incline Dumbbell Curl/vid-1.mp4', targetSets: 3, targetReps: '12-15', rest: 60, tempo: '1/1/1', desc: 'Incline curl for long head of biceps.' },
+
+          // { id: 'ex11', name: 'Cable Biceps Curl', targetSets: 3, targetReps: '15', rest: 60, tempo: '1/1/1', img: '/uploads/Cable Biceps Curl/img-1.png', video: '/uploads/Cable Biceps Curl/vid-1.mp4', video2: '/uploads/156/container/vid-2.mp4', desc: 'Cable biceps curls.' },
           { id: 'ex13', name: 'Back Extension', targetSets: 4, targetReps: '20', rest: 90, tempo: '1/1/1', img: '/uploads/Back Extension/img-1.png', video: '/uploads/Back Extension/vid-1.mp4', desc: 'Back extension on machine.' },
         ],
       },
