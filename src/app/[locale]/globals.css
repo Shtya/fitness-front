@@ -4,7 +4,7 @@
 @import 'tailwindcss';
 
 :root {
-  --main: oklch(51.1% .262 276.966);
+  --main: oklch(51.1% 0.262 276.966);
 }
 body {
   color: black;
@@ -18,8 +18,9 @@ body {
 [dir='rtl'] body {
   font-family: var(--font-arabic) !important;
 }
-.font-ar { font-family: var(--font-arabic) !important }
-
+.font-ar {
+  font-family: var(--font-arabic) !important;
+}
 
 .scrollbar-custom {
   scrollbar-width: thin;
@@ -103,9 +104,14 @@ body {
   @apply text-[18px] max-md:text-[16px] text-black opacity-80 font-[500];
 }
 
-@keyframes marquee { 0% { transform: translateX(0%) } 100% { transform: translateX(-100%) } }
-
-
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
 
 ::-webkit-scrollbar {
   width: 8px;
@@ -118,11 +124,11 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, oklch(51.1% .262 276.966), oklch(58.5% .233 277.117));
+  background: linear-gradient(180deg, oklch(51.1% 0.262 276.966), oklch(58.5% 0.233 277.117));
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, oklch(51.1% .262 276.966), oklch(58.5% .233 277.117));
+  background: linear-gradient(180deg, oklch(51.1% 0.262 276.966), oklch(58.5% 0.233 277.117));
 }
 
 .scroll *::-webkit-scrollbar {
@@ -142,6 +148,9 @@ body {
   background: linear-gradient(90deg, rgba(226, 232, 240, 0.9) 25%, rgba(255, 255, 255, 0.95) 50%, rgba(226, 232, 240, 0.9) 75%);
   background-size: 200% 100%;
   animation: shimmerMove 1.3s ease-in-out infinite;
+}
+html {
+  scroll-behavior: smooth;
 }
 
 @layer base {
@@ -183,7 +192,9 @@ body {
     @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
   }
 }
-.inp { @apply w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30; }
+.inp {
+  @apply w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30;
+}
 /* Animation classes */
 .fade-in {
   animation: fadeIn 0.5s ease-in;
@@ -250,28 +261,28 @@ body {
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.35), 0 2px 0 rgba(255, 255, 255, 0.18) inset, 0 -10px 18px rgba(0, 0, 0, 0.35) inset;
   border: 1px solid rgba(255, 255, 255, 0.12);
   transform: translateZ(0);
- }
+}
 
 /* Heuristics for common downloaders – not guaranteed */
-[id*="IDM"], [class*="idm"],
-[id*="download"], [class*="download"],
-[id*="realplayer"], [class*="realplayer"] {
+[id*='IDM'],
+[class*='idm'],
+[id*='download'],
+[class*='download'],
+[id*='realplayer'],
+[class*='realplayer'] {
   display: none !important;
 }
 
-
- .bg-gradient {
-	position: relative;
-   color: white;
+.bg-gradient {
+  position: relative;
+  color: white;
   background: linear-gradient(to top right, #6366f1, #38bdf8);
-   /* box-shadow: 
+  /* box-shadow: 
     0 16px 32px rgba(0, 0, 0, 0.35),
     0 2px 0 rgba(255, 255, 255, 0.18) inset,
     0 -10px 18px rgba(0, 0, 0, 0.35) inset; */
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-
- }
-
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
 
 .bg-main {
   @apply relative rounded-[10px] text-white bg-gradient-to-tr from-indigo-600 to-blue-500;
@@ -311,23 +322,20 @@ body {
   /* transform: translateY(-3px); */
   box-shadow: 0 22px 42px rgba(0, 0, 0, 0.4), 0 2px 0 rgba(255, 255, 255, 0.2) inset, 0 -12px 22px rgba(0, 0, 0, 0.38) inset;
 }
- /* Example with higher specificity */
+/* Example with higher specificity */
 body .nextjs-toast {
   display: none !important;
   opacity: 0 !important;
 }
 
-
-
-
 /* Hide arrows for Chrome, Safari, Edge, Opera */
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
 /* Hide arrows for Firefox */
-input[type=number] {
+input[type='number'] {
   -moz-appearance: textfield;
 }

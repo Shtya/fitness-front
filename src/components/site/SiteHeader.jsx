@@ -49,14 +49,9 @@ export default function SiteHeader({ basePath = '/site', announcement }) {
   const items = useMemo(
     () => [
       { slug: 'programs', label: 'Programs' },
-      { slug: 'schedule', label: 'Schedule' },
       { slug: 'pricing', label: 'Pricing' },
-      { slug: 'coaches', label: 'Coaches' },
       { slug: 'stories', label: 'Stories' },
-      { slug: 'blogs', label: 'Blog' }, // NOTE: use slug 'blog' (not 'blogs') to match /site/blog
-      { slug: 'events', label: 'Events' },
-      { slug: 'gallery', label: 'Gallery' },
-      { slug: 'contact', label: 'Contact' },
+       { slug: 'contact', label: 'Contact' },
     ],
     [],
   );
