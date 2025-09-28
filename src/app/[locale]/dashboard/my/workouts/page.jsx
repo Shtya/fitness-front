@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader, TabsPill, EmptyState, spring } from '@/components/dashboard/ui/UI';
-import { Dumbbell, History as HistoryIcon, Clock, X, Play, Pause, Minus, Plus, Video as VideoIcon, Images, Shuffle, Trophy, TrendingUp, Flame, Save as SaveIcon, ImageIcon, Edit3, Headphones, Radio, Settings as SettingsIcon, Menu as MenuIcon, Volume2, VolumeX, RotateCw, Square, Activity, EyeOff, Eye } from 'lucide-react';
+import { Dumbbell, History as HistoryIcon, X, Minus, Plus, Video as VideoIcon, Trophy, TrendingUp, Flame, Save as SaveIcon, ImageIcon, Headphones, Settings as SettingsIcon, Menu as MenuIcon } from 'lucide-react';
 import Button from '@/components/atoms/Button';
 import CheckBox from '@/components/atoms/CheckBox';
 import api from '@/utils/axios';
@@ -34,7 +34,7 @@ function pickTodayId(availableIds) {
   return pref.find(x => availableIds.includes(x)) || availableIds[0] || 'monday';
 }
 
-// ensure this exists
+// Optimized throttle function
 const throttle = (fn, wait = 800) => {
   let last = 0,
     timer = null,
@@ -54,7 +54,7 @@ const throttle = (fn, wait = 800) => {
       fn.apply(lastThis, lastArgs);
     } else if (!timer) {
       timer = setTimeout(() => {
-        last = Date.now();
+        last = now;
         timer = null;
         fn.apply(lastThis, lastArgs);
       }, remaining);
@@ -66,43 +66,179 @@ const epley = (w, r) => Math.round((Number(w) || 0) * (1 + (Number(r) || 0) / 30
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const fmtVal = v => (v === null || v === undefined ? '—' : typeof v === 'string' || typeof v === 'number' ? String(v) : JSON.stringify(v));
 
-async function fetchActivePlan(userId) {
-  // const { data } = await api.get('/plans/active',
-  //  { params: { userId } });
-  const data = weeklyProgram;
-  return data?.program?.days?.length ? data : { program: { days: Object.keys(weeklyProgram).map(k => weeklyProgram[k]) } };
+// returns YYYY-MM-DD
+function dateOnlyISO(d = new Date()) {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
+
+// Map your UI day key -> JS getDay() index
+const DAY_INDEX = {
+  SUNDAY: 0,
+  MONDAY: 1,
+  TUESDAY: 2,
+  WEDNESDAY: 3,
+  THURSDAY: 4,
+  FRIDAY: 5,
+  SATURDAY: 6,
+};
+
+// If your app's week starts Saturday, set WEEK_START = 6. If Sunday, use 0.
+const WEEK_START = 6; // ← change to 0 if your week starts on Sunday
+
+function isoForThisWeeksDay(dayName, refDate = new Date(), weekStart = WEEK_START) {
+  const targetIdx = DAY_INDEX[dayName.toUpperCase()];
+  if (targetIdx == null) throw new Error(`Bad dayName: ${dayName}`);
+
+  const refIdx = refDate.getDay(); // 0..6
+  // start-of-week date
+  const deltaStart = (refIdx - weekStart + 7) % 7;
+  const start = new Date(refDate);
+  start.setHours(12, 0, 0, 0); // avoid DST edges
+  start.setDate(start.getDate() - deltaStart);
+
+  // target day date
+  const targetOffset = (targetIdx - weekStart + 7) % 7;
+  const target = new Date(start);
+  target.setDate(start.getDate() + targetOffset);
+
+  return dateOnlyISO(target);
+}
+
+// Optimized API calls with caching
+const apiCache = new Map();
+
+async function fetchWithCache(key, fetchFn) {
+  if (apiCache.has(key)) {
+    return apiCache.get(key);
+  }
+  const result = await fetchFn();
+  apiCache.set(key, result);
+  return result;
+}
+
+async function fetchActivePlan(userId) {
+  const cacheKey = `activePlan-${userId}`;
+  return fetchWithCache(cacheKey, async () => {
+    // const { data } = await api.get('/plans/active', { params: { userId } });
+    const data = weeklyProgram;
+    return data?.program?.days?.length ? data : { program: { days: Object.keys(weeklyProgram).map(k => weeklyProgram[k]) } };
+  });
+}
+
 async function upsertDailyPR(userId, exerciseName, date, records) {
   const { data } = await api.post('/prs', { exerciseName, date, records }, { params: { userId } });
+  // Clear relevant cache entries
+  apiCache.clear();
   return data;
 }
 
 async function fetchOverview(userId, windowDays = 30) {
-  const { data } = await api.get('/prs/stats/overview', { params: { userId, windowDays } });
-  return data;
+  const cacheKey = `overview-${userId}-${windowDays}`;
+  return fetchWithCache(cacheKey, async () => {
+    const { data } = await api.get('/prs/stats/overview', { params: { userId, windowDays } });
+    return data;
+  });
 }
+
 async function fetchExerciseStats(userId, name, windowDays = 90) {
-  const [seriesRes, topRes, histRes] = await Promise.all([api.get('/prs/stats/e1rm-series', { params: { userId, exerciseName: name, bucket: 'week', windowDays } }), api.get('/prs/stats/top-sets', { params: { userId, exerciseName: name, top: 5 } }), api.get('/prs/history', { params: { userId, exerciseName: name } })]);
-  return {
-    series: seriesRes.data || [],
-    topSets: topRes.data || { byWeight: [], byReps: [], byE1rm: [] },
-    attempts: histRes.data || [],
-  };
+  const cacheKey = `exerciseStats-${userId}-${name}-${windowDays}`;
+  return fetchWithCache(cacheKey, async () => {
+    const [seriesRes, topRes, histRes] = await Promise.all([api.get('/prs/stats/e1rm-series', { params: { userId, exerciseName: name, bucket: 'week', windowDays } }), api.get('/prs/stats/top-sets', { params: { userId, exerciseName: name, top: 5 } }), api.get('/prs/history', { params: { userId, exerciseName: name } })]);
+    return {
+      series: seriesRes.data || [],
+      topSets: topRes.data || { byWeight: [], byReps: [], byE1rm: [] },
+      attempts: histRes.data || [],
+    };
+  });
 }
 
 async function fetchLastDayByName(userId, day, onOrBefore) {
-  const { data } = await api.get('/prs/last-day/by-name', {
-    params: { userId, day, onOrBefore }, // e.g. day='sunday'
+  const cacheKey = `lastDay-${userId}-${day}-${onOrBefore}`;
+  return fetchWithCache(cacheKey, async () => {
+    const { data } = await api.get('/prs/last-day/by-name', {
+      params: { userId, day, onOrBefore },
+    });
+
+    const recordsByExercise = Object.fromEntries((data?.exercises || []).map(e => [e.exerciseName, e.records || []]));
+
+    return {
+      date: data?.date || null,
+      day: data?.day || null,
+      recordsByExercise,
+    };
   });
-
-  const recordsByExercise = Object.fromEntries((data?.exercises || []).map(e => [e.exerciseName, e.records || []]));
-
-  return {
-    date: data?.date || null,
-    day: data?.day || null,
-    recordsByExercise,
-  };
 }
+
+/* =================== SKELETON COMPONENTS =================== */
+const SkeletonLoader = () => (
+  <div className='space-y-5 sm:space-y-6 animate-pulse'>
+    {/* Header Skeleton */}
+    <div className='rounded-xl md:rounded-2xl overflow-hidden border border-indigo-200'>
+      <div className='relative p-4 md:p-8 bg-gradient text-white'>
+        <div className='absolute inset-0 opacity-20 bg-[radial-gradient(600px_200px_at_20%_-20%,white,transparent)]' />
+        <div className='relative z-10 flex flex-row md:items-center gap-3 md:gap-6 justify-between'>
+          <div className='flex-1 max-lg:hidden'>
+            <div className='h-8 bg-white/20 rounded w-48'></div>
+            <div className='h-4 bg-white/20 rounded w-64 mt-2'></div>
+          </div>
+          <div className='flex items-center gap-2'>
+            <div className='h-[37px] w-[37px] bg-white/20 rounded-xl'></div>
+            <div className='h-[37px] w-[37px] bg-white/20 rounded-xl'></div>
+            <div className='max-md:hidden flex gap-2'>
+              <div className='h-[37px] w-24 bg-white/20 rounded-xl'></div>
+              <div className='h-[37px] w-24 bg-white/20 rounded-xl'></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className='px-4 md:px-6 py-3 bg-white'>
+        <div className='flex gap-2'>
+          {[1, 2, 3].map(i => (
+            <div key={i} className='h-8 bg-slate-200 rounded-lg w-20'></div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    {/* Main Content Skeleton */}
+    <div className='grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6'>
+      {/* Left Panel Skeleton */}
+      <div className='space-y-4'>
+        <div className='rounded-2xl border border-slate-200 bg-white p-4'>
+          <div className='h-64 bg-slate-200 rounded-lg mb-4'></div>
+          <div className='space-y-3'>
+            <div className='h-12 bg-slate-200 rounded-lg'></div>
+            <div className='h-12 bg-slate-200 rounded-lg'></div>
+            <div className='h-12 bg-slate-200 rounded-lg'></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel Skeleton */}
+      <div className='hidden lg:block space-y-3'>
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className='h-16 bg-slate-200 rounded-lg'></div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const SkeletonTable = ({ rows = 5 }) => (
+  <div className='space-y-2'>
+    {Array.from({ length: rows }).map((_, i) => (
+      <div key={i} className='flex gap-4'>
+        <div className='h-10 bg-slate-200 rounded flex-1'></div>
+        <div className='h-10 bg-slate-200 rounded flex-1'></div>
+        <div className='h-10 bg-slate-200 rounded flex-1'></div>
+        <div className='h-10 bg-slate-200 rounded w-16'></div>
+      </div>
+    ))}
+  </div>
+);
 
 /* =================== MAIN PAGE =================== */
 export default function MyWorkoutsPage() {
@@ -135,17 +271,30 @@ export default function MyWorkoutsPage() {
   const [unsaved, setUnsaved] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const lastSavedRef = useRef(new Map());
-  const [isPending, startTransition] = useTransition(); // defer non-urgent updates
+  const [isPending, startTransition] = useTransition();
+
+  // Preload images and videos for better UX
+  const preloadMedia = useCallback(exercises => {
+    exercises.forEach(exercise => {
+      if (exercise.img) {
+        const img = new Image();
+        img.src = exercise.img;
+      }
+    });
+  }, []);
 
   // one throttled writer shared across handlers
   const persistBufferThrottled = useMemo(() => throttle(w => persistLocalBuffer(w), 800), []);
 
-  /* ---------- initial load ---------- */
+  /* ---------- optimized initial load ---------- */
   useEffect(() => {
     let mounted = true;
-    (async () => {
+    let timeoutId;
+
+    const loadData = async () => {
       setLoading(true);
       try {
+        // Load critical data first
         const p = await fetchActivePlan(USER_ID);
         if (!mounted) return;
         setPlan(p);
@@ -163,7 +312,12 @@ export default function MyWorkoutsPage() {
         setWorkout(session);
         setCurrentExId(session.exercises[0]?.id);
 
-        // lastSaved mirror build (reuse Map)
+        // Preload media for better UX
+        if (session.exercises?.length) {
+          preloadMedia(session.exercises);
+        }
+
+        // Initialize lastSaved mirror
         const mirror = lastSavedRef.current;
         mirror.clear();
         for (let i = 0; i < session.sets.length; i++) {
@@ -171,34 +325,64 @@ export default function MyWorkoutsPage() {
           mirror.set(s.id, { weight: s.weight, reps: s.reps, done: s.done });
         }
 
-        // settings
+        // Load settings
         try {
           const s = JSON.parse(localStorage.getItem(LOCAL_KEY_SETTINGS) || 'null');
           if (s?.alertSound) setAlertSound(s.alertSound);
         } catch {}
 
-        // match server records
-        const { recordsByExercise } = await fetchLastDayByName(USER_ID, initialDayId, todayISO());
-        if (!mounted) return;
-        applyServerRecords(session, recordsByExercise, setWorkout, lastSavedRef);
+        // Load server records in background
+        const dayISO = isoForThisWeeksDay(initialDayId);
+        fetchLastDayByName(USER_ID, initialDayId, dayISO)
+          .then(({ recordsByExercise }) => {
+            if (mounted) {
+              applyServerRecords(session, recordsByExercise, setWorkout, lastSavedRef);
+            }
+          })
+          .catch(console.error);
+
+        // Load overview data in background
+        fetchOverview(USER_ID, 30)
+          .then(data => {
+            if (mounted) {
+              setOverview(data || null);
+              setHistory(Array.isArray(data?.history) ? data.history : []);
+            }
+          })
+          .catch(console.error);
+      } catch (error) {
+        console.error('Initial load error:', error);
       } finally {
-        if (mounted) setLoading(false);
+        // Small delay to show skeleton and prevent flash
+        timeoutId = setTimeout(() => {
+          if (mounted) setLoading(false);
+        }, 300);
       }
-    })();
+    };
+
+    loadData();
+
     return () => {
       mounted = false;
+      clearTimeout(timeoutId);
+      // Cleanup cache on unmount to prevent memory leaks
+      apiCache.clear();
     };
-  }, []);
+  }, [preloadMedia]);
 
-  // keep audio element in sync
+  // Keep audio element in sync
   useEffect(() => {
     const el = audioRef.current;
-    if (el) el.src = alertSound;
+    if (el) {
+      el.src = alertSound;
+      el.load(); // Preload audio
+    }
   }, [alertSound]);
 
-  /* ---------- derived data ---------- */
+  /* ---------- derived data with memoization ---------- */
   const hasExercises = !!workout?.exercises?.length;
   const currentExercise = useMemo(() => workout?.exercises.find(e => e.id === currentExId), [workout?.exercises, currentExId]);
+
   const currentSets = useMemo(() => (workout?.sets || []).filter(s => s.exId === currentExId), [workout?.sets, currentExId]);
 
   const weekOrder = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday'];
@@ -225,7 +409,7 @@ export default function MyWorkoutsPage() {
     [],
   );
 
-  /* ---------- handlers (stable) ---------- */
+  /* ---------- optimized handlers ---------- */
   const changeDay = useCallback(
     dayId => {
       startTransition(() => {
@@ -238,11 +422,15 @@ export default function MyWorkoutsPage() {
       const session = createSessionFromDay(dayProgram);
       setWorkout(session);
       setCurrentExId(session.exercises[0]?.id);
-      // default media
-      // setActiveMedia exists below
+
+      // Preload media for new day
+      if (session.exercises?.length) {
+        preloadMedia(session.exercises);
+      }
+
       setActiveMediaRef.current('image');
 
-      // refresh mirror
+      // Refresh mirror
       const mirror = lastSavedRef.current;
       mirror.clear();
       for (let i = 0; i < session.sets.length; i++) {
@@ -250,15 +438,15 @@ export default function MyWorkoutsPage() {
         mirror.set(s.id, { weight: s.weight, reps: s.reps, done: s.done });
       }
 
-      // prefetch server records
-      (async () => {
-        try {
-          const { recordsByExercise } = await fetchLastDayByName(USER_ID, dayId, todayISO());
+      // Prefetch server records in background
+      const dayISO = isoForThisWeeksDay(dayId);
+      fetchLastDayByName(USER_ID, dayId, dayISO)
+        .then(({ recordsByExercise }) => {
           applyServerRecords(session, recordsByExercise, setWorkout, lastSavedRef);
-        } catch {}
-      })();
+        })
+        .catch(console.error);
     },
-    [plan],
+    [plan, preloadMedia],
   );
 
   const addSetForCurrentExercise = useCallback(() => {
@@ -345,19 +533,33 @@ export default function MyWorkoutsPage() {
   );
 
   const [loadingSaveDays, setLoadingSaveDays] = useState(false);
+  const [loadingSaveOnly, setLoadingSaveOnly] = useState(false);
+
   const saveDayToServer = useCallback(async () => {
     const ex = workout?.exercises.find(e => e.id === currentExId);
     if (!ex) return;
     const payload = buildDailyPRPayload(ex.name);
     try {
       setLoadingSaveDays(true);
-      const data = await upsertDailyPR(USER_ID, payload.exerciseName, payload.date, payload.records);
+      setLoadingSaveOnly(true);
+      const data = await upsertDailyPR(USER_ID, payload.exerciseName, payload.date, payload.records)
+        .then(res => {
+          setLoadingSaveOnly(false);
+        })
+        .catch(err => setLoadingSaveOnly(false))
+        .finally(() => {
+          setLoadingSaveOnly(false);
+          setUnsaved(false);
+        });
       const serverRecords = data?.records || [];
       setWorkout(w => ({
         ...w,
         sets: w.sets.map(s => (s.exId === currentExId ? (serverRecords.find(r => Number(r.setNumber) === Number(s.set)) ? { ...s, serverId: serverRecords.find(r => Number(r.setNumber) === Number(s.set)).id } : s) : s)),
       }));
+
+      // Parallel loading for better performance
       await Promise.all([loadOverview(30), loadExerciseStats(ex.name, 90)]);
+
       flushLocalBufferForExercise(ex.name);
       setUnsaved(false);
     } catch (err) {
@@ -370,7 +572,6 @@ export default function MyWorkoutsPage() {
 
   const maybeSaveSetOnBlur = useCallback(
     setObj => {
-      // only marks unsaved + persists buffer; no network
       const prev = lastSavedRef.current.get(setObj.id) || { weight: 0, reps: 0, done: false };
       const changed = Number(prev.weight) !== Number(setObj.weight) || Number(prev.reps) !== Number(setObj.reps) || Boolean(prev.done) !== Boolean(setObj.done);
       if (changed) {
@@ -394,7 +595,7 @@ export default function MyWorkoutsPage() {
     setAttempts(attempts);
   }, []);
 
-  /* ---------- small local UI helpers ---------- */
+  /* ---------- media state management ---------- */
   const [activeMedia, _setActiveMedia] = useState('image');
   const activeMediaRef = useRef('image');
   const setActiveMedia = useCallback(m => {
@@ -406,7 +607,11 @@ export default function MyWorkoutsPage() {
     setActiveMediaRef.current = setActiveMedia;
   }, [setActiveMedia]);
 
-  /* =================== RENDER =================== */
+  // Show skeleton while loading
+  if (loading) {
+    return <SkeletonLoader />;
+  }
+
   return (
     <div className='space-y-5 sm:space-y-6'>
       {/* alert sound audio */}
@@ -475,123 +680,128 @@ export default function MyWorkoutsPage() {
       {/* WORKOUT */}
       {tab === 'workout' && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
-          {loading ? (
-            /* shimmers… unchanged for brevity */
-            <div className='grid grid-cols-[1fr_300px] max-md:grid-cols-1 gap-3'>{/* … */}</div>
-          ) : (
-            <div className='space-y-5 sm:space-y-6'>
-              <div className='rounded-2xl md:border md:border-slate-200 bg-white md:p-2 sm:p-4'>
-                {workout && (
-                  <div className='flex flex-col lg:flex-row gap-4'>
-                    {/* LEFT */}
-                    <div className='w-full lg:flex-1 min-w-0'>
-                      <div className='rounded-xl border border-slate-200 bg-white overflow-hidden'>
-                        {!hasExercises ? (
-                          <div className='p-6'>
-                            <div className='rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center'>
-                              <div className='mx-auto mb-3 w-12 h-12 rounded-full bg-white shadow grid place-items-center'>
-                                <Dumbbell size={18} className='text-slate-500' />
-                              </div>
-                              <div className='text-base font-semibold text-slate-700'>Not found for this day</div>
-                              <div className='text-sm text-slate-500 mt-1'>Pick another day from the tabs above.</div>
+          <div className='space-y-5 sm:space-y-6'>
+            <div className='rounded-2xl md:border md:border-slate-200 bg-white md:p-2 sm:p-4'>
+              {workout && (
+                <div className='flex flex-col lg:flex-row gap-4'>
+                  {/* LEFT */}
+                  <div className='w-full lg:flex-1 min-w-0'>
+                    <div className='rounded-xl border border-slate-200 bg-white overflow-hidden'>
+                      {!hasExercises ? (
+                        <div className='p-6'>
+                          <div className='rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center'>
+                            <div className='mx-auto mb-3 w-12 h-12 rounded-full bg-white shadow grid place-items-center'>
+                              <Dumbbell size={18} className='text-slate-500' />
                             </div>
+                            <div className='text-base font-semibold text-slate-700'>Not found for this day</div>
+                            <div className='text-sm text-slate-500 mt-1'>Pick another day from the tabs above.</div>
                           </div>
-                        ) : (
-                          <>
-                            {/* Media area */}
-                            <div className='w-full relative rounded-[10px_10px_0_0] overflow-hidden md:!h-[275px]' style={{ height: 200 }}>
-                              {currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? <InlineVideo key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} /> : <img key={currentExercise?.id + '-image'} src={currentExercise?.img} alt={currentExercise?.name} className='w-full h-full object-contain bg-white' />}
-                              <div className='absolute bottom-2 right-2 flex items-center gap-2 bg-black/40 backdrop-blur px-2 py-1 rounded-lg'>
-                                <button onClick={() => setActiveMedia('image')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'image' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show image'>
-                                  <ImageIcon size={14} />
-                                </button>
-                                <button onClick={() => setActiveMedia('video')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'video' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show video' disabled={!currentExercise?.video}>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Media area */}
+                          <div className='w-full relative rounded-[10px_10px_0_0] overflow-hidden md:!h-[275px]' style={{ height: 200 }}>
+                            {currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? (
+                              <InlineVideo key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} />
+                            ) : (
+                              <img
+                                key={currentExercise?.id + '-image'}
+                                src={currentExercise?.img}
+                                alt={currentExercise?.name}
+                                className='w-full h-full object-contain bg-white'
+                                loading='lazy' // Lazy load images
+                              />
+                            )}
+                            <div className='absolute bottom-2 right-2 flex items-center gap-2 bg-black/40 backdrop-blur px-2 py-1 rounded-lg'>
+                              <button onClick={() => setActiveMedia('image')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'image' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show image'>
+                                <ImageIcon size={14} />
+                              </button>
+                              <button onClick={() => setActiveMedia('video')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'video' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show video' disabled={!currentExercise?.video}>
+                                <VideoIcon size={14} />
+                              </button>
+                              {!!currentExercise?.video2 && (
+                                <button onClick={() => setActiveMedia('video2')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'video2' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show video 2'>
                                   <VideoIcon size={14} />
                                 </button>
-                                {!!currentExercise?.video2 && (
-                                  <button onClick={() => setActiveMedia('video2')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'video2' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show video 2'>
-                                    <VideoIcon size={14} />
-                                  </button>
-                                )}
-                              </div>
+                              )}
                             </div>
+                          </div>
 
-                            {/* Rest timer */}
-                            <RestTimerCard alerting={alerting} setAlerting={setAlerting} initialSeconds={Number.isFinite(currentExercise?.restSeconds) ? currentExercise?.restSeconds : Number.isFinite(currentExercise?.rest) ? currentExercise?.rest : 90} audioEl={audioRef} className='mt-1' />
+                          {/* Rest timer */}
+                          <RestTimerCard alerting={alerting} setAlerting={setAlerting} initialSeconds={Number.isFinite(currentExercise?.restSeconds) ? currentExercise?.restSeconds : Number.isFinite(currentExercise?.rest) ? currentExercise?.rest : 90} audioEl={audioRef} className='mt-1' />
 
-                            {/* Sets table */}
-                            <div className='max-md:mb-2 mx-2 md:mb-4 border border-slate-200 rounded-lg overflow-hidden'>
-                              <div className='overflow-x-auto'>
-                                <table className='w-full text-sm'>
-                                  <thead className='bg-slate-50/80 backdrop-blur sticky top-0 z-10'>
-                                    <tr className='text-left text-slate-500'>
-                                      <th className='py-2.5 px-3 font-semibold'>Set</th>
-                                      <th className='py-2.5 px-3 font-semibold'>Weight</th>
-                                      <th className='py-2.5 px-3 font-semibold'>Reps</th>
-                                      <th className='py-2.5 px-3 font-semibold'>Done</th>
+                          {/* Sets table */}
+                          <div className='max-md:mb-2 mx-2 md:mb-4 border border-slate-200 rounded-lg overflow-hidden'>
+                            <div className='overflow-x-auto'>
+                              <table className='w-full text-sm'>
+                                <thead className='bg-slate-50/80 backdrop-blur sticky top-0 z-10'>
+                                  <tr className='text-left text-slate-500'>
+                                    <th className='py-2.5 px-3 font-semibold'>Set</th>
+                                    <th className='py-2.5 px-3 font-semibold'>Weight</th>
+                                    <th className='py-2.5 px-3 font-semibold'>Reps</th>
+                                    <th className='py-2.5 px-3 font-semibold'>Done</th>
+                                  </tr>
+                                </thead>
+                                <tbody className='divide-y divide-slate-100'>
+                                  {currentSets.map((s, i) => (
+                                    <tr key={s.id} className={`hover:bg-indigo-50/40 transition-colors ${i % 2 === 1 ? 'bg-slate-50/30' : 'bg-white'}`}>
+                                      <td className='py-2.5 px-3'>
+                                        <span className='inline-flex h-6 min-w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700 font-medium'>{s.set}</span>
+                                      </td>
+                                      <td className='py-2.5 px-3'>
+                                        <input type='string' value={s.weight} onChange={e => setWorkout(w => ({ ...w, sets: w.sets.map(x => (x.id === s.id ? { ...x, weight: +e.target.value } : x)) }))} onBlur={() => maybeSaveSetOnBlur({ ...s, weight: Number(s.weight) })} className='h-9 w-[72px] !text-[16px] rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition' placeholder='0' inputMode='numeric' />
+                                      </td>
+                                      <td className='py-2.5 px-3'>
+                                        <input type='string' value={s.reps} onChange={e => setWorkout(w => ({ ...w, sets: w.sets.map(x => (x.id === s.id ? { ...x, reps: +e.target.value } : x)) }))} onBlur={() => maybeSaveSetOnBlur({ ...s, reps: Number(s.reps) })} className='h-9 w-[72px] !text-[16px] rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition' placeholder='0' inputMode='numeric' />
+                                      </td>
+                                      <td className='py-2.5 px-3'>
+                                        <CheckBox
+                                          initialChecked={s.done}
+                                          onChange={() => {
+                                            toggleDone(s.id);
+                                            setUnsaved(true);
+                                            persistBufferThrottled({ ...workout });
+                                          }}
+                                        />
+                                      </td>
                                     </tr>
-                                  </thead>
-                                  <tbody className='divide-y divide-slate-100'>
-                                    {currentSets.map((s, i) => (
-                                      <tr key={s.id} className={`hover:bg-indigo-50/40 transition-colors ${i % 2 === 1 ? 'bg-slate-50/30' : 'bg-white'}`}>
-                                        <td className='py-2.5 px-3'>
-                                          <span className='inline-flex h-6 min-w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700 font-medium'>{s.set}</span>
-                                        </td>
-                                        <td className='py-2.5 px-3'>
-                                          <input type='string' value={s.weight} onChange={e => setWorkout(w => ({ ...w, sets: w.sets.map(x => (x.id === s.id ? { ...x, weight: +e.target.value } : x)) }))} onBlur={() => maybeSaveSetOnBlur({ ...s, weight: Number(s.weight) })} className='h-9 w-[72px] !text-[16px] rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition' placeholder='0' inputMode='numeric' />
-                                        </td>
-                                        <td className='py-2.5 px-3'>
-                                          <input type='string' value={s.reps} onChange={e => setWorkout(w => ({ ...w, sets: w.sets.map(x => (x.id === s.id ? { ...x, reps: +e.target.value } : x)) }))} onBlur={() => maybeSaveSetOnBlur({ ...s, reps: Number(s.reps) })} className='h-9 w-[72px] !text-[16px] rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition' placeholder='0' inputMode='numeric' />
-                                        </td>
-                                        <td className='py-2.5 px-3'>
-                                          <CheckBox
-                                            initialChecked={s.done}
-                                            onChange={() => {
-                                              toggleDone(s.id);
-                                              setUnsaved(true);
-                                              persistBufferThrottled({ ...workout });
-                                            }}
-                                          />
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                              <div className='flex items-center justify-between px-3 py-2 text-[11px] text-slate-500 bg-slate-50/60'>
-                                <div className='flex items-center gap-2'>
-                                  <button onClick={removeSetFromCurrentExercise} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50' disabled={currentSets.length <= 1}>
-                                    <Minus size={14} />
-                                  </button>
-                                  <button onClick={addSetForCurrentExercise} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50'>
-                                    <Plus size={14} />
-                                  </button>
-                                </div>
-                                <Button color='secondary' loading={loadingSaveDays} icon={<SaveIcon size={14} />} name={'Save'} onClick={saveDayToServer} className='!px-2 !text-sm !py-1 !w-fit' />
-                              </div>
+                                  ))}
+                                </tbody>
+                              </table>
                             </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* RIGHT */}
-                    <div className='hidden lg:block w-80'>
-                      <ExerciseList
-                        workout={workout}
-                        currentExId={currentExId}
-                        onPick={ex => {
-                          setCurrentExId(ex.id);
-                          setExercisePick(ex.name);
-                          setActiveMedia('image');
-                        }}
-                      />
+                            <div className='flex items-center justify-between px-3 py-2 text-[11px] text-slate-500 bg-slate-50/60'>
+                              <div className='flex items-center gap-2'>
+                                <button onClick={removeSetFromCurrentExercise} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50' disabled={currentSets.length <= 1}>
+                                  <Minus size={14} />
+                                </button>
+                                <button onClick={addSetForCurrentExercise} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50'>
+                                  <Plus size={14} />
+                                </button>
+                              </div>
+                              <Button color='secondary' loading={loadingSaveOnly} icon={<SaveIcon size={14} />} name={'Save'} onClick={saveDayToServer} className='!px-2 !text-sm !py-1 !w-fit' />
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
+
+                  {/* RIGHT */}
+                  <div className='hidden lg:block w-80'>
+                    <ExerciseList
+                      workout={workout}
+                      currentExId={currentExId}
+                      onPick={ex => {
+                        setCurrentExId(ex.id);
+                        setExercisePick(ex.name);
+                        setActiveMedia('image');
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </motion.div>
       )}
 
@@ -754,4 +964,3 @@ export default function MyWorkoutsPage() {
     </div>
   );
 }
- 
