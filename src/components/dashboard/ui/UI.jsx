@@ -11,9 +11,11 @@ export function PageHeader({ className, icon: Icon, title, subtitle, actions = n
   return (
     <div className={`flex items-center justify-between ${className} `}>
       <div className='flex items-center gap-3'>
-        <motion.div initial={{ rotate: -8, scale: 0.9 }} animate={{ rotate: 0, scale: 1 }} transition={spring} className='h-10 w-10 grid place-content-center rounded-xl bg-main text-white shadow-md'>
-          {Icon ? <Icon className='w-5 h-5' /> : null}
-        </motion.div>
+        {Icon ? (
+          <motion.div initial={{ rotate: -8, scale: 0.9 }} animate={{ rotate: 0, scale: 1 }} transition={spring} className='h-10 w-10 grid place-content-center rounded-xl bg-main text-white shadow-md'>
+            <Icon className='w-5 h-5' />
+          </motion.div>
+        ) : null}
         <div>
           <h1 className='text-2xl font-semibold'>{title}</h1>
           {subtitle ? <p className=' max-md:hidden text-sm opacity-70'>{subtitle}</p> : null}
@@ -24,16 +26,58 @@ export function PageHeader({ className, icon: Icon, title, subtitle, actions = n
   );
 }
 
-/* --------- Stat Card --------- */
-export function StatCard({ icon: Icon, title, value, sub , className }) {
+export function StatCardArray({
+  icon: Icon,
+  title,
+  value,
+  trends = [], // optional: array of datasets, each is [{value: number}, ...]
+  trendType = 'area', // 'area' | 'bar' for the tiny chart per row
+  className = '',
+}) {
+  // Normalize to arrays for mapping
+  const titles = Array.isArray(title) ? title : [title];
+  const values = Array.isArray(value) ? value : [value];
+  const rows = Math.max(titles.length, values.length);
+
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={`card-glow p-4 ${className} `}>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={`rounded-xl border border-slate-200 bg-white p-4   ${className}`}>
+      <div className='flex items-center h-full gap-3'>
+        {/* Icon */}
+        <div className='flex items-center justify-center relative w-10 h-10 overflow-hidden rounded-xl text-white shrink-0'>
+          <div className='absolute inset-0 bg-gradient-to-tr from-indigo-500 to-blue-500' />
+          {Icon ? <Icon className='w-5 h-5 relative z-[1] text-white' /> : null}
+        </div>
+
+        {/* Content */}
+        <div className='flex-1 '>
+          {[...Array(rows)].map((_, i) => {
+            const t = titles[i] ?? '';
+            const v = values[i] ?? '';
+
+            return (
+              <div key={i} className='flex mt-[-5px] items-center justify-between'>
+                <div className='text-xs font-[600] text-slate-600 truncate'>{t}</div>
+                <div className='text-base  font-semibold text-slate-800 '>{v}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+export function StatCard({ icon: Icon, title, value, sub, className }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={` !bg-white rounded-xl border border-slate-200 p-4 ${className} `}>
       <div className='flex items-center gap-3 h-full '>
-        <div className='w-10 h-10 rounded-xl bg-main text-white grid place-content-center shadow-md'>{Icon ? <Icon className='w-5 h-5' /> : null}</div>
-        <div>
-          <div className='text-sm text-slate-600'>{title}</div>
-          <div className='text-xl font-semibold'>{value}</div>
-          {sub ? <div className='text-xs text-slate-500 mt-0.5'>{sub}</div> : null}
+        <div className=' flex items-center justify-center relative w-10 h-10 overflow-hidden rounded-xl text-white '>
+          <div className='!absolute  inset-0 bg-red-500 opacity-100 w-full h-full bg-gradient ' />
+          {Icon ? <Icon className='w-5 h-5 relative z-[10] text-white ' /> : null}
+        </div>
+        <div className='flex items-center  justify-between  flex-1 '>
+          <div className='text-xs font-[600] text-slate-600'>{title}</div>
+          <div className='text-xl text-black font-semibold'>{value}</div>
         </div>
       </div>
     </motion.div>
@@ -111,16 +155,16 @@ export function Modal({ open, onClose, title, children, maxW = 'max-w-3xl' }) {
     <AnimatePresence>
       {open && (
         <>
-          <motion.div className='fixed backdrop-blur-[8px] inset-0 z-[100] bg-black/30  ' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+          <motion.div className='fixed backdrop-blur-[8px] inset-0 z-[100] bg-black/50  ' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
           <motion.div className='fixed z-[110] inset-0 grid place-items-center p-4' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} transition={spring}>
-            <div className={`w-full ${maxW} card-glow !bg-white/90 backdrop-blur-3xl p-5`}>
+            <div className={`  w-full ${maxW} !bg-white/80 backdrop-blur-3xl rounded-xl p-4 md:p-8`}>
               <div className='flex items-center justify-between mb-3'>
                 <h3 className='text-lg font-semibold'>{title}</h3>
                 <button onClick={onClose} className='w-9 h-9 rounded-lg border border-slate-200 grid place-content-center bg-white hover:bg-slate-50'>
                   <X className='w-5 h-5 text-slate-600' />
                 </button>
               </div>
-              {children}
+              <div className='max-h-[80vh] h-full w-[calc(100%+50px)] ltr:ml-[-25px] rlt:mr-[-25px] px-6   overflow-auto'>{children}</div>
             </div>
           </motion.div>
         </>

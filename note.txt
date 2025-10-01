@@ -1,0 +1,11 @@
+
+
+- form the users page 
+	- assign the user to coach 
+	- program 
+	- exercise 
+	- 
+
+- template have the exercise
+- plans 
+-

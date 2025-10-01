@@ -1,12 +1,26 @@
+/* 
+	- i need put validation here 
+		- to write the name 
+		- and should choose at leatest one day in the program 
+			and the day should have al letest one exercise to make submit 
+
+		use yup and react hook form 
+*/
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Dumbbell, Plus, Search as SearchIcon, LayoutGrid, Rows, Eye, Pencil, Trash2, CheckCircle2, Settings, RefreshCcw, Clock, ChevronUp, ChevronDown, Users as UsersIcon, Calendar as CalendarIcon, ChevronRight, X as XIcon, Layers } from 'lucide-react';
+import { Dumbbell, Plus, Search as SearchIcon, LayoutGrid, Rows, Eye, Pencil, Trash2, CheckCircle2, Settings, RefreshCcw, Clock, ChevronUp, ChevronDown, Users as UsersIcon, Calendar as CalendarIcon, ChevronRight, X as XIcon, Layers, Upload, ArrowUp, ArrowDown, Search } from 'lucide-react';
 
 import api from '@/utils/axios';
 import { Modal, StatCard, PageHeader } from '@/components/dashboard/ui/UI';
 import { Badge } from '@/components/site/UI';
+import Input from '@/components/atoms/Input';
+import Button from '@/components/atoms/Button';
+import SelectSearch from '@/components/dashboard/ui/SelectSearch';
+import { useValues } from '@/context/GlobalContext';
+import PlanForm from '@/components/pages/dashboard/plans/PlanForm';
+import { Notification } from '@/config/Notification';
 
 const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
@@ -30,6 +44,10 @@ const toArray = v => {
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
+/* 
+	i need here doesn't add the info of hte exercise i need select it  and if not exist show button to create a new exercise with all info of this exercise and after create can choose it
+	not add the name  and the day 
+*/
 /* --------------------------------- Page --------------------------------- */
 export default function PlansPage() {
   // list
@@ -47,11 +65,22 @@ export default function PlansPage() {
   const debounced = useDebounced(searchText, 350);
 
   // ui
-  const [view, setView] = useState('grid'); // grid | list
+  const [view, setView] = useState('list');
   const [preview, setPreview] = useState(null); // plan (with days)
   const [addOpen, setAddOpen] = useState(false);
   const [editRow, setEditRow] = useState(null); // plan (with days)
   const [assignOpen, setAssignOpen] = useState(null); // plan to assign
+  const [importOpen, setImportOpen] = useState(false);
+
+  const { usersByRole, fetchUsers } = useValues();
+
+  useEffect(() => {
+    fetchUsers('client');
+    fetchUsers('coach');
+  }, []);
+
+  const optionsClient = usersByRole['client'] || [];
+  const optionsCoach = usersByRole['coach'] || [];
 
   // race guard
   const reqId = useRef(0);
@@ -114,8 +143,8 @@ export default function PlansPage() {
 
   // derived stats (lightweight; based on currently loaded items)
   const kpiTotal = total || items.length;
-  const kpiActive = items.filter(p => p.isActive).length;
-  const kpiDays = items.reduce((acc, p) => acc + (p.days?.length || 0), 0);
+  const kpiActive = items.filter(p => p?.isActive).length;
+  const kpiDays = items.reduce((acc, p) => acc + (p?.days?.length || 0), 0);
   const kpiAvgDays = items.length ? Math.round(kpiDays / items.length) : 0;
 
   /* ------------------------------ CRUD actions ------------------------------ */
@@ -131,15 +160,16 @@ export default function PlansPage() {
       setItems(arr => arr.filter(x => x.id !== id));
       setTotal(t => Math.max(0, t - 1));
     } catch (e) {
-      alert(e?.response?.data?.message || 'Delete failed');
+      // alert(e?.response?.data?.message || 'Delete failed');
     }
   };
 
   const createOrUpdate = async ({ id, payload }) => {
-    // backend expects name, isActive, notes, startDate, endDate, coachId, program.days[]
     const url = id ? `/plans/${id}` : '/plans';
     const method = id ? 'put' : 'post';
-    const res = await api[method](url, payload, { headers: { 'Content-Type': 'application/json' } });
+    const res = await api[method](url, payload).then(res=>{}).catch(err => {
+			Notification(err.response.data?.message , "error")
+		})
     return res.data;
   };
 
@@ -168,13 +198,14 @@ export default function PlansPage() {
     <div className='space-y-6'>
       {/* Header / Stats */}
       <div className='rounded-xl md:rounded-2xl overflow-hidden border border-indigo-200'>
-        <div className='relative p-4 md:p-8 bg-gradient text-white'>
+        <div className='relative p-4 md:pm-8 md:p-8 bg-gradient text-white'>
           <div className='absolute inset-0 opacity-20 bg-[radial-gradient(600px_200px_at_20%_-20%,white,transparent)]' />
           <div className='relative z-10 flex flex-row md:items-center gap-3 md:gap-6 justify-between'>
-            <PageHeader icon={Dumbbell} title='Plans' subtitle='Create programs, organize days, and assign to athletes.' />
-            <button onClick={() => setAddOpen(true)} className='cursor-pointer hover:scale-[.95] duration-300 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white'>
-              <Plus className='w-4 h-4' /> New Plan
-            </button>
+            <PageHeader title='Plans' subtitle='Create programs, organize days, and assign to athletes.' />
+            <div className='flex items-center gap-2'>
+              <Button onClick={() => setImportOpen(true)} color='outline' icon={<Upload className='w-4 h-4' />} name='Import Template' className='bg-white/90 text-slate-900 border-white/70' />
+              <Button onClick={() => setAddOpen(true)} color='primary' icon={<Plus className='w-4 h-4' />} name='New Plan' className='bg-gradient-to-tr from-indigo-600 to-blue-500' />
+            </div>
           </div>
 
           <div className='flex items-center justify-start gap-3 mt-6'>
@@ -194,34 +225,13 @@ export default function PlansPage() {
 
       {/* Controls: Search + Sort + View (no extra filters) */}
       <div className='flex items-center gap-2 mt-12 flex-wrap'>
-        <div className='relative w-full md:w-72'>
-          <SearchIcon className='absolute left-3 z-[10] top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
-          <input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder='Search plan name or notes…' className='h-[40px] w-full pl-10 pr-3 rounded-xl bg-white text-black border border-slate-300 font-medium text-sm shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-indigo-500/40 hover:border-indigo-400 transition' />
+        <div className='relative w-full md:w-60'>
+          <Search className='absolute left-3 z-[10] top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
+          <input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder='Search name...' className={` h-[40px] w-full pl-10 pr-3 rounded-xl bg-white text-black border border-slate-300 font-medium text-sm shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-indigo-500/40 hover:border-indigo-400 transition `} />
         </div>
+        <Button onClick={toggleSortNewest} color='outline' className='!w-fit !bg-white !rounded-xl' icon={<Clock size={16} />} name={<span className='flex items-center gap-2'> Newest {sortBy === 'created_at' ? sortOrder === 'ASC' ? <ChevronUp className='w-4 h-4 text-black' /> : <ChevronDown className='w-4 h-4 text-black' /> : null} </span>} />
 
-        <button
-          onClick={() => {
-            if (sortBy === 'name') setSortOrder(o => (o === 'ASC' ? 'DESC' : 'ASC'));
-            else {
-              setSortBy('name');
-              setSortOrder('ASC');
-            }
-          }}
-          className='bg-white inline-flex items-center h-[40px] gap-2 px-4 py-2 rounded-xl text-black border border-slate-300 font-medium text-sm backdrop-blur-md active:scale-[.97] transition'>
-          <span>Name</span>
-          {sortBy === 'name' ? sortOrder === 'ASC' ? <ChevronUp className='w-4 h-4 text-black' /> : <ChevronDown className='w-4 h-4 text-black' /> : null}
-        </button>
-
-        <button onClick={toggleSortNewest} className='bg-white inline-flex items-center h-[40px] gap-2 px-4 py-2 rounded-xl text-black border border-slate-300 font-medium text-sm backdrop-blur-md active:scale-[.97] transition'>
-          <Clock size={16} />
-          <span>Newest</span>
-          {sortBy === 'created_at' ? sortOrder === 'ASC' ? <ChevronUp className='w-4 h-4 text-black' /> : <ChevronDown className='w-4 h-4 text-black' /> : null}
-        </button>
-
-        <button onClick={() => setView(v => (v === 'grid' ? 'list' : 'grid'))} className='bg-white inline-flex items-center h-[40px] gap-2 px-4 py-2 rounded-xl text-black border border-slate-300 font-medium text-sm backdrop-blur-md active:scale-[.97] transition'>
-          {view === 'grid' ? <Rows size={16} /> : <LayoutGrid size={16} />}
-          <span>{view === 'grid' ? 'List' : 'Grid'}</span>
-        </button>
+        <Button className='!w-fit !bg-white !rounded-xl' onClick={() => setView(v => (v === 'grid' ? 'list' : 'grid'))} color='outline' icon={view === 'grid' ? <Rows size={16} /> : <LayoutGrid size={16} />} name={view === 'grid' ? 'List' : 'Grid'} />
       </div>
 
       {/* Errors */}
@@ -231,7 +241,7 @@ export default function PlansPage() {
       {view === 'grid' ? <GridView loading={loading && page === 1} items={items} onPreview={openPreview} onEdit={openEdit} onDelete={handleDelete} onAssign={openAssign} /> : <ListView loading={loading && page === 1} items={items} onPreview={openPreview} onEdit={openEdit} onDelete={handleDelete} onAssign={openAssign} />}
 
       {/* Load more */}
-      <div className='flex justify-center py-2'>{loading && page > 1 ? <ButtonGhost disabled>Loading…</ButtonGhost> : items.length < total ? <ButtonGhost onClick={() => setPage(p => p + 1)}>Load more</ButtonGhost> : null}</div>
+      <div className='flex justify-center py-2'>{loading && page > 1 ? <Button disabled>Loading…</Button> : hasMore ? <Button onClick={() => setPage(p => p + 1)} color='outline' name='Load more' /> : null}</div>
 
       {/* Preview */}
       <Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name || 'Plan'} maxW='max-w-4xl'>
@@ -241,15 +251,15 @@ export default function PlansPage() {
       {/* Add */}
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title='Create Plan' maxW='max-w-3xl'>
         <PlanForm
+          optionsCoach={optionsCoach}
+          optionsClient={optionsClient}
           onSubmit={async payload => {
             try {
               const saved = await createOrUpdate({ payload });
               setItems(arr => [saved, ...arr]);
               setTotal(t => t + 1);
               setAddOpen(false);
-            } catch (e) {
-              alert(e?.response?.data?.message || 'Create failed');
-            }
+            } catch (e) {}
           }}
         />
       </Modal>
@@ -258,15 +268,15 @@ export default function PlansPage() {
       <Modal open={!!editRow} onClose={() => setEditRow(null)} title={`Edit: ${editRow?.name || ''}`} maxW='max-w-3xl'>
         {editRow && (
           <PlanForm
+            optionsCoach={optionsCoach}
+            optionsClient={optionsClient}
             initial={editRow}
             onSubmit={async payload => {
               try {
                 const saved = await createOrUpdate({ id: editRow.id, payload });
                 setItems(arr => arr.map(p => (p.id === editRow.id ? saved : p)));
                 setEditRow(null);
-              } catch (e) {
-                alert(e?.response?.data?.message || 'Update failed');
-              }
+              } catch (e) {}
             }}
           />
         )}
@@ -276,6 +286,8 @@ export default function PlansPage() {
       <Modal open={!!assignOpen} onClose={() => setAssignOpen(null)} title={`Assign: ${assignOpen?.name || ''}`} maxW='max-w-xl'>
         {assignOpen && (
           <AssignForm
+            optionsCoach={optionsCoach}
+            optionsClient={optionsClient}
             planId={assignOpen.id}
             onClose={() => setAssignOpen(null)}
             onAssigned={() => {
@@ -285,24 +297,18 @@ export default function PlansPage() {
         )}
       </Modal>
 
-      {/* shimmer css */}
-      <style jsx>{`
-        .shimmer {
-          position: relative;
-          overflow: hidden;
-          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 37%, #f1f5f9 63%);
-          background-size: 400% 100%;
-          animation: shimmer 1.2s ease-in-out infinite;
-        }
-        @keyframes shimmer {
-          0% {
-            background-position: 100% 0;
-          }
-          100% {
-            background-position: 0 0;
-          }
-        }
-      `}</style>
+      {/* Import Template */}
+      <Modal open={importOpen} onClose={() => setImportOpen(false)} title='Import Weekly Template' maxW='max-w-3xl'>
+        <ImportTemplate
+          onClose={() => setImportOpen(false)}
+          onImported={async () => {
+            setImportOpen(false);
+            setItems([]);
+            setPage(1);
+            await fetchList({ reset: true });
+          }}
+        />
+      </Modal>
     </div>
   );
 }
@@ -372,10 +378,7 @@ function GridView({ loading, items, onPreview, onEdit, onDelete, onAssign }) {
           </div>
 
           <div className='flex items-center gap-2 mt-3'>
-            <button onClick={() => onAssign(p)} className='px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 inline-flex items-center gap-2'>
-              <UsersIcon className='w-4 h-4' />
-              Assign
-            </button>
+            <Button onClick={() => onAssign(p)} color='outline' icon={<UsersIcon className='w-4 h-4' />} name='Assign' className='px-3 py-1.5' />
           </div>
         </motion.div>
       ))}
@@ -409,7 +412,7 @@ function ListView({ loading, items, onPreview, onEdit, onDelete, onAssign }) {
       {items.map(p => (
         <div key={p.id} className='p-4 flex items-center justify-between gap-3'>
           <div className='flex items-center gap-3'>
-            <div className='w-10 h-10 rounded-xl bg-main/90 text-white grid place-content-center'>
+            <div className='w-10 h-10 rounded-xl bg-main/90 text-white grid bg-gradient place-content-center'>
               <Dumbbell className='w-5 h-5' />
             </div>
             <div>
@@ -421,9 +424,7 @@ function ListView({ loading, items, onPreview, onEdit, onDelete, onAssign }) {
           </div>
 
           <div className='flex items-center gap-2'>
-            <button onClick={() => onAssign(p)} className='px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 inline-flex items-center gap-1.5'>
-              <UsersIcon className='w-4 h-4' /> Assign
-            </button>
+            <Button onClick={() => onAssign(p)} color='outline' icon={<UsersIcon className='w-4 h-4' />} name='Assign' className='px-2.5 py-1.5' />
             <IconButton title='Preview' onClick={() => onPreview(p)}>
               <Eye className='w-4 h-4' />
             </IconButton>
@@ -475,7 +476,7 @@ function PlanPreview({ plan }) {
           <div key={d.id || idx} className='rounded-xl border border-slate-200 p-3 bg-white'>
             <div className='flex items-center justify-between'>
               <div className='font-medium'>{d.name}</div>
-              <div className='text-xs text-slate-500'>{d.day}</div>
+              <div className='text-xs text-slate-500'>{String(d.day || d.dayOfWeek || '').toLowerCase()}</div>
             </div>
             <div className='mt-2 text-sm text-slate-600'>
               {(d.exercises || []).length ? (
@@ -483,9 +484,9 @@ function PlanPreview({ plan }) {
                   {d.exercises.map((ex, i) => (
                     <li key={ex.id || ex.exerciseId || i} className='flex items-center justify-between'>
                       <span>{ex.name || ex.exercise?.name || `Exercise #${i + 1}`}</span>
-                      {ex.targetReps || ex.targetSets || ex.restSeconds ? (
+                      {ex.targetReps || ex.targetSets || ex.restSeconds || ex.rest || ex.tempo ? (
                         <span className='text-xs text-slate-500'>
-                          {ex.targetSets ? `Sets ${ex.targetSets}` : ''} {ex.targetReps ? `· Reps ${ex.targetReps}` : ''} {ex.restSeconds ? `· Rest ${ex.restSeconds}s` : ''}
+                          {ex.targetSets ? `Sets ${ex.targetSets}` : ''} {ex.targetReps ? `· Reps ${ex.targetReps}` : ''} {ex.restSeconds ? `· Rest ${ex.restSeconds}s` : ex.rest ? `· Rest ${ex.rest}s` : ''} {ex.tempo ? `· Tempo ${ex.tempo}` : ''}
                         </span>
                       ) : null}
                     </li>
@@ -507,7 +508,7 @@ function PlanPreview({ plan }) {
           <div className='flex flex-wrap gap-1'>
             {assignees.map(a => (
               <Badge key={a.id} color='indigo'>
-                {a.name || a.email || a.id}
+                {a?.athlete?.name || a?.athlete?.email || a?.athlete?.id}
               </Badge>
             ))}
           </div>
@@ -524,200 +525,188 @@ function PlanPreview({ plan }) {
 }
 
 /* ----------------------------- Create / Edit ----------------------------- */
-function PlanForm({ initial, onSubmit }) {
-  // local state for days builder
-  const [name, setName] = useState(initial?.name || '');
-  const [notes, setNotes] = useState(initial?.notes || '');
-  const [isActive, setIsActive] = useState(!!(initial?.isActive ?? true));
-  const [coachId, setCoachId] = useState(initial?.coach?.id || '');
-  const [startDate, setStartDate] = useState(initial?.startDate || '');
-  const [endDate, setEndDate] = useState(initial?.endDate || '');
-  const [days, setDays] = useState(
-    (initial?.days || []).map(d => ({
-      id: d.id,
-      name: d.name || '',
-      dayOfWeek: d.day || 'monday',
-      orderIndex: d.orderIndex || 0,
-      exercises: (d.exercises || []).map(ex => ({
-        exerciseId: ex.exerciseId || ex.id || ex.exercise?.id || '',
-        name: ex.name || ex.exercise?.name || '',
-        targetReps: ex.targetReps || '',
-        targetSets: ex.targetSets || null,
-        restSeconds: ex.restSeconds || null,
-      })),
-    })),
-  );
+// function PlanForm({ initial, onSubmit, optionsCoach, optionsClient }) {
+//   const [name, setName] = useState(initial?.name || '');
+//   const [days, setDays] = useState(
+//     (initial?.days || []).map(d => ({
+//       id: d.id,
+//       name: d.name || '',
+//       dayOfWeek: (d.day || d.dayOfWeek || 'monday').toLowerCase(),
+//       orderIndex: d.orderIndex || 0,
+//       exercises: (d.exercises || []).map(ex => ({
+//         exerciseId: ex.exerciseId || ex.id || ex.exercise?.id || '',
+//         name: ex.name || ex.exercise?.name || '',
+//         targetReps: ex.targetReps || '',
+//         targetSets: ex.targetSets ?? null,
+//         restSeconds: ex.restSeconds ?? null,
+//         rest: ex.rest ?? ex.restSeconds ?? null,
+//         tempo: ex.tempo ?? '',
+//         altExerciseId: '', // UI field for fallback
+//       })),
+//     })),
+//   );
 
-  const addDay = () => setDays(arr => [...arr, { name: 'New Day', dayOfWeek: 'monday', orderIndex: arr.length, exercises: [] }]);
+//   const addDay = () =>
+//     setDays(arr => [
+//       ...arr,
+//       {
+//         name: 'New Day',
+//         dayOfWeek: 'monday',
+//         orderIndex: arr.length,
+//         exercises: [],
+//       },
+//     ]);
 
-  const removeDay = idx => setDays(arr => arr.filter((_, i) => i !== idx));
+//   const removeDay = idx => setDays(arr => arr.filter((_, i) => i !== idx));
 
-  const updateDay = (idx, patch) => setDays(arr => arr.map((d, i) => (i === idx ? { ...d, ...patch } : d)));
+//   const moveDay = (idx, dir) =>
+//     setDays(arr => {
+//       const n = [...arr];
+//       const j = idx + dir;
+//       if (j < 0 || j >= n.length) return n;
+//       [n[idx], n[j]] = [n[j], n[idx]];
+//       return n.map((d, i) => ({ ...d, orderIndex: i }));
+//     });
 
-  const addEx = idx =>
-    setDays(arr =>
-      arr.map((d, i) =>
-        i === idx
-          ? {
-              ...d,
-              exercises: [...d.exercises, { exerciseId: '', name: '', targetReps: '', targetSets: null, restSeconds: null }],
-            }
-          : d,
-      ),
-    );
+//   const updateDay = (idx, patch) => setDays(arr => arr.map((d, i) => (i === idx ? { ...d, ...patch } : d)));
 
-  const removeEx = (idx, exIdx) => setDays(arr => arr.map((d, i) => (i === idx ? { ...d, exercises: d.exercises.filter((_, j) => j !== exIdx) } : d)));
+//   const addEx = idx =>
+//     setDays(arr =>
+//       arr.map((d, i) =>
+//         i === idx
+//           ? {
+//               ...d,
+//               exercises: [...d.exercises, { exerciseId: '', name: '', targetReps: '', targetSets: null, rest: null, tempo: '', altExerciseId: '' }],
+//             }
+//           : d,
+//       ),
+//     );
 
-  const updateEx = (idx, exIdx, patch) =>
-    setDays(arr =>
-      arr.map((d, i) =>
-        i === idx
-          ? {
-              ...d,
-              exercises: d.exercises.map((ex, j) => (j === exIdx ? { ...ex, ...patch } : ex)),
-            }
-          : d,
-      ),
-    );
+//   const removeEx = (idx, exIdx) => setDays(arr => arr.map((d, i) => (i === idx ? { ...d, exercises: d.exercises.filter((_, j) => j !== exIdx) } : d)));
 
-  // (optional) tiny search to pick an exercise id
-  const searchExercise = async (q, setter) => {
-    try {
-      const res = await api.get('/plan-exercises', { params: { page: 1, limit: 8, search: q } });
-      const recs = Array.isArray(res.data?.records) ? res.data.records : Array.isArray(res.data) ? res.data : [];
-      setter(recs);
-    } catch {
-      setter([]);
-    }
-  };
+//   const moveEx = (dayIdx, exIdx, dir) =>
+//     setDays(arr =>
+//       arr.map((d, i) => {
+//         if (i !== dayIdx) return d;
+//         const list = [...d.exercises];
+//         const j = exIdx + dir;
+//         if (j < 0 || j >= list.length) return d;
+//         [list[exIdx], list[j]] = [list[j], list[exIdx]];
+//         return { ...d, exercises: list };
+//       }),
+//     );
 
-  return (
-    <form
-      onSubmit={async e => {
-        e.preventDefault();
-        const payload = {
-          name,
-          notes,
-          isActive,
-          coachId: coachId || undefined,
-          startDate: startDate || null,
-          endDate: endDate || null,
-          program: {
-            days: days.map((d, dayIndex) => ({
-              dayOfWeek: d.dayOfWeek,
-              name: d.name || `${d.dayOfWeek} #${dayIndex + 1}`,
-              orderIndex: dayIndex,
-              exercises: d.exercises.map((ex, i) =>
-                ex.exerciseId
-                  ? { order: i + 1, exerciseId: ex.exerciseId, targetReps: ex.targetReps || undefined, targetSets: ex.targetSets || undefined, restSeconds: ex.restSeconds || undefined }
-                  : {
-                      order: i + 1,
-                      name: ex.name || `Exercise #${i + 1}`,
-                      targetReps: ex.targetReps || '10',
-                      targetSets: ex.targetSets || 3,
-                      restSeconds: ex.restSeconds || 90,
-                    },
-              ),
-            })),
-            meals: [],
-            instructions: [],
-          },
-        };
-        onSubmit?.(payload);
-      }}
-      className='space-y-4'>
-      <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
-        <Field label='Name'>
-          <input value={name} onChange={e => setName(e.target.value)} required className='inp' />
-        </Field>
-        <Field label='Coach ID (optional)'>
-          <input value={coachId} onChange={e => setCoachId(e.target.value)} className='inp' placeholder='UUID' />
-        </Field>
-        <Field label='Start Date'>
-          <input type='date' value={startDate || ''} onChange={e => setStartDate(e.target.value)} className='inp' />
-        </Field>
-        <Field label='End Date'>
-          <input type='date' value={endDate || ''} onChange={e => setEndDate(e.target.value)} className='inp' />
-        </Field>
-        <Field label='Active'>
-          <div className='h-[40px] flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3'>
-            <input id='active' type='checkbox' checked={isActive} onChange={e => setIsActive(e.target.checked)} />
-            <label htmlFor='active' className='text-sm text-slate-700'>
-              Is Active
-            </label>
-          </div>
-        </Field>
-        <Field label='Notes'>
-          <input value={notes} onChange={e => setNotes(e.target.value)} className='inp' placeholder='Optional notes…' />
-        </Field>
-      </div>
+//   const updateEx = (idx, exIdx, patch) =>
+//     setDays(arr =>
+//       arr.map((d, i) =>
+//         i === idx
+//           ? {
+//               ...d,
+//               exercises: d.exercises.map((ex, j) => (j === exIdx ? { ...ex, ...patch } : ex)),
+//             }
+//           : d,
+//       ),
+//     );
 
-      {/* Days builder */}
-      <div className='rounded-xl border border-slate-200 p-3'>
-        <div className='flex items-center justify-between mb-2'>
-          <div className='text-sm font-semibold'>Days</div>
-          <button type='button' onClick={addDay} className='px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 inline-flex items-center gap-1.5'>
-            <Plus className='w-4 h-4' /> Add Day
-          </button>
-        </div>
+//   // small exercise search
+//   const searchExercise = async (q, setter) => {
+//     try {
+//       const res = await api.get('/plan-exercises', { params: { page: 1, limit: 8, search: q } });
+//       const recs = Array.isArray(res.data?.records) ? res.data.records : Array.isArray(res.data) ? res.data : [];
+//       setter(recs);
+//     } catch {
+//       setter([]);
+//     }
+//   };
 
-        {!days.length ? (
-          <div className='text-xs text-slate-500'>No days yet.</div>
-        ) : (
-          <div className='space-y-3'>
-            {days.map((d, idx) => (
-              <div key={idx} className='rounded-lg border border-slate-200 p-3 bg-white'>
-                <div className='flex items-center gap-2'>
-                  <input value={d.name} onChange={e => updateDay(idx, { name: e.target.value })} className='inp flex-1' placeholder='Day name e.g. Push A' />
-                  <select value={d.dayOfWeek} onChange={e => updateDay(idx, { dayOfWeek: e.target.value })} className='inp w-[150px]'>
-                    {DAYS.map(day => (
-                      <option key={day} value={day}>
-                        {day}
-                      </option>
-                    ))}
-                  </select>
-                  <button type='button' onClick={() => removeDay(idx)} className='w-9 h-9 grid place-content-center rounded-lg border border-red-200 bg-white hover:bg-red-50 text-red-600' title='Remove day'>
-                    <XIcon className='w-4 h-4' />
-                  </button>
-                </div>
+//   return (
+//     <form
+//       onSubmit={async e => {
+//         e.preventDefault();
+//         const payload = {
+//           name,
+//           isActive: true,
+//           program: {
+//             days: days.map((d, dayIndex) => ({
+//               dayOfWeek: d.dayOfWeek,
+//               name: d.name || `${d.dayOfWeek} #${dayIndex + 1}`,
+//               orderIndex: dayIndex,
+//               exercises: d.exercises.map((ex, i) =>
+//                 ex.exerciseId
+//                   ? {
+//                       order: i + 1,
+//                       exerciseId: ex.exerciseId,
+//                       altExerciseId: ex.altExerciseId ? toArray(ex.altExerciseId) : undefined,
+//                       targetReps: ex.targetReps || undefined,
+//                       targetSets: ex.targetSets || undefined,
+//                       rest: ex.rest ?? undefined,
+//                       tempo: ex.tempo || undefined,
+//                     }
+//                   : {
+//                       order: i + 1,
+//                       name: ex.name || `Exercise #${i + 1}`,
+//                       targetReps: ex.targetReps || '10',
+//                       targetSets: ex.targetSets || 3,
+//                       rest: ex.rest ?? 90,
+//                       tempo: ex.tempo || undefined,
+//                     },
+//               ),
+//             })),
+//           },
+//         };
+//         onSubmit?.(payload);
+//       }}
+//       className='space-y-4'>
+//       <Field label='Name'>
+//         <Input value={name} onChange={setName} placeholder='Plan name' />
+//       </Field>
 
-                {/* Exercises */}
-                <div className='mt-3'>
-                  <div className='flex items-center justify-between'>
-                    <div className='text-xs font-semibold text-slate-600'>Exercises</div>
-                    <button type='button' onClick={() => addEx(idx)} className='text-xs px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 inline-flex items-center gap-1.5'>
-                      <Plus className='w-3.5 h-3.5' /> Add Exercise
-                    </button>
-                  </div>
+//       {/* Days builder */}
+//       <div className='rounded-xl border border-slate-200 '>
+//         <span onClick={addDay} className='flex items-center gap-1 w-full justify-end text-sm cursor-pointer mb-3 '>
+//           <Plus className='w-4 h-4' /> Add Day
+//         </span>
 
-                  <div className='mt-2 space-y-2'>
-                    {d.exercises.map((ex, exIdx) => (
-                      <ExercisePickerRow key={exIdx} ex={ex} onChange={patch => updateEx(idx, exIdx, patch)} onRemove={() => removeEx(idx, exIdx)} searchExercise={searchExercise} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+//         {!days.length ? null : (
+//           <div className='space-y-3'>
+//             {days.map((d, idx) => (
+//               <div key={idx} className='rounded-lg border border-slate-200 p-3 bg-white'>
+//                 <div className='flex items-center gap-2 mb-3'>
+//                   <Input value={d.name} onChange={value => updateDay(idx, { name: value })} placeholder='Day name e.g. Push A' className='flex-none max-w-[300px] ' />
+//                   <Select value={d.dayOfWeek} onChange={value => updateDay(idx, { dayOfWeek: value })} options={DAYS.map(day => ({ id: day, label: day.charAt(0).toUpperCase() + day.slice(1) }))} className='w-[150px]' />
+//                   <div className='flex items-center gap-1'>
+//                     <IconButton onClick={() => removeDay(idx)} title='Remove day' danger>
+//                       <XIcon className='w-4 h-4' />
+//                     </IconButton>
+//                   </div>
+//                 </div>
 
-      <div className='flex items-center justify-end gap-2 pt-2'>
-        <button type='submit' className='px-3 py-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white'>
-          Save
-        </button>
-      </div>
+//                 {/* Exercises */}
+//                 <div className='mt-3'>
+//                   <span onClick={() => addEx(idx)} className='flex items-center gap-1 w-full justify-end text-sm cursor-pointer mb-3 '>
+//                     <Plus className='w-4 h-4' /> Add Exercise
+//                   </span>
 
-      <style jsx>{`
-        .inp {
-          @apply h-[40px] mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30;
-        }
-      `}</style>
-    </form>
-  );
-}
+//                   <div className='mt-2 space-y-2'>
+//                     {d.exercises.map((ex, exIdx) => (
+//                       <ExercisePickerRow key={exIdx} ex={ex} index={exIdx} onChange={patch => updateEx(idx, exIdx, patch)} onRemove={() => removeEx(idx, exIdx)} onMoveUp={() => moveEx(idx, exIdx, -1)} onMoveDown={() => moveEx(idx, exIdx, +1)} searchExercise={searchExercise} />
+//                     ))}
+//                   </div>
+//                 </div>
+//               </div>
+//             ))}
+//           </div>
+//         )}
+//       </div>
 
-function ExercisePickerRow({ ex, onChange, onRemove, searchExercise }) {
+//       <div className='flex items-center justify-end gap-2 pt-2'>
+//         <Button type='submit' color='primary' name='Save Plan' />
+//       </div>
+//     </form>
+//   );
+// }
+
+function ExercisePickerRow({ ex, index, onChange, onRemove, onMoveUp, onMoveDown, searchExercise }) {
   const [q, setQ] = useState('');
   const [opts, setOpts] = useState([]);
 
@@ -738,20 +727,40 @@ function ExercisePickerRow({ ex, onChange, onRemove, searchExercise }) {
   }, [q, searchExercise]);
 
   return (
-    <div className='rounded-lg border border-slate-200 p-2'>
+    <div className='rounded-lg border border-slate-200 p-3'>
+      <div className='flex items-center justify-between mb-3'>
+        <div className='text-xs text-slate-500'>Order: {index + 1}</div>
+        <div className='flex gap-1'>
+          <IconButton onClick={onMoveUp} title='Move up'>
+            <ArrowUp className='w-4 h-4' />
+          </IconButton>
+          <IconButton onClick={onMoveDown} title='Move down'>
+            <ArrowDown className='w-4 h-4' />
+          </IconButton>
+          <IconButton onClick={onRemove} title='Remove' danger>
+            <XIcon className='w-4 h-4' />
+          </IconButton>
+        </div>
+      </div>
+
       <div className='grid grid-cols-1 md:grid-cols-12 gap-2'>
         <div className='md:col-span-4'>
-          <input value={ex.exerciseId} onChange={e => onChange({ exerciseId: e.target.value })} className='inp' placeholder='Exercise ID (paste)' />
+          <Input value={ex.exerciseId} onChange={value => onChange({ exerciseId: value })} placeholder='Exercise ID (paste)' />
+
           <div className='relative mt-2'>
-            <input value={q} onChange={e => setQ(e.target.value)} className='inp' placeholder='Search exercises…' />
-            {opts.length ? (
-              <div className='absolute z-10 w-full mt-1 rounded-lg border border-slate-200 bg-white shadow'>
+            <Input value={q} onChange={setQ} placeholder='Search exercises…' iconLeft={<SearchIcon className='w-4 h-4' />} />
+            {opts.length > 0 && (
+              <div className='absolute z-10 w-full mt-1 rounded-lg border border-slate-200 bg-white shadow max-h-56 overflow-auto'>
                 {opts.map(o => (
                   <button
                     key={o.id}
                     type='button'
                     onClick={() => {
-                      onChange({ exerciseId: o.id, name: o.name, targetReps: o.targetReps || ex.targetReps });
+                      onChange({
+                        exerciseId: o.id,
+                        name: o.name,
+                        targetReps: o.targetReps || ex.targetReps,
+                      });
                       setQ('');
                       setOpts([]);
                     }}
@@ -760,30 +769,35 @@ function ExercisePickerRow({ ex, onChange, onRemove, searchExercise }) {
                   </button>
                 ))}
               </div>
-            ) : null}
+            )}
           </div>
         </div>
 
         <div className='md:col-span-3'>
-          <input value={ex.name || ''} onChange={e => onChange({ name: e.target.value })} className='inp' placeholder='Name (optional if ID set)' />
+          <Input value={ex.name || ''} onChange={value => onChange({ name: value })} placeholder='Name (optional if ID set)' />
         </div>
 
         <div className='md:col-span-2'>
-          <input value={ex.targetReps || ''} onChange={e => onChange({ targetReps: e.target.value })} className='inp' placeholder='Reps e.g. 8-10' />
-        </div>
-
-        <div className='md:col-span-2'>
-          <input type='number' min={0} value={ex.targetSets ?? ''} onChange={e => onChange({ targetSets: e.target.value ? Number(e.target.value) : null })} className='inp' placeholder='Sets' />
+          <Input value={ex.targetReps || ''} onChange={value => onChange({ targetReps: value })} placeholder='Reps e.g. 8-10' />
         </div>
 
         <div className='md:col-span-1'>
-          <input type='number' min={0} value={ex.restSeconds ?? ''} onChange={e => onChange({ restSeconds: e.target.value ? Number(e.target.value) : null })} className='inp' placeholder='Rest' />
+          <Input type='number' value={ex.targetSets ?? ''} onChange={value => onChange({ targetSets: value ? Number(value) : null })} placeholder='Sets' />
         </div>
 
-        <div className='md:col-span-12 flex justify-end'>
-          <button type='button' onClick={onRemove} className='px-2.5 py-1.5 rounded-lg border border-red-200 bg-white hover:bg-red-50 text-red-600 inline-flex items-center gap-1.5'>
-            <XIcon className='w-4 h-4' /> Remove
-          </button>
+        <div className='md:col-span-1'>
+          <Input type='number' value={ex.rest ?? ''} onChange={value => onChange({ rest: value ? Number(value) : null })} placeholder='Rest' />
+        </div>
+
+        <div className='md:col-span-1'>
+          <Input value={ex.tempo || ''} onChange={value => onChange({ tempo: value })} placeholder='Tempo' />
+        </div>
+
+        <div className='md:col-span-12'>
+          <Input value={ex.altExerciseId || ''} onChange={value => onChange({ altExerciseId: value })} placeholder='Alt exercise ID(s) comma separated' />
+          <div className='text-[11px] text-slate-500 mt-1'>
+            Only <b>id, name, targetSets, targetReps, rest, tempo, img, video</b> are used.
+          </div>
         </div>
       </div>
     </div>
@@ -791,25 +805,40 @@ function ExercisePickerRow({ ex, onChange, onRemove, searchExercise }) {
 }
 
 /* --------------------------------- Assign --------------------------------- */
-function AssignForm({ planId, onClose, onAssigned }) {
-  const [ids, setIds] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [active, setActive] = useState(true);
+function AssignForm({ planId, onClose, onAssigned, optionsCoach, optionsClient }) {
+  const [selectedUsers, setSelectedUsers] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const addUser = userId => {
+    if (!userId) return;
+    // already selected?
+    if (selectedUsers.some(u => u.id === userId)) return;
+
+    // find full object from optionsClient
+    const user = optionsClient.find(u => u.id === userId);
+    if (!user) return;
+
+    setSelectedUsers(prev => [...prev, user]);
+  };
+
+  const removeUser = userId => {
+    setSelectedUsers(prev => prev.filter(u => u.id !== userId));
+  };
 
   return (
     <form
       onSubmit={async e => {
         e.preventDefault();
+        if (selectedUsers.length === 0) {
+          return;
+        }
+
         setSubmitting(true);
         try {
-          const athleteIds = toArray(ids);
+          const athleteIds = selectedUsers.map(u => u.id);
           await api.post(`/plans/${planId}/assign`, {
             athleteIds,
-            startDate: startDate || null,
-            endDate: endDate || null,
-            isActive: active,
+            isActive: true,
           });
           onAssigned?.();
         } catch (err) {
@@ -819,47 +848,134 @@ function AssignForm({ planId, onClose, onAssigned }) {
         }
       }}
       className='space-y-3'>
-      <Field label='Athlete IDs (comma separated)'>
-        <input value={ids} onChange={e => setIds(e.target.value)} className='inp' placeholder='uuid-1, uuid-2, uuid-3' />
+      <Field label='Select Users'>
+        {/* Hide already-selected users from the list (UI-only, SelectSearch logic untouched) */}
+        <SelectSearch value={null} onChange={addUser} options={optionsClient.filter(o => !selectedUsers.some(u => u.id === o.id))} placeholder='Search and select users...' searchable={true} />
       </Field>
 
-      <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
-        <Field label='Start Date'>
-          <input type='date' value={startDate || ''} onChange={e => setStartDate(e.target.value)} className='inp' />
-        </Field>
-        <Field label='End Date'>
-          <input type='date' value={endDate || ''} onChange={e => setEndDate(e.target.value)} className='inp' />
-        </Field>
-        <Field label='Active'>
-          <div className='h-[40px] flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3'>
-            <input id='a' type='checkbox' checked={active} onChange={e => setActive(e.target.checked)} />
-            <label htmlFor='a' className='text-sm text-slate-700'>
-              Is Active
-            </label>
-          </div>
-        </Field>
-      </div>
+      {/* Selected users chips */}
+      {selectedUsers.length > 0 && (
+        <div className='flex flex-wrap gap-2'>
+          {selectedUsers.map(user => (
+            <div key={user.id} className='inline-flex items-center gap-2 px-3 py-1.5 bg-gradient opacity-90 text-blue-800 rounded-full text-sm'>
+              {user.label}
+              <button type='button' onClick={() => removeUser(user.id)} className='hover:text-blue-900'>
+                <XIcon className='w-3 h-3' />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className='flex items-center justify-end gap-2 pt-2'>
-        <button type='button' onClick={onClose} className='px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50'>
-          Cancel
-        </button>
-        <button disabled={submitting} type='submit' className='px-3 py-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white'>
-          {submitting ? 'Assigning…' : 'Assign'}
-        </button>
+        <Button type='button' onClick={onClose} color='outline' name='Cancel' />
+        <Button disabled={submitting || selectedUsers.length === 0} type='submit' color='primary' name={submitting ? 'Assigning…' : 'Assign'} loading={submitting} />
       </div>
-      <style jsx>{`
-        .inp {
-          @apply h-[40px] mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30;
-        }
-      `}</style>
     </form>
   );
 }
 
+/* ------------------------------- Importer -------------------------------- */
+function ImportTemplate({ onClose, onImported }) {
+  const [userId, setUserId] = useState('');
+  const [coachId, setCoachId] = useState('');
+  const [raw, setRaw] = useState(`{
+  "name": "Push Pull Leg",
+  "userId": "36eae674-a063-4287-b378-e3cab0364b91",
+  "coachId": "36eae674-a063-4287-b378-e3cab0364b91",
+  "program": {
+    "days": [
+      {
+        "id": "saturday",
+        "dayOfWeek": "saturday",
+        "name": "Push Day 1 (Chest & Triceps)",
+        "exercises": [
+          { "id": "ex1", "name": "Machine Flat Chest Press", "targetSets": 3, "targetReps": "8", "rest": 90, "tempo": "1/1/1", "img": "/uploads/smith-machine-flat-chest-press/img-1.png", "video": "/uploads/smith-machine-flat-chest-press/vid-1.mp4" },
+          { "id": "ex3", "name": "Machine Incline Chest Press", "targetSets": 3, "targetReps": "10-12", "rest": 90, "tempo": "1/1/1", "img": "/uploads/machine-incline-chest-press/img-1.png", "video": "/uploads/machine-incline-chest-press/vid-1.mp4" },
+          { "id": "ex2", "name": "Cable Crossover Press", "targetSets": 3, "targetReps": "12-15", "rest": 75, "tempo": "1/1/1", "img": "/uploads/cable-crossover-press/img-1.png", "video": "/uploads/cable-crossover-press/vid-1.mp4" },
+          { "id": "ex4", "name": "Lateral Raises", "targetSets": 3, "targetReps": "12-15", "rest": 60, "tempo": "1/1/1", "img": "/uploads/lateral-raises/img-1.png", "video": "/uploads/lateral-raises/vid-1.mp4" },
+          { "id": "ex5", "name": "Overhead Tricep Extension (Rope)", "targetSets": 3, "targetReps": "12-15", "rest": 60, "tempo": "1/1/1", "img": "/uploads/one-hand-tricep-pushdown/img-1.png", "video": "/uploads/one-hand-tricep-pushdown/vid-1.mp4" },
+          { "id": "ex6n", "name": "Reverse Pec Deck Machine", "targetSets": 3, "targetReps": "12-15", "rest": 60, "tempo": "1/1/1", "img": "/uploads/reverse-fly-machine/img-1.png", "video": "/uploads/reverse-fly-machine/vid-1.mp4" }
+        ]
+      }
+    ]
+  }
+}`);
+  const [err, setErr] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const cleanExercise = e => ({
+    id: e.id,
+    name: e.name,
+    targetSets: e.targetSets,
+    targetReps: e.targetReps ?? '10',
+    rest: e.rest ?? e.restSeconds,
+    tempo: e.tempo ?? null,
+    img: e.img ?? null,
+    video: e.video ?? null,
+  });
+
+  const onSubmit = async () => {
+    setErr(null);
+    try {
+      const obj = JSON.parse(raw || '{}');
+      const final = {
+        name: obj.name || 'Program',
+        userId: userId || obj.userId, // allow override
+        coachId: coachId || obj.coachId || undefined,
+        program: {
+          days: (obj.program?.days || []).map((d, i) => ({
+            id: (d.id || d.dayOfWeek || '').toLowerCase(),
+            dayOfWeek: (d.dayOfWeek || d.id || 'monday').toLowerCase(),
+            name: d.name || `${d.dayOfWeek || d.id || 'day'} #${i + 1}`,
+            exercises: (d.exercises || []).map(cleanExercise),
+          })),
+        },
+      };
+
+      if (!final.userId) {
+        setErr('userId is required (type it above or include it in JSON).');
+        return;
+      }
+
+      setSubmitting(true);
+      await api.post('/plans/import', final, { headers: { 'Content-Type': 'application/json' } });
+      onImported?.();
+    } catch (e) {
+      setErr(e?.message || 'Invalid JSON');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className='space-y-3'>
+      <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
+        <Field label='User ID (required)'>
+          <Input value={userId} onChange={setUserId} placeholder='athlete UUID' />
+        </Field>
+        <Field label='Coach ID (optional)'>
+          <Input value={coachId} onChange={setCoachId} placeholder='coach UUID' />
+        </Field>
+      </div>
+
+      <Field label='Template JSON (weeklyProgram shape)'>
+        <textarea value={raw} onChange={e => setRaw(e.target.value)} rows={14} className='w-full rounded-xl border border-slate-200 p-3 outline-none focus:ring-2 focus:ring-indigo-500/30' />
+      </Field>
+
+      {err ? <div className='p-2 rounded bg-red-50 text-red-600 text-sm border border-red-100'>{err}</div> : null}
+
+      <div className='flex items-center justify-end gap-2'>
+        <Button onClick={onClose} color='outline' name='Cancel' />
+        <Button onClick={onSubmit} disabled={submitting} color='primary' name={submitting ? 'Importing…' : 'Import & Activate'} />
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------ Small atoms ------------------------------ */
-const IconButton = ({ title, onClick, children, danger = false }) => (
-  <button title={title} onClick={onClick} className={`w-[34px] h-[34px] inline-flex items-center justify-center rounded-lg border transition ${danger ? 'border-red-200 bg-white text-red-600 hover:bg-red-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
+export const IconButton = ({ title, onClick, children, danger = false }) => (
+  <button title={title} onClick={onClick} className={`flex-none w-[40px] h-[40px] inline-flex items-center justify-center rounded-lg border transition ${danger ? 'border-red-200 bg-white text-red-600 hover:bg-red-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
     {children}
   </button>
 );
@@ -870,13 +986,7 @@ const IconMini = ({ title, onClick, children, danger = false }) => (
   </button>
 );
 
-const ButtonGhost = ({ children, onClick, disabled }) => (
-  <button disabled={disabled} onClick={onClick} className='px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 disabled:opacity-60'>
-    {children}
-  </button>
-);
-
-function Field({ label, children }) {
+export function Field({ label, children }) {
   return (
     <div>
       <label className='text-sm text-slate-600'>{label}</label>

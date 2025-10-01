@@ -1,27 +1,4 @@
-// const createNextIntlPlugin = require('next-intl/plugin');
-
-// const withNextIntl = createNextIntlPlugin();
-
-// const nextConfig = {
-//   images: {
-//     remotePatterns: [
-//       {
-//         protocol: 'https',
-//         hostname: 'cdn.jsdelivr.net',
-//         pathname: '/gh/faker-js/**',
-//       },
-//       {
-//         protocol: 'https',
-//         hostname: 'avatars.githubusercontent.com',
-//         // pathname: '/gh/faker-js/**',
-//       },
-//     ],
-//   },
-// };
-
-// module.exports = withNextIntl(nextConfig);
-
-
+ 
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
@@ -29,11 +6,7 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development',
   runtimeCaching: [
     {
-      urlPattern: ({ request }) =>
-        request.destination === 'image' ||
-        request.destination === 'style' ||
-        request.destination === 'script' ||
-        request.destination === 'font',
+      urlPattern: ({ request }) => request.destination === 'image' || request.destination === 'style' || request.destination === 'script' || request.destination === 'font',
       handler: 'StaleWhileRevalidate',
       options: {
         cacheName: 'static-assets',
@@ -64,6 +37,7 @@ const createNextIntlPlugin = require('next-intl/plugin');
 const withNextIntl = createNextIntlPlugin();
 
 const nextConfig = {
+  reactStrictMode: false,
   images: {
     remotePatterns: [
       {
@@ -77,7 +51,6 @@ const nextConfig = {
       },
     ],
   },
-  reactStrictMode: true,
 };
 
 // دمج الاثنين مع بعض

@@ -1,39 +1,67 @@
-import { useEffect, useState } from 'react';
-import { FaCheck } from 'react-icons/fa';
+'use client';
 
-const CheckBox = ({ label, initialChecked, onChange, className }) => {
-  const [checked, setChecked] = useState(initialChecked || false);
+import React, { useEffect, useId, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Check } from 'lucide-react';
+
+export default function CheckBox({
+  label,
+  initialChecked = false,
+  onChange = () => {},
+  className = '',
+}) {
+  const [checked, setChecked] = useState(!!initialChecked);
+  const id = useId();
 
   useEffect(() => {
-    setChecked(initialChecked);
+    setChecked(!!initialChecked);
   }, [initialChecked]);
 
-  const handleCheck = () => {
-    const newChecked = !checked;
-    setChecked(newChecked);
-    if (onChange) {
-      onChange(newChecked); // notify parent
+  const toggle = () => {
+    const next = !checked;
+    setChecked(next);
+    onChange(next);
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      toggle();
     }
   };
 
   return (
-    <label className={`inline-flex flex-none items-center gap-3 cursor-pointer select-none ${className}`}>
-      <span
-        onClick={handleCheck}
-        aria-hidden
-        className={`relative h-5 w-5 rounded-[6px] border transition-colors duration-200
-          ${checked ? 'bg-blue-600 border-blue-600' : 'bg-blue-50 border-blue-200 hover:border-blue-300'}`}>
-        {checked && <FaCheck className='!text-white h-3 w-3 absolute left-[2px] top-[2px]' />}
-      </span>
+    <div className={`inline-flex items-center gap-3 ${className}`}>
+      <button
+        id={id}
+        type="button"
+        role="checkbox"
+        aria-checked={checked}
+        onClick={toggle}
+        onKeyDown={onKeyDown}
+        className={`relative cursor-pointer flex h-6 w-6 items-center justify-center rounded-md border transition-colors duration-300
+          ${checked
+            ? 'bg-gradient-to-br from-blue-600 to-indigo-600 border-blue-600'
+            : 'bg-white border-gray-300'}
+          focus:outline-none focus:ring-2 focus:ring-blue-400`}
+      >
+        <motion.div
+          initial={false}
+          animate={{ scale: checked ? 1 : 0, opacity: checked ? 1 : 0 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        >
+          <Check className="h-4 w-4 text-white" />
+        </motion.div>
+      </button>
 
-      {/* real input for accessibility */}
-      <input type='checkbox' checked={checked} onChange={() => {}} className='hidden' />
-
-      <span onClick={handleCheck} className='text-slate-800 text-[15px] leading-none'>
-        {label}
-      </span>
-    </label>
+      {label && (
+        <span
+          className="text-slate-800 text-[15px] leading-none cursor-pointer"
+          onClick={toggle}
+        >
+          {label}
+        </span>
+      )}
+    </div>
   );
-};
-
-export default CheckBox;
+}

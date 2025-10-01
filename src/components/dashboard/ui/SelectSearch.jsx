@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, X, Check, Search } from 'lucide-react';
 
-export default function Select({
-  options = [],          // [{ id: '1', label: 'Option 1' }, ...]
-  value = null,          // selected id
+export default function SelectSearch({
+  options = [], // [{ id: '1', label: 'Option 1' }, ...]
+  value = null, // selected id
   onChange = () => {},
   placeholder = 'Select…',
   searchable = true,
@@ -27,15 +27,15 @@ export default function Select({
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
 
   const selected = useMemo(
-    () => options.find(o => String(o.id) === String(value)) || null,
+    () => options.find(o => o.id === value) || null,
     [options, value]
   );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!searchable || !q) return options;
+    if (!q) return options;
     return options.filter(o => String(o.label).toLowerCase().includes(q));
-  }, [options, query, searchable]);
+  }, [options, query]);
 
   const updateCoords = useCallback(() => {
     if (!buttonRef.current) return;
@@ -65,7 +65,7 @@ export default function Select({
     setPortalReady(true);
   }, []);
 
-  // Reposition on resize/scroll
+  // Reposition on resize/scroll/route changes
   useEffect(() => {
     if (!open) return;
     const handler = () => updateCoords();
@@ -160,6 +160,7 @@ export default function Select({
     onChange(null);
     setQuery('');
     setActiveIndex(-1);
+    // keep menu closed; user can open again
   };
 
   return (
@@ -176,6 +177,7 @@ export default function Select({
           'rounded-xl border bg-white px-3.5 py-2.5 text-sm',
           disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
           'transition-colors',
+          // borders & focus states
           'border-slate-300 hover:border-slate-400 focus:border-indigo-500',
           'focus:outline-none focus:ring-4 focus:ring-indigo-100',
         ].join(' ')}
@@ -194,7 +196,7 @@ export default function Select({
         </span>
       </button>
 
-      {/* Portal dropdown (same pattern) */}
+      {/* Portal dropdown (indigo-styled UI) */}
       {portalReady &&
         open &&
         createPortal(

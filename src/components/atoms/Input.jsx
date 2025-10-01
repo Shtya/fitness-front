@@ -1,41 +1,80 @@
-// components/atoms/Input.jsx
 'use client';
 
-import { forwardRef } from 'react';
+import { useState, useRef } from 'react';
+import { X } from 'lucide-react';
 
-const Input = forwardRef(({ error, cnLabel, cnInput, className, label, placeholder = 'Enter text', iconLeft, actionIcon, onAction, onChange, onBlur, name, type = 'text', required = false, showMsgError = true, ...props }, ref) => {
+export default function Input({
+  label,
+  placeholder = '',
+  name,
+  type = 'text',
+  value,
+  onChange = () => {},
+  disabled = false,
+  error,
+  clearable = true,
+  className = '',
+}) {
+  const inputRef = useRef(null);
+  const [internal, setInternal] = useState(value ?? '');
+
+  function handleChange(e) {
+    setInternal(e.target.value);
+    onChange(e.target.value);
+  }
+
+  function clearInput(e) {
+    e.stopPropagation();
+    setInternal('');
+    onChange('');
+    inputRef.current?.focus();
+  }
+
   return (
-    <div className={`w-full ${className}`}>
+    <div className={`w-full relative ${className}`}>
       {label && (
-        <label htmlFor={name} className={`mb-1 block text-sm font-medium text-gray-600 ${cnLabel}`}>
+        <label className="mb-1.5 block text-sm font-medium text-slate-700">
           {label}
-          {required && <span className='text-red-500 ml-1'>*</span>}
         </label>
       )}
 
       <div
-        className={`${cnInput} overflow-hidden relative flex items-center rounded-md bg-white h-[40px] px-2 py-2 text-sm gap-1 
-        transition border ${error ? 'border-red-500 ring-2 ring-red-500/20' : props.value ? 'border-emerald-600' : 'border-gray-300'} focus-within:border-emerald-600 focus-within:ring-2 focus-within:ring-emerald-600/20`}>
-        {iconLeft && (
-          <span className='flex-none text-slate-400'>
-            <img src={iconLeft} alt='' className='w-4' />
-          </span>
-        )}
+        className={[
+          'relative flex items-center',
+          'rounded-xl border bg-white',
+          disabled
+            ? 'cursor-not-allowed opacity-60'
+            : 'cursor-text',
+          error
+            ? 'border-rose-500'
+            : 'border-slate-300 hover:border-slate-400 focus-within:border-indigo-500',
+          'focus-within:ring-4 focus-within:ring-indigo-100',
+          'transition-colors',
+        ].join(' ')}
+      >
+        <input
+          ref={inputRef}
+          type={type}
+          name={name}
+          placeholder={placeholder}
+          value={internal}
+          disabled={disabled}
+          onChange={handleChange}
+          className="h-[43px] w-full rounded-xl px-3.5 py-2.5 text-sm text-slate-900 outline-none placeholder:text-gray-400"
+        />
 
-        <input ref={ref} id={name} name={name} type={type} placeholder={placeholder} onChange={onChange} onBlur={onBlur} className={`${actionIcon && 'w-[calc(100%-50px)]'} w-full bg-transparent outline-none text-slate-700 placeholder:text-gray-400`} {...props} />
-
-        {actionIcon && (
-          <button type='button' onClick={onAction} className='cursor-pointer flex items-center justify-center h-full aspect-1/1 absolute rtl:left-0 ltr:right-0 top-1/2 -translate-y-1/2 flex-none gradient p-2 text-white transition'>
-            <img src={actionIcon} alt='' className='w-[25px]' />
-          </button>
+        {clearable && internal && !disabled && (
+          <X
+            size={16}
+            className="absolute right-3 opacity-60 hover:opacity-100 transition cursor-pointer"
+            onClick={clearInput}
+          />
         )}
       </div>
 
-      {showMsgError && error && <p className='text-red-500 text-sm mt-1'>{error}</p>}
+      {error && (
+        <p className="mt-1.5 text-xs text-rose-600">{error}</p>
+      )}
     </div>
   );
-});
-
-Input.displayName = 'Input';
-
-export default Input;
+}

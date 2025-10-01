@@ -1,35 +1,32 @@
-/* 
-
-	- show his active plan here and get it with the id and show button to edit
-	- 
-*/
-
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Upload, Plus, Users as UsersIcon, CheckCircle2, XCircle, RefreshCcw, Trash2, Mail, Shield, Dumbbell, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Pencil, Eye, Clock, Search } from 'lucide-react';
+import { Plus, Users as UsersIcon, CheckCircle2, XCircle, Shield, Dumbbell, ChevronUp, ChevronDown, Eye, Clock, Search, UserPlus, BadgeCheck, ListChecks, Activity, Power, Trash2, Check, KeyRound, EyeOff, Eye as EyeIcon, Sparkles } from 'lucide-react';
+
 import DataTable from '@/components/dashboard/ui/DataTable';
 import api from '@/utils/axios';
-import { Link } from '@/i18n/navigation';
-import { Modal, PageHeader, StatCard } from '@/components/dashboard/ui/UI';
-import Button from '@/components/atoms/Button';
+import { Modal, PageHeader, StatCard, StatCardArray } from '@/components/dashboard/ui/UI';
 import Select from '@/components/atoms/Select';
+import ActionsMenu from '@/components/molecules/ActionsMenu';
+import Input from '@/components/atoms/Input';
+import Button from '@/components/atoms/Button';
+import { Notification } from '@/config/Notification';
 
 /* ---------- helpers ---------- */
-const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
+
 const toTitle = s => (s ? s.toString().charAt(0).toUpperCase() + s.toString().slice(1).toLowerCase() : s);
+
 const normRole = r => {
   const t = String(r || '').toUpperCase();
-  if (['ADMIN', 'TRAINER', 'CLIENT'].includes(t)) return toTitle(t);
-  if (['admin', 'trainer', 'client'].includes(String(r))) return toTitle(r);
+  if (['ADMIN', 'COACH', 'CLIENT'].includes(t)) return toTitle(t);
+  if (['admin', 'coach', 'client'].includes(String(r))) return toTitle(r);
   return 'Client';
 };
+
+const STATUS_MAP = { pending: 'Pending', active: 'Active', suspended: 'Suspended' };
 const normStatus = s => {
-  const t = String(s || '').toUpperCase();
-  if (['ACTIVE', 'INACTIVE', 'PENDING', 'SUSPENDED'].includes(t)) return toTitle(t);
-  if (['active', 'inactive', 'pending', 'suspended'].includes(String(s))) return toTitle(s);
-  return 'Inactive';
+  const t = String(s || '').toLowerCase();
+  return STATUS_MAP[t] || 'Pending';
 };
 
 function Badge({ children, color = 'slate' }) {
@@ -40,6 +37,7 @@ function Badge({ children, color = 'slate' }) {
     indigo: 'bg-indigo-100 text-indigo-700 ring-indigo-600/10',
     slate: 'bg-slate-100 text-slate-700 ring-slate-600/10',
     amber: 'bg-amber-100 text-amber-800 ring-amber-600/10',
+    violet: 'bg-violet-100 text-violet-700 ring-violet-600/10',
   };
   return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ring-1 ${map[color] || map.slate}`}>{children}</span>;
 }
@@ -55,7 +53,7 @@ function StatusPill({ status }) {
 }
 function RolePill({ role }) {
   const r = normRole(role);
-  const color = r === 'Admin' ? 'indigo' : r === 'Trainer' ? 'blue' : 'slate';
+  const color = r === 'Admin' ? 'indigo' : r === 'Coach' ? 'violet' : 'slate';
   return (
     <Badge color={color}>
       <Shield className='w-3 h-3' /> {r}
@@ -79,9 +77,10 @@ export default function UsersList() {
   const [limit, setLimit] = useState(10);
   const [sortBy, setSortBy] = useState('created_at'); // valid: created_at, name, email, role, status
   const [sortOrder, setSortOrder] = useState('DESC'); // 'ASC' | 'DESC'
+  let currentPage;
 
-  const [role, setRole] = useState(null);
-  const [status, setStatus] = useState(null);
+  // viewer role
+  const [myRole, setMyRole] = useState('Client');
 
   // ui state
   const [rows, setRows] = useState([]);
@@ -89,6 +88,19 @@ export default function UsersList() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
+
+  // stats
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    pendingUsers: 0,
+    suspendedUsers: 0,
+    admins: 0,
+    coaches: 0,
+    clients: 0,
+    withPlans: 0,
+    withoutPlans: 0,
+  });
 
   // search with debounce (server-side)
   const [searchText, setSearchText] = useState('');
@@ -99,38 +111,62 @@ export default function UsersList() {
   }, [searchText]);
 
   // client-side filters
-  const [roleFilter, setRoleFilter] = useState('All'); // All | Admin | Trainer | Client
-  const [statusFilter, setStatusFilter] = useState('All'); // All | Active | Inactive | Pending | Suspended
+  const [roleFilter, setRoleFilter] = useState('All'); // All | Admin | Coach | Client
+  const [statusFilter, setStatusFilter] = useState('All'); // All | Active | Pending | Suspended
   const [hasPlanFilter, setHasPlanFilter] = useState('All'); // All | With plan | No plan
 
-  // selection
-  const [selected, setSelected] = useState([]);
-
-  // modal
+  // modals
   const [addOpen, setAddOpen] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignTargetUser, setAssignTargetUser] = useState(null);
+  const [coaches, setCoaches] = useState([]);
+  const [selectedCoachId, setSelectedCoachId] = useState(null);
+  const [assignSaving, setAssignSaving] = useState(false);
 
-  // fetch
+  // admin create user state
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    membership: '',
+    password: '',
+    role: 'Client', // Client | Coach
+    gender: null, // 'male' | 'female'
+    coachId: null, // only for clients
+    showPassword: false,
+  });
+
+  const setField = (key, val) => setNewUser(prev => ({ ...prev, [key]: val }));
+
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
+    let p = '';
+    for (let i = 0; i < 12; i++) p += chars[Math.floor(Math.random() * chars.length)];
+    setField('password', p);
+    Notification('Generated a strong password', 'info');
+  };
+
+  /* ---------------- API ---------------- */
+
+  async function fetchMe() {
+    try {
+      const res = await api.get('/auth/me');
+      setMyRole(res?.data?.role);
+    } catch {}
+  }
+
   async function fetchUsers() {
     setLoading(true);
     setErr(null);
     try {
-      const params = {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-      };
+      const params = { page, limit, sortBy, sortOrder };
       if (debounced) params.search = debounced;
 
       const res = await api.get('/auth/users', { params });
 
-      // normalize two shapes:
-      // A) CRUD.findAll → { total_records, current_page, per_page, records }
-      // B) Alt sample   → { users, total, page, totalPages }
       const data = res.data || {};
       let records = [];
       let totalRecords = 0;
-      let currentPage = page;
       let pagesCount = 1;
 
       if (Array.isArray(data.records)) {
@@ -144,14 +180,12 @@ export default function UsersList() {
         currentPage = Number(data.page || page);
         pagesCount = Number(data.totalPages || 1);
       } else if (Array.isArray(data)) {
-        // very defensive
         records = data;
         totalRecords = data.length;
         currentPage = page;
         pagesCount = Math.max(1, Math.ceil(totalRecords / limit));
       }
 
-      // map for UI
       const mapped = records.map(u => ({
         id: u.id,
         name: u.name,
@@ -160,9 +194,13 @@ export default function UsersList() {
         status: normStatus(u.status),
         phone: u.phone || '',
         membership: u.membership || '-',
+        gender: u.gender || '',
         joinDate: u.created_at ? new Date(u.created_at).toISOString().slice(0, 10) : u.joinDate || '',
         points: u.points ?? 0,
-        activePlanId: u.activePlanId ?? null,
+        activePlanId: u.activePlanId ?? u.planId ?? null,
+        planName: u.activePlan?.name || u.planName || (u.activePlanId ? 'Active plan' : '-'),
+        coachId: u.coachId ?? u.assignedCoachId ?? null,
+        coachName: u.coach?.name || u.coachName || u.assignedCoachName || null,
       }));
 
       setRows(mapped);
@@ -176,12 +214,53 @@ export default function UsersList() {
     }
   }
 
+  async function fetchStats() {
+    try {
+      const { data } = await api.get('/auth/stats');
+      setStats(prev => ({ ...prev, ...(data || {}) }));
+    } catch (e) {
+      // keep silent; page still works
+      console.error('stats error', e?.response?.data?.message || e.message);
+    }
+  }
+
+  async function fetchCoaches() {
+    try {
+      // preferred dedicated endpoint
+      let res = await api.get('/auth/coaches');
+      let list = Array.isArray(res?.data) ? res.data : [];
+
+      // fallback
+      if (!list.length) {
+        const all = await api.get('/auth/users', { params: { limit: 200 } });
+        const list2 = Array.isArray(all?.data?.users) ? all.data.users : Array.isArray(all?.data?.records) ? all.data.records : Array.isArray(all?.data) ? all.data : [];
+        list = list2.filter(x => String(x.role).toLowerCase() === 'coach');
+      }
+
+      const mapped = list.map(c => ({
+        id: c.id,
+        label: c.name || c.email || `Coach ${c.id}`,
+      }));
+      setCoaches(mapped);
+    } catch (e) {
+      console.error(e);
+      setCoaches([]);
+    }
+  }
+
+  useEffect(() => {
+    fetchMe();
+    fetchStats();
+    fetchCoaches();
+  }, []);
+
   useEffect(() => {
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, limit, sortBy, sortOrder, debounced]);
 
-  // client filters
+  /* ---------------- Derived ---------------- */
+
   const filtered = useMemo(() => {
     return rows
       .filter(r => (roleFilter === 'All' ? true : r.role === roleFilter))
@@ -189,11 +268,127 @@ export default function UsersList() {
       .filter(r => (hasPlanFilter === 'All' ? true : hasPlanFilter === 'With plan' ? !!r.activePlanId : !r.activePlanId));
   }, [rows, roleFilter, statusFilter, hasPlanFilter]);
 
-  // KPIs
-  const kpiTotal = filtered.length;
-  const kpiActive = filtered.filter(u => u.status === 'Active').length;
+  /* ---------------- Actions ---------------- */
 
-  // columns
+  const openAssignCoach = row => {
+    setAssignTargetUser(row);
+    setSelectedCoachId(row.coachId || null);
+    setAssignOpen(true);
+    fetchCoaches();
+  };
+
+  const assignCoach = async () => {
+    if (!assignTargetUser?.id || !selectedCoachId) return;
+    setAssignSaving(true);
+    try {
+      await api.post('/auth/coach/assign', { userId: assignTargetUser.id, coachId: selectedCoachId });
+      setAssignOpen(false);
+      setAssignTargetUser(null);
+      setSelectedCoachId(null);
+      fetchUsers();
+      Notification('Coach assigned successfully', 'success');
+    } catch (e) {
+      Notification(e?.response?.data?.message || 'Failed to assign coach', 'error');
+    } finally {
+      setAssignSaving(false);
+    }
+  };
+
+  const setStatusApi = async (userId, statusLower) => {
+    try {
+      await api.put(`/auth/status/${userId}`, { status: statusLower });
+      fetchUsers();
+      fetchStats();
+      Notification(`Status updated to ${toTitle(statusLower)}`, 'success');
+    } catch (e) {
+      Notification(e?.response?.data?.message || 'Failed to update status', 'error');
+    }
+  };
+
+  const toggleActive = async row => {
+    const current = String(row.status).toLowerCase();
+    if (current === 'active') return setStatusApi(row.id, 'suspended');
+    if (current === 'suspended' || current === 'pending') return setStatusApi(row.id, 'active');
+    return setStatusApi(row.id, 'active');
+  };
+
+  const approveUser = async row => setStatusApi(row.id, 'active');
+
+  const deleteUser = async row => {
+    try {
+      await api.delete(`/auth/user/${row.id}`);
+      fetchUsers();
+      fetchStats();
+      Notification('User deleted', 'success');
+    } catch (e) {
+      Notification(e?.response?.data?.message || 'Failed to delete user', 'error');
+    }
+  };
+
+  const goProgress = row => {
+    window.location.href = `/dashboard/users/${row.id}/progress`;
+  };
+  const goProgram = row => {
+    window.location.href = `/dashboard/users/${row.id}/program`;
+  };
+  const goPlans = row => {
+    window.location.href = `/dashboard/users/${row.id}/plans`;
+  };
+
+  // Build role-aware menu options
+  const buildRowActions = row => {
+    const viewer = myRole;
+    const isAdmin = viewer === 'admin';
+    const canCoachManage = viewer === 'coach';
+    const canAssign = isAdmin || canCoachManage;
+    const canToggle = isAdmin || canCoachManage;
+    const canViewFlows = isAdmin || canCoachManage;
+
+    const opts = [];
+
+    opts.push({
+      icon: <Eye className='h-4 w-4' />,
+      label: 'View',
+      onClick: () => (window.location.href = `/dashboard/users/${row.id}`),
+      disabled: false,
+    });
+
+    if (canViewFlows) {
+      opts.push({ icon: <Activity className='h-4 w-4' />, label: 'Progress', onClick: () => goProgress(row) });
+      opts.push({ icon: <BadgeCheck className='h-4 w-4' />, label: 'Workout Programs', onClick: () => goProgram(row) });
+      opts.push({ icon: <ListChecks className='h-4 w-4' />, label: 'Plans', onClick: () => goPlans(row) });
+    }
+
+    if (canAssign && row.role === 'Client') {
+      opts.push({ icon: <UserPlus className='h-4 w-4' />, label: 'Assign Coach', onClick: () => openAssignCoach(row) });
+    }
+
+    if (canToggle) {
+      const s = String(row.status).toLowerCase();
+      if (s === 'pending') {
+        opts.push({ icon: <Check className='h-4 w-4' />, label: 'Approve', onClick: () => approveUser(row) });
+      }
+      const isActive = s === 'active';
+      opts.push({
+        icon: <Power className='h-4 w-4' />,
+        label: isActive ? 'Deactivate' : 'Activate',
+        onClick: () => toggleActive(row),
+      });
+    }
+
+    if (isAdmin) {
+      opts.push({
+        icon: <Trash2 className='h-4 w-4' />,
+        label: 'Delete',
+        onClick: () => deleteUser(row),
+      });
+    }
+
+    return opts;
+  };
+
+  /* ---------------- Columns ---------------- */
+
   const columns = [
     { header: 'Name', accessor: 'name', className: 'text-nowrap' },
     { header: 'Email', accessor: 'email' },
@@ -201,60 +396,63 @@ export default function UsersList() {
     { header: 'Status', accessor: 'status', cell: row => <StatusPill status={row.status} /> },
     { header: 'Phone', accessor: 'phone' },
     { header: 'Membership', accessor: 'membership' },
+    { header: 'Plan', accessor: 'planName' },
+    {
+      header: 'Coach',
+      accessor: 'coachName',
+      cell: row =>
+        row.coachName ? (
+          <Badge color='violet'>
+            <Shield className='w-3 h-3' /> {row.coachName}
+          </Badge>
+        ) : (
+          <span className='text-slate-400'>—</span>
+        ),
+    },
     { header: 'Join Date', accessor: 'joinDate', className: 'text-nowrap' },
     {
       header: 'Actions',
       accessor: '_actions',
       disableSort: true,
-      cell: row => (
-        <div className='flex items-center gap-1'>
-          <Link href={'/dashboard/users/' + row?.id} className='w-[30px] h-[30px] justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 inline-flex items-center gap-1.5'>
-            <Eye size={16} />
-          </Link>
-
-          <Link href={'/dashboard/users/edit/' + row?.id} className='w-[30px] h-[30px] justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 inline-flex items-center gap-1.5'>
-            <Pencil size={16} />
-          </Link>
-
-          {/* <button
-            onClick={async () => {
-              if (!confirm('Delete this user?')) return;
-              try {
-                await api.delete(`/auth/user/${row.id}`);
-                setRows(arr => arr.filter(x => x.id !== row.id));
-              } catch (e) {
-                alert(e?.response?.data?.message || 'Delete failed');
-              }
-            }}
-            className='w-[30px] h-[30px] justify-center rounded-lg border border-slate-200 bg-white hover:bg-red-50 text-red-600 inline-flex items-center gap-1.5'>
-            <Trash2  size={16} />
-          </button> */}
-        </div>
-      ),
+      cell: row => <ActionsMenu options={buildRowActions(row)} align='right' />,
     },
   ];
 
-  // add user
-  const addUser = async e => {
+  /* ---------------- Create (Admin) ---------------- */
+
+  const submitCreate = async e => {
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    const payload = {
-      name: form.get('name'),
-      email: form.get('email'),
-      password: form.get('password'),
-      phone: form.get('phone') || undefined,
-      membership: form.get('membership') || undefined,
-      role: String(form.get('role') || '').toUpperCase() || undefined, // ADMIN/TRAINER/CLIENT (backend may ignore if dto disallows)
-      status: String(form.get('status') || '').toUpperCase() || undefined, // ACTIVE/INACTIVE/PENDING (backend may ignore)
+    const body = {
+      name: newUser.name,
+      email: newUser.email,
+      phone: newUser.phone || undefined,
+      membership: newUser.membership || undefined,
+      gender: newUser.gender || undefined, // 'male' | 'female'
+      role: String(newUser.role || 'Client').toLowerCase(), // 'client' | 'coach'
+      password: newUser.password || undefined, // if omitted, backend may auto-generate
+      coachId: newUser.role === 'Client' ? newUser.coachId || undefined : undefined,
     };
     try {
-      await api.post('/auth/register', payload);
+      const res = await api.post('/auth/admin/users', body);
       setAddOpen(false);
-      // reload first page to include the new user
+      setNewUser({
+        name: '',
+        email: '',
+        phone: '',
+        membership: '',
+        password: '',
+        role: 'Client',
+        gender: null,
+        coachId: null,
+        showPassword: false,
+      });
       setPage(1);
       fetchUsers();
+      fetchStats();
+      const temp = res?.data?.tempPassword;
+      Notification(`User created. ${temp ? `Temp password: ${temp}` : 'Credentials sent by email.'}`, 'success');
     } catch (e) {
-      alert(e?.response?.data?.message || 'Create failed');
+      Notification(e?.response?.data?.message || 'Create failed', 'error');
     }
   };
 
@@ -271,14 +469,13 @@ export default function UsersList() {
   const ROLE_OPTIONS = [
     { id: 'All', name: 'All roles' },
     { id: 'Admin', name: 'Admin' },
-    { id: 'Trainer', name: 'Trainer' },
+    { id: 'Coach', name: 'Coach' },
     { id: 'Client', name: 'Client' },
   ];
 
   const STATUS_OPTIONS = [
     { id: 'All', name: 'All statuses' },
     { id: 'Active', name: 'Active' },
-    { id: 'Inactive', name: 'Inactive' },
     { id: 'Pending', name: 'Pending' },
     { id: 'Suspended', name: 'Suspended' },
   ];
@@ -292,23 +489,19 @@ export default function UsersList() {
 
   return (
     <div className='space-y-6'>
-      <div className='rounded-xl   md:rounded-2xl overflow-hidden border border-indigo-200'>
-        <div className='relative p-4 md:p-8  bg-gradient text-white'>
-          <div className='absolute inset-0 opacity-20 bg-[radial-gradient(600px_200px_at_20%_-20%,white,transparent)]' />
+      <div className='rounded-xl md:rounded-2xl overflow-hidden border border-gray-300 '>
+        <div className='relative p-4 md:p-8 bg-gradient text-white'>
           <div className='relative z-10 flex flex-row md:items-center gap-3 md:gap-6 justify-between'>
-            {/* Title */}
-            <PageHeader className=' ' icon={Dumbbell} title='User Management' subtitle='Manage clients, trainers and admins with full control.' />
+            <PageHeader title='User Management' subtitle='Manage clients, coaches and admins with full control.' />
             <ToolbarButton icon={Plus} onClick={() => setAddOpen(true)}>
-              Add User
+              Create Account
             </ToolbarButton>
           </div>
-
-          {/* KPIs */}
-          <div className='flex items-center justify-start gap-3 mt-6 '>
-            <StatCard className={'max-w-[200px] w-full '} icon={UsersIcon} title='Total Users ' value={kpiTotal} />
-            <StatCard className={'max-w-[200px] w-full '} icon={CheckCircle2} title='Active' value={kpiActive} />
-            <StatCard className={'max-w-[200px] w-full '} icon={Shield} title='Admins' value={1} />
-            <StatCard className={'max-w-[200px] w-full '} icon={Shield} title='Admins' value={1} />
+          <div className=' grid grid-cols-2 md:grid-cols-4 xl:grid-cols-4 gap-3 mt-6  '>
+            <StatCard icon={UsersIcon} title={'Total Users' } value={stats.totalUsers } />
+            <StatCardArray icon={UsersIcon} title={[ 'Active', 'Suspended']} value={[ stats.activeUsers, stats.suspendedUsers]} />
+            <StatCardArray icon={Shield} title={['Admins', 'Coaches', 'Clients']} value={[stats.admins, stats.coaches, stats.clients]} />
+            <StatCardArray icon={ListChecks} title={['With Plans', 'Without Plans']} value={[stats.withPlans, stats.withoutPlans]} />
           </div>
         </div>
       </div>
@@ -316,7 +509,7 @@ export default function UsersList() {
       {/* Filters + search */}
       <div className='flex items-center gap-2 mt-12 flex-wrap'>
         <div className='flex-1'>
-          <div className='relative w-full md:w-60  '>
+          <div className='relative w-full md:w-60'>
             <Search className='absolute left-3 z-[10] top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
             <input
               value={searchText}
@@ -337,7 +530,6 @@ export default function UsersList() {
           options={toSelectOptions(ROLE_OPTIONS)}
           value={roleFilter}
           onChange={id => {
-            // receives the selected id
             setRoleFilter(id);
             setPage(1);
           }}
@@ -385,80 +577,90 @@ export default function UsersList() {
             loading={loading}
             itemsPerPage={limit}
             pagination
-            selectable
-            selectedIds={selected}
-            onToggleRow={id => setSelected(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))}
-            onToggleAll={ids => setSelected(prev => (prev.length === ids.length ? [] : ids))}
-            onRowClick={row => console.log('row clicked', row)}
-            initialSort={{ key: sortBy === 'created_at' ? 'joinDate' : sortBy, dir: sortOrder.toLowerCase() }} // just to align initial arrow in your table, actual sort is server-driven
+            // selection removed as requested
+            selectable={false}
+            // onRowClick={row => (window.location.href = `/dashboard/users/${row.id}`)}
+            initialSort={{ key: sortBy === 'created_at' ? 'joinDate' : sortBy, dir: sortOrder.toLowerCase() }}
           />
         </div>
       </div>
 
-      {/* Add User Modal */}
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title='Add New User'>
-        <form onSubmit={addUser} className='space-y-3'>
+      {/* Create Account (Admin) */}
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title='Create Account'>
+        <form onSubmit={submitCreate} className='space-y-3'>
           <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
-            <div>
-              <label className='text-sm text-slate-600'>Full Name</label>
-              <input name='name' required className='mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30' />
-            </div>
-            <div>
-              <label className='text-sm text-slate-600'>Email</label>
-              <input type='email' name='email' required className='mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30' />
-            </div>
-            <div>
-              <label className='text-sm text-slate-600'>Password</label>
-              <input type='password' name='password' required className='mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30' />
-            </div>
-            <div>
-              <label className='text-sm text-slate-600'>Phone</label>
-              <input name='phone' className='mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30' />
-            </div>
+            <Input label='Full Name' name='name' value={newUser.name} onChange={val => setField('name', val)} placeholder='John Doe' required />
 
-            <div>
-              <Select
-                label='Role'
-                placeholder='Select role'
-                options={['Client', 'Trainer', 'Admin'].map(r => ({
-                  id: r,
-                  label: r,
-                }))}
-                value={role}
-                onChange={id => setRole(id)}
-              />
-            </div>
+            <Input label='Email' type='email' name='email' value={newUser.email} onChange={val => setField('email', val)} placeholder='name@example.com' required />
 
-            <div>
-              <Select
-                label='Status'
-                placeholder='Select status'
-                options={['Pending', 'Active', 'Inactive'].map(s => ({
-                  id: s,
-                  label: s,
-                }))}
-                value={status}
-                onChange={id => setStatus(id)}
-              />
-            </div>
+            <Select className='!z-[300]' label='Role' placeholder='Select role' options={['Client', 'Coach'].map(r => ({ id: r, label: r }))} value={newUser.role} onChange={id => setField('role', id)} />
 
-            <div>
-              <label className='text-sm text-slate-600'>Membership</label>
-              <input name='membership' placeholder='Basic / Gold / Platinum…' className='mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30' />
+            <Select label='Gender' placeholder='Select gender' options={['Male', 'Female'].map(g => ({ id: g.toLowerCase(), label: g }))} value={newUser.gender} onChange={id => setField('gender', id)} />
+
+            <Input label='Phone' name='phone' value={newUser.phone} onChange={val => setField('phone', val)} placeholder='+20 1X XXX XXXX' />
+
+            <Input label='Membership' name='membership' value={newUser.membership} onChange={val => setField('membership', val)} placeholder='Basic / Gold / Platinum…' />
+
+            {newUser.role === 'Client' && <Select label='Assign Coach (optional)' placeholder='Select a coach' options={coaches} value={newUser.coachId} onChange={id => setField('coachId', id)} />}
+
+            {/* Password with icons */}
+            <div className='relative'>
+              <Input label='Password' type={newUser.showPassword ? 'text' : 'password'} name='password' value={newUser.password} onChange={val => setField('password', val)} placeholder='••••••••' clearable={false} required />
+              <div className='absolute right-2 bottom-2 flex items-center gap-1'>
+                <Button
+                  color='neutral'
+                  className='!px-2 !py-1 !text-xs rounded-md'
+                  onClick={e => {
+                    e.preventDefault();
+                    setField('showPassword', !newUser.showPassword);
+                  }}
+                  name=''
+                  icon={newUser.showPassword ? <EyeOff className='w-4 h-4' /> : <EyeIcon className='w-4 h-4' />}
+                />
+                <Button
+                  color='neutral'
+                  className='!px-2 !py-1 !text-xs rounded-md'
+                  onClick={e => {
+                    e.preventDefault();
+                    generatePassword();
+                  }}
+                  name=''
+                  icon={<Sparkles className='w-4 h-4' />}
+                />
+                <Button
+                  color='neutral'
+                  className='!px-2 !py-1 !text-xs rounded-md'
+                  onClick={e => {
+                    e.preventDefault();
+                    navigator.clipboard.writeText(newUser.password || '');
+                    Notification('Password copied', 'info');
+                  }}
+                  name=''
+                  icon={<KeyRound className='w-4 h-4' />}
+                />
+              </div>
             </div>
           </div>
+
           <div className='flex items-center justify-end gap-2 pt-2'>
-            <button type='button' onClick={() => setAddOpen(false)} className='px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50'>
-              Cancel
-            </button>
-            <button type='submit' className='px-3 py-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white'>
-              Save
-            </button>
+            <Button color='neutral' name='Cancel' onClick={() => setAddOpen(false)} />
+            <Button color='primary' name='Save' />
           </div>
-          <p className='text-xs text-slate-500 pt-2'>
-            Note: If your <code>RegisterDto</code> doesn’t allow <code>role</code>/<code>status</code>, backend will ignore them—no problem.
-          </p>
         </form>
+      </Modal>
+
+      {/* Assign Coach Modal */}
+      <Modal open={assignOpen} onClose={() => setAssignOpen(false)} title={`Assign Coach${assignTargetUser ? ` • ${assignTargetUser.name}` : ''}`}>
+        <div className='space-y-4'>
+          <Select label='Coach' placeholder='Select a coach' options={coaches} value={selectedCoachId} onChange={id => setSelectedCoachId(id)} />
+          <div className='flex items-center justify-end gap-2'>
+            <Button color='neutral' name='Cancel' onClick={() => setAssignOpen(false)} />
+            <Button color='primary' name={assignSaving ? 'Saving…' : 'Assign Coach'} onClick={assignCoach} disabled={!selectedCoachId || assignSaving} />
+          </div>
+          <p className='text-xs text-slate-500'>
+            Coaches are users with role <b>Coach</b>.
+          </p>
+        </div>
       </Modal>
     </div>
   );

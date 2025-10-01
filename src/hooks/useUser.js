@@ -1,5 +1,5 @@
 // Global function to get user info from localStorage
-export const getUserInfo = () => {
+export const useUser = () => {
   if (typeof window === 'undefined') return null;
 
   try {

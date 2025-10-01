@@ -1,99 +1,225 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, ShieldCheck, Dumbbell, ClipboardList, CalendarRange, Apple, NotebookPen, Send, LineChart, CheckCircle2, MessageSquare, Bell, Settings, FileClock, UserCog, ServerCog, X, CreditCard, QrCode, Wrench, Salad, Calculator, User, ChefHat, ShoppingCart } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { LayoutDashboard, Users, User as UserIcon, Shield, ShieldCheck, Dumbbell, ClipboardList, CalendarRange, Apple, NotebookPen, MessageSquare, CreditCard, ChefHat, ShoppingCart, Calculator, LineChart, Salad, Settings as SettingsIcon, ServerCog, ChevronDown, X } from 'lucide-react';
 import { usePathname } from '@/i18n/navigation';
+import { useUser } from '@/hooks/useUser';
 
-const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
+const spring = { type: 'spring', stiffness: 380, damping: 28, mass: 0.7 };
 
-const nav = [
-  // Client-related tabs
-  { role: 'coach', name: 'Dashboard', href: '/dashboard/my', icon: LayoutDashboard },
-  { role: 'coach', name: 'My Workouts', href: '/dashboard/my/workouts', icon: Dumbbell },
-  { role: 'coach', name: 'My Nutrition', href: '/dashboard/my/nutrition', icon: Salad },
-  { role: 'coach', name: 'My Calendar', href: '/dashboard/my/calendar', icon: CalendarRange },
-  { role: 'coach', name: 'My Progress', href: '/dashboard/my/progress', icon: LineChart },
-  { role: 'coach', name: 'Profile', href: '/dashboard/my/profile', icon: User },
-  { role: 'coach', name: 'library-food-list', href: '/dashboard/nutrition/library-food-list', icon: ChefHat },
-  { role: 'coach', name: 'grocery-list', href: '/dashboard/nutrition/grocery-list', icon: ShoppingCart },
-  { role: 'coach', name: 'Calorie Calculator', href: '/dashboard/nutrition/calculator', icon: Calculator },
+function cn(...a) {
+  return a.filter(Boolean).join(' ');
+}
 
-  // Coach-related tabs
-  { role: 'coach', name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { role: 'coach', name: 'Users', href: '/dashboard/users', icon: Users },
-  { role: 'coach', name: 'Exercises', href: '/dashboard/workouts', icon: Dumbbell },
-  { role: 'coach', name: 'Workout Plans', href: '/dashboard/workouts/plans', icon: ClipboardList },
-  { role: 'coach', name: 'Programs', href: '/dashboard/programs', icon: CalendarRange },
-  { role: 'coach', name: 'System Settings', href: '/dashboard/settings', icon: ServerCog },
-  { role: 'coach', name: 'Food Database', href: '/dashboard/nutrition', icon: Apple },
-  { role: 'coach', name: 'Meal Plans', href: '/dashboard/nutrition/meal-plans', icon: NotebookPen },
-  { role: 'coach', name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
-  { role: 'coach', name: 'Billing', href: '/dashboard/billing', icon: CreditCard },
+/** ----------------------------------------------------------------
+ * NAV CONFIG (with nesting + improved names/icons)
+ * role: 'coach' | 'admin'
+ * children: nested items
+ ------------------------------------------------------------------*/
+const NAV = [
+  // -------------------- COACH --------------------
+  {
+    role: 'coach',
+    section: 'My Space',
+    items: [
+      { name: 'Dashboard', href: '/dashboard/my', icon: LayoutDashboard },
+      {
+        name: 'Training',
+        icon: Dumbbell,
+        children: [
+          { name: 'My Workouts', href: '/dashboard/my/workouts', icon: ClipboardList },
+          { name: 'Progress', href: '/dashboard/my/progress', icon: LineChart },
+          { name: 'Calendar', href: '/dashboard/my/calendar', icon: CalendarRange },
+        ],
+      },
+      {
+        name: 'Nutrition',
+        icon: Salad,
+        children: [
+          { name: 'My Nutrition', href: '/dashboard/my/nutrition', icon: Apple },
+          { name: 'Food Library', href: '/dashboard/nutrition/library-food-list', icon: ChefHat },
+          { name: 'Grocery List', href: '/dashboard/nutrition/grocery-list', icon: ShoppingCart },
+          { name: 'Calorie Calculator', href: '/dashboard/nutrition/calculator', icon: Calculator },
+        ],
+      },
+      { name: 'Profile', href: '/dashboard/my/profile', icon: UserIcon },
+    ],
+  },
+
+  // -------------------- ADMIN --------------------
+  {
+    role: 'admin',
+    section: 'Overview',
+    items: [
+      { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+      {
+        name: 'Users',
+        icon: Users,
+        children: [
+          { name: 'All Users', href: '/dashboard/users', icon: Users },
+          { name: 'Coaches', href: '/dashboard/users?role=coach', icon: ShieldCheck },
+          { name: 'Clients', href: '/dashboard/users?role=client', icon: UserIcon },
+          { name: 'My Workouts', href: '/dashboard/my/workouts', icon: Shield },
+        ],
+      },
+      {
+        name: 'Workouts',
+        icon: Dumbbell,
+        children: [
+          { name: 'All Exercises', href: '/dashboard/workouts', icon: ClipboardList },
+          { name: 'Workout Programs', href: '/dashboard/workouts/plans', icon: NotebookPen },
+        ],
+      },
+    ],
+  },
+  {
+    role: 'admin',
+    section: 'Nutrition',
+    items: [
+      { name: 'Food Database', href: '/dashboard/nutrition', icon: Apple },
+      { name: 'Meal Plans', href: '/dashboard/nutrition/meal-plans', icon: NotebookPen },
+    ],
+  },
+  {
+    role: 'admin',
+    section: 'Operations',
+    items: [
+      { name: 'Messages', href: '/dashboard/chat', icon: MessageSquare },
+      { name: 'Billing', href: '/dashboard/billing', icon: CreditCard },
+      { name: 'System Settings', href: '/dashboard/settings', icon: ServerCog },
+    ],
+  },
 ];
 
-function NavItem({ item, isActive, isPreviewed, onMouseEnter, onMouseLeave, onClick }) {
-  const Icon = item.icon;
+/** ----------------------------------------------------------------
+ * Helpers
+ ------------------------------------------------------------------*/
+function isPathActive(pathname, href) {
+  if (!href) return false;
+  return pathname === href || pathname?.startsWith(href + '/') || pathname?.endsWith(href + '/');
+}
 
-  return (
-    <Link href={item.href} className='block' onClick={onClick} aria-current={isActive ? 'page' : undefined}>
-      <div className='relative'>
-        {isPreviewed && <motion.span layoutId='activePill' className='absolute inset-0 before:!rounded-md !rounded-md bg-second !ashadow-none' transition={spring} />}
+function anyChildActive(pathname, children = []) {
+  return children.some(c => isPathActive(pathname, c.href));
+}
 
-        <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} transition={spring} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} className={[' px-2 relative z-10 flex items-center gap-3 transition-all !shadow-none  py-2', isPreviewed ? 'border-transparent text-white' : 'text-slate-700'].join(' ')}>
-          <div className={['flex items-center justify-center w-8 h-8 rounded-lg', isPreviewed ? 'bg-white/20' : 'bg-slate-100'].join(' ')}>
-            <Icon className={isPreviewed ? 'size-5 text-white' : 'size-5 text-indigo-600'} />
+/** ----------------------------------------------------------------
+ * NavItem (handles both leaf links and collapsible parents)
+ ------------------------------------------------------------------*/
+function NavItem({ item, pathname, depth = 0, onNavigate }) {
+  const Icon = item.icon || LayoutDashboard;
+  const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+
+  const initiallyOpen = hasChildren && (anyChildActive(pathname, item.children) || isPathActive(pathname, item.href));
+  const [open, setOpen] = useState(initiallyOpen);
+
+  useEffect(() => {
+    if (hasChildren) {
+      setOpen(anyChildActive(pathname, item.children) || isPathActive(pathname, item.href));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+ 
+  if (!hasChildren) {
+    const active =  pathname == item.href
+    return (
+      <Link href={item.href} onClick={onNavigate} className='block group'>
+        <div className={cn('relative flex items-center gap-3 rounded-lg px-3 py-2 transition-colors', active ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50 border border-transparent')} style={{ paddingLeft: depth ? 8 + depth * 14 : 12 }}>
+          <div className={cn('flex items-center justify-center w-8 h-8 rounded-md', active ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-indigo-600 group-hover:bg-indigo-50')}>
+            <Icon className='size-5' />
           </div>
+          <div className='flex-1 font-medium truncate'>{item.name}</div>
+        </div>
+      </Link>
+    );
+  }
 
-          <div className={['flex-1 font-medium', isPreviewed ? 'text-white drop-shadow-sm' : ''].join(' ')}>{item.name}</div>
-        </motion.div>
-      </div>
-    </Link>
+  // Parent (collapsible)
+  return (
+    <div className='w-full'>
+      <button type='button' onClick={() => setOpen(v => !v)} className={cn('w-full flex items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors', open ? 'bg-slate-50 text-slate-800' : 'hover:bg-slate-50 text-slate-700')} style={{ paddingLeft: depth ? 8 + depth * 14 : 12 }} aria-expanded={open}>
+        <div className='flex items-center justify-center w-8 h-8 rounded-md bg-slate-100 text-indigo-600'>
+          <Icon className='size-5' />
+        </div>
+        <div className='flex-1 font-semibold truncate'>{item.name}</div>
+        <motion.span initial={false} animate={{ rotate: open ? 180 : 0 }} transition={spring} className='text-slate-400'>
+          <ChevronDown className='size-4' />
+        </motion.span>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div key='submenu' initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={spring} className='overflow-hidden'>
+            <div className='py-1 space-y-1'>
+              {item.children.map(child => (
+                <NavItem key={child.href || child.name} item={child} pathname={pathname} depth={depth + 1} onNavigate={onNavigate} />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
-export default function Sidebar({ open, setOpen, role = 'coach' }) {
+/** ----------------------------------------------------------------
+ * Section with title
+ ------------------------------------------------------------------*/
+function NavSection({ section, items, pathname, onNavigate }) {
+  return (
+    <div className='mb-3'>
+      {section ? <div className='px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500/80'>{section}</div> : null}
+      <div className='px-2 space-y-1'>
+        {items.map(item => (
+          <NavItem key={item.href || item.name} item={item} pathname={pathname} onNavigate={onNavigate} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** ----------------------------------------------------------------
+ * SIDEBAR
+ ------------------------------------------------------------------*/
+export default function Sidebar({ open, setOpen }) {
   const pathname = usePathname();
+  const user = useUser();
+  const role = user?.role || 'coach'; // fallback to coach
 
-  const activeHref = useMemo(() => {
-    const isActive = href => pathname === href || pathname?.endsWith(href + '/');
-    const found = nav.find(n => isActive(n.href));
-    return found?.href ?? '/dashboard';
-  }, [pathname]);
+  // Filter by role and group by section
+  const sections = useMemo(() => {
+    return NAV.filter(s => s.role === role);
+  }, [role]);
 
-  const [hoveredHref, setHoveredHref] = useState(null);
-  const pillTarget = hoveredHref || activeHref;
-
-  const isActive = href => href === activeHref || pathname?.startsWith(href + '/');
-
-  // Filter nav items by the user's role
-  const filteredNav = nav.filter(item => item.role === role);
-
+  const onNavigate = () => {
+    // close mobile drawer on navigation
+    if (setOpen) setOpen(false);
+  };
+ 
   return (
     <>
-      <aside className=' hidden lg:flex lg:flex-col w-[250px] shrink-0 border-r border-slate-200 bg-white'>
+      {/* DESKTOP */}
+      <aside className='hidden lg:flex lg:flex-col w-[260px] shrink-0 border-r border-slate-200 bg-white'>
         <div className='flex h-screen flex-col'>
           {/* Brand */}
-          <div className='sticky top-0 z-10 h-[63px] flex items-center gap-2 px-5 border-b border-slate-200 bg-white'>
-            <motion.div initial={{ rotate: -8, scale: 0.9 }} animate={{ rotate: 0, scale: 1 }} transition={spring} className='  bg-main h-9 w-9 grid place-content-center rounded-xl text-slate-500 shadow-md'>
+          <div className='sticky top-0 z-10 h-[64px] flex items-center gap-3 px-5 border-b border-slate-200 bg-white'>
+            <motion.div initial={{ rotate: -6, scale: 0.9 }} animate={{ rotate: 0, scale: 1 }} transition={spring} className='bg-indigo-600 h-9 w-9 grid place-content-center rounded-xl text-white shadow-md'>
               <Dumbbell className='size-5' />
             </motion.div>
             <div>
-              <div className='text-sm text-slate-500'>Welcome</div>
-              <div className='font-semibold'>Amazing UI</div>
+              <div className='text-xs text-slate-500'>Welcome back</div>
+              <div className='font-semibold'>Coach Portal</div>
             </div>
           </div>
 
           {/* Nav */}
           <LayoutGroup id='sidebar-nav'>
-            <nav dir='rtl' className='flex-1  overflow-y-auto'>
-              <div dir='ltr' className='px-2 py-4 '>
-                {filteredNav.map(item => {
-                  const isPreviewed = pillTarget === item.href;
-                  return <NavItem key={item.href} item={item} isActive={isActive(item.href)} isPreviewed={isPreviewed} onMouseEnter={() => setHoveredHref(item.href)} onMouseLeave={() => setHoveredHref(null)} />;
-                })}
-              </div>
+            <nav className='flex-1 overflow-y-auto py-3'>
+              {sections.map(section => (
+                <NavSection key={section.section} section={section.section} items={section.items} pathname={pathname} onNavigate={onNavigate} />
+              ))}
             </nav>
           </LayoutGroup>
         </div>
@@ -104,12 +230,14 @@ export default function Sidebar({ open, setOpen, role = 'coach' }) {
         {open && (
           <>
             <motion.div key='overlay' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpen(false)} className='fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px] lg:hidden' />
-            <motion.aside key='drawer' initial={{ x: -320 }} animate={{ x: 0 }} exit={{ x: -320 }} transition={spring} className='fixed z-50 top-0 left-0 h-dvh w-[280px] bg-white border-r border-slate-200 lg:hidden' aria-label='Mobile Sidebar'>
+            <motion.aside key='drawer' initial={{ x: -320 }} animate={{ x: 0 }} exit={{ x: -320 }} transition={spring} className='fixed z-50 top-0 left-0 h-dvh w-[300px] bg-white border-r border-slate-200 lg:hidden' aria-label='Mobile Sidebar'>
               {/* header */}
               <div className='h-[72px] px-4 border-b border-slate-200 flex items-center justify-between'>
                 <div className='flex items-center gap-2'>
-                  <div className='size-8 rounded-xl bg-emerald-500 shadow ring-4 ring-emerald-100' />
-                  <div className='font-semibold'>Amazing UI</div>
+                  <div className='size-8 rounded-xl bg-indigo-600 shadow ring-4 ring-indigo-100 grid place-content-center text-white'>
+                    <LayoutDashboard className='size-4' />
+                  </div>
+                  <div className='font-semibold'>Coach Portal</div>
                 </div>
                 <button onClick={() => setOpen(false)} className='inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white active:scale-95' aria-label='Close menu'>
                   <X className='w-4 h-4' />
@@ -118,11 +246,10 @@ export default function Sidebar({ open, setOpen, role = 'coach' }) {
 
               {/* nav */}
               <LayoutGroup id='sidebar-nav-mobile'>
-                <nav className='w-full  h-[calc(100vh-100px)]  overflow-y-auto px-3 pt-4 space-y-2'>
-                  {filteredNav.map(item => {
-                    const isPreviewed = pillTarget === item.href;
-                    return <NavItem key={item.href} item={item} isActive={isActive(item.href)} isPreviewed={isPreviewed} onMouseEnter={() => setHoveredHref(item.href)} onMouseLeave={() => setHoveredHref(null)} onClick={() => setOpen(false)} />;
-                  })}
+                <nav className='w-full h-[calc(100vh-100px)] overflow-y-auto px-2 pt-4 pb-6 space-y-3'>
+                  {sections.map(section => (
+                    <NavSection key={section.section} section={section.section} items={section.items} pathname={pathname} onNavigate={onNavigate} />
+                  ))}
                 </nav>
               </LayoutGroup>
             </motion.aside>
