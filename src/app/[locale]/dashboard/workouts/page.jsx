@@ -1,12 +1,3 @@
-/*
-  - Replaced alert/confirm with modal dialogs (ConfirmDialog + InfoDialog via Modal)
-  - Preview modal now shows IMAGE first with a toggle to VIDEO
-  - Edit form now fully controlled; inputs populate reliably when opening edit
-  - Cards show image instead of autoplay video; video playable from preview modal
-  - Fixed native input onChange bug in search (was passing value, needed e.target.value)
-  - Kept multipart handling; added small UX touches (skeletons, errors)
-*/
-
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -52,15 +43,16 @@ const resURL = url => {
 };
 
 /* --------------------------- Small Dialog Helpers -------------------------- */
-function ConfirmDialog({ open, onClose, title = 'Are you sure?', message = '', onConfirm, confirmText = 'Confirm' }) {
+function ConfirmDialog({ open, onClose, loading, title = 'Are you sure?', message = '', onConfirm, confirmText = 'Confirm' }) {
   return (
-    <Modal open={open} onClose={onClose} title={title}>
+    <Modal open={open} onClose={onClose} title={title} maxW='max-w-md'>
       <div className='space-y-4'>
         {message ? <p className='text-sm text-slate-600'>{message}</p> : null}
         <div className='flex items-center justify-end gap-2'>
-          <Button name='Cancel' color='neutral' className='!w-fit' onClick={onClose} />
           <Button
             name={confirmText}
+            loading={loading}
+            color='danger'
             className='!w-fit'
             onClick={() => {
               onConfirm?.();
@@ -93,7 +85,7 @@ export default function ExercisesPage() {
   const debounced = useDebounced(searchText, 350);
 
   // ui
-  const [view, setView] = useState('grid'); // grid | list
+  const [view, setView] = useState('list'); // grid | list
   const [preview, setPreview] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -186,8 +178,10 @@ export default function ExercisesPage() {
     setDeleteOpen(true);
   };
 
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const handleDelete = async () => {
     if (!deleteId) return;
+    setDeleteLoading(true);
     try {
       await api.delete(`/plan-exercises/${deleteId}`);
       setItems(arr => arr.filter(x => x.id !== deleteId));
@@ -197,6 +191,7 @@ export default function ExercisesPage() {
       Notification(e?.response?.data?.message || 'Delete failed', 'error');
     } finally {
       setDeleteId(null);
+      setDeleteLoading(false);
     }
   };
 
@@ -366,6 +361,7 @@ export default function ExercisesPage() {
 
       {/* Delete confirmation */}
       <ConfirmDialog
+        loading={deleteLoading}
         open={deleteOpen}
         onClose={() => {
           setDeleteOpen(false);
@@ -549,14 +545,7 @@ function ExercisePreview({ exercise }) {
         </div>
       )}
 
-      <div className=' bg-white w-full max-h-[500px] rounded-xl overflow-hidden  grid place-content-center'>{
-			tab === 'image' && hasImg 
-			? <Img src={exercise.img} alt={exercise.name} className='aspect-square w-full h-full object-contain bg-white' /> 
-			: tab === 'video' && hasVideo 
-				? <video src={resURL(exercise.video)} controls className=' aspect-square w-full h-full object-contain bg-white' /> 
-				: <div className='text-slate-400 text-sm'>No media</div>
-				}
-				</div>
+      <div className=' bg-white w-full max-h-[500px] rounded-xl overflow-hidden  grid place-content-center'>{tab === 'image' && hasImg ? <Img src={exercise.img} alt={exercise.name} className='aspect-square w-full h-full object-contain bg-white' /> : tab === 'video' && hasVideo ? <video src={resURL(exercise.video)} controls className=' aspect-square w-full h-full object-contain bg-white' /> : <div className='text-slate-400 text-sm'>No media</div>}</div>
 
       <div className='flex items-start justify-between gap-3'>
         <div>

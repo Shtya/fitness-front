@@ -587,7 +587,7 @@ export default function UsersList() {
 
       {/* Create Account (Admin) */}
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title='Create Account'>
-        <form onSubmit={submitCreate} className='space-y-3'>
+        <form  className='space-y-3'>
           <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
             <Input label='Full Name' name='name' value={newUser.name} onChange={val => setField('name', val)} placeholder='John Doe' required />
 
@@ -642,9 +642,8 @@ export default function UsersList() {
             </div>
           </div>
 
-          <div className='flex items-center justify-end gap-2 pt-2'>
-            <Button color='neutral' name='Cancel' onClick={() => setAddOpen(false)} />
-            <Button color='primary' name='Save' />
+          <div className='grid grid-cols-2 gap-5 justify-center  pt-2'>
+              <Button onClick={submitCreate} color='primary' name='Save' />
           </div>
         </form>
       </Modal>

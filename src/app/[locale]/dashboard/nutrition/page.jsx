@@ -1,356 +1,735 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import DataTable from "@/components/dashboard/ui/DataTable";
-import useDebounced from "@/hooks/useDebounced";
-import { PageHeader, StatCard, ToolbarButton, SearchInput, Select, Modal, EmptyState, Badge, spring } from "@/components/dashboard/ui/UI";
-import {
-  Apple, Plus, Upload, Download, RefreshCcw, Utensils, Eye, Edit, Trash2,
-} from "lucide-react";
-import { motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Apple, Plus, LayoutGrid, Rows, Eye, Pencil, Trash2, Layers, Settings, RefreshCcw, Clock, ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, X, Upload, Scale, Beef, Carrot, Drumstick } from 'lucide-react';
 
-/* ---------------- Mock API ---------------- */
-const MOCK = [
-  { id: 1,  name: "Chicken Breast", brand: "—", category: "Protein", serving: 100, calories: 165, protein: 31, carbs: 0, fat: 3.6, fiber: 0, sugar: 0, sodium: 74 },
-  { id: 2,  name: "Brown Rice (cooked)", brand: "—", category: "Carbs", serving: 100, calories: 111, protein: 2.6, carbs: 23, fat: 0.9, fiber: 1.8, sugar: 0.4, sodium: 5 },
-  { id: 3,  name: "Olive Oil", brand: "—", category: "Fats", serving: 15,  calories: 119, protein: 0, carbs: 0, fat: 13.5, fiber: 0, sugar: 0, sodium: 0 },
-  { id: 4,  name: "Apple", brand: "—", category: "Fruits", serving: 182, calories: 95,  protein: 0.5, carbs: 25, fat: 0.3, fiber: 4.4, sugar: 19, sodium: 2 },
-  { id: 5,  name: "Greek Yogurt (nonfat)", brand: "—", category: "Dairy", serving: 170, calories: 100, protein: 17, carbs: 6, fat: 0, fiber: 0, sugar: 6, sodium: 61 },
-  { id: 6,  name: "Oats (dry)", brand: "—", category: "Carbs", serving: 40,  calories: 154, protein: 5.3, carbs: 27, fat: 2.6, fiber: 4, sugar: 0.5, sodium: 2 },
-  { id: 7,  name: "Banana", brand: "—", category: "Fruits", serving: 118, calories: 105, protein: 1.3, carbs: 27, fat: 0.4, fiber: 3.1, sugar: 14, sodium: 1 },
-  { id: 8,  name: "Egg (whole)", brand: "—", category: "Protein", serving: 50,  calories: 72,  protein: 6.3, carbs: 0.4, fat: 4.8, fiber: 0, sugar: 0.2, sodium: 71 },
-  { id: 9,  name: "Almonds", brand: "—", category: "Fats", serving: 28,  calories: 164, protein: 6, carbs: 6, fat: 14, fiber: 3.5, sugar: 1.2, sodium: 0 },
-  { id: 10, name: "Broccoli", brand: "—", category: "Vegetables", serving: 91, calories: 31,  protein: 2.5, carbs: 6, fat: 0.3, fiber: 2.4, sugar: 1.5, sodium: 30 },
-];
+import api, { baseImg } from '@/utils/axios';
+import { Modal, StatCard, PageHeader } from '@/components/dashboard/ui/UI';
+import Img from '@/components/atoms/Img';
+import Input from '@/components/atoms/Input';
+import Button from '@/components/atoms/Button';
+import { Notification } from '@/config/Notification';
+import Select from '@/components/atoms/Select';
 
-const CATS = ["All","Protein","Carbs","Fats","Fruits","Vegetables","Dairy","Snacks","Drinks"];
+ 
+const useDebounced = (value, delay = 350) => {
+  const [deb, setDeb] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDeb(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return deb;
+};
 
-const fetchFoods = () => new Promise(res => setTimeout(()=>res(MOCK), 900));
+function ConfirmDialog({ open, onClose, loading, title = 'Are you sure?', message = '', onConfirm, confirmText = 'Confirm' }) {
+  return (
+    <Modal open={open} onClose={onClose} title={title} maxW='max-w-md'>
+      <div className='space-y-4'>
+        {message ? <p className='text-sm text-slate-600'>{message}</p> : null}
+        <div className='flex items-center justify-end gap-2'>
+          <Button
+            name={confirmText}
+            loading={loading}
+            color='danger'
+            className='!w-fit'
+            onClick={() => {
+              onConfirm?.();
+              onClose?.();
+            }}
+          />
+        </div>
+      </div>
+    </Modal>
+  );
+}
 
-/* ---------------- Page ---------------- */
-export default function FoodDatabasePage() {
-  const [foods, setFoods] = useState([]);
+export default function FoodsPage() {
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
 
-  // search & filters
-  const [search, setSearch] = useState("");
-  const q = useDebounced(search, 300);
-  const [cat, setCat] = useState("All");
-  const [brand, setBrand] = useState("");
-  const [kMin, setKMin] = useState(""); const [kMax, setKMax] = useState("");
-  const [pMin, setPMin] = useState(""); const [pMax, setPMax] = useState("");
-  const [cMin, setCMin] = useState(""); const [cMax, setCMax] = useState("");
-  const [fMin, setFMin] = useState(""); const [fMax, setFMax] = useState("");
+  const [stats, setStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(true);
 
-  // selection
-  const [selected, setSelected] = useState([]);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(12);
+  const [total, setTotal] = useState(0);
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState('DESC');
+  const [searchText, setSearchText] = useState('');
+  const debounced = useDebounced(searchText, 350);
 
-  // modals
+  const [view, setView] = useState('list');
   const [preview, setPreview] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const reqId = useRef(0);
+
+  const fetchList = async () => {
+    setErr(null);
+    setLoading(true);
+    const myId = ++reqId.current;
+    try {
+      const params = { page, limit: perPage, sortBy, sortOrder };
+      if (debounced) params.search = debounced;
+
+      const res = await api.get('/foods', { params });
+      const data = res.data || {};
+
+      let records = [];
+      let totalRecords = 0;
+      let serverPerPage = perPage;
+
+      if (Array.isArray(data.records)) {
+        records = data.records;
+        totalRecords = Number(data.total_records || data.records.length || 0);
+        serverPerPage = Number(data.per_page || perPage);
+      } else if (Array.isArray(data)) {
+        records = data;
+        totalRecords = data.length;
+      }
+
+      if (myId !== reqId.current) return;
+      setTotal(totalRecords);
+      setPerPage(serverPerPage);
+      setItems(records);
+    } catch (e) {
+      if (myId !== reqId.current) return;
+      setErr(e?.response?.data?.message || 'Failed to load foods');
+    } finally {
+      if (myId === reqId.current) setLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    setLoadingStats(true);
+    try {
+      const params = {};
+      if (debounced) params.search = debounced;
+      const res = await api.get('/foods/stats', { params });
+      setStats(res.data);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingStats(false);
+    }
+  };
 
   useEffect(() => {
-    setLoading(true);
-    fetchFoods().then((d) => { setFoods(d); setLoading(false); });
-  }, []);
+    setPage(1);
+  }, [debounced, sortBy, sortOrder, perPage]);
 
-  /* filters */
-  const filtered = useMemo(() => {
-    let data = foods.slice();
+  useEffect(() => {
+    fetchList();
+    fetchStats();
+  }, [page, debounced, sortBy, sortOrder, perPage]);
 
-    if (q) {
-      const s = q.toLowerCase();
-      data = data.filter(x =>
-        [x.name, x.brand, x.category].join(" ").toLowerCase().includes(s)
-      );
+  const toggleSort = field => {
+    if (sortBy === field) {
+      setSortOrder(o => (o === 'ASC' ? 'DESC' : 'ASC'));
+    } else {
+      setSortBy(field);
+      setSortOrder('ASC');
     }
-    if (brand) data = data.filter(x => (x.brand || '').toLowerCase().includes(brand.toLowerCase()));
-    if (cat !== "All") data = data.filter(x => x.category === cat);
-
-    const within = (v, min, max) => (min ? v >= +min : true) && (max ? v <= +max : true);
-    data = data.filter(x =>
-      within(x.calories, kMin, kMax) &&
-      within(x.protein,  pMin, pMax) &&
-      within(x.carbs,    cMin, cMax) &&
-      within(x.fat,      fMin, fMax)
-    );
-    return data;
-  }, [foods, q, brand, cat, kMin, kMax, pMin, pMax, cMin, cMax, fMin, fMax]);
-
-  /* KPIs */
-  const kpiTotal = foods.length;
-  const kpiAvgKcal = Math.round(foods.reduce((a,f)=>a+f.calories,0)/Math.max(1,foods.length));
-  const kpiProteinRich = foods.filter(f => f.protein >= 15).length;
-  const kpiFiberRich = foods.filter(f => f.fiber >= 3).length;
-
-  /* table columns */
-  const columns = [
-    {
-      header: "Food",
-      accessor: "name",
-      sortable: true,
-      cell: (row) => (
-        <div>
-          <div className="font-medium">{row.name}</div>
-          <div className="text-xs text-slate-500">{row.brand && row.brand !== "—" ? row.brand : ""}</div>
-        </div>
-      )
-    },
-    { header: "Category", accessor: "category", sortable: true },
-    { header: "Serving (g/ml)", accessor: "serving", sortable: true },
-    { header: "Kcal", accessor: "calories", sortable: true },
-    { header: "P (g)", accessor: "protein", sortable: true },
-    { header: "C (g)", accessor: "carbs", sortable: true },
-    { header: "F (g)", accessor: "fat", sortable: true },
-    {
-      header: "More",
-      accessor: "_more",
-      disableSort: true,
-      cell: (row) => (
-        <div className="text-xs text-slate-600">
-          Fiber: {row.fiber ?? 0}g · Sugar: {row.sugar ?? 0}g · Na: {row.sodium ?? 0}mg
-        </div>
-      )
-    },
-    {
-      header: "Actions",
-      accessor: "_actions",
-      disableSort: true,
-      cell: (row) => (
-        <div className="flex items-center gap-2">
-          <button onClick={() => setPreview(row)} className="px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 inline-flex items-center gap-1">
-            <Eye className="w-4 h-4" /> View
-          </button>
-          <button onClick={() => setEditRow(row)} className="px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 inline-flex items-center gap-1">
-            <Edit className="w-4 h-4" /> Edit
-          </button>
-          <button onClick={() => setFoods(arr => arr.filter(x => x.id !== row.id))} className="px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-red-50 text-red-600 inline-flex items-center gap-1">
-            <Trash2 className="w-4 h-4" /> Delete
-          </button>
-        </div>
-      )
-    },
-  ];
-
-  /* selection handlers (DataTable controlled API) */
-  const selectedIds = selected;
-  const onToggleRow = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  const onToggleAll = (ids) => setSelected(prev => prev.length === ids.length ? [] : ids);
-
-  /* actions */
-  const refresh = () => { setLoading(true); setSelected([]); fetchFoods().then(d => { setFoods(d); setLoading(false); }); };
-  const exportCSV = () => {
-    const rows = [["id","name","brand","category","serving","calories","protein","carbs","fat","fiber","sugar","sodium"]];
-    filtered.forEach(f => rows.push([f.id,f.name,f.brand,f.category,f.serving,f.calories,f.protein,f.carbs,f.fat,f.fiber,f.sugar,f.sodium]));
-    const csv = rows.map(r => r.map(x => `"${String(x ?? '').replace(/"/g,'""')}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob); const a = document.createElement("a");
-    a.href = url; a.download = "foods.csv"; a.click(); URL.revokeObjectURL(url);
   };
-  const importCSV = () => alert("Import CSV not wired in this mock. Hook to your uploader/parser.");
 
-  const addFood = (payload) => {
-    const id = Math.max(0, ...foods.map(f=>f.id)) + 1;
-    setFoods(arr => [{ id, ...payload }, ...arr]);
+  const askDelete = id => {
+    setDeleteId(id);
+    setDeleteOpen(true);
   };
-  const saveEdit = (payload) => setFoods(arr => arr.map(f => f.id === editRow.id ? { ...f, ...payload } : f));
+
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setDeleteLoading(true);
+    try {
+      await api.delete(`/foods/${deleteId}`);
+      setItems(arr => arr.filter(x => x.id !== deleteId));
+      setTotal(t => Math.max(0, t - 1));
+      Notification('Food deleted', 'success');
+    } catch (e) {
+      Notification(e?.response?.data?.message || 'Delete failed', 'error');
+    } finally {
+      setDeleteId(null);
+      setDeleteLoading(false);
+    }
+  };
+
+  const createOrUpdate = async ({ id, payload }) => {
+    const body = {
+      name: payload.name,
+      calories: Number(payload.calories || 0),
+      protein: Number(payload.protein || 0),
+      carbs: Number(payload.carbs || 0),
+      fat: Number(payload.fat || 0),
+      unit: payload.unit || 'g',
+    };
+
+    const url = id ? `/foods/${id}` : '/foods';
+    const method = id ? 'put' : 'post';
+    const res = await api[method](url, body);
+    return res.data;
+  };
+
+  const totalPages = Math.max(1, Math.ceil(total / Math.max(1, perPage)));
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <PageHeader
-        icon={Utensils}
-        title="Food Database"
-        subtitle="Manage foods, macros and servings. Reusable across plans and meal builders."
-        actions={
-          <div className="flex items-center gap-2">
-            <ToolbarButton icon={Upload} onClick={importCSV} variant="secondary">Import</ToolbarButton>
-            <ToolbarButton icon={Download} onClick={exportCSV} variant="secondary">Export</ToolbarButton>
-            <ToolbarButton icon={Plus} onClick={() => setAddOpen(true)}>Add Food</ToolbarButton>
-          </div>
-        }
-      />
-
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard icon={Apple} title="Total Foods" value={kpiTotal} />
-        <StatCard icon={RefreshCcw} title="Avg kcal / item" value={kpiAvgKcal} />
-        <StatCard icon={Utensils} title="Protein-rich (≥15g)" value={kpiProteinRich} />
-        <StatCard icon={Utensils} title="Fiber-rich (≥3g)" value={kpiFiberRich} />
-      </div>
-
-      {/* Filters */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="card-glow p-4">
-        <div className="flex flex-col lg:flex-row gap-3 items-center justify-between">
-          <SearchInput value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Search name, brand, category…" className="w-full lg:min-w-[360px]" />
-          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-            <Select label="Category" value={cat} setValue={setCat} options={CATS} />
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white">
-              <span className="text-xs text-slate-500">Brand</span>
-              <input value={brand} onChange={(e)=>setBrand(e.target.value)} className="outline-none" placeholder="e.g. Brand" />
+    <div className='space-y-6'>
+      <div className='rounded-xl md:rounded-2xl overflow-hidden border border-green-200'>
+        <div className='relative p-4 md:p-8 bg-gradient  to-emerald-500 text-white'>
+          <div className='relative z-10 flex flex-col gap-3 md:flex-row md:items-center md:gap-6 md:justify-between'>
+            <PageHeader title='Foods Database' subtitle='Manage your nutrition food library.' />
+            <div className='flex items-center gap-2'>
+              <Button name='Bulk Add' icon={<Plus className='w-4 h-4' />} onClick={() => setBulkOpen(true)} />
+              <Button name='Add Food' icon={<Plus className='w-4 h-4' />} onClick={() => setAddOpen(true)} />
             </div>
-            <Range label="Kcal" vMin={kMin} vMax={kMax} setMin={setKMin} setMax={setKMax} />
-            <Range label="P" vMin={pMin} vMax={pMax} setMin={setPMin} setMax={setPMax} />
-            <Range label="C" vMin={cMin} vMax={cMax} setMin={setCMin} setMax={setCMax} />
-            <Range label="F" vMin={fMin} vMax={fMax} setMin={setFMin} setMax={setFMax} />
-            <ToolbarButton icon={RefreshCcw} onClick={refresh} variant="secondary">Refresh</ToolbarButton>
+          </div>
+
+          <div className='grid grid-cols-4 gap-2 flex items-center justify-start gap-3 mt-6'>
+            {loadingStats ? (
+              <KpiSkeleton />
+            ) : (
+              <>
+                <StatCard className='' icon={Layers} title='Total Foods' value={stats?.totals?.total || 0} />
+                <StatCard className='' icon={Beef} title='Avg Protein' value={`${stats?.totals?.avgProtein || 0}g`} />
+                <StatCard className='' icon={Drumstick} title='Avg Calories' value={stats?.totals?.avgCalories || 0} />
+                <StatCard className='' icon={RefreshCcw} title='Added 7d' value={stats?.totals?.created7d || 0} sub={`${stats?.totals?.created30d || 0} added 30d`} />
+              </>
+            )}
           </div>
         </div>
-
-        {/* Bulk actions */}
-        {selected.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-slate-200">
-            <Badge color="blue">{selected.length} selected</Badge>
-            <button onClick={() => setFoods(arr => arr.filter(f => !selected.includes(f.id)))} className="ml-2 px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 inline-flex items-center gap-2">
-              <Trash2 className="w-4 h-4" /> Delete
-            </button>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Table */}
-      <div className="card-glow">
-        <DataTable
-          columns={columns}
-          data={filtered}
-          loading={loading}
-          itemsPerPage={10}
-          pagination
-          selectable
-          selectedIds={selectedIds}
-          onToggleRow={onToggleRow}
-          onToggleAll={onToggleAll}
-          onRowClick={(row) => setPreview(row)}
-          initialSort={{ key: 'name', dir: 'asc' }}
-        />
       </div>
 
-      {/* Preview */}
-      <Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name || "Food"}>
+      <div className='flex items-center gap-2 mt-12 flex-wrap'>
+        <div className='flex-1 flex items-center gap-2'>
+          <div className='relative w-full md:w-60'>
+            <Search className='absolute left-3 z-[10] top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
+            <input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder='Search food name...' className={`h-[40px] w-full pl-10 pr-3 rounded-xl bg-white text-black border border-slate-300 font-medium text-sm shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-green-500/40 hover:border-green-400 transition`} />
+          </div>
+
+          <Button
+            name={
+              <span className='inline-flex items-center gap-2'>
+                {view === 'grid' ? <Rows size={16} /> : <LayoutGrid size={16} />}
+                {view === 'grid' ? 'List' : 'Grid'}
+              </span>
+            }
+            color='outline'
+            className='!w-fit !h-[40px] !bg-white rounded-xl'
+            onClick={() => setView(v => (v === 'grid' ? 'list' : 'grid'))}
+          />
+        </div>
+
+        <Select
+          label=''
+          className='!max-w-[150px] !w-full'
+          placeholder='Per page'
+          options={[
+            { id: 8, label: 8 },
+            { id: 12, label: 12 },
+            { id: 20, label: 20 },
+            { id: 30, label: 30 },
+          ]}
+          value={perPage}
+          onChange={n => setPerPage(Number(n))}
+        />
+
+        <button onClick={() => toggleSort('created_at')} className={`bg-white inline-flex items-center h-[40px] gap-2 px-4 py-2 rounded-xl text-black border border-slate-300 font-medium text-sm backdrop-blur-md hover:from-green-500/90 hover:to-emerald-400/90 active:scale-[.97] transition`}>
+          <Clock size={16} />
+          <span>Newest</span>
+          {sortBy === 'created_at' ? sortOrder === 'ASC' ? <ChevronUp className='w-4 h-4 text-black transition-transform' /> : <ChevronDown className='w-4 h-4 text-black transition-transform' /> : null}
+        </button>
+      </div>
+
+      {err ? <div className='p-3 rounded-xl bg-red-50 text-red-700 border border-red-100'>{err}</div> : null}
+
+      {view === 'grid' ? <GridView loading={loading} items={items} onView={setPreview} onEdit={setEditRow} onDelete={askDelete} /> : <ListView loading={loading} items={items} onView={setPreview} onEdit={setEditRow} onDelete={askDelete} />}
+
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+
+      <Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name || 'Food Details'} maxW='max-w-md'>
         {preview && <FoodPreview food={preview} />}
       </Modal>
 
-      {/* Add */}
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add Food">
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title='Add Food'>
         <FoodForm
-          onSubmit={(payload)=>{ addFood(payload); setAddOpen(false); }}
+          onSubmit={async payload => {
+            try {
+              const saved = await createOrUpdate({ payload });
+              setItems(arr => [saved, ...arr]);
+              setTotal(t => t + 1);
+              setAddOpen(false);
+              Notification('Food created', 'success');
+            } catch (e) {
+              Notification(e?.response?.data?.message || 'Create failed', 'error');
+            }
+          }}
         />
       </Modal>
 
-      {/* Edit */}
-      <Modal open={!!editRow} onClose={() => setEditRow(null)} title={`Edit: ${editRow?.name || ""}`}>
+      <Modal open={!!editRow} onClose={() => setEditRow(null)} title={`Edit: ${editRow?.name || ''}`}>
         {editRow && (
           <FoodForm
             initial={editRow}
-            onSubmit={(payload)=>{ saveEdit(payload); setEditRow(null); }}
+            onSubmit={async payload => {
+              try {
+                const saved = await createOrUpdate({ id: editRow.id, payload });
+                setItems(arr => arr.map(e => (e.id === editRow.id ? saved : e)));
+                setEditRow(null);
+                Notification('Food updated', 'success');
+              } catch (e) {
+                Notification(e?.response?.data?.message || 'Update failed', 'error');
+              }
+            }}
           />
         )}
       </Modal>
+
+      <Modal open={bulkOpen} onClose={() => setBulkOpen(false)} title='Bulk Add Foods' maxW='max-w-3xl'>
+        <BulkAddFoods
+          onCancel={() => setBulkOpen(false)}
+          onSubmit={async itemsToSend => {
+            try {
+              const res = await api.post('/foods/bulk', { items: itemsToSend });
+              const saved = Array.isArray(res.data) ? res.data : [];
+              setItems(arr => [...saved, ...arr]);
+              setTotal(t => t + saved.length);
+              setBulkOpen(false);
+              Notification(`Added ${saved.length} food(s)`, 'success');
+            } catch (e) {
+              Notification(e.response?.data?.message?.[0] || e?.response?.data?.message || 'Bulk create failed', 'error');
+            }
+          }}
+        />
+      </Modal>
+
+      <ConfirmDialog
+        loading={deleteLoading}
+        open={deleteOpen}
+        onClose={() => {
+          setDeleteOpen(false);
+          setDeleteId(null);
+        }}
+        title='Delete food?'
+        message='This action cannot be undone.'
+        confirmText='Delete'
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }
 
-/* ---------------- Tiny controls ---------------- */
+function GridView({ loading, items, onView, onEdit, onDelete }) {
+  const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
-function Range({ label, vMin, vMax, setMin, setMax }) {
+  if (loading) {
+    return (
+      <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3'>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className='card-glow p-4'>
+            <div className='aspect-video rounded-xl shimmer mb-3' />
+            <div className='h-4 rounded shimmer w-2/3 mb-2' />
+            <div className='h-3 rounded shimmer w-1/2' />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!items.length) {
+    return (
+      <div className='card-glow p-10 text-center'>
+        <div className='mx-auto w-14 h-14 rounded-2xl bg-slate-100 grid place-content-center'>
+          <Apple className='w-7 h-7 text-slate-500' />
+        </div>
+        <h3 className='mt-4 text-lg font-semibold'>No foods found</h3>
+        <p className='text-sm text-slate-600 mt-1'>Try a different search query or add a new food.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white">
-      <span className="text-xs text-slate-500">{label}</span>
-      <input type="number" placeholder="min" value={vMin} onChange={(e)=>setMin(e.target.value)} className="w-16 outline-none" />
-      <span className="text-slate-400">—</span>
-      <input type="number" placeholder="max" value={vMax} onChange={(e)=>setMax(e.target.value)} className="w-16 outline-none" />
+    <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3'>
+      {items.map(food => (
+        <motion.div key={food.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className='card-glow overflow-hidden p-0 group'>
+          <div className='relative aspect-video bg-green-50 grid place-content-center'>
+            <Apple className='w-12 h-12 text-green-400' />
+
+            <div className='absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition'>
+              <button title='Show' onClick={() => onView(food)} className='w-9 h-9 grid place-content-center rounded-lg backdrop-blur bg-white/85 hover:bg-white shadow border border-white/60'>
+                <Eye className='w-4 h-4' />
+              </button>
+              <button title='Edit' onClick={() => onEdit(food)} className='w-9 h-9 grid place-content-center rounded-lg backdrop-blur bg-white/85 hover:bg-white shadow border border-white/60'>
+                <Pencil className='w-4 h-4' />
+              </button>
+              <button title='Delete' onClick={() => onDelete(food.id)} className='w-9 h-9 grid place-content-center rounded-lg backdrop-blur bg-white/85 hover:bg-white shadow border border-red-200 text-red-600'>
+                <Trash2 className='w-4 h-4' />
+              </button>
+            </div>
+          </div>
+
+          <div className='p-4'>
+            <div className='font-semibold'>{food.name}</div>
+            <div className='text-xs text-slate-500 mt-1'>
+              <div>Calories: {food.calories} kcal</div>
+              <div>
+                Protein: {food.protein}g · Carbs: {food.carbs}g · Fat: {food.fat}g
+              </div>
+              <div>Per 100{food.unit}</div>
+            </div>
+          </div>
+        </motion.div>
+      ))}
     </div>
   );
 }
 
-/* ---------------- Subcomponents ---------------- */
+function ListView({ loading, items, onView, onEdit, onDelete }) {
+  if (loading) {
+    return (
+      <div className='card-glow divide-y divide-transparent'>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className='p-4 flex items-center justify-between gap-3'>
+            <div className='flex items-center gap-3 w-full'>
+              <div className='w-16 h-10 rounded-lg shimmer' />
+              <div className='flex-1'>
+                <div className='h-4 shimmer w-40 mb-2 rounded' />
+                <div className='h-3 shimmer w-24 rounded' />
+              </div>
+            </div>
+            <div className='w-28 h-6 shimmer rounded' />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (!items.length) return <div className='card-glow p-6 text-slate-500'>No foods found.</div>;
+
+  return (
+    <div className='card-glow divide-y divide-slate-100'>
+      {items.map(food => (
+        <div key={food.id} className='p-4 flex items-center justify-between gap-3'>
+          <div className='flex items-center gap-3'>
+            <div className='w-10 h-10 rounded-lg bg-green-100 grid place-content-center'>
+              <Apple className='w-5 h-5 text-green-600' />
+            </div>
+            <div>
+              <div className='font-medium'>{food.name}</div>
+              <div className='text-xs text-slate-500'>
+                {food.calories} kcal · P: {food.protein}g · C: {food.carbs}g · F: {food.fat}g
+              </div>
+            </div>
+          </div>
+          <div className='flex items-center gap-2'>
+            <IconButton title='View' onClick={() => onView(food)}>
+              <Eye className='w-4 h-4' />
+            </IconButton>
+            <IconButton title='Edit' onClick={() => onEdit(food)}>
+              <Pencil className='w-4 h-4' />
+            </IconButton>
+            <IconButton title='Delete' onClick={() => onDelete(food.id)} danger>
+              <Trash2 className='w-4 h-4' />
+            </IconButton>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function FoodPreview({ food }) {
-  const [qty, setQty] = useState(1);
-  const m = (v) => +(v * qty).toFixed(1);
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Info title="Category" value={food.category} />
-        <Info title="Brand" value={food.brand || "—"} />
-        <Info title="Serving" value={`${food.serving} g/ml`} />
-        <Info title="Calories" value={m(food.calories)} />
+    <div className='space-y-4'>
+      <div className='flex items-center gap-3'>
+        <div className='w-12 h-12 rounded-xl bg-green-100 grid place-content-center'>
+          <Apple className='w-6 h-6 text-green-600' />
+        </div>
+        <div>
+          <div className='text-lg font-semibold'>{food.name}</div>
+          <div className='text-sm text-slate-600'>Nutrition per 100{food.unit}</div>
+        </div>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Info title="Protein (g)" value={m(food.protein)} />
-        <Info title="Carbs (g)" value={m(food.carbs)} />
-        <Info title="Fat (g)" value={m(food.fat)} />
-        <Info title="Fiber (g)" value={m(food.fiber ?? 0)} />
+
+      <div className='grid grid-cols-2 gap-4'>
+        <div className='text-center p-3 rounded-xl bg-blue-50'>
+          <div className='text-2xl font-bold text-blue-600'>{food.calories}</div>
+          <div className='text-xs text-blue-700'>Calories</div>
+        </div>
+        <div className='text-center p-3 rounded-xl bg-green-50'>
+          <div className='text-2xl font-bold text-green-600'>{food.protein}g</div>
+          <div className='text-xs text-green-700'>Protein</div>
+        </div>
+        <div className='text-center p-3 rounded-xl bg-yellow-50'>
+          <div className='text-2xl font-bold text-yellow-600'>{food.carbs}g</div>
+          <div className='text-xs text-yellow-700'>Carbs</div>
+        </div>
+        <div className='text-center p-3 rounded-xl bg-red-50'>
+          <div className='text-2xl font-bold text-red-600'>{food.fat}g</div>
+          <div className='text-xs text-red-700'>Fat</div>
+        </div>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Info title="Sugar (g)" value={m(food.sugar ?? 0)} />
-        <Info title="Sodium (mg)" value={m(food.sodium ?? 0)} />
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-slate-500">Servings</span>
-        <input type="number" min="0.25" step="0.25" value={qty} onChange={(e)=>setQty(parseFloat(e.target.value||1))} className="w-24 px-3 py-2 rounded-xl border border-slate-200 bg-white outline-none" />
-      </div>
-      <p className="text-xs text-slate-500">Tip: calories ≈ 4×P + 4×C + 9×F; use this if no label kcal available.</p>
+
+      <div className='text-xs text-slate-500'>Created: {food.created_at ? new Date(food.created_at).toLocaleDateString() : '—'}</div>
     </div>
   );
 }
 
 function FoodForm({ initial, onSubmit }) {
+  const [name, setName] = useState(initial?.name || '');
+  const [calories, setCalories] = useState(initial?.calories || 0);
+  const [protein, setProtein] = useState(initial?.protein || 0);
+  const [carbs, setCarbs] = useState(initial?.carbs || 0);
+  const [fat, setFat] = useState(initial?.fat || 0);
+  const [unit, setUnit] = useState(initial?.unit || 'g');
+
+  useEffect(() => {
+    setName(initial?.name || '');
+    setCalories(initial?.calories || 0);
+    setProtein(initial?.protein || 0);
+    setCarbs(initial?.carbs || 0);
+    setFat(initial?.fat || 0);
+    setUnit(initial?.unit || 'g');
+  }, [initial]);
+
   return (
-    <form onSubmit={(e)=>{e.preventDefault(); const f=new FormData(e.currentTarget);
-      const payload = {
-        name: f.get('name'), brand: f.get('brand') || '—', category: f.get('category') || 'Protein',
-        serving: +f.get('serving') || 100,
-        calories: +f.get('calories') || calcKcal(+f.get('protein')||0, +f.get('carbs')||0, +f.get('fat')||0),
-        protein: +f.get('protein') || 0, carbs: +f.get('carbs') || 0, fat: +f.get('fat') || 0,
-        fiber: +f.get('fiber') || 0, sugar: +f.get('sugar') || 0, sodium: +f.get('sodium') || 0,
-      };
-      onSubmit?.(payload);
-    }} className="space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Name"><input name="name" defaultValue={initial?.name||""} required className="inp" /></Field>
-        <Field label="Brand"><input name="brand" defaultValue={initial?.brand||""} className="inp" placeholder="—" /></Field>
-        <Field label="Category">
-          <select name="category" defaultValue={initial?.category||"Protein"} className="inp">
-            {CATS.filter(c=>c!=="All").map(c=> <option key={c}>{c}</option>)}
+    <form
+      onSubmit={async e => {
+        e.preventDefault();
+        const payload = {
+          name,
+          calories: Number(calories),
+          protein: Number(protein),
+          carbs: Number(carbs),
+          fat: Number(fat),
+          unit,
+        };
+        onSubmit?.(payload);
+      }}
+      className='space-y-4'>
+      <Input label='Food Name' name='name' value={name} onChange={v => setName(v)} required />
+
+      <div className='grid grid-cols-2 gap-3'>
+        <Input label='Calories' name='calories' type='number' min={0} value={String(calories)} onChange={v => setCalories(Number(v || 0))} />
+
+        <div>
+          <label className='text-sm text-slate-600'>Unit</label>
+          <select value={unit} onChange={e => setUnit(e.target.value)} className='w-full h-[40px] rounded-xl border border-slate-200 px-3 outline-none focus:ring-2 focus:ring-green-500/30'>
+            <option value='g'>g (grams)</option>
+            <option value='ml'>ml (milliliters)</option>
+            <option value='piece'>Piece</option>
+            <option value='cup'>Cup</option>
           </select>
-        </Field>
-        <Field label="Serving size (g/ml)"><input name="serving" type="number" defaultValue={initial?.serving||100} className="inp" /></Field>
-        <Field label="Calories (kcal)"><input name="calories" type="number" defaultValue={initial?.calories||""} className="inp" placeholder="auto from macros if empty" /></Field>
-        <Field label="Protein (g)"><input name="protein" type="number" step="0.1" defaultValue={initial?.protein||0} className="inp" /></Field>
-        <Field label="Carbs (g)"><input name="carbs" type="number" step="0.1" defaultValue={initial?.carbs||0} className="inp" /></Field>
-        <Field label="Fat (g)"><input name="fat" type="number" step="0.1" defaultValue={initial?.fat||0} className="inp" /></Field>
-        <Field label="Fiber (g)"><input name="fiber" type="number" step="0.1" defaultValue={initial?.fiber||0} className="inp" /></Field>
-        <Field label="Sugar (g)"><input name="sugar" type="number" step="0.1" defaultValue={initial?.sugar||0} className="inp" /></Field>
-        <Field label="Sodium (mg)"><input name="sodium" type="number" step="1" defaultValue={initial?.sodium||0} className="inp" /></Field>
+        </div>
       </div>
-      <div className="flex items-center justify-end gap-2 pt-2">
-        <button type="submit" className="px-3 py-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white">Save</button>
+
+      <div className='grid grid-cols-3 gap-3'>
+        <Input label='Protein (g)' name='protein' type='number' min={0} step={0.1} value={String(protein)} onChange={v => setProtein(Number(v || 0))} />
+        <Input label='Carbs (g)' name='carbs' type='number' min={0} step={0.1} value={String(carbs)} onChange={v => setCarbs(Number(v || 0))} />
+        <Input label='Fat (g)' name='fat' type='number' min={0} step={0.1} value={String(fat)} onChange={v => setFat(Number(v || 0))} />
       </div>
-      <style jsx>{`
-        .inp { @apply mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30; }
-      `}</style>
+
+      <div className='flex items-center justify-end gap-2 pt-2'>
+        <Button name='Save' />
+      </div>
     </form>
   );
 }
 
-function Info({ title, value }) {
+function BulkAddFoods({ onSubmit }) {
+  const [text, setText] = useState(`[
+  {
+    "name": "Chicken Breast",
+    "calories": 165,
+    "protein": 31,
+    "carbs": 0,
+    "fat": 3.6,
+    "unit": "g"
+  },
+  {
+    "name": "Brown Rice", 
+    "calories": 111,
+    "protein": 2.6,
+    "carbs": 23,
+    "fat": 0.9,
+    "unit": "g"
+  }
+]`);
+  const [fileErr, setFileErr] = useState('');
+  const [items, setItems] = useState([]);
+
+  const parseCSV = csv => {
+    const lines = csv.trim().split(/\r?\n/);
+    if (!lines.length) return [];
+    const headers = lines[0].split(',').map(s => s.trim());
+    const idx = key => headers.indexOf(key);
+    const out = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',').map(s => s.trim());
+      const item = {
+        name: cols[idx('name')],
+        calories: Number(cols[idx('calories')] ?? 0),
+        protein: Number(cols[idx('protein')] ?? 0),
+        carbs: Number(cols[idx('carbs')] ?? 0),
+        fat: Number(cols[idx('fat')] ?? 0),
+        unit: cols[idx('unit')] || 'g',
+      };
+      if (item.name) out.push(item);
+    }
+    return out;
+  };
+
+  const handlePreview = () => {
+    setFileErr('');
+    try {
+      let parsed = [];
+      const trimmed = text.trim();
+      if (!trimmed) {
+        setItems([]);
+        return;
+      }
+      if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+        const raw = JSON.parse(trimmed);
+        const arr = Array.isArray(raw) ? raw : [raw];
+        parsed = arr
+          .map(i => ({
+            name: i.name,
+            calories: Number(i.calories ?? 0),
+            protein: Number(i.protein ?? 0),
+            carbs: Number(i.carbs ?? 0),
+            fat: Number(i.fat ?? 0),
+            unit: i.unit || 'g',
+          }))
+          .filter(i => i.name);
+      } else {
+        parsed = parseCSV(trimmed);
+      }
+      setItems(parsed);
+    } catch (e) {
+      setFileErr(e.message || 'Failed to parse input');
+      setItems([]);
+    }
+  };
+
+  const handleFile = f => {
+    setFileErr('');
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => setText(String(reader.result || ''));
+    reader.onerror = () => setFileErr('Failed to read file');
+    reader.readAsText(f);
+  };
+
   return (
-    <div className="p-3 rounded-xl border border-slate-200 bg-white">
-      <div className="text-xs text-slate-500">{title}</div>
-      <div className="font-semibold">{value}</div>
-    </div>
-  );
-}
-function Field({ label, children }) {
-  return (
-    <div>
-      <label className="text-sm text-slate-600">{label}</label>
-      {children}
+    <div className='space-y-4'>
+      <div className='flex items-center justify-between gap-2'>
+        <div className='text-sm text-slate-600'>
+          Paste <b>JSON</b> array or <b>CSV</b> with headers
+        </div>
+        <label className='inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white cursor-pointer text-sm'>
+          <Upload className='w-4 h-4' />
+          <span className='text-nowrap'>Import file</span>
+          <input type='file' accept='.json,.csv,.txt' className='hidden' onChange={e => handleFile(e.target.files?.[0] || null)} />
+        </label>
+      </div>
+
+      <textarea value={text} onChange={e => setText(e.target.value)} rows={10} className='bg-white w-full rounded-xl border border-slate-200 p-3 outline-none focus:ring-2 focus:ring-green-500/30' />
+
+      <div className='flex items-center gap-2'>
+        <Button name='Preview' className='!w-fit hover:!bg-gray-50' color='neutral' onClick={handlePreview} />
+        <div className='text-xs text-slate-500 ml-auto'>{items.length ? `${items.length} item(s) ready` : ''}</div>
+      </div>
+
+      {fileErr ? <div className='p-2 rounded bg-red-50 text-red-600 text-sm border border-red-100'>{fileErr}</div> : null}
+
+      {!!items.length && (
+        <>
+          <div className='overflow-auto border border-slate-200 rounded-xl'>
+            <table className='min-w-full text-sm'>
+              <thead className='bg-slate-50'>
+                <tr>
+                  {['name', 'calories', 'protein', 'carbs', 'fat', 'unit'].map(h => (
+                    <th key={h} className='text-left px-3 py-2 font-semibold text-slate-700 capitalize'>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className='bg-white'>
+                {items.map((it, i) => (
+                  <tr key={i} className='border-t border-slate-100'>
+                    <td className='px-3 py-2'>{it.name}</td>
+                    <td className='px-3 py-2'>{it.calories}</td>
+                    <td className='px-3 py-2'>{it.protein}g</td>
+                    <td className='px-3 py-2'>{it.carbs}g</td>
+                    <td className='px-3 py-2'>{it.fat}g</td>
+                    <td className='px-3 py-2'>{it.unit}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className='flex items-center justify-end gap-2'>
+            <Button name='Submit' icon={<Plus size={20} />} className='!w-fit !ml-auto' onClick={() => onSubmit(items)} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
-/* ---------------- Utils ---------------- */
-function calcKcal(p=0,c=0,f=0){ return Math.round(p*4 + c*4 + f*9); }
+const IconButton = ({ title, onClick, children, danger = false }) => (
+  <button title={title} onClick={onClick} className={`w-[34px] h-[34px] inline-flex items-center justify-center rounded-lg border transition ${danger ? 'border-red-200 bg-white text-red-600 hover:bg-red-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
+    {children}
+  </button>
+);
+
+function KpiSkeleton() {
+  return (
+    <div className='grid grid-cols-4 gap-2 w-full col-span-4'>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className='card-glow p-4'>
+          <div className='flex items-center gap-3'>
+            <div className='w-10 h-10 rounded-xl shimmer' />
+            <div className='flex-1'>
+              <div className='h-3 shimmer w-24 rounded mb-2' />
+              <div className='h-4 shimmer w-16 rounded' />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Pagination({ page, totalPages, onChange }) {
+  const maxButtons = 7;
+  const pages = useMemo(() => {
+    const arr = [];
+    const start = Math.max(1, page - Math.floor(maxButtons / 2));
+    const end = Math.min(totalPages, start + maxButtons - 1);
+    for (let i = Math.max(1, end - maxButtons + 1); i <= end; i++) arr.push(i);
+    return arr;
+  }, [page, totalPages]);
+
+  const go = p => onChange(Math.max(1, Math.min(totalPages, p)));
+
+  if (totalPages <= 1) return null;
+  return (
+    <div className='flex items-center justify-center gap-2 pt-2'>
+      <Button icon={<ChevronLeft />} className='bg-gradient-to-r from-green-600 to-emerald-500 !w-[40px] !h-[40px]' onClick={() => go(page - 1)} disabled={page <= 1} />
+      {pages.map(p => (
+        <button key={p} onClick={() => go(p)} className={`w-[40px] h-[40px] flex items-center justify-center rounded-xl border ${p === page ? 'bg-gradient-to-r from-green-600 to-emerald-500 text-white' : 'bg-white text-slate-900 border-slate-300 hover:bg-slate-50'}`}>
+          {p}
+        </button>
+      ))}
+      <Button icon={<ChevronRight />} className='bg-gradient-to-r from-green-600 to-emerald-500 !w-[40px] !h-[40px]' onClick={() => go(page + 1)} disabled={page >= totalPages} />
+    </div>
+  );
+}

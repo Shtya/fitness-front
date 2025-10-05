@@ -14,6 +14,7 @@ export default function Input({
   error,
   clearable = true,
   className = '',
+	cnInput
 }) {
   const inputRef = useRef(null);
   const [internal, setInternal] = useState(value ?? '');
@@ -60,7 +61,7 @@ export default function Input({
           value={internal}
           disabled={disabled}
           onChange={handleChange}
-          className="h-[43px] w-full rounded-xl px-3.5 py-2.5 text-sm text-slate-900 outline-none placeholder:text-gray-400"
+          className={`${cnInput} h-[43px] w-full rounded-xl px-3.5 py-2.5 text-sm text-slate-900 outline-none placeholder:text-gray-400`}
         />
 
         {clearable && internal && !disabled && (

@@ -31,14 +31,14 @@ export default function Layout({ children }) {
   }, [sidebarOpen]);
 
     useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1500); // 0.8s spinner
+    const timer = setTimeout(() => setLoading(false), 2500); // 0.8s spinner
     return () => clearTimeout(timer);
   }, [pathname]);
 
 
-  if (loading) {
-    return  <DhikrLoading /> ;
-  }
+  // if (loading) {
+  //   return  <DhikrLoading /> ;
+  // }
 
   return (
     <GlobalProvider>

@@ -1,11 +1,89 @@
 
+	pages 
 
-- form the users page 
-	- assign the user to coach 
-	- program 
-	- exercise 
-	- 
+		* user
+			- when the coach login show only his trainer only 
+			- Roles/Permissions (Admins / Coaches / Assistants).
+			- When create new user account:
+				- Steps to put the Training Plans, Nutrition System, and Calorie Targets.
+				- Redirect to WhatsApp to send credentials.
+				- Assign user to a coach.
+				
+			- Switch Programs (Food / Exercise) via dropdown → "Switch Program".
+			- Edit user profile information.
+			- User Details View page.
 
-- template have the exercise
-- plans 
--
+		* workouts page
+			- handle the last ( weight , reps , his logs , history  ) 
+			- in the dashboard can see his logs for any user 
+			- control on the podcast that will show for the client 
+			-
+
+		* meals page 
+			- put his plan food and logs about it 
+
+		* setting 
+			- auto send the report and explain to him this information i take it form your infomation 
+
+		* profile 
+			- have the all information about it and hist transofrmation 
+
+		* profile ( have his details about everything)
+		* grocery-list 
+		* calculator 
+			- Add calories calculator for each client.
+			
+		* motivation page -> send msg to the all with his name
+		* Reminders
+			- Training schedules.
+			- Meal/water reminders.
+			- Alerts for check-ins with coach.
+
+		* send form data to answeron the question 
+		* Report 
+			- Weekly/Daily notes from coach.
+			- Evaluation of client’s commitment.
+			
+
+		* Communication
+     - Video Call option.
+     - Group meetings (chat style).
+
+		* notification
+			- connect the notification between whatsapp
+			- Notifications for program changes or new notes.
+			- Recommendation Engine (suggest workouts/meals automatically).
+
+		* setting
+			- controller on the text appear on the loading
+			- System customization (Coach logo, personal data).
+			- Manage roles/permissions (if assistants exist).
+			- Control theme colors (male/female version).
+			- Pricing/Subscriptions.
+			- Sending a report → trigger notification.
+			- Automated workflows:
+				• On report day → auto-send to coach.
+				• Add motivational messages (scheduled for next day).
+			- Send reminders via WhatsApp (integration needed).
+			- Weekly logs: weight + progress stats.
+
+		*	Progress Tracking
+			- Record weight periodically.
+			- Track body measurements (waist, chest, arms, legs).
+			- Upload progress photos.
+			- Reports with charts + history.
+			- Compare workout values with old values (check improvements).
+
+		* stats dashboard
+
+		* home page 
+			- Content should be dynamically editable from the dashboard.
+
+
+  - Mobile App or PWA with Offline Caching.
+  - Localization/i18n (Arabic/English, RTL support).
+  - Library of Workouts & Meals (with warnings/alternatives).
+  - Client Guide (Onboarding help/tutorial).
+ 
+ 
+ 

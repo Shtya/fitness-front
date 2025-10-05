@@ -1,6 +1,6 @@
 {
-  "auth": { 
-	"userType": "User Type",
+  "auth": {
+    "userType": "User Type",
     "business": "Business",
     "individual": "Individual",
     "chooseMethod": "Choose your sign in method",
@@ -27,7 +27,7 @@
     "enterOtp": "Enter verification code",
     "referralCode": "Referral Code (optional)",
     "enterReferral": "Enter referral code",
-     
+
     "role": {
       "selectRole": "Select Role",
       "buyer": "Buyer",
@@ -67,7 +67,7 @@
     "confirmNewPassword": "Confirm your new password",
     "sendCodeButton": "Send Verification Code",
     "terms": "By joining, you agree to the UpPhoto Terms of Service and to occasionally receive emails from us. Please read our Privacy Policy to learn how we use your personal data.",
- 
+
     "signIn": "Sign In",
     "signUp": "Sign Up",
     "forgotPassword": "Forgot?",
@@ -572,6 +572,61 @@
     "resetFilters": "Reset Filters",
     "prev": "Prev",
     "next": "Next"
+  },
+
+  "MyWorkouts": {
+    "title": "My Workouts",
+    "subtitle": "Log sets and track PRs automatically.",
+    "workout": "Workout",
+    "history": "History",
+    "listen": "Listen",
+    "settings": "Settings",
+    "exercises": "Exercises",
+    "save": "Save",
+    "set": "Set",
+    "weight": "Weight",
+    "reps": "Reps",
+    "done": "Done",
+    "addSet": "Add Set",
+    "removeSet": "Remove Set",
+    "restTimer": "Rest Timer",
+    "exercisesTracked": "Exercises Tracked",
+    "totalAttempts": "Total Attempts",
+    "allTimePRs": "All-time PRs",
+    "currentStreak": "Current Streak (days)",
+    "allTimeBests": "All-time Bests",
+    "exerciseDrilldown": "Exercise Drilldown",
+    "e1rmWeekly": "e1RM (weekly max) – last 90 days",
+    "topByWeight": "Top by Weight",
+    "topByReps": "Top by Reps",
+    "topByE1rm": "Top by e1RM",
+    "attempts": "Attempts",
+    "sessionHistory": "Session History",
+    "workoutsCompleted": "workouts completed",
+    "date": "Date",
+    "volume": "Volume",
+    "duration": "Duration",
+    "sets": "Sets",
+    "changesStored": "Changes are stored locally until you press Save.",
+    "noExercises": "Not found for this day",
+    "pickAnotherDay": "Pick another day from the tabs above.",
+    "noData": "No data.",
+    "noBests": "No bests yet.",
+    "noAttempts": "No attempts yet.",
+    "noSessions": "No sessions yet.",
+    "logFirstWorkout": "Log your first workout to see history here.",
+    "clock": {
+      "startTraining": "Start Training",
+      "endTraining": "End Training",
+      "timeInGym": "Time in gym",
+      "reachedAt": "Reached at"
+    },
+    "video": {
+      "upload": "Upload Video",
+      "sendToCoach": "Send to Coach",
+      "recording": "Recording...",
+      "chooseFile": "Choose video file"
+    }
   },
 
   "socialMediaTitle": "Follow Us on Social Media",

@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Shield, ShieldCheck, Dumbbell, ClipboardList, CalendarRange, Apple, NotebookPen, MessageSquare, CreditCard, ChefHat, ShoppingCart, Calculator, LineChart, Salad, Settings as SettingsIcon, ServerCog, ChevronDown, X } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Shield, ShieldCheck, Dumbbell, ClipboardList, CalendarRange, Apple, NotebookPen, MessageSquare, CreditCard, ChefHat, ShoppingCart, Calculator, LineChart, Salad, Settings as SettingsIcon, ServerCog, ChevronDown, X, UtensilsCrossed } from 'lucide-react';
 import { usePathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
+import { FaRegFilePowerpoint } from 'react-icons/fa';
 
 const spring = { type: 'spring', stiffness: 380, damping: 28, mass: 0.7 };
 
@@ -13,13 +14,35 @@ function cn(...a) {
   return a.filter(Boolean).join(' ');
 }
 
-/** ----------------------------------------------------------------
- * NAV CONFIG (with nesting + improved names/icons)
- * role: 'coach' | 'admin'
- * children: nested items
- ------------------------------------------------------------------*/
 const NAV = [
   // -------------------- COACH --------------------
+  {
+    role: 'client',
+    section: 'My Space',
+    items: [
+      { name: 'Dashboard', href: '/dashboard/my', icon: LayoutDashboard },
+      {
+        name: 'Training',
+        icon: Dumbbell,
+        children: [
+          { name: 'My Workouts', href: '/dashboard/my/workouts', icon: ClipboardList },
+          { name: 'Progress', href: '/dashboard/my/progress', icon: LineChart },
+          { name: 'Calendar', href: '/dashboard/my/calendar', icon: CalendarRange },
+        ],
+      },
+      {
+        name: 'Nutrition',
+        icon: Salad,
+        children: [
+          { name: 'My Nutrition', href: '/dashboard/my/nutrition', icon: Apple },
+          { name: 'Food Library', href: '/dashboard/nutrition/library-food-list', icon: ChefHat },
+          { name: 'Grocery List', href: '/dashboard/nutrition/grocery-list', icon: ShoppingCart },
+          { name: 'Calorie Calculator', href: '/dashboard/nutrition/calculator', icon: Calculator },
+        ],
+      },
+      { name: 'Profile', href: '/dashboard/my/profile', icon: UserIcon },
+    ],
+  },
   {
     role: 'coach',
     section: 'My Space',
@@ -54,32 +77,24 @@ const NAV = [
     section: 'Overview',
     items: [
       { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-      {
-        name: 'Users',
-        icon: Users,
-        children: [
-          { name: 'All Users', href: '/dashboard/users', icon: Users },
-          { name: 'Coaches', href: '/dashboard/users?role=coach', icon: ShieldCheck },
-          { name: 'Clients', href: '/dashboard/users?role=client', icon: UserIcon },
-          { name: 'My Workouts', href: '/dashboard/my/workouts', icon: Shield },
-        ],
-      },
+      { name: 'All Users', href: '/dashboard/users', icon: Users },
       {
         name: 'Workouts',
         icon: Dumbbell,
+        expand: true,
         children: [
           { name: 'All Exercises', href: '/dashboard/workouts', icon: ClipboardList },
           { name: 'Workout Programs', href: '/dashboard/workouts/plans', icon: NotebookPen },
         ],
       },
-    ],
-  },
-  {
-    role: 'admin',
-    section: 'Nutrition',
-    items: [
-      { name: 'Food Database', href: '/dashboard/nutrition', icon: Apple },
-      { name: 'Meal Plans', href: '/dashboard/nutrition/meal-plans', icon: NotebookPen },
+      {
+        name: 'Food Library',
+        icon: UtensilsCrossed,
+        children: [
+          { name: 'Foods', href: '/dashboard/nutrition', icon: Apple },
+          { name: 'Meal Plans', href: '/dashboard/nutrition/meal-plans', icon: ChefHat },
+        ],
+      },
     ],
   },
   {
@@ -87,7 +102,8 @@ const NAV = [
     section: 'Operations',
     items: [
       { name: 'Messages', href: '/dashboard/chat', icon: MessageSquare },
-      { name: 'Billing', href: '/dashboard/billing', icon: CreditCard },
+      { name: 'Calculator', href: '/dashboard/calculator', icon: Calculator },
+      { name: 'Reports', href: '/dashboard/reports', icon: FaRegFilePowerpoint },
       { name: 'System Settings', href: '/dashboard/settings', icon: ServerCog },
     ],
   },
@@ -112,18 +128,23 @@ function NavItem({ item, pathname, depth = 0, onNavigate }) {
   const Icon = item.icon || LayoutDashboard;
   const hasChildren = Array.isArray(item.children) && item.children.length > 0;
 
-  const initiallyOpen = hasChildren && (anyChildActive(pathname, item.children) || isPathActive(pathname, item.href));
+  const initiallyOpen = hasChildren && (item.expand || anyChildActive(pathname, item.children) || isPathActive(pathname, item.href));
+
   const [open, setOpen] = useState(initiallyOpen);
 
   useEffect(() => {
-    if (hasChildren) {
+    if (!hasChildren) return;
+    // ✅ if expand is true, keep it open; otherwise follow active route
+    if (item.expand) {
+      setOpen(true);
+    } else {
       setOpen(anyChildActive(pathname, item.children) || isPathActive(pathname, item.href));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
- 
+
   if (!hasChildren) {
-    const active =  pathname == item.href
+    const active = pathname == item.href;
     return (
       <Link href={item.href} onClick={onNavigate} className='block group'>
         <div className={cn('relative flex items-center gap-3 rounded-lg px-3 py-2 transition-colors', active ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50 border border-transparent')} style={{ paddingLeft: depth ? 8 + depth * 14 : 12 }}>
@@ -197,23 +218,12 @@ export default function Sidebar({ open, setOpen }) {
     // close mobile drawer on navigation
     if (setOpen) setOpen(false);
   };
- 
+
   return (
     <>
       {/* DESKTOP */}
       <aside className='hidden lg:flex lg:flex-col w-[260px] shrink-0 border-r border-slate-200 bg-white'>
         <div className='flex h-screen flex-col'>
-          {/* Brand */}
-          <div className='sticky top-0 z-10 h-[64px] flex items-center gap-3 px-5 border-b border-slate-200 bg-white'>
-            <motion.div initial={{ rotate: -6, scale: 0.9 }} animate={{ rotate: 0, scale: 1 }} transition={spring} className='bg-indigo-600 h-9 w-9 grid place-content-center rounded-xl text-white shadow-md'>
-              <Dumbbell className='size-5' />
-            </motion.div>
-            <div>
-              <div className='text-xs text-slate-500'>Welcome back</div>
-              <div className='font-semibold'>Coach Portal</div>
-            </div>
-          </div>
-
           {/* Nav */}
           <LayoutGroup id='sidebar-nav'>
             <nav className='flex-1 overflow-y-auto py-3'>

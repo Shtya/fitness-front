@@ -1,8 +1,8 @@
 'use client';
 
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup, useReducedMotion } from 'framer-motion';
 import { CheckCircle2, XCircle, Search, X, Clock } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 export const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
@@ -148,24 +148,127 @@ export function Select({ label, value, setValue, options, className = '' }) {
     </div>
   );
 }
-
-/* --------- Modal --------- */
+ 
 export function Modal({ open, onClose, title, children, maxW = 'max-w-3xl' }) {
+  const shouldReduce = useReducedMotion();
+  const containerRef = useRef(null);
+  const closeBtnRef = useRef(null);
+
+  // Close on ESC
+  useEffect(() => {
+    if (!open) return;
+    const onKey = e => {
+      if (e.key === 'Escape') onClose?.();
+      // basic focus trap (Shift+Tab/Tab loops inside)
+      if (e.key === 'Tab' && containerRef.current) {
+        const focusables = containerRef.current.querySelectorAll('a, button, input, textarea, select, details,[tabindex]:not([tabindex="-1"])');
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        } else if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  // Body scroll lock + focus on open
+  useEffect(() => {
+    if (open) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      // focus the close button (or first focusable) on mount
+      const t = setTimeout(() => closeBtnRef.current?.focus(), 0);
+      return () => {
+        clearTimeout(t);
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [open]);
+
+  // Variants
+  const overlayVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { duration: 0.18 } },
+    exit: { opacity: 0, transition: { duration: 0.18 } },
+  };
+
+  const panelVariants = shouldReduce
+    ? {
+        hidden: { opacity: 0 },
+        show: { opacity: 1, transition: { duration: 0.2 } },
+        exit: { opacity: 0, transition: { duration: 0.15 } },
+      }
+    : {
+        // Desktop: subtle pop; Mobile: slide-up
+        hidden: { opacity: 0, y: 16, scale: 0.98, filter: 'blur(6px)' },
+        show: {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          filter: 'blur(0px)',
+          transition: { ...spring, opacity: { duration: 0.2 }, filter: { duration: 0.2 } },
+        },
+        exit: {
+          opacity: 0,
+          y: 10,
+          scale: 0.985,
+          filter: 'blur(4px)',
+          transition: { duration: 0.15 },
+        },
+      };
+
   return (
     <AnimatePresence>
       {open && (
         <>
-          <motion.div className='fixed backdrop-blur-[8px] inset-0 z-[100] bg-black/50  ' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
-          <motion.div className='fixed z-[110] inset-0 grid place-items-center p-4' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} transition={spring}>
-            <div className={`  w-full ${maxW} !bg-white/80 backdrop-blur-3xl rounded-xl p-4 md:p-8`}>
-              <div className='flex items-center justify-between mb-3'>
-                <h3 className='text-lg font-semibold'>{title}</h3>
-                <button onClick={onClose} className='w-9 h-9 rounded-lg border border-slate-200 grid place-content-center bg-white hover:bg-slate-50'>
-                  <X className='w-5 h-5 text-slate-600' />
+          {/* Overlay */}
+          <motion.button
+            aria-hidden
+            onClick={onClose}
+            className='fixed inset-0 z-[100] bg-black/50 backdrop-blur-[6px]'
+            initial='hidden'
+            animate='show'
+            exit='exit'
+            variants={overlayVariants}
+            // make it a button so it can receive focus in Safari/VoiceOver
+            type='button'
+          />
+
+          {/* Panel */}
+          <motion.div className=' px-6 fixed inset-0 z-[110] grid place-items-center   p-0 md:p-4' initial={{ opacity: 1 }} animate={{ opacity: 1 }} exit={{ opacity: 1 }}>
+            <motion.div
+              role='dialog'
+              aria-modal='true'
+              aria-label={title}
+              ref={containerRef}
+              className={`!w-full md:w-auto ${maxW} relative rounded-2xl md:rounded-xl border border-white/10 bg-white/75  backdrop-blur-2xl shadow-2xl
+                          md:p-6 p-4 md:mb-0 mb-safe md:mx-0 mx-0`}
+              initial='hidden'
+              animate='show'
+              exit='exit'
+              variants={panelVariants}
+              style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
+              <div className='md:hidden mx-auto mb-3 h-1.5 w-12 rounded-full bg-slate-300/70' />
+
+              <div className='flex items-center justify-between md:mb-4 mb-3'>
+                <h3 className='text-base md:text-lg font-semibold text-slate-900 '>{title}</h3>
+                <button ref={closeBtnRef} onClick={onClose} className='w-9 h-9 rounded-lg border border-slate-200  grid place-content-center bg-white/80  hover:bg-white'>
+                  <X className='w-5 h-5 text-slate-700 ' />
                 </button>
               </div>
-              <div className='max-h-[80vh] h-full w-[calc(100%+50px)] ltr:ml-[-25px] rlt:mr-[-25px] px-6   overflow-auto'>{children}</div>
-            </div>
+
+              <div className='max-h-[80vh] overflow-auto pr-1 md:pr-2 -mr-1 md:-mr-2'>{children}</div>
+
+              {/* Subtle glow accent */}
+              {!shouldReduce && <motion.span aria-hidden className='pointer-events-none absolute inset-0 rounded-2xl md:rounded-xl' initial={{ boxShadow: '0 0 0px rgba(59,130,246,0)' }} animate={{ boxShadow: '0 10px 60px rgba(59,130,246,0.12)' }} transition={{ delay: 0.05, duration: 0.35 }} />}
+            </motion.div>
           </motion.div>
         </>
       )}
@@ -175,9 +278,9 @@ export function Modal({ open, onClose, title, children, maxW = 'max-w-3xl' }) {
 
 /* --------- Empty State --------- */
 export function EmptyState({ title = 'No data', subtitle = 'Adjust filters or add new records.', icon = null, action = null }) {
-  return (
+   return (
     <div className='text-center py-16'>
-      <div className='mx-auto w-14 h-14 rounded-2xl bg-slate-100 grid place-content-center'>{icon}</div>
+      {/* <div className='mx-auto w-14 h-14 rounded-2xl bg-slate-100 grid place-content-center'>{icon}</div> */}
       <h3 className='mt-4 text-lg font-semibold'>{title}</h3>
       <p className='text-sm text-slate-600 mt-1'>{subtitle}</p>
       {action ? <div className='mt-6'>{action}</div> : null}
