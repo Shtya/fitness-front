@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
+import axios from 'axios'; 
 import { useTranslations } from 'next-intl';
 import { SubmitButton } from '@/components/pages/auth/SubmitButton';
 import { Input } from '@/components/pages/auth/Input';
@@ -16,7 +16,7 @@ import { Input } from '@/components/pages/auth/Input';
 
 // const API_BASE_URL = 'http://localhost:8081/api/v1';
 const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_BASE_URL,
+  baseURL: process.env.NEXT_PUBLIC_BASE_URL + "/api/v1",
   headers: { 'Content-Type': 'application/json' },
 });
 
