@@ -39,7 +39,7 @@ export default function MessagesPage() {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
 
-    socketRef.current = io(process.env.NEXT_PUBLIC_BACKEND_URL, {
+    socketRef.current = io(process.env.NEXT_PUBLIC_BASE_URL, {
       auth: { token },
     });
 

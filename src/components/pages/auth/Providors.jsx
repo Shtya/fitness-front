@@ -6,7 +6,7 @@ export const ContinueWithGoogleButton = ({ referralCode }) => {
   const redirectUrl = "http://localhost:3000"; // Hardcoded or dynamically set based on your needs.
 
   const handleGoogleLogin = async () => {
-    let url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/google`;
+    let url = `${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/auth/google`;
     const params = new URLSearchParams();
     
     // Append the necessary parameters (redirect and referral code) to the URL.
@@ -46,7 +46,7 @@ export const ContinueWithGoogleButton = ({ referralCode }) => {
 
 export const ContinueWithAppleButton = ({ redirectUrl, referralCode }) => {
   const handleAppleLogin = async () => {
-    let url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/auth/apple`;
+    let url = `${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/auth/apple`;
     const params = new URLSearchParams();
     if (redirectUrl) params.append('redirect', redirectUrl);
     if (referralCode) params.append('ref', referralCode);
