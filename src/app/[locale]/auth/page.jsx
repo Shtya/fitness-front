@@ -14,9 +14,9 @@ import { Input } from '@/components/pages/auth/Input';
 
 /* ================== Axios (with refresh) ================== */
 
-const API_BASE_URL = 'http://localhost:8081/api/v1';
+// const API_BASE_URL = 'http://localhost:8081/api/v1';
 const axiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: process.env.NEXT_PUBLIC_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
