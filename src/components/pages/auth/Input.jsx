@@ -22,7 +22,7 @@ export const Input = ({
           type={inputType}
           placeholder=" "
           className={`
-            peer w-full rounded-xl border px-4 pt-5 pb-2  
+            peer w-full rounded-lg border px-4 pt-5 pb-2  
             bg-white/90 text-gray-900 text-[16px] shadow-inner transition-all
             focus:border-transparent focus:ring-2 focus:ring-indigo-500/70
             placeholder-transparent outline-none

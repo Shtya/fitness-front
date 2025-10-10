@@ -1,17 +1,28 @@
+/* 
+  Meal Plans page – enhanced to match Exercises page design
+  - Consistent styling with Exercises page
+  - Performance optimizations
+  - UI pattern alignment
+*/
+
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Utensils, Plus, Search as SearchIcon, LayoutGrid, Rows, Eye, Pencil, Trash2, CheckCircle2, Settings, RefreshCcw, Clock, ChevronUp, ChevronDown, Users as UsersIcon, ChevronRight, X as XIcon, Layers, Upload, Calendar } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Utensils, Plus, LayoutGrid, Rows, Eye, PencilLine, Trash2, CheckCircle2, Settings, Clock, ChevronUp, ChevronDown, Users as UsersIcon, X, Layers, Search, Tag, Calendar, RefreshCcw } from 'lucide-react';
 
 import api from '@/utils/axios';
-import { Modal, StatCard, PageHeader } from '@/components/dashboard/ui/UI';
- import Input from '@/components/atoms/Input';
+import { Modal, StatCard, TabsPill } from '@/components/dashboard/ui/UI';
 import Button from '@/components/atoms/Button';
-import SelectSearch from '@/components/dashboard/ui/SelectSearch';
+import Select from '@/components/atoms/Select';
 import { useValues } from '@/context/GlobalContext';
 import { Notification } from '@/config/Notification';
+import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
+import { PrettyPagination } from '@/components/dashboard/ui/Pagination';
 
+const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
+
+/* -------------------------------- Helpers -------------------------------- */
 const useDebounced = (value, delay = 350) => {
   const [deb, setDeb] = useState(value);
   useEffect(() => {
@@ -21,6 +32,36 @@ const useDebounced = (value, delay = 350) => {
   return deb;
 };
 
+const numOr = (v, d = 0) => {
+  const n = typeof v === 'string' ? parseFloat(v) : v;
+  return Number.isFinite(n) ? n : d;
+};
+
+const fieldIsNumber = field => ['calories', 'protein', 'carbs', 'fat', 'quantity', 'orderIndex'].includes(field);
+
+/* ---------------------------- Memoized Components --------------------------- */
+const Chip = memo(({ children }) => <span className='inline-flex items-center rounded-lg bg-slate-100 text-slate-700 text-[11px] px-2 py-1 mr-1 mb-1'>{children}</span>);
+
+const IconBtn = memo(({ title, onClick, danger, children }) => (
+  <button
+    type='button'
+    title={title}
+    onClick={onClick}
+    aria-label={title}
+    className={`size-7 grid place-content-center rounded-lg border shadow-sm active:scale-95 transition
+      ${danger ? 'border-rose-200 bg-white hover:bg-rose-50 text-rose-600' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'}`}>
+    {children}
+  </button>
+));
+
+const StatPill = memo(({ label, value }) => (
+  <span className='inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-700'>
+    <span className='font-medium text-slate-900'>{label}</span>
+    <span className='opacity-80'>{value}</span>
+  </span>
+));
+
+/* =============================== PAGE ROOT =============================== */
 export default function MealPlansPage() {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
@@ -28,136 +69,163 @@ export default function MealPlansPage() {
   const [err, setErr] = useState(null);
 
   const [page, setPage] = useState(1);
-  const [limit] = useState(12);
+  const [perPage, setPerPage] = useState(12);
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('DESC');
   const [searchText, setSearchText] = useState('');
   const debounced = useDebounced(searchText, 350);
 
-  const [view, setView] = useState('list');
+  const [view, setView] = useState('grid');
   const [preview, setPreview] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [editRow, setEditRow] = useState(null);
   const [assignOpen, setAssignOpen] = useState(null);
 
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deleteTargetId, setDeleteTargetId] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  // KPIs
+  const [stats, setStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(true);
 
-  const [kpi, setKpi] = useState({
-    total: 0,
-    activePlans: 0,
-    totalDays: 0,
-    totalAssignments: 0,
-  });
-
+  // People (clients/coaches)
   const { usersByRole, fetchUsers } = useValues();
-
   useEffect(() => {
     fetchUsers('client');
     fetchUsers('coach');
-  }, []);
-
+  }, [fetchUsers]);
   const optionsClient = usersByRole['client'] || [];
 
   const reqId = useRef(0);
+  const abortControllerRef = useRef(null);
 
-  const fetchList = async ({ reset = false } = {}) => {
+  const fetchList = useCallback(async () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    abortControllerRef.current = new AbortController();
     setErr(null);
-    if (reset) setLoading(true);
+    setLoading(true);
+
     const myId = ++reqId.current;
     try {
-      const params = { page, limit, sortBy, sortOrder };
+      const params = { page, limit: perPage, sortBy, sortOrder };
       if (debounced) params.search = debounced;
 
-      const res = await api.get('/meal-plans', { params });
+      const res = await api.get('/nutrition/meal-plans', {
+        params,
+        signal: abortControllerRef.current.signal,
+      });
       const data = res.data || {};
 
       let records = [];
       let totalRecords = 0;
+      let serverPerPage = perPage;
+
       if (Array.isArray(data.records)) {
         records = data.records;
         totalRecords = Number(data.total_records || data.records.length || 0);
+        serverPerPage = Number(data.per_page || perPage);
       } else if (Array.isArray(data)) {
         records = data;
         totalRecords = data.length;
+      } else if (Array.isArray(data.items)) {
+        records = data.items;
+        totalRecords = Number(data.total || data.items.length || 0);
+        serverPerPage = Number(data.limit || perPage);
       }
 
       if (myId !== reqId.current) return;
       setTotal(totalRecords);
-      setItems(prev => (reset ? records : [...prev, ...records]));
+      setPerPage(serverPerPage);
+      setItems(records);
     } catch (e) {
+      if (e.name === 'CanceledError') return;
       if (myId !== reqId.current) return;
       setErr(e?.response?.data?.message || 'Failed to load meal plans');
     } finally {
       if (myId === reqId.current) setLoading(false);
     }
-  };
+  }, [page, debounced, sortBy, sortOrder, perPage]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
+    setLoadingStats(true);
     try {
-      const res = await api.get('/meal-plans/stats');
-      setKpi(res.data?.totals || {});
-    } catch (e) {
-      console.error('Failed to fetch meal plans stats:', e);
+      const params = {};
+      if (debounced) params.search = debounced;
+      const res = await api.get('/nutrition/meal-plans/stats', { params });
+      setStats(res.data?.totals || {});
+    } catch {
+      // ignore
+    } finally {
+      setLoadingStats(false);
     }
-  };
+  }, [debounced]);
 
+  // Reset to page 1 on search/sort changes
   useEffect(() => {
-    setItems([]);
     setPage(1);
-  }, [debounced, sortBy, sortOrder]);
+  }, [debounced, sortBy, sortOrder, perPage]);
+
+  // Data fetching
+  useEffect(() => {
+    fetchList();
+  }, [fetchList]);
 
   useEffect(() => {
-    fetchList({ reset: page === 1 });
     fetchStats();
-  }, [page, debounced, sortBy, sortOrder]);
+  }, [fetchStats]);
 
-  const hasMore = items.length < total;
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
-  const toggleSortNewest = () => {
-    if (sortBy === 'created_at') setSortOrder(o => (o === 'ASC' ? 'DESC' : 'ASC'));
-    else {
-      setSortBy('created_at');
-      setSortOrder('DESC');
-    }
-  };
+  const toggleSort = useCallback(
+    field => {
+      if (sortBy === field) {
+        setSortOrder(o => (o === 'ASC' ? 'DESC' : 'ASC'));
+      } else {
+        setSortBy(field);
+        setSortOrder('ASC');
+      }
+    },
+    [sortBy],
+  );
 
-  const getOne = async id => {
-    const res = await api.get(`/meal-plans/${id}`);
-    return res.data;
-  };
+  const getOne = async id => (await api.get(`/nutrition/meal-plans/${id}`)).data;
 
-  const handleDelete = id => {
-    setDeleteTargetId(id);
-    setDeleteModalOpen(true);
-  };
+  /* ----------------------------- CRUD Handlers ---------------------------- */
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const closeDeleteModal = () => {
-    if (deleting) return;
-    setDeleteModalOpen(false);
-    setDeleteTargetId(null);
-  };
+  const askDelete = useCallback(id => {
+    setDeleteId(id);
+    setDeleteOpen(true);
+  }, []);
 
-  const confirmDelete = async () => {
-    if (!deleteTargetId) return;
+  const handleDelete = useCallback(async () => {
+    if (!deleteId) return;
+    setDeleteLoading(true);
     try {
-      setDeleting(true);
-      await api.delete(`/meal-plans/${deleteTargetId}`);
-      setItems(arr => arr.filter(x => x.id !== deleteTargetId));
+      await api.delete(`/nutrition/meal-plans/${deleteId}`);
+      setItems(arr => arr.filter(x => x.id !== deleteId));
       setTotal(t => Math.max(0, t - 1));
       Notification('Meal plan deleted successfully', 'success');
     } catch (e) {
       Notification(e?.response?.data?.message || 'Delete failed', 'error');
     } finally {
-      setDeleting(false);
-      setDeleteModalOpen(false);
-      setDeleteTargetId(null);
+      setDeleteId(null);
+      setDeleteLoading(false);
+      setDeleteOpen(false);
     }
-  };
+  }, [deleteId]);
 
   const createOrUpdate = async ({ id, payload }) => {
-    const url = id ? `/meal-plans/${id}` : '/meal-plans';
+    const url = id ? `/nutrition/meal-plans/${id}` : '/nutrition/meal-plans';
     const method = id ? 'put' : 'post';
     const res = await api[method](url, payload);
     return res.data;
@@ -165,8 +233,7 @@ export default function MealPlansPage() {
 
   const openPreview = async plan => {
     try {
-      const full = await getOne(plan.id);
-      setPreview(full);
+      setPreview(await getOne(plan.id));
     } catch {
       setPreview(plan);
     }
@@ -174,8 +241,7 @@ export default function MealPlansPage() {
 
   const openEdit = async plan => {
     try {
-      const full = await getOne(plan.id);
-      setEditRow(full);
+      setEditRow(await getOne(plan.id));
     } catch {
       setEditRow(plan);
     }
@@ -183,54 +249,92 @@ export default function MealPlansPage() {
 
   const openAssign = plan => setAssignOpen(plan);
 
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / Math.max(1, perPage))), [total, perPage]);
+
   return (
     <div className='space-y-6'>
-      <div className='rounded-xl md:rounded-2xl overflow-hidden border border-indigo-200'>
-        <div className='relative p-4 md:p-8 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white'>
-          <div className='absolute inset-0 opacity-20 bg-[radial-gradient(600px_200px_at_20%_-20%,white,transparent)]' />
-          <div className='relative z-10 flex flex-col gap-3 md:flex-row md:items-center md:gap-6 md:justify-between'>
-            <PageHeader title='Meal Plans' subtitle='Create nutrition plans and assign to clients.' />
-            <div className='flex items-center gap-2'>
-              <Button onClick={() => setAddOpen(true)} color='primary' icon={<Plus className='w-4 h-4' />} name='New Meal Plan' className='bg-gradient-to-tr from-indigo-600 to-indigo-500' />
-            </div>
-          </div>
+      {/* Header / Stats - Matching Exercises page */}
+      <GradientStatsHeader onClick={() => setAddOpen(true)} btnName={'New Meal Plan'} title='Meal Plans' desc='Create nutrition plans and assign to clients.' loadingStats={loadingStats}>
+        <StatCard className=' ' icon={Layers} title='Total Plans' value={stats?.total || 0} />
+        <StatCard className=' ' icon={CheckCircle2} title='Active Plans' value={stats?.activePlans || 0} />
+        <StatCard className=' ' icon={Calendar} title='Total Days' value={stats?.totalDays || 0} />
+        <StatCard className=' ' icon={RefreshCcw} title='Total Assignments' value={stats?.totalAssignments || 0} />
+      </GradientStatsHeader>
 
-          <div className='flex items-center flex-wrap justify-start gap-3 mt-6'>
-            {loading && page === 1 ? (
-              <KpiSkeleton />
-            ) : (
-              <>
-                <StatCard className='max-w-[220px] w-full' icon={Layers} title='Total Plans' value={kpi?.total} />
-                <StatCard className='max-w-[220px] w-full' icon={CheckCircle2} title='Active Plans' value={kpi?.activePlans} />
-                <StatCard className='max-w-[220px] w-full' icon={Calendar} title='Total Days' value={kpi?.totalDays} />
-                <StatCard className='max-w-[220px] w-full' icon={UsersIcon} title='Total Assignments' value={kpi?.totalAssignments} />
-              </>
+      {/* Filters + search - Matching Exercises page */}
+      <div className='relative '>
+        <div className='flex items-center justify-between gap-2 flex-wrap'>
+          {/* Search */}
+          <div className='relative flex-1 max-w-[240px] sm:min-w-[260px]'>
+            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
+            <input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder='Search meal plans…' className={['h-11 w-full pl-10 pr-10 rounded-lg', 'border border-slate-200 bg-white/90 text-slate-900', 'shadow-sm hover:shadow transition', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')} />
+            {!!searchText && (
+              <button type='button' onClick={() => setSearchText('')} className='absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100' aria-label='Clear search' title='Clear'>
+                <X className='w-4 h-4' />
+              </button>
             )}
           </div>
+
+          <div className='flex items-center gap-2'>
+            {/* View toggle */}
+            <button onClick={() => setView(v => (v === 'grid' ? 'list' : 'grid'))} className={['group inline-flex items-center gap-2 rounded-lg px-3.5 h-11', 'border border-slate-200 bg-white/90 text-slate-800', 'shadow-sm hover:shadow transition active:scale-[.98]', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')} aria-pressed={view !== 'grid'} title={view === 'grid' ? 'Switch to list view' : 'Switch to grid view'}>
+              <span className='relative inline-block w-5 h-5'>
+                <AnimatePresence mode='wait' initial={false}>
+                  {view === 'grid' ? (
+                    <motion.span key='rows' className='absolute inset-0' initial={{ y: 8, opacity: 0, rotate: -8, scale: 0.92 }} animate={{ y: 0, opacity: 1, rotate: 0, scale: 1 }} exit={{ y: -8, opacity: 0, rotate: 8, scale: 0.92 }} transition={{ type: 'spring', stiffness: 420, damping: 28, mass: 0.6 }}>
+                      <Rows className='w-5 h-5 text-slate-700' />
+                    </motion.span>
+                  ) : (
+                    <motion.span key='grid' className='absolute inset-0' initial={{ y: 8, opacity: 0, rotate: -8, scale: 0.92 }} animate={{ y: 0, opacity: 1, rotate: 0, scale: 1 }} exit={{ y: -8, opacity: 0, rotate: 8, scale: 0.92 }} transition={{ type: 'spring', stiffness: 420, damping: 28, mass: 0.6 }}>
+                      <LayoutGrid className='w-5 h-5 text-slate-700' />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </span>
+              <motion.span key={view} initial={{ y: 6, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -6, opacity: 0 }} transition={{ duration: 0.16 }} className='hidden sm:inline text-sm'>
+                {view === 'grid' ? 'List view' : 'Grid view'}
+              </motion.span>
+            </button>
+
+            {/* Per page */}
+            <div className='min-w-[130px]'>
+              <Select
+                className='!w-full'
+                placeholder='Per page'
+                options={[
+                  { id: 8, label: 8 },
+                  { id: 12, label: 12 },
+                  { id: 20, label: 20 },
+                  { id: 30, label: 30 },
+                ]}
+                value={perPage}
+                onChange={n => setPerPage(Number(n))}
+              />
+            </div>
+
+            {/* Sort newest */}
+            <button onClick={() => toggleSort('created_at')} className={['inline-flex items-center gap-2 rounded-lg px-3 h-11 font-medium transition-all duration-300', 'border border-slate-200 bg-white/95 text-slate-800 shadow-sm', 'hover:shadow-md hover:bg-slate-50 active:scale-[.97]', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')}>
+              <Clock size={18} />
+              <span className='text-sm tracking-wide'>{sortBy === 'created_at' ? (sortOrder === 'ASC' ? 'Oldest First' : 'Newest First') : 'Sort by Date'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className='flex items-center gap-2 mt-12 flex-wrap'>
-        <div className='relative w-full md:w-60'>
-          <SearchIcon className='absolute left-3 z-[10] top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
-          <input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder='Search meal plans...' className={`h-[40px] w-full pl-10 pr-3 rounded-xl bg-white text-black border border-slate-300 font-medium text-sm shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-indigo-500/40 hover:border-indigo-400 transition`} />
-        </div>
+      {/* Errors */}
+      {err ? <div className='p-3 rounded-lg bg-red-50 text-red-700 border border-red-100'>{err}</div> : null}
 
-        <Button onClick={toggleSortNewest} color='outline' className='!w-fit !bg-white !rounded-xl' icon={<Clock size={16} />} name={<span className='flex items-center gap-2'> Newest {sortBy === 'created_at' ? sortOrder === 'ASC' ? <ChevronUp className='w-4 h-4 text-black' /> : <ChevronDown className='w-4 h-4 text-black' /> : null} </span>} />
+      {/* Content */}
+      {view === 'grid' ? <GridView loading={loading} items={items} onPreview={openPreview} onEdit={openEdit} onDelete={askDelete} onAssign={openAssign} /> : <ListView loading={loading} items={items} onPreview={openPreview} onEdit={openEdit} onDelete={askDelete} onAssign={openAssign} />}
 
-        <Button className='!w-fit !bg-white !rounded-xl' onClick={() => setView(v => (v === 'grid' ? 'list' : 'grid'))} color='outline' icon={view === 'grid' ? <Rows size={16} /> : <LayoutGrid size={16} />} name={view === 'grid' ? 'List' : 'Grid'} />
-      </div>
+      <PrettyPagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
-      {err ? <div className='p-3 rounded-xl bg-red-50 text-red-700 border border-red-100'>{err}</div> : null}
-
-      {view === 'grid' ? <GridView loading={loading && page === 1} items={items} onPreview={openPreview} onEdit={openEdit} onDelete={handleDelete} onAssign={openAssign} /> : <ListView loading={loading && page === 1} items={items} onPreview={openPreview} onEdit={openEdit} onDelete={handleDelete} onAssign={openAssign} />}
-
-      <div className='flex justify-center py-2'>{loading && page > 1 ? <Button disabled>Loading…</Button> : hasMore ? <Button onClick={() => setPage(p => p + 1)} color='outline' name='Load more' /> : null}</div>
-
-      <Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name || 'Meal Plan'} maxW='max-w-4xl'>
+      {/* Preview */}
+      <Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name || 'Meal Plan Preview'} maxW='max-w-4xl'>
         {preview && <MealPlanPreview plan={preview} />}
       </Modal>
 
+      {/* New Meal Plan */}
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title='Create Meal Plan' maxW='max-w-3xl'>
         <MealPlanForm
           onSubmit={async payload => {
@@ -247,6 +351,7 @@ export default function MealPlansPage() {
         />
       </Modal>
 
+      {/* Edit */}
       <Modal open={!!editRow} onClose={() => setEditRow(null)} title={`Edit: ${editRow?.name || ''}`} maxW='max-w-3xl'>
         {editRow && (
           <MealPlanForm
@@ -265,6 +370,7 @@ export default function MealPlansPage() {
         )}
       </Modal>
 
+      {/* Assign */}
       <Modal open={!!assignOpen} onClose={() => setAssignOpen(null)} title={`Assign: ${assignOpen?.name || ''}`} maxW='max-w-md'>
         {assignOpen && (
           <AssignMealPlanForm
@@ -279,118 +385,157 @@ export default function MealPlansPage() {
         )}
       </Modal>
 
-      <Modal open={deleteModalOpen} onClose={closeDeleteModal} title='Delete meal plan?' maxW='max-w-md'>
-        <div className='space-y-5'>
-          <p className='text-slate-600'>This action cannot be undone. Are you sure you want to delete this meal plan?</p>
-          <div className='flex items-center justify-end gap-3'>
-            <Button type='button' color='danger' loading={deleting} onClick={confirmDelete} disabled={deleting} name={deleting ? 'Deleting…' : 'Delete'} />
-          </div>
-        </div>
-      </Modal>
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        loading={deleteLoading}
+        open={deleteOpen}
+        onClose={() => {
+          setDeleteOpen(false);
+          setDeleteId(null);
+        }}
+        title='Delete meal plan?'
+        message='This action cannot be undone.'
+        confirmText='Delete'
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }
 
-/* -------------------------------- Grid View -------------------------------- */
-function GridView({ loading, items, onPreview, onEdit, onDelete, onAssign }) {
-  const spring = { type: 'spring', stiffness: 320, damping: 26 };
+/* ---------------------------- Subcomponents ---------------------------- */
+const ConfirmDialog = memo(({ open, onClose, loading, title = 'Are you sure?', message = '', onConfirm, confirmText = 'Confirm' }) => {
+  return (
+    <Modal open={open} onClose={onClose} title={title} maxW='max-w-md'>
+      <div className='space-y-4'>
+        {message ? <p className='text-sm text-slate-600'>{message}</p> : null}
+        <div className='flex items-center justify-end gap-2'>
+          <Button
+            name={confirmText}
+            loading={loading}
+            color='danger'
+            className='!w-fit'
+            onClick={() => {
+              onConfirm?.();
+              onClose?.();
+            }}
+          />
+        </div>
+      </div>
+    </Modal>
+  );
+});
 
-  const plural = (n, s, pluralS = s + 's') => `${n} ${n === 1 ? s : pluralS}`;
-
+/* ================================ GRID VIEW ================================ */
+const GridView = memo(({ loading, items, onPreview, onEdit, onDelete, onAssign }) => {
   if (loading) {
     return (
-      <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3'>
+      <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'>
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className='card-glow p-4'>
-            <div className='h-36 rounded-xl shimmer mb-3' />
-            <div className='h-4 rounded shimmer w-2/3 mb-2' />
-            <div className='h-3 rounded shimmer w-1/2' />
+          <div key={i} className='relative overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm'>
+            <div className='aspect-video w-full overflow-hidden'>
+              <div className='h-full w-full shimmer' />
+            </div>
+            <div className='p-4'>
+              <div className='h-4 w-4/5 shimmer rounded mb-2' />
+              <div className='h-3 w-2/3 shimmer rounded mb-2' />
+              <div className='h-3 w-1/2 shimmer rounded' />
+            </div>
           </div>
         ))}
       </div>
     );
   }
+
   if (!items.length) {
     return (
-      <div className='card-glow p-10 text-center'>
-        <div className='mx-auto w-14 h-14 rounded-2xl bg-slate-100 grid place-content-center'>
-          <Utensils className='w-7 h-7 text-slate-500' />
+      <div className='rounded-lg border border-slate-200 bg-white p-10 text-center shadow-sm'>
+        <div className='mx-auto w-16 h-16 rounded-lg bg-slate-100 grid place-content-center'>
+          <Utensils className='w-8 h-8 text-slate-500' />
         </div>
-        <h3 className='mt-4 text-lg font-semibold'>No meal plans found</h3>
-        <p className='text-sm text-slate-600 mt-1'>Try a different search query or create a new meal plan.</p>
+        <h3 className='mt-4 text-lg font-semibold text-slate-800'>No meal plans found</h3>
+        <p className='text-sm text-slate-600 mt-1'>Try a different search or create a new meal plan.</p>
       </div>
     );
   }
 
   return (
-    <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3'>
+    <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'>
       {items.map(p => {
         const dayCount = p?.days?.length || 0;
         const totalFoods = p?.days?.reduce((sum, day) => sum + (day.foods?.length || 0), 0) || 0;
 
         return (
-          <motion.div key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className='p-4 group relative rounded-xl border border-slate-200 bg-white hover:shadow-lg'>
-            {/* Hover actions */}
-            <div className='absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition'>
-              <IconMini title='Preview' onClick={() => onPreview?.(p)}>
-                <Eye className='w-4 h-4' />
-              </IconMini>
-              <IconMini title='Edit' onClick={() => onEdit?.(p)}>
-                <Pencil className='w-4 h-4' />
-              </IconMini>
-              <IconMini title='Delete' onClick={() => onDelete?.(p.id)} danger>
-                <Trash2 className='w-4 h-4' />
-              </IconMini>
+          <motion.div key={p.id} initial={{ opacity: 0, y: 10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={spring} className='group relative overflow-hidden rounded-lg bg-white border border-slate-200 shadow-sm hover:shadow-md'>
+            {/* premium gradient ring on hover */}
+            <div className='pointer-events-none absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300' style={{ WebkitMaskImage: 'linear-gradient(#000 60%, transparent)' }}>
+              <div className='absolute inset-0 rounded-lg ring-1 ring-transparent' style={{ background: 'linear-gradient(90deg, rgba(99,102,241,.18), rgba(16,185,129,.18))', maskImage: 'linear-gradient(black, transparent 70%)' }} />
             </div>
 
             {/* Header */}
-            <div className='flex items-start gap-3'>
-              <div className='h-10 w-10 grid place-content-center rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow'>
-                <Utensils className='w-5 h-5' />
-              </div>
-              <div className='flex-1 min-w-0'>
-                <div className='font-semibold truncate' title={p?.name}>
-                  {p?.name}
+            <div className='p-4 space-y-2'>
+              {/* Title row */}
+              <div className='flex items-start justify-between gap-2'>
+                <div className='font-semibold text-slate-800 leading-5 line-clamp-1' title={p.name}>
+                  {p.name}
                 </div>
-
-                {p?.desc ? <div className='text-xs text-slate-600 mt-1 line-clamp-2'>{p.desc}</div> : null}
-
-                {/* status + quick stats */}
-                <div className='flex flex-wrap items-center gap-2 mt-2'>
-                  <Badge color={p?.isActive ? 'green' : 'slate'}>{p?.isActive ? 'Active' : 'Inactive'}</Badge>
-                  <Badge color='blue'>{plural(dayCount, 'day')}</Badge>
-                  <Badge color='purple'>{plural(totalFoods, 'food')}</Badge>
+                <div className='flex gap-1 opacity-0 group-hover:opacity-100 transition'>
+                  <IconBtn title='Preview' onClick={() => onPreview?.(p)}>
+                    <Eye className='w-3.5 h-3.5 text-slate-700' />
+                  </IconBtn>
+                  <IconBtn title='Edit' onClick={() => onEdit?.(p)}>
+                    <PencilLine className='w-3.5 h-3.5 text-indigo-600' />
+                  </IconBtn>
+                  <IconBtn title='Delete' onClick={() => onDelete?.(p.id)} danger>
+                    <Trash2 className='w-3.5 h-3.5' />
+                  </IconBtn>
                 </div>
               </div>
+
+              {/* Status badge */}
+              <span className={`inline-flex items-center gap-1 rounded-lg text-[11px] px-2 py-1 shadow ${p.isActive ? 'bg-emerald-600/90 text-white' : 'bg-slate-100 text-slate-700'}`}>{p.isActive ? 'Active' : 'Inactive'}</span>
+
+              {/* Description */}
+              {p.desc ? <p className='text-sm text-slate-600 line-clamp-2'>{p.desc}</p> : null}
+
+              {/* Meta row */}
+              <div className='flex flex-wrap items-center gap-2 pt-1'>
+                <span className='text-[11px] rounded-lg border border-slate-200 px-2 py-1 text-slate-600'>
+                  Days <span className='font-medium'> / {dayCount}</span>
+                </span>
+                <span className='text-[11px] rounded-lg border border-slate-200 px-2 py-1 text-slate-600'>
+                  Foods <span className='font-medium'>{totalFoods}</span>
+                </span>
+              </div>
+
+              {/* Days */}
+              {dayCount > 0 && (
+                <div className='flex flex-wrap gap-1'>
+                  {p.days.slice(0, 3).map(d => (
+                    <span key={d.id} className='px-2 py-0.5 text-[11px] rounded-full bg-slate-100 text-slate-700 border border-slate-200'>
+                      {String(d.name || d.day).toLowerCase()}
+                    </span>
+                  ))}
+                  {dayCount > 3 && <span className='px-2 py-0.5 text-[11px] rounded-full bg-slate-100 text-slate-700 border border-slate-200'>+{dayCount - 3} more</span>}
+                </div>
+              )}
             </div>
 
-            {/* Days pills */}
-            {dayCount > 0 && (
-              <div className='mt-3 flex flex-wrap gap-1.5'>
-                {p.days.map(d => (
-                  <span key={d.id} className='px-2 py-0.5 text-[11px] rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200' title={d.day}>
-                    {String(d.name || d.day).toLowerCase()}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Footer actions */}
-            <div className='flex items-center justify-between mt-4'>
-              <Button onClick={() => onAssign?.(p)} color='outline' icon={<UsersIcon className='w-4 h-4' />} name='Assign' className='px-3 py-1.5' />
+            {/* Footer */}
+            <div className='px-4 pb-4'>
+              <Button onClick={() => onAssign?.(p)} color='outline' className='!w-full' icon={<UsersIcon className='w-4 h-4' />} name='Assign' />
             </div>
           </motion.div>
         );
       })}
     </div>
   );
-}
+});
 
-/* -------------------------------- List View -------------------------------- */
-function ListView({ loading, items, onPreview, onEdit, onDelete, onAssign }) {
+/* ================================ LIST VIEW ================================ */
+const ListView = memo(({ loading, items, onPreview, onEdit, onDelete, onAssign }) => {
   if (loading) {
     return (
-      <div className='card-glow divide-y divide-transparent'>
+      <div className='rounded-lg border border-slate-200 bg-white divide-y divide-slate-100 shadow-sm'>
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className='p-4 flex items-center justify-between gap-3'>
             <div className='flex items-center gap-3 w-full'>
@@ -400,59 +545,87 @@ function ListView({ loading, items, onPreview, onEdit, onDelete, onAssign }) {
                 <div className='h-3 shimmer w-24 rounded' />
               </div>
             </div>
-            <div className='w-28 h-6 shimmer rounded' />
+            <div className='w-24 h-6 shimmer rounded' />
           </div>
         ))}
       </div>
     );
   }
-  if (!items.length) return <div className='card-glow p-6 text-slate-500'>No meal plans.</div>;
+
+  if (!items.length) {
+    return (
+      <div className='rounded-lg border border-slate-200 bg-white p-10 text-center shadow-sm'>
+        <div className='mx-auto w-16 h-16 rounded-lg bg-slate-100 grid place-content-center'>
+          <Utensils className='w-8 h-8 text-slate-500' />
+        </div>
+        <h3 className='mt-4 text-lg font-semibold text-slate-800'>No meal plans found</h3>
+        <p className='text-sm text-slate-600 mt-1'>Try a different search or create a new meal plan.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className='card-glow divide-y divide-slate-100'>
+    <div className='rounded-lg border border-slate-200 bg-white divide-y divide-slate-100 shadow-sm'>
       {items.map(p => {
+        const dayCount = p?.days?.length || 0;
         const totalFoods = p?.days?.reduce((sum, day) => sum + (day.foods?.length || 0), 0) || 0;
 
         return (
-          <div key={p.id} className='p-4 flex items-center justify-between gap-3'>
-            <div className='flex items-center gap-3'>
-              <div className='w-10 h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 text-white grid place-content-center'>
+          <div key={p.id} className='p-3 sm:p-4 flex items-center justify-between gap-3'>
+            {/* Left: content */}
+            <div className='flex items-start gap-3 min-w-0 flex-1'>
+              {/* Icon */}
+              <div className='w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white grid place-content-center shrink-0'>
                 <Utensils className='w-5 h-5' />
               </div>
-              <div>
-                <div className='font-medium'>{p?.name}</div>
-                <div className='text-xs text-slate-500'>
-                  {p?.isActive ? 'Active' : 'Inactive'} · {p?.days?.length || 0} day(s) · {totalFoods} food(s)
+
+              {/* Text area */}
+              <div className='min-w-0 flex-1'>
+                {/* Title + status */}
+                <div className='flex items-center gap-2 min-w-0'>
+                  <div className='font-medium text-slate-800 truncate'>{p.name}</div>
+                  <span className={`inline-flex items-center gap-1 rounded-lg text-[11px] px-2 py-0.5 shrink-0 ${p.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{p.isActive ? 'Active' : 'Inactive'}</span>
+                </div>
+
+                {/* Details one-liner */}
+                {p.desc ? <div className='text-[12px] text-slate-600 line-clamp-1 mt-1'>{p.desc}</div> : null}
+
+                {/* Meta */}
+                <div className='mt-1 text-[11px] text-slate-500'>
+                  {dayCount} day{dayCount === 1 ? '' : 's'} · {totalFoods} food{totalFoods === 1 ? '' : 's'}
                 </div>
               </div>
             </div>
 
-            <div className='flex items-center gap-2'>
-              <Button onClick={() => onAssign(p)} color='outline' icon={<UsersIcon className='w-4 h-4' />} name='Assign' className='px-2.5 py-1.5' />
-              <IconButton title='Preview' onClick={() => onPreview(p)}>
-                <Eye className='w-4 h-4' />
-              </IconButton>
-              <IconButton title='Edit' onClick={() => onEdit(p)}>
-                <Pencil className='w-4 h-4' />
-              </IconButton>
-              <IconButton title='Delete' onClick={() => onDelete(p.id)} danger>
-                <Trash2 className='w-4 h-4' />
-              </IconButton>
+            {/* Right: compact actions */}
+            <div className='flex items-center gap-1 shrink-0'>
+              <Button onClick={() => onAssign?.(p)} color='outline' className='!px-2.5 !py-1.5' icon={<UsersIcon className='w-4 h-4' />} name='Assign' />
+              <IconBtn title='Preview' onClick={() => onPreview?.(p)}>
+                <Eye className='w-3.5 h-3.5' />
+              </IconBtn>
+              <IconBtn title='Edit' onClick={() => onEdit?.(p)}>
+                <PencilLine className='w-3.5 h-3.5 text-indigo-600' />
+              </IconBtn>
+              <IconBtn title='Delete' onClick={() => onDelete?.(p.id)} danger>
+                <Trash2 className='w-3.5 h-3.5' />
+              </IconBtn>
             </div>
           </div>
         );
       })}
     </div>
   );
-}
+});
 
-/* ------------------------------- Preview ------------------------------- */
-function MealPlanPreview({ plan }) {
+/* ================================ PREVIEW ================================ */
+const MealPlanPreview = memo(({ plan }) => {
   const [assignees, setAssignees] = useState(null);
+
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const res = await api.get(`/meal-plans/${plan.id}/assignees`);
+        const res = await api.get(`/nutrition/meal-plans/${plan.id}/assignees`);
         if (mounted) setAssignees(res.data || []);
       } catch {}
     })();
@@ -465,15 +638,13 @@ function MealPlanPreview({ plan }) {
     return (
       foods?.reduce(
         (total, item) => {
-          const food = item.food || {};
-          const quantity = item.quantity || 100;
-          const factor = quantity / 100;
-
+          const q = Number(item.quantity || 0);
+          const factor = q / 100;
           return {
-            calories: total.calories + (food.calories || 0) * factor,
-            protein: total.protein + (food.protein || 0) * factor,
-            carbs: total.carbs + (food.carbs || 0) * factor,
-            fat: total.fat + (food.fat || 0) * factor,
+            calories: total.calories + Number(item.calories || 0) * factor,
+            protein: total.protein + Number(item.protein || 0) * factor,
+            carbs: total.carbs + Number(item.carbs || 0) * factor,
+            fat: total.fat + Number(item.fat || 0) * factor,
           };
         },
         { calories: 0, protein: 0, carbs: 0, fat: 0 },
@@ -482,70 +653,74 @@ function MealPlanPreview({ plan }) {
   };
 
   return (
-    <div className='space-y-4'>
+    <div className='space-y-6'>
       <div className='flex flex-wrap items-center gap-2'>
-        <Badge color={plan.isActive ? 'green' : 'slate'}>{plan.isActive ? 'Active' : 'Inactive'}</Badge>
+        <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium ${plan.isActive ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-slate-100 text-slate-800 border border-slate-200'}`}>{plan.isActive ? 'Active' : 'Inactive'}</span>
       </div>
 
-      {plan.desc ? <div className='text-sm text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200'>{plan.desc}</div> : null}
+      {plan.desc ? <div className='text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-200'>{plan.desc}</div> : null}
 
-      <div className='space-y-3'>
+      <div className='space-y-4'>
         {(plan.days || []).map((d, idx) => {
-          const dayNutrition = calculateNutrition(d.foods);
+          const dayNutrition = calculateNutrition(d.foods || []);
 
           return (
-            <div key={d.id || idx} className='rounded-xl border border-slate-200 p-3 bg-white'>
-              <div className='flex items-center justify-between'>
-                <div className='font-medium'>{d.name}</div>
+            <div key={d.id || idx} className='rounded-lg border border-slate-200 bg-white'>
+              <div className='px-4 py-3 border-b border-slate-100 flex items-center justify-between'>
+                <div className='font-semibold text-slate-800'>{d.name}</div>
                 <div className='text-xs text-slate-500'>{String(d.day || '').toLowerCase()}</div>
               </div>
 
               {/* Nutrition Summary */}
               {d.foods?.length > 0 && (
-                <div className='mt-2 grid grid-cols-4 gap-2 text-xs'>
-                  <div className='text-center p-2 rounded bg-blue-50'>
-                    <div className='font-semibold text-blue-700'>{Math.round(dayNutrition.calories)}</div>
-                    <div className='text-blue-600'>kcal</div>
-                  </div>
-                  <div className='text-center p-2 rounded bg-green-50'>
-                    <div className='font-semibold text-green-700'>{dayNutrition.protein.toFixed(1)}g</div>
-                    <div className='text-green-600'>Protein</div>
-                  </div>
-                  <div className='text-center p-2 rounded bg-yellow-50'>
-                    <div className='font-semibold text-yellow-700'>{dayNutrition.carbs.toFixed(1)}g</div>
-                    <div className='text-yellow-600'>Carbs</div>
-                  </div>
-                  <div className='text-center p-2 rounded bg-red-50'>
-                    <div className='font-semibold text-red-700'>{dayNutrition.fat.toFixed(1)}g</div>
-                    <div className='text-red-600'>Fat</div>
+                <div className='p-4 border-b border-slate-100'>
+                  <div className='grid grid-cols-4 gap-3 text-sm'>
+                    <div className='text-center p-2 rounded-lg bg-blue-50 border border-blue-200'>
+                      <div className='font-semibold text-blue-700'>{Math.round(dayNutrition.calories)}</div>
+                      <div className='text-blue-600 text-xs'>kcal</div>
+                    </div>
+                    <div className='text-center p-2 rounded-lg bg-green-50 border border-green-200'>
+                      <div className='font-semibold text-green-700'>{dayNutrition.protein.toFixed(1)}g</div>
+                      <div className='text-green-600 text-xs'>Protein</div>
+                    </div>
+                    <div className='text-center p-2 rounded-lg bg-yellow-50 border border-yellow-200'>
+                      <div className='font-semibold text-yellow-700'>{dayNutrition.carbs.toFixed(1)}g</div>
+                      <div className='text-yellow-600 text-xs'>Carbs</div>
+                    </div>
+                    <div className='text-center p-2 rounded-lg bg-red-50 border border-red-200'>
+                      <div className='font-semibold text-red-700'>{dayNutrition.fat.toFixed(1)}g</div>
+                      <div className='text-red-600 text-xs'>Fat</div>
+                    </div>
                   </div>
                 </div>
               )}
 
-              <div className='mt-2 text-sm text-slate-600'>
+              <div className='p-4'>
                 {(d.foods || []).length ? (
                   <ul className='space-y-2'>
                     {d.foods.map((foodItem, i) => {
-                      const food = foodItem.food || {};
+                      const q = Number(foodItem.quantity || 0);
+                      const factor = q / 100;
                       return (
-                        <li key={foodItem.id || i} className='flex items-center justify-between p-2 rounded-lg bg-slate-50'>
-                          <div>
-                            <span className='font-medium'>{food.name}</span>
-                            <div className='text-xs text-slate-500'>
-                              {foodItem.quantity}
-                              {food.unit} · {foodItem.mealType}
+                        <li key={foodItem.id || i} className='flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200'>
+                          <div className='flex-1'>
+                            <div className='font-medium text-slate-800'>{foodItem.name}</div>
+                            <div className='text-xs text-slate-600 mt-1'>
+                              {q}
+                              {foodItem.unit || 'g'} · {String(foodItem.mealType || '').toUpperCase()}
+                              {foodItem.category ? ` · ${foodItem.category}` : ''}
                             </div>
                           </div>
-                          <div className='text-xs text-slate-500 text-right'>
-                            <div>{Math.round((food.calories || 0) * (foodItem.quantity / 100))} kcal</div>
-                            <div>P: {(food.protein || 0) * (foodItem.quantity / 100).toFixed(1)}g</div>
+                          <div className='text-right text-sm text-slate-700'>
+                            <div className='font-medium'>{Math.round((foodItem.calories || 0) * factor)} kcal</div>
+                            <div className='text-xs text-slate-500'>P: {(Number(foodItem.protein || 0) * factor).toFixed(1)}g</div>
                           </div>
                         </li>
                       );
                     })}
                   </ul>
                 ) : (
-                  <div className='text-xs text-slate-400'>No foods yet</div>
+                  <div className='text-sm text-slate-500 text-center py-4'>No foods yet</div>
                 )}
               </div>
             </div>
@@ -553,16 +728,16 @@ function MealPlanPreview({ plan }) {
         })}
       </div>
 
-      <div className='pt-2'>
-        <div className='text-xs font-semibold text-slate-500 mb-1'>Assignees</div>
+      <div>
+        <div className='text-xs font-semibold text-slate-500 mb-2'>Assignees</div>
         {assignees === null ? (
           <div className='h-8 rounded shimmer w-1/2' />
         ) : assignees.length ? (
           <div className='flex flex-wrap gap-1'>
             {assignees.map(a => (
-              <Badge key={a.id} color='indigo'>
+              <span key={a.id} className='inline-flex items-center rounded-lg bg-indigo-100 text-indigo-700 text-[11px] px-2 py-1 border border-indigo-200'>
                 {a?.athlete?.name || a?.athlete?.email || a?.athlete?.id}
-              </Badge>
+              </span>
             ))}
           </div>
         ) : (
@@ -570,41 +745,133 @@ function MealPlanPreview({ plan }) {
         )}
       </div>
 
-      <div className='text-[11px] text-slate-500'>
+      <div className='text-[11px] text-slate-500 border-t border-slate-100 pt-3'>
         Created: {plan.created_at ? new Date(plan.created_at).toLocaleString() : '—'} · Updated: {plan.updated_at ? new Date(plan.updated_at).toLocaleString() : '—'}
       </div>
     </div>
   );
-}
+});
 
-/* ------------------------------- Meal Plan Form ------------------------------- */
-function MealPlanForm({ initial, onSubmit }) {
+/* ================================ ASSIGN ================================= */
+const AssignMealPlanForm = memo(({ planId, onClose, onAssigned, optionsClient }) => {
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  const addUser = userId => {
+    if (!userId) return;
+    if (selectedUsers.some(u => u.id === userId)) return;
+    const user = optionsClient.find(u => u.id === userId);
+    if (!user) return;
+    setSelectedUsers(prev => [...prev, user]);
+  };
+
+  const removeUser = userId => setSelectedUsers(prev => prev.filter(u => u.id !== userId));
+
+  const submit = async e => {
+    e.preventDefault();
+    if (!selectedUsers.length) return;
+    setSubmitting(true);
+    try {
+      // single assign first; you can switch to bulk if needed
+      const first = selectedUsers[0];
+      await api.post(`/nutrition/meal-plans/${planId}/assign`, { userId: first.id });
+      onAssigned?.();
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Failed to assign meal plan';
+      Notification(msg, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className='space-y-4'>
+      <div>
+        <label className='text-sm font-medium text-slate-700 mb-2 block'>Select Users</label>
+        <Select placeholder='Search and select users…' options={optionsClient.filter(o => !selectedUsers.some(u => u.id === o.id))} value={null} onChange={addUser} searchable={true} />
+      </div>
+
+      {selectedUsers.length > 0 && (
+        <div className='flex flex-wrap gap-2'>
+          {selectedUsers.map(user => (
+            <span key={user.id} className='inline-flex items-center gap-2 rounded-lg bg-indigo-100 text-indigo-700 text-sm px-3 py-1.5 border border-indigo-200'>
+              {user.label}
+              <button type='button' onClick={() => removeUser(user.id)} className='hover:text-indigo-900 transition-colors' aria-label='Remove user'>
+                <X className='w-3 h-3' />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className='flex items-center justify-end gap-2 pt-2'>
+        <Button onClick={onClose} type='button' color='outline' name='Cancel' />
+        <Button disabled={submitting || selectedUsers.length === 0} type='submit' color='primary' name={submitting ? 'Assigning…' : 'Assign'} loading={submitting} />
+      </div>
+    </form>
+  );
+});
+
+/* ============================ MEAL PLAN FORM ============================ */
+const MealPlanForm = memo(({ initial, onSubmit }) => {
   const [name, setName] = useState(initial?.name || '');
   const [desc, setDesc] = useState(initial?.desc || '');
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
-  const [days, setDays] = useState(initial?.days || []);
-
-  const { foods, fetchFoods } = useValues();
-
-  useEffect(() => {
-    fetchFoods();
-  }, []);
+  const [days, setDays] = useState(
+    (initial?.days || []).map(d => ({
+      id: d.id || `day-${Math.random().toString(36).slice(2)}`,
+      day: d.day || 'monday',
+      name: d.name || '',
+      foods: (d.foods || []).map(f => ({
+        id: f.id || `food-${Math.random().toString(36).slice(2)}`,
+        name: f.name || '',
+        category: f.category || '',
+        calories: numOr(f.calories, 0),
+        protein: numOr(f.protein, 0),
+        carbs: numOr(f.carbs, 0),
+        fat: numOr(f.fat, 0),
+        unit: f.unit || 'g',
+        quantity: numOr(f.quantity, 100),
+        mealType: (f.mealType || 'lunch').toLowerCase(),
+        orderIndex: numOr(f.orderIndex, 0),
+      })),
+    })),
+  );
 
   useEffect(() => {
     setName(initial?.name || '');
     setDesc(initial?.desc || '');
     setIsActive(initial?.isActive ?? true);
-    setDays(initial?.days || []);
+    setDays(
+      (initial?.days || []).map(d => ({
+        id: d.id || `day-${Math.random().toString(36).slice(2)}`,
+        day: d.day || 'monday',
+        name: d.name || '',
+        foods: (d.foods || []).map(f => ({
+          id: f.id || `food-${Math.random().toString(36).slice(2)}`,
+          name: f.name || '',
+          category: f.category || '',
+          calories: numOr(f.calories, 0),
+          protein: numOr(f.protein, 0),
+          carbs: numOr(f.carbs, 0),
+          fat: numOr(f.fat, 0),
+          unit: f.unit || 'g',
+          quantity: numOr(f.quantity, 100),
+          mealType: (f.mealType || 'lunch').toLowerCase(),
+          orderIndex: numOr(f.orderIndex, 0),
+        })),
+      })),
+    );
   }, [initial]);
 
   const DAYS = [
-    { value: 'saturday', label: 'Saturday' },
-    { value: 'sunday', label: 'Sunday' },
     { value: 'monday', label: 'Monday' },
     { value: 'tuesday', label: 'Tuesday' },
     { value: 'wednesday', label: 'Wednesday' },
     { value: 'thursday', label: 'Thursday' },
     { value: 'friday', label: 'Friday' },
+    { value: 'saturday', label: 'Saturday' },
+    { value: 'sunday', label: 'Sunday' },
   ];
 
   const MEAL_TYPES = [
@@ -635,10 +902,16 @@ function MealPlanForm({ initial, onSubmit }) {
   const addFoodToDay = dayIndex => {
     const newFood = {
       id: `food-${Date.now()}`,
-      foodId: '',
+      name: '',
+      category: '',
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      unit: 'g',
       quantity: 100,
       mealType: 'lunch',
-      orderIndex: days[dayIndex].foods.length,
+      orderIndex: days[dayIndex]?.foods?.length || 0,
     };
     setDays(prev => prev.map((day, i) => (i === dayIndex ? { ...day, foods: [...day.foods, newFood] } : day)));
   };
@@ -653,33 +926,34 @@ function MealPlanForm({ initial, onSubmit }) {
         i === dayIndex
           ? {
               ...day,
-              foods: day.foods.map((food, j) => (j === foodIndex ? { ...food, [field]: value } : food)),
+              foods: day.foods.map((food, j) => (j === foodIndex ? { ...food, [field]: fieldIsNumber(field) ? numOr(value, 0) : value } : food)),
             }
           : day,
       ),
     );
   };
 
-  const getSelectedFood = foodId => {
-    return foods.find(f => f.id === foodId);
+  const kcalForFood = f => {
+    const q = numOr(f.quantity, 0);
+    const factor = q / 100;
+    return Math.round(numOr(f.calories, 0) * factor);
   };
+
+  const NumberField = memo(({ label, value, onChange }) => (
+    <div>
+      <label className='text-xs text-slate-600'>{label}</label>
+      <input type='number' value={value} onChange={e => onChange(e.target.value)} className='w-full h-[34px] rounded-lg border border-slate-200 px-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/30' step={fieldIsNumber(label.toLowerCase()) ? '0.1' : '1'} />
+    </div>
+  ));
 
   return (
     <form
       onSubmit={async e => {
         e.preventDefault();
-        if (!name.trim()) {
-          Notification('Plan name is required', 'error');
-          return;
-        }
-        if (days.length === 0) {
-          Notification('Add at least one day to the plan', 'error');
-          return;
-        }
-        if (days.some(day => day.foods.length === 0)) {
-          Notification('Each day must have at least one food item', 'error');
-          return;
-        }
+        if (!name.trim()) return Notification('Plan name is required', 'error');
+        if (days.length === 0) return Notification('Add at least one day to the plan', 'error');
+        if (days.some(day => day.foods.length === 0)) return Notification('Each day must have at least one food item', 'error');
+        if (days.some(day => day.foods.some(f => !f.name.trim()))) return Notification('Each food item must have a name', 'error');
 
         const payload = {
           name: name.trim(),
@@ -688,51 +962,60 @@ function MealPlanForm({ initial, onSubmit }) {
           days: days.map(day => ({
             day: day.day,
             name: day.name,
-            foods: day.foods.map(foodItem => ({
-              foodId: foodItem.foodId,
-              quantity: Number(foodItem.quantity),
-              mealType: foodItem.mealType,
-              orderIndex: foodItem.orderIndex,
+            foods: day.foods.map(f => ({
+              name: f.name,
+              category: f.category || null,
+              calories: numOr(f.calories, 0),
+              protein: numOr(f.protein, 0),
+              carbs: numOr(f.carbs, 0),
+              fat: numOr(f.fat, 0),
+              unit: f.unit || 'g',
+              quantity: numOr(f.quantity, 0),
+              mealType: f.mealType,
+              orderIndex: numOr(f.orderIndex, 0),
             })),
           })),
         };
         onSubmit?.(payload);
       }}
-      className='space-y-4'>
-      <Input label='Plan Name' name='name' value={name} onChange={v => setName(v)} required />
-
+      className='space-y-6'>
       <div>
-        <label className='text-sm text-slate-600'>Description</label>
-        <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3} className='w-full rounded-xl border border-slate-200 p-3 outline-none focus:ring-2 focus:ring-indigo-500/30' placeholder='Optional description...' />
+        <label className='text-sm font-medium text-slate-700 mb-2 block'>Plan Name</label>
+        <input value={name} onChange={e => setName(e.target.value)} className='w-full rounded-lg border border-slate-200 p-3 outline-none focus:ring-2 focus:ring-indigo-500/30 bg-white' placeholder='e.g., High Protein Diet…' required />
       </div>
 
-      <div className='flex items-center gap-2'>
+      <div>
+        <label className='text-sm font-medium text-slate-700 mb-2 block'>Description</label>
+        <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3} className='w-full rounded-lg border border-slate-200 p-3 outline-none focus:ring-2 focus:ring-indigo-500/30 bg-white resize-none' placeholder='Optional description...' />
+      </div>
+
+      <div className='flex items-center gap-3'>
         <input type='checkbox' id='isActive' checked={isActive} onChange={e => setIsActive(e.target.checked)} className='rounded border-slate-300 text-indigo-600 focus:ring-indigo-500' />
-        <label htmlFor='isActive' className='text-sm text-slate-600'>
+        <label htmlFor='isActive' className='text-sm font-medium text-slate-700'>
           Active Plan
         </label>
       </div>
 
-      <div className='border-t pt-4'>
+      <div className='border-t border-slate-100 pt-4'>
         <div className='flex items-center justify-between mb-4'>
-          <h3 className='font-semibold'>Days & Foods</h3>
-          <Button type='button' onClick={addDay} icon={<Plus className='w-4 h-4' />} name='Add Day' color='outline' className='!w-fit' />
+          <h3 className='font-semibold text-slate-800'>Days & Foods</h3>
+          <Button type='button' onClick={addDay} icon={<Plus className='w-4 h-4' />} name='Add Day' color='outline' />
         </div>
 
         {days.length === 0 ? (
-          <div className='text-center py-8 text-slate-500 border-2 border-dashed border-slate-200 rounded-xl'>
+          <div className='text-center py-8 text-slate-500 border-2 border-dashed border-slate-200 rounded-lg bg-slate-50'>
             <Utensils className='w-8 h-8 mx-auto mb-2 text-slate-400' />
-            <p>No days added yet</p>
+            <p className='text-sm'>No days added yet</p>
           </div>
         ) : (
           <div className='space-y-4'>
             {days.map((day, dayIndex) => (
-              <div key={day.id} className='border border-slate-200 rounded-xl p-4'>
-                <div className='flex items-center gap-3 mb-3'>
+              <motion.div key={day.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className='border border-slate-200 rounded-lg p-4 bg-white'>
+                <div className='flex items-center gap-3 mb-4'>
                   <div className='flex-1 grid grid-cols-2 gap-3'>
                     <div>
-                      <label className='text-sm text-slate-600'>Day</label>
-                      <select value={day.day} onChange={e => updateDay(dayIndex, 'day', e.target.value)} className='w-full h-[40px] rounded-xl border border-slate-200 px-3 outline-none focus:ring-2 focus:ring-indigo-500/30'>
+                      <label className='text-sm font-medium text-slate-700 mb-2 block'>Day</label>
+                      <select value={day.day} onChange={e => updateDay(dayIndex, 'day', e.target.value)} className='w-full h-11 rounded-lg border border-slate-200 px-3 outline-none focus:ring-2 focus:ring-indigo-500/30 bg-white'>
                         {DAYS.map(d => (
                           <option key={d.value} value={d.value}>
                             {d.label}
@@ -741,203 +1024,92 @@ function MealPlanForm({ initial, onSubmit }) {
                       </select>
                     </div>
                     <div>
-                      <label className='text-sm text-slate-600'>Day Name</label>
-                      <input type='text' value={day.name} onChange={e => updateDay(dayIndex, 'name', e.target.value)} className='w-full h-[40px] rounded-xl border border-slate-200 px-3 outline-none focus:ring-2 focus:ring-indigo-500/30' placeholder='e.g., High Protein Day' />
+                      <label className='text-sm font-medium text-slate-700 mb-2 block'>Day Name</label>
+                      <input type='text' value={day.name} onChange={e => updateDay(dayIndex, 'name', e.target.value)} className='w-full h-11 rounded-lg border border-slate-200 px-3 outline-none focus:ring-2 focus:ring-indigo-500/30 bg-white' placeholder='e.g., High Protein Day' />
                     </div>
                   </div>
-                  <Button type='button' onClick={() => removeDay(dayIndex)} color='danger' icon={<Trash2 className='w-4 h-4' />} className='!w-fit mt-6' />
+                  <IconBtn title='Remove day' onClick={() => removeDay(dayIndex)} danger className='mt-6'>
+                    <Trash2 className='w-4 h-4' />
+                  </IconBtn>
                 </div>
 
                 <div className='space-y-3'>
                   <div className='flex items-center justify-between'>
-                    <h4 className='font-medium text-sm'>Foods</h4>
-                    <Button type='button' onClick={() => addFoodToDay(dayIndex)} icon={<Plus className='w-4 h-4' />} name='Add Food' color='outline' className='!w-fit !text-xs' />
+                    <h4 className='font-medium text-sm text-slate-800'>Foods</h4>
+                    <Button type='button' onClick={() => addFoodToDay(dayIndex)} icon={<Plus className='w-4 h-4' />} name='Add Food' color='outline' className='!px-3 !py-1.5' />
                   </div>
 
                   {day.foods.length === 0 ? (
-                    <div className='text-center py-4 text-slate-400 text-sm border border-dashed border-slate-200 rounded-lg'>No foods added to this day</div>
+                    <div className='text-center py-4 text-slate-400 text-sm border border-dashed border-slate-200 rounded-lg bg-slate-50'>No foods added to this day</div>
                   ) : (
-                    day.foods.map((foodItem, foodIndex) => {
-                      const selectedFood = getSelectedFood(foodItem.foodId);
-                      return (
-                        <div key={foodItem.id} className='flex items-center gap-3 p-3 border border-slate-100 rounded-lg bg-slate-50'>
-                          <div className='flex-1 grid grid-cols-4 gap-2'>
-                            <div>
-                              <label className='text-xs text-slate-600'>Food</label>
-                              <select value={foodItem.foodId} onChange={e => updateFoodInDay(dayIndex, foodIndex, 'foodId', e.target.value)} className='w-full h-[34px] rounded-lg border border-slate-200 px-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/30' required>
-                                <option value=''>Select food...</option>
-                                {foods.map(food => (
-                                  <option key={food.id} value={food.id}>
-                                    {food.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <label className='text-xs text-slate-600'>Quantity</label>
-                              <input type='number' value={foodItem.quantity} onChange={e => updateFoodInDay(dayIndex, foodIndex, 'quantity', e.target.value)} className='w-full h-[34px] rounded-lg border border-slate-200 px-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/30' min='1' required />
-                            </div>
-                            <div>
-                              <label className='text-xs text-slate-600'>Meal Type</label>
-                              <select value={foodItem.mealType} onChange={e => updateFoodInDay(dayIndex, foodIndex, 'mealType', e.target.value)} className='w-full h-[34px] rounded-lg border border-slate-200 px-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/30'>
-                                {MEAL_TYPES.map(meal => (
-                                  <option key={meal.value} value={meal.value}>
-                                    {meal.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <label className='text-xs text-slate-600'>Nutrition</label>
-                              <div className='text-xs text-slate-500 h-[34px] flex items-center'>{selectedFood ? <>{Math.round((selectedFood.calories || 0) * (foodItem.quantity / 100))} kcal</> : '--'}</div>
-                            </div>
+                    day.foods.map((f, foodIndex) => (
+                      <div key={f.id} className='p-3 border border-slate-200 rounded-lg bg-slate-50 space-y-3'>
+                        {/* row 1: name + category */}
+                        <div className='grid grid-cols-2 gap-3'>
+                          <div>
+                            <label className='text-xs font-medium text-slate-700 mb-1 block'>Food Name</label>
+                            <input type='text' value={f.name} onChange={e => updateFoodInDay(dayIndex, foodIndex, 'name', e.target.value)} className='w-full h-9 rounded-lg border border-slate-200 px-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/30 bg-white' placeholder='e.g., Chicken Breast' required />
                           </div>
-                          <Button type='button' onClick={() => removeFoodFromDay(dayIndex, foodIndex)} color='danger' icon={<Trash2 className='w-3 h-3' />} className='!w-fit !h-[34px]' />
+                          <div>
+                            <label className='text-xs font-medium text-slate-700 mb-1 block'>Category</label>
+                            <input type='text' value={f.category} onChange={e => updateFoodInDay(dayIndex, foodIndex, 'category', e.target.value)} className='w-full h-9 rounded-lg border border-slate-200 px-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/30 bg-white' placeholder='Protein / Carb / Fat ...' />
+                          </div>
                         </div>
-                      );
-                    })
+
+                        {/* row 2: macros */}
+                        <div className='grid grid-cols-5 gap-2'>
+                          <NumberField label='Calories' value={f.calories} onChange={v => updateFoodInDay(dayIndex, foodIndex, 'calories', v)} />
+                          <NumberField label='Protein' value={f.protein} onChange={v => updateFoodInDay(dayIndex, foodIndex, 'protein', v)} />
+                          <NumberField label='Carbs' value={f.carbs} onChange={v => updateFoodInDay(dayIndex, foodIndex, 'carbs', v)} />
+                          <NumberField label='Fat' value={f.fat} onChange={v => updateFoodInDay(dayIndex, foodIndex, 'fat', v)} />
+                          <div>
+                            <label className='text-xs font-medium text-slate-700 mb-1 block'>Unit</label>
+                            <input value={f.unit} onChange={e => updateFoodInDay(dayIndex, foodIndex, 'unit', e.target.value)} className='w-full h-9 rounded-lg border border-slate-200 px-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/30 bg-white' />
+                          </div>
+                        </div>
+
+                        {/* row 3: qty + meal type + kcal preview */}
+                        <div className='grid grid-cols-4 gap-2'>
+                          <NumberField label='Quantity' value={f.quantity} onChange={v => updateFoodInDay(dayIndex, foodIndex, 'quantity', v)} />
+                          <div>
+                            <label className='text-xs font-medium text-slate-700 mb-1 block'>Meal Type</label>
+                            <select value={f.mealType} onChange={e => updateFoodInDay(dayIndex, foodIndex, 'mealType', e.target.value)} className='w-full h-9 rounded-lg border border-slate-200 px-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/30 bg-white'>
+                              {MEAL_TYPES.map(meal => (
+                                <option key={meal.value} value={meal.value}>
+                                  {meal.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className='text-xs font-medium text-slate-700 mb-1 block'>Order</label>
+                            <input type='number' value={f.orderIndex} onChange={e => updateFoodInDay(dayIndex, foodIndex, 'orderIndex', e.target.value)} className='w-full h-9 rounded-lg border border-slate-200 px-2 text-sm outline-none focus:ring-1 focus:ring-indigo-500/30 bg-white' />
+                          </div>
+                          <div className='flex flex-col justify-end'>
+                            <div className='text-xs font-medium text-slate-700'>Est. kcal</div>
+                            <div className='h-9 flex items-center text-sm font-semibold text-slate-800'>{kcalForFood(f)} kcal</div>
+                          </div>
+                        </div>
+
+                        {/* remove */}
+                        <div className='flex justify-end'>
+                          <IconBtn title='Remove food' onClick={() => removeFoodFromDay(dayIndex, foodIndex)} danger>
+                            <Trash2 className='w-4 h-4' />
+                          </IconBtn>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         )}
       </div>
 
-      <div className='flex items-center justify-end gap-2 pt-4 border-t'>
+      <div className='flex items-center justify-end gap-3 pt-4 border-t border-slate-100'>
         <Button name='Save Meal Plan' type='submit' />
       </div>
     </form>
   );
-}
-
-/* --------------------------------- Assign Meal Plan --------------------------------- */
-function AssignMealPlanForm({ planId, onClose, onAssigned, optionsClient }) {
-  const [selectedUsers, setSelectedUsers] = useState([]);
-  const [submitting, setSubmitting] = useState(false);
-
-  const addUser = userId => {
-    if (!userId) return;
-    if (selectedUsers.some(u => u.id === userId)) return;
-
-    const user = optionsClient.find(u => u.id === userId);
-    if (!user) return;
-
-    setSelectedUsers(prev => [...prev, user]);
-  };
-
-  const removeUser = userId => {
-    setSelectedUsers(prev => prev.filter(u => u.id !== userId));
-  };
-
-  const handleSubmit = async e => {
-    e.preventDefault();
-    if (selectedUsers.length === 0) {
-      Notification('Please select at least one user', 'error');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const athleteIds = selectedUsers.map(u => u.id);
-      await api.post(`/meal-plans/${planId}/assign`, { userId: athleteIds[0] });
-
-      onAssigned?.();
-    } catch (err) {
-      const msg = err?.response?.data?.message || 'Failed to assign meal plan';
-      Notification(msg, 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className='space-y-3'>
-      <Field label='Select Users'>
-        <SelectSearch value={null} onChange={addUser} options={optionsClient.filter(o => !selectedUsers.some(u => u.id === o.id))} placeholder='Search and select users...' searchable={true} />
-      </Field>
-
-      {selectedUsers.length > 0 && (
-        <div className='flex flex-wrap gap-2'>
-          {selectedUsers.map(user => (
-            <div key={user.id} className='inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-full text-sm'>
-              {user.label}
-              <button type='button' onClick={() => removeUser(user.id)} className='hover:text-indigo-200'>
-                <XIcon className='w-3 h-3' />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className='flex items-center justify-end gap-2 pt-2'>
-        <Button disabled={submitting || selectedUsers.length === 0} type='submit' color='primary' name={submitting ? 'Assigning…' : 'Assign'} loading={submitting} />
-      </div>
-    </form>
-  );
-}
-
-/* ------------------------------ Small atoms ------------------------------ */
-const IconButton = ({ title, onClick, children, danger = false }) => (
-  <button title={title} onClick={onClick} className={`flex-none w-[40px] h-[40px] inline-flex items-center justify-center rounded-lg border transition ${danger ? 'border-red-200 bg-white text-red-600 hover:bg-red-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
-    {children}
-  </button>
-);
-
-const IconMini = ({ title, onClick, children, danger = false }) => (
-  <button title={title} onClick={onClick} className={`w-9 h-9 grid place-content-center rounded-lg backdrop-blur shadow border ${danger ? 'border-red-200 text-red-600 bg-white/85 hover:bg-white' : 'border-white/60 bg-white/85 hover:bg-white'}`}>
-    {children}
-  </button>
-);
-
-function Field({ label, children }) {
-  return (
-    <div>
-      <label className='text-sm text-slate-600'>{label}</label>
-      {children}
-    </div>
-  );
-}
-
-function KpiSkeleton() {
-  return (
-    <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full'>
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className='card-glow p-4'>
-          <div className='flex items-center gap-3'>
-            <div className='w-10 h-10 rounded-xl shimmer' />
-            <div className='flex-1'>
-              <div className='h-3 shimmer w-24 rounded mb-2' />
-              <div className='h-4 shimmer w-16 rounded' />
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
- 
-import clsx from 'clsx';
-
-const COLORS = {
-  blue: 'bg-blue-100 text-blue-800 border border-blue-200',
-  green: 'bg-green-100 text-green-800 border border-green-200',
-  red: 'bg-red-100 text-red-800 border border-red-200',
-  yellow: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
-  gray: 'bg-gray-100 text-gray-800 border border-gray-200',
-  indigo: 'bg-indigo-100 text-indigo-800 border border-indigo-200',
-};
-
-export function Badge({ color = 'gray', children }) {
-  return (
-    <span
-      className={clsx(
-        'inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full',
-        COLORS[color] || COLORS.gray
-      )}
-    >
-      {children}
-    </span>
-  );
-}
+});

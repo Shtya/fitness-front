@@ -10,6 +10,7 @@ export default function Input({
   type = 'text',
   value,
   onChange = () => {},
+	onBlur ,
   disabled = false,
   error,
   clearable = true,
@@ -42,7 +43,7 @@ export default function Input({
       <div
         className={[
           'relative flex items-center',
-          'rounded-xl border bg-white',
+          'rounded-lg border bg-white',
           disabled
             ? 'cursor-not-allowed opacity-60'
             : 'cursor-text',
@@ -59,9 +60,10 @@ export default function Input({
           name={name}
           placeholder={placeholder}
           value={internal}
+					onBlur={onBlur}
           disabled={disabled}
           onChange={handleChange}
-          className={`${cnInput} h-[43px] w-full rounded-xl px-3.5 py-2.5 text-sm text-slate-900 outline-none placeholder:text-gray-400`}
+          className={`${cnInput} h-[43px] w-full rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none placeholder:text-gray-400`}
         />
 
         {clearable && internal && !disabled && (

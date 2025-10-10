@@ -1,5 +1,5 @@
 import { useCountdown } from '@/hooks/workouts/useCountdown';
-import { Clock, Edit3, Play, Minus, Pause, Plus, X } from 'lucide-react';
+import { Clock, Edit3, Play, Minus, Pause, Plus, X, Bell, BellOff } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 /* --------------------------- Pure helpers --------------------------- */
@@ -17,6 +17,7 @@ export function mmssToSeconds(str) {
   return (Number(m) || 0) * 60 + (Number(s) || 0);
 }
 
+/* =========================== Prettier Timer =========================== */
 export const RestTimerCard = React.memo(function RestTimerCard({
   alerting,
   setAlerting,
@@ -26,18 +27,16 @@ export const RestTimerCard = React.memo(function RestTimerCard({
   // Tweaks
   smallStep = 15, // +/- buttons step when clicked
   holdStep = 5, // +/- step when held
-  holdIntervalMs = 120, // long-press interval
-  alertLoopMs = 30000, // auto-stop alert after this
+  holdIntervalMs = 120,
+  alertLoopMs = 30000,
 }) {
   const { remaining, running, paused, start, pause, resume, stop, duration } = useCountdown();
 
   // Local state
   const [seconds, setSeconds] = useState(() => Number(initialSeconds || 90) || 90);
-  const [showInput, setShowInput] = useState(false);
-
+ 
   // Refs
-  const inputRef = useRef(null);
-  const holdRef = useRef(null);
+   const holdRef = useRef(null);
   const alertTimeoutRef = useRef(null);
   const hasAlertFiredRef = useRef(false);
 
@@ -45,7 +44,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
     setSeconds(Number(initialSeconds || 90) || 90);
   }, [initialSeconds]);
 
-  /* --------------------------- Haptics (throttled) --------------------------- */
+  /* --------------------------- Haptics --------------------------- */
   const haptic = useCallback((ms = 10) => {
     if (typeof window === 'undefined') return;
     const nav = window.navigator;
@@ -72,7 +71,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
     setAlerting(false);
   }, [audioEl, setAlerting]);
 
-  // Fire alert once when countdown reaches 0 after a valid run
+  // Fire alert once when countdown reaches 0
   useEffect(() => {
     if (!running && duration > 0 && remaining === 0 && !hasAlertFiredRef.current) {
       const el = audioEl?.current;
@@ -81,11 +80,8 @@ export const RestTimerCard = React.memo(function RestTimerCard({
       try {
         el.currentTime = 0;
         el.loop = true;
-        const maybePromise = el.play?.();
-        // best effort: some browsers require user gesture; ignore rejections
-        if (maybePromise && typeof maybePromise.catch === 'function') {
-          maybePromise.catch(() => {});
-        }
+        const p = el.play?.();
+        if (p?.catch) p.catch(() => {});
         setAlerting(true);
         alertTimeoutRef.current = setTimeout(stopAlert, alertLoopMs);
       } catch {}
@@ -102,12 +98,10 @@ export const RestTimerCard = React.memo(function RestTimerCard({
   const step = useCallback(delta => {
     setSeconds(s => Math.max(0, s + delta));
   }, []);
-
   const dec = useCallback(() => {
     step(-smallStep);
     haptic();
   }, [haptic, smallStep, step]);
-
   const inc = useCallback(() => {
     step(+smallStep);
     haptic();
@@ -121,7 +115,6 @@ export const RestTimerCard = React.memo(function RestTimerCard({
     },
     [holdIntervalMs, step],
   );
-
   const endHold = useCallback(() => {
     if (holdRef.current) {
       clearInterval(holdRef.current);
@@ -129,35 +122,24 @@ export const RestTimerCard = React.memo(function RestTimerCard({
     }
   }, []);
 
-  useEffect(() => {
-    // safety cleanup on unmount
-    return () => {
+  useEffect(
+    () => () => {
       if (holdRef.current) clearInterval(holdRef.current);
       if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
-    };
-  }, []);
+    },
+    [],
+  );
 
   const handleStart = useCallback(() => {
-    hasAlertFiredRef.current = false; // fresh run
-    stopAlert(); // silence any previous loop
+    hasAlertFiredRef.current = false;
+    stopAlert();
     start(seconds);
     haptic(20);
   }, [seconds, start, haptic, stopAlert]);
 
-  const toggleEdit = useCallback(() => {
-    setShowInput(v => !v);
-    // focus next frame
-    requestAnimationFrame(() => inputRef.current?.focus());
-  }, []);
-
-  const commitInput = useCallback(e => {
-    setSeconds(mmssToSeconds(e.target.value));
-    setShowInput(false);
-  }, []);
-
   /* --------------------------- SVG ring math --------------------------- */
   const ring = useMemo(() => {
-    const R = 17;
+    const R = 22; // bigger ring
     const C = 2 * Math.PI * R;
     const pct = duration > 0 ? remaining / duration : 0;
     const dash = C * pct;
@@ -167,10 +149,12 @@ export const RestTimerCard = React.memo(function RestTimerCard({
   /* --------------------------- Derived label --------------------------- */
   const timeLabel = useMemo(() => toMMSS(running ? remaining : seconds), [running, remaining, seconds]);
 
+  /* --------------------------- UI --------------------------- */
   return (
-    <div className={`px-2 pt-2 pb-2 ${className}`}>
-      <div className='flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-2'>
-        {/* Left: tiny ring (stop also silences alert) */}
+    <div className={` pt-2 pb-2 ${className}`}>
+      <div className={[' bg-white relative flex items-center gap-3 rounded-lg border border-slate-200 backdrop-blur px-3 py-2.5'].join(' ')} role='group' aria-label='Rest timer'>
+        {alerting && <div className='pointer-events-none absolute inset-0 rounded-lg ring-2 ring-rose-200/60' />}
+
         <button
           onClick={() => {
             if (running) {
@@ -180,31 +164,48 @@ export const RestTimerCard = React.memo(function RestTimerCard({
             }
           }}
           className='relative shrink-0 grid place-items-center rounded-full'
-          title={running ? 'Stop' : 'Timer'}
+          title={running ? 'Stop timer' : 'Timer'}
           aria-label={running ? 'Stop timer' : 'Timer'}
-          style={{ width: 44, height: 44 }}>
-          <svg width='44' height='44' viewBox='0 0 44 44' aria-hidden='true'>
-            <circle cx='22' cy='22' r={ring.R} stroke='#e5e7eb' strokeWidth='6' fill='none' />
-            <circle cx='22' cy='22' r={ring.R} stroke='currentColor' strokeWidth='6' fill='none' strokeDasharray={ring.C} strokeDashoffset={ring.C - ring.dash} className={`transition-[stroke-dashoffset] duration-200 ease-linear ${running ? 'text-indigo-600' : 'text-slate-300'}`} transform='rotate(-90 22 22)' />
+          style={{ width: 58, height: 58 }}>
+          <svg width='58' height='58' viewBox='0 0 58 58' aria-hidden='true'>
+            <defs>
+              <linearGradient id='rtGrad' x1='0' y1='0' x2='1' y2='1'>
+                <stop offset='0%' stopColor={alerting ? '#ef4444' : '#6366f1'} />
+                <stop offset='100%' stopColor={alerting ? '#f97316' : '#22c55e'} />
+              </linearGradient>
+            </defs>
+            <circle cx='29' cy='29' r={ring.R} stroke='#e5e7eb' strokeWidth='7' fill='none' />
+            <circle cx='29' cy='29' r={ring.R} stroke='url(#rtGrad)' strokeWidth='7' fill='none' strokeLinecap='round' strokeDasharray={ring.C} strokeDashoffset={ring.C - ring.dash} className={`transition-[stroke-dashoffset] duration-200 ease-linear ${running ? '' : 'opacity-70'}`} transform='rotate(-90 29 29)' />
           </svg>
-          <span className='absolute text-[10px] font-semibold text-slate-700 tabular-nums' aria-live='polite'>
+          <span className='absolute text-[11px] font-semibold text-slate-800 tabular-nums' aria-live='polite'>
             {timeLabel}
           </span>
         </button>
 
-        {/* Stop sound (only while alert is looping) */}
-        {alerting && (
-          <button onClick={stopAlert} className='inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 text-red-600 px-2.5 py-1 text-xs hover:bg-red-100' title='Stop alert sound'>
-            <X size={12} /> Stop sound
-          </button>
-        )}
-
-        {/* Middle: controls */}
-        <div className='flex-1 min-w-0'>
-          <div className='flex items-center gap-1.5'>
+        {/* Center: controls & editor */}
+        <div className='flex items-center gap-2 flex-1 min-w-0'>
+          {alerting && (
+            <button onClick={stopAlert} className='inline-flex items-center gap-1.5 ml-1 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 px-2 py-[3px] text-[10px] hover:bg-rose-100' title='Stop alert sound'>
+              <BellOff size={12} /> Stop sound
+            </button>
+          )}
+          {!running && (
+            <div className='ml-auto flex items-center gap-2'>
+              <div className='inline-flex rounded-xl overflow-hidden border border-slate-200 bg-white'>
+                <button onMouseDown={() => startHold(-holdStep)} onMouseUp={endHold} onMouseLeave={endHold} onTouchStart={() => startHold(-holdStep)} onTouchEnd={endHold} onClick={dec} className='px-2.5 h-8 text-xs hover:bg-slate-50' title={`-${smallStep}s (hold for -${holdStep}/tick)`}>
+                  <Minus size={12} />
+                </button>
+                <div className='px-2.5 h-8 grid place-items-center text-sm font-semibold tabular-nums text-slate-800'>{toMMSS(seconds)}</div>
+                <button onMouseDown={() => startHold(+holdStep)} onMouseUp={endHold} onMouseLeave={endHold} onTouchStart={() => startHold(+holdStep)} onTouchEnd={endHold} onClick={inc} className='px-2.5 h-8 text-xs hover:bg-slate-50 border-l border-slate-200' title={`+${smallStep}s (hold for +${holdStep}/tick)`}>
+                  <Plus size={12} />
+                </button>
+              </div>
+            </div>
+          )}
+          <div className=' flex items-center gap-1.5'>
             {!running ? (
-              <button onClick={handleStart} className='inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 px-2.5 py-1 text-xs hover:bg-indigo-100' title='Start'>
-                <Clock size={12} /> Start
+              <button onClick={handleStart} className='inline-flex items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 px-3 h-8 text-xs hover:bg-indigo-100' title='Start'>
+                <Play size={12} /> Start
               </button>
             ) : paused ? (
               <>
@@ -213,7 +214,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
                     resume();
                     haptic();
                   }}
-                  className='inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 px-2.5 py-1 text-xs hover:bg-emerald-100'
+                  className='inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 h-8 text-xs hover:bg-emerald-100'
                   title='Resume'>
                   <Play size={12} /> Resume
                 </button>
@@ -223,7 +224,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
                     stopAlert();
                     haptic(20);
                   }}
-                  className='inline-flex items-center gap-1 rounded-lg border border-red-200 text-red-600 px-2.5 py-1 text-xs hover:bg-red-50'
+                  className='inline-flex items-center gap-1 rounded-xl border border-rose-200 text-rose-600 px-3 h-8 text-xs hover:bg-rose-50'
                   title='Stop'>
                   <X size={12} /> Stop
                 </button>
@@ -235,7 +236,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
                     pause();
                     haptic();
                   }}
-                  className='inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs hover:bg-slate-50'
+                  className='inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 h-8 text-xs hover:bg-slate-50'
                   title='Pause'>
                   <Pause size={12} /> Pause
                 </button>
@@ -245,38 +246,13 @@ export const RestTimerCard = React.memo(function RestTimerCard({
                     stopAlert();
                     haptic(20);
                   }}
-                  className='inline-flex items-center gap-1 rounded-lg border border-red-200 text-red-600 px-2.5 py-1 text-xs hover:bg-red-50'
+                  className='inline-flex items-center gap-1 rounded-xl border border-rose-200 text-rose-600 px-3 h-8 text-xs hover:bg-rose-50'
                   title='Stop'>
                   <X size={12} /> Stop
                 </button>
               </>
             )}
-
-            {/* +/- tiny controls (only when idle) */}
-            {!running && (
-              <div className='ml-auto inline-flex rounded-lg overflow-hidden border border-slate-200'>
-                <button onMouseDown={() => startHold(-holdStep)} onMouseUp={endHold} onMouseLeave={endHold} onTouchStart={() => startHold(-holdStep)} onTouchEnd={endHold} onClick={dec} className='px-2 py-1.5 text-xs hover:bg-slate-50' title={`-${smallStep}s (hold for -${holdStep}/tick)`}>
-                  <Minus size={12} />
-                </button>
-                <button onMouseDown={() => startHold(+holdStep)} onMouseUp={endHold} onMouseLeave={endHold} onTouchStart={() => startHold(+holdStep)} onTouchEnd={endHold} onClick={inc} className='px-2 py-1.5 text-xs hover:bg-slate-50 border-l border-slate-200' title={`+${smallStep}s (hold for +${holdStep}/tick)`}>
-                  <Plus size={12} />
-                </button>
-                <button onClick={toggleEdit} className='px-2 py-1.5 text-xs hover:bg-slate-50 border-l border-slate-200' title='Edit mm:ss'>
-                  <Edit3 size={12} />
-                </button>
-              </div>
-            )}
           </div>
-
-          {/* Inline editor (idle only) */}
-          {!running && showInput && (
-            <div className='mt-1 flex items-center gap-1.5'>
-              <div className='relative ml-auto'>
-                <input ref={inputRef} type='text' defaultValue={toMMSS(seconds)} onBlur={commitInput} onKeyDown={e => e.key === 'Enter' && commitInput(e)} className='h-7 w-[76px] rounded-md border border-slate-200 bg-white px-2 text-[12px] text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 tabular-nums' placeholder='mm:ss' inputMode='numeric' aria-label='Set custom time (mm:ss)' />
-                <span className='absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 select-none'>mm:ss</span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

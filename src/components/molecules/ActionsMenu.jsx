@@ -96,7 +96,7 @@ export default function ActionsMenu({ options = [], align = 'right', buttonClass
 
   return (
     <>
-      <button ref={btnRef} type='button' onClick={toggle} aria-label={ariaLabel} aria-expanded={open} aria-haspopup='menu' className={buttonClassName || 'h-9 w-9 inline-flex items-center justify-center rounded-md border border-slate-200 bg-white hover:bg-slate-50'}>
+      <button ref={btnRef} type='button' onClick={toggle} aria-label={ariaLabel} aria-expanded={open} aria-haspopup='menu' className={buttonClassName || 'h-9 w-9 inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50'}>
         <MoreHorizontal className='h-5 w-5 text-slate-700' />
       </button>
 
@@ -117,7 +117,7 @@ export default function ActionsMenu({ options = [], align = 'right', buttonClass
                     close();
                     opt.onClick && opt.onClick();
                   }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-slate-50 text-left
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-slate-50 text-left
                     ${opt.danger ? 'text-rose-600 hover:bg-rose-50' : 'text-slate-700'}
                     ${opt.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   {opt.icon ? <span className='h-4 w-4'>{opt.icon}</span> : null}

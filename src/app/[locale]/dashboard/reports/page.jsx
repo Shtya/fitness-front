@@ -221,7 +221,7 @@ export default function ReportsPage() {
             <ChartCard title="Personal Records (PRs)" subtitle="Program totals">
               <AreaTrend data={programs.map(p=>({ label: short(p.name), value: p.prs }))} />
             </ChartCard>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="rounded-lg border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between">
                 <div className="font-semibold">Program Table</div>
                 <ToolbarButton variant="secondary" icon={Download} onClick={()=>exportCSV("programs", completionRows)}>CSV</ToolbarButton>
@@ -252,7 +252,7 @@ export default function ReportsPage() {
             </ChartCard>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
             <div className="flex items-center justify-between">
               <div className="font-semibold">Trainer Table</div>
               <ToolbarButton variant="secondary" icon={Download} onClick={()=>exportCSV("trainers", trainerRows)}>CSV</ToolbarButton>
@@ -320,11 +320,11 @@ export default function ReportsPage() {
 
       {/* skeleton when loading */}
       {loading && <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {Array.from({length:6}).map((_,i)=> <div key={i} className="h-32 rounded-2xl bg-slate-100 animate-pulse" />)}
+        {Array.from({length:6}).map((_,i)=> <div key={i} className="h-32 rounded-lg bg-slate-100 animate-pulse" />)}
       </div>}
 
       <style jsx>{`
-        .kpi { @apply rounded-2xl border border-slate-200 bg-white p-4; }
+        .kpi { @apply rounded-lg border border-slate-200 bg-white p-4; }
       `}</style>
     </div>
   );

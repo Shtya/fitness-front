@@ -56,7 +56,7 @@ export function SettingsPopup({ open, onClose, currentSound, onChange, sounds = 
     <AnimatePresence>
       {open && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className='fixed inset-0 z-[80] bg-black/30'>
-          <motion.div initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }} className='mx-auto mt-24 w-[92%] max-w-md rounded-2xl border border-slate-200 bg-white shadow-xl' role='dialog' aria-modal='true' aria-label='Settings'>
+          <motion.div initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }} className='mx-auto mt-24 w-[92%] max-w-md rounded-lg border border-slate-200 bg-white shadow-xl' role='dialog' aria-modal='true' aria-label='Settings'>
             {/* Header */}
             <div className='p-3 border-b border-slate-100 flex items-center justify-between'>
               <div className='font-semibold flex items-center gap-2'>
@@ -72,7 +72,7 @@ export function SettingsPopup({ open, onClose, currentSound, onChange, sounds = 
               <div className='text-sm font-medium'>Alert sound</div>
 
               {/* Scrollable list: fixed height 300px with overflow */}
-              <div className='h-[300px] overflow-auto rounded-xl border border-slate-200'>
+              <div className='h-[300px] overflow-auto rounded-lg border border-slate-200'>
                 <ul className='divide-y divide-slate-200'>
                   {sounds.map((url, i) => {
                     const isSelected = sel === url;

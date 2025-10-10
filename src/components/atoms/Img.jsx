@@ -1,7 +1,7 @@
 'use client';
 
 import { baseImg } from '@/utils/axios';
- import { useMemo } from 'react';
+import { useMemo } from 'react';
 
 export default function Img({ src, altSrc, alt = '', className = 'h-full w-full object-cover', fallback = '/icons/no-img.png', loading = 'lazy', decoding = 'async', draggable = false, ...rest }) {
   const resolved = useMemo(() => {
@@ -10,12 +10,11 @@ export default function Img({ src, altSrc, alt = '', className = 'h-full w-full 
 
     const trimmed = src.trim();
     if (!trimmed) return fallback;
-		
+
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
       return trimmed;
     }
 
-    // relative → join with baseImg safely
     try {
       const base = String(baseImg || '').replace(/\/+$/, '');
       const rel = trimmed.replace(/^\/+/, '');
@@ -26,13 +25,11 @@ export default function Img({ src, altSrc, alt = '', className = 'h-full w-full 
   }, [src, fallback]);
 
   const handleError = e => {
-    // show contained fallback to avoid ugly stretch
     e.currentTarget.classList.add('!object-contain', 'bg-slate-50');
     e.currentTarget.src = altSrc || fallback;
   };
 
   const handleLoad = e => {
-    // if it successfully loads something that isn’t the fallback, keep object-cover
     if (e.currentTarget.src.includes(fallback)) {
       e.currentTarget.classList.add('!object-contain');
     } else {
@@ -40,5 +37,13 @@ export default function Img({ src, altSrc, alt = '', className = 'h-full w-full 
     }
   };
 
-  return <img src={resolved} alt={alt} className={className} onError={handleError} onLoad={handleLoad} loading={loading} decoding={decoding} draggable={draggable} {...rest} />;
+  return (
+    <div className='relative w-full h-full overflow-hidden'>
+      {/* Background blurred version */}
+      <img src={resolved} alt='' className='absolute inset-0 w-full h-full object-cover blur-[20px] ' aria-hidden='true' />
+
+      {/* Foreground normal version */}
+      <img src={resolved} alt={alt} className={`relative ${className}`} onError={handleError} onLoad={handleLoad} loading={loading} decoding={decoding} draggable={draggable} {...rest} />
+    </div>
+  );
 }

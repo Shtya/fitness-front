@@ -178,7 +178,7 @@ export default function ProfileAndPrefsPage() {
           <div className="inline-flex items-center gap-2">
             <button
               onClick={() => { saveLS(LS_PROFILE, profile); saveLS(LS_PREFS, prefs); }}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50"
             >
               <Save size={16}/> Save
             </button>
@@ -187,7 +187,7 @@ export default function ProfileAndPrefsPage() {
       </motion.div>
 
       {/* Tabs */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-2">
+      <div className="rounded-lg border border-slate-200 bg-white p-2">
         <div className="flex flex-wrap gap-2">
           <TabBtn active={tab==='profile'} onClick={()=>setTab('profile')} icon={User} label="Profile" />
           <TabBtn active={tab==='preferences'} onClick={()=>setTab('preferences')} icon={ListChecks} label="Preferences" />
@@ -228,13 +228,13 @@ export default function ProfileAndPrefsPage() {
               <div>
                 <div className="text-sm font-semibold mb-1">Progress photos</div>
                 <div className="grid grid-cols-3 gap-2">
-                  <input type="date" value={pDate} onChange={e=>setPDate(e.target.value)} className="h-9 rounded-md border border-slate-200 px-2 text-sm" />
-                  <input type="url" placeholder="https://image.jpg" value={pUrl} onChange={e=>setPUrl(e.target.value)} className="h-9 rounded-md border border-slate-200 px-2 text-sm" />
-                  <button onClick={addProgressPhoto} className="h-9 rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50">Add</button>
+                  <input type="date" value={pDate} onChange={e=>setPDate(e.target.value)} className="h-9 rounded-lg border border-slate-200 px-2 text-sm" />
+                  <input type="url" placeholder="https://image.jpg" value={pUrl} onChange={e=>setPUrl(e.target.value)} className="h-9 rounded-lg border border-slate-200 px-2 text-sm" />
+                  <button onClick={addProgressPhoto} className="h-9 rounded-lg border border-slate-200 px-3 text-sm hover:bg-slate-50">Add</button>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   {(profile.progressPhotos||[]).slice(-4).reverse().map((ph, i) => (
-                    <div key={`${ph.url}-${i}`} className="relative rounded-xl overflow-hidden border border-slate-200">
+                    <div key={`${ph.url}-${i}`} className="relative rounded-lg overflow-hidden border border-slate-200">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={ph.url} alt="progress" className="w-full h-28 object-cover" />
                       <div className="absolute bottom-0 inset-x-0 bg-black/40 text-white text-xs px-2 py-1 flex items-center justify-between">
@@ -250,13 +250,13 @@ export default function ProfileAndPrefsPage() {
               <div>
                 <div className="text-sm font-semibold mb-1">Supplements photos</div>
                 <div className="grid grid-cols-3 gap-2">
-                  <input type="date" value={sDate} onChange={e=>setSDate(e.target.value)} className="h-9 rounded-md border border-slate-200 px-2 text-sm" />
-                  <input type="url" placeholder="https://image.jpg" value={sUrl} onChange={e=>setSUrl(e.target.value)} className="h-9 rounded-md border border-slate-200 px-2 text-sm" />
-                  <button onClick={addSuppPhoto} className="h-9 rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50">Add</button>
+                  <input type="date" value={sDate} onChange={e=>setSDate(e.target.value)} className="h-9 rounded-lg border border-slate-200 px-2 text-sm" />
+                  <input type="url" placeholder="https://image.jpg" value={sUrl} onChange={e=>setSUrl(e.target.value)} className="h-9 rounded-lg border border-slate-200 px-2 text-sm" />
+                  <button onClick={addSuppPhoto} className="h-9 rounded-lg border border-slate-200 px-3 text-sm hover:bg-slate-50">Add</button>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   {(profile.supplementsPhotos||[]).slice(-4).reverse().map((ph, i) => (
-                    <div key={`${ph.url}-${i}`} className="relative rounded-xl overflow-hidden border border-slate-200">
+                    <div key={`${ph.url}-${i}`} className="relative rounded-lg overflow-hidden border border-slate-200">
                       <img src={ph.url} alt="supp" className="w-full h-28 object-cover" />
                       <div className="absolute bottom-0 inset-x-0 bg-black/40 text-white text-xs px-2 py-1 flex items-center justify-between">
                         <span>{ph.date}</span>
@@ -293,7 +293,7 @@ export default function ProfileAndPrefsPage() {
                 icon={Ruler}
               />
               <Input label="Default rest timer (sec)" type="number" value={prefs.restTimerDefaultSec} onChange={v=>setPrefs(p=>({...p, restTimerDefaultSec:+v||0}))} />
-              <div className="col-span-2 rounded-xl border border-slate-200 p-3">
+              <div className="col-span-2 rounded-lg border border-slate-200 p-3">
                 <div className="text-sm font-semibold mb-1 flex items-center gap-2"><Bell size={16}/> Notifications</div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <Toggle label="Workout reminders" checked={!!prefs.notifications.workouts} onChange={v=>setPrefs(p=>({...p, notifications:{...p.notifications, workouts:v}}))} />
@@ -352,7 +352,7 @@ export default function ProfileAndPrefsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               <Input label="From" placeholder="e.g., 100 g rice" value={subFrom} onChange={setSubFrom} />
               <Input label="To" placeholder="e.g., 120 g potato" value={subTo} onChange={setSubTo} />
-              <button onClick={addSubstitution} className="h-9 rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50 mt-6">Add</button>
+              <button onClick={addSubstitution} className="h-9 rounded-lg border border-slate-200 px-3 text-sm hover:bg-slate-50 mt-6">Add</button>
             </div>
 
             <div className="mt-4 divide-y divide-slate-100">
@@ -416,7 +416,7 @@ function TabBtn({ active, onClick, icon: Icon, label }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border transition
+      className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm border transition
         ${active ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'}`}
     >
       <Icon size={16} />
@@ -427,7 +427,7 @@ function TabBtn({ active, onClick, icon: Icon, label }) {
 
 function Card({ title, icon: Icon, children }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+    <div className="rounded-lg border border-slate-200 bg-white p-4">
       <div className="flex items-center gap-2 mb-3">
         {Icon ? <Icon size={18} className="text-slate-700" /> : null}
         <div className="font-semibold">{title}</div>
@@ -446,7 +446,7 @@ function Input({ label, value, onChange, type='text', placeholder='', icon: Icon
         value={value ?? ''}
         placeholder={placeholder}
         onChange={e=>onChange(e.target.value)}
-        className="mt-1 h-9 w-full rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+        className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
       />
     </label>
   );
@@ -460,7 +460,7 @@ function Textarea({ label, value, onChange, rows=3 }) {
         rows={rows}
         value={value ?? ''}
         onChange={e=>onChange(e.target.value)}
-        className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+        className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
       />
     </label>
   );
@@ -473,7 +473,7 @@ function Select({ label, value, onChange, options, icon: Icon }) {
       <select
         value={value}
         onChange={e=>onChange(e.target.value)}
-        className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+        className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
@@ -499,7 +499,7 @@ function Toggle({ label, checked, onChange }) {
 
 function QA({ i, q, a }) {
   return (
-    <div className="rounded-xl border border-slate-200 p-3 mb-2">
+    <div className="rounded-lg border border-slate-200 p-3 mb-2">
       <div className="text-xs text-slate-500">Q{i}</div>
       <div className="text-sm font-medium text-slate-800">{q}</div>
       <div className="text-sm text-slate-700 mt-1">{a}</div>

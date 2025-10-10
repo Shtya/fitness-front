@@ -19,7 +19,7 @@ export function Section({ id, className = '', children }) {
   );
 }
 export function Button({ as: As = 'button', variant = 'primary', className = '', ...props }) {
-  const base = 'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-indigo-500/30';
+  const base = 'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-indigo-500/30';
   const styles = variant === 'primary' ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white hover:opacity-95' : variant === 'ghost' ? 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-800' : 'bg-slate-800 text-white hover:bg-slate-700';
   const Comp = As;
   return <Comp className={`${base} ${styles} ${className}`} {...props} />;
@@ -28,22 +28,22 @@ export function Badge({ children }) {
   return <span className='inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100'>{children}</span>;
 }
 export function Card({ className = '', children }) {
-  return <div className={`relative rounded-2xl border border-slate-200 bg-white/80 backdrop-blur shadow-[0_8px_30px_rgba(0,0,0,0.05)] ${className}`}>{children}</div>;
+  return <div className={`relative rounded-lg border border-slate-200 bg-white/80 backdrop-blur shadow-[0_8px_30px_rgba(0,0,0,0.05)] ${className}`}>{children}</div>;
 }
 export function Input({ className = '', ...props }) {
-  return <input className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${className}`} {...props} />;
+  return <input className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${className}`} {...props} />;
 }
 export function Textarea({ className = '', ...props }) {
-  return <textarea className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${className}`} {...props} />;
+  return <textarea className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${className}`} {...props} />;
 }
 export function Select({ className = '', ...props }) {
-  return <select className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${className}`} {...props} />;
+  return <select className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${className}`} {...props} />;
 }
 export function Feature({ icon: Icon, title, children }) {
   return (
     <div className='flex items-start gap-3'>
       {Icon && (
-        <div className='mt-1 w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 grid place-items-center'>
+        <div className='mt-1 w-10 h-10 rounded-lg bg-indigo-50 text-indigo-700 grid place-items-center'>
           <Icon className='w-5 h-5' />
         </div>
       )}
@@ -348,7 +348,7 @@ export default function OnePageSite() {
             </div>
             <div className='lg:col-span-6'>
               <Card className='p-4'>
-                <div className='aspect-[16/9] rounded-xl overflow-hidden bg-slate-200 grid place-items-center text-slate-500'>
+                <div className='aspect-[16/9] rounded-lg overflow-hidden bg-slate-200 grid place-items-center text-slate-500'>
                   <span className='text-sm'>Hero image / video placeholder</span>
                 </div>
               </Card>
@@ -373,7 +373,7 @@ export default function OnePageSite() {
               <motion.div key={p.key} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ ...spring, delay: i * 0.03 }}>
                 <Card className='p-5 h-full'>
                   <div className='flex items-start gap-3'>
-                    <div className='w-12 h-12 rounded-xl bg-indigo-50 text-indigo-700 grid place-items-center'>
+                    <div className='w-12 h-12 rounded-lg bg-indigo-50 text-indigo-700 grid place-items-center'>
                       <p.icon className='w-6 h-6' />
                     </div>
                     <div className='min-w-0 flex-1'>
@@ -439,7 +439,7 @@ export default function OnePageSite() {
             </Badge>
             <h2 className='mt-4 text-3xl sm:text-4xl font-extrabold'>Pricing & Memberships</h2>
             <p className='mt-2 text-slate-600'>Pick a plan, start training, and cancel anytime. Prices are demo values — set yours in CMS.</p>
-            <div className='mt-5 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1'>
+            <div className='mt-5 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-1'>
               <PeriodButton active={period === 'monthly'} onClick={() => setPeriod('monthly')}>
                 Monthly
               </PeriodButton>
@@ -508,15 +508,15 @@ export default function OnePageSite() {
           {/* KPI band */}
           <Card className='mt-8 p-5'>
             <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 text-center'>
-              <div className='rounded-xl border border-slate-200 bg-white p-4'>
+              <div className='rounded-lg border border-slate-200 bg-white p-4'>
                 <div className='text-xs text-slate-500'>Total transformations</div>
                 <div className='text-2xl font-extrabold'>{kpi.total}</div>
               </div>
-              <div className='rounded-xl border border-slate-200 bg-white p-4'>
+              <div className='rounded-lg border border-slate-200 bg-white p-4'>
                 <div className='text-xs text-slate-500'>Total kg lost</div>
                 <div className='text-2xl font-extrabold'>{kpi.lost}</div>
               </div>
-              <div className='rounded-xl border border-slate-200 bg-white p-4'>
+              <div className='rounded-lg border border-slate-200 bg-white p-4'>
                 <div className='text-xs text-slate-500'>Avg. program length</div>
                 <div className='text-2xl font-extrabold'>{kpi.avgMonths} months</div>
               </div>
@@ -561,7 +561,7 @@ export default function OnePageSite() {
                   <Impact value={delta(s)} />
                 </div>
 
-                <blockquote className='mt-3 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-xl p-3'>
+                <blockquote className='mt-3 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-3'>
                   <div className='flex items-start gap-2'>
                     <Quote className='w-4 h-4 text-slate-400 mt-0.5' />
                     <p className='leading-relaxed'>{s.quote}</p>
@@ -689,7 +689,7 @@ function StatusPill({ status }) {
 function HoursTable({ hours }) {
   const todayIdx = new Date().getDay(); // 0=Sun
   return (
-    <div className='mt-3 divide-y divide-slate-100 rounded-xl border border-slate-200 overflow-hidden'>
+    <div className='mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200 overflow-hidden'>
       {DAYS.map((d, i) => {
         const row = hours[d];
         const isToday = i === todayIdx;
@@ -706,7 +706,7 @@ function HoursTable({ hours }) {
 
 function ActionButton({ href, icon: Icon, label, detail }) {
   return (
-    <a href={href} target={href?.startsWith('http') ? '_blank' : undefined} className='group inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50'>
+    <a href={href} target={href?.startsWith('http') ? '_blank' : undefined} className='group inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50'>
       <Icon className='w-4 h-4 text-indigo-600' />
       <span className='font-medium'>{label}</span>
       {detail && <span className='text-slate-500'>• {detail}</span>}
@@ -726,7 +726,7 @@ function ContactForm({ toEmail = 'hello@amazinggym.com', defaultBranch }) {
   useEffect(() => {
     setData(d => ({ ...d, branch: defaultBranch || '' }));
   }, [defaultBranch]);
-  if (sent) return <div className='mt-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700'>Thanks! We received your message and will get back to you shortly.</div>;
+  if (sent) return <div className='mt-3 rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700'>Thanks! We received your message and will get back to you shortly.</div>;
   return (
     <form onSubmit={onSubmit} className='mt-3 space-y-3'>
       <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
@@ -786,7 +786,7 @@ function minutesToHHMM(x) {
 
 function MiniStep({ icon: Icon, title, text }) {
   return (
-    <div className='rounded-xl border border-slate-200 bg-white p-3'>
+    <div className='rounded-lg border border-slate-200 bg-white p-3'>
       <div className='flex items-center gap-2 font-medium'>
         <Icon className='w-4 h-4' /> {title}
       </div>
@@ -830,7 +830,7 @@ function Inc({ children }) {
 function BeforeAfter({ before, after, name }) {
   const [pos, setPos] = useState(50);
   return (
-    <div className='relative aspect-[4/3] w-full rounded-xl overflow-hidden select-none bg-slate-200'>
+    <div className='relative aspect-[4/3] w-full rounded-lg overflow-hidden select-none bg-slate-200'>
       {before ? <img src={before} alt={`${name} before`} className='absolute inset-0 w-full h-full object-cover' /> : <div className='absolute inset-0 bg-slate-300' />}
       <div className='absolute inset-0' style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
         {after ? <img src={after} alt={`${name} after`} className='w-full h-full object-cover' /> : <div className='w-full h-full bg-slate-400' />}
@@ -846,7 +846,7 @@ function BeforeAfter({ before, after, name }) {
 
 function Stat({ icon: Icon, label, value }) {
   return (
-    <div className='rounded-xl border border-slate-200 bg-white p-2'>
+    <div className='rounded-lg border border-slate-200 bg-white p-2'>
       <div className={`inline-flex items-center gap-1 text-[11px] text-slate-500`}>
         <Icon className={`w-3.5 h-3.5`} /> {label}
       </div>
@@ -857,7 +857,7 @@ function Stat({ icon: Icon, label, value }) {
 
 function Impact({ value }) {
   return (
-    <div className='rounded-xl border border-slate-200 bg-white p-2'>
+    <div className='rounded-lg border border-slate-200 bg-white p-2'>
       <div className='inline-flex items-center gap-1 text-[11px] text-slate-500'>
         <Star className='w-3.5 h-3.5 text-amber-500' /> Impact
       </div>
@@ -958,7 +958,7 @@ function delta(s) {
 //         <p className='mt-6 max-w-2xl text-lg text-white/85'>Join today and start your fitness journey at your favorite location. Limited-time $3 trial, all fitness levels welcome.</p>
 
 //         <div className='mt-6'>
-//           <Link href='#claim' className='inline-flex items-center justify-center rounded-md bg-brand-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-brand-600/30 transition hover:bg-brand-500'>
+//           <Link href='#claim' className='inline-flex items-center justify-center rounded-lg bg-brand-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-brand-600/30 transition hover:bg-brand-500'>
 //             Claim Your $3 Trial
 //           </Link>
 //         </div>

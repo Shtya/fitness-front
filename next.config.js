@@ -1,4 +1,3 @@
- 
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
@@ -37,7 +36,7 @@ const createNextIntlPlugin = require('next-intl/plugin');
 const withNextIntl = createNextIntlPlugin();
 
 const nextConfig = {
-  reactStrictMode: false,
+  reactStrictMode: false, 
   images: {
     remotePatterns: [
       {

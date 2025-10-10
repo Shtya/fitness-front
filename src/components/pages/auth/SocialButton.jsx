@@ -7,7 +7,7 @@ export const SocialButton = ({ icon, text, onClick, className = '' }) => (
     whileHover={{ scale: 1.03 }}
     whileTap={{ scale: 0.97 }}
     className={`group cursor-pointer relative w-full flex items-center justify-center px-4 py-3 
-      rounded-2xl text-base font-semibold 
+      rounded-lg text-base font-semibold 
       bg-white text-gray-700 
       shadow-sm border border-gray-200 
       overflow-hidden 
@@ -32,7 +32,7 @@ export const SocialButton = ({ icon, text, onClick, className = '' }) => (
 
     {/* Ripple Glow Background (subtle) */}
     <span
-      className='absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 
+      className='absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 
         bg-gradient-to-r from-emerald-50 via-white to-emerald-50 
         transition-opacity duration-500'
     />

@@ -175,7 +175,7 @@ async function fetchLastDayByName(userId, day, onOrBefore) {
 const SkeletonLoader = () => (
   <div className='space-y-5 sm:space-y-6 animate-pulse'>
     {/* Header Skeleton */}
-    <div className='rounded-xl md:rounded-2xl overflow-hidden border border-indigo-200'>
+    <div className='rounded-lg md:rounded-lg overflow-hidden border border-indigo-200'>
       <div className='relative p-4 md:p-8 bg-gradient text-white'>
         <div className='absolute inset-0 opacity-20 bg-[radial-gradient(600px_200px_at_20%_-20%,white,transparent)]' />
         <div className='relative z-10 flex flex-row md:items-center gap-3 md:gap-6 justify-between'>
@@ -184,11 +184,11 @@ const SkeletonLoader = () => (
             <div className='h-4 bg-white/20 rounded w-64 mt-2'></div>
           </div>
           <div className='flex items-center gap-2'>
-            <div className='h-[37px] w-[37px] bg-white/20 rounded-xl'></div>
-            <div className='h-[37px] w-[37px] bg-white/20 rounded-xl'></div>
+            <div className='h-[37px] w-[37px] bg-white/20 rounded-lg'></div>
+            <div className='h-[37px] w-[37px] bg-white/20 rounded-lg'></div>
             <div className='max-md:hidden flex gap-2'>
-              <div className='h-[37px] w-24 bg-white/20 rounded-xl'></div>
-              <div className='h-[37px] w-24 bg-white/20 rounded-xl'></div>
+              <div className='h-[37px] w-24 bg-white/20 rounded-lg'></div>
+              <div className='h-[37px] w-24 bg-white/20 rounded-lg'></div>
             </div>
           </div>
         </div>
@@ -206,7 +206,7 @@ const SkeletonLoader = () => (
     <div className='grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6'>
       {/* Left Panel Skeleton */}
       <div className='space-y-4'>
-        <div className='rounded-2xl border border-slate-200 bg-white p-4'>
+        <div className='rounded-lg border border-slate-200 bg-white p-4'>
           <div className='h-64 bg-slate-200 rounded-lg mb-4'></div>
           <div className='space-y-3'>
             <div className='h-12 bg-slate-200 rounded-lg'></div>
@@ -636,7 +636,7 @@ const dayTabs = useMemo(() => {
       <audio ref={audioRef} src={alertSound} preload='auto' />
 
       {/* HEADER */}
-      <div className='rounded-xl md:rounded-2xl overflow-hidden border border-indigo-200'>
+      <div className='rounded-lg md:rounded-lg overflow-hidden border border-indigo-200'>
         <div className='relative p-4 md:p-8 bg-gradient text-white'>
           <div className='absolute inset-0 opacity-20 bg-[radial-gradient(600px_200px_at_20%_-20%,white,transparent)]' />
           <div className='relative z-10 flex flex-row md:items-center gap-3 md:gap-6 justify-between'>
@@ -647,20 +647,20 @@ const dayTabs = useMemo(() => {
                   !hidden && setAudioOpen(v => !v);
                   setHidden(false);
                 }}
-                className='px-2 inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition'
+                className='px-2 inline-flex items-center gap-2 rounded-lg bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition'
                 aria-label='Listen'>
                 <Headphones size={16} />
                 <span className='max-md:hidden'>Listen</span>
               </button>
-              <button onClick={() => setSettingsOpen(true)} className='px-2 inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition' aria-label='Settings'>
+              <button onClick={() => setSettingsOpen(true)} className='px-2 inline-flex items-center gap-2 rounded-lg bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition' aria-label='Settings'>
                 <SettingsIcon size={16} />
                 <span className='max-md:hidden'>Settings</span>
               </button>
               {/* Mobile tabs */}
-              <button onClick={() => setTab('workout')} className={`md:hidden px-2 inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium hover:bg-white/20 active:scale-95 transition ${tab === 'workout' ? 'ring-1 ring-white/50' : ''}`} aria-label='Workout tab'>
+              <button onClick={() => setTab('workout')} className={`md:hidden px-2 inline-flex items-center gap-2 rounded-lg bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium hover:bg-white/20 active:scale-95 transition ${tab === 'workout' ? 'ring-1 ring-white/50' : ''}`} aria-label='Workout tab'>
                 <Dumbbell size={16} />
               </button>
-              <button onClick={() => setTab('history')} className={`md:hidden px-2 inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium hover:bg-white/20 active:scale-95 transition ${tab === 'history' ? 'ring-1 ring-white/50' : ''}`} aria-label='History tab'>
+              <button onClick={() => setTab('history')} className={`md:hidden px-2 inline-flex items-center gap-2 rounded-lg bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium hover:bg-white/20 active:scale-95 transition ${tab === 'history' ? 'ring-1 ring-white/50' : ''}`} aria-label='History tab'>
                 <HistoryIcon size={16} />
               </button>
               {/* Desktop tabs */}
@@ -677,7 +677,7 @@ const dayTabs = useMemo(() => {
             </div>
 
             <div className='flex items-center gap-2 lg:hidden'>
-              <button onClick={() => setDrawerOpen(true)} className='inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm cursor-pointer hover:opacity-80 '>
+              <button onClick={() => setDrawerOpen(true)} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm cursor-pointer hover:opacity-80 '>
                 <MenuIcon size={16} /> Exercises
               </button>
             </div>
@@ -687,7 +687,7 @@ const dayTabs = useMemo(() => {
         <div className='px-4 md:px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white'>
           {tab === 'workout' && (
             <div className='flex-1'>
-              <TabsPill className='!rounded-xl' slice={3} id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={changeDay} />
+              <TabsPill className='!rounded-lg' slice={3} id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={changeDay} />
             </div>
           )}
         </div>
@@ -699,15 +699,15 @@ const dayTabs = useMemo(() => {
       {tab === 'workout' && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
           <div className='space-y-5 sm:space-y-6'>
-            <div className='rounded-2xl md:border md:border-slate-200 bg-white md:p-2 sm:p-4'>
+            <div className='rounded-lg md:border md:border-slate-200 bg-white md:p-2 sm:p-4'>
               {workout && (
                 <div className='flex flex-col lg:flex-row gap-4'>
                   {/* LEFT */}
                   <div className='w-full lg:flex-1 min-w-0'>
-                    <div className='rounded-xl border border-slate-200 bg-white overflow-hidden'>
+                    <div className='rounded-lg border border-slate-200 bg-white overflow-hidden'>
                       {!hasExercises ? (
                         <div className='p-6'>
-                          <div className='rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center'>
+                          <div className='rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center'>
                             <div className='mx-auto mb-3 w-12 h-12 rounded-full bg-white shadow grid place-items-center'>
                               <Dumbbell size={18} className='text-slate-500' />
                             </div>
@@ -765,7 +765,7 @@ const dayTabs = useMemo(() => {
                                             setWorkout(w => ({ ...w, sets: w.sets.map(x => (x.id === s.id ? { ...x, weight: Number.isFinite(val) ? val : 0 } : x)) }));
                                           }}
                                           onBlur={() => maybeSaveSetOnBlur({ ...s, weight: Number(s.weight) })}
-                                          className='h-9 w-[80px] !text-[16px] rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition'
+                                          className='h-9 w-[80px] !text-[16px] rounded-lg border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition'
                                           placeholder='0'
                                           inputMode='numeric'
                                         />
@@ -779,7 +779,7 @@ const dayTabs = useMemo(() => {
                                             setWorkout(w => ({ ...w, sets: w.sets.map(x => (x.id === s.id ? { ...x, reps: Number.isFinite(val) ? val : 0 } : x)) }));
                                           }}
                                           onBlur={() => maybeSaveSetOnBlur({ ...s, reps: Number(s.reps) })}
-                                          className='h-9 w-[80px] !text-[16px] rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition'
+                                          className='h-9 w-[80px] !text-[16px] rounded-lg border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition'
                                           placeholder='0'
                                           inputMode='numeric'
                                         />
@@ -845,7 +845,7 @@ const dayTabs = useMemo(() => {
             <KPI title='Current Streak (days)' value={fmtVal(overview?.totals?.currentStreakDays)} icon={Flame} />
           </div>
 
-          <div className='rounded-2xl border border-slate-200 bg-white p-4'>
+          <div className='rounded-lg border border-slate-200 bg-white p-4'>
             <div className='flex items-center justify-between mb-3'>
               <div className='font-semibold'>All-time Bests</div>
               <div className='text-xs text-slate-500'>From PRs (computed e1RM if needed)</div>
@@ -856,7 +856,7 @@ const dayTabs = useMemo(() => {
                 const wSafe = Number(b?.weight) || 0;
                 const bestE1rm = Math.round(Number(b?.e1rm) || wSafe * (1 + repSafe / 30) || 0);
                 return (
-                  <div key={i} className='p-3 rounded-xl border border-slate-200 bg-white flex items-center justify-between'>
+                  <div key={i} className='p-3 rounded-lg border border-slate-200 bg-white flex items-center justify-between'>
                     <div className='text-sm font-medium truncate'>{String(b?.name ?? '—')}</div>
                     <div className='text-sm tabular-nums font-semibold'>{bestE1rm} e1RM</div>
                   </div>
@@ -866,7 +866,7 @@ const dayTabs = useMemo(() => {
             </div>
           </div>
 
-          <div className='rounded-2xl border border-slate-200 bg-white p-4'>
+          <div className='rounded-lg border border-slate-200 bg-white p-4'>
             <div className='flex items-center justify-between gap-2 mb-3'>
               <div className='font-semibold'>Exercise Drilldown</div>
               <select className='h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm' value={exercisePick} onChange={e => setExercisePick(e.target.value)}>
@@ -906,7 +906,7 @@ const dayTabs = useMemo(() => {
             </div>
           </div>
 
-          <div className='rounded-2xl border border-slate-200 bg-white p-4'>
+          <div className='rounded-lg border border-slate-200 bg-white p-4'>
             <div className='flex items-center justify-between mb-4'>
               <div className='font-semibold'>Session History</div>
               <div className='text-sm text-slate-500'>{Number(history?.length || 0)} workouts completed</div>

@@ -5,8 +5,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Scheherazade+New&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Lateef&display=swap');
 
-
-
 @import 'tailwindcss';
 
 .duah-font {
@@ -206,7 +204,7 @@ html {
   }
 }
 .inp {
-  @apply w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30;
+  @apply w-full px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30;
 }
 /* Animation classes */
 .fade-in {
@@ -253,30 +251,17 @@ html {
 }
 
 .card-glow {
-  @apply relative rounded-2xl border border-slate-200/70 bg-white/70 backdrop-blur-sm 
+  @apply relative rounded-lg border border-slate-200/70 bg-white/70 backdrop-blur-sm 
          shadow-[0_8px_30px_rgba(0,0,0,0.04)];
 }
 
-.card-glow::before {
-  content: '';
-  @apply absolute inset-0 rounded-2xl z-[-1]
-         bg-gradient-to-br from-indigo-500/10 via-emerald-500/10 to-transparent;
-}
-
-.card-glow::after {
-  content: '';
-  @apply pointer-events-none absolute inset-0 rounded-2xl 
-         ring-1 ring-black/5;
-}
-
 .bg-second {
-  @apply bg-gradient-to-tr from-indigo-600 to-blue-500 rounded-[10px] text-white;
+  @apply bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 rounded-[10px] text-white;
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.35), 0 2px 0 rgba(255, 255, 255, 0.18) inset, 0 -10px 18px rgba(0, 0, 0, 0.35) inset;
   border: 1px solid rgba(255, 255, 255, 0.12);
   transform: translateZ(0);
 }
 
-/* Heuristics for common downloaders – not guaranteed */
 [id*='IDM'],
 [class*='idm'],
 [id*='download'],
@@ -305,8 +290,7 @@ html {
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.bg-main::before,
-.bg-second::before {
+.bg-main::before  {
   content: '';
   @apply absolute inset-0 rounded-[10px];
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.12) 28%, transparent 55%), radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.25), transparent 60%), radial-gradient(120% 90% at 100% 100%, rgba(0, 0, 0, 0.25), transparent 70%);
@@ -314,8 +298,7 @@ html {
   pointer-events: none;
 }
 
-.bg-main::after,
-.bg-second::after {
+.bg-main::after  {
   content: '';
   position: absolute;
   left: 10%;
@@ -332,7 +315,6 @@ html {
 /* subtle 3D lift on hover */
 .bg-main:hover,
 .bg-second:hover {
-  /* transform: translateY(-3px); */
   box-shadow: 0 22px 42px rgba(0, 0, 0, 0.4), 0 2px 0 rgba(255, 255, 255, 0.2) inset, 0 -12px 22px rgba(0, 0, 0, 0.38) inset;
 }
 /* Example with higher specificity */

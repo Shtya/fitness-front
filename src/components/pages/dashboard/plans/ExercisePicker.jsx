@@ -1,0 +1,256 @@
+import React, { memo, useEffect, useMemo, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Dumbbell, Search, X, Tag, Check } from 'lucide-react';
+import Select from '@/components/atoms/Select';
+import { PrettyPagination } from '@/components/dashboard/ui/Pagination';
+import { TabsPill } from '@/components/dashboard/ui/UI';
+import useDebounced from '@/hooks/useDebounced';
+import { Notification } from '@/config/Notification';
+import api from '@/utils/axios';
+import Img from '@/components/atoms/Img';
+
+const overlaySpring = { type: 'spring', stiffness: 200, damping: 24 };
+const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
+const resURL = url => (url && url.startsWith('/') ? baseImg + url : url || '');
+
+export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDone }) {
+  const [categories, setCategories] = useState([]);
+  const [activeCat, setActiveCat] = useState('all');
+
+  const [searchText, setSearchText] = useState('');
+  const debounced = useDebounced(searchText, 300);
+
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
+  const [sortBy] = useState('created_at');
+  const [sortOrder] = useState('DESC');
+
+  const [items, setItems] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  const [selected, setSelected] = useState({});
+  const totalPages = Math.max(1, Math.ceil(total / Math.max(1, perPage)));
+
+  const tabs = useMemo(() => [{ key: 'all', label: 'All' }, ...categories.map(c => ({ key: c, label: c }))], [categories]);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await api.get('/plan-exercises/categories');
+      setCategories((Array.isArray(res.data) ? res.data : []).filter(Boolean));
+    } catch {
+      setCategories([]);
+    }
+  }, []);
+
+  const fetchList = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = { page, limit: perPage, sortBy, sortOrder };
+      if (debounced) params.search = debounced;
+      if (activeCat !== 'all') params.category = activeCat;
+
+      const res = await api.get('/plan-exercises', { params });
+      const data = res.data || {};
+
+      let records = [];
+      let totalRecords = 0;
+      let serverPer = perPage;
+
+      if (Array.isArray(data.records)) {
+        records = data.records;
+        totalRecords = Number(data.total_records || data.records.length || 0);
+        serverPer = Number(data.per_page || perPage);
+      } else if (Array.isArray(data)) {
+        records = data;
+        totalRecords = data.length;
+      }
+
+      setItems(records);
+      setTotal(totalRecords);
+      setPerPage(serverPer);
+    } catch (e) {
+      Notification(e?.response?.data?.message || 'Failed to load exercises', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [page, perPage, sortBy, sortOrder, debounced, activeCat]);
+
+  // Lifecycle
+  useEffect(() => {
+    if (open) fetchCategories();
+  }, [open]);
+
+  useEffect(() => {
+    if (open) setPage(1);
+  }, [debounced, activeCat, open]);
+
+  useEffect(() => {
+    if (open) fetchList();
+  }, [open, page, debounced, activeCat, perPage]);
+
+  // Selection
+  const toggle = ex => {
+    setSelected(prev => {
+      const next = { ...prev };
+      if (next[ex.id]) delete next[ex.id];
+      else next[ex.id] = ex;
+      return next;
+    });
+  };
+  const selectedCount = Object.keys(selected).length;
+
+  // Close handlers (backdrop & ESC)
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e) {
+      if (e.key === 'Escape') onClose?.();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <AnimatePresence>
+      {open ? (
+        <motion.div key='exercise-picker' className='fixed inset-0 z-[1000]' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          {/* Backdrop */}
+          <motion.div className='absolute inset-0 bg-slate-900/50 backdrop-blur-sm' onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+
+          {/* Fullscreen Content */}
+          <motion.div className='absolute inset-0 flex flex-col' initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 16, opacity: 0 }} transition={overlaySpring} aria-modal='true' role='dialog' aria-label='Exercise picker'>
+            {/* Sticky Header */}
+            <div className='sticky top-0 z-10 border-b border-white/10 bg-gradient-to-r from-indigo-600 to-violet-600 text-white'>
+              <div className='mx-auto max-w-7xl px-4 sm:px-6'>
+                <div className='flex items-center justify-between py-4'>
+                  <div className='flex items-center gap-3'>
+                    <Dumbbell className='h-6 w-6' />
+                    <div>
+                      <div className='text-base font-semibold'>Select Exercises</div>
+                      <div className='text-xs opacity-90'>Click to select; use tabs, search, and filters.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filters row (sticky under header) */}
+              <div className='bg-gradient-to-r from-indigo-600 to-violet-600'>
+                <div className='mx-auto flex items-center justify-between gap-2 flex-wrap max-w-7xl px-4 sm:px-6 py-3'>
+                  <div className=' flex-none relative  w-full max-w-[200px]'>
+                    <Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
+                    <input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder='Search exercises…' className='h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-sm text-slate-900 shadow-sm hover:shadow focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40 transition' />
+                    {!!searchText && (
+                      <button type='button' onClick={() => setSearchText('')} className='absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100' aria-label='Clear search'>
+                        <X className='h-4 w-4' />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Tabs */}
+                  {tabs.length > 1 && (
+                    <div className='overflow-x-auto '>
+                      <TabsPill hiddenArrow id='picker-cats' className='!bg-slate-100/80' tabs={tabs} active={activeCat} onChange={setActiveCat} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Scrollable Body */}
+            <div className='flex-1 overflow-auto'>
+              <div className='mx-auto max-w-7xl px-4 sm:px-6 py-6'>
+                {/* Cards */}
+                {loading ? (
+                  <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'>
+                    {Array.from({ length: 12 }).map((_, i) => (
+                      <div key={i} className='relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'>
+                        <div className='aspect-[4/3] w-full overflow-hidden'>
+                          <div className='h-full w-full shimmer' />
+                        </div>
+                        <div className='p-3'>
+                          <div className='mb-2 h-3.5 w-4/5 rounded shimmer' />
+                          <div className='mb-2 h-3 w-2/3 rounded shimmer' />
+                          <div className='h-3 w-1/2 rounded shimmer' />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : items.length ? (
+                  <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'>
+                    {items.map(e => {
+                      const checked = !!selected[e.id];
+                      return (
+                        <motion.button type='button' key={e.id} onClick={() => toggle(e)} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={['text-left rounded-xl border p-3 transition-all', checked ? 'border-indigo-400 ring-2 ring-indigo-200 bg-indigo-50/50 shadow-md' : 'border-slate-200 bg-white shadow-sm hover:border-slate-300 hover:shadow-md'].join(' ')}>
+                          <div className='relative mb-2 overflow-hidden rounded-lg bg-slate-100'>
+                            <div className='aspect-[4/3] w-full'>
+                              {e.img ? (
+                                <Img src={e.img} alt={e.name} className='h-full w-full object-cover' loading='lazy' />
+                              ) : (
+                                <div className='grid h-full w-full place-content-center text-slate-400'>
+                                  <Dumbbell className='h-7 w-7' />
+                                </div>
+                              )}
+                            </div>
+                            {checked && (
+                              <span className='absolute right-2 top-2 inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2 py-0.5 text-[11px] font-medium text-white shadow-sm'>
+                                <Check className='h-3.5 w-3.5' />
+                                Selected
+                              </span>
+                            )}
+                          </div>
+
+                          <div className='mb-0.5 truncate text-sm font-semibold text-slate-900'>{e.name}</div>
+
+                          <div className='mb-2 truncate text-[12px] text-slate-600'>
+                            Sets {e.targetSets ?? 3} · Reps {e.targetReps || '—'} · Rest {e.rest ?? 90}s{e.tempo ? ` · ${e.tempo}` : ''}
+                          </div>
+
+                          {e.category && (
+                            <span className='inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[11px] text-indigo-700'>
+                              <Tag size={11} />
+                              {e.category}
+                            </span>
+                          )}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className='rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm'>
+                    <div className='mx-auto grid h-14 w-14 place-content-center rounded-xl bg-slate-100'>
+                      <Dumbbell className='h-7 w-7 text-slate-500' />
+                    </div>
+                    <h3 className='mt-4 text-base font-semibold text-slate-900'>No exercises found</h3>
+                    <p className='mt-1 text-sm text-slate-600'>Try a different search or category.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Sticky Footer */}
+            <div className='sticky bottom-0 z-10 border-t border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60'>
+              <div className='mx-auto max-w-7xl px-4 sm:px-6'>
+                <div className='flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between'>
+                  <PrettyPagination page={page} totalPages={totalPages} onPageChange={setPage} className='order-2 sm:order-1' />
+
+                  <div className='order-1 flex items-center justify-end gap-2 sm:order-2'>
+                    <button type='button' onClick={onClose} className='inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50 active:scale-[.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 transition'>
+                      Close
+                    </button>
+                    <button type='button' onClick={() => onDone?.(Object.values(selected))} disabled={!selectedCount} className={['inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition', 'bg-[#4f39f6] text-white hover:bg-[#4f39f6]/90 active:scale-[.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30', !selectedCount ? 'opacity-50 cursor-not-allowed' : ''].join(' ')}>
+                      Add Selected ({selectedCount || 0})
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>,
+    document.body,
+  );
+});

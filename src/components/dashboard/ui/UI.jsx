@@ -1,8 +1,8 @@
 'use client';
 
 import { motion, AnimatePresence, LayoutGroup, useReducedMotion } from 'framer-motion';
-import { CheckCircle2, XCircle, Search, X, Clock } from 'lucide-react';
-import { useEffect, useState, useRef } from 'react';
+import { CheckCircle2, ChevronLeft, ChevronRight, XCircle, Search, X, Clock } from 'lucide-react';
+import React, { useEffect, useMemo, useLayoutEffect, useState, useRef } from 'react';
 
 export const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
@@ -12,7 +12,7 @@ export function PageHeader({ className, icon: Icon, title, subtitle, actions = n
     <div className={`flex items-center justify-between ${className} `}>
       <div className='flex items-center gap-3'>
         {Icon ? (
-          <motion.div initial={{ rotate: -8, scale: 0.9 }} animate={{ rotate: 0, scale: 1 }} transition={spring} className='h-10 w-10 grid place-content-center rounded-xl bg-main text-white shadow-md'>
+          <motion.div initial={{ rotate: -8, scale: 0.9 }} animate={{ rotate: 0, scale: 1 }} transition={spring} className='h-10 w-10 grid place-content-center rounded-lg bg-main text-white shadow-md'>
             <Icon className='w-5 h-5' />
           </motion.div>
         ) : null}
@@ -26,63 +26,99 @@ export function PageHeader({ className, icon: Icon, title, subtitle, actions = n
   );
 }
 
-export function StatCardArray({
-  icon: Icon,
-  title,
-  value,
-  trends = [], // optional: array of datasets, each is [{value: number}, ...]
-  trendType = 'area', // 'area' | 'bar' for the tiny chart per row
-  className = '',
-}) {
-  // Normalize to arrays for mapping
-  const titles = Array.isArray(title) ? title : [title];
-  const values = Array.isArray(value) ? value : [value];
-  const rows = Math.max(titles.length, values.length);
-
+export function StatCard({ icon: Icon, title, value }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={`rounded-xl border border-slate-200 bg-white p-4   ${className}`}>
-      <div className='flex items-center h-full gap-3'>
-        {/* Icon */}
-        <div className='flex items-center justify-center relative w-10 h-10 overflow-hidden rounded-xl text-white shrink-0'>
-          <div className='absolute inset-0 bg-gradient-to-tr from-indigo-500 to-blue-500' />
-          {Icon ? <Icon className='w-5 h-5 relative z-[1] text-white' /> : null}
+    <div className='relative overflow-hidden rounded-lg border border-white/20 bg-white/10 p-3'>
+      <div className='flex items-start justify-between gap-2'>
+        <div className='grid place-items-center rounded-lg bg-white/15 p-2'>
+          <Icon className='h-5 w-5' />
         </div>
-
-        {/* Content */}
-        <div className='flex-1 '>
-          {[...Array(rows)].map((_, i) => {
-            const t = titles[i] ?? '';
-            const v = values[i] ?? '';
-
-            return (
-              <div key={i} className='flex mt-[-5px] items-center justify-between'>
-                <div className='text-xs font-[600] text-slate-600 truncate'>{t}</div>
-                <div className='text-base  font-semibold text-slate-800 '>{v}</div>
-              </div>
-            );
-          })}
+        <div className='flex items-center gap-2 flex-1 justify-between'>
+          <p className='text-sm text-white/85'>{title}</p>
+          <p className=' text-xl font-bold tracking-tight'>{value}</p>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-export function StatCard({ icon: Icon, title, value, sub, className }) {
+export function StatCardArray({ icon: Icon, title = [], value = [] }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={` !bg-white rounded-xl border border-slate-200 p-4 ${className} `}>
-      <div className='flex items-center gap-3 h-full '>
-        <div className=' flex items-center justify-center relative w-10 h-10 overflow-hidden rounded-xl text-white '>
-          <div className='!absolute  inset-0 bg-red-500 opacity-100 w-full h-full bg-gradient ' />
-          {Icon ? <Icon className='w-5 h-5 relative z-[10] text-white ' /> : null}
+    <div className='relative overflow-hidden rounded-lg border border-white/20 bg-white/10 p-3'>
+      <div className='flex items-start justify-between gap-2'>
+        <div className='grid place-items-center rounded-lg bg-white/15 border border-slate-100/30 p-2'>
+          <Icon className='h-5 w-5' />
         </div>
-        <div className='flex items-center  justify-between  flex-1 '>
-          <div className='text-xs font-[600] text-slate-600'>{title}</div>
-          <div className='text-xl text-black font-semibold'>{value}</div>
+        <div className='w-full'>
+          {title.map((t, i) => (
+            <div key={i} className=' mt-[-5px] flex items-center gap-2 flex-1 justify-between'>
+              <p className='text-xs font-[600] text-white/85'>{t}</p>
+              <p className='text-xl font-semibold'>{String(value[i]).padStart(2, '0')}</p>
+            </div>
+          ))}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
+
+// export function StatCardArray({
+//   icon: Icon,
+//   title,
+//   value,
+//   trends = [], // optional: array of datasets, each is [{value: number}, ...]
+//   trendType = 'area', // 'area' | 'bar' for the tiny chart per row
+//   className = '',
+// }) {
+//   // Normalize to arrays for mapping
+//   const titles = Array.isArray(title) ? title : [title];
+//   const values = Array.isArray(value) ? value : [value];
+//   const rows = Math.max(titles.length, values.length);
+
+//   return (
+//     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={`rounded-lg border border-slate-200 bg-white p-4   ${className}`}>
+//       <div className='flex items-center h-full gap-3'>
+//         {/* Icon */}
+//         <div className='flex items-center justify-center relative w-10 h-10 overflow-hidden rounded-lg text-white shrink-0'>
+//           <div className='!absolute  inset-0 bg-red-500 opacity-100 w-full h-full bg-main' />
+//           {Icon ? <Icon className='w-5 h-5 relative z-[1] text-white' /> : null}
+//         </div>
+
+//         {/* Content */}
+//         <div className='flex-1 '>
+//           {[...Array(rows)].map((_, i) => {
+//             const t = titles[i] ?? '';
+//             const v = values[i] ?? '';
+
+//             return (
+//               <div key={i} className='flex mt-[-5px] items-center justify-between'>
+//                 <div className='text-xs font-[600] text-slate-600 truncate'>{t}</div>
+//                 <div className='text-base  font-semibold text-slate-800 '>{v}</div>
+//               </div>
+//             );
+//           })}
+//         </div>
+//       </div>
+//     </motion.div>
+//   );
+// }
+
+// export function StatCard({ icon: Icon, title, value, sub, className }) {
+//   return (
+//     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={` !bg-white rounded-lg border border-slate-200 p-4 ${className} `}>
+//       <div className='flex items-center gap-3 h-full '>
+//         <div className=' flex items-center justify-center relative w-10 h-10 overflow-hidden rounded-lg text-white '>
+//           <div className='!absolute  inset-0 bg-red-500 opacity-100 w-full h-full bg-main ' />
+//           {Icon ? <Icon className='w-5 h-5 relative z-[10] text-white ' /> : null}
+//         </div>
+//         <div className='flex items-center  justify-between  flex-1 '>
+//           <div className='text-xs font-[600] text-slate-600'>{title}</div>
+//           <div className='text-xl text-black font-semibold'>{value}</div>
+//         </div>
+//       </div>
+//     </motion.div>
+//   );
+// }
 
 /* --------- Badge + Pills --------- */
 export function Badge({ color = 'slate', children }) {
@@ -112,7 +148,7 @@ export const StatusPill = ({ status }) =>
 export function ToolbarButton({ icon: Icon, children, onClick, variant = 'primary' }) {
   const styles = variant === 'primary' ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white hover:opacity-95' : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200';
   return (
-    <button onClick={onClick} className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl transition ${styles}`}>
+    <button onClick={onClick} className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg transition ${styles}`}>
       {Icon ? <Icon className='w-4 h-4' /> : null} {children}
     </button>
   );
@@ -123,7 +159,7 @@ export function SearchInput({ value, onChange, placeholder = 'Search…', classN
   return (
     <div className={`relative ${className}`}>
       <Search className='w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2' />
-      <input value={value} onChange={onChange} placeholder={placeholder} className='w-full pl-9 pr-9 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30' />
+      <input value={value} onChange={onChange} placeholder={placeholder} className='w-full pl-9 pr-9 py-2.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30' />
       {value ? (
         <button onClick={() => onChange({ target: { value: '' } })} className='absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-slate-100' aria-label='Clear'>
           <X className='w-4 h-4 text-slate-400' />
@@ -138,7 +174,7 @@ export function Select({ label, value, setValue, options, className = '' }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {label ? <span className='text-xs text-slate-500'>{label}</span> : null}
-      <select value={value} onChange={e => setValue(e.target.value)} className='px-3 py-2 rounded-xl border border-slate-200 bg-white'>
+      <select value={value} onChange={e => setValue(e.target.value)} className='px-3 py-2 rounded-lg border border-slate-200 bg-white'>
         {options.map(o => (
           <option key={o} value={o}>
             {o}
@@ -148,7 +184,7 @@ export function Select({ label, value, setValue, options, className = '' }) {
     </div>
   );
 }
- 
+
 export function Modal({ open, onClose, title, children, maxW = 'max-w-3xl' }) {
   const shouldReduce = useReducedMotion();
   const containerRef = useRef(null);
@@ -232,7 +268,7 @@ export function Modal({ open, onClose, title, children, maxW = 'max-w-3xl' }) {
           <motion.button
             aria-hidden
             onClick={onClose}
-            className='fixed inset-0 z-[100] bg-black/50 backdrop-blur-[6px]'
+            className='h-full fixed inset-0 z-[100] bg-black/50 backdrop-blur-[6px]'
             initial='hidden'
             animate='show'
             exit='exit'
@@ -248,7 +284,7 @@ export function Modal({ open, onClose, title, children, maxW = 'max-w-3xl' }) {
               aria-modal='true'
               aria-label={title}
               ref={containerRef}
-              className={`!w-full md:w-auto ${maxW} relative rounded-2xl md:rounded-xl border border-white/10 bg-white/75  backdrop-blur-2xl shadow-2xl
+              className={`!w-full md:w-auto ${maxW} relative rounded-lg md:rounded-lg border border-white/10 bg-white/75  backdrop-blur-2xl shadow-2xl
                           md:p-6 p-4 md:mb-0 mb-safe md:mx-0 mx-0`}
               initial='hidden'
               animate='show'
@@ -264,10 +300,10 @@ export function Modal({ open, onClose, title, children, maxW = 'max-w-3xl' }) {
                 </button>
               </div>
 
-              <div className='max-h-[80vh] overflow-auto pr-1 md:pr-2 -mr-1 md:-mr-2'>{children}</div>
+              <div className='max-h-[80vh] overflow-auto pr-1 md:pr-2 -mr-1 md:-mr-2 px-1'>{children}</div>
 
               {/* Subtle glow accent */}
-              {!shouldReduce && <motion.span aria-hidden className='pointer-events-none absolute inset-0 rounded-2xl md:rounded-xl' initial={{ boxShadow: '0 0 0px rgba(59,130,246,0)' }} animate={{ boxShadow: '0 10px 60px rgba(59,130,246,0.12)' }} transition={{ delay: 0.05, duration: 0.35 }} />}
+              {!shouldReduce && <motion.span aria-hidden className='pointer-events-none absolute inset-0 rounded-lg md:rounded-lg' initial={{ boxShadow: '0 0 0px rgba(59,130,246,0)' }} animate={{ boxShadow: '0 10px 60px rgba(59,130,246,0.12)' }} transition={{ delay: 0.05, duration: 0.35 }} />}
             </motion.div>
           </motion.div>
         </>
@@ -278,9 +314,9 @@ export function Modal({ open, onClose, title, children, maxW = 'max-w-3xl' }) {
 
 /* --------- Empty State --------- */
 export function EmptyState({ title = 'No data', subtitle = 'Adjust filters or add new records.', icon = null, action = null }) {
-   return (
+  return (
     <div className='text-center py-16'>
-      {/* <div className='mx-auto w-14 h-14 rounded-2xl bg-slate-100 grid place-content-center'>{icon}</div> */}
+      {/* <div className='mx-auto w-14 h-14 rounded-lg bg-slate-100 grid place-content-center'>{icon}</div> */}
       <h3 className='mt-4 text-lg font-semibold'>{title}</h3>
       <p className='text-sm text-slate-600 mt-1'>{subtitle}</p>
       {action ? <div className='mt-6'>{action}</div> : null}
@@ -291,7 +327,7 @@ export function EmptyState({ title = 'No data', subtitle = 'Adjust filters or ad
 /* --------- RangeControl (min/max number) --------- */
 export function RangeControl({ label, vMin, vMax, setMin, setMax, className = '' }) {
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white ${className}`}>
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white ${className}`}>
       {label ? <span className='text-xs text-slate-500'>{label}</span> : null}
       <input type='number' placeholder='min' value={vMin} onChange={e => setMin(e.target.value)} className='w-16 outline-none' />
       <span className='text-slate-400'>—</span>
@@ -322,32 +358,233 @@ export function MacroBar({ p = 0, c = 0, f = 0, className = '' }) {
   );
 }
 
-/* --------- TabsPill (animated tabs with shared pill) --------- */
-export function TabsPill({ slice, tabs, active, onChange, className, id = 'ui-tabs-pill' }) {
+ 
+ const shimmerStyle = `
+@keyframes tabsShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.tabs-skeleton{background:linear-gradient(90deg,#e9eef5 0%,#f5f7fb 40%,#e9eef5 80%);background-size:200% 100%;animation:tabsShimmer 1.2s linear infinite;}
+`;
+function InjectShimmer() {
+  // inject once (no deps)
+  useEffect(() => {
+    if (document.getElementById('tabs-shimmer-style')) return;
+    const s = document.createElement('style');
+    s.id = 'tabs-shimmer-style';
+    s.innerHTML = shimmerStyle;
+    document.head.appendChild(s);
+  }, []);
+  return null;
+}
+
+export function TabsPill({
+  hiddenArrow = false,
+  slice,
+  tabs = [],
+  active,
+  onChange,
+  className = '',
+  id = 'ui-tabs-pill',
+  skeletonCount = 5, 
+}) {
+  const scrollerRef = useRef(null);
+  const tabRefs = useRef({}); // { [key]: HTMLElement }
+
+  const isLoading = !Array.isArray(tabs) || tabs.length === 0;
+
+  const activeIndex = useMemo(
+    () =>
+      Math.max(
+        0,
+        tabs.findIndex(t => t.key === active),
+      ),
+    [tabs, active],
+  );
+
+  const hasPrev = !isLoading && activeIndex > 0;
+  const hasNext = !isLoading && activeIndex < tabs.length - 1;
+
+  const goPrev = () => {
+    if (!hasPrev) return;
+    const prevKey = tabs[activeIndex - 1]?.key;
+    if (prevKey) onChange(prevKey);
+  };
+
+  const goNext = () => {
+    if (!hasNext) return;
+    const nextKey = tabs[activeIndex + 1]?.key;
+    if (nextKey) onChange(nextKey);
+  };
+
+  // keep active pill in view
+  useEffect(() => {
+    if (isLoading) return;
+    const el = tabRefs.current[active];
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, [active, isLoading]);
+
+  // keyboard support on container: ← →
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const onKey = e => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goPrev();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        goNext();
+      }
+    };
+    scroller.addEventListener('keydown', onKey);
+    return () => scroller.removeEventListener('keydown', onKey);
+  }, [goPrev, goNext, activeIndex, tabs]);
+
   return (
-    <LayoutGroup id={id}>
-      <div className={` ${className} max-md:overflow-x-auto max-md:w-[calc(100vw-20px)] max-md:max-w-fit  overflow-y-hidden inline-flex p-1 rounded-2xl   bg-slate-100/80 ring-1 ring-black/5 shadow-sm `}>
-        {tabs.map(t => {
-          const isActive = active === t.key;
-          return (
-            <motion.button key={t.key} type='button' onClick={() => onChange(t.key)} className='relative cursor-pointer select-none rounded-xl max-md:!rounded-[10px_10px_0_0] px-3 py-1.5 text-sm font-medium outline-none' whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 350, damping: 30 }}>
-              {isActive && <motion.span layoutId='tabs-pill' className='absolute inset-0 after:!rounded-xl !rounded-xl   bg-second shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
-              <span className={`relative z-10 ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-700'} capitalize`}>
-                {t.icon ? <t.icon className='inline w-4 h-4 mr-1 -mt-0.5' /> : null}
-                {slice ? t.label?.slice(0, slice) : t.label}
-              </span>
-            </motion.button>
-          );
-        })}
+    <div className='w-full overflow-x-auto pb-1 overflow-y-hidden'>
+      <InjectShimmer />
+      <div className='w-fit flex items-center gap-2'>
+        {/* Prev button */}
+        {!hiddenArrow && (
+          <button type='button' onClick={goPrev} aria-label='Previous tab' disabled={!hasPrev} className={[' max-md:!hidden inline-flex items-center justify-center h-[40px] w-[30px] rounded-lg border transition', 'bg-white/90 border-slate-200', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', !hasPrev ? 'opacity-40 cursor-not-allowed' : ''].join(' ')}>
+            <ChevronLeft className='w-5 h-5 text-slate-700' />
+          </button>
+        )}
+
+        {/* Scrollable pills */}
+        <div ref={scrollerRef} tabIndex={0} className='w-fit outline-none'>
+          <LayoutGroup id={id}>
+            <div className={[className, 'inline-flex p-1 rounded-lg border border-slate-200 overflow-hidden', 'bg-slate-100/80 ring-1 ring-black/5', isLoading ? 'gap-1.5' : ''].join(' ')}>
+              {isLoading
+                ? Array.from({ length: skeletonCount }).map((_, i) => {
+                    // nice variety of widths
+                    const widths = [64, 84, 72, 92, 68, 88, 76];
+                    const w = widths[i % widths.length];
+                    return <div key={`tabs-skel-${i}`} className='h-8 rounded-lg tabs-skeleton' style={{ width: w }} aria-hidden='true' />;
+                  })
+                : tabs.map(t => {
+                    const isActive = active === t.key;
+                    return (
+                      <motion.button key={t.key} type='button' ref={el => (tabRefs.current[t.key] = el)} onClick={() => onChange(t.key)} className='relative cursor-pointer select-none rounded-lg max-md:!rounded-[10px_10px_0_0] px-3 py-1.5 text-sm font-medium outline-none' whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 350, damping: 30 }}>
+                        {isActive && <motion.span layoutId='tabs-pill' className='absolute inset-0 after:!rounded-lg !rounded-lg bg-second shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
+                        <span className={`relative z-10 text-nowrap ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-700'} capitalize`}>
+                          {t.icon ? <t.icon className='inline w-4 h-4 mr-1 -mt-0.5' /> : null}
+                          {slice ? t.label?.slice(0, slice) : t.label}
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+            </div>
+          </LayoutGroup>
+        </div>
+
+        {/* Next button */}
+        {!hiddenArrow && (
+          <button type='button' onClick={goNext} aria-label='Next tab' disabled={!hasNext} className={[' max-md:!hidden inline-flex items-center justify-center h-[40px] w-[30px] rounded-lg border transition', 'bg-white/90 border-slate-200', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', !hasNext ? 'opacity-40 cursor-not-allowed' : ''].join(' ')}>
+            <ChevronRight className='w-5 h-5 text-slate-700' />
+          </button>
+        )}
       </div>
-    </LayoutGroup>
+    </div>
   );
 }
+
+// export function TabsPill({ hiddenArrow = false , slice, tabs = [], active, onChange, className = '', id = 'ui-tabs-pill' }) {
+//   const scrollerRef = useRef(null);
+//   const tabRefs = useRef({}); // { [key]: HTMLElement }
+
+//   const activeIndex = useMemo(
+//     () =>
+//       Math.max(
+//         0,
+//         tabs.findIndex(t => t.key === active),
+//       ),
+//     [tabs, active],
+//   );
+
+//   const hasPrev = activeIndex > 0;
+//   const hasNext = activeIndex < tabs.length - 1;
+
+//   const goPrev = () => {
+//     if (!hasPrev) return;
+//     const prevKey = tabs[activeIndex - 1]?.key;
+//     if (prevKey) onChange(prevKey);
+//   };
+
+//   const goNext = () => {
+//     if (!hasNext) return;
+//     const nextKey = tabs[activeIndex + 1]?.key;
+//     if (nextKey) onChange(nextKey);
+//   };
+
+//   // keep active pill in view
+//   useEffect(() => {
+//     const el = tabRefs.current[active];
+//     if (el && typeof el.scrollIntoView === 'function') {
+//       el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+//     }
+//   }, [active]);
+
+//   // keyboard support on container: ← →
+//   useEffect(() => {
+//     const scroller = scrollerRef.current;
+//     if (!scroller) return;
+//     const onKey = e => {
+//       if (e.key === 'ArrowLeft') {
+//         e.preventDefault();
+//         goPrev();
+//       } else if (e.key === 'ArrowRight') {
+//         e.preventDefault();
+//         goNext();
+//       }
+//     };
+//     scroller.addEventListener('keydown', onKey);
+//     return () => scroller.removeEventListener('keydown', onKey);
+//   }, [goPrev, goNext, activeIndex, tabs]);
+
+//   return (
+//     <div className='w-full overflow-x-auto pb-1 overflow-y-hidden'>
+//       <div className='w-fit flex items-center gap-2' >
+//         {/* Prev button */}
+// 				{
+// 					!hiddenArrow && <button type='button' onClick={goPrev} aria-label='Previous tab' disabled={!hasPrev} className={['inline-flex items-center justify-center h-[40px] w-[30px]  rounded-lg border transition', 'bg-white/90 border-slate-200 ', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', !hasPrev ? 'opacity-40 cursor-not-allowed' : ''].join(' ')}>
+//           <ChevronLeft className='w-5 h-5 text-slate-700' />
+//         </button>
+// 				}
+
+//         {/* Scrollable pills */}
+//         <div ref={scrollerRef} tabIndex={0} className='w-fit '>
+//           <LayoutGroup id={id}>
+//             <div className={[className, 'inline-flex p-1 rounded-lg border border-slate-200 overflow-hidden', 'bg-slate-100/80 ring-1 ring-black/5'].join(' ')}>
+//               {tabs.map(t => {
+//                 const isActive = active === t.key;
+//                 return (
+//                   <motion.button key={t.key} type='button' ref={el => (tabRefs.current[t.key] = el)} onClick={() => onChange(t.key)} className='relative cursor-pointer select-none rounded-lg max-md:!rounded-[10px_10px_0_0] px-3 py-1.5 text-sm font-medium outline-none' whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 350, damping: 30 }}>
+//                     {isActive && <motion.span layoutId='tabs-pill' className='absolute inset-0 after:!rounded-lg !rounded-lg bg-second shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
+//                     <span className={`relative z-10 text-nowrap ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-700'} capitalize`}>
+//                       {t.icon ? <t.icon className='inline w-4 h-4 mr-1 -mt-0.5' /> : null}
+//                       {slice ? t.label?.slice(0, slice) : t.label}
+//                     </span>
+//                   </motion.button>
+//                 );
+//               })}
+//             </div>
+//           </LayoutGroup>
+//         </div>
+
+//         {/* Next button */}
+//         {!hiddenArrow && <button type='button' onClick={goNext} aria-label='Next tab' disabled={!hasNext} className={['inline-flex items-center justify-center h-[40px] w-[30px] rounded-lg border transition', 'bg-white/90 border-slate-200  ', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', !hasNext ? 'opacity-40 cursor-not-allowed' : ''].join(' ')}>
+//           <ChevronRight className='w-5 h-5 text-slate-700' />
+//         </button>}
+//       </div>
+//     </div>
+//   );
+// }
 
 /* --------- DateRangeControl (From/To date inputs) --------- */
 export function DateRangeControl({ label = 'Date', from, to, setFrom, setTo, className = '' }) {
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white ${className}`}>
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white ${className}`}>
       <span className='text-xs text-slate-500'>{label}</span>
       <input type='date' value={from} onChange={e => setFrom(e.target.value)} className='outline-none' />
       <span className='text-slate-400'>→</span>
@@ -431,7 +668,7 @@ export function RadioPills({ label, value, onChange, options = [], className = '
         {options.map(opt => {
           const active = value === opt.value;
           return (
-            <button type='button' key={String(opt.value)} onClick={() => onChange?.(opt.value)} className={['px-3 py-1.5 rounded-xl border text-sm transition', active ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white border-transparent' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'].join(' ')}>
+            <button type='button' key={String(opt.value)} onClick={() => onChange?.(opt.value)} className={['px-3 py-1.5 rounded-lg border text-sm transition', active ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white border-transparent' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'].join(' ')}>
               {opt.label}
             </button>
           );
@@ -450,7 +687,7 @@ export function FileDrop({ label = 'Upload', accept = 'image/*', multiple = fals
     onFiles?.(e.dataTransfer.files);
   };
   return (
-    <label htmlFor={id} onDragOver={e => e.preventDefault()} onDrop={onDrop} className={['flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-2xl p-6 bg-white hover:bg-slate-50 cursor-pointer', className].join(' ')}>
+    <label htmlFor={id} onDragOver={e => e.preventDefault()} onDrop={onDrop} className={['flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg p-6 bg-white hover:bg-slate-50 cursor-pointer', className].join(' ')}>
       <span className='text-sm text-slate-600'>{label}</span>
       <span className='text-xs text-slate-500'>Click or drag & drop</span>
       <input id={id} type='file' accept={accept} multiple={multiple} onChange={onChange} className='hidden' />
@@ -487,7 +724,7 @@ export function AutoGrowTextarea({ value, onChange, minRows = 1, maxRows = 6, cl
     const current = Math.min(maxRows, Math.ceil(el.scrollHeight / 24));
     setRows(current);
   }, [value, minRows, maxRows, props.id]);
-  return <textarea id={props.id || 'autogrow-textarea'} rows={rows} value={value} onChange={onChange} className={`w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 resize-none ${className}`} {...props} />;
+  return <textarea id={props.id || 'autogrow-textarea'} rows={rows} value={value} onChange={onChange} className={`w-full px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 resize-none ${className}`} {...props} />;
 }
 
 /* --------- TypingDots (animated typing indicator) --------- */
@@ -517,7 +754,7 @@ export function Switch({ checked, onChange, label, className = '' }) {
 /* --------- TimeRangeControl (HH:MM → HH:MM) --------- */
 export function TimeRangeControl({ label = 'Quiet hours', from, to, setFrom, setTo, className = '' }) {
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white ${className}`}>
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white ${className}`}>
       <span className='text-xs text-slate-500'>{label}</span>
       <input type='time' value={from} onChange={e => setFrom(e.target.value)} className='outline-none' />
       <span className='text-slate-400'>→</span>
@@ -552,14 +789,14 @@ export function KeyField({ label = 'API Key', value = '', masked = true, onRevea
     <div className='w-full'>
       <div className='text-sm text-slate-600'>{label}</div>
       <div className='mt-1 flex items-center gap-2'>
-        <input readOnly className='flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white font-mono text-sm' value={display} />
+        <input readOnly className='flex-1 px-3 py-2 rounded-lg border border-slate-200 bg-white font-mono text-sm' value={display} />
         <button
           type='button'
           onClick={() => {
             setShow(s => !s);
             onReveal?.(!show);
           }}
-          className='px-2 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm'>
+          className='px-2 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm'>
           {show ? 'Hide' : 'Show'}
         </button>
         <button
@@ -568,11 +805,11 @@ export function KeyField({ label = 'API Key', value = '', masked = true, onRevea
             navigator.clipboard.writeText(value);
             onCopy?.();
           }}
-          className='px-2 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm'>
+          className='px-2 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm'>
           Copy
         </button>
         {onRegen && (
-          <button type='button' onClick={onRegen} className='px-2 py-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white text-sm'>
+          <button type='button' onClick={onRegen} className='px-2 py-2 rounded-lg bg-gradient-to-tr from-indigo-600 to-blue-500 text-white text-sm'>
             Regenerate
           </button>
         )}
@@ -588,11 +825,11 @@ export function ConfirmDialog({ open, title = 'Are you sure?', desc, confirmText
     <div className='fixed inset-0 z-50'>
       <div className='absolute inset-0 bg-black/30 backdrop-blur-[2px]' onClick={onClose} />
       <div className='absolute inset-0 grid place-items-center'>
-        <div className='w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl'>
+        <div className='w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-xl'>
           <div className='text-lg font-semibold'>{title}</div>
           {desc ? <div className='mt-1 text-sm text-slate-600'>{desc}</div> : null}
           <div className='mt-4 flex items-center justify-end gap-2'>
-            <button onClick={onClose} className='px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50'>
+            <button onClick={onClose} className='px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50'>
               {cancelText}
             </button>
             <button
@@ -600,7 +837,7 @@ export function ConfirmDialog({ open, title = 'Are you sure?', desc, confirmText
                 onConfirm?.();
                 onClose?.();
               }}
-              className='px-3 py-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white'>
+              className='px-3 py-2 rounded-lg bg-gradient-to-tr from-indigo-600 to-blue-500 text-white'>
               {confirmText}
             </button>
           </div>
@@ -638,12 +875,12 @@ export function SectionCard({ title, subtitle, children, className = '' }) {
 export function SaveBar({ onSave, onCancel, saving = false }) {
   return (
     <div className='sticky bottom-3 z-10'>
-      <div className='mx-auto max-w-5xl rounded-2xl border border-slate-200 bg-white/90 backdrop-blur p-3 shadow'>
+      <div className='mx-auto max-w-5xl rounded-lg border border-slate-200 bg-white/90 backdrop-blur p-3 shadow'>
         <div className='flex items-center justify-end gap-2'>
-          <button onClick={onCancel} className='px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50'>
+          <button onClick={onCancel} className='px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50'>
             Cancel
           </button>
-          <button onClick={onSave} className='px-3 py-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white disabled:opacity-60' disabled={saving}>
+          <button onClick={onSave} className='px-3 py-2 rounded-lg bg-gradient-to-tr from-indigo-600 to-blue-500 text-white disabled:opacity-60' disabled={saving}>
             {saving ? 'Saving…' : 'Save changes'}
           </button>
         </div>
@@ -671,7 +908,7 @@ export function AvatarUpload({ name = '', src = '', onFile }) {
     <div className='flex items-center gap-3'>
       <div className='w-16 h-16 rounded-full overflow-hidden bg-slate-100'>{preview ? <img src={preview} alt={name} className='w-full h-full object-cover' /> : null}</div>
       <div className='flex items-center gap-2'>
-        <label className='px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer'>
+        <label className='px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer'>
           Upload
           <input
             type='file'
@@ -692,7 +929,7 @@ export function AvatarUpload({ name = '', src = '', onFile }) {
               setPreview('');
               onFile?.(null);
             }}
-            className='px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50'>
+            className='px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50'>
             Remove
           </button>
         )}
@@ -704,7 +941,7 @@ export function AvatarUpload({ name = '', src = '', onFile }) {
 // Money input with currency prefix
 export function MoneyInput({ value, onChange, currency = 'EGP', className = '' }) {
   return (
-    <div className={`flex items-center rounded-xl border border-slate-200 bg-white ${className}`}>
+    <div className={`flex items-center rounded-lg border border-slate-200 bg-white ${className}`}>
       <span className='px-3 text-slate-500 text-sm'>{currency}</span>
       <input type='number' step='0.01' min='0' className='flex-1 px-3 py-2 rounded-r-xl outline-none' value={value} onChange={e => onChange?.(e.target.value)} />
     </div>
@@ -714,7 +951,7 @@ export function MoneyInput({ value, onChange, currency = 'EGP', className = '' }
 // Percentage input (0–100)
 export function PercentInput({ value, onChange, className = '' }) {
   return (
-    <div className={`flex items-center rounded-xl border border-slate-200 bg-white ${className}`}>
+    <div className={`flex items-center rounded-lg border border-slate-200 bg-white ${className}`}>
       <input type='number' step='0.1' min='0' max='100' className='flex-1 px-3 py-2 rounded-l-xl outline-none' value={value} onChange={e => onChange?.(e.target.value)} />
       <span className='px-3 text-slate-500 text-sm'>%</span>
     </div>
@@ -724,7 +961,7 @@ export function PercentInput({ value, onChange, className = '' }) {
 /* ---- StatPill (small KPI) ---- */
 export function StatPill({ label, value, sub }) {
   return (
-    <div className='rounded-xl border border-slate-200 bg-white p-3'>
+    <div className='rounded-lg border border-slate-200 bg-white p-3'>
       <div className='text-xs text-slate-500'>{label}</div>
       <div className='text-xl font-semibold'>{value}</div>
       {sub ? <div className='text-xs text-slate-500 mt-0.5'>{sub}</div> : null}
@@ -736,7 +973,7 @@ export function StatPill({ label, value, sub }) {
 export function CapacityMeter({ current = 0, max = 100 }) {
   const pct = Math.min(100, Math.round((current / Math.max(1, max)) * 100));
   return (
-    <div className='rounded-2xl border border-slate-200 bg-white p-4'>
+    <div className='rounded-lg border border-slate-200 bg-white p-4'>
       <div className='flex items-end justify-between'>
         <div>
           <div className='text-xs text-slate-500'>Current occupancy</div>
@@ -790,7 +1027,7 @@ export function MiniMonth({ date = new Date(), onChange }) {
   const isSame = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   const today = new Date();
   return (
-    <div className='rounded-xl border border-slate-200 bg-white p-3'>
+    <div className='rounded-lg border border-slate-200 bg-white p-3'>
       <div className='flex items-center justify-between mb-2'>
         <button className='px-2 py-1 rounded-lg border border-slate-200' onClick={() => onChange?.(new Date(date.getFullYear(), date.getMonth() - 1, 1))}>
           ‹
@@ -830,7 +1067,7 @@ export function TagInput({ value = [], onChange, placeholder = 'Add tag and pres
     onChange?.([...new Set([...(value || []), v])]);
   };
   return (
-    <div className='rounded-xl border border-slate-200 bg-white px-2 py-1 flex flex-wrap gap-1'>
+    <div className='rounded-lg border border-slate-200 bg-white px-2 py-1 flex flex-wrap gap-1'>
       {(value || []).map(t => (
         <span key={t} className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs'>
           {t}
@@ -859,7 +1096,7 @@ export function SegmentPicker({ value = { role: 'All', status: 'All', tags: [], 
   const v = value || {};
   const set = patch => onChange?.({ ...v, ...patch });
   return (
-    <div className='rounded-xl border border-slate-200 bg-white p-3 space-y-2'>
+    <div className='rounded-lg border border-slate-200 bg-white p-3 space-y-2'>
       <div className='grid grid-cols-1 md:grid-cols-3 gap-2'>
         <div>
           <label className='text-sm text-slate-600'>Role</label>
@@ -900,7 +1137,7 @@ export function FileDropzone({ onFiles, accept = '*/*', className = '' }) {
     onFiles?.(files);
   }
   return (
-    <label onDrop={handle} onDragOver={e => e.preventDefault()} className={`grid place-items-center cursor-pointer rounded-2xl border border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 p-6 text-center ${className}`}>
+    <label onDrop={handle} onDragOver={e => e.preventDefault()} className={`grid place-items-center cursor-pointer rounded-lg border border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 p-6 text-center ${className}`}>
       <input type='file' multiple accept={accept} className='hidden' onChange={handle} />
       <div>
         <div className='text-sm font-semibold'>Drop files here or click to upload</div>
@@ -930,7 +1167,7 @@ export function TagChips({ tags = [], selected = [], onToggle }) {
 /* NumberStepper */
 export function NumberStepper({ value = 0, min = 0, step = 1, onChange }) {
   return (
-    <div className='inline-flex items-center rounded-xl border border-slate-200 bg-white overflow-hidden'>
+    <div className='inline-flex items-center rounded-lg border border-slate-200 bg-white overflow-hidden'>
       <button type='button' onClick={() => onChange?.(Math.max(min, value - step))} className='px-2 py-1 text-slate-600 hover:bg-slate-50'>
         −
       </button>
@@ -989,7 +1226,7 @@ export function RestTimer({ initial = 90 }) {
   const ss = String(seconds % 60).padStart(2, '0');
 
   return (
-    <div className='inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1'>
+    <div className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1'>
       <span className='tabular-nums text-sm'>
         {mm}:{ss}
       </span>
@@ -1032,7 +1269,7 @@ export function CalendarToolbar({ date, setDate, view, setView }) {
 
   return (
     <div className='flex flex-wrap items-center gap-2'>
-      <div className='inline-flex items-center rounded-xl border border-slate-200 bg-white overflow-hidden'>
+      <div className='inline-flex items-center rounded-lg border border-slate-200 bg-white overflow-hidden'>
         <button onClick={() => (view === 'week' ? addDays(-7) : addMonths(-1))} className='px-3 py-2 hover:bg-slate-50'>
           ‹
         </button>
@@ -1044,7 +1281,7 @@ export function CalendarToolbar({ date, setDate, view, setView }) {
         </button>
       </div>
       <div className='text-sm font-semibold'>{label}</div>
-      <div className='ml-auto inline-flex rounded-xl border border-slate-200 bg-white overflow-hidden'>
+      <div className='ml-auto inline-flex rounded-lg border border-slate-200 bg-white overflow-hidden'>
         {['month', 'week', 'list'].map(v => (
           <button key={v} onClick={() => setView(v)} className={`px-3 py-2 text-sm ${view === v ? 'bg-indigo-600 text-white' : 'hover:bg-slate-50'}`}>
             {v[0].toUpperCase() + v.slice(1)}
@@ -1065,11 +1302,11 @@ export function BadgeDot({ color = 'slate', children }) {
 }
 
 export function PhotoGrid({ photos = [], onOpen }) {
-  if (!photos.length) return <div className='rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500'>No photos yet. Upload from the Check‑in tab.</div>;
+  if (!photos.length) return <div className='rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500'>No photos yet. Upload from the Check‑in tab.</div>;
   return (
     <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2'>
       {photos.map((p, idx) => (
-        <button key={p.id || idx} onClick={() => onOpen?.(idx)} className='group relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-100'>
+        <button key={p.id || idx} onClick={() => onOpen?.(idx)} className='group relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-100'>
           <img src={p.url} alt={p.label || 'Progress photo'} className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105' />
           <div className='absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/50 to-transparent p-1.5'>
             <div className='text-[10px] text-white/90 truncate'>{p.date || ''}</div>
@@ -1102,7 +1339,7 @@ export function Lightbox({ open, setOpen, photos = [], index = 0, setIndex }) {
         ›
       </button>
       <div className='max-w-[92vw] max-h-[86vh]'>
-        {p ? <img src={p.url} alt={p.label || 'photo'} className='max-h-[86vh] max-w-[92vw] rounded-xl shadow-2xl' /> : null}
+        {p ? <img src={p.url} alt={p.label || 'photo'} className='max-h-[86vh] max-w-[92vw] rounded-lg shadow-2xl' /> : null}
         <div className='mt-2 text-center text-white/90 text-xs'>
           {p?.date} {p?.label ? `• ${p.label}` : ''}
         </div>

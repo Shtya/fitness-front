@@ -86,13 +86,13 @@ export default function SystemSettingsPage() {
             </div>
           </Field>
           <Field label="Logo">
-            <label className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer inline-flex items-center gap-2">
+            <label className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer inline-flex items-center gap-2">
               Upload logo
               <input type="file" accept="image/*" className="hidden" onChange={(e)=>setLogo(e.target.files?.[0] || null)} />
             </label>
           </Field>
           <Field label="Preview">
-            <div className="rounded-xl border border-slate-200 p-4" style={{ background: `linear-gradient(135deg, ${brand}, ${shade(brand, -15)})` }}>
+            <div className="rounded-lg border border-slate-200 p-4" style={{ background: `linear-gradient(135deg, ${brand}, ${shade(brand, -15)})` }}>
               <div className="text-white font-semibold">Amazing Gym</div>
               <div className="mt-1 text-white/80 text-sm">Buttons, highlights and pills use your brand color</div>
             </div>
@@ -136,14 +136,14 @@ export default function SystemSettingsPage() {
             <KeyField value={cloudKey} masked />
           </Field>
           <Field label="Webhooks (see Admin → API & Webhooks)" className="md:col-span-2">
-            <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm">Manage endpoints and test delivery under <span className="font-medium">Admin → API & Webhooks</span>.</div>
+            <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">Manage endpoints and test delivery under <span className="font-medium">Admin → API & Webhooks</span>.</div>
           </Field>
         </SectionCard>
 
         {/* Danger */}
         <SectionCard title="Danger Zone" subtitle="Be careful — destructive actions." >
           <Field label="Reset theme to default">
-            <button onClick={()=>setOpenReset(true)} className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-red-50 text-red-600">
+            <button onClick={()=>setOpenReset(true)} className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-red-50 text-red-600">
               Reset branding
             </button>
           </Field>
@@ -162,7 +162,7 @@ export default function SystemSettingsPage() {
       />
 
       <style jsx>{`
-        .inp { @apply w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30; }
+        .inp { @apply w-full px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30; }
       `}</style>
     </div>
   );

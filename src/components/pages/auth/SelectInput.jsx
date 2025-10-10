@@ -14,7 +14,7 @@ export const SelectInput = ({ label, options = [], register, error, disabled = f
   return (
     <div className='w-full mb-5'>
       {/* Box container for Select Input */}
-      <div className='p-4 border border-slate-200  rounded-xl shadow-inner '>
+      <div className='p-4 border border-slate-200  rounded-lg shadow-inner '>
          {label && <label className='block text-sm text-gray-600 mb-2'>{label}</label>}
 
         <LayoutGroup id={`select-tabs-${Math.random()}`}>
@@ -33,7 +33,7 @@ export const SelectInput = ({ label, options = [], register, error, disabled = f
                   onMouseLeave={() => setHoveredTab(null)}
                   whileHover={{ y: -1 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`relative cursor-pointer rounded-2xl px-6 py-2 transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-indigo-500/60
+                  className={`relative cursor-pointer rounded-lg px-6 py-2 transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-indigo-500/60
                     ${isActive ? 'bg-indigo-500 text-white' : 'bg-slate-100 shadow-inner text-gray-700'}
                     ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
                     ${isHovered && !disabled ? 'bg-indigo-600 text-white' : ''}  
@@ -41,7 +41,7 @@ export const SelectInput = ({ label, options = [], register, error, disabled = f
                   disabled={disabled} // Ensure button is truly disabled for interactivity
                 >
                   {/* Active pill animation */}
-                  {isActive && <motion.span layoutId='active-pill' className='absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-400 shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
+                  {isActive && <motion.span layoutId='active-pill' className='absolute inset-0 rounded-lg bg-gradient-to-r from-indigo-500 to-indigo-400 shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
 
                   <span className={`relative z-10 transition-colors ${isActive ? 'text-white drop-shadow-sm' : 'text-gray-700'}`}>{option.label}</span>
                 </motion.button>

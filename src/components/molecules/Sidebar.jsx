@@ -3,19 +3,19 @@
 import Link from 'next/link';
 import { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Shield, ShieldCheck, Dumbbell, ClipboardList, CalendarRange, Apple, NotebookPen, MessageSquare, CreditCard, ChefHat, ShoppingCart, Calculator, LineChart, Salad, Settings as SettingsIcon, ServerCog, ChevronDown, X, UtensilsCrossed } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Shield, ShieldCheck, Dumbbell, ClipboardList, CalendarRange, Apple, NotebookPen, MessageSquare, CreditCard, ChefHat, ShoppingCart, Calculator, LineChart, Salad, Settings as SettingsIcon, ServerCog, ChevronDown, X, UtensilsCrossed, ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
-import { FaRegFilePowerpoint } from 'react-icons/fa';
+import { FaChartBar, FaInbox, FaRegFilePowerpoint, FaUsers, FaWpforms } from 'react-icons/fa';
 
 const spring = { type: 'spring', stiffness: 380, damping: 28, mass: 0.7 };
 
-function cn(...a) {
-  return a.filter(Boolean).join(' ');
+function cn() {
+  return Array.from(arguments).filter(Boolean).join(' ');
 }
 
 const NAV = [
-  // -------------------- COACH --------------------
+  // -------------------- CLIENT --------------------
   {
     role: 'client',
     section: 'My Space',
@@ -43,6 +43,8 @@ const NAV = [
       { name: 'Profile', href: '/dashboard/my/profile', icon: UserIcon },
     ],
   },
+
+  // -------------------- COACH --------------------
   {
     role: 'coach',
     section: 'My Space',
@@ -78,21 +80,26 @@ const NAV = [
     items: [
       { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
       { name: 'All Users', href: '/dashboard/users', icon: Users },
+      { name: 'All Exercises', href: '/dashboard/workouts', icon: ClipboardList },
+    ],
+  },
+  {
+    role: 'admin',
+    section: 'Programs',
+    items: [
+      { name: 'Workout Programs', href: '/dashboard/workouts/plans', icon: NotebookPen },
+      { name: 'Meal Programs', href: '/dashboard/nutrition/meal-plans', icon: UtensilsCrossed },
+    ],
+  },
+  {
+    role: 'admin',
+    items: [
       {
-        name: 'Workouts',
-        icon: Dumbbell,
-        expand: true,
+        name: 'Client Intake',
+        icon: FaUsers,
         children: [
-          { name: 'All Exercises', href: '/dashboard/workouts', icon: ClipboardList },
-          { name: 'Workout Programs', href: '/dashboard/workouts/plans', icon: NotebookPen },
-        ],
-      },
-      {
-        name: 'Food Library',
-        icon: UtensilsCrossed,
-        children: [
-          { name: 'Foods', href: '/dashboard/nutrition', icon: Apple },
-          { name: 'Meal Plans', href: '/dashboard/nutrition/meal-plans', icon: ChefHat },
+          { name: 'Manage Forms', href: '/dashboard/intake/forms', icon: FaWpforms },
+          { name: 'Responses', href: '/dashboard/intake/responses', icon: FaInbox },
         ],
       },
     ],
@@ -109,9 +116,7 @@ const NAV = [
   },
 ];
 
-/** ----------------------------------------------------------------
- * Helpers
- ------------------------------------------------------------------*/
+/* ----------------------------- helpers ---------------------------------- */
 function isPathActive(pathname, href) {
   if (!href) return false;
   return pathname === href || pathname?.startsWith(href + '/') || pathname?.endsWith(href + '/');
@@ -124,17 +129,46 @@ function anyChildActive(pathname, children = []) {
 /** ----------------------------------------------------------------
  * NavItem (handles both leaf links and collapsible parents)
  ------------------------------------------------------------------*/
-function NavItem({ item, pathname, depth = 0, onNavigate }) {
+function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false }) {
   const Icon = item.icon || LayoutDashboard;
   const hasChildren = Array.isArray(item.children) && item.children.length > 0;
 
+  // In collapsed mode, we show icon-only. Parents with children link to first child.
+  if (collapsed) {
+    if (hasChildren) {
+      const firstChild = item.children.find(c => c.href);
+      if (!firstChild) return null;
+      const active = isPathActive(pathname, firstChild.href);
+      return (
+        <Link href={firstChild.href} onClick={onNavigate} className='block group'>
+          <div className={cn('relative flex items-center gap-3 rounded-lg px-3 py-1 transition-colors justify-center', active ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50 border border-transparent')}>
+            <div className={cn('flex flex-none items-center justify-center w-10 h-10 rounded-lg', active ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-indigo-600 group-hover:bg-indigo-50')} title={item.name}>
+              <Icon className='size-5' />
+            </div>
+          </div>
+        </Link>
+      );
+    }
+    // leaf in collapsed
+    const active = isPathActive(pathname, item.href);
+    return (
+      <Link href={item.href} onClick={onNavigate} className='block group'>
+        <div className={cn('relative flex items-center gap-3 rounded-lg px-3 py-1 transition-colors justify-center', active ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50 border border-transparent')}>
+          <div className={cn('flex  !flex-none items-center justify-center w-10 h-10 rounded-lg', active ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-indigo-600 group-hover:bg-indigo-50')} title={item.name}>
+            <Icon className='size-5' />
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
+  // Expanded sidebar behaviour
   const initiallyOpen = hasChildren && (item.expand || anyChildActive(pathname, item.children) || isPathActive(pathname, item.href));
 
   const [open, setOpen] = useState(initiallyOpen);
 
   useEffect(() => {
     if (!hasChildren) return;
-    // ✅ if expand is true, keep it open; otherwise follow active route
     if (item.expand) {
       setOpen(true);
     } else {
@@ -144,11 +178,11 @@ function NavItem({ item, pathname, depth = 0, onNavigate }) {
   }, [pathname]);
 
   if (!hasChildren) {
-    const active = pathname == item.href;
+    const active = pathname === item.href;
     return (
       <Link href={item.href} onClick={onNavigate} className='block group'>
         <div className={cn('relative flex items-center gap-3 rounded-lg px-3 py-2 transition-colors', active ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50 border border-transparent')} style={{ paddingLeft: depth ? 8 + depth * 14 : 12 }}>
-          <div className={cn('flex items-center justify-center w-8 h-8 rounded-md', active ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-indigo-600 group-hover:bg-indigo-50')}>
+          <div className={cn('flex  flex-none items-center justify-center w-8 h-8 rounded-lg', active ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-indigo-600 group-hover:bg-indigo-50')}>
             <Icon className='size-5' />
           </div>
           <div className='flex-1 font-medium truncate'>{item.name}</div>
@@ -157,14 +191,14 @@ function NavItem({ item, pathname, depth = 0, onNavigate }) {
     );
   }
 
-  // Parent (collapsible)
+  // Parent (collapsible) when expanded
   return (
     <div className='w-full'>
       <button type='button' onClick={() => setOpen(v => !v)} className={cn('w-full flex items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors', open ? 'bg-slate-50 text-slate-800' : 'hover:bg-slate-50 text-slate-700')} style={{ paddingLeft: depth ? 8 + depth * 14 : 12 }} aria-expanded={open}>
-        <div className='flex items-center justify-center w-8 h-8 rounded-md bg-slate-100 text-indigo-600'>
+        <div className='flex flex-none items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-indigo-600'>
           <Icon className='size-5' />
         </div>
-        <div className='flex-1 font-semibold truncate'>{item.name}</div>
+        <div className='flex-1  font-semibold truncate'>{item.name}</div>
         <motion.span initial={false} animate={{ rotate: open ? 180 : 0 }} transition={spring} className='text-slate-400'>
           <ChevronDown className='size-4' />
         </motion.span>
@@ -188,23 +222,20 @@ function NavItem({ item, pathname, depth = 0, onNavigate }) {
 /** ----------------------------------------------------------------
  * Section with title
  ------------------------------------------------------------------*/
-function NavSection({ section, items, pathname, onNavigate }) {
+function NavSection({ section, items, pathname, onNavigate, collapsed = false }) {
   return (
     <div className='mb-3'>
-      {section ? <div className='px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500/80'>{section}</div> : null}
-      <div className='px-2 space-y-1'>
+      {!collapsed && section ? <div className='px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500/80'>{section}</div> : null}
+      <div className={cn('px-2 space-y-1', collapsed && 'px-1')}>
         {items.map(item => (
-          <NavItem key={item.href || item.name} item={item} pathname={pathname} onNavigate={onNavigate} />
+          <NavItem key={item.href || item.name} item={item} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
         ))}
       </div>
     </div>
   );
 }
 
-/** ----------------------------------------------------------------
- * SIDEBAR
- ------------------------------------------------------------------*/
-export default function Sidebar({ open, setOpen }) {
+export default function Sidebar({ open, setOpen, collapsed, setCollapsed }) {
   const pathname = usePathname();
   const user = useUser();
   const role = user?.role || 'coach'; // fallback to coach
@@ -222,13 +253,19 @@ export default function Sidebar({ open, setOpen }) {
   return (
     <>
       {/* DESKTOP */}
-      <aside className='hidden lg:flex lg:flex-col w-[260px] shrink-0 border-r border-slate-200 bg-white'>
+      <aside className={cn('hidden lg:flex lg:flex-col shrink-0 border-r border-slate-200 bg-white transition-[width] duration-300', collapsed ? 'w-[72px]' : 'w-[260px]')}>
         <div className='flex h-screen flex-col'>
+          <div className={cn('h-[64px] border-b border-slate-200 flex items-center', collapsed ? 'justify-center px-2' : 'justify-end px-3')}>
+            <button onClick={() => setCollapsed(v => !v)} className={cn('inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white active:scale-95 transition h-9', collapsed ? 'w-9' : 'w-9')} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+              {collapsed ? <ChevronRight className='w-4 h-4' /> : <ChevronLeft className='w-4 h-4' />}
+            </button>
+          </div>
+
           {/* Nav */}
           <LayoutGroup id='sidebar-nav'>
-            <nav className='flex-1 overflow-y-auto py-3'>
+            <nav className={cn('flex-1 overflow-y-auto py-3', collapsed ? 'px-1' : '')}>
               {sections.map(section => (
-                <NavSection key={section.section} section={section.section} items={section.items} pathname={pathname} onNavigate={onNavigate} />
+                <NavSection key={section.section || section.items[0]?.name} section={section.section} items={section.items} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} />
               ))}
             </nav>
           </LayoutGroup>
@@ -244,7 +281,7 @@ export default function Sidebar({ open, setOpen }) {
               {/* header */}
               <div className='h-[72px] px-4 border-b border-slate-200 flex items-center justify-between'>
                 <div className='flex items-center gap-2'>
-                  <div className='size-8 rounded-xl bg-indigo-600 shadow ring-4 ring-indigo-100 grid place-content-center text-white'>
+                  <div className='size-8 rounded-lg bg-indigo-600 shadow ring-4 ring-indigo-100 grid place-content-center text-white'>
                     <LayoutDashboard className='size-4' />
                   </div>
                   <div className='font-semibold'>Coach Portal</div>
@@ -258,7 +295,7 @@ export default function Sidebar({ open, setOpen }) {
               <LayoutGroup id='sidebar-nav-mobile'>
                 <nav className='w-full h-[calc(100vh-100px)] overflow-y-auto px-2 pt-4 pb-6 space-y-3'>
                   {sections.map(section => (
-                    <NavSection key={section.section} section={section.section} items={section.items} pathname={pathname} onNavigate={onNavigate} />
+                    <NavSection key={section.section || section.items[0]?.name} section={section.section} items={section.items} pathname={pathname} onNavigate={onNavigate} />
                   ))}
                 </nav>
               </LayoutGroup>

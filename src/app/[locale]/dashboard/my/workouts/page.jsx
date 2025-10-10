@@ -1,77 +1,33 @@
-/* 
-	- issue 
-		1. day doenst' take the defulat today and form the localstorage 
-		2.  changes are stored locally appear when i load the page 
-		3. when click on upload video for caoch open popup 
-*/
-
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader, TabsPill, EmptyState, spring } from '@/components/dashboard/ui/UI';
-import { Dumbbell, History as HistoryIcon, X, Minus, Plus, Video as VideoIcon, Trophy, TrendingUp, Flame, Save as SaveIcon, ImageIcon, Headphones, Settings as SettingsIcon, Menu as MenuIcon, Clock, Upload } from 'lucide-react';
-import Button from '@/components/atoms/Button';
+import { Dumbbell, X, Minus, Plus, Video as VideoIcon, Save as SaveIcon, ImageIcon, Headphones, Settings as SettingsIcon, Menu as MenuIcon, Upload } from 'lucide-react';
 import CheckBox from '@/components/atoms/CheckBox';
-import api from '@/utils/axios';
+import api, { baseImg } from '@/utils/axios';
 import weeklyProgram from './exercises';
-import { KPI, TopList } from '@/components/pages/workouts/UI';
-import { createSessionFromDay, applyServerRecords, markUnsaved, persistLocalBuffer, flushLocalBufferForExercise } from '@/components/pages/workouts/helpers';
+import { createSessionFromDay, applyServerRecords } from '@/components/pages/workouts/helpers';
 import { RestTimerCard } from '@/components/pages/workouts/RestTimerCard';
 import { SettingsPopup } from '@/components/pages/workouts/SettingsPopup';
 import { AudioHubInline } from '@/components/pages/workouts/AudioHub';
-import DataTable from '@/components/dashboard/ui/DataTable';
 import { ExerciseList } from '@/components/pages/workouts/ExerciseList';
 import { InlineVideo } from '@/components/pages/workouts/InlineVideo';
 import { useUser } from '@/hooks/useUser';
 import { useTranslations } from 'next-intl';
+import Img from '@/components/atoms/Img';
+import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 
+/* =========================
+   Constants / tiny helpers
+========================= */
 export const DEFAULT_SOUNDS = ['/sounds/1.mp3', '/sounds/2.mp3', '/sounds/alert1.mp3', '/sounds/alert2.mp3', '/sounds/alert3.mp3', '/sounds/alert4.mp3', '/sounds/alert5.mp3', '/sounds/alert6.mp3', '/sounds/alert7.mp3', '/sounds/alert8.mp3'];
+
 const LOCAL_KEY_SETTINGS = 'mw.settings.v1';
-const LOCAL_KEY_WORKOUT_BUFFER = 'mw.workout.buffer';
-const LOCAL_KEY_GYM_TIME = 'mw.gym.time';
 const LOCAL_KEY_SELECTED_DAY = 'mw.selected.day';
 
-// Helper functions
 const jsDayToId = d => ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][d] || 'monday';
-
-function pickTodayId(availableIds) {
-  const todayId = jsDayToId(new Date().getDay());
-  if (availableIds.includes(todayId)) return todayId;
-  const pref = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-  return pref.find(x => availableIds.includes(x)) || availableIds[0] || 'monday';
-}
-
-const throttle = (fn, wait = 800) => {
-  let last = 0,
-    timer = null,
-    lastArgs,
-    lastThis;
-  return function (...args) {
-    const now = Date.now();
-    const remaining = wait - (now - last);
-    lastArgs = args;
-    lastThis = this;
-    if (remaining <= 0) {
-      if (timer) {
-        clearTimeout(timer);
-        timer = null;
-      }
-      last = now;
-      fn.apply(lastThis, lastArgs);
-    } else if (!timer) {
-      timer = setTimeout(() => {
-        last = Date.now();
-        timer = null;
-        fn.apply(lastThis, lastArgs);
-      }, remaining);
-    }
-  };
-};
-
-const epley = (w, r) => Math.round((Number(w) || 0) * (1 + (Number(r) || 0) / 30));
 const todayISO = () => new Date().toISOString().slice(0, 10);
-const fmtVal = v => (v === null || v === undefined ? '—' : typeof v === 'string' || typeof v === 'number' ? String(v) : JSON.stringify(v));
 
 function dateOnlyISO(d = new Date()) {
   const yyyy = d.getFullYear();
@@ -80,175 +36,121 @@ function dateOnlyISO(d = new Date()) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-const DAY_INDEX = {
-  SUNDAY: 0,
-  MONDAY: 1,
-  TUESDAY: 2,
-  WEDNESDAY: 3,
-  THURSDAY: 4,
-  FRIDAY: 5,
-  SATURDAY: 6,
-};
-
-const WEEK_START = 6;
+const DAY_INDEX = { SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6 };
+const WEEK_START = 6; // Saturday
 
 function isoForThisWeeksDay(dayName, refDate = new Date(), weekStart = WEEK_START) {
   const targetIdx = DAY_INDEX[dayName.toUpperCase()];
-  if (targetIdx == null) throw new Error(`Bad dayName: ${dayName}`);
-
   const refIdx = refDate.getDay();
   const deltaStart = (refIdx - weekStart + 7) % 7;
   const start = new Date(refDate);
   start.setHours(12, 0, 0, 0);
   start.setDate(start.getDate() - deltaStart);
-
   const targetOffset = (targetIdx - weekStart + 7) % 7;
   const target = new Date(start);
   target.setDate(start.getDate() + targetOffset);
-
   return dateOnlyISO(target);
 }
 
-const apiCache = new Map();
-
-async function fetchWithCache(key, fetchFn) {
-  if (apiCache.has(key)) {
-    return apiCache.get(key);
-  }
-  const result = await fetchFn();
-  apiCache.set(key, result);
-  return result;
+function pickTodayId(availableIds) {
+  const todayId = jsDayToId(new Date().getDay());
+  if (availableIds.includes(todayId)) return todayId;
+  const pref = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+  return pref.find(x => availableIds.includes(x)) || availableIds[0] || 'monday';
 }
 
-async function fetchActivePlan(userId) {
-  const cacheKey = `activePlan-${userId ?? 'guest'}`;
-  return fetchWithCache(cacheKey, async () => {
-    const { data } = await api.get('/plans/active', { params: { userId } });
-    return data?.program?.days?.length ? data : { program: { days: Object.keys(weeklyProgram).map(k => weeklyProgram[k]) } };
-  });
+function ButtonMini({ name, icon, onClick, loading, disabled, className = '' }) {
+  return (
+    <button type='button' onClick={onClick} disabled={disabled || loading} className={['inline-flex items-center gap-2 rounded-lg px-3 h-9 text-sm font-medium shadow-sm', 'border border-indigo-200 bg-indigo-600 text-white hover:bg-indigo-700', 'active:scale-[.98] disabled:opacity-60 disabled:cursor-not-allowed', className].join(' ')}>
+      {loading ? (
+        <span className='relative flex items-center'>
+          <span className='mr-1 inline-block w-3.5 h-3.5 border-2 border-white/60 border-t-transparent rounded-full animate-spin' />
+          {name}
+        </span>
+      ) : (
+        <>
+          {icon ? icon : null}
+          {name}
+        </>
+      )}
+    </button>
+  );
 }
 
-async function upsertDailyPR(userId, exerciseName, date, records) {
-  const { data } = await api.post('/prs', { exerciseName, date, records }, { params: { userId } });
-  apiCache.clear();
-  return data;
-}
+function UploadVideoModal({ open, onClose, userId, exercise, onUploaded }) {
+  const [file, setFile] = useState(null);
+  const [error, setError] = useState('');
+  const [sending, setSending] = useState(false);
 
-async function fetchAllStats(userId, windowDays = 30, exerciseWindowDays = 90) {
-  const cacheKey = `allStats-${userId ?? 'guest'}-${windowDays}-${exerciseWindowDays}`;
-  return fetchWithCache(cacheKey, async () => {
-    const { data } = await api.get('/prs/all-stats', {
-      params: { userId, windowDays, exerciseWindowDays },
-    });
-    return data;
-  });
-}
+  const onPick = e => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (!f.type?.startsWith('video/')) return setError('Please select a valid video file.');
+    if (f.size > 100 * 1024 * 1024) return setError('Max size is 100MB.');
+    setError('');
+    setFile(f);
+  };
 
-// Simplified version if you don't need the date aggregation
-async function fetchLastDayByName(userId, day, onOrBefore) {
-  const cacheKey = `lastDay-${userId ?? 'guest'}-${day}-${onOrBefore}`;
-  return fetchWithCache(cacheKey, async () => {
+  const doUpload = async () => {
+    if (!file || !exercise) return;
+    setSending(true);
     try {
-      const plan = await fetchActivePlan(userId);
-      const dayProgram = plan?.program?.days?.find(d => String(d.dayOfWeek ?? '').toLowerCase() === day.toLowerCase()) || weeklyProgram[day] || { exercises: [] };
-
-      const exerciseNames = dayProgram.exercises.map(ex => ex.name);
-
-      if (exerciseNames.length === 0) {
-        return {
-          date: null,
-          day: day,
-          recordsByExercise: {},
-        };
-      }
-
-      const { data } = await api.post('/prs/last-workout-sets', {
-        userId,
-        exercises: exerciseNames,
-      });
-
-      const recordsByExercise = {};
-      data.exercises.forEach(exercise => {
-        if (exercise.records.length > 0) {
-          recordsByExercise[exercise.exerciseName] = exercise.records;
-        }
-      });
-
-      return {
-        date: data.exercises.find(ex => ex.date)?.date || null,
-        day: day,
-        recordsByExercise,
-      };
-    } catch (error) {
-      console.error('Error fetching last workout sets:', error);
-      return {
-        date: null,
-        day: day,
-        recordsByExercise: {},
-      };
+      const formData = new FormData();
+      formData.append('video', file);
+      formData.append('exerciseId', exercise.id);
+      formData.append('userId', userId);
+      const { data } = await api.post('/exercises/upload-video', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      onUploaded?.(data);
+      onClose();
+    } catch (e) {
+      setError('Upload failed. Try again.');
+      console.error(e);
+    } finally {
+      setSending(false);
     }
-  });
+  };
+
+  if (!open) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className='fixed inset-0 z-[95] bg-black/40 backdrop-blur-[1px]' onClick={onClose} />
+      <motion.div initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', stiffness: 280, damping: 28 }} className='fixed left-1/2 top-[15%] -translate-x-1/2 z-[100] w-[92%] max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200'>
+        <div className='p-4 border-b border-slate-100 flex items-center justify-between'>
+          <div className='font-semibold'>
+            Upload video for: <span className='text-indigo-700'>{exercise?.name}</span>
+          </div>
+          <button onClick={onClose} className='p-2 rounded-lg hover:bg-slate-100'>
+            <X size={16} />
+          </button>
+        </div>
+        <div className='p-4 space-y-3'>
+          <div className='rounded-lg border border-slate-200 p-3 bg-slate-50'>
+            <input id='video-file' type='file' accept='video/*' onChange={onPick} className='hidden' />
+            <label htmlFor='video-file' className='inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 cursor-pointer'>
+              <Upload size={16} /> Choose video
+            </label>
+            {file && <div className='mt-2 text-sm text-slate-700 truncate'>Selected: {file.name}</div>}
+            {!!error && <div className='mt-2 text-sm text-rose-600'>{error}</div>}
+          </div>
+          <div className='flex items-center justify-end gap-2 pt-2'>
+            <button onClick={onClose} className='h-9 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700'>
+              Cancel
+            </button>
+            <ButtonMini name='Upload' icon={<Upload size={16} />} onClick={doUpload} loading={sending} disabled={!file} />
+          </div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
 }
-
-// NEW: Video upload function
-async function uploadExerciseVideo(userId, exerciseId, videoFile) {
-  const formData = new FormData();
-  formData.append('video', videoFile);
-  formData.append('exerciseId', exerciseId);
-  formData.append('userId', userId);
-
-  const { data } = await api.post('/exercises/upload-video', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  return data;
-}
-
-// NEW: Gym time tracking functions
-const saveGymTime = (startTime, endTime = null) => {
-  const gymTime = { startTime, endTime };
-  localStorage.setItem(LOCAL_KEY_GYM_TIME, JSON.stringify(gymTime));
-  return gymTime;
-};
-
-const getGymTime = () => {
-  try {
-    return JSON.parse(localStorage.getItem(LOCAL_KEY_GYM_TIME)) || null;
-  } catch {
-    return null;
-  }
-};
-
-const calculateTimeInGym = (startTime, endTime) => {
-  if (!startTime) return null;
-  const start = new Date(startTime);
-  const end = endTime ? new Date(endTime) : new Date();
-  const diffMs = end - start;
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  return `${hours}h ${minutes}m`;
-};
 
 const SkeletonLoader = () => (
   <div className='space-y-5 sm:space-y-6 animate-pulse'>
-    <div className='rounded-xl md:rounded-2xl overflow-hidden border border-indigo-200'>
-      <div className='relative p-4 md:p-8 bg-gradient text-white'>
-        <div className='absolute inset-0 opacity-20 bg-[radial-gradient(600px_200px_at_20%_-20%,white,transparent)]' />
-        <div className='relative z-10 flex flex-row md:items-center gap-3 md:gap-6 justify-between'>
-          <div className='flex-1 max-lg:hidden'>
-            <div className='h-8 bg-white/20 rounded w-48'></div>
-            <div className='h-4 bg-white/20 rounded w-64 mt-2'></div>
-          </div>
-          <div className='flex items-center gap-2'>
-            <div className='h-[37px] w-[37px] bg-white/20 rounded-xl'></div>
-            <div className='h-[37px] w-[37px] bg-white/20 rounded-xl'></div>
-            <div className='max-md:hidden flex gap-2'>
-              <div className='h-[37px] w-24 bg-white/20 rounded-xl'></div>
-              <div className='h-[37px] w-24 bg-white/20 rounded-xl'></div>
-            </div>
-          </div>
-        </div>
+    <div className='rounded-lg overflow-hidden border border-indigo-200'>
+      <div className='relative p-6 bg-gradient text-white'>
+        <div className='h-6 bg-white/20 rounded w-56'></div>
+        <div className='mt-2 h-4 bg-white/20 rounded w-64'></div>
       </div>
       <div className='px-4 md:px-6 py-3 bg-white'>
         <div className='flex gap-2'>
@@ -258,288 +160,75 @@ const SkeletonLoader = () => (
         </div>
       </div>
     </div>
-
     <div className='grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6'>
-      <div className='space-y-4'>
-        <div className='rounded-2xl border border-slate-200 bg-white p-4'>
-          <div className='h-64 bg-slate-200 rounded-lg mb-4'></div>
-          <div className='space-y-3'>
-            <div className='h-12 bg-slate-200 rounded-lg'></div>
-            <div className='h-12 bg-slate-200 rounded-lg'></div>
-            <div className='h-12 bg-slate-200 rounded-lg'></div>
-          </div>
-        </div>
+      <div className='rounded-lg border border-slate-200 bg-white p-4'>
+        <div className='h-64 bg-slate-200 rounded-lg'></div>
       </div>
-
       <div className='hidden lg:block space-y-3'>
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className='h-16 bg-slate-200 rounded-lg'></div>
+          <div key={i} className='h-16 bg-slate-200 rounded-lg' />
         ))}
       </div>
     </div>
   </div>
 );
 
-// NEW: Video Upload Component
-const VideoUploadButton = ({ exercise, userId, onVideoUpload }) => {
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef(null);
+async function fetchActivePlan(userId) {
+  // No cache here so dashboard changes reflect immediately
+  const { data } = await api.get('/plans/active', { params: { userId } });
+  if (data?.program?.days?.length) return data;
+  // fallback to local weeklyProgram if server empty
+  return { program: { days: Object.keys(weeklyProgram).map(k => weeklyProgram[k]) } };
+}
 
-  const handleVideoUpload = async event => {
-    const file = event.target.files[0];
-    if (!file) return;
+async function fetchLastDayByName(userId, day, onOrBefore) {
+  try {
+    const plan = await fetchActivePlan(userId);
+    const dayProgram = plan?.program?.days?.find(d => String(d.dayOfWeek ?? '').toLowerCase() === day.toLowerCase()) || weeklyProgram[day] || { exercises: [] };
 
-    // Validate file type
-    if (!file.type.startsWith('video/')) {
-      alert('Please select a video file');
-      return;
+    const exerciseNames = (dayProgram.exercises || []).map(ex => ex.name);
+    if (exerciseNames.length === 0) {
+      return { date: null, day, recordsByExercise: {} };
     }
 
-    // Validate file size (max 100MB)
-    if (file.size > 100 * 1024 * 1024) {
-      alert('Video file must be less than 100MB');
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const result = await uploadExerciseVideo(userId, exercise.id, file);
-      onVideoUpload?.(result);
-      alert('Video uploaded successfully!');
-    } catch (error) {
-      console.error('Video upload failed:', error);
-      alert('Failed to upload video. Please try again.');
-    } finally {
-      setUploading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+    const { data } = await api.post('/prs/last-workout-sets', { userId, exercises: exerciseNames });
+    const recordsByExercise = {};
+    data.exercises.forEach(exercise => {
+      if (exercise.records.length > 0) {
+        recordsByExercise[exercise.exerciseName] = exercise.records;
       }
-    }
-  };
+    });
 
-  return (
-    <div className='mt-3'>
-      <input type='file' ref={fileInputRef} onChange={handleVideoUpload} accept='video/*' className='hidden' id={`video-upload-${exercise.id}`} />
-      <label htmlFor={`video-upload-${exercise.id}`} className='inline-flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg cursor-pointer hover:bg-blue-600 transition-colors text-sm'>
-        <Upload size={16} />
-        {uploading ? 'Uploading...' : 'Upload Video for Coach'}
-      </label>
-    </div>
-  );
-};
-
-// NEW: Compact Gym Clock Component
-const GymClock = () => {
-  const t = useTranslations('MyWorkouts');
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [gymTime, setGymTime] = useState(getGymTime());
-  const [isTraining, setIsTraining] = useState(!!gymTime?.startTime && !gymTime?.endTime);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const handleStartTraining = () => {
-    const startTime = new Date().toISOString();
-    const newGymTime = saveGymTime(startTime);
-    setGymTime(newGymTime);
-    setIsTraining(true);
-  };
-
-  const handleEndTraining = () => {
-    const endTime = new Date().toISOString();
-    const newGymTime = saveGymTime(gymTime.startTime, endTime);
-    setGymTime(newGymTime);
-    setIsTraining(false);
-
-    // Show time spent in gym
-    const timeSpent = calculateTimeInGym(gymTime.startTime, endTime);
-    alert(`You spent ${timeSpent} in the gym!`);
-  };
-
-  const timeInGym = gymTime ? calculateTimeInGym(gymTime.startTime, gymTime.endTime) : null;
-
-  return (
-    <div className='bg-white/20 backdrop-blur-sm rounded-lg p-3 border border-white/30 mb-3'>
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center gap-2'>
-          <Clock className='text-white' size={18} />
-          <div className='text-white'>
-            <div className='text-xs opacity-80'>{t('clock.timeInGym')}</div>
-            <div className='text-sm font-semibold'>{timeInGym || '0h 0m'}</div>
-          </div>
-        </div>
-        {!isTraining ? (
-          <button onClick={handleStartTraining} className='px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-xs font-medium'>
-            {t('clock.startTraining')}
-          </button>
-        ) : (
-          <button onClick={handleEndTraining} className='px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-xs font-medium'>
-            {t('clock.endTraining')}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// NEW: Simplified History Tab Components
-const StatsOverview = ({ overview }) => (
-  <div className='grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3'>
-    <KPI title='Exercises Tracked' value={fmtVal(overview?.exercisesTracked)} icon={Dumbbell} />
-    <KPI title='Total Attempts' value={fmtVal(overview?.totalAttempts)} icon={TrendingUp} />
-    <KPI title='All-time PRs' value={fmtVal(overview?.allTimePrs)} icon={Trophy} />
-    <KPI title='Current Streak' value={fmtVal(overview?.currentStreakDays)} icon={Flame} />
-  </div>
-);
-
-const AllTimeBests = ({ allTimeBests }) => (
-  <div className='rounded-2xl border border-slate-200 bg-white p-4'>
-    <div className='flex items-center justify-between mb-3'>
-      <div className='font-semibold'>All-time Bests</div>
-      <div className='text-xs text-slate-500'>From PRs (computed e1RM)</div>
-    </div>
-    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2'>
-      {allTimeBests?.map((best, i) => (
-        <div key={i} className='p-3 rounded-xl border border-slate-200 bg-white flex items-center justify-between'>
-          <div className='text-sm font-medium truncate'>{best.name}</div>
-          <div className='text-sm tabular-nums font-semibold'>{best.e1rm} e1RM</div>
-        </div>
-      ))}
-      {!allTimeBests?.length && <div className='text-sm text-slate-500'>No personal records yet</div>}
-    </div>
-  </div>
-);
-
-const ExerciseDrilldown = ({ exerciseDrilldown, exercisePick, onExerciseChange }) => {
-  const drilldown = exerciseDrilldown?.[exercisePick];
-
-  if (!drilldown || !drilldown.hasData) {
-    return (
-      <div className='rounded-2xl border border-slate-200 bg-white p-4'>
-        <div className='flex items-center justify-between gap-2 mb-3'>
-          <div className='font-semibold'>Exercise Progress</div>
-          <select className='h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm' value={exercisePick} onChange={e => onExerciseChange(e.target.value)}>
-            {Object.keys(exerciseDrilldown || {}).map(name => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <EmptyState title='No data yet' subtitle='Log your first workout to see progress here.' icon={<TrendingUp />} />
-      </div>
-    );
+    return {
+      date: data.exercises.find(ex => ex.date)?.date || null,
+      day,
+      recordsByExercise,
+    };
+  } catch (error) {
+    console.error('Error fetching last workout sets:', error);
+    return { date: null, day, recordsByExercise: {} };
   }
+}
 
-  return (
-    <div className='rounded-2xl border border-slate-200 bg-white p-4'>
-      <div className='flex items-center justify-between gap-2 mb-4'>
-        <div className='font-semibold'>{exercisePick} Progress</div>
-        <select className='h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm' value={exercisePick} onChange={e => onExerciseChange(e.target.value)}>
-          {Object.keys(exerciseDrilldown || {}).map(name => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Recent Performance */}
-      <div className='mb-4'>
-        <div className='text-sm font-medium mb-2'>Recent Performance</div>
-        <div className='grid grid-cols-3 gap-3'>
-          <div className='text-center p-3 rounded-lg bg-slate-50 border border-slate-200'>
-            <div className='text-xs text-slate-500'>Best Weight</div>
-            <div className='text-lg font-bold'>{drilldown.topSets.byWeight[0]?.weight || 0} kg</div>
-          </div>
-          <div className='text-center p-3 rounded-lg bg-slate-50 border border-slate-200'>
-            <div className='text-xs text-slate-500'>Best Reps</div>
-            <div className='text-lg font-bold'>{drilldown.topSets.byReps[0]?.reps || 0}</div>
-          </div>
-          <div className='text-center p-3 rounded-lg bg-slate-50 border border-slate-200'>
-            <div className='text-xs text-slate-500'>Best e1RM</div>
-            <div className='text-lg font-bold'>{drilldown.topSets.byE1rm[0]?.e1rm || 0}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Attempts */}
-      {drilldown.attempts.length > 0 && (
-        <div>
-          <div className='text-sm font-medium mb-2'>Recent Attempts</div>
-          <div className='space-y-2 max-h-60 overflow-y-auto'>
-            {drilldown.attempts.slice(0, 5).map((attempt, i) => (
-              <div key={i} className='flex items-center justify-between p-2 rounded-lg border border-slate-200'>
-                <div className='text-sm'>{attempt.date}</div>
-                <div className='text-sm font-medium'>
-                  {attempt.weight}kg × {attempt.reps}
-                </div>
-                {attempt.isPr && <span className='text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded'>PR</span>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const SessionHistory = ({ sessionHistory }) => (
-  <div className='rounded-2xl border border-slate-200 bg-white p-4'>
-    <div className='flex items-center justify-between mb-4'>
-      <div className='font-semibold'>Workout History</div>
-      <div className='text-sm text-slate-500'>{sessionHistory?.totalWorkouts || 0} workouts completed</div>
-    </div>
-
-    {sessionHistory?.workouts?.length > 0 ? (
-      <div className='space-y-3'>
-        {sessionHistory.workouts.slice(0, 5).map((workout, i) => (
-          <div key={i} className='p-3 rounded-lg border border-slate-200 bg-white'>
-            <div className='flex items-center justify-between mb-2'>
-              <div className='font-medium text-sm'>{workout.date}</div>
-              <div className='text-xs text-slate-500'>
-                {workout.setsDone}/{workout.setsTotal} sets
-              </div>
-            </div>
-            <div className='text-sm text-slate-600 mb-1'>{workout.name}</div>
-            <div className='text-xs text-slate-500'>Volume: {workout.volume?.toLocaleString()} kg·reps</div>
-          </div>
-        ))}
-      </div>
-    ) : (
-      <EmptyState title='No workouts yet' subtitle='Complete your first workout to see history here.' icon={<HistoryIcon />} />
-    )}
-  </div>
-);
+async function upsertDailyPR(userId, exerciseName, date, records) {
+  const { data } = await api.post('/prs', { exerciseName, date, records }, { params: { userId } });
+  return data;
+}
 
 export default function MyWorkoutsPage() {
   const t = useTranslations('MyWorkouts');
   const user = useUser();
   const USER_ID = user?.id;
-  const [tab, setTab] = useState('workout');
+
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState(null);
 
-  // NEW: Get selected day from localStorage or default to today
-  const [selectedDay, setSelectedDay] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(LOCAL_KEY_SELECTED_DAY) || 'monday';
-    }
-    return 'monday';
-  });
+  // ONLY persist the selected day
+  const [selectedDay, setSelectedDay] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem(LOCAL_KEY_SELECTED_DAY) || 'monday' : 'monday'));
 
   const [workout, setWorkout] = useState(null);
   const [currentExId, setCurrentExId] = useState(undefined);
   const [hidden, setHidden] = useState(false);
-
-  // NEW: Single state for all stats
-  const [allStats, setAllStats] = useState(null);
-  const [exercisePick, setExercisePick] = useState('Bench Press');
 
   // audio + settings
   const audioRef = useRef(null);
@@ -551,253 +240,127 @@ export default function MyWorkoutsPage() {
   const [audioOpen, setAudioOpen] = useState(false);
   const [unsaved, setUnsaved] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [dayLoading, setDayLoading] = useState(false); // NEW: Separate loading for day changes
-  const lastSavedRef = useRef(new Map());
+  const [dayLoading, setDayLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // NEW: Save selected day to localStorage whenever it changes
+  // upload modal
+  const [uploadOpen, setUploadOpen] = useState(false);
+
+  const lastSavedRef = useRef(new Map());
+
   useEffect(() => {
-    if (selectedDay) {
-      localStorage.setItem(LOCAL_KEY_SELECTED_DAY, selectedDay);
-    }
+    if (selectedDay) localStorage.setItem(LOCAL_KEY_SELECTED_DAY, selectedDay);
   }, [selectedDay]);
 
-  // NEW: Load from localStorage on initial load
-  const loadFromLocalStorage = useCallback(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_KEY_WORKOUT_BUFFER);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.workout && parsed.selectedDay) {
-          setWorkout(parsed.workout);
-          setSelectedDay(parsed.selectedDay);
-          setCurrentExId(parsed.currentExId);
-          setUnsaved(true);
-
-          // Restore lastSavedRef
-          lastSavedRef.current.clear();
-          if (parsed.workout?.sets) {
-            parsed.workout.sets.forEach(s => {
-              lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done });
-            });
-          }
-          return parsed;
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load from localStorage:', error);
-    }
-    return null;
-  }, []);
-
   const preloadMedia = useCallback(exercises => {
-    exercises.forEach(exercise => {
-      if (exercise.img) {
+    exercises?.forEach(exercise => {
+      if (exercise?.img) {
         const img = new Image();
         img.src = exercise.img;
       }
     });
   }, []);
 
-  const persistBufferThrottled = useMemo(() => throttle(w => persistLocalBuffer(w), 800), []);
-
-  // NEW: Enhanced persist function that includes all state
-  const persistAllToLocalStorage = useCallback((workoutData, selectedDay, currentExId) => {
-    const stateToSave = {
-      workout: workoutData,
-      selectedDay,
-      currentExId,
-      timestamp: new Date().toISOString(),
-    };
-    localStorage.setItem(LOCAL_KEY_WORKOUT_BUFFER, JSON.stringify(stateToSave));
-  }, []);
-
-  // NEW: Enhanced workout setter that auto-saves to localStorage
-  const setWorkoutWithPersistence = useCallback(
-    updater => {
-      setWorkout(prevWorkout => {
-        const newWorkout = typeof updater === 'function' ? updater(prevWorkout) : updater;
-
-        if (newWorkout) {
-          persistAllToLocalStorage(newWorkout, selectedDay, currentExId);
-        }
-
-        return newWorkout;
-      });
-    },
-    [selectedDay, currentExId, persistAllToLocalStorage],
-  );
-
-  // NEW: Load all stats in one call
-  const loadAllStats = useCallback(async () => {
-    if (!USER_ID) return;
-
-    try {
-      const stats = await fetchAllStats(USER_ID, 30, 90);
-      setAllStats(stats);
-
-      // Set default exercise pick from available exercises
-      if (stats?.exerciseDrilldown && Object.keys(stats.exerciseDrilldown).length > 0) {
-        setExercisePick(Object.keys(stats.exerciseDrilldown)[0]);
-      }
-    } catch (error) {
-      console.error('Error loading all stats:', error);
-    }
-  }, [USER_ID]);
-
-  // NEW: Auto-refresh stats every second when on history tab
-  useEffect(() => {
-    if (tab !== 'history') return;
-
-    loadAllStats();
-
-    // Set up interval for auto-refresh
-    const intervalId = setInterval(() => {
-      loadAllStats();
-    }, 1000); // Refresh every second
-
-    return () => clearInterval(intervalId); // Cleanup on unmount or tab change
-  }, [tab, loadAllStats]);
-
+  // Initial load (no use of mw.workout.buffer at all)
   useEffect(() => {
     let mounted = true;
-    let timeoutId;
 
-    const loadData = async () => {
-      setLoading(true);
+    (async () => {
       try {
-        // Load critical data first - active plan
+        setLoading(true);
+
+        // 1) Fetch plan fresh (reflect dashboard changes)
         const p = await fetchActivePlan(USER_ID);
         if (!mounted) return;
         setPlan(p);
 
         const rawServerDays = Array.isArray(p?.program?.days) ? p.program.days : [];
-        const serverDays = rawServerDays.map(d => ({
-          ...d,
-          _key: String(d.dayOfWeek ?? '').toLowerCase(),
-        }));
+        const serverDays = rawServerDays.map(d => ({ ...d, _key: String(d.dayOfWeek ?? '').toLowerCase() }));
         const byKey = Object.fromEntries(serverDays.map(d => [d._key, d]));
         const allKeys = serverDays.map(d => d._key);
 
-        // Use saved day or today's day
-        const savedDay = localStorage.getItem(LOCAL_KEY_SELECTED_DAY);
+        // 2) Determine initial day
+        const savedDay = (typeof window !== 'undefined' && localStorage.getItem(LOCAL_KEY_SELECTED_DAY)) || null;
         const initialDayId = savedDay || pickTodayId(allKeys.length ? allKeys : Object.keys(weeklyProgram));
+        setSelectedDay(initialDayId);
 
-        // Check if we have localStorage data first
-        const localStorageData = loadFromLocalStorage();
+        // 3) Create session from server day
+        const dayProgram = byKey[initialDayId] || weeklyProgram[initialDayId] || { id: initialDayId, name: 'Workout', exercises: [] };
+        const session = createSessionFromDay(dayProgram);
+        setWorkout(session);
+        setCurrentExId(session.exercises[0]?.id);
 
-        let session;
-        let finalDayId = initialDayId;
+        // 4) Preload media
+        if (session?.exercises?.length) preloadMedia(session.exercises);
 
-        if (localStorageData && localStorageData.workout) {
-          // Use localStorage data if available
-          session = localStorageData.workout;
-          finalDayId = localStorageData.selectedDay || initialDayId;
-          setSelectedDay(finalDayId);
-          setWorkoutWithPersistence(session);
-          setCurrentExId(localStorageData.currentExId || session.exercises[0]?.id);
-          setUnsaved(true);
-        } else {
-          // Use server data
-          setSelectedDay(initialDayId);
-          const dayProgram = byKey[initialDayId] || weeklyProgram[initialDayId] || { id: initialDayId, name: 'Workout', exercises: [] };
-          session = createSessionFromDay(dayProgram);
-          setWorkoutWithPersistence(session);
-          setCurrentExId(session.exercises[0]?.id);
-        }
+        // 5) Mirror last saved values (for unsaved detection only)
+        lastSavedRef.current.clear();
+        session?.sets?.forEach(s => {
+          lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done });
+        });
 
-        if (session?.exercises?.length) {
-          preloadMedia(session.exercises);
-        }
-
-        // Initialize lastSaved mirror
-        const mirror = lastSavedRef.current;
-        mirror.clear();
-        if (session.sets) {
-          for (let i = 0; i < session.sets.length; i++) {
-            const s = session.sets[i];
-            mirror.set(s.id, { weight: s.weight, reps: s.reps, done: s.done });
-          }
-        }
-
-        // Load settings
+        // 6) Load settings
         try {
           const s = JSON.parse(localStorage.getItem(LOCAL_KEY_SETTINGS) || 'null');
           if (s?.alertSound) setAlertSound(s.alertSound);
         } catch {}
 
-        // Load server records in background ONLY if not using localStorage
-        if (!localStorageData?.workout) {
-          const dayISO = isoForThisWeeksDay(finalDayId);
-          fetchLastDayByName(USER_ID, finalDayId, dayISO)
-            .then(({ recordsByExercise }) => {
-              if (mounted && session) {
-                applyServerRecords(session, recordsByExercise, setWorkoutWithPersistence, lastSavedRef);
-              }
-            })
-            .catch(console.error);
+        // 7) Apply last server records (no local buffer usage)
+        const dayISO = isoForThisWeeksDay(initialDayId);
+        const { recordsByExercise } = await fetchLastDayByName(USER_ID, initialDayId, dayISO);
+        if (mounted && session) {
+          applyServerRecords(session, recordsByExercise, next => setWorkout(next), lastSavedRef);
         }
-
-        // Load all stats in background
-        loadAllStats();
-      } catch (error) {
-        console.error('Initial load error:', error);
+      } catch (e) {
+        console.error('Initial load error:', e);
       } finally {
-        timeoutId = setTimeout(() => {
-          if (mounted) setLoading(false);
-        }, 300);
+        if (mounted) setLoading(false);
       }
-    };
-
-    loadData();
+    })();
 
     return () => {
       mounted = false;
-      clearTimeout(timeoutId);
-      apiCache.clear();
     };
-  }, [preloadMedia, USER_ID]);
+  }, [USER_ID, preloadMedia]);
 
-  // NEW: Enhanced changeDay with separate loading state
+  // Change day
   const changeDay = useCallback(
     async dayId => {
       setDayLoading(true);
       startTransition(() => setSelectedDay(dayId));
-
       try {
         const raw = plan?.program?.days || [];
         const byKey = Object.fromEntries(raw.map(d => [String(d.dayOfWeek ?? '').toLowerCase(), d]));
-
         const dayProgram = byKey[dayId] || weeklyProgram[dayId] || { id: dayId, name: 'Workout', exercises: [] };
-
         const session = createSessionFromDay(dayProgram);
-        setWorkoutWithPersistence(session);
+        setWorkout(session);
         setCurrentExId(session.exercises[0]?.id);
-
         if (session.exercises?.length) preloadMedia(session.exercises);
 
-        setActiveMediaRef.current('image');
+        // reset mirror
+        lastSavedRef.current.clear();
+        session.sets.forEach(s => lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
 
-        const mirror = lastSavedRef.current;
-        mirror.clear();
-        for (let i = 0; i < session.sets.length; i++) {
-          const s = session.sets[i];
-          mirror.set(s.id, { weight: s.weight, reps: s.reps, done: s.done });
-        }
-
+        // pull last server records for this day
         const dayISO = isoForThisWeeksDay(dayId);
-        await fetchLastDayByName(USER_ID, dayId, dayISO)
-          .then(({ recordsByExercise }) => applyServerRecords(session, recordsByExercise, setWorkoutWithPersistence, lastSavedRef))
-          .catch(console.error);
+        const { recordsByExercise } = await fetchLastDayByName(USER_ID, dayId, dayISO);
+        applyServerRecords(session, recordsByExercise, next => setWorkout(next), lastSavedRef);
+
+        // persist only the chosen day
+        localStorage.setItem(LOCAL_KEY_SELECTED_DAY, dayId);
+        setUnsaved(false);
+      } catch (e) {
+        console.error(e);
       } finally {
         setDayLoading(false);
       }
     },
-    [plan, preloadMedia, USER_ID, setWorkoutWithPersistence],
+    [plan, preloadMedia, USER_ID],
   );
 
   const addSetForCurrentExercise = useCallback(() => {
-    setWorkoutWithPersistence(w => {
+    setWorkout(w => {
+      if (!w) return w;
       const exSets = w.sets.filter(s => s.exId === currentExId);
       const nextIndex = exSets.length + 1;
       const base = exSets[exSets.length - 1] || { targetReps: '10', restTime: 90 };
@@ -816,60 +379,61 @@ export default function MyWorkoutsPage() {
         restTime: Number.isFinite(ex?.rest ?? ex?.restSeconds) ? ex?.rest ?? ex?.restSeconds : base.restTime,
       };
       const next = { ...w, sets: [...w.sets, newSet] };
-      markUnsaved(next, setUnsaved);
       lastSavedRef.current.set(newSet.id, { weight: 0, reps: 0, done: false });
-      persistBufferThrottled(next);
+      setUnsaved(true);
       return next;
     });
-  }, [currentExId, persistBufferThrottled, setWorkoutWithPersistence]);
+  }, [currentExId]);
 
   const removeSetFromCurrentExercise = useCallback(() => {
-    setWorkoutWithPersistence(w => {
+    setWorkout(w => {
+      if (!w) return w;
       const exSets = w.sets.filter(s => s.exId === currentExId);
       if (exSets.length <= 1) return w;
       const lastSetId = exSets[exSets.length - 1].id;
       const next = { ...w, sets: w.sets.filter(s => s.id !== lastSetId) };
-      markUnsaved(next, setUnsaved);
       lastSavedRef.current.delete(lastSetId);
-      persistBufferThrottled(next);
+      setUnsaved(true);
       return next;
     });
-  }, [currentExId, persistBufferThrottled, setWorkoutWithPersistence]);
+  }, [currentExId]);
 
-  const toggleDone = useCallback(
-    setId => {
-      setWorkoutWithPersistence(w => {
-        const next = { ...w, sets: w.sets.map(s => (s.id === setId ? { ...s, done: !s.done } : s)) };
-        const s = next.sets.find(x => x.id === setId);
-        if (s && !s.pr && s.done && s.weight > 0 && s.reps > 0) {
-          const e1rmVal = epley(s.weight, s.reps);
-          // Update PRs logic here if needed
-        }
-        markUnsaved(next, setUnsaved);
-        persistBufferThrottled(next);
-        return next;
-      });
-    },
-    [persistBufferThrottled, setWorkoutWithPersistence],
-  );
+  const toggleDone = useCallback(setId => {
+    setWorkout(w => {
+      if (!w) return w;
+      const next = { ...w, sets: w.sets.map(s => (s.id === setId ? { ...s, done: !s.done } : s)) };
+      setUnsaved(true);
+      return next;
+    });
+  }, []);
 
-  const handleSetValueChange = useCallback(
-    (setId, field, value) => {
-      setWorkoutWithPersistence(w => {
-        const next = { ...w, sets: w.sets.map(s => (s.id === setId ? { ...s, [field]: value } : s)) };
+  const bump = useCallback((setId, field, delta) => {
+    setWorkout(w => {
+      if (!w) return w;
+      const next = { ...w, sets: w.sets.map(s => (s.id === setId ? { ...s, [field]: Math.max(0, Number(s[field] || 0) + delta) } : s)) };
+      // auto-check done if both > 0
+      const u = next.sets.find(s => s.id === setId);
+      if (u && Number(u.weight) > 0 && Number(u.reps) > 0) {
+        next.sets = next.sets.map(s => (s.id === setId ? { ...s, done: true } : s));
+      }
+      setUnsaved(true);
+      return next;
+    });
+  }, []);
 
-        // Auto-check done if both weight and reps have values
-        const updatedSet = next.sets.find(s => s.id === setId);
-        if (updatedSet && Number(updatedSet.weight) > 0 && Number(updatedSet.reps) > 0) {
-          next.sets = next.sets.map(s => (s.id === setId ? { ...s, done: true } : s));
-        }
-
-        markUnsaved(next, setUnsaved);
-        return next;
-      });
-    },
-    [setWorkoutWithPersistence],
-  );
+  const setValue = useCallback((setId, field, value) => {
+    setWorkout(w => {
+      if (!w) return w;
+      const val = Number(value);
+      const next = { ...w, sets: w.sets.map(s => (s.id === setId ? { ...s, [field]: Number.isFinite(val) ? val : 0 } : s)) };
+      const u = next.sets.find(s => s.id === setId);
+      if (u && Number(u.weight) > 0 && Number(u.reps) > 0) {
+        next.sets = next.sets.map(s => (s.id === setId ? { ...s, done: true } : s));
+      }
+      setUnsaved(true);
+      return next;
+    });
+  }, []);
 
   const buildDailyPRPayload = useCallback(
     exName => {
@@ -887,58 +451,33 @@ export default function MyWorkoutsPage() {
     [workout?.sets],
   );
 
-  const [loadingSaveDays, setLoadingSaveDays] = useState(false);
-  const [loadingSaveOnly, setLoadingSaveOnly] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const saveDayToServer = useCallback(async () => {
     const ex = workout?.exercises.find(e => e.id === currentExId);
     if (!ex) return;
     const payload = buildDailyPRPayload(ex.name);
     try {
-      setLoadingSaveDays(true);
-      setLoadingSaveOnly(true);
-
+      setSaving(true);
       const data = await upsertDailyPR(USER_ID, payload.exerciseName, payload.date, payload.records);
-
-      setWorkoutWithPersistence(w => ({
-        ...w,
-        sets: w.sets.map(s =>
-          s.exId === currentExId
-            ? (() => {
-                const match = data?.records?.find(r => Number(r.setNumber) === Number(s.set));
-                return match ? { ...s, serverId: match.id } : s;
-              })()
-            : s,
-        ),
-      }));
-
-      // Reload stats after save
-      loadAllStats();
-
-      // NEW: Clear localStorage after successful save
-      localStorage.removeItem(LOCAL_KEY_WORKOUT_BUFFER);
-      flushLocalBufferForExercise(ex.name);
+      // sync server ids back
+      setWorkout(w => {
+        if (!w) return w;
+        const mapped = w.sets.map(s => {
+          if (s.exId !== currentExId) return s;
+          const match = data?.records?.find(r => Number(r.setNumber) === Number(s.set));
+          return match ? { ...s, serverId: match.id } : s;
+        });
+        return { ...w, sets: mapped };
+      });
       setUnsaved(false);
     } catch (err) {
-      console.error('Save day failed', err);
-      persistLocalBuffer(workout);
+      console.error('Save failed', err);
+      // keep unsaved true
     } finally {
-      setLoadingSaveOnly(false);
-      setLoadingSaveDays(false);
+      setSaving(false);
     }
-  }, [workout?.exercises, currentExId, buildDailyPRPayload, USER_ID, setWorkoutWithPersistence, loadAllStats]);
-
-  const maybeSaveSetOnBlur = useCallback(
-    setObj => {
-      const prev = lastSavedRef.current.get(setObj.id) || { weight: 0, reps: 0, done: false };
-      const changed = Number(prev.weight) !== Number(setObj.weight) || Number(prev.reps) !== Number(setObj.reps) || Boolean(prev.done) !== Boolean(setObj.done);
-      if (changed) {
-        setUnsaved(true);
-        persistBufferThrottled({ ...workout });
-      }
-    },
-    [workout, persistBufferThrottled],
-  );
+  }, [workout?.exercises, currentExId, buildDailyPRPayload, USER_ID]);
 
   useEffect(() => {
     const el = audioRef.current;
@@ -956,7 +495,6 @@ export default function MyWorkoutsPage() {
   const dayTabs = useMemo(() => {
     const raw = plan?.program?.days || [];
     const byKey = Object.fromEntries(raw.map(d => [String(d.dayOfWeek ?? '').toLowerCase(), d]));
-
     return weekOrder
       .filter(d => byKey[d] || weeklyProgram[d])
       .map(d => ({
@@ -966,256 +504,234 @@ export default function MyWorkoutsPage() {
       }));
   }, [plan]);
 
-  const [activeMedia, _setActiveMedia] = useState('image');
-  const activeMediaRef = useRef('image');
-  const setActiveMedia = useCallback(m => {
-    activeMediaRef.current = m;
-    _setActiveMedia(m);
-  }, []);
-  const setActiveMediaRef = useRef(setActiveMedia);
-  useEffect(() => {
-    setActiveMediaRef.current = setActiveMedia;
-  }, [setActiveMedia]);
+  const [activeMedia, setActiveMedia] = useState('image');
 
-  // NEW: Handle video upload
-  const handleVideoUpload = useCallback(result => {
-    console.log('Video uploaded successfully:', result);
-  }, []);
+  // if (loading) return <SkeletonLoader />;
 
-  if (loading) {
-    return <SkeletonLoader />;
-  }
+  const Actions = ({ className }) => (
+    <div className={`flex items-center gap-2 ${className}`}>
+      <button
+        onClick={() => {
+          !hidden && setAudioOpen(v => !v);
+          setHidden(false);
+        }}
+        className='px-2 inline-flex items-center gap-2 rounded-lg bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition'
+        aria-label={t('listen')}>
+        <Headphones size={16} />
+        <span className='max-md:hidden'>{t('listen')}</span>
+      </button>
+      <button onClick={() => setSettingsOpen(true)} className='px-2 inline-flex items-center gap-2 rounded-lg bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition' aria-label={t('settings')}>
+        <SettingsIcon size={16} />
+        <span className='max-md:hidden'>{t('settings')}</span>
+      </button>
+      <div className='lg:hidden'>
+        <button onClick={() => setDrawerOpen(true)} className='inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/30 h-[37px] max-md:w-[37px] px-2 py-2 text-sm cursor-pointer bg-white/10 hover:bg-white/20'>
+          <MenuIcon size={16} /> <span className='max-md:hidden'> {t('exercises')} </span>
+        </button>
+      </div>
+    </div>
+  );
 
+  // {(hasImg || hasVideo) && (
+  //       <div className='inline-flex items-center gap-2 rounded-lg bg-slate-100/70 p-1 ring-1 ring-black/5'>
+  //         <button type='button' aria-pressed={tab === 'image'} disabled={!hasImg} onClick={() => setTab('image')} className={['relative inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg outline-none transition', tab === 'image' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', !hasImg ? 'opacity-50 cursor-not-allowed' : ''].join(' ')}>
+  //           <ImageIcon size={14} />
+  //           Image
+  //           {tab === 'image' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
+  //         </button>
+
+  //         <button type='button' aria-pressed={tab === 'video'} disabled={!hasVideo} onClick={() => setTab('video')} className={['relative inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg outline-none transition', tab === 'video' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', !hasVideo ? 'opacity-50 cursor-not-allowed' : ''].join(' ')}>
+  //           <PlayCircle size={14} />
+  //           Video
+  //           {tab === 'video' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
+  //         </button>
+  //       </div>
+  //     )}
   return (
     <div className='space-y-5 sm:space-y-6'>
       <audio ref={audioRef} src={alertSound} preload='auto' />
 
-      {/* HEADER */}
-      <div className='rounded-xl md:rounded-2xl overflow-hidden border border-indigo-200'>
-        <div className='relative p-4 md:p-8 bg-gradient text-white'>
-          <div className='absolute inset-0 opacity-20 bg-[radial-gradient(600px_200px_at_20%_-20%,white,transparent)]' />
- 
-          <div className='relative z-10 flex flex-row md:items-center gap-3 md:gap-6 justify-between'>
-            <PageHeader className='max-lg:!hidden'  title={t('title')} subtitle={t('subtitle')} />
-            <div className='flex items-center gap-2'>
-              <button
-                onClick={() => {
-                  !hidden && setAudioOpen(v => !v);
-                  setHidden(false);
-                }}
-                className='px-2 inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition'
-                aria-label={t('listen')}>
-                <Headphones size={16} />
-                <span className='max-md:hidden'>{t('listen')}</span>
-              </button>
-              <button onClick={() => setSettingsOpen(true)} className='px-2 inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition' aria-label={t('settings')}>
-                <SettingsIcon size={16} />
-                <span className='max-md:hidden'>{t('settings')}</span>
-              </button>
-              <button onClick={() => setTab('workout')} className={`md:hidden px-2 inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium hover:bg-white/20 active:scale-95 transition ${tab === 'workout' ? 'ring-1 ring-white/50' : ''}`} aria-label={t('workout')}>
-                <Dumbbell size={16} />
-              </button>
-              <button onClick={() => setTab('history')} className={`md:hidden px-2 inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium hover:bg-white/20 active:scale-95 transition ${tab === 'history' ? 'ring-1 ring-white/50' : ''}`} aria-label={t('history')}>
-                <HistoryIcon size={16} />
-              </button>
-              <TabsPill
-                className='max-md:hidden'
-                id='my-workouts-tabs'
-                tabs={[
-                  { key: 'workout', label: t('workout'), icon: Dumbbell },
-                  { key: 'history', label: t('history'), icon: HistoryIcon },
-                ]}
-                active={tab}
-                onChange={k => setTab(k)}
-              />
-            </div>
-
-            <div className='flex items-center gap-2 lg:hidden'>
-              <button onClick={() => setDrawerOpen(true)} className='inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm cursor-pointer hover:opacity-80 '>
-                <MenuIcon size={16} /> {t('exercises')}
-              </button>
-            </div>
-          </div>
+      <div className={'relative overflow-hidden rounded-lg border border-indigo-100/60 bg-white/60 shadow-sm backdrop-blur '}>
+        <div className='absolute inset-0'>
+          <div className='absolute inset-0 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-95' />
+          <div className='absolute inset-0 opacity-15' style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px)', backgroundSize: '22px 22px', backgroundPosition: '-1px -1px' }} />
+          <div className='absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/20 blur-3xl' />
+          <div className='absolute -bottom-16 -right-8 h-60 w-60 rounded-full bg-blue-300/30 blur-3xl' />
         </div>
 
-        <div className='px-4 md:px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white'>
-          {tab === 'workout' && (
-            <div className='flex-1 relative'>
-              {dayLoading && (
-                <div className='absolute inset-0 bg-white/80 z-10 flex items-center justify-center'>
-                  <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600'></div>
-                </div>
-              )}
-              <TabsPill className='!rounded-xl' slice={3} id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={changeDay} />
+        <div className='relative py-2 p-3 md:p-5 text-white'>
+          <div className='flex  flex-row  items-center justify-between gap-3 '>
+            <div>
+              <h1 className='text-xl md:text-4xl font-semibold'>{t('title')}</h1>
+              <p className='text-white/85 mt-1 max-md:hidden '>{t('subtitle')}</p>
             </div>
-          )}
+
+            <Actions className={' md:!hidden'} />
+          </div>
+
+          <div className=' mt-2 md:mt-4 flex items-center justify-between '>
+            <TabsPill className='!rounded-lg' slice={3} id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={changeDay} />
+
+            <Actions className={'max-md:!hidden'} />
+          </div>
         </div>
       </div>
 
       <AudioHubInline hidden={hidden} setHidden={setHidden} alerting={alerting} setAlerting={setAlerting} open={audioOpen} onClose={() => setAudioOpen(false)} />
 
-      {/* WORKOUT TAB - Unchanged */}
-      {tab === 'workout' && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
-          <div className='space-y-5 sm:space-y-6'>
-            <div className='rounded-2xl md:border md:border-slate-200 bg-white md:p-2 sm:p-4'>
-              <div className='flex flex-col lg:flex-row gap-4'>
-                {/* LEFT */}
-                <div className='w-full h-full lg:flex-1 min-w-0'>
-                  <div className={`rounded-xl border border-slate-200 bg-white overflow-hidden ${!hasExercises && '!border-transparent'}`}>
-                    {!hasExercises ? (
-                      <div className='p-6 h-full'>
-                        <div className='rounded-2xl h-full border border-dashed border-slate-300 bg-slate-50 p-8 text-center'>
-                          <div className='mx-auto mb-3 w-12 h-12 rounded-full bg-white shadow grid place-items-center'>
-                            <Dumbbell size={18} className='text-slate-500' />
-                          </div>
-                          <div className='text-base font-semibold text-slate-700'>{t('noExercises')}</div>
-                          <div className='text-sm text-slate-500 mt-1'>{t('pickAnotherDay')}</div>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        {/* Media area */}
-                        <div className='w-full relative rounded-[10px_10px_0_0] overflow-hidden md:!h-[275px]' style={{ height: 200 }}>
-                          {currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? <InlineVideo key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} /> : <img key={currentExercise?.id + '-image'} src={currentExercise?.img} alt={currentExercise?.name} className='w-full h-full object-contain bg-white' loading='lazy' />}
-                          <div className='absolute bottom-2 right-2 flex items-center gap-2 bg-black/40 backdrop-blur px-2 py-1 rounded-lg'>
-                            <button onClick={() => setActiveMedia('image')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'image' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show image'>
+      {/* WORKOUT ONLY */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
+        <div className='flex flex-col lg:flex-row gap-4'>
+          {/* LEFT main pane (enhanced) */}
+          <div className='md:rounded-lg md:bg-white h-fit md:p-4 md:shadow-sm w-full  lg:flex-1 min-w-0'>
+            <div className={`relative md:bg-white/80 backdrop-blur md:rounded-lg md:overflow-hidden ${!hasExercises ? '!border-transparent' : ''}`}>
+              {!hasExercises ? (
+                /* Empty state */
+                <div className='p-10'>
+                  <div className='rounded-2xl border border-dashed border-slate-300/80 bg-gradient-to-br from-slate-50 via-white to-slate-50 p-10 text-center shadow-sm'>
+                    <div className='mx-auto mb-4 w-14 h-14 rounded-full bg-white shadow grid place-items-center ring-1 ring-slate-200'>
+                      <Dumbbell size={20} className='text-slate-500' />
+                    </div>
+                    <div className='text-lg font-semibold text-slate-800'>{t('noExercises')}</div>
+                    <div className='text-sm text-slate-500 mt-1'>{t('pickAnotherDay')}</div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className='relative w-full rounded-lg overflow-hidden '>
+                    <div className='aspect-video md:aspect-[16/9] bg-white'>{currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? <InlineVideo key={currentExercise.id + '-video'} src={baseImg + currentExercise[activeMedia]} /> : <Img key={currentExercise?.id + '-image'} src={currentExercise?.img} alt={currentExercise?.name} className='w-full h-full object-contain ' loading='lazy' />}</div>
+
+                    {(() => {
+                      const hasImg = !!currentExercise?.img;
+                      const hasVideo1 = !!currentExercise?.video;
+                      const hasVideo2 = !!currentExercise?.video2;
+
+                      return (
+                        <div className={`absolute  right-3 flex items-center gap-2 ${activeMedia === 'video' ? 'bottom-[70px] ' : 'bottom-3'} duration-500 `}>
+                          <div className='inline-flex items-center gap-[4px] rounded-xl bg-slate-100/70 p-1 ring-1 ring-black/5 backdrop-blur-md'>
+                            <button type='button' onClick={() => setUploadOpen(true)} className='inline-flex items-center gap-1  px-2 h-[35px] max-md:w-[35px] justify-center rounded-lg text-[11px] font-medium  bg-white/95 text-indigo-700 hover:bg-white shadow-sm ring-1 ring-indigo-200  transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40' aria-label='Upload video for coach' title='Upload video for coach'>
+                              <Upload size={14} />
+                              <span className='hidden sm:inline'>Upload</span>
+                            </button>
+                            {/* Image tab */}
+                            <button type='button' aria-pressed={activeMedia === 'image'} disabled={!hasImg} onClick={() => setActiveMedia('image')} className={['relative inline-flex items-center gap-1.5 w-[35px] h-[35px] justify-center text-xs sm:text-sm rounded-lg outline-none transition', activeMedia === 'image' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', !hasImg ? 'opacity-50 cursor-not-allowed' : '', 'focus-visible:ring-2 focus-visible:ring-indigo-400/40'].join(' ')} title='Show image'>
                               <ImageIcon size={14} />
+                              {activeMedia === 'image' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
                             </button>
-                            <button onClick={() => setActiveMedia('video')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'video' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show video' disabled={!currentExercise?.video}>
+
+                            {/* Video tab */}
+                            <button type='button' aria-pressed={activeMedia === 'video'} disabled={!hasVideo1} onClick={() => setActiveMedia('video')} className={['relative inline-flex items-center gap-1.5 w-[35px] h-[35px] justify-center text-xs sm:text-sm rounded-lg outline-none transition', activeMedia === 'video' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', !hasVideo1 ? 'opacity-50 cursor-not-allowed' : '', 'focus-visible:ring-2 focus-visible:ring-indigo-400/40'].join(' ')} title='Show video'>
                               <VideoIcon size={14} />
+                              {activeMedia === 'video' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
                             </button>
-                            {!!currentExercise?.video2 && (
-                              <button onClick={() => setActiveMedia('video2')} className={`text-xs px-2 py-1 rounded ${activeMedia === 'video2' ? 'bg-white text-slate-900' : 'text-white hover:bg-white/10'}`} title='Show video 2'>
+
+                            {/* Alt video tab (only if provided) */}
+                            {hasVideo2 && (
+                              <button type='button' aria-pressed={activeMedia === 'video2'} onClick={() => setActiveMedia('video2')} className={['relative inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm rounded-lg outline-none transition', activeMedia === 'video2' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', 'focus-visible:ring-2 focus-visible:ring-indigo-400/40'].join(' ')} title='Show video 2'>
                                 <VideoIcon size={14} />
+                                <span className='hidden sm:inline'>Alt</span>
+                                {activeMedia === 'video2' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
                               </button>
                             )}
                           </div>
                         </div>
-
-                        {/* Video Upload Button */}
-                        {currentExercise && (
-                          <div className='px-4 pt-3'>
-                            <VideoUploadButton exercise={currentExercise} userId={USER_ID} onVideoUpload={handleVideoUpload} />
-                          </div>
-                        )}
-
-                        {/* Rest timer */}
-                        <RestTimerCard alerting={alerting} setAlerting={setAlerting} initialSeconds={Number.isFinite(currentExercise?.restSeconds) ? currentExercise?.restSeconds : Number.isFinite(currentExercise?.rest) ? currentExercise?.rest : 90} audioEl={audioRef} className='mt-1' />
-
-                        {/* Sets table */}
-                        <div className='max-md:mb-2 mx-2 md:mb-4 border border-slate-200 rounded-lg overflow-hidden'>
-                          <div className='overflow-x-auto'>
-                            <table className='w-full text-sm'>
-                              <thead className='bg-slate-50/80 backdrop-blur sticky top-0 z-10'>
-                                <tr className='text-left text-slate-500'>
-                                  <th className='py-2.5 px-3 font-semibold'>{t('set')}</th>
-                                  <th className='py-2.5 px-3 font-semibold'>{t('weight')}</th>
-                                  <th className='py-2.5 px-3 font-semibold'>{t('reps')}</th>
-                                  <th className='py-2.5 px-3 font-semibold'>{t('done')}</th>
-                                </tr>
-                              </thead>
-                              <tbody className='divide-y divide-slate-100'>
-                                {currentSets.map((s, i) => (
-                                  <tr key={s.id} className={`hover:bg-indigo-50/40 transition-colors ${i % 2 === 1 ? 'bg-slate-50/30' : 'bg-white'}`}>
-                                    <td className='py-2.5 px-3'>
-                                      <span className='inline-flex h-6 min-w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700 font-medium'>{s.set}</span>
-                                    </td>
-                                    <td className='py-2.5 px-3'>
-                                      <input
-                                        type='number'
-                                        value={s.weight ?? 0}
-                                        onChange={e => {
-                                          const val = Number(e.target.value);
-                                          handleSetValueChange(s.id, 'weight', Number.isFinite(val) ? val : 0);
-                                        }}
-                                        onBlur={() => maybeSaveSetOnBlur({ ...s, weight: Number(s.weight) })}
-                                        className='h-9 w-[80px] !text-[16px] rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition'
-                                        placeholder='0'
-                                        inputMode='numeric'
-                                      />
-                                    </td>
-                                    <td className='py-2.5 px-3'>
-                                      <input
-                                        type='number'
-                                        value={s.reps ?? 0}
-                                        onChange={e => {
-                                          const val = Number(e.target.value);
-                                          handleSetValueChange(s.id, 'reps', Number.isFinite(val) ? val : 0);
-                                        }}
-                                        onBlur={() => maybeSaveSetOnBlur({ ...s, reps: Number(s.reps) })}
-                                        className='h-9 w-[80px] !text-[16px] rounded-md border border-slate-200 bg-white px-3 text-slate-900 shadow-inner outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition'
-                                        placeholder='0'
-                                        inputMode='numeric'
-                                      />
-                                    </td>
-                                    <td className='py-2.5 px-3'>
-                                      <CheckBox
-                                        initialChecked={s.done}
-                                        onChange={() => {
-                                          toggleDone(s.id);
-                                          setUnsaved(true);
-                                          persistBufferThrottled({ ...workout });
-                                        }}
-                                      />
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                          <div className='flex items-center justify-between px-3 py-2 text-[11px] text-slate-500 bg-slate-50/60'>
-                            <div className='flex items-center gap-2'>
-                              <button onClick={removeSetFromCurrentExercise} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50' disabled={currentSets.length <= 1}>
-                                <Minus size={14} />
-                              </button>
-                              <button onClick={addSetForCurrentExercise} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50'>
-                                <Plus size={14} />
-                              </button>
-                            </div>
-                            <Button loading={loadingSaveOnly} icon={<SaveIcon size={14} />} name={t('save')} onClick={saveDayToServer} className='!px-2 !text-sm !py-1 !w-fit' />
-                          </div>
-                        </div>
-                      </>
-                    )}
+                      );
+                    })()}
                   </div>
-                </div>
 
-                {/* RIGHT */}
-                <div className='hidden lg:block w-80'>
-                  <ExerciseList
-                    workout={workout}
-                    currentExId={currentExId}
-                    onPick={ex => {
-                      setCurrentExId(ex.id);
-                      setExercisePick(ex.name);
-                      setActiveMedia('image');
-                    }}
-                  />
-                </div>
-              </div>
+                  {/* Rest timer */}
+                  <RestTimerCard alerting={alerting} setAlerting={setAlerting} initialSeconds={Number.isFinite(currentExercise?.restSeconds) ? currentExercise?.restSeconds : Number.isFinite(currentExercise?.rest) ? currentExercise?.rest : 90} audioEl={audioRef} className='mt-2 ' />
+
+                  {/* Sets table */}
+                  <div className='max-md:mb-2 md:mb-5 mt-3 rounded-lg border border-slate-200 overflow-hidden bg-white'>
+                    <div className='overflow-x-auto'>
+                      <table className='w-full text-sm'>
+                        <thead className=' rounded-lg overflow-hidden bg-slate-200 backdrop-blur sticky top-0 z-10'>
+                          <tr className='text-left text-slate-600'>
+                            <th className='py-2.5 px-3 font-semibold'>Set</th>
+                            <th className='py-2.5 px-3 font-semibold'>Weight</th>
+                            <th className='py-2.5 px-3 font-semibold'>Reps</th>
+                            <th className='py-2.5 px-3 font-semibold'>Done</th>
+                          </tr>
+                        </thead>
+                        <tbody className='divide-y divide-slate-100'>
+                          {currentSets.map((s, i) => (
+                            <tr key={s.id} className={`transition-colors ${i % 2 === 1 ? 'bg-slate-50/40' : 'bg-white'} hover:bg-indigo-50/40`}>
+                              <td className='py-2.5 px-3'>
+                                <span className='inline-flex h-6 min-w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700 font-medium'>{s.set}</span>
+                              </td>
+                              <td className='py-2.5 px-3'>
+                                <div className='relative inline-block'>
+                                  <input type='number' value={s.weight ?? 0} onChange={e => setValue(s.id, 'weight', e.target.value)} placeholder='0' className=' text-center h-9 w-[90px] !text-[16px] tabular-nums  rounded-lg border border-slate-200 bg-white  outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 px-[26px]' />
+
+                                  <button type='button' onClick={() => bump(s.id, 'weight', -1)} title='-1' aria-label='Decrease weight' className='absolute left-[4px] top-1/2 -translate-y-1/2 h-[25px] w-[25px] flex items-center justify-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-50 active:scale-[.98] transition' tabIndex={-1}>
+                                    <Plus size={16} />
+                                  </button>
+
+                                  <button type='button' onClick={() => bump(s.id, 'weight', +1)} title='+1' aria-label='Increase weight' className='absolute right-[4px] top-1/2 -translate-y-1/2  h-[25px] w-[25px] flex items-center justify-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-50 active:scale-[.98] transition' tabIndex={-1}>
+                                    <Minus size={16} />
+                                  </button>
+                                </div>
+                              </td>
+                              <td className='py-2.5 px-3'>
+                                <div className='relative inline-block'>
+                                  <input type='number' value={s.reps ?? 0} onChange={e => setValue(s.id, 'reps', e.target.value)} placeholder='0' inputMode='numeric' step='1' className='text-center h-9 w-[90px] !text-[16px] tabular-nums rounded-lg border border-slate-200 bg-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 px-[26px]' />
+
+                                  <button type='button' onClick={() => bump(s.id, 'reps', -1)} title='-1' aria-label='Decrease reps' className='absolute left-[4px] top-1/2 -translate-y-1/2 h-[25px] w-[25px] flex items-center justify-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-50 active:scale-[.98] transition' tabIndex={-1}>
+                                    <Plus size={16} />
+                                  </button>
+
+                                  <button type='button' onClick={() => bump(s.id, 'reps', +1)} title='+1' aria-label='Increase reps' className='absolute right-[4px] top-1/2 -translate-y-1/2  h-[25px] w-[25px] flex items-center justify-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-50 active:scale-[.98] transition' tabIndex={-1}>
+                                    <Minus size={16} />
+                                  </button>
+                                </div>
+                              </td>
+                              <td className='py-2.5 px-3'>
+                                <CheckBox
+                                  initialChecked={s.done}
+                                  onChange={() => {
+                                    toggleDone(s.id);
+                                  }}
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Footer toolbar */}
+                    <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-2 px-3 py-2 text-[11px] text-slate-600 bg-slate-50/70 border-t border-slate-200'>
+                      <div className='flex items-center gap-2'>
+                        <button onClick={removeSetFromCurrentExercise} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 bg-white hover:bg-slate-50' disabled={currentSets.length <= 1}>
+                          <Minus size={14} /> Remove set
+                        </button>
+                        <button onClick={addSetForCurrentExercise} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 bg-white hover:bg-slate-50'>
+                          <Plus size={14} /> Add set
+                        </button>
+                      </div>
+
+                      <ButtonMini loading={saving} icon={<SaveIcon size={14} />} name={t('save')} onClick={saveDayToServer} className='!px-3 !text-sm !py-1.5 !w-fit md:self-end' />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-        </motion.div>
-      )}
 
-      {/* HISTORY TAB - Simplified with new components and auto-refresh indicator */}
-      {tab === 'history' && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className='space-y-4'>
-          {/* Auto-refresh indicator */}
-          <div className='flex items-center justify-center'>
-            <div className='flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs'>
-              <div className='w-2 h-2 bg-green-500 rounded-full animate-pulse'></div>
-              Live updates every second
-            </div>
+          {/* RIGHT (exercise list) */}
+          <div className='rounded-lg bg-white h-fit p-4 shadow-sm hidden  lg:block w-80'>
+            <ExerciseList
+              workout={workout}
+              currentExId={currentExId}
+              onPick={ex => {
+                setCurrentExId(ex.id);
+                setActiveMedia('image');
+              }}
+            />
           </div>
-
-          <StatsOverview overview={allStats?.overview} />
-          <AllTimeBests allTimeBests={allStats?.allTimeBests} />
-          <ExerciseDrilldown exerciseDrilldown={allStats?.exerciseDrilldown} exercisePick={exercisePick} onExerciseChange={setExercisePick} />
-          <SessionHistory sessionHistory={allStats?.sessionHistory} />
-        </motion.div>
-      )}
+        </div>
+      </motion.div>
 
       {/* Unsaved hint */}
       <AnimatePresence>
@@ -1246,7 +762,6 @@ export default function MyWorkoutsPage() {
                   currentExId={currentExId}
                   onPick={ex => {
                     setCurrentExId(ex.id);
-                    setExercisePick(ex.name);
                     setActiveMedia('image');
                     setDrawerOpen(false);
                   }}
@@ -1267,6 +782,17 @@ export default function MyWorkoutsPage() {
           try {
             localStorage.setItem(LOCAL_KEY_SETTINGS, JSON.stringify({ alertSound: s }));
           } catch {}
+        }}
+      />
+
+      {/* Upload Modal */}
+      <UploadVideoModal
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        userId={USER_ID}
+        exercise={currentExercise}
+        onUploaded={() => {
+          /* you can toast success here if you want */
         }}
       />
     </div>

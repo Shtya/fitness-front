@@ -225,10 +225,10 @@ export default function GroceryListPage() {
             </p>
           </div>
           <div className="inline-flex items-center gap-2">
-            <button onClick={exportCSV} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-2">
+            <button onClick={exportCSV} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-2">
               <Download size={16}/> Export CSV
             </button>
-            <button onClick={printList} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-2">
+            <button onClick={printList} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-2">
               <Printer size={16}/> Print
             </button>
           </div>
@@ -236,7 +236,7 @@ export default function GroceryListPage() {
       </motion.div>
 
       {/* Controls */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-3">
+      <div className="rounded-lg border border-slate-200 bg-white p-3">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           {/* Search */}
           <label className="relative md:col-span-2">
@@ -271,7 +271,7 @@ export default function GroceryListPage() {
               <input
                 type="number" step="0.5" min="0.5" value={state.scale}
                 onChange={e=>setState(s=>({ ...s, scale: Math.max(0.5, +e.target.value || 1) }))}
-                className="h-8 w-16 rounded-md border border-slate-200 px-2 text-sm text-center outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                className="h-8 w-16 rounded-lg border border-slate-200 px-2 text-sm text-center outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               />
               <button onClick={()=>setState(s=>({ ...s, scale: round(s.scale+0.5,1) }))} className="h-8 w-8 grid place-items-center rounded-lg border border-slate-200 hover:bg-slate-50"><Plus size={14}/></button>
             </div>
@@ -309,7 +309,7 @@ export default function GroceryListPage() {
           if (!items.length) return null;
           return (
             <motion.div key={cat} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring}
-              className="rounded-2xl border border-slate-200 bg-white p-4 break-inside-avoid">
+              className="rounded-lg border border-slate-200 bg-white p-4 break-inside-avoid">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-semibold">{CAT_LABEL[cat]}</div>
                 <div className="text-xs text-slate-500">{items.length} item(s)</div>
@@ -341,7 +341,7 @@ export default function GroceryListPage() {
 
       {/* Empty state */}
       {keysList.length === 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-600">
+        <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-600">
           No items found — adjust filters or check your meal plan.
         </div>
       )}

@@ -11,7 +11,7 @@ export const SubmitButton = ({
     disabled={isLoading} 
     className={`
       relative flex items-center justify-center cursor-pointer
-      ${isLoading ? "w-fit px-4 py-4 rounded-full" : "w-full px-6 py-3 rounded-2xl"} 
+      ${isLoading ? "w-fit px-4 py-4 rounded-full" : "w-full px-6 py-3 rounded-lg"} 
       font-semibold text-white 
       bg-main
       shadow-sm transition-all duration-300 over:!scale-1

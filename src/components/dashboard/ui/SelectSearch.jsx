@@ -174,7 +174,7 @@ export default function SelectSearch({
         disabled={disabled}
         className={[
           'h-[43px] group relative w-full inline-flex items-center justify-between',
-          'rounded-xl border bg-white px-3.5 py-2.5 text-sm',
+          'rounded-lg border bg-white px-3.5 py-2.5 text-sm',
           disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
           'transition-colors',
           // borders & focus states
@@ -208,7 +208,7 @@ export default function SelectSearch({
           >
             <div
               ref={listRef}
-              className="max-h-72 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-lg ring-1 ring-black/5"
+              className="max-h-72 overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5"
               onKeyDown={onKeyDown}
             >
               {/* Search row */}
@@ -217,7 +217,7 @@ export default function SelectSearch({
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
-                      className="w-full h-9 pl-10 pr-3 py-2 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white"
+                      className="w-full h-9 pl-10 pr-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white"
                       placeholder="Search…"
                       value={query}
                       onChange={e => {
@@ -245,7 +245,7 @@ export default function SelectSearch({
                       role="option"
                       aria-selected={isSelected}
                       className={[
-                        'mx-1 my-0.5 rounded-xl px-3 py-2 text-sm flex items-center justify-between select-none cursor-pointer',
+                        'mx-1 my-0.5 rounded-lg px-3 py-2 text-sm flex items-center justify-between select-none cursor-pointer',
                         isActive ? 'bg-indigo-50' : 'bg-transparent',
                         isSelected ? 'text-indigo-700' : 'text-slate-700',
                         'hover:bg-indigo-50',

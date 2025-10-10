@@ -118,7 +118,7 @@ export default function PlanForm({ initial, onSubmit }) {
       </Field>
 
       {/* Days */}
-      <div className='rounded-xl border border-slate-200'>
+      <div className='rounded-lg border border-slate-200'>
         {dayFields.length === 0 ? (
           <>
             {errors?.program?.days?.message ? <div className='p-2 text-xs text-red-600'>{String(errors.program.days.message)}</div> : null}
@@ -293,7 +293,7 @@ function ExerciseSearchInline({ disabled, onPick, onCreate, cap, count }) {
             onFocus={() => setOpen(true)}
             disabled={atCap}
             placeholder={atCap ? `Reached ${cap} exercises` : 'Search exercise… (min 2 chars)'}
-            className={` pr-[30px] h-[40px] w-full pl-10 rounded-xl bg-white text-black border border-slate-300 font-medium text-sm shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-indigo-500/40 hover:border-indigo-400 transition   ${atCap ? 'bg-slate-100 border-slate-200 text-slate-400' : 'bg-white border-slate-300'} `}
+            className={` pr-[30px] h-[40px] w-full pl-10 rounded-lg bg-white text-black border border-slate-300 font-medium text-sm shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-indigo-500/40 hover:border-indigo-400 transition   ${atCap ? 'bg-slate-100 border-slate-200 text-slate-400' : 'bg-white border-slate-300'} `}
           />
           <X
             size={20}
@@ -305,13 +305,13 @@ function ExerciseSearchInline({ disabled, onPick, onCreate, cap, count }) {
           />
         </div>
 
-        <button type='button' onClick={() => setCreateOpen(true)} disabled={atCap} className={`px-3 rounded-xl border text-sm ${atCap ? 'border-slate-200 bg-slate-100 text-slate-400' : 'border-slate-300 bg-white'}`} title='Create new exercise'>
+        <button type='button' onClick={() => setCreateOpen(true)} disabled={atCap} className={`px-3 rounded-lg border text-sm ${atCap ? 'border-slate-200 bg-slate-100 text-slate-400' : 'border-slate-300 bg-white'}`} title='Create new exercise'>
           Create
         </button>
       </div>
 
       {open && (opts.length || loading) ? (
-        <div className='absolute z-20 mt-1 w-full max-h-64 overflow-auto rounded-xl border border-slate-200 bg-white shadow'>
+        <div className='absolute z-20 mt-1 w-full max-h-64 overflow-auto rounded-lg border border-slate-200 bg-white shadow'>
           {loading ? (
             <div className='px-3 py-2 text-sm text-slate-500'>Searching…</div>
           ) : (
@@ -449,8 +449,8 @@ function CreateExerciseModal({ onClose, onCreated }) {
   };
 
   return (
-    <div className='fixed w-[calc(100%+20px)] h-[calc(100%+20px)] top-[-10px] left-[-10px] inset-0 z-40 grid place-items-center backdrop-blur-[100px] rounded-xl  bg-black/50 p-4'>
-      <div className='w-full overflow-auto max-w-lg rounded-2xl bg-white border border-slate-200 '>
+    <div className='fixed w-[calc(100%+20px)] h-[calc(100%+20px)] top-[-10px] left-[-10px] inset-0 z-40 grid place-items-center backdrop-blur-[100px] rounded-lg  bg-black/50 p-4'>
+      <div className='w-full overflow-auto max-w-lg rounded-lg bg-white border border-slate-200 '>
         <div className='flex items-center justify-between mb-2 p-4'>
           <div className='text-base font-semibold'>Create Exercise</div>
           <button onClick={onClose} className='w-9 h-9 grid place-content-center rounded-lg border border-slate-200 hover:bg-slate-50'>
@@ -490,7 +490,7 @@ function CreateExerciseModal({ onClose, onCreated }) {
               {imgPreview ? (
                 <div className='relative'>
                   <img src={imgPreview} alt='preview' className='h-28 w-full object-contain rounded-lg border border-slate-200' />
-                  <button type='button' onClick={() => clearFile('img')} className='absolute top-1 right-1 w-7 h-7 grid place-content-center rounded-md bg-white/90 border  border-slate-200'>
+                  <button type='button' onClick={() => clearFile('img')} className='absolute top-1 right-1 w-7 h-7 grid place-content-center rounded-lg bg-white/90 border  border-slate-200'>
                     <XIcon className='w-4 h-4' />
                   </button>
                 </div>
@@ -509,7 +509,7 @@ function CreateExerciseModal({ onClose, onCreated }) {
               {videoPreview ? (
                 <div className='relative'>
                   <video src={videoPreview} controls className='h-28 w-full object-contain rounded-lg border  border-slate-200' />
-                  <button type='button' onClick={() => clearFile('video')} className='absolute top-1 right-1 w-7 h-7 grid place-content-center rounded-md bg-white/90 border  border-slate-200'>
+                  <button type='button' onClick={() => clearFile('video')} className='absolute top-1 right-1 w-7 h-7 grid place-content-center rounded-lg bg-white/90 border  border-slate-200'>
                     <XIcon className='w-4 h-4' />
                   </button>
                 </div>
@@ -544,19 +544,19 @@ function NumberInput({ value, onChange, placeholder, className = '' }) {
         onChange(v === '' ? '' : v);
       }}
       placeholder={placeholder}
-      className={`h-[40px] w-full px-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${className}`}
+      className={`h-[40px] w-full px-3 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${className}`}
     />
   );
 }
 
 function Textarea({ value, onChange, placeholder, rows = 4 }) {
-  return <textarea value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} className='w-full rounded-xl border border-slate-200 p-3 outline-none focus:ring-2 focus:ring-indigo-500/30' />;
+  return <textarea value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} className='w-full rounded-lg border border-slate-200 p-3 outline-none focus:ring-2 focus:ring-indigo-500/30' />;
 }
 
 function EmptyDaysState({ onAdd }) {
   return (
-    <div className='p-8 rounded-2xl border border-dashed border-slate-300 bg-gradient-to-b from-white to-slate-50 text-center'>
-      <div className='mx-auto w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 grid place-content-center shadow-sm'>
+    <div className='p-8 rounded-lg border border-dashed border-slate-300 bg-gradient-to-b from-white to-slate-50 text-center'>
+      <div className='mx-auto w-14 h-14 rounded-lg bg-indigo-50 text-indigo-600 grid place-content-center shadow-sm'>
         <CalendarDays className='w-7 h-7' />
       </div>
 
@@ -564,7 +564,7 @@ function EmptyDaysState({ onAdd }) {
       <p className='mt-1 text-sm text-slate-600'>Start building your program by adding a workout day, then pick up to 8 exercises for it.</p>
 
       <div className='mt-4'>
-        <button type='button' onClick={onAdd} className='inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow hover:scale-[.98] transition'>
+        <button type='button' onClick={onAdd} className='inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow hover:scale-[.98] transition'>
           <Plus className='w-4 h-4' />
           Add your first day
         </button>
@@ -577,8 +577,8 @@ function EmptyDaysState({ onAdd }) {
 
 function EmptyExercisesState() {
   return (
-    <div className='mt-2 p-6 rounded-2xl border border-dashed border-slate-300 bg-gradient-to-b from-white to-slate-50 text-center'>
-      <div className='mx-auto w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 grid place-content-center shadow-sm'>
+    <div className='mt-2 p-6 rounded-lg border border-dashed border-slate-300 bg-gradient-to-b from-white to-slate-50 text-center'>
+      <div className='mx-auto w-12 h-12 rounded-lg bg-indigo-50 text-indigo-600 grid place-content-center shadow-sm'>
         <Dumbbell className='w-6 h-6' />
       </div>
 
@@ -621,7 +621,7 @@ function ExerciseChips({ items = [], onRemove, onReorder, limit = 9 }) {
 
   if (!items.length) {
     return (
-      <div className='mt-2 p-4 rounded-xl border border-dashed border-slate-300 bg-gradient-to-b from-white to-slate-50 text-center'>
+      <div className='mt-2 p-4 rounded-lg border border-dashed border-slate-300 bg-gradient-to-b from-white to-slate-50 text-center'>
         <div className='mx-auto w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 grid place-content-center shadow-sm'>
           <Dumbbell className='w-5 h-5' />
         </div>
@@ -638,8 +638,8 @@ function ExerciseChips({ items = [], onRemove, onReorder, limit = 9 }) {
           const label = ex._label || ex.exerciseId || 'Exercise';
 
           return (
-            <Reorder.Item key={`${ex.exerciseId || 'ex'}-${originalIdx}`} value={originalIdx} layout transition={{ type: 'spring', stiffness: 420, damping: 28, mass: 0.6 }} whileDrag={{ scale: 1.04, boxShadow: '0 12px 28px rgba(2, 6, 23, .18)' }} className='group cursor-grab active:cursor-grabbing inline-flex items-center gap-2 pl-1 pr-1 py-1 rounded-xl text-xs bg-white border border-slate-200 shadow-sm hover:border-indigo-300 hover:shadow transition'>
-              <span className='w-5 h-5 rounded-md bg-slate-50 border border-slate-200 grid place-content-center text-slate-400 group-hover:text-slate-600' title='Drag to reorder'>
+            <Reorder.Item key={`${ex.exerciseId || 'ex'}-${originalIdx}`} value={originalIdx} layout transition={{ type: 'spring', stiffness: 420, damping: 28, mass: 0.6 }} whileDrag={{ scale: 1.04, boxShadow: '0 12px 28px rgba(2, 6, 23, .18)' }} className='group cursor-grab active:cursor-grabbing inline-flex items-center gap-2 pl-1 pr-1 py-1 rounded-lg text-xs bg-white border border-slate-200 shadow-sm hover:border-indigo-300 hover:shadow transition'>
+              <span className='w-5 h-5 rounded-lg bg-slate-50 border border-slate-200 grid place-content-center text-slate-400 group-hover:text-slate-600' title='Drag to reorder'>
                 <GripVertical className='w-3.5 h-3.5' />
               </span>
 
@@ -655,7 +655,7 @@ function ExerciseChips({ items = [], onRemove, onReorder, limit = 9 }) {
               <button
                 type='button'
                 onClick={() => onRemove?.(originalIdx)}
-                className='ml-1 inline-flex items-center justify-center w-5 h-5 rounded-md text-slate-500 hover:text-red-600 hover:bg-red-50 border border-transparent group-hover:border-red-200 transition'
+                className='ml-1 inline-flex items-center justify-center w-5 h-5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 border border-transparent group-hover:border-red-200 transition'
                 title='Remove'
                 aria-label={`Remove ${label}`}
                 onKeyDown={e => {
@@ -671,13 +671,13 @@ function ExerciseChips({ items = [], onRemove, onReorder, limit = 9 }) {
         })}
 
         {!expanded && extraCount > 0 ? (
-          <motion.button type='button' onClick={() => setExpanded(true)} whileTap={{ scale: 0.97 }} className='inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs bg-slate-100 border border-slate-200 hover:bg-slate-50' title='Show more'>
+          <motion.button type='button' onClick={() => setExpanded(true)} whileTap={{ scale: 0.97 }} className='inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-slate-100 border border-slate-200 hover:bg-slate-50' title='Show more'>
             <ChevronDown className='w-3.5 h-3.5' />+{extraCount} more
           </motion.button>
         ) : null}
 
         {expanded && items.length > limit ? (
-          <motion.button type='button' onClick={() => setExpanded(false)} whileTap={{ scale: 0.97 }} className='inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs bg-slate-100 border border-slate-200 hover:bg-slate-50' title='Show less'>
+          <motion.button type='button' onClick={() => setExpanded(false)} whileTap={{ scale: 0.97 }} className='inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-slate-100 border border-slate-200 hover:bg-slate-50' title='Show less'>
             <ChevronUp className='w-3.5 h-3.5' />
             Show less
           </motion.button>

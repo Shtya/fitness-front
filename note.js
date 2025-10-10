@@ -1,29 +1,57 @@
-
-	pages 
+/*
 
 		* user
 			- when the coach login show only his trainer only 
-			- Roles/Permissions (Admins / Coaches / Assistants).
-			- When create new user account:
-				- Steps to put the Training Plans, Nutrition System, and Calorie Targets.
-				- Redirect to WhatsApp to send credentials.
-				- Assign user to a coach.
-				
-			- Switch Programs (Food / Exercise) via dropdown → "Switch Program".
-			- Edit user profile information.
-			- User Details View page.
+			- User Details View page. 
 
-		* workouts page
-			- handle the last ( weight , reps , his logs , history  ) 
-			- in the dashboard can see his logs for any user 
+		* chat page
+			- when exist userId in the params get this user to contact with it 
+
+		* workouts page ( dashboard)
+			✅ the category overflow
+			✅ enhance the performance of the page
+
+
+		* dashboard/workouts/plans 
+			✅ when asign user reflect on the data
+			✅ when change on the plan remove the assign 
+			✅ the stats 
+			✅ pagination doesnt work 
+			- i have a problem on the edit plans on reorder the exercise doesn't apply
+
+
+		* my/workouts
+			- remove the comment on the loading 
+			- work on upload the video 
 			- control on the podcast that will show for the client 
-			-
+			- in the dashboard can see his logs for any user 
+			- handle the last ( weight , reps , his logs , history  ) 
+
+
+			* workouts all
+			- (user details dashboard ) show all logs of this user about his exercises
+			- (workouts client) can show his logs fomr history 
+			- ( workouts client) 
+					- solve teh 
+
+			- ( progress page client)			
+
+
+
+
+
+
+
+
+
 
 		* meals page 
 			- put his plan food and logs about it 
+			there is a problem in the assign moduel send only one userid
 
 		* setting 
 			- auto send the report and explain to him this information i take it form your infomation 
+			- control on the podcast that will show for the client 
 
 		* profile 
 			- have the all information about it and hist transofrmation 
@@ -55,6 +83,7 @@
 			- Recommendation Engine (suggest workouts/meals automatically).
 
 		* setting
+			- edit on the ذكر 
 			- controller on the text appear on the loading
 			- System customization (Coach logo, personal data).
 			- Manage roles/permissions (if assistants exist).
@@ -86,4 +115,4 @@
   - Client Guide (Onboarding help/tutorial).
  
  
- 
+ */

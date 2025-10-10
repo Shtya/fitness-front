@@ -132,11 +132,11 @@ function Ring({ size = 84, stroke = 10, value = 0, color = PALETTE.ring.fill, tr
   );
 }
 function StatCard({ children, className = '' }) {
-  return <div className={`rounded-2xl ${PALETTE.card} p-4 ${className}`}>{children}</div>;
+  return <div className={`rounded-lg ${PALETTE.card} p-4 ${className}`}>{children}</div>;
 }
 function Mini({ title, value, children }) {
   return (
-    <div className='rounded-xl bg-white/20 border border-white/30 px-3 py-2 text-white'>
+    <div className='rounded-lg bg-white/20 border border-white/30 px-3 py-2 text-white'>
       <div className='text-[11px]/5'>{title}</div>
       {value !== undefined ? <div className='text-sm font-semibold'>{value}</div> : children}
     </div>
@@ -188,7 +188,7 @@ function FoodMixerBox({ value, onChange }) {
 
   return (
     <>
-      <div dir='rtl' className={` font-ar rounded-xl border border-slate-200 bg-white p-3 ${AR_FONT_CLASS}`}>
+      <div dir='rtl' className={` font-ar rounded-lg border border-slate-200 bg-white p-3 ${AR_FONT_CLASS}`}>
         <div className='font-semibold mb-2'>خلطة السعرات</div>
         <div className='space-y-2'>
           {list1.map((it, idx) => (
@@ -200,7 +200,7 @@ function FoodMixerBox({ value, onChange }) {
         </div>
       </div>
 
-      <div dir='rtl' className={`rounded-xl border border-slate-200 bg-white p-3 ${AR_FONT_CLASS}`}>
+      <div dir='rtl' className={`rounded-lg border border-slate-200 bg-white p-3 ${AR_FONT_CLASS}`}>
         <div className='font-semibold mb-2'>وجبة إضافية</div>
         <div className='space-y-2'>
           {list2.map((it, idx) => (
@@ -307,7 +307,7 @@ function CalcPopup({ open, onClose, onSave, initial }) {
         <>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className='fixed inset-0 z-[85] bg-black/30' onClick={onClose} />
           <motion.div initial={{ scale: 0.98, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.98, y: 8 }} className='fixed inset-0 z-[90] grid place-items-center p-4' onClick={onClose}>
-            <div className='w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-xl' onClick={e => e.stopPropagation()}>
+            <div className='w-full max-w-lg rounded-lg bg-white border border-slate-200 shadow-xl' onClick={e => e.stopPropagation()}>
               <div className='p-4 border-b border-slate-100 flex items-center justify-between'>
                 <div className='font-semibold flex items-center gap-2'>
                   <Calculator size={16} /> Calculate Calories
@@ -365,7 +365,7 @@ function CalcPopup({ open, onClose, onSave, initial }) {
                   </label>
                 </div>
 
-                <div className='rounded-xl border border-slate-200 p-3 grid grid-cols-3 gap-2 text-sm'>
+                <div className='rounded-lg border border-slate-200 p-3 grid grid-cols-3 gap-2 text-sm'>
                   <div title='Calories your body burns at rest'>
                     <div className='text-[11px] text-slate-600 leading-4'>
                       Basal Metabolic Rate <span className='opacity-70'>(BMR)</span>
@@ -480,7 +480,7 @@ export default function NutritionPage() {
     <div className={`${PALETTE.bg} min-h-[100dvh] ${PALETTE.text}`}>
       <div className=' space-y-6'>
         {/* Banner */}
-        <div className=' rounded-none max-md:w-[calc(100%+30px)] max-md:ltr:ml-[-15px] max-md:rtl:mr-[-15px] max-md:mt-[-15px]  md:rounded-3xl overflow-hidden border border-indigo-200'>
+        <div className=' rounded-none max-md:w-[calc(100%+30px)] max-md:ltr:ml-[-15px] max-md:rtl:mr-[-15px] max-md:mt-[-15px]  md:rounded-lg overflow-hidden border border-indigo-200'>
           <div className='relative p-4 md:p-8 bg-gradient-to-tr from-indigo-500 to-sky-400 text-white'>
             <div className='absolute inset-0 opacity-20 bg-[radial-gradient(600px_200px_at_20%_-20%,white,transparent)]' />
             <div className='relative z-10 flex flex-col md:flex-row md:items-center gap-6 justify-between'>
@@ -502,11 +502,11 @@ export default function NutritionPage() {
           {/* Secondary bar: Days Tabs + Actions */}
           <div className='px-4 md:px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white'>
             <div className='flex-1'>
-              <TabsPill className={'!rounded-xl'} slice={3} id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={setSelectedDay} />
+              <TabsPill className={'!rounded-lg'} slice={3} id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={setSelectedDay} />
             </div>
 
             <div className='flex items-center gap-2'>
-              <button onClick={() => setGroceryOpen(true)} className='inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50'>
+              <button onClick={() => setGroceryOpen(true)} className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50'>
                 <MenuIcon size={16} /> Grocery
               </button>
 
@@ -550,7 +550,7 @@ export default function NutritionPage() {
                 const kcalDone = m.items.filter(i => todays.items[i.id]).reduce((s, i) => s + (i.kcal || 0), 0);
 
                 return (
-                  <div key={m.id} className={`rounded-2xl ${PALETTE.card} p-4`}>
+                  <div key={m.id} className={`rounded-lg ${PALETTE.card} p-4`}>
                     <div className='flex items-center justify-between'>
                       <div>
                         <div className='font-semibold'>{m.title}</div>
@@ -579,7 +579,7 @@ export default function NutritionPage() {
                     </div>
 
                     {m.subs?.length ? (
-                      <div className={`mt-3 rounded-xl bg-slate-50 border border-slate-200 p-3 ${AR_FONT_CLASS}`}>
+                      <div className={`mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3 ${AR_FONT_CLASS}`}>
                         <div className='text-xs text-slate-700 mb-1'>بدائل ذكية</div>
                         <ul className='list-disc pl-5 text-xs text-slate-600 space-y-1'>
                           {m.subs.map((s, i) => (
@@ -596,7 +596,7 @@ export default function NutritionPage() {
         )}
 
         {tab === 'guidelines' && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={`rounded-2xl ${PALETTE.card} p-5 ${AR_FONT_CLASS}`}>
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={`rounded-lg ${PALETTE.card} p-5 ${AR_FONT_CLASS}`}>
             <div className='font-semibold mb-2 flex items-center gap-2'>
               <Info size={16} /> الإرشادات
             </div>

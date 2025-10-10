@@ -7,7 +7,7 @@ import {
 
 export function ChartCard({ title, subtitle, children, right }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+    <div className="rounded-lg border border-slate-200 bg-white p-4">
       <div className="flex items-start justify-between">
         <div>
           <div className="text-sm text-slate-500">{subtitle}</div>

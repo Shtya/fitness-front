@@ -163,7 +163,7 @@ export default function CalendarPage(){
       />
 
       {/* Filters + Toolbar */}
-      <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="rounded-2xl border border-slate-200 bg-white p-4">
+      <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="rounded-lg border border-slate-200 bg-white p-4">
         <div className="flex flex-col lg:flex-row lg:items-center gap-3">
           <CalendarToolbar date={date} setDate={setDate} view={view} setView={setView} />
           <div className="flex-1" />
@@ -178,7 +178,7 @@ export default function CalendarPage(){
 
       {/* Views */}
       {view==="month" && (
-        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="rounded-2xl border border-slate-200 bg-white p-2">
+        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="rounded-lg border border-slate-200 bg-white p-2">
           <table className="w-full">
             <thead>
               <tr className="text-xs text-slate-500">
@@ -194,7 +194,7 @@ export default function CalendarPage(){
                     const items = byDate[ds] || [];
                     return (
                       <td key={j} className="p-1">
-                        <div className={`h-36 rounded-xl border p-2 ${out?'border-slate-100 bg-slate-50 text-slate-400':'border-slate-200 bg-white'}`}>
+                        <div className={`h-36 rounded-lg border p-2 ${out?'border-slate-100 bg-slate-50 text-slate-400':'border-slate-200 bg-white'}`}>
                           <div className="flex items-center justify-between">
                             <button onClick={()=>openNew(day)} className="text-xs font-medium">{day.getDate()}</button>
                             <div className="flex gap-1">
@@ -231,7 +231,7 @@ export default function CalendarPage(){
       )}
 
       {view==="week" && (
-        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="rounded-2xl border border-slate-200 bg-white p-3 overflow-x-auto">
+        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="rounded-lg border border-slate-200 bg-white p-3 overflow-x-auto">
           <div className="grid grid-cols-8 gap-2 min-w-[880px]">
             <div />
             {weekDays.map(d => <div key={iso(d)} className="text-sm font-medium">{d.toLocaleDateString(undefined,{weekday:"short", day:"numeric"})}</div>)}
@@ -262,7 +262,7 @@ export default function CalendarPage(){
       )}
 
       {view==="list" && (
-        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="rounded-2xl border border-slate-200 bg-white p-4">
+        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="rounded-lg border border-slate-200 bg-white p-4">
           <DataTable
             columns={listCols}
             data={[...filtered].sort((a,b)=> (a.date+b.start).localeCompare(b.date+b.start))}
@@ -309,7 +309,7 @@ export default function CalendarPage(){
       <Modal open={openView} onClose={()=>setOpenView(false)} title="Booking">
         {current ? (
           <div className="space-y-3">
-            <div className="rounded-xl border border-slate-200 p-3">
+            <div className="rounded-lg border border-slate-200 p-3">
               <div className="font-semibold">{current.title} <span className="ml-2"><BadgeDot color={colorFor(current.type)}>{current.type}</BadgeDot></span></div>
               <div className="text-sm text-slate-600 mt-1 flex flex-wrap gap-4">
                 <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {current.date} · {timeStr(current.start)}–{timeStr(current.end)}</span>
@@ -331,8 +331,8 @@ export default function CalendarPage(){
 
       {/* local styles if not global */}
       <style jsx>{`
-        .inp { @apply w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30; }
-        .btn-primary { @apply px-3 py-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white; }
+        .inp { @apply w-full px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30; }
+        .btn-primary { @apply px-3 py-2 rounded-lg bg-gradient-to-tr from-indigo-600 to-blue-500 text-white; }
         .btn-sm { @apply px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm; }
       `}</style>
     </div>

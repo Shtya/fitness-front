@@ -406,7 +406,7 @@ export default function MessagesPage() {
       <AnimatePresence>
         {showUserSearch && (
           <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className='bg-white rounded-2xl w-full max-w-md p-6'>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className='bg-white rounded-lg w-full max-w-md p-6'>
               <div className='flex items-center justify-between mb-4'>
                 <h3 className='text-lg font-semibold'>Start New Conversation</h3>
                 <button
@@ -451,7 +451,7 @@ export default function MessagesPage() {
 
       <div className='grid grid-cols-1 lg:grid-cols-12 gap-6'>
         {/* Conversations List */}
-        <motion.aside initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }} className='lg:col-span-4 rounded-2xl border border-gray-200 bg-white p-4 h-[70vh] flex flex-col shadow-sm'>
+        <motion.aside initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }} className='lg:col-span-4 rounded-lg border border-gray-200 bg-white p-4 h-[70vh] flex flex-col shadow-sm'>
           <div className='flex items-center gap-2 mb-4'>
             <SearchInput value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder='Search conversations...' className='flex-1' />
             <button className={`p-2 rounded-lg border transition-colors ${showPinned ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`} onClick={() => setShowPinned(v => !v)} title={showPinned ? 'Show all' : 'Show pinned first'}>
@@ -472,7 +472,7 @@ export default function MessagesPage() {
               ))
             ) : filteredConversations.length > 0 ? (
               filteredConversations.map(conversation => (
-                <button key={conversation.id} onClick={() => setActiveConversation(conversation)} className={`w-full text-left p-3 rounded-xl transition-all duration-200 ${activeConversation?.id === conversation.id ? 'bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 shadow-sm' : 'hover:bg-gray-50 border border-transparent'}`}>
+                <button key={conversation.id} onClick={() => setActiveConversation(conversation)} className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${activeConversation?.id === conversation.id ? 'bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 shadow-sm' : 'hover:bg-gray-50 border border-transparent'}`}>
                   <div className='flex items-center gap-3'>
                     <Avatar name={getConversationName(conversation)} online={getOtherParticipants(conversation).some(p => onlineUsers.has(p.id))} isGroup={conversation.isGroup} size={48} />
                     <div className='flex-1 min-w-0'>
@@ -495,12 +495,12 @@ export default function MessagesPage() {
         </motion.aside>
 
         {/* Chat Thread */}
-        <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }} className='lg:col-span-8 rounded-2xl border border-gray-200 bg-white h-[70vh] flex flex-col shadow-sm'>
+        <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }} className='lg:col-span-8 rounded-lg border border-gray-200 bg-white h-[70vh] flex flex-col shadow-sm'>
           {activeConversation ? (
             <>
               {/* Chat Header */}
               <div className='px-6 py-4 border-b border-gray-200 flex items-center gap-4 bg-white rounded-t-2xl'>
-                <button className='lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors' onClick={() => setActiveConversation(null)}>
+                <button className='lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors' onClick={() => setActiveConversation(null)}>
                   <ArrowLeft className='w-5 h-5 text-gray-600' />
                 </button>
 
@@ -510,13 +510,13 @@ export default function MessagesPage() {
                   <p className='text-sm text-gray-600'>{activeConversation.isGroup ? `${activeConversation.chatParticipants?.length} participants` : getOtherParticipants(activeConversation).some(p => onlineUsers.has(p.id)) ? 'Online • Active now' : 'Offline'}</p>
                 </div>
                 <div className='flex items-center gap-2'>
-                  <button className='p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-900'>
+                  <button className='p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-900'>
                     <Phone className='w-5 h-5' />
                   </button>
-                  <button className='p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-900'>
+                  <button className='p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-900'>
                     <Video className='w-5 h-5' />
                   </button>
-                  <button className='p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-900'>
+                  <button className='p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-900'>
                     <Info className='w-5 h-5' />
                   </button>
                 </div>
@@ -535,7 +535,7 @@ export default function MessagesPage() {
                         {showDate && <div className='text-center text-sm text-gray-500 my-6'>{formatDate(message.created_at)}</div>}
                         <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} gap-3`}>
                           {!isCurrentUser && <Avatar name={message.sender?.name} online={onlineUsers.has(message.sender?.id)} size={36} />}
-                          <div className={`max-w-[70%] rounded-xl px-3 py-2 ${isCurrentUser ? 'bg-gradient-to-br from-indigo-600 to-blue-500 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-900 shadow-sm'} ${isOptimistic ? 'opacity-70' : ''}`}>
+                          <div className={`max-w-[70%] rounded-lg px-3 py-2 ${isCurrentUser ? 'bg-gradient-to-br from-indigo-600 to-blue-500 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-900 shadow-sm'} ${isOptimistic ? 'opacity-70' : ''}`}>
                             {!isCurrentUser && activeConversation.isGroup && <div className='text-xs font-semibold mb-1 text-gray-700'>{message.sender?.name}</div>}
                             {message.content && <div className='whitespace-pre-wrap break-words text-sm leading-relaxed'>{message.content}</div>}
                             {message.attachments?.map((attachment, i) => (
@@ -568,7 +568,7 @@ export default function MessagesPage() {
                   {typingUsers[activeConversation.id] && (
                     <div className='flex items-end gap-3'>
                       <Avatar name={typingUsers[activeConversation.id].userName} size={36} />
-                      <div className='px-4 py-3 rounded-2xl bg-white border border-gray-200 shadow-sm'>
+                      <div className='px-4 py-3 rounded-lg bg-white border border-gray-200 shadow-sm'>
                         <TypingDots />
                       </div>
                     </div>
@@ -610,10 +610,10 @@ export default function MessagesPage() {
                           sendMessage();
                         }
                       }}
-                      className='flex-1 h-9 px-2  rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm placeholder-gray-400'
+                      className='flex-1 h-9 px-2  rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm placeholder-gray-400'
                     />
 
-                    <button className='w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-900' title='Attach files' onClick={() => fileInputRef.current?.click()}>
+                    <button className='w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-900' title='Attach files' onClick={() => fileInputRef.current?.click()}>
                       <Paperclip className='w-5 h-5' />
                     </button>
 
@@ -629,7 +629,7 @@ export default function MessagesPage() {
               </div>
               <h3 className='text-xl font-semibold text-gray-900 mb-2'>Welcome to Messages</h3>
               <p className='text-gray-600 max-w-sm mb-6'>Select a conversation from the list or start a new one to begin messaging.</p>
-              <button onClick={() => setShowUserSearch(true)} className='px-6 py-3 bg-gradient-to-br from-indigo-600 to-blue-500 text-white font-medium rounded-xl hover:from-indigo-700 hover:to-blue-600 transition-all shadow-sm hover:shadow-md flex items-center gap-2'>
+              <button onClick={() => setShowUserSearch(true)} className='px-6 py-3 bg-gradient-to-br from-indigo-600 to-blue-500 text-white font-medium rounded-lg hover:from-indigo-700 hover:to-blue-600 transition-all shadow-sm hover:shadow-md flex items-center gap-2'>
                 <Plus className='w-5 h-5' />
                 Start New Conversation
               </button>
@@ -670,11 +670,11 @@ function Avatar({ name, online = false, size = 40, isGroup = false }) {
 
 function SendButton({ loading, text }) {
   return (
-    <button type='submit' disabled={loading} aria-label={text} title={text} className={['relative inline-flex items-center rounded-xl', 'text-[13px] font-medium bg-gradient-to-br from-indigo-600', loading ? '  to-indigo-400' : ' to-blue-500 text-white  ', 'shadow-sm transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed'].join(' ')}>
-      <span className='grid place-items-center rounded-xl h-9 w-9 bg-white/10'>{loading ? <FaSpinner className='h-3.5 w-3.5 animate-spin' /> : <Send size={14} />}</span>
+    <button type='submit' disabled={loading} aria-label={text} title={text} className={['relative inline-flex items-center rounded-lg', 'text-[13px] font-medium bg-gradient-to-br from-indigo-600', loading ? '  to-indigo-400' : ' to-blue-500 text-white  ', 'shadow-sm transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed'].join(' ')}>
+      <span className='grid place-items-center rounded-lg h-9 w-9 bg-white/10'>{loading ? <FaSpinner className='h-3.5 w-3.5 animate-spin' /> : <Send size={14} />}</span>
 
       {/* subtle progress overlay when loading */}
-      {loading && <span className='absolute inset-0 rounded-xl ring-1 ring-white/10' />}
+      {loading && <span className='absolute inset-0 rounded-lg ring-1 ring-white/10' />}
     </button>
   );
 }

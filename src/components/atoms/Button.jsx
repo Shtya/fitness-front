@@ -16,6 +16,7 @@ export default function Button({
 }) {
   const colorClasses = {
     primary: 'bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-400/50',
+    violet: 'bg-violet-800 hover:bg-violet-700 text-white  focus-visible:ring-violet-400/50',
     blue: 'bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-400/50',
     green: 'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-400/50',
     success: 'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-400/50',
@@ -25,7 +26,7 @@ export default function Button({
     warning: 'bg-amber-500 text-white hover:bg-amber-600 focus-visible:ring-amber-400/50',
     black: 'bg-black text-white hover:bg-black/90 focus-visible:ring-black/40',
     gray: 'bg-gray-800 text-white hover:bg-gray-900 focus-visible:ring-gray-400/40',
-    neutral: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus-visible:ring-gray-300',
+    neutral: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus-visible:ring-gray-300',
     outline: 'bg-transparent !text-gray-800 border border-gray-300 hover:bg-gray-50 focus-visible:ring-gray-300',
     ghost: 'bg-transparent text-gray-800 hover:bg-gray-100 focus-visible:ring-gray-200',
     subtle: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus-visible:ring-gray-300',

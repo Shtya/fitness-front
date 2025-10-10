@@ -54,7 +54,7 @@ function pctToConic(pct, color = '#4f46e5') {
 function GlassCard({ children, className = '' , glow=false }) {
   return (
     <div
-      className={` ${glow && "card-glow"} rounded-3xl border border-white/30 bg-white/60 backdrop-blur-md shadow-[0_10px_30px_rgba(2,6,23,0.06)] ${className}`}
+      className={` ${glow && "card-glow"} rounded-lg border border-white/30 bg-white/60 backdrop-blur-md shadow-[0_10px_30px_rgba(2,6,23,0.06)] ${className}`}
     >
       {children}
     </div>
@@ -255,7 +255,7 @@ export default function HomeDashboardPretty() {
                     <div className="mt-1 text-xs text-slate-500">All sets completed 🎉</div>
                   )}
                 </div>
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-3">
+                <div className="rounded-lg border border-slate-200/70 bg-slate-50 p-3">
                   <div className="text-xs text-slate-500 mb-1 flex items-center gap-1">
                     <CalendarDays size={14} /> Day
                   </div>
@@ -327,7 +327,7 @@ export default function HomeDashboardPretty() {
                     <Pill label="Carbs" value={`${targets.c ?? '—'} g`} tone="blue" />
                     <Pill label="Fat" value={`${targets.f ?? '—'} g`} tone="rose" />
                   </div>
-                  <div className="rounded-2xl bg-slate-50 border border-slate-200/70 p-3">
+                  <div className="rounded-lg bg-slate-50 border border-slate-200/70 p-3">
                     <div className="text-xs text-slate-500 mb-1">Per-meal (×{targets.meals ?? 4})</div>
                     <div className="text-sm font-medium">{targets.perMeal ?? '—'} kcal each</div>
                   </div>
@@ -353,7 +353,7 @@ export default function HomeDashboardPretty() {
               {hydrated && history?.length ? (
                 <div className="mt-3 space-y-2">
                   {history.slice(0, 3).map(h => (
-                    <div key={h.id} className="flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white/60 p-3">
+                    <div key={h.id} className="flex items-center gap-3 rounded-lg border border-slate-200/70 bg-white/60 p-3">
                       <CheckCircle2 className="text-emerald-600" size={18} />
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium truncate text-slate-800">{h.name}</div>
@@ -378,7 +378,7 @@ export default function HomeDashboardPretty() {
               {prs && Object.keys(prs).length ? (
                 <div className="mt-3 space-y-2">
                   {Object.entries(prs).slice(0, 5).map(([ex, pr]) => (
-                    <div key={ex} className="rounded-2xl border border-slate-200/70 bg-white/60 p-3">
+                    <div key={ex} className="rounded-lg border border-slate-200/70 bg-white/60 p-3">
                       <div className="flex items-center justify-between">
                         <div className="min-w-0">
                           <div className="text-sm font-medium truncate text-slate-800">{ex}</div>
@@ -437,7 +437,7 @@ function MiniStat({ icon: Icon, label, value, tone = 'slate' }) {
     blue: 'bg-sky-50 text-sky-800 border-sky-200/70',
   };
   return (
-    <div className={`rounded-2xl border p-3 ${tones[tone] || tones.slate}`}>
+    <div className={`rounded-lg border p-3 ${tones[tone] || tones.slate}`}>
       <div className="text-xs text-slate-500 mb-1 flex items-center gap-1">
         <Icon size={14} /> {label}
       </div>
@@ -454,7 +454,7 @@ function MiniSupp({ supp }) {
     { k: 'creatine', label: 'Creatine' },
   ];
   return (
-    <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-3">
+    <div className="rounded-lg border border-slate-200/70 bg-slate-50 p-3">
       <div className="text-xs text-slate-500 mb-1">Supplements</div>
       <div className="flex flex-wrap gap-1.5">
         {items.map(i => (
@@ -481,7 +481,7 @@ function Pill({ label, value, tone = 'slate', icon: Icon }) {
     rose: 'border-rose-200/70 bg-rose-50 text-rose-800',
   };
   return (
-    <div className={`rounded-2xl border px-3 py-2 flex items-center gap-2 ${tones[tone] || tones.slate}`}>
+    <div className={`rounded-lg border px-3 py-2 flex items-center gap-2 ${tones[tone] || tones.slate}`}>
       {Icon ? <Icon size={16} /> : null}
       <div className="text-xs">{label}</div>
       <div className="ml-auto text-sm font-semibold tabular-nums">{value}</div>
@@ -493,9 +493,9 @@ function CTA({ href, icon: Icon, label }) {
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-2 rounded-2xl border border-white/40 bg-white/70 px-4 py-2 text-sm text-slate-800 hover:shadow-md hover:-translate-y-0.5 transition shadow-[0_6px_20px_rgba(2,6,23,0.05)]"
+      className="inline-flex items-center gap-2 rounded-lg border border-white/40 bg-white/70 px-4 py-2 text-sm text-slate-800 hover:shadow-md hover:-translate-y-0.5 transition shadow-[0_6px_20px_rgba(2,6,23,0.05)]"
     >
-      <div className="w-8 h-8 rounded-xl grid place-items-center bg-slate-100 border border-slate-200">
+      <div className="w-8 h-8 rounded-lg grid place-items-center bg-slate-100 border border-slate-200">
         <Icon size={16} className="text-slate-700" />
       </div>
       <span className="font-medium">{label}</span>

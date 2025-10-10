@@ -1,434 +1,406 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
-import { PageHeader, TabsPill, spring } from '@/components/dashboard/ui/UI';
-import { Calculator, Activity, Ruler, Dumbbell, Clipboard, Info, AlertCircle } from 'lucide-react';
 
-/* =================== PERSISTENCE =================== */
-const LS_KEY = 'mw.calorie.calc.v1';
-const LS_UI = 'mw.calorie.calc.ui';
-
-/* =================== HELPERS =================== */
-const kgFromLbs = lbs => lbs * 0.45359237;
-const cmFromIn = inches => inches * 2.54;
-
-const round = (n, d = 0) => {
-  const p = Math.pow(10, d);
-  return Math.round(n * p) / p;
-};
-
-// Mifflin–St Jeor
-function bmr({ sex, weightKg, heightCm, age }) {
-  const base = 10 * weightKg + 6.25 * heightCm - 5 * age;
-  return sex === 'male' ? base + 5 : base - 161;
-}
+// ⚙️ Use YOUR atoms
+import Button from '@/components/atoms/Button';
+import Input from '@/components/atoms/Input';
+import Select from '@/components/atoms/Select';
 
 const ACTIVITY = [
-  { key: 'sed', label: 'Sedentary (little/no exercise)', factor: 1.2 },
-  { key: 'light', label: 'Light (1–3x/week)', factor: 1.375 },
-  { key: 'mod', label: 'Moderate (3–5x/week)', factor: 1.55 },
-  { key: 'high', label: 'Very active (6–7x/week)', factor: 1.725 },
-  { key: 'ath', label: 'Athlete/physical job', factor: 1.9 },
+  { key: 'sed', label: 'Sedentary (desk, little exercise)', mult: 1.2 },
+  { key: 'light', label: 'Light (1–3x/week)', mult: 1.375 },
+  { key: 'mod', label: 'Moderate (3–5x/week)', mult: 1.55 },
+  { key: 'very', label: 'Very Active (6–7x/week)', mult: 1.725 },
+  { key: 'ath', label: 'Athlete/2-a-days', mult: 1.9 },
 ];
 
 const GOALS = [
-  { key: 'cut10', label: 'Cut −10%', adj: -0.1 },
-  { key: 'cut15', label: 'Cut −15%', adj: -0.15 },
-  // { key: 'cut20', label: 'Cut −20%', adj: -0.2 },
-  { key: 'maint', label: 'Maintain', adj: 0.0 },
-  { key: 'bulk10', label: 'Bulk +10%', adj: 0.1 },
-  { key: 'bulk15', label: 'Bulk +15%', adj: 0.15 },
-  // { key: 'bulk20', label: 'Bulk +20%', adj: 0.2 },
+  { label: 'Cut', delta: -20 },
+  { label: 'Recomp', delta: 0 },
+  { label: 'Lean Bulk', delta: +10 },
 ];
 
-// kcal per gram
-const KCAL = { protein: 4, carbs: 4, fat: 9 };
+const MACRO_PRESETS = [
+  { key: 'balanced', label: 'Balanced', p: 30, c: 40, f: 30 },
+  { key: 'highp', label: 'High Protein', p: 35, c: 35, f: 30 },
+  { key: 'lowc', label: 'Low Carb', p: 35, c: 25, f: 40 },
+  { key: 'keto', label: 'Keto-ish', p: 25, c: 5, f: 70 },
+  { key: 'custom', label: 'Custom', p: 30, c: 40, f: 30 },
+];
 
-/* =================== SMALL UI: Hint Tooltip =================== */
-function Hint({ text, side = 'top' }) {
-  // position classes
-  const pos = side === 'top' ? 'bottom-full left-1/2 -translate-x-1/2 mb-2' : side === 'right' ? 'left-full top-1/2 -translate-y-1/2 ml-2' : side === 'left' ? 'right-full top-1/2 -translate-y-1/2 mr-2' : 'top-full left-1/2 -translate-x-1/2 mt-2';
-
-  return (
-    <span className='relative inline-flex items-center group'>
-      {/* focusable icon for keyboard users */}
-      <button type='button' className='ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 text-slate-500 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/30' aria-label='Help'>
-        <Info size={12} />
-      </button>
-
-      {/* tooltip */}
-      <div role='tooltip' className={`pointer-events-none absolute ${pos} z-20 w-[220px] rounded-md border border-slate-200 bg-white p-2 text-[11.5px] leading-snug text-slate-700 shadow-md opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0 transition`}>
-        {text}
-      </div>
-    </span>
-  );
+function clamp(n, a, b) {
+  const v = Number.isFinite(+n) ? +n : 0;
+  return Math.min(b, Math.max(a, v));
 }
 
-/* =================== PAGE =================== */
-export default function CalorieCalculatorPage() {
-  const [tab, setTab] = useState('calculator'); // calculator | about
+export default function Page() {
+  // Inputs
   const [unit, setUnit] = useState('metric'); // metric | imperial
-  const [form, setForm] = useState(() => {
-    // sensible defaults
-    const saved = loadLS(LS_KEY, null);
-    return (
-      saved || {
-        sex: 'male',
-        age: 25,
-        height: { cm: 175, in: 69 },
-        weight: { kg: 75, lbs: 165 },
-        activity: 'mod',
-        goal: 'maint',
-        proteinGperKg: 1.8, // 1.6–2.2 typical
-        fatGperKg: 0.8, // 0.5–1.2 typical
-        mealsPerDay: 4,
-      }
-    );
-  });
+  const [sex, setSex] = useState('male'); // male | female
+  const [age, setAge] = useState(28);
+  const [height, setHeight] = useState(178); // cm or inches
+  const [weight, setWeight] = useState(78); // kg or lb
+  const [bf, setBf] = useState(15); // %
+  const [activity, setActivity] = useState('mod');
+  const [goalDelta, setGoalDelta] = useState(0);
+  const [macroPreset, setMacroPreset] = useState('balanced');
+  const [macrosPct, setMacrosPct] = useState({ p: 30, c: 40, f: 30 });
 
-  useEffect(() => saveLS(LS_KEY, form), [form]);
+  // Sync macro preset → percentages
   useEffect(() => {
-    const savedUI = loadLS(LS_UI, { tab: 'calculator', unit: 'metric' });
-    setTab(savedUI.tab);
-    setUnit(savedUI.unit);
-  }, []);
-  useEffect(() => saveLS(LS_UI, { tab, unit }), [tab, unit]);
+    const p = MACRO_PRESETS.find(m => m.key === macroPreset);
+    if (!p || p.key === 'custom') return;
+    setMacrosPct({ p: p.p, c: p.c, f: p.f });
+  }, [macroPreset]);
 
-  // unify weight/height based on unit inputs
-  function setWeight(value) {
-    if (unit === 'metric') {
-      const kg = Math.max(0, +value || 0);
-      setForm(f => ({ ...f, weight: { kg, lbs: round(kg / 0.45359237, 1) } }));
-    } else {
-      const lbs = Math.max(0, +value || 0);
-      setForm(f => ({ ...f, weight: { lbs, kg: round(kgFromLbs(lbs), 1) } }));
-    }
-  }
-  function setHeight(value) {
-    if (unit === 'metric') {
-      const cm = Math.max(0, +value || 0);
-      setForm(f => ({ ...f, height: { cm, in: round(cm / 2.54, 1) } }));
-    } else {
-      const inches = Math.max(0, +value || 0);
-      setForm(f => ({ ...f, height: { in: inches, cm: round(cmFromIn(inches), 1) } }));
-    }
-  }
+  // Metric conversions
+  const { kg, cm } = useMemo(() => {
+    if (unit === 'metric') return { kg: +weight || 0, cm: +height || 0 };
+    return { kg: (Number(weight) || 0) * 0.45359237, cm: (Number(height) || 0) * 2.54 };
+  }, [unit, weight, height]);
 
-  const activity = ACTIVITY.find(a => a.key === form.activity) || ACTIVITY[2];
-  const goal = GOALS.find(g => g.key === form.goal) || GOALS[3];
+  const lbm = useMemo(() => {
+    const bodyFat = clamp(bf, 0, 60) / 100;
+    return kg * (1 - bodyFat);
+  }, [kg, bf]);
 
-  const calc = useMemo(() => {
-    const weightKg = form.weight.kg || 0;
-    const heightCm = form.height.cm || 0;
-    const age = Math.max(0, +form.age || 0);
-
-    const baseBMR = bmr({ sex: form.sex, weightKg, heightCm, age });
-    const tdee = baseBMR * activity.factor;
-    const target = tdee * (1 + goal.adj);
-
-    // macros
-    const proteinG = Math.max(0, round(weightKg * form.proteinGperKg));
-    const fatG = Math.max(0, round(weightKg * form.fatGperKg));
-    const caloriesAfterPF = target - (proteinG * KCAL.protein + fatG * KCAL.fat);
-    const carbsG = Math.max(0, Math.floor(caloriesAfterPF / KCAL.carbs));
-
-    // per-meal split
-    const meals = Math.max(1, Math.min(8, form.mealsPerDay || 4));
-    const perMeal = {
-      kcal: Math.round(target / meals),
-      p: Math.round(proteinG / meals),
-      c: Math.round(carbsG / meals),
-      f: Math.round(fatG / meals),
+  // BMR
+  const bmr = useMemo(() => {
+    const s = sex === 'male' ? 1 : 0;
+    const mifflin = 10 * kg + 6.25 * cm - 5 * age + (s ? 5 : -161);
+    const harris = s ? 88.362 + 13.397 * kg + 4.799 * cm - 5.677 * age : 447.593 + 9.247 * kg + 3.098 * cm - 4.33 * age;
+    const katch = 370 + 21.6 * lbm;
+    const cunningham = 500 + 22 * lbm;
+    return {
+      mifflin: Math.max(0, Math.round(mifflin)),
+      harris: Math.max(0, Math.round(harris)),
+      katch: Math.max(0, Math.round(katch)),
+      cunningham: Math.max(0, Math.round(cunningham)),
     };
+  }, [kg, cm, age, sex, lbm]);
+
+  const activityMult = useMemo(() => ACTIVITY.find(a => a.key === activity)?.mult || 1.55, [activity]);
+
+  const tdee = useMemo(() => {
+    const avgBmr = (bmr.mifflin + bmr.harris + bmr.katch + bmr.cunningham) / 4;
+    return Math.round(avgBmr * activityMult);
+  }, [bmr, activityMult]);
+
+  const targetCalories = useMemo(() => {
+    const delta = clamp(goalDelta, -40, 40);
+    return Math.max(0, Math.round(tdee * (1 + delta / 100)));
+  }, [tdee, goalDelta]);
+
+  // Macros
+  const macroGrams = useMemo(() => {
+    const p = clamp(macrosPct.p, 0, 100);
+    const c = clamp(macrosPct.c, 0, 100);
+    let f = clamp(macrosPct.f, 0, 100);
+    const sum = p + c + f;
+    if (sum !== 100) f = clamp(100 - (p + c), 0, 100);
+
+    const pCal = (p / 100) * targetCalories;
+    const cCal = (c / 100) * targetCalories;
+    const fCal = (f / 100) * targetCalories;
 
     return {
-      baseBMR: Math.round(baseBMR),
-      tdee: Math.round(tdee),
-      target: Math.round(target),
-      proteinG,
-      fatG,
-      carbsG,
-      perMeal,
+      pct: { p, c, f },
+      g: {
+        p: Math.round(pCal / 4),
+        c: Math.round(cCal / 4),
+        f: Math.round(fCal / 9),
+      },
     };
-  }, [form, activity.factor, goal.adj]);
+  }, [macrosPct, targetCalories]);
 
-  const warnLow = form.fatGperKg < 0.5 || form.proteinGperKg < 1.4;
+  // Helpers
+  const resetAll = () => {
+    setUnit('metric');
+    setSex('male');
+    setAge(28);
+    setHeight(178);
+    setWeight(78);
+    setBf(15);
+    setActivity('mod');
+    setGoalDelta(0);
+    setMacroPreset('balanced');
+    setMacrosPct({ p: 30, c: 40, f: 30 });
+  };
+
+  const copySummary = async () => {
+    const lines = [`Calorie & Macro Summary`, `-----------------------`, `Sex: ${sex} | Age: ${age} | Height: ${height}${unit === 'metric' ? 'cm' : 'in'} | Weight: ${weight}${unit === 'metric' ? 'kg' : 'lb'} | BF%: ${bf}%`, `Activity: ${ACTIVITY.find(a => a.key === activity)?.label}`, ``, `BMR (kcal/day):`, `  - Mifflin-St Jeor: ${bmr.mifflin}`, `  - Harris-Benedict: ${bmr.harris}`, `  - Katch-McArdle:   ${bmr.katch}`, `  - Cunningham:      ${bmr.cunningham}`, ``, `TDEE (avg BMR × activity): ${tdee} kcal`, `Goal: ${goalDelta}% → Target: ${targetCalories} kcal`, ``, `Macros (${macroPreset}):`, `  Protein: ${macroGrams.pct.p}% → ${macroGrams.g.p} g`, `  Carbs:   ${macroGrams.pct.c}% → ${macroGrams.g.c} g`, `  Fat:     ${macroGrams.pct.f}% → ${macroGrams.g.f} g`].join('\n');
+    try {
+      await navigator.clipboard.writeText(lines);
+      alert('Copied to clipboard!');
+    } catch {
+      alert('Copy failed. (Clipboard permission?)');
+    }
+  };
+
+  // 🔁 options for YOUR Select (expects {id,label})
+  const unitOptions = [
+    { id: 'metric', label: 'Metric (kg/cm)' },
+    { id: 'imperial', label: 'Imperial (lb/in)' },
+  ];
+  const sexOptions = [
+    { id: 'male', label: 'Male' },
+    { id: 'female', label: 'Female' },
+  ];
+  const activityOptions = ACTIVITY.map(a => ({ id: a.key, label: a.label }));
 
   return (
-    <div className='space-y-6'>
-      <div className='flex items-center justify-between flex-wrap gap-3'>
-        <PageHeader icon={Calculator} title='Calorie Calculator' subtitle='Estimate BMR, TDEE, target calories, and smart macros.' />
-        <TabsPill
-          id='calorie-tabs'
-          tabs={[
-            { key: 'calculator', label: 'Calculator', icon: Calculator },
-            { key: 'about', label: 'About', icon: Info },
-          ]}
-          active={tab}
-          onChange={setTab}
-        />
-      </div>
-
-      {/* Unit toggle */}
-      <div className='rounded-2xl border border-slate-200 bg-white p-4'>
-        <div className='flex items-center gap-2'>
-          <Ruler size={16} className='text-slate-700' />
-          <span className='text-sm font-medium flex items-center gap-1'>
-            Units:
-            <Hint text='بدّل بين النظام المتري (kg/cm) أو الإمبراطوري (lb/in). الحقول تُحدَّث تلقائيًا.' />
-          </span>
-          <div className='ml-2 inline-flex rounded-lg border border-slate-200 overflow-hidden'>
-            <button onClick={() => setUnit('metric')} className={`px-3 py-1.5 text-sm ${unit === 'metric' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50'}`}>
-              Metric (kg / cm)
-            </button>
-            <button onClick={() => setUnit('imperial')} className={`px-3 py-1.5 text-sm ${unit === 'imperial' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50'}`}>
-              Imperial (lb / in)
-            </button>
+    <div className='min-h-screen '>
+      <div className='container !px-0 py-8'>
+        {/* Header */}
+        <div className='rounded-lg overflow-hidden border border-indigo-200 shadow-sm'>
+          <div className='relative p-6 md:p-10 bg-gradient-to-r from-indigo-600 to-violet-600 text-white'>
+            <div className='absolute inset-0 opacity-20 bg-[radial-gradient(600px_200px_at_20%_-20%,white,transparent)]' />
+            <div className='relative z-10'>
+              <h1 className='text-2xl md:text-3xl font-bold'>Coach Calorie & Macro Calculator</h1>
+              <p className='text-white/90 mt-1'>Fast planning for trainees—BMR, TDEE, goals, and macros with one clean worksheet.</p>
+              <div className='mt-4 flex flex-wrap gap-2'>
+                <Button color='subtle' className='!w-fit bg-white/95 text-indigo-700' name='Copy Summary' onClick={copySummary} />
+                <Button color='outline' className='!w-fit !text-white !border-white/60 hover:!bg-white/20' name='Print' onClick={() => window.print()} />
+                <Button color='outline' className='!w-fit !text-white !border-white/60 hover:!bg-white/20' name='Reset' onClick={resetAll} />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {tab === 'calculator' && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
-          {/* Left: Inputs */}
-          <div className='rounded-2xl border border-slate-200 bg-white p-4 space-y-4'>
-            <div className='grid grid-cols-2 gap-5'>
-              {/* Sex */}
-              <div className='col-span-2 '>
-                <label className='text-sm rtl:ml-2 ltr:mr-2 font-medium'>Sex</label>
-                <div className='mt-1 inline-flex rounded-lg border border-slate-200 overflow-hidden'>
-                  <button onClick={() => setForm(f => ({ ...f, sex: 'male' }))} className={`px-3 py-1.5 text-sm ${form.sex === 'male' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50'}`}>
-                    Male
-                  </button>
-                  <button onClick={() => setForm(f => ({ ...f, sex: 'female' }))} className={`px-3 py-1.5 text-sm ${form.sex === 'female' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50'}`}>
-                    Female
-                  </button>
+        {/* Content grid */}
+        <div className='mt-8 grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6'>
+          {/* Inputs */}
+          <div className='lg:col-span-2 space-y-4'>
+            {/* Profile */}
+            <Card title='Trainee Profile'>
+              <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
+                <Select label='Units' options={unitOptions} value={unit} onChange={setUnit} />
+                <Select label='Sex' options={sexOptions} value={sex} onChange={setSex} />
+                <Input label='Age (yrs)' type='number' value={String(age)} onChange={v => setAge(clamp(v, 10, 90))} />
+                <Select label='Activity' options={activityOptions} value={activity} onChange={setActivity} />
+              </div>
+
+              <div className='grid grid-cols-2 md:grid-cols-4 gap-3 mt-3'>
+                <Input label={unit === 'metric' ? 'Height (cm)' : 'Height (in)'} type='number' value={String(height)} onChange={v => setHeight(clamp(v, unit === 'metric' ? 100 : 40, unit === 'metric' ? 230 : 100))} />
+                <Input label={unit === 'metric' ? 'Weight (kg)' : 'Weight (lb)'} type='number' value={String(weight)} onChange={v => setWeight(clamp(v, unit === 'metric' ? 35 : 80, unit === 'metric' ? 250 : 550))} />
+                <Input label='Body Fat (%)' type='number' value={String(bf)} onChange={v => setBf(clamp(v, 0, 60))} />
+                <ReadOnly label='Lean Mass (kg)' value={lbm.toFixed(1)} />
+              </div>
+            </Card>
+
+            {/* Goals */}
+            <Card title='Goal & Calories'>
+              <div className='flex flex-wrap items-center gap-2'>
+                {GOALS.map(g => (
+                  <Button key={g.label} color={goalDelta === g.delta ? 'primary' : 'outline'} className='!w-fit' name={`${g.label} (${g.delta > 0 ? '+' : ''}${g.delta}%)`} onClick={() => setGoalDelta(g.delta)} />
+                ))}
+                <div className='ml-auto text-sm text-slate-500'>Adjust:</div>
+                <input type='range' min={-40} max={40} step={1} value={goalDelta} onChange={e => setGoalDelta(parseInt(e.target.value, 10))} className='w-40' />
+                <span className='px-2 py-1 rounded-lg bg-slate-100 text-sm'>
+                  {goalDelta > 0 ? '+' : ''}
+                  {goalDelta}%
+                </span>
+              </div>
+
+              <div className='grid grid-cols-2 md:grid-cols-4 gap-3 mt-4'>
+                <ReadOnly label='Average BMR (4 formulas)' value={Math.round((bmr.mifflin + bmr.harris + bmr.katch + bmr.cunningham) / 4)} />
+                <ReadOnly label='Activity Multiplier' value={activityMult.toFixed(3)} />
+                <ReadOnly label='TDEE (kcal)' value={tdee} />
+                <ReadOnly label='Target (kcal)' value={targetCalories} />
+              </div>
+
+              <div className='mt-3'>
+                <BmrTable bmr={bmr} />
+              </div>
+            </Card>
+
+            {/* Macros */}
+            <Card title='Macros'>
+              <div className='flex flex-wrap items-center gap-2'>
+                {MACRO_PRESETS.map(p => (
+                  <Button key={p.key} color={macroPreset === p.key ? 'green' : 'outline'} className='!w-fit' name={p.label} onClick={() => setMacroPreset(p.key)} />
+                ))}
+              </div>
+
+              <div className='grid grid-cols-3 gap-3 mt-4'>
+                <PctInput
+                  label='Protein %'
+                  value={macrosPct.p}
+                  onChange={v => {
+                    setMacrosPct(m => ({ ...m, p: clamp(v, 0, 100) }));
+                    setMacroPreset('custom');
+                  }}
+                />
+                <PctInput
+                  label='Carbs %'
+                  value={macrosPct.c}
+                  onChange={v => {
+                    setMacrosPct(m => ({ ...m, c: clamp(v, 0, 100) }));
+                    setMacroPreset('custom');
+                  }}
+                />
+                <PctInput
+                  label='Fat %'
+                  value={macrosPct.f}
+                  onChange={v => {
+                    setMacrosPct(m => ({ ...m, f: clamp(v, 0, 100) }));
+                    setMacroPreset('custom');
+                  }}
+                />
+              </div>
+
+              <div className='mt-3'>
+                <MacroBar pct={macroGrams.pct} />
+                <div className='grid grid-cols-3 gap-3 mt-3'>
+                  <ReadOnly label='Protein (g)' value={macroGrams.g.p} />
+                  <ReadOnly label='Carbs (g)' value={macroGrams.g.c} />
+                  <ReadOnly label='Fat (g)' value={macroGrams.g.f} />
                 </div>
               </div>
-
-              {/* Age */}
-              <div>
-                <label className='text-sm font-medium'>Age</label>
-                <input type='number' min={0} value={form.age} onChange={e => setForm(f => ({ ...f, age: +e.target.value }))} className='mt-1 h-9 w-full rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20' placeholder='Age' />
-              </div>
-
-              {/* Height */}
-              <div>
-                <label className='text-sm font-medium'>Height ({unit === 'metric' ? 'cm' : 'in'})</label>
-                <input type='number' min={0} value={unit === 'metric' ? form.height.cm : form.height.in} onChange={e => setHeight(e.target.value)} className='mt-1 h-9 w-full rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20' placeholder={unit === 'metric' ? 'cm' : 'in'} />
-              </div>
-
-              {/* Weight */}
-              <div className=''>
-                <label className='text-sm font-medium'>Weight ({unit === 'metric' ? 'kg' : 'lb'})</label>
-                <input type='number' min={0} value={unit === 'metric' ? form.weight.kg : form.weight.lbs} onChange={e => setWeight(e.target.value)} className='mt-1 h-9 w-full rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20' placeholder={unit === 'metric' ? 'kg' : 'lb'} />
-              </div>
-
-              {/* Activity */}
-              <div className=''>
-                <label className='text-sm font-medium flex items-center gap-2'>
-                  <Activity size={16} /> Activity level
-                  <Hint text='معامل يضاعف BMR ليعكس حركة يومك (عمل، تمرين، خطوات). اختر الأقرب لروتينك.' />
-                </label>
-                <select className='mt-2 h-9 w-full rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20' value={form.activity} onChange={e => setForm(f => ({ ...f, activity: e.target.value }))}>
-                  {ACTIVITY.map(a => (
-                    <option key={a.key} value={a.key}>
-                      {a.label} (×{a.factor})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Goal */}
-              <div className='col-span-2'>
-                <label className='text-sm font-medium flex items-center gap-1'>
-                  Goal
-                  <Hint text='Cut = عجز سعرات (نزول وزن). Maintain = ثبات. Bulk = فائض (زيادة كتلة). النِسب تضبط مقدار العجز/الفائض.' />
-                </label>
-                <div className='mt-1 grid grid-cols-3 gap-2'>
-                  {GOALS.map(g => (
-                    <button key={g.key} onClick={() => setForm(f => ({ ...f, goal: g.key }))} className={`px-3 py-2 rounded-lg border text-sm ${form.goal === g.key ? 'bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
-                      {g.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Macros knobs */}
-              <div className='col-span-2 grid grid-cols-2 gap-3'>
-                <div>
-                  <label className='text-sm font-medium flex items-center gap-1'>
-                    Protein (g/kg)
-                    <Hint text='جرامات البروتين لكل كجم من وزن الجسم يوميًا. شائع 1.6–2.2 g/kg للحفاظ/زيادة العضلات.' />
-                  </label>
-                  <input type='number' step='0.1' min={0.8} max={3} value={form.proteinGperKg} onChange={e => setForm(f => ({ ...f, proteinGperKg: +e.target.value }))} className='mt-1 h-9 w-full rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20' />
-                  <div className='text-[11px] text-slate-500 mt-1'>Typical 1.6–2.2 g/kg</div>
-                </div>
-                <div>
-                  <label className='text-sm font-medium flex items-center gap-1'>
-                    Fat (g/kg)
-                    <Hint text='جرامات الدهون لكل كجم يوميًا. عادة 0.5–1.2 g/kg؛ أقل من 0.5 قد يؤثر على الهرمونات.' />
-                  </label>
-                  <input type='number' step='0.1' min={0.4} max={2} value={form.fatGperKg} onChange={e => setForm(f => ({ ...f, fatGperKg: +e.target.value }))} className='mt-1 h-9 w-full rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20' />
-                  <div className='text-[11px] text-slate-500 mt-1'>Typical 0.5–1.2 g/kg</div>
-                </div>
-              </div>
-
-              {/* Meals per day */}
-              <div className='col-span-2'>
-                <label className='text-sm font-medium flex items-center gap-1'>
-                  Meals per day
-                  <Hint text='يستخدم لتقسيم السعرات والماكروز بالتساوي على وجباتك اليومية.' />
-                </label>
-                <input type='number' min={1} max={8} value={form.mealsPerDay} onChange={e => setForm(f => ({ ...f, mealsPerDay: Math.max(1, Math.min(8, +e.target.value || 1)) }))} className='mt-1 h-9 w-full rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20' />
-              </div>
-            </div>
-
-            {warnLow && (
-              <div className='flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-800'>
-                <AlertCircle size={16} className='mt-0.5' />
-                <div className='text-sm'>
-                  Protein or fat target looks low. Common healthy ranges are <b>protein 1.6–2.2 g/kg</b> and <b>fat 0.5–1.2 g/kg</b>.
-                </div>
-              </div>
-            )}
+            </Card>
           </div>
 
-          {/* Right: Results */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className='rounded-2xl border border-slate-200 bg-white p-4 space-y-4'>
-            <div className='grid grid-cols-2 gap-3'>
-              <Stat title='BMR' value={`${calc.baseBMR} kcal`} help='Basal Metabolic Rate — السعرات التي يحرقها جسمك في الراحة التامة.' />
-              <Stat title='TDEE' value={`${calc.tdee} kcal`} help='Total Daily Energy Expenditure = BMR × عامل النشاط (إجمالي احتياجك اليومي).' />
-              <Stat title='Target Calories' value={`${calc.target} kcal`} highlight help='السعرات بعد تطبيق هدفك (عجز للنزول أو فائض للزيادة).' />
-              <Stat title='Activity ×' value={activity.factor} help='المعامل المستخدم لتحويل BMR إلى TDEE حسب مستوى نشاطك.' />
-            </div>
+          {/* Summary */}
+          <div className='space-y-4'>
+            <Card title='Coach Summary'>
+              <div className='space-y-3'>
+                <SummaryRow label='Target Calories' value={`${targetCalories} kcal`} big />
+                <div className='grid grid-cols-3 gap-2'>
+                  <Pill title='Protein' value={`${macroGrams.g.p} g`} sub={`${macroGrams.pct.p}%`} color='indigo' />
+                  <Pill title='Carbs' value={`${macroGrams.g.c} g`} sub={`${macroGrams.pct.c}%`} color='blue' />
+                  <Pill title='Fat' value={`${macroGrams.g.f} g`} sub={`${macroGrams.pct.f}%`} color='amber' />
+                </div>
 
-            <div className='rounded-xl border border-slate-200 p-3'>
-              <div className='font-semibold mb-2 flex items-center gap-2'>
-                <Dumbbell size={16} /> Macros (per day)
-                <Hint text='نحسب البروتين والدهون حسب g/kg، ثم نملأ الباقي بالكربوهيدرات ضمن السعرات المستهدفة.' />
-              </div>
-              <div className='grid grid-cols-3 gap-3'>
-                <Macro title='Protein' grams={calc.proteinG} kcal={calc.proteinG * KCAL.protein} />
-                <Macro title='Carbs' grams={calc.carbsG} kcal={calc.carbsG * KCAL.carbs} />
-                <Macro title='Fat' grams={calc.fatG} kcal={calc.fatG * KCAL.fat} />
-              </div>
-            </div>
-
-            <div className='rounded-xl border border-slate-200 p-3'>
-              <div className='font-semibold mb-2 flex items-center gap-1'>
-                Per-meal split (×{Math.max(1, form.mealsPerDay)})
-                <Hint text='تقسيم تقريبي بالتساوي على عدد الوجبات المحدد. يمكنك تعديله في صفحة التغذية.' />
-              </div>
-              <div className='grid grid-cols-4 gap-3 text-sm'>
-                <div className='card-glow rounded-lg bg-slate-50 p-3'>
-                  <div className='text-slate-500'>Calories</div>
-                  <div className='font-semibold'>{calc.perMeal.kcal} kcal</div>
-                </div>
-                <div className='card-glow rounded-lg bg-slate-50 p-3'>
-                  <div className='text-slate-500'>Protein</div>
-                  <div className='font-semibold'>{calc.perMeal.p} g</div>
-                </div>
-                <div className='card-glow rounded-lg bg-slate-50 p-3'>
-                  <div className='text-slate-500'>Carbs</div>
-                  <div className='font-semibold'>{calc.perMeal.c} g</div>
-                </div>
-                <div className='card-glow rounded-lg bg-slate-50 p-3'>
-                  <div className='text-slate-500'>Fat</div>
-                  <div className='font-semibold'>{calc.perMeal.f} g</div>
+                <div className='mt-3 p-3 rounded-lg bg-slate-50 border border-slate-200 text-sm'>
+                  <div className='font-medium mb-1'>Notes</div>
+                  <ul className='list-disc pl-5 space-y-1 text-slate-600'>
+                    <li>TDEE = average(BMR formulas) × activity level</li>
+                    <li>Goals adjust calories by −40% to +40%</li>
+                    <li>Macros automatically balance to 100%</li>
+                  </ul>
                 </div>
               </div>
-            </div>
+            </Card>
 
-            <SummaryBlock form={form} activity={activity} goal={goal} calc={calc} />
-          </motion.div>
-        </motion.div>
-      )}
+            <Card title='Quick Conversions'>
+              <div className='grid grid-cols-2 gap-3'>
+                <ReadOnly label='Weight (lb)' value={unit === 'imperial' ? weight : Math.round(weight * 2.20462)} />
+                <ReadOnly label='Weight (kg)' value={unit === 'metric' ? weight : Math.round(weight * 0.453592)} />
+                <ReadOnly label='Height (in)' value={unit === 'imperial' ? height : Math.round(height / 2.54)} />
+                <ReadOnly label='Height (cm)' value={unit === 'metric' ? height : Math.round(height * 2.54)} />
+              </div>
+            </Card>
+          </div>
+        </div>
 
-      {tab === 'about' && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className='rounded-2xl border border-slate-200 bg-white p-4 space-y-3 text-sm leading-relaxed'>
-          <p>
-            Formulas: <b>Mifflin-St Jeor</b> for BMR:
-            <br />
-            Male: <code>10×kg + 6.25×cm − 5×age + 5</code>; Female: <code>10×kg + 6.25×cm − 5×age − 161</code>.
-          </p>
-          <p>
-            TDEE = BMR × activity factor. Target calories apply your selected goal (% deficit/surplus). Macros default to protein <b>1.8 g/kg</b> and fat <b>0.8 g/kg</b> (editable). Carbs fill remaining calories.
-          </p>
-          <p className='text-slate-500'>Note: This gives estimates, not medical advice. Adjust based on progress (e.g., ±100–200 kcal every 2–3 weeks).</p>
-        </motion.div>
-      )}
-    </div>
-  );
-}
-
-/* =================== SMALL COMPONENTS =================== */
-
-function Stat({ title, value, highlight = false, help }) {
-  return (
-    <div className={` card-glow rounded-xl p-3 border ${highlight ? 'border-indigo-200 bg-indigo-50' : 'border-slate-200 bg-slate-50'}`}>
-      <div className='flex items-center gap-1'>
-        <div className='text-xs text-slate-600'>{title}</div>
-        {help ? <Hint text={help} /> : null}
+        <Footer />
       </div>
-      <div className='text-lg font-semibold tabular-nums'>{value}</div>
     </div>
   );
 }
 
-function Macro({ title, grams, kcal }) {
+/* ===== UI bits (including SummaryRow) ===== */
+
+function Card({ title, children }) {
   return (
-    <div className='card-glow rounded-lg bg-slate-50 p-3'>
-      <div className='text-slate-500 text-sm'>{title}</div>
-      <div className='font-semibold'>{grams} g</div>
-      <div className='text-xs text-slate-500'>{kcal} kcal</div>
-    </div>
-  );
-}
-
-function SummaryBlock({ form, activity, goal, calc }) {
-  const [copied, setCopied] = useState(false);
-  const text = `BMR: ${calc.baseBMR} kcal
-TDEE: ${calc.tdee} kcal
-Target: ${calc.target} kcal (${goal.label}, activity ×${activity.factor})
-Macros: P ${calc.proteinG} g • C ${calc.carbsG} g • F ${calc.fatG} g
-Per meal (x${form.mealsPerDay}): ${calc.perMeal.kcal} kcal | P ${calc.perMeal.p}g • C ${calc.perMeal.c}g • F ${calc.perMeal.f}g`;
-
-  function copy() {
-    navigator.clipboard
-      ?.writeText(text)
-      .then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1200);
-      })
-      .catch(() => {});
-  }
-
-  return (
-    <div className='card-glow rounded-xl border border-slate-200 p-3'>
-      <div className='flex items-center justify-between'>
-        <div className='font-semibold'>Summary</div>
-        <button onClick={copy} className={`text-xs px-3 py-1.5 rounded-lg border ${copied ? 'border-green-200 text-green-700 bg-green-50' : 'border-slate-200 hover:bg-slate-50'}`}>
-          {copied ? 'Copied!' : 'Copy'}
-        </button>
+    <div className='bg-white rounded-lg border border-slate-200 shadow-sm'>
+      <div className='px-4 sm:px-5 py-4 border-b border-slate-100'>
+        <h3 className='font-semibold'>{title}</h3>
       </div>
-      <pre className='mt-2 text-xs whitespace-pre-wrap text-slate-700'>{text}</pre>
+      <div className='p-4 sm:p-5'>{children}</div>
     </div>
   );
 }
 
-/* =================== STORAGE =================== */
-function loadLS(key, fallback) {
-  try {
-    const v = localStorage.getItem(key);
-    return v ? JSON.parse(v) : fallback;
-  } catch {
-    return fallback;
-  }
+// ✅ Your Input already handles type=number; we wrap to keep styling consistent for % inputs
+function PctInput({ label, value, onChange }) {
+  return (
+    <div>
+      <Input label={label} type='number' value={String(value)} onChange={v => onChange(parseFloat(v || 0))} cnInput='pr-12' />
+      <div className='text-[11px] text-slate-500 mt-1'>0–100%</div>
+    </div>
+  );
 }
-function saveLS(key, val) {
-  try {
-    localStorage.setItem(key, JSON.stringify(val));
-  } catch {}
+
+// Small read-only display box
+function ReadOnly({ label, value }) {
+  return (
+    <label className='block'>
+      <div className='text-sm text-slate-600 mb-1'>{label}</div>
+      <div className='w-full h-11 px-3 rounded-lg border border-slate-200 bg-slate-50 grid place-items-center text-slate-800'>{value}</div>
+    </label>
+  );
+}
+
+// 🌟 NEW: SummaryRow for left label + right value (big variant)
+function SummaryRow({ label, value, big = false }) {
+  return (
+    <div className={`flex items-center justify-between rounded-lg border ${big ? 'border-indigo-200 bg-indigo-50' : 'border-slate-200 bg-slate-50'} px-3 py-2`}>
+      <div className={`font-medium ${big ? 'text-indigo-800' : 'text-slate-700'}`}>{label}</div>
+      <div className={`${big ? 'text-2xl font-bold text-indigo-700' : 'text-sm text-slate-700'}`}>{value}</div>
+    </div>
+  );
+}
+
+function MacroBar({ pct }) {
+  const seg = (val, color) => <div className={`h-3 rounded-full ${color}`} style={{ width: `${clamp(val, 0, 100)}%` }} />;
+  return (
+    <div>
+      <div className='h-3 w-full rounded-full bg-slate-100 overflow-hidden flex'>
+        {seg(pct.p, 'bg-indigo-500')}
+        {seg(pct.c, 'bg-blue-500')}
+        {seg(pct.f, 'bg-amber-500')}
+      </div>
+      <div className='mt-1 text-[11px] text-slate-500'>Protein / Carbs / Fat</div>
+    </div>
+  );
+}
+
+function Pill({ title, value, sub, color = 'indigo' }) {
+  const palette = {
+    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    blue: 'bg-blue-50 text-blue-700 border-blue-200',
+    amber: 'bg-amber-50 text-amber-700 border-amber-200',
+  }[color];
+  return (
+    <div className={`p-3 rounded-lg border ${palette}`}>
+      <div className='text-xs'>{title}</div>
+      <div className='text-lg font-semibold leading-none'>{value}</div>
+      <div className='text-[11px] mt-0.5'>{sub}</div>
+    </div>
+  );
+}
+
+function BmrTable({ bmr }) {
+  const rows = [
+    ['Mifflin-St Jeor', bmr.mifflin],
+    ['Harris-Benedict', bmr.harris],
+    ['Katch-McArdle', bmr.katch],
+    ['Cunningham', bmr.cunningham],
+  ];
+  return (
+    <div className='overflow-hidden rounded-lg border border-slate-200'>
+      <table className='w-full text-sm'>
+        <thead className='bg-slate-50'>
+          <tr>
+            <th className='text-left px-3 py-2'>Formula</th>
+            <th className='text-left px-3 py-2'>BMR (kcal/day)</th>
+          </tr>
+        </thead>
+        <tbody className='bg-white'>
+          {rows.map(r => (
+            <tr key={r[0]} className='border-t border-slate-100'>
+              <td className='px-3 py-2'>{r[0]}</td>
+              <td className='px-3 py-2 font-medium'>{r[1]}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Footer() {
+  return <div className='mt-10 text-center text-xs text-slate-500'>Tip: For strength athletes, keep protein ~1.6–2.2 g/kg LBM and adjust carbs based on training volume.</div>;
 }
