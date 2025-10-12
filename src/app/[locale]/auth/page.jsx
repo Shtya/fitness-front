@@ -74,11 +74,7 @@ axiosInstance.interceptors.response.use(
   },
 );
 
-/* ================== Auth Context ================== */
-
 const AuthContext = createContext(null);
-
-/* ================== Schemas ================== */
 
 const loginSchema = z.object({
   email: z.string().email('invalidEmail'),
@@ -86,6 +82,14 @@ const loginSchema = z.object({
 });
 
 /* ================== Tiny UI Helpers ================== */
+
+function getPostLoginPath(role) {
+  const r = (role || '').toString().toLowerCase();
+  if (r === 'admin') return '/dashboard';
+  if (r === 'coach' || r === 'cocach') return '/dashboard/assign/users';
+  if (r === 'client') return '/dashboard/my/workouts';
+  return '/dashboard'; // fallback
+}
 
 function TitleLogin() {
   const t = useTranslations('auth');
@@ -291,19 +295,19 @@ export default function AuthPage() {
           localStorage.setItem('user', JSON.stringify(user || {}));
         }
         toast.success(t('success.signedIn'));
-        router.push(redirectUrl);
+        const path = getPostLoginPath(user?.role) || redirectUrl;
+        router.push(path);
       } catch (e) {
         console.error('Failed to complete OAuth login', e);
         toast.error(t('errors.loginFailed'));
       }
     };
     handleOAuthLogin();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const handleLoggedIn = user => {
-    // role-based redirect can be done here
-    router.push('/dashboard/my');
+    const path = getPostLoginPath(user?.role) || '/dashboard';
+    router.push(path);
   };
 
   return (

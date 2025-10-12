@@ -3,11 +3,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Dumbbell, Users, Video, Salad, Sparkles, Target, CheckCircle2, ClipboardList, MessageSquare, MapPin, Clock, Phone, Mail, Navigation as NavIcon, ShieldCheck, Crown, Star, Quote, Timer, Scale, LineChart, Menu, X } from 'lucide-react';
+import { useUser } from '@/hooks/useUser';
 
-/* ======================= Motion spring ======================= */
 export const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
-/* ======================= Minimal UI Kit ======================= */
 export function Container({ className = '', children }) {
   return <div className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${className}`}>{children}</div>;
 }
@@ -56,16 +55,125 @@ export function Feature({ icon: Icon, title, children }) {
 }
 
 /* ======================= Sticky Navbar (anchors) ======================= */
+
+/* ======================= Auth-driven nav helpers ======================= */
+
+/* ======================= Role links (JS) ======================= */
+function getRoleLinks(role) {
+  if (!role) return []; // <- no role? no private links
+  const links = [];
+  if (role === 'admin') {
+    links.push({ href: '/dashboard', label: 'Dashboard' }, { href: '/dashboard/users', label: 'Users' });
+  } else if (role === 'coach') {
+    links.push({ href: '/dashboard', label: 'Dashboard' }, { href: '/dashboard/assign/user', label: 'Assign Users' }, { href: '/dashboard/workouts', label: 'Workouts' });
+  } else if (role === 'client') {
+    links.push({ href: '/dashboard/my', label: 'My Dashboard' }, { href: '/dashboard/my/workouts', label: 'My Workouts' });
+  } else {
+    links.push({ href: '/dashboard', label: 'Dashboard' });
+  }
+  return links;
+}
+
+function initialsFromName(name) {
+  if (!name) return 'U';
+  const parts = name.trim().split(/\s+/);
+  const a = parts[0]?.[0] || '';
+  const b = parts[1]?.[0] || '';
+  return (a + b).toUpperCase();
+}
+
+/* ======================= Sign out (clear + redirect) ======================= */
+const LOGOUT_REDIRECT = '/auth';
+function clearUserStorage() {
+  try {
+    // remove known keys (tweak to match your app)
+    localStorage.removeItem('token');
+    localStorage.removeItem('auth');
+    localStorage.removeItem('user');
+    localStorage.removeItem('mw.workout.buffer'); // example from your app
+    // or nuke all:
+    // localStorage.clear();
+  } catch (e) {}
+}
+function handleLogout() {
+  clearUserStorage();
+  // optional: call your API /logout here
+  window.location.href = LOGOUT_REDIRECT;
+}
+
+/* ======================= User dropdown ======================= */
+function UserMenu({ user }) {
+  const [open, setOpen] = React.useState(false);
+  const role = user?.role || null;
+  const items = getRoleLinks(role);
+
+  React.useEffect(() => {
+    const onEsc = e => e.key === 'Escape' && setOpen(false);
+    window.addEventListener('keydown', onEsc);
+    return () => window.removeEventListener('keydown', onEsc);
+  }, []);
+
+  if (!user) return null; // safety
+
+  return (
+    <div className='relative'>
+      <button onClick={() => setOpen(v => !v)} className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm hover:bg-slate-50' aria-haspopup='menu' aria-expanded={open}>
+        <span className='inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-white text-xs'>{initialsFromName(user?.name || user?.email)}</span>
+        <span className='hidden sm:inline text-slate-800 font-medium truncate max-w-[140px]'>{user?.name || user?.email || 'User'}</span>
+        {role && <span className='text-[11px] text-slate-500 hidden md:inline'>({role})</span>}
+        <svg className='h-4 w-4 text-slate-500' viewBox='0 0 20 20' fill='currentColor'>
+          <path d='M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.4a.75.75 0 01-1.08 0l-4.25-4.4a.75.75 0 01.02-1.06z' />
+        </svg>
+      </button>
+
+      {open && (
+        <div role='menu' className='absolute right-0 mt-2 w-56 rounded-lg border border-slate-200 bg-white shadow-lg z-50 overflow-hidden'>
+          <div className='px-3 py-2 text-xs text-slate-500 border-b border-slate-100'>
+            Signed in as <span className='font-medium text-slate-700'>{user?.email || user?.name}</span>
+          </div>
+
+          {!!items.length && (
+            <div className='py-1'>
+              {items.map(it => (
+                <a key={it.href} href={it.href} onClick={() => setOpen(false)} className='block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50'>
+                  {it.label}
+                </a>
+              ))}
+            </div>
+          )}
+
+          <div className='border-t border-slate-100'>
+            <a href='/profile' onClick={() => setOpen(false)} className='block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50'>
+              Profile
+            </a>
+            <button type='button' onClick={handleLogout} className='w-full text-left block px-3 py-2 text-sm text-rose-600 hover:bg-rose-50'>
+              Sign out
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ======================= Navbar ======================= */
 function Navbar() {
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const onHash = e => {
+  const [open, setOpen] = React.useState(false);
+
+  // hash smooth-scroll (unchanged)
+  React.useEffect(() => {
+    const onHash = () => {
       const target = document.querySelector(window.location.hash);
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
+
+  // ✅ get user safely from your hook (supports {user,loading} or direct user)
+  const hook = useUser();
+  const user = hook?.user ?? hook ?? null;
+  const loading = hook?.loading ?? false;
 
   const LinkBtn = ({ href, children }) => (
     <a href={href} onClick={() => setOpen(false)} className='px-3 py-2 text-sm rounded-lg hover:bg-white/60'>
@@ -79,23 +187,37 @@ function Navbar() {
         <a href='#top' className='font-extrabold tracking-tight text-slate-800'>
           Fit<span className='text-indigo-600'>Studio</span>
         </a>
-        <nav className='hidden md:flex items-center gap-1'>
+
+        {/* DESKTOP NAV */}
+        <nav className='hidden md:flex items-center gap-2'>
           <LinkBtn href='#programs'>Programs</LinkBtn>
           <LinkBtn href='#pricing'>Pricing</LinkBtn>
           <LinkBtn href='#stories'>Stories</LinkBtn>
           <LinkBtn href='#contact'>Contact</LinkBtn>
-          <LinkBtn href='/dashboard/my/workouts'>Dashboard</LinkBtn>
-          <Button as='a' href='#trial' className='ml-2'>
-            Book Trial
-          </Button>
+
+          {/* auth-aware area */}
+          {!loading && !user && (
+            <>
+              <Button as='a' href='/auth' className='mt-2'>
+                Sign in
+              </Button>
+            </>
+          )}
+
+          {!loading && user && <UserMenu user={user} />}
         </nav>
+
+        {/* MOBILE BURGER */}
         <button className='md:hidden p-2' onClick={() => setOpen(v => !v)} aria-label='Menu'>
           {open ? <X className='w-5 h-5' /> : <Menu className='w-5 h-5' />}
         </button>
       </Container>
+
+      {/* MOBILE PANEL */}
       {open && (
         <div className='md:hidden border-t border-slate-200 bg-white'>
           <Container className='py-2 flex flex-col'>
+            {/* public links */}
             <a onClick={() => setOpen(false)} href='#programs' className='px-2 py-2 text-sm'>
               Programs
             </a>
@@ -108,13 +230,34 @@ function Navbar() {
             <a onClick={() => setOpen(false)} href='#contact' className='px-2 py-2 text-sm'>
               Contact
             </a>
-            <a onClick={() => setOpen(false)} href='/dashboard/my/workouts' className='px-2 py-2 text-sm'>
-               Dashboard 
 
-            </a>
-            <Button as='a' href='#trial' className='mt-2'>
-              Book Trial
-            </Button>
+            {/* auth-aware mobile */}
+            {!loading && !user && (
+              <>
+                <Button as='a' href='/auth' className='mt-2'>
+                  Sign in
+                </Button>
+              </>
+            )}
+
+            {!loading && user && (
+              <>
+                <div className='px-2 py-2 text-xs text-slate-500'>
+                  Signed in as <span className='font-medium text-slate-700'>{user.email || user.name}</span>
+                </div>
+                {getRoleLinks(user?.role || null).map(it => (
+                  <a key={it.href} href={it.href} onClick={() => setOpen(false)} className='px-2 py-2 text-sm'>
+                    {it.label}
+                  </a>
+                ))}
+                <a href='/profile' onClick={() => setOpen(false)} className='px-2 py-2 text-sm'>
+                  Profile
+                </a>
+                <button type='button' onClick={handleLogout} className='text-left px-2 py-2 text-sm text-rose-600'>
+                  Sign out
+                </button>
+              </>
+            )}
           </Container>
         </div>
       )}
@@ -871,121 +1014,3 @@ function delta(s) {
   const bf = Math.abs((s.endBodyFat ?? 0) - (s.startBodyFat ?? 0));
   return Math.round(kg + bf);
 }
-
-// function NavBar() {
-//   return (
-//     <header className='absolute inset-x-0 top-0 z-30'>
-//       <div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8'>
-//         <div className='flex items-center justify-between py-5'>
-//           {/* Logo */}
-//           <Link href='#' className='flex items-center gap-3'>
-//             <span className='inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15'>
-//               {/* simple barbell icon */}
-//               <span className='block h-0.5 w-6 bg-white relative'>
-//                 <span className='absolute -left-2 -top-1.5 h-4 w-1 bg-white' />
-//                 <span className='absolute -right-2 -top-1.5 h-4 w-1 bg-white' />
-//               </span>
-//             </span>
-//             <span className='font-semibold tracking-tight text-xl'>PulseFit</span>
-//           </Link>
-
-//           {/* Nav group */}
-//           <nav className='hidden md:flex items-center gap-2'>
-//             {[
-//               { href: '#home', label: 'Home' },
-//               { href: '#benefit', label: 'Benefit' },
-//               { href: '#locations', label: 'Locations' },
-//               { href: '#form', label: 'Form' },
-//               { href: '#contact', label: 'Contact' },
-//             ].map(i => (
-//               <Link key={i.href} href={i.href} className='rounded-full px-3 py-1.5 text-sm/6 text-white/90 ring-1 ring-white/15 bg-white/5 hover:bg-white/10 backdrop-blur'>
-//                 {i.label}
-//               </Link>
-//             ))}
-//           </nav>
-
-//           {/* Learn more */}
-//           <Link href='#learn' className='rounded-full bg-white/10 px-4 py-2 text-sm/6 font-medium ring-1 ring-white/15 hover:bg-white/20 backdrop-blur'>
-//             Learn More
-//           </Link>
-//         </div>
-//       </div>
-//     </header>
-//   );
-// }
-
-// function Rating() {
-//   return (
-//     <div className='mt-6 flex items-center gap-3'>
-//       {/* Avatars — put files in /public e.g., /avatar1.jpg ... */}
-//       <div className='-space-x-2 flex'>
-//         {['/avatar1.jpg', '/avatar2.jpg', '/avatar3.jpg', '/avatar4.jpg'].map((src, i) => (
-//           // eslint-disable-next-line @next/next/no-img-element
-//           <img key={i} src={src} alt='member' className='h-8 w-8 rounded-full ring-2 ring-black/40' />
-//         ))}
-//       </div>
-
-//       {/* Stars */}
-//       <div className='flex items-center gap-1 text-yellow-300'>
-//         {Array.from({ length: 5 }).map((_, i) => (
-//           <svg key={i} xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' className='h-5 w-5'>
-//             <path d='M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z' />
-//           </svg>
-//         ))}
-//       </div>
-
-//       <span className='text-sm text-white/80'>Rated 5.0 on Trustpilot</span>
-//     </div>
-//   );
-// }
-
-// function Hero() {
-//   return (
-//     <section id='home' className='relative isolate min-h-screen overflow-hidden'>
-//       <img src='/transform/hero.JPEG' alt='Gym background' className='absolute inset-0 h-full w-full object-contain' />
-
-//        <div className='absolute inset-0 bg-black/55' />
-
-//        <div className='relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-36 pb-28'>
-//         <p className='text-xs tracking-widest text-yellow-300/80'>JOIN AND START TODAY</p>
-
-//         <h1 className='mt-4 max-w-3xl font-heading text-5xl font-extrabold leading-[1.05] drop-shadow md:text-7xl'>
-//           Try Our Gym
-//           <br className='hidden sm:block' />
-//           for Just $3!
-//         </h1>
-
-//         <p className='mt-6 max-w-2xl text-lg text-white/85'>Join today and start your fitness journey at your favorite location. Limited-time $3 trial, all fitness levels welcome.</p>
-
-//         <div className='mt-6'>
-//           <Link href='#claim' className='inline-flex items-center justify-center rounded-lg bg-brand-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-brand-600/30 transition hover:bg-brand-500'>
-//             Claim Your $3 Trial
-//           </Link>
-//         </div>
-
-//         <Rating />
-//       </div>
-
-//       {/* Bottom fade for readability */}
-//       <div className='pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/60 to-transparent' />
-//     </section>
-//   );
-// }
-
-// export default function Home() {
-//   return (
-//     <>
-//       <Head>
-//         <title>PulseFit</title>
-//         <meta name='viewport' content='width=device-width, initial-scale=1' />
-//         <meta name='description' content='Try our gym for just $3' />
-//         <link rel='icon' href='/favicon.ico' />
-//       </Head>
-
-//       <main className='relative min-h-screen'>
-//         <NavBar />
-//         <Hero />
-//       </main>
-//     </>
-//   );
-// }

@@ -16,8 +16,7 @@ import { InlineVideo } from '@/components/pages/workouts/InlineVideo';
 import { useUser } from '@/hooks/useUser';
 import { useTranslations } from 'next-intl';
 import Img from '@/components/atoms/Img';
-import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
-
+ 
 /* =========================
    Constants / tiny helpers
 ========================= */
@@ -531,22 +530,7 @@ export default function MyWorkoutsPage() {
       </div>
     </div>
   );
-
-  // {(hasImg || hasVideo) && (
-  //       <div className='inline-flex items-center gap-2 rounded-lg bg-slate-100/70 p-1 ring-1 ring-black/5'>
-  //         <button type='button' aria-pressed={tab === 'image'} disabled={!hasImg} onClick={() => setTab('image')} className={['relative inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg outline-none transition', tab === 'image' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', !hasImg ? 'opacity-50 cursor-not-allowed' : ''].join(' ')}>
-  //           <ImageIcon size={14} />
-  //           Image
-  //           {tab === 'image' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
-  //         </button>
-
-  //         <button type='button' aria-pressed={tab === 'video'} disabled={!hasVideo} onClick={() => setTab('video')} className={['relative inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg outline-none transition', tab === 'video' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', !hasVideo ? 'opacity-50 cursor-not-allowed' : ''].join(' ')}>
-  //           <PlayCircle size={14} />
-  //           Video
-  //           {tab === 'video' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
-  //         </button>
-  //       </div>
-  //     )}
+ 
   return (
     <div className='space-y-5 sm:space-y-6'>
       <audio ref={audioRef} src={alertSound} preload='auto' />
@@ -599,7 +583,11 @@ export default function MyWorkoutsPage() {
               ) : (
                 <>
                   <div className='relative w-full rounded-lg overflow-hidden '>
-                    <div className='aspect-video md:aspect-[16/9] bg-white'>{currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? <InlineVideo key={currentExercise.id + '-video'} src={baseImg + currentExercise[activeMedia]} /> : <Img key={currentExercise?.id + '-image'} src={currentExercise?.img} alt={currentExercise?.name} className='w-full h-full object-contain ' loading='lazy' />}</div>
+                    <div className='aspect-video md:aspect-[16/9] '>{
+										currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] 
+										? <InlineVideo key={currentExercise.id + '-video'} src={ currentExercise[activeMedia]} /> 
+										: <Img key={currentExercise?.id + '-image'} src={ currentExercise?.img} alt={currentExercise?.name} className='w-full h-full object-contain ' loading='lazy' />
+										}</div>
 
                     {(() => {
                       const hasImg = !!currentExercise?.img;

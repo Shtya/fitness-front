@@ -58,9 +58,9 @@ export default function Layout({ children }) {
     } catch {}
   }, [sidebarCollapsed]);
 
-  // if (loading) {
-  //   return <DhikrLoading />;
-  // }
+  if (loading) {
+    return <DhikrLoading />;
+  }
 
 	
   return (

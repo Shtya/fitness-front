@@ -4,7 +4,6 @@ import { Dumbbell, CheckCircle2, Timer, Activity, ChevronRight } from 'lucide-re
 export function ExerciseList({ workout, currentExId, onPick }) {
   const exercises = Array.isArray(workout?.exercises) ? workout.exercises : [];
   const sets = Array.isArray(workout?.sets) ? workout.sets : [];
-
   const setsFor = exId => sets.filter(s => s?.exId === exId);
 
   const pct = (done, total) => {
@@ -67,11 +66,10 @@ export function ExerciseList({ workout, currentExId, onPick }) {
               <div className='min-w-0 flex-1'>
                 <div className='flex items-center justify-between gap-2'>
                   <div className='min-w-0'>
-                    <div className='font-semibold text-slate-900 truncate'>
+                    <div title={ex?.name} className={`font-semibold text-slate-900 ${!active && "truncate"}`}>
                       {idx + 1}. {ex?.name ?? 'Unnamed exercise'}
                     </div>
-                    <div className='mt-0.5 flex items-center gap-2 text-[11px] text-slate-600'></div>
-                  </div>
+                   </div>
 
                   {/* Chevron */}
                   <ChevronRight size={16} className={['shrink-0 text-slate-400 transition-transform', active ? 'translate-x-0' : 'group-hover:translate-x-0.5'].join(' ')} />
