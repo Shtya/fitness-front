@@ -27,7 +27,6 @@ const NAV = [
         children: [
           { name: 'My Workouts', href: '/dashboard/my/workouts', icon: ClipboardList },
           { name: 'Progress', href: '/dashboard/my/progress', icon: LineChart },
-          { name: 'Calendar', href: '/dashboard/my/calendar', icon: CalendarRange },
         ],
       },
       {
@@ -37,9 +36,9 @@ const NAV = [
           { name: 'My Nutrition', href: '/dashboard/my/nutrition', icon: Apple },
           { name: 'Food Library', href: '/dashboard/nutrition/library-food-list', icon: ChefHat },
           { name: 'Grocery List', href: '/dashboard/nutrition/grocery-list', icon: ShoppingCart },
-          { name: 'Calorie Calculator', href: '/dashboard/nutrition/calculator', icon: Calculator },
         ],
       },
+			{ name: 'Calorie Calculator', href: '/dashboard/nutrition/calculator', icon: Calculator },
       { name: 'Profile', href: '/dashboard/my/profile', icon: UserIcon },
     ],
   },
@@ -56,7 +55,6 @@ const NAV = [
         children: [
           { name: 'My Workouts', href: '/dashboard/my/workouts', icon: ClipboardList },
           { name: 'Progress', href: '/dashboard/my/progress', icon: LineChart },
-          { name: 'Calendar', href: '/dashboard/my/calendar', icon: CalendarRange },
         ],
       },
       {
@@ -66,9 +64,9 @@ const NAV = [
           { name: 'My Nutrition', href: '/dashboard/my/nutrition', icon: Apple },
           { name: 'Food Library', href: '/dashboard/nutrition/library-food-list', icon: ChefHat },
           { name: 'Grocery List', href: '/dashboard/nutrition/grocery-list', icon: ShoppingCart },
-          { name: 'Calorie Calculator', href: '/dashboard/nutrition/calculator', icon: Calculator },
         ],
       },
+			{ name: 'Calorie Calculator', href: '/dashboard/nutrition/calculator', icon: Calculator },
       { name: 'Profile', href: '/dashboard/my/profile', icon: UserIcon },
     ],
   },

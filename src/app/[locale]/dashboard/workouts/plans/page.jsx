@@ -61,11 +61,9 @@ export default function PlansPage() {
   const [editRow, setEditRow] = useState(null);
   const [assignOpen, setAssignOpen] = useState(null);
 
-  // KPIs
   const [stats, setStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
 
-  // People (clients/coaches)
   const { usersByRole, fetchUsers } = useValues();
   useEffect(() => {
     fetchUsers('client');
@@ -134,27 +132,23 @@ export default function PlansPage() {
       const res = await api.get('/plans/overview', { params });
       setStats(res.data);
     } catch {
-      // ignore
     } finally {
       setLoadingStats(false);
     }
   }, [debounced]);
 
-  // Reset to page 1 on search/sort changes
   useEffect(() => {
     setPage(1);
   }, [debounced, sortBy, sortOrder, perPage]);
 
-  // Data fetching
   useEffect(() => {
     fetchList();
-  }, [changePlans , fetchList]);
+  }, [changePlans, fetchList]);
 
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
 
-  // Cleanup
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -326,7 +320,7 @@ export default function PlansPage() {
               const saved = await createPlan(payload);
               setItems(arr => [saved, ...arr]);
               setTotal(t => t + 1);
-              // setAddOpen(false);
+              setAddOpen(false);
               Notification('Plan created', 'success');
             } catch (e) {
               Notification(e?.response?.data?.message || 'Create failed', 'error');
@@ -817,7 +811,6 @@ const NewPlanBuilder = memo(({ initial, onCancel, onCreate }) => {
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
   const [notes, setNotes] = useState(initial?.notes || '');
 
-  // days: [{ id, dayOfWeek, nameOfWeek, exercises: [{ exerciseId, name, category, order }] }]
   const [days, setDays] = useState(() => {
     const d = initial?.days || initial?.program?.days || [];
     return d.map((x, i) => ({
@@ -848,7 +841,6 @@ const NewPlanBuilder = memo(({ initial, onCancel, onCreate }) => {
 
   const removeDay = id => setDays(arr => arr.filter(d => d.id !== id));
 
-  // Exercise Picker modal state
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerDayId, setPickerDayId] = useState(null);
 

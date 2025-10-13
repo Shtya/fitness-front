@@ -1,4 +1,7 @@
 /*
+	- check when he not auth return to the login
+	- close the popup of the create plan when finish 
+	- check from the ai assistant 
 
 		* user
 			- when the coach login show only his trainer only 
@@ -40,7 +43,7 @@
 
 
 
-
+		- stats fo the users take a long time
 
 
 
@@ -49,10 +52,7 @@
 			- put his plan food and logs about it 
 			there is a problem in the assign moduel send only one userid
 
-		* setting 
-			- auto send the report and explain to him this information i take it form your infomation 
-			- control on the podcast that will show for the client 
-
+ 
 		* profile 
 			- have the all information about it and hist transofrmation 
 
@@ -71,6 +71,7 @@
 		* Report 
 			- Weekly/Daily notes from coach.
 			- Evaluation of client’s commitment.
+			- when send his report show how month pass . to give him motivation 
 			
 
 		* Communication
@@ -95,6 +96,8 @@
 				• Add motivational messages (scheduled for next day).
 			- Send reminders via WhatsApp (integration needed).
 			- Weekly logs: weight + progress stats.
+			- auto send the report and explain to him this information i take it form your infomation 
+			- control on the podcast that will show for the client 
 
 		*	Progress Tracking
 			- Record weight periodically.

@@ -491,13 +491,13 @@ export default function Header({ onMenu, onProfile = () => console.log('profile'
           <div className='h-16 grid grid-cols-[auto_1fr_auto] items-center gap-2'>
             {/* left: menu only */}
             <div className='flex items-center gap-2'>
-              <button onClick={onMenu} className='lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-slate-200 bg-white hover:shadow-sm active:scale-95 transition' aria-label='Open menu' title='Open menu'>
-                <Menu className='w-5 h-5' />
+              <button onClick={onMenu} className='lg:hidden inline-flex items-center justify-center size-11 max-md:size-9 rounded-lg border border-slate-200 bg-white hover:shadow-sm active:scale-95 transition' aria-label='Open menu' title='Open menu'>
+                <Menu className=' ' />
               </button>
               {/* user block */}
               <div className='flex items-center gap-3'>
                 <div className='relative'>
-                  <div className='size-11 rounded-lg grid place-content-center font-semibold bg-indigo-600 text-white shadow-sm'>{avatarText}</div>
+                  <div className=' max-md:size-9 size-11 rounded-lg grid place-content-center font-semibold bg-indigo-600 text-white shadow-sm'>{avatarText}</div>
                   <span className={`absolute -right-0 -bottom-0 size-2.5 rounded-full ring-2 ring-white ${isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} title={isActive ? 'Online' : 'Offline'} />
                 </div>
 

@@ -1,7 +1,7 @@
 import Img from '@/components/atoms/Img';
 import { Dumbbell, CheckCircle2, Timer, Activity, ChevronRight } from 'lucide-react';
 
-export function ExerciseList({ workout, currentExId, onPick }) {
+export function ExerciseList({ workout, currentExId, onPick, t }) {
   const exercises = Array.isArray(workout?.exercises) ? workout.exercises : [];
   const sets = Array.isArray(workout?.sets) ? workout.sets : [];
   const setsFor = exId => sets.filter(s => s?.exId === exId);
@@ -14,13 +14,22 @@ export function ExerciseList({ workout, currentExId, onPick }) {
   // Empty state
   if (!workout || exercises.length === 0) {
     return (
-      <div className='p-4 ltr:pl-0 rtl:pr-0 h-full'>
-        <div className='flex h-full flex-col items-center justify-center p-8 border border-dashed border-slate-300 rounded-lg bg-gradient-to-br from-slate-50 via-white to-slate-50 text-center'>
-          <div className='w-14 h-14 rounded-full bg-white shadow grid place-items-center mb-3 ring-1 ring-slate-200'>
-            <Dumbbell size={20} className='text-slate-400' />
+      <div className='p-5'>
+        <div className='relative flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300/80 bg-gradient-to-br from-slate-50 via-white to-slate-50 p-5 text-center shadow-sm'>
+          {/* Decorative background */}
+          <div className='absolute inset-0 -z-10 opacity-[0.5]'>
+            <div className='absolute inset-0 bg-[radial-gradient(800px_400px_at_0%_0%,rgba(59,130,246,0.06),transparent_60%),radial-gradient(600px_300px_at_100%_100%,rgba(16,185,129,0.06),transparent_60%)]' />
+            <div className='absolute inset-0 [mask-image:radial-gradient(360px_160px_at_50%_0%,#000,transparent)] bg-[linear-gradient(45deg,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:12px_12px]' />
           </div>
-          <h3 className='text-base font-semibold text-slate-800'>Not found Exercise for this day</h3>
-          <p className='text-sm text-slate-500 mt-1'>Pick another day from the tabs above.</p>
+
+          {/* Icon */}
+          <div className='mb-4 grid h-16 w-16 place-items-center rounded-full bg-white shadow ring-1 ring-slate-200'>
+            <Dumbbell size={24} className='text-slate-500' />
+          </div>
+
+          {/* Text */}
+          <h3 className='text-lg font-semibold text-slate-800'>{t('noExercises') || 'No exercises found for this day'}</h3>
+          <p className='mt-1  text-xs text-slate-400 italic  text-nowrap truncate '>{t('pickAnotherDay') || 'Try selecting another day or check your workout plan.'}</p>
         </div>
       </div>
     );
@@ -66,10 +75,10 @@ export function ExerciseList({ workout, currentExId, onPick }) {
               <div className='min-w-0 flex-1'>
                 <div className='flex items-center justify-between gap-2'>
                   <div className='min-w-0'>
-                    <div title={ex?.name} className={`font-semibold text-slate-900 ${!active && "truncate"}`}>
+                    <div title={ex?.name} className={`font-semibold text-slate-900 ${!active && 'truncate'}`}>
                       {idx + 1}. {ex?.name ?? 'Unnamed exercise'}
                     </div>
-                   </div>
+                  </div>
 
                   {/* Chevron */}
                   <ChevronRight size={16} className={['shrink-0 text-slate-400 transition-transform', active ? 'translate-x-0' : 'group-hover:translate-x-0.5'].join(' ')} />

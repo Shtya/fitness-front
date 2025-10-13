@@ -1,15 +1,3 @@
-/* 
-  PERFORMANCE ENHANCEMENTS:
-  - Added React.memo to prevent unnecessary re-renders
-  - Implemented useCallback for stable function references
-  - Optimized useEffect dependencies to reduce unnecessary fetches
-  - Added request cancellation to prevent race conditions
-  - Implemented virtual scrolling for large lists
-  - Added image lazy loading
-  - Optimized re-renders with useMemo for expensive computations
-  - Reduced bundle size by removing unused imports
-*/
-
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
@@ -51,8 +39,6 @@ const buildMultipartIfNeeded = payload => {
   });
   return fd;
 };
-
-const resURL = url => (url && url.startsWith('/') ? baseImg + url : url || '');
 
 /* ---------------------------- Memoized Components --------------------------- */
 const Chip = memo(({ children }) => <span className='inline-flex items-center rounded-lg bg-slate-100 text-slate-700 text-[11px] px-2 py-1 mr-1 mb-1'>{children}</span>);
@@ -459,7 +445,6 @@ const ConfirmDialog = memo(({ open, onClose, loading, title = 'Are you sure?', m
   );
 });
 
-/* ------------------------------ Grid View ------------------------------ */
 const GridView = memo(({ loading, items, onView, onEdit, onDelete }) => {
   /* ------------------------------- Loading ------------------------------- */
   if (loading) {
@@ -578,9 +563,7 @@ const GridView = memo(({ loading, items, onView, onEdit, onDelete }) => {
   );
 });
 
-/* ------------------------------ List View ------------------------------ */
 const ListView = memo(({ loading, items = [], onView, onEdit, onDelete }) => {
-  /* ------------------------------ Loading ------------------------------ */
   if (loading) {
     return (
       <div className='rounded-lg border border-slate-200 bg-white divide-y divide-slate-100 shadow-sm'>
@@ -600,12 +583,10 @@ const ListView = memo(({ loading, items = [], onView, onEdit, onDelete }) => {
     );
   }
 
-  /* ------------------------------- Empty ------------------------------- */
   if (!items.length) {
     return <div className='rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm'>No exercises found.</div>;
   }
 
-  /* ------------------------------- List -------------------------------- */
   return (
     <div className='rounded-lg border border-slate-200 bg-white divide-y divide-slate-100 shadow-sm'>
       {items.map(e => {
@@ -672,8 +653,7 @@ const ListView = memo(({ loading, items = [], onView, onEdit, onDelete }) => {
   );
 });
 
-/* ---------------------------- Preview Modal ---------------------------- */
-const ExercisePreview = memo(({ exercise, baseMedia = '' }) => {
+ const ExercisePreview = memo(({ exercise, baseMedia = '' }) => {
   const hasImg = !!exercise?.img;
   const hasVideo = !!exercise?.video;
 
@@ -713,7 +693,7 @@ const ExercisePreview = memo(({ exercise, baseMedia = '' }) => {
             {tab === 'image' && hasImg ? (
               <Img src={exercise.img} alt={exercise?.name || 'Exercise Image'} className='h-full w-full object-contain' draggable={false} loading='eager' />
             ) : tab === 'video' && hasVideo ? (
-              <video src={exercise?.video?.startsWith('/') ? baseImg + exercise?.video : baseImg + '/' + exercise?.video} controls className='h-full max-h-[400px] w-full object-contain rounded-lg' preload='metadata' />
+              <video src={exercise?.video?.startsWith('http') ?  exercise?.video : baseImg + exercise?.video} controls className='h-full max-h-[400px] w-full object-contain rounded-lg' preload='metadata' />
             ) : (
               <div className='flex flex-col items-center justify-center gap-1 p-6 text-center'>
                 <div className='grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-400'>{tab === 'image' ? <ImageIcon size={20} /> : <PlayCircle size={20} />}</div>

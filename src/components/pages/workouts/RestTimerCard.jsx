@@ -34,9 +34,9 @@ export const RestTimerCard = React.memo(function RestTimerCard({
 
   // Local state
   const [seconds, setSeconds] = useState(() => Number(initialSeconds || 90) || 90);
- 
+
   // Refs
-   const holdRef = useRef(null);
+  const holdRef = useRef(null);
   const alertTimeoutRef = useRef(null);
   const hasAlertFiredRef = useRef(false);
 
@@ -151,8 +151,8 @@ export const RestTimerCard = React.memo(function RestTimerCard({
 
   /* --------------------------- UI --------------------------- */
   return (
-    <div className={` pt-2 pb-2 ${className}`}>
-      <div className={[' bg-white relative flex items-center gap-3 rounded-lg border border-slate-200 backdrop-blur px-3 py-2.5'].join(' ')} role='group' aria-label='Rest timer'>
+    <div className={` max-md:flex max-md:h-full max-md:flex-col md:pt-2 md:pb-2 ${className}`}>
+      <div className={['max-md:flex max-md:flex-col max-md:h-full max-md:justify-center bg-white relative flex items-center gap-3 rounded-lg border border-slate-200 backdrop-blur px-3 py-2.5'].join(' ')} role='group' aria-label='Rest timer'>
         {alerting && <div className='pointer-events-none absolute inset-0 rounded-lg ring-2 ring-rose-200/60' />}
 
         <button
@@ -163,27 +163,61 @@ export const RestTimerCard = React.memo(function RestTimerCard({
               haptic(20);
             }
           }}
-          className='relative shrink-0 grid place-items-center rounded-full'
+          className={`
+    relative shrink-0 grid place-items-center rounded-full 
+    transition-all duration-300 ease-out 
+    shadow-md hover:shadow-lg active:scale-[0.95]
+    bg-gradient-to-br from-slate-50 via-white to-slate-100
+    hover:from-indigo-50 hover:via-white hover:to-green-50
+  `}
           title={running ? 'Stop timer' : 'Timer'}
           aria-label={running ? 'Stop timer' : 'Timer'}
-          style={{ width: 58, height: 58 }}>
-          <svg width='58' height='58' viewBox='0 0 58 58' aria-hidden='true'>
+          style={{
+            width: 'clamp(58px, 8vw, 90px)',
+            height: 'clamp(58px, 8vw, 90px)',
+          }}>
+          {/* SVG Timer Circle */}
+          <svg width='100%' height='100%' viewBox='0 0 58 58' aria-hidden='true' className='drop-shadow-sm'>
             <defs>
               <linearGradient id='rtGrad' x1='0' y1='0' x2='1' y2='1'>
-                <stop offset='0%' stopColor={alerting ? '#ef4444' : '#6366f1'} />
-                <stop offset='100%' stopColor={alerting ? '#f97316' : '#22c55e'} />
+                <stop offset='0%' stopColor={alerting ? '#f43f5e' : '#6366f1'} />
+                <stop offset='50%' stopColor={alerting ? '#f97316' : '#22c55e'} />
+                <stop offset='100%' stopColor={alerting ? '#facc15' : '#3b82f6'} />
               </linearGradient>
+              <filter id='glow'>
+                <feGaussianBlur stdDeviation='2.5' result='coloredBlur' />
+                <feMerge>
+                  <feMergeNode in='coloredBlur' />
+                  <feMergeNode in='SourceGraphic' />
+                </feMerge>
+              </filter>
             </defs>
-            <circle cx='29' cy='29' r={ring.R} stroke='#e5e7eb' strokeWidth='7' fill='none' />
-            <circle cx='29' cy='29' r={ring.R} stroke='url(#rtGrad)' strokeWidth='7' fill='none' strokeLinecap='round' strokeDasharray={ring.C} strokeDashoffset={ring.C - ring.dash} className={`transition-[stroke-dashoffset] duration-200 ease-linear ${running ? '' : 'opacity-70'}`} transform='rotate(-90 29 29)' />
+
+            {/* Background Ring */}
+            <circle cx='29' cy='29' r={ring.R} stroke='#e5e7eb' strokeWidth='6' fill='none' />
+
+            {/* Animated Progress Ring */}
+            <circle cx='29' cy='29' r={ring.R} stroke='url(#rtGrad)' strokeWidth='6' fill='none' strokeLinecap='round' strokeDasharray={ring.C} strokeDashoffset={ring.C - ring.dash} className={`transition-[stroke-dashoffset,opacity] duration-200 ease-linear ${running ? 'opacity-100' : 'opacity-70'}`} transform='rotate(-90 29 29)' filter='url(#glow)' />
           </svg>
-          <span className='absolute text-[11px] font-semibold text-slate-800 tabular-nums' aria-live='polite'>
+
+          {/* Time Label */}
+          <span
+            className={`
+      absolute font-semibold tabular-nums
+      text-slate-800 
+      text-[11px] sm:text-[12px] md:text-[13px] 
+      tracking-wide
+    `}
+            aria-live='polite'>
             {timeLabel}
           </span>
+
+          {/* Animated Pulse When Alerting */}
+          {alerting && <span className='absolute inset-0 rounded-full animate-ping bg-red-400/20'></span>}
         </button>
 
         {/* Center: controls & editor */}
-        <div className='flex items-center gap-2 flex-1 min-w-0'>
+        <div className='flex max-md:flex-col items-center gap-2 md:flex-1 min-w-0'>
           {alerting && (
             <button onClick={stopAlert} className='inline-flex items-center gap-1.5 ml-1 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 px-2 py-[3px] text-[10px] hover:bg-rose-100' title='Stop alert sound'>
               <BellOff size={12} /> Stop sound
@@ -193,16 +227,16 @@ export const RestTimerCard = React.memo(function RestTimerCard({
             <div className='ml-auto flex items-center gap-2'>
               <div className='inline-flex rounded-xl overflow-hidden border border-slate-200 bg-white'>
                 <button onMouseDown={() => startHold(-holdStep)} onMouseUp={endHold} onMouseLeave={endHold} onTouchStart={() => startHold(-holdStep)} onTouchEnd={endHold} onClick={dec} className='px-2.5 h-8 text-xs hover:bg-slate-50' title={`-${smallStep}s (hold for -${holdStep}/tick)`}>
-                  <Minus size={12} />
+                  <Minus className=' size-[10px] md:w-[12px] ' />
                 </button>
-                <div className='px-2.5 h-8 grid place-items-center text-sm font-semibold tabular-nums text-slate-800'>{toMMSS(seconds)}</div>
+                <div className='px-2  h-8 grid place-items-center  text-[10px] md:text-sm font-semibold tabular-nums text-slate-800'>{toMMSS(seconds)}</div>
                 <button onMouseDown={() => startHold(+holdStep)} onMouseUp={endHold} onMouseLeave={endHold} onTouchStart={() => startHold(+holdStep)} onTouchEnd={endHold} onClick={inc} className='px-2.5 h-8 text-xs hover:bg-slate-50 border-l border-slate-200' title={`+${smallStep}s (hold for +${holdStep}/tick)`}>
-                  <Plus size={12} />
+                  <Plus className=' size-[10px] md:w-[12px] ' />
                 </button>
               </div>
             </div>
           )}
-          <div className=' flex items-center gap-1.5'>
+          <div className='max-md:flex-col flex items-center gap-1.5'>
             {!running ? (
               <button onClick={handleStart} className='inline-flex items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 px-3 h-8 text-xs hover:bg-indigo-100' title='Start'>
                 <Play size={12} /> Start

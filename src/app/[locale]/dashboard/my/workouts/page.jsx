@@ -16,7 +16,7 @@ import { InlineVideo } from '@/components/pages/workouts/InlineVideo';
 import { useUser } from '@/hooks/useUser';
 import { useTranslations } from 'next-intl';
 import Img from '@/components/atoms/Img';
- 
+
 /* =========================
    Constants / tiny helpers
 ========================= */
@@ -530,7 +530,7 @@ export default function MyWorkoutsPage() {
       </div>
     </div>
   );
- 
+
   return (
     <div className='space-y-5 sm:space-y-6'>
       <audio ref={audioRef} src={alertSound} preload='auto' />
@@ -571,64 +571,69 @@ export default function MyWorkoutsPage() {
             <div className={`relative md:bg-white/80 backdrop-blur md:rounded-lg md:overflow-hidden ${!hasExercises ? '!border-transparent' : ''}`}>
               {!hasExercises ? (
                 /* Empty state */
-                <div className='p-10'>
-                  <div className='rounded-2xl border border-dashed border-slate-300/80 bg-gradient-to-br from-slate-50 via-white to-slate-50 p-10 text-center shadow-sm'>
-                    <div className='mx-auto mb-4 w-14 h-14 rounded-full bg-white shadow grid place-items-center ring-1 ring-slate-200'>
-                      <Dumbbell size={20} className='text-slate-500' />
+                <div className='p-5'>
+                  <div className='relative flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300/80 bg-gradient-to-br from-slate-50 via-white to-slate-50 p-5 text-center shadow-sm'>
+                    {/* Decorative background */}
+                    <div className='absolute inset-0 -z-10 opacity-[0.5]'>
+                      <div className='absolute inset-0 bg-[radial-gradient(800px_400px_at_0%_0%,rgba(59,130,246,0.06),transparent_60%),radial-gradient(600px_300px_at_100%_100%,rgba(16,185,129,0.06),transparent_60%)]' />
+                      <div className='absolute inset-0 [mask-image:radial-gradient(360px_160px_at_50%_0%,#000,transparent)] bg-[linear-gradient(45deg,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:12px_12px]' />
                     </div>
-                    <div className='text-lg font-semibold text-slate-800'>{t('noExercises')}</div>
-                    <div className='text-sm text-slate-500 mt-1'>{t('pickAnotherDay')}</div>
+
+                    {/* Icon */}
+                    <div className='mb-4 grid h-16 w-16 place-items-center rounded-full bg-white shadow ring-1 ring-slate-200'>
+                      <Dumbbell size={24} className='text-slate-500' />
+                    </div>
+
+                    {/* Text */}
+                    <h3 className='text-lg font-semibold text-slate-800'>{t('noExercises') || 'No exercises found for this day'}</h3>
+                    <p className='mt-1  text-xs text-slate-400 italic '>{t('pickAnotherDay') || 'Try selecting another day or check your workout plan.'}</p>
                   </div>
                 </div>
               ) : (
                 <>
-                  <div className='relative w-full rounded-lg overflow-hidden '>
-                    <div className='aspect-video md:aspect-[16/9] '>{
-										currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] 
-										? <InlineVideo key={currentExercise.id + '-video'} src={ currentExercise[activeMedia]} /> 
-										: <Img key={currentExercise?.id + '-image'} src={ currentExercise?.img} alt={currentExercise?.name} className='w-full h-full object-contain ' loading='lazy' />
-										}</div>
+                  <div className=' max-md:grid-cols-[1fr_120px] max-md:grid max-md:gap-2 '>
+                    <div className='relative w-full rounded-lg overflow-hidden '>
+                      <div className='max-md:h-[250px] md:aspect-[16/9] '>{currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? <InlineVideo key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} /> : <Img key={currentExercise?.id + '-image'} src={currentExercise?.img} alt={currentExercise?.name} className='w-full h-full object-contain ' loading='lazy' />}</div>
 
-                    {(() => {
-                      const hasImg = !!currentExercise?.img;
-                      const hasVideo1 = !!currentExercise?.video;
-                      const hasVideo2 = !!currentExercise?.video2;
+                      {(() => {
+                        const hasImg = !!currentExercise?.img;
+                        const hasVideo1 = !!currentExercise?.video;
+                        const hasVideo2 = !!currentExercise?.video2;
 
-                      return (
-                        <div className={`absolute  right-3 flex items-center gap-2 ${activeMedia === 'video' ? 'bottom-[70px] ' : 'bottom-3'} duration-500 `}>
-                          <div className='inline-flex items-center gap-[4px] rounded-xl bg-slate-100/70 p-1 ring-1 ring-black/5 backdrop-blur-md'>
-                            <button type='button' onClick={() => setUploadOpen(true)} className='inline-flex items-center gap-1  px-2 h-[35px] max-md:w-[35px] justify-center rounded-lg text-[11px] font-medium  bg-white/95 text-indigo-700 hover:bg-white shadow-sm ring-1 ring-indigo-200  transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40' aria-label='Upload video for coach' title='Upload video for coach'>
-                              <Upload size={14} />
-                              <span className='hidden sm:inline'>Upload</span>
-                            </button>
-                            {/* Image tab */}
-                            <button type='button' aria-pressed={activeMedia === 'image'} disabled={!hasImg} onClick={() => setActiveMedia('image')} className={['relative inline-flex items-center gap-1.5 w-[35px] h-[35px] justify-center text-xs sm:text-sm rounded-lg outline-none transition', activeMedia === 'image' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', !hasImg ? 'opacity-50 cursor-not-allowed' : '', 'focus-visible:ring-2 focus-visible:ring-indigo-400/40'].join(' ')} title='Show image'>
-                              <ImageIcon size={14} />
-                              {activeMedia === 'image' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
-                            </button>
-
-                            {/* Video tab */}
-                            <button type='button' aria-pressed={activeMedia === 'video'} disabled={!hasVideo1} onClick={() => setActiveMedia('video')} className={['relative inline-flex items-center gap-1.5 w-[35px] h-[35px] justify-center text-xs sm:text-sm rounded-lg outline-none transition', activeMedia === 'video' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', !hasVideo1 ? 'opacity-50 cursor-not-allowed' : '', 'focus-visible:ring-2 focus-visible:ring-indigo-400/40'].join(' ')} title='Show video'>
-                              <VideoIcon size={14} />
-                              {activeMedia === 'video' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
-                            </button>
-
-                            {/* Alt video tab (only if provided) */}
-                            {hasVideo2 && (
-                              <button type='button' aria-pressed={activeMedia === 'video2'} onClick={() => setActiveMedia('video2')} className={['relative inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm rounded-lg outline-none transition', activeMedia === 'video2' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', 'focus-visible:ring-2 focus-visible:ring-indigo-400/40'].join(' ')} title='Show video 2'>
-                                <VideoIcon size={14} />
-                                <span className='hidden sm:inline'>Alt</span>
-                                {activeMedia === 'video2' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
+                        return (
+                          <div className={`absolute right-1  md:right-3 flex items-center gap-2 ${activeMedia === 'video' ? 'bottom-[70px] ' : ' bottom-1 md:bottom-3'} duration-500 `}>
+                            <div className='inline-flex max-md:flex-col   items-center gap-[4px] rounded-xl bg-slate-100/70 p-1 ring-1 ring-black/5 backdrop-blur-md'>
+                              <button type='button' onClick={() => setUploadOpen(true)} className='inline-flex items-center gap-1  px-2 h-[35px] max-md:w-[35px] justify-center rounded-lg text-[11px] font-medium  bg-white/95 text-indigo-700 hover:bg-white shadow-sm ring-1 ring-indigo-200  transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40' aria-label='Upload video for coach' title='Upload video for coach'>
+                                <Upload size={14} />
+                                <span className='hidden sm:inline'>Upload</span>
                               </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
 
-                  {/* Rest timer */}
-                  <RestTimerCard alerting={alerting} setAlerting={setAlerting} initialSeconds={Number.isFinite(currentExercise?.restSeconds) ? currentExercise?.restSeconds : Number.isFinite(currentExercise?.rest) ? currentExercise?.rest : 90} audioEl={audioRef} className='mt-2 ' />
+                              <button type='button' aria-pressed={activeMedia === 'image'} disabled={!hasImg} onClick={() => setActiveMedia('image')} className={['relative inline-flex items-center gap-1.5 w-[35px] h-[35px] justify-center text-xs sm:text-sm rounded-lg outline-none transition', activeMedia === 'image' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', !hasImg ? 'opacity-50 cursor-not-allowed' : '', 'focus-visible:ring-2 focus-visible:ring-indigo-400/40'].join(' ')} title='Show image'>
+                                <ImageIcon size={14} />
+                                {activeMedia === 'image' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
+                              </button>
+
+                              {/* Video tab */}
+                              <button type='button' aria-pressed={activeMedia === 'video'} disabled={!hasVideo1} onClick={() => setActiveMedia('video')} className={['relative inline-flex items-center gap-1.5 w-[35px] h-[35px] justify-center text-xs sm:text-sm rounded-lg outline-none transition', activeMedia === 'video' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', !hasVideo1 ? 'opacity-50 cursor-not-allowed' : '', 'focus-visible:ring-2 focus-visible:ring-indigo-400/40'].join(' ')} title='Show video'>
+                                <VideoIcon size={14} />
+                                {activeMedia === 'video' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
+                              </button>
+
+                              {/* Alt video tab (only if provided) */}
+                              {hasVideo2 && (
+                                <button type='button' aria-pressed={activeMedia === 'video2'} onClick={() => setActiveMedia('video2')} className={['relative inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm rounded-lg outline-none transition', activeMedia === 'video2' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', 'focus-visible:ring-2 focus-visible:ring-indigo-400/40'].join(' ')} title='Show video 2'>
+                                  <VideoIcon size={14} />
+                                  <span className='hidden sm:inline'>Alt</span>
+                                  {activeMedia === 'video2' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <RestTimerCard alerting={alerting} setAlerting={setAlerting} initialSeconds={Number.isFinite(currentExercise?.restSeconds) ? currentExercise?.restSeconds : Number.isFinite(currentExercise?.rest) ? currentExercise?.rest : 90} audioEl={audioRef} className='md:mt-2 ' />
+                  </div>
 
                   {/* Sets table */}
                   <div className='max-md:mb-2 md:mb-5 mt-3 rounded-lg border border-slate-200 overflow-hidden bg-white'>
@@ -646,31 +651,84 @@ export default function MyWorkoutsPage() {
                           {currentSets.map((s, i) => (
                             <tr key={s.id} className={`transition-colors ${i % 2 === 1 ? 'bg-slate-50/40' : 'bg-white'} hover:bg-indigo-50/40`}>
                               <td className='py-2.5 px-3'>
-                                <span className='inline-flex h-6 min-w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700 font-medium'>{s.set}</span>
+                                <span className='inline-flex h-[25px] w-[25px] items-center justify-center rounded-lg bg-slate-100 shadow-sm text-slate-700 font-medium'>{s.set}</span>
                               </td>
+
                               <td className='py-2.5 px-3'>
                                 <div className='relative inline-block'>
-                                  <input type='number' value={s.weight ?? 0} onChange={e => setValue(s.id, 'weight', e.target.value)} placeholder='0' className=' text-center h-9 w-[90px] !text-[16px] tabular-nums  rounded-lg border border-slate-200 bg-white  outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 px-[26px]' />
+                                  <input type='number' value={s.weight ?? 0} onChange={e => setValue(s.id, 'weight', e.target.value)} placeholder='0' className='text-center h-9 w-[100px] !text-[16px] tabular-nums rounded-lg border border-slate-200 bg-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 px-[26px] transition-shadow duration-200' />
 
-                                  <button type='button' onClick={() => bump(s.id, 'weight', -1)} title='-1' aria-label='Decrease weight' className='absolute left-[4px] top-1/2 -translate-y-1/2 h-[25px] w-[25px] flex items-center justify-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-50 active:scale-[.98] transition' tabIndex={-1}>
-                                    <Plus size={16} />
+                                  {/* Decrease Button */}
+                                  <button
+                                    type='button'
+                                    onClick={e => {
+                                      bump(s.id, 'weight', -1);
+                                      const el = e.currentTarget;
+                                      el.classList.add('animate-press');
+                                      setTimeout(() => el.classList.remove('animate-press'), 250);
+                                    }}
+                                    title='-1'
+                                    aria-label='Decrease weight'
+                                    className='absolute left-[4px] top-1/2 -translate-y-1/2 grid h-[25px] w-[25px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
+                                    tabIndex={-1}>
+                                    <Minus size={16} />
+                                    <span className='pointer-events-none absolute inset-0 rounded-md bg-slate-300/40 scale-0 opacity-0 transition-transform duration-300 ease-out group-active:scale-100 group-active:opacity-100'></span>
                                   </button>
 
-                                  <button type='button' onClick={() => bump(s.id, 'weight', +1)} title='+1' aria-label='Increase weight' className='absolute right-[4px] top-1/2 -translate-y-1/2  h-[25px] w-[25px] flex items-center justify-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-50 active:scale-[.98] transition' tabIndex={-1}>
-                                    <Minus size={16} />
+                                  {/* Increase Button */}
+                                  <button
+                                    type='button'
+                                    onClick={e => {
+                                      bump(s.id, 'weight', +1);
+                                      const el = e.currentTarget;
+                                      el.classList.add('animate-press');
+                                      setTimeout(() => el.classList.remove('animate-press'), 250);
+                                    }}
+                                    title='+1'
+                                    aria-label='Increase weight'
+                                    className='absolute right-[4px] top-1/2 -translate-y-1/2 grid h-[25px] w-[25px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
+                                    tabIndex={-1}>
+                                    <Plus size={16} />
+                                    <span className='pointer-events-none absolute inset-0 rounded-md bg-blue-300/30 scale-0 opacity-0 transition-transform duration-300 ease-out group-active:scale-100 group-active:opacity-100'></span>
                                   </button>
                                 </div>
                               </td>
+
                               <td className='py-2.5 px-3'>
                                 <div className='relative inline-block'>
-                                  <input type='number' value={s.reps ?? 0} onChange={e => setValue(s.id, 'reps', e.target.value)} placeholder='0' inputMode='numeric' step='1' className='text-center h-9 w-[90px] !text-[16px] tabular-nums rounded-lg border border-slate-200 bg-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 px-[26px]' />
+                                  <input type='number' value={s.reps ?? 0} onChange={e => setValue(s.id, 'reps', e.target.value)} placeholder='0' inputMode='numeric' step='1' className='text-center h-9 w-[100px] !text-[16px] tabular-nums rounded-lg border border-slate-200 bg-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 px-[26px]' />
 
-                                  <button type='button' onClick={() => bump(s.id, 'reps', -1)} title='-1' aria-label='Decrease reps' className='absolute left-[4px] top-1/2 -translate-y-1/2 h-[25px] w-[25px] flex items-center justify-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-50 active:scale-[.98] transition' tabIndex={-1}>
-                                    <Plus size={16} />
+                                  <button
+                                    type='button'
+                                    onClick={e => {
+                                      bump(s.id, 'reps', -1);
+                                      const el = e.currentTarget;
+                                      el.classList.add('animate-press');
+                                      setTimeout(() => el.classList.remove('animate-press'), 250);
+                                    }}
+                                    title='-1'
+                                    aria-label='Decrease reps'
+                                    className='absolute left-[4px] top-1/2 -translate-y-1/2 grid h-[25px] w-[25px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
+                                    tabIndex={-1}>
+                                    <Minus size={16} />
+                                    <span className='pointer-events-none absolute inset-0 rounded-md bg-slate-300/40 scale-0 opacity-0 transition-transform duration-300 ease-out group-active:scale-100 group-active:opacity-100'></span>
                                   </button>
 
-                                  <button type='button' onClick={() => bump(s.id, 'reps', +1)} title='+1' aria-label='Increase reps' className='absolute right-[4px] top-1/2 -translate-y-1/2  h-[25px] w-[25px] flex items-center justify-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-50 active:scale-[.98] transition' tabIndex={-1}>
-                                    <Minus size={16} />
+                                  {/* Increase Button */}
+                                  <button
+                                    type='button'
+                                    onClick={e => {
+                                      bump(s.id, 'reps', +1);
+                                      const el = e.currentTarget;
+                                      el.classList.add('animate-press');
+                                      setTimeout(() => el.classList.remove('animate-press'), 250);
+                                    }}
+                                    title='+1'
+                                    aria-label='Increase reps'
+                                    className='absolute right-[4px] top-1/2 -translate-y-1/2 grid h-[25px] w-[25px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
+                                    tabIndex={-1}>
+                                    <Plus size={16} />
+                                    <span className='pointer-events-none absolute inset-0 rounded-md bg-blue-300/30 scale-0 opacity-0 transition-transform duration-300 ease-out group-active:scale-100 group-active:opacity-100'></span>
                                   </button>
                                 </div>
                               </td>
@@ -689,7 +747,7 @@ export default function MyWorkoutsPage() {
                     </div>
 
                     {/* Footer toolbar */}
-                    <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-2 px-3 py-2 text-[11px] text-slate-600 bg-slate-50/70 border-t border-slate-200'>
+                    <div className='flex  flex-row items-center justify-between gap-2 px-3 py-2 text-[11px] text-slate-600 bg-slate-50/70 border-t border-slate-200'>
                       <div className='flex items-center gap-2'>
                         <button onClick={removeSetFromCurrentExercise} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 bg-white hover:bg-slate-50' disabled={currentSets.length <= 1}>
                           <Minus size={14} /> Remove set
@@ -710,6 +768,7 @@ export default function MyWorkoutsPage() {
           {/* RIGHT (exercise list) */}
           <div className='rounded-lg bg-white h-fit p-4 shadow-sm hidden  lg:block w-80'>
             <ExerciseList
+              t={t}
               workout={workout}
               currentExId={currentExId}
               onPick={ex => {

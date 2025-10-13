@@ -1,3 +1,4 @@
+ 
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -27,6 +28,25 @@ function parseArrayMaybe(v) {
 }
 const isEmptyish = v => v == null || (Array.isArray(v) ? v.length === 0 : String(v).trim() === '');
 const safeStr = v => (v == null ? '' : String(v));
+
+function resolveUrlMaybe(v) {
+  if (!v) return '';
+  // If it's a File (upload), caller will make an object URL; leave as-is
+  if (typeof v !== 'string') return v;
+
+  const s = v.trim();
+  // already absolute → use it as-is
+  if (/^(https?:|data:|blob:)/i.test(s)) return s;
+
+  // make absolute using baseImg
+  try {
+    const base = String(baseImg || '').replace(/\/+$/, '');
+    const rel = s.replace(/^\/+/, '');
+    return `${base}/${rel}`;
+  } catch {
+    return s; // fail-safe: return original string
+  }
+}
 
 /* ================================================
    Custom UI Primitives (Inputs / Buttons)
@@ -226,11 +246,16 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
   }, [initial, reset]);
 
   useEffect(() => {
-    if (initial) {
-      setValue('imgUrl', initial?.img?.startsWith('/') ? baseImg + initial?.img : baseImg + '/' + initial?.img);
-      setValue('videoUrl', initial?.video?.startsWith('/') ? baseImg + initial?.video : baseImg + '/' + initial?.video);
-    }
-  }, [initial]);
+    if (!initial) return;
+
+    // keep *stored* values human-readable (what you already have in initial)
+    // but set them to safely-resolved absolute URLs only if they’re relative
+    const img = resolveUrlMaybe(initial?.img);
+    const vid = resolveUrlMaybe(initial?.video);
+
+    setValue('imgUrl', img);
+    setValue('videoUrl', vid);
+  }, [initial, setValue]);
 
   // show AI button after name length >= 2
   const nameVal = watch('name');
@@ -243,6 +268,8 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
     if (inFlight.current) inFlight.current.abort();
     const ctrl = new AbortController();
     inFlight.current = ctrl;
+
+    console.log(API_KEY);
     setAiLoading(true);
     try {
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -354,14 +381,14 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
                   await handleNameBlur();
                 }}
                 placeholder='e.g., Wide-Grip Seated Row'
-                rightSlot={
-                  showAiButton ? (
-                    <button type='button' onClick={applyAISuggestions} className='mr-1 inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-400/50'>
-                      <Wand2 className='h-3.5 w-3.5' />
-                      Get AI
-                    </button>
-                  ) : null
-                }
+                // rightSlot={
+                //   showAiButton ? (
+                //     <button type='button' onClick={applyAISuggestions} className='mr-1 inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-400/50'>
+                //       <Wand2 className='h-3.5 w-3.5' />
+                //       Get AI
+                //     </button>
+                //   ) : null
+                // }
               />
             </Field>
           )}
@@ -479,9 +506,9 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
                         className='hidden'
                         onChange={e => {
                           const f = e.target.files?.[0] || null;
-                          setImgFile(f);
+                           setImgFile(f);
                           setValue('hasImgFile', !!f, { shouldValidate: true });
-                          setValue('imgUrl', f);
+                          setValue('imgUrl', f.name);
                           trigger('imgUrl');
                         }}
                       />
@@ -521,7 +548,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
                           const f = e.target.files?.[0] || null;
                           setVideoFile(f);
                           setValue('hasVideoFile', !!f, { shouldValidate: true });
-                          setValue('videoUrl', f);
+                          setValue('videoUrl', f.name);
                           trigger('videoUrl');
                         }}
                       />
@@ -538,11 +565,10 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
       </div>
 
       <div className='flex items-center justify-end gap-2 pt-2'>
-        {/* Extra AI button at footer */}
-        <PrimaryButton type='button' onClick={applyAISuggestions} loading={aiLoading} disabled={!nameVal || nameVal.trim().length < 2}>
+        {/* <PrimaryButton type='button' onClick={applyAISuggestions} loading={aiLoading} disabled={!nameVal || nameVal.trim().length < 2}>
           <Sparkles className='mr-1.5 h-4 w-4' />
           Fill with AI
-        </PrimaryButton>
+        </PrimaryButton> */}
 
         {/* Save with RHF submitting state */}
         <PrimaryButton type='submit' loading={isSubmitting}>

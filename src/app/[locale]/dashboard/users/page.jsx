@@ -1200,7 +1200,7 @@ export default function UsersList() {
             <StatCardArray icon={Users} title={['Total Users', 'Active', 'Suspended']} value={[stats.totalUsers, stats.activeUsers, stats.suspendedUsers]} />
             <StatCardArray icon={Shield} title={['Admins', 'Coaches', 'Clients']} value={[stats.admins, stats.coaches, stats.clients]} />
             <StatCardArray icon={ListChecks} title={['With Exercise Plan', 'Without Exercise Plans']} value={[stats.withPlans, stats.withoutPlans]} />
-            <StatCardArray icon={ListChecks} title={['With Meals Plans', 'Without Meals Plans']} value={[stats.withMealPlans, stats.withoutMealPlans]} />
+            <StatCardArray icon={ListChecks} title={['With Meals Plans', 'Without Meals Plans']} value={[stats.withMealPlans || 0, stats.withoutMealPlans || 0]} />
           </motion.div>
         </div>
       </div>
