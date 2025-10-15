@@ -28,7 +28,7 @@ export function PageHeader({ className, icon: Icon, title, subtitle, actions = n
 
 export function StatCard({ icon: Icon, title, value }) {
   return (
-    <div className='relative overflow-hidden rounded-lg border border-white/20 bg-white/10 p-3'>
+    <div className='relative overflow-hidden text-white rounded-lg border border-white/20 bg-white/10 p-3'>
       <div className='flex items-start justify-between gap-2'>
         <div className='grid place-items-center rounded-lg bg-white/15 p-2'>
           <Icon className='h-5 w-5' />

@@ -2,10 +2,10 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PageHeader, TabsPill, EmptyState, spring } from '@/components/dashboard/ui/UI';
-import { Dumbbell, X, Minus, Plus, Video as VideoIcon, Save as SaveIcon, ImageIcon, Headphones, Settings as SettingsIcon, Menu as MenuIcon, Upload } from 'lucide-react';
+import { TabsPill, spring } from '@/components/dashboard/ui/UI';
+import { Dumbbell, X, Minus, Plus, Video as VideoIcon, Image as ImageIcon, Headphones, Settings as SettingsIcon, Menu as MenuIcon, Upload } from 'lucide-react';
 import CheckBox from '@/components/atoms/CheckBox';
-import api, { baseImg } from '@/utils/axios';
+import api from '@/utils/axios';
 import weeklyProgram from './exercises';
 import { createSessionFromDay, applyServerRecords } from '@/components/pages/workouts/helpers';
 import { RestTimerCard } from '@/components/pages/workouts/RestTimerCard';
@@ -172,11 +172,38 @@ const SkeletonLoader = () => (
   </div>
 );
 
+/* === NEW: normalize Arabic/Eastern digits + comma === */
+function normalizeNumericInput(str = '') {
+  const map = {
+    '٠': '0',
+    '١': '1',
+    '٢': '2',
+    '٣': '3',
+    '٤': '4',
+    '٥': '5',
+    '٦': '6',
+    '٧': '7',
+    '٨': '8',
+    '٩': '9',
+    '۰': '0',
+    '۱': '1',
+    '۲': '2',
+    '۳': '3',
+    '۴': '4',
+    '۵': '5',
+    '۶': '6',
+    '۷': '7',
+    '۸': '8',
+    '۹': '9',
+  };
+  return String(str)
+    .replace(/[٠-٩۰-۹]/g, d => map[d] || d)
+    .replace(',', '.');
+}
+
 async function fetchActivePlan(userId) {
-  // No cache here so dashboard changes reflect immediately
   const { data } = await api.get('/plans/active', { params: { userId } });
   if (data?.program?.days?.length) return data;
-  // fallback to local weeklyProgram if server empty
   return { program: { days: Object.keys(weeklyProgram).map(k => weeklyProgram[k]) } };
 }
 
@@ -245,7 +272,21 @@ export default function MyWorkoutsPage() {
   // upload modal
   const [uploadOpen, setUploadOpen] = useState(false);
 
-  const lastSavedRef = useRef(new Map());
+  // mirrors and buffers
+  const lastSavedRef = useRef(new Map()); // setId -> { weight, reps, done }
+  // === CHANGED: use STATE (not ref) so typing triggers rerender ===
+  const [inputBuffer, setInputBuffer] = useState({}); // key -> string
+
+  // autosave counters
+  const [changeCount, setChangeCount] = useState(0);
+  const saveTimerRef = useRef(null);
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(''); // '', 'saving', 'saved', 'error'
+
+  const markChanged = useCallback(() => {
+    setUnsaved(true);
+    setChangeCount(c => c + 1);
+  }, []);
 
   useEffect(() => {
     if (selectedDay) localStorage.setItem(LOCAL_KEY_SELECTED_DAY, selectedDay);
@@ -260,7 +301,7 @@ export default function MyWorkoutsPage() {
     });
   }, []);
 
-  // Initial load (no use of mw.workout.buffer at all)
+  // Initial load
   useEffect(() => {
     let mounted = true;
 
@@ -268,7 +309,6 @@ export default function MyWorkoutsPage() {
       try {
         setLoading(true);
 
-        // 1) Fetch plan fresh (reflect dashboard changes)
         const p = await fetchActivePlan(USER_ID);
         if (!mounted) return;
         setPlan(p);
@@ -278,33 +318,27 @@ export default function MyWorkoutsPage() {
         const byKey = Object.fromEntries(serverDays.map(d => [d._key, d]));
         const allKeys = serverDays.map(d => d._key);
 
-        // 2) Determine initial day
         const savedDay = (typeof window !== 'undefined' && localStorage.getItem(LOCAL_KEY_SELECTED_DAY)) || null;
         const initialDayId = savedDay || pickTodayId(allKeys.length ? allKeys : Object.keys(weeklyProgram));
         setSelectedDay(initialDayId);
 
-        // 3) Create session from server day
         const dayProgram = byKey[initialDayId] || weeklyProgram[initialDayId] || { id: initialDayId, name: 'Workout', exercises: [] };
         const session = createSessionFromDay(dayProgram);
         setWorkout(session);
         setCurrentExId(session.exercises[0]?.id);
 
-        // 4) Preload media
         if (session?.exercises?.length) preloadMedia(session.exercises);
 
-        // 5) Mirror last saved values (for unsaved detection only)
         lastSavedRef.current.clear();
         session?.sets?.forEach(s => {
           lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done });
         });
 
-        // 6) Load settings
         try {
           const s = JSON.parse(localStorage.getItem(LOCAL_KEY_SETTINGS) || 'null');
           if (s?.alertSound) setAlertSound(s.alertSound);
         } catch {}
 
-        // 7) Apply last server records (no local buffer usage)
         const dayISO = isoForThisWeeksDay(initialDayId);
         const { recordsByExercise } = await fetchLastDayByName(USER_ID, initialDayId, dayISO);
         if (mounted && session) {
@@ -322,7 +356,7 @@ export default function MyWorkoutsPage() {
     };
   }, [USER_ID, preloadMedia]);
 
-  // Change day
+  // Change day (loading overlay)
   const changeDay = useCallback(
     async dayId => {
       setDayLoading(true);
@@ -336,18 +370,19 @@ export default function MyWorkoutsPage() {
         setCurrentExId(session.exercises[0]?.id);
         if (session.exercises?.length) preloadMedia(session.exercises);
 
-        // reset mirror
+        // reset trackers
         lastSavedRef.current.clear();
+        setInputBuffer({});
         session.sets.forEach(s => lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
+        setUnsaved(false);
+        setChangeCount(0);
 
         // pull last server records for this day
         const dayISO = isoForThisWeeksDay(dayId);
         const { recordsByExercise } = await fetchLastDayByName(USER_ID, dayId, dayISO);
         applyServerRecords(session, recordsByExercise, next => setWorkout(next), lastSavedRef);
 
-        // persist only the chosen day
         localStorage.setItem(LOCAL_KEY_SELECTED_DAY, dayId);
-        setUnsaved(false);
       } catch (e) {
         console.error(e);
       } finally {
@@ -379,10 +414,10 @@ export default function MyWorkoutsPage() {
       };
       const next = { ...w, sets: [...w.sets, newSet] };
       lastSavedRef.current.set(newSet.id, { weight: 0, reps: 0, done: false });
-      setUnsaved(true);
+      markChanged();
       return next;
     });
-  }, [currentExId]);
+  }, [currentExId, markChanged]);
 
   const removeSetFromCurrentExercise = useCallback(() => {
     setWorkout(w => {
@@ -392,47 +427,71 @@ export default function MyWorkoutsPage() {
       const lastSetId = exSets[exSets.length - 1].id;
       const next = { ...w, sets: w.sets.filter(s => s.id !== lastSetId) };
       lastSavedRef.current.delete(lastSetId);
-      setUnsaved(true);
+      setInputBuffer(prev => {
+        const n = { ...prev };
+        delete n[`${lastSetId}:weight`];
+        delete n[`${lastSetId}:reps`];
+        return n;
+      });
+      markChanged();
       return next;
     });
-  }, [currentExId]);
+  }, [currentExId, markChanged]);
 
-  const toggleDone = useCallback(setId => {
-    setWorkout(w => {
-      if (!w) return w;
-      const next = { ...w, sets: w.sets.map(s => (s.id === setId ? { ...s, done: !s.done } : s)) };
-      setUnsaved(true);
-      return next;
-    });
-  }, []);
+  const toggleDone = useCallback(
+    setId => {
+      setWorkout(w => {
+        if (!w) return w;
+        const next = { ...w, sets: w.sets.map(s => (s.id === setId ? { ...s, done: !s.done } : s)) };
+        markChanged();
+        return next;
+      });
+    },
+    [markChanged],
+  );
 
-  const bump = useCallback((setId, field, delta) => {
-    setWorkout(w => {
-      if (!w) return w;
-      const next = { ...w, sets: w.sets.map(s => (s.id === setId ? { ...s, [field]: Math.max(0, Number(s[field] || 0) + delta) } : s)) };
-      // auto-check done if both > 0
-      const u = next.sets.find(s => s.id === setId);
-      if (u && Number(u.weight) > 0 && Number(u.reps) > 0) {
-        next.sets = next.sets.map(s => (s.id === setId ? { ...s, done: true } : s));
-      }
-      setUnsaved(true);
-      return next;
-    });
-  }, []);
+  const bump = useCallback(
+    (setId, field, delta) => {
+      // clear live buffer (we commit numeric)
+      setInputBuffer(prev => {
+        const n = { ...prev };
+        delete n[`${setId}:${field}`];
+        return n;
+      });
+      setWorkout(w => {
+        if (!w) return w;
+        const next = {
+          ...w,
+          sets: w.sets.map(s => (s.id === setId ? { ...s, [field]: Math.max(0, Number(s[field] || 0) + delta) } : s)),
+        };
+        const u = next.sets.find(s => s.id === setId);
+        if (u && Number(u.weight) > 0 && Number(u.reps) > 0) {
+          next.sets = next.sets.map(s => (s.id === setId ? { ...s, done: true } : s));
+        }
+        markChanged();
+        return next;
+      });
+    },
+    [markChanged],
+  );
 
-  const setValue = useCallback((setId, field, value) => {
-    setWorkout(w => {
-      if (!w) return w;
+  // commit numeric value (used onBlur)
+  const setValue = useCallback(
+    (setId, field, value) => {
       const val = Number(value);
-      const next = { ...w, sets: w.sets.map(s => (s.id === setId ? { ...s, [field]: Number.isFinite(val) ? val : 0 } : s)) };
-      const u = next.sets.find(s => s.id === setId);
-      if (u && Number(u.weight) > 0 && Number(u.reps) > 0) {
-        next.sets = next.sets.map(s => (s.id === setId ? { ...s, done: true } : s));
-      }
-      setUnsaved(true);
-      return next;
-    });
-  }, []);
+      setWorkout(w => {
+        if (!w) return w;
+        const next = { ...w, sets: w.sets.map(s => (s.id === setId ? { ...s, [field]: Number.isFinite(val) ? val : 0 } : s)) };
+        const u = next.sets.find(s => s.id === setId);
+        if (u && Number(u.weight) > 0 && Number(u.reps) > 0) {
+          next.sets = next.sets.map(s => (s.id === setId ? { ...s, done: true } : s));
+        }
+        markChanged();
+        return next;
+      });
+    },
+    [markChanged],
+  );
 
   const buildDailyPRPayload = useCallback(
     exName => {
@@ -450,14 +509,31 @@ export default function MyWorkoutsPage() {
     [workout?.sets],
   );
 
-  const [saving, setSaving] = useState(false);
-
   const saveDayToServer = useCallback(async () => {
-    const ex = workout?.exercises.find(e => e.id === currentExId);
+    const ex = workout?.exercises?.find(e => e.id === currentExId);
     if (!ex) return;
+
+    // commit any buffered values to numeric before save
+    const keys = Object.keys(inputBuffer);
+    if (keys.length) {
+      setWorkout(w => {
+        if (!w) return w;
+        let sets = [...w.sets];
+        keys.forEach(k => {
+          const [sid, field] = k.split(':');
+          const strVal = inputBuffer[k];
+          const numVal = Number(strVal);
+          sets = sets.map(s => (s.id === sid ? { ...s, [field]: Number.isFinite(numVal) ? numVal : 0 } : s));
+        });
+        return { ...w, sets };
+      });
+      setInputBuffer({});
+    }
+
     const payload = buildDailyPRPayload(ex.name);
     try {
       setSaving(true);
+      setSaveStatus('saving');
       const data = await upsertDailyPR(USER_ID, payload.exerciseName, payload.date, payload.records);
       // sync server ids back
       setWorkout(w => {
@@ -470,13 +546,30 @@ export default function MyWorkoutsPage() {
         return { ...w, sets: mapped };
       });
       setUnsaved(false);
+      setChangeCount(0);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus(''), 1200);
     } catch (err) {
       console.error('Save failed', err);
-      // keep unsaved true
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus(''), 1500);
     } finally {
       setSaving(false);
     }
-  }, [workout?.exercises, currentExId, buildDailyPRPayload, USER_ID]);
+  }, [workout?.exercises, currentExId, buildDailyPRPayload, USER_ID, inputBuffer]);
+
+  // Auto-save after >= 2 edits (debounced)
+  useEffect(() => {
+    if (changeCount >= 2) {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        saveDayToServer();
+      }, 800);
+    }
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [changeCount, saveDayToServer]);
 
   useEffect(() => {
     const el = audioRef.current;
@@ -487,7 +580,7 @@ export default function MyWorkoutsPage() {
   }, [alertSound]);
 
   const hasExercises = !!workout?.exercises?.length;
-  const currentExercise = useMemo(() => workout?.exercises.find(e => e.id === currentExId), [workout?.exercises, currentExId]);
+  const currentExercise = useMemo(() => workout?.exercises?.find(e => e.id === currentExId), [workout?.exercises, currentExId]);
   const currentSets = useMemo(() => (workout?.sets || []).filter(s => s.exId === currentExId), [workout?.sets, currentExId]);
 
   const weekOrder = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
@@ -504,8 +597,6 @@ export default function MyWorkoutsPage() {
   }, [plan]);
 
   const [activeMedia, setActiveMedia] = useState('image');
-
-  // if (loading) return <SkeletonLoader />;
 
   const Actions = ({ className }) => (
     <div className={`flex items-center gap-2 ${className}`}>
@@ -531,6 +622,41 @@ export default function MyWorkoutsPage() {
     </div>
   );
 
+  /* ===== Buffer helpers (STATE-BASED) ===== */
+  const getBufferedValue = (setId, field, numericVal) => {
+    const key = `${setId}:${field}`;
+    if (Object.prototype.hasOwnProperty.call(inputBuffer, key)) {
+      return inputBuffer[key];
+    }
+    if (Number(numericVal) === 0) return '';
+    return String(numericVal ?? '');
+  };
+
+  const handleInputChange = (setId, field, raw) => {
+    const key = `${setId}:${field}`;
+    let v = normalizeNumericInput(raw);
+    // allow digits + ONE dot
+    v = v.replace(/[^\d.]/g, '');
+    const parts = v.split('.');
+    if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+    setInputBuffer(prev => ({ ...prev, [key]: v }));
+  };
+
+  const handleInputBlur = (setId, field) => {
+    const key = `${setId}:${field}`;
+    const raw = inputBuffer[key];
+    setInputBuffer(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+    const num = raw === '' || raw == null ? 0 : Number(raw);
+    setValue(setId, field, Number.isFinite(num) ? num : 0);
+    // markChanged(); // setValue already marks changed
+  };
+
+  if (loading) return <SkeletonLoader />;
+
   return (
     <div className='space-y-5 sm:space-y-6'>
       <audio ref={audioRef} src={alertSound} preload='auto' />
@@ -538,7 +664,14 @@ export default function MyWorkoutsPage() {
       <div className={'relative overflow-hidden rounded-lg border border-indigo-100/60 bg-white/60 shadow-sm backdrop-blur '}>
         <div className='absolute inset-0'>
           <div className='absolute inset-0 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-95' />
-          <div className='absolute inset-0 opacity-15' style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px)', backgroundSize: '22px 22px', backgroundPosition: '-1px -1px' }} />
+          <div
+            className='absolute inset-0 opacity-15'
+            style={{
+              backgroundImage: 'linear-gradient(rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px)',
+              backgroundSize: '22px 22px',
+              backgroundPosition: '-1px -1px',
+            }}
+          />
           <div className='absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/20 blur-3xl' />
           <div className='absolute -bottom-16 -right-8 h-60 w-60 rounded-full bg-blue-300/30 blur-3xl' />
         </div>
@@ -555,10 +688,21 @@ export default function MyWorkoutsPage() {
 
           <div className=' mt-2 md:mt-4 flex items-center justify-between '>
             <TabsPill className='!rounded-lg' slice={3} id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={changeDay} />
-
             <Actions className={'max-md:!hidden'} />
           </div>
         </div>
+
+        {/* Day loading overlay */}
+        <AnimatePresence>
+          {dayLoading && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className='absolute inset-0 z-20 grid place-items-center bg-white/50 backdrop-blur-[2px]'>
+              <div className='flex items-center gap-2 text-indigo-700 text-sm font-medium'>
+                <span className='inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin' />
+                {t('loadingExercises') || 'Loading exercises...'}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <AudioHubInline hidden={hidden} setHidden={setHidden} alerting={alerting} setAlerting={setAlerting} open={audioOpen} onClose={() => setAudioOpen(false)} />
@@ -566,25 +710,22 @@ export default function MyWorkoutsPage() {
       {/* WORKOUT ONLY */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
         <div className='flex flex-col lg:flex-row gap-4'>
-          {/* LEFT main pane (enhanced) */}
+          {/* LEFT main pane */}
           <div className='md:rounded-lg md:bg-white h-fit md:p-4 md:shadow-sm w-full  lg:flex-1 min-w-0'>
             <div className={`relative md:bg-white/80 backdrop-blur md:rounded-lg md:overflow-hidden ${!hasExercises ? '!border-transparent' : ''}`}>
               {!hasExercises ? (
                 /* Empty state */
                 <div className='p-5'>
                   <div className='relative flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300/80 bg-gradient-to-br from-slate-50 via-white to-slate-50 p-5 text-center shadow-sm'>
-                    {/* Decorative background */}
                     <div className='absolute inset-0 -z-10 opacity-[0.5]'>
                       <div className='absolute inset-0 bg-[radial-gradient(800px_400px_at_0%_0%,rgba(59,130,246,0.06),transparent_60%),radial-gradient(600px_300px_at_100%_100%,rgba(16,185,129,0.06),transparent_60%)]' />
                       <div className='absolute inset-0 [mask-image:radial-gradient(360px_160px_at_50%_0%,#000,transparent)] bg-[linear-gradient(45deg,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:12px_12px]' />
                     </div>
 
-                    {/* Icon */}
                     <div className='mb-4 grid h-16 w-16 place-items-center rounded-full bg-white shadow ring-1 ring-slate-200'>
                       <Dumbbell size={24} className='text-slate-500' />
                     </div>
 
-                    {/* Text */}
                     <h3 className='text-lg font-semibold text-slate-800'>{t('noExercises') || 'No exercises found for this day'}</h3>
                     <p className='mt-1  text-xs text-slate-400 italic '>{t('pickAnotherDay') || 'Try selecting another day or check your workout plan.'}</p>
                   </div>
@@ -619,7 +760,7 @@ export default function MyWorkoutsPage() {
                                 {activeMedia === 'video' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
                               </button>
 
-                              {/* Alt video tab (only if provided) */}
+                              {/* Alt video tab */}
                               {hasVideo2 && (
                                 <button type='button' aria-pressed={activeMedia === 'video2'} onClick={() => setActiveMedia('video2')} className={['relative inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm rounded-lg outline-none transition', activeMedia === 'video2' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', 'focus-visible:ring-2 focus-visible:ring-indigo-400/40'].join(' ')} title='Show video 2'>
                                   <VideoIcon size={14} />
@@ -654,11 +795,23 @@ export default function MyWorkoutsPage() {
                                 <span className='inline-flex h-[25px] w-[25px] items-center justify-center rounded-lg bg-slate-100 shadow-sm text-slate-700 font-medium'>{s.set}</span>
                               </td>
 
+                              {/* WEIGHT */}
                               <td className='py-2.5 px-3'>
                                 <div className='relative inline-block'>
-                                  <input type='number' value={s.weight ?? 0} onChange={e => setValue(s.id, 'weight', e.target.value)} placeholder='0' className='text-center h-9 w-[100px] !text-[16px] tabular-nums rounded-lg border border-slate-200 bg-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 px-[26px] transition-shadow duration-200' />
+                                  <input
+                                    type='text'
+                                    value={getBufferedValue(s.id, 'weight', s.weight)}
+                                    onChange={e => handleInputChange(s.id, 'weight', e.target.value)}
+                                    onFocus={e => e.target.select()}
+                                    onBlur={() => handleInputBlur(s.id, 'weight')}
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter') e.currentTarget.blur();
+                                    }}
+                                    inputMode='decimal'
+                                    placeholder='0'
+                                    className='text-center h-9 w-[100px] !text-[16px] tabular-nums rounded-lg border border-slate-200 bg-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 px-[26px] transition-shadow duration-200'
+                                  />
 
-                                  {/* Decrease Button */}
                                   <button
                                     type='button'
                                     onClick={e => {
@@ -672,10 +825,8 @@ export default function MyWorkoutsPage() {
                                     className='absolute left-[4px] top-1/2 -translate-y-1/2 grid h-[25px] w-[25px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
                                     tabIndex={-1}>
                                     <Minus size={16} />
-                                    <span className='pointer-events-none absolute inset-0 rounded-md bg-slate-300/40 scale-0 opacity-0 transition-transform duration-300 ease-out group-active:scale-100 group-active:opacity-100'></span>
                                   </button>
 
-                                  {/* Increase Button */}
                                   <button
                                     type='button'
                                     onClick={e => {
@@ -689,14 +840,26 @@ export default function MyWorkoutsPage() {
                                     className='absolute right-[4px] top-1/2 -translate-y-1/2 grid h-[25px] w-[25px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
                                     tabIndex={-1}>
                                     <Plus size={16} />
-                                    <span className='pointer-events-none absolute inset-0 rounded-md bg-blue-300/30 scale-0 opacity-0 transition-transform duration-300 ease-out group-active:scale-100 group-active:opacity-100'></span>
                                   </button>
                                 </div>
                               </td>
 
+                              {/* REPS */}
                               <td className='py-2.5 px-3'>
                                 <div className='relative inline-block'>
-                                  <input type='number' value={s.reps ?? 0} onChange={e => setValue(s.id, 'reps', e.target.value)} placeholder='0' inputMode='numeric' step='1' className='text-center h-9 w-[100px] !text-[16px] tabular-nums rounded-lg border border-slate-200 bg-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 px-[26px]' />
+                                  <input
+                                    type='text'
+                                    value={getBufferedValue(s.id, 'reps', s.reps)}
+                                    onChange={e => handleInputChange(s.id, 'reps', e.target.value)}
+                                    onFocus={e => e.target.select()}
+                                    onBlur={() => handleInputBlur(s.id, 'reps')}
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter') e.currentTarget.blur();
+                                    }}
+                                    inputMode='numeric'
+                                    placeholder='0'
+                                    className='text-center h-9 w-[100px] !text-[16px] tabular-nums rounded-lg border border-slate-200 bg-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 px-[26px]'
+                                  />
 
                                   <button
                                     type='button'
@@ -711,10 +874,8 @@ export default function MyWorkoutsPage() {
                                     className='absolute left-[4px] top-1/2 -translate-y-1/2 grid h-[25px] w-[25px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
                                     tabIndex={-1}>
                                     <Minus size={16} />
-                                    <span className='pointer-events-none absolute inset-0 rounded-md bg-slate-300/40 scale-0 opacity-0 transition-transform duration-300 ease-out group-active:scale-100 group-active:opacity-100'></span>
                                   </button>
 
-                                  {/* Increase Button */}
                                   <button
                                     type='button'
                                     onClick={e => {
@@ -728,10 +889,10 @@ export default function MyWorkoutsPage() {
                                     className='absolute right-[4px] top-1/2 -translate-y-1/2 grid h-[25px] w-[25px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
                                     tabIndex={-1}>
                                     <Plus size={16} />
-                                    <span className='pointer-events-none absolute inset-0 rounded-md bg-blue-300/30 scale-0 opacity-0 transition-transform duration-300 ease-out group-active:scale-100 group-active:opacity-100'></span>
                                   </button>
                                 </div>
                               </td>
+
                               <td className='py-2.5 px-3'>
                                 <CheckBox
                                   initialChecked={s.done}
@@ -757,7 +918,17 @@ export default function MyWorkoutsPage() {
                         </button>
                       </div>
 
-                      <ButtonMini loading={saving} icon={<SaveIcon size={14} />} name={t('save')} onClick={saveDayToServer} className='!px-3 !text-sm !py-1.5 !w-fit md:self-end' />
+                      {/* Auto-save status (Save button removed) */}
+                      <div className='ml-auto flex items-center gap-2'>
+                        {saveStatus === 'saving' && (
+                          <span className='inline-flex items-center gap-1 text-indigo-600'>
+                            <span className='inline-block w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin' />
+                            Saving...
+                          </span>
+                        )}
+                        {saveStatus === 'saved' && <span className='text-emerald-600'>Saved</span>}
+                        {saveStatus === 'error' && <span className='text-rose-600'>Save failed</span>}
+                      </div>
                     </div>
                   </div>
                 </>
@@ -784,7 +955,7 @@ export default function MyWorkoutsPage() {
       <AnimatePresence>
         {unsaved && (
           <motion.div initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 16, opacity: 0 }} className='fixed bottom-4 w-[90%] max-w-fit text-nowrap truncate left-1/2 -translate-x-1/2 z-40 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs flex justify-center text-center px-3 py-1.5 shadow'>
-            {t('changesStored')}
+            {t('changesStored') || 'Changes are stored locally and will auto-save soon'}
           </motion.div>
         )}
       </AnimatePresence>
@@ -839,7 +1010,7 @@ export default function MyWorkoutsPage() {
         userId={USER_ID}
         exercise={currentExercise}
         onUploaded={() => {
-          /* you can toast success here if you want */
+          /* optional toast success */
         }}
       />
     </div>

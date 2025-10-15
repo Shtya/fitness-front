@@ -1,4 +1,7 @@
 /*
+	- الترير يرسل اسبوعيا ولو الكلاينت اتأخر ف الارسال يبعت نتوفيكيشن للمدرب بإن الاشخاص دول لسا مبعتوش 
+	
+	- كورسات لفهم التمارين والتشريح وجسمك بيشتغل ازاي
 	- check when he not auth return to the login
 	- close the popup of the create plan when finish 
 	- check from the ai assistant 
@@ -13,6 +16,7 @@
 		* workouts page ( dashboard)
 			✅ the category overflow
 			✅ enhance the performance of the page
+			- there is a problem i push the binary file to the backend in teh add new 
 
 
 		* dashboard/workouts/plans 
@@ -20,6 +24,7 @@
 			✅ when change on the plan remove the assign 
 			✅ the stats 
 			✅ pagination doesnt work 
+			- when select a exercise and out and add exercise again still the selected and put it again
 			- i have a problem on the edit plans on reorder the exercise doesn't apply
 
 

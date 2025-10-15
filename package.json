@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
+    "@huggingface/transformers": "^3.7.5",
     "aos": "^2.3.4",
     "axios": "^1.10.0",
     "flatpickr": "^4.6.13",

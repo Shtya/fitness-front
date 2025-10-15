@@ -12,7 +12,7 @@ export default function Button({
   className = '',
   color = 'primary',
   loading = false,
-  type = 'button', // Added type prop
+  type = 'button', 
 }) {
   const colorClasses = {
     primary: 'bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-400/50',
@@ -32,7 +32,7 @@ export default function Button({
     subtle: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus-visible:ring-gray-300',
   };
 
-  const baseClass = `cursor-pointer w-full inline-flex items-center justify-center gap-2 rounded-lg text-lg max-md:text-base px-4 !py-[5px] transition-all duration-300`;
+  const baseClass = ` !w-fit text-[16px] min-h-[40px] cursor-pointer w-full inline-flex items-center justify-center gap-2 rounded-lg text-lg max-md:text-base px-4 !py-[5px] transition-all duration-300`;
 
   const finalClass = `${baseClass} ${colorClasses[color]} ${disabled ? '!opacity-50 !cursor-not-allowed !pointer-events-none' : ''} ${className} transform perspective-1000`;
 

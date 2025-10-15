@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState , useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import DataTable from "@/components/dashboard/ui/DataTable";
@@ -11,8 +11,12 @@ import {
 } from "@/components/dashboard/ui/UI";
 import {
   User, Send, ClipboardList, MessageSquare, Plus, Download, Pencil, Trash2,
-  CalendarRange, LineChart, NotebookPen, Folder, CreditCard, Activity, CheckCircle2
+  CalendarRange, LineChart, NotebookPen, Folder, CreditCard, Activity, CheckCircle2,
+  FileText
 } from "lucide-react";
+import { Notification } from '@/config/Notification';
+import api from '@/utils/axios';
+import { useUser } from '@/hooks/useUser';
 
 /* ---------------- Mock API ---------------- */
 // Replace these with real API calls later.
@@ -79,19 +83,16 @@ const fetchClient = (id) =>
   );
 
 /* ---------------- Helpers ---------------- */
+
 const TABS = [
   { key: "overview", label: "Overview", icon: User },
   { key: "measurements", label: "Measurements", icon: ClipboardList },
   { key: "progress", label: "Progress", icon: LineChart },
-  { key: "notes", label: "Notes", icon: NotebookPen },
   { key: "workouts", label: "Workouts", icon: CalendarRange },
   { key: "nutrition", label: "Nutrition", icon: CheckCircle2 },
-  { key: "assignments", label: "Assignments", icon: Activity },
-  { key: "messages", label: "Messages", icon: MessageSquare },
-  { key: "checkins", label: "Check-ins", icon: ClipboardList },
-  { key: "files", label: "Files", icon: Folder },
-  { key: "billing", label: "Billing", icon: CreditCard },
-  { key: "activity", label: "Activity", icon: Activity },
+  { key: "logs", label: "Progress Meals", icon: ClipboardList },
+  { key: "suggestions", label: "Suggestions", icon: MessageSquare },
+  { key: "reports", label: "Reports", icon: FileText },
 ];
 
 function fmt(d) { return new Date(d).toLocaleDateString(); }
@@ -123,6 +124,59 @@ export default function ClientProfilePage() {
 
   const [metric, setMetric] = useState("weight");
 
+  // Nutrition-related states
+  const [mealLogs, setMealLogs] = useState([]);
+  const [loadingMealLogs, setLoadingMealLogs] = useState(false);
+  const [selectedLogDate, setSelectedLogDate] = useState(new Date().toISOString().split('T')[0]);
+  const [nutritionSuggestions, setNutritionSuggestions] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [nutritionReports, setNutritionReports] = useState([]);
+  const [loadingReports, setLoadingReports] = useState(false);
+  const [generateReportOpen, setGenerateReportOpen] = useState(false);
+  const [suggestionModalOpen, setSuggestionModalOpen] = useState(false);
+
+  // Fetch nutrition data
+  const fetchMealLogs = useCallback(async (userId, date) => {
+    setLoadingMealLogs(true);
+    try {
+      const { data } = await api.get(`/nutrition/meal-logs/all`, {
+        params: { userId, date }
+      });
+      setMealLogs(data || []);
+    } catch (error) {
+      console.error('Error fetching meal logs:', error);
+      setMealLogs([]);
+    } finally {
+      setLoadingMealLogs(false);
+    }
+  }, []);
+
+  const fetchNutritionSuggestions = useCallback(async (userId) => {
+    setLoadingSuggestions(true);
+    try {
+      const { data } = await api.get(`/nutrition/suggestions/${userId}`);
+      setNutritionSuggestions(data || []);
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+      setNutritionSuggestions([]);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  }, []);
+
+  const fetchNutritionReports = useCallback(async (userId) => {
+    setLoadingReports(true);
+    try {
+      const { data } = await api.get(`/nutrition/reports/${userId}`);
+      setNutritionReports(data.records || []);
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      setNutritionReports([]);
+    } finally {
+      setLoadingReports(false);
+    }
+  }, []);
+
   useEffect(() => {
     setLoading(true);
     fetchClient(id).then((data) => {
@@ -130,6 +184,25 @@ export default function ClientProfilePage() {
       setLoading(false);
     });
   }, [id]);
+
+  // Load nutrition data when client changes
+  useEffect(() => {
+    if (client && active === 'logs') {
+      fetchMealLogs(client.id, selectedLogDate);
+    }
+  }, [client, active, selectedLogDate, fetchMealLogs]);
+
+  useEffect(() => {
+    if (client && active === 'suggestions') {
+      fetchNutritionSuggestions(client.id);
+    }
+  }, [client, active, fetchNutritionSuggestions]);
+
+  useEffect(() => {
+    if (client && active === 'reports') {
+      fetchNutritionReports(client.id);
+    }
+  }, [client, active, fetchNutritionReports]);
 
   const filteredMeasurements = useMemo(() => {
     if (!client) return [];
@@ -300,28 +373,114 @@ export default function ClientProfilePage() {
       )}
 
       {active === "measurements" && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="card-glow">
-          <div className="p-4 flex items-center justify-between">
-            <div className="font-semibold">Measurements</div>
-            <div className="flex items-center gap-2">
-              <ToolbarButton icon={Download} variant="secondary" onClick={exportMeasurements}>Export CSV</ToolbarButton>
-              <ToolbarButton icon={Plus} onClick={()=>setAddMeasOpen(true)}>Add</ToolbarButton>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="space-y-6">
+          {/* Measurements Table */}
+          <div className="card-glow">
+            <div className="p-4 flex items-center justify-between">
+              <div className="font-semibold">Measurements</div>
+              <div className="flex items-center gap-2">
+                <ToolbarButton icon={Download} variant="secondary" onClick={exportMeasurements}>Export CSV</ToolbarButton>
+                <ToolbarButton icon={Plus} onClick={()=>setAddMeasOpen(true)}>Add</ToolbarButton>
+              </div>
+            </div>
+            <div className="px-4 pb-4">
+              <DateRangeControl from={from} to={to} setFrom={setFrom} setTo={setTo} />
+            </div>
+            <DataTable columns={measColumns} data={filteredMeasurements} loading={false} itemsPerPage={8} pagination />
+            {!filteredMeasurements.length && <EmptyState title="No measurements" subtitle="Add a measurement to get started." />}
+          </div>
+
+          {/* Body Images */}
+          <div className="card-glow p-5">
+            <div className="font-semibold mb-4">Body Progress Images</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="w-full h-32 bg-slate-100 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center mb-2">
+                  <div className="text-center">
+                    <div className="text-2xl text-slate-400 mb-1">📸</div>
+                    <div className="text-xs text-slate-500">Front View</div>
+                  </div>
+                </div>
+                <button className="text-xs text-blue-600 hover:text-blue-700">Upload</button>
+              </div>
+              <div className="text-center">
+                <div className="w-full h-32 bg-slate-100 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center mb-2">
+                  <div className="text-center">
+                    <div className="text-2xl text-slate-400 mb-1">📸</div>
+                    <div className="text-xs text-slate-500">Left Side</div>
+                  </div>
+                </div>
+                <button className="text-xs text-blue-600 hover:text-blue-700">Upload</button>
+              </div>
+              <div className="text-center">
+                <div className="w-full h-32 bg-slate-100 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center mb-2">
+                  <div className="text-center">
+                    <div className="text-2xl text-slate-400 mb-1">📸</div>
+                    <div className="text-xs text-slate-500">Right Side</div>
+                  </div>
+                </div>
+                <button className="text-xs text-blue-600 hover:text-blue-700">Upload</button>
+              </div>
+              <div className="text-center">
+                <div className="w-full h-32 bg-slate-100 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center mb-2">
+                  <div className="text-center">
+                    <div className="text-2xl text-slate-400 mb-1">📸</div>
+                    <div className="text-xs text-slate-500">Back View</div>
+                  </div>
+                </div>
+                <button className="text-xs text-blue-600 hover:text-blue-700">Upload</button>
+              </div>
             </div>
           </div>
-          <div className="px-4 pb-4">
-            <DateRangeControl from={from} to={to} setFrom={setFrom} setTo={setTo} />
-          </div>
-          <DataTable columns={measColumns} data={filteredMeasurements} loading={false} itemsPerPage={8} pagination />
-          {!filteredMeasurements.length && <EmptyState title="No measurements" subtitle="Add a measurement to get started." />}
         </motion.div>
       )}
 
       {active === "progress" && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="space-y-6">
-          {/* reuse the same block but show key deltas */}
+          {/* Exercise Progress */}
           <div className="card-glow p-5">
-            <div className="font-semibold mb-2">Progress Charts</div>
-            <div className="flex items-center gap-2">
+            <div className="font-semibold mb-4">Exercise Progress</div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <div className="text-sm text-slate-600 mb-1">Total Workouts</div>
+                  <div className="text-2xl font-bold text-slate-800">24</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <div className="text-sm text-slate-600 mb-1">Personal Records</div>
+                  <div className="text-2xl font-bold text-slate-800">8</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <div className="text-sm text-slate-600 mb-1">Consistency</div>
+                  <div className="text-2xl font-bold text-slate-800">85%</div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h5 className="font-medium text-slate-700">Recent Achievements</h5>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div>
+                      <div className="font-medium text-green-800">New PR: Squat</div>
+                      <div className="text-sm text-green-600">120kg x 5 reps</div>
+                    </div>
+                    <div className="text-xs text-green-600">2 days ago</div>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div>
+                      <div className="font-medium text-blue-800">New PR: Deadlift</div>
+                      <div className="text-sm text-blue-600">150kg x 3 reps</div>
+                    </div>
+                    <div className="text-xs text-blue-600">1 week ago</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Body Measurements Progress */}
+          <div className="card-glow p-5">
+            <div className="font-semibold mb-2">Body Measurements Progress</div>
+            <div className="flex items-center gap-2 mb-4">
               <select className="px-3 py-2 rounded-lg border border-slate-200 bg-white" value={metric} onChange={(e)=>setMetric(e.target.value)}>
                 {["weight","bodyFat","chest","waist","arms","thighs"].map(m => <option key={m} value={m}>{labelFor(m)}</option>)}
               </select>
@@ -339,22 +498,6 @@ export default function ClientProfilePage() {
         </motion.div>
       )}
 
-      {active === "notes" && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="card-glow p-5">
-          <div className="flex items-center justify-between">
-            <div className="font-semibold">Coach Notes</div>
-            <ToolbarButton icon={Plus} onClick={()=>setAddNoteOpen(true)}>New Note</ToolbarButton>
-          </div>
-          <div className="mt-3 space-y-3">
-            {client.notes.length ? client.notes.map(n => (
-              <div key={n.id} className="rounded-lg border border-slate-200 bg-white p-3">
-                <div className="text-xs text-slate-500">{timeAgo(n.at)}</div>
-                <div className="mt-0.5">{n.text}</div>
-              </div>
-            )) : <EmptyState title="No notes" subtitle="Add your first coaching note." />}
-          </div>
-        </motion.div>
-      )}
 
       {active === "workouts" && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="card-glow p-5">
@@ -393,108 +536,188 @@ export default function ClientProfilePage() {
         </motion.div>
       )}
 
-      {active === "assignments" && (
+
+      {active === "logs" && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="card-glow p-5">
-          <div className="font-semibold mb-2">Assignments</div>
-          {client.assignments.length ? (
-            <ul className="space-y-2">
-              {client.assignments.map(a => (
-                <li key={a.id} className="rounded-lg border border-slate-200 bg-white p-3">
-                  <div className="font-medium">{a.title}</div>
-                  <div className="text-xs text-slate-500">From {fmt(a.startDate)} to {fmt(a.endDate)} · {a.status}</div>
-                </li>
+          <div className="flex items-center justify-between mb-4">
+            <div className="font-semibold">Meal Logs</div>
+            <div className="flex items-center gap-2">
+              <input 
+                type="date" 
+                className="px-3 py-2 rounded-lg border border-slate-200 bg-white" 
+                value={selectedLogDate} 
+                onChange={(e) => setSelectedLogDate(e.target.value)} 
+              />
+              <button 
+                onClick={() => fetchMealLogs(client.id, selectedLogDate)}
+                className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
+          {loadingMealLogs ? (
+            <div className="text-center py-8 text-slate-500">Loading meal logs...</div>
+          ) : mealLogs.length > 0 ? (
+            <div className="space-y-2">
+              {mealLogs.map(log => (
+                <div key={log.id} className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-medium">{log.itemName}</span>
+                      <span className="text-sm text-slate-500 ml-2">({log.mealType})</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded-full text-xs ${log.taken ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {log.taken ? 'Taken' : 'Not Taken'}
+                      </span>
+                      <span className="text-xs text-slate-500">{log.quantity}g</span>
+                    </div>
+                  </div>
+                  {log.notes && (
+                    <div className="mt-2 text-sm text-slate-600">{log.notes}</div>
+                  )}
+                </div>
               ))}
-            </ul>
-          ) : <EmptyState title="No assignments" subtitle="Assign a program or diet." />}
+            </div>
+          ) : <EmptyState title="No meal logs" subtitle="No meal logs found for this date." />}
         </motion.div>
       )}
 
-      {active === "messages" && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="card-glow p-5">
-          <div className="flex items-center justify-between">
-            <div className="font-semibold">Recent Messages</div>
-            <ToolbarButton icon={MessageSquare} onClick={()=>router.push(`/dashboard/communication/messages?client=${client.id}`)}>Open Chat</ToolbarButton>
-          </div>
-          <div className="mt-3 space-y-2">
-            {client.messagesPreview.length ? client.messagesPreview.map(m => (
-              <div key={m.id} className={`px-3 py-2 rounded-lg border ${m.from==='coach'? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white border-transparent' : 'bg-white border-slate-200'}`}>
-                <div className="text-xs opacity-80">{timeAgo(m.at)}</div>
-                <div>{m.text}</div>
+      {active === "suggestions" && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="space-y-6">
+          {/* Exercise Suggestions */}
+          <div className="card-glow p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="font-semibold">Exercise Suggestions</div>
+              <button 
+                onClick={() => setSuggestionModalOpen(true)}
+                className="px-3 py-2 rounded-lg bg-gradient-to-tr from-indigo-600 to-blue-500 text-white hover:from-indigo-700 hover:to-blue-600 text-sm"
+              >
+                Add Suggestion
+              </button>
+            </div>
+            <div className="space-y-2">
+              <div className="rounded-lg border border-slate-200 bg-white p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">Squat Form Improvement</span>
+                  <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-700">Pending</span>
+                </div>
+                <p className="text-sm text-slate-600 mb-2">I think I can improve my squat depth. Can we work on mobility exercises?</p>
+                <div className="text-xs text-slate-500">Exercise • 2 days ago</div>
+                <div className="mt-2 flex items-center gap-2">
+                  <button className="px-2 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700 text-sm">Approve</button>
+                  <button className="px-2 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm">Reject</button>
+                </div>
               </div>
-            )) : <EmptyState title="No messages" subtitle="Start a conversation from Messages." />}
-          </div>
-        </motion.div>
-      )}
-
-      {active === "checkins" && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="card-glow">
-          <div className="p-4 flex items-center justify-between">
-            <div className="font-semibold">Check-ins</div>
-            <ToolbarButton icon={ClipboardList} onClick={()=>router.push(`/dashboard/progress/check-ins?client=${client.id}`)}>Open Check-ins</ToolbarButton>
-          </div>
-          <DataTable columns={checkinColumns} data={client.checkins} loading={false} itemsPerPage={8} pagination />
-          {!client.checkins.length && <EmptyState title="No check-ins" subtitle="Submit the first weekly check-in." />}
-        </motion.div>
-      )}
-
-      {active === "files" && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="card-glow p-5">
-          <div className="font-semibold mb-2">Files</div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <FileDrop label="Upload files" multiple onFiles={(fs)=>alert(`${fs.length} file(s) selected (mock).`)} />
-            <div className="md:col-span-2">
-              {client.files.length ? (
-                <ul className="space-y-2">
-                  {client.files.map(f => (
-                    <li key={f.id} className="rounded-lg border border-slate-200 bg-white p-3 flex items-center justify-between">
-                      <div className="min-w-0">
-                        <div className="font-medium truncate">{f.name}</div>
-                        <div className="text-xs text-slate-500">{f.size} · {fmt(f.at)}</div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button className="px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm">View</button>
-                        <button className="px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-red-50 text-red-600 text-sm"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : <EmptyState title="No files" subtitle="Upload PDFs or images for this client." />}
             </div>
           </div>
+
+          {/* Nutrition Suggestions */}
+          <div className="card-glow p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="font-semibold">Nutrition Suggestions</div>
+              <button 
+                onClick={() => fetchNutritionSuggestions(client.id)}
+                className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+              >
+                Refresh
+              </button>
+            </div>
+            {loadingSuggestions ? (
+              <div className="text-center py-8 text-slate-500">Loading suggestions...</div>
+            ) : nutritionSuggestions.length > 0 ? (
+              <div className="space-y-2">
+                {nutritionSuggestions.map(suggestion => (
+                  <div key={suggestion.id} className="rounded-lg border border-slate-200 bg-white p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">{suggestion.itemName}</span>
+                      <span className={`px-2 py-1 rounded-full text-xs ${suggestion.coachApproved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                        {suggestion.coachApproved ? 'Approved' : 'Pending'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-600 mb-2">{suggestion.suggestion}</p>
+                    <div className="text-xs text-slate-500">
+                      {suggestion.mealType} • {suggestion.day} • {timeAgo(suggestion.created_at)}
+                    </div>
+                    {!suggestion.coachApproved && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <button 
+                          onClick={() => {/* Approve suggestion */}}
+                          className="px-2 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700 text-sm"
+                        >
+                          Approve
+                        </button>
+                        <button 
+                          onClick={() => {/* Reject suggestion */}}
+                          className="px-2 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : <EmptyState title="No suggestions" subtitle="No nutrition suggestions found for this client." />}
+          </div>
         </motion.div>
       )}
 
-      {active === "billing" && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="card-glow">
-          <div className="p-4 flex items-center justify-between">
-            <div className="font-semibold">Billing</div>
-            <div className="text-sm text-slate-600">
-              Plan: <span className="font-medium">{client.membership.plan}</span> · Renews {fmt(client.membership.renewsAt)} ·
-              <span className="ml-2 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">{client.membership.status}</span>
+      {active === "reports" && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="card-glow p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="font-semibold">Nutrition Reports</div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setGenerateReportOpen(true)}
+                className="px-3 py-2 rounded-lg bg-gradient-to-tr from-indigo-600 to-blue-500 text-white hover:from-indigo-700 hover:to-blue-600 text-sm"
+              >
+                Generate Report
+              </button>
+              <button 
+                onClick={() => fetchNutritionReports(client.id)}
+                className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+              >
+                Refresh
+              </button>
             </div>
           </div>
-          <div className="p-4">
-            <DataTable columns={invoiceColumns} data={client.invoices} loading={false} itemsPerPage={6} pagination />
-            {!client.invoices.length && <EmptyState title="No invoices" subtitle="Create the first invoice." />}
-          </div>
-        </motion.div>
-      )}
-
-      {active === "activity" && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="card-glow p-5">
-          <div className="font-semibold mb-2">Activity</div>
-          {client.activity.length ? (
-            <ul className="space-y-2">
-              {client.activity.map(a => (
-                <li key={a.id} className={`rounded-lg border border-slate-200 p-3 ${activityColors[a.kind] || "bg-white"}`}>
-                  <div className="text-xs text-slate-500">{timeAgo(a.at)}</div>
-                  <div>{a.text}</div>
-                </li>
+          {loadingReports ? (
+            <div className="text-center py-8 text-slate-500">Loading reports...</div>
+          ) : nutritionReports.length > 0 ? (
+            <div className="space-y-2">
+              {nutritionReports.map(report => (
+                <div key={report.id} className="rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium">{report.title}</span>
+                    <span className="text-xs text-slate-500">{fmt(report.reportDate)}</span>
+                  </div>
+                  <p className="text-sm text-slate-600 mb-2">{report.description}</p>
+                  <div className="text-xs text-slate-500 mb-2">
+                    Period: {fmt(report.periodStart)} - {fmt(report.periodEnd)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => {/* View report details */}}
+                      className="px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+                    >
+                      View
+                    </button>
+                    <button 
+                      onClick={() => {/* Download report */}}
+                      className="px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"
+                    >
+                      Download
+                    </button>
+                  </div>
+                </div>
               ))}
-            </ul>
-          ) : <EmptyState title="No activity" subtitle="Activity shows messages, check-ins, assignments and more." />}
+            </div>
+          ) : <EmptyState title="No reports" subtitle="No nutrition reports found for this client." />}
         </motion.div>
       )}
+
 
       {/* Add measurement modal */}
       <Modal open={addMeasOpen} onClose={()=>setAddMeasOpen(false)} title="Add Measurement">
@@ -527,6 +750,57 @@ export default function ClientProfilePage() {
           </div>
         </form>
       </Modal>
+
+      {/* Generate report modal */}
+      <Modal open={generateReportOpen} onClose={()=>setGenerateReportOpen(false)} title="Generate Nutrition Report">
+        <ReportForm
+          onSubmit={async payload => {
+            try {
+              await api.post('/nutrition/reports', {
+                userId: client.id,
+                generatedById: USER?.id,
+                ...payload,
+              });
+              Notification('Report generated successfully', 'success');
+              setGenerateReportOpen(false);
+              fetchNutritionReports(client.id);
+            } catch (e) {
+              Notification(e?.response?.data?.message || 'Generate failed', 'error');
+            }
+          }}
+        />
+      </Modal>
+
+      {/* Suggestion Modal */}
+      <Modal open={suggestionModalOpen} onClose={()=>setSuggestionModalOpen(false)} title="Submit Suggestion">
+        <SuggestionForm
+          onSubmit={async payload => {
+            try {
+              await api.post('/nutrition/suggestions', {
+                userId: client.id,
+                ...payload,
+              });
+              Notification('Suggestion submitted successfully', 'success');
+              setSuggestionModalOpen(false);
+            } catch (e) {
+              Notification(e?.response?.data?.message || 'Submit failed', 'error');
+            }
+          }}
+        />
+      </Modal>
+
+      {/* Floating Suggestion Button */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          onClick={() => setSuggestionModalOpen(true)}
+          className="w-14 h-14 bg-gradient-to-tr from-indigo-600 to-blue-500 text-white rounded-full shadow-lg hover:from-indigo-700 hover:to-blue-600 transition-all duration-200 flex items-center justify-center group"
+        >
+          <MessageSquare size={24} />
+          <div className="absolute right-16 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+            Submit Suggestion
+          </div>
+        </button>
+      </div>
 
       <style jsx>{`
         .inp { @apply w-full px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30; }
@@ -561,3 +835,166 @@ function avg(arr){ if(!arr || !arr.length) return 0; return arr.reduce((a,b)=>a+
 function toNums(o){ const out={}; Object.keys(o).forEach(k=>{ const v=o[k]; out[k]=isNaN(+v)?v:+v; }); return out; }
 function labelFor(m){ return ({weight:"Weight",bodyFat:"Body Fat",chest:"Chest",waist:"Waist",arms:"Arms",thighs:"Thighs"})[m] || m; }
 function unitFor(m){ return ({weight:"kg",bodyFat:"%",chest:"cm",waist:"cm",arms:"cm",thighs:"cm"})[m] || ""; }
+
+// Report Form Component
+function ReportForm({ onSubmit }) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [periodStart, setPeriodStart] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [periodEnd, setPeriodEnd] = useState(new Date().toISOString().split('T')[0]);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const payload = { title, description, periodStart, periodEnd };
+      await onSubmit(payload);
+    } catch (error) {
+      console.error('Error generating report:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="text-sm text-slate-600">Report Title</label>
+        <input 
+          type="text" 
+          className="inp" 
+          value={title} 
+          onChange={(e) => setTitle(e.target.value)} 
+          required 
+          placeholder="e.g., Monthly Nutrition Analysis" 
+        />
+      </div>
+
+      <div>
+        <label className="text-sm text-slate-600">Description</label>
+        <textarea 
+          className="inp" 
+          rows={3}
+          value={description} 
+          onChange={(e) => setDescription(e.target.value)} 
+          placeholder="Optional description for this report" 
+        />
+      </div>
+
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <label className="text-sm text-slate-600">Start Date</label>
+          <input 
+            type="date" 
+            className="inp" 
+            value={periodStart} 
+            onChange={(e) => setPeriodStart(e.target.value)} 
+            required 
+          />
+        </div>
+        <div className="flex-1">
+          <label className="text-sm text-slate-600">End Date</label>
+          <input 
+            type="date" 
+            className="inp" 
+            value={periodEnd} 
+            onChange={(e) => setPeriodEnd(e.target.value)} 
+            required 
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end">
+        <button 
+          type="submit"
+          disabled={loading}
+          className="px-3 py-2 rounded-lg bg-gradient-to-tr from-indigo-600 to-blue-500 text-white hover:from-indigo-700 hover:to-blue-600 disabled:opacity-50"
+        >
+          {loading ? 'Generating...' : 'Generate Report'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// Suggestion Form Component
+function SuggestionForm({ onSubmit }) {
+  const [type, setType] = useState('exercise');
+  const [title, setTitle] = useState('');
+  const [suggestion, setSuggestion] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const payload = { 
+        type,
+        title,
+        suggestion,
+        date: new Date().toISOString().split('T')[0],
+        day: new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase(),
+        mealType: type === 'nutrition' ? 'breakfast' : null,
+        itemName: title
+      };
+      await onSubmit(payload);
+    } catch (error) {
+      console.error('Error submitting suggestion:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="text-sm text-slate-600">Suggestion Type</label>
+        <select 
+          className="inp" 
+          value={type} 
+          onChange={(e) => setType(e.target.value)} 
+          required
+        >
+          <option value="exercise">Exercise</option>
+          <option value="nutrition">Nutrition</option>
+          <option value="general">General</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="text-sm text-slate-600">Title</label>
+        <input 
+          type="text" 
+          className="inp" 
+          value={title} 
+          onChange={(e) => setTitle(e.target.value)} 
+          required 
+          placeholder="Brief title for your suggestion" 
+        />
+      </div>
+
+      <div>
+        <label className="text-sm text-slate-600">Suggestion</label>
+        <textarea 
+          className="inp" 
+          rows={4}
+          value={suggestion} 
+          onChange={(e) => setSuggestion(e.target.value)} 
+          required
+          placeholder="Describe your suggestion in detail..." 
+        />
+      </div>
+
+      <div className="flex items-center justify-end">
+        <button 
+          type="submit"
+          disabled={loading}
+          className="px-3 py-2 rounded-lg bg-gradient-to-tr from-indigo-600 to-blue-500 text-white hover:from-indigo-700 hover:to-blue-600 disabled:opacity-50"
+        >
+          {loading ? 'Submitting...' : 'Submit Suggestion'}
+        </button>
+      </div>
+    </form>
+  );
+}

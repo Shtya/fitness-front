@@ -1,4 +1,3 @@
- 
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -269,7 +268,6 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
     const ctrl = new AbortController();
     inFlight.current = ctrl;
 
-    console.log(API_KEY);
     setAiLoading(true);
     try {
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -381,14 +379,14 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
                   await handleNameBlur();
                 }}
                 placeholder='e.g., Wide-Grip Seated Row'
-                // rightSlot={
-                //   showAiButton ? (
-                //     <button type='button' onClick={applyAISuggestions} className='mr-1 inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-400/50'>
-                //       <Wand2 className='h-3.5 w-3.5' />
-                //       Get AI
-                //     </button>
-                //   ) : null
-                // }
+                rightSlot={
+                  showAiButton ? (
+                    <button type='button' onClick={applyAISuggestions} className='mr-1 inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-400/50'>
+                      <Wand2 className='h-3.5 w-3.5' />
+                      Get AI
+                    </button>
+                  ) : null
+                }
               />
             </Field>
           )}
@@ -506,7 +504,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
                         className='hidden'
                         onChange={e => {
                           const f = e.target.files?.[0] || null;
-                           setImgFile(f);
+                          setImgFile(f);
                           setValue('hasImgFile', !!f, { shouldValidate: true });
                           setValue('imgUrl', f.name);
                           trigger('imgUrl');
@@ -565,10 +563,10 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
       </div>
 
       <div className='flex items-center justify-end gap-2 pt-2'>
-        {/* <PrimaryButton type='button' onClick={applyAISuggestions} loading={aiLoading} disabled={!nameVal || nameVal.trim().length < 2}>
+        <PrimaryButton type='button' onClick={applyAISuggestions} loading={aiLoading} disabled={!nameVal || nameVal.trim().length < 2}>
           <Sparkles className='mr-1.5 h-4 w-4' />
           Fill with AI
-        </PrimaryButton> */}
+        </PrimaryButton>
 
         {/* Save with RHF submitting state */}
         <PrimaryButton type='submit' loading={isSubmitting}>

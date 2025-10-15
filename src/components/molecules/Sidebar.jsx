@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Shield, ShieldCheck, Dumbbell, ClipboardList, CalendarRange, Apple, NotebookPen, MessageSquare, CreditCard, ChefHat, ShoppingCart, Calculator, LineChart, Salad, Settings as SettingsIcon, ServerCog, ChevronDown, X, UtensilsCrossed, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Shield, ShieldCheck, Dumbbell, ClipboardList, CalendarRange, Apple, NotebookPen, MessageSquare, CreditCard, ChefHat, ShoppingCart, Calculator, LineChart, Salad, Settings as SettingsIcon, ServerCog, ChevronDown, X, UtensilsCrossed, ChevronLeft, ChevronRight, BarChart3, Send, FileText, Newspaper } from 'lucide-react';
 import { usePathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
 import { FaChartBar, FaInbox, FaRegFilePowerpoint, FaUsers, FaWpforms } from 'react-icons/fa';
@@ -26,7 +26,7 @@ const NAV = [
         icon: Dumbbell,
         children: [
           { name: 'My Workouts', href: '/dashboard/my/workouts', icon: ClipboardList },
-          { name: 'Progress', href: '/dashboard/my/progress', icon: LineChart },
+          { name: 'My Progress', href: '/dashboard/my/progress', icon: LineChart },
         ],
       },
       {
@@ -38,7 +38,9 @@ const NAV = [
           { name: 'Grocery List', href: '/dashboard/nutrition/grocery-list', icon: ShoppingCart },
         ],
       },
-			{ name: 'Calorie Calculator', href: '/dashboard/nutrition/calculator', icon: Calculator },
+      { name: 'Weekly Strength Report', href: '/dashboard/my/report', icon: Newspaper }, 
+
+      { name: 'Calorie Calculator', href: '/dashboard/calculator', icon: Calculator },
       { name: 'Profile', href: '/dashboard/my/profile', icon: UserIcon },
     ],
   },
@@ -66,8 +68,31 @@ const NAV = [
           { name: 'Grocery List', href: '/dashboard/nutrition/grocery-list', icon: ShoppingCart },
         ],
       },
-			{ name: 'Calorie Calculator', href: '/dashboard/nutrition/calculator', icon: Calculator },
+      { name: 'Calorie Calculator', href: '/dashboard/calculator', icon: Calculator },
       { name: 'Profile', href: '/dashboard/my/profile', icon: UserIcon },
+    ],
+  },
+  {
+    role: 'coach',
+    section: 'Client Management',
+    items: [
+      {
+        name: 'Nutrition Management',
+        icon: UtensilsCrossed,
+        children: [
+          { name: 'Meal Plans', href: '/dashboard/nutrition', icon: ChefHat },
+          { name: 'Analytics', href: '/dashboard/nutrition/analytics', icon: BarChart3 },
+          { name: 'Reports', href: '/dashboard/nutrition/reports', icon: FileText },
+        ],
+      },
+      {
+        name: 'Training Management',
+        icon: Dumbbell,
+        children: [
+          { name: 'Workout Plans', href: '/dashboard/workouts/plans', icon: NotebookPen },
+          { name: 'All Workouts', href: '/dashboard/workouts', icon: ClipboardList },
+        ],
+      },
     ],
   },
 
@@ -86,7 +111,15 @@ const NAV = [
     section: 'Programs',
     items: [
       { name: 'Workout Programs', href: '/dashboard/workouts/plans', icon: NotebookPen },
-      { name: 'Meal Programs', href: '/dashboard/nutrition/meal-plans', icon: UtensilsCrossed },
+      {
+        name: 'Nutrition Management',
+        icon: UtensilsCrossed,
+        children: [
+          { name: 'Meal Plans', href: '/dashboard/nutrition', icon: ChefHat },
+          { name: 'Analytics', href: '/dashboard/nutrition/analytics', icon: BarChart3 },
+          { name: 'Reports', href: '/dashboard/nutrition/reports', icon: FileText },
+        ],
+      },
     ],
   },
   {
@@ -107,7 +140,7 @@ const NAV = [
     section: 'Operations',
     items: [
       { name: 'Messages', href: '/dashboard/chat', icon: MessageSquare },
-      { name: 'Calculator', href: '/dashboard/calculator', icon: Calculator },
+      { name: 'Calorie Calculator', href: '/dashboard/calculator', icon: Calculator },
       { name: 'Reports', href: '/dashboard/reports', icon: FaRegFilePowerpoint },
       { name: 'System Settings', href: '/dashboard/settings', icon: ServerCog },
     ],
