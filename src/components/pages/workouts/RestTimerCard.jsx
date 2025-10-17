@@ -151,8 +151,8 @@ export const RestTimerCard = React.memo(function RestTimerCard({
 
   /* --------------------------- UI --------------------------- */
   return (
-    <div className={` max-md:flex max-md:h-full max-md:flex-col md:pt-2 md:pb-2 ${className}`}>
-      <div className={['max-md:flex max-md:flex-col max-md:h-full max-md:justify-center bg-white relative flex items-center gap-3 rounded-lg border border-slate-200 backdrop-blur px-3 py-2.5'].join(' ')} role='group' aria-label='Rest timer'>
+    <div className={`  pt-2 pb-2 ${className}`}>
+      <div className={['  bg-white relative flex items-center gap-3 rounded-lg border border-slate-200 backdrop-blur px-3 py-2.5'].join(' ')} role='group' aria-label='Rest timer'>
         {alerting && <div className='pointer-events-none absolute inset-0 rounded-lg ring-2 ring-rose-200/60' />}
 
         <button
@@ -217,7 +217,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
         </button>
 
         {/* Center: controls & editor */}
-        <div className='flex max-md:flex-col items-center gap-2 md:flex-1 min-w-0'>
+        <div className='flex items-center gap-2 flex-1 min-w-0'>
           {alerting && (
             <button onClick={stopAlert} className='inline-flex items-center gap-1.5 ml-1 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 px-2 py-[3px] text-[10px] hover:bg-rose-100' title='Stop alert sound'>
               <BellOff size={12} /> Stop sound
@@ -236,7 +236,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
               </div>
             </div>
           )}
-          <div className='max-md:flex-col flex items-center gap-1.5'>
+          <div className=' flex items-center gap-1.5'>
             {!running ? (
               <button onClick={handleStart} className='inline-flex items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 px-3 h-8 text-xs hover:bg-indigo-100' title='Start'>
                 <Play size={12} /> Start

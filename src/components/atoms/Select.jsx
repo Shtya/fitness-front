@@ -217,7 +217,7 @@ export default function Select({
         open &&
         createPortal(
           <div role='listbox' aria-activedescendant={activeIndex >= 0 ? `opt-${activeIndex}` : undefined} className='z-[99999999] fixed mt-0' style={{ top: coords.top, left: coords.left, width: coords.width }}>
-            <div ref={listRef} className='max-h-80 overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5' onKeyDown={onKeyDown}>
+            <div ref={listRef} className='max-h-[215px] overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5' onKeyDown={onKeyDown}>
               {/* Search row */}
               {searchable && !createMode && (
                 <div className='p-2 border-b border-slate-100 sticky top-0 bg-white'>

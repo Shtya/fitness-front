@@ -55,7 +55,6 @@ export default function PlansPage() {
   const [searchText, setSearchText] = useState('');
   const debounced = useDebounced(searchText, 350);
 
-  const [view, setView] = useState('list');
   const [preview, setPreview] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [editRow, setEditRow] = useState(null);
@@ -253,26 +252,6 @@ export default function PlansPage() {
           </div>
 
           <div className='flex items-center gap-2'>
-            {/* View toggle */}
-            <button onClick={() => setView(v => (v === 'grid' ? 'list' : 'grid'))} className={['group inline-flex items-center gap-2 rounded-lg px-3.5 h-11', 'border border-slate-200 bg-white/90 text-slate-800', 'shadow-sm hover:shadow transition active:scale-[.98]', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')} aria-pressed={view !== 'grid'} title={view === 'grid' ? 'Switch to list view' : 'Switch to grid view'}>
-              <span className='relative inline-block w-5 h-5'>
-                <AnimatePresence mode='wait' initial={false}>
-                  {view === 'grid' ? (
-                    <motion.span key='rows' className='absolute inset-0' initial={{ y: 8, opacity: 0, rotate: -8, scale: 0.92 }} animate={{ y: 0, opacity: 1, rotate: 0, scale: 1 }} exit={{ y: -8, opacity: 0, rotate: 8, scale: 0.92 }} transition={{ type: 'spring', stiffness: 420, damping: 28, mass: 0.6 }}>
-                      <Rows className='w-5 h-5 text-slate-700' />
-                    </motion.span>
-                  ) : (
-                    <motion.span key='grid' className='absolute inset-0' initial={{ y: 8, opacity: 0, rotate: -8, scale: 0.92 }} animate={{ y: 0, opacity: 1, rotate: 0, scale: 1 }} exit={{ y: -8, opacity: 0, rotate: 8, scale: 0.92 }} transition={{ type: 'spring', stiffness: 420, damping: 28, mass: 0.6 }}>
-                      <LayoutGrid className='w-5 h-5 text-slate-700' />
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </span>
-              <motion.span key={view} initial={{ y: 6, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -6, opacity: 0 }} transition={{ duration: 0.16 }} className='hidden sm:inline text-sm'>
-                {view === 'grid' ? 'List view' : 'Grid view'}
-              </motion.span>
-            </button>
-
             {/* Per page */}
             <div className='min-w-[130px]'>
               <Select
@@ -302,7 +281,7 @@ export default function PlansPage() {
       {err ? <div className='p-3 rounded-lg bg-red-50 text-red-700 border border-red-100'>{err}</div> : null}
 
       {/* Content */}
-      {view === 'grid' ? <GridView loading={loading} items={items} onPreview={openPreview} onEdit={openEdit} onDelete={askDelete} onAssign={openAssign} /> : <ListView loading={loading} items={items} onPreview={openPreview} onEdit={openEdit} onDelete={askDelete} onAssign={openAssign} />}
+      {<ListView loading={loading} items={items} onPreview={openPreview} onEdit={openEdit} onDelete={askDelete} onAssign={openAssign} />}
 
       <PrettyPagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
@@ -395,140 +374,6 @@ const ConfirmDialog = memo(({ open, onClose, loading, title = 'Are you sure?', m
 });
 
 /* ================================ GRID VIEW ================================ */
-const GridView = memo(({ loading, items, onPreview, onEdit, onDelete, onAssign }) => {
-  if (loading) {
-    return (
-      <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'>
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className='relative overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm'>
-            <div className='aspect-video w-full overflow-hidden'>
-              <div className='h-full w-full shimmer' />
-            </div>
-            <div className='p-4'>
-              <div className='h-4 w-4/5 shimmer rounded mb-2' />
-              <div className='h-3 w-2/3 shimmer rounded mb-2' />
-              <div className='h-3 w-1/2 shimmer rounded' />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (!items.length) {
-    return (
-      <div className='rounded-lg border border-slate-200 bg-white p-10 text-center shadow-sm'>
-        <div className='mx-auto w-16 h-16 rounded-lg bg-slate-100 grid place-content-center'>
-          <Dumbbell className='w-8 h-8 text-slate-500' />
-        </div>
-        <h3 className='mt-4 text-lg font-semibold text-slate-800'>No plans found</h3>
-        <p className='text-sm text-slate-600 mt-1'>Try a different search or create a new plan.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'>
-      {items.map(p => {
-        const dayCount = p?.days?.length || 0;
-        const assignments = Array.isArray(p?.assignments) ? p.assignments : [];
-        const totalAssignees = assignments.length;
-        const activeAssignees = assignments.filter(a => a?.isActive).length;
-
-        return (
-          <motion.div
-            key={p.id}
-            initial={{ opacity: 0, y: 10, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            whileHover={{ y: -2, scale: 1.01 }}
-            whileTap={{ scale: 0.995 }}
-            transition={spring}
-            className='group relative overflow-hidden rounded-xl bg-white border border-slate-200 shadow-sm 
-             hover:shadow-lg transition-shadow duration-300 will-change-transform'>
-            {/* ✨ Gradient glow ring */}
-            <span
-              aria-hidden
-              className='pointer-events-none absolute inset-0 rounded-[inherit] opacity-0 transition-opacity duration-300
-               group-hover:opacity-100'
-              style={{
-                background: 'radial-gradient(60% 60% at 50% 10%, rgba(99,102,241,0.20), transparent 70%), radial-gradient(60% 60% at 80% 30%, rgba(168,85,247,0.18), transparent 70%)',
-              }}
-            />
-
-            {/* ✨ Sheen swipe across header on hover */}
-            <span
-              aria-hidden
-              className='pointer-events-none absolute -top-24 left-[-30%] h-48 w-1/2 rotate-[25deg] 
-               bg-gradient-to-r from-white/0 via-white/25 to-white/0 
-               opacity-0 group-hover:opacity-100 transition-opacity duration-300'
-            />
-            <span
-              aria-hidden
-              className='pointer-events-none absolute -top-24 left-[-40%] h-48 w-1/2 rotate-[25deg] 
-               bg-gradient-to-r from-white/0 via-white/25 to-white/0 
-               translate-x-[-20%] group-hover:translate-x-[220%] transition-transform duration-700 ease-out'
-            />
-
-            {/* Header */}
-            <div className={`relative p-4 space-y-2 ${p.notes ? 'pb-[68px]' : 'pb-[85px]'}`}>
-              {/* Title row */}
-              <div className='flex items-start justify-between gap-2'>
-                <div className='font-semibold text-slate-900 leading-5 line-clamp-1' title={p.name}>
-                  {p.name}
-                </div>
-
-                {/* Tools column: slide+fade in on hover */}
-                <div className='absolute right-1 top-1'>
-                  <div
-                    className='flex flex-col items-center gap-1 rounded-lg backdrop-blur px-1 py-1 
-                     transition-all duration-300 group-hover:bg-white/80
-                     translate-y-[-6px] opacity-0 group-hover:translate-y-0 group-hover:opacity-100'>
-                    <IconBtn title='View' onClick={() => onPreview?.(p)}>
-                      <Eye className='w-3.5 h-3.5 text-slate-700' />
-                    </IconBtn>
-                    <IconBtn title='Edit' onClick={() => onEdit?.(p)}>
-                      <PencilLine className='w-3.5 h-3.5 text-indigo-600' />
-                    </IconBtn>
-                    <IconBtn title='Delete' onClick={() => onDelete?.(p.id)} danger>
-                      <Trash2 className='w-3.5 h-3.5' />
-                    </IconBtn>
-                  </div>
-                </div>
-              </div>
-
-              {/* Description */}
-              {p.notes ? <p className='text-[13px] text-slate-600 line-clamp-1'>{p.notes}</p> : null}
-
-              {/* Meta row */}
-              <div className='flex flex-wrap items-center gap-2 pt-1'>
-                <span className='text-[11px] rounded-lg border border-slate-200 px-2 py-1 text-slate-600 bg-slate-50'>
-                  Days <span className='font-medium'>/ {dayCount}</span>
-                </span>
-                {totalAssignees > 0 && (
-                  <span className='text-[11px] rounded-lg border border-slate-200 px-2 py-1 text-slate-600 bg-slate-50'>
-                    Users{' '}
-                    <span className='font-medium'>
-                      {activeAssignees}/{totalAssignees}
-                    </span>
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Footer (lifts on card hover) */}
-            <div className='px-4 pb-4 absolute bottom-[-4px] w-full left-0'>
-              <div className='transition-transform duration-300 group-hover:-translate-y-0.5'>
-                <Button onClick={() => onAssign?.(p)} color='outline' className='!w-full' icon={<UsersIcon className='w-4 h-4' />} name={`Assign${totalAssignees ? ` (${totalAssignees})` : ''}`} />
-              </div>
-            </div>
-          </motion.div>
-        );
-      })}
-    </div>
-  );
-});
-
-/* ================================ LIST VIEW ================================ */
 
 export const ListView = memo(function ListView({ loading, items = [], onPreview, onEdit, onDelete, onAssign }) {
   /* ---------- Loading (skeleton list) ---------- */
@@ -569,8 +414,6 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
     <div className='divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'>
       {items.map(p => {
         const dayCount = Array.isArray(p?.days) ? p.days.length : 0;
-        const assignments = Array.isArray(p?.assignments) ? p.assignments : [];
-        const totalAssignees = assignments.length;
         const active = !!p?.isActive;
 
         return (
@@ -596,18 +439,15 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
                 <span className='rounded-lg border border-slate-200 bg-white px-2 py-0.5'>
                   {dayCount} day{dayCount === 1 ? '' : 's'}
                 </span>
-                <span className='rounded-lg border border-slate-200 bg-white px-2 py-0.5'>
-                  {totalAssignees} user{totalAssignees === 1 ? '' : 's'}
-                </span>
               </div>
             </div>
 
             {/* actions: primary + rail (grid DNA) */}
             <div className='ml-auto flex shrink-0 items-center gap-1'>
               {/* Primary action: Assign */}
-              <button type='button' onClick={() => onAssign?.(p)} className='inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 active:scale-[.98]' title='Assign'>
+              <button type='button' onClick={() => onAssign?.(p)} className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800  transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 active:scale-[.98]' title='Assign'>
                 <UsersIcon className='h-4 w-4' />
-                Assign{totalAssignees ? ` (${totalAssignees})` : ''}
+                Assign
               </button>
 
               {/* Hover rail (appears on row hover) */}
@@ -647,29 +487,18 @@ const PlanPreview = memo(({ plan }) => {
 
   return (
     <div className='space-y-6'>
-      <div className='flex flex-wrap items-center gap-2'>
-        <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium ${plan.isActive ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-slate-100 text-slate-800 border border-slate-200'}`}>{plan.isActive ? 'Active' : 'Inactive'}</span>
-        {plan.startDate || plan.endDate ? (
-          <span className='inline-flex items-center gap-1 rounded-lg bg-blue-100 text-blue-800 px-2.5 py-1 text-xs font-medium border border-blue-200'>
-            {plan.startDate || '—'} <ChevronRight className='w-3 h-3' /> {plan.endDate || '—'}
-          </span>
-        ) : null}
-      </div>
-
-      {plan.notes ? <div className='text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-200'>{plan.notes}</div> : null}
-
       <div className='space-y-4'>
-        {(plan.days || []).map((d, idx) => (
-          <div key={d.id || idx} className='rounded-lg border border-slate-200 bg-white'>
-            <div className='px-4 py-3 border-b border-slate-100 flex items-center justify-between'>
+        {(plan?.program.days || []).map((d, idx) => (
+          <div key={d.id || idx} className=''>
+            <div className='rounded-[6px_6px_0_0] border border-slate-200 bg-white px-4 py-3 border-b  flex items-center justify-between'>
               <div className='font-semibold'>{d.name}</div>
               <div className='text-xs text-slate-500'>{String(d.day || d.dayOfWeek || '').toLowerCase()}</div>
             </div>
-            <div className='p-4'>
+            <div className='p-2 bg-gray-50 rounded-[0_0_6px_6px]'>
               {(d.exercises || []).length ? (
                 <ol className='space-y-2'>
                   {d.exercises.map((ex, i) => (
-                    <li key={ex.id || ex.exerciseId || i} className='flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2'>
+                    <li key={ex.id || ex.exerciseId || i} className='flex items-center justify-between bg-slate-200/70 rounded-lg px-3 py-2'>
                       <div className='flex items-center gap-2'>
                         <span className='w-6 h-6 text-[11px] grid place-content-center rounded bg-white border border-slate-200 text-slate-700'>{i + 1}</span>
                         <div className='font-medium text-slate-800'>{ex.name || ex.exercise?.name || `Exercise #${i + 1}`}</div>
@@ -704,7 +533,7 @@ const PlanPreview = memo(({ plan }) => {
           <div className='flex flex-wrap gap-1'>
             {assignees.map(a => (
               <span key={a.id} className='inline-flex items-center rounded-lg bg-indigo-100 text-indigo-700 text-[11px] px-2 py-1 border border-indigo-200'>
-                {a?.athlete?.name || a?.athlete?.email || a?.athlete?.id}
+                {a?.email}
               </span>
             ))}
           </div>
@@ -918,8 +747,7 @@ const NewPlanBuilder = memo(({ initial, onCancel, onCreate }) => {
   return (
     <div className='space-y-6'>
       <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-        <Input label={'Plan name'} value={name} onChange={e => setName(e)} placeholder='Push Pull Legs…' />
-        <Textarea label='Notes' rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder='Program notes, goals, tempo schemes, etc.' />
+        <Input placeholder={'Plan name : Push Pull Legs…'} value={name} onChange={e => setName(e)} />
       </div>
 
       <div className='flex items-center justify-between pt-4 border-t border-slate-100'>
@@ -938,9 +766,7 @@ const NewPlanBuilder = memo(({ initial, onCancel, onCreate }) => {
           Cancel
         </button>
 
-        <Button name={'Save plan'} loading={loading} type='button' onClick={submit} className='!w-fit text-sm !h-[39px]'>
-          {' '}
-        </Button>
+        <Button name={'Save plan'} loading={loading} type='button' onClick={submit} className='!w-fit text-sm !h-[39px]'></Button>
       </div>
 
       {/* Full-screen Exercise Picker */}

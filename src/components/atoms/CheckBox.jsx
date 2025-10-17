@@ -4,9 +4,8 @@ import React, { useEffect, useId, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 
-export default function CheckBox({ label, initialChecked = false, onChange = () => {}, className = '' }) {
+export default function CheckBox({ id = 'custom', label, initialChecked = false, onChange = () => {}, className = '' }) {
   const [checked, setChecked] = useState(!!initialChecked);
-  const id = useId();
 
   useEffect(() => {
     setChecked(!!initialChecked);
@@ -34,7 +33,7 @@ export default function CheckBox({ label, initialChecked = false, onChange = () 
         aria-checked={checked}
         onClick={toggle}
         onKeyDown={onKeyDown}
-        className={`relative cursor-pointer flex h-6.5 w-6.5 items-center justify-center rounded-md border transition-colors duration-300
+        className={` input-3d-checkbox relative cursor-pointer flex h-6.5 w-6.5 items-center justify-center rounded-md border transition-colors duration-300
           ${checked ? 'bg-gradient-to-br from-blue-600 to-indigo-600 border-blue-600' : 'bg-white border-gray-300'}
           focus:outline-none focus:ring-2 focus:ring-blue-400`}>
         <motion.div initial={false} animate={{ scale: checked ? 1 : 0, opacity: checked ? 1 : 0 }} transition={{ type: 'spring', stiffness: 500, damping: 30 }}>

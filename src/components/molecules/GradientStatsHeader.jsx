@@ -9,7 +9,7 @@ export function GradientStatsHeader({ className = '', children, loadingStats, ti
   return (
     <div className={'relative overflow-hidden rounded-lg border border-indigo-100/60 bg-white/60 shadow-sm backdrop-blur ' + className}>
       {/* Background Decorations */}
-      <div className='absolute inset-0'>
+      <div className='absolute inset-0 overflow-hidden'>
         <div className='absolute inset-0 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-95' />
         <div
           className='absolute inset-0 opacity-15'
@@ -30,10 +30,10 @@ export function GradientStatsHeader({ className = '', children, loadingStats, ti
             <p className='text-white/85 mt-1'>{desc}</p>
           </div>
 
-          <button onClick={onClick} className='group relative inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm  font-semibold text-white border border-white/20 bg-white/10 hover:bg-white/20 focus:outline-none focus:ring-4 focus:ring-white/30 transition-transform active:scale-[.98]'>
+          {btnName && <button onClick={onClick} className='group relative inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm  font-semibold text-white border border-white/20 bg-white/10 hover:bg-white/20 focus:outline-none focus:ring-4 focus:ring-white/30 transition-transform active:scale-[.98]'>
             <Plus size={16} />
             <span>{btnName}</span>
-          </button>
+          </button>}
         </div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }} className='mt-6 grid grid-cols-2 md:grid-cols-4 gap-3'>

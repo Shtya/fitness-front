@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X } from 'lucide-react';
 
 export default function Input({
@@ -10,19 +10,42 @@ export default function Input({
   type = 'text',
   value,
   onChange = () => {},
-	onBlur ,
+  onBlur,
   disabled = false,
   error,
   clearable = true,
   className = '',
-	cnInput
+  cnInput,
 }) {
   const inputRef = useRef(null);
-  const [internal, setInternal] = useState(value ?? '');
+
+  // keep internal state as a STRING so 0 is not treated as empty/falsy
+  const toStr = v => (v === null || v === undefined ? '' : String(v));
+  const [internal, setInternal] = useState(toStr(value));
+
+  // sync internal when parent value changes
+  useEffect(() => {
+    setInternal(toStr(value));
+  }, [value]);
 
   function handleChange(e) {
-    setInternal(e.target.value);
-    onChange(e.target.value);
+    const next = e.target.value;
+    setInternal(next);
+    onChange(next);
+  }
+
+  function handleBlur(e) {
+    // Optional: normalize numbers on blur (without turning '' into 0)
+    if (type === 'number') {
+      const s = e.target.value.trim();
+      if (s === '') {
+        onChange('');
+      } else {
+        const n = Number(s);
+        onChange(Number.isNaN(n) ? '' : n);
+      }
+    }
+    onBlur?.(e);
   }
 
   function clearInput(e) {
@@ -31,6 +54,8 @@ export default function Input({
     onChange('');
     inputRef.current?.focus();
   }
+
+  const showClear = clearable && !disabled && internal !== '';
 
   return (
     <div className={`w-full relative ${className}`}>
@@ -44,9 +69,7 @@ export default function Input({
         className={[
           'relative flex items-center',
           'rounded-lg border bg-white',
-          disabled
-            ? 'cursor-not-allowed opacity-60'
-            : 'cursor-text',
+          disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text',
           error
             ? 'border-rose-500'
             : 'border-slate-300 hover:border-slate-400 focus-within:border-indigo-500',
@@ -59,25 +82,24 @@ export default function Input({
           type={type}
           name={name}
           placeholder={placeholder}
-          value={internal}
-					onBlur={onBlur}
-          disabled={disabled}
+          value={internal}   
           onChange={handleChange}
-          className={`${cnInput} h-[43px] w-full rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none placeholder:text-gray-400`}
+          onBlur={handleBlur}
+          disabled={disabled}
+          className={`input-3d ${cnInput || ''} h-[43px] w-full rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none placeholder:text-gray-400`}
+          aria-invalid={!!error}
         />
 
-        {clearable && internal && !disabled && (
+        {showClear && (
           <X
             size={16}
-            className="absolute right-3 opacity-60 hover:opacity-100 transition cursor-pointer"
+            className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer opacity-60 transition hover:opacity-100"
             onClick={clearInput}
           />
         )}
       </div>
 
-      {error && (
-        <p className="mt-1.5 text-xs text-rose-600">{error}</p>
-      )}
+      {error && <p className="mt-1.5 text-xs text-rose-600">{error}</p>}
     </div>
   );
 }

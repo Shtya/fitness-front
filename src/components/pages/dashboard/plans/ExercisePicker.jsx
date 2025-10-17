@@ -1,7 +1,7 @@
 import React, { memo, useEffect, useMemo, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Dumbbell, Search, X, Tag, Check } from 'lucide-react';
+import { Dumbbell, Search, X, Tag, Check, PlayCircle } from 'lucide-react';
 import Select from '@/components/atoms/Select';
 import { PrettyPagination } from '@/components/dashboard/ui/Pagination';
 import { TabsPill } from '@/components/dashboard/ui/UI';
@@ -110,6 +110,7 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+  const [showVideo, setShowVideo] = useState(null);
 
   if (typeof document === 'undefined') return null;
 
@@ -164,7 +165,7 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
               <div className='mx-auto max-w-7xl px-4 sm:px-6 py-6'>
                 {/* Cards */}
                 {loading ? (
-                  <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'>
+                  <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6'>
                     {Array.from({ length: 12 }).map((_, i) => (
                       <div key={i} className='relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'>
                         <div className='aspect-[4/3] w-full overflow-hidden'>
@@ -179,15 +180,22 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
                     ))}
                   </div>
                 ) : items.length ? (
-                  <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'>
+                  <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6'>
                     {items.map(e => {
                       const checked = !!selected[e.id];
+
                       return (
                         <motion.button type='button' key={e.id} onClick={() => toggle(e)} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={['text-left rounded-xl border p-3 transition-all', checked ? 'border-indigo-400 ring-2 ring-indigo-200 bg-indigo-50/50 shadow-md' : 'border-slate-200 bg-white shadow-sm hover:border-slate-300 hover:shadow-md'].join(' ')}>
                           <div className='relative mb-2 overflow-hidden rounded-lg bg-slate-100'>
                             <div className='aspect-[4/3] w-full'>
                               {e.img ? (
-                                <Img src={e.img} alt={e.name} className='h-full w-full object-cover' loading='lazy' />
+                                <div className='relative aspect-square '>
+                                  <Img src={e.img} alt={e.name} className='h-full w-full object-cover' loading='lazy' />
+                                  <button type='button' onClick={ev => setShowVideo(e.video)} className='absolute left-1.5 bottom-1.5 inline-flex items-center gap-1 rounded-md bg-black/65 px-1.5 py-[3px] text-[10px] text-white opacity-90 hover:opacity-100 active:scale-95 transition' aria-label='Preview video'>
+                                    <PlayCircle className='h-3.5 w-3.5' />
+                                    <span className='hidden sm:inline'>Preview</span>
+                                  </button>
+                                </div>
                               ) : (
                                 <div className='grid h-full w-full place-content-center text-slate-400'>
                                   <Dumbbell className='h-7 w-7' />
@@ -247,6 +255,22 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
                 </div>
               </div>
             </div>
+
+            {/* Video Modal */}
+            <AnimatePresence>
+              {showVideo && (
+                <motion.div className='fixed inset-0 z-[1100] flex items-center justify-center p-4' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <div className='absolute inset-0 bg-black/70' onClick={()=> setShowVideo(null)} />
+                  <motion.div initial={{ scale: 0.98, opacity: 0, y: 6 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.98, opacity: 0, y: 6 }} transition={overlaySpring} className='relative w-full max-w-3xl rounded-2xl bg-black overflow-hidden shadow-2xl'>
+                    <button onClick={()=> setShowVideo(null)} className='absolute right-2 top-2 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 active:scale-95' aria-label='Close video'>
+                      <X className='h-5 w-5' />
+                    </button>
+
+                    <div className='w-full aspect-video bg-black'>{<video src={showVideo} controls className='h-full w-full' preload='metadata' />}</div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </motion.div>
       ) : null}

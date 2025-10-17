@@ -15,6 +15,7 @@ const Textarea = forwardRef(
       onAction,
       onChange,
       onBlur,
+			cnInput ,
       name,
       rows = 4,
       error = null,
@@ -36,7 +37,7 @@ const Textarea = forwardRef(
         )}
 
         <div
-          className={`relative flex items-center rounded-lg bg-white transition border ${
+          className={` ${cnInput} relative flex items-center rounded-lg bg-white transition border ${
             error
               ? 'border-red-500 ring-2 ring-red-500/20'
               : props.value
@@ -58,7 +59,7 @@ const Textarea = forwardRef(
             onChange={onChange}
             onBlur={onBlur}
             rows={rows}
-            className="p-2 w-full bg-transparent outline-none text-slate-900 placeholder:text-slate-400 resize-none"
+            className=" overflow-hidden input-3d p-2 w-full bg-transparent outline-none text-slate-900 placeholder:text-slate-400 resize-none"
             {...props}
           />
 

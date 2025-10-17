@@ -290,7 +290,7 @@ html {
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.bg-main::before  {
+.bg-main::before {
   content: '';
   @apply absolute inset-0 rounded-[10px];
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.12) 28%, transparent 55%), radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.25), transparent 60%), radial-gradient(120% 90% at 100% 100%, rgba(0, 0, 0, 0.25), transparent 70%);
@@ -298,7 +298,7 @@ html {
   pointer-events: none;
 }
 
-.bg-main::after  {
+.bg-main::after {
   content: '';
   position: absolute;
   left: 10%;
@@ -335,8 +335,6 @@ input[type='number'] {
   -moz-appearance: textfield;
 }
 
-
-
 @keyframes pressPulse {
   0% {
     box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
@@ -353,4 +351,15 @@ input[type='number'] {
 }
 .animate-press {
   animation: pressPulse 0.25s ease-out;
+}
+
+ 
+ 
+.input-3d {
+  color: rgb(0 0 0 / 0.7);
+  box-shadow: 6px 6px 12px #d1d9e670, -6px -6px 12px #ffffff70 inset;
+}
+.input-3d-checkbox {
+  color: rgb(0 0 0 / 0.7);
+  box-shadow: 6px 6px 12px #d1d9e650, -6px -6px 12px #ffffff50 inset;
 }

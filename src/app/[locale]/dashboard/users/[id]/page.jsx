@@ -17,6 +17,7 @@ import {
 import { Notification } from '@/config/Notification';
 import api from '@/utils/axios';
 import { useUser } from '@/hooks/useUser';
+import ClientProgressDashboard from "@/components/pages/dashboard/users/ClientProgressMeal";
 
 /* ---------------- Mock API ---------------- */
 // Replace these with real API calls later.
@@ -539,48 +540,7 @@ export default function ClientProfilePage() {
 
       {active === "logs" && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="card-glow p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="font-semibold">Meal Logs</div>
-            <div className="flex items-center gap-2">
-              <input 
-                type="date" 
-                className="px-3 py-2 rounded-lg border border-slate-200 bg-white" 
-                value={selectedLogDate} 
-                onChange={(e) => setSelectedLogDate(e.target.value)} 
-              />
-              <button 
-                onClick={() => fetchMealLogs(client.id, selectedLogDate)}
-                className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"
-              >
-                Refresh
-              </button>
-            </div>
-          </div>
-          {loadingMealLogs ? (
-            <div className="text-center py-8 text-slate-500">Loading meal logs...</div>
-          ) : mealLogs.length > 0 ? (
-            <div className="space-y-2">
-              {mealLogs.map(log => (
-                <div key={log.id} className="rounded-lg border border-slate-200 bg-white p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-medium">{log.itemName}</span>
-                      <span className="text-sm text-slate-500 ml-2">({log.mealType})</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 rounded-full text-xs ${log.taken ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {log.taken ? 'Taken' : 'Not Taken'}
-                      </span>
-                      <span className="text-xs text-slate-500">{log.quantity}g</span>
-                    </div>
-                  </div>
-                  {log.notes && (
-                    <div className="mt-2 text-sm text-slate-600">{log.notes}</div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : <EmptyState title="No meal logs" subtitle="No meal logs found for this date." />}
+           <ClientProgressDashboard /> 
         </motion.div>
       )}
 

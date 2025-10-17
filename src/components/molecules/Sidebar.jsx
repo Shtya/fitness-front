@@ -29,15 +29,15 @@ const NAV = [
           { name: 'My Progress', href: '/dashboard/my/progress', icon: LineChart },
         ],
       },
-      {
-        name: 'Nutrition',
-        icon: Salad,
-        children: [
-          { name: 'My Nutrition', href: '/dashboard/my/nutrition', icon: Apple },
-          { name: 'Food Library', href: '/dashboard/nutrition/library-food-list', icon: ChefHat },
-          { name: 'Grocery List', href: '/dashboard/nutrition/grocery-list', icon: ShoppingCart },
-        ],
-      },
+			{ name: 'My Nutrition', href: '/dashboard/my/nutrition', icon: Apple },
+      // {
+      //   name: 'Nutrition',
+      //   icon: Salad,
+      //   children: [
+      //     { name: 'Food Library', href: '/dashboard/nutrition/library-food-list', icon: ChefHat },
+      //     { name: 'Grocery List', href: '/dashboard/nutrition/grocery-list', icon: ShoppingCart },
+      //   ],
+      // },
       { name: 'Weekly Strength Report', href: '/dashboard/my/report', icon: Newspaper }, 
 
       { name: 'Calorie Calculator', href: '/dashboard/calculator', icon: Calculator },
@@ -110,16 +110,8 @@ const NAV = [
     role: 'admin',
     section: 'Programs',
     items: [
-      { name: 'Workout Programs', href: '/dashboard/workouts/plans', icon: NotebookPen },
-      {
-        name: 'Nutrition Management',
-        icon: UtensilsCrossed,
-        children: [
-          { name: 'Meal Plans', href: '/dashboard/nutrition', icon: ChefHat },
-          { name: 'Analytics', href: '/dashboard/nutrition/analytics', icon: BarChart3 },
-          { name: 'Reports', href: '/dashboard/nutrition/reports', icon: FileText },
-        ],
-      },
+      { name: 'Workout Plans', href: '/dashboard/workouts/plans', icon: NotebookPen },
+			{ name: 'Meal Plans', href: '/dashboard/nutrition', icon: ChefHat }, 
     ],
   },
   {
@@ -128,6 +120,7 @@ const NAV = [
       {
         name: 'Client Intake',
         icon: FaUsers,
+				expand : true ,
         children: [
           { name: 'Manage Forms', href: '/dashboard/intake/forms', icon: FaWpforms },
           { name: 'Responses', href: '/dashboard/intake/responses', icon: FaInbox },

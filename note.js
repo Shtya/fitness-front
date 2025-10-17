@@ -1,4 +1,8 @@
 /*
+	- users page : when chose coach remove the field of the caoch and the other steps of meals and exercise 
+	- workouts plans page : remove teh selected exercise wehn i choose them for day 
+
+	
 	- الترير يرسل اسبوعيا ولو الكلاينت اتأخر ف الارسال يبعت نتوفيكيشن للمدرب بإن الاشخاص دول لسا مبعتوش 
 	
 	- كورسات لفهم التمارين والتشريح وجسمك بيشتغل ازاي
@@ -89,6 +93,8 @@
 			- Recommendation Engine (suggest workouts/meals automatically).
 
 		* setting
+			- can put his api token  and tell him how to get it
+			
 			- edit on the ذكر 
 			- controller on the text appear on the loading
 			- System customization (Coach logo, personal data).

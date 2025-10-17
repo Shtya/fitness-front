@@ -267,7 +267,7 @@ export default function WeeklyExerciseReport({ userId: userIdProp }) {
     <div className='mx-auto max-w-5xl p-4 md:p-8'>
       {/* Header with your gradient + blur */}
       <div className='relative overflow-hidden rounded-lg border border-indigo-100/60 bg-white/60 shadow-sm backdrop-blur'>
-        <div className='absolute inset-0'>
+        <div className='absolute inset-0 overflow-hidden'>
           <div className='absolute inset-0 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-95' />
           <div
             className='absolute inset-0 opacity-15'

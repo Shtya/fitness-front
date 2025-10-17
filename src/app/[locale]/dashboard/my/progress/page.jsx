@@ -259,7 +259,7 @@ export default function ClientProgressPro({ userId: userIdProp, initialExercise 
     <div className='mx-auto min-h-screen max-w-7xl bg-gray-50 p-4 md:p-6 lg:p-8'>
       {/* Fancy header (gradient + grid + blur) */}
       <div className='relative overflow-hidden rounded-lg border border-indigo-100/60 bg-white/60 shadow-sm backdrop-blur'>
-        <div className='absolute inset-0'>
+        <div className='absolute inset-0 overflow-hidden'>
           <div className='absolute inset-0 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-95' />
           <div
             className='absolute inset-0 opacity-15'

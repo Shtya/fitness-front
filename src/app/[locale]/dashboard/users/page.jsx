@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Plus, Users as UsersIcon, CheckCircle2, XCircle, Shield, ChevronUp, ChevronDown, Eye, Clock, Search, BadgeCheck, PencilLine, PauseCircle, PlayCircle, MessageSquare, PhoneCall, ListChecks, Power, Trash2, Check, EyeOff, Eye as EyeIcon, Sparkles, Dumbbell, Utensils, MessageCircle, Edit3, KeyRound, Copy, User, Mail, Phone, Calendar, Crown, Award, Users, Globe, Languages } from 'lucide-react';
+import { CalendarDays, Plus, Users as UsersIcon, CheckCircle2, XCircle, Shield, ChevronUp, ChevronDown, Eye, Clock, Search, BadgeCheck, PencilLine, PauseCircle, PlayCircle, MessageSquare, PhoneCall, ListChecks, Power, Trash2, Check, EyeOff, Eye as EyeIcon, Sparkles, Dumbbell, Utensils, MessageCircle, Edit3, KeyRound, Copy, User, Mail, Phone, Calendar, Crown, Award, Users, Globe, Languages, Bell } from 'lucide-react';
 
 import { useForm, Controller } from 'react-hook-form';
 import * as yup from 'yup';
@@ -18,6 +18,7 @@ import { Notification } from '@/config/Notification';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useValues } from '@/context/GlobalContext';
 import { Stepper, PlanPicker, orderDays, MealPlanPicker, FieldRow, PasswordRow, CopyButton, buildWhatsAppLink, LanguageToggle, SubscriptionPeriodPicker } from '@/components/pages/dashboard/users/Atoms';
+import { Link } from '@/i18n/navigation';
 
 /* ---------- helpers ---------- */
 const toTitle = s => (s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s);
@@ -417,8 +418,8 @@ function EditUserModal({ open, onClose, user, onSaved }) {
           <div className='relative'>
             <Controller name='password' control={control} render={({ field }) => <CutomInput label='Password (leave blank to keep)' type={showPassword ? 'text' : 'password'} placeholder='••••••••' value={field.value || ''} onChange={field.onChange} error={errors.password?.message} />} />
             <div className='absolute right-2 top-9 flex items-center gap-1'>
-              <Button color='neutral' className='!px-2 !py-1 !text-xs rounded-lg' onClick={() => setShowPassword(v => !v)} name='' icon={showPassword ? <EyeOff className='w-4 h-4' /> : <EyeIcon className='w-4 h-4' />} />
-              <Button color='neutral' className='!px-2 !py-1 !text-xs rounded-lg' onClick={generatePassword} name='' icon={<Sparkles className='w-4 h-4' />} />
+              <Button color='neutral' className=' !min-h-[30px] !px-2 !py-1 !text-xs rounded-lg' onClick={() => setShowPassword(v => !v)} name='' icon={showPassword ? <EyeOff className='w-4 h-4' /> : <EyeIcon className='w-4 h-4' />} />
+              <Button color='neutral' className=' !min-h-[30px] !px-2 !py-1 !text-xs rounded-lg' onClick={generatePassword} name='' icon={<Sparkles className='w-4 h-4' />} />
             </div>
           </div>
 
@@ -744,8 +745,8 @@ function CreateClientWizard({ open, onClose, onDone }) {
                 }
               />
               <div className='absolute right-2 top-9 flex items-center gap-1'>
-                <Button color='neutral' className='!px-2 !py-1 !text-xs rounded-lg' onClick={() => setShowPassword(v => !v)} name='' icon={showPassword ? <EyeOff className='w-4 h-4' /> : <EyeIcon className='w-4 h-4' />} />
-                <Button color='neutral' className='!px-2 !py-1 !text-xs rounded-lg' onClick={generatePassword} name='' icon={<Sparkles className='w-4 h-4' />} />
+                <Button color='neutral' className=' !min-h-[30px] !px-2 !py-1 !text-xs rounded-lg' onClick={() => setShowPassword(v => !v)} name='' icon={showPassword ? <EyeOff className='w-4 h-4' /> : <EyeIcon className='w-4 h-4' />} />
+                <Button color='neutral' className=' !min-h-[30px] !px-2 !py-1 !text-xs rounded-lg' onClick={generatePassword} name='' icon={<Sparkles className='w-4 h-4' />} />
               </div>
             </div>
 
@@ -912,6 +913,7 @@ export default function UsersList() {
       const mapped = data?.users.map(u => ({
         id: u.id,
         name: u.name,
+        suggestionsCount: u.suggestionsCount,
         email: u.email,
         role: normRole(u.role),
         status: normStatus(u.status),
@@ -972,11 +974,6 @@ export default function UsersList() {
     } catch (e) {
       Notification(e?.response?.data?.message || 'Failed to update status', 'error');
     }
-  };
-
-  const toggleActive = row => {
-    const s = String(row.status).toLowerCase();
-    return setStatusApi(row.id, s === 'active' ? 'suspended' : 'active');
   };
 
   const approveUser = row => setStatusApi(row.id, 'active');
@@ -1095,7 +1092,16 @@ export default function UsersList() {
   };
 
   const columns = [
-    { header: 'Name', accessor: 'name', className: 'text-nowrap' },
+    {
+      header: 'Name',
+      accessor: 'name',
+      className: 'text-nowrap',
+      cell: r => (
+        <div className='flex items-center gap-2'>
+          <span>{r.name}</span>
+        </div>
+      ),
+    },
     { header: 'Email', accessor: 'email' },
     { header: 'Role', accessor: 'role', cell: r => <RolePill role={r.role} /> },
     { header: 'Gender', accessor: 'gender', cell: r => <StatusPill status={r.gender} /> },
@@ -1156,13 +1162,6 @@ export default function UsersList() {
     { id: 'Client', name: 'Client' },
   ];
 
-  const FILTER_STATUS_OPTIONS = [
-    { id: 'All', name: 'All statuses' },
-    { id: 'Active', name: 'Active' },
-    { id: 'Pending', name: 'Pending' },
-    { id: 'Suspended', name: 'Suspended' },
-  ];
-
   const FILTER_PLAN_OPTIONS = [
     { id: 'All', name: 'All plans' },
     { id: 'With plan', name: 'With plan' },
@@ -1173,7 +1172,7 @@ export default function UsersList() {
     <div className='space-y-6'>
       <div className='relative overflow-hidden rounded-lg border border-indigo-100/60 bg-white/60 shadow-sm backdrop-blur'>
         {/* Background Decorations */}
-        <div className='absolute inset-0'>
+        <div className='absolute inset-0 overflow-hidden'>
           <div className='absolute inset-0 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-95' />
           <div className='absolute inset-0 opacity-15' style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px)', backgroundSize: '22px 22px', backgroundPosition: '-1px -1px' }} />
           <div className='absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/20 blur-3xl' />
@@ -1231,7 +1230,7 @@ export default function UsersList() {
             setRoleFilter(id);
             setPage(1);
           }}
-        /> 
+        />
         <Select
           className='!max-w-[150px] !w-full'
           placeholder='Plan'
