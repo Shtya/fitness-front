@@ -13,70 +13,45 @@
 		* user
 			- when the coach login show only his trainer only 
 			- User Details View page. 
+			- stats fo the users take a long time
 
 		* chat page
 			- when exist userId in the params get this user to contact with it 
 
-		* workouts page ( dashboard)
-			✅ the category overflow
-			✅ enhance the performance of the page
+		* workouts ( dashboard) 
 			- there is a problem i push the binary file to the backend in teh add new 
 
 
-		* dashboard/workouts/plans 
-			✅ when asign user reflect on the data
-			✅ when change on the plan remove the assign 
-			✅ the stats 
-			✅ pagination doesnt work 
+		* workouts/plans  ( dashboard) 
 			- when select a exercise and out and add exercise again still the selected and put it again
 			- i have a problem on the edit plans on reorder the exercise doesn't apply
 
 
-		* my/workouts
+		* my/workouts ( client )
 			- remove the comment on the loading 
 			- work on upload the video 
 			- control on the podcast that will show for the client 
-			- in the dashboard can see his logs for any user 
-			- handle the last ( weight , reps , his logs , history  ) 
-
-
-			* workouts all
-			- (user details dashboard ) show all logs of this user about his exercises
-			- (workouts client) can show his logs fomr history 
-			- ( workouts client) 
-					- solve teh 
-
-			- ( progress page client)			
+			- in the dashboard can see his logs for any user  
+			- work on save teh records is localstorage and push it to the endponit oneshot
+			- bulk select for the exercise that he finish it
 
 
 
-
-
-		- stats fo the users take a long time
-
-
-
-
-		* meals page 
-			- put his plan food and logs about it 
-			there is a problem in the assign moduel send only one userid
+		* meals page ( client )
+			- handle teh button of edit on the meal or add 
+			- handle the history 
 
  
 		* profile 
-			- have the all information about it and hist transofrmation 
+			- have the all information about it and his transofrmation 
+			- can put his imgs [ front , back , right , left ] for hist body as recoerd every month or when he like as timline for those imgs
+				and his weight also and the other details 
+			-
 
-		* profile ( have his details about everything)
-		* grocery-list 
-		* calculator 
-			- Add calories calculator for each client.
+ 		* grocery-list 
 			
-		* motivation page -> send msg to the all with his name
-		* Reminders
-			- Training schedules.
-			- Meal/water reminders.
-			- Alerts for check-ins with coach.
+		
 
-		* send form data to answeron the question 
 		* Report 
 			- Weekly/Daily notes from coach.
 			- Evaluation of client’s commitment.
@@ -109,7 +84,13 @@
 			- Weekly logs: weight + progress stats.
 			- auto send the report and explain to him this information i take it form your infomation 
 			- control on the podcast that will show for the client 
+			- motivation page -> send msg to the all with his name
+			- Reminders
+			- Training schedules.
+			- Meal/water reminders.
+			- Alerts for check-ins with coach.
 
+			
 		*	Progress Tracking
 			- Record weight periodically.
 			- Track body measurements (waist, chest, arms, legs).
@@ -121,6 +102,10 @@
 
 		* home page 
 			- Content should be dynamically editable from the dashboard.
+
+
+
+	* يكون فيه دكاتره علي السيستم 
 
 
   - Mobile App or PWA with Offline Caching.

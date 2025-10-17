@@ -61,65 +61,7 @@ export function StatCardArray({ icon: Icon, title = [], value = [] }) {
     </div>
   );
 }
-
-// export function StatCardArray({
-//   icon: Icon,
-//   title,
-//   value,
-//   trends = [], // optional: array of datasets, each is [{value: number}, ...]
-//   trendType = 'area', // 'area' | 'bar' for the tiny chart per row
-//   className = '',
-// }) {
-//   // Normalize to arrays for mapping
-//   const titles = Array.isArray(title) ? title : [title];
-//   const values = Array.isArray(value) ? value : [value];
-//   const rows = Math.max(titles.length, values.length);
-
-//   return (
-//     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={`rounded-lg border border-slate-200 bg-white p-4   ${className}`}>
-//       <div className='flex items-center h-full gap-3'>
-//         {/* Icon */}
-//         <div className='flex items-center justify-center relative w-10 h-10 overflow-hidden rounded-lg text-white shrink-0'>
-//           <div className='!absolute  inset-0 bg-red-500 opacity-100 w-full h-full bg-main' />
-//           {Icon ? <Icon className='w-5 h-5 relative z-[1] text-white' /> : null}
-//         </div>
-
-//         {/* Content */}
-//         <div className='flex-1 '>
-//           {[...Array(rows)].map((_, i) => {
-//             const t = titles[i] ?? '';
-//             const v = values[i] ?? '';
-
-//             return (
-//               <div key={i} className='flex mt-[-5px] items-center justify-between'>
-//                 <div className='text-xs font-[600] text-slate-600 truncate'>{t}</div>
-//                 <div className='text-base  font-semibold text-slate-800 '>{v}</div>
-//               </div>
-//             );
-//           })}
-//         </div>
-//       </div>
-//     </motion.div>
-//   );
-// }
-
-// export function StatCard({ icon: Icon, title, value, sub, className }) {
-//   return (
-//     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={` !bg-white rounded-lg border border-slate-200 p-4 ${className} `}>
-//       <div className='flex items-center gap-3 h-full '>
-//         <div className=' flex items-center justify-center relative w-10 h-10 overflow-hidden rounded-lg text-white '>
-//           <div className='!absolute  inset-0 bg-red-500 opacity-100 w-full h-full bg-main ' />
-//           {Icon ? <Icon className='w-5 h-5 relative z-[10] text-white ' /> : null}
-//         </div>
-//         <div className='flex items-center  justify-between  flex-1 '>
-//           <div className='text-xs font-[600] text-slate-600'>{title}</div>
-//           <div className='text-xl text-black font-semibold'>{value}</div>
-//         </div>
-//       </div>
-//     </motion.div>
-//   );
-// }
-
+ 
 /* --------- Badge + Pills --------- */
 export function Badge({ color = 'slate', children }) {
   const map = {

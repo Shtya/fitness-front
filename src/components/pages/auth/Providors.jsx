@@ -21,8 +21,7 @@ export const ContinueWithGoogleButton = ({ referralCode }) => {
       if (response.ok) {
         const data = await response.json();
         if (data.redirectUrl) {
-			console.log(data.redirectUrl);
-        //   window.location.href = data.redirectUrl;
+         //   window.location.href = data.redirectUrl;
         } else {
           console.error('No redirect URL found in response.');
         }

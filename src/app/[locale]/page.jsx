@@ -862,9 +862,7 @@ function ContactForm({ toEmail = 'hello@amazinggym.com', defaultBranch }) {
   const [sent, setSent] = useState(false);
   function onSubmit(e) {
     e.preventDefault();
-    // TODO: POST to your backend / CRM
-    console.log('Contact form:', data);
-    setSent(true);
+      setSent(true);
   }
   useEffect(() => {
     setData(d => ({ ...d, branch: defaultBranch || '' }));
