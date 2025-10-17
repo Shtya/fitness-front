@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
@@ -8,8 +9,8 @@ import api, { baseImg } from '@/utils/axios';
 import { Modal, StatCard, TabsPill } from '@/components/dashboard/ui/UI';
 import Img from '@/components/atoms/Img';
 import Button from '@/components/atoms/Button';
-import { Notification } from '@/config/Notification';
 import Select from '@/components/atoms/Select';
+import { Notification } from '@/config/Notification';
 import { ExerciseForm } from '@/components/pages/dashboard/workouts/ExerciseForm';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 import { PrettyPagination } from '@/components/dashboard/ui/Pagination';
