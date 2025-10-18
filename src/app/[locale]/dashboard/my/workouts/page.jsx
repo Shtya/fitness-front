@@ -1,15 +1,10 @@
 /* 
-	i need here doesn't save when change any value in the weight or reps or check i need save his recoreds in the localestorage about this day
-	and when close the app and open again send those values to the api and if return with success clear the localstorage 
-
-	to don't make hit for the endpoint when everytime save value
-
-
-	and also don't save the plan in the locale storage to if the coach change his plan change direct save only the values for the exercise 
-
-
-	for ecample when i maek exercise weight 10 , reps 30 , done true 
-		keep those records in the locale storage under exercised with the id for every set to put it when load the page and send it to save it and if saved remove the values form the localestorage
+  Local-first workouts with reliable refresh:
+  - Edits/add/remove/toggle persist a snapshot for the current exercise to localStorage.
+  - On refresh/open and day/exercise change, we re-apply any queued snapshot so nothing looks "null".
+  - "Sync now" sends the queued payload(s) to /prs; on success we remove them from localStorage
+    AND update workout.sets in-place so the table shows the latest synced data.
+  - Initial prefill from /prs/last-workout-sets copies weight, reps, AND done.
 */
 
 'use client';
@@ -17,11 +12,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TabsPill, spring } from '@/components/dashboard/ui/UI';
-import { Dumbbell, X, Minus, Plus, Video as VideoIcon, Image as ImageIcon, Headphones, Settings as SettingsIcon, Menu as MenuIcon, Upload } from 'lucide-react';
+import { Dumbbell, X, Minus, Plus, Video as VideoIcon, Image as ImageIcon, Headphones, Settings as SettingsIcon, Menu as MenuIcon, Upload, CloudOff, Cloud } from 'lucide-react';
 import CheckBox from '@/components/atoms/CheckBox';
 import api from '@/utils/axios';
 import weeklyProgram from './exercises';
-import { createSessionFromDay, applyServerRecords } from '@/components/pages/workouts/helpers';
+import { createSessionFromDay } from '@/components/pages/workouts/helpers';
 import { RestTimerCard } from '@/components/pages/workouts/RestTimerCard';
 import { SettingsPopup } from '@/components/pages/workouts/SettingsPopup';
 import { AudioHubInline } from '@/components/pages/workouts/AudioHub';
@@ -38,6 +33,7 @@ export const DEFAULT_SOUNDS = ['/sounds/1.mp3', '/sounds/2.mp3', '/sounds/alert1
 
 const LOCAL_KEY_SETTINGS = 'mw.settings.v1';
 const LOCAL_KEY_SELECTED_DAY = 'mw.selected.day';
+const LOCAL_KEY_QUEUE = 'mw.pendingPRs.v1'; // array of items: { userId, date, exerciseName, records, createdAt }
 
 const jsDayToId = d => ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][d] || 'monday';
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -186,35 +182,17 @@ const SkeletonLoader = () => (
   </div>
 );
 
-/* === NEW: normalize Arabic/Eastern digits + comma === */
+/* === Normalize Arabic/Eastern digits + comma === */
 function normalizeNumericInput(str = '') {
-  const map = {
-    '٠': '0',
-    '١': '1',
-    '٢': '2',
-    '٣': '3',
-    '٤': '4',
-    '٥': '5',
-    '٦': '6',
-    '٧': '7',
-    '٨': '8',
-    '٩': '9',
-    '۰': '0',
-    '۱': '1',
-    '۲': '2',
-    '۳': '3',
-    '۴': '4',
-    '۵': '5',
-    '۶': '6',
-    '۷': '7',
-    '۸': '8',
-    '۹': '9',
-  };
+  const map = { '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9', '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4', '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9' };
   return String(str)
     .replace(/[٠-٩۰-۹]/g, d => map[d] || d)
     .replace(',', '.');
 }
 
+/* =========================
+   API helpers
+========================= */
 async function fetchActivePlan(userId) {
   const { data } = await api.get('/plans/active', { params: { userId } });
   if (data?.program?.days?.length) return data;
@@ -235,7 +213,12 @@ async function fetchLastDayByName(userId, day, onOrBefore) {
     const recordsByExercise = {};
     data.exercises.forEach(exercise => {
       if (exercise.records.length > 0) {
-        recordsByExercise[exercise.exerciseName] = exercise.records;
+        recordsByExercise[exercise.exerciseName] = exercise.records.map(r => ({
+          weight: Number(r.weight) || 0,
+          reps: Number(r.reps) || 0,
+          done: !!r.done,
+          setNumber: Number(r.setNumber) || 1,
+        }));
       }
     });
 
@@ -255,6 +238,42 @@ async function upsertDailyPR(userId, exerciseName, date, records) {
   return data;
 }
 
+/* =========================
+   Local queue helpers
+========================= */
+function loadQueue() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(LOCAL_KEY_QUEUE) || '[]');
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+function saveQueue(arr) {
+  try {
+    localStorage.setItem(LOCAL_KEY_QUEUE, JSON.stringify(arr));
+  } catch {}
+}
+function queueKey(item) {
+  return `${item.userId}__${item.date}__${item.exerciseName}`.toLowerCase();
+}
+function upsertQueueItem(item) {
+  const q = loadQueue();
+  const key = queueKey(item);
+  const idx = q.findIndex(x => queueKey(x) === key);
+  if (idx >= 0) q[idx] = { ...q[idx], ...item, createdAt: q[idx].createdAt || item.createdAt || Date.now() };
+  else q.push({ ...item, createdAt: Date.now() });
+  saveQueue(q);
+}
+function removeQueueItem(item) {
+  const q = loadQueue();
+  const key = queueKey(item);
+  saveQueue(q.filter(x => queueKey(x) !== key));
+}
+
+/* =========================
+   Component
+========================= */
 export default function MyWorkoutsPage() {
   const t = useTranslations('MyWorkouts');
   const user = useUser();
@@ -263,12 +282,14 @@ export default function MyWorkoutsPage() {
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState(null);
 
-  // ONLY persist the selected day
   const [selectedDay, setSelectedDay] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem(LOCAL_KEY_SELECTED_DAY) || 'monday' : 'monday'));
 
   const [workout, setWorkout] = useState(null);
   const [currentExId, setCurrentExId] = useState(undefined);
   const [hidden, setHidden] = useState(false);
+
+  // media tab
+  const [activeMedia, setActiveMedia] = useState('image');
 
   // audio + settings
   const audioRef = useRef(null);
@@ -278,7 +299,7 @@ export default function MyWorkoutsPage() {
 
   // misc
   const [audioOpen, setAudioOpen] = useState(false);
-  const [unsaved, setUnsaved] = useState(false);
+  const [unsaved, setUnsaved] = useState(false); // "queued locally & not synced"
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dayLoading, setDayLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -288,19 +309,11 @@ export default function MyWorkoutsPage() {
 
   // mirrors and buffers
   const lastSavedRef = useRef(new Map()); // setId -> { weight, reps, done }
-  // === CHANGED: use STATE (not ref) so typing triggers rerender ===
   const [inputBuffer, setInputBuffer] = useState({}); // key -> string
 
-  // autosave counters
-  const [changeCount, setChangeCount] = useState(0);
-  const saveTimerRef = useRef(null);
-  const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState(''); // '', 'saving', 'saved', 'error'
-
-  const markChanged = useCallback(() => {
-    setUnsaved(true);
-    setChangeCount(c => c + 1);
-  }, []);
+  // sync status
+  const [syncing, setSyncing] = useState(false);
+  const [lastSyncStatus, setLastSyncStatus] = useState(''); // '', 'ok', 'error'
 
   useEffect(() => {
     if (selectedDay) localStorage.setItem(LOCAL_KEY_SELECTED_DAY, selectedDay);
@@ -314,6 +327,104 @@ export default function MyWorkoutsPage() {
       }
     });
   }, []);
+
+  // merge helper — **THIS updates the table after sync**
+  const applyRecordsToWorkout = useCallback((exerciseName, records) => {
+    if (!records || !records.length) return;
+    setWorkout(prev => {
+      if (!prev) return prev;
+      const bySet = {};
+      records.forEach(r => {
+        bySet[Number(r.setNumber) || 1] = r;
+      });
+      const next = {
+        ...prev,
+        sets: prev.sets.map(s => {
+          if (s.exName !== exerciseName) return s;
+          const r = bySet[Number(s.set) || 1];
+          if (!r) return s;
+          return {
+            ...s,
+            weight: Number(r.weight) || 0,
+            reps: Number(r.reps) || 0,
+            done: !!r.done,
+            serverId: r.id ?? s.serverId, // keep old id if server didn't return it
+          };
+        }),
+      };
+      // refresh mirror
+      lastSavedRef.current.clear();
+      next.sets.forEach(s => lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
+      return next;
+    });
+  }, []);
+
+  // apply initial PRs weight+reps+done (from server)
+  const applyInitialRecordsWithDone = useCallback((session, recordsByExercise) => {
+    if (!session?.sets?.length) return session;
+    const next = { ...session, sets: session.sets.map(s => ({ ...s })) };
+    Object.entries(recordsByExercise || {}).forEach(([exName, recs]) => {
+      const bySet = {};
+      recs.forEach(r => (bySet[Number(r.setNumber) || 1] = r));
+      next.sets = next.sets.map(s => {
+        if (s.exName !== exName) return s;
+        const r = bySet[Number(s.set) || 1];
+        if (!r) return s;
+        return {
+          ...s,
+          weight: Number(r.weight) || 0,
+          reps: Number(r.reps) || 0,
+          done: !!r.done,
+        };
+      });
+    });
+    return next;
+  }, []);
+
+  // ---- persist a snapshot from the computed "next" workout state
+  function persistExerciseSnapshot(nextWorkout, exId, userId) {
+    if (!nextWorkout || !exId || !userId) return;
+    const ex = nextWorkout.exercises?.find(e => e.id === exId);
+    if (!ex) return;
+
+    const records = (nextWorkout.sets || [])
+      .filter(s => s.exId === exId)
+      .map(s => ({
+        id: s.serverId, // may be undefined
+        weight: Number(s.weight) || 0,
+        reps: Number(s.reps) || 0,
+        done: !!s.done,
+        setNumber: Number(s.set) || 1,
+      }));
+
+    const item = { userId: userId, date: todayISO(), exerciseName: ex.name, records };
+    upsertQueueItem(item);
+  }
+
+  // If there’s a queued snapshot for the current exercise/date, apply it to UI
+  const applyLocalQueuedSnapshotIfAny = useCallback(() => {
+    setWorkout(prev => {
+      if (!prev) return prev;
+      const ex = prev.exercises?.find(e => e.id === currentExId);
+      if (!ex || !USER_ID) return prev;
+
+      const queued = loadQueue().find(i => i.userId === USER_ID && i.exerciseName === ex.name && i.date === todayISO());
+      if (!queued) return prev;
+
+      const bySet = {};
+      (queued.records || []).forEach(r => (bySet[Number(r.setNumber) || 1] = r));
+
+      const next = {
+        ...prev,
+        sets: prev.sets.map(s => (s.exName !== ex.name ? s : { ...s, weight: Number(bySet[s.set]?.weight) || 0, reps: Number(bySet[s.set]?.reps) || 0, done: !!bySet[s.set]?.done })),
+      };
+      // mirror
+      lastSavedRef.current.clear();
+      next.sets.forEach(s => lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
+      setUnsaved(true);
+      return next;
+    });
+  }, [currentExId, USER_ID]);
 
   // Initial load
   useEffect(() => {
@@ -337,7 +448,7 @@ export default function MyWorkoutsPage() {
         setSelectedDay(initialDayId);
 
         const dayProgram = byKey[initialDayId] || weeklyProgram[initialDayId] || { id: initialDayId, name: 'Workout', exercises: [] };
-        const session = createSessionFromDay(dayProgram);
+        let session = createSessionFromDay(dayProgram);
         setWorkout(session);
         setCurrentExId(session.exercises[0]?.id);
 
@@ -353,11 +464,36 @@ export default function MyWorkoutsPage() {
           if (s?.alertSound) setAlertSound(s.alertSound);
         } catch {}
 
+        // Prefill from server (weight + reps + done)
         const dayISO = isoForThisWeeksDay(initialDayId);
         const { recordsByExercise } = await fetchLastDayByName(USER_ID, initialDayId, dayISO);
-        if (mounted && session) {
-          applyServerRecords(session, recordsByExercise, next => setWorkout(next), lastSavedRef);
+        if (!mounted) return;
+
+        session = applyInitialRecordsWithDone(session, recordsByExercise);
+
+        // Apply queued local snapshot for the first exercise (so refresh shows unsynced edits)
+        const firstEx = session.exercises?.[0];
+        if (firstEx && USER_ID) {
+          const queued = loadQueue().find(i => i.userId === USER_ID && i.exerciseName === firstEx.name && i.date === todayISO());
+          if (queued) {
+            const bySet = {};
+            (queued.records || []).forEach(r => (bySet[Number(r.setNumber) || 1] = r));
+            session = {
+              ...session,
+              sets: session.sets.map(s => (s.exName !== firstEx.name ? s : { ...s, weight: Number(bySet[s.set]?.weight) || 0, reps: Number(bySet[s.set]?.reps) || 0, done: !!bySet[s.set]?.done })),
+            };
+            setUnsaved(true);
+          }
         }
+
+        setWorkout(session);
+
+        // refresh mirror
+        lastSavedRef.current.clear();
+        session.sets.forEach(s => lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
+
+        // Try sync any pending queue on start (non-blocking UI)
+        trySyncQueue(false);
       } catch (e) {
         console.error('Initial load error:', e);
       } finally {
@@ -368,9 +504,20 @@ export default function MyWorkoutsPage() {
     return () => {
       mounted = false;
     };
-  }, [USER_ID, preloadMedia]);
+  }, [USER_ID, preloadMedia, applyInitialRecordsWithDone]);
 
-  // Change day (loading overlay)
+  // Keep the "unsaved" badge accurate when workout/exercise changes
+  useEffect(() => {
+    const exName = workout?.exercises?.find(e => e.id === currentExId)?.name;
+    if (!exName || !USER_ID) {
+      setUnsaved(false);
+      return;
+    }
+    const hasPending = loadQueue().some(i => i.userId === USER_ID && i.exerciseName === exName && i.date === todayISO());
+    setUnsaved(hasPending);
+  }, [workout, currentExId, USER_ID]);
+
+  // Change day
   const changeDay = useCallback(
     async dayId => {
       setDayLoading(true);
@@ -379,7 +526,7 @@ export default function MyWorkoutsPage() {
         const raw = plan?.program?.days || [];
         const byKey = Object.fromEntries(raw.map(d => [String(d.dayOfWeek ?? '').toLowerCase(), d]));
         const dayProgram = byKey[dayId] || weeklyProgram[dayId] || { id: dayId, name: 'Workout', exercises: [] };
-        const session = createSessionFromDay(dayProgram);
+        let session = createSessionFromDay(dayProgram);
         setWorkout(session);
         setCurrentExId(session.exercises[0]?.id);
         if (session.exercises?.length) preloadMedia(session.exercises);
@@ -389,23 +536,30 @@ export default function MyWorkoutsPage() {
         setInputBuffer({});
         session.sets.forEach(s => lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
         setUnsaved(false);
-        setChangeCount(0);
 
-        // pull last server records for this day
+        // Prefill last workout with weight+reps+done
         const dayISO = isoForThisWeeksDay(dayId);
         const { recordsByExercise } = await fetchLastDayByName(USER_ID, dayId, dayISO);
-        applyServerRecords(session, recordsByExercise, next => setWorkout(next), lastSavedRef);
+        session = applyInitialRecordsWithDone(session, recordsByExercise);
+        setWorkout(session);
+        lastSavedRef.current.clear();
+        session.sets.forEach(s => lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done }));
 
+        // restore selected day
         localStorage.setItem(LOCAL_KEY_SELECTED_DAY, dayId);
+
+        // Apply any queued snapshot for the newly current exercise
+        applyLocalQueuedSnapshotIfAny();
       } catch (e) {
         console.error(e);
       } finally {
         setDayLoading(false);
       }
     },
-    [plan, preloadMedia, USER_ID],
+    [plan, preloadMedia, USER_ID, applyInitialRecordsWithDone, applyLocalQueuedSnapshotIfAny],
   );
 
+  // === Set mutations (persist AFTER computing "next")
   const addSetForCurrentExercise = useCallback(() => {
     setWorkout(w => {
       if (!w) return w;
@@ -413,6 +567,7 @@ export default function MyWorkoutsPage() {
       const nextIndex = exSets.length + 1;
       const base = exSets[exSets.length - 1] || { targetReps: '10', restTime: 90 };
       const ex = w.exercises.find(e => e.id === currentExId);
+
       const newSet = {
         id: `${currentExId}-set${nextIndex}`,
         exId: currentExId,
@@ -426,20 +581,24 @@ export default function MyWorkoutsPage() {
         pr: false,
         restTime: Number.isFinite(ex?.rest ?? ex?.restSeconds) ? ex?.rest ?? ex?.restSeconds : base.restTime,
       };
+
       const next = { ...w, sets: [...w.sets, newSet] };
       lastSavedRef.current.set(newSet.id, { weight: 0, reps: 0, done: false });
-      markChanged();
+      persistExerciseSnapshot(next, currentExId, USER_ID);
+      setUnsaved(true);
       return next;
     });
-  }, [currentExId, markChanged]);
+  }, [currentExId, USER_ID]);
 
   const removeSetFromCurrentExercise = useCallback(() => {
     setWorkout(w => {
       if (!w) return w;
       const exSets = w.sets.filter(s => s.exId === currentExId);
       if (exSets.length <= 1) return w;
+
       const lastSetId = exSets[exSets.length - 1].id;
       const next = { ...w, sets: w.sets.filter(s => s.id !== lastSetId) };
+
       lastSavedRef.current.delete(lastSetId);
       setInputBuffer(prev => {
         const n = { ...prev };
@@ -447,64 +606,77 @@ export default function MyWorkoutsPage() {
         delete n[`${lastSetId}:reps`];
         return n;
       });
-      markChanged();
+
+      persistExerciseSnapshot(next, currentExId, USER_ID);
+      setUnsaved(true);
       return next;
     });
-  }, [currentExId, markChanged]);
+  }, [currentExId, USER_ID]);
 
   const toggleDone = useCallback(
     setId => {
       setWorkout(w => {
         if (!w) return w;
         const next = { ...w, sets: w.sets.map(s => (s.id === setId ? { ...s, done: !s.done } : s)) };
-        markChanged();
+        persistExerciseSnapshot(next, currentExId, USER_ID);
+        setUnsaved(true);
         return next;
       });
     },
-    [markChanged],
+    [currentExId, USER_ID],
   );
 
   const bump = useCallback(
     (setId, field, delta) => {
-      // clear live buffer (we commit numeric)
       setInputBuffer(prev => {
         const n = { ...prev };
         delete n[`${setId}:${field}`];
         return n;
       });
+
       setWorkout(w => {
         if (!w) return w;
-        const next = {
+
+        let next = {
           ...w,
           sets: w.sets.map(s => (s.id === setId ? { ...s, [field]: Math.max(0, Number(s[field] || 0) + delta) } : s)),
         };
+
         const u = next.sets.find(s => s.id === setId);
         if (u && Number(u.weight) > 0 && Number(u.reps) > 0) {
-          next.sets = next.sets.map(s => (s.id === setId ? { ...s, done: true } : s));
+          next = { ...next, sets: next.sets.map(s => (s.id === setId ? { ...s, done: true } : s)) };
         }
-        markChanged();
+
+        persistExerciseSnapshot(next, currentExId, USER_ID);
+        setUnsaved(true);
         return next;
       });
     },
-    [markChanged],
+    [currentExId, USER_ID],
   );
 
-  // commit numeric value (used onBlur)
   const setValue = useCallback(
     (setId, field, value) => {
       const val = Number(value);
       setWorkout(w => {
         if (!w) return w;
-        const next = { ...w, sets: w.sets.map(s => (s.id === setId ? { ...s, [field]: Number.isFinite(val) ? val : 0 } : s)) };
+
+        let next = {
+          ...w,
+          sets: w.sets.map(s => (s.id === setId ? { ...s, [field]: Number.isFinite(val) ? val : 0 } : s)),
+        };
+
         const u = next.sets.find(s => s.id === setId);
         if (u && Number(u.weight) > 0 && Number(u.reps) > 0) {
-          next.sets = next.sets.map(s => (s.id === setId ? { ...s, done: true } : s));
+          next = { ...next, sets: next.sets.map(s => (s.id === setId ? { ...s, done: true } : s)) };
         }
-        markChanged();
+
+        persistExerciseSnapshot(next, currentExId, USER_ID);
+        setUnsaved(true);
         return next;
       });
     },
-    [markChanged],
+    [currentExId, USER_ID],
   );
 
   const buildDailyPRPayload = useCallback(
@@ -523,67 +695,58 @@ export default function MyWorkoutsPage() {
     [workout?.sets],
   );
 
-  const saveDayToServer = useCallback(async () => {
-    const ex = workout?.exercises?.find(e => e.id === currentExId);
-    if (!ex) return;
+  // Try sync entire queue (optionally show status)
+  const trySyncQueue = useCallback(
+    async (showStatus = true) => {
+      const qStart = loadQueue();
+      if (!qStart.length) {
+        if (showStatus) {
+          setLastSyncStatus('ok');
+          setTimeout(() => setLastSyncStatus(''), 1200);
+        }
+        setUnsaved(false);
+        return;
+      }
 
-    // commit any buffered values to numeric before save
-    const keys = Object.keys(inputBuffer);
-    if (keys.length) {
-      setWorkout(w => {
-        if (!w) return w;
-        let sets = [...w.sets];
-        keys.forEach(k => {
-          const [sid, field] = k.split(':');
-          const strVal = inputBuffer[k];
-          const numVal = Number(strVal);
-          sets = sets.map(s => (s.id === sid ? { ...s, [field]: Number.isFinite(numVal) ? numVal : 0 } : s));
-        });
-        return { ...w, sets };
-      });
-      setInputBuffer({});
-    }
+      setSyncing(true);
+      let anyError = false;
+      for (const item of qStart) {
+        try {
+          const data = await upsertDailyPR(item.userId, item.exerciseName, item.date, item.records);
 
-    const payload = buildDailyPRPayload(ex.name);
-    try {
-      setSaving(true);
-      setSaveStatus('saving');
-      const data = await upsertDailyPR(USER_ID, payload.exerciseName, payload.date, payload.records);
-      // sync server ids back
-      setWorkout(w => {
-        if (!w) return w;
-        const mapped = w.sets.map(s => {
-          if (s.exId !== currentExId) return s;
-          const match = data?.records?.find(r => Number(r.setNumber) === Number(s.set));
-          return match ? { ...s, serverId: match.id } : s;
-        });
-        return { ...w, sets: mapped };
-      });
-      setUnsaved(false);
-      setChangeCount(0);
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus(''), 1200);
-    } catch (err) {
-      console.error('Save failed', err);
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus(''), 1500);
-    } finally {
-      setSaving(false);
-    }
-  }, [workout?.exercises, currentExId, buildDailyPRPayload, USER_ID, inputBuffer]);
+          // ===== KEY FIX: update the UI records immediately after a successful sync
+          // Prefer server response (it may include ids or normalized values), fallback to queued item.
+          const mergedRecords = Array.isArray(data?.records) && data.records.length ? data.records : item.records;
+          applyRecordsToWorkout(item.exerciseName, mergedRecords);
 
-  // Auto-save after >= 2 edits (debounced)
+          // Remove from queue after applying to UI
+          removeQueueItem(item);
+        } catch (e) {
+          console.error('Sync failed for', item.exerciseName, e);
+          anyError = true;
+          // keep item for retry
+        }
+      }
+      setSyncing(false);
+      if (showStatus) {
+        setLastSyncStatus(anyError ? 'error' : 'ok');
+        setTimeout(() => setLastSyncStatus(''), 1500);
+      }
+      // recompute unsaved for current ex/date
+      const still = loadQueue();
+      const exName = workout?.exercises?.find(e => e.id === currentExId)?.name;
+      const hasPendingForCurrent = !!exName && still.some(i => i.userId === USER_ID && i.exerciseName === exName && i.date === todayISO());
+      setUnsaved(hasPendingForCurrent);
+    },
+    [USER_ID, workout, currentExId, applyRecordsToWorkout],
+  );
+
   useEffect(() => {
-    if (changeCount >= 2) {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => {
-        saveDayToServer();
-      }, 800);
-    }
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, [changeCount, saveDayToServer]);
+    // Attempt sync when browser regains focus
+    const onFocus = () => trySyncQueue(false);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [trySyncQueue]);
 
   useEffect(() => {
     const el = audioRef.current;
@@ -609,8 +772,6 @@ export default function MyWorkoutsPage() {
         name: byKey[d]?.name || weeklyProgram[d]?.name || d,
       }));
   }, [plan]);
-
-  const [activeMedia, setActiveMedia] = useState('image');
 
   const Actions = ({ className }) => (
     <div className={`flex items-center gap-2 ${className}`}>
@@ -666,7 +827,6 @@ export default function MyWorkoutsPage() {
     });
     const num = raw === '' || raw == null ? 0 : Number(raw);
     setValue(setId, field, Number.isFinite(num) ? num : 0);
-    // markChanged(); // setValue already marks changed
   };
 
   if (loading) return <SkeletonLoader />;
@@ -758,23 +918,16 @@ export default function MyWorkoutsPage() {
                         return (
                           <div className={`absolute right-1  md:right-3 flex items-center gap-2 ${activeMedia === 'video' ? 'bottom-[70px] ' : ' bottom-1 md:bottom-3'} duration-500 `}>
                             <div className='inline-flex max-md:flex-col   items-center gap-[4px] rounded-xl bg-slate-100/70 p-1 ring-1 ring-black/5 backdrop-blur-md'>
-                              {/* <button type='button' onClick={() => setUploadOpen(true)} className='inline-flex items-center gap-1  px-2 h-[35px] max-md:w-[35px] justify-center rounded-lg text-[11px] font-medium  bg-white/95 text-indigo-700 hover:bg-white shadow-sm ring-1 ring-indigo-200  transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40' aria-label='Upload video for coach' title='Upload video for coach'>
-                                <Upload size={14} />
-                                <span className='hidden sm:inline'>Upload</span>
-                              </button> */}
-
                               <button type='button' aria-pressed={activeMedia === 'image'} disabled={!hasImg} onClick={() => setActiveMedia('image')} className={['relative inline-flex items-center gap-1.5 w-[35px] h-[35px] justify-center text-xs sm:text-sm rounded-lg outline-none transition', activeMedia === 'image' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', !hasImg ? 'opacity-50 cursor-not-allowed' : '', 'focus-visible:ring-2 focus-visible:ring-indigo-400/40'].join(' ')} title='Show image'>
                                 <ImageIcon size={14} />
                                 {activeMedia === 'image' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
                               </button>
 
-                              {/* Video tab */}
                               <button type='button' aria-pressed={activeMedia === 'video'} disabled={!hasVideo1} onClick={() => setActiveMedia('video')} className={['relative inline-flex items-center gap-1.5 w-[35px] h-[35px] justify-center text-xs sm:text-sm rounded-lg outline-none transition', activeMedia === 'video' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', !hasVideo1 ? 'opacity-50 cursor-not-allowed' : '', 'focus-visible:ring-2 focus-visible:ring-indigo-400/40'].join(' ')} title='Show video'>
                                 <VideoIcon size={14} />
                                 {activeMedia === 'video' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
                               </button>
 
-                              {/* Alt video tab */}
                               {hasVideo2 && (
                                 <button type='button' aria-pressed={activeMedia === 'video2'} onClick={() => setActiveMedia('video2')} className={['relative inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm rounded-lg outline-none transition', activeMedia === 'video2' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', 'focus-visible:ring-2 focus-visible:ring-indigo-400/40'].join(' ')} title='Show video 2'>
                                   <VideoIcon size={14} />
@@ -806,7 +959,7 @@ export default function MyWorkoutsPage() {
                           {currentSets.map((s, i) => (
                             <tr key={s.id} className={`transition-colors ${i % 2 === 1 ? 'bg-slate-50/40' : 'bg-white'} hover:bg-indigo-50/40`}>
                               <td className='py-2.5 px-3'>
-                                <span className='inline-flex h-[25px] w-[25px] items-center justify-center rounded-lg bg-slate-100 shadow-sm text-slate-700 font-medium'>{s.set}</span>
+                                <span className='inline-flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-slate-100  border border-slate-200 text-slate-700 font-medium'>{s.set}</span>
                               </td>
 
                               {/* WEIGHT */}
@@ -836,7 +989,7 @@ export default function MyWorkoutsPage() {
                                     }}
                                     title='-1'
                                     aria-label='Decrease weight'
-                                    className='absolute left-[4px] top-1/2 -translate-y-1/2 grid h-[25px] w-[25px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
+                                    className='absolute left-[2px] top-1/2 -translate-y-1/2 grid h-[30px] w-[30px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
                                     tabIndex={-1}>
                                     <Minus size={16} />
                                   </button>
@@ -851,7 +1004,7 @@ export default function MyWorkoutsPage() {
                                     }}
                                     title='+1'
                                     aria-label='Increase weight'
-                                    className='absolute right-[4px] top-1/2 -translate-y-1/2 grid h-[25px] w-[25px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
+                                    className='absolute right-[2px] top-1/2 -translate-y-1/2 grid h-[30px] w-[30px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
                                     tabIndex={-1}>
                                     <Plus size={16} />
                                   </button>
@@ -885,7 +1038,7 @@ export default function MyWorkoutsPage() {
                                     }}
                                     title='-1'
                                     aria-label='Decrease reps'
-                                    className='absolute left-[4px] top-1/2 -translate-y-1/2 grid h-[25px] w-[25px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
+                                    className='absolute left-[2px] top-1/2 -translate-y-1/2 grid h-[30px] w-[30px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
                                     tabIndex={-1}>
                                     <Minus size={16} />
                                   </button>
@@ -900,7 +1053,7 @@ export default function MyWorkoutsPage() {
                                     }}
                                     title='+1'
                                     aria-label='Increase reps'
-                                    className='absolute right-[4px] top-1/2 -translate-y-1/2 grid h-[25px] w-[25px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
+                                    className='absolute right-[2px] top-1/2 -translate-y-1/2 grid h-[30px] w-[30px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
                                     tabIndex={-1}>
                                     <Plus size={16} />
                                   </button>
@@ -921,27 +1074,38 @@ export default function MyWorkoutsPage() {
                       </table>
                     </div>
 
-                    {/* Footer toolbar */}
+                    {/* Sync controls */}
                     <div className='flex  flex-row items-center justify-between gap-2 px-3 py-2 text-[11px] text-slate-600 bg-slate-50/70 border-t border-slate-200'>
                       <div className='flex items-center gap-2'>
-                        <button onClick={removeSetFromCurrentExercise} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 bg-white hover:bg-slate-50' disabled={currentSets.length <= 1}>
-                          <Minus size={14} /> Remove set
+                        {/* Remove set */}
+                        <button
+                          onClick={removeSetFromCurrentExercise}
+                          disabled={currentSets.length <= 1}
+                          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-200
+      ${currentSets.length <= 1 ? 'cursor-not-allowed border border-slate-200 bg-white text-slate-400 shadow-inner' : 'border border-red-400 text-red-600 bg-white hover:bg-red-50 hover:border-red-500 hover:text-red-700 active:scale-95 shadow-sm'}`}>
+                          <Minus size={14} className='flex-none' />
+                          Remove set
                         </button>
-                        <button onClick={addSetForCurrentExercise} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 bg-white hover:bg-slate-50'>
-                          <Plus size={14} /> Add set
+
+                        {/* Add set */}
+                        <button
+                          onClick={addSetForCurrentExercise}
+                          className='inline-flex items-center gap-1.5 rounded-lg border border-indigo-400 px-3 py-1.5 text-xs font-medium 
+               text-indigo-600 bg-white hover:bg-indigo-50 hover:border-indigo-500 hover:text-indigo-700
+               active:scale-95 shadow-sm transition-all duration-200'>
+                          <Plus size={14} className='flex-none' />
+                          Add set
                         </button>
                       </div>
 
-                      {/* Auto-save status (Save button removed) */}
-                      <div className='ml-auto flex items-center gap-2'>
-                        {saveStatus === 'saving' && (
-                          <span className='inline-flex items-center gap-1 text-indigo-600'>
-                            <span className='inline-block w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin' />
-                            Saving...
-                          </span>
-                        )}
-                        {saveStatus === 'saved' && <span className='text-emerald-600'>Saved</span>}
-                        {saveStatus === 'error' && <span className='text-rose-600'>Save failed</span>}
+                      <div className='ml-auto flex items-center gap-3'>
+                        <button type='button' onClick={() => trySyncQueue(true)} disabled={syncing} className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 bg-white hover:bg-slate-50'>
+                          {syncing ? <span className='inline-block w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin' /> : unsaved ? <CloudOff size={14} className='text-amber-600' /> : <Cloud size={14} className='text-emerald-600' />}
+                          {syncing ? 'Syncing...' : unsaved ? 'Sync now' : 'Synced'}
+                        </button>
+
+                        {lastSyncStatus === 'ok' && <span className='text-emerald-600'>Synced</span>}
+                        {lastSyncStatus === 'error' && <span className='text-rose-600'>Some items failed</span>}
                       </div>
                     </div>
                   </div>
@@ -959,20 +1123,13 @@ export default function MyWorkoutsPage() {
               onPick={ex => {
                 setCurrentExId(ex.id);
                 setActiveMedia('image');
+                // Apply queued local snapshot after switching exercise
+                applyLocalQueuedSnapshotIfAny();
               }}
             />
           </div>
         </div>
       </motion.div>
-
-      {/* Unsaved hint */}
-      <AnimatePresence>
-        {unsaved && (
-          <motion.div initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 16, opacity: 0 }} className='fixed bottom-4 w-[90%] max-w-fit text-nowrap truncate left-1/2 -translate-x-1/2 z-40 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs flex justify-center text-center px-3 py-1.5 shadow'>
-            {t('changesStored') || 'Changes are stored locally and will auto-save soon'}
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Drawer */}
       <AnimatePresence>
@@ -996,6 +1153,8 @@ export default function MyWorkoutsPage() {
                     setCurrentExId(ex.id);
                     setActiveMedia('image');
                     setDrawerOpen(false);
+                    // Apply queued local snapshot after picking from drawer
+                    applyLocalQueuedSnapshotIfAny();
                   }}
                 />
               </div>

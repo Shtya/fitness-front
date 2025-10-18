@@ -1,12 +1,16 @@
 /* 
-	i need here doesn't save when change any value in the weight or reps or check i need save his recoreds in the localestorage about this day
-	and when close the app and open again send those values to the api and if return with success clear the localstorage 
+ 
 
-	to don't make hit for the endpoint when everytime save value
+	i need here save the changes of the sets in localstorage direct doesn't send it to the backend to save it 
+		- i need when close teh page and open again check if there sets in the local get and send it to the endpoint to save it 
+		- i not save it for an error keep it in the local and try when open or by button can click on it to save 
+		- and if he save teh data to the endponit with success remove the data form the localstorage 
 
+		- i make this point to don't hit the server of the backend every time 
 
-	and also don't save the plan in the locale storage to if the coach change his plan change direct save only the values for the exercise 
+		- and also another point when you get the intial sets for the ( prs/last-workout-sets ) put only the weight and reps don't put the ( done ) because done this for today he finish this exercise or no
 
+	and return teh full code i use js not ts 
 */
 
 'use client';
@@ -755,10 +759,10 @@ export default function MyWorkoutsPage() {
                         return (
                           <div className={`absolute right-1  md:right-3 flex items-center gap-2 ${activeMedia === 'video' ? 'bottom-[70px] ' : ' bottom-1 md:bottom-3'} duration-500 `}>
                             <div className='inline-flex max-md:flex-col   items-center gap-[4px] rounded-xl bg-slate-100/70 p-1 ring-1 ring-black/5 backdrop-blur-md'>
-                              <button type='button' onClick={() => setUploadOpen(true)} className='inline-flex items-center gap-1  px-2 h-[35px] max-md:w-[35px] justify-center rounded-lg text-[11px] font-medium  bg-white/95 text-indigo-700 hover:bg-white shadow-sm ring-1 ring-indigo-200  transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40' aria-label='Upload video for coach' title='Upload video for coach'>
+                              {/* <button type='button' onClick={() => setUploadOpen(true)} className='inline-flex items-center gap-1  px-2 h-[35px] max-md:w-[35px] justify-center rounded-lg text-[11px] font-medium  bg-white/95 text-indigo-700 hover:bg-white shadow-sm ring-1 ring-indigo-200  transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40' aria-label='Upload video for coach' title='Upload video for coach'>
                                 <Upload size={14} />
                                 <span className='hidden sm:inline'>Upload</span>
-                              </button>
+                              </button> */}
 
                               <button type='button' aria-pressed={activeMedia === 'image'} disabled={!hasImg} onClick={() => setActiveMedia('image')} className={['relative inline-flex items-center gap-1.5 w-[35px] h-[35px] justify-center text-xs sm:text-sm rounded-lg outline-none transition', activeMedia === 'image' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', !hasImg ? 'opacity-50 cursor-not-allowed' : '', 'focus-visible:ring-2 focus-visible:ring-indigo-400/40'].join(' ')} title='Show image'>
                                 <ImageIcon size={14} />

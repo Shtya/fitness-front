@@ -321,12 +321,9 @@ export default function AuthPage() {
 
   return (
     <AuthContext.Provider value={{ loading, setLoading, error, setError }}>
-      {/* Mobile-first: image as background under the form */}
-      <div className='relative min-h-svh lg:min-h-screen'>
-        {/* Background image for mobile/tablet */}
-        <img src='/auth-2.png' alt='' className='absolute inset-0 -z-10 h-full w-full object-cover object-center lg:hidden' />
-        {/* Gradient overlay for readability on mobile */}
-        <div
+       <div className='relative min-h-screen '>
+         <img src='/auth-2.png' alt='' className='absolute inset-0 -z-10 h-full w-full object-cover object-center lg:hidden' />
+         <div
           className='absolute inset-0 -z-10 lg:hidden'
           style={{
             background: 'linear-gradient(180deg, rgba(8,11,15,0.55) 0%, rgba(8,11,15,0.35) 30%, rgba(8,11,15,0.25) 70%, rgba(8,11,15,0.45) 100%)',

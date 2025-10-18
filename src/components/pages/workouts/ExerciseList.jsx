@@ -89,9 +89,7 @@ export function ExerciseList({ workout, currentExId, onPick, t }) {
                   <div className={['h-full rounded-full bg-gradient-to-r from-indigo-500 via-indigo-500 to-indigo-600', 'transition-[width] duration-300 ease-out'].join(' ')} style={{ width: `${progress}%` }} />
                 </div>
 
-                {/* Micro helper line */}
-                <div className='mt-1.5 text-[10px] text-slate-500'>{progress === 100 ? 'Completed' : progress === 0 ? 'Not started yet' : `${progress}% done`}</div>
-              </div>
+                </div>
             </div>
           </button>
         );

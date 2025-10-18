@@ -40,6 +40,9 @@
 		* meals page ( client )
 			- handle teh button of edit on the meal or add 
 			- handle the history 
+			- check form the all assigns
+			- dublicated
+
 
  
 		* profile 

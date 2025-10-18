@@ -219,7 +219,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
         {/* Center: controls & editor */}
         <div className='flex items-center gap-2 flex-1 min-w-0'>
           {alerting && (
-            <button onClick={stopAlert} className='inline-flex items-center gap-1.5 ml-1 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 px-2 py-[3px] text-[10px] hover:bg-rose-100' title='Stop alert sound'>
+            <button onClick={stopAlert} className='inline-flex items-center gap-1.5 ml-1 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 px-2 py-[3px] text-[12px] hover:bg-rose-100' title='Stop alert sound'>
               <BellOff size={12} /> Stop sound
             </button>
           )}
@@ -227,11 +227,11 @@ export const RestTimerCard = React.memo(function RestTimerCard({
             <div className='ml-auto flex items-center gap-2'>
               <div className='inline-flex rounded-xl overflow-hidden border border-slate-200 bg-white'>
                 <button onMouseDown={() => startHold(-holdStep)} onMouseUp={endHold} onMouseLeave={endHold} onTouchStart={() => startHold(-holdStep)} onTouchEnd={endHold} onClick={dec} className='px-2.5 h-8 text-xs hover:bg-slate-50' title={`-${smallStep}s (hold for -${holdStep}/tick)`}>
-                  <Minus className=' size-[10px] md:w-[12px] ' />
+                  <Minus className=' w-[14px] ' />
                 </button>
-                <div className='px-2  h-8 grid place-items-center  text-[10px] md:text-sm font-semibold tabular-nums text-slate-800'>{toMMSS(seconds)}</div>
+                <div className='px-2  h-8 grid place-items-center  text-sm font-semibold tabular-nums text-slate-800'>{toMMSS(seconds)}</div>
                 <button onMouseDown={() => startHold(+holdStep)} onMouseUp={endHold} onMouseLeave={endHold} onTouchStart={() => startHold(+holdStep)} onTouchEnd={endHold} onClick={inc} className='px-2.5 h-8 text-xs hover:bg-slate-50 border-l border-slate-200' title={`+${smallStep}s (hold for +${holdStep}/tick)`}>
-                  <Plus className=' size-[10px] md:w-[12px] ' />
+                  <Plus className=' w-[14px] ' />
                 </button>
               </div>
             </div>
