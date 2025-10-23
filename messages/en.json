@@ -609,5 +609,35 @@
     "messages": {
       "saved": "✅ Coach feedback saved successfully!"
     }
+  },
+  "AddToHomeGuide": {
+    "title": "Install the app on your home screen",
+    "subtitle": "Use the website as a full standalone app, even without internet.",
+    "chooseBrowser": "Choose browser",
+    "installButton": "Install app",
+    "installing": "Installing...",
+    "stepsTitle": "Steps:",
+    "dontShowAgain": "Don’t show this message again",
+    "close": "Got it",
+    "footerNote": "This guide is shown only once and saved in localStorage.",
+    "browserOptions": {
+      "auto": "Auto detect",
+      "chrome": "Chrome (Android)",
+      "edge": "Edge (Android)",
+      "samsung": "Samsung Internet",
+      "firefox": "Firefox (Android)",
+      "safari": "Safari (iPhone/iPad)",
+      "ios_other": "Chrome/Edge/Firefox (iOS)",
+      "generic": "Other browser"
+    },
+    "steps": {
+      "chrome": ["Open the menu (⋮) in the top right.", "Select \"Add to Home screen.\"", "Tap \"Install\" to confirm."],
+      "edge": ["Open the menu (⋮) in the top right.", "Select \"Install app.\"", "Tap \"Install\" to confirm."],
+      "samsung": ["Tap the menu button (≡) at the bottom.", "Select \"Add page to\" then \"Home screen.\"", "Tap \"Add.\""],
+      "firefox": ["Open the menu (⋮) at the top.", "Select \"Add to Home screen.\"", "Tap \"Add.\""],
+      "safari": ["Tap the share button (↑ arrow).", "Select \"Add to Home Screen.\"", "Tap \"Add\" to confirm."],
+      "ios_other": ["It’s recommended to use Safari to add the app.", "Open the site in Safari.", "Tap \"Add to Home Screen\" then \"Add.\""],
+      "generic": ["Look in your browser’s menu for \"Add to Home screen\" or \"Install app.\"", "Follow the instructions to add the icon to your home screen."]
+    }
   }
 }

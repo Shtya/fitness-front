@@ -3,7 +3,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Select from './Select';
 import CheckBox from './CheckBox';
-import { Modal } from '../dashboard/ui/UI';
 import MultiLangText from './MultiLangText';
 
 export default function AddToHomeGuide({ storageKey = 'a2hs_guide_dismissed_v1', autoShowDelayMs = 1200 }) {
@@ -103,7 +102,7 @@ export default function AddToHomeGuide({ storageKey = 'a2hs_guide_dismissed_v1',
             <Select
               className='mt-3'
               options={Object.entries(t.raw('browserOptions')).map(([key, label]) => ({
-                label : <MultiLangText>{label}</MultiLangText> ,
+                label: <MultiLangText>{label}</MultiLangText>,
                 id: key,
               }))}
               value={browserKey}
