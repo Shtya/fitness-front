@@ -16,7 +16,6 @@ const openSans = Open_Sans({
   display: 'swap',
 });
 
- 
 const arabicFont = Cairo({
   variable: '--font-arabic',
   subsets: ['arabic'],
@@ -38,7 +37,7 @@ export const metadata = {
 
   manifest: '/manifest.json',
 
-   openGraph: {
+  openGraph: {
     title: 'FitPro - Your Personal Fitness Revolution',
     description: 'AI-powered fitness coaching with personalized plans, real-time progress tracking, and expert guidance. Start your transformation journey today.',
     url: 'https://fitpro.com',
@@ -49,9 +48,7 @@ export const metadata = {
 
   // Icons for various platforms
   icons: {
-    icon: [
-			{ url: '/favicon.ico' }
-		],
+    icon: [{ url: '/favicon.ico' }],
     shortcut: ['/logo.png'],
     apple: [{ url: '/logo.png', sizes: '180x180', type: 'image/png' }],
     other: [
@@ -106,7 +103,7 @@ export default async function RootLayout({ children, params }) {
       <body className={`bg-[#fff] scroll ${arabicFont.variable} ${openSans.variable}`}>
         <NextIntlClientProvider locale={locale}>
           <Layout> {children} </Layout>
-					<AddToHomeGuide />
+          <AddToHomeGuide />
         </NextIntlClientProvider>
       </body>
     </html>
