@@ -1,665 +1,613 @@
 {
   "auth": {
-    "userType": "User Type",
-    "business": "Business",
-    "individual": "Individual",
-    "chooseMethod": "Choose your sign in method",
-    "emailMethod": "Sign in with your email",
-    "phoneMethod": "Sign in with your phone",
-    "otpMethod": "Enter the verification code",
-    "createAccount": "Create your account",
-    "phoneSignUp": "Sign up with your phone",
-    "verifyEmail": "Verify your email",
-    "resetPassword": "Reset your password",
-    "verifyIdentity": "Verify your identity",
-    "setNewPassword": "Set new password",
-    "passwordRequirements": "Please enter your new password",
+    "signIn": "Sign In",
+    "subtitle": "Welcome back!",
+    "subtitle2": "Sign in to track your progress.",
     "email": "Email",
     "enterEmail": "Enter your email",
     "password": "Password",
     "enterPassword": "Enter your password",
-    "username": "Username",
-    "chooseUsername": "Choose a username",
-    "phoneNumber": "Phone Number",
-    "enterPhone": "Enter your phone number",
-    "newPassword": "New Password",
-    "otpCode": "Verification Code",
-    "enterOtp": "Enter verification code",
-    "referralCode": "Referral Code (optional)",
-    "enterReferral": "Enter referral code",
-    "subtitle": "Welcome back!",
-    "subtitle2": "Log in to continue your progress.",
-    "rememberMe": "Remember me",
+    "signInButton": "Sign In",
+
     "invalidEmail": "Please enter a valid email address",
     "passwordRequired": "Password is required",
-    "usernameMin": "Username must be at least 3 characters",
-    "usernameMax": "Username must be less than 30 characters",
-    "usernameInvalid": "Username can only contain letters, numbers, and spaces",
-    "usernameSpaces": "Username cannot contain consecutive spaces",
-    "passwordMin": "Password must be at least 8 characters",
-    "phoneMin": "Please enter a valid phone number",
-    "passwordsMatch": "Passwords do not match",
-    "otpRequired": "Verification code is required",
-    "otpLength": "Verification code must be 6 digits",
-    "otpInvalid": "Invalid verification code",
-    "loginFailed": "Login failed. Please check your credentials.",
-    "registrationFailed": "Registration failed. Please try again.",
-    "codeSendFailed": "Failed to send verification code. Please try again.",
-    "resetEmailFailed": "Failed to send reset email. Please try again.",
-    "passwordResetFailed": "Failed to reset password. Please try again.",
-    "resendFailed": "Failed to resend code. Please try again.",
-    "googleLoginFailed": "Failed to initiate Google login",
-    "appleLoginFailed": "Failed to initiate Apple login",
-    "or": "OR",
-    "bullet": {
-      "personalized": "Personalized workout plans",
-      "progress": "Visual progress tracking",
-      "collab": "Coach collaboration",
-      "secure": "Secure authentication"
-    },
-    "securityNote": "We use industry-standard encryption and token-based authentication. Keep your credentials safe.",
 
-    "role": {
-      "selectRole": "Select Role",
-      "buyer": "Buyer",
-      "seller": "Seller"
-    },
     "success": {
-      "signedIn": "Successfully signed in!",
-      "otpSent": "Verification code sent to your email!",
-      "emailVerified": "Email verified successfully!",
-      "passwordReset": "Password reset successfully!",
-      "codeResent": "Verification code resent!"
+      "signedIn": "Successfully signed in!"
+    },
+
+    "errors": {
+      "loginFailed": "Login failed. Please check your credentials.",
+      "accountPending": "Your account is under review. Please try again later.",
+      "accountSuspended": "Your account has been suspended. Please contact support."
+    },
+
+    "loading": {
+      "signingIn": "Signing in..."
+    },
+
+    "a11y": {
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
+    },
+
+    "hero": {
+      "title": "Start Your Fitness Journey Now!",
+      "subtitle": "Track your workouts, improve your records, and maintain consistency through a platform designed for real results.",
+      "perkPersonalized": "Personalized workout plans",
+      "perkProgress": "Progress charts and achievement streaks",
+      "perkChat": "Coach chat and feedback",
+      "perkPrivacy": "Secure and private data"
+    },
+
+    "notes": {
+      "protected": "Protected by industry-standard encryption."
+    }
+  },
+  "myProfile": {
+    "tabs": {
+      "overview": "Overview",
+      "body": "Measurements",
+      "photos": "Photos"
+    },
+    "sides": {
+      "all": "All",
+      "front": "Front",
+      "back": "Back",
+      "left": "Left",
+      "right": "Right"
+    },
+    "stats": {
+      "workoutPlan": "Workout Plan",
+      "mealPlan": "Meal Plan",
+      "latestWeight": "Latest Weight",
+      "caloriesToday": "Today's Calories",
+      "photos": "Photos",
+      "measurements": "Measurements",
+      "trend": "Trend"
+    },
+    "profile": {
+      "member": "Member",
+      "phone": "Phone:",
+      "coach": "Coach:",
+      "coaching": "Coach",
+      "coachId": "Coach ID"
+    },
+    "actions": {
+      "edit": "Edit",
+      "editProfile": "Edit Profile",
+      "addBodyPhotos": "Add Body Photos",
+      "saving": "Saving...",
+      "save": "Save",
+      "reset": "Reset",
+      "clear": "Clear",
+      "saveSet": "Save Set",
+      "cancel": "Cancel",
+      "preview": "Preview",
+      "saveChanges": "Save Changes",
+      "apply": "Apply",
+      "zoom": "Zoom",
+      "previewAll": "Preview All",
+      "delete": "Delete"
+    },
+    "sections": {
+      "weightTrend": "Weight Trend",
+      "compare": "Progress Comparison",
+      "bodyMetrics": "Body Measurements",
+      "measurements": "Measurements",
+      "uploadBodyPhotos": "Upload Body Photos",
+      "timeline": "Timeline"
+    },
+    "labels": {
+      "deltaKg": "Δ (kg)",
+      "side": "Side",
+      "before": "Before",
+      "after": "After",
+      "beforeAfter": "Before/After",
+      "latestWeight": "Latest Weight",
+      "lastEntry": "Last Entry"
+    },
+    "placeholders": {
+      "choose": "Choose..."
+    },
+    "messages": {
+      "chooseTwoSets": "Choose two sets to compare.",
+      "useCompareBlock": "Use the comparison section to select photos.",
+      "noTimeline": "No photos in timeline currently.",
+      "noMeasurements": "No measurements yet.",
+      "pickImageFirst": "Please select an image to crop first.",
+      "deletePhotoConfirm": "Are you sure you want to delete this photo set?",
+      "deleteMeasurementConfirm": "Are you sure you want to delete this measurement?"
+    },
+    "modals": {
+      "cropTitle": "Crop Image",
+      "addBodySet": "Add Body Photo Set",
+      "editProfile": "Edit Profile",
+      "preview": "Preview",
+      "confirmDelete": "Confirm Deletion"
+    },
+    "notifications": {
+      "welcome": "Welcome to your profile!"
+    },
+    "photos": {
+      "sampleNote": "Sample monthly entry"
+    },
+    "tips": {
+      "title": "How to Take Excellent Progress Photos",
+      "lighting": "Take photos in bright, consistent lighting and avoid harsh shadows.",
+      "distance": "Maintain the same distance from the camera each time.",
+      "angles": "Stick to the same angles in every shooting session.",
+      "cameraHeight": "Place the camera at chest level with a straight angle.",
+      "timer": "Use a timer or remote to avoid camera shake.",
+      "clothes": "Wear similar or tight-fitting clothes in each session.",
+      "background": "Choose a simple, clutter-free background.",
+      "frequency": "Take photos weekly or bi-weekly at the same time of day.",
+      "cta": "How to take excellent progress photos?"
     },
     "errors": {
-      "invalidEmail": "Please enter a valid email address",
-      "passwordRequired": "Password is required",
-      "usernameMin": "Username must be at least 3 characters",
-      "usernameMax": "Username must be less than 30 characters",
-      "usernameInvalid": "Username can only contain letters, numbers, and spaces",
-      "usernameSpaces": "Username cannot contain consecutive spaces",
-      "passwordMin": "Password must be at least 8 characters",
-      "phoneMin": "Please enter a valid phone number",
-      "passwordsMatch": "Passwords do not match",
-      "otpRequired": "Verification code is required",
-      "otpLength": "Verification code must be 6 digits",
-      "otpInvalid": "Invalid verification code",
-      "loginFailed": "Login failed. Please check your credentials.",
-      "registrationFailed": "Registration failed. Please try again.",
-      "codeSendFailed": "Failed to send verification code. Please try again.",
-      "resetEmailFailed": "Failed to send reset email. Please try again.",
-      "passwordResetFailed": "Failed to reset password. Please try again.",
-      "resendFailed": "Failed to resend code. Please try again.",
-      "googleLoginFailed": "Failed to initiate Google login",
-      "appleLoginFailed": "Failed to initiate Apple login"
+      "loadProfile": "Failed to load profile. Please try again."
     },
-    "enterNewPassword": "Enter new password",
-    "confirmPassword": "Confirm Password",
-    "confirmNewPassword": "Confirm your new password",
-    "sendCodeButton": "Send Verification Code",
-    "terms": "By joining, you agree to the UpPhoto Terms of Service and to occasionally receive emails from us. Please read our Privacy Policy to learn how we use your personal data.",
-
-    "signIn": "Sign In",
-    "signUp": "Sign Up",
-    "forgotPassword": "Forgot?",
-    "signInTitle": "Sign in to your account",
-    "signInSubtitle": "Choose a method to continue",
-    "signInEmailTitle": "Sign in with Email",
-    "signInEmailSubtitle": "Enter your email and password",
-    "signInPhoneTitle": "Sign in with Phone",
-    "signInPhoneSubtitle": "Enter your phone number to receive a code",
-    "otpTitle": "Verify your code",
-    "otpSubtitle": "Enter the 6-digit code we sent you",
-    "registerTitle": "Create your account",
-    "registerSubtitle": "Choose a method to get started",
-    "registerEmailTitle": "Create account with Email",
-    "registerEmailSubtitle": "Fill in your details to sign up",
-    "registerPhoneTitle": "Create account with Phone",
-    "registerPhoneSubtitle": "We'll send you a verification code",
-    "verifyEmailTitle": "Verify your email",
-    "verifyEmailSubtitle": "Enter the code to activate your account",
-    "forgotPasswordTitle": "Forgot your password",
-    "forgotPasswordSubtitle": "Enter your email to receive a reset code",
-    "verifyIdentityTitle": "Verify your identity",
-    "verifyIdentitySubtitle": "Enter the code we sent to reset your password",
-    "resetPasswordTitle": "Set a new password",
-    "resetPasswordSubtitle": "Use at least 8 characters with letters & numbers",
-    "emailLabel": "Email",
-    "emailPlaceholder": "Enter your email",
-    "passwordLabel": "Password",
-    "passwordPlaceholder": "Enter your password",
-    "usernameLabel": "Username",
-    "usernamePlaceholder": "Choose a username",
-    "referralLabel": "Referral Code (Optional)",
-    "referralPlaceholder": "Enter referral code",
-    "phoneLabel": "Phone Number",
-    "phonePlaceholder": "Enter your phone number",
-    "newPasswordLabel": "New Password",
-    "newPasswordPlaceholder": "Enter new password",
-    "confirmPasswordLabel": "Confirm Password",
-    "confirmPasswordPlaceholder": "Confirm your new password",
-    "signInButton": "Sign In",
-    "createAccountButton": "Create Account",
-    "sendOtpButton": "Send OTP",
-    "resetPasswordButton": "Reset Password",
-    "verifyCodeButton": "Verify Code",
-    "continueWithGoogle": "Continue with Google",
-    "continueWithApple": "Continue with Apple",
-    "continueWithEmail": "Continue with Email",
-    "continueWithPhone": "Continue with Phone",
-    "resendCode": "Resend",
-    "resendIn": "Resend in {seconds}s",
-    "didntReceiveCode": "Didn't receive the code?",
-    "termsText": "By joining, you agree to the UpPhoto Terms of Service and to occasionally receive emails from us. Please read our Privacy Policy to learn how we use your personal data.",
-    "roleLabel": "I want to be a",
-    "roleBuyer": "Buyer",
-    "roleSeller": "Seller",
-    "successRegister": "Verification code sent to your email!",
-    "successLogin": "Signed in successfully!",
-    "successOtp": "Email verified successfully!",
-    "successPasswordReset": "Password has been reset successfully!",
-    "errorInvalidOtp": "Invalid verification code. Please try again.",
-    "errorGeneral": "Something went wrong. Please try again.",
-
-    "title": "Start your success now!",
-    "taglines": ["Talented freelancers for any project", "Best freelancers for every project High-quality services for every budget", "Trusted by 4+ million clients worldwide"],
-
-    "signInToYourAccount": "Sign in to your account",
-    "dontHaveAnAccount": "Don't have an account?",
-    "authConsentNotice": "By joining, you agree to the UpPhoto Terms of Service and to occasionally receive emails from us. Please read our Privacy Policy to learn how we use your personal data.",
-    "back": "Back",
-    "continueWithYourEmail": "Continue with your email",
-
-    "forgotPasswordLink": "Forgot password?",
-    "loginButton": "Login",
-    "registerYourAccount": "Register your account",
-    "alreadyHaveAnAccount": "Already have an account?",
-
-    "registerButton": "Register",
-    "verifyYourEmail": "Verify your email",
-    "otpSentTo": "A 6-digit code has been sent to",
-    "enterCodeBelow": "Please enter the code below to verify your email.",
-    "verificationCodeLabel": "Verification Code",
-    "verificationCodePlaceholder": "Enter 6-digit code",
-    "verifyButton": "Verify",
-    "resendCodeIn": "Resend code in {count}",
-    "noEmailForOtp": "No email found for verification. Please go back and register again.",
-    "backToRegister": "Back to Register",
-    "forgotPasswordInstructions": "Enter your registered email address to receive a password reset link.",
-    "sendResetLinkButton": "Send Link",
-    "passwordResetEmailSent": "An email with a password reset link has been sent to your address. Please check your inbox.",
-    "passwordResetRequestFailedGeneric": "Failed to send password reset link. Please try again.",
-    "resetPasswordInstructions": "Enter your new password below.",
-    "confirmNewPasswordLabel": "Confirm New Password",
-    "confirmNewPasswordPlaceholder": "Confirm your new password",
-    "passwordResetSuccess": "Password reset successfully!",
-    "passwordResetFailedGeneric": "Failed to reset password. Please try again or request a new link.",
-    "invalidResetLinkTitle": "Invalid or Expired Link",
-    "invalidResetLinkMessage": "The password reset link is invalid or has expired. Please request a new one.",
-    "requestNewResetLink": "Request a New Reset Link"
+    "table": {
+      "date": "Date",
+      "weight": "Weight (kg)",
+      "waist": "Waist (cm)",
+      "chest": "Chest (cm)",
+      "hips": "Hips (cm)",
+      "actions": "Actions"
+    },
+    "forms": {
+      "addMeasurement": "Add Measurement",
+      "date": "Date",
+      "weightKg": "Weight (kg)",
+      "waistCm": "Waist (cm)",
+      "chestCm": "Chest (cm)",
+      "hipsCm": "Hips (cm)",
+      "weightOptional": "Weight (optional)",
+      "noteOptional": "Note (optional)",
+      "name": "Name",
+      "phone": "Phone",
+      "coachId": "Coach ID",
+      "membership": "Membership",
+      "subscriptionStart": "Subscription Start",
+      "subscriptionEnd": "Subscription End"
+    }
   },
-  "categories": {
-    "importantLinks": "important links",
-    "title": "Categories",
-    "becomeSeller": "Become a seller",
-    "shareJobDescription": "Share Job Description",
-    "appDevelopment": "App Development",
-    "programmingTech": "Programming & Tech",
-    "uiDesign": "UI Design",
-    "videoAnimation": "Video & Animation",
-    "writingTranslation": "Writing & Translation",
-    "musicAudio": "Music & Audio",
-    "digitalMarketing": "Digital Marketing",
-    "aiServices": "AI Services",
-    "consulting": "Consulting",
-    "bikeRepairMaintenance": "Bike Repair & Maintenance",
-    "automation": "Automation",
-    "mechanic": "Mechanic",
-    "photography": "Photography"
+  "nav": {
+    "brand": { "coachPortal": "Coach Portal" },
+
+    "sections": {
+      "mySpace": "My Space",
+      "clientManagement": "Client Management",
+      "overview": "Overview",
+      "programs": "Programs",
+      "operations": "Operations"
+    },
+
+    "items": {
+      "dashboard": "Dashboard",
+      "training": "Training",
+      "myWorkouts": "My Workouts",
+      "myProgress": "My Progress",
+      "progress": "Progress",
+      "myNutrition": "My Nutrition",
+      "weeklyStrength": "Weekly Strength Report",
+      "calorieCalculator": "Calorie Calculator",
+      "profile": "Profile",
+
+      "nutrition": "Nutrition",
+      "foodLibrary": "Food Library",
+      "groceryList": "Grocery List",
+
+      "nutritionManagement": "Nutrition Management",
+      "mealPlans": "Meal Plans",
+      "analytics": "Analytics",
+      "reports": "Reports",
+
+      "trainingManagement": "Training Management",
+      "workoutPlans": "Workout Plans",
+      "allWorkouts": "All Workouts",
+
+      "allUsers": "All Users",
+      "allExercises": "All Exercises",
+
+      "clientIntake": "Client Intake",
+      "manageForms": "Manage Forms",
+      "responses": "Responses",
+
+      "messages": "Messages",
+      "systemSettings": "System Settings"
+    },
+
+    "tooltips": {
+      "expand": "Expand sidebar",
+      "collapse": "Collapse sidebar",
+      "closeMenu": "Close menu"
+    }
   },
 
-  "createProject": {
-    "crumb": {
-      "share": "Share Job Description",
-      "step1": "Step 1: Add form one data",
-      "step2": "Step 2: Add form two data",
-      "step3": "Step 3: Show the summary",
-      "reset": "Reset to start"
+  "header": {
+    "actions": {
+      "openMenu": "Open menu",
+      "profile": "Profile",
+      "settings": "Settings",
+      "signOut": "Sign Out",
+      "signIn": "Sign In"
     },
-    "hero": {
-      "title": "Now let’s talk budget and timing",
-      "subtitle": "(This is where you provide us with the full picture)",
-      "cta": "See more"
+    "status": { "online": "Online", "offline": "Offline" },
+    "labels": {
+      "role": "Role",
+      "lastLogin": "Last login: {time}"
     },
-    "banner": {
-      "q": "Are you a freelancer?",
-      "cta": "Become a Seller"
+    "roles": {
+      "admin": "Admin",
+      "coach": "Coach",
+      "client": "Client",
+      "guest": "Guest"
+    },
+    "common": { "guest": "Guest" }
+  },
+  "notif": {
+    "title": "Notifications",
+    "tabs": { "all": "All", "unread": "Unread" },
+    "placeholders": { "search": "Search…" },
+    "actions": {
+      "open": "Open notifications",
+      "close": "Close",
+      "markAll": "Mark all as read",
+      "read": "Read",
+      "openLink": "Open",
+      "showAll": "Show all",
+      "loadMore": "Load more",
+      "loading": "Loading…",
+      "reset": "Reset"
     },
     "common": {
-      "back": "Back"
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "notification": "Notification",
+      "read": "Read"
     },
-    "step1": {
-      "titleLbl": "Give your project job a title",
-      "titlePh": "Add your job title",
-      "descLbl": "What are you looking to get done?",
-      "descPh": "Add your job description",
-      "attach": "Attach Files",
-      "catLbl": "Which category best fits your project?",
-      "catPh": "Select category",
-      "budgetLbl": "Budget",
-      "budgetPh": "Enter your budget",
-      "timeLbl": "Timeline",
-      "timePh": "Enter project duration (e.g., 2 weeks)",
-      "submit": "Submit & get matched"
+    "empty": {
+      "title": "No notifications",
+      "hint": "Try changing the tab or clearing the search."
     },
-    "step2": {
-      "title": "I’m looking to spend",
-      "budgetPh": "Add your budget",
-      "range": "Average range for this services $3,706 - $13,706",
-      "flex": "My budget is flexible",
-      "delivery": "Delivery date",
-      "deliveryPh": "Preferred delivery date",
-      "note": "We’ll find available freelancers",
-      "review": "Review Your Project",
-      "opt": {
-        "asap": "ASAP (within a few days)",
-        "1w": "In 1 week",
-        "2w": "In 2 weeks",
-        "1m": "In 1 month",
-        "date": "Pick a specific date…"
-      }
-    },
-    "review": {
-      "project": "Project Summary",
-      "bigPicture": "This is where you fill us in on the big picture.",
-      "title": "Title",
-      "service": "Service",
-      "description": "Description",
-      "attachment": "Attachment",
-      "noFiles": "No files attached",
-      "continue": "Continue",
-      "job": "Job Summary",
-      "blurb": "Here’s a recap of your job preferences.",
-      "budget": "Budget",
-      "deliverBy": "Deliver by",
-      "reviewCta": "Review Your Project"
+    "footer": {
+      "syncing": "Syncing…",
+      "shown": "Shown: {count}"
     }
   },
 
   "common": {
-    "loading": "Loading...",
-    "back": "Back",
-    "invalidEmail": "Please enter a valid email address.",
-    "errorFetchingData": "Failed to fetch data. Please try again.",
-    "errorSendingInvitation": "Failed to send invitation. Please try again.",
-    "loadingReferralData": "Loading referral data...",
-    "notAuthenticated": "You must be logged in to view this content.",
-    "copyFailed": "Failed to copy. Please try manually.",
-    "unknownError": "An unknown error occurred."
+    "selectDate": "Select date",
+    "search": "Search…",
+    "select": "Select"
   },
+  "weekly": {
+    "title": "Weekly Report",
+    "subtitle": "Fill out your weekly report for your coach including diet, workouts, measurements, and progress photos.",
+    "progress": "Data completion percentage",
+    "weekOf": "Week of",
+    "cardioAdherence": "Your cardio adherence (from 1 to 5)",
 
-  "home": {
-    "heroTitle": "Discover your potential with Helhal",
-    "heroSubtitle": "The best freelance services in one place!",
-    "heroTagline": "All visual services in one place!",
-    "popularServicesTitle": "Popular Services",
-    "iosAppDevelopment": "iOS App Development",
-    "wordpressDevelopers": "WordPress Developers",
-    "uxpin": "UXPin",
-    "invisionStudio": "Invision Studio",
-    "whyChoose": {
-      "title": "Why choose Helhal",
-      "items": {
-        "categories": {
-          "title": "Over 700 Categories",
-          "description": "Discover photography services for every purpose, from personal shoots to corporate needs."
+    "errors": {
+      "required": "This field is required",
+      "unknown": "An unexpected error occurred during submission"
+    },
+
+    "diet": {
+      "title": "1) Diet",
+      "hungry": "Do you feel hungry?",
+      "comfort": "Do you feel psychologically comfortable?",
+      "wantSpecific": {
+        "title": "Do you want to add specific items?",
+        "ph": "Write the items you'd like to add"
+      },
+      "tooMuch": "Is the food amount too much?",
+      "deviation": {
+        "title": "Is there deviation in the diet?",
+        "times": "Number of times",
+        "details": "Types and quantities",
+        "ph": "Example: Pizza twice - Sweets one piece..."
+      }
+    },
+
+    "training": {
+      "title": "2) Training",
+      "intensityOk": "Is the workout intensity appropriate?",
+      "daysDeviation": "Is there deviation in the number of workout days?",
+      "deviation": {
+        "count": "Number of deviated days (increase or decrease)",
+        "reason": "Reason for deviation (temporary or permanent)"
+      },
+      "shape": "Do you notice changes in shape?",
+      "fitness": "Do you notice changes in fitness?",
+      "sleepEnough": "Do you get enough sleep hours?",
+      "sleepHours": "Daily sleep hours",
+      "notes": {
+        "title": "Your notes or suggestions about the program",
+        "ph": "Write any notes or suggestions to improve the program 💪🏻"
+      }
+    },
+
+    "measurements": {
+      "title": "3) Measurements",
+      "pick": "Select previous measurement",
+      "addNew": "Add new measurement",
+      "hideAdd": "Hide add form",
+      "date": "Measurement date",
+      "weight": "Weight (kg)",
+      "waist": "Waist (cm)",
+      "chest": "Chest (cm)",
+      "hips": "Hips (cm)",
+      "arms": "Arms (cm)",
+      "thighs": "Thighs (cm)",
+      "save": "Save measurement",
+      "new": "New measurement added",
+      "noData": "No measurements yet"
+    },
+
+    "photos": {
+      "upload": "Upload photo",
+      "replace": "Replace",
+      "uploadSet": "Upload photo set",
+      "pickFromHistory": {
+        "btn": "Select photos from history",
+        "title": "Select photos from history",
+        "empty": "No saved photos yet."
+      },
+      "errors": {
+        "noFiles": "Please select at least one photo.",
+        "dateRequired": "Please select the photos date."
+      },
+      "title": "4) Progress Photos",
+      "pickSet": "Select previous photo set",
+      "orUpload": "Or upload new photos below",
+      "addNew": "Add new photo set",
+      "hideAdd": "Hide add form",
+      "front": "Front photo",
+      "back": "Back photo",
+      "right": "Right side photo",
+      "left": "Left side photo",
+      "date": "Capture date",
+      "weight": "Weight at capture (kg)",
+      "note": "Photo notes",
+      "noPhotos": "No saved photos currently"
+    },
+
+    "actions": {
+      "close": "Close",
+      "add": "Add",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+
+    "success": "✅ Report successfully sent to the coach!",
+    "submit": {
+      "hint": "Make sure to fill required fields before submitting.",
+      "sending": "Sending...",
+      "cta": "Submit Report"
+    }
+  },
+  "chat": {
+    "search": {
+      "placeholder": "Search by name or email...",
+      "results": "Search results",
+      "clear": "Clear search",
+      "noResultsTitle": "No matching results",
+      "noResultsHint": "Try a different name or email"
+    },
+    "quick": {
+      "coach": "Contact Coach"
+    },
+    "appbar": {
+      "title": "Messages",
+      "subtitle": "Communicate with your coach and clients"
+    },
+    "tabs": {
+      "all": "All",
+      "unread": "Unread"
+    },
+    "empty": { "pick": "Select a conversation to start chatting", "hint": "Choose a conversation from the list" },
+    "composer": {
+      "placeholder": "Type a message…",
+      "disabled": "Select a conversation to start chatting",
+      "remove": "Remove attachment",
+      "send": "Send",
+      "hint": "Shift+Enter for new line • Ctrl/Cmd+Enter to send"
+    },
+    "list": {
+      "group": "Group chat",
+      "direct": "Direct message",
+      "photo": "📷 Photo",
+      "video": "🎥 Video",
+      "file": "📎 File",
+      "empty": "No conversations yet",
+      "title": "Conversations",
+      "subtitle": "Stay connected",
+      "startHint": "Search to start a new conversation"
+    },
+    "header": {
+      "typing": "Typing now...",
+      "direct": "Online",
+      "loading": "Loading...",
+      "noselect": "Select conversation"
+    },
+    "actions": {
+      "openList": "Open conversations list",
+      "close": "Close"
+    }
+  },
+  "calorie": {
+    "labelsExtra": {
+      "searchFood": "Search for food",
+      "pickFood": "Select food",
+      "amount": "Amount",
+      "pickFoodHint": "Select an item to display calories.",
+      "mealEmpty": "No items added yet."
+    },
+    "notesExtra": {
+      "mealTip": "Compare your meal with the target and adjust quantities as needed."
+    },
+    "actions": {
+      "reset": "Reset",
+      "generateSummary": "Generate Summary",
+      "addItem": "Add Item",
+      "clearMeal": "Clear Meal",
+      "remove": "Remove"
+    },
+    "loader": {
+      "generating": "Generating..."
+    },
+    "header": {
+      "title": "Daily Calorie Calculator",
+      "desc": "Calculate your daily needs based on your goal, and easily calculate food calories."
+    },
+    "sections": {
+      "dailyNeed": "Daily Need",
+      "summary": "Summary",
+      "foodCalc": "Food Calorie Calculator",
+      "mealVsTarget": "Meal vs Target"
+    },
+    "labels": {
+      "targetKcal": "Target Calories",
+      "macrosPCF": "Macros (Pro/Carb/Fat)",
+      "sex": "Sex",
+      "ageYears": "Age (years)",
+      "heightCm": "Height (cm)",
+      "weightKg": "Weight (kg)",
+      "activity": "Activity Level",
+      "goal": "Goal",
+      "target": "Target",
+      "targetCalories": "Target Calories",
+      "protein": "Protein",
+      "carbs": "Carbs",
+      "fat": "Fat",
+      "notes": "Notes",
+      "searchFood": "Search for food",
+      "pickFood": "Select Food",
+      "amount": "Amount",
+      "pickFoodHint": "Select a food to display calories.",
+      "mealEmpty": "No items added.",
+      "item": "Item",
+      "qty": "Quantity",
+      "unit": "Unit",
+      "kcal": "Calories",
+      "p": "Protein",
+      "c": "Carbs",
+      "f": "Fat",
+      "total": "Total",
+      "monthlyChange": "Monthly Change",
+      "kgPerMonth": "kg/Month"
+    },
+    "sex": {
+      "male": "Male",
+      "female": "Female"
+    },
+    "tips": {
+      "bmr": "Basal Metabolic Rate: Energy your body burns at rest.",
+      "tdee": "Total Daily Energy Expenditure = BMR × Activity Factor.",
+      "target": "Daily calories after applying your goal (bulk/cut/maintain)."
+    },
+    "notes": {
+      "tdeeAvg": "TDEE = Average BMR formulas × Activity (or approved formula).",
+      "goalsRange": "Goals adjust calories from −40% to +40% based on target.",
+      "macrosBalance": "Macro ratios automatically balance to equal 100%.",
+      "mealTip": "Compare your meal with the target and adjust quantities to reach requirements.",
+      "activityHint": "Choose activity level based on your daily work pattern, not just exercise."
+    }
+  },
+  "coachReports": {
+    "title": "Athletes' Weekly Reports",
+    "subtitle": "Review your athletes' weekly reports and provide your feedback and responses",
+    "athlete": "Athlete",
+    "allAthletes": "All Athletes",
+    "clearFilters": "Clear Filters",
+    "buttons": {
+      "refresh": "Refresh"
+    },
+    "filters": "Filters",
+    "total": "Total Reports: {count}",
+    "loading": "Loading reports...",
+    "empty": "No reports matching current filters.",
+    "prev": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {pages}",
+    "view": "View Details",
+    "reviewed": "Reviewed",
+    "awaitingReview": "Awaiting Review",
+    "columns": {
+      "weekOf": "Week"
+    },
+    "card": {
+      "summary": "Weight: {weight} kg • Cardio: {cardio}/5"
+    },
+    "detail": {
+      "title": "Weekly Report Details",
+      "loading": "Loading report details...",
+      "reviewedBy": "Reviewed by",
+      "you": "You",
+      "photos": "Progress Photos",
+      "noPhoto": "No photo",
+      "measurements": "Measurements",
+      "training": "Training",
+      "diet": "Diet",
+      "feedback": "Coach Feedback",
+      "feedbackPh": "Write your feedback or guidance for the athlete...",
+      "saveFeedback": "Save Feedback",
+      "close": "Close",
+      "reviewedAt": "Review Date",
+      "section": {
+        "photos": {
+          "front": "Front",
+          "back": "Back",
+          "left": "Left Side",
+          "right": "Right Side"
         },
-        "pricing": {
-          "title": "Clear Upfront Pricing",
-          "description": "No hidden fees, you know exactly what you’re paying for."
+        "measurements": {
+          "date": "Measurement Date",
+          "weight": "Weight",
+          "waist": "Waist",
+          "chest": "Chest",
+          "hips": "Hips",
+          "arms": "Arms",
+          "thighs": "Thighs"
         },
-        "quality": {
-          "title": "Quality Work Done Faster",
-          "description": "High-quality results delivered quickly, so you never miss a deadline."
+        "training": {
+          "cardioAdherence": "Cardio Adherence",
+          "intensityOk": "Is workout intensity appropriate?",
+          "shape": "Do you notice changes in shape?",
+          "fitness": "Do you notice changes in fitness?",
+          "sleepEnough": "Do you get enough sleep hours?",
+          "sleepHours": "Daily sleep hours",
+          "notes": {
+            "title": "Notes about training program"
+          },
+          "daysDeviation": "Deviation in number of days",
+          "deviation": {
+            "count": "Number of deviated days",
+            "reason": "Reason for deviation"
+          }
         },
-        "support": {
-          "title": "24/7 Award-Winning Support",
-          "description": "We're always here, ready to help, day or night, anytime you need us."
+        "diet": {
+          "hungry": "Does the athlete feel hungry?",
+          "comfort": "Do they feel psychologically comfortable?",
+          "tooMuch": "Is the amount too much?",
+          "wantSpecific": "Requested items",
+          "deviation": {
+            "title": "Is there deviation in the diet?",
+            "times": "Number of times",
+            "details": "Deviation details"
+          }
         }
       }
     },
-    "clientsExperiencesTitle": "Our Client's Experiences"
-  },
-
-  "layout": {
-    "joinButton": "Join",
-    "mobileMenuButtonAriaLabel": "Open mobile menu",
-    "userProfileAriaLabel": "User Profile",
-    "ordersLinkAriaLabel": "Orders",
-    "messagesButtonAriaLabel": "Messages",
-    "notificationsButtonAriaLabel": "Notifications",
-    "userAvatarAlt": "User Avatar",
-    "userMenuAriaLabel": "user Menu Aria Label",
-    "searchPlaceholder": "Find Perfect Freelancer",
-    "searchButtonAriaLabel": "Search",
-
-    "profileLink": "Profile",
-    "settingsLink": "Settings",
-    "logoutLink": "Logout",
-    "loggingOut": "Logging out...",
-    "dashboardLink": "Dashboard",
-    "myGigsLink": "My Gigs",
-    "ordersLink": "Orders",
-    "messagesLink": "Messages",
-    "postRequestLink": "Post a Request",
-    "referFriendLink": "Refer a Friend",
-    "becomeSellerLink": "Become a Seller",
-    "billingPaymentsLink": "Billing & Payments",
-
-    "notificationsTitle": "Notifications",
-    "notificationsPlaceholder": "Notifications will be here.",
-    "messagesTitle": "Messages",
-    "messagesPlaceholder": "Messages will be here.",
-
-    "menuTitle": "Menu",
-    "socialMediaTitle": "Social Media",
-    "copyright": "© 2025 Helhal. All rights reserved.",
-    "backButton": "Back"
-  },
-  "navigation_sections": {
-    "forClients": {
-      "title": "For Clients",
-      "yourAccount": "Your Account",
-      "careers": "Careers",
-      "pressNews": "Press & News",
-      "partnerships": "Partnerships",
-      "ipClaims": "Intellectual Property Claims"
+    "errors": {
+      "load": "An error occurred while loading reports.",
+      "save": "Failed to save feedback.",
+      "feedbackEmpty": "Please write feedback before saving."
     },
-    "company": {
-      "title": "Company",
-      "contact": "Contact",
-      "inviteFriend": "Invite a Friend",
-      "privacyPolicy": "Privacy Policy",
-      "termsOfService": "Terms of Service",
-      "guides": "Helhal Guides",
-      "helpSupport": "Help & Support"
-    },
-    "forFreelancers": {
-      "title": "For Freelancers",
-      "trustSafety": "Trust & Safety",
-      "buying": "Buying on Helhal",
-      "selling": "Selling on Helhal"
-    },
-    "businessSolutions": {
-      "title": "Business Solutions",
-      "events": "Events",
-      "communityStandards": "Community Standards",
-      "podcast": "Podcast"
-    },
-    "socialMediaTitle": "Social Media",
-    "copyright": "© 2025 Helhal. All rights reserved."
-  },
-
-  "referral": {
-    "referAFriendTitle": "Refer a Friend",
-    "placeholderContent": "This is where you'll find your referral information and invite friends!",
-    "moreSectionsComingSoon": "More sections for your referral code, link, and invitation form will be added here soon.",
-    "referralHeroAlt": "People celebrating a successful referral",
-    "referralHeroTitle": "{username}, take the credit for referring friends to Helhal",
-    "referralHeroSubtitle": "Earn up to US$500 in Helhal Credits - up to US$100 from each referral",
-    "guest": "Guest",
-    "inviteFriendsByEmail": "Invite Friends through Email",
-    "enterFriendEmailsPlaceholder": "Enter friends' emails",
-    "sendInvitation": "Send Invitation",
-    "yourReferralLink": "Your Referral Link",
-    "copyLinkButton": "Copy Link",
-    "copiedLinkSuccess": "Referral link copied!",
-    "notAvailable": "N/A",
-    "loadingReferralData": "Loading referral data...",
-    "errorSendingInvitation": "Failed to send invitation. Please try again.",
-    "errorFetchingData": "Failed to fetch referral data.",
-    "notAuthenticated": "You must be logged in to view referral details.",
-    "copyText": "Copy",
-    "copiedText": "Copied!",
-    "invitationSentSuccess": "Invitation sent to {email} successfully!",
-    "howItWorks": {
-      "subheading": "From Referral To Reward",
-      "heading": "It's easy to earn with referrals",
-      "card1": {
-        "title": "Refer a friend",
-        "description": "Refer friends to Helhal through email, with your own personal referral link, or by spreading the word on social."
-      },
-      "card2": {
-        "title": "They get a discount",
-        "description": "When your referrals join Helhal, they'll get 10% off their first order."
-      },
-      "card3": {
-        "title": "You get the credit",
-        "description": "When your referrals join Helhal, you'll earn rewards when they place their first order."
-      }
-    },
-    "enterEmailsSeparatedByCommas": "Enter emails separated by commas",
-    "emailLanguageLabel": "Email Language",
-    "languageEnglish": "English",
-    "languageArabic": "العربية"
-  },
-  "services": {
-    "appDevelopment": {
-      "mobileAppDev": "Mobile App Development",
-      "webAppDev": "Web App Development",
-      "gameDev": "Game Development"
-    },
-    "programmingTech": {
-      "pythonDev": "Python Development",
-      "javaDev": "Java Development",
-      "webScraping": "Web Scraping"
-    },
-    "uiDesign": {
-      "uxResearch": "UX Research",
-      "wireframing": "Wireframing",
-      "prototyping": "Prototyping"
-    },
-    "videoAnimation": {
-      "explainerVideos": "Explainer Videos",
-      "logoAnimation": "Logo Animation",
-      "characterAnimation": "Character Animation"
-    },
-    "writingTranslation": {
-      "articleWriting": "Article Writing",
-      "translationServices": "Translation Services",
-      "proofreading": "Proofreading"
-    },
-    "musicAudio": {
-      "voiceOver": "Voice Over",
-      "songWriting": "Song Writing",
-      "podcastEditing": "Podcast Editing"
-    },
-    "digitalMarketing": {
-      "seoOptimization": "SEO Optimization",
-      "socialMediaMarketing": "Social Media Marketing",
-      "contentMarketing": "Content Marketing"
-    },
-    "aiServices": {
-      "aiChatbot": "AI Chatbot Development",
-      "machineLearning": "Machine Learning Models",
-      "dataScience": "Data Science Consulting"
-    },
-    "consulting": {
-      "businessConsulting": "Business Consulting",
-      "careerCoaching": "Career Coaching",
-      "financialAdvice": "Financial Advice"
-    },
-    "bikeRepairMaintenance": {
-      "flatTireRepair": "Flat Tire Repair",
-      "brakeAdjustment": "Brake Adjustment",
-      "fullTuneUp": "Full Tune-up"
-    },
-    "automation": {
-      "workflowAutomation": "Workflow Automation",
-      "dataAutomation": "Data Automation",
-      "robotics": "Robotics"
-    },
-    "mechanic": {
-      "carRepair": "Car Repair",
-      "engineDiagnostics": "Engine Diagnostics",
-      "oilChange": "Oil Change"
-    },
-    "photography": {
-      "portraitPhotography": "Portrait Photography",
-      "eventPhotography": "Event Photography",
-      "productPhotography": "Product Photography"
+    "messages": {
+      "saved": "✅ Coach feedback saved successfully!"
     }
-  },
-  "validation": {
-    "email": {
-      "invalid": "Invalid email address"
-    },
-    "password": {
-      "required": "Password is required",
-      "min": "Password must be at least 8 characters",
-      "uppercase": "Must contain at least one uppercase letter",
-      "lowercase": "Must contain at least one lowercase letter",
-      "number": "Must contain at least one number",
-      "mismatch": "Passwords do not match"
-    },
-    "username": {
-      "min": "Username must be at least 3 characters",
-      "max": "Username must be at most 30 characters",
-      "invalidChars": "Username can only contain letters, numbers, spaces and underscores",
-      "consecutiveSpaces": "Username cannot contain consecutive spaces"
-    },
-    "otp": {
-      "length": "Verification code must be 6 digits",
-      "digitsOnly": "Code must contain only digits"
-    },
-    "emailList": {
-      "required": "Please enter at least one email address.",
-      "invalidFormat": "Some emails are invalid: {invalidEmails}",
-      "duplicates": "Please remove duplicate email addresses."
-    },
-    "unknownError": "An unknown validation error occurred.",
-    "errorSendingInvitation": "Failed to send invitation. Please try again."
-  },
-
-  "Chat": {
-    "you": "You",
-    "received": "Received ✅",
-    "save": "Save",
-    "star": "Star",
-    "more": "More",
-    "close": "Close",
-    "allMessages": "All Message",
-    "clear": "Clear",
-    "attach": "Attach",
-    "emoji": "Emoji",
-    "send": "Send",
-    "noMatches": "No matches",
-    "about": "About {name}",
-    "labels": {
-      "from": "From",
-      "onPlatform": "On Platform",
-      "english": "English",
-      "otherLanguage": "Other language",
-      "level": "Seller level",
-      "responseRate": "Response rate",
-      "rating": "Rating"
-    },
-    "placeholders": {
-      "search": "Search by Client Name",
-      "message": "Send Message"
-    },
-    "menu": {
-      "markUnread": "Mark as unread",
-      "mute": "Mute conversation",
-      "block": "Block user",
-      "export": "Export chat",
-      "delete": "Delete chat"
-    }
-  },
-
-  "CategoryPage": {
-    "categoryNotFound": "Category Not Found",
-    "categoryNotFoundDesc": "The category you are looking for doesn’t exist or has been removed. Please check the URL or explore other categories.",
-    "backToServices": "Back to Services",
-    "services": "Services",
-    "filterTitle": "🔎 Search and Filter Services",
-    "filterSubtitle": "Use the filters below to find exactly what you’re looking for.",
-    "category": "Category",
-    "serviceType": "Service Type",
-    "priceRange": "Price Range",
-    "rating": "Rating",
-    "sortBy": "Sort By",
-    "sort": {
-      "all": "All",
-      "priceLowHigh": "Price: Low → High",
-      "priceHighLow": "Price: High → Low",
-      "rating": "Rating",
-      "newest": "Newest"
-    },
-    "searchPlaceholder": "Search by Location",
-    "results": "result(s)",
-    "noServices": "No services found",
-    "noServicesDesc": "We couldn’t find any services matching your filters. Try adjusting the filters or search keywords.",
-    "resetFilters": "Reset Filters",
-    "prev": "Prev",
-    "next": "Next"
-  },
-
-  "MyWorkouts": {
-    "title": "My Workouts",
-    "subtitle": "Log sets and track PRs automatically.",
-    "workout": "Workout",
-    "history": "History",
-    "listen": "Listen",
-    "settings": "Settings",
-    "exercises": "Exercises",
-    "save": "Save",
-    "set": "Set",
-    "weight": "Weight",
-    "reps": "Reps",
-    "done": "Done",
-    "addSet": "Add Set",
-    "removeSet": "Remove Set",
-    "restTimer": "Rest Timer",
-    "exercisesTracked": "Exercises Tracked",
-    "totalAttempts": "Total Attempts",
-    "allTimePRs": "All-time PRs",
-    "currentStreak": "Current Streak (days)",
-    "allTimeBests": "All-time Bests",
-    "exerciseDrilldown": "Exercise Drilldown",
-    "e1rmWeekly": "e1RM (weekly max) – last 90 days",
-    "topByWeight": "Top by Weight",
-    "topByReps": "Top by Reps",
-    "topByE1rm": "Top by e1RM",
-    "attempts": "Attempts",
-    "sessionHistory": "Session History",
-    "workoutsCompleted": "workouts completed",
-    "date": "Date",
-    "volume": "Volume",
-    "duration": "Duration",
-    "sets": "Sets",
-    "changesStored": "Changes are stored locally until you press Save.",
-    "noExercises": "Not found for this day",
-    "pickAnotherDay": "Pick another day from the tabs above.",
-    "noData": "No data.",
-    "noBests": "No bests yet.",
-    "noAttempts": "No attempts yet.",
-    "noSessions": "No sessions yet.",
-    "logFirstWorkout": "Log your first workout to see history here.",
-    "clock": {
-      "startTraining": "Start Training",
-      "endTraining": "End Training",
-      "timeInGym": "Time in gym",
-      "reachedAt": "Reached at"
-    },
-    "video": {
-      "upload": "Upload Video",
-      "sendToCoach": "Send to Coach",
-      "recording": "Recording...",
-      "chooseFile": "Choose video file"
-    }
-  },
-
-  "socialMediaTitle": "Follow Us on Social Media",
-  "copyright": "© 2025 Your Company. All rights reserved."
+  }
 }

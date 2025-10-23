@@ -10,8 +10,8 @@ export function Switcher({ checked, onChange }) {
       aria-checked={checked}
       onClick={() => onChange(!checked)}
       className={`relative cursor-pointer inline-flex h-7 w-14 items-center rounded-full transition-colors duration-300
-        ${checked ? 'gradient' : 'bg-gray-300'}
-        focus:outline-none focus:ring-2 focus:ring-green-400`}
+        ${checked ? 'bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 ' : 'bg-gray-300'}
+        focus:outline-none focus:ring-2 focus:ring-indigo-400`}
     >
       {/* Circle Knob */}
       <motion.span
@@ -23,7 +23,7 @@ export function Switcher({ checked, onChange }) {
         }}
       >
         {checked ? (
-          <Check className="h-3 w-3 text-green-500" />
+          <Check className="h-3 w-3 text-indigo-500" />
         ) : (
           <X className="h-3 w-3 text-gray-400" />
         )}

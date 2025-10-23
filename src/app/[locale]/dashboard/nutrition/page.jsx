@@ -1,11 +1,3 @@
-/**
- * Fixes included:
- * 1) Show HH:MM validation errors directly under each time input (meals & supplements).
- * 2) Prevent notes list from disappearing after AI generate (always render at least one line).
- * 3) Safer Yup transforms for optional time fields.
- * 4) When setting notes from AI, never store an empty array.
- */
-
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState, memo, useRef, forwardRef } from 'react';
@@ -24,143 +16,11 @@ import { Notification } from '@/config/Notification';
 import Select from '@/components/atoms/Select';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 import { useValues } from '@/context/GlobalContext';
-
-export const Input = forwardRef(({ label, name, value, onChange, type = 'text', required = false, disabled = false, error, className = '', ...props }, ref) => {
-  const base = 'peer w-full h-[35px] rounded-lg border bg-white/90 px-2 pt-1 text-sm outline-none placeholder-transparent transition ';
-  const ok = 'border-slate-200 hover:border-slate-300 focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-200/40';
-  const bad = 'border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-200';
-
-  return (
-    <div className={`relative ${className}`}>
-      <input ref={ref} id={name} name={name} type={type} value={value ?? ''} onChange={e => onChange?.(e.target?.value ?? e)} required={required} disabled={disabled} placeholder=' ' className={`${base} ${error ? bad : ok} disabled:opacity-60`} aria-invalid={!!error} aria-describedby={error ? `${name}-error` : undefined} {...props} />
-
-      <label htmlFor={name} className={['rounded-[8px_8px_0_0] absolute pointer-events-none left-2 z-10 px-2 text-slate-500', 'transition-all duration-150 ease-out', 'peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-[12px]', 'peer-focus:bg-white peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-[11px]', 'peer-[&:not(:placeholder-shown)]:bg-white peer-[&:not(:placeholder-shown)]:top-0 peer-[&:not(:placeholder-shown)]:-translate-y-1/2 peer-[&:not(:placeholder-shown)]:text-[11px]', error ? 'text-rose-600' : ''].join(' ')}>
-        {label}
-        {required && <span className='ml-0.5 text-rose-500'>*</span>}
-      </label>
-
-      {error && (
-        <p id={`${name}-error`} className='mt-1 text-xs text-rose-600'>
-          {error}
-        </p>
-      )}
-    </div>
-  );
-});
-Input.displayName = 'Input';
-
-/* =========================
-   Clickable HH:MM Picker
-   ========================= */
-function pad(n) {
-  return String(n).padStart(2, '0');
-}
+import { TimeField } from '@/components/atoms/InputTime';
+import { Input } from '@/components/atoms/Input2';
 
 const hhmmRegex = /^$|^([01]\d|2[0-3]):([0-5]\d)$/; // "" or HH:MM
 
-export function TimeField({ label = 'Time (HH:MM)', name, value, onChange, className = '', error }) {
-  const [open, setOpen] = useState(false);
-  const [tempH, setTempH] = useState('08');
-  const [tempM, setTempM] = useState('00');
-  const rootRef = useRef(null);
-
-  useEffect(() => {
-    const v = (value || '').trim();
-    const ok = hhmmRegex.test(v);
-    if (ok && v) {
-      const [h, m] = v.split(':');
-      setTempH(pad(Number(h)));
-      setTempM(pad(Number(m)));
-    }
-  }, [value]);
-
-  useEffect(() => {
-    const onDoc = e => {
-      if (!rootRef.current) return;
-      if (!rootRef.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, []);
-
-  const commit = (h = tempH, m = tempM) => {
-    const val = `${pad(Number(h))}:${pad(Number(m))}`;
-    onChange?.(val);
-    setOpen(false);
-  };
-
-  const onManual = v => {
-    onChange?.(v);
-  };
-
-  const hours = Array.from({ length: 24 }, (_, i) => pad(i));
-  const minutes = Array.from({ length: 12 }, (_, i) => pad(i * 5)); // 00,05,10,...
-
-  return (
-    <div ref={rootRef} className={`relative ${className}`}>
-      <Input label={label} name={name || 'time'} value={value || ''} onChange={onManual} placeholder=' ' className='cursor-pointer' onFocus={() => setOpen(true)} onClick={() => setOpen(true)} error={error} />
-
-      <AnimatePresence>
-        {open && (
-          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} className='absolute z-50 mt-1 w-[340px] rounded-lg border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur-sm'>
-            <div className='text-[12px] mb-2 text-slate-500'>Choose hour & minutes</div>
-            <div className='grid grid-cols-2 gap-3'>
-              <div>
-                <div className='text-xs mb-1 text-slate-600'>Hour</div>
-                <div className='grid grid-cols-6 gap-1 max-h-36 overflow-auto pr-1'>
-                  {hours.map(h => (
-                    <button
-                      key={h}
-                      type='button'
-                      onClick={() => {
-                        setTempH(h);
-                        commit(h, tempM);
-                      }}
-                      className={['h-[25px] rounded-lg border text-xs', h === tempH ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-slate-200 hover:bg-slate-50 text-slate-700'].join(' ')}>
-                      {h}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className='text-xs mb-1 text-slate-600'>Minutes</div>
-                <div className='grid grid-cols-6 gap-1 max-h-36 overflow-auto pr-1'>
-                  {minutes.map(m => (
-                    <button
-                      key={m}
-                      type='button'
-                      onClick={() => {
-                        setTempM(m);
-                        commit(tempH, m);
-                      }}
-                      className={['h-[25px] rounded-lg border text-xs', m === tempM ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-slate-200 hover:bg-slate-50 text-slate-700'].join(' ')}>
-                      {m}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className='mt-3 flex items-center justify-between text-xs text-slate-500'>
-              <div>
-                Selected: <span className='font-medium text-slate-700'>{value && hhmmRegex.test(value) ? value : `${tempH}:${tempM}`}</span>
-              </div>
-              <button type='button' onClick={() => setOpen(false)} className='rounded-md border px-2.5 py-1 hover:bg-slate-50'>
-                Done
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-
-
-/* =========================
-   Buttons / Bits
-   ========================= */
 export function CButton({ name, icon, className = '', type = 'button', onClick, disabled = false, loading = false, variant = 'primary', size = 'md', title }) {
   const variantMap = {
     primary: 'bg-indigo-600 text-white hover:bg-indigo-700 focus-visible:ring-indigo-300/40',
@@ -1158,14 +1018,14 @@ export function PlanDetailsView({ plan }) {
                               <div className='flex items-center gap-2 font-medium text-slate-800'>
                                 <UtensilsCrossed size={16} className='text-indigo-600' />
                                 {m.title || `Meal ${mi + 1}`}
-																<div className='mt-1 text-[11px] text-slate-500'>~ {mealCals} kcal</div>
+                                <div className='mt-1 text-[11px] text-slate-500'>~ {mealCals} kcal</div>
                               </div>
                               <div className='flex items-center gap-1 text-xs text-slate-500'>
                                 <Clock size={14} /> {m.time || '—'}
                               </div>
                             </div>
 
-                             <div className='mt-2'>
+                            <div className='mt-2'>
                               <div className='h-2 w-full overflow-hidden rounded-full bg-slate-100'>
                                 <motion.div initial={{ width: 0 }} animate={{ width: `${mealWidthPct(m, maxMeal)}%` }} transition={spring} className='h-full rounded-full bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-500' />
                               </div>
@@ -1174,7 +1034,7 @@ export function PlanDetailsView({ plan }) {
                             {/* Items */}
                             {m.items?.length > 0 && (
                               <div className='mt-3'>
-                                 <div className='overflow-x-auto'>
+                                <div className='overflow-x-auto'>
                                   <table className='w-full text-sm'>
                                     <thead>
                                       <tr className='text-left text-slate-500'>

@@ -3,13 +3,13 @@
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { useTranslations } from 'next-intl';
-import { AlertCircle, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
+import * as yup from 'yup';
+import { yupResolver } from '@hookform/resolvers/yup';
 
 /* ================== Axios (with refresh) ================== */
 
@@ -73,9 +73,9 @@ axiosInstance.interceptors.response.use(
 
 const AuthContext = createContext(null);
 
-const loginSchema = z.object({
-  email: z.string().email('invalidEmail'),
-  password: z.string().min(1, 'passwordRequired'),
+const loginSchema = yup.object().shape({
+  email: yup.string().email('invalidEmail').required('invalidEmail'),
+  password: yup.string().min(1, 'passwordRequired').required('passwordRequired'),
 });
 
 /* ================== Tiny UI Helpers ================== */
@@ -92,10 +92,9 @@ function TitleLogin() {
   const t = useTranslations('auth');
   return (
     <motion.div className='mb-6 text-left' initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-      <h1 className='text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 drop-shadow-sm'>{t('signIn')}</h1>
-      <p className='mt-2 font-[600] text-gray-800 md:text-lg'>{t('subtitle') }</p>
-      <p className=' text-gray-600 md:text-base'>{t('subtitle2') }</p>
-    </motion.div>
+      <h1 className=' rtl:text-right text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 drop-shadow-sm'>{t('signIn')}</h1>
+      <p className=' max-lg:!hidden rtl:text-right mt-2 font-[600] text-gray-800 md:text-lg'>{t('subtitle')}</p>
+     </motion.div>
   );
 }
 
@@ -122,7 +121,7 @@ const LoginForm = ({ onLoggedIn }) => {
     formState: { errors },
     setError: setRHError,
   } = useForm({
-    resolver: zodResolver(loginSchema),
+    resolver: yupResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   });
 
@@ -153,9 +152,9 @@ const LoginForm = ({ onLoggedIn }) => {
         else if (low.includes('suspended')) msg = t('errors.accountSuspended');
       }
       if (String(msg).toLowerCase().includes('email')) {
-        setRHError('email', { type: 'server', message: msg });
+        setRHError('email', { type: 'server', message: t('invalidEmail') });
       } else if (String(msg).toLowerCase().includes('password')) {
-        setRHError('password', { type: 'server', message: msg });
+        setRHError('password', { type: 'server', message: t('passwordRequired') });
       }
       setError(msg);
       toast.error(msg);
@@ -169,30 +168,56 @@ const LoginForm = ({ onLoggedIn }) => {
       {/* Email */}
       <div className='space-y-1.5'>
         <label className='block text-sm font-medium text-gray-700'>{t('email')}</label>
-        <input type='email' inputMode='email' placeholder={t('enterEmail')} autoComplete='email' className='w-full h-11 rounded-lg border border-gray-200 bg-white px-3.5 outline-none ring-0 focus:border-gray-300 focus:ring-4 focus:ring-gray-100 transition' {...register('email')} />
-        <FieldError msg={errors.email?.message} />
+        <input
+          type='email'
+          inputMode='email'
+          placeholder={t('enterEmail')}
+          autoComplete='email'
+          className='w-full h-11 rounded-lg border border-gray-200 bg-white px-3.5 outline-none ring-0 focus:border-gray-300 focus:ring-4 focus:ring-gray-100 transition'
+          {...register('email')}
+        />
+        <FieldError msg={errors.email?.message ? t(String(errors.email.message)) : null} />
       </div>
 
       {/* Password with toggle */}
       <div className='space-y-1.5'>
         <label className='block text-sm font-medium text-gray-700'>{t('password')}</label>
         <div className='relative'>
-          <input type={showPassword ? 'text' : 'password'} placeholder={t('enterPassword')} autoComplete='current-password' className='w-full h-11 rounded-lg border border-gray-200 bg-white px-3.5 pr-11 outline-none ring-0 focus:border-gray-300 focus:ring-4 focus:ring-gray-100 transition' {...register('password')} />
-          <button type='button' aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(s => !s)} className='absolute inset-y-0 right-2.5 my-auto grid place-items-center rounded-lg p-2 hover:bg-gray-50 active:scale-95 transition'>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            placeholder={t('enterPassword')}
+            autoComplete='current-password'
+            className='w-full h-11 rounded-lg border border-gray-200 bg-white px-3.5 rtl:pl-11 ltr:pr-11 outline-none ring-0 focus:border-gray-300 focus:ring-4 focus:ring-gray-100 transition'
+            {...register('password')}
+          />
+          <button
+            type='button'
+            aria-label={showPassword ? t('a11y.hidePassword') : t('a11y.showPassword')}
+            onClick={() => setShowPassword(s => !s)}
+            className='absolute inset-y-0 rtl:left-2.5 ltr:right-2.5 my-auto grid place-items-center rounded-lg p-2 hover:bg-gray-50 active:scale-95 transition'
+          >
             {showPassword ? <EyeOff className='w-5 h-5 text-gray-500' /> : <Eye className='w-5 h-5 text-gray-500' />}
           </button>
         </div>
-        <FieldError msg={errors.password?.message && t(errors.password.message)} />
+        <FieldError msg={errors.password?.message ? t(String(errors.password.message)) : null} />
       </div>
 
       {/* Submit */}
       <div className='pt-2'>
-        <button disabled={loading} className='relative w-full inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-3 font-semibold text-white bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 hover:from-indigo-700 hover:via-indigo-600 hover:to-blue-700 focus:outline-none focus:ring-4 focus:ring-indigo-300/50 transition-all duration-300 shadow-md hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed'>
+        <button
+          disabled={loading}
+          className='relative w-full inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-3 font-semibold text-white bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 hover:from-indigo-700 hover:via-indigo-600 hover:to-blue-700 focus:outline-none focus:ring-4 focus:ring-indigo-300/50 transition-all duration-300 shadow-md hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed'
+        >
           <span className='relative z-10 flex items-center gap-2'>
             {loading ? (
               <>
-                <motion.span className='relative flex items-center justify-center' initial={{ rotate: 0 }} animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
-                  <svg  className=' stroke-white   w-5 h-5 text-white drop-shadow-sm' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'>
+                <motion.span
+                  className='relative flex items-center justify-center'
+                  initial={{ rotate: 0 }}
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                >
+                  <svg className='stroke-white w-5 h-5 text-white drop-shadow-sm' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'>
                     <defs>
                       <linearGradient id='spinner-gradient' x1='0%' y1='0%' x2='100%' y2='100%'>
                         <stop offset='0%' stopColor='#6366f1' />
@@ -205,7 +230,7 @@ const LoginForm = ({ onLoggedIn }) => {
                   </svg>
                 </motion.span>
                 <motion.span className='text-sm tracking-wide text-white/90' initial={{ opacity: 0 }} animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1.2 }}>
-                  Signing in...
+                  {t('loading.signingIn')}
                 </motion.span>
               </>
             ) : (
@@ -223,12 +248,10 @@ const LoginForm = ({ onLoggedIn }) => {
       </div>
 
       {/* Divider */}
-      <div className=' md:hidden flex items-center gap-3 pt-2'>
+      <div className='md:hidden flex items-center gap-3 pt-2'>
         <div className='h-px flex-1 bg-gray-200' />
         <div className='h-px flex-1 bg-gray-200' />
       </div>
-
- 
     </motion.form>
   );
 };
@@ -236,8 +259,13 @@ const LoginForm = ({ onLoggedIn }) => {
 /* ================== Decorative Background (Left on Desktop) ================== */
 
 function HeroSide() {
-  // Desktop-only perks/bullets are kept, but hidden on small screens.
-  const perks = ['Personalized workout plans', 'Progress charts & streaks', 'Coach chat & feedback', 'Safe & private data'];
+  const t = useTranslations('auth');
+  const perks = [
+    t('hero.perkPersonalized'),
+    t('hero.perkProgress'),
+    t('hero.perkChat'),
+    t('hero.perkPrivacy'),
+  ];
   return (
     <div className='relative w-full h-full text-white overflow-hidden hidden lg:block'>
       {/* Background image */}
@@ -253,14 +281,14 @@ function HeroSide() {
       <motion.div className='absolute -top-24 -left-24 h-72 w-72 rounded-full bg-emerald-400/30 blur-3xl' animate={{ y: [0, 10, 0], x: [0, 8, 0] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }} />
       <motion.div className='absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-teal-400/30 blur-3xl' animate={{ y: [0, -12, 0], x: [0, -8, 0] }} transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }} />
 
-      {/* Content (bullets kept for desktop only) */}
+      {/* Content */}
       <div className='relative z-10 max-w-2xl mx-auto h-full flex items-center px-10 lg:px-14 py-16'>
         <div className='backdrop-blur-sm/0'>
           <motion.h1 className='text-4xl md:text-5xl font-extrabold mb-3 drop-shadow' initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            Start your fitness journey now!
+            {t('hero.title')}
           </motion.h1>
           <motion.p className='text-lg md:text-xl text-white/90 mb-6 max-w-xl' initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
-            Track workouts, beat your PRs, and stay consistent with a platform built for real results.
+            {t('hero.subtitle')}
           </motion.p>
           <div className='space-y-2 text-base'>
             {perks.map((text, i) => (
@@ -312,7 +340,7 @@ export default function AuthPage() {
       }
     };
     handleOAuthLogin();
-  }, [token]);
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLoggedIn = user => {
     const path = getPostLoginPath(user?.role) || '/dashboard';
@@ -321,9 +349,9 @@ export default function AuthPage() {
 
   return (
     <AuthContext.Provider value={{ loading, setLoading, error, setError }}>
-       <div className='relative min-h-screen '>
-         <img src='/auth-2.png' alt='' className='absolute inset-0 -z-10 h-full w-full object-cover object-center lg:hidden' />
-         <div
+      <div className='relative min-h-screen '>
+        <img src='/auth-2.png' alt='' className='absolute inset-0 -z-10 h-full w-full object-cover object-center lg:hidden' />
+        <div
           className='absolute inset-0 -z-10 lg:hidden'
           style={{
             background: 'linear-gradient(180deg, rgba(8,11,15,0.55) 0%, rgba(8,11,15,0.35) 30%, rgba(8,11,15,0.25) 70%, rgba(8,11,15,0.45) 100%)',
@@ -373,7 +401,7 @@ export default function AuthPage() {
                 </div>
               )}
             </div>
-            <p className='mt-4 text-center text-xs text-white/90'>Protected by industry‑standard encryption.</p>
+            <p className='mt-4 text-center text-xs text-white/90'>{t('notes.protected')}</p>
           </motion.div>
         </div>
       </div>

@@ -1,8 +1,9 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, BarChart3, Bell, CalendarDays, Dumbbell, Flame, Goal, HeartPulse, LineChart, PieChart as PieChartIcon, TrendingUp, Users, Settings, TimerReset, Apple, Salad, Sandwich, CheckCircle2, Layers, Star, Zap } from 'lucide-react';
+import { Activity, BarChart3, Bell, CalendarDays, Dumbbell, Flame, Goal, HeartPulse, LineChart, PieChart as PieChartIcon, TrendingUp, Users, Settings, TimerReset, Apple, Salad, Sandwich, CheckCircle2, Layers, Star, Zap, UserCheck, AlertTriangle, Crown, Target, Clock, Award, TrendingDown } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, LineChart as RLineChart, Line, BarChart, Bar, PieChart, Pie, Cell, RadialBarChart, RadialBar, PolarAngleAxis } from 'recharts';
+import api from '@/utils/axios';
 
 export const cn = (...classes) => classes.filter(Boolean).join(' ');
 const spring = { type: 'spring', stiffness: 120, damping: 16, mass: 0.8 };
@@ -11,53 +12,17 @@ const fadeUp = (i = 0) => ({
   show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { delay: 0.06 * i, ...spring } },
 });
 
-const kpis = [
-  { label: 'Total Workouts', value: 24, delta: '+12%', icon: Dumbbell },
-  { label: 'Completed Meals', value: '86%', delta: '+5%', icon: Apple },
-  { label: 'Active Users', value: 1234, delta: '+8%', icon: Users },
-  { label: 'Weekly Progress', value: '4.2 kg', delta: '-2.1%', icon: TrendingUp },
-];
-
-const revenue = [
-  { name: 'Mon', value: 420 },
-  { name: 'Tue', value: 560 },
-  { name: 'Wed', value: 480 },
-  { name: 'Thu', value: 640 },
-  { name: 'Fri', value: 720 },
-  { name: 'Sat', value: 460 },
-  { name: 'Sun', value: 520 },
-];
-
-const macroSplit = [
-  { name: 'Protein', value: 40 },
-  { name: 'Carbs', value: 35 },
-  { name: 'Fats', value: 25 },
-];
-
-const recentActivity = [
-  { user: 'John Doe', action: 'completed Chest Day workout', time: '2h', icon: CheckCircle2 },
-  { user: 'Sarah Smith', action: 'logged a new meal', time: '4h', icon: Salad },
-  { user: 'Mike Johnson', action: 'new personal record (Deadlift 180kg)', time: '6h', icon: Star },
-  { user: 'Emily Wilson', action: 'scheduled a training session', time: '1d', icon: CalendarDays },
-];
-
-const leaderboard = [
-  { name: 'Ahmed', points: 1280 },
-  { name: 'Lena', points: 1120 },
-  { name: 'Hassan', points: 990 },
-  { name: 'Maria', points: 940 },
-];
+const pieColors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16'];
 
 export function GlowCard({ children, className }) {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={cn('card-glow', className)}>
-      {' '}
       {children}
     </motion.div>
   );
 }
 
-function KPI({ icon: Icon, label, value, delta, i }) {
+function KPI({ icon: Icon, label, value, delta, i, trend = 'up' }) {
   return (
     <GlowCard className='p-5 overflow-hidden' key={label}>
       <motion.div variants={fadeUp(i)} initial='hidden' animate='show' className='flex items-start justify-between'>
@@ -67,11 +32,16 @@ function KPI({ icon: Icon, label, value, delta, i }) {
             {label}
           </div>
           <div className='text-3xl font-semibold tracking-tight'>{value}</div>
-          <div className={cn('mt-2 text-xs font-medium', String(delta).startsWith('-') ? 'text-rose-600' : 'text-emerald-600')}>{delta} vs last week</div>
+          <div className={cn('mt-2 text-xs font-medium flex items-center gap-1', 
+            trend === 'up' ? 'text-emerald-600' : trend === 'down' ? 'text-rose-600' : 'text-slate-500'
+          )}>
+            {trend === 'up' ? <TrendingUp className='size-3' /> : trend === 'down' ? <TrendingDown className='size-3' /> : null}
+            {delta} vs last period
+          </div>
         </div>
 
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.08 * i, ...spring }} className='h-12 w-12  bg-main flex-none !rounded-full before:!rounded-full text-white flex items-center justify-center'>
-          <Icon className='size-7  ' />
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.08 * i, ...spring }} className='h-12 w-12 bg-main flex-none !rounded-full before:!rounded-full text-white flex items-center justify-center'>
+          <Icon className='size-7' />
         </motion.div>
       </motion.div>
     </GlowCard>
@@ -98,48 +68,219 @@ function Skeleton({ className }) {
 }
 
 // ---------- main ----------
-export default function GymDashboard() {
+export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
+  const [systemStats, setSystemStats] = useState(null);
+  const [activityTrends, setActivityTrends] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [userDistribution, setUserDistribution] = useState([]);
+
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 600);
-    return () => clearTimeout(t);
+    fetchDashboardData();
   }, []);
 
-  const pieColors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [systemResponse, trendsResponse] = await Promise.all([
+        api.get('/stats/system/overview'),
+        api.get('/stats/system/activity-trends?days=7')
+      ]);
+
+      setSystemStats(systemResponse.data);
+      setActivityTrends(trendsResponse.data.trends || []);
+      
+      // Generate recent activity from trends
+      const activity = generateRecentActivity(trendsResponse.data.trends);
+      setRecentActivity(activity);
+
+      // Generate user distribution from system stats
+      if (systemResponse.data.summary) {
+        const distribution = [
+          { name: 'Active', value: systemResponse.data.summary.activeUsers },
+          { name: 'New This Month', value: systemResponse.data.summary.newUsersThisMonth },
+          { name: 'Suspended', value: systemResponse.data.summary.suspendedUsers },
+        ];
+        setUserDistribution(distribution);
+      }
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateRecentActivity = (trends) => {
+    if (!trends || trends.length === 0) return [];
+    
+    const activities = [];
+    trends.slice(-4).forEach((trend, index) => {
+      if (trend.workouts > 0) {
+        activities.push({
+          user: `${trend.workouts} members`,
+          action: 'completed workouts',
+          time: index === 0 ? 'Today' : `${index + 1}d ago`,
+          icon: Dumbbell
+        });
+      }
+      if (trend.meals > 0 && activities.length < 4) {
+        activities.push({
+          user: `${trend.meals} meals`,
+          action: 'were logged',
+          time: index === 0 ? 'Today' : `${index + 1}d ago`,
+          icon: Apple
+        });
+      }
+    });
+    
+    // Fill with default activities if needed
+    while (activities.length < 4) {
+      activities.push({
+        user: 'System',
+        action: 'No recent activity',
+        time: 'N/A',
+        icon: Clock
+      });
+    }
+    
+    return activities;
+  };
+
+  const kpis = useMemo(() => {
+    if (!systemStats) return [];
+    
+    return [
+      { 
+        label: 'Total Users', 
+        value: systemStats.summary?.totalUsers || 0, 
+        delta: `${systemStats.summary?.userGrowth || 0}%`, 
+        icon: Users,
+        trend: (systemStats.summary?.userGrowth || 0) >= 0 ? 'up' : 'down'
+      },
+      { 
+        label: 'Active Users', 
+        value: systemStats.summary?.activeUsers || 0, 
+        delta: '+8%', 
+        icon: UserCheck,
+        trend: 'up'
+      },
+      { 
+        label: 'Exercise Plans', 
+        value: systemStats.plans?.exercisePlans || 0, 
+        delta: `${systemStats.plans?.utilizationRate || 0}% utilization`, 
+        icon: Target,
+        trend: 'up'
+      },
+      { 
+        label: 'Meal Logs', 
+        value: systemStats.nutrition?.totalLogs || 0, 
+        delta: `${systemStats.nutrition?.avgAdherence || 0} avg adherence`, 
+        icon: Apple,
+        trend: 'up'
+      },
+    ];
+  }, [systemStats]);
+
+  const activityChartData = useMemo(() => {
+    return activityTrends.map(trend => ({
+      name: new Date(trend.date).toLocaleDateString('en-US', { weekday: 'short' }),
+      workouts: trend.workouts,
+      meals: trend.meals,
+      activeUsers: trend.activeUsers,
+    }));
+  }, [activityTrends]);
+
+  const leaderboard = useMemo(() => {
+    // This would come from your API - using mock data for now
+    return [
+      { name: 'Ahmed', points: 1280, progress: 100 },
+      { name: 'Lena', points: 1120, progress: 87 },
+      { name: 'Hassan', points: 990, progress: 77 },
+      { name: 'Maria', points: 940, progress: 73 },
+    ];
+  }, []);
+
+  if (loading && !systemStats) {
+    return (
+      <div className='min-h-screen w-full p-6'>
+        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8'>
+          {[1, 2, 3, 4].map(i => (
+            <Skeleton key={i} className='h-32' />
+          ))}
+        </div>
+        <div className='grid grid-cols-1 xl:grid-cols-3 gap-6'>
+          <div className='space-y-6 xl:col-span-2'>
+            <Skeleton className='h-80' />
+            <Skeleton className='h-64' />
+          </div>
+          <div className='space-y-6'>
+            <Skeleton className='h-80' />
+            <Skeleton className='h-64' />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className='min-h-screen w-full'>
-      <main className=' '>
+    <div className='min-h-screen w-full p-6'>
+      <main>
         <motion.div initial='hidden' animate='show' className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8'>
           {kpis.map((k, i) => (
-            <KPI key={k.label} icon={k.icon} label={k.label} value={k.value} delta={k.delta} i={i} />
+            <KPI key={k.label} icon={k.icon} label={k.label} value={k.value} delta={k.delta} i={i} trend={k.trend} />
           ))}
         </motion.div>
+
         {/* Primary grid */}
         <div className='grid grid-cols-1 xl:grid-cols-3 gap-6'>
           {/* Left column (2/3) */}
           <div className='space-y-6 xl:col-span-2'>
+            {/* System Activity Chart */}
             <GlowCard className='p-5'>
-              <SectionHeader icon={BarChart3} subtitle='Business' title='Membership Revenue (7 days)' />
+              <SectionHeader 
+                icon={Activity} 
+                subtitle='System Analytics' 
+                title='Platform Activity (7 Days)' 
+                right={<button className='text-xs text-indigo-600 hover:underline'>View details</button>}
+              />
               {loading ? (
                 <Skeleton className='h-56' />
               ) : (
                 <div className='h-56'>
                   <ResponsiveContainer width='100%' height='100%'>
-                    <BarChart data={revenue} margin={{ top: 8, right: 8, left: -18 }}>
+                    <BarChart data={activityChartData} margin={{ top: 8, right: 8, left: -18 }}>
                       <CartesianGrid strokeOpacity={0.2} vertical={false} />
                       <XAxis dataKey='name' tickLine={false} axisLine={false} />
                       <YAxis tickLine={false} axisLine={false} />
-                      <Tooltip cursor={{ opacity: 0.1 }} />
-                      <Bar dataKey='value' radius={[8, 8, 0, 0]} fill='#8b5cf6' />
+                      <Tooltip 
+                        cursor={{ opacity: 0.1 }}
+                        formatter={(value, name) => {
+                          const labels = {
+                            workouts: 'Workouts',
+                            meals: 'Meals',
+                            activeUsers: 'Active Users'
+                          };
+                          return [value, labels[name] || name];
+                        }}
+                      />
+                      <Bar dataKey='workouts' radius={[8, 8, 0, 0]} fill='#6366f1' name='workouts' />
+                      <Bar dataKey='meals' radius={[8, 8, 0, 0]} fill='#10b981' name='meals' />
+                      <Bar dataKey='activeUsers' radius={[8, 8, 0, 0]} fill='#f59e0b' name='activeUsers' />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               )}
             </GlowCard>
 
+            {/* Recent System Activity */}
             <GlowCard className='p-5'>
-              <SectionHeader icon={Activity} subtitle='Activity' title='Recent Member Activity' right={<button className='text-xs text-indigo-600 hover:underline'>View all</button>} />
+              <SectionHeader 
+                icon={Bell} 
+                subtitle='Real-time' 
+                title='Recent Platform Activity' 
+                right={<button className='text-xs text-indigo-600 hover:underline'>View all</button>}
+              />
               <div className='divide-y divide-slate-200/80'>
                 {recentActivity.map((a, i) => (
                   <motion.div key={i} variants={fadeUp(i)} initial='hidden' animate='show' className='flex items-start gap-3 py-3'>
@@ -150,67 +291,133 @@ export default function GymDashboard() {
                       <p className='text-sm text-slate-800'>
                         <span className='font-medium'>{a.user}</span> {a.action}
                       </p>
-                      <p className='text-xs text-slate-500'>{a.time} ago</p>
+                      <p className='text-xs text-slate-500'>{a.time}</p>
                     </div>
-                    <button className='text-xs text-slate-500 hover:text-slate-700'>Details</button>
+                    <button className='text-xs text-slate-500 hover:text-slate-700'>View</button>
                   </motion.div>
                 ))}
+              </div>
+            </GlowCard>
+
+            {/* System Health Metrics */}
+            <GlowCard className='p-5'>
+              <SectionHeader 
+                icon={HeartPulse} 
+                subtitle='System Health' 
+                title='Platform Performance' 
+              />
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='text-center p-4 rounded-lg bg-slate-50'>
+                  <div className='text-2xl font-bold text-slate-800'>{systemStats?.plans?.utilizationRate || 0}%</div>
+                  <div className='text-sm text-slate-600'>Plan Utilization</div>
+                </div>
+                <div className='text-center p-4 rounded-lg bg-slate-50'>
+                  <div className='text-2xl font-bold text-slate-800'>{systemStats?.nutrition?.avgAdherence || 0}/5</div>
+                  <div className='text-sm text-slate-600'>Avg Meal Adherence</div>
+                </div>
+                <div className='text-center p-4 rounded-lg bg-slate-50'>
+                  <div className='text-2xl font-bold text-slate-800'>{systemStats?.activity?.today?.activeUsers || 0}</div>
+                  <div className='text-sm text-slate-600'>Active Today</div>
+                </div>
+                <div className='text-center p-4 rounded-lg bg-slate-50'>
+                  <div className='text-2xl font-bold text-slate-800'>{systemStats?.summary?.newUsersThisMonth || 0}</div>
+                  <div className='text-sm text-slate-600'>New This Month</div>
+                </div>
               </div>
             </GlowCard>
           </div>
 
           {/* Right column (1/3) */}
           <div className='space-y-6'>
+            {/* User Distribution */}
             <GlowCard className='p-5'>
-              <SectionHeader icon={PieChartIcon} subtitle='Nutrition' title='Macro Split' />
+              <SectionHeader icon={PieChartIcon} subtitle='Users' title='User Distribution' />
               {loading ? (
                 <Skeleton className='h-48' />
               ) : (
                 <div className='h-48'>
                   <ResponsiveContainer width='100%' height='100%'>
                     <PieChart>
-                      <Pie data={macroSplit} innerRadius={52} outerRadius={72} paddingAngle={8} dataKey='value'>
-                        {macroSplit.map((_, i) => (
+                      <Pie 
+                        data={userDistribution} 
+                        innerRadius={52} 
+                        outerRadius={72} 
+                        paddingAngle={8} 
+                        dataKey='value'
+                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      >
+                        {userDistribution.map((_, i) => (
                           <Cell key={i} fill={pieColors[i % pieColors.length]} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip formatter={(value) => [value, 'Users']} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
               )}
-              <div className='mt-3 grid grid-cols-3 gap-2 text-xs'>
-                {macroSplit.map((m, i) => (
-                  <div key={i} className='flex items-center gap-2'>
-                    <span className='h-2 w-2 rounded-full' style={{ background: pieColors[i % pieColors.length] }} />
-                    <span className='text-slate-600'>{m.name}</span>
-                    <span className='ml-auto font-medium'>{m.value}%</span>
+              <div className='mt-3 space-y-2 text-xs'>
+                {userDistribution.map((m, i) => (
+                  <div key={i} className='flex items-center gap-2 justify-between'>
+                    <div className='flex items-center gap-2'>
+                      <span className='h-2 w-2 rounded-full' style={{ background: pieColors[i % pieColors.length] }} />
+                      <span className='text-slate-600'>{m.name}</span>
+                    </div>
+                    <span className='font-medium'>{m.value}</span>
                   </div>
                 ))}
               </div>
             </GlowCard>
 
+            {/* Top Performers Leaderboard */}
             <GlowCard className='p-5'>
-              <SectionHeader icon={Users} subtitle='Gamification' title='Leaderboard' />
+              <SectionHeader icon={Crown} subtitle='Performance' title='Top Members' />
               <div className='space-y-2'>
                 {leaderboard.map((m, i) => (
                   <motion.div key={i} variants={fadeUp(i)} initial='hidden' animate='show' className='flex items-center gap-3 rounded-lg border border-slate-200/70 p-3'>
-                    <div className='size-9 rounded-full bg-gradient-to-tr from-indigo-500 to-emerald-500 text-white grid place-content-center font-semibold'>{m.name.charAt(0)}</div>
+                    <div className='size-9 rounded-full bg-gradient-to-tr from-indigo-500 to-emerald-500 text-white grid place-content-center font-semibold'>
+                      {m.name.charAt(0)}
+                    </div>
                     <div className='flex-1'>
                       <div className='flex items-center justify-between'>
                         <p className='text-sm font-medium text-slate-800'>{m.name}</p>
                         <p className='text-sm font-semibold'>{m.points}</p>
                       </div>
                       <div className='mt-1 h-2 rounded-full bg-slate-100'>
-                        <div className='h-2 rounded-full bg-gradient-to-r from-indigo-500 to-emerald-500' style={{ width: `${(m.points / leaderboard[0].points) * 100}%` }} />
+                        <div 
+                          className='h-2 rounded-full bg-gradient-to-r from-indigo-500 to-emerald-500' 
+                          style={{ width: `${m.progress}%` }} 
+                        />
                       </div>
                     </div>
                   </motion.div>
                 ))}
               </div>
             </GlowCard>
+
+            {/* Quick Stats */}
+            <GlowCard className='p-5'>
+              <SectionHeader icon={Zap} subtitle='Quick Look' title="Today's Snapshot" />
+              <div className='space-y-3'>
+                <div className='flex justify-between items-center'>
+                  <span className='text-sm text-slate-600'>Workouts Completed</span>
+                  <span className='font-semibold'>{systemStats?.activity?.today?.workouts || 0}</span>
+                </div>
+                <div className='flex justify-between items-center'>
+                  <span className='text-sm text-slate-600'>Meals Logged</span>
+                  <span className='font-semibold'>{systemStats?.activity?.today?.meals || 0}</span>
+                </div>
+                <div className='flex justify-between items-center'>
+                  <span className='text-sm text-slate-600'>Active Sessions</span>
+                  <span className='font-semibold'>{systemStats?.activity?.today?.activeUsers || 0}</span>
+                </div>
+                <div className='flex justify-between items-center'>
+                  <span className='text-sm text-slate-600'>System Uptime</span>
+                  <span className='font-semibold text-emerald-600'>99.9%</span>
+                </div>
+              </div>
+            </GlowCard>
           </div>
-        </div>{' '}
+        </div>
       </main>
     </div>
   );

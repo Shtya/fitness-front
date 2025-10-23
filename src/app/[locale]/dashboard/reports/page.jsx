@@ -1,368 +1,506 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import DataTable from "@/components/dashboard/ui/DataTable";
-import {
-  PageHeader, TabsPill, ToolbarButton, EmptyState, SearchInput, DateRangeControl, Badge, spring
-} from "@/components/dashboard/ui/UI";
-import { ChartCard, LineTrend, BarTrend, AreaTrend, Donut } from "@/components/dashboard/ui/Charts/Primitives";
-import {
-  LineChart as LineIcon, Download, CalendarRange, TrendingUp, Users, Dumbbell, Salad, Percent
-} from "lucide-react";
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
+import { Loader2, Filter, RefreshCw, ChevronLeft, ChevronRight, Eye, CheckCircle2, XCircle, User2, CalendarDays, HeartPulse, Activity, ClipboardList } from 'lucide-react';
 
-/* =============== Mock data =============== */
-// Revenue (last 12 months)
-const revenue = [
-  { m: "2024-09", mrr: 21000, newSubs: 58, cancels: 22 },
-  { m: "2024-10", mrr: 22600, newSubs: 64, cancels: 20 },
-  { m: "2024-11", mrr: 23250, newSubs: 61, cancels: 19 },
-  { m: "2024-12", mrr: 24100, newSubs: 66, cancels: 21 },
-  { m: "2025-01", mrr: 25200, newSubs: 80, cancels: 23 },
-  { m: "2025-02", mrr: 26150, newSubs: 74, cancels: 25 },
-  { m: "2025-03", mrr: 27500, newSubs: 88, cancels: 24 },
-  { m: "2025-04", mrr: 28900, newSubs: 91, cancels: 26 },
-  { m: "2025-05", mrr: 30100, newSubs: 96, cancels: 27 },
-  { m: "2025-06", mrr: 30950, newSubs: 84, cancels: 29 },
-  { m: "2025-07", mrr: 31600, newSubs: 79, cancels: 31 },
-  { m: "2025-08", mrr: 32750, newSubs: 92, cancels: 28 },
-];
+import api from '@/utils/axios';
+import Img from '@/components/atoms/Img';
+// ⬇️ change this to the correct import where you saved the provided Modal component
+import { Modal } from '@/components/dashboard/ui/UI';
+import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
+import Select from '@/components/atoms/Select';
 
-// Attendance last 30 days (utilization % of capacity)
-const attendance = Array.from({ length: 30 }).map((_, i) => {
-  const d = new Date(); d.setDate(d.getDate() - (29 - i));
-  const util = 45 + Math.round(Math.abs(Math.sin(i/4))*40); // 45–85%
-  return { day: d.toISOString().slice(5,10), utilization: util };
-});
-
-// Program performance
-const programs = [
-  { name: "Beginner Strength", active: 120, completed: 86, prs: 230 },
-  { name: "Fat Loss 12w",      active: 95,  completed: 62, prs: 120 },
-  { name: "Hypertrophy 8w",    active: 70,  completed: 41, prs: 175 },
-];
-
-// Trainer performance
-const trainers = [
-  { coach: "Ali",   sessions: 142, retention: 82, rating: 4.8 },
-  { coach: "Mariam",sessions: 126, retention: 79, rating: 4.7 },
-  { coach: "Omar",  sessions: 118, retention: 76, rating: 4.6 },
-];
-
-// Nutrition adherence (weekly % met targets)
-const nutrition = [
-  { week: "W30", adherence: 71 },
-  { week: "W31", adherence: 74 },
-  { week: "W32", adherence: 78 },
-  { week: "W33", adherence: 77 },
-  { week: "W34", adherence: 81 },
-  { week: "W35", adherence: 83 },
-];
-
-// Funnel (counts)
-const funnel = { leads: 1200, qualified: 720, trial: 320, member: 210 };
-
-/* =============== Page =============== */
-export default function ReportsPage() {
-  const [tab, setTab] = useState("revenue"); // revenue | attendance | programs | trainers | nutrition | funnel
-  const [loading, setLoading] = useState(true);
-  const [from, setFrom] = useState(""); // optional global filter
-  const [to, setTo] = useState("");
-
-  useEffect(() => { const t = setTimeout(()=>setLoading(false), 600); return ()=>clearTimeout(t); }, []);
-
-  /* ===== derived KPIs ===== */
-  const mrr = revenue[revenue.length-1].mrr;
-  const prevMrr = revenue[revenue.length-2].mrr;
-  const mrrDelta = pctDelta(prevMrr, mrr);
-
-  const churnRate = useMemo(() => {
-    // simple logo churn = cancels / (previous month active estimate)
-    return Math.round((revenue[revenue.length-1].cancels / (revenue[revenue.length-2].newSubs + 800)) * 1000)/10; // %
-  }, []);
-  const retention = 100 - churnRate;
-
-  const avgUtil = Math.round(attendance.reduce((a,b)=>a+b.utilization,0)/attendance.length);
-
-  const completionRows = programs.map(p => ({
-    program: p.name,
-    active: p.active,
-    completed: p.completed,
-    completionRate: Math.round((p.completed / Math.max(1, p.active + p.completed)) * 100),
-    prs: p.prs
-  })).sort((a,b)=>b.completionRate - a.completionRate);
-
-  const trainerRows = trainers.map(t => ({
-    coach: t.coach, sessions: t.sessions, retention: t.retention, rating: t.rating
-  })).sort((a,b)=>b.sessions - a.sessions);
-
-  const funnelRates = [
-    { stage: "Qualified", value: rate(funnel.qualified, funnel.leads) },
-    { stage: "Trial",     value: rate(funnel.trial, funnel.leads) },
-    { stage: "Member",    value: rate(funnel.member, funnel.leads) },
-    { stage: "Trial→Member", value: rate(funnel.member, funnel.trial) }
-  ];
-
-  /* ===== tables ===== */
-  const programCols = [
-    { header: "Program", accessor: "program" },
-    { header: "Active", accessor: "active" },
-    { header: "Completed", accessor: "completed" },
-    { header: "Completion %", accessor: "completionRate", cell: r => <strong>{r.completionRate}%</strong> },
-    { header: "PRs", accessor: "prs" },
-  ];
-
-  const trainerCols = [
-    { header: "Coach", accessor: "coach" },
-    { header: "Sessions", accessor: "sessions" },
-    { header: "Retention %", accessor: "retention", cell: r => <strong>{r.retention}%</strong> },
-    { header: "Rating", accessor: "rating" },
-  ];
-
-  const utilCols = [
-    { header: "Day", accessor: "day" },
-    { header: "Utilization %", accessor: "utilization", cell: r => <strong>{r.utilization}%</strong> },
-  ];
-
-  /* ===== export helpers ===== */
-  function exportCSV(name, rows) {
-    const keys = Object.keys(rows[0]||{});
-    const out = [keys, ...rows.map(r => keys.map(k => r[k]))]
-      .map(r => r.map(x => `"${String(x??"").replace(/"/g,'""')}"`).join(","))
-      .join("\n");
-    const url = URL.createObjectURL(new Blob([out], { type: "text/csv;charset=utf-8" }));
-    const a = document.createElement("a"); a.href = url; a.download = `${name}.csv`; a.click(); URL.revokeObjectURL(url);
-  }
-
+/* ----------------------------- Small UI helpers ----------------------------- */
+const Button = ({ children, className = '', onClick, type = 'button', disabled, color = 'primary' }) => {
+  const base = 'inline-flex items-center justify-center rounded-xl px-3.5 py-2 text-sm font-semibold shadow-sm transition active:scale-[.98]';
+  const styles = {
+    primary: 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50',
+    neutral: 'bg-slate-100 text-slate-800 hover:bg-slate-200 disabled:opacity-50',
+    success: 'bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50',
+    danger: 'bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50',
+    ghost: 'bg-transparent text-slate-700 hover:bg-slate-100 disabled:opacity-50',
+  };
   return (
-    <div className="space-y-6">
-      <PageHeader
-        icon={LineIcon}
-        title="Reporting & Analytics"
-        subtitle="Track revenue, attendance, programs, trainers, nutrition, and funnel performance."
-        actions={
-          <div className="flex items-center gap-2">
-            <DateRangeControl from={from} to={to} setFrom={setFrom} setTo={setTo} />
-            <ToolbarButton icon={Download} variant="secondary" onClick={()=>window.print()}>Print</ToolbarButton>
-          </div>
-        }
-      />
-
-      <TabsPill
-        id="reports-tabs"
-        tabs={[
-          { key:"revenue",    label:"Revenue",    icon: TrendingUp },
-          { key:"attendance", label:"Attendance", icon: CalendarRange },
-          { key:"programs",   label:"Programs",   icon: Dumbbell },
-          { key:"trainers",   label:"Trainers",   icon: Users },
-          { key:"nutrition",  label:"Nutrition",  icon: Salad },
-          { key:"funnel",     label:"Funnel",     icon: Percent },
-        ]}
-        active={tab}
-        onChange={setTab}
-      />
-
-      {/* ========= REVENUE ========= */}
-      {tab==="revenue" && (
-        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <KPI title="MRR" value={fmt(mrr)} delta={mrrDelta} />
-            <KPI title="ARR" value={fmt(mrr*12)} />
-            <KPI title="Churn" value={`${churnRate}%`} delta={-churnRate} invert />
-            <KPI title="Retention" value={`${retention}%`} />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <ChartCard title="MRR" subtitle="12 months">
-              <AreaTrend data={revenue.map(r=>({ label: r.m, value: r.mrr }))} />
-            </ChartCard>
-            <ChartCard title="New vs Cancels" subtitle="12 months">
-              <BarTrend data={revenue.map(r=>({ label: r.m.slice(5), value: r.newSubs, cancels: r.cancels }))} x="label" y="value" />
-            </ChartCard>
-            <ChartCard title="Net Adds" subtitle="New - Cancels">
-              <LineTrend data={revenue.map(r=>({ label: r.m.slice(5), value: r.newSubs - r.cancels }))} />
-            </ChartCard>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ========= ATTENDANCE ========= */}
-      {tab==="attendance" && (
-        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <KPI title="Avg Utilization" value={`${avgUtil}%`} />
-            <KPI title="Peak Day" value={`${peak(attendance, 'utilization').day}`} />
-            <KPI title="Peak Util %" value={`${peak(attendance, 'utilization').utilization}%`} />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <ChartCard title="Utilization (30d)" subtitle="Percent of capacity">
-              <LineTrend data={attendance.map(a=>({ label: a.day, value: a.utilization }))} />
-            </ChartCard>
-            <ChartCard title="Daily Utilization Table" subtitle="Last 30 days" right={<ToolbarButton variant="secondary" icon={Download} onClick={()=>exportCSV("attendance", attendance)}>CSV</ToolbarButton>}>
-              <div className="h-[260px] overflow-auto">
-                <DataTable columns={utilCols} data={attendance} loading={loading} pagination={false} />
-              </div>
-            </ChartCard>
-            <ChartCard title="By Day-of-Week" subtitle="Avg utilization">
-              <BarTrend data={dow(attendance)} x="dow" y="avg" />
-            </ChartCard>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ========= PROGRAMS ========= */}
-      {tab==="programs" && (
-        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <ChartCard title="Completion Rate by Program" subtitle="Higher is better">
-              <BarTrend data={completionRows.map(r=>({ label: r.program, value: r.completionRate }))} />
-            </ChartCard>
-            <ChartCard title="Personal Records (PRs)" subtitle="Program totals">
-              <AreaTrend data={programs.map(p=>({ label: short(p.name), value: p.prs }))} />
-            </ChartCard>
-            <div className="rounded-lg border border-slate-200 bg-white p-4">
-              <div className="flex items-center justify-between">
-                <div className="font-semibold">Program Table</div>
-                <ToolbarButton variant="secondary" icon={Download} onClick={()=>exportCSV("programs", completionRows)}>CSV</ToolbarButton>
-              </div>
-              <div className="mt-2">
-                <DataTable columns={programCols} data={completionRows} loading={loading} pagination itemsPerPage={8} />
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ========= TRAINERS ========= */}
-      {tab==="trainers" && (
-        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <KPI title="Top Sessions" value={trainerRows[0].coach} />
-            <KPI title="Best Retention" value={trainerRows.slice().sort((a,b)=>b.retention-a.retention)[0].coach} />
-            <KPI title="Highest Rating" value={trainerRows.slice().sort((a,b)=>b.rating-a.rating)[0].coach} />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <ChartCard title="Sessions by Trainer" subtitle="This month">
-              <BarTrend data={trainerRows.map(t=>({ label: t.coach, value: t.sessions }))} />
-            </ChartCard>
-            <ChartCard title="Retention by Trainer" subtitle="% of clients retained">
-              <LineTrend data={trainerRows.map(t=>({ label: t.coach, value: t.retention }))} />
-            </ChartCard>
-          </div>
-
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <div className="flex items-center justify-between">
-              <div className="font-semibold">Trainer Table</div>
-              <ToolbarButton variant="secondary" icon={Download} onClick={()=>exportCSV("trainers", trainerRows)}>CSV</ToolbarButton>
-            </div>
-            <div className="mt-2">
-              <DataTable columns={trainerCols} data={trainerRows} loading={loading} pagination itemsPerPage={8} />
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ========= NUTRITION ========= */}
-      {tab==="nutrition" && (
-        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <KPI title="Avg Adherence" value={`${avg(nutrition, 'adherence')}%`} />
-            <KPI title="Best Week" value={peak(nutrition, 'adherence').week} />
-            <KPI title="Best %" value={`${peak(nutrition, 'adherence').adherence}%`} />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <ChartCard title="Weekly Adherence" subtitle="6 weeks">
-              <AreaTrend data={nutrition.map(n=>({ label: n.week, value: n.adherence }))} />
-            </ChartCard>
-            <ChartCard title="Goal Hit Split" subtitle="Est. distribution">
-              <Donut data={[
-                { name:">90%", value: 22 },
-                { name:"75–90%", value: 48 },
-                { name:"50–75%", value: 24 },
-                { name:"<50%", value: 6 },
-              ]}/>
-            </ChartCard>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ========= FUNNEL ========= */}
-      {tab==="funnel" && (
-        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={spring} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <KPI title="Leads" value={funnel.leads} />
-            <KPI title="Qualified" value={`${funnel.qualified} (${rate(funnel.qualified, funnel.leads)}%)`} />
-            <KPI title="Trials" value={`${funnel.trial} (${rate(funnel.trial, funnel.leads)}%)`} />
-            <KPI title="Members" value={`${funnel.member} (${rate(funnel.member, funnel.leads)}%)`} />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <ChartCard title="Stage Conversion" subtitle="Overall">
-              <BarTrend data={funnelRates.map(r=>({ label: r.stage, value: r.value }))} />
-            </ChartCard>
-            <ChartCard title="Lead Sources (est.)" subtitle="Example split">
-              <Donut data={[
-                { name:"Website", value: 46 },
-                { name:"Facebook", value: 32 },
-                { name:"Instagram", value: 14 },
-                { name:"Referral", value: 8 },
-              ]}/>
-            </ChartCard>
-            <ChartCard title="Month-over-Month Members" subtitle="Synthetic">
-              <LineTrend data={revenue.map(r=>({ label: r.m.slice(5), value: Math.round(r.mrr/150) }))} />
-            </ChartCard>
-          </div>
-        </motion.div>
-      )}
-
-      {/* skeleton when loading */}
-      {loading && <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {Array.from({length:6}).map((_,i)=> <div key={i} className="h-32 rounded-lg bg-slate-100 animate-pulse" />)}
-      </div>}
-
-      <style jsx>{`
-        .kpi { @apply rounded-lg border border-slate-200 bg-white p-4; }
-      `}</style>
-    </div>
+    <button type={type} onClick={onClick} disabled={disabled} className={[base, styles[color] || styles.primary, className].join(' ')}>
+      {children}
+    </button>
   );
+};
+
+const StatPill = ({ icon: Icon, label, value }) => (
+  <div className='flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2'>
+    <Icon className='w-4 h-4 text-indigo-600' />
+    <div className='text-xs text-slate-500'>{label}</div>
+    <div className='text-xs font-semibold text-slate-900'>• {value}</div>
+  </div>
+);
+
+/* --------------------------------- API calls -------------------------------- */
+async function fetchReports({ page = 1, limit = 12, userId = '' }) {
+  const params = { page, limit };
+  if (userId) params.userId = userId;
+  const { data } = await api.get('/weekly-reports', { params });
+  // shape: { items, total, page, limit, hasMore }
+  return data;
+}
+async function fetchReportById(id) {
+  const { data } = await api.get(`/weekly-reports/${id}`);
+  return data;
+}
+async function saveCoachFeedback(id, payload) {
+  const { data } = await api.put(`/weekly-reports/${id}/feedback`, payload);
+  return data;
 }
 
-/* ===== Small helpers (local) ===== */
-function KPI({ title, value, delta, invert }) {
-  const good = invert ? (delta<0) : (delta>0);
-  return (
-    <div className="kpi">
-      <div className="text-sm text-slate-500">{title}</div>
-      <div className="text-2xl font-semibold">{value}</div>
-      {delta!=null && (
-        <div className={`text-xs mt-1 ${good?'text-emerald-600':'text-rose-600'}`}>
-          {good ? '↑' : '↓'} {Math.abs(delta)}%
+/* ---------------------------------- Page ---------------------------------- */
+export default function CoachReportsPage() {
+  const t = useTranslations();
+
+  // pagination & filters
+  const [page, setPage] = useState(1);
+  const limit = 12;
+  const [athleteFilter, setAthleteFilter] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+
+  // data
+  const [reports, setReports] = useState([]); // list
+  const [total, setTotal] = useState(0);
+
+  // unique athletes for filter (built from page results or later you can load a dedicated list)
+  const athleteOptions = useMemo(() => {
+    const map = new Map();
+    reports.forEach(r => {
+      const u = r?.user;
+      if (u?.id && !map.has(u.id)) map.set(u.id, { id: u.id, name: u.name || u.email || u.id });
+    });
+    return [{ id: '', name: t('coachReports.allAthletes') }, ...Array.from(map.values())];
+  }, [reports, t]);
+
+  // modal / detail
+  const [open, setOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [activeId, setActiveId] = useState(null);
+  const [active, setActive] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveErr, setSaveErr] = useState('');
+  const [savedOk, setSavedOk] = useState(false);
+  const [feedbackDraft, setFeedbackDraft] = useState('');
+
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  const load = useCallback(async () => {
+    try {
+      setErr('');
+      setLoading(true);
+      const res = await fetchReports({ page, limit, userId: athleteFilter });
+      setReports(res.items || []);
+      setTotal(res.total || 0);
+    } catch (e) {
+      setErr(t('coachReports.errors.load'));
+    } finally {
+      setLoading(false);
+    }
+  }, [page, limit, athleteFilter, t]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const refresh = () => load();
+
+  const openDetail = async id => {
+    try {
+      setActiveId(id);
+      setDetailLoading(true);
+      setOpen(true);
+      const data = await fetchReportById(id);
+      setActive(data || null);
+      setFeedbackDraft(data?.coachFeedback || '');
+    } catch (e) {
+      setActive(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeDetail = () => {
+    setOpen(false);
+    setActiveId(null);
+    setActive(null);
+    setFeedbackDraft('');
+    setSaveErr('');
+    setSavedOk(false);
+  };
+
+  const handleSaveFeedback = async (opts = {}) => {
+    if (!activeId) return;
+    try {
+      setSaving(true);
+      setSaveErr('');
+      const payload = {
+        coachFeedback: typeof opts.feedback === 'string' ? opts.feedback : feedbackDraft,
+        isRead: typeof opts.isRead === 'boolean' ? opts.isRead : active?.isRead || false,
+      };
+      if (!payload.coachFeedback?.trim() && opts?.forceRequire) {
+        setSaveErr(t('coachReports.errors.feedbackEmpty'));
+        setSaving(false);
+        return;
+      }
+      const saved = await saveCoachFeedback(activeId, payload);
+      setActive(saved);
+      setSavedOk(true);
+      setTimeout(() => setSavedOk(false), 2500);
+      // refresh list to reflect reviewed state
+      refresh();
+    } catch (e) {
+      setSaveErr(t('coachReports.errors.save'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ----------------------------- Cards / list UI ---------------------------- */
+  const Card = ({ r }) => {
+    const u = r?.user || {};
+    const m = r?.measurements || {};
+    const tr = r?.training || {};
+    const statusReviewed = !!r?.reviewedAt;
+
+    const weightTxt = m?.weight != null ? `${m.weight}` : '—';
+    const cardioTxt = tr?.cardioAdherence != null ? `${tr.cardioAdherence}` : '—';
+
+    return (
+      <div className='rounded-xl border border-slate-200 bg-white p-3 shadow-sm hover:shadow transition'>
+        <div className='flex items-start justify-between gap-2'>
+          <div className='flex items-center gap-2'>
+            <div className='h-9 w-9 grid place-content-center rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100'>
+              <User2 className='w-4 h-4' />
+            </div>
+            <div>
+              <div className='text-sm font-semibold text-slate-900'>{u?.name || u?.email || t('coachReports.athlete')}</div>
+              <div className='text-xs text-slate-500 flex items-center gap-1'>
+                <CalendarDays className='w-3.5 h-3.5' />
+                <span>
+                  {t('coachReports.columns.weekOf')}: {r?.weekOf}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className='text-xs'>
+            {statusReviewed ? (
+              <span className='inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 border border-emerald-200'>
+                <CheckCircle2 className='w-3.5 h-3.5' />
+                {t('coachReports.reviewed')}
+              </span>
+            ) : (
+              <span className='inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 border border-amber-200'>
+                <XCircle className='w-3.5 h-3.5' />
+                {t('coachReports.awaitingReview')}
+              </span>
+            )}
+          </div>
         </div>
-      )}
+
+        <div className='mt-3 grid grid-cols-2 gap-2'>
+          <StatPill icon={HeartPulse} label={t('coachReports.card.summary').split('•')[0].replace('{weight}', '') || 'Weight'} value={`${weightTxt} كجم`} />
+          <StatPill icon={Activity} label={t('coachReports.card.summary').split('•')[1]?.split('/')[0].replace('{cardio}', '')} value={`${cardioTxt} / 5`} />
+        </div>
+
+        <div className='mt-3 flex items-center justify-between'>
+          <div className='text-[11px] text-slate-500'>{t('coachReports.total', { count: total })}</div>
+          <Button onClick={() => openDetail(r.id)} className='!px-3 !py-1.5'>
+            <Eye className='w-4 h-4 mr-1' />
+            {t('coachReports.view')}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  /* --------------------------------- Render --------------------------------- */
+  return (
+    <div className='mx-auto max-w-6xl px-3 sm:px-5 py-5 space-y-5'>
+      <GradientStatsHeader
+        className='rounded-2xl'
+        title={t('coachReports.title')}
+        desc={t('coachReports.subtitle')}
+        btnName={t('coachReports.buttons.refresh')}
+        onClick={refresh}
+        hiddenStats={true} // set to false if you pass KPI children
+        loadingStats={false} // or your loading state if you show KPIs
+      >
+        {/* 
+      Optional KPI cards go here later, e.g.:
+      <StatCard icon={...} title={t('coachReports.kpis.totalReports')} value={stats.total} />
+    */}
+      </GradientStatsHeader>
+
+      {/* Filters */}
+      <div className='mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'>
+        <div className='flex flex-col md:flex-row md:items-end gap-2'>
+          <Select
+            label={t('coachReports.athlete')}
+            onChange={e => {
+              setAthleteFilter(e.target.value);
+              setPage(1);
+            }}
+            options={athleteOptions.map(opt => {
+              return { id: opt.id, label: opt.name };
+            })}
+            value={athleteFilter}
+          />
+
+          <div className='flex gap-2'>
+            <Button color='neutral' onClick={refresh}>
+              <RefreshCw className='w-4 h-4 mr-1' />
+              {t('coachReports.buttons.refresh')}
+            </Button>
+
+            <Button
+              color='ghost'
+              onClick={() => {
+                setAthleteFilter('');
+                setPage(1);
+              }}>
+              <Filter className='w-4 h-4 mr-1' />
+              {t('coachReports.clearFilters')}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* List */}
+      <div className='rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm'>
+        {loading ? (
+          <div className='h-40 grid place-content-center text-slate-600'>
+            <Loader2 className='w-5 h-5 animate-spin mx-auto mb-2' />
+            <div className='text-sm'>{t('coachReports.loading')}</div>
+          </div>
+        ) : err ? (
+          <div className='h-40 grid place-content-center text-rose-700 text-sm'>{err}</div>
+        ) : reports.length === 0 ? (
+          <div className='h-40 grid place-content-center text-slate-600 text-sm'>{t('coachReports.empty')}</div>
+        ) : (
+          <>
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
+              {reports.map(r => (
+                <Card key={r.id} r={r} />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            <div className='mt-4 flex items-center justify-between'>
+              <div className='text-xs text-slate-500'>{t('coachReports.pageOf', { page, pages: totalPages })}</div>
+              <div className='flex items-center gap-2'>
+                <Button color='neutral' disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
+                  <ChevronRight className='w-4 h-4 ltr:hidden' />
+                  <ChevronLeft className='w-4 h-4 rtl:hidden' />
+                  {t('coachReports.prev')}
+                </Button>
+                <Button color='neutral' disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
+                  {t('coachReports.next')}
+                  <ChevronLeft className='w-4 h-4 ltr:hidden' />
+                  <ChevronRight className='w-4 h-4 rtl:hidden' />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Detail Modal */}
+      <Modal open={open} onClose={closeDetail} title={t('coachReports.detail.title')} maxW='max-w-5xl' maxH='max-h-[86vh]' maxHBody='max-h-[70vh]'>
+        {detailLoading ? (
+          <div className='h-48 grid place-content-center text-slate-600'>
+            <Loader2 className='w-5 h-5 animate-spin mx-auto mb-2' />
+            <div className='text-sm'>{t('coachReports.detail.loading')}</div>
+          </div>
+        ) : !active ? (
+          <div className='text-sm text-slate-600'>{t('coachReports.empty')}</div>
+        ) : (
+          <div className='space-y-4'>
+            {/* Header info */}
+            <div className='rounded-xl border border-slate-200 bg-white p-3'>
+              <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-2'>
+                <div className='flex items-center gap-3'>
+                  <div className='h-10 w-10 grid place-content-center rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100'>
+                    <User2 className='w-5 h-5' />
+                  </div>
+                  <div>
+                    <div className='text-sm font-semibold text-slate-900'>{active?.user?.name || active?.user?.email}</div>
+                    <div className='text-xs text-slate-500 flex items-center gap-1'>
+                      <CalendarDays className='w-3.5 h-3.5' />
+                      <span>
+                        {t('coachReports.columns.weekOf')}: {active?.weekOf}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className='flex flex-wrap items-center gap-2'>
+                  {active?.reviewedAt ? (
+                    <span className='inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 border border-emerald-200 text-xs'>
+                      <CheckCircle2 className='w-3.5 h-3.5' />
+                      {t('coachReports.reviewed')}
+                    </span>
+                  ) : (
+                    <span className='inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 border border-amber-200 text-xs'>
+                      <XCircle className='w-3.5 h-3.5' />
+                      {t('coachReports.awaitingReview')}
+                    </span>
+                  )}
+                  {active?.reviewedBy && (
+                    <span className='text-xs text-slate-600'>
+                      {t('coachReports.detail.reviewedBy')}: {t('coachReports.detail.you')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Photos */}
+            <div className='rounded-xl border border-slate-200 bg-white p-3'>
+              <div className='font-semibold text-slate-900 text-sm mb-2'>{t('coachReports.detail.photos')}</div>
+              <div className='grid grid-cols-2 md:grid-cols-4 gap-2'>
+                {['front', 'back', 'left', 'right'].map(side => {
+                  const url = active?.photos?.[side]?.url;
+                  return (
+                    <div key={side} className='rounded-lg border border-slate-200 bg-slate-50 p-2'>
+                      <div className='text-[11px] text-slate-600 mb-1'>{t(`coachReports.detail.section.photos.${side}`)}</div>
+                      {url ? <Img src={url} alt={side} className='h-40 w-full object-contain rounded-md bg-white' /> : <div className='h-40 grid place-content-center rounded-md bg-white text-slate-400 text-xs border border-slate-200'>{t('coachReports.detail.noPhoto')}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Measurements */}
+            <div className='rounded-xl border border-slate-200 bg-white p-3'>
+              <div className='font-semibold text-slate-900 text-sm mb-2'>{t('coachReports.detail.measurements')}</div>
+              <div className='overflow-auto'>
+                <table className='min-w-[520px] w-full text-sm'>
+                  <thead className='text-xs text-slate-500'>
+                    <tr>
+                      <th className='text-start py-2'>{t('coachReports.detail.section.measurements.date')}</th>
+                      <th className='text-start py-2'>{t('coachReports.detail.section.measurements.weight')}</th>
+                      <th className='text-start py-2'>{t('coachReports.detail.section.measurements.waist')}</th>
+                      <th className='text-start py-2'>{t('coachReports.detail.section.measurements.chest')}</th>
+                      <th className='text-start py-2'>{t('coachReports.detail.section.measurements.hips')}</th>
+                      <th className='text-start py-2'>{t('coachReports.detail.section.measurements.arms')}</th>
+                      <th className='text-start py-2'>{t('coachReports.detail.section.measurements.thighs')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className='text-slate-800'>
+                    <tr className='border-t border-slate-100'>
+                      <td className='py-2'>{active?.measurements?.date || '—'}</td>
+                      <td className='py-2'>{active?.measurements?.weight ?? '—'}</td>
+                      <td className='py-2'>{active?.measurements?.waist ?? '—'}</td>
+                      <td className='py-2'>{active?.measurements?.chest ?? '—'}</td>
+                      <td className='py-2'>{active?.measurements?.hips ?? '—'}</td>
+                      <td className='py-2'>{active?.measurements?.arms ?? '—'}</td>
+                      <td className='py-2'>{active?.measurements?.thighs ?? '—'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Training & Diet */}
+            <div className='grid md:grid-cols-2 gap-3'>
+              {/* Training */}
+              <div className='rounded-xl border border-slate-200 bg-white p-3'>
+                <div className='font-semibold text-slate-900 text-sm mb-2'>{t('coachReports.detail.training')}</div>
+                <div className='space-y-1.5 text-sm'>
+                  <Row label={t('coachReports.detail.section.training.cardioAdherence')} value={(active?.training?.cardioAdherence ?? '—') + ' / 5'} />
+                  <Row label={t('coachReports.detail.section.training.intensityOk')} value={yn(active?.training?.intensityOk)} />
+                  <Row label={t('coachReports.detail.section.training.shape')} value={yn(active?.training?.shapeChange)} />
+                  <Row label={t('coachReports.detail.section.training.fitness')} value={yn(active?.training?.fitnessChange)} />
+                  <Row label={t('coachReports.detail.section.training.sleepEnough')} value={yn(active?.training?.sleep?.enough)} />
+                  <Row label={t('coachReports.detail.section.training.sleepHours')} value={active?.training?.sleep?.hours || '—'} />
+                  <div className='pt-2'>
+                    <div className='text-xs text-slate-500 mb-1'>{t('coachReports.detail.section.training.notes.title')}</div>
+                    <div className='rounded-lg border border-slate-200 bg-slate-50 p-2 text-slate-800 text-sm whitespace-pre-wrap'>{active?.training?.programNotes || '—'}</div>
+                  </div>
+                  <div className='pt-2'>
+                    <div className='text-xs text-slate-500 mb-1'>{t('coachReports.detail.section.training.daysDeviation')}</div>
+                    <Row label={t('coachReports.detail.section.training.deviation.count')} value={active?.training?.daysDeviation?.count || '—'} />
+                    <Row label={t('coachReports.detail.section.training.deviation.reason')} value={active?.training?.daysDeviation?.reason || '—'} />
+                  </div>
+                </div>
+              </div>
+              {/* Diet */}
+              <div className='rounded-xl border border-slate-200 bg-white p-3'>
+                <div className='font-semibold text-slate-900 text-sm mb-2'>{t('coachReports.detail.diet')}</div>
+                <div className='space-y-1.5 text-sm'>
+                  <Row label={t('coachReports.detail.section.diet.hungry')} value={yn(active?.diet?.hungry)} />
+                  <Row label={t('coachReports.detail.section.diet.comfort')} value={yn(active?.diet?.mentalComfort)} />
+                  <Row label={t('coachReports.detail.section.diet.tooMuch')} value={yn(active?.diet?.foodTooMuch)} />
+                  <Row label={t('coachReports.detail.section.diet.wantSpecific')} value={active?.diet?.wantSpecific || '—'} />
+                  <div className='pt-2'>
+                    <div className='text-xs text-slate-500 mb-1'>{t('coachReports.detail.section.diet.deviation.title')}</div>
+                    <Row label={t('coachReports.detail.section.diet.deviation.times')} value={active?.diet?.dietDeviation?.times || '—'} />
+                    <Row label={t('coachReports.detail.section.diet.deviation.details')} value={active?.diet?.dietDeviation?.details || '—'} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Feedback editor */}
+            <div className='rounded-xl border border-slate-200 bg-white p-3'>
+              <div className='font-semibold text-slate-900 text-sm mb-2'>{t('coachReports.detail.feedback')}</div>
+
+              <textarea className='w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm min-h-[100px]' placeholder={t('coachReports.detail.feedbackPh')} value={feedbackDraft} onChange={e => setFeedbackDraft(e.target.value)} />
+
+              {/* status row */}
+              <div className='mt-2 flex items-center justify-between'>
+                <div className='text-xs text-slate-500'>{active?.reviewedAt ? `${t('coachReports.detail.reviewedAt')}: ${new Date(active.reviewedAt).toLocaleString()}` : t('coachReports.awaitingReview')}</div>
+                <div className='flex items-center gap-2'>
+                  <Button color='success' disabled={saving} onClick={() => handleSaveFeedback({ forceRequire: true })}>
+                    {saving ? <Loader2 className='w-4 h-4 animate-spin mr-1' /> : <ClipboardList className='w-4 h-4 mr-1' />}
+                    {t('coachReports.detail.saveFeedback')}
+                  </Button>
+                  {/* Mark reviewed (even with empty feedback) */}
+                  <Button color='neutral' disabled={saving} onClick={() => handleSaveFeedback({ isRead: true, feedback: feedbackDraft || '' })}>
+                    <CheckCircle2 className='w-4 h-4 mr-1' />
+                    {t('coachReports.reviewed')}
+                  </Button>
+                </div>
+              </div>
+
+              {saveErr ? <div className='mt-2 text-xs text-rose-700'>{saveErr}</div> : null}
+              {savedOk ? (
+                <div className='mt-2 inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700'>
+                  <CheckCircle2 className='w-4 h-4' />
+                  {t('coachReports.messages.saved')}
+                </div>
+              ) : null}
+            </div>
+
+            <div className='flex items-center justify-end'>
+              <Button color='neutral' onClick={closeDetail}>
+                {t('coachReports.detail.close')}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
-function fmt(n){ return n.toLocaleString(undefined, { style:"currency", currency:"USD", maximumFractionDigits:0 }); }
-function pctDelta(prev, now){ if(!prev) return 0; return Math.round(((now-prev)/prev)*1000)/10; }
-function avg(arr, k){ return Math.round(arr.reduce((a,b)=>a+b[k],0)/Math.max(1,arr.length)); }
-function peak(arr, k){ return arr.reduce((m,x)=> x[k]>m[k]? x : m, arr[0]); }
-function short(s){ return s.replace(/(Beginner|Hypertrophy|Strength|Loss)/g, (m)=>m[0]); }
-function rate(part, whole){ return Math.round((part/Math.max(1,whole))*100); }
-function dow(days){ // avg by Mon..Sun
-  const week = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-  const now = new Date();
-  const enriched = days.map(d => {
-    // rebuild date with current year for weekday
-    const s = new Date(`${now.getFullYear()}-${d.day}`);
-    const wd = week[(s.getDay()+6)%7];
-    return { wd, v: d.utilization };
-  });
-  return week.map(w => {
-    const items = enriched.filter(x => x.wd===w);
-    const avg = Math.round(items.reduce((a,b)=>a+b.v,0)/Math.max(1,items.length));
-    return { dow: w, avg };
-  });
+
+/* -------------------------------- Subparts -------------------------------- */
+function Row({ label, value }) {
+  return (
+    <div className='flex items-center justify-between gap-3 border-b border-slate-100 py-1.5 last:border-b-0'>
+      <div className='text-xs text-slate-500'>{label}</div>
+      <div className='text-sm font-medium text-slate-900'>{value}</div>
+    </div>
+  );
+}
+
+function yn(val) {
+  if (val === 'yes') return 'نعم';
+  if (val === 'no') return 'لا';
+  return val ?? '—';
 }

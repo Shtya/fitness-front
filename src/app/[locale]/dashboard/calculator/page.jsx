@@ -1,406 +1,638 @@
+/**
+ * Mobile-first enhanced page (JS/JSX)
+ * - Tight paddings, bigger tap targets, clearer layout on phones
+ * - Search + qty in a single row that wraps nicely
+ * - Goal dropdown still shows live kg/month values
+ * - Inputs have no default values (user-controlled)
+ * - Meal list renders as cards on mobile, table on md+
+ * - Sticky action bar inside Food box for quick "Add" on small screens
+ * - "Meal vs Target" section removed (per your earlier request)
+ */
+
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 
-// ⚙️ Use YOUR atoms
+// ✅ atoms
 import Button from '@/components/atoms/Button';
 import Input from '@/components/atoms/Input';
 import Select from '@/components/atoms/Select';
 
+// ✅ header/cards
+import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
+import { StatCard } from '@/components/dashboard/ui/UI';
+
+// Icons
+import { Flame, Apple, Calculator, Gauge, Ruler, Info, Search, Trash } from 'lucide-react';
+import { DEFAULT_FOODS } from './FoodCalorieDB';
+
+/* ===== Storage keys ===== */
+const LS = {
+  PROFILE: 'dailycal_profile_v3',
+  MEAL: 'dailycal_meal_v3',
+  CUSTOM_FOODS: 'dailycal_customfoods_v1',
+};
+
+/* ===== Activity (clearer wording) ===== */
 const ACTIVITY = [
-  { key: 'sed', label: 'Sedentary (desk, little exercise)', mult: 1.2 },
-  { key: 'light', label: 'Light (1–3x/week)', mult: 1.375 },
-  { key: 'mod', label: 'Moderate (3–5x/week)', mult: 1.55 },
-  { key: 'very', label: 'Very Active (6–7x/week)', mult: 1.725 },
-  { key: 'ath', label: 'Athlete/2-a-days', mult: 1.9 },
+  { id: '1.2', label_ar: 'مكتبي/دراسة (بدون تمرين)', label_en: 'Desk / Study (no exercise)' },
+  { id: '1.375', label_ar: 'وظيفة خفيفة + تمرين 1–3x/أسبوع', label_en: 'Light job + 1–3x/week training' },
+  { id: '1.55', label_ar: 'بيع/وقوف/تحرّك + تمرين 3–5x/أسبوع', label_en: 'Retail/Standing + 3–5x/week training' },
+  { id: '1.725', label_ar: 'مجهود بدني عالي + تمرين 6–7x/أسبوع', label_en: 'Manual labor + 6–7x/week training' },
+  { id: '1.9', label_ar: 'شغل بدني ثقيل + تمرين مكثّف/رياضي', label_en: 'Heavy labor + intense/athlete' },
 ];
 
+/* ===== Goals (labels; live kg/month is computed dynamically) ===== */
 const GOALS = [
-  { label: 'Cut', delta: -20 },
-  { label: 'Recomp', delta: 0 },
-  { label: 'Lean Bulk', delta: +10 },
+  { id: '-20', label_ar: 'تشييف -20%', label_en: 'Cutting -20%' },
+  { id: '-10', label_ar: 'تشييف خفيف -10%', label_en: 'Light Cutting -10%' },
+  { id: '0', label_ar: 'ثبات 0%', label_en: 'Maintenance 0%' },
+  { id: '+10', label_ar: 'تضخيم خفيف +10%', label_en: 'Light Bulking +10%' },
+  { id: '+20', label_ar: 'تضخيم +20%', label_en: 'Bulking +20%' },
 ];
 
-const MACRO_PRESETS = [
-  { key: 'balanced', label: 'Balanced', p: 30, c: 40, f: 30 },
-  { key: 'highp', label: 'High Protein', p: 35, c: 35, f: 30 },
-  { key: 'lowc', label: 'Low Carb', p: 35, c: 25, f: 40 },
-  { key: 'keto', label: 'Keto-ish', p: 25, c: 5, f: 70 },
-  { key: 'custom', label: 'Custom', p: 30, c: 40, f: 30 },
-];
-
-function clamp(n, a, b) {
-  const v = Number.isFinite(+n) ? +n : 0;
-  return Math.min(b, Math.max(a, v));
+// estimate kg/month from TDEE and goal percent
+function goalKgPerMonth(tdee, goalStr) {
+  const pct = parseFloat(goalStr || '0') / 100;
+  if (!tdee || !pct) return 0;
+  const dailyDelta = tdee * pct; // kcal/day
+  return (dailyDelta * 30) / 7700; // ≈ kg/month
 }
 
-export default function Page() {
-  // Inputs
-  const [unit, setUnit] = useState('metric'); // metric | imperial
-  const [sex, setSex] = useState('male'); // male | female
-  const [age, setAge] = useState(28);
-  const [height, setHeight] = useState(178); // cm or inches
-  const [weight, setWeight] = useState(78); // kg or lb
-  const [bf, setBf] = useState(15); // %
-  const [activity, setActivity] = useState('mod');
-  const [goalDelta, setGoalDelta] = useState(0);
-  const [macroPreset, setMacroPreset] = useState('balanced');
-  const [macrosPct, setMacrosPct] = useState({ p: 30, c: 40, f: 30 });
+/* ===== Utils ===== */
+function toNumber(v, d = 0) {
+  if (v === '' || v === null || typeof v === 'undefined') return d;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : d;
+}
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+function round(n, p = 0) {
+  const k = 10 ** p;
+  return Math.round(n * k) / k;
+}
 
-  // Sync macro preset → percentages
-  useEffect(() => {
-    const p = MACRO_PRESETS.find(m => m.key === macroPreset);
-    if (!p || p.key === 'custom') return;
-    setMacrosPct({ p: p.p, c: p.c, f: p.f });
-  }, [macroPreset]);
+/* ===== BMR (Mifflin–St Jeor) ===== */
+function bmrMifflin({ sex, weightKg, heightCm, age }) {
+  if (!sex || !weightKg || !heightCm || !age) return 0;
+  const s = sex === 'male' ? 5 : -161;
+  return 10 * weightKg + 6.25 * heightCm - 5 * age + s;
+}
 
-  // Metric conversions
-  const { kg, cm } = useMemo(() => {
-    if (unit === 'metric') return { kg: +weight || 0, cm: +height || 0 };
-    return { kg: (Number(weight) || 0) * 0.45359237, cm: (Number(height) || 0) * 2.54 };
-  }, [unit, weight, height]);
-
-  const lbm = useMemo(() => {
-    const bodyFat = clamp(bf, 0, 60) / 100;
-    return kg * (1 - bodyFat);
-  }, [kg, bf]);
-
-  // BMR
-  const bmr = useMemo(() => {
-    const s = sex === 'male' ? 1 : 0;
-    const mifflin = 10 * kg + 6.25 * cm - 5 * age + (s ? 5 : -161);
-    const harris = s ? 88.362 + 13.397 * kg + 4.799 * cm - 5.677 * age : 447.593 + 9.247 * kg + 3.098 * cm - 4.33 * age;
-    const katch = 370 + 21.6 * lbm;
-    const cunningham = 500 + 22 * lbm;
-    return {
-      mifflin: Math.max(0, Math.round(mifflin)),
-      harris: Math.max(0, Math.round(harris)),
-      katch: Math.max(0, Math.round(katch)),
-      cunningham: Math.max(0, Math.round(cunningham)),
-    };
-  }, [kg, cm, age, sex, lbm]);
-
-  const activityMult = useMemo(() => ACTIVITY.find(a => a.key === activity)?.mult || 1.55, [activity]);
-
-  const tdee = useMemo(() => {
-    const avgBmr = (bmr.mifflin + bmr.harris + bmr.katch + bmr.cunningham) / 4;
-    return Math.round(avgBmr * activityMult);
-  }, [bmr, activityMult]);
-
-  const targetCalories = useMemo(() => {
-    const delta = clamp(goalDelta, -40, 40);
-    return Math.max(0, Math.round(tdee * (1 + delta / 100)));
-  }, [tdee, goalDelta]);
-
-  // Macros
-  const macroGrams = useMemo(() => {
-    const p = clamp(macrosPct.p, 0, 100);
-    const c = clamp(macrosPct.c, 0, 100);
-    let f = clamp(macrosPct.f, 0, 100);
-    const sum = p + c + f;
-    if (sum !== 100) f = clamp(100 - (p + c), 0, 100);
-
-    const pCal = (p / 100) * targetCalories;
-    const cCal = (c / 100) * targetCalories;
-    const fCal = (f / 100) * targetCalories;
-
-    return {
-      pct: { p, c, f },
-      g: {
-        p: Math.round(pCal / 4),
-        c: Math.round(cCal / 4),
-        f: Math.round(fCal / 9),
-      },
-    };
-  }, [macrosPct, targetCalories]);
-
-  // Helpers
-  const resetAll = () => {
-    setUnit('metric');
-    setSex('male');
-    setAge(28);
-    setHeight(178);
-    setWeight(78);
-    setBf(15);
-    setActivity('mod');
-    setGoalDelta(0);
-    setMacroPreset('balanced');
-    setMacrosPct({ p: 30, c: 40, f: 30 });
-  };
-
-  const copySummary = async () => {
-    const lines = [`Calorie & Macro Summary`, `-----------------------`, `Sex: ${sex} | Age: ${age} | Height: ${height}${unit === 'metric' ? 'cm' : 'in'} | Weight: ${weight}${unit === 'metric' ? 'kg' : 'lb'} | BF%: ${bf}%`, `Activity: ${ACTIVITY.find(a => a.key === activity)?.label}`, ``, `BMR (kcal/day):`, `  - Mifflin-St Jeor: ${bmr.mifflin}`, `  - Harris-Benedict: ${bmr.harris}`, `  - Katch-McArdle:   ${bmr.katch}`, `  - Cunningham:      ${bmr.cunningham}`, ``, `TDEE (avg BMR × activity): ${tdee} kcal`, `Goal: ${goalDelta}% → Target: ${targetCalories} kcal`, ``, `Macros (${macroPreset}):`, `  Protein: ${macroGrams.pct.p}% → ${macroGrams.g.p} g`, `  Carbs:   ${macroGrams.pct.c}% → ${macroGrams.g.c} g`, `  Fat:     ${macroGrams.pct.f}% → ${macroGrams.g.f} g`].join('\n');
-    try {
-      await navigator.clipboard.writeText(lines);
-      alert('Copied to clipboard!');
-    } catch {
-      alert('Copy failed. (Clipboard permission?)');
-    }
-  };
-
-  // 🔁 options for YOUR Select (expects {id,label})
-  const unitOptions = [
-    { id: 'metric', label: 'Metric (kg/cm)' },
-    { id: 'imperial', label: 'Imperial (lb/in)' },
-  ];
-  const sexOptions = [
-    { id: 'male', label: 'Male' },
-    { id: 'female', label: 'Female' },
-  ];
-  const activityOptions = ACTIVITY.map(a => ({ id: a.key, label: a.label }));
-
+/* ===== Tooltip ===== */
+function Tooltip({ label, children }) {
   return (
-    <div className='min-h-screen '>
-      <div className='container !px-0 py-8'>
-        {/* Header */}
-        <div className='rounded-lg overflow-hidden border border-indigo-200 shadow-sm'>
-          <div className='relative p-6 md:p-10 bg-gradient-to-r from-indigo-600 to-violet-600 text-white'>
-            <div className='absolute inset-0 opacity-20 bg-[radial-gradient(600px_200px_at_20%_-20%,white,transparent)]' />
-            <div className='relative z-10'>
-              <h1 className='text-2xl md:text-3xl font-bold'>Coach Calorie & Macro Calculator</h1>
-              <p className='text-white/90 mt-1'>Fast planning for trainees—BMR, TDEE, goals, and macros with one clean worksheet.</p>
-              <div className='mt-4 flex flex-wrap gap-2'>
-                <Button color='subtle' className='!w-fit bg-white/95 text-indigo-700' name='Copy Summary' onClick={copySummary} />
-                <Button color='outline' className='!w-fit !text-white !border-white/60 hover:!bg-white/20' name='Print' onClick={() => window.print()} />
-                <Button color='outline' className='!w-fit !text-white !border-white/60 hover:!bg-white/20' name='Reset' onClick={resetAll} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Content grid */}
-        <div className='mt-8 grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6'>
-          {/* Inputs */}
-          <div className='lg:col-span-2 space-y-4'>
-            {/* Profile */}
-            <Card title='Trainee Profile'>
-              <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
-                <Select label='Units' options={unitOptions} value={unit} onChange={setUnit} />
-                <Select label='Sex' options={sexOptions} value={sex} onChange={setSex} />
-                <Input label='Age (yrs)' type='number' value={String(age)} onChange={v => setAge(clamp(v, 10, 90))} />
-                <Select label='Activity' options={activityOptions} value={activity} onChange={setActivity} />
-              </div>
-
-              <div className='grid grid-cols-2 md:grid-cols-4 gap-3 mt-3'>
-                <Input label={unit === 'metric' ? 'Height (cm)' : 'Height (in)'} type='number' value={String(height)} onChange={v => setHeight(clamp(v, unit === 'metric' ? 100 : 40, unit === 'metric' ? 230 : 100))} />
-                <Input label={unit === 'metric' ? 'Weight (kg)' : 'Weight (lb)'} type='number' value={String(weight)} onChange={v => setWeight(clamp(v, unit === 'metric' ? 35 : 80, unit === 'metric' ? 250 : 550))} />
-                <Input label='Body Fat (%)' type='number' value={String(bf)} onChange={v => setBf(clamp(v, 0, 60))} />
-                <ReadOnly label='Lean Mass (kg)' value={lbm.toFixed(1)} />
-              </div>
-            </Card>
-
-            {/* Goals */}
-            <Card title='Goal & Calories'>
-              <div className='flex flex-wrap items-center gap-2'>
-                {GOALS.map(g => (
-                  <Button key={g.label} color={goalDelta === g.delta ? 'primary' : 'outline'} className='!w-fit' name={`${g.label} (${g.delta > 0 ? '+' : ''}${g.delta}%)`} onClick={() => setGoalDelta(g.delta)} />
-                ))}
-                <div className='ml-auto text-sm text-slate-500'>Adjust:</div>
-                <input type='range' min={-40} max={40} step={1} value={goalDelta} onChange={e => setGoalDelta(parseInt(e.target.value, 10))} className='w-40' />
-                <span className='px-2 py-1 rounded-lg bg-slate-100 text-sm'>
-                  {goalDelta > 0 ? '+' : ''}
-                  {goalDelta}%
-                </span>
-              </div>
-
-              <div className='grid grid-cols-2 md:grid-cols-4 gap-3 mt-4'>
-                <ReadOnly label='Average BMR (4 formulas)' value={Math.round((bmr.mifflin + bmr.harris + bmr.katch + bmr.cunningham) / 4)} />
-                <ReadOnly label='Activity Multiplier' value={activityMult.toFixed(3)} />
-                <ReadOnly label='TDEE (kcal)' value={tdee} />
-                <ReadOnly label='Target (kcal)' value={targetCalories} />
-              </div>
-
-              <div className='mt-3'>
-                <BmrTable bmr={bmr} />
-              </div>
-            </Card>
-
-            {/* Macros */}
-            <Card title='Macros'>
-              <div className='flex flex-wrap items-center gap-2'>
-                {MACRO_PRESETS.map(p => (
-                  <Button key={p.key} color={macroPreset === p.key ? 'green' : 'outline'} className='!w-fit' name={p.label} onClick={() => setMacroPreset(p.key)} />
-                ))}
-              </div>
-
-              <div className='grid grid-cols-3 gap-3 mt-4'>
-                <PctInput
-                  label='Protein %'
-                  value={macrosPct.p}
-                  onChange={v => {
-                    setMacrosPct(m => ({ ...m, p: clamp(v, 0, 100) }));
-                    setMacroPreset('custom');
-                  }}
-                />
-                <PctInput
-                  label='Carbs %'
-                  value={macrosPct.c}
-                  onChange={v => {
-                    setMacrosPct(m => ({ ...m, c: clamp(v, 0, 100) }));
-                    setMacroPreset('custom');
-                  }}
-                />
-                <PctInput
-                  label='Fat %'
-                  value={macrosPct.f}
-                  onChange={v => {
-                    setMacrosPct(m => ({ ...m, f: clamp(v, 0, 100) }));
-                    setMacroPreset('custom');
-                  }}
-                />
-              </div>
-
-              <div className='mt-3'>
-                <MacroBar pct={macroGrams.pct} />
-                <div className='grid grid-cols-3 gap-3 mt-3'>
-                  <ReadOnly label='Protein (g)' value={macroGrams.g.p} />
-                  <ReadOnly label='Carbs (g)' value={macroGrams.g.c} />
-                  <ReadOnly label='Fat (g)' value={macroGrams.g.f} />
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Summary */}
-          <div className='space-y-4'>
-            <Card title='Coach Summary'>
-              <div className='space-y-3'>
-                <SummaryRow label='Target Calories' value={`${targetCalories} kcal`} big />
-                <div className='grid grid-cols-3 gap-2'>
-                  <Pill title='Protein' value={`${macroGrams.g.p} g`} sub={`${macroGrams.pct.p}%`} color='indigo' />
-                  <Pill title='Carbs' value={`${macroGrams.g.c} g`} sub={`${macroGrams.pct.c}%`} color='blue' />
-                  <Pill title='Fat' value={`${macroGrams.g.f} g`} sub={`${macroGrams.pct.f}%`} color='amber' />
-                </div>
-
-                <div className='mt-3 p-3 rounded-lg bg-slate-50 border border-slate-200 text-sm'>
-                  <div className='font-medium mb-1'>Notes</div>
-                  <ul className='list-disc pl-5 space-y-1 text-slate-600'>
-                    <li>TDEE = average(BMR formulas) × activity level</li>
-                    <li>Goals adjust calories by −40% to +40%</li>
-                    <li>Macros automatically balance to 100%</li>
-                  </ul>
-                </div>
-              </div>
-            </Card>
-
-            <Card title='Quick Conversions'>
-              <div className='grid grid-cols-2 gap-3'>
-                <ReadOnly label='Weight (lb)' value={unit === 'imperial' ? weight : Math.round(weight * 2.20462)} />
-                <ReadOnly label='Weight (kg)' value={unit === 'metric' ? weight : Math.round(weight * 0.453592)} />
-                <ReadOnly label='Height (in)' value={unit === 'imperial' ? height : Math.round(height / 2.54)} />
-                <ReadOnly label='Height (cm)' value={unit === 'metric' ? height : Math.round(height * 2.54)} />
-              </div>
-            </Card>
-          </div>
-        </div>
-
-        <Footer />
-      </div>
-    </div>
+    <span className='relative inline-flex items-center group cursor-help'>
+      {children}
+      <span className='pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 rtl:left-auto rtl:right-0 rtl:translate-x-0 whitespace-pre rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20'>{label}</span>
+    </span>
+  );
+}
+function InfoBadge({ title }) {
+  return (
+    <Tooltip label={title}>
+      <Info className='w-3.5 h-3.5 text-slate-400 ml-1' />
+    </Tooltip>
   );
 }
 
-/* ===== UI bits (including SummaryRow) ===== */
-
-function Card({ title, children }) {
+/* ===== Small UI bits ===== */
+function ReadStat({ title, value }) {
   return (
-    <div className='bg-white rounded-lg border border-slate-200 shadow-sm'>
-      <div className='px-4 sm:px-5 py-4 border-b border-slate-100'>
-        <h3 className='font-semibold'>{title}</h3>
-      </div>
-      <div className='p-4 sm:p-5'>{children}</div>
+    <div className='rounded-lg border border-slate-200 bg-slate-50 px-3 py-2'>
+      <div className='text-[11px] text-slate-500'>{title}</div>
+      <div className='text-slate-800 font-semibold'>{value}</div>
     </div>
   );
 }
-
-// ✅ Your Input already handles type=number; we wrap to keep styling consistent for % inputs
-function PctInput({ label, value, onChange }) {
+function SmallStat({ title, value }) {
   return (
     <div>
-      <Input label={label} type='number' value={String(value)} onChange={v => onChange(parseFloat(v || 0))} cnInput='pr-12' />
-      <div className='text-[11px] text-slate-500 mt-1'>0–100%</div>
+      <div className='text-[11px] text-slate-500 mb-0.5'>{title}</div>
+      <div className='text-slate-800 font-medium'>{value}</div>
     </div>
   );
 }
-
-// Small read-only display box
-function ReadOnly({ label, value }) {
-  return (
-    <label className='block'>
-      <div className='text-sm text-slate-600 mb-1'>{label}</div>
-      <div className='w-full h-11 px-3 rounded-lg border border-slate-200 bg-slate-50 grid place-items-center text-slate-800'>{value}</div>
-    </label>
-  );
-}
-
-// 🌟 NEW: SummaryRow for left label + right value (big variant)
 function SummaryRow({ label, value, big = false }) {
   return (
     <div className={`flex items-center justify-between rounded-lg border ${big ? 'border-indigo-200 bg-indigo-50' : 'border-slate-200 bg-slate-50'} px-3 py-2`}>
       <div className={`font-medium ${big ? 'text-indigo-800' : 'text-slate-700'}`}>{label}</div>
-      <div className={`${big ? 'text-2xl font-bold text-indigo-700' : 'text-sm text-slate-700'}`}>{value}</div>
+      <div className={`${big ? 'text-xl md:text-2xl font-bold text-indigo-700' : 'text-sm text-slate-700'}`}>{value}</div>
     </div>
   );
 }
-
-function MacroBar({ pct }) {
-  const seg = (val, color) => <div className={`h-3 rounded-full ${color}`} style={{ width: `${clamp(val, 0, 100)}%` }} />;
-  return (
-    <div>
-      <div className='h-3 w-full rounded-full bg-slate-100 overflow-hidden flex'>
-        {seg(pct.p, 'bg-indigo-500')}
-        {seg(pct.c, 'bg-blue-500')}
-        {seg(pct.f, 'bg-amber-500')}
-      </div>
-      <div className='mt-1 text-[11px] text-slate-500'>Protein / Carbs / Fat</div>
-    </div>
-  );
-}
-
 function Pill({ title, value, sub, color = 'indigo' }) {
-  const palette = {
-    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    blue: 'bg-blue-50 text-blue-700 border-blue-200',
-    amber: 'bg-amber-50 text-amber-700 border-amber-200',
-  }[color];
+  const palette =
+    {
+      indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      blue: 'bg-blue-50 text-blue-700 border-blue-200',
+      amber: 'bg-amber-50 text-amber-700 border-amber-200',
+    }[color] || 'bg-slate-50 text-slate-700 border-slate-200';
   return (
     <div className={`p-3 rounded-lg border ${palette}`}>
-      <div className='text-xs'>{title}</div>
-      <div className='text-lg font-semibold leading-none'>{value}</div>
-      <div className='text-[11px] mt-0.5'>{sub}</div>
+      <div className='flex items-center flex-wrap justify-between gap-1'>
+        <div className='text-xs'>{title}</div>
+        <div className='flex items-baseline gap-1 text-sm font-semibold leading-none'>
+          {value}
+          {sub ? <div className='text-[10px] rtl:order-[-2]'>{sub}</div> : null}
+        </div>
+      </div>
     </div>
   );
 }
 
-function BmrTable({ bmr }) {
-  const rows = [
-    ['Mifflin-St Jeor', bmr.mifflin],
-    ['Harris-Benedict', bmr.harris],
-    ['Katch-McArdle', bmr.katch],
-    ['Cunningham', bmr.cunningham],
-  ];
+/* ===== Food Search (typeahead, AR/EN) ===== */
+function FoodSearch({ foods, value, onChange, onPick, placeholder }) {
+  const locale = useLocale();
+  const isEn = (locale || '').toLowerCase().startsWith('en');
+  const [open, setOpen] = useState(false);
+
+  const norm = s => (s || '').toString().toLowerCase().trim();
+  const results = useMemo(() => {
+    const q = norm(value);
+    return foods.filter(f => norm(f.name).includes(q) || norm(f.name_en).includes(q));
+  }, [value, foods]);
+
+  const labelOf = f => (isEn ? f.name_en || f.name : f.name || f.name_en || '');
+
+  const pick = item => {
+    onPick?.(item);
+    setOpen(false);
+  };
+
+  const onBlurSafeClose = () => setTimeout(() => setOpen(false), 120);
+
   return (
-    <div className='overflow-hidden rounded-lg border border-slate-200'>
-      <table className='w-full text-sm'>
-        <thead className='bg-slate-50'>
-          <tr>
-            <th className='text-left px-3 py-2'>Formula</th>
-            <th className='text-left px-3 py-2'>BMR (kcal/day)</th>
-          </tr>
-        </thead>
-        <tbody className='bg-white'>
-          {rows.map(r => (
-            <tr key={r[0]} className='border-t border-slate-100'>
-              <td className='px-3 py-2'>{r[0]}</td>
-              <td className='px-3 py-2 font-medium'>{r[1]}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className='relative z-[100] '>
+      <div className='relative'>
+        <Search className='absolute top-1/2 -translate-y-1/2 rtl:left-3 ltr:left-3 w-4 h-4 text-slate-400 pointer-events-none' />
+        <input
+          className='w-full h-11 pl-9 pr-3 rounded-lg border border-slate-300 hover:border-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none text-sm bg-white'
+          placeholder={placeholder}
+          value={value}
+          inputMode='search'
+          onChange={e => {
+            onChange?.(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={onBlurSafeClose}
+        />
+      </div>
+
+      {open && (
+        <div className='absolute z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg max-h-[280px] overflow-auto overscroll-contain'>
+          {results.length === 0 ? (
+            <div className='p-3 text-sm text-slate-500'>لا توجد نتائج / No results</div>
+          ) : (
+            results.map(f => (
+              <button key={f.id} type='button' onMouseDown={e => e.preventDefault()} onClick={() => pick(f)} className='w-full text-left px-3 py-3 text-[15px] hover:bg-indigo-50 focus:bg-indigo-50'>
+                <div className='rtl:text-right font-medium text-slate-800 line-clamp-1'>{labelOf(f)}</div>
+                <div className='rtl:text-right text-xs text-slate-500'>
+                  {f.per} {f.unit} • {f.kcal} kcal • P {f.p} / C {f.c} / F {f.f}
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-function Footer() {
-  return <div className='mt-10 text-center text-xs text-slate-500'>Tip: For strength athletes, keep protein ~1.6–2.2 g/kg LBM and adjust carbs based on training volume.</div>;
+export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
+  const t = useTranslations('calorie');
+  const locale = useLocale();
+  const isEn = (locale || '').toLowerCase().startsWith('en');
+
+  /* ===== Inputs (NO default values) ===== */
+  const [sex, setSex] = useState(''); // '' | 'male' | 'female'
+  const [age, setAge] = useState(''); // number string or ''
+  const [height, setHeight] = useState(''); // cm
+  const [weight, setWeight] = useState(''); // kg
+  const [activity, setActivity] = useState(''); // multiplier string
+  const [goal, setGoal] = useState(''); // delta string like '+10'
+
+  /* ===== Foods (merge built-ins + custom if you add later) ===== */
+  const [customFoods, setCustomFoods] = useState([]);
+  const mergedFoods = useMemo(() => [...foods, ...customFoods], [foods, customFoods]);
+
+  /* ===== Food calc + meal ===== */
+  const [foodId, setFoodId] = useState(''); // selected id
+  const [qty, setQty] = useState(''); // amount in selectedFood.unit
+  const [mealItems, setMealItems] = useState([]); // { id, qty }
+
+  /* ===== Food search value ===== */
+  const [foodSearch, setFoodSearch] = useState('');
+
+  /* ===== Generate summary flow ===== */
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  /* ===== Persist / Load ===== */
+  useEffect(() => {
+    try {
+      const prof = JSON.parse(localStorage.getItem(LS.PROFILE) || 'null');
+      if (prof) {
+        setSex(prof.sex ?? '');
+        setAge(prof.age ?? '');
+        setHeight(prof.height ?? '');
+        setWeight(prof.weight ?? '');
+        setActivity(prof.activity ?? '');
+        setGoal(prof.goal ?? '');
+      }
+      const savedMeal = JSON.parse(localStorage.getItem(LS.MEAL) || 'null');
+      if (savedMeal && Array.isArray(savedMeal)) setMealItems(savedMeal);
+      const savedFoods = JSON.parse(localStorage.getItem(LS.CUSTOM_FOODS) || 'null');
+      if (savedFoods && Array.isArray(savedFoods)) setCustomFoods(savedFoods);
+    } catch {}
+  }, []);
+  useEffect(() => {
+    localStorage.setItem(LS.PROFILE, JSON.stringify({ sex, age, height, weight, activity, goal }));
+  }, [sex, age, height, weight, activity, goal]);
+  useEffect(() => {
+    localStorage.setItem(LS.MEAL, JSON.stringify(mealItems));
+  }, [mealItems]);
+
+  /* ===== Numbers for math (0 if empty) ===== */
+  const ageN = toNumber(age, 0);
+  const heightN = toNumber(height, 0);
+  const weightN = toNumber(weight, 0);
+  const actMult = activity ? parseFloat(activity) : 0;
+  const goalPct = goal ? parseFloat(goal) / 100 : 0;
+
+  /* ===== Calculations ===== */
+  const bmr = useMemo(() => bmrMifflin({ sex, weightKg: weightN, heightCm: heightN, age: ageN }), [sex, weightN, heightN, ageN]);
+  const tdee = useMemo(() => (bmr && actMult ? bmr * actMult : 0), [bmr, actMult]);
+  const targetCalories = useMemo(() => (tdee ? tdee * (1 + goalPct) : 0), [tdee, goalPct]);
+
+  // Macro suggestion when weight provided
+  const proteinG = useMemo(() => (weightN ? clamp(2 * weightN, 80, 250) : 0), [weightN]);
+  const fatG = useMemo(() => (weightN ? clamp(0.9 * weightN, 40, 140) : 0), [weightN]);
+  const carbsG = useMemo(() => {
+    if (!targetCalories) return 0;
+    const pCal = proteinG * 4;
+    const fCal = fatG * 9;
+    return Math.max(0, (targetCalories - pCal - fCal) / 4);
+  }, [targetCalories, proteinG, fatG]);
+
+  const macroPct = useMemo(() => {
+    const pCal = proteinG * 4;
+    const fCal = fatG * 9;
+    const cCal = carbsG * 4;
+    const sum = pCal + fCal + cCal || 1;
+    return {
+      p: Math.round((pCal / sum) * 100),
+      c: Math.round((cCal / sum) * 100),
+      f: Math.round((fCal / sum) * 100),
+    };
+  }, [proteinG, fatG, carbsG]);
+
+  // Locale-aware food name
+  const displayName = f => (isEn ? f.name_en || f.name : f.name || f.name_en || '');
+
+  // Filter for search dropdown
+  const filteredFoods = useMemo(() => {
+    const q = (foodSearch || '').toLowerCase().trim();
+    if (!q) return mergedFoods;
+    return mergedFoods.filter(f => {
+      const a = (f.name || '').toLowerCase();
+      const b = (f.name_en || '').toLowerCase();
+      return a.includes(q) || b.includes(q);
+    });
+  }, [mergedFoods, foodSearch]);
+
+  // Selected food by id
+  const selectedFood = useMemo(() => mergedFoods.find(f => f.id === foodId) || null, [mergedFoods, foodId]);
+
+  // Quick single item totals
+  const qtyN = toNumber(qty, 0);
+  const quickFoodTotals = useMemo(() => {
+    if (!selectedFood || !qtyN) return { kcal: 0, p: 0, c: 0, f: 0, unit: selectedFood?.unit || '' };
+    const factor = qtyN / selectedFood.per;
+    return {
+      kcal: round(selectedFood.kcal * factor),
+      p: round(selectedFood.p * factor, 1),
+      c: round(selectedFood.c * factor, 1),
+      f: round(selectedFood.f * factor, 1),
+      unit: selectedFood.unit,
+    };
+  }, [selectedFood, qtyN]);
+
+  // Meal totals
+  const findFood = id => mergedFoods.find(f => f.id === id);
+  const mealTotals = useMemo(() => {
+    let kcal = 0,
+      p = 0,
+      c = 0,
+      f = 0;
+    for (const it of mealItems) {
+      const food = findFood(it.id);
+      const q = toNumber(it.qty, 0);
+      if (!food || !q) continue;
+      const factor = q / food.per;
+      kcal += food.kcal * factor;
+      p += food.p * factor;
+      c += food.c * factor;
+      f += food.f * factor;
+    }
+    return { kcal: round(kcal), p: round(p, 1), c: round(c, 1), f: round(f, 1) };
+  }, [mealItems]);
+
+  // Header stats
+  const headerStats = {
+    bmr: Math.round(bmr || 0),
+    tdee: Math.round(tdee || 0),
+    target: Math.round(targetCalories || 0),
+    protein: Math.round(proteinG || 0),
+    carbs: Math.round(carbsG || 0),
+    fat: Math.round(fatG || 0),
+  };
+
+  /* ===== Options (locale-aware) ===== */
+  const sexOptions = [
+    { id: 'male', label: t('sex.male') },
+    { id: 'female', label: t('sex.female') },
+  ];
+  const activityOptions = ACTIVITY.map(a => ({
+    id: a.id,
+    label: isEn ? a.label_en : a.label_ar,
+  }));
+
+  // goal label + live kg/month badge (always computed so user sees the value)
+  const goalOptions = GOALS.map(g => {
+    const kg = goalKgPerMonth(tdee, g.id);
+    const kgAbs = Math.abs(kg).toFixed(2);
+    const isCut = parseFloat(g.id) < 0;
+    const isBulk = parseFloat(g.id) > 0;
+
+    const labelAR = isCut ? `${g.label_ar} → نقص ≈ ${kgAbs} كجم/الشهر` : isBulk ? `${g.label_ar} → زيادة ≈ ${kgAbs} كجم/الشهر` : `${g.label_ar} → بدون تغيير`;
+
+    const labelEN = isCut ? `${g.label_en} → ≈ ${kgAbs} kg/month loss` : isBulk ? `${g.label_en} → ≈ ${kgAbs} kg/month gain` : `${g.label_en} → no change`;
+
+    return {
+      id: g.id,
+      label: isEn ? labelEN : labelAR,
+    };
+  });
+
+  /* ===== Actions ===== */
+  const resetAll = () => {
+    setSex('');
+    setAge('');
+    setHeight('');
+    setWeight('');
+    setActivity('');
+    setGoal('');
+    setFoodSearch('');
+    setFoodId('');
+    setQty('');
+    setMealItems([]);
+    setShowSummary(false);
+    setIsGenerating(false);
+    setProgress(0);
+  };
+
+  const addItem = () => {
+    if (!selectedFood) return;
+    const q = qtyN;
+    if (q <= 0) return;
+    const exists = mealItems.find(m => m.id === selectedFood.id);
+    if (exists) setMealItems(prev => prev.map(m => (m.id === selectedFood.id ? { ...m, qty: toNumber(m.qty, 0) + q } : m)));
+    else setMealItems(prev => [...prev, { id: selectedFood.id, qty: q }]);
+  };
+  const updateQty = (id, newQty) => setMealItems(prev => prev.map(m => (m.id === id ? { ...m, qty: clamp(toNumber(newQty, 0), 0, 100000) } : m)));
+  const removeItem = id => setMealItems(prev => prev.filter(m => m.id !== id));
+
+  const generateSummary = () => {
+    setShowSummary(false);
+    setIsGenerating(true);
+    setProgress(0);
+    const steps = [12, 35, 62, 84, 100];
+    let i = 0;
+    const tick = () => {
+      setProgress(steps[i]);
+      i++;
+      if (i < steps.length) setTimeout(tick, 240);
+      else {
+        setIsGenerating(false);
+        setShowSummary(true);
+      }
+    };
+    setTimeout(tick, 220);
+  };
+
+  /* ===================== RENDER ===================== */
+  return (
+    <div className=' '>
+      {/* Header — compact on mobile */}
+      <GradientStatsHeader hiddenStats onClick={resetAll} btnName={t('actions.reset')} title={t('header.title')} desc={t('header.desc')} loadingStats={false}>
+        <StatCard icon={Flame} title='BMR' value={headerStats.bmr} />
+        <StatCard icon={Gauge} title='TDEE' value={headerStats.tdee} />
+        <StatCard icon={Calculator} title={t('labels.targetKcal')} value={headerStats.target} />
+        <StatCard cn='!flex-wrap' icon={Apple} title={t('labels.macrosPCF')} value={`${headerStats.protein} / ${headerStats.carbs} / ${headerStats.fat} g`} />
+      </GradientStatsHeader>
+
+      {/* Content */}
+      <div className=' py-4 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4'>
+        {/* BOX 1: Daily Need + Summary */}
+        <section className=' overflow-hidden rounded-lg sm:rounded-lg bg-white/90 backdrop-blur border border-slate-200 shadow-sm'>
+          <header className='px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-100 flex items-center gap-2 sticky top-0 bg-white/80 backdrop-blur z-10'>
+            <Ruler className='w-4 h-4 text-indigo-600 shrink-0' />
+            <h2 className='font-semibold text-slate-800 text-base sm:text-lg'>{t('sections.dailyNeed')}</h2>
+          </header>
+
+          <div className='p-3 sm:p-5 space-y-3 sm:space-y-4'>
+            {/* Inputs (no defaults) */}
+            <div className='grid grid-cols-2 gap-2 sm:gap-3'>
+              <Select label={t('labels.sex')} options={sexOptions} value={sex} onChange={setSex} />
+              <Input label={t('labels.ageYears')} type='number' inputMode='numeric' value={age} onChange={setAge} placeholder='—' />
+              <Input label={t('labels.heightCm')} type='number' inputMode='numeric' value={height} onChange={setHeight} placeholder='—' />
+              <Input label={t('labels.weightKg')} type='number' inputMode='numeric' value={weight} onChange={setWeight} placeholder='—' />
+            </div>
+
+            <div className='grid grid-cols-1 gap-2 sm:gap-3'>
+              <Select label={t('labels.activity')} options={activityOptions} value={activity} onChange={setActivity} />
+              <Select label={t('labels.goal')} options={goalOptions} value={goal} onChange={setGoal} />
+            </div>
+
+            {/* Generate Summary + Loader */}
+            <div className='pt-1'>
+              <Button name={t('actions.generateSummary')} onClick={generateSummary} className='!w-full sm:!w-fit' />
+              {isGenerating && (
+                <div className='mt-3'>
+                  <div className='relative h-3 w-full overflow-hidden rounded-full bg-slate-100 border border-slate-200'>
+                    <div
+                      className='h-full transition-all duration-300'
+                      style={{
+                        width: `${progress}%`,
+                        backgroundImage: 'repeating-linear-gradient(45deg, rgba(99,102,241,0.95) 0, rgba(99,102,241,0.95) 12px, rgba(165,180,252,0.95) 12px, rgba(165,180,252,0.95) 24px)',
+                      }}
+                    />
+                  </div>
+                  <div className='mt-1 flex items-center justify-between text-[11px] text-slate-500'>
+                    <span>{t('loader.generating')}</span>
+                    <span>{progress}%</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Summary */}
+            {showSummary && (
+              <div className='mt-2 sm:mt-3 rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 sm:p-4'>
+                <div className='flex items-center gap-2 mb-2 sm:mb-3'>
+                  <Calculator className='w-4 h-4 text-violet-600' />
+                  <div className='font-semibold text-slate-800 text-sm sm:text-base'>{t('sections.summary')}</div>
+                </div>
+
+                <SummaryRow label={t('labels.targetCalories')} value={`${Math.round(targetCalories || 0)} kcal`} big />
+                <div className='grid grid-cols-3 gap-2 mt-2'>
+                  <Pill title={t('labels.protein')} value={`${Math.round(proteinG || 0)} g`} sub={`${macroPct.p}%`} color='indigo' />
+                  <Pill title={t('labels.carbs')} value={`${Math.round(carbsG || 0)} g`} sub={`${macroPct.c}%`} color='blue' />
+                  <Pill title={t('labels.fat')} value={`${Math.round(fatG || 0)} g`} sub={`${macroPct.f}%`} color='amber' />
+                </div>
+
+                <div className='grid grid-cols-2 gap-2 sm:gap-3 mt-3'>
+                  <ReadStat
+                    title={
+                      <span>
+                        BMR <InfoBadge title={t('tips.bmr')} />
+                      </span>
+                    }
+                    value={`${Math.round(bmr || 0)} kcal`}
+                  />
+                  <ReadStat
+                    title={
+                      <span>
+                        TDEE <InfoBadge title={t('tips.tdee')} />
+                      </span>
+                    }
+                    value={`${Math.round(tdee || 0)} kcal`}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* BOX 2: Food Calculator + Meal */}
+        <section className=' overflow-hidden rounded-lg sm:rounded-lg bg-white/90 backdrop-blur border border-slate-200 shadow-sm'>
+          <header className='px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-100 flex items-center gap-2 sticky top-0 bg-white/80 backdrop-blur z-10'>
+            <Apple className='w-4 h-4 text-emerald-600 shrink-0' />
+            <h2 className='font-semibold text-slate-800 text-base sm:text-lg'>{t('sections.foodCalc')}</h2>
+          </header>
+
+          <div className='p-3 sm:p-5 space-y-3 sm:space-y-4'>
+            {/* Search + qty (wrap on mobile) */}
+            <div className='grid  grid-cols-[1fr_100px] gap-2 sm:gap-3 items-stretch'>
+              <FoodSearch
+                foods={filteredFoods}
+                value={foodSearch}
+                onChange={setFoodSearch}
+                onPick={f => {
+                  setFoodId(f.id);
+                  setFoodSearch(displayName(f));
+                }}
+                placeholder={t('labels.searchFood')}
+              />
+              <Input placeholder={`${t('labels.amount')}${selectedFood?.unit ? ` (${selectedFood.unit})` : ''}`} type='number' inputMode='numeric' value={qty} onChange={setQty} className='[&>input]:text-base sm:[&>input]:text-sm' />
+            </div>
+
+            {/* Sticky action bar on mobile for quick Add/Clear */}
+            <div className='sm:hidden sticky bottom-2 z-20'>
+              <div className={`rounded-lg shadow-lg border border-slate-200 bg-white/95 backdrop-blur px-3 py-2 flex items-center gap-2`}>
+                <div className='flex-1 min-w-0'>
+                  <div className='text-[12px] text-slate-500'>{t('labels.item')}</div>
+                  <div className='text-sm font-medium text-slate-800 truncate'>{selectedFood ? displayName(selectedFood) : t('labels.pickFoodHint')}</div>
+                </div>
+                <Button name={t('actions.addItem')} disabled={!selectedFood || !qty} onClick={addItem} className='!px-3 !py-2 !text-sm' />
+                <Button name={t('actions.clearMeal')} color='neutral' onClick={() => setMealItems([])} className='!px-3 !py-2 !text-sm' />
+              </div>
+            </div>
+
+            {/* Quick single calc */}
+            <div className={`${!selectedFood && "flex items-center justify-between"}  rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3`}>
+              {!selectedFood ? (
+                <div className='text-sm text-slate-500'>{t('labels.pickFoodHint')}</div>
+              ) : (
+                <div className='grid grid-cols-2 sm:grid-cols-[1fr_90px_90px_90px_90px] gap-3 text-sm'>
+                  <SmallStat title={t('labels.item')} value={displayName(selectedFood)} />
+                  <SmallStat title={t('labels.kcal')} value={`${quickFoodTotals.kcal} kcal`} />
+                  <SmallStat title={t('labels.protein')} value={`${quickFoodTotals.p} g`} />
+                  <SmallStat title={t('labels.carbs')} value={`${quickFoodTotals.c} g`} />
+                  <SmallStat title={t('labels.fat')} value={`${quickFoodTotals.f} g`} />
+                </div>
+              )}
+
+              {/* Desktop add/clear (mobile has sticky bar) */}
+              <div className={`${selectedFood && " mt-3"} hidden sm:flex items-center gap-2`}>
+                <Button name={t('actions.addItem')} onClick={addItem} />
+                <Button name={t('actions.clearMeal')} color='neutral' onClick={() => setMealItems([])} />
+              </div>
+            </div>
+
+            {/* Meal list — cards on mobile, table on md+ */}
+            {mealItems.length === 0 ? (
+              <div className='text-sm text-slate-500'>{t('labels.mealEmpty')}</div>
+            ) : (
+              <>
+                <div className=' overflow-auto rounded-lg border border-slate-200'>
+                  <table className='w-full text-sm'>
+                    <thead className='bg-slate-50/80 sticky top-0'>
+                      <tr className='text-slate-600'>
+                        <th className='text-left px-3 py-2'>{t('labels.item')}</th>
+                        <th className='text-right px-3 py-2'>{t('labels.qty')}</th>
+                        <th className='text-right px-3 py-2'>{t('labels.kcal')}</th>
+                        <th className='text-right px-3 py-2'>{t('labels.p')}</th>
+                        <th className='text-right px-3 py-2'>{t('labels.c')}</th>
+                        <th className='text-right px-3 py-2'>{t('labels.f')}</th>
+                        <th className='px-3 py-2'></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mealItems.map(it => {
+                        const f = findFood(it.id);
+                        if (!f) return null;
+                        const factor = (toNumber(it.qty, 0) || 0) / f.per;
+                        return (
+                          <tr key={it.id} className='odd:bg-white even:bg-slate-50/50 border-t border-slate-100'>
+                            <td className='px-3 py-2'>{displayName(f)}</td>
+                            <td className='px-3 py-2 text-right'>
+                              <input type='number' className='w-[80px] text-right border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 hover:border-slate-400 transition-colors' value={it.qty ?? ''} onChange={e => updateQty(it.id, e.target.value)} placeholder='0' inputMode='numeric' />
+                            </td>
+                            <td className='px-3 py-2 text-right'>{round(f.kcal * factor)}</td>
+                            <td className='px-3 py-2 text-right'>{round(f.p * factor, 1)}g</td>
+                            <td className='px-3 py-2 text-right'>{round(f.c * factor, 1)}g</td>
+                            <td className='px-3 py-2 text-right'>{round(f.f * factor, 1)}g</td>
+                            <td className='px-3 py-2 text-right'>
+                              <Button icon={<Trash size={16} />} color='danger' className='!py-1 !px-3 !text-sm' onClick={() => removeItem(it.id)} />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className='bg-slate-50 border-t border-slate-200'>
+                        <td className='px-3 py-2 font-medium'>{t('labels.total')}</td>
+                        <td className='px-3 py-2'></td>
+                        <td className='px-3 py-2 text-right font-semibold'>{mealTotals.kcal}</td>
+                        <td className='px-3 py-2 text-right font-semibold'>{mealTotals.p}g</td>
+                        <td className='px-3 py-2 text-right font-semibold'>{mealTotals.c}g</td>
+                        <td className='px-3 py-2 text-right font-semibold'>{mealTotals.f}g</td>
+                        <td className='px-3 py-2'></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
 }

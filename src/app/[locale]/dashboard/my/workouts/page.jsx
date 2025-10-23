@@ -1,12 +1,4 @@
-/* 
-  Local-first workouts with reliable refresh:
-  - Edits/add/remove/toggle persist a snapshot for the current exercise to localStorage.
-  - On refresh/open and day/exercise change, we re-apply any queued snapshot so nothing looks "null".
-  - "Sync now" sends the queued payload(s) to /prs; on success we remove them from localStorage
-    AND update workout.sets in-place so the table shows the latest synced data.
-  - Initial prefill from /prs/last-workout-sets copies weight, reps, AND done.
-*/
-
+ 
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';

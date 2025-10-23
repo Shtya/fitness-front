@@ -75,7 +75,7 @@ export default function Layout({ children }) {
 
             <AnimatePresence mode='wait'>
               <motion.main key={pathname} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}>
-                <div className={`${!isAuthRoute && 'bg-[#f7f9fc] h-[calc(100vh-65px)] overflow-auto max-md:p-3 p-4'}`}>{children}</div>
+                <div className={`${!isAuthRoute && 'bg-[#f7f9fc] h-[calc(100vh-65px)] overflow-auto max-md:p-3 p-4 overflow-x-hidden'}`}>{children}</div>
               </motion.main>
             </AnimatePresence>
           </div>

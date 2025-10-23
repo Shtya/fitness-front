@@ -26,14 +26,14 @@ export function PageHeader({ className, icon: Icon, title, subtitle, actions = n
   );
 }
 
-export function StatCard({ icon: Icon, title, value }) {
+export function StatCard({ cnParent, cn, icon: Icon, title, value }) {
   return (
-    <div className='relative overflow-hidden text-white rounded-lg border border-white/20 bg-white/10 p-3'>
+    <div className={`${cnParent} relative overflow-hidden text-white rounded-lg border border-white/20 bg-white/10 p-3`}>
       <div className='flex items-start justify-between gap-2'>
         <div className='grid place-items-center rounded-lg bg-white/15 p-2'>
           <Icon className='h-5 w-5' />
         </div>
-        <div className='flex items-center gap-2 flex-1 justify-between'>
+        <div className={`flex items-center gap-2 flex-1 justify-between ${cn} `}>
           <p className='text-sm text-white/85 text-nowrap truncate  '>{title}</p>
           <p className=' text-lg font-bold tracking-tight'>{value}</p>
         </div>
@@ -61,7 +61,7 @@ export function StatCardArray({ icon: Icon, title = [], value = [] }) {
     </div>
   );
 }
- 
+
 /* --------- Badge + Pills --------- */
 export function Badge({ color = 'slate', children }) {
   const map = {
@@ -127,7 +127,7 @@ export function Select({ label, value, setValue, options, className = '' }) {
   );
 }
 
-export function Modal({ cn , maxHBody , open, onClose, title, children , maxH, maxW = 'max-w-3xl' }) {
+export function Modal({ cn, maxHBody, open, onClose, title, children, maxH, maxW = 'max-w-3xl' }) {
   const shouldReduce = useReducedMotion();
   const containerRef = useRef(null);
   const closeBtnRef = useRef(null);
@@ -300,8 +300,7 @@ export function MacroBar({ p = 0, c = 0, f = 0, className = '' }) {
   );
 }
 
- 
- const shimmerStyle = `
+const shimmerStyle = `
 @keyframes tabsShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 .tabs-skeleton{background:linear-gradient(90deg,#e9eef5 0%,#f5f7fb 40%,#e9eef5 80%);background-size:200% 100%;animation:tabsShimmer 1.2s linear infinite;}
 `;
@@ -317,16 +316,7 @@ function InjectShimmer() {
   return null;
 }
 
-export function TabsPill({
-  hiddenArrow = false,
-  slice,
-  tabs = [],
-  active,
-  onChange,
-  className = '',
-  id = 'ui-tabs-pill',
-  skeletonCount = 5, 
-}) {
+export function TabsPill({ sliceInPhone = true, hiddenArrow = false, slice, tabs = [], active, onChange, className = '', id = 'ui-tabs-pill', skeletonCount = 5 }) {
   const scrollerRef = useRef(null);
   const tabRefs = useRef({}); // { [key]: HTMLElement }
 
@@ -389,7 +379,7 @@ export function TabsPill({
         {/* Prev button */}
         {!hiddenArrow && (
           <button type='button' onClick={goPrev} aria-label='Previous tab' disabled={!hasPrev} className={[' max-md:!hidden inline-flex items-center justify-center h-[40px] w-[30px] rounded-lg border transition', 'bg-white/90 border-slate-200', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', !hasPrev ? 'opacity-40 cursor-not-allowed' : ''].join(' ')}>
-            <ChevronLeft className='w-5 h-5 text-slate-700' />
+            <ChevronLeft className=' rtl:scale-x-[-1] w-5 h-5 text-slate-700' />
           </button>
         )}
 
@@ -411,8 +401,9 @@ export function TabsPill({
                         {isActive && <motion.span layoutId='tabs-pill' className='absolute inset-0 after:!rounded-lg !rounded-lg bg-second shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
                         <span className={`relative z-10 text-nowrap ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-700'} capitalize`}>
                           {t.icon ? <t.icon className=' max-md:hidden inline w-4 h-4 mr-1 -mt-0.5' /> : null}
-													<span className='md:hidden' > {t.label?.slice(0, 3)} </span>
-													<span className='max-md:hidden' > {t.label} </span>
+
+                          <span className={` ${!sliceInPhone && '!hidden'} md:hidden`}> {t.label?.slice(0, 3)} </span>
+                          <span className={` ${!sliceInPhone && '!flex'} max-md:hidden`}> {t.label} </span>
                         </span>
                       </motion.button>
                     );
@@ -424,105 +415,13 @@ export function TabsPill({
         {/* Next button */}
         {!hiddenArrow && (
           <button type='button' onClick={goNext} aria-label='Next tab' disabled={!hasNext} className={[' max-md:!hidden inline-flex items-center justify-center h-[40px] w-[30px] rounded-lg border transition', 'bg-white/90 border-slate-200', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', !hasNext ? 'opacity-40 cursor-not-allowed' : ''].join(' ')}>
-            <ChevronRight className='w-5 h-5 text-slate-700' />
+            <ChevronRight className='rtl:scale-x-[-1] w-5 h-5 text-slate-700' />
           </button>
         )}
       </div>
     </div>
   );
 }
-
-// export function TabsPill({ hiddenArrow = false , slice, tabs = [], active, onChange, className = '', id = 'ui-tabs-pill' }) {
-//   const scrollerRef = useRef(null);
-//   const tabRefs = useRef({}); // { [key]: HTMLElement }
-
-//   const activeIndex = useMemo(
-//     () =>
-//       Math.max(
-//         0,
-//         tabs.findIndex(t => t.key === active),
-//       ),
-//     [tabs, active],
-//   );
-
-//   const hasPrev = activeIndex > 0;
-//   const hasNext = activeIndex < tabs.length - 1;
-
-//   const goPrev = () => {
-//     if (!hasPrev) return;
-//     const prevKey = tabs[activeIndex - 1]?.key;
-//     if (prevKey) onChange(prevKey);
-//   };
-
-//   const goNext = () => {
-//     if (!hasNext) return;
-//     const nextKey = tabs[activeIndex + 1]?.key;
-//     if (nextKey) onChange(nextKey);
-//   };
-
-//   // keep active pill in view
-//   useEffect(() => {
-//     const el = tabRefs.current[active];
-//     if (el && typeof el.scrollIntoView === 'function') {
-//       el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-//     }
-//   }, [active]);
-
-//   // keyboard support on container: ← →
-//   useEffect(() => {
-//     const scroller = scrollerRef.current;
-//     if (!scroller) return;
-//     const onKey = e => {
-//       if (e.key === 'ArrowLeft') {
-//         e.preventDefault();
-//         goPrev();
-//       } else if (e.key === 'ArrowRight') {
-//         e.preventDefault();
-//         goNext();
-//       }
-//     };
-//     scroller.addEventListener('keydown', onKey);
-//     return () => scroller.removeEventListener('keydown', onKey);
-//   }, [goPrev, goNext, activeIndex, tabs]);
-
-//   return (
-//     <div className='w-full overflow-x-auto pb-1 overflow-y-hidden'>
-//       <div className='w-fit flex items-center gap-2' >
-//         {/* Prev button */}
-// 				{
-// 					!hiddenArrow && <button type='button' onClick={goPrev} aria-label='Previous tab' disabled={!hasPrev} className={['inline-flex items-center justify-center h-[40px] w-[30px]  rounded-lg border transition', 'bg-white/90 border-slate-200 ', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', !hasPrev ? 'opacity-40 cursor-not-allowed' : ''].join(' ')}>
-//           <ChevronLeft className='w-5 h-5 text-slate-700' />
-//         </button>
-// 				}
-
-//         {/* Scrollable pills */}
-//         <div ref={scrollerRef} tabIndex={0} className='w-fit '>
-//           <LayoutGroup id={id}>
-//             <div className={[className, 'inline-flex p-1 rounded-lg border border-slate-200 overflow-hidden', 'bg-slate-100/80 ring-1 ring-black/5'].join(' ')}>
-//               {tabs.map(t => {
-//                 const isActive = active === t.key;
-//                 return (
-//                   <motion.button key={t.key} type='button' ref={el => (tabRefs.current[t.key] = el)} onClick={() => onChange(t.key)} className='relative cursor-pointer select-none rounded-lg max-md:!rounded-[10px_10px_0_0] px-3 py-1.5 text-sm font-medium outline-none' whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 350, damping: 30 }}>
-//                     {isActive && <motion.span layoutId='tabs-pill' className='absolute inset-0 after:!rounded-lg !rounded-lg bg-second shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
-//                     <span className={`relative z-10 text-nowrap ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-700'} capitalize`}>
-//                       {t.icon ? <t.icon className='inline w-4 h-4 mr-1 -mt-0.5' /> : null}
-//                       {slice ? t.label?.slice(0, slice) : t.label}
-//                     </span>
-//                   </motion.button>
-//                 );
-//               })}
-//             </div>
-//           </LayoutGroup>
-//         </div>
-
-//         {/* Next button */}
-//         {!hiddenArrow && <button type='button' onClick={goNext} aria-label='Next tab' disabled={!hasNext} className={['inline-flex items-center justify-center h-[40px] w-[30px] rounded-lg border transition', 'bg-white/90 border-slate-200  ', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', !hasNext ? 'opacity-40 cursor-not-allowed' : ''].join(' ')}>
-//           <ChevronRight className='w-5 h-5 text-slate-700' />
-//         </button>}
-//       </div>
-//     </div>
-//   );
-// }
 
 /* --------- DateRangeControl (From/To date inputs) --------- */
 export function DateRangeControl({ label = 'Date', from, to, setFrom, setTo, className = '' }) {

@@ -3,22 +3,25 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, X, Check, Search, Plus, Save, CircleX } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 export default function Select({
-  options = [], // [{ id, label }]
-  value = null, // selected id OR custom string
+  options = [],  
+  value = null,  
   onChange = () => {},
-  placeholder = 'Select…',
+  placeholder ,
   searchable = true,
   disabled = false,
   clearable = true,
   className = '',
   label,
-
+cnInputParent,
   // NEW
   allowCustom = false, // enable "write new category"
   createHint = 'Write a new category…',
 }) {
+	const t = useTranslations()
+	
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -40,7 +43,7 @@ export default function Select({
   const buttonLabel = useMemo(() => {
     if (selectedOption) return selectedOption.label;
     if (typeof value === 'string' && value.trim()) return value;
-    return placeholder || 'Select…';
+    return placeholder || t("common.select");
   }, [selectedOption, value, placeholder]);
 
   const filtered = useMemo(() => {
@@ -204,11 +207,11 @@ export default function Select({
     <div ref={rootRef} className={`relative ${className}`}>
       {label && <label className='mb-1.5 block text-sm font-medium text-slate-700'>{label}</label>}
 
-      <button type='button' ref={buttonRef} onClick={() => (open ? closeMenu() : openMenu())} onKeyDown={onKeyDown} disabled={disabled} className={['h-[43px] group relative w-full inline-flex items-center justify-between', 'rounded-lg border bg-white px-3.5 py-2.5 text-sm', disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer', 'transition-colors', 'border-slate-300 hover:border-slate-400 focus:border-indigo-500', 'focus:outline-none focus:ring-4 focus:ring-indigo-100'].join(' ')} aria-haspopup='listbox' aria-expanded={open}>
+      <button type='button' ref={buttonRef} onClick={() => (open ? closeMenu() : openMenu())} onKeyDown={onKeyDown} disabled={disabled} className={[cnInputParent , ' h-[43px] group relative w-full inline-flex items-center justify-between gap-2', 'rounded-lg border bg-white px-3.5 py-2.5 text-sm', disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer', 'transition-colors', 'border-slate-300 hover:border-slate-400 focus:border-indigo-500', 'focus:outline-none focus:ring-4 focus:ring-indigo-100'].join(' ')} aria-haspopup='listbox' aria-expanded={open}>
         <span className={`truncate text-left ${selectedOption || (typeof value === 'string' && value.trim()) ? 'text-slate-900' : 'text-gray-500'}`}>{buttonLabel}</span>
 
-        <span className='ml-3 flex items-center gap-1'>
-          {clearable && (selectedOption || (typeof value === 'string' && value)) && !disabled && <X className='h-4 w-4 opacity-60 hover:opacity-100 transition' onClick={clear} />}
+        <span className=' flex items-center gap-1'>
+          {clearable && (selectedOption || (typeof value === 'string' && value)) && !disabled && <X className=' max-md:hidden h-4 w-4 opacity-60 hover:opacity-100 transition' onClick={clear} />}
           <ChevronDown className='h-4 w-4 text-slate-600' />
         </span>
       </button>
@@ -225,7 +228,7 @@ export default function Select({
                     <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400' />
                     <input
                       className='w-full h-9 pl-10 pr-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white'
-                      placeholder='Search…'
+                      placeholder={t("common.search")}
                       value={query}
                       onChange={e => {
                         setQuery(e.target.value);

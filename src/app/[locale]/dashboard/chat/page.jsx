@@ -1,720 +1,1079 @@
-// src/app/[locale]/dashboard/chat/page.jsx
+/* 
+	i need use here t = useTranslations() form next-intl to make this page is ar and en and in the end give me file json ar,en
+	- when make search get direct after 1s not click on the button of search
+	- remove teh button of contact with the admin can only contact with the coach 
+
+	- make this page is responsive in the phone show like the whatsapp make the list of the actions and the conversation show as list show form right to left with the full screen in the phone and can make action or close it 
+
+
+	and amke the chat take the full height and also teh msgs the owner msg in the right and the other in the left 
+
+
+	
+	- i have a problem here should when click on the user after search on it open chat between them and i can send msgs
+	- and also when exist in the params userId get this user by his id and open chat between this user and me 
+
+	- and handle the msgs number and when open the conversation read the msgs 
+	- and enhance this page and if i forget any point here add it 
+	- and i use js no ts and retunr the full code for this page is complete
+
+	- and also when i open conversation and have count of unread msg doesnt' remove it untill reload the page
+	- and alsow when get new msgs show but not add on teh number of unread msgs on the chat of this user
+
+	?userId=5b0def9f-c5b2-4441-9027-4cdaf9ef3b75
+*/
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations, useLocale } from 'next-intl';
+import io from 'socket.io-client';
+import { Paperclip, Image as ImageIcon, Send, Search, Phone, UserCircle2, ChevronLeft, Loader2, Check, CheckCheck, Video, File as FileIcon, X, Inbox, Menu, ChevronRight, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PageHeader, ToolbarButton, EmptyState, SearchInput } from '@/components/dashboard/ui/UI';
-import { MessageSquare, Plus, Paperclip, Send, Image as ImageIcon, Phone, Video, Info, Pin, PinOff, Trash2, MoreVertical, ArrowLeft, CheckCheck, Check, Clock, Users, UserPlus, Search, X, User, Loader2 } from 'lucide-react';
-import { io } from 'socket.io-client';
-import api, { baseImg } from '@/utils/axios';
-import { useUser } from '@/hooks/useUser';
-import { FaSpinner } from 'react-icons/fa';
 
-export default function MessagesPage() {
-  const user = useUser();
-  const [loading, setLoading] = useState(true);
-  const [conversations, setConversations] = useState([]);
-  const [activeConversation, setActiveConversation] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [onlineUsers, setOnlineUsers] = useState(new Set());
-  const [typingUsers, setTypingUsers] = useState({});
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showPinned, setShowPinned] = useState(true);
-  const [messageText, setMessageText] = useState('');
-  const [attachments, setAttachments] = useState([]);
-  const [searchResults, setSearchResults] = useState([]);
-  const [showUserSearch, setShowUserSearch] = useState(false);
-  const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [userSearchLoading, setUserSearchLoading] = useState(false);
-  const [sending, setSending] = useState(false);
+import api from '@/utils/axios';
+import Img from '@/components/atoms/Img';
+import MultiLangText from '@/components/atoms/MultiLangText';
 
-  const socketRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const messagesEndRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
-  const sentTempIds = useRef(new Set()); // Track sent temporary IDs
+const API_URL = process.env.NEXT_PUBLIC_BASE_URL;
+const cls = (...a) => a.filter(Boolean).join(' ');
 
-  // Initialize socket connection
+/* ---------------------------- Auth (me) ---------------------------- */
+function useAuthMe() {
+  const [me, setMe] = useState(null);
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
+    (async () => {
+      try {
+        const { data } = await api.get('/auth/me');
+        setMe(data);
+      } catch {
+        setMe(null);
+      }
+    })();
+  }, []);
+  return me;
+}
 
-    socketRef.current = io(process.env.NEXT_PUBLIC_BASE_URL, {
+/* ----------------------------- API helpers ----------------------------- */
+async function listConversations(page = 1, limit = 50) {
+  const { data } = await api.get(`/chat/conversations`, { params: { page, limit } });
+  return data ?? [];
+}
+async function getMessages(conversationId, page = 1, limit = 200) {
+  const { data } = await api.get(`/chat/conversations/${conversationId}/messages`, { params: { page, limit } });
+  return data ?? [];
+}
+async function searchUsers(q, role) {
+  const { data } = await api.get(`/chat/users/search`, { params: { q, role } });
+  return Array.isArray(data) ? data : [];
+}
+async function getOrCreateDirect(userId) {
+  const { data } = await api.post(`/chat/conversations/direct/${userId}`);
+  return data;
+}
+async function uploadChatFile(file) {
+  const isImg = /^image\//.test(file.type);
+  const isVideo = /^video\//.test(file.type);
+  const url = isImg ? '/chat/upload/image' : isVideo ? '/chat/upload/video' : '/chat/upload/file';
+  const fd = new FormData();
+  fd.append('file', file);
+  const { data } = await api.post(url, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  return data;
+}
+
+/* --------------------------- Small UI helpers -------------------------- */
+function timeHHMM(dateStr) {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
+function dateLabel(dateStr) {
+  const d = new Date(dateStr);
+  const today = new Date();
+  const yday = new Date();
+  yday.setDate(today.getDate() - 1);
+  const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  if (sameDay(d, today)) return 'Today';
+  if (sameDay(d, yday)) return 'Yesterday';
+  return d.toLocaleDateString();
+}
+function UnreadBadge({ count }) {
+  if (!count || count <= 0) return null;
+  return <span className='min-w-[20px] px-1 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-semibold grid place-items-center'>{count > 99 ? '99+' : count}</span>;
+}
+function ReadTicks({ meId, msg }) {
+  const mine = msg?.sender?.id === meId;
+  if (!mine) return null;
+
+  // Check if message has been read by checking readBy array
+  const isRead = msg?.readBy && Array.isArray(msg.readBy) && msg.readBy.length > 0;
+
+  return <span className='inline-flex items-center gap-1 text-[11px] opacity-80'>{isRead ? <CheckCheck size={14} className='text-blue-500' /> : <Check size={14} />}</span>;
+}
+
+const getInitial = u => {
+  const s = (u?.name || u?.email || '').trim();
+  return s ? s[0].toUpperCase() : '?';
+};
+
+const pickAvatarClass = seed => {
+  const palette = [
+    // from → to (Tailwind gradients)
+    'from-indigo-100 to-blue-100 text-indigo-700 ring-indigo-200/70',
+    'from-rose-100 to-pink-100 text-rose-700 ring-rose-200/70',
+    'from-emerald-100 to-teal-100 text-emerald-700 ring-emerald-200/70',
+    'from-amber-100 to-yellow-100 text-amber-700 ring-amber-200/70',
+    'from-violet-100 to-purple-100 text-violet-700 ring-violet-200/70',
+    'from-cyan-100 to-sky-100 text-cyan-700 ring-cyan-200/70',
+  ];
+  const str = String(seed || '');
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return palette[h % palette.length];
+};
+
+const dayLabel = d => {
+  const date = new Date(d);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const test = new Date(date);
+  test.setHours(0, 0, 0, 0);
+  const diff = (test - today) / (1000 * 60 * 60 * 24);
+  if (diff === 0) return 'Today';
+  if (diff === -1) return 'Yesterday';
+  return date.toLocaleDateString();
+};
+
+/* ------------------------------- The Page ------------------------------ */
+export default function ChatPage() {
+  const t = useTranslations('chat');
+  const locale = useLocale();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const me = useAuthMe();
+
+  const [socket, setSocket] = useState(null);
+
+  const [convos, setConvos] = useState([]);
+  const [filterTab, setFilterTab] = useState('all');
+  const [activeId, setActiveId] = useState(null);
+
+  const [msgs, setMsgs] = useState([]);
+  const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [loadingConvos, setLoadingConvos] = useState(true);
+
+  const [search, setSearch] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [results, setResults] = useState([]);
+
+  const [sending, setSending] = useState(false);
+  const [text, setText] = useState('');
+  const [attaches, setAttaches] = useState([]);
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [typing, setTyping] = useState(false);
+  const [typingTimeout, setTypingTimeout] = useState(null);
+
+  const listRef = useRef(null);
+  const endRef = useRef(null);
+  const searchTimerRef = useRef(null);
+  const typingTimerRef = useRef(null);
+
+  const hasAttaches = Array.isArray(attaches) && attaches.length > 0;
+
+  /* -------------------------- Bootstrap data -------------------------- */
+  useEffect(() => {
+    const uid = searchParams?.get('userId');
+    if (uid) {
+      (async () => {
+        const conv = await getOrCreateDirect(uid);
+        await refreshConvos(conv?.id);
+      })();
+    } else {
+      refreshConvos();
+    }
+  }, [searchParams]);
+
+  async function refreshConvos(focusId = null) {
+    setLoadingConvos(true);
+    try {
+      const list = await listConversations(1, 50);
+      setConvos(list);
+      if (focusId) {
+        onSelectConversation(focusId);
+      } else if (list.length > 0 && !activeId) {
+        onSelectConversation(list[0].id);
+      }
+    } finally {
+      setLoadingConvos(false);
+    }
+  }
+
+  /* ---------------------------- Socket init --------------------------- */
+  useEffect(() => {
+    if (!me) return;
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') || '' : '';
+    const s = io(API_URL, {
+      transports: ['websocket'],
+      autoConnect: true,
+      withCredentials: true,
       auth: { token },
     });
 
-    socketRef.current.on('connect', () => {
-      console.log('Connected to chat server');
-      // Re-join active conversation if exists
-      if (activeConversation) {
-        socketRef.current.emit('join_conversation', activeConversation.id);
-      }
-    });
-
-    socketRef.current.on('new_message', message => {
-      console.log('New message received:', message);
-
-      // FIXED: Safe conversation ID access and duplicate prevention
-      const conversationId = message.conversation?.id || message.conversationId;
-
-      // Prevent duplicate messages by checking tempId
-      if (message.tempId && sentTempIds.current.has(message.tempId)) {
-        sentTempIds.current.delete(message.tempId);
-        // Replace optimistic message with real one
-        setMessages(prev => prev.map(msg => (msg.id === message.tempId ? message : msg)));
-      } else if (conversationId === activeConversation?.id) {
-        // Only add if not a duplicate
-        setMessages(prev => {
-          const exists = prev.some(msg => msg.id === message.id);
-          return exists ? prev : [...prev, message];
-        });
-      }
-
-      // Update conversations list
-      setConversations(prev =>
-        prev.map(conv =>
-          conv.id === conversationId
-            ? {
-                ...conv,
-                lastMessage: message,
-                lastMessageAt: message.created_at,
-              }
-            : conv,
-        ),
-      );
-    });
-
-    socketRef.current.on('user_typing', data => {
-      setTypingUsers(prev => ({
-        ...prev,
-        [data.conversationId]: data.typing ? data : null,
-      }));
-    });
-
-    socketRef.current.on('user_online', data => {
-      setOnlineUsers(prev => {
-        const newSet = new Set(prev);
-        if (data.online) {
-          newSet.add(data.userId);
-        } else {
-          newSet.delete(data.userId);
-        }
-        return newSet;
-      });
-    });
-
-    socketRef.current.on('messages_read', data => {
-      if (data.conversationId === activeConversation?.id) {
-        // Update message read status if needed
-      }
-    });
+    setSocket(s);
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
+      s.disconnect();
     };
-  }, [activeConversation]);
+  }, [me]);
 
-  // Load conversations
+  /* ------------------------- Socket event handlers -------------------- */
   useEffect(() => {
-    loadConversations();
-  }, []);
+    if (!socket) return;
+    console.log(socket);
 
-  // Load messages when active conversation changes
-  useEffect(() => {
-    if (activeConversation) {
-      loadMessages(activeConversation.id);
-      joinConversation(activeConversation.id);
-      markAsRead(activeConversation.id);
-    }
-  }, [activeConversation]);
+    function onNewMessage(message) {
+      console.log('New message received:', message);
 
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // Search users when query changes
-  useEffect(() => {
-    if (userSearchQuery.trim()) {
-      searchUsers(userSearchQuery);
-    } else {
-      setSearchResults([]);
-    }
-  }, [userSearchQuery]);
-
-  const loadConversations = async () => {
-    try {
-      const response = await api.get('/chat/conversations');
-      console.log('Conversations loaded:', response.data);
-      setConversations(response.data || []);
-    } catch (error) {
-      console.error('Error loading conversations:', error);
-      setConversations([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadMessages = async conversationId => {
-    try {
-      // FIXED: Ensure proper pagination parameters
-      const response = await api.get(`/chat/conversations/${conversationId}/messages?page=1&limit=100`);
-      console.log('Messages loaded:', response.data);
-      setMessages(response.data || []);
-    } catch (error) {
-      console.error('Error loading messages:', error);
-      setMessages([]);
-    }
-  };
-
-  const searchUsers = async query => {
-    setUserSearchLoading(true);
-    try {
-      const response = await api.get(`/chat/users/search?q=${encodeURIComponent(query)}`);
-      setSearchResults(response.data);
-    } catch (error) {
-      console.error('Error searching users:', error);
-    } finally {
-      setUserSearchLoading(false);
-    }
-  };
-
-  const startConversationWithUser = async targetUser => {
-    try {
-      const response = await api.post(`/chat/conversations/direct/${targetUser.id}`);
-      const conversation = response.data;
-
-      setConversations(prev => [conversation, ...prev]);
-      setActiveConversation(conversation);
-      setShowUserSearch(false);
-      setUserSearchQuery('');
-      setSearchResults([]);
-    } catch (error) {
-      console.error('Error starting conversation:', error);
-    }
-  };
-
-  const joinConversation = conversationId => {
-    if (socketRef.current) {
-      socketRef.current.emit('join_conversation', conversationId);
-    }
-  };
-
-  const markAsRead = conversationId => {
-    if (socketRef.current) {
-      socketRef.current.emit('mark_as_read', conversationId);
-    }
-  };
-
-  // UPLOAD FILE FUNCTION
-  const uploadFile = async file => {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      let endpoint = '/chat/upload/file';
-      if (file.type.startsWith('image/')) {
-        endpoint = '/chat/upload/image';
-      } else if (file.type.startsWith('video/')) {
-        endpoint = '/chat/upload/video';
-      }
-
-      const response = await api.post(endpoint, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      setMsgs(prev => {
+        if (message?.conversation?.id !== activeId) return prev;
+        const exists = prev.some(m => m.id === message.id || (message.tempId && m.tempId === message.tempId));
+        if (exists) return prev;
+        return [...prev, message];
       });
 
-      return response.data;
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      throw error;
-    }
-  };
+      setConvos(prev => {
+        return prev
+          .map(c => {
+            if (c.id !== message.conversation.id) return c;
 
-  // FIXED SEND MESSAGE FUNCTION
-  const sendMessage = async () => {
-    if (!messageText.trim() && attachments.length === 0) return;
+            const isMine = message.sender?.id === me?.id;
+            const isActive = c.id === activeId;
+
+            let newUnreadCount = c.unreadCount || 0;
+            if (!isMine && !isActive) {
+              newUnreadCount = (c.unreadCount || 0) + 1;
+            } else if (isActive) {
+              newUnreadCount = 0;
+            }
+
+            return {
+              ...c,
+              lastMessage: message,
+              lastMessageAt: message.created_at,
+              unreadCount: newUnreadCount,
+            };
+          })
+          .sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0));
+      });
+
+      if (message?.conversation?.id === activeId && message?.sender?.id !== me?.id) {
+        markActiveAsRead();
+      }
+      scrollToBottom();
+    }
+
+    function onMessagesRead({ conversationId, userId }) {
+      if (conversationId !== activeId) return;
+      setMsgs(prev =>
+        prev.map(m => {
+          if (m.sender?.id === me?.id) {
+            return {
+              ...m,
+              readBy: m.readBy ? [...m.readBy, userId] : [userId],
+            };
+          }
+          return m;
+        }),
+      );
+    }
+
+    function onConversationUpdated(updatedConvo) {
+      setConvos(prev => {
+        const exists = prev.find(c => c.id === updatedConvo.id);
+        if (!exists) {
+          return [updatedConvo, ...prev].sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0));
+        }
+
+        return prev.map(c => (c.id === updatedConvo.id ? updatedConvo : c)).sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0));
+      });
+    }
+
+    function onUserTyping({ conversationId, typing: isTyping, userId }) {
+      if (conversationId !== activeId || userId === me?.id) return;
+
+      setTyping(!!isTyping);
+
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+      }
+
+      if (isTyping) {
+        typingTimerRef.current = setTimeout(() => {
+          setTyping(false);
+        }, 3000);
+      }
+    }
+
+    function onMessageError({ tempId, error }) {
+      console.error('Message failed to send:', error);
+      setMsgs(prev => prev.filter(m => m.tempId !== tempId));
+      setSending(false);
+    }
+
+    socket.on('new_message', onNewMessage);
+    socket.on('messages_read', onMessagesRead);
+    socket.on('conversation_updated', onConversationUpdated);
+    socket.on('user_typing', onUserTyping);
+    socket.on('message_error', onMessageError);
+
+    return () => {
+      socket.off('new_message', onNewMessage);
+      socket.off('messages_read', onMessagesRead);
+      socket.off('conversation_updated', onConversationUpdated);
+      socket.off('user_typing', onUserTyping);
+      socket.off('message_error', onMessageError);
+
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+      }
+    };
+  }, [socket, activeId, me?.id]);
+
+  /* --------------------------- Conversation open ---------------------- */
+  async function onSelectConversation(conversationId) {
+    setActiveId(conversationId);
+    setDrawerOpen(false);
+    setLoadingMsgs(true);
+    setTyping(false);
+
+    try {
+      const data = await getMessages(conversationId, 1, 200);
+      setMsgs(data);
+      socket?.emit('join_conversation', conversationId);
+
+      // Update unread count for this conversation
+      setConvos(prev => prev.map(c => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
+
+      markActiveAsRead(conversationId);
+      setTimeout(scrollToBottom, 100);
+    } finally {
+      setLoadingMsgs(false);
+    }
+  }
+
+  function scrollToBottom() {
+    setTimeout(() => {
+      endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 100);
+  }
+
+  function markActiveAsRead(cid = activeId) {
+    if (!cid) return;
+    socket?.emit('mark_as_read', cid);
+  }
+
+  /* ---------------------------- Searching ----------------------------- */
+  useEffect(() => {
+    if (!search?.trim()) {
+      setResults([]);
+      setSearching(false);
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+      return;
+    }
+
+    setSearching(true);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const users = await searchUsers(search.trim());
+        setResults(users);
+      } finally {
+        setSearching(false);
+      }
+    }, 1000);
+
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, [search]);
+
+  async function openDirectWith(userId) {
+    const conv = await getOrCreateDirect(userId);
+    await refreshConvos(conv?.id);
+    setResults([]);
+    setSearch('');
+  }
+
+  async function contactCoach() {
+    if (!me?.coachId) {
+      alert('No coach assigned to your account');
+      return;
+    }
+    await openDirectWith(me.coachId);
+  }
+
+  /* ------------------------- Attachments handling --------------------- */
+  function onPickFiles(files) {
+    const arr = Array.from(files || []);
+    if (!arr.length) return;
+    const safe = arr.slice(0, 6);
+    const withPreview = safe.map(f => ({
+      file: f,
+      url: URL.createObjectURL(f),
+      type: f.type,
+      name: f.name,
+      size: f.size,
+    }));
+    setAttaches(prev => [...prev, ...withPreview]);
+  }
+
+  function removeAttach(i) {
+    setAttaches(prev => {
+      const copy = [...prev];
+      const it = copy[i];
+      if (it?.url) URL.revokeObjectURL(it.url);
+      copy.splice(i, 1);
+      return copy;
+    });
+  }
+
+  /* ------------------------------- Send -------------------------------- */
+  async function send() {
+    if (!activeId || sending) return;
+
+    const trimmedText = (text || '').trim();
+    const hasAtt = Array.isArray(attaches) && attaches.length > 0;
+
+    if (!trimmedText && !hasAtt) return;
 
     setSending(true);
 
     try {
-      const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      sentTempIds.current.add(tempId);
-
-      let uploadedAttachments = [];
-
-      // Upload files if any
-      if (attachments.length > 0) {
-        for (const file of attachments) {
-          const uploadResult = await uploadFile(file);
-          uploadedAttachments.push({
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            url: uploadResult.url || `/uploads/chat/${file.type.startsWith('image/') ? 'images' : file.type.startsWith('video/') ? 'videos' : 'files'}/${uploadResult.filename}`,
-          });
-        }
+      let uploaded = [];
+      if (hasAtt) {
+        uploaded = await Promise.all(
+          attaches.map(async a => {
+            try {
+              const up = await uploadChatFile(a.file);
+              return {
+                name: up?.originalname || a?.name || 'file',
+                type: up?.mimetype || a?.type || 'application/octet-stream',
+                size: up?.size ?? a?.size ?? 0,
+                url: up?.url || '',
+              };
+            } catch (e) {
+              console.error('Upload failed:', a?.name, e);
+              return null;
+            }
+          }),
+        );
+        uploaded = uploaded.filter(Boolean);
       }
 
-      const messageData = {
-        conversationId: activeConversation.id,
-        content: messageText.trim(),
-        messageType: attachments.length > 0 ? 'file' : 'text',
-        attachments: uploadedAttachments,
-        tempId: tempId, // Include tempId to prevent duplicates
-      };
+      let messageType = 'text';
+      if (uploaded.length > 0) {
+        const t = uploaded[0].type || '';
+        messageType = /^image\//.test(t) ? 'image' : /^video\//.test(t) ? 'video' : 'file';
+      }
 
-      console.log('Sending message:', messageData);
-
-      // Optimistically add message to UI
-      const optimisticMessage = {
+      const tempId = `tmp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const optimistic = {
         id: tempId,
-        content: messageData.content,
-        messageType: messageData.messageType,
-        attachments: messageData.attachments,
+        tempId,
+        conversation: { id: activeId },
+        sender: me,
+        content: trimmedText || null,
+        messageType,
+        attachments: uploaded.length ? uploaded : null,
+        isEdited: false,
+        isDeleted: false,
         created_at: new Date().toISOString(),
-        sender: user,
-        conversation: { id: activeConversation.id },
-        isOptimistic: true, // Mark as optimistic
+        readBy: null,
       };
 
-      setMessages(prev => [...prev, optimisticMessage]);
-      setMessageText('');
-      setAttachments([]);
+      setMsgs(prev => [...prev, optimistic]);
+      scrollToBottom();
 
-      // Send via socket
-      if (socketRef.current) {
-        socketRef.current.emit('send_message', messageData);
+      socket?.emit('typing_stop', activeId);
+
+      socket?.emit('send_message', {
+        conversationId: activeId,
+        content: trimmedText || null,
+        messageType,
+        attachments: uploaded,
+        tempId,
+      });
+
+      setText('');
+      if (hasAtt) {
+        setAttaches(prev => {
+          (prev || []).forEach(a => a?.url && URL.revokeObjectURL(a.url));
+          return [];
+        });
       }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      // Remove optimistic message on error
-      setMessages(prev => prev.filter(msg => msg.id !== tempId));
-      sentTempIds.current.delete(tempId);
-      alert('Failed to send message. Please try again.');
+    } catch (err) {
+      console.error('Error sending message:', err);
     } finally {
       setSending(false);
     }
-  };
+  }
 
-  const handleTyping = () => {
-    if (socketRef.current && activeConversation) {
-      socketRef.current.emit('typing_start', activeConversation.id);
+  /* --------------------------- Typing indicators ----------------------- */
+  function handleTyping() {
+    if (!activeId) return;
 
-      clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = setTimeout(() => {
-        socketRef.current.emit('typing_stop', activeConversation.id);
-      }, 3000);
-    }
-  };
+    socket?.emit('typing_start', activeId);
 
-  // Safe rendering for other participants
-  const getOtherParticipants = conversation => {
-    const currentUserId = user?.id;
-    if (!conversation?.chatParticipants) return [];
-    return conversation.chatParticipants
-      .filter(p => p?.user?.id !== currentUserId)
-      .map(p => p.user)
-      .filter(user => user != null);
-  };
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleAttachFiles = e => {
-    const files = Array.from(e.target.files || []).slice(0, 5);
-    setAttachments(prev => [...prev, ...files]);
-  };
-
-  const removeAttachment = index => {
-    setAttachments(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const filteredConversations = useMemo(() => {
-    let filtered = conversations.filter(conv => conv.name?.toLowerCase().includes(searchQuery.toLowerCase()) || getOtherParticipants(conv).some(p => p?.name?.toLowerCase().includes(searchQuery.toLowerCase())));
-
-    if (showPinned) {
-      filtered.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
     }
 
-    return filtered.sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0));
-  }, [conversations, searchQuery, showPinned]);
+    const newTimeout = setTimeout(() => {
+      socket?.emit('typing_stop', activeId);
+    }, 2000);
 
-  const formatTime = dateString => {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+    setTypingTimeout(newTimeout);
+  }
 
-  const formatDate = dateString => {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString([], {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+  /* --------------------------- Derived helpers ------------------------- */
+  const filteredConvos = useMemo(() => {
+    if (filterTab === 'unread') return convos.filter(c => (c.unreadCount || 0) > 0);
+    return convos;
+  }, [convos, filterTab]);
 
-  // Safe rendering for conversation names
-  const getConversationName = conversation => {
-    if (!conversation) return 'Unknown Conversation';
-    if (conversation.name) return conversation.name;
-    const others = getOtherParticipants(conversation);
-    if (others.length === 0) return 'Unknown User';
-    return others.map(p => p?.name || 'Unknown User').join(', ');
-  };
+  const activeConversation = useMemo(() => convos.find(c => c.id === activeId) || null, [convos, activeId]);
 
-  const TypingDots = () => (
-    <div className='flex space-x-1'>
-      <div className='w-2 h-2 bg-gray-400 rounded-full animate-bounce' style={{ animationDelay: '0ms' }} />
-      <div className='w-2 h-2 bg-gray-400 rounded-full animate-bounce' style={{ animationDelay: '150ms' }} />
-      <div className='w-2 h-2 bg-gray-400 rounded-full animate-bounce' style={{ animationDelay: '300ms' }} />
-    </div>
-  );
+  const otherUser = useMemo(() => {
+    if (!activeConversation || !me) return null;
+    const others = (activeConversation.chatParticipants || []).map(p => p.user).filter(u => u && u.id !== me.id);
+    return others[0] || null;
+  }, [activeConversation, me]);
 
-  const bodyRef = useRef(null);
-
-  const scrollBodyToBottom = (behavior = 'smooth') => {
-    if (!bodyRef.current) return;
-    bodyRef.current.scrollTo({ top: bodyRef.current.scrollHeight, behavior });
-  };
-
-  useEffect(() => {
-    scrollBodyToBottom('smooth');
-  }, [messages.length]);
+  const isRTL = locale === 'ar';
 
   return (
-    <div className='space-y-6'>
-      <PageHeader
-        icon={MessageSquare}
-        title='Messages'
-        subtitle='Chat with clients and your coaching team.'
-        actions={
-          <ToolbarButton icon={Plus} onClick={() => setShowUserSearch(true)}>
-            New message
-          </ToolbarButton>
-        }
-      />
-
-      {/* User Search Modal */}
-      <AnimatePresence>
-        {showUserSearch && (
-          <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className='bg-white rounded-lg w-full max-w-md p-6'>
-              <div className='flex items-center justify-between mb-4'>
-                <h3 className='text-lg font-semibold'>Start New Conversation</h3>
-                <button
-                  onClick={() => {
-                    setShowUserSearch(false);
-                    setUserSearchQuery('');
-                    setSearchResults([]);
-                  }}
-                  className='p-1 hover:bg-gray-100 rounded-lg'>
-                  <X className='w-5 h-5' />
-                </button>
-              </div>
-
-              <SearchInput value={userSearchQuery} onChange={e => setUserSearchQuery(e.target.value)} placeholder='Search users by name or email...' autoFocus />
-
-              <div className='mt-4 max-h-64 overflow-y-auto'>
-                {userSearchLoading ? (
-                  <div className='flex justify-center py-4'>
-                    <TypingDots />
-                  </div>
-                ) : searchResults.length > 0 ? (
-                  searchResults.map(user => (
-                    <button key={user.id} onClick={() => startConversationWithUser(user)} className='w-full text-left p-3 hover:bg-gray-50 rounded-lg flex items-center gap-3'>
-                      <Avatar name={user.name} size={40} />
-                      <div className='flex-1'>
-                        <div className='font-medium text-gray-900'>{user.name}</div>
-                        <div className='text-sm text-gray-500'>{user.email}</div>
-                        <div className='text-xs text-gray-400 capitalize'>{user.role}</div>
-                      </div>
-                    </button>
-                  ))
-                ) : userSearchQuery ? (
-                  <div className='text-center py-4 text-gray-500'>No users found</div>
-                ) : (
-                  <div className='text-center py-4 text-gray-500'>Start typing to search users</div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <div className='grid grid-cols-1 lg:grid-cols-12 gap-6'>
-        {/* Conversations List */}
-        <motion.aside initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }} className='lg:col-span-4 rounded-lg border border-gray-200 bg-white p-4 h-[70vh] flex flex-col shadow-sm'>
-          <div className='flex items-center gap-2 mb-4'>
-            <SearchInput value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder='Search conversations...' className='flex-1' />
-            <button className={`p-2 rounded-lg border transition-colors ${showPinned ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`} onClick={() => setShowPinned(v => !v)} title={showPinned ? 'Show all' : 'Show pinned first'}>
-              {showPinned ? <Pin className='w-4 h-4' /> : <PinOff className='w-4 h-4' />}
+    <div className={' max-md:w-[calc(100%+20px)] max-md:ltr:ml-[-10px] max-md:rtl:mr-[-10px] h-[calc(100vh-95px)] md:!h-[calc(100vh-150px)] flex flex-col md:rounded-2xl overflow-hidden md:border md:border-slate-200 bg-gradient-to-br from-indigo-50 via-white to-blue-50'}>
+      {/* App bar */}
+      <div className='hidden md:flex items-center justify-between px-5 h-14 border-b border-slate-200/70 bg-white/70 backdrop-blur'>
+        <div className='font-semibold  text-slate-800'>{t('appbar.title')}</div>
+         <div className='flex items-center justify-between gap-2  '>
+          <div className='inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-1'>
+            <button onClick={() => setFilterTab('all')} className={cls('px-3 h-8 rounded-full text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40', filterTab === 'all' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-600 hover:text-slate-900')}>
+              {t('tabs.all')}
+            </button>
+            <button onClick={() => setFilterTab('unread')} className={cls('px-3 h-8 rounded-full text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40', filterTab === 'unread' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-600 hover:text-slate-900')}>
+              {t('tabs.unread')}
             </button>
           </div>
 
-          <div className='flex-1 overflow-y-auto space-y-1'>
-            {loading ? (
-              Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className='animate-pulse p-3 flex items-center gap-3'>
-                  <div className='w-12 h-12 rounded-full bg-gray-200' />
-                  <div className='flex-1 space-y-2'>
-                    <div className='h-4 bg-gray-200 rounded w-3/4' />
-                    <div className='h-3 bg-gray-200 rounded w-1/2' />
-                  </div>
-                </div>
-              ))
-            ) : filteredConversations.length > 0 ? (
-              filteredConversations.map(conversation => (
-                <button key={conversation.id} onClick={() => setActiveConversation(conversation)} className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${activeConversation?.id === conversation.id ? 'bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 shadow-sm' : 'hover:bg-gray-50 border border-transparent'}`}>
-                  <div className='flex items-center gap-3'>
-                    <Avatar name={getConversationName(conversation)} online={getOtherParticipants(conversation).some(p => onlineUsers.has(p.id))} isGroup={conversation.isGroup} size={48} />
-                    <div className='flex-1 min-w-0'>
-                      <div className='flex items-center justify-between gap-2 mb-1'>
-                        <div className='font-semibold text-gray-900 truncate text-sm'>{getConversationName(conversation)}</div>
-                        <div className='flex items-center gap-1'>
-                          {conversation.unreadCount > 0 && <span className='px-2 py-1 rounded-full bg-indigo-600 text-white text-xs font-medium min-w-[20px] text-center'>{conversation.unreadCount}</span>}
-                          <span className='text-xs text-gray-500 whitespace-nowrap'>{conversation.lastMessageAt && formatTime(conversation.lastMessageAt)}</span>
-                        </div>
-                      </div>
-                      <div className='text-xs text-gray-600 truncate'>{conversation.lastMessage?.content || 'No messages yet'}</div>
-                    </div>
-                  </div>
+          {/* Coach CTA */}
+          <div className=' w-fit '>
+            <button type='button' onClick={contactCoach} className='w-full h-11 rounded-xl border border-slate-200 bg-white/90 text-slate-800 text-sm inline-flex items-center justify-center px-2 gap-1 hover:bg-slate-50 active:scale-[.99] transition shadow-[0_0_0_0_rgba(0,0,0,0)] hover:shadow-[0_4px_16px_-8px_rgba(99,102,241,0.25)]'>
+              <Phone size={16} />
+              {t('quick.coach')}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className='flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[360px_minmax(0,1fr)]'>
+        {/* Desktop sidebar */}
+        <aside className='hidden md:flex min-h-0 rtl:border-l ltr:border-r border-slate-200/70 bg-white/70 backdrop-blur-xl flex-col'>
+          {/* Header / Search (sticky) */}
+          <div className='border-b border-slate-200/70 z-10 px-3 py-[5.5px]  bg-white/70 backdrop-blur-xl'>
+            {/* Search */}
+            <div className='relative group'>
+              <Search className='absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors' />
+
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('search.placeholder')} aria-label={t('search.placeholder')} className='h-11 w-full ltr:pl-10 rtl:pr-10 ltr:pr-12 rtl:pl-12 rounded-xl border border-slate-200 bg-slate-50/80 text-slate-900 transition focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40' />
+              {searching && <Loader2 className='absolute ltr:right-3 rtl:left-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-slate-400 pointer-events-none' />}
+              {!!search && !searching && (
+                <button type='button' onClick={() => setSearch('')} aria-label={t('search.clear', { defaultValue: 'Clear search' })} className='absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-slate-100 active:scale-95 transition'>
+                  <X className='w-4 h-4 text-slate-400' />
                 </button>
-              ))
+              )}
+            </div>
+
+            {/* Search results */}
+            {searching ? null : search && results.length === 0 ? (
+              <div className='mt-3 rounded-xl border border-slate-200 bg-white/60 p-6 text-center'>
+                <div className='mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100'>
+                  <Inbox className='w-6 h-6 text-slate-400' />
+                </div>
+                <div className='text-sm font-medium text-slate-700'>{t('search.noResultsTitle', { defaultValue: 'No matches found' })}</div>
+                <div className='text-xs text-slate-500 mt-1'>{t('search.noResultsHint', { defaultValue: 'Try a different name or email' })}</div>
+              </div>
             ) : (
-              <EmptyState title='No conversations' subtitle='Start a new conversation to begin messaging.' icon={MessageSquare} />
+              !!results.length && (
+                <div className='mt-3 rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-white/70'>
+                  <div className='px-3 py-2 text-xs text-slate-500 bg-slate-50'>{t('search.results')}</div>
+                  <ul className='max-h-64 overflow-auto'>
+                    {results.map(u => {
+                      const initial = getInitial(u);
+                      const avatarTone = pickAvatarClass(u.id || u.email);
+                      return (
+                        <li key={u.id} className='border-t border-slate-100'>
+                          <button onClick={() => openDirectWith(u.id)} className='w-full px-3 py-2 text-left hover:bg-slate-50 active:bg-slate-100/60 flex items-center gap-3 transition group'>
+                            {/* Avatar with initial */}
+                            <div className={cls('h-8 w-8 rounded-xl bg-gradient-to-br grid place-items-center overflow-hidden', 'ring-1 ring-inset', avatarTone)}>
+                              <span className='text-[11px] font-bold leading-none select-none'>{initial}</span>
+                            </div>
+
+                            <div className='min-w-0 flex-1 flex flex-col'>
+                              <MultiLangText className='text-sm font-medium text-slate-900 truncate group-hover:text-slate-950'>{u.name || u.email}</MultiLangText>
+                              <MultiLangText className='text-xs text-slate-500 truncate'>{u.email}</MultiLangText>
+                            </div>
+
+                            {/* Optional chevron / affordance */}
+                            <ChevronRight className='w-4 h-4 text-slate-300 rtl:rotate-180 group-hover:text-slate-400' />
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )
             )}
           </div>
-        </motion.aside>
 
-        {/* Chat Thread */}
-        <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }} className='lg:col-span-8 rounded-lg border border-gray-200 bg-white h-[70vh] flex flex-col shadow-sm'>
-          {activeConversation ? (
-            <>
-              {/* Chat Header */}
-              <div className='px-6 py-4 border-b border-gray-200 flex items-center gap-4 bg-white rounded-t-2xl'>
-                <button className='lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors' onClick={() => setActiveConversation(null)}>
-                  <ArrowLeft className='w-5 h-5 text-gray-600' />
-                </button>
-
-                <Avatar name={getConversationName(activeConversation)} online={getOtherParticipants(activeConversation).some(p => onlineUsers.has(p.id))} isGroup={activeConversation.isGroup} size={48} />
-                <div className='flex-1 min-w-0'>
-                  <h3 className='font-semibold text-gray-900 text-lg'>{getConversationName(activeConversation)}</h3>
-                  <p className='text-sm text-gray-600'>{activeConversation.isGroup ? `${activeConversation.chatParticipants?.length} participants` : getOtherParticipants(activeConversation).some(p => onlineUsers.has(p.id)) ? 'Online • Active now' : 'Offline'}</p>
-                </div>
-                <div className='flex items-center gap-2'>
-                  <button className='p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-900'>
-                    <Phone className='w-5 h-5' />
-                  </button>
-                  <button className='p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-900'>
-                    <Video className='w-5 h-5' />
-                  </button>
-                  <button className='p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-900'>
-                    <Info className='w-5 h-5' />
-                  </button>
-                </div>
+          {/* Conversation list */}
+          <div ref={listRef} className='flex-1 overflow-auto p-2'>
+            {loadingConvos ? (
+              <div className='p-4 space-y-3'>
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className='h-14 rounded-2xl bg-slate-100/80 animate-pulse' />
+                ))}
               </div>
+            ) : filteredConvos.length ? (
+              <ul className='space-y-2'>
+                {filteredConvos.map(c => {
+                  const others = (c.chatParticipants || []).map(p => p.user).filter(u => me && u?.id !== me.id);
+                  const title = c.isGroup ? c.name || t('list.group') : others[0]?.name || others[0]?.email || t('list.direct');
+                  const last = c.lastMessage;
+                  const preview = last?.messageType === 'text' ? last?.content : last?.messageType === 'image' ? t('list.photo') : last?.messageType === 'video' ? t('list.video') : last?.messageType === 'file' ? t('list.file') : '';
 
-              {/* Messages Area */}
-              <div ref={bodyRef} className='flex-1 overflow-y-auto px-6 py-4 bg-gray-50'>
-                <div className='space-y-4'>
-                  {messages.map((message, index) => {
-                    const isCurrentUser = message.sender?.id === user?.id;
-                    const showDate = index === 0 || new Date(message.created_at).toDateString() !== new Date(messages[index - 1]?.created_at).toDateString();
-                    const isOptimistic = message.isOptimistic;
+                  const isActive = activeId === c.id;
+                  const hasUnread = Number(c.unreadCount) > 0;
 
-                    return (
-                      <div key={message.id}>
-                        {showDate && <div className='text-center text-sm text-gray-500 my-6'>{formatDate(message.created_at)}</div>}
-                        <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} gap-3`}>
-                          {!isCurrentUser && <Avatar name={message.sender?.name} online={onlineUsers.has(message.sender?.id)} size={36} />}
-                          <div className={`max-w-[70%] rounded-lg px-3 py-2 ${isCurrentUser ? 'bg-gradient-to-br from-indigo-600 to-blue-500 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-900 shadow-sm'} ${isOptimistic ? 'opacity-70' : ''}`}>
-                            {!isCurrentUser && activeConversation.isGroup && <div className='text-xs font-semibold mb-1 text-gray-700'>{message.sender?.name}</div>}
-                            {message.content && <div className='whitespace-pre-wrap break-words text-sm leading-relaxed'>{message.content}</div>}
-                            {message.attachments?.map((attachment, i) => (
-                              <div key={i} className='my-1 bg-white/80 p-1 rounded-lg '>
-                                {attachment.type?.startsWith('image/') ? (
-                                  <img src={baseImg + attachment.url} alt={attachment.name} className='  max-w-[200px]   object-contain' />
-                                ) : attachment.type?.startsWith('video/') ? (
-                                  <video src={baseImg + attachment.url} controls className='max-w-[200px]   object-contain' />
-                                ) : (
-                                  <a href={baseImg + attachment.url} className='flex items-center gap-2 p-3 border  bg-white hover:bg-gray-50 transition-colors' target='_blank' rel='noopener noreferrer'>
-                                    <Paperclip className='w-4 h-4 text-gray-400' />
-                                    <span className='text-sm text-gray-700'>{attachment.name.length > 15 ? attachment.name.slice(0, 15) + '...' : attachment.name}</span>
-                                  </a>
-                                )}
-                              </div>
-                            ))}
+                  return (
+                    <li key={c.id}>
+                      <button onClick={() => onSelectConversation(c.id)} className={cls('w-full px-3 py-3 text-left rounded-2xl transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40', isActive ? ' bg-slate-100 shadow-sm ring-1 ring-slate-200' : ' bg-slate-50 hover:bg-slate-100 active:bg-slate-100/60')}>
+                        <div className='flex items-center gap-3'>
+                          <div className={cls('h-11 w-11 rounded-2xl grid place-items-center overflow-hidden ring-1 ring-inset', hasUnread ? 'bg-gradient-to-br from-indigo-100 to-blue-100 ring-indigo-200' : 'bg-slate-100 ring-slate-200')}>
+                            <UserCircle2 className={cls('w-6 h-6', hasUnread ? 'text-indigo-600' : 'text-slate-500')} />
+                          </div>
 
-                            <div className={`mt-0 flex items-center gap-1 text-xs ${isCurrentUser ? 'text-white/80' : 'text-gray-500'}`}>
-                              <span className='text-[12px]' >{formatTime(message.created_at)}</span>
-                              {isCurrentUser && !isOptimistic && <CheckCheck size={16} />}
-                              {isOptimistic && <Clock className='w-3 h-3' />}
+                          <div className='min-w-0 flex-1'>
+                            <div className='flex items-center justify-between gap-2'>
+                              <MultiLangText className='text-sm font-semibold text-slate-900 truncate'>{title}</MultiLangText>
+                              <div className=' font-en text-[11px] text-slate-500 shrink-0 tabular-nums'>{last?.created_at ? timeHHMM(last.created_at) : ''}</div>
+                            </div>
+
+                            <div className='flex items-center justify-between gap-2 mt-1'>
+                              <MultiLangText className='text-xs text-slate-500 truncate flex-1 rtl:text-right '>{preview}</MultiLangText>
+                              <UnreadBadge count={c.unreadCount} />
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <div className='p-10 text-center text-slate-500'>
+                <div className='mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100'>
+                  <Inbox className='w-6 h-6 opacity-70' />
+                </div>
+                <div className='text-sm font-medium'>{t('list.empty')}</div>
+                <div className='text-xs mt-1 opacity-80'>{t('list.startHint', { defaultValue: 'Use search to start a chat' })}</div>
+              </div>
+            )}
+          </div>
+        </aside>
 
-                  {/* Typing Indicator */}
-                  {typingUsers[activeConversation.id] && (
-                    <div className='flex items-end gap-3'>
-                      <Avatar name={typingUsers[activeConversation.id].userName} size={36} />
-                      <div className='px-4 py-3 rounded-lg bg-white border border-gray-200 shadow-sm'>
-                        <TypingDots />
-                      </div>
-                    </div>
-                  )}
+        {/* Conversation area */}
+        <section className='flex flex-col min-h-0'>
+          {/* Mobile top bar */}
+          <div className='md:hidden h-14 border-b border-slate-200/70 px-3 flex items-center justify-between bg-white/80 backdrop-blur supports-[backdrop-filter]:backdrop-blur-xl'>
+            <button onClick={() => setDrawerOpen(true)} className=' flex-none inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 active:scale-95 transition' title={t('actions.openList')} aria-label={t('actions.openList')}>
+              <Menu className='w-5 h-5' />
+            </button>
+            <div className='text-sm w-full px-2 font-semibold'>{t('appbar.title')}</div>
+            <div className='w-9' />
+          </div>
 
-                  <div ref={messagesEndRef} />
+          {/* Desktop header */}
+          <div className='hidden md:flex h-14 border-b border-slate-200/70 px-3 items-center gap-3 bg-white/80 backdrop-blur supports-[backdrop-filter]:backdrop-blur-xl'>
+            {otherUser ? (
+              <>
+                {/* Avatar with initial + presence dot */}
+                <div className='relative'>
+                  <div className={cls('h-9 w-9 rounded-xl bg-gradient-to-br grid place-items-center overflow-hidden ring-1 ring-inset', pickAvatarClass(otherUser.id || otherUser.email))}>
+                    <MultiLangText className='text-[11px] font-bold leading-none select-none'>{getInitial(otherUser)}</MultiLangText>
+                  </div>
+                  {otherUser?.online && <span className='absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white' />}
+                </div>
+
+                <div className='min-w-0'>
+                  <MultiLangText className='text-sm font-semibold text-slate-900 truncate'>{otherUser.name || otherUser.email}</MultiLangText>
+                  <div className='text-[11px] text-slate-500'>{typing ? t('header.typing') : t('header.direct')}</div>
+                </div>
+              </>
+            ) : activeId ? (
+              <div className='text-sm text-slate-500'>{t('header.loading')}</div>
+            ) : (
+              <div className='text-sm text-slate-500'>{t('header.noselect')}</div>
+            )}
+          </div>
+
+          {/* Messages */}
+          <div className='  space-y-2 flex-1 min-h-0 overflow-y-auto px-3 py-4 bg-gradient-to-b from-slate-50/60 to-slate-100/40'>
+            {!activeId ? (
+              <div className='h-full grid place-items-center text-slate-500 text-sm'>
+                <div className='text-center'>
+                  <div className='mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm border border-slate-200'>
+                    <Inbox className='w-6 h-6 text-slate-400' />
+                  </div>
+                  <div>{t('empty.pick')}</div>
+                  <div className='text-xs text-slate-400 mt-1'>{t('empty.hint', { defaultValue: 'Select a conversation from the list' })}</div>
                 </div>
               </div>
+            ) : loadingMsgs ? (
+              <MessageSkeleton />
+            ) : (
+              <MessageList msgs={msgs} me={me} API_URL={API_URL} endRef={endRef} t={t} typing={typing} />
+            )}
+          </div>
 
-              {/* Message Composer */}
-              <div className='px-6 py-4 border-t border-gray-200 bg-white rounded-b-2xl'>
-                <div className=' '>
-                  {attachments.length > 0 && (
-                    <div className='mb-3 flex flex-wrap gap-2'>
-                      {attachments.map((file, index) => (
-                        <div key={index} className='group relative w-20 h-16 rounded-lg overflow-hidden border border-gray-200 bg-gray-50'>
-                          <AttachmentPreview file={file} />
-                          <button onClick={() => removeAttachment(index)} className='absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm' title='Remove'>
-                            <X size={16} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+          {/* Composer */}
+          <div className='border-t border-slate-200/70 p-2 bg-white/90 backdrop-blur supports-[backdrop-filter]:backdrop-blur-xl'>
+            {!activeId ? (
+              <div className='text-center text-xs text-slate-500 py-4'>{t('composer.disabled')}</div>
+            ) : (
+              <>
+                {/* Attachments preview */}
+                {!!attaches.length && (
+                  <div className='px-1 pb-2 flex gap-2 overflow-x-auto'>
+                    {attaches.map((a, idx) => (
+                      <div key={idx} className='relative shrink-0 group'>
+                        {/^image\//.test(a.type) ? (
+                          <img src={a.url} alt={a.name} className='h-16 w-16 object-cover rounded-xl border border-slate-200 shadow-sm' />
+                        ) : /^video\//.test(a.type) ? (
+                          <div className='h-16 w-24 rounded-xl border border-slate-200 grid place-items-center bg-slate-50 shadow-sm'>
+                            <Video className='w-5 h-5 text-slate-600' />
+                          </div>
+                        ) : (
+                          <div className='h-16 w-24 rounded-xl border border-slate-200 grid place-items-center bg-slate-50 shadow-sm'>
+                            <FileIcon className='w-5 h-5 text-slate-600' />
+                          </div>
+                        )}
 
-                  <div className='flex items-center gap-2'>
-                    <input ref={fileInputRef} type='file' multiple className='hidden' onChange={handleAttachFiles} accept='image/*,video/*,.pdf,.doc,.docx,.txt' />
+                        {/* filename badge (mirrors in RTL) */}
+                        <div className='absolute bottom-1 ltr:left-1 ltr:right-7 rtl:right-1 rtl:left-7 truncate text-[10px] px-1 py-0.5 rounded-md bg-black/60 text-white'>{a.name}</div>
 
-                    <input
-                      placeholder='Type your message...'
-                      value={messageText}
+                        {/* remove button (mirrors in RTL) */}
+                        <button onClick={() => removeAttach(idx)} className='absolute top-1 ltr:right-1 rtl:left-1 h-6 w-6 rounded-full bg-black/70 text-white grid place-items-center hover:bg-black/90 transition-colors shadow' title={t('composer.remove')} aria-label={t('composer.remove')}>
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className='flex items-end gap-2'>
+                  {/* Composer shell */}
+                  <div className='relative flex-1'>
+                    <textarea
+                      value={text}
                       onChange={e => {
-                        setMessageText(e.target.value);
+                        setText(e.target.value);
                         handleTyping();
+                        const el = e.target;
+                        el.style.height = 'auto';
+                        el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+                      }}
+                      onInput={e => {
+                        const el = e.currentTarget;
+                        el.style.height = 'auto';
+                        el.style.height = Math.min(el.scrollHeight, 160) + 'px';
                       }}
                       onKeyDown={e => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
+                        const isSend = (e.key === 'Enter' && !e.shiftKey) || (e.key === 'Enter' && (e.metaKey || e.ctrlKey));
+                        if (isSend) {
                           e.preventDefault();
-                          sendMessage();
+                          send();
                         }
                       }}
-                      className='flex-1 h-9 px-2  rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm placeholder-gray-400'
+                      onBlur={() => {
+                        if (activeId) socket?.emit('typing_stop', activeId);
+                        if (typingTimeout) clearTimeout(typingTimeout);
+                      }}
+                      rows={1}
+                      placeholder={t('composer.placeholder')}
+                      className={['h-auto min-h-[44px] max-h-[160px] w-full rounded-xl', 'border border-slate-200 bg-white/90 text-slate-900', 'shadow-sm hover:shadow transition', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', ' px-2 ltr:!pl-[160px]  rtl:!pl-[160px]  ', 'py-2 text-sm resize-none'].join(' ')}
                     />
 
-                    <button className='w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-900' title='Attach files' onClick={() => fileInputRef.current?.click()}>
-                      <Paperclip className='w-5 h-5' />
-                    </button>
+                    {/* Inner icon cluster – anchored to "start" side (mirrors with RTL) */}
+                    <div className='pointer-events-auto absolute inset-y-0 ltr:right-[4px] rtl:left-[4px] flex gap-1 top-[4px] '>
+                      <button onClick={send} disabled={sending || (!text.trim() && !hasAttaches)} className=' h-9 w-9 rounded-xl bg-indigo-600 text-white grid place-items-center disabled:opacity-60 hover:bg-indigo-700 active:scale-95 shadow transition-all duration-200' title={t('composer.send')} aria-label={t('composer.send')}>
+                        {sending ? <Loader2 className='animate-spin w-4 h-4' /> : <Send className='w-4 h-4' />}
+                      </button>
+                      <label className='h-9 w-9 grid place-items-center rounded-xl border border-slate-200 bg-white cursor-pointer hover:bg-slate-50 active:scale-95 transition shadow-sm'>
+                        <ImageIcon className='w-5 h-5 text-slate-600' />
+                        <input type='file' className='hidden' accept='image/*' multiple onChange={e => onPickFiles(e.target.files)} />
+                      </label>
 
-                    <SendButton loading={loading} text={'send msg'} />
+                      <label className='h-9 w-9 grid place-items-center rounded-xl border border-slate-200 bg-white cursor-pointer hover:bg-slate-50 active:scale-95 transition shadow-sm'>
+                        <Video className='w-5 h-5 text-slate-600' />
+                        <input type='file' className='hidden' accept='video/*' multiple onChange={e => onPickFiles(e.target.files)} />
+                      </label>
+
+                      <label className='h-9 w-9 grid place-items-center rounded-xl border border-slate-200 bg-white cursor-pointer hover:bg-slate-50 active:scale-95 transition shadow-sm'>
+                        <Paperclip className='w-5 h-5 text-slate-600' />
+                        <input type='file' className='hidden' multiple onChange={e => onPickFiles(e.target.files)} />
+                      </label>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </>
-          ) : (
-            <div className='flex-1 flex flex-col items-center justify-center text-center p-8'>
-              <div className='w-24 h-24 bg-gradient-to-br from-indigo-100 to-blue-100 rounded-full flex items-center justify-center mb-6'>
-                <MessageSquare className='w-10 h-10 text-indigo-600' />
-              </div>
-              <h3 className='text-xl font-semibold text-gray-900 mb-2'>Welcome to Messages</h3>
-              <p className='text-gray-600 max-w-sm mb-6'>Select a conversation from the list or start a new one to begin messaging.</p>
-              <button onClick={() => setShowUserSearch(true)} className='px-6 py-3 bg-gradient-to-br from-indigo-600 to-blue-500 text-white font-medium rounded-lg hover:from-indigo-700 hover:to-blue-600 transition-all shadow-sm hover:shadow-md flex items-center gap-2'>
-                <Plus className='w-5 h-5' />
-                Start New Conversation
+              </>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {/* Mobile conversations drawer */}
+      <AnimatePresence>
+        {drawerOpen && (
+          <motion.aside initial={{ x: isRTL ? '100%' : '-100%' }} animate={{ x: 0 }} exit={{ x: isRTL ? '100%' : '-100%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} className='fixed inset-0 z-50 md:hidden bg-white' dir={isRTL ? 'rtl' : 'ltr'}>
+            <div className='h-14 border-b border-slate-200/70 px-3 flex items-center justify-between'>
+              <div className='text-sm font-semibold'>{t('appbar.title')}</div>
+              <button onClick={() => setDrawerOpen(false)} className='inline-flex h-9 px-3 items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors'>
+                <ChevronLeft className='w-5 h-5 rtl:scale-x-[-1] ' />
+                <span className='ml-2 text-sm'>{t('actions.close')}</span>
               </button>
             </div>
-          )}
-        </motion.section>
-      </div>
+
+            <div className='p-3 border-b border-slate-200/70'>
+              <div className='relative'>
+                <Search className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 ${isRTL ? 'right-3' : 'left-3'}`} />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('search.placeholder')} className={`w-full h-11 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-400/30 ${isRTL ? 'pr-9 pl-3' : 'pl-9 pr-3'}`} />
+                {searching && <Loader2 className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-slate-400 ${isRTL ? 'left-3' : 'right-3'}`} />}
+              </div>
+
+              <button type='button' onClick={contactCoach} className='mt-3 w-full h-10 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm inline-flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors'>
+                <Phone size={16} /> {t('quick.coach')}
+              </button>
+
+              {!!results.length && (
+                <div className='mt-3 rounded-xl border border-slate-200 overflow-hidden shadow-sm'>
+                  <div className='px-3 py-2 text-xs text-slate-500 bg-slate-50'>{t('search.results')}</div>
+                  <ul className='max-h-64 overflow-auto'>
+                    {results.map(u => (
+                      <li key={u.id} className='border-t border-slate-100'>
+                        <button onClick={() => openDirectWith(u.id)} className={`w-full px-3 py-2 hover:bg-slate-50 flex items-center gap-3 ${isRTL ? 'text-right justify-end' : 'text-left'}`}>
+                          {!isRTL && <UserCircle2 className='w-6 h-6 text-slate-500' />}
+                          <div className='min-w-0 flex-1'>
+                            <MultiLangText className='text-sm font-medium text-slate-900 truncate'>{u.name || u.email}</MultiLangText>
+                          </div>
+                          {isRTL && <UserCircle2 className='w-6 h-6 text-slate-500' />}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            <div className='p-2 h-[calc(100%-140px)] overflow-auto'>
+              {filteredConvos.length ? (
+                <ul className='space-y-2'>
+                  {filteredConvos.map(c => {
+                    const others = (c.chatParticipants || []).map(p => p.user).filter(u => me && u?.id !== me.id);
+                    const title = c.isGroup ? c.name || t('list.group') : others[0]?.name || others[0]?.email || t('list.direct');
+                    const last = c.lastMessage;
+                    const preview = last?.messageType === 'text' ? last?.content : last?.messageType === 'image' ? t('list.photo') : last?.messageType === 'video' ? t('list.video') : last?.messageType === 'file' ? t('list.file') : '';
+
+                    return (
+                      <li key={c.id}>
+                        <button onClick={() => onSelectConversation(c.id)} className={cls('w-full px-3 py-3 rounded-2xl transition-all duration-200 border', activeId === c.id ? 'bg-slate-100 shadow-sm border-slate-200' : 'border-transparent hover:bg-slate-100 bg-slate-50 ')}>
+                          <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                            <div className='min-w-0 flex-1'>
+                              <div className={`flex items-center justify-between gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                <div className='font-en text-[11px] text-slate-500 shrink-0'>{last?.created_at ? timeHHMM(last.created_at) : ''}</div>
+                                <MultiLangText className='text-sm font-semibold text-slate-900 truncate'>{title}</MultiLangText>
+                              </div>
+                              <div className={`flex items-center justify-between gap-2 mt-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                <UnreadBadge count={c.unreadCount} />
+                                <MultiLangText className='text-xs text-slate-500 truncate flex-1  rtl:text-right'>{preview}</MultiLangText>
+                              </div>
+                            </div>
+                            <div className='h-11 w-11 rounded-2xl bg-gradient-to-br from-indigo-100 to-blue-100 grid place-items-center overflow-hidden'>
+                              <UserCircle2 className='w-6 h-6 text-indigo-500' />
+                            </div>
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <div className='p-8 text-center text-slate-500'>
+                  <Inbox className='mx-auto mb-2 w-6 h-6 opacity-60' />
+                  <div className='text-sm'>{t('list.empty')}</div>
+                </div>
+              )}
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-// Avatar Component
-function Avatar({ name, online = false, size = 40, isGroup = false }) {
-  const initials = name
-    ? name
-        .split(' ')
-        .map(n => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-    : '??';
+/* --------------------------- MessageList --------------------------- */
+function MessageList({ msgs, me, API_URL, endRef, t, typing }) {
+  const groups = [];
+  let lastDate = '';
+
+  // Group messages by date
+  msgs.forEach(m => {
+    const d = new Date(m.created_at).toDateString();
+    if (d !== lastDate) {
+      groups.push({ type: 'sep', label: dateLabel(m.created_at), id: `sep-${m.created_at}` });
+      lastDate = d;
+    }
+    groups.push({ type: 'msg', data: m });
+  });
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    const id = setTimeout(() => {
+      endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 80);
+    return () => clearTimeout(id);
+  }, [msgs, typing, endRef]);
 
   return (
-    <div className='relative h-fit'>
-      <div
-        className={`rounded-full flex items-center justify-center text-white font-semibold shadow-sm ${isGroup ? 'bg-gradient-to-br from-purple-500 to-pink-600' : 'bg-gradient-to-br from-indigo-500 to-blue-600'}`}
-        style={{
-          width: size,
-          height: size,
-          fontSize: size * 0.35,
-        }}>
-        {isGroup ? <Users className='w-1/2 h-1/2' /> : initials}
-      </div>
-      {online && !isGroup && <div className='absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full shadow-sm' />}
-    </div>
+    <>
+      {groups.map(item => {
+        if (item.type === 'sep') {
+          return (
+            <div key={item.id} className='sticky top-2 z-10'>
+              <MultiLangText className='mx-auto block w-fit text-[11px] px-2 py-1 rounded-full bg-white/85 border border-slate-200 text-slate-600 shadow-sm'>{item.label}</MultiLangText>
+            </div>
+          );
+        }
+
+        const m = item.data;
+        const mine = (m?.sender?.id ?? m?.senderId) === me?.id;
+        const other = m?.sender || m?.from || m?.user || {}; // flexible
+        const time = timeHHMM(m.created_at);
+
+        // message content (keeps your logic)
+        const Content = () => {
+          if (m.messageType === 'text' && !!m.content) {
+            return <MultiLangText className='whitespace-pre-wrap text-[15px] leading-6 break-words'>{m.content}</MultiLangText>;
+          }
+
+          if (m.messageType === 'image' && Array.isArray(m.attachments)) {
+            return (
+              <div className='grid grid-cols-2 gap-2'>
+                {m.attachments.map((a, i) => (
+                  <a key={i} href={`${API_URL}${a.url}`} target='_blank' rel='noreferrer' className='block overflow-hidden rounded-lg border border-slate-200 hover:opacity-90 transition'>
+                    <Img src={`${a.url}`} alt={a.name} className='w-full h-40 object-cover' />
+                  </a>
+                ))}
+              </div>
+            );
+          }
+
+          if (m.messageType === 'video' && Array.isArray(m.attachments)) {
+            return (
+              <div className='space-y-2'>
+                {m.attachments.map((a, i) => (
+                  <video key={i} src={`${API_URL}${a.url}`} controls className='w-full rounded-lg overflow-hidden max-h-64 border border-slate-200' />
+                ))}
+              </div>
+            );
+          }
+
+          if (m.messageType === 'file' && Array.isArray(m.attachments)) {
+            return (
+              <div className='space-y-2'>
+                {m.attachments.map((a, i) => (
+                  <a key={i} href={`${API_URL}${a.url}`} target='_blank' rel='noreferrer' className={cls('flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border', mine ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white' : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700')}>
+                    <FileIcon className={cls('w-4 h-4', mine ? 'text-white' : 'text-slate-600')} />
+                    <span className='text-xs truncate flex-1'>{a.name}</span>
+                    <span className={cls('text-[11px] tabular-nums', mine ? 'opacity-90' : 'text-slate-500')}>{a.size ? `(${Math.round(a.size / 1024)} KB)` : ''}</span>
+                  </a>
+                ))}
+              </div>
+            );
+          }
+
+          return null;
+        };
+
+        return (
+          <div key={m.id || m.tempId} className={cls('flex items-end gap-2', mine ? 'justify-end' : 'justify-start')}>
+            {/* incoming avatar initial */}
+            {!mine && (
+              <div className={cls('h-8 w-8 rounded-full bg-gradient-to-br grid place-items-center ring-1 ring-inset shrink-0 select-none', pickAvatarClass(other?.id || other?.email))} title={other?.name || other?.email}>
+                <span className='text-[11px] font-bold font-en '>{getInitial(other)}</span>
+              </div>
+            )}
+
+            {/* bubble */}
+            <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className={cls('relative max-w-[78%] rounded-2xl px-3 py-2 shadow-sm', mine ? 'bg-indigo-600 text-white rtl:rounded-bl-sm ltr:rounded-br-sm' : 'bg-white text-slate-800 rtl:rounded-br-sm  ltr:rounded-bl-sm border border-slate-200')}>
+              <Content />
+
+              <div className={cls('mt-1 text-[11px] flex items-center gap-1 tabular-nums', mine ? 'text-white/80' : 'text-slate-500')}>
+                <MultiLangText>{time}</MultiLangText>
+                <ReadTicks meId={me?.id} msg={m} />
+              </div>
+            </motion.div>
+          </div>
+        );
+      })}
+
+      {/* Typing indicator with avatar */}
+      {typing && (
+        <div className='flex justify-start items-end gap-2'>
+          <div className='h-8 w-8 rounded-full bg-gradient-to-br from-indigo-100 to-blue-100 ring-1 ring-inset ring-indigo-200/70 grid place-items-center select-none'>
+            <span className='text-[11px] font-bold'>…</span>
+          </div>
+          <div className='relative max-w-[78%] rounded-2xl px-3 py-3 shadow-sm bg-white border border-slate-200 rtl:rounded-br-sm ltr:rounded-bl-sm'>
+            <div className='flex gap-1 items-center'>
+              <div className='w-2 h-2 bg-slate-400 rounded-full animate-bounce' style={{ animationDelay: '0ms' }} />
+              <div className='w-2 h-2 bg-slate-400 rounded-full animate-bounce' style={{ animationDelay: '150ms' }} />
+              <div className='w-2 h-2 bg-slate-400 rounded-full animate-bounce' style={{ animationDelay: '300ms' }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div ref={endRef} />
+    </>
   );
 }
 
-function SendButton({ loading, text }) {
-  return (
-    <button type='submit' disabled={loading} aria-label={text} title={text} className={['relative inline-flex items-center rounded-lg', 'text-[13px] font-medium bg-gradient-to-br from-indigo-600', loading ? '  to-indigo-400' : ' to-blue-500 text-white  ', 'shadow-sm transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed'].join(' ')}>
-      <span className='grid place-items-center rounded-lg h-9 w-9 bg-white/10'>{loading ? <FaSpinner className='h-3.5 w-3.5 animate-spin' /> : <Send size={14} />}</span>
-
-      {/* subtle progress overlay when loading */}
-      {loading && <span className='absolute inset-0 rounded-lg ring-1 ring-white/10' />}
-    </button>
-  );
-}
-
-function truncateKeepExt(name, max = 10) {
-  const dot = name.lastIndexOf('.');
-  if (dot <= 0) return name.length > max ? name.slice(0, max) + '...' : name;
-  const base = name.slice(0, dot);
-  const ext = name.slice(dot); // includes "."
-  if (base.length <= max) return base + ext;
-  return base.slice(0, max) + '...' + ext;
-}
-
-function useObjectUrl(file) {
-  const url = useMemo(() => (file ? URL.createObjectURL(file) : ''), [file]);
-  useEffect(
-    () => () => {
-      if (url) URL.revokeObjectURL(url);
-    },
-    [url],
-  );
-  return url;
-}
-
-function AttachmentPreview({ file }) {
-  const url = useObjectUrl(file);
-  const name = truncateKeepExt(file.name, 10);
-
-  if (file.type?.startsWith('image/')) {
-    return <img src={url} alt={file.name} className='w-full h-full object-contain' loading='lazy' />;
-  }
-
-  if (file.type?.startsWith('video/')) {
-    return <video src={url} className='w-full h-full object-contain' muted controls playsInline />;
-  }
-
-  return (
-    <div className='w-full h-full flex flex-col items-center justify-center p-1'>
-      <Paperclip className='w-6 h-6 text-gray-400 mb-1' />
-      <span className='text-[10px] text-gray-600 text-center break-words leading-tight'>{name}</span>
-    </div>
-  );
-}
+const MessageSkeleton = () => (
+  <div className='p-4 space-y-3'>
+    {[...Array(6)].map((_, i) => {
+      const mine = i % 2 === 1;
+      return (
+        <div key={i} className={cls('flex items-end gap-2', mine ? 'justify-end' : 'justify-start')}>
+          {!mine && <div className='h-8 w-8 rounded-full bg-slate-200/70' />}
+          <div className={cls('rounded-2xl h-14 animate-pulse', mine ? 'bg-indigo-200/40 w-48' : 'bg-slate-200/70 w-56 border border-slate-200')} />
+        </div>
+      );
+    })}
+  </div>
+);

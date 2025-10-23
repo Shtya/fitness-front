@@ -1,4 +1,9 @@
 /*
+* Working later on 
+	- add the caloris of this client and when create his account assign the form to it to show his information
+	- setting of the client 
+	- notification of the client
+	
 	- users page : when chose coach remove the field of the caoch and the other steps of meals and exercise 
 	- workouts plans page : remove teh selected exercise wehn i choose them for day 
 
@@ -46,10 +51,8 @@
 
  
 		* profile 
-			- have the all information about it and his transofrmation 
-			- can put his imgs [ front , back , right , left ] for hist body as recoerd every month or when he like as timline for those imgs
-				and his weight also and the other details 
-			-
+			- can show his plans and exercise and choose form global things in teh system 
+			- 
 
  		* grocery-list 
 			
@@ -59,6 +62,23 @@
 			- Weekly/Daily notes from coach.
 			- Evaluation of client’s commitment.
 			- when send his report show how month pass . to give him motivation 
+			التقرير الأسبوعي ✅
+
+				1_( الديت )
+				هل تشعر بالجوع؟
+				هل تشعر براحه نفسيه ام لا؟
+				هل تود إضافة أصناف معينه ؟
+				هل كمية الأكل كثيره؟
+				هل هناك انحراف في الديت ( في حالة الاجابه بنعم يجب توضيح عدد المرات و نوعيات الاكل و الكميه )
+				(التمرين )
+				هل كثافه لتمرين مناسبه؟
+				هل هناك انحراف في عدد الايام( في حالة الاجابه بنعم يجب توضيح عدد ايام الانحراف بالزياده أو النقصان وهل السبب مؤقت ام دائم )
+				هل تلاحظ تغيير بالشاكل
+				هل تلاحظ تغيير في مستوي اللياقه
+				هل تنام كفايه
+				هل في أي ملحوظات أو انتقادات بالبرنامج( اتقبل كل الانتقادات للوصول لمستوي افضل في الخدمه و للوصول لأفضل مستوي للعميل🙏🏻)
+				صور وش وضهر و ميزان وقياسات
+				علي مقياس من 1 ل 5 ما مدي اللتزامك بتمارين الكارديو
 			
 
 		* Communication

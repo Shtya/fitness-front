@@ -5,7 +5,7 @@ import * as React from 'react';
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 
-export function GradientStatsHeader({ className = '', children, loadingStats, title, desc, onClick, btnName }) {
+export function GradientStatsHeader({ hiddenStats , className = '', children, loadingStats, title, desc, onClick, btnName }) {
   return (
     <div className={'relative overflow-hidden rounded-lg border border-indigo-100/60 bg-white/60 shadow-sm backdrop-blur ' + className}>
       {/* Background Decorations */}
@@ -23,20 +23,20 @@ export function GradientStatsHeader({ className = '', children, loadingStats, ti
         <div className='absolute -bottom-16 -right-8 h-60 w-60 rounded-full bg-blue-300/30 blur-3xl' />
       </div>
 
-      <div className='relative p-6 sm:p-8 text-white'>
-        <div className='flex flex-col md:flex-row md:items-center justify-between gap-3 '>
+      <div className='relative p-4 sm:p-8 text-white'>
+        <div className=' max-md:items-center max-md:flex-row flex flex-col md:flex-row md:items-center justify-between gap-3 '>
           <div>
-            <h1 className='text-2xl md:text-4xl font-semibold'>{title}</h1>
-            <p className='text-white/85 mt-1'>{desc}</p>
+            <h1 className='text-xl md:text-4xl font-semibold'>{title}</h1>
+            <p className='text-white/85 mt-1 max-md:hidden '>{desc}</p>
           </div>
 
-          {btnName && <button onClick={onClick} className='group relative inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm  font-semibold text-white border border-white/20 bg-white/10 hover:bg-white/20 focus:outline-none focus:ring-4 focus:ring-white/30 transition-transform active:scale-[.98]'>
+          {btnName && <button onClick={onClick} className=' max-md:w-fit group relative inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm  font-semibold text-white border border-white/20 bg-white/10 hover:bg-white/20 focus:outline-none focus:ring-4 focus:ring-white/30 transition-transform active:scale-[.98]'>
             <Plus size={16} />
             <span>{btnName}</span>
           </button>}
         </div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }} className='mt-6 grid grid-cols-2 md:grid-cols-4 gap-3'>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }} className={`mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 ${hiddenStats && "max-md:hidden"} `}>
           {loadingStats ? <KpiSkeleton /> : children}
         </motion.div>
       </div>
