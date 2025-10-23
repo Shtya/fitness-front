@@ -37,12 +37,6 @@ export const metadata = {
   publisher: 'FitPro',
 
   manifest: '/manifest.json',
-  themeColor: '#7C3AED',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-  },
 
    openGraph: {
     title: 'FitPro - Your Personal Fitness Revolution',

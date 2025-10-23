@@ -9,7 +9,7 @@ import { motion } from 'framer-motion';
 
 import api from '@/utils/axios';
 import { Modal, StatCard, TabsPill } from '@/components/dashboard/ui/UI';
-import { Input } from '../../nutrition/page';
+import { Input } from '@/components/atoms/Input2';
 import MultiLangText from '@/components/atoms/MultiLangText';
 import { Notification } from '@/config/Notification';
 import HistoryViewer from '@/components/pages/dashboard/nutrition/HistoryViewer';
