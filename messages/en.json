@@ -639,5 +639,133 @@
       "ios_other": ["It’s recommended to use Safari to add the app.", "Open the site in Safari.", "Tap \"Add to Home Screen\" then \"Add.\""],
       "generic": ["Look in your browser’s menu for \"Add to Home screen\" or \"Install app.\"", "Follow the instructions to add the icon to your home screen."]
     }
+  },
+  "users": {
+    "header": {
+      "title": "User Management",
+      "subtitle": "Manage clients and coaches with full control.",
+      "createNewUser": "Create New User"
+    },
+    "stats": { "totalUsers": "Total Users", "active": "Active", "coaches": "Coaches", "clients": "Clients" },
+    "filters": { "role": "Role", "plan": "Plan", "newest": "Newest", "allRoles": "All roles", "allPlans": "All plans", "withPlan": "With plan", "noPlan": "No plan" },
+    "table": { "name": "Name", "email": "Email", "role": "Role", "gender": "Gender", "phone": "Phone", "membership": "Membership", "exercisePlan": "Exercise Plan", "mealPlan": "Meal Plan", "coach": "Coach", "joinDate": "Join Date", "status": "Status", "daysLeft": "Days Left", "actions": "Actions" },
+    "actions": { "openProfile": "Open Profile", "editDetails": "Edit Details", "assignWorkout": "Assign Workout", "assignMeal": "Assign Meal", "approve": "Approve Member", "suspend": "Suspend Account", "activate": "Activate Account", "whatsapp": "WhatsApp Chat", "directChat": "Direct Chat", "delete": "Delete Member" },
+    "status": { "active": "Active", "pending": "Pending", "suspended": "Suspended" },
+    "roles": { "admin": "Admin", "coach": "Coach", "client": "Client" },
+    "gender": { "male": "Male", "female": "Female", "notSpecified": "Not specified" },
+    "membership": { "basic": "Basic", "gold": "Gold", "platinum": "Platinum" },
+    "fields": {
+      "fullName": "Full Name",
+      "email": "Email",
+      "phone": "Phone",
+      "password": "Password",
+      "passwordEdit": "Password (leave blank to keep)",
+      "gender": "Gender",
+      "membership": "Membership",
+      "role": "Role",
+      "coach": "Coach",
+      "status": "Status",
+      "phoneWhatsapp": "Phone (WhatsApp)"
+    },
+    "placeholders": {
+      "fullName": "John Doe",
+      "email": "name@example.com",
+      "phone": "+20 1X XXX XXXX",
+      "coach": "Select coach",
+      "role": "Select role",
+      "status": "Select status",
+      "search": "Search name, email, phone...",
+      "whatsapp": "e.g., 2012xxxxxxx"
+    },
+    "wizard": {
+      "newUser": "New User",
+      "createAccount": "Create Account",
+      "chooseWorkout": "Choose a workout plan (optional)",
+      "chooseMeal": "Choose a meal plan (optional)",
+      "caloriesDetails": "Calories & Details",
+      "credentialsAndForm": "Credentials & Coach Form",
+      "createAndNext": "Create & Next",
+      "credsReady": "Credentials are ready. You can copy & share via WhatsApp below.",
+      "passwordByEmail": "sent to email (or set by admin)"
+    },
+    "calories": {
+      "calories": "Calories",
+      "protein": "Protein",
+      "carbs": "Carbs",
+      "fat": "Fat",
+      "activity": "Activity Level",
+      "level": { "sedentary": "Sedentary", "light": "Light", "moderate": "Moderate", "active": "Active", "athlete": "Athlete" },
+      "notes": "Notes",
+      "notesPh": "Additional details, allergies, preferences..."
+    },
+    "forms": {
+      "title": "Coach Form",
+      "select": "Select form",
+      "placeholder": "Pick a form to send",
+      "sendToClient": "Send to Client",
+      "noteLinkAnswers": "The submitted answers will be linked to this user's account."
+    },
+    "pickers": {
+      "selectOne": "Select one plan to assign",
+      "assignWorkout": "Assign Workout Plan",
+      "assignMeal": "Assign Meal Plan"
+    },
+    "common": {
+      "assign": "Assign",
+      "seeMore": "See more",
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes",
+      "creating": "Creating…",
+      "expired": "Expired",
+      "days": "days",
+      "back": "Back",
+      "saveAndNext": "Save & Next",
+      "sendWhatsapp": "Send via WhatsApp",
+      "noCoach": "No Coach"
+    },
+    "alerts": {
+      "loadPlansFailed": "Failed to load plans",
+      "planAssigned": "Plan assigned successfully",
+      "assignFailed": "Failed to assign plan",
+      "loadCoachesFailed": "Failed to load coaches",
+      "passwordGenerated": "Generated a strong password",
+      "userUpdated": "User updated successfully",
+      "updateFailed": "Update failed",
+      "accountCreated": "Account created",
+      "createFailed": "Create failed",
+      "assignWorkoutFailed": "Failed to assign workout plan",
+      "assignMealFailed": "Failed to assign meal plan",
+      "saveCaloriesFailed": "Failed to save calories",
+      "enterPhoneWhatsapp": "Enter a phone number to send via WhatsApp",
+      "selectFormFirst": "Select a form first",
+      "formSent": "Form sent successfully",
+      "formSendFailed": "Failed to send form",
+      "statusUpdated": "Status updated to {status}",
+      "userDeleted": "User deleted successfully",
+      "deleteFailed": "Delete failed",
+      "loadUsersFailed": "Failed to load users",
+      "noPhone": "No valid phone number found for this user",
+      "loadWorkoutFailed": "Failed to load workout plans",
+      "loadMealFailed": "Failed to load meal plans"
+    },
+    "errors": {
+      "nameMin": "Name must be at least 2 characters",
+      "nameRequired": "Full name is required",
+      "emailInvalid": "Invalid email address",
+      "emailRequired": "Email is required",
+      "phoneInvalid": "Invalid phone number format",
+      "roleRequired": "Role is required",
+      "membershipRequired": "Membership is required",
+      "passwordRequired": "Password is required",
+      "passwordMin": "Password must be at least 8 characters",
+      "coachRequired": "Coach is required",
+      "startRequired": "Start date is required",
+      "endRequired": "End date is required",
+      "endAfterStart": "End date must be on/after start date",
+      "statusRequired": "Status is required"
+    },
+    "dialogs": {
+      "deleteUserConfirm": "Are you sure you want to delete {name}? This action cannot be undone."
+    }
   }
 }

@@ -221,7 +221,7 @@ cnInputParent,
         createPortal(
           <div role='listbox' aria-activedescendant={activeIndex >= 0 ? `opt-${activeIndex}` : undefined} className='z-[99999999] fixed mt-0' style={{ top: coords.top, left: coords.left, width: coords.width }}>
             <div ref={listRef} className='max-h-[215px] overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-black/5' onKeyDown={onKeyDown}>
-              {/* Search row */}
+
               {searchable && !createMode && (
                 <div className='p-2 border-b border-slate-100 sticky top-0 bg-white'>
                   <div className='relative'>
@@ -282,7 +282,7 @@ cnInputParent,
               {!createMode && (
                 <>
                   <ul className='py-1'>
-                    {filtered.length === 0 && <li className='px-3 py-2 text-sm text-slate-400'>No results</li>}
+                    {filtered.length === 0 && <li className='px-3 py-2 text-sm text-slate-400'>{t("common.noResult")}</li>}
                     {filtered.map((item, idx) => {
                       const isSelected = selectedOption?.id === item.id;
                       const isActive = idx === activeIndex;

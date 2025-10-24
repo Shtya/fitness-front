@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
@@ -14,6 +13,8 @@ import { Notification } from '@/config/Notification';
 import { ExerciseForm } from '@/components/pages/dashboard/workouts/ExerciseForm';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 import { PrettyPagination } from '@/components/dashboard/ui/Pagination';
+import { useLocale, useTranslations } from 'next-intl';
+import MultiLangText from '@/components/atoms/MultiLangText';
 
 const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
@@ -65,6 +66,8 @@ const StatPill = memo(({ label, value }) => (
 
 /* ------------------------------ Main Component ----------------------------- */
 export default function ExercisesPage() {
+  const t = useTranslations('workouts');
+
   // list + stats
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -111,7 +114,6 @@ export default function ExercisesPage() {
   }, []);
 
   const fetchList = useCallback(async () => {
-    // Cancel previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -154,13 +156,13 @@ export default function ExercisesPage() {
       setPerPage(serverPerPage);
       setItems(records);
     } catch (e) {
-      if (e.name === 'CanceledError') return; // Ignore canceled requests
+      if (e.name === 'CanceledError') return;
       if (myId !== reqId.current) return;
-      setErr(e?.response?.data?.message || 'Failed to load exercises');
+      setErr(e?.response?.data?.message || t('errors.loadExercises'));
     } finally {
       if (myId === reqId.current) setLoading(false);
     }
-  }, [page, debounced, sortBy, sortOrder, perPage, activeCat]);
+  }, [page, debounced, sortBy, sortOrder, perPage, activeCat, t]);
 
   const fetchStats = useCallback(async () => {
     setLoadingStats(true);
@@ -177,17 +179,14 @@ export default function ExercisesPage() {
     }
   }, [debounced, activeCat]);
 
-  // Reset to page 1 on search/sort/category changes
   useEffect(() => {
     setPage(1);
   }, [debounced, sortBy, sortOrder, perPage, activeCat]);
 
-  // Initial load
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
 
-  // Data fetching with optimized dependencies
   useEffect(() => {
     fetchList();
   }, [fetchList]);
@@ -196,7 +195,6 @@ export default function ExercisesPage() {
     fetchStats();
   }, [fetchStats]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -222,27 +220,28 @@ export default function ExercisesPage() {
     setDeleteId(id);
     setDeleteOpen(true);
   }, []);
-
+  const locale = useLocale();
   const [deleteLoading, setDeleteLoading] = useState(false);
   const handleDelete = useCallback(async () => {
     if (!deleteId) return;
     setDeleteLoading(true);
     try {
-      await api.delete(`/plan-exercises/${deleteId}`);
+      await api.delete(`/plan-exercises/${deleteId}?lang=${locale}`);
       setItems(arr => arr.filter(x => x.id !== deleteId));
-      setTotal(t => Math.max(0, t - 1));
-      Notification('Exercise deleted', 'success');
+      setTotal(tot => Math.max(0, tot - 1));
+      Notification(t('toasts.deleted'), 'success');
     } catch (e) {
-      Notification(e?.response?.data?.message || 'Delete failed', 'error');
+      Notification(e?.response?.data?.message || t('errors.deleteFailed'), 'error');
     } finally {
       setDeleteId(null);
       setDeleteLoading(false);
     }
-  }, [deleteId]);
+  }, [deleteId, t]);
 
   const createOrUpdate = useCallback(async ({ id, payload }) => {
     const body = {
       name: payload.name,
+      userId: payload.userId,
       details: payload.details || null,
       category: payload.category || null,
       primaryMusclesWorked: payload.primaryMusclesWorked || [],
@@ -264,30 +263,29 @@ export default function ExercisesPage() {
     return res.data;
   }, []);
 
-  /* ---------------------------- Memoized Values --------------------------- */
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / Math.max(1, perPage))), [total, perPage]);
 
   const tabs = useMemo(() => {
-    const base = [{ key: 'all', label: 'All' }];
+    const base = [{ key: 'all', label: t('filters.all') }];
     return base.concat((categories || []).map(c => ({ key: c, label: c })));
-  }, [categories]);
+  }, [categories, t]);
 
   const handleAddSubmit = useCallback(
     async payload => {
       try {
         const saved = await createOrUpdate({ payload });
         setItems(arr => [saved, ...arr]);
-        setTotal(t => t + 1);
+        setTotal(tot => tot + 1);
         setAddOpen(false);
-        Notification('Exercise created', 'success');
+        Notification(t('toasts.created'), 'success');
         if (saved?.category && !categories.includes(saved.category)) {
           setCategories(prev => [...prev, saved.category].sort());
         }
       } catch (e) {
-        Notification(e?.response?.data?.message || 'Create failed', 'error');
+        Notification(e?.response?.data?.message || t('errors.createFailed'), 'error');
       }
     },
-    [createOrUpdate, categories],
+    [createOrUpdate, categories, t],
   );
 
   const handleEditSubmit = useCallback(
@@ -296,25 +294,26 @@ export default function ExercisesPage() {
         const saved = await createOrUpdate({ id: editRow.id, payload });
         setItems(arr => arr.map(e => (e.id === editRow.id ? saved : e)));
         setEditRow(null);
-        Notification('Exercise updated', 'success');
+        Notification(t('toasts.updated'), 'success');
         if (saved?.category && !categories.includes(saved.category)) {
           setCategories(prev => [...prev, saved.category].sort());
         }
       } catch (e) {
-        Notification(e?.response?.data?.message || 'Update failed', 'error');
+        Notification(e?.response?.data?.message || t('errors.updateFailed'), 'error');
       }
     },
-    [createOrUpdate, editRow, categories],
+    [createOrUpdate, editRow, categories, t],
   );
 
   return (
     <div className='space-y-6'>
       {/* Header / Stats */}
-      <GradientStatsHeader onClick={() => setAddOpen(true)} btnName={'Add Exercise'} title='Exercises' desc="Manage your gym's exercise library." loadingStats={loadingStats}>
-        <StatCard className=' ' icon={Layers} title='Total' value={stats?.totals?.total || 0} />
-        <StatCard className=' ' icon={Settings} title='With Video' value={stats?.totals?.withVideo || 0} />
-        <StatCard className=' ' icon={RefreshCcw} title='With Image' value={stats?.totals?.withImage || 0} />
-        <StatCard className=' ' icon={Clock} title='Avg Rest (s)' value={stats?.totals?.avgRest ?? 0} sub={`${stats?.totals?.created7d || 0} added 7d`} />
+      <GradientStatsHeader onClick={() => setAddOpen(true)} btnName={t('actions.addExercise')} title={t('descriptions.exercises')} desc={t('descriptions.manageLibrary')} loadingStats={loadingStats}>
+        <StatCard className='' icon={Layers} title={t('stats.totalGlobalExercise')} value={stats?.totals?.totalGlobalExercise - stats?.totals?.totalPersonalExercise ?? 0} />
+        {stats?.totals?.totalPersonalExercise != null && stats?.totals?.totalPersonalExercise != '0' && <StatCard className='' icon={Layers} title={t('stats.totalPersonalExercise')} value={stats?.totals?.totalPersonalExercise ?? 0} />}
+
+        <StatCard className=' ' icon={Settings} title={t('stats.withVideo')} value={stats?.totals?.withVideo || 0} />
+        <StatCard className=' ' icon={RefreshCcw} title={t('stats.withImage')} value={stats?.totals?.withImage || 0} />
       </GradientStatsHeader>
 
       {/* Filters + search */}
@@ -322,10 +321,10 @@ export default function ExercisesPage() {
         <div className='flex items-center justify-between gap-2 flex-wrap'>
           {/* Search */}
           <div className='relative flex-1 max-w-[240px] sm:min-w-[260px]'>
-            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
-            <input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder='Search name…' className={['h-11 w-full pl-10 pr-10 rounded-lg', 'border border-slate-200 bg-white/90 text-slate-900', 'shadow-sm hover:shadow transition', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')} />
+            <Search className='absolute rtl:right-3 ltr:left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
+            <input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder={t('placeholders.search')} className={['h-11 w-full px-8 rounded-lg', 'border border-slate-200 bg-white/90 text-slate-900', 'shadow-sm hover:shadow transition', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')} aria-label={t('placeholders.search')} />
             {!!searchText && (
-              <button type='button' onClick={() => setSearchText('')} className='absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100' aria-label='Clear search' title='Clear'>
+              <button type='button' onClick={() => setSearchText('')} className='absolute rtl:left-2 ltr:right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100' aria-label={t('actions.clear')} title={t('actions.clear')}>
                 <X className='w-4 h-4' />
               </button>
             )}
@@ -333,7 +332,7 @@ export default function ExercisesPage() {
 
           <div className='flex items-center gap-2'>
             {/* View toggle */}
-            <button onClick={() => setView(v => (v === 'grid' ? 'list' : 'grid'))} className={['group inline-flex items-center gap-2 rounded-lg px-3.5 h-11', 'border border-slate-200 bg-white/90 text-slate-800', 'shadow-sm hover:shadow transition active:scale-[.98]', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')} aria-pressed={view !== 'grid'} title={view === 'grid' ? 'Switch to list view' : 'Switch to grid view'}>
+            <button onClick={() => setView(v => (v === 'grid' ? 'list' : 'grid'))} className={['group inline-flex items-center gap-2 rounded-lg px-3.5 h-11', 'border border-slate-200 bg-white/90 text-slate-800', 'shadow-sm hover:shadow transition active:scale-[.98]', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')} aria-pressed={view !== 'grid'} title={view === 'grid' ? t('actions.switchToList') : t('actions.switchToGrid')}>
               <span className='relative inline-block w-5 h-5'>
                 <AnimatePresence mode='wait' initial={false}>
                   {view === 'grid' ? (
@@ -348,7 +347,7 @@ export default function ExercisesPage() {
                 </AnimatePresence>
               </span>
               <motion.span key={view} initial={{ y: 6, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -6, opacity: 0 }} transition={{ duration: 0.16 }} className='hidden sm:inline text-sm'>
-                {view === 'grid' ? 'List view' : 'Grid view'}
+                {view === 'grid' ? t('actions.listView') : t('actions.gridView')}
               </motion.span>
             </button>
 
@@ -356,7 +355,7 @@ export default function ExercisesPage() {
             <div className='min-w-[130px]'>
               <Select
                 className='!w-full'
-                placeholder='Per page'
+                placeholder={t('placeholders.perPage')}
                 options={[
                   { id: 8, label: 8 },
                   { id: 12, label: 12 },
@@ -371,7 +370,7 @@ export default function ExercisesPage() {
             {/* Sort newest */}
             <button onClick={() => toggleSort('created_at')} className={['inline-flex items-center gap-2 rounded-lg px-3 h-11 font-medium transition-all duration-300', 'border border-slate-200 bg-white/95 text-slate-800 shadow-sm', 'hover:shadow-md hover:bg-slate-50 active:scale-[.97]', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')}>
               <Clock size={18} />
-              <span className='text-sm tracking-wide'>{sortBy === 'created_at' ? (sortOrder === 'ASC' ? 'Oldest First' : 'Newest First') : 'Sort by Date'}</span>
+              <span className='text-sm tracking-wide'>{sortBy === 'created_at' ? (sortOrder === 'ASC' ? t('actions.oldestFirst') : t('actions.newestFirst')) : t('actions.sortByDate')}</span>
             </button>
           </div>
         </div>
@@ -387,36 +386,37 @@ export default function ExercisesPage() {
       {err ? <div className='p-3 rounded-lg bg-red-50 text-red-700 border border-red-100'>{err}</div> : null}
 
       {/* Content */}
-      {view === 'grid' ? <GridView loading={loading} items={items} onView={setPreview} onEdit={setEditRow} onDelete={askDelete} /> : <ListView loading={loading} items={items} onView={setPreview} onEdit={setEditRow} onDelete={askDelete} />}
+      {view === 'grid' ? <GridView t={t} loading={loading} items={items} onView={setPreview} onEdit={setEditRow} onDelete={askDelete} /> : <ListView t={t} loading={loading} items={items} onView={setPreview} onEdit={setEditRow} onDelete={askDelete} />}
 
       <PrettyPagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
       {/* Preview */}
-      <Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name || 'Preview'} maxW='max-w-3xl'>
-        {preview && <ExercisePreview exercise={preview} />}
+      <Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name || t('titles.preview')} maxW='max-w-3xl'>
+        {preview && <ExercisePreview t={t} exercise={preview} />}
       </Modal>
 
       {/* Add */}
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title='Add Exercise'>
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title={t('titles.addExercise')}>
         <ExerciseForm categories={categories} onSubmit={handleAddSubmit} />
       </Modal>
 
       {/* Edit */}
-      <Modal open={!!editRow} onClose={() => setEditRow(null)} title={`Edit: ${editRow?.name || ''}`}>
+      <Modal open={!!editRow} onClose={() => setEditRow(null)} title={t('titles.editExercise', { name: editRow?.name || '' })}>
         {editRow && <ExerciseForm categories={categories} initial={editRow} onSubmit={handleEditSubmit} />}
       </Modal>
 
       {/* Delete confirmation */}
       <ConfirmDialog
+        t={t}
         loading={deleteLoading}
         open={deleteOpen}
         onClose={() => {
           setDeleteOpen(false);
           setDeleteId(null);
         }}
-        title='Delete exercise?'
-        message='This action cannot be undone.'
-        confirmText='Delete'
+        title={t('confirm.deleteTitle')}
+        message={t('confirm.deleteMsg')}
+        confirmText={t('confirm.deleteBtn')}
         onConfirm={handleDelete}
       />
     </div>
@@ -424,7 +424,7 @@ export default function ExercisesPage() {
 }
 
 /* ---------------------------- Subcomponents ---------------------------- */
-const ConfirmDialog = memo(({ open, onClose, loading, title = 'Are you sure?', message = '', onConfirm, confirmText = 'Confirm' }) => {
+const ConfirmDialog = memo(({ open, onClose, loading, title, message, onConfirm, confirmText, t }) => {
   return (
     <Modal open={open} onClose={onClose} title={title} maxW='max-w-md'>
       <div className='space-y-4'>
@@ -446,8 +446,7 @@ const ConfirmDialog = memo(({ open, onClose, loading, title = 'Are you sure?', m
   );
 });
 
-const GridView = memo(({ loading, items, onView, onEdit, onDelete }) => {
-  /* ------------------------------- Loading ------------------------------- */
+const GridView = memo(({ loading, items, onView, onEdit, onDelete, t }) => {
   if (loading) {
     return (
       <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'>
@@ -467,32 +466,28 @@ const GridView = memo(({ loading, items, onView, onEdit, onDelete }) => {
     );
   }
 
-  /* ------------------------------- Empty -------------------------------- */
   if (!items?.length) {
     return (
       <div className='rounded-lg border border-slate-200 bg-white p-10 text-center shadow-sm'>
         <div className='mx-auto w-16 h-16 rounded-lg bg-slate-100 grid place-content-center'>
           <Dumbbell className='w-8 h-8 text-slate-500' />
         </div>
-        <h3 className='mt-4 text-lg font-semibold text-slate-800'>No exercises found</h3>
-        <p className='text-sm text-slate-600 mt-1'>Try a different search or add a new exercise.</p>
+        <h3 className='mt-4 text-lg font-semibold text-slate-800'>{t('empty.title')}</h3>
+        <p className='text-sm text-slate-600 mt-1'>{t('empty.subtitle')}</p>
       </div>
     );
   }
 
-  /* -------------------------------- Grid -------------------------------- */
   return (
     <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'>
       {items.map(e => {
         const hasImg = Boolean(e.img);
         const hasVideo = Boolean(e.video);
         const sets = e.targetSets ?? 3;
-        const reps = e.targetReps ?? '—';
         const rest = e.rest ?? 90;
 
         return (
           <motion.div key={e.id} initial={{ opacity: 0, y: 10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={spring} className='group relative overflow-hidden rounded-lg bg-white border border-slate-200 shadow-sm hover:shadow-md'>
-            {/* premium gradient ring on hover */}
             <div className='pointer-events-none absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300' style={{ WebkitMaskImage: 'linear-gradient(#000 60%, transparent)' }}>
               <div className='absolute inset-0 rounded-lg ring-1 ring-transparent' style={{ background: 'linear-gradient(90deg, rgba(99,102,241,.18), rgba(16,185,129,.18))', maskImage: 'linear-gradient(black, transparent 70%)' }} />
             </div>
@@ -512,14 +507,14 @@ const GridView = memo(({ loading, items, onView, onEdit, onDelete }) => {
               )}
 
               <div className='absolute right-1 top-1'>
-                <div className='flex flex-col items-center gap-1 rounded-[8px_8px_8px_8px] bg-white/90 border border-slate-200/70 shadow-sm backdrop-blur px-1 py-1 hover:bg-white transition'>
-                  <IconBtn title='View' onClick={() => onView?.(e)}>
+                <div className='flex flex-col items-center gap-1 rounded-[8px] bg-white/90 border border-slate-200/70 shadow-sm backdrop-blur px-1 py-1 hover:bg-white transition'>
+                  <IconBtn title={t('actions.view')} onClick={() => onView?.(e)}>
                     <Eye className='w-3.5 h-3.5 text-slate-700' />
                   </IconBtn>
-                  <IconBtn title='Edit' onClick={() => onEdit?.(e)}>
+                  <IconBtn title={t('actions.edit')} onClick={() => onEdit?.(e)}>
                     <PencilLine className='w-3.5 h-3.5 text-indigo-600' />
                   </IconBtn>
-                  <IconBtn title='Delete' onClick={() => onDelete?.(e.id)} danger>
+                  <IconBtn title={t('actions.delete')} onClick={() => onDelete?.(e.id)} danger>
                     <Trash2 className='w-3.5 h-3.5' />
                   </IconBtn>
                 </div>
@@ -528,31 +523,34 @@ const GridView = memo(({ loading, items, onView, onEdit, onDelete }) => {
 
             {/* Body */}
             <div className='p-4 space-y-2'>
-              {/* Title row */}
               <div className='flex items-start justify-between gap-2'>
-                <div className='font-semibold text-slate-800 leading-5 line-clamp-1' title={e.name}>
+                <MultiLangText className='font-semibold text-slate-800 leading-5 line-clamp-1' title={e.name}>
                   {e.name}
-                </div>
+                </MultiLangText>
               </div>
 
-              <span className='inline-flex items-center gap-1 rounded-lg bg-indigo-600/90 text-white text-[11px] px-2 py-1 shadow'>
-                <Tag size={12} /> {e.category}
-              </span>
+              {e.category ? (
+                <span className='inline-flex items-center gap-1 rounded-lg bg-indigo-600/90 text-white text-[11px] px-2 py-1 shadow'>
+                  <Tag size={12} /> <MultiLangText>{e.category}</MultiLangText>
+                </span>
+              ) : null}
 
-              {/* Description */}
-              {e.details ? <p className='text-sm text-slate-600 line-clamp-1'>{e.details}</p> : null}
+              {e.details ? (
+                <MultiLangText dir="ltr" className=' text-sm text-slate-600 line-clamp-1 '>
+                  {e.details}
+                </MultiLangText>
+              ) : null}
 
-              {/* Meta row */}
               <div className='flex flex-wrap items-center gap-2 pt-1'>
                 <span className='text-[11px] rounded-lg border border-slate-200 px-2 py-1 text-slate-600'>
-                  Sets <span className='font-medium'> / {sets}</span>
+                  {t('meta.sets')} <span className='font-medium'>/ {sets}</span>
                 </span>
                 <span className='text-[11px] rounded-lg border border-slate-200 px-2 py-1 text-slate-600'>
-                  Rest <span className='font-medium'>{rest}s</span>
+                  {t('meta.rest')} <span className='font-medium'>{rest}s</span>
                 </span>
                 {e.tempo ? (
                   <span className='text-[11px] rounded-lg border border-slate-200 px-2 py-1 text-slate-600'>
-                    Tempo <span className='font-medium'>{e.tempo}</span>
+                    {t('meta.tempo')} <span className='font-medium'>{e.tempo}</span>
                   </span>
                 ) : null}
               </div>
@@ -564,7 +562,7 @@ const GridView = memo(({ loading, items, onView, onEdit, onDelete }) => {
   );
 });
 
-const ListView = memo(({ loading, items = [], onView, onEdit, onDelete }) => {
+const ListView = memo(({ loading, items = [], onView, onEdit, onDelete, t }) => {
   if (loading) {
     return (
       <div className='rounded-lg border border-slate-200 bg-white divide-y divide-slate-100 shadow-sm'>
@@ -585,7 +583,7 @@ const ListView = memo(({ loading, items = [], onView, onEdit, onDelete }) => {
   }
 
   if (!items.length) {
-    return <div className='rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm'>No exercises found.</div>;
+    return <div className='rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm'>{t('empty.simple')}</div>;
   }
 
   return (
@@ -595,11 +593,6 @@ const ListView = memo(({ loading, items = [], onView, onEdit, onDelete }) => {
         const sets = e.targetSets ?? 3;
         const reps = e.targetReps ?? '—';
         const rest = e.rest ?? 90;
-
-        const primary = Array.isArray(e.primaryMusclesWorked) ? e.primaryMusclesWorked : [];
-        const secondary = Array.isArray(e.secondaryMusclesWorked) ? e.secondaryMusclesWorked : [];
-        const muscles = [...primary, ...secondary].filter(Boolean);
-
         return (
           <div key={e.id} className='p-3 sm:p-4 flex items-center justify-between gap-3'>
             {/* Left: media + content */}
@@ -611,24 +604,24 @@ const ListView = memo(({ loading, items = [], onView, onEdit, onDelete }) => {
               <div className='min-w-0'>
                 {/* Title + category */}
                 <div className='flex items-center gap-2 min-w-0'>
-                  <div className='font-medium text-slate-800 truncate'>{e.name}</div>
+                  <MultiLangText className='font-medium text-slate-800 truncate'>{e.name}</MultiLangText>
                   {e.category ? (
                     <span className='inline-flex items-center gap-1 rounded-lg bg-indigo-50 text-indigo-700 text-[11px] px-2 py-0.5 shrink-0'>
-                      <Tag size={12} /> {e.category}
+                      <Tag size={12} /> <MultiLangText>{e.category}</MultiLangText>
                     </span>
                   ) : null}
                 </div>
 
                 {/* Details one-liner */}
-                {e.details ? <div className='text-[12px] text-slate-600 line-clamp-1'>{e.details}</div> : null}
+                {e.details ? <MultiLangText className='text-[12px] text-slate-600 line-clamp-1'>{e.details}</MultiLangText> : null}
 
                 {/* Meta */}
                 <div className='mt-1 text-[11px] text-slate-500'>
-                  Sets <span className='font-medium'>{sets}</span> · Reps <span className='font-medium'>{rest}s</span>
+                  {t('meta.sets')} <span className='font-medium'>{sets}</span> · {t('meta.reps')} <span className='font-medium'>{reps}</span> · {t('meta.rest')} <span className='font-medium'>{rest}s</span>
                   {e.tempo ? (
                     <>
                       {' '}
-                      · Tempo <span className='font-medium'>{e.tempo}</span>
+                      · {t('meta.tempo')} <span className='font-medium'>{e.tempo}</span>
                     </>
                   ) : null}
                 </div>
@@ -637,13 +630,13 @@ const ListView = memo(({ loading, items = [], onView, onEdit, onDelete }) => {
 
             {/* Right: compact actions */}
             <div className='flex items-center gap-1 shrink-0'>
-              <IconBtn title='View' onClick={() => onView?.(e)}>
+              <IconBtn title={t('actions.view')} onClick={() => onView?.(e)}>
                 <Eye className='w-3.5 h-3.5' />
               </IconBtn>
-              <IconBtn title='Edit' onClick={() => onEdit?.(e)}>
+              <IconBtn title={t('actions.edit')} onClick={() => onEdit?.(e)}>
                 <PencilLine className='w-3.5 h-3.5 text-indigo-600' />
               </IconBtn>
-              <IconBtn title='Delete' onClick={() => onDelete?.(e.id)} danger>
+              <IconBtn title={t('actions.delete')} onClick={() => onDelete?.(e.id)} danger>
                 <Trash2 className='w-3.5 h-3.5' />
               </IconBtn>
             </div>
@@ -654,7 +647,7 @@ const ListView = memo(({ loading, items = [], onView, onEdit, onDelete }) => {
   );
 });
 
- const ExercisePreview = memo(({ exercise, baseMedia = '' }) => {
+const ExercisePreview = memo(({ exercise, baseMedia = '', t }) => {
   const hasImg = !!exercise?.img;
   const hasVideo = !!exercise?.video;
 
@@ -675,13 +668,13 @@ const ListView = memo(({ loading, items = [], onView, onEdit, onDelete }) => {
         <div className='inline-flex items-center gap-2 rounded-lg bg-slate-100/70 p-1 ring-1 ring-black/5'>
           <button type='button' aria-pressed={tab === 'image'} disabled={!hasImg} onClick={() => setTab('image')} className={['relative inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg outline-none transition', tab === 'image' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', !hasImg ? 'opacity-50 cursor-not-allowed' : ''].join(' ')}>
             <ImageIcon size={14} />
-            Image
+            {t('media.image')}
             {tab === 'image' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
           </button>
 
           <button type='button' aria-pressed={tab === 'video'} disabled={!hasVideo} onClick={() => setTab('video')} className={['relative inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg outline-none transition', tab === 'video' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900', !hasVideo ? 'opacity-50 cursor-not-allowed' : ''].join(' ')}>
             <PlayCircle size={14} />
-            Video
+            {t('media.video')}
             {tab === 'video' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
           </button>
         </div>
@@ -692,22 +685,21 @@ const ListView = memo(({ loading, items = [], onView, onEdit, onDelete }) => {
         <div className='relative w-full h-full'>
           <div className='aspect-[16/9] grid place-items-center'>
             {tab === 'image' && hasImg ? (
-              <Img src={exercise.img} alt={exercise?.name || 'Exercise Image'} className='h-full w-full object-contain' draggable={false} loading='eager' />
+              <Img src={exercise.img} alt={exercise?.name || t('titles.untitled')} className='h-full w-full object-contain' draggable={false} loading='eager' />
             ) : tab === 'video' && hasVideo ? (
-              <video src={exercise?.video?.startsWith('http') ?  exercise?.video : baseImg + exercise?.video} controls className='h-full max-h-[400px] w-full object-contain rounded-lg' preload='metadata' />
+              <video src={exercise?.video?.startsWith('http') ? exercise?.video : baseImg + exercise?.video} controls className='h-full max-h-[400px] w-full object-contain rounded-lg' preload='metadata' />
             ) : (
               <div className='flex flex-col items-center justify-center gap-1 p-6 text-center'>
                 <div className='grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-400'>{tab === 'image' ? <ImageIcon size={20} /> : <PlayCircle size={20} />}</div>
-                <p className='text-sm text-slate-500'>No {tab === 'image' ? 'image' : 'video'} available</p>
+                <p className='text-sm text-slate-500'>{t('media.none', { kind: tab === 'image' ? t('media.image') : t('media.video') })}</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Disabled hint overlay if active tab has no media */}
         {activeTabDisabled && (
           <div className='pointer-events-none absolute inset-0 grid place-items-center bg-white/60'>
-            <span className='rounded-lg bg-white px-3 py-1.5 text-xs text-slate-600 ring-1 ring-slate-200 shadow-sm'>{tab === 'image' ? 'No image' : 'No video'}</span>
+            <span className='rounded-lg bg-white px-3 py-1.5 text-xs text-slate-600 ring-1 ring-slate-200 shadow-sm'>{tab === 'image' ? t('media.noImage') : t('media.noVideo')}</span>
           </div>
         )}
       </div>
@@ -716,7 +708,7 @@ const ListView = memo(({ loading, items = [], onView, onEdit, onDelete }) => {
       <div className='flex items-start justify-between gap-3'>
         <div className='min-w-0'>
           <div className='flex items-center gap-2'>
-            <h3 className='text-lg font-semibold text-slate-900 truncate'>{exercise?.name || 'Untitled Exercise'}</h3>
+            <h3 className='text-lg font-semibold text-slate-900 truncate'>{exercise?.name || t('titles.untitled')}</h3>
             {exercise?.category ? (
               <span className='inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700'>
                 <TagIcon size={12} />
@@ -725,20 +717,17 @@ const ListView = memo(({ loading, items = [], onView, onEdit, onDelete }) => {
             ) : null}
           </div>
 
-          {/* Details text */}
           {exercise?.details ? <p className='mt-1 max-w-prose text-sm leading-6 text-slate-600'>{exercise.details}</p> : null}
 
-          {/* Stats */}
           <div className='mt-1.5 flex flex-wrap items-center gap-1.5 text-sm text-slate-700'>
-            <StatPill label='Sets' value={exercise?.targetSets ?? 3} />
-            <StatPill label='Rest' value={`${exercise?.rest ?? 90}s`} />
-            {exercise?.tempo ? <StatPill label='Tempo' value={exercise.tempo} /> : null}
+            <StatPill label={t('meta.sets')} value={exercise?.targetSets ?? 3} />
+            <StatPill label={t('meta.rest')} value={`${exercise?.rest ?? 90}s`} />
+            {exercise?.tempo ? <StatPill label={t('meta.tempo')} value={exercise.tempo} /> : null}
           </div>
 
-          {/* Muscles */}
           {(primary.length > 0 || secondary.length > 0) && (
             <div className='pt-3'>
-              <div className='mb-1 text-xs font-medium text-slate-500'>Muscles</div>
+              <div className='mb-1 text-xs font-medium text-slate-500'>{t('labels.muscles')}</div>
               <div className='flex flex-wrap gap-1.5'>
                 {primary.map(m => (
                   <Chip key={`p-${m}`}>{m}</Chip>

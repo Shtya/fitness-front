@@ -8,6 +8,9 @@ import * as yup from 'yup';
 import { Loader2, UploadCloud, Wand2, Sparkles, X } from 'lucide-react';
 import Select from '@/components/atoms/Select';
 import { baseImg } from '@/utils/axios';
+import { useTranslations } from 'next-intl';
+import { useUser } from '@/hooks/useUser';
+import { Notification } from '@/config/Notification';
 
 /* -------------------- helpers -------------------- */
 function parseArrayMaybe(v) {
@@ -30,20 +33,15 @@ const safeStr = v => (v == null ? '' : String(v));
 
 function resolveUrlMaybe(v) {
   if (!v) return '';
-  // If it's a File (upload), caller will make an object URL; leave as-is
   if (typeof v !== 'string') return v;
-
   const s = v.trim();
-  // already absolute → use it as-is
   if (/^(https?:|data:|blob:)/i.test(s)) return s;
-
-  // make absolute using baseImg
   try {
     const base = String(baseImg || '').replace(/\/+$/, '');
     const rel = s.replace(/^\/+/, '');
     return `${base}/${rel}`;
   } catch {
-    return s; // fail-safe: return original string
+    return s;
   }
 }
 
@@ -68,7 +66,7 @@ function TextInput({ value, onChange, placeholder, name, required, disabled, rig
   return (
     <div className={'relative flex items-center rounded-lg border ' + (disabled ? 'opacity-60 ' : '') + className + ' border-slate-200 bg-white shadow-sm'}>
       <input name={name} value={value ?? ''} onChange={e => onChange(e.target.value)} onBlur={onBlur} placeholder={placeholder} required={required} disabled={disabled} className='peer w-full rounded-lg bg-transparent px-3.5 py-2.5 text-sm outline-none placeholder:text-slate-400' />
-      {rightSlot ? <div className='absolute right-1.5 flex items-center gap-1'>{rightSlot}</div> : null}
+      {rightSlot ? <div className='absolute rtl:left-1 ltr:right-1.5 flex items-center gap-1'>{rightSlot}</div> : null}
     </div>
   );
 }
@@ -108,7 +106,7 @@ function TagsField({ value = [], onChange, placeholder = 'Type and press Enter',
         {(value || []).map((t, i) => (
           <span key={`${t}-${i}`} className='group inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700'>
             {t}
-            <button type='button' onClick={() => removeTag(i)} className='opacity-60 hover:opacity-100'>
+            <button type='button' onClick={() => removeTag(i)} className='opacity-60 hover:opacity-100' aria-label='Remove tag'>
               <X className='h-3.5 w-3.5' />
             </button>
           </span>
@@ -145,44 +143,40 @@ function PrimaryButton({ children, type = 'button', onClick, disabled, loading, 
 }
 
 /* ================================================
-   Validation Schema (Yup)
-   (Use hidden booleans hasImgFile / hasVideoFile to avoid timing issues)
-================================================ */
-const schema = yup.object({
-  name: yup.string().trim().min(2, 'Name must be at least 2 chars').required('Name is required'),
-  targetReps: yup
-    .string()
-    .trim()
-    .matches(/^\d+(-\d+)?$/, 'Use e.g. "10" or "8-12"')
-    .required('Target reps is required'),
-  targetSets: yup.number().typeError('Sets must be a number').integer('Sets must be an integer').min(0, 'Min 0').max(30, 'Too many sets').required('Target sets is required'),
-  rest: yup.number().typeError('Rest must be a number').min(0, 'Min 0s').max(1200, 'Max 1200s'),
-  tempo: yup
-    .string()
-    .trim()
-    .matches(/^\d+\/\d+\/\d+$/, 'Use format "2/1/2"')
-    .nullable()
-    .transform(v => (v === '' ? null : v)),
-
-  category: yup.string().trim().required('Category is required'),
-
-  details: yup.string().max(2000, 'Keep details under 2000 chars').nullable(),
-  primaryMusclesWorked: yup.array(yup.string().trim()).max(20, 'Max 20 tags'),
-  secondaryMusclesWorked: yup.array(yup.string().trim()).max(20, 'Max 20 tags'),
-
-  // Hidden flags set by RHF when files chosen
-  hasImgFile: yup.boolean().default(false),
-  hasVideoFile: yup.boolean().default(false),
-
-  imgUrl: yup.string().required('Image URL is required'),
-  videoUrl: yup.string().required('Video URL is required'),
-});
-
-/* ================================================
-   The Form
+   The Form (with i18n)
 ================================================ */
 export function ExerciseForm({ initial, onSubmit, categories }) {
-  // local file objects for preview/upload
+  const t = useTranslations('workouts');
+
+  const schema = useMemo(
+    () =>
+      yup.object({
+        name: yup.string().trim().min(2, t('val.nameMin')).required(t('val.nameReq')),
+        targetReps: yup
+          .string()
+          .trim()
+          .matches(/^\d+(-\d+)?$/, t('val.repsFmt'))
+          .required(t('val.repsReq')),
+        targetSets: yup.number().typeError(t('val.setsNum')).integer(t('val.setsInt')).min(0, t('val.setsMin')).max(30, t('val.setsMax')).required(t('val.setsReq')),
+        rest: yup.number().typeError(t('val.restNum')).min(0, t('val.restMin')).max(1200, t('val.restMax')),
+        tempo: yup
+          .string()
+          .trim()
+          .matches(/^\d+\/\d+\/\d+$/, t('val.tempoFmt'))
+          .nullable()
+          .transform(v => (v === '' ? null : v)),
+        category: yup.string().trim().required(t('val.categoryReq')),
+        details: yup.string().max(2000, t('val.detailsMax')).nullable(),
+        primaryMusclesWorked: yup.array(yup.string().trim()).max(20, t('val.tagsMax')),
+        secondaryMusclesWorked: yup.array(yup.string().trim()).max(20, t('val.tagsMax')),
+        hasImgFile: yup.boolean().default(false),
+        hasVideoFile: yup.boolean().default(false),
+        imgUrl: yup.string().required(t('val.imgReq')),
+        videoUrl: yup.string().required(t('val.videoReq')),
+      }),
+    [t],
+  );
+
   const [imgFile, setImgFile] = useState(null);
   const [videoFile, setVideoFile] = useState(null);
 
@@ -196,13 +190,12 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
   const {
     control,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { isSubmitting },
     setValue,
     getValues,
     watch,
     reset,
     trigger,
-    clearErrors,
   } = useForm({
     resolver: yupResolver(schema),
     mode: 'onBlur',
@@ -212,10 +205,10 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
       category: initial?.category || '',
       primaryMusclesWorked: parseArrayMaybe(initial?.primaryMusclesWorked),
       secondaryMusclesWorked: parseArrayMaybe(initial?.secondaryMusclesWorked),
-      targetReps: safeStr(initial?.targetReps),
+      targetReps: safeStr(initial?.targetReps ||  10) ,
       targetSets: initial?.targetSets === 0 ? 0 : initial?.targetSets ?? 3,
       rest: initial?.rest === 0 ? 0 : initial?.rest ?? 90,
-      tempo: safeStr(initial?.tempo),
+      tempo: safeStr(initial?.tempo || "1/1/1"),
       imgUrl: initial?.img || '',
       videoUrl: initial?.video || '',
       hasImgFile: false,
@@ -231,10 +224,10 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
       category: initial?.category || '',
       primaryMusclesWorked: parseArrayMaybe(initial?.primaryMusclesWorked),
       secondaryMusclesWorked: parseArrayMaybe(initial?.secondaryMusclesWorked),
-      targetReps: safeStr(initial?.targetReps),
+      targetReps: safeStr(initial?.targetReps || 10),
       targetSets: initial?.targetSets === 0 ? 0 : initial?.targetSets ?? 3,
       rest: initial?.rest === 0 ? 0 : initial?.rest ?? 90,
-      tempo: safeStr(initial?.tempo),
+      tempo: safeStr(initial?.tempo || "1/1/1"),
       imgUrl: initial?.img || '',
       videoUrl: initial?.video || '',
       hasImgFile: false,
@@ -246,12 +239,8 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
 
   useEffect(() => {
     if (!initial) return;
-
-    // keep *stored* values human-readable (what you already have in initial)
-    // but set them to safely-resolved absolute URLs only if they’re relative
     const img = resolveUrlMaybe(initial?.img);
     const vid = resolveUrlMaybe(initial?.video);
-
     setValue('imgUrl', img);
     setValue('videoUrl', vid);
   }, [initial, setValue]);
@@ -260,9 +249,9 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
   const nameVal = watch('name');
   useEffect(() => setShowAiButton(Boolean(nameVal && nameVal.trim().length >= 2)), [nameVal]);
 
-  // ---------- AI (uses setValue) ----------
+  // ---------- AI ----------
   async function suggestFromAI(exName) {
-    const API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY; // avoid exposing in prod
+    const API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
     if (!API_KEY || !exName || exName.trim().length < 2) return null;
     if (inFlight.current) inFlight.current.abort();
     const ctrl = new AbortController();
@@ -294,17 +283,13 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
         parsed = JSON.parse(m ? m[0] : content);
       } catch {}
       return parsed;
-    } catch (_) {
+    } catch (err) {
+      Notification(t('errors.apiKeyExpired'), 'error');
       return null;
     } finally {
       setAiLoading(false);
       if (inFlight.current === ctrl) inFlight.current = null;
     }
-  }
-
-  function emptyishForAI() {
-    const vals = getValues();
-    return isEmptyish(vals.details) && isEmptyish(vals.category) && isEmptyish(vals.primaryMusclesWorked) && isEmptyish(vals.secondaryMusclesWorked) && isEmptyish(vals.tempo);
   }
 
   async function applyAISuggestions() {
@@ -326,12 +311,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
     if (isEmptyish(vals.videoUrl) && typeof s.video === 'string') setValue('videoUrl', s.video);
   }
 
-  async function handleNameBlur() {
-    if (!emptyishForAI()) return;
-    await applyAISuggestions();
-  }
-
-  // ---------- submit ----------
+  const user = useUser();
   const onValidSubmit = handleSubmit(async values => {
     const payload = {
       name: values.name,
@@ -347,43 +327,38 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
       videoUrl: videoFile ? undefined : values.videoUrl || '',
       imgFile: imgFile || undefined,
       videoFile: videoFile || undefined,
+      userId: user?.id,
     };
     await onSubmit?.(payload);
   });
 
   return (
     <form onSubmit={onValidSubmit} className='relative space-y-4'>
-      {/* Loading overlay while AI is fetching */}
       {aiLoading && (
         <div className='absolute inset-0 z-10 grid place-items-center rounded-lg bg-white/70 backdrop-blur-sm'>
           <div className='flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 shadow'>
             <Loader2 className='h-4 w-4 animate-spin' />
-            <span className='text-sm text-slate-700'>Fetching AI suggestions…</span>
+            <span className='text-sm text-slate-700'>{t('ai.fetching')}</span>
           </div>
         </div>
       )}
 
       <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
-        {/* Name with inline AI button */}
         <Controller
           name='name'
           control={control}
           render={({ field, fieldState }) => (
-            <Field label='Name' required hint={showAiButton ? 'Type a name, then use AI to auto-fill fields.' : undefined} error={fieldState.error?.message}>
+            <Field label={t('labels.name')} required hint={showAiButton ? t('hints.nameAi') : undefined} error={fieldState.error?.message}>
               <TextInput
                 name='name'
                 value={field.value}
                 onChange={field.onChange}
-                onBlur={async () => {
-                  field.onBlur();
-                  await handleNameBlur();
-                }}
-                placeholder='e.g., Wide-Grip Seated Row'
+                placeholder={t('placeholders.name')}
                 rightSlot={
                   showAiButton ? (
                     <button type='button' onClick={applyAISuggestions} className='mr-1 inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-400/50'>
                       <Wand2 className='h-3.5 w-3.5' />
-                      Get AI
+                      {t('actions.getAi')}
                     </button>
                   ) : null
                 }
@@ -393,62 +368,65 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
         />
 
         <Controller
-          name='targetReps'
-          control={control}
-          render={({ field, fieldState }) => (
-            <Field label='Target Reps' error={fieldState.error?.message}>
-              <TextInput name='targetReps' value={field.value} onChange={field.onChange} placeholder='10 or 8-12' />
-            </Field>
-          )}
-        />
-
-        <Controller
-          name='targetSets'
-          control={control}
-          render={({ field, fieldState }) => (
-            <Field label='Target Sets' error={fieldState.error?.message}>
-              <NumberInput name='targetSets' value={field.value} onChange={field.onChange} min={0} step={1} />
-            </Field>
-          )}
-        />
-
-        <Controller
-          name='rest'
-          control={control}
-          render={({ field, fieldState }) => (
-            <Field label='Rest (sec)' error={fieldState.error?.message}>
-              <NumberInput name='rest' value={field.value} onChange={field.onChange} min={0} step={5} />
-            </Field>
-          )}
-        />
-
-        <Controller
-          name='tempo'
-          control={control}
-          render={({ field, fieldState }) => (
-            <Field label='Tempo' hint='Format "x/y/z", 2/1/2' error={fieldState.error?.message}>
-              <TextInput name='tempo' value={safeStr(field.value)} onChange={field.onChange} placeholder='2/1/2' />
-            </Field>
-          )}
-        />
-
-        <Controller
           name='category'
           control={control}
           render={({ field, fieldState }) => (
-            <Field label='Category' required error={fieldState.error?.message}>
-              <Select className='!w-full' placeholder='Select category' options={categoryOptions} value={field.value} onChange={val => field.onChange(val)} allowCustom={true} createHint='Write a new category…' />
+            <Field label={t('labels.category')} required error={fieldState.error?.message}>
+              <Select className='!w-full' placeholder={t('placeholders.category')} options={categoryOptions} value={field.value} onChange={val => field.onChange(val)} allowCustom={true} createHint={t('hints.createCategory')} />
             </Field>
           )}
         />
+
+          <div className=' max-md:space-y-3 md:grid grid-cols-2 gap-2' >
+            <Controller
+              name='targetReps'
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field label={t('labels.targetReps')} error={fieldState.error?.message}>
+                  <TextInput name='targetReps' value={field.value} onChange={field.onChange} placeholder={t('placeholders.reps')} />
+                </Field>
+              )}
+            />
+
+            <Controller
+              name='targetSets'
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field label={t('labels.targetSets')} error={fieldState.error?.message}>
+                  <NumberInput name='targetSets' value={field.value} onChange={field.onChange} min={0} step={1} placeholder={t('placeholders.sets')} />
+                </Field>
+              )}
+            />
+          </div>  
+          <div className=' max-md:space-y-3 md:grid grid-cols-2 gap-2' >
+            <Controller
+              name='rest'
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field label={t('labels.rest')} error={fieldState.error?.message}>
+                  <NumberInput name='rest' value={field.value} onChange={field.onChange} min={0} step={5} placeholder={t('placeholders.rest')} />
+                </Field>
+              )}
+            />
+
+            <Controller
+              name='tempo'
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field label={t('labels.tempo')}  error={fieldState.error?.message}>
+                  <TextInput name='tempo' value={safeStr(field.value)} onChange={field.onChange} placeholder={t('placeholders.tempo')} />
+                </Field>
+              )}
+            />
+          </div> 
 
         <Controller
           name='details'
           control={control}
           render={({ field, fieldState }) => (
             <div className='sm:col-span-2'>
-              <Field label='Details' error={fieldState.error?.message}>
-                <TextArea rows={2} value={field.value} onChange={field.onChange} placeholder='Form cues, setup, and targeted stimulus...' />
+              <Field label={t('labels.details')} error={fieldState.error?.message}>
+                <TextArea rows={2} value={field.value} onChange={field.onChange} placeholder={t('placeholders.details')} />
               </Field>
             </div>
           )}
@@ -458,8 +436,8 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
           name='primaryMusclesWorked'
           control={control}
           render={({ field, fieldState }) => (
-            <Field label='Primary Muscles' error={fieldState.error?.message}>
-              <TagsField value={field.value} onChange={field.onChange} placeholder='Write a muscle and press Enter' maxTags={20} />
+            <Field label={t('labels.primary')} error={fieldState.error?.message}>
+              <TagsField value={field.value} onChange={field.onChange} placeholder={t('placeholders.tag')} maxTags={20} />
             </Field>
           )}
         />
@@ -468,8 +446,8 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
           name='secondaryMusclesWorked'
           control={control}
           render={({ field, fieldState }) => (
-            <Field label='Secondary Muscles' error={fieldState.error?.message}>
-              <TagsField value={field.value} onChange={field.onChange} placeholder='Write a muscle and press Enter' maxTags={20} />
+            <Field label={t('labels.secondary')} error={fieldState.error?.message}>
+              <TagsField value={field.value} onChange={field.onChange} placeholder={t('placeholders.tag')} maxTags={20} />
             </Field>
           )}
         />
@@ -485,7 +463,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
             control={control}
             render={({ field, fieldState }) => (
               <div>
-                <Field label='Image' required error={fieldState.error?.message}>
+                <Field label={t('labels.image')} required error={fieldState.error?.message}>
                   <div className='flex items-center gap-2'>
                     <TextInput
                       name='imgUrl'
@@ -493,7 +471,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
                       onChange={val => {
                         field.onChange(val);
                       }}
-                      placeholder='https://… or /uploads/…'
+                      placeholder={t('placeholders.mediaUrl')}
                       className='flex-1'
                     />
                     <label className='inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-[10px] text-sm'>
@@ -506,9 +484,10 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
                           const f = e.target.files?.[0] || null;
                           setImgFile(f);
                           setValue('hasImgFile', !!f, { shouldValidate: true });
-                          setValue('imgUrl', f.name);
+                          setValue('imgUrl', f?.name || '');
                           trigger('imgUrl');
                         }}
+                        aria-label={t('actions.uploadImage')}
                       />
                     </label>
                   </div>
@@ -525,7 +504,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
             control={control}
             render={({ field, fieldState }) => (
               <div>
-                <Field label='Video' required error={fieldState.error?.message}>
+                <Field label={t('labels.video')} required error={fieldState.error?.message}>
                   <div className='flex items-center gap-2'>
                     <TextInput
                       name='videoUrl'
@@ -533,7 +512,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
                       onChange={val => {
                         field.onChange(val);
                       }}
-                      placeholder='https://… or /uploads/…'
+                      placeholder={t('placeholders.mediaUrlVideo')}
                       className='flex-1'
                     />
                     <label className='inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-[10px] text-sm'>
@@ -546,9 +525,10 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
                           const f = e.target.files?.[0] || null;
                           setVideoFile(f);
                           setValue('hasVideoFile', !!f, { shouldValidate: true });
-                          setValue('videoUrl', f.name);
+                          setValue('videoUrl', f?.name || '');
                           trigger('videoUrl');
                         }}
+                        aria-label={t('actions.uploadVideo')}
                       />
                     </label>
                   </div>
@@ -565,12 +545,11 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
       <div className='flex items-center justify-end gap-2 pt-2'>
         <PrimaryButton type='button' onClick={applyAISuggestions} loading={aiLoading} disabled={!nameVal || nameVal.trim().length < 2}>
           <Sparkles className='mr-1.5 h-4 w-4' />
-          Fill with AI
+          {t('actions.fillWithAi')}
         </PrimaryButton>
 
-        {/* Save with RHF submitting state */}
         <PrimaryButton type='submit' loading={isSubmitting}>
-          Save
+          {t('actions.save')}
         </PrimaryButton>
       </div>
     </form>

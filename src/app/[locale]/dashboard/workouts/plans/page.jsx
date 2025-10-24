@@ -1,20 +1,23 @@
+// File: app/[locale]/dashboard/workouts/plans/page.jsx
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
-import { AnimatePresence, LayoutGroup, motion, Reorder } from 'framer-motion';
-import { Dumbbell, Plus, LayoutGrid, Rows, Eye, PencilLine, Trash2, CheckCircle2, Settings, Clock, ChevronUp, ChevronDown, Users as UsersIcon, ChevronRight, X, Layers, Search, Tag, GripVertical, RefreshCcw, UserCheck, Users, CalendarX } from 'lucide-react';
+import { motion, Reorder } from 'framer-motion';
+import { Dumbbell, Plus, Eye, PencilLine, Trash2, Clock, Users as UsersIcon, X, Layers, Search, Tag, GripVertical, UserCheck, Users, CalendarX } from 'lucide-react';
 
-import api, { baseImg } from '@/utils/axios';
-import { Modal, StatCard, TabsPill } from '@/components/dashboard/ui/UI';
+import api from '@/utils/axios';
+import { Modal, StatCard } from '@/components/dashboard/ui/UI';
 import Button from '@/components/atoms/Button';
 import Select from '@/components/atoms/Select';
-import { useValues } from '@/context/GlobalContext';
 import { Notification } from '@/config/Notification';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 import { PrettyPagination } from '@/components/dashboard/ui/Pagination';
 import Input from '@/components/atoms/Input';
-import Textarea from '@/components/atoms/Textarea';
 import { ExercisePicker } from '@/components/pages/dashboard/plans/ExercisePicker';
+import { useTranslations } from 'next-intl';
+import { useAdminClients } from '@/hooks/useHierarchy';
+import { useUser } from '@/hooks/useUser';
+import MultiLangText from '@/components/atoms/MultiLangText';
 
 const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
@@ -28,20 +31,11 @@ const useDebounced = (value, delay = 350) => {
   return deb;
 };
 
-const IconBtn = memo(({ title, onClick, danger, children }) => (
-  <button
-    type='button'
-    title={title}
-    onClick={onClick}
-    aria-label={title}
-    className={`size-7 grid place-content-center rounded-lg border shadow-sm active:scale-95 transition
-      ${danger ? 'border-rose-200 bg-white hover:bg-rose-50 text-rose-600' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'}`}>
-    {children}
-  </button>
-));
-
 /* =============================== PAGE ROOT =============================== */
 export default function PlansPage() {
+  const t = useTranslations('workoutPlans');
+  const user = useUser();
+
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -63,12 +57,20 @@ export default function PlansPage() {
   const [stats, setStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
 
-  const { usersByRole, fetchUsers } = useValues();
-  useEffect(() => {
-    fetchUsers('client');
-    fetchUsers('coach');
-  }, [fetchUsers]);
-  const optionsClient = usersByRole['client'] || [];
+  const clients = useAdminClients(user?.id, { page: 1, limit: 100, search: '' });
+
+  const optionsClient = useMemo(() => {
+    const list = [];
+    if (clients?.items?.length) {
+      for (const coach of clients.items) {
+        list.push({
+          id: coach.id,
+          label: coach.name,
+        });
+      }
+    }
+    return list;
+  }, [user, clients?.items]);
 
   const reqId = useRef(0);
   const abortControllerRef = useRef(null);
@@ -117,11 +119,11 @@ export default function PlansPage() {
     } catch (e) {
       if (e.name === 'CanceledError') return;
       if (myId !== reqId.current) return;
-      setErr(e?.response?.data?.message || 'Failed to load plans');
+      setErr(e?.response?.data?.message || t('errors.loadPlans', 'Failed to load plans'));
     } finally {
       if (myId === reqId.current) setLoading(false);
     }
-  }, [page, debounced, sortBy, sortOrder, perPage]);
+  }, [page, debounced, sortBy, sortOrder, perPage, t]);
 
   const fetchStats = useCallback(async () => {
     setLoadingStats(true);
@@ -131,6 +133,7 @@ export default function PlansPage() {
       const res = await api.get('/plans/overview', { params });
       setStats(res.data);
     } catch {
+      // ignore
     } finally {
       setLoadingStats(false);
     }
@@ -186,18 +189,20 @@ export default function PlansPage() {
     try {
       await api.delete(`/plans/${deleteId}`);
       setItems(arr => arr.filter(x => x.id !== deleteId));
-      setTotal(t => Math.max(0, t - 1));
-      Notification('Plan deleted successfully', 'success');
+      setTotal(tot => Math.max(0, tot - 1));
+      Notification(t('notifications.planDeleted'), 'success');
     } catch (e) {
-      Notification(e?.response?.data?.message || 'Delete failed', 'error');
+      if (e?.response?.data?.message == 'You can only take actions on plans you created.') return Notification(t('planActionNotAllowed'), 'error');
+      Notification(e?.response?.data?.message || t('notifications.planDeleteFailed'), 'error');
     } finally {
       setDeleteId(null);
       setDeleteLoading(false);
       setDeleteOpen(false);
     }
-  }, [deleteId]);
+  }, [deleteId, t]);
 
   const createPlan = async payload => {
+    // payload already has userId injected in NewPlanBuilder
     const res = await api.post('/plans', payload, { headers: { 'Content-Type': 'application/json' } });
     return res.data;
   };
@@ -227,25 +232,25 @@ export default function PlansPage() {
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / Math.max(1, perPage))), [total, perPage]);
 
+  const sortLabel = sortBy === 'created_at' ? (sortOrder === 'ASC' ? t('plans.filters.oldestFirst') : t('plans.filters.newestFirst')) : t('plans.filters.sortByDate');
+
   return (
     <div className='space-y-6'>
-      {/* Header / Stats - Matching Exercises page */}
-      <GradientStatsHeader onClick={() => setAddOpen(true)} btnName={'New Plan'} title='Plans' desc='Create programs, organize days, and assign to athletes.' loadingStats={loadingStats}>
-        <StatCard className=' ' icon={Layers} title='Total Plans' value={stats?.summary?.plans?.total || 0} />
-        <StatCard className=' ' icon={CalendarX} title='Plans Without Days' value={stats?.summary?.plans?.withNoDays || 0} />
-        <StatCard className=' ' icon={Users} title='Unassigned Plans' value={stats?.summary?.plans?.withNoAssignments || 0} />
-        <StatCard className=' ' icon={UserCheck} title='Active Assignments' value={stats?.summary?.usage?.totalAssignments || 0} />
+      {/* Header / Stats */}
+      <GradientStatsHeader onClick={() => setAddOpen(true)} btnName={t('plans.header.newPlanButton')} title={t('plans.header.title')} desc={t('plans.header.desc')} loadingStats={loadingStats}>
+        <StatCard className=' ' icon={Layers} title={t('plans.stats.globalPlans')} value={stats?.plans?.total || 0} />
+        <StatCard className=' ' icon={Layers} title={t('plans.stats.personalPlans')} value={stats?.plans?.totalPlansPersonal || 0} />
       </GradientStatsHeader>
 
-      {/* Filters + search - Matching Exercises page */}
+      {/* Filters + search */}
       <div className='relative '>
         <div className='flex items-center justify-between gap-2 flex-wrap'>
           {/* Search */}
           <div className='relative flex-1 max-w-[240px] sm:min-w-[260px]'>
-            <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
-            <input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder='Search plans…' className={['h-11 w-full pl-10 pr-10 rounded-lg', 'border border-slate-200 bg-white/90 text-slate-900', 'shadow-sm hover:shadow transition', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')} />
+            <Search className='absolute rtl:right-3 ltr:left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
+            <input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder={t('placeholders.search')} className={['h-11 w-full px-8 rounded-lg', 'border border-slate-200 bg-white/90 text-slate-900', 'shadow-sm hover:shadow transition', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')} aria-label={t('placeholders.search')} />
             {!!searchText && (
-              <button type='button' onClick={() => setSearchText('')} className='absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100' aria-label='Clear search' title='Clear'>
+              <button type='button' onClick={() => setSearchText('')} className='absolute rtl:left-2 ltr:right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100' aria-label={t('actions.clear')} title={t('actions.clear')}>
                 <X className='w-4 h-4' />
               </button>
             )}
@@ -256,7 +261,7 @@ export default function PlansPage() {
             <div className='min-w-[130px]'>
               <Select
                 className='!w-full'
-                placeholder='Per page'
+                placeholder={t('plans.filters.perPage')}
                 options={[
                   { id: 8, label: 8 },
                   { id: 12, label: 12 },
@@ -271,7 +276,7 @@ export default function PlansPage() {
             {/* Sort newest */}
             <button onClick={() => toggleSort('created_at')} className={['inline-flex items-center gap-2 rounded-lg px-3 h-11 font-medium transition-all duration-300', 'border border-slate-200 bg-white/95 text-slate-800 shadow-sm', 'hover:shadow-md hover:bg-slate-50 active:scale-[.97]', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')}>
               <Clock size={18} />
-              <span className='text-sm tracking-wide'>{sortBy === 'created_at' ? (sortOrder === 'ASC' ? 'Oldest First' : 'Newest First') : 'Sort by Date'}</span>
+              <span className='text-sm tracking-wide'>{sortLabel}</span>
             </button>
           </div>
         </div>
@@ -281,37 +286,40 @@ export default function PlansPage() {
       {err ? <div className='p-3 rounded-lg bg-red-50 text-red-700 border border-red-100'>{err}</div> : null}
 
       {/* Content */}
-      {<ListView loading={loading} items={items} onPreview={openPreview} onEdit={openEdit} onDelete={askDelete} onAssign={openAssign} />}
+      <ListView loading={loading} items={items} onPreview={openPreview} onEdit={openEdit} onDelete={askDelete} onAssign={openAssign} />
 
       <PrettyPagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
       {/* Preview */}
-      <Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name || 'Plan Preview'} maxW='max-w-4xl'>
+      <Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name || t('plans.modals.previewTitle')} maxW='max-w-4xl'>
         {preview && <PlanPreview plan={preview} />}
       </Modal>
 
       {/* New Plan Builder */}
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title='Create Plan' maxW='max-w-5xl'>
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title={t('plans.modals.createTitle')} maxW='max-w-5xl'>
         <NewPlanBuilder
+          userId={user?.id}
           onCancel={() => setAddOpen(false)}
           onCreate={async payload => {
             try {
               const saved = await createPlan(payload);
               setItems(arr => [saved, ...arr]);
-              setTotal(t => t + 1);
+              setTotal(tot => tot + 1);
               setAddOpen(false);
-              Notification('Plan created', 'success');
+              Notification(t('notifications.planCreated'), 'success');
             } catch (e) {
-              Notification(e?.response?.data?.message || 'Create failed', 'error');
+              if (e?.response?.data?.message == 'Duplicate day: saturday') return Notification(t('notifications.duplicateDay'), 'error');
+              Notification(e?.response?.data?.message || t('notifications.createFailed'), 'error');
             }
           }}
         />
       </Modal>
 
       {/* Edit */}
-      <Modal open={!!editRow} onClose={() => setEditRow(null)} title={`Edit: ${editRow?.name || ''}`} maxW='max-w-5xl'>
+      <Modal open={!!editRow} onClose={() => setEditRow(null)} title={`${t('plans.modals.editTitle')} ${editRow?.name || ''}`} maxW='max-w-5xl'>
         {editRow && (
           <NewPlanBuilder
+            userId={user?.id}
             initial={editRow}
             onCancel={() => setEditRow(null)}
             onCreate={async payload => {
@@ -319,9 +327,10 @@ export default function PlansPage() {
                 const saved = await updatePlan(editRow.id, payload);
                 setItems(arr => arr.map(p => (p.id === editRow.id ? saved : p)));
                 setEditRow(null);
-                Notification('Plan updated', 'success');
+                Notification(t('notifications.planUpdated'), 'success');
               } catch (e) {
-                Notification(e?.response?.data?.message || 'Update failed', 'error');
+                if (e?.response?.data?.message == 'You can only take actions on plans you created.') return Notification(t('planActionNotAllowed'), 'error');
+                Notification(e?.response?.data?.message || t('notifications.createFailed'), 'error');
               }
             }}
           />
@@ -329,7 +338,7 @@ export default function PlansPage() {
       </Modal>
 
       {/* Assign */}
-      <Modal open={!!assignOpen} onClose={() => setAssignOpen(null)} title={`Assign: ${assignOpen?.name || ''}`} maxW='max-w-md'>
+      <Modal open={!!assignOpen} onClose={() => setAssignOpen(null)} title={t('plans.modals.assignTitle', { name: assignOpen?.name || '' })} maxW='max-w-md'>
         {assignOpen && <AssignForm setChangePlans={setChangePlans} setPlans={setItems} plans={items} planId={assignOpen.id} optionsClient={optionsClient} onClose={() => setAssignOpen(null)} onAssigned={() => setAssignOpen(null)} />}
       </Modal>
 
@@ -341,9 +350,9 @@ export default function PlansPage() {
           setDeleteOpen(false);
           setDeleteId(null);
         }}
-        title='Delete plan?'
-        message='This action cannot be undone.'
-        confirmText='Delete'
+        title={t('confirm.deletePlanTitle')}
+        message={t('confirm.deletePlanMsg')}
+        confirmText={t('confirm.confirmBtn')}
         onConfirm={handleDelete}
       />
     </div>
@@ -351,14 +360,15 @@ export default function PlansPage() {
 }
 
 /* ---------------------------- Subcomponents ---------------------------- */
-const ConfirmDialog = memo(({ open, onClose, loading, title = 'Are you sure?', message = '', onConfirm, confirmText = 'Confirm' }) => {
+const ConfirmDialog = memo(function ConfirmDialog({ open, onClose, loading, title, message, onConfirm, confirmText }) {
+  const t = useTranslations('workoutPlans');
   return (
-    <Modal open={open} onClose={onClose} title={title} maxW='max-w-md'>
+    <Modal open={open} onClose={onClose} title={title || t('confirm.titleDefault')} maxW='max-w-md'>
       <div className='space-y-4'>
         {message ? <p className='text-sm text-slate-600'>{message}</p> : null}
         <div className='flex items-center justify-end gap-2'>
           <Button
-            name={confirmText}
+            name={confirmText || t('confirm.confirmBtn')}
             loading={loading}
             color='danger'
             className='!w-fit'
@@ -373,18 +383,17 @@ const ConfirmDialog = memo(({ open, onClose, loading, title = 'Are you sure?', m
   );
 });
 
-/* ================================ GRID VIEW ================================ */
-
+/* ================================ LIST VIEW ================================ */
 export const ListView = memo(function ListView({ loading, items = [], onPreview, onEdit, onDelete, onAssign }) {
+  const t = useTranslations('workoutPlans');
+
   /* ---------- Loading (skeleton list) ---------- */
   if (loading) {
     return (
       <div className='divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'>
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className='group relative flex items-center gap-3 px-4 py-3'>
-            {/* gradient hairline left */}
-            <span aria-hidden className='absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-indigo-500/80 to-violet-500/80 opacity-60' />
-            <div className='grid h-12 w-12 place-content-center rounded-lg bg-slate-100 shimmer' />
+             <div className='grid h-12 w-12 place-content-center rounded-lg bg-slate-100 shimmer' />
             <div className='min-w-0 flex-1'>
               <div className='mb-2 h-4 w-40 rounded shimmer' />
               <div className='h-3 w-24 rounded shimmer' />
@@ -403,62 +412,52 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
         <div className='mx-auto grid h-16 w-16 place-content-center rounded-xl bg-slate-100'>
           <Dumbbell className='h-8 w-8 text-slate-500' />
         </div>
-        <h3 className='mt-4 text-lg font-semibold text-slate-900'>No plans found</h3>
-        <p className='mt-1 text-sm text-slate-600'>Try a different search or create a new plan.</p>
+        <h3 className='mt-4 text-lg font-semibold text-slate-900'>{t('plans.list.noPlansTitle')}</h3>
+        <p className='mt-1 text-sm text-slate-600'>{t('plans.list.noPlansDesc')}</p>
       </div>
     );
   }
 
-  /* ---------- List (grid-inspired styling) ---------- */
+  /* ---------- List ---------- */
   return (
-    <div className='divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'>
+    <div className='divide-y flex flex-col gap-3 divide-slate-100 overflow-hidden '>
       {items.map(p => {
-        const dayCount = Array.isArray(p?.days) ? p.days.length : 0;
+        const dayCount = Array.isArray(p?.program?.days) ? p.program.days.length : 0;
         const active = !!p?.isActive;
 
         return (
-          <div key={p.id} className='group relative flex items-start gap-3 px-4 py-3 transition-all duration-300 hover:bg-slate-50/60'>
-            {/* left gradient hairline (grid DNA) */}
-            <span aria-hidden className='absolute left-0 top-0 h-full w-1 rounded-tr-lg rounded-br-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-70' />
-
-            {/* icon tile (grid DNA) */}
-            <div className='mt-0.5 grid h-12 w-12 shrink-0 place-content-center rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-95 text-white shadow-sm'>
+          <div key={p.id} className='rounded-xl border border-y-slate-200 bg-white  group relative flex items-start gap-3 px-4 py-3 transition-all duration-300 hover:bg-slate-50/60'>
+  
+            {/* icon tile */}
+            <div className='mt-0.5 grid h-8 w-8 shrink-0 place-content-center rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-95 text-white shadow-sm'>
               <Dumbbell className='h-5 w-5' />
             </div>
 
             {/* content */}
             <div className='min-w-0 flex-1'>
               <div className='flex flex-wrap items-center gap-2'>
-                <div className='truncate text-sm font-semibold text-slate-900'>{p.name}</div>
-                <span className={['inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] ring-1 ring-inset', active ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-slate-100 text-slate-600 ring-slate-200'].join(' ')}>{active ? 'Active' : 'Inactive'}</span>
-              </div>
-
-              {p.notes ? <p className='mt-1 line-clamp-1 text-[13px] leading-5 text-slate-600'>{p.notes}</p> : <p className='mt-1 text-[13px] text-slate-500'>No description.</p>}
-
-              <div className='mt-1 flex flex-wrap items-center gap-2 text-[12px] text-slate-600'>
-                <span className='rounded-lg border border-slate-200 bg-white px-2 py-0.5'>
-                  {dayCount} day{dayCount === 1 ? '' : 's'}
-                </span>
+                <MultiLangText className='truncate text-base font-semibold text-slate-900'>{p.name}</MultiLangText>
+                <span className={['inline-flex items-center gap-1 rounded-md px-2 py-0.5   ring-1 ring-inset', active ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-slate-100 text-slate-600 ring-slate-200'].join(' ')}>{active ? t('plans.list.active') : t('plans.list.inactive')}</span>
+                <span className='rounded-lg border border-slate-200 bg-white px-2 py-0.5'>{t('plans.list.dayCountLabel', { count: dayCount })}</span>
               </div>
             </div>
 
-            {/* actions: primary + rail (grid DNA) */}
+            {/* actions */}
             <div className='ml-auto flex shrink-0 items-center gap-1'>
-              {/* Primary action: Assign */}
-              <button type='button' onClick={() => onAssign?.(p)} className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800  transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 active:scale-[.98]' title='Assign'>
+              {/* Assign */}
+              <button type='button' onClick={() => onAssign?.(p)} className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800  transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 active:scale-[.98]' title={t('actions.assign')}>
                 <UsersIcon className='h-4 w-4' />
-                Assign
+                {t('actions.assign')}
               </button>
 
-              {/* Hover rail (appears on row hover) */}
               <div className='flex items-center gap-1 '>
-                <button type='button' title='Preview' onClick={() => onPreview?.(p)} className='inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30'>
+                <button type='button' title={t('actions.preview')} onClick={() => onPreview?.(p)} className='inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30'>
                   <Eye className='h-4 w-4' />
                 </button>
-                <button type='button' title='Edit' onClick={() => onEdit?.(p)} className='inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-indigo-700 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400/30'>
+                <button type='button' title={t('actions.edit')} onClick={() => onEdit?.(p)} className='inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-indigo-700 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400/30'>
                   <PencilLine className='h-4 w-4' />
                 </button>
-                <button type='button' title='Delete' onClick={() => onDelete?.(p.id)} className='inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/30'>
+                <button type='button' title={t('actions.delete')} onClick={() => onDelete?.(p.id)} className='inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/30'>
                   <Trash2 className='h-4 w-4' />
                 </button>
               </div>
@@ -470,25 +469,12 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
   );
 });
 
-const PlanPreview = memo(({ plan }) => {
-  const [assignees, setAssignees] = useState(null);
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const res = await api.get(`/plans/${plan.id}/assignees`);
-        if (mounted) setAssignees(res.data || []);
-      } catch {}
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [plan.id]);
-
+const PlanPreview = memo(function PlanPreview({ plan }) {
+  const t = useTranslations('workoutPlans');
   return (
     <div className='space-y-6'>
       <div className='space-y-4'>
-        {(plan?.program.days || []).map((d, idx) => (
+        {(plan?.program?.days || []).map((d, idx) => (
           <div key={d.id || idx} className=''>
             <div className='rounded-[6px_6px_0_0] border border-slate-200 bg-white px-4 py-3 border-b  flex items-center justify-between'>
               <div className='font-semibold'>{d.name}</div>
@@ -501,7 +487,7 @@ const PlanPreview = memo(({ plan }) => {
                     <li key={ex.id || ex.exerciseId || i} className='flex items-center justify-between bg-slate-200/70 rounded-lg px-3 py-2'>
                       <div className='flex items-center gap-2'>
                         <span className='w-6 h-6 text-[11px] grid place-content-center rounded bg-white border border-slate-200 text-slate-700'>{i + 1}</span>
-                        <div className='font-medium text-slate-800'>{ex.name || ex.exercise?.name || `Exercise #${i + 1}`}</div>
+                        <div className='font-medium text-slate-800'>{ex.name || ex.exercise?.name || `${t('preview.exerciseLabel')} #${i + 1}`}</div>
                         {ex.exercise?.category ? (
                           <span className='ml-2 text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200'>
                             <Tag className='inline w-3 h-3 mr-1' />
@@ -511,65 +497,32 @@ const PlanPreview = memo(({ plan }) => {
                       </div>
                       {ex.targetReps || ex.targetSets || ex.restSeconds || ex.rest || ex.tempo ? (
                         <div className='text-xs text-slate-500'>
-                          {ex.targetSets ? `Sets ${ex.targetSets}` : ''} {ex.targetReps ? `· Reps ${ex.targetReps}` : ''} {ex.restSeconds ? `· Rest ${ex.restSeconds}s` : ex.rest ? `· Rest ${ex.rest}s` : ''} {ex.tempo ? `· Tempo ${ex.tempo}` : ''}
+                          {ex.targetSets ? `${t('picker.sets')} ${ex.targetSets}` : ''} {ex.targetReps ? `· ${t('picker.reps')} ${ex.targetReps}` : ''} {ex.restSeconds ? `· ${t('picker.rest')} ${ex.restSeconds}s` : ex.rest ? `· ${t('picker.rest')} ${ex.rest}s` : ''} {ex.tempo ? `· ${ex.tempo}` : ''}
                         </div>
                       ) : null}
                     </li>
                   ))}
                 </ol>
               ) : (
-                <div className='text-xs text-slate-400'>No exercises yet</div>
+                <div className='text-xs text-slate-400'>{t('preview.noExercisesYet')}</div>
               )}
             </div>
           </div>
         ))}
       </div>
 
-      <div>
-        <div className='text-xs font-semibold text-slate-500 mb-2'>Assignees</div>
-        {assignees === null ? (
-          <div className='h-8 rounded shimmer w-1/2' />
-        ) : assignees.length ? (
-          <div className='flex flex-wrap gap-1'>
-            {assignees.map(a => (
-              <span key={a.id} className='inline-flex items-center rounded-lg bg-indigo-100 text-indigo-700 text-[11px] px-2 py-1 border border-indigo-200'>
-                {a?.email}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <div className='text-xs text-slate-400'>No assignees</div>
-        )}
-      </div>
-
       <div className='text-[11px] text-slate-500 border-t border-slate-100 pt-3'>
-        Created: {plan.created_at ? new Date(plan.created_at).toLocaleString() : '—'} · Updated: {plan.updated_at ? new Date(plan.updated_at).toLocaleString() : '—'}
+        {t('preview.createdAt')} {plan.created_at ? new Date(plan.created_at).toLocaleString() : '—'} · {t('preview.updatedAt')} {plan.updated_at ? new Date(plan.updated_at).toLocaleString() : '—'}
       </div>
     </div>
   );
 });
 
 /* ================================ ASSIGN ================================= */
-const AssignForm = memo(({ planId, onClose, onAssigned, optionsClient, setChangePlans }) => {
+const AssignForm = memo(function AssignForm({ planId, onClose, onAssigned, optionsClient, setChangePlans }) {
+  const t = useTranslations('workoutPlans');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const res = await api.get(`/plans/${planId}/assignees`);
-        const curr = (res.data || []).map(a => a?.athlete?.id).filter(Boolean);
-        if (!mounted) return;
-        const ids = new Set(curr);
-        const pre = optionsClient.filter(o => ids.has(o.id));
-        setSelectedUsers(pre);
-      } catch {}
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [planId, optionsClient]);
 
   const addUser = userId => {
     if (!userId) return;
@@ -589,7 +542,7 @@ const AssignForm = memo(({ planId, onClose, onAssigned, optionsClient, setChange
     try {
       const athleteIds = selectedUsers.map(u => u.id);
 
-      const res = await api.post(`/plans/${planId}/assign`, {
+      await api.post(`/plans/${planId}/assign`, {
         athleteIds,
         isActive: true,
         confirm: 'yes',
@@ -597,10 +550,10 @@ const AssignForm = memo(({ planId, onClose, onAssigned, optionsClient, setChange
 
       setChangePlans(JSON.stringify(athleteIds + planId));
 
-      Notification('Assigned successfully', 'success');
+      Notification(t('notifications.assignedSuccess'), 'success');
       onAssigned?.();
     } catch (err) {
-      Notification(err?.response?.data?.message || 'Failed to assign', 'error');
+      Notification(err?.response?.data?.message || t('notifications.assignFailed'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -609,8 +562,8 @@ const AssignForm = memo(({ planId, onClose, onAssigned, optionsClient, setChange
   return (
     <form onSubmit={submit} className='space-y-4'>
       <div>
-        <label className='text-sm font-medium text-slate-700 mb-2 block'>Select Users</label>
-        <Select placeholder='Search and select users…' options={optionsClient.filter(o => !selectedUsers.some(u => u.id === o.id))} value={null} onChange={addUser} searchable={true} />
+        <label className='text-sm font-medium text-slate-700 mb-2 block'>{t('assign.selectUsersLabel')}</label>
+        <Select placeholder={t('assign.selectUsersPlaceholder')} options={optionsClient.filter(o => !selectedUsers.some(u => u.id === o.id))} value={null} onChange={addUser} searchable={true} />
       </div>
 
       {selectedUsers.length > 0 && (
@@ -618,7 +571,7 @@ const AssignForm = memo(({ planId, onClose, onAssigned, optionsClient, setChange
           {selectedUsers.map(user => (
             <span key={user.id} className='inline-flex items-center gap-2 rounded-lg bg-indigo-100 text-indigo-700 text-sm px-3 py-1.5 border border-indigo-200'>
               {user.label}
-              <button type='button' onClick={() => removeUser(user.id)} className='hover:text-indigo-900 transition-colors' aria-label='Remove user'>
+              <button type='button' onClick={() => removeUser(user.id)} className='hover:text-indigo-900 transition-colors' aria-label={t('assign.removeUser')}>
                 <X className='w-3 h-3' />
               </button>
             </span>
@@ -627,75 +580,130 @@ const AssignForm = memo(({ planId, onClose, onAssigned, optionsClient, setChange
       )}
 
       <div className='flex items-center justify-end gap-2 pt-2'>
-        <Button onClick={onClose} type='button' color='outline' name='Cancel' />
-        <Button disabled={submitting || selectedUsers.length === 0} type='submit' color='primary' name={submitting ? 'Assigning…' : 'Assign'} loading={submitting} />
+        <Button onClick={onClose} type='button' color='outline' name={t('actions.cancel')} />
+        <Button disabled={submitting || selectedUsers.length === 0} type='submit' color='primary' name={submitting ? t('assign.assigning') : t('actions.assign')} loading={submitting} />
       </div>
     </form>
   );
 });
 
 /* ============================ NEW PLAN BUILDER ============================ */
-const NewPlanBuilder = memo(({ initial, onCancel, onCreate }) => {
+const NewPlanBuilder = memo(function NewPlanBuilder({ initial, onCancel, onCreate, userId }) {
+  const t = useTranslations('workoutPlans');
+
   const [name, setName] = useState(initial?.name || '');
-  const [isActive, setIsActive] = useState(initial?.isActive ?? true);
   const [notes, setNotes] = useState(initial?.notes || '');
+
+  // helper to create a blank day starting on Saturday
+  const makeNewDay = idx => ({
+    id: `day_${Date.now()}_${idx}`,
+    dayOfWeek: 'saturday',
+    nameOfWeek: t('builder.dayNumber', { num: idx }),
+    exercises: [],
+  });
 
   const [days, setDays] = useState(() => {
     const d = initial?.days || initial?.program?.days || [];
-    return d.map((x, i) => ({
+    const mapped = d.map((x, i) => ({
       id: x.id || `day_${i}`,
-      dayOfWeek: (x.day || x.dayOfWeek || '').toLowerCase() || 'monday',
-      nameOfWeek: x.nameOfWeek || x.name || `Day ${i + 1}`,
+      dayOfWeek: (x.day || x.dayOfWeek || '').toLowerCase() || 'saturday',
+      nameOfWeek: x.nameOfWeek || x.name || t('builder.dayNumber', { num: i + 1 }),
       exercises: (x.exercises || []).map((e, j) => ({
         exerciseId: e.exerciseId || e.exercise?.id || e.id,
-        name: e.name || e.exercise?.name || `Exercise #${j + 1}`,
+        name: e.name || e.exercise?.name || `${t('preview.exerciseLabel')} #${j + 1}`,
         category: e.exercise?.category || e.category || null,
         order: e.order || e.orderIndex || j + 1,
       })),
     }));
+
+    // if editing existing plan with days -> use them
+    if (mapped.length > 0) return mapped;
+
+    // NEW plan → start with one default day (Saturday)
+    return [makeNewDay(1)];
   });
 
   const addDay = () => {
-    const idx = days.length + 1;
-    setDays(arr => [
-      ...arr,
-      {
-        id: `day_${Date.now()}`,
-        dayOfWeek: 'monday',
-        nameOfWeek: `Day ${idx}`,
-        exercises: [],
-      },
-    ]);
+    setDays(arr => {
+      const idx = arr.length + 1;
+      return [...arr, makeNewDay(idx)];
+    });
   };
 
   const removeDay = id => setDays(arr => arr.filter(d => d.id !== id));
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerDayId, setPickerDayId] = useState(null);
+  const pickerInitialSelected = useMemo(() => {
+    const day = days.find(d => d.id === pickerDayId);
+    if (!day) return [];
+    return day.exercises.map(ex => ({
+      id: ex.exerciseId,
+      name: ex.name,
+      category: ex.category || null,
+    }));
+  }, [pickerDayId, days]);
 
   const openPicker = dayId => {
     setPickerDayId(dayId);
     setPickerOpen(true);
   };
 
-  const onPickerDone = selected => {
+  const onPickerDone = pickedArray => {
+    // pickedArray = [{ id, name, category }, ...] from ExercisePicker (only currently checked)
+
     setDays(arr =>
-      arr.map(d => {
-        if (d.id !== pickerDayId) return d;
-        const base = d.exercises.slice();
-        const start = base.length + 1;
-        const toAdd = selected.map((s, i) => ({
-          exerciseId: s.id,
-          name: s.name,
-          category: s.category || null,
-          order: start + i,
+      arr.map(day => {
+        if (day.id !== pickerDayId) return day;
+
+        // what user wants to end up with in this day
+        const pickedIds = pickedArray.map(x => x.id);
+
+        // 1. keep only exercises that are STILL selected in the picker
+        const keptExisting = day.exercises.filter(ex => pickedIds.includes(ex.exerciseId));
+
+        // 2. find which picked ones are NEW (not already in day.exercises)
+        const existingIdsSet = new Set(day.exercises.map(ex => ex.exerciseId));
+        const newOnes = pickedArray
+          .filter(x => !existingIdsSet.has(x.id))
+          .map(x => ({
+            exerciseId: x.id,
+            name: x.name,
+            category: x.category || null,
+          }));
+
+        // 3. merge kept + new, and fix order
+        const merged = [...keptExisting, ...newOnes].map((ex, idx) => ({
+          ...ex,
+          order: idx + 1,
         }));
-        return { ...d, exercises: [...base, ...toAdd] };
+
+        return { ...day, exercises: merged };
       }),
     );
+
     setPickerOpen(false);
     setPickerDayId(null);
   };
+
+  // const onPickerDone = selected => {
+  //   setDays(arr =>
+  //     arr.map(d => {
+  //       if (d.id !== pickerDayId) return d;
+  //       const base = d.exercises.slice();
+  //       const start = base.length + 1;
+  //       const toAdd = selected.map((s, i) => ({
+  //         exerciseId: s.id,
+  //         name: s.name,
+  //         category: s.category || null,
+  //         order: start + i,
+  //       }));
+  //       return { ...d, exercises: [...base, ...toAdd] };
+  //     }),
+  //   );
+  //   setPickerOpen(false);
+  //   setPickerDayId(null);
+  // };
 
   const onReorderExercises = (dayId, newOrder) => {
     setDays(arr =>
@@ -708,29 +716,34 @@ const NewPlanBuilder = memo(({ initial, onCancel, onCreate }) => {
   };
 
   const [loading, setLoading] = useState(false);
+
   const submit = async () => {
     if (!name.trim()) {
-      Notification('Plan name is required', 'error');
+      Notification(t('builder.validation.nameRequired'), 'error');
       return;
     }
     if (!days.length) {
-      Notification('Add at least one day', 'error');
+      Notification(t('builder.validation.needDay'), 'error');
       return;
     }
     if (days.some(d => !d.exercises.length)) {
-      Notification('Each day needs at least one exercise', 'error');
+      Notification(t('builder.validation.needExercisePerDay'), 'error');
       return;
     }
 
     const payload = {
+      userId: userId || null,
       name: name.trim(),
-      isActive: !!isActive,
+      isActive: true,
       notes: notes || null,
       program: {
         days: days.map(d => ({
           dayOfWeek: d.dayOfWeek,
           nameOfWeek: d.nameOfWeek,
-          exercises: d.exercises.map(ex => ({ order: ex.order, exerciseId: ex.exerciseId })),
+          exercises: d.exercises.map(ex => ({
+            order: ex.order,
+            exerciseId: ex.exerciseId,
+          })),
         })),
       },
     };
@@ -739,23 +752,25 @@ const NewPlanBuilder = memo(({ initial, onCancel, onCreate }) => {
     setLoading(false);
   };
 
-  const DAY_OPTIONS = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'].map(d => ({
-    id: d,
-    label: d.charAt(0).toUpperCase() + d.slice(1),
-  }));
+  // Days of the week start with Saturday
+  const DAY_OPTIONS = [
+    { id: 'saturday', label: t('days.saturday') },
+    { id: 'sunday', label: t('days.sunday') },
+    { id: 'monday', label: t('days.monday') },
+    { id: 'tuesday', label: t('days.tuesday') },
+    { id: 'wednesday', label: t('days.wednesday') },
+    { id: 'thursday', label: t('days.thursday') },
+    { id: 'friday', label: t('days.friday') },
+  ];
 
   return (
-    <div className='space-y-6'>
-      <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-        <Input placeholder={'Plan name : Push Pull Legs…'} value={name} onChange={e => setName(e)} />
-      </div>
-
-      <div className='flex items-center justify-between pt-4 border-t border-slate-100'>
-        <div className='text-sm font-semibold text-slate-800'>Days</div>
+    <div className='space-y-4 py-1'>
+      <div className='flex items-center justify-between pb-2 border-b border-slate-100'>
+        <Input className='max-w-[400px] w-full' placeholder={t('builder.namePlaceholder')} value={name} onChange={e => setName(e)} />
 
         <button type='button' onClick={addDay} className='inline-flex items-center gap-2 rounded-lg border border-slate-300  bg-white px-4 py-2 text-sm font-medium text-slate-800  shadow-sm hover:bg-slate-50 active:scale-[.97]  focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30  transition-all duration-200'>
           <Plus className='w-4 h-4 text-slate-700' />
-          <span>Add day</span>
+          <span>{t('actions.addDay')}</span>
         </button>
       </div>
 
@@ -763,15 +778,17 @@ const NewPlanBuilder = memo(({ initial, onCancel, onCreate }) => {
 
       <div className='flex items-center justify-end gap-3 pt-4 border-t border-slate-100'>
         <button type='button' onClick={onCancel} className='inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300  bg-white px-4 py-2.5 text-sm font-medium text-slate-700  shadow-sm hover:bg-slate-50 active:scale-[.97]  focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30  transition-all duration-200'>
-          Cancel
+          {t('actions.cancel')}
         </button>
 
-        <Button name={'Save plan'} loading={loading} type='button' onClick={submit} className='!w-fit text-sm !h-[39px]'></Button>
+        <Button name={t('builder.savePlanBtn')} loading={loading} type='button' onClick={submit} className='!w-fit text-sm !h-[39px]'></Button>
       </div>
 
       {/* Full-screen Exercise Picker */}
       <ExercisePicker
         open={pickerOpen}
+        dayId={pickerDayId} // 👈 NEW
+        initialSelected={pickerInitialSelected} // 👈 NEW
         onClose={() => {
           setPickerOpen(false);
           setPickerDayId(null);
@@ -783,7 +800,8 @@ const NewPlanBuilder = memo(({ initial, onCancel, onCreate }) => {
 });
 
 export function DaysListSection({ days, setDays, openPicker, removeDay, onReorderExercises, DAY_OPTIONS, spring }) {
-  /* --- tiny inline button helpers --- */
+  const t = useTranslations('workoutPlans');
+
   const btnBase = ' h-[35px] inline-flex items-center justify-center gap-2 rounded-lg text-sm transition ' + 'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 active:scale-[.98]';
   const btnOutline = 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 px-3 py-1.5 shadow-sm';
   const btnGhostDanger = 'border border-slate-200 bg-white text-rose-600 hover:bg-rose-50 px-2.5 py-1.5';
@@ -799,24 +817,25 @@ export function DaysListSection({ days, setDays, openPicker, removeDay, onReorde
               <div className='font-semibold text-slate-900 uppercase  '>{d.nameOfWeek}</div>
               <Select
                 className='!w-[160px]'
-                placeholder='Select day'
+                placeholder={t('builder.selectDayPlaceholder')}
                 options={DAY_OPTIONS.map(o => ({ id: o.id, label: o.label }))}
                 value={d.dayOfWeek}
                 onChange={val => {
                   setDays(arr => arr.map(x => (x.id === d.id ? { ...x, dayOfWeek: val } : x)));
                 }}
+                searchable={false}
               />
             </div>
 
             <div className='flex items-center gap-2'>
               {/* Add exercises */}
-              <button type='button' onClick={() => openPicker(d.id)} className={`${btnBase} ${btnOutline} !px-3 !py-1.5`} title='Add exercises'>
+              <button type='button' onClick={() => openPicker(d.id)} className={`${btnBase} ${btnOutline} !px-3 !py-1.5`} title={t('actions.addExercises')}>
                 <Plus className='w-4 h-4' />
-                Add exercises
+                {t('actions.addExercises')}
               </button>
 
               {/* Remove day */}
-              <button type='button' onClick={() => removeDay(d.id)} className={`${btnBase} ${btnGhostDanger}`} title='Remove day'>
+              <button type='button' onClick={() => removeDay(d.id)} className={`${btnBase} ${btnGhostDanger}`} title={t('actions.removeDay')}>
                 <Trash2 className='w-4 h-4' />
               </button>
             </div>
@@ -856,7 +875,7 @@ export function DaysListSection({ days, setDays, openPicker, removeDay, onReorde
                           )
                         }
                         className={iconBtn}
-                        title='Remove exercise'>
+                        title={t('actions.delete')}>
                         <Trash2 className='w-4 h-4' />
                       </button>
                     </div>
@@ -864,9 +883,7 @@ export function DaysListSection({ days, setDays, openPicker, removeDay, onReorde
                 ))}
               </Reorder.Group>
             ) : (
-              <div className='rounded-lg border border-dashed border-slate-200 bg-slate-50 py-6 text-center text-sm text-slate-500'>
-                No exercises. Click <span className='font-medium'>“Add exercises”</span> to add exercises to this day.
-              </div>
+              <div className='rounded-lg border border-dashed border-slate-200 bg-slate-50 py-6 text-center text-sm text-slate-500'>{t('builder.noExercisesHint')}</div>
             )}
           </div>
         </motion.div>

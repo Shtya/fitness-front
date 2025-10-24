@@ -1,10 +1,30 @@
 /*
+	- users page
+		- get the plans for this admin
+		- get the plans meals for this admin 
+		* user
+					- when the coach login show only his trainer only 
+					- User Details View page. 
+					- stats fo the users take a long time
+		
+	* workouts ( dashboard) 
+	- check when upload workout in the backend ( return start with /uploads/)
+	-
+		- there is a problem i push the binary file to the backend in teh add new 
+		- there is exercise global and not global related with the coach 
+
+
+
+
+* profile 
+	- show those data on it ( caloriesTarget , proteinPerDay , carbsPerDay , fatsPerDay , activityLevel , notes)
+
+
 * Working later on 
-	- add the caloris of this client and when create his account assign the form to it to show his information
+	
 	- setting of the client 
 	- notification of the client
 	
-	- users page : when chose coach remove the field of the caoch and the other steps of meals and exercise 
 	- workouts plans page : remove teh selected exercise wehn i choose them for day 
 
 	
@@ -15,16 +35,9 @@
 	- close the popup of the create plan when finish 
 	- check from the ai assistant 
 
-		* user
-			- when the coach login show only his trainer only 
-			- User Details View page. 
-			- stats fo the users take a long time
+		
 
-		* chat page
-			- when exist userId in the params get this user to contact with it 
 
-		* workouts ( dashboard) 
-			- there is a problem i push the binary file to the backend in teh add new 
 
 
 		* workouts/plans  ( dashboard) 
@@ -55,8 +68,6 @@
 			- 
 
  		* grocery-list 
-			
-		
 
 		* Report 
 			- Weekly/Daily notes from coach.
@@ -126,15 +137,6 @@
 		* home page 
 			- Content should be dynamically editable from the dashboard.
 
+		* يكون فيه دكاتره علي السيستم 
 
-
-	* يكون فيه دكاتره علي السيستم 
-
-
-  - Mobile App or PWA with Offline Caching.
-  - Localization/i18n (Arabic/English, RTL support).
-  - Library of Workouts & Meals (with warnings/alternatives).
-  - Client Guide (Onboarding help/tutorial).
- 
- 
  */

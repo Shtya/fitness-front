@@ -278,7 +278,22 @@
   "common": {
     "selectDate": "اختر التاريخ",
     "search": "ابحث…",
-    "select": "اختر"
+    "select": "اختر",
+    "copy": "نسخ",
+    "show": "عرض",
+    "hide": "إخفاء",
+    "noResult": "لا يوجد نتائج",
+    "saturday": "السبت",
+    "sunday": "الأحد",
+    "monday": "الاثنين",
+    "tuesday": "الثلاثاء",
+    "wednesday": "الأربعاء",
+    "thursday": "الخميس",
+    "friday": "الجمعة",
+    "day": "يوم",
+    "week": "اسبوع",
+    "month": "شهر",
+    "year": "سنه"
   },
   "weekly": {
     "title": "التقرير الأسبوعي",
@@ -636,6 +651,620 @@
       "safari": ["اضغط زر المشاركة (سهم ↑).", "اختر \"Add to Home Screen\".", "اضغط \"Add\" للتأكيد."],
       "ios_other": ["يُفضل استخدام Safari لإضافة التطبيق.", "افتح الموقع في Safari.", "اضغط \"Add to Home Screen\" ثم \"Add\"."],
       "generic": ["ابحث في قائمة المتصفح عن \"Add to Home screen\" أو \"Install app\".", "اتبع التعليمات لإضافة الأيقونة إلى الشاشة الرئيسية."]
+    }
+  },
+  "users": {
+    "editUser": "تعديل مستخدم",
+    "header": {
+      "title": "إدارة المستخدمين",
+      "subtitle": "تحكم كامل في العملاء والمدربين وإدارة بياناتهم.",
+      "createNewUser": "إنشاء مستخدم جديد"
+    },
+    "stats": {
+      "totalUsers": "إجمالي المستخدمين",
+      "active": "الحسابات النشطة",
+      "coaches": "المدربون",
+      "clients": "العملاء"
+    },
+    "filters": {
+      "role": "الدور",
+      "plan": "الخطة",
+      "newest": "الأحدث",
+      "allRoles": "كل الأدوار",
+      "allPlans": "كل الخطط",
+      "withPlan": "لديه خطة",
+      "noPlan": "بدون خطة"
+    },
+    "table": {
+      "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "role": "الدور",
+      "gender": "النوع",
+      "phone": "رقم الهاتف",
+      "membership": "العضوية",
+      "exercisePlan": "خطة التمارين",
+      "mealPlan": "خطة الوجبات",
+      "coach": "المدرب",
+      "joinDate": "تاريخ الانضمام",
+      "status": "الحالة",
+      "daysLeft": "الأيام المتبقية",
+      "actions": "الإجراءات"
+    },
+    "actions": {
+      "openProfile": "عرض الملف الشخصي",
+      "editDetails": "تعديل البيانات",
+      "assignWorkout": "تعيين خطة تمرين",
+      "assignMeal": "تعيين خطة وجبات",
+      "approve": "تفعيل الحساب",
+      "suspend": "إيقاف مؤقت",
+      "activate": "إعادة التفعيل",
+      "whatsapp": "محادثة واتساب",
+      "directChat": "دردشة مباشرة",
+      "delete": "حذف المستخدم"
+    },
+    "status": {
+      "active": "نشط",
+      "pending": "قيد الانتظار",
+      "suspended": "موقوف مؤقتاً"
+    },
+    "roles": {
+      "admin": "مسؤول",
+      "coach": "مدرب",
+      "client": "عميل"
+    },
+    "gender": {
+      "male": "ذكر",
+      "female": "أنثى",
+      "notSpecified": "غير محدد"
+    },
+    "membership": {
+      "basic": "عادية",
+      "gold": "ذهبية",
+      "platinum": "بلاتينية"
+    },
+    "fields": {
+      "fullName": "الاسم الكامل",
+      "email": "البريد الإلكتروني",
+      "phone": "رقم الهاتف",
+      "password": "كلمة المرور",
+      "passwordEdit": "كلمة المرور (اتركها فارغة للإبقاء عليها)",
+      "gender": "النوع",
+      "membership": "العضوية",
+      "role": "الدور",
+      "coach": "المدرب",
+      "status": "الحالة",
+      "phoneWhatsapp": "رقم الواتساب"
+    },
+    "placeholders": {
+      "fullName": "محمد أحمد",
+      "email": "example@domain.com",
+      "phone": "+966 5X XXX XXXX",
+      "coach": "اختر المدرب",
+      "role": "اختر الدور",
+      "status": "اختر الحالة",
+      "search": "ابحث بالاسم أو البريد أو الهاتف...",
+      "whatsapp": "مثلاً 9665XXXXXXXX"
+    },
+    "wizard": {
+      "newUser": "مستخدم جديد",
+      "createAccount": "إنشاء الحساب",
+      "chooseWorkout": "اختيار خطة تمرين (اختياري)",
+      "chooseMeal": "اختيار خطة وجبات (اختياري)",
+      "caloriesDetails": "التفاصيل والسعرات الحرارية",
+      "credentialsAndForm": "بيانات الدخول ",
+      "createAndNext": "إنشاء والانتقال",
+      "credsReady": "تم إنشاء بيانات الدخول، يمكنك نسخها وإرسالها عبر واتساب أدناه.",
+      "passwordByEmail": "تم الإرسال عبر البريد الإلكتروني"
+    },
+    "calories": {
+      "calories": "السعرات الحرارية",
+      "protein": "البروتين",
+      "carbs": "الكربوهيدرات",
+      "fat": "الدهون",
+      "activity": "مستوى النشاط",
+      "level": {
+        "sedentary": "خامل",
+        "light": "نشاط خفيف",
+        "moderate": "نشاط متوسط",
+        "active": "نشاط مرتفع",
+        "athlete": "رياضي"
+      },
+      "notes": "ملاحظات",
+      "notesPh": "تفاصيل إضافية أو تفضيلات غذائية..."
+    },
+    "forms": {
+      "title": "نموذج المدرب",
+      "select": "اختر النموذج",
+      "placeholder": "اختر نموذجًا للإرسال",
+      "sendToClient": "إرسال للعميل",
+      "noteLinkAnswers": "سيتم ربط إجابات النموذج بحساب هذا المستخدم."
+    },
+    "pickers": {
+      "selectOne": "اختر خطة واحدة للتعيين",
+      "assignWorkout": "تعيين خطة تمرين",
+      "assignMeal": "تعيين خطة وجبات"
+    },
+    "common": {
+      "assign": "تعيين",
+      "seeMore": "عرض المزيد",
+      "cancel": "إلغاء",
+      "saveChanges": "حفظ التغييرات",
+      "creating": "جاري الإنشاء...",
+      "expired": "منتهية",
+      "days": "يوم",
+      "back": "رجوع",
+      "saveAndNext": "حفظ والمتابعة",
+      "sendWhatsapp": "إرسال عبر واتساب",
+      "noCoach": "بدون مدرب"
+    },
+    "alerts": {
+      "loadPlansFailed": "فشل تحميل الخطط",
+      "planAssigned": "تم تعيين الخطة بنجاح",
+      "assignFailed": "فشل تعيين الخطة",
+      "loadCoachesFailed": "فشل تحميل قائمة المدربين",
+      "passwordGenerated": "تم إنشاء كلمة مرور قوية",
+      "userUpdated": "تم تحديث بيانات المستخدم بنجاح",
+      "updateFailed": "فشل في التحديث",
+      "accountCreated": "تم إنشاء الحساب بنجاح",
+      "createFailed": "فشل إنشاء الحساب",
+      "assignWorkoutFailed": "فشل تعيين خطة التمرين",
+      "assignMealFailed": "فشل تعيين خطة الوجبات",
+      "saveCaloriesFailed": "فشل حفظ بيانات السعرات",
+      "enterPhoneWhatsapp": "يرجى إدخال رقم الهاتف لإرسال بيانات الدخول عبر واتساب",
+      "selectFormFirst": "اختر نموذجًا أولاً قبل الإرسال",
+      "formSent": "تم إرسال النموذج بنجاح",
+      "formSendFailed": "فشل إرسال النموذج",
+      "statusUpdated": "تم تحديث الحالة إلى {status}",
+      "userDeleted": "تم حذف المستخدم بنجاح",
+      "deleteFailed": "فشل في الحذف",
+      "loadUsersFailed": "فشل تحميل المستخدمين",
+      "noPhone": "لا يوجد رقم هاتف صالح لهذا المستخدم",
+      "loadWorkoutFailed": "فشل تحميل خطط التمارين",
+      "loadMealFailed": "فشل تحميل خطط الوجبات"
+    },
+    "errors": {
+      "nameMin": "يجب ألا يقل الاسم عن حرفين",
+      "nameRequired": "الاسم الكامل مطلوب",
+      "emailInvalid": "البريد الإلكتروني غير صالح",
+      "emailRequired": "البريد الإلكتروني مطلوب",
+      "phoneInvalid": "تنسيق رقم الهاتف غير صالح",
+      "roleRequired": "يجب تحديد الدور",
+      "membershipRequired": "يجب تحديد نوع العضوية",
+      "passwordRequired": "كلمة المرور مطلوبة",
+      "passwordMin": "يجب ألا تقل كلمة المرور عن 8 أحرف",
+      "coachRequired": "يجب اختيار مدرب",
+      "startRequired": "تاريخ البداية مطلوب",
+      "endRequired": "تاريخ الانتهاء مطلوب",
+      "endAfterStart": "يجب أن يكون تاريخ الانتهاء بعد أو يساوي تاريخ البداية",
+      "statusRequired": "يجب تحديد الحالة"
+    },
+    "dialogs": {
+      "deleteUserConfirm": "هل أنت متأكد أنك تريد حذف {name}؟ لا يمكن التراجع عن هذا الإجراء."
+    }
+  },
+  "DataTable": {
+    "toggleSelectAll": "تحديد الكل / إلغاء التحديد",
+    "toggleRow": "تحديد هذا الصف",
+    "sort": "فرز",
+    "pageLabel": "الصفحة {page} من {total}",
+    "first": "الأولى",
+    "prev": "السابق",
+    "next": "التالي",
+    "last": "الأخيرة",
+    "noData": "لا توجد بيانات",
+    "adjustFiltersOrAdd": "عدِّل عوامل التصفية أو أضِف سجلات جديدة."
+  },
+  "Stepper": {
+    "progress": "التقدّم"
+  },
+  "Common": {
+    "skip": "تخطي",
+    "assigning": "جارٍ الإسناد…",
+    "assignNext": "إسناد ومتابعة",
+    "assignFinish": "إسناد وإنهاء",
+    "back": "رجوع",
+    "show": "إظهار",
+    "hide": "إخفاء",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور",
+    "copy": "نسخ",
+    "copyToClipboard": "نسخ إلى الحافظة",
+    "copied": "تم النسخ",
+    "copyFailed": "فشل النسخ",
+    "english": "الإنجليزية",
+    "arabic": "العربية"
+  },
+  "Plans": {
+    "searchPlaceholder": "ابحث باسم الخطة أو اليوم…",
+    "empty": "لا توجد خطط متاحة. جرّب كلمة بحث أخرى.",
+    "untitled": "خطة بدون اسم",
+    "assignedCount": "{count} مُسند",
+    "daysCount": "{count} يوم",
+    "details": "التفاصيل",
+    "moreCount": "+{count} أخرى"
+  },
+  "Meals": {
+    "searchPlaceholder": "ابحث باسم أو وصف خطة الوجبات…",
+    "empty": "لا توجد خطط وجبات متاحة. جرّب كلمة بحث أخرى.",
+    "untitled": "خطة وجبات بدون اسم"
+  },
+  "Subscription": {
+    "startLabel": "تاريخ بداية الاشتراك",
+    "endLabel": "تاريخ نهاية الاشتراك",
+    "pickEnd": "اختر تاريخ النهاية",
+    "endAfterStart": "يجب أن يكون تاريخ النهاية في نفس يوم أو بعد تاريخ البداية",
+    "d1": "شهر",
+    "d3": "3 أشهر",
+    "d6": "6 أشهر",
+    "d12": "12 شهر"
+  },
+
+  "superAdmin": {
+    "header": {
+      "title": "لوحة السوبر أدمن",
+      "subtitle": "إنشاء المسؤولين وإدارة المدراء والمدربين والعملاء عبر النظام.",
+      "createAdmin": "إنشاء مسؤول جديد"
+    },
+    "stats": {
+      "totalAdmins": "إجمالي المسؤولين",
+      "activeAdmins": "المسؤولون النشطون",
+      "totalCoaches": "إجمالي المدربين",
+      "totalClients": "إجمالي العملاء"
+    },
+    "table": {
+      "admin": "المسؤول",
+      "phone": "رقم الهاتف",
+      "status": "الحالة",
+      "coaches": "المدربون",
+      "clients": "العملاء",
+      "createdAt": "تاريخ الإنشاء",
+      "clientName": "اسم العميل",
+      "clientEmail": "بريد العميل",
+      "joinDate": "تاريخ الانضمام"
+    },
+    "badges": {
+      "coaches": "{n} مدرب",
+      "clients": "{n} عميل"
+    },
+    "actions": {
+      "viewExpand": "عرض التفاصيل",
+      "edit": "تعديل",
+      "suspend": "إيقاف مؤقت",
+      "activate": "تفعيل",
+      "delete": "حذف"
+    },
+    "expand": {
+      "coaches": "قائمة المدربين",
+      "noCoaches": "لا يوجد مدربون لهذا المسؤول.",
+      "showClients": "عرض العملاء",
+      "hideClients": "إخفاء العملاء",
+      "clientsCount": "{n} عميل",
+      "noClients": "لا يوجد عملاء لهذا المدرب."
+    },
+    "createModal": {
+      "title": "إنشاء مسؤول جديد",
+      "create": "إنشاء"
+    },
+    "fields": {
+      "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "phone": "رقم الهاتف",
+      "password": "كلمة المرور",
+      "status": "الحالة"
+    },
+    "placeholders": {
+      "name": "محمد أحمد",
+      "email": "example@domain.com",
+      "phone": "+20 1X XXX XXXX",
+      "status": "اختر الحالة",
+      "search": "ابحث بالاسم أو البريد أو الهاتف..."
+    },
+    "status": {
+      "active": "نشط",
+      "suspended": "موقوف"
+    },
+    "common": {
+      "cancel": "إلغاء",
+      "creating": "جاري الإنشاء..."
+    },
+    "errors": {
+      "nameMin": "يجب ألا يقل الاسم عن حرفين",
+      "nameRequired": "الاسم مطلوب",
+      "emailInvalid": "البريد الإلكتروني غير صالح",
+      "emailRequired": "البريد الإلكتروني مطلوب",
+      "phoneInvalid": "تنسيق رقم الهاتف غير صالح",
+      "passwordRequired": "كلمة المرور مطلوبة",
+      "passwordMin": "يجب ألا تقل كلمة المرور عن 8 أحرف",
+      "statusRequired": "يجب تحديد الحالة"
+    },
+    "alerts": {
+      "passwordGenerated": "تم إنشاء كلمة مرور قوية",
+      "adminCreated": "تم إنشاء المسؤول بنجاح",
+      "createFailed": "فشل إنشاء المسؤول",
+      "loadFailed": "فشل تحميل البيانات",
+      "statusUpdated": "تم تحديث الحالة إلى {status}",
+      "updateFailed": "فشل التحديث",
+      "deleted": "تم الحذف بنجاح",
+      "deleteFailed": "فشل الحذف"
+    },
+    "dialogs": {
+      "deleteConfirm": "هل أنت متأكد من حذف {name}؟ لا يمكن التراجع عن هذا الإجراء."
+    },
+    "hints": {
+      "editComingSoon": "شاشة التعديل ستتوفر لاحقاً."
+    }
+  },
+  "workouts": {
+    "titles": {
+      "exercises": "التمارين",
+      "preview": "معاينة",
+      "addExercise": "إضافة تمرين",
+      "editExercise": "تعديل: {name}",
+      "untitled": "تمرين بدون اسم"
+    },
+    "descriptions": {
+      "exercises": "مكتبة التمارين",
+      "manageLibrary": "قم بإدارة مكتبة التمارين الخاصة بك بسهولة — أضف تمارين جديدة، حدّث التفاصيل، وابقِ كل شيء منظماً لتقديم أفضل تجربة تدريبية لعملائك."
+    },
+    "actions": {
+      "addExercise": "إضافة تمرين",
+      "getAi": "اقتراح بالذكاء الاصطناعي",
+      "fillWithAi": "إكمال تلقائي بالذكاء الاصطناعي",
+      "save": "حفظ",
+      "view": "عرض",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "clear": "مسح",
+      "switchToList": "التبديل إلى عرض قائمة",
+      "switchToGrid": "التبديل إلى عرض شبكة",
+      "listView": "عرض القائمة",
+      "gridView": "عرض الشبكة",
+      "sortByDate": "الفرز حسب التاريخ",
+      "newestFirst": "الأحدث أولاً",
+      "oldestFirst": "الأقدم أولاً",
+      "uploadImage": "رفع صورة",
+      "uploadVideo": "رفع فيديو"
+    },
+    "labels": {
+      "name": "الاسم",
+      "targetReps": "التكرارات ",
+      "targetSets": "المجموعات",
+      "rest": "الراحة بالثانية",
+      "tempo": "التمبو",
+      "category": "الفئة",
+      "details": "التفاصيل",
+      "primary": "العضلات الأساسية",
+      "secondary": "العضلات الثانوية",
+      "image": "صورة",
+      "video": "فيديو",
+      "muscles": "العضلات"
+    },
+    "placeholders": {
+      "name": "مثال: سحب جالس بذراعين عريضتين",
+      "reps": "10 أو 8-12",
+      "sets": "عدد المجموعات",
+      "rest": "مدة الراحة بالثواني",
+      "tempo": "2/1/2",
+      "category": "اختر الفئة",
+      "details": "ارشادات الأداء، وضعية الجسم، الهدف العضلي...",
+      "tag": "اكتب اسم العضلة واضغط Enter",
+      "mediaUrl": "يجب رفع صورة أو وضع رابط صالح",
+      "mediaUrlVideo": "يجب رفع فيديو أو وضع رابط صالح",
+
+      "search": "ابحث بالاسم…",
+      "perPage": "عدد العناصر في الصفحة"
+    },
+    "hints": {
+      "nameAi": "اكتب الاسم ثم استخدم الذكاء الاصطناعي لملء الحقول تلقائياً.",
+      "tempo": "الصيغة \"x/y/z\" مثل 2/1/2",
+      "createCategory": "اكتب فئة جديدة…"
+    },
+    "ai": {
+      "fetching": "جارٍ جلب اقتراحات الذكاء الاصطناعي…"
+    },
+    "val": {
+      "nameMin": "يجب أن لا يقل الاسم عن حرفين",
+      "nameReq": "الاسم مطلوب",
+      "repsFmt": "استخدم الصيغة مثل \"10\" أو \"8-12\"",
+      "repsReq": "التكرارات مطلوبة",
+      "setsNum": "المجموعات يجب أن تكون رقماً",
+      "setsInt": "المجموعات يجب أن تكون عدداً صحيحاً",
+      "setsMin": "الحد الأدنى 0",
+      "setsMax": "الحد الأقصى 30",
+      "setsReq": "المجموعات مطلوبة",
+      "restNum": "الراحة يجب أن تكون رقماً",
+      "restMin": "الحد الأدنى 0 ثانية",
+      "restMax": "الحد الأقصى 1200 ثانية",
+      "tempoFmt": "استخدم الصيغة 2/1/2",
+      "categoryReq": "الفئة مطلوبة",
+      "detailsMax": "يرجى إبقاء التفاصيل أقل من 2000 حرف",
+      "tagsMax": "الحد الأقصى 20 وسم",
+      "imgReq": "رابط الصورة مطلوب",
+      "videoReq": "رابط الفيديو مطلوب"
+    },
+    "filters": {
+      "all": "الكل"
+    },
+    "stats": {
+      "total": "الإجمالي",
+      "withVideo": "تمارين بها فيديو",
+      "withImage": "تمارين بها صورة",
+      "avgRest": "متوسط الراحة (ث)",
+      "added7d": "أضيفت خلال 7 أيام",
+      "totalPersonalExercise": "تمارينك الخاصة",
+      "totalGlobalExercise": "جميع التمارين"
+    },
+    "empty": {
+      "title": "لا توجد تمارين",
+      "subtitle": "جرّب بحثاً مختلفاً أو أضف تمريناً جديداً.",
+      "simple": "لا توجد تمارين حالياً."
+    },
+    "confirm": {
+      "deleteTitle": "حذف التمرين؟",
+      "deleteMsg": "هذا الإجراء لا يمكن التراجع عنه.",
+      "deleteBtn": "حذف"
+    },
+    "errors": {
+      "loadExercises": "فشل تحميل التمارين",
+      "createFailed": "فشل إنشاء التمرين",
+      "updateFailed": "فشل تحديث التمرين",
+      "deleteFailed": "فشل حذف التمرين",
+      "apiKeyExpired": "مفتاح واجهة البرمجة (API Key) منتهي الصلاحية أو غير صالح. يرجى التحقق من الإعدادات أو إدخال مفتاح جديد."
+    },
+    "toasts": {
+      "created": "تم إنشاء التمرين بنجاح",
+      "updated": "تم تحديث التمرين بنجاح",
+      "deleted": "تم حذف التمرين بنجاح"
+    },
+    "meta": {
+      "sets": "المجموعات",
+      "reps": "التكرارات",
+      "rest": "الراحة",
+      "tempo": "التمبو"
+    },
+    "media": {
+      "image": "صورة",
+      "video": "فيديو",
+      "none": "لا توجد {kind} متوفرة",
+      "noImage": "لا توجد صورة",
+      "noVideo": "لا يوجد فيديو"
+    }
+  },
+  "workoutPlans": {
+    "placeholders": {
+      "search": "ابحث..."
+    },
+    "planActionNotAllowed": "يمكنك تنفيذ الإجراءات فقط على الخطط التي قمت بإنشائها.",
+
+    "actions": {
+      "clear": "مسح",
+      "cancel": "إلغاء",
+      "close": "إغلاق",
+      "assign": "تعيين",
+      "preview": "معاينة",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "addDay": "إضافة يوم",
+      "addExercises": "إضافة تمارين",
+      "removeDay": "حذف اليوم",
+      "savePlan": "حفظ الخطة"
+    },
+
+    "errors": {
+      "loadExercises": "حدث خطأ أثناء تحميل التمارين.",
+      "loadPlans": "تعذّر تحميل الخطط."
+    },
+
+    "notifications": {
+      "planDeleted": "تم حذف الخطة بنجاح.",
+      "planDeleteFailed": "فشل حذف الخطة.",
+      "planCreated": "تم إنشاء الخطة بنجاح.",
+      "createFailed": "تعذّر إنشاء الخطة.",
+      "duplicateDay": "اليوم مكرر، اختر يوماً آخر.",
+      "planUpdated": "تم تحديث الخطة بنجاح.",
+      "updateFailed": "تعذّر تحديث الخطة.",
+      "assignedSuccess": "تم تعيين الخطة للمستخدمين بنجاح.",
+      "assignFailed": "فشل تعيين الخطة للمستخدمين."
+    },
+
+    "confirm": {
+      "titleDefault": "هل أنت متأكد؟",
+      "messageDefault": "هذا الإجراء لا يمكن التراجع عنه.",
+      "confirmBtn": "تأكيد",
+      "deletePlanTitle": "حذف الخطة؟",
+      "deletePlanMsg": "لا يمكن التراجع عن هذه العملية."
+    },
+
+    "picker": {
+      "dialogAria": "نافذة اختيار التمارين",
+      "title": "اختر التمارين",
+      "subtitle": "اضغط لإضافة التمرين. يمكنك التصفية والبحث حسب الفئة.",
+      "searchPlaceholder": "ابحث عن تمرين...",
+      "all": "الكل",
+      "preview": "معاينة",
+      "previewVideo": "معاينة الفيديو",
+      "selected": "مُحدّد",
+      "sets": "مجموعات",
+      "reps": "تكرارات",
+      "rest": "راحة",
+      "noExercisesTitle": "لا توجد تمارين",
+      "noExercisesDesc": "جرّب كلمة بحث مختلفة أو فئة أخرى.",
+      "addSelected": "إضافة ({count})"
+    },
+
+    "plans": {
+      "header": {
+        "newPlanButton": "خطة جديدة",
+        "title": "الخطط التدريبية",
+        "desc": "أنشئ برامج تدريب، نظّم الأيام، وعيّنها للمتدربين بسهولة."
+      },
+      "stats": {
+        "globalPlans": "الخطط العامة",
+        "personalPlans": "خططي الشخصية",
+        "withoutDays": "خطط بدون أيام",
+        "unassigned": "خطط غير مخصّصة",
+        "activeAssignments": "تعيينات نشطة"
+      },
+      "filters": {
+        "perPage": "عدد العناصر / صفحة",
+        "oldestFirst": "الأقدم أولاً",
+        "newestFirst": "الأحدث أولاً",
+        "sortByDate": "الترتيب حسب التاريخ"
+      },
+      "list": {
+        "noPlansTitle": "لا توجد خطط حالياً",
+        "noPlansDesc": "جرّب البحث أو قم بإنشاء خطة جديدة.",
+        "active": "نشطة",
+        "inactive": "غير نشطة",
+        "noDescription": "لا توجد ملاحظات.",
+        "dayCountLabel": "{count} يوم"
+      },
+      "modals": {
+        "previewTitle": "معاينة الخطة",
+        "createTitle": "إنشاء خطة",
+        "editTitle": "تعديل:",
+        "assignTitle": "تعيين الخطة: {name}"
+      }
+    },
+
+    "preview": {
+      "exerciseLabel": "تمرين",
+      "noExercisesYet": "لا توجد تمارين بعد.",
+      "assignees": "المستلمون / المعيَّنون",
+      "noAssignees": "لم يتم تعيين هذه الخطة بعد.",
+      "createdAt": "تاريخ الإنشاء:",
+      "updatedAt": "آخر تحديث:"
+    },
+
+    "assign": {
+      "selectUsersLabel": "اختر المستخدمين",
+      "selectUsersPlaceholder": "ابحث واختر المستخدمين...",
+      "removeUser": "إزالة المستخدم",
+      "assigning": "جاري التعيين..."
+    },
+
+    "builder": {
+      "namePlaceholder": "اسم الخطة (مثلاً: دفع/سحب/أرجل...)",
+      "daysSectionTitle": "الأيام",
+      "dayNumber": "اليوم {num}",
+      "selectDayPlaceholder": "اختر اليوم",
+      "noExercisesHint": "لا توجد تمارين بعد. اضغط «إضافة تمارين» لإضافة تمارين لهذا اليوم.",
+      "savePlanBtn": "حفظ الخطة",
+      "validation": {
+        "nameRequired": "اسم الخطة مطلوب.",
+        "needDay": "يجب أن تحتوي الخطة على يوم واحد على الأقل.",
+        "needExercisePerDay": "كل يوم يجب أن يحتوي على تمرين واحد على الأقل."
+      }
+    },
+
+    "days": {
+      "saturday": "السبت",
+      "sunday": "الأحد",
+      "monday": "الاثنين",
+      "tuesday": "الثلاثاء",
+      "wednesday": "الأربعاء",
+      "thursday": "الخميس",
+      "friday": "الجمعة"
     }
   }
 }

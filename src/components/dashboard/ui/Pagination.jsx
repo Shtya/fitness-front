@@ -56,13 +56,13 @@ export function PrettyPagination({ page, totalPages, onPageChange, className = '
         {/* Edges */}
         {showEdges && !isCompact && (
           <button type='button' onClick={() => go(1)} disabled={page <= 1} className={`${baseBtn} ${subtle} h-9 w-9`} aria-label='First page'>
-            <ChevronsLeft size={16} />
+            <ChevronsLeft size={16} className='rtl:scale-x-[-1]' />
           </button>
         )}
 
         {/* Prev */}
         <button type='button' onClick={() => go(page - 1)} disabled={page <= 1} className={`${baseBtn} ${subtle} h-9 w-9`} aria-label='Previous page'>
-          <ChevronLeft size={18} />
+          <ChevronLeft size={16} className='rtl:scale-x-[-1]' />
         </button>
 
         {/* Compact mode shows only current/total */}
@@ -74,12 +74,12 @@ export function PrettyPagination({ page, totalPages, onPageChange, className = '
           <>
             {items.map(it =>
               typeof it === 'number' ? (
-                <button key={it} onClick={() => go(it)} aria-current={it === page ? 'page' : undefined} className={`${baseBtn} h-9 min-w-9 px-3 ${it === page ? solid : ghost}`}>
+                <button key={it} onClick={() => go(it)} aria-current={it === page ? 'page' : undefined} className={`${baseBtn} font-en h-9 min-w-9 px-3 ${it === page ? solid : ghost}`}>
                   {it}
                 </button>
               ) : (
                 <span key={it} className='mx-0.5 inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-transparent px-2 text-slate-500' aria-hidden='true'>
-                  <MoreHorizontal size={18} />
+                  <MoreHorizontal size={16} className='rtl:scale-x-[-1]' />
                 </span>
               ),
             )}
@@ -88,13 +88,13 @@ export function PrettyPagination({ page, totalPages, onPageChange, className = '
 
         {/* Next */}
         <button type='button' onClick={() => go(page + 1)} disabled={page >= totalPages} className={`${baseBtn} ${subtle} h-9 w-9`} aria-label='Next page'>
-          <ChevronRight size={18} />
+          <ChevronRight size={16} className='rtl:scale-x-[-1]' />
         </button>
 
         {/* Edges */}
         {showEdges && !isCompact && (
           <button type='button' onClick={() => go(totalPages)} disabled={page >= totalPages} className={`${baseBtn} ${subtle} h-9 w-9`} aria-label='Last page'>
-            <ChevronsRight size={16} />
+            <ChevronsRight size={16} className='rtl:scale-x-[-1]' />
           </button>
         )}
       </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import MultiLangText from '@/components/atoms/MultiLangText';
 import { motion, AnimatePresence, LayoutGroup, useReducedMotion } from 'framer-motion';
 import { CheckCircle2, ChevronLeft, ChevronRight, XCircle, Search, X, Clock } from 'lucide-react';
 import React, { useEffect, useMemo, useLayoutEffect, useState, useRef } from 'react';
@@ -29,7 +30,7 @@ export function PageHeader({ className, icon: Icon, title, subtitle, actions = n
 export function StatCard({ cnParent, cn, icon: Icon, title, value }) {
   return (
     <div className={`${cnParent} relative overflow-hidden text-white rounded-lg border border-white/20 bg-white/10 p-3`}>
-      <div className='flex items-start justify-between gap-2'>
+      <div className='flex items-center justify-between gap-2'>
         <div className='grid place-items-center rounded-lg bg-white/15 p-2'>
           <Icon className='h-5 w-5' />
         </div>
@@ -402,8 +403,8 @@ export function TabsPill({ sliceInPhone = true, hiddenArrow = false, slice, tabs
                         <span className={`relative z-10 text-nowrap ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-700'} capitalize`}>
                           {t.icon ? <t.icon className=' max-md:hidden inline w-4 h-4 mr-1 -mt-0.5' /> : null}
 
-                          <span className={` ${!sliceInPhone && '!hidden'} md:hidden`}> {t.label?.slice(0, 3)} </span>
-                          <span className={` ${!sliceInPhone && '!flex'} max-md:hidden`}> {t.label} </span>
+                          <MultiLangText className={` ${!sliceInPhone && '!hidden'} md:hidden`}>{t.label?.slice(0, 3)}</MultiLangText>
+                          <MultiLangText className={` ${!sliceInPhone && '!flex'} max-md:hidden`}>{t.label}</MultiLangText>
                         </span>
                       </motion.button>
                     );

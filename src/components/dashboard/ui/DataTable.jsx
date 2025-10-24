@@ -2,31 +2,29 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useLocale, useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckSquare, Square } from 'lucide-react';
 
 const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
 function TruncatedText({ value, max = 15 }) {
+  const locale = useLocale();
   if (value == null || value === '') {
     return <span className='text-slate-400'>—</span>;
   }
 
   const text = String(value);
   if (text.length <= max) {
-    return <span className='whitespace-nowrap'>{text}</span>;
+    return <span className='whitespace-nowrap  '>{text}</span>;
   }
 
-  const visible = text.slice(0, max) + '…';
+  const visible = locale == 'ar' ? '…' + text.slice(0, max) : text.slice(0, max) + '…';
 
   return (
-    <span
-      className='group relative inline-block whitespace-nowrap align-middle'
-      title={text} // accessibility: full string
-    >
+    <span className='group relative inline-flex whitespace-nowrap align-middle'>
       {visible}
-      {/* Tooltip shows the FULL text, fits content up to 200px */}
       <span
-        className='pointer-events-none absolute left-0 top-[115%] z-20 hidden w-fit max-w-[200px]
+        className=' pointer-events-none absolute left-0 top-[115%] z-20 hidden w-fit max-w-[200px]
         whitespace-normal break-words rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs
         text-slate-700 shadow-xl group-hover:block'>
         {text}
@@ -56,6 +54,8 @@ export default function DataTable({
   onPageChange,
   totalRows,
 }) {
+  const t = useTranslations('DataTable');
+
   // keep internal page only if uncontrolled
   const [internalPage, setInternalPage] = useState(1);
   const page = controlledPage ?? internalPage;
@@ -93,6 +93,10 @@ export default function DataTable({
   const start = (page - 1) * itemsPerPage;
   const pageData = pagination ? (serverPagination ? sorted : sorted.slice(start, start + itemsPerPage)) : sorted;
 
+  // select-all helpers (page-scoped)
+  const allPageIds = useMemo(() => (pageData || []).map(r => r.id).filter(Boolean), [pageData]);
+  const allChecked = useMemo(() => allPageIds.length > 0 && allPageIds.every(id => selectedIds?.includes(id)), [allPageIds, selectedIds]);
+
   // disable sort toggling in server mode (optional but less confusing)
   const toggleSort = (key, disableSort) => {
     if (disableSort || serverPagination) return;
@@ -111,15 +115,15 @@ export default function DataTable({
             <thead className={`${stickyHeader ? 'sticky top-0 z-10' : ''}`}>
               <tr className='bg-slate-50/90 backdrop-blur supports-[backdrop-filter]:bg-slate-50/70 text-slate-600 border-b border-slate-200 shadow-[inset_0_-1px_0_rgba(15,23,42,0.06)]'>
                 {selectable && (
-                  <th className='px-4 py-3 text-left w-10'>
-                    <button onClick={() => onToggleAll?.(allPageIds)} className='inline-flex items-center gap-2 text-slate-700' aria-label='Toggle select all'>
+                  <th className='px-4 py-3 rtl:text-right  text-left w-10'>
+                    <button onClick={() => onToggleAll?.(allPageIds)} className='inline-flex items-center gap-2 text-slate-700' aria-label={t('toggleSelectAll')} title={t('toggleSelectAll')}>
                       {allChecked ? <CheckSquare className='w-4 h-4' /> : <Square className='w-4 h-4' />}
                     </button>
                   </th>
                 )}
                 {columns.map(c => (
-                  <th key={c.header + c.accessor} className='px-4 py-3 text-left select-none font-medium text-slate-700 whitespace-nowrap'>
-                    <button className={`inline-flex items-center gap-1 hover:text-slate-900`} onClick={() => toggleSort(c.accessor, c.disableSort)} title={c.disableSort ? '' : 'Sort'}>
+                  <th key={c.header + c.accessor} className='px-4 py-3 rtl:text-right text-left select-none font-medium text-slate-700 whitespace-nowrap'>
+                    <button className='inline-flex items-center gap-1 hover:text-slate-900' onClick={() => toggleSort(c.accessor, c.disableSort)} title={c.disableSort ? '' : t('sort')}>
                       <span>{c.header}</span>
                       {!c.disableSort && sort?.key === c.accessor && <span className='text-slate-400'>{sort.dir === 'asc' ? '↑' : '↓'}</span>}
                     </button>
@@ -142,14 +146,12 @@ export default function DataTable({
                   <motion.tr key={row.id ?? JSON.stringify(row)} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={spring} className='border-t border-slate-100 hover:bg-slate-50/60' onClick={onRowClick ? () => onRowClick(row) : undefined} role={onRowClick ? 'button' : undefined}>
                     {selectable && (
                       <td className='px-4 py-3 whitespace-nowrap'>
-                        <input type='checkbox' checked={selectedIds?.includes(row.id)} onChange={() => onToggleRow?.(row.id)} className='w-4 h-4' onClick={e => e.stopPropagation()} />
+                        <input type='checkbox' checked={selectedIds?.includes(row.id)} onChange={() => onToggleRow?.(row.id)} className='w-4 h-4' onClick={e => e.stopPropagation()} aria-label={t('toggleRow')} title={t('toggleRow')} />
                       </td>
                     )}
                     {columns.map(c => (
                       <td key={c.accessor} className={`px-4 py-3 align-middle whitespace-nowrap ${c?.className || ''}`}>
-                        {c.cell
-                          ? c.cell(row) // if custom cell, let it render (you can wrap it with TruncatedText inside your cell if needed)
-                          : toDisplay(get(row, c.accessor))}
+                        {c.cell ? c.cell(row) : toDisplay(get(row, c.accessor))}
                       </td>
                     ))}
                   </motion.tr>
@@ -161,21 +163,19 @@ export default function DataTable({
 
         {pagination && !loading && pageData.length > 0 && (
           <div className='flex items-center justify-between p-3 border-t border-slate-200 text-sm bg-white'>
-            <div className='text-slate-600'>
-              Page <span className='font-medium'>{page}</span> of <span className='font-medium'>{totalPages}</span>
-            </div>
+            <div className='text-slate-600'>{t('pageLabel', { page, total: totalPages })}</div>
             <div className='flex items-center gap-1'>
-              <PagerBtn disabled={page === 1} onClick={() => setPage(1)}>
-                <ChevronsLeft className='w-4 h-4' />
+              <PagerBtn ariaLabel={t('first')} disabled={page === 1} onClick={() => setPage(1)}>
+                <ChevronsLeft className='w-4 h-4 rtl:scale-x-[-1] ' />
               </PagerBtn>
-              <PagerBtn disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
-                <ChevronLeft className='w-4 h-4' />
+              <PagerBtn ariaLabel={t('prev')} disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
+                <ChevronLeft className='w-4 h-4 rtl:scale-x-[-1]' />
               </PagerBtn>
-              <PagerBtn disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
-                <ChevronRight className='w-4 h-4' />
+              <PagerBtn ariaLabel={t('next')} disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
+                <ChevronRight className='w-4 h-4 rtl:scale-x-[-1]' />
               </PagerBtn>
-              <PagerBtn disabled={page === totalPages} onClick={() => setPage(totalPages)}>
-                <ChevronsRight className='w-4 h-4' />
+              <PagerBtn ariaLabel={t('last')} disabled={page === totalPages} onClick={() => setPage(totalPages)}>
+                <ChevronsRight className='w-4 h-4 rtl:scale-x-[-1]' />
               </PagerBtn>
             </div>
           </div>
@@ -187,11 +187,13 @@ export default function DataTable({
 
 /* ---------- small helpers ---------- */
 
-function PagerBtn({ children, disabled, onClick }) {
+function PagerBtn({ children, disabled, onClick, ariaLabel }) {
   return (
     <button
       disabled={disabled}
       onClick={onClick}
+      aria-label={ariaLabel}
+      title={ariaLabel}
       className={`inline-flex items-center justify-center w-9 h-9 rounded-lg border transition
         ${disabled ? 'border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed' : 'border-slate-200 bg-white hover:bg-slate-50 active:scale-[.98]'}`}
       aria-disabled={disabled}>
@@ -223,11 +225,12 @@ function SkeletonBlock({ columns, count = 6, selectable }) {
 }
 
 function DefaultEmptyState() {
+  const t = useTranslations('DataTable');
   return (
     <div className='text-center py-10'>
       <div className='mx-auto w-14 h-14 rounded-lg bg-slate-100' />
-      <h3 className='mt-3 text-base font-semibold'>No data</h3>
-      <p className='text-sm text-slate-600 mt-1'>Adjust filters or add new records.</p>
+      <h3 className='mt-3 text-base font-semibold'>{t('noData')}</h3>
+      <p className='text-sm text-slate-600 mt-1'>{t('adjustFiltersOrAdd')}</p>
     </div>
   );
 }
@@ -238,7 +241,6 @@ function get(obj, path) {
 }
 
 function toDisplay(v) {
-  // Any body text -> truncate to 15 and show tooltip with remaining
   if (v == null || v === '') return <span className='text-slate-400'>—</span>;
   return <TruncatedText value={v} max={15} />;
 }

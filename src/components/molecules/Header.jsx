@@ -9,6 +9,7 @@ import io from 'socket.io-client';
 import api from '@/utils/axios';
 import LanguageToggle from '../atoms/LanguageToggle';
 import { useTranslations, useLocale } from 'next-intl';
+import MultiLangText from '../atoms/MultiLangText';
 
 /* ----------------------------- helpers ---------------------------------- */
 function initialsFrom(name, email) {
@@ -466,9 +467,9 @@ export default function Header({ onMenu, onProfile = () => {}, onSettings = () =
                   <span className={`absolute -right-0 -bottom-0 size-2.5 rounded-full ring-2 ring-white ${isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} title={isActive ? t('status.online') : t('status.offline')} />
                 </div>
 
-                <div className='hidden sm:flex flex-col items-start'>
-                  <span className='text-sm font-medium leading-4 text-slate-800 max-w-[180px] truncate'>{user?.name || user?.email || t('common.guest')}</span>
-                  <div className='flex items-center gap-2 mt-[2px]'>
+                <div className='hidden sm:flex flex-col items-start '>
+                  <MultiLangText className='text-sm font-medium mb-[-4px] text-slate-800 max-w-[180px] truncate'>{user?.name || user?.email || t('common.guest')}</MultiLangText>
+                  <div className='flex items-center gap-2 '>
                     <span className=' rtl:order-[2] inline-flex items-center gap-1 text-[11px] leading-5 px-1.5 py-0.5 rounded-lg border text-indigo-700 border-indigo-200 bg-indigo-50/70' title={`${t('labels.role')}: ${role}`}>
                       <UserIcon className='size-3.5' />
                       {t(`roles.${(user?.role || 'guest').toLowerCase()}`)}

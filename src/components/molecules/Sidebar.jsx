@@ -15,9 +15,6 @@ function cn() {
   return Array.from(arguments).filter(Boolean).join(' ');
 }
 
-/** ************************************************************
- * NAV source uses i18n *keys* (nameKey, sectionKey) not labels
- ************************************************************* */
 const NAV = [
   // -------------------- CLIENT --------------------
   {
@@ -133,6 +130,17 @@ const NAV = [
       { nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
       { nameKey: 'reports', href: '/dashboard/reports', icon: FaRegFilePowerpoint },
       { nameKey: 'systemSettings', href: '/dashboard/settings', icon: ServerCog },
+    ],
+  },
+
+	// -------------------- ADMIN --------------------
+  {
+    role: 'super_admin',
+    sectionKey: 'sections.overview',
+    items: [
+      { nameKey: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
+      { nameKey: 'allUsers', href: '/dashboard/users', icon: Users },
+      { nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
     ],
   },
 ];
@@ -274,8 +282,8 @@ export default function Sidebar({ open, setOpen, collapsed, setCollapsed }) {
             {/* Example: Show text or logo when expanded */}
             {!collapsed && (
               <div className='flex items-center gap-2'>
-                 <img src='/logo/logo1.png' alt='Logo' className='w-[60px]  object-contain' />
-                <span className='font-semibold text-slate-700'>{t("items.dashboard")}</span>
+                <img src='/logo/logo1.png' alt='Logo' className='w-[60px]  object-contain' />
+                <span className='font-semibold text-slate-700'>{t('items.dashboard')}</span>
               </div>
             )}
 
