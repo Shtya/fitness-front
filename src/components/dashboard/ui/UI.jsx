@@ -303,7 +303,7 @@ export function MacroBar({ p = 0, c = 0, f = 0, className = '' }) {
 
 const shimmerStyle = `
 @keyframes tabsShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-.tabs-skeleton{background:linear-gradient(90deg,#e9eef5 0%,#f5f7fb 40%,#e9eef5 80%);background-size:200% 100%;animation:tabsShimmer 1.2s linear infinite;}
+.tabs-skeleton{background:linear-gradient(90deg,#e9eef5 0%,#f5f7fb 30%,#e9eef5 60%);background-size:200% 100%;animation:tabsShimmer 1.2s linear infinite;}
 `;
 function InjectShimmer() {
   // inject once (no deps)
@@ -317,11 +317,10 @@ function InjectShimmer() {
   return null;
 }
 
-export function TabsPill({ sliceInPhone = true, hiddenArrow = false, slice, tabs = [], active, onChange, className = '', id = 'ui-tabs-pill', skeletonCount = 5 }) {
+export function TabsPill({ isLoading , sliceInPhone = true, hiddenArrow = false, slice, tabs = [], active, onChange, className = '', id = 'ui-tabs-pill', skeletonCount = 5 }) {
   const scrollerRef = useRef(null);
   const tabRefs = useRef({}); // { [key]: HTMLElement }
 
-  const isLoading = !Array.isArray(tabs) || tabs.length === 0;
 
   const activeIndex = useMemo(
     () =>
@@ -387,7 +386,7 @@ export function TabsPill({ sliceInPhone = true, hiddenArrow = false, slice, tabs
         {/* Scrollable pills */}
         <div ref={scrollerRef} tabIndex={0} className='w-fit outline-none'>
           <LayoutGroup id={id}>
-            <div className={[className, 'inline-flex p-1 rounded-lg border border-slate-200 overflow-hidden', 'bg-slate-100/80 ring-1 ring-black/5', isLoading ? 'gap-1.5' : ''].join(' ')}>
+            <div className={[className, 'inline-flex p-1 rounded-lg border border-slate-200 overflow-hidden', 'bg-slate-100/80 ring-1 ring-black/5', isLoading ? 'gap-1.5 bg-slate-100/40 '  : ''].join(' ')}>
               {isLoading
                 ? Array.from({ length: skeletonCount }).map((_, i) => {
                     // nice variety of widths
