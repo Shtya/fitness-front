@@ -20,7 +20,7 @@ import api from '@/utils/axios';
 
 /* ----------------------------- Local UI bits ----------------------------- */
 const Button = ({ name, children, className = '', disabled, onClick, type = 'button', color = 'primary' }) => (
-  <button type={type} onClick={onClick} disabled={disabled} className={['inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition active:scale-[.98]', color === 'primary' && 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50', color === 'neutral' && 'bg-slate-100 text-slate-800 hover:bg-slate-200 disabled:opacity-50', color === 'danger' && 'bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50', className].join(' ')}>
+  <button type={type} onClick={onClick} disabled={disabled} className={['inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold shadow-sm transition active:scale-[.98]', color === 'primary' && 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50', color === 'neutral' && 'bg-slate-100 text-slate-800 hover:bg-slate-200 disabled:opacity-50', color === 'danger' && 'bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50', className].join(' ')}>
     {children || name}
   </button>
 );
@@ -28,7 +28,7 @@ const Button = ({ name, children, className = '', disabled, onClick, type = 'but
 function Section({ icon, title, children, extra }) {
   const Icon = icon || Info;
   return (
-    <section className='rounded-xl bg-white/90 backdrop-blur border border-slate-200 shadow-sm'>
+    <section className='rounded-lg bg-white/90 backdrop-blur border border-slate-200 shadow-sm'>
       <header className='px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur z-10 rounded-t-xl'>
         <div className='flex items-center gap-2'>
           <Icon className='w-4 h-4 text-indigo-600' />
@@ -117,7 +117,7 @@ function PhotoPickerModal({ onClose, photos, onPick, selected = { front: null, b
 
   return (
     <div className='fixed inset-0 z-[9999] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-3'>
-      <div className='w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden'>
+      <div className='w-full max-w-3xl bg-white rounded-lg shadow-2xl overflow-hidden'>
         <div className='flex items-center justify-between px-4 py-3 border-b border-slate-200'>
           <div className='font-semibold text-slate-800'>{t('weekly.photos.pickFromHistory.title')}</div>
           <button type='button' onClick={onClose} className='p-2 rounded-lg hover:bg-slate-100'>
@@ -182,11 +182,11 @@ function RatingStars({ label, value = 0, onChange = () => {}, allowZero = false,
           {required ? <span className='text-rose-600 ml-1'>*</span> : null}
         </label>
       )}
-      <div className={['inline-flex items-center gap-2 rounded-2xl px-2 py-1', readOnly ? 'opacity-80' : 'hover:bg-slate-50'].join(' ')} role='radiogroup' aria-label={typeof label === 'string' ? label : 'rating'}>
+      <div className={['inline-flex items-center gap-2 rounded-lg px-2 py-1', readOnly ? 'opacity-80' : 'hover:bg-slate-50'].join(' ')} role='radiogroup' aria-label={typeof label === 'string' ? label : 'rating'}>
         {items.map(n => {
           const filled = n <= value;
           return (
-            <button key={n} type='button' role='radio' aria-checked={value === n} onClick={() => handleSelect(n)} disabled={readOnly} className={['grid place-items-center rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2', !readOnly && 'cursor-pointer'].join(' ')}>
+            <button key={n} type='button' role='radio' aria-checked={value === n} onClick={() => handleSelect(n)} disabled={readOnly} className={['grid place-items-center rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2', !readOnly && 'cursor-pointer'].join(' ')}>
               <Star filled={filled} className={sizeMap[size] || sizeMap.md} />
               <span className='sr-only'>{n}</span>
               <input name={name} value={n} type='radio' className='hidden' readOnly checked={value === n} tabIndex={-1} />
@@ -587,7 +587,7 @@ export default function WeeklyReportPage() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className='mx-auto max-w-3xl px-3 sm:px-5 py-4 sm:py-6 space-y-4 sm:space-y-5'>
       {/* Header */}
-      <div className='rounded-2xl border border-slate-200 bg-white/90 backdrop-blur p-4 sm:p-6 shadow-sm'>
+      <div className='rounded-lg border border-slate-200 bg-white/90 backdrop-blur p-4 sm:p-6 shadow-sm'>
         <h1 className='text-xl sm:text-2xl font-bold text-slate-900'>{t('weekly.title')}</h1>
         <p className='mt-1 text-slate-600 text-sm'>{t('weekly.subtitle')}</p>
 
@@ -815,7 +815,7 @@ export default function WeeklyReportPage() {
 
       {/* Errors / success */}
       {ok ? (
-        <div className='rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 p-3 text-sm inline-flex items-center gap-2'>
+        <div className='rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 p-3 text-sm inline-flex items-center gap-2'>
           <CheckCircle2 className='w-4 h-4' />
           {t('weekly.success')}
         </div>

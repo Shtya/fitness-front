@@ -143,7 +143,7 @@ export default function HistoryViewer({ history = [] }) {
   return (
     <div className="space-y-4">
       {/* filter bar */}
-      <div className="rounded-xl border border-slate-200 bg-white p-3">
+      <div className="rounded-lg border border-slate-200 bg-white p-3">
         <div className="flex items-center gap-2 text-slate-700 mb-2">
           <Filter className="w-4 h-4" />
           <span className="text-sm font-semibold">Filters</span>
@@ -219,7 +219,7 @@ export default function HistoryViewer({ history = [] }) {
 
       {/* table */}
       {!rows.length ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
           <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm border border-slate-200">
             <Inbox className="h-5 w-5 text-slate-400" />
           </div>
@@ -229,7 +229,7 @@ export default function HistoryViewer({ history = [] }) {
           </div>
         </div>
       ) : (
-        <div className="overflow-auto rounded-xl border border-slate-200">
+        <div className="overflow-auto rounded-lg border border-slate-200">
           <table className="w-full text-sm">
             <thead className="bg-slate-50">
               <tr className="*:*:px-3 *:*:py-2 border-b border-slate-200 text-slate-600">

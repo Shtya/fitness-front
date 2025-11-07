@@ -7,21 +7,37 @@ const api = axios.create({
   timeout: 30000,
 });
 
-// Request interceptor to add auth token
+// Detect lang from current URL
+function detectLangFromURL() {
+  if (typeof window === 'undefined') return 'en';
+  const path = window.location.pathname; // e.g. "/ar/dashboard/nutrition"
+  const firstSegment = path.split('/')[1]; // "ar"
+  // Adjust if your supported locales list differs
+  return ['ar', 'en'].includes(firstSegment) ? firstSegment : 'en';
+}
+
+// Request interceptor to add auth token + lang param
 api.interceptors.request.use(
   config => {
+    // Auth
     const accessToken = localStorage.getItem('accessToken');
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
+
+    // Lang injection
+    const lang = detectLangFromURL();
+    config.params = {
+      ...(config.params || {}),
+      lang: config.params?.lang || lang, // only inject if not explicitly provided
+    };
+
     return config;
   },
-  error => {
-    return Promise.reject(error);
-  },
+  error => Promise.reject(error),
 );
 
-// Response interceptor to handle errors
+// Response interceptor
 api.interceptors.response.use(
   response => response,
   error => {

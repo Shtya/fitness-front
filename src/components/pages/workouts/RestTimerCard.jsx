@@ -225,7 +225,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
           )}
           {!running && (
             <div className='ml-auto flex items-center gap-2'>
-              <div className='inline-flex rounded-xl overflow-hidden border border-slate-200 bg-white'>
+              <div className='inline-flex rounded-lg overflow-hidden border border-slate-200 bg-white'>
                 <button onMouseDown={() => startHold(-holdStep)} onMouseUp={endHold} onMouseLeave={endHold} onTouchStart={() => startHold(-holdStep)} onTouchEnd={endHold} onClick={dec} className='px-2.5 h-8 text-xs hover:bg-slate-50' title={`-${smallStep}s (hold for -${holdStep}/tick)`}>
                   <Minus className=' w-[14px] ' />
                 </button>
@@ -238,7 +238,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
           )}
           <div className=' flex items-center gap-1.5'>
             {!running ? (
-              <button onClick={handleStart} className='inline-flex items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 px-3 h-8 text-xs hover:bg-indigo-100' title='Start'>
+              <button onClick={handleStart} className='inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 px-3 h-8 text-xs hover:bg-indigo-100' title='Start'>
                 <Play size={12} /> Start
               </button>
             ) : paused ? (
@@ -248,7 +248,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
                     resume();
                     haptic();
                   }}
-                  className='inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 h-8 text-xs hover:bg-emerald-100'
+                  className='inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 h-8 text-xs hover:bg-emerald-100'
                   title='Resume'>
                   <Play size={12} /> Resume
                 </button>
@@ -258,7 +258,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
                     stopAlert();
                     haptic(20);
                   }}
-                  className='inline-flex items-center gap-1 rounded-xl border border-rose-200 text-rose-600 px-3 h-8 text-xs hover:bg-rose-50'
+                  className='inline-flex items-center gap-1 rounded-lg border border-rose-200 text-rose-600 px-3 h-8 text-xs hover:bg-rose-50'
                   title='Stop'>
                   <X size={12} /> Stop
                 </button>
@@ -270,7 +270,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
                     pause();
                     haptic();
                   }}
-                  className='inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 h-8 text-xs hover:bg-slate-50'
+                  className='inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 h-8 text-xs hover:bg-slate-50'
                   title='Pause'>
                   <Pause size={12} /> Pause
                 </button>
@@ -280,7 +280,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
                     stopAlert();
                     haptic(20);
                   }}
-                  className='inline-flex items-center gap-1 rounded-xl border border-rose-200 text-rose-600 px-3 h-8 text-xs hover:bg-rose-50'
+                  className='inline-flex items-center gap-1 rounded-lg border border-rose-200 text-rose-600 px-3 h-8 text-xs hover:bg-rose-50'
                   title='Stop'>
                   <X size={12} /> Stop
                 </button>

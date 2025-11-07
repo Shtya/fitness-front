@@ -108,12 +108,12 @@ export default function DataTable({
   };
 
   return (
-    <div className='w-full'>
+    <div className='w-full '>
       <div className='overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm'>
         <div className='overflow-x-auto'>
           <table className='min-w-full text-sm'>
             <thead className={`${stickyHeader ? 'sticky top-0 z-10' : ''}`}>
-              <tr className='bg-slate-50/90 backdrop-blur supports-[backdrop-filter]:bg-slate-50/70 text-slate-600 border-b border-slate-200 shadow-[inset_0_-1px_0_rgba(15,23,42,0.06)]'>
+              <tr  className=' rounded-[20px_20px_0_0]  bg-slate-50/90 backdrop-blur supports-[backdrop-filter]:bg-slate-50/70 text-slate-600 border-b border-slate-200 shadow-[inset_0_-1px_0_rgba(15,23,42,0.06)]'>
                 {selectable && (
                   <th className='px-4 py-3 rtl:text-right  text-left w-10'>
                     <button onClick={() => onToggleAll?.(allPageIds)} className='inline-flex items-center gap-2 text-slate-700' aria-label={t('toggleSelectAll')} title={t('toggleSelectAll')}>

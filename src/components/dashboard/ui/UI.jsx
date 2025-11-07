@@ -317,7 +317,7 @@ function InjectShimmer() {
   return null;
 }
 
-export function TabsPill({ isLoading , sliceInPhone = true, hiddenArrow = false, slice, tabs = [], active, onChange, className = '', id = 'ui-tabs-pill', skeletonCount = 5 }) {
+export function TabsPill({ outerCn , isLoading , sliceInPhone = true, hiddenArrow = false, slice, tabs = [], active, onChange, className = '', id = 'ui-tabs-pill', skeletonCount = 5 }) {
   const scrollerRef = useRef(null);
   const tabRefs = useRef({}); // { [key]: HTMLElement }
 
@@ -373,7 +373,7 @@ export function TabsPill({ isLoading , sliceInPhone = true, hiddenArrow = false,
   }, [goPrev, goNext, activeIndex, tabs]);
 
   return (
-    <div className='w-full overflow-x-auto pb-1 overflow-y-hidden'>
+    <div className={`${outerCn} w-full overflow-x-auto pb-1 overflow-y-hidden`}>
       <InjectShimmer />
       <div className='w-fit flex items-center gap-2'>
         {/* Prev button */}
@@ -399,7 +399,7 @@ export function TabsPill({ isLoading , sliceInPhone = true, hiddenArrow = false,
                     return (
                       <motion.button key={t.key} type='button' ref={el => (tabRefs.current[t.key] = el)} onClick={() => onChange(t.key)} className='relative cursor-pointer select-none rounded-lg max-md:!rounded-[10px_10px_0_0] px-3 py-1.5 text-sm font-medium outline-none' whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 350, damping: 30 }}>
                         {isActive && <motion.span layoutId='tabs-pill' className='absolute inset-0 after:!rounded-lg !rounded-lg bg-second shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
-                        <span className={`relative z-10 text-nowrap ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-700'} capitalize`}>
+                        <span className={`relative z-10 text-nowrap ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-700'} capitalize flex items-center gap-1 `}>
                           {t.icon ? <t.icon className=' max-md:hidden inline w-4 h-4 mr-1 -mt-0.5' /> : null}
 
                           <MultiLangText className={` ${!sliceInPhone && '!hidden'} md:hidden`}>{t.label?.slice(0, 3)}</MultiLangText>
@@ -423,7 +423,7 @@ export function TabsPill({ isLoading , sliceInPhone = true, hiddenArrow = false,
   );
 }
 
-/* --------- DateRangeControl (From/To date inputs) --------- */
+
 export function DateRangeControl({ label = 'Date', from, to, setFrom, setTo, className = '' }) {
   return (
     <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white ${className}`}>

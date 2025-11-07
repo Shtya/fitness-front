@@ -558,7 +558,7 @@ export default function ChatPage() {
   const isRTL = locale === 'ar';
 
   return (
-    <div className={' max-md:w-[calc(100%+20px)] max-md:ltr:ml-[-10px] max-md:rtl:mr-[-10px] h-[calc(100vh-95px)] md:!h-[calc(100vh-150px)] flex flex-col md:rounded-2xl overflow-hidden md:border md:border-slate-200 bg-gradient-to-br from-indigo-50 via-white to-blue-50'}>
+    <div className={' max-md:w-[calc(100%+20px)] max-md:ltr:ml-[-10px] max-md:rtl:mr-[-10px] h-[calc(100vh-95px)] md:!h-[calc(100vh-150px)] flex flex-col md:rounded-lg overflow-hidden md:border md:border-slate-200 bg-gradient-to-br from-indigo-50 via-white to-blue-50'}>
       {/* App bar */}
       <div className='hidden md:flex items-center justify-between px-5 h-14 border-b border-slate-200/70 bg-white/70 backdrop-blur'>
         <div className='font-semibold  text-slate-800'>{t('appbar.title')}</div>
@@ -574,7 +574,7 @@ export default function ChatPage() {
 
           {/* Coach CTA */}
           <div className=' w-fit '>
-            <button type='button' onClick={contactCoach} className='w-full h-11 rounded-xl border border-slate-200 bg-white/90 text-slate-800 text-sm inline-flex items-center justify-center px-2 gap-1 hover:bg-slate-50 active:scale-[.99] transition shadow-[0_0_0_0_rgba(0,0,0,0)] hover:shadow-[0_4px_16px_-8px_rgba(99,102,241,0.25)]'>
+            <button type='button' onClick={contactCoach} className='w-full h-11 rounded-lg border border-slate-200 bg-white/90 text-slate-800 text-sm inline-flex items-center justify-center px-2 gap-1 hover:bg-slate-50 active:scale-[.99] transition shadow-[0_0_0_0_rgba(0,0,0,0)] hover:shadow-[0_4px_16px_-8px_rgba(99,102,241,0.25)]'>
               <Phone size={16} />
               {t('quick.coach')}
             </button>
@@ -591,7 +591,7 @@ export default function ChatPage() {
             <div className='relative group'>
               <Search className='absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors' />
 
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('search.placeholder')} aria-label={t('search.placeholder')} className='h-11 w-full ltr:pl-10 rtl:pr-10 ltr:pr-12 rtl:pl-12 rounded-xl border border-slate-200 bg-slate-50/80 text-slate-900 transition focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40' />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('search.placeholder')} aria-label={t('search.placeholder')} className='h-11 w-full ltr:pl-10 rtl:pr-10 ltr:pr-12 rtl:pl-12 rounded-lg border border-slate-200 bg-slate-50/80 text-slate-900 transition focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40' />
               {searching && <Loader2 className='absolute ltr:right-3 rtl:left-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-slate-400 pointer-events-none' />}
               {!!search && !searching && (
                 <button type='button' onClick={() => setSearch('')} aria-label={t('search.clear', { defaultValue: 'Clear search' })} className='absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-slate-100 active:scale-95 transition'>
@@ -602,8 +602,8 @@ export default function ChatPage() {
 
             {/* Search results */}
             {searching ? null : search && results.length === 0 ? (
-              <div className='mt-3 rounded-xl border border-slate-200 bg-white/60 p-6 text-center'>
-                <div className='mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100'>
+              <div className='mt-3 rounded-lg border border-slate-200 bg-white/60 p-6 text-center'>
+                <div className='mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100'>
                   <Inbox className='w-6 h-6 text-slate-400' />
                 </div>
                 <div className='text-sm font-medium text-slate-700'>{t('search.noResultsTitle', { defaultValue: 'No matches found' })}</div>
@@ -611,7 +611,7 @@ export default function ChatPage() {
               </div>
             ) : (
               !!results.length && (
-                <div className='mt-3 rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-white/70'>
+                <div className='mt-3 rounded-lg border border-slate-200 overflow-hidden shadow-sm bg-white/70'>
                   <div className='px-3 py-2 text-xs text-slate-500 bg-slate-50'>{t('search.results')}</div>
                   <ul className='max-h-64 overflow-auto'>
                     {results.map(u => {
@@ -621,7 +621,7 @@ export default function ChatPage() {
                         <li key={u.id} className='border-t border-slate-100'>
                           <button onClick={() => openDirectWith(u.id)} className='w-full px-3 py-2 text-left hover:bg-slate-50 active:bg-slate-100/60 flex items-center gap-3 transition group'>
                             {/* Avatar with initial */}
-                            <div className={cls('h-8 w-8 rounded-xl bg-gradient-to-br grid place-items-center overflow-hidden', 'ring-1 ring-inset', avatarTone)}>
+                            <div className={cls('h-8 w-8 rounded-lg bg-gradient-to-br grid place-items-center overflow-hidden', 'ring-1 ring-inset', avatarTone)}>
                               <span className='text-[11px] font-bold leading-none select-none'>{initial}</span>
                             </div>
 
@@ -647,7 +647,7 @@ export default function ChatPage() {
             {loadingConvos ? (
               <div className='p-4 space-y-3'>
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className='h-14 rounded-2xl bg-slate-100/80 animate-pulse' />
+                  <div key={i} className='h-14 rounded-lg bg-slate-100/80 animate-pulse' />
                 ))}
               </div>
             ) : filteredConvos.length ? (
@@ -663,9 +663,9 @@ export default function ChatPage() {
 
                   return (
                     <li key={c.id}>
-                      <button onClick={() => onSelectConversation(c.id)} className={cls('w-full px-3 py-3 text-left rounded-2xl transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40', isActive ? ' bg-slate-100 shadow-sm ring-1 ring-slate-200' : ' bg-slate-50 hover:bg-slate-100 active:bg-slate-100/60')}>
+                      <button onClick={() => onSelectConversation(c.id)} className={cls('w-full px-3 py-3 text-left rounded-lg transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40', isActive ? ' bg-slate-100 shadow-sm ring-1 ring-slate-200' : ' bg-slate-50 hover:bg-slate-100 active:bg-slate-100/60')}>
                         <div className='flex items-center gap-3'>
-                          <div className={cls('h-11 w-11 rounded-2xl grid place-items-center overflow-hidden ring-1 ring-inset', hasUnread ? 'bg-gradient-to-br from-indigo-100 to-blue-100 ring-indigo-200' : 'bg-slate-100 ring-slate-200')}>
+                          <div className={cls('h-11 w-11 rounded-lg grid place-items-center overflow-hidden ring-1 ring-inset', hasUnread ? 'bg-gradient-to-br from-indigo-100 to-blue-100 ring-indigo-200' : 'bg-slate-100 ring-slate-200')}>
                             <UserCircle2 className={cls('w-6 h-6', hasUnread ? 'text-indigo-600' : 'text-slate-500')} />
                           </div>
 
@@ -688,7 +688,7 @@ export default function ChatPage() {
               </ul>
             ) : (
               <div className='p-10 text-center text-slate-500'>
-                <div className='mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100'>
+                <div className='mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100'>
                   <Inbox className='w-6 h-6 opacity-70' />
                 </div>
                 <div className='text-sm font-medium'>{t('list.empty')}</div>
@@ -715,7 +715,7 @@ export default function ChatPage() {
               <>
                 {/* Avatar with initial + presence dot */}
                 <div className='relative'>
-                  <div className={cls('h-9 w-9 rounded-xl bg-gradient-to-br grid place-items-center overflow-hidden ring-1 ring-inset', pickAvatarClass(otherUser.id || otherUser.email))}>
+                  <div className={cls('h-9 w-9 rounded-lg bg-gradient-to-br grid place-items-center overflow-hidden ring-1 ring-inset', pickAvatarClass(otherUser.id || otherUser.email))}>
                     <MultiLangText className='text-[11px] font-bold leading-none select-none'>{getInitial(otherUser)}</MultiLangText>
                   </div>
                   {otherUser?.online && <span className='absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white' />}
@@ -738,7 +738,7 @@ export default function ChatPage() {
             {!activeId ? (
               <div className='h-full grid place-items-center text-slate-500 text-sm'>
                 <div className='text-center'>
-                  <div className='mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm border border-slate-200'>
+                  <div className='mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-white shadow-sm border border-slate-200'>
                     <Inbox className='w-6 h-6 text-slate-400' />
                   </div>
                   <div>{t('empty.pick')}</div>
@@ -764,13 +764,13 @@ export default function ChatPage() {
                     {attaches.map((a, idx) => (
                       <div key={idx} className='relative shrink-0 group'>
                         {/^image\//.test(a.type) ? (
-                          <img src={a.url} alt={a.name} className='h-16 w-16 object-cover rounded-xl border border-slate-200 shadow-sm' />
+                          <img src={a.url} alt={a.name} className='h-16 w-16 object-cover rounded-lg border border-slate-200 shadow-sm' />
                         ) : /^video\//.test(a.type) ? (
-                          <div className='h-16 w-24 rounded-xl border border-slate-200 grid place-items-center bg-slate-50 shadow-sm'>
+                          <div className='h-16 w-24 rounded-lg border border-slate-200 grid place-items-center bg-slate-50 shadow-sm'>
                             <Video className='w-5 h-5 text-slate-600' />
                           </div>
                         ) : (
-                          <div className='h-16 w-24 rounded-xl border border-slate-200 grid place-items-center bg-slate-50 shadow-sm'>
+                          <div className='h-16 w-24 rounded-lg border border-slate-200 grid place-items-center bg-slate-50 shadow-sm'>
                             <FileIcon className='w-5 h-5 text-slate-600' />
                           </div>
                         )}
@@ -817,25 +817,25 @@ export default function ChatPage() {
                       }}
                       rows={1}
                       placeholder={t('composer.placeholder')}
-                      className={['h-auto min-h-[44px] max-h-[160px] w-full rounded-xl', 'border border-slate-200 bg-white/90 text-slate-900', 'shadow-sm hover:shadow transition', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', ' px-2 ltr:!pl-[160px]  rtl:!pl-[160px]  ', 'py-2 text-sm resize-none'].join(' ')}
+                      className={['h-auto min-h-[44px] max-h-[160px] w-full rounded-lg', 'border border-slate-200 bg-white/90 text-slate-900', 'shadow-sm hover:shadow transition', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', ' px-2 ltr:!pl-[160px]  rtl:!pl-[160px]  ', 'py-2 text-sm resize-none'].join(' ')}
                     />
 
                     {/* Inner icon cluster – anchored to "start" side (mirrors with RTL) */}
                     <div className='pointer-events-auto absolute inset-y-0 ltr:right-[4px] rtl:left-[4px] flex gap-1 top-[4px] '>
-                      <button onClick={send} disabled={sending || (!text.trim() && !hasAttaches)} className=' h-9 w-9 rounded-xl bg-indigo-600 text-white grid place-items-center disabled:opacity-60 hover:bg-indigo-700 active:scale-95 shadow transition-all duration-200' title={t('composer.send')} aria-label={t('composer.send')}>
+                      <button onClick={send} disabled={sending || (!text.trim() && !hasAttaches)} className=' h-9 w-9 rounded-lg bg-indigo-600 text-white grid place-items-center disabled:opacity-60 hover:bg-indigo-700 active:scale-95 shadow transition-all duration-200' title={t('composer.send')} aria-label={t('composer.send')}>
                         {sending ? <Loader2 className='animate-spin w-4 h-4' /> : <Send className='w-4 h-4' />}
                       </button>
-                      <label className='h-9 w-9 grid place-items-center rounded-xl border border-slate-200 bg-white cursor-pointer hover:bg-slate-50 active:scale-95 transition shadow-sm'>
+                      <label className='h-9 w-9 grid place-items-center rounded-lg border border-slate-200 bg-white cursor-pointer hover:bg-slate-50 active:scale-95 transition shadow-sm'>
                         <ImageIcon className='w-5 h-5 text-slate-600' />
                         <input type='file' className='hidden' accept='image/*' multiple onChange={e => onPickFiles(e.target.files)} />
                       </label>
 
-                      <label className='h-9 w-9 grid place-items-center rounded-xl border border-slate-200 bg-white cursor-pointer hover:bg-slate-50 active:scale-95 transition shadow-sm'>
+                      <label className='h-9 w-9 grid place-items-center rounded-lg border border-slate-200 bg-white cursor-pointer hover:bg-slate-50 active:scale-95 transition shadow-sm'>
                         <Video className='w-5 h-5 text-slate-600' />
                         <input type='file' className='hidden' accept='video/*' multiple onChange={e => onPickFiles(e.target.files)} />
                       </label>
 
-                      <label className='h-9 w-9 grid place-items-center rounded-xl border border-slate-200 bg-white cursor-pointer hover:bg-slate-50 active:scale-95 transition shadow-sm'>
+                      <label className='h-9 w-9 grid place-items-center rounded-lg border border-slate-200 bg-white cursor-pointer hover:bg-slate-50 active:scale-95 transition shadow-sm'>
                         <Paperclip className='w-5 h-5 text-slate-600' />
                         <input type='file' className='hidden' multiple onChange={e => onPickFiles(e.target.files)} />
                       </label>
@@ -863,7 +863,7 @@ export default function ChatPage() {
             <div className='p-3 border-b border-slate-200/70'>
               <div className='relative'>
                 <Search className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 ${isRTL ? 'right-3' : 'left-3'}`} />
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('search.placeholder')} className={`w-full h-11 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-400/30 ${isRTL ? 'pr-9 pl-3' : 'pl-9 pr-3'}`} />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('search.placeholder')} className={`w-full h-11 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-400/30 ${isRTL ? 'pr-9 pl-3' : 'pl-9 pr-3'}`} />
                 {searching && <Loader2 className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-slate-400 ${isRTL ? 'left-3' : 'right-3'}`} />}
               </div>
 
@@ -872,7 +872,7 @@ export default function ChatPage() {
               </button>
 
               {!!results.length && (
-                <div className='mt-3 rounded-xl border border-slate-200 overflow-hidden shadow-sm'>
+                <div className='mt-3 rounded-lg border border-slate-200 overflow-hidden shadow-sm'>
                   <div className='px-3 py-2 text-xs text-slate-500 bg-slate-50'>{t('search.results')}</div>
                   <ul className='max-h-64 overflow-auto'>
                     {results.map(u => (
@@ -902,7 +902,7 @@ export default function ChatPage() {
 
                     return (
                       <li key={c.id}>
-                        <button onClick={() => onSelectConversation(c.id)} className={cls('w-full px-3 py-3 rounded-2xl transition-all duration-200 border', activeId === c.id ? 'bg-slate-100 shadow-sm border-slate-200' : 'border-transparent hover:bg-slate-100 bg-slate-50 ')}>
+                        <button onClick={() => onSelectConversation(c.id)} className={cls('w-full px-3 py-3 rounded-lg transition-all duration-200 border', activeId === c.id ? 'bg-slate-100 shadow-sm border-slate-200' : 'border-transparent hover:bg-slate-100 bg-slate-50 ')}>
                           <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                             <div className='min-w-0 flex-1'>
                               <div className={`flex items-center justify-between gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -914,7 +914,7 @@ export default function ChatPage() {
                                 <MultiLangText className='text-xs text-slate-500 truncate flex-1  rtl:text-right'>{preview}</MultiLangText>
                               </div>
                             </div>
-                            <div className='h-11 w-11 rounded-2xl bg-gradient-to-br from-indigo-100 to-blue-100 grid place-items-center overflow-hidden'>
+                            <div className='h-11 w-11 rounded-lg bg-gradient-to-br from-indigo-100 to-blue-100 grid place-items-center overflow-hidden'>
                               <UserCircle2 className='w-6 h-6 text-indigo-500' />
                             </div>
                           </div>
@@ -1031,7 +1031,7 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing }) {
             )}
 
             {/* bubble */}
-            <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className={cls('relative max-w-[78%] rounded-2xl px-3 py-2 shadow-sm', mine ? 'bg-indigo-600 text-white rtl:rounded-bl-sm ltr:rounded-br-sm' : 'bg-white text-slate-800 rtl:rounded-br-sm  ltr:rounded-bl-sm border border-slate-200')}>
+            <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className={cls('relative max-w-[78%] rounded-lg px-3 py-2 shadow-sm', mine ? 'bg-indigo-600 text-white rtl:rounded-bl-sm ltr:rounded-br-sm' : 'bg-white text-slate-800 rtl:rounded-br-sm  ltr:rounded-bl-sm border border-slate-200')}>
               <Content />
 
               <div className={cls('mt-1 text-[11px] flex items-center gap-1 tabular-nums', mine ? 'text-white/80' : 'text-slate-500')}>
@@ -1049,7 +1049,7 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing }) {
           <div className='h-8 w-8 rounded-full bg-gradient-to-br from-indigo-100 to-blue-100 ring-1 ring-inset ring-indigo-200/70 grid place-items-center select-none'>
             <span className='text-[11px] font-bold'>…</span>
           </div>
-          <div className='relative max-w-[78%] rounded-2xl px-3 py-3 shadow-sm bg-white border border-slate-200 rtl:rounded-br-sm ltr:rounded-bl-sm'>
+          <div className='relative max-w-[78%] rounded-lg px-3 py-3 shadow-sm bg-white border border-slate-200 rtl:rounded-br-sm ltr:rounded-bl-sm'>
             <div className='flex gap-1 items-center'>
               <div className='w-2 h-2 bg-slate-400 rounded-full animate-bounce' style={{ animationDelay: '0ms' }} />
               <div className='w-2 h-2 bg-slate-400 rounded-full animate-bounce' style={{ animationDelay: '150ms' }} />
@@ -1071,7 +1071,7 @@ const MessageSkeleton = () => (
       return (
         <div key={i} className={cls('flex items-end gap-2', mine ? 'justify-end' : 'justify-start')}>
           {!mine && <div className='h-8 w-8 rounded-full bg-slate-200/70' />}
-          <div className={cls('rounded-2xl h-14 animate-pulse', mine ? 'bg-indigo-200/40 w-48' : 'bg-slate-200/70 w-56 border border-slate-200')} />
+          <div className={cls('rounded-lg h-14 animate-pulse', mine ? 'bg-indigo-200/40 w-48' : 'bg-slate-200/70 w-56 border border-slate-200')} />
         </div>
       );
     })}

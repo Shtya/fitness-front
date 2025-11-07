@@ -7,6 +7,9 @@
 
 @import 'tailwindcss';
 
+.flatpickr-day.endRange{
+	@apply bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 ;
+}
 .duah-font {
   font-family: 'Scheherazade New', serif !important;
 }

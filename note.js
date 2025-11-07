@@ -1,57 +1,37 @@
-/*
-	- users page
-		- get the plans for this admin
-		- get the plans meals for this admin 
-		* user
-					- when the coach login show only his trainer only 
-					- User Details View page. 
-					- stats fo the users take a long time
-		
-	* workouts ( dashboard) 
-	- check when upload workout in the backend ( return start with /uploads/)
-	-
-		- there is a problem i push the binary file to the backend in teh add new 
-		- there is exercise global and not global related with the coach 
+/* 
+bugs
+	- when the select down i cannot show the all options in the dropdown like the ( profile )
+
+	* users ( super admin )
+		- get all meals plans
+		- get all workouts
+		- get all workouts plans
+		- get all coaches 
+		- get all clients
 
 
-
-
-* profile 
-	- show those data on it ( caloriesTarget , proteinPerDay , carbsPerDay , fatsPerDay , activityLevel , notes)
-
-
-* Working later on 
-	
-	- setting of the client 
-	- notification of the client
-	
-	- workouts plans page : remove teh selected exercise wehn i choose them for day 
-
-	
-	- الترير يرسل اسبوعيا ولو الكلاينت اتأخر ف الارسال يبعت نتوفيكيشن للمدرب بإن الاشخاص دول لسا مبعتوش 
-	
-	- كورسات لفهم التمارين والتشريح وجسمك بيشتغل ازاي
-	- check when he not auth return to the login
-	- close the popup of the create plan when finish 
-	- check from the ai assistant 
+	* check form the response of the forms 
+		- get only for the admin 
 
 		
+	*nutrition 
+		- add in the setting api key and also for the gradient of the header page 
+		- edit the meal plan action doens't work correctly
 
 
 
-
-		* workouts/plans  ( dashboard) 
-			- when select a exercise and out and add exercise again still the selected and put it again
-			- i have a problem on the edit plans on reorder the exercise doesn't apply
-
+	* user
+		- when the coach login show only his trainer only 
+		- User Details View page. 
+		- stats of the users take a long time
+	
 
 		* my/workouts ( client )
 			- remove the comment on the loading 
 			- work on upload the video 
 			- control on the podcast that will show for the client 
 			- in the dashboard can see his logs for any user  
-			- work on save teh records is localstorage and push it to the endponit oneshot
-			- bulk select for the exercise that he finish it
+			- check box beside the exercise to finish it 
 
 
 
@@ -62,10 +42,10 @@
 			- dublicated
 
 
- 
 		* profile 
+			- show those data on it ( caloriesTarget , proteinPerDay , carbsPerDay , fatsPerDay , activityLevel , notes)
+			- get the data the coach enter it when create teh account for the client and put it in his profile 
 			- can show his plans and exercise and choose form global things in teh system 
-			- 
 
  		* grocery-list 
 
@@ -73,24 +53,10 @@
 			- Weekly/Daily notes from coach.
 			- Evaluation of client’s commitment.
 			- when send his report show how month pass . to give him motivation 
-			التقرير الأسبوعي ✅
+			- check he send the report for his coach 
+			- show مين الي مبعتش تقرير الاسبوع ده
 
-				1_( الديت )
-				هل تشعر بالجوع؟
-				هل تشعر براحه نفسيه ام لا؟
-				هل تود إضافة أصناف معينه ؟
-				هل كمية الأكل كثيره؟
-				هل هناك انحراف في الديت ( في حالة الاجابه بنعم يجب توضيح عدد المرات و نوعيات الاكل و الكميه )
-				(التمرين )
-				هل كثافه لتمرين مناسبه؟
-				هل هناك انحراف في عدد الايام( في حالة الاجابه بنعم يجب توضيح عدد ايام الانحراف بالزياده أو النقصان وهل السبب مؤقت ام دائم )
-				هل تلاحظ تغيير بالشاكل
-				هل تلاحظ تغيير في مستوي اللياقه
-				هل تنام كفايه
-				هل في أي ملحوظات أو انتقادات بالبرنامج( اتقبل كل الانتقادات للوصول لمستوي افضل في الخدمه و للوصول لأفضل مستوي للعميل🙏🏻)
-				صور وش وضهر و ميزان وقياسات
-				علي مقياس من 1 ل 5 ما مدي اللتزامك بتمارين الكارديو
-			
+
 
 		* Communication
      - Video Call option.
@@ -126,17 +92,27 @@
 
 			
 		*	Progress Tracking
-			- Record weight periodically.
-			- Track body measurements (waist, chest, arms, legs).
 			- Upload progress photos.
-			- Reports with charts + history.
-			- Compare workout values with old values (check improvements).
 
-		* stats dashboard
+		* dashboard
+			- status in the admin dashboard 
+			- status in the super_admin dashboard
 
-		* home page 
-			- Content should be dynamically editable from the dashboard.
+		* home : Content should be dynamically editable from the dashboard.
+		* doctors : يكون فيه دكاتره علي السيستم 
 
-		* يكون فيه دكاتره علي السيستم 
+
+		
+* Working later on 
+	
+	- setting of the client 
+	- notification of the client
+	- workouts plans page : remove teh selected exercise wehn i choose them for day 
+	- الترير يرسل اسبوعيا ولو الكلاينت اتأخر ف الارسال يبعت نتوفيكيشن للمدرب بإن الاشخاص دول لسا مبعتوش 
+	
+	- كورسات لفهم التمارين والتشريح وجسمك بيشتغل ازاي
+	- check when he not auth return to the login
+	- close the popup of the create plan when finish 
+	- check from the ai assistant 
 
  */

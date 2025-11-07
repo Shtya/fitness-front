@@ -10,6 +10,7 @@ import { Notification } from '@/config/Notification';
 import api from '@/utils/axios';
 import Img from '@/components/atoms/Img';
 import { useTranslations } from 'next-intl';
+import MultiLangText from '@/components/atoms/MultiLangText';
 
 const overlaySpring = { type: 'spring', stiffness: 200, damping: 24 };
 const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
@@ -186,10 +187,9 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
               <div className='mx-auto max-w-7xl  px-4 sm:px-6'>
                 <div className='flex items-center justify-between py-4'>
                   <div className='text-white flex items-center gap-3'>
-                    <Dumbbell className='h-6 w-6' />
-                    <div>
-                      <div className='text-base font-semibold '>{t('picker.title')}</div>
-                      <div className='text-xs opacity-90'>{t('picker.subtitle')}</div>
+                     <div>
+                      <div className=' lg:text-xl text-base font-semibold '>{t('picker.title')}</div>
+                      <div className=' lg:text-lg text-xs opacity-90'>{t('picker.subtitle')}</div>
                     </div>
                   </div>
 
@@ -219,7 +219,7 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
                 {loading ? (
                   <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6'>
                     {Array.from({ length: 12 }).map((_, i) => (
-                      <div key={i} className='relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'>
+                      <div key={i} className='relative overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm'>
                         <div className='aspect-[4/3] w-full overflow-hidden'>
                           <div className='h-full w-full shimmer' />
                         </div>
@@ -237,7 +237,7 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
                       const checked = !!selected[e.id];
 
                       return (
-                        <motion.button type='button' key={e.id} onClick={() => toggle(e)} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={['text-left rounded-xl border p-3 transition-all', checked ? 'border-indigo-400 ring-2 ring-indigo-200 bg-indigo-50/50 shadow-md' : 'border-slate-200 bg-white shadow-sm hover:border-slate-300 hover:shadow-md'].join(' ')}>
+                        <motion.button type='button' key={e.id} onClick={() => toggle(e)} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={['text-left rounded-lg border p-3 transition-all', checked ? 'border-indigo-400 ring-2 ring-indigo-200 bg-indigo-50/50 shadow-md' : 'border-slate-200 bg-white shadow-sm hover:border-slate-300 hover:shadow-md'].join(' ')}>
                           <div className='relative mb-2 overflow-hidden rounded-lg bg-slate-100'>
                             <div className='aspect-[4/3] w-full'>
                               {e.img ? (
@@ -262,7 +262,7 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
                             )}
                           </div>
 
-                          <div className='mb-0.5 truncate text-sm font-semibold text-slate-900'>{e.name}</div>
+                          <MultiLangText className='mb-0.5 truncate text-sm font-semibold text-slate-900'>{e.name}</MultiLangText>
 
                           <div className='mb-2 truncate text-[12px] text-slate-600'>
                             {t('picker.sets')} {e.targetSets ?? 3} · {t('picker.reps')} {e.targetReps || '—'} · {t('picker.rest')} {e.rest ?? 90}s{e.tempo ? ` · ${e.tempo}` : ''}
@@ -271,7 +271,7 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
                           {e.category && (
                             <span className='inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[11px] text-indigo-700'>
                               <Tag size={11} />
-                              {e.category}
+                              <MultiLangText>{e.category}</MultiLangText>
                             </span>
                           )}
                         </motion.button>
@@ -279,8 +279,8 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
                     })}
                   </div>
                 ) : (
-                  <div className='rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm'>
-                    <div className='mx-auto grid h-14 w-14 place-content-center rounded-xl bg-slate-100'>
+                  <div className='rounded-lg border border-slate-200 bg-white p-10 text-center shadow-sm'>
+                    <div className='mx-auto grid h-14 w-14 place-content-center rounded-lg bg-slate-100'>
                       <Dumbbell className='h-7 w-7 text-slate-500' />
                     </div>
                     <h3 className='mt-4 text-base font-semibold text-slate-900'>{t('picker.noExercisesTitle')}</h3>
@@ -297,10 +297,10 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
                   <PrettyPagination page={page} totalPages={totalPages} onPageChange={setPage} className='order-2 sm:order-1' />
 
                   <div className='order-1 flex items-center justify-end gap-2 sm:order-2'>
-                    <button type='button' onClick={onClose} className='inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50 active:scale-[.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 transition'>
+                    <button type='button' onClick={onClose} className='inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50 active:scale-[.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 transition'>
                       {t('actions.close')}
                     </button>
-                    <button type='button' onClick={handleDone} disabled={!selectedCount} className={['inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition', 'bg-[#4f39f6] text-white hover:bg-[#4f39f6]/90 active:scale-[.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30', !selectedCount ? 'opacity-50 cursor-not-allowed' : ''].join(' ')}>
+                    <button type='button' onClick={handleDone} disabled={!selectedCount} className={['inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition', 'bg-[#4f39f6] text-white hover:bg-[#4f39f6]/90 active:scale-[.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30', !selectedCount ? 'opacity-50 cursor-not-allowed' : ''].join(' ')}>
                       {t('picker.addSelected', { count: selectedCount || 0 })}
                     </button>
                   </div>
@@ -313,7 +313,7 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
               {showVideo && (
                 <motion.div className='fixed inset-0 z-[1100] flex items-center justify-center p-4' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                   <div className='absolute inset-0 bg-black/70' onClick={() => setShowVideo(null)} />
-                  <motion.div initial={{ scale: 0.98, opacity: 0, y: 6 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.98, opacity: 0, y: 6 }} transition={overlaySpring} className='relative w-full max-w-3xl rounded-2xl bg-black overflow-hidden shadow-2xl'>
+                  <motion.div initial={{ scale: 0.98, opacity: 0, y: 6 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.98, opacity: 0, y: 6 }} transition={overlaySpring} className='relative w-full max-w-3xl rounded-lg bg-black overflow-hidden shadow-2xl'>
                     <button onClick={() => setShowVideo(null)} className='absolute right-2 top-2 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 active:scale-95' aria-label={t('actions.close')}>
                       <X className='h-5 w-5' />
                     </button>

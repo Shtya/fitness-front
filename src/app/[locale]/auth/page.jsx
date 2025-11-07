@@ -82,10 +82,10 @@ const loginSchema = yup.object().shape({
 
 function getPostLoginPath(role) {
   const r = (role || '').toString().toLowerCase();
-  if (r === 'admin') return '/dashboard';
+  if (r === 'admin') return '/dashboard/users';
   if (r === 'coach' || r === 'cocach') return '/dashboard/assign/users';
   if (r === 'client') return '/dashboard/my/workouts';
-  return '/dashboard'; // fallback
+  return '/dashboard/users'; // fallback
 }
 
 function TitleLogin() {
@@ -206,7 +206,7 @@ const LoginForm = ({ onLoggedIn }) => {
       <div className='pt-2'>
         <button
           disabled={loading}
-          className='relative w-full inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-3 font-semibold text-white bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 hover:from-indigo-700 hover:via-indigo-600 hover:to-blue-700 focus:outline-none focus:ring-4 focus:ring-indigo-300/50 transition-all duration-300 shadow-md hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed'
+          className='relative w-full inline-flex items-center justify-center gap-2 overflow-hidden rounded-lg px-6 py-3 font-semibold text-white bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 hover:from-indigo-700 hover:via-indigo-600 hover:to-blue-700 focus:outline-none focus:ring-4 focus:ring-indigo-300/50 transition-all duration-300 shadow-md hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed'
         >
           <span className='relative z-10 flex items-center gap-2'>
             {loading ? (
@@ -243,7 +243,7 @@ const LoginForm = ({ onLoggedIn }) => {
           </span>
 
           {/* Glowing overlay */}
-          <span className='absolute inset-0 bg-gradient-to-br from-white/20 via-white/5 to-transparent opacity-0 hover:opacity-20 transition-opacity duration-300 rounded-xl'></span>
+          <span className='absolute inset-0 bg-gradient-to-br from-white/20 via-white/5 to-transparent opacity-0 hover:opacity-20 transition-opacity duration-300 rounded-lg'></span>
         </button>
       </div>
 
@@ -343,7 +343,7 @@ export default function AuthPage() {
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLoggedIn = user => {
-    const path = getPostLoginPath(user?.role) || '/dashboard';
+    const path = getPostLoginPath(user?.role) || '/dashboard/users';
     router.push(path);
   };
 
@@ -365,7 +365,7 @@ export default function AuthPage() {
           </div>
           <div className='flex-1 flex items-center justify-center px-6 lg:px-10 py-12'>
             <motion.div initial={{ opacity: 0, scale: 0.985 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.45 }} className='w-full max-w-[520px]'>
-              <div className='bg-white/90 backdrop-blur-sm border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-lg'>
+              <div className='bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 sm:p-8 shadow-lg'>
                 <TitleLogin />
                 <AnimatePresence mode='wait'>
                   <motion.div key='login-only-desktop' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
@@ -387,7 +387,7 @@ export default function AuthPage() {
         <div className=' bg-gray-50 h-screen lg:hidden flex items-center justify-center px-4 sm:px-6 py-8'>
           <img src='/auth-2.png' alt='' className='absolute inset-0 h-full w-full object-cover object-center' />
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className='w-full max-w-[520px]'>
-            <div className='rounded-xl border border-slate-200 bg-white/80 backdrop-blur-xl shadow-xl p-5 sm:p-6'>
+            <div className='rounded-lg border border-slate-200 bg-white/80 backdrop-blur-xl shadow-xl p-5 sm:p-6'>
               <TitleLogin />
               <AnimatePresence mode='wait'>
                 <motion.div key='login-only-mobile' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>

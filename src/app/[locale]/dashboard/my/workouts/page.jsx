@@ -132,7 +132,7 @@ function UploadVideoModal({ open, onClose, userId, exercise, onUploaded }) {
 				animate={{ y: 0, opacity: 1 }}
 				exit={{ y: 40, opacity: 0 }}
 				transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-				className='fixed left-1/2 top-[15%] -translate-x-1/2 z-[100] w-[92%] max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200'
+				className='fixed left-1/2 top-[15%] -translate-x-1/2 z-[100] w-[92%] max-w-md rounded-lg bg-white shadow-2xl border border-slate-200'
 			>
 				<div className='p-4 border-b border-slate-100 flex items-center justify-between'>
 					<div className='font-semibold'>
@@ -953,7 +953,7 @@ export default function MyWorkoutsPage() {
 
 												return (
 													<div className={`absolute right-1  md:right-3 flex items-center gap-2 ${activeMedia === 'video' ? 'bottom-[70px] ' : ' bottom-1 md:bottom-3'} duration-500 `}>
-														<div className='inline-flex max-md:flex-col   items-center gap-[4px] rounded-xl bg-slate-100/70 p-1 ring-1 ring-black/5 backdrop-blur-md'>
+														<div className='inline-flex max-md:flex-col   items-center gap-[4px] rounded-lg bg-slate-100/70 p-1 ring-1 ring-black/5 backdrop-blur-md'>
 															<button
 																type='button'
 																aria-pressed={activeMedia === 'image'}

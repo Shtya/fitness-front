@@ -383,7 +383,7 @@ export const AudioHubInline = React.memo(function AudioHubInline({ open, onClose
     <AnimatePresence>
       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className={clsx('w-full', hidden && 'hidden')}>
         {/* Shell */}
-        <div className='mt-2 -mb-2 pb-2 rounded-2xl border border-slate-200 bg-white/70 backdrop-blur-sm shadow-[0_4px_30px_rgba(0,0,0,0.05)] overflow-hidden'>
+        <div className='mt-2 -mb-2 pb-2 rounded-lg border border-slate-200 bg-white/70 backdrop-blur-sm shadow-[0_4px_30px_rgba(0,0,0,0.05)] overflow-hidden'>
           {/* Header */}
           <div className='px-3 py-2 flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-indigo-50/60 to-white'>
             <div className='flex items-center gap-2 font-semibold text-sm text-slate-800'>
@@ -417,7 +417,7 @@ export const AudioHubInline = React.memo(function AudioHubInline({ open, onClose
 
           {/* Tabs */}
           <div className='px-3 pt-2'>
-            <div className='inline-flex rounded-xl bg-slate-100 p-1'>
+            <div className='inline-flex rounded-lg bg-slate-100 p-1'>
               {[
                 { key: 'stations', label: 'Stations' },
                 { key: 'podcasts', label: 'Podcasts' },
@@ -438,7 +438,7 @@ export const AudioHubInline = React.memo(function AudioHubInline({ open, onClose
             <div className='p-3'>
               <div className='grid grid-cols-1 md:grid-cols-[300px_1fr] gap-3'>
                 {/* left: stations list */}
-                <div className='rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-indigo-50/60 p-3'>
+                <div className='rounded-lg border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-indigo-50/60 p-3'>
                   <div className='mb-2 flex items-center justify-between'>
                     <div className='text-sm font-semibold text-slate-800'>Qur’an Stations</div>
                     <div className='text-[11px] text-slate-600'>{playing ? 'Playing' : 'Idle'}</div>
@@ -500,7 +500,7 @@ export const AudioHubInline = React.memo(function AudioHubInline({ open, onClose
 
                       <div className='flex items-center gap-2'>
                         {/* Play / Pause */}
-                        <button onClick={togglePlay} className={clsx('inline-flex items-center gap-2 rounded-xl px-4 h-10 text-xs font-medium border shadow-sm transition', loading ? 'border-slate-200 bg-white/70 text-slate-500' : 'border-slate-200 bg-white/80 hover:bg-white')} aria-busy={loading ? 'true' : 'false'} aria-label={loading ? 'Loading' : playing ? 'Pause' : 'Play'}>
+                        <button onClick={togglePlay} className={clsx('inline-flex items-center gap-2 rounded-lg px-4 h-10 text-xs font-medium border shadow-sm transition', loading ? 'border-slate-200 bg-white/70 text-slate-500' : 'border-slate-200 bg-white/80 hover:bg-white')} aria-busy={loading ? 'true' : 'false'} aria-label={loading ? 'Loading' : playing ? 'Pause' : 'Play'}>
                           {loading ? (
                             <Loader2 className='w-4 h-4 animate-spin' />
                           ) : playing ? (
@@ -515,7 +515,7 @@ export const AudioHubInline = React.memo(function AudioHubInline({ open, onClose
                         </button>
 
                         {/* Mute */}
-                        <button onClick={() => setMuted(m => !m)} className='inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white/80 hover:bg-white h-10 w-10' aria-label={muted ? 'Unmute' : 'Mute'} title={muted ? 'Unmute' : 'Mute'}>
+                        <button onClick={() => setMuted(m => !m)} className='inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white/80 hover:bg-white h-10 w-10' aria-label={muted ? 'Unmute' : 'Mute'} title={muted ? 'Unmute' : 'Mute'}>
                           {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                         </button>
                       </div>
@@ -585,7 +585,7 @@ export const AudioHubInline = React.memo(function AudioHubInline({ open, onClose
               {/* desktop: sidebar list at left, video at right | mobile: stacked */}
               <div className='grid grid-cols-1 md:grid-cols-[260px_1fr] gap-3'>
                 {/* sidebar list */}
-                <div className='rounded-xl border border-slate-200 p-2'>
+                <div className='rounded-lg border border-slate-200 p-2'>
                   <div className='text-xs font-semibold text-slate-700 px-1 mb-2'>Playlist</div>
                   <div className='space-y-1 max-h-[380px] overflow-auto scrollbar-custom'>
                     {podcastsLoading
@@ -611,7 +611,7 @@ export const AudioHubInline = React.memo(function AudioHubInline({ open, onClose
                 </div>
 
                 {/* player area */}
-                <div className='rounded-xl border border-slate-200 p-2'>
+                <div className='rounded-lg border border-slate-200 p-2'>
                   {podcastsLoading ? (
                     <div className='aspect-video w-full rounded-lg overflow-hidden border border-slate-200'>
                       <div className='h-full w-full animate-pulse bg-slate-100' />

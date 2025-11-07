@@ -102,9 +102,9 @@ export default function LanguageToggle({ className = '', size = 35 }) {
           left: isEN ? W - knob - 3 : 3,
         }}
         transition={{ type: 'spring', stiffness: 380, damping: 28, mass: 0.7 }}>
-        <span className='pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br from-white/70 to-white/40' />
+        <span className='pointer-events-none absolute inset-0 rounded-lg bg-gradient-to-br from-white/70 to-white/40' />
       </motion.span>
-      <AnimatePresence>{isPending && <motion.span className='pointer-events-none absolute inset-0 z-10 rounded-2xl bg-white/20' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />}</AnimatePresence>
+      <AnimatePresence>{isPending && <motion.span className='pointer-events-none absolute inset-0 z-10 rounded-lg bg-white/20' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />}</AnimatePresence>
     </motion.button>
   );
 }

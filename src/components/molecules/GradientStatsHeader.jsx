@@ -5,7 +5,7 @@ import * as React from 'react';
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 
-export function GradientStatsHeader({ hiddenStats , className = '', children, loadingStats, title, desc, onClick, btnName }) {
+export function GradientStatsHeader({someThing , hiddenStats , innerCn , className = '', children, loadingStats, title, desc, onClick, btnName }) {
   return (
     <div className={'relative overflow-hidden rounded-lg border border-indigo-100/60 bg-white/60 shadow-sm backdrop-blur ' + className}>
       {/* Background Decorations */}
@@ -23,8 +23,8 @@ export function GradientStatsHeader({ hiddenStats , className = '', children, lo
         <div className='absolute -bottom-16 -right-8 h-60 w-60 rounded-full bg-blue-300/30 blur-3xl' />
       </div>
 
-      <div className='relative p-4 sm:p-8 text-white'>
-        <div className=' max-md:items-center max-md:flex-row flex flex-col md:flex-row md:items-center justify-between gap-3 '>
+      <div className='relative px-4 py-2 sm:py-4 sm:px-8 text-white'>
+        <div className={`max-md:items-center max-md:flex-row flex flex-col md:flex-row md:items-center justify-between gap-3 ${innerCn}`}>
           <div>
             <h1 className='text-xl md:text-4xl font-semibold'>{title}</h1>
             <p className='text-white/85 mt-1 max-md:hidden '>{desc}</p>
@@ -34,11 +34,12 @@ export function GradientStatsHeader({ hiddenStats , className = '', children, lo
             <Plus size={16} />
             <span>{btnName}</span>
           </button>}
+					{someThing}
         </div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }} className={`mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 ${hiddenStats && "max-md:hidden"} `}>
+        {children && <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }} className={`mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 ${hiddenStats && "max-md:hidden"} `}>
           {loadingStats ? <KpiSkeleton /> : children}
-        </motion.div>
+        </motion.div>}
       </div>
     </div>
   );

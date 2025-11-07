@@ -179,8 +179,8 @@ export function ToggleGroup({ label, options = [], value, onChange, error, class
         {options.map(opt => {
           const active = value === opt.id;
           return (
-            <motion.button key={opt.id ?? 'none'} type='button' role='radio' aria-checked={active} onClick={() => onChange?.(opt.id)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} className={['relative px-4 py-[6px] rounded-xl text-sm border select-none focus:outline-none', 'transition-colors ease-out', active ? ['bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600', 'text-white border-transparent shadow-lg shadow-indigo-500/20', 'ring-2 ring-indigo-400/50'].join(' ') : ['bg-white text-slate-700 border-slate-300', 'hover:border-indigo-400 hover:bg-indigo-50', 'focus:ring-2 focus:ring-indigo-300/60'].join(' ')].join(' ')}>
-              <AnimatePresence>{active && <motion.span layoutId='toggleGlow' className='absolute inset-0 rounded-xl' style={{ boxShadow: '0 0 0.75rem 0.15rem rgba(99,102,241,0.25)' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} />}</AnimatePresence>
+            <motion.button key={opt.id ?? 'none'} type='button' role='radio' aria-checked={active} onClick={() => onChange?.(opt.id)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} className={['relative px-4 py-[6px] rounded-lg text-sm border select-none focus:outline-none', 'transition-colors ease-out', active ? ['bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600', 'text-white border-transparent shadow-lg shadow-indigo-500/20', 'ring-2 ring-indigo-400/50'].join(' ') : ['bg-white text-slate-700 border-slate-300', 'hover:border-indigo-400 hover:bg-indigo-50', 'focus:ring-2 focus:ring-indigo-300/60'].join(' ')].join(' ')}>
+              <AnimatePresence>{active && <motion.span layoutId='toggleGlow' className='absolute inset-0 rounded-lg' style={{ boxShadow: '0 0 0.75rem 0.15rem rgba(99,102,241,0.25)' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} />}</AnimatePresence>
 
               <span className='relative z-10 font-medium'>{opt.label}</span>
             </motion.button>
@@ -1312,7 +1312,7 @@ export default function UsersList() {
 
 function Stat({ label, value }) {
   return (
-    <div className='rounded-xl bg-white/70 backdrop-blur-[100px] text-slate-800 border border-white/90 shadow-sm px-4 py-3'>
+    <div className='rounded-lg bg-white/70 backdrop-blur-[100px] text-slate-800 border border-white/90 shadow-sm px-4 py-3'>
       <div className='text-xs text-slate-900'>{label}</div>
       <div className='text-xl font-semibold mt-1'>{value ?? 0}</div>
     </div>

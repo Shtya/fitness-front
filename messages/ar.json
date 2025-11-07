@@ -183,6 +183,7 @@
 			"myProgress": "تقدمي",
 			"progress": "التقدم",
 			"myNutrition": "تغذيتي",
+			"myReminders": "تذكيراتي",
 			"weeklyStrength": "تقرير القوة الأسبوعي",
 			"calorieCalculator": "حاسبة السعرات",
 			"profile": "الملف الشخصي",
@@ -1318,5 +1319,1192 @@
 		"exerciseFallback": "تمرين",
 		"minusOne": "-1",
 		"plusOne": "+1"
+	},
+	"nutrition": {
+		"saturday": "السبت",
+		"sunday": "الأحد",
+		"monday": "الاثنين",
+		"tuesday": "الثلاثاء",
+		"wednesday": "الأربعاء",
+		"thursday": "الخميس",
+		"friday": "الجمعة",
+		"ui": {
+			"title": "إدارة التغذية",
+			"subtitle": "أنشئ خطط وجبات، اسندها للعملاء، واعرض التفاصيل في صفحة واحدة."
+		},
+		"btn": {
+			"new_plan": "خطة جديدة",
+			"create": "إنشاء",
+			"update": "تحديث",
+			"save": "حفظ",
+			"assign": "إسناد",
+			"assign_plan": "إسناد الخطة",
+			"delete": "حذف",
+			"deleting": "جاري الحذف…",
+			"cancel": "إلغاء",
+			"preview": "معاينة",
+			"edit": "تعديل",
+			"remove_meal": "حذف الوجبة",
+			"add_meal": "إضافة وجبة",
+			"add_item": "إضافة عنصر",
+			"add_supplement": "إضافة مكمل",
+			"ai_assist": "مساعد بالذكاء الاصطناعي",
+			"generate": "توليد"
+		},
+		"stats": {
+			"global_plans": "الخطط العامة",
+			"my_plans": "خططي الخاصة"
+		},
+		"search": {
+			"placeholder": "ابحث عن الخطط…",
+			"clear": "مسح البحث",
+			"per_page": "عدد بالصفحة",
+			"oldest_first": "الأقدم أولاً",
+			"newest_first": "الأحدث أولاً",
+			"sort_by_date": "ترتيب حسب التاريخ"
+		},
+		"modals": {
+			"create_title": "إنشاء خطة وجبات",
+			"edit_title": "تعديل",
+			"assign_title": "إسناد",
+			"details_title": "تفاصيل خطة الوجبات"
+		},
+		"form": {
+			"plan_name": "اسم الخطة",
+			"description": "الوصف",
+			"base_day_title": "وجبات اليوم المرجعي (تُطبق على كل الأيام)",
+			"meal_name": "اسم الوجبة",
+			"hhmm": "الوقت (HH:MM)",
+			"customize_days": "تخصيص أيام بعينها (اختياري)",
+			"item_name": "اسم العنصر",
+			"qty_g": "الكمية (جرام)",
+			"calories": "السعرات",
+			"supplement_name": "اسم المكمل",
+			"time_hhmm": "وقت (HH:MM)",
+			"best_with": "أفضل مع"
+		},
+		"days": {
+			"monday": "الاثنين",
+			"tuesday": "الثلاثاء",
+			"wednesday": "الأربعاء",
+			"thursday": "الخميس",
+			"friday": "الجمعة",
+			"saturday": "السبت",
+			"sunday": "الأحد"
+		},
+		"details": {
+			"notes": "ملاحظات",
+			"meals": "وجبة",
+			"kcal": "سعرة",
+			"supplements": "المكملات",
+			"time": "الوقت",
+			"best_with": "أفضل مع",
+			"assigned_clients": "العملاء المسند إليهم"
+		},
+		"table": {
+			"item": "العنصر",
+			"qty_g": "الكمية (جم)",
+			"calories": "السعرات"
+		},
+		"list": {
+			"empty_title": "لا توجد خطط",
+			"empty_desc": "جرّب بحثًا مختلفًا أو أنشئ خطة جديدة.",
+			"no_desc": "لا يوجد وصف."
+		},
+		"assign": {
+			"title": "إسناد إلى",
+			"select_client": "اختر عميلًا"
+		},
+		"confirm": {
+			"delete_title": "حذف الخطة؟",
+			"delete_msg": "هذا الإجراء لا يمكن التراجع عنه."
+		},
+		"toast": {
+			"created": "تم إنشاء الخطة بنجاح",
+			"create_failed": "فشل في إنشاء الخطة",
+			"updated": "تم تحديث الخطة بنجاح",
+			"update_failed": "فشل في تحديث الخطة",
+			"assigned": "تم إسناد الخطة بنجاح",
+			"assign_failed": "فشل في إسناد الخطة",
+			"deleted": "تم حذف الخطة بنجاح",
+			"delete_failed": "فشل حذف الخطة",
+			"ai_filled": "تم ملء الخطة بواسطة الذكاء الاصطناعي. راجع وعدّل عند الحاجة.",
+			"ai_failed": "فشل توليد بيانات الخطة بالذكاء الاصطناعي"
+		},
+		"notes": {
+			"placeholder": "اكتب ملاحظة واضغط Enter…"
+		},
+		"validation": {
+			"required": "مطلوب",
+			"number": "يجب أن يكون رقمًا",
+			"min": "القيمة أقل من المسموح",
+			"hhmm": "صيغة الوقت HH:MM",
+			"add_item": "أضف عنصرًا واحدًا على الأقل",
+			"add_meal": "أضف وجبة واحدة على الأقل",
+			"plan_name_required": "اسم الخطة مطلوب"
+		},
+		"empty": {
+			"no_meals_hint": "لا توجد وجبات. اضغط «إضافة وجبة» للبدء."
+		}
+	},
+	"forms": {
+		"header": {
+			"new": "نموذج جديد",
+			"title": "إدارة النماذج",
+			"desc": "أنشئ وعدّل وشارك نماذج مخصصة."
+		},
+		"messages": {
+			"load_failed": "تعذّر تحميل النماذج",
+			"created": "تم إنشاء النموذج",
+			"updated": "تم تحديث النموذج",
+			"deleted": "تم حذف النموذج",
+			"link_copied": "تم نسخ الرابط"
+		},
+		"errors": {
+			"title_required": "عنوان النموذج مطلوب",
+			"create_failed": "فشل إنشاء النموذج",
+			"update_failed": "فشل تحديث النموذج",
+			"delete_failed": "فشل حذف النموذج"
+		},
+		"actions": {
+			"create_form": "إنشاء نموذج",
+			"copy_link": "نسخ رابط المشاركة",
+			"edit_form": "تعديل النموذج",
+			"move_up": "تحريك لأعلى",
+			"move_down": "تحريك لأسفل",
+			"edit_field": "تعديل الحقل",
+			"remove_field": "حذف الحقل",
+			"cancel": "إلغاء",
+			"deleting": "جاري الحذف…",
+			"done": "تم"
+		},
+		"delete": {
+			"title": "حذف النموذج؟",
+			"message": "لا يمكن التراجع عن هذه العملية. سيتم حذف النموذج وكافة الردود.",
+			"confirm": "حذف"
+		},
+		"empty": {
+			"title": "لا توجد نماذج",
+			"subtitle": "ابدأ بإنشاء أول نموذج.",
+			"select_hint": "اختر نموذجًا من القائمة لعرض التفاصيل.",
+			"no_fields": "لا توجد حقول بعد."
+		},
+		"labels": {
+			"fields": "حقل/حقول",
+			"key": "المفتاح",
+			"placeholder": "العنونة",
+			"options": "الخيارات",
+			"required": "إلزامي",
+			"order": "الترتيب",
+			"created_at": "تم الإنشاء",
+			"no_label": "بدون عنوان"
+		},
+		"editor": {
+			"form_title": "عنوان النموذج",
+			"fields": "حقول النموذج",
+			"add_field": "إضافة حقل",
+			"label": "عنوان الحقل",
+			"key": "المفتاح",
+			"regen_key": "توليد مفتاح جديد",
+			"regen": "توليد",
+			"type": "النوع",
+			"placeholder": "العنونة (Placeholder)",
+			"required": "حقل إلزامي",
+			"options": "الخيارات",
+			"placeholders": {
+				"form_title": "اكتب عنوان النموذج",
+				"label": "اكتب عنوان الحقل",
+				"key": "أدخل المفتاح (فريد)",
+				"placeholder": "نص العنونة",
+				"option": "أضف خيارًا ثم اضغط Enter"
+			}
+		},
+		"types": {
+			"text": "نص",
+			"email": "بريد إلكتروني",
+			"number": "رقم",
+			"phone": "هاتف",
+			"date": "تاريخ",
+			"textarea": "نص طويل",
+			"select": "قائمة اختيار",
+			"radio": "اختيار فردي",
+			"checkbox": "مربع اختيار",
+			"checklist": "قائمة تحقق",
+			"file": "ملف"
+		},
+		"types_map": {
+			"text": "نص",
+			"email": "بريد إلكتروني",
+			"number": "رقم",
+			"phone": "هاتف",
+			"date": "تاريخ",
+			"textarea": "نص طويل",
+			"select": "قائمة اختيار",
+			"radio": "اختيار فردي",
+			"checkbox": "مربع اختيار",
+			"checklist": "قائمة تحقق",
+			"file": "ملف"
+		},
+		"create": {
+			"title": "إنشاء نموذج جديد",
+			"cta": "إنشاء"
+		},
+		"edit": {
+			"title": "تعديل النموذج",
+			"cta": "حفظ التغييرات"
+		}
+	},
+	"submissions": {
+		"header": {
+			"title": "إدخالات النماذج",
+			"desc": "استعراض وإدارة إدخالات النماذج من العملاء.",
+			"new_form": "نموذج جديد"
+		},
+		"filters": {
+			"search_placeholder": "ابحث في الإيميل/الهاتف/IP والإجابات…",
+			"from": "من تاريخ",
+			"to": "إلى تاريخ",
+			"form": "النموذج",
+			"all_forms": "كل النماذج"
+		},
+		"errors": {
+			"from_before_to": "يجب أن يكون تاريخ (من) قبل تاريخ (إلى).",
+			"title_required": "عنوان النموذج إجباري.",
+			"user_required": "اختر المستخدم أولاً."
+		},
+		"messages": {
+			"load_forms_failed": "تعذّر تحميل النماذج.",
+			"load_submissions_failed": "تعذّر تحميل الإدخالات.",
+			"form_created": "تم إنشاء النموذج.",
+			"create_form_failed": "تعذّر إنشاء النموذج.",
+			"assigned_ok": "تم تعيين الإدخال للمستخدم.",
+			"assign_failed": "تعذّر التعيين."
+		},
+		"table": {
+			"form": "النموذج",
+			"email": "الإيميل",
+			"phone": "الهاتف",
+			"ip": "عنوان IP",
+			"submitted": "وقت الإرسال",
+			"actions": "إجراءات"
+		},
+		"actions": {
+			"view": "عرض",
+			"load_more": "تحميل المزيد",
+			"close": "إغلاق",
+			"cancel": "إلغاء"
+		},
+		"empty": {
+			"title": "لا توجد إدخالات",
+			"subtitle_all": "لم يتم إرسال أي إدخالات بعد.",
+			"subtitle_one": "لا توجد إدخالات للنموذج المحدد."
+		},
+		"labels": {
+			"unknown_form": "نموذج غير معروف"
+		},
+		"detail": {
+			"title": "تفاصيل الإدخال",
+			"contact": "معلومات الاتصال",
+			"form": "تفاصيل النموذج",
+			"submission_id": "رقم الإدخال",
+			"answers": "الإجابات",
+			"no_answers": "لا توجد إجابات."
+		},
+		"assign": {
+			"title": "تعيين الإدخال لعميل",
+			"client": "العميل",
+			"client_id": "معرّف العميل",
+			"cta": "تعيين الآن",
+			"assigned_to": "مُعيّن إلى:"
+		},
+		"create": {
+			"title": "إنشاء نموذج جديد",
+			"form_title": "عنوان النموذج",
+			"form_title_ph": "اكتب عنوان النموذج",
+			"assign_optional": "تعيين (اختياري) — أدخل معرّف مستخدم",
+			"assign_optional_ph": "يمكنك التعيين لاحقاً من تفاصيل الإدخال",
+			"cta": "إنشاء"
+		}
+	},
+	"reports": {
+		"title": "تقارير الأسبوع",
+		"subtitle": "راجع وفلتر وادير تقارير الأسبوع بسهولة.",
+		"athlete": "المتدرب",
+		"columns": {
+			"weekOf": "أسبوع"
+		},
+		"reviewed": "تمت المراجعة",
+		"awaitingReview": "بانتظار المراجعة",
+		"card": {
+			"weight": "الوزن",
+			"kg": "كجم",
+			"cardio": "الكارديو"
+		},
+		"createdAt": "تاريخ الإنشاء",
+		"view": "عرض",
+		"loading": "جارِ التحميل…",
+		"empty": "لا توجد بيانات.",
+		"errors": {
+			"load": "فشل تحميل التقارير.",
+			"save": "فشل حفظ الملاحظات.",
+			"feedbackEmpty": "أضف ملاحظات أولاً."
+		},
+		"messages": {
+			"saved": "تم الحفظ"
+		},
+		"prev": "السابق",
+		"next": "التالي",
+		"pagination": "الصفحة {page} من {pages} • الإجمالي {total}",
+		"detail": {
+			"title": "تفاصيل التقرير",
+			"loading": "جارِ التحميل…",
+			"photos": "الصور",
+			"noPhoto": "لا توجد صورة",
+			"measurements": "القياسات",
+			"training": "التدريب",
+			"diet": "النظام الغذائي",
+			"feedback": "ملاحظات المدرب",
+			"feedbackPh": "اكتب ملاحظاتك…",
+			"reviewedAt": "تاريخ المراجعة",
+			"saveFeedback": "حفظ الملاحظات",
+			"close": "إغلاق",
+			"section": {
+				"photos": {
+					"front": "أمام",
+					"back": "خلف",
+					"left": "يسار",
+					"right": "يمين"
+				},
+				"measurements": {
+					"date": "التاريخ",
+					"weight": "الوزن",
+					"waist": "الخصر",
+					"chest": "الصدر",
+					"hips": "الأرداف",
+					"arms": "الذراعان",
+					"thighs": "الفخذان"
+				},
+				"training": {
+					"cardioAdherence": "الالتزام بالكارديو",
+					"intensityOk": "شدة التمرين مناسبة",
+					"shape": "تغير في الشكل",
+					"fitness": "تغير في اللياقة",
+					"sleepEnough": "نوم كافٍ",
+					"sleepHours": "ساعات النوم",
+					"notes": {
+						"title": "ملاحظات البرنامج"
+					},
+					"daysDeviation": "الانحراف عن أيام التمرين",
+					"deviation": {
+						"count": "العدد",
+						"reason": "السبب"
+					}
+				},
+				"diet": {
+					"hungry": "شعور بالجوع",
+					"comfort": "راحة نفسية",
+					"tooMuch": "طعام زائد",
+					"wantSpecific": "رغبة في طعام معيّن",
+					"deviation": {
+						"title": "الانحراف عن النظام",
+						"times": "عدد المرات",
+						"details": "التفاصيل"
+					}
+				}
+			}
+		},
+		"filters": {
+			"reviewed": {
+				"label": "حالة المراجعة",
+				"any": "الكل",
+				"yes": "تمت المراجعة",
+				"no": "لم تُراجع"
+			},
+			"cardio": {
+				"label": "الكارديو (قيمة)",
+				"placeholder": "0..5"
+			},
+			"sortBy": "الترتيب حسب",
+			"sortOrder": "نوع الترتيب"
+		},
+		"sort": {
+			"fields": {
+				"created_at": "تاريخ الإنشاء",
+				"weekOf": "أسبوع",
+				"updated_at": "تاريخ التحديث",
+				"isRead": "مقروء"
+			},
+			"orders": {
+				"asc": "تصاعدي",
+				"desc": "تنازلي"
+			}
+		},
+		"kpis": {
+			"total": "إجمالي التقارير",
+			"sortBy": "الترتيب حسب",
+			"tab": "العرض الحالي"
+		},
+		"tabs": {
+			"allReports": "كل التقارير",
+			"myClients": "عملائي"
+		},
+		"clients": {
+			"title": "اختَر عميلاً لعرض تقاريره",
+			"empty": "لا يوجد عملاء",
+			"select": {
+				"label": "اختيار العميل",
+				"placeholder": "اختر عميلًا..."
+			}
+		},
+		"yes": "نعم",
+		"no": "لا"
+	},
+	"settings": {
+		"title": "الإعدادات",
+		"subtitle": "اضبط هوية منصّتك وتجربة العميل من مكان واحد",
+		"export": "تصدير",
+		"import": "استيراد",
+		"save": "حفظ التغييرات",
+		"cancel": "إلغاء",
+		"add": "إضافة",
+		"org": {
+			"title": "المنظمة واللغة",
+			"desc": "اسم المنشأة، اللغة الافتراضية، المنطقة الزمنية، ورابط الصفحة الرئيسية.",
+			"name": {
+				"label": "اسم المنظمة",
+				"hint": "يظهر في الهيدر والفواتير ورسائل البريد.",
+				"ph": "مثال: Ultimate Fitness"
+			},
+			"defaultLang": {
+				"label": "اللغة الافتراضية",
+				"hint": "اختَر اللغة التي تظهر للعميل عند أول زيارة."
+			},
+			"timezone": {
+				"label": "المنطقة الزمنية"
+			},
+			"homeSlug": {
+				"label": "Slug الصفحة الرئيسية",
+				"hint": "اكتب مسارًا بديلًا يمكن استخدامه بدل الدومين (مثال: /ultimate).",
+				"ph": "home أو ultimate أو landing",
+				"preview": "معاينة الرابط"
+			}
+		},
+		"site": {
+			"title": "إدارة الموقع (SEO)",
+			"desc": "تحسينات لمحركات البحث وبيانات المشاركة للصفحة التعريفية.",
+			"metaTitle": "عنوان الميتا",
+			"metaTitlePh": "عنوان واضح قصير يحتوي الكلمة المفتاحية",
+			"metaDescription": "وصف الميتا",
+			"metaDescriptionPh": "وصف موجز يجذب النقر ويعكس محتوى الصفحة",
+			"metaKeywords": "كلمات مفتاحية",
+			"metaKeywordsPh": "health, fitness, gym, ultimate",
+			"ogImageUpload": "صورة المشاركة (OG Image)",
+			"ogImageHint": "يُفضّل أبعاد 630×1200 بكسل (نسبة 1.91:1).",
+			"chooseImage": "اختر صورة",
+			"homeTitle": "عنوان الصفحة الرئيسية",
+			"homeTitlePh": "مثال: خطط التدريب والتغذية المخصّصة"
+		},
+		"loader": {
+			"title": "شاشة التحميل",
+			"desc": "اضبط رسالة التحميل والمدة الظاهرة للعميل.",
+			"enabled": "تفعيل شاشة التحميل",
+			"message": "رسالة التحميل",
+			"messageHint": "النص الذي يظهر أثناء التحميل.",
+			"messagePh": "جارٍ التحميل… لحظات ونكون معك",
+			"previewBtn": "معاينة",
+			"durationSec": "المدة بالثواني",
+			"durationHint": "الوقت قبل إخفاء شاشة التحميل"
+		},
+		"dhikr": {
+			"title": "الذكر",
+			"desc": "أضف أكثر من ذكر وحدّد ذكرًا نشطًا ليظهر للعملاء كتنبيه.",
+			"enabled": "تفعيل الذكر",
+			"activeOne": "الذكر النشط",
+			"activeHint": "سيتم إظهار هذا الذكر للعملاء عند التفعيل.",
+			"add": "إضافة ذكر"
+		},
+		"branding": {
+			"title": "المظهر والألوان",
+			"desc": "اضبط لوحة الألوان الخاصة بالواجهة وعناصرها.",
+			"palette": "لوحة الألوان",
+			"previewLabel": "معاينة",
+			"previewHint": "تنعكس أي تغييرات مباشرة على المعاينة.",
+			"headerDemo": {
+				"title": "عنوان قسم تجريبي",
+				"desc": "هذا مثال يوضح تدرّج (primary → secondary).",
+				"badge": "شارة مثال"
+			},
+			"previewChip": "زر/شارة بنمط اللون الأساسي"
+		},
+		"reportsAuto": {
+			"title": "التقارير والأتمتة",
+			"desc": "حدّد يوم/وقت إرسال تقرير أسبوعي وحدّد عناصره.",
+			"enabled": "تفعيل الإرسال الآلي",
+			"schedule": {
+				"label": "الجدولة",
+				"hint": "اختر اليوم والوقت لإرسال التقرير."
+			},
+			"contents": {
+				"label": "محتوى التقرير",
+				"hint": "مارك العناصر التي سيتم إدراجها داخل الرسالة.",
+				"items": {
+					"weightTrend": "اتجاه الوزن",
+					"mealAdherence": "الالتزام بالوجبات",
+					"workoutCompletion": "إنهاء التمارين",
+					"waterIntake": "شرب الماء",
+					"checkinNotes": "ملاحظات المتابعة",
+					"nextFocus": "تركيز الأسبوع القادم",
+					"latestPhotos": "أحدث الصور"
+				}
+			},
+			"template": {
+				"label": "قالب الرسالة",
+				"hint": "اكتب الرسالة وسيتم إضافة/إزالة البنود تلقائيًا عند اختيارك للعناصر بالأعلى.",
+				"defaults": "عمل ممتاز هذا الأسبوع، {name}! استمر."
+			}
+		},
+		"reminders": {
+			"title": "التذكيرات (Firebase)",
+			"desc": "أضف تذكيرات لتُرسَل كإشعارات في الأوقات المحددة.",
+			"list": "قائمة التذكيرات",
+			"add": "إضافة تذكير",
+			"titlePh": "مثال: اشرب كوب ماء",
+			"examples": {
+				"water": "اشرب كوب ماء"
+			},
+			"firebaseNote": "يتم الإرسال عبر Firebase Cloud Messaging بعد إعداد مفاتيح الخادم."
+		}
+	},
+	"dashboard": {
+		"filters": {
+			"from": "من",
+			"to": "إلى",
+			"adminOptional": "مسؤول (اختياري)",
+			"adminPlaceholder": "معرّف المسؤول (UUID)",
+			"apply": "تطبيق",
+			"reloadPreview": "إعادة تحميل المعاينة"
+		},
+		"error": {
+			"previewFallback": "تعذّر تحميل الإحصائيات — يتم عرض بيانات معاينة."
+		},
+		"kpi": {
+			"totalClients": "إجمالي العملاء",
+			"activeClients": "العملاء النشطون",
+			"newInRange": "الجدد في النطاق",
+			"churned": "المنسحبون",
+			"formSubmissions": "نماذج مُرسلة",
+			"unreadNotices": "تنبيهات غير مقروءة",
+			"assetsUploaded": "أصول مرفوعة",
+			"pendingVideos": "فيديوهات قيد المراجعة"
+		},
+		"charts": {
+			"usersCreatedDaily": {
+				"title": "إنشاء المستخدمين (يوميًا)"
+			},
+			"duo": {
+				"title": "حجم التمارين مقابل سجل الوجبات",
+				"exerciseVolume": "حجم التمارين",
+				"mealLogs": "سجل الوجبات"
+			}
+		},
+		"donuts": {
+			"memberships": {
+				"title": "الاشتراكات"
+			},
+			"status": {
+				"title": "حالة المستخدمين"
+			}
+		},
+		"gauge": {
+			"activeRate": {
+				"title": "معدل العملاء النشطين",
+				"tooltip": "نسبة نشط",
+				"caption": "من العملاء نشطون"
+			}
+		},
+		"list": {
+			"memberships": {
+				"title": "تفصيل الاشتراكات"
+			},
+			"status": {
+				"title": "تفصيل الحالة"
+			},
+			"topConversations": {
+				"title": "أهم المحادثات"
+			}
+		},
+		"review": {
+			"title": "قائمة المراجعة",
+			"weeklyReports": "تقارير أسبوعية قيد المراجعة",
+			"videos": "فيديوهات التمرين قيد المراجعة",
+			"foodSuggestions": "اقتراحات الطعام قيد المراجعة"
+		},
+		"membership": {
+			"basic": "أساسي",
+			"pro": "احترافي",
+			"elite": "نخبة",
+			"trial": "تجريبي"
+		},
+		"status": {
+			"active": "نشط",
+			"idle": "خامل",
+			"suspended": "موقوف",
+			"churned": "منسحب"
+		},
+		"conv": {
+			"nutritionQA": "أسئلة التغذية",
+			"formSubmissions": "إرسال النماذج",
+			"workoutReviews": "مراجعات التمرين",
+			"general": "عام",
+			"support": "الدعم"
+		}
+	},
+	"client360": {
+		"tabs": {
+			"overview": "نظرة عامة",
+			"measurements": "القياسات",
+			"progress": "التقدم",
+			"workouts": "التمارين",
+			"nutrition": "التغذية",
+			"logs": "السجلات",
+			"reports": "التقارير"
+		},
+		"empty": {
+			"clientNotFound": {
+				"title": "العميل غير موجود",
+				"subtitle": "لم نتمكن من العثور على بيانات هذا العميل."
+			}
+		},
+		"workouts": {
+			"title": "التمارين",
+			"empty": {
+				"title": "لا توجد خطط تمرين",
+				"subtitle": "أضف يوم تمرين لبدء المتابعة."
+			},
+			"exercisesShort": "تمرين",
+			"video": "فيديو",
+			"rest": "راحة {s}ث",
+			"more": "تمرين إضافي",
+			"unnamedDay": "يوم بدون اسم",
+			"unnamedExercise": "تمرين بدون اسم"
+		},
+		"common": {
+			"active": "نشط",
+			"inactive": "غير نشط"
+		},
+		"overview": {
+			"noPhone": "لا يوجد رقم هاتف"
+		},
+		"measurements": {
+			"title": "سجل القياسات",
+			"date": "التاريخ",
+			"weight": "الوزن",
+			"waist": "الخصر",
+			"chest": "الصدر",
+			"hips": "الأرداف",
+			"arms": "الذراعان",
+			"thighs": "الفخذان",
+			"empty": {
+				"title": "لا توجد قياسات",
+				"subtitle": "أضف القياسات لبدء تتبع التقدم."
+			},
+			"addTitle": "إضافة قياس",
+			"fields": {
+				"date": "التاريخ",
+				"weight": "الوزن",
+				"waist": "الخصر",
+				"chest": "الصدر",
+				"hips": "الأرداف",
+				"arms": "الذراعان",
+				"thighs": "الفخذان"
+			},
+			"toast": {
+				"created": "تمت إضافة القياس بنجاح"
+			}
+		},
+		"progress": {
+			"exerciseProgress": "تقدم التمارين",
+			"totalWorkouts": "إجمالي التمارين",
+			"personalRecords": "أرقام شخصية",
+			"consistency": "الانتظام",
+			"bodyProgress": "تقدم الجسم"
+		},
+		"nutrition": {
+			"title": "التغذية",
+			"empty": {
+				"title": "لا توجد خطط تغذية",
+				"subtitle": "أضف خطة تغذية لمتابعة السعرات والمغذيات."
+			},
+			"targets": "الأهداف الغذائية",
+			"noTargets": "لا توجد أهداف غذائية."
+		},
+		"logs": {
+			"title": "سجلات الوجبات",
+			"last30": "آخر 30 يومًا",
+			"loading": "يتم التحميل…",
+			"count": "عدد السجلات"
+		},
+		"reports": {
+			"title": "التقارير الغذائية",
+			"generate": "إنشاء تقرير",
+			"loading": "يتم تحميل التقارير…",
+			"period": "الفترة",
+			"empty": {
+				"title": "لا توجد تقارير",
+				"subtitle": "أنشئ تقريرًا جديدًا لعرض الملخص."
+			}
+		},
+		"actions": {
+			"open": "فتح",
+			"edit": "تعديل",
+			"refresh": "تحديث",
+			"view": "عرض",
+			"download": "تنزيل",
+			"cancel": "إلغاء",
+			"add": "إضافة"
+		},
+		"metrics": {
+			"weight": "الوزن",
+			"waist": "الخصر",
+			"chest": "الصدر",
+			"hips": "الأرداف",
+			"arms": "الذراعان",
+			"thighs": "الفخذان"
+		},
+		"summary": {
+			"header": {
+				"title": "الإحصائيات · الملخص",
+				"client": "العميل:",
+				"coach": "المدرب",
+				"phone": "الهاتف",
+				"email": "البريد",
+				"separator": "·",
+				"lastLogin": "آخر تسجيل دخول:",
+				"arrow": "→"
+			},
+			"snapshot": {
+				"title": "نظرة سريعة",
+				"subtitle": "ملخص سريع للحالة الحالية",
+				"daysToExpiry": "الأيام المتبقية للاشتراك",
+				"elapsed": "منذ البداية",
+				"latestWeight": "آخر وزن",
+				"latestWaist": "آخر قياس خصر",
+				"totalCheckins": "إجمالي تسجيلات المتابعة"
+			},
+			"trend": {
+				"title": "اتجاه الوزن",
+				"subtitle": "تغير الوزن عبر آخر القياسات",
+				"legend": {
+					"current": "الحالي",
+					"min": "الأدنى",
+					"max": "الأعلى",
+					"latestPoint": "آخر نقطة",
+					"otherPoints": "نقاط أخرى"
+				},
+				"axis": {
+					"y": "الوزن (كجم)"
+				}
+			},
+			"workout": {
+				"title": "خطة التمرين",
+				"subtitle": "الخطة النشطة والملخص",
+				"daysShort": "يوم",
+				"exercisesShort": "تمرين"
+			},
+			"meal": {
+				"title": "خطة الوجبات",
+				"subtitle": "الخطة النشطة والملخص",
+				"daysShort": "يوم",
+				"mealsShort": "وجبة"
+			},
+			"checkins": {
+				"title": "آخر المتابعات",
+				"subtitle": "أحدث الأنشطة المقدمة",
+				"empty": "لا توجد متابعات حتى الآن."
+			},
+			"identity": {
+				"title": "الهوية والاشتراك",
+				"subtitle": "بيانات العميل الأساسية",
+				"client": "العميل",
+				"membership": "العضوية",
+				"gender": "النوع",
+				"phone": "الهاتف"
+			},
+			"units": {
+				"kg": "كجم",
+				"cm": "سم",
+				"dayShort": "ي"
+			},
+			"common": {
+				"active": "نشط",
+				"inactive": "غير نشط",
+				"hyphen": "—",
+				"na": "غير متاح"
+			}
+		}
+	},
+	"workoutsProgress": {
+		"title": "تقدّم التمرين",
+		"subtitle": "ملخص الأداء والتزام الجلسات",
+		"window": "آخر {d} يومًا",
+		"loading": "جارٍ التحميل...",
+		"empty": "لا توجد بيانات للعرض حاليًا.",
+		"kpi": {
+			"title": "نظرة عامة",
+			"subtitle": "تحديث: {date}",
+			"adherence": "الالتزام",
+			"daysTrained": "{n} يوم تمرين",
+			"volumeTotal": "إجمالي الحجم",
+			"avgPerSession": "متوسط/جلسة: {n}",
+			"sessions": "الجلسات",
+			"avgSetsPerSession": "مجموعات/جلسة: {n}",
+			"lastWorkout": "آخر تمرين",
+			"streak": "سلسلة الأيام: {n}"
+		},
+		"sessions": {
+			"title": "الجلسات الأخيرة",
+			"subtitle": "آخر 8 جلسات",
+			"volume": "الحجم",
+			"setsShort": "المجموعات",
+			"sets": "{d} من {t} مجموعة",
+			"exercises": "التمارين الأبرز"
+		},
+		"top": {
+			"byAttempts": "الأكثر تكرارًا (عدد المحاولات)",
+			"byVolume": "الأعلى حجمًا"
+		},
+		"prs": {
+			"title": "الأرقام القياسية (PRs)",
+			"subtitle": "إجمالي: {n}",
+			"e1rm": "1RM تقديري: {n}",
+			"weight": "وزن: {n}",
+			"reps": "عدّات: {n}"
+		},
+		"e1rm": {
+			"title": "اتجاهات 1RM التقديرية",
+			"subtitle": "نافذة تمارين: {d} يومًا"
+		}
+	},
+	"nutritionProgress": {
+		"title": "تقدّم التغذية",
+		"window30": "آخر 30 يومًا",
+		"empty": "لا توجد بيانات متاحة للعرض حاليًا.",
+		"kpi": {
+			"title": "نظرة عامة",
+			"subtitle": "ملخص لمذكّرات الوجبات والسلوك الغذائي",
+			"mealsLogged": "الوجبات المسجلة",
+			"daysCovered": "عدد الأيام: {n}",
+			"adherenceAvg": "متوسط الالتزام",
+			"scale5": "المقياس من 1 إلى 5",
+			"supplements": "المكملات",
+			"taken": "تم تناولها",
+			"lastLog": "آخر تسجيل",
+			"latestHint": "أحدث يوم تم تسجيله"
+		},
+		"adherence": {
+			"title": "اتجاه الالتزام",
+			"subtitle": "متوسط الالتزام اليومي خلال آخر 14 يومًا",
+			"caption": "القيمة أعلى تعني التزامًا أفضل بالوجبات والخطة"
+		},
+		"mealsDensity": {
+			"title": "كثافة الوجبات",
+			"subtitle": "عدد الوجبات المسجلة يوميًا"
+		},
+		"topFoods": {
+			"title": "الأغذية الأكثر تكرارًا",
+			"subtitle": "حسب مرات الظهور في الوجبات"
+		},
+		"logs": {
+			"title": "سجل الوجبات",
+			"subtitle": "مجمّع حسب اليوم",
+			"meal": "وجبة",
+			"at": "عند",
+			"adherence": "التزام: {n}/5",
+			"items": "الأصناف",
+			"more": "أخرى",
+			"supplements": "المكملات المتناولة"
+		}
+	},
+	"reportsTab": {
+		"actions": {
+			"view": "عرض التفاصيل"
+		},
+		"modal": {
+			"title": "تفاصيل أسبوع"
+		},
+		"loading": "جاري التحميل...",
+		"error": "حدث خطأ أثناء تحميل البيانات",
+		"title": "تقارير الأسبوع",
+		"subtitle": "إجمالي: {n} تقرير",
+		"empty": "لا توجد تقارير متاحة حاليًا.",
+		"kpi": {
+			"title": "نظرة عامة",
+			"subtitle": "ملخص حالة تقارير التقدّم",
+			"total": "إجمالي التقارير",
+			"pages": "عدد الصفحات: {n}",
+			"unread": "غير مقروء",
+			"unreadHint": "تقارير لم يتم فتحها بعد",
+			"withPhotos": "تقارير بها صور",
+			"withPhotosHint": "تضم أي صورة أمامية أو جانبية أو خلفية",
+			"latestWeek": "أحدث أسبوع"
+		},
+		"list": {
+			"title": "التقارير المُجمّعة",
+			"subtitle": "أحدث تقرير لكل أسبوع"
+		},
+		"card": {
+			"weekOf": "أسبوع",
+			"created": "أُنشئ",
+			"updated": "تحديث",
+			"read": "مقروء",
+			"unread": "غير مقروء",
+			"reviewedAt": "مراجَع في"
+		},
+		"diet": {
+			"title": "النظام الغذائي",
+			"deviation": "خروج عن الخطة"
+		},
+		"training": {
+			"title": "التمرين",
+			"sleepEnough": "النوم كافٍ",
+			"intensityOk": "شِدة التمرين مناسبة",
+			"shapeChange": "تغيّر في الشكل",
+			"cardio": "الالتزام بالكارديو"
+		},
+		"measurements": {
+			"title": "القياسات",
+			"weight": "الوزن",
+			"waist": "الخصر",
+			"chest": "الصدر"
+		},
+		"photos": {
+			"title": "الصور التقدمية",
+			"placeholder": "لا توجد صورة: {side}",
+			"front": "أمام",
+			"left": "يسار",
+			"right": "يمين",
+			"back": "خلف"
+		},
+		"feedback": {
+			"title": "ملاحظات المدرب"
+		},
+		"pager": {
+			"showing": "عرض {from}–{to} من {total}",
+			"prev": "السابق",
+			"next": "التالي"
+		},
+		"common": {
+			"yes": "نعم",
+			"no": "لا"
+		}
+	},
+	"dateRange": {
+		"label": "المدى الزمني",
+		"placeholder": "اختر الفترة",
+		"from": "من",
+		"to": "إلى",
+		"clear": "مسح",
+		"close": "إغلاق",
+		"presets": {
+			"label": "خيارات سريعة",
+			"title": "نطاقات سريعة",
+			"last7": "آخر 7 أيام",
+			"last30": "آخر 30 يومًا",
+			"thisMonth": "هذا الشهر",
+			"today": "اليوم"
+		}
+	},
+	"reminders": {
+		"title": "التذكيرات",
+		"subtitle": "إدارة تذكيراتك الشخصية",
+		"untitled": "بدون عنوان",
+		"next": "القادم",
+		"minutesShort": "د",
+		"unit": {
+			"hour": "ساعة",
+			"minute": "دقيقة",
+			"day": "يوم"
+		},
+		"every": {
+			"2h": "كل ساعتين",
+			"3h": "كل 3 ساعات",
+			"4h": "كل 4 ساعات",
+			"5h": "كل 5 ساعات",
+			"6h": "كل 6 ساعات"
+		},
+		"actions": {
+			"new": "جديد",
+			"save": "حفظ",
+			"cancel": "إلغاء",
+			"delete": "حذف",
+			"edit": "تعديل",
+			"enable": "تفعيل",
+			"disable": "إيقاف",
+			"done": "تم",
+			"enablePush": "تفعيل الإشعارات",
+			"pushEnabled": "الإشعارات مفعّلة",
+			"confirm": "تأكيد",
+			"add": "إضافة"
+		},
+		"search": {
+			"placeholder": "ابحث في التذكيرات…"
+		},
+		"tabs": {
+			"details": "التفاصيل",
+			"settings": "الإعدادات"
+		},
+		"form": {
+			"newTitle": "تذكير جديد",
+			"editTitle": "تعديل التذكير",
+			"title": "العنوان",
+			"titlePh": "اكتب عنوان التذكير",
+			"note": "ملاحظة",
+			"notePh": "ملاحظة اختيارية",
+			"startDate": "تاريخ البدء",
+			"endDate": "تاريخ الانتهاء",
+			"endAdd": "إضافة تاريخ انتهاء",
+			"endHide": "حذف تاريخ الانتهاء",
+			"mode": "وضع التكرار",
+			"modePh": "اختر وضع التكرار",
+			"weekdays": "أيام الأسبوع",
+			"times": "الأوقات",
+			"addTime": "إضافة وقت",
+			"intervalStart": "وقت البداية",
+			"intervalEvery": "تكرار كل",
+			"intervalEveryPh": "كل … ساعات",
+			"prayer": "الصلاة",
+			"prayerPh": "اختر الصلاة",
+			"beforeAfter": "قبل/بعد",
+			"beforeAfterPh": "قبل أم بعد",
+			"minutes": "الدقائق",
+			"todayTimes": "مواقيت اليوم",
+			"from": "من",
+			"type": "النوع",
+			"typePh": "اختر النوع"
+		},
+		"mode": {
+			"once": "مرة واحدة",
+			"daily": "يوميًا",
+			"weekly": "أسبوعيًا",
+			"monthly": "شهريًا",
+			"interval": "بفاصل زمني",
+			"intervalEvery": "كل",
+			"prayer": "حسب الصلاة"
+		},
+		"errors": {
+			"title": "العنوان مطلوب",
+			"mode": "اختر وضع التكرار"
+		},
+		"weekday": {
+			"sun": "الأحد",
+			"mon": "الاثنين",
+			"tue": "الثلاثاء",
+			"wed": "الأربعاء",
+			"thu": "الخميس",
+			"fri": "الجمعة",
+			"sat": "السبت",
+			"header": {
+				"sun": "الأحد",
+				"mon": "الاثنين",
+				"tue": "الثلاثاء",
+				"wed": "الأربعاء",
+				"thu": "الخميس",
+				"fri": "الجمعة",
+				"sat": "السبت"
+			}
+		},
+		"weekdayShort": {
+			"SU": "أح",
+			"MO": "اث",
+			"TU": "ثل",
+			"WE": "أر",
+			"TH": "خم",
+			"FR": "جم",
+			"SA": "سب"
+		},
+		"week": {
+			"quick": {
+				"all": "الكل",
+				"none": "لا شيء"
+			}
+		},
+		"prayer": {
+			"fajr": "الفجر",
+			"dhuhr": "الظهر",
+			"asr": "العصر",
+			"maghrib": "المغرب",
+			"isha": "العشاء"
+		},
+		"before": "قبل",
+		"after": "بعد",
+		"snooze": {
+			"placeholder": "غفوة",
+			"5": "5 د",
+			"10": "10 د",
+			"30": "30 د",
+			"60": "60 د",
+			"custom": "مخصص…",
+			"customLabel": "الدقائق"
+		},
+		"calendar": {
+			"label": "التقويم",
+			"open": "فتح التقويم",
+			"title": "التقويم",
+			"prev": "الشهر السابق",
+			"next": "الشهر التالي",
+			"dayDetails": "تفاصيل اليوم",
+			"pickDay": "اختر يومًا",
+			"none": "لا توجد تذكيرات",
+			"remindersOf": "تذكيرات يوم"
+		},
+		"settings": {
+			"label": "الإعدادات",
+			"open": "فتح الإعدادات",
+			"title": "الإعدادات",
+			"sound": "النغمة",
+			"soundPh": "اختر النغمة",
+			"preview": "استماع",
+			"timezone": "المنطقة الزمنية",
+			"city": "المدينة",
+			"country": "الدولة",
+			"quietFrom": "وضع الصمت من",
+			"quietTo": "وضع الصمت إلى",
+			"defaultSnooze": "الغفوة الافتراضية (دقائق)",
+			"defaultSnoozePh": "ادخل قيمة الغفوة",
+			"defaultSnoozeHint": "تُستخدم عند الضغط على غفوة دون اختيار مدة."
+		},
+		"metrics": {
+			"done": "المنجَز",
+			"streak": "المتتالية"
+		},
+		"type": {
+			"custom": "مخصّص",
+			"adhkar": "أذكار",
+			"water": "شرب الماء",
+			"medicine": "دواء",
+			"appointment": "موعد",
+			"routine": "روتين"
+		},
+		"quick": {
+			"title": "تذكير سريع",
+			"after": "بعد X دقيقة",
+			"createIn": "إنشاء بعد",
+			"custom": "مخصص…"
+		},
+		"empty": {
+			"day": "لا توجد تذكيرات لهذا اليوم"
+		}
+	},
+	"timeField": {
+		"label": "الوقت (س س:د د)",
+		"placeholder": "أدخل الوقت بصيغة 24 ساعة",
+		"openPicker": "فتح منتقي الوقت",
+		"choose": "اختر الساعة والدقائق",
+		"close": "إغلاق",
+		"hour": "الساعة",
+		"minutes": "الدقائق",
+		"selected": "المحدد",
+		"done": "تم",
+		"invalid": "الوقت غير صالح. استخدم الصيغة 24 ساعة (HH:MM)."
 	}
 }

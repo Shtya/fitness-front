@@ -171,7 +171,7 @@ export default function AddToHomeGuide({
             <button
               onClick={triggerInstall}
               disabled={installing}
-              className='w-full rounded-2xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium py-2.5'
+              className='w-full rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium py-2.5'
             >
               {installing ? t('installing') : t('installButton')}
             </button>
@@ -201,7 +201,7 @@ export default function AddToHomeGuide({
 
             <button
               onClick={closeGuide}
-              className='sm:ml-auto rounded-xl px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 transition'
+              className='sm:ml-auto rounded-lg px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 transition'
             >
               {t('close')}
             </button>

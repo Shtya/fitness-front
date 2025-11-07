@@ -62,12 +62,12 @@ async function getJSON(p) {
 
 /** ---------- tiny UI ---------- */
 function Card({ children, className = '' }) {
-  return <div className={cx('rounded-2xl border border-slate-200 bg-white shadow-sm', className)}>{children}</div>;
+  return <div className={cx('rounded-lg border border-slate-200 bg-white shadow-sm', className)}>{children}</div>;
 }
 
 function Shimmer({ className = '' }) {
   return (
-    <div className={cx('relative overflow-hidden rounded-xl bg-slate-100', className)}>
+    <div className={cx('relative overflow-hidden rounded-lg bg-slate-100', className)}>
       <div className='absolute inset-0 -translate-x-full animate-[shimmer_1.6s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent' />
       <style jsx>{`
         @keyframes shimmer {
@@ -101,7 +101,7 @@ function KPI({ label, value, sub, icon, hint }) {
           <div className='mt-1 text-2xl font-semibold'>{value}</div>
           {sub ? <div className='mt-1 text-xs text-slate-400'>{sub}</div> : null}
         </div>
-        {icon ? <div className='rounded-xl bg-slate-50 p-2 text-slate-600'>{icon}</div> : null}
+        {icon ? <div className='rounded-lg bg-slate-50 p-2 text-slate-600'>{icon}</div> : null}
       </div>
     </Card>
   );
@@ -424,7 +424,7 @@ export default function ClientProgressPro({ userId: userIdProp, initialExercise 
                 <KPI label='Sets' value={fmt.num(dayStats.totals.totalSets)} />
                 <KPI label='Volume' value={fmt.num(dayStats.totals.totalVolume)} />
               </div>
-              <div className='max-h-80 overflow-auto rounded-xl border border-slate-200'>
+              <div className='max-h-80 overflow-auto rounded-lg border border-slate-200'>
                 <table className='min-w-full text-sm'>
                   <thead className='bg-slate-50 text-slate-600'>
                     <tr>
@@ -504,7 +504,7 @@ export default function ClientProgressPro({ userId: userIdProp, initialExercise 
                 />
               </div>
 
-              <div className='max-h-60 overflow-auto rounded-xl border border-slate-200'>
+              <div className='max-h-60 overflow-auto rounded-lg border border-slate-200'>
                 <table className='min-w-full text-sm'>
                   <thead className='bg-slate-50 text-slate-600'>
                     <tr>
@@ -684,7 +684,7 @@ export default function ClientProgressPro({ userId: userIdProp, initialExercise 
             {!history ? (
               <Shimmer className='h-48' />
             ) : history?.length ? (
-              <div className='max-h-80 overflow-auto rounded-xl border border-slate-200'>
+              <div className='max-h-80 overflow-auto rounded-lg border border-slate-200'>
                 <table className='min-w-full text-sm'>
                   <thead className='bg-slate-50 text-slate-600'>
                     <tr>
@@ -719,7 +719,7 @@ export default function ClientProgressPro({ userId: userIdProp, initialExercise 
         </div>
       )}
 
-      {error ? <div className='mt-6 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700'>{String(error)}</div> : null}
+      {error ? <div className='mt-6 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700'>{String(error)}</div> : null}
     </div>
   );
 }

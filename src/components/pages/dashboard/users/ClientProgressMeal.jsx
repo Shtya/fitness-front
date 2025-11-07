@@ -35,7 +35,7 @@ function Stat({ icon: Icon, label, value, hint, tone = 'slate' }) {
     violet: 'bg-violet-50 text-violet-900',
   };
   return (
-    <div className={`rounded-xl border border-slate-200 p-3 ${toneMap[tone] || toneMap.slate}`}>
+    <div className={`rounded-lg border border-slate-200 p-3 ${toneMap[tone] || toneMap.slate}`}>
       <div className='flex items-center justify-between'>
         <div className='text-xs font-medium opacity-80'>{label}</div>
         {Icon ? <Icon className='h-4 w-4 opacity-70' /> : null}
@@ -442,7 +442,7 @@ export default function ClientProgressDashboard() {
   return (
     <div className='space-y-6'>
       {/* Top header */}
-      <div className='rounded-2xl border border-slate-200 bg-gradient-to-br from-indigo-50 via-white to-slate-50 p-4'>
+      <div className='rounded-lg border border-slate-200 bg-gradient-to-br from-indigo-50 via-white to-slate-50 p-4'>
         <div className='flex items-center justify-between gap-3'>
           <div>
             <div className='text-lg font-semibold text-slate-900'>My Progress</div>
@@ -465,14 +465,14 @@ export default function ClientProgressDashboard() {
 
       {/* Weight Trend */}
       <Section title='Weight Trend' icon={<TrendingUp className='h-4 w-4' />}>
-        <div className='rounded-xl border border-slate-200 bg-white p-3'>
+        <div className='rounded-lg border border-slate-200 bg-white p-3'>
           <LineChart series={data.weightSeries} />
         </div>
       </Section>
 
       {/* Adherence Heatmap */}
       <Section title='Adherence Heatmap' icon={<IconCalendar className='h-4 w-4' />}>
-        <div className='rounded-xl border border-slate-200 bg-white p-3'>
+        <div className='rounded-lg border border-slate-200 bg-white p-3'>
           <AdherenceHeatmap points={data.adherence} rangeDays={range} />
           <div className='mt-2 text-[12px] text-slate-500'>Darker green = better adherence (5/5)</div>
         </div>
@@ -480,7 +480,7 @@ export default function ClientProgressDashboard() {
 
       {/* Macros vs Target */}
       <Section title='Macros vs Target' icon={<Flame className='h-4 w-4' />}>
-        <div className='rounded-xl border border-slate-200 bg-white p-3'>
+        <div className='rounded-lg border border-slate-200 bg-white p-3'>
           <div className='text-sm text-slate-700 mb-2'>
             Target: {fmtKcal(data.target?.calories || 2300)}
             {data.target?.protein != null ? <> • Protein {data.target.protein}g</> : null}
@@ -494,7 +494,7 @@ export default function ClientProgressDashboard() {
       {/* Compliance + Extras + Supplements */}
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-3'>
         <Section title='Meal Compliance' icon={<UtensilsCrossed className='h-4 w-4' />}>
-          <div className='rounded-xl border border-slate-200 bg-white p-3'>
+          <div className='rounded-lg border border-slate-200 bg-white p-3'>
             <div className='space-y-2'>
               {(data.mealCompliance || []).map(m => (
                 <div key={m.meal} className='flex items-center gap-2'>
@@ -510,14 +510,14 @@ export default function ClientProgressDashboard() {
         </Section>
 
         <Section title='Extras (per day)' icon={<PlusSquare className='h-4 w-4' />}>
-          <div className='rounded-xl border border-slate-200 bg-white p-3'>
+          <div className='rounded-lg border border-slate-200 bg-white p-3'>
             <ExtrasMiniBars days={data.extras} />
             <div className='mt-2 text-[12px] text-slate-500'>Higher bars = more extra foods beyond the plan.</div>
           </div>
         </Section>
 
         <Section title='Supplements Adherence' icon={<Pill className='h-4 w-4' />}>
-          <div className='rounded-xl border border-slate-200 bg-white p-3'>
+          <div className='rounded-lg border border-slate-200 bg-white p-3'>
             <div className='space-y-2'>
               {(data.supplements || []).map(s => (
                 <div key={s.name} className='flex items-center gap-2'>

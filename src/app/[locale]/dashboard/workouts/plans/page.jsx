@@ -390,7 +390,7 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
   /* ---------- Loading (skeleton list) ---------- */
   if (loading) {
     return (
-      <div className='divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'>
+      <div className='divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm'>
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className='group relative flex items-center gap-3 px-4 py-3'>
              <div className='grid h-12 w-12 place-content-center rounded-lg bg-slate-100 shimmer' />
@@ -408,8 +408,8 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
   /* ---------- Empty ---------- */
   if (!items.length) {
     return (
-      <div className='rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm'>
-        <div className='mx-auto grid h-16 w-16 place-content-center rounded-xl bg-slate-100'>
+      <div className='rounded-lg border border-slate-200 bg-white p-10 text-center shadow-sm'>
+        <div className='mx-auto grid h-16 w-16 place-content-center rounded-lg bg-slate-100'>
           <Dumbbell className='h-8 w-8 text-slate-500' />
         </div>
         <h3 className='mt-4 text-lg font-semibold text-slate-900'>{t('plans.list.noPlansTitle')}</h3>
@@ -426,7 +426,7 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
         const active = !!p?.isActive;
 
         return (
-          <div key={p.id} className='rounded-xl border border-y-slate-200 bg-white  group relative flex items-start gap-3 px-4 py-3 transition-all duration-300 hover:bg-slate-50/60'>
+          <div key={p.id} className='rounded-lg border border-y-slate-200 bg-white  group relative flex items-start gap-3 px-4 py-3 transition-all duration-300 hover:bg-slate-50/60'>
   
             {/* icon tile */}
             <div className='mt-0.5 grid h-8 w-8 shrink-0 place-content-center rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-95 text-white shadow-sm'>
@@ -685,26 +685,7 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ initial, onCancel, onCreat
     setPickerOpen(false);
     setPickerDayId(null);
   };
-
-  // const onPickerDone = selected => {
-  //   setDays(arr =>
-  //     arr.map(d => {
-  //       if (d.id !== pickerDayId) return d;
-  //       const base = d.exercises.slice();
-  //       const start = base.length + 1;
-  //       const toAdd = selected.map((s, i) => ({
-  //         exerciseId: s.id,
-  //         name: s.name,
-  //         category: s.category || null,
-  //         order: start + i,
-  //       }));
-  //       return { ...d, exercises: [...base, ...toAdd] };
-  //     }),
-  //   );
-  //   setPickerOpen(false);
-  //   setPickerDayId(null);
-  // };
-
+ 
   const onReorderExercises = (dayId, newOrder) => {
     setDays(arr =>
       arr.map(d => {
@@ -850,11 +831,11 @@ export function DaysListSection({ days, setDays, openPicker, removeDay, onReorde
                     <div className='flex items-center justify-between gap-3'>
                       <div className='flex min-w-0 items-center gap-3'>
                         <GripVertical className='w-4 h-4 shrink-0 cursor-grab text-slate-400' />
-                        <div className='truncate font-medium text-slate-900'>{ex.name}</div>
+                        <MultiLangText className='truncate font-medium text-slate-900'>{ex.name}</MultiLangText>
                         {ex.category ? (
                           <span className='inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-1 text-[11px] text-indigo-700'>
                             <Tag size={12} />
-                            {ex.category}
+                            <MultiLangText>{ex.category}</MultiLangText>
                           </span>
                         ) : null}
                       </div>

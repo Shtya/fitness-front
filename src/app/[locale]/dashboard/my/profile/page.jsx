@@ -15,7 +15,7 @@ import Select from '@/components/atoms/Select';
 import Img from '@/components/atoms/Img';
 
 /* ============================ Helpers ============================ */
-const card = 'rounded-2xl border border-slate-200 bg-white/90 backdrop-blur shadow-sm p-4 md:p-5';
+const card = 'rounded-lg border border-slate-200 bg-white/90 backdrop-blur shadow-sm p-4 md:p-5';
 const sectionTitle = 'text-base md:text-lg font-semibold text-slate-900';
 const fade = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.28 } };
 
@@ -50,10 +50,10 @@ const ShimmerStyle = () => <style>{`@keyframes shimmer{100%{transform:translateX
 
 function HeaderSkeleton() {
   return (
-    <div className='rounded-2xl border border-slate-200 overflow-hidden shadow-sm'>
+    <div className='rounded-lg border border-slate-200 overflow-hidden shadow-sm'>
       <div className={`bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 text-white p-6 md:p-8`}>
         <div className='flex flex-wrap items-center gap-4'>
-          <div className={`${skeletonBase} ${shimmer} h-14 w-14 rounded-2xl`} />
+          <div className={`${skeletonBase} ${shimmer} h-14 w-14 rounded-lg`} />
           <div className='min-w-0 flex-1'>
             <div className={`${skeletonBase} ${shimmer} h-6 w-40`} />
             <div className='mt-2 flex gap-3'>
@@ -69,7 +69,7 @@ function HeaderSkeleton() {
         </div>
         <div className='grid grid-cols-2 md:grid-cols-4 gap-3 mt-5'>
           {[...Array(4)].map((_, i) => (
-            <div key={i} className={`${skeletonBase} ${shimmer} h-16 w-full rounded-xl`} />
+            <div key={i} className={`${skeletonBase} ${shimmer} h-16 w-full rounded-lg`} />
           ))}
         </div>
       </div>
@@ -81,7 +81,7 @@ function CardSkeletonGrid({ rows = 4 }) {
   return (
     <div className='grid grid-cols-2 gap-2'>
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className='rounded-xl border border-slate-200 p-3'>
+        <div key={i} className='rounded-lg border border-slate-200 p-3'>
           <div className='flex items-center justify-between'>
             <div className={`${skeletonBase} ${shimmer} h-3 w-16`} />
             <div className={`${skeletonBase} ${shimmer} h-4 w-10`} />
@@ -128,7 +128,7 @@ function TableSkeleton({ rows = 6 }) {
 function BeforeAfter({ before, after, name }) {
   const [pos, setPos] = useState(50);
   return (
-    <div dir='ltr' className='relative aspect-[4/3] w-full rounded-xl overflow-hidden select-none bg-slate-200 border border-slate-200'>
+    <div dir='ltr' className='relative aspect-[4/3] w-full rounded-lg overflow-hidden select-none bg-slate-200 border border-slate-200'>
       {before ? <Img src={before} alt={`${name} before`} className='absolute inset-0 w-full h-full object-cover' /> : <div className='absolute inset-0 bg-slate-300' />}
       <div className='absolute inset-0' style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
         {after ? <Img src={after} alt={`${name} after`} className='w-full h-full object-cover' /> : <div className='w-full h-full bg-slate-400' />}
@@ -153,7 +153,7 @@ function Btn({ children, onClick, disabled, className = '', size = 'md', variant
     subtle: 'bg-slate-100 text-slate-700 hover:bg-slate-200 focus:ring-slate-300/40 border border-slate-200',
   };
   return (
-    <button type={type} onClick={onClick} disabled={disabled} className={['inline-flex items-center justify-center rounded-xl shadow-sm transition focus:outline-none focus:ring-4 disabled:opacity-60', sizes[size], variants[variant], className].join(' ')}>
+    <button type={type} onClick={onClick} disabled={disabled} className={['inline-flex items-center justify-center rounded-lg shadow-sm transition focus:outline-none focus:ring-4 disabled:opacity-60', sizes[size], variants[variant], className].join(' ')}>
       {children}
     </button>
   );
@@ -687,12 +687,12 @@ export default function ProfileOverviewPage() {
       <ShimmerStyle />
 
       {/* Header */}
-      <div className='rounded-2xl border border-slate-200 overflow-hidden shadow-sm'>
+      <div className='rounded-lg border border-slate-200 overflow-hidden shadow-sm'>
         <div className='bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 text-white'>
           <div className='p-6 md:p-8'>
             <div className='flex flex-wrap justify-between items-center gap-4'>
               <div className='flex items-center gap-2'>
-                <div className='h-14 w-14 rounded-2xl bg-white/15 grid place-items-center ring-1 ring-white/20'>
+                <div className='h-14 w-14 rounded-lg bg-white/15 grid place-items-center ring-1 ring-white/20'>
                   <UserIcon className='h-7 w-7 text-white' />
                 </div>
                 <div className='min-w-0'>
@@ -733,7 +733,7 @@ export default function ProfileOverviewPage() {
             <ProfileCard user={user} onEdit={() => console.log('edit open')} dir='rtl' />
 
             {/* Weight summary */}
-            <motion.div initial={{ opacity: 0, y: 6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 20, mass: 0.8 }} className='relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm'>
+            <motion.div initial={{ opacity: 0, y: 6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 20, mass: 0.8 }} className='relative overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm'>
               <div className='absolute inset-x-0 top-0 h-1 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600' />
 
               <div className='p-4 sm:p-5'>
@@ -750,7 +750,7 @@ export default function ProfileOverviewPage() {
                 </div>
                 <div className='grid grid-cols-2 gap-2'>
                   {measurements?.map((p, i) => (
-                    <div key={(p.id || p.date || '') + i} className='rounded-xl border border-slate-200 p-3'>
+                    <div key={(p.id || p.date || '') + i} className='rounded-lg border border-slate-200 p-3'>
                       <div className='flex items-center justify-between text-xs text-slate-600'>
                         <span>{p.date}</span>
                         <span className='font-semibold text-slate-900'>{p.weight ?? '-'}</span>
@@ -766,7 +766,7 @@ export default function ProfileOverviewPage() {
             </motion.div>
 
             {/* Compare */}
-            <motion.div initial={{ opacity: 0, y: 6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 20, mass: 0.8 }} className='xl:col-span-3 relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm'>
+            <motion.div initial={{ opacity: 0, y: 6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 20, mass: 0.8 }} className='xl:col-span-3 relative overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm'>
               <div className='absolute inset-x-0 top-0 h-1 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600' />
               <div className={` p-4 sm:p-5`}>
                 <div className='flex items-center gap-2 mb-3'>
@@ -938,7 +938,7 @@ export default function ProfileOverviewPage() {
                   { key: 'left', label: t('sides.left'), file: pLeft, setter: setPLeft },
                   { key: 'right', label: t('sides.right'), file: pRight, setter: setPRight },
                 ].map(({ key, label, file, setter }) => (
-                  <div key={key} className='relative rounded-xl border border-dashed border-slate-300 bg-slate-50 aspect-[4/3] overflow-hidden'>
+                  <div key={key} className='relative rounded-lg border border-dashed border-slate-300 bg-slate-50 aspect-[4/3] overflow-hidden'>
                     {!file ? (
                       <label className='group absolute inset-0 cursor-pointer grid place-items-center hover:bg-slate-100 transition'>
                         <div className='flex flex-col items-center'>
@@ -1001,7 +1001,7 @@ export default function ProfileOverviewPage() {
               </div>
 
               {photoMonths.length === 0 ? (
-                <div className='flex items-center justify-center text-slate-600 bg-slate-50 border border-slate-200 rounded-xl py-12'>
+                <div className='flex items-center justify-center text-slate-600 bg-slate-50 border border-slate-200 rounded-lg py-12'>
                   <div className='text-center space-y-2'>
                     <div className='mx-auto h-12 w-12 rounded-full bg-white border border-slate-200 grid place-items-center'>
                       <ImagePlus className='h-6 w-6 text-slate-400' />
@@ -1015,7 +1015,7 @@ export default function ProfileOverviewPage() {
               ) : (
                 <div ref={scrollerRef} className='flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2'>
                   {photoMonths.map(entry => (
-                    <div key={entry.id} className='min-w-[300px] md:min-w-[400px] snap-start rounded-xl border border-slate-200 p-3 bg-white'>
+                    <div key={entry.id} className='min-w-[300px] md:min-w-[400px] snap-start rounded-lg border border-slate-200 p-3 bg-white'>
                       <div className='flex items-center justify-between mb-2'>
                         <div>
                           <div className='text-sm font-semibold'>{entry.takenAt}</div>
@@ -1055,7 +1055,7 @@ export default function ProfileOverviewPage() {
               { key: 'left', label: t('sides.left'), file: pLeft, setter: setPLeft },
               { key: 'right', label: t('sides.right'), file: pRight, setter: setPRight },
             ].map(({ key, label, file, setter }) => (
-              <div key={key} className='relative rounded-xl border border-dashed border-slate-300 bg-slate-50 aspect-[4/3] overflow-hidden'>
+              <div key={key} className='relative rounded-lg border border-dashed border-slate-300 bg-slate-50 aspect-[4/3] overflow-hidden'>
                 {!file ? (
                   <label className='group absolute inset-0 cursor-pointer grid place-items-center hover:bg-slate-100 transition'>
                     <div className='flex flex-col items-center'>
@@ -1095,7 +1095,7 @@ export default function ProfileOverviewPage() {
       {/* Photo preview (single side) */}
       <Modal open={!!photoPreview} onClose={() => setPhotoPreview(null)} title={photoPreview?.label || t('modals.preview')} maxW='max-w-3xl'>
         {photoPreview?.src ? (
-          <div className='rounded-xl overflow-hidden border border-slate-200'>
+          <div className='rounded-lg overflow-hidden border border-slate-200'>
             <Img src={photoPreview.src} alt={photoPreview.label} className='w-full h-auto object-contain' />
           </div>
         ) : (
@@ -1170,7 +1170,7 @@ export default function ProfileOverviewPage() {
       <Modal open={cropOpen} onClose={() => setCropOpen(false)} title={t('modals.cropTitle')} maxW='max-w-3xl'>
         {cropImageSrc ? (
           <div className='space-y-3'>
-            <div className='relative w-full aspect-[4/3] bg-slate-100 rounded-xl overflow-hidden'>
+            <div className='relative w-full aspect-[4/3] bg-slate-100 rounded-lg overflow-hidden'>
               <Cropper image={cropImageSrc} crop={crop} zoom={zoom} aspect={1} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={(_, areaPixels) => setCropAreaPixels(areaPixels)} cropShape='rect' objectFit='cover' />
             </div>
             <div className='flex items-center gap-3'>
@@ -1212,7 +1212,7 @@ function ProfileCard({ user = {}, onEdit = () => {}, dir = 'ltr' }) {
   const subBadgeColor = leftDaysVal == null ? 'bg-slate-100 text-slate-700 ring-1 ring-slate-200' : leftDaysVal <= 0 ? 'bg-red-50 text-red-700 ring-1 ring-red-200' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200';
 
   return (
-    <motion.div initial={{ opacity: 0, y: 6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 20, mass: 0.8 }} className='relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm' dir={dir}>
+    <motion.div initial={{ opacity: 0, y: 6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 20, mass: 0.8 }} className='relative overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm' dir={dir}>
       <div className='absolute inset-x-0 top-0 h-1 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600' />
 
       <div className='p-4 sm:p-5'>
@@ -1265,7 +1265,7 @@ function ProfileCard({ user = {}, onEdit = () => {}, dir = 'ltr' }) {
 
         {/* footer actions */}
         <div className='mt-4  '>
-          <button onClick={onEdit} className='inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 active:translate-y-[1px]'>
+          <button onClick={onEdit} className='inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 active:translate-y-[1px]'>
             {t('actions.editProfile')}
           </button>
         </div>

@@ -281,7 +281,7 @@ export function Notifications({ open, onClose, toggleNotif, notifOpen }) {
           <motion.div className='fixed inset-0 z-[60]' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
 
           {/* Panel */}
-          <motion.div role='dialog' aria-label={t('notif:title')} className='absolute right-0 top-10 z-[70] w-[420px] max-w-[95vw] rounded-xl border border-slate-200 bg-white shadow-2xl ring-1 ring-slate-900/5 overflow-hidden' initial={{ opacity: 0, y: -10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.98 }}>
+          <motion.div role='dialog' aria-label={t('notif:title')} className='absolute right-0 top-10 z-[70] w-[420px] max-w-[95vw] rounded-lg border border-slate-200 bg-white shadow-2xl ring-1 ring-slate-900/5 overflow-hidden' initial={{ opacity: 0, y: -10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.98 }}>
             {/* Header */}
             <div className='px-3 py-2 border-b border-slate-100 bg-gradient-to-br from-indigo-50 to-white'>
               <div className='flex items-center justify-between gap-2'>

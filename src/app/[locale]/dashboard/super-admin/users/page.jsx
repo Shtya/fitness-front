@@ -453,7 +453,7 @@ export default function SuperAdminAdminsPage() {
 /* small stat card */
 function Stat({ label, value }) {
   return (
-    <div className='rounded-xl bg-white/95 text-slate-800 border border-white/70 shadow-sm px-4 py-3'>
+    <div className='rounded-lg bg-white/95 text-slate-800 border border-white/70 shadow-sm px-4 py-3'>
       <div className='text-xs text-slate-500'>{label}</div>
       <div className='text-xl font-semibold mt-1'>{value ?? 0}</div>
     </div>
