@@ -18,9 +18,7 @@ export default function ProfileSettings() {
   });
 
   const handleSubmit = e => {
-    e.preventDefault();
-    // Handle profile update
-    console.log('Updated profile:', userData);
+    e.preventDefault(); 
   };
 
   const handleInputChange = e => {

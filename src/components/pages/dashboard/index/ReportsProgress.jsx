@@ -327,7 +327,6 @@ export default function ReportsTab({ userId, active, pageSize = 4 }) {
 				const { data } = await api.get(`/weekly-reports/users/${userId}/weekly-reports`, {
 					params: { page: 1, limit: 50, sortBy: "created_at", sortOrder: "DESC" },
 				});
-				console.log(data);
 				setRawRecords(Array.isArray(data?.records) ? data.records : []);
 			} catch (e) {
 				if (!mounted) return;
@@ -432,7 +431,7 @@ export default function ReportsTab({ userId, active, pageSize = 4 }) {
 						<KPI icon={FileText} label={t("kpi.total")} value={total} hint={t("kpi.pages", { n: pageCount })} tone="indigo" />
 						<KPI icon={Eye} label={t("kpi.unread")} value={unread} hint={t("kpi.unreadHint")} tone="amber" />
 						<KPI icon={ImageIcon} label={t("kpi.withPhotos")} value={withPhotos} hint={t("kpi.withPhotosHint")} tone="sky" />
-						<KPI icon={CalendarDays} label={t("kpi.latestWeek")}  value={deduped[0]?.weekOf ? formatDate(deduped[0].weekOf) : "—"} tone="emerald" />
+						<KPI icon={CalendarDays} label={t("kpi.latestWeek")} value={deduped[0]?.weekOf ? formatDate(deduped[0].weekOf) : "—"} tone="emerald" />
 					</div>
 				</Card>
 			</div>

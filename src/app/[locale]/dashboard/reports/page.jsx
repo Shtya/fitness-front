@@ -1,9 +1,3 @@
-/* 
-	- why the filters select doesn't work here should send teh filter that i click on it to the back to retun the values
-	- send in the payload filters[key] : value
-
-	tell me edit where 
-	*/
 
 'use client';
 
@@ -46,8 +40,7 @@ const StatPill = ({ icon: Icon, label, value }) => (
 
 /* --------------------------------- API calls -------------------------------- */
 async function fetchReports({ page = 1, limit = 12, sortBy = 'created_at', sortOrder = 'DESC', filters = {} }) {
-	console.log('Sending filters:', filters); // Debug log
-
+ 
 	const params = { page, limit, sortBy, sortOrder, filters };
 	const { data } = await api.get('/weekly-reports', {
 		params,
@@ -87,8 +80,7 @@ async function fetchAdminClients(adminId, { page = 1, limit = 20 }) {
 		}, {})
 	);
 
-	console.log(uniqueRecords);
-
+ 
 	return { total_records: uniqueRecords.length, records: uniqueRecords };
 }
 
