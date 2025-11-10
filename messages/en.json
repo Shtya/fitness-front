@@ -1023,7 +1023,7 @@
 		},
 		"descriptions": {
 			"exercises": "Exercise Library",
-			"manageLibrary": "Manage your exercise library with ease — add new exercises, update details, and keep everything organized to deliver the best training experience for your clients."
+			"manageLibrary": "Manage your exercise library with ease — add new exercises, update details"
 		},
 		"actions": {
 			"addExercise": "Add Exercise",

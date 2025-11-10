@@ -15,7 +15,7 @@ function cn() {
 	return Array.from(arguments).filter(Boolean).join(' ');
 }
 
-const NAV = [
+export const NAV = [
 	// -------------------- CLIENT --------------------
 	{
 		role: 'client',
@@ -43,53 +43,25 @@ const NAV = [
 	// -------------------- COACH --------------------
 	{
 		role: 'coach',
-		sectionKey: 'sections.mySpace',
+		sectionKey: 'sections.overview',
 		items: [
-			{ nameKey: 'dashboard', href: '/dashboard/my', icon: LayoutDashboard },
-			{
-				nameKey: 'training',
-				icon: Dumbbell,
-				children: [
-					{ nameKey: 'myWorkouts', href: '/dashboard/my/workouts', icon: ClipboardList },
-					{ nameKey: 'progress', href: '/dashboard/my/progress', icon: LineChart },
-				],
-			},
-			{
-				nameKey: 'nutrition',
-				icon: Salad,
-				children: [
-					{ nameKey: 'myNutrition', href: '/dashboard/my/nutrition', icon: Apple },
-					{ nameKey: 'foodLibrary', href: '/dashboard/nutrition/library-food-list', icon: ChefHat },
-					{ nameKey: 'groceryList', href: '/dashboard/nutrition/grocery-list', icon: ShoppingCart },
-				],
-			},
-			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
-			{ nameKey: 'profile', href: '/dashboard/my/profile', icon: UserIcon },
+			// { nameKey: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
+			{ nameKey: 'allUsers', href: '/dashboard/users', icon: Users },
+			{ nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
 		],
 	},
 	{
 		role: 'coach',
 		sectionKey: 'sections.clientManagement',
 		items: [
-			{
-				nameKey: 'nutritionManagement',
-				icon: UtensilsCrossed,
-				children: [
-					{ nameKey: 'mealPlans', href: '/dashboard/nutrition', icon: ChefHat },
-					{ nameKey: 'analytics', href: '/dashboard/nutrition/analytics', icon: BarChart3 },
-					{ nameKey: 'reports', href: '/dashboard/nutrition/reports', icon: FileBarChart },
-				],
-			},
-			{
-				nameKey: 'trainingManagement',
-				icon: Dumbbell,
-				children: [
-					{ nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: NotebookPen },
-					{ nameKey: 'allWorkouts', href: '/dashboard/workouts', icon: ClipboardList },
-				],
-			},
+			{ nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: NotebookPen },
+			{ nameKey: 'mealPlans', href: '/dashboard/nutrition', icon: ChefHat },
+			{ nameKey: 'analytics', href: '/dashboard/nutrition/analytics', icon: BarChart3 },
+			{ nameKey: 'reports', href: '/dashboard/nutrition/reports', icon: FileBarChart },
+			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
 		],
 	},
+
 
 	// -------------------- ADMIN --------------------
 	{
@@ -273,7 +245,7 @@ export default function Sidebar({ open, setOpen, collapsed, setCollapsed }) {
 
 	// const sections = useMemo(() => NAV.filter(s => s.role === role), [role]);
 	const sections = useMemo(() => {
-		if (!role) return SKELETON_SECTIONS;  // هيكل ثابت لا يغيّر نوع التاج
+		if (!role) return null;
 		return NAV.filter(s => s.role === role);
 	}, [role]);
 
@@ -301,7 +273,7 @@ export default function Sidebar({ open, setOpen, collapsed, setCollapsed }) {
 
 					<LayoutGroup id='sidebar-nav'>
 						<nav className={cn('flex-1 overflow-y-auto py-3', collapsed ? 'px-1' : '')}>
-							{sections.map(section => (
+							{sections?.map(section => (
 								<NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} onNavigate={onNavigate} collapsed={collapsed} t={t} />
 							))}
 						</nav>
@@ -331,7 +303,7 @@ export default function Sidebar({ open, setOpen, collapsed, setCollapsed }) {
 							{/* nav */}
 							<LayoutGroup id='sidebar-nav-mobile'>
 								<nav className='w-full h-[calc(100vh-100px)] overflow-y-auto px-2 pt-4 pb-6 space-y-3'>
-									{sections.map(section => (
+									{sections?.map(section => (
 										<NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} onNavigate={onNavigate} t={t} />
 									))}
 								</nav>

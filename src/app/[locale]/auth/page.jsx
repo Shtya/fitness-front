@@ -10,6 +10,7 @@ import { useTranslations } from 'next-intl';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
+import { loginPersist } from '@/app/role-access';
 
 /* ================== Axios (with refresh) ================== */
 
@@ -83,7 +84,7 @@ const loginSchema = yup.object().shape({
 function getPostLoginPath(role) {
   const r = (role || '').toString().toLowerCase();
   if (r === 'admin') return '/dashboard/users';
-  if (r === 'coach' || r === 'cocach') return '/dashboard/assign/users';
+  if (r === 'coach' || r === 'cocach') return '/dashboard/users';
   if (r === 'client') return '/dashboard/my/workouts';
   return '/dashboard/users'; // fallback
 }
@@ -135,6 +136,8 @@ const LoginForm = ({ onLoggedIn }) => {
       if (!accessToken || !refreshToken) {
         throw new Error('Missing tokens');
       }
+
+			loginPersist(user)
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('accessToken', accessToken);

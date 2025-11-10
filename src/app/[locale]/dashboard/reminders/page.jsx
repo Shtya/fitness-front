@@ -1,21 +1,3 @@
-// handle the ui of after x time
-/* 
-	
-	- i need in the card show he will work after how time not in 10:00pm will work say for example he will work after 00:32 minutes
-	- and when you ask him about the permission of notfication make it alwyas not when open every time ask him about the notification permission 
-	- and when add any reminder add it in the first and order the return reminders form the api by first work 
-	- and enhance the card of showing the reminders more than this make it something awesome 
-	
-	- and also work the sound notification that he choose it when the alert get 
-	- and put in the setting  the of creating reminder the sounds and when click on the button beside teh select can listen it becuase when i click on the button make close the modal 
-	- and remove the search and also the button of ( الإشعارات مفعّلة) ask him if you need the permissison when open this page only dont' make controll on it for the client
-	- and remove the select of ( غفوة ) form the card and teh check also 
-
-	- and please enhance the card more than this of reminders 
-	- and return teh full code after edit and use js not ts 
-	*/
-
-
 "use client";
 
 import React, { useEffect, useMemo, useState, useCallback } from "react";
@@ -23,9 +5,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search as SearchIcon, Plus, Settings, Calendar as CalendarIcon, Bell,
-  Clock, X, ChevronLeft, ChevronRight, CheckCircle2, Pencil, Power, PowerOff,
-  Trash2, Info, BellRing, FileText, CalendarX, CalendarPlus, Zap
+  Plus, Settings, Calendar as CalendarIcon, BellRing, FileText,
+  CalendarX, CalendarPlus, Zap, Clock, Pencil, Power, PowerOff, Trash2, Info
 } from "lucide-react";
 
 import { Modal, TabsPill } from "@/components/dashboard/ui/UI";
@@ -44,12 +25,11 @@ import {
   normalizeSchedule, computeNextOccurrence, fetchTodayPrayerTimes,
   listReminders, getUserSettingsApi, createReminderApi, updateReminderApi,
   deleteReminderApi, toggleActiveApi, snoozeReminderApi, markCompletedApi,
-  updateUserSettingsApi, enableWebPush, sendReminderNow, safeT, toISODate, useReminderTicker,
-	humanDateTime,
-	sameDay
+  updateUserSettingsApi, enableWebPush, sendReminderNow, safeT, toISODate,
+  useReminderTicker, humanDateTime, sameDay, humanDuration
 } from "@/components/pages/reminders/atoms";
 
- 
+/** Format schedule line for card */
 function formatSchedule(t, rem) {
   const s = rem.schedule || {};
   const times = (s.times || []).map(formatTime12).join("، ");
@@ -78,7 +58,6 @@ function formatTime12(hhmm) {
   return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
-// ------------------ Page ------------------
 export default function RemindersPage() {
   const t = useTranslations("reminders");
   const router = useRouter();
@@ -91,7 +70,6 @@ export default function RemindersPage() {
     typeof Notification !== "undefined" ? Notification.permission === "granted" : false
   );
 
-  // Pop-up when due
   const [dueModal, setDueModal] = useState({ open: false, reminder: null });
 
   const [openForm, setOpenForm] = useState(false);
@@ -99,7 +77,6 @@ export default function RemindersPage() {
   const [openSettings, setOpenSettings] = useState(false);
   const [openCalendar, setOpenCalendar] = useState(false);
 
-  const [query, setQuery] = useState("");
   const today = new Date();
   const todayKey = ["SU","MO","TU","WE","TH","FR","SA"][today.getDay()];
   const [selectedDay, setSelectedDay] = useState(todayKey);
@@ -107,10 +84,9 @@ export default function RemindersPage() {
     () => WEEK_DAYS.map((d) => ({ key: d.key, label: safeT(t, `weekday.${d.label}`, d.label) })),
     [t]
   );
-
   const changeDay = useCallback((k) => setSelectedDay(k), []);
 
-  // Initial load
+  // Initial load + ask notification permission ONCE when the page opens (no toggle UI)
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -155,16 +131,9 @@ export default function RemindersPage() {
     return () => { mounted = false; };
   }, [pushAvailable, t]);
 
-  // Filter & sort
+  // Filter & sort by next occurrence
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     const list = reminders
-      .filter((r) => {
-        if (!q) return true;
-        const tt = (r.title || "").toLowerCase();
-        const inText = tt.includes(q) || (r.notes || "").toLowerCase().includes(q);
-        return inText;
-      })
       .filter((r) => {
         const s = r.schedule || {};
         if (s.mode === "weekly" && Array.isArray(s.daysOfWeek) && s.daysOfWeek.length) {
@@ -177,17 +146,17 @@ export default function RemindersPage() {
         (computeNextOccurrence(b, settings || {})?.getTime() || 0)
       );
     return list;
-  }, [reminders, query, selectedDay, settings]);
+  }, [reminders, selectedDay, settings]);
 
-  // Ticker with popup-on-due
+  // Ticker -> play sound + push + popup
   useReminderTicker(
     reminders,
     setReminders,
     settings || { quietHours: { start: "22:00", end: "07:00" } },
-    (rem) => setDueModal({ open: true, reminder: rem }) // open popup
+    (rem) => setDueModal({ open: true, reminder: rem })
   );
 
-  // CRUD handlers (same behavior)
+  // CRUD
   const onCreate = () => { setEditing(null); setOpenForm(true); };
   const onEdit = (rem) => { setEditing(rem); setOpenForm(true); };
 
@@ -222,6 +191,7 @@ export default function RemindersPage() {
           created.sound?.id === "drop" ? SOUND_SAMPLES.drop :
           created.sound?.id === "soft" ? SOUND_SAMPLES.soft :
           SOUND_SAMPLES.chime;
+        // Insert FIRST
         setReminders((list) => [created, ...list]);
       } catch {}
     }
@@ -246,22 +216,6 @@ export default function RemindersPage() {
     } catch { setReminders(before); }
   };
 
-  const onSnooze = async (rem, minutes) => {
-    const m = minutes ?? settings?.defaultSnooze ?? 10;
-    const until = new Date(Date.now() + m * 60 * 1000).toISOString();
-    setReminders((list) => list.map((r) => (r.id === rem.id ? { ...r, _snoozedUntil: until } : r)));
-    try {
-      const saved = await snoozeReminderApi(rem.id, m);
-      saved.sound.previewUrl =
-        saved.sound?.id === "drop" ? SOUND_SAMPLES.drop :
-        saved.sound?.id === "soft" ? SOUND_SAMPLES.soft :
-        SOUND_SAMPLES.chime;
-      setReminders((list) => list.map((r) => (r.id === rem.id ? { ...saved, _snoozedUntil: until } : r)));
-    } catch {
-      setReminders((list) => list.map((r) => (r.id === rem.id ? { ...r, _snoozedUntil: null } : r)));
-    }
-  };
-
   const onAck = async (rem) => {
     try {
       const saved = await markCompletedApi(rem.id);
@@ -273,7 +227,6 @@ export default function RemindersPage() {
     } catch {}
   };
 
-  // Quick create
   const quickCreate = async (mins) => {
     const n = Number(mins);
     if (Number.isNaN(n) || n <= 0) return;
@@ -338,34 +291,7 @@ export default function RemindersPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {pushAvailable && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      if (!pushEnabled) {
-                        if (typeof Notification !== "undefined" && Notification.permission !== "granted") {
-                          const perm = await Notification.requestPermission();
-                          if (perm !== "granted") return;
-                        }
-                        await enableWebPush().catch(() => {});
-                        setPushEnabled(true);
-                      }
-                    } catch {}
-                  }}
-                  className={`rounded-lg border px-3 py-2 text-sm ${pushEnabled
-                    ? "border-blue-100 bg-indigo-100/50 text-white/90 cursor-default"
-                    : "border-white/30 bg-white/10 hover:bg-white/20"
-                  }`}
-                  disabled={pushEnabled}
-                  aria-label={safeT(t, "actions.enablePush", "Enable notifications")}
-                  title={safeT(t, "actions.enablePush", "Enable notifications")}
-                >
-                  <Bell className="inline-block w-4 h-4 mr-1 -mt-0.5" />
-                  {pushEnabled ? safeT(t, "actions.pushEnabled", "Notifications Enabled") : safeT(t, "actions.enablePush", "Enable Push")}
-                </button>
-              )}
-
+              {/* No notifications toggle button anymore */}
               <QuickCreate t={t} onPick={quickCreate} />
 
               <button type="button" onClick={() => sendReminderNow()}
@@ -393,17 +319,11 @@ export default function RemindersPage() {
           <div className="mt-2 md:mt-4 flex items-center justify-between gap-2">
             <TabsPill
               hiddenArrow sliceInPhone={false} isLoading={false}
-              className="!rounded-lg flex-1 md:flex-none" slice={3}
+              className="!rounded-lg" slice={3}
               id="day-tabs" tabs={dayTabs} active={selectedDay} onChange={changeDay}
             />
-            <div className="max-md:hidden relative w-full md:w-64">
-              <SearchIcon className="absolute rtl:right-3 ltr:left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/80" />
-              <input
-                value={query} onChange={(e) => setQuery(e.target.value)}
-                placeholder={safeT(t, "search.placeholder", "Search reminders…")}
-                className="w-full rounded-lg border border-white/20 bg-white/10 px-9 py-2 text-sm placeholder:text-white/70 outline-none focus:bg-white/20"
-              />
-            </div>
+            {/* Search removed per request */}
+            <div className="max-md:hidden w-0 h-0" />
           </div>
         </div>
       </div>
@@ -424,7 +344,6 @@ export default function RemindersPage() {
               onEdit={() => setEditing(r) || setOpenForm(true)}
               onDelete={() => onDelete(r.id)}
               onToggleActive={() => onToggleActive(r.id)}
-              onSnooze={(m) => onSnooze(r, m)}
               onAck={() => onAck(r)}
             />
           ))
@@ -454,19 +373,17 @@ export default function RemindersPage() {
         <CalendarView t={t} reminders={reminders} settings={settings || defaultSettings()} />
       </Modal>
 
-      {/* Due popup (when website open) */}
+      {/* Due popup */}
       <DueDialog
         open={dueModal.open}
         reminder={dueModal.reminder}
         onClose={() => setDueModal({ open:false, reminder:null })}
-        onSnooze={(m) => { if (dueModal.reminder) onSnooze(dueModal.reminder, m); setDueModal({ open:false, reminder:null }); }}
         onAck={() => { if (dueModal.reminder) onAck(dueModal.reminder); setDueModal({ open:false, reminder:null }); }}
       />
     </main>
   );
 }
 
-// -------------- Small UI pieces (same styling you had) --------------
 function IconButton({ icon, onClick, label, danger }) {
   return (
     <button
@@ -480,27 +397,58 @@ function IconButton({ icon, onClick, label, danger }) {
   );
 }
 
-function ReminderCard({ t, reminder, onEdit, onDelete, onToggleActive, onSnooze, onAck, settings }) {
+/** Card with live countdown, no Snooze select, no Done/check action on the card */
+function ReminderCard({ t, reminder, onEdit, onDelete, onToggleActive, onAck, settings }) {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const next = computeNextOccurrence(reminder, settings || {});
-  const due = next && next <= new Date();
+  const due = next && next <= now;
   const muted = !reminder.active;
 
+  const remainingMs = next ? Math.max(0, next.getTime() - now.getTime()) : null;
+  const remainingStr = remainingMs === null ? "—"
+    : remainingMs === 0 ? safeT(t, "now", "Now")
+    : humanDuration(remainingMs, { hhmm: true });
+
+  // visual cue when almost due (< 5 minutes)
+  const almostDue = remainingMs !== null && remainingMs <= 5 * 60 * 1000 && remainingMs > 0;
+
   return (
-    <div className={`rounded-lg border border-slate-200 bg-white/70 p-4 md:p-5 shadow-sm backdrop-blur transition ${muted ? "opacity-60" : due ? "ring-2 ring-emerald-400" : ""}`}>
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+    <div
+      className={`relative rounded-xl border bg-white/80 p-4 md:p-5 shadow-sm backdrop-blur transition
+      ${muted ? "opacity-60 border-slate-200"
+        : due ? "border-emerald-400 ring-2 ring-emerald-300/70"
+        : almostDue ? "border-indigo-300 ring-1 ring-indigo-200"
+        : "border-slate-200"}`}
+    >
+      {/* subtle gradient edge */}
+      <div className="pointer-events-none absolute inset-0 rounded-xl [mask-image:radial-gradient(120%_120%_at_0%_0%,#000_20%,transparent_60%)] bg-gradient-to-br from-indigo-50 via-transparent to-blue-50" />
+
+      <div className="relative flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div className="min-w-0">
           <div className="text-xs mb-1 flex flex-wrap items-center gap-2 text-slate-600">
             <span className="inline-flex items-center gap-1 text-xs">
               <Clock className="w-4 h-4" /> <span>{formatSchedule(t, reminder)}</span>
             </span>
-            {safeT(t, "next", "Next")}: {next ? humanDateTime(next) : "—"}
+            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+              {safeT(t, "next", "Next")}: {next ? humanDateTime(next) : "—"}
+            </span>
+            <span className={`px-2 py-0.5 rounded-md ${due ? "bg-emerald-100 text-emerald-800" : "bg-indigo-50 text-indigo-700"}`}>
+              {due ? safeT(t, "now", "Now") : safeT(t, "willStartAfter", "يعمل بعد")} {due ? "" : remainingStr}
+            </span>
           </div>
-          <MultiLangText className="truncate text-base font-semibold text-slate-800">{reminder.title}</MultiLangText>
-          {reminder.notes && <p className="mt-1 line-clamp-2 text-sm text-slate-600">{reminder.notes}</p>}
+          <MultiLangText className="truncate text-base font-semibold text-slate-800">
+            {reminder.title}
+          </MultiLangText>
+          {reminder.notes && <p className="mt-1 text-sm text-slate-600">{reminder.notes}</p>}
         </div>
-        <div className="flex flex-wrap md:flex-nowrap items-center gap-1">
-          <IconButton icon={<CheckCircle2 size={14} />} label={safeT(t,"actions.done","Done")} onClick={onAck} />
-          <SnoozeSelect t={t} onPick={onSnooze} />
+
+        <div className="relative z-10 flex flex-wrap md:flex-nowrap items-center gap-1">
+          {/* Removed Done and Snooze from card per request */}
           <IconButton icon={<Pencil size={14} />} label={safeT(t,"actions.edit","Edit")} onClick={onEdit} />
           <IconButton icon={reminder.active ? <Power size={14}/> : <PowerOff size={14}/>}
             label={reminder.active ? safeT(t,"actions.disable","Disable") : safeT(t,"actions.enable","Enable")}
@@ -512,54 +460,7 @@ function ReminderCard({ t, reminder, onEdit, onDelete, onToggleActive, onSnooze,
   );
 }
 
-function SnoozeSelect({ t, onPick }) {
-  const [open, setOpen] = useState(false);
-  const [custom, setCustom] = useState("");
-  const options = [
-    { id: "5", label: safeT(t, "snooze.5", "5 min") },
-    { id: "10", label: safeT(t, "snooze.10", "10 min") },
-    { id: "30", label: safeT(t, "snooze.30", "30 min") },
-    { id: "60", label: safeT(t, "snooze.60", "60 min") },
-    { id: "custom", label: safeT(t, "snooze.custom", "Custom…") },
-  ];
-  return (
-    <div className="relative flex items-center gap-1">
-      <Select
-        options={options} value={null}
-        onChange={(val) => {
-          if (val === "custom") setOpen(true);
-          else {
-            const n = Number(val);
-            if (!Number.isNaN(n)) onPick(n);
-          }
-        }}
-        placeholder={safeT(t, "snooze.placeholder", "Snooze")}
-        clearable={false} cnInputParent={"!h-[32px] !border-slate-200 "} className="min-w-[90px]"
-      />
-      <AnimatePresence>
-        {open && (
-          <motion.div className="absolute right-0 top-full z-50 mt-2 rounded-lg border border-slate-200 bg-white p-3 shadow-xl"
-            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}>
-            <div className="text-sm text-slate-700 mb-2">{safeT(t,"snooze.customLabel","Minutes")}</div>
-            <div className="flex items-center gap-2">
-              <input type="number" min={1} className="h-[36px] w-[120px] rounded-lg border border-slate-300 px-2 text-sm"
-                value={custom} onChange={(e) => setCustom(e.target.value)} />
-              <button className="rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 text-white px-3 py-2 text-xs"
-                onClick={() => { const n = Number(custom); if (!Number.isNaN(n) && n > 0) onPick(n); setOpen(false); setCustom(""); }}>
-                {safeT(t, "actions.confirm", "Confirm")}
-              </button>
-              <button className="rounded-lg px-3 py-2 text-xs" onClick={() => setOpen(false)}>
-                {safeT(t, "actions.cancel", "Cancel")}
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-// ----- Reminder Form (unchanged logic, JS only) -----
+/** ---- Form (JS) ---- */
 const schema = yup.object().shape({
   title: yup.string().trim().required(),
   type: yup.mixed().oneOf(["custom"]).default("custom"),
@@ -644,7 +545,7 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
               </div>
               <button type="button" onClick={() => setShowNotes((v)=>!v)}
                 className="flex items-center gap-2 h-[40px] rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 text-white px-3 text-sm">
-                {showNotes ? <X className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                {showNotes ? "—" : <FileText className="w-4 h-4" />}
               </button>
             </div>
             {showNotes && (
@@ -746,7 +647,7 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
                         const next = (times || []).map((x, idx) => (idx === i ? val : x));
                         setValue("schedule.times", next);
                       }} />
-                    <IconButton danger icon={<X className="w-4 h-5" />} onClick={() => removeTime(i)} />
+                    <IconButton danger icon={"✕"} onClick={() => removeTime(i)} />
                   </div>
                 ))}
                 <button type="button" onClick={addTime}
@@ -910,7 +811,6 @@ function WeeklyDaysSelector({ t, initial, getDays, setDays }) {
   );
 }
 
-// ------- Settings panel (simple) -------
 function SettingsPanel({ t, value, onChange }) {
   const [v, setV] = useState(value);
   const set = (patch) => setV((s) => ({ ...s, ...patch }));
@@ -945,13 +845,12 @@ function SettingsPanel({ t, value, onChange }) {
   );
 }
 
-// ------- Calendar (same concept) -------
 function CalendarView({ t, reminders, settings }) {
   const [cursor, setCursor] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const y = cursor.getFullYear(); const m = cursor.getMonth();
   const first = new Date(y, m, 1);
-  const startWeekday = (first.getDay() + 6) % 7; // Monday-first
+  const startWeekday = (first.getDay() + 6) % 7;
   const daysInMonth = new Date(y, m + 1, 0).getDate();
   const daySlots = [];
   for (let i = 0; i < startWeekday; i++) daySlots.push(null);
@@ -986,10 +885,10 @@ function CalendarView({ t, reminders, settings }) {
       <div className="md:col-span-3">
         <div className="mb-3 flex items-center justify-between">
           <button className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50"
-            onClick={() => setCursor(new Date(y, m - 1, 1))}><ChevronRight className="w-4 h-4" /></button>
+            onClick={() => setCursor(new Date(y, m - 1, 1))}>‹</button>
           <div className="text-slate-800 font-medium">{cursor.toLocaleDateString("ar-EG", { month:"long", year:"numeric" })}</div>
           <button className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50"
-            onClick={() => setCursor(new Date(y, m + 1, 1))}><ChevronLeft className="w-4 h-4" /></button>
+            onClick={() => setCursor(new Date(y, m + 1, 1))}>›</button>
         </div>
 
         <div className="grid grid-cols-7 gap-2 text-center text-[13px] text-slate-500">
@@ -1046,7 +945,6 @@ function CalendarView({ t, reminders, settings }) {
   );
 }
 
-// ------- Quick Create -------
 function QuickCreate({ t, onPick }) {
   const [open, setOpen] = useState(false);
   const options = [{id:"5",label:"5"},{id:"10",label:"10"},{id:"15",label:"15"},{id:"30",label:"30"},{id:"50",label:"50"},{id:"custom",label:safeT(t,"quick.custom","Custom…")}];
@@ -1088,22 +986,19 @@ function QuickCreate({ t, onPick }) {
   );
 }
 
-// --------- Due Dialog (popup when website open) ----------
-function DueDialog({ open, reminder, onClose, onSnooze, onAck }) {
+function DueDialog({ open, reminder, onClose, onAck }) {
   if (!open || !reminder) return null;
   return (
     <Modal open={open} onClose={onClose} title={reminder.title || "Reminder"} maxW="max-w-md">
       <div className="grid gap-3">
         {reminder.notes && <p className="text-slate-700">{reminder.notes}</p>}
         <div className="flex items-center justify-end gap-2">
-          <button onClick={() => onSnooze(10)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50">
-            Snooze 10m
-          </button>
-          <button onClick={() => onSnooze(30)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50">
-            Snooze 30m
+          {/* Keep a couple of snooze options INSIDE popup for convenience */}
+          <button onClick={onClose} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50">
+            {safeT(useTranslations("reminders"),"actions.close","Close")}
           </button>
           <button onClick={onAck} className="rounded-lg bg-gradient-to-br from-emerald-600 to-emerald-700 text-white px-4 py-2">
-            Done
+            {safeT(useTranslations("reminders"),"actions.done","Done")}
           </button>
         </div>
       </div>

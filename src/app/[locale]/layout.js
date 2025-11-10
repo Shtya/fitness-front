@@ -8,6 +8,8 @@ import './globals.css';
 import React from 'react';
 import Layout from '../../components/molecules/Layout';
 import AddToHomeGuide from '@/components/atoms/AddToHomeGuide';
+import { NAV } from '@/components/molecules/Sidebar';
+import { RouteGuard } from '../role-access';
 
 const openSans = Open_Sans({
   variable: '--font-open-sans',
@@ -102,10 +104,14 @@ export default async function RootLayout({ children, params }) {
     <html lang={locale} dir={locale == 'en' ? 'ltr' : 'rtl'} suppressHydrationWarning>
       <body className={`bg-[#fff] scroll ${arabicFont.variable} ${openSans.variable}`}>
         <NextIntlClientProvider locale={locale}>
-          <Layout>
-            {children}
-            <div className='md:hidden' > <AddToHomeGuide /> </div>
-          </Layout>
+          <RouteGuard NAV={NAV} unauthRedirect='/auth' noAccessRedirect='/' publicPrefixes={['/auth']}>
+            <Layout>
+              {children}
+              <div className='md:hidden'>
+                <AddToHomeGuide />
+              </div>
+            </Layout>
+          </RouteGuard>
         </NextIntlClientProvider>
       </body>
     </html>

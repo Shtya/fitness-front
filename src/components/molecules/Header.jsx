@@ -468,13 +468,13 @@ export default function Header({ onMenu, onProfile = () => {}, onSettings = () =
                 </div>
 
                 <div className='hidden sm:flex flex-col items-start '>
-                  <MultiLangText className='text-sm font-medium mb-[-4px] text-slate-800 max-w-[180px] truncate'>{user?.name || user?.email || t('common.guest')}</MultiLangText>
+                  <MultiLangText className='text-sm font-medium  text-slate-800 max-w-[180px] truncate'>{user?.name || user?.email || t('common.guest')}</MultiLangText>
                   <div className='flex items-center gap-2 '>
-                    <span className=' rtl:order-[2] inline-flex items-center gap-1 text-[11px] leading-5 px-1.5 py-0.5 rounded-lg border text-indigo-700 border-indigo-200 bg-indigo-50/70' title={`${t('labels.role')}: ${role}`}>
+                    <span className=' rtl:order-[-1] inline-flex items-center gap-1 text-[11px] leading-5 px-1.5 py-0.5 rounded-lg border text-indigo-700 border-indigo-200 bg-indigo-50/70' title={`${t('labels.role')}: ${role}`}>
                       <UserIcon className='size-3.5' />
                       {t(`roles.${(user?.role || 'guest').toLowerCase()}`)}
                     </span>
-                    <span className='text-[11px] text-slate-500'>{t('labels.lastLogin', { time: user?.lastLogin ? new Date(user.lastLogin).toLocaleString() : '—' })}</span>
+                    <span className='text-[11px] text-slate-500'>{t('labels.lastLogin', { time: "" })} <span className="font-en">{user?.lastLogin ? new Date(user.lastLogin).toLocaleString() : '—'}</span> </span>
                   </div>
                 </div>
               </div>
