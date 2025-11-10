@@ -500,7 +500,7 @@ const GridView = memo(({ loading, items, onView, onEdit, onDelete, t }) => {
 						{/* Media */}
 						<div className='relative aspect-4/2 bg-slate-50'>
 							{hasImg ? (
-								<Img src={e.img} alt={e.name} className='w-full h-full object-contain' loading='lazy' />
+								<Img showBlur={false} src={e.img} alt={e.name} className='w-full h-full object-contain' loading='lazy' />
 							) : hasVideo ? (
 								<div className='w-full h-full grid place-content-center text-slate-400'>
 									<Play className='w-9 h-9' />

@@ -1,0 +1,921 @@
+{
+	"plans": [
+		{
+			"name": "4-Day Bodybuilding Split",
+			"notes": "4-Day Bodybuilding Split is a program designed for intermediate to advanced lifters who want to build muscle and gain strength. The program is divided into four categories, each targeting specific muscle groups.",
+			"program": {
+				"days": [
+					{
+						"dayOfWeek": "saturday",
+						"nameOfWeek": "Chest and Triceps",
+						"orderIndex": 0,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "72ed4fe3-9177-4720-a950-8f12802e30c9"
+							},
+							{
+								"order": 2,
+								"exerciseId": "d3a35315-b109-461d-aa65-d9a2932a3b03"
+							},
+							{
+								"order": 3,
+								"exerciseId": "828c3171-9ef1-43c5-89d1-260d91ca0ae4"
+							},
+							{
+								"order": 4,
+								"exerciseId": "77f6e201-3c70-48c2-9288-6cda54b3fd8b"
+							},
+							{
+								"order": 5,
+								"exerciseId": "0d20cede-3153-4d9c-bb16-cde82fdd29e0"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "sunday",
+						"nameOfWeek": "Back and Biceps",
+						"orderIndex": 1,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "6a759686-7b72-4709-82d7-a6b982e6fc57"
+							},
+							{
+								"order": 2,
+								"exerciseId": "e8e65ec4-96d4-4376-b414-388349702454"
+							},
+							{
+								"order": 3,
+								"exerciseId": "4bab2a90-a8f6-4bf4-bd97-fcebf5a8ba23"
+							},
+							{
+								"order": 4,
+								"exerciseId": "ca6882d8-3e2e-4444-b557-748f99314f0c"
+							},
+							{
+								"order": 5,
+								"exerciseId": "ff71bc22-ee0f-4203-8ee8-4d8cb99b6423"
+							},
+							{
+								"order": 6,
+								"exerciseId": "3e7b74be-de13-4d43-8be6-317294941d8b"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "monday",
+						"nameOfWeek": "Shoulders and Legs",
+						"orderIndex": 2,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "69fd5d5c-87a6-4902-9d23-2067e725ed69"
+							},
+							{
+								"order": 2,
+								"exerciseId": "1b416a59-c2b3-41f0-aa64-474a4915a6bc"
+							},
+							{
+								"order": 3,
+								"exerciseId": "4e5cec5c-3775-4936-b28c-70602997cdd9"
+							},
+							{
+								"order": 4,
+								"exerciseId": "d733c53c-593c-4847-b741-ef97c63258ad"
+							},
+							{
+								"order": 5,
+								"exerciseId": "2596e562-2d4a-432a-b691-adb983510601"
+							},
+							{
+								"order": 6,
+								"exerciseId": "6ff108ce-6090-493f-a1ed-661c161677b0"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "tuesday",
+						"nameOfWeek": "Arms and Abs",
+						"orderIndex": 3,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "254cd8a8-8c3b-45c9-a823-2fce401b64c5"
+							},
+							{
+								"order": 2,
+								"exerciseId": "66fc7122-3d4c-44b6-bf89-da34f5b94481"
+							},
+							{
+								"order": 3,
+								"exerciseId": "ff71bc22-ee0f-4203-8ee8-4d8cb99b6423"
+							},
+							{
+								"order": 4,
+								"exerciseId": "0d20cede-3153-4d9c-bb16-cde82fdd29e0"
+							},
+							{
+								"order": 5,
+								"exerciseId": "1b837579-2224-4ecb-8e16-fbae346989db"
+							},
+							{
+								"order": 6,
+								"exerciseId": "6f282ea8-0e1f-4642-9c25-ac6d4611ac2e"
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"name": "4-Day Upper/Lower",
+			"notes": "Upper/Lower 4-day split is a popular weightlifting program designed for intermediate lifters who want to build muscle and increase strength. The program is split into upper and lower body workouts, with each workout targeting specific muscle groups.",
+			"program": {
+				"days": [
+					{
+						"dayOfWeek": "saturday",
+						"nameOfWeek": "Upper Body Strength",
+						"orderIndex": 0,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "72ed4fe3-9177-4720-a950-8f12802e30c9"
+							},
+							{
+								"order": 2,
+								"exerciseId": "d3a35315-b109-461d-aa65-d9a2932a3b03"
+							},
+							{
+								"order": 3,
+								"exerciseId": "7f7cbd8b-c57e-4319-9c15-9376c134ef51"
+							},
+							{
+								"order": 4,
+								"exerciseId": "ca6882d8-3e2e-4444-b557-748f99314f0c"
+							},
+							{
+								"order": 5,
+								"exerciseId": "254cd8a8-8c3b-45c9-a823-2fce401b64c5"
+							},
+							{
+								"order": 6,
+								"exerciseId": "0d20cede-3153-4d9c-bb16-cde82fdd29e0"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "sunday",
+						"nameOfWeek": "Lower Body Strength",
+						"orderIndex": 1,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "69fd5d5c-87a6-4902-9d23-2067e725ed69"
+							},
+							{
+								"order": 2,
+								"exerciseId": "b3b95f98-7c62-40db-b705-087951e3e754"
+							},
+							{
+								"order": 3,
+								"exerciseId": "1b416a59-c2b3-41f0-aa64-474a4915a6bc"
+							},
+							{
+								"order": 4,
+								"exerciseId": "4e5cec5c-3775-4936-b28c-70602997cdd9"
+							},
+							{
+								"order": 5,
+								"exerciseId": "27bf5802-27c6-45ed-8e68-b786e01920e9"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "monday",
+						"nameOfWeek": "Upper Body Hypertrophy",
+						"orderIndex": 2,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "d733c53c-593c-4847-b741-ef97c63258ad"
+							},
+							{
+								"order": 2,
+								"exerciseId": "c550a9d3-04ab-4fe7-8d0b-bdc145b5fb97"
+							},
+							{
+								"order": 3,
+								"exerciseId": "ca6882d8-3e2e-4444-b557-748f99314f0c"
+							},
+							{
+								"order": 4,
+								"exerciseId": "254cd8a8-8c3b-45c9-a823-2fce401b64c5"
+							},
+							{
+								"order": 5,
+								"exerciseId": "6ff108ce-6090-493f-a1ed-661c161677b0"
+							},
+							{
+								"order": 6,
+								"exerciseId": "2edd2435-90dc-431c-8261-0d16c930f17d"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "tuesday",
+						"nameOfWeek": "Lower Body Hypertrophy",
+						"orderIndex": 3,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "6a759686-7b72-4709-82d7-a6b982e6fc57"
+							},
+							{
+								"order": 2,
+								"exerciseId": "d7c0bf43-ffb6-45a8-bdf3-cf07475bc722"
+							},
+							{
+								"order": 3,
+								"exerciseId": "1b416a59-c2b3-41f0-aa64-474a4915a6bc"
+							},
+							{
+								"order": 4,
+								"exerciseId": "3b928ba8-8336-4900-b4a8-9a983590e771"
+							},
+							{
+								"order": 5,
+								"exerciseId": "27bf5802-27c6-45ed-8e68-b786e01920e9"
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"name": "Jeff Nippard's Ultimate Push Pull Legs Split (PPL)",
+			"notes": "Jeff Nippard's Ultimate Push Pull Legs Split (PPL) is a 3-day-per-week workout routine designed to maximize muscle growth and strength through evidence-based training principles.",
+			"program": {
+				"days": [
+					{
+						"dayOfWeek": "saturday",
+						"nameOfWeek": "PUSH - 1 (Chest, Shoulders & Triceps)",
+						"orderIndex": 0,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "72ed4fe3-9177-4720-a950-8f12802e30c9"
+							},
+							{
+								"order": 2,
+								"exerciseId": "f6e04a16-bc51-473e-b0ad-d6a6ab258c83"
+							},
+							{
+								"order": 3,
+								"exerciseId": "6594d10a-6b99-4820-82e7-dfa37b078f47"
+							},
+							{
+								"order": 4,
+								"exerciseId": "c15e99b7-f107-4ca4-be5e-62e634cb53a2"
+							},
+							{
+								"order": 5,
+								"exerciseId": "f2906f78-e7a9-4fa2-bf32-360aa7efadec"
+							},
+							{
+								"order": 6,
+								"exerciseId": "7abeeef2-1ce7-438d-8f1f-fe5e46c6d163"
+							},
+							{
+								"order": 7,
+								"exerciseId": "0d20cede-3153-4d9c-bb16-cde82fdd29e0"
+							},
+							{
+								"order": 8,
+								"exerciseId": "aa855996-20b6-422d-8447-05cfad52d3d6"
+							},
+							{
+								"order": 9,
+								"exerciseId": "46248456-5392-44bf-9074-f319353db9b7"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "sunday",
+						"nameOfWeek": "PULL - 1 (Back & Biceps)",
+						"orderIndex": 1,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "1f5ebf7b-192f-4148-a6e2-dfd2178cb34e"
+							},
+							{
+								"order": 2,
+								"exerciseId": "31eea3ec-2317-41e7-baf8-4947c4e30288"
+							},
+							{
+								"order": 3,
+								"exerciseId": "ed71039b-3654-41ef-b308-4db307628fec"
+							},
+							{
+								"order": 4,
+								"exerciseId": "e6776ce9-1bf0-408f-bec8-887b0fe553e1"
+							},
+							{
+								"order": 5,
+								"exerciseId": "e2980631-b30a-4b99-9711-78e4c1285730"
+							},
+							{
+								"order": 6,
+								"exerciseId": "119a448d-090d-43f5-8b9d-cd4d4736ec41"
+							},
+							{
+								"order": 7,
+								"exerciseId": "3e7b74be-de13-4d43-8be6-317294941d8b"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "monday",
+						"nameOfWeek": "LEGS - 1 (Legs & Core)",
+						"orderIndex": 2,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "69fd5d5c-87a6-4902-9d23-2067e725ed69"
+							},
+							{
+								"order": 2,
+								"exerciseId": "b3b95f98-7c62-40db-b705-087951e3e754"
+							},
+							{
+								"order": 3,
+								"exerciseId": "d7c0bf43-ffb6-45a8-bdf3-cf07475bc722"
+							},
+							{
+								"order": 4,
+								"exerciseId": "fe65d822-dd00-4259-96ad-541574cdf930"
+							},
+							{
+								"order": 5,
+								"exerciseId": "3335d08e-f165-46dd-9be3-4ec4d1e5dc34"
+							},
+							{
+								"order": 6,
+								"exerciseId": "2714bcdf-6279-44f0-b818-f041c3d10094"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "tuesday",
+						"nameOfWeek": "PUSH - 2 (Chest, Shoulders & Triceps Variation)",
+						"orderIndex": 3,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "d3a35315-b109-461d-aa65-d9a2932a3b03"
+							},
+							{
+								"order": 2,
+								"exerciseId": "d05c6fed-73a5-4bf9-8511-c8b8154f2f72"
+							},
+							{
+								"order": 3,
+								"exerciseId": "66fc7122-3d4c-44b6-bf89-da34f5b94481"
+							},
+							{
+								"order": 4,
+								"exerciseId": "ef83082d-9659-4207-8b6f-e9a69faccfe3"
+							},
+							{
+								"order": 5,
+								"exerciseId": "c15e99b7-f107-4ca4-be5e-62e634cb53a2"
+							},
+							{
+								"order": 6,
+								"exerciseId": "0af4bb05-3912-41f4-9535-6998c812bb9e"
+							},
+							{
+								"order": 7,
+								"exerciseId": "0d97b447-fab2-4a36-a426-f28fa185c16b"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "wednesday",
+						"nameOfWeek": "PULL - 2 (Back & Biceps Variation)",
+						"orderIndex": 4,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "3223722e-dea0-4736-861b-bfac22e05145"
+							},
+							{
+								"order": 2,
+								"exerciseId": "7f7cbd8b-c57e-4319-9c15-9376c134ef51"
+							},
+							{
+								"order": 3,
+								"exerciseId": "5b6d411b-a22b-4bc6-af36-d24da11be65e"
+							},
+							{
+								"order": 4,
+								"exerciseId": "45af261f-c1fa-4758-876c-c6a3305ab1f7"
+							},
+							{
+								"order": 5,
+								"exerciseId": "106dcdf5-6e05-4e32-8343-33db7df32602"
+							},
+							{
+								"order": 6,
+								"exerciseId": "3bc54d89-4e9a-49ac-9c63-e8aa299cf753"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "thursday",
+						"nameOfWeek": "LEGS - 2 (Legs & Core Variation)",
+						"orderIndex": 5,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "6a759686-7b72-4709-82d7-a6b982e6fc57"
+							},
+							{
+								"order": 2,
+								"exerciseId": "ac3f6810-0a02-4f5d-a174-247904d2e2c1"
+							},
+							{
+								"order": 3,
+								"exerciseId": "1b416a59-c2b3-41f0-aa64-474a4915a6bc"
+							},
+							{
+								"order": 4,
+								"exerciseId": "e56f7237-3151-449c-9b3d-05e51f8e9b2d"
+							},
+							{
+								"order": 5,
+								"exerciseId": "4e5cec5c-3775-4936-b28c-70602997cdd9"
+							},
+							{
+								"order": 6,
+								"exerciseId": "b61f1945-19cd-4394-a16c-2bc712e726fc"
+							},
+							{
+								"order": 7,
+								"exerciseId": "cfabd733-e047-4f53-83b6-f9cfe8cddb35"
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"name": "3-Day Split: Push/Pull/Legs",
+			"notes": "This 3-day workout plan is structured to target different muscle groups on different days, providing a balanced training routine for your week.",
+			"program": {
+				"days": [
+					{
+						"dayOfWeek": "saturday",
+						"nameOfWeek": "Push Day (Chest, Shoulders & Triceps)",
+						"orderIndex": 0,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "72ed4fe3-9177-4720-a950-8f12802e30c9"
+							},
+							{
+								"order": 2,
+								"exerciseId": "6594d10a-6b99-4820-82e7-dfa37b078f47"
+							},
+							{
+								"order": 3,
+								"exerciseId": "8ef55aa5-898c-49b0-9bd7-a86c5b86a6e8"
+							},
+							{
+								"order": 4,
+								"exerciseId": "4c64ed8a-61d1-4c6b-a7ec-e50cf496d5bb"
+							},
+							{
+								"order": 5,
+								"exerciseId": "6ff108ce-6090-493f-a1ed-661c161677b0"
+							},
+							{
+								"order": 6,
+								"exerciseId": "d456648c-ba00-4cd7-91ff-1a2e0fc30ab2"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "sunday",
+						"nameOfWeek": "Pull Day (Back & Biceps)",
+						"orderIndex": 1,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "7f7cbd8b-c57e-4319-9c15-9376c134ef51"
+							},
+							{
+								"order": 2,
+								"exerciseId": "9bf0c11b-4f15-4d16-9033-d762dd017aba"
+							},
+							{
+								"order": 3,
+								"exerciseId": "1f5ebf7b-192f-4148-a6e2-dfd2178cb34e"
+							},
+							{
+								"order": 4,
+								"exerciseId": "270ad3fc-1d23-4984-8617-71030f422a28"
+							},
+							{
+								"order": 5,
+								"exerciseId": "254cd8a8-8c3b-45c9-a823-2fce401b64c5"
+							},
+							{
+								"order": 6,
+								"exerciseId": "ff71bc22-ee0f-4203-8ee8-4d8cb99b6423"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "monday",
+						"nameOfWeek": "Leg Day (Legs & Core)",
+						"orderIndex": 2,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "69fd5d5c-87a6-4902-9d23-2067e725ed69"
+							},
+							{
+								"order": 2,
+								"exerciseId": "b3b95f98-7c62-40db-b705-087951e3e754"
+							},
+							{
+								"order": 3,
+								"exerciseId": "cfd5e307-0e2f-4663-a5fa-4b9205d4e9ec"
+							},
+							{
+								"order": 4,
+								"exerciseId": "fe65d822-dd00-4259-96ad-541574cdf930"
+							},
+							{
+								"order": 5,
+								"exerciseId": "fad85aa1-98b6-4ac1-b834-0e4f8a6e24dc"
+							},
+							{
+								"order": 6,
+								"exerciseId": "1bd59cf3-c260-4577-97d3-83dfafee4ff0"
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"name": "  5-Day Split",
+			"notes": " 5-day Split Routine designed to build a balanced and aesthetic physique through a classic bodybuilding approach.",
+			"program": {
+				"days": [
+					{
+						"dayOfWeek": "saturday",
+						"nameOfWeek": "Full Body Day (Full Body Strength & Conditioning)",
+						"orderIndex": 0,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "6a759686-7b72-4709-82d7-a6b982e6fc57"
+							},
+							{
+								"order": 2,
+								"exerciseId": "69fd5d5c-87a6-4902-9d23-2067e725ed69"
+							},
+							{
+								"order": 3,
+								"exerciseId": "72ed4fe3-9177-4720-a950-8f12802e30c9"
+							},
+							{
+								"order": 4,
+								"exerciseId": "532ee028-044c-443f-9d4c-4e4a09819356"
+							},
+							{
+								"order": 5,
+								"exerciseId": "516ec8fb-bc96-411e-a20e-35e7a240a333"
+							},
+							{
+								"order": 6,
+								"exerciseId": "7f7cbd8b-c57e-4319-9c15-9376c134ef51"
+							},
+							{
+								"order": 7,
+								"exerciseId": "63abe7da-120c-4daf-9da4-3d6735dc9eae"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "sunday",
+						"nameOfWeek": "Back Day (Back & Traps)",
+						"orderIndex": 1,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "4bab2a90-a8f6-4bf4-bd97-fcebf5a8ba23"
+							},
+							{
+								"order": 2,
+								"exerciseId": "94e1a510-7cef-4c1a-ae8f-760d081dfedd"
+							},
+							{
+								"order": 3,
+								"exerciseId": "4937cb88-3ce6-4b53-ae21-44188b6a759b"
+							},
+							{
+								"order": 4,
+								"exerciseId": "f1727cf8-d78f-4f5b-bd43-2e73bac6692b"
+							},
+							{
+								"order": 5,
+								"exerciseId": "13f9531e-daee-41fa-bf3c-f315fc245367"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "monday",
+						"nameOfWeek": "Shoulders and Triceps (Delts & Triceps)",
+						"orderIndex": 2,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "d733c53c-593c-4847-b741-ef97c63258ad"
+							},
+							{
+								"order": 2,
+								"exerciseId": "800e75e2-9bfb-4fd5-998f-d9159c017518"
+							},
+							{
+								"order": 3,
+								"exerciseId": "7be15632-078b-462f-965f-fb1447e552c4"
+							},
+							{
+								"order": 4,
+								"exerciseId": "1c118d36-63e3-4bd0-bcf8-894dc9201521"
+							},
+							{
+								"order": 5,
+								"exerciseId": "0d20cede-3153-4d9c-bb16-cde82fdd29e0"
+							},
+							{
+								"order": 6,
+								"exerciseId": "73f8345c-7cce-469a-940b-bd64892eb553"
+							},
+							{
+								"order": 7,
+								"exerciseId": "2edd2435-90dc-431c-8261-0d16c930f17d"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "tuesday",
+						"nameOfWeek": "Leg and Calfs (Legs & Calves)",
+						"orderIndex": 3,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "69fd5d5c-87a6-4902-9d23-2067e725ed69"
+							},
+							{
+								"order": 2,
+								"exerciseId": "1b416a59-c2b3-41f0-aa64-474a4915a6bc"
+							},
+							{
+								"order": 3,
+								"exerciseId": "b9c35c14-4fb0-46f6-97d8-1c4b3ae18dc0"
+							},
+							{
+								"order": 4,
+								"exerciseId": "4e5cec5c-3775-4936-b28c-70602997cdd9"
+							},
+							{
+								"order": 5,
+								"exerciseId": "9456ba94-5f39-4481-9216-13516176f2ff"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "wednesday",
+						"nameOfWeek": "Chest/Biceps (Chest & Biceps)",
+						"orderIndex": 4,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "72ed4fe3-9177-4720-a950-8f12802e30c9"
+							},
+							{
+								"order": 2,
+								"exerciseId": "d3a35315-b109-461d-aa65-d9a2932a3b03"
+							},
+							{
+								"order": 3,
+								"exerciseId": "eab5f5b6-f753-4f2a-9e80-ae4d06ea7b67"
+							},
+							{
+								"order": 4,
+								"exerciseId": "894f0f5a-f995-48cf-a0f3-11e203743a4f"
+							},
+							{
+								"order": 5,
+								"exerciseId": "254cd8a8-8c3b-45c9-a823-2fce401b64c5"
+							},
+							{
+								"order": 6,
+								"exerciseId": "e6f3af6e-9c5f-483c-940b-d0560af2a3f0"
+							},
+							{
+								"order": 7,
+								"exerciseId": "3e7b74be-de13-4d43-8be6-317294941d8b"
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"name": "Arnold Split 5 Days",
+			"notes": "This is an excellent program for gaining muscle mass inspired by Arnold Schwarzenegger's classic training principles. It emphasizes compound lifts, isolation work, and balanced muscle development across five focused sessions.",
+			"program": {
+				"days": [
+					{
+						"dayOfWeek": "saturday",
+						"nameOfWeek": "Session 1 (Chest and Back)",
+						"orderIndex": 0,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "142736d1-c302-49df-b456-654f4a0506fc"
+							},
+							{
+								"order": 2,
+								"exerciseId": "72ed4fe3-9177-4720-a950-8f12802e30c9"
+							},
+							{
+								"order": 3,
+								"exerciseId": "4bab2a90-a8f6-4bf4-bd97-fcebf5a8ba23"
+							},
+							{
+								"order": 4,
+								"exerciseId": "bc6465f1-dcac-421f-a04a-5abed9042bea"
+							},
+							{
+								"order": 5,
+								"exerciseId": "c550a9d3-04ab-4fe7-8d0b-bdc145b5fb97"
+							},
+							{
+								"order": 6,
+								"exerciseId": "50764873-93fa-4c12-8719-44f1405bbfa4"
+							},
+							{
+								"order": 7,
+								"exerciseId": "cfabd733-e047-4f53-83b6-f9cfe8cddb35"
+							},
+							{
+								"order": 8,
+								"exerciseId": "a677c081-6f54-40fe-baf2-a3d2ff3a44da"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "sunday",
+						"nameOfWeek": "Session 2 (Hamstrings and Glutes)",
+						"orderIndex": 1,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "3b928ba8-8336-4900-b4a8-9a983590e771"
+							},
+							{
+								"order": 2,
+								"exerciseId": "83026e36-b3df-4c1c-9e9f-7a0c7feb3957"
+							},
+							{
+								"order": 3,
+								"exerciseId": "190a63c0-9cbd-473a-92ec-10c00826a521"
+							},
+							{
+								"order": 4,
+								"exerciseId": "cfd5e307-0e2f-4663-a5fa-4b9205d4e9ec"
+							},
+							{
+								"order": 5,
+								"exerciseId": "c29fdf94-6b6e-49ba-b1ba-bc63e0785268"
+							},
+							{
+								"order": 6,
+								"exerciseId": "1b837579-2224-4ecb-8e16-fbae346989db"
+							},
+							{
+								"order": 7,
+								"exerciseId": "629a84a4-25a1-4b99-aa99-9a4b8856b20c"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "monday",
+						"nameOfWeek": "Session 3 (Shoulders and Arms)",
+						"orderIndex": 2,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "8447a718-0703-437a-882a-9c933445cbaf"
+							},
+							{
+								"order": 2,
+								"exerciseId": "99ca12d4-0826-4bf8-bb14-c0fda740903e"
+							},
+							{
+								"order": 3,
+								"exerciseId": "bdc12bab-61ed-4a62-9e51-cfbaea98aa41"
+							},
+							{
+								"order": 4,
+								"exerciseId": "6ff108ce-6090-493f-a1ed-661c161677b0"
+							},
+							{
+								"order": 5,
+								"exerciseId": "e13c2fb8-e250-4c40-8d17-6bbc6e7e22f4"
+							},
+							{
+								"order": 6,
+								"exerciseId": "51144631-c551-4449-90f4-963e1f159b95"
+							},
+							{
+								"order": 7,
+								"exerciseId": "8af93cce-672b-4f43-a251-5809616007fd"
+							},
+							{
+								"order": 8,
+								"exerciseId": "77f8e6df-e00a-4995-b746-ab03c9f2368b"
+							},
+							{
+								"order": 9,
+								"exerciseId": "da4c4413-1a60-4f10-b583-388dc5ffb505"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "tuesday",
+						"nameOfWeek": "Session 4 (Quadriceps)",
+						"orderIndex": 3,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "4e5cec5c-3775-4936-b28c-70602997cdd9"
+							},
+							{
+								"order": 2,
+								"exerciseId": "cfd5e307-0e2f-4663-a5fa-4b9205d4e9ec"
+							},
+							{
+								"order": 3,
+								"exerciseId": "df225d19-d545-4108-8b18-b4b92e085773"
+							},
+							{
+								"order": 4,
+								"exerciseId": "4e5cec5c-3775-4936-b28c-70602997cdd9"
+							},
+							{
+								"order": 5,
+								"exerciseId": "c29fdf94-6b6e-49ba-b1ba-bc63e0785268"
+							},
+							{
+								"order": 6,
+								"exerciseId": "a26e9926-182f-4908-94d8-6474dd6edfa6"
+							},
+							{
+								"order": 7,
+								"exerciseId": "629a84a4-25a1-4b99-aa99-9a4b8856b20c"
+							}
+						]
+					},
+					{
+						"dayOfWeek": "wednesday",
+						"nameOfWeek": "Session 5 (Cardio and Core)",
+						"orderIndex": 4,
+						"exercises": [
+							{
+								"order": 1,
+								"exerciseId": "3221386b-6265-49eb-9bc0-a9d6a301a0a9"
+							},
+							{
+								"order": 2,
+								"exerciseId": "a26e9926-182f-4908-94d8-6474dd6edfa6"
+							},
+							{
+								"order": 3,
+								"exerciseId": "da4c4413-1a60-4f10-b583-388dc5ffb505"
+							}
+						]
+					}
+				]
+			}
+		}
+	]
+}
