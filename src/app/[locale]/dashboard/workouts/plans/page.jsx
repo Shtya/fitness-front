@@ -17,6 +17,7 @@ import { useTranslations } from 'next-intl';
 import { useAdminClients } from '@/hooks/useHierarchy';
 import { useUser } from '@/hooks/useUser';
 import MultiLangText from '@/components/atoms/MultiLangText';
+import Img from '@/components/atoms/Img';
 
 const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
@@ -476,39 +477,56 @@ const PlanPreview = memo(function PlanPreview({ plan }) {
 	const t = useTranslations('workoutPlans');
 	return (
 		<div className='space-y-6'>
-			<div className='space-y-4'>
+			<div className='space-y-4 '>
 				{(plan?.program?.days || []).map((d, idx) => (
 					<div key={d.id || idx} className=''>
 						<div className='rounded-[6px_6px_0_0] border border-slate-200 bg-white px-4 py-3 border-b  flex items-center justify-between'>
 							<MultiLangText className='font-semibold'>{d.name}</MultiLangText>
 							<MultiLangText className='text-xs text-slate-500'>{String(d.day || d.dayOfWeek || '').toLowerCase()}</MultiLangText>
 						</div>
-						<div className='p-2 bg-gray-50 rounded-[0_0_6px_6px]'>
+						<div className=' p-2 bg-gray-50 rounded-[0_0_6px_6px]'>
 							{(d.exercises || []).length ? (
-								<ol className='space-y-2'>
+								<ol className="grid grid-cols-2 gap-4">
 									{d.exercises.map((ex, i) => (
-										<li key={ex.id || ex.exerciseId || i} className='flex items-center justify-between bg-slate-200/70 rounded-lg px-3 py-2'>
-											<div className='flex items-center gap-2'>
-												<span className='w-6 h-6 text-[11px] grid place-content-center rounded bg-white border border-slate-200 text-slate-700'>{i + 1}</span>
-												<MultiLangText className='font-medium text-slate-800'>{ex.name || ex.exercise?.name || `${t('preview.exerciseLabel')} #${i + 1}`}</MultiLangText>
-												{ex.exercise?.category ? (
-													<span className='ml-2 text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200'>
-														<Tag className='inline w-3 h-3 mr-1' />
-														{ex.exercise.category}
-													</span>
-												) : null}
+										<li
+											key={ex.id || ex.exerciseId || i}
+											className="relative flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm "
+										>
+											{/* Number Badge */}
+											<span className="absolute -top-[2px] rtl:-right-[2px] z-[10] ltr:-left-[2px] flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-500 text-[11px] font-semibold text-white shadow-md">
+												{i + 1}
+											</span>
+
+											{/* Image */}
+											<div className="w-fit">
+												<Img
+													showBlur={false}
+													src={ex.img}
+													alt={ex.name}
+													className="h-18 !w-18 rounded-md object-contain bg-slate-50"
+												/>
 											</div>
-											{ex.targetReps || ex.targetSets || ex.restSeconds || ex.rest || ex.tempo ? (
-												<div className='text-xs text-slate-500'  >
-													{ex.targetSets ? `${ex.targetSets} ${t('picker.sets')} ` : ''} {ex.targetReps ? `· ${ex.targetReps} ${t('picker.reps')}` : ''} {ex.restSeconds ? `· ${ex.restSeconds}s ${t('picker.rest')}` : ex.rest ? `· ${t('picker.rest')} ${ex.rest}s` : ''} {ex.tempo ? `· ${ex.tempo}` : ''}
-												</div>
-											) : null}
+
+											{/* Text Content */}
+											<div className="flex w-full flex-col">
+												<MultiLangText className="text-base font-semibold text-slate-800 leading-tight">
+													{ex.name}
+												</MultiLangText>
+
+												{(ex.targetSets || ex.targetReps) && (
+													<p className="text-sm text-slate-500 font-en">
+														{ex.targetSets ? `${ex.targetSets} sets` : ""}{" "}
+														{ex.targetReps ? `x ${ex.targetReps} reps` : ""}
+													</p>
+												)}
+											</div>
 										</li>
 									))}
 								</ol>
 							) : (
-								<div className='text-xs text-slate-400'>{t('preview.noExercisesYet')}</div>
+								<div className="text-xs text-slate-400">{t("preview.noExercisesYet")}</div>
 							)}
+
 						</div>
 					</div>
 				))}
