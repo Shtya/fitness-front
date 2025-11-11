@@ -1,13 +1,12 @@
 /* 
+dashboard/nutrition
+	- تخصيص أيام بعينها (اختياري  have a problem cannot add custom days
+	
+intake/forms
+	- bug when click on add new template make load for the page
+
 bugs
 	- when the select down i cannot show the all options in the dropdown like the ( profile )
-
-	* users ( super admin )
-		- get all meals plans
-		- get all workouts
-		- get all workouts plans
-		- get all coaches 
-		- get all clients
 
 
 	* check form the response of the forms 
@@ -19,13 +18,7 @@ bugs
 		- edit the meal plan action doens't work correctly
 
 
-
-	* user
-		- when the coach login show only his trainer only 
-		- User Details View page. 
-		- stats of the users take a long time
-	
-
+ 
 		* my/workouts ( client )
 			- remove the comment on the loading 
 			- work on upload the video 
@@ -47,7 +40,6 @@ bugs
 			- get the data the coach enter it when create teh account for the client and put it in his profile 
 			- can show his plans and exercise and choose form global things in teh system 
 
- 		* grocery-list 
 
 		* Report 
 			- Weekly/Daily notes from coach.

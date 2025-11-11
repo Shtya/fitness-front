@@ -167,7 +167,11 @@
 	},
 	"nav": {
 		"brand": {
-			"coachPortal": "Coach Portal"
+			"portalTitle": "Dashboard Access",
+			"superAdminPortal": "Super Admin Portal",
+			"adminPortal": "Admin Portal",
+			"coachPortal": "Coach Portal",
+			"clientPortal": "My Space"
 		},
 		"sections": {
 			"mySpace": "My Space",
@@ -184,7 +188,7 @@
 			"progress": "Progress",
 			"myNutrition": "My Nutrition",
 			"myReminders": "My Reminders",
-			"weeklyStrength": "Weekly Strength Report",
+			"weeklyStrength": "Weekly Report",
 			"calorieCalculator": "Calorie Calculator",
 			"profile": "Profile",
 			"nutrition": "Nutrition",
@@ -1158,6 +1162,7 @@
 			"cancel": "Cancel",
 			"close": "Close",
 			"assign": "Assign",
+			"view": "View & Share Plan",
 			"preview": "Preview",
 			"edit": "Edit",
 			"delete": "Delete",
@@ -2506,5 +2511,34 @@
 		"selected": "Selected",
 		"done": "Done",
 		"invalid": "Invalid time. Use 24-hour format (HH:MM)."
+	},
+	"PublicPlan": {
+		"plan": "Plan",
+		"publicShare": "Public share view",
+		"createdAt": "Created at",
+		"days": "Program Days",
+		"exercises": "exercises",
+		"sets": "Sets",
+		"reps": "Reps",
+		"rest": "Rest",
+		"tempo": "Tempo",
+		"watchVideo": "Watch video",
+		"noVideo": "No video",
+		"footerNote": "This page is generated for public viewing.",
+		"loadFailed": "Load failed",
+		"cantLoad": "Could not load data.",
+		"retry": "Retry",
+		"noDaysTitle": "No days in this plan",
+		"noDaysSubtitle": "Add days and exercises to see them here.",
+		"share": "Share",
+		"copy": "Copy",
+		"print": "Print",
+		"copied": "Link copied ✅",
+		"copyFail": "Copy failed — please copy manually.",
+		"index": "Index",
+		"expandAll": "Expand all",
+		"collapseAll": "Collapse all",
+		"open": "Open",
+		"close": "Close"
 	}
 }

@@ -14,76 +14,77 @@ const DhikrLoading = dynamic(() => import('./DhikrLoading'), { ssr: false });
 const LS_KEY = 'sidebar:collapsed';
 
 export default function Layout({ children }) {
-  const pathname = usePathname();
-  const isAuthRoute = pathname.startsWith('/auth') || pathname.startsWith('/form') || pathname.startsWith('/thank-you') || pathname.startsWith('/site') || pathname === '/';
+	const pathname = usePathname();
 
-  // Mobile drawer open/close
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+	const isAuthRoute = pathname.startsWith('/workouts/plans') || pathname.startsWith('/auth') || pathname.startsWith('/form') || pathname.startsWith('/thank-you') || pathname.startsWith('/site') || pathname === '/';
 
-  // Desktop collapsed (persisted)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+	// Mobile drawer open/close
+	const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const [loading, setLoading] = useState(true);
+	// Desktop collapsed (persisted)
+	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Close mobile drawer when route changes
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [pathname]);
+	const [loading, setLoading] = useState(true);
 
-  // Prevent body scroll when mobile drawer open
-  useEffect(() => {
-    if (sidebarOpen) document.body.style.overflow = 'hidden';
-    else document.body.style.overflow = '';
-    return () => (document.body.style.overflow = '');
-  }, [sidebarOpen]);
+	// Close mobile drawer when route changes
+	useEffect(() => {
+		setSidebarOpen(false);
+	}, [pathname]);
 
-  // Fake loading animation (kept from your code)
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 2500);
-    return () => clearTimeout(timer);
-  }, [pathname]);
+	// Prevent body scroll when mobile drawer open
+	useEffect(() => {
+		if (sidebarOpen) document.body.style.overflow = 'hidden';
+		else document.body.style.overflow = '';
+		return () => (document.body.style.overflow = '');
+	}, [sidebarOpen]);
 
-  // Load collapsed state from localStorage
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (raw === '1') setSidebarCollapsed(true);
-    } catch {}
-  }, []);
+	// Fake loading animation (kept from your code)
+	useEffect(() => {
+		const timer = setTimeout(() => setLoading(false), 2500);
+		return () => clearTimeout(timer);
+	}, [pathname]);
 
-  // Persist collapsed state
-  useEffect(() => {
-    try {
-      localStorage.setItem(LS_KEY, sidebarCollapsed ? '1' : '0');
-    } catch {}
-  }, [sidebarCollapsed]);
+	// Load collapsed state from localStorage
+	useEffect(() => {
+		try {
+			const raw = localStorage.getItem(LS_KEY);
+			if (raw === '1') setSidebarCollapsed(true);
+		} catch { }
+	}, []);
 
-  // if (loading) {
-  //   return <DhikrLoading />;
-  // }
+	// Persist collapsed state
+	useEffect(() => {
+		try {
+			localStorage.setItem(LS_KEY, sidebarCollapsed ? '1' : '0');
+		} catch { }
+	}, [sidebarCollapsed]);
 
-	
-  return (
-    <GlobalProvider>
-      <div className='bg-gradient-to-b from-indigo-50 via-white to-white text-slate-800'>
-        <div className='container !px-0 flex min-h-dvh'>
-          {!isAuthRoute && <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />}
+	// if (loading) {
+	//   return <DhikrLoading />;
+	// }
 
-          {/* Main area */}
-          <div className='relative flex-1 min-w-0'>
-            {!isAuthRoute && <Header onMenu={() => setSidebarOpen(true)} />}
 
-            <AnimatePresence mode='wait'>
-              <motion.main key={pathname} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}>
-                <div className={`${!isAuthRoute && 'bg-[#f7f9fc] h-[calc(100vh-65px)] overflow-auto max-md:p-3 p-4 overflow-x-hidden'}`}>{children}</div>
-              </motion.main>
-            </AnimatePresence>
-          </div>
-        </div>
-      </div>
-      {/* <PWAInstallPrompt /> */}
-      <ConfigAos />
-      <Toaster position='top-center' />
-    </GlobalProvider>
-  );
+	return (
+		<GlobalProvider>
+			<div className='bg-gradient-to-b from-indigo-50 via-white to-white text-slate-800'>
+				<div className='container !px-0 flex min-h-dvh'>
+					{!isAuthRoute && <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />}
+
+					{/* Main area */}
+					<div className='relative flex-1 min-w-0'>
+						{!isAuthRoute && <Header onMenu={() => setSidebarOpen(true)} />}
+
+						<AnimatePresence mode='wait'>
+							<motion.main key={pathname} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}>
+								<div className={`${!isAuthRoute && 'bg-[#f7f9fc] h-[calc(100vh-65px)] overflow-auto max-md:p-3 p-4 overflow-x-hidden'}`}>{children}</div>
+							</motion.main>
+						</AnimatePresence>
+					</div>
+				</div>
+			</div>
+			{/* <PWAInstallPrompt /> */}
+			<ConfigAos />
+			<Toaster position='top-center' />
+		</GlobalProvider>
+	);
 }

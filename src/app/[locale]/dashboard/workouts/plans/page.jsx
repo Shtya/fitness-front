@@ -18,6 +18,7 @@ import { useAdminClients } from '@/hooks/useHierarchy';
 import { useUser } from '@/hooks/useUser';
 import MultiLangText from '@/components/atoms/MultiLangText';
 import Img from '@/components/atoms/Img';
+import { Link } from '@/i18n/navigation';
 
 const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
@@ -441,31 +442,69 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 						<div className='min-w-0 flex-1'>
 							<div className='flex flex-wrap items-center gap-2'>
 								<MultiLangText className='truncate text-base font-semibold text-slate-900'>{p.name}</MultiLangText>
-								<span className={['inline-flex items-center gap-1 rounded-md px-2 py-0.5   ring-1 ring-inset', active ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-slate-100 text-slate-600 ring-slate-200'].join(' ')}>{active ? t('plans.list.active') : t('plans.list.inactive')}</span>
-								<span className='rounded-lg border border-slate-200 bg-white px-2 py-0.5'>{t('plans.list.dayCountLabel', { count: dayCount })}</span>
-							</div>
+								<span className={['inline-flex items-center gap-1 rounded-md px-2 py-0.5   ring-1 ring-inset', active ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-slate-100 text-slate-600 ring-slate-200'].join(' ')}>{t('plans.list.dayCountLabel', { count: dayCount })}</span>
+ 							</div>
 						</div>
 
 						{/* actions */}
-						<div className='ml-auto flex shrink-0 items-center gap-1'>
+						<div className="ml-auto flex shrink-0 items-center gap-1">
 							{/* Assign */}
-							{user?.role == "admin" && <button type='button' onClick={() => onAssign?.(p)} className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800  transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 active:scale-[.98]' title={t('actions.assign')}>
-								<UsersIcon className='h-4 w-4' />
-								{t('actions.assign')}
-							</button>}
+							{user?.role === "admin" && (
+								<button
+									type="button"
+									onClick={() => onAssign?.(p)}
+									className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 active:scale-[.98]"
+									title={t("actions.assign")}
+								>
+									<UsersIcon className="h-4 w-4" />
+									{t("actions.assign")}
+								</button>
+							)}
 
-							<div className='flex items-center gap-1 '>
-								<button type='button' title={t('actions.preview')} onClick={() => onPreview?.(p)} className='inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30'>
-									<Eye className='h-4 w-4' />
+							<div className="flex items-center gap-2">
+								{/* Public View */}
+								<Link
+									href={`/workouts/plans/${p.id}`}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-600 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/30"
+								>
+									<Eye className="h-4 w-4" />
+									<span>{t("actions.view")}</span>
+								</Link>
+
+								{/* Preview */}
+								<button
+									type="button"
+									title={t("actions.preview")}
+									onClick={() => onPreview?.(p)}
+									className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30"
+								>
+									<Eye className="h-4 w-4" />
 								</button>
-								<button type='button' title={t('actions.edit')} onClick={() => onEdit?.(p)} className='inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-indigo-700 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400/30'>
-									<PencilLine className='h-4 w-4' />
+
+								{/* Edit */}
+								<button
+									type="button"
+									title={t("actions.edit")}
+									onClick={() => onEdit?.(p)}
+									className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-indigo-700 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400/30"
+								>
+									<PencilLine className="h-4 w-4" />
 								</button>
-								<button type='button' title={t('actions.delete')} onClick={() => onDelete?.(p.id)} className='inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/30'>
-									<Trash2 className='h-4 w-4' />
+
+								{/* Delete */}
+								<button
+									type="button"
+									title={t("actions.delete")}
+									onClick={() => onDelete?.(p.id)}
+									className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/30"
+								>
+									<Trash2 className="h-4 w-4" />
 								</button>
 							</div>
 						</div>
+
 					</div>
 				);
 			})}

@@ -167,7 +167,11 @@
 	},
 	"nav": {
 		"brand": {
-			"coachPortal": "بوابة المدرب"
+			"portalTitle": "منطقة التحكم",
+			"superAdminPortal": "بوابة المدير العام",
+			"adminPortal": "بوابة المشرف",
+			"coachPortal": "بوابة المدرب",
+			"clientPortal": "مساحتي الشخصية"
 		},
 		"sections": {
 			"mySpace": "مساحتي",
@@ -184,7 +188,7 @@
 			"progress": "التقدم",
 			"myNutrition": "تغذيتي",
 			"myReminders": "تذكيراتي",
-			"weeklyStrength": "تقرير القوة الأسبوعي",
+			"weeklyStrength": "التقرير الأسبوعي",
 			"calorieCalculator": "حاسبة السعرات",
 			"profile": "الملف الشخصي",
 			"nutrition": "التغذية",
@@ -1158,6 +1162,7 @@
 			"cancel": "إلغاء",
 			"close": "إغلاق",
 			"assign": "تعيين",
+			"view": "عرض ومشاركة الخطة",
 			"preview": "معاينة",
 			"edit": "تعديل",
 			"delete": "حذف",
@@ -2506,5 +2511,34 @@
 		"selected": "المحدد",
 		"done": "تم",
 		"invalid": "الوقت غير صالح. استخدم الصيغة 24 ساعة (HH:MM)."
+	},
+	"PublicPlan": {
+		"index": "الفهرس",
+		"expandAll": "توسيع الكل",
+		"collapseAll": "طي الكل",
+		"open": "فتح",
+		"close": "إغلاق",
+		"plan": "الخطة",
+		"publicShare": "عرض عام قابل للمشاركة",
+		"createdAt": "تاريخ الإنشاء",
+		"days": "أيام البرنامج",
+		"exercises": "تمارين",
+		"sets": "مجموعات",
+		"reps": "تكرارات",
+		"rest": "راحة",
+		"tempo": "الإيقاع",
+		"watchVideo": "مشاهدة الفيديو",
+		"noVideo": "لا يوجد فيديو",
+		"footerNote": "تم إنشاء هذه الصفحة للعرض العام.",
+		"loadFailed": "فشل التحميل",
+		"cantLoad": "تعذّر تحميل البيانات.",
+		"retry": "إعادة المحاولة",
+		"noDaysTitle": "لا توجد أيام في هذه الخطة",
+		"noDaysSubtitle": "أضف أيامًا وتمارين لعرضها هنا.",
+		"share": "مشاركة",
+		"copy": "نسخ",
+		"print": "طباعة",
+		"copied": "تم نسخ الرابط ✅",
+		"copyFail": "تعذّر النسخ — انسخه يدويًا."
 	}
 }

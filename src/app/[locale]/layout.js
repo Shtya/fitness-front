@@ -104,7 +104,7 @@ export default async function RootLayout({ children, params }) {
     <html lang={locale} dir={locale == 'en' ? 'ltr' : 'rtl'} suppressHydrationWarning>
       <body className={`bg-[#fff] scroll ${arabicFont.variable} ${openSans.variable}`}>
         <NextIntlClientProvider locale={locale}>
-          <RouteGuard NAV={NAV} unauthRedirect='/auth' noAccessRedirect='/' publicPrefixes={['/auth']}>
+          <RouteGuard NAV={NAV} unauthRedirect='/auth' noAccessRedirect='/' publicPrefixes={['/auth', '/public', '/workouts/plans']}>
             <Layout>
               {children}
               <div className='md:hidden'>

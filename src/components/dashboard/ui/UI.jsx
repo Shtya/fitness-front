@@ -34,9 +34,9 @@ export function StatCard({ cnParent, cn, icon: Icon, title, value }) {
         <div className='grid place-items-center rounded-lg bg-white/15 p-2'>
           <Icon className='h-5 w-5' />
         </div>
-        <div className={`flex items-center gap-2 flex-1 justify-between ${cn} `}>
-          <p className='text-sm text-white/85 text-nowrap truncate  '>{title}</p>
-          <p className=' text-lg font-bold tracking-tight'>{value}</p>
+        <div className={`flex  items-center gap-2 flex-1 justify-between ${cn} `}>
+          <p className='text-sm text-white/85  '>{title}</p>
+          <p className=' text-lg font-bold tracking-tight flex-none'>{value}</p>
         </div>
       </div>
     </div>

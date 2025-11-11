@@ -135,7 +135,9 @@ export default function ReportsUnifiedPage() {
 	const normalizedFilters = useMemo(() => {
 		const f = {};
 		if (!user?.id) return f;
-		f.adminId = user.id;
+
+		if(user.role == 'admin') f.adminId = user.id;
+		else  f.coachId = user.id;
 
 		if (tab === 'clients' && selectedClientId) {
 			f.userId = selectedClientId;
@@ -317,7 +319,7 @@ export default function ReportsUnifiedPage() {
 				title={t('reports.title')}
 				desc={t('reports.subtitle')}
 				hiddenStats={false}
-				someThing={<TabsPill
+				someThing={ user.role == "admin" && <TabsPill
 					tabs={tabs}
 					active={tab}
 					sliceInPhone={false}

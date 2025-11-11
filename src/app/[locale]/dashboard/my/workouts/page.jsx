@@ -940,9 +940,9 @@ export default function MyWorkoutsPage() {
 										<div className='relative w-full rounded-lg overflow-hidden '>
 											<div className='max-md:h-[250px] md:aspect-[16/9] '>
 												{currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? (
-													<InlineVideo key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} />
+													<InlineVideo  key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} />
 												) : (
-													<Img key={currentExercise?.id + '-image'} src={currentExercise?.img} alt={currentExercise?.name} className='w-full h-full object-contain ' loading='lazy' />
+													<Img showBlur={false} key={currentExercise?.id + '-image'} src={currentExercise?.img} alt={currentExercise?.name} className='w-full h-full object-contain ' loading='lazy' />
 												)}
 											</div>
 

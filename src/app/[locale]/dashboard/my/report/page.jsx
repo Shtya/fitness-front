@@ -585,7 +585,7 @@ export default function WeeklyReportPage() {
 
   /* ---------------------------------- UI ---------------------------------- */
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className='mx-auto max-w-3xl px-3 sm:px-5 py-4 sm:py-6 space-y-4 sm:space-y-5'>
+    <form onSubmit={handleSubmit(onSubmit)} className=' relative mx-auto max-w-3xl px-3 sm:px-5 py-4 sm:py-6 space-y-4 sm:space-y-5'>
       {/* Header */}
       <div className='rounded-lg border border-slate-200 bg-white/90 backdrop-blur p-4 sm:p-6 shadow-sm'>
         <h1 className='text-xl sm:text-2xl font-bold text-slate-900'>{t('weekly.title')}</h1>

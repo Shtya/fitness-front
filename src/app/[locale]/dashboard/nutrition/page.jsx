@@ -26,17 +26,13 @@ import { Modal, StatCard } from '@/components/dashboard/ui/UI';
 import { Notification } from '@/config/Notification';
 import Select from '@/components/atoms/Select';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
-import { useValues } from '@/context/GlobalContext';
 import { TimeField } from '@/components/atoms/InputTime';
-import { Input } from '@/components/atoms/Input2';
+import Input  from '@/components/atoms/Input';
 import { useAdminClients } from '@/hooks/useHierarchy';
 import MultiLangText from '@/components/atoms/MultiLangText';
 
 const hhmmRegex = /^$|^([01]\d|2[0-3]):([0-5]\d)$/; // "" or HH:MM
 
-/* =========================
-	 Button (uses i18n key in "name")
-	 ========================= */
 export function CButton({
 	name, icon, className = '', type = 'button', onClick, disabled = false, loading = false,
 	variant = 'primary', size = 'md', title
@@ -123,9 +119,6 @@ function CheckBox({ id = 'custom', label, initialChecked = false, onChange = () 
 	);
 }
 
-/* =========================
-	 Schemas via builder(t)
-	 ========================= */
 function buildSchemas(t) {
 	const mealItemSchema = yup.object().shape({
 		name: yup.string().trim().required(t('validation.required')),
@@ -170,9 +163,6 @@ function buildSchemas(t) {
 
 const DEFAULT_NOTES = ''.split('\n').filter(Boolean);
 
-/* =========================
-	 Main Page
-	 ========================= */
 export default function NutritionManagementPage() {
 	const t = useTranslations('nutrition');
 
@@ -234,7 +224,7 @@ export default function NutritionManagementPage() {
 	const fetchPlans = useCallback(async () => {
 		setListLoading(true);
 		try {
-			const { data } = await api.get('/nutrition/meal-plans', {
+			const { data } = await api.get( user?.role == "admin" ?'/nutrition/meal-plans' : `/nutrition/meal-plans?user_id=${user?.adminId}`, {
 				params: {
 					search: searchText || undefined,
 					sortBy,
@@ -316,39 +306,22 @@ export default function NutritionManagementPage() {
 		<div className='space-y-5 sm:space-y-6'>
 			<GradientStatsHeader
 				onClick={() => setAddPlanOpen(true)}
-				btnName={t('btn.new_plan')}
+				btnName={user?.role == "admin" && t('btn.new_plan')}
 				title={t('ui.title')}
 				desc={t('ui.subtitle')}
 				loadingStats={loadingStats}
 			>
-				<StatCard icon={Target} title={t('stats.global_plans')} value={stats?.totals?.globalPlansCount} />
-				<StatCard icon={TrendingUp} title={t('stats.my_plans')} value={stats?.totals?.myPlansCount} />
+				{user?.role == "admin" && <>
+					<StatCard icon={Target} title={t('stats.global_plans')} value={stats?.totals?.globalPlansCount} />
+					<StatCard icon={TrendingUp} title={t('stats.my_plans')} value={stats?.totals?.myPlansCount} /></>}
 			</GradientStatsHeader>
 
 			<div className='relative'>
 				<div className='flex items-center justify-between gap-2 flex-wrap'>
-					{/* <div className='relative flex-1 max-w-[260px]'>
-						<Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
-						<input
-							value={searchText}
-							onChange={e => setSearchText(e.target.value)}
-							placeholder={t('search.placeholder')}
-							className={['h-11 w-full pl-10 pr-10 rounded-lg', 'border border-slate-200 bg-white/90 text-slate-900', 'shadow-sm hover:shadow transition', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', ].join(' ')} />
-						{!!searchText && (
-							<button
-								type='button'
-								onClick={() => setSearchText('')}
-								className='absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100'
-								aria-label={t('search.clear')}
-								title={t('search.clear')}
-							>
-								<X className='w-4 h-4' />
-							</button>
-						)}
-					</div> */}
+
 					<div className='relative flex-1 max-w-[240px] sm:min-w-[260px]'>
 						<Search className='absolute rtl:right-3 ltr:left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
-						<input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder={t('search.placeholder')}className={['h-11 w-full px-8 rounded-lg', 'border border-slate-200 bg-white/90 text-slate-900', 'shadow-sm hover:shadow transition', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')} aria-label={t('placeholders.search')} />
+						<input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder={t('search.placeholder')} className={['h-11 w-full px-8 rounded-lg', 'border border-slate-200 bg-white/90 text-slate-900', 'shadow-sm hover:shadow transition', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')} aria-label={t('placeholders.search')} />
 						{!!searchText && (
 							<button type='button' onClick={() => setSearchText('')} className='absolute rtl:left-2 ltr:right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100' aria-label={t('actions.clear')} title={t('actions.clear')}>
 								<X className='w-4 h-4' />
@@ -630,7 +603,7 @@ export function MealPlanForm({ initialPlan, onSubmitPayload, submitLabel = 'btn.
 					control={control}
 					render={({ field }) => (
 						<Input
-							label={t('form.plan_name')}
+							placeholder={t('form.plan_name')}
 							name='name'
 							value={field.value}
 							onChange={field.onChange}
@@ -644,7 +617,7 @@ export function MealPlanForm({ initialPlan, onSubmitPayload, submitLabel = 'btn.
 					control={control}
 					render={({ field }) => (
 						<Input
-							label={t('form.description')}
+							placeholder={t('form.description')}
 							name='description'
 							value={field.value}
 							onChange={field.onChange}
@@ -706,7 +679,7 @@ export function MealPlanForm({ initialPlan, onSubmitPayload, submitLabel = 'btn.
 											render={({ field }) => (
 												<Input
 													className='max-w-[300px]'
-													label={t('form.meal_name')}
+													placeholder={t('form.meal_name')}
 													value={field.value}
 													onChange={field.onChange}
 													required
@@ -720,7 +693,7 @@ export function MealPlanForm({ initialPlan, onSubmitPayload, submitLabel = 'btn.
 											render={({ field }) => (
 												<TimeField
 													className='w-[160px]'
-													label={t('form.hhmm')}
+													showLabel={false}
 													value={field.value || ''}
 													onChange={field.onChange}
 													error={getErr(errors, `baseMeals.${mealIndex}.time`)}
@@ -752,7 +725,7 @@ export function MealPlanForm({ initialPlan, onSubmitPayload, submitLabel = 'btn.
 				render={({ field }) => (
 					<CheckBox
 						id='customizeDays'
-						label={t('form.customize_days')}
+						placeholder={t('form.customize_days')}
 						initialChecked={!!field.value}
 						onChange={field.onChange}
 					/>
@@ -849,7 +822,7 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 	return (
 		<div className='mt-3 space-y-3'>
 			{/* -------- Items -------- */}
-			<div className='p-4 space-y-4'>
+			<div className='p-4 space-y-2'>
 				{itemFields.map((f, idx) => (
 					<DraggableCard key={f.id || idx} index={idx} onMove={(from, to) => moveItem(from, to)}>
 						<div className='flex flex-col gap-2 rounded-lg'>
@@ -862,7 +835,7 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 											control={control}
 											render={({ field }) => (
 												<Input
-													label={t('form.item_name')}
+													placeholder={t('form.item_name')}
 													value={field.value}
 													onChange={field.onChange}
 													required
@@ -875,7 +848,7 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 											control={control}
 											render={({ field }) => (
 												<Input
-													label={t('form.qty_g')}
+													placeholder={t('form.qty_g')}
 													type='number'
 													value={field.value == null ? '' : field.value}
 													onChange={v => field.onChange(asNumber(v))}
@@ -889,7 +862,7 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 											control={control}
 											render={({ field }) => (
 												<Input
-													label={t('form.calories')}
+													placeholder={t('form.calories')}
 													type='number'
 													value={field.value == 0 ? null : field.value}
 													onChange={v => field.onChange(asNumber(v))}
@@ -909,7 +882,7 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 			</div>
 
 			{/* -------- Supplements (timing REMOVED) -------- */}
-			<div className='space-y-4'>
+			<div className='space-y-2'>
 				{supFields.map((f, idx) => (
 					<DraggableCard key={f.id || idx} index={idx} onMove={(from, to) => moveSup(from, to)}>
 						<div className='flex items-center gap-2 justify-between rounded-lg px-4'>
@@ -921,7 +894,7 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 										control={control}
 										render={({ field }) => (
 											<Input
-												label={t('form.supplement_name')}
+												placeholder={t('form.supplement_name')}
 												value={field.value}
 												onChange={field.onChange}
 												error={getErr(errors, `${basePath}.supplements.${idx}.name`)}
@@ -933,7 +906,7 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 										control={control}
 										render={({ field }) => (
 											<TimeField
-												label={t('form.time_hhmm')}
+												showLabel={false}
 												value={field.value || ''}
 												onChange={field.onChange}
 												error={getErr(errors, `${basePath}.supplements.${idx}.time`)}
@@ -945,7 +918,7 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 										control={control}
 										render={({ field }) => (
 											<Input
-												label={t('form.best_with')}
+												placeholder={t('form.best_with')}
 												value={field.value || ''}
 												onChange={field.onChange}
 											/>
@@ -1081,7 +1054,7 @@ function DayOverrides({ control, errors }) {
 												control={control}
 												render={({ field }) => (
 													<Input
-														label={t('form.meal_name')}
+														placeholder={t('form.meal_name')}
 														value={field.value}
 														onChange={field.onChange}
 														required
@@ -1094,7 +1067,7 @@ function DayOverrides({ control, errors }) {
 												control={control}
 												render={({ field }) => (
 													<TimeField
-														label={t('form.hhmm')}
+														showLabel={false}
 														value={field.value || ''}
 														onChange={field.onChange}
 														error={getErr(errors, `${basePath}.${mi}.time`)}
@@ -1299,6 +1272,7 @@ function AssignPlanForm({ plan, clients, onAssign }) {
 
 export const PlanListView = memo(function PlanListView({ loading, plans = [], onPreview, onEdit, onDelete, onAssign }) {
 	const t = useTranslations('nutrition');
+	const user = useUser()
 
 	if (loading) {
 		return (
@@ -1351,7 +1325,7 @@ export const PlanListView = memo(function PlanListView({ loading, plans = [], on
 						</div>
 
 						<div className='ml-auto flex shrink-0 items-center gap-1'>
-							<div className='flex items-center gap-2'>
+							{user?.role == "admin" && <div className='flex items-center gap-2'>
 								<CButton
 									type='button'
 									onClick={() => onAssign?.(p)}
@@ -1361,7 +1335,7 @@ export const PlanListView = memo(function PlanListView({ loading, plans = [], on
 									variant='outline'
 									size='sm'
 								/>
-							</div>
+							</div>}
 
 							<div className='flex items-center gap-1'>
 								<IconButton title={t('btn.preview')} onClick={() => onPreview?.(p)} kind='neutral'>
@@ -1395,7 +1369,7 @@ function ConfirmDialog({ loading, open, onClose, title, message, confirmText, on
 				<p className='text-slate-600 mb-4'>{message}</p>
 				<div className='flex items-center justify-end gap-2'>
 					<CButton onClick={onClose} disabled={loading} name='btn.cancel' variant='outline' />
-					<CButton onClick={onConfirm} disabled={loading} name={loading ? 'btn.deleting' : undefined} variant='danger' />
+					<CButton onClick={onConfirm} disabled={loading} name={loading ? 'btn.deleting' : "btn.delete"} variant='danger' />
 				</div>
 			</div>
 		</div>

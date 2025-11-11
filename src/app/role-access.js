@@ -111,7 +111,6 @@ function CheckingAccessSkeleton() {
         aria-hidden
         className="absolute -z-10 h-[320px] w-[320px] rounded-full bg-gradient-to-tr from-sky-400/20 via-emerald-400/15 to-indigo-400/25 blur-3xl"
       />
-
       {/* Spinner */}
       <div className="relative h-16 w-16">
         <div
@@ -123,12 +122,19 @@ function CheckingAccessSkeleton() {
               'radial-gradient(farthest-side, transparent calc(100% - 6px), black 0)',
             mask: 'radial-gradient(farthest-side, transparent calc(100% - 6px), black 0)',
           }}
-        ></div>
+        />
         <div className="absolute inset-[6px] rounded-full bg-white/90 backdrop-blur-sm" />
       </div>
- 
     </div>
   );
+}
+
+/* ---------------- helpers for public routes (supports string or RegExp) ---------------- */
+function matchesPublicPrefix(pathname, pref) {
+  const p = normalize(pathname || '/');
+  if (pref instanceof RegExp) return pref.test(p);
+  const n = normalize(pref || '/');
+  return p === n || p.startsWith(n + '/');
 }
 
 /* ---------------- RouteGuard ---------------- */
@@ -136,8 +142,8 @@ export function RouteGuard({
   NAV,
   unauthRedirect = '/auth',
   noAccessRedirect = '/',
-  loading = <CheckingAccessSkeleton />,
-  publicPrefixes = [], // e.g., ['/auth', '/public']
+  loading = <CheckingAccessSkeleton />, 
+  publicPrefixes = [],
   children,
 }) {
   const router = useRouter();
@@ -148,15 +154,21 @@ export function RouteGuard({
   const effectivePublic = useMemo(() => {
     const base = Array.isArray(publicPrefixes) ? publicPrefixes.slice() : [];
     if (!base.includes(unauthRedirect)) base.push(unauthRedirect);
+
+    // 👉 Ensure workouts plan pages are public by default:
+    //    '/workouts/plans/*' and localized '/ar/workouts/plans/*' '/en/workouts/plans/*'
+    const defaultPublicPlansRegex = /^\/(?:ar|en)?\/?workouts\/plans(?:\/|$)/;
+    const alreadyHasPlans =
+      base.some(x =>
+        x instanceof RegExp ? String(x) === String(defaultPublicPlansRegex) : x === '/workouts/plans',
+      );
+    if (!alreadyHasPlans) base.push(defaultPublicPlansRegex);
+
     return base;
   }, [publicPrefixes, unauthRedirect]);
 
   const isPublic = useMemo(() => {
-    const p = normalize(pathname || '/');
-    return effectivePublic.some(pref => {
-      const n = normalize(pref);
-      return p === n || p.startsWith(n + '/');
-    });
+    return effectivePublic.some(pref => matchesPublicPrefix(pathname, pref));
   }, [pathname, effectivePublic]);
 
   const allowed = useMemo(() => allowedPathsFromNAV(NAV, role), [NAV, role]);

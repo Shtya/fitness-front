@@ -227,14 +227,14 @@ export default function Select({
 									<div className='relative'>
 										<Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400' />
 										<input
-											className='w-full h-9 pl-10 pr-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white'
+											className='w-full h-9 pl-10 pr-3 py-2 rounded-lg border border-slate-200 text-base outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white'
 											placeholder={t("common.search")}
 											value={query}
 											onChange={e => {
 												setQuery(e.target.value);
 												setActiveIndex(0);
 											}}
-											autoFocus
+											 
 										/>
 									</div>
 								</div>
@@ -246,7 +246,7 @@ export default function Select({
 									<div className='flex gap-2'>
 										<input
 											ref={createInputRef}
-											className='flex-1 h-9 px-3 rounded-lg border border-slate-200 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100'
+											className='flex-1 h-9 px-3 rounded-lg border border-slate-200 text-base outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100'
 											placeholder={createHint}
 											value={createText}
 											onChange={e => setCreateText(e.target.value)}

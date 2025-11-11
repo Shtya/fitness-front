@@ -228,7 +228,7 @@ export function TimeField({
 						width: placement.width,
 						zIndex: 9999,
 					}}
-					className="overflow-hidden rounded-2xl shadow-2xl ring-1 ring-slate-200/70"
+					className="overflow-hidden rounded-lg shadow-2xl ring-1 ring-slate-200/70"
 				>
 					<div className="bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 px-4 py-3 text-white">
 						<div className="flex items-center justify-between">
@@ -340,7 +340,7 @@ export function TimeField({
 					onClick={() => setOpen(true)}
 					placeholder={t("timeField.placeholder")}
 					className={[
-						"w-full rounded-xl border bg-white/95 px-3.5 py-2.5 pe-10 text-sm shadow-sm",
+						"w-full rounded-lg border bg-white/95 px-3.5 py-2.5 pe-10 text-sm shadow-sm",
 						"border-slate-200 placeholder:text-slate-400",
 						"focus:outline-none focus:ring-4 focus:ring-indigo-100",
 						!isValid || error ? "border-rose-300 focus:ring-rose-100" : "",

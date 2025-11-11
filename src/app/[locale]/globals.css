@@ -7,6 +7,12 @@
 
 @import 'tailwindcss';
 
+.seg-item {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] sm:text-xs font-medium
+         text-slate-700 hover:bg-slate-50 active:bg-slate-100
+         focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/20;
+}
+
 .flatpickr-day.endRange{
 	@apply bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 ;
 }
