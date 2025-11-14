@@ -1,15 +1,17 @@
 'use client';
 import { Toaster } from 'react-hot-toast';
 import { GlobalProvider } from '../../context/GlobalContext';
-import Header from './Header';
+// import Header from './Header';
 import { usePathname } from '../../i18n/navigation';
-import Sidebar from './Sidebar';
+// import Sidebar from './Sidebar';
 import ConfigAos from '@/config/Aos';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import dynamic from 'next/dynamic';
 const DhikrLoading = dynamic(() => import('./DhikrLoading'), { ssr: false });
+const Sidebar = dynamic(() => import('./Sidebar'), { ssr: false });
+const Header = dynamic(() => import('./Header'), { ssr: false });
 
 const LS_KEY = 'sidebar:collapsed';
 

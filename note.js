@@ -1,9 +1,14 @@
-/* 
+/*
+	- make the dashboard show only in web 
+
+/dashboard/users
+	- stats of ( total users , action account ) not correct 
 dashboard/nutrition
 	- تخصيص أيام بعينها (اختياري  have a problem cannot add custom days
 	
 intake/forms
 	- bug when click on add new template make load for the page
+
 
 bugs
 	- when the select down i cannot show the all options in the dropdown like the ( profile )

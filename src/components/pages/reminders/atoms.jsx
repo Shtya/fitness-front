@@ -446,63 +446,144 @@ export function applyOffset(date, direction, minutes) {
 }
 
 // -------------------------------
-// Ticker hook
+// WebSocket hook for real-time reminders
 // -------------------------------
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import io from 'socket.io-client';
 
-export function useReminderTicker(reminders, setReminders, settings, onDue) {
+export function useReminderWebSocket(onDue) {
+  const socketRef = useRef(null);
+
   useEffect(() => {
-    const id = setInterval(() => {
-      const now = new Date();
-      reminders.forEach(async (r) => {
-        if (!r.active || r.isCompleted) return;
-        const s = r.schedule || defaultSchedule();
+    if (typeof window === 'undefined') return;
 
-        let next = computeNextOccurrence(r, settings || {});
-        if (s.mode === "prayer" && settings) {
-          const { name, offsetMin = 0, direction = "before" } = s.prayer || {};
-          const today = await getPrayerDateTime(name, now, settings);
-          let candidate = applyOffset(today, direction, offsetMin);
-          if (!candidate || candidate < now) {
-            const tmr = plusDays(now, 1);
-            const nextTime = await getPrayerDateTime(name, tmr, settings);
-            candidate = applyOffset(nextTime, direction, offsetMin);
-          }
-          next = candidate;
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+
+    // Construct WebSocket URL - use same pattern as chat
+    const baseURL = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+    // Socket.io automatically handles the namespace, so we just use the base URL
+    const socketUrl = baseURL;
+
+    // Connect to reminders WebSocket
+    const socket = io(`${socketUrl}/reminders`, {
+      transports: ['websocket'],
+      auth: { token },
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+      reconnectionDelayMax: 5000,
+      withCredentials: true,
+      timeout: 20000,
+    });
+
+    socket.on('connect', () => {
+      console.log('✅ Connected to reminders WebSocket', socket.id);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('❌ Disconnected from reminders WebSocket:', reason);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('❌ Reminders WebSocket connection error:', error.message || error);
+    });
+
+    socket.on('error', (error) => {
+      console.error('❌ Reminders WebSocket error:', error);
+    });
+
+    // Listen for reminder_due events from backend
+    socket.on('reminder_due', (reminderData) => {
+      console.log('🔔 Reminder due received via WebSocket:', reminderData);
+
+      if (!reminderData || !reminderData.id) {
+        console.error('❌ Invalid reminder data received:', reminderData);
+        return;
+      }
+
+      // Play sound
+      try {
+        const soundId = reminderData.sound?.id || 'chime';
+        const previewUrl = 
+          soundId === 'drop' ? SOUND_SAMPLES.drop :
+          soundId === 'soft' ? SOUND_SAMPLES.soft :
+          SOUND_SAMPLES.chime;
+        
+        if (previewUrl) {
+          const audio = new Audio(previewUrl);
+          audio.volume = Number.isFinite(reminderData.sound?.volume) 
+            ? reminderData.sound.volume 
+            : 0.8;
+          audio.play().catch((err) => {
+            console.warn('⚠️ Failed to play reminder sound:', err);
+          });
+          console.log('🔊 Playing reminder sound:', soundId);
         }
+      } catch (err) {
+        console.warn('⚠️ Error playing reminder sound:', err);
+      }
 
-        const snoozed = r._snoozedUntil ? new Date(r._snoozedUntil) : null;
-        const effectiveNext = snoozed && snoozed > now ? snoozed : next;
-        if (!effectiveNext) return;
-
-        if (Math.abs(effectiveNext.getTime() - now.getTime()) < 30 * 1000) {
-          try {
-            const audio = new Audio(r?.sound?.previewUrl || SOUND_SAMPLES.chime);
-            audio.volume = Number.isFinite(r?.sound?.volume) ? r.sound.volume : 0.8;
-            audio.play().catch(() => { });
-          } catch { }
-
-          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-            try {
-              const reg = await navigator.serviceWorker.getRegistration();
-              if (reg) {
-                await reg.showNotification(r.title || 'تذكير', {
-                  body: r.notes || '',
-                  icon: '/icons/bell.png',
-                  badge: '/icons/badge.png',
-                  requireInteraction: true,
-                  data: { url: '/app/reminders', reminderId: r.id }
-                });
-              }
-            } catch { }
-          }
-
-          if (typeof onDue === "function") onDue(r);
-
-          setReminders(prev => prev.map(x => (x.id === r.id ? { ...x, _snoozedUntil: null } : x)));
+      // Show browser notification (if permission granted)
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        try {
+          const notification = new Notification(reminderData.title || 'Reminder', {
+            body: reminderData.notes || '',
+            icon: '/icons/bell.png',
+            badge: '/icons/badge.png',
+            requireInteraction: true,
+            tag: `reminder-${reminderData.id}`,
+            data: {
+              url: '/dashboard/reminders',
+              reminderId: reminderData.id,
+            },
+          });
+          console.log('📱 Browser notification shown');
+          
+          // Handle notification click
+          notification.onclick = () => {
+            window.focus();
+            if (reminderData.id) {
+              window.location.href = '/dashboard/reminders';
+            }
+          };
+        } catch (err) {
+          console.warn('⚠️ Failed to show browser notification:', err);
         }
-      });
-    }, 15 * 1000);
-    return () => clearInterval(id);
-  }, [reminders, setReminders, settings, onDue]);
+      } else {
+        console.warn('⚠️ Notification permission not granted');
+      }
+
+      // Trigger onDue callback to show modal
+      if (typeof onDue === 'function') {
+        try {
+          onDue({
+            id: reminderData.id,
+            title: reminderData.title,
+            notes: reminderData.notes,
+            sound: reminderData.sound,
+            schedule: reminderData.schedule,
+            type: reminderData.type,
+            priority: reminderData.priority,
+          });
+          console.log('✅ Reminder modal triggered');
+        } catch (err) {
+          console.error('❌ Error triggering reminder modal:', err);
+        }
+      } else {
+        console.warn('⚠️ onDue callback is not a function');
+      }
+    });
+
+    socketRef.current = socket;
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, [onDue]);
+
+  return socketRef.current;
 }

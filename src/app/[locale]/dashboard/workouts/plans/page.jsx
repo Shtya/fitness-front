@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
 import { motion, Reorder } from 'framer-motion';
-import { Dumbbell, Plus, Eye, PencilLine, Trash2, Clock, Users as UsersIcon, X, Layers, Search, Tag, GripVertical, UserCheck, Users, CalendarX } from 'lucide-react';
+import { Dumbbell, Plus, Eye, PencilLine, Trash2, Clock, Users as UsersIcon, X, Layers, Search, Tag, GripVertical, UserCheck, Users, CalendarX, Loader2 } from 'lucide-react';
 
 import api from '@/utils/axios';
 import { Modal, StatCard } from '@/components/dashboard/ui/UI';
@@ -31,6 +31,30 @@ const useDebounced = (value, delay = 350) => {
 	}, [value, delay]);
 	return deb;
 };
+
+// Normalize any plan shape -> POST /plans payload
+function buildPayloadFromPlan(sourcePlan, { userId, nameSuffix = ' (copy)', isActive = true } = {}) {
+	const srcDays = sourcePlan?.program?.days || sourcePlan?.days || [];
+	const safeName = (sourcePlan?.name || 'Plan') + nameSuffix;
+
+	const days = srcDays.map((d, i) => ({
+		dayOfWeek: String(d.dayOfWeek || d.day || 'saturday').toLowerCase(),
+		nameOfWeek: d.nameOfWeek || d.name || `Day #${i + 1}`,
+		exercises: (d.exercises || []).map((ex, idx) => ({
+			order: ex.order || ex.orderIndex || idx + 1,
+			exerciseId: ex.exerciseId || ex?.exercise?.id || ex?.id,
+		})),
+	}));
+
+	return {
+		userId: userId ?? null,
+		name: safeName.trim(),
+		isActive,
+		notes: sourcePlan?.notes ?? null,
+		program: { days },
+	};
+}
+
 
 /* =============================== PAGE ROOT =============================== */
 export default function PlansPage() {
@@ -230,10 +254,50 @@ export default function PlansPage() {
 	};
 
 	const openAssign = plan => setAssignOpen(plan);
-
 	const totalPages = useMemo(() => Math.max(1, Math.ceil(total / Math.max(1, perPage))), [total, perPage]);
-
 	const sortLabel = sortBy === 'created_at' ? (sortOrder === 'ASC' ? t('plans.filters.oldestFirst') : t('plans.filters.newestFirst')) : t('plans.filters.sortByDate');
+
+
+	const [duplicatingIds, setDuplicatingIds] = useState(() => new Set());
+	const markDuplicating = useCallback((id, on) => {
+		setDuplicatingIds(prev => {
+			const next = new Set(prev);
+			on ? next.add(id) : next.delete(id);
+			return next;
+		});
+	}, []);
+
+
+	const handleDuplicate = useCallback(async (plan) => {
+		if (!plan?.id) return;
+		markDuplicating(plan.id, true);
+		try {
+			// fetch full plan to ensure we have program.days
+			const full = await getOne(plan.id).catch(() => plan);
+
+			const payload = buildPayloadFromPlan(full, {
+				userId: user?.id,
+				nameSuffix: ` ${t('copySuffix', '(copy)')}`,
+				isActive: full?.isActive ?? true,
+			});
+
+			const created = await createPlan(payload);
+
+			// optimistic UI: prepend & increase total
+			setItems(arr => [created, ...arr]);
+			setTotal(tot => tot + 1);
+
+			Notification(t('notifications.planDuplicated', 'Plan duplicated. You can edit it now.'), 'success');
+
+			// open the edit modal so you can rename/tweak immediately
+			setEditRow(created);
+		} catch (e) {
+			const msg = e?.response?.data?.message || t('notifications.duplicateFailed', 'Could not duplicate plan');
+			Notification(msg, 'error');
+		} finally {
+			markDuplicating(plan.id, false);
+		}
+	}, [user?.id, t, markDuplicating]);
 
 	return (
 		<div className='space-y-6'>
@@ -291,7 +355,7 @@ export default function PlansPage() {
 			{err ? <div className='p-3 rounded-lg bg-red-50 text-red-700 border border-red-100'>{err}</div> : null}
 
 			{/* Content */}
-			<ListView loading={loading} items={items} onPreview={openPreview} onEdit={openEdit} onDelete={askDelete} onAssign={openAssign} />
+			<ListView loading={loading} items={items} onPreview={openPreview} onEdit={openEdit} onDelete={askDelete} onAssign={openAssign} duplicatingIds={duplicatingIds} onDuplicate={handleDuplicate} />
 
 			<PrettyPagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
@@ -389,7 +453,7 @@ const ConfirmDialog = memo(function ConfirmDialog({ open, onClose, loading, titl
 });
 
 /* ================================ LIST VIEW ================================ */
-export const ListView = memo(function ListView({ loading, items = [], onPreview, onEdit, onDelete, onAssign }) {
+export const ListView = memo(function ListView({ loading, items = [], onPreview, onEdit, onDelete, onAssign, onDuplicate, duplicatingIds }) {
 	const t = useTranslations('workoutPlans');
 	const user = useUser()
 	/* ---------- Loading (skeleton list) ---------- */
@@ -443,7 +507,7 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 							<div className='flex flex-wrap items-center gap-2'>
 								<MultiLangText className='truncate text-base font-semibold text-slate-900'>{p.name}</MultiLangText>
 								<span className={['inline-flex items-center gap-1 rounded-md px-2 py-0.5   ring-1 ring-inset', active ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-slate-100 text-slate-600 ring-slate-200'].join(' ')}>{t('plans.list.dayCountLabel', { count: dayCount })}</span>
- 							</div>
+							</div>
 						</div>
 
 						{/* actions */}
@@ -501,6 +565,23 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 									className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/30"
 								>
 									<Trash2 className="h-4 w-4" />
+								</button>
+
+								{/* Duplicate */}
+								<button
+									type="button"
+									title={t('actions.duplicate', { default: 'Duplicate' })}
+									onClick={() => !duplicatingIds?.has(p.id) && onDuplicate?.(p)}
+									disabled={duplicatingIds?.has(p.id)}
+									aria-busy={duplicatingIds?.has(p.id) ? 'true' : 'false'}
+									className={[
+										"inline-flex h-9 w-9 items-center justify-center rounded-lg border bg-white focus-visible:outline-none focus-visible:ring-4 transition",
+										"border-violet-200 text-violet-700 hover:bg-violet-50 focus-visible:ring-violet-300/30",
+										duplicatingIds?.has(p.id) ? "opacity-60 pointer-events-none cursor-not-allowed" : ""
+									].join(' ')}>
+									{duplicatingIds?.has(p.id)
+										? <Loader2 className="h-4 w-4 animate-spin" />
+										: <Layers className="h-4 w-4" />}
 								</button>
 							</div>
 						</div>

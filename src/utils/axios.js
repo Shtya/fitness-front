@@ -42,9 +42,9 @@ api.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 401) {
-      // localStorage.removeItem('accessToken');
-      // localStorage.removeItem('user');
-      // window.location.href = '/auth';
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      window.location.href = '/auth';
     }
     return Promise.reject(error);
   },

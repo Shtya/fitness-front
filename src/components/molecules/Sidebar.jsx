@@ -6,7 +6,8 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import {
 	LayoutDashboard, Users, User as UserIcon, Dumbbell, ClipboardList, Apple, NotebookPen,
-	MessageSquare, Calculator, FileBarChart, ChefHat, ChevronDown, ChevronLeft, ChevronRight, X, LineChart, Newspaper, ServerCog
+	MessageSquare, Calculator, FileBarChart, ChefHat, ChevronDown, ChevronLeft, ChevronRight, X, LineChart, Newspaper, ServerCog,
+	AlarmClock
 } from 'lucide-react';
 import { usePathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
@@ -21,10 +22,10 @@ function cn(...args) {
 }
 // utils/cls.ts
 export function cls(...inputs) {
-  return inputs
-    .flat(Infinity)        // handle nested arrays
-    .filter(Boolean)       // remove falsy values (false, null, undefined, '')
-    .join(' ');            // join into a single className string
+	return inputs
+		.flat(Infinity)        // handle nested arrays
+		.filter(Boolean)       // remove falsy values (false, null, undefined, '')
+		.join(' ');            // join into a single className string
 }
 
 /* ----------------------------- NAV (unchanged) ----------------------------- */
@@ -34,17 +35,17 @@ export const NAV = [
 		role: 'client',
 		sectionKey: 'sections.mySpace',
 		items: [
-			{ nameKey: 'dashboard', href: '/dashboard/my', icon: LayoutDashboard },
-			{
-				nameKey: 'training',
-				icon: Dumbbell,
-				children: [
-					{ nameKey: 'myWorkouts', href: '/dashboard/my/workouts', icon: ClipboardList },
-					{ nameKey: 'myProgress', href: '/dashboard/my/progress', icon: LineChart },
-				],
-			},
+			// { nameKey: 'dashboard', href: '/dashboard/my', icon: LayoutDashboard },
+			// {
+			// 	nameKey: 'training',
+			// 	icon: Dumbbell,
+			// 	children: [
+			// 		{ nameKey: 'myProgress', href: '/dashboard/my/progress', icon: LineChart },
+			// 	],
+			// },
+			{ nameKey: 'myWorkouts', href: '/dashboard/my/workouts', icon: ClipboardList },
 			{ nameKey: 'myNutrition', href: '/dashboard/my/nutrition', icon: Apple },
-			{ nameKey: 'myReminders', href: '/dashboard/reminders', icon: Newspaper },
+			{ nameKey: 'myReminders', href: '/dashboard/reminders', icon: AlarmClock  },
 			{ nameKey: 'weeklyStrength', href: '/dashboard/my/report', icon: Newspaper },
 			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
 			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
@@ -94,7 +95,7 @@ export const NAV = [
 			{
 				nameKey: 'clientIntake',
 				icon: FaUsers,
-				expand: true,
+				expand: false,
 				children: [
 					{ nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FaWpforms },
 					{ nameKey: 'responses', href: '/dashboard/intake/responses', icon: FaInbox },
@@ -127,7 +128,7 @@ export const NAV = [
 /* ----------------------------- helpers ---------------------------------- */
 function isPathActive(pathname, href) {
 	if (!href) return false;
-	return pathname === href || pathname?.startsWith(href + '/') || pathname?.endsWith(href + '/');
+	return pathname === href || pathname?.endsWith(href + '/');
 }
 function anyChildActive(pathname, children = []) {
 	return children.some(c => isPathActive(pathname, c.href));
@@ -344,7 +345,7 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 			</Link>
 		);
 	}
-
+ 
 	return (
 		<div className="w-full">
 			<button type="button" onClick={() => setOpen(v => !v)} onKeyDown={onKeyToggle} className={cn('w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors border', open ? 'bg-slate-50 text-slate-800 border-slate-200' : 'hover:bg-slate-50 text-slate-700 border-transparent')} style={{ paddingInlineStart: depth ? 8 + depth * 14 : 12 }} aria-expanded={open} >
@@ -361,27 +362,59 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 				{open && (
 					<motion.div
 						key="submenu"
+						id={`submenu-${item.nameKey || item.href || label}`}
 						initial={{ height: 0, opacity: 0 }}
-						animate={{ height: 'auto', opacity: 1 }}
+						animate={{ height: "auto", opacity: 1 }}
 						exit={{ height: 0, opacity: 0 }}
 						transition={spring}
 						className="overflow-hidden"
 					>
-						<div className="py-1 space-y-1">
-							{item.children.map(child => (
-								<NavItem
-									key={child.href || child.nameKey}
-									item={child}
-									pathname={pathname}
-									depth={depth + 1}
-									onNavigate={onNavigate}
-									t={t}
-								/>
-							))}
-						</div>
+						{/* Level rail */}
+						<ul
+							className={cn(
+								"relative ltr:ml-1 rtl:mr-1 pl-5",              // indent for children
+								"before:content-[''] before:absolute",           // vertical rail
+								"ltr:before:left-3 rtl:before:right-3",
+								"before:top-0 before:bottom-0 before:w-px before:bg-slate-200/70"
+							)}
+						>
+							{item.children.map((child, idx) => {
+								const isLast = idx === item.children.length - 1;
+								return (
+									<li
+										key={child.href || child.nameKey}
+										className={cn(
+											"relative py-0.5",
+											// hide the rail a bit after the last elbow so it doesn't run past the last item
+											isLast &&
+											"after:content-[''] after:absolute ltr:after:left-3 rtl:after:right-3 after:bottom-0 after:h-3 after:w-px after:bg-white"
+										)}
+									>
+										{/* elbow connector into each child row */}
+										<div
+											className={cn(
+												"relative",
+												"before:content-[''] before:absolute before:top-1/2 before:-translate-y-1/2 before:h-px before:w-4 before:bg-slate-200/70",
+												"ltr:before:left-[-1rem] rtl:before:right-[-1rem]"
+											)}
+										>
+											<NavItem
+												item={child}
+												pathname={pathname}
+												depth={depth + 1}
+												onNavigate={onNavigate}
+												t={t}
+												totalUnread={totalUnread}
+											/>
+										</div>
+									</li>
+								);
+							})}
+						</ul>
 					</motion.div>
 				)}
 			</AnimatePresence>
+
 		</div>
 	);
 }
@@ -468,6 +501,7 @@ function ScrollShadow({ children }) {
 /** ----------------------------------------------------------------
  * Sidebar root
  ------------------------------------------------------------------*/
+
 export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCollapsed: setCollapsedProp }) {
 	const pathname = usePathname();
 	const user = useUser();
@@ -642,7 +676,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 
 
 
-export function useUnreadChats(pollMs = 30000) {
+export function useUnreadChats(pollMs = 300000) {
 	const [total, setTotal] = useState(0);
 
 	async function load() {
@@ -678,3 +712,4 @@ function Badge({ value, className = '' }) {
 		</span>
 	);
 }
+ 

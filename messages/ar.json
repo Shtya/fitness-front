@@ -1153,11 +1153,13 @@
 		}
 	},
 	"workoutPlans": {
+		"copySuffix": "(copy)",
 		"placeholders": {
 			"search": "ابحث..."
 		},
 		"planActionNotAllowed": "يمكنك تنفيذ الإجراءات فقط على الخطط التي قمت بإنشائها.",
 		"actions": {
+			"duplicate": "Duplicate",
 			"clear": "مسح",
 			"cancel": "إلغاء",
 			"close": "إغلاق",
@@ -1184,7 +1186,9 @@
 			"planUpdated": "تم تحديث الخطة بنجاح.",
 			"updateFailed": "تعذّر تحديث الخطة.",
 			"assignedSuccess": "تم تعيين الخطة للمستخدمين بنجاح.",
-			"assignFailed": "فشل تعيين الخطة للمستخدمين."
+			"assignFailed": "فشل تعيين الخطة للمستخدمين.",
+			"planDuplicated": "Plan duplicated. You can edit it now.",
+			"duplicateFailed": "Could not duplicate plan"
 		},
 		"confirm": {
 			"titleDefault": "هل أنت متأكد؟",
@@ -2321,10 +2325,67 @@
 	},
 	"reminders": {
 		"title": "التذكيرات",
-		"subtitle": "إدارة تذكيراتك الشخصية",
-		"untitled": "بدون عنوان",
-		"next": "القادم",
+		"subtitle": "إدارة التذكيرات الشخصية",
 		"minutesShort": "د",
+		"next": "الموعد القادم",
+		"now": "الآن",
+		"willStartAfter": "سيبدأ بعد",
+		"untitled": "بدون عنوان",
+		"tabs": {
+			"details": "التفاصيل",
+			"settings": "الإعدادات"
+		},
+		"errors": {
+			"title": "العنوان مطلوب",
+			"mode": "اختر وضع التكرار"
+		},
+		"weekday": {
+			"mon": "الاثنين",
+			"tue": "الثلاثاء",
+			"wed": "الأربعاء",
+			"thu": "الخميس",
+			"fri": "الجمعة",
+			"sat": "السبت",
+			"sun": "الأحد",
+			"header": {
+				"mon": "الاثنين",
+				"tue": "الثلاثاء",
+				"wed": "الأربعاء",
+				"thu": "الخميس",
+				"fri": "الجمعة",
+				"sat": "السبت",
+				"sun": "الأحد"
+			}
+		},
+		"calendar": {
+			"title": "التقويم",
+			"remindersOf": "تذكيرات يوم",
+			"pickDay": "اختر يومًا من التقويم",
+			"none": "لا توجد تذكيرات",
+			"label": "التقويم",
+			"open": "فتح التقويم",
+			"prev": "الشهر السابق",
+			"next": "الشهر التالي",
+			"dayDetails": "تفاصيل اليوم"
+		},
+		"actions": {
+			"edit": "تعديل",
+			"disable": "إيقاف",
+			"enable": "تفعيل",
+			"delete": "حذف",
+			"cancel": "إلغاء",
+			"save": "حفظ",
+			"add": "إضافة",
+			"close": "إغلاق",
+			"done": "تم",
+			"new": "جديد",
+			"enablePush": "تفعيل الإشعارات",
+			"pushEnabled": "الإشعارات مفعّلة",
+			"confirm": "تأكيد"
+		},
+		"empty": {
+			"day": "لا توجد تذكيرات لهذا اليوم"
+		},
 		"unit": {
 			"hour": "ساعة",
 			"minute": "دقيقة",
@@ -2337,26 +2398,8 @@
 			"5h": "كل 5 ساعات",
 			"6h": "كل 6 ساعات"
 		},
-		"actions": {
-			"new": "جديد",
-			"save": "حفظ",
-			"cancel": "إلغاء",
-			"delete": "حذف",
-			"edit": "تعديل",
-			"enable": "تفعيل",
-			"disable": "إيقاف",
-			"done": "تم",
-			"enablePush": "تفعيل الإشعارات",
-			"pushEnabled": "الإشعارات مفعّلة",
-			"confirm": "تأكيد",
-			"add": "إضافة"
-		},
 		"search": {
 			"placeholder": "ابحث في التذكيرات…"
-		},
-		"tabs": {
-			"details": "التفاصيل",
-			"settings": "الإعدادات"
 		},
 		"form": {
 			"newTitle": "تذكير جديد",
@@ -2392,31 +2435,9 @@
 			"daily": "يوميًا",
 			"weekly": "أسبوعيًا",
 			"monthly": "شهريًا",
-			"interval": "بفاصل زمني",
+			"interval": "على فترات",
 			"intervalEvery": "كل",
 			"prayer": "حسب الصلاة"
-		},
-		"errors": {
-			"title": "العنوان مطلوب",
-			"mode": "اختر وضع التكرار"
-		},
-		"weekday": {
-			"sun": "الأحد",
-			"mon": "الاثنين",
-			"tue": "الثلاثاء",
-			"wed": "الأربعاء",
-			"thu": "الخميس",
-			"fri": "الجمعة",
-			"sat": "السبت",
-			"header": {
-				"sun": "الأحد",
-				"mon": "الاثنين",
-				"tue": "الثلاثاء",
-				"wed": "الأربعاء",
-				"thu": "الخميس",
-				"fri": "الجمعة",
-				"sat": "السبت"
-			}
 		},
 		"weekdayShort": {
 			"SU": "أح",
@@ -2451,17 +2472,6 @@
 			"custom": "مخصص…",
 			"customLabel": "الدقائق"
 		},
-		"calendar": {
-			"label": "التقويم",
-			"open": "فتح التقويم",
-			"title": "التقويم",
-			"prev": "الشهر السابق",
-			"next": "الشهر التالي",
-			"dayDetails": "تفاصيل اليوم",
-			"pickDay": "اختر يومًا",
-			"none": "لا توجد تذكيرات",
-			"remindersOf": "تذكيرات يوم"
-		},
 		"settings": {
 			"label": "الإعدادات",
 			"open": "فتح الإعدادات",
@@ -2495,9 +2505,6 @@
 			"after": "بعد X دقيقة",
 			"createIn": "إنشاء بعد",
 			"custom": "مخصص…"
-		},
-		"empty": {
-			"day": "لا توجد تذكيرات لهذا اليوم"
 		}
 	},
 	"timeField": {
