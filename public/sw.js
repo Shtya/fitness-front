@@ -16,27 +16,34 @@ self.addEventListener('activate', event => {
 self.addEventListener('notificationclick', event => {
   console.log('[SW] Notification click received:', event.notification);
   
-  // حسب Google Docs: يجب إغلاق الإشعار أولاً
   event.notification.close();
   
-  const url = event.notification?.data?.url || '/dashboard/reminders';
+  const rawUrl = event.notification?.data?.url || '/dashboard/reminders';
+  const absoluteUrl = new URL(rawUrl, self.location.origin).href;
+  const targetPathname = new URL(rawUrl, self.location.origin).pathname;
   
-  // حسب Google Docs: يجب استخدام event.waitUntil() لضمان فتح النافذة
   event.waitUntil(
     clients.matchAll({ 
       type: 'window', 
       includeUncontrolled: true 
     }).then(clientList => {
-      // Try to focus existing window (حسب Google Docs)
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
-        if (client.url === url && 'focus' in client) {
-          return client.focus();
+        try {
+          const clientUrl = new URL(client.url);
+          if (
+            clientUrl.href === absoluteUrl ||
+            clientUrl.pathname === targetPathname ||
+            clientUrl.pathname.endsWith(targetPathname)
+          ) {
+            if ('focus' in client) return client.focus();
+          }
+        } catch (err) {
+          console.warn('[SW] Unable to parse client URL', err);
         }
       }
-      // If no window found, open a new one (حسب Google Docs)
       if (clients.openWindow) {
-        return clients.openWindow(url);
+        return clients.openWindow(absoluteUrl);
       }
     })
   );
@@ -73,7 +80,8 @@ self.addEventListener('push', event => {
     };
   }
 
-  // حسب dev.to article: يجب استخدام event.waitUntil() دائماً
+  const targetUrl = data.url || data?.data?.url || '/dashboard/reminders';
+
   const notificationOptions = {
     title: data.title || 'Reminder',
     body: data.body || data.description || '',
@@ -84,9 +92,10 @@ self.addEventListener('push', event => {
     tag: `reminder-${data.reminderId || data.data?.reminderId || Date.now()}`,
     data: {
       ...(data.data || {}),
-      url: data.url || data.data?.url || '/dashboard/reminders',
+      url: targetUrl,
       reminderId: data.reminderId || data.data?.reminderId || null,
     },
+    url: targetUrl,
   };
 
   console.log('[SW] Showing notification with options:', notificationOptions);

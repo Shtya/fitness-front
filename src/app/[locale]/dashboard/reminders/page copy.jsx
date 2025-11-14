@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
 	Plus,
@@ -106,10 +105,6 @@ function formatTime12(hhmm) {
 export default function RemindersPage() {
 	const t = useTranslations("reminders");
 
-	const searchParams = useSearchParams();
-	const pathname = usePathname();
-	const router = useRouter();
-
 	const [reminders, setReminders] = useState([]);
 	const [settings, setSettings] = useState(null);
 	const [loading, setLoading] = useState(true);
@@ -118,10 +113,6 @@ export default function RemindersPage() {
 		typeof Notification !== "undefined"
 			? Notification.permission === "granted"
 			: false
-	);
-	const timelineEntries = useMemo(
-		() => buildTimelineEntries(reminders, settings),
-		[reminders, settings]
 	);
 
 	const [dueModal, setDueModal] = useState({ open: false, reminder: null });
@@ -144,74 +135,6 @@ export default function RemindersPage() {
 		[t]
 	);
 	const changeDay = useCallback((k) => setSelectedDay(k), []);
-
-	const viewToggleOptions = useMemo(
-		() => [
-			{ key: "list", label: safeT(t, "view.list", "List") },
-			{ key: "timeline", label: safeT(t, "view.timeline", "Timeline") },
-		],
-		[t]
-	);
-
-	const viewFromQuery = searchParams?.get("view");
-	const reminderIdFromQuery = searchParams?.get("reminderId");
-	const searchParamsString = searchParams?.toString() || "";
-	const [viewMode, setViewMode] = useState(
-		viewFromQuery === "timeline" ? "timeline" : "list"
-	);
-	const [highlightReminderId, setHighlightReminderId] = useState(
-		reminderIdFromQuery || null
-	);
-	const timelineSectionRef = useRef(null);
-
-	useEffect(() => {
-		setViewMode(viewFromQuery === "timeline" ? "timeline" : "list");
-		setHighlightReminderId(reminderIdFromQuery || null);
-	}, [viewFromQuery, reminderIdFromQuery]);
-
-	const switchView = useCallback(
-		(nextMode, options = {}) => {
-			setViewMode(nextMode);
-			if (!router || !pathname) return;
-			const params = new URLSearchParams(searchParamsString);
-			if (nextMode === "timeline") {
-				params.set("view", "timeline");
-				let reminderId = null;
-				if (options.reminderId) {
-					reminderId = options.reminderId;
-				} else if (options.keepReminderId && highlightReminderId) {
-					reminderId = highlightReminderId;
-				}
-				if (reminderId) {
-					params.set("reminderId", reminderId);
-				} else {
-					params.delete("reminderId");
-				}
-			} else {
-				params.delete("view");
-				params.delete("reminderId");
-			}
-			const qs = params.toString();
-			router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-		},
-		[router, pathname, searchParamsString, highlightReminderId]
-	);
-
-	useEffect(() => {
-		if (viewMode === "timeline" && timelineSectionRef.current) {
-			timelineSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-		}
-	}, [viewMode]);
-
-	useEffect(() => {
-		if (viewMode !== "timeline" || !highlightReminderId) return;
-		const el = document.querySelector(
-			`[data-reminder-id="${highlightReminderId}"]`
-		);
-		if (el) {
-			el.scrollIntoView({ behavior: "smooth", block: "center" });
-		}
-	}, [viewMode, highlightReminderId, timelineEntries]);
 
 	// Initial load + ask notification permission ONCE
 	// استبدل useEffect الحالي بهذا الكود المحسن:
@@ -246,48 +169,48 @@ export default function RemindersPage() {
 					try {
 						console.log('🔧 Starting service worker registration...');
 
-						// 1. تسجيل Service Worker أولاً (حسب dev.to article)
-						const registration = await navigator.serviceWorker.register('/sw.js', {
-							scope: '/',
-							updateViaCache: 'none' // حسب dev.to: تأكد من تحديث SW دائماً
-						});
-						console.log('✅ Service Worker registered:', registration.scope);
+					// 1. تسجيل Service Worker أولاً (حسب dev.to article)
+					const registration = await navigator.serviceWorker.register('/sw.js', {
+						scope: '/',
+						updateViaCache: 'none' // حسب dev.to: تأكد من تحديث SW دائماً
+					});
+					console.log('✅ Service Worker registered:', registration.scope);
 
-						// انتظر حتى يصبح الـ Service Worker نشطاً (حسب dev.to article)
-						if (registration.installing) {
-							console.log('⏳ Service Worker is installing, waiting for activation...');
-							await new Promise(resolve => {
-								const installingWorker = registration.installing;
-								if (!installingWorker) {
+					// انتظر حتى يصبح الـ Service Worker نشطاً (حسب dev.to article)
+					if (registration.installing) {
+						console.log('⏳ Service Worker is installing, waiting for activation...');
+						await new Promise(resolve => {
+							const installingWorker = registration.installing;
+							if (!installingWorker) {
+								resolve();
+								return;
+							}
+							installingWorker.addEventListener('statechange', (e) => {
+								const target = e.target ;
+								console.log('🔄 Service Worker state changed:', target.state);
+								if (target.state === 'activated') {
+									console.log('✅ Service Worker activated');
 									resolve();
-									return;
 								}
-								installingWorker.addEventListener('statechange', (e) => {
-									const target = e.target;
-									console.log('🔄 Service Worker state changed:', target.state);
-									if (target.state === 'activated') {
-										console.log('✅ Service Worker activated');
-										resolve();
-									}
-								});
 							});
-						} else if (registration.waiting) {
-							console.log('⏳ Service Worker is waiting, activating...');
-							registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-							// انتظر قليلاً بعد إرسال الرسالة
-							await new Promise(resolve => setTimeout(resolve, 1000));
-						} else if (registration.active) {
-							console.log('✅ Service Worker is already active');
-						}
+						});
+					} else if (registration.waiting) {
+						console.log('⏳ Service Worker is waiting, activating...');
+						registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+						// انتظر قليلاً بعد إرسال الرسالة
+						await new Promise(resolve => setTimeout(resolve, 1000));
+					} else if (registration.active) {
+						console.log('✅ Service Worker is already active');
+					}
 
-						// حسب dev.to: تأكد من أن Service Worker جاهز
-						await navigator.serviceWorker.ready;
-						console.log('✅ Service Worker is ready');
+					// حسب dev.to: تأكد من أن Service Worker جاهز
+					await navigator.serviceWorker.ready;
+					console.log('✅ Service Worker is ready');
 
 						// 2. طلب الإذن للإشعارات
 						let permission = Notification.permission;
 						console.log('📱 Current notification permission:', permission);
-
+						
 						if (permission === 'default') {
 							console.log('📱 Requesting notification permission...');
 							permission = await Notification.requestPermission();
@@ -347,7 +270,6 @@ export default function RemindersPage() {
 			);
 		return list;
 	}, [reminders, selectedDay, settings]);
-
 
 	// WebSocket connection for real-time reminders (replaces setInterval ticker)
 	useReminderWebSocket((rem) => {
@@ -573,76 +495,47 @@ export default function RemindersPage() {
 						</div>
 					</div>
 
-					<div className="mt-2 md:mt-4 flex flex-col gap-3">
-						<div className="flex items-center justify-between gap-2">
-							<TabsPill
-								hiddenArrow
-								sliceInPhone={false}
-								isLoading={false}
-								className="!rounded-lg"
-								slice={3}
-								id="day-tabs"
-								tabs={dayTabs}
-								active={selectedDay}
-								onChange={changeDay}
-							/>
-							<div className="flex items-center gap-2">
-								<div className="flex rounded-full bg-white/10 p-0.5">
-									{viewToggleOptions.map((option) => {
-										const active = viewMode === option.key;
-										return (
-											<button
-												type="button"
-												key={option.key}
-												onClick={() => switchView(option.key, { keepReminderId: true })}
-												className={`px-3 py-1.5 text-sm rounded-full transition ${
-													active ? "bg-white text-indigo-600 font-semibold" : "text-white/80 hover:bg-white/10"
-												}`}
-											>
-												{option.label}
-											</button>
-										);
-									})}
-								</div>
-							</div>
-						</div>
+					<div className="mt-2 md:mt-4 flex items-center justify-between gap-2">
+						<TabsPill
+							hiddenArrow
+							sliceInPhone={false}
+							isLoading={false}
+							className="!rounded-lg"
+							slice={3}
+							id="day-tabs"
+							tabs={dayTabs}
+							active={selectedDay}
+							onChange={changeDay}
+						/>
+						{/* Search removed */}
+						<div className="max-md:hidden w-0 h-0" />
 					</div>
 				</div>
 			</div>
 
-			{/* List / Timeline */}
-			<section ref={timelineSectionRef} className="mt-6">
-				{viewMode === "timeline" ? (
-					<ReminderTimeline
-						t={t}
-						entries={timelineEntries}
-						highlightReminderId={highlightReminderId}
-					/>
-				) : (
-					<div className="grid grid-cols-1 gap-4">
-						{filtered.length === 0 ? (
-							<div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center">
-								<p className="text-slate-600">
-									{safeT(t, "empty.day", "No reminders for this day")}
-								</p>
-							</div>
-						) : (
-							filtered.map((r) => (
-								<ReminderCard
-									key={r.id}
-									t={t}
-									reminder={r}
-									settings={
-										settings || { quietHours: { start: "22:00", end: "07:00" } }
-									}
-									onEdit={() => onEdit(r)}
-									onDelete={() => onDelete(r.id)}
-									onToggleActive={() => onToggleActive(r.id)}
-									onAck={() => onAck(r)}
-								/>
-							))
-						)}
+			{/* List */}
+			<section className="mt-6 grid grid-cols-1 gap-4">
+				{filtered.length === 0 ? (
+					<div className="rounded-3xl border border-dashed border-slate-200 p-10 text-center">
+						<p className="text-slate-600">
+							{safeT(t, "empty.day", "No reminders for this day")}
+						</p>
 					</div>
+				) : (
+					filtered.map((r) => (
+						<ReminderCard
+							key={r.id}
+							t={t}
+							reminder={r}
+							settings={
+								settings || { quietHours: { start: "22:00", end: "07:00" } }
+							}
+							onEdit={() => onEdit(r)}
+							onDelete={() => onDelete(r.id)}
+							onToggleActive={() => onToggleActive(r.id)}
+							onAck={() => onAck(r)}
+						/>
+					))
 				)}
 			</section>
 
@@ -708,67 +601,6 @@ export default function RemindersPage() {
 				}}
 			/>
 		</main>
-	);
-}
-
-function ReminderTimeline({ t, entries, highlightReminderId }) {
-	if (!entries.length) {
-		return (
-			<div className="rounded-3xl border border-dashed border-slate-200 bg-white/70 p-10 text-center">
-				<p className="text-slate-600">
-					{safeT(t, "timeline.empty", "No reminders scheduled for today")}
-				</p>
-			</div>
-		);
-	}
-
-	return (
-		<div className="rounded-3xl border border-slate-200 bg-white/80 p-4 md:p-6 shadow-sm backdrop-blur">
-			<div className="space-y-4">
-				{entries.map((entry) => {
-					const isHighlighted = highlightReminderId && entry.reminderId === highlightReminderId;
-					const statusLabel = entry.status === "past"
-						? safeT(t, "timeline.status.past", "Earlier today")
-						: entry.status === "now"
-							? safeT(t, "timeline.status.now", "Happening now")
-							: safeT(t, "timeline.status.upcoming", "Upcoming");
-					const statusClass =
-						entry.status === "past"
-							? "bg-slate-100 text-slate-600"
-							: entry.status === "now"
-								? "bg-emerald-100 text-emerald-700"
-								: "bg-indigo-100 text-indigo-700";
-					return (
-						<div
-							key={entry.id}
-							data-reminder-id={entry.reminderId}
-							className={`flex flex-col gap-2 rounded-2xl border p-4 transition lg:flex-row lg:items-center lg:gap-4 ${
-								isHighlighted
-									? "border-emerald-300 ring-2 ring-emerald-200 bg-emerald-50/60"
-									: "border-slate-200 bg-white"
-							}`}
-						>
-							<div className="flex items-center gap-3">
-								<div className="font-mono text-lg text-slate-800 w-24">
-									{formatTimelineTime(entry.time)}
-								</div>
-								<div className={`rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}>
-									{statusLabel}
-								</div>
-							</div>
-							<div className="flex-1">
-								<div className="text-base font-semibold text-slate-800">
-									{entry.title}
-								</div>
-								{entry.notes ? (
-									<p className="text-sm text-slate-600 mt-1">{entry.notes}</p>
-								) : null}
-							</div>
-						</div>
-					);
-				})}
-			</div>
-		</div>
 	);
 }
 
@@ -888,87 +720,6 @@ function ReminderCard({
 			</div>
 		</div>
 	);
-}
-
-function buildTimelineEntries(reminders = [], settings = {}) {
-	const today = new Date();
-	const todayIso = toISODate(today);
-	const dayKey = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][today.getDay()];
-	const now = new Date();
-	const entries = [];
-	const normalizedSettings = settings || {};
-
-	for (const reminder of reminders) {
-		if (!reminder?.active) continue;
-		const schedule = reminder.schedule || {};
-		const times = Array.isArray(schedule.times) && schedule.times.length ? schedule.times : ["08:00"];
-
-		const pushOccurrence = (dateObj) => {
-			entries.push(makeTimelineEntry(reminder, dateObj, now));
-		};
-
-		if (schedule.mode === "interval" || schedule.mode === "prayer") {
-			const next = computeNextOccurrence(reminder, normalizedSettings);
-			if (next && sameDay(next, today)) {
-				pushOccurrence(next);
-			}
-			continue;
-		}
-
-		if (schedule.mode === "once") {
-			if (schedule.startDate && sameDay(new Date(`${schedule.startDate}T00:00:00`), today)) {
-				const firstTime = times[0] || "08:00";
-				pushOccurrence(new Date(`${todayIso}T${firstTime}:00`));
-			}
-			continue;
-		}
-
-		if (schedule.mode === "weekly") {
-			const allowedDays = Array.isArray(schedule.daysOfWeek) && schedule.daysOfWeek.length
-				? schedule.daysOfWeek
-				: WEEK_DAYS.map((d) => d.key);
-			if (!allowedDays.includes(dayKey)) continue;
-		}
-
-		if (schedule.mode === "monthly" && schedule.startDate) {
-			const startDate = new Date(`${schedule.startDate}T00:00:00`);
-			if (startDate.getDate() !== today.getDate()) continue;
-		}
-
-		times
-			.filter(Boolean)
-			.forEach((timeStr) => pushOccurrence(new Date(`${todayIso}T${timeStr}:00`)));
-	}
-
-	return entries.sort((a, b) => a.time - b.time);
-}
-
-function makeTimelineEntry(reminder, time, now) {
-	const diff = time.getTime() - now.getTime();
-	let status = "upcoming";
-	if (Math.abs(diff) <= 60 * 1000) status = "now";
-	else if (diff < 0) status = "past";
-
-	return {
-		id: `${reminder.id}-${time.getTime()}`,
-		reminderId: reminder.id,
-		title: reminder.title,
-		notes: reminder.notes,
-		time,
-		status,
-	};
-}
-
-function formatTimelineTime(date) {
-	try {
-		return new Intl.DateTimeFormat("en-US", {
-			hour: "numeric",
-			minute: "2-digit",
-			hour12: true,
-		}).format(date);
-	} catch {
-		return date.toLocaleTimeString();
-	}
 }
 
 /** ---- Form (JS) ---- */
@@ -1952,7 +1703,7 @@ const subscribeToPush = async (registration) => {
 		try {
 			const publicKey = data.data.publicKey;
 			console.log('🔑 VAPID Public Key received:', publicKey.substring(0, 50) + '...');
-
+			
 			// تحويل Base64 URL-safe إلى Uint8Array
 			applicationServerKey = urlBase64ToUint8Array(publicKey);
 			console.log('✅ VAPID key converted successfully, length:', applicationServerKey.length);
@@ -1978,12 +1729,12 @@ const subscribeToPush = async (registration) => {
 					setTimeout(resolve, 1000);
 				}
 			});
-
+			
 			if (!registration.active) {
 				throw new Error('Service Worker is not active after waiting');
 			}
 		}
-
+		
 		console.log('✅ Service Worker is active');
 
 
@@ -2010,7 +1761,7 @@ const subscribeToPush = async (registration) => {
 		if (!subscription) {
 			console.log('🆕 No existing subscription, creating new one...');
 			console.log('🔑 Using applicationServerKey length:', applicationServerKey.length);
-
+			
 			// إنشاء اشتراك جديد (حسب dev.to article)
 			try {
 				subscription = await registration.pushManager.subscribe({
@@ -2025,20 +1776,20 @@ const subscribeToPush = async (registration) => {
 					message: subscribeError.message,
 					stack: subscribeError.stack
 				});
-
+				
 				// إذا كان الخطأ متعلق بـ VAPID key، حاول مرة أخرى بعد تنظيف
 				if (subscribeError.name === 'AbortError' || subscribeError.message.includes('push service')) {
 					console.warn('⚠️ Push service error, checking VAPID key format...');
-
+					
 					// تحقق من أن المفتاح صحيح
 					if (applicationServerKey.length !== 65) {
 						throw new Error(`Invalid VAPID key length: ${applicationServerKey.length}, expected 65`);
 					}
-
+					
 					// حاول مرة أخرى
 					throw new Error(`Push subscription failed. Please check VAPID keys in backend. Error: ${subscribeError.message}`);
 				}
-
+				
 				throw subscribeError;
 			}
 		} else {
@@ -2077,10 +1828,10 @@ const subscribeToPush = async (registration) => {
 		};
 
 		console.log('📤 Sending subscription to server (always, as per Google Docs)...');
-
+		
 		try {
 			const response = await api.post("/reminders/push/subscribe", subscriptionData);
-
+			
 			if (response.data) {
 				console.log('✅ Subscription saved on server successfully');
 			} else {
@@ -2125,10 +1876,10 @@ function urlBase64ToUint8Array(base64String) {
 	// حسب dev.to article: تحويل Base64 URL-safe إلى Uint8Array
 	// تنظيف السلسلة وإزالة المسافات
 	const cleaned = base64String.trim();
-
+	
 	// إضافة padding إذا لزم الأمر
 	const padding = '='.repeat((4 - cleaned.length % 4) % 4);
-
+	
 	// تحويل من URL-safe Base64 إلى Base64 عادي
 	const base64 = (cleaned + padding)
 		.replace(/\-/g, '+')
@@ -2141,12 +1892,12 @@ function urlBase64ToUint8Array(base64String) {
 		for (let i = 0; i < rawData.length; ++i) {
 			outputArray[i] = rawData.charCodeAt(i);
 		}
-
+		
 		// VAPID public key يجب أن يكون طوله 65 bytes (uncompressed) أو 87 characters في Base64
 		if (outputArray.length !== 65) {
 			console.warn(`⚠️ VAPID key length is ${outputArray.length}, expected 65. This might cause issues.`);
 		}
-
+		
 		return outputArray;
 	} catch (error) {
 		console.error('❌ Error converting VAPID key:', error);

@@ -2320,6 +2320,18 @@
 		}
 	},
 	"reminders": {
+		"view": {
+      "list": "List",
+      "timeline": "Timeline"
+    },
+    "timeline": {
+      "empty": "No reminders scheduled for today.",
+      "status": {
+        "past": "Earlier today",
+        "now": "Happening now",
+        "upcoming": "Upcoming"
+      }
+    },
 		"title": "Reminders",
 		"subtitle": "Manage your personal reminders",
 		"untitled": "Untitled",
