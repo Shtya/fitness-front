@@ -15,7 +15,7 @@ export async function POST(req) {
 
     res.cookies.set('user', JSON.stringify(user), {
       httpOnly: false, // keep false if you need to read it in client JS
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       sameSite: 'lax',
       path: '/',
       maxAge: oneWeek,
