@@ -146,19 +146,19 @@ export function defaultReminder(patch = {}) {
 export function normalizeSchedule(s) {
   const base = defaultSchedule();
   const merged = { ...base, ...(s || {}) };
-  if (!Array.isArray(merged.times) || merged.times.length === 0)
-    merged.times = ['08:00'];
+  if (!Array.isArray(merged.times) || merged.times.length === 0) merged.times = ['08:00'];
   if (merged.mode === 'prayer' && !merged.prayer)
     merged.prayer = { name: 'Fajr', offsetMin: 10, direction: 'before' };
   if (!merged.startDate) merged.startDate = base.startDate;
 
   if (merged.mode === 'interval') {
-    merged.interval = merged.interval || { every: 2, unit: 'hour' };
+    merged.interval = merged.interval || { every: 1, unit: 'hour' }; // ← هنا 1 بدل 2
     if (!merged.interval.unit) merged.interval.unit = 'hour';
   }
 
   return merged;
 }
+
 function isHHmm(s) {
   return typeof s === 'string' && /^\d{2}:\d{2}$/.test(s);
 }
@@ -266,8 +266,7 @@ export async function createReminderApi(uiReminder) {
 }
 export async function updateReminderApi(id, uiPatch) {
   const payload = uiToApiReminder(uiPatch);
-  // if your Nest controller uses @Patch(':id'), PATCH is correct
-  const { data } = await api.patch(`/reminders/${id}`, payload);
+  const { data } = await api.put(`/reminders/${id}`, payload);
   return apiToUiReminder(data);
 }
 export async function deleteReminderApi(id) {

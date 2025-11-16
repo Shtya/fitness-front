@@ -1,13 +1,4 @@
-/**
- * Mobile-first enhanced page (JS/JSX)
- * - Tight paddings, bigger tap targets, clearer layout on phones
- * - Search + qty in a single row that wraps nicely
- * - Goal dropdown still shows live kg/month values
- * - Inputs have no default values (user-controlled)
- * - Meal list renders as cards on mobile, table on md+
- * - Sticky action bar inside Food box for quick "Add" on small screens
- * - "Meal vs Target" section removed (per your earlier request)
- */
+
 
 'use client';
 
@@ -433,13 +424,12 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
         <StatCard icon={Flame} title='BMR' value={headerStats.bmr} />
         <StatCard icon={Gauge} title='TDEE' value={headerStats.tdee} />
         <StatCard icon={Calculator} title={t('labels.targetKcal')} value={headerStats.target} />
-        <StatCard cn='!flex-wrap' icon={Apple} title={t('labels.macrosPCF')} value={`${headerStats.protein} / ${headerStats.carbs} / ${headerStats.fat} g`} />
       </GradientStatsHeader>
 
       {/* Content */}
       <div className=' py-4 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4'>
         {/* BOX 1: Daily Need + Summary */}
-        <section className=' overflow-hidden rounded-lg sm:rounded-lg bg-white/90 backdrop-blur border border-slate-200 shadow-sm'>
+        <section className='box-3d overflow-hidden rounded-lg sm:rounded-lg bg-white/90 backdrop-blur border border-slate-200 shadow-sm'>
           <header className='px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-100 flex items-center gap-2 sticky top-0 bg-white/80 backdrop-blur z-10'>
             <Ruler className='w-4 h-4 text-indigo-600 shrink-0' />
             <h2 className='font-semibold text-slate-800 text-base sm:text-lg'>{t('sections.dailyNeed')}</h2>
@@ -448,15 +438,15 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
           <div className='p-3 sm:p-5 space-y-3 sm:space-y-4'>
             {/* Inputs (no defaults) */}
             <div className='grid grid-cols-2 gap-2 sm:gap-3'>
-              <Select label={t('labels.sex')} options={sexOptions} value={sex} onChange={setSex} />
+              <Select searchable={false} label={t('labels.sex')} options={sexOptions} value={sex} onChange={setSex} />
               <Input label={t('labels.ageYears')} type='number' inputMode='numeric' value={age} onChange={setAge} placeholder='—' />
               <Input label={t('labels.heightCm')} type='number' inputMode='numeric' value={height} onChange={setHeight} placeholder='—' />
               <Input label={t('labels.weightKg')} type='number' inputMode='numeric' value={weight} onChange={setWeight} placeholder='—' />
             </div>
 
             <div className='grid grid-cols-1 gap-2 sm:gap-3'>
-              <Select label={t('labels.activity')} options={activityOptions} value={activity} onChange={setActivity} />
-              <Select label={t('labels.goal')} options={goalOptions} value={goal} onChange={setGoal} />
+              <Select searchable={false} label={t('labels.activity')} options={activityOptions} value={activity} onChange={setActivity} />
+              <Select searchable={false} label={t('labels.goal')} options={goalOptions} value={goal} onChange={setGoal} />
             </div>
 
             {/* Generate Summary + Loader */}
@@ -520,7 +510,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
         </section>
 
         {/* BOX 2: Food Calculator + Meal */}
-        <section className=' overflow-hidden rounded-lg sm:rounded-lg bg-white/90 backdrop-blur border border-slate-200 shadow-sm'>
+        <section className='box-3d overflow-hidden rounded-lg sm:rounded-lg bg-white/90 backdrop-blur border border-slate-200 shadow-sm'>
           <header className='px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-100 flex items-center gap-2 sticky top-0 bg-white/80 backdrop-blur z-10'>
             <Apple className='w-4 h-4 text-emerald-600 shrink-0' />
             <h2 className='font-semibold text-slate-800 text-base sm:text-lg'>{t('sections.foodCalc')}</h2>

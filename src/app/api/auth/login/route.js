@@ -9,12 +9,10 @@ export async function POST(req) {
     }
 
     const res = NextResponse.json({ ok: true, user });
-
-    // Cookie expires in 1 week (7 days)
     const oneWeek = 60 * 60 * 24 * 7;
 
     res.cookies.set('user', JSON.stringify(user), {
-      httpOnly: false, // keep false if you need to read it in client JS
+      httpOnly: false,
       secure: false,
       sameSite: 'lax',
       path: '/',

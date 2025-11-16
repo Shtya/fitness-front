@@ -1,16 +1,130 @@
+/* 
+	- i have a problem when i add reminder in some day not today  the client not aware with this 
+	- add tab for the setting have the date is optional and the sound 
+	- and this next not correct check form it ( التالي: Nov 16, 2025, 9:00 PM )
+	- and also those ( كل 2 ساعة (من )) not write correct what this ref nto understand 
+
+	- and show the timeline with pretty why untill this 
+	- and make the note as text if he need add note under the input of the عنوان التذكير and when click on it appear teh input to write note 
+	- and add more ( قوالب جاهزة سريعة ) to can use it 
+
+	- and add tabsPill use it to show the days can switch between them to show the reimnder in every day and put the active on today ( 
+	export function TabsPill({ outerCn , isLoading , sliceInPhone = true, hiddenArrow = false,  tabs = [], active, onChange, className = '', id = 'ui-tabs-pill', skeletonCount = 5 }) {
+  const scrollerRef = useRef(null);
+  const tabRefs = useRef({}); // { [key]: HTMLElement }
+
+
+  const activeIndex = useMemo(
+    () =>
+      Math.max(
+        0,
+        tabs.findIndex(t => t.key === active),
+      ),
+    [tabs, active],
+  );
+
+  const hasPrev = !isLoading && activeIndex > 0;
+  const hasNext = !isLoading && activeIndex < tabs.length - 1;
+
+  const goPrev = () => {
+    if (!hasPrev) return;
+    const prevKey = tabs[activeIndex - 1]?.key;
+    if (prevKey) onChange(prevKey);
+  };
+
+  const goNext = () => {
+    if (!hasNext) return;
+    const nextKey = tabs[activeIndex + 1]?.key;
+    if (nextKey) onChange(nextKey);
+  };
+
+  // keep active pill in view
+  useEffect(() => {
+    if (isLoading) return;
+    const el = tabRefs.current[active];
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, [active, isLoading]);
+
+  // keyboard support on container: ← →
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const onKey = e => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goPrev();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        goNext();
+      }
+    };
+    scroller.addEventListener('keydown', onKey);
+    return () => scroller.removeEventListener('keydown', onKey);
+  }, [goPrev, goNext, activeIndex, tabs]);
+
+  return (
+     <div className={`${outerCn} w-full overflow-x-auto pb-1 overflow-y-hidden`}>
+      <InjectShimmer />
+      <div className='w-fit flex items-center gap-2'>
+        {!hiddenArrow && (
+          <button type='button' onClick={goPrev} aria-label='Previous tab' disabled={!hasPrev} className={[' max-md:!hidden inline-flex items-center justify-center h-[40px] w-[30px] rounded-lg border transition', 'bg-white/90 border-slate-200', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', !hasPrev ? 'opacity-40 cursor-not-allowed' : ''].join(' ')}>
+            <ChevronLeft className=' rtl:scale-x-[-1] w-5 h-5 text-slate-700' />
+          </button>
+        )}
+
+        <div ref={scrollerRef} tabIndex={0} className='w-fit outline-none'>
+          <LayoutGroup id={id}>
+            <div className={[className, 'inline-flex p-1 rounded-lg border border-slate-200 overflow-hidden', 'bg-slate-100/80 ring-1 ring-black/5', isLoading ? 'gap-1.5 bg-slate-100/40 '  : ''].join(' ')}>
+              {isLoading
+                ? Array.from({ length: skeletonCount }).map((_, i) => {
+                    const widths = [64, 84, 72, 92, 68, 88, 76];
+                    const w = widths[i % widths.length];
+                    return <div key={`tabs-skel-${i}`} className='h-8 rounded-lg tabs-skeleton' style={{ width: w }} aria-hidden='true' />;
+                  })
+                : tabs.map(t => {
+                    const isActive = active === t.key;
+                    return (
+                      <motion.button key={t.key} type='button' ref={el => (tabRefs.current[t.key] = el)} onClick={() => onChange(t.key)} className='relative cursor-pointer select-none rounded-lg max-md:!rounded-[10px_10px_0_0] px-3 py-1.5 text-sm font-medium outline-none' whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 350, damping: 30 }}>
+                        {isActive && <motion.span layoutId='tabs-pill' className='absolute inset-0 after:!rounded-lg !rounded-lg bg-second shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
+                        <span className={`relative z-10 text-nowrap ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-700'} capitalize flex items-center gap-1 `}>
+                          {t.icon ? <t.icon className=' max-md:hidden inline w-4 h-4 mr-1 -mt-0.5' /> : null}
+
+                          <MultiLangText className={` ${!sliceInPhone && '!hidden'} md:hidden`}>{t.label?.slice(0, 3)}</MultiLangText>
+                          <MultiLangText className={` ${!sliceInPhone && '!flex'} max-md:hidden`}>{t.label}</MultiLangText>
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+            </div>
+          </LayoutGroup>
+        </div>
+
+        {!hiddenArrow && (
+          <button type='button' onClick={goNext} aria-label='Next tab' disabled={!hasNext} className={[' max-md:!hidden inline-flex items-center justify-center h-[40px] w-[30px] rounded-lg border transition', 'bg-white/90 border-slate-200', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', !hasNext ? 'opacity-40 cursor-not-allowed' : ''].join(' ')}>
+            <ChevronRight className='rtl:scale-x-[-1] w-5 h-5 text-slate-700' />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+	)
+*/
+
 'use client';
 
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Settings, Calendar as CalendarIcon, BellRing, Info, Edit2, Trash2, Zap, Square } from 'lucide-react';
+import { Plus, Settings, Calendar as CalendarIcon, BellRing, Info, Edit2, Trash2, Zap, Square, X } from 'lucide-react';
 
 import { Modal, TabsPill } from '@/components/dashboard/ui/UI';
 import Select from '@/components/atoms/Select';
 import { TimeField } from '@/components/atoms/InputTime';
 import InputDate from '@/components/atoms/InputDate';
-import Input from '@/components/atoms/Input';
 import MultiLangText from '@/components/atoms/MultiLangText';
 import { Controller, useForm } from 'react-hook-form';
 import * as yup from 'yup';
@@ -19,6 +133,8 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { WEEK_DAYS, PRAYERS, SOUND_SAMPLES, defaultSettings, defaultReminder, normalizeSchedule, computeNextOccurrence, fetchTodayPrayerTimes, listReminders, getUserSettingsApi, createReminderApi, updateReminderApi, deleteReminderApi, toggleActiveApi, markCompletedApi, updateUserSettingsApi, safeT, toISODate, useReminderWebSocket, humanDateTime, sameDay, humanDuration, stopCurrentReminderSound } from '@/components/pages/reminders/atoms';
 import api from '@/utils/axios';
 import { Switcher } from '@/components/atoms/Switcher';
+
+/* ---------- helpers ---------- */
 
 function formatTime12Local(hhmm) {
   if (!hhmm) return '—';
@@ -33,10 +149,20 @@ function formatSchedule(t, rem) {
   const times = (s.times || []).map(formatTime12Local).join('، ');
 
   if (s.mode === 'prayer' && s.prayer) {
-    const dir = s.prayer.direction === 'before' ? safeT(t, 'before', 'Before') : safeT(t, 'after', 'After');
-    const prayerLabel = safeT(t, `prayer.${(s.prayer.name || '').toLowerCase()}`, s.prayer.name || '');
-    return `${prayerLabel} • ${dir} ${s.prayer.offsetMin} ${safeT(t, 'minutesShort', 'min')}`;
-  }
+  const dir =
+    s.prayer.direction === 'before'
+      ? safeT(t, 'before', 'Before')
+      : safeT(t, 'after', 'After');
+
+  const prayerLabel = getPrayerLabel(t, s.prayer);
+
+  return `${prayerLabel} • ${dir} ${s.prayer.offsetMin} ${safeT(
+    t,
+    'minutesShort',
+    'min',
+  )}`;
+}
+
 
   const labelByMode = {
     once: `${safeT(t, 'mode.once', 'Once')} ${times}`,
@@ -46,6 +172,16 @@ function formatSchedule(t, rem) {
     interval: s.interval ? `${safeT(t, 'mode.intervalEvery', 'Every')} ${s.interval.every} ${safeT(t, `interval.unit.${s.interval.unit || 'hour'}`, s.interval.unit || 'hour')}` : safeT(t, 'mode.interval', 'Interval'),
   };
   return labelByMode[s.mode] || labelByMode.daily;
+}
+
+function getPrayerLabel(t, prayer) {
+  const rawName = (prayer?.name || '').toLowerCase().trim();
+
+  if (!rawName) {
+    return prayer?.name || safeT(t, 'prayer.fallback', 'Prayer');
+  }
+
+  return safeT(t, `prayer.${rawName}`, prayer.name || rawName);
 }
 
 function formatSchedule2(t, rem) {
@@ -69,7 +205,8 @@ function formatSchedule2(t, rem) {
 
   if (s.mode === 'prayer' && s.prayer) {
     const dir = s.prayer.direction === 'before' ? safeT(t, 'before', 'Before') : safeT(t, 'after', 'After');
-    const prayerName = safeT(t, `prayer.${(s.prayer.name || '').toLowerCase()}`, s.prayer.name || '') || s.prayer.name;
+
+    const prayerName = getPrayerLabel(t, s.prayer);
     const offset = Number.isFinite(Number(s.prayer.offsetMin)) ? Number(s.prayer.offsetMin) : 0;
 
     text = `${prayerName} • ${dir} ${offset} ${safeT(t, 'minutesShort', 'min')}`;
@@ -121,7 +258,7 @@ function formatTimelineTime(date) {
   }
 }
 
-/** ---- Form (JS) ---- */
+/** ---- Validation schema ---- */
 const schema = yup.object().shape({
   title: yup.string().trim().required(),
   type: yup.mixed().oneOf(['custom']).default('custom'),
@@ -130,6 +267,8 @@ const schema = yup.object().shape({
     startDate: yup.string().required(),
   }),
 });
+
+/* ---------- Main Page ---------- */
 
 export default function RemindersPage() {
   const t = useTranslations('reminders');
@@ -474,11 +613,11 @@ export default function RemindersPage() {
         <div className='relative p-3 md:p-5 text-white'>
           <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-3'>
             <div>
-              <h1 className='text-xl md:text-4xl font-semibold hidden md:block'>{safeT(t, 'title', 'Reminders')}</h1>
+              <h1 className='text-xl md:text-4xl font-semibold max-md:text-center block'>{safeT(t, 'title', 'Reminders')}</h1>
               <p className='text-white/85 mt-1 hidden md:block'>{safeT(t, 'subtitle', 'Manage your personal reminders')}</p>
             </div>
 
-            <div className='flex flex-wrap items-center gap-2'>
+            <div className='flex flex-wrap max-md:justify-center items-center gap-2'>
               <button type='button' onClick={() => setOpenCalendar(true)} title={t('actions.openCalendar')} aria-label={t('actions.openCalendar')} className=' flex items-center gap-1 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm hover:bg-white/20'>
                 <CalendarIcon className='inline-block w-4 h-4' />
               </button>
@@ -492,9 +631,9 @@ export default function RemindersPage() {
           </div>
 
           <div className='mt-2 md:mt-4 flex flex-col gap-3'>
-            <div className='flex items-center justify-between gap-2'>
+            <div className=' max-md:justify-center flex items-center justify-between gap-2'>
               <div className='flex items-center gap-2'>
-                <div className='flex gap-1 rounded-full bg-white/10 p-2'>
+                <div className='flex  gap-1 rounded-full bg-white/10 p-2'>
                   {viewToggleOptions.map(option => {
                     const active = viewMode === option.key;
                     return (
@@ -581,6 +720,8 @@ export default function RemindersPage() {
   );
 }
 
+/* ---------- Timeline ---------- */
+
 function ReminderTimeline({ t, entries, highlightReminderId }) {
   if (!entries.length) {
     return (
@@ -591,7 +732,7 @@ function ReminderTimeline({ t, entries, highlightReminderId }) {
   }
 
   return (
-    <div className='rounded-3xl border border-slate-200 bg-white/90 p-4 md:p-6 shadow-sm'>
+    <div className=' '>
       <div className='flex items-center gap-2 mb-4'>
         <span className='h-2 w-2 rounded-full bg-emerald-500' />
         <p className='text-xs md:text-sm text-slate-500'>{safeT(t, 'timeline.subtitle', 'Timeline of your reminders (today)')}</p>
@@ -607,7 +748,7 @@ function ReminderTimeline({ t, entries, highlightReminderId }) {
             const [time, period] = formatTimelineTime(entry.time);
 
             return (
-              <div key={entry.id} data-reminder-id={entry.reminderId} className={`relative flex flex-col gap-2 md:flex-row md:items-center md:gap-4 rounded-2xl border px-4 py-3 transition ${isHighlighted ? 'border-emerald-300 ring-2 ring-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
+              <div key={entry.id} data-reminder-id={entry.reminderId} className={`box-3d relative flex flex-col gap-2 md:flex-row md:items-center md:gap-4 rounded-2xl border px-4 py-3 transition ${isHighlighted ? 'border-emerald-300 ring-2 ring-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
                 <div className='absolute -left-[3px] top-4 hidden md:block h-3 w-3 rounded-full border-2 border-white bg-indigo-500 shadow-sm' />
 
                 <div className='flex items-end gap-2'>
@@ -629,6 +770,8 @@ function ReminderTimeline({ t, entries, highlightReminderId }) {
   );
 }
 
+/* ---------- Shared small components ---------- */
+
 function IconButton({ cn, icon, onClick, label, danger }) {
   return (
     <button type='button' onClick={onClick} aria-label={label} title={label} className={`${cn} rounded-lg border px-2.5 py-2 text-sm transition ${danger ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
@@ -636,6 +779,8 @@ function IconButton({ cn, icon, onClick, label, danger }) {
     </button>
   );
 }
+
+/* ---------- Reminder card ---------- */
 
 function ReminderCard({ t, reminder, onEdit, onDelete, onToggleActive, settings }) {
   const [now, setNow] = useState(new Date());
@@ -656,7 +801,7 @@ function ReminderCard({ t, reminder, onEdit, onDelete, onToggleActive, settings 
   const [scheduleText, time, period] = formatSchedule2(t, reminder);
 
   return (
-    <div className={` hover:bg-slate-50 group bg-white relative  border-b  py-3 px-4 backdrop-blur transition ${muted ? '  border-slate-200' : due ? 'border-emerald-400 ring-2 ring-emerald-300/70' : almostDue ? 'border-indigo-300 ring-1 ring-indigo-200' : 'border-slate-200'}`}>
+    <div className={`  hover:bg-slate-50 group bg-white relative  border-b  py-3 px-4 backdrop-blur transition ${muted ? '  border-slate-200' : due ? 'border-emerald-400 ring-2 ring-emerald-300/70' : almostDue ? 'border-indigo-300 ring-1 ring-indigo-200' : 'border-slate-200'}`}>
       <div className='relative flex items-start justify-between gap-4'>
         <div className=' w-fit '>
           <div className='text-xs mb-1 flex flex-wrap items-center gap-2 text-slate-600'>
@@ -691,6 +836,8 @@ function ReminderCard({ t, reminder, onEdit, onDelete, onToggleActive, settings 
     </div>
   );
 }
+
+/* ---------- timeline building ---------- */
 
 function buildTimelineEntries(reminders = [], settings = {}) {
   const today = new Date();
@@ -757,6 +904,8 @@ function makeTimelineEntry(reminder, time, now) {
   };
 }
 
+/* ---------- Form ---------- */
+
 function ReminderForm({ t, initial, onCancel, onSave, settings }) {
   const {
     register,
@@ -821,6 +970,8 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 
   const mode = watch('schedule.mode');
   const times = watch('schedule.times');
+  const intervalEvery = watch('schedule.interval.every');
+  const intervalUnit = watch('schedule.interval.unit') || 'hour';
   const [activeTab, setActiveTab] = useState('details');
 
   // preview sound toggle
@@ -915,6 +1066,11 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 
   const intervalOptions = [
     {
+      id: '1',
+      label: safeT(t, 'interval.every1h', 'Every 1 hour'),
+      value: 1,
+    },
+    {
       id: '2',
       label: safeT(t, 'interval.every2h', 'Every 2 hours'),
       value: 2,
@@ -976,19 +1132,19 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
     }
   };
 
+  const currentIntervalEvery = intervalEvery || 1;
+  const intervalUnitLabel = safeT(t, `interval.unit.${intervalUnit}`, intervalUnit);
+
   return (
     <form className='grid gap-5' onSubmit={handleSubmit(onSubmit)}>
-      {/* Tabs can be enabled later if needed */}
-      {/* <TabsPill ... /> */}
-
       {activeTab === 'details' && (
         <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-          <Input label={safeT(t, 'form.title', 'Title')} placeholder={safeT(t, 'form.titlePh', 'Reminder title')} error={errors?.title && safeT(t, 'errors.title', 'Title is required')} value={watch('title')} onChange={register('title').onChange} />
-          <Input label={safeT(t, 'form.note', 'Note')} placeholder={safeT(t, 'form.notePh', 'Optional note')} {...register('notes')} defaultValue='' />
+          <Input label={safeT(t, 'form.title', 'Title')} placeholder={safeT(t, 'form.titlePh', 'Reminder title')} error={errors?.title && safeT(t, 'errors.title', 'Title is required')} value={watch('title')} {...register('title')} />
+          <Input label={safeT(t, 'form.note', 'Note')} placeholder={safeT(t, 'form.notePh', 'Optional note')} defaultValue='' {...register('notes')} />
 
           {/* Templates row */}
           <div className='md:col-span-2'>
-            <label className='mb-1.5 block text-sm font-medium text-slate-700'>{safeT(t, 'templates.label', 'Quick templates')}</label>
+            <label className='mb-1.5 block text-sm font-medium text-slate-700'>{safeT(t, 'templates.label', 'قوالب جاهزة سريعة')}</label>
             <div className='flex flex-wrap gap-2'>
               <button type='button' onClick={() => applyTemplate('water')} className='inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-800 hover:bg-sky-100'>
                 💧 {safeT(t, 'templates.water.short', 'Drink water')}
@@ -1091,7 +1247,7 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
                 control={control}
                 name='schedule.interval.every'
                 render={({ field }) => {
-                  const currentEvery = field.value || 2;
+                  const currentEvery = field.value || 1;
                   return (
                     <div>
                       <label className='mb-1.5 block text-sm font-medium text-slate-700'>{safeT(t, 'form.intervalEvery', 'Repeat every')}</label>
@@ -1111,7 +1267,7 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
                             unit: currentInterval.unit || 'hour',
                           });
                         }}
-                      />
+                      /> 
                     </div>
                   );
                 }}
@@ -1187,7 +1343,7 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
                     </div>
                   )}
                 />
-                <Controller control={control} name='schedule.prayer.offsetMin' render={({ field }) => <Input label={safeT(t, 'form.minutes', 'Minutes')} type='number' value={field.value ?? 10} onChange={v => field.onChange(Number(v) || 0)} cnInputParent='h-[40px]' />} />
+                <Controller control={control} name='schedule.prayer.offsetMin' render={({ field }) => <Input label={safeT(t, 'form.minutes', 'Minutes')} type='number' value={field.value ?? 10} onChange={e => field.onChange(Number(e.target.value) || 0)} cnInputParent='h-[40px]' />} />
               </div>
 
               {todayTimes && (
@@ -1213,7 +1369,7 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
           <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
             <div>
               <label className='mb-1.5 block text-sm font-medium text-slate-700'>{safeT(t, 'settings.defaultSnooze', 'Default snooze (min)')}</label>
-              <Input type='number' cnInputParent='h-[40px]' value={watch('defaultSnooze') ?? 10} onChange={x => setValue('defaultSnooze', Number(x) || 10)} />
+              <Input type='number' cnInputParent='h-[40px]' value={watch('defaultSnooze') ?? 10} onChange={e => setValue('defaultSnooze', Number(e.target.value) || 10)} />
             </div>
           </div>
 
@@ -1223,10 +1379,10 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
               <Input
                 placeholder='10:00 PM'
                 value={watch('quietHours.start') ?? '10:00 PM'}
-                onChange={x =>
+                onChange={e =>
                   setValue('quietHours', {
                     ...(watch('quietHours') || {}),
-                    start: x,
+                    start: e.target.value,
                   })
                 }
               />
@@ -1236,17 +1392,17 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
               <Input
                 placeholder='07:00 AM'
                 value={watch('quietHours.end') ?? '07:00 AM'}
-                onChange={x =>
+                onChange={e =>
                   setValue('quietHours', {
                     ...(watch('quietHours') || {}),
-                    end: x,
+                    end: e.target.value,
                   })
                 }
               />
             </div>
             <div>
               <label className='mb-1 block text-sm text-slate-600'>{safeT(t, 'settings.timezone', 'Timezone')}</label>
-              <Input value={watch('timezone') ?? 'Africa/Cairo'} onChange={x => setValue('timezone', x)} />
+              <Input value={watch('timezone') ?? 'Africa/Cairo'} onChange={e => setValue('timezone', e.target.value)} />
             </div>
           </div>
         </div>
@@ -1269,6 +1425,8 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
     </form>
   );
 }
+
+/* ---------- Weekly day selector ---------- */
 
 function WeeklyDaysSelector({ t, initial, getDays, setDays }) {
   const days = getDays() || initial?.schedule?.daysOfWeek || [];
@@ -1311,6 +1469,8 @@ function WeeklyDaysSelector({ t, initial, getDays, setDays }) {
   );
 }
 
+/* ---------- Settings panel ---------- */
+
 function SettingsPanel({ t, value, onChange }) {
   const [v, setV] = useState(value);
   const set = patch => setV(s => ({ ...s, ...patch }));
@@ -1325,18 +1485,18 @@ function SettingsPanel({ t, value, onChange }) {
   return (
     <div className='grid gap-4'>
       <div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
-        <Input label={safeT(t, 'settings.timezone', 'Timezone')} cnInputParent='h-[40px]' value={v.timezone} onChange={x => set({ timezone: x })} />
-        <Input label={safeT(t, 'settings.city', 'City')} cnInputParent='h-[40px]' value={v.city} onChange={x => set({ city: x })} />
-        <Input label={safeT(t, 'settings.country', 'Country')} cnInputParent='h-[40px]' value={v.country} onChange={x => set({ country: x })} />
+        <Input label={safeT(t, 'settings.timezone', 'Timezone')} cnInputParent='h-[40px]' value={v.timezone} onChange={e => set({ timezone: e.target.value })} />
+        <Input label={safeT(t, 'settings.city', 'City')} cnInputParent='h-[40px]' value={v.city} onChange={e => set({ city: e.target.value })} />
+        <Input label={safeT(t, 'settings.country', 'Country')} cnInputParent='h-[40px]' value={v.country} onChange={e => set({ country: e.target.value })} />
       </div>
       <div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
         <div>
           <label className='mb-1 block text-sm text-slate-600'>{safeT(t, 'settings.quietFrom', 'Quiet from')}</label>
           <Input
             value={v.quietHours.start}
-            onChange={x =>
+            onChange={e =>
               set({
-                quietHours: { ...v.quietHours, start: x },
+                quietHours: { ...v.quietHours, start: e.target.value },
               })
             }
             placeholder='10:00 PM'
@@ -1346,15 +1506,15 @@ function SettingsPanel({ t, value, onChange }) {
           <label className='mb-1 block text-sm text-slate-600'>{safeT(t, 'settings.quietTo', 'Quiet to')}</label>
           <Input
             value={v.quietHours.end}
-            onChange={x =>
+            onChange={e =>
               set({
-                quietHours: { ...v.quietHours, end: x },
+                quietHours: { ...v.quietHours, end: e.target.value },
               })
             }
             placeholder='07:00 AM'
           />
         </div>
-        <Input label={safeT(t, 'settings.defaultSnooze', 'Default snooze (min)')} type='number' cnInputParent='h-[40px]' value={v.defaultSnooze} onChange={x => set({ defaultSnooze: Number(x) || 10 })} />
+        <Input label={safeT(t, 'settings.defaultSnooze', 'Default snooze (min)')} type='number' cnInputParent='h-[40px]' value={v.defaultSnooze} onChange={e => set({ defaultSnooze: Number(e.target.value) || 10 })} />
       </div>
       <div className='flex justify-end'>
         <button type='button' onClick={save} className='rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 text-white px-4 py-2'>
@@ -1364,6 +1524,8 @@ function SettingsPanel({ t, value, onChange }) {
     </div>
   );
 }
+
+/* ---------- Calendar ---------- */
 
 function CalendarView({ t, reminders, settings }) {
   const [cursor, setCursor] = React.useState(new Date());
@@ -1560,6 +1722,8 @@ function CalendarView({ t, reminders, settings }) {
   );
 }
 
+/* ---------- Quick create ---------- */
+
 function QuickCreate({ t, onPick }) {
   const [open, setOpen] = useState(false);
   const options = [
@@ -1615,6 +1779,8 @@ function QuickCreate({ t, onPick }) {
   );
 }
 
+/* ---------- Due dialog ---------- */
+
 function DueDialog({ open, reminder, onClose, onAck }) {
   if (!open || !reminder) return null;
   const t = useTranslations('reminders');
@@ -1634,6 +1800,8 @@ function DueDialog({ open, reminder, onClose, onAck }) {
     </Modal>
   );
 }
+
+/* ---------- Push subscription helpers ---------- */
 
 const subscribeToPush = async registration => {
   try {
@@ -1764,4 +1932,60 @@ export function addMonths(date, months) {
   const d = new Date(date);
   d.setMonth(d.getMonth() + months);
   return d;
+}
+
+/* ---------- Local Input component (replaces imported Input) ---------- */
+
+function Input({ label, type = 'text', error, placeholder, cnInputParent = '', className = '', name, onChange, onBlur, value, defaultValue, id, inputRef, disabled = false, clearable = true, cnInput = '', ...rest }) {
+  const inputId = id || (name ? `input-${name}` : undefined);
+
+  const handleChange = e => {
+    if (typeof onChange === 'function') {
+      onChange(e); // keep same API (event)
+    }
+  };
+
+  // derive current value to decide showing clear icon
+  const currentValue = typeof value !== 'undefined' ? value : typeof defaultValue !== 'undefined' ? defaultValue : '';
+
+  const showClear = clearable && !disabled && currentValue !== '';
+
+  const clearInput = e => {
+    e.stopPropagation();
+
+    if (typeof onChange === 'function') {
+      // Build a minimal event-like object so existing handlers using e.target.value / e.target.name still work
+      const fakeEvent = {
+        ...e,
+        target: {
+          ...(e.target || {}),
+          name,
+          value: '',
+        },
+      };
+      onChange(fakeEvent);
+    }
+
+    if (inputRef && typeof inputRef === 'object' && inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  return (
+    <div className={`w-full relative ${className}`}>
+      {label && (
+        <label htmlFor={inputId} className='mb-1.5 block text-sm font-medium text-slate-700'>
+          {label}
+        </label>
+      )}
+
+      <div className={[cnInputParent, 'relative flex items-center rounded-lg border bg-white', disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text', error && error !== 'users' ? 'border-rose-500' : 'border-slate-300 hover:border-slate-400 focus-within:border-indigo-500', 'focus-within:ring-4 focus-within:ring-indigo-100', 'transition-colors'].join(' ')}>
+        <input id={inputId} name={name} type={type} placeholder={placeholder} className={`input-3d ${cnInput} h-[40px] ltr:pr-[28px] rtl:pl-[28px] w-full rounded-lg px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-gray-400`} value={value} defaultValue={defaultValue} onChange={handleChange} onBlur={onBlur} ref={inputRef} disabled={disabled} aria-invalid={!!error} {...rest} />
+
+        {showClear && <X size={16} className='absolute rtl:left-3 ltr:right-3 top-1/2 -translate-y-1/2 cursor-pointer opacity-60 transition hover:opacity-100' onClick={clearInput} />}
+      </div>
+
+      {error && error !== 'users' && <p className='mt-1.5 text-xs text-rose-600'>{error}</p>}
+    </div>
+  );
 }

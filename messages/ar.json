@@ -166,6 +166,8 @@
     }
   },
   "nav": {
+		
+		"reload-page" : "إعادة تحميل الصفحة",
     "brand": {
       "portalTitle": "منطقة التحكم",
       "superAdminPortal": "بوابة المدير العام",
@@ -2324,6 +2326,7 @@
     },
 
     "interval": {
+      "every1h": "كل ساعه",
       "every2h": "كل ساعتين",
       "every3h": "كل 3 ساعات",
       "every4h": "كل 4 ساعات",
@@ -2406,7 +2409,16 @@
       "minutes": "الدقائق",
       "weekdays": "أيام الأسبوع",
       "todayPrayerTimes": "مواقيت الصلاة لليوم",
-      "from": "من"
+      "from": "من",
+      "selectMode": "اختر الوضع",
+      "selectDate": "اختر التاريخ",
+      "selectTime": "اختر الوقت",
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "notes": "ملاحظات",
+      "titlePlaceholder": "اكتب عنوان التذكير",
+      "notesPlaceholder": "أضف ملاحظات (اختياري)",
+			"intervalSummary": "سيتم التكرار كل"
     },
 
     "templates": {
@@ -2455,12 +2467,14 @@
     },
 
     "prayer": {
-      "fajr": "الفجر",
-      "dhuhr": "الظهر",
-      "asr": "العصر",
-      "maghrib": "المغرب",
-      "isha": "العشاء"
-    },
+  "fajr": "الفجر",
+  "dhuhr": "الظهر",
+  "asr": "العصر",
+  "maghrib": "المغرب",
+  "isha": "العشاء",
+  "fallback": "الصلاة"
+}
+,
 
     "errors": {
       "title": "العنوان مطلوب",
@@ -2468,6 +2482,7 @@
     },
 
     "calendar": {
+			"pickDay": "اختر يومًا",
       "title": "التقويم",
       "subtitle": "اضغط على اليوم لعرض التذكيرات",
       "today": "اليوم",

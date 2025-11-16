@@ -28,8 +28,8 @@ const Button = ({ name, children, className = '', disabled, onClick, type = 'but
 function Section({ icon, title, children, extra }) {
   const Icon = icon || Info;
   return (
-    <section className='rounded-lg bg-white/90 backdrop-blur border border-slate-200 shadow-sm'>
-      <header className='px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur z-10 rounded-t-xl'>
+    <section className='box-3d rounded-lg bg-white/90 backdrop-blur border border-slate-200 '>
+      <header className='px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur z-10 rounded-t-lg'>
         <div className='flex items-center gap-2'>
           <Icon className='w-4 h-4 text-indigo-600' />
           <h2 className='font-semibold text-slate-800 text-base sm:text-lg'>{title}</h2>
@@ -585,9 +585,9 @@ export default function WeeklyReportPage() {
 
   /* ---------------------------------- UI ---------------------------------- */
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className=' relative mx-auto max-w-3xl px-3 sm:px-5 py-4 sm:py-6 space-y-4 sm:space-y-5'>
+    <form onSubmit={handleSubmit(onSubmit)} className=' relative !px-0 space-y-4 sm:space-y-5'>
       {/* Header */}
-      <div className='rounded-lg border border-slate-200 bg-white/90 backdrop-blur p-4 sm:p-6 shadow-sm'>
+      <div className='box-3d rounded-lg border border-slate-200 bg-white/90 backdrop-blur p-4 sm:p-6 shadow-sm'>
         <h1 className='text-xl sm:text-2xl font-bold text-slate-900'>{t('weekly.title')}</h1>
         <p className='mt-1 text-slate-600 text-sm'>{t('weekly.subtitle')}</p>
 

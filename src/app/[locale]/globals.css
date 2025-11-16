@@ -376,3 +376,15 @@ input[type='number'] {
   color: rgb(0 0 0 / 0.7);
   box-shadow: 6px 6px 12px #d1d9e650, -6px -6px 12px #ffffff50 inset;
 }
+
+.bg-box-3d {
+  background: #f3f4f0;
+}
+.box-3d {
+  position: relative;
+
+  background: #f3f4f490;
+  box-shadow: -15px -15px 15px rgba(255, 255, 255, 0.5), 15px 15px 15px rgba(0, 0, 0, 0.05);
+}
+ 
+ 

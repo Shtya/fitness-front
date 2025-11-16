@@ -166,6 +166,7 @@
     }
   },
   "nav": {
+		"reload-page" : "Reload Page",
     "brand": {
       "portalTitle": "Dashboard Access",
       "superAdminPortal": "Super Admin Portal",
@@ -2480,7 +2481,7 @@
     "untitled": "Untitled"
   },
   "my-nutrition": {
-				"gram" : "gram",
+    "gram": "gram",
 
     "common": {
       "loading": "Loading...",

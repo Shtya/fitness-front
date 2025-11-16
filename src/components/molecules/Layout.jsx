@@ -18,13 +18,7 @@ const LS_KEY = 'sidebar:collapsed';
 export default function Layout({ children }) {
   const pathname = usePathname();
 
-  const isAuthRoute =
-    pathname.startsWith('/workouts/plans') ||
-    pathname.startsWith('/auth') ||
-    pathname.startsWith('/form') ||
-    pathname.startsWith('/thank-you') ||
-    pathname.startsWith('/site') ||
-    pathname === '/';
+  const isAuthRoute = pathname.startsWith('/workouts/plans') || pathname.startsWith('/auth') || pathname.startsWith('/form') || pathname.startsWith('/thank-you') || pathname.startsWith('/site') || pathname === '/';
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -63,36 +57,18 @@ export default function Layout({ children }) {
 
   return (
     <GlobalProvider>
-      <div className="relativebg-gradient-to-t from-indigo-50 via-white to-white text-slate-800">
-        <div className="container !px-0 flex min-h-dvh">
-          {!isAuthRoute && (
-            <Sidebar
-              open={sidebarOpen}
-              setOpen={setSidebarOpen}
-              collapsed={sidebarCollapsed}
-              setCollapsed={setSidebarCollapsed}
-            />
-          )}
+      <div className='relativebg-gradient-to-t from-indigo-50 via-white to-white text-slate-800'>
+        <div className='container !px-0 flex min-h-dvh'>
+          {!isAuthRoute && <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />}
 
           {/* Main area */}
-          <div className="relative flex-1 min-w-0">
+          <div className='relative flex-1 min-w-0'>
             {!isAuthRoute && <Header onMenu={() => setSidebarOpen(true)} />}
 
-            <AnimatePresence mode="wait">
-              <motion.main
-                key={pathname}
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <div
-                  className={`${
-                    !isAuthRoute &&
-                    '  h-[calc(100vh-65px)] overflow-auto max-md:p-3 p-4 overflow-x-hidden'
-                  }`}
-                >
-									<div className="absolute z-[-1]  inset-0 opacity-15" style={{ backgroundImage: 'linear-gradient(rgba(79,70,229,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(79,70,229,0.12) 1px, transparent 1px)', backgroundSize: '12px 12px', backgroundPosition: '-1px -1px', }} /> 
+            <AnimatePresence mode='wait'>
+              <motion.main key={pathname} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}>
+                <div id='body' className={`${!isAuthRoute && '  h-[calc(100vh-65px)] bg-[#ffffff60] overflow-auto max-md:p-3 p-4 overflow-x-hidden'}`}>
+                  <div className='absolute z-[-1]  inset-0 opacity-15' style={{ backgroundImage: 'linear-gradient(rgba(79,70,229,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(79,70,229,0.12) 1px, transparent 1px)', backgroundSize: '12px 12px', backgroundPosition: '-1px -1px' }} />
                   {children}
                 </div>
               </motion.main>
@@ -102,7 +78,7 @@ export default function Layout({ children }) {
       </div>
       {/* <PWAInstallPrompt /> */}
       <ConfigAos />
-      <Toaster position="top-center" />
+      <Toaster position='top-center' />
     </GlobalProvider>
   );
 }
