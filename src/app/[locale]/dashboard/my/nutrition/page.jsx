@@ -8,22 +8,27 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { motion } from 'framer-motion';
 
 import api from '@/utils/axios';
-import { Modal, StatCard, TabsPill } from '@/components/dashboard/ui/UI';
+import { Modal, StatCard, StatCardArray, TabsPill } from '@/components/dashboard/ui/UI';
 import { Input } from '@/components/atoms/Input2';
 import MultiLangText from '@/components/atoms/MultiLangText';
 import { Notification } from '@/config/Notification';
 import HistoryViewer from '@/components/pages/dashboard/nutrition/HistoryViewer';
+import { useUser } from '@/hooks/useUser';
+import { useTranslations } from 'next-intl';
 
 /* =========================================================================
    SMALL UI PRIMITIVES (IN-FILE)
    ========================================================================= */
-function BasicButton({ label, onClick, icon: Icon, variant = 'outline', submit = false, loading = false }) {
+function BasicButton({ labelKey, onClick, icon: Icon, variant = 'outline', submit = false, loading = false }) {
+  const t = useTranslations('my-nutrition');
+
   const base = 'inline-flex items-center justify-center gap-2 rounded-lg border text-sm font-medium h-9 px-3 transition active:scale-95';
   const theme = variant === 'primary' ? 'bg-indigo-600 text-white border-indigo-700 hover:bg-indigo-700' : variant === 'warning' ? 'bg-amber-500 text-white border-amber-600 hover:bg-amber-600' : variant === 'neutral' ? 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50';
+
   return (
     <button type={submit ? 'submit' : 'button'} onClick={onClick} disabled={loading} className={`${base} ${theme} disabled:opacity-60`}>
       {Icon ? <Icon className='h-4 w-4' /> : null}
-      <span>{loading ? '...' : label}</span>
+      <span>{loading ? t('common.loading') : t(labelKey)}</span>
     </button>
   );
 }
@@ -48,20 +53,19 @@ function MiniCheck({ checked, tone = 'indigo', className = '' }) {
 export default function ClientMealPlanPage() {
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState(null);
+  const t = useTranslations('my-nutrition');
 
-  const [activeDayKey, setActiveDayKey] = useState(null); // 'saturday'...'friday'
-  const [history, setHistory] = useState([]); // only for the selected date
+  const [activeDayKey, setActiveDayKey] = useState(null);
+  const [history, setHistory] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
 
-  // UI state (hydrated from *selected date* history)
-  const [takenMap, setTakenMap] = useState({}); // meal-level: "day:mi" -> bool
-  const [itemTakenMap, setItemTakenMap] = useState({}); // item-level: "day:mi:itemKey" -> bool
-  const [suppTakenMap, setSuppTakenMap] = useState({}); // supplement: name-scoped key
+  const [takenMap, setTakenMap] = useState({});
+  const [itemTakenMap, setItemTakenMap] = useState({});
+  const [suppTakenMap, setSuppTakenMap] = useState({});
 
-  const [selectedDateISO, setSelectedDateISO] = useState(null); // 'YYYY-MM-DD' for the active tab
+  const [selectedDateISO, setSelectedDateISO] = useState(null);
 
-  // ---- simple per-action lock to avoid duplicate API posts (StrictMode / double click)
   const pendingRef = useRef(new Set());
   const runLocked = useCallback(async (key, fn) => {
     if (pendingRef.current.has(key)) return;
@@ -73,7 +77,6 @@ export default function ClientMealPlanPage() {
     }
   }, []);
 
-  // ---- fetch plan once
   const fetchPlan = useCallback(async () => {
     const planRes = await api
       .get('/nutrition/my/meal-plan')
@@ -82,13 +85,12 @@ export default function ClientMealPlanPage() {
 
     setPlan(planRes);
 
-    // choose initial tab
     if (planRes?.days?.length) {
-      const todayKey = weekdayKeySaturdayFirst(new Date()); // 'sunday'...'saturday'
+      const todayKey = weekdayKeySaturdayFirst(new Date());
       const hasToday = (planRes.days || []).some(d => (d.day || '').toLowerCase() === todayKey);
       const initialDay = hasToday ? todayKey : planRes.days?.[0]?.day || null;
       setActiveDayKey(initialDay);
-      // selected date for initial tab
+
       const dateISO = dateForDayKeyInCurrentWeek(initialDay, new Date());
       setSelectedDateISO(dateISO);
     } else {
@@ -97,7 +99,6 @@ export default function ClientMealPlanPage() {
     }
   }, []);
 
-  // ---- fetch logs for a specific date (YYYY-MM-DD)
   const fetchLogsForDate = useCallback(
     async (dateISO, dayKey, planRef) => {
       if (!dateISO || !dayKey) {
@@ -116,7 +117,6 @@ export default function ClientMealPlanPage() {
 
         setHistory(logs);
 
-        // Hydrate from *this date's* logs
         const hydrated = deriveTakenMapsFromHistory(planRef || plan, logs);
         setTakenMap(hydrated.mealMap);
         setItemTakenMap(hydrated.itemMap);
@@ -128,7 +128,6 @@ export default function ClientMealPlanPage() {
     [plan],
   );
 
-  // Initial load: plan first
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -140,7 +139,6 @@ export default function ClientMealPlanPage() {
     })();
   }, [fetchPlan]);
 
-  // When activeDayKey changes, compute date (current week, Saturday-start) and fetch logs
   useEffect(() => {
     if (!activeDayKey || !plan) return;
     const dateISO = dateForDayKeyInCurrentWeek(activeDayKey, new Date());
@@ -148,7 +146,6 @@ export default function ClientMealPlanPage() {
     fetchLogsForDate(dateISO, activeDayKey, plan);
   }, [activeDayKey, plan, fetchLogsForDate]);
 
-  // Manual refresh
   const refresh = () => {
     if (selectedDateISO && activeDayKey) {
       fetchLogsForDate(selectedDateISO, activeDayKey, plan);
@@ -170,39 +167,45 @@ export default function ClientMealPlanPage() {
     if (!activeDay) return { meals: 0, kcal: 0, adherenceAvg: 0, streak: 0 };
     const meals = (activeDay?.meals || []).length;
     const kcal = sumCaloriesDay(activeDay?.meals || []);
-    const recent = history.slice(0, 20);
-    const adhAvg = recent.length ? Math.round((recent.reduce((a, c) => a + Number(c.adherence || 0), 0) / recent.length) * 10) / 10 : 0;
-    const streak = computeStreak(history);
-    return { meals, kcal, adherenceAvg: adhAvg, streak };
+    return { meals, kcal };
   }, [activeDay, history]);
 
   const kMeal = (dayKey, mi) => `${dayKey}:${mi}`;
 
-  // === Mark entire meal done/undone (persist + set all item checkboxes)
+  // PESSIMISTIC UPDATE: meal
   const setMealTaken = async (dayKey, mealIndex, meal, value) => {
     const lockKey = `meal:${dayKey}:${mealIndex}`;
+
     await runLocked(lockKey, async () => {
       const mealKey = kMeal(dayKey, mealIndex);
-      try {
-        // optimistic meal toggle
-        setTakenMap(prev => ({ ...prev, [mealKey]: value }));
+      const itemKeys = (meal.items || []).map(i => kItemByName(dayKey, mealIndex, i.name));
 
-        // optimistic all items
-        const optimisticItemKeys = (meal.items || []).map(i => kItemByName(dayKey, mealIndex, i.name));
-        setItemTakenMap(prev => {
-          const next = { ...prev };
-          optimisticItemKeys.forEach(k => (next[k] = value));
-          return next;
+      // 1) Snapshot previous state (for rollback if request fails)
+      const prevMealValue = !!takenMap[mealKey];
+      const prevItemValues = {};
+      itemKeys.forEach(k => {
+        prevItemValues[k] = itemTakenMap[k];
+      });
+
+      // 2) Optimistic update: apply check BEFORE request
+      setTakenMap(prev => ({ ...prev, [mealKey]: value }));
+      setItemTakenMap(prev => {
+        const next = { ...prev };
+        itemKeys.forEach(k => {
+          next[k] = value;
         });
+        return next;
+      });
 
-        // persist
+      try {
+        // 3) Send request
         await api.post('/nutrition/food-logs', {
           planId: plan?.id,
           day: dayKey,
           mealIndex,
           eatenAt: new Date().toISOString(),
           adherence: value ? 5 : 3,
-          mealTitle: meal?.title || `Meal ${mealIndex + 1}`,
+          mealTitle: meal?.title || t('nutrition.meal.defaultTitle', { index: mealIndex + 1 }),
           items: (meal.items || []).map(i => ({
             name: i.name,
             taken: !!value,
@@ -212,85 +215,135 @@ export default function ClientMealPlanPage() {
           extraFoods: [],
           supplementsTaken: [],
         });
+
+        // success → keep optimistic state as is
       } catch (e) {
-        // revert
-        setTakenMap(prev => ({ ...prev, [mealKey]: !value }));
+        // 4) Rollback on error
+        setTakenMap(prev => ({ ...prev, [mealKey]: prevMealValue }));
         setItemTakenMap(prev => {
           const next = { ...prev };
-          (meal.items || []).forEach(i => {
-            const key = kItemByName(dayKey, mealIndex, i.name);
-            next[key] = !value;
+          itemKeys.forEach(k => {
+            next[k] = prevItemValues[k];
           });
           return next;
         });
-        Notification(e?.response?.data?.message || 'Failed to log meal', 'error');
+
+        Notification(e?.response?.data?.message || t('nutrition.errors.mealLogFailed'), 'error');
       }
     });
   };
 
-  // === Single item toggle
+  // OPTIMISTIC UPDATE: single item
   const setItemTaken = async (dayKey, mealIndex, item, value) => {
     const lockKey = `item:${dayKey}:${mealIndex}:${normName(item.name)}`;
+
     await runLocked(lockKey, async () => {
       const key = kItemByName(dayKey, mealIndex, item.name);
-      try {
-        setItemTakenMap(prev => ({ ...prev, [key]: value }));
+      const meal = activeDay?.meals?.[mealIndex];
+      const mealKey = kMeal(dayKey, mealIndex);
 
+      // snapshot previous state for rollback
+      const prevItemValue = !!itemTakenMap[key];
+      const prevMealValue = !!takenMap[mealKey];
+
+      // 1) optimistic update: toggle the item
+      setItemTakenMap(prev => {
+        const next = { ...prev, [key]: value };
+
+        // also recompute meal-level "all items taken" based on the *new* map
+        if (meal?.items?.length) {
+          const allTrue = meal.items.every(i => {
+            const k = kItemByName(dayKey, mealIndex, i.name);
+            return !!next[k];
+          });
+
+          setTakenMap(prevMeals => ({
+            ...prevMeals,
+            [mealKey]: allTrue,
+          }));
+        }
+
+        return next;
+      });
+
+      try {
+        // 2) send request
         await api.post('/nutrition/food-logs', {
           planId: plan?.id,
           day: dayKey,
           mealIndex,
           eatenAt: new Date().toISOString(),
           adherence: value ? 4 : 3,
-          mealTitle: activeDay?.meals?.[mealIndex]?.title || `Meal ${mealIndex + 1}`,
-          items: [{ name: item.name, taken: !!value, qty: item.quantity == null ? null : Number(item.quantity) }],
+          mealTitle: meal?.title || t('nutrition.meal.defaultTitle', { index: mealIndex + 1 }),
+          items: [
+            {
+              name: item.name,
+              taken: !!value,
+              qty: item.quantity == null ? null : Number(item.quantity),
+            },
+          ],
           notifyCoach: false,
           extraFoods: [],
           supplementsTaken: [],
         });
 
-        // sync meal-level toggle based on all item states
-        if (!value) {
-          setTakenMap(prev => ({ ...prev, [kMeal(dayKey, mealIndex)]: false }));
-        } else {
-          const meal = activeDay?.meals?.[mealIndex];
-          if (meal?.items?.length) {
-            const allTrue = meal.items.every(i => {
-              const k = kItemByName(dayKey, mealIndex, i.name);
-              return k === key ? value : !!itemTakenMap[k];
-            });
-            setTakenMap(prev => ({ ...prev, [kMeal(dayKey, mealIndex)]: allTrue }));
-          }
-        }
+        // success → keep optimistic state
       } catch (e) {
-        setItemTakenMap(prev => ({ ...prev, [key]: !value })); // revert
-        Notification(e?.response?.data?.message || 'Failed to update item', 'error');
+        // 3) rollback on error
+        setItemTakenMap(prev => ({
+          ...prev,
+          [key]: prevItemValue,
+        }));
+
+        setTakenMap(prevMeals => ({
+          ...prevMeals,
+          [mealKey]: prevMealValue,
+        }));
+
+        Notification(e?.response?.data?.message || t('nutrition.errors.itemUpdateFailed'), 'error');
       }
     });
   };
 
-  // === Supplements toggle (name-based)
+  // OPTIMISTIC UPDATE: supplements
   const setSupplementTaken = async (dayKey, scope, idOrIndex, supp, value, mealIndex = null) => {
     const localKey = kSuppByName(dayKey, scope, mealIndex, supp.name);
     const lockKey = `supp:${localKey}`;
+
     await runLocked(lockKey, async () => {
+      // snapshot previous state
+      const prevValue = !!suppTakenMap[localKey];
+
+      // 1) optimistic update
+      setSuppTakenMap(prev => ({
+        ...prev,
+        [localKey]: value,
+      }));
+
       try {
-        setSuppTakenMap(prev => ({ ...prev, [localKey]: value }));
+        // 2) request
         await api.post('/nutrition/food-logs', {
           planId: plan?.id,
           day: dayKey,
-          mealIndex, // null for day-level
+          mealIndex,
           eatenAt: new Date().toISOString(),
           adherence: 5,
-          mealTitle: mealIndex != null ? activeDay?.meals?.[mealIndex]?.title || `Meal ${Number(mealIndex) + 1}` : 'Supplements',
+          mealTitle: mealIndex != null ? activeDay?.meals?.[mealIndex]?.title || t('nutrition.meal.defaultTitle', { index: Number(mealIndex) + 1 }) : t('nutrition.supplements.logTitle'),
           items: [],
           notifyCoach: false,
           extraFoods: [],
-          supplementsTaken: [{ name: supp.name, taken: !!value }], // server persists by name
+          supplementsTaken: [{ name: supp.name, taken: !!value }],
         });
+
+        // success → keep optimistic state
       } catch (e) {
-        setSuppTakenMap(prev => ({ ...prev, [localKey]: !value }));
-        Notification(e?.response?.data?.message || 'Failed to update supplement', 'error');
+        // 3) rollback on error
+        setSuppTakenMap(prev => ({
+          ...prev,
+          [localKey]: prevValue,
+        }));
+
+        Notification(e?.response?.data?.message || t('nutrition.errors.supplementUpdateFailed'), 'error');
       }
     });
   };
@@ -310,12 +363,14 @@ export default function ClientMealPlanPage() {
       });
       refresh();
     } catch (e) {
-      Notification(e?.response?.data?.message || 'Failed to save changes', 'error');
+      Notification(e?.response?.data?.message || t('nutrition.errors.inlineSaveFailed'), 'error');
     }
   };
 
+  const user = useUser();
+
   return (
-    <div className='space-y-6 max-md:space-y-2 '>
+    <div className='space-y-6 max-md:space-y-3'>
       {/* Header */}
       <div className='relative overflow-hidden rounded-lg border border-indigo-100/60 bg-white/60 shadow-sm backdrop-blur'>
         <div className='absolute inset-0 overflow-hidden'>
@@ -332,33 +387,37 @@ export default function ClientMealPlanPage() {
           <div className='absolute -bottom-16 -right-8 h-60 w-60 rounded-full bg-blue-300/30 blur-3xl' />
         </div>
 
-        <div className='relative py-2 p-3 md:p-5 text-white'>
-          <div className='flex flex-row items-center justify-between gap-3'>
-            <div>
-              <h1 className='text-xl md:text-4xl font-semibold'>{plan?.name || 'My Nutrition Plan'}</h1>
-              <p className='text-white/85 mt-1 max-md:hidden'>{plan?.desc || 'Quick log meals, view history, and send suggestions to your coach.'}</p>
+        <div className='relative py-3 px-3 md:p-5 text-white'>
+          <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-3'>
+            <div className='min-w-0'>
+              <MultiLangText className=' max-sm:text-center block text-xl md:text-4xl font-semibold truncate'>{plan?.name}</MultiLangText>
+              <MultiLangText className=' max-sm:text-center  block text-white/85 mt-1 max-md:text-sm max-md:line-clamp-2'>{plan?.desc}</MultiLangText>
             </div>
 
-            <div className='flex items-center gap-2'>
-              {/* <button onClick={() => setHistoryOpen(true)} className='px-2 inline-flex items-center gap-2 rounded-lg bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition'>
+            <div className='flex items-center gap-2 justify-end'>
+              {/* History button (kept but translated, you can un-comment when needed) */}
+              {/* <button
+                onClick={() => setHistoryOpen(true)}
+                className='px-2 inline-flex items-center gap-2 rounded-lg bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition'
+              >
                 <History size={16} />
-                <span className='max-md:hidden'>History</span>
+                <span className='max-md:hidden'>{t('nutrition.header.history')}</span>
               </button> */}
 
               {hasNotes && (
-                <button onClick={() => setNotesOpen(true)} className='px-2 inline-flex items-center gap-2 rounded-lg bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition'>
+                <button onClick={() => setNotesOpen(true)} className=' max-md:mx-auto px-2 inline-flex items-center gap-2 rounded-lg bg-white/10 border border-white/30 text-white h-[37px]  justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition'>
                   <StickyNote size={16} />
-                  <span className='max-md:hidden'>Notes</span>
+                  <span className=' '>{t('nutrition.header.notes')}</span>
                 </button>
               )}
             </div>
           </div>
 
-          <div className='grid grid-cols-4 gap-2 max-md:hidden mt-4'>
-            <StatCard icon={Target} title='Today Calories' value={`${stats?.kcal || 0}`} />
-            <StatCard icon={TrendingUp} title='Meals (Selected Day)' value={stats?.meals} />
-            <StatCard icon={Calendar} title='Adherence (day logs)' value={stats?.adherenceAvg || 0} />
-            <StatCard icon={History} title='Streak (days)' value={stats?.streak} />
+          {/* Stats – responsive */}
+          <div className='mt-4 grid grid-cols-3 sm:grid-cols-4 gap-2'>
+            <StatCard resPhone={true} icon={Target} title={t('nutrition.header.dailyTarget')} value={user?.caloriesTarget ?? 0} />
+            <StatCard resPhone={true} icon={Target} title={t('nutrition.header.todayCalories')} value={stats?.kcal ?? 0} />
+            <StatCard resPhone={true} icon={TrendingUp} title={t('nutrition.header.mealsSelectedDay')} value={stats?.meals ?? 0} />
           </div>
         </div>
       </div>
@@ -369,7 +428,7 @@ export default function ClientMealPlanPage() {
       </div>
 
       {/* Notes */}
-      <Modal open={notesOpen} onClose={() => setNotesOpen(false)} title='Coach Notes'>
+      <Modal open={notesOpen} onClose={() => setNotesOpen(false)} title={t('nutrition.notes.modalTitle')}>
         {hasNotes ? (
           <div className='rounded-lg border border-slate-200 bg-amber-50 p-3'>
             <MultiLangText className='whitespace-pre-wrap text-[13px] leading-6 text-slate-900'>{plan.notes}</MultiLangText>
@@ -380,10 +439,10 @@ export default function ClientMealPlanPage() {
       </Modal>
 
       {/* Content */}
-      <div className='md:bg-white md:p-6 overflow-hidden'>{loading ? <SkeletonPanel /> : !plan || !activeDay ? <NotFoundPanel onRefresh={refresh} /> : <DayPanel day={activeDay} takenMap={takenMap} itemTakenMap={itemTakenMap} suppTakenMap={suppTakenMap} setMealTaken={setMealTaken} setItemTaken={setItemTaken} setSupplementTaken={setSupplementTaken} onInlineSave={saveInlineMeal} />}</div>
+      <div className=' '>{loading ? <SkeletonPanel /> : !plan || !activeDay ? <NotFoundPanel onRefresh={refresh} /> : <DayPanel day={activeDay} takenMap={takenMap} itemTakenMap={itemTakenMap} suppTakenMap={suppTakenMap} setMealTaken={setMealTaken} setItemTaken={setItemTaken} setSupplementTaken={setSupplementTaken} onInlineSave={saveInlineMeal} />}</div>
 
       {/* History modal */}
-      <Modal open={historyOpen} onClose={() => setHistoryOpen(false)} title='Eating History'>
+      <Modal open={historyOpen} onClose={() => setHistoryOpen(false)} title={t('nutrition.history.modalTitle')}>
         <HistoryViewer history={history} />
       </Modal>
     </div>
@@ -404,16 +463,18 @@ function SkeletonPanel() {
 }
 
 function NotFoundPanel({ onRefresh }) {
+  const t = useTranslations('my-nutrition');
+
   return (
-    <div className='p-8'>
+    <div className='p-6 md:p-8'>
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 28 }} className='mx-auto max-w-xl text-center'>
         <div className='mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm border border-slate-200'>
           <Inbox className='h-6 w-6 text-slate-400' />
         </div>
-        <h3 className='mt-3 text-lg font-semibold text-slate-900'>Not found</h3>
-        <p className='mt-1 text-sm text-slate-600'>No active meal plan is available for your account.</p>
+        <h3 className='mt-3 text-lg font-semibold text-slate-900'>{t('nutrition.notFound.title')}</h3>
+        <p className='mt-1 text-sm text-slate-600'>{t('nutrition.notFound.description')}</p>
         <div className='mt-4 flex items-center justify-center'>
-          <BasicButton label='Refresh' variant='outline' onClick={onRefresh} />
+          <BasicButton labelKey='nutrition.notFound.refresh' variant='outline' onClick={onRefresh} />
         </div>
       </motion.div>
     </div>
@@ -421,6 +482,8 @@ function NotFoundPanel({ onRefresh }) {
 }
 
 function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, setItemTaken, setSupplementTaken, onInlineSave }) {
+  const t = useTranslations('my-nutrition');
+
   const meals = day?.meals || mapFoodsToMeals(day?.foods || []);
   const daySupps = Array.isArray(day?.supplements) ? day.supplements : [];
   const dayKey = (day.day || '').toLowerCase();
@@ -432,9 +495,9 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
   };
 
   const timeline = useMemo(() => {
-    const toMin = t => {
-      if (!t) return 24 * 60 + 1;
-      const [h, m = '0'] = String(t).split(':');
+    const toMin = timeVal => {
+      if (!timeVal) return 24 * 60 + 1;
+      const [h, m = '0'] = String(timeVal).split(':');
       return Number(h) * 60 + Number(m);
     };
     const mealBlocks = (meals || []).map((m, mi) => ({
@@ -469,19 +532,20 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
             const mealCals = (meal.items || []).reduce((a, it) => a + Number(it.calories || 0), 0);
             const editKey = mealKey;
             const isEditing = !!editing[editKey];
+
             return (
               <motion.div key={block.key} className='relative md:grid md:grid-cols-2' initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 28 }}>
                 {/* timeline marker / time (desktop) */}
                 <div className={`hidden md:block ${isLeft ? 'order-1 pr-6' : 'order-2 pl-6'} relative`}>
-                  {!isLeft && <span className='absolute -left-[7px] top-3 h-3.5 w-3.5 rounded-full bg-indigo-600 ring-4 ring-indigo-100' />}
-                  {isLeft && <span className='absolute -right-[7px] top-3 h-3.5 w-3.5 rounded-full bg-indigo-600 ring-4 ring-indigo-100' />}
-                  <span className={`flex flex-col gap-1 absolute top-[9px] text-[11px] text-slate-500 whitespace-nowrap ${isLeft ? 'right-[40px] translate-x-6' : 'left-[40px] -translate-x-6'}`}>
+                  {!isLeft && <span className='absolute rtl:-right-[7px] ltr:-left-[7px] top-3 h-3.5 w-3.5 rounded-full bg-indigo-600 ring-4 ring-indigo-100' />}
+                  {isLeft && <span className='absolute rtl:-left-[7px] ltr:-right-[7px] top-3 h-3.5 w-3.5 rounded-full bg-indigo-600 ring-4 ring-indigo-100' />}
+                  <span className={`flex flex-col gap-1 absolute top-[9px] text-[11px] text-slate-500 whitespace-nowrap ${isLeft ? ' rtl:left-0 ltr:right-[40px] translate-x-6' : ' rtl:right-0 ltr:left-[40px] -translate-x-6'}`}>
                     <span className='text-sm font-[600] items-center gap-1'>{time12}</span>
                   </span>
                 </div>
 
                 {/* mobile bullet/time */}
-                <div className='md:hidden relative flex items-center gap-2 px-2 py-1.5 '>
+                <div className='md:hidden relative flex items-center gap-2 px-2 py-1.5'>
                   <span className='relative flex h-3.5 w-3.5'>
                     <span className='absolute inline-flex h-full w-full rounded-full bg-indigo-600 opacity-75 animate-ping'></span>
                     <span className='relative inline-flex h-3.5 w-3.5 rounded-full bg-indigo-600 ring-4 ring-indigo-100'></span>
@@ -493,8 +557,8 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
                 </div>
 
                 {/* card */}
-                <div className={`${isLeft ? 'md:order-2 md:pl-6' : 'md:order-1 md:pr-6'}`}>
-                  <div className='rounded-lg border border-slate-200 bg-white p-3 shadow-sm hover:shadow transition-shadow'>
+                <div className={`${isLeft ? 'md:order-2 md:rtl:pr-6 md:ltr:pl-6' : 'md:order-1 md:rtl:pl-6 md:ltr:pr-6'}`}>
+                  <div className='rounded-lg border border-slate-200 bg-white p-3 shadow-sm hover:shadow-md transition-shadow'>
                     <div className='flex items-start justify-between gap-3'>
                       <div className='min-w-0 w-full'>
                         <div className='flex justify-between gap-2'>
@@ -503,23 +567,18 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
                             <span className='inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200'>
                               <UtensilsCrossed size={14} />
                             </span>
-                            <span className='truncate'>{`Meal ${idx + 1}`}</span>
-                            <span className='rounded-full border border-slate-200 bg-slate-50 px-2 py-[2px] text-[12px] text-slate-600'>{mealCals} kcal</span>
+                            <span className='truncate'>{t('nutrition.meal.title', { index: idx + 1 })}</span>
+                            <span className='rounded-full border border-slate-200 bg-slate-50 px-2 py-[2px] text-[12px] text-slate-600'>
+                              {mealCals} {t('nutrition.units.kcal')}
+                            </span>
                           </div>
 
                           {/* Actions */}
                           <div className='flex flex-wrap items-center gap-2'>
-                            {/* Edit / Close */}
-                            {/* <button onClick={() => toggleEdit(mi)} title={isEditing ? 'Close editor' : 'Edit items'} className={['inline-flex h-[34px] items-center gap-1 rounded-md px-3 text-xs font-medium shadow-sm ring-1 ring-inset transition', 'focus-visible:outline-none focus-visible:ring-2', isEditing ? 'bg-rose-600 text-white ring-rose-600 hover:bg-rose-700 focus-visible:ring-rose-300/40' : 'bg-indigo-600 text-white ring-indigo-600 hover:bg-indigo-700 focus-visible:ring-indigo-300/40'].join(' ')}>
-                              <PencilLine size={12} />
-                              {isEditing ? 'Close' : 'Edit'}
-                            </button> */}
-
                             {/* Mark done / undo (indigo theme) */}
                             {!isEditing && (
                               <button type='button' onClick={() => setMealTaken(dayKey, mi, meal, !mealTaken)} aria-pressed={mealTaken} className={['inline-flex h-9 items-center gap-2 rounded-md px-3 text-xs font-medium transition-colors', 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/40', mealTaken ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 ring-1 ring-slate-200'].join(' ')}>
-                                {mealTaken ? <CheckCircle className='flex-none text-white' size={16} /> : <CircleCheck className='flex-none text-indigo-500' size={16} />}
-                                {mealTaken ? 'Done' : 'Mark all done'}
+                                {mealTaken ? <CheckCircle className='flex-none text-white' size={20} /> : <CircleCheck className='flex-none text-indigo-500' size={20} />}
                               </button>
                             )}
                           </div>
@@ -546,16 +605,18 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
                                     }
                                   }}
                                   onClick={toggle}
-                                  className={['!p-2 group inline-flex items-center gap-2 rounded-lg border text-[12px] transition', 'cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/60', checked ? 'bg-indigo-50 text-indigo-900 border-indigo-200 ring-1 ring-indigo-300 shadow-[inset_0_0_0_1px_rgba(79,70,229,.25)]' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'].join(' ')}>
+                                  className={['!p-2 group inline-flex items-center gap-2 rounded-lg border text-[12px] transition', 'cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2', 'focus-visible:ring-indigo-300/60', checked ? 'bg-indigo-50 text-indigo-900 border-indigo-200 ring-1 ring-indigo-300 shadow-[inset_0_0_0_1px_rgba(79,70,229,.25)]' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'].join(' ')}>
                                   <MiniCheck checked={checked} tone='indigo' />
-                                  <span className='leading-none flex items-center gap-2'>
-                                    <span className={checked ? 'font-semibold' : ''}>
-                                      {it.name}
-                                      {it.quantity ? ` • ${Number(it.quantity)}g` : ''}
-                                      {it.calories ? ` • ${Number(it.calories)} kcal` : ''}
+
+                                  <div dir='rtl' className={checked ? 'font-semibold' : '' + ' flex items-center  gap-2 leading-none '}>
+                                    <span>{it.name}</span> -
+                                    <span> {it.quantity ? `${Number(it.quantity)}${t("gram")}` : null} </span> - {" "}
+																		<span className='inline-flex items-center '>
+																			<span> {" "} {Number(it.calories)}  </span> 
+																			<span> {t('nutrition.units.kcal')} </span>
                                     </span>
-                                    {checked && <span className='inline-flex items-center rounded-full bg-indigo-100 px-1.5 py-[1px] text-[10px] font-semibold text-indigo-800'>Done</span>}
-                                  </span>
+                                    
+                                  </div>
                                 </div>
                               );
                             })}
@@ -583,11 +644,10 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
                               <span className='inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200'>
                                 <Pill size={14} className='text-emerald-600' />
                               </span>
-                              Supplements
+                              {t('nutrition.supplements.title')}
                             </div>
                             <div className='flex flex-col gap-1.5'>
                               {meal.supplements.map((s, si) => {
-                                // name-based key (scoped per meal)
                                 const key = kSuppByName(dayKey, 'meal', mi, s.name);
                                 const taken = !!suppTakenMap[key];
                                 const toggle = () => setSupplementTaken(dayKey, 'meal', `${mi}-${s.id || si}`, s, !taken, mi);
@@ -605,7 +665,7 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
                                       }
                                     }}
                                     onClick={toggle}
-                                    className={[' !p-2 !px-3 group inline-flex items-center justify-between gap-3 rounded-lg border text-[12px] transition', 'cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60', taken ? 'bg-emerald-50 text-emerald-900 border-emerald-200 ring-1 ring-emerald-300 shadow-[inset_0_0_0_1px_rgba(16,185,129,.25)]' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'].join(' ')}>
+                                    className={['!p-2 !px-3 group inline-flex items-center justify-between gap-3 rounded-lg border text-[12px] transition', 'cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60', taken ? 'bg-emerald-50 text-emerald-900 border-emerald-200 ring-1 ring-emerald-300 shadow-[inset_0_0_0_1px_rgba(16,185,129,.25)]' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'].join(' ')}>
                                     <div className='min-w-0 text-slate-700 flex-1'>
                                       <div className='flex items-center gap-2'>
                                         <MiniCheck checked={taken} tone='emerald' />
@@ -613,9 +673,13 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
                                           {s.name}
                                           {s.time ? ` • ${formatTime12(s.time)}` : ''}
                                           {s.timing ? ` • ${s.timing}` : ''}
-                                          {s.bestWith ? ` • best with: ${s.bestWith}` : ''}
+                                          {s.bestWith
+                                            ? ` • ${t('nutrition.supplements.bestWith', {
+                                                value: s.bestWith,
+                                              })}`
+                                            : ''}
                                         </span>
-                                        {taken && <span className='inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-[1px] text-[10px] font-semibold text-emerald-800'>Taken</span>}
+                                        {taken && <span className='inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-[1px] text-[10px] font-semibold text-emerald-800'>{t('nutrition.supplements.takenTag')}</span>}
                                       </div>
                                     </div>
                                   </div>
@@ -632,7 +696,7 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
             );
           }
 
-          // DAY-LEVEL SUPPLEMENT (emerald when taken)
+          // day-level supplement block
           const { supp } = block.meta;
           const bulletClass = 'h-3.5 w-3.5 rounded-full bg-indigo-600 ring-4 ring-indigo-100';
 
@@ -649,7 +713,7 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
               </div>
 
               <div className={`${idx % 2 === 0 ? 'md:order-2 md:pl-6' : 'md:order-1 md:pr-6'}`}>
-                <div className='rounded-lg border border-slate-200 bg-white p-3 shadow-sm hover:shadow transition-shadow'>
+                <div className='rounded-lg border border-slate-200 bg-white p-3 shadow-sm hover:shadow-md transition-shadow'>
                   <div className='flex items-start justify-between gap-3'>
                     <div className='min-w-0'>
                       <div className='font-semibold text-slate-900 flex items-center gap-2 text-sm'>
@@ -659,7 +723,7 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
                       <div className='mt-1 text-[12px] text-slate-600'>
                         {supp.bestWith ? (
                           <>
-                            Best with: <span className='font-medium text-slate-800'>{supp.bestWith}</span>
+                            {t('nutrition.supplements.bestWithLabel')} <span className='font-medium text-slate-800'>{supp.bestWith}</span>
                           </>
                         ) : (
                           '—'
@@ -687,7 +751,7 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
                           onClick={toggle}
                           className={['block !p-2 !px-3 group inline-flex items-center gap-2 rounded-lg border text-[12px] transition', 'cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60', taken ? 'bg-emerald-50 text-emerald-900 border-emerald-200 ring-1 ring-emerald-300 shadow-[inset_0_0_0_1px_rgba(16,185,129,.25)]' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'].join(' ')}>
                           <MiniCheck checked={taken} tone='emerald' />
-                          <span className='leading-none'>{taken ? 'Taken' : 'Mark taken'}</span>
+                          <span className='leading-none'>{taken ? t('nutrition.supplements.takenTag') : t('nutrition.supplements.markTaken')}</span>
                         </div>
                       );
                     })()}
@@ -734,6 +798,8 @@ const inlineSchema = yup.object().shape({
 });
 
 function InlineMealEditor({ dayKey, mealIndex, initialItems = [], onCancel, onSave }) {
+  const t = useTranslations('my-nutrition');
+
   const {
     control,
     handleSubmit,
@@ -759,30 +825,30 @@ function InlineMealEditor({ dayKey, mealIndex, initialItems = [], onCancel, onSa
   return (
     <form onSubmit={handleSubmit(submit)} className='mt-3 space-y-2 rounded-lg border border-indigo-200 bg-indigo-50/40 p-2'>
       {!fields.length ? (
-        <div className='rounded border border-slate-200 p-3 text-sm text-slate-600 bg-white'>No items. Add some below.</div>
+        <div className='rounded border border-slate-200 p-3 text-sm text-slate-600 bg-white'>{t('nutrition.inline.noItems')}</div>
       ) : (
         <div className='space-y-2'>
           {fields.map((f, idx) => (
             <div key={f.id || idx} className='grid grid-cols-1 md:grid-cols-[1.2fr_.7fr_.6fr_auto] gap-2 border border-slate-200 rounded-md p-2 bg-white'>
-              <Controller name={`items.${idx}.name`} control={control} render={({ field, fieldState }) => <Input placeholder='Name' value={field.value} onChange={field.onChange} error={fieldState?.error?.message} />} />
-              <Controller name={`items.${idx}.quantity`} control={control} render={({ field, fieldState }) => <Input placeholder='Quantity (g)' type='number' value={field.value ?? ''} onChange={v => field.onChange(v === '' ? '' : Number(v))} error={fieldState?.error?.message} />} />
-              <Controller name={`items.${idx}.calories`} control={control} render={({ field, fieldState }) => <Input placeholder='Calories' type='number' value={field.value ?? ''} onChange={v => field.onChange(v === '' ? '' : Number(v))} error={fieldState?.error?.message} />} />
+              <Controller name={`items.${idx}.name`} control={control} render={({ field, fieldState }) => <Input placeholder={t('nutrition.inline.namePlaceholder')} value={field.value} onChange={field.onChange} error={fieldState?.error?.message} />} />
+              <Controller name={`items.${idx}.quantity`} control={control} render={({ field, fieldState }) => <Input placeholder={t('nutrition.inline.quantityPlaceholder')} type='number' value={field.value ?? ''} onChange={v => field.onChange(v === '' ? '' : Number(v))} error={fieldState?.error?.message} />} />
+              <Controller name={`items.${idx}.calories`} control={control} render={({ field, fieldState }) => <Input placeholder={t('nutrition.inline.caloriesPlaceholder')} type='number' value={field.value ?? ''} onChange={v => field.onChange(v === '' ? '' : Number(v))} error={fieldState?.error?.message} />} />
               <button type='button' onClick={() => remove(idx)} className='rounded-md border border-slate-200 px-2 text-sm hover:bg-slate-50 h-9'>
-                Remove
+                {t('nutrition.inline.remove')}
               </button>
             </div>
           ))}
         </div>
       )}
 
-      <div className='flex items-center justify-between'>
+      <div className='flex flex-col md:flex-row items-center justify-between gap-2'>
         <button type='button' onClick={() => append({ name: '', quantity: null, calories: null })} className='inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm hover:bg-slate-50'>
-          <Plus className='h-4 w-4' /> Add item
+          <Plus className='h-4 w-4' /> {t('nutrition.inline.addItem')}
         </button>
 
         <div className='flex items-center gap-2'>
-          <BasicButton label='Cancel' variant='outline' onClick={onCancel} />
-          <BasicButton label='Save' variant='primary' submit loading={isSubmitting} />
+          <BasicButton labelKey='common.cancel' variant='outline' onClick={onCancel} />
+          <BasicButton labelKey='common.save' variant='primary' submit loading={isSubmitting} />
         </div>
       </div>
     </form>
@@ -800,7 +866,6 @@ function deriveTakenMapsFromHistory(plan, history) {
     const dayKey = (log.day || '').toLowerCase();
     const mi = typeof log.mealIndex === 'number' ? log.mealIndex : null;
 
-    // Items -> name-based
     if (Array.isArray(log.items) && mi != null) {
       for (const it of log.items) {
         if (!it?.name) continue;
@@ -808,7 +873,6 @@ function deriveTakenMapsFromHistory(plan, history) {
       }
     }
 
-    // Supplements -> **name-based** (ignore per-log ids)
     if (Array.isArray(log.supplementsTaken) && log.supplementsTaken.length) {
       const scope = mi != null ? 'meal' : 'day';
       log.supplementsTaken.forEach(s => {
@@ -819,7 +883,6 @@ function deriveTakenMapsFromHistory(plan, history) {
     }
   }
 
-  // Recompute mealMap using name-based item states
   if (plan?.days?.length) {
     const days = normalizeWeekOrder(plan.days);
     days.forEach(d => {
@@ -853,7 +916,7 @@ function capitalize(s) {
 }
 // JS getDay(): 0=Sun..6=Sat. We return 'sunday'...'saturday'
 function weekdayKeySaturdayFirst(d) {
-  const js = d.getDay(); // 0..6
+  const js = d.getDay();
   const map = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   return map[js];
 }
@@ -866,7 +929,11 @@ function normalizeWeekOrder(days = []) {
 }
 function sumCaloriesDay(meals = []) {
   let total = 0;
-  (meals || []).forEach(m => (m.items || []).forEach(it => (total += Number(it.calories || 0))));
+  (meals || []).forEach(m =>
+    (m.items || []).forEach(it => {
+      total += Number(it.calories || 0);
+    }),
+  );
   return total;
 }
 // legacy: convert foods[] shape into a single "Meal"
@@ -874,7 +941,7 @@ function mapFoodsToMeals(foods = []) {
   if (!foods?.length) return [];
   return [
     {
-      title: 'Meal',
+      title: '',
       time: '',
       items: foods.map(f => ({
         name: f.name,
@@ -914,7 +981,7 @@ const kItemByName = (dayKey, mi, name) => `${dayKey}:${mi}:name::${normName(name
 // supplements name-based (meal- or day-level)
 const kSuppByName = (dayKey, scope, mealIndexOrNull, name) => {
   const base = `${dayKey}:${scope}:name::${normName(name)}`;
-  return scope === 'meal' ? `${base}@${mealIndexOrNull}` : base; // disambiguate per meal
+  return scope === 'meal' ? `${base}@${mealIndexOrNull}` : base;
 };
 
 function dateForDayKeyInCurrentWeek(dayKey, now = new Date()) {
@@ -922,9 +989,7 @@ function dateForDayKeyInCurrentWeek(dayKey, now = new Date()) {
   const idx = WEEK.indexOf((dayKey || '').toLowerCase());
   if (idx === -1) return formatLocalDateYYYYMMDD(now);
 
-  // Find start of week (Saturday) relative to 'now'
-  // JS: 0=Sun..6=Sat -> distance back to Saturday is (jsDay+1) % 7
-  const jsDay = now.getDay(); // 0..6
+  const jsDay = now.getDay();
   const backToSat = (jsDay + 1) % 7;
   const weekStart = new Date(now);
   weekStart.setHours(0, 0, 0, 0);

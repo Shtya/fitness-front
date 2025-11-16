@@ -531,6 +531,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 					collapsed ? 'w-[72px]' : 'w-[280px]'
 				)}
 			>
+				
 				<div className="flex h-screen flex-col">
 					{/* Header */}
 					<div

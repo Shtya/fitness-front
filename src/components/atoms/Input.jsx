@@ -3,12 +3,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { forwardRef } from 'react';
 
 export default function Input({ cnInputParent, label, placeholder = '', name, type = 'text', value, onChange = () => {}, onBlur, disabled = false, error, clearable = true, className = '', cnInput }) {
   const inputRef = useRef(null);
   const t = useTranslations();
 
-  // keep internal state as a STRING so 0 is not treated as empty/falsy
   const toStr = v => (v === null || v === undefined ? '' : String(v));
   const [internal, setInternal] = useState(toStr(value));
 
@@ -60,3 +60,95 @@ export default function Input({ cnInputParent, label, placeholder = '', name, ty
     </div>
   );
 }
+
+ 
+ 
+export const Input2 = forwardRef(function Input(
+  {
+    cnInputParent = '',
+    label,
+    placeholder = '',
+    name,
+    type = 'text',
+    value,
+    onChange,
+    onBlur,
+    disabled = false,
+    error,
+    clearable = true,
+    className = '',
+    cnInput = '',
+    ...rest
+  },
+  ref,
+) {
+  const val = value ?? '';
+
+  const handleChange = e => {
+    const next = e.target.value;
+    // RHF accepts both event and raw value, but we keep it clean:
+    onChange?.(next);
+  };
+
+  const handleBlur = e => {
+    onBlur?.(e);
+  };
+
+  const clearInput = e => {
+    e.stopPropagation();
+    onChange?.('');
+  };
+
+  const showClear = clearable && !disabled && val !== '';
+
+  return (
+    <div className={`w-full relative ${className}`}>
+      {label && (
+        <label className='mb-1.5 block text-sm font-medium text-slate-700'>
+          {label}
+        </label>
+      )}
+
+      <div
+        className={[
+          cnInputParent,
+          'relative flex items-center rounded-lg border bg-white',
+          disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text',
+          error && error !== 'users'
+            ? 'border-rose-500'
+            : 'border-slate-300 hover:border-slate-400 focus-within:border-indigo-500',
+          'focus-within:ring-4 focus-within:ring-indigo-100',
+          'transition-colors',
+        ].join(' ')}
+      >
+        <input
+          ref={ref}
+          type={type}
+          name={name}
+          placeholder={placeholder}
+          value={val}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          disabled={disabled}
+          className={`input-3d ${cnInput} h-[40px] ltr:pr-[28px] rtl:pl-[28px] w-full rounded-lg px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-gray-400`}
+          aria-invalid={!!error}
+          {...rest}
+        />
+
+        {showClear && (
+          <X
+            size={16}
+            className='absolute rtl:left-3 ltr:right-3 top-1/2 -translate-y-1/2 cursor-pointer opacity-60 transition hover:opacity-100'
+            onClick={clearInput}
+          />
+        )}
+      </div>
+
+      {error && error !== 'users' && (
+        <p className='mt-1.5 text-xs text-rose-600'>{error}</p>
+      )}
+    </div>
+  );
+});
+
+ 

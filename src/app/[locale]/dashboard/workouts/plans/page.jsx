@@ -745,23 +745,22 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ initial, onCancel, onCreat
 
 	const [days, setDays] = useState(() => {
 		const d = initial?.days || initial?.program?.days || [];
-		const mapped = d.map((x, i) => ({
-			id: x.id || `day_${i}`,
+ 		const mapped = d.map((x, i) => ({
+			id: x.id ,
 			dayOfWeek: (x.day || x.dayOfWeek || '').toLowerCase() || 'saturday',
 			nameOfWeek: x.nameOfWeek || x.name || t('builder.dayNumber', { num: i + 1 }),
 			exercises: (x.exercises || []).map((e, j) => ({
 				exerciseId: e.exerciseId || e.exercise?.id || e.id,
-				name: e.name || e.exercise?.name || `${t('preview.exerciseLabel')} #${j + 1}`,
+				name: e.name || e.exercise?.name  ,
+				img: e.img ,
 				category: e.exercise?.category || e.category || null,
 				order: e.order || e.orderIndex || j + 1,
 			})),
 		}));
 
-		// if editing existing plan with days -> use them
-		if (mapped.length > 0) return mapped;
+ 		if (mapped.length > 0) return mapped;
 
-		// NEW plan → start with one default day (Saturday)
-		return [makeNewDay(1)];
+ 		return [makeNewDay(1)];
 	});
 
 	const addDay = () => {
@@ -791,8 +790,6 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ initial, onCancel, onCreat
 	};
 
 	const onPickerDone = pickedArray => {
-		// pickedArray = [{ id, name, category }, ...] from ExercisePicker (only currently checked)
-
 		setDays(arr =>
 			arr.map(day => {
 				if (day.id !== pickerDayId) return day;
@@ -906,11 +903,10 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ initial, onCancel, onCreat
 				<Button name={t('builder.savePlanBtn')} loading={loading} type='button' onClick={submit} className='!w-fit text-sm !h-[39px]'></Button>
 			</div>
 
-			{/* Full-screen Exercise Picker */}
 			<ExercisePicker
 				open={pickerOpen}
-				dayId={pickerDayId} // 👈 NEW
-				initialSelected={pickerInitialSelected} // 👈 NEW
+				dayId={pickerDayId}
+				initialSelected={pickerInitialSelected} 
 				onClose={() => {
 					setPickerOpen(false);
 					setPickerDayId(null);
@@ -928,7 +924,7 @@ export function DaysListSection({ days, setDays, openPicker, removeDay, onReorde
 	const btnOutline = 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 px-3 py-1.5 shadow-sm';
 	const btnGhostDanger = 'border border-slate-200 bg-white text-rose-600 hover:bg-rose-50 px-2.5 py-1.5';
 	const iconBtn = 'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white ' + 'text-slate-700 hover:bg-slate-50 focus-visible:ring-4 focus-visible:ring-slate-400/30';
-
+ 
 	return (
 		<div className='space-y-4'>
 			{days.map(d => (
@@ -972,6 +968,9 @@ export function DaysListSection({ days, setDays, openPicker, removeDay, onReorde
 										<div className='flex items-center justify-between gap-3'>
 											<div className='flex min-w-0 items-center gap-3'>
 												<GripVertical className='w-4 h-4 shrink-0 cursor-grab text-slate-400' />
+												<div className='w-[35px] ' >
+													<Img src={ex?.img} showBlur={false} className='w-full' />
+												</div>
 												<MultiLangText className='truncate font-medium text-slate-900'>{ex.name}</MultiLangText>
 												{ex.category ? (
 													<span className='inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-1 text-[11px] text-indigo-700'>

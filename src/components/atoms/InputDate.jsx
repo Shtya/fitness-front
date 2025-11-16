@@ -6,40 +6,42 @@ import 'flatpickr/dist/flatpickr.css';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 
-export default function InputDate({ cnLabel, cnInput, className, label, placeholder = 'Select date', onChange }) {
-  const [value, setValue] = useState('');
+export default function InputDate({
+  cnLabel,
+  cnInput,
+  className,
+  label,
+  placeholder = 'Select date',
+  onChange,
+  defaultValue,   // ✅ NEW PROP
+}) {
   const inputRef = useRef(null);
   const t = useTranslations("common");
 
+  const initDate = defaultValue ? new Date(defaultValue) : new Date();
+
+  const format = d =>
+    d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  const [value, setValue] = useState(format(initDate));
+
   useEffect(() => {
-    const today = new Date();
-    const formattedToday = today.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-    setValue(formattedToday);
-    onChange?.(today);
+    onChange?.(initDate);
 
     if (inputRef.current) {
       flatpickr(inputRef.current, {
         dateFormat: 'd M Y',
-        defaultDate: today, // ✅ set default to today
+        defaultDate: initDate, // ⭐ Uses the passed value
         onChange: selectedDates => {
           const date = selectedDates[0];
           if (date) {
-            const formatted = date.toLocaleDateString('en-GB', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-            });
-            setValue(formatted);
+            setValue(format(date));
             onChange?.(date);
           }
         },
       });
     }
-  }, []);
+  }, [defaultValue]); // ⭐ re-init if defaultValue changes
 
   return (
     <div className={`w-full ${className}`}>

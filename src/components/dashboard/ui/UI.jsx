@@ -27,15 +27,15 @@ export function PageHeader({ className, icon: Icon, title, subtitle, actions = n
   );
 }
 
-export function StatCard({ cnParent, cn, icon: Icon, title, value }) {
+export function StatCard({ resPhone , cnParent, cn, icon: Icon, title, value }) {
   return (
-    <div className={`${cnParent} relative overflow-hidden text-white rounded-lg border border-white/20 bg-white/10 p-3`}>
-      <div className='flex items-center justify-between gap-2'>
-        <div className='grid place-items-center rounded-lg bg-white/15 p-2'>
+    <div className={`${cnParent} ${resPhone && "max-md:h-fit"} relative overflow-hidden text-white rounded-lg border border-white/20 bg-white/10 p-3`}>
+      <div className={`flex items-center justify-between gap-2 ${resPhone && "max-md:flex-col"}`}>
+        <div className={`grid place-items-center rounded-lg bg-white/15 p-2 ${resPhone && "max-md:hidden"}`}>
           <Icon className='h-5 w-5' />
         </div>
-        <div className={`flex  items-center gap-2 flex-1 justify-between ${cn} `}>
-          <p className='text-sm text-white/85  '>{title}</p>
+        <div className={`flex  items-center gap-2 flex-1 justify-between ${cn} ${resPhone && "max-md:flex-col max-md:gap-1"}`}>
+          <p className={` text-sm text-white/85  ${resPhone && "max-md:text-center max-md:text-xs  "}`}>{title}</p>
           <p className=' text-lg font-bold tracking-tight flex-none'>{value}</p>
         </div>
       </div>
@@ -317,7 +317,7 @@ function InjectShimmer() {
   return null;
 }
 
-export function TabsPill({ outerCn , isLoading , sliceInPhone = true, hiddenArrow = false, slice, tabs = [], active, onChange, className = '', id = 'ui-tabs-pill', skeletonCount = 5 }) {
+export function TabsPill({ outerCn , isLoading , sliceInPhone = true, hiddenArrow = false,  tabs = [], active, onChange, className = '', id = 'ui-tabs-pill', skeletonCount = 5 }) {
   const scrollerRef = useRef(null);
   const tabRefs = useRef({}); // { [key]: HTMLElement }
 
@@ -373,7 +373,7 @@ export function TabsPill({ outerCn , isLoading , sliceInPhone = true, hiddenArro
   }, [goPrev, goNext, activeIndex, tabs]);
 
   return (
-    <div className={`${outerCn} w-full overflow-x-auto pb-1 overflow-y-hidden`}>
+     <div className={`${outerCn} w-full overflow-x-auto pb-1 overflow-y-hidden`}>
       <InjectShimmer />
       <div className='w-fit flex items-center gap-2'>
         {/* Prev button */}

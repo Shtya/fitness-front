@@ -2,18 +2,36 @@ import { Toaster } from 'react-hot-toast';
 import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { notFound } from 'next/navigation';
 import { routing } from '../../i18n/routing';
-import { Cairo, IBM_Plex_Sans_Arabic, Open_Sans } from 'next/font/google';
+import { Cairo, Inter, Open_Sans, Roboto_Mono, Space_Grotesk } from 'next/font/google';
 import './globals.css';
-// import '@/../public/fonts/fonts.css';
 import React from 'react';
 import Layout from '../../components/molecules/Layout';
 import AddToHomeGuide from '@/components/atoms/AddToHomeGuide';
-// import { NAV } from '@/components/molecules/Sidebar';
-// import { RouteGuard } from '../role-access';
+
+export const spaceGrotesk = Space_Grotesk({
+  variable: '--font-space-grotesk',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+});
+
+export const robotoMono = Roboto_Mono({
+  variable: '--font-roboto-mono',
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  display: 'swap',
+});
+
+export const inter = Inter({
+  variable: '--font-inter',
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  display: 'swap',
+});
 
 const openSans = Open_Sans({
   variable: '--font-open-sans',
-  subsets: ['latin'], // أضف 'latin-ext' إذا تحتاج
+  subsets: ['latin'],  
   weight: ['300', '400', '500', '600', '700', '800'],
   display: 'swap',
 });
@@ -26,13 +44,15 @@ const arabicFont = Cairo({
 });
 
 export function generateStaticParams() {
-  return routing.locales.map(locale => ({ locale }));
+  return routing.locales.map((locale) => ({ locale }));
 }
 
 export const metadata = {
   title: 'FitPro - Transform Your Body, Transform Your Life',
-  description: 'Professional fitness coaching platform with personalized workout plans, nutrition tracking, and progress analytics. Join thousands achieving their fitness goals.',
-  keywords: 'fitness, workout, nutrition, personal trainer, exercise, health, wellness, body transformation, muscle building, weight loss',
+  description:
+    'Professional fitness coaching platform with personalized workout plans, nutrition tracking, and progress analytics. Join thousands achieving their fitness goals.',
+  keywords:
+    'fitness, workout, nutrition, personal trainer, exercise, health, wellness, body transformation, muscle building, weight loss',
   authors: [{ name: 'FitPro Team' }],
   creator: 'FitPro',
   publisher: 'FitPro',
@@ -41,7 +61,8 @@ export const metadata = {
 
   openGraph: {
     title: 'FitPro - Your Personal Fitness Revolution',
-    description: 'AI-powered fitness coaching with personalized plans, real-time progress tracking, and expert guidance. Start your transformation journey today.',
+    description:
+      'AI-powered fitness coaching with personalized plans, real-time progress tracking, and expert guidance. Start your transformation journey today.',
     url: 'https://fitpro.com',
     siteName: 'FitPro Fitness Platform',
     locale: 'en_US',
@@ -57,12 +78,14 @@ export const metadata = {
       {
         rel: 'apple-touch-startup-image',
         url: '/logo.png',
-        media: '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)',
+        media:
+          '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)',
       },
       {
         rel: 'apple-touch-startup-image',
         url: '/logo.png',
-        media: '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)',
+        media:
+          '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)',
       },
     ],
   },
@@ -102,16 +125,14 @@ export default async function RootLayout({ children, params }) {
 
   return (
     <html lang={locale} dir={locale == 'en' ? 'ltr' : 'rtl'} suppressHydrationWarning>
-      <body className={`bg-[#fff] scroll ${arabicFont.variable} ${openSans.variable}`}>
+      <body className={`bg-[#fff] scroll ${arabicFont.variable} ${openSans.variable} ${spaceGrotesk.variable} ${robotoMono.variable} ${inter.variable}`}>
         <NextIntlClientProvider locale={locale}>
-          {/* <RouteGuard NAV={NAV} unauthRedirect='/auth' noAccessRedirect='/' publicPrefixes={['/auth', '/public', '/workouts/plans']}> */}
-            <Layout>
-              {children}
-              <div className='md:hidden'>
-                <AddToHomeGuide />
-              </div>
-            </Layout>
-          {/* </RouteGuard> */}
+          <Layout>
+            {children}
+            <div className="md:hidden">
+              <AddToHomeGuide />
+            </div>
+          </Layout>
         </NextIntlClientProvider>
       </body>
     </html>

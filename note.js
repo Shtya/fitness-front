@@ -1,45 +1,26 @@
 /*
+	- button for feedback or problem	
 	- make the dashboard show only in web 
+	
 
 /dashboard/users
 	- stats of ( total users , action account ) not correct 
 dashboard/nutrition
 	- تخصيص أيام بعينها (اختياري  have a problem cannot add custom days
-	
-intake/forms
-	- bug when click on add new template make load for the page
-
-
-bugs
-	- when the select down i cannot show the all options in the dropdown like the ( profile )
-
-
-	* check form the response of the forms 
-		- get only for the admin 
-
-		
 	*nutrition 
 		- add in the setting api key and also for the gradient of the header page 
 		- edit the meal plan action doens't work correctly
 
 
+intake/forms
+	- bug when click on add new template make load for the page
  
-		* my/workouts ( client )
-			- remove the comment on the loading 
-			- work on upload the video 
-			- control on the podcast that will show for the client 
-			- in the dashboard can see his logs for any user  
-			- check box beside the exercise to finish it 
+ 
 
+bugs
+	- when the select down i cannot show the all options in the dropdown like the ( profile )
 
-
-		* meals page ( client )
-			- handle teh button of edit on the meal or add 
-			- handle the history 
-			- check form the all assigns
-			- dublicated
-
-
+ 
 		* profile 
 			- show those data on it ( caloriesTarget , proteinPerDay , carbsPerDay , fatsPerDay , activityLevel , notes)
 			- get the data the coach enter it when create teh account for the client and put it in his profile 
@@ -77,15 +58,10 @@ bugs
 			- Automated workflows:
 				• On report day → auto-send to coach.
 				• Add motivational messages (scheduled for next day).
-			- Send reminders via WhatsApp (integration needed).
 			- Weekly logs: weight + progress stats.
 			- auto send the report and explain to him this information i take it form your infomation 
 			- control on the podcast that will show for the client 
 			- motivation page -> send msg to the all with his name
-			- Reminders
-			- Training schedules.
-			- Meal/water reminders.
-			- Alerts for check-ins with coach.
 
 			
 		*	Progress Tracking
@@ -113,3 +89,20 @@ bugs
 	- check from the ai assistant 
 
  */
+
+
+
+/* 
+	Later 
+		* my/workouts ( client )
+			- work on upload the video 
+			- control on the podcast that will show for the client 
+			- in the dashboard can see his logs for any user  
+
+
+		* my/nutrition ( client )
+			- handle teh button of edit on the meal or add 
+			- handle the history 
+			- check form the all assigns
+			- dublicated
+*/

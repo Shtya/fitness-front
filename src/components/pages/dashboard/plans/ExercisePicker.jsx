@@ -147,19 +147,7 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
 	const [showVideo, setShowVideo] = useState(null);
 
 	if (typeof document === 'undefined') return null;
-
-	// const SearchComponent = ({ className }) => (
-	// 	<div className={`relative flex-1 max-w-[240px] sm:min-w-[260px] ${className}`}>
-	// 		<Search className='absolute rtl:right-3 ltr:left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
-	// 		<input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder={t('picker.searchPlaceholder')} className={['h-11 w-full px-8 rounded-lg', 'border border-slate-200 bg-white/90 text-slate-900', 'shadow-sm hover:shadow transition', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')} />
-	// 		{!!searchText && (
-	// 			<button type='button' onClick={() => setSearchText('')} className='absolute rtl:left-2 ltr:right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100' aria-label={t('actions.clear')}>
-	// 				<X className='w-4 h-4' />
-	// 			</button>
-	// 		)}
-	// 	</div>
-	// );
-
+ 
 	return createPortal(
 		<AnimatePresence>
 			{open ? (
@@ -271,7 +259,7 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
 														)}
 													</div>
 
-													<MultiLangText className='mb-0.5 truncate text-sm font-semibold text-slate-900'>{e.name}</MultiLangText>
+													<MultiLangText className=' text-nowrap block truncate mb-0.5 text-sm font-semibold text-slate-900'>{e.name}</MultiLangText>
 
 													<div className='mb-2 truncate text-[12px] text-slate-600'>
 														{t('picker.sets')} {e.targetSets ?? 3} · {t('picker.reps')} {e.targetReps || '—'} · {t('picker.rest')} {e.rest ?? 90}s{e.tempo ? ` · ${e.tempo}` : ''}

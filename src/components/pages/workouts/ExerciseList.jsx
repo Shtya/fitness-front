@@ -1,7 +1,8 @@
+import CheckBox from '@/components/atoms/CheckBox';
 import Img from '@/components/atoms/Img';
 import { Dumbbell, CheckCircle2, Timer, Activity, ChevronRight } from 'lucide-react';
 
-export function ExerciseList({ workout, currentExId, onPick, t }) {
+export function ExerciseList({ workout, currentExId, onPick, t, completedExercises, toggleExerciseCompletion }) {
   const exercises = Array.isArray(workout?.exercises) ? workout.exercises : [];
   const sets = Array.isArray(workout?.sets) ? workout.sets : [];
   const setsFor = exId => sets.filter(s => s?.exId === exId);
@@ -44,54 +45,63 @@ export function ExerciseList({ workout, currentExId, onPick, t }) {
         const total = list.length || 0;
         const progress = pct(done, total);
         const active = currentExId === exId;
+        const isCompleted = completedExercises.has(exId);
 
         return (
-          <button
-            key={exId}
-            type='button'
-            onClick={() => onPick?.(ex)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onPick?.(ex);
-              }
-            }}
-            aria-current={active ? 'true' : 'false'}
-            className={['group w-full text-left rounded-lg transition focus:outline-none focus:ring-2 focus:ring-indigo-400 ', 'border bg-white backdrop-blur-sm', active ? 'border-indigo-400 shadow-sm ring-1 ring-indigo-100 ' : 'border-slate-200 hover:bg-slate-50/60 hover:shadow-sm'].join(' ')}>
-            <div className='p-3 flex items-center gap-3'>
-              {/* Thumb */}
-              <div className='relative w-12 h-12 rounded-lg overflow-hidden bg-slate-100 ring-1 ring-slate-200 shrink-0'>
-                {ex?.img ? (
-                  <Img src={ex.img} alt={ex?.name || 'exercise'} className='object-cover w-full h-full' />
-                ) : (
-                  <div className='grid place-items-center w-full h-full'>
-                    <Dumbbell size={18} className='text-slate-500' />
-                  </div>
-                )}
-                {active && <span className='absolute -inset-0.5 rounded-lg ring-2 ring-indigo-300  pointer-events-none' />}
-              </div>
+          <div key={exId} className='group relative'>
+            <button
+              type='button'
+              onClick={() => onPick?.(ex)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onPick?.(ex);
+                }
+              }}
+              aria-current={active ? 'true' : 'false'}
+              className={['w-full text-left rounded-lg transition focus:outline-none focus:ring-2 focus:ring-indigo-400 ', 'border bg-white backdrop-blur-sm', active ? 'border-indigo-400 shadow-sm ring-1 ring-indigo-100 ' : 'border-slate-200 hover:bg-slate-50/60 hover:shadow-sm'].join(' ')}>
+              <div className='p-3 flex items-center gap-3'>
+                {/* Thumb */}
+                <div className='relative w-12 h-12 rounded-lg overflow-hidden bg-slate-100 ring-1 ring-slate-200 shrink-0'>
+                  {ex?.img ? (
+                    <Img src={ex.img} alt={ex?.name || 'exercise'} className='object-cover w-full h-full' />
+                  ) : (
+                    <div className='grid place-items-center w-full h-full'>
+                      <Dumbbell size={18} className='text-slate-500' />
+                    </div>
+                  )}
+                  {active && <span className='absolute -inset-0.5 rounded-lg ring-2 ring-indigo-300  pointer-events-none' />}
+                </div>
 
-              {/* Info */}
-              <div className='min-w-0 flex-1'>
-                <div className='flex items-center justify-between gap-2'>
-                  <div className='min-w-0'>
-                    <div title={ex?.name} className={`font-semibold text-slate-900 ${!active && 'truncate'}`}>
-                      {idx + 1}. {ex?.name ?? 'Unnamed exercise'}
+                {/* Info */}
+                <div className='min-w-0 flex-1'>
+                  <div className='flex items-center justify-between gap-2'>
+                    <div className='min-w-0  '>
+                      <div title={ex?.name} className={` rtl:text-right font-number text-nowrap truncate font-semibold text-slate-900 ${!active && 'truncate'}`}>
+                        {idx + 1}. {ex?.name ?? 'Unnamed exercise'}
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={e => {
+                        e.stopPropagation();
+                        toggleExerciseCompletion(exId);
+                      }}
+                      className={`cursor-pointer hover:scale-[1.05] origin-center p-1 rounded-md transition-all ${isCompleted ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-300 hover:bg-slate-50'}`}
+                      aria-label={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
+                      title={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}>
+                      <CheckCircle2 size={16} className={isCompleted ? 'text-white' : 'text-slate-400'} />
                     </div>
                   </div>
 
-                  {/* Chevron */}
-                  <ChevronRight size={16} className={['shrink-0 text-slate-400 transition-transform', active ? 'translate-x-0' : 'group-hover:translate-x-0.5'].join(' ')} />
+                  {/* Progress bar */}
+                  <div className='mt-2 h-2 rounded-full bg-slate-200 overflow-hidden'>
+                    <div className={['h-full rounded-full bg-gradient-to-r from-indigo-500 via-indigo-500 to-indigo-600', 'transition-[width] duration-300 ease-out'].join(' ')} style={{ width: `${progress}%` }} />
+                  </div>
                 </div>
-
-                {/* Progress bar */}
-                <div className='mt-2 h-2 rounded-full bg-slate-200 overflow-hidden'>
-                  <div className={['h-full rounded-full bg-gradient-to-r from-indigo-500 via-indigo-500 to-indigo-600', 'transition-[width] duration-300 ease-out'].join(' ')} style={{ width: `${progress}%` }} />
-                </div>
-
-                </div>
-            </div>
-          </button>
+              </div>
+            </button>
+          </div>
         );
       })}
     </div>

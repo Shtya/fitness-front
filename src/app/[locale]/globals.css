@@ -13,8 +13,8 @@
          focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/20;
 }
 
-.flatpickr-day.endRange{
-	@apply bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 ;
+.flatpickr-day.endRange {
+  @apply bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600;
 }
 .duah-font {
   font-family: 'Scheherazade New', serif !important;
@@ -31,7 +31,7 @@ body {
 }
 
 [dir='ltr'] body {
-   font-family: var(--font-open-sans) !important;
+  font-family: var(--font-open-sans) !important;
 }
 
 [dir='rtl'] body {
@@ -42,6 +42,10 @@ body {
 }
 .font-en {
   font-family: var(--font-open-sans) !important;
+}
+
+.font-number {
+  font-family: var(--font-inter), sans-serif !important;
 }
 
 .scrollbar-custom {
@@ -364,8 +368,6 @@ input[type='number'] {
   animation: pressPulse 0.25s ease-out;
 }
 
- 
- 
 .input-3d {
   color: rgb(0 0 0 / 0.7);
   box-shadow: 6px 6px 12px #d1d9e670, -6px -6px 12px #ffffff70 inset;
