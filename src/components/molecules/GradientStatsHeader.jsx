@@ -23,10 +23,10 @@ export function GradientStatsHeader({someThing , hiddenStats , innerCn , classNa
         <div className='absolute -bottom-16 -right-8 h-60 w-60 rounded-full bg-blue-300/30 blur-3xl' />
       </div>
 
-      <div className='relative px-4 py-2 sm:py-4 sm:px-8 text-white'>
+      <div className='relative px-4 py-4   sm:px-8 text-white'>
         <div className={`max-md:items-center max-md:flex-row flex flex-col md:flex-row md:items-center justify-between gap-3 ${innerCn}`}>
           <div>
-            <h1 className='text-xl md:text-4xl font-semibold'>{title}</h1>
+            <h1 className='text-lg md:text-4xl font-semibold'>{title}</h1>
             <p className='text-white/85 mt-1 max-md:hidden '>{desc}</p>
           </div>
 

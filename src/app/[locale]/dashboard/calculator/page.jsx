@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -18,40 +16,35 @@ import { StatCard } from '@/components/dashboard/ui/UI';
 import { Flame, Apple, Calculator, Gauge, Ruler, Info, Search, Trash } from 'lucide-react';
 import { DEFAULT_FOODS } from './FoodCalorieDB';
 
-/* ===== Storage keys ===== */
 const LS = {
   PROFILE: 'dailycal_profile_v3',
   MEAL: 'dailycal_meal_v3',
   CUSTOM_FOODS: 'dailycal_customfoods_v1',
 };
 
-/* ===== Activity (clearer wording) ===== */
 const ACTIVITY = [
-  { id: '1.2', label_ar: 'مكتبي/دراسة (بدون تمرين)', label_en: 'Desk / Study (no exercise)' },
-  { id: '1.375', label_ar: 'وظيفة خفيفة + تمرين 1–3x/أسبوع', label_en: 'Light job + 1–3x/week training' },
-  { id: '1.55', label_ar: 'بيع/وقوف/تحرّك + تمرين 3–5x/أسبوع', label_en: 'Retail/Standing + 3–5x/week training' },
-  { id: '1.725', label_ar: 'مجهود بدني عالي + تمرين 6–7x/أسبوع', label_en: 'Manual labor + 6–7x/week training' },
-  { id: '1.9', label_ar: 'شغل بدني ثقيل + تمرين مكثّف/رياضي', label_en: 'Heavy labor + intense/athlete' },
+  { id: '1.2', label_ar: 'خامل / بدون تمرين', label_en: 'Sedentary (No Exercise)' },
+  { id: '1.375', label_ar: 'نشاط خفيف + تمرين بسيط', label_en: 'Light Activity + Light Training' },
+  { id: '1.55', label_ar: 'نشاط متوسط + تمرين منتظم', label_en: 'Moderate Activity + Regular Training' },
+  { id: '1.725', label_ar: 'نشاط عالي + تمرين يومي', label_en: 'High Activity + Daily Training' },
+  { id: '1.9', label_ar: 'نشاط شديد + رياضي/مجهود عالي', label_en: 'Very High Activity / Athlete' },
 ];
 
-/* ===== Goals (labels; live kg/month is computed dynamically) ===== */
 const GOALS = [
-  { id: '-20', label_ar: 'تشييف -20%', label_en: 'Cutting -20%' },
-  { id: '-10', label_ar: 'تشييف خفيف -10%', label_en: 'Light Cutting -10%' },
+  { id: '-20', label_ar: 'خفض قوي -20%', label_en: 'Aggressive Cut -20%' },
+  { id: '-10', label_ar: 'خفض خفيف -10%', label_en: 'Light Cut -10%' },
   { id: '0', label_ar: 'ثبات 0%', label_en: 'Maintenance 0%' },
-  { id: '+10', label_ar: 'تضخيم خفيف +10%', label_en: 'Light Bulking +10%' },
-  { id: '+20', label_ar: 'تضخيم +20%', label_en: 'Bulking +20%' },
+  { id: '+10', label_ar: 'زيادة خفيفة +10%', label_en: 'Lean Bulk +10%' },
+  { id: '+20', label_ar: 'زيادة قوية +20%', label_en: 'Aggressive Bulk +20%' },
 ];
 
-// estimate kg/month from TDEE and goal percent
 function goalKgPerMonth(tdee, goalStr) {
   const pct = parseFloat(goalStr || '0') / 100;
   if (!tdee || !pct) return 0;
-  const dailyDelta = tdee * pct; // kcal/day
-  return (dailyDelta * 30) / 7700; // ≈ kg/month
+  const dailyDelta = tdee * pct;
+  return (dailyDelta * 30) / 7700;
 }
 
-/* ===== Utils ===== */
 function toNumber(v, d = 0) {
   if (v === '' || v === null || typeof v === 'undefined') return d;
   const n = Number(v);
@@ -65,14 +58,12 @@ function round(n, p = 0) {
   return Math.round(n * k) / k;
 }
 
-/* ===== BMR (Mifflin–St Jeor) ===== */
 function bmrMifflin({ sex, weightKg, heightCm, age }) {
   if (!sex || !weightKg || !heightCm || !age) return 0;
   const s = sex === 'male' ? 5 : -161;
   return 10 * weightKg + 6.25 * heightCm - 5 * age + s;
 }
 
-/* ===== Tooltip ===== */
 function Tooltip({ label, children }) {
   return (
     <span className='relative inline-flex items-center group cursor-help'>
@@ -89,7 +80,6 @@ function InfoBadge({ title }) {
   );
 }
 
-/* ===== Small UI bits ===== */
 function ReadStat({ title, value }) {
   return (
     <div className='rounded-lg border border-slate-200 bg-slate-50 px-3 py-2'>
@@ -134,7 +124,6 @@ function Pill({ title, value, sub, color = 'indigo' }) {
   );
 }
 
-/* ===== Food Search (typeahead, AR/EN) ===== */
 function FoodSearch({ foods, value, onChange, onPick, placeholder }) {
   const locale = useLocale();
   const isEn = (locale || '').toLowerCase().startsWith('en');
@@ -198,32 +187,26 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
   const locale = useLocale();
   const isEn = (locale || '').toLowerCase().startsWith('en');
 
-  /* ===== Inputs (NO default values) ===== */
-  const [sex, setSex] = useState(''); // '' | 'male' | 'female'
-  const [age, setAge] = useState(''); // number string or ''
-  const [height, setHeight] = useState(''); // cm
-  const [weight, setWeight] = useState(''); // kg
-  const [activity, setActivity] = useState(''); // multiplier string
-  const [goal, setGoal] = useState(''); // delta string like '+10'
+  const [sex, setSex] = useState('male');
+  const [age, setAge] = useState('');
+  const [height, setHeight] = useState('');
+  const [weight, setWeight] = useState('');
+  const [activity, setActivity] = useState('');
+  const [goal, setGoal] = useState('');
 
-  /* ===== Foods (merge built-ins + custom if you add later) ===== */
   const [customFoods, setCustomFoods] = useState([]);
   const mergedFoods = useMemo(() => [...foods, ...customFoods], [foods, customFoods]);
 
-  /* ===== Food calc + meal ===== */
-  const [foodId, setFoodId] = useState(''); // selected id
-  const [qty, setQty] = useState(''); // amount in selectedFood.unit
-  const [mealItems, setMealItems] = useState([]); // { id, qty }
+  const [foodId, setFoodId] = useState('');
+  const [qty, setQty] = useState('');
+  const [mealItems, setMealItems] = useState([]);
 
-  /* ===== Food search value ===== */
   const [foodSearch, setFoodSearch] = useState('');
 
-  /* ===== Generate summary flow ===== */
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  /* ===== Persist / Load ===== */
   useEffect(() => {
     try {
       const prof = JSON.parse(localStorage.getItem(LS.PROFILE) || 'null');
@@ -248,19 +231,16 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
     localStorage.setItem(LS.MEAL, JSON.stringify(mealItems));
   }, [mealItems]);
 
-  /* ===== Numbers for math (0 if empty) ===== */
   const ageN = toNumber(age, 0);
   const heightN = toNumber(height, 0);
   const weightN = toNumber(weight, 0);
   const actMult = activity ? parseFloat(activity) : 0;
   const goalPct = goal ? parseFloat(goal) / 100 : 0;
 
-  /* ===== Calculations ===== */
   const bmr = useMemo(() => bmrMifflin({ sex, weightKg: weightN, heightCm: heightN, age: ageN }), [sex, weightN, heightN, ageN]);
   const tdee = useMemo(() => (bmr && actMult ? bmr * actMult : 0), [bmr, actMult]);
   const targetCalories = useMemo(() => (tdee ? tdee * (1 + goalPct) : 0), [tdee, goalPct]);
 
-  // Macro suggestion when weight provided
   const proteinG = useMemo(() => (weightN ? clamp(2 * weightN, 80, 250) : 0), [weightN]);
   const fatG = useMemo(() => (weightN ? clamp(0.9 * weightN, 40, 140) : 0), [weightN]);
   const carbsG = useMemo(() => {
@@ -282,10 +262,8 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
     };
   }, [proteinG, fatG, carbsG]);
 
-  // Locale-aware food name
   const displayName = f => (isEn ? f.name_en || f.name : f.name || f.name_en || '');
 
-  // Filter for search dropdown
   const filteredFoods = useMemo(() => {
     const q = (foodSearch || '').toLowerCase().trim();
     if (!q) return mergedFoods;
@@ -296,10 +274,8 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
     });
   }, [mergedFoods, foodSearch]);
 
-  // Selected food by id
   const selectedFood = useMemo(() => mergedFoods.find(f => f.id === foodId) || null, [mergedFoods, foodId]);
 
-  // Quick single item totals
   const qtyN = toNumber(qty, 0);
   const quickFoodTotals = useMemo(() => {
     if (!selectedFood || !qtyN) return { kcal: 0, p: 0, c: 0, f: 0, unit: selectedFood?.unit || '' };
@@ -313,7 +289,6 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
     };
   }, [selectedFood, qtyN]);
 
-  // Meal totals
   const findFood = id => mergedFoods.find(f => f.id === id);
   const mealTotals = useMemo(() => {
     let kcal = 0,
@@ -333,7 +308,6 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
     return { kcal: round(kcal), p: round(p, 1), c: round(c, 1), f: round(f, 1) };
   }, [mealItems]);
 
-  // Header stats
   const headerStats = {
     bmr: Math.round(bmr || 0),
     tdee: Math.round(tdee || 0),
@@ -343,7 +317,6 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
     fat: Math.round(fatG || 0),
   };
 
-  /* ===== Options (locale-aware) ===== */
   const sexOptions = [
     { id: 'male', label: t('sex.male') },
     { id: 'female', label: t('sex.female') },
@@ -353,7 +326,6 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
     label: isEn ? a.label_en : a.label_ar,
   }));
 
-  // goal label + live kg/month badge (always computed so user sees the value)
   const goalOptions = GOALS.map(g => {
     const kg = goalKgPerMonth(tdee, g.id);
     const kgAbs = Math.abs(kg).toFixed(2);
@@ -370,7 +342,6 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
     };
   });
 
-  /* ===== Actions ===== */
   const resetAll = () => {
     setSex('');
     setAge('');
@@ -416,7 +387,6 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
     setTimeout(tick, 220);
   };
 
-  /* ===================== RENDER ===================== */
   return (
     <div className=' '>
       {/* Header — compact on mobile */}
@@ -545,7 +515,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
             </div>
 
             {/* Quick single calc */}
-            <div className={`${!selectedFood && "flex items-center justify-between"}  rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3`}>
+            <div className={`${!selectedFood && 'flex items-center justify-between'}  rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3`}>
               {!selectedFood ? (
                 <div className='text-sm text-slate-500'>{t('labels.pickFoodHint')}</div>
               ) : (
@@ -559,7 +529,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
               )}
 
               {/* Desktop add/clear (mobile has sticky bar) */}
-              <div className={`${selectedFood && " mt-3"} hidden sm:flex items-center gap-2`}>
+              <div className={`${selectedFood && ' mt-3'} hidden sm:flex items-center gap-2`}>
                 <Button name={t('actions.addItem')} onClick={addItem} />
                 <Button name={t('actions.clearMeal')} color='neutral' onClick={() => setMealItems([])} />
               </div>

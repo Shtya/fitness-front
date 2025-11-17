@@ -31,7 +31,7 @@ export const inter = Inter({
 
 const openSans = Open_Sans({
   variable: '--font-open-sans',
-  subsets: ['latin'],  
+  subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700', '800'],
   display: 'swap',
 });
@@ -44,15 +44,13 @@ const arabicFont = Cairo({
 });
 
 export function generateStaticParams() {
-  return routing.locales.map((locale) => ({ locale }));
+  return routing.locales.map(locale => ({ locale }));
 }
 
 export const metadata = {
   title: 'FitPro - Transform Your Body, Transform Your Life',
-  description:
-    'Professional fitness coaching platform with personalized workout plans, nutrition tracking, and progress analytics. Join thousands achieving their fitness goals.',
-  keywords:
-    'fitness, workout, nutrition, personal trainer, exercise, health, wellness, body transformation, muscle building, weight loss',
+  description: 'Professional fitness coaching platform with personalized workout plans, nutrition tracking, and progress analytics. Join thousands achieving their fitness goals.',
+  keywords: 'fitness, workout, nutrition, personal trainer, exercise, health, wellness, body transformation, muscle building, weight loss',
   authors: [{ name: 'FitPro Team' }],
   creator: 'FitPro',
   publisher: 'FitPro',
@@ -61,16 +59,14 @@ export const metadata = {
 
   openGraph: {
     title: 'FitPro - Your Personal Fitness Revolution',
-    description:
-      'AI-powered fitness coaching with personalized plans, real-time progress tracking, and expert guidance. Start your transformation journey today.',
+    description: 'AI-powered fitness coaching with personalized plans, real-time progress tracking, and expert guidance. Start your transformation journey today.',
     url: 'https://fitpro.com',
     siteName: 'FitPro Fitness Platform',
     locale: 'en_US',
     type: 'website',
   },
 
-  // Icons for various platforms
-  icons: {
+   icons: {
     icon: [{ url: '/favicon.ico' }],
     shortcut: ['/logo.png'],
     apple: [{ url: '/logo.png', sizes: '180x180', type: 'image/png' }],
@@ -78,14 +74,12 @@ export const metadata = {
       {
         rel: 'apple-touch-startup-image',
         url: '/logo.png',
-        media:
-          '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)',
+        media: '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)',
       },
       {
         rel: 'apple-touch-startup-image',
         url: '/logo.png',
-        media:
-          '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)',
+        media: '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)',
       },
     ],
   },
@@ -98,6 +92,8 @@ export const metadata = {
     'msapplication-TileColor': '#7C3AED',
     'msapplication-config': '/browserconfig.xml',
     'theme-color': '#7C3AED',
+
+		google: 'notranslate',
   },
 
   // Robots.txt instructions
@@ -124,12 +120,12 @@ export default async function RootLayout({ children, params }) {
   if (!hasLocale(routing.locales, locale)) notFound();
 
   return (
-    <html lang={locale} dir={locale == 'en' ? 'ltr' : 'rtl'} suppressHydrationWarning>
+    <html translate="no" lang={locale} dir={locale == 'en' ? 'ltr' : 'rtl'} suppressHydrationWarning>
       <body className={`bg-[#fff] scroll ${arabicFont.variable} ${openSans.variable} ${spaceGrotesk.variable} ${robotoMono.variable} ${inter.variable}`}>
         <NextIntlClientProvider locale={locale}>
           <Layout>
             {children}
-            <div className="md:hidden">
+            <div className='md:hidden'>
               <AddToHomeGuide />
             </div>
           </Layout>

@@ -5,6 +5,11 @@
 
 /dashboard/users
 	- stats of ( total users , action account ) not correct 
+	- bug on show the plans days
+	- bug on the meals also and handle skeltong untill return the meals
+	- and alos can show more 
+	- and add the icon of calc the calories
+
 dashboard/nutrition
 	- تخصيص أيام بعينها (اختياري  have a problem cannot add custom days
 	*nutrition 

@@ -1,10 +1,20 @@
+/* 
+  Profile Overview Page (JS, not TS)
+
+  Changes:
+  - Added powerful Edit Profile modal.
+  - PUT to /auth/profile/:id with allowed fields.
+  - Weight trend as SVG graph (اتجاه الوزن).
+  - In Photos tab: upload block is hidden until user clicks button.
+  - Main color: Indigo (no green as main).
+*/
 
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Cropper from 'react-easy-crop';
-import { UtensilsCrossed, User as UserIcon, Dumbbell, Utensils, Scale, Ruler, Camera, Image as ImageIcon, Upload, ArrowUpRight, Clock, ChevronsLeft, ChevronsRight, Sparkles, Phone, Mail, Pencil, X, ShieldCheck, Activity, ImagePlus, Trash2, Edit3, Save, RotateCcw } from 'lucide-react';
+import { User as UserIcon, Dumbbell, Utensils, Scale, Ruler, Camera, Image as ImageIcon, Upload, ArrowUpRight, Clock, ChevronsLeft, ChevronsRight, Sparkles, Mail, Pencil, X, ShieldCheck, Activity, ImagePlus, Trash2, Edit3, Save, RotateCcw, Flame, ActivityIcon, Phone, User2, Apple, Plane, Lightbulb } from 'lucide-react';
 
 import api from '@/utils/axios';
 import { Modal, StatCard, TabsPill } from '@/components/dashboard/ui/UI';
@@ -13,8 +23,8 @@ import Input from '@/components/atoms/Input';
 import { useTranslations } from 'next-intl';
 import Select from '@/components/atoms/Select';
 import Img from '@/components/atoms/Img';
+import { FaTasks } from 'react-icons/fa';
 
-/* ============================ Helpers ============================ */
 const card = 'rounded-lg border border-slate-200 bg-white/90 backdrop-blur shadow-sm p-4 md:p-5';
 const sectionTitle = 'text-base md:text-lg font-semibold text-slate-900';
 const fade = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.28 } };
@@ -35,15 +45,7 @@ const daysLeft = end => {
   return diff;
 };
 
-function SparkBar({ value = 0 }) {
-  return (
-    <div className='h-2 w-full overflow-hidden rounded-full bg-slate-100'>
-      <div className='h-full rounded-full bg-gradient-to-r from-indigo-600 via-indigo-500/90 to-blue-600 transition-[width] duration-500' style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
-    </div>
-  );
-}
-
-/* ============================ Skeletons ============================ */
+/* === Small utils for shimmer skeletons === */
 const shimmer = 'relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_1.2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/40 before:to-transparent';
 const skeletonBase = 'bg-slate-200/40 rounded-md';
 const ShimmerStyle = () => <style>{`@keyframes shimmer{100%{transform:translateX(100%);}}`}</style>;
@@ -51,7 +53,7 @@ const ShimmerStyle = () => <style>{`@keyframes shimmer{100%{transform:translateX
 function HeaderSkeleton() {
   return (
     <div className='rounded-lg border border-slate-200 overflow-hidden shadow-sm'>
-      <div className={`bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 text-white p-6 md:p-8`}>
+      <div className='bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 text-white p-6 md:p-8'>
         <div className='flex flex-wrap items-center gap-4'>
           <div className={`${skeletonBase} ${shimmer} h-14 w-14 rounded-lg`} />
           <div className='min-w-0 flex-1'>
@@ -66,11 +68,6 @@ function HeaderSkeleton() {
             <div className={`${skeletonBase} ${shimmer} h-7 w-24 rounded-full`} />
             <div className={`${skeletonBase} ${shimmer} h-7 w-24 rounded-full`} />
           </div>
-        </div>
-        <div className='grid grid-cols-2 md:grid-cols-4 gap-3 mt-5'>
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className={`${skeletonBase} ${shimmer} h-16 w-full rounded-lg`} />
-          ))}
         </div>
       </div>
     </div>
@@ -124,7 +121,7 @@ function TableSkeleton({ rows = 6 }) {
   );
 }
 
-/* ============================ Compare widget ============================ */
+/* === Before / After comparison === */
 function BeforeAfter({ before, after, name }) {
   const [pos, setPos] = useState(50);
   return (
@@ -142,13 +139,13 @@ function BeforeAfter({ before, after, name }) {
   );
 }
 
-/* ============================ Local Button ============================ */
+/* === Generic button === */
 function Btn({ children, onClick, disabled, className = '', size = 'md', variant = 'primary', type = 'button' }) {
   const sizes = { sm: 'h-9 px-3 text-sm', md: 'h-10 px-4 text-sm', lg: 'h-11 px-5 text-base' };
   const variants = {
     primary: 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-400/40 border border-indigo-600',
     outline: 'bg-white text-slate-700 hover:bg-slate-50 focus:ring-slate-300/40 border border-slate-200',
-    success: 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400/40 border border-emerald-600',
+    success: 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-400/40 border border-indigo-600', // same as primary (no green main)
     danger: 'bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-400/40 border border-rose-600',
     subtle: 'bg-slate-100 text-slate-700 hover:bg-slate-200 focus:ring-slate-300/40 border border-slate-200',
   };
@@ -159,8 +156,8 @@ function Btn({ children, onClick, disabled, className = '', size = 'md', variant
   );
 }
 
-/* ============================ API helpers (Profile Module endpoints) ============================ */
-// Users (fallback stays as your previous logic for demo/local)
+/* === API helpers === */
+
 async function fetchMe() {
   try {
     const { data } = await api.get('/auth/me');
@@ -170,6 +167,7 @@ async function fetchMe() {
       const { data } = await api.get('/auth/me');
       return data;
     } catch {
+      // fallback dummy data (dev only)
       return {
         id: '633c7739-31bb-4b41-bf1d-dd994d557694',
         created_at: new Date().toISOString(),
@@ -194,6 +192,7 @@ async function fetchMe() {
     }
   }
 }
+
 async function fetchPlanName(type, id) {
   if (!id) return null;
   const url = type === 'exercise' ? `/plans/${id}` : `/nutrition/meal-plans/${id}`;
@@ -204,6 +203,7 @@ async function fetchPlanName(type, id) {
     return null;
   }
 }
+
 async function fetchCoach(id) {
   if (!id) return null;
   try {
@@ -213,73 +213,67 @@ async function fetchCoach(id) {
     return null;
   }
 }
-async function updateUser(userId, payload) {
-  const { data } = await api.put(`/auth/${userId}`, payload);
+
+async function getProfileStats() {
+  const { data } = await api.get('/profile/stats');
   return data;
 }
 
-// Profile STATS
-async function getProfileStats() {
-  const { data } = await api.get('/profile/stats');
-  return data; // expect: includes measurements count, photos count, maybe recent info
-}
-
-// Measurements
 async function getMeasurements(days = 120) {
   const { data } = await api.get(`/profile/measurements`, { params: { days } });
   return Array.isArray(data) ? data : [];
 }
+
 async function getLatestMeasurement() {
   const { data } = await api.get(`/profile/measurements/latest`);
   return data;
 }
+
 async function getMeasurementStats() {
   const { data } = await api.get(`/profile/measurements/stats`);
   return data;
 }
+
 async function postMeasurement(payload) {
   const { data } = await api.post(`/profile/measurements`, payload);
   return data;
 }
+
 async function putMeasurement(id, payload) {
   const { data } = await api.put(`/profile/measurements/${id}`, payload);
   return data;
 }
+
 async function deleteMeasurement(id) {
   const { data } = await api.delete(`/profile/measurements/${id}`);
   return data;
 }
 
-// Photos
 async function getPhotosTimeline(months = 12) {
   const { data } = await api.get(`/profile/photos/timeline`, { params: { months } });
   return Array.isArray(data.records) ? data.records : [];
 }
-async function getPhotoSet(photoId) {
-  const { data } = await api.get(`/profile/photos/${photoId}`);
-  return data;
-}
+
 async function deletePhotoSet(photoId) {
   const { data } = await api.delete(`/profile/photos/${photoId}`);
   return data;
 }
+
 async function createPhotoSetApi(payload) {
-  // payload: { takenAt, weight, note, sides:{front/back/left/right URLs} }
   const { data } = await api.post(`/profile/photos`, payload);
   return data;
 }
 
-// Bulk (optional if you implement)
 async function bulkMeasurements(list) {
   const { data } = await api.post(`/profile/measurements/bulk`, list);
   return data;
 }
+
 async function bulkPhotos(list) {
   const { data } = await api.post(`/profile/photos/bulk`, list);
   return data;
 }
 
-// Asset upload (kept from your previous code)
 async function uploadAsset(file) {
   const fd = new FormData();
   fd.append('file', file);
@@ -293,7 +287,7 @@ async function uploadAsset(file) {
   }
 }
 
-/* ============================ Crop helpers ============================ */
+/* === Crop helpers === */
 function createImage(url) {
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -303,6 +297,7 @@ function createImage(url) {
     image.src = url;
   });
 }
+
 async function getCroppedImg(imageSrc, pixelCrop) {
   const image = await createImage(imageSrc);
   const canvas = document.createElement('canvas');
@@ -319,32 +314,172 @@ async function getCroppedImg(imageSrc, pixelCrop) {
     canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.9);
   });
 }
+
 function blobToFile(blob, filename) {
   return new File([blob], filename, { type: blob.type });
 }
 
-/* ============================ Component ============================ */
+/* === Weight Trend Graph (اتجاه الوزن) === */
+
+function WeightTrendChart({ data = [], t }) {
+  if (!data.length) {
+    return (
+      <div className='flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-6 text-center'>
+        <div className='mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200'>
+          <Scale className='h-5 w-5 text-slate-400' />
+        </div>
+        <p className='text-sm font-medium text-slate-600'>{t('messages.noMeasurements')}</p>
+        <p className='mt-1 text-xs text-slate-500'>{t('messages.noMeasurementsHint') || t('labels.direction')}</p>
+      </div>
+    );
+  }
+
+  const sorted = [...data].slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const weights = sorted.map(m => Number(m.weight || 0));
+  const minW = Math.min(...weights);
+  const maxW = Math.max(...weights);
+  const range = maxW - minW || 1;
+
+  const points = sorted.map((m, idx) => {
+    const x = sorted.length === 1 ? 50 : (idx / (sorted.length - 1)) * 100;
+    const normalized = (Number(m.weight || 0) - minW) / range;
+    const y = 68 - normalized * 36; // keep top/bottom padding
+    return { x, y };
+  });
+
+  const path = points.map(p => `${p.x},${p.y}`).join(' ');
+
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+
+  const delta = last.weight != null && first.weight != null ? (last.weight - first.weight).toFixed(1) : '0.0';
+
+  return (
+    <div className='space-y-3'>
+      {/* Header row inside chart */}
+      <div className='flex flex-wrap items-center justify-between gap-3'>
+        <div className='flex items-center gap-2'>
+          <span className='inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs text-indigo-700 ring-1 ring-indigo-100'>
+            <Scale className='h-3.5 w-3.5' />
+            <span className='font-medium'>{t('labels.direction')}</span>
+          </span>
+        </div>
+
+        <div className='flex flex-wrap items-center gap-2 text-[11px]'>
+          {/* Start */}
+          <div className='inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-1 text-slate-700 ring-1 ring-slate-200'>
+            <span className='text-[10px] text-slate-500'>{t('labels.start')}</span>
+            <span className='font-semibold text-slate-900'>{first.weight ?? '-'}</span>
+            <span className='text-[10px] text-slate-400'>kg</span>
+          </div>
+
+          {/* End */}
+          <div className='inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-1 text-slate-700 ring-1 ring-slate-200'>
+            <span className='text-[10px] text-slate-500'>{t('labels.end')}</span>
+            <span className='font-semibold text-slate-900'>{last.weight ?? '-'}</span>
+            <span className='text-[10px] text-slate-400'>kg</span>
+          </div>
+
+          {/* Delta */}
+          <div className='inline-flex items-center gap-1.5 rounded-full bg-indigo-600/10 px-2.5 py-1 text-indigo-700 ring-1 ring-indigo-200'>
+            <ArrowUpRight className='h-3.5 w-3.5' />
+            <span className='text-[10px]'>{t('labels.deltaKg')}</span>
+            <span className='font-semibold'>{delta}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Chart */}
+      <div className='relative overflow-hidden rounded-xl bg-slate-50/60 ring-1 ring-slate-200'>
+        <svg viewBox='0 0 100 80' className='w-full h-40 md:h-48'>
+          <defs>
+            {/* line gradient */}
+            <linearGradient id='weightLine' x1='0' y1='0' x2='1' y2='0'>
+              <stop offset='0%' stopColor='#4f46e5' />
+              <stop offset='50%' stopColor='#6366f1' />
+              <stop offset='100%' stopColor='#3b82f6' />
+            </linearGradient>
+
+            {/* fill gradient */}
+            <linearGradient id='weightFill' x1='0' y1='0' x2='0' y2='1'>
+              <stop offset='0%' stopColor='#4f46e5' stopOpacity='0.20' />
+              <stop offset='100%' stopColor='#4f46e5' stopOpacity='0.01' />
+            </linearGradient>
+          </defs>
+
+          {/* Background */}
+          <rect x='0' y='0' width='100' height='80' fill='transparent' />
+
+          {/* Grid lines */}
+          {[0, 1, 2, 3].map(i => (
+            <line key={i} x1='0' x2='100' y1={22 + i * 14} y2={22 + i * 14} stroke='#cbd5f5' strokeOpacity='0.5' strokeWidth='0.3' />
+          ))}
+
+          {/* Fill under line */}
+          {points.length > 1 && <path d={`M ${points[0].x},${points[0].y} ${path} L ${points[points.length - 1].x},74 L ${points[0].x},74 Z`} fill='url(#weightFill)' />}
+
+          {/* Line */}
+          <polyline fill='none' stroke='url(#weightLine)' strokeWidth='1.6' strokeLinejoin='round' strokeLinecap='round' points={path} />
+
+          {/* Dots */}
+          {points.map((p, i) => (
+            <g key={i}>
+              <circle cx={p.x} cy={p.y} r='1.6' fill='#ffffff' stroke='#4f46e5' strokeWidth='0.6' />
+            </g>
+          ))}
+        </svg>
+      </div>
+
+      {/* Last few points “chips” */}
+      <div className='flex overflow-x-auto py-1 gap-2 text-[11px] text-slate-500'>
+        {sorted.map(m => (
+          <div key={m.id || m.date} className='inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200'>
+            <span className='text-slate-500 text-nowrap '>{m.date?.slice(5)}</span>
+            <span className='font-semibold text-slate-900'>{m.weight ?? '-'}</span>
+            <span className='text-slate-400'>kg</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* === Main component === */
+
 export default function ProfileOverviewPage() {
   const t = useTranslations('myProfile');
   const [tab, setTab] = useState('overview');
 
-  // Data
   const [user, setUser] = useState(null);
-  const [stats, setStats] = useState(null); // profile/stats
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Measurements
   const [measurements, setMeasurements] = useState([]);
   const [latestM, setLatestM] = useState(null);
   const [mStats, setMStats] = useState(null);
 
-  // Photos
   const [photoMonths, setPhotoMonths] = useState([]);
 
-  // UI state
   const [editOpen, setEditOpen] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    phone: '',
+    gender: '',
+    membership: '',
+    defaultRestSeconds: '',
+    caloriesTarget: '',
+    proteinPerDay: '',
+    carbsPerDay: '',
+    fatsPerDay: '',
+    activityLevel: '',
+    notes: '',
+  });
+
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [showUploadBlock, setShowUploadBlock] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [tipsOpen, setTipsOpen] = useState(false);
   const [compareAllOpen, setCompareAllOpen] = useState(false);
@@ -353,7 +488,6 @@ export default function ProfileOverviewPage() {
   const [confirmDeleteMeasurementId, setConfirmDeleteMeasurementId] = useState(null);
   const scrollerRef = useRef(null);
 
-  // Add measurement form (default date today, time-less)
   const [mDate, setMDate] = useState(new Date());
   const [mWeight, setMWeight] = useState('');
   const [mWaist, setMWaist] = useState('');
@@ -361,12 +495,10 @@ export default function ProfileOverviewPage() {
   const [mHips, setMHips] = useState('');
   const [savingMeasure, setSavingMeasure] = useState(false);
 
-  // Inline edit for measurement
   const [editRowId, setEditRowId] = useState(null);
   const [editRow, setEditRow] = useState({ date: '', weight: '', waist: '', chest: '', hips: '' });
   const [savingEditRow, setSavingEditRow] = useState(false);
 
-  // Photo upload form (with crop)
   const [pFront, setPFront] = useState(null);
   const [pBack, setPBack] = useState(null);
   const [pLeft, setPLeft] = useState(null);
@@ -376,10 +508,8 @@ export default function ProfileOverviewPage() {
   const [pDate, setPDate] = useState(new Date());
   const [savingPhotos, setSavingPhotos] = useState(false);
 
-  // Compare state
   const [compare, setCompare] = useState({ side: 'front', beforeId: null, afterId: null });
 
-  // Crop modal state
   const [cropOpen, setCropOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState(null);
   const [cropSide, setCropSide] = useState(null);
@@ -409,7 +539,7 @@ export default function ProfileOverviewPage() {
 
   const allSides = ['front', 'back', 'left', 'right'];
 
-  // Load initial
+  /* === Initial load === */
   useEffect(() => {
     (async () => {
       try {
@@ -419,21 +549,22 @@ export default function ProfileOverviewPage() {
         const computedName = me?.name && me.name.includes('@') ? me.email?.split('@')[0] : me?.name;
         const [exName, mpName, coach] = await Promise.all([fetchPlanName('exercise', me?.activeExercisePlanId), fetchPlanName('meal', me?.activeMealPlanId), fetchCoach(me?.coachId)]);
 
-        setUser({
+        const userObj = {
           ...me,
           name: computedName || me?.email || 'User',
           activeExercisePlan: exName ? { name: exName } : null,
           activeMealPlan: mpName ? { name: mpName } : null,
           coach: coach ? { id: coach.id, name: coach.name || coach.email || coach.id } : me?.coach || null,
-        });
+        };
 
-        // Profile module endpoints
+        setUser(userObj);
+
         const [statsRes, listRes, latestRes, statMRes, timelineRes] = await Promise.allSettled([getProfileStats(), getMeasurements(120), getLatestMeasurement(), getMeasurementStats(), getPhotosTimeline(12)]);
 
         if (statsRes.status === 'fulfilled') setStats(statsRes.value || null);
         if (listRes.status === 'fulfilled') {
           const arr = (listRes.value || []).map(m => ({
-            id: m.id, // assume backend returns id
+            id: m.id,
             date: m.date?.slice(0, 10) ?? m.date,
             weight: m.weight,
             waist: m.waist,
@@ -456,26 +587,61 @@ export default function ProfileOverviewPage() {
     })();
   }, [t]);
 
-  const lastWeight = useMemo(() => {
-    if (latestM?.weight != null) return latestM.weight;
-    if (!measurements.length) return '-';
-    return measurements[measurements.length - 1]?.weight ?? '-';
-  }, [measurements, latestM]);
-
-  const weightDelta = useMemo(() => {
-    if (!measurements.length) return '0.0';
-    const first = measurements[0]?.weight ?? 0;
-    const last = measurements[measurements.length - 1]?.weight ?? 0;
-    return (last - first).toFixed(1);
-  }, [measurements]);
-
   const tabs = [
     { key: 'overview', label: t('tabs.overview') },
     { key: 'body', label: t('tabs.body') },
     { key: 'photos', label: t('tabs.photos') },
   ];
 
-  /* ============================ Actions: Measurements ============================ */
+  /* === Edit Profile Modal helpers === */
+
+  const openEditProfile = () => {
+    if (!user) return;
+    setEditForm({
+      name: user.name || '',
+      phone: user.phone || '',
+      gender: user.gender || '',
+      membership: user.membership || '',
+      defaultRestSeconds: user.defaultRestSeconds != null ? String(user.defaultRestSeconds) : '',
+      caloriesTarget: user.caloriesTarget != null ? String(user.caloriesTarget) : '',
+      proteinPerDay: user.proteinPerDay != null ? String(user.proteinPerDay) : '',
+      carbsPerDay: user.carbsPerDay != null ? String(user.carbsPerDay) : '',
+      fatsPerDay: user.fatsPerDay != null ? String(user.fatsPerDay) : '',
+      activityLevel: user.activityLevel || '',
+      notes: user.notes || '',
+    });
+    setEditOpen(true);
+  };
+
+  const numericProfileFields = ['defaultRestSeconds', 'caloriesTarget', 'proteinPerDay', 'carbsPerDay', 'fatsPerDay'];
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setSavingProfile(true);
+    try {
+      const payload = {};
+      Object.entries(editForm).forEach(([key, val]) => {
+        if (val === '' || val == null) return;
+        if (numericProfileFields.includes(key)) {
+          payload[key] = Number(val);
+        } else {
+          payload[key] = val;
+        }
+      });
+
+      const { data } = await api.put(`/auth/profile/${user.id}`, payload);
+      // assume backend returns updated user
+      setUser(prev => ({ ...prev, ...(data || payload) }));
+      setEditOpen(false);
+    } catch (e) {
+      // optional: toast error
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  /* === Measurements CRUD === */
+
   async function addMeasurement() {
     if (!mDate) return;
     setSavingMeasure(true);
@@ -517,6 +683,7 @@ export default function ProfileOverviewPage() {
       hips: m.hips ?? '',
     });
   }
+
   async function saveEditRow() {
     if (!editRowId) return;
     setSavingEditRow(true);
@@ -535,9 +702,11 @@ export default function ProfileOverviewPage() {
       setSavingEditRow(false);
     }
   }
+
   function cancelEditRow() {
     setEditRowId(null);
   }
+
   async function confirmDeleteMeasurement() {
     if (!confirmDeleteMeasurementId) return;
     const id = confirmDeleteMeasurementId;
@@ -546,11 +715,12 @@ export default function ProfileOverviewPage() {
     setMeasurements(prev => prev.filter(m => m.id !== id));
   }
 
-  /* ============================ Actions: Photos ============================ */
+  /* === Photos === */
+
   function onPickSideFile(side, file) {
     if (!file) return;
     const src = URL.createObjectURL(file);
-    setCropSide(side); // 'front' | 'back' | 'left' | 'right'
+    setCropSide(side);
     setCropImageSrc(src);
     setZoom(1);
     setCrop({ x: 0, y: 0 });
@@ -577,13 +747,11 @@ export default function ProfileOverviewPage() {
     try {
       const formData = new FormData();
 
-      // Add files with their side names
       if (pFront) formData.append('front', pFront);
       if (pBack) formData.append('back', pBack);
       if (pLeft) formData.append('left', pLeft);
       if (pRight) formData.append('right', pRight);
 
-      // Add JSON data
       const takenAt = `${toISODate(pDate)}`;
       const photoData = {
         takenAt,
@@ -592,7 +760,6 @@ export default function ProfileOverviewPage() {
       };
       formData.append('data', JSON.stringify(photoData));
 
-      // Upload using FormData
       const { data: newPhoto } = await api.post('/profile/photos', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
@@ -603,18 +770,17 @@ export default function ProfileOverviewPage() {
         weight: newPhoto.weight,
         note: newPhoto.note,
         sides: newPhoto.sides,
+        takenAt: newPhoto.takenAt,
         createdAt: newPhoto.created_at,
       };
 
       setPhotoMonths(prev => {
-        const existingMonthIndex = prev.findIndex(entry => entry.takenAt === newEntry.month);
-
+        const existingMonthIndex = prev.findIndex(entry => entry.id === newEntry.id);
         if (existingMonthIndex !== -1) {
           const updated = [...prev];
           updated[existingMonthIndex] = newEntry;
           return updated;
         } else {
-          // Add new month entry at the beginning
           return [newEntry, ...prev];
         }
       });
@@ -626,6 +792,7 @@ export default function ProfileOverviewPage() {
       setPWeight('');
       setPNote('');
       setUploadOpen(false);
+      setShowUploadBlock(false);
     } finally {
       setSavingPhotos(false);
     }
@@ -634,6 +801,7 @@ export default function ProfileOverviewPage() {
   async function removePhotoSet(photoId) {
     setConfirmDeletePhotoId(photoId);
   }
+
   async function confirmDeletePhotoSet() {
     const id = confirmDeletePhotoId;
     setConfirmDeletePhotoId(null);
@@ -652,35 +820,34 @@ export default function ProfileOverviewPage() {
     setCompareAllOpen(true);
   };
 
-  /* ============================ Render ============================ */
-  if (loading) {
-    return (
-      <div className=' '>
-        <ShimmerStyle />
-        <HeaderSkeleton />
-        <div className='grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6 mt-6'>
-          <div className={card}>
-            <div className='flex items-center gap-2 mb-3'>
-              <div className={`${skeletonBase} ${shimmer} h-4 w-20`} />
-            </div>
-            <CardSkeletonGrid rows={6} />
-          </div>
-          <div className={card}>
-            <div className='flex items-center gap-2 mb-3'>
-              <div className={`${skeletonBase} ${shimmer} h-4 w-24`} />
-            </div>
-            <TableSkeleton rows={6} />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  /* === Loading / error === */
+
+  // if (loading) {
+  //   return (
+  //     <div>
+  //       <ShimmerStyle />
+  //       <HeaderSkeleton />
+  //       <div className='grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6 mt-6'>
+  //         <div className={card}>
+  //           <div className='flex items-center gap-2 mb-3'>
+  //             <div className={`${skeletonBase} ${shimmer} h-4 w-20`} />
+  //           </div>
+  //           <CardSkeletonGrid rows={6} />
+  //         </div>
+  //         <div className={card}>
+  //           <div className='flex items-center gap-2 mb-3'>
+  //             <div className={`${skeletonBase} ${shimmer} h-4 w-24`} />
+  //           </div>
+  //           <TableSkeleton rows={6} />
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
+
   if (error) {
     return <div className='p-6 text-rose-600'>{error}</div>;
   }
-
-  const leftDaysVal = daysLeft(user?.subscriptionEnd);
-  const subBadgeColor = leftDaysVal == null ? 'bg-white/10 ring-1 ring-white/25' : leftDaysVal <= 0 ? 'bg-rose-500/20 ring-1 ring-rose-300 text-white' : leftDaysVal <= 30 ? 'bg-amber-400/20 ring-1 ring-amber-300 text-white' : 'bg-white/10 ring-1 ring-white/25';
 
   return (
     <div className='space-y-6'>
@@ -690,33 +857,25 @@ export default function ProfileOverviewPage() {
       <div className='rounded-lg border border-slate-200 overflow-hidden shadow-sm'>
         <div className='bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 text-white'>
           <div className='p-6 md:p-8'>
-            <div className='flex flex-wrap justify-between items-center gap-4'>
-              <div className='flex items-center gap-2'>
+            <div className='flex rtl:flex-row-reverse flex-wrap justify-between items-center gap-4'>
+              <div className='flex rtl:flex-row-reverse items-center gap-2'>
                 <div className='h-14 w-14 rounded-lg bg-white/15 grid place-items-center ring-1 ring-white/20'>
                   <UserIcon className='h-7 w-7 text-white' />
                 </div>
                 <div className='min-w-0'>
                   <div className='text-xl md:text-2xl font-semibold truncate'>{user?.name}</div>
                   <div className='text-white/90 text-sm flex items-center gap-3 flex-wrap'>
-                    <span className='inline-flex items-center gap-1'>
-                      <Mail size={14} />
-                      {user?.email}
+                    <span className='w-full rtl:text-left gap-1'>
+                       {user?.email}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <Btn variant='primary' className='!ml-auto md:!ml-0' onClick={() => setEditOpen(true)}>
-                <Pencil size={14} className='mr-1' />
-                {t('actions.edit')}
+              <Btn variant='subtle' className='' onClick={openEditProfile}>
+                <Pencil size={16} className=' rtl:ml-1 ltr:mr-1 max-md:!mx-0 ' />
+                <span className='max-md:hidden'> {t('actions.edit')} </span>
               </Btn>
-            </div>
-
-            <div className='grid grid-cols-2 md:grid-cols-4 gap-3 mt-5'>
-              <StatCard cn='!gap-1 flex-wrap' icon={Dumbbell} title={t('stats.workoutPlan')} value={user?.activeExercisePlan?.name || '-'} />
-              <StatCard cn='!gap-1 flex-wrap' icon={Utensils} title={t('stats.mealPlan')} value={user?.activeMealPlan?.name || '-'} />
-              <StatCard cn='!gap-1 flex-wrap' icon={Scale} title={t('stats.latestWeight')} value={lastWeight} />
-              <StatCard cn='!gap-1 flex-wrap' icon={Activity} title={t('stats.caloriesToday')} value={String(user?.points ?? 0)} subtitle={stats ? `${t('stats.photos')}: ${stats?.photosCount ?? '-'} · ${t('stats.measurements')}: ${stats?.measurementsCount ?? '-'}` : ''} />
             </div>
           </div>
         </div>
@@ -726,71 +885,56 @@ export default function ProfileOverviewPage() {
       <TabsPill sliceInPhone={false} id='profile-tabs' tabs={[...tabs]} active={tab} onChange={setTab} className='!bg-white' />
 
       <AnimatePresence mode='wait'>
-        {/* ============================ OVERVIEW ============================ */}
+        {/* Overview Tab */}
         {tab === 'overview' && (
-          <motion.div key='overview' {...fade} className='grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6'>
-            {/* Identity */}
-            <ProfileCard user={user} onEdit={() => console.log('edit open')} dir='rtl' />
+          <motion.div key='overview' {...fade} className='grid grid-cols-1 2xl:grid-cols-3 gap-4 md:gap-6'>
+            <ProfileCard user={user} onEdit={openEditProfile} dir='rtl' />
 
-            {/* Weight summary */}
-            <motion.div initial={{ opacity: 0, y: 6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 20, mass: 0.8 }} className='relative overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm'>
-              <div className='absolute inset-x-0 top-0 h-1 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600' />
-
-              <div className='p-4 sm:p-5'>
-                <div className='flex items-center justify-between mb-3'>
-                  <div className='flex items-center gap-2'>
-                    <Scale className='h-4 w-4 text-slate-500' />
-                    <div className={sectionTitle}>{t('sections.weightTrend')}</div>
-                  </div>
-                  <div className='flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm'>
-                    <ArrowUpRight className='h-4 w-4 text-slate-500' />
-                    <span className='text-xs text-slate-500'>{t('labels.deltaKg')}</span>
-                    <span className='text-sm font-semibold'>{weightDelta}</span>
-                  </div>
-                </div>
-                <div className='grid grid-cols-2 gap-2'>
-                  {measurements?.map((p, i) => (
-                    <div key={(p.id || p.date || '') + i} className='rounded-lg border border-slate-200 p-3'>
-                      <div className='flex items-center justify-between text-xs text-slate-600'>
-                        <span>{p.date}</span>
-                        <span className='font-semibold text-slate-900'>{p.weight ?? '-'}</span>
-                      </div>
-                      <div className='mt-2'>
-                        <SparkBar value={30 + i * 8} />
-                      </div>
-                    </div>
-                  ))}
-                  {!measurements.length && <div className='text-sm text-slate-500'>{t('messages.noMeasurements')}</div>}
-                </div>
+            {/* Weight Trend Graph (اتجاه الوزن) */}
+            <motion.div initial={{ opacity: 0, y: 6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 20, mass: 0.8 }} className=' box-3d  2xl:col-span-2 relative overflow-hidden rounded-lg border border-slate-200 bg-white '>
+              <div className='relative p-4 sm:p-5 '>
+                <WeightTrendChart data={measurements} t={t} />
               </div>
             </motion.div>
 
-            {/* Compare */}
-            <motion.div initial={{ opacity: 0, y: 6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 20, mass: 0.8 }} className='xl:col-span-3 relative overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm'>
-              <div className='absolute inset-x-0 top-0 h-1 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600' />
-              <div className={` p-4 sm:p-5`}>
-                <div className='flex items-center gap-2 mb-3'>
-                  <ImageIcon className='h-4 w-4 text-slate-500' />
-                  <div className={sectionTitle}>{t('sections.compare')}</div>
+            {/* Compare block stays full width below on small screens */}
+            <motion.div initial={{ opacity: 0, y: 6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 20, mass: 0.8 }} className=' box-3d 2xl:col-span-3 relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-lg hover:border-slate-300'>
+              <div className='relative p-4 sm:p-5 space-y-4'>
+                {/* Header */}
+                <div className='flex items-center justify-between gap-3 mb-1'>
+                  <div className='flex items-center gap-3'>
+                    <div className='flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100'>
+                      <ImageIcon className='h-4 w-4' />
+                    </div>
+                    <div className='flex flex-col'>
+                      <div className={sectionTitle}>{t('sections.compare')}</div>
+                      <span className='text-[11px] text-slate-500'>{t('messages.chooseTwoSets') /* works as a hint too */}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className='grid md:grid-cols-4 gap-3'>
+                {/* Controls */}
+                <div className='grid md:grid-cols-4 gap-3 mt-4'>
+                  {/* Side */}
                   <label className='space-y-1.5'>
                     <div className='text-xs font-medium text-slate-600'>{t('labels.side')}</div>
-                    <Select options={sideOptions} value={compare.side} onChange={val => setCompare(s => ({ ...s, side: String(val) }))} placeholder={t('placeholders.choose')} clearable={false} />
+                    <Select searchable={false} options={sideOptions} value={compare.side} onChange={val => setCompare(s => ({ ...s, side: String(val) }))} placeholder={t('placeholders.choose')} clearable={false} />
                   </label>
 
+                  {/* Before */}
                   <label className='space-y-1.5'>
                     <div className='text-xs font-medium text-slate-600'>{t('labels.before')}</div>
-                    <Select options={photoSetOptions} value={compare.beforeId || ''} onChange={val => setCompare(s => ({ ...s, beforeId: String(val) }))} placeholder={t('placeholders.choose')} clearable searchable />
+                    <Select searchable={false} options={photoSetOptions} value={compare.beforeId || ''} onChange={val => setCompare(s => ({ ...s, beforeId: String(val) }))} placeholder={t('placeholders.choose')} clearable />
                   </label>
 
+                  {/* After */}
                   <label className='space-y-1.5'>
                     <div className='text-xs font-medium text-slate-600'>{t('labels.after')}</div>
-                    <Select options={photoSetOptions} value={compare.afterId || ''} onChange={val => setCompare(s => ({ ...s, afterId: String(val) }))} placeholder={t('placeholders.choose')} clearable searchable />
+                    <Select searchable={false} options={photoSetOptions} value={compare.afterId || ''} onChange={val => setCompare(s => ({ ...s, afterId: String(val) }))} placeholder={t('placeholders.choose')} clearable />
                   </label>
 
-                  <div className='flex items-end gap-2'>
+                  {/* Actions */}
+                  <div className='flex flex-col justify-end gap-2'>
                     <Btn
                       variant='primary'
                       className='w-full'
@@ -811,47 +955,55 @@ export default function ProfileOverviewPage() {
                   </div>
                 </div>
 
-                <div className='mt-4'>{compare.beforeId && compare.afterId && compare.side !== 'all' ? <BeforeAfter before={leftSrc()} after={rightSrc()} name='progress' /> : <div className='text-sm text-slate-500'>{t('messages.chooseTwoSets')}</div>}</div>
+                {/* Preview area */}
+                <div className='mt-4'>
+                  {compare.beforeId && compare.afterId && compare.side !== 'all' ? (
+                    <div className='rounded-2xl border border-slate-200 bg-slate-50/60 px-3 py-3 sm:px-4 sm:py-4'>
+                      <BeforeAfter before={leftSrc()} after={rightSrc()} name='progress' />
+                    </div>
+                  ) : (
+                    <div className='flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-6 text-center'>
+                      <div className='mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200'>
+                        <ImageIcon className='h-5 w-5 text-slate-400' />
+                      </div>
+                      <p className='text-sm font-medium text-slate-600'>{t('messages.chooseTwoSets')}</p>
+                      <p className='mt-1 text-xs text-slate-500'>{t('messages.compareHint') || t('labels.beforeAfter') /* optional extra hint */}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </motion.div>
           </motion.div>
         )}
 
-        {/* ============================ BODY (Measurements CRUD) ============================ */}
+        {/* Body Tab */}
         {tab === 'body' && (
           <motion.div key='body' {...fade} className='grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6'>
-            <div className={card}>
-              <div className='flex items-center gap-2 mb-3'>
-                <Ruler className='h-4 w-4 text-slate-500' />
-                <div className={sectionTitle}>{t('forms.addMeasurement')}</div>
+            <div className={card + ' box-3d'}>
+              <div className='flex items-center justify-between gap-2 mb-3'>
+                <div className='flex items-center gap-2'>
+                  <Ruler className='h-4 w-4 text-slate-500' />
+                  <div className={sectionTitle}>{t('forms.addMeasurement')}</div>
+                </div>
+
+                <div className='  flex items-center gap-2 flex-wrap'>
+                  <Btn variant='primary' onClick={addMeasurement} disabled={savingMeasure}>
+                    {savingMeasure ? t('actions.saving') : t('actions.save')}
+                  </Btn>
+                </div>
               </div>
 
               <div className='mt-4'>
-                <div className='grid grid-cols-1 sm:grid-cols-2 gap-2'>
-                  <InputDate label={t('forms.date')} value={mDate} onChange={d => setMDate(d)} className='sm:col-span-1' />
-                  <Input label={t('forms.weightKg')} name='weight' value={mWeight} onChange={setMWeight} />
-                  <Input label={t('forms.waistCm')} name='waist' value={mWaist} onChange={setMWaist} />
-                  <Input label={t('forms.chestCm')} name='chest' value={mChest} onChange={setMChest} />
-                </div>
-                <div className='mt-3 flex items-center gap-2'>
-                  <Btn variant='success' onClick={addMeasurement} disabled={savingMeasure}>
-                    {savingMeasure ? t('actions.saving') : t('actions.save')}
-                  </Btn>
-                  <Btn
-                    variant='subtle'
-                    onClick={() => {
-                      setMWeight('');
-                      setMWaist('');
-                      setMChest('');
-                      setMHips('');
-                    }}>
-                    {t('actions.reset')}
-                  </Btn>
+                <div className='grid grid-cols-2 sm:grid-cols-2 gap-2'>
+                  <InputDate placeholder={t('forms.date')} value={mDate} onChange={d => setMDate(d)} className='sm:col-span-1' />
+                  <Input placeholder={t('forms.weightKg')} name='weight' value={mWeight} onChange={setMWeight} />
+                  <Input placeholder={t('forms.waistCm')} name='waist' value={mWaist} onChange={setMWaist} />
+                  <Input placeholder={t('forms.chestCm')} name='chest' value={mChest} onChange={setMChest} />
                 </div>
               </div>
             </div>
 
-            <div className={card}>
+            <div className={card + ' box-3d'}>
               <div className='flex items-center justify-between mb-3'>
                 <div className='flex items-center gap-2'>
                   <Scale className='h-4 w-4 text-slate-500' />
@@ -863,11 +1015,11 @@ export default function ProfileOverviewPage() {
                   <table className='w-full text-sm'>
                     <thead className='text-slate-500'>
                       <tr>
-                        <th className='text-right font-normal pb-2'>{t('table.date')}</th>
-                        <th className='text-right font-normal pb-2'>{t('table.weight')}</th>
-                        <th className='text-right font-normal pb-2'>{t('table.waist')}</th>
-                        <th className='text-right font-normal pb-2'>{t('table.chest')}</th>
-                        <th className='text-right font-normal pb-2'>{t('table.actions')}</th>
+                        <th className=' ltr:text-left rtl:text-right font-normal pb-2'>{t('table.date')}</th>
+                        <th className=' ltr:text-left rtl:text-right font-normal pb-2'>{t('table.weight')}</th>
+                        <th className=' ltr:text-left rtl:text-right font-normal pb-2'>{t('table.waist')}</th>
+                        <th className=' ltr:text-left rtl:text-right font-normal pb-2'>{t('table.chest')}</th>
+                        <th className='text-center font-normal pb-2'>{t('table.actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -878,13 +1030,13 @@ export default function ProfileOverviewPage() {
                           const isEditing = editRowId === m.id;
                           return (
                             <tr key={(m.id || m.date || '') + idx} className='border-t border-slate-100'>
-                              <td className='py-2'>{isEditing ? <input type='date' className='w-full rounded-md border border-slate-200 px-2 py-1' value={editRow.date} onChange={e => setEditRow(s => ({ ...s, date: e.target.value }))} /> : m.date}</td>
-                              <td className='py-2 text-right font-medium'>{isEditing ? <input type='number' className='w-24 rounded-md border border-slate-200 px-2 py-1 text-right' value={editRow.weight} onChange={e => setEditRow(s => ({ ...s, weight: e.target.value }))} /> : m.weight ?? '-'}</td>
-                              <td className='py-2 text-right font-medium'>{isEditing ? <input type='number' className='w-24 rounded-md border border-slate-200 px-2 py-1 text-right' value={editRow.waist} onChange={e => setEditRow(s => ({ ...s, waist: e.target.value }))} /> : m.waist ?? '-'}</td>
-                              <td className='py-2 text-right font-medium'>{isEditing ? <input type='number' className='w-24 rounded-md border border-slate-200 px-2 py-1 text-right' value={editRow.chest} onChange={e => setEditRow(s => ({ ...s, chest: e.target.value }))} /> : m.chest ?? '-'}</td>
-                              <td className='py-2 text-right'>
+                              <td className='py-2'>{isEditing ? <input type='date' className='w-full rounded-md border border-slate-200 px-2 py-1 text-sm' value={editRow.date} onChange={e => setEditRow(s => ({ ...s, date: e.target.value }))} /> : m.date}</td>
+                              <td className='py-2 ltr:text-left rtl:text-right font-medium'>{isEditing ? <input type='number' className='w-24 rounded-md border border-slate-200 px-2 py-1 text-right text-sm' value={editRow.weight} onChange={e => setEditRow(s => ({ ...s, weight: e.target.value }))} /> : m.weight ?? '-'}</td>
+                              <td className='py-2 ltr:text-left rtl:text-right font-medium'>{isEditing ? <input type='number' className='w-24 rounded-md border border-slate-200 px-2 py-1 text-right text-sm' value={editRow.waist} onChange={e => setEditRow(s => ({ ...s, waist: e.target.value }))} /> : m.waist ?? '-'}</td>
+                              <td className='py-2 ltr:text-left rtl:text-right font-medium'>{isEditing ? <input type='number' className='w-24 rounded-md border border-slate-200 px-2 py-1 text-right text-sm' value={editRow.chest} onChange={e => setEditRow(s => ({ ...s, chest: e.target.value }))} /> : m.chest ?? '-'}</td>
+                              <td className='py-2 ltr:text-left rtl:text-right mr-auto flex  items-center rtl:justify-end ltr:justify-end'>
                                 {!isEditing ? (
-                                  <div className='flex items-center gap-2 ltr:justify-end rtl:justify-start '>
+                                  <div className='flex items-center gap-2 ltr:justify-end rtl:justify-start'>
                                     <button className='inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50' onClick={() => startEditRow(m)} title={t('actions.edit')}>
                                       <Edit3 size={16} />
                                     </button>
@@ -893,8 +1045,8 @@ export default function ProfileOverviewPage() {
                                     </button>
                                   </div>
                                 ) : (
-                                  <div className='flex items-center gap-2 ltr:justify-end rtl:justify-start '>
-                                    <button className='inline-flex h-8 w-8 items-center justify-center rounded-md border border-emerald-200 text-emerald-700 hover:bg-emerald-50' onClick={saveEditRow} disabled={savingEditRow} title={t('actions.save')}>
+                                  <div className='flex items-center  gap-2  '>
+                                    <button className='inline-flex h-8 w-8 items-center justify-center rounded-md border border-indigo-200 text-indigo-700 hover:bg-indigo-50' onClick={saveEditRow} disabled={savingEditRow} title={t('actions.save')}>
                                       <Save size={16} />
                                     </button>
                                     <button className='inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50' onClick={cancelEditRow} title={t('actions.cancel')}>
@@ -916,76 +1068,81 @@ export default function ProfileOverviewPage() {
           </motion.div>
         )}
 
-        {/* ============================ PHOTOS ============================ */}
+        {/* Photos Tab */}
         {tab === 'photos' && (
           <motion.div key='photos' {...fade} className='grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6'>
-            {/* Upload + Crop tiles */}
-            <div className={card}>
+            {/* Upload panel (hidden until button click) */}
+            <div className={card + ' box-3d'}>
               <div className='flex items-center justify-between gap-2 flex-wrap'>
-                <div className='flex items-center gap-2 '>
+                <div className='flex items-center gap-2'>
                   <Camera className='h-4 w-4 text-slate-500' />
                   <div className={sectionTitle}>{t('sections.uploadBodyPhotos')}</div>
                 </div>
-                <Btn variant='outline' onClick={() => setTipsOpen(true)}>
-                  {t('tips.cta')}
-                </Btn>
+                <div className='flex gap-2'>
+                  <Btn variant='outline' size='sm' onClick={() => setTipsOpen(true)}>
+                    {t('tips.cta')}
+                  </Btn>
+                </div>
               </div>
 
-              <div className='grid grid-cols-2 gap-3  mt-4'>
-                {[
-                  { key: 'front', label: t('sides.front'), file: pFront, setter: setPFront },
-                  { key: 'back', label: t('sides.back'), file: pBack, setter: setPBack },
-                  { key: 'left', label: t('sides.left'), file: pLeft, setter: setPLeft },
-                  { key: 'right', label: t('sides.right'), file: pRight, setter: setPRight },
-                ].map(({ key, label, file, setter }) => (
-                  <div key={key} className='relative rounded-lg border border-dashed border-slate-300 bg-slate-50 aspect-[4/3] overflow-hidden'>
-                    {!file ? (
-                      <label className='group absolute inset-0 cursor-pointer grid place-items-center hover:bg-slate-100 transition'>
-                        <div className='flex flex-col items-center'>
-                          <Upload className='h-6 w-6 text-slate-500' />
-                          <div className='mt-2 text-sm font-medium'>{label}</div>
-                        </div>
-                        <input type='file' accept='image/*' className='hidden' onChange={e => onPickSideFile(key, e.target.files?.[0] || null)} />
-                      </label>
-                    ) : (
-                      <>
-                        <img src={URL.createObjectURL(file)} alt={label} className='absolute inset-0 w-full h-full object-cover' />
-                        <button type='button' onClick={() => setter(null)} className='absolute top-2 right-2 inline-flex items-center justify-center h-8 w-8 rounded-full bg-black/60 text-white' aria-label={t('actions.clear')}>
-                          <X size={16} />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <div className='mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2'>
-                <Input label={t('forms.weightOptional')} name='pWeight' value={pWeight} onChange={setPWeight} />
-                <InputDate label={t('forms.date')} value={pDate} onChange={setPDate} />
-              </div>
-
-              <div className='mt-3 flex gap-2'>
-                <Btn variant='primary' onClick={savePhotoSet} disabled={savingPhotos || (!pFront && !pBack && !pLeft && !pRight)}>
-                  {savingPhotos ? t('actions.saving') : t('actions.saveSet')}
+              <div className=' mt-4 space-y-3 flex flex-col items-end'>
+                <Btn variant='primary' size='sm' className='w-fit ' onClick={() => setShowUploadBlock(s => !s)}>
+                  <Upload size={16} className='mr-1' />
+                  {showUploadBlock ? t('actions.hideUpload') : t('actions.addBodyPhotos')}
                 </Btn>
-                <Btn
-                  variant='subtle'
-                  onClick={() => {
-                    setPFront(null);
-                    setPBack(null);
-                    setPLeft(null);
-                    setPRight(null);
-                    setPWeight('');
-                    setPNote('');
-                  }}>
-                  {t('actions.clear')}
-                </Btn>
+
+                <AnimatePresence initial={false}>
+                  {showUploadBlock && (
+                    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }} className=' w-full space-y-3'>
+                      <div className='grid grid-cols-2 gap-3 mt-3'>
+                        {[
+                          { key: 'front', label: t('sides.front'), file: pFront, setter: setPFront },
+                          { key: 'back', label: t('sides.back'), file: pBack, setter: setPBack },
+                          { key: 'left', label: t('sides.left'), file: pLeft, setter: setPLeft },
+                          { key: 'right', label: t('sides.right'), file: pRight, setter: setPRight },
+                        ].map(({ key, label, file, setter }) => (
+                          <div key={key} className='relative rounded-lg border border-dashed border-slate-300 bg-slate-50 aspect-[4/3] overflow-hidden'>
+                            {!file ? (
+                              <label className='group absolute inset-0 cursor-pointer grid place-items-center hover:bg-slate-100 transition'>
+                                <div className='flex flex-col items-center'>
+                                  <ImagePlus className='h-6 w-6 text-slate-500' />
+                                  <div className='mt-2 text-sm font-medium'>{label}</div>
+                                  <div className='mt-1 text-[11px] text-slate-500'>{t('labels.tapToUpload')}</div>
+                                </div>
+                                <input type='file' accept='image/*' className='hidden' onChange={e => onPickSideFile(key, e.target.files?.[0] || null)} />
+                              </label>
+                            ) : (
+                              <>
+                                <img src={URL.createObjectURL(file)} alt={label} className='absolute inset-0 w-full h-full object-cover' />
+                                <button type='button' onClick={() => setter(null)} className='absolute top-2 right-2 inline-flex items-center justify-center h-8 w-8 rounded-full bg-black/60 text-white' aria-label={t('actions.clear')}>
+                                  <X size={16} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className='grid grid-cols-1 sm:grid-cols-2 gap-2'>
+                        <InputDate placeholder={t('forms.date')} value={pDate} onChange={setPDate} />
+                        <Input placeholder={t('forms.weightOptional')} name='pWeight' value={pWeight} onChange={setPWeight} />
+                        <Input placeholder={t('forms.noteOptional')} name='pNote' value={pNote} onChange={setPNote} />
+                      </div>
+
+                      <div className='flex gap-2 flex-wrap'>
+                        <Btn variant='primary' onClick={savePhotoSet} disabled={savingPhotos || (!pFront && !pBack && !pLeft && !pRight)}>
+                          {savingPhotos ? t('actions.saving') : t('actions.saveSet')}
+                        </Btn>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
             {/* Timeline */}
-            <div className={`xl:col-span-2 ${card}`}>
-              <div className='flex items-center justify-between mb-3'>
+            <div className={`xl:col-span-2 ${card} box-3d`}>
+              <div className='flex items-center justify-between mb-3 gap-2'>
                 <div className='flex items-center gap-2'>
                   <ImageIcon className='h-4 w-4 text-slate-500' />
                   <div className={sectionTitle}>{t('sections.timeline')}</div>
@@ -1007,7 +1164,12 @@ export default function ProfileOverviewPage() {
                       <ImagePlus className='h-6 w-6 text-slate-400' />
                     </div>
                     <div className='text-sm font-medium'>{t('messages.noTimeline')}</div>
-                    <Btn variant='primary' onClick={() => setUploadOpen(true)} className='mt-1'>
+                    <Btn
+                      variant='primary'
+                      onClick={() => {
+                        setShowUploadBlock(true);
+                      }}
+                      className='mt-1'>
                       {t('actions.addBodyPhotos')}
                     </Btn>
                   </div>
@@ -1015,8 +1177,8 @@ export default function ProfileOverviewPage() {
               ) : (
                 <div ref={scrollerRef} className='flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2'>
                   {photoMonths.map(entry => (
-                    <div key={entry.id} className='min-w-[300px] md:min-w-[400px] snap-start rounded-lg border border-slate-200 p-3 bg-white'>
-                      <div className='flex items-center justify-between mb-2'>
+                    <div key={entry.id} className='min-w-[260px] sm:min-w-[320px] md:min-w-[380px] snap-start rounded-lg border border-slate-200 p-3 bg-white'>
+                      <div className='flex items-center justify-between mb-2 gap-2'>
                         <div>
                           <div className='text-sm font-semibold'>{entry.takenAt}</div>
                           <div className='text-xs text-slate-500'>{entry.note}</div>
@@ -1030,9 +1192,16 @@ export default function ProfileOverviewPage() {
                       </div>
                       <div className='grid grid-cols-2 gap-2'>
                         {['front', 'back', 'left', 'right'].map(side => (
-                          <button key={side} onClick={() => setPhotoPreview({ src: entry.sides?.[side], label: `${entry.takenAt} — ${side}` })} className='overflow-hidden rounded-lg border border-slate-200 bg-slate-50 hover:shadow-sm transition'>
-                            <Img src={entry.sides?.[side]} className=' max-md:h-[120px] h-40 w-full object-cover' alt={side} />
-                            <div className='px-2 py-1 text-xs text-slate-600 capitalize'>{t(`sides.${side}`)}</div>
+                          <button
+                            key={side}
+                            onClick={() =>
+                              setPhotoPreview({
+                                src: entry.sides?.[side],
+                                label: `${entry.takenAt} — ${side}`,
+                              })
+                            }
+                            className='overflow-hidden rounded-lg border border-slate-200 bg-slate-50 hover:shadow-sm transition'>
+                            <Img src={entry.sides?.[side]} className='max-h-[140px] aspect-square w-full object-contain' alt={side} />
                           </button>
                         ))}
                       </div>
@@ -1045,7 +1214,7 @@ export default function ProfileOverviewPage() {
         )}
       </AnimatePresence>
 
-      {/* Upload modal (same uploader but modal form) */}
+      {/* Modal: inline upload (already have full-screen version too) */}
       <Modal open={uploadOpen} onClose={() => setUploadOpen(false)} title={t('modals.addBodySet')} maxW='max-w-3xl'>
         <div className='space-y-3'>
           <div className='grid grid-cols-2 gap-3'>
@@ -1092,7 +1261,7 @@ export default function ProfileOverviewPage() {
         </div>
       </Modal>
 
-      {/* Photo preview (single side) */}
+      {/* Modal: preview single image or compare hint */}
       <Modal open={!!photoPreview} onClose={() => setPhotoPreview(null)} title={photoPreview?.label || t('modals.preview')} maxW='max-w-3xl'>
         {photoPreview?.src ? (
           <div className='rounded-lg overflow-hidden border border-slate-200'>
@@ -1103,7 +1272,7 @@ export default function ProfileOverviewPage() {
         )}
       </Modal>
 
-      {/* Compare ALL sides carousel */}
+      {/* Modal: before/after all sides */}
       <Modal open={compareAllOpen} onClose={() => setCompareAllOpen(false)} title={t('labels.beforeAfter')} maxW='max-w-3xl'>
         <div className='flex items-center justify-between mb-2 text-sm text-slate-600'>
           <span className='font-medium capitalize'>{t(`sides.${allSides[compareAllIndex]}`)}</span>
@@ -1124,23 +1293,34 @@ export default function ProfileOverviewPage() {
         </div>
       </Modal>
 
-      {/* Tips Modal */}
-      <Modal open={tipsOpen} onClose={() => setTipsOpen(false)} title={t('tips.title')} maxW='max-w-lg'>
-        <div className='space-y-2 text-sm text-slate-700'>
-          <ul className='list-disc pl-5 space-y-1'>
-            <li>{t('tips.lighting')}</li>
-            <li>{t('tips.distance')}</li>
-            <li>{t('tips.angles')}</li>
-            <li>{t('tips.cameraHeight')}</li>
-            <li>{t('tips.timer')}</li>
-            <li>{t('tips.clothes')}</li>
-            <li>{t('tips.background')}</li>
-            <li>{t('tips.frequency')}</li>
+      {/* Modal: tips */}
+      <Modal
+        open={tipsOpen}
+        onClose={() => setTipsOpen(false)}
+        title={
+          <div className='flex items-center gap-2 pt-1'>
+            <div className='flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100'>
+              <Lightbulb className='h-4 w-4' />
+            </div>
+            <span className=' font-medium text-slate-600'>{t('tips.subtitle') || t('tips.title')}</span>
+          </div>
+        }
+        maxW='max-w-lg'>
+        <div className='relative space-y-4 text-sm text-slate-700'>
+          <div className='absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-indigo-500 via-blue-500 to-emerald-400 rounded-full' />
+
+          <ul className='space-y-2 pt-1'>
+            {['lighting', 'distance', 'angles', 'cameraHeight', 'timer', 'clothes', 'background', 'frequency'].map(key => (
+              <li key={key} className='flex items-start gap-3 rounded-lg bg-slate-50 py-2 px-3 ring-1 ring-slate-200'>
+                <span className='mt-1 h-2 w-2 rounded-full bg-indigo-500' />
+                <span className='text-[13px] leading-relaxed text-slate-700'>{t(`tips.${key}`)}</span>
+              </li>
+            ))}
           </ul>
         </div>
       </Modal>
 
-      {/* Confirm delete Photo Set */}
+      {/* Modal: delete photo set */}
       <Modal open={!!confirmDeletePhotoId} onClose={() => setConfirmDeletePhotoId(null)} title={t('modals.confirmDelete')} maxW='max-w-md'>
         <div className='text-sm text-slate-700 mb-3'>{t('messages.deletePhotoConfirm')}</div>
         <div className='flex gap-2'>
@@ -1153,7 +1333,7 @@ export default function ProfileOverviewPage() {
         </div>
       </Modal>
 
-      {/* Confirm delete Measurement */}
+      {/* Modal: delete measurement */}
       <Modal open={!!confirmDeleteMeasurementId} onClose={() => setConfirmDeleteMeasurementId(null)} title={t('modals.confirmDelete')} maxW='max-w-md'>
         <div className='text-sm text-slate-700 mb-3'>{t('messages.deleteMeasurementConfirm')}</div>
         <div className='flex gap-2'>
@@ -1166,12 +1346,12 @@ export default function ProfileOverviewPage() {
         </div>
       </Modal>
 
-      {/* Crop Modal */}
+      {/* Modal: crop */}
       <Modal open={cropOpen} onClose={() => setCropOpen(false)} title={t('modals.cropTitle')} maxW='max-w-3xl'>
         {cropImageSrc ? (
           <div className='space-y-3'>
-            <div className='relative w-full aspect-[4/3] bg-slate-100 rounded-lg overflow-hidden'>
-              <Cropper image={cropImageSrc} crop={crop} zoom={zoom} aspect={1} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={(_, areaPixels) => setCropAreaPixels(areaPixels)} cropShape='rect' objectFit='cover' />
+            <div className='relative w-full aspect-square bg-slate-100 rounded-lg overflow-hidden'>
+              <Cropper image={cropImageSrc} crop={crop} zoom={zoom} aspect={1} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={(_, areaPixels) => setCropAreaPixels(areaPixels)} cropShape='rect' objectFit='contain' />
             </div>
             <div className='flex items-center gap-3'>
               <label className='text-sm text-slate-600'>{t('actions.zoom')}</label>
@@ -1190,9 +1370,46 @@ export default function ProfileOverviewPage() {
           <div className='text-sm text-slate-600'>{t('messages.pickImageFirst')}</div>
         )}
       </Modal>
+
+      {/* Modal: Edit Profile */}
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} title={t('modals.editProfileTitle') || t('actions.editProfile')} maxW='max-w-3xl'>
+        <div className='space-y-4'>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-2'>
+            <Input placeholder={t('profile.name')} name='name' value={editForm.name} onChange={val => setEditForm(f => ({ ...f, name: val }))} />
+            <Input placeholder={t('profile.phone')} name='phone' value={editForm.phone} onChange={val => setEditForm(f => ({ ...f, phone: val }))} />
+
+            <Input placeholder={t('profile.caloriesTarget')} name='caloriesTarget' type='number' value={editForm.caloriesTarget} onChange={val => setEditForm(f => ({ ...f, caloriesTarget: val }))} />
+            <Input placeholder={t('profile.proteinPerDay')} name='proteinPerDay' type='number' value={editForm.proteinPerDay} onChange={val => setEditForm(f => ({ ...f, proteinPerDay: val }))} />
+            <Input placeholder={t('profile.carbsPerDay')} name='carbsPerDay' type='number' value={editForm.carbsPerDay} onChange={val => setEditForm(f => ({ ...f, carbsPerDay: val }))} />
+            <Input placeholder={t('profile.fatsPerDay')} name='fatsPerDay' type='number' value={editForm.fatsPerDay} onChange={val => setEditForm(f => ({ ...f, fatsPerDay: val }))} />
+            <Select
+              searchable={false}
+              placeholder={t('profile.activityLevel')}
+              options={[
+                { id: 'sedentary', label: t('profile.activity.sedentary') },
+                { id: 'light', label: t('profile.activity.light') },
+                { id: 'moderate', label: t('profile.activity.moderate') },
+                { id: 'high', label: t('profile.activity.high') },
+                { id: 'athlete', label: t('profile.activity.athlete') },
+              ]}
+              value={editForm.activityLevel}
+              onChange={val => setEditForm(f => ({ ...f, activityLevel: String(val) }))}
+              clearable
+            />
+          </div>
+
+          <div className='flex gap-2 justify-end'>
+            <Btn variant='primary' onClick={handleSaveProfile} disabled={savingProfile}>
+              {savingProfile ? t('actions.saving') : t('actions.save')}
+            </Btn>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
+
+/* === Helpers === */
 
 function fmt(d) {
   if (!d) return '-';
@@ -1205,69 +1422,197 @@ function fmt(d) {
   }
 }
 
-function ProfileCard({ user = {}, onEdit = () => {}, dir = 'ltr' }) {
+function ProfileCard({ user = {}, dir = 'ltr' }) {
   const t = useTranslations('myProfile');
-  const leftDaysVal = daysLeft(user?.subscriptionEnd);
+
+  const { phone, membership, gender, subscriptionStart, subscriptionEnd, caloriesTarget, proteinPerDay, carbsPerDay, fatsPerDay, activityLevel, coach, activeExercisePlan, activeMealPlan } = user || {};
+
+  const leftDaysVal = daysLeft(subscriptionEnd);
 
   const subBadgeColor = leftDaysVal == null ? 'bg-slate-100 text-slate-700 ring-1 ring-slate-200' : leftDaysVal <= 0 ? 'bg-red-50 text-red-700 ring-1 ring-red-200' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200';
 
+  const leftDaysLabel = leftDaysVal == null ? t('profile.noEndDate') : leftDaysVal <= 0 ? t('profile.expired') : t('profile.daysLeft', { count: leftDaysVal });
+
+  const formatMacro = val => (val == null ? '-- g' : `${val} g`);
+  const formatActivity = val => val || t('profile.activityNotSet');
+
   return (
-    <motion.div initial={{ opacity: 0, y: 6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 20, mass: 0.8 }} className='relative overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm' dir={dir}>
-      <div className='absolute inset-x-0 top-0 h-1 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600' />
-
-      <div className='p-4 sm:p-5'>
-        <div className='flex items-start gap-4'>
-          <div className='min-w-0 flex-1'>
-            {user?.phone && (
-              <div className='mt-1 text-sm text-slate-600'>
-                {t('profile.phone')}{' '}
-                <span className='font-medium' dir='ltr'>
-                  {user.phone}
-                </span>
+    <motion.div dir={dir} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 200, damping: 22 }} className=' box-3d relative overflow-hidden rounded-lg border border-slate-200 bg-white shadow-md'>
+      <div className='relative p-5 xl:p-6 space-y-5'>
+        {/* Header */}
+        <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3'>
+          <div className='space-y-1 flex items-center justify-between w-full '>
+            <div className='flex items-center gap-2 rounded-full bg-slate-50 px-2 py-1.5 ring-1 ring-slate-200'>
+              <div className='h-7 w-7 flex items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 text-white shadow-md'>
+                <User2 className='h-4 w-4' />
               </div>
-            )}
-
-            <div className='mt-1 text-sm text-slate-600'>
-              {t('profile.coach')} <span className='font-medium'>{user?.coach?.name || user?.coachId || '-'}</span>
+              <div className='flex flex-col'>
+                <div className='flex items-center gap-2'>
+                  <span className='text-[10px] text-slate-500'>{t('profile.coachLabel')}</span> :<span className='text-sm font-semibold text-slate-800'>{coach?.name || t('profile.noCoach')}</span>
+                </div>
+              </div>
             </div>
 
-            {/* badges row (your snippet merged + styled) */}
-            <div className='mt-3 ml-auto flex items-center gap-2 flex-wrap'>
-              <span className='inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 px-3 py-1 text-xs text-white shadow-sm'>
-                <Sparkles className='h-4 w-4' />
-                <span className='opacity-90'>
-                  {user?.membership || '-'} {t('profile.member')}
-                </span>
-              </span>
+            {/* Phone */}
+            {phone && (
+              <div className='font-number flex items-center gap-2 rounded-full bg-slate-50 px-2 py-1.5 ring-1 ring-slate-200 text-sm text-slate-700  h-[40px] '>
+                <span dir='ltr'>{phone}</span>
+                <Phone className='  h-3.5 w-3.5 text-slate-500' />
+              </div>
+            )}
+          </div>
+        </div>
 
-              <span className='inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs text-slate-700 ring-1 ring-slate-200'>
-                <ShieldCheck className='h-4 w-4' />
-                {String(user?.role || '').toUpperCase() || '-'}
-              </span>
+        {/* Grid */}
+        <div className='grid grid-cols-1 lg:grid-cols-3 gap-4'>
+          {/* Membership */}
+          <div className='rounded-xl max-md:border-none max-md:p-0 max-md:bg-white/0 backdrop-blur-2xl bg-white/90 border border-slate-200 p-4 space-y-3'>
+            <div className='flex justify-between items-center'>
+              <span className='text-xs font-semibold text-slate-500 uppercase tracking-wide'>{t('profile.membershipTitle')}</span>
+              <span className='px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[11px] ring-1 ring-indigo-200 font-number '>{membership ? membership.toUpperCase() : t('profile.noPlan')}</span>
+            </div>
 
-              <span className='inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs text-slate-700 ring-1 ring-slate-200'>
-                <Activity className='h-4 w-4' />
-                {String(user?.status || '').toUpperCase() || '-'}
-              </span>
+            <div className='flex justify-between items-center'>
+              <span className='text-xs font-semibold text-slate-500 uppercase tracking-wide'>{t('profile.gender')}</span>
+              <span className='px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[11px] ring-1 uppercase ring-indigo-200 font-number '>{gender}</span>
+            </div>
+            <div className='flex justify-between items-center'>
+              <span className='text-xs font-semibold text-slate-500 uppercase tracking-wide'>{t('profile.activityLevel')}</span>
+              <span className='px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[11px] ring-1 uppercase ring-indigo-200 '>{formatActivity(activityLevel)}</span>
+            </div>
+          </div>
 
-              <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs ring-1 ${subBadgeColor.replace('bg-', 'ring-')}`}>
-                <Clock className='h-4 w-4' />
-                <div className='flex items-center gap-1' dir='ltr'>
-                  <span>{fmt(user?.subscriptionStart)}</span>
-                  <span>→</span>
-                  <span>{fmt(user?.subscriptionEnd)}</span>
+          {/* Subscription */}
+          <div className='rounded-xl max-md:border-none max-md:p-0 max-md:bg-white/0 max-md:my-4 backdrop-blur-2xl bg-white/90  border border-slate-200 p-4 space-y-3'>
+            <div className='flex items-center justify-between'>
+              <span className='text-xs font-semibold text-slate-500 uppercase tracking-wide'>{t('profile.start')}</span>
+              <span className={` font-number px-2.5 py-0.5 rounded-full text-[11px] font-medium ${subBadgeColor}`}>{fmt(subscriptionStart) || '--'}</span>
+            </div>
+            <div className='flex items-center justify-between'>
+              <span className='text-xs font-semibold text-slate-500 uppercase tracking-wide'>{t('profile.end')}</span>
+              <span className={` font-number px-2.5 py-0.5 rounded-full text-[11px] font-medium ${subBadgeColor}`}>{fmt(subscriptionEnd) || '--'}</span>
+            </div>
+            <div className='flex items-center justify-between'>
+              <span className='text-xs font-semibold text-slate-500 uppercase tracking-wide'>{t('profile.subscriptionPeriod')}</span>
+              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium ${subBadgeColor}`}>{leftDaysLabel}</span>
+            </div>
+          </div>
+
+          {/* Active Plans */}
+          <div className='rounded-xl max-md:border-none max-md:p-0 max-md:bg-white/0 backdrop-blur-2xl bg-white/90  border border-slate-200 p-4 space-y-3'>
+            <div className='flex items-center gap-2 mb-3'>
+              <FaTasks className='h-4 w-4 text-orange-500' />
+              <span className='text-sm font-semibold text-slate-800'>{t('profile.activePlans')}</span>
+            </div>
+            <div className='grid grid-cols-2 gap-2 mt-1'>
+              {/* Exercise Plan */}
+              <div className='relative overflow-hidden rounded-xl bg-white px-3 py-3 ring-1 ring-slate-200 shadow-[0_1px_3px_rgba(15,23,42,0.08)]'>
+                <div className='absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500' />
+
+                <div className='flex flex-col items-center gap-1.5'>
+                  <div className='flex mx-auto items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700'>
+                    <Dumbbell className='h-3.5 w-3.5' />
+                    <span className='uppercase text-center tracking-wide'>{t('profile.exercisePlan')}</span>
+                  </div>
+
+                  <div className='mt-0.5 text-sm font-semibold text-slate-900 text-center'>{activeExercisePlan?.name || t('profile.noExercisePlan')}</div>
+
+                  <span className='text-[11px] text-slate-500'>{t('profile.planActiveLabel') /* optional */}</span>
                 </div>
-                {leftDaysVal != null && <span className='ml-1 opacity-90'>{leftDaysVal <= 0 ? 'expired' : `${leftDaysVal}d left`}</span>}
-              </span>
+              </div>
+
+              {/* Meal Plan */}
+              <div className='relative overflow-hidden rounded-xl bg-white px-3 py-3 ring-1 ring-slate-200 shadow-[0_1px_3px_rgba(15,23,42,0.08)]'>
+                <div className='absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-rose-400 via-rose-500 to-pink-500' />
+
+                <div className='flex flex-col items-center gap-1.5'>
+                  <div className='flex mx-auto items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-medium text-rose-700'>
+                    <Apple className='h-3.5 w-3.5' />
+                    <span className='uppercase text-center tracking-wide'>{t('profile.mealPlan')}</span>
+                  </div>
+
+                  <div className='mt-0.5 text-sm font-semibold text-slate-900 text-center'>{activeMealPlan?.name || t('profile.noMealPlan')}</div>
+
+                  <span className='text-[11px] text-slate-500'>{t('profile.planActiveLabel')}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* footer actions */}
-        <div className='mt-4  '>
-          <button onClick={onEdit} className='inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 active:translate-y-[1px]'>
-            {t('actions.editProfile')}
-          </button>
+        {/* Nutrition */}
+        <div className='rounded-xl max-md:border-none max-md:p-0 max-md:bg-white/0 bg-slate-50 border border-slate-200 p-4'>
+          <div className='flex items-center gap-2 mb-3'>
+            <Flame className='h-4 w-4 text-orange-500' />
+            <span className='text-sm font-semibold text-slate-800'>{t('profile.nutritionTargets')}</span>
+          </div>
+
+          <div className='grid grid-cols-2 sm:grid-cols-4 gap-3 text-center'>
+            {/* Calories */}
+            <div className='relative overflow-hidden rounded-xl bg-white px-3 py-3 ring-1 ring-slate-200 shadow-[0_1px_3px_rgba(15,23,42,0.08)]'>
+              <div className='absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-orange-400 via-amber-400 to-rose-400' />
+              <div className='flex flex-col items-center gap-1.5'>
+                <div className='inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-medium text-orange-700'>
+                  {/* make sure Flame is imported */}
+                  <Flame className='h-3.5 w-3.5' />
+                  <span className='uppercase tracking-wide'>{t('profile.calories')}</span>
+                </div>
+
+                <div className='flex items-end gap-1 mt-0.5'>
+                  <span className='text-2xl font-bold text-slate-900'>{caloriesTarget || '--'}</span>
+                  <span className='text-[11px] uppercase text-slate-500 mb-[2px]'>kcal</span>
+                </div>
+
+                <span className='text-[11px] text-slate-500'>{t('profile.perDayLabel') /* e.g. "في اليوم" */}</span>
+              </div>
+            </div>
+
+            {/* Protein */}
+            <div className='relative overflow-hidden rounded-xl bg-white px-3 py-3 ring-1 ring-slate-200'>
+              <div className='absolute inset-x-6 top-0 h-0.5 rounded-full bg-gradient-to-r from-indigo-400 to-indigo-600/80' />
+              <div className='flex flex-col items-center gap-1.5'>
+                <div className='inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-medium text-indigo-700'>
+                  {/* Dumbbell icon if you like for protein */}
+                  <Dumbbell className='h-3.5 w-3.5' />
+                  <span className='uppercase tracking-wide'>{t('profile.protein')}</span>
+                </div>
+                <div className='flex items-end gap-1'>
+                  <span className='text-base font-semibold text-slate-900'>{formatMacro(proteinPerDay)}</span>
+                </div>
+                <span className='text-[11px] text-slate-500'>{t('profile.gramsPerDay') /* "جم / اليوم" */}</span>
+              </div>
+            </div>
+
+            {/* Carbs */}
+            <div className='relative overflow-hidden rounded-xl bg-white px-3 py-3 ring-1 ring-slate-200'>
+              <div className='absolute inset-x-6 top-0 h-0.5 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600/80' />
+              <div className='flex flex-col items-center gap-1.5'>
+                <div className='inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700'>
+                  <span className='h-2 w-2 rounded-full bg-emerald-500' />
+                  <span className='uppercase tracking-wide'>{t('profile.carbs')}</span>
+                </div>
+                <div className='flex items-end gap-1'>
+                  <span className='text-base font-semibold text-slate-900'>{formatMacro(carbsPerDay)}</span>
+                </div>
+                <span className='text-[11px] text-slate-500'>{t('profile.gramsPerDay')}</span>
+              </div>
+            </div>
+
+            {/* Fats */}
+            <div className='relative overflow-hidden rounded-xl bg-white px-3 py-3 ring-1 ring-slate-200'>
+              <div className='absolute inset-x-6 top-0 h-0.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-600/80' />
+              <div className='flex flex-col items-center gap-1.5'>
+                <div className='inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700'>
+                  <span className='h-2 w-2 rounded-full bg-amber-500' />
+                  <span className='uppercase tracking-wide'>{t('profile.fats')}</span>
+                </div>
+                <div className='flex items-end gap-1'>
+                  <span className='text-base font-semibold text-slate-900'>{formatMacro(fatsPerDay)}</span>
+                </div>
+                <span className='text-[11px] text-slate-500'>{t('profile.gramsPerDay')}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </motion.div>

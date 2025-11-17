@@ -41,133 +41,185 @@
     "tabs": {
       "overview": "نظرة عامة",
       "body": "القياسات",
-      "photos": "الصور"
+      "photos": "صور التقدم"
     },
-    "sides": {
-      "all": "الكل",
-      "front": "أمامي",
-      "back": "خلفي",
-      "left": "يسار",
-      "right": "يمين"
+
+    "errors": {
+      "loadProfile": "حصل خطأ أثناء تحميل بيانات الملف الشخصي."
     },
+
     "stats": {
-      "workoutPlan": "خطة التمرين",
-      "mealPlan": "خطة الوجبات",
-      "latestWeight": "آخر وزن",
-      "caloriesToday": "سعرات اليوم",
-      "photos": "الصور",
-      "measurements": "القياسات",
-      "trend": "الاتجاه"
+      "workoutPlan": "خطة التدريب",
+      "mealPlan": "خطة التغذية",
+      "latestWeight": "أحدث وزن",
+      "caloriesToday": "النقاط اليوم",
+      "photos": "عدد الصور",
+      "measurements": "عدد القياسات"
     },
-    "profile": {
-      "member": "عضو",
-      "phone": "الهاتف:",
-      "coach": "المدرب:",
-      "coaching": "مدرب",
-      "coachId": "معرّف المدرب"
+
+    "sections": {
+      "weightTrend": "اتجاه الوزن",
+      "compare": "مقارنة قبل / بعد",
+      "measurements": "سجل القياسات",
+      "uploadBodyPhotos": "رفع صور الجسم",
+      "timeline": "الخط الزمني للصور"
     },
+
+    "labels": {
+      "deltaKg": "فرق الوزن (كجم)",
+      "direction": "اتجاه التقدم في الوزن",
+      "start": "البداية",
+      "end": "النهاية",
+      "side": "الزاوية",
+      "before": "قبل",
+      "after": "بعد",
+      "beforeAfter": "قبل وبعد",
+      "tapToUpload": "اضغط للرفع",
+      "average": "المتوسط"
+    },
+
+    "messages": {
+      "noMeasurements": "لا توجد قياسات مسجلة حتى الآن.",
+      "chooseTwoSets": "اختر مجموعتين من الصور للمقارنة ثم حدّد الزاوية.",
+      "noTimeline": "لا توجد صور في الخط الزمني حتى الآن.",
+      "useCompareBlock": "استخدم بلوك المقارنة لاختيار صور قبل وبعد لعرضها هنا.",
+      "deletePhotoConfirm": "هل أنت متأكد من حذف مجموعة الصور هذه؟ لن تتمكن من استرجاعها.",
+      "deleteMeasurementConfirm": "هل أنت متأكد من حذف هذه القياس؟",
+      "pickImageFirst": "من فضلك اختر صورة أولًا لبدء القص.",
+      "noMeasurementsHint": "ابدأ بإضافة قياسات وزنك من صفحة التقدم لمتابعة منحنى التغير بمرور الوقت.",
+      "compareHint": "اختر صورتين لمشاهدة الفرق بوضوح"
+    },
+
     "actions": {
       "edit": "تعديل",
       "editProfile": "تعديل الملف الشخصي",
-      "addBodyPhotos": "إضافة صور للجسم",
-      "saving": "جارٍ الحفظ...",
-      "save": "حفظ",
-      "reset": "إعادة ضبط",
-      "clear": "مسح",
-      "saveSet": "حفظ المجموعة",
-      "cancel": "إلغاء",
       "preview": "معاينة",
-      "saveChanges": "حفظ التغييرات",
+      "previewAll": "معاينة كل الزوايا",
+      "save": "حفظ",
+      "saving": "جاري الحفظ...",
+      "reset": "إعادة تعيين",
+      "clear": "تفريغ",
+      "cancel": "إلغاء",
+      "delete": "حذف",
       "apply": "تطبيق",
-      "zoom": "تكبير",
-      "previewAll": "معاينة الكل",
-      "delete": "حذف"
+      "zoom": "التكبير",
+      "saveSet": "حفظ مجموعة الصور",
+      "addBodyPhotos": "إضافة صور الجسم",
+      "hideUpload": "إخفاء نموذج الرفع"
     },
-    "sections": {
-      "weightTrend": "اتجاه الوزن",
-      "compare": "مقارنة التقدم",
-      "bodyMetrics": "قياسات الجسم",
-      "measurements": "القياسات",
-      "uploadBodyPhotos": "رفع صور الجسم",
-      "timeline": "الخط الزمني"
+
+    "tips": {
+      "subtitle": "نصائح لالتقاط صور تقدم واضحة",
+      "cta": "نصائح لالتقاط صور أفضل",
+      "title": "نصائح لالتقاط صور تقدم واضحة",
+      "lighting": "التقط الصورة في إضاءة قوية وثابتة (يفضل الضوء الطبيعي).",
+      "distance": "حافظ على نفس المسافة بينك وبين الكاميرا في كل مرة.",
+      "angles": "صور من الأمام، الخلف، والجانبين لنفس الوقفة.",
+      "cameraHeight": "اجعل الكاميرا في مستوى منتصف الجسم تقريبًا للحصول على منظور ثابت.",
+      "timer": "استخدم المؤقت في الهاتف لتثبيت الكاميرا وأخذ وضعية مريحة.",
+      "clothes": "البس ملابس مريحة ومتشابهة في كل مرة لتوضيح الفرق.",
+      "background": "اختر خلفية بسيطة ثابتة بدون فوضى.",
+      "frequency": "التقط صور تقدم مثلاً كل أسبوع أو كل أسبوعين للمقارنة."
     },
-    "labels": {
-      "deltaKg": "Δ (كجم)",
-      "side": "الجانب",
-      "before": "قبل",
-      "after": "بعد",
-      "beforeAfter": "قبل / بعد",
-      "latestWeight": "آخر وزن",
-      "lastEntry": "آخر إدخال"
+
+    "modals": {
+      "addBodySet": "إضافة مجموعة صور للجسم",
+      "preview": "معاينة الصورة",
+      "confirmDelete": "تأكيد الحذف",
+      "cropTitle": "قص الصورة",
+      "editProfileTitle": "تعديل بيانات الحساب"
     },
+
+    "sides": {
+      "all": "كل الزوايا",
+      "front": "أمام",
+      "back": "خلف",
+      "left": "جانب أيسر",
+      "right": "جانب أيمن"
+    },
+
+    "forms": {
+      "addMeasurement": "إضافة قياس جديد",
+      "date": "التاريخ",
+      "weightKg": "الوزن (كجم)",
+      "waistCm": "محيط الخصر (سم)",
+      "chestCm": "محيط الصدر (سم)",
+      "weightOptional": "الوزن (اختياري)",
+      "noteOptional": "ملاحظة (اختياري)"
+    },
+
+    "table": {
+      "date": "التاريخ",
+      "weight": "الوزن",
+      "waist": "الخصر",
+      "chest": "الصدر",
+      "actions": "إجراءات"
+    },
+
     "placeholders": {
       "choose": "اختر..."
     },
-    "messages": {
-      "chooseTwoSets": "اختر مجموعتين للمقارنة.",
-      "useCompareBlock": "استخدم جزء المقارنة لاختيار الصور.",
-      "noTimeline": "لا توجد صور في الخط الزمني حاليًا.",
-      "noMeasurements": "لا توجد قياسات بعد.",
-      "pickImageFirst": "اختر صورة أولًا للقص.",
-      "deletePhotoConfirm": "هل أنت متأكد من حذف مجموعة الصور هذه؟",
-      "deleteMeasurementConfirm": "هل أنت متأكد من حذف هذا القياس؟"
-    },
-    "modals": {
-      "cropTitle": "قص الصورة",
-      "addBodySet": "إضافة مجموعة صور للجسم",
-      "editProfile": "تعديل الملف الشخصي",
-      "preview": "معاينة",
-      "confirmDelete": "تأكيد الحذف"
-    },
-    "notifications": {
-      "welcome": "مرحبًا بك في ملفك الشخصي!"
-    },
-    "photos": {
-      "sampleNote": "مثال لإدخال شهري"
-    },
-    "tips": {
-      "title": "كيف تلتقط صور تقدم ممتازة",
-      "lighting": "التقط الصور في إضاءة ساطعة وثابتة وتجنب الظلال القوية.",
-      "distance": "حافظ على نفس المسافة من الكاميرا في كل مرة.",
-      "angles": "التزم بنفس الزوايا في كل جلسة تصوير.",
-      "cameraHeight": "ضع الكاميرا على مستوى الصدر وبزاوية مستقيمة.",
-      "timer": "استخدم المؤقت أو جهاز تحكم لتجنب اهتزاز الكاميرا.",
-      "clothes": "ارتدِ ملابس مشابهة أو ضيقة في كل جلسة تصوير.",
-      "background": "اختر خلفية بسيطة وخالية من الفوضى.",
-      "frequency": "التقط الصور أسبوعيًا أو كل أسبوعين في نفس الوقت من اليوم.",
-      "cta": "كيف تلتقط صور تقدم ممتازة؟"
-    },
-    "errors": {
-      "loadProfile": "تعذر تحميل الملف الشخصي. يرجى المحاولة مرة أخرى."
-    },
-    "table": {
-      "date": "التاريخ",
-      "weight": "الوزن (كجم)",
-      "waist": "الخصر (سم)",
-      "chest": "الصدر (سم)",
-      "hips": "الأرداف (سم)",
-      "actions": "الإجراءات"
-    },
-    "forms": {
-      "addMeasurement": "إضافة قياس",
-      "date": "التاريخ",
-      "weightKg": "الوزن (كجم)",
-      "waistCm": "الخصر (سم)",
-      "chestCm": "الصدر (سم)",
-      "hipsCm": "الأرداف (سم)",
-      "weightOptional": "الوزن (اختياري)",
-      "noteOptional": "ملاحظة (اختياري)",
+    "profile": {
       "name": "الاسم",
-      "phone": "الهاتف",
-      "coachId": "معرّف المدرب",
-      "membership": "العضوية",
-      "subscriptionStart": "بداية الاشتراك",
-      "subscriptionEnd": "نهاية الاشتراك"
+      "genderMale": "ذكر",
+      "genderFemale": "أنثى",
+      "genderOther": "أخرى",
+      "membership": "نوع الاشتراك",
+
+      "defaultRestSeconds": "ثواني الراحة الافتراضية",
+      "caloriesTarget": "هدف السعرات",
+      "proteinPerDay": "البروتين في اليوم (جم)",
+      "carbsPerDay": "الكربوهيدرات في اليوم (جم)",
+      "fatsPerDay": "الدهون في اليوم (جم)",
+
+      "activity": {
+        "sedentary": "نمط حياة مكتبي / قليل الحركة",
+        "light": "نشاط خفيف + تمرين 1–3 مرات أسبوعيًا",
+        "moderate": "نشاط متوسط + تمرين 3–5 مرات أسبوعيًا",
+        "high": "نشاط عالي + تمرين 6–7 مرات أسبوعيًا",
+        "athlete": "نشاط مكثف / رياضي"
+      },
+
+      "notes": "ملاحظات المستخدم",
+      "perDayLabel": "في اليوم",
+      "gramsPerDay": "جم / اليوم",
+      "planActiveLabel": "الخطة الحالية",
+      "subscriptionOverview": "نظرة عامة على الاشتراك",
+      "coachLabel": "المدرب الشخصي",
+      "noCoach": "لم يتم تعيين مدرب بعد",
+      "phone": "رقم الهاتف",
+
+      "membershipTitle": "نوع الاشتراك",
+      "noPlan": "بدون خطة",
+
+      "gender": "النوع",
+      "notSet": "غير محدد",
+
+      "activityLevel": "مستوى النشاط",
+      "activityNotSet": "لم يتم تحديد مستوى النشاط",
+
+      "subscriptionPeriod": "مدة الاشتراك",
+      "noEndDate": "بدون تاريخ انتهاء",
+      "expired": "انتهى الاشتراك",
+      "daysLeft": "متبقي {count} يوم",
+      "start": "بداية الاشتراك",
+      "end": "نهاية الاشتراك",
+
+      "activePlans": "الخطط المفعّلة",
+      "exercisePlan": "خطة التمرين الحالية",
+      "noExercisePlan": "لا توجد خطة تمرين مفعّلة",
+      "mealPlan": "خطة التغذية الحالية",
+      "noMealPlan": "لا توجد خطة تغذية مفعّلة",
+
+      "nutritionTargets": "أهداف السعرات والعناصر الغذائية",
+      "calories": "السعرات",
+      "protein": "البروتين",
+      "carbs": "الكربوهيدرات",
+      "fats": "الدهون"
     }
   },
   "nav": {
-		
-		"reload-page" : "إعادة تحميل الصفحة",
+    "reload-page": "إعادة تحميل الصفحة",
     "brand": {
       "portalTitle": "منطقة التحكم",
       "superAdminPortal": "بوابة المدير العام",
@@ -406,7 +458,8 @@
       "noResultsHint": "جرّب اسمًا أو بريدًا مختلفًا"
     },
     "quick": {
-      "coach": "تواصل مع المدرب"
+      "coach": "تواصل مع المدرب",
+      "admin": "تواصل مع المشرف"
     },
     "appbar": {
       "title": "الرسائل",
@@ -741,7 +794,7 @@
       "coach": "اختر المدرب",
       "role": "اختر الدور",
       "status": "اختر الحالة",
-      "search": "ابحث بالاسم أو البريد أو الهاتف...",
+      "search": "ابحث بالاسم أو البريد الإلكتروني...",
       "whatsapp": "مثلاً 9665XXXXXXXX"
     },
     "wizard": {
@@ -857,6 +910,7 @@
     "progress": "التقدّم"
   },
   "Common": {
+		"seeMore" : "عرض المزيد",
     "skip": "تخطي",
     "assigning": "جارٍ الإسناد…",
     "assignNext": "إسناد ومتابعة",
@@ -955,7 +1009,7 @@
       "email": "example@domain.com",
       "phone": "+20 1X XXX XXXX",
       "status": "اختر الحالة",
-      "search": "ابحث بالاسم أو البريد أو الهاتف..."
+      "search": "ابحث بالاسم أو البريد الإلكتروني..."
     },
     "status": {
       "active": "نشط",
@@ -2418,7 +2472,7 @@
       "notes": "ملاحظات",
       "titlePlaceholder": "اكتب عنوان التذكير",
       "notesPlaceholder": "أضف ملاحظات (اختياري)",
-			"intervalSummary": "سيتم التكرار كل"
+      "intervalSummary": "سيتم التكرار كل"
     },
 
     "templates": {
@@ -2467,22 +2521,20 @@
     },
 
     "prayer": {
-  "fajr": "الفجر",
-  "dhuhr": "الظهر",
-  "asr": "العصر",
-  "maghrib": "المغرب",
-  "isha": "العشاء",
-  "fallback": "الصلاة"
-}
-,
-
+      "fajr": "الفجر",
+      "dhuhr": "الظهر",
+      "asr": "العصر",
+      "maghrib": "المغرب",
+      "isha": "العشاء",
+      "fallback": "الصلاة"
+    },
     "errors": {
       "title": "العنوان مطلوب",
       "mode": "برجاء اختيار نوع التكرار"
     },
 
     "calendar": {
-			"pickDay": "اختر يومًا",
+      "pickDay": "اختر يومًا",
       "title": "التقويم",
       "subtitle": "اضغط على اليوم لعرض التذكيرات",
       "today": "اليوم",
