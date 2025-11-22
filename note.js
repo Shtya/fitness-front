@@ -1,13 +1,16 @@
+
+
 /*
+- search on someting put the app on the homescreen with one click
 	- button for feedback or problem	
 	- make the dashboard show only in web 
 	
 
+
+	- page information about the gym and reminders
+	- 
+
 /dashboard/users
-	- stats of ( total users , action account ) not correct 
-	- bug on show the plans days
-	- bug on the meals also and handle skeltong untill return the meals
-	- and alos can show more 
 	- and add the icon of calc the calories
 
 dashboard/nutrition
