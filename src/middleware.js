@@ -55,7 +55,8 @@ const NO_ACCESS_REDIRECT = '/';
 const PUBLIC_PREFIXES = [
   '/auth',
   '/public',
-  // workouts plans public:
+  '/thank-you',
+	/^\/form\/\d+\/submit(?:\/|$)/,
   /^\/workouts\/plans(?:\/|$)/,
 ];
 

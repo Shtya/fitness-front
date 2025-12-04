@@ -932,8 +932,7 @@ export default function SuperAdminUsersPage() {
 		try {
 			const { data } = await api.post('/auth/super-admin/impersonate', { userId: user.id });
 			Notification('Impersonation token issued', 'success');
-			console.log('impersonate token', data?.accessToken);
-		} catch (e) {
+ 		} catch (e) {
 			Notification(e?.response?.data?.message || 'Impersonation unavailable', 'error');
 		}
 	};

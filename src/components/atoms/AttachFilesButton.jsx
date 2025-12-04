@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { FiUpload, FiX, FiCheck, FiAlertCircle, FiSearch } from 'react-icons/fi';
-import { FaSpinner } from 'react-icons/fa';
+import { FiUpload, FiX, FiCheck, FiAlertCircle } from 'react-icons/fi';
+import { FaFileUpload } from 'react-icons/fa';
 import api, { baseImg } from '@/utils/axios';
 import { File, FileText, ImageIcon, Music, Video } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 // ---- helpers --------------------------------------------------------------
 
@@ -30,9 +31,10 @@ const BYTES_IN_KB = 1024;
 // format size nicely
 const formatSize = bytes => {
   if (!Number.isFinite(bytes)) return '';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  const v = bytes;
+  if (v < 1024) return `${v} B`;
+  if (v < 1024 * 1024) return `${Math.round(v / 1024)} KB`;
+  return `${(v / (1024 * 1024)).toFixed(1)} MB`;
 };
 
 // small toast-ish inline message
@@ -56,18 +58,21 @@ export default function AttachFilesButton({
   hiddenFiles,
   className = '',
   onChange,
-  // optional constraints
   accept = undefined, // e.g. "image/*,application/pdf"
   maxFiles = 20,
   maxTotalBytes = 200 * 1024 * 1024, // 200 MB
+  // optional: userId passed from outside
+  userId,
 }) {
+  const t = useTranslations('attachments');
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const [selected, setSelected] = useState([]); // [{id,...}]
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
- 
+
   const dropRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -86,12 +91,16 @@ export default function AttachFilesButton({
     setErrorMsg('');
     setLoading(true);
     try {
-      const res = await api.get('/assets');
+      const res = await api.get('/assets', {
+        params: {
+          userId: userId || undefined,
+        },
+      });
       const data = res?.data?.records || res?.data || [];
       setAttachments(Array.isArray(data) ? data : []);
     } catch (err) {
       setAttachments([]);
-      setErrorMsg('Failed to load your files. Please try again.');
+      setErrorMsg(t('errors.loadFiles'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -127,11 +136,11 @@ export default function AttachFilesButton({
     // basic limits
     const totalBytes = files.reduce((sum, f) => sum + (f.size || 0), 0);
     if (files.length > maxFiles) {
-      setErrorMsg(`You can upload up to ${maxFiles} files at once.`);
+      setErrorMsg(t('errors.maxFiles', { count: maxFiles }));
       return;
     }
     if (totalBytes > maxTotalBytes) {
-      setErrorMsg(`Total upload size exceeds ${formatSize(maxTotalBytes)}.`);
+      setErrorMsg(t('errors.maxTotalBytes', { max: formatSize(maxTotalBytes) }));
       return;
     }
 
@@ -143,27 +152,33 @@ export default function AttachFilesButton({
 
       const res = await api.post('/assets/bulk', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        params: {
+          userId: userId || undefined, // send userId as query when available
+        },
       });
 
       const newFiles = res?.data?.assets || res?.data || [];
       afterUploadMerge(Array.isArray(newFiles) ? newFiles : []);
     } catch (err) {
       console.error('Upload error', err);
-      setErrorMsg('Failed to upload files. Please try again.');
+      const backendMessage = err?.response?.data?.message;
+      setErrorMsg(backendMessage || t('errors.uploadFiles'));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
- 
+
   // drag & drop
   useEffect(() => {
     const el = dropRef.current;
     if (!el) return;
+
     const stop = e => {
       e.preventDefault();
       e.stopPropagation();
     };
+
     const onDrop = e => {
       stop(e);
       if (uploading) return;
@@ -171,11 +186,14 @@ export default function AttachFilesButton({
       doUpload(files);
       el.classList.remove('ring-2', 'ring-indigo-300');
     };
+
     const onDragEnter = e => {
       stop(e);
       el.classList.add('ring-2', 'ring-indigo-300');
     };
+
     const onDragOver = stop;
+
     const onDragLeave = e => {
       stop(e);
       el.classList.remove('ring-2', 'ring-indigo-300');
@@ -193,39 +211,46 @@ export default function AttachFilesButton({
     };
   }, [uploading]);
 
-  const handleDeleteFile = async (fileId, e) => {
+  const handleDeleteFile = (fileId, e) => {
     e?.stopPropagation?.();
     if (uploading) return;
     try {
-      await api.delete(`/assets/${fileId}`);
+      api.delete(`/assets/${fileId}`); // logic is backend-side
       setAttachments(prev => prev.filter(f => f.id !== fileId));
       setSelected(prev => prev.filter(f => f.id !== fileId));
     } catch (err) {
       console.error('Delete error', err);
-      setErrorMsg('Failed to delete file. Please try again.');
+      const backendMessage = err?.response?.data?.message;
+      setErrorMsg(backendMessage || t('errors.deleteFile'));
     }
   };
 
- 
   // ---- modal view ---------------------------------------------------------
 
+  const finishLabel = selected.length ? t('actions.finishSelectionWithCount', { count: selected.length }) : t('actions.finishSelection');
+
   const modalContent = (
-    <div className='fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center' onClick={e => e.target === e.currentTarget && setIsModalOpen(false)} role='dialog' aria-modal='true' aria-label='Attach files'>
+    <div className='fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center' onClick={e => e.target === e.currentTarget && setIsModalOpen(false)} role='dialog' aria-modal='true' aria-label={t('labels.attachFiles')}>
       <div className='bg-white w-full max-w-[800px] rounded-lg shadow-2xl border border-slate-200 max-h-[85vh] overflow-hidden flex flex-col'>
         {/* header */}
         <div className='flex items-center justify-between gap-2 px-5 py-4 border-b border-slate-200'>
           <div className='min-w-0'>
-            <h3 className='text-lg font-semibold text-slate-900'>Your files</h3>
-            <p className='text-xs text-slate-500'>Upload new files or pick from your library</p>
+            <h3 className='text-lg font-semibold text-slate-900'>{t('modal.title')}</h3>
+            <p className='text-xs text-slate-500'>{t('modal.subtitle')}</p>
           </div>
-          <button onClick={() => setIsModalOpen(false)} className='inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300' aria-label='Close'>
+          <button onClick={() => setIsModalOpen(false)} className='inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300' aria-label={t('labels.close')}>
             <FiX className='w-4 h-4' />
           </button>
         </div>
 
         {/* body */}
         <div className='flex-1 overflow-y-auto p-5 space-y-4'>
-           
+          <input ref={fileInputRef} type='file' className='hidden' multiple accept={accept} onChange={e => doUpload(Array.from(e.target.files || []))} />
+
+          <div ref={dropRef} className='rounded-lg border border-dashed border-slate-300 bg-slate-50/60 p-4'>
+            {/* drag & drop area (invisible UI, but active) */}
+          </div>
+
           {errorMsg ? <InlineNotice tone='error'>{errorMsg}</InlineNotice> : null}
 
           {/* grid */}
@@ -233,7 +258,7 @@ export default function AttachFilesButton({
             {/* uploader card as a tile */}
             <button type='button' onClick={() => fileInputRef.current?.click()} disabled={uploading || loading} className={cx('group aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center transition', 'border-indigo-200 bg-indigo-50 hover:bg-indigo-100', (uploading || loading) && 'opacity-60 cursor-not-allowed')}>
               <FiUpload className='w-6 h-6 text-indigo-500' />
-              <span className='mt-1 text-xs text-indigo-700'>Upload</span>
+              <span className='mt-1 text-xs text-indigo-700'>{t('uploader.upload')}</span>
             </button>
 
             {/* files */}
@@ -249,7 +274,7 @@ export default function AttachFilesButton({
                   </div>
 
                   {/* delete */}
-                  <button type='button' onClick={e => handleDeleteFile(asset.id, e)} className='absolute top-2 right-2 w-7 h-7 rounded-lg border border-slate-200 bg-white/90 text-slate-600 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-rose-400' aria-label={`Delete ${asset.filename}`} disabled={uploading}>
+                  <button type='button' onClick={e => handleDeleteFile(asset.id, e)} className='absolute top-2 right-2 w-7 h-7 rounded-lg border border-slate-200 bg-white/90 text-slate-600 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-rose-400' aria-label={t('actions.deleteFile', { filename: asset.filename })} disabled={uploading}>
                     <FiX className='w-4 h-4 mx-auto' />
                   </button>
 
@@ -257,7 +282,7 @@ export default function AttachFilesButton({
                   <div className='aspect-square rounded-lg overflow-hidden flex items-center justify-center bg-slate-50'>
                     {url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={url} alt={asset.filename || 'image'} loading='lazy' className='w-full h-full object-contain' />
+                      <img src={url} alt={asset.filename || t('labels.image')} loading='lazy' className='w-full h-full object-contain' />
                     ) : (
                       <div className='flex items-center justify-center w-full h-full'>{getFileIcon(asset.mimeType)}</div>
                     )}
@@ -273,23 +298,22 @@ export default function AttachFilesButton({
                 </div>
               );
             })}
- 
           </div>
         </div>
 
         {/* footer */}
         <div className='px-5 py-4 border-t bg-slate-50 flex items-center justify-between gap-3'>
           <div className='text-xs text-slate-500'>
-            Total files: <span className='font-medium'>{attachments.length}</span>
+            {t('labels.totalFiles')}: <span className='font-medium'>{attachments.length}</span>
           </div>
 
           <div className='flex items-center gap-2'>
             <button type='button' onClick={() => setIsModalOpen(false)} className='inline-flex items-center justify-center h-9 px-4 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition focus:outline-none focus:ring-2 focus:ring-slate-300'>
-              Cancel
+              {t('actions.cancel')}
             </button>
 
-            <button type='button' onClick={handleOkClick} disabled={!selected.length} className={cx('inline-flex items-center gap-2 h-9 px-4 rounded-lg text-white transition focus:outline-none focus:ring-2', selected.length ? 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-400' : 'bg-emerald-300 cursor-not-allowed')}>
-              Finish Selection {selected.length ? `(${selected.length})` : ''}
+            <button type='button' onClick={handleOkClick} disabled={!selected.length} className={cx('inline-flex items-center gap-2 h-9 px-4 rounded-lg text-white transition focus:outline-none focus:ring-2', selected.length ? 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-400' : 'bg-indigo-300 cursor-not-allowed')}>
+              {finishLabel}
             </button>
           </div>
         </div>
@@ -301,11 +325,10 @@ export default function AttachFilesButton({
 
   return (
     <div className={cx('relative', className)}>
-      <div className='flex items-center gap-4 my-6'>
-        <button type='button' onClick={toggleModal} className='flex-none px-5 py-2 inline-flex items-center gap-2 rounded-full border border-emerald-700 text-emerald-700 hover:bg-emerald-50 transition focus:outline-none focus:ring-2 focus:ring-emerald-300'>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src='/icons/attachment-green.svg' alt='' className='w-5 h-5' />
-          <span className='font-medium'>Attach Files</span>
+      <div className='flex flex-col items-start gap-4 my-6'>
+        <button type='button' onClick={toggleModal} className='flex-none px-5 py-2 inline-flex items-center gap-2 rounded-full border border-indigo-700 text-indigo-700 hover:bg-indigo-50 transition focus:outline-none focus:ring-2 focus:ring-indigo-300'>
+          <FaFileUpload size={18} />
+          <span className='font-medium'>{t('labels.attachFiles')}</span>
         </button>
 
         {!hiddenFiles && (
@@ -315,7 +338,7 @@ export default function AttachFilesButton({
                 <span className='truncate max-w-[160px]' title={file.filename}>
                   {file.filename}
                 </span>
-                <button type='button' onClick={() => setSelected(prev => prev.filter(f => f.id !== file.id))} className='text-slate-500 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-300 rounded' aria-label={`Remove ${file.filename}`}>
+                <button type='button' onClick={() => setSelected(prev => prev.filter(f => f.id !== file.id))} className='text-slate-500 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-300 rounded' aria-label={t('actions.removeFile', { filename: file.filename })}>
                   <FiX className='w-3.5 h-3.5' />
                 </button>
               </li>

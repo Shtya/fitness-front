@@ -2,20 +2,19 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Camera, UploadCloud, CheckCircle2, Loader2, Info, X, Images, Plus, RefreshCw } from 'lucide-react';
+import { Camera, UploadCloud, CheckCircle2, Loader2, Info, X, Images, Plus, ClipboardList, Eye } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 
-// UI atoms from your project
 import Input from '@/components/atoms/Input';
 import Textarea from '@/components/atoms/Textarea';
 import Select from '@/components/atoms/Select';
 import InputDate from '@/components/atoms/InputDate';
 import { Switcher } from '@/components/atoms/Switcher';
 import Img from '@/components/atoms/Img';
+import { Modal } from '@/components/dashboard/ui/UI'; // ✅ استيراد المودال
 
-// Axios API instance
 import api from '@/utils/axios';
 
 /* ----------------------------- Local UI bits ----------------------------- */
@@ -51,21 +50,50 @@ async function postMeasurement(payload) {
   return data;
 }
 async function getPhotosTimeline({ page = 1, limit = 50, sortOrder = 'DESC' } = {}) {
-  const { data } = await api.get('/profile/photos/timeline', { params: { page, limit, sortOrder } });
+  const { data } = await api.get('/profile/photos/timeline', {
+    params: { page, limit, sortOrder },
+  });
   return { rows: data?.records || data?.data || [], meta: data?.meta || null };
 }
 async function uploadProgressPhotos(formData) {
-  const { data } = await api.post('/profile/photos', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-  return data; // { id, sides:{front,..}, takenAt, weight, note }
+  const { data } = await api.post('/profile/photos', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
 }
 async function postWeeklyReport(payload) {
-  // INTEGRATED to your backend controller: POST /weekly-reports
   const { data } = await api.post('/weekly-reports', payload);
   return data;
 }
 
+// ✅ عدّاد ملاحظات الكوتش غير المقروءة للعميل
+async function fetchUnreadFeedbackCount() {
+  const { data } = await api.get('/weekly-reports/user/unread-feedback/count');
+  return data?.count ?? 0;
+}
+
+// ✅ تقاريري السابقة (الكلينت)
+async function fetchMyReports({ page = 1, limit = 5 } = {}) {
+  const { data } = await api.get('/weekly-reports', {
+    params: { page, limit },
+  });
+
+  return {
+    items: data?.items || [],
+    total: data?.total || 0,
+    page: data?.page || page,
+    limit: data?.limit || limit,
+    hasMore: data?.hasMore ?? false,
+  };
+}
+
+// ✅ تعليم التقرير كمقروء لما العميل يفتح الملاحظة
+async function markReportAsRead(id) {
+  await api.put(`/weekly-reports/${id}/read`);
+}
+
 /* ------------------------- Image Picker + Modal -------------------------- */
-function ImagePicker({ openPopup, label, file, onPick, pickedUrl, onClearPicked, uploadText, replaceText }) {
+function ImagePicker({ openPopup, label, file, onPick, pickedUrl, onClearPicked, uploadText }) {
   const hasPicked = !!pickedUrl;
   const inputRef = useRef(null);
 
@@ -111,7 +139,14 @@ function PhotoPickerModal({ onClose, photos, onPick, selected = { front: null, b
   (photos || []).forEach(p => {
     const s = p.sides || {};
     sides.forEach(side => {
-      if (s[side]) flat.push({ id: `${p.id}-${side}`, side, url: s[side], takenAt: p.takenAt, weight: p.weight ?? null });
+      if (s[side])
+        flat.push({
+          id: `${p.id}-${side}`,
+          side,
+          url: s[side],
+          takenAt: p.takenAt,
+          weight: p.weight ?? null,
+        });
     });
   });
 
@@ -202,6 +237,23 @@ function RatingStars({ label, value = 0, onChange = () => {}, allowZero = false,
 export default function WeeklyReportPage() {
   const t = useTranslations();
 
+  // ✅ عدّاد feedback غير المقروء
+  const [unreadFeedbackCount, setUnreadFeedbackCount] = useState(0);
+  const [unreadLoading, setUnreadLoading] = useState(false);
+
+  // ✅ تقاريري السابقة
+  const [myReports, setMyReports] = useState([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportsError, setReportsError] = useState('');
+  const [reportsPage, setReportsPage] = useState(1);
+  const [reportsHasMore, setReportsHasMore] = useState(false);
+  const [showPrevModal, setShowPrevModal] = useState(false); // ✅ فتح/غلق مودال التقارير السابقة
+
+  // ✅ مودال عرض ملاحظة الكوتش
+  const [activeReport, setActiveReport] = useState(null);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [markingRead, setMarkingRead] = useState(false);
+
   // Photos (new uploads quick pick)
   const [frontFile, setFrontFile] = useState(null);
   const [backFile, setBackFile] = useState(null);
@@ -212,7 +264,12 @@ export default function WeeklyReportPage() {
   const [historyRows, setHistoryRows] = useState([]);
   const [photoSelect, setPhotoSelect] = useState('');
   const [showPickModal, setShowPickModal] = useState(false);
-  const [pickedSides, setPickedSides] = useState({ front: null, back: null, left: null, right: null });
+  const [pickedSides, setPickedSides] = useState({
+    front: null,
+    back: null,
+    left: null,
+    right: null,
+  });
   const [showAddPhotoForm, setShowAddPhotoForm] = useState(false);
   const [uploadingSet, setUploadingSet] = useState(false);
 
@@ -226,7 +283,6 @@ export default function WeeklyReportPage() {
   const [ok, setOk] = useState(false);
   const [serverError, setServerError] = useState('');
 
-  // RHF + Yup
   const schema = useMemo(
     () =>
       yup.object({
@@ -289,8 +345,24 @@ export default function WeeklyReportPage() {
         sleepHours: '',
         programNotes: '',
       },
-      measurements: { date: '', weight: '', waist: '', chest: '', hips: '', arms: '', thighs: '' },
-      addPhoto: { date: '', weight: '', note: '', front: undefined, back: undefined, left: undefined, right: undefined },
+      measurements: {
+        date: '',
+        weight: '',
+        waist: '',
+        chest: '',
+        hips: '',
+        arms: '',
+        thighs: '',
+      },
+      addPhoto: {
+        date: '',
+        weight: '',
+        note: '',
+        front: undefined,
+        back: undefined,
+        left: undefined,
+        right: undefined,
+      },
     },
     mode: 'onChange',
   });
@@ -301,10 +373,23 @@ export default function WeeklyReportPage() {
   const addPhotoVals = watch('addPhoto');
 
   /* ---------------------------- Derived / Options ---------------------------- */
-  const measurementOptions = useMemo(() => measureList.map(mm => ({ id: mm.id, label: `${mm.date}${mm.weight ? ` • ${mm.weight}kg` : ''}` })), [measureList]);
-  const photoSetOptions = useMemo(() => historyRows.map(r => ({ id: r.id, label: `${r.takenAt}${r.weight ? ` • ${r.weight}kg` : ''}` })), [historyRows]);
+  const measurementOptions = useMemo(
+    () =>
+      measureList.map(mm => ({
+        id: mm.id,
+        label: `${mm.date}${mm.weight ? ` • ${mm.weight}kg` : ''}`,
+      })),
+    [measureList],
+  );
+  const photoSetOptions = useMemo(
+    () =>
+      historyRows.map(r => ({
+        id: r.id,
+        label: `${r.takenAt}${r.weight ? ` • ${r.weight}kg` : ''}`,
+      })),
+    [historyRows],
+  );
 
-  // progress calculations (for header bar & sticky bar)
   const reqTotal = useMemo(() => {
     const anyMeas = ['weight', 'waist', 'chest', 'hips', 'arms', 'thighs'].some(k => `${m?.[k] ?? ''}`.trim() !== '');
     return 2 + (anyMeas ? 1 : 0);
@@ -334,11 +419,46 @@ export default function WeeklyReportPage() {
       } catch {}
 
       try {
-        const { rows } = await getPhotosTimeline({ page: 1, limit: 100, sortOrder: 'DESC' });
+        const { rows } = await getPhotosTimeline({
+          page: 1,
+          limit: 100,
+          sortOrder: 'DESC',
+        });
         setHistoryRows(rows);
       } catch {}
     })();
   }, [setValue]);
+
+  // ✅ تحميل عدّاد الملاحظات غير المقروءة
+  useEffect(() => {
+    (async () => {
+      try {
+        setUnreadLoading(true);
+        const c = await fetchUnreadFeedbackCount();
+        setUnreadFeedbackCount(c);
+      } catch {
+      } finally {
+        setUnreadLoading(false);
+      }
+    })();
+  }, []);
+
+  // ✅ تحميل تقاريري السابقة (تستخدم في المودال)
+  useEffect(() => {
+    (async () => {
+      try {
+        setReportsError('');
+        setReportsLoading(true);
+        const res = await fetchMyReports({ page: reportsPage, limit: 5 });
+        setMyReports(res.items || []);
+        setReportsHasMore(res.hasMore);
+      } catch {
+        setReportsError(t('weekly.prevReports.error'));
+      } finally {
+        setReportsLoading(false);
+      }
+    })();
+  }, [reportsPage, t]);
 
   function hydrateMeasurement(mm) {
     setValue('measurements.date', mm?.date || '');
@@ -400,7 +520,11 @@ export default function WeeklyReportPage() {
 
   async function openPickPhotosModal() {
     try {
-      const { rows } = await getPhotosTimeline({ page: 1, limit: 100, sortOrder: 'DESC' });
+      const { rows } = await getPhotosTimeline({
+        page: 1,
+        limit: 100,
+        sortOrder: 'DESC',
+      });
       setHistoryRows(rows);
     } catch {}
     setShowPickModal(true);
@@ -408,7 +532,6 @@ export default function WeeklyReportPage() {
 
   const hasAnyPhotoNew = !!(frontFile || backFile || leftFile || rightFile || addPhotoVals.front || addPhotoVals.back || addPhotoVals.left || addPhotoVals.right);
 
-  /* ----------- Upload-only flow for "Add new photo set" (separate button) ----------- */
   const uploadNewPhotoSet = async () => {
     try {
       setServerError('');
@@ -447,13 +570,15 @@ export default function WeeklyReportPage() {
 
       const saved = await uploadProgressPhotos(fd);
 
-      // refresh & select
-      const { rows } = await getPhotosTimeline({ page: 1, limit: 100, sortOrder: 'DESC' });
+      const { rows } = await getPhotosTimeline({
+        page: 1,
+        limit: 100,
+        sortOrder: 'DESC',
+      });
       setHistoryRows(rows);
       setPhotoSelect(saved?.id || '');
       if (saved?.id) applyPhotoSetToPickedSides(saved.id);
 
-      // clear addPhoto inputs
       setValue('addPhoto.front', undefined);
       setValue('addPhoto.back', undefined);
       setValue('addPhoto.left', undefined);
@@ -472,7 +597,27 @@ export default function WeeklyReportPage() {
     }
   };
 
-  /* --------------------------------- Submit (full report) --------------------------------- */
+  // ✅ فتح ملاحظة الكوتش (مع تعليمها مقروء + تحديث العداد)
+  const handleOpenFeedback = async report => {
+    setActiveReport(report);
+    setShowFeedbackModal(true);
+
+    if (report.coachFeedback && !report.isRead) {
+      try {
+        setMarkingRead(true);
+        await markReportAsRead(report.id);
+
+        setMyReports(prev => prev.map(r => (r.id === report.id ? { ...r, isRead: true } : r)));
+        setActiveReport(prev => (prev ? { ...prev, isRead: true } : prev));
+
+        setUnreadFeedbackCount(prev => (prev > 0 ? prev - 1 : 0));
+      } catch {
+      } finally {
+        setMarkingRead(false);
+      }
+    }
+  };
+
   const onSubmit = async values => {
     setServerError('');
     setOk(false);
@@ -480,12 +625,10 @@ export default function WeeklyReportPage() {
     try {
       setSubmitting(true);
 
-      // 1) Save measurement if present/changed
       if (values.measurements?.date) {
         await saveMeasurementInline();
       }
 
-      // 2) Upload NEW photos if provided (either quick pickers or addPhoto form)
       let uploadedSides = { front: null, back: null, left: null, right: null };
       if (hasAnyPhotoNew) {
         const fd = new FormData();
@@ -511,7 +654,11 @@ export default function WeeklyReportPage() {
         uploadedSides = saved?.sides || uploadedSides;
 
         try {
-          const { rows } = await getPhotosTimeline({ page: 1, limit: 100, sortOrder: 'DESC' });
+          const { rows } = await getPhotosTimeline({
+            page: 1,
+            limit: 100,
+            sortOrder: 'DESC',
+          });
           setHistoryRows(rows);
           setPhotoSelect(saved?.id || '');
           if (saved?.id) applyPhotoSetToPickedSides(saved.id);
@@ -519,7 +666,6 @@ export default function WeeklyReportPage() {
         } catch {}
       }
 
-      // 3) Compose photos payload from picked or uploaded
       const photosPayload = {
         front: pickedSides.front ? { url: pickedSides.front } : uploadedSides.front ? { url: uploadedSides.front } : null,
         back: pickedSides.back ? { url: pickedSides.back } : uploadedSides.back ? { url: uploadedSides.back } : null,
@@ -528,7 +674,6 @@ export default function WeeklyReportPage() {
         extras: [],
       };
 
-      // 4) Send weekly report (matches CreateWeeklyReportDto)
       const payload = {
         weekOf: values.weekOf,
         diet: {
@@ -575,6 +720,14 @@ export default function WeeklyReportPage() {
 
       await postWeeklyReport(payload);
       setOk(true);
+
+      // تحديث التقارير بعد الإرسال
+      try {
+        const res = await fetchMyReports({ page: 1, limit: 5 });
+        setMyReports(res.items || []);
+        setReportsPage(1);
+        setReportsHasMore(res.hasMore);
+      } catch {}
     } catch (e) {
       setServerError(typeof e === 'string' ? e : e?.message || t('weekly.errors.unknown'));
     } finally {
@@ -588,7 +741,27 @@ export default function WeeklyReportPage() {
     <form onSubmit={handleSubmit(onSubmit)} className=' relative !px-0 space-y-4 sm:space-y-5'>
       {/* Header */}
       <div className='box-3d rounded-lg border border-slate-200 bg-white/90 backdrop-blur p-4 sm:p-6 shadow-sm'>
-        <h1 className='text-xl sm:text-2xl font-bold text-slate-900'>{t('weekly.title')}</h1>
+        <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+          <h1 className='text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-3'>
+            {t('weekly.title')}
+            {/* ✅ Badge عدد الملاحظات غير المقروءة */}
+            {unreadFeedbackCount > 0 && <span className='inline-flex items-center gap-1 rounded-full bg-indigo-50 text-indigo-900 px-3 py-1 text-[11px] border border-indigo-200'>
+              <Info className='w-3.5 h-3.5' />
+              {unreadLoading
+                ? t('weekly.unreadFeedback.loading')
+                : t('weekly.unreadFeedback.badge', {
+                    count: unreadFeedbackCount,
+                  })}
+            </span>}
+          </h1>
+
+          {/* ✅ زر يفتح Popup التقارير السابقة */}
+          <Button type='button' color='neutral' className='!px-3 !py-2 text-xs sm:text-sm' onClick={() => setShowPrevModal(true)}>
+            <ClipboardList className='w-4 h-4 mr-1' />
+            {t('weekly.prevReports.goTo')}
+          </Button>
+        </div>
+
         <p className='mt-1 text-slate-600 text-sm'>{t('weekly.subtitle')}</p>
 
         {/* Week & Cardio */}
@@ -747,19 +920,17 @@ export default function WeeklyReportPage() {
             </Button>
           </div>
         }>
-        {/* Choose existing set from dropdown */}
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3 lg:gap-4'>
-          <Select className='!flex  items-center  gap-4' cnInputParent=' md:max-w-[300px] rtl:md:mr-auto ltr:md:ml-auto flex-1' label={t('weekly.photos.pickSet')} value={photoSelect} onChange={onPickPhotoSet} options={photoSetOptions} clearable />
-          <div className='flex items-end'>
+        <div className='grid !mb-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3 lg:gap-4'>
+          <Select className='  ' cnInputParent=' md:max-w-[300px] rtl:md:mr-auto ltr:md:ml-auto flex-1' label={t('weekly.photos.pickSet')} value={photoSelect} onChange={onPickPhotoSet} options={photoSetOptions} clearable />
+          <div className='flex items-end justify-end'>
             <Button type='button' name={t('weekly.photos.pickFromHistory.btn')} onClick={openPickPhotosModal}>
-              <Images className='w-4 h-4 mr-2' /> {t('weekly.photos.pickFromHistory.btn')}
+              <Images className='w-4 h-4 rtl:ml-2 ltr:mr-2' /> {t('weekly.photos.pickFromHistory.btn')}
             </Button>
           </div>
         </div>
 
-        {/* Add new set inline (with its own upload button) */}
         {showAddPhotoForm && (
-          <div className='mt-3 space-y-3'>
+          <div className='!mt-6 space-y-3'>
             <div className='grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3 lg:gap-4'>
               <Controller name='addPhoto.front' control={control} render={({ field }) => <ImagePicker label={t('weekly.photos.front')} file={field.value} onPick={file => field.onChange(file)} pickedUrl={undefined} onClearPicked={() => field.onChange(undefined)} uploadText={t('weekly.photos.upload')} />} />
               <Controller name='addPhoto.back' control={control} render={({ field }) => <ImagePicker label={t('weekly.photos.back')} file={field.value} onPick={file => field.onChange(file)} pickedUrl={undefined} onClearPicked={() => field.onChange(undefined)} uploadText={t('weekly.photos.upload')} />} />
@@ -792,7 +963,7 @@ export default function WeeklyReportPage() {
 
             <div className='flex gap-2'>
               <Button type='button' onClick={uploadNewPhotoSet} disabled={uploadingSet}>
-                {uploadingSet ? <Loader2 className='w-4 h-4 animate-spin mr-2' /> : <UploadCloud className='w-4 h-4 mr-2' />}
+                {uploadingSet ? <Loader2 className='w-4 h-4 animate-spin rtl:ml-2 ltr:mr-2' /> : <UploadCloud className='w-4 h-4 rtl:ml-2 ltr:mr-2' />}
                 {t('weekly.photos.uploadSet')}
               </Button>
               <Button type='button' color='neutral' onClick={() => setShowAddPhotoForm(false)}>
@@ -802,7 +973,6 @@ export default function WeeklyReportPage() {
           </div>
         )}
 
-        {/* Per-side quick pickers (or show selected) */}
         {!showAddPhotoForm && (
           <div className='grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3 lg:gap-4 mt-2'>
             <ImagePicker label={t('weekly.photos.front')} openPopup={openPickPhotosModal} file={frontFile} onPick={setFrontFile} pickedUrl={pickedSides.front} onClearPicked={() => setPickedSides(p => ({ ...p, front: null }))} uploadText={t('weekly.photos.upload')} />
@@ -813,7 +983,7 @@ export default function WeeklyReportPage() {
         )}
       </Section>
 
-      {/* Errors / success */}
+      {/* رسائل النجاح / الخطأ */}
       {ok ? (
         <div className='rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 p-3 text-sm inline-flex items-center gap-2'>
           <CheckCircle2 className='w-4 h-4' />
@@ -821,7 +991,14 @@ export default function WeeklyReportPage() {
         </div>
       ) : null}
 
-      {/* Sticky submit bar with inline progress */}
+      {serverError ? (
+        <div className='rounded-lg border border-rose-200 bg-rose-50 text-rose-800 p-3 text-sm inline-flex items-center gap-2'>
+          <X className='w-4 h-4' />
+          {serverError}
+        </div>
+      ) : null}
+
+      {/* Sticky submit bar */}
       <div className='h-16' />
       <div className='fixed inset-x-0 bottom-0 z-40 px-3 sm:px-5 pb-3'>
         <div className='mx-auto max-w-3xl rounded-lg overflow-hidden border border-slate-200 bg-white/95 backdrop-blur shadow-lg p-2 flex items-center gap-2'>
@@ -849,6 +1026,121 @@ export default function WeeklyReportPage() {
             setPickedSides(prev => (prev[side] === url ? { ...prev, [side]: null } : { ...prev, [side]: url }));
           }}
         />
+      )}
+
+      {/* ✅ Popup التقارير السابقة باستخدام Modal اللي عندك */}
+      <Modal open={showPrevModal} onClose={() => setShowPrevModal(false)} title={t('weekly.prevReports.title')} maxW='max-w-3xl' maxHBody='max-h-[70vh]'>
+        {reportsLoading ? (
+          <div className='h-24 grid place-content-center text-slate-600 text-sm'>
+            <Loader2 className='w-4 h-4 animate-spin mx-auto mb-2' />
+            {t('weekly.prevReports.loading')}
+          </div>
+        ) : reportsError ? (
+          <div className='h-24 grid place-content-center text-rose-700 text-sm'>{reportsError}</div>
+        ) : myReports.length === 0 ? (
+          <div className='h-24 grid place-content-center text-slate-500 text-sm'>{t('weekly.prevReports.empty')}</div>
+        ) : (
+          <>
+            <div className='space-y-3'>
+              {myReports.map(r => (
+                <div key={r.id} className='rounded-lg border border-slate-200 bg-slate-50 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
+                  <div className='space-y-1'>
+                    <div className='text-sm font-semibold text-slate-900'>
+                      {t('weekly.prevReports.weekOf')}: {r.weekOf}
+                    </div>
+                    <div className='text-[11px] text-slate-500'>
+                      {t('weekly.prevReports.createdAt')}: {r.created_at ? new Date(r.created_at).toLocaleString() : '—'}
+                    </div>
+                    <div className='text-[11px]'>
+                      {r.coachFeedback ? (
+                        r.isRead ? (
+                          <span className='inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 border border-emerald-200'>
+                            <CheckCircle2 className='w-3.5 h-3.5' />
+                            {t('weekly.prevReports.noteRead')}
+                          </span>
+                        ) : (
+                          <span className='inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 border border-amber-200'>
+                            <Info className='w-3.5 h-3.5' />
+                            {t('weekly.prevReports.noteUnread')}
+                          </span>
+                        )
+                      ) : (
+                        <span className='inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-700 px-2 py-0.5 border border-slate-200'>
+                          <Info className='w-3.5 h-3.5' />
+                          {t('weekly.prevReports.noNote')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className='flex items-center gap-2'>
+                    {r.coachFeedback ? (
+                      <Button type='button' color='primary' className='!px-3 !py-1.5 text-xs' onClick={() => handleOpenFeedback(r)}>
+                        <Eye className='w-3.5 h-3.5 mr-1' />
+                        {t('weekly.prevReports.viewNote')}
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className='mt-3 flex items-center justify-between'>
+              <div className='text-xs text-slate-500'>
+                {t('weekly.prevReports.pagination', {
+                  page: reportsPage,
+                })}
+              </div>
+              <div className='flex items-center gap-2'>
+                <Button type='button' color='neutral' className='!px-3 !py-1.5 text-xs' disabled={reportsPage <= 1} onClick={() => setReportsPage(p => Math.max(1, p - 1))}>
+                  {t('weekly.prevReports.prev')}
+                </Button>
+                <Button type='button' color='neutral' className='!px-3 !py-1.5 text-xs' disabled={!reportsHasMore} onClick={() => setReportsPage(p => p + 1)}>
+                  {t('weekly.prevReports.next')}
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+      </Modal>
+
+      {/* ✅ مودال عرض ملاحظة الكوتش */}
+      {showFeedbackModal && activeReport && (
+        <div className='fixed inset-0 z-[9999] bg-black/40 backdrop-blur-sm flex items-center justify-center p-3'>
+          <div className='w-full max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden'>
+            <div className='flex items-center justify-between px-4 py-3 border-b border-slate-200'>
+              <div className='font-semibold text-slate-800 flex items-center gap-2'>
+                <Eye className='w-4 h-4' />
+                {t('weekly.prevReports.noteTitle', {
+                  week: activeReport.weekOf,
+                })}
+              </div>
+              <button type='button' onClick={() => setShowFeedbackModal(false)} className='p-2 rounded-lg hover:bg-slate-100'>
+                <X className='w-4 h-4' />
+              </button>
+            </div>
+
+            <div className='p-4 space-y-2'>
+              <div className='text-xs text-slate-500'>
+                {t('weekly.prevReports.createdAt')}: {activeReport.created_at ? new Date(activeReport.created_at).toLocaleString() : '—'}
+              </div>
+              <div className='text-sm font-medium text-slate-800'>{t('weekly.prevReports.noteLabel')}</div>
+              <div className='rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800 whitespace-pre-wrap'>{activeReport.coachFeedback || '—'}</div>
+              {markingRead && (
+                <div className='text-[11px] text-slate-500 flex items-center gap-1'>
+                  <Loader2 className='w-3.5 h-3.5 animate-spin' />
+                  {t('weekly.prevReports.markingRead')}
+                </div>
+              )}
+            </div>
+
+            <div className='px-4 py-3 border-t border-slate-200 flex justify-end'>
+              <Button type='button' color='neutral' className='!px-4 !py-1.5 text-sm' onClick={() => setShowFeedbackModal(false)}>
+                {t('weekly.actions.close')}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </form>
   );

@@ -145,7 +145,7 @@ export function PlanPicker({
       </div>
     </motion.div>
   );
-
+ 
   return (
     <div className='space-y-4'>
       <AnimatePresence mode='popLayout'>
@@ -167,31 +167,33 @@ export function PlanPicker({
               const orderedDays = orderDays(rawDays);
 
               return (
-                <motion.button key={plan.id} layout type='button' onClick={() => handleSelect(plan.id)} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03, duration: 0.35, ease: 'easeOut' }} className={['group relative text-left rounded-lg border p-4 transition-all', 'bg-white hover:bg-indigo-50/50', isSelected ? 'border-indigo-400 ring-2 ring-indigo-400/40' : 'border-slate-200 hover:border-indigo-200'].join(' ')}>
+                <motion.button key={plan.id} layout type='button' onClick={() => handleSelect(plan.id)} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03, duration: 0.35, ease: 'easeOut' }} className={['flex flex-col group relative text-left rounded-lg border p-4 transition-all', 'bg-white hover:bg-indigo-50/50', isSelected ? 'border-indigo-400 ring-2 ring-indigo-400/40' : 'border-slate-200 hover:border-indigo-200'].join(' ')}>
                   {/* Title row */}
-                  <div className='flex items-center gap-3'>
+                  <div className='flex items-start gap-3'>
                     <CheckCircle2 className={`h-5 w-5 transition-colors ${isSelected ? 'text-indigo-500' : 'text-slate-300 group-hover:text-indigo-300'}`} />
                     <div className='flex-1 flex gap-2 items-center justify-between min-w-0'>
-                      <MultiLangText className='font-semibold text-slate-800 truncate'>{plan.name || t('untitled')}</MultiLangText>
-                      <span className='flex-none inline-flex items-center gap-1 text-xs text-slate-600'>
-                        <CalendarDays className='h-3.5 w-3.5' />
-                        {t('daysCount', { count: orderedDays.length })}
-                      </span>
+                      <MultiLangText className='font-semibold text-slate-800  '>{plan.name || t('untitled')}</MultiLangText>
                     </div>
                   </div>
 
                   {/* Expand details */}
                   <div className='mt-2'>
-                    <button
-                      type='button'
-                      onClick={e => {
-                        e.stopPropagation();
-                        setExpanded(expanded === plan.id ? null : plan.id);
-                      }}
-                      className='inline-flex items-center gap-1 text-xs text-indigo-700 hover:text-indigo-900'>
-                      {t('details')}
-                      <ChevronDown className={`h-4 w-4 transition-transform ${expanded === plan.id ? 'rotate-180' : ''}`} />
-                    </button>
+                    {orderedDays.length > 0 && <div className='flex items-center justify-between' >
+                      <span className='flex-none inline-flex items-center gap-1 text-xs text-slate-600'>
+                        <CalendarDays className='h-3.5 w-3.5' />
+                        {t('daysCount', { count: orderedDays.length })}
+                      </span>
+                      <button
+                        type='button'
+                        onClick={e => {
+                          e.stopPropagation();
+                          setExpanded(expanded === plan.id ? null : plan.id);
+                        }}
+                        className='inline-flex items-center gap-1 text-xs text-indigo-700 hover:text-indigo-900'>
+                        {t('details')}
+                        <ChevronDown className={`h-4 w-4 transition-transform ${expanded === plan.id ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>}
 
                     <AnimatePresence initial={false}>
                       {expanded === plan.id && (
@@ -199,7 +201,7 @@ export function PlanPicker({
                           <div className='mt-3 flex flex-wrap gap-2'>
                             {orderedDays.slice(0, 6).map(d => (
                               <span key={d.id || d.dayOfWeek} className='rtl:flex-row-reverse inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border border-slate-200 bg-slate-50 text-slate-600'>
-                                <span className='font-medium capitalize'>{common(d.dayOfWeek || d.id)}</span>
+                                <span className='font-medium capitalize'>{common(d.dayOfWeek || d?.day || d.id)}</span>
                                 <span className='text-slate-400'>•</span>
                                 <span className='truncate max-w-[140px]'>{common('day')}</span>
                               </span>
@@ -261,7 +263,7 @@ export function orderDays(days) {
 
 export function MealPlanPicker({
   loading,
-  mealPlans = [],            // ✅ default to [] so length is always safe
+  mealPlans = [], // ✅ default to [] so length is always safe
   visibleMeals,
   setVisibleMeals,
   meals = [],
@@ -283,95 +285,45 @@ export function MealPlanPicker({
   };
 
   const renderSkeletonCard = (_, i) => (
-    <motion.div
-      key={`meal-skeleton-${i}`}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }}
-      className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm animate-pulse"
-    >
-      <div className="flex items-start gap-3 mb-2">
-        <div className="h-5 w-5 rounded-full bg-slate-200" />
-        <div className="flex-1 space-y-2">
-          <div className="h-3 w-2/3 rounded bg-slate-200" />
-          <div className="h-2.5 w-full rounded bg-slate-100" />
-          <div className="h-2.5 w-3/4 rounded bg-slate-100" />
+    <motion.div key={`meal-skeleton-${i}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }} className='rounded-lg border border-slate-200 bg-white p-4 shadow-sm animate-pulse'>
+      <div className='flex items-start gap-3 mb-2'>
+        <div className='h-5 w-5 rounded-full bg-slate-200' />
+        <div className='flex-1 space-y-2'>
+          <div className='h-3 w-2/3 rounded bg-slate-200' />
+          <div className='h-2.5 w-full rounded bg-slate-100' />
+          <div className='h-2.5 w-3/4 rounded bg-slate-100' />
         </div>
       </div>
     </motion.div>
   );
 
   return (
-    <div className="space-y-4">
+    <div className='space-y-4'>
       {/* Grid */}
-      <AnimatePresence mode="popLayout">
+      <AnimatePresence mode='popLayout'>
         {loading ? (
-          <motion.div
-            key="loading"
-            layout
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
-          >
+          <motion.div key='loading' layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
             {Array.from({ length: 6 }).map(renderSkeletonCard)}
           </motion.div>
         ) : meals.length === 0 ? (
           // ✅ Empty state (only when not loading and meals is empty)
-          <motion.div
-            key="empty"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-slate-500 bg-slate-50/60"
-          >
+          <motion.div key='empty' initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className='rounded-lg border border-dashed border-slate-300 p-6 text-center text-slate-500 bg-slate-50/60'>
             {t('empty')}
           </motion.div>
         ) : (
           // ✅ Use `meals` exactly as passed from parent (already sliced)
-          <motion.div
-            key="meals"
-            layout
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
-          >
+          <motion.div key='meals' layout className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
             {meals.map((plan, i) => {
               const isSelected = selectedId === plan.id;
 
               return (
-                <motion.button
-                  key={plan.id}
-                  layout
-                  type="button"
-                  onClick={() => handleSelect(plan.id)}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.03, duration: 0.35, ease: 'easeOut' }}
-                  className={[
-                    'group relative text-left rounded-lg border p-4 transition-all',
-                    'bg-white hover:bg-indigo-50/40',
-                    isSelected
-                      ? 'border-indigo-400 ring-2 ring-indigo-400/40'
-                      : 'border-slate-200 hover:border-indigo-200',
-                  ].join(' ')}
-                >
+                <motion.button key={plan.id} layout type='button' onClick={() => handleSelect(plan.id)} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03, duration: 0.35, ease: 'easeOut' }} className={[' flex flex-col group relative text-left rounded-lg border p-4 transition-all', 'bg-white hover:bg-indigo-50/40', isSelected ? 'border-indigo-400 ring-2 ring-indigo-400/40' : 'border-slate-200 hover:border-indigo-200'].join(' ')}>
                   {/* Title row */}
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2
-                      className={`h-5 w-5 transition-colors ${
-                        isSelected
-                          ? 'text-indigo-500'
-                          : 'text-slate-300 group-hover:text-indigo-300'
-                      }`}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <MultiLangText className="font-semibold text-slate-800 truncate">
-                        {plan.name || t('untitled')}
-                      </MultiLangText>
-                      {plan.desc && (
-                        <MultiLangText className="mt-1 text-sm text-slate-600 line-clamp-2">
-                          {plan.desc}
-                        </MultiLangText>
-                      )}
+                  <div className='flex items-start gap-3'>
+                    <CheckCircle2 className={`h-5 w-5 transition-colors ${isSelected ? 'text-indigo-500' : 'text-slate-300 group-hover:text-indigo-300'}`} />
+                    <div className='flex-1 min-w-0'>
+                      <MultiLangText className=' text-sm font-semibold text-slate-800  '>{plan.name || t('untitled')}</MultiLangText>
+                      {plan.desc && <MultiLangText className='mt-1 text-sm text-slate-600 line-clamp-2'>{plan.desc}</MultiLangText>}
                     </div>
                   </div>
                 </motion.button>
@@ -382,11 +334,10 @@ export function MealPlanPicker({
 
         {/* See more */}
         {mealPlans.length > visibleMeals ? (
-          <div className="flex justify-center">
+          <div className='flex justify-start'>
             <Button
-              // 🔁 use Common namespace, not t('common...')
               name={tc('seeMore')}
-              color="neutral"
+              color='neutral'
               onClick={() => setVisibleMeals(v => v + 6)}
             />
           </div>
@@ -394,30 +345,15 @@ export function MealPlanPicker({
       </AnimatePresence>
 
       {/* Footer actions */}
-      <div className="flex justify-between gap-2 pt-2">
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors"
-        >
+      <div className='flex justify-between gap-2 pt-2'>
+        <button type='button' onClick={onBack} className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
           {tc('back')}
         </button>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={onSkip}
-            className="rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors"
-          >
+        <div className='flex gap-2'>
+          <button type='button' onClick={onSkip} className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
             {tc('skip')}
           </button>
-          <button
-            type="button"
-            onClick={() => onAssign?.(selectedId)}
-            disabled={!selectedId || assigning}
-            className={`rounded-lg px-4 py-2 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
-              !selectedId ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'
-            }`}
-          >
+          <button type='button' onClick={() => onAssign?.(selectedId)} disabled={!selectedId || assigning} className={`rounded-lg px-4 py-2 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${!selectedId ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
             {assigning ? tc('assigning') : tc('assignFinish')}
           </button>
         </div>
@@ -425,7 +361,6 @@ export function MealPlanPicker({
     </div>
   );
 }
-
 
 /* ===========================
    FieldRow
@@ -532,75 +467,35 @@ export function buildWhatsAppLink({ phone, email, password, role, lang = 'en' })
    SubscriptionPeriodPicker
 =========================== */
 
-const DURATIONS = [
-  { key: 'd1', months: 1 },
-  { key: 'd3', months: 3 },
-  { key: 'd6', months: 6 },
-  { key: 'd12', months: 12 },
-];
-
-export function SubscriptionPeriodPicker({ startValue, endValue, onStartChange, onEndChange, errorStart, errorEnd }) {
-  const t = useTranslations('Subscription');
+export function SubscriptionPeriodPicker({
+  startValue,
+  endValue,
+  setValue, // <<— from react-hook-form
+  errorStart,
+  errorEnd,
+}) {
+  const t = useTranslations('date');
 
   const today = useMemo(() => formatISO(new Date(), { representation: 'date' }), []);
 
+  const threeMonthsFrom = date => formatISO(addMonths(date, 3), { representation: 'date' });
+
+  // ========== RANGE VALIDATION ==========
   const invalidRange = useMemo(() => {
     if (!startValue || !endValue) return false;
     return isBefore(parseISO(endValue), parseISO(startValue));
   }, [startValue, endValue]);
 
-  const setDuration = months => {
-    if (!startValue) {
-      const start = today;
-      onStartChange?.(start);
-      const end = formatISO(addMonths(new Date(), months, /* inclusiveMinusOneDay */ true), {
-        representation: 'date',
-      });
-      onEndChange?.(end);
-      return;
-    }
-    const end = formatISO(addMonths(parseISO(startValue), months, true), { representation: 'date' });
-    onEndChange?.(end);
-  };
-
-  const startDateObj = startValue ? parseISO(startValue) : null;
-  const endDateObj = endValue ? parseISO(endValue) : null;
-
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className=' mt-1'>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className='mt-1'>
       <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
         {/* START DATE */}
         <div>
           <label className='text-sm font-[500] text-slate-700'>{t('startLabel')}</label>
-          <div className='mt-1 bg-white rounded-lg'>
-            <Flatpickr
-              value={startDateObj}
-              options={{
-                dateFormat: 'Y-m-d',
-                minDate: today,
-                disableMobile: true,
-              }}
-              onChange={dates => {
-                const d = dates?.[0];
-                onStartChange?.(d ? formatISO(d, { representation: 'date' }) : '');
-                // If end is before new start, nudge end to start
-                if (endValue && d && isBefore(parseISO(endValue), d)) {
-                  onEndChange?.(formatISO(d, { representation: 'date' }));
-                }
-              }}
-              className={`w-full rounded-lg border px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 ${errorStart ? 'border-rose-400 focus:ring-rose-200' : 'border-slate-300 focus:ring-indigo-200'}`}
-              placeholder={today}
-            />
-          </div>
-          {errorStart && <p className='mt-1 text-xs text-rose-600'>{errorStart}</p>}
-        </div>
 
-        {/* END DATE */}
-        <div>
-          <label className='text-sm font-[500] text-slate-700'>{t('endLabel')}</label>
           <div className='mt-1 bg-white rounded-lg'>
             <Flatpickr
-              value={endDateObj}
+              value={startValue ? parseISO(startValue) : null}
               options={{
                 dateFormat: 'Y-m-d',
                 minDate: startValue || today,
@@ -608,23 +503,54 @@ export function SubscriptionPeriodPicker({ startValue, endValue, onStartChange, 
               }}
               onChange={dates => {
                 const d = dates?.[0];
-                onEndChange?.(d ? formatISO(d, { representation: 'date' }) : '');
+                if (!d) return;
+
+                const iso = formatISO(d, { representation: 'date' });
+
+                // update RHF
+                setValue('subscriptionStart', iso, { shouldValidate: true });
+
+                // adjust END if too early
+                if (endValue && isBefore(parseISO(endValue), d)) {
+                  const newEnd = threeMonthsFrom(d);
+                  setValue('subscriptionEnd', newEnd, { shouldValidate: true });
+                }
+              }}
+              className={`w-full rounded-lg border px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 ${errorStart ? 'border-rose-400 focus:ring-rose-200' : 'border-slate-300 focus:ring-indigo-200'}`}
+            />
+          </div>
+
+          {errorStart && <p className='mt-1 text-xs text-rose-600'>{errorStart}</p>}
+        </div>
+
+        {/* END DATE */}
+        <div>
+          <label className='text-sm font-[500] text-slate-700'>{t('endLabel')}</label>
+
+          <div className='mt-1 bg-white rounded-lg'>
+            <Flatpickr
+              value={endValue ? parseISO(endValue) : null}
+              options={{
+                dateFormat: 'Y-m-d',
+                minDate: today,
+                disableMobile: true,
+              }}
+              onChange={dates => {
+                const d = dates?.[0];
+                if (!d) return;
+
+                const iso = formatISO(d, { representation: 'date' });
+
+                // update RHF
+                setValue('subscriptionEnd', iso, { shouldValidate: true });
               }}
               className={`w-full rounded-lg border px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 ${errorEnd || invalidRange ? 'border-rose-400 focus:ring-rose-200' : 'border-slate-300 focus:ring-indigo-200'}`}
               placeholder={t('pickEnd')}
             />
           </div>
+
           {(errorEnd || invalidRange) && <p className='mt-1 text-xs text-rose-600'>{errorEnd || t('endAfterStart')}</p>}
         </div>
-      </div>
-
-      {/* Quick durations */}
-      <div className='mt-3 flex flex-wrap items-center gap-2'>
-        {DURATIONS.map(d => (
-          <button key={d.key} type='button' onClick={() => setDuration(d.months)} className='rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700 hover:bg-indigo-50 hover:border-indigo-200'>
-            {t(d.key)}
-          </button>
-        ))}
       </div>
     </motion.div>
   );

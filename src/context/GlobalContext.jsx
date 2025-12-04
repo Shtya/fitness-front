@@ -9,10 +9,11 @@ export const GlobalProvider = ({ children }) => {
   const [usersByRole, setUsersByRole] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [conversationId, setConversationId] = useState(null);
 
-   const fetchUsers = async role => {
-    if (!role) return; 
-     if (usersByRole[role]) return;
+  const fetchUsers = async role => {
+    if (!role) return;
+    if (usersByRole[role]) return;
 
     setLoading(true);
     setError(null);
@@ -38,6 +39,8 @@ export const GlobalProvider = ({ children }) => {
         fetchUsers, // call this with a role
         loading,
         error,
+        conversationId,
+        setConversationId,
       }}>
       {children}
     </GlobalContext.Provider>

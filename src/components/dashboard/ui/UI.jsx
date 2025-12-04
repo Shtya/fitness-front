@@ -128,7 +128,7 @@ export function Select({ label, value, setValue, options, className = '' }) {
   );
 }
 
-export function Modal({ cn, maxHBody, open, onClose, title, children, maxH, maxW = 'max-w-3xl' }) {
+export function Modal({scrollRef , cn, maxHBody, open, onClose, title, children, maxH, maxW = 'max-w-3xl' }) {
   const shouldReduce = useReducedMotion();
   const containerRef = useRef(null);
   const closeBtnRef = useRef(null);
@@ -208,26 +208,25 @@ export function Modal({ cn, maxHBody, open, onClose, title, children, maxH, maxW
       {open && (
         <>
           {/* Overlay */}
+
+          {/* Panel */}
+          <motion.div  className={`${cn} px-6 fixed inset-0 z-[110] grid place-items-center   p-0 md:p-4`} initial={{ opacity: 1 }} animate={{ opacity: 1 }} exit={{ opacity: 1 }}>
           <motion.button
             aria-hidden
             onClick={onClose}
-            className='h-full fixed inset-0 z-[100] bg-black/50 backdrop-blur-[6px]'
+            className='h-full fixed inset-0  bg-black/50 backdrop-blur-[6px]'
             initial='hidden'
             animate='show'
             exit='exit'
             variants={overlayVariants}
-            // make it a button so it can receive focus in Safari/VoiceOver
             type='button'
           />
-
-          {/* Panel */}
-          <motion.div className={`${cn} px-6 fixed inset-0 z-[110] grid place-items-center   p-0 md:p-4`} initial={{ opacity: 1 }} animate={{ opacity: 1 }} exit={{ opacity: 1 }}>
             <motion.div
               role='dialog'
               aria-modal='true'
               aria-label={title}
               ref={containerRef}
-              className={`!w-full md:w-auto ${maxH} ${maxW} relative rounded-lg md:rounded-lg border border-white/10 bg-gradient-to-b from-indigo-50/70 to-white  backdrop-blur-2xl shadow-2xl
+              className={` !w-full md:w-auto ${maxH} ${maxW} relative rounded-lg md:rounded-lg border border-white/10 bg-gradient-to-b from-indigo-50/70 to-white  backdrop-blur-2xl shadow-2xl
                           md:p-6 p-4 md:mb-0 mb-safe md:mx-0 mx-0`}
               initial='hidden'
               animate='show'
@@ -243,7 +242,7 @@ export function Modal({ cn, maxHBody, open, onClose, title, children, maxH, maxW
                 </button>
               </div>
 
-              <div className={` ${maxHBody} max-h-[80vh] overflow-auto pr-1 md:pr-2 -mr-1 md:-mr-2 px-1`}>{children}</div>
+              <div ref={scrollRef} className={` ${maxHBody} max-h-[80vh] overflow-auto pr-1 md:pr-2 -mr-1 md:-mr-2 px-1`}>{children}</div>
 
               {/* Subtle glow accent */}
               {!shouldReduce && <motion.span aria-hidden className='pointer-events-none absolute inset-0 rounded-lg md:rounded-lg' initial={{ boxShadow: '0 0 0px rgba(59,130,246,0)' }} animate={{ boxShadow: '0 10px 60px rgba(59,130,246,0.12)' }} transition={{ delay: 0.05, duration: 0.35 }} />}

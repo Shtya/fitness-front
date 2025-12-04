@@ -4,8 +4,11 @@
 import { motion } from 'framer-motion';
 import { CheckCircle2, Home, FileText, PlusCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 export default function ThankYouPage() {
+  const t = useTranslations('ThankYouPage');
+
   return (
     <div className='relative min-h-screen flex items-center justify-center px-4 py-10 bg-gradient-to-b from-indigo-50 via-white to-emerald-50'>
       {/* soft background orbs */}
@@ -25,13 +28,12 @@ export default function ThankYouPage() {
 
             {/* Title & copy */}
             <div className='mt-6 text-center'>
-              <h1 className='text-2xl sm:text-3xl font-bold tracking-tight text-slate-900'>Thank you for your submission!</h1>
-              <p className='mt-3 text-slate-600 leading-relaxed'>We’ve received your information and will review it shortly. You can safely close this page, or continue below to create another form or view your submissions.</p>
+              <h1 className='text-2xl sm:text-3xl font-bold tracking-tight text-slate-900'>{t('title')}</h1>
+              <p className='mt-3 text-slate-600 leading-relaxed'>{t('description')}</p>
 
               {/* Tiny hint row */}
-              <div className='mt-2 text-xs text-slate-400'>Tip: You can always find your forms and submissions from your dashboard.</div>
+              <div className='mt-2 text-xs text-slate-400'>{t('hint')}</div>
             </div>
- 
           </div>
         </motion.div>
 

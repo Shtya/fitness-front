@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import api from '@/utils/axios';
-import { FiXCircle, FiSend, FiCalendar, FiUpload, FiAlertCircle, FiCheck } from 'react-icons/fi';
+import { FiXCircle, FiSend, FiCalendar, FiAlertCircle, FiCheck } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import Flatpickr from 'react-flatpickr';
@@ -15,16 +15,21 @@ import 'flatpickr/dist/themes/light.css';
 import { createPortal } from 'react-dom';
 import { ChevronDown, X, Check, Search, Plus, Save, CircleX } from 'lucide-react';
 
+// i18n
+import { useTranslations } from 'use-intl';
+
 // Atoms
 import Textarea from '@/components/atoms/Textarea';
 import CheckBox from '@/components/atoms/CheckBox';
 import Button from '@/components/atoms/Button';
 import AttachFilesButton from '@/components/atoms/AttachFilesButton';
 import MultiLangText from '@/components/atoms/MultiLangText';
+import PhoneField from '@/components/atoms/PhoneField';
 
 export default function FormSubmissionPage() {
   const params = useParams();
   const router = useRouter();
+  const t = useTranslations('publicForm'); // 👈 namespace
 
   const [form, setForm] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,7 +51,7 @@ export default function FormSubmissionPage() {
       setForm({ ...f, fields: sorted });
     } catch (e) {
       console.error(e);
-      toast.error('Failed to load form');
+      toast.error(t('messages.load_failed'));
       setForm(null);
     } finally {
       setIsLoading(false);
@@ -60,20 +65,20 @@ export default function FormSubmissionPage() {
       .catch(() => setClientIp(''));
   }, []);
 
-  // Accept any phone format as long as it has 7–15 digits total
-  const phoneRule = yup
-    .string()
-    .required('Phone is required')
-    .test('valid-phone', 'Invalid phone number', value => {
-      if (!value) return false;
-      const digits = String(value).replace(/\D/g, '');
-      return digits.length >= 7 && digits.length <= 15;
-    });
-
-  // Build dynamic validation
+  // Build dynamic validation based on form response
   const dynamicShape = useMemo(() => {
+    // phone rule (generic: counts digits only)
+    const phoneRule = yup
+      .string()
+      .required(t('validation.phone_required'))
+      .test('valid-phone', t('validation.phone_invalid'), value => {
+        if (!value) return false;
+        const digits = String(value).replace(/\D/g, '');
+        return digits.length >= 7 && digits.length <= 15;
+      });
+
     const shape = {
-      email: yup.string().email('Invalid email format').required('Email is required'),
+      email: yup.string().email(t('validation.email_invalid')).required(t('validation.email_required')),
       phone: phoneRule,
     };
 
@@ -85,43 +90,40 @@ export default function FormSubmissionPage() {
 
         switch (field.type) {
           case 'file':
-            shape[field.key] = yup.mixed().test('file', `${label} is required`, v => v instanceof File || typeof v === 'string');
+            shape[field.key] = yup.mixed().test('file', t('validation.file_required', { label }), v => v instanceof File || typeof v === 'string');
             break;
 
           case 'checklist':
-            shape[field.key] = yup.array().of(yup.string()).min(1, `${label} is required`);
+            shape[field.key] = yup.array().of(yup.string()).min(1, t('validation.required_generic', { label }));
             break;
 
           case 'checkbox':
-            shape[field.key] = yup.boolean().oneOf([true], `${label} is required`);
+            shape[field.key] = yup.boolean().oneOf([true], t('validation.required_generic', { label }));
             break;
 
           case 'phone':
-            shape[field.key] = yup
-              .string()
-              .required(`${label} is required`)
-              .matches(/^(9665|05)[0-9]{8}$/, `${label} must be a valid Saudi number`);
+            shape[field.key] = phoneRule;
             break;
 
           case 'date':
-            shape[field.key] = yup.date().typeError(`${label} must be a valid date`).required(`${label} is required`);
+            shape[field.key] = yup.date().typeError(t('validation.date_invalid', { label })).required(t('validation.required_generic', { label }));
             break;
 
           case 'number':
             shape[field.key] = yup
               .number()
               .transform(v => (isNaN(v) ? undefined : v))
-              .typeError(`${label} must be a number`)
-              .required(`${label} is required`);
+              .typeError(t('validation.number_type', { label }))
+              .required(t('validation.required_generic', { label }));
             break;
 
           default:
-            shape[field.key] = yup.string().trim().required(`${label} is required`);
+            shape[field.key] = yup.string().trim().required(t('validation.required_generic', { label }));
         }
       }
     }
     return yup.object().shape(shape);
-  }, [form]);
+  }, [form, t]);
 
   const {
     register,
@@ -129,6 +131,8 @@ export default function FormSubmissionPage() {
     setValue,
     watch,
     getValues,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm({
     resolver: form ? yupResolver(dynamicShape) : undefined,
@@ -189,12 +193,19 @@ export default function FormSubmissionPage() {
 
       await api.post(`/forms/${params.id}/submit`, payload);
 
-      toast.success('Form submitted successfully!');
+      toast.success(t('messages.submit_success'));
       router.push('/thank-you');
     } catch (e) {
       console.error(e);
-      const msg = e?.response?.data?.message || 'Submission failed';
-      toast.error(Array.isArray(msg) ? msg.join(', ') : msg);
+      const msg = e?.response?.data?.message || t('messages.submit_failed');
+
+      const fieldErrors = e?.response?.data?.errors;
+      if (fieldErrors && typeof fieldErrors === 'object') {
+        const flat = Object.values(fieldErrors).flat();
+        toast.error(flat.join('\n'));
+      } else {
+        toast.error(Array.isArray(msg) ? msg.join(', ') : msg);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -289,7 +300,7 @@ export default function FormSubmissionPage() {
       case 'text':
       case 'number':
       case 'email':
-        return <Input label={<MultiLangText>{field.label}</MultiLangText>} placeholder={field.placeholder || ''} type={field.type} error={error?.message} {...register(field.key)} />;
+        return <Input label={<MultiLangText>{field.label}</MultiLangText>} placeholder={field.placeholder || ''} type={field.type === 'number' ? 'number' : field.type} error={error?.message} {...register(field.key)} />;
 
       case 'date':
         return (
@@ -306,7 +317,7 @@ export default function FormSubmissionPage() {
                 className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-4
                   ${error ? 'border-rose-500 focus:ring-rose-100' : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-100'}
                 `}
-                placeholder={field.placeholder || 'Select date'}
+                placeholder={field.placeholder || t('fields.date.placeholder')}
               />
               <FiCalendar className='absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none' />
             </div>
@@ -318,7 +329,7 @@ export default function FormSubmissionPage() {
         return <Textarea label={<MultiLangText>{field.label}</MultiLangText>} placeholder={field.placeholder || ''} rows={4} error={error?.message} {...register(field.key)} />;
 
       case 'select':
-        return <Select label={<MultiLangText>{field.label}</MultiLangText>} placeholder={field.placeholder || 'Select an option'} options={(field.options || []).map(opt => ({ id: opt, label: opt }))} value={fieldValue} onChange={val => setValue(field.key, val, { shouldValidate: true })} required={!!field.required} error={error?.message} />;
+        return <Select label={<MultiLangText>{field.label}</MultiLangText>} placeholder={field.placeholder || t('fields.select.placeholder')} options={(field.options || []).map(opt => ({ id: opt, label: opt }))} value={fieldValue} onChange={val => setValue(field.key, val, { shouldValidate: true })} required={!!field.required} error={error?.message} />;
 
       case 'radio':
         return <RadioGroup field={field} error={error} />;
@@ -345,25 +356,22 @@ export default function FormSubmissionPage() {
               onChange={files => {
                 if (files && files.length > 0) {
                   const theFile = files[0];
-                  setValue(field.key, theFile?.url || theFile, { shouldValidate: true });
+                  setValue(field.key, theFile?.url || theFile, {
+                    shouldValidate: true,
+                  });
                   setFileNames(prev => ({
                     ...prev,
-                    [field.key]: theFile?.name || theFile?.url || 'Uploaded file',
+                    [field.key]: theFile?.name || theFile?.url || t('fields.file.uploaded_default_name'),
                   }));
                 }
               }}
             />
-            {fileNames[field.key] && (
-              <div className='text-xs text-slate-600 flex items-center gap-2'>
-                <FiUpload /> {fileNames[field.key]}
-              </div>
-            )}
             {renderErrorText(error)}
           </div>
         );
 
       case 'phone':
-        return <Input label={<MultiLangText>{field.label}</MultiLangText>} placeholder={field.placeholder || 'Example: 966512345678'} type='tel' error={error?.message} {...register(field.key)} />;
+        return <PhoneField name={field.key} label={<MultiLangText>{field.label}</MultiLangText>} value={fieldValue || ''} required={field.required} error={error?.message} setError={setError} clearErrors={clearErrors} onChange={val => setValue(field.key, val, { shouldValidate: true })} />;
 
       default:
         return <Input label={<MultiLangText>{field.label}</MultiLangText>} placeholder={field.placeholder || ''} error={error?.message} {...register(field.key)} />;
@@ -377,9 +385,7 @@ export default function FormSubmissionPage() {
       <div className='sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/70 bg-white/90 border-b border-slate-200'>
         <div className='max-w-4xl mx-auto px-4 sm:px-6 py-4'>
           <div className='flex items-center justify-between gap-4 animate-pulse'>
-            {/* Title */}
             <div className='h-6 sm:h-7 w-48 sm:w-60 bg-slate-200 rounded' />
-            {/* Progress */}
             <div className='min-w-[160px] w-44'>
               <div className='flex items-center justify-between mb-1'>
                 <div className='h-3 w-14 bg-slate-200 rounded' />
@@ -393,10 +399,9 @@ export default function FormSubmissionPage() {
         </div>
       </div>
 
-      {/* Content */}
+      {/* Content skeleton */}
       <div className='max-w-4xl mx-auto px-4 sm:px-6 py-8'>
         <div className='bg-white shadow-sm rounded-lg overflow-hidden border border-slate-200'>
-          {/* Card header */}
           <div className='px-6 py-5 bg-gradient-to-r from-slate-50 to-white border-b border-slate-200'>
             <div className='flex items-center gap-2 text-sm animate-pulse'>
               <div className='h-6 w-28 rounded-full bg-slate-200' />
@@ -404,9 +409,7 @@ export default function FormSubmissionPage() {
             </div>
           </div>
 
-          {/* Card body */}
           <div className='p-6 space-y-10 animate-pulse'>
-            {/* Contact */}
             <section className='space-y-4'>
               <div className='h-4 w-24 bg-slate-200 rounded' />
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
@@ -421,36 +424,29 @@ export default function FormSubmissionPage() {
               </div>
             </section>
 
-            {/* Additional Information – 2 per row with some full-width blocks */}
             <section className='space-y-4'>
               <div className='h-4 w-44 bg-slate-200 rounded' />
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                {/* normal field */}
                 <div className='space-y-2'>
                   <div className='h-4 w-24 bg-slate-200 rounded' />
                   <div className='h-[43px] w-full bg-slate-200 rounded-lg' />
                 </div>
-                {/* normal field */}
                 <div className='space-y-2'>
                   <div className='h-4 w-28 bg-slate-200 rounded' />
                   <div className='h-[43px] w-full bg-slate-200 rounded-lg' />
                 </div>
-                {/* textarea (full width) */}
                 <div className='md:col-span-2 space-y-2'>
                   <div className='h-4 w-20 bg-slate-200 rounded' />
                   <div className='h-28 w-full bg-slate-200 rounded-lg' />
                 </div>
-                {/* select */}
                 <div className='space-y-2'>
                   <div className='h-4 w-24 bg-slate-200 rounded' />
                   <div className='h-[43px] w-full bg-slate-200 rounded-lg' />
                 </div>
-                {/* date */}
                 <div className='space-y-2'>
                   <div className='h-4 w-16 bg-slate-200 rounded' />
                   <div className='h-[43px] w-full bg-slate-200 rounded-lg' />
                 </div>
-                {/* radio/checklist (full width) */}
                 <div className='md:col-span-2 space-y-3'>
                   <div className='h-4 w-28 bg-slate-200 rounded' />
                   <div className='grid grid-cols-1 sm:grid-cols-2 gap-2'>
@@ -458,7 +454,6 @@ export default function FormSubmissionPage() {
                     <div className='h-12 rounded-lg bg-slate-200' />
                   </div>
                 </div>
-                {/* file (full width) */}
                 <div className='md:col-span-2 space-y-2'>
                   <div className='h-4 w-14 bg-slate-200 rounded' />
                   <div className='h-12 w-full bg-slate-200 rounded-lg' />
@@ -470,7 +465,7 @@ export default function FormSubmissionPage() {
         </div>
       </div>
 
-      {/* Fixed submit bar */}
+      {/* Fixed submit bar skeleton */}
       <div className='fixed bottom-4 left-0 right-0 px-4 sm:px-6'>
         <div className='max-w-4xl mx-auto'>
           <div className='rounded-lg bg-white/95 shadow-lg border border-slate-200 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-pulse'>
@@ -489,8 +484,8 @@ export default function FormSubmissionPage() {
       <div className='min-h-screen bg-slate-50 flex items-center justify-center px-4'>
         <div className='text-center'>
           <FiXCircle className='h-12 w-12 text-slate-300 mx-auto mb-4' />
-          <h3 className='text-lg font-semibold text-slate-900 mb-2'>Form Not Found</h3>
-          <p className='text-slate-600'>The form you’re looking for doesn’t exist.</p>
+          <h3 className='text-lg font-semibold text-slate-900 mb-2'>{t('errors.not_found_title')}</h3>
+          <p className='text-slate-600'>{t('errors.not_found_subtitle')}</p>
         </div>
       </div>
     );
@@ -511,7 +506,7 @@ export default function FormSubmissionPage() {
             {/* Progress */}
             <div className='min-w-[160px]'>
               <div className='flex items-center justify-between text-xs text-slate-600 mb-1'>
-                <span>Progress</span>
+                <span>{t('header.progress_label')}</span>
                 <span>{isNaN(progress) ? 0 : progress}%</span>
               </div>
               <div className='h-2 bg-slate-200 rounded-full overflow-hidden'>
@@ -529,7 +524,8 @@ export default function FormSubmissionPage() {
           <div className='px-6 py-5 bg-gradient-to-r from-slate-50 to-white border-b border-slate-200'>
             <div className='flex items-center gap-2 text-slate-700 text-sm'>
               <span className='inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100'>
-                <FiSend /> Public Form
+                <FiSend />
+                {t('header.public_badge')}
               </span>
               {form?.description && <MultiLangText className='text-slate-500 truncate'>{form.description}</MultiLangText>}
             </div>
@@ -537,22 +533,24 @@ export default function FormSubmissionPage() {
 
           {/* Card body */}
           <div className='p-6 space-y-10'>
-            {/* Email & Phone (always required) */}
+            {/* Email & Phone */}
             <section aria-labelledby='contact-info' className='space-y-4'>
               <h2 id='contact-info' className='text-sm font-semibold text-slate-900'>
-                Contact
+                {t('sections.contact')}
               </h2>
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                <Input label='Email' type='email' placeholder='you@email.com' required error={errors?.email?.message} {...register('email')} />
-                <Input label='Phone' type='tel' placeholder='966512345678' required error={errors?.phone?.message} {...register('phone')} />
+                <Input label={t('fields.email.label')} type='email' placeholder={t('fields.email.placeholder')} error={errors?.email?.message} {...register('email')} />
+
+                {/* ✅ top-level PhoneField wired to RHF */}
+                <PhoneField name='phone' label={t('fields.phone.label')} required value={watch('phone') || ''} error={errors?.phone?.message} setError={setError} clearErrors={clearErrors} onChange={val => setValue('phone', val, { shouldValidate: true })} />
               </div>
             </section>
 
-            {/* Dynamic Fields (responsive grid, 2 per row on desktop) */}
+            {/* Dynamic Fields */}
             {(form.fields || []).length > 0 && (
               <section aria-labelledby='additional-info' className='space-y-4'>
                 <h2 id='additional-info' className='text-sm font-semibold text-slate-900'>
-                  Additional Information
+                  {t('sections.additional')}
                 </h2>
 
                 <motion.div layout className='grid grid-cols-1 md:grid-cols-2 gap-4'>
@@ -572,8 +570,8 @@ export default function FormSubmissionPage() {
         <div className='fixed bottom-4 left-0 right-0 px-4 sm:px-6'>
           <div className='max-w-4xl mx-auto'>
             <div className='rounded-lg bg-white/95 shadow-lg border border-slate-200 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
-              <div className='text-xs sm:text-sm text-slate-600'>Review your info before submitting.</div>
-              <Button type='submit' name={isSubmitting ? 'Submitting...' : 'Submit Form'} icon={<FiSend className='w-4 h-4' />} className='!w-full sm:!w-fit sm:min-w-[160px]' loading={isSubmitting} />
+              <div className='text-xs sm:text-sm text-slate-600'>{t('footer.review_before_submit')}</div>
+              <Button type='submit' name={isSubmitting ? t('cta.submitting') : t('cta.submit')} icon={<FiSend className='w-4 h-4' />} className='!w-full sm:!w-fit sm:min-w-[160px]' loading={isSubmitting} />
             </div>
           </div>
         </div>
@@ -645,7 +643,7 @@ const Input = forwardRef(function Input(
       <div className={['relative flex items-center', 'rounded-lg border bg-white', disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text', error ? 'border-rose-500' : 'border-slate-300 hover:border-slate-400 focus-within:border-indigo-500', 'focus-within:ring-4 focus-within:ring-indigo-100', 'transition-colors'].join(' ')}>
         <input ref={innerRef} type={type} name={name} placeholder={placeholder} value={internal ?? ''} disabled={disabled} onChange={handleChange} onBlur={onBlur} className={`${cnInput || ''} h-[43px] w-full rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none placeholder:text-gray-400`} {...rest} />
 
-        {clearable && !!(internal ?? '') && !disabled && <X size={16} className='absolute right-3 opacity-60 hover:opacity-100 transition cursor-pointer' onClick={clearInput} />}
+        {clearable && !!(internal ?? '') && !disabled && <X size={16} className='absolute rtl:left-3 ltr:right-3 opacity-60 hover:opacity-100 transition cursor-pointer' onClick={clearInput} />}
       </div>
 
       {error && <p className='mt-1.5 text-xs text-rose-600'>{error}</p>}
@@ -653,23 +651,24 @@ const Input = forwardRef(function Input(
   );
 });
 
+/* ---------- SELECT (unchanged from your version, kept for completeness) ---------- */
 export function Select({
   options = [], // [{ id, label }]
   value = null, // selected id OR custom string
   onChange = () => {},
-  placeholder = 'Select…',
+  placeholder,
   searchable = true,
   disabled = false,
   clearable = true,
   className = '',
   label, // can be <MultiLangText>…</MultiLangText>
   allowCustom = false,
-  createHint = 'Write a new category…',
-
-  // NEW
+  createHint,
   required = false,
-  error = '', // string | undefined
+  error = '',
 }) {
+  const t = useTranslations('publicForm');
+
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -682,17 +681,15 @@ export function Select({
   const createInputRef = useRef(null);
   const [portalReady, setPortalReady] = useState(false);
 
-  // Fixed-position coords for the portal menu
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
 
   const selectedOption = useMemo(() => options.find(o => String(o.id) === String(value)) || null, [options, value]);
 
-  // What to show on the button
   const buttonLabel = useMemo(() => {
     if (selectedOption) return selectedOption.label;
     if (typeof value === 'string' && value.trim()) return value;
-    return placeholder || 'Select…';
-  }, [selectedOption, value, placeholder]);
+    return placeholder || t('select.placeholder');
+  }, [selectedOption, value, placeholder, t]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -727,10 +724,8 @@ export function Select({
     setCreateText('');
   }, []);
 
-  // Prepare portal
   useEffect(() => setPortalReady(true), []);
 
-  // Reposition on resize/scroll
   useEffect(() => {
     if (!open) return;
     const handler = () => updateCoords();
@@ -745,26 +740,38 @@ export function Select({
     };
   }, [open, updateCoords]);
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const onDocClick = e => {
-      const t = e.target;
-      if (buttonRef.current?.contains(t) || listRef.current?.contains(t)) return;
+      const tEl = e.target;
+      if (buttonRef.current?.contains(tEl) || listRef.current?.contains(tEl)) return;
       closeMenu();
     };
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [open, closeMenu]);
 
-  // Focus the create input when opening create mode
   useEffect(() => {
     if (createMode) {
       setTimeout(() => createInputRef.current?.focus(), 0);
     }
   }, [createMode]);
 
-  // Keyboard interactions
+  const scrollIntoView = index => {
+    const list = listRef.current;
+    if (!list) return;
+    const offset = searchable ? 1 : 0;
+    const item = list.children[index + offset];
+    if (!item) return;
+    const listRect = list.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    if (itemRect.top < listRect.top) {
+      list.scrollTop -= listRect.top - itemRect.top;
+    } else if (itemRect.bottom > listRect.bottom) {
+      list.scrollTop += itemRect.bottom - listRect.bottom;
+    }
+  };
+
   const onKeyDown = e => {
     if (!open) {
       if (['ArrowDown', 'Enter', ' '].includes(e.key)) {
@@ -815,21 +822,6 @@ export function Select({
     }
   };
 
-  const scrollIntoView = index => {
-    const list = listRef.current;
-    if (!list) return;
-    const offset = searchable ? 1 : 0;
-    const item = list.children[index + offset];
-    if (!item) return;
-    const listRect = list.getBoundingClientRect();
-    const itemRect = item.getBoundingClientRect();
-    if (itemRect.top < listRect.top) {
-      list.scrollTop -= listRect.top - itemRect.top;
-    } else if (itemRect.bottom > listRect.bottom) {
-      list.scrollTop += itemRect.bottom - listRect.bottom;
-    }
-  };
-
   const pick = item => {
     onChange(item.id);
     closeMenu();
@@ -844,9 +836,9 @@ export function Select({
   };
 
   const createFromText = text => {
-    const t = (text ?? '').trim();
-    if (!t) return;
-    onChange(t); // pass raw string as the new category
+    const tVal = (text ?? '').trim();
+    if (!tVal) return;
+    onChange(tVal);
     closeMenu();
     buttonRef.current?.focus();
   };
@@ -854,17 +846,19 @@ export function Select({
   const errorState = Boolean(error);
   const buttonClasses = ['h-[43px] group relative w-full inline-flex items-center justify-between', 'rounded-lg border bg-white px-3.5 py-2.5 text-sm', disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer', 'transition-colors', errorState ? 'border-rose-500 focus-within:border-rose-500' : 'border-slate-300 hover:border-slate-400 focus:border-indigo-500', 'focus:outline-none focus:ring-4', errorState ? 'focus:ring-rose-100' : 'focus:ring-indigo-100'].join(' ');
 
+  const createHintText = createHint || t('select.create_hint');
+
   return (
     <div ref={rootRef} className={`relative ${className}`}>
       {label && (
         <label className='mb-1.5 block text-sm font-medium text-slate-700'>
-          <MultiLangText>{label.props.children}</MultiLangText>
+          {label}
           {required && <span className='text-rose-500 ml-1'>*</span>}
         </label>
       )}
 
       <button type='button' ref={buttonRef} onClick={() => (open ? closeMenu() : openMenu())} onKeyDown={onKeyDown} disabled={disabled} className={buttonClasses} aria-haspopup='listbox' aria-expanded={open} aria-invalid={errorState || undefined}>
-        <MultiLangText className={`truncate text-left ${selectedOption || (typeof value === 'string' && value.trim()) ? 'text-slate-900' : 'text-gray-500'}`}>{buttonLabel}</MultiLangText>
+        <span className={`truncate text-left ${selectedOption || (typeof value === 'string' && value?.trim()) ? 'text-slate-900' : 'text-gray-500'}`}>{buttonLabel}</span>
 
         <span className='ml-3 flex items-center gap-1'>
           {clearable && (selectedOption || (typeof value === 'string' && value)) && !disabled && <X className='h-4 w-4 opacity-60 hover:opacity-100 transition' onClick={clear} />}
@@ -872,7 +866,6 @@ export function Select({
         </span>
       </button>
 
-      {/* error helper text */}
       {errorState && <p className='mt-1.5 text-xs text-rose-600'>{error}</p>}
 
       {portalReady &&
@@ -887,7 +880,7 @@ export function Select({
                     <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400' />
                     <input
                       className='w-full h-9 pl-10 pr-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white'
-                      placeholder='Search…'
+                      placeholder={t('select.search_placeholder')}
                       value={query}
                       onChange={e => {
                         setQuery(e.target.value);
@@ -906,7 +899,7 @@ export function Select({
                     <input
                       ref={createInputRef}
                       className='flex-1 h-9 px-3 rounded-lg border border-slate-200 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100'
-                      placeholder={createHint}
+                      placeholder={createHintText}
                       value={createText}
                       onChange={e => setCreateText(e.target.value)}
                       onKeyDown={e => {
@@ -922,7 +915,7 @@ export function Select({
                       }}
                     />
                     <button type='button' onClick={() => createFromText(createText)} className='inline-flex items-center gap-1 rounded-lg px-3 text-sm border border-slate-300 hover:border-slate-400 h-9'>
-                      <Save className='w-4 h-4' /> Save
+                      <Save className='w-4 h-4' /> {t('select.save')}
                     </button>
                     <button
                       type='button'
@@ -931,7 +924,7 @@ export function Select({
                         setCreateText('');
                       }}
                       className='inline-flex items-center gap-1 rounded-lg px-3 text-sm border border-slate-300 hover:border-slate-400 h-9'>
-                      <CircleX className='w-4 h-4' /> Cancel
+                      <CircleX className='w-4 h-4' /> {t('select.cancel')}
                     </button>
                   </div>
                 </div>
@@ -941,13 +934,13 @@ export function Select({
               {!createMode && (
                 <>
                   <ul className='py-1'>
-                    {filtered.length === 0 && <li className='px-3 py-2 text-sm text-slate-400'>No results</li>}
+                    {filtered.length === 0 && <li className='px-3 py-2 text-sm text-slate-400'>{t('select.no_results')}</li>}
                     {filtered.map((item, idx) => {
                       const isSelected = selectedOption?.id === item.id;
                       const isActive = idx === activeIndex;
                       return (
                         <li id={`opt-${idx}`} key={item.id} role='option' aria-selected={isSelected} className={['mx-1 my-0.5 rounded-lg px-3 py-2 text-sm flex items-center justify-between select-none cursor-pointer', isActive ? 'bg-indigo-50' : 'bg-transparent', isSelected ? 'text-indigo-700' : 'text-slate-700', 'hover:bg-indigo-50'].join(' ')} onMouseEnter={() => setActiveIndex(idx)} onMouseDown={e => e.preventDefault()} onClick={() => pick(item)}>
-                          <MultiLangText className='truncate'>{item.label}</MultiLangText>
+                          <span className='truncate'>{item.label}</span>
                           {isSelected && <Check className='h-4 w-4 text-indigo-600' />}
                         </li>
                       );
@@ -959,7 +952,9 @@ export function Select({
                     <div className='p-2 border-t border-slate-100 sticky bottom-0 bg-white'>
                       <button type='button' onClick={() => createFromText(query)} className='w-full inline-flex items-center justify-center gap-2 rounded-lg h-9 text-sm border border-dashed border-slate-300 hover:border-slate-400'>
                         <Plus className='w-4 h-4' />
-                        Create “{query.trim()}”
+                        {t('select.create_from_query', {
+                          value: query.trim(),
+                        })}
                       </button>
                     </div>
                   )}
@@ -977,7 +972,7 @@ export function Select({
                     }}
                     className='w-full inline-flex items-center justify-center gap-2 rounded-lg h-9 text-sm border border-slate-300 hover:border-slate-400'>
                     <Plus className='w-4 h-4' />
-                    {createHint}
+                    {createHintText}
                   </button>
                 </div>
               )}

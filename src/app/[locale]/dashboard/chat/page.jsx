@@ -11,6 +11,8 @@ import api from '@/utils/axios';
 import Img from '@/components/atoms/Img';
 import MultiLangText from '@/components/atoms/MultiLangText';
 import { useUser } from '@/hooks/useUser';
+import { useUnreadChats } from '@/components/molecules/Sidebar';
+import { useValues } from '@/context/GlobalContext';
 
 const API_URL = process.env.NEXT_PUBLIC_BASE_URL;
 const cls = (...a) => a.filter(Boolean).join(' ');
@@ -176,8 +178,6 @@ export default function ChatPage() {
       setConvos(list);
       if (focusId) {
         onSelectConversation(focusId);
-      } else if (list.length > 0 && !activeId) {
-        onSelectConversation(list[0].id);
       }
     } finally {
       setLoadingConvos(false);
@@ -289,6 +289,8 @@ export default function ChatPage() {
   }, [socket, activeId, me?.id]);
 
   /* --------------------------- Conversation open ---------------------- */
+  const { setConversationId } = useValues();
+
   async function onSelectConversation(conversationId) {
     setActiveId(conversationId);
     setDrawerOpen(false);
@@ -299,6 +301,10 @@ export default function ChatPage() {
       setMsgs(data);
       socket?.emit('join_conversation', conversationId);
       setConvos(prev => prev.map(c => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
+      const index = convos?.find(c => c.id === conversationId);
+      setConversationId(conversationId);
+      if (index?.unreadCount > 0) {
+      }
       markActiveAsRead(conversationId);
       setTimeout(scrollToBottom, 80);
     } finally {
@@ -349,7 +355,6 @@ export default function ChatPage() {
   }
 
   async function contactCoach() {
-    console.log(me);
     if (!me?.coachId) {
       alert('No coach assigned to your account');
       return;
@@ -601,21 +606,34 @@ export default function ChatPage() {
 
                   return (
                     <li key={c.id}>
-                      <button onClick={() => onSelectConversation(c.id)} className={cls('w-full px-3 py-3 text-left rounded-lg transition-all duration-200 group', ui.ringFocus, isActive ? 'bg-white shadow-sm ring-1 ring-slate-200' : 'bg-white/70 hover:bg-white active:bg-white/80 border border-transparent')}>
+                      <button onClick={() => onSelectConversation(c.id)} className={cls('w-full px-3 py-3 text-left rounded-lg transition-all duration-200  ', ui.ringFocus, isActive ? 'bg-white shadow-sm ring-1 ring-slate-200' : 'bg-white/70 hover:bg-white active:bg-white/80 border border-transparent')}>
                         <div className='flex items-center gap-3'>
-                          <div className={cls('h-11 w-11 rounded-lg grid place-items-center overflow-hidden ring-1 ring-inset', hasUnread ? 'bg-gradient-to-br from-indigo-100 to-blue-100 ring-indigo-200' : 'bg-slate-100 ring-slate-200')}>
-                            <UserCircle2 className={cls('w-6 h-6', hasUnread ? 'text-indigo-600' : 'text-slate-500')} />
+                          <div className='relative group w-max'>
+                            {/* Avatar */}
+                            <div className={cls('h-11 w-11 rounded-xl grid place-items-center overflow-hidden ring-1 ring-inset shadow-sm', 'transition-all duration-300 ease-out transform', hasUnread ? 'bg-gradient-to-br from-indigo-500 via-indigo-400 to-blue-400 ring-indigo-300 shadow-indigo-200/50 group-hover:shadow-[0_14px_30px_rgba(79,70,229,0.55)]' : 'bg-gradient-to-br from-slate-200 to-slate-100 ring-slate-300 shadow-slate-200/40 group-hover:shadow-[0_14px_30px_rgba(15,23,42,0.45)]', 'group-hover:-translate-y-0.5 group-hover:scale-[1.03]')}>
+                              <UserCircle2 className={cls('w-6 h-6 drop-shadow-sm transition-colors duration-300', hasUnread ? 'text-white' : 'text-slate-600')} />
+                            </div>
+
+                            {/* Tooltip */}
+                            {others?.[0]?.email && (
+                              <div className=' pointer-events-none absolute top-0 mt-2 px-2.5 py-1.5 rounded-md bg-slate-900/95 text-white text-[11px] whitespace-nowrap shadow-xl opacity-0 scale-95 translate-y-1 transition-all duration-200 origin-top group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 ltr:left-[50px] rtl:right-[50px] '>
+                                {others[0].email}
+                                <div className=' absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-slate-900/95 rotate-45 ltr:-left-1 rtl:-right-1 ' />
+                              </div>
+                            )}
                           </div>
 
                           <div className='min-w-0 flex-1'>
                             <div className='flex items-center justify-between gap-2'>
-                              <MultiLangText className='text-sm font-semibold text-slate-900 truncate'>{title}</MultiLangText>
-                              <div className='font-en text-[11px] text-slate-500 shrink-0 tabular-nums'>{last?.created_at ? timeHHMM(last.created_at) : ''}</div>
+                              <div className='flex flex-col '>
+                                <MultiLangText className='rtl:text-right ltr:text-left text-sm font-semibold text-slate-900 truncate'>{title}</MultiLangText>
+                              </div>
+                              <UnreadBadge count={c.unreadCount} />
                             </div>
 
                             <div className='flex items-center justify-between gap-2 mt-1'>
                               <MultiLangText className='text-xs text-slate-500 truncate flex-1 rtl:text-right'>{preview}</MultiLangText>
-                              <UnreadBadge count={c.unreadCount} />
+                              <div className='font-en text-[11px] text-slate-500 shrink-0 tabular-nums'>{last?.created_at ? timeHHMM(last.created_at) : ''}</div>
                             </div>
                           </div>
                         </div>

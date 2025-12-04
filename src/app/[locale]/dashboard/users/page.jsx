@@ -21,6 +21,8 @@ import { Stepper, PlanPicker, MealPlanPicker, FieldRow, PasswordRow, buildWhatsA
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdminCoaches } from '@/hooks/useHierarchy';
 import { useUser } from '@/hooks/useUser';
+import PhoneField from '@/components/atoms/PhoneField';
+import CaloriesStep from '@/components/pages/dashboard/users/CaloriesStep';
 /* ---------- helpers ---------- */
 const toTitle = s => (s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s);
 const normRole = r => (['ADMIN', 'COACH', 'CLIENT'].includes(String(r || '').toUpperCase()) ? toTitle(r) : 'Client');
@@ -291,6 +293,8 @@ function EditUserModal({ open, onClose, user, onSaved, optionsCoach }) {
     setValue,
     trigger,
     watch,
+    setError,
+    clearErrors,
   } = useForm({
     defaultValues: {
       name: user?.name || '',
@@ -325,8 +329,7 @@ function EditUserModal({ open, onClose, user, onSaved, optionsCoach }) {
         subscriptionEnd: user.subscriptionEnd || new Date().toISOString().slice(0, 10),
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, user]);
+  }, [open, user, reset]);
 
   const generatePassword = e => {
     e?.preventDefault?.();
@@ -364,13 +367,32 @@ function EditUserModal({ open, onClose, user, onSaved, optionsCoach }) {
       setSaving(false);
     }
   };
+  const subscriptionStart = watch('subscriptionStart');
+  const subscriptionEnd = watch('subscriptionEnd');
 
   return (
     <Modal open={open} onClose={onClose} title={`${t('editUser')} • ${user?.name ?? ''}`}>
       <form className='space-y-4' onSubmit={handleSubmit(onSubmit)}>
         <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
           <Controller name='name' control={control} render={({ field }) => <Input label={t('fields.fullName')} placeholder={t('placeholders.fullName')} error={t(errors.name?.message)} icon={<User className='w-4 h-4' />} {...field} />} />
-          <Controller name='phone' control={control} render={({ field }) => <Input label={t('fields.phone')} placeholder={t('placeholders.phone')} error={(errors.phone && t(errors.phone?.message)) || ''} icon={<Phone className='w-4 h-4' />} {...field} value={field.value} />} />
+          {/* <Controller name='phone' control={control} render={({ field }) => <Input label={t('fields.phone')} placeholder={t('placeholders.phone')} error={(errors.phone && t(errors.phone?.message)) || ''} icon={<Phone className='w-4 h-4' />} {...field} value={field.value} />} /> */}
+          <Controller
+            name='phone'
+            control={control}
+            render={({ field }) => (
+              <PhoneField
+                label={t('fields.phone')}
+                value={field.value || ''}
+                onChange={field.onChange}
+                error={errors.phone?.message ? t(errors.phone.message) : ''}
+                name={field.name} // for setError
+                setError={setError}
+                clearErrors={clearErrors}
+                t={t}
+              />
+            )}
+          />
+
           <Controller name='email' control={control} render={({ field }) => <Input label={t('fields.email')} type='email' placeholder={t('placeholders.email')} error={errors.email && t(errors.email?.message)} icon={<Mail className='w-4 h-4' />} {...field} />} />
 
           {/* Password (leave blank to keep) */}
@@ -393,7 +415,6 @@ function EditUserModal({ open, onClose, user, onSaved, optionsCoach }) {
                 options={[
                   { id: 'male', label: t('gender.male') },
                   { id: 'female', label: t('gender.female') },
-                  { id: null, label: t('gender.notSpecified') },
                 ]}
                 error={errors.gender?.message ? t(errors.gender.message) : undefined}
               />
@@ -426,6 +447,8 @@ function EditUserModal({ open, onClose, user, onSaved, optionsCoach }) {
                 <Select
                   label={t('fields.role')}
                   placeholder={t('placeholders.role')}
+                  searchable={false}
+                  clearable={false}
                   options={[
                     { id: 'Admin', label: t('roles.admin') },
                     { id: 'Coach', label: t('roles.coach') },
@@ -448,6 +471,8 @@ function EditUserModal({ open, onClose, user, onSaved, optionsCoach }) {
                 <Select
                   label={t('fields.status')}
                   placeholder={t('placeholders.status')}
+                  searchable={false}
+                  clearable={false}
                   options={[
                     { id: 'Active', label: t('status.active') },
                     { id: 'Pending', label: t('status.pending') },
@@ -475,20 +500,13 @@ function EditUserModal({ open, onClose, user, onSaved, optionsCoach }) {
 
           {/* Subscription period */}
           <div className='sm:col-span-2'>
-            <Controller
-              name='subscriptionStart'
-              control={control}
-              render={({ field }) => {
-                const start = field.value;
-                return <Controller name='subscriptionEnd' control={control} render={({ field: fieldEnd }) => <SubscriptionPeriodPicker startValue={start} endValue={fieldEnd.value || ''} onStartChange={v => field.onChange(v)} onEndChange={v => fieldEnd.onChange(v)} errorStart={errors.subscriptionStart?.message ? t(errors.subscriptionStart.message) : undefined} errorEnd={errors.subscriptionEnd?.message ? t(errors.subscriptionEnd.message) : undefined} t={t} />} />;
-              }}
-            />
+            <SubscriptionPeriodPicker startValue={subscriptionStart} endValue={subscriptionEnd} setValue={setValue} errorStart={errors.subscriptionStart?.message ? t(errors.subscriptionStart.message) : undefined} errorEnd={errors.subscriptionEnd?.message ? t(errors.subscriptionEnd.message) : undefined} />
           </div>
         </div>
 
         <div className='flex justify-end gap-2 pt-4 border-t border-slate-200'>
           <Button color='neutral' name={t('common.cancel')} onClick={onClose} />
-          <Button color='primary' type='submit' name={t('common.saveChanges')} loading={saving} disabled={!isDirty || saving} />
+          <Button color='primary' type='submit' name={t('common.saveChanges')} loading={saving} disabled={saving} />
         </div>
       </form>
     </Modal>
@@ -544,6 +562,16 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
   const steps = roleAtCreation === 'Coach' ? stepsCoach : stepsClient;
   const currentStep = steps[stepIndex];
 
+  // Today in YYYY-MM-DD
+  const today = new Date();
+  const defaultStart = today.toISOString().slice(0, 10);
+
+  // Add 3 months using pure JS
+  const plus3 = new Date(today);
+  plus3.setMonth(plus3.getMonth() + 3);
+
+  const defaultEnd = plus3.toISOString().slice(0, 10);
+
   const {
     control,
     handleSubmit,
@@ -553,6 +581,8 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
     trigger,
     watch,
     formState: { errors, isSubmitting },
+    setError,
+    clearErrors,
   } = useForm({
     defaultValues: {
       name: '',
@@ -563,8 +593,8 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
       membership: 'basic',
       password: '',
       coachId: null,
-      subscriptionStart: new Date().toISOString().slice(0, 10),
-      subscriptionEnd: new Date().toISOString().slice(0, 10),
+      subscriptionStart: defaultStart,
+      subscriptionEnd: defaultEnd,
     },
     resolver: yupResolver(accountSchema),
     mode: 'onBlur',
@@ -750,7 +780,24 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
         <form className='space-y-3' onSubmit={handleSubmit(onSubmitAccount)}>
           <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
             <Controller name='name' control={control} render={({ field }) => <Input label={t('fields.fullName')} placeholder={t('placeholders.fullName')} error={t(errors?.name?.message || '')} {...field} />} />
-            <Controller name='phone' control={control} render={({ field }) => <Input type='phone' label={t('fields.phone')} placeholder={t('placeholders.phone')} error={t(errors?.phone?.message || '')} {...field} value={field.value || ''} />} />
+            {/* <Controller name='phone' control={control} render={({ field }) => <Input type='phone' label={t('fields.phone')} placeholder={t('placeholders.phone')} error={t(errors?.phone?.message || '')} {...field} value={field.value || ''} />} /> */}
+            <Controller
+              name='phone'
+              control={control}
+              render={({ field }) => (
+                <PhoneField
+                  label={t('fields.phone')}
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                  error={errors?.phone?.message ? t(errors.phone.message) : ''}
+                  required={false} // or true if you want
+                  name={field.name} // for setError
+                  setError={setError}
+                  clearErrors={clearErrors}
+                  t={t}
+                />
+              )}
+            />
 
             <Controller name='email' control={control} render={({ field }) => <Input label={t('fields.email')} type='email' placeholder={t('placeholders.email')} error={t(errors?.email?.message)} {...field} />} />
 
@@ -802,7 +849,7 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
                   control={control}
                   render={({ field }) => {
                     const start = field.value;
-                    return <Controller name='subscriptionEnd' control={control} render={({ field: fieldEnd }) => <SubscriptionPeriodPicker startValue={start} endValue={fieldEnd.value || ''} onStartChange={v => field.onChange(v)} onEndChange={v => fieldEnd.onChange(v)} errorStart={errors.subscriptionStart?.message ? t(errors.subscriptionStart.message) : undefined} errorEnd={errors.subscriptionEnd?.message ? t(errors.subscriptionEnd.message) : undefined} t={t} />} />;
+                    return <Controller name='subscriptionEnd' control={control} render={({ field: fieldEnd }) => <SubscriptionPeriodPicker setValue={setValue} startValue={start} endValue={fieldEnd.value || ''} onStartChange={v => field.onChange(v)} onEndChange={v => fieldEnd.onChange(v)} errorStart={errors.subscriptionStart?.message ? t(errors.subscriptionStart.message) : undefined} errorEnd={errors.subscriptionEnd?.message ? t(errors.subscriptionEnd.message) : undefined} t={t} />} />;
                   }}
                 />
               </div>
@@ -842,32 +889,19 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 
       {/* Step: Calories & Details */}
       {currentStep === 'calories' && (
-        <div className='space-y-4'>
-          <div className='grid grid-cols-1 sm:grid-cols-4 gap-3'>
-            <Input type='number' label={t('calories.calories')} value={caloriesForm.calories} onChange={v => setCaloriesForm(s => ({ ...s, calories: v }))} placeholder='e.g., 2200' />
-            <Input type='number' label={t('calories.protein')} value={caloriesForm.protein} onChange={v => setCaloriesForm(s => ({ ...s, protein: v }))} placeholder='g/day' />
-            <Input type='number' label={t('calories.carbs')} value={caloriesForm.carbs} onChange={v => setCaloriesForm(s => ({ ...s, carbs: v }))} placeholder='g/day' />
-            <Input type='number' label={t('calories.fat')} value={caloriesForm.fat} onChange={v => setCaloriesForm(s => ({ ...s, fat: v }))} placeholder='g/day' />
-          </div>
-          <Select
-            label={t('calories.activity')}
-            options={[
-              { id: 'sedentary', label: t('calories.level.sedentary') },
-              { id: 'light', label: t('calories.level.light') },
-              { id: 'moderate', label: t('calories.level.moderate') },
-              { id: 'active', label: t('calories.level.active') },
-              { id: 'athlete', label: t('calories.level.athlete') },
-            ]}
-            value={caloriesForm.activity}
-            onChange={v => setCaloriesForm(s => ({ ...s, activity: v }))}
-          />
-          <Input label={t('calories.notes')} value={caloriesForm.notes} onChange={v => setCaloriesForm(s => ({ ...s, notes: v }))} placeholder={t('calories.notesPh')} />
-
-          <div className='flex justify-end gap-2'>
-            <Button color='neutral' name={t('common.back')} onClick={() => setStepIndex(steps.indexOf('meal'))} />
-            <Button color='primary' name={t('common.saveAndNext')} onClick={saveCalories} />
-          </div>
-        </div>
+        <CaloriesStep
+          userId={createdUser?.user?.id}
+          initialValues={{
+            caloriesTarget: createdUser?.user?.caloriesTarget,
+            proteinPerDay: createdUser?.user?.proteinPerDay,
+            carbsPerDay: createdUser?.user?.carbsPerDay,
+            fatsPerDay: createdUser?.user?.fatsPerDay,
+            activityLevel: createdUser?.user?.activityLevel,
+            notes: createdUser?.user?.notes,
+          }}
+          onBack={() => setStepIndex(steps.indexOf('meal'))}
+          onNext={() => setStepIndex(steps.indexOf('send'))}
+        />
       )}
 
       {/* Step: Send Credentials (+ Coach sends form) */}
@@ -881,11 +915,8 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
             </div>
           </div>
 
-          <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
-            <Input value={summaryPhone} onChange={setSummaryPhone} placeholder={t('placeholders.whatsapp')} />
-            <div className='sm:col-span-2 flex items-end justify-end gap-2'>
-              <Button color='green' className='!w-fit text-base' name={t('common.sendWhatsapp')} icon={<MessageCircle size={16} />} onClick={handleSendCreds} />
-            </div>
+          <div className='flex justify-end'>
+            <Button color='green' className='!w-fit text-base' name={t('common.sendWhatsapp')} icon={<MessageCircle size={16} />} onClick={handleSendCreds} />
           </div>
         </div>
       )}
@@ -938,6 +969,17 @@ export default function UsersList() {
     try {
       const params = { page, limit, sortBy, sortOrder };
       if (debounced) params.search = debounced;
+
+      if (roleFilter !== 'All') {
+        params.role = roleFilter.toLowerCase();
+      }
+
+      if (hasPlanFilter === 'With plan') {
+        params.hasPlan = true;
+      } else if (hasPlanFilter === 'No plan') {
+        params.hasPlan = false;
+      }
+
       const res = user.role == 'admin' ? await api.get('/auth/users', { params }) : await api.get(`/auth/coaches/${user.id}/clients`, { params });
       const data = res.data || {};
       const totalRecords = data?.total;
@@ -984,23 +1026,7 @@ export default function UsersList() {
 
   useEffect(() => {
     fetchUsers();
-  }, [page, sortBy, sortOrder, debounced]); // eslint-disable-line
-
-  const filtered = useMemo(() => rows.filter(r => (roleFilter === 'All' ? true : r.role === roleFilter)).filter(r => (hasPlanFilter === 'All' ? true : hasPlanFilter === 'With plan' ? !!r.activePlanId : !r.activePlanId)), [rows, roleFilter, hasPlanFilter]);
-
-  const setStatusApi = async (userId, statusLower) => {
-    try {
-      await api.put(`/auth/status/${userId}`, { status: statusLower });
-      fetchUsers();
-      fetchStats();
-      Notification(t('alerts.statusUpdated', { status: toTitle(statusLower) }), 'success');
-    } catch (e) {
-      Notification(e?.response?.data?.message || t('alerts.updateFailed'), 'error');
-    }
-  };
-
-  const approveUser = row => setStatusApi(row.id, 'active');
-  const suspendUser = row => setStatusApi(row.id, 'suspended');
+  }, [page, sortBy, sortOrder, debounced, roleFilter, hasPlanFilter]); // eslint-disable-line
 
   const deleteUser = async row => {
     if (!confirm(t('dialogs.deleteUserConfirm', { name: row.name }))) return;
@@ -1021,11 +1047,12 @@ export default function UsersList() {
     const canCoachManage = viewer === 'coach';
     const canManage = isAdmin || canCoachManage;
 
-    const opts = [{ icon: I(Eye, 'text-slate-600'), label: t('actions.openProfile'), onClick: () => (window.location.href = `/dashboard/users/${row.id}`), className: 'hover:text-slate-800' }];
+    const opts = [
+      { icon: I(Eye, 'text-slate-600'), label: t('actions.openProfile'), onClick: () => (window.location.href = `/dashboard/users/${row.id}`), className: 'hover:text-slate-800' },
+      ];
 
     if (canManage) {
       opts.push({ icon: I(Dumbbell, 'text-violet-600'), label: t('actions.assignWorkout'), onClick: () => setPickerWorkout({ open: true, user: row }), className: 'hover:text-violet-700' }, { icon: I(Utensils, 'text-amber-600'), label: t('actions.assignMeal'), onClick: () => setPickerMeal({ open: true, user: row }), className: 'hover:text-amber-700' });
-      const s = String(row.status || '').toLowerCase();
     }
 
     if (isAdmin) {
@@ -1039,20 +1066,21 @@ export default function UsersList() {
           },
           className: 'hover:text-indigo-700',
         },
-        {
-          icon: I(PhoneCall, 'text-green-600'),
-          label: t('actions.whatsapp'),
-          onClick: () => {
-            const phone = String(row.phone || '').replace(/[^0-9]/g, '');
-            if (!phone) return Notification(t('alerts.noPhone'), 'error');
-            window.open(`https://wa.me/${phone}`, '_blank');
-          },
-          className: 'hover:text-green-700',
-        },
-        { icon: I(MessageSquare, 'text-sky-600'), label: t('actions.directChat'), onClick: () => window.open(`/dashboard/chat?userId=${row.id}`, '_blank'), className: 'hover:text-sky-700' },
         { icon: I(Trash2, 'text-rose-600'), label: t('actions.delete'), onClick: () => deleteUser(row), className: 'text-rose-600 hover:text-rose-700' },
       );
     }
+		opts.push({
+        icon: I(PhoneCall, 'text-green-600'),
+        label: t('actions.whatsapp'),
+        onClick: () => {
+          const phone = String(row.phone || '').replace(/[^0-9]/g, '');
+          if (!phone) return Notification(t('alerts.noPhone'), 'error');
+          window.open(`https://wa.me/${phone}`, '_blank');
+        },
+        className: 'hover:text-green-700',
+      },
+      { icon: I(MessageSquare, 'text-sky-600'), label: t('actions.directChat'), onClick: () => window.open(`/dashboard/chat?userId=${row.id}`, '_blank'), className: 'hover:text-sky-700' },
+    )
     return opts;
   };
 
@@ -1171,7 +1199,7 @@ export default function UsersList() {
               <p className='text-white/85 mt-1'>{t('header.subtitle')}</p>
             </div>
 
-            {user?.role == 'admin' && (
+            {String(myRole || '').toLowerCase() === 'admin' && (
               <button onClick={() => setWizardOpen(true)} className=' w-fit group relative inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold text-white border border-white/20 bg-white/10 hover:bg-white/20 focus:outline-none focus:ring-4 focus:ring-white/30 transition-transform active:scale-[.98]'>
                 <Plus size={16} />
                 <span>{t('header.createNewUser')}</span>
@@ -1179,7 +1207,7 @@ export default function UsersList() {
             )}
           </div>
 
-          {user?.role == 'admin' && (
+          {String(myRole || '').toLowerCase() === 'admin' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }} className='mt-6 grid grid-cols-2 md:grid-cols-4 gap-3'>
               {/* Simple stat badges */}
               <StatCard icon={Users} title={t('stats.totalUsers')} value={stats.totalUsers} />
@@ -1211,22 +1239,14 @@ export default function UsersList() {
         </div>
 
         <Select
+          searchable={false}
+          clearable={false}
           className='!max-w-[180px] !w-full'
           placeholder={t('filters.role')}
           options={toSelectOptions(FILTER_ROLE_OPTIONS)}
           value={roleFilter}
           onChange={id => {
             setRoleFilter(id);
-            setPage(1);
-          }}
-        />
-        <Select
-          className='!max-w-[180px] !w-full'
-          placeholder={t('filters.plan')}
-          options={toSelectOptions(FILTER_PLAN_OPTIONS)}
-          value={hasPlanFilter}
-          onChange={id => {
-            setHasPlanFilter(id);
             setPage(1);
           }}
         />
@@ -1241,7 +1261,7 @@ export default function UsersList() {
       <div className='space-y-4'>
         {err && <div className='p-3 rounded-lg bg-red-50 text-red-700 border border-red-100'>{err}</div>}
         <div className='overflow-hidden rounded-lg border border-slate-200 bg-white'>
-          <DataTable columns={columns} data={filtered} loading={loading} itemsPerPage={limit} pagination selectable={false} serverPagination page={page} onPageChange={setPage} totalRows={total} />
+          <DataTable columns={columns} data={rows} loading={loading} itemsPerPage={limit} pagination selectable={false} serverPagination page={page} onPageChange={setPage} totalRows={total} />
         </div>
       </div>
 
@@ -1275,7 +1295,7 @@ export default function UsersList() {
         onClose={() => setPickerWorkout({ open: false, user: null })}
         title={`${t('pickers.assignWorkout')}${pickerWorkout.user ? ` • ${pickerWorkout.user.name}` : ''}`}
         icon={Dumbbell}
-        fetchUrl={user?.role == 'admin' ? '/plans' : `/plans?user_id=${user.adminId}`}
+        fetchUrl={user?.role == 'admin' ? '/plans' : `/plans?user_id=${user?.adminId}`}
         assignUrl='/plans/assign'
         userId={pickerWorkout.user?.id}
         onAssigned={() => {
@@ -1289,7 +1309,7 @@ export default function UsersList() {
         onClose={() => setPickerMeal({ open: false, user: null })}
         title={`${t('pickers.assignMeal')}${pickerMeal.user ? ` • ${pickerMeal.user.name}` : ''}`}
         icon={Utensils}
-        fetchUrl={user?.role == 'admin' ? '/nutrition/meal-plans' : `/nutrition/meal-plans?user_id=${user.adminId}`}
+        fetchUrl={user?.role == 'admin' ? '/nutrition/meal-plans' : `/nutrition/meal-plans?user_id=${user?.adminId}`}
         assignUrl='/nutrition/meal-plans/assign'
         userId={pickerMeal.user?.id}
         onAssigned={() => {

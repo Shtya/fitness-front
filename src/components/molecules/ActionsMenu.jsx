@@ -5,13 +5,7 @@ import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import { MoreHorizontal } from 'lucide-react';
 
-/**
- * Reusable actions menu (3-dots) rendered via portal to avoid clipping.
- * Props:
- *  - options: [{ icon, label, onClick, danger, disabled, hide }]
- *  - align: "right" | "left" (default "right")
- *  - buttonClassName: optional class for the trigger button
- */
+ 
 export default function ActionsMenu({ options = [], align = 'right', buttonClassName = '', ariaLabel = 'Row actions', onOpenChange }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
@@ -41,7 +35,7 @@ export default function ActionsMenu({ options = [], align = 'right', buttonClass
     let left = align === 'right' ? rect.right + scrollX - menuW : rect.left + scrollX;
 
     // Clamp horizontally to viewport padding
-    left = Math.max(scrollX + 8, Math.min(left, scrollX + vw - 8 - menuW));
+    left = Math.max(scrollX + 70, Math.min(left, scrollX + vw - 70 - menuW));
 
     // Vertical: try below, flip above if not enough space
     const roomBelow = vh - rect.bottom;

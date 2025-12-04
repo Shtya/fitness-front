@@ -7,7 +7,7 @@ import * as yup from 'yup';
 
 import { Loader2, UploadCloud, Wand2, Sparkles, X } from 'lucide-react';
 import Select from '@/components/atoms/Select';
-import { baseImg } from '@/utils/axios';
+import api, { baseImg } from '@/utils/axios';
 import { useTranslations } from 'next-intl';
 import { useUser } from '@/hooks/useUser';
 import { Notification } from '@/config/Notification';
@@ -205,10 +205,10 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
       category: initial?.category || '',
       primaryMusclesWorked: parseArrayMaybe(initial?.primaryMusclesWorked),
       secondaryMusclesWorked: parseArrayMaybe(initial?.secondaryMusclesWorked),
-      targetReps: safeStr(initial?.targetReps ||  10) ,
+      targetReps: safeStr(initial?.targetReps || 10),
       targetSets: initial?.targetSets === 0 ? 0 : initial?.targetSets ?? 3,
       rest: initial?.rest === 0 ? 0 : initial?.rest ?? 90,
-      tempo: safeStr(initial?.tempo || "1/1/1"),
+      tempo: safeStr(initial?.tempo || '1/1/1'),
       imgUrl: initial?.img || '',
       videoUrl: initial?.video || '',
       hasImgFile: false,
@@ -227,7 +227,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
       targetReps: safeStr(initial?.targetReps || 10),
       targetSets: initial?.targetSets === 0 ? 0 : initial?.targetSets ?? 3,
       rest: initial?.rest === 0 ? 0 : initial?.rest ?? 90,
-      tempo: safeStr(initial?.tempo || "1/1/1"),
+      tempo: safeStr(initial?.tempo || '1/1/1'),
       imgUrl: initial?.img || '',
       videoUrl: initial?.video || '',
       hasImgFile: false,
@@ -236,6 +236,14 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
     setImgFile(null);
     setVideoFile(null);
   }, [initial, reset]);
+
+  const [setting, setSetting] = useState();
+
+  useEffect(() => {
+    api.get(user?.role == 'admin' ? `/settings` : `/settings?user_id=${user?.adminId}`).then(res => {
+      setSetting(res.data);
+    });
+  }, []);
 
   useEffect(() => {
     if (!initial) return;
@@ -251,7 +259,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
 
   // ---------- AI ----------
   async function suggestFromAI(exName) {
-    const API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+    const API_KEY = setting?.aiSecretKey;
     if (!API_KEY || !exName || exName.trim().length < 2) return null;
     if (inFlight.current) inFlight.current.abort();
     const ctrl = new AbortController();
@@ -297,10 +305,13 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
     if (!exName || exName.trim().length < 2) return;
     const s = await suggestFromAI(exName);
     if (!s) return;
-
-    const vals = getValues();
+    const vals = s;
+		console.log(vals);
     if (isEmptyish(vals.details) && typeof s.details === 'string') setValue('details', s.details.slice(0, 1200), { shouldValidate: true });
-    if (isEmptyish(vals.category) && typeof s.category === 'string') setValue('category', s.category, { shouldValidate: true });
+
+    if (isEmptyish(vals.category)) {
+      setValue('category', s.category, { shouldValidate: true });
+    }
     if (isEmptyish(vals.primaryMusclesWorked) && Array.isArray(s.primary)) setValue('primaryMusclesWorked', s.primary.filter(Boolean).slice(0, 20), { shouldValidate: true });
     if (isEmptyish(vals.secondaryMusclesWorked) && Array.isArray(s.secondary)) setValue('secondaryMusclesWorked', s.secondary.filter(Boolean).slice(0, 20), { shouldValidate: true });
     if (isEmptyish(vals.targetReps) && typeof s.targetReps === 'string') setValue('targetReps', safeStr(s.targetReps), { shouldValidate: true });
@@ -327,7 +338,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
       videoUrl: videoFile ? undefined : values.videoUrl || '',
       imgFile: imgFile || undefined,
       videoFile: videoFile || undefined,
-      userId: user?.id,
+      userId: user?.role == 'admin' ? user?.id : user?.adminId,
     };
     await onSubmit?.(payload);
   });
@@ -355,7 +366,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
                 onChange={field.onChange}
                 placeholder={t('placeholders.name')}
                 rightSlot={
-                  showAiButton ? (
+                  showAiButton && setting?.aiSecretKey ? (
                     <button type='button' onClick={applyAISuggestions} className='mr-1 inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-400/50'>
                       <Wand2 className='h-3.5 w-3.5' />
                       {t('actions.getAi')}
@@ -372,53 +383,53 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
           control={control}
           render={({ field, fieldState }) => (
             <Field label={t('labels.category')} required error={fieldState.error?.message}>
-              <Select className='!w-full' placeholder={t('placeholders.category')} options={categoryOptions} value={field.value} onChange={val => field.onChange(val)} allowCustom={true} createHint={t('hints.createCategory')} />
+              <Select searchable={false} clearable={false} className='!w-full' placeholder={t('placeholders.category')} options={categoryOptions} value={field.value} onChange={val => field.onChange(val)} allowCustom={true} createHint={t('hints.createCategory')} />
             </Field>
           )}
         />
 
-          <div className=' max-md:space-y-3 md:grid grid-cols-2 gap-2' >
-            <Controller
-              name='targetReps'
-              control={control}
-              render={({ field, fieldState }) => (
-                <Field label={t('labels.targetReps')} error={fieldState.error?.message}>
-                  <TextInput name='targetReps' value={field.value} onChange={field.onChange} placeholder={t('placeholders.reps')} />
-                </Field>
-              )}
-            />
+        <div className=' max-md:space-y-3 md:grid grid-cols-2 gap-2'>
+          <Controller
+            name='targetReps'
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field label={t('labels.targetReps')} error={fieldState.error?.message}>
+                <TextInput name='targetReps' value={field.value} onChange={field.onChange} placeholder={t('placeholders.reps')} />
+              </Field>
+            )}
+          />
 
-            <Controller
-              name='targetSets'
-              control={control}
-              render={({ field, fieldState }) => (
-                <Field label={t('labels.targetSets')} error={fieldState.error?.message}>
-                  <NumberInput name='targetSets' value={field.value} onChange={field.onChange} min={0} step={1} placeholder={t('placeholders.sets')} />
-                </Field>
-              )}
-            />
-          </div>  
-          <div className=' max-md:space-y-3 md:grid grid-cols-2 gap-2' >
-            <Controller
-              name='rest'
-              control={control}
-              render={({ field, fieldState }) => (
-                <Field label={t('labels.rest')} error={fieldState.error?.message}>
-                  <NumberInput name='rest' value={field.value} onChange={field.onChange} min={0} step={5} placeholder={t('placeholders.rest')} />
-                </Field>
-              )}
-            />
+          <Controller
+            name='targetSets'
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field label={t('labels.targetSets')} error={fieldState.error?.message}>
+                <NumberInput name='targetSets' value={field.value} onChange={field.onChange} min={0} step={1} placeholder={t('placeholders.sets')} />
+              </Field>
+            )}
+          />
+        </div>
+        <div className=' max-md:space-y-3 md:grid grid-cols-2 gap-2'>
+          <Controller
+            name='rest'
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field label={t('labels.rest')} error={fieldState.error?.message}>
+                <NumberInput name='rest' value={field.value} onChange={field.onChange} min={0} step={5} placeholder={t('placeholders.rest')} />
+              </Field>
+            )}
+          />
 
-            <Controller
-              name='tempo'
-              control={control}
-              render={({ field, fieldState }) => (
-                <Field label={t('labels.tempo')}  error={fieldState.error?.message}>
-                  <TextInput name='tempo' value={safeStr(field.value)} onChange={field.onChange} placeholder={t('placeholders.tempo')} />
-                </Field>
-              )}
-            />
-          </div> 
+          <Controller
+            name='tempo'
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field label={t('labels.tempo')} error={fieldState.error?.message}>
+                <TextInput name='tempo' value={safeStr(field.value)} onChange={field.onChange} placeholder={t('placeholders.tempo')} />
+              </Field>
+            )}
+          />
+        </div>
 
         <Controller
           name='details'
@@ -543,10 +554,12 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
       </div>
 
       <div className='flex items-center justify-end gap-2 pt-2'>
-        <PrimaryButton type='button' onClick={applyAISuggestions} loading={aiLoading} disabled={!nameVal || nameVal.trim().length < 2}>
-          <Sparkles className='mr-1.5 h-4 w-4' />
-          {t('actions.fillWithAi')}
-        </PrimaryButton>
+        {setting?.aiSecretKey && (
+          <PrimaryButton type='button' onClick={applyAISuggestions} loading={aiLoading} disabled={!nameVal || nameVal.trim().length < 2}>
+            <Sparkles className='mr-1.5 h-4 w-4' />
+            {t('actions.fillWithAi')}
+          </PrimaryButton>
+        )}
 
         <PrimaryButton type='submit' loading={isSubmitting}>
           {t('actions.save')}

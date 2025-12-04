@@ -38,190 +38,189 @@
     }
   },
   "myProfile": {
-  "tabs": {
-    "overview": "Overview",
-    "body": "Measurements",
-    "photos": "Progress Photos"
-  },
-
-  "errors": {
-    "loadProfile": "An error occurred while loading the profile data."
-  },
-
-  "stats": {
-    "workoutPlan": "Workout Plan",
-    "mealPlan": "Meal Plan",
-    "latestWeight": "Latest Weight",
-    "caloriesToday": "Calories Today",
-    "photos": "Total Photos",
-    "measurements": "Total Measurements"
-  },
-
-  "sections": {
-    "weightTrend": "Weight Trend",
-    "compare": "Before / After Comparison",
-    "measurements": "Measurement Log",
-    "uploadBodyPhotos": "Upload Body Photos",
-    "timeline": "Photo Timeline"
-  },
-
-  "labels": {
-    "deltaKg": "Weight Change (kg)",
-    "direction": "Weight Progress Direction",
-    "start": "Start",
-    "end": "End",
-    "side": "Side",
-    "before": "Before",
-    "after": "After",
-    "beforeAfter": "Before & After",
-    "tapToUpload": "Tap to Upload",
-    "average": "Average"
-  },
-
-  "messages": {
-    "noMeasurements": "No measurements recorded yet.",
-    "chooseTwoSets": "Choose two photo sets to compare, then select the angle.",
-    "noTimeline": "No photos in the timeline yet.",
-    "useCompareBlock": "Use the comparison block to select before/after photos to display here.",
-    "deletePhotoConfirm": "Are you sure you want to delete this photo set? This action cannot be undone.",
-    "deleteMeasurementConfirm": "Are you sure you want to delete this measurement?",
-    "pickImageFirst": "Please choose an image first to begin cropping.",
-    "noMeasurementsHint": "Start adding your weight measurements in the Progress page to track changes over time.",
-    "compareHint": "Choose two photos to clearly see the difference."
-  },
-
-  "actions": {
-    "edit": "Edit",
-    "editProfile": "Edit Profile",
-    "preview": "Preview",
-    "previewAll": "Preview All Angles",
-    "save": "Save",
-    "saving": "Saving...",
-    "reset": "Reset",
-    "clear": "Clear",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "apply": "Apply",
-    "zoom": "Zoom",
-    "saveSet": "Save Photo Set",
-    "addBodyPhotos": "Add Body Photos",
-    "hideUpload": "Hide Upload Form"
-  },
-
-  "tips": {
-    "subtitle": "Tips for Taking Clear Progress Photos",
-    "cta": "Tips for Better Photos",
-    "title": "Tips for Taking Clear Progress Photos",
-    "lighting": "Take the photo in strong, consistent lighting (natural light is best).",
-    "distance": "Keep the same distance between you and the camera every time.",
-    "angles": "Capture front, back, and both side angles in the same stance.",
-    "cameraHeight": "Set the camera around mid-body height for a consistent perspective.",
-    "timer": "Use the phone’s timer to stabilize the camera and pose comfortably.",
-    "clothes": "Wear similar, comfortable clothing each time to make changes more visible.",
-    "background": "Choose a simple, uncluttered background.",
-    "frequency": "Take progress photos every week or two for better comparisons."
-  },
-
-  "modals": {
-    "addBodySet": "Add Body Photo Set",
-    "preview": "Photo Preview",
-    "confirmDelete": "Confirm Deletion",
-    "cropTitle": "Crop Photo",
-    "editProfileTitle": "Edit Account Details"
-  },
-
-  "sides": {
-    "all": "All Angles",
-    "front": "Front",
-    "back": "Back",
-    "left": "Left Side",
-    "right": "Right Side"
-  },
-
-  "forms": {
-    "addMeasurement": "Add New Measurement",
-    "date": "Date",
-    "weightKg": "Weight (kg)",
-    "waistCm": "Waist (cm)",
-    "chestCm": "Chest (cm)",
-    "weightOptional": "Weight (optional)",
-    "noteOptional": "Note (optional)"
-  },
-
-  "table": {
-    "date": "Date",
-    "weight": "Weight",
-    "waist": "Waist",
-    "chest": "Chest",
-    "actions": "Actions"
-  },
-
-  "placeholders": {
-    "choose": "Choose..."
-  },
-
-  "profile": {
-    "name": "Name",
-    "genderMale": "Male",
-    "genderFemale": "Female",
-    "genderOther": "Other",
-    "membership": "Membership Type",
-
-    "defaultRestSeconds": "Default Rest Seconds",
-    "caloriesTarget": "Calorie Target",
-    "proteinPerDay": "Protein Per Day (g)",
-    "carbsPerDay": "Carbs Per Day (g)",
-    "fatsPerDay": "Fats Per Day (g)",
-
-    "activity": {
-      "sedentary": "Sedentary / Desk Lifestyle",
-      "light": "Light Activity + 1–3 workouts weekly",
-      "moderate": "Moderate Activity + 3–5 workouts weekly",
-      "high": "High Activity + 6–7 workouts weekly",
-      "athlete": "Intense Activity / Athlete"
+    "tabs": {
+      "overview": "Overview",
+      "body": "Measurements",
+      "photos": "Progress Photos"
     },
 
-    "notes": "User Notes",
-    "perDayLabel": "Per Day",
-    "gramsPerDay": "g / day",
-    "planActiveLabel": "Active Plan",
-    "subscriptionOverview": "Subscription Overview",
-    "coachLabel": "Personal Coach",
-    "noCoach": "No coach assigned yet",
-    "phone": "Phone Number",
+    "errors": {
+      "loadProfile": "An error occurred while loading the profile data."
+    },
 
-    "membershipTitle": "Membership Type",
-    "noPlan": "No Plan",
+    "stats": {
+      "workoutPlan": "Workout Plan",
+      "mealPlan": "Meal Plan",
+      "latestWeight": "Latest Weight",
+      "caloriesToday": "Calories Today",
+      "photos": "Total Photos",
+      "measurements": "Total Measurements"
+    },
 
-    "gender": "Gender",
-    "notSet": "Not Set",
+    "sections": {
+      "weightTrend": "Weight Trend",
+      "compare": "Before / After Comparison",
+      "measurements": "Measurement Log",
+      "uploadBodyPhotos": "Upload Body Photos",
+      "timeline": "Photo Timeline"
+    },
 
-    "activityLevel": "Activity Level",
-    "activityNotSet": "Activity level not set",
+    "labels": {
+      "deltaKg": "Weight Change (kg)",
+      "direction": "Weight Progress Direction",
+      "start": "Start",
+      "end": "End",
+      "side": "Side",
+      "before": "Before",
+      "after": "After",
+      "beforeAfter": "Before & After",
+      "tapToUpload": "Tap to Upload",
+      "average": "Average"
+    },
 
-    "subscriptionPeriod": "Subscription Period",
-    "noEndDate": "No end date",
-    "expired": "Expired",
-    "daysLeft": "{count} days left",
-    "start": "Start Date",
-    "end": "End Date",
+    "messages": {
+      "noMeasurements": "No measurements recorded yet.",
+      "chooseTwoSets": "Choose two photo sets to compare, then select the angle.",
+      "noTimeline": "No photos in the timeline yet.",
+      "useCompareBlock": "Use the comparison block to select before/after photos to display here.",
+      "deletePhotoConfirm": "Are you sure you want to delete this photo set? This action cannot be undone.",
+      "deleteMeasurementConfirm": "Are you sure you want to delete this measurement?",
+      "pickImageFirst": "Please choose an image first to begin cropping.",
+      "noMeasurementsHint": "Start adding your weight measurements in the Progress page to track changes over time.",
+      "compareHint": "Choose two photos to clearly see the difference."
+    },
 
-    "activePlans": "Active Plans",
-    "exercisePlan": "Current Workout Plan",
-    "noExercisePlan": "No active workout plan",
-    "mealPlan": "Current Meal Plan",
-    "noMealPlan": "No active meal plan",
+    "actions": {
+      "edit": "Edit",
+      "editProfile": "Edit Profile",
+      "preview": "Preview",
+      "previewAll": "Preview All Angles",
+      "save": "Save",
+      "saving": "Saving...",
+      "reset": "Reset",
+      "clear": "Clear",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "apply": "Apply",
+      "zoom": "Zoom",
+      "saveSet": "Save Photo Set",
+      "addBodyPhotos": "Add Body Photos",
+      "hideUpload": "Hide Upload Form"
+    },
 
-    "nutritionTargets": "Calorie & Macro Targets",
-    "calories": "Calories",
-    "protein": "Protein",
-    "carbs": "Carbs",
-    "fats": "Fats"
-  }
-}
- ,
+    "tips": {
+      "subtitle": "Tips for Taking Clear Progress Photos",
+      "cta": "Tips for Better Photos",
+      "title": "Tips for Taking Clear Progress Photos",
+      "lighting": "Take the photo in strong, consistent lighting (natural light is best).",
+      "distance": "Keep the same distance between you and the camera every time.",
+      "angles": "Capture front, back, and both side angles in the same stance.",
+      "cameraHeight": "Set the camera around mid-body height for a consistent perspective.",
+      "timer": "Use the phone’s timer to stabilize the camera and pose comfortably.",
+      "clothes": "Wear similar, comfortable clothing each time to make changes more visible.",
+      "background": "Choose a simple, uncluttered background.",
+      "frequency": "Take progress photos every week or two for better comparisons."
+    },
+
+    "modals": {
+      "addBodySet": "Add Body Photo Set",
+      "preview": "Photo Preview",
+      "confirmDelete": "Confirm Deletion",
+      "cropTitle": "Crop Photo",
+      "editProfileTitle": "Edit Account Details"
+    },
+
+    "sides": {
+      "all": "All Angles",
+      "front": "Front",
+      "back": "Back",
+      "left": "Left Side",
+      "right": "Right Side"
+    },
+
+    "forms": {
+      "addMeasurement": "Add New Measurement",
+      "date": "Date",
+      "weightKg": "Weight (kg)",
+      "waistCm": "Waist (cm)",
+      "chestCm": "Chest (cm)",
+      "weightOptional": "Weight (optional)",
+      "noteOptional": "Note (optional)"
+    },
+
+    "table": {
+      "date": "Date",
+      "weight": "Weight",
+      "waist": "Waist",
+      "chest": "Chest",
+      "actions": "Actions"
+    },
+
+    "placeholders": {
+      "choose": "Choose..."
+    },
+
+    "profile": {
+      "name": "Name",
+      "genderMale": "Male",
+      "genderFemale": "Female",
+      "genderOther": "Other",
+      "membership": "Membership Type",
+
+      "defaultRestSeconds": "Default Rest Seconds",
+      "caloriesTarget": "Calorie Target",
+      "proteinPerDay": "Protein Per Day (g)",
+      "carbsPerDay": "Carbs Per Day (g)",
+      "fatsPerDay": "Fats Per Day (g)",
+
+      "activity": {
+        "sedentary": "Sedentary / Desk Lifestyle",
+        "light": "Light Activity + 1–3 workouts weekly",
+        "moderate": "Moderate Activity + 3–5 workouts weekly",
+        "high": "High Activity + 6–7 workouts weekly",
+        "athlete": "Intense Activity / Athlete"
+      },
+
+      "notes": "User Notes",
+      "perDayLabel": "Per Day",
+      "gramsPerDay": "g / day",
+      "planActiveLabel": "Active Plan",
+      "subscriptionOverview": "Subscription Overview",
+      "coachLabel": "Personal Coach",
+      "noCoach": "No coach assigned yet",
+      "phone": "Phone Number",
+
+      "membershipTitle": "Membership Type",
+      "noPlan": "No Plan",
+
+      "gender": "Gender",
+      "notSet": "Not Set",
+
+      "activityLevel": "Activity Level",
+      "activityNotSet": "Activity level not set",
+
+      "subscriptionPeriod": "Subscription Period",
+      "noEndDate": "No end date",
+      "expired": "Expired",
+      "daysLeft": "{count} days left",
+      "start": "Start Date",
+      "end": "End Date",
+
+      "activePlans": "Active Plans",
+      "exercisePlan": "Current Workout Plan",
+      "noExercisePlan": "No active workout plan",
+      "mealPlan": "Current Meal Plan",
+      "noMealPlan": "No active meal plan",
+
+      "nutritionTargets": "Calorie & Macro Targets",
+      "calories": "Calories",
+      "protein": "Protein",
+      "carbs": "Carbs",
+      "fats": "Fats"
+    }
+  },
   "nav": {
-		"reload-page" : "Reload Page",
+    "reload-page": "Reload Page",
     "brand": {
       "portalTitle": "Dashboard Access",
       "superAdminPortal": "Super Admin Portal",
@@ -795,7 +794,7 @@
       "coach": "Choose coach",
       "role": "Choose role",
       "status": "Choose status",
-      "search": "Search by name, email, or phone...",
+      "search": "Search by name, email",
       "whatsapp": "e.g., 9665XXXXXXXX"
     },
     "wizard": {
@@ -824,6 +823,7 @@
       },
       "notes": "Notes",
       "notesPh": "Additional details or dietary preferences..."
+      
     },
     "forms": {
       "title": "Coach Form",
@@ -1009,7 +1009,7 @@
       "email": "example@domain.com",
       "phone": "+20 1X XXX XXXX",
       "status": "Choose status",
-      "search": "Search by name, email, or phone..."
+      "search": "Search by name, email"
     },
     "status": {
       "active": "Active",

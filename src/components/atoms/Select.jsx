@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, X, Check, Search, Plus, Save, CircleX } from 'lucide-react';
+import { ChevronDown, X, Check, Search, Plus, Save, CircleX, CheckCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-export default function Select({ options = [], value = null, onChange = () => {}, placeholder, searchable = true, disabled = false, clearable = true, className = '', label, cnInputParent, allowCustom = false, createHint = 'Write a new category…' }) {
+export default function Select({cnLabel , options = [], value = null, onChange = () => {}, placeholder, searchable = true, disabled = false, clearable = true, className = '', label, cnInputParent, allowCustom = false, createHint = 'Write a new category…' }) {
   const t = useTranslations();
 
   const [open, setOpen] = useState(false);
@@ -260,7 +260,7 @@ export default function Select({ options = [], value = null, onChange = () => {}
 
   return (
     <div ref={rootRef} className={`relative ${className}`}>
-      {label && <label className='mb-1.5 block text-sm font-medium text-slate-700'>{label}</label>}
+      {label && <label className={`${cnLabel} mb-1.5 block text-sm font-medium text-slate-700`}>{label}</label>}
 
       <button type='button' ref={buttonRef} onClick={() => (open ? closeMenu() : openMenu())} onKeyDown={onKeyDown} disabled={disabled} className={[cnInputParent, 'h-[43px] group relative w-full inline-flex items-center justify-between gap-2', 'rounded-lg border bg-white px-2 py-2.5 text-sm', disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer', 'transition-colors', 'border-slate-300 hover:border-slate-400 focus:border-indigo-500', 'focus:outline-none focus:ring-4 focus:ring-indigo-100'].join(' ')} aria-haspopup='listbox' aria-expanded={open}>
         <span className={`truncate text-left ${selectedOption || (typeof value === 'string' && value.trim()) ? 'text-slate-900' : 'text-gray-500'}`}>{buttonLabel}</span>
@@ -325,7 +325,7 @@ export default function Select({ options = [], value = null, onChange = () => {}
                       }}
                     />
                     <button type='button' onClick={() => createFromText(createText)} className='inline-flex items-center gap-1 rounded-lg px-3 text-sm border border-slate-300 hover:border-slate-400 h-9'>
-                      <Save className='w-4 h-4' /> Save
+                      <CheckCheck className='w-4 h-4' /> 
                     </button>
                     <button
                       type='button'
@@ -334,7 +334,7 @@ export default function Select({ options = [], value = null, onChange = () => {}
                         setCreateText('');
                       }}
                       className='inline-flex items-center gap-1 rounded-lg px-3 text-sm border border-slate-300 hover:border-slate-400 h-9'>
-                      <CircleX className='w-4 h-4' /> Cancel
+                      <X className='w-4 h-4' /> 
                     </button>
                   </div>
                 </div>

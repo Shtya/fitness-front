@@ -428,7 +428,7 @@ export function Notifications({ open, onClose, toggleNotif, notifOpen }) {
 }
 
 /* -------------------------------- Header --------------------------------- */
-export default function Header({ onMenu, onProfile = () => { }, onSettings = () => { } }) {
+export default function Header({ onMenu,  onSettings = () => { } }) {
 	const t = useTranslations('header');
 	const user = useUser?.();
 	const router = useRouter();
@@ -497,9 +497,9 @@ export default function Header({ onMenu, onProfile = () => { }, onSettings = () 
 							{/* <Notifications toggleNotif={toggleNotif} notifOpen={notifOpen} open={notifOpen} onClose={() => setNotifOpen(false)} /> */}
 
 							<div className='flex items-center gap-1'>
-								<button onClick={onProfile} className='inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 active:scale-95 transition' aria-label={t('actions.profile')} title={t('actions.profile')}>
+								{/* <button onClick={onProfile} className='inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 active:scale-95 transition' aria-label={t('actions.profile')} title={t('actions.profile')}>
 									<UserRound className='size-5 text-slate-700' />
-								</button>
+								</button> */}
 								{/* <button onClick={onSettings} className=' inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 active:scale-95 transition' aria-label={t('actions.settings')} title={t('actions.settings')}>
                   <Settings className='size-5 text-slate-700' />
                 </button> */}
