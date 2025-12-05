@@ -41,7 +41,7 @@ function useQueryState(initial = { page: 1, limit: 20, search: '' }) {
  * - enabled: boolean (don’t call if false)
  * ----------------------------------------------------------- */
 function useListFetcher(urlBuilder, initialQuery = {}, enabled = true) {
-  const { page, limit, search, setPage, setLimit, setSearch } = useQueryState(initialQuery);
+  const { coachId ,  page, limit, search, setPage, setLimit, setSearch } = useQueryState(initialQuery);
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -61,8 +61,8 @@ function useListFetcher(urlBuilder, initialQuery = {}, enabled = true) {
       abortRef.current = controller;
 
       try {
-        const url = urlBuilder({ page, limit, search, ...(opts || {}) });
-        const data = await CRUD.get(url, { page, limit, search });
+        const url = urlBuilder({ coachId ,page, limit, search, ...(opts || {}) });
+        const data = await CRUD.get(url, { coachId ,page, limit, search });
         setItems(data.items || data.users || []); // tolerate different payloads
         setTotal(Number(data.total || 0));
         setTotalPages(Number(data.totalPages || 0));
@@ -75,7 +75,7 @@ function useListFetcher(urlBuilder, initialQuery = {}, enabled = true) {
         setLoading(false);
       }
     },
-    [enabled, page, limit, search, urlBuilder],
+    [enabled, page ,  coachId , limit, search, urlBuilder],
   );
 
   // refetch on query change
@@ -93,6 +93,7 @@ function useListFetcher(urlBuilder, initialQuery = {}, enabled = true) {
     items,
     total,
     page,
+		coachId,
     totalPages,
     loading,
     error,
@@ -117,18 +118,12 @@ export function useAdminCoaches(adminId, initial = { page: 1, limit: 20, search:
  * Hook: Clients under an Admin
  * GET /auth/admin/:adminId/clients?page=&limit=&search=
  * ----------------------------------------------------------- */
-export function useAdminClients(adminId, initial = { page: 1, limit: 20, search: '' }) {
+export function useAdminClients(adminId, initial = {  page: 1, limit: 20, search: '' }) {
   const enabled = Boolean(adminId);
   const urlBuilder = useCallback(() => `/auth/admin/${adminId}/clients`, [adminId]);
   return useListFetcher(urlBuilder, initial, enabled);
 }
-
-/* -------------------------------------------------------------
- * Hook: Clients under a Coach
- * GET /auth/coach/:coachId/clients?page=&limit=&search=
- * - If you pass null/undefined for coachId and current user is COACH,
- *   it will try to use the logged-in user's id from localStorage.
- * ----------------------------------------------------------- */
+ 
 export function useCoachClients(coachIdOrNull, initial = { page: 1, limit: 20, search: '' }) {
   // Resolve coachId from localStorage if not provided and current user is a coach
   const resolvedCoachId = useMemo(() => {

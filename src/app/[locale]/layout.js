@@ -66,7 +66,7 @@ export const metadata = {
     type: 'website',
   },
 
-   icons: {
+  icons: {
     icon: [{ url: '/favicon.ico' }],
     shortcut: ['/logo.png'],
     apple: [{ url: '/logo.png', sizes: '180x180', type: 'image/png' }],
@@ -93,7 +93,7 @@ export const metadata = {
     'msapplication-config': '/browserconfig.xml',
     'theme-color': '#7C3AED',
 
-		google: 'notranslate',
+    google: 'notranslate',
   },
 
   // Robots.txt instructions
@@ -120,7 +120,7 @@ export default async function RootLayout({ children, params }) {
   if (!hasLocale(routing.locales, locale)) notFound();
 
   return (
-    <html translate="no" lang={locale} dir={locale == 'en' ? 'ltr' : 'rtl'} suppressHydrationWarning>
+    <html translate='no' lang={locale} dir={locale == 'en' ? 'ltr' : 'rtl'} suppressHydrationWarning>
       <body className={`bg-[#fff] scroll ${arabicFont.variable} ${openSans.variable} ${spaceGrotesk.variable} ${robotoMono.variable} ${inter.variable}`}>
         <NextIntlClientProvider locale={locale}>
           <Layout>

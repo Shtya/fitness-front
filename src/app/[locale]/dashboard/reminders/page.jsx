@@ -1,118 +1,3 @@
-/* 
-	- i have a problem when i add reminder in some day not today  the client not aware with this 
-	- add tab for the setting have the date is optional and the sound 
-	- and this next not correct check form it ( التالي: Nov 16, 2025, 9:00 PM )
-	- and also those ( كل 2 ساعة (من )) not write correct what this ref nto understand 
-
-	- and show the timeline with pretty why untill this 
-	- and make the note as text if he need add note under the input of the عنوان التذكير and when click on it appear teh input to write note 
-	- and add more ( قوالب جاهزة سريعة ) to can use it 
-
-	- and add tabsPill use it to show the days can switch between them to show the reimnder in every day and put the active on today ( 
-	export function TabsPill({ outerCn , isLoading , sliceInPhone = true, hiddenArrow = false,  tabs = [], active, onChange, className = '', id = 'ui-tabs-pill', skeletonCount = 5 }) {
-  const scrollerRef = useRef(null);
-  const tabRefs = useRef({}); // { [key]: HTMLElement }
-
-
-  const activeIndex = useMemo(
-    () =>
-      Math.max(
-        0,
-        tabs.findIndex(t => t.key === active),
-      ),
-    [tabs, active],
-  );
-
-  const hasPrev = !isLoading && activeIndex > 0;
-  const hasNext = !isLoading && activeIndex < tabs.length - 1;
-
-  const goPrev = () => {
-    if (!hasPrev) return;
-    const prevKey = tabs[activeIndex - 1]?.key;
-    if (prevKey) onChange(prevKey);
-  };
-
-  const goNext = () => {
-    if (!hasNext) return;
-    const nextKey = tabs[activeIndex + 1]?.key;
-    if (nextKey) onChange(nextKey);
-  };
-
-  // keep active pill in view
-  useEffect(() => {
-    if (isLoading) return;
-    const el = tabRefs.current[active];
-    if (el && typeof el.scrollIntoView === 'function') {
-      el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-    }
-  }, [active, isLoading]);
-
-  // keyboard support on container: ← →
-  useEffect(() => {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
-    const onKey = e => {
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        goPrev();
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        goNext();
-      }
-    };
-    scroller.addEventListener('keydown', onKey);
-    return () => scroller.removeEventListener('keydown', onKey);
-  }, [goPrev, goNext, activeIndex, tabs]);
-
-  return (
-     <div className={`${outerCn} w-full overflow-x-auto pb-1 overflow-y-hidden`}>
-      <InjectShimmer />
-      <div className='w-fit flex items-center gap-2'>
-        {!hiddenArrow && (
-          <button type='button' onClick={goPrev} aria-label='Previous tab' disabled={!hasPrev} className={[' max-md:!hidden inline-flex items-center justify-center h-[40px] w-[30px] rounded-lg border transition', 'bg-white/90 border-slate-200', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', !hasPrev ? 'opacity-40 cursor-not-allowed' : ''].join(' ')}>
-            <ChevronLeft className=' rtl:scale-x-[-1] w-5 h-5 text-slate-700' />
-          </button>
-        )}
-
-        <div ref={scrollerRef} tabIndex={0} className='w-fit outline-none'>
-          <LayoutGroup id={id}>
-            <div className={[className, 'inline-flex p-1 rounded-lg border border-slate-200 overflow-hidden', 'bg-slate-100/80 ring-1 ring-black/5', isLoading ? 'gap-1.5 bg-slate-100/40 '  : ''].join(' ')}>
-              {isLoading
-                ? Array.from({ length: skeletonCount }).map((_, i) => {
-                    const widths = [64, 84, 72, 92, 68, 88, 76];
-                    const w = widths[i % widths.length];
-                    return <div key={`tabs-skel-${i}`} className='h-8 rounded-lg tabs-skeleton' style={{ width: w }} aria-hidden='true' />;
-                  })
-                : tabs.map(t => {
-                    const isActive = active === t.key;
-                    return (
-                      <motion.button key={t.key} type='button' ref={el => (tabRefs.current[t.key] = el)} onClick={() => onChange(t.key)} className='relative cursor-pointer select-none rounded-lg max-md:!rounded-[10px_10px_0_0] px-3 py-1.5 text-sm font-medium outline-none' whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} transition={{ type: 'spring', stiffness: 350, damping: 30 }}>
-                        {isActive && <motion.span layoutId='tabs-pill' className='absolute inset-0 after:!rounded-lg !rounded-lg bg-second shadow-lg' transition={{ type: 'spring', stiffness: 350, damping: 30 }} />}
-                        <span className={`relative z-10 text-nowrap ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-700'} capitalize flex items-center gap-1 `}>
-                          {t.icon ? <t.icon className=' max-md:hidden inline w-4 h-4 mr-1 -mt-0.5' /> : null}
-
-                          <MultiLangText className={` ${!sliceInPhone && '!hidden'} md:hidden`}>{t.label?.slice(0, 3)}</MultiLangText>
-                          <MultiLangText className={` ${!sliceInPhone && '!flex'} max-md:hidden`}>{t.label}</MultiLangText>
-                        </span>
-                      </motion.button>
-                    );
-                  })}
-            </div>
-          </LayoutGroup>
-        </div>
-
-        {!hiddenArrow && (
-          <button type='button' onClick={goNext} aria-label='Next tab' disabled={!hasNext} className={[' max-md:!hidden inline-flex items-center justify-center h-[40px] w-[30px] rounded-lg border transition', 'bg-white/90 border-slate-200', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40', !hasNext ? 'opacity-40 cursor-not-allowed' : ''].join(' ')}>
-            <ChevronRight className='rtl:scale-x-[-1] w-5 h-5 text-slate-700' />
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-	)
-*/
-
 'use client';
 
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
@@ -149,20 +34,12 @@ function formatSchedule(t, rem) {
   const times = (s.times || []).map(formatTime12Local).join('، ');
 
   if (s.mode === 'prayer' && s.prayer) {
-  const dir =
-    s.prayer.direction === 'before'
-      ? safeT(t, 'before', 'Before')
-      : safeT(t, 'after', 'After');
+    const dir = s.prayer.direction === 'before' ? safeT(t, 'before', 'Before') : safeT(t, 'after', 'After');
 
-  const prayerLabel = getPrayerLabel(t, s.prayer);
+    const prayerLabel = getPrayerLabel(t, s.prayer);
 
-  return `${prayerLabel} • ${dir} ${s.prayer.offsetMin} ${safeT(
-    t,
-    'minutesShort',
-    'min',
-  )}`;
-}
-
+    return `${prayerLabel} • ${dir} ${s.prayer.offsetMin} ${safeT(t, 'minutesShort', 'min')}`;
+  }
 
   const labelByMode = {
     once: `${safeT(t, 'mode.once', 'Once')} ${times}`,
@@ -408,9 +285,16 @@ export default function RemindersPage() {
               permission = await Notification.requestPermission();
             }
 
-            if (permission === 'granted') await subscribeToPush(registration);
+            if (permission === 'granted') {
+              try {
+                await subscribeToPush(registration);
+                console.log('[Reminders] subscribeToPush succeeded');
+              } catch (e) {
+                console.error('[Reminders] subscribeToPush failed:', e);
+              }
+            }
           } catch (swError) {
-            // ignore
+            console.error('[Reminders] service worker registration failed:', swError);
           }
         }
       } catch (error) {
@@ -562,23 +446,22 @@ export default function RemindersPage() {
         {/* Header skeleton */}
         <div className='relative mb-4 overflow-hidden rounded-lg border border-indigo-100/60 bg-indigo-500/70'>
           <div className='absolute inset-0 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-90' />
-          <div
-            className='absolute inset-0 opacity-15'
-            style={{
-              backgroundImage: 'linear-gradient(rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px)',
-              backgroundSize: '22px 22px',
-              backgroundPosition: '-1px -1px',
-            }}
-          />
+          <div className='absolute inset-0 opacity-15' style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px)', backgroundSize: '22px 22px', backgroundPosition: '-1px -1px' }} />
           <div className='absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/20 blur-3xl' />
           <div className='absolute -bottom-16 -right-8 h-60 w-60 rounded-full bg-blue-300/30 blur-3xl' />
+
           <div className='relative p-4 md:p-6 animate-pulse'>
-            <div className='h-5 w-40 rounded-full bg-white/40 mb-2' />
-            <div className='h-4 w-64 rounded-full bg-white/30' />
-            <div className='mt-4 flex flex-wrap gap-2'>
+            <div className='flex items-center justify-between'>
+              <div className='h-5 w-40 rounded-full bg-white/40 mb-2' />
+              <div className='  md:hidden flex items-center gap-2'>
+                <div className='h-8 w-8 rounded-full bg-white/40 mb-2' />
+                <div className='h-8 w-20 rounded-full bg-white/40 mb-2' />
+              </div>
+            </div>
+            <div className=' max-md:hidden h-4 w-64 rounded-full bg-white/30' />
+            <div className='mt-4 flex  max-md:justify-end flex-wrap gap-2'>
               <div className='h-8 w-20 rounded-full bg-white/30' />
               <div className='h-8 w-20 rounded-full bg-white/20' />
-              <div className='h-8 w-24 rounded-full bg-white/25' />
             </div>
           </div>
         </div>
@@ -611,7 +494,7 @@ export default function RemindersPage() {
         </div>
 
         <div className='relative p-3 md:p-5 text-white'>
-          <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-3'>
+          <div className='flex  flex-row  items-center  justify-between gap-3'>
             <div>
               <h1 className='text-xl md:text-4xl font-semibold max-md:text-center block'>{safeT(t, 'title', 'Reminders')}</h1>
               <p className='text-white/85 mt-1 hidden md:block'>{safeT(t, 'subtitle', 'Manage your personal reminders')}</p>
@@ -631,7 +514,7 @@ export default function RemindersPage() {
           </div>
 
           <div className='mt-2 md:mt-4 flex flex-col gap-3'>
-            <div className=' max-md:justify-center flex items-center justify-between gap-2'>
+            <div className=' max-md:justify-end max-md:mt-[12px] flex items-center justify-between gap-2'>
               <div className='flex items-center gap-2'>
                 <div className='flex  gap-1 rounded-full bg-white/10 p-2'>
                   {viewToggleOptions.map(option => {
@@ -1132,9 +1015,6 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
     }
   };
 
-  const currentIntervalEvery = intervalEvery || 1;
-  const intervalUnitLabel = safeT(t, `interval.unit.${intervalUnit}`, intervalUnit);
-
   return (
     <form className='grid gap-5' onSubmit={handleSubmit(onSubmit)}>
       {activeTab === 'details' && (
@@ -1267,7 +1147,7 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
                             unit: currentInterval.unit || 'hour',
                           });
                         }}
-                      /> 
+                      />
                     </div>
                   );
                 }}
@@ -1737,7 +1617,8 @@ function QuickCreate({ t, onPick }) {
   ];
   const [custom, setCustom] = useState('');
   return (
-    <div className='relative'>
+    // max-sm:hidden
+    <div className='relative '>
       <button type='button' onClick={() => setOpen(v => !v)} className='flex gap-1 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm hover:bg-white/20' aria-label={safeT(t, 'quick.title', 'Quick reminder')} title={safeT(t, 'quick.title', 'Quick reminder')}>
         <Zap className='inline-block w-4 h-4 mt-[2px]' />
         {safeT(t, 'quick.after', 'After X min')}
@@ -1805,6 +1686,25 @@ function DueDialog({ open, reminder, onClose, onAck }) {
 
 const subscribeToPush = async registration => {
   try {
+    // 🔍 Diagnostic: Check protocol
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    const isSecureContext = window.isSecureContext;
+    
+    console.log(`[Push Debug] === SECURITY DIAGNOSTICS ===`);
+    console.log(`[Push Debug] Protocol: ${protocol}`);
+    console.log(`[Push Debug] Hostname: ${hostname}`);
+    console.log(`[Push Debug] Is Secure Context: ${isSecureContext}`);
+    console.log(`[Push Debug] Full URL: ${window.location.href}`);
+    
+    if (!isSecureContext && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      throw new Error(
+        `⚠️ SECURITY ERROR: Push API requires HTTPS or localhost. ` +
+        `Current: ${protocol}//${hostname}. ` +
+        `If using IP address, switch to localhost or use HTTPS.`
+      );
+    }
+    
     const data = await api.get('/reminders/push/vapid-key');
 
     if (!data?.data?.publicKey) {
@@ -1813,10 +1713,15 @@ const subscribeToPush = async registration => {
     let applicationServerKey;
     try {
       const publicKey = data.data.publicKey;
+      console.log(`[Push Debug] Public key from server: ${publicKey.substring(0, 20)}...`);
+      console.log(`[Push Debug] Public key length: ${publicKey.length}`);
       applicationServerKey = urlBase64ToUint8Array_local(publicKey);
+      console.log(`[Push Debug] Converted to Uint8Array, length: ${applicationServerKey.length}`);
+      console.log(`[Push Debug] VAPID conversion successful, ready to subscribe`);
     } catch (convertError) {
       throw new Error(`Failed to convert VAPID key: ${convertError.message}`);
     }
+
     if (!registration.active) {
       await new Promise(resolve => {
         if (registration.installing) {
@@ -1834,6 +1739,7 @@ const subscribeToPush = async registration => {
         throw new Error('Service Worker is not active after waiting');
       }
     }
+		
     let permission = Notification.permission;
     if (permission === 'default') {
       permission = await Notification.requestPermission();
@@ -1844,35 +1750,57 @@ const subscribeToPush = async registration => {
     }
 
     let subscription = await registration.pushManager.getSubscription();
-
+		
     if (!subscription) {
-      try {
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: applicationServerKey,
-        });
+			try {
+				console.log(`[Push Debug] About to call pushManager.subscribe with:`, {
+					userVisibleOnly: true,
+					applicationServerKeyLength: applicationServerKey.length,
+					applicationServerKeyType: applicationServerKey.constructor.name,
+					applicationServerKey: Array.from(applicationServerKey).slice(0, 10).map(b => b.toString(16).padStart(2, '0')).join(' ') + '...',
+				});
+				subscription = await registration.pushManager.subscribe({ 
+					userVisibleOnly: true, 
+					applicationServerKey: applicationServerKey 
+				});
+				console.log(`[Push Debug] ✅ pushManager.subscribe() succeeded!`);
+				console.log(subscription);
       } catch (subscribeError) {
-        if (subscribeError.name === 'AbortError' || subscribeError.message.includes('push service')) {
-          if (applicationServerKey.length !== 65) {
-            throw new Error(`Invalid VAPID key length: ${applicationServerKey.length}, expected 65`);
-          }
-
-          throw new Error(`Push subscription failed. Please check VAPID keys in backend. Error: ${subscribeError.message}`);
-        }
-
-        throw subscribeError;
+				console.error(`[Push Debug] ❌ pushManager.subscribe() FAILED!`);
+				console.error(`[Push Debug] Error name: ${subscribeError.name}`);
+				console.error(`[Push Debug] Error message: ${subscribeError.message}`);
+				console.error(`[Push Debug] Full error:`, subscribeError);
+				console.error(`[Push Debug] Error stack:`, subscribeError.stack);
+				
+				// Try alternate approach without applicationServerKey
+				if (subscribeError.name === 'AbortError') {
+					console.log(`[Push Debug] Attempting fallback: subscribe without applicationServerKey...`);
+					try {
+						const subWithoutKey = await registration.pushManager.subscribe({ userVisibleOnly: true });
+						console.log(`[Push Debug] ⚠️ Fallback subscribe succeeded (no VAPID key), but won't work for server push`);
+						subscription = subWithoutKey;
+					} catch (fallbackError) {
+						console.error(`[Push Debug] Fallback also failed:`, fallbackError.message);
+						throw subscribeError; // Throw original error
+					}
+				} else {
+					throw subscribeError;
+				}
       }
     }
     if (!subscription) {
       throw new Error('Subscription is null after creation');
     }
-
+ 
+    console.log(`[Push Debug] ✅ Got subscription, now extracting keys...`);
     const p256dh = subscription.getKey('p256dh');
     const auth = subscription.getKey('auth');
 
     if (!p256dh || !auth) {
       throw new Error('Missing subscription keys');
     }
+
+    console.log(`[Push Debug] ✅ Keys extracted: p256dh=${p256dh.byteLength} bytes, auth=${auth.byteLength} bytes`);
 
     const p256dhBase64 = arrayBufferToBase64_local(p256dh);
     const authBase64 = arrayBufferToBase64_local(auth);
@@ -1885,9 +1813,19 @@ const subscribeToPush = async registration => {
       },
     };
 
-    await api.post('/reminders/push/subscribe', subscriptionData);
+    console.log(`[Push Debug] ✅ About to POST subscription to backend...`);
+    console.log(`[Push Debug] Subscription data:`, {
+      endpointLength: subscriptionData.endpoint.length,
+      p256dhLength: subscriptionData.keys.p256dh.length,
+      authLength: subscriptionData.keys.auth.length,
+    });
+    
+    const postResponse = await api.post('/reminders/push/subscribe', subscriptionData);
+    console.log(`[Push Debug] ✅ POST /reminders/push/subscribe response:`, postResponse.data);
+    console.log(`[Push Debug] ✅ Subscription saved on backend with ID: ${postResponse.data?.subscriptionId}`);
     return subscription;
   } catch (error) {
+    console.error(`[Push Debug] 🔥 subscribeToPush failed:`, error.message);
     throw error;
   }
 };
@@ -1897,12 +1835,22 @@ function arrayBufferToBase64_local(buffer) {
     throw new Error('Buffer is null or undefined');
   }
   const bytes = new Uint8Array(buffer);
+  console.log(`[arrayBufferToBase64] Converting ${bytes.byteLength} bytes to base64...`);
+  
+  // استخدام طريقة آمنة تعمل على جميع المتصفحات
   let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
+  const chunkSize = 8192; // معالجة 8KB في كل مرة لتجنب stack overflow
+  
+  for (let i = 0; i < bytes.byteLength; i += chunkSize) {
+    const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.byteLength));
+    binary += String.fromCharCode.apply(null, chunk);
   }
+  
   const base64 = window.btoa(binary);
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const urlSafeBase64 = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  
+  console.log(`[arrayBufferToBase64] ✅ Success: ${bytes.byteLength} bytes → base64 (${urlSafeBase64.length} chars)`);
+  return urlSafeBase64;
 }
 
 function urlBase64ToUint8Array_local(base64String) {
@@ -1911,19 +1859,24 @@ function urlBase64ToUint8Array_local(base64String) {
   }
 
   const cleaned = base64String.trim();
+  console.log('[urlBase64ToUint8Array] input length:', cleaned.length, 'first 20 chars:', cleaned.substring(0, 20));
 
   const padding = '='.repeat((4 - (cleaned.length % 4)) % 4);
   const base64 = (cleaned + padding).replace(/\-/g, '+').replace(/_/g, '/');
+  console.log('[urlBase64ToUint8Array] after padding+convert length:', base64.length);
 
   try {
     const rawData = window.atob(base64);
+    console.log('[urlBase64ToUint8Array] decoded byte length:', rawData.length);
     const outputArray = new Uint8Array(rawData.length);
 
     for (let i = 0; i < rawData.length; ++i) {
       outputArray[i] = rawData.charCodeAt(i);
     }
+    console.log('[urlBase64ToUint8Array] success, uint8 length:', outputArray.length);
     return outputArray;
   } catch (error) {
+    console.error('[urlBase64ToUint8Array] decode error:', error);
     throw new Error(`Invalid VAPID public key format: ${error.message}`);
   }
 }

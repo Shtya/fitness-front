@@ -1,9 +1,11 @@
 self.addEventListener('install', event => {
+  console.log('📦 [SW] Service Worker installing...');
   self.skipWaiting(); // Activate immediately
 });
 
 // Activate event
 self.addEventListener('activate', event => {
+  console.log('✅ [SW] Service Worker activated!');
   event.waitUntil(self.clients.claim());
 });
 
@@ -41,20 +43,25 @@ self.addEventListener('notificationclick', event => {
 });
 
 self.addEventListener('push', event => {
+  console.log('🔔 [SW] Push event received!', event);
+  
   let data = {};
   try {
     if (event.data) {
       data = event.data.json();
+      console.log('🔔 [SW] Parsed push data:', data);
       if (data.notification) {
         data = { ...data, ...data.notification };
       }
     } else {
+      console.warn('⚠️ [SW] No data in push event');
       data = {
         title: 'Reminder',
         body: 'You have a new reminder',
       };
     }
   } catch (e) {
+    console.error('❌ [SW] Error parsing push data:', e);
     data = {
       title: 'Reminder',
       body: 'You have a new reminder',
@@ -66,8 +73,10 @@ self.addEventListener('push', event => {
   const notificationOptions = {
     title: data.title || 'Reminder',
     body: data.body || data.description || '',
-    icon: data.icon || '/icons/bell.png',
-    badge: '/icons/badge.png',
+    // prefer bell/badge icons we just added
+    icon: data.icon || '/icons/bell.svg',
+    // badge might not be available; use the badge SVG as fallback
+    badge: data.badge || '/icons/badge.svg',
     requireInteraction: true,
     vibrate: [200, 100, 200],
     tag: `reminder-${data.reminderId || data.data?.reminderId || Date.now()}`,
@@ -78,37 +87,53 @@ self.addEventListener('push', event => {
     },
     url: targetUrl,
   };
+  
+  console.log('📢 [SW] Showing notification with options:', notificationOptions);
+  
   event.waitUntil(
     self.registration
       .showNotification(notificationOptions.title, notificationOptions)
-      .then(() => {})
-      .catch(err => {}),
+      .then(() => {
+        console.log('✅ [SW] Notification shown successfully!');
+      })
+      .catch(err => {
+        console.error('❌ [SW] Failed to show notification:', err);
+      }),
   );
 });
 
 // Handle push subscription errors
 self.addEventListener('pushsubscriptionchange', event => {
+  // Attempt to re-subscribe and re-send the subscription to the backend
   event.waitUntil(
-    self.registration.pushManager
-      .subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: event.newSubscription?.options?.applicationServerKey,
-      })
-      .then(subscription => {
-        return fetch('/api/v1/reminders/push/subscribe', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            endpoint: subscription.endpoint,
-            keys: {
-              p256dh: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('p256dh')))),
-              auth: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('auth')))),
-            },
-          }),
+    (async () => {
+      try {
+        const newSub = await self.registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: event.newSubscription?.options?.applicationServerKey,
         });
-      }),
+
+        const p256dh = newSub.getKey && newSub.getKey('p256dh') ? btoa(String.fromCharCode(...new Uint8Array(newSub.getKey('p256dh')))) : null;
+        const auth = newSub.getKey && newSub.getKey('auth') ? btoa(String.fromCharCode(...new Uint8Array(newSub.getKey('auth')))) : null;
+
+        const body = JSON.stringify({
+          endpoint: newSub.endpoint,
+          keys: {
+            p256dh: p256dh,
+            auth: auth,
+          },
+        });
+
+        // Post to same endpoint the client uses
+        await fetch('/reminders/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        });
+      } catch (err) {
+        console.error('[SW] pushsubscriptionchange failed:', err);
+      }
+    })(),
   );
 });
 

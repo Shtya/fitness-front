@@ -488,8 +488,18 @@ export let currentReminderAudio = null;
 export function stopCurrentReminderSound() {
   if (!currentReminderAudio) return;
   try {
-    currentReminderAudio.pause();
-    currentReminderAudio.currentTime = 0;
+    try {
+      if (!currentReminderAudio.paused) currentReminderAudio.pause();
+    } catch (_) {}
+    try {
+      currentReminderAudio.currentTime = 0;
+    } catch (_) {}
+    // remove event handlers if any
+    try {
+      currentReminderAudio.onended = null;
+      currentReminderAudio.onerror = null;
+      currentReminderAudio.onplay = null;
+    } catch (_) {}
   } catch (e) {}
   currentReminderAudio = null;
 }
@@ -518,19 +528,19 @@ export function useReminderWebSocket(onDue) {
       timeout: 20000,
     });
 
-    socket.on('connect', () => {
-      console.log(
-        '✅ Connected to reminders WebSocket',
-        socket.id,
-      );
-    });
+    // socket.on('connect', () => {
+    //   console.log(
+    //     '✅ Connected to reminders WebSocket',
+    //     socket.id,
+    //   );
+    // });
 
-    socket.on('disconnect', reason => {
-      console.log(
-        '❌ Disconnected from reminders WebSocket:',
-        reason,
-      );
-    });
+    // socket.on('disconnect', reason => {
+    //   console.log(
+    //     '❌ Disconnected from reminders WebSocket:',
+    //     reason,
+    //   );
+    // });
 
     socket.on('connect_error', error => {
       console.error(
@@ -544,10 +554,10 @@ export function useReminderWebSocket(onDue) {
     });
 
     socket.on('reminder_due', reminderData => {
-      console.log(
-        '🔔 Reminder due received via WebSocket:',
-        reminderData,
-      );
+      // console.log(
+      //   '🔔 Reminder due received via WebSocket:',
+      //   reminderData,
+      // );
 
       if (!reminderData || !reminderData.id) {
         console.error(
@@ -570,21 +580,41 @@ export function useReminderWebSocket(onDue) {
           stopCurrentReminderSound();
 
           const audio = new Audio(previewUrl);
+
+          // set tentative current audio reference so stop can act on it
           currentReminderAudio = audio;
 
           audio.volume = Number.isFinite(reminderData.sound?.volume)
             ? reminderData.sound.volume
             : 0.8;
+
+          // cleanup when finished
+          audio.onended = () => {
+            try {
+              if (currentReminderAudio === audio) currentReminderAudio = null;
+            } catch (_) {}
+          };
+
+          audio.onerror = err => {
+            console.warn('⚠️ Reminder audio error:', err);
+          };
+
           audio
             .play()
             .then(() => {
               console.log('🔊 Playing reminder sound:', soundId);
             })
             .catch(err => {
-              console.warn(
-                '⚠️ Failed to play reminder sound:',
-                err,
-              );
+              // Common expected errors: NotAllowedError (no user interaction) or AbortError (play interrupted by pause)
+              if (err && (err.name === 'NotAllowedError' || err.name === 'AbortError')) {
+                console.warn('⚠️ Failed to play reminder sound:', err.name + ': ' + (err.message || '')); 
+              } else {
+                console.warn('⚠️ Failed to play reminder sound:', err);
+              }
+              // If playback failed, ensure ref is cleared
+              try {
+                if (currentReminderAudio === audio) currentReminderAudio = null;
+              } catch (_) {}
             });
         }
       } catch (err) {
@@ -601,8 +631,8 @@ export function useReminderWebSocket(onDue) {
             reminderData.title || 'Reminder',
             {
               body: reminderData.notes || '',
-              icon: '/icons/bell.png',
-              badge: '/icons/badge.png',
+              icon: '/icons/bell.svg',
+              badge: '/icons/badge.svg',
               requireInteraction: true,
               tag: `reminder-${reminderData.id}`,
               data: {
@@ -611,8 +641,7 @@ export function useReminderWebSocket(onDue) {
               },
             },
           );
-          console.log('📱 Browser notification shown');
-
+ 
           notification.onclick = () => {
             try {
               window.focus();
@@ -640,8 +669,7 @@ export function useReminderWebSocket(onDue) {
             type: reminderData.type,
             priority: reminderData.priority,
           });
-          console.log('✅ Reminder modal triggered');
-        } catch (err) {
+         } catch (err) {
           console.error(
             '❌ Error triggering reminder modal:',
             err,

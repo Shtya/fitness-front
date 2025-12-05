@@ -11,6 +11,7 @@ import { useUser } from '@/hooks/useUser';
 import { FaInbox, FaUsers, FaWpforms } from 'react-icons/fa';
 import { useTranslations } from 'next-intl';
 import { useValues } from '@/context/GlobalContext';
+import FeedbackWidget from './FeedbackWidget';
 
 const spring = { type: 'spring', stiffness: 380, damping: 28, mass: 0.7 };
 const flyoutSpring = { type: 'spring', stiffness: 420, damping: 30, mass: 0.7 };
@@ -108,6 +109,8 @@ export const NAV = [
       { nameKey: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
       { nameKey: 'allUsers', href: '/dashboard/super-admin/users', icon: Users },
       { nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
+      { nameKey: 'feedback', href: '/dashboard/super-admin/feedback', icon: MessageSquare },
+      { nameKey: 'systemSettings', href: '/dashboard/settings', icon: ServerCog },
     ],
   },
 ];
@@ -552,38 +555,16 @@ function Badge({ value, className = '' }) {
  ------------------------------------------------------------------*/
 function ReloadButton({ collapsed, t }) {
   return (
-    <button
-      onClick={() => window.location.reload()}
-      className={
-        collapsed
-          ? `
-            mx-auto flex items-center justify-center 
-            w-10 h-10 rounded-lg
-            bg-indigo-600 text-white 
-            shadow-sm hover:shadow-md 
-            hover:bg-indigo-700 
-            active:scale-95 
-            transition-all duration-200
-          `
-          : `
-            flex w-full items-center gap-3
-            bg-indigo-600 text-white 
-            px-4 py-3 rounded-xl font-medium 
-            shadow-sm hover:shadow-md
-            hover:bg-indigo-700 
-            active:scale-95 
-            transition-all duration-200
-          `
-      }>
-      <div
-        className={`
-          flex items-center justify-center 
-          w-5 h-5
-        `}>
-        <RotateCcw className='w-5 h-5' strokeWidth={2.2} />
-      </div>
+    <div className='flex flex-col gap-1' >
+      <button onClick={() => window.location.reload()} className={  collapsed ? ` md:hidden mx-auto flex items-center justify-center  w-10 h-10 rounded-lg bg-indigo-600 text-white  shadow-sm hover:shadow-md  hover:bg-indigo-700  active:scale-95  transition-all duration-200 ` : ` md:hidden flex w-full items-center gap-3 bg-indigo-600 text-white  px-4 py-3 rounded-xl font-medium  shadow-sm hover:shadow-md hover:bg-indigo-700  active:scale-95  transition-all duration-200 `}>
+        <div className={` flex items-center justify-center  w-5 h-5 `}>
+          <RotateCcw className='w-5 h-5' strokeWidth={2.2} />
+        </div>
 
-      {!collapsed && <span className='text-sm font-medium tracking-wide'>{t('reload-page')}</span>}
-    </button>
+        {!collapsed && <span className='text-sm font-medium tracking-wide'>{t('reload-page')}</span>}
+      </button>
+
+			<FeedbackWidget collapsed={collapsed} />
+    </div>
   );
 }

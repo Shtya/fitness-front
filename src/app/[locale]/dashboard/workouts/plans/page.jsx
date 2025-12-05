@@ -80,17 +80,33 @@ export default function PlansPage() {
 
   const [stats, setStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [clientsCoach, setClientsCoach] = useState();
 
   const clients = useAdminClients(user?.id, { page: 1, limit: 100, search: '' });
 
+  useEffect(() => {
+    if (user?.role == 'coach') api.get(`auth/coaches/${user?.id}/clients?limit=1000`).then(res => setClientsCoach(res.data));
+  }, []);
+
   const optionsClient = useMemo(() => {
     const list = [];
-    if (clients?.items?.length) {
-      for (const coach of clients.items) {
-        list.push({
-          id: coach.id,
-          label: coach.name,
-        });
+    if (user?.role == 'admin') {
+      if (clients?.items?.length) {
+        for (const coach of clients.items) {
+          list.push({
+            id: coach.id,
+            label: coach.name,
+          });
+        }
+      }
+    } else {
+      if (clientsCoach?.users?.length) {
+        for (const coach of clientsCoach.users) {
+          list.push({
+            id: coach.id,
+            label: coach.name,
+          });
+        }
       }
     }
     return list;
@@ -273,7 +289,7 @@ export default function PlansPage() {
         const full = await getOne(plan.id).catch(() => plan);
 
         const payload = buildPayloadFromPlan(full, {
-          userId: user?.id,
+          userId: user?.role == 'admin' ? user?.id : user?.adminId,
           nameSuffix: ` ${t('copySuffix', '(copy)')}`,
           isActive: full?.isActive ?? true,
         });
@@ -459,7 +475,7 @@ const ConfirmDialog = memo(function ConfirmDialog({ open, onClose, loading, titl
 export const ListView = memo(function ListView({ loading, items = [], onPreview, onEdit, onDelete, onAssign, onDuplicate, duplicatingIds }) {
   const t = useTranslations('workoutPlans');
   const user = useUser();
-  /* ---------- Loading (skeleton list) ---------- */
+
   if (loading) {
     return (
       <div className='divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm'>
@@ -527,7 +543,7 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 
                 {/* Duplicate */}
                 <button type='button' title={t('actions.duplicate', { default: 'Duplicate' })} onClick={() => !duplicatingIds?.has(p.id) && onDuplicate?.(p)} disabled={duplicatingIds?.has(p.id)} aria-busy={duplicatingIds?.has(p.id) ? 'true' : 'false'} className={[' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border bg-white focus-visible:outline-none focus-visible:ring-4 transition', 'border-violet-200 text-violet-700 hover:bg-violet-50 focus-visible:ring-violet-300/30', duplicatingIds?.has(p.id) ? 'opacity-60 pointer-events-none cursor-not-allowed' : ''].join(' ')}>
-                  {duplicatingIds?.has(p.id) ? <Loader2 className='h-4 w-4 animate-spin' /> : <Files className='h-4 w-4' />}
+                  {duplicatingIds?.has(p.id) ? <Loader2 className='h-4 w-4 animate-spin' /> : <Layers className='h-4 w-4' />}
                 </button>
 
                 {/* Preview */}
@@ -772,6 +788,42 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
       }
     }, 0);
   };
+  const duplicateDay = id => {
+    setDays(arr => {
+      const index = arr.findIndex(d => d.id === id);
+      if (index === -1) return arr;
+
+      const source = arr[index];
+
+      const newId = `day_${Date.now()}_${index + 1}`;
+
+      const copiedExercises = (source.exercises || []).map((ex, idx) => ({
+        ...ex,
+        order: idx + 1, // رصّ الأوامر من جديد
+      }));
+
+      const duplicated = {
+        ...source,
+        id: newId,
+        nameOfWeek: `${source.nameOfWeek} ${t('copySuffix', '(copy)')}`,
+        exercises: copiedExercises,
+      };
+
+      const next = [...arr];
+      next.splice(index + 1, 0, duplicated); // حط اليوم الجديد بعد الأصلي
+      return next;
+    });
+
+    // سكرول لتحت عشان يشوف اليوم الجديد
+    setTimeout(() => {
+      if (scrollRef?.current) {
+        scrollRef.current.scrollTo({
+          top: scrollRef.current.scrollHeight,
+          behavior: 'smooth',
+        });
+      }
+    }, 0);
+  };
 
   const removeDay = id => setDays(arr => arr.filter(d => d.id !== id));
 
@@ -832,6 +884,7 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 
   const [loading, setLoading] = useState(false);
 
+  const user = useUser();
   const submit = async () => {
     if (!name.trim()) {
       Notification(t('builder.validation.nameRequired'), 'error');
@@ -847,7 +900,7 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
     }
 
     const payload = {
-      userId: userId || null,
+      userId: user?.role == 'admin' ? user?.id : user?.adminId,
       name: name.trim(),
       isActive: true,
       notes: notes || null,
@@ -879,7 +932,7 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 
   return (
     <div className='space-y-4 py-1'>
-      <div className='flex items-center justify-between pb-2 border-b border-slate-100'>
+      <div className='  flex items-center justify-between pb-2 border-b border-slate-100'>
         <Input className='max-w-[400px] w-full' placeholder={t('builder.namePlaceholder')} value={name} onChange={e => setName(e)} />
 
         <button type='button' onClick={addDay} className='inline-flex items-center gap-2 rounded-lg border border-slate-300  bg-white px-4 py-2 text-sm font-medium text-slate-800  shadow-sm hover:bg-slate-50 active:scale-[.97]  focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30  transition-all duration-200'>
@@ -888,7 +941,7 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
         </button>
       </div>
 
-      <DaysListSection days={days} setDays={setDays} openPicker={openPicker} removeDay={removeDay} onReorderExercises={onReorderExercises} DAY_OPTIONS={DAY_OPTIONS} spring={spring} />
+      <DaysListSection days={days} setDays={setDays} openPicker={openPicker} removeDay={removeDay} duplicateDay={duplicateDay} onReorderExercises={onReorderExercises} DAY_OPTIONS={DAY_OPTIONS} spring={spring} />
 
       <div className='flex items-center justify-end gap-3 pt-4 border-t border-slate-100'>
         <button type='button' onClick={onCancel} className='inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300  bg-white px-4 py-2.5 text-sm font-medium text-slate-700  shadow-sm hover:bg-slate-50 active:scale-[.97]  focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30  transition-all duration-200'>
@@ -912,7 +965,7 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
   );
 });
 
-export function DaysListSection({ days, setDays, openPicker, removeDay, onReorderExercises, DAY_OPTIONS, spring }) {
+export function DaysListSection({ duplicateDay, days, setDays, openPicker, removeDay, onReorderExercises, DAY_OPTIONS, spring }) {
   const t = useTranslations('workoutPlans');
 
   const btnBase = ' h-[35px] inline-flex items-center justify-center gap-2 rounded-lg text-sm transition ' + 'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 active:scale-[.98]';
@@ -946,6 +999,12 @@ export function DaysListSection({ days, setDays, openPicker, removeDay, onReorde
               <button type='button' onClick={() => openPicker(d.id)} className={`${btnBase} ${btnOutline} !px-3 !py-1.5`} title={t('actions.addExercises')}>
                 <Plus className='w-4 h-4' />
                 {t('actions.addExercises')}
+              </button>
+
+              {/* Duplicate day */}
+              <button type='button' onClick={() => duplicateDay(d.id)} className={`${btnBase} ${btnOutline} !px-3 !py-1.5`} title={t('actions.duplicateDay', { default: 'Duplicate day' })}>
+                <CopyPlus className='w-4 h-4' />
+                <span className='hidden sm:inline'>{t('actions.duplicateDay', { default: 'Duplicate day' })}</span>
               </button>
 
               {/* Remove day */}

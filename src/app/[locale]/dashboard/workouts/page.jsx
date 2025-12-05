@@ -112,7 +112,7 @@ const IconBtn = memo(({ title, onClick, danger, children }) => (
     title={title}
     onClick={onClick}
     aria-label={title}
-    className={`size-7 grid place-content-center rounded-lg border shadow-sm active:scale-95 transition
+    className={`size-8 grid place-content-center rounded-lg border shadow-sm active:scale-95 transition
       ${danger ? 'border-rose-200 bg-white hover:bg-rose-50 text-rose-600' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'}`}>
     {children}
   </button>
@@ -154,6 +154,7 @@ export default function ExercisesPage() {
   const [preview, setPreview] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [duplicateInitial, setDuplicateInitial] = useState(null);
 
   // delete modal state
   const [deleteId, setDeleteId] = useState(null);
@@ -222,7 +223,7 @@ export default function ExercisesPage() {
     } finally {
       if (myId === reqId.current) setLoading(false);
     }
-  }, [page, debounced, sortBy, sortOrder, perPage, activeCat, t]);
+  }, [page, debounced, sortBy, sortOrder, perPage, activeCat, t, user.adminId, user.role]);
 
   const fetchStats = useCallback(async () => {
     setLoadingStats(true);
@@ -296,7 +297,7 @@ export default function ExercisesPage() {
       setDeleteId(null);
       setDeleteLoading(false);
     }
-  }, [deleteId, t]);
+  }, [deleteId, t, locale]);
 
   const createOrUpdate = useCallback(async ({ id, payload }) => {
     const body = {
@@ -343,6 +344,7 @@ export default function ExercisesPage() {
         setItems(arr => [saved, ...arr]);
         setTotal(tot => tot + 1);
         setAddOpen(false);
+        setDuplicateInitial(null);
         Notification(t('toasts.created'), 'success');
         if (saved?.category && !categories.includes(saved.category)) {
           setCategories(prev => [...prev, saved.category].sort());
@@ -371,10 +373,25 @@ export default function ExercisesPage() {
     [createOrUpdate, editRow, categories, t],
   );
 
+  const handleDuplicate = useCallback(exercise => {
+    if (!exercise) return;
+    const { id, ...rest } = exercise;
+    setDuplicateInitial(rest);
+    setAddOpen(true);
+  }, []);
+
   return (
     <div className='space-y-6'>
       {/* Header / Stats */}
-      <GradientStatsHeader onClick={() => setAddOpen(true)} btnName={t('actions.addExercise')} title={t('descriptions.exercises')} desc={t('descriptions.manageLibrary')} loadingStats={loadingStats}>
+      <GradientStatsHeader
+        onClick={() => {
+          setDuplicateInitial(null);
+          setAddOpen(true);
+        }}
+        btnName={t('actions.addExercise')}
+        title={t('descriptions.exercises')}
+        desc={t('descriptions.manageLibrary')}
+        loadingStats={loadingStats}>
         <>
           <StatCard className='' icon={Layers} title={t('stats.totalGlobalExercise')} value={stats?.totals?.totalGlobalExercise - stats?.totals?.totalPersonalExercise ?? 0} />
           {stats?.totals?.totalPersonalExercise != null && stats?.totals?.totalPersonalExercise != '0' && <StatCard className='' icon={Layers} title={t('stats.totalPersonalExercise')} value={stats?.totals?.totalPersonalExercise ?? 0} />}
@@ -436,7 +453,7 @@ export default function ExercisesPage() {
       {err ? <div className='p-3 rounded-lg bg-red-50 text-red-700 border border-red-100'>{err}</div> : null}
 
       {/* Content */}
-      <GridView t={t} loading={loading} items={items} onView={setPreview} onEdit={setEditRow} onDelete={askDelete} />
+      <GridView t={t} loading={loading} items={items} onView={setPreview} onEdit={setEditRow} onDelete={askDelete} onDuplicate={handleDuplicate} />
 
       <PrettyPagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
@@ -445,9 +462,15 @@ export default function ExercisesPage() {
         {preview && <ExercisePreview t={t} exercise={preview} />}
       </Modal>
 
-      {/* Add */}
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title={t('titles.addExercise')}>
-        <ExerciseForm categories={categories} onSubmit={handleAddSubmit} />
+      {/* Add / Duplicate */}
+      <Modal
+        open={addOpen}
+        onClose={() => {
+          setAddOpen(false);
+          setDuplicateInitial(null);
+        }}
+        title={t('titles.addExercise')}>
+        <ExerciseForm categories={categories} initial={duplicateInitial || null} onSubmit={handleAddSubmit} />
       </Modal>
 
       {/* Edit */}
@@ -496,7 +519,7 @@ const ConfirmDialog = memo(({ open, onClose, loading, title, message, onConfirm,
   );
 });
 
-const GridView = memo(({ loading, items, onView, onEdit, onDelete, t }) => {
+const GridView = memo(({ loading, items, onView, onEdit, onDelete, onDuplicate, t }) => {
   if (loading) {
     return (
       <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'>
@@ -559,16 +582,19 @@ const GridView = memo(({ loading, items, onView, onEdit, onDelete, t }) => {
               <div className='absolute right-1 top-1'>
                 <div className='flex flex-col items-center gap-1 rounded-[8px] bg-white/90 border border-slate-200/70 shadow-sm backdrop-blur px-1 py-1 hover:bg-white transition'>
                   <IconBtn title={t('actions.view')} onClick={() => onView?.(e)}>
-                    <Eye className='w-3.5 h-3.5 text-slate-700' />
+                    <Eye className='w-4 h-4 text-slate-700' />
                   </IconBtn>
                   {e?.adminId != null && (
                     <IconBtn title={t('actions.edit')} onClick={() => onEdit?.(e)}>
-                      <PencilLine className='w-3.5 h-3.5 text-indigo-600' />
+                      <PencilLine className='w-4 h-4 text-indigo-600' />
                     </IconBtn>
                   )}
+                  <IconBtn title='Duplicate' onClick={() => onDuplicate?.(e)}>
+                    <Layers className='w-4 h-4 text-emerald-600' />
+                  </IconBtn>
                   {e?.adminId != null && (
                     <IconBtn title={t('actions.delete')} onClick={() => onDelete?.(e.id)} danger>
-                      <Trash2 className='w-3.5 h-3.5' />
+                      <Trash2 className='w-4 h-4' />
                     </IconBtn>
                   )}
                 </div>

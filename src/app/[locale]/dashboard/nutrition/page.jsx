@@ -21,7 +21,7 @@ import { useAdminClients } from '@/hooks/useHierarchy';
 import MultiLangText from '@/components/atoms/MultiLangText';
 import Button from '@/components/atoms/Button';
 
-const hhmmRegex = /^$|^([01]\d|2[0-3]):([0-5]\d)$/; // "" or HH:MM
+const hhmmRegex = /^$|^([01]\d|2[0-3]):([0-5]\d)$/;
 
 export function CButton({ name, icon, className = '', type = 'button', onClick, disabled = false, loading = false, variant = 'primary', size = 'md', title }) {
   const t = useTranslations('nutrition');
@@ -185,15 +185,31 @@ export default function NutritionManagementPage() {
 
   const user = useUser();
   const clients = useAdminClients(user?.id, { page: 1, limit: 100, search: '' });
+  const [clientsCoach, setClientsCoach] = useState();
+
+  useEffect(() => {
+    if (user?.role == 'coach') api.get(`auth/coaches/${user?.id}/clients?limit=1000`).then(res => setClientsCoach(res.data));
+  }, []);
 
   const optionsClient = useMemo(() => {
     const list = [];
-    if (clients?.items?.length) {
-      for (const coach of clients.items) {
-        list.push({
-          id: coach.id,
-          label: coach.name,
-        });
+    if (user?.role == 'admin') {
+      if (clients?.items?.length) {
+        for (const coach of clients.items) {
+          list.push({
+            id: coach.id,
+            label: coach.name,
+          });
+        }
+      }
+    } else {
+      if (clientsCoach?.users?.length) {
+        for (const coach of clientsCoach.users) {
+          list.push({
+            id: coach.id,
+            label: coach.name,
+          });
+        }
       }
     }
     return list;
@@ -298,13 +314,9 @@ export default function NutritionManagementPage() {
 
   return (
     <div className='space-y-5 sm:space-y-6'>
-      <GradientStatsHeader onClick={() => setAddPlanOpen(true)} btnName={user?.role == 'admin' && t('btn.new_plan')} title={t('ui.title')} desc={t('ui.subtitle')} loadingStats={loadingStats}>
-        {user?.role == 'admin' && (
-          <>
-            <StatCard icon={Target} title={t('stats.global_plans')} value={stats?.totals?.globalPlansCount} />
-            <StatCard icon={TrendingUp} title={t('stats.my_plans')} value={stats?.totals?.myPlansCount} />
-          </>
-        )}
+      <GradientStatsHeader onClick={() => setAddPlanOpen(true)} btnName={t('btn.new_plan')} title={t('ui.title')} desc={t('ui.subtitle')} loadingStats={loadingStats}>
+        <StatCard icon={Target} title={t('stats.global_plans')} value={stats?.totals?.globalPlansCount} />
+        <StatCard icon={TrendingUp} title={t('stats.my_plans')} value={stats?.totals?.myPlansCount} />
       </GradientStatsHeader>
 
       <div className='relative'>
@@ -322,8 +334,8 @@ export default function NutritionManagementPage() {
           <div className='flex items-center gap-2'>
             <div className='min-w-[80px]'>
               <Select
-							searchable={false}
-							clearable={false}
+                searchable={false}
+                clearable={false}
                 className='!w-full'
                 placeholder={t('search.per_page')}
                 options={[
@@ -354,7 +366,7 @@ export default function NutritionManagementPage() {
         }}
       />
 
-      <Modal open={addPlanOpen} maxHBody='!h-[90%]' maxH='h-[90vh] ' cn='!py-0' onClose={() => setAddPlanOpen(false)} title={t('modals.create_title')} scrollRef={scrollRef}>
+      <Modal open={addPlanOpen} maxH='h-fit ' cn='!py-0' onClose={() => setAddPlanOpen(false)} title={t('modals.create_title')} scrollRef={scrollRef}>
         <MealPlanForm scrollRef={scrollRef} onSubmitPayload={onCreate} submitLabel='btn.create' />
       </Modal>
 
@@ -1201,15 +1213,7 @@ function ConfirmDialog({ loading, open, onClose, title, message, confirmText, on
   );
 }
 
-function IconButton({ children, title, onClick, disabled, kind = 'neutral' }) {
-  const color = kind === 'warning' ? 'border-amber-100 text-amber-700 hover:bg-amber-100 focus-visible:ring-amber-300/30' : kind === 'danger' ? 'border-rose-100 text-rose-600 hover:bg-rose-100 focus-visible:ring-rose-300/30' : kind === 'neutral' ? 'border-slate-200 text-slate-700 hover:bg-slate-100 focus-visible:ring-slate-300/30' : 'border-blue-100 text-blue-600 hover:bg-blue-100 focus-visible:ring-blue-300/30';
-
-  return (
-    <button type='button' title={title} disabled={disabled} onClick={onClick} className={['inline-flex h-9 w-9 items-center justify-center rounded-lg border shadow-sm transition-all focus-visible:outline-none', 'active:scale-[.98]', disabled ? 'opacity-50 cursor-not-allowed' : color].join(' ')}>
-      {children}
-    </button>
-  );
-}
+ 
 
 export function DangerX({
   onClick,

@@ -133,7 +133,6 @@ export default function ReportsUnifiedPage() {
   const [savedOk, setSavedOk] = useState(false);
   const [feedbackDraft, setFeedbackDraft] = useState('');
 
-  // ✅ عدّاد التقارير غير المراجعة
   const [unreviewedCount, setUnreviewedCount] = useState(0);
   const [countLoading, setCountLoading] = useState(false);
 
@@ -141,7 +140,7 @@ export default function ReportsUnifiedPage() {
     const f = {};
     if (!user?.id) return f;
 
-    if (user.role == 'admin') f.adminId = user.id;
+    if (user?.role == 'admin') f.adminId = user.id;
     else f.coachId = user.id;
 
     if (tab === 'clients' && selectedClientId) {
@@ -369,7 +368,7 @@ export default function ReportsUnifiedPage() {
             <div className='space-y-1 flex-1 '>
               <h1 className='text-xl md:text-4xl font-semibold flex items-center gap-3'>
                 {t('reports.title')}
-                {user.role === 'admin' && (
+                {user?.role === 'admin' && (
                   <span className={`inline-flex items-center gap-1 rounded-full bg-amber-50/90 text-amber-900 px-3 py-1 text-xs border border-amber-200 ${unreviewedCount == 0 && '!hidden'} `}>
                     <ClipboardList className='w-3.5 h-3.5' />
 
@@ -381,7 +380,7 @@ export default function ReportsUnifiedPage() {
             </div>
 
             <div className=' '>
-              {user.role == 'admin' && (
+              {user?.role == 'admin' && (
                 <TabsPill
                   tabs={tabs}
                   active={tab}

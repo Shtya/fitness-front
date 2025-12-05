@@ -9,7 +9,7 @@
     "enterPassword": "أدخل كلمة المرور",
     "passwordRequired": "كلمة المرور مطلوبة.",
     "signInButton": "تسجيل الدخول",
-		"Incorrect email or password" : "البريد الإلكتروني أو كلمه المرور غير صحيحة.",
+    "Incorrect email or password": "البريد الإلكتروني أو كلمه المرور غير صحيحة.",
     "loading": {
       "signingIn": "جاري تسجيل الدخول..."
     },
@@ -266,6 +266,7 @@
       "manageForms": "إدارة النماذج",
       "responses": "الردود",
       "messages": "الرسائل",
+      "feedback": "آراء وملاحظات",
       "systemSettings": "إعدادات النظام"
     },
     "tooltips": {
@@ -294,7 +295,8 @@
       "admin": "مسؤول",
       "coach": "مدرب",
       "client": "عميل",
-      "guest": "زائر"
+      "guest": "زائر",
+			"super_admin" : "مدير النظام"
     },
     "common": {
       "guest": "زائر"
@@ -1126,7 +1128,8 @@
       "newestFirst": "الأحدث أولاً",
       "oldestFirst": "الأقدم أولاً",
       "uploadImage": "رفع صورة",
-      "uploadVideo": "رفع فيديو"
+      "uploadVideo": "رفع فيديو",
+      "duplicate": "نسخ التمرين"
     },
     "labels": {
       "name": "الاسم",
@@ -1141,6 +1144,12 @@
       "image": "صورة",
       "video": "فيديو",
       "muscles": "العضلات"
+    },
+    "notes": {
+      "muscleWikiTipLabel": "ملاحظة:",
+      "muscleWikiTipPrefix": "يمكنك نسخ رابط فيديو التمرين مباشرة من",
+      "muscleWikiTipSuffix": " دون الحاجة لتنزيل الفيديو أو رفعه. بالنسبة لحقل الصورة، يمكنك أخذ لقطة (Snapshot) من الفيديو واستخدامها كصورة أو استخدام رابطها مباشرة.",
+      "muscleWikiTip": "ملاحظة: يمكنك نسخ رابط فيديو التمرين مباشرة من موقع musclewiki.com دون الحاجة لتنزيل الفيديو أو رفعه. أما بالنسبة للصورة، يمكنك أخذ لقطة (Snapshot) من الفيديو واستخدامها هنا."
     },
     "placeholders": {
       "name": "مثال: سحب جالس بذراعين عريضتين",
@@ -1211,7 +1220,7 @@
       "createFailed": "فشل إنشاء التمرين",
       "updateFailed": "فشل تحديث التمرين",
       "deleteFailed": "فشل حذف التمرين",
-      "apiKeyExpired": "مفتاح واجهة البرمجة (API Key) منتهي الصلاحية أو غير صالح. يرجى التحقق من الإعدادات أو إدخال مفتاح جديد."
+      "apiKeyExpired": "مفتاح الذكاء الاصطناعي غير صالح أو منتهي الصلاحية"
     },
     "toasts": {
       "created": "تم إنشاء التمرين بنجاح",
@@ -1230,6 +1239,55 @@
       "none": "لا توجد {kind} متوفرة",
       "noImage": "لا توجد صورة",
       "noVideo": "لا يوجد فيديو"
+    }
+  },
+	"feedback": {
+    "floatingButtonAria": "إرسال ملاحظة عن النظام",
+    "panelTitle": "ملاحظات وتحسينات",
+    "panelDescription": "شاركنا رأيك في النظام أو اقترح تحسينًا جديدًا. سيتم مراجعة الملاحظات من قِبل المشرف وإضافتها إذا كانت مناسبة.",
+    "typeLabel": "النوع",
+    "typePlaceholder": "اختر نوع الملاحظة",
+    "typeEnhancement": "تحسين / فكرة جديدة",
+    "typeIssue": "مشكلة / عطل",
+    "typeOther": "أخرى",
+    "titleLabel": "العنوان",
+    "titlePlaceholder": "عنوان قصير (مثال: تحسين شاشة الطلبات)",
+    "detailsLabel": "التفاصيل",
+    "detailsPlaceholder": "اشرح الفكرة أو المشكلة بأكبر قدر ممكن من التفاصيل.",
+    "emailLabel": "البريد الإلكتروني للتواصل",
+    "emailOptional": "اختياري",
+    "emailPlaceholder": "you@example.com",
+    "errorRequired": "العنوان والتفاصيل مطلوبان.",
+    "submit": "إرسال الملاحظة",
+    "submitting": "جاري الإرسال...",
+    "success": "شكرًا لك! تم إرسال ملاحظتك بنجاح.",
+    "genericError": "حدث خطأ أثناء إرسال الملاحظة. جرّب مرة أخرى.",
+    "close": "إغلاق",
+    "admin": {
+      "title": "آراء وملاحظات المستخدمين",
+      "subtitle": "إدارة ومراجعة جميع آراء وملاحظات المستخدمين وطلبات التحسينات",
+      "totalFeedback": "إجمالي الملاحظات",
+      "newFeedback": "جديد",
+      "resolvedFeedback": "تم حله",
+      "issuesFeedback": "المشاكل",
+      "search": "البحث بالعنوان أو البريد...",
+      "typeFilter": "جميع الأنواع",
+      "statusFilter": "جميع الحالات",
+      "exportCSV": "تحميل CSV",
+      "noFeedback": "لا توجد ملاحظات",
+      "loading": "جاري التحميل...",
+      "description": "الوصف",
+      "changeStatus": "تغيير الحالة",
+      "delete": "حذف",
+      "deleteConfirm": "هل أنت متأكد من حذف هذه الملاحظة؟",
+      "statusUpdated": "تم تحديث الحالة بنجاح",
+      "deleted": "تم حذف الملاحظة بنجاح",
+      "updateFailed": "فشل تحديث الحالة",
+      "deleteFailed": "فشل حذف الملاحظة",
+      "statusNew": "جديد",
+      "statusReviewed": "تمت مراجعته",
+      "statusResolved": "تم حله",
+      "statusClosed": "مغلق"
     }
   },
   "workoutPlans": {
@@ -1253,7 +1311,8 @@
       "addDay": "إضافة يوم",
       "addExercises": "إضافة تمارين",
       "removeDay": "حذف اليوم",
-      "savePlan": "حفظ الخطة"
+      "savePlan": "حفظ الخطة",
+      "duplicateDay": "تكرار اليوم"
     },
     "errors": {
       "loadExercises": "حدث خطأ أثناء تحميل التمارين.",
@@ -1269,8 +1328,8 @@
       "updateFailed": "تعذّر تحديث الخطة.",
       "assignedSuccess": "تم تعيين الخطة للمستخدمين بنجاح.",
       "assignFailed": "فشل تعيين الخطة للمستخدمين.",
-      "planDuplicated": "Plan duplicated. You can edit it now.",
-      "duplicateFailed": "Could not duplicate plan"
+      "planDuplicated": "تم نسخ الخطة بنجاح. يمكنك تعديلها الآن.",
+      "duplicateFailed": "تعذّر نسخ الخطة."
     },
     "confirm": {
       "titleDefault": "هل أنت متأكد؟",
@@ -1320,7 +1379,7 @@
         "active": "نشطة",
         "inactive": "غير نشطة",
         "noDescription": "لا توجد ملاحظات.",
-        "dayCountLabel": "{count} يوم"
+        "dayCountLabel": "{count} ايام"
       },
       "modals": {
         "previewTitle": "معاينة الخطة",
