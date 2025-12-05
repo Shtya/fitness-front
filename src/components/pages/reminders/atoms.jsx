@@ -480,6 +480,7 @@ export function applyOffset(date, direction, minutes) {
   );
 }
 
+
 import { useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 
@@ -513,8 +514,7 @@ export function useReminderWebSocket(onDue) {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
 
-    const baseURL =
-      process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+    const baseURL = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
     const socketUrl = baseURL;
 
     const socket = io(`${socketUrl}/reminders`, {

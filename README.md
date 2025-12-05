@@ -1,5 +1,6 @@
 
-
+bug 
+ - when create account if he not assign any one to hime and make submit send and keep the validation not apply 
 
 
 
