@@ -508,25 +508,61 @@ export default function RemindersPage() {
     );
   }
 
-  if (notificationStatus !== 'granted' && notificationStatus !== 'unsupported') {
-     return (
-      <main className='container !px-0'>
-        <div className='max-w-xl mx-auto mt-10 rounded-2xl border border-dashed border-slate-300 bg-white p-6 md:p-8 text-center shadow-sm'>
-          <h1 className='text-xl md:text-2xl font-semibold text-slate-900 mb-3'>{safeT(t, 'permission.title', 'تفعيل الإشعارات مطلوب')}</h1>
+// أي حالة ما عدا granted → نعرض شاشة خاصة
+if (notificationStatus !== 'granted') {
+  return (
+    <main className='container !px-0'>
+      <div className='max-w-xl mx-auto mt-10 rounded-2xl border border-dashed border-slate-300 bg-white p-6 md:p-8 text-center shadow-sm'>
+        <h1 className='text-xl md:text-2xl font-semibold text-slate-900 mb-3'>
+          {safeT(t, 'permission.title', 'تفعيل الإشعارات مطلوب')}
+        </h1>
 
-          <p className='text-sm md:text-base text-slate-600 mb-4'>{safeT(t, 'permission.description', 'لكي تعمل صفحة التذكيرات بشكل صحيح وتستقبل تنبيهات في المتصفح، يجب السماح للإشعارات لهذا الموقع.')}</p>
-
-          {notificationStatus === 'denied' && <p className='text-xs md:text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4'>{safeT(t, 'permission.denied', 'لقد قمت برفض الإشعارات من قبل. من فضلك اضغط على أيقونة القفل بجانب عنوان الموقع في شريط المتصفح، ثم فعّل الإشعارات لهذا الموقع.')}</p>}
-
-          {notificationStatus === 'default' && (
-            <button type='button' onClick={requestNotificationPermission} className='rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 px-5 py-2.5 text-sm md:text-base text-white font-medium'>
-              {safeT(t, 'permission.button', 'تفعيل الإشعارات الآن')}
-            </button>
+        {/* وصف عام */}
+        <p className='text-sm md:text-base text-slate-600 mb-4'>
+          {safeT(
+            t,
+            'permission.description',
+            'لكي تعمل صفحة التذكيرات بشكل صحيح وتستقبل تنبيهات في المتصفح، يجب السماح بالإشعارات لهذا الموقع.'
           )}
-        </div>
-      </main>
-    );
-  }
+        </p>
+
+        {/* حالة: المتصفح لا يدعم الإشعارات */}
+        {notificationStatus === 'unsupported' && (
+          <p className='text-xs md:text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2'>
+            {safeT(
+              t,
+              'permission.unsupported',
+              'متصفحك الحالي لا يدعم إشعارات المتصفح. جرّب فتح الموقع من متصفح آخر أو جهاز يدعم الإشعارات.'
+            )}
+          </p>
+        )}
+
+        {/* حالة: المستخدم رفض من قبل */}
+        {notificationStatus === 'denied' && (
+          <p className='text-xs md:text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4'>
+            {safeT(
+              t,
+              'permission.denied',
+              'لقد قمت برفض الإشعارات من قبل. من فضلك اضغط على أيقونة القفل بجانب عنوان الموقع في شريط المتصفح، ثم فعّل الإشعارات لهذا الموقع.'
+            )}
+          </p>
+        )}
+
+        {/* حالة: default → نعرض زر يطلب الإذن */}
+        {notificationStatus === 'default' && (
+          <button
+            type='button'
+            onClick={requestNotificationPermission}
+            className='rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 px-5 py-2.5 text-sm md:text-base text-white font-medium'
+          >
+            {safeT(t, 'permission.button', 'تفعيل الإشعارات الآن')}
+          </button>
+        )}
+      </div>
+    </main>
+  );
+}
+
 
   return (
     <main className='container !px-0'>
