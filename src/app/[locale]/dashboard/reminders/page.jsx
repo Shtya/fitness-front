@@ -240,6 +240,7 @@ export default function RemindersPage() {
     (async () => {
       try {
         const [rs, st] = await Promise.all([listReminders(), getUserSettingsApi()]);
+
         if (!mounted) return;
 
         const withAudio = (rs || []).map(r => ({
@@ -249,60 +250,61 @@ export default function RemindersPage() {
             previewUrl: r.sound?.id === 'drop' ? SOUND_SAMPLES.drop : r.sound?.id === 'soft' ? SOUND_SAMPLES.soft : SOUND_SAMPLES.chime,
           },
         }));
+
         setReminders(withAudio);
         setSettings(st);
-
-        if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window) {
-          try {
-            const registration = await navigator.serviceWorker.register('/sw.js', {
-              scope: '/',
-              updateViaCache: 'none',
-            });
-
-            if (registration.installing) {
-              await new Promise(resolve => {
-                const installingWorker = registration.installing;
-                if (!installingWorker) {
-                  resolve();
-                  return;
-                }
-                installingWorker.addEventListener('statechange', e => {
-                  const target = e.target;
-                  if (target.state === 'activated') {
-                    resolve();
-                  }
-                });
-              });
-            } else if (registration.waiting) {
-              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-
-            await navigator.serviceWorker.ready;
-            let permission = Notification.permission;
-
-            if (permission === 'default') {
-              permission = await Notification.requestPermission();
-            }
-
-            if (permission === 'granted') {
-              try {
-                await subscribeToPush(registration);
-                console.log('[Reminders] subscribeToPush succeeded');
-              } catch (e) {
-                console.error('[Reminders] subscribeToPush failed:', e);
-              }
-            }
-          } catch (swError) {
-            console.error('[Reminders] service worker registration failed:', swError);
-          }
-        }
       } catch (error) {
-        // ignore
+        console.error('[Reminders] failed to load data', error);
       } finally {
         if (mounted) setLoading(false);
       }
     })();
+
+    // 2) تسجيل الـ Service Worker بشكل منفصل (لا يلمس loading)
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window) {
+      (async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/',
+            updateViaCache: 'none',
+          });
+
+          // ⚠️ لا تنتظر للأبد على state === 'activated'
+          if (registration.installing) {
+            const installingWorker = registration.installing;
+            await new Promise(resolve => {
+              if (!installingWorker) return resolve(null);
+
+              const handler = (e) => {
+                const state = e.target.state;
+                // نعتبر activated أو redundant نهاية طبيعية
+                if (state === 'activated' || state === 'redundant') {
+                  installingWorker.removeEventListener('statechange', handler);
+                  resolve(null);
+                }
+              };
+
+              installingWorker.addEventListener('statechange', handler);
+
+              // safety timeout حتى لو ما جاء أي event
+              setTimeout(() => resolve(null), 5000);
+            });
+          }
+
+          // ❌ احذف أو علّق هذه السطر لأنه ممكن يعلّق لو الـ SW فشل
+          // await navigator.serviceWorker.ready;
+
+          // ممكن تستدعي push subscription لكن بدون await إجباري
+          try {
+            await subscribeToPush(registration);
+          } catch (e) {
+            console.error('[Reminders] subscribeToPush failed:', e);
+          }
+        } catch (swError) {
+          console.error('[Reminders] service worker registration failed:', swError);
+        }
+      })();
+    }
 
     return () => {
       mounted = false;
@@ -1690,21 +1692,17 @@ const subscribeToPush = async registration => {
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
     const isSecureContext = window.isSecureContext;
-    
+
     console.log(`[Push Debug] === SECURITY DIAGNOSTICS ===`);
     console.log(`[Push Debug] Protocol: ${protocol}`);
     console.log(`[Push Debug] Hostname: ${hostname}`);
     console.log(`[Push Debug] Is Secure Context: ${isSecureContext}`);
     console.log(`[Push Debug] Full URL: ${window.location.href}`);
-    
+
     if (!isSecureContext && hostname !== 'localhost' && hostname !== '127.0.0.1') {
-      throw new Error(
-        `⚠️ SECURITY ERROR: Push API requires HTTPS or localhost. ` +
-        `Current: ${protocol}//${hostname}. ` +
-        `If using IP address, switch to localhost or use HTTPS.`
-      );
+      throw new Error(`⚠️ SECURITY ERROR: Push API requires HTTPS or localhost. ` + `Current: ${protocol}//${hostname}. ` + `If using IP address, switch to localhost or use HTTPS.`);
     }
-    
+
     const data = await api.get('/reminders/push/vapid-key');
 
     if (!data?.data?.publicKey) {
@@ -1739,7 +1737,7 @@ const subscribeToPush = async registration => {
         throw new Error('Service Worker is not active after waiting');
       }
     }
-		
+
     let permission = Notification.permission;
     if (permission === 'default') {
       permission = await Notification.requestPermission();
@@ -1750,48 +1748,52 @@ const subscribeToPush = async registration => {
     }
 
     let subscription = await registration.pushManager.getSubscription();
-		
+
     if (!subscription) {
-			try {
-				console.log(`[Push Debug] About to call pushManager.subscribe with:`, {
-					userVisibleOnly: true,
-					applicationServerKeyLength: applicationServerKey.length,
-					applicationServerKeyType: applicationServerKey.constructor.name,
-					applicationServerKey: Array.from(applicationServerKey).slice(0, 10).map(b => b.toString(16).padStart(2, '0')).join(' ') + '...',
-				});
-				subscription = await registration.pushManager.subscribe({ 
-					userVisibleOnly: true, 
-					applicationServerKey: applicationServerKey 
-				});
-				console.log(`[Push Debug] ✅ pushManager.subscribe() succeeded!`);
-				console.log(subscription);
+      try {
+        console.log(`[Push Debug] About to call pushManager.subscribe with:`, {
+          userVisibleOnly: true,
+          applicationServerKeyLength: applicationServerKey.length,
+          applicationServerKeyType: applicationServerKey.constructor.name,
+          applicationServerKey:
+            Array.from(applicationServerKey)
+              .slice(0, 10)
+              .map(b => b.toString(16).padStart(2, '0'))
+              .join(' ') + '...',
+        });
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: applicationServerKey,
+        });
+        console.log(`[Push Debug] ✅ pushManager.subscribe() succeeded!`);
+        console.log(subscription);
       } catch (subscribeError) {
-				console.error(`[Push Debug] ❌ pushManager.subscribe() FAILED!`);
-				console.error(`[Push Debug] Error name: ${subscribeError.name}`);
-				console.error(`[Push Debug] Error message: ${subscribeError.message}`);
-				console.error(`[Push Debug] Full error:`, subscribeError);
-				console.error(`[Push Debug] Error stack:`, subscribeError.stack);
-				
-				// Try alternate approach without applicationServerKey
-				if (subscribeError.name === 'AbortError') {
-					console.log(`[Push Debug] Attempting fallback: subscribe without applicationServerKey...`);
-					try {
-						const subWithoutKey = await registration.pushManager.subscribe({ userVisibleOnly: true });
-						console.log(`[Push Debug] ⚠️ Fallback subscribe succeeded (no VAPID key), but won't work for server push`);
-						subscription = subWithoutKey;
-					} catch (fallbackError) {
-						console.error(`[Push Debug] Fallback also failed:`, fallbackError.message);
-						throw subscribeError; // Throw original error
-					}
-				} else {
-					throw subscribeError;
-				}
+        console.error(`[Push Debug] ❌ pushManager.subscribe() FAILED!`);
+        console.error(`[Push Debug] Error name: ${subscribeError.name}`);
+        console.error(`[Push Debug] Error message: ${subscribeError.message}`);
+        console.error(`[Push Debug] Full error:`, subscribeError);
+        console.error(`[Push Debug] Error stack:`, subscribeError.stack);
+
+        // Try alternate approach without applicationServerKey
+        if (subscribeError.name === 'AbortError') {
+          console.log(`[Push Debug] Attempting fallback: subscribe without applicationServerKey...`);
+          try {
+            const subWithoutKey = await registration.pushManager.subscribe({ userVisibleOnly: true });
+            console.log(`[Push Debug] ⚠️ Fallback subscribe succeeded (no VAPID key), but won't work for server push`);
+            subscription = subWithoutKey;
+          } catch (fallbackError) {
+            console.error(`[Push Debug] Fallback also failed:`, fallbackError.message);
+            throw subscribeError; // Throw original error
+          }
+        } else {
+          throw subscribeError;
+        }
       }
     }
     if (!subscription) {
       throw new Error('Subscription is null after creation');
     }
- 
+
     console.log(`[Push Debug] ✅ Got subscription, now extracting keys...`);
     const p256dh = subscription.getKey('p256dh');
     const auth = subscription.getKey('auth');
@@ -1819,7 +1821,7 @@ const subscribeToPush = async registration => {
       p256dhLength: subscriptionData.keys.p256dh.length,
       authLength: subscriptionData.keys.auth.length,
     });
-    
+
     const postResponse = await api.post('/reminders/push/subscribe', subscriptionData);
     console.log(`[Push Debug] ✅ POST /reminders/push/subscribe response:`, postResponse.data);
     console.log(`[Push Debug] ✅ Subscription saved on backend with ID: ${postResponse.data?.subscriptionId}`);
@@ -1836,19 +1838,19 @@ function arrayBufferToBase64_local(buffer) {
   }
   const bytes = new Uint8Array(buffer);
   console.log(`[arrayBufferToBase64] Converting ${bytes.byteLength} bytes to base64...`);
-  
+
   // استخدام طريقة آمنة تعمل على جميع المتصفحات
   let binary = '';
   const chunkSize = 8192; // معالجة 8KB في كل مرة لتجنب stack overflow
-  
+
   for (let i = 0; i < bytes.byteLength; i += chunkSize) {
     const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.byteLength));
     binary += String.fromCharCode.apply(null, chunk);
   }
-  
+
   const base64 = window.btoa(binary);
   const urlSafeBase64 = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  
+
   console.log(`[arrayBufferToBase64] ✅ Success: ${bytes.byteLength} bytes → base64 (${urlSafeBase64.length} chars)`);
   return urlSafeBase64;
 }
