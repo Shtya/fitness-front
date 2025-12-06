@@ -149,6 +149,7 @@ const schema = yup.object().shape({
 
 export default function RemindersPage() {
   const t = useTranslations('reminders');
+  const [notificationStatus, setNotificationStatus] = useState('checking');
 
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -275,7 +276,7 @@ export default function RemindersPage() {
             await new Promise(resolve => {
               if (!installingWorker) return resolve(null);
 
-              const handler = (e) => {
+              const handler = e => {
                 const state = e.target.state;
                 // نعتبر activated أو redundant نهاية طبيعية
                 if (state === 'activated' || state === 'redundant') {
@@ -309,6 +310,15 @@ export default function RemindersPage() {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof Notification === 'undefined') {
+      // متصفح لا يدعم Notifications
+      setNotificationStatus('unsupported');
+      return;
+    }
+    setNotificationStatus(Notification.permission); // 'default' | 'granted' | 'denied'
   }, []);
 
   const filtered = useMemo(() => {
@@ -402,6 +412,26 @@ export default function RemindersPage() {
     }
   };
 
+  const requestNotificationPermission = async () => {
+    if (typeof window === 'undefined' || typeof Notification === 'undefined') return;
+
+    try {
+      const result = await Notification.requestPermission();
+      setNotificationStatus(result);
+
+      if (result === 'granted' && 'serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          await subscribeToPush(registration);
+        } catch (err) {
+          console.error('[Reminders] subscribeToPush after permission failed:', err);
+        }
+      }
+    } catch (err) {
+      console.error('[Reminders] requestNotificationPermission failed:', err);
+    }
+  };
+
   const onAck = async rem => {
     try {
       const saved = await markCompletedApi(rem.id);
@@ -473,6 +503,26 @@ export default function RemindersPage() {
           <div className='h-20 rounded-xl bg-slate-100 animate-pulse' />
           <div className='h-20 rounded-xl bg-slate-100 animate-pulse' />
           <div className='h-20 rounded-xl bg-slate-100 animate-pulse' />
+        </div>
+      </main>
+    );
+  }
+
+  if (notificationStatus !== 'granted' && notificationStatus !== 'unsupported') {
+     return (
+      <main className='container !px-0'>
+        <div className='max-w-xl mx-auto mt-10 rounded-2xl border border-dashed border-slate-300 bg-white p-6 md:p-8 text-center shadow-sm'>
+          <h1 className='text-xl md:text-2xl font-semibold text-slate-900 mb-3'>{safeT(t, 'permission.title', 'تفعيل الإشعارات مطلوب')}</h1>
+
+          <p className='text-sm md:text-base text-slate-600 mb-4'>{safeT(t, 'permission.description', 'لكي تعمل صفحة التذكيرات بشكل صحيح وتستقبل تنبيهات في المتصفح، يجب السماح للإشعارات لهذا الموقع.')}</p>
+
+          {notificationStatus === 'denied' && <p className='text-xs md:text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4'>{safeT(t, 'permission.denied', 'لقد قمت برفض الإشعارات من قبل. من فضلك اضغط على أيقونة القفل بجانب عنوان الموقع في شريط المتصفح، ثم فعّل الإشعارات لهذا الموقع.')}</p>}
+
+          {notificationStatus === 'default' && (
+            <button type='button' onClick={requestNotificationPermission} className='rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 px-5 py-2.5 text-sm md:text-base text-white font-medium'>
+              {safeT(t, 'permission.button', 'تفعيل الإشعارات الآن')}
+            </button>
+          )}
         </div>
       </main>
     );
