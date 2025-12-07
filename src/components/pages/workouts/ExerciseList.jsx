@@ -37,7 +37,7 @@ export function ExerciseList({ workout, currentExId, onPick, t, completedExercis
   }
 
   return (
-    <div className='space-y-2'>
+    <div className=' max-lg:px-1 max-lg:pb-1 max-lg:pt-2  lg:space-y-2 max-lg:overflow-x-auto max-lg:flex max-lg:gap-2'>
       {exercises.map((ex, idx) => {
         const exId = ex?.id ?? `idx-${idx}`;
         const list = setsFor(exId);
@@ -51,20 +51,13 @@ export function ExerciseList({ workout, currentExId, onPick, t, completedExercis
           <div key={exId} className='group relative'>
             <button
               type='button'
-              onClick={() => onPick?.(ex)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onPick?.(ex);
-                }
-              }}
-              aria-current={active ? 'true' : 'false'}
-              className={['w-full text-left rounded-lg transition focus:outline-none focus:ring-2 focus:ring-indigo-400 ', 'border bg-white backdrop-blur-sm', active ? 'border-indigo-400 shadow-sm ring-1 ring-indigo-100 ' : 'border-slate-200 hover:bg-slate-50/60 hover:shadow-sm'].join(' ')}>
-              <div className='p-3 flex items-center gap-3'>
-                {/* Thumb */}
-                <div className='relative w-12 h-12 rounded-lg overflow-hidden bg-slate-100 ring-1 ring-slate-200 shrink-0'>
+              onClick={() => onPick?.(ex)} 
+               className={[' w-full text-left rounded-lg transition focus:outline-none focus:ring-2 focus:ring-indigo-400 ', 'border bg-white backdrop-blur-sm', active ? ' scale-[1.05] border-indigo-400 shadow-sm ring-1 ring-indigo-100 ' : 'border-slate-200 hover:bg-slate-50/60 hover:shadow-sm'].join(' ')}>
+              <div className=' max-lg:p-[2px] lg:p-3 flex items-center gap-3'>
+
+                <div className='relative max-lg:w-13 max-lg:h-13 w-12 h-12 rounded-md overflow-hidden lg:bg-slate-100 ring-1 ring-slate-200 shrink-0'>
                   {ex?.img ? (
-                    <Img src={ex.img} alt={ex?.name || 'exercise'} className='object-cover w-full h-full' />
+                    <Img src={ex.img} alt={ex?.name || 'exercise'} className='object-contain w-full h-full ' showBlur={false} />
                   ) : (
                     <div className='grid place-items-center w-full h-full'>
                       <Dumbbell size={18} className='text-slate-500' />
@@ -74,7 +67,7 @@ export function ExerciseList({ workout, currentExId, onPick, t, completedExercis
                 </div>
 
                 {/* Info */}
-                <div className='min-w-0 flex-1'>
+                <div className=' max-lg:!hidden min-w-0 flex-1'>
                   <div className='flex items-center justify-between gap-2'>
                     <div className='min-w-0  '>
                       <div title={ex?.name} className={` rtl:text-right font-number text-nowrap truncate font-semibold text-slate-900 ${!active && 'truncate'}`}>
