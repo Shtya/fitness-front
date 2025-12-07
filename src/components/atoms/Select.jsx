@@ -158,19 +158,19 @@ export default function Select({cnLabel , options = [], value = null, onChange =
     }
   }, [createMode]);
 
-  useEffect(() => {
-    if (!open) return;
+  // useEffect(() => {
+  //   if (!open) return;
 
-    const el = document.querySelector('#body');
-    if (!el) return;
+  //   const el = document.querySelector('#body');
+  //   if (!el) return;
 
-    const prev = el.style.overflow;
-    el.style.overflow = 'hidden';
+  //   const prev = el.style.overflow;
+  //   el.style.overflow = 'hidden';
 
-    return () => {
-      el.style.overflow = prev;
-    };
-  }, [open]);
+  //   return () => {
+  //     el.style.overflow = prev;
+  //   };
+  // }, [open]);
 
   const scrollIntoView = index => {
     const list = listRef.current;

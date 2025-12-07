@@ -233,7 +233,8 @@
       "clientManagement": "Client Management",
       "overview": "Overview",
       "programs": "Programs",
-      "operations": "Operations"
+      "operations": "Operations",
+      "billing": "Billing & Wallet"
     },
     "items": {
       "dashboard": "Dashboard",
@@ -262,7 +263,15 @@
       "manageForms": "Manage Forms",
       "responses": "Responses",
       "messages": "Messages",
-      "systemSettings": "System Settings"
+      "feedback": "Feedback",
+      "systemSettings": "System Settings",
+      "billing": "Billing & Wallet",
+      "transactions": "Transactions",
+      "subscriptions": "Subscriptions",
+      "withdraw": "Withdrawal",
+      "clientPayments": "Client Payments",
+      "withdrawalApprovals": "Approval Requests",
+      "allWallets": "All Wallets"
     },
     "tooltips": {
       "expand": "Expand sidebar",

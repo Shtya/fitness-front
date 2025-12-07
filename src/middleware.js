@@ -34,17 +34,25 @@ export const NAV_HREFS = {
     '/dashboard/calculator',
     '/dashboard/reports',
     '/dashboard/settings',
+    '/dashboard/billing',
+    '/dashboard/billing/transactions',
+    '/dashboard/billing/subscriptions',
+    '/dashboard/billing/withdraw',
+    '/dashboard/billing/client-payments',
   ],
   super_admin: [
     '/dashboard',
     '/dashboard/super-admin/users',
     '/dashboard/workouts',
+    '/dashboard/billing/analytics',
+    '/dashboard/billing/withdrawal-approvals',
+    '/dashboard/billing/all-wallets',
   ],
 };
 
 const intlMiddleware = createMiddleware({
   locales: ['en', 'ar'],
-  defaultLocale: 'en',
+  defaultLocale: 'ar',
   localePrefix: 'always',
 });
 
@@ -76,7 +84,7 @@ function stripLocale(pathname) {
 }
 function withLocale(path, locale) {
   const p = normalize(path || '/');
-  const l = locale || 'en';
+  const l = locale || 'ar';
   return `/${l}${p === '/' ? '' : p}`;
 }
 function matchesPublic(pathNoLocale) {
@@ -109,7 +117,7 @@ function readUserCookie(req) {
 export default function middleware(req) {
   const { nextUrl } = req;
   const pathname = nextUrl.pathname;
-  const currentLocale = getLocaleFromPath(pathname) || 'en';
+  const currentLocale = getLocaleFromPath(pathname) || 'ar';
 
   // Always remove locale before checks to avoid loops
   const pathNoLocale = stripLocale(pathname);

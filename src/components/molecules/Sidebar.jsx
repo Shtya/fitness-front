@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import api from '@/utils/axios';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, ClipboardList, Apple, NotebookPen, MessageSquare, Calculator, FileBarChart, ChefHat, ChevronDown, ChevronLeft, ChevronRight, X, Newspaper, ServerCog, AlarmClock, RotateCcw } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, ClipboardList, Apple, NotebookPen, MessageSquare, Calculator, FileBarChart, ChefHat, ChevronDown, ChevronLeft, ChevronRight, X, Newspaper, ServerCog, AlarmClock, RotateCcw, Wallet, CreditCard, TrendingUp } from 'lucide-react';
 import { usePathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
 import { FaInbox, FaUsers, FaWpforms } from 'react-icons/fa';
@@ -101,6 +101,24 @@ export const NAV = [
       { nameKey: 'systemSettings', href: '/dashboard/settings', icon: ServerCog },
     ],
   },
+  {
+    role: 'admin',
+    sectionKey: 'sections.billing',
+    items: [
+      {
+        nameKey: 'billing',
+        icon: Wallet,
+        expand: false,
+        children: [
+          { nameKey: 'overview', href: '/dashboard/billing', icon: CreditCard },
+          { nameKey: 'transactions', href: '/dashboard/billing/transactions', icon: FileBarChart },
+          { nameKey: 'subscriptions', href: '/dashboard/billing/subscriptions', icon: CreditCard },
+          { nameKey: 'withdraw', href: '/dashboard/billing/withdraw', icon: TrendingUp },
+          { nameKey: 'clientPayments', href: '/dashboard/billing/client-payments', icon: Users },
+        ],
+      },
+    ],
+  },
   // SUPER ADMIN
   {
     role: 'super_admin',
@@ -111,6 +129,22 @@ export const NAV = [
       { nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
       { nameKey: 'feedback', href: '/dashboard/super-admin/feedback', icon: MessageSquare },
       { nameKey: 'systemSettings', href: '/dashboard/settings', icon: ServerCog },
+    ],
+  },
+  {
+    role: 'super_admin',
+    sectionKey: 'sections.billing',
+    items: [
+      {
+        nameKey: 'billing',
+        icon: Wallet,
+        expand: false,
+        children: [
+          { nameKey: 'analytics', href: '/dashboard/billing/analytics', icon: TrendingUp },
+          { nameKey: 'withdrawalApprovals', href: '/dashboard/billing/withdrawal-approvals', icon: CreditCard },
+          { nameKey: 'allWallets', href: '/dashboard/billing/all-wallets', icon: Users },
+        ],
+      },
     ],
   },
 ];

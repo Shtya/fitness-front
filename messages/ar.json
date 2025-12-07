@@ -44,7 +44,8 @@
 			"photos": "صور التقدم"
 		},
 		"errors": {
-			"loadProfile": "حصل خطأ أثناء تحميل بيانات الملف الشخصي."
+			"loadProfile": "حصل خطأ أثناء تحميل بيانات الملف الشخصي.",
+			"required": "هذا الحقل مطلوب"
 		},
 		"stats": {
 			"workoutPlan": "خطة التدريب",
@@ -211,7 +212,8 @@
 			"clientManagement": "إدارة العملاء",
 			"overview": "نظرة عامة",
 			"programs": "البرامج",
-			"operations": "العمليات"
+			"operations": "العمليات",
+			"billing": "الفواتير والمحفظة"
 		},
 		"items": {
 			"dashboard": "لوحة التحكم",
@@ -229,7 +231,6 @@
 			"groceryList": "قائمة المشتريات",
 			"nutritionManagement": "إدارة التغذية",
 			"mealPlans": "خطط الوجبات",
-			"analytics": "التحليلات",
 			"reports": "التقارير",
 			"trainingManagement": "إدارة التدريب",
 			"workoutPlans": "خطط التمارين",
@@ -241,7 +242,16 @@
 			"responses": "الردود",
 			"messages": "الرسائل",
 			"feedback": "آراء وملاحظات",
-			"systemSettings": "إعدادات النظام"
+			"systemSettings": "إعدادات النظام",
+			"billing": "الفواتير والمحفظة",
+			"overview": "النظرة العامة",
+			"transactions": "العمليات",
+			"subscriptions": "الاشتراكات",
+			"withdraw": "السحب",
+			"clientPayments": "دفعات العملاء",
+			"withdrawalApprovals": "الموافقة على السحب",
+			"allWallets": "جميع المحافظ" , 
+			"analytics": "التحليلات"
 		},
 		"tooltips": {
 			"expand": "توسيع الشريط الجانبي",
@@ -2629,6 +2639,7 @@
 			"timeline": "الخط الزمني"
 		},
 		"now": "الآن",
+		"passed": "انتهى",
 		"before": "قبل",
 		"after": "بعد",
 		"next": "التالي",

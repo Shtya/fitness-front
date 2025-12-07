@@ -1,3 +1,5 @@
+
+
 'use client';
 
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
@@ -91,12 +93,12 @@ function formatSchedule2(t, rem) {
 		const every = s.interval && Number(s.interval.every) > 0 ? Number(s.interval.every) : null;
 		const unitLabel = s.interval && s.interval.unit ? safeT(t, `interval.unit.${s.interval.unit}`, s.interval.unit) : '';
 
-		const intervalLabel = s.interval && every ? `${safeT(t, 'mode.intervalEvery', 'Every')} ${every} ${unitLabel} (${safeT(t, 'form.from', 'from')} ${mappedTimes[0] || '—'})` : safeT(t, 'mode.interval', 'Interval');
+		const intervalLabel = s.interval && every ? `${safeT(t, 'mode.intervalEvery', 'Every')} ${every} ${unitLabel} ` : safeT(t, 'mode.interval', 'Interval');
 
 		const labelByMode = {
 			once: `${safeT(t, 'mode.once', 'Once')} ${mappedTimes.join('، ')}`,
 			daily: `${safeT(t, 'mode.daily', 'Daily')} ${mappedTimes.join('، ')}`,
-			weekly: `${safeT(t, 'mode.weekly', 'Weekly')} ${(s.daysOfWeek || []).join('، ') || '—'} ${mappedTimes.join('، ')}`,
+			weekly: `${safeT(t, 'mode.weekly', 'Weekly')}`,
 			monthly: `${safeT(t, 'mode.monthly', 'Monthly')} ${mappedTimes.join('، ')}`,
 			interval: intervalLabel,
 		};
@@ -173,7 +175,6 @@ export default function RemindersPage() {
 	const [reminders, setReminders] = useState([]);
 	const [settings, setSettings] = useState(null);
 	const [loading, setLoading] = useState(true);
-	const timelineEntries = useMemo(() => buildTimelineEntries(reminders, settings), [reminders, settings]);
 
 	const [dueModal, setDueModal] = useState({ open: false, reminder: null });
 
@@ -182,8 +183,28 @@ export default function RemindersPage() {
 	const [openSettings, setOpenSettings] = useState(false);
 	const [openCalendar, setOpenCalendar] = useState(false);
 
+ 	const now = new Date();
+ 
 	const today = new Date();
 	const todayKey = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][today.getDay()];
+
+	// active day for TabsPill (default to today)
+	const [activeDay, setActiveDay] = useState(todayKey);
+
+	function dateForWeekday(key) {
+		const now = new Date();
+		for (let i = 0; i < 7; i++) {
+			const d = new Date(now);
+			d.setDate(now.getDate() + i);
+			const k = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][d.getDay()];
+			if (k === key) return d;
+		}
+		return now;
+	}
+
+	const selectedDate = useMemo(() => dateForWeekday(activeDay), [activeDay]);
+
+	const timelineEntries = useMemo(() => buildTimelineEntries(reminders, settings, selectedDate), [reminders, settings, selectedDate]);
 
 	const viewToggleOptions = useMemo(
 		() => [
@@ -283,7 +304,6 @@ export default function RemindersPage() {
 				setReminders(withAudio);
 				setSettings(st);
 			} catch (error) {
-				console.error('[Reminders] failed to load data', error);
 			} finally {
 				if (mounted) setLoading(false);
 			}
@@ -319,18 +339,11 @@ export default function RemindersPage() {
 							setTimeout(() => resolve(null), 5000);
 						});
 					}
-
-					// ❌ احذف أو علّق هذه السطر لأنه ممكن يعلّق لو الـ SW فشل
-					// await navigator.serviceWorker.ready;
-
-					// ممكن تستدعي push subscription لكن بدون await إجباري
 					try {
 						await subscribeToPush(registration);
 					} catch (e) {
-						console.error('[Reminders] subscribeToPush failed:', e);
 					}
 				} catch (swError) {
-					console.error('[Reminders] service worker registration failed:', swError);
 				}
 			})();
 		}
@@ -350,17 +363,22 @@ export default function RemindersPage() {
 	}, []);
 
 	const filtered = useMemo(() => {
-		const list = reminders
-			.filter(r => {
-				const s = r.schedule || {};
-				if (s.mode === 'weekly' && Array.isArray(s.daysOfWeek) && s.daysOfWeek.length) {
-					return s.daysOfWeek.includes(todayKey);
-				}
-				return true;
-			})
-			.sort((a, b) => (computeNextOccurrence(a, settings || {})?.getTime() || 0) - (computeNextOccurrence(b, settings || {})?.getTime() || 0));
+		// Show ALL reminders sorted by next occurrence (regardless of selected tab)
+		const list = reminders.slice().sort((a, b) => (computeNextOccurrence(a, settings || {})?.getTime() || 0) - (computeNextOccurrence(b, settings || {})?.getTime() || 0));
 		return list;
-	}, [reminders, settings, todayKey]);
+	}, [reminders, settings]);
+
+	// build tabs with counts per weekday and localized labels (accurate per-day occurrences)
+	const tabs = useMemo(() => {
+		return WEEK_DAYS.map(d => {
+			const label = safeT(t, `weekday.${d.label}`, d.label);
+			const date = dateForWeekday(d.key);
+			const entries = buildTimelineEntries(reminders, settings, date);
+			const count = entries.length || 0;
+			const labelWithCount = count > 0 ? `${label} (${count})` : label;
+			return { key: d.key, label: labelWithCount };
+		});
+	}, [WEEK_DAYS, reminders, settings, t]);
 
 	useReminderWebSocket(rem => {
 		setReminders(prev => prev.map(r => (r.id === rem.id ? { ...r, ...rem } : r)));
@@ -452,11 +470,9 @@ export default function RemindersPage() {
 					const registration = await navigator.serviceWorker.ready;
 					await subscribeToPush(registration);
 				} catch (err) {
-					console.error('[Reminders] subscribeToPush after permission failed:', err);
 				}
 			}
 		} catch (err) {
-			console.error('[Reminders] requestNotificationPermission failed:', err);
 		}
 	};
 
@@ -540,7 +556,6 @@ export default function RemindersPage() {
 	const telegramEnabled = settings?.telegramEnabled === true;
 	const needsActivation = notificationStatus !== 'granted' && !telegramEnabled;
 
-	// لو لا إشعارات متصفح ولا تيليجرام → نطلب تفعيل واحد منهم
 	if (needsActivation) {
 		return (
 			<main className="container !px-0">
@@ -568,7 +583,6 @@ export default function RemindersPage() {
 						</p>
 					)}
 
-					{/* حالة: المستخدم رفض من قبل */}
 					{notificationStatus === 'denied' && (
 						<p className="text-xs md:text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
 							{safeT(
@@ -579,7 +593,6 @@ export default function RemindersPage() {
 						</p>
 					)}
 
-					{/* حالة: default → نعرض زر يطلب الإذن */}
 					{notificationStatus === 'default' && (
 						<button
 							type="button"
@@ -589,8 +602,6 @@ export default function RemindersPage() {
 							{safeT(t, 'permission.button', 'تفعيل إشعارات المتصفح')}
 						</button>
 					)}
-
-					{/* بديل تيليجرام دايماً يظهر هنا طالما لسه مفعّلتهوش */}
 					<div className="mt-4">
 						<TelegramConnectSection settings={settings} />
 					</div>
@@ -626,7 +637,7 @@ export default function RemindersPage() {
 						</div>
 
 						<div className='flex flex-wrap max-md:justify-center items-center gap-2'>
-							<TelegramConnectSection settings={settings} />
+
 							<button type='button' onClick={() => setOpenCalendar(true)} title={t('actions.openCalendar')} aria-label={t('actions.openCalendar')} className=' flex items-center gap-1 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm hover:bg-white/20'>
 								<CalendarIcon className='inline-block w-4 h-4' />
 							</button>
@@ -639,8 +650,11 @@ export default function RemindersPage() {
 						</div>
 					</div>
 
-					<div className='mt-2 md:mt-4 flex flex-col gap-3'>
-						<div className=' max-md:justify-end max-md:mt-[12px] flex items-center justify-between gap-2'>
+					<div className='max-md:mt-[17px] flex items-center justify-between gap-3'>
+
+						<TelegramConnectSection settings={settings} />
+
+						<div className=' max-md:justify-end  flex items-center justify-between gap-2'>
 							<div className='flex items-center gap-2'>
 								<div className='flex  gap-1 rounded-full bg-white/10 p-2'>
 									{viewToggleOptions.map(option => {
@@ -658,6 +672,8 @@ export default function RemindersPage() {
 				</div>
 			</div>
 
+			<TabsPill outerCn='!pt-4' tabs={tabs} sliceInPhone={false} active={activeDay} onChange={setActiveDay} />
+
 			<section ref={timelineSectionRef} className='mt-6'>
 				{viewMode === 'timeline' ? (
 					<ReminderTimeline t={t} entries={timelineEntries} highlightReminderId={highlightReminderId} />
@@ -671,6 +687,7 @@ export default function RemindersPage() {
 							filtered.map(r => (
 								<ReminderCard
 									key={r.id}
+									now={now}
 									t={t}
 									reminder={r}
 									settings={
@@ -735,12 +752,10 @@ export function TelegramConnectSection({ settings }) {
 	const [status, setStatus] = useState(
 		settings?.telegramEnabled ? 'linked' : 'idle'
 	);
-	const [error, setError] = useState(null);
 
 	useEffect(() => {
 		if (settings?.telegramEnabled) {
 			setStatus('linked');
-			setError(null);
 		}
 	}, [settings?.telegramEnabled]);
 
@@ -749,14 +764,12 @@ export function TelegramConnectSection({ settings }) {
 
 		try {
 			setStatus('loading');
-			setError(null);
 
 			const res = await api.post('/reminders/telegram/link');
 			const botUrl = res.data?.botUrl;
 
 			if (!botUrl) {
 				setStatus('error');
-				setError(t('reminders.telegram.error'));
 				return;
 			}
 
@@ -764,33 +777,9 @@ export function TelegramConnectSection({ settings }) {
 			setStatus('waiting');
 		} catch (err) {
 			setStatus('error');
-			setError(t('reminders.telegram.error'));
 		}
 	};
 
-	const handleCheckStatus = async () => {
-		try {
-			setStatus('loading');
-
-			const res = await api.get('/reminders/settings/user');
-			const enabled = res.data?.telegramEnabled;
-
-			if (enabled) {
-				setStatus('linked');
-
-				// عملنا لينك بنجاح → نعش الصفحة عشان RemindersPage يشوف telegramEnabled = true
-				if (typeof window !== 'undefined') {
-					window.location.reload();
-				}
-			} else {
-				setStatus('waiting');
-				setError(t('reminders.telegram.waiting'));
-			}
-		} catch (err) {
-			setStatus('error');
-			setError(t('reminders.telegram.error'));
-		}
-	};
 	const telegramAlreadyEnabled = settings?.telegramEnabled && settings?.telegramChatId;
 
 	return (
@@ -801,13 +790,13 @@ export function TelegramConnectSection({ settings }) {
 					<button
 						onClick={handleConnect}
 						disabled={status === 'loading'}
-						className="w-full px-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm disabled:opacity-50"
+						className="w-full px-3 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-xs disabled:opacity-50"
 					>
 						{status === 'loading'
 							? t('reminders.telegram.loading')
 							: t('reminders.telegram.activate')}
 					</button>
- 
+
 				</>
 			)}
 
@@ -815,9 +804,9 @@ export function TelegramConnectSection({ settings }) {
 				<button
 					type="button"
 					disabled
-					className="w-full px-2 bg-emerald-600 text-white py-2 rounded-lg text-sm opacity-90 cursor-default"
+					className="w-full px-3 bg-emerald-600 text-white py-2 rounded-lg text-xs opacity-90 cursor-default"
 				>
-					✅ {t('reminders.telegram.enabled')}
+					{t('reminders.telegram.enabled')}
 				</button>
 			)}
 		</div>
@@ -888,15 +877,12 @@ function IconButton({ cn, icon, onClick, label, danger }) {
 
 /* ---------- Reminder card ---------- */
 
-function ReminderCard({ t, reminder, onEdit, onDelete, onToggleActive, settings }) {
-	const [now, setNow] = useState(new Date());
-	useEffect(() => {
-		const id = setInterval(() => setNow(new Date()), 1000);
-		return () => clearInterval(id);
-	}, []);
+const ReminderCard = React.memo(function ReminderCard({ now, t, reminder, onEdit, onDelete, onToggleActive, settings }) {
 
-	const next = computeNextOccurrence(reminder, settings || {});
-	const due = next && next <= now;
+	const next = useMemo(() => computeNextOccurrence(reminder, settings || {}), [reminder.id, JSON.stringify(reminder?.schedule || {}), JSON.stringify(settings || {}), now?.getTime()]);
+
+	const due = next && next.getTime() <= now.getTime();
+
 	const muted = !reminder.active;
 
 	const remainingMs = next ? Math.max(0, next.getTime() - now.getTime()) : null;
@@ -916,7 +902,7 @@ function ReminderCard({ t, reminder, onEdit, onDelete, onToggleActive, settings 
 								{period && <span className=' absolute ltr:-right-7 rtl:-left-7  font-en text-sm font-[800] lowercase font-number '>{period}</span>}
 								<span className='text-4xl font-[700] font-number  '>{time}</span>
 							</div>
-							{scheduleText && <span className=' rtl:mr-[2px] ltr:ml-[2px] '>{scheduleText}</span>}
+							{scheduleText && <span className='text-nowrap truncate rtl:mr-[2px] ltr:ml-[2px] '>{scheduleText}</span>}
 						</span>
 					</div>
 					<div className='gap-2 flex flex-wrap items-center '>
@@ -926,7 +912,9 @@ function ReminderCard({ t, reminder, onEdit, onDelete, onToggleActive, settings 
 								{safeT(t, 'next', 'Next')}: {next ? humanDateTime(next) : '—'}
 							</span>
 						)}
+
 						{due && <span className={`px-2 py-0.5 rounded-md ${due ? 'bg-emerald-100 text-emerald-800' : 'bg-indigo-50 text-indigo-700'}`}>{due ? safeT(t, 'now', 'Now') : `${safeT(t, 'willStartAfter', 'يعمل بعد')} ${remainingStr}`} </span>}
+						{due && <span className='px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 text-xs font-semibold'>⏱ {safeT(t, 'passed', 'Passed')}</span>}
 					</div>
 					{reminder.notes && <p className='mt-1 text-sm text-slate-600'>{reminder.notes}</p>}
 				</div>
@@ -941,12 +929,12 @@ function ReminderCard({ t, reminder, onEdit, onDelete, onToggleActive, settings 
 			</div>
 		</div>
 	);
-}
+})
 
 /* ---------- timeline building ---------- */
 
-function buildTimelineEntries(reminders = [], settings = {}) {
-	const today = new Date();
+function buildTimelineEntries(reminders = [], settings = {}, targetDate = new Date()) {
+	const today = targetDate;
 	const todayIso = toISODate(today);
 	const dayKey = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][today.getDay()];
 	const now = new Date();
@@ -1041,8 +1029,8 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 			exdates: initial?.schedule?.exdates || [],
 			defaultSnooze: initial?.defaultSnooze ?? 10,
 			quietHours: initial?.quietHours || {
-				start: '10:00 PM',
-				end: '07:00 AM',
+				start: '12:00 PM',
+				end: '01:00 AM',
 			},
 			timezone: initial?.timezone || settings.timezone || 'Africa/Cairo',
 		},
@@ -1076,49 +1064,8 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 
 	const mode = watch('schedule.mode');
 	const times = watch('schedule.times');
-	const intervalEvery = watch('schedule.interval.every');
-	const intervalUnit = watch('schedule.interval.unit') || 'hour';
 	const [activeTab, setActiveTab] = useState('details');
 
-	// preview sound toggle
-	const previewAudioRef = useRef(null);
-	const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
-
-	const stopPreview = () => {
-		if (previewAudioRef.current) {
-			try {
-				previewAudioRef.current.pause();
-				previewAudioRef.current.currentTime = 0;
-			} catch (_) { }
-			previewAudioRef.current = null;
-		}
-		setIsPreviewPlaying(false);
-	};
-
-	const playPreview = () => {
-		try {
-			const sound = watch('sound') || {};
-			const audio = new Audio(sound.previewUrl || SOUND_SAMPLES.chime);
-			previewAudioRef.current = audio;
-			audio.volume = Number.isFinite(sound.volume) ? sound.volume : 0.8;
-			audio
-				.play()
-				.then(() => {
-					setIsPreviewPlaying(true);
-					audio.onended = () => {
-						setIsPreviewPlaying(false);
-						previewAudioRef.current = null;
-					};
-				})
-				.catch(() => {
-					setIsPreviewPlaying(false);
-					previewAudioRef.current = null;
-				});
-		} catch (e) {
-			setIsPreviewPlaying(false);
-			previewAudioRef.current = null;
-		}
-	};
 
 	const onSubmit = data => {
 		onSave({
@@ -1153,13 +1100,7 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 		};
 	}, [settings.city, settings.country]);
 
-	const tabs = useMemo(
-		() => [
-			{ key: 'details', label: safeT(t, 'tabs.details', 'Details') },
-			{ key: 'settings', label: safeT(t, 'tabs.settings', 'Settings') },
-		],
-		[t],
-	);
+
 
 	const MODE_OPTIONS = [
 		{ id: 'once', label: safeT(t, 'mode.once', 'Once') },
@@ -1203,74 +1144,15 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 		},
 	];
 
-	// Templates: ماء / فواتير / أذكار
-	const applyTemplate = key => {
-		const todayIso = toISODate(new Date());
-
-		if (key === 'water') {
-			setValue('title', safeT(t, 'templates.water.title', 'Drink water'));
-			setValue('notes', safeT(t, 'templates.water.notes', 'Stay hydrated during the day'));
-			setValue('schedule.mode', 'interval');
-			setValue('schedule.startDate', todayIso);
-			setValue('schedule.interval', { every: 2, unit: 'hour' });
-			setValue('schedule.times', ['09:00']);
-		}
-
-		if (key === 'bills') {
-			setValue('title', safeT(t, 'templates.bills.title', 'Pay bills'));
-			setValue('notes', safeT(t, 'templates.bills.notes', 'Monthly bills reminder'));
-			setValue('schedule.mode', 'monthly');
-			setValue('schedule.startDate', todayIso);
-			setValue('schedule.times', ['20:00']);
-		}
-
-		if (key === 'adhkar') {
-			setValue('title', safeT(t, 'templates.adhkar.title', 'أذكار الصباح'));
-			setValue('notes', safeT(t, 'templates.adhkar.notes', 'Daily reminder for morning adhkar'));
-			setValue('schedule.mode', 'prayer');
-			setValue('schedule.prayer', {
-				name: 'Fajr',
-				direction: 'after',
-				offsetMin: 10,
-			});
-			setValue('schedule.startDate', todayIso);
-			setValue('schedule.times', []);
-		}
-	};
-
 	return (
 		<form className='grid gap-5' onSubmit={handleSubmit(onSubmit)}>
 			{activeTab === 'details' && (
 				<div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
 					<Input label={safeT(t, 'form.title', 'Title')} placeholder={safeT(t, 'form.titlePh', 'Reminder title')} error={errors?.title && safeT(t, 'errors.title', 'Title is required')} value={watch('title')} {...register('title')} />
-					<Input label={safeT(t, 'form.note', 'Note')} placeholder={safeT(t, 'form.notePh', 'Optional note')} defaultValue='' {...register('notes')} />
-
-					{/* Templates row */}
-					<div className='md:col-span-2'>
-						<label className='mb-1.5 block text-sm font-medium text-slate-700'>{safeT(t, 'templates.label', 'قوالب جاهزة سريعة')}</label>
-						<div className='flex flex-wrap gap-2'>
-							<button type='button' onClick={() => applyTemplate('water')} className='inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-800 hover:bg-sky-100'>
-								💧 {safeT(t, 'templates.water.short', 'Drink water')}
-							</button>
-							<button type='button' onClick={() => applyTemplate('bills')} className='inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100'>
-								💳 {safeT(t, 'templates.bills.short', 'Bills')}
-							</button>
-							<button type='button' onClick={() => applyTemplate('adhkar')} className='inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100'>
-								📿 {safeT(t, 'templates.adhkar.short', 'أذكار')}
-							</button>
-						</div>
-					</div>
 
 					<input type='hidden' value='custom' {...register('type')} />
 
-					<div className='flex-1'>
-						<label className='mb-1.5 block text-sm font-medium text-slate-700'>{safeT(t, 'form.startDate', 'Start date')}</label>
-						<InputDate value={watch('schedule.startDate') || toISODate(new Date())} onChange={v => setValue('schedule.startDate', v)} />
-					</div>
-					<div>
-						<label className='mb-1.5 block text-sm font-medium text-slate-700'>{safeT(t, 'form.endDate', 'End date')}</label>
-						<InputDate value={watch('schedule.endDate')} onChange={v => setValue('schedule.endDate', v || null)} />
-					</div>
+
 
 					<div className=' '>
 						<div className='mb-1.5 flex items-center gap-1.5'>
@@ -1281,62 +1163,6 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 						{errors?.schedule?.mode && <p className='mt-1.5 text-xs text-rose-600'>{safeT(t, 'errors.mode', 'Select a mode')}</p>}
 					</div>
 
-					<div className='flex w-full'>
-						<span className='w-full'>
-							<Controller
-								control={control}
-								name='sound.id'
-								render={({ field }) => (
-									<Select
-										options={[
-											{ id: 'chime', label: 'Chime' },
-											{ id: 'drop', label: 'Water Drop' },
-											{ id: 'soft', label: 'Soft Bell' },
-										]}
-										label={safeT(t, 'settings.sound', 'Sound')}
-										value={field.value || 'chime'}
-										onChange={val => {
-											const map = {
-												chime: {
-													id: 'chime',
-													name: 'Chime',
-													previewUrl: SOUND_SAMPLES.chime,
-												},
-												drop: {
-													id: 'drop',
-													name: 'Water Drop',
-													previewUrl: SOUND_SAMPLES.drop,
-												},
-												soft: {
-													id: 'soft',
-													name: 'Soft Bell',
-													previewUrl: SOUND_SAMPLES.soft,
-												},
-											};
-											const vol = watch('sound.volume') ?? 0.8;
-											setValue('sound', {
-												...(map[val] || map.chime),
-												volume: vol,
-											});
-										}}
-									/>
-								)}
-							/>
-						</span>
-						<span className='mx-1 mt-[27px]'>
-							<IconButton
-								icon={isPreviewPlaying ? <Square className='w-5 h-5' /> : <BellRing className='w-5 h-5' />}
-								label={safeT(t, 'settings.preview', 'Preview')}
-								onClick={() => {
-									if (isPreviewPlaying) {
-										stopPreview();
-									} else {
-										playPreview();
-									}
-								}}
-							/>
-						</span>
-					</div>
 
 					{mode === 'weekly' && <WeeklyDaysSelector t={t} initial={initial} getDays={() => watch('schedule.daysOfWeek')} setDays={arr => setValue('schedule.daysOfWeek', arr)} />}
 
@@ -1515,7 +1341,6 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 				<button
 					type='button'
 					onClick={() => {
-						stopPreview();
 						onCancel();
 					}}
 					className='rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50'>
@@ -1542,22 +1367,11 @@ function WeeklyDaysSelector({ t, initial, getDays, setDays }) {
 		setSorted([...cur]);
 	};
 
-	const setAll = () => setSorted(WEEK_DAYS.map(d => d.key));
-	const setNone = () => setDays([]);
 
 	return (
 		<div className='md:col-span-2'>
 			<label className='mb-1.5 block text-sm font-medium text-slate-700'>{safeT(t, 'form.weekdays', 'Week days')}</label>
-			<div className='mb-2 flex items-center gap-2'>
-				<div className='flex flex-wrap items-center gap-2'>
-					<button type='button' onClick={setAll} className='inline-flex items-center gap-1.5 rounded-md bg-slate-100 text-slate-700 px-3 h-8 text-sm hover:bg-slate-200'>
-						{safeT(t, 'week.quick.all', 'All')}
-					</button>
-					<button type='button' onClick={setNone} className='inline-flex items-center gap-1.5 rounded-md bg-slate-100 text-slate-700 px-3 h-8 text-sm hover:bg-slate-200'>
-						{safeT(t, 'week.quick.none', 'None')}
-					</button>
-				</div>
-			</div>
+
 			<div className='flex flex-wrap gap-2'>
 				{orderedDays.map(d => {
 					const selected = isSelected(d.key);
@@ -1914,12 +1728,6 @@ const subscribeToPush = async registration => {
 		const hostname = window.location.hostname;
 		const isSecureContext = window.isSecureContext;
 
-		console.log(`[Push Debug] === SECURITY DIAGNOSTICS ===`);
-		console.log(`[Push Debug] Protocol: ${protocol}`);
-		console.log(`[Push Debug] Hostname: ${hostname}`);
-		console.log(`[Push Debug] Is Secure Context: ${isSecureContext}`);
-		console.log(`[Push Debug] Full URL: ${window.location.href}`);
-
 		if (!isSecureContext && hostname !== 'localhost' && hostname !== '127.0.0.1') {
 			throw new Error(`⚠️ SECURITY ERROR: Push API requires HTTPS or localhost. ` + `Current: ${protocol}//${hostname}. ` + `If using IP address, switch to localhost or use HTTPS.`);
 		}
@@ -1932,11 +1740,7 @@ const subscribeToPush = async registration => {
 		let applicationServerKey;
 		try {
 			const publicKey = data.data.publicKey;
-			console.log(`[Push Debug] Public key from server: ${publicKey.substring(0, 20)}...`);
-			console.log(`[Push Debug] Public key length: ${publicKey.length}`);
 			applicationServerKey = urlBase64ToUint8Array_local(publicKey);
-			console.log(`[Push Debug] Converted to Uint8Array, length: ${applicationServerKey.length}`);
-			console.log(`[Push Debug] VAPID conversion successful, ready to subscribe`);
 		} catch (convertError) {
 			throw new Error(`Failed to convert VAPID key: ${convertError.message}`);
 		}
@@ -1972,38 +1776,20 @@ const subscribeToPush = async registration => {
 
 		if (!subscription) {
 			try {
-				console.log(`[Push Debug] About to call pushManager.subscribe with:`, {
-					userVisibleOnly: true,
-					applicationServerKeyLength: applicationServerKey.length,
-					applicationServerKeyType: applicationServerKey.constructor.name,
-					applicationServerKey:
-						Array.from(applicationServerKey)
-							.slice(0, 10)
-							.map(b => b.toString(16).padStart(2, '0'))
-							.join(' ') + '...',
-				});
+
 				subscription = await registration.pushManager.subscribe({
 					userVisibleOnly: true,
 					applicationServerKey: applicationServerKey,
 				});
-				console.log(`[Push Debug] ✅ pushManager.subscribe() succeeded!`);
 				console.log(subscription);
 			} catch (subscribeError) {
-				console.error(`[Push Debug] ❌ pushManager.subscribe() FAILED!`);
-				console.error(`[Push Debug] Error name: ${subscribeError.name}`);
-				console.error(`[Push Debug] Error message: ${subscribeError.message}`);
-				console.error(`[Push Debug] Full error:`, subscribeError);
-				console.error(`[Push Debug] Error stack:`, subscribeError.stack);
 
 				// Try alternate approach without applicationServerKey
 				if (subscribeError.name === 'AbortError') {
-					console.log(`[Push Debug] Attempting fallback: subscribe without applicationServerKey...`);
 					try {
 						const subWithoutKey = await registration.pushManager.subscribe({ userVisibleOnly: true });
-						console.log(`[Push Debug] ⚠️ Fallback subscribe succeeded (no VAPID key), but won't work for server push`);
 						subscription = subWithoutKey;
 					} catch (fallbackError) {
-						console.error(`[Push Debug] Fallback also failed:`, fallbackError.message);
 						throw subscribeError; // Throw original error
 					}
 				} else {
@@ -2015,7 +1801,6 @@ const subscribeToPush = async registration => {
 			throw new Error('Subscription is null after creation');
 		}
 
-		console.log(`[Push Debug] ✅ Got subscription, now extracting keys...`);
 		const p256dh = subscription.getKey('p256dh');
 		const auth = subscription.getKey('auth');
 
@@ -2023,7 +1808,6 @@ const subscribeToPush = async registration => {
 			throw new Error('Missing subscription keys');
 		}
 
-		console.log(`[Push Debug] ✅ Keys extracted: p256dh=${p256dh.byteLength} bytes, auth=${auth.byteLength} bytes`);
 
 		const p256dhBase64 = arrayBufferToBase64_local(p256dh);
 		const authBase64 = arrayBufferToBase64_local(auth);
@@ -2036,19 +1820,9 @@ const subscribeToPush = async registration => {
 			},
 		};
 
-		console.log(`[Push Debug] ✅ About to POST subscription to backend...`);
-		console.log(`[Push Debug] Subscription data:`, {
-			endpointLength: subscriptionData.endpoint.length,
-			p256dhLength: subscriptionData.keys.p256dh.length,
-			authLength: subscriptionData.keys.auth.length,
-		});
-
 		const postResponse = await api.post('/reminders/push/subscribe', subscriptionData);
-		console.log(`[Push Debug] ✅ POST /reminders/push/subscribe response:`, postResponse.data);
-		console.log(`[Push Debug] ✅ Subscription saved on backend with ID: ${postResponse.data?.subscriptionId}`);
 		return subscription;
 	} catch (error) {
-		console.error(`[Push Debug] 🔥 subscribeToPush failed:`, error.message);
 		throw error;
 	}
 };
@@ -2082,24 +1856,19 @@ function urlBase64ToUint8Array_local(base64String) {
 	}
 
 	const cleaned = base64String.trim();
-	console.log('[urlBase64ToUint8Array] input length:', cleaned.length, 'first 20 chars:', cleaned.substring(0, 20));
 
 	const padding = '='.repeat((4 - (cleaned.length % 4)) % 4);
 	const base64 = (cleaned + padding).replace(/\-/g, '+').replace(/_/g, '/');
-	console.log('[urlBase64ToUint8Array] after padding+convert length:', base64.length);
 
 	try {
 		const rawData = window.atob(base64);
-		console.log('[urlBase64ToUint8Array] decoded byte length:', rawData.length);
 		const outputArray = new Uint8Array(rawData.length);
 
 		for (let i = 0; i < rawData.length; ++i) {
 			outputArray[i] = rawData.charCodeAt(i);
 		}
-		console.log('[urlBase64ToUint8Array] success, uint8 length:', outputArray.length);
 		return outputArray;
 	} catch (error) {
-		console.error('[urlBase64ToUint8Array] decode error:', error);
 		throw new Error(`Invalid VAPID public key format: ${error.message}`);
 	}
 }
