@@ -31,20 +31,11 @@ export const getTransaction = async (id) => {
   return api.get(`/billing/transactions/${id}`);
 };
 
-// ============= SUBSCRIPTION APIs =============
-
 export const createSubscription = async (data) => {
   return api.post('/billing/subscriptions', data);
 };
 
-export const getSubscription = async (adminId) => {
-  const params = adminId ? { adminId } : {};
-  return api.get('/billing/subscriptions', { params });
-};
-
-export const renewSubscription = async (id) => {
-  return api.post(`/subscriptions/${id}/renew`);
-};
+ 
 
 // ============= WITHDRAWAL APIs =============
 
@@ -104,4 +95,20 @@ export const getSystemAnalytics = async () => {
 
 export const getAllWallets = async (page = 1, limit = 10) => {
   return api.get('/billing/analytics/wallets', { params: { page, limit } });
+};
+
+
+// ============= SUBSCRIPTION APIs =============
+export const getSubscription = async (adminId) => {
+  const params = adminId ? { adminId } : {};
+  return api.get('/billing/subscriptions', { params }); // ✅ FIX (was wrong)
+};
+
+export const renewSubscription = async (id) => {
+  return api.post(`/billing/subscriptions/${id}/renew`); // ✅ FIX
+};
+
+// ============= CLIENT PAYMENT APIs =============
+export const deleteClientPayment = async (id) => {
+  return api.delete(`/billing/client-payments/${id}`); // ✅ NEW
 };

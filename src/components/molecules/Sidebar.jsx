@@ -103,20 +103,8 @@ export const NAV = [
   },
   {
     role: 'admin',
-    sectionKey: 'sections.billing',
-    items: [
-      {
-        nameKey: 'billing',
-        icon: Wallet,
-        expand: false,
-        children: [
-          { nameKey: 'overview', href: '/dashboard/billing', icon: CreditCard },
-          { nameKey: 'transactions', href: '/dashboard/billing/transactions', icon: FileBarChart },
-          { nameKey: 'subscriptions', href: '/dashboard/billing/subscriptions', icon: CreditCard },
-          { nameKey: 'withdraw', href: '/dashboard/billing/withdraw', icon: TrendingUp },
-          { nameKey: 'clientPayments', href: '/dashboard/billing/client-payments', icon: Users },
-        ],
-      },
+     items: [
+			{ nameKey: 'billing',icon: Wallet, href: '/dashboard/billing' },
     ],
   },
   // SUPER ADMIN
@@ -135,6 +123,7 @@ export const NAV = [
     role: 'super_admin',
     sectionKey: 'sections.billing',
     items: [
+			
       {
         nameKey: 'billing',
         icon: Wallet,

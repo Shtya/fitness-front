@@ -37,50 +37,7 @@ export const WalletCard = ({ balance = 0, totalEarned = 0, totalWithdrawn = 0, c
   );
 };
 
-export const SubscriptionCard = ({ tier = 'free', expiresAt, isActive = false, monthlyPrice = 0 }) => {
-  const tierColors = {
-    free: 'bg-gray-100 text-gray-800',
-    basic: 'bg-blue-100 text-blue-800',
-    professional: 'bg-purple-100 text-purple-800',
-    enterprise: 'bg-gold-100 text-gold-800',
-  };
-
-  const tierLabels = {
-    free: 'مجاني',
-    basic: 'أساسي',
-    professional: 'احترافي',
-    enterprise: 'مؤسسة',
-  };
-
-  const isExpired = expiresAt && new Date(expiresAt) < new Date();
-
-  return (
-    <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">الاشتراك الحالي</h3>
-          <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mt-2 ${tierColors[tier]}`}>
-            {tierLabels[tier]}
-          </span>
-        </div>
-        <div className={`w-3 h-3 rounded-full ${isActive && !isExpired ? 'bg-green-500' : 'bg-red-500'}`}></div>
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-gray-600">
-          <span className="font-semibold">السعر الشهري:</span> {monthlyPrice.toFixed(2)} $
-        </p>
-        {expiresAt && (
-          <p className={`text-sm ${isExpired ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
-            <span className="font-semibold">ينتهي في:</span> {new Date(expiresAt).toLocaleDateString('ar-EG')}
-          </p>
-        )}
-        {isExpired && <p className="text-red-600 font-semibold text-sm">⚠️ انتهت الصلاحية</p>}
-      </div>
-    </div>
-  );
-};
-
+ 
 export const TransactionTable = ({ transactions = [], loading = false }) => {
   const typeLabels = {
     deposit: 'إيداع',

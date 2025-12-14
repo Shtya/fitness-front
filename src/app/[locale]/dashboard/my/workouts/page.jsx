@@ -1,4 +1,4 @@
-/* /app/[locale]/dashboard/my/workouts/page.js */
+
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
@@ -10,7 +10,7 @@ import api from '@/utils/axios';
 import weeklyProgram from './exercises';
 import { createSessionFromDay } from '@/components/pages/workouts/helpers';
 import { RestTimerCard } from '@/components/pages/workouts/RestTimerCard';
-import { SettingsPopup } from '@/components/pages/workouts/SettingsPopup';
+// import { SettingsPopup } from '@/components/pages/workouts/SettingsPopup';
 import { AudioHubInline } from '@/components/pages/workouts/AudioHub';
 import { ExerciseList } from '@/components/pages/workouts/ExerciseList';
 import { InlineVideo } from '@/components/pages/workouts/InlineVideo';
@@ -18,12 +18,11 @@ import { useUser } from '@/hooks/useUser';
 import { useTranslations } from 'next-intl';
 import Img from '@/components/atoms/Img';
 
-/* =========================
+/* =========================cxc
 	 Constants / tiny helpers
 ========================= */
-export const DEFAULT_SOUNDS = ['/sounds/1.mp3', '/sounds/2.mp3', '/sounds/alert1.mp3', '/sounds/alert2.mp3', '/sounds/alert3.mp3', '/sounds/alert4.mp3', '/sounds/alert5.mp3', '/sounds/alert6.mp3', '/sounds/alert7.mp3', '/sounds/alert8.mp3'];
+export const DEFAULT_SOUNDS = ['/sounds/1.mp3', '/sounds/2.mp3', '/sounds/sound.wav', '/sounds/alert2.mp3', '/sounds/alert3.mp3', '/sounds/alert4.mp3', '/sounds/alert5.mp3', '/sounds/alert6.mp3', '/sounds/alert7.mp3', '/sounds/alert8.mp3'];
 
-const LOCAL_KEY_SETTINGS = 'mw.settings.v1';
 const LOCAL_KEY_SELECTED_DAY = 'mw.selected.day';
 const LOCAL_KEY_QUEUE = 'mw.pendingPRs.v1'; // array of items: { userId, date, exerciseName, records, createdAt }
 
@@ -316,8 +315,9 @@ export default function MyWorkoutsPage() {
 
 	// audio + settings
 	const audioRef = useRef(null);
-	const [settingsOpen, setSettingsOpen] = useState(false);
-	const [alertSound, setAlertSound] = useState(DEFAULT_SOUNDS[2]);
+	// const [settingsOpen, setSettingsOpen] = useState(false);
+	// const [alertSound, setAlertSound] = useState(DEFAULT_SOUNDS[2]);
+	const ALERT_SOUND = DEFAULT_SOUNDS[2];
 	const [alerting, setAlerting] = useState(false);
 
 	// misc
@@ -542,10 +542,10 @@ export default function MyWorkoutsPage() {
 					lastSavedRef.current.set(s.id, { weight: s.weight, reps: s.reps, done: s.done });
 				});
 
-				try {
-					const s = JSON.parse(localStorage.getItem(LOCAL_KEY_SETTINGS) || 'null');
-					if (s?.alertSound) setAlertSound(s.alertSound);
-				} catch { }
+				// try {
+				// 	const s = JSON.parse(localStorage.getItem(LOCAL_KEY_SETTINGS) || 'null');
+				// 	if (s?.alertSound) setAlertSound(s.alertSound);
+				// } catch { }
 
 				// Prefill from server (weight + reps + done)
 				const dayISO = isoForThisWeeksDay(initialDayId);
@@ -829,13 +829,13 @@ export default function MyWorkoutsPage() {
 		return () => window.removeEventListener('focus', onFocus);
 	}, [trySyncQueue]);
 
-	useEffect(() => {
-		const el = audioRef.current;
-		if (el) {
-			el.src = alertSound;
-			el.load();
-		}
-	}, [alertSound]);
+	// useEffect(() => {
+	// 	const el = audioRef.current;
+	// 	if (el) {
+	// 		el.src = alertSound;
+	// 		el.load();
+	// 	}
+	// }, [alertSound]);
 
 	const hasExercises = !!workout?.exercises?.length;
 	const currentExercise = useMemo(() => workout?.exercises?.find(e => e.id === currentExId), [workout?.exercises, currentExId]);
@@ -866,10 +866,10 @@ export default function MyWorkoutsPage() {
 				<Headphones size={16} />
 				<span className='max-md:hidden'>{t('listen')}</span>
 			</button>
-			<button onClick={() => setSettingsOpen(true)} className='px-2 inline-flex items-center gap-2 rounded-lg bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition' aria-label={t('settings')}>
+			{/* <button onClick={() => setSettingsOpen(true)} className='px-2 inline-flex items-center gap-2 rounded-lg bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition' aria-label={t('settings')}>
 				<SettingsIcon size={16} />
 				<span className='max-md:hidden'>{t('settings')}</span>
-			</button>
+			</button> */}
 			{/* <div className='lg:hidden'>
 				<button onClick={() => setDrawerOpen(true)} className='inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/30 h-[37px] max-md:w-[37px] px-2 py-2 text-sm cursor-pointer bg-white/10 hover:bg-white/20'>
 					<MenuIcon size={16} /> <span className='max-md:hidden'> {t('exercises')} </span>
@@ -910,11 +910,71 @@ export default function MyWorkoutsPage() {
 		setValue(setId, field, Number.isFinite(num) ? num : 0);
 	};
 
+
+
+
+	const stopAlertTimeoutRef = useRef(null);
+
+	const safePlayAlertFor5s = useCallback(async () => {
+		const el = audioRef.current;
+		if (!el) return;
+
+		try {
+			// reset + load to avoid "stuck" states
+			el.pause();
+			el.currentTime = 0;
+			el.load();
+
+			const p = el.play();
+			if (p && typeof p.catch === 'function') {
+				await p.catch(() => { });
+			}
+
+			// stop after 5s
+			if (stopAlertTimeoutRef.current) clearTimeout(stopAlertTimeoutRef.current);
+			stopAlertTimeoutRef.current = setTimeout(() => {
+				try {
+					el.pause();
+					el.currentTime = 0;
+				} catch { }
+			}, 5000);
+		} catch { }
+	}, []);
+
+	useEffect(() => {
+		if (alerting) safePlayAlertFor5s();
+	}, [alerting, safePlayAlertFor5s]);
+
+	useEffect(() => {
+		const unlock = async () => {
+			const el = audioRef.current;
+			if (!el) return;
+			try {
+				// tiny silent play/pause to unlock
+				el.muted = true;
+				await el.play().catch(() => { });
+				el.pause();
+				el.currentTime = 0;
+				el.muted = false;
+			} catch { }
+			window.removeEventListener('pointerdown', unlock);
+			window.removeEventListener('keydown', unlock);
+		};
+
+		window.addEventListener('pointerdown', unlock, { once: true });
+		window.addEventListener('keydown', unlock, { once: true });
+		return () => {
+			window.removeEventListener('pointerdown', unlock);
+			window.removeEventListener('keydown', unlock);
+		};
+	}, []);
+
+
 	if (loading) return <SkeletonLoader />;
 
 	return (
 		<div className='space-y-5 sm:space-y-6'>
-			<audio ref={audioRef} src={alertSound} preload='auto' />
+			<audio ref={audioRef} src={ALERT_SOUND} preload='auto' />
 
 			<div className={'relative overflow-hidden rounded-lg border border-indigo-100/60 bg-white/60 shadow-sm backdrop-blur '}>
 				<div className='absolute inset-0 overflow-hidden'>
@@ -948,8 +1008,17 @@ export default function MyWorkoutsPage() {
 
 			</div>
 
-			<AudioHubInline hidden={hidden} setHidden={setHidden} alerting={alerting} setAlerting={setAlerting} open={audioOpen} onClose={() => setAudioOpen(false)} />
-
+			{/* <AudioHubInline hidden={hidden} setHidden={setHidden} alerting={alerting} setAlerting={setAlerting} open={audioOpen} onClose={() => setAudioOpen(false)} /> */}
+			<AudioHubInline
+  t={t}
+  hidden={hidden}
+  setHidden={setHidden}
+  alerting={alerting}
+  setAlerting={setAlerting}
+  open={audioOpen}
+  onClose={() => setAudioOpen(false)}
+  key="audio-hub" // Add a key to force clean remounts when props change
+/>
 			{/* WORKOUT ONLY */}
 			<motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
 				<div className='flex flex-col lg:flex-row gap-4'>
@@ -1009,20 +1078,20 @@ export default function MyWorkoutsPage() {
 												);
 											})()}
 										</div>
-									<div className='  pt-2  lg:hidden'>
+										<div className='  pt-2  lg:hidden'>
 
-										<ExerciseList
-											t={t}
-											workout={workout}
-											currentExId={currentExId}
-											onPick={ex => {
-												setCurrentExId(ex.id);
-												setActiveMedia('image');
-												applyLocalQueuedSnapshotIfAny();
-											}}
-											completedExercises={completedExercises}
-											toggleExerciseCompletion={toggleExerciseCompletion}
-										/>
+											<ExerciseList
+												t={t}
+												workout={workout}
+												currentExId={currentExId}
+												onPick={ex => {
+													setCurrentExId(ex.id);
+													setActiveMedia('image');
+													applyLocalQueuedSnapshotIfAny();
+												}}
+												completedExercises={completedExercises}
+												toggleExerciseCompletion={toggleExerciseCompletion}
+											/>
 										</div>
 										<RestTimerCard alerting={alerting} setAlerting={setAlerting} initialSeconds={Number.isFinite(currentExercise?.restSeconds) ? currentExercise?.restSeconds : Number.isFinite(currentExercise?.rest) ? currentExercise?.rest : 90} audioEl={audioRef} className=' mt-2 ' />
 									</div>
@@ -1217,42 +1286,8 @@ export default function MyWorkoutsPage() {
 				</div>
 			</motion.div>
 
-			{/* Drawer */}
-			{/* <AnimatePresence>
-        {drawerOpen && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className='fixed inset-0 z-[75] bg-black/30' onClick={() => setDrawerOpen(false)} />
-            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', stiffness: 260, damping: 32 }} className='fixed right-0 top-0 h-full w-[84%] max-w-sm z-[80] bg-white shadow-2xl border-l border-slate-200' onClick={e => e.stopPropagation()}>
-              <div className='p-3 flex items-center justify-between border-b border-slate-100'>
-                <div className='font-semibold flex items-center gap-2'>
-                  <Dumbbell size={18} /> {t('exercises')}
-                </div>
-                <button onClick={() => setDrawerOpen(false)} className='p-2 rounded-lg hover:bg-slate-100' aria-label={t('actions.close')}>
-                  <X size={16} />
-                </button>
-              </div>
-              <div className='p-3'>
-                <ExerciseList
-                  workout={workout}
-                  currentExId={currentExId}
-                  onPick={ex => {
-                    setCurrentExId(ex.id);
-                    setActiveMedia('image');
-                    setDrawerOpen(false);
-                    // Apply queued local snapshot after picking from drawer
-                    applyLocalQueuedSnapshotIfAny();
-                  }}
-                  completedExercises={completedExercises}
-                  toggleExerciseCompletion={toggleExerciseCompletion}
-                />
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence> */}
-
 			{/* Settings */}
-			<SettingsPopup
+			{/* <SettingsPopup
 				open={settingsOpen}
 				onClose={() => setSettingsOpen(false)}
 				currentSound={alertSound}
@@ -1262,7 +1297,7 @@ export default function MyWorkoutsPage() {
 						localStorage.setItem(LOCAL_KEY_SETTINGS, JSON.stringify({ alertSound: s }));
 					} catch { }
 				}}
-			/>
+			/> */}
 
 			{/* Upload Modal */}
 			<UploadVideoModal
@@ -1270,9 +1305,7 @@ export default function MyWorkoutsPage() {
 				onClose={() => setUploadOpen(false)}
 				userId={USER_ID}
 				exercise={currentExercise}
-				onUploaded={() => {
-					/* optional toast success */
-				}}
+				onUploaded={() => { }}
 			/>
 		</div>
 	);

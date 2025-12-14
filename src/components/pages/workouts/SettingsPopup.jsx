@@ -6,7 +6,7 @@ import {   X, Play,  Settings as SettingsIcon, Square  } from 'lucide-react';
 
 export function SettingsPopup({ open, onClose, currentSound, onChange, sounds = DEFAULT_SOUNDS }) {
   const [sel, setSel] = useState(currentSound || sounds[0]);
-  const [playingUrl, setPlayingUrl] = useState(null); // which sound is currently playing
+  const [playingUrl, setPlayingUrl] = useState(null); // which  sound is currently playing
   const audioRef = useRef(null);
 
   useEffect(() => {
