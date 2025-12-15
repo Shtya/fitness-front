@@ -1,2914 +1,2893 @@
 {
-	"auth": {
-		"signIn": "Log in",
-		"subtitle": "Log in to continue your plans and workouts.",
-		"email": "Email",
-		"enterEmail": "Enter your email",
-		"invalidEmail": "Invalid email address.",
-		"password": "Password",
-		"enterPassword": "Enter your password",
-		"passwordRequired": "Password is required.",
-		"signInButton": "Log in",
-		"Incorrect email or password": "Incorrect email or password.",
-		"loading": {
-			"signingIn": "Signing in..."
-		},
-		"a11y": {
-			"showPassword": "Show password",
-			"hidePassword": "Hide password"
-		},
-		"hero": {
-			"title": "Train, track, and progress with confidence",
-			"subtitle": "One platform to manage workout plans, track your progress, and easily communicate with your coach.",
-			"perkPersonalized": "Personalized training plans tailored to your goals.",
-			"perkProgress": "Track your progress step by step.",
-			"perkChat": "Direct communication with your coach.",
-			"perkPrivacy": "Your data is kept private and secure."
-		},
-		"success": {
-			"signedIn": "Logged in successfully."
-		},
-		"errors": {
-			"loginFailed": "Login failed, please check your details.",
-			"accountPending": "Your account is under review and will be activated soon.",
-			"accountSuspended": "Your account has been suspended. Please contact support."
-		},
-		"notes": {
-			"protected": "This section is protected and can only be accessed after logging in."
-		}
-	},
-	"myProfile": {
-		"tabs": {
-			"overview": "Overview",
-			"body": "Measurements",
-			"photos": "Progress photos"
-		},
-		"errors": {
-			"loadProfile": "An error occurred while loading profile data.",
-			"required": "This field is required."
-		},
-		"stats": {
-			"workoutPlan": "Training plan",
-			"mealPlan": "Meal plan",
-			"latestWeight": "Latest weight",
-			"caloriesToday": "Points today",
-			"photos": "Number of photos",
-			"measurements": "Number of measurements"
-		},
-		"sections": {
-			"weightTrend": "Weight trend",
-			"compare": "Before / after comparison",
-			"measurements": "Measurements log",
-			"uploadBodyPhotos": "Upload body photos",
-			"timeline": "Photo timeline"
-		},
-		"labels": {
-			"deltaKg": "Weight difference (kg)",
-			"direction": "Direction of weight progress",
-			"start": "Start",
-			"end": "End",
-			"side": "Angle",
-			"before": "Before",
-			"after": "After",
-			"beforeAfter": "Before and after",
-			"tapToUpload": "Tap to upload",
-			"average": "Average"
-		},
-		"messages": {
-			"noMeasurements": "No measurements have been recorded yet.",
-			"chooseTwoSets": "Choose two sets of photos to compare, then select the angle.",
-			"noTimeline": "No photos in the timeline yet.",
-			"useCompareBlock": "Use the comparison block to choose before and after photos to display here.",
-			"deletePhotoConfirm": "Are you sure you want to delete this photo set? You will not be able to restore it.",
-			"deleteMeasurementConfirm": "Are you sure you want to delete this measurement?",
-			"pickImageFirst": "Please choose a photo first to start cropping.",
-			"noMeasurementsHint": "Start by adding your weight measurements from the progress page to follow your trend over time.",
-			"compareHint": "Choose two photos to clearly see the difference."
-		},
-		"actions": {
-			"edit": "Edit",
-			"editProfile": "Edit profile",
-			"preview": "Preview",
-			"previewAll": "Preview all angles",
-			"save": "Save",
-			"saving": "Saving...",
-			"reset": "Reset",
-			"clear": "Clear",
-			"cancel": "Cancel",
-			"delete": "Delete",
-			"apply": "Apply",
-			"zoom": "Zoom",
-			"saveSet": "Save photo set",
-			"addBodyPhotos": "Add body photos",
-			"hideUpload": "Hide upload form"
-		},
-		"tips": {
-			"subtitle": "Tips for taking clear progress photos",
-			"cta": "Tips for better photos",
-			"title": "Tips for taking clear progress photos",
-			"lighting": "Take the photo in strong, steady lighting (natural light is preferred).",
-			"distance": "Keep the same distance between you and the camera every time.",
-			"angles": "Take photos from the front, back, and both sides with the same pose.",
-			"cameraHeight": "Keep the camera roughly at mid-body level for a consistent perspective.",
-			"timer": "Use your phone’s timer to stabilize the camera and get into a comfortable pose.",
-			"clothes": "Wear comfortable and similar clothes each time to make changes clearer.",
-			"background": "Choose a simple, fixed background without clutter.",
-			"frequency": "Take progress photos every week or two for comparison."
-		},
-		"modals": {
-			"addBodySet": "Add body photo set",
-			"preview": "Preview photo",
-			"confirmDelete": "Confirm deletion",
-			"cropTitle": "Crop photo",
-			"editProfileTitle": "Edit account details"
-		},
-		"sides": {
-			"all": "All angles",
-			"front": "Front",
-			"back": "Back",
-			"left": "Left side",
-			"right": "Right side"
-		},
-		"forms": {
-			"addMeasurement": "Add new measurement",
-			"date": "Date",
-			"weightKg": "Weight (kg)",
-			"waistCm": "Waist (cm)",
-			"chestCm": "Chest (cm)",
-			"weightOptional": "Weight (optional)",
-			"noteOptional": "Note (optional)"
-		},
-		"table": {
-			"date": "Date",
-			"weight": "Weight",
-			"waist": "Waist",
-			"chest": "Chest",
-			"actions": "Actions"
-		},
-		"placeholders": {
-			"choose": "Choose..."
-		},
-		"profile": {
-			"name": "Name",
-			"genderMale": "Male",
-			"genderFemale": "Female",
-			"genderOther": "Other",
-			"membership": "Subscription type",
-			"defaultRestSeconds": "Default rest seconds",
-			"caloriesTarget": "Calorie target",
-			"proteinPerDay": "Protein per day (g)",
-			"carbsPerDay": "Carbs per day (g)",
-			"fatsPerDay": "Fats per day (g)",
-			"activity": {
-				"sedentary": "Desk job / low activity",
-				"light": "Light activity + training 1–3 times weekly",
-				"moderate": "Moderate activity + training 3–5 times weekly",
-				"high": "High activity + training 6–7 times weekly",
-				"athlete": "Intense activity / athlete"
-			},
-			"notes": "User notes",
-			"perDayLabel": "Per day",
-			"gramsPerDay": "g / day",
-			"planActiveLabel": "Current plan",
-			"subscriptionOverview": "Subscription overview",
-			"coachLabel": "Personal coach",
-			"noCoach": "No coach assigned yet",
-			"phone": "Phone number",
-			"membershipTitle": "Subscription type",
-			"noPlan": "No plan",
-			"gender": "Gender",
-			"notSet": "Not set",
-			"activityLevel": "Activity level",
-			"activityNotSet": "Activity level not set",
-			"subscriptionPeriod": "Subscription period",
-			"noEndDate": "No end date",
-			"expired": "Subscription expired",
-			"daysLeft": "{count} days left",
-			"start": "Subscription start",
-			"end": "Subscription end",
-			"activePlans": "Active plans",
-			"exercisePlan": "Current workout plan",
-			"noExercisePlan": "No active workout plan",
-			"mealPlan": "Current meal plan",
-			"noMealPlan": "No active meal plan",
-			"nutritionTargets": "Calorie and macro targets",
-			"calories": "Calories",
-			"protein": "Protein",
-			"carbs": "Carbs",
-			"fats": "Fats"
-		}
-	},
-	"nav": {
-		"reload-page": "Reload page",
-		"brand": {
-			"portalTitle": "Control area",
-			"superAdminPortal": "Super admin portal",
-			"adminPortal": "Admin portal",
-			"coachPortal": "Coach portal",
-			"clientPortal": "My personal space"
-		},
-		"sections": {
-			"mySpace": "My space",
-			"clientManagement": "Client management",
-			"overview": "Overview",
-			"programs": "Programs",
-			"operations": "Operations",
-			"billing": "Billing & wallet"
-		},
-		"items": {
-			"dashboard": "Dashboard",
-			"training": "Training",
-			"myWorkouts": "My workouts",
-			"myProgress": "My progress",
-			"progress": "Progress",
-			"myNutrition": "My nutrition",
-			"myReminders": "My reminders",
-			"weeklyStrength": "Weekly report",
-			"calorieCalculator": "Calorie calculator",
-			"profile": "Profile",
-			"nutrition": "Nutrition",
-			"foodLibrary": "Food library",
-			"groceryList": "Grocery list",
-			"nutritionManagement": "Nutrition management",
-			"mealPlans": "Meal plans",
-			"reports": "Reports",
-			"trainingManagement": "Training management",
-			"workoutPlans": "Workout plans",
-			"allWorkouts": "All workouts",
-			"allUsers": "All users",
-			"allExercises": "All exercises",
-			"clientIntake": "Client questionnaire",
-			"manageForms": "Manage forms",
-			"responses": "Responses",
-			"messages": "Messages",
-			"feedback": "Feedback",
-			"systemSettings": "System settings",
-			"billing": "Billing & wallet",
-			"overview": "Overview",
-			"transactions": "Transactions",
-			"subscriptions": "Subscriptions",
-			"withdraw": "Withdraw",
-			"clientPayments": "Client payments",
-			"withdrawalApprovals": "Withdrawal approvals",
-			"allWallets": "All wallets",
-			"analytics": "Analytics"
-		},
-		"tooltips": {
-			"expand": "Expand sidebar",
-			"collapse": "Collapse sidebar",
-			"closeMenu": "Close menu"
-		}
-	},
-	"header": {
-		"actions": {
-			"openMenu": "Open menu",
-			"profile": "Profile",
-			"settings": "Settings",
-			"signOut": "Log out",
-			"signIn": "Log in"
-		},
-		"status": {
-			"online": "Online",
-			"offline": "Offline"
-		},
-		"labels": {
-			"role": "Role",
-			"lastLogin": "Last login: {time}"
-		},
-		"roles": {
-			"admin": "Admin",
-			"coach": "Coach",
-			"client": "Client",
-			"guest": "Guest",
-			"super_admin": "System administrator"
-		},
-		"common": {
-			"guest": "Guest"
-		}
-	},
-	"notif": {
-		"title": "Notifications",
-		"tabs": {
-			"all": "All",
-			"unread": "Unread"
-		},
-		"placeholders": {
-			"search": "Search…"
-		},
-		"actions": {
-			"open": "Open notifications",
-			"close": "Close",
-			"markAll": "Mark all as read",
-			"read": "Marked as read",
-			"openLink": "Open",
-			"showAll": "Show all",
-			"loadMore": "Load more",
-			"loading": "Loading…",
-			"reset": "Reset"
-		},
-		"common": {
-			"today": "Today",
-			"yesterday": "Yesterday",
-			"notification": "Notification",
-			"read": "Read"
-		},
-		"empty": {
-			"title": "No notifications",
-			"hint": "Try changing the tab or clearing the search."
-		},
-		"footer": {
-			"syncing": "Syncing…",
-			"shown": "Shown: {count}"
-		}
-	},
-	"common": {
-		"selectDate": "Select date",
-		"search": "Search…",
-		"select": "Select",
-		"copy": "Copy",
-		"show": "Show",
-		"hide": "Hide",
-		"noResult": "No results",
-		"saturday": "Saturday",
-		"sunday": "Sunday",
-		"monday": "Monday",
-		"tuesday": "Tuesday",
-		"wednesday": "Wednesday",
-		"thursday": "Thursday",
-		"friday": "Friday",
-		"day": "Day",
-		"week": "Week",
-		"month": "Month",
-		"year": "Year"
-	},
-	"weekly": {
-		"title": "Weekly report",
-		"subtitle": "Fill out your weekly progress report in detail so your coach can follow you more accurately.",
-		"errors": {
-			"required": "This field is required.",
-			"unknown": "An unexpected error occurred, please try again."
-		},
-		"weekOf": "Week of",
-		"cardioAdherence": "Your cardio adherence",
-		"diet": {
-			"title": "Nutrition",
-			"hungry": "Do you feel hungry during the day?",
-			"comfort": "Are you mentally comfortable with the diet?",
-			"wantSpecific": {
-				"title": "Is there any specific food you’d like to add to your plan?",
-				"ph": "Write here any special requests regarding food..."
-			},
-			"tooMuch": "Do you feel the amount of food in the plan is too much for you?",
-			"deviation": {
-				"title": "Did you deviate from the diet this week?",
-				"times": "How many times did you deviate?",
-				"details": "Briefly describe what you ate outside the plan.",
-				"ph": "Example: I ate pizza on Friday, chocolate on Tuesday..."
-			}
-		},
-		"training": {
-			"title": "Training & activity",
-			"intensityOk": "Is the workout intensity suitable for you?",
-			"daysDeviation": "Did you miss any training days this week?",
-			"deviation": {
-				"count": "How many training days did you miss?",
-				"reason": "Briefly explain why you didn’t stick to the training."
-			},
-			"shape": "Do you feel your body shape has started to change?",
-			"fitness": "Has your fitness improved?",
-			"sleepEnough": "Are your sleep hours sufficient?",
-			"sleepHours": "Approximately how many hours do you sleep per day?",
-			"notes": {
-				"title": "Additional notes about training",
-				"ph": "Write here any notes or issues related to training or equipment..."
-			}
-		},
-		"measurements": {
-			"title": "Measurements",
-			"addNew": "Add new measurements",
-			"hideAdd": "Hide measurements form",
-			"pick": "Choose from previous measurements",
-			"date": "Measurement date",
-			"weight": "Weight (kg)",
-			"waist": "Waist (cm)",
-			"chest": "Chest (cm)",
-			"chestShort": "Chest",
-			"hips": "Hips (cm)",
-			"arms": "Arm circumference (cm)",
-			"thighs": "Thigh circumference (cm)",
-			"save": "Save measurements"
-		},
-		"photos": {
-			"title": "Progress photos",
-			"addNew": "Add new photo set",
-			"hideAdd": "Hide photo upload form",
-			"pickSet": "Choose a previous photo set",
-			"pickFromHistory": {
-				"btn": "Choose from photo history",
-				"title": "Choose photos from previous photos",
-				"empty": "No saved photos yet."
-			},
-			"front": "Front photo",
-			"back": "Back photo",
-			"right": "Right-side photo",
-			"left": "Left-side photo",
-			"upload": "Upload photo",
-			"date": "Photo date",
-			"weight": "Weight at time of photo (optional)",
-			"note": "Photo notes (optional)",
-			"uploadSet": "Upload photo set",
-			"errors": {
-				"noFiles": "Please select at least one photo before uploading.",
-				"dateRequired": "You must enter a date for the photo set."
-			}
-		},
-		"actions": {
-			"close": "Close"
-		},
-		"success": "Weekly report sent successfully ✅",
-		"submit": {
-			"hint": "After finishing the important fields, click Submit to confirm your weekly report.",
-			"sending": "Sending...",
-			"cta": "Submit report"
-		},
-		"unreadFeedback": {
-			"loading": "Loading unread coach notes...",
-			"badge": "You have {count} unread note(s) from your coach"
-		},
-		"prevReports": {
-			"goTo": "View my previous reports",
-			"title": "My previous reports",
-			"loading": "Loading your previous reports...",
-			"error": "We couldn’t load previous reports, please try again.",
-			"empty": "There are no previous reports yet.",
-			"weekOf": "Week report",
-			"createdAt": "Report creation date",
-			"noNote": "There is no coach note for this report.",
-			"noteRead": "Coach’s note has been read",
-			"noteUnread": "Coach’s note is unread",
-			"viewNote": "View coach’s note",
-			"pagination": "Page {page}",
-			"prev": "Previous",
-			"next": "Next",
-			"noteTitle": "Coach’s note for week {week}",
-			"noteLabel": "Coach’s note text",
-			"markingRead": "Marking note as read..."
-		}
-	},
-	"chat": {
-		"search": {
-			"placeholder": "Search by name or email...",
-			"results": "Search results",
-			"clear": "Clear search",
-			"noResultsTitle": "No matching results",
-			"noResultsHint": "Try a different name or email"
-		},
-		"quick": {
-			"coach": "Contact coach",
-			"admin": "Contact admin"
-		},
-		"appbar": {
-			"title": "Messages",
-			"subtitle": "Stay in touch with your coach and clients"
-		},
-		"tabs": {
-			"all": "All",
-			"unread": "Unread"
-		},
-		"empty": {
-			"pick": "Choose a conversation to start chatting",
-			"hint": "Select a conversation from the list"
-		},
-		"composer": {
-			"placeholder": "Write a message...",
-			"disabled": "Select a conversation to start chatting",
-			"remove": "Remove attachment",
-			"send": "Send",
-			"hint": "Shift+Enter for a new line • Ctrl/Cmd+Enter to send"
-		},
-		"list": {
-			"group": "Group conversation",
-			"direct": "Direct message",
-			"photo": "📷 Photo",
-			"video": "🎥 Video",
-			"file": "📎 File",
-			"empty": "No conversations yet",
-			"title": "Conversations",
-			"subtitle": "Stay connected",
-			"startHint": "Search to start a new conversation"
-		},
-		"header": {
-			"typing": "Typing...",
-			"direct": "Online",
-			"loading": "Loading...",
-			"noselect": "Select a conversation"
-		},
-		"actions": {
-			"openList": "Open conversations list",
-			"close": "Close"
-		}
-	},
-	"calorie": {
-		"labelsExtra": {
-			"searchFood": "Search food",
-			"pickFood": "Choose food",
-			"amount": "Amount",
-			"pickFoodHint": "Choose an item to view its calories.",
-			"mealEmpty": "No items have been added yet."
-		},
-		"notesExtra": {
-			"mealTip": "Compare your meal with your target and adjust amounts as needed."
-		},
-		"actions": {
-			"reset": "Reset",
-			"generateSummary": "Generate summary",
-			"addItem": "Add item",
-			"clearMeal": "Delete meal",
-			"remove": "Remove"
-		},
-		"loader": {
-			"generating": "Generating..."
-		},
-		"header": {
-			"title": "Daily calorie calculator",
-			"desc": "Calculate your daily needs based on your goal, and easily calculate food calories."
-		},
-		"sections": {
-			"dailyNeed": "Daily requirement",
-			"summary": "Summary",
-			"foodCalc": "Food calorie calculator",
-			"mealVsTarget": "Meal vs target"
-		},
-		"labels": {
-			"targetKcal": "Target calories",
-			"macrosPCF": "Macros (Protein/Carbs/Fat)",
-			"sex": "Sex",
-			"ageYears": "Age (years)",
-			"heightCm": "Height (cm)",
-			"weightKg": "Weight (kg)",
-			"activity": "Activity level",
-			"goal": "Goal",
-			"target": "Target",
-			"targetCalories": "Target calories",
-			"protein": "Protein",
-			"carbs": "Carbs",
-			"fat": "Fat",
-			"notes": "Notes",
-			"searchFood": "Search food",
-			"pickFood": "Choose food",
-			"amount": "Amount",
-			"pickFoodHint": "Choose food to view calories.",
-			"mealEmpty": "No items added.",
-			"item": "Item",
-			"qty": "Quantity",
-			"unit": "Unit",
-			"kcal": "Calories",
-			"p": "Protein",
-			"c": "Carbs",
-			"f": "Fat",
-			"total": "Total",
-			"monthlyChange": "Monthly change",
-			"kgPerMonth": "kg/month"
-		},
-		"sex": {
-			"male": "Male",
-			"female": "Female"
-		},
-		"tips": {
-			"bmr": "Basal Metabolic Rate: energy your body burns at rest.",
-			"tdee": "Total Daily Energy Expenditure = BMR × activity factor.",
-			"target": "Daily calories after applying your goal (bulking/cutting/maintenance)."
-		},
-		"notes": {
-			"tdeeAvg": "TDEE = Average of BMR formulas × activity (or another accepted formula).",
-			"goalsRange": "Goals adjust calories from −40% to +40% depending on the goal.",
-			"macrosBalance": "Macro ratios automatically balance to total 100%.",
-			"mealTip": "Compare your meal with the target and adjust portions to reach your goal.",
-			"activityHint": "Choose activity level based on your daily lifestyle, not just your training."
-		}
-	},
-	"coachReports": {
-		"title": "Trainees’ weekly reports",
-		"subtitle": "Review your trainees’ weekly reports and provide your feedback and replies",
-		"athlete": "Trainee",
-		"allAthletes": "All trainees",
-		"clearFilters": "Clear filters",
-		"buttons": {
-			"refresh": "Refresh"
-		},
-		"filters": "Filters",
-		"total": "Total reports: {count}",
-		"loading": "Loading reports...",
-		"empty": "No reports match the current filters.",
-		"prev": "Previous",
-		"next": "Next",
-		"pageOf": "Page {page} of {pages}",
-		"view": "View details",
-		"reviewed": "Reviewed",
-		"awaitingReview": "Awaiting review",
-		"columns": {
-			"weekOf": "Week"
-		},
-		"card": {
-			"summary": "Weight: {weight} kg • Cardio: {cardio}/5"
-		},
-		"detail": {
-			"title": "Weekly report details",
-			"loading": "Loading report details...",
-			"reviewedBy": "Reviewed by",
-			"you": "You",
-			"photos": "Progress photos",
-			"noPhoto": "No photo",
-			"measurements": "Measurements",
-			"training": "Training",
-			"diet": "Diet",
-			"feedback": "Coach’s notes",
-			"feedbackPh": "Write your notes or instructions for the trainee...",
-			"saveFeedback": "Save notes",
-			"close": "Close",
-			"reviewedAt": "Review date",
-			"section": {
-				"photos": {
-					"front": "Front",
-					"back": "Back",
-					"left": "Left side",
-					"right": "Right side"
-				},
-				"measurements": {
-					"date": "Measurement date",
-					"weight": "Weight",
-					"waist": "Waist",
-					"chest": "Chest",
-					"hips": "Hips",
-					"arms": "Arms",
-					"thighs": "Thighs"
-				},
-				"training": {
-					"cardioAdherence": "Cardio adherence",
-					"intensityOk": "Is workout intensity suitable?",
-					"shape": "Do you notice a change in shape?",
-					"fitness": "Do you notice a change in fitness?",
-					"sleepEnough": "Does the trainee sleep enough hours?",
-					"sleepHours": "Average sleep hours per day",
-					"notes": {
-						"title": "Notes about the training program"
-					},
-					"daysDeviation": "Deviation in training days",
-					"deviation": {
-						"count": "Number of deviated days",
-						"reason": "Reason for deviation"
-					}
-				},
-				"diet": {
-					"hungry": "Does the trainee feel hungry?",
-					"comfort": "Does the trainee feel mentally comfortable?",
-					"tooMuch": "Is the food quantity too large?",
-					"wantSpecific": "Requested foods",
-					"deviation": {
-						"title": "Is there deviation from the diet?",
-						"times": "Number of deviations",
-						"details": "Deviation details"
-					}
-				}
-			}
-		},
-		"errors": {
-			"load": "An error occurred while loading reports.",
-			"save": "Failed to save notes.",
-			"feedbackEmpty": "Please write notes before saving."
-		},
-		"messages": {
-			"saved": "✅ Coach’s notes saved successfully!"
-		}
-	},
-	"AddToHomeGuide": {
-		"title": "Pin the app to your home screen",
-		"subtitle": "Use the site as a full standalone app, even without internet.",
-		"chooseBrowser": "Choose browser",
-		"installButton": "Install app",
-		"installing": "Installing...",
-		"stepsTitle": "Steps:",
-		"dontShowAgain": "Don’t show this message again",
-		"close": "Got it",
-		"footerNote": "This guide is shown only once and is saved in localStorage.",
-		"browserOptions": {
-			"auto": "Automatic selection",
-			"chrome": "Chrome (Android)",
-			"edge": "Edge (Android)",
-			"samsung": "Samsung Internet",
-			"firefox": "Firefox (Android)",
-			"safari": "Safari (iPhone/iPad)",
-			"ios_other": "Chrome/Edge/Firefox (iOS)",
-			"generic": "Other browser"
-		},
-		"steps": {
-			"chrome": [
-				"Open the menu (⋮) at the top right.",
-				"Choose \"Add to Home screen\".",
-				"Tap \"Install\" to confirm."
-			],
-			"edge": [
-				"Open the menu (⋮) at the top right.",
-				"Choose \"Install app\".",
-				"Tap \"Install\" to confirm."
-			],
-			"samsung": [
-				"Tap the menu button (≡) at the bottom.",
-				"Choose \"Add page to\" then \"Home screen\".",
-				"Tap \"Add\"."
-			],
-			"firefox": [
-				"Open the menu (⋮) at the top.",
-				"Choose \"Add to Home screen\".",
-				"Tap \"Add\"."
-			],
-			"safari": [
-				"Tap the share button (arrow ↑).",
-				"Choose \"Add to Home Screen\".",
-				"Tap \"Add\" to confirm."
-			],
-			"ios_other": [
-				"It’s recommended to use Safari to add the app.",
-				"Open the site in Safari.",
-				"Tap \"Add to Home Screen\" then \"Add\"."
-			],
-			"generic": [
-				"Look in the browser menu for \"Add to Home screen\" or \"Install app\".",
-				"Follow the instructions to add the icon to your home screen."
-			]
-		}
-	},
-	"users": {
-		"editUser": "Edit user",
-		"header": {
-			"title": "User management",
-			"subtitle": "Full control over clients, coaches, and their data.",
-			"createNewUser": "Create new user"
-		},
-		"stats": {
-			"totalUsers": "Total users",
-			"active": "Active accounts",
-			"coaches": "Coaches",
-			"clients": "Clients"
-		},
-		"filters": {
-			"role": "Role",
-			"plan": "Plan",
-			"newest": "Newest",
-			"allRoles": "All roles",
-			"allPlans": "All plans",
-			"withPlan": "Has a plan",
-			"noPlan": "No plan"
-		},
-		"table": {
-			"name": "Name",
-			"email": "Email",
-			"role": "Role",
-			"gender": "Gender",
-			"phone": "Phone number",
-			"membership": "Membership",
-			"exercisePlan": "Workout plan",
-			"mealPlan": "Meal plan",
-			"coach": "Coach",
-			"joinDate": "Join date",
-			"status": "Status",
-			"daysLeft": "Days left",
-			"actions": "Actions"
-		},
-		"actions": {
-			"openProfile": "View profile",
-			"editDetails": "Edit details",
-			"assignWorkout": "Assign workout plan",
-			"assignMeal": "Assign meal plan",
-			"approve": "Activate account",
-			"suspend": "Suspend",
-			"activate": "Reactivate",
-			"whatsapp": "WhatsApp chat",
-			"directChat": "Direct chat",
-			"delete": "Delete user"
-		},
-		"status": {
-			"active": "Active",
-			"pending": "Pending",
-			"suspended": "Temporarily suspended"
-		},
-		"roles": {
-			"admin": "Admin",
-			"coach": "Coach",
-			"client": "Client"
-		},
-		"gender": {
-			"male": "Male",
-			"female": "Female",
-			"notSpecified": "Not specified"
-		},
-		"membership": {
-			"basic": "Basic",
-			"gold": "Gold",
-			"platinum": "Platinum"
-		},
-		"fields": {
-			"fullName": "Full name",
-			"email": "Email",
-			"phone": "Phone number",
-			"password": "Password",
-			"passwordEdit": "Password (leave blank to keep current)",
-			"gender": "Gender",
-			"membership": "Membership",
-			"role": "Role",
-			"coach": "Coach",
-			"status": "Status",
-			"phoneWhatsapp": "WhatsApp number"
-		},
-		"placeholders": {
-			"fullName": "Mohammed Ahmed",
-			"email": "example@domain.com",
-			"phone": "+966 5X XXX XXXX",
-			"coach": "Choose coach",
-			"role": "Choose role",
-			"status": "Choose status",
-			"search": "Search by name or email...",
-			"whatsapp": "e.g. 9665XXXXXXXX"
-		},
-		"wizard": {
-			"newUser": "New user",
-			"createAccount": "Create account",
-			"chooseWorkout": "Choose workout plan (optional)",
-			"chooseMeal": "Choose meal plan (optional)",
-			"caloriesDetails": "Details & calories",
-			"credentialsAndForm": "Login details",
-			"createAndNext": "Create and continue",
-			"credsReady": "Login details have been created. You can copy and send them via WhatsApp below.",
-			"passwordByEmail": "Sent via email"
-		},
-		"calories": {
-			"calories": "Calories",
-			"protein": "Protein",
-			"carbs": "Carbs",
-			"fat": "Fat",
-			"activity": "Activity level",
-			"level": {
-				"sedentary": "Sedentary",
-				"light": "Light activity",
-				"moderate": "Moderate activity",
-				"active": "High activity",
-				"athlete": "Athlete"
-			},
-			"notes": "Notes",
-			"notesPh": "Additional details or dietary preferences...",
-			"errors": {
-				"integer": "Must be an integer",
-				"positive": "Must be greater than 0",
-				"notNegative": "Must not be less than 0",
-				"activityRequired": "Please choose an activity level",
-				"notesMax": "Notes text is too long"
-			}
-		},
-		"forms": {
-			"title": "Coach form",
-			"select": "Choose form",
-			"placeholder": "Choose a form to send",
-			"sendToClient": "Send to client",
-			"noteLinkAnswers": "Form answers will be linked to this user’s account."
-		},
-		"pickers": {
-			"selectOne": "Choose one plan to assign",
-			"assignWorkout": "Assign workout plan",
-			"assignMeal": "Assign meal plan"
-		},
-		"common": {
-			"assign": "Assign",
-			"seeMore": "View more",
-			"cancel": "Cancel",
-			"saveChanges": "Save changes",
-			"creating": "Creating...",
-			"expired": "Expired",
-			"days": "Days",
-			"back": "Back",
-			"saveAndNext": "Save and continue",
-			"sendWhatsapp": "Send via WhatsApp",
-			"noCoach": "No coach"
-		},
-		"alerts": {
-			"loadPlansFailed": "Failed to load plans",
-			"planAssigned": "Plan assigned successfully",
-			"assignFailed": "Failed to assign plan",
-			"loadCoachesFailed": "Failed to load coaches list",
-			"passwordGenerated": "Strong password generated",
-			"userUpdated": "User data updated successfully",
-			"updateFailed": "Update failed",
-			"accountCreated": "Account created successfully",
-			"createFailed": "Failed to create account",
-			"assignWorkoutFailed": "Failed to assign workout plan",
-			"assignMealFailed": "Failed to assign meal plan",
-			"saveCaloriesFailed": "Failed to save calorie data",
-			"enterPhoneWhatsapp": "Please enter a phone number to send login details via WhatsApp",
-			"selectFormFirst": "Select a form first before sending",
-			"formSent": "Form sent successfully",
-			"formSendFailed": "Failed to send form",
-			"statusUpdated": "Status updated to {status}",
-			"userDeleted": "User deleted successfully",
-			"deleteFailed": "Deletion failed",
-			"loadUsersFailed": "Failed to load users",
-			"noPhone": "No valid phone number for this user",
-			"loadWorkoutFailed": "Failed to load workout plans",
-			"loadMealFailed": "Failed to load meal plans",
-			"saveCaloriesSuccess": "Calorie information saved successfully"
-		},
-		"errors": {
-			"nameMin": "Name must be at least 2 characters",
-			"nameRequired": "Full name is required",
-			"emailInvalid": "Invalid email address",
-			"emailRequired": "Email is required",
-			"roleRequired": "Role must be specified",
-			"membershipRequired": "Membership type must be specified",
-			"passwordRequired": "Password is required",
-			"passwordMin": "Password must be at least 8 characters",
-			"coachRequired": "Coach must be selected",
-			"startRequired": "Start date is required",
-			"endRequired": "End date is required",
-			"endAfterStart": "End date must be after or equal to the start date",
-			"statusRequired": "Status must be specified",
-			"phoneRequired": "Phone number is required",
-			"phoneInvalid": "Invalid phone number",
-			"phoneTooShort": "Phone number is shorter than required",
-			"phoneTooLong": "Phone number is longer than required",
-			"phoneLeadingZero": "Do not add 0 after the country code",
-			"phoneDuplicateCountryCode": "Do not repeat the country code inside the phone number",
-			"phoneStartInvalid": "Phone number start is invalid for this country"
-		},
-		"dialogs": {
-			"deleteUserConfirm": "Are you sure you want to delete {name}? This action cannot be undone."
-		}
-	},
-	"date": {
-		"startLabel": "Start date",
-		"endLabel": "End date",
-		"pickEnd": "Pick end date",
-		"endAfterStart": "End date must be after the start date"
-	},
-	"DataTable": {
-		"toggleSelectAll": "Select all / Deselect",
-		"toggleRow": "Select this row",
-		"sort": "Sort",
-		"pageLabel": "Page {page} of {total}",
-		"first": "First",
-		"prev": "Previous",
-		"next": "Next",
-		"last": "Last",
-		"noData": "No data available",
-		"adjustFiltersOrAdd": "Adjust filters or add new records."
-	},
-	"Stepper": {
-		"progress": "Progress"
-	},
-	"Common": {
-		"seeMore": "See more",
-		"skip": "Skip",
-		"assigning": "Assigning…",
-		"assignNext": "Assign & continue",
-		"assignFinish": "Assign & finish",
-		"back": "Back",
-		"show": "Show",
-		"hide": "Hide",
-		"showPassword": "Show password",
-		"hidePassword": "Hide password",
-		"copy": "Copy",
-		"copyToClipboard": "Copy to clipboard",
-		"copied": "Copied",
-		"copyFailed": "Copy failed",
-		"english": "English",
-		"arabic": "Arabic"
-	},
-	"Plans": {
-		"searchPlaceholder": "Search by plan name or day…",
-		"empty": "No plans available. Try another search keyword.",
-		"untitled": "Untitled plan",
-		"assignedCount": "{count} assigned",
-		"daysCount": "{count} days",
-		"details": "Details",
-		"moreCount": "+{count} more"
-	},
-	"Meals": {
-		"searchPlaceholder": "Search by name or meal plan description…",
-		"empty": "No meal plans available. Try another search keyword.",
-		"untitled": "Untitled meal plan"
-	},
-	"Subscription": {
-		"startLabel": "Subscription start date",
-		"endLabel": "Subscription end date",
-		"pickEnd": "Choose end date",
-		"endAfterStart": "End date must be the same day or after the start date",
-		"d1": "1 month",
-		"d3": "3 months",
-		"d6": "6 months",
-		"d12": "12 months"
-	},
-	"superAdmin": {
-		"header": {
-			"title": "Super Admin Dashboard",
-			"subtitle": "Create administrators and manage managers, coaches, and clients across the system.",
-			"createAdmin": "Create new admin"
-		},
-		"stats": {
-			"totalAdmins": "Total admins",
-			"activeAdmins": "Active admins",
-			"totalCoaches": "Total coaches",
-			"totalClients": "Total clients"
-		},
-		"table": {
-			"admin": "Admin",
-			"phone": "Phone number",
-			"status": "Status",
-			"coaches": "Coaches",
-			"clients": "Clients",
-			"createdAt": "Created at",
-			"clientName": "Client name",
-			"clientEmail": "Client email",
-			"joinDate": "Join date"
-		},
-		"badges": {
-			"coaches": "{n} coach(es)",
-			"clients": "{n} client(s)"
-		},
-		"actions": {
-			"viewExpand": "View details",
-			"edit": "Edit",
-			"suspend": "Suspend",
-			"activate": "Activate",
-			"delete": "Delete"
-		},
-		"expand": {
-			"coaches": "Coaches list",
-			"noCoaches": "No coaches for this admin.",
-			"showClients": "Show clients",
-			"hideClients": "Hide clients",
-			"clientsCount": "{n} client(s)",
-			"noClients": "No clients for this coach."
-		},
-		"createModal": {
-			"title": "Create new admin",
-			"create": "Create"
-		},
-		"fields": {
-			"name": "Name",
-			"email": "Email",
-			"phone": "Phone number",
-			"password": "Password",
-			"status": "Status"
-		},
-		"placeholders": {
-			"name": "Mohammed Ahmed",
-			"email": "example@domain.com",
-			"phone": "+20 1X XXX XXXX",
-			"status": "Choose status",
-			"search": "Search by name or email..."
-		},
-		"status": {
-			"active": "Active",
-			"suspended": "Suspended"
-		},
-		"common": {
-			"cancel": "Cancel",
-			"creating": "Creating..."
-		},
-		"errors": {
-			"nameMin": "Name must be at least 2 characters",
-			"nameRequired": "Name is required",
-			"emailInvalid": "Invalid email",
-			"emailRequired": "Email is required",
-			"phoneInvalid": "Invalid phone format",
-			"passwordRequired": "Password is required",
-			"passwordMin": "Password must be at least 8 characters",
-			"statusRequired": "Status must be selected"
-		},
-		"alerts": {
-			"passwordGenerated": "Strong password generated",
-			"adminCreated": "Admin created successfully",
-			"createFailed": "Failed to create admin",
-			"loadFailed": "Failed to load data",
-			"statusUpdated": "Status updated to {status}",
-			"updateFailed": "Update failed",
-			"deleted": "Deleted successfully",
-			"deleteFailed": "Delete failed"
-		},
-		"dialogs": {
-			"deleteConfirm": "Are you sure you want to delete {name}? This action cannot be undone."
-		},
-		"hints": {
-			"editComingSoon": "Edit screen coming soon."
-		}
-	},
-	"workouts": {
-		"titles": {
-			"exercises": "Exercises",
-			"preview": "Preview",
-			"addExercise": "Add exercise",
-			"editExercise": "Edit: {name}",
-			"untitled": "Untitled exercise"
-		},
-		"descriptions": {
-			"exercises": "Exercises library",
-			"manageLibrary": "Manage your exercise library easily — add new exercises, update details"
-		},
-		"actions": {
-			"addExercise": "Add exercise",
-			"getAi": "AI suggestion",
-			"fillWithAi": "Auto-fill with AI",
-			"save": "Save",
-			"view": "View",
-			"edit": "Edit",
-			"delete": "Delete",
-			"clear": "Clear",
-			"switchToList": "Switch to list view",
-			"switchToGrid": "Switch to grid view",
-			"listView": "List view",
-			"gridView": "Grid view",
-			"sortByDate": "Sort by date",
-			"newestFirst": "Newest first",
-			"oldestFirst": "Oldest first",
-			"uploadImage": "Upload image",
-			"uploadVideo": "Upload video",
-			"duplicate": "Duplicate exercise"
-		},
-		"labels": {
-			"name": "Name",
-			"targetReps": "Reps",
-			"targetSets": "Sets",
-			"rest": "Rest (seconds)",
-			"tempo": "Tempo",
-			"category": "Category",
-			"details": "Details",
-			"primary": "Primary muscles",
-			"secondary": "Secondary muscles",
-			"image": "Image",
-			"video": "Video",
-			"muscles": "Muscles"
-		},
-		"notes": {
-			"muscleWikiTipLabel": "Note:",
-			"muscleWikiTipPrefix": "You can copy the exercise video link directly from",
-			"muscleWikiTipSuffix": " without needing to download or upload it. For the image, you may take a snapshot from the video and use it, or use a valid image URL.",
-			"muscleWikiTip": "Note: You can copy the exercise video link directly from musclewiki.com without downloading or uploading it. For the image, you can take a snapshot from the video and use it here."
-		},
-		"placeholders": {
-			"name": "Example: Seated wide-grip row",
-			"reps": "10 or 8-12",
-			"sets": "Number of sets",
-			"rest": "Rest duration in seconds",
-			"tempo": "2/1/2",
-			"category": "Choose category",
-			"details": "Performance tips, body posture, muscle target...",
-			"tag": "Type a muscle name and press Enter",
-			"mediaUrl": "Upload an image or enter a valid link",
-			"mediaUrlVideo": "Upload a video or enter a valid link",
-			"search": "Search by name…",
-			"perPage": "Items per page"
-		},
-		"hints": {
-			"nameAi": "Write the name then use AI to auto-fill fields.",
-			"tempo": "Format \"x/y/z\" like 2/1/2",
-			"createCategory": "Type to create a new category…"
-		},
-		"ai": {
-			"fetching": "Fetching AI suggestions…"
-		},
-		"val": {
-			"nameMin": "Name must be at least 2 characters",
-			"nameReq": "Name is required",
-			"repsFmt": "Use a format like '10' or '8-12'",
-			"repsReq": "Reps are required",
-			"setsNum": "Sets must be a number",
-			"setsInt": "Sets must be an integer",
-			"setsMin": "Minimum is 0",
-			"setsMax": "Maximum is 30",
-			"setsReq": "Sets are required",
-			"restNum": "Rest must be a number",
-			"restMin": "Minimum is 0 seconds",
-			"restMax": "Maximum is 1200 seconds",
-			"tempoFmt": "Use format 2/1/2",
-			"categoryReq": "Category is required",
-			"detailsMax": "Details must be less than 2000 characters",
-			"tagsMax": "Maximum 20 tags",
-			"imgReq": "Image link is required",
-			"videoReq": "Video link is required"
-		},
-		"filters": {
-			"all": "All"
-		},
-		"stats": {
-			"total": "Total",
-			"withVideo": "Exercises with video",
-			"withImage": "Exercises with image",
-			"avgRest": "Average rest (sec)",
-			"added7d": "Added within 7 days",
-			"totalPersonalExercise": "Your personal exercises",
-			"totalGlobalExercise": "All exercises"
-		},
-		"empty": {
-			"title": "No exercises found",
-			"subtitle": "Try another search or add a new exercise.",
-			"simple": "No exercises available."
-		},
-		"confirm": {
-			"deleteTitle": "Delete exercise?",
-			"deleteMsg": "This action cannot be undone.",
-			"deleteBtn": "Delete"
-		},
-		"errors": {
-			"loadExercises": "Failed to load exercises",
-			"createFailed": "Failed to create exercise",
-			"updateFailed": "Failed to update exercise",
-			"deleteFailed": "Failed to delete exercise",
-			"apiKeyExpired": "AI key invalid or expired"
-		},
-		"toasts": {
-			"created": "Exercise created successfully",
-			"updated": "Exercise updated successfully",
-			"deleted": "Exercise deleted successfully"
-		},
-		"meta": {
-			"sets": "Sets",
-			"reps": "Reps",
-			"rest": "Rest",
-			"tempo": "Tempo"
-		},
-		"media": {
-			"image": "Image",
-			"video": "Video",
-			"none": "No {kind} available",
-			"noImage": "No image",
-			"noVideo": "No video"
-		}
-	},
-	"feedback": {
-		"floatingButtonAria": "Send feedback about the system",
-		"panelTitle": "Feedback & Improvements",
-		"panelDescription": "Share your feedback or suggest improvements. Your notes will be reviewed by the admin.",
-		"typeLabel": "Type",
-		"typePlaceholder": "Select feedback type",
-		"typeEnhancement": "Enhancement / New idea",
-		"typeIssue": "Issue / Bug",
-		"typeOther": "Other",
-		"titleLabel": "Title",
-		"titlePlaceholder": "Short title (e.g., orders screen improvement)",
-		"detailsLabel": "Details",
-		"detailsPlaceholder": "Explain the idea or issue with as much detail as possible.",
-		"emailLabel": "Contact email",
-		"emailOptional": "Optional",
-		"emailPlaceholder": "you@example.com",
-		"errorRequired": "Title and details are required.",
-		"submit": "Submit feedback",
-		"submitting": "Submitting...",
-		"success": "Thank you! Your feedback has been sent.",
-		"genericError": "An error occurred while sending the feedback. Try again.",
-		"close": "Close",
-		"admin": {
-			"title": "User feedback",
-			"subtitle": "Manage and review all user feedback and improvement requests",
-			"totalFeedback": "Total feedback",
-			"newFeedback": "New",
-			"resolvedFeedback": "Resolved",
-			"issuesFeedback": "Issues",
-			"search": "Search by title or email...",
-			"typeFilter": "All types",
-			"statusFilter": "All statuses",
-			"exportCSV": "Export CSV",
-			"noFeedback": "No feedback found",
-			"loading": "Loading...",
-			"description": "Description",
-			"changeStatus": "Change status",
-			"delete": "Delete",
-			"deleteConfirm": "Are you sure you want to delete this feedback?",
-			"statusUpdated": "Status updated successfully",
-			"deleted": "Feedback deleted successfully",
-			"updateFailed": "Failed to update status",
-			"deleteFailed": "Failed to delete feedback",
-			"statusNew": "New",
-			"statusReviewed": "Reviewed",
-			"statusResolved": "Resolved",
-			"statusClosed": "Closed"
-		}
-	},
-	"workoutPlans": {
-		"copySuffix": "(copy)",
-		"placeholders": {
-			"search": "Search...",
-			"searchPlan": "Search by plan name…"
-		},
-		"filters": {
-			"all": "All"
-		},
-		"planActionNotAllowed": "You can only perform actions on plans you created.",
-		"actions": {
-			"duplicate": "Duplicate",
-			"clear": "Clear",
-			"cancel": "Cancel",
-			"close": "Close",
-			"assign": "Assign",
-			"view": "View & share plan",
-			"preview": "Preview",
-			"edit": "Edit",
-			"delete": "Delete",
-			"addDay": "Add day",
-			"addExercises": "Add exercises",
-			"removeDay": "Remove day",
-			"savePlan": "Save plan",
-			"duplicateDay": "Duplicate day"
-		},
-		"errors": {
-			"loadExercises": "Error loading exercises.",
-			"loadPlans": "Failed to load plans."
-		},
-		"notifications": {
-			"planDeleted": "Plan deleted successfully.",
-			"planDeleteFailed": "Failed to delete plan.",
-			"planCreated": "Plan created successfully.",
-			"createFailed": "Failed to create plan.",
-			"duplicateDay": "Day is duplicated, choose another.",
-			"planUpdated": "Plan updated successfully.",
-			"updateFailed": "Failed to update plan.",
-			"assignedSuccess": "Plan assigned to users successfully.",
-			"assignFailed": "Failed to assign plan to users.",
-			"planDuplicated": "Plan duplicated successfully. You can edit it now.",
-			"duplicateFailed": "Failed to duplicate plan."
-		},
-		"confirm": {
-			"titleDefault": "Are you sure?",
-			"messageDefault": "This action cannot be undone.",
-			"confirmBtn": "Confirm",
-			"deletePlanTitle": "Delete plan?",
-			"deletePlanMsg": "This action cannot be undone."
-		},
-		"picker": {
-			"dialogAria": "Exercise selection window",
-			"title": "Choose exercises",
-			"subtitle": "Click to add an exercise. You can filter and search by category.",
-			"searchPlaceholder": "Search exercise...",
-			"all": "All",
-			"preview": "Preview",
-			"previewVideo": "Preview video",
-			"selected": "Selected",
-			"sets": "Sets",
-			"reps": "Reps",
-			"rest": "Rest",
-			"noExercisesTitle": "No exercises found",
-			"noExercisesDesc": "Try a different search keyword or category.",
-			"addSelected": "Add ({count})"
-		},
-		"plans": {
-			"header": {
-				"newPlanButton": "New plan",
-				"title": "Training plans",
-				"desc": "Create programs, organize days, and assign them easily."
-			},
-			"stats": {
-				"globalPlans": "Global plans",
-				"personalPlans": "My personal plans",
-				"withoutDays": "Plans without days",
-				"unassigned": "Unassigned plans",
-				"activeAssignments": "Active assignments"
-			},
-			"filters": {
-				"perPage": "Items / page",
-				"oldestFirst": "Oldest first",
-				"newestFirst": "Newest first",
-				"sortByDate": "Sort by date"
-			},
-			"list": {
-				"noPlansTitle": "No plans available",
-				"noPlansDesc": "Try another search or create a new plan.",
-				"active": "Active",
-				"inactive": "Inactive",
-				"noDescription": "No notes.",
-				"dayCountLabel": "{count} days"
-			},
-			"modals": {
-				"previewTitle": "Plan preview",
-				"createTitle": "Create plan",
-				"editTitle": "Edit:",
-				"assignTitle": "Assign plan: {name}"
-			}
-		},
-		"preview": {
-			"exerciseLabel": "Exercise",
-			"noExercisesYet": "No exercises yet.",
-			"assignees": "Assigned users",
-			"noAssignees": "This plan has not been assigned yet.",
-			"createdAt": "Created at:",
-			"updatedAt": "Last updated:",
-			"exercise": "Exercise",
-			"exercises": "Exercises",
-			"sets": "Sets",
-			"reps": "Reps",
-			"noDaysYet": "No days added yet.",
-			"noExercisesYetTitle": "No exercises yet",
-			"noExercisesYetHelper": "Add exercises to this day to see them here."
-		},
-		"assign": {
-			"selectUsersLabel": "Choose users",
-			"selectUsersPlaceholder": "Search and select users...",
-			"removeUser": "Remove user",
-			"assigning": "Assigning..."
-		},
-		"builder": {
-			"namePlaceholder": "Plan name (e.g., Push/Pull/Legs...)",
-			"daysSectionTitle": "Days",
-			"dayNumber": "Day {num}",
-			"selectDayPlaceholder": "Choose day",
-			"noExercisesHint": "No exercises yet. Click 'Add exercises' to add exercises to this day.",
-			"savePlanBtn": "Save plan",
-			"validation": {
-				"nameRequired": "Plan name is required.",
-				"needDay": "Plan must contain at least one day.",
-				"needExercisePerDay": "Each day must contain at least one exercise."
-			}
-		},
-		"days": {
-			"saturday": "Saturday",
-			"sunday": "Sunday",
-			"monday": "Monday",
-			"tuesday": "Tuesday",
-			"wednesday": "Wednesday",
-			"thursday": "Thursday",
-			"friday": "Friday"
-		}
-	},
-	"MyWorkouts": {
-		"title": "My workouts",
-		"subtitle": "Your weekly plan and daily exercises in one place.",
-		"listen": "Listen",
-		"settings": "Settings",
-		"exercises": "Exercises",
-		"workout": "Workout",
-		"loadingExercises": "Loading exercises...",
-		"noExercises": "No exercises for today",
-		"pickAnotherDay": "Try selecting another day or review your workout plan.",
-		"uploadFor": "Upload video for",
-		"selected": "Selected file",
-		"showImage": "Show image",
-		"showVideo": "Show video",
-		"showVideoAlt": "Show video 2",
-		"alt": "Alt",
-		"table": {
-			"set": "Set",
-			"weight": "Weight",
-			"reps": "Reps",
-			"done": "Done"
-		},
-		"actions": {
-			"removeSet": "Delete set",
-			"addSet": "Add set",
-			"upload": "Upload",
-			"chooseVideo": "Choose video",
-			"cancel": "Cancel",
-			"close": "Close"
-		},
-		"sync": {
-			"syncNow": "Sync now",
-			"synced": "Synced",
-			"syncing": "Syncing...",
-			"someFailed": "Some items failed to sync"
-		},
-		"errors": {
-			"pickVideo": "Please choose a valid video file.",
-			"maxSize": "Maximum size is 100MB.",
-			"uploadFailed": "Upload failed. Try again."
-		},
-		"exerciseFallback": "Exercise",
-		"minusOne": "-1",
-		"plusOne": "+1"
-	},
-	"nutrition": {
-		"saturday": "Saturday",
-		"sunday": "Sunday",
-		"monday": "Monday",
-		"tuesday": "Tuesday",
-		"wednesday": "Wednesday",
-		"thursday": "Thursday",
-		"friday": "Friday",
-		"clickAgainToConfirm": "Click again to confirm",
-		"ui": {
-			"title": "Nutrition management",
-			"subtitle": "Create meal plans, assign them to clients, and view all details in one place."
-		},
-		"btn": {
-			"new_plan": "New plan",
-			"create": "Create",
-			"update": "Update",
-			"save": "Save",
-			"assign": "Assign",
-			"assign_plan": "Assign plan",
-			"delete": "Delete",
-			"deleting": "Deleting…",
-			"cancel": "Cancel",
-			"preview": "Preview",
-			"edit": "Edit",
-			"remove_meal": "Delete meal",
-			"add_meal": "Add meal",
-			"add_item": "Add item",
-			"add_supplement": "Add supplement",
-			"ai_assist": "AI Assistant",
-			"generate": "Generate"
-		},
-		"stats": {
-			"global_plans": "Global plans",
-			"my_plans": "My plans"
-		},
-		"search": {
-			"placeholder": "Search by plan name…",
-			"clear": "Clear",
-			"per_page": "Per page",
-			"oldest_first": "Oldest first",
-			"newest_first": "Newest first",
-			"sort_by_date": "Sort by date"
-		},
-		"modals": {
-			"create_title": "Create meal plan",
-			"edit_title": "Edit",
-			"assign_title": "Assign",
-			"details_title": "Meal plan details"
-		},
-		"form": {
-			"plan_name": "Plan name",
-			"description": "Description",
-			"base_day_title": "Base day meals (applies to all days)",
-			"meal_name": "Meal name",
-			"hhmm": "Time (HH:MM)",
-			"customize_days": "Customize specific days (optional)",
-			"item_name": "Item name",
-			"qty_g": "Quantity (g)",
-			"calories": "Calories",
-			"supplement_name": "Supplement name",
-			"time_hhmm": "Time (HH:MM)",
-			"best_with": "Best with"
-		},
-		"days": {
-			"monday": "Monday",
-			"tuesday": "Tuesday",
-			"wednesday": "Wednesday",
-			"thursday": "Thursday",
-			"friday": "Friday",
-			"saturday": "Saturday",
-			"sunday": "Sunday"
-		},
-		"details": {
-			"notes": "Notes",
-			"meals": "Meal",
-			"kcal": "Calories",
-			"supplements": "Supplements",
-			"time": "Time",
-			"best_with": "Best with",
-			"assigned_clients": "Assigned clients"
-		},
-		"table": {
-			"item": "Item",
-			"qty_g": "Quantity (g)",
-			"calories": "Calories"
-		},
-		"list": {
-			"empty_title": "No plans",
-			"empty_desc": "Try a different search or create a new plan.",
-			"no_desc": "No description."
-		},
-		"assign": {
-			"title": "Assign to",
-			"select_client": "Select client"
-		},
-		"confirm": {
-			"delete_title": "Delete plan?",
-			"delete_msg": "This action cannot be undone."
-		},
-		"toast": {
-			"created": "Plan created successfully",
-			"create_failed": "Failed to create plan",
-			"updated": "Plan updated successfully",
-			"update_failed": "Failed to update plan",
-			"assigned": "Plan assigned successfully",
-			"assign_failed": "Failed to assign plan",
-			"deleted": "Plan deleted successfully",
-			"delete_failed": "Failed to delete plan",
-			"ai_filled": "Plan auto-filled by AI. Review and adjust if needed.",
-			"ai_failed": "Failed to generate plan data using AI"
-		},
-		"notes": {
-			"placeholder": "Write a note and press Enter…"
-		},
-		"validation": {
-			"required": "Required",
-			"number": "Must be a number",
-			"min": "Value is below allowed minimum",
-			"hhmm": "Time must follow HH:MM format",
-			"add_item": "Add at least one item",
-			"add_meal": "Add at least one meal",
-			"plan_name_required": "Plan name is required"
-		},
-		"empty": {
-			"no_meals_hint": "No meals added. Click 'Add meal' to start."
-		}
-	},
-	"forms": {
-		"header": {
-			"new": "New form",
-			"title": "Form management",
-			"desc": "Create, edit, and share custom forms."
-		},
-		"messages": {
-			"load_failed": "Failed to load forms",
-			"created": "Form created",
-			"updated": "Form updated",
-			"deleted": "Form deleted",
-			"link_copied": "Link copied"
-		},
-		"errors": {
-			"title_required": "Form title is required",
-			"create_failed": "Failed to create form",
-			"update_failed": "Failed to update form",
-			"delete_failed": "Failed to delete form",
-			"required": "Field name and placeholder are required for each field"
-		},
-		"actions": {
-			"create_form": "Create form",
-			"copy_link": "Copy share link",
-			"edit_form": "Edit form",
-			"move_up": "Move up",
-			"move_down": "Move down",
-			"edit_field": "Edit field",
-			"remove_field": "Delete field",
-			"deleting": "Deleting…",
-			"done": "Done",
-			"duplicate": "Duplicate",
-			"clear": "Clear",
-			"cancel": "Cancel",
-			"close": "Close",
-			"assign": "Assign",
-			"view": "View & share plan",
-			"preview": "Preview",
-			"edit": "Edit",
-			"delete": "Delete",
-			"addDay": "Add day",
-			"addExercises": "Add exercises",
-			"removeDay": "Remove day",
-			"savePlan": "Save plan"
-		},
-		"delete": {
-			"title": "Delete form?",
-			"message": "This action cannot be undone. The form and all responses will be deleted.",
-			"confirm": "Delete"
-		},
-		"empty": {
-			"title": "No forms",
-			"subtitle": "Start by creating your first form.",
-			"select_hint": "Select a form from the list to view details.",
-			"no_fields": "No fields yet."
-		},
-		"labels": {
-			"fields": "Field",
-			"key": "Key",
-			"placeholder": "Placeholder",
-			"options": "Options",
-			"required": "Required",
-			"order": "Order",
-			"created_at": "Created at",
-			"no_label": "No label",
-			"copy_suffix": " (copy)"
-		},
-		"editor": {
-			"form_title": "Form title",
-			"fields": "Form fields",
-			"add_field": "Add field",
-			"label": "Field label",
-			"key": "Key",
-			"regen_key": "Generate new key",
-			"regen": "Generate",
-			"type": "Type",
-			"placeholder": "Placeholder",
-			"required": "Required field",
-			"options": "Options",
-			"placeholders": {
-				"form_title": "Enter form title",
-				"label": "Enter field label",
-				"key": "Enter unique key",
-				"placeholder": "Placeholder text",
-				"option": "Add option then press Enter"
-			}
-		},
-		"types": {
-			"text": "Text",
-			"email": "Email",
-			"number": "Number",
-			"phone": "Phone",
-			"date": "Date",
-			"textarea": "Long text",
-			"select": "Dropdown",
-			"radio": "Radio",
-			"checkbox": "Checkbox",
-			"checklist": "Checklist",
-			"file": "File"
-		},
-		"types_map": {
-			"text": "Text",
-			"email": "Email",
-			"number": "Number",
-			"phone": "Phone",
-			"date": "Date",
-			"textarea": "Long text",
-			"select": "Dropdown",
-			"radio": "Radio",
-			"checkbox": "Checkbox",
-			"checklist": "Checklist",
-			"file": "File"
-		},
-		"create": {
-			"title": "Create new form",
-			"cta": "Create"
-		},
-		"edit": {
-			"title": "Edit form",
-			"cta": "Save changes"
-		}
-	},
-	"attachments": {
-		"modal": {
-			"title": "Your files",
-			"subtitle": "Upload new files or choose from your library"
-		},
-		"errors": {
-			"loadFiles": "Failed to load your files. Try again.",
-			"uploadFiles": "Failed to upload files. Try again.",
-			"deleteFile": "Failed to delete file. Try again.",
-			"maxFiles": "You can upload a maximum of {count} files at once.",
-			"maxTotalBytes": "Total upload size exceeds the limit of {max}."
-		},
-		"uploader": {
-			"upload": "Upload"
-		},
-		"labels": {
-			"close": "Close",
-			"attachFiles": "Attach files",
-			"image": "Image",
-			"totalFiles": "Total files"
-		},
-		"actions": {
-			"cancel": "Cancel",
-			"finishSelection": "Finish selection",
-			"finishSelectionWithCount": "Finish selection ({count})",
-			"deleteFile": "Delete {filename}",
-			"removeFile": "Remove {filename}"
-		}
-	},
-	"publicForm": {
-		"messages": {
-			"load_failed": "Error loading form.",
-			"submit_success": "Form submitted successfully.",
-			"submit_failed": "Failed to submit form, please try again."
-		},
-		"errors": {
-			"not_found_title": "Form not found",
-			"not_found_subtitle": "The form you are trying to access is not available."
-		},
-		"header": {
-			"public_badge": "Public form",
-			"progress_label": "Progress"
-		},
-		"sections": {
-			"contact": "Contact information",
-			"additional": "Additional information"
-		},
-		"fields": {
-			"email": {
-				"label": "Email",
-				"placeholder": "name@example.com"
-			},
-			"phone": {
-				"label": "Mobile number",
-				"placeholder": "Example: 9665xxxxxxxx"
-			},
-			"date": {
-				"placeholder": "Pick date"
-			},
-			"select": {
-				"placeholder": "Choose from list"
-			},
-			"file": {
-				"uploaded_default_name": "Uploaded file"
-			}
-		},
-		"footer": {
-			"review_before_submit": "Review your answers before submitting."
-		},
-		"cta": {
-			"submit": "Submit form",
-			"submitting": "Submitting..."
-		},
-		"validation": {
-			"email_required": "Email is required.",
-			"email_invalid": "Invalid email format.",
-			"phone_required": "Mobile number is required.",
-			"phone_invalid": "Invalid mobile number.",
-			"sa_phone_invalid": "{label} must be a valid Saudi mobile number.",
-			"required_generic": "{label} is required.",
-			"file_required": "Field {label} is required.",
-			"date_invalid": "{label} must be a valid date.",
-			"number_type": "{label} must be a number."
-		},
-		"select": {
-			"placeholder": "Choose...",
-			"search_placeholder": "Search...",
-			"no_results": "No results.",
-			"save": "Save",
-			"cancel": "Cancel",
-			"create_hint": "Type to add a new option...",
-			"create_from_query": "Create \"{value}\""
-		}
-	},
-	"ThankYouPage": {
-		"title": "Thank you for filling out the form!",
-		"description": "We received your information and will review it as soon as possible. You may safely close this page."
-	},
-	"submissions": {
-		"header": {
-			"title": "Form submissions",
-			"desc": "View and manage form submissions from clients.",
-			"new_form": "New form"
-		},
-		"filters": {
-			"search_placeholder": "Search email/phone/IP and answers…",
-			"from": "From date",
-			"to": "To date",
-			"form": "Form",
-			"all_forms": "All forms"
-		},
-		"errors": {
-			"from_before_to": "The (from) date must be before the (to) date.",
-			"title_required": "Form title is required.",
-			"user_required": "Select user first.",
-			"required": "Field name and placeholder are required for each field"
-		},
-		"messages": {
-			"load_forms_failed": "Failed to load forms.",
-			"load_submissions_failed": "Failed to load submissions.",
-			"form_created": "Form created.",
-			"create_form_failed": "Failed to create form.",
-			"assigned_ok": "Submission assigned to user.",
-			"assign_failed": "Failed to assign."
-		},
-		"table": {
-			"form": "Form",
-			"email": "Email",
-			"phone": "Phone",
-			"ip": "IP address",
-			"submitted": "Submission time",
-			"actions": "Actions"
-		},
-		"actions": {
-			"view": "View",
-			"load_more": "Load more",
-			"close": "Close",
-			"cancel": "Cancel"
-		},
-		"empty": {
-			"title": "No submissions",
-			"subtitle_all": "No submissions received yet.",
-			"subtitle_one": "No submissions for the selected form."
-		},
-		"labels": {
-			"unknown_form": "Unknown form"
-		},
-		"detail": {
-			"title": "Submission details",
-			"contact": "Contact info",
-			"form": "Form details",
-			"submission_id": "Submission ID",
-			"answers": "Answers",
-			"no_answers": "No answers."
-		},
-		"assign": {
-			"title": "Assign submission to client",
-			"client": "Client",
-			"client_id": "Client ID",
-			"cta": "Assign now",
-			"assigned_to": "Assigned to:"
-		},
-		"create": {
-			"title": "Create new form",
-			"form_title": "Form title",
-			"form_title_ph": "Enter form title",
-			"assign_optional": "Assign (optional) — Enter user ID",
-			"assign_optional_ph": "You can assign later from submission details",
-			"cta": "Create"
-		}
-	},
-	"reports": {
-		"title": "Weekly reports",
-		"subtitle": "Review, filter, and manage weekly reports easily.",
-		"athlete": "Trainee",
-		"columns": {
-			"weekOf": "Week"
-		},
-		"unreviewedBadge": "{count} reports awaiting review",
-		"reviewed": "Reviewed",
-		"awaitingReview": "Awaiting review",
-		"card": {
-			"weight": "Weight",
-			"kg": "kg",
-			"cardio": "Cardio"
-		},
-		"createdAt": "Creation date",
-		"view": "View",
-		"loading": "Loading…",
-		"empty": "No data.",
-		"errors": {
-			"load": "Failed to load reports.",
-			"save": "Failed to save notes.",
-			"feedbackEmpty": "Add notes first."
-		},
-		"messages": {
-			"saved": "Saved"
-		},
-		"prev": "Previous",
-		"next": "Next",
-		"pagination": "Page {page} of {pages} • Total {total}",
-		"detail": {
-			"title": "Report details",
-			"loading": "Loading…",
-			"photos": "Photos",
-			"noPhoto": "No photo",
-			"measurements": "Measurements",
-			"training": "Training",
-			"diet": "Diet",
-			"feedback": "Coach notes",
-			"feedbackPh": "Write your notes…",
-			"reviewedAt": "Reviewed at",
-			"saveFeedback": "Save notes",
-			"close": "Close",
-			"section": {
-				"photos": {
-					"front": "Front",
-					"back": "Back",
-					"left": "Left",
-					"right": "Right"
-				},
-				"measurements": {
-					"date": "Date",
-					"weight": "Weight",
-					"waist": "Waist",
-					"chest": "Chest",
-					"hips": "Hips",
-					"arms": "Arms",
-					"thighs": "Thighs"
-				},
-				"training": {
-					"cardioAdherence": "Cardio adherence",
-					"intensityOk": "Workout intensity suitable",
-					"shape": "Change in shape",
-					"fitness": "Change in fitness",
-					"sleepEnough": "Enough sleep",
-					"sleepHours": "Sleep hours",
-					"notes": {
-						"title": "Program notes"
-					},
-					"daysDeviation": "Deviation from training days",
-					"deviation": {
-						"count": "Count",
-						"reason": "Reason"
-					}
-				},
-				"diet": {
-					"hungry": "Feeling hungry",
-					"comfort": "Mental comfort",
-					"tooMuch": "Too much food",
-					"wantSpecific": "Craving specific food",
-					"deviation": {
-						"title": "Diet deviation",
-						"times": "Number of times",
-						"details": "Details"
-					}
-				}
-			}
-		},
-		"filters": {
-			"reviewed": {
-				"label": "Review status",
-				"any": "All",
-				"yes": "Reviewed",
-				"no": "Not reviewed"
-			},
-			"cardio": {
-				"label": "Cardio (value)",
-				"placeholder": "0..5"
-			},
-			"sortBy": "Sort by",
-			"sortOrder": "Sort order"
-		},
-		"sort": {
-			"fields": {
-				"created_at": "Creation date",
-				"weekOf": "Week",
-				"updated_at": "Update date",
-				"isRead": "Read"
-			},
-			"orders": {
-				"asc": "Ascending",
-				"desc": "Descending"
-			}
-		},
-		"kpis": {
-			"total": "Total reports",
-			"sortBy": "Sorted by",
-			"tab": "Current view"
-		},
-		"tabs": {
-			"allReports": "All reports",
-			"myClients": "My clients"
-		},
-		"clients": {
-			"title": "Select a client to view their reports",
-			"empty": "No clients",
-			"select": {
-				"label": "Select client",
-				"placeholder": "Choose a client..."
-			}
-		},
-		"yes": "Yes",
-		"no": "No"
-	},
-	"settings": {
-		"title": "Settings",
-		"subtitle": "Adjust your platform identity and customer experience from one place",
-		"export": "Export",
-		"import": "Import",
-		"save": "Save changes",
-		"cancel": "Cancel",
-		"add": "Add",
-		"ai": {
-			"title": "AI Settings",
-			"desc": "Add your AI key to use all advanced features.",
-			"form_here": "from here",
-			"secretKey": {
-				"label": "AI Key",
-				"hint": "Enter your key from OpenRouter",
-				"placeholder": "Paste your OpenRouter key here",
-				"show": "Show",
-				"hide": "Hide"
-			},
-			"steps": {
-				"title": "How to get an AI key:",
-				"step1": "Go to this link:",
-				"step2": "Sign in or create an account if needed.",
-				"step3": "Click the \"Create API Key\" button.",
-				"step4": "Enter any name for the key (example: Menuzed App).",
-				"step5": "Copy the key that appears (starts with sk-or-v1-).",
-				"step6": "Paste the key in the field above.",
-				"step7": "Save your changes.",
-				"warning": "⚠️ Keep this key secret — do not share it with anyone."
-			}
-		},
-		"org": {
-			"title": "Organization & Language",
-			"desc": "Organization name, default language, timezone, and home page slug.",
-			"name": {
-				"label": "Organization name",
-				"hint": "Appears in the header, invoices, and emails.",
-				"ph": "Example: Ultimate Fitness"
-			},
-			"defaultLang": {
-				"label": "Default language",
-				"hint": "Choose the language shown to customers on their first visit."
-			},
-			"timezone": {
-				"label": "Timezone"
-			},
-			"homeSlug": {
-				"label": "Homepage slug",
-				"hint": "Write an alternative path to be used instead of the domain (example: /ultimate).",
-				"ph": "home or ultimate or landing",
-				"preview": "Preview link"
-			}
-		},
-		"site": {
-			"title": "Website Management (SEO)",
-			"desc": "SEO enhancements and sharing metadata for your profile page.",
-			"metaTitle": "Meta title",
-			"metaTitlePh": "Clear short title containing the main keyword",
-			"metaDescription": "Meta description",
-			"metaDescriptionPh": "A short description that encourages clicks and reflects page content",
-			"metaKeywords": "Keywords",
-			"metaKeywordsPh": "health, fitness, gym, ultimate",
-			"ogImageUpload": "OG Image",
-			"ogImageHint": "Recommended size: 630×1200 px (1.91:1 ratio).",
-			"chooseImage": "Choose image",
-			"homeTitle": "Homepage title",
-			"homeTitlePh": "Example: Personalized training & nutrition plans"
-		},
-		"loader": {
-			"title": "Loading Screen",
-			"desc": "Adjust the loading message and duration shown to customers.",
-			"enabled": "Enable loading screen",
-			"message": "Loading message",
-			"messageHint": "Text displayed during loading.",
-			"messagePh": "Loading… just a moment",
-			"previewBtn": "Preview",
-			"durationSec": "Duration (seconds)",
-			"durationHint": "Time before hiding the loading screen"
-		},
-		"dhikr": {
-			"title": "Dhikr",
-			"desc": "Add multiple dhikr and set one active to appear as a notification to customers.",
-			"enabled": "Enable dhikr",
-			"activeOne": "Active dhikr",
-			"activeHint": "This dhikr will be shown to customers when enabled.",
-			"add": "Add dhikr"
-		},
-		"branding": {
-			"title": "Appearance & Colors",
-			"desc": "Adjust the UI color palette and elements.",
-			"palette": "Color palette",
-			"previewLabel": "Preview",
-			"previewHint": "Changes are reflected immediately in the preview.",
-			"headerDemo": {
-				"title": "Demo section title",
-				"desc": "An example showing the gradient (primary → secondary).",
-				"badge": "Sample badge"
-			},
-			"previewChip": "Primary-colored button/badge"
-		},
-		"reportsAuto": {
-			"title": "Reports & Automation",
-			"desc": "Set the day/time for sending weekly reports and select their contents.",
-			"enabled": "Enable auto sending",
-			"schedule": {
-				"label": "Schedule",
-				"hint": "Choose the day and time for sending the report."
-			},
-			"contents": {
-				"label": "Report contents",
-				"hint": "Mark items to include in the message.",
-				"items": {
-					"weightTrend": "Weight trend",
-					"mealAdherence": "Meal adherence",
-					"workoutCompletion": "Workout completion",
-					"waterIntake": "Water intake",
-					"checkinNotes": "Check-in notes",
-					"nextFocus": "Next week focus",
-					"latestPhotos": "Latest photos"
-				}
-			},
-			"template": {
-				"label": "Message template",
-				"hint": "Write the message. Items above will be added/removed automatically based on your selection.",
-				"defaults": "Great work this week, {name}! Keep it up."
-			}
-		},
-		"reminders": {
-			"title": "Reminders (Firebase)",
-			"desc": "Add reminders to be sent as notifications at scheduled times.",
-			"list": "Reminders list",
-			"add": "Add reminder",
-			"titlePh": "Example: Drink a glass of water",
-			"examples": {
-				"water": "Drink a glass of water"
-			},
-			"firebaseNote": "Notifications are sent via Firebase Cloud Messaging after server keys are configured."
-		}
-	},
-	"dashboard": {
-		"filters": {
-			"from": "From",
-			"to": "To",
-			"adminOptional": "Admin (optional)",
-			"adminPlaceholder": "Admin ID (UUID)",
-			"apply": "Apply",
-			"reloadPreview": "Reload preview"
-		},
-		"error": {
-			"previewFallback": "Failed to load stats — displaying preview data."
-		},
-		"kpi": {
-			"totalClients": "Total clients",
-			"activeClients": "Active clients",
-			"newInRange": "New in range",
-			"churned": "Churned",
-			"formSubmissions": "Form submissions",
-			"unreadNotices": "Unread notices",
-			"assetsUploaded": "Assets uploaded",
-			"pendingVideos": "Pending videos"
-		},
-		"charts": {
-			"usersCreatedDaily": {
-				"title": "User creation (daily)"
-			},
-			"duo": {
-				"title": "Workout volume vs Meal logs",
-				"exerciseVolume": "Exercise volume",
-				"mealLogs": "Meal logs"
-			}
-		},
-		"donuts": {
-			"memberships": {
-				"title": "Memberships"
-			},
-			"status": {
-				"title": "User status"
-			}
-		},
-		"gauge": {
-			"activeRate": {
-				"title": "Active client rate",
-				"tooltip": "Active percentage",
-				"caption": "of clients are active"
-			}
-		},
-		"list": {
-			"memberships": {
-				"title": "Membership details"
-			},
-			"status": {
-				"title": "Status details"
-			},
-			"topConversations": {
-				"title": "Top conversations"
-			}
-		},
-		"review": {
-			"title": "Review list",
-			"weeklyReports": "Weekly reports awaiting review",
-			"videos": "Workout videos pending review",
-			"foodSuggestions": "Food suggestions pending review"
-		},
-		"membership": {
-			"basic": "Basic",
-			"pro": "Pro",
-			"elite": "Elite",
-			"trial": "Trial"
-		},
-		"status": {
-			"active": "Active",
-			"idle": "Idle",
-			"suspended": "Suspended",
-			"churned": "Churned"
-		},
-		"conv": {
-			"nutritionQA": "Nutrition Q&A",
-			"formSubmissions": "Form submissions",
-			"workoutReviews": "Workout reviews",
-			"general": "General",
-			"support": "Support"
-		}
-	},
-	"client360": {
-		"tabs": {
-			"overview": "Overview",
-			"measurements": "Measurements",
-			"progress": "Progress",
-			"workouts": "Workouts",
-			"nutrition": "Nutrition",
-			"logs": "Logs",
-			"reports": "Reports"
-		},
-		"empty": {
-			"clientNotFound": {
-				"title": "Client not found",
-				"subtitle": "We couldn't find data for this client."
-			}
-		},
-		"workouts": {
-			"title": "Workouts",
-			"empty": {
-				"title": "No workout plans",
-				"subtitle": "Add a workout day to get started."
-			},
-			"exercisesShort": "Exercise",
-			"video": "Video",
-			"rest": "Rest {s}s",
-			"more": "Additional exercise",
-			"unnamedDay": "Unnamed day",
-			"unnamedExercise": "Unnamed exercise"
-		},
-		"common": {
-			"active": "Active",
-			"inactive": "Inactive"
-		},
-		"overview": {
-			"noPhone": "No phone number"
-		},
-		"measurements": {
-			"title": "Measurement log",
-			"date": "Date",
-			"weight": "Weight",
-			"waist": "Waist",
-			"chest": "Chest",
-			"hips": "Hips",
-			"arms": "Arms",
-			"thighs": "Thighs",
-			"empty": {
-				"title": "No measurements",
-				"subtitle": "Add measurements to start tracking progress."
-			},
-			"addTitle": "Add measurement",
-			"fields": {
-				"date": "Date",
-				"weight": "Weight",
-				"waist": "Waist",
-				"chest": "Chest",
-				"hips": "Hips",
-				"arms": "Arms",
-				"thighs": "Thighs"
-			},
-			"toast": {
-				"created": "Measurement added successfully"
-			}
-		},
-		"progress": {
-			"exerciseProgress": "Exercise progress",
-			"totalWorkouts": "Total workouts",
-			"personalRecords": "Personal records",
-			"consistency": "Consistency",
-			"bodyProgress": "Body progress"
-		},
-		"nutrition": {
-			"title": "Nutrition",
-			"empty": {
-				"title": "No nutrition plans",
-				"subtitle": "Add a nutrition plan to track calories and macros."
-			},
-			"targets": "Nutrition targets",
-			"noTargets": "No nutrition targets."
-		},
-		"logs": {
-			"title": "Meal logs",
-			"last30": "Last 30 days",
-			"loading": "Loading…",
-			"count": "Record count"
-		},
-		"reports": {
-			"title": "Nutrition reports",
-			"generate": "Generate report",
-			"loading": "Loading reports…",
-			"period": "Period",
-			"empty": {
-				"title": "No reports",
-				"subtitle": "Generate a new report to view the summary."
-			}
-		},
-		"actions": {
-			"open": "Open",
-			"edit": "Edit",
-			"refresh": "Refresh",
-			"view": "View",
-			"download": "Download",
-			"cancel": "Cancel",
-			"add": "Add"
-		},
-		"metrics": {
-			"weight": "Weight",
-			"waist": "Waist",
-			"chest": "Chest",
-			"hips": "Hips",
-			"arms": "Arms",
-			"thighs": "Thighs"
-		},
-		"summary": {
-			"header": {
-				"title": "Stats · Summary",
-				"client": "Client:",
-				"coach": "Coach",
-				"phone": "Phone",
-				"email": "Email",
-				"separator": "·",
-				"lastLogin": "Last login:",
-				"arrow": "→"
-			},
-			"snapshot": {
-				"title": "Quick view",
-				"subtitle": "A quick summary of current status",
-				"daysToExpiry": "Days until expiry",
-				"elapsed": "Since start",
-				"latestWeight": "Latest weight",
-				"latestWaist": "Latest waist",
-				"totalCheckins": "Total check-ins"
-			},
-			"trend": {
-				"title": "Weight trend",
-				"subtitle": "Weight change across recent measurements",
-				"legend": {
-					"current": "Current",
-					"min": "Min",
-					"max": "Max",
-					"latestPoint": "Latest point",
-					"otherPoints": "Other points"
-				},
-				"axis": {
-					"y": "Weight (kg)"
-				}
-			},
-			"workout": {
-				"title": "Workout plan",
-				"subtitle": "Active plan & summary",
-				"daysShort": "day",
-				"exercisesShort": "exercise"
-			},
-			"meal": {
-				"title": "Meal plan",
-				"subtitle": "Active plan & summary",
-				"daysShort": "day",
-				"mealsShort": "meal"
-			},
-			"checkins": {
-				"title": "Latest check-ins",
-				"subtitle": "Most recent submitted activities",
-				"empty": "No check-ins yet."
-			},
-			"identity": {
-				"title": "Identity & membership",
-				"subtitle": "Basic client information",
-				"client": "Client",
-				"membership": "Membership",
-				"gender": "Gender",
-				"phone": "Phone"
-			},
-			"units": {
-				"kg": "kg",
-				"cm": "cm",
-				"dayShort": "d"
-			},
-			"common": {
-				"active": "Active",
-				"inactive": "Inactive",
-				"hyphen": "—",
-				"na": "Not available"
-			}
-		}
-	},
-	"workoutsProgress": {
-		"title": "Workout progress",
-		"subtitle": "Performance summary & session adherence",
-		"window": "Last {d} days",
-		"loading": "Loading...",
-		"empty": "No data available to display.",
-		"kpi": {
-			"title": "Overview",
-			"subtitle": "Updated: {date}",
-			"adherence": "Adherence",
-			"daysTrained": "{n} training days",
-			"volumeTotal": "Total volume",
-			"avgPerSession": "Avg/session: {n}",
-			"sessions": "Sessions",
-			"avgSetsPerSession": "Sets/session: {n}",
-			"lastWorkout": "Last workout",
-			"streak": "Streak: {n} days"
-		},
-		"sessions": {
-			"title": "Recent sessions",
-			"subtitle": "Last 8 sessions",
-			"volume": "Volume",
-			"setsShort": "sets",
-			"sets": "{d} of {t} sets",
-			"exercises": "Top exercises"
-		},
-		"top": {
-			"byAttempts": "Most repeated (attempts count)",
-			"byVolume": "Highest volume"
-		},
-		"prs": {
-			"title": "Personal Records (PRs)",
-			"subtitle": "Total: {n}",
-			"e1rm": "Estimated 1RM: {n}",
-			"weight": "Weight: {n}",
-			"reps": "Reps: {n}"
-		},
-		"e1rm": {
-			"title": "Estimated 1RM trends",
-			"subtitle": "Workout window: {d} days"
-		}
-	},
-	"nutritionProgress": {
-		"title": "Nutrition progress",
-		"window30": "Last 30 days",
-		"empty": "No data available currently.",
-		"kpi": {
-			"title": "Overview",
-			"subtitle": "Summary of meal logs & eating behavior",
-			"mealsLogged": "Meals logged",
-			"daysCovered": "Days recorded: {n}",
-			"adherenceAvg": "Average adherence",
-			"scale5": "Scale from 1 to 5",
-			"supplements": "Supplements",
-			"taken": "Taken",
-			"lastLog": "Last log",
-			"latestHint": "Latest day logged"
-		},
-		"adherence": {
-			"title": "Adherence trend",
-			"subtitle": "Daily adherence average for the last 14 days",
-			"caption": "Higher value means better adherence to meals & the plan"
-		},
-		"mealsDensity": {
-			"title": "Meal density",
-			"subtitle": "Number of meals logged per day"
-		},
-		"topFoods": {
-			"title": "Most frequent foods",
-			"subtitle": "Based on occurrence in meal logs"
-		},
-		"logs": {
-			"title": "Meal log",
-			"subtitle": "Grouped by day",
-			"meal": "Meal",
-			"at": "at",
-			"adherence": "Adherence: {n}/5",
-			"items": "Items",
-			"more": "More",
-			"supplements": "Supplements taken"
-		}
-	},
-	"reportsTab": {
-		"actions": {
-			"view": "View details"
-		},
-		"modal": {
-			"title": "Week details"
-		},
-		"loading": "Loading...",
-		"error": "An error occurred while loading data",
-		"title": "Weekly reports",
-		"subtitle": "Total: {n} report(s)",
-		"empty": "No reports available currently.",
-		"kpi": {
-			"title": "Overview",
-			"subtitle": "Progress report summary",
-			"total": "Total reports",
-			"pages": "Total pages: {n}",
-			"unread": "Unread",
-			"unreadHint": "Reports not yet opened",
-			"withPhotos": "Reports with photos",
-			"withPhotosHint": "Includes any front, side, or back photo",
-			"latestWeek": "Latest week"
-		},
-		"list": {
-			"title": "Grouped reports",
-			"subtitle": "Latest report for each week"
-		},
-		"card": {
-			"weekOf": "Week of",
-			"created": "Created",
-			"updated": "Updated",
-			"read": "Read",
-			"unread": "Unread",
-			"reviewedAt": "Reviewed at"
-		},
-		"diet": {
-			"title": "Diet",
-			"deviation": "Deviation from plan"
-		},
-		"training": {
-			"title": "Training",
-			"sleepEnough": "Sufficient sleep",
-			"intensityOk": "Workout intensity suitable",
-			"shapeChange": "Change in physique",
-			"cardio": "Cardio adherence"
-		},
-		"measurements": {
-			"title": "Measurements",
-			"weight": "Weight",
-			"waist": "Waist",
-			"chest": "Chest"
-		},
-		"photos": {
-			"title": "Progress photos",
-			"placeholder": "No photo: {side}",
-			"front": "Front",
-			"left": "Left",
-			"right": "Right",
-			"back": "Back"
-		},
-		"feedback": {
-			"title": "Coach notes"
-		},
-		"pager": {
-			"showing": "Showing {from}–{to} of {total}",
-			"prev": "Previous",
-			"next": "Next"
-		},
-		"common": {
-			"yes": "Yes",
-			"no": "No"
-		}
-	},
-	"dateRange": {
-		"label": "Date range",
-		"placeholder": "Choose period",
-		"from": "From",
-		"to": "To",
-		"clear": "Clear",
-		"close": "Close",
-		"presets": {
-			"label": "Quick options",
-			"title": "Quick ranges",
-			"last7": "Last 7 days",
-			"last30": "Last 30 days",
-			"thisMonth": "This month",
-			"today": "Today"
-		}
-	},
-	"reminders": {
-		"title": "Reminders",
-		"subtitle": "Manage and organize your personal reminders",
-		"page": {
-			"title": "Reminders"
-		},
-		"telegram": {
-			"title": "Enable Telegram notifications",
-			"desc": "Enable Telegram notifications so reminders reach you even if your browser doesn't support web notifications.",
-			"activate": "Enable Telegram notifications",
-			"waiting": "After pressing Start in Telegram, click here to confirm activation",
-			"enabled": "Telegram notifications enabled.",
-			"error": "An error occurred while enabling Telegram",
-			"unsupported": "Your current browser does not support web notifications. You can enable Telegram notifications to receive reminders.",
-			"loading": "Loading..."
-		},
-		"permission": {
-			"title": "Notifications required",
-			"description": "To use reminders properly and receive alerts in the browser, notifications must be allowed for this site.",
-			"button": "Enable notifications now",
-			"denied": "You previously denied notifications. Click the lock icon near the site address in your browser, then enable notifications.",
-			"unsupported": "Your current browser does not support notifications. Try another browser or device."
-		},
-		"view": {
-			"list": "Reminders",
-			"timeline": "Timeline"
-		},
-		"now": "Now",
-		"passed": "Passed",
-		"before": "Before",
-		"after": "After",
-		"next": "Next",
-		"willStartAfter": "Starts after",
-		"minutesShort": "min",
-		"untitled": "Untitled",
-		"mode": {
-			"once": "Once",
-			"daily": "Daily",
-			"weekly": "Weekly",
-			"monthly": "Monthly",
-			"interval": "Interval",
-			"intervalEvery": "Every",
-			"prayer": "Prayer times"
-		},
-		"interval": {
-			"every1h": "Every hour",
-			"every2h": "Every 2 hours",
-			"every3h": "Every 3 hours",
-			"every4h": "Every 4 hours",
-			"every5h": "Every 5 hours",
-			"every6h": "Every 6 hours",
-			"unit": {
-				"hour": "Hour",
-				"minute": "Minute",
-				"day": "Day"
-			}
-		},
-		"empty": {
-			"day": "No reminders for this day"
-		},
-		"timeline": {
-			"empty": "No scheduled reminders for today",
-			"subtitle": "Timeline for your reminders (Today)",
-			"status": {
-				"past": "Earlier today",
-				"now": "Happening now",
-				"upcoming": "Upcoming"
-			}
-		},
-		"actions": {
-			"openCalendar": "Open calendar",
-			"createNew": "New reminder",
-			"edit": "Edit",
-			"delete": "Delete",
-			"cancel": "Cancel",
-			"save": "Save",
-			"close": "Close",
-			"done": "Done",
-			"add": "Add"
-		},
-		"settings": {
-			"title": "Settings",
-			"sound": "Sound",
-			"preview": "Preview",
-			"defaultSnooze": "Default snooze (minutes)",
-			"quietFrom": "Quiet mode from",
-			"quietTo": "Quiet mode to",
-			"timezone": "Timezone",
-			"city": "City",
-			"country": "Country"
-		},
-		"quick": {
-			"title": "Quick reminder",
-			"after": "After X minutes",
-			"createIn": "Create in",
-			"custom": "Custom…"
-		},
-		"tabs": {
-			"details": "Details",
-			"settings": "Advanced settings"
-		},
-		"form": {
-			"newTitle": "New reminder",
-			"editTitle": "Edit reminder",
-			"addTime": "Add time",
-			"title": "Reminder title",
-			"titlePh": "Write reminder title",
-			"note": "Note",
-			"notePh": "Optional note",
-			"startDate": "Start date",
-			"endDate": "End date",
-			"mode": "Repeat type",
-			"modePh": "Choose repeat type",
-			"times": "Reminder times",
-			"intervalStart": "Start time",
-			"intervalEvery": "Repeats every",
-			"prayer": "Prayer",
-			"beforeAfter": "Before / After",
-			"minutes": "Minutes",
-			"weekdays": "Weekdays",
-			"todayPrayerTimes": "Today's prayer times",
-			"from": "From",
-			"selectMode": "Choose mode",
-			"selectDate": "Pick date",
-			"selectTime": "Pick time",
-			"save": "Save",
-			"cancel": "Cancel",
-			"notes": "Notes",
-			"titlePlaceholder": "Write reminder title",
-			"notesPlaceholder": "Add notes (optional)",
-			"intervalSummary": "Will repeat every"
-		},
-		"templates": {
-			"label": "Quick ready-made templates",
-			"water": {
-				"title": "Drink water",
-				"notes": "Don't forget to drink water throughout the day",
-				"short": "Drink water"
-			},
-			"bills": {
-				"title": "Pay bills",
-				"notes": "Monthly reminder to pay bills",
-				"short": "Bills"
-			},
-			"adhkar": {
-				"title": "Morning Athkar",
-				"notes": "Daily reminder for morning athkar",
-				"short": "Athkar"
-			}
-		},
-		"week": {
-			"quick": {
-				"all": "All days",
-				"none": "None"
-			}
-		},
-		"weekday": {
-			"sun": "Sunday",
-			"mon": "Monday",
-			"tue": "Tuesday",
-			"wed": "Wednesday",
-			"thu": "Thursday",
-			"fri": "Friday",
-			"sat": "Saturday",
-			"header": {
-				"mon": "Monday",
-				"tue": "Tuesday",
-				"wed": "Wednesday",
-				"thu": "Thursday",
-				"fri": "Friday",
-				"sat": "Saturday",
-				"sun": "Sunday"
-			}
-		},
-		"prayer": {
-			"fajr": "Fajr",
-			"dhuhr": "Dhuhr",
-			"asr": "Asr",
-			"maghrib": "Maghrib",
-			"isha": "Isha",
-			"fallback": "Prayer"
-		},
-		"errors": {
-			"title": "Title is required",
-			"mode": "Please select a repeat mode"
-		},
-		"calendar": {
-			"pickDay": "Pick a day",
-			"title": "Calendar",
-			"subtitle": "Click a day to view reminders",
-			"today": "Today",
-			"remindersOf": "Reminders of",
-			"total": "Total reminders:",
-			"noneForDay": "No reminders for this day",
-			"none": "Pick a day to view reminders",
-			"mobileHint": "Tap any day to view its reminders",
-			"remindersShort": "Reminders"
-		}
-	},
-	"my-nutrition": {
-		"gram": "gram",
-		"common": {
-			"loading": "Loading...",
-			"cancel": "Cancel",
-			"save": "Save"
-		},
-		"nutrition": {
-			"header": {
-				"dailyTarget": "Daily target",
-				"todayCalories": "Today's calories",
-				"mealsSelectedDay": "Meals (selected day)",
-				"notes": "Coach notes",
-				"history": "History"
-			},
-			"notFound": {
-				"title": "No nutrition plan available",
-				"description": "There is no active nutrition plan on your account.",
-				"refresh": "Refresh"
-			},
-			"history": {
-				"modalTitle": "Food log"
-			},
-			"notes": {
-				"modalTitle": "Coach notes"
-			},
-			"meal": {
-				"defaultTitle": "Meal {index}",
-				"title": "Meal {index}",
-				"done": "Done",
-				"markAllDone": "Mark entire meal as done",
-				"itemDoneTag": "Done"
-			},
-			"units": {
-				"kcal": "calorie"
-			},
-			"supplements": {
-				"title": "Supplements",
-				"bestWith": "Best with: {value}",
-				"bestWithLabel": "Best with:",
-				"takenTag": "Taken",
-				"markTaken": "Mark as taken",
-				"logTitle": "Supplements"
-			},
-			"inline": {
-				"noItems": "No items. Add items below.",
-				"namePlaceholder": "Name",
-				"quantityPlaceholder": "Quantity (g)",
-				"caloriesPlaceholder": "Calories",
-				"remove": "Remove",
-				"addItem": "Add item"
-			},
-			"errors": {
-				"mealLogFailed": "Failed to log meal",
-				"itemUpdateFailed": "Failed to update item",
-				"supplementUpdateFailed": "Failed to update supplement",
-				"inlineSaveFailed": "Failed to save changes"
-			}
-		}
-	},
-	"timeField": {
-		"label": "Time (HH:MM)",
-		"placeholder": "Enter time in 24-hour format",
-		"openPicker": "Open time picker",
-		"choose": "Select hour and minutes",
-		"close": "Close",
-		"hour": "Hour",
-		"minutes": "Minutes",
-		"selected": "Selected",
-		"done": "Done",
-		"invalid": "Invalid time. Use 24-hour format (HH:MM)."
-	},
-	"PublicPlan": {
-		"index": "Index",
-		"expandAll": "Expand all",
-		"collapseAll": "Collapse all",
-		"open": "Open",
-		"close": "Close",
-		"plan": "Plan",
-		"publicShare": "Public share view",
-		"createdAt": "Created at",
-		"days": "Program days",
-		"exercises": "Exercises",
-		"sets": "Sets",
-		"reps": "Reps",
-		"rest": "Rest",
-		"tempo": "Tempo",
-		"watchVideo": "Watch video",
-		"noVideo": "No video",
-		"footerNote": "This page was generated for public viewing.",
-		"loadFailed": "Loading failed",
-		"cantLoad": "Unable to load data.",
-		"retry": "Retry",
-		"noDaysTitle": "No days in this plan",
-		"noDaysSubtitle": "Add days and exercises to display them here.",
-		"share": "Share",
-		"copy": "Copy",
-		"print": "Print",
-		"copied": "Link copied ✅",
-		"copyFail": "Copy failed — copy it manually."
-	}
+  "auth": {
+    "signIn": "Log in",
+    "subtitle": "Log in to continue your plans and workouts.",
+    "email": "Email",
+    "enterEmail": "Enter your email",
+    "invalidEmail": "Invalid email address.",
+    "password": "Password",
+    "enterPassword": "Enter your password",
+    "passwordRequired": "Password is required.",
+    "signInButton": "Log in",
+    "Incorrect email or password": "Incorrect email or password.",
+    "loading": {
+      "signingIn": "Signing in..."
+    },
+    "a11y": {
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
+    },
+    "hero": {
+      "title": "Train, track, and progress with confidence",
+      "subtitle": "One platform to manage workout plans, track your progress, and easily communicate with your coach.",
+      "perkPersonalized": "Personalized training plans tailored to your goals.",
+      "perkProgress": "Track your progress step by step.",
+      "perkChat": "Direct communication with your coach.",
+      "perkPrivacy": "Your data is kept private and secure."
+    },
+    "success": {
+      "signedIn": "Logged in successfully."
+    },
+    "errors": {
+      "loginFailed": "Login failed, please check your details.",
+      "accountPending": "Your account is under review and will be activated soon.",
+      "accountSuspended": "Your account has been suspended. Please contact support."
+    },
+    "notes": {
+      "protected": "This section is protected and can only be accessed after logging in."
+    }
+  },
+  "myProfile": {
+    "tabs": {
+      "overview": "Overview",
+      "body": "Measurements",
+      "photos": "Progress photos"
+    },
+    "errors": {
+      "loadProfile": "An error occurred while loading profile data.",
+      "required": "This field is required."
+    },
+    "stats": {
+      "workoutPlan": "Training plan",
+      "mealPlan": "Meal plan",
+      "latestWeight": "Latest weight",
+      "caloriesToday": "Points today",
+      "photos": "Number of photos",
+      "measurements": "Number of measurements"
+    },
+    "sections": {
+      "weightTrend": "Weight trend",
+      "compare": "Before / after comparison",
+      "measurements": "Measurements log",
+      "uploadBodyPhotos": "Upload body photos",
+      "timeline": "Photo timeline"
+    },
+    "labels": {
+      "deltaKg": "Weight difference (kg)",
+      "direction": "Direction of weight progress",
+      "start": "Start",
+      "end": "End",
+      "side": "Angle",
+      "before": "Before",
+      "after": "After",
+      "beforeAfter": "Before and after",
+      "tapToUpload": "Tap to upload",
+      "average": "Average"
+    },
+    "messages": {
+      "noMeasurements": "No measurements have been recorded yet.",
+      "chooseTwoSets": "Choose two sets of photos to compare, then select the angle.",
+      "noTimeline": "No photos in the timeline yet.",
+      "useCompareBlock": "Use the comparison block to choose before and after photos to display here.",
+      "deletePhotoConfirm": "Are you sure you want to delete this photo set? You will not be able to restore it.",
+      "deleteMeasurementConfirm": "Are you sure you want to delete this measurement?",
+      "pickImageFirst": "Please choose a photo first to start cropping.",
+      "noMeasurementsHint": "Start by adding your weight measurements from the progress page to follow your trend over time.",
+      "compareHint": "Choose two photos to clearly see the difference."
+    },
+    "actions": {
+      "edit": "Edit",
+      "editProfile": "Edit profile",
+      "preview": "Preview",
+      "previewAll": "Preview all angles",
+      "save": "Save",
+      "saving": "Saving...",
+      "reset": "Reset",
+      "clear": "Clear",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "apply": "Apply",
+      "zoom": "Zoom",
+      "saveSet": "Save photo set",
+      "addBodyPhotos": "Add body photos",
+      "hideUpload": "Hide upload form"
+    },
+    "tips": {
+      "subtitle": "Tips for taking clear progress photos",
+      "cta": "Tips for better photos",
+      "title": "Tips for taking clear progress photos",
+      "lighting": "Take the photo in strong, steady lighting (natural light is preferred).",
+      "distance": "Keep the same distance between you and the camera every time.",
+      "angles": "Take photos from the front, back, and both sides with the same pose.",
+      "cameraHeight": "Keep the camera roughly at mid-body level for a consistent perspective.",
+      "timer": "Use your phone’s timer to stabilize the camera and get into a comfortable pose.",
+      "clothes": "Wear comfortable and similar clothes each time to make changes clearer.",
+      "background": "Choose a simple, fixed background without clutter.",
+      "frequency": "Take progress photos every week or two for comparison."
+    },
+    "modals": {
+      "addBodySet": "Add body photo set",
+      "preview": "Preview photo",
+      "confirmDelete": "Confirm deletion",
+      "cropTitle": "Crop photo",
+      "editProfileTitle": "Edit account details"
+    },
+    "sides": {
+      "all": "All angles",
+      "front": "Front",
+      "back": "Back",
+      "left": "Left side",
+      "right": "Right side"
+    },
+    "forms": {
+      "addMeasurement": "Add new measurement",
+      "date": "Date",
+      "weightKg": "Weight (kg)",
+      "waistCm": "Waist (cm)",
+      "chestCm": "Chest (cm)",
+      "weightOptional": "Weight (optional)",
+      "noteOptional": "Note (optional)"
+    },
+    "table": {
+      "date": "Date",
+      "weight": "Weight",
+      "waist": "Waist",
+      "chest": "Chest",
+      "actions": "Actions"
+    },
+    "placeholders": {
+      "choose": "Choose..."
+    },
+    "profile": {
+      "name": "Name",
+      "genderMale": "Male",
+      "genderFemale": "Female",
+      "genderOther": "Other",
+      "membership": "Subscription type",
+      "defaultRestSeconds": "Default rest seconds",
+      "caloriesTarget": "Calorie target",
+      "proteinPerDay": "Protein per day (g)",
+      "carbsPerDay": "Carbs per day (g)",
+      "fatsPerDay": "Fats per day (g)",
+      "activity": {
+        "sedentary": "Desk job / low activity",
+        "light": "Light activity + training 1–3 times weekly",
+        "moderate": "Moderate activity + training 3–5 times weekly",
+        "high": "High activity + training 6–7 times weekly",
+        "athlete": "Intense activity / athlete"
+      },
+      "notes": "User notes",
+      "perDayLabel": "Per day",
+      "gramsPerDay": "g / day",
+      "planActiveLabel": "Current plan",
+      "subscriptionOverview": "Subscription overview",
+      "coachLabel": "Personal coach",
+      "noCoach": "No coach assigned yet",
+      "phone": "Phone number",
+      "membershipTitle": "Subscription type",
+      "noPlan": "No plan",
+      "gender": "Gender",
+      "notSet": "Not set",
+      "activityLevel": "Activity level",
+      "activityNotSet": "Activity level not set",
+      "subscriptionPeriod": "Subscription period",
+      "noEndDate": "No end date",
+      "expired": "Subscription expired",
+      "daysLeft": "{count} days left",
+      "start": "Subscription start",
+      "end": "Subscription end",
+      "activePlans": "Active plans",
+      "exercisePlan": "Current workout plan",
+      "noExercisePlan": "No active workout plan",
+      "mealPlan": "Current meal plan",
+      "noMealPlan": "No active meal plan",
+      "nutritionTargets": "Calorie and macro targets",
+      "calories": "Calories",
+      "protein": "Protein",
+      "carbs": "Carbs",
+      "fats": "Fats"
+    }
+  },
+  "nav": {
+    "reload-page": "Reload page",
+    "brand": {
+      "portalTitle": "Control area",
+      "superAdminPortal": "Super admin portal",
+      "adminPortal": "Admin portal",
+      "coachPortal": "Coach portal",
+      "clientPortal": "My personal space"
+    },
+    "sections": {
+      "mySpace": "My space",
+      "clientManagement": "Client management",
+      "overview": "Overview",
+      "programs": "Programs",
+      "operations": "Operations",
+      "billing": "Billing & wallet"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "training": "Training",
+      "myWorkouts": "My workouts",
+      "myProgress": "My progress",
+      "progress": "Progress",
+      "myNutrition": "My nutrition",
+      "myReminders": "My reminders",
+      "weeklyStrength": "Weekly report",
+      "calorieCalculator": "Calorie calculator",
+      "profile": "Profile",
+      "nutrition": "Nutrition",
+      "foodLibrary": "Food library",
+      "groceryList": "Grocery list",
+      "nutritionManagement": "Nutrition management",
+      "mealPlans": "Meal plans",
+      "reports": "Reports",
+      "trainingManagement": "Training management",
+      "workoutPlans": "Workout plans",
+      "allWorkouts": "All workouts",
+      "allUsers": "All users",
+      "allExercises": "All exercises",
+      "clientIntake": "Client questionnaire",
+      "manageForms": "Manage forms",
+      "responses": "Responses",
+      "messages": "Messages",
+      "feedback": "Feedback",
+      "systemSettings": "System settings",
+      "billing": "Billing & wallet",
+      "overview": "Overview",
+      "transactions": "Transactions",
+      "subscriptions": "Subscriptions",
+      "withdraw": "Withdraw",
+      "clientPayments": "Client payments",
+      "withdrawalApprovals": "Withdrawal approvals",
+      "allWallets": "All wallets",
+      "analytics": "Analytics"
+    },
+    "tooltips": {
+      "expand": "Expand sidebar",
+      "collapse": "Collapse sidebar",
+      "closeMenu": "Close menu"
+    }
+  },
+  "header": {
+    "actions": {
+      "openMenu": "Open menu",
+      "profile": "Profile",
+      "settings": "Settings",
+      "signOut": "Log out",
+      "signIn": "Log in"
+    },
+    "status": {
+      "online": "Online",
+      "offline": "Offline"
+    },
+    "labels": {
+      "role": "Role",
+      "lastLogin": "Last login: {time}"
+    },
+    "roles": {
+      "admin": "Admin",
+      "coach": "Coach",
+      "client": "Client",
+      "guest": "Guest",
+      "super_admin": "System administrator"
+    },
+    "common": {
+      "guest": "Guest"
+    }
+  },
+  "notif": {
+    "title": "Notifications",
+    "tabs": {
+      "all": "All",
+      "unread": "Unread"
+    },
+    "placeholders": {
+      "search": "Search…"
+    },
+    "actions": {
+      "open": "Open notifications",
+      "close": "Close",
+      "markAll": "Mark all as read",
+      "read": "Marked as read",
+      "openLink": "Open",
+      "showAll": "Show all",
+      "loadMore": "Load more",
+      "loading": "Loading…",
+      "reset": "Reset"
+    },
+    "common": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "notification": "Notification",
+      "read": "Read"
+    },
+    "empty": {
+      "title": "No notifications",
+      "hint": "Try changing the tab or clearing the search."
+    },
+    "footer": {
+      "syncing": "Syncing…",
+      "shown": "Shown: {count}"
+    }
+  },
+  "common": {
+    "selectDate": "Select date",
+    "search": "Search…",
+    "select": "Select",
+    "copy": "Copy",
+    "show": "Show",
+    "hide": "Hide",
+    "noResult": "No results",
+    "saturday": "Saturday",
+    "sunday": "Sunday",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "day": "Day",
+    "week": "Week",
+    "month": "Month",
+    "year": "Year"
+  },
+  "weekly": {
+    "title": "Weekly report",
+    "subtitle": "Fill out your weekly progress report in detail so your coach can follow you more accurately.",
+    "errors": {
+      "required": "This field is required.",
+      "unknown": "An unexpected error occurred, please try again."
+    },
+    "weekOf": "Week of",
+    "cardioAdherence": "Your cardio adherence",
+    "diet": {
+      "title": "Nutrition",
+      "hungry": "Do you feel hungry during the day?",
+      "comfort": "Are you mentally comfortable with the diet?",
+      "wantSpecific": {
+        "title": "Is there any specific food you’d like to add to your plan?",
+        "ph": "Write here any special requests regarding food..."
+      },
+      "tooMuch": "Do you feel the amount of food in the plan is too much for you?",
+      "deviation": {
+        "title": "Did you deviate from the diet this week?",
+        "times": "How many times did you deviate?",
+        "details": "Briefly describe what you ate outside the plan.",
+        "ph": "Example: I ate pizza on Friday, chocolate on Tuesday..."
+      }
+    },
+    "training": {
+      "title": "Training & activity",
+      "intensityOk": "Is the workout intensity suitable for you?",
+      "daysDeviation": "Did you miss any training days this week?",
+      "deviation": {
+        "count": "How many training days did you miss?",
+        "reason": "Briefly explain why you didn’t stick to the training."
+      },
+      "shape": "Do you feel your body shape has started to change?",
+      "fitness": "Has your fitness improved?",
+      "sleepEnough": "Are your sleep hours sufficient?",
+      "sleepHours": "Approximately how many hours do you sleep per day?",
+      "notes": {
+        "title": "Additional notes about training",
+        "ph": "Write here any notes or issues related to training or equipment..."
+      }
+    },
+    "measurements": {
+      "title": "Measurements",
+      "addNew": "Add new measurements",
+      "hideAdd": "Hide measurements form",
+      "pick": "Choose from previous measurements",
+      "date": "Measurement date",
+      "weight": "Weight (kg)",
+      "waist": "Waist (cm)",
+      "chest": "Chest (cm)",
+      "chestShort": "Chest",
+      "hips": "Hips (cm)",
+      "arms": "Arm circumference (cm)",
+      "thighs": "Thigh circumference (cm)",
+      "save": "Save measurements"
+    },
+    "photos": {
+      "title": "Progress photos",
+      "addNew": "Add new photo set",
+      "hideAdd": "Hide photo upload form",
+      "pickSet": "Choose a previous photo set",
+      "pickFromHistory": {
+        "btn": "Choose from photo history",
+        "title": "Choose photos from previous photos",
+        "empty": "No saved photos yet."
+      },
+      "front": "Front photo",
+      "back": "Back photo",
+      "right": "Right-side photo",
+      "left": "Left-side photo",
+      "upload": "Upload photo",
+      "date": "Photo date",
+      "weight": "Weight at time of photo (optional)",
+      "note": "Photo notes (optional)",
+      "uploadSet": "Upload photo set",
+      "errors": {
+        "noFiles": "Please select at least one photo before uploading.",
+        "dateRequired": "You must enter a date for the photo set."
+      }
+    },
+    "actions": {
+      "close": "Close"
+    },
+    "success": "Weekly report sent successfully ✅",
+    "submit": {
+      "hint": "After finishing the important fields, click Submit to confirm your weekly report.",
+      "sending": "Sending...",
+      "cta": "Submit report"
+    },
+    "unreadFeedback": {
+      "loading": "Loading unread coach notes...",
+      "badge": "You have {count} unread note(s) from your coach"
+    },
+    "prevReports": {
+      "goTo": "View my previous reports",
+      "title": "My previous reports",
+      "loading": "Loading your previous reports...",
+      "error": "We couldn’t load previous reports, please try again.",
+      "empty": "There are no previous reports yet.",
+      "weekOf": "Week report",
+      "createdAt": "Report creation date",
+      "noNote": "There is no coach note for this report.",
+      "noteRead": "Coach’s note has been read",
+      "noteUnread": "Coach’s note is unread",
+      "viewNote": "View coach’s note",
+      "pagination": "Page {page}",
+      "prev": "Previous",
+      "next": "Next",
+      "noteTitle": "Coach’s note for week {week}",
+      "noteLabel": "Coach’s note text",
+      "markingRead": "Marking note as read..."
+    }
+  },
+  "chat": {
+    "search": {
+      "placeholder": "Search by name or email...",
+      "results": "Search results",
+      "clear": "Clear search",
+      "noResultsTitle": "No matching results",
+      "noResultsHint": "Try a different name or email"
+    },
+    "quick": {
+      "coach": "Contact coach",
+      "admin": "Contact admin"
+    },
+    "appbar": {
+      "title": "Messages",
+      "subtitle": "Stay in touch with your coach and clients"
+    },
+    "tabs": {
+      "all": "All",
+      "unread": "Unread"
+    },
+    "empty": {
+      "pick": "Choose a conversation to start chatting",
+      "hint": "Select a conversation from the list"
+    },
+    "composer": {
+      "placeholder": "Write a message...",
+      "disabled": "Select a conversation to start chatting",
+      "remove": "Remove attachment",
+      "send": "Send",
+      "hint": "Shift+Enter for a new line • Ctrl/Cmd+Enter to send"
+    },
+    "list": {
+      "group": "Group conversation",
+      "direct": "Direct message",
+      "photo": "📷 Photo",
+      "video": "🎥 Video",
+      "file": "📎 File",
+      "empty": "No conversations yet",
+      "title": "Conversations",
+      "subtitle": "Stay connected",
+      "startHint": "Search to start a new conversation"
+    },
+    "header": {
+      "typing": "Typing...",
+      "direct": "Online",
+      "loading": "Loading...",
+      "noselect": "Select a conversation"
+    },
+    "actions": {
+      "openList": "Open conversations list",
+      "close": "Close"
+    }
+  },
+  "calorie": {
+    "labelsExtra": {
+      "searchFood": "Search food",
+      "pickFood": "Choose food",
+      "amount": "Amount",
+      "pickFoodHint": "Choose an item to view its calories.",
+      "mealEmpty": "No items have been added yet."
+    },
+    "notesExtra": {
+      "mealTip": "Compare your meal with your target and adjust amounts as needed."
+    },
+    "actions": {
+      "reset": "Reset",
+      "generateSummary": "Generate summary",
+      "addItem": "Add item",
+      "clearMeal": "Delete meal",
+      "remove": "Remove"
+    },
+    "loader": {
+      "generating": "Generating..."
+    },
+    "header": {
+      "title": "Daily calorie calculator",
+      "desc": "Calculate your daily needs based on your goal, and easily calculate food calories."
+    },
+    "sections": {
+      "dailyNeed": "Daily requirement",
+      "summary": "Summary",
+      "foodCalc": "Food calorie calculator",
+      "mealVsTarget": "Meal vs target"
+    },
+    "labels": {
+      "targetKcal": "Target calories",
+      "macrosPCF": "Macros (Protein/Carbs/Fat)",
+      "sex": "Sex",
+      "ageYears": "Age (years)",
+      "heightCm": "Height (cm)",
+      "weightKg": "Weight (kg)",
+      "activity": "Activity level",
+      "goal": "Goal",
+      "target": "Target",
+      "targetCalories": "Target calories",
+      "protein": "Protein",
+      "carbs": "Carbs",
+      "fat": "Fat",
+      "notes": "Notes",
+      "searchFood": "Search food",
+      "pickFood": "Choose food",
+      "amount": "Amount",
+      "pickFoodHint": "Choose food to view calories.",
+      "mealEmpty": "No items added.",
+      "item": "Item",
+      "qty": "Quantity",
+      "unit": "Unit",
+      "kcal": "Calories",
+      "p": "Protein",
+      "c": "Carbs",
+      "f": "Fat",
+      "total": "Total",
+      "monthlyChange": "Monthly change",
+      "kgPerMonth": "kg/month"
+    },
+    "sex": {
+      "male": "Male",
+      "female": "Female"
+    },
+    "tips": {
+      "bmr": "Basal Metabolic Rate: energy your body burns at rest.",
+      "tdee": "Total Daily Energy Expenditure = BMR × activity factor.",
+      "target": "Daily calories after applying your goal (bulking/cutting/maintenance)."
+    },
+    "notes": {
+      "tdeeAvg": "TDEE = Average of BMR formulas × activity (or another accepted formula).",
+      "goalsRange": "Goals adjust calories from −40% to +40% depending on the goal.",
+      "macrosBalance": "Macro ratios automatically balance to total 100%.",
+      "mealTip": "Compare your meal with the target and adjust portions to reach your goal.",
+      "activityHint": "Choose activity level based on your daily lifestyle, not just your training."
+    }
+  },
+  "coachReports": {
+    "title": "Trainees’ weekly reports",
+    "subtitle": "Review your trainees’ weekly reports and provide your feedback and replies",
+    "athlete": "Trainee",
+    "allAthletes": "All trainees",
+    "clearFilters": "Clear filters",
+    "buttons": {
+      "refresh": "Refresh"
+    },
+    "filters": "Filters",
+    "total": "Total reports: {count}",
+    "loading": "Loading reports...",
+    "empty": "No reports match the current filters.",
+    "prev": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {pages}",
+    "view": "View details",
+    "reviewed": "Reviewed",
+    "awaitingReview": "Awaiting review",
+    "columns": {
+      "weekOf": "Week"
+    },
+    "card": {
+      "summary": "Weight: {weight} kg • Cardio: {cardio}/5"
+    },
+    "detail": {
+      "title": "Weekly report details",
+      "loading": "Loading report details...",
+      "reviewedBy": "Reviewed by",
+      "you": "You",
+      "photos": "Progress photos",
+      "noPhoto": "No photo",
+      "measurements": "Measurements",
+      "training": "Training",
+      "diet": "Diet",
+      "feedback": "Coach’s notes",
+      "feedbackPh": "Write your notes or instructions for the trainee...",
+      "saveFeedback": "Save notes",
+      "close": "Close",
+      "reviewedAt": "Review date",
+      "section": {
+        "photos": {
+          "front": "Front",
+          "back": "Back",
+          "left": "Left side",
+          "right": "Right side"
+        },
+        "measurements": {
+          "date": "Measurement date",
+          "weight": "Weight",
+          "waist": "Waist",
+          "chest": "Chest",
+          "hips": "Hips",
+          "arms": "Arms",
+          "thighs": "Thighs"
+        },
+        "training": {
+          "cardioAdherence": "Cardio adherence",
+          "intensityOk": "Is workout intensity suitable?",
+          "shape": "Do you notice a change in shape?",
+          "fitness": "Do you notice a change in fitness?",
+          "sleepEnough": "Does the trainee sleep enough hours?",
+          "sleepHours": "Average sleep hours per day",
+          "notes": {
+            "title": "Notes about the training program"
+          },
+          "daysDeviation": "Deviation in training days",
+          "deviation": {
+            "count": "Number of deviated days",
+            "reason": "Reason for deviation"
+          }
+        },
+        "diet": {
+          "hungry": "Does the trainee feel hungry?",
+          "comfort": "Does the trainee feel mentally comfortable?",
+          "tooMuch": "Is the food quantity too large?",
+          "wantSpecific": "Requested foods",
+          "deviation": {
+            "title": "Is there deviation from the diet?",
+            "times": "Number of deviations",
+            "details": "Deviation details"
+          }
+        }
+      }
+    },
+    "errors": {
+      "load": "An error occurred while loading reports.",
+      "save": "Failed to save notes.",
+      "feedbackEmpty": "Please write notes before saving."
+    },
+    "messages": {
+      "saved": "✅ Coach’s notes saved successfully!"
+    }
+  },
+  "AddToHomeGuide": {
+    "title": "Pin the app to your home screen",
+    "subtitle": "Use the site as a full standalone app, even without internet.",
+    "chooseBrowser": "Choose browser",
+    "installButton": "Install app",
+    "installing": "Installing...",
+    "stepsTitle": "Steps:",
+    "dontShowAgain": "Don’t show this message again",
+    "close": "Got it",
+    "footerNote": "This guide is shown only once and is saved in localStorage.",
+    "browserOptions": {
+      "auto": "Automatic selection",
+      "chrome": "Chrome (Android)",
+      "edge": "Edge (Android)",
+      "samsung": "Samsung Internet",
+      "firefox": "Firefox (Android)",
+      "safari": "Safari (iPhone/iPad)",
+      "ios_other": "Chrome/Edge/Firefox (iOS)",
+      "generic": "Other browser"
+    },
+    "steps": {
+      "chrome": ["Open the menu (⋮) at the top right.", "Choose \"Add to Home screen\".", "Tap \"Install\" to confirm."],
+      "edge": ["Open the menu (⋮) at the top right.", "Choose \"Install app\".", "Tap \"Install\" to confirm."],
+      "samsung": ["Tap the menu button (≡) at the bottom.", "Choose \"Add page to\" then \"Home screen\".", "Tap \"Add\"."],
+      "firefox": ["Open the menu (⋮) at the top.", "Choose \"Add to Home screen\".", "Tap \"Add\"."],
+      "safari": ["Tap the share button (arrow ↑).", "Choose \"Add to Home Screen\".", "Tap \"Add\" to confirm."],
+      "ios_other": ["It’s recommended to use Safari to add the app.", "Open the site in Safari.", "Tap \"Add to Home Screen\" then \"Add\"."],
+      "generic": ["Look in the browser menu for \"Add to Home screen\" or \"Install app\".", "Follow the instructions to add the icon to your home screen."]
+    }
+  },
+  "users": {
+    "editUser": "Edit user",
+    "header": {
+      "title": "User management",
+      "subtitle": "Full control over clients, coaches, and their data.",
+      "createNewUser": "Create new user"
+    },
+    "stats": {
+      "totalUsers": "Total users",
+      "active": "Active accounts",
+      "coaches": "Coaches",
+      "clients": "Clients"
+    },
+    "filters": {
+      "role": "Role",
+      "plan": "Plan",
+      "newest": "Newest",
+      "allRoles": "All roles",
+      "allPlans": "All plans",
+      "withPlan": "Has a plan",
+      "noPlan": "No plan"
+    },
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "gender": "Gender",
+      "phone": "Phone number",
+      "membership": "Membership",
+      "exercisePlan": "Workout plan",
+      "mealPlan": "Meal plan",
+      "coach": "Coach",
+      "joinDate": "Join date",
+      "status": "Status",
+      "daysLeft": "Days left",
+      "actions": "Actions"
+    },
+    "actions": {
+      "openProfile": "View profile",
+      "editDetails": "Edit details",
+      "assignWorkout": "Assign workout plan",
+      "assignMeal": "Assign meal plan",
+      "approve": "Activate account",
+      "suspend": "Suspend",
+      "activate": "Reactivate",
+      "whatsapp": "WhatsApp chat",
+      "directChat": "Direct chat",
+      "delete": "Delete user"
+    },
+    "status": {
+      "active": "Active",
+      "pending": "Pending",
+      "suspended": "Temporarily suspended"
+    },
+    "roles": {
+      "admin": "Admin",
+      "coach": "Coach",
+      "client": "Client"
+    },
+    "gender": {
+      "male": "Male",
+      "female": "Female",
+      "notSpecified": "Not specified"
+    },
+    "membership": {
+      "basic": "Basic",
+      "gold": "Gold",
+      "platinum": "Platinum"
+    },
+    "fields": {
+      "fullName": "Full name",
+      "email": "Email",
+      "phone": "Phone number",
+      "password": "Password",
+      "passwordEdit": "Password (leave blank to keep current)",
+      "gender": "Gender",
+      "membership": "Membership",
+      "role": "Role",
+      "coach": "Coach",
+      "status": "Status",
+      "phoneWhatsapp": "WhatsApp number"
+    },
+    "placeholders": {
+      "fullName": "Mohammed Ahmed",
+      "email": "example@domain.com",
+      "phone": "+966 5X XXX XXXX",
+      "coach": "Choose coach",
+      "role": "Choose role",
+      "status": "Choose status",
+      "search": "Search by name or email...",
+      "whatsapp": "e.g. 9665XXXXXXXX"
+    },
+    "wizard": {
+      "newUser": "New user",
+      "createAccount": "Create account",
+      "chooseWorkout": "Choose workout plan (optional)",
+      "chooseMeal": "Choose meal plan (optional)",
+      "caloriesDetails": "Details & calories",
+      "credentialsAndForm": "Login details",
+      "createAndNext": "Create and continue",
+      "credsReady": "Login details have been created. You can copy and send them via WhatsApp below.",
+      "passwordByEmail": "Sent via email"
+    },
+    "calories": {
+      "calories": "Calories",
+      "protein": "Protein",
+      "carbs": "Carbs",
+      "fat": "Fat",
+      "activity": "Activity level",
+      "level": {
+        "sedentary": "Sedentary",
+        "light": "Light activity",
+        "moderate": "Moderate activity",
+        "active": "High activity",
+        "athlete": "Athlete"
+      },
+      "notes": "Notes",
+      "notesPh": "Additional details or dietary preferences...",
+      "errors": {
+        "integer": "Must be an integer",
+        "positive": "Must be greater than 0",
+        "notNegative": "Must not be less than 0",
+        "activityRequired": "Please choose an activity level",
+        "notesMax": "Notes text is too long"
+      }
+    },
+    "forms": {
+      "title": "Coach form",
+      "select": "Choose form",
+      "placeholder": "Choose a form to send",
+      "sendToClient": "Send to client",
+      "noteLinkAnswers": "Form answers will be linked to this user’s account."
+    },
+    "pickers": {
+      "selectOne": "Choose one plan to assign",
+      "assignWorkout": "Assign workout plan",
+      "assignMeal": "Assign meal plan"
+    },
+    "common": {
+      "assign": "Assign",
+      "seeMore": "View more",
+      "cancel": "Cancel",
+      "saveChanges": "Save changes",
+      "creating": "Creating...",
+      "expired": "Expired",
+      "days": "Days",
+      "back": "Back",
+      "saveAndNext": "Save and continue",
+      "sendWhatsapp": "Send via WhatsApp",
+      "noCoach": "No coach"
+    },
+    "alerts": {
+      "loadPlansFailed": "Failed to load plans",
+      "planAssigned": "Plan assigned successfully",
+      "assignFailed": "Failed to assign plan",
+      "loadCoachesFailed": "Failed to load coaches list",
+      "passwordGenerated": "Strong password generated",
+      "userUpdated": "User data updated successfully",
+      "updateFailed": "Update failed",
+      "accountCreated": "Account created successfully",
+      "createFailed": "Failed to create account",
+      "assignWorkoutFailed": "Failed to assign workout plan",
+      "assignMealFailed": "Failed to assign meal plan",
+      "saveCaloriesFailed": "Failed to save calorie data",
+      "enterPhoneWhatsapp": "Please enter a phone number to send login details via WhatsApp",
+      "selectFormFirst": "Select a form first before sending",
+      "formSent": "Form sent successfully",
+      "formSendFailed": "Failed to send form",
+      "statusUpdated": "Status updated to {status}",
+      "userDeleted": "User deleted successfully",
+      "deleteFailed": "Deletion failed",
+      "loadUsersFailed": "Failed to load users",
+      "noPhone": "No valid phone number for this user",
+      "loadWorkoutFailed": "Failed to load workout plans",
+      "loadMealFailed": "Failed to load meal plans",
+      "saveCaloriesSuccess": "Calorie information saved successfully"
+    },
+    "errors": {
+      "nameMin": "Name must be at least 2 characters",
+      "nameRequired": "Full name is required",
+      "emailInvalid": "Invalid email address",
+      "emailRequired": "Email is required",
+      "roleRequired": "Role must be specified",
+      "membershipRequired": "Membership type must be specified",
+      "passwordRequired": "Password is required",
+      "passwordMin": "Password must be at least 8 characters",
+      "coachRequired": "Coach must be selected",
+      "startRequired": "Start date is required",
+      "endRequired": "End date is required",
+      "endAfterStart": "End date must be after or equal to the start date",
+      "statusRequired": "Status must be specified",
+      "phoneRequired": "Phone number is required",
+      "phoneInvalid": "Invalid phone number",
+      "phoneTooShort": "Phone number is shorter than required",
+      "phoneTooLong": "Phone number is longer than required",
+      "phoneLeadingZero": "Do not add 0 after the country code",
+      "phoneDuplicateCountryCode": "Do not repeat the country code inside the phone number",
+      "phoneStartInvalid": "Phone number start is invalid for this country"
+    },
+    "dialogs": {
+      "deleteUserConfirm": "Are you sure you want to delete {name}? This action cannot be undone."
+    }
+  },
+  "date": {
+    "startLabel": "Start date",
+    "endLabel": "End date",
+    "pickEnd": "Pick end date",
+    "endAfterStart": "End date must be after the start date"
+  },
+  "DataTable": {
+    "toggleSelectAll": "Select all / Deselect",
+    "toggleRow": "Select this row",
+    "sort": "Sort",
+    "pageLabel": "Page {page} of {total}",
+    "first": "First",
+    "prev": "Previous",
+    "next": "Next",
+    "last": "Last",
+    "noData": "No data available",
+    "adjustFiltersOrAdd": "Adjust filters or add new records."
+  },
+  "Stepper": {
+    "progress": "Progress"
+  },
+  "Common": {
+    "seeMore": "See more",
+    "skip": "Skip",
+    "assigning": "Assigning…",
+    "assignNext": "Assign & continue",
+    "assignFinish": "Assign & finish",
+    "back": "Back",
+    "show": "Show",
+    "hide": "Hide",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "copy": "Copy",
+    "copyToClipboard": "Copy to clipboard",
+    "copied": "Copied",
+    "copyFailed": "Copy failed",
+    "english": "English",
+    "arabic": "Arabic"
+  },
+  "Plans": {
+    "searchPlaceholder": "Search by plan name or day…",
+    "empty": "No plans available. Try another search keyword.",
+    "untitled": "Untitled plan",
+    "assignedCount": "{count} assigned",
+    "daysCount": "{count} days",
+    "details": "Details",
+    "moreCount": "+{count} more"
+  },
+  "Meals": {
+    "searchPlaceholder": "Search by name or meal plan description…",
+    "empty": "No meal plans available. Try another search keyword.",
+    "untitled": "Untitled meal plan"
+  },
+  "Subscription": {
+    "startLabel": "Subscription start date",
+    "endLabel": "Subscription end date",
+    "pickEnd": "Choose end date",
+    "endAfterStart": "End date must be the same day or after the start date",
+    "d1": "1 month",
+    "d3": "3 months",
+    "d6": "6 months",
+    "d12": "12 months"
+  },
+  "superAdmin": {
+    "header": {
+      "title": "Super Admin Dashboard",
+      "subtitle": "Create administrators and manage managers, coaches, and clients across the system.",
+      "createAdmin": "Create new admin"
+    },
+    "stats": {
+      "totalAdmins": "Total admins",
+      "activeAdmins": "Active admins",
+      "totalCoaches": "Total coaches",
+      "totalClients": "Total clients"
+    },
+    "table": {
+      "admin": "Admin",
+      "phone": "Phone number",
+      "status": "Status",
+      "coaches": "Coaches",
+      "clients": "Clients",
+      "createdAt": "Created at",
+      "clientName": "Client name",
+      "clientEmail": "Client email",
+      "joinDate": "Join date"
+    },
+    "badges": {
+      "coaches": "{n} coach(es)",
+      "clients": "{n} client(s)"
+    },
+    "actions": {
+      "viewExpand": "View details",
+      "edit": "Edit",
+      "suspend": "Suspend",
+      "activate": "Activate",
+      "delete": "Delete"
+    },
+    "expand": {
+      "coaches": "Coaches list",
+      "noCoaches": "No coaches for this admin.",
+      "showClients": "Show clients",
+      "hideClients": "Hide clients",
+      "clientsCount": "{n} client(s)",
+      "noClients": "No clients for this coach."
+    },
+    "createModal": {
+      "title": "Create new admin",
+      "create": "Create"
+    },
+    "fields": {
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone number",
+      "password": "Password",
+      "status": "Status"
+    },
+    "placeholders": {
+      "name": "Mohammed Ahmed",
+      "email": "example@domain.com",
+      "phone": "+20 1X XXX XXXX",
+      "status": "Choose status",
+      "search": "Search by name or email..."
+    },
+    "status": {
+      "active": "Active",
+      "suspended": "Suspended"
+    },
+    "common": {
+      "cancel": "Cancel",
+      "creating": "Creating..."
+    },
+    "errors": {
+      "nameMin": "Name must be at least 2 characters",
+      "nameRequired": "Name is required",
+      "emailInvalid": "Invalid email",
+      "emailRequired": "Email is required",
+      "phoneInvalid": "Invalid phone format",
+      "passwordRequired": "Password is required",
+      "passwordMin": "Password must be at least 8 characters",
+      "statusRequired": "Status must be selected"
+    },
+    "alerts": {
+      "passwordGenerated": "Strong password generated",
+      "adminCreated": "Admin created successfully",
+      "createFailed": "Failed to create admin",
+      "loadFailed": "Failed to load data",
+      "statusUpdated": "Status updated to {status}",
+      "updateFailed": "Update failed",
+      "deleted": "Deleted successfully",
+      "deleteFailed": "Delete failed"
+    },
+    "dialogs": {
+      "deleteConfirm": "Are you sure you want to delete {name}? This action cannot be undone."
+    },
+    "hints": {
+      "editComingSoon": "Edit screen coming soon."
+    }
+  },
+  "workouts": {
+    "titles": {
+      "exercises": "Exercises",
+      "preview": "Preview",
+      "addExercise": "Add exercise",
+      "editExercise": "Edit: {name}",
+      "untitled": "Untitled exercise"
+    },
+    "descriptions": {
+      "exercises": "Exercises library",
+      "manageLibrary": "Manage your exercise library easily — add new exercises, update details"
+    },
+    "actions": {
+      "addExercise": "Add exercise",
+      "getAi": "AI suggestion",
+      "fillWithAi": "Auto-fill with AI",
+      "save": "Save",
+      "view": "View",
+      "edit": "Edit",
+      "delete": "Delete",
+      "clear": "Clear",
+      "switchToList": "Switch to list view",
+      "switchToGrid": "Switch to grid view",
+      "listView": "List view",
+      "gridView": "Grid view",
+      "sortByDate": "Sort by date",
+      "newestFirst": "Newest first",
+      "oldestFirst": "Oldest first",
+      "uploadImage": "Upload image",
+      "uploadVideo": "Upload video",
+      "duplicate": "Duplicate exercise"
+    },
+    "labels": {
+      "name": "Name",
+      "targetReps": "Reps",
+      "targetSets": "Sets",
+      "rest": "Rest (seconds)",
+      "tempo": "Tempo",
+      "category": "Category",
+      "details": "Details",
+      "primary": "Primary muscles",
+      "secondary": "Secondary muscles",
+      "image": "Image",
+      "video": "Video",
+      "muscles": "Muscles"
+    },
+    "notes": {
+      "muscleWikiTipLabel": "Note:",
+      "muscleWikiTipPrefix": "You can copy the exercise video link directly from",
+      "muscleWikiTipSuffix": " without needing to download or upload it. For the image, you may take a snapshot from the video and use it, or use a valid image URL.",
+      "muscleWikiTip": "Note: You can copy the exercise video link directly from musclewiki.com without downloading or uploading it. For the image, you can take a snapshot from the video and use it here."
+    },
+    "placeholders": {
+      "name": "Example: Seated wide-grip row",
+      "reps": "10 or 8-12",
+      "sets": "Number of sets",
+      "rest": "Rest duration in seconds",
+      "tempo": "2/1/2",
+      "category": "Choose category",
+      "details": "Performance tips, body posture, muscle target...",
+      "tag": "Type a muscle name and press Enter",
+      "mediaUrl": "Upload an image or enter a valid link",
+      "mediaUrlVideo": "Upload a video or enter a valid link",
+      "search": "Search by name…",
+      "perPage": "Items per page"
+    },
+    "hints": {
+      "nameAi": "Write the name then use AI to auto-fill fields.",
+      "tempo": "Format \"x/y/z\" like 2/1/2",
+      "createCategory": "Type to create a new category…"
+    },
+    "ai": {
+      "fetching": "Fetching AI suggestions…"
+    },
+    "val": {
+      "nameMin": "Name must be at least 2 characters",
+      "nameReq": "Name is required",
+      "repsFmt": "Use a format like '10' or '8-12'",
+      "repsReq": "Reps are required",
+      "setsNum": "Sets must be a number",
+      "setsInt": "Sets must be an integer",
+      "setsMin": "Minimum is 0",
+      "setsMax": "Maximum is 30",
+      "setsReq": "Sets are required",
+      "restNum": "Rest must be a number",
+      "restMin": "Minimum is 0 seconds",
+      "restMax": "Maximum is 1200 seconds",
+      "tempoFmt": "Use format 2/1/2",
+      "categoryReq": "Category is required",
+      "detailsMax": "Details must be less than 2000 characters",
+      "tagsMax": "Maximum 20 tags",
+      "imgReq": "Image link is required",
+      "videoReq": "Video link is required"
+    },
+    "filters": {
+      "all": "All"
+    },
+    "stats": {
+      "total": "Total",
+      "withVideo": "Exercises with video",
+      "withImage": "Exercises with image",
+      "avgRest": "Average rest (sec)",
+      "added7d": "Added within 7 days",
+      "totalPersonalExercise": "Your personal exercises",
+      "totalGlobalExercise": "All exercises"
+    },
+    "empty": {
+      "title": "No exercises found",
+      "subtitle": "Try another search or add a new exercise.",
+      "simple": "No exercises available."
+    },
+    "confirm": {
+      "deleteTitle": "Delete exercise?",
+      "deleteMsg": "This action cannot be undone.",
+      "deleteBtn": "Delete"
+    },
+    "errors": {
+      "loadExercises": "Failed to load exercises",
+      "createFailed": "Failed to create exercise",
+      "updateFailed": "Failed to update exercise",
+      "deleteFailed": "Failed to delete exercise",
+      "apiKeyExpired": "AI key invalid or expired"
+    },
+    "toasts": {
+      "created": "Exercise created successfully",
+      "updated": "Exercise updated successfully",
+      "deleted": "Exercise deleted successfully"
+    },
+    "meta": {
+      "sets": "Sets",
+      "reps": "Reps",
+      "rest": "Rest",
+      "tempo": "Tempo"
+    },
+    "media": {
+      "image": "Image",
+      "video": "Video",
+      "none": "No {kind} available",
+      "noImage": "No image",
+      "noVideo": "No video"
+    }
+  },
+  "feedback": {
+    "floatingButtonAria": "Send feedback about the system",
+    "panelTitle": "Feedback & Improvements",
+    "panelDescription": "Share your feedback or suggest improvements. Your notes will be reviewed by the admin.",
+    "typeLabel": "Type",
+    "typePlaceholder": "Select feedback type",
+    "typeEnhancement": "Enhancement / New idea",
+    "typeIssue": "Issue / Bug",
+    "typeOther": "Other",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Short title (e.g., orders screen improvement)",
+    "detailsLabel": "Details",
+    "detailsPlaceholder": "Explain the idea or issue with as much detail as possible.",
+    "emailLabel": "Contact email",
+    "emailOptional": "Optional",
+    "emailPlaceholder": "you@example.com",
+    "errorRequired": "Title and details are required.",
+    "submit": "Submit feedback",
+    "submitting": "Submitting...",
+    "success": "Thank you! Your feedback has been sent.",
+    "genericError": "An error occurred while sending the feedback. Try again.",
+    "close": "Close",
+    "admin": {
+      "title": "User feedback",
+      "subtitle": "Manage and review all user feedback and improvement requests",
+      "totalFeedback": "Total feedback",
+      "newFeedback": "New",
+      "resolvedFeedback": "Resolved",
+      "issuesFeedback": "Issues",
+      "search": "Search by title or email...",
+      "typeFilter": "All types",
+      "statusFilter": "All statuses",
+      "exportCSV": "Export CSV",
+      "noFeedback": "No feedback found",
+      "loading": "Loading...",
+      "description": "Description",
+      "changeStatus": "Change status",
+      "delete": "Delete",
+      "deleteConfirm": "Are you sure you want to delete this feedback?",
+      "statusUpdated": "Status updated successfully",
+      "deleted": "Feedback deleted successfully",
+      "updateFailed": "Failed to update status",
+      "deleteFailed": "Failed to delete feedback",
+      "statusNew": "New",
+      "statusReviewed": "Reviewed",
+      "statusResolved": "Resolved",
+      "statusClosed": "Closed"
+    }
+  },
+  "workoutPlans": {
+    "copySuffix": "(copy)",
+    "placeholders": {
+      "search": "Search...",
+      "searchPlan": "Search by plan name…"
+    },
+    "filters": {
+      "all": "All"
+    },
+    "planActionNotAllowed": "You can only perform actions on plans you created.",
+    "actions": {
+      "duplicate": "Duplicate",
+      "clear": "Clear",
+      "cancel": "Cancel",
+      "close": "Close",
+      "assign": "Assign",
+      "view": "View & share plan",
+      "preview": "Preview",
+      "edit": "Edit",
+      "delete": "Delete",
+      "addDay": "Add day",
+      "addExercises": "Add exercises",
+      "removeDay": "Remove day",
+      "savePlan": "Save plan",
+      "duplicateDay": "Duplicate day"
+    },
+    "errors": {
+      "loadExercises": "Error loading exercises.",
+      "loadPlans": "Failed to load plans."
+    },
+    "notifications": {
+      "planDeleted": "Plan deleted successfully.",
+      "planDeleteFailed": "Failed to delete plan.",
+      "planCreated": "Plan created successfully.",
+      "createFailed": "Failed to create plan.",
+      "duplicateDay": "Day is duplicated, choose another.",
+      "planUpdated": "Plan updated successfully.",
+      "updateFailed": "Failed to update plan.",
+      "assignedSuccess": "Plan assigned to users successfully.",
+      "assignFailed": "Failed to assign plan to users.",
+      "planDuplicated": "Plan duplicated successfully. You can edit it now.",
+      "duplicateFailed": "Failed to duplicate plan."
+    },
+    "confirm": {
+      "titleDefault": "Are you sure?",
+      "messageDefault": "This action cannot be undone.",
+      "confirmBtn": "Confirm",
+      "deletePlanTitle": "Delete plan?",
+      "deletePlanMsg": "This action cannot be undone."
+    },
+    "picker": {
+      "dialogAria": "Exercise selection window",
+      "title": "Choose exercises",
+      "subtitle": "Click to add an exercise. You can filter and search by category.",
+      "searchPlaceholder": "Search exercise...",
+      "all": "All",
+      "preview": "Preview",
+      "previewVideo": "Preview video",
+      "selected": "Selected",
+      "sets": "Sets",
+      "reps": "Reps",
+      "rest": "Rest",
+      "noExercisesTitle": "No exercises found",
+      "noExercisesDesc": "Try a different search keyword or category.",
+      "addSelected": "Add ({count})"
+    },
+    "plans": {
+      "header": {
+        "newPlanButton": "New plan",
+        "title": "Training plans",
+        "desc": "Create programs, organize days, and assign them easily."
+      },
+      "stats": {
+        "globalPlans": "Global plans",
+        "personalPlans": "My personal plans",
+        "withoutDays": "Plans without days",
+        "unassigned": "Unassigned plans",
+        "activeAssignments": "Active assignments"
+      },
+      "filters": {
+        "perPage": "Items / page",
+        "oldestFirst": "Oldest first",
+        "newestFirst": "Newest first",
+        "sortByDate": "Sort by date"
+      },
+      "list": {
+        "noPlansTitle": "No plans available",
+        "noPlansDesc": "Try another search or create a new plan.",
+        "active": "Active",
+        "inactive": "Inactive",
+        "noDescription": "No notes.",
+        "dayCountLabel": "{count} days"
+      },
+      "modals": {
+        "previewTitle": "Plan preview",
+        "createTitle": "Create plan",
+        "editTitle": "Edit:",
+        "assignTitle": "Assign plan: {name}"
+      }
+    },
+    "preview": {
+      "exerciseLabel": "Exercise",
+      "noExercisesYet": "No exercises yet.",
+      "assignees": "Assigned users",
+      "noAssignees": "This plan has not been assigned yet.",
+      "createdAt": "Created at:",
+      "updatedAt": "Last updated:",
+      "exercise": "Exercise",
+      "exercises": "Exercises",
+      "sets": "Sets",
+      "reps": "Reps",
+      "noDaysYet": "No days added yet.",
+      "noExercisesYetTitle": "No exercises yet",
+      "noExercisesYetHelper": "Add exercises to this day to see them here."
+    },
+    "assign": {
+      "selectUsersLabel": "Choose users",
+      "selectUsersPlaceholder": "Search and select users...",
+      "removeUser": "Remove user",
+      "assigning": "Assigning..."
+    },
+    "builder": {
+      "namePlaceholder": "Plan name (e.g., Push/Pull/Legs...)",
+      "daysSectionTitle": "Days",
+      "dayNumber": "Day {num}",
+      "selectDayPlaceholder": "Choose day",
+      "noExercisesHint": "No exercises yet. Click 'Add exercises' to add exercises to this day.",
+      "savePlanBtn": "Save plan",
+      "validation": {
+        "nameRequired": "Plan name is required.",
+        "needDay": "Plan must contain at least one day.",
+        "needExercisePerDay": "Each day must contain at least one exercise."
+      }
+    },
+    "days": {
+      "saturday": "Saturday",
+      "sunday": "Sunday",
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday"
+    }
+  },
+  "MyWorkouts": {
+    "title": "My workouts",
+    "subtitle": "Your weekly plan and daily exercises in one place.",
+    "listen": "Listen",
+    "settings": "Settings",
+    "exercises": "Exercises",
+    "workout": "Workout",
+    "loadingExercises": "Loading exercises...",
+    "noExercises": "No exercises for today",
+    "pickAnotherDay": "Try selecting another day or review your workout plan.",
+    "uploadFor": "Upload video for",
+    "selected": "Selected file",
+    "showImage": "Show image",
+    "showVideo": "Show video",
+    "showVideoAlt": "Show video 2",
+    "alt": "Alt",
+    "table": {
+      "set": "Set",
+      "weight": "Weight",
+      "reps": "Reps",
+      "done": "Done"
+    },
+    "actions": {
+      "removeSet": "Delete set",
+      "addSet": "Add set",
+      "upload": "Upload",
+      "chooseVideo": "Choose video",
+      "cancel": "Cancel",
+      "close": "Close"
+    },
+    "sync": {
+      "syncNow": "Sync now",
+      "synced": "Synced",
+      "syncing": "Syncing...",
+      "someFailed": "Some items failed to sync"
+    },
+    "errors": {
+      "pickVideo": "Please choose a valid video file.",
+      "maxSize": "Maximum size is 100MB.",
+      "uploadFailed": "Upload failed. Try again."
+    },
+    "exerciseFallback": "Exercise",
+    "minusOne": "-1",
+    "plusOne": "+1"
+  },
+  "nutrition": {
+    "saturday": "Saturday",
+    "sunday": "Sunday",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "clickAgainToConfirm": "Click again to confirm",
+    "ui": {
+      "title": "Nutrition management",
+      "subtitle": "Create meal plans, assign them to clients, and view all details in one place."
+    },
+    "btn": {
+      "new_plan": "New plan",
+      "create": "Create",
+      "update": "Update",
+      "save": "Save",
+      "assign": "Assign",
+      "assign_plan": "Assign plan",
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "cancel": "Cancel",
+      "preview": "Preview",
+      "edit": "Edit",
+      "remove_meal": "Delete meal",
+      "add_meal": "Add meal",
+      "add_item": "Add item",
+      "add_supplement": "Add supplement",
+      "ai_assist": "AI Assistant",
+      "generate": "Generate"
+    },
+    "stats": {
+      "global_plans": "Global plans",
+      "my_plans": "My plans"
+    },
+    "search": {
+      "placeholder": "Search by plan name…",
+      "clear": "Clear",
+      "per_page": "Per page",
+      "oldest_first": "Oldest first",
+      "newest_first": "Newest first",
+      "sort_by_date": "Sort by date"
+    },
+    "modals": {
+      "create_title": "Create meal plan",
+      "edit_title": "Edit",
+      "assign_title": "Assign",
+      "details_title": "Meal plan details"
+    },
+    "form": {
+      "plan_name": "Plan name",
+      "description": "Description",
+      "base_day_title": "Base day meals (applies to all days)",
+      "meal_name": "Meal name",
+      "hhmm": "Time (HH:MM)",
+      "customize_days": "Customize specific days (optional)",
+      "item_name": "Item name",
+      "qty_g": "Quantity (g)",
+      "calories": "Calories",
+      "supplement_name": "Supplement name",
+      "time_hhmm": "Time (HH:MM)",
+      "best_with": "Best with"
+    },
+    "days": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    },
+    "details": {
+      "notes": "Notes",
+      "meals": "Meal",
+      "kcal": "Calories",
+      "supplements": "Supplements",
+      "time": "Time",
+      "best_with": "Best with",
+      "assigned_clients": "Assigned clients"
+    },
+    "table": {
+      "item": "Item",
+      "qty_g": "Quantity (g)",
+      "calories": "Calories"
+    },
+    "list": {
+      "empty_title": "No plans",
+      "empty_desc": "Try a different search or create a new plan.",
+      "no_desc": "No description."
+    },
+    "assign": {
+      "title": "Assign to",
+      "select_client": "Select client"
+    },
+    "confirm": {
+      "delete_title": "Delete plan?",
+      "delete_msg": "This action cannot be undone."
+    },
+    "toast": {
+      "created": "Plan created successfully",
+      "create_failed": "Failed to create plan",
+      "updated": "Plan updated successfully",
+      "update_failed": "Failed to update plan",
+      "assigned": "Plan assigned successfully",
+      "assign_failed": "Failed to assign plan",
+      "deleted": "Plan deleted successfully",
+      "delete_failed": "Failed to delete plan",
+      "ai_filled": "Plan auto-filled by AI. Review and adjust if needed.",
+      "ai_failed": "Failed to generate plan data using AI"
+    },
+    "notes": {
+      "placeholder": "Write a note and press Enter…"
+    },
+    "validation": {
+      "required": "Required",
+      "number": "Must be a number",
+      "min": "Value is below allowed minimum",
+      "hhmm": "Time must follow HH:MM format",
+      "add_item": "Add at least one item",
+      "add_meal": "Add at least one meal",
+      "plan_name_required": "Plan name is required"
+    },
+    "empty": {
+      "no_meals_hint": "No meals added. Click 'Add meal' to start."
+    }
+  },
+  "forms": {
+    "header": {
+      "new": "New form",
+      "title": "Form management",
+      "desc": "Create, edit, and share custom forms."
+    },
+    "messages": {
+      "load_failed": "Failed to load forms",
+      "created": "Form created",
+      "updated": "Form updated",
+      "deleted": "Form deleted",
+      "link_copied": "Link copied"
+    },
+    "errors": {
+      "title_required": "Form title is required",
+      "create_failed": "Failed to create form",
+      "update_failed": "Failed to update form",
+      "delete_failed": "Failed to delete form",
+      "required": "Field name and placeholder are required for each field"
+    },
+    "actions": {
+      "create_form": "Create form",
+      "copy_link": "Copy share link",
+      "edit_form": "Edit form",
+      "move_up": "Move up",
+      "move_down": "Move down",
+      "edit_field": "Edit field",
+      "remove_field": "Delete field",
+      "deleting": "Deleting…",
+      "done": "Done",
+      "duplicate": "Duplicate",
+      "clear": "Clear",
+      "cancel": "Cancel",
+      "close": "Close",
+      "assign": "Assign",
+      "view": "View & share plan",
+      "preview": "Preview",
+      "edit": "Edit",
+      "delete": "Delete",
+      "addDay": "Add day",
+      "addExercises": "Add exercises",
+      "removeDay": "Remove day",
+      "savePlan": "Save plan"
+    },
+    "delete": {
+      "title": "Delete form?",
+      "message": "This action cannot be undone. The form and all responses will be deleted.",
+      "confirm": "Delete"
+    },
+    "empty": {
+      "title": "No forms",
+      "subtitle": "Start by creating your first form.",
+      "select_hint": "Select a form from the list to view details.",
+      "no_fields": "No fields yet."
+    },
+    "labels": {
+      "fields": "Field",
+      "key": "Key",
+      "placeholder": "Placeholder",
+      "options": "Options",
+      "required": "Required",
+      "order": "Order",
+      "created_at": "Created at",
+      "no_label": "No label",
+      "copy_suffix": " (copy)"
+    },
+    "editor": {
+      "form_title": "Form title",
+      "fields": "Form fields",
+      "add_field": "Add field",
+      "label": "Field label",
+      "key": "Key",
+      "regen_key": "Generate new key",
+      "regen": "Generate",
+      "type": "Type",
+      "placeholder": "Placeholder",
+      "required": "Required field",
+      "options": "Options",
+      "placeholders": {
+        "form_title": "Enter form title",
+        "label": "Enter field label",
+        "key": "Enter unique key",
+        "placeholder": "Placeholder text",
+        "option": "Add option then press Enter"
+      }
+    },
+    "types": {
+      "text": "Text",
+      "email": "Email",
+      "number": "Number",
+      "phone": "Phone",
+      "date": "Date",
+      "textarea": "Long text",
+      "select": "Dropdown",
+      "radio": "Radio",
+      "checkbox": "Checkbox",
+      "checklist": "Checklist",
+      "file": "File"
+    },
+    "types_map": {
+      "text": "Text",
+      "email": "Email",
+      "number": "Number",
+      "phone": "Phone",
+      "date": "Date",
+      "textarea": "Long text",
+      "select": "Dropdown",
+      "radio": "Radio",
+      "checkbox": "Checkbox",
+      "checklist": "Checklist",
+      "file": "File"
+    },
+    "create": {
+      "title": "Create new form",
+      "cta": "Create"
+    },
+    "edit": {
+      "title": "Edit form",
+      "cta": "Save changes"
+    }
+  },
+  "attachments": {
+    "modal": {
+      "title": "Your files",
+      "subtitle": "Upload new files or choose from your library"
+    },
+    "errors": {
+      "loadFiles": "Failed to load your files. Try again.",
+      "uploadFiles": "Failed to upload files. Try again.",
+      "deleteFile": "Failed to delete file. Try again.",
+      "maxFiles": "You can upload a maximum of {count} files at once.",
+      "maxTotalBytes": "Total upload size exceeds the limit of {max}."
+    },
+    "uploader": {
+      "upload": "Upload"
+    },
+    "labels": {
+      "close": "Close",
+      "attachFiles": "Attach files",
+      "image": "Image",
+      "totalFiles": "Total files"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "finishSelection": "Finish selection",
+      "finishSelectionWithCount": "Finish selection ({count})",
+      "deleteFile": "Delete {filename}",
+      "removeFile": "Remove {filename}"
+    }
+  },
+  "publicForm": {
+    "messages": {
+      "load_failed": "Error loading form.",
+      "submit_success": "Form submitted successfully.",
+      "submit_failed": "Failed to submit form, please try again."
+    },
+    "errors": {
+      "not_found_title": "Form not found",
+      "not_found_subtitle": "The form you are trying to access is not available."
+    },
+    "header": {
+      "public_badge": "Public form",
+      "progress_label": "Progress"
+    },
+    "sections": {
+      "contact": "Contact information",
+      "additional": "Additional information"
+    },
+    "fields": {
+      "email": {
+        "label": "Email",
+        "placeholder": "name@example.com"
+      },
+      "phone": {
+        "label": "Mobile number",
+        "placeholder": "Example: 9665xxxxxxxx"
+      },
+      "date": {
+        "placeholder": "Pick date"
+      },
+      "select": {
+        "placeholder": "Choose from list"
+      },
+      "file": {
+        "uploaded_default_name": "Uploaded file"
+      }
+    },
+    "footer": {
+      "review_before_submit": "Review your answers before submitting."
+    },
+    "cta": {
+      "submit": "Submit form",
+      "submitting": "Submitting..."
+    },
+    "validation": {
+      "email_required": "Email is required.",
+      "email_invalid": "Invalid email format.",
+      "phone_required": "Mobile number is required.",
+      "phone_invalid": "Invalid mobile number.",
+      "sa_phone_invalid": "{label} must be a valid Saudi mobile number.",
+      "required_generic": "{label} is required.",
+      "file_required": "Field {label} is required.",
+      "date_invalid": "{label} must be a valid date.",
+      "number_type": "{label} must be a number."
+    },
+    "select": {
+      "placeholder": "Choose...",
+      "search_placeholder": "Search...",
+      "no_results": "No results.",
+      "save": "Save",
+      "cancel": "Cancel",
+      "create_hint": "Type to add a new option...",
+      "create_from_query": "Create \"{value}\""
+    }
+  },
+  "ThankYouPage": {
+    "title": "Thank you for filling out the form!",
+    "description": "We received your information and will review it as soon as possible. You may safely close this page."
+  },
+  "submissions": {
+    "header": {
+      "title": "Form submissions",
+      "desc": "View and manage form submissions from clients.",
+      "new_form": "New form"
+    },
+    "filters": {
+      "search_placeholder": "Search email/phone/IP and answers…",
+      "from": "From date",
+      "to": "To date",
+      "form": "Form",
+      "all_forms": "All forms"
+    },
+    "errors": {
+      "from_before_to": "The (from) date must be before the (to) date.",
+      "title_required": "Form title is required.",
+      "user_required": "Select user first.",
+      "required": "Field name and placeholder are required for each field"
+    },
+    "messages": {
+      "load_forms_failed": "Failed to load forms.",
+      "load_submissions_failed": "Failed to load submissions.",
+      "form_created": "Form created.",
+      "create_form_failed": "Failed to create form.",
+      "assigned_ok": "Submission assigned to user.",
+      "assign_failed": "Failed to assign."
+    },
+    "table": {
+      "form": "Form",
+      "email": "Email",
+      "phone": "Phone",
+      "ip": "IP address",
+      "submitted": "Submission time",
+      "actions": "Actions"
+    },
+    "actions": {
+      "view": "View",
+      "load_more": "Load more",
+      "close": "Close",
+      "cancel": "Cancel"
+    },
+    "empty": {
+      "title": "No submissions",
+      "subtitle_all": "No submissions received yet.",
+      "subtitle_one": "No submissions for the selected form."
+    },
+    "labels": {
+      "unknown_form": "Unknown form"
+    },
+    "detail": {
+      "title": "Submission details",
+      "contact": "Contact info",
+      "form": "Form details",
+      "submission_id": "Submission ID",
+      "answers": "Answers",
+      "no_answers": "No answers."
+    },
+    "assign": {
+      "title": "Assign submission to client",
+      "client": "Client",
+      "client_id": "Client ID",
+      "cta": "Assign now",
+      "assigned_to": "Assigned to:"
+    },
+    "create": {
+      "title": "Create new form",
+      "form_title": "Form title",
+      "form_title_ph": "Enter form title",
+      "assign_optional": "Assign (optional) — Enter user ID",
+      "assign_optional_ph": "You can assign later from submission details",
+      "cta": "Create"
+    }
+  },
+  "reports": {
+    "title": "Weekly reports",
+    "subtitle": "Review, filter, and manage weekly reports easily.",
+    "athlete": "Trainee",
+    "columns": {
+      "weekOf": "Week"
+    },
+    "unreviewedBadge": "{count} reports awaiting review",
+    "reviewed": "Reviewed",
+    "awaitingReview": "Awaiting review",
+    "card": {
+      "weight": "Weight",
+      "kg": "kg",
+      "cardio": "Cardio"
+    },
+    "createdAt": "Creation date",
+    "view": "View",
+    "loading": "Loading…",
+    "empty": "No data.",
+    "errors": {
+      "load": "Failed to load reports.",
+      "save": "Failed to save notes.",
+      "feedbackEmpty": "Add notes first."
+    },
+    "messages": {
+      "saved": "Saved"
+    },
+    "prev": "Previous",
+    "next": "Next",
+    "pagination": "Page {page} of {pages} • Total {total}",
+    "detail": {
+      "title": "Report details",
+      "loading": "Loading…",
+      "photos": "Photos",
+      "noPhoto": "No photo",
+      "measurements": "Measurements",
+      "training": "Training",
+      "diet": "Diet",
+      "feedback": "Coach notes",
+      "feedbackPh": "Write your notes…",
+      "reviewedAt": "Reviewed at",
+      "saveFeedback": "Save notes",
+      "close": "Close",
+      "section": {
+        "photos": {
+          "front": "Front",
+          "back": "Back",
+          "left": "Left",
+          "right": "Right"
+        },
+        "measurements": {
+          "date": "Date",
+          "weight": "Weight",
+          "waist": "Waist",
+          "chest": "Chest",
+          "hips": "Hips",
+          "arms": "Arms",
+          "thighs": "Thighs"
+        },
+        "training": {
+          "cardioAdherence": "Cardio adherence",
+          "intensityOk": "Workout intensity suitable",
+          "shape": "Change in shape",
+          "fitness": "Change in fitness",
+          "sleepEnough": "Enough sleep",
+          "sleepHours": "Sleep hours",
+          "notes": {
+            "title": "Program notes"
+          },
+          "daysDeviation": "Deviation from training days",
+          "deviation": {
+            "count": "Count",
+            "reason": "Reason"
+          }
+        },
+        "diet": {
+          "hungry": "Feeling hungry",
+          "comfort": "Mental comfort",
+          "tooMuch": "Too much food",
+          "wantSpecific": "Craving specific food",
+          "deviation": {
+            "title": "Diet deviation",
+            "times": "Number of times",
+            "details": "Details"
+          }
+        }
+      }
+    },
+    "filters": {
+      "reviewed": {
+        "label": "Review status",
+        "any": "All",
+        "yes": "Reviewed",
+        "no": "Not reviewed"
+      },
+      "cardio": {
+        "label": "Cardio (value)",
+        "placeholder": "0..5"
+      },
+      "sortBy": "Sort by",
+      "sortOrder": "Sort order"
+    },
+    "sort": {
+      "fields": {
+        "created_at": "Creation date",
+        "weekOf": "Week",
+        "updated_at": "Update date",
+        "isRead": "Read"
+      },
+      "orders": {
+        "asc": "Ascending",
+        "desc": "Descending"
+      }
+    },
+    "kpis": {
+      "total": "Total reports",
+      "sortBy": "Sorted by",
+      "tab": "Current view"
+    },
+    "tabs": {
+      "allReports": "All reports",
+      "myClients": "My clients"
+    },
+    "clients": {
+      "title": "Select a client to view their reports",
+      "empty": "No clients",
+      "select": {
+        "label": "Select client",
+        "placeholder": "Choose a client..."
+      }
+    },
+    "yes": "Yes",
+    "no": "No"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Adjust your platform identity and customer experience from one place",
+    "export": "Export",
+    "import": "Import",
+    "save": "Save changes",
+    "cancel": "Cancel",
+    "add": "Add",
+    "ai": {
+      "title": "AI Settings",
+      "desc": "Add your AI key to use all advanced features.",
+      "form_here": "from here",
+      "secretKey": {
+        "label": "AI Key",
+        "hint": "Enter your key from OpenRouter",
+        "placeholder": "Paste your OpenRouter key here",
+        "show": "Show",
+        "hide": "Hide"
+      },
+      "steps": {
+        "title": "How to get an AI key:",
+        "step1": "Go to this link:",
+        "step2": "Sign in or create an account if needed.",
+        "step3": "Click the \"Create API Key\" button.",
+        "step4": "Enter any name for the key (example: Menuzed App).",
+        "step5": "Copy the key that appears (starts with sk-or-v1-).",
+        "step6": "Paste the key in the field above.",
+        "step7": "Save your changes.",
+        "warning": "⚠️ Keep this key secret — do not share it with anyone."
+      }
+    },
+    "org": {
+      "title": "Organization & Language",
+      "desc": "Organization name, default language, timezone, and home page slug.",
+      "name": {
+        "label": "Organization name",
+        "hint": "Appears in the header, invoices, and emails.",
+        "ph": "Example: Ultimate Fitness"
+      },
+      "defaultLang": {
+        "label": "Default language",
+        "hint": "Choose the language shown to customers on their first visit."
+      },
+      "timezone": {
+        "label": "Timezone"
+      },
+      "homeSlug": {
+        "label": "Homepage slug",
+        "hint": "Write an alternative path to be used instead of the domain (example: /ultimate).",
+        "ph": "home or ultimate or landing",
+        "preview": "Preview link"
+      }
+    },
+    "site": {
+      "title": "Website Management (SEO)",
+      "desc": "SEO enhancements and sharing metadata for your profile page.",
+      "metaTitle": "Meta title",
+      "metaTitlePh": "Clear short title containing the main keyword",
+      "metaDescription": "Meta description",
+      "metaDescriptionPh": "A short description that encourages clicks and reflects page content",
+      "metaKeywords": "Keywords",
+      "metaKeywordsPh": "health, fitness, gym, ultimate",
+      "ogImageUpload": "OG Image",
+      "ogImageHint": "Recommended size: 630×1200 px (1.91:1 ratio).",
+      "chooseImage": "Choose image",
+      "homeTitle": "Homepage title",
+      "homeTitlePh": "Example: Personalized training & nutrition plans"
+    },
+    "loader": {
+      "title": "Loading Screen",
+      "desc": "Adjust the loading message and duration shown to customers.",
+      "enabled": "Enable loading screen",
+      "message": "Loading message",
+      "messageHint": "Text displayed during loading.",
+      "messagePh": "Loading… just a moment",
+      "previewBtn": "Preview",
+      "durationSec": "Duration (seconds)",
+      "durationHint": "Time before hiding the loading screen"
+    },
+    "dhikr": {
+      "title": "Dhikr",
+      "desc": "Add multiple dhikr and set one active to appear as a notification to customers.",
+      "enabled": "Enable dhikr",
+      "activeOne": "Active dhikr",
+      "activeHint": "This dhikr will be shown to customers when enabled.",
+      "add": "Add dhikr"
+    },
+    "branding": {
+      "title": "Appearance & Colors",
+      "desc": "Adjust the UI color palette and elements.",
+      "palette": "Color palette",
+      "previewLabel": "Preview",
+      "previewHint": "Changes are reflected immediately in the preview.",
+      "headerDemo": {
+        "title": "Demo section title",
+        "desc": "An example showing the gradient (primary → secondary).",
+        "badge": "Sample badge"
+      },
+      "previewChip": "Primary-colored button/badge"
+    },
+    "reportsAuto": {
+      "title": "Reports & Automation",
+      "desc": "Set the day/time for sending weekly reports and select their contents.",
+      "enabled": "Enable auto sending",
+      "schedule": {
+        "label": "Schedule",
+        "hint": "Choose the day and time for sending the report."
+      },
+      "contents": {
+        "label": "Report contents",
+        "hint": "Mark items to include in the message.",
+        "items": {
+          "weightTrend": "Weight trend",
+          "mealAdherence": "Meal adherence",
+          "workoutCompletion": "Workout completion",
+          "waterIntake": "Water intake",
+          "checkinNotes": "Check-in notes",
+          "nextFocus": "Next week focus",
+          "latestPhotos": "Latest photos"
+        }
+      },
+      "template": {
+        "label": "Message template",
+        "hint": "Write the message. Items above will be added/removed automatically based on your selection.",
+        "defaults": "Great work this week, {name}! Keep it up."
+      }
+    },
+    "reminders": {
+      "title": "Reminders (Firebase)",
+      "desc": "Add reminders to be sent as notifications at scheduled times.",
+      "list": "Reminders list",
+      "add": "Add reminder",
+      "titlePh": "Example: Drink a glass of water",
+      "examples": {
+        "water": "Drink a glass of water"
+      },
+      "firebaseNote": "Notifications are sent via Firebase Cloud Messaging after server keys are configured."
+    }
+  },
+  "dashboard": {
+    "filters": {
+      "from": "From",
+      "to": "To",
+      "adminOptional": "Admin (optional)",
+      "adminPlaceholder": "Admin ID (UUID)",
+      "apply": "Apply",
+      "reloadPreview": "Reload preview"
+    },
+    "error": {
+      "previewFallback": "Failed to load stats — displaying preview data."
+    },
+    "kpi": {
+      "totalClients": "Total clients",
+      "activeClients": "Active clients",
+      "newInRange": "New in range",
+      "churned": "Churned",
+      "formSubmissions": "Form submissions",
+      "unreadNotices": "Unread notices",
+      "assetsUploaded": "Assets uploaded",
+      "pendingVideos": "Pending videos"
+    },
+    "charts": {
+      "usersCreatedDaily": {
+        "title": "User creation (daily)"
+      },
+      "duo": {
+        "title": "Workout volume vs Meal logs",
+        "exerciseVolume": "Exercise volume",
+        "mealLogs": "Meal logs"
+      }
+    },
+    "donuts": {
+      "memberships": {
+        "title": "Memberships"
+      },
+      "status": {
+        "title": "User status"
+      }
+    },
+    "gauge": {
+      "activeRate": {
+        "title": "Active client rate",
+        "tooltip": "Active percentage",
+        "caption": "of clients are active"
+      }
+    },
+    "list": {
+      "memberships": {
+        "title": "Membership details"
+      },
+      "status": {
+        "title": "Status details"
+      },
+      "topConversations": {
+        "title": "Top conversations"
+      }
+    },
+    "review": {
+      "title": "Review list",
+      "weeklyReports": "Weekly reports awaiting review",
+      "videos": "Workout videos pending review",
+      "foodSuggestions": "Food suggestions pending review"
+    },
+    "membership": {
+      "basic": "Basic",
+      "pro": "Pro",
+      "elite": "Elite",
+      "trial": "Trial"
+    },
+    "status": {
+      "active": "Active",
+      "idle": "Idle",
+      "suspended": "Suspended",
+      "churned": "Churned"
+    },
+    "conv": {
+      "nutritionQA": "Nutrition Q&A",
+      "formSubmissions": "Form submissions",
+      "workoutReviews": "Workout reviews",
+      "general": "General",
+      "support": "Support"
+    }
+  },
+  "client360": {
+    "tabs": {
+      "overview": "Overview",
+      "measurements": "Measurements",
+      "progress": "Progress",
+      "workouts": "Workouts",
+      "nutrition": "Nutrition",
+      "logs": "Logs",
+      "reports": "Reports"
+    },
+    "empty": {
+      "clientNotFound": {
+        "title": "Client not found",
+        "subtitle": "We couldn't find data for this client."
+      }
+    },
+    "workouts": {
+      "title": "Workouts",
+      "empty": {
+        "title": "No workout plans",
+        "subtitle": "Add a workout day to get started."
+      },
+      "exercisesShort": "Exercise",
+      "video": "Video",
+      "rest": "Rest {s}s",
+      "more": "Additional exercise",
+      "unnamedDay": "Unnamed day",
+      "unnamedExercise": "Unnamed exercise"
+    },
+    "common": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "overview": {
+      "noPhone": "No phone number"
+    },
+    "measurements": {
+      "title": "Measurement log",
+      "date": "Date",
+      "weight": "Weight",
+      "waist": "Waist",
+      "chest": "Chest",
+      "hips": "Hips",
+      "arms": "Arms",
+      "thighs": "Thighs",
+      "empty": {
+        "title": "No measurements",
+        "subtitle": "Add measurements to start tracking progress."
+      },
+      "addTitle": "Add measurement",
+      "fields": {
+        "date": "Date",
+        "weight": "Weight",
+        "waist": "Waist",
+        "chest": "Chest",
+        "hips": "Hips",
+        "arms": "Arms",
+        "thighs": "Thighs"
+      },
+      "toast": {
+        "created": "Measurement added successfully"
+      }
+    },
+    "progress": {
+      "exerciseProgress": "Exercise progress",
+      "totalWorkouts": "Total workouts",
+      "personalRecords": "Personal records",
+      "consistency": "Consistency",
+      "bodyProgress": "Body progress"
+    },
+    "nutrition": {
+      "title": "Nutrition",
+      "empty": {
+        "title": "No nutrition plans",
+        "subtitle": "Add a nutrition plan to track calories and macros."
+      },
+      "targets": "Nutrition targets",
+      "noTargets": "No nutrition targets."
+    },
+    "logs": {
+      "title": "Meal logs",
+      "last30": "Last 30 days",
+      "loading": "Loading…",
+      "count": "Record count"
+    },
+    "reports": {
+      "title": "Nutrition reports",
+      "generate": "Generate report",
+      "loading": "Loading reports…",
+      "period": "Period",
+      "empty": {
+        "title": "No reports",
+        "subtitle": "Generate a new report to view the summary."
+      }
+    },
+    "actions": {
+      "open": "Open",
+      "edit": "Edit",
+      "refresh": "Refresh",
+      "view": "View",
+      "download": "Download",
+      "cancel": "Cancel",
+      "add": "Add"
+    },
+    "metrics": {
+      "weight": "Weight",
+      "waist": "Waist",
+      "chest": "Chest",
+      "hips": "Hips",
+      "arms": "Arms",
+      "thighs": "Thighs"
+    },
+    "summary": {
+      "header": {
+        "title": "Stats · Summary",
+        "client": "Client:",
+        "coach": "Coach",
+        "phone": "Phone",
+        "email": "Email",
+        "separator": "·",
+        "lastLogin": "Last login:",
+        "arrow": "→"
+      },
+      "snapshot": {
+        "title": "Quick view",
+        "subtitle": "A quick summary of current status",
+        "daysToExpiry": "Days until expiry",
+        "elapsed": "Since start",
+        "latestWeight": "Latest weight",
+        "latestWaist": "Latest waist",
+        "totalCheckins": "Total check-ins"
+      },
+      "trend": {
+        "title": "Weight trend",
+        "subtitle": "Weight change across recent measurements",
+        "legend": {
+          "current": "Current",
+          "min": "Min",
+          "max": "Max",
+          "latestPoint": "Latest point",
+          "otherPoints": "Other points"
+        },
+        "axis": {
+          "y": "Weight (kg)"
+        }
+      },
+      "workout": {
+        "title": "Workout plan",
+        "subtitle": "Active plan & summary",
+        "daysShort": "day",
+        "exercisesShort": "exercise"
+      },
+      "meal": {
+        "title": "Meal plan",
+        "subtitle": "Active plan & summary",
+        "daysShort": "day",
+        "mealsShort": "meal"
+      },
+      "checkins": {
+        "title": "Latest check-ins",
+        "subtitle": "Most recent submitted activities",
+        "empty": "No check-ins yet."
+      },
+      "identity": {
+        "title": "Identity & membership",
+        "subtitle": "Basic client information",
+        "client": "Client",
+        "membership": "Membership",
+        "gender": "Gender",
+        "phone": "Phone"
+      },
+      "units": {
+        "kg": "kg",
+        "cm": "cm",
+        "dayShort": "d"
+      },
+      "common": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "hyphen": "—",
+        "na": "Not available"
+      }
+    }
+  },
+  "workoutsProgress": {
+    "title": "Workout progress",
+    "subtitle": "Performance summary & session adherence",
+    "window": "Last {d} days",
+    "loading": "Loading...",
+    "empty": "No data available to display.",
+    "kpi": {
+      "title": "Overview",
+      "subtitle": "Updated: {date}",
+      "adherence": "Adherence",
+      "daysTrained": "{n} training days",
+      "volumeTotal": "Total volume",
+      "avgPerSession": "Avg/session: {n}",
+      "sessions": "Sessions",
+      "avgSetsPerSession": "Sets/session: {n}",
+      "lastWorkout": "Last workout",
+      "streak": "Streak: {n} days"
+    },
+    "sessions": {
+      "title": "Recent sessions",
+      "subtitle": "Last 8 sessions",
+      "volume": "Volume",
+      "setsShort": "sets",
+      "sets": "{d} of {t} sets",
+      "exercises": "Top exercises"
+    },
+    "top": {
+      "byAttempts": "Most repeated (attempts count)",
+      "byVolume": "Highest volume"
+    },
+    "prs": {
+      "title": "Personal Records (PRs)",
+      "subtitle": "Total: {n}",
+      "e1rm": "Estimated 1RM: {n}",
+      "weight": "Weight: {n}",
+      "reps": "Reps: {n}"
+    },
+    "e1rm": {
+      "title": "Estimated 1RM trends",
+      "subtitle": "Workout window: {d} days"
+    }
+  },
+  "nutritionProgress": {
+    "title": "Nutrition progress",
+    "window30": "Last 30 days",
+    "empty": "No data available currently.",
+    "kpi": {
+      "title": "Overview",
+      "subtitle": "Summary of meal logs & eating behavior",
+      "mealsLogged": "Meals logged",
+      "daysCovered": "Days recorded: {n}",
+      "adherenceAvg": "Average adherence",
+      "scale5": "Scale from 1 to 5",
+      "supplements": "Supplements",
+      "taken": "Taken",
+      "lastLog": "Last log",
+      "latestHint": "Latest day logged"
+    },
+    "adherence": {
+      "title": "Adherence trend",
+      "subtitle": "Daily adherence average for the last 14 days",
+      "caption": "Higher value means better adherence to meals & the plan"
+    },
+    "mealsDensity": {
+      "title": "Meal density",
+      "subtitle": "Number of meals logged per day"
+    },
+    "topFoods": {
+      "title": "Most frequent foods",
+      "subtitle": "Based on occurrence in meal logs"
+    },
+    "logs": {
+      "title": "Meal log",
+      "subtitle": "Grouped by day",
+      "meal": "Meal",
+      "at": "at",
+      "adherence": "Adherence: {n}/5",
+      "items": "Items",
+      "more": "More",
+      "supplements": "Supplements taken"
+    }
+  },
+  "reportsTab": {
+    "actions": {
+      "view": "View details"
+    },
+    "modal": {
+      "title": "Week details"
+    },
+    "loading": "Loading...",
+    "error": "An error occurred while loading data",
+    "title": "Weekly reports",
+    "subtitle": "Total: {n} report(s)",
+    "empty": "No reports available currently.",
+    "kpi": {
+      "title": "Overview",
+      "subtitle": "Progress report summary",
+      "total": "Total reports",
+      "pages": "Total pages: {n}",
+      "unread": "Unread",
+      "unreadHint": "Reports not yet opened",
+      "withPhotos": "Reports with photos",
+      "withPhotosHint": "Includes any front, side, or back photo",
+      "latestWeek": "Latest week"
+    },
+    "list": {
+      "title": "Grouped reports",
+      "subtitle": "Latest report for each week"
+    },
+    "card": {
+      "weekOf": "Week of",
+      "created": "Created",
+      "updated": "Updated",
+      "read": "Read",
+      "unread": "Unread",
+      "reviewedAt": "Reviewed at"
+    },
+    "diet": {
+      "title": "Diet",
+      "deviation": "Deviation from plan"
+    },
+    "training": {
+      "title": "Training",
+      "sleepEnough": "Sufficient sleep",
+      "intensityOk": "Workout intensity suitable",
+      "shapeChange": "Change in physique",
+      "cardio": "Cardio adherence"
+    },
+    "measurements": {
+      "title": "Measurements",
+      "weight": "Weight",
+      "waist": "Waist",
+      "chest": "Chest"
+    },
+    "photos": {
+      "title": "Progress photos",
+      "placeholder": "No photo: {side}",
+      "front": "Front",
+      "left": "Left",
+      "right": "Right",
+      "back": "Back"
+    },
+    "feedback": {
+      "title": "Coach notes"
+    },
+    "pager": {
+      "showing": "Showing {from}–{to} of {total}",
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "common": {
+      "yes": "Yes",
+      "no": "No"
+    }
+  },
+  "dateRange": {
+    "label": "Date range",
+    "placeholder": "Choose period",
+    "from": "From",
+    "to": "To",
+    "clear": "Clear",
+    "close": "Close",
+    "presets": {
+      "label": "Quick options",
+      "title": "Quick ranges",
+      "last7": "Last 7 days",
+      "last30": "Last 30 days",
+      "thisMonth": "This month",
+      "today": "Today"
+    }
+  },
+  "reminders": {
+    "title": "Reminders",
+    "subtitle": "Manage and organize your personal reminders",
+    "page": {
+      "title": "Reminders"
+    },
+    "telegram": {
+      "title": "Enable Telegram notifications",
+      "desc": "Enable Telegram notifications so reminders reach you even if your browser doesn't support web notifications.",
+      "activate": "Enable Telegram notifications",
+      "waiting": "After pressing Start in Telegram, click here to confirm activation",
+      "enabled": "Telegram notifications enabled.",
+      "error": "An error occurred while enabling Telegram",
+      "unsupported": "Your current browser does not support web notifications. You can enable Telegram notifications to receive reminders.",
+      "loading": "Loading..."
+    },
+    "permission": {
+      "title": "Notifications required",
+      "description": "To use reminders properly and receive alerts in the browser, notifications must be allowed for this site.",
+      "button": "Enable notifications now",
+      "denied": "You previously denied notifications. Click the lock icon near the site address in your browser, then enable notifications.",
+      "unsupported": "Your current browser does not support notifications. Try another browser or device."
+    },
+    "view": {
+      "list": "Reminders",
+      "timeline": "Timeline"
+    },
+    "now": "Now",
+    "passed": "Passed",
+    "before": "Before",
+    "after": "After",
+    "next": "Next",
+    "willStartAfter": "Starts after",
+    "minutesShort": "min",
+    "untitled": "Untitled",
+    "mode": {
+      "once": "Once",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "interval": "Interval",
+      "intervalEvery": "Every",
+      "prayer": "Prayer times"
+    },
+    "interval": {
+      "every1h": "Every hour",
+      "every2h": "Every 2 hours",
+      "every3h": "Every 3 hours",
+      "every4h": "Every 4 hours",
+      "every5h": "Every 5 hours",
+      "every6h": "Every 6 hours",
+      "unit": {
+        "hour": "Hour",
+        "minute": "Minute",
+        "day": "Day"
+      }
+    },
+    "empty": {
+      "day": "No reminders for this day"
+    },
+    "timeline": {
+      "empty": "No scheduled reminders for today",
+      "subtitle": "Timeline for your reminders (Today)",
+      "status": {
+        "past": "Earlier today",
+        "now": "Happening now",
+        "upcoming": "Upcoming"
+      }
+    },
+    "actions": {
+      "openCalendar": "Open calendar",
+      "createNew": "New reminder",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save",
+      "close": "Close",
+      "done": "Done",
+      "add": "Add"
+    },
+    "settings": {
+      "title": "Settings",
+      "sound": "Sound",
+      "preview": "Preview",
+      "defaultSnooze": "Default snooze (minutes)",
+      "quietFrom": "Quiet mode from",
+      "quietTo": "Quiet mode to",
+      "timezone": "Timezone",
+      "city": "City",
+      "country": "Country"
+    },
+    "quick": {
+      "title": "Quick reminder",
+      "after": "After X minutes",
+      "createIn": "Create in",
+      "custom": "Custom…"
+    },
+    "tabs": {
+      "details": "Details",
+      "settings": "Advanced settings"
+    },
+    "form": {
+      "newTitle": "New reminder",
+      "editTitle": "Edit reminder",
+      "addTime": "Add time",
+      "title": "Reminder title",
+      "titlePh": "Write reminder title",
+      "note": "Note",
+      "notePh": "Optional note",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "mode": "Repeat type",
+      "modePh": "Choose repeat type",
+      "times": "Reminder times",
+      "intervalStart": "Start time",
+      "intervalEvery": "Repeats every",
+      "prayer": "Prayer",
+      "beforeAfter": "Before / After",
+      "minutes": "Minutes",
+      "weekdays": "Weekdays",
+      "todayPrayerTimes": "Today's prayer times",
+      "from": "From",
+      "selectMode": "Choose mode",
+      "selectDate": "Pick date",
+      "selectTime": "Pick time",
+      "save": "Save",
+      "cancel": "Cancel",
+      "notes": "Notes",
+      "titlePlaceholder": "Write reminder title",
+      "notesPlaceholder": "Add notes (optional)",
+      "intervalSummary": "Will repeat every"
+    },
+    "templates": {
+      "label": "Quick ready-made templates",
+      "water": {
+        "title": "Drink water",
+        "notes": "Don't forget to drink water throughout the day",
+        "short": "Drink water"
+      },
+      "bills": {
+        "title": "Pay bills",
+        "notes": "Monthly reminder to pay bills",
+        "short": "Bills"
+      },
+      "adhkar": {
+        "title": "Morning Athkar",
+        "notes": "Daily reminder for morning athkar",
+        "short": "Athkar"
+      }
+    },
+    "week": {
+      "quick": {
+        "all": "All days",
+        "none": "None"
+      }
+    },
+    "weekday": {
+      "sun": "Sunday",
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday",
+      "header": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
+      }
+    },
+    "prayer": {
+      "fajr": "Fajr",
+      "dhuhr": "Dhuhr",
+      "asr": "Asr",
+      "maghrib": "Maghrib",
+      "isha": "Isha",
+      "fallback": "Prayer"
+    },
+    "errors": {
+      "title": "Title is required",
+      "mode": "Please select a repeat mode"
+    },
+    "calendar": {
+      "pickDay": "Pick a day",
+      "title": "Calendar",
+      "subtitle": "Click a day to view reminders",
+      "today": "Today",
+      "remindersOf": "Reminders of",
+      "total": "Total reminders:",
+      "noneForDay": "No reminders for this day",
+      "none": "Pick a day to view reminders",
+      "mobileHint": "Tap any day to view its reminders",
+      "remindersShort": "Reminders"
+    }
+  },
+  "my-nutrition": {
+    "gram": "gram",
+    "common": {
+      "loading": "Loading...",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "nutrition": {
+      "header": {
+        "dailyTarget": "Daily target",
+        "todayCalories": "Today's calories",
+        "mealsSelectedDay": "Meals (selected day)",
+        "notes": "Coach notes",
+        "history": "History"
+      },
+      "notFound": {
+        "title": "No nutrition plan available",
+        "description": "There is no active nutrition plan on your account.",
+        "refresh": "Refresh"
+      },
+      "history": {
+        "modalTitle": "Food log"
+      },
+      "notes": {
+        "modalTitle": "Coach notes"
+      },
+      "meal": {
+        "defaultTitle": "Meal {index}",
+        "title": "Meal {index}",
+        "done": "Done",
+        "markAllDone": "Mark entire meal as done",
+        "itemDoneTag": "Done"
+      },
+      "units": {
+        "kcal": "calorie"
+      },
+      "supplements": {
+        "title": "Supplements",
+        "bestWith": "Best with: {value}",
+        "bestWithLabel": "Best with:",
+        "takenTag": "Taken",
+        "markTaken": "Mark as taken",
+        "logTitle": "Supplements"
+      },
+      "inline": {
+        "noItems": "No items. Add items below.",
+        "namePlaceholder": "Name",
+        "quantityPlaceholder": "Quantity (g)",
+        "caloriesPlaceholder": "Calories",
+        "remove": "Remove",
+        "addItem": "Add item"
+      },
+      "errors": {
+        "mealLogFailed": "Failed to log meal",
+        "itemUpdateFailed": "Failed to update item",
+        "supplementUpdateFailed": "Failed to update supplement",
+        "inlineSaveFailed": "Failed to save changes"
+      }
+    }
+  },
+  "timeField": {
+    "label": "Time (HH:MM)",
+    "placeholder": "Enter time in 24-hour format",
+    "openPicker": "Open time picker",
+    "choose": "Select hour and minutes",
+    "close": "Close",
+    "hour": "Hour",
+    "minutes": "Minutes",
+    "selected": "Selected",
+    "done": "Done",
+    "invalid": "Invalid time. Use 24-hour format (HH:MM)."
+  },
+  "PublicPlan": {
+    "index": "Index",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "open": "Open",
+    "close": "Close",
+    "plan": "Plan",
+    "publicShare": "Public share view",
+    "createdAt": "Created at",
+    "days": "Program days",
+    "exercises": "Exercises",
+    "sets": "Sets",
+    "reps": "Reps",
+    "rest": "Rest",
+    "tempo": "Tempo",
+    "watchVideo": "Watch video",
+    "noVideo": "No video",
+    "footerNote": "This page was generated for public viewing.",
+    "loadFailed": "Loading failed",
+    "cantLoad": "Unable to load data.",
+    "retry": "Retry",
+    "noDaysTitle": "No days in this plan",
+    "noDaysSubtitle": "Add days and exercises to display them here.",
+    "share": "Share",
+    "copy": "Copy",
+    "print": "Print",
+    "copied": "Link copied ✅",
+    "copyFail": "Copy failed — copy it manually."
+  },
+  "mobile": {
+    "desktop_required_title": "Desktop Required",
+    "desktop_required_message": "This form is available only on PC for Admin / Coach accounts because the dashboard UI isn’t optimized for mobile.",
+    "desktop_required_guide": "Tip: Open this form on a laptop or desktop device for better experience.",
+    "reload_button": "Try Again"
+  }
 }

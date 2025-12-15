@@ -7,7 +7,7 @@ export async function POST() {
     // Delete the user cookie
     res.cookies.set('user', '', {
       path: '/',
-      maxAge: 0, // immediately expire
+      maxAge: 0, 
     });
 
     return res;
