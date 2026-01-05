@@ -18,7 +18,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 
 
 
-export function FormSection({ title, description, right, children }) {
+function FormSection({ title, description, right, children }) {
 	return (
 		<Card className="rounded-md border bg-background p-4 sm:p-5 shadow-sm">
 			<div className="flex items-start justify-between gap-3">
@@ -72,7 +72,7 @@ export function FormSection2({ title, description, right, children, defaultOpen 
 }
 
 
-export function Field({ label, hint, required, helper, children }) {
+function Field({ label, hint, required, helper, children }) {
 	return (
 		<div className="space-y-[3px]">
 			<div className="flex items-center justify-between gap-2">
@@ -94,11 +94,11 @@ export function Field({ label, hint, required, helper, children }) {
 	)
 }
 
-export function Row2({ children }) {
+function Row2({ children }) {
 	return <div className="grid gap-3 sm:grid-cols-2">{children}</div>
 }
 
-export function ListItemCard({ title, subtitle, onDelete, leftIcon, children }) {
+function ListItemCard({ title, subtitle, onDelete, leftIcon, children }) {
 	return (
 		<div className="rounded-md border bg-background p-3 sm:p-4 space-y-3 shadow-sm">
 			<div className="flex items-start justify-between gap-3">
@@ -144,7 +144,7 @@ function isValidAnchorOrUrl(href) {
 	)
 }
 
-export function NavbarEditor({ block, updateBlock }) {
+ function NavbarEditor({ block, updateBlock }) {
 	const links = useMemo(() => normalizeLinks(block.links), [block.links])
 
 	// safe defaults (won't break old docs)
@@ -342,7 +342,7 @@ export function NavbarEditor({ block, updateBlock }) {
 	)
 }
 
-export function HeroEditor({ block, updateBlock }) {
+ function HeroEditor({ block, updateBlock }) {
 	return (
 		<div className="space-y-4">
 			<div>
@@ -418,7 +418,7 @@ export function HeroEditor({ block, updateBlock }) {
 	)
 }
 
-export function StatsEditor({ block, updateBlock }) {
+function StatsEditor({ block, updateBlock }) {
 	const items = Array.isArray(block.items) ? block.items : []
 
 	return (
@@ -489,7 +489,7 @@ export function StatsEditor({ block, updateBlock }) {
 	)
 }
 
-export function FeaturesEditor({ block, updateBlock }) {
+function FeaturesEditor({ block, updateBlock }) {
 	const items = Array.isArray(block.items) ? block.items : []
 
 	return (
@@ -580,7 +580,7 @@ export function FeaturesEditor({ block, updateBlock }) {
 	)
 }
 
-export function PricingEditor({ block, updateBlock }) {
+function PricingEditor({ block, updateBlock }) {
 	const plans = Array.isArray(block.plans) ? block.plans : []
 
 	return (
@@ -758,7 +758,7 @@ export function PricingEditor({ block, updateBlock }) {
 	)
 }
 
-export function TestimonialsEditor({ block, updateBlock }) {
+function TestimonialsEditor({ block, updateBlock }) {
 	const quotes = Array.isArray(block.quotes) ? block.quotes : []
 
 	return (
@@ -855,7 +855,7 @@ export function TestimonialsEditor({ block, updateBlock }) {
 	)
 }
 
-export function CTAEditor({ block, updateBlock }) {
+function CTAEditor({ block, updateBlock }) {
 	return (
 		<div className="space-y-4">
 			<div>
@@ -898,7 +898,7 @@ export function CTAEditor({ block, updateBlock }) {
 	)
 }
 
-export function FormEditor({ block, updateBlock }) {
+function FormEditor({ block, updateBlock }) {
 	const fields = Array.isArray(block.fields) ? block.fields : []
 
 	return (
@@ -1012,7 +1012,7 @@ export function FormEditor({ block, updateBlock }) {
 	)
 }
 
-export function FAQEditor({ block, updateBlock }) {
+function FAQEditor({ block, updateBlock }) {
 	const items = Array.isArray(block.items) ? block.items : []
 
 	return (
@@ -1084,7 +1084,7 @@ export function FAQEditor({ block, updateBlock }) {
 	)
 }
 
-export function FooterEditor({ block, updateBlock }) {
+function FooterEditor({ block, updateBlock }) {
 	const columns = Array.isArray(block.columns) ? block.columns : []
 	const social = Array.isArray(block.social) ? block.social : []
 
@@ -1202,7 +1202,7 @@ export function FooterEditor({ block, updateBlock }) {
 	)
 }
 
-export function BannerEditor({ block, updateBlock }) {
+function BannerEditor({ block, updateBlock }) {
 	return (
 		<div className="space-y-4">
 			<div>
@@ -1229,7 +1229,7 @@ export function BannerEditor({ block, updateBlock }) {
 	)
 }
 
-export function TextEditor({ block, updateBlock }) {
+function TextEditor({ block, updateBlock }) {
 	return (
 		<div className="space-y-4">
 			<div>
@@ -1272,7 +1272,7 @@ export function TextEditor({ block, updateBlock }) {
 	)
 }
 
-export function HeadingEditor({ block, updateBlock }) {
+function HeadingEditor({ block, updateBlock }) {
 	return (
 		<div className="space-y-4">
 			<div>
@@ -1315,7 +1315,7 @@ export function HeadingEditor({ block, updateBlock }) {
 	)
 }
 
-export function ButtonEditor({ block, updateBlock }) {
+function ButtonEditor({ block, updateBlock }) {
 	return (
 		<div className="space-y-4">
 			<div>
@@ -1348,7 +1348,7 @@ export function ButtonEditor({ block, updateBlock }) {
 	)
 }
 
-export function ImageEditor({ block, updateBlock }) {
+function ImageEditor({ block, updateBlock }) {
 	return (
 		<div className="space-y-4">
 			<div>
@@ -1377,7 +1377,7 @@ export function ImageEditor({ block, updateBlock }) {
 	)
 }
 
-export function VideoEditor({ block, updateBlock }) {
+function VideoEditor({ block, updateBlock }) {
 	return (
 		<div className="space-y-4">
 			<div>
@@ -1410,7 +1410,7 @@ export function VideoEditor({ block, updateBlock }) {
 	)
 }
 
-export function GalleryEditor({ block, updateBlock }) {
+function GalleryEditor({ block, updateBlock }) {
 	const images = Array.isArray(block.images) ? block.images : []
 
 	return (
@@ -1478,7 +1478,7 @@ export function GalleryEditor({ block, updateBlock }) {
 	)
 }
 
-export function SpacerEditor({ block, updateBlock }) {
+function SpacerEditor({ block, updateBlock }) {
 	return (
 		<div className="space-y-4">
 			<div>
@@ -1496,7 +1496,7 @@ export function SpacerEditor({ block, updateBlock }) {
 	)
 }
 
-export function DividerEditor({ block, updateBlock }) {
+function DividerEditor({ block, updateBlock }) {
 	return (
 		<div className="space-y-4">
 			<div>
@@ -1514,7 +1514,7 @@ export function DividerEditor({ block, updateBlock }) {
 	)
 }
 
-export function HTMLEditor({ block, updateBlock }) {
+function HTMLEditor({ block, updateBlock }) {
 	return (
 		<div className="space-y-4">
 			<div>
