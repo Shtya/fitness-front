@@ -39,6 +39,7 @@ export const NAV_HREFS = {
     '/dashboard/billing/subscriptions',
     '/dashboard/billing/withdraw',
     '/dashboard/billing/client-payments',
+    '/dashboard/builder',
   ],
   super_admin: [
     '/dashboard',
@@ -64,9 +65,17 @@ const PUBLIC_PREFIXES = [
   '/auth',
   '/public',
   '/thank-you',
-	/^\/form\/\d+\/submit(?:\/|$)/,
+
+  // existing regex
+  /^\/form\/\d+\/submit(?:\/|$)/,
   /^\/workouts\/plans(?:\/|$)/,
+
+  // ✅ TENANT LANDING PAGES (IMPORTANT)
+  // Matches: /coach1 , /coach1/anything
+  // Excludes: /dashboard, /api, /auth, /_next, etc.
+  /^\/(?!auth|dashboard|api|_next|favicon\.ico|public|thank-you|form|workouts)([^/]+)(?:\/|$)/,
 ];
+
 
 function normalize(p) {
   if (!p) return '/';

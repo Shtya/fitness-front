@@ -1264,6 +1264,9 @@
     }
   },
   "workoutPlans": {
+    "Sets": "Sets",
+    "Reps": "Reps",
+    "Tempo": "Tempo",
     "copySuffix": "(copy)",
     "placeholders": {
       "search": "Search...",
@@ -1408,6 +1411,10 @@
     }
   },
   "MyWorkouts": {
+    "Sets": "Sets",
+    "Reps": "Reps",
+    "Tempo": "Tempo",
+    "tempoHelp": "Tempo = eccentric / pause / concentric (e.g. 3/1/1)",
     "title": "My workouts",
     "subtitle": "Your weekly plan and daily exercises in one place.",
     "listen": "Listen",
@@ -1423,6 +1430,15 @@
     "showVideo": "Show video",
     "showVideoAlt": "Show video 2",
     "alt": "Alt",
+    "days": {
+      "sunday": "Sunday",
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday"
+    },
     "table": {
       "set": "Set",
       "weight": "Weight",

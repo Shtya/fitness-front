@@ -11,6 +11,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { useUser } from '@/hooks/useUser';
 import { useTranslations } from 'next-intl';
+import Providers from '@/context/ReactQuery';
+import Link from 'next/link';
 const DhikrLoading = dynamic(() => import('./DhikrLoading'), { ssr: false });
 const Sidebar = dynamic(() => import('./Sidebar'), { ssr: false });
 const Header = dynamic(() => import('./Header'), { ssr: false });
@@ -23,7 +25,7 @@ export default function Layout({ children }) {
 	const [role, setRole] = useState("user");
 	const [isMobile, setIsMobile] = useState(false);
 	useEffect(() => {
-		const update = () => setIsMobile(window.innerWidth < 768); // md breakpoint
+		const update = () => setIsMobile(window.innerWidth < 1168); // md breakpoint
 		update();
 		window.addEventListener('resize', update);
 		return () => window.removeEventListener('resize', update);
@@ -39,11 +41,11 @@ export default function Layout({ children }) {
 	}, [user]);
 
 	const isAdminOrCoach = role === 'admin' || role === 'coach';
-	const isFormRoute = pathname.startsWith('/auth');
+	const isFormRoute = pathname.startsWith('/auth') || pathname.includes("/dashboard/builder/preview");
 	const blockFormOnMobile = !isFormRoute && isMobile && isAdminOrCoach;
 
 
-	const isAuthRoute = pathname.startsWith('/workouts/plans') || pathname.startsWith('/auth') || pathname.startsWith('/form') || pathname.startsWith('/thank-you') || pathname.startsWith('/site') || pathname === '/';
+	const isAuthRoute = pathname.includes('dashboard/builder') || pathname.startsWith('/workouts/plans') || pathname.startsWith('/auth') || pathname.startsWith('/form') || pathname.startsWith('/thank-you') || pathname.startsWith('/site') || pathname === '/';
 
 	const [sidebarOpen, setSidebarOpen] = useState(false);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -100,12 +102,12 @@ export default function Layout({ children }) {
 
 							<div className="mt-6">
 								<p className="text-sm text-gray-500 mb-4">{t('desktop_required_guide')}</p>
-								<button
+								<Link
 									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-300"
-									onClick={() => window.location.reload()} // refresh or provide further instructions
+									href={"/auth"}
 								>
 									{t('reload_button')}
-								</button>
+								</Link>
 							</div>
 						</div>
 					</div>
@@ -118,29 +120,31 @@ export default function Layout({ children }) {
 
 	return (
 		<GlobalProvider>
-			<div className='relativebg-gradient-to-t from-indigo-50 via-white to-white text-slate-800'>
-				<div className='container !px-0 flex min-h-dvh'>
-					{!isAuthRoute && <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />}
+			<Providers>
+				<div className='relativebg-gradient-to-t from-indigo-50 via-white to-white text-slate-800'>
+					<div className='container !px-0 flex min-h-dvh'>
+						{!isAuthRoute && <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />}
 
-					{/* Main area */}
-					<div className='relative flex-1 min-w-0'>
-						{!isAuthRoute && <Header onMenu={() => setSidebarOpen(true)} />}
+						{/* Main area */}
+						<div className='relative flex-1 min-w-0'>
+							{!isAuthRoute && <Header onMenu={() => setSidebarOpen(true)} />}
 
-						<AnimatePresence mode='wait'>
-							<motion.main key={pathname} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}>
-								<div id='body' className={`${!isAuthRoute && '  h-[calc(100vh-65px)] bg-[#ffffff60] overflow-auto max-md:p-3 p-4 overflow-x-hidden'}`}>
-									<div className='absolute z-[-1]  inset-0 opacity-15' style={{ backgroundImage: 'linear-gradient(rgba(79,70,229,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(79,70,229,0.12) 1px, transparent 1px)', backgroundSize: '12px 12px', backgroundPosition: '-1px -1px' }} />
-									{children}
-								</div>
-							</motion.main>
-						</AnimatePresence>
+							<AnimatePresence mode='wait'>
+								<motion.main key={pathname} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}>
+									<div id='body' className={`${!isAuthRoute && '  h-[calc(100vh-65px)] bg-[#ffffff60] overflow-auto max-md:p-3 p-4 overflow-x-hidden'}`}>
+										<div className='absolute z-[-1]  inset-0 opacity-15' style={{ backgroundImage: 'linear-gradient(rgba(79,70,229,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(79,70,229,0.12) 1px, transparent 1px)', backgroundSize: '12px 12px', backgroundPosition: '-1px -1px' }} />
+										{children}
+									</div>
+								</motion.main>
+							</AnimatePresence>
+						</div>
 					</div>
 				</div>
-			</div>
 
 
-			<ConfigAos />
-			<Toaster position='top-center' />
+				<ConfigAos />
+				<Toaster position='top-center' />
+			</Providers>
 		</GlobalProvider>
 	);
 }

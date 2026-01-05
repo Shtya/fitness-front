@@ -4,13 +4,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TabsPill, spring } from '@/components/dashboard/ui/UI';
-import { Dumbbell, X, Minus, Plus, Video as VideoIcon, Image as ImageIcon, Headphones, Settings as SettingsIcon, Menu as MenuIcon, Upload, CloudOff, Cloud, CheckCircle2 } from 'lucide-react';
+import { Dumbbell, X, Minus, Plus, Video as VideoIcon, Image as ImageIcon, Headphones, Settings as SettingsIcon, Menu as MenuIcon, Upload, CloudOff, Cloud, CheckCircle2, Info } from 'lucide-react';
 import CheckBox from '@/components/atoms/CheckBox';
 import api from '@/utils/axios';
 import weeklyProgram from './exercises';
 import { createSessionFromDay } from '@/components/pages/workouts/helpers';
 import { RestTimerCard } from '@/components/pages/workouts/RestTimerCard';
-// import { SettingsPopup } from '@/components/pages/workouts/SettingsPopup';
 import { AudioHubInline } from '@/components/pages/workouts/AudioHub';
 import { ExerciseList } from '@/components/pages/workouts/ExerciseList';
 import { InlineVideo } from '@/components/pages/workouts/InlineVideo';
@@ -35,6 +34,60 @@ function dateOnlyISO(d = new Date()) {
 	const dd = String(d.getDate()).padStart(2, '0');
 	return `${yyyy}-${mm}-${dd}`;
 }
+function normalizeTempo(raw) {
+	const s = String(raw ?? '').trim();
+	if (!s) return '1/1/1';
+
+	// accept formats: 1/2/4 | 1-2-4 | 1.2.4 | 1 2 4 | 1,2,4
+	const cleaned = s.replace(/[.,\s-]+/g, '/').replace(/\/+/g, '/');
+	const parts = cleaned.split('/').filter(Boolean);
+
+	// allow 3 parts only, numbers 1-20 (you can widen it)
+	if (parts.length !== 3) return '1/1/1';
+	const nums = parts.map(x => Number(x));
+	if (nums.some(n => !Number.isFinite(n) || n <= 0 || n > 20)) return '1/1/1';
+
+	return `${nums[0]}/${nums[1]}/${nums[2]}`;
+}
+function normalizeReps(raw) {
+	const s = String(raw ?? '').trim();
+	if (!s) return '';
+
+	// unify separators to "-"
+	let x = s
+		.toLowerCase()
+		.replace(/[–—]/g, '-') // long dashes
+		.replace(/\bto\b/g, '-') // "to"
+		.replace(/إلى/g, '-') // arabic "to"
+		.replace(/\//g, '-') // sometimes "10/12"
+		.replace(/\s+/g, '');
+
+	// keep only digits and "-"
+	x = x.replace(/[^\d-]/g, '');
+
+	// collapse multiple dashes
+	x = x.replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+	if (!x) return '';
+
+	// if range like "10-12"
+	if (x.includes('-')) {
+		const [a, b] = x.split('-').filter(Boolean);
+		const n1 = Number(a);
+		const n2 = Number(b);
+		if (Number.isFinite(n1) && Number.isFinite(n2) && n1 > 0 && n2 > 0) {
+			const lo = Math.min(n1, n2);
+			const hi = Math.max(n1, n2);
+			return lo === hi ? String(lo) : `${lo}-${hi}`;
+		}
+		return '';
+	}
+
+	// single number
+	const n = Number(x);
+	return Number.isFinite(n) && n > 0 ? String(n) : '';
+}
+
 
 const DAY_INDEX = { SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6 };
 const WEEK_START = 6; // Saturday
@@ -312,21 +365,13 @@ export default function MyWorkoutsPage() {
 
 	// media tab
 	const [activeMedia, setActiveMedia] = useState('image');
-
-	// audio + settings
 	const audioRef = useRef(null);
-	// const [settingsOpen, setSettingsOpen] = useState(false);
-	// const [alertSound, setAlertSound] = useState(DEFAULT_SOUNDS[2]);
 	const ALERT_SOUND = DEFAULT_SOUNDS[2];
 	const [alerting, setAlerting] = useState(false);
 
 	// misc
 	const [audioOpen, setAudioOpen] = useState(false);
-	const [unsaved, setUnsaved] = useState(false); // "queued locally & not synced"
-	const [drawerOpen, setDrawerOpen] = useState(false);
-	const [dayLoading, setDayLoading] = useState(false);
-	const [isPending, startTransition] = useTransition();
-
+	const [unsaved, setUnsaved] = useState(false);
 	// upload modal
 	const [uploadOpen, setUploadOpen] = useState(false);
 
@@ -336,9 +381,7 @@ export default function MyWorkoutsPage() {
 
 	// sync status
 	const [syncing, setSyncing] = useState(false);
-	const [lastSyncStatus, setLastSyncStatus] = useState(''); // '', 'ok', 'error'
-
-	// Track completed exercises
+	const [lastSyncStatus, setLastSyncStatus] = useState('');
 	const [completedExercises, setCompletedExercises] = useState(new Set());
 
 	useEffect(() => {
@@ -532,7 +575,17 @@ export default function MyWorkoutsPage() {
 
 				const dayProgram = byKey[initialDayId] || weeklyProgram[initialDayId] || { id: initialDayId, name: t('workout') };
 				let session = createSessionFromDay(dayProgram);
+				const firstId = session.exercises[0]?.id;
+				setCurrentExId(firstId);
+
+				if (firstId) {
+					const firstEx = session.exercises.find(e => e.id === firstId);
+					const desired = firstEx?.targetSets ?? 1;
+					session = ensureSetsCountForExercise(session, firstId, desired);
+				}
+
 				setWorkout(session);
+
 				setCurrentExId(session.exercises[0]?.id);
 
 				if (session?.exercises?.length) preloadMedia(session.exercises);
@@ -603,8 +656,6 @@ export default function MyWorkoutsPage() {
 	// Change day
 	const changeDay = useCallback(
 		async dayId => {
-			setDayLoading(true);
-			startTransition(() => setSelectedDay(dayId));
 			try {
 				const raw = plan?.program?.days || [];
 				const byKey = Object.fromEntries(raw.map(d => [String(d.dayOfWeek ?? '').toLowerCase(), d]));
@@ -636,7 +687,6 @@ export default function MyWorkoutsPage() {
 			} catch (e) {
 				console.error(e);
 			} finally {
-				setDayLoading(false);
 			}
 		},
 		[plan, preloadMedia, USER_ID, applyInitialRecordsWithDone, applyLocalQueuedSnapshotIfAny, t],
@@ -762,22 +812,6 @@ export default function MyWorkoutsPage() {
 		[currentExId, USER_ID],
 	);
 
-	const buildDailyPRPayload = useCallback(
-		exName => {
-			const records = (workout?.sets || [])
-				.filter(s => s.exName === exName)
-				.map(s => ({
-					id: s.serverId,
-					weight: Number(s.weight) || 0,
-					reps: Number(s.reps) || 0,
-					done: !!s.done,
-					setNumber: Number(s.set) || 1,
-				}));
-			return { exerciseName: exName, date: todayISO(), records };
-		},
-		[workout?.sets],
-	);
-
 	// Try sync entire queue (optionally show status)
 	const trySyncQueue = useCallback(
 		async (showStatus = true) => {
@@ -829,19 +863,31 @@ export default function MyWorkoutsPage() {
 		return () => window.removeEventListener('focus', onFocus);
 	}, [trySyncQueue]);
 
-	// useEffect(() => {
-	// 	const el = audioRef.current;
-	// 	if (el) {
-	// 		el.src = alertSound;
-	// 		el.load();
-	// 	}
-	// }, [alertSound]);
-
 	const hasExercises = !!workout?.exercises?.length;
 	const currentExercise = useMemo(() => workout?.exercises?.find(e => e.id === currentExId), [workout?.exercises, currentExId]);
 	const currentSets = useMemo(() => (workout?.sets || []).filter(s => s.exId === currentExId), [workout?.sets, currentExId]);
+	const exTargetSets = useMemo(() => {
+		const n = Number(currentExercise?.targetSets ?? 0);
+		if (!Number.isFinite(n) || n <= 0) return 1;
+		return Math.min(20, Math.max(1, Math.round(n)));
+	}, [currentExercise?.targetSets]);
+
+	const exTempo = useMemo(() => normalizeTempo(currentExercise?.tempo), [currentExercise?.tempo]);
+	const exReps = useMemo(() => normalizeReps(currentExercise?.targetReps), [currentExercise?.targetReps]);
 
 	const weekOrder = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+	// const dayTabs = useMemo(() => {
+	// 	const raw = plan?.program?.days || [];
+	// 	const byKey = Object.fromEntries(raw.map(d => [String(d.dayOfWeek ?? '').toLowerCase(), d]));
+	// 	return weekOrder
+	// 		.filter(d => byKey[d] || weeklyProgram[d])
+	// 		.map(d => ({
+	// 			key: d,
+	// 			label: d,
+	// 			name: byKey[d]?.name || weeklyProgram[d]?.name || d,
+	// 		}));
+	// }, [plan]);
+
 	const dayTabs = useMemo(() => {
 		const raw = plan?.program?.days || [];
 		const byKey = Object.fromEntries(raw.map(d => [String(d.dayOfWeek ?? '').toLowerCase(), d]));
@@ -849,10 +895,11 @@ export default function MyWorkoutsPage() {
 			.filter(d => byKey[d] || weeklyProgram[d])
 			.map(d => ({
 				key: d,
-				label: d,
-				name: byKey[d]?.name || weeklyProgram[d]?.name || d,
+				label: t(`days.${d}`), // ✅ translated label
+				name: byKey[d]?.name || weeklyProgram[d]?.name || t(`days.${d}`),
 			}));
-	}, [plan]);
+	}, [plan, t]);
+
 
 	const Actions = ({ className }) => (
 		<div className={`flex items-center gap-2 ${className}`}>
@@ -969,7 +1016,37 @@ export default function MyWorkoutsPage() {
 		};
 	}, []);
 
+	const ensureSetsCountForExercise = useCallback((w, exId, desired) => {
+		if (!w || !exId) return w;
+		const d = Math.max(1, Math.min(20, Number(desired) || 1));
+		const existing = w.sets.filter(s => s.exId === exId);
+		const ex = w.exercises.find(e => e.id === exId);
 
+		// if equal, return
+		if (existing.length === d) return w;
+
+		// remove extras
+		let nextSets = w.sets.filter(s => !(s.exId === exId && Number(s.set) > d));
+
+		// add missing
+		for (let i = existing.length + 1; i <= d; i++) {
+			nextSets.push({
+				id: `${exId}-set${i}`,
+				exId,
+				exName: ex?.name || t('exerciseFallback'),
+				set: i,
+				targetReps: exReps || ex?.targetReps || '10',
+				weight: 0,
+				reps: 0,
+				effort: null,
+				done: false,
+				pr: false,
+				restTime: Number.isFinite(ex?.rest ?? ex?.restSeconds) ? ex?.rest ?? ex?.restSeconds : 90,
+			});
+		}
+
+		return { ...w, sets: nextSets };
+	}, [t, exReps]);
 	if (loading) return <SkeletonLoader />;
 
 	return (
@@ -1001,7 +1078,7 @@ export default function MyWorkoutsPage() {
 					</div>
 
 					<div className=' mt-2 md:mt-4 flex items-center justify-between '>
-						<TabsPill className='!rounded-lg' slice={3} id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={changeDay} />
+						<TabsPill className='!rounded-lg' sliceInPhone={false} id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={changeDay} />
 						<Actions className={'max-md:!hidden'} />
 					</div>
 				</div>
@@ -1010,15 +1087,15 @@ export default function MyWorkoutsPage() {
 
 			{/* <AudioHubInline hidden={hidden} setHidden={setHidden} alerting={alerting} setAlerting={setAlerting} open={audioOpen} onClose={() => setAudioOpen(false)} /> */}
 			<AudioHubInline
-  t={t}
-  hidden={hidden}
-  setHidden={setHidden}
-  alerting={alerting}
-  setAlerting={setAlerting}
-  open={audioOpen}
-  onClose={() => setAudioOpen(false)}
-  key="audio-hub" // Add a key to force clean remounts when props change
-/>
+				t={t}
+				hidden={hidden}
+				setHidden={setHidden}
+				alerting={alerting}
+				setAlerting={setAlerting}
+				open={audioOpen}
+				onClose={() => setAudioOpen(false)}
+				key="audio-hub" // Add a key to force clean remounts when props change
+			/>
 			{/* WORKOUT ONLY */}
 			<motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
 				<div className='flex flex-col lg:flex-row gap-4'>
@@ -1087,6 +1164,7 @@ export default function MyWorkoutsPage() {
 												onPick={ex => {
 													setCurrentExId(ex.id);
 													setActiveMedia('image');
+													setWorkout(w => ensureSetsCountForExercise(w, ex.id, ex?.targetSets ?? 1));
 													applyLocalQueuedSnapshotIfAny();
 												}}
 												completedExercises={completedExercises}
@@ -1095,6 +1173,35 @@ export default function MyWorkoutsPage() {
 										</div>
 										<RestTimerCard alerting={alerting} setAlerting={setAlerting} initialSeconds={Number.isFinite(currentExercise?.restSeconds) ? currentExercise?.restSeconds : Number.isFinite(currentExercise?.rest) ? currentExercise?.rest : 90} audioEl={audioRef} className=' mt-2 ' />
 									</div>
+
+									{/* Exercise Meta (Sets / Reps / Tempo) */}
+									<div className="relative z-[100] mt-3 mb-2 flex flex-wrap items-center gap-2">
+										{/* Sets */}
+										<span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700">
+											<span className="font-semibold">{t('Sets')}:</span>
+											<span className="tabular-nums">{exTargetSets}</span>
+										</span>
+
+										{/* Reps */}
+										<span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700">
+											<span className="font-semibold">{t('Reps')}:</span>
+											<span className="tabular-nums">{exReps || '—'}</span>
+										</span>
+
+										{/* Tempo + info */}
+										<span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700">
+											<span className="font-semibold">{t('Tempo')}:</span>
+											<span className="tabular-nums">{exTempo}</span>
+
+											<span className="relative group inline-flex">
+												<Info size={14} className="text-slate-500" />
+												<span className="pointer-events-none absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 shadow-lg opacity-0 group-hover:opacity-100 transition">
+													{t('tempoHelp')}
+												</span>
+											</span>
+										</span>
+									</div>
+
 
 									{/* Sets table */}
 									<div className='max-md:mb-2 md:mb-5 mt-3 rounded-lg border border-slate-200 overflow-hidden bg-white'>
@@ -1170,7 +1277,7 @@ export default function MyWorkoutsPage() {
 																<div className='relative inline-block'>
 																	<input
 																		type='text'
-																		value={getBufferedValue(s.id, 'reps', s.reps)}
+																		value={getBufferedValue(s.id, 'reps', s.reps) || exReps}
 																		onChange={e => handleInputChange(s.id, 'reps', e.target.value)}
 																		onFocus={e => e.target.select()}
 																		onBlur={() => handleInputBlur(s.id, 'reps')}
@@ -1212,6 +1319,7 @@ export default function MyWorkoutsPage() {
 																		tabIndex={-1}>
 																		<Plus size={16} />
 																	</button>
+
 																</div>
 															</td>
 
@@ -1277,6 +1385,7 @@ export default function MyWorkoutsPage() {
 							onPick={ex => {
 								setCurrentExId(ex.id);
 								setActiveMedia('image');
+								setWorkout(w => ensureSetsCountForExercise(w, ex.id, ex?.targetSets ?? 1));
 								applyLocalQueuedSnapshotIfAny();
 							}}
 							completedExercises={completedExercises}

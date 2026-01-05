@@ -11,7 +11,7 @@ import Select from '@/components/atoms/Select';
 import { Notification } from '@/config/Notification';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 import { PrettyPagination } from '@/components/dashboard/ui/Pagination';
-import Input from '@/components/atoms/Input';
+import Input, { Input2 } from '@/components/atoms/Input';
 import { ExercisePicker } from '@/components/pages/dashboard/plans/ExercisePicker';
 import { useTranslations } from 'next-intl';
 import { useAdminClients } from '@/hooks/useHierarchy';
@@ -42,6 +42,10 @@ function buildPayloadFromPlan(sourcePlan, { userId, nameSuffix = ' (copy)', isAc
 		exercises: (d.exercises || []).map((ex, idx) => ({
 			order: ex.order || ex.orderIndex || idx + 1,
 			exerciseId: ex.exerciseId || ex?.exercise?.id || ex?.id,
+
+			targetSets: ex.targetSets ?? 3,
+			targetReps: ex.targetReps ?? 12,
+			tempo: ex.tempo ?? '1/1/1',
 		})),
 	}));
 
@@ -765,6 +769,11 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 				img: e.img,
 				category: e.exercise?.category || e.category || null,
 				order: e.order || e.orderIndex || j + 1,
+
+				// NEW
+				targetSets: e.targetSets ?? 3,
+				targetReps: e.targetReps ?? 12,
+				tempo: e.tempo ?? '1/1/1',
 			})),
 		}));
 
@@ -859,6 +868,11 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 						name: x.name,
 						category: x.category || null,
 						img: x.img,
+
+						// NEW defaults
+						targetSets: 3,
+						targetReps: 12,
+						tempo: '1/1/1',
 					}));
 				const merged = [...keptExisting, ...newOnes].map((ex, idx) => ({
 					...ex,
@@ -911,6 +925,10 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 					exercises: d.exercises.map(ex => ({
 						order: ex.order,
 						exerciseId: ex.exerciseId,
+						// ✅ send these too
+						targetSets: ex.targetSets === '' || ex.targetSets == null ? null : Number(ex.targetSets),
+						targetReps: ex.targetReps === '' || ex.targetReps == null ? null : Number(ex.targetReps),
+						tempo: ex.tempo === '' || ex.tempo == null ? null : String(ex.tempo).trim(),
 					})),
 				})),
 			},
@@ -1024,9 +1042,6 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 										<div className='flex items-center justify-between gap-3'>
 											<div className='flex min-w-0 items-center gap-3'>
 												<GripVertical className='w-4 h-4 shrink-0 cursor-grab text-slate-400' />
-												{/* <div className='w-[35px] '>
-                          <Img src={ex?.img} showBlur={false} className='w-full' />
-                        </div> */}
 												<div className='relative w-[45px] group'>
 													<Img src={ex?.img} showBlur={false} className='w-full rounded' />
 
@@ -1049,25 +1064,122 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 												) : null}
 											</div>
 
-											{/* Remove exercise */}
-											<button
-												type='button'
-												onClick={() =>
-													setDays(arr =>
-														arr.map(x =>
-															x.id === d.id
-																? {
-																	...x,
-																	exercises: x.exercises.filter(e => e.exerciseId !== ex.exerciseId),
-																}
-																: x,
-														),
-													)
-												}
-												className={iconBtn}
-												title={t('actions.delete')}>
-												<Trash2 className='w-4 h-4' />
-											</button>
+
+											<div className='flex items-center gap-2' >
+												{/* Sets / Reps / Tempo */}
+												<div className='w-full sm:w-auto'>
+													{(() => {
+														const setsVal = ex.targetSets ?? '';
+														const repsVal = ex.targetReps ?? '';
+														const tempoVal = ex.tempo ?? '';
+
+														const setExerciseField = (exerciseId, patch) => {
+															setDays(arr =>
+																arr.map(day =>
+																	day.id !== d.id
+																		? day
+																		: {
+																			...day,
+																			exercises: day.exercises.map(e =>
+																				e.exerciseId !== exerciseId ? e : { ...e, ...patch },
+																			),
+																		},
+																),
+															);
+														};
+
+														const normalizeIntOrDefault = (v, def) => {
+															const s = String(v ?? '').trim();
+															if (!s) return def;
+															const n = Number(s);
+															if (!Number.isFinite(n) || n <= 0) return def;
+															return Math.trunc(n);
+														};
+
+														const normalizeTempoOrDefault = (v, def) => {
+															const s = String(v ?? '').trim();
+															if (!s) return def;
+															if (/^\d+\/\d+\/\d+$/.test(s)) return s;
+															return def;
+														};
+
+														return (
+															<div className='mt-2 sm:mt-0 sm:ml-auto grid grid-cols-3 gap-1.5 min-w-[210px] max-w-[260px]'>
+																<MiniField
+																	inputMode='numeric'
+																	type="number"
+																	placeholder={t('Sets')}
+																	value={setsVal}
+																	onChange={e =>
+																		setExerciseField(ex.exerciseId, { targetSets: e.target.value })
+																	}
+																	onBlur={() => {
+																		const s = String(ex.targetSets ?? '').trim();
+																		if (!s) return; // ✅ لو فاضي سيبه فاضي
+																		setExerciseField(ex.exerciseId, {
+																			targetSets: normalizeIntOrDefault(ex.targetSets, 3),
+																		});
+																	}}
+																/>
+
+																<MiniField
+																	inputMode='numeric'
+																	placeholder={t('Reps')}
+																	value={repsVal}
+																	onChange={e =>
+																		setExerciseField(ex.exerciseId, { targetReps: e.target.value })
+																	}
+																	onBlur={() => {
+																		const s = String(ex.targetReps ?? '').trim();
+																		if (!s) return; // ✅ لو فاضي سيبه فاضي
+																		setExerciseField(ex.exerciseId, {
+																			targetReps: normalizeIntOrDefault(ex.targetReps, 12),
+																		});
+																	}}
+																/>
+
+																<MiniField
+																	placeholder={t('Tempo')}
+																	value={tempoVal}
+																	onChange={e =>
+																		setExerciseField(ex.exerciseId, { tempo: e.target.value })
+																	}
+																	onBlur={() => {
+																		const s = String(ex.tempo ?? '').trim();
+																		if (!s) return; // ✅ لو فاضي سيبه فاضي
+																		setExerciseField(ex.exerciseId, {
+																			tempo: normalizeTempoOrDefault(ex.tempo, '1/1/1'),
+																		});
+																	}}
+																/>
+															</div>
+														);
+													})()}
+												</div>
+
+
+
+												{/* Remove exercise */}
+												<button
+													type='button'
+													onClick={() =>
+														setDays(arr =>
+															arr.map(x =>
+																x.id === d.id
+																	? {
+																		...x,
+																		exercises: x.exercises.filter(e => e.exerciseId !== ex.exerciseId),
+																	}
+																	: x,
+															),
+														)
+													}
+													className={iconBtn}
+													title={t('actions.delete')}>
+													<Trash2 className='w-4 h-4' />
+												</button>
+
+											</div>
 										</div>
 									</Reorder.Item>
 								))}
@@ -1098,3 +1210,52 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 		</div>
 	);
 }
+
+
+
+
+const MiniField = memo(function MiniField({
+	value,
+	placeholder,
+	inputMode,
+	onChange,
+	onBlur,
+	className = '',
+	type = 'text'
+}) {
+	const hasValue = String(value ?? '').trim().length > 0;
+
+	return (
+		<div className="relative w-full">
+			{/* Floating label */}
+			<label
+				className={[
+					'absolute left-2 px-1 text-[10px] transition-all bg-white pointer-events-none',
+					hasValue
+						? 'top-[-6px] !bg-[linear-gradient(to_bottom,#f1f5f9_50%,#ffffff_50%)] text-indigo-500'
+						: 'top-1/2 -translate-y-1/2 text-slate-400 opacity-0'
+				].join(' ')}
+			>
+				{placeholder}
+			</label>
+
+			<input
+				value={value ?? ''}
+				inputMode={inputMode}
+				type={type}
+				placeholder={hasValue ? '' : placeholder}
+				onChange={onChange}
+				onBlur={onBlur}
+				className={[
+					'h-8 w-full rounded-md border px-2 text-[12px]',
+					'bg-white outline-none transition',
+					'focus:ring-4 focus:ring-slate-400/20',
+					hasValue
+						? 'border-indigo-300 hover:border-indigo-400'
+						: 'border-slate-200 hover:border-slate-300',
+					className
+				].join(' ')}
+			/>
+		</div>
+	);
+});
