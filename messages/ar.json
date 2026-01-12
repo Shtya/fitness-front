@@ -1430,7 +1430,7 @@
     "showVideo": "عرض الفيديو",
     "showVideoAlt": "عرض الفيديو 2",
     "alt": "بديل",
-		 "days": {
+    "days": {
       "sunday": "الأحد",
       "monday": "الإثنين",
       "tuesday": "الثلاثاء",
@@ -2904,179 +2904,6 @@
     "copyFail": "تعذّر النسخ — انسخه يدويًا."
   },
 
-  "billing": {
-    "title": "الفواتير والمحفظة",
-    "subtitle": "إدارة جميع دفعات الاشتراك ودفعات العملاء من مكان واحد",
-    "badge": "لوحة تحكم الفواتير",
-
-    "tabs": {
-      "overview": "نظرة عامة",
-      "subscriptions": "الاشتراكات",
-      "clientPayments": "دفعات العملاء"
-    },
-
-    "common": {
-      "enabled": "مفعل ✓",
-      "disabled": "معطل",
-      "unnamed": "بدون اسم",
-      "loading": "جاري التحميل...",
-      "prev": "السابق",
-      "next": "التالي",
-      "page": "الصفحة",
-      "total": "الإجمالي",
-      "reset": "إعادة تعيين",
-      "delete": "حذف",
-
-      "refresh": "تحديث",
-      "count": "العدد"
-    },
-
-    "errors": {
-      "load": "حدث خطأ في تحميل البيانات",
-      "loadSubscription": "حدث خطأ في تحميل الاشتراك",
-      "renew": "حدث خطأ في تجديد الاشتراك",
-      "loadPayments": "حدث خطأ في تحميل الدفعات",
-      "recordPayment": "حدث خطأ في تسجيل الدفعة",
-      "markPaid": "حدث خطأ في تحديث حالة الدفعة",
-      "deletePayment": "فشل حذف الدفعة"
-    },
-
-    "messages": {
-      "renewed": "تم تجديد الاشتراك بنجاح",
-      "paymentRecorded": "تم تسجيل الدفعة بنجاح"
-    },
-
-    "overview": {
-      "selectAdmin": "معاينة كمسؤول",
-      "selectAdminPh": "اختر مسؤولًا (اختياري)",
-      "selectAdminHint": "عند اختيار مسؤول، سيتم تحميل المحفظة وإحصائيات الفواتير الخاصة به.",
-
-      "kpi": {
-        "balance": "رصيد المحفظة",
-        "totalEarned": "إجمالي الأرباح",
-        "totalWithdrawn": "إجمالي المسحوبات",
-        "pendingPayments": "مدفوعات معلقة",
-        "paidThisMonth": "مدفوع هذا الشهر"
-      },
-
-      "preview": {
-        "recentTransactions": "أحدث المعاملات",
-        "noTransactions": "لا توجد معاملات حتى الآن.",
-        "withdrawals": "أحدث طلبات السحب",
-        "noWithdrawals": "لا توجد طلبات سحب حتى الآن.",
-        "withdrawalId": "طلب"
-      },
-
-      "charts": {
-        "walletTitle": "توزيع المحفظة",
-        "activityTitle": "نشاط الاشتراكات والمعاملات"
-      },
-
-      "wallet": {
-        "currentBalance": "الرصيد الحالي",
-        "totalEarned": "إجمالي المكتسب",
-        "totalWithdrawn": "إجمالي المسحوب"
-      },
-
-      "activity": {
-        "activeSubs": "مشتركين نشطين",
-        "expiredSubs": "مشتركين منتهين",
-        "pendingWithdrawals": "طلبات سحب معلقة",
-        "transactions": "عدد العمليات"
-      },
-
-      "month": {
-        "moneyIn": "الأموال الداخلة هذا الشهر",
-        "moneyOut": "الأموال الخارجة هذا الشهر",
-        "net": "الصافي هذا الشهر",
-        "start": "من"
-      },
-
-      "pendingPayments": "مدفوعات معلقة",
-
-      "quick": {
-        "subscriptionsTitle": "الاشتراكات",
-        "subscriptionsDesc": "إدارة الاشتراك الحالي وخطط الأسعار",
-        "paymentsTitle": "دفعات اشتراك العملاء",
-        "paymentsDesc": "تسجيل ومتابعة دفعات الاشتراك من العملاء",
-        "todayTitle": "ملخص سريع",
-        "totalBalance": "إجمالي الرصيد"
-      }
-    },
-
-    "subscriptions": {
-      "detailsTitle": "تفاصيل الاشتراك",
-      "featuresTitle": "الميزات المتضمنة",
-      "noFeatures": "لا توجد ميزات",
-      "periodTitle": "معلومات الفترة",
-      "startDate": "تاريخ البداية",
-      "endDate": "تاريخ الانتهاء",
-      "autoRenew": "التجديد التلقائي",
-      "renewNow": "تجديد الاشتراك الآن",
-      "cancel": "إلغاء الاشتراك",
-      "notFound": "لم يتم العثور على اشتراك"
-    },
-
-    "payments": {
-      "filtersTitle": "فلاتر عرض دفعات الاشتراك",
-      "chooseClient": "اختر العميل",
-      "historyTitle": "سجل دفعات الاشتراك",
-      "empty": "لا توجد دفعات مسجلة",
-      "clientLabel": "العميل",
-      "period": "الفترة",
-      "markPaid": "تحديث إلى مدفوع",
-      "amount": "المبلغ",
-      "createdAt": "تاريخ الإنشاء",
-      "confirmDelete": "هل أنت متأكد من حذف هذه الدفعة؟",
-
-      "filters": {
-        "from": "من تاريخ",
-        "to": "إلى تاريخ",
-        "paid": "حالة الدفع",
-        "paidAll": "الكل",
-        "paidOnly": "مدفوع فقط",
-        "unpaidOnly": "غير مدفوع فقط"
-      },
-
-      "status": {
-        "pending": "قيد الانتظار",
-        "paid": "مدفوع",
-        "completed": "مدفوع",
-        "failed": "فشل"
-      },
-
-      "sort": {
-        "order": "الترتيب",
-        "newest": "الأحدث أولاً",
-        "oldest": "الأقدم أولاً",
-        "amountHigh": "الأعلى مبلغًا",
-        "amountLow": "الأقل مبلغًا"
-      }
-    },
-
-    "form": {
-      "title": "تسجيل دفعة اشتراك جديدة",
-      "client": "العميل",
-      "chooseClient": "اختر العميل",
-      "amount": "المبلغ ($)",
-      "amountPh": "أدخل المبلغ",
-      "description": "الوصف",
-      "descPh": "مثال: اشتراك شهري لخدمة X",
-      "period": "فترة الاشتراك",
-      "periodFrom": "من تاريخ",
-      "periodTo": "إلى تاريخ",
-      "submit": "تسجيل الدفعة",
-
-      "errors": {
-        "clientRequired": "يرجى اختيار العميل",
-        "amountRequired": "يرجى إدخال المبلغ",
-        "amountNumber": "المبلغ يجب أن يكون رقم",
-        "amountPositive": "المبلغ يجب أن يكون أكبر من صفر",
-        "descRequired": "يرجى إدخال الوصف",
-        "periodBoth": "إذا أدخلت فترة، يجب إدخال تاريخ البداية والنهاية معاً"
-      }
-    }
-  },
   "audioHub": {
     "audio": "الصوت",
     "live": "مباشر",
@@ -3129,5 +2956,245 @@
     "desktop_required_message": "هذا النموذج متاح فقط على أجهزة الكمبيوتر لحسابات المشرفين والمدربين، لأن واجهة لوحة التحكم غير مهيأة للاستخدام على الهاتف المحمول.",
     "desktop_required_guide": "نصيحة: يرجى فتح النموذج من جهاز كمبيوتر أو لابتوب للحصول على أفضل تجربة.",
     "reload_button": "إعادة المحاولة"
+  },
+
+  "billing": {
+    "title": "إدارة الفواتير والمدفوعات",
+    "subtitle": "تتبع وإدارة محفظتك، الاشتراكات، والمدفوعات من مكان واحد",
+    "currency": "ج.م",
+    "tabs": {
+      "overview": "نظرة عامة",
+      "clients": "العملاء",
+      "packages": "إدارة الباقات",
+      "subscriptions": "الاشتراكات",
+      "clientPayments": "مدفوعات العملاء"
+    },
+    "tooltips": {
+      "pageInfo": "هنا يمكنك إدارة كل ما يتعلق بالمدفوعات والاشتراكات والفواتير الخاصة بك"
+    },
+    "kpi": {
+      "walletBalance": {
+        "title": "رصيد المحفظة",
+        "subtitle": "المتاح حالياً"
+      },
+      "totalEarned": {
+        "title": "إجمالي الأرباح",
+        "subtitle": "إجمالي ما تم كسبه"
+      },
+      "moneyInThisMonth": {
+        "title": "الإيرادات هذا الشهر",
+        "subtitle": "الإيرادات الشهرية"
+      }
+    },
+    "packages": {
+      "title": "إدارة الباقات",
+      "description": "قم بإنشاء وتعديل وإدارة باقات الاشتراك الخاصة بك",
+      "addNew": "إضافة باقة جديدة",
+      "edit": "تعديل الباقة",
+      "sendWhatsApp": "إرسال عبر واتساب",
+      "exportAll": "إرسال جميع الباقات",
+      "exportingPdf": "جاري تصدير ملف PDF للباقة:",
+      "exportSuccess": "تم إرسال الباقات بنجاح إلى {phone}",
+      "dialogDescription": "املأ التفاصيل أدناه لإنشاء أو تعديل الباقة",
+      "exportDialog": {
+        "title": "إرسال جميع الباقات",
+        "description": "سيتم إنشاء ملف PDF يحتوي على جميع الباقات وإرساله عبر واتساب",
+        "phoneLabel": "رقم الهاتف",
+        "info": "سيتم إنشاء ملف PDF شامل يحتوي على تفاصيل جميع الباقات المتاحة",
+        "send": "إرسال عبر واتساب",
+        "sending": "جاري الإرسال..."
+      },
+      "form": {
+        "nameAr": "اسم الباقة (عربي)",
+        "nameEn": "اسم الباقة (إنجليزي)",
+        "price": "السعر",
+        "duration": "المدة",
+        "features": "المميزات",
+        "feature": "ميزة",
+        "addFeature": "إضافة ميزة",
+        "monthly": "شهري",
+        "quarterly": "ربع سنوي",
+        "semiAnnual": "نصف سنوي",
+        "annual": "سنوي"
+      }
+    },
+    "clients": {
+      "title": "إدارة العملاء",
+      "description": "تتبع اشتراكات العملاء ومواعيد التجديد",
+      "search": "البحث عن عميل...",
+      "daysLeft": "الأيام المتبقية",
+      "days": "يوم",
+      "renewalDate": "تاريخ التجديد",
+      "sendReminder": "إرسال تذكير",
+      "noResults": "لا توجد نتائج",
+      "management": "إدارة العملاء",
+      "managementSubtitle": "عرض العملاء في جدول مع بحث وترقيم صفحات",
+      "contact": "التواصل",
+      "package": "الباقة",
+      "renewal": "التجديد",
+      "startDate": "تاريخ البداية", 
+      "status": {
+        "active": "نشط",
+        "expiringSoon": "ينتهي قريباً",
+        "renewalDue": "يحتاج للتجديد",
+        "ended": "منتهي"
+      },
+      "stats": {
+        "total": "إجمالي العملاء",
+        "active": "نشط",
+        "renewSoon": "يحتاج تجديد قريبًا",
+        "renewUrgent": "تجديد عاجل",
+        "ended": "منتهي"
+      },
+      "statsSubtitle": {
+        "total": "الكل",
+        "active": "أكثر من 30 يوم",
+        "renewSoon": "من 8 إلى 30 يوم",
+        "renewUrgent": "خلال 7 أيام",
+        "ended": "انتهى بالفعل"
+      },
+      "statsHint": {
+        "total": "إجمالي قاعدة العملاء",
+        "active": "اشتراكات مستقرة",
+        "renewSoon": "تابع قبل الانتهاء",
+        "renewUrgent": "أرسل تذكير الآن",
+        "ended": "فرصة لإعادة الاشتراك"
+      }
+    },
+    "table": {
+      "client": "العميل",
+      "status": "الحالة",
+      "description": "الوصف",
+      "period": "الفترة",
+      "date": "التاريخ",
+      "amount": "المبلغ",
+      "actions": "الإجراءات",
+      "to": "إلى",
+      "view": "عرض"
+    },
+    "subscriptions": {
+      "stats": {
+        "active": "الاشتراكات النشطة",
+        "revenue": "الإيرادات الشهرية",
+        "renewal": "معدل التجديد"
+      }
+    },
+    "transactions": {
+      "recent": "آخر المعاملات",
+      "recentSubtitle": "عرض آخر المعاملات في جدول مع ترقيم صفحات",
+      "empty": "لا توجد معاملات حتى الآن",
+      "examples": {
+        "subscription": "دفع اشتراك شهري - الباقة المميزة",
+        "withdrawal": "طلب سحب إلى الحساب البنكي",
+        "refund": "استرداد - إلغاء الاشتراك",
+        "annual": "دفع اشتراك سنوي - باقة المؤسسات"
+      }
+    },
+    "transactionTypes": {
+      "subscription_payment": "دفع اشتراك",
+      "withdrawal": "سحب",
+      "refund": "استرداد",
+      "deposit": "إيداع",
+      "transfer": "تحويل"
+    },
+    "status": {
+      "completed": "مكتمل",
+      "pending": "قيد الانتظار",
+      "failed": "فشل",
+      "paid": "مدفوع",
+      "unpaid": "غير مدفوع",
+      "approved": "موافق عليه",
+      "rejected": "مرفوض"
+    },
+    "filters": {
+      "title": "تصفية وبحث",
+      "subtitle": "فلترة النتائج بسرعة ووضوح",
+      "client": "العميل",
+      "selectClient": "اختر عميل",
+      "allClients": "جميع العملاء",
+      "fromDate": "من تاريخ",
+      "toDate": "إلى تاريخ",
+      "selectDate": "اختر التاريخ",
+      "paidStatus": "حالة الدفع",
+      "all": "الكل",
+      "paid": "مدفوع",
+      "unpaid": "غير مدفوع",
+      "sort": "ترتيب حسب",
+      "newest": "الأحدث أولاً",
+      "oldest": "الأقدم أولاً",
+      "amountHigh": "المبلغ (الأعلى أولاً)",
+      "amountLow": "المبلغ (الأقل أولاً)",
+      "reset": "إعادة تعيين",
+      "show": "إظهار",
+      "hide": "إخفاء"
+    },
+    "payments": {
+      "history": "سجل المدفوعات",
+      "historyDescription": "سجل كامل بجميع المعاملات",
+      "total": "إجمالي: {count} معاملة",
+      "empty": "لا توجد مدفوعات مسجلة",
+      "emptyDescription": "لم يتم تسجيل أي مدفوعات حتى الآن",
+      "period": "الفترة",
+      "markAsPaid": "تعيين كمدفوع"
+    },
+    "form": {
+      "title": "تسجيل دفعة جديدة",
+      "description": "الوصف",
+      "client": "اختر العميل",
+      "selectClient": "اختر عميل من القائمة",
+      "amount": "المبلغ",
+      "descriptionPlaceholder": "أدخل وصفاً تفصيلياً للدفعة...",
+      "period": "فترة الاشتراك",
+      "optional": "اختياري",
+      "periodFrom": "من تاريخ",
+      "periodTo": "إلى تاريخ",
+      "submit": "تسجيل الدفعة",
+      "submitting": "جاري التسجيل...",
+      "success": "تم تسجيل الدفعة بنجاح!",
+      "errors": {
+        "clientRequired": "يجب اختيار العميل",
+        "amountRequired": "يجب إدخال مبلغ صحيح",
+        "descriptionRequired": "يجب إدخال وصف الدفعة",
+        "periodRequired": "يجب إدخال تاريخ البداية والنهاية معاً",
+        "submitFailed": "فشل في تسجيل الدفعة. حاول مرة أخرى"
+      }
+    },
+    "pagination": {
+      "prev": "السابق",
+      "next": "التالي"
+    },
+    "common": {
+      "viewAll": "عرض الكل",
+      "system": "النظام",
+      "adminUser": "المسؤول",
+      "superAdmin": "المدير العام",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "cancel": "إلغاء",
+      "save": "حفظ",
+      "update": "تحديث",
+      "export": "تصدير",
+      "loading": "جاري التحميل...",
+      "noData": "لا توجد بيانات"
+    },
+    "withdrawals": {
+      "title": "طلبات السحب",
+      "pending": "قيد المراجعة",
+      "approved": "موافق عليه",
+      "rejected": "مرفوض",
+      "rejectionReason": "سبب الرفض",
+      "examples": {
+        "rejectionReason": "الرصيد غير كافٍ للسحب المطلوب"
+      },
+      "actions": {
+        "approve": "الموافقة",
+        "reject": "الرفض"
+      }
+    },
+    "subscription": {
+      "title": "حالة الاشتراك",
+      "endDate": "تاريخ الانتهاء",
+      "renewNow": "تجديد الآن"
+    }
   }
 }

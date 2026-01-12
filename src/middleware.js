@@ -39,7 +39,7 @@ export const NAV_HREFS = {
     '/dashboard/billing/subscriptions',
     '/dashboard/billing/withdraw',
     '/dashboard/billing/client-payments',
-    '/dashboard/builder',
+    '/dashboard/templates',
   ],
   super_admin: [
     '/dashboard',

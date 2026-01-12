@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gym Coach Landing — Template 1</title>
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+      :root {
+        /* Theme variables (will be overridden by injected theme) */
+        --bg: #070a12;
+        --card: rgba(255, 255, 255, 0.06);
+        --text: #e5e7eb;
+        --muted: rgba(229, 231, 235, 0.78);
+        --border: rgba(255, 255, 255, 0.12);
+
+        --primary: #60a5fa;
+        --primaryText: #071018;
+
+        --accent: #22c55e;
+        --accentText: #052e16;
+
+        --ring: rgba(96, 165, 250, 0.45);
+      }
+
+      body {
+        background: radial-gradient(1200px 800px at 20% -10%, rgba(96,165,250,.18), transparent 60%),
+          radial-gradient(900px 600px at 90% 0%, rgba(34,197,94,.15), transparent 55%),
+          var(--bg);
+        color: var(--text);
+      }
+
+      .glass {
+        background: var(--card);
+        border: 1px solid var(--border);
+        backdrop-filter: blur(10px);
+      }
+
+      .ringed:focus {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+
+      /* Inline editing */
+      .editable-wrap {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      [data-editable] {
+        cursor: text;
+        border-radius: 8px;
+        padding: 2px 6px;
+        transition: background 0.2s, outline 0.2s;
+      }
+      [data-editable].active {
+        outline: 2px dashed var(--primary);
+        outline-offset: 4px;
+        background: rgba(96, 165, 250, 0.1);
+      }
+      .edit-icon {
+        font-size: 14px;
+        opacity: 0.55;
+        cursor: pointer;
+        user-select: none;
+        transition: opacity 0.2s, transform 0.2s;
+      }
+      .editable-wrap:hover .edit-icon {
+        opacity: 1;
+        transform: scale(1.05);
+      }
+
+      .floating-editor {
+        position: absolute;
+        z-index: 9999;
+        width: min(420px, calc(100vw - 24px));
+        background: rgba(2, 6, 23, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 16px;
+        padding: 12px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+        display: none;
+      }
+      .floating-editor .row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .floating-editor input {
+        flex: 1;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(11, 16, 32, 0.7);
+        color: white;
+        outline: none;
+      }
+      .floating-editor button {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: none;
+        font-weight: 800;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .floating-editor .save {
+        background: var(--accent);
+        color: var(--accentText);
+      }
+      .floating-editor .delete {
+        background: rgba(255, 255, 255, 0.14);
+        color: white;
+      }
+      .floating-editor .cancel {
+        background: rgba(255, 255, 255, 0.08);
+        color: white;
+      }
+      .floating-editor .hint {
+        font-size: 12px;
+        opacity: 0.72;
+        text-align: left;
+        margin: 0;
+      }
+    </style>
+  </head>
+
+  <body class="min-h-screen">
+    <!-- NAVBAR -->
+    <header class="sticky top-0 z-40">
+      <div class="mx-auto max-w-6xl px-4 py-3">
+        <nav class="glass rounded-2xl px-4 py-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-xl grid place-items-center" style="background: rgba(96,165,250,.18); border: 1px solid rgba(96,165,250,.35);">
+              <span class="text-lg">🏋️</span>
+            </div>
+            <div class="leading-tight">
+              <div class="editable-wrap">
+                <span data-editable class="font-extrabold tracking-tight">CoachPro</span>
+                <span class="edit-icon">✏️</span>
+              </div>
+              <div class="text-sm opacity-75">
+                <span class="editable-wrap">
+                  <span data-editable>Your fitness coaching brand</span>
+                  <span class="edit-icon">✏️</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hidden md:flex items-center gap-5 text-sm">
+            <a href="#features" class="opacity-80 hover:opacity-100">Features</a>
+            <a href="#programs" class="opacity-80 hover:opacity-100">Programs</a>
+            <a href="#testimonials" class="opacity-80 hover:opacity-100">Results</a>
+            <a href="#faq" class="opacity-80 hover:opacity-100">FAQ</a>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button class="rounded-xl px-4 py-2 font-bold ringed" style="background: var(--primary); color: var(--primaryText);">
+              <span class="editable-wrap">
+                <span data-editable>Book a Call</span>
+                <span class="edit-icon">✏️</span>
+              </span>
+            </button>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <!-- HERO -->
+    <section class="mx-auto max-w-6xl px-4 pt-10 pb-14">
+      <div class="grid lg:grid-cols-2 gap-10 items-center">
+        <div>
+          <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-tight">
+            <span class="editable-wrap">
+              <span data-editable>Transform bodies. Build discipline. Scale your coaching.</span>
+              <span class="edit-icon">✏️</span>
+            </span>
+          </h1>
+
+          <p class="mt-4 text-base md:text-lg" style="color: var(--muted);">
+            <span class="editable-wrap">
+              <span data-editable>
+                A high-converting landing page for gym coaches: programs, pricing, results, and call-to-action — ready to customize.
+              </span>
+              <span class="edit-icon">✏️</span>
+            </span>
+          </p>
+
+          <div class="mt-7 flex flex-wrap gap-3">
+            <button class="rounded-2xl px-5 py-3 font-extrabold ringed" style="background: var(--accent); color: var(--accentText);">
+              <span class="editable-wrap">
+                <span data-editable>Start Your Program</span>
+                <span class="edit-icon">✏️</span>
+              </span>
+            </button>
+            <button class="rounded-2xl px-5 py-3 font-extrabold ringed border" style="border-color: var(--border); background: rgba(255,255,255,.03);">
+              <span class="editable-wrap">
+                <span data-editable>See Client Results</span>
+                <span class="edit-icon">✏️</span>
+              </span>
+            </button>
+          </div>
+
+          <!-- social proof -->
+          <div class="mt-8 grid grid-cols-3 gap-3">
+            <div class="glass rounded-2xl p-4">
+              <div class="text-2xl font-black">
+                <span class="editable-wrap">
+                  <span data-editable>500+</span>
+                  <span class="edit-icon">✏️</span>
+                </span>
+              </div>
+              <div class="text-sm" style="color: var(--muted);">
+                <span class="editable-wrap">
+                  <span data-editable>Clients coached</span>
+                  <span class="edit-icon">✏️</span>
+                </span>
+              </div>
+            </div>
+            <div class="glass rounded-2xl p-4">
+              <div class="text-2xl font-black">
+                <span class="editable-wrap">
+                  <span data-editable>4.9★</span>
+                  <span class="edit-icon">✏️</span>
+                </span>
+              </div>
+              <div class="text-sm" style="color: var(--muted);">
+                <span class="editable-wrap">
+                  <span data-editable>Average rating</span>
+                  <span class="edit-icon">✏️</span>
+                </span>
+              </div>
+            </div>
+            <div class="glass rounded-2xl p-4">
+              <div class="text-2xl font-black">
+                <span class="editable-wrap">
+                  <span data-editable>12w</span>
+                  <span class="edit-icon">✏️</span>
+                </span>
+              </div>
+              <div class="text-sm" style="color: var(--muted);">
+                <span class="editable-wrap">
+                  <span data-editable>Typical transformation</span>
+                  <span class="edit-icon">✏️</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- visual card -->
+        <div class="glass rounded-3xl p-6 relative overflow-hidden">
+          <div class="absolute -top-24 -right-24 h-64 w-64 rounded-full" style="background: rgba(96,165,250,.18); filter: blur(20px)"></div>
+          <div class="absolute -bottom-24 -left-24 h-64 w-64 rounded-full" style="background: rgba(34,197,94,.14); filter: blur(20px)"></div>
+
+          <div class="relative">
+            <div class="text-sm uppercase tracking-widest opacity-75">
+              <span class="editable-wrap">
+                <span data-editable>Weekly coaching includes</span>
+                <span class="edit-icon">✏️</span>
+              </span>
+            </div>
+
+            <ul class="mt-4 space-y-3 text-sm">
+              <li class="flex gap-3 items-start">
+                <span class="mt-0.5">✅</span>
+                <span class="editable-wrap">
+                  <span data-editable>Personalized training plan</span>
+                  <span class="edit-icon">✏️</span>
+                </span>
+              </li>
+              <li class="flex gap-3 items-start">
+                <span class="mt-0.5">✅</span>
+                <span class="editable-wrap">
+                  <span data-editable>Nutrition targets + meal templates</span>
+                  <span class="edit-icon">✏️</span>
+                </span>
+              </li>
+              <li class="flex gap-3 items-start">
+                <span class="mt-0.5">✅</span>
+                <span class="editable-wrap">
+                  <span data-editable>Weekly check-ins & progress tracking</span>
+                  <span class="edit-icon">✏️</span>
+                </span>
+              </li>
+              <li class="flex gap-3 items-start">
+                <span class="mt-0.5">✅</span>
+                <span class="editable-wrap">
+                  <span data-editable>Form feedback & habit coaching</span>
+                  <span class="edit-icon">✏️</span>
+                </span>
+              </li>
+            </ul>
+
+            <div class="mt-6 glass rounded-2xl p-4">
+              <div class="text-sm opacity-80">
+                <span class="editable-wrap">
+                  <span data-editable>Next available slot</span>
+                  <span class="edit-icon">✏️</span>
+                </span>
+              </div>
+              <div class="mt-2 text-2xl font-black">
+                <span class="editable-wrap">
+                  <span data-editable>Monday • 6:00 PM</span>
+                  <span class="edit-icon">✏️</span>
+                </span>
+              </div>
+              <div class="mt-4 flex gap-2">
+                <button class="rounded-xl px-4 py-2 font-extrabold ringed" style="background: var(--primary); color: var(--primaryText);">
+                  <span class="editable-wrap">
+                    <span data-editable>Reserve</span>
+                    <span class="edit-icon">✏️</span>
+                  </span>
+                </button>
+                <button class="rounded-xl px-4 py-2 font-extrabold ringed border" style="border-color: var(--border); background: rgba(255,255,255,.03);">
+                  <span class="editable-wrap">
+                    <span data-editable>Message</span>
+                    <span class="edit-icon">✏️</span>
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <p class="mt-4 text-xs opacity-70">
+              <span class="editable-wrap">
+                <span data-editable>*Replace any text. You can even delete it (leave it empty).</span>
+                <span class="edit-icon">✏️</span>
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features" class="mx-auto max-w-6xl px-4 py-14">
+      <div class="flex items-end justify-between gap-6 flex-wrap">
+        <div>
+          <h2 class="text-3xl font-black tracking-tight">
+            <span class="editable-wrap">
+              <span data-editable>Everything you need to convert visitors</span>
+              <span class="edit-icon">✏️</span>
+            </span>
+          </h2>
+          <p class="mt-2" style="color: var(--muted);">
+            <span class="editable-wrap">
+              <span data-editable>Clear offer. Strong proof. Simple CTA. Built for gym coaches.</span>
+              <span class="edit-icon">✏️</span>
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-8 grid md:grid-cols-3 gap-4">
+        <div class="glass rounded-3xl p-6">
+          <div class="text-xl font-black">📈</div>
+          <div class="mt-3 font-extrabold">
+            <span class="editable-wrap">
+              <span data-editable>Conversion-first layout</span>
+              <span class="edit-icon">✏️</span>
+            </span>
+          </div>
+          <p class="mt-2 text-sm" style="color: var(--muted);">
+            <span class="editable-wrap">
+              <span data-editable>Hero → Proof → Programs → Results → CTA. No fluff.</span>
+              <span class="edit-icon">✏️</span>
+            </span>
+          </p>
+        </div>
+
+        <div class="glass rounded-3xl p-6">
+          <div class="text-xl font-black">⚡</div>
+          <div class="mt-3 font-extrabold">
+            <span class="editable-wrap">
+              <span data-editable>Inline editing</span>
+              <span class="edit-icon">✏️</span>
+            </span>
+          </div>
+          <p class="mt-2 text-sm" style="color: var(--muted);">
+            <span class="editable-wrap">
+              <span data-editable>Click any text to edit instantly — no dashboard needed.</span>
+              <span class="edit-icon">✏️</span>
+            </span>
+          </p>
+        </div>
+
+        <div class="glass rounded-3xl p-6">
+          <div class="text-xl font-black">🎨</div>
+          <div class="mt-3 font-extrabold">
+            <span class="editable-wrap">
+              <span data-editable>Theme-ready colors</span>
+              <span class="edit-icon">✏️</span>
+            </span>
+          </div>
+          <p class="mt-2 text-sm" style="color: var(--muted);">
+            <span class="editable-wrap">
+              <span data-editable>Swap palettes to match your brand in seconds.</span>
+              <span class="edit-icon">✏️</span>
+            </span>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROGRAMS / PRICING -->
+    <section id="programs" class="mx-auto max-w-6xl px-4 py-14">
+      <div class="glass rounded-3xl p-7 md:p-10">
+        <div class="flex items-end justify-between gap-6 flex-wrap">
+          <div>
+            <h2 class="text-3xl font-black tracking-tight">
+              <span class="editable-wrap">
+                <span data-editable>Programs that fit your clients</span>
+                <span class="edit-icon">✏️</span>
+              </span>
+            </h2>
+            <p class="mt-2" style="color: var(--muted);">
+              <span class="editable-wrap">
+                <span data-editable>Offer 1:1 coaching, group programs, or hybrid plans.</span>
+                <span class="edit-icon">✏️</span>
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-8 grid md:grid-cols-3 gap-4">
+          <div class="rounded-3xl p-6 border" style="border-color: var(--border); background: rgba(255,255,255,.03);">
+            <div class="text-sm opacity-80">
+              <span class="editable-wrap">
+                <span data-editable>Starter</span>
+                <span class="edit-icon">✏️</span>
+              </span>
+            </div>
+            <div class="mt-2 text-3xl font-black">
+              <span class="editable-wrap">
+                <span data-editable>$79</span>
+                <span class="edit-icon">✏️</span>
+              </span>
+              <span class="text-sm opacity-70">/mo</span>
+            </div>
+            <ul class="mt-4 space-y-2 text-sm" style="color: var(--muted);">
+              <li class="editable-wrap"><span data-editable>Workout plan</span><span class="edit-icon">✏️</span></li>
+              <li class="editable-wrap"><span data-editable>Nutrition targets</span><span class="edit-icon">✏️</span></li>
+              <li class="editable-wrap"><span data-editable>Weekly check-in</span><span class="edit-icon">✏️</span></li>
+            </ul>
+            <button class="mt-6 w-full rounded-2xl px-5 py-3 font-extrabold ringed border"
+              style="border-color: var(--border); background: rgba(255,255,255,.03);">
+              <span class="editable-wrap"><span data-editable>Choose Starter</span><span class="edit-icon">✏️</span></span>
+            </button>
+          </div>
+
+          <div class="rounded-3xl p-6 border relative overflow-hidden"
+            style="border-color: rgba(96,165,250,.4); background: rgba(96,165,250,.10);">
+            <div class="absolute top-4 right-4 text-xs font-extrabold px-3 py-1 rounded-full"
+              style="background: rgba(96,165,250,.25); border: 1px solid rgba(96,165,250,.35);">
+              <span class="editable-wrap"><span data-editable>Most Popular</span><span class="edit-icon">✏️</span></span>
+            </div>
+            <div class="text-sm opacity-90">
+              <span class="editable-wrap"><span data-editable>Pro</span><span class="edit-icon">✏️</span></span>
+            </div>
+            <div class="mt-2 text-3xl font-black">
+              <span class="editable-wrap"><span data-editable>$149</span><span class="edit-icon">✏️</span></span>
+              <span class="text-sm opacity-70">/mo</span>
+            </div>
+            <ul class="mt-4 space-y-2 text-sm" style="color: var(--muted);">
+              <li class="editable-wrap"><span data-editable>Everything in Starter</span><span class="edit-icon">✏️</span></li>
+              <li class="editable-wrap"><span data-editable>2x weekly check-ins</span><span class="edit-icon">✏️</span></li>
+              <li class="editable-wrap"><span data-editable>Form feedback</span><span class="edit-icon">✏️</span></li>
+              <li class="editable-wrap"><span data-editable>Messaging support</span><span class="edit-icon">✏️</span></li>
+            </ul>
+            <button class="mt-6 w-full rounded-2xl px-5 py-3 font-extrabold ringed"
+              style="background: var(--primary); color: var(--primaryText);">
+              <span class="editable-wrap"><span data-editable>Choose Pro</span><span class="edit-icon">✏️</span></span>
+            </button>
+          </div>
+
+          <div class="rounded-3xl p-6 border" style="border-color: var(--border); background: rgba(255,255,255,.03);">
+            <div class="text-sm opacity-80">
+              <span class="editable-wrap"><span data-editable>Elite</span><span class="edit-icon">✏️</span></span>
+            </div>
+            <div class="mt-2 text-3xl font-black">
+              <span class="editable-wrap"><span data-editable>$299</span><span class="edit-icon">✏️</span></span>
+              <span class="text-sm opacity-70">/mo</span>
+            </div>
+            <ul class="mt-4 space-y-2 text-sm" style="color: var(--muted);">
+              <li class="editable-wrap"><span data-editable>Everything in Pro</span><span class="edit-icon">✏️</span></li>
+              <li class="editable-wrap"><span data-editable>Daily adjustments</span><span class="edit-icon">✏️</span></li>
+              <li class="editable-wrap"><span data-editable>Call support</span><span class="edit-icon">✏️</span></li>
+            </ul>
+            <button class="mt-6 w-full rounded-2xl px-5 py-3 font-extrabold ringed border"
+              style="border-color: var(--border); background: rgba(255,255,255,.03);">
+              <span class="editable-wrap"><span data-editable>Choose Elite</span><span class="edit-icon">✏️</span></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TESTIMONIALS -->
+    <section id="testimonials" class="mx-auto max-w-6xl px-4 py-14">
+      <h2 class="text-3xl font-black tracking-tight">
+        <span class="editable-wrap"><span data-editable>Real results from real people</span><span class="edit-icon">✏️</span></span>
+      </h2>
+      <p class="mt-2" style="color: var(--muted);">
+        <span class="editable-wrap"><span data-editable>Swap these with your client transformations.</span><span class="edit-icon">✏️</span></span>
+      </p>
+
+      <div class="mt-8 grid md:grid-cols-3 gap-4">
+        <div class="glass rounded-3xl p-6">
+          <div class="text-sm opacity-80">★★★★★</div>
+          <p class="mt-3 text-sm" style="color: var(--muted);">
+            <span class="editable-wrap"><span data-editable>Lost 9kg in 10 weeks. Stronger, faster, and confident.</span><span class="edit-icon">✏️</span></span>
+          </p>
+          <div class="mt-4 font-extrabold">
+            <span class="editable-wrap"><span data-editable>— Sara M.</span><span class="edit-icon">✏️</span></span>
+          </div>
+        </div>
+
+        <div class="glass rounded-3xl p-6">
+          <div class="text-sm opacity-80">★★★★★</div>
+          <p class="mt-3 text-sm" style="color: var(--muted);">
+            <span class="editable-wrap"><span data-editable>Best coaching I’ve tried. The check-ins kept me consistent.</span><span class="edit-icon">✏️</span></span>
+          </p>
+          <div class="mt-4 font-extrabold">
+            <span class="editable-wrap"><span data-editable>— Ahmed K.</span><span class="edit-icon">✏️</span></span>
+          </div>
+        </div>
+
+        <div class="glass rounded-3xl p-6">
+          <div class="text-sm opacity-80">★★★★★</div>
+          <p class="mt-3 text-sm" style="color: var(--muted);">
+            <span class="editable-wrap"><span data-editable>My posture improved and I’m finally pain-free.</span><span class="edit-icon">✏️</span></span>
+          </p>
+          <div class="mt-4 font-extrabold">
+            <span class="editable-wrap"><span data-editable>— Lina A.</span><span class="edit-icon">✏️</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="mx-auto max-w-6xl px-4 py-14">
+      <div class="glass rounded-3xl p-7 md:p-10">
+        <h2 class="text-3xl font-black tracking-tight">
+          <span class="editable-wrap"><span data-editable>Frequently asked questions</span><span class="edit-icon">✏️</span></span>
+        </h2>
+
+        <div class="mt-8 grid md:grid-cols-2 gap-4">
+          <div class="rounded-3xl p-6 border" style="border-color: var(--border); background: rgba(255,255,255,.03);">
+            <div class="font-extrabold">
+              <span class="editable-wrap"><span data-editable>How do I start?</span><span class="edit-icon">✏️</span></span>
+            </div>
+            <p class="mt-2 text-sm" style="color: var(--muted);">
+              <span class="editable-wrap"><span data-editable>Click the CTA and schedule a call. We’ll match you to the right plan.</span><span class="edit-icon">✏️</span></span>
+            </p>
+          </div>
+
+          <div class="rounded-3xl p-6 border" style="border-color: var(--border); background: rgba(255,255,255,.03);">
+            <div class="font-extrabold">
+              <span class="editable-wrap"><span data-editable>Do you do meal plans?</span><span class="edit-icon">✏️</span></span>
+            </div>
+            <p class="mt-2 text-sm" style="color: var(--muted);">
+              <span class="editable-wrap"><span data-editable>We focus on flexible nutrition targets with simple templates.</span><span class="edit-icon">✏️</span></span>
+            </p>
+          </div>
+
+          <div class="rounded-3xl p-6 border" style="border-color: var(--border); background: rgba(255,255,255,.03);">
+            <div class="font-extrabold">
+              <span class="editable-wrap"><span data-editable>Is it beginner friendly?</span><span class="edit-icon">✏️</span></span>
+            </div>
+            <p class="mt-2 text-sm" style="color: var(--muted);">
+              <span class="editable-wrap"><span data-editable>Yes — programs adjust to your level and equipment.</span><span class="edit-icon">✏️</span></span>
+            </p>
+          </div>
+
+          <div class="rounded-3xl p-6 border" style="border-color: var(--border); background: rgba(255,255,255,.03);">
+            <div class="font-extrabold">
+              <span class="editable-wrap"><span data-editable>Can I cancel anytime?</span><span class="edit-icon">✏️</span></span>
+            </div>
+            <p class="mt-2 text-sm" style="color: var(--muted);">
+              <span class="editable-wrap"><span data-editable>Yes — monthly plans can be stopped any time.</span><span class="edit-icon">✏️</span></span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINAL CTA -->
+    <section class="mx-auto max-w-6xl px-4 py-14">
+      <div class="rounded-3xl p-8 md:p-12 border relative overflow-hidden"
+        style="border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.10);">
+        <div class="absolute -top-24 -right-24 h-72 w-72 rounded-full" style="background: rgba(34,197,94,.20); filter: blur(24px)"></div>
+        <div class="relative">
+          <h2 class="text-3xl md:text-4xl font-black tracking-tight">
+            <span class="editable-wrap"><span data-editable>Ready to start your transformation?</span><span class="edit-icon">✏️</span></span>
+          </h2>
+          <p class="mt-3 text-base md:text-lg" style="color: var(--muted);">
+            <span class="editable-wrap"><span data-editable>Book a free consultation and get a custom plan within 24 hours.</span><span class="edit-icon">✏️</span></span>
+          </p>
+          <div class="mt-6 flex flex-wrap gap-3">
+            <button class="rounded-2xl px-6 py-3 font-extrabold ringed" style="background: var(--accent); color: var(--accentText);">
+              <span class="editable-wrap"><span data-editable>Book Free Call</span><span class="edit-icon">✏️</span></span>
+            </button>
+            <button class="rounded-2xl px-6 py-3 font-extrabold ringed border" style="border-color: var(--border); background: rgba(255,255,255,.03);">
+              <span class="editable-wrap"><span data-editable>Ask a Question</span><span class="edit-icon">✏️</span></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="mx-auto max-w-6xl px-4 pb-14">
+      <div class="glass rounded-3xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="text-sm" style="color: var(--muted);">
+          <span class="editable-wrap"><span data-editable>© 2026 CoachPro. All rights reserved.</span><span class="edit-icon">✏️</span></span>
+        </div>
+        <div class="flex gap-4 text-sm opacity-85">
+          <a href="#" class="hover:opacity-100"><span class="editable-wrap"><span data-editable>Instagram</span><span class="edit-icon">✏️</span></span></a>
+          <a href="#" class="hover:opacity-100"><span class="editable-wrap"><span data-editable>YouTube</span><span class="edit-icon">✏️</span></span></a>
+          <a href="#" class="hover:opacity-100"><span class="editable-wrap"><span data-editable>Contact</span><span class="edit-icon">✏️</span></span></a>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Floating Inline Editor -->
+    <div id="floatingEditor" class="floating-editor">
+      <div class="row">
+        <input id="editorInput" class="ringed" type="text" placeholder="Edit text..." />
+        <button class="save" id="saveBtn">Save</button>
+        <button class="delete" id="deleteBtn" title="Clear text">Delete</button>
+        <button class="cancel" id="cancelBtn">X</button>
+      </div>
+      <p class="hint">Enter = save • Esc = close • Delete = clear</p>
+    </div>
+
+    <script>
+      const editor = document.getElementById("floatingEditor");
+      const input = document.getElementById("editorInput");
+      const saveBtn = document.getElementById("saveBtn");
+      const deleteBtn = document.getElementById("deleteBtn");
+      const cancelBtn = document.getElementById("cancelBtn");
+
+      let activeEl = null;
+
+      function positionEditorFor(el) {
+        const rect = el.getBoundingClientRect();
+        const padding = 10;
+
+        editor.style.display = "block";
+        // measure after display
+        const ew = editor.offsetWidth;
+        const eh = editor.offsetHeight;
+
+        let top = window.scrollY + rect.bottom + padding;
+        let left = window.scrollX + rect.left;
+
+        // clamp
+        const maxLeft = window.scrollX + window.innerWidth - ew - 12;
+        if (left > maxLeft) left = maxLeft;
+
+        // if bottom overflow, place above
+        const maxTop = window.scrollY + window.innerHeight - eh - 12;
+        if (top > maxTop) top = window.scrollY + rect.top - eh - padding;
+
+        editor.style.top = top + "px";
+        editor.style.left = left + "px";
+      }
+
+      function openEditorFor(el) {
+        if (!el) return;
+        if (activeEl) activeEl.classList.remove("active");
+        activeEl = el;
+        activeEl.classList.add("active");
+
+        input.value = (activeEl.textContent || "").trim();
+        positionEditorFor(activeEl);
+        input.focus();
+        input.select();
+      }
+
+      function closeEditor() {
+        if (activeEl) activeEl.classList.remove("active");
+        activeEl = null;
+        editor.style.display = "none";
+      }
+
+      function saveEdit() {
+        if (!activeEl) return;
+        // as requested: innerHTML
+        activeEl.innerHTML = input.value; // allow empty string => "delete"
+        closeEditor();
+      }
+
+      function deleteEdit() {
+        if (!activeEl) return;
+        activeEl.innerHTML = ""; // clear text
+        closeEditor();
+      }
+
+      document.addEventListener("click", (e) => {
+        if (e.target.closest("#floatingEditor")) return;
+
+        if (e.target.classList.contains("edit-icon")) {
+          const wrap = e.target.closest(".editable-wrap");
+          const editable = wrap && wrap.querySelector("[data-editable]");
+          if (editable) openEditorFor(editable);
+          return;
+        }
+
+        const editable = e.target.closest("[data-editable]");
+        if (editable) openEditorFor(editable);
+        else closeEditor();
+      });
+
+      saveBtn.addEventListener("click", saveEdit);
+      deleteBtn.addEventListener("click", deleteEdit);
+      cancelBtn.addEventListener("click", closeEditor);
+
+      document.addEventListener("keydown", (e) => {
+        if (editor.style.display !== "block") return;
+        if (e.key === "Enter") saveEdit();
+        if (e.key === "Escape") closeEditor();
+      });
+
+      window.addEventListener("scroll", () => {
+        if (activeEl) positionEditorFor(activeEl);
+      }, { passive: true });
+
+      window.addEventListener("resize", () => {
+        if (activeEl) positionEditorFor(activeEl);
+      });
+
+      // Optional: allow parent (Next.js page) to apply theme via postMessage
+      window.addEventListener("message", (event) => {
+        const msg = event.data;
+        if (!msg || msg.type !== "APPLY_THEME") return;
+        const t = msg.theme || {};
+        const root = document.documentElement;
+        for (const [k, v] of Object.entries(t)) {
+          root.style.setProperty(k, v);
+        }
+      });
+    </script>
+  </body>
+</html>

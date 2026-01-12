@@ -45,7 +45,7 @@ export default function Layout({ children }) {
 	const blockFormOnMobile = !isFormRoute && isMobile && isAdminOrCoach;
 
 
-	const isAuthRoute = pathname.includes('dashboard/builder') || pathname.startsWith('/workouts/plans') || pathname.startsWith('/auth') || pathname.startsWith('/form') || pathname.startsWith('/thank-you') || pathname.startsWith('/site') || pathname === '/';
+	const isAuthRoute = pathname.includes('dashboard/templates') || pathname.startsWith('/workouts/plans') || pathname.startsWith('/auth') || pathname.startsWith('/form') || pathname.startsWith('/thank-you') || pathname.startsWith('/site') || pathname === '/';
 
 	const [sidebarOpen, setSidebarOpen] = useState(false);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -122,7 +122,7 @@ export default function Layout({ children }) {
 		<GlobalProvider>
 			<Providers>
 				<div className='relativebg-gradient-to-t from-indigo-50 via-white to-white text-slate-800'>
-					<div className='container !px-0 flex min-h-dvh'>
+					<div className='  !px-0 flex min-h-dvh'>
 						{!isAuthRoute && <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />}
 
 						{/* Main area */}
