@@ -1,898 +1,628 @@
-'use client';
+"use client"
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { 
-  Dumbbell, Users, Calendar, Bell, TrendingUp, 
-  MessageSquare, Award, FileText, Apple, Target,
-  ChevronRight, Zap, Shield, Sparkles, BarChart3,
-  Camera, Clock, CheckCircle2, Star, ArrowRight,
-  Phone, Mail, MapPin, Check, X, Menu, Plus,
-  Wallet, Settings, Video, Image, ListChecks,
-  Activity, ChevronDown, PlayCircle, Quote, Heart,
-  Flame, Crown, Rocket, Trophy, Coffee
-} from 'lucide-react';
-
-export default function FitnessLandingPage() {
-  const [scrolled, setScrolled] = useState(false);
+  Moon, Droplet, Pill, Flame, Bell, BarChart3, 
+  Check, ArrowRight, Menu, X, Mail, Phone, MapPin,
+  Target, Calendar, TrendingUp, Star, Users, Shield,
+  Zap, Clock, Globe, MessageCircle, Twitter, Facebook, Linkedin, Instagram
+} from "lucide-react";
+const features = [
+  {
+    icon: Moon,
+    title: "Smart Prayer Reminders",
+    description: "Automatically syncs with your local prayer times. Get notified before or after each prayer with customizable offsets."
+  },
+  {
+    icon: Droplet,
+    title: "Hydration Tracking",
+    description: "Set personalized water intake goals and receive gentle reminders throughout the day to stay healthy."
+  },
+  {
+    icon: Pill,
+    title: "Medicine Reminders",
+    description: "Never miss a dose again. Schedule complex medication routines with repeat patterns and snooze options."
+  },
+  {
+    icon: Flame,
+    title: "Habit Streaks",
+    description: "Build lasting habits with streak tracking. Visualize your consistency and celebrate milestones."
+  },
+  {
+    icon: Bell,
+    title: "Push Notifications",
+    description: "Cross-platform alerts that work on web, mobile, and even Telegram. Stay on track anywhere."
+  },
+  {
+    icon: BarChart3,
+    title: "Analytics Dashboard",
+    description: "Gain insights into your habits with detailed analytics. Track completion rates and identify patterns."
+  }
+];
+const steps = [
+  {
+    number: "01",
+    title: "Create Your Goals",
+    description: "Define the habits you want to build. Choose from templates like Adhkar, hydration, or create custom reminders tailored to your lifestyle."
+  },
+  {
+    number: "02",
+    title: "Set Your Schedule",
+    description: "Configure flexible timing options: daily, weekly, interval-based, or synced with prayer times. We adapt to your routine."
+  },
+  {
+    number: "03",
+    title: "Track & Improve",
+    description: "Monitor your streaks, analyze your progress, and celebrate wins. Our insights help you build habits that stick."
+  }
+];
+const pricingPlans = [
+  {
+    name: "Free",
+    price: "$0",
+    period: "forever",
+    description: "Perfect for getting started",
+    features: [
+      "5 active reminders",
+      "Basic push notifications",
+      "Daily scheduling",
+      "7-day streak history",
+      "Community support"
+    ],
+    cta: "Start Free",
+    popular: false
+  },
+  {
+    name: "Basic",
+    price: "$4.99",
+    period: "/month",
+    description: "For individuals building habits",
+    features: [
+      "25 active reminders",
+      "Prayer time sync",
+      "Weekly & monthly schedules",
+      "30-day analytics",
+      "Email support"
+    ],
+    cta: "Get Started",
+    popular: false
+  },
+  {
+    name: "Professional",
+    price: "$9.99",
+    period: "/month",
+    description: "For serious habit builders",
+    features: [
+      "Unlimited reminders",
+      "Advanced analytics",
+      "Telegram integration",
+      "Custom sounds",
+      "Priority support",
+      "Data export"
+    ],
+    cta: "Go Professional",
+    popular: true
+  },
+  {
+    name: "Enterprise",
+    price: "Custom",
+    period: "",
+    description: "For teams and organizations",
+    features: [
+      "Everything in Professional",
+      "API access",
+      "Custom integrations",
+      "Dedicated account manager",
+      "SLA guarantee",
+      "On-premise option"
+    ],
+    cta: "Contact Sales",
+    popular: false
+  }
+];
+const testimonials = [
+  {
+    name: "Sarah Mitchell",
+    role: "Product Manager",
+    initials: "SM",
+    color: "bg-indigo-500",
+    quote: "Reflect has completely transformed my morning routine. The prayer time sync is incredibly accurate, and the streak tracking keeps me motivated every single day."
+  },
+  {
+    name: "Ahmed Hassan",
+    role: "Software Engineer",
+    initials: "AH",
+    color: "bg-emerald-500",
+    quote: "I've tried dozens of reminder apps, but nothing comes close to Reflect. The interval-based hydration reminders have genuinely improved my health."
+  },
+  {
+    name: "Emily Chen",
+    role: "Healthcare Professional",
+    initials: "EC",
+    color: "bg-amber-500",
+    quote: "As a nurse, I recommended Reflect to my patients for medication reminders. The reliability and ease of use make it perfect for all ages."
+  }
+];
+const faqs = [
+  {
+    question: "What is Reflect?",
+    answer: "Reflect is a comprehensive reminder and habit tracking system designed to help you build positive daily routines. From prayer times to medication schedules, hydration goals to custom habits, Reflect keeps you on track with intelligent notifications."
+  },
+  {
+    question: "How do prayer-time reminders work?",
+    answer: "Our system automatically calculates prayer times based on your location. You can set reminders to trigger before or after each prayer (Fajr, Dhuhr, Asr, Maghrib, Isha) with customizable offsets. Times update automatically as seasons change."
+  },
+  {
+    question: "Can I use this on multiple devices?",
+    answer: "Yes! Reflect works seamlessly across all your devices. Your account syncs in real-time, so whether you're on your phone, tablet, or computer, your reminders and progress are always up to date."
+  },
+  {
+    question: "Is my data secure?",
+    answer: "Absolutely. We use industry-standard encryption for all data transmission and storage. Your personal information and habit data are never shared with third parties. We're fully GDPR compliant."
+  },
+  {
+    question: "How do I cancel my subscription?",
+    answer: "You can cancel your subscription anytime from your account settings. There are no cancellation fees, and you'll continue to have access to paid features until the end of your billing period."
+  },
+  {
+    question: "Do you offer refunds?",
+    answer: "Yes, we offer a 14-day money-back guarantee for all paid plans. If you're not satisfied with Reflect, contact our support team within 14 days of purchase for a full refund."
+  }
+];
+export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState('professional');
-  const [openFaq, setOpenFaq] = useState(null);
-  const [activeFeature, setActiveFeature] = useState(0);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveFeature((prev) => (prev + 1) % 12);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const capabilities = [
-    {
-      category: 'Workout Management',
-      icon: Dumbbell,
-      gradient: 'from-violet-500 via-purple-500 to-fuchsia-500',
-      items: [
-        'Custom exercise library with videos and images',
-        'Weekly program builder with drag-and-drop',
-        'Progressive overload tracking',
-        'Exercise form video submissions and reviews',
-        'Personal record (PR) tracking',
-        'Rest timer and tempo controls',
-        'Workout completion tracking',
-        'Exercise substitution suggestions'
-      ]
-    },
-    {
-      category: 'Nutrition & Meal Planning',
-      icon: Apple,
-      gradient: 'from-emerald-500 via-green-500 to-teal-500',
-      items: [
-        'Macro-based meal plan creator',
-        'Daily meal logging and adherence tracking',
-        'Supplement schedules with timing',
-        'Food alternative suggestions',
-        'Calorie and macronutrient analytics',
-        'Weekly nutrition reports',
-        'Meal prep templates',
-        'Water intake tracking'
-      ]
-    },
-    {
-      category: 'Client Management',
-      icon: Users,
-      gradient: 'from-blue-500 via-cyan-500 to-sky-500',
-      items: [
-        'Multi-client dashboard',
-        'Client onboarding with custom forms',
-        'Subscription and payment tracking',
-        'Client notes and history',
-        'Bulk actions and batch updates',
-        'Client grouping and tags',
-        'Activity timeline',
-        'Performance benchmarking'
-      ]
-    },
-    {
-      category: 'Progress Tracking',
-      icon: TrendingUp,
-      gradient: 'from-orange-500 via-amber-500 to-yellow-500',
-      items: [
-        'Body measurement tracking',
-        '4-angle progress photos',
-        'Weight and body composition graphs',
-        'Strength progression charts',
-        'Before/after comparisons',
-        'Weekly check-in reports',
-        'Goal setting and milestones',
-        'Export progress reports'
-      ]
-    },
-    {
-      category: 'Communication',
-      icon: MessageSquare,
-      gradient: 'from-pink-500 via-rose-500 to-red-500',
-      items: [
-        'In-app real-time messaging',
-        'Group chat support',
-        'File and media sharing',
-        'Voice note support',
-        'Telegram bot integration',
-        'Push notifications',
-        'Read receipts',
-        'Message search and history'
-      ]
-    },
-    {
-      category: 'Smart Reminders',
-      icon: Bell,
-      gradient: 'from-indigo-500 via-blue-500 to-purple-500',
-      items: [
-        'Workout reminders',
-        'Meal time notifications',
-        'Water intake alerts',
-        'Supplement reminders',
-        'Custom appointment reminders',
-        'Prayer time integration',
-        'Recurring schedules',
-        'Multi-channel delivery (Web, Telegram)'
-      ]
-    },
-    {
-      category: 'Analytics & Reports',
-      icon: BarChart3,
-      gradient: 'from-cyan-500 via-teal-500 to-emerald-500',
-      items: [
-        'Client adherence dashboards',
-        'Weekly automated reports',
-        'Nutrition compliance metrics',
-        'Workout completion rates',
-        'Revenue and billing analytics',
-        'Client retention insights',
-        'Performance trends',
-        'Custom report generation'
-      ]
-    },
-    {
-      category: 'Business Management',
-      icon: Wallet,
-      gradient: 'from-yellow-500 via-orange-500 to-red-500',
-      items: [
-        'Multi-tier subscriptions',
-        'Payment processing',
-        'Commission tracking',
-        'Withdrawal requests',
-        'Invoice generation',
-        'Client payment history',
-        'Revenue reports',
-        'Refund management'
-      ]
-    },
-    {
-      category: 'White-Label & Customization',
-      icon: Settings,
-      gradient: 'from-fuchsia-500 via-pink-500 to-rose-500',
-      items: [
-        'Custom branding and logo',
-        'Domain customization',
-        'Theme color picker',
-        'SEO optimization',
-        'Custom page builder',
-        'Email templates',
-        'Language settings',
-        'Timezone configuration'
-      ]
-    },
-    {
-      category: 'Gamification',
-      icon: Award,
-      gradient: 'from-purple-500 via-violet-500 to-indigo-500',
-      items: [
-        'Points and rewards system',
-        'Streak tracking',
-        'Achievement badges',
-        'Leaderboards',
-        'Challenge creation',
-        'Milestone celebrations',
-        'Progress levels',
-        'Social sharing'
-      ]
-    }
-  ];
-
-  const howItWorks = [
-    {
-      step: 1,
-      title: 'Sign Up & Setup',
-      description: 'Create your account, customize your branding, and set up your gym profile in minutes.',
-      icon: Users
-    },
-    {
-      step: 2,
-      title: 'Add Your Clients',
-      description: 'Import existing clients or use custom intake forms to onboard new members seamlessly.',
-      icon: FileText
-    },
-    {
-      step: 3,
-      title: 'Build Programs',
-      description: 'Create personalized workout and meal plans using our intuitive builder with drag-and-drop.',
-      icon: Dumbbell
-    },
-    {
-      step: 4,
-      title: 'Track & Communicate',
-      description: 'Monitor client progress, provide feedback, and stay connected through real-time chat.',
-      icon: MessageSquare
-    },
-    {
-      step: 5,
-      title: 'Analyze & Optimize',
-      description: 'Review analytics, weekly reports, and metrics to continuously improve client results.',
-      icon: TrendingUp
-    }
-  ];
-
-  const features = [
-    {
-      icon: Dumbbell,
-      title: 'Exercise Program Builder',
-      description: 'Create comprehensive workout plans with custom exercises, sets, reps, tempo, and rest periods. Visual day-by-day planning.',
-      highlight: 'Drag & Drop Interface',
-      color: 'from-violet-500 to-purple-600',
-      emoji: '💪'
-    },
-    {
-      icon: Apple,
-      title: 'Meal Plan Designer',
-      description: 'Build detailed nutrition plans with macro tracking, meal timing, supplements, and food alternatives for every client.',
-      highlight: 'Macro Calculator Included',
-      color: 'from-emerald-500 to-green-600',
-      emoji: '🥗'
-    },
-    {
-      icon: Bell,
-      title: 'Multi-Channel Reminders',
-      description: 'Automated notifications via Web Push and Telegram for workouts, meals, water, medicine, and custom schedules.',
-      highlight: 'Never Miss a Beat',
-      color: 'from-blue-500 to-cyan-600',
-      emoji: '🔔'
-    },
-    {
-      icon: Video,
-      title: 'Form Check System',
-      description: 'Clients submit exercise videos for form review. Coaches provide feedback and track improvement over time.',
-      highlight: 'Video Analysis',
-      color: 'from-pink-500 to-rose-600',
-      emoji: '🎥'
-    },
-    {
-      icon: Camera,
-      title: 'Progress Photo Tracking',
-      description: '4-angle photo uploads with measurements, weight, and notes. Automatic before/after comparisons.',
-      highlight: 'Visual Transformation',
-      color: 'from-orange-500 to-amber-600',
-      emoji: '📸'
-    },
-    {
-      icon: BarChart3,
-      title: 'Weekly Check-in Reports',
-      description: 'Automated weekly questionnaires covering diet, training, sleep, and measurements with coach feedback.',
-      highlight: 'Automated Reports',
-      color: 'from-cyan-500 to-teal-600',
-      emoji: '📊'
-    },
-    {
-      icon: MessageSquare,
-      title: 'Real-Time Chat',
-      description: 'Built-in messaging with file sharing, group chats, read receipts, and full conversation history.',
-      highlight: 'Stay Connected',
-      color: 'from-indigo-500 to-purple-600',
-      emoji: '💬'
-    },
-    {
-      icon: Award,
-      title: 'Gamification Engine',
-      description: 'Points, streaks, achievements, and leaderboards to keep clients motivated and engaged daily.',
-      highlight: 'Boost Retention',
-      color: 'from-yellow-500 to-orange-600',
-      emoji: '🏆'
-    },
-    {
-      icon: Wallet,
-      title: 'Billing & Payments',
-      description: 'Subscription management, payment tracking, commission calculation, and automated invoicing.',
-      highlight: 'Financial Control',
-      color: 'from-fuchsia-500 to-pink-600',
-      emoji: '💰'
-    },
-    {
-      icon: Settings,
-      title: 'White-Label Platform',
-      description: 'Complete customization: your logo, colors, domain, SEO, and branded client experience.',
-      highlight: 'Your Brand',
-      color: 'from-purple-500 to-violet-600',
-      emoji: '🎨'
-    },
-    {
-      icon: ListChecks,
-      title: 'Custom Intake Forms',
-      description: 'Create dynamic onboarding forms with 12+ field types. Track submissions and auto-assign clients.',
-      highlight: 'Flexible Forms',
-      color: 'from-red-500 to-pink-600',
-      emoji: '📝'
-    },
-    {
-      icon: TrendingUp,
-      title: 'Advanced Analytics',
-      description: 'Client adherence metrics, performance trends, revenue reports, and actionable insights dashboard.',
-      highlight: 'Data-Driven Decisions',
-      color: 'from-green-500 to-emerald-600',
-      emoji: '📈'
-    }
-  ];
-
-  const pricing = [
-    {
-      name: 'Starter',
-      price: 29,
-      period: 'month',
-      description: 'Perfect for individual coaches getting started',
-      features: [
-        'Up to 10 active clients',
-        'Exercise & meal plan builder',
-        'Progress tracking',
-        'Basic analytics',
-        'Client chat messaging',
-        'Mobile app access',
-        'Email support'
-      ],
-      limitations: [
-        'No white-label branding',
-        'No custom domain',
-        'Limited to 1 coach',
-        'Basic reporting only'
-      ],
-      popular: false
-    },
-    {
-      name: 'Professional',
-      price: 79,
-      period: 'month',
-      description: 'For growing coaching businesses',
-      features: [
-        'Up to 50 active clients',
-        'Everything in Starter',
-        'White-label branding',
-        'Custom domain',
-        'Advanced analytics',
-        'Automated reports',
-        'Form check reviews',
-        'Up to 3 coaches',
-        'Priority support',
-        'API access'
-      ],
-      limitations: [
-        'Limited to 3 coaches',
-        'Basic customization'
-      ],
-      popular: true
-    },
-    {
-      name: 'Enterprise',
-      price: 199,
-      period: 'month',
-      description: 'For gyms and large coaching teams',
-      features: [
-        'Unlimited clients',
-        'Everything in Professional',
-        'Unlimited coaches',
-        'Full white-label control',
-        'Custom page builder',
-        'Advanced customization',
-        'Dedicated account manager',
-        'Custom integrations',
-        'SLA guarantee',
-        '24/7 premium support',
-        'Training & onboarding'
-      ],
-      limitations: [],
-      popular: false
-    }
-  ];
-
-  const faqs = [ 
-    {
-      question: 'Can I use my own domain and branding?',
-      answer: 'Yes! Professional and Enterprise plans include full white-label capabilities. You can use your own domain, logo, brand colors, and customize the entire client experience to match your brand identity.'
-    },
-    {
-      question: 'What happens to my data if I cancel?',
-      answer: 'You maintain full ownership of your data. Before cancellation, you can export all client information, programs, and history. We also provide a 30-day grace period where your data remains accessible in read-only mode.'
-    },
-    {
-      question: 'Do my clients need to download anything?',
-      answer: 'No downloads required! The platform works seamlessly on any device through web browsers. However, we also offer optional progressive web app (PWA) installation for a native app-like experience on mobile devices.'
-    },
-    {
-      question: 'Is there a limit to the number of programs I can create?',
-      answer: 'No limits! Create unlimited workout programs, meal plans, and templates. You can also duplicate and customize existing programs to save time when onboarding similar clients.'
-    },
-    {
-      question: 'How does the reminder system work?',
-      answer: 'Our smart reminder system sends notifications through web push notifications and Telegram. Clients can set personalized schedules for workouts, meals, water intake, supplements, and more. All notifications are timezone-aware and respect quiet hours.'
-    },
-    {
-      question: 'Can I migrate from my current platform?',
-      answer: 'Yes! We provide data migration assistance for Professional and Enterprise plans. Our team will help you import your existing client data, programs, and ensure a smooth transition with minimal disruption.'
-    },
-    {
-      question: 'What kind of support do you offer?',
-      answer: 'Starter plans include email support (24-48hr response time). Professional plans get priority email support (12hr response). Enterprise plans include 24/7 support via email, chat, and phone, plus a dedicated account manager.'
-    },
-    {
-      question: 'Is the payment processing secure?',
-      answer: 'Absolutely. We use industry-standard encryption and PCI-compliant payment processors. All financial data is encrypted both in transit and at rest. We never store full credit card details on our servers.'
-    } 
-  ];
-
-  const testimonials = [
-    {
-      name: 'Sarah Mitchell',
-      role: 'Personal Trainer, FitLife Studio',
-      image: '👩‍💼',
-      content: 'This platform completely transformed how I manage my clients. The automated check-ins and progress tracking save me 10+ hours per week. My client retention has increased by 40% since switching.',
-      rating: 5
-    }, 
-    {
-      name: 'Elena Rodriguez',
-      role: 'Nutrition Specialist',
-      image: '👩‍⚕️',
-      content: 'The meal planning tools are incredible. I can create detailed nutrition plans in minutes and the macro tracking helps clients stay accountable. The analytics show real results.',
-      rating: 5
-    },
-    {
-      name: 'David Chen',
-      role: 'Gym Owner, PowerFit',
-      image: '👨‍💼',
-      content: 'Managing 5 coaches and 150+ clients used to be chaos. Now everything is organized in one place. The billing automation alone has paid for itself. Highly recommend for gym owners.',
-      rating: 5
-    }
-  ];
-
+  const [formData, setFormData] = useState({ name: "", email: "", message: "" });
+  const scrollToSection = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    setMobileMenuOpen(false);
+  };
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm' : 'bg-white'
-      }`}>
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-slate-900 p-2.5 rounded-lg">
-                <Dumbbell className="w-6 h-6 text-white" />
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                <Zap className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-2xl font-bold text-slate-900">FitnessPro</span>
+              <span className="font-display text-xl font-bold text-foreground">Reflect</span>
             </div>
             
-            <div className="hidden lg:flex items-center gap-8">
-              <a href="#features" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">Features</a>
-              <a href="#how-it-works" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">How It Works</a>
-              <a href="#capabilities" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">Capabilities</a>
-              <a href="#pricing" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">Pricing</a>
-              <a href="#testimonials" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">Testimonials</a>
-              <a href="#faq" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">FAQ</a>
+            <div className="hidden md:flex items-center gap-8">
+              <button onClick={() => scrollToSection("features")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Features</button>
+              <button onClick={() => scrollToSection("how-it-works")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">How It Works</button>
+              <button onClick={() => scrollToSection("pricing")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Pricing</button>
+              <button onClick={() => scrollToSection("faq")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">FAQ</button>
+              <button onClick={() => scrollToSection("testimonials")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Testimonials</button>
             </div>
-
-            <div className="hidden lg:flex items-center gap-4">
-              <Button variant="ghost" className="text-slate-900">
-                Sign In
-              </Button>
-              <Button className="bg-slate-900 hover:bg-slate-800 text-white">
-                Start Free Trial
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+            <div className="hidden md:flex items-center gap-4">
+              <a href="/auth">
+                <Button variant="ghost">Log In</Button>
+              </a>
+              <a href="/auth">
+                <Button>Get Started</Button>
+              </a>
             </div>
-
             <button 
-              className="lg:hidden"
+              className="md:hidden p-2"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              <Menu className="w-6 h-6" />
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
-
-          {/* Mobile Menu */}
-          {mobileMenuOpen && (
-            <div className="lg:hidden mt-4 pb-4 border-t pt-4">
-              <div className="flex flex-col gap-4">
-                <a href="#features" className="text-slate-600 font-medium">Features</a>
-                <a href="#how-it-works" className="text-slate-600 font-medium">How It Works</a>
-                <a href="#capabilities" className="text-slate-600 font-medium">Capabilities</a>
-                <a href="#pricing" className="text-slate-600 font-medium">Pricing</a>
-                <a href="#testimonials" className="text-slate-600 font-medium">Testimonials</a>
-                <a href="#faq" className="text-slate-600 font-medium">FAQ</a>
-                <Button className="bg-slate-900 text-white w-full">Start Free Trial</Button>
-              </div>
-            </div>
-          )}
         </div>
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-background border-b px-4 py-4 space-y-4">
+            <button onClick={() => scrollToSection("features")} className="block w-full text-left py-2 text-muted-foreground">Features</button>
+            <button onClick={() => scrollToSection("how-it-works")} className="block w-full text-left py-2 text-muted-foreground">How It Works</button>
+            <button onClick={() => scrollToSection("pricing")} className="block w-full text-left py-2 text-muted-foreground">Pricing</button>
+            <button onClick={() => scrollToSection("faq")} className="block w-full text-left py-2 text-muted-foreground">FAQ</button>
+            <button onClick={() => scrollToSection("testimonials")} className="block w-full text-left py-2 text-muted-foreground">Testimonials</button>
+            <div className="pt-4 border-t space-y-2">
+              <a href="/auth" className="block">
+                <Button variant="outline" className="w-full">Log In</Button>
+              </a>
+              <a href="/auth" className="block">
+                <Button className="w-full">Get Started</Button>
+              </a>
+            </div>
+          </div>
+        )}
       </nav>
-
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 bg-gradient-to-b from-slate-50 to-white">
-        <div className="container mx-auto">
-          <div className="max-w-4xl mx-auto text-center">
-            <Badge className="mb-6 bg-slate-100 text-slate-900 border-slate-200 px-4 py-2 text-sm font-semibold">
-              <Sparkles className="w-3.5 h-3.5 mr-2 inline" />
-              Trusted by 1,000+ Fitness Professionals
-            </Badge>
-            
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight text-slate-900">
-              The Complete Platform for
-              <span className="block text-slate-900 mt-2">Modern Fitness Coaching</span>
-            </h1>
-
-            <p className="text-xl md:text-2xl text-slate-600 mb-10 max-w-3xl mx-auto leading-relaxed">
-              Everything you need to manage clients, build programs, track progress, and grow your fitness business—all in one powerful platform.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-              <Button size="lg" className="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-8 py-6 text-lg">
-                Start 14-Day Free Trial
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-              <Button size="lg" variant="outline" className="border-2 border-slate-300 hover:bg-slate-50 text-slate-900 font-semibold px-8 py-6 text-lg">
-                <PlayCircle className="w-5 h-5 mr-2" />
-                Watch Demo
-              </Button>
-            </div>
-
-            <p className="text-sm text-slate-500">No credit card required • Cancel anytime • Full access to all features</p>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-16">
-              <div>
-                <div className="text-4xl font-bold text-slate-900">15+</div>
-                <div className="text-slate-600 mt-1">Core Modules</div>
+      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <Badge variant="secondary" className="px-3 py-1">
+                  <Star className="w-3 h-3 mr-1 inline" />
+                  Trusted by 5,000+ users
+                </Badge>
+                <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
+                  Master Your Daily Habits with 
+                  <span className="text-primary"> Intelligent Reminders</span>
+                </h1>
+                <p className="text-lg text-muted-foreground max-w-xl">
+                  Build lasting habits with smart reminders that adapt to your lifestyle. From prayer times to hydration goals, Reflect keeps you on track effortlessly.
+                </p>
               </div>
-              <div>
-                <div className="text-4xl font-bold text-slate-900">40+</div>
-                <div className="text-slate-600 mt-1">Entity Types</div>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <a href="/auth">
+                  <Button size="lg" className="w-full sm:w-auto gap-2">
+                    Start Free <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </a>
+                <Button size="lg" variant="outline" className="w-full sm:w-auto gap-2" onClick={() => scrollToSection("how-it-works")}>
+                  See How It Works
+                </Button>
               </div>
-              <div>
-                <div className="text-4xl font-bold text-slate-900">99.9%</div>
-                <div className="text-slate-600 mt-1">Uptime SLA</div>
-              </div>
-              <div>
-                <div className="text-4xl font-bold text-slate-900">24/7</div>
-                <div className="text-slate-600 mt-1">Automation</div>
+              <div className="flex flex-wrap gap-6 pt-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Check className="w-4 h-4 text-primary" />
+                  Free forever plan
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Check className="w-4 h-4 text-primary" />
+                  No credit card required
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Check className="w-4 h-4 text-primary" />
+                  Cancel anytime
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section id="how-it-works" className="py-20 px-6 bg-white">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">
-              How It Works
-            </h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Get up and running in 5 simple steps
-            </p>
-          </div>
-
-          <div className="max-w-5xl mx-auto">
-            {howItWorks.map((item, idx) => {
-              const Icon = item.icon;
-              return (
-                <div key={idx} className="flex gap-6 mb-12 last:mb-0">
-                  <div className="flex-shrink-0">
-                    <div className="w-16 h-16 bg-slate-900 text-white rounded-full flex items-center justify-center text-2xl font-bold">
-                      {item.step}
+            {/* Hero Visual */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent rounded-3xl blur-3xl" />
+              <div className="relative bg-card border rounded-2xl p-6 shadow-xl">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-4 border-b">
+                    <h3 className="font-display font-semibold">Today's Reminders</h3>
+                    <Badge variant="secondary">3 Active</Badge>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-4 p-3 rounded-lg bg-accent/50">
+                      <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                        <Moon className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Morning Adhkar</p>
+                        <p className="text-xs text-muted-foreground">After Fajr Prayer</p>
+                      </div>
+                      <Badge className="bg-emerald-100 text-emerald-700 border-0">Done</Badge>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 p-3 rounded-lg bg-accent/50">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <Droplet className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Drink Water</p>
+                        <p className="text-xs text-muted-foreground">Every 2 hours</p>
+                      </div>
+                      <Badge variant="secondary">4/8</Badge>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 p-3 rounded-lg bg-accent/50">
+                      <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center">
+                        <Pill className="w-5 h-5 text-rose-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Vitamin D</p>
+                        <p className="text-xs text-muted-foreground">8:00 PM</p>
+                      </div>
+                      <Badge variant="outline">Upcoming</Badge>
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="bg-slate-50 rounded-xl p-6 border border-slate-200">
-                      <div className="flex items-start gap-4">
-                        <Icon className="w-8 h-8 text-slate-900 flex-shrink-0" />
-                        <div>
-                          <h3 className="text-2xl font-bold text-slate-900 mb-2">{item.title}</h3>
-                          <p className="text-slate-600 text-lg">{item.description}</p>
-                        </div>
-                      </div>
+                  <div className="pt-4 border-t">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Current Streak</span>
+                      <span className="font-semibold flex items-center gap-1">
+                        <Flame className="w-4 h-4 text-orange-500" /> 12 days
+                      </span>
                     </div>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            </div>
           </div>
         </div>
       </section>
-
-      {/* Features */}
-      <section id="features" className="py-20 px-6 bg-slate-50">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">
-              Powerful Features
+      {/* Logos/Trust */}
+      <section className="py-12 border-y bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Users className="w-5 h-5" />
+              <span className="font-medium">5,000+ Active Users</span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Globe className="w-5 h-5" />
+              <span className="font-medium">50+ Countries</span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Shield className="w-5 h-5" />
+              <span className="font-medium">Enterprise Security</span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Clock className="w-5 h-5" />
+              <span className="font-medium">99.9% Uptime</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      {/* Features Section */}
+      <section id="features" className="py-24 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <Badge variant="secondary" className="mb-4">Features</Badge>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-4">
+              Everything You Need to Build Better Habits
             </h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Everything you need to deliver exceptional coaching experiences
+            <p className="text-lg text-muted-foreground">
+              Powerful features designed to help you stay consistent and achieve your goals every single day.
             </p>
           </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-            {features.map((feature, idx) => {
-              const Icon = feature.icon;
-              return (
-                <Card key={idx} className="border-slate-200 hover:shadow-lg transition-shadow bg-white">
-                  <CardHeader>
-                    <div className="w-12 h-12 bg-slate-900 rounded-lg flex items-center justify-center mb-4">
-                      <Icon className="w-6 h-6 text-white" />
-                    </div>
-                    <CardTitle className="text-xl mb-2">{feature.title}</CardTitle>
-                    <Badge variant="secondary" className="w-fit">{feature.highlight}</Badge>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-slate-600">{feature.description}</p>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((feature, index) => (
+              <Card key={index} className="group hover:border-primary/50 transition-colors">
+                <CardHeader>
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                    <feature.icon className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle className="font-display">{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-base">{feature.description}</CardDescription>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
-
-      {/* Full Capabilities */}
-      <section id="capabilities" className="py-20 px-6 bg-white">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">
-              Complete System Capabilities
+      {/* How It Works */}
+      <section id="how-it-works" className="py-24 px-4 sm:px-6 lg:px-8 bg-muted/30">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <Badge variant="secondary" className="mb-4">How It Works</Badge>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-4">
+              Get Started in Three Simple Steps
             </h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Everything your fitness business needs in one comprehensive platform
+            <p className="text-lg text-muted-foreground">
+              Setting up your personalized reminder system takes just a few minutes.
             </p>
           </div>
-
-          <div className="grid md:grid-cols-2 gap-8 max-w-7xl mx-auto">
-            {capabilities.map((cap, idx) => {
-              const Icon = cap.icon;
-              return (
-                <Card key={idx} className="border-slate-200 bg-white">
-                  <CardHeader>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 bg-slate-900 rounded-lg flex items-center justify-center">
-                        <Icon className="w-5 h-5 text-white" />
-                      </div>
-                      <CardTitle className="text-2xl">{cap.category}</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3">
-                      {cap.items.map((item, i) => (
-                        <li key={i} className="flex items-start gap-3">
-                          <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                          <span className="text-slate-600">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <div className="grid md:grid-cols-3 gap-8">
+            {steps.map((step, index) => (
+              <div key={index} className="relative">
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-full bg-primary text-primary-foreground font-display text-2xl font-bold flex items-center justify-center mx-auto mb-6">
+                    {step.number}
+                  </div>
+                  <h3 className="font-display text-xl font-semibold mb-3">{step.title}</h3>
+                  <p className="text-muted-foreground">{step.description}</p>
+                </div>
+                {index < steps.length - 1 && (
+                  <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-px bg-border" />
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-12">
+            <a href="/auth">
+              <Button size="lg" className="gap-2">
+                Start Your Journey <ArrowRight className="w-4 h-4" />
+              </Button>
+            </a>
           </div>
         </div>
       </section>
-
-      {/* Pricing */}
-      <section id="pricing" className="py-20 px-6 bg-slate-50">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">
+      {/* Pricing Section */}
+      <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <Badge variant="secondary" className="mb-4">Pricing</Badge>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-4">
               Simple, Transparent Pricing
             </h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Choose the plan that fits your business. Upgrade or downgrade anytime.
+            <p className="text-lg text-muted-foreground">
+              Choose the plan that fits your needs. Upgrade or downgrade anytime.
             </p>
           </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {pricing.map((plan, idx) => (
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {pricingPlans.map((plan, index) => (
               <Card 
-                key={idx} 
-                className={`border-2 ${plan.popular ? 'border-slate-900 shadow-xl relative' : 'border-slate-200'} bg-white`}
+                key={index} 
+                className={`relative ${plan.popular ? 'border-primary shadow-lg scale-105' : ''}`}
               >
                 {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-slate-900 text-white px-4 py-1">Most Popular</Badge>
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
                   </div>
                 )}
-                <CardHeader>
-                  <CardTitle className="text-2xl mb-2">{plan.name}</CardTitle>
-                  <CardDescription className="text-base">{plan.description}</CardDescription>
-                  <div className="mt-6">
-                    <span className="text-5xl font-bold text-slate-900">${plan.price}</span>
-                    <span className="text-slate-600 ml-2">/ {plan.period}</span>
+                <CardHeader className="text-center pb-4">
+                  <CardTitle className="font-display text-xl">{plan.name}</CardTitle>
+                  <div className="mt-4">
+                    <span className="text-4xl font-bold">{plan.price}</span>
+                    <span className="text-muted-foreground">{plan.period}</span>
                   </div>
+                  <CardDescription className="mt-2">{plan.description}</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <Button 
-                    className={`w-full mb-6 ${plan.popular ? 'bg-slate-900 hover:bg-slate-800 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-900'}`}
-                    size="lg"
-                  >
-                    {plan.popular ? 'Start Free Trial' : 'Get Started'}
-                  </Button>
-                  
-                  <div className="space-y-3 mb-6">
-                    {plan.features.map((feature, i) => (
-                      <div key={i} className="flex items-start gap-3">
-                        <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                        <span className="text-sm text-slate-600">{feature}</span>
-                      </div>
+                <CardContent className="space-y-4">
+                  <ul className="space-y-3">
+                    {plan.features.map((feature, fIndex) => (
+                      <li key={fIndex} className="flex items-start gap-2 text-sm">
+                        <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                        <span>{feature}</span>
+                      </li>
                     ))}
-                  </div>
-
-                  {plan.limitations.length > 0 && (
-                    <div className="space-y-3 pt-6 border-t border-slate-200">
-                      {plan.limitations.map((limitation, i) => (
-                        <div key={i} className="flex items-start gap-3">
-                          <X className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
-                          <span className="text-sm text-slate-500">{limitation}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  </ul>
+                  <a href="/auth" className="block">
+                    <Button 
+                      className="w-full" 
+                      variant={plan.popular ? "default" : "outline"}
+                    >
+                      {plan.cta}
+                    </Button>
+                  </a>
                 </CardContent>
               </Card>
             ))}
           </div>
-
-          <div className="text-center mt-12">
-            <p className="text-slate-600 mb-4">Need a custom plan for your organization?</p>
-            <Button variant="outline" size="lg" className="border-slate-300">
-              Contact Sales
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
         </div>
       </section>
-
       {/* Testimonials */}
-      <section id="testimonials" className="py-20 px-6 bg-white">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">
-              Loved by Fitness Professionals
+      <section id="testimonials" className="py-24 px-4 sm:px-6 lg:px-8 bg-muted/30">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <Badge variant="secondary" className="mb-4">Testimonials</Badge>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-4">
+              Loved by Thousands of Users
             </h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              See what coaches and gym owners are saying about FitnessPro
+            <p className="text-lg text-muted-foreground">
+              See what our community has to say about their experience with Reflect.
             </p>
           </div>
-
-          <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-            {testimonials.map((testimonial, idx) => (
-              <Card key={idx} className="border-slate-200 bg-white">
-                <CardHeader>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-3xl">
-                      {testimonial.image}
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.map((testimonial, index) => (
+              <Card key={index} className="bg-card">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-1 mb-4">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    ))}
+                  </div>
+                  <p className="text-muted-foreground mb-6 italic">"{testimonial.quote}"</p>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full ${testimonial.color} flex items-center justify-center text-white font-semibold text-sm`}>
+                      {testimonial.initials}
                     </div>
                     <div>
-                      <div className="font-bold text-lg text-slate-900">{testimonial.name}</div>
-                      <div className="text-sm text-slate-600">{testimonial.role}</div>
+                      <p className="font-medium text-sm">{testimonial.name}</p>
+                      <p className="text-xs text-muted-foreground">{testimonial.role}</p>
                     </div>
                   </div>
-                  <div className="flex gap-1 mb-4">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Quote className="w-8 h-8 text-slate-300 mb-3" />
-                  <p className="text-slate-700 leading-relaxed">{testimonial.content}</p>
                 </CardContent>
               </Card>
             ))}
           </div>
         </div>
       </section>
-
-      {/* FAQ */}
-      <section id="faq" className="py-20 px-6 bg-slate-50">
-        <div className="container mx-auto max-w-4xl">
+      {/* FAQ Section */}
+      <section id="faq" className="py-24 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">
+            <Badge variant="secondary" className="mb-4">FAQ</Badge>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-4">
               Frequently Asked Questions
             </h2>
-            <p className="text-xl text-slate-600">
-              Everything you need to know about FitnessPro
+            <p className="text-lg text-muted-foreground">
+              Got questions? We've got answers.
             </p>
           </div>
-
-          <div className="space-y-4">
-            {faqs.map((faq, idx) => (
-              <Card key={idx} className="border-slate-200 bg-white">
-                <CardHeader 
-                  className="cursor-pointer"
-                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                >
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-semibold text-slate-900">{faq.question}</CardTitle>
-                    <ChevronDown className={`w-5 h-5 text-slate-500 transition-transform ${openFaq === idx ? 'rotate-180' : ''}`} />
-                  </div>
-                </CardHeader>
-                {openFaq === idx && (
-                  <CardContent>
-                    <p className="text-slate-600 leading-relaxed">{faq.answer}</p>
-                  </CardContent>
-                )}
-              </Card>
+          <Accordion type="single" collapsible className="space-y-4">
+            {faqs.map((faq, index) => (
+              <AccordionItem 
+                key={index} 
+                value={`faq-${index}`} 
+                className="bg-card border rounded-lg px-6"
+              >
+                <AccordionTrigger className="text-left font-medium hover:no-underline">
+                  {faq.question}
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  {faq.answer}
+                </AccordionContent>
+              </AccordionItem>
             ))}
-          </div>
+          </Accordion>
         </div>
       </section>
-
-      {/* Contact CTA */}
-      <section id="contact" className="py-20 px-6 bg-slate-900 text-white">
-        <div className="container mx-auto max-w-5xl">
-          <div className="grid md:grid-cols-2 gap-12">
+      {/* Contact Section */}
+      <section id="contact" className="py-24 px-4 sm:px-6 lg:px-8 bg-muted/30">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12">
             <div>
-              <h2 className="text-4xl font-bold mb-6">Get in Touch</h2>
-              <p className="text-slate-300 text-lg mb-8">
-                Have questions? Want to see a demo? Our team is here to help you succeed.
+              <Badge variant="secondary" className="mb-4">Contact Us</Badge>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-4">
+                Get In Touch
+              </h2>
+              <p className="text-lg text-muted-foreground mb-8">
+                Have questions or need help? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
               </p>
-
               <div className="space-y-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
-                    <Mail className="w-6 h-6" />
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <div className="font-semibold">Email Us</div>
-                    <div className="text-slate-400">support@fitnesspro.com</div>
+                    <p className="font-medium">Email</p>
+                    <p className="text-muted-foreground">support@reflect.app</p>
                   </div>
                 </div>
-
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
-                    <Phone className="w-6 h-6" />
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <MessageCircle className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <div className="font-semibold">Call Us</div>
-                    <div className="text-slate-400">+1 (555) 123-4567</div>
+                    <p className="font-medium">Live Chat</p>
+                    <p className="text-muted-foreground">Available 9 AM - 6 PM EST</p>
                   </div>
                 </div>
-
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
-                    <MapPin className="w-6 h-6" />
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <div className="font-semibold">Visit Us</div>
-                    <div className="text-slate-400">123 Fitness St, Wellness City, FC 12345</div>
+                    <p className="font-medium">Location</p>
+                    <p className="text-muted-foreground">San Francisco, CA</p>
                   </div>
                 </div>
               </div>
             </div>
-
-            <Card className="bg-white border-0">
-              <CardHeader>
-                <CardTitle className="text-slate-900">Send us a message</CardTitle>
-                <CardDescription>We'll get back to you within 24 hours</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form className="space-y-4">
-                  <div>
-                    <Input placeholder="Your Name" className="border-slate-300" />
+            <Card>
+              <CardContent className="pt-6">
+                <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Name</label>
+                      <Input 
+                        placeholder="Your name" 
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Email</label>
+                      <Input 
+                        type="email" 
+                        placeholder="you@example.com" 
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Input type="email" placeholder="Your Email" className="border-slate-300" />
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Message</label>
+                    <Textarea 
+                      placeholder="How can we help you?" 
+                      rows={5}
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                    />
                   </div>
-                  <div>
-                    <Input placeholder="Subject" className="border-slate-300" />
-                  </div>
-                  <div>
-                    <Textarea placeholder="Your Message" rows={4} className="border-slate-300" />
-                  </div>
-                  <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white">
+                  <Button className="w-full" size="lg">
                     Send Message
-                    <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </form>
               </CardContent>
@@ -900,88 +630,91 @@ export default function FitnessLandingPage() {
           </div>
         </div>
       </section>
-
-      {/* Final CTA */}
-      <section className="py-20 px-6 bg-white border-t border-slate-200">
-        <div className="container mx-auto max-w-4xl text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-slate-900">
-            Ready to Transform Your Coaching Business?
+      {/* CTA Section */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-4">
+            Ready to Transform Your Habits?
           </h2>
-          <p className="text-xl text-slate-600 mb-10">
-            Join thousands of fitness professionals using FitnessPro to deliver exceptional results
+          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+            Join thousands of users who have already improved their daily routines with Reflect. Start your journey today.
           </p>
-          
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" className="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-10 py-7 text-xl">
-              Start Your 14-Day Free Trial
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-            <Button size="lg" variant="outline" className="border-2 border-slate-300 text-slate-900 font-semibold px-10 py-7 text-xl">
-              Schedule a Demo
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/auth">
+              <Button size="lg" className="gap-2">
+                Start Free Today <ArrowRight className="w-4 h-4" />
+              </Button>
+            </a>
+            <Button size="lg" variant="outline" onClick={() => scrollToSection("pricing")}>
+              View Pricing
             </Button>
           </div>
-          
-          <p className="text-sm text-slate-500 mt-6">No credit card required • Full feature access • Cancel anytime</p>
         </div>
       </section>
-
       {/* Footer */}
-      <footer className="border-t border-slate-200 py-12 px-6 bg-slate-50">
-        <div className="container mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="bg-slate-900 p-2 rounded-lg">
-                  <Dumbbell className="w-5 h-5 text-white" />
+      <footer className="bg-slate-900 text-slate-300 py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
+            <div className="lg:col-span-2">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-primary-foreground" />
                 </div>
-                <span className="text-lg font-bold text-slate-900">FitnessPro</span>
+                <span className="font-display text-xl font-bold text-white">Reflect</span>
               </div>
-              <p className="text-slate-600 text-sm">
-                The complete platform for modern fitness coaching and client management.
+              <p className="text-slate-400 mb-6 max-w-sm">
+                Build better habits with intelligent reminders. Your personal companion for daily wellness and spiritual growth.
               </p>
+              <div className="flex gap-4">
+                <a href="#" className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition-colors">
+                  <Twitter className="w-5 h-5" />
+                </a>
+                <a href="#" className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition-colors">
+                  <Facebook className="w-5 h-5" />
+                </a>
+                <a href="#" className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition-colors">
+                  <Linkedin className="w-5 h-5" />
+                </a>
+                <a href="#" className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition-colors">
+                  <Instagram className="w-5 h-5" />
+                </a>
+              </div>
             </div>
-
             <div>
-              <h4 className="font-bold text-slate-900 mb-4">Product</h4>
-              <ul className="space-y-2 text-slate-600 text-sm">
-                <li><a href="#features" className="hover:text-slate-900">Features</a></li>
-                <li><a href="#pricing" className="hover:text-slate-900">Pricing</a></li>
-                <li><a href="#" className="hover:text-slate-900">Integrations</a></li>
-                <li><a href="#" className="hover:text-slate-900">API Docs</a></li>
+              <h4 className="font-semibold text-white mb-4">Product</h4>
+              <ul className="space-y-3">
+                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
+                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Integrations</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Changelog</a></li>
               </ul>
             </div>
-
             <div>
-              <h4 className="font-bold text-slate-900 mb-4">Company</h4>
-              <ul className="space-y-2 text-slate-600 text-sm">
-                <li><a href="#" className="hover:text-slate-900">About Us</a></li>
-                <li><a href="#" className="hover:text-slate-900">Blog</a></li>
-                <li><a href="#" className="hover:text-slate-900">Careers</a></li>
-                <li><a href="#contact" className="hover:text-slate-900">Contact</a></li>
+              <h4 className="font-semibold text-white mb-4">Company</h4>
+              <ul className="space-y-3">
+                <li><a href="#" className="hover:text-white transition-colors">About</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
+                <li><a href="#contact" className="hover:text-white transition-colors">Contact</a></li>
               </ul>
             </div>
-
             <div>
-              <h4 className="font-bold text-slate-900 mb-4">Legal</h4>
-              <ul className="space-y-2 text-slate-600 text-sm">
-                <li><a href="#" className="hover:text-slate-900">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-slate-900">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-slate-900">Security</a></li>
-                <li><a href="#" className="hover:text-slate-900">GDPR</a></li>
+              <h4 className="font-semibold text-white mb-4">Legal</h4>
+              <ul className="space-y-3">
+                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Cookie Policy</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">GDPR</a></li>
               </ul>
             </div>
           </div>
-
-          <div className="border-t border-slate-200 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="text-slate-500 text-sm">
-              © 2026 FitnessPro. All rights reserved.
-            </div>
-            <div className="flex gap-6 text-slate-500">
-              <a href="#" className="hover:text-slate-900 transition-colors">Twitter</a>
-              <a href="#" className="hover:text-slate-900 transition-colors">LinkedIn</a>
-              <a href="#" className="hover:text-slate-900 transition-colors">Instagram</a>
-              <a href="#" className="hover:text-slate-900 transition-colors">YouTube</a>
-            </div>
+          <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <p className="text-slate-400 text-sm">
+              2024 Reflect. All rights reserved.
+            </p>
+            <p className="text-slate-400 text-sm">
+              Made with care for your daily wellness
+            </p>
           </div>
         </div>
       </footer>
