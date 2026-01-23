@@ -22,6 +22,7 @@ export const NAV_HREFS = {
     '/dashboard/reports',
     '/dashboard/chat',
     '/dashboard/calculator',
+		'/dashboard/my-account',
   ],
   admin: [
     '/dashboard/users',
@@ -40,6 +41,7 @@ export const NAV_HREFS = {
     '/dashboard/billing/withdraw',
     '/dashboard/billing/client-payments',
     '/dashboard/templates',
+    '/dashboard/my-account',
   ],
   super_admin: [
     '/dashboard',
@@ -65,6 +67,7 @@ const PUBLIC_PREFIXES = [
   '/auth',
   '/public',
   '/thank-you',
+  '/',
 
   // existing regex
   /^\/form\/\d+\/submit(?:\/|$)/,

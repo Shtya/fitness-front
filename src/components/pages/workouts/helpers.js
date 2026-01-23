@@ -1,28 +1,45 @@
 const LOCAL_KEY_BUFFER = 'mw.sets.buffer.v1';
 
+ 
+ 
 
 export function createSessionFromDay(dayProgram) {
-  return {
-    ...dayProgram,
-    startedAt: null,
-    sets: (dayProgram.exercises || []).flatMap(ex =>
-      Array.from({ length: 2 }).map((_, i) => ({
-        id: `${ex.id}-set${i + 1}`,
-        exId: ex.id,
-        exName: ex.name,
-        set: i + 1,
-        targetReps: ex.targetReps,
-        weight: 0,
-        reps: 0,
-        effort: null,
-        done: false,
-        pr: false,
-        restTime: Number.isFinite(ex.rest ?? ex.restSeconds) ? ex.rest ?? ex.restSeconds : 90,
-      })),
-    ),
-    exercises: (dayProgram.exercises || []).map(e => ({ ...e })),
-  };
+	const list = Array.isArray(dayProgram?.allExercises)
+		? dayProgram.allExercises
+		: Array.isArray(dayProgram?.exercises)
+		? dayProgram.exercises
+		: [];
+
+	const clampSets = n => {
+		const x = Number(n);
+		if (!Number.isFinite(x) || x <= 0) return 2;
+		return Math.max(1, Math.min(20, Math.round(x)));
+	};
+
+	return {
+		...dayProgram,
+		startedAt: null,
+		exercises: list.map(e => ({ ...e })),
+		sets: list.flatMap(ex => {
+			const count = clampSets(ex.targetSets ?? 2);
+			return Array.from({ length: count }).map((_, i) => ({
+				id: `${ex.id}-set${i + 1}`,
+				exId: ex.id,
+				exName: ex.name,
+				set: i + 1,
+				targetReps: ex.targetReps,
+				weight: 0,
+				reps: 0,
+				effort: null,
+				done: false,
+				pr: false,
+				restTime: Number.isFinite(ex.rest ?? ex.restSeconds) ? ex.rest ?? ex.restSeconds : 90,
+			}));
+		}),
+	};
 }
+
+
 
 export function applyServerRecords(session, recordsByEx, setWorkout, lastSavedRef) {
   const nextSets = (session.sets || []).map(s => {

@@ -2,7 +2,23 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
 import { motion, Reorder } from 'framer-motion';
-import { Dumbbell, Plus, Eye, PencilLine, Trash2, Clock, Users as UsersIcon, X, Layers, Search, Tag, GripVertical, UserCheck, Users, CalendarX, Loader2, Share, Share2, CopyPlus, Files } from 'lucide-react';
+import {
+	Dumbbell,
+	Plus,
+	Eye,
+	PencilLine,
+	Trash2,
+	Clock,
+	Users as UsersIcon,
+	X,
+	Layers,
+	Search,
+	Tag,
+	GripVertical,
+	Loader2,
+	Share2,
+	CopyPlus,
+} from 'lucide-react';
 
 import api from '@/utils/axios';
 import { Modal, StatCard } from '@/components/dashboard/ui/UI';
@@ -11,7 +27,7 @@ import Select from '@/components/atoms/Select';
 import { Notification } from '@/config/Notification';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 import { PrettyPagination } from '@/components/dashboard/ui/Pagination';
-import Input, { Input2 } from '@/components/atoms/Input';
+import Input from '@/components/atoms/Input';
 import { ExercisePicker } from '@/components/pages/dashboard/plans/ExercisePicker';
 import { useTranslations } from 'next-intl';
 import { useAdminClients } from '@/hooks/useHierarchy';
@@ -19,6 +35,7 @@ import { useUser } from '@/hooks/useUser';
 import MultiLangText from '@/components/atoms/MultiLangText';
 import Img from '@/components/atoms/Img';
 import { Link } from '@/i18n/navigation';
+import { NotesListInput } from '../../nutrition/page';
 
 const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
@@ -39,10 +56,23 @@ function buildPayloadFromPlan(sourcePlan, { userId, nameSuffix = ' (copy)', isAc
 	const days = srcDays.map((d, i) => ({
 		dayOfWeek: String(d.dayOfWeek || d.day || 'saturday').toLowerCase(),
 		nameOfWeek: d.nameOfWeek || d.name || `Day #${i + 1}`,
+		warmupExercises: (d.warmupExercises || []).map((ex, idx) => ({
+			order: ex.order || ex.orderIndex || idx + 1,
+			exerciseId: ex.exerciseId || ex?.exercise?.id || ex?.id,
+			targetSets: ex.targetSets ?? 3,
+			targetReps: ex.targetReps ?? 12,
+			tempo: ex.tempo ?? '1/1/1',
+		})),
 		exercises: (d.exercises || []).map((ex, idx) => ({
 			order: ex.order || ex.orderIndex || idx + 1,
 			exerciseId: ex.exerciseId || ex?.exercise?.id || ex?.id,
-
+			targetSets: ex.targetSets ?? 3,
+			targetReps: ex.targetReps ?? 12,
+			tempo: ex.tempo ?? '1/1/1',
+		})),
+		cardioExercises: (d.cardioExercises || []).map((ex, idx) => ({
+			order: ex.order || ex.orderIndex || idx + 1,
+			exerciseId: ex.exerciseId || ex?.exercise?.id || ex?.id,
 			targetSets: ex.targetSets ?? 3,
 			targetReps: ex.targetReps ?? 12,
 			tempo: ex.tempo ?? '1/1/1',
@@ -90,39 +120,28 @@ export default function PlansPage() {
 
 	useEffect(() => {
 		if (user?.role == 'coach') api.get(`auth/coaches/${user?.id}/clients?limit=1000`).then(res => setClientsCoach(res.data));
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const optionsClient = useMemo(() => {
 		const list = [];
 		if (user?.role == 'admin') {
 			if (clients?.items?.length) {
-				for (const coach of clients.items) {
-					list.push({
-						id: coach.id,
-						label: coach.name,
-					});
-				}
+				for (const coach of clients.items) list.push({ id: coach.id, label: coach.name });
 			}
 		} else {
 			if (clientsCoach?.users?.length) {
-				for (const coach of clientsCoach.users) {
-					list.push({
-						id: coach.id,
-						label: coach.name,
-					});
-				}
+				for (const coach of clientsCoach.users) list.push({ id: coach.id, label: coach.name });
 			}
 		}
 		return list;
-	}, [user, clients?.items]);
+	}, [user, clients?.items, clientsCoach?.users]);
 
 	const reqId = useRef(0);
 	const abortControllerRef = useRef(null);
 
 	const fetchList = useCallback(async () => {
-		if (abortControllerRef.current) {
-			abortControllerRef.current.abort();
-		}
+		if (abortControllerRef.current) abortControllerRef.current.abort();
 
 		abortControllerRef.current = new AbortController();
 		setErr(null);
@@ -161,13 +180,13 @@ export default function PlansPage() {
 			setPerPage(serverPerPage);
 			setItems(records);
 		} catch (e) {
-			if (e.name === 'CanceledError') return;
+			if (e?.name === 'CanceledError') return;
 			if (myId !== reqId.current) return;
 			setErr(e?.response?.data?.message || t('errors.loadPlans', 'Failed to load plans'));
 		} finally {
 			if (myId === reqId.current) setLoading(false);
 		}
-	}, [page, debounced, sortBy, sortOrder, perPage, t]);
+	}, [page, debounced, sortBy, sortOrder, perPage, t, user?.role, user?.adminId]);
 
 	const fetchStats = useCallback(async () => {
 		setLoadingStats(true);
@@ -183,31 +202,20 @@ export default function PlansPage() {
 		}
 	}, [debounced]);
 
-	useEffect(() => {
-		setPage(1);
-	}, [debounced, sortBy, sortOrder, perPage]);
-
-	useEffect(() => {
-		fetchList();
-	}, [changePlans, fetchList]);
-
-	useEffect(() => {
-		fetchStats();
-	}, [fetchStats]);
+	useEffect(() => setPage(1), [debounced, sortBy, sortOrder, perPage]);
+	useEffect(() => void fetchList(), [changePlans, fetchList]);
+	useEffect(() => void fetchStats(), [fetchStats]);
 
 	useEffect(() => {
 		return () => {
-			if (abortControllerRef.current) {
-				abortControllerRef.current.abort();
-			}
+			if (abortControllerRef.current) abortControllerRef.current.abort();
 		};
 	}, []);
 
 	const toggleSort = useCallback(
 		field => {
-			if (sortBy === field) {
-				setSortOrder(o => (o === 'ASC' ? 'DESC' : 'ASC'));
-			} else {
+			if (sortBy === field) setSortOrder(o => (o === 'ASC' ? 'DESC' : 'ASC'));
+			else {
 				setSortBy(field);
 				setSortOrder('ASC');
 			}
@@ -245,15 +253,8 @@ export default function PlansPage() {
 		}
 	}, [deleteId, t]);
 
-	const createPlan = async payload => {
-		const res = await api.post('/plans', payload, { headers: { 'Content-Type': 'application/json' } });
-		return res.data;
-	};
-
-	const updatePlan = async (id, payload) => {
-		const res = await api.put(`/plans/${id}`, payload, { headers: { 'Content-Type': 'application/json' } });
-		return res.data;
-	};
+	const createPlan = async payload => (await api.post('/plans', payload, { headers: { 'Content-Type': 'application/json' } })).data;
+	const updatePlan = async (id, payload) => (await api.put(`/plans/${id}`, payload, { headers: { 'Content-Type': 'application/json' } })).data;
 
 	const openPreview = async plan => {
 		try {
@@ -272,8 +273,14 @@ export default function PlansPage() {
 	};
 
 	const openAssign = plan => setAssignOpen(plan);
+
 	const totalPages = useMemo(() => Math.max(1, Math.ceil(total / Math.max(1, perPage))), [total, perPage]);
-	const sortLabel = sortBy === 'created_at' ? (sortOrder === 'ASC' ? t('plans.filters.oldestFirst') : t('plans.filters.newestFirst')) : t('plans.filters.sortByDate');
+	const sortLabel =
+		sortBy === 'created_at'
+			? sortOrder === 'ASC'
+				? t('plans.filters.oldestFirst')
+				: t('plans.filters.newestFirst')
+			: t('plans.filters.sortByDate');
 
 	const [duplicatingIds, setDuplicatingIds] = useState(() => new Set());
 	const markDuplicating = useCallback((id, on) => {
@@ -289,24 +296,16 @@ export default function PlansPage() {
 			if (!plan?.id) return;
 			markDuplicating(plan.id, true);
 			try {
-				// fetch full plan to ensure we have program.days
 				const full = await getOne(plan.id).catch(() => plan);
-
 				const payload = buildPayloadFromPlan(full, {
 					userId: user?.role == 'admin' ? user?.id : user?.adminId,
 					nameSuffix: ` ${t('copySuffix', '(copy)')}`,
 					isActive: full?.isActive ?? true,
 				});
-
 				const created = await createPlan(payload);
-
-				// optimistic UI: prepend & increase total
 				setItems(arr => [created, ...arr]);
 				setTotal(tot => tot + 1);
-
 				Notification(t('notifications.planDuplicated', 'Plan duplicated. You can edit it now.'), 'success');
-
-				// open the edit modal so you can rename/tweak immediately
 				setEditRow(created);
 			} catch (e) {
 				const msg = e?.response?.data?.message || t('notifications.duplicateFailed', 'Could not duplicate plan');
@@ -315,13 +314,18 @@ export default function PlansPage() {
 				markDuplicating(plan.id, false);
 			}
 		},
-		[user?.id, t, markDuplicating],
+		[user?.id, user?.adminId, user?.role, t, markDuplicating],
 	);
 
 	return (
 		<div className='space-y-6'>
-			{/* Header / Stats */}
-			<GradientStatsHeader onClick={() => setAddOpen(true)} btnName={user?.role == 'admin' && t('plans.header.newPlanButton')} title={t('plans.header.title')} desc={t('plans.header.desc')} loadingStats={loadingStats}>
+			<GradientStatsHeader
+				onClick={() => setAddOpen(true)}
+				btnName={t('plans.header.newPlanButton')}
+				title={t('plans.header.title')}
+				desc={t('plans.header.desc')}
+				loadingStats={loadingStats}
+			>
 				{user?.role == 'admin' && (
 					<>
 						<StatCard className=' ' icon={Layers} title={t('plans.stats.globalPlans')} value={stats?.plans?.total || 0} />
@@ -330,22 +334,36 @@ export default function PlansPage() {
 				)}
 			</GradientStatsHeader>
 
-			{/* Filters + search */}
 			<div className='relative '>
 				<div className='flex items-center justify-between gap-2 flex-wrap'>
-					{/* Search */}
 					<div className='relative flex-1 max-w-[240px] sm:min-w-[260px]'>
 						<Search className='absolute rtl:right-3 ltr:left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
-						<input value={searchText} onChange={e => setSearchText(e.target.value)} placeholder={t('placeholders.searchPlan')} className={['h-11 w-full px-8 rounded-lg', 'border border-slate-200 bg-white/90 text-slate-900', 'shadow-sm hover:shadow transition', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')} aria-label={t('placeholders.searchPlan')} />
+						<input
+							value={searchText}
+							onChange={e => setSearchText(e.target.value)}
+							placeholder={t('placeholders.searchPlan')}
+							className={[
+								'h-11 w-full px-8 rounded-lg',
+								'border border-slate-200 bg-white/90 text-slate-900',
+								'shadow-sm hover:shadow transition',
+								'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40',
+							].join(' ')}
+							aria-label={t('placeholders.searchPlan')}
+						/>
 						{!!searchText && (
-							<button type='button' onClick={() => setSearchText('')} className='absolute rtl:left-2 ltr:right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100' aria-label={t('actions.clear')} title={t('actions.clear')}>
+							<button
+								type='button'
+								onClick={() => setSearchText('')}
+								className='absolute rtl:left-2 ltr:right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100'
+								aria-label={t('actions.clear')}
+								title={t('actions.clear')}
+							>
 								<X className='w-4 h-4' />
 							</button>
 						)}
 					</div>
 
 					<div className='flex items-center gap-2'>
-						{/* Per page */}
 						<div className='min-w-[80px]'>
 							<Select
 								searchable={false}
@@ -363,8 +381,15 @@ export default function PlansPage() {
 							/>
 						</div>
 
-						{/* Sort newest */}
-						<button onClick={() => toggleSort('created_at')} className={['inline-flex items-center gap-2 rounded-lg px-3 h-11 font-medium transition-all duration-300', 'border border-slate-200 bg-white/95 text-slate-800 shadow-sm', 'hover:shadow-md hover:bg-slate-50 active:scale-[.97]', 'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40'].join(' ')}>
+						<button
+							onClick={() => toggleSort('created_at')}
+							className={[
+								'inline-flex items-center gap-2 rounded-lg px-3 h-11 font-medium transition-all duration-300',
+								'border border-slate-200 bg-white/95 text-slate-800 shadow-sm',
+								'hover:shadow-md hover:bg-slate-50 active:scale-[.97]',
+								'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40',
+							].join(' ')}
+						>
 							<Clock size={18} />
 							<span className='text-sm tracking-wide'>{sortLabel}</span>
 						</button>
@@ -372,20 +397,25 @@ export default function PlansPage() {
 				</div>
 			</div>
 
-			{/* Errors */}
 			{err ? <div className='p-3 rounded-lg bg-red-50 text-red-700 border border-red-100'>{err}</div> : null}
 
-			{/* Content */}
-			<ListView loading={loading} items={items} onPreview={openPreview} onEdit={openEdit} onDelete={askDelete} onAssign={openAssign} duplicatingIds={duplicatingIds} onDuplicate={handleDuplicate} />
+			<ListView
+				loading={loading}
+				items={items}
+				onPreview={openPreview}
+				onEdit={openEdit}
+				onDelete={askDelete}
+				onAssign={openAssign}
+				duplicatingIds={duplicatingIds}
+				onDuplicate={handleDuplicate}
+			/>
 
 			<PrettyPagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
-			{/* Preview */}
 			<Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name || t('plans.modals.previewTitle')} maxW='max-w-4xl'>
 				{preview && <PlanPreview plan={preview} />}
 			</Modal>
 
-			{/* New Plan Builder */}
 			<Modal scrollRef={scrollRef} open={addOpen} onClose={() => setAddOpen(false)} title={t('plans.modals.createTitle')} maxW='max-w-5xl'>
 				<NewPlanBuilder
 					scrollRef={scrollRef}
@@ -406,7 +436,6 @@ export default function PlansPage() {
 				/>
 			</Modal>
 
-			{/* Edit */}
 			<Modal scrollRef={scrollRef} open={!!editRow} onClose={() => setEditRow(null)} title={`${t('plans.modals.editTitle')} ${editRow?.name || ''}`} maxW='max-w-5xl'>
 				{editRow && (
 					<NewPlanBuilder
@@ -429,12 +458,20 @@ export default function PlansPage() {
 				)}
 			</Modal>
 
-			{/* Assign */}
 			<Modal open={!!assignOpen} onClose={() => setAssignOpen(null)} title={t('plans.modals.assignTitle', { name: assignOpen?.name || '' })} maxW='max-w-md'>
-				{assignOpen && <AssignForm setChangePlans={setChangePlans} setPlans={setItems} plans={items} planId={assignOpen.id} optionsClient={optionsClient} onClose={() => setAssignOpen(null)} onAssigned={() => setAssignOpen(null)} />}
+				{assignOpen && (
+					<AssignForm
+						setChangePlans={setChangePlans}
+						setPlans={setItems}
+						plans={items}
+						planId={assignOpen.id}
+						optionsClient={optionsClient}
+						onClose={() => setAssignOpen(null)}
+						onAssigned={() => setAssignOpen(null)}
+					/>
+				)}
 			</Modal>
 
-			{/* Delete confirmation */}
 			<ConfirmDialog
 				loading={deleteLoading}
 				open={deleteOpen}
@@ -497,7 +534,6 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 		);
 	}
 
-	/* ---------- Empty ---------- */
 	if (!items.length) {
 		return (
 			<div className='rounded-lg border border-slate-200 bg-white p-10 text-center shadow-sm'>
@@ -510,7 +546,6 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 		);
 	}
 
-	/* ---------- List ---------- */
 	return (
 		<div className='divide-y flex flex-col gap-3 divide-slate-100 overflow-hidden '>
 			{items.map(p => {
@@ -519,52 +554,87 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 
 				return (
 					<div key={p.id} className='rounded-lg border border-y-slate-200 bg-white  group relative flex items-start gap-3 px-4 py-3 transition-all duration-300 hover:bg-slate-50/60'>
-						{/* icon tile */}
 						<div className='mt-0.5 grid h-8 w-8 shrink-0 place-content-center rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-95 text-white shadow-sm'>
 							<Dumbbell className='h-5 w-5' />
 						</div>
 
-						{/* content */}
 						<div className='min-w-0 flex-1'>
 							<div className='flex flex-wrap items-center gap-2'>
 								<MultiLangText className='truncate text-base font-semibold text-slate-900'>{p.name}</MultiLangText>
-								<span className={['inline-flex items-center gap-1 rounded-md px-2 py-0.5   ring-1 ring-inset', active ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-slate-100 text-slate-600 ring-slate-200'].join(' ')}>{t('plans.list.dayCountLabel', { count: dayCount })}</span>
+								<span
+									className={[
+										'inline-flex items-center gap-1 rounded-md px-2 py-0.5   ring-1 ring-inset',
+										active ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-slate-100 text-slate-600 ring-slate-200',
+									].join(' ')}
+								>
+									{t('plans.list.dayCountLabel', { count: dayCount })}
+								</span>
 							</div>
 						</div>
 
-						{/* actions */}
 						<div className='ml-auto flex shrink-0 items-center gap-1'>
-							<button type='button' onClick={() => onAssign?.(p)} className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 active:scale-[.98]' title={t('actions.assign')}>
+							<button
+								type='button'
+								onClick={() => onAssign?.(p)}
+								className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 active:scale-[.98]'
+								title={t('actions.assign')}
+							>
 								<UsersIcon className='h-4 w-4' />
 								{t('actions.assign')}
 							</button>
 
 							<div className='flex items-center gap-2'>
-								{/* Public View */}
-								<Link href={`/workouts/plans/${p.id}`} target='_blank' rel='noopener noreferrer' className='inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 bg-white  text-sm font-medium text-emerald-600 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/30'>
+								<Link
+									href={`/workouts/plans/${p.id}`}
+									target='_blank'
+									rel='noopener noreferrer'
+									className='inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 bg-white  text-sm font-medium text-emerald-600 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/30'
+								>
 									<Share2 className='h-4 w-4' />
 								</Link>
 
-								{/* Duplicate */}
-								<button type='button' title={t('actions.duplicate', { default: 'Duplicate' })} onClick={() => !duplicatingIds?.has(p.id) && onDuplicate?.(p)} disabled={duplicatingIds?.has(p.id)} aria-busy={duplicatingIds?.has(p.id) ? 'true' : 'false'} className={[' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border bg-white focus-visible:outline-none focus-visible:ring-4 transition', 'border-violet-200 text-violet-700 hover:bg-violet-50 focus-visible:ring-violet-300/30', duplicatingIds?.has(p.id) ? 'opacity-60 pointer-events-none cursor-not-allowed' : ''].join(' ')}>
+								<button
+									type='button'
+									title={t('actions.duplicate', { default: 'Duplicate' })}
+									onClick={() => !duplicatingIds?.has(p.id) && onDuplicate?.(p)}
+									disabled={duplicatingIds?.has(p.id)}
+									aria-busy={duplicatingIds?.has(p.id) ? 'true' : 'false'}
+									className={[
+										' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border bg-white focus-visible:outline-none focus-visible:ring-4 transition',
+										'border-violet-200 text-violet-700 hover:bg-violet-50 focus-visible:ring-violet-300/30',
+										duplicatingIds?.has(p.id) ? 'opacity-60 pointer-events-none cursor-not-allowed' : '',
+									].join(' ')}
+								>
 									{duplicatingIds?.has(p.id) ? <Loader2 className='h-4 w-4 animate-spin' /> : <Layers className='h-4 w-4' />}
 								</button>
 
-								{/* Preview */}
-								<button type='button' title={t('actions.preview')} onClick={() => onPreview?.(p)} className=' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30'>
+								<button
+									type='button'
+									title={t('actions.preview')}
+									onClick={() => onPreview?.(p)}
+									className=' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30'
+								>
 									<Eye className='h-4 w-4' />
 								</button>
 
-								{/* Edit */}
 								{p?.adminId != null && (
-									<button type='button' title={t('actions.edit')} onClick={() => onEdit?.(p)} className=' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-indigo-700 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400/30'>
+									<button
+										type='button'
+										title={t('actions.edit')}
+										onClick={() => onEdit?.(p)}
+										className=' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-indigo-700 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400/30'
+									>
 										<PencilLine className='h-4 w-4' />
 									</button>
 								)}
 
-								{/* Delete */}
 								{p?.adminId != null && (
-									<button type='button' title={t('actions.delete')} onClick={() => onDelete?.(p.id)} className=' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/30'>
+									<button
+										type='button'
+										title={t('actions.delete')}
+										onClick={() => onDelete?.(p.id)}
+										className=' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/30'
+									>
 										<Trash2 className='h-4 w-4' />
 									</button>
 								)}
@@ -579,55 +649,53 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 
 const PlanPreview = memo(function PlanPreview({ plan }) {
 	const t = useTranslations('workoutPlans');
-
 	const days = plan?.program?.days || [];
-
 	const formatDateTime = value => (value ? new Date(value).toLocaleString() : '—');
 
 	return (
 		<div className='space-y-6'>
-			{/* Days List */}
 			<div className='space-y-4'>
 				{days.map((d, idx) => {
-					const exercises = d.exercises || [];
+					const warmup = d.warmupExercises || [];
+					const main = d.exercises || [];
+					const cardio = d.cardioExercises || [];
+
+					const exercises = [...warmup, ...main, ...cardio];
 					const hasExercises = exercises.length > 0;
 
 					return (
 						<section key={d.id || idx} className='rounded-xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden'>
-							{/* Day Header */}
 							<header className='flex items-center justify-between gap-2 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-3'>
 								<div className='flex items-center gap-2'>
 									<span className='inline-flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-xs font-semibold text-indigo-700'>{idx + 1}</span>
-
 									<MultiLangText className='font-semibold text-slate-900'>{d.name}</MultiLangText>
 								</div>
 
 								<div className='flex items-center gap-2 text-[11px]'>
-									{/* Day of Week pill */}
 									<span className='inline-flex items-center rounded-full bg-slate-900/5 px-2.5 py-1 text-[11px] font-medium text-slate-600'>{t(`days.${d.dayOfWeek}`)}</span>
-
-									{/* Exercises count pill */}
 									<span className='inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700'>
-										{exercises.length} <span className='ms-1 font-normal text-emerald-700/80'>{exercises.length === 1 ? t('preview.exercise') : t('preview.exercises')}</span>
+										{exercises.length}{' '}
+										<span className='ms-1 font-normal text-emerald-700/80'>{exercises.length === 1 ? t('preview.exercise') : t('preview.exercises')}</span>
 									</span>
 								</div>
 							</header>
 
-							{/* Exercises Grid */}
 							<div className='bg-slate-50/80 px-3 py-3 sm:px-4 sm:py-4'>
 								{hasExercises ? (
 									<ol className='grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4'>
 										{exercises.map((ex, i) => (
-											<li key={ex.id || ex.exerciseId || i} className='group relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-xs transition-all hover:-translate-y-[1px] hover:border-indigo-200 hover:shadow-md'>
-												{/* Number badge */}
-												<span className='pointer-events-none absolute top-0 rtl:-right-0 ltr:-left-0 z-10 inline-flex h-6 w-6 items-center justify-center rtl:rounded-[0_10px_0_10px] ltr:rounded-[10px_0_10px_0] bg-indigo-500 text-[11px] font-semibold text-white shadow-md'>{i + 1}</span>
+											<li
+												key={ex.id || ex.exerciseId || i}
+												className='group relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-xs transition-all hover:-translate-y-[1px] hover:border-indigo-200 hover:shadow-md'
+											>
+												<span className='pointer-events-none absolute top-0 rtl:-right-0 ltr:-left-0 z-10 inline-flex h-6 w-6 items-center justify-center rtl:rounded-[0_10px_0_10px] ltr:rounded-[10px_0_10px_0] bg-indigo-500 text-[11px] font-semibold text-white shadow-md'>
+													{i + 1}
+												</span>
 
-												{/* Image */}
 												<div className='shrink-0'>
 													<Img showBlur={false} src={ex.img} alt={ex.name} className='h-16 w-16 rounded-lg bg-slate-50 object-contain' />
 												</div>
 
-												{/* Text content */}
 												<div className='flex min-w-0 flex-1 flex-col gap-0.5'>
 													<MultiLangText className='truncate text-sm font-semibold text-slate-900 leading-snug'>{ex.name}</MultiLangText>
 
@@ -646,8 +714,8 @@ const PlanPreview = memo(function PlanPreview({ plan }) {
 									<div className='flex items-center gap-2 rounded-lg border border-dashed border-slate-200 bg-white/70 px-3 py-3 text-xs text-slate-500'>
 										<span className='flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-[13px]'>💡</span>
 										<div className='flex flex-col'>
-											<span className='font-medium text-slate-700'>{t('preview.noExercisesYetTitle') || t('preview.noExercisesYet')}</span>
-											<span className='text-[11px] text-slate-400'>{t('preview.noExercisesYetHelper') || t('preview.noExercisesYet')}</span>
+											<span className='font-medium text-slate-700'>{t('preview.noExercisesYetTitle')}</span>
+											<span className='text-[11px] text-slate-400'>{t('preview.noExercisesYetHelper')}</span>
 										</div>
 									</div>
 								)}
@@ -656,11 +724,9 @@ const PlanPreview = memo(function PlanPreview({ plan }) {
 					);
 				})}
 
-				{/* If no days */}
-				{!days.length && <div className='rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-sm text-slate-500'>{t('preview.noDaysYet') || 'No days configured for this plan yet.'}</div>}
+				{!days.length && <div className='rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-sm text-slate-500'>{t('preview.noDaysYet')}</div>}
 			</div>
 
-			{/* Footer meta */}
 			<footer className='rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5 text-[11px] text-slate-500'>
 				<div className='flex flex-wrap items-center gap-x-3 gap-y-1'>
 					<span>
@@ -721,7 +787,13 @@ const AssignForm = memo(function AssignForm({ planId, onClose, onAssigned, optio
 		<form onSubmit={submit} className='space-y-4'>
 			<div>
 				<label className='text-sm font-medium text-slate-700 mb-2 block'>{t('assign.selectUsersLabel')}</label>
-				<Select placeholder={t('assign.selectUsersPlaceholder')} options={optionsClient.filter(o => !selectedUsers.some(u => u.id === o.id))} value={null} onChange={addUser} searchable={true} />
+				<Select
+					placeholder={t('assign.selectUsersPlaceholder')}
+					options={optionsClient.filter(o => !selectedUsers.some(u => u.id === o.id))}
+					value={null}
+					onChange={addUser}
+					searchable={true}
+				/>
 			</div>
 
 			{selectedUsers.length > 0 && (
@@ -745,16 +817,22 @@ const AssignForm = memo(function AssignForm({ planId, onClose, onAssigned, optio
 	);
 });
 
-const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCancel, onCreate, userId }) {
+const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCancel, onCreate }) {
 	const t = useTranslations('workoutPlans');
 	const [name, setName] = useState(initial?.name || '');
-	const [notes, setNotes] = useState(initial?.notes || '');
+	const [notes, setNotes] = useState(() => {
+		const v = initial?.notes;
+		return Array.isArray(v) && v.length ? v : [''];
+	});
+	const [pickerBlock, setPickerBlock] = useState('main'); // 'warmup' | 'main' | 'cardio'
 
 	const makeNewDay = idx => ({
 		id: `day_${Date.now()}_${idx}`,
 		dayOfWeek: 'saturday',
 		nameOfWeek: t('builder.dayNumber', { num: idx }),
+		warmupExercises: [],
 		exercises: [],
+		cardioExercises: [],
 	});
 
 	const [days, setDays] = useState(() => {
@@ -763,14 +841,35 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 			id: x.id,
 			dayOfWeek: (x.day || x.dayOfWeek || '').toLowerCase() || 'saturday',
 			nameOfWeek: x.nameOfWeek || x.name || t('builder.dayNumber', { num: i + 1 }),
+
+			warmupExercises: (x.warmupExercises || []).map((e, j) => ({
+				exerciseId: e.exerciseId || e.exercise?.id || e.id,
+				name: e.name || e.exercise?.name,
+				img: e.img,
+				category: e.exercise?.category || e.category || null,
+				order: e.order || e.orderIndex || j + 1,
+				targetSets: e.targetSets ?? 3,
+				targetReps: e.targetReps ?? 12,
+				tempo: e.tempo ?? '1/1/1',
+			})),
+
 			exercises: (x.exercises || []).map((e, j) => ({
 				exerciseId: e.exerciseId || e.exercise?.id || e.id,
 				name: e.name || e.exercise?.name,
 				img: e.img,
 				category: e.exercise?.category || e.category || null,
 				order: e.order || e.orderIndex || j + 1,
+				targetSets: e.targetSets ?? 3,
+				targetReps: e.targetReps ?? 12,
+				tempo: e.tempo ?? '1/1/1',
+			})),
 
-				// NEW
+			cardioExercises: (x.cardioExercises || []).map((e, j) => ({
+				exerciseId: e.exerciseId || e.exercise?.id || e.id,
+				name: e.name || e.exercise?.name,
+				img: e.img,
+				category: e.exercise?.category || e.category || null,
+				order: e.order || e.orderIndex || j + 1,
 				targetSets: e.targetSets ?? 3,
 				targetReps: e.targetReps ?? 12,
 				tempo: e.tempo ?? '1/1/1',
@@ -778,59 +877,42 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 		}));
 
 		if (mapped.length > 0) return mapped;
-
 		return [makeNewDay(1)];
 	});
 
 	const addDay = () => {
-		setDays(arr => {
-			const idx = arr.length + 1;
-			return [...arr, makeNewDay(idx)];
-		});
-
+		setDays(arr => [...arr, makeNewDay(arr.length + 1)]);
 		setTimeout(() => {
-			if (scrollRef.current) {
-				scrollRef.current.scrollTo({
-					top: scrollRef.current.scrollHeight,
-					behavior: 'smooth',
-				});
-			}
+			if (scrollRef?.current) scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
 		}, 0);
 	};
+
 	const duplicateDay = id => {
 		setDays(arr => {
 			const index = arr.findIndex(d => d.id === id);
 			if (index === -1) return arr;
 
 			const source = arr[index];
-
 			const newId = `day_${Date.now()}_${index + 1}`;
 
-			const copiedExercises = (source.exercises || []).map((ex, idx) => ({
-				...ex,
-				order: idx + 1, // رصّ الأوامر من جديد
-			}));
+			const copyList = list => (list || []).map((ex, idx) => ({ ...ex, order: idx + 1 }));
 
 			const duplicated = {
 				...source,
 				id: newId,
 				nameOfWeek: `${source.nameOfWeek} ${t('copySuffix', '(copy)')}`,
-				exercises: copiedExercises,
+				warmupExercises: copyList(source.warmupExercises),
+				exercises: copyList(source.exercises),
+				cardioExercises: copyList(source.cardioExercises),
 			};
 
 			const next = [...arr];
-			next.splice(index + 1, 0, duplicated); // حط اليوم الجديد بعد الأصلي
+			next.splice(index + 1, 0, duplicated);
 			return next;
 		});
 
-		// سكرول لتحت عشان يشوف اليوم الجديد
 		setTimeout(() => {
-			if (scrollRef?.current) {
-				scrollRef.current.scrollTo({
-					top: scrollRef.current.scrollHeight,
-					behavior: 'smooth',
-				});
-			}
+			if (scrollRef?.current) scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
 		}, 0);
 	};
 
@@ -838,29 +920,33 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 
 	const [pickerOpen, setPickerOpen] = useState(false);
 	const [pickerDayId, setPickerDayId] = useState(null);
+
 	const pickerInitialSelected = useMemo(() => {
 		const day = days.find(d => d.id === pickerDayId);
 		if (!day) return [];
-		return day.exercises.map(ex => ({
-			id: ex.exerciseId,
-			name: ex.name,
-			category: ex.category || null,
-			img: ex.img,
-		}));
-	}, [pickerDayId, days]);
+		const key = pickerBlock === 'warmup' ? 'warmupExercises' : pickerBlock === 'cardio' ? 'cardioExercises' : 'exercises';
+		return (day[key] || []).map(ex => ({ id: ex.exerciseId, name: ex.name, category: ex.category || null, img: ex.img }));
+	}, [pickerDayId, pickerBlock, days]);
 
-	const openPicker = dayId => {
+	const openPicker = (dayId, block = 'main') => {
 		setPickerDayId(dayId);
+		setPickerBlock(block);
 		setPickerOpen(true);
 	};
 
 	const onPickerDone = pickedArray => {
+		const key = pickerBlock === 'warmup' ? 'warmupExercises' : pickerBlock === 'cardio' ? 'cardioExercises' : 'exercises';
+
 		setDays(arr =>
 			arr.map(day => {
 				if (day.id !== pickerDayId) return day;
+
+				const current = day[key] || [];
 				const pickedIds = pickedArray.map(x => x.id);
-				const keptExisting = day.exercises.filter(ex => pickedIds.includes(ex.exerciseId));
-				const existingIdsSet = new Set(day.exercises.map(ex => ex.exerciseId));
+
+				const keptExisting = current.filter(ex => pickedIds.includes(ex.exerciseId));
+				const existingIdsSet = new Set(current.map(ex => ex.exerciseId));
+
 				const newOnes = pickedArray
 					.filter(x => !existingIdsSet.has(x.id))
 					.map(x => ({
@@ -868,17 +954,13 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 						name: x.name,
 						category: x.category || null,
 						img: x.img,
-
-						// NEW defaults
 						targetSets: 3,
 						targetReps: 12,
 						tempo: '1/1/1',
 					}));
-				const merged = [...keptExisting, ...newOnes].map((ex, idx) => ({
-					...ex,
-					order: idx + 1,
-				}));
-				return { ...day, exercises: merged };
+
+				const merged = [...keptExisting, ...newOnes].map((ex, idx) => ({ ...ex, order: idx + 1 }));
+				return { ...day, [key]: merged };
 			}),
 		);
 
@@ -886,31 +968,25 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 		setPickerDayId(null);
 	};
 
-	const onReorderExercises = (dayId, newOrder) => {
+	const onReorderExercises = (dayId, block, newOrder) => {
+		const key = block === 'warmup' ? 'warmupExercises' : block === 'cardio' ? 'cardioExercises' : 'exercises';
 		setDays(arr =>
 			arr.map(d => {
 				if (d.id !== dayId) return d;
 				const reordered = newOrder.map((ex, idx) => ({ ...ex, order: idx + 1 }));
-				return { ...d, exercises: reordered };
+				return { ...d, [key]: reordered };
 			}),
 		);
 	};
 
 	const [loading, setLoading] = useState(false);
-
 	const user = useUser();
+
 	const submit = async () => {
-		if (!name.trim()) {
-			Notification(t('builder.validation.nameRequired'), 'error');
-			return;
-		}
-		if (!days.length) {
-			Notification(t('builder.validation.needDay'), 'error');
-			return;
-		}
-		if (days.some(d => !d.exercises.length)) {
-			Notification(t('builder.validation.needExercisePerDay'), 'error');
-			return;
+		if (!name.trim()) return Notification(t('builder.validation.nameRequired'), 'error');
+		if (!days.length) return Notification(t('builder.validation.needDay'), 'error');
+		if (days.some(d => !(d.exercises?.length || d.warmupExercises?.length || d.cardioExercises?.length))) {
+			return Notification(t('builder.validation.needExercisePerDay'), 'error');
 		}
 
 		const payload = {
@@ -922,10 +998,23 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 				days: days.map(d => ({
 					dayOfWeek: d.dayOfWeek,
 					nameOfWeek: d.nameOfWeek,
-					exercises: d.exercises.map(ex => ({
+					warmupExercises: (d.warmupExercises || []).map(ex => ({
 						order: ex.order,
 						exerciseId: ex.exerciseId,
-						// ✅ send these too
+						targetSets: ex.targetSets === '' || ex.targetSets == null ? null : Number(ex.targetSets),
+						targetReps: ex.targetReps === '' || ex.targetReps == null ? null : Number(ex.targetReps),
+						tempo: ex.tempo === '' || ex.tempo == null ? null : String(ex.tempo).trim(),
+					})),
+					exercises: (d.exercises || []).map(ex => ({
+						order: ex.order,
+						exerciseId: ex.exerciseId,
+						targetSets: ex.targetSets === '' || ex.targetSets == null ? null : Number(ex.targetSets),
+						targetReps: ex.targetReps === '' || ex.targetReps == null ? null : Number(ex.targetReps),
+						tempo: ex.tempo === '' || ex.tempo == null ? null : String(ex.tempo).trim(),
+					})),
+					cardioExercises: (d.cardioExercises || []).map(ex => ({
+						order: ex.order,
+						exerciseId: ex.exerciseId,
 						targetSets: ex.targetSets === '' || ex.targetSets == null ? null : Number(ex.targetSets),
 						targetReps: ex.targetReps === '' || ex.targetReps == null ? null : Number(ex.targetReps),
 						tempo: ex.tempo === '' || ex.tempo == null ? null : String(ex.tempo).trim(),
@@ -933,6 +1022,7 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 				})),
 			},
 		};
+
 		setLoading(true);
 		await onCreate?.(payload);
 		setLoading(false);
@@ -953,16 +1043,35 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 			<div className='  flex items-center justify-between pb-2 border-b border-slate-100'>
 				<Input className='max-w-[400px] w-full' placeholder={t('builder.namePlaceholder')} value={name} onChange={e => setName(e)} />
 
-				<button type='button' onClick={addDay} className='inline-flex items-center gap-2 rounded-lg border border-slate-300  bg-white px-4 py-2 text-sm font-medium text-slate-800  shadow-sm hover:bg-slate-50 active:scale-[.97]  focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30  transition-all duration-200'>
+				<button
+					type='button'
+					onClick={addDay}
+					className='inline-flex items-center gap-2 rounded-lg border border-slate-300  bg-white px-4 py-2 text-sm font-medium text-slate-800  shadow-sm hover:bg-slate-50 active:scale-[.97]  focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30  transition-all duration-200'
+				>
 					<Plus className='w-4 h-4 text-slate-700' />
 					<span>{t('actions.addDay')}</span>
 				</button>
 			</div>
 
-			<DaysListSection days={days} setDays={setDays} openPicker={openPicker} removeDay={removeDay} duplicateDay={duplicateDay} onReorderExercises={onReorderExercises} DAY_OPTIONS={DAY_OPTIONS} spring={spring} />
+			<NotesListInput value={notes} onChange={setNotes} />
+
+			<DaysListSection
+				days={days}
+				setDays={setDays}
+				openPicker={openPicker}
+				removeDay={removeDay}
+				duplicateDay={duplicateDay}
+				onReorderExercises={onReorderExercises}
+				DAY_OPTIONS={DAY_OPTIONS}
+				spring={spring}
+			/>
 
 			<div className='flex items-center justify-end gap-3 pt-4 border-t border-slate-100'>
-				<button type='button' onClick={onCancel} className='inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300  bg-white px-4 py-2.5 text-sm font-medium text-slate-700  shadow-sm hover:bg-slate-50 active:scale-[.97]  focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30  transition-all duration-200'>
+				<button
+					type='button'
+					onClick={onCancel}
+					className='inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300  bg-white px-4 py-2.5 text-sm font-medium text-slate-700  shadow-sm hover:bg-slate-50 active:scale-[.97]  focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30  transition-all duration-200'
+				>
 					{t('actions.cancel')}
 				</button>
 
@@ -985,21 +1094,158 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 
 export function DaysListSection({ duplicateDay, days, setDays, openPicker, removeDay, onReorderExercises, DAY_OPTIONS, spring }) {
 	const t = useTranslations('workoutPlans');
-	const [previewImg, setPreviewImg] = useState(null)
+	const [previewImg, setPreviewImg] = useState(null);
 
 	const btnBase = ' h-[35px] inline-flex items-center justify-center gap-2 rounded-lg text-sm transition ' + 'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 active:scale-[.98]';
 	const btnOutline = 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 px-3 py-1.5 shadow-sm';
 	const btnGhostDanger = 'border border-slate-200 bg-white text-rose-600 hover:bg-rose-50 px-2.5 py-1.5';
 	const iconBtn = 'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white ' + 'text-slate-700 hover:bg-slate-50 focus-visible:ring-4 focus-visible:ring-slate-400/30';
 
+	const normalizeIntOrDefault = (v, def) => {
+		const s = String(v ?? '').trim();
+		if (!s) return def;
+		const n = Number(s);
+		if (!Number.isFinite(n) || n <= 0) return def;
+		return Math.trunc(n);
+	};
+
+	const normalizeTempoOrDefault = (v, def) => {
+		const s = String(v ?? '').trim();
+		if (!s) return def;
+		if (/^\d+\/\d+\/\d+$/.test(s)) return s;
+		return def;
+	};
+
+	const renderBlock = (day, block, list) => {
+		const key = block === 'warmup' ? 'warmupExercises' : block === 'cardio' ? 'cardioExercises' : 'exercises';
+
+		const title =
+			block === 'warmup'
+				? t('builder.blocks.warmup', { default: 'Warmup' })
+				: block === 'cardio'
+					? t('builder.blocks.cardio', { default: 'Cardio' })
+					: t('builder.blocks.workout', { default: 'Workout' });
+
+		const setExerciseField = (exerciseId, patch) => {
+			setDays(arr =>
+				arr.map(d0 =>
+					d0.id !== day.id
+						? d0
+						: {
+							...d0,
+							[key]: (d0[key] || []).map(e => (e.exerciseId !== exerciseId ? e : { ...e, ...patch })),
+						},
+				),
+			);
+		};
+
+		const removeExercise = exerciseId => {
+			setDays(arr => arr.map(d0 => (d0.id !== day.id ? d0 : { ...d0, [key]: (d0[key] || []).filter(e => e.exerciseId !== exerciseId) })));
+		};
+
+		return (
+			<div className='mb-4'>
+				<div className='mb-2 text-xs font-semibold text-slate-700'>{title}</div>
+
+				{list?.length ? (
+					<Reorder.Group axis='y' values={list} onReorder={newOrder => onReorderExercises(day.id, block, newOrder)} className='space-y-2'>
+						{list.map(ex => (
+							<Reorder.Item
+								key={ex.exerciseId}
+								value={ex}
+								dragListener
+								dragConstraints={{ top: 0, bottom: 0 }}
+								className='rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 transition-colors hover:bg-slate-100'
+							>
+								<div className='flex items-center justify-between gap-3'>
+									<div className='flex min-w-0 items-center gap-3'>
+										<GripVertical className='w-4 h-4 shrink-0 cursor-grab text-slate-400' />
+
+										<div className='relative w-[45px] group'>
+											<Img src={ex?.img} showBlur={false} className='w-full rounded' />
+											<button
+												type='button'
+												onClick={() => setPreviewImg(ex.img)}
+												className='absolute inset-0 flex items-center justify-center  bg-black/40 opacity-0 group-hover:opacity-100  transition-opacity rounded'
+												aria-label={t('actions.preview')}
+												title={t('actions.preview')}
+											>
+												<Eye className='h-4 w-4 text-white' />
+											</button>
+										</div>
+
+										<MultiLangText className='truncate font-medium text-slate-900'>{ex.name}</MultiLangText>
+
+										{ex.category ? (
+											<span className='inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-1 text-[11px] text-indigo-700'>
+												<Tag size={12} />
+												<MultiLangText>{ex.category}</MultiLangText>
+											</span>
+										) : null}
+									</div>
+
+									<div className='flex items-center gap-2'>
+										<div className='w-full sm:w-auto'>
+											<div className='mt-2 sm:mt-0 sm:ml-auto grid grid-cols-3 gap-1.5 min-w-[210px] max-w-[260px]'>
+												<MiniField
+													inputMode='numeric'
+													type='number'
+													placeholder={t('preview.sets')}
+													value={ex.targetSets ?? ''}
+													onChange={e => setExerciseField(ex.exerciseId, { targetSets: e.target.value })}
+													onBlur={() => {
+														const s = String(ex.targetSets ?? '').trim();
+														if (!s) return;
+														setExerciseField(ex.exerciseId, { targetSets: normalizeIntOrDefault(ex.targetSets, 3) });
+													}}
+												/>
+
+												<MiniField
+													inputMode='numeric'
+													placeholder={t('preview.reps')}
+													value={ex.targetReps ?? ''}
+													onChange={e => setExerciseField(ex.exerciseId, { targetReps: e.target.value })}
+													onBlur={() => {
+														const s = String(ex.targetReps ?? '').trim();
+														if (!s) return;
+														setExerciseField(ex.exerciseId, { targetReps: normalizeIntOrDefault(ex.targetReps, 12) });
+													}}
+												/>
+
+												<MiniField
+													placeholder={t('preview.tempo', { default: 'Tempo' })}
+													value={ex.tempo ?? ''}
+													onChange={e => setExerciseField(ex.exerciseId, { tempo: e.target.value })}
+													onBlur={() => {
+														const s = String(ex.tempo ?? '').trim();
+														if (!s) return;
+														setExerciseField(ex.exerciseId, { tempo: normalizeTempoOrDefault(ex.tempo, '1/1/1') });
+													}}
+												/>
+											</div>
+										</div>
+
+										<button type='button' onClick={() => removeExercise(ex.exerciseId)} className={iconBtn} title={t('actions.delete')} aria-label={t('actions.delete')}>
+											<Trash2 className='w-4 h-4' />
+										</button>
+									</div>
+								</div>
+							</Reorder.Item>
+						))}
+					</Reorder.Group>
+				) : (
+					<div className='rounded-lg border border-dashed border-slate-200 bg-slate-50 py-6 text-center text-sm text-slate-500'>{t('builder.noExercisesHint')}</div>
+				)}
+			</div>
+		);
+	};
+
 	return (
 		<div className='space-y-4'>
 			{days.map(d => (
 				<motion.div key={d.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className='overflow-hidden rounded-lg border border-slate-200 bg-white'>
-					{/* Header row */}
 					<div className='flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/60 px-4 py-3'>
 						<div className='flex flex-wrap items-center gap-3'>
-							{/* <div className='font-semibold text-slate-900 uppercase  '>{d.nameOfWeek}</div> */}
 							<Select
 								clearable={false}
 								searchable={false}
@@ -1007,233 +1253,62 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 								placeholder={t('builder.selectDayPlaceholder')}
 								options={DAY_OPTIONS.map(o => ({ id: o.id, label: o.label }))}
 								value={d.dayOfWeek}
-								onChange={val => {
-									setDays(arr => arr.map(x => (x.id === d.id ? { ...x, dayOfWeek: val } : x)));
-								}}
+								onChange={val => setDays(arr => arr.map(x => (x.id === d.id ? { ...x, dayOfWeek: val } : x)))}
 							/>
 						</div>
 
 						<div className='flex items-center gap-2'>
-							{/* Add exercises */}
-							<button type='button' onClick={() => openPicker(d.id)} className={`${btnBase} ${btnOutline} !px-3 !py-1.5`} title={t('actions.addExercises')}>
-								<Plus className='w-4 h-4' />
-								{t('actions.addExercises')}
+							<button type='button' onClick={() => openPicker(d.id, 'warmup')} className={`${btnBase} ${btnOutline}`}>
+								{t('builder.addWarmup', { default: '+ Warmup' })}
 							</button>
 
-							{/* Duplicate day */}
+							<button type='button' onClick={() => openPicker(d.id, 'main')} className={`${btnBase} ${btnOutline}`}>
+								{t('builder.addWorkout', { default: '+ Workout' })}
+							</button>
+
+							<button type='button' onClick={() => openPicker(d.id, 'cardio')} className={`${btnBase} ${btnOutline}`}>
+								{t('builder.addCardio', { default: '+ Cardio' })}
+							</button>
+
 							<button type='button' onClick={() => duplicateDay(d.id)} className={`${btnBase} ${btnOutline} !px-3 !py-1.5`} title={t('actions.duplicateDay', { default: 'Duplicate day' })}>
 								<CopyPlus className='w-4 h-4' />
 								<span className='hidden sm:inline'>{t('actions.duplicateDay', { default: 'Duplicate day' })}</span>
 							</button>
 
-							{/* Remove day */}
-							<button type='button' onClick={() => removeDay(d.id)} className={`${btnBase} ${btnGhostDanger}`} title={t('actions.removeDay')}>
+							<button type='button' onClick={() => removeDay(d.id)} className={`${btnBase} ${btnGhostDanger}`} title={t('actions.removeDay')} aria-label={t('actions.removeDay')}>
 								<Trash2 className='w-4 h-4' />
 							</button>
 						</div>
 					</div>
 
-					{/* Body */}
 					<div className='p-4'>
-						{d.exercises.length ? (
-							<Reorder.Group axis='y' values={d.exercises} onReorder={newOrder => onReorderExercises(d.id, newOrder)} className='space-y-2'>
-								{d.exercises.map(ex => (
-									<Reorder.Item key={ex.exerciseId} value={ex} dragListener dragConstraints={{ top: 0, bottom: 0 }} className='rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 transition-colors hover:bg-slate-100'>
-										<div className='flex items-center justify-between gap-3'>
-											<div className='flex min-w-0 items-center gap-3'>
-												<GripVertical className='w-4 h-4 shrink-0 cursor-grab text-slate-400' />
-												<div className='relative w-[45px] group'>
-													<Img src={ex?.img} showBlur={false} className='w-full rounded' />
-
-													{/* Preview icon */}
-													<button
-														type='button'
-														onClick={() => setPreviewImg(ex.img)}
-														className='absolute inset-0 flex items-center justify-center  bg-black/40 opacity-0 group-hover:opacity-100  transition-opacity rounded'
-													>
-														<Eye className='h-4 w-4 text-white' />
-													</button>
-												</div>
-
-												<MultiLangText className='truncate font-medium text-slate-900'>{ex.name}</MultiLangText>
-												{ex.category ? (
-													<span className='inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-1 text-[11px] text-indigo-700'>
-														<Tag size={12} />
-														<MultiLangText>{ex.category}</MultiLangText>
-													</span>
-												) : null}
-											</div>
-
-
-											<div className='flex items-center gap-2' >
-												{/* Sets / Reps / Tempo */}
-												<div className='w-full sm:w-auto'>
-													{(() => {
-														const setsVal = ex.targetSets ?? '';
-														const repsVal = ex.targetReps ?? '';
-														const tempoVal = ex.tempo ?? '';
-
-														const setExerciseField = (exerciseId, patch) => {
-															setDays(arr =>
-																arr.map(day =>
-																	day.id !== d.id
-																		? day
-																		: {
-																			...day,
-																			exercises: day.exercises.map(e =>
-																				e.exerciseId !== exerciseId ? e : { ...e, ...patch },
-																			),
-																		},
-																),
-															);
-														};
-
-														const normalizeIntOrDefault = (v, def) => {
-															const s = String(v ?? '').trim();
-															if (!s) return def;
-															const n = Number(s);
-															if (!Number.isFinite(n) || n <= 0) return def;
-															return Math.trunc(n);
-														};
-
-														const normalizeTempoOrDefault = (v, def) => {
-															const s = String(v ?? '').trim();
-															if (!s) return def;
-															if (/^\d+\/\d+\/\d+$/.test(s)) return s;
-															return def;
-														};
-
-														return (
-															<div className='mt-2 sm:mt-0 sm:ml-auto grid grid-cols-3 gap-1.5 min-w-[210px] max-w-[260px]'>
-																<MiniField
-																	inputMode='numeric'
-																	type="number"
-																	placeholder={t('Sets')}
-																	value={setsVal}
-																	onChange={e =>
-																		setExerciseField(ex.exerciseId, { targetSets: e.target.value })
-																	}
-																	onBlur={() => {
-																		const s = String(ex.targetSets ?? '').trim();
-																		if (!s) return; // ✅ لو فاضي سيبه فاضي
-																		setExerciseField(ex.exerciseId, {
-																			targetSets: normalizeIntOrDefault(ex.targetSets, 3),
-																		});
-																	}}
-																/>
-
-																<MiniField
-																	inputMode='numeric'
-																	placeholder={t('Reps')}
-																	value={repsVal}
-																	onChange={e =>
-																		setExerciseField(ex.exerciseId, { targetReps: e.target.value })
-																	}
-																	onBlur={() => {
-																		const s = String(ex.targetReps ?? '').trim();
-																		if (!s) return; // ✅ لو فاضي سيبه فاضي
-																		setExerciseField(ex.exerciseId, {
-																			targetReps: normalizeIntOrDefault(ex.targetReps, 12),
-																		});
-																	}}
-																/>
-
-																<MiniField
-																	placeholder={t('Tempo')}
-																	value={tempoVal}
-																	onChange={e =>
-																		setExerciseField(ex.exerciseId, { tempo: e.target.value })
-																	}
-																	onBlur={() => {
-																		const s = String(ex.tempo ?? '').trim();
-																		if (!s) return; // ✅ لو فاضي سيبه فاضي
-																		setExerciseField(ex.exerciseId, {
-																			tempo: normalizeTempoOrDefault(ex.tempo, '1/1/1'),
-																		});
-																	}}
-																/>
-															</div>
-														);
-													})()}
-												</div>
-
-
-
-												{/* Remove exercise */}
-												<button
-													type='button'
-													onClick={() =>
-														setDays(arr =>
-															arr.map(x =>
-																x.id === d.id
-																	? {
-																		...x,
-																		exercises: x.exercises.filter(e => e.exerciseId !== ex.exerciseId),
-																	}
-																	: x,
-															),
-														)
-													}
-													className={iconBtn}
-													title={t('actions.delete')}>
-													<Trash2 className='w-4 h-4' />
-												</button>
-
-											</div>
-										</div>
-									</Reorder.Item>
-								))}
-							</Reorder.Group>
-						) : (
-							<div className='rounded-lg border border-dashed border-slate-200 bg-slate-50 py-6 text-center text-sm text-slate-500'>{t('builder.noExercisesHint')}</div>
-						)}
+						{renderBlock(d, 'warmup', d.warmupExercises)}
+						{renderBlock(d, 'main', d.exercises)}
+						{renderBlock(d, 'cardio', d.cardioExercises)}
 					</div>
 				</motion.div>
 			))}
 
 			{previewImg && (
-				<div
-					className='fixed inset-0 z-50 flex items-center justify-center rounded-md bg-black/70 backdrop-blur-xs'
-					onClick={() => setPreviewImg(null)}
-				>
+				<div className='fixed inset-0 z-50 flex items-center justify-center rounded-md bg-black/70 backdrop-blur-xs' onClick={() => setPreviewImg(null)}>
 					<div className='max-w-[90vw] max-h-[90vh] p-4'>
-						<Img
-							src={previewImg}
-							alt='Exercise preview'
-							className='max-h-[90vh] h-full max-w-full rounded-lg bg-white'
-							onClick={e => e.stopPropagation()}
-						/>
+						<Img src={previewImg} alt={t('actions.preview')} className='max-h-[90vh] h-full max-w-full rounded-lg bg-white' onClick={e => e.stopPropagation()} />
 					</div>
 				</div>
 			)}
-
 		</div>
 	);
 }
 
-
-
-
-const MiniField = memo(function MiniField({
-	value,
-	placeholder,
-	inputMode,
-	onChange,
-	onBlur,
-	className = '',
-	type = 'text'
-}) {
+const MiniField = memo(function MiniField({ value, placeholder, inputMode, onChange, onBlur, className = '', type = 'text' }) {
 	const hasValue = String(value ?? '').trim().length > 0;
 
 	return (
-		<div className="relative w-full">
-			{/* Floating label */}
+		<div className='relative w-full'>
 			<label
 				className={[
 					'absolute left-2 px-1 text-[10px] transition-all bg-white pointer-events-none',
-					hasValue
-						? 'top-[-6px] !bg-[linear-gradient(to_bottom,#f1f5f9_50%,#ffffff_50%)] text-indigo-500'
-						: 'top-1/2 -translate-y-1/2 text-slate-400 opacity-0'
+					hasValue ? 'top-[-6px] !bg-[linear-gradient(to_bottom,#f1f5f9_50%,#ffffff_50%)] text-indigo-500' : 'top-1/2 -translate-y-1/2 text-slate-400 opacity-0',
 				].join(' ')}
 			>
 				{placeholder}
@@ -1250,10 +1325,8 @@ const MiniField = memo(function MiniField({
 					'h-8 w-full rounded-md border px-2 text-[12px]',
 					'bg-white outline-none transition',
 					'focus:ring-4 focus:ring-slate-400/20',
-					hasValue
-						? 'border-indigo-300 hover:border-indigo-400'
-						: 'border-slate-200 hover:border-slate-300',
-					className
+					hasValue ? 'border-indigo-300 hover:border-indigo-400' : 'border-slate-200 hover:border-slate-300',
+					className,
 				].join(' ')}
 			/>
 		</div>

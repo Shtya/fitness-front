@@ -217,8 +217,7 @@ export default function PhoneField({ label, value, onChange, error, required, na
       )}
 
       <div className='flex gap-2 rtl:flex-row-reverse'>
-        {/* Country code dropdown */}
-        <div className='min-w-[90px]'>
+         <div className='min-w-[90px]'>
           <Select placeholder='+20' clearable={false} searchable={false} options={countries} value={countryCode} onChange={handleCountryChange} disabled={disabled} />
         </div>
 

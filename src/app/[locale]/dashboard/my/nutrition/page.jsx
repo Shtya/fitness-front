@@ -416,6 +416,7 @@ export default function ClientMealPlanPage() {
           {/* Stats – responsive */}
           <div className='mt-4 max-sm:hidden grid grid-cols-3 sm:grid-cols-4 gap-2'>
             <StatCard resPhone={true} icon={Target} title={t('nutrition.header.dailyTarget')} value={user?.caloriesTarget ?? 0} />
+            <StatCard resPhone={true} icon={Target} title={t('nutrition.header.FiberTarget')} value={user?.FiberTarget ?? 0} />
             <StatCard resPhone={true} icon={Target} title={t('nutrition.header.todayCalories')} value={stats?.kcal ?? 0} />
             <StatCard resPhone={true} icon={TrendingUp} title={t('nutrition.header.mealsSelectedDay')} value={stats?.meals ?? 0} />
           </div>

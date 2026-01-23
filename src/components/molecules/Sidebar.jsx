@@ -1,17 +1,17 @@
 'use client';
 
-import React, { useLayoutEffect,useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, { useLayoutEffect, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import api from '@/utils/axios';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, ClipboardList, Apple, NotebookPen, MessageSquare, Calculator, FileBarChart, ChefHat, ChevronDown, ChevronLeft, ChevronRight, X, Newspaper, ServerCog, AlarmClock, RotateCcw, Wallet, CreditCard, TrendingUp, Sparkles, Zap, Crown, Shield } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, ClipboardList, Apple, NotebookPen, MessageSquare, Calculator, FileBarChart, ChefHat, ChevronDown, ChevronLeft, ChevronRight, X, Newspaper, ServerCog, AlarmClock, RotateCcw, Wallet, CreditCard, TrendingUp, Sparkles, Zap, Crown, Shield, User } from 'lucide-react';
 import { usePathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
 import { FaInbox, FaUsers, FaWpforms } from 'react-icons/fa';
 import { useTranslations } from 'next-intl';
 import { useValues } from '@/context/GlobalContext';
-import FeedbackWidget from './FeedbackWidget'; 
+import FeedbackWidget from './FeedbackWidget';
 const spring = { type: 'spring', stiffness: 500, damping: 32, mass: 0.6 };
 const flyoutSpring = { type: 'spring', stiffness: 550, damping: 35, mass: 0.6 };
 const smoothSpring = { type: 'spring', stiffness: 380, damping: 30, mass: 0.8 };
@@ -24,7 +24,7 @@ export function cls(...inputs) {
 	return inputs.flat(Infinity).filter(Boolean).join(' ');
 }
 
-/* ----------------------------- NAV (unchanged) ----------------------------- */
+
 export const NAV = [
 	// CLIENT
 	{
@@ -58,6 +58,8 @@ export const NAV = [
 			{ nameKey: 'reports', href: '/dashboard/reports', icon: FileBarChart },
 			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
 			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
+			{ nameKey: 'profile', icon: User, href: '/dashboard/my-account' },
+
 		],
 	},
 	// ADMIN
@@ -105,6 +107,7 @@ export const NAV = [
 		role: 'admin',
 		items: [
 			{ nameKey: 'billing', icon: Wallet, href: '/dashboard/billing' },
+			{ nameKey: 'profile', icon: User, href: '/dashboard/my-account' },
 		],
 	},
 	// SUPER ADMIN
@@ -137,7 +140,6 @@ export const NAV = [
 	},
 ];
 
-/* ----------------------------- helpers ---------------------------------- */
 function isPathActive(pathname, href) {
 	if (!href) return false;
 	return pathname === href || pathname?.endsWith(href + '/');
@@ -799,21 +801,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 										<X className='w-5 h-5' strokeWidth={2.5} />
 									</motion.button>
 								</div>
-
-								{/* Role Badge Mobile */}
-								<div className='px-4 pt-4 pb-2'>
-									<div className={cn('rounded-2xl p-3 border-2 border-slate-200/60 bg-gradient-to-br', roleConfig.bg)}>
-										<div className='flex items-center gap-3'>
-											<div className={cn('w-10 h-10 rounded-xl bg-gradient-to-br shadow-lg flex items-center justify-center', roleConfig.gradient)}>
-												<RoleIcon className='w-5 h-5 text-white' strokeWidth={2.5} />
-											</div>
-											<div className='flex-1 min-w-0'>
-												<p className='text-xs font-bold text-slate-500 uppercase tracking-wider'>Your Role</p>
-												<p className='text-sm font-black text-slate-800 truncate'>{roleConfig.label}</p>
-											</div>
-										</div>
-									</div>
-								</div>
+ 
 
 								<LayoutGroup id='sidebar-nav-mobile'>
 									<div className='flex-1'>
@@ -895,21 +883,42 @@ function Badge({ value, className = '' }) {
  ------------------------------------------------------------------*/
 function ReloadButton({ collapsed, t }) {
 	return (
-		<div className='flex flex-col gap-2'>
+		<div className='flex items-center gap-3 md:hidden px-4'>
 			<motion.button
-				whileHover={{ scale: 1.02 }}
-				whileTap={{ scale: 0.98 }}
+				whileHover={{ scale: 1.04 }}
+				whileTap={{ scale: 0.96 }}
 				onClick={() => window.location.reload()}
 				className={
 					collapsed
-						? 'md:hidden mx-auto flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-xl shadow-indigo-500/30 hover:shadow-2xl hover:from-indigo-700 hover:to-violet-700 active:scale-95 transition-all duration-300'
-						: 'md:hidden flex w-full items-center gap-3 bg-gradient-to-br from-indigo-600 to-violet-600 text-white px-5 py-3.5 rounded-2xl font-bold shadow-xl shadow-indigo-500/30 hover:shadow-2xl hover:from-indigo-700 hover:to-violet-700 active:scale-95 transition-all duration-300'
-				}>
-				<div className='flex items-center justify-center w-5 h-5'>
+						? `
+							flex items-center justify-center
+							w-12 h-12 rounded-2xl
+							bg-gradient-to-br from-indigo-600 to-violet-600
+							text-white
+							shadow-xl shadow-indigo-500/40
+							hover:shadow-2xl hover:from-indigo-700 hover:to-violet-700
+							active:scale-95
+							transition-all duration-300
+						`
+						: `
+							flex items-center gap-3
+							h-12 px-5
+							rounded-2xl font-bold
+							bg-gradient-to-br from-indigo-600 to-violet-600
+							text-white
+							shadow-xl shadow-indigo-500/40
+							hover:shadow-2xl hover:from-indigo-700 hover:to-violet-700
+							active:scale-95
+							transition-all duration-300
+						`
+				}
+			>
+				<motion.div
+					whileHover={{ rotate: -20 }}
+					className='flex items-center justify-center w-5 h-5'
+				>
 					<RotateCcw className='w-5 h-5' strokeWidth={2.5} />
-				</div>
-
-				{!collapsed && <span className='text-sm font-bold tracking-wide'>{t('reload-page')}</span>}
+				</motion.div> 
 			</motion.button>
 
 			<FeedbackWidget collapsed={collapsed} />

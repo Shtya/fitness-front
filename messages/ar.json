@@ -758,7 +758,8 @@
       "activate": "إعادة التفعيل",
       "whatsapp": "محادثة واتساب",
       "directChat": "دردشة مباشرة",
-      "delete": "حذف المستخدم"
+      "delete": "حذف المستخدم",
+      "shareCredsWhatsapp": "إرسال بيانات الدخول عبر واتساب"
     },
     "status": {
       "active": "نشط",
@@ -801,7 +802,8 @@
       "role": "اختر الدور",
       "status": "اختر الحالة",
       "search": "ابحث بالاسم أو البريد الإلكتروني...",
-      "whatsapp": "مثلاً 9665XXXXXXXX"
+      "whatsapp": "مثلاً 9665XXXXXXXX",
+      "calories": "السعرات الحرارية"
     },
     "wizard": {
       "newUser": "مستخدم جديد",
@@ -835,7 +837,12 @@
         "notNegative": "يجب ألا يكون أقل من 0",
         "activityRequired": "يرجى اختيار مستوى النشاط",
         "notesMax": "عدد الأحرف في الملاحظات كبير جدًا"
-      }
+      },
+      "smartDefaults": "الإعدادات الافتراضية الذكية",
+      "smartDefaultsDesc": "نحدد القيم تلقائيًا بناءً على بياناتك لتسهيل المتابعة",
+      "autoFill": "تعبئة تلقائية",
+      "macros": "العناصر الغذائية الكبرى",
+      "fiber": "الألياف"
     },
     "forms": {
       "title": "نموذج المدرب",
@@ -863,6 +870,8 @@
       "noCoach": "بدون مدرب"
     },
     "alerts": {
+      "credsSent": "تم إرسال بيانات الدخول",
+      "sendFailed": "فشل إرسال بيانات الدخول",
       "loadPlansFailed": "فشل تحميل الخطط",
       "planAssigned": "تم تعيين الخطة بنجاح",
       "assignFailed": "فشل تعيين الخطة",
@@ -911,7 +920,8 @@
       "phoneStartInvalid": "بداية رقم الهاتف غير صحيحة لهذا البلد"
     },
     "dialogs": {
-      "deleteUserConfirm": "هل أنت متأكد أنك تريد حذف {name}؟ لا يمكن التراجع عن هذا الإجراء."
+      "deleteUserConfirm": "هل أنت متأكد أنك تريد حذف {name}؟ لا يمكن التراجع عن هذا الإجراء.",
+      "resetPasswordAndSendConfirm": "سيتم إعادة تعيين كلمة مرور {{name}} وإرسال بيانات دخول جديدة عبر واتساب. هل تريد المتابعة؟"
     }
   },
   "date": {
@@ -1379,7 +1389,8 @@
       "reps": "تكرارات",
       "noDaysYet": "لا توجد أيام مُضافة لهذه الخطة بعد.",
       "noExercisesYetTitle": "لا توجد تمارين بعد",
-      "noExercisesYetHelper": "أضف تمارين لهذا اليوم لعرضها هنا."
+      "noExercisesYetHelper": "أضف تمارين لهذا اليوم لعرضها هنا.",
+      "tempo": "الإيقاع"
     },
     "assign": {
       "selectUsersLabel": "اختر المستخدمين",
@@ -1390,15 +1401,23 @@
     "builder": {
       "namePlaceholder": "اسم الخطة (مثلاً: دفع/سحب/أرجل...)",
       "daysSectionTitle": "الأيام",
-      "dayNumber": "اليوم {num}",
-      "selectDayPlaceholder": "اختر اليوم",
-      "noExercisesHint": "لا توجد تمارين بعد. اضغط «إضافة تمارين» لإضافة تمارين لهذا اليوم.",
-      "savePlanBtn": "حفظ الخطة",
       "validation": {
-        "nameRequired": "اسم الخطة مطلوب.",
-        "needDay": "يجب أن تحتوي الخطة على يوم واحد على الأقل.",
-        "needExercisePerDay": "كل يوم يجب أن يحتوي على تمرين واحد على الأقل."
-      }
+        "nameRequired": "اسم الخطة مطلوب",
+        "needDay": "يجب إضافة يوم واحد على الأقل",
+        "needExercisePerDay": "كل يوم يجب أن يحتوي على تمرين واحد على الأقل"
+      },
+      "blocks": {
+        "warmup": "التسخين",
+        "workout": "التمرين",
+        "cardio": "الكارديو"
+      },
+      "addWarmup": "+ تسخين",
+      "addWorkout": "+ تمرين",
+      "addCardio": "+ كارديو",
+      "noExercisesHint": "لا يوجد تمارين في هذا القسم بعد",
+      "selectDayPlaceholder": "اختر اليوم",
+      "dayNumber": "اليوم رقم {num}",
+      "savePlanBtn": "حفظ الخطة"
     },
     "days": {
       "saturday": "السبت",
@@ -1411,6 +1430,18 @@
     }
   },
   "MyWorkouts": {
+		"sections": {
+      "title": "الأقسام",
+      "warmup": "إحماء",
+      "workout": "تمارين",
+      "cardio": "كارديو"
+    },
+    "notes": {
+      "show": "عرض الملاحظات",
+      "modalTitle": "ملاحظات الخطة",
+      "fallbackTitle": "الخطة الحالية",
+      "empty": "لا توجد ملاحظات لهذه الخطة"
+    },
     "Sets": "المجموعات",
     "Reps": "التكرارات",
     "Tempo": "الوتيرة",
@@ -1597,6 +1628,9 @@
     },
     "empty": {
       "no_meals_hint": "لا توجد وجبات. اضغط «إضافة وجبة» للبدء."
+    },
+    "header": {
+      "FiberTarget": "فايبرز"
     }
   },
   "forms": {
@@ -2815,7 +2849,8 @@
         "todayCalories": "سعرات اليوم",
         "mealsSelectedDay": "الوجبات (اليوم المحدد)",
         "notes": "ملاحظات الكوتش",
-        "history": "السجل"
+        "history": "السجل",
+        "FiberTarget": "فايبرز"
       },
       "notFound": {
         "title": "لا يوجد نظام غذائي متاح",
@@ -3032,7 +3067,7 @@
       "contact": "التواصل",
       "package": "الباقة",
       "renewal": "التجديد",
-      "startDate": "تاريخ البداية", 
+      "startDate": "تاريخ البداية",
       "status": {
         "active": "نشط",
         "expiringSoon": "ينتهي قريباً",
@@ -3195,6 +3230,121 @@
       "title": "حالة الاشتراك",
       "endDate": "تاريخ الانتهاء",
       "renewNow": "تجديد الآن"
+    }
+  },
+
+  "profile": {
+    "common": {
+      "loading": "جاري التحميل..."
+    },
+    "header": {
+      "role": "الدور",
+      "membership": "العضوية",
+      "points": "النقاط",
+      "coach": "المدرب"
+    },
+    "roles": {
+      "admin": "مدير",
+      "coach": "مدرب",
+      "client": "عميل"
+    },
+    "sections": {
+      "personalInfo": {
+        "title": "المعلومات الشخصية",
+        "subtitle": "تحديث بياناتك الشخصية"
+      },
+      "fitness": {
+        "title": "تفضيلات اللياقة"
+      },
+      "nutrition": {
+        "title": "أهداف التغذية"
+      },
+      "security": {
+        "title": "الأمان",
+        "subtitle": "تغيير كلمة المرور",
+        "hintTitle": "نصائح أمان كلمة المرور",
+        "hint": "استخدم كلمة مرور قوية وفريدة تحتوي على مزيج من الأحرف الكبيرة والصغيرة والأرقام والرموز الخاصة. تجنب الكلمات الشائعة أو المعلومات الشخصية."
+      },
+      "subscription": {
+        "title": "الاشتراك",
+        "subtitle": "تفاصيل عضويتك"
+      }
+    },
+    "fields": {
+      "name": "الاسم الكامل",
+      "email": "البريد الإلكتروني",
+      "emailReadonly": "لا يمكن تغيير البريد الإلكتروني",
+      "phone": "رقم الهاتف",
+      "gender": "الجنس",
+      "restTime": "وقت الراحة الافتراضي (ثواني)",
+      "activityLevel": "مستوى النشاط",
+      "calories": "السعرات (سعرة)",
+      "protein": "البروتين (جرام)",
+      "carbs": "الكربوهيدرات (جرام)",
+      "fats": "الدهون (جرام)",
+      "notes": "ملاحظات",
+      "currentPassword": "كلمة المرور الحالية",
+      "newPassword": "كلمة المرور الجديدة",
+      "confirmPassword": "تأكيد كلمة المرور"
+    },
+    "placeholders": {
+      "name": "أدخل اسمك الكامل",
+      "notes": "أضف أي ملاحظات أو تفضيلات شخصية..."
+    },
+    "gender": {
+      "male": "ذكر",
+      "female": "أنثى"
+    },
+    "activity": {
+      "sedentary": "قليل الحركة (بدون تمارين)",
+      "light": "خفيف (1-3 أيام/أسبوع)",
+      "moderate": "متوسط (3-5 أيام/أسبوع)",
+      "active": "نشط (6-7 أيام/أسبوع)",
+      "veryActive": "نشط جداً (مرتين يومياً)"
+    },
+    "password": {
+      "strength": "قوة كلمة المرور",
+      "weak": "ضعيفة",
+      "fair": "مقبولة",
+      "good": "جيدة",
+      "strong": "قوية",
+      "requirements": "متطلبات كلمة المرور",
+      "check": {
+        "length": "8 أحرف على الأقل",
+        "lowercase": "حرف صغير واحد",
+        "uppercase": "حرف كبير واحد",
+        "number": "رقم واحد",
+        "special": "رمز خاص واحد"
+      }
+    },
+    "subscription": {
+      "start": "بداية الاشتراك",
+      "end": "نهاية الاشتراك"
+    },
+    "buttons": {
+      "saveChanges": "حفظ التغييرات",
+      "changePassword": "تغيير كلمة المرور"
+    },
+    "alerts": {
+      "loadFailed": "فشل تحميل الملف الشخصي",
+      "profileUpdated": "تم تحديث الملف الشخصي بنجاح",
+      "updateFailed": "فشل تحديث الملف الشخصي",
+      "passwordChanged": "تم تغيير كلمة المرور بنجاح",
+      "passwordChangeFailed": "فشل تغيير كلمة المرور"
+    },
+    "errors": {
+      "nameMin": "يجب أن يكون الاسم على الأقل حرفين",
+      "nameRequired": "الاسم مطلوب",
+      "phoneInvalid": "رقم هاتف غير صالح",
+      "passwordMin": "يجب أن تكون كلمة المرور 8 أحرف على الأقل",
+      "passwordLowercase": "يجب أن تحتوي كلمة المرور على حرف صغير واحد على الأقل",
+      "passwordUppercase": "يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل",
+      "passwordNumber": "يجب أن تحتوي كلمة المرور على رقم واحد على الأقل",
+      "passwordSpecial": "يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل",
+      "currentPasswordRequired": "كلمة المرور الحالية مطلوبة",
+      "newPasswordRequired": "كلمة المرور الجديدة مطلوبة",
+      "confirmPasswordRequired": "تأكيد كلمة المرور مطلوب",
+      "passwordsMustMatch": "كلمات المرور يجب أن تتطابق"
     }
   }
 }

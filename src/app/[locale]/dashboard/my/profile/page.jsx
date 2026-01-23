@@ -462,6 +462,7 @@ export default function ProfileOverviewPage() {
 		membership: '',
 		defaultRestSeconds: '',
 		caloriesTarget: '',
+		FiberTarget: '',
 		proteinPerDay: '',
 		carbsPerDay: '',
 		fatsPerDay: '',
@@ -595,6 +596,7 @@ export default function ProfileOverviewPage() {
 			membership: user.membership || '',
 			defaultRestSeconds: user.defaultRestSeconds != null ? String(user.defaultRestSeconds) : '',
 			caloriesTarget: user.caloriesTarget != null ? String(user.caloriesTarget) : '',
+			FiberTarget: user.FiberTarget != null ? String(user.FiberTarget) : '',
 			proteinPerDay: user.proteinPerDay != null ? String(user.proteinPerDay) : '',
 			carbsPerDay: user.carbsPerDay != null ? String(user.carbsPerDay) : '',
 			fatsPerDay: user.fatsPerDay != null ? String(user.fatsPerDay) : '',
@@ -811,26 +813,26 @@ export default function ProfileOverviewPage() {
 	/* === Loading / error === */
 
 	if (loading) {
-	  return (
-	    <div>
-	      <ShimmerStyle />
-	      <HeaderSkeleton />
-	      <div className='grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6 mt-6'>
-	        <div className={card}>
-	          <div className='flex items-center gap-2 mb-3'>
-	            <div className={`${skeletonBase} ${shimmer} h-4 w-20`} />
-	          </div>
-	          <CardSkeletonGrid rows={6} />
-	        </div>
-	        <div className={card}>
-	          <div className='flex items-center gap-2 mb-3'>
-	            <div className={`${skeletonBase} ${shimmer} h-4 w-24`} />
-	          </div>
-	          <TableSkeleton rows={6} />
-	        </div>
-	      </div>
-	    </div>
-	  );
+		return (
+			<div>
+				<ShimmerStyle />
+				<HeaderSkeleton />
+				<div className='grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6 mt-6'>
+					<div className={card}>
+						<div className='flex items-center gap-2 mb-3'>
+							<div className={`${skeletonBase} ${shimmer} h-4 w-20`} />
+						</div>
+						<CardSkeletonGrid rows={6} />
+					</div>
+					<div className={card}>
+						<div className='flex items-center gap-2 mb-3'>
+							<div className={`${skeletonBase} ${shimmer} h-4 w-24`} />
+						</div>
+						<TableSkeleton rows={6} />
+					</div>
+				</div>
+			</div>
+		);
 	}
 
 	if (error) {
@@ -1386,6 +1388,7 @@ export default function ProfileOverviewPage() {
 						<Input placeholder={t('profile.phone')} name='phone' value={editForm.phone} onChange={val => setEditForm(f => ({ ...f, phone: val }))} />
 
 						<Input placeholder={t('profile.caloriesTarget')} name='caloriesTarget' type='number' value={editForm.caloriesTarget} onChange={val => setEditForm(f => ({ ...f, caloriesTarget: val }))} />
+						<Input placeholder={t('profile.FiberTarget')} name='FiberTarget' type='number' value={editForm.FiberTarget} onChange={val => setEditForm(f => ({ ...f, FiberTarget: val }))} />
 						<Input placeholder={t('profile.proteinPerDay')} name='proteinPerDay' type='number' value={editForm.proteinPerDay} onChange={val => setEditForm(f => ({ ...f, proteinPerDay: val }))} />
 						<Input placeholder={t('profile.carbsPerDay')} name='carbsPerDay' type='number' value={editForm.carbsPerDay} onChange={val => setEditForm(f => ({ ...f, carbsPerDay: val }))} />
 						<Input placeholder={t('profile.fatsPerDay')} name='fatsPerDay' type='number' value={editForm.fatsPerDay} onChange={val => setEditForm(f => ({ ...f, fatsPerDay: val }))} />
@@ -1432,7 +1435,7 @@ function fmt(d) {
 function ProfileCard({ user = {}, dir = 'ltr', cn }) {
 	const t = useTranslations('myProfile');
 
-	const { phone, membership, gender, subscriptionStart, subscriptionEnd, caloriesTarget, proteinPerDay, carbsPerDay, fatsPerDay, activityLevel, coach, activeExercisePlan, activeMealPlan } = user || {};
+	const { phone, membership, gender, subscriptionStart, subscriptionEnd, caloriesTarget, FiberTarget, proteinPerDay, carbsPerDay, fatsPerDay, activityLevel, coach, activeExercisePlan, activeMealPlan } = user || {};
 
 	const leftDaysVal = daysLeft(subscriptionEnd);
 
@@ -1568,6 +1571,23 @@ function ProfileCard({ user = {}, dir = 'ltr', cn }) {
 								<div className='flex items-end gap-1 mt-0.5'>
 									<span className='text-2xl font-bold text-slate-900'>{caloriesTarget || '--'}</span>
 									<span className='text-[11px] uppercase text-slate-500 mb-[2px]'>kcal</span>
+								</div>
+
+								<span className='text-[11px] text-slate-500'>{t('profile.perDayLabel') /* e.g. "في اليوم" */}</span>
+							</div>
+						</div>
+						{/* Calories */}
+						<div className='relative overflow-hidden rounded-xl bg-white px-3 py-3 ring-1 ring-slate-200 shadow-[0_1px_3px_rgba(15,23,42,0.08)]'>
+							<div className='absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-orange-400 via-amber-400 to-rose-400' />
+							<div className='flex flex-col items-center gap-1.5'>
+								<div className='inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-medium text-orange-700'>
+									{/* make sure Flame is imported */}
+									<Flame className='h-3.5 w-3.5' />
+									<span className='uppercase tracking-wide'>{t('profile.calories')}</span>
+								</div>
+
+								<div className='flex items-end gap-1 mt-0.5'>
+									<span className='text-2xl font-bold text-slate-900'>{FiberTarget || '--'}</span>
 								</div>
 
 								<span className='text-[11px] text-slate-500'>{t('profile.perDayLabel') /* e.g. "في اليوم" */}</span>

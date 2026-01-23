@@ -1,1014 +1,990 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Dumbbell, Users, Video, Salad, Sparkles, Target, CheckCircle2, ClipboardList, MessageSquare, MapPin, Clock, Phone, Mail, Navigation as NavIcon, ShieldCheck, Crown, Star, Quote, Timer, Scale, LineChart, Menu, X } from 'lucide-react';
-import { useUser } from '@/hooks/useUser';
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { 
+  Dumbbell, Users, Calendar, Bell, TrendingUp, 
+  MessageSquare, Award, FileText, Apple, Target,
+  ChevronRight, Zap, Shield, Sparkles, BarChart3,
+  Camera, Clock, CheckCircle2, Star, ArrowRight,
+  Phone, Mail, MapPin, Check, X, Menu, Plus,
+  Wallet, Settings, Video, Image, ListChecks,
+  Activity, ChevronDown, PlayCircle, Quote, Heart,
+  Flame, Crown, Rocket, Trophy, Coffee
+} from 'lucide-react';
 
-export const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
+export default function FitnessLandingPage() {
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState('professional');
+  const [openFaq, setOpenFaq] = useState(null);
+  const [activeFeature, setActiveFeature] = useState(0);
 
-export function Container({ className = '', children }) {
-  return <div className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${className}`}>{children}</div>;
-}
-export function Section({ id, className = '', children }) {
-  return (
-    <section id={id} className={`scroll-mt-24 py-14 sm:py-20 ${className}`}>
-      {children}
-    </section>
-  );
-}
-export function Button({ as: As = 'button', variant = 'primary', className = '', ...props }) {
-  const base = 'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-indigo-500/30';
-  const styles = variant === 'primary' ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white hover:opacity-95' : variant === 'ghost' ? 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-800' : 'bg-slate-800 text-white hover:bg-slate-700';
-  const Comp = As;
-  return <Comp className={`${base} ${styles} ${className}`} {...props} />;
-}
-export function Badge({ children }) {
-  return <span className='inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100'>{children}</span>;
-}
-export function Card({ className = '', children }) {
-  return <div className={`relative rounded-lg border border-slate-200 bg-white/80 backdrop-blur shadow-[0_8px_30px_rgba(0,0,0,0.05)] ${className}`}>{children}</div>;
-}
-export function Input({ className = '', ...props }) {
-  return <input className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${className}`} {...props} />;
-}
-export function Textarea({ className = '', ...props }) {
-  return <textarea className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${className}`} {...props} />;
-}
-export function Select({ className = '', ...props }) {
-  return <select className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${className}`} {...props} />;
-}
-export function Feature({ icon: Icon, title, children }) {
-  return (
-    <div className='flex items-start gap-3'>
-      {Icon && (
-        <div className='mt-1 w-10 h-10 rounded-lg bg-indigo-50 text-indigo-700 grid place-items-center'>
-          <Icon className='w-5 h-5' />
-        </div>
-      )}
-      <div>
-        <div className='font-semibold'>{title}</div>
-        <div className='text-slate-600 text-sm mt-1'>{children}</div>
-      </div>
-    </div>
-  );
-}
-
-/* ======================= Sticky Navbar (anchors) ======================= */
-
-/* ======================= Auth-driven nav helpers ======================= */
-
-/* ======================= Role links (JS) ======================= */
-function getRoleLinks(role) {
-  if (!role) return []; // <- no role? no private links
-  const links = [];
-  if (role === 'admin') {
-    links.push({ href: '/dashboard', label: 'Dashboard' }, { href: '/dashboard/users', label: 'Users' });
-  } else if (role === 'coach') {
-    links.push({ href: '/dashboard', label: 'Dashboard' }, { href: '/dashboard/assign/user', label: 'Assign Users' }, { href: '/dashboard/workouts', label: 'Workouts' });
-  } else if (role === 'client') {
-    links.push({ href: '/dashboard/my', label: 'My Dashboard' }, { href: '/dashboard/my/workouts', label: 'My Workouts' });
-  } else {
-    links.push({ href: '/dashboard', label: 'Dashboard' });
-  }
-  return links;
-}
-
-function initialsFromName(name) {
-  if (!name) return 'U';
-  const parts = name.trim().split(/\s+/);
-  const a = parts[0]?.[0] || '';
-  const b = parts[1]?.[0] || '';
-  return (a + b).toUpperCase();
-}
-
-/* ======================= Sign out (clear + redirect) ======================= */
-const LOGOUT_REDIRECT = '/auth';
-function clearUserStorage() {
-  try {
-    // remove known keys (tweak to match your app)
-    localStorage.removeItem('token');
-    localStorage.removeItem('auth');
-    localStorage.removeItem('user');
-    localStorage.removeItem('mw.workout.buffer'); // example from your app
-    // or nuke all:
-    // localStorage.clear();
-  } catch (e) {}
-}
-function handleLogout() {
-  clearUserStorage();
-  // optional: call your API /logout here
-  window.location.href = LOGOUT_REDIRECT;
-}
-
-/* ======================= User dropdown ======================= */
-function UserMenu({ user }) {
-  const [open, setOpen] = React.useState(false);
-  const role = user?.role || null;
-  const items = getRoleLinks(role);
-
-  React.useEffect(() => {
-    const onEsc = e => e.key === 'Escape' && setOpen(false);
-    window.addEventListener('keydown', onEsc);
-    return () => window.removeEventListener('keydown', onEsc);
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  if (!user) return null; // safety
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveFeature((prev) => (prev + 1) % 12);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const capabilities = [
+    {
+      category: 'Workout Management',
+      icon: Dumbbell,
+      gradient: 'from-violet-500 via-purple-500 to-fuchsia-500',
+      items: [
+        'Custom exercise library with videos and images',
+        'Weekly program builder with drag-and-drop',
+        'Progressive overload tracking',
+        'Exercise form video submissions and reviews',
+        'Personal record (PR) tracking',
+        'Rest timer and tempo controls',
+        'Workout completion tracking',
+        'Exercise substitution suggestions'
+      ]
+    },
+    {
+      category: 'Nutrition & Meal Planning',
+      icon: Apple,
+      gradient: 'from-emerald-500 via-green-500 to-teal-500',
+      items: [
+        'Macro-based meal plan creator',
+        'Daily meal logging and adherence tracking',
+        'Supplement schedules with timing',
+        'Food alternative suggestions',
+        'Calorie and macronutrient analytics',
+        'Weekly nutrition reports',
+        'Meal prep templates',
+        'Water intake tracking'
+      ]
+    },
+    {
+      category: 'Client Management',
+      icon: Users,
+      gradient: 'from-blue-500 via-cyan-500 to-sky-500',
+      items: [
+        'Multi-client dashboard',
+        'Client onboarding with custom forms',
+        'Subscription and payment tracking',
+        'Client notes and history',
+        'Bulk actions and batch updates',
+        'Client grouping and tags',
+        'Activity timeline',
+        'Performance benchmarking'
+      ]
+    },
+    {
+      category: 'Progress Tracking',
+      icon: TrendingUp,
+      gradient: 'from-orange-500 via-amber-500 to-yellow-500',
+      items: [
+        'Body measurement tracking',
+        '4-angle progress photos',
+        'Weight and body composition graphs',
+        'Strength progression charts',
+        'Before/after comparisons',
+        'Weekly check-in reports',
+        'Goal setting and milestones',
+        'Export progress reports'
+      ]
+    },
+    {
+      category: 'Communication',
+      icon: MessageSquare,
+      gradient: 'from-pink-500 via-rose-500 to-red-500',
+      items: [
+        'In-app real-time messaging',
+        'Group chat support',
+        'File and media sharing',
+        'Voice note support',
+        'Telegram bot integration',
+        'Push notifications',
+        'Read receipts',
+        'Message search and history'
+      ]
+    },
+    {
+      category: 'Smart Reminders',
+      icon: Bell,
+      gradient: 'from-indigo-500 via-blue-500 to-purple-500',
+      items: [
+        'Workout reminders',
+        'Meal time notifications',
+        'Water intake alerts',
+        'Supplement reminders',
+        'Custom appointment reminders',
+        'Prayer time integration',
+        'Recurring schedules',
+        'Multi-channel delivery (Web, Telegram)'
+      ]
+    },
+    {
+      category: 'Analytics & Reports',
+      icon: BarChart3,
+      gradient: 'from-cyan-500 via-teal-500 to-emerald-500',
+      items: [
+        'Client adherence dashboards',
+        'Weekly automated reports',
+        'Nutrition compliance metrics',
+        'Workout completion rates',
+        'Revenue and billing analytics',
+        'Client retention insights',
+        'Performance trends',
+        'Custom report generation'
+      ]
+    },
+    {
+      category: 'Business Management',
+      icon: Wallet,
+      gradient: 'from-yellow-500 via-orange-500 to-red-500',
+      items: [
+        'Multi-tier subscriptions',
+        'Payment processing',
+        'Commission tracking',
+        'Withdrawal requests',
+        'Invoice generation',
+        'Client payment history',
+        'Revenue reports',
+        'Refund management'
+      ]
+    },
+    {
+      category: 'White-Label & Customization',
+      icon: Settings,
+      gradient: 'from-fuchsia-500 via-pink-500 to-rose-500',
+      items: [
+        'Custom branding and logo',
+        'Domain customization',
+        'Theme color picker',
+        'SEO optimization',
+        'Custom page builder',
+        'Email templates',
+        'Language settings',
+        'Timezone configuration'
+      ]
+    },
+    {
+      category: 'Gamification',
+      icon: Award,
+      gradient: 'from-purple-500 via-violet-500 to-indigo-500',
+      items: [
+        'Points and rewards system',
+        'Streak tracking',
+        'Achievement badges',
+        'Leaderboards',
+        'Challenge creation',
+        'Milestone celebrations',
+        'Progress levels',
+        'Social sharing'
+      ]
+    }
+  ];
+
+  const howItWorks = [
+    {
+      step: 1,
+      title: 'Sign Up & Setup',
+      description: 'Create your account, customize your branding, and set up your gym profile in minutes.',
+      icon: Users
+    },
+    {
+      step: 2,
+      title: 'Add Your Clients',
+      description: 'Import existing clients or use custom intake forms to onboard new members seamlessly.',
+      icon: FileText
+    },
+    {
+      step: 3,
+      title: 'Build Programs',
+      description: 'Create personalized workout and meal plans using our intuitive builder with drag-and-drop.',
+      icon: Dumbbell
+    },
+    {
+      step: 4,
+      title: 'Track & Communicate',
+      description: 'Monitor client progress, provide feedback, and stay connected through real-time chat.',
+      icon: MessageSquare
+    },
+    {
+      step: 5,
+      title: 'Analyze & Optimize',
+      description: 'Review analytics, weekly reports, and metrics to continuously improve client results.',
+      icon: TrendingUp
+    }
+  ];
+
+  const features = [
+    {
+      icon: Dumbbell,
+      title: 'Exercise Program Builder',
+      description: 'Create comprehensive workout plans with custom exercises, sets, reps, tempo, and rest periods. Visual day-by-day planning.',
+      highlight: 'Drag & Drop Interface',
+      color: 'from-violet-500 to-purple-600',
+      emoji: '💪'
+    },
+    {
+      icon: Apple,
+      title: 'Meal Plan Designer',
+      description: 'Build detailed nutrition plans with macro tracking, meal timing, supplements, and food alternatives for every client.',
+      highlight: 'Macro Calculator Included',
+      color: 'from-emerald-500 to-green-600',
+      emoji: '🥗'
+    },
+    {
+      icon: Bell,
+      title: 'Multi-Channel Reminders',
+      description: 'Automated notifications via Web Push and Telegram for workouts, meals, water, medicine, and custom schedules.',
+      highlight: 'Never Miss a Beat',
+      color: 'from-blue-500 to-cyan-600',
+      emoji: '🔔'
+    },
+    {
+      icon: Video,
+      title: 'Form Check System',
+      description: 'Clients submit exercise videos for form review. Coaches provide feedback and track improvement over time.',
+      highlight: 'Video Analysis',
+      color: 'from-pink-500 to-rose-600',
+      emoji: '🎥'
+    },
+    {
+      icon: Camera,
+      title: 'Progress Photo Tracking',
+      description: '4-angle photo uploads with measurements, weight, and notes. Automatic before/after comparisons.',
+      highlight: 'Visual Transformation',
+      color: 'from-orange-500 to-amber-600',
+      emoji: '📸'
+    },
+    {
+      icon: BarChart3,
+      title: 'Weekly Check-in Reports',
+      description: 'Automated weekly questionnaires covering diet, training, sleep, and measurements with coach feedback.',
+      highlight: 'Automated Reports',
+      color: 'from-cyan-500 to-teal-600',
+      emoji: '📊'
+    },
+    {
+      icon: MessageSquare,
+      title: 'Real-Time Chat',
+      description: 'Built-in messaging with file sharing, group chats, read receipts, and full conversation history.',
+      highlight: 'Stay Connected',
+      color: 'from-indigo-500 to-purple-600',
+      emoji: '💬'
+    },
+    {
+      icon: Award,
+      title: 'Gamification Engine',
+      description: 'Points, streaks, achievements, and leaderboards to keep clients motivated and engaged daily.',
+      highlight: 'Boost Retention',
+      color: 'from-yellow-500 to-orange-600',
+      emoji: '🏆'
+    },
+    {
+      icon: Wallet,
+      title: 'Billing & Payments',
+      description: 'Subscription management, payment tracking, commission calculation, and automated invoicing.',
+      highlight: 'Financial Control',
+      color: 'from-fuchsia-500 to-pink-600',
+      emoji: '💰'
+    },
+    {
+      icon: Settings,
+      title: 'White-Label Platform',
+      description: 'Complete customization: your logo, colors, domain, SEO, and branded client experience.',
+      highlight: 'Your Brand',
+      color: 'from-purple-500 to-violet-600',
+      emoji: '🎨'
+    },
+    {
+      icon: ListChecks,
+      title: 'Custom Intake Forms',
+      description: 'Create dynamic onboarding forms with 12+ field types. Track submissions and auto-assign clients.',
+      highlight: 'Flexible Forms',
+      color: 'from-red-500 to-pink-600',
+      emoji: '📝'
+    },
+    {
+      icon: TrendingUp,
+      title: 'Advanced Analytics',
+      description: 'Client adherence metrics, performance trends, revenue reports, and actionable insights dashboard.',
+      highlight: 'Data-Driven Decisions',
+      color: 'from-green-500 to-emerald-600',
+      emoji: '📈'
+    }
+  ];
+
+  const pricing = [
+    {
+      name: 'Starter',
+      price: 29,
+      period: 'month',
+      description: 'Perfect for individual coaches getting started',
+      features: [
+        'Up to 10 active clients',
+        'Exercise & meal plan builder',
+        'Progress tracking',
+        'Basic analytics',
+        'Client chat messaging',
+        'Mobile app access',
+        'Email support'
+      ],
+      limitations: [
+        'No white-label branding',
+        'No custom domain',
+        'Limited to 1 coach',
+        'Basic reporting only'
+      ],
+      popular: false
+    },
+    {
+      name: 'Professional',
+      price: 79,
+      period: 'month',
+      description: 'For growing coaching businesses',
+      features: [
+        'Up to 50 active clients',
+        'Everything in Starter',
+        'White-label branding',
+        'Custom domain',
+        'Advanced analytics',
+        'Automated reports',
+        'Form check reviews',
+        'Up to 3 coaches',
+        'Priority support',
+        'API access'
+      ],
+      limitations: [
+        'Limited to 3 coaches',
+        'Basic customization'
+      ],
+      popular: true
+    },
+    {
+      name: 'Enterprise',
+      price: 199,
+      period: 'month',
+      description: 'For gyms and large coaching teams',
+      features: [
+        'Unlimited clients',
+        'Everything in Professional',
+        'Unlimited coaches',
+        'Full white-label control',
+        'Custom page builder',
+        'Advanced customization',
+        'Dedicated account manager',
+        'Custom integrations',
+        'SLA guarantee',
+        '24/7 premium support',
+        'Training & onboarding'
+      ],
+      limitations: [],
+      popular: false
+    }
+  ];
+
+  const faqs = [ 
+    {
+      question: 'Can I use my own domain and branding?',
+      answer: 'Yes! Professional and Enterprise plans include full white-label capabilities. You can use your own domain, logo, brand colors, and customize the entire client experience to match your brand identity.'
+    },
+    {
+      question: 'What happens to my data if I cancel?',
+      answer: 'You maintain full ownership of your data. Before cancellation, you can export all client information, programs, and history. We also provide a 30-day grace period where your data remains accessible in read-only mode.'
+    },
+    {
+      question: 'Do my clients need to download anything?',
+      answer: 'No downloads required! The platform works seamlessly on any device through web browsers. However, we also offer optional progressive web app (PWA) installation for a native app-like experience on mobile devices.'
+    },
+    {
+      question: 'Is there a limit to the number of programs I can create?',
+      answer: 'No limits! Create unlimited workout programs, meal plans, and templates. You can also duplicate and customize existing programs to save time when onboarding similar clients.'
+    },
+    {
+      question: 'How does the reminder system work?',
+      answer: 'Our smart reminder system sends notifications through web push notifications and Telegram. Clients can set personalized schedules for workouts, meals, water intake, supplements, and more. All notifications are timezone-aware and respect quiet hours.'
+    },
+    {
+      question: 'Can I migrate from my current platform?',
+      answer: 'Yes! We provide data migration assistance for Professional and Enterprise plans. Our team will help you import your existing client data, programs, and ensure a smooth transition with minimal disruption.'
+    },
+    {
+      question: 'What kind of support do you offer?',
+      answer: 'Starter plans include email support (24-48hr response time). Professional plans get priority email support (12hr response). Enterprise plans include 24/7 support via email, chat, and phone, plus a dedicated account manager.'
+    },
+    {
+      question: 'Is the payment processing secure?',
+      answer: 'Absolutely. We use industry-standard encryption and PCI-compliant payment processors. All financial data is encrypted both in transit and at rest. We never store full credit card details on our servers.'
+    } 
+  ];
+
+  const testimonials = [
+    {
+      name: 'Sarah Mitchell',
+      role: 'Personal Trainer, FitLife Studio',
+      image: '👩‍💼',
+      content: 'This platform completely transformed how I manage my clients. The automated check-ins and progress tracking save me 10+ hours per week. My client retention has increased by 40% since switching.',
+      rating: 5
+    }, 
+    {
+      name: 'Elena Rodriguez',
+      role: 'Nutrition Specialist',
+      image: '👩‍⚕️',
+      content: 'The meal planning tools are incredible. I can create detailed nutrition plans in minutes and the macro tracking helps clients stay accountable. The analytics show real results.',
+      rating: 5
+    },
+    {
+      name: 'David Chen',
+      role: 'Gym Owner, PowerFit',
+      image: '👨‍💼',
+      content: 'Managing 5 coaches and 150+ clients used to be chaos. Now everything is organized in one place. The billing automation alone has paid for itself. Highly recommend for gym owners.',
+      rating: 5
+    }
+  ];
 
   return (
-    <div className='relative'>
-      <button onClick={() => setOpen(v => !v)} className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm hover:bg-slate-50' aria-haspopup='menu' aria-expanded={open}>
-        <span className='inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-white text-xs'>{initialsFromName(user?.name || user?.email)}</span>
-        <span className='hidden sm:inline text-slate-800 font-medium truncate max-w-[140px]'>{user?.name || user?.email || 'User'}</span>
-        {role && <span className='text-[11px] text-slate-500 hidden md:inline'>({role})</span>}
-        <svg className='h-4 w-4 text-slate-500' viewBox='0 0 20 20' fill='currentColor'>
-          <path d='M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.4a.75.75 0 01-1.08 0l-4.25-4.4a.75.75 0 01.02-1.06z' />
-        </svg>
-      </button>
-
-      {open && (
-        <div role='menu' className='absolute right-0 mt-2 w-56 rounded-lg border border-slate-200 bg-white shadow-lg z-50 overflow-hidden'>
-          <div className='px-3 py-2 text-xs text-slate-500 border-b border-slate-100'>
-            Signed in as <span className='font-medium text-slate-700'>{user?.email || user?.name}</span>
-          </div>
-
-          {!!items.length && (
-            <div className='py-1'>
-              {items.map(it => (
-                <a key={it.href} href={it.href} onClick={() => setOpen(false)} className='block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50'>
-                  {it.label}
-                </a>
-              ))}
+    <div className="min-h-screen bg-white text-slate-900">
+      {/* Navigation */}
+      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+        scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm' : 'bg-white'
+      }`}>
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-slate-900 p-2.5 rounded-lg">
+                <Dumbbell className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-2xl font-bold text-slate-900">FitnessPro</span>
             </div>
-          )}
+            
+            <div className="hidden lg:flex items-center gap-8">
+              <a href="#features" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">Features</a>
+              <a href="#how-it-works" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">How It Works</a>
+              <a href="#capabilities" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">Capabilities</a>
+              <a href="#pricing" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">Pricing</a>
+              <a href="#testimonials" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">Testimonials</a>
+              <a href="#faq" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">FAQ</a>
+            </div>
 
-          <div className='border-t border-slate-100'>
-            <a href='/profile' onClick={() => setOpen(false)} className='block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50'>
-              Profile
-            </a>
-            <button type='button' onClick={handleLogout} className='w-full text-left block px-3 py-2 text-sm text-rose-600 hover:bg-rose-50'>
-              Sign out
+            <div className="hidden lg:flex items-center gap-4">
+              <Button variant="ghost" className="text-slate-900">
+                Sign In
+              </Button>
+              <Button className="bg-slate-900 hover:bg-slate-800 text-white">
+                Start Free Trial
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+
+            <button 
+              className="lg:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <Menu className="w-6 h-6" />
             </button>
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
-/* ======================= Navbar ======================= */
-function Navbar() {
-  const [open, setOpen] = React.useState(false);
-
-  // hash smooth-scroll (unchanged)
-  React.useEffect(() => {
-    const onHash = () => {
-      const target = document.querySelector(window.location.hash);
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
-  }, []);
-
-  // ✅ get user safely from your hook (supports {user,loading} or direct user)
-  const hook = useUser();
-  const user = hook?.user ?? hook ?? null;
-  const loading = hook?.loading ?? false;
-
-  const LinkBtn = ({ href, children }) => (
-    <a href={href} onClick={() => setOpen(false)} className='px-3 py-2 text-sm rounded-lg hover:bg-white/60'>
-      {children}
-    </a>
-  );
-
-  return (
-    <header className='sticky top-0 z-40 border-b border-slate-200/70 backdrop-blur bg-white/80'>
-      <Container className='flex h-16 items-center justify-between'>
-        <a href='#top' className='font-extrabold tracking-tight text-slate-800'>
-          Fit<span className='text-indigo-600'>Studio</span>
-        </a>
-
-        {/* DESKTOP NAV */}
-        <nav className='hidden md:flex items-center gap-2'>
-          <LinkBtn href='#programs'>Programs</LinkBtn>
-          <LinkBtn href='#pricing'>Pricing</LinkBtn>
-          <LinkBtn href='#stories'>Stories</LinkBtn>
-          <LinkBtn href='#contact'>Contact</LinkBtn>
-
-          {/* auth-aware area */}
-          {!loading && !user && (
-            <>
-              <Button as='a' href='/auth' className='mt-2'>
-                Sign in
-              </Button>
-            </>
-          )}
-
-          {!loading && user && <UserMenu user={user} />}
-        </nav>
-
-        {/* MOBILE BURGER */}
-        <button className='md:hidden p-2' onClick={() => setOpen(v => !v)} aria-label='Menu'>
-          {open ? <X className='w-5 h-5' /> : <Menu className='w-5 h-5' />}
-        </button>
-      </Container>
-
-      {/* MOBILE PANEL */}
-      {open && (
-        <div className='md:hidden border-t border-slate-200 bg-white'>
-          <Container className='py-2 flex flex-col'>
-            {/* public links */}
-            <a onClick={() => setOpen(false)} href='#programs' className='px-2 py-2 text-sm'>
-              Programs
-            </a>
-            <a onClick={() => setOpen(false)} href='#pricing' className='px-2 py-2 text-sm'>
-              Pricing
-            </a>
-            <a onClick={() => setOpen(false)} href='#stories' className='px-2 py-2 text-sm'>
-              Stories
-            </a>
-            <a onClick={() => setOpen(false)} href='#contact' className='px-2 py-2 text-sm'>
-              Contact
-            </a>
-
-            {/* auth-aware mobile */}
-            {!loading && !user && (
-              <>
-                <Button as='a' href='/auth' className='mt-2'>
-                  Sign in
-                </Button>
-              </>
-            )}
-
-            {!loading && user && (
-              <>
-                <div className='px-2 py-2 text-xs text-slate-500'>
-                  Signed in as <span className='font-medium text-slate-700'>{user.email || user.name}</span>
-                </div>
-                {getRoleLinks(user?.role || null).map(it => (
-                  <a key={it.href} href={it.href} onClick={() => setOpen(false)} className='px-2 py-2 text-sm'>
-                    {it.label}
-                  </a>
-                ))}
-                <a href='/profile' onClick={() => setOpen(false)} className='px-2 py-2 text-sm'>
-                  Profile
-                </a>
-                <button type='button' onClick={handleLogout} className='text-left px-2 py-2 text-sm text-rose-600'>
-                  Sign out
-                </button>
-              </>
-            )}
-          </Container>
-        </div>
-      )}
-    </header>
-  );
-}
-
-/* ======================= Demo Data ======================= */
-const PROGRAMS = [
-  {
-    key: 'gym',
-    icon: Dumbbell,
-    title: 'Gym Classes',
-    tag: 'Group training',
-    desc: 'Strength, conditioning, and mobility — scalable for all levels. Small groups so coaches can actually coach.',
-    bullets: ['Beginner-friendly Foundations', 'Periodized cycles', 'Technique-first coaching', 'Community vibe'],
-    cta: 'See schedule',
-    href: '#contact',
-  },
-  {
-    key: 'pt',
-    icon: Users,
-    title: 'Personal Training',
-    tag: '1-on-1 coaching',
-    desc: 'Private sessions tailored to your goals and timetable. Perfect for fast, focused progress.',
-    bullets: ['Movement assessment', 'Custom program', 'Flexible times', 'Weekly check‑ins'],
-    cta: 'Book PT',
-    href: '#contact',
-  },
-  {
-    key: 'online',
-    icon: Video,
-    title: 'Online Coaching',
-    tag: 'Remote',
-    desc: 'Fully remote programming with video form checks, habit coaching, and message support — anywhere you are.',
-    bullets: ['App-based logging', 'Video feedback', 'Monthly reviews', 'Worldwide access'],
-    cta: 'Get started',
-    href: '#contact',
-  },
-  {
-    key: 'nutrition',
-    icon: Salad,
-    title: 'Nutrition Coaching',
-    tag: 'Food & habits',
-    desc: 'Meal templates and grocery lists tailored to you. We focus on sustainable changes, not crash diets.',
-    bullets: ['Macro targets', 'Meal plans', 'Recipe library', 'Weekly adjustments'],
-    cta: 'View plans',
-    href: '#pricing',
-  },
-];
-
-const PLANS = [
-  {
-    key: 'basic',
-    name: 'Basic',
-    highlight: false,
-    monthly: 699,
-    yearly: 6990,
-    unit: 'EGP',
-    tagline: '8 classes / month + open gym',
-    features: ['Small‑group classes (8/mo)', 'Open gym access', 'Community chat', 'Coach Q&A (weekly)'],
-    cta: 'Choose Basic',
-  },
-  {
-    key: 'plus',
-    name: 'Plus',
-    highlight: true,
-    monthly: 999,
-    yearly: 9990,
-    unit: 'EGP',
-    tagline: 'Unlimited classes + 1 PT / month',
-    features: ['Unlimited classes', 'Open gym access', '1× Personal Training / month', 'Priority waitlists'],
-    cta: 'Choose Plus',
-  },
-  {
-    key: 'elite',
-    name: 'Elite',
-    highlight: false,
-    monthly: 1899,
-    yearly: 18990,
-    unit: 'EGP',
-    tagline: 'Unlimited + weekly PT + nutrition',
-    features: ['Unlimited classes', 'Weekly Personal Training', 'Nutrition coaching', 'Monthly progress review'],
-    cta: 'Choose Elite',
-  },
-];
-
-const STORIES = [
-  {
-    id: 's1',
-    name: 'Mahmoud A.',
-    goal: 'Fat loss',
-    gender: 'M',
-    type: 'PT',
-    months: 6,
-    startWeight: 96,
-    endWeight: 84,
-    startBodyFat: 28,
-    endBodyFat: 18,
-    quote: 'Lost 12 kg without crazy diets. I finally enjoy training.',
-    before: 'https://picsum.photos/seed/gym-before-1/1200/900',
-    after: 'https://picsum.photos/seed/gym-after-1/1200/900',
-  },
-  {
-    id: 's2',
-    name: 'Nour H.',
-    goal: 'Recomposition',
-    gender: 'F',
-    type: 'Online',
-    months: 4,
-    startWeight: 64,
-    endWeight: 62,
-    startBodyFat: 27,
-    endBodyFat: 21,
-    quote: 'Clothes fit better and I feel stronger every week!',
-    before: 'https://picsum.photos/seed/gym-before-2/1200/900',
-    after: 'https://picsum.photos/seed/gym-after-2/1200/900',
-  },
-  {
-    id: 's3',
-    name: 'Omar S.',
-    goal: 'Strength',
-    gender: 'M',
-    type: 'PT',
-    months: 5,
-    startWeight: 78,
-    endWeight: 80,
-    startBodyFat: 20,
-    endBodyFat: 17,
-    quote: 'Hit +60kg on deadlift and fixed my back pain.',
-    before: 'https://picsum.photos/seed/gym-before-3/1200/900',
-    after: 'https://picsum.photos/seed/gym-after-3/1200/900',
-  },
-];
-
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const LOCATIONS = [
-  {
-    id: 'heliopolis',
-    name: 'Heliopolis Club',
-    address: ['12 Abbas El Akkad St', 'Heliopolis, Cairo'],
-    city: 'Cairo',
-    phone: '+20 100 123 4567',
-    whatsapp: '+201001234567',
-    email: 'hello@amazinggym.com',
-    mapEmbed: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3451.709!2d31.340!3d30.087!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0:0x0!2zMzDCsDA1JzEyLjAiTiAzMcKwMjAnMjQuMCJF!5e0!3m2!1sen!2seg!4v1680000000000',
-    mapsLink: 'https://maps.google.com/?q=Amazing+Gym+Heliopolis',
-    hours: {
-      Mon: ['07:00', '22:00'],
-      Tue: ['07:00', '22:00'],
-      Wed: ['07:00', '22:00'],
-      Thu: ['07:00', '22:00'],
-      Fri: ['09:00', '20:00'],
-      Sat: ['08:00', '21:00'],
-      Sun: ['08:00', '21:00'],
-    },
-  },
-  {
-    id: 'zamalek',
-    name: 'Zamalek Riverside Studio',
-    address: ['5 Nile Corniche', 'Zamalek, Cairo'],
-    city: 'Cairo',
-    phone: '+20 100 765 4321',
-    whatsapp: '+201007654321',
-    email: 'zamalek@amazinggym.com',
-    mapEmbed: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3451.709!2d31.224!3d30.061!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0:0x0!2zMzDCsDAzJzQxLjYiTiAzMcKwMTMnMjYuNCJF!5e0!3m2!1sen!2seg!4v1680000000001',
-    mapsLink: 'https://maps.google.com/?q=Amazing+Gym+Zamalek',
-    hours: {
-      Mon: ['06:30', '22:30'],
-      Tue: ['06:30', '22:30'],
-      Wed: ['06:30', '22:30'],
-      Thu: ['06:30', '22:30'],
-      Fri: ['08:00', '20:00'],
-      Sat: ['08:00', '21:00'],
-      Sun: ['08:00', '21:00'],
-    },
-  },
-];
-
-/* ======================= Page ======================= */
-export default function OnePageSite() {
-  const [activeLocation, setActiveLocation] = useState(LOCATIONS[0].id);
-  const location = useMemo(() => LOCATIONS.find(l => l.id === activeLocation), [activeLocation]);
-  const status = useMemo(() => getOpenStatus(location.hours), [location]);
-
-  const [period, setPeriod] = useState('monthly'); // pricing
-  const [storyQ, setStoryQ] = useState('');
-  const [sort, setSort] = useState('impact');
-
-  const filteredStories = useMemo(() => {
-    const s = storyQ.trim().toLowerCase();
-    let list = STORIES.filter(x => !s || [x.name, x.goal, x.type].join(' ').toLowerCase().includes(s));
-    if (sort === 'months') list.sort((a, b) => a.months - b.months);
-    if (sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
-    if (sort === 'impact') list.sort((a, b) => delta(b) - delta(a));
-    return list;
-  }, [storyQ, sort]);
-
-  const kpi = useMemo(() => {
-    const n = STORIES.length;
-    const lost = STORIES.reduce((acc, x) => acc + Math.max(0, x.startWeight - x.endWeight), 0);
-    const avgMonths = Math.round(STORIES.reduce((a, x) => a + x.months, 0) / n);
-    return { total: n, lost, avgMonths };
-  }, []);
-
-  return (
-    <div id='top' className='min-h-dvh flex flex-col bg-gradient-to-b from-white to-slate-50'>
-      <Navbar />
-
-      {/* ============ Hero ============ */}
-      <Section id='hero' className='pt-10'>
-        <Container>
-          <div className='grid grid-cols-1 lg:grid-cols-12 gap-8 items-center'>
-            <div className='lg:col-span-6'>
-              <Badge>
-                <Sparkles className='w-4 h-4' /> Cairo’s friendliest training studio
-              </Badge>
-              <h1 className='mt-4 text-3xl sm:text-5xl font-extrabold leading-tight'>
-                Get stronger, feel better,
-                <span className='text-indigo-600'> enjoy training</span>.
-              </h1>
-              <p className='mt-3 text-slate-600 max-w-xl'>Classes, personal training, online coaching, and nutrition — in one simple place. Start with a free trial and we’ll guide you.</p>
-              <div className='mt-5 flex flex-wrap gap-3'>
-                <Button as='a' href='#trial'>
-                  Book a free trial
-                </Button>
-                <Button as='a' href='#programs' variant='ghost'>
-                  Explore programs
-                </Button>
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="lg:hidden mt-4 pb-4 border-t pt-4">
+              <div className="flex flex-col gap-4">
+                <a href="#features" className="text-slate-600 font-medium">Features</a>
+                <a href="#how-it-works" className="text-slate-600 font-medium">How It Works</a>
+                <a href="#capabilities" className="text-slate-600 font-medium">Capabilities</a>
+                <a href="#pricing" className="text-slate-600 font-medium">Pricing</a>
+                <a href="#testimonials" className="text-slate-600 font-medium">Testimonials</a>
+                <a href="#faq" className="text-slate-600 font-medium">FAQ</a>
+                <Button className="bg-slate-900 text-white w-full">Start Free Trial</Button>
               </div>
             </div>
-            <div className='lg:col-span-6'>
-              <Card className='p-4'>
-                <div className='aspect-[16/9] rounded-lg overflow-hidden bg-slate-200 grid place-items-center text-slate-500'>
-                  <span className='text-sm'>Hero image / video placeholder</span>
-                </div>
-              </Card>
+          )}
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="pt-32 pb-20 px-6 bg-gradient-to-b from-slate-50 to-white">
+        <div className="container mx-auto">
+          <div className="max-w-4xl mx-auto text-center">
+            <Badge className="mb-6 bg-slate-100 text-slate-900 border-slate-200 px-4 py-2 text-sm font-semibold">
+              <Sparkles className="w-3.5 h-3.5 mr-2 inline" />
+              Trusted by 1,000+ Fitness Professionals
+            </Badge>
+            
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight text-slate-900">
+              The Complete Platform for
+              <span className="block text-slate-900 mt-2">Modern Fitness Coaching</span>
+            </h1>
+
+            <p className="text-xl md:text-2xl text-slate-600 mb-10 max-w-3xl mx-auto leading-relaxed">
+              Everything you need to manage clients, build programs, track progress, and grow your fitness business—all in one powerful platform.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+              <Button size="lg" className="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-8 py-6 text-lg">
+                Start 14-Day Free Trial
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+              <Button size="lg" variant="outline" className="border-2 border-slate-300 hover:bg-slate-50 text-slate-900 font-semibold px-8 py-6 text-lg">
+                <PlayCircle className="w-5 h-5 mr-2" />
+                Watch Demo
+              </Button>
+            </div>
+
+            <p className="text-sm text-slate-500">No credit card required • Cancel anytime • Full access to all features</p>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-16">
+              <div>
+                <div className="text-4xl font-bold text-slate-900">15+</div>
+                <div className="text-slate-600 mt-1">Core Modules</div>
+              </div>
+              <div>
+                <div className="text-4xl font-bold text-slate-900">40+</div>
+                <div className="text-slate-600 mt-1">Entity Types</div>
+              </div>
+              <div>
+                <div className="text-4xl font-bold text-slate-900">99.9%</div>
+                <div className="text-slate-600 mt-1">Uptime SLA</div>
+              </div>
+              <div>
+                <div className="text-4xl font-bold text-slate-900">24/7</div>
+                <div className="text-slate-600 mt-1">Automation</div>
+              </div>
             </div>
           </div>
-        </Container>
-      </Section>
+        </div>
+      </section>
 
-      {/* ============ Programs ============ */}
-      <Section id='programs'>
-        <Container>
-          <div className='text-center max-w-2xl mx-auto'>
-            <Badge>
-              <Sparkles className='w-4 h-4' /> Pick your path — or combine them
-            </Badge>
-            <h2 className='mt-4 text-3xl sm:text-4xl font-extrabold'>Programs & Services</h2>
-            <p className='mt-2 text-slate-600'>Whether you love the energy of classes or prefer 1‑on‑1, we’ve got a track that fits your goals, time, and budget.</p>
+      {/* How It Works */}
+      <section id="how-it-works" className="py-20 px-6 bg-white">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">
+              How It Works
+            </h2>
+            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+              Get up and running in 5 simple steps
+            </p>
           </div>
 
-          <div className='mt-8 grid grid-cols-1 md:grid-cols-2 gap-6'>
-            {PROGRAMS.map((p, i) => (
-              <motion.div key={p.key} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ ...spring, delay: i * 0.03 }}>
-                <Card className='p-5 h-full'>
-                  <div className='flex items-start gap-3'>
-                    <div className='w-12 h-12 rounded-lg bg-indigo-50 text-indigo-700 grid place-items-center'>
-                      <p.icon className='w-6 h-6' />
+          <div className="max-w-5xl mx-auto">
+            {howItWorks.map((item, idx) => {
+              const Icon = item.icon;
+              return (
+                <div key={idx} className="flex gap-6 mb-12 last:mb-0">
+                  <div className="flex-shrink-0">
+                    <div className="w-16 h-16 bg-slate-900 text-white rounded-full flex items-center justify-center text-2xl font-bold">
+                      {item.step}
                     </div>
-                    <div className='min-w-0 flex-1'>
-                      <div className='flex items-center gap-2 flex-wrap'>
-                        <div className='font-semibold text-lg'>{p.title}</div>
-                        <span className='text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700'>{p.tag}</span>
-                      </div>
-                      <p className='text-slate-600 text-sm mt-1'>{p.desc}</p>
-                      <ul className='mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-700 list-disc pl-5'>
-                        {p.bullets.map((b, idx) => (
-                          <li key={idx}>{b}</li>
-                        ))}
-                      </ul>
-                      <div className='mt-4 flex gap-2'>
-                        <Button as='a' href={p.href}>
-                          {p.cta}
-                        </Button>
-                        <Button as='a' href='#trial' variant='ghost'>
-                          Book trial
-                        </Button>
+                  </div>
+                  <div className="flex-1">
+                    <div className="bg-slate-50 rounded-xl p-6 border border-slate-200">
+                      <div className="flex items-start gap-4">
+                        <Icon className="w-8 h-8 text-slate-900 flex-shrink-0" />
+                        <div>
+                          <h3 className="text-2xl font-bold text-slate-900 mb-2">{item.title}</h3>
+                          <p className="text-slate-600 text-lg">{item.description}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section id="features" className="py-20 px-6 bg-slate-50">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">
+              Powerful Features
+            </h2>
+            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+              Everything you need to deliver exceptional coaching experiences
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+            {features.map((feature, idx) => {
+              const Icon = feature.icon;
+              return (
+                <Card key={idx} className="border-slate-200 hover:shadow-lg transition-shadow bg-white">
+                  <CardHeader>
+                    <div className="w-12 h-12 bg-slate-900 rounded-lg flex items-center justify-center mb-4">
+                      <Icon className="w-6 h-6 text-white" />
+                    </div>
+                    <CardTitle className="text-xl mb-2">{feature.title}</CardTitle>
+                    <Badge variant="secondary" className="w-fit">{feature.highlight}</Badge>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-slate-600">{feature.description}</p>
+                  </CardContent>
                 </Card>
-              </motion.div>
-            ))}
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Full Capabilities */}
+      <section id="capabilities" className="py-20 px-6 bg-white">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">
+              Complete System Capabilities
+            </h2>
+            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+              Everything your fitness business needs in one comprehensive platform
+            </p>
           </div>
 
-          {/* How it works mini-sections */}
-          <div className='mt-10 grid grid-cols-1 lg:grid-cols-2 gap-6'>
-            <Card className='p-5'>
-              <div className='font-semibold text-lg flex items-center gap-2'>
-                <Dumbbell className='w-5 h-5' /> How classes work
-              </div>
-              <div className='mt-2 text-slate-600 text-sm'>Small groups (max 18) split by level. Every 8–12 weeks we switch cycles (hypertrophy → strength → power). Coaches demo, cue, and scale.</div>
-              <div className='mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3'>
-                <MiniStep icon={ClipboardList} title='Arrive & brief' text='Warm‑up + daily focus' />
-                <MiniStep icon={Target} title='Main sets' text='Progressive loading' />
-                <MiniStep icon={CheckCircle2} title='Finisher' text='Conditioning or accessories' />
-              </div>
-            </Card>
-            <Card className='p-5'>
-              <div className='font-semibold text-lg flex items-center gap-2'>
-                <Users className='w-5 h-5' /> Personal training flow
-              </div>
-              <div className='mt-2 text-slate-600 text-sm'>Start with a movement assessment and goal setting. Your plan fits your calendar, equipment access, and training history.</div>
-              <div className='mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3'>
-                <MiniStep icon={ClipboardList} title='Assess' text='History + movement' />
-                <MiniStep icon={Target} title='Plan' text='Custom program' />
-                <MiniStep icon={MessageSquare} title='Check‑ins' text='Weekly adjustments' />
-              </div>
-            </Card>
+          <div className="grid md:grid-cols-2 gap-8 max-w-7xl mx-auto">
+            {capabilities.map((cap, idx) => {
+              const Icon = cap.icon;
+              return (
+                <Card key={idx} className="border-slate-200 bg-white">
+                  <CardHeader>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 bg-slate-900 rounded-lg flex items-center justify-center">
+                        <Icon className="w-5 h-5 text-white" />
+                      </div>
+                      <CardTitle className="text-2xl">{cap.category}</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3">
+                      {cap.items.map((item, i) => (
+                        <li key={i} className="flex items-start gap-3">
+                          <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                          <span className="text-slate-600">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-        </Container>
-      </Section>
+        </div>
+      </section>
 
-      {/* ============ Pricing ============ */}
-      <Section id='pricing'>
-        <Container>
-          <div className='text-center max-w-2xl mx-auto'>
-            <Badge>
-              <Sparkles className='w-4 h-4' /> Simple plans, flexible options
-            </Badge>
-            <h2 className='mt-4 text-3xl sm:text-4xl font-extrabold'>Pricing & Memberships</h2>
-            <p className='mt-2 text-slate-600'>Pick a plan, start training, and cancel anytime. Prices are demo values — set yours in CMS.</p>
-            <div className='mt-5 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-1'>
-              <PeriodButton active={period === 'monthly'} onClick={() => setPeriod('monthly')}>
-                Monthly
-              </PeriodButton>
-              <PeriodButton active={period === 'yearly'} onClick={() => setPeriod('yearly')}>
-                Yearly <span className='ml-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700'>Save</span>
-              </PeriodButton>
-            </div>
-            <div className='mt-2 text-xs text-slate-500'>{period === 'yearly' ? 'Save ~2 months with annual billing' : 'Switch to annual to save'}</div>
+      {/* Pricing */}
+      <section id="pricing" className="py-20 px-6 bg-slate-50">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">
+              Simple, Transparent Pricing
+            </h2>
+            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+              Choose the plan that fits your business. Upgrade or downgrade anytime.
+            </p>
           </div>
 
-          <div className='mt-8 grid grid-cols-1 md:grid-cols-3 gap-5'>
-            {PLANS.map(p => (
-              <Card key={p.key} className={`p-5 ${p.highlight ? 'ring-2 ring-indigo-500' : ''}`}>
-                {p.highlight && (
-                  <div className='mb-2'>
-                    <Badge>Most popular</Badge>
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {pricing.map((plan, idx) => (
+              <Card 
+                key={idx} 
+                className={`border-2 ${plan.popular ? 'border-slate-900 shadow-xl relative' : 'border-slate-200'} bg-white`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-slate-900 text-white px-4 py-1">Most Popular</Badge>
                   </div>
                 )}
-                <div className='flex items-center justify-between'>
-                  <div className='font-semibold text-lg'>{p.name}</div>
-                  {p.highlight ? <Crown className='w-5 h-5 text-indigo-600' /> : <ShieldCheck className='w-5 h-5 text-slate-400' />}
-                </div>
-                <div className='text-slate-600 text-sm mt-0.5'>{p.tagline}</div>
-
-                <div className='mt-3'>
-                  <Price amount={p[period]} unit={p.unit} period={period} />
-                </div>
-
-                <ul className='mt-3 space-y-2 text-sm text-slate-700'>
-                  {p.features.map((f, i) => (
-                    <li key={i} className='flex items-start gap-2'>
-                      <CheckCircle2 className='w-4 h-4 text-emerald-600 mt-0.5' />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-
-                <Button className='mt-4 w-full'>{p.cta}</Button>
-                <div className='mt-2 text-[11px] text-slate-500'>No contracts. Cancel or change plan anytime.</div>
-              </Card>
-            ))}
-          </div>
-
-          <Card className='mt-8 p-5'>
-            <div className='font-semibold'>Included in all plans</div>
-            <div className='mt-2 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-700'>
-              <Inc>Coach oversight & safety first</Inc>
-              <Inc>App access for logging & check‑ins</Inc>
-              <Inc>Community events & challenges</Inc>
-            </div>
-          </Card>
-        </Container>
-      </Section>
-
-      {/* ============ Stories ============ */}
-      <Section id='stories'>
-        <Container>
-          <div className='text-center max-w-2xl mx-auto'>
-            <Badge>
-              <Sparkles className='w-4 h-4' /> Real people. Real results.
-            </Badge>
-            <h2 className='mt-4 text-3xl sm:text-4xl font-extrabold'>Success Stories</h2>
-            <p className='mt-2 text-slate-600'>Swipe the slider, read their stories, and start yours today.</p>
-          </div>
-
-          {/* KPI band */}
-          <Card className='mt-8 p-5'>
-            <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 text-center'>
-              <div className='rounded-lg border border-slate-200 bg-white p-4'>
-                <div className='text-xs text-slate-500'>Total transformations</div>
-                <div className='text-2xl font-extrabold'>{kpi.total}</div>
-              </div>
-              <div className='rounded-lg border border-slate-200 bg-white p-4'>
-                <div className='text-xs text-slate-500'>Total kg lost</div>
-                <div className='text-2xl font-extrabold'>{kpi.lost}</div>
-              </div>
-              <div className='rounded-lg border border-slate-200 bg-white p-4'>
-                <div className='text-xs text-slate-500'>Avg. program length</div>
-                <div className='text-2xl font-extrabold'>{kpi.avgMonths} months</div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Filters */}
-          <Card className='mt-6 p-4'>
-            <div className='grid grid-cols-1 sm:grid-cols-5 gap-3'>
-              <Input placeholder='Search name or goal…' value={storyQ} onChange={e => setStoryQ(e.target.value)} />
-              <Select value={sort} onChange={e => setSort(e.target.value)}>
-                <option value='impact'>Sort by impact</option>
-                <option value='months'>Sort by duration</option>
-                <option value='name'>Sort by name</option>
-              </Select>
-              <div className='sm:col-span-3 text-sm text-slate-500 grid place-items-center'>Tip: Book a free assessment to get a personalized plan.</div>
-            </div>
-          </Card>
-
-          {/* Stories grid */}
-          <div className='mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5'>
-            {filteredStories.map(s => (
-              <Card key={s.id} className='p-4'>
-                <BeforeAfter before={s.before} after={s.after} name={s.name} />
-                <div className='mt-3 flex items-start justify-between gap-3'>
-                  <div>
-                    <div className='font-semibold'>{s.name}</div>
-                    <div className='text-xs text-slate-500'>
-                      {s.goal} • {s.type}
-                    </div>
+                <CardHeader>
+                  <CardTitle className="text-2xl mb-2">{plan.name}</CardTitle>
+                  <CardDescription className="text-base">{plan.description}</CardDescription>
+                  <div className="mt-6">
+                    <span className="text-5xl font-bold text-slate-900">${plan.price}</span>
+                    <span className="text-slate-600 ml-2">/ {plan.period}</span>
                   </div>
-                  <div className='text-right text-xs text-slate-600'>
-                    <div className='inline-flex items-center gap-1'>
-                      <Timer className='w-3.5 h-3.5' /> {s.months} months
-                    </div>
-                  </div>
-                </div>
-
-                <div className='mt-3 grid grid-cols-3 gap-2 text-center text-xs'>
-                  <Stat icon={Scale} label='Weight' value={`${s.startWeight}→${s.endWeight} kg`} />
-                  <Stat icon={LineChart} label='Body fat' value={`${s.startBodyFat}%→${s.endBodyFat}%`} />
-                  <Impact value={delta(s)} />
-                </div>
-
-                <blockquote className='mt-3 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-3'>
-                  <div className='flex items-start gap-2'>
-                    <Quote className='w-4 h-4 text-slate-400 mt-0.5' />
-                    <p className='leading-relaxed'>{s.quote}</p>
-                  </div>
-                </blockquote>
-
-                <div className='mt-4 flex items-center justify-between gap-2'>
-                  <div className='flex flex-wrap gap-1.5'>
-                    <span className='text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100'>{s.goal}</span>
-                    <span className='text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'>{s.type}</span>
-                  </div>
-                  <Button as='a' href='#trial' variant='ghost'>
-                    Start like {s.name}
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    className={`w-full mb-6 ${plan.popular ? 'bg-slate-900 hover:bg-slate-800 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-900'}`}
+                    size="lg"
+                  >
+                    {plan.popular ? 'Start Free Trial' : 'Get Started'}
                   </Button>
-                </div>
+                  
+                  <div className="space-y-3 mb-6">
+                    {plan.features.map((feature, i) => (
+                      <div key={i} className="flex items-start gap-3">
+                        <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <span className="text-sm text-slate-600">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {plan.limitations.length > 0 && (
+                    <div className="space-y-3 pt-6 border-t border-slate-200">
+                      {plan.limitations.map((limitation, i) => (
+                        <div key={i} className="flex items-start gap-3">
+                          <X className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-sm text-slate-500">{limitation}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
               </Card>
             ))}
           </div>
-        </Container>
-      </Section>
 
-      {/* ============ Contact ============ */}
-      <Section id='contact'>
-        <Container>
-          <div className='text-center max-w-2xl mx-auto'>
-            <Badge>We’re here to help</Badge>
-            <h2 className='mt-4 text-3xl sm:text-4xl font-extrabold'>Contact & Locations</h2>
-            <p className='mt-2 text-slate-600'>Call, WhatsApp, or drop by. Choose a branch to see the map and hours.</p>
+          <div className="text-center mt-12">
+            <p className="text-slate-600 mb-4">Need a custom plan for your organization?</p>
+            <Button variant="outline" size="lg" className="border-slate-300">
+              Contact Sales
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section id="testimonials" className="py-20 px-6 bg-white">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">
+              Loved by Fitness Professionals
+            </h2>
+            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+              See what coaches and gym owners are saying about FitnessPro
+            </p>
           </div>
 
-          <Card className='mt-6 p-4'>
-            <div className='flex flex-wrap items-center gap-2'>
-              {LOCATIONS.map(l => (
-                <button key={l.id} onClick={() => setActiveLocation(l.id)} className={`px-3 py-1.5 rounded-lg text-sm border transition ${l.id === activeLocation ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white border-transparent' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}>
-                  {l.name}
-                </button>
-              ))}
-            </div>
-          </Card>
-
-          <div className='mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6'>
-            <div className='lg:col-span-5 space-y-4'>
-              <Card className='p-5'>
-                <div className='font-semibold text-lg flex items-center gap-2'>
-                  <MapPin className='w-5 h-5' /> {location.name}
-                </div>
-                <div className='mt-1 text-slate-600 text-sm'>
-                  <div>{location.address[0]}</div>
-                  <div>{location.address[1]}</div>
-                </div>
-                <div className='mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2'>
-                  <ActionButton href={`tel:${onlyDigits(location.phone)}`} icon={Phone} label='Call' detail={location.phone} />
-                  <ActionButton href={`https://wa.me/${digitsForWa(location.whatsapp)}`} icon={MessageSquare} label='WhatsApp' detail='Chat now' />
-                  <ActionButton href={`mailto:${location.email}`} icon={Mail} label='Email' detail={location.email} />
-                  <ActionButton href={location.mapsLink} icon={NavIcon} label='Directions' detail={location.city} />
-                </div>
-              </Card>
-
-              <Card className='p-5'>
-                <div className='flex items-center justify-between'>
-                  <div className='font-semibold text-lg flex items-center gap-2'>
-                    <Clock className='w-5 h-5' /> Opening hours
+          <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+            {testimonials.map((testimonial, idx) => (
+              <Card key={idx} className="border-slate-200 bg-white">
+                <CardHeader>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-3xl">
+                      {testimonial.image}
+                    </div>
+                    <div>
+                      <div className="font-bold text-lg text-slate-900">{testimonial.name}</div>
+                      <div className="text-sm text-slate-600">{testimonial.role}</div>
+                    </div>
                   </div>
-                  <StatusPill status={status} />
-                </div>
-                <HoursTable hours={location.hours} />
+                  <div className="flex gap-1 mb-4">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                    ))}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Quote className="w-8 h-8 text-slate-300 mb-3" />
+                  <p className="text-slate-700 leading-relaxed">{testimonial.content}</p>
+                </CardContent>
               </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
-              <Card className='p-5' id='trial'>
-                <div className='font-semibold text-lg'>Book a free trial</div>
-                <p className='text-sm text-slate-600 mt-0.5'>We usually reply within the same business day.</p>
-                <ContactForm toEmail={location.email} defaultBranch={location.name} />
+      {/* FAQ */}
+      <section id="faq" className="py-20 px-6 bg-slate-50">
+        <div className="container mx-auto max-w-4xl">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-xl text-slate-600">
+              Everything you need to know about FitnessPro
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {faqs.map((faq, idx) => (
+              <Card key={idx} className="border-slate-200 bg-white">
+                <CardHeader 
+                  className="cursor-pointer"
+                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                >
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-semibold text-slate-900">{faq.question}</CardTitle>
+                    <ChevronDown className={`w-5 h-5 text-slate-500 transition-transform ${openFaq === idx ? 'rotate-180' : ''}`} />
+                  </div>
+                </CardHeader>
+                {openFaq === idx && (
+                  <CardContent>
+                    <p className="text-slate-600 leading-relaxed">{faq.answer}</p>
+                  </CardContent>
+                )}
               </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact CTA */}
+      <section id="contact" className="py-20 px-6 bg-slate-900 text-white">
+        <div className="container mx-auto max-w-5xl">
+          <div className="grid md:grid-cols-2 gap-12">
+            <div>
+              <h2 className="text-4xl font-bold mb-6">Get in Touch</h2>
+              <p className="text-slate-300 text-lg mb-8">
+                Have questions? Want to see a demo? Our team is here to help you succeed.
+              </p>
+
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
+                    <Mail className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">Email Us</div>
+                    <div className="text-slate-400">support@fitnesspro.com</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
+                    <Phone className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">Call Us</div>
+                    <div className="text-slate-400">+1 (555) 123-4567</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
+                    <MapPin className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">Visit Us</div>
+                    <div className="text-slate-400">123 Fitness St, Wellness City, FC 12345</div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className='lg:col-span-7'>
-              <Card className='p-0 overflow-hidden'>
-                <div className='aspect-[16/9] w-full bg-slate-200'>
-                  <iframe title={`Map of ${location.name}`} src={location.mapEmbed} loading='lazy' className='w-full h-full border-0' allowFullScreen referrerPolicy='no-referrer-when-downgrade' />
+            <Card className="bg-white border-0">
+              <CardHeader>
+                <CardTitle className="text-slate-900">Send us a message</CardTitle>
+                <CardDescription>We'll get back to you within 24 hours</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form className="space-y-4">
+                  <div>
+                    <Input placeholder="Your Name" className="border-slate-300" />
+                  </div>
+                  <div>
+                    <Input type="email" placeholder="Your Email" className="border-slate-300" />
+                  </div>
+                  <div>
+                    <Input placeholder="Subject" className="border-slate-300" />
+                  </div>
+                  <div>
+                    <Textarea placeholder="Your Message" rows={4} className="border-slate-300" />
+                  </div>
+                  <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white">
+                    Send Message
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-20 px-6 bg-white border-t border-slate-200">
+        <div className="container mx-auto max-w-4xl text-center">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-slate-900">
+            Ready to Transform Your Coaching Business?
+          </h2>
+          <p className="text-xl text-slate-600 mb-10">
+            Join thousands of fitness professionals using FitnessPro to deliver exceptional results
+          </p>
+          
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button size="lg" className="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-10 py-7 text-xl">
+              Start Your 14-Day Free Trial
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+            <Button size="lg" variant="outline" className="border-2 border-slate-300 text-slate-900 font-semibold px-10 py-7 text-xl">
+              Schedule a Demo
+            </Button>
+          </div>
+          
+          <p className="text-sm text-slate-500 mt-6">No credit card required • Full feature access • Cancel anytime</p>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-200 py-12 px-6 bg-slate-50">
+        <div className="container mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-slate-900 p-2 rounded-lg">
+                  <Dumbbell className="w-5 h-5 text-white" />
                 </div>
-              </Card>
+                <span className="text-lg font-bold text-slate-900">FitnessPro</span>
+              </div>
+              <p className="text-slate-600 text-sm">
+                The complete platform for modern fitness coaching and client management.
+              </p>
+            </div>
+
+            <div>
+              <h4 className="font-bold text-slate-900 mb-4">Product</h4>
+              <ul className="space-y-2 text-slate-600 text-sm">
+                <li><a href="#features" className="hover:text-slate-900">Features</a></li>
+                <li><a href="#pricing" className="hover:text-slate-900">Pricing</a></li>
+                <li><a href="#" className="hover:text-slate-900">Integrations</a></li>
+                <li><a href="#" className="hover:text-slate-900">API Docs</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-bold text-slate-900 mb-4">Company</h4>
+              <ul className="space-y-2 text-slate-600 text-sm">
+                <li><a href="#" className="hover:text-slate-900">About Us</a></li>
+                <li><a href="#" className="hover:text-slate-900">Blog</a></li>
+                <li><a href="#" className="hover:text-slate-900">Careers</a></li>
+                <li><a href="#contact" className="hover:text-slate-900">Contact</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-bold text-slate-900 mb-4">Legal</h4>
+              <ul className="space-y-2 text-slate-600 text-sm">
+                <li><a href="#" className="hover:text-slate-900">Privacy Policy</a></li>
+                <li><a href="#" className="hover:text-slate-900">Terms of Service</a></li>
+                <li><a href="#" className="hover:text-slate-900">Security</a></li>
+                <li><a href="#" className="hover:text-slate-900">GDPR</a></li>
+              </ul>
             </div>
           </div>
-        </Container>
-      </Section>
 
-      {/* ============ Footer ============ */}
-      <footer className='mt-auto border-t border-slate-200 bg-white/70'>
-        <Container className='py-6 flex flex-col sm:flex-row items-center justify-between gap-3'>
-          <div className='text-sm text-slate-600'>© {new Date().getFullYear()} FitStudio. All rights reserved.</div>
-          <div className='text-sm'>
-            <a href='#pricing' className='hover:underline'>
-              Pricing
-            </a>
-            <span className='mx-2'>•</span>
-            <a href='#contact' className='hover:underline'>
-              Contact
-            </a>
+          <div className="border-t border-slate-200 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="text-slate-500 text-sm">
+              © 2026 FitnessPro. All rights reserved.
+            </div>
+            <div className="flex gap-6 text-slate-500">
+              <a href="#" className="hover:text-slate-900 transition-colors">Twitter</a>
+              <a href="#" className="hover:text-slate-900 transition-colors">LinkedIn</a>
+              <a href="#" className="hover:text-slate-900 transition-colors">Instagram</a>
+              <a href="#" className="hover:text-slate-900 transition-colors">YouTube</a>
+            </div>
           </div>
-        </Container>
+        </div>
       </footer>
     </div>
   );
-}
-
-/* ================= Helpers & Small Components ================= */
-function onlyDigits(s = '') {
-  return s.replace(/[^+\d]/g, '');
-}
-function digitsForWa(s = '') {
-  return s.replace(/[^\d]/g, '');
-}
-
-function StatusPill({ status }) {
-  if (!status) return null;
-  const { open, until, nextOpen } = status;
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] ring-1 ${open ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' : 'bg-rose-50 text-rose-700 ring-rose-100'}`}>
-      <CheckCircle2 className={`w-3.5 h-3.5 ${open ? 'text-emerald-600' : 'text-rose-600'}`} />
-      {open ? `Open now • until ${until}` : `Closed • opens ${nextOpen}`}
-    </span>
-  );
-}
-
-function HoursTable({ hours }) {
-  const todayIdx = new Date().getDay(); // 0=Sun
-  return (
-    <div className='mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200 overflow-hidden'>
-      {DAYS.map((d, i) => {
-        const row = hours[d];
-        const isToday = i === todayIdx;
-        return (
-          <div key={d} className={`flex items-center justify-between px-4 py-2 text-sm ${isToday ? 'bg-slate-50' : ''}`}>
-            <div className='font-medium text-slate-800'>{d}</div>
-            <div className='text-slate-700'>{row ? `${row[0]} – ${row[1]}` : 'Closed'}</div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function ActionButton({ href, icon: Icon, label, detail }) {
-  return (
-    <a href={href} target={href?.startsWith('http') ? '_blank' : undefined} className='group inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50'>
-      <Icon className='w-4 h-4 text-indigo-600' />
-      <span className='font-medium'>{label}</span>
-      {detail && <span className='text-slate-500'>• {detail}</span>}
-    </a>
-  );
-}
-
-function ContactForm({ toEmail = 'hello@amazinggym.com', defaultBranch }) {
-  const [data, setData] = useState({ name: '', email: '', phone: '', branch: defaultBranch || '', message: '' });
-  const [sent, setSent] = useState(false);
-  function onSubmit(e) {
-    e.preventDefault();
-      setSent(true);
-  }
-  useEffect(() => {
-    setData(d => ({ ...d, branch: defaultBranch || '' }));
-  }, [defaultBranch]);
-  if (sent) return <div className='mt-3 rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700'>Thanks! We received your message and will get back to you shortly.</div>;
-  return (
-    <form onSubmit={onSubmit} className='mt-3 space-y-3'>
-      <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
-        <Input placeholder='Full name' required value={data.name} onChange={e => setData(d => ({ ...d, name: e.target.value }))} />
-        <Input type='email' placeholder='Email' required value={data.email} onChange={e => setData(d => ({ ...d, email: e.target.value }))} />
-      </div>
-      <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
-        <Input type='tel' placeholder='Phone / WhatsApp' value={data.phone} onChange={e => setData(d => ({ ...d, phone: e.target.value }))} />
-        <Input placeholder='Preferred branch' value={data.branch} onChange={e => setData(d => ({ ...d, branch: e.target.value }))} />
-      </div>
-      <Textarea rows={4} placeholder='How can we help?' value={data.message} onChange={e => setData(d => ({ ...d, message: e.target.value }))} />
-      <div className='flex items-center justify-end gap-2'>
-        <Button as='a' href={`mailto:${toEmail}`} variant='ghost'>
-          Email us
-        </Button>
-        <Button type='submit'>Send message</Button>
-      </div>
-    </form>
-  );
-}
-
-function getOpenStatus(hours) {
-  try {
-    const now = new Date();
-    const day = DAYS[now.getDay()];
-    const today = hours?.[day];
-    const timeToM = t => {
-      const [H, M] = (t || '00:00').split(':').map(Number);
-      return H * 60 + M;
-    };
-    const m = now.getHours() * 60 + now.getMinutes();
-    if (!today) {
-      for (let i = 1; i <= 7; i++) {
-        const d = DAYS[(now.getDay() + i) % 7];
-        const slot = hours?.[d];
-        if (slot) return { open: false, nextOpen: `${d} ${slot[0]}` };
-      }
-      return { open: false };
-    }
-    const [o, c] = today.map(timeToM);
-    if (m >= o && m < c) {
-      return { open: true, until: minutesToHHMM(c) };
-    }
-    return { open: false, nextOpen: `${day} ${today[0]}` };
-  } catch (e) {
-    return null;
-  }
-}
-
-function minutesToHHMM(x) {
-  const H = Math.floor(x / 60)
-    .toString()
-    .padStart(2, '0');
-  const M = (x % 60).toString().padStart(2, '0');
-  return `${H}:${M}`;
-}
-
-function MiniStep({ icon: Icon, title, text }) {
-  return (
-    <div className='rounded-lg border border-slate-200 bg-white p-3'>
-      <div className='flex items-center gap-2 font-medium'>
-        <Icon className='w-4 h-4' /> {title}
-      </div>
-      <div className='text-xs text-slate-600 mt-1'>{text}</div>
-    </div>
-  );
-}
-
-function PeriodButton({ active, children, ...props }) {
-  return (
-    <button className={`px-3 py-1.5 rounded-lg text-sm border transition ${active ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white border-transparent' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`} {...props}>
-      {children}
-    </button>
-  );
-}
-
-function Price({ amount, unit, period }) {
-  const per = period === 'yearly' ? 'yr' : 'mo';
-  return (
-    <div>
-      <div className='text-3xl font-extrabold'>
-        {amount}
-        <span className='text-base font-medium'>
-          {' '}
-          {unit}/{per}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function Inc({ children }) {
-  return (
-    <div className='inline-flex items-center gap-2'>
-      <ShieldCheck className='w-4 h-4 text-indigo-600' />
-      {children}
-    </div>
-  );
-}
-
-function BeforeAfter({ before, after, name }) {
-  const [pos, setPos] = useState(50);
-  return (
-    <div className='relative aspect-[4/3] w-full rounded-lg overflow-hidden select-none bg-slate-200'>
-      {before ? <img src={before} alt={`${name} before`} className='absolute inset-0 w-full h-full object-cover' /> : <div className='absolute inset-0 bg-slate-300' />}
-      <div className='absolute inset-0' style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
-        {after ? <img src={after} alt={`${name} after`} className='w-full h-full object-cover' /> : <div className='w-full h-full bg-slate-400' />}
-      </div>
-      <div className='absolute inset-y-0' style={{ left: `${pos}%` }}>
-        <div className='h-full w-[2px] bg-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.1)]' />
-        <div className='absolute -top-4 -translate-x-1/2 left-0 text-[10px] bg-black/60 text-white px-2 py-0.5 rounded-full'>Slide</div>
-      </div>
-      <input type='range' value={pos} min={0} max={100} onChange={e => setPos(Number(e.target.value))} className='absolute inset-0 opacity-0 cursor-ew-resize' aria-label='Compare before and after' />
-    </div>
-  );
-}
-
-function Stat({ icon: Icon, label, value }) {
-  return (
-    <div className='rounded-lg border border-slate-200 bg-white p-2'>
-      <div className={`inline-flex items-center gap-1 text-[11px] text-slate-500`}>
-        <Icon className={`w-3.5 h-3.5`} /> {label}
-      </div>
-      <div className='mt-1 font-semibold text-slate-800'>{value}</div>
-    </div>
-  );
-}
-
-function Impact({ value }) {
-  return (
-    <div className='rounded-lg border border-slate-200 bg-white p-2'>
-      <div className='inline-flex items-center gap-1 text-[11px] text-slate-500'>
-        <Star className='w-3.5 h-3.5 text-amber-500' /> Impact
-      </div>
-      <div className='mt-1 font-semibold text-slate-800'>+{value}</div>
-    </div>
-  );
-}
-
-function delta(s) {
-  const kg = Math.abs(s.endWeight - s.startWeight);
-  const bf = Math.abs((s.endBodyFat ?? 0) - (s.startBodyFat ?? 0));
-  return Math.round(kg + bf);
 }
