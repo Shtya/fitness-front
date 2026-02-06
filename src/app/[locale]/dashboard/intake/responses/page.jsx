@@ -1,435 +1,665 @@
+/*
+	✅ Updated Submissions page:
+	- Uses your ThemeProvider CSS vars (primary/secondary/gradient) everywhere
+	- Uses your GradientStatsHeader (theme-aware)
+	- Replaces static table with your DataTable (same logic + better UI)
+	- Uses the new PrettyPagination with 3+ page circles always
+	- Improves modal UI + answer cards (also theme-aware)
+*/
+
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslations } from 'use-intl';
+import { useRouter } from 'next/navigation';
 
 import api, { baseImg } from '@/utils/axios';
 import { toast } from 'react-hot-toast';
-import { FiFileText, FiEye, FiPlus, FiUsers, FiLink2, FiSearch, FiCalendar } from 'react-icons/fi';
+
+import { FiEye, FiSearch, FiX } from 'react-icons/fi';
 import { FaSpinner } from 'react-icons/fa6';
 
 import Select from '@/components/atoms/Select';
 import Input from '@/components/atoms/Input';
-import { Modal } from '@/components/dashboard/ui/UI';
+import { Modal, StatCard } from '@/components/dashboard/ui/UI';
 import MultiLangText from '@/components/atoms/MultiLangText';
 import Img from '@/components/atoms/Img';
 
-const PAGE_SIZE = 50;
+import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 
-/* ----------------- small UI atoms ------------------ */
+// ✅ import your DataTable + PrettyPagination
+
+
+import { FileText, Search, Eye, Layers, Sparkles, Link as LinkIcon, Users } from 'lucide-react';
+import DataTable from '@/components/dashboard/ui/DataTable';
+import { PrettyPagination } from '@/components/dashboard/ui/Pagination';
+
+const PAGE_SIZE = 50;
 
 const cx = (...c) => c.filter(Boolean).join(' ');
 
-function IconButton({ title, onClick, children, tone = 'slate', disabled }) {
-  const tones = {
-    slate: 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus:ring-slate-300',
-    indigo: 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-400',
-    emerald: 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400',
-  };
-  const base = 'inline-flex items-center gap-2 h-9 px-3 rounded-lg border transition focus:outline-none focus:ring-2';
-  const toneCls = tone === 'slate' ? tones.slate : tone === 'indigo' ? tones.indigo + ' border-transparent' : tones.emerald + ' border-transparent';
-  return (
-    <button type='button' title={title} aria-label={title} disabled={disabled} onClick={onClick} className={cx(base, toneCls, disabled && 'opacity-60 cursor-not-allowed')}>
-      {children}
-    </button>
-  );
+/* ---------------- Theme helpers ---------------- */
+
+function ThemeFrame({ children, className = '' }) {
+	return (
+		<div
+			className={cx('rounded-2xl p-[1px]', className)}
+
+		>
+			<div
+				className="rounded-2xl border bg-white/85 backdrop-blur-xl"
+				style={{
+					borderColor: 'var(--color-primary-200)',
+					boxShadow: '0 1px 0 rgba(15, 23, 42, 0.04), 0 18px 40px rgba(15, 23, 42, 0.10)',
+				}}
+			>
+				{children}
+			</div>
+		</div>
+	);
 }
 
-function PrimaryButton({ children, onClick, tone = 'indigo', disabled }) {
-  return (
-    <button type='button' onClick={onClick} disabled={disabled} className={cx('inline-flex items-center gap-2 h-9 px-4 rounded-lg text-white transition focus:outline-none focus:ring-2', tone === 'indigo' ? 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-400' : 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-400', disabled && 'opacity-60 cursor-not-allowed')}>
-      {children}
-    </button>
-  );
+function SoftCard({ children, className = '' }) {
+	return (
+		<div
+			className={cx('rounded-2xl border bg-white', className)}
+			style={{
+				borderColor: 'var(--color-primary-200)',
+				boxShadow: '0 1px 0 rgba(15, 23, 42, 0.03), 0 10px 24px rgba(15, 23, 42, 0.06)',
+			}}
+		>
+			{children}
+		</div>
+	);
 }
 
-function Th({ children, className }) {
-  return <th className={cx('px-4 py-3 text-left rtl:text-right text-[11px] font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap sticky top-0 bg-slate-50 z-10', className)}>{children}</th>;
+function Pill({ children, tone = 'primary' }) {
+	const tones = {
+		primary: {
+			border: 'var(--color-primary-200)',
+			bg: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
+			text: 'var(--color-primary-800)',
+		},
+		soft: {
+			border: '#e2e8f0',
+			bg: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
+			text: '#475569',
+		},
+	};
+
+	const s = tones[tone] || tones.primary;
+
+	return (
+		<span
+			className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
+			style={{
+				borderColor: s.border,
+				background: s.bg,
+				color: s.text,
+				boxShadow: '0 6px 16px rgba(15,23,42,0.06)',
+			}}
+		>
+			{children}
+		</span>
+	);
 }
-function Td({ children, className }) {
-  return <td className={cx('px-4 py-3 text-sm text-slate-700', className)}>{children}</td>;
+
+function GhostBtn({ children, onClick, disabled, title }) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			disabled={disabled}
+			title={title}
+			aria-label={title}
+			className="inline-flex items-center gap-2 h-11 px-4 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed"
+			style={{
+				borderColor: 'var(--color-primary-200)',
+				backgroundColor: 'rgba(255,255,255,0.9)',
+				color: 'var(--color-primary-800)',
+				boxShadow: '0 12px 24px rgba(15,23,42,0.08)',
+				['--tw-ring-color']: 'var(--color-primary-200)',
+			}}
+			onMouseEnter={e => {
+				if (!disabled) e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
+			}}
+			onMouseLeave={e => {
+				if (!disabled) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.9)';
+			}}
+		>
+			{children}
+		</button>
+	);
+}
+
+function GradientBtn({ children, onClick, disabled, title }) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			disabled={disabled}
+			title={title}
+			aria-label={title}
+			className="inline-flex items-center gap-2 h-11 px-5 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed"
+			style={{
+				borderColor: 'transparent',
+				background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+				color: 'white',
+				boxShadow: '0 18px 34px rgba(15,23,42,0.14)',
+				['--tw-ring-color']: 'var(--color-primary-200)',
+			}}
+		>
+			{children}
+		</button>
+	);
 }
 
 /* ----------------------------- page ----------------------------------- */
 
 export default function SubmissionsPage() {
-  const t = useTranslations('submissions');
-  const router = useRouter();
+	const t = useTranslations('submissions');
+	const router = useRouter();
 
-  const [forms, setForms] = useState([]);
-  const [submissions, setSubmissions] = useState([]);
+	const [forms, setForms] = useState([]);
+	const [submissions, setSubmissions] = useState([]);
 
-  const [loadingForms, setLoadingForms] = useState(true);
-  const [loadingSubs, setLoadingSubs] = useState(false);
+	const [loadingForms, setLoadingForms] = useState(true);
+	const [loadingSubs, setLoadingSubs] = useState(false);
 
-  const [selectedFormId, setSelectedFormId] = useState('all');
-  const [query, setQuery] = useState('');
+	const [selectedFormId, setSelectedFormId] = useState('all');
+	const [query, setQuery] = useState('');
 
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+	const [page, setPage] = useState(1);
+	const [total, setTotal] = useState(0);
+	const totalPages = useMemo(() => Math.max(1, Math.ceil((total || 0) / PAGE_SIZE)), [total]);
 
-  // Submission modal (and assign)
-  const [selectedSubmission, setSelectedSubmission] = useState(null);
-  const [showSubmissionModal, setShowSubmissionModal] = useState(false);
-  const [clients, setClients] = useState([]);
-  const [assignUserId, setAssignUserId] = useState('');
-  const [assignLoading, setAssignLoading] = useState(false);
+	// Submission modal
+	const [selectedSubmission, setSelectedSubmission] = useState(null);
+	const [showSubmissionModal, setShowSubmissionModal] = useState(false);
 
-  // debounce search
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const debounceTimer = useRef(null);
-  useEffect(() => {
-    clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => setDebouncedQuery(query.trim().toLowerCase()), 250);
-    return () => clearTimeout(debounceTimer.current);
-  }, [query]);
+	// debounce search
+	const [debouncedQuery, setDebouncedQuery] = useState('');
+	const debounceTimer = useRef(null);
+	useEffect(() => {
+		clearTimeout(debounceTimer.current);
+		debounceTimer.current = setTimeout(() => setDebouncedQuery(query.trim().toLowerCase()), 250);
+		return () => clearTimeout(debounceTimer.current);
+	}, [query]);
 
-  useEffect(() => {
-    loadForms();
-    // Optional: fetch clients for assignment combo
-    loadClients();
-  }, []);
+	useEffect(() => {
+		loadForms();
+	}, []);
 
-  useEffect(() => {
-    if (!forms.length) return;
-    setPage(1);
-    loadSubmissions('reset');
-  }, [forms, selectedFormId]);
+	useEffect(() => {
+		if (!forms.length) return;
+		setPage(1);
+		loadSubmissions({ resetPage: true, forcedPage: 1 });
+	}, [forms, selectedFormId]);
 
-  const loadClients = async () => {
-    try {
-      setClients([]);
-    } catch {
-      setClients([]);
-    }
-  };
+	useEffect(() => {
+		if (!forms.length) return;
+		if (selectedFormId === 'all') return; // aggregated mode: we always load first page for each form
+		loadSubmissions({ resetPage: true, forcedPage: page });
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [page]);
 
-  const loadForms = async () => {
-    setLoadingForms(true);
-    try {
-      const res = await api.get('/forms');
-      const list = res?.data?.data || res?.data || [];
-      setForms(Array.isArray(list) ? list : []);
-    } catch (err) {
-      toast.error(t('messages.load_forms_failed'));
-    } finally {
-      setLoadingForms(false);
-    }
-  };
+	const loadForms = async () => {
+		setLoadingForms(true);
+		try {
+			const res = await api.get('/forms');
+			const list = res?.data?.data || res?.data || [];
+			setForms(Array.isArray(list) ? list : []);
+		} catch (err) {
+			toast.error(t('messages.load_forms_failed'));
+		} finally {
+			setLoadingForms(false);
+		}
+	};
 
-  const normalizeSubmission = sub => ({
-    ...sub,
-    form_id: sub?.form?.id ?? sub?.form_id ?? null,
-  });
+	const normalizeSubmission = sub => ({
+		...sub,
+		form_id: sub?.form?.id ?? sub?.form_id ?? null,
+	});
 
-  const loadSubmissions = async (mode = 'append') => {
-    setLoadingSubs(true);
-    try {
-      if (selectedFormId === 'all') {
-        const reqs = forms.map(f =>
-          api
-            .get(`/forms/${f.id}/submissions`, { params: { page: 1, limit: PAGE_SIZE } })
-            .then(r => ({ formId: f.id, ...r.data }))
-            .catch(() => ({ formId: f.id, data: [], total: 0 })),
-        );
-        const results = await Promise.all(reqs);
-        let aggregated = [];
-        let totalCount = 0;
-        for (const r of results) {
-          const arr = (r?.data || []).map(normalizeSubmission);
-          aggregated = aggregated.concat(arr);
-          totalCount += r?.total || 0;
-        }
-        aggregated.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        setTotal(totalCount);
-        setSubmissions(aggregated);
-      } else {
-        const r = await api.get(`/forms/${selectedFormId}/submissions`, {
-          params: { page, limit: PAGE_SIZE },
-        });
-        const rows = (r?.data?.data || r?.data || []).map(normalizeSubmission);
-        const newList = mode === 'append' ? [...submissions, ...rows] : rows;
-        setSubmissions(newList);
-        setTotal(r?.data?.total ?? newList.length);
-      }
-    } catch (err) {
-      toast.error(t('messages.load_submissions_failed'));
-    } finally {
-      setLoadingSubs(false);
-    }
-  };
+	const loadSubmissions = async ({ resetPage = false, forcedPage } = {}) => {
+		setLoadingSubs(true);
+		try {
+			if (selectedFormId === 'all') {
+				// aggregate 1st page from all forms (existing behavior)
+				const reqs = forms.map(f =>
+					api
+						.get(`/forms/${f.id}/submissions`, { params: { page: 1, limit: PAGE_SIZE } })
+						.then(r => ({ formId: f.id, ...r.data }))
+						.catch(() => ({ formId: f.id, data: [], total: 0 })),
+				);
 
-  const onLoadMore = () => {
-    if (selectedFormId === 'all') return;
-    setPage(p => p + 1);
-    setTimeout(() => loadSubmissions('append'), 0);
-  };
+				const results = await Promise.all(reqs);
 
-  const filteredSubmissions = useMemo(() => {
-    const q = debouncedQuery;
-    if (!q) return submissions;
-    return submissions.filter(s => {
-      const formTitle = forms.find(f => f.id == s.form_id)?.title?.toLowerCase() || '';
-      const email = s.email?.toLowerCase() || '';
-      const phone = s.phone?.toLowerCase() || '';
-      const ip = s.ipAddress?.toLowerCase() || '';
-      const inAnswers =
-        s.answers &&
-        Object.values(s.answers).some(v =>
-          String(Array.isArray(v) ? v.join(', ') : v)
-            .toLowerCase()
-            .includes(q),
-        );
-      return formTitle.includes(q) || email.includes(q) || phone.includes(q) || ip.includes(q) || inAnswers;
-    });
-  }, [submissions, forms, debouncedQuery]);
+				let aggregated = [];
+				let totalCount = 0;
 
-  const viewSubmission = submission => {
-    setSelectedSubmission(submission);
-    setAssignUserId(submission?.assignedToId || '');
-    setShowSubmissionModal(true);
-  };
+				for (const r of results) {
+					const arr = (r?.data || []).map(normalizeSubmission);
+					aggregated = aggregated.concat(arr);
+					totalCount += r?.total || 0;
+				}
 
-  const assignSubmission = async () => {
-    if (!selectedSubmission?.id || !selectedSubmission?.form_id) return;
-    const uid = (assignUserId || '').trim();
-    if (!uid) {
-      toast.error(t('errors.user_required'));
-      return;
-    }
-    setAssignLoading(true);
-    try {
-      await api.post(`/forms/${selectedSubmission.form_id}/submissions/${selectedSubmission.id}/assign`, {
-        userId: uid,
-      });
-      toast.success(t('messages.assigned_ok'));
-      // reflect locally
-      setSelectedSubmission(prev => (prev ? { ...prev, assignedToId: uid, assignedAt: new Date().toISOString() } : prev));
-    } catch (e) {
-      toast.error(t('messages.assign_failed'));
-    } finally {
-      setAssignLoading(false);
-    }
-  };
+				aggregated.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+				setTotal(totalCount);
+				setSubmissions(aggregated);
+			} else {
+				const currentPage = forcedPage ?? page;
+				const r = await api.get(`/forms/${selectedFormId}/submissions`, {
+					params: { page: currentPage, limit: PAGE_SIZE },
+				});
 
-  if (loadingForms && !forms.length) {
-    return (
-      <div className='min-h-screen bg-slate-50 flex items-center justify-center'>
-        <FaSpinner className='animate-spin h-8 w-8 text-indigo-600' />
-      </div>
-    );
-  }
+				const rows = (r?.data?.data || r?.data || []).map(normalizeSubmission);
+				setSubmissions(rows);
+				setTotal(r?.data?.total ?? rows.length);
+			}
+		} catch (err) {
+			toast.error(t('messages.load_submissions_failed'));
+		} finally {
+			setLoadingSubs(false);
+		}
+	};
 
-  return (
-    <div className='min-h-screen bg-slate-50'>
-      <div className='container !px-0 py-8'>
-        {/* Header */}
-        <div className='relative overflow-hidden rounded-lg border border-indigo-100/60 bg-white/60 shadow-sm backdrop-blur'>
-          <div className='absolute inset-0 overflow-hidden'>
-            <div className='absolute inset-0 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-95' />
-            <div
-              className='absolute inset-0 opacity-15'
-              style={{
-                backgroundImage: 'linear-gradient(rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px)',
-                backgroundSize: '22px 22px',
-                backgroundPosition: '-1px -1px',
-              }}
-            />
-            <div className='absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/20 blur-3xl' />
-            <div className='absolute -bottom-16 -right-8 h-60 w-60 rounded-full bg-blue-300/30 blur-3xl' />
-          </div>
+	const filteredSubmissions = useMemo(() => {
+		const q = debouncedQuery;
+		if (!q) return submissions;
 
-          <div className='relative py-3 p-3 md:p-5 text-white'>
-            <div className='flex items-center justify-between gap-3 flex-wrap'>
-              <div className='space-y-1'>
-                <h1 className='text-xl md:text-4xl font-semibold'>{t('header.title')}</h1>
-                <p className='text-white/85 max-md:hidden'>{t('header.desc')}</p>
-              </div>
+		return submissions.filter(s => {
+			const formTitle = forms.find(f => f.id == s.form_id)?.title?.toLowerCase() || '';
+			const email = s.email?.toLowerCase() || '';
+			const phone = s.phone?.toLowerCase() || '';
+			const ip = s.ipAddress?.toLowerCase() || '';
+			const inAnswers =
+				s.answers &&
+				Object.values(s.answers).some(v =>
+					String(Array.isArray(v) ? v.join(', ') : v)
+						.toLowerCase()
+						.includes(q),
+				);
+			return formTitle.includes(q) || email.includes(q) || phone.includes(q) || ip.includes(q) || inAnswers;
+		});
+	}, [submissions, forms, debouncedQuery]);
 
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-3 w-full md:w-auto md:min-w-[720px]'>
-                <div className='md:col-span-2'>
-                  <div className='relative'>
-                    <Input cnInput='rtl:pr-8 ltr:pl-8 ' label='' placeholder={t('filters.search_placeholder')} value={query} onChange={setQuery} />
-                    <FiSearch className='absolute rtl:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-black/50' />
-                  </div>
-                </div>
+	const viewSubmission = submission => {
+		setSelectedSubmission(submission);
+		setShowSubmissionModal(true);
+	};
 
-                <div className='md:col-span-1 max-w-[300px] w-full'>
-                  <Select value={selectedFormId} onChange={val => setSelectedFormId(val)} options={[{ id: 'all', label: t('filters.all_forms') }, ...forms.map(f => ({ id: f.id, label: f.title }))]} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+	const headerStats = useMemo(() => {
+		const totalShown = filteredSubmissions.length;
+		const uniqueForms = new Set(filteredSubmissions.map(s => String(s.form_id ?? ''))).size;
+		return { totalShown, uniqueForms };
+	}, [filteredSubmissions]);
 
-        {/* Table */}
-        <div className='rounded-lg border border-slate-200 bg-white overflow-hidden mt-6'>
-          <div className='overflow-x-auto'>
-            <table className='min-w-full divide-y divide-slate-200'>
-              <thead className='bg-slate-50'>
-                <tr>
-                  <Th className='min-w-[220px]'>{t('table.form')}</Th>
-                  <Th>{t('table.email')}</Th>
-                  <Th>{t('table.phone')}</Th>
-                  <Th>{t('table.ip')}</Th>
-                  <Th>{t('table.submitted')}</Th>
-                  <Th className='text-right pr-6'>{t('table.actions')}</Th>
-                </tr>
-              </thead>
-              <tbody className='divide-y divide-slate-100'>
-                {loadingSubs && submissions.length === 0
-                  ? [...Array(5)].map((_, i) => (
-                      <tr key={i} className='animate-pulse'>
-                        <Td>
-                          <div className='h-4 w-40 bg-slate-200 rounded' />
-                        </Td>
-                        <Td>
-                          <div className='h-4 w-28 bg-slate-200 rounded' />
-                        </Td>
-                        <Td>
-                          <div className='h-4 w-24 bg-slate-200 rounded' />
-                        </Td>
-                        <Td>
-                          <div className='h-4 w-24 bg-slate-200 rounded' />
-                        </Td>
-                        <Td>
-                          <div className='h-4 w-32 bg-slate-200 rounded' />
-                        </Td>
-                        <Td className='text-right pr-6'>
-                          <div className='h-9 w-20 bg-slate-200 rounded' />
-                        </Td>
-                      </tr>
-                    ))
-                  : filteredSubmissions.map(s => {
-                      const form = forms.find(f => f.id == s.form_id);
-                      return (
-                        <tr key={s.id} className='hover:bg-slate-50'>
-                          <Td>
-                            <div className='flex items-center gap-2'>
-                              <span className='p-2 bg-indigo-100 rounded-lg'>
-                                <FiFileText className='w-4 h-4 text-indigo-600' />
-                              </span>
-                              <MultiLangText className='font-medium text-slate-900 truncate max-w-[360px]'>{form?.title || t('labels.unknown_form')}</MultiLangText>
-                            </div>
-                          </Td>
-                          <Td className='truncate max-w-[220px] font-en'>{s.email}</Td>
-                          <Td className='truncate max-w-[160px]  font-en'>{s.phone}</Td>
-                          <Td className='font-mono text-xs font-en'>{s.ipAddress}</Td>
-                          <Td className={'font-en'}>{new Date(s.created_at).toLocaleString()}</Td>
-                          <Td className='text-right pr-6'>
-                            <IconButton title={t('actions.view')} onClick={() => viewSubmission(s)} tone='slate'>
-                              <FiEye className='w-4 h-4' />
-                              <span className='text-sm'>{t('actions.view')}</span>
-                            </IconButton>
-                          </Td>
-                        </tr>
-                      );
-                    })}
-              </tbody>
-            </table>
-          </div>
+	const columns = useMemo(
+		() => [
+			{
+				header: t('table.form'),
+				accessor: '__formTitle',
+				cell: row => {
+					const form = forms.find(f => f.id == row.form_id);
+					return (
+						<div className="flex items-center gap-3 min-w-[240px]">
+							<div
+								className="grid place-items-center rounded-2xl"
+								style={{
+									width: 40,
+									height: 40,
+									background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-200))',
+									boxShadow: '0 12px 20px rgba(15,23,42,0.08)',
+								}}
+							>
+								<FileText className="w-5 h-5" style={{ color: 'var(--color-primary-800)' }} />
+							</div>
+							<div className="min-w-0">
+								<MultiLangText className="font-extrabold text-slate-900 truncate max-w-[420px]">
+									{form?.title || t('labels.unknown_form')}
+								</MultiLangText>
+								<div className="mt-0.5 text-xs text-slate-500 flex items-center gap-2">
+									<Pill tone="primary">#{row.id}</Pill>
+									<span className="hidden sm:inline">
+										{new Date(row.created_at).toLocaleDateString()} • {new Date(row.created_at).toLocaleTimeString()}
+									</span>
+								</div>
+							</div>
+						</div>
+					);
+				},
+			},
+			{
+				header: t('table.email'),
+				accessor: 'email',
+				className: 'font-en',
+				cell: row => (
+					<div className="max-w-[260px] truncate font-en">
+						{row.email || <span className="text-slate-400">—</span>}
+					</div>
+				),
+			},
+			{
+				header: t('table.phone'),
+				accessor: 'phone',
+				className: 'font-en',
+				cell: row => (
+					<div className="max-w-[190px] truncate font-en">
+						{row.phone || <span className="text-slate-400">—</span>}
+					</div>
+				),
+			},
+			{
+				header: t('table.ip'),
+				accessor: 'ipAddress',
+				className: 'font-en',
+				cell: row => (
+					<span
+						className="inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-mono"
+						style={{
+							borderColor: 'var(--color-primary-200)',
+							background: 'linear-gradient(135deg, rgba(255,255,255,0.92), var(--color-primary-50))',
+							color: 'var(--color-primary-800)',
+						}}
+					>
+						{row.ipAddress || '—'}
+					</span>
+				),
+			},
+			{
+				header: t('table.submitted'),
+				accessor: 'created_at',
+				className: 'font-en',
+				cell: row => (
+					<span className="text-sm text-slate-700 font-en">
+						{row.created_at ? new Date(row.created_at).toLocaleString() : '—'}
+					</span>
+				),
+			},
+			{
+				header: t('table.actions'),
+				accessor: '__actions',
+				cell: row => (
+					<div className="flex justify-end">
+						<GhostBtn title={t('actions.view')} onClick={() => viewSubmission(row)}>
+							<Eye className="w-4 h-4" />
+							<span className="text-sm font-semibold">{t('actions.view')}</span>
+						</GhostBtn>
+					</div>
+				),
+				className: 'text-right',
+			},
+		],
+		[forms, t],
+	);
 
-          {/* Empty state */}
-          {!loadingSubs && filteredSubmissions.length === 0 && (
-            <div className='text-center py-12'>
-              <FiFileText className='h-12 w-12 text-slate-300 mx-auto mb-4' />
-              <h3 className='text-lg font-semibold text-slate-900 mb-1'>{t('empty.title')}</h3>
-              <p className='text-slate-600'>{selectedFormId === 'all' ? t('empty.subtitle_all') : t('empty.subtitle_one')}</p>
-            </div>
-          )}
+	if (loadingForms && !forms.length) {
+		return (
+			<div className="min-h-screen flex items-center justify-center"
+				style={{
+					background:
+						'radial-gradient(1200px 600px at 15% 10%, var(--color-primary-100), transparent 55%),' +
+						'radial-gradient(900px 500px at 85% 18%, var(--color-secondary-100), transparent 55%),' +
+						'linear-gradient(180deg, #ffffff, #f8fafc)',
+				}}
+			>
+				<FaSpinner className="animate-spin h-8 w-8" style={{ color: 'var(--color-primary-600)' }} />
+			</div>
+		);
+	}
 
-          {/* Pager */}
-          {selectedFormId !== 'all' && filteredSubmissions.length > 0 && filteredSubmissions.length < total && (
-            <div className='p-4 border-top border-slate-200 flex justify-center'>
-              <PrimaryButton onClick={onLoadMore} tone='indigo'>
-                <FiEye className='w-4 h-4' />
-                <span className='text-sm font-medium'>{t('actions.load_more')}</span>
-              </PrimaryButton>
-            </div>
-          )}
-        </div>
-      </div>
+	return (
+		<div
+			className="min-h-screen"
 
-      {/* Submission Detail Modal */}
-      <Modal open={showSubmissionModal && !!selectedSubmission} onClose={() => setShowSubmissionModal(false)} title={t('detail.title')} maxW='max-w-4xl'>
-        {selectedSubmission && (
-          <div className='space-y-6'>
-            <Box title={t('detail.contact')}>
-              <Row k={t('table.email')} v={selectedSubmission.email} />
-              <Row k={t('table.phone')} v={selectedSubmission.phone} />
-              <Row k={t('table.form')} v={forms.find(f => f.id == selectedSubmission.form_id)?.title || t('labels.unknown_form')} />
-            </Box>
+		>
+			<div className=" ">
+				{/* ✅ Theme header using your GradientStatsHeader */}
+				<GradientStatsHeader
+					title={t('header.title')}
+					desc={t('header.desc')}
+					icon={Sparkles}
+					btnName={t('header.new', { default: t('filters.all_forms') })}
+					onClick={() => router.push('/dashboard/intake/forms')}
 
-            <div>
-              <h3 className='font-semibold text-slate-900 mb-3'>{t('detail.answers')}</h3>
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>{renderAnswers(selectedSubmission, forms, t)}</div>
-            </div>
-          </div>
-        )}
-      </Modal>
-    </div>
-  );
+				>
+
+					<StatCard icon={Users} title={t('labels.total')} value={total || 0} />
+					<StatCard icon={Users} title={t('labels.shown')} value={headerStats.totalShown} />
+					<StatCard icon={Users} title={t('labels.forms')} value={headerStats.uniqueForms} />
+
+
+				</GradientStatsHeader>
+
+
+				{/* ===== FILTERS BAR ===== */}
+				<div className='flex items-center justify-between gap-2.5 mt-8 flex-wrap'>
+
+
+					<div className="relative  ">
+						<Input
+							cnInput="rtl:pr-8 ltr:pl-8"
+							label=""
+							cnInputParent='w-[300px]'
+							placeholder={t('filters.search_placeholder')}
+							value={query}
+							onChange={setQuery}
+						/>
+						<Search size={18} className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-gray-300" />
+					</div>
+					<Select
+						value={selectedFormId}
+						onChange={val => setSelectedFormId(val)}
+						options={[{ id: 'all', label: t('filters.all_forms') }, ...forms.map(f => ({ id: f.id, label: f.title }))]}
+					/>
+
+				</div>
+
+				{/* ✅ DataTable (theme styled already) */}
+				<div className="mt-6">
+					<ThemeFrame>
+
+
+						<DataTable
+							columns={columns}
+							data={filteredSubmissions}
+							loading={loadingSubs}
+							itemsPerPage={PAGE_SIZE}
+							// pagination={false} // ✅ we use PrettyPagination above (server paging)
+							serverPagination={true}
+							stickyHeader={true}
+							emptyState={
+								<div className="text-center py-12">
+									<div
+										className="mx-auto mb-4 grid place-items-center rounded-3xl"
+										style={{
+											width: 72,
+											height: 72,
+											background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-secondary-100))',
+											boxShadow: '0 18px 36px rgba(15,23,42,0.12)',
+										}}
+									>
+										<FileText className="w-8 h-8" style={{ color: 'var(--color-primary-700)' }} />
+									</div>
+									<h3 className="text-lg font-extrabold text-slate-900 mb-1">{t('empty.title')}</h3>
+									<p className="text-slate-600">
+										{selectedFormId === 'all' ? t('empty.subtitle_all') : t('empty.subtitle_one')}
+									</p>
+								</div>
+							}
+
+							pagination selectable={false} page={page}
+							onPageChange={p => setPage(p)} totalRows={totalPages}
+						/>
+
+					</ThemeFrame>
+				</div>
+			</div>
+
+			{/* Submission Detail Modal */}
+			<Modal
+				open={showSubmissionModal && !!selectedSubmission}
+				onClose={() => setShowSubmissionModal(false)}
+				title={t('detail.title')}
+				maxW="max-w-4xl"
+			>
+				{selectedSubmission && (
+					<div className="space-y-6 pt-2">
+						<SoftCard className="p-4">
+							<div className="flex items-center justify-between gap-3 flex-wrap">
+								<div className="flex items-center gap-3">
+									<div
+										className="grid place-items-center rounded-2xl"
+										style={{
+											width: 44,
+											height: 44,
+											background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-200))',
+										}}
+									>
+										<FileText className="w-5 h-5" style={{ color: 'var(--color-primary-800)' }} />
+									</div>
+									<div>
+										<div className="text-sm font-extrabold text-slate-900">{t('detail.contact')}</div>
+										<div className="text-xs text-slate-500">
+											{new Date(selectedSubmission.created_at).toLocaleString()}
+										</div>
+									</div>
+								</div>
+
+								<Pill tone="primary">
+									{forms.find(f => f.id == selectedSubmission.form_id)?.title || t('labels.unknown_form')}
+								</Pill>
+							</div>
+
+							<div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+								<InfoRow k={t('table.email')} v={selectedSubmission.email} />
+								<InfoRow k={t('table.phone')} v={selectedSubmission.phone} />
+								<InfoRow k={t('table.ip')} v={selectedSubmission.ipAddress} mono />
+							</div>
+						</SoftCard>
+
+						<div>
+							<div className="flex items-center justify-between gap-3 mb-3">
+								<h3 className="font-extrabold text-slate-900">{t('detail.answers')}</h3>
+								<Pill tone="soft">{Object.keys(selectedSubmission.answers || {}).length}</Pill>
+							</div>
+
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+								{renderAnswers(selectedSubmission, forms, t)}
+							</div>
+						</div>
+					</div>
+				)}
+			</Modal>
+		</div>
+	);
 }
 
 /** ---------- tiny helpers ---------- */
 
-function Box({ title, children }) {
-  return (
-    <div className='rounded-lg border border-slate-200 bg-slate-50 p-4'>
-      <div className='text-sm font-semibold text-slate-900 mb-2'>{title}</div>
-      <div className='space-y-1'>{children}</div>
-    </div>
-  );
-}
-
-function Row({ k, v, mono }) {
-  return (
-    <div className='text-sm'>
-      <span className='text-slate-500'>{k}: </span>
-      <MultiLangText className={mono ? 'font-mono' : 'font-medium'}>{String(v ?? '')}</MultiLangText>
-    </div>
-  );
+function InfoRow({ k, v, mono }) {
+	return (
+		<div
+			className="rounded-2xl border p-3"
+			style={{
+				borderColor: 'var(--color-primary-200)',
+				background: 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))',
+			}}
+		>
+			<div className="text-xs text-slate-500 font-semibold">{k}</div>
+			<MultiLangText className={cx('mt-1 text-sm font-extrabold text-slate-900 break-words', mono && 'font-mono')}>
+				{String(v ?? '—')}
+			</MultiLangText>
+		</div>
+	);
 }
 
 function renderAnswers(submission, forms, t) {
-  const form = forms.find(f => f.id == (submission.form_id ?? submission.form?.id));
-  const fieldsByKey = new Map((form?.fields || []).map(fld => [fld.key, fld]));
-  const entries = Object.entries(submission.answers || {});
+	const form = forms.find(f => f.id == (submission.form_id ?? submission.form?.id));
+	const fieldsByKey = new Map((form?.fields || []).map(fld => [fld.key, fld]));
+	const entries = Object.entries(submission.answers || {});
 
-  if (!entries.length) {
-    return <div className='text-slate-600'>{t('detail.no_answers')}</div>;
-  }
+	if (!entries.length) {
+		return <div className="text-slate-600">{t('detail.no_answers')}</div>;
+	}
 
-  return entries.map(([key, value]) => {
-    const fld = fieldsByKey.get(key);
-    const label = fld?.label || key;
+	return entries.map(([key, value]) => {
+		const fld = fieldsByKey.get(key);
+		const label = fld?.label || key;
 
-    const isUploadImage = typeof value === 'string' && value.trim().toLowerCase().startsWith('upload');
+		const isUploadImage = typeof value === 'string' && value.trim().toLowerCase().startsWith('upload');
+		const imgSrc = isUploadImage ? value.replace(/\\/g, '/') : null;
 
-    // Normalize path for URL (turn backslashes into slashes)
-    const imgSrc = isUploadImage ? value.replace(/\\/g, '/') : null;
+		const out =
+			value == null
+				? ''
+				: Array.isArray(value)
+					? value.join(', ')
+					: typeof value === 'object'
+						? JSON.stringify(value)
+						: String(value);
 
-    const out = value == null ? '' : Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? JSON.stringify(value) : String(value);
+		return (
+			<div
+				key={key}
+				className="rounded-3xl border bg-white p-4 w-full overflow-hidden"
+				style={{
+					borderColor: 'var(--color-primary-200)',
+					boxShadow: '0 1px 0 rgba(15,23,42,0.03), 0 10px 24px rgba(15,23,42,0.06)',
+				}}
+			>
+				<div className="flex items-start justify-between gap-3">
+					<MultiLangText dirAuto className="text-[11px] uppercase text-slate-500 font-semibold">
+						{label}
+					</MultiLangText>
 
-    return (
-      <div key={key} className='rounded-lg border border-slate-200 bg-white p-3 w-full'>
-        <MultiLangText dirAuto className='text-xs uppercase text-slate-500 mb-1'>
-          {label}
-        </MultiLangText>
+					<span
+						className="h-6 px-2 rounded-full text-[11px] font-extrabold border"
+						style={{
+							borderColor: 'var(--color-primary-200)',
+							color: 'var(--color-primary-800)',
+							background: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
+						}}
+					>
+						{key}
+					</span>
+				</div>
 
-        <div className='text-sm text-slate-900 break-words'>
-          {isUploadImage ? (
-            <a href={ baseImg + "/" + imgSrc} target='_blank' rel='noopener noreferrer' className='w-full h-[200px] inline-flex flex-col gap-2'>
-              <Img src={imgSrc} alt={label} className=' w-fit h-full ' />
-            </a>
-          ) : out ? (
-            <MultiLangText>{out}</MultiLangText>
-          ) : (
-            <span className='text-slate-400'>—</span>
-          )}
-        </div>
-      </div>
-    );
-  });
+				<div className="mt-3 text-sm text-slate-900 break-words">
+					{isUploadImage ? (
+						<a
+							href={baseImg + '/' + imgSrc}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="w-full inline-flex flex-col gap-2"
+						>
+							<div
+								className="rounded-2xl border overflow-hidden"
+								style={{ borderColor: 'var(--color-primary-200)' }}
+							>
+								<Img src={imgSrc} alt={label} className="w-full h-[220px] object-cover" />
+							</div>
+							<div className="text-xs text-slate-600">
+								<span className="font-semibold">{t('labels.open', { default: 'Open' })}:</span>{' '}
+								{imgSrc}
+							</div>
+						</a>
+					) : out ? (
+						<MultiLangText>{out}</MultiLangText>
+					) : (
+						<span className="text-slate-400">—</span>
+					)}
+				</div>
+
+				<div
+					className="mt-4 h-px"
+					style={{
+						background:
+							'linear-gradient(90deg, transparent, var(--color-primary-200), transparent)',
+					}}
+				/>
+			</div>
+		);
+	});
 }

@@ -48,16 +48,16 @@ export function Stepper({ step = 1, steps = 4 }) {
               {/* Base track */}
               <div className='h-2.5 rounded-full bg-slate-200 overflow-hidden' />
 
-              {/* Animated fill */}
+              {/* Animated fill - now uses theme gradient */}
               <motion.div
-                className='absolute inset-0 h-2.5 origin-left rounded-full '
+                className='absolute inset-0 h-2.5 origin-left rounded-full theme-gradient-bg'
                 style={
                   isActive
                     ? {
-                        background: 'linear-gradient(90deg, rgba(99,102,241,1) 0%, rgba(139,92,246,1) 100%)',
-                        boxShadow: '0 0 12px rgba(99,102,241,.55)',
+                        boxShadow: '0 0 12px var(--color-primary-500)',
+                        opacity: 0.9,
                       }
-                    : {}
+                    : { opacity: 0 }
                 }
                 variants={lineVariants}
                 initial='initial'
@@ -85,9 +85,16 @@ export function Stepper({ step = 1, steps = 4 }) {
               <motion.div custom={idx * 0.5} variants={bubbleVariants} initial='initial' animate='enter' className='absolute -top-3 left-1/2 -translate-x-1/2'>
                 <motion.div
                   animate={isActive ? 'active' : 'inactive'}
-                  className={`h-7 w-7 rounded-full border-2 flex items-center justify-center text-[11px] font-semibold
-                    ${isActive ? 'text-white border-indigo-300 shadow-md' : 'text-slate-500 border-slate-300 bg-white'}`}
-                  style={isActive ? { background: 'linear-gradient(135deg, rgba(99,102,241,1), rgba(139,92,246,1))' } : {}}>
+                  className={`h-7 w-7 rounded-full border-2 flex items-center justify-center text-[11px] font-semibold transition-all
+                    ${isActive ? 'text-white shadow-md' : 'text-slate-500 border-slate-300 bg-white'}`}
+                  style={
+                    isActive
+                      ? {
+                          background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+                          borderColor: 'var(--color-primary-300)',
+                        }
+                      : {}
+                  }>
                   {idx}
                 </motion.div>
               </motion.div>
@@ -110,7 +117,7 @@ export function PlanPicker({
   onAssign,
   onSkip,
   assigning = false,
-  loading = false, // ✅ NEW: loading flag
+  loading = false,
 }) {
   const t = useTranslations('Plans');
   const tc = useTranslations('Common');
@@ -124,15 +131,19 @@ export function PlanPicker({
     onSelect?.(id);
   };
 
-  // ✅ Make sure we only show as many as visibleWorkouts
   const visiblePlans = plans.slice(0, visibleWorkouts || plans.length);
-
   const showEmpty = !loading && plans.length === 0;
 
   const renderSkeletonCard = (_, i) => (
-    <motion.div key={`skeleton-${i}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }} className='rounded-lg border border-slate-200 bg-white p-4 shadow-sm animate-pulse'>
+    <motion.div 
+      key={`skeleton-${i}`} 
+      initial={{ opacity: 0, y: 8 }} 
+      animate={{ opacity: 1, y: 0 }} 
+      transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }} 
+      className='rounded-lg border bg-white p-4 shadow-sm animate-pulse'
+      style={{ borderColor: 'var(--color-primary-100)' }}>
       <div className='flex items-center gap-3 mb-3'>
-        <div className='h-5 w-5 rounded-full bg-slate-200' />
+        <div className='h-5 w-5 rounded-full' style={{ backgroundColor: 'var(--color-primary-200)' }} />
         <div className='flex-1 space-y-2'>
           <div className='h-3 w-2/3 rounded bg-slate-200' />
           <div className='h-2.5 w-1/3 rounded bg-slate-100' />
@@ -145,7 +156,7 @@ export function PlanPicker({
       </div>
     </motion.div>
   );
- 
+
   return (
     <div className='space-y-4'>
       <AnimatePresence mode='popLayout'>
@@ -154,63 +165,101 @@ export function PlanPicker({
             {Array.from({ length: 6 }).map(renderSkeletonCard)}
           </motion.div>
         ) : showEmpty ? (
-          <motion.div key='empty' initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className='rounded-lg border border-dashed border-slate-300 p-6 text-center text-slate-500 bg-slate-50/60'>
+          <motion.div 
+            key='empty' 
+            initial={{ opacity: 0, y: 8 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0 }} 
+            className='rounded-lg border border-dashed p-6 text-center text-slate-500 bg-slate-50/60'
+            style={{ borderColor: 'var(--color-primary-200)' }}>
             {t('empty')}
           </motion.div>
         ) : (
           <motion.div key='plans' layout className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
             {visiblePlans.map((plan, i) => {
               const isSelected = selectedId === plan.id;
-
-              // ✅ Use your real shape: program.days
               const rawDays = plan.program?.days || plan.days || [];
               const orderedDays = orderDays(rawDays);
 
               return (
-                <motion.button key={plan.id} layout type='button' onClick={() => handleSelect(plan.id)} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03, duration: 0.35, ease: 'easeOut' }} className={['flex flex-col group relative text-left rounded-lg border p-4 transition-all', 'bg-white hover:bg-indigo-50/50', isSelected ? 'border-indigo-400 ring-2 ring-indigo-400/40' : 'border-slate-200 hover:border-indigo-200'].join(' ')}>
+                <motion.button 
+                  key={plan.id} 
+                  layout 
+                  type='button' 
+                  onClick={() => handleSelect(plan.id)} 
+                  initial={{ opacity: 0, y: 8 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: i * 0.03, duration: 0.35, ease: 'easeOut' }} 
+                  className='flex flex-col group relative text-left rounded-lg border p-4 transition-all bg-white hover:shadow-md'
+                  style={
+                    isSelected
+                      ? {
+                          borderColor: 'var(--color-primary-400)',
+                          boxShadow: '0 0 0 3px var(--color-primary-100)',
+                        }
+                      : {
+                          borderColor: '#e2e8f0',
+                        }
+                  }>
                   {/* Title row */}
                   <div className='flex items-start gap-3'>
-                    <CheckCircle2 className={`h-5 w-5 transition-colors ${isSelected ? 'text-indigo-500' : 'text-slate-300 group-hover:text-indigo-300'}`} />
+                    <CheckCircle2 
+                      className='h-5 w-5 transition-colors' 
+                      style={{ 
+                        color: isSelected ? 'var(--color-primary-500)' : '#cbd5e1' 
+                      }} 
+                    />
                     <div className='flex-1 flex gap-2 items-center justify-between min-w-0'>
-                      <MultiLangText className='font-semibold text-slate-800  '>{plan.name || t('untitled')}</MultiLangText>
+                      <MultiLangText className='font-semibold text-slate-800'>{plan.name || t('untitled')}</MultiLangText>
                     </div>
                   </div>
 
                   {/* Expand details */}
                   <div className='mt-2'>
-                    {orderedDays.length > 0 && <div className='flex items-center justify-between' >
-                      <span className='flex-none inline-flex items-center gap-1 text-xs text-slate-600'>
-                        <CalendarDays className='h-3.5 w-3.5' />
-                        {t('daysCount', { count: orderedDays.length })}
-                      </span>
-                      <button
-                        type='button'
-                        onClick={e => {
-                          e.stopPropagation();
-                          setExpanded(expanded === plan.id ? null : plan.id);
-                        }}
-                        className='inline-flex items-center gap-1 text-xs text-indigo-700 hover:text-indigo-900'>
-                        {t('details')}
-                        <ChevronDown className={`h-4 w-4 transition-transform ${expanded === plan.id ? 'rotate-180' : ''}`} />
-                      </button>
-                    </div>}
+                    {orderedDays.length > 0 && (
+                      <div className='flex items-center justify-between'>
+                        <span className='flex-none inline-flex items-center gap-1 text-xs text-slate-600'>
+                          <CalendarDays className='h-3.5 w-3.5' />
+                          {t('daysCount', { count: orderedDays.length })}
+                        </span>
+                        <button
+                          type='button'
+                          onClick={e => {
+                            e.stopPropagation();
+                            setExpanded(expanded === plan.id ? null : plan.id);
+                          }}
+                          className='inline-flex items-center gap-1 text-xs theme-primary-text hover:opacity-80 transition-opacity'>
+                          {t('details')}
+                          <ChevronDown className={`h-4 w-4 transition-transform ${expanded === plan.id ? 'rotate-180' : ''}`} />
+                        </button>
+                      </div>
+                    )}
 
                     <AnimatePresence initial={false}>
                       {expanded === plan.id && (
-                        <motion.div key='details' initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className='overflow-hidden'>
+                        <motion.div 
+                          key='details' 
+                          initial={{ height: 0, opacity: 0 }} 
+                          animate={{ height: 'auto', opacity: 1 }} 
+                          exit={{ height: 0, opacity: 0 }} 
+                          transition={{ duration: 0.25 }} 
+                          className='overflow-hidden'>
                           <div className='mt-3 flex flex-wrap gap-2'>
                             {orderedDays.slice(0, 6).map(d => (
-                              <span key={d.id || d.dayOfWeek} className='rtl:flex-row-reverse inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border border-slate-200 bg-slate-50 text-slate-600'>
+                              <span 
+                                key={d.id || d.dayOfWeek} 
+                                className='rtl:flex-row-reverse inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border bg-slate-50 text-slate-600'
+                                style={{ borderColor: 'var(--color-primary-200)' }}>
                                 <span className='font-medium capitalize'>{common(d.dayOfWeek || d?.day || d.id)}</span>
                                 <span className='text-slate-400'>•</span>
                                 <span className='truncate max-w-[140px]'>{common('day')}</span>
                               </span>
                             ))}
                             {orderedDays.length > 6 && (
-                              <span className='inline-flex items-center px-2.5 py-1 rounded-full text-xs border border-slate-200 bg-slate-50 text-slate-600'>
-                                {t('moreCount', {
-                                  count: orderedDays.length - 6,
-                                })}
+                              <span 
+                                className='inline-flex items-center px-2.5 py-1 rounded-full text-xs border bg-slate-50 text-slate-600'
+                                style={{ borderColor: 'var(--color-primary-200)' }}>
+                                {t('moreCount', { count: orderedDays.length - 6 })}
                               </span>
                             )}
                           </div>
@@ -236,7 +285,10 @@ export function PlanPicker({
       <div className='flex justify-between gap-2 pt-2'>
         <div className='flex justify-end w-full gap-2'>
           {!buttonName && (
-            <button type='button' onClick={onSkip} className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
+            <button 
+              type='button' 
+              onClick={onSkip} 
+              className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
               {tc('skip')}
             </button>
           )}
@@ -245,8 +297,7 @@ export function PlanPicker({
             type='button'
             onClick={() => onAssign?.(selectedId)}
             disabled={!selectedId || assigning}
-            className={`rounded-lg px-4 py-2 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed
-              ${!selectedId ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+            className='rounded-lg px-4 py-2 text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed theme-gradient-bg hover:opacity-95 shadow-sm'>
             {assigning ? tc('assigning') : buttonName || tc('assignNext')}
           </button>
         </div>
@@ -263,7 +314,7 @@ export function orderDays(days) {
 
 export function MealPlanPicker({
   loading,
-  mealPlans = [], // ✅ default to [] so length is always safe
+  mealPlans = [],
   visibleMeals,
   setVisibleMeals,
   meals = [],
@@ -285,9 +336,15 @@ export function MealPlanPicker({
   };
 
   const renderSkeletonCard = (_, i) => (
-    <motion.div key={`meal-skeleton-${i}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }} className='rounded-lg border border-slate-200 bg-white p-4 shadow-sm animate-pulse'>
+    <motion.div 
+      key={`meal-skeleton-${i}`} 
+      initial={{ opacity: 0, y: 8 }} 
+      animate={{ opacity: 1, y: 0 }} 
+      transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }} 
+      className='rounded-lg border bg-white p-4 shadow-sm animate-pulse'
+      style={{ borderColor: 'var(--color-primary-100)' }}>
       <div className='flex items-start gap-3 mb-2'>
-        <div className='h-5 w-5 rounded-full bg-slate-200' />
+        <div className='h-5 w-5 rounded-full' style={{ backgroundColor: 'var(--color-primary-200)' }} />
         <div className='flex-1 space-y-2'>
           <div className='h-3 w-2/3 rounded bg-slate-200' />
           <div className='h-2.5 w-full rounded bg-slate-100' />
@@ -306,23 +363,50 @@ export function MealPlanPicker({
             {Array.from({ length: 6 }).map(renderSkeletonCard)}
           </motion.div>
         ) : meals.length === 0 ? (
-          // ✅ Empty state (only when not loading and meals is empty)
-          <motion.div key='empty' initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className='rounded-lg border border-dashed border-slate-300 p-6 text-center text-slate-500 bg-slate-50/60'>
+          <motion.div 
+            key='empty' 
+            initial={{ opacity: 0, y: 8 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0 }} 
+            className='rounded-lg border border-dashed p-6 text-center text-slate-500 bg-slate-50/60'
+            style={{ borderColor: 'var(--color-primary-200)' }}>
             {t('empty')}
           </motion.div>
         ) : (
-          // ✅ Use `meals` exactly as passed from parent (already sliced)
           <motion.div key='meals' layout className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
             {meals.map((plan, i) => {
               const isSelected = selectedId === plan.id;
 
               return (
-                <motion.button key={plan.id} layout type='button' onClick={() => handleSelect(plan.id)} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03, duration: 0.35, ease: 'easeOut' }} className={[' flex flex-col group relative text-left rounded-lg border p-4 transition-all', 'bg-white hover:bg-indigo-50/40', isSelected ? 'border-indigo-400 ring-2 ring-indigo-400/40' : 'border-slate-200 hover:border-indigo-200'].join(' ')}>
+                <motion.button 
+                  key={plan.id} 
+                  layout 
+                  type='button' 
+                  onClick={() => handleSelect(plan.id)} 
+                  initial={{ opacity: 0, y: 8 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: i * 0.03, duration: 0.35, ease: 'easeOut' }} 
+                  className='flex flex-col group relative text-left rounded-lg border p-4 transition-all bg-white hover:shadow-md'
+                  style={
+                    isSelected
+                      ? {
+                          borderColor: 'var(--color-primary-400)',
+                          boxShadow: '0 0 0 3px var(--color-primary-100)',
+                        }
+                      : {
+                          borderColor: '#e2e8f0',
+                        }
+                  }>
                   {/* Title row */}
                   <div className='flex items-start gap-3'>
-                    <CheckCircle2 className={`h-5 w-5 transition-colors ${isSelected ? 'text-indigo-500' : 'text-slate-300 group-hover:text-indigo-300'}`} />
+                    <CheckCircle2 
+                      className='h-5 w-5 transition-colors' 
+                      style={{ 
+                        color: isSelected ? 'var(--color-primary-500)' : '#cbd5e1' 
+                      }} 
+                    />
                     <div className='flex-1 min-w-0'>
-                      <MultiLangText className=' text-sm font-semibold text-slate-800  '>{plan.name || t('untitled')}</MultiLangText>
+                      <MultiLangText className='text-sm font-semibold text-slate-800'>{plan.name || t('untitled')}</MultiLangText>
                       {plan.desc && <MultiLangText className='mt-1 text-sm text-slate-600 line-clamp-2'>{plan.desc}</MultiLangText>}
                     </div>
                   </div>
@@ -335,25 +419,31 @@ export function MealPlanPicker({
         {/* See more */}
         {mealPlans.length > visibleMeals ? (
           <div className='flex justify-start'>
-            <Button
-              name={tc('seeMore')}
-              color='neutral'
-              onClick={() => setVisibleMeals(v => v + 6)}
-            />
+            <Button name={tc('seeMore')} color='neutral' onClick={() => setVisibleMeals(v => v + 6)} />
           </div>
         ) : null}
       </AnimatePresence>
 
       {/* Footer actions */}
       <div className='flex justify-between gap-2 pt-2'>
-        <button type='button' onClick={onBack} className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
+        <button 
+          type='button' 
+          onClick={onBack} 
+          className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
           {tc('back')}
         </button>
         <div className='flex gap-2'>
-          <button type='button' onClick={onSkip} className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
+          <button 
+            type='button' 
+            onClick={onSkip} 
+            className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
             {tc('skip')}
           </button>
-          <button type='button' onClick={() => onAssign?.(selectedId)} disabled={!selectedId || assigning} className={`rounded-lg px-4 py-2 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${!selectedId ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+          <button 
+            type='button' 
+            onClick={() => onAssign?.(selectedId)} 
+            disabled={!selectedId || assigning} 
+            className='rounded-lg px-4 py-2 text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed theme-gradient-bg hover:opacity-95 shadow-sm'>
             {assigning ? tc('assigning') : tc('assignFinish')}
           </button>
         </div>
@@ -368,9 +458,16 @@ export function MealPlanPicker({
 export function FieldRow({ icon, label, value, canCopy }) {
   const tc = useTranslations('Common');
   return (
-    <div className='flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2'>
+    <div className='flex items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2 shadow-sm' style={{ borderColor: 'var(--color-primary-100)' }}>
       <div className='flex items-center gap-2 min-w-0'>
-        <div className='grid place-items-center h-8 w-8 rounded-lg bg-slate-100 text-slate-600'>{icon}</div>
+        <div 
+          className='grid place-items-center h-8 w-8 rounded-lg' 
+          style={{ 
+            backgroundColor: 'var(--color-primary-100)', 
+            color: 'var(--color-primary-700)' 
+          }}>
+          {icon}
+        </div>
         <div className='min-w-0'>
           <div className='text-xs text-slate-500'>{label}</div>
           <div className='text-sm font-medium text-slate-800 truncate'>{value || '—'}</div>
@@ -389,10 +486,16 @@ export function PasswordRow({ label, value, canCopy }) {
   const isMasked = !show && value && value !== 'sent to email (or set by admin)';
   const masked = isMasked ? '•'.repeat(Math.min(String(value).length, 12) || 8) : value;
   const t = useTranslations('Common');
+  
   return (
-    <div className='flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2'>
+    <div className='flex items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2 shadow-sm' style={{ borderColor: 'var(--color-primary-100)' }}>
       <div className='flex items-center gap-2 min-w-0'>
-        <div className='grid place-items-center h-8 w-8 rounded-lg bg-indigo-100 text-indigo-700'>
+        <div 
+          className='grid place-items-center h-8 w-8 rounded-lg' 
+          style={{ 
+            backgroundColor: 'var(--color-primary-100)', 
+            color: 'var(--color-primary-700)' 
+          }}>
           <KeyRound className='h-4 w-4' />
         </div>
         <div className='min-w-0'>
@@ -403,12 +506,22 @@ export function PasswordRow({ label, value, canCopy }) {
 
       <div className='flex items-center gap-2'>
         {isMasked && (
-          <button type='button' onClick={() => setShow(true)} className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100' aria-label={t('showPassword')} title={t('showPassword')}>
+          <button 
+            type='button' 
+            onClick={() => setShow(true)} 
+            className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 transition-colors' 
+            aria-label={t('showPassword')} 
+            title={t('showPassword')}>
             <Eye className='h-4 w-4' /> {t('show')}
           </button>
         )}
         {!isMasked && value && value !== 'sent to email (or set by admin)' && (
-          <button type='button' onClick={() => setShow(false)} className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100' aria-label={t('hidePassword')} title={t('hidePassword')}>
+          <button 
+            type='button' 
+            onClick={() => setShow(false)} 
+            className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 transition-colors' 
+            aria-label={t('hidePassword')} 
+            title={t('hidePassword')}>
             <EyeOff className='h-4 w-4' /> {t('hide')}
           </button>
         )}
@@ -423,21 +536,38 @@ export function PasswordRow({ label, value, canCopy }) {
 =========================== */
 export function CopyButton({ text }) {
   const t = useTranslations('Common');
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Handle error silently or show toast
+    }
+  };
+
   return (
     <button
       type='button'
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(text);
-          // toast.success(t('copied')); // if you have a toast system
-        } catch {
-          // toast.error(t('copyFailed'));
-        }
+      onClick={handleCopy}
+      className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors'
+      style={{
+        color: copied ? 'var(--color-primary-600)' : '#64748b',
+        backgroundColor: copied ? 'var(--color-primary-50)' : 'transparent',
       }}
-      className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100'
       aria-label={t('copyToClipboard')}
       title={t('copy')}>
-      <Copy className='h-4 w-4' /> {t('copy')}
+      {copied ? (
+        <>
+          <Check className='h-4 w-4' /> {t('copied')}
+        </>
+      ) : (
+        <>
+          <Copy className='h-4 w-4' /> {t('copy')}
+        </>
+      )}
     </button>
   );
 }
@@ -455,7 +585,7 @@ export function buildWhatsAppLink({ phone, email, password, role, lang = 'en' })
   const url = safe(`${process.env.NEXT_PUBLIC_WEBSITE_URL}/en/auth`);
   const urlLine = url ? (lang === 'ar' ? `رابط تسجيل الدخول: ${url}` : `Login here: ${url}`) : '';
 
-  const linesEN = ['Your account is ready!', email ? `• Email: ${email}` : null, hasPwd ? `• Password: ${password}` : '• Password: (sent to email / set by admin)', urlLine || null, '', 'You can sign in right away. If you didn’t request this, ignore this message.'].filter(Boolean);
+  const linesEN = ['Your account is ready!', email ? `• Email: ${email}` : null, hasPwd ? `• Password: ${password}` : '• Password: (sent to email / set by admin)', urlLine || null, '', "You can sign in right away. If you didn't request this, ignore this message."].filter(Boolean);
 
   const linesAR = ['تم إنشاء حسابك بنجاح!', email ? `• البريد الإلكتروني: ${email}` : null, hasPwd ? `• كلمة المرور: ${password}` : '• كلمة المرور: (أُرسلت على الإيميل / يحددها المشرف)', urlLine || null, '', 'تقدر تسجّل دخولك مباشرة. إذا ما طلبتش إنشاء الحساب، تجاهل الرسالة.'].filter(Boolean);
 
@@ -466,21 +596,18 @@ export function buildWhatsAppLink({ phone, email, password, role, lang = 'en' })
 /* ===========================
    SubscriptionPeriodPicker
 =========================== */
-
 export function SubscriptionPeriodPicker({
   startValue,
   endValue,
-  setValue, // <<— from react-hook-form
+  setValue,
   errorStart,
   errorEnd,
 }) {
   const t = useTranslations('date');
 
   const today = useMemo(() => formatISO(new Date(), { representation: 'date' }), []);
-
   const threeMonthsFrom = date => formatISO(addMonths(date, 3), { representation: 'date' });
 
-  // ========== RANGE VALIDATION ==========
   const invalidRange = useMemo(() => {
     if (!startValue || !endValue) return false;
     return isBefore(parseISO(endValue), parseISO(startValue));
@@ -506,17 +633,19 @@ export function SubscriptionPeriodPicker({
                 if (!d) return;
 
                 const iso = formatISO(d, { representation: 'date' });
-
-                // update RHF
                 setValue('subscriptionStart', iso, { shouldValidate: true });
 
-                // adjust END if too early
                 if (endValue && isBefore(parseISO(endValue), d)) {
                   const newEnd = threeMonthsFrom(d);
                   setValue('subscriptionEnd', newEnd, { shouldValidate: true });
                 }
               }}
-              className={`w-full rounded-lg border px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 ${errorStart ? 'border-rose-400 focus:ring-rose-200' : 'border-slate-300 focus:ring-indigo-200'}`}
+              className='w-full rounded-lg border px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 transition-shadow'
+              style={
+                errorStart
+                  ? { borderColor: '#f43f5e', '--tw-ring-color': '#fda4af' }
+                  : { borderColor: '#cbd5e1', '--tw-ring-color': 'var(--color-primary-300)' }
+              }
             />
           </div>
 
@@ -540,11 +669,14 @@ export function SubscriptionPeriodPicker({
                 if (!d) return;
 
                 const iso = formatISO(d, { representation: 'date' });
-
-                // update RHF
                 setValue('subscriptionEnd', iso, { shouldValidate: true });
               }}
-              className={`w-full rounded-lg border px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 ${errorEnd || invalidRange ? 'border-rose-400 focus:ring-rose-200' : 'border-slate-300 focus:ring-indigo-200'}`}
+              className='w-full rounded-lg border px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 transition-shadow'
+              style={
+                errorEnd || invalidRange
+                  ? { borderColor: '#f43f5e', '--tw-ring-color': '#fda4af' }
+                  : { borderColor: '#cbd5e1', '--tw-ring-color': 'var(--color-primary-300)' }
+              }
               placeholder={t('pickEnd')}
             />
           </div>
@@ -566,9 +698,11 @@ export function formatISO(date, { representation = 'date' } = {}) {
   }
   return d.toISOString();
 }
+
 export function parseISO(s) {
   return new Date(`${s}T00:00:00`);
 }
+
 export function addMonths(date, months, inclusiveMinusOneDay = false) {
   const d = new Date(date);
   const day = d.getDate();
@@ -577,6 +711,7 @@ export function addMonths(date, months, inclusiveMinusOneDay = false) {
   if (inclusiveMinusOneDay) d.setDate(d.getDate() - 1);
   return d;
 }
+
 export function isBefore(a, b) {
   return a.getTime() < b.getTime();
 }

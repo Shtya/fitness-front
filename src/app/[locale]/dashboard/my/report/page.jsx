@@ -13,24 +13,56 @@ import Select from '@/components/atoms/Select';
 import InputDate from '@/components/atoms/InputDate';
 import { Switcher } from '@/components/atoms/Switcher';
 import Img from '@/components/atoms/Img';
-import { Modal } from '@/components/dashboard/ui/UI'; // ✅ استيراد المودال
+import { Modal } from '@/components/dashboard/ui/UI';
 
 import api from '@/utils/axios';
 
+/* ----------------------------- THEME HELPERS ----------------------------- */
+/**
+ * Uses your CSS variables from ThemeProvider:
+ * --color-primary-*, --color-secondary-*, --color-gradient-from/via/to
+ */
+const themeGradient = 'bg-[linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-via),var(--color-gradient-to))]';
+const ringTheme = 'focus:outline-none focus:ring-4 focus:ring-[color:var(--color-primary-500)]/20';
+const borderTheme = 'border-[color:var(--color-primary-200)]';
+const textTheme = 'text-[color:var(--color-primary-600)]';
+const hoverTextTheme = 'hover:text-[color:var(--color-primary-700)]';
+const hoverBorderTheme = 'hover:border-[color:var(--color-primary-300)]';
+const bgThemeSoft = 'bg-[color:var(--color-primary-50)]';
+const bgThemeSoft2 = 'bg-[color:var(--color-secondary-50)]';
+
 /* ----------------------------- Local UI bits ----------------------------- */
-const Button = ({ name, children, className = '', disabled, onClick, type = 'button', color = 'primary' }) => (
-  <button type={type} onClick={onClick} disabled={disabled} className={['inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold shadow-sm transition active:scale-[.98]', color === 'primary' && 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50', color === 'neutral' && 'bg-slate-100 text-slate-800 hover:bg-slate-200 disabled:opacity-50', color === 'danger' && 'bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50', className].join(' ')}>
-    {children || name}
-  </button>
-);
+const Button = ({ name, children, className = '', disabled, onClick, type = 'button', color = 'primary' }) => {
+  const variants = {
+    primary: `${themeGradient} text-white hover:opacity-95 disabled:opacity-50 shadow-sm`,
+    neutral: `bg-slate-100 text-slate-800 hover:bg-slate-200 disabled:opacity-50`,
+    danger: `bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50`,
+  };
+
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={[
+        'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold shadow-sm transition active:scale-[.98]',
+        ringTheme,
+        variants[color] || variants.primary,
+        className,
+      ].join(' ')}
+    >
+      {children || name}
+    </button>
+  );
+};
 
 function Section({ icon, title, children, extra }) {
   const Icon = icon || Info;
   return (
-    <section className='box-3d rounded-lg bg-white/90 backdrop-blur border border-slate-200 '>
+    <section className={`box-3d rounded-lg bg-white/90 backdrop-blur border ${borderTheme}`}>
       <header className='px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur z-10 rounded-t-lg'>
         <div className='flex items-center gap-2'>
-          <Icon className='w-4 h-4 text-indigo-600' />
+          <Icon className={`w-4 h-4 ${textTheme}`} />
           <h2 className='font-semibold text-slate-800 text-base sm:text-lg'>{title}</h2>
         </div>
         {extra || null}
@@ -66,18 +98,13 @@ async function postWeeklyReport(payload) {
   return data;
 }
 
-// ✅ عدّاد ملاحظات الكوتش غير المقروءة للعميل
 async function fetchUnreadFeedbackCount() {
   const { data } = await api.get('/weekly-reports/user/unread-feedback/count');
   return data?.count ?? 0;
 }
 
-// ✅ تقاريري السابقة (الكلينت)
 async function fetchMyReports({ page = 1, limit = 5 } = {}) {
-  const { data } = await api.get('/weekly-reports', {
-    params: { page, limit },
-  });
-
+  const { data } = await api.get('/weekly-reports', { params: { page, limit } });
   return {
     items: data?.items || [],
     total: data?.total || 0,
@@ -87,7 +114,6 @@ async function fetchMyReports({ page = 1, limit = 5 } = {}) {
   };
 }
 
-// ✅ تعليم التقرير كمقروء لما العميل يفتح الملاحظة
 async function markReportAsRead(id) {
   await api.put(`/weekly-reports/${id}/read`);
 }
@@ -100,14 +126,14 @@ function ImagePicker({ openPopup, label, file, onPick, pickedUrl, onClearPicked,
   const triggerFile = () => inputRef.current && inputRef.current.click();
 
   return (
-    <div className='rounded-lg border border-slate-200 bg-slate-50 p-2'>
+    <div className={`rounded-lg border ${borderTheme} bg-slate-50 p-2`}>
       <div className='text-[12px] text-slate-700 mb-2'>{label}</div>
 
       <input ref={inputRef} type='file' accept='image/*' className='hidden' onChange={e => onPick((e.target.files && e.target.files[0]) || null)} />
 
       {hasPicked ? (
         <div className='relative'>
-          <Img src={pickedUrl} alt={label} className='w-full h-32 object-cover rounded-lg border border-slate-200' />
+          <Img src={pickedUrl} alt={label} className={`w-full h-32 object-cover rounded-lg border ${borderTheme}`} />
           <div className='absolute top-1 left-1 flex gap-1'>
             <Button type='button' color='danger' className='!px-2 !py-1' onClick={onClearPicked}>
               <X className='w-4 h-4' />
@@ -116,13 +142,21 @@ function ImagePicker({ openPopup, label, file, onPick, pickedUrl, onClearPicked,
         </div>
       ) : file ? (
         <div className='relative'>
-          <img src={URL.createObjectURL(file)} alt={label} className='w-full h-32 object-cover rounded-lg border border-slate-200' />
+          <img src={URL.createObjectURL(file)} alt={label} className={`w-full h-32 object-cover rounded-lg border ${borderTheme}`} />
           <Button type='button' color='danger' className='absolute -top-2 -left-2 rounded-full p-1 shadow' onClick={() => onPick(null)} aria-label='remove'>
             <X className='w-4 h-4' />
           </Button>
         </div>
       ) : (
-        <div onClick={openPopup || triggerFile} className='h-32 rounded-lg border border-dashed border-slate-300 bg-white flex flex-col items-center justify-center gap-2 text-slate-500 hover:border-indigo-400 hover:text-indigo-600'>
+        <div
+          onClick={openPopup || triggerFile}
+          className={[
+            'h-32 rounded-lg border border-dashed bg-white flex flex-col items-center justify-center gap-2 text-slate-500 transition',
+            'border-slate-300',
+            hoverBorderTheme,
+            hoverTextTheme,
+          ].join(' ')}
+        >
           <Camera className='w-5 h-5' />
           <button type='button' className='text-[12px] underline'>
             {uploadText}
@@ -153,14 +187,14 @@ function PhotoPickerModal({ onClose, photos, onPick, selected = { front: null, b
   return (
     <div className='fixed inset-0 z-[9999] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-3'>
       <div className='w-full max-w-3xl bg-white rounded-lg shadow-2xl overflow-hidden'>
-        <div className='flex items-center justify-between px-4 py-3 border-b border-slate-200'>
+        <div className={`flex items-center justify-between px-4 py-3 border-b ${borderTheme}`}>
           <div className='font-semibold text-slate-800'>{t('weekly.photos.pickFromHistory.title')}</div>
           <button type='button' onClick={onClose} className='p-2 rounded-lg hover:bg-slate-100'>
             <X className='w-5 h-5' />
           </button>
         </div>
 
-        <div className='p-4 overflow-auto max-h-[70vh] '>
+        <div className='p-4 overflow-auto max-h-[70vh]'>
           {flat.length === 0 ? (
             <div className='text-sm text-slate-600'>{t('weekly.photos.pickFromHistory.empty')}</div>
           ) : (
@@ -168,9 +202,18 @@ function PhotoPickerModal({ onClose, photos, onPick, selected = { front: null, b
               {flat.map(it => {
                 const isActive = selected[it.side] === it.url;
                 return (
-                  <button type='button' key={it.id} onClick={() => onPick(it.side, it.url)} className={['group relative rounded-lg overflow-hidden border transition', isActive ? 'border-indigo-500 ring-2 ring-indigo-300' : 'border-slate-200 hover:border-indigo-400'].join(' ')}>
+                  <button
+                    type='button'
+                    key={it.id}
+                    onClick={() => onPick(it.side, it.url)}
+                    className={[
+                      'group relative rounded-lg overflow-hidden border transition',
+                      isActive ? 'ring-2' : '',
+                      isActive ? 'border-[color:var(--color-primary-500)] ring-[color:var(--color-primary-300)]' : `border-slate-200 ${hoverBorderTheme}`,
+                    ].join(' ')}
+                  >
                     <Img src={it.url} alt={it.side} className='h-32 w-full object-contain' />
-                    {isActive && <div className='absolute inset-0 bg-indigo-500/10 pointer-events-none' />}
+                    {isActive && <div className='absolute inset-0 bg-[color:var(--color-primary-500)]/10 pointer-events-none' />}
                     <div className='absolute inset-x-0 bottom-0 bg-black/40 text-white text-[11px] px-2 py-1 flex items-center justify-between'>
                       <span>{t(`weekly.photos.${it.side}`)}</span>
                       <span>
@@ -185,7 +228,7 @@ function PhotoPickerModal({ onClose, photos, onPick, selected = { front: null, b
           )}
         </div>
 
-        <div className='px-4 py-3 border-t border-slate-200 flex justify-end'>
+        <div className={`px-4 py-3 border-t ${borderTheme} flex justify-end`}>
           <Button type='button' name={t('weekly.actions.close')} onClick={onClose} />
         </div>
       </div>
@@ -221,7 +264,18 @@ function RatingStars({ label, value = 0, onChange = () => {}, allowZero = false,
         {items.map(n => {
           const filled = n <= value;
           return (
-            <button key={n} type='button' role='radio' aria-checked={value === n} onClick={() => handleSelect(n)} disabled={readOnly} className={['grid place-items-center rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2', !readOnly && 'cursor-pointer'].join(' ')}>
+            <button
+              key={n}
+              type='button'
+              role='radio'
+              aria-checked={value === n}
+              onClick={() => handleSelect(n)}
+              disabled={readOnly}
+              className={[
+                'grid place-items-center rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2',
+                !readOnly && 'cursor-pointer',
+              ].join(' ')}
+            >
               <Star filled={filled} className={sizeMap[size] || sizeMap.md} />
               <span className='sr-only'>{n}</span>
               <input name={name} value={n} type='radio' className='hidden' readOnly checked={value === n} tabIndex={-1} />
@@ -237,48 +291,36 @@ function RatingStars({ label, value = 0, onChange = () => {}, allowZero = false,
 export default function WeeklyReportPage() {
   const t = useTranslations();
 
-  // ✅ عدّاد feedback غير المقروء
   const [unreadFeedbackCount, setUnreadFeedbackCount] = useState(0);
   const [unreadLoading, setUnreadLoading] = useState(false);
 
-  // ✅ تقاريري السابقة
   const [myReports, setMyReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [reportsError, setReportsError] = useState('');
   const [reportsPage, setReportsPage] = useState(1);
   const [reportsHasMore, setReportsHasMore] = useState(false);
-  const [showPrevModal, setShowPrevModal] = useState(false); // ✅ فتح/غلق مودال التقارير السابقة
+  const [showPrevModal, setShowPrevModal] = useState(false);
 
-  // ✅ مودال عرض ملاحظة الكوتش
   const [activeReport, setActiveReport] = useState(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [markingRead, setMarkingRead] = useState(false);
 
-  // Photos (new uploads quick pick)
   const [frontFile, setFrontFile] = useState(null);
   const [backFile, setBackFile] = useState(null);
   const [leftFile, setLeftFile] = useState(null);
   const [rightFile, setRightFile] = useState(null);
 
-  // Photos (from history / dropdown)
   const [historyRows, setHistoryRows] = useState([]);
   const [photoSelect, setPhotoSelect] = useState('');
   const [showPickModal, setShowPickModal] = useState(false);
-  const [pickedSides, setPickedSides] = useState({
-    front: null,
-    back: null,
-    left: null,
-    right: null,
-  });
+  const [pickedSides, setPickedSides] = useState({ front: null, back: null, left: null, right: null });
   const [showAddPhotoForm, setShowAddPhotoForm] = useState(false);
   const [uploadingSet, setUploadingSet] = useState(false);
 
-  // Measurements history
   const [measureList, setMeasureList] = useState([]);
   const [measureSelect, setMeasureSelect] = useState('');
   const [showAddMeasureForm, setShowAddMeasureForm] = useState(false);
 
-  // UI
   const [submitting, setSubmitting] = useState(false);
   const [ok, setOk] = useState(false);
   const [serverError, setServerError] = useState('');
@@ -345,24 +387,8 @@ export default function WeeklyReportPage() {
         sleepHours: '',
         programNotes: '',
       },
-      measurements: {
-        date: '',
-        weight: '',
-        waist: '',
-        chest: '',
-        hips: '',
-        arms: '',
-        thighs: '',
-      },
-      addPhoto: {
-        date: '',
-        weight: '',
-        note: '',
-        front: undefined,
-        back: undefined,
-        left: undefined,
-        right: undefined,
-      },
+      measurements: { date: '', weight: '', waist: '', chest: '', hips: '', arms: '', thighs: '' },
+      addPhoto: { date: '', weight: '', note: '', front: undefined, back: undefined, left: undefined, right: undefined },
     },
     mode: 'onChange',
   });
@@ -372,7 +398,6 @@ export default function WeeklyReportPage() {
   const m = watch('measurements');
   const addPhotoVals = watch('addPhoto');
 
-  /* ---------------------------- Derived / Options ---------------------------- */
   const measurementOptions = useMemo(
     () =>
       measureList.map(mm => ({
@@ -381,6 +406,7 @@ export default function WeeklyReportPage() {
       })),
     [measureList],
   );
+
   const photoSetOptions = useMemo(
     () =>
       historyRows.map(r => ({
@@ -403,7 +429,6 @@ export default function WeeklyReportPage() {
 
   const reqPct = Math.round((reqDone / reqTotal) * 100) || 0;
 
-  /* -------------------------------- Lifecycle -------------------------------- */
   useEffect(() => {
     (async () => {
       try {
@@ -419,31 +444,24 @@ export default function WeeklyReportPage() {
       } catch {}
 
       try {
-        const { rows } = await getPhotosTimeline({
-          page: 1,
-          limit: 100,
-          sortOrder: 'DESC',
-        });
+        const { rows } = await getPhotosTimeline({ page: 1, limit: 100, sortOrder: 'DESC' });
         setHistoryRows(rows);
       } catch {}
     })();
   }, [setValue]);
 
-  // ✅ تحميل عدّاد الملاحظات غير المقروءة
   useEffect(() => {
     (async () => {
       try {
         setUnreadLoading(true);
         const c = await fetchUnreadFeedbackCount();
         setUnreadFeedbackCount(c);
-      } catch {
       } finally {
         setUnreadLoading(false);
       }
     })();
   }, []);
 
-  // ✅ تحميل تقاريري السابقة (تستخدم في المودال)
   useEffect(() => {
     (async () => {
       try {
@@ -520,11 +538,7 @@ export default function WeeklyReportPage() {
 
   async function openPickPhotosModal() {
     try {
-      const { rows } = await getPhotosTimeline({
-        page: 1,
-        limit: 100,
-        sortOrder: 'DESC',
-      });
+      const { rows } = await getPhotosTimeline({ page: 1, limit: 100, sortOrder: 'DESC' });
       setHistoryRows(rows);
     } catch {}
     setShowPickModal(true);
@@ -561,20 +575,12 @@ export default function WeeklyReportPage() {
         return;
       }
 
-      const dataObj = {
-        takenAt,
-        weight: addPhotoVals.weight || m?.weight || null,
-        note: addPhotoVals.note || '',
-      };
+      const dataObj = { takenAt, weight: addPhotoVals.weight || m?.weight || null, note: addPhotoVals.note || '' };
       fd.append('data', JSON.stringify(dataObj));
 
       const saved = await uploadProgressPhotos(fd);
 
-      const { rows } = await getPhotosTimeline({
-        page: 1,
-        limit: 100,
-        sortOrder: 'DESC',
-      });
+      const { rows } = await getPhotosTimeline({ page: 1, limit: 100, sortOrder: 'DESC' });
       setHistoryRows(rows);
       setPhotoSelect(saved?.id || '');
       if (saved?.id) applyPhotoSetToPickedSides(saved.id);
@@ -597,7 +603,6 @@ export default function WeeklyReportPage() {
     }
   };
 
-  // ✅ فتح ملاحظة الكوتش (مع تعليمها مقروء + تحديث العداد)
   const handleOpenFeedback = async report => {
     setActiveReport(report);
     setShowFeedbackModal(true);
@@ -606,12 +611,9 @@ export default function WeeklyReportPage() {
       try {
         setMarkingRead(true);
         await markReportAsRead(report.id);
-
         setMyReports(prev => prev.map(r => (r.id === report.id ? { ...r, isRead: true } : r)));
         setActiveReport(prev => (prev ? { ...prev, isRead: true } : prev));
-
         setUnreadFeedbackCount(prev => (prev > 0 ? prev - 1 : 0));
-      } catch {
       } finally {
         setMarkingRead(false);
       }
@@ -654,11 +656,7 @@ export default function WeeklyReportPage() {
         uploadedSides = saved?.sides || uploadedSides;
 
         try {
-          const { rows } = await getPhotosTimeline({
-            page: 1,
-            limit: 100,
-            sortOrder: 'DESC',
-          });
+          const { rows } = await getPhotosTimeline({ page: 1, limit: 100, sortOrder: 'DESC' });
           setHistoryRows(rows);
           setPhotoSelect(saved?.id || '');
           if (saved?.id) applyPhotoSetToPickedSides(saved.id);
@@ -696,10 +694,7 @@ export default function WeeklyReportPage() {
           },
           shapeChange: values.training?.shapeChange ? 'yes' : 'no',
           fitnessChange: values.training?.fitnessChange ? 'yes' : 'no',
-          sleep: {
-            enough: values.training?.sleepEnough ? 'yes' : 'no',
-            hours: values.training?.sleepHours || null,
-          },
+          sleep: { enough: values.training?.sleepEnough ? 'yes' : 'no', hours: values.training?.sleepHours || null },
           programNotes: values.training?.programNotes || '',
           cardioAdherence: Number(values.cardioAdherence),
         },
@@ -721,7 +716,6 @@ export default function WeeklyReportPage() {
       await postWeeklyReport(payload);
       setOk(true);
 
-      // تحديث التقارير بعد الإرسال
       try {
         const res = await fetchMyReports({ page: 1, limit: 5 });
         setMyReports(res.items || []);
@@ -736,28 +730,27 @@ export default function WeeklyReportPage() {
     }
   };
 
-  /* ---------------------------------- UI ---------------------------------- */
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className=' relative !px-0 space-y-4 sm:space-y-5'>
+    <form onSubmit={handleSubmit(onSubmit)} className='relative !px-0 space-y-4 sm:space-y-5'>
       {/* Header */}
-      <div className='box-3d rounded-lg border border-slate-200 bg-white/90 backdrop-blur p-4 sm:p-6 shadow-sm'>
+      <div className={`box-3d rounded-lg border ${borderTheme} bg-white/90 backdrop-blur p-4 sm:p-6 shadow-sm`}>
         <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
           <h1 className='text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-3'>
             {t('weekly.title')}
-            {/* ✅ Badge عدد الملاحظات غير المقروءة */}
-            {unreadFeedbackCount > 0 && <span className='inline-flex items-center gap-1 rounded-full bg-indigo-50 text-indigo-900 px-3 py-1 text-[11px] border border-indigo-200'>
-              <Info className='w-3.5 h-3.5' />
-              {unreadLoading
-                ? t('weekly.unreadFeedback.loading')
-                : t('weekly.unreadFeedback.badge', {
-                    count: unreadFeedbackCount,
-                  })}
-            </span>}
+            {unreadFeedbackCount > 0 && (
+              <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] border ${bgThemeSoft} text-slate-900 ${borderTheme}`}>
+                <Info className={`w-3.5 h-3.5 ${textTheme}`} />
+                {unreadLoading
+                  ? t('weekly.unreadFeedback.loading')
+                  : t('weekly.unreadFeedback.badge', {
+                      count: unreadFeedbackCount,
+                    })}
+              </span>
+            )}
           </h1>
 
-          {/* ✅ زر يفتح Popup التقارير السابقة */}
           <Button type='button' color='neutral' className='!px-3 !py-2 text-xs sm:text-sm' onClick={() => setShowPrevModal(true)}>
-            <ClipboardList className='w-4 h-4 mr-1' />
+            <ClipboardList className={`w-4 h-4 mr-1 ${textTheme}`} />
             {t('weekly.prevReports.goTo')}
           </Button>
         </div>
@@ -861,10 +854,11 @@ export default function WeeklyReportPage() {
         extra={
           <div className='flex items-center gap-2'>
             <Button type='button' color='neutral' onClick={() => setShowAddMeasureForm(s => !s)}>
-              <Plus className='w-4 h-4 mr-1' /> {showAddMeasureForm ? t('weekly.measurements.hideAdd') : t('weekly.measurements.addNew')}
+              <Plus className={`w-4 h-4 mr-1 ${textTheme}`} /> {showAddMeasureForm ? t('weekly.measurements.hideAdd') : t('weekly.measurements.addNew')}
             </Button>
           </div>
-        }>
+        }
+      >
         <Select className='!flex  items-center  gap-4 w-full' cnInputParent=' md:max-w-[300px] rtl:md:mr-auto ltr:md:ml-auto flex-1' label={t('weekly.measurements.pick')} value={measureSelect} onChange={onPickMeasurement} options={measurementOptions} clearable />
 
         {showAddMeasureForm && (
@@ -916,10 +910,11 @@ export default function WeeklyReportPage() {
         extra={
           <div className='flex items-center gap-2'>
             <Button type='button' color='neutral' onClick={() => setShowAddPhotoForm(s => !s)}>
-              <Plus className='w-4 h-4 mr-1' /> {showAddPhotoForm ? t('weekly.photos.hideAdd') : t('weekly.photos.addNew')}
+              <Plus className={`w-4 h-4 mr-1 ${textTheme}`} /> {showAddPhotoForm ? t('weekly.photos.hideAdd') : t('weekly.photos.addNew')}
             </Button>
           </div>
-        }>
+        }
+      >
         <div className='grid !mb-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3 lg:gap-4'>
           <Select className='  ' cnInputParent=' md:max-w-[300px] rtl:md:mr-auto ltr:md:ml-auto flex-1' label={t('weekly.photos.pickSet')} value={photoSelect} onChange={onPickPhotoSet} options={photoSetOptions} clearable />
           <div className='flex items-end justify-end'>
@@ -983,7 +978,7 @@ export default function WeeklyReportPage() {
         )}
       </Section>
 
-      {/* رسائل النجاح / الخطأ */}
+      {/* Success / error */}
       {ok ? (
         <div className='rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 p-3 text-sm inline-flex items-center gap-2'>
           <CheckCircle2 className='w-4 h-4' />
@@ -1001,14 +996,21 @@ export default function WeeklyReportPage() {
       {/* Sticky submit bar */}
       <div className='h-16' />
       <div className='fixed inset-x-0 bottom-0 z-40 px-3 sm:px-5 pb-3'>
-        <div className='mx-auto max-w-3xl rounded-lg overflow-hidden border border-slate-200 bg-white/95 backdrop-blur shadow-lg p-2 flex items-center gap-2'>
+        <div className={`mx-auto max-w-3xl rounded-lg overflow-hidden border ${borderTheme} bg-white/95 backdrop-blur shadow-lg p-2 flex items-center gap-2`}>
           <div className='absolute bottom-0 left-0 h-[2px] w-full overflow-hidden bg-slate-100'>
-            <div className='h-full bg-gradient-to-r from-indigo-600 via-indigo-500/90 to-blue-600 transition-[width] duration-500' style={{ width: `${reqPct}%` }} />
+            <div
+              className='h-full transition-[width] duration-500'
+              style={{
+                width: `${reqPct}%`,
+                background: `linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-via), var(--color-gradient-to))`,
+              }}
+            />
           </div>
 
           <div className='flex-1 text-[12px] text-slate-600 flex items-center gap-2'>
             <span>{t('weekly.submit.hint')}</span>
           </div>
+
           <Button type='submit' name={submitting ? t('weekly.submit.sending') : t('weekly.submit.cta')} disabled={submitting} className='!px-4 !py-2'>
             {submitting ? <Loader2 className='w-4 h-4 animate-spin' /> : <UploadCloud className='w-4 h-4' />}
             <span className='ml-2'>{t('weekly.submit.cta')}</span>
@@ -1028,7 +1030,7 @@ export default function WeeklyReportPage() {
         />
       )}
 
-      {/* ✅ Popup التقارير السابقة باستخدام Modal اللي عندك */}
+      {/* Prev reports */}
       <Modal open={showPrevModal} onClose={() => setShowPrevModal(false)} title={t('weekly.prevReports.title')} maxW='max-w-3xl' maxHBody='max-h-[70vh]'>
         {reportsLoading ? (
           <div className='h-24 grid place-content-center text-slate-600 text-sm'>
@@ -1043,7 +1045,7 @@ export default function WeeklyReportPage() {
           <>
             <div className='space-y-3'>
               {myReports.map(r => (
-                <div key={r.id} className='rounded-lg border border-slate-200 bg-slate-50 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
+                <div key={r.id} className={`rounded-lg border ${borderTheme} ${bgThemeSoft2} p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3`}>
                   <div className='space-y-1'>
                     <div className='text-sm font-semibold text-slate-900'>
                       {t('weekly.prevReports.weekOf')}: {r.weekOf}
@@ -1104,16 +1106,14 @@ export default function WeeklyReportPage() {
         )}
       </Modal>
 
-      {/* ✅ مودال عرض ملاحظة الكوتش */}
+      {/* Feedback modal */}
       {showFeedbackModal && activeReport && (
-        <div className='fixed inset-0 z-[9999] bg-black/40 backdrop-blur-sm flex items-center justify-center p-3'>
+        <div className='fixed inset-0 z-[9999000] bg-black/40 backdrop-blur-sm flex items-center justify-center p-3'>
           <div className='w-full max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden'>
-            <div className='flex items-center justify-between px-4 py-3 border-b border-slate-200'>
+            <div className={`flex items-center justify-between px-4 py-3 border-b ${borderTheme}`}>
               <div className='font-semibold text-slate-800 flex items-center gap-2'>
-                <Eye className='w-4 h-4' />
-                {t('weekly.prevReports.noteTitle', {
-                  week: activeReport.weekOf,
-                })}
+                <Eye className={`w-4 h-4 ${textTheme}`} />
+                {t('weekly.prevReports.noteTitle', { week: activeReport.weekOf })}
               </div>
               <button type='button' onClick={() => setShowFeedbackModal(false)} className='p-2 rounded-lg hover:bg-slate-100'>
                 <X className='w-4 h-4' />
@@ -1125,7 +1125,7 @@ export default function WeeklyReportPage() {
                 {t('weekly.prevReports.createdAt')}: {activeReport.created_at ? new Date(activeReport.created_at).toLocaleString() : '—'}
               </div>
               <div className='text-sm font-medium text-slate-800'>{t('weekly.prevReports.noteLabel')}</div>
-              <div className='rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800 whitespace-pre-wrap'>{activeReport.coachFeedback || '—'}</div>
+              <div className={`rounded-lg border ${borderTheme} ${bgThemeSoft2} p-3 text-sm text-slate-800 whitespace-pre-wrap`}>{activeReport.coachFeedback || '—'}</div>
               {markingRead && (
                 <div className='text-[11px] text-slate-500 flex items-center gap-1'>
                   <Loader2 className='w-3.5 h-3.5 animate-spin' />
@@ -1134,7 +1134,7 @@ export default function WeeklyReportPage() {
               )}
             </div>
 
-            <div className='px-4 py-3 border-t border-slate-200 flex justify-end'>
+            <div className={`px-4 py-3 border-t ${borderTheme} flex justify-end`}>
               <Button type='button' color='neutral' className='!px-4 !py-1.5 text-sm' onClick={() => setShowFeedbackModal(false)}>
                 {t('weekly.actions.close')}
               </Button>

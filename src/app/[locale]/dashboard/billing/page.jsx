@@ -1,12 +1,3 @@
-/* 
-	- Show all data as TABLE (not boxes) for:
-		1) (آخر المعاملات) in Overview
-		2) (إدارة العملاء) in Clients
-	- Create a reusable table component with nice pagination (use it everywhere)
-	- In Clients: show stats (need renew soon / subscription ended / active)
-	- In Subscriptions: show filters in a prettier way (chips + clean layout)
-*/
-
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -46,6 +37,9 @@ import {
 	FileText,
 	Receipt,
 	Crown,
+	Sparkles,
+	TrendingDown,
+	BarChart3,
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,6 +56,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useTheme } from "@/app/[locale]/theme";
+
+const cls = (...a) => a.filter(Boolean).join(" ");
 
 // ===============================
 // Reusable DataTable + Pagination
@@ -70,7 +67,6 @@ function PaginationBar({ page, totalPages, onPageChange }) {
 	const canPrev = page > 1;
 	const canNext = page < totalPages;
 
-	// show up to 7 buttons with ellipsis behavior
 	const pages = useMemo(() => {
 		if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
 
@@ -88,12 +84,12 @@ function PaginationBar({ page, totalPages, onPageChange }) {
 	}, [page, totalPages]);
 
 	return (
-		<div className="flex items-center justify-between mt-6 pt-5 border-t-2">
+		<div className="flex items-center justify-between mt-6 pt-6 border-t-2 border-slate-200/60">
 			<Button
 				variant="outline"
 				disabled={!canPrev}
 				onClick={() => onPageChange(page - 1)}
-				className="h-11 px-6 rounded-xl border-2 font-semibold"
+				className="h-11 px-6 rounded-xl border-2 font-bold hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] transition-all duration-200"
 			>
 				← السابق
 			</Button>
@@ -110,7 +106,12 @@ function PaginationBar({ page, totalPages, onPageChange }) {
 							variant={page === p ? "default" : "outline"}
 							size="sm"
 							onClick={() => onPageChange(p)}
-							className="w-10 h-10 rounded-xl font-bold"
+							className={cls(
+								"w-10 h-10 rounded-xl font-bold transition-all duration-200",
+								page === p
+									? "bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-lg shadow-[var(--color-primary-500)]/30"
+									: "hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)]"
+							)}
 						>
 							{p}
 						</Button>
@@ -122,7 +123,7 @@ function PaginationBar({ page, totalPages, onPageChange }) {
 				variant="outline"
 				disabled={!canNext}
 				onClick={() => onPageChange(page + 1)}
-				className="h-11 px-6 rounded-xl border-2 font-semibold"
+				className="h-11 px-6 rounded-xl border-2 font-bold hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] transition-all duration-200"
 			>
 				التالي →
 			</Button>
@@ -154,20 +155,18 @@ function DataTable({
 		return rows.slice(start, start + pageSize);
 	}, [rows, safePage, pageSize]);
 
-	// keep page in bounds when rows change
 	React.useEffect(() => {
 		if (page > totalPages) setPage(totalPages);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [totalPages]);
 
 	return (
-		<Card className="rounded-3xl border-2 shadow-xl overflow-hidden">
+		<Card className="rounded-3xl border-2 border-slate-200/60 shadow-xl overflow-hidden bg-white/80 backdrop-blur-sm">
 			{(headerTitle || headerRight) && (
-				<CardHeader className="pb-4">
+				<CardHeader className="pb-4 bg-gradient-to-r from-white/95 to-slate-50/50">
 					<div className="flex items-start justify-between gap-4">
 						<div>
-							{headerTitle && <CardTitle className="text-xl font-bold">{headerTitle}</CardTitle>}
-							{headerSubtitle && <p className="text-sm text-gray-500 mt-1">{headerSubtitle}</p>}
+							{headerTitle && <CardTitle className="text-xl font-black text-gray-900">{headerTitle}</CardTitle>}
+							{headerSubtitle && <p className="text-sm text-gray-600 mt-1 font-medium">{headerSubtitle}</p>}
 						</div>
 						{headerRight}
 					</div>
@@ -176,23 +175,29 @@ function DataTable({
 
 			<CardContent>
 				{rows.length === 0 ? (
-					<div className="text-center py-16">
-						{EmptyIcon ? <EmptyIcon className="w-16 h-16 text-gray-300 mx-auto mb-3" /> : null}
-						<p className="text-gray-600 font-bold text-lg">{emptyTitle || "لا توجد بيانات"}</p>
-						{emptyDescription ? <p className="text-sm text-gray-400 mt-2">{emptyDescription}</p> : null}
+					<div className="text-center py-20">
+						{EmptyIcon ? (
+							<div className="mx-auto mb-5 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200/60 shadow-lg">
+								<EmptyIcon className="w-10 h-10 text-slate-400" />
+							</div>
+						) : null}
+						<p className="text-gray-700 font-bold text-lg mb-2">{emptyTitle || "لا توجد بيانات"}</p>
+						{emptyDescription ? <p className="text-sm text-gray-500 mt-2">{emptyDescription}</p> : null}
 					</div>
 				) : (
 					<>
-						<div className="rounded-xl border-2 overflow-hidden">
+						<div className="rounded-2xl border-2 border-slate-200/60 overflow-hidden shadow-sm">
 							<Table>
 								<TableHeader>
-									<TableRow className="bg-gray-50">
+									<TableRow className="bg-gradient-to-r from-slate-50 to-slate-100/50 border-b-2 border-slate-200/60">
 										{columns.map((c) => (
 											<TableHead
 												key={c.key}
-												className={[
-													"font-black text-gray-900 rtl:text-right ltr:text-left",
-												].join(" ")}
+												className={cls(
+													"font-black text-gray-900 rtl:text-right ltr:text-left py-4",
+													c.align === "right" ? "text-right" : "",
+													c.align === "center" ? "text-center" : ""
+												)}
 											>
 												{c.label}
 											</TableHead>
@@ -201,15 +206,19 @@ function DataTable({
 								</TableHeader>
 
 								<TableBody>
-									{pagedRows.map((row) => (
-										<TableRow key={getRowKey(row)} className="hover:bg-gray-50">
+									{pagedRows.map((row, idx) => (
+										<TableRow 
+											key={getRowKey(row)} 
+											className="hover:bg-gradient-to-r hover:from-[var(--color-primary-50)]/50 hover:to-white transition-all duration-200 border-b border-slate-100"
+										>
 											{columns.map((c) => (
 												<TableCell
 													key={c.key}
-													className={[
+													className={cls(
+														"py-4",
 														c.align === "right" ? "text-right" : "",
-														c.align === "center" ? "text-center" : "",
-													].join(" ")}
+														c.align === "center" ? "text-center" : ""
+													)}
 												>
 													{renderCell(row, c.key)}
 												</TableCell>
@@ -237,15 +246,14 @@ export default function BillingPage() {
 	const t = useTranslations("billing");
 	const searchParams = useSearchParams();
 	const router = useRouter();
+	const { theme, colors } = useTheme();
 
 	const activeTab = searchParams.get("tab") || "overview";
 
-	// State
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [success, setSuccess] = useState(null);
 
-	// Mock data
 	const walletData = {
 		balance: 25000,
 		totalEarned: 150000,
@@ -278,27 +286,57 @@ export default function BillingPage() {
 	};
 
 	return (
-		<div className="relative">
-			<div className="relative z-10 !py-4 container">
-				{/* Header */}
-				<div className="mb-8 lg:mb-12">
+		<div className="relative min-h-screen">
+			{/* Animated Background */}
+			<div className="fixed inset-0 -z-10 overflow-hidden">
+				<div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100" />
+				<div 
+					className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-3xl opacity-20"
+					style={{
+						background: `radial-gradient(circle, var(--color-gradient-from), transparent)`
+					}}
+				/>
+				<div 
+					className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full blur-3xl opacity-20"
+					style={{
+						background: `radial-gradient(circle, var(--color-gradient-to), transparent)`
+					}}
+				/>
+			</div>
+
+			<div className="relative z-10 container py-6 lg:py-8">
+				{/* Enhanced Header */}
+				<motion.div 
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					className="mb-8 lg:mb-12"
+				>
 					<div className="flex flex-col lg:flex-row items-start justify-between gap-6">
 						<div className="flex items-start gap-4 lg:gap-6">
-							<div className="w-16 h-16 lg:w-20 lg:h-20 rounded-3xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-700 flex items-center justify-center shadow-2xl shadow-indigo-500/40 relative overflow-hidden">
-								<Wallet className="w-8 h-8 lg:w-10 lg:h-10 text-white relative z-10 group-hover:scale-110 transition-transform duration-300" />
+							<motion.div 
+								whileHover={{ scale: 1.05, rotate: 5 }}
+								className="w-20 h-20 lg:w-24 lg:h-24 rounded-3xl bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] flex items-center justify-center shadow-2xl shadow-[var(--color-primary-500)]/30 relative overflow-hidden group"
+							>
+								<Wallet className="w-10 h-10 lg:w-12 lg:h-12 text-white relative z-10 group-hover:scale-110 transition-transform duration-300" />
 								<div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-							</div>
+								<motion.div
+									className="absolute inset-0 bg-white/20"
+									initial={{ x: "-100%", y: "-100%" }}
+									whileHover={{ x: "100%", y: "100%" }}
+									transition={{ duration: 0.6 }}
+								/>
+							</motion.div>
 
 							<div>
 								<div className="flex items-center gap-3 mb-2">
-									<h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 tracking-tight">
+									<h1 className="text-3xl sm:text-4xl lg:text-5xl font-black bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] bg-clip-text text-transparent tracking-tight">
 										{t("title")}
 									</h1>
 									<TooltipProvider>
 										<Tooltip>
 											<TooltipTrigger asChild>
-												<button className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors">
-													<Info className="w-4 h-4 text-slate-600" />
+												<button className="w-9 h-9 rounded-xl bg-white border-2 border-slate-200 flex items-center justify-center hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] transition-all duration-200 shadow-sm">
+													<Info className="w-5 h-5 text-[var(--color-primary-600)]" />
 												</button>
 											</TooltipTrigger>
 											<TooltipContent className="max-w-xs">
@@ -308,71 +346,91 @@ export default function BillingPage() {
 									</TooltipProvider>
 								</div>
 
-								<p className="text-base lg:text-lg text-gray-600 mb-3 max-w-2xl">{t("subtitle")}</p>
+								<p className="text-base lg:text-lg text-gray-600 font-medium max-w-2xl">{t("subtitle")}</p>
 							</div>
 						</div>
 					</div>
-				</div>
+				</motion.div>
 
-				{/* Tabs */}
-				<div className="mb-6 lg:mb-8">
-					<div className="w-full lg:w-fit bg-white/70 backdrop-blur-2xl rounded-2xl lg:rounded-3xl p-1.5 border-2 border-gray-200/60 shadow-xl shadow-black/5">
-						<div className="flex gap-1 overflow-x-auto scrollbar-none">
+				{/* Enhanced Tabs */}
+				<motion.div 
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ delay: 0.1 }}
+					className="mb-8 lg:mb-10"
+				>
+					<div className="w-full lg:w-fit bg-white/80 backdrop-blur-xl rounded-2xl lg:rounded-3xl p-2 border-2 border-slate-200/60 shadow-xl">
+						<div className="flex gap-2 overflow-x-auto scrollbar-none">
 							{tabs.map((tab) => {
 								const Icon = tab.icon;
 								const isActive = activeTab === tab.id;
 
 								return (
-									<button
+									<motion.button
 										key={tab.id}
 										onClick={() => handleTabChange(tab.id)}
-										className={[
+										whileHover={{ scale: 1.02 }}
+										whileTap={{ scale: 0.98 }}
+										className={cls(
 											"relative flex items-center gap-2.5",
-											"px-4 lg:px-6 py-3 lg:py-3.5 rounded-xl lg:rounded-2xl text-sm lg:text-base font-bold",
+											"px-5 lg:px-7 py-3.5 lg:py-4 rounded-xl lg:rounded-2xl text-sm lg:text-base font-bold",
 											"whitespace-nowrap select-none transition-all duration-300",
-											"focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/40",
-											isActive ? "text-indigo-950 shadow-lg" : "text-slate-600 hover:bg-black/5",
-										].join(" ")}
+											"focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)]/50",
+											isActive ? "text-white shadow-lg" : "text-slate-700 hover:bg-slate-50"
+										)}
 									>
 										{isActive && (
 											<motion.span
 												layoutId="activeTabPill"
-												className="absolute inset-0 rounded-xl lg:rounded-2xl bg-gradient-to-br from-indigo-400 via-indigo-500 to-indigo-600"
+												className="absolute inset-0 rounded-xl lg:rounded-2xl bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] shadow-lg shadow-[var(--color-primary-500)]/30"
 												transition={{ type: "spring", stiffness: 500, damping: 35 }}
 											/>
 										)}
 
-										<span className="relative z-10 inline-flex items-center gap-2 lg:gap-2.5">
+										<span className="relative z-10 inline-flex items-center gap-2.5">
 											<Icon
-												className={["h-4 w-4 lg:h-5 lg:w-5", isActive ? "text-white drop-shadow-sm" : ""].join(" ")}
+												className={cls(
+													"h-5 w-5 lg:h-5 lg:w-5",
+													isActive ? "text-white drop-shadow-sm" : ""
+												)}
 												strokeWidth={2.5}
 											/>
-											<span className={isActive ? "text-white font-black" : ""}>{tab.label}</span>
+											<span>{tab.label}</span>
 										</span>
 
 										{isActive && (
-											<motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="relative z-10 w-1.5 h-1.5 rounded-full bg-white shadow-sm" />
+											<motion.span 
+												initial={{ scale: 0, opacity: 0 }} 
+												animate={{ scale: 1, opacity: 1 }} 
+												className="relative z-10 w-2 h-2 rounded-full bg-white shadow-sm" 
+											/>
 										)}
-									</button>
+									</motion.button>
 								);
 							})}
 						</div>
 					</div>
-				</div>
+				</motion.div>
 
 				{/* Tab Content */}
 				<AnimatePresence mode="wait">
 					{activeTab === "overview" && (
-						<OverviewTab walletData={walletData} t={t} onNavigateToSubscriptions={() => handleTabChange("subscriptions")} />
+						<OverviewTab 
+							key="overview"
+							walletData={walletData} 
+							t={t} 
+							onNavigateToSubscriptions={() => handleTabChange("subscriptions")}
+							colors={colors}
+						/>
 					)}
 
-					{activeTab === "clients" && <ClientsTab t={t} />}
+					{activeTab === "clients" && <ClientsTab key="clients" t={t} colors={colors} />}
 
-					{activeTab === "packages" && <PackagesTab t={t} />}
+					{activeTab === "packages" && <PackagesTab key="packages" t={t} colors={colors} />}
 
-					{activeTab === "subscriptions" && <SubscriptionsTab t={t} />}
+					{activeTab === "subscriptions" && <SubscriptionsTab key="subscriptions" t={t} colors={colors} />}
 
-					{activeTab === "client-payments" && <ClientPaymentsTab t={t} />}
+					{activeTab === "client-payments" && <ClientPaymentsTab key="client-payments" t={t} colors={colors} />}
 				</AnimatePresence>
 			</div>
 
@@ -390,16 +448,10 @@ export default function BillingPage() {
 }
 
 // ==========================================
-// OVERVIEW TAB (transactions as TABLE)
+// OVERVIEW TAB - Enhanced
 // ==========================================
-function OverviewTab({ walletData, t, onNavigateToSubscriptions }) {
+function OverviewTab({ walletData, t, onNavigateToSubscriptions, colors }) {
 	const [error, setError] = useState(null);
-
-	const cardGradients = [
-		"linear-gradient(300.09deg, #FAFAFA 74.95%, #B5CBE9 129.29%)",
-		"linear-gradient(300.09deg, #FAFAFA 74.95%, #E9B5B5 129.29%)",
-		"linear-gradient(300.09deg, #FAFAFA 74.95%, #E9C6B5 129.29%)",
-	];
 
 	const walletStats = [
 		{
@@ -407,24 +459,27 @@ function OverviewTab({ walletData, t, onNavigateToSubscriptions }) {
 			subtitle: t("kpi.walletBalance.subtitle"),
 			value: `${walletData.balance.toLocaleString()} ${t("currency")}`,
 			icon: Wallet,
-			gradient: cardGradients[0],
-			textColor: "text-blue-600",
+			iconColor: "text-blue-600",
+			bgGradient: "from-blue-50 to-indigo-50",
+			trend: { value: "+12.5%", direction: "up" },
 		},
 		{
 			title: t("kpi.totalEarned.title"),
 			subtitle: t("kpi.totalEarned.subtitle"),
 			value: `${walletData.totalEarned.toLocaleString()} ${t("currency")}`,
 			icon: TrendingUp,
-			gradient: cardGradients[1],
-			textColor: "text-emerald-600",
+			iconColor: "text-emerald-600",
+			bgGradient: "from-emerald-50 to-teal-50",
+			trend: { value: "+8.2%", direction: "up" },
 		},
 		{
 			title: t("kpi.moneyInThisMonth.title"),
 			subtitle: new Date().toLocaleDateString("ar-EG", { month: "long", year: "numeric" }),
 			value: `${walletData.moneyInThisMonth.toLocaleString()} ${t("currency")}`,
 			icon: ArrowDownRight,
-			gradient: cardGradients[2],
-			textColor: "text-teal-600",
+			iconColor: "text-[var(--color-primary-600)]",
+			bgGradient: `from-[var(--color-primary-50)] to-[var(--color-secondary-50)]`,
+			trend: { value: "+5.7%", direction: "up" },
 		},
 	];
 
@@ -481,7 +536,6 @@ function OverviewTab({ walletData, t, onNavigateToSubscriptions }) {
 
 	return (
 		<motion.div
-			key="overview"
 			initial={{ opacity: 0, y: 20 }}
 			animate={{ opacity: 1, y: 0 }}
 			exit={{ opacity: 0, y: -20 }}
@@ -495,102 +549,98 @@ function OverviewTab({ walletData, t, onNavigateToSubscriptions }) {
 				</Alert>
 			)}
 
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5">
-				{walletStats.map((stat) => {
+			{/* Enhanced Stats Cards */}
+			<div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
+				{walletStats.map((stat, idx) => {
 					const Icon = stat.icon;
-					const trend = stat.trend; // optional
 
 					return (
-						<div
+						<motion.div
 							key={stat.title}
-							className="group relative rounded-2xl lg:rounded-3xl border-2 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden hover:-translate-y-1"
-							style={{ background: stat.gradient }}
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: idx * 0.1 }}
+							whileHover={{ y: -8, scale: 1.02 }}
+							className={cls(
+								"group relative rounded-3xl border-2 border-slate-200/60",
+								"shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden",
+								"bg-gradient-to-br",
+								stat.bgGradient
+							)}
 						>
-							<div className="absolute inset-0 bg-gradient-to-t from-black/[0.05] to-transparent pointer-events-none" />
+							<div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent pointer-events-none" />
+							
+							{/* Animated gradient overlay */}
+							<motion.div
+								className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+								initial={{ x: "-100%" }}
+								whileHover={{ x: "100%" }}
+								transition={{ duration: 0.8 }}
+							/>
 
-							<div className="relative p-4 lg:p-5">
-								<div className="flex items-start justify-between gap-3">
-									<div className="flex items-center gap-3 min-w-0">
-										<div className="w-11 h-11 lg:w-12 lg:h-12 rounded-2xl bg-white/70 backdrop-blur flex items-center justify-center border border-white/60 group-hover:scale-[1.04] transition-transform">
-											<Icon className={`w-5 h-5 lg:w-6 lg:h-6 ${stat.textColor}`} />
-										</div>
+							<div className="relative p-6">
+								<div className="flex items-start justify-between gap-4 mb-4">
+									<div className="flex items-center gap-3">
+										<motion.div 
+											whileHover={{ rotate: 360, scale: 1.1 }}
+											transition={{ duration: 0.6 }}
+											className="w-14 h-14 rounded-2xl bg-white/80 backdrop-blur-sm border-2 border-white/60 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300"
+										>
+											<Icon className={cls("w-7 h-7", stat.iconColor)} strokeWidth={2.5} />
+										</motion.div>
 
-										<div className="min-w-0">
-											<h3 className="text-[11px] lg:text-xs font-black text-gray-700 uppercase tracking-wider truncate">
+										<div>
+											<h3 className="text-xs font-black text-gray-700 uppercase tracking-wider">
 												{stat.title}
 											</h3>
-											{stat.subtitle ? (
-												<p className="text-[11px] text-gray-500 font-semibold truncate mt-0.5">
+											{stat.subtitle && (
+												<p className="text-xs text-gray-600 font-semibold mt-0.5">
 													{stat.subtitle}
 												</p>
-											) : null}
+											)}
 										</div>
 									</div>
 
-									{/* right badges */}
-									<div className="flex items-center gap-1.5 shrink-0">
-										{stat.chip ? (
-											<span className="px-2 py-1 rounded-xl text-[10px] font-black bg-white/70 border border-white/70 text-gray-700">
-												{stat.chip}
-											</span>
-										) : null}
-
-										{trend?.value ? (
-											<span
-												className={[
-													"px-2 py-1 rounded-xl text-[10px] font-black border",
-													trend.direction === "down"
-														? "bg-rose-50/80 border-rose-200 text-rose-700"
-														: "bg-emerald-50/80 border-emerald-200 text-emerald-700",
-												].join(" ")}
-											>
-												{trend.value}
-											</span>
-										) : null}
-									</div>
+									{stat.trend && (
+										<Badge 
+											className={cls(
+												"px-2.5 py-1 rounded-xl text-xs font-black border-2",
+												stat.trend.direction === "up"
+													? "bg-emerald-50/80 border-emerald-200 text-emerald-700"
+													: "bg-rose-50/80 border-rose-200 text-rose-700"
+											)}
+										>
+											{stat.trend.direction === "up" ? "↑" : "↓"} {stat.trend.value}
+										</Badge>
+									)}
 								</div>
 
-								<div className="mt-3 flex items-end justify-between gap-3">
-									<p className="text-2xl lg:text-3xl font-black text-gray-900 leading-none tracking-tight">
-										{stat.value}
-									</p>
-
-									{stat.hint ? (
-										<p className="text-[11px] text-gray-500 font-semibold text-right">
-											{stat.hint}
-										</p>
-									) : null}
-								</div>
-
-								{/* tiny progress bar (optional) */}
-								{typeof stat.progress === "number" ? (
-									<div className="mt-3">
-										<div className="h-1.5 w-full rounded-full bg-white/60 border border-white/70 overflow-hidden">
-											<div
-												className="h-full rounded-full bg-black/20"
-												style={{ width: `${Math.max(0, Math.min(100, stat.progress))}%` }}
-											/>
-										</div>
-									</div>
-								) : null}
+								<p className="text-3xl lg:text-4xl font-black text-gray-900 leading-none tracking-tight">
+									{stat.value}
+								</p>
 							</div>
-						</div>
+						</motion.div>
 					);
 				})}
 			</div>
 
+			{/* Enhanced Transactions Table */}
 			<DataTable
 				headerTitle={t("transactions.recent")}
 				headerSubtitle={t("transactions.recentSubtitle") || t("transactions.recent")}
 				headerRight={
 					<div className="flex items-center gap-3">
-						<Badge variant="secondary" className="font-bold text-sm px-4 py-1.5">
+						<Badge 
+							variant="secondary" 
+							className="font-bold text-sm px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] border-2 border-[var(--color-primary-200)]"
+						>
+							<BarChart3 className="w-4 h-4 mr-2" />
 							{t("payments.total", { count: recentTransactions.length })}
 						</Badge>
 						<Button
 							variant="outline"
 							size="sm"
-							className="rounded-xl border-2"
+							className="rounded-xl border-2 font-bold hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] transition-all duration-200"
 							onClick={onNavigateToSubscriptions}
 						>
 							{t("common.viewAll")}
@@ -608,25 +658,30 @@ function OverviewTab({ walletData, t, onNavigateToSubscriptions }) {
 					if (key === "status") return <TxStatusBadge status={tx.status} t={t} />;
 					if (key === "client") {
 						return (
-							<div className="flex items-center gap-2">
-								<User className="w-4 h-4 text-gray-400" />
+							<div className="flex items-center gap-3">
+								<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-secondary-100)] flex items-center justify-center shadow-sm">
+									<User className="w-5 h-5 text-[var(--color-primary-600)]" />
+								</div>
 								<span className="font-bold text-gray-900">{tx.client}</span>
 							</div>
 						);
 					}
-					if (key === "description") return <span className="text-sm text-gray-700">{tx.description}</span>;
+					if (key === "description") return <span className="text-sm text-gray-700 font-medium">{tx.description}</span>;
 					if (key === "date") {
 						return (
 							<div className="text-sm">
-								<p className="text-gray-700">{tx.date}</p>
+								<p className="text-gray-700 font-semibold">{tx.date}</p>
 								<p className="text-xs text-gray-500">{tx.time}</p>
 							</div>
 						);
 					}
 					if (key === "amount") {
 						return (
-							<div>
-								<p className={`text-lg font-black ${tx.amount > 0 ? "text-emerald-700" : "text-rose-700"}`}>
+							<div className="text-right">
+								<p className={cls(
+									"text-lg font-black",
+									tx.amount > 0 ? "text-emerald-700" : "text-rose-700"
+								)}>
 									{tx.amount > 0 ? "+" : ""}
 									{tx.amount.toLocaleString()}
 								</p>
@@ -652,17 +707,17 @@ function TxStatusBadge({ status, t }) {
 	const Icon = cfg.icon;
 
 	return (
-		<Badge className={`${cfg.cls} border-2 px-2.5 py-1 font-bold text-xs`}>
-			<Icon className="w-3 h-3 mr-1.5" />
+		<Badge className={cls(cfg.cls, "border-2 px-3 py-1.5 font-bold text-xs rounded-xl")}>
+			<Icon className="w-3.5 h-3.5 mr-1.5" />
 			{t(`status.${status}`)}
 		</Badge>
 	);
 }
 
 // ==========================================
-// CLIENTS TAB (TABLE + STATS)
+// CLIENTS TAB - Enhanced
 // ==========================================
-function ClientsTab({ t }) {
+function ClientsTab({ t, colors }) {
 	const [searchTerm, setSearchTerm] = useState("");
 
 	const clients = [
@@ -753,10 +808,9 @@ function ClientsTab({ t }) {
 
 	const stats = useMemo(() => {
 		const total = clients.length;
-
 		const active = clients.filter((c) => c.daysLeft > 30).length;
-		const renew30 = clients.filter((c) => c.daysLeft > 7 && c.daysLeft <= 30).length; // soon
-		const renew7 = clients.filter((c) => c.daysLeft > 0 && c.daysLeft <= 7).length; // urgent
+		const renew30 = clients.filter((c) => c.daysLeft > 7 && c.daysLeft <= 30).length;
+		const renew7 = clients.filter((c) => c.daysLeft > 0 && c.daysLeft <= 7).length;
 		const ended = clients.filter((c) => c.daysLeft <= 0).length;
 
 		const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
@@ -767,60 +821,50 @@ function ClientsTab({ t }) {
 				label: t("clients.stats.total") ?? "إجمالي العملاء",
 				value: total,
 				icon: Users,
-				gradient: "linear-gradient(300.09deg, #FAFAFA 74.95%, #DDE7F7 129.29%)",
 				iconCls: "text-slate-700",
+				bgGradient: "from-slate-50 to-slate-100",
 				chip: "100%",
-				subLabel: t("clients.statsSubtitle.total") ?? "الكل",
 				progress: 100,
-				hint: t("clients.statsHint.total") ?? "قاعدة العملاء",
 			},
 			{
 				key: "active",
 				label: t("clients.stats.active") || "نشط",
 				value: active,
 				icon: CheckCircle,
-				gradient: "linear-gradient(300.09deg, #FAFAFA 74.95%, #B5E9C6 129.29%)",
 				iconCls: "text-emerald-700",
+				bgGradient: "from-emerald-50 to-teal-50",
 				chip: `${pct(active)}%`,
-				subLabel: t("clients.statsSubtitle.active") ?? "أكثر من 30 يوم",
 				progress: pct(active),
-				hint: t("clients.statsHint.active") ?? "اشتراكات مستقرة",
 			},
 			{
 				key: "renew7",
 				label: t("clients.stats.renewUrgent") ?? "تجديد عاجل",
 				value: renew7,
 				icon: AlertCircle,
-				gradient: "linear-gradient(300.09deg, #FAFAFA 74.95%, #F7D6DA 129.29%)",
 				iconCls: "text-rose-700",
+				bgGradient: "from-rose-50 to-pink-50",
 				chip: `${pct(renew7)}%`,
-				subLabel: t("clients.statsSubtitle.renewUrgent") ?? "خلال 7 أيام",
 				progress: pct(renew7),
-				hint: t("clients.statsHint.renewUrgent") ?? "أرسل تذكير الآن",
 			},
 			{
 				key: "renew30",
 				label: t("clients.stats.renewSoon") || "يحتاج تجديد قريبًا",
 				value: renew30,
 				icon: RefreshCw,
-				gradient: "linear-gradient(300.09deg, #FAFAFA 74.95%, #E9C6B5 129.29%)",
 				iconCls: "text-amber-700",
+				bgGradient: "from-amber-50 to-orange-50",
 				chip: `${pct(renew30)}%`,
-				subLabel: t("clients.statsSubtitle.renewSoon") ?? "8–30 يوم",
 				progress: pct(renew30),
-				hint: t("clients.statsHint.renewSoon") ?? "تابع قبل الانتهاء",
 			},
 			{
 				key: "ended",
 				label: t("clients.stats.ended") || "منتهي",
 				value: ended,
 				icon: XCircle,
-				gradient: "linear-gradient(300.09deg, #FAFAFA 74.95%, #E9B5B5 129.29%)",
-				iconCls: "text-rose-700",
+				iconCls: "text-gray-700",
+				bgGradient: "from-gray-50 to-slate-100",
 				chip: `${pct(ended)}%`,
-				subLabel: t("clients.statsSubtitle.ended") ?? "انتهى بالفعل",
 				progress: pct(ended),
-				hint: t("clients.statsHint.ended") ?? "استرجاع العملاء",
 			},
 		];
 	}, [clients, t]);
@@ -865,87 +909,85 @@ function ClientsTab({ t }) {
 
 	return (
 		<motion.div
-			key="clients"
 			initial={{ opacity: 0, y: 20 }}
 			animate={{ opacity: 1, y: 0 }}
 			exit={{ opacity: 0, y: -20 }}
 			transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
 			className="space-y-8"
 		>
- 
-
-			{/* Stats */}
-			<div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
-				{stats.map((s) => {
+			{/* Enhanced Stats Grid */}
+			<div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+				{stats.map((s, idx) => {
 					const Icon = s.icon;
 					return (
-						<div
+						<motion.div
 							key={s.key}
-							className="group relative rounded-2xl border-2 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden"
-							style={{ background: s.gradient }}
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: idx * 0.05 }}
+							whileHover={{ y: -4, scale: 1.02 }}
+							className={cls(
+								"group relative rounded-2xl border-2 border-slate-200/60",
+								"shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden",
+								"bg-gradient-to-br",
+								s.bgGradient
+							)}
 						>
-							<div className="absolute inset-0 bg-gradient-to-t from-black/[0.05] to-transparent pointer-events-none" />
+							<div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent pointer-events-none" />
 
-							<div className="relative p-3.5 lg:p-4">
-								<div className="flex items-start justify-between gap-3">
-									<div className="flex items-center gap-3 min-w-0">
-										<div className="w-10 h-10 rounded-xl bg-white/70 backdrop-blur flex items-center justify-center border border-white/60 group-hover:scale-[1.03] transition-transform">
-											<Icon className={`w-5 h-5 ${s.iconCls}`} />
+							<div className="relative p-4">
+								<div className="flex items-start justify-between gap-2 mb-3">
+									<div className="flex items-center gap-2">
+										<div className="w-10 h-10 rounded-xl bg-white/70 backdrop-blur flex items-center justify-center border border-white/60 group-hover:scale-105 transition-transform shadow-sm">
+											<Icon className={cls("w-5 h-5", s.iconCls)} />
 										</div>
 
-										<div className="min-w-0">
-											<p className="text-[11px] font-black text-gray-700 uppercase tracking-wide truncate">
+										<div>
+											<p className="text-[11px] font-black text-gray-700 uppercase tracking-wide">
 												{s.label}
 											</p>
-											{s.subLabel ? (
-												<p className="text-[11px] text-gray-500 font-semibold truncate mt-0.5">
-													{s.subLabel}
-												</p>
-											) : null}
 										</div>
 									</div>
 
-									{s.chip ? (
-										<span className="px-2 py-1 rounded-xl text-[10px] font-black bg-white/70 border border-white/70 text-gray-700 shrink-0">
+									{s.chip && (
+										<span className="px-2 py-1 rounded-lg text-[10px] font-black bg-white/70 border border-white/70 text-gray-700 shrink-0">
 											{s.chip}
 										</span>
-									) : null}
+									)}
 								</div>
 
-								<div className="mt-3 flex items-end justify-between gap-3">
-									<p className="text-2xl lg:text-[26px] font-black text-gray-900 leading-none">
-										{s.value}
-									</p>
+								<p className="text-3xl font-black text-gray-900 leading-none mb-3">
+									{s.value}
+								</p>
 
-									{s.hint ? (
-										<p className="text-[11px] text-gray-500 font-semibold text-right">
-											{s.hint}
-										</p>
-									) : null}
-								</div>
-
-								{typeof s.progress === "number" ? (
+								{typeof s.progress === "number" && (
 									<div className="mt-3">
 										<div className="h-1.5 w-full rounded-full bg-white/60 border border-white/70 overflow-hidden">
-											<div
-												className="h-full rounded-full bg-black/20"
-												style={{ width: `${Math.max(0, Math.min(100, s.progress))}%` }}
+											<motion.div
+												initial={{ width: 0 }}
+												animate={{ width: `${Math.max(0, Math.min(100, s.progress))}%` }}
+												transition={{ duration: 1, delay: idx * 0.1 }}
+												className="h-full rounded-full bg-gradient-to-r from-gray-400 to-gray-500"
 											/>
 										</div>
 									</div>
-								) : null}
+								)}
 							</div>
-						</div>
+						</motion.div>
 					);
 				})}
 			</div>
 
-			{/* Table */}
+			{/* Enhanced Table */}
 			<DataTable
 				headerTitle={t("clients.management") || "إدارة العملاء"}
 				headerSubtitle={t("clients.managementSubtitle") || "عرض العملاء في جدول مع بحث وترتيب وتجديد"}
 				headerRight={
-					<Badge variant="secondary" className="font-bold text-sm px-4 py-1.5">
+					<Badge 
+						variant="secondary" 
+						className="font-bold text-sm px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] border-2 border-[var(--color-primary-200)]"
+					>
+						<Users className="w-4 h-4 mr-2" />
 						{t("payments.total", { count: filtered.length })}
 					</Badge>
 				}
@@ -959,14 +1001,14 @@ function ClientsTab({ t }) {
 					if (key === "client") {
 						return (
 							<div className="flex items-center gap-3">
-								<Avatar className="w-10 h-10 border-2 border-white shadow-sm">
-									<AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-sm font-black">
+								<Avatar className="w-11 h-11 border-2 border-white shadow-md">
+									<AvatarFallback className="bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white text-sm font-black">
 										{c.avatar}
 									</AvatarFallback>
 								</Avatar>
-								<div className="min-w-0">
-									<p className="font-black text-gray-900 truncate">{c.name}</p>
-									<p className="text-xs text-gray-500">
+								<div>
+									<p className="font-black text-gray-900">{c.name}</p>
+									<p className="text-xs text-gray-500 font-medium">
 										{t("clients.startDate") || "بدأ"}: {c.startDate}
 									</p>
 								</div>
@@ -979,11 +1021,11 @@ function ClientsTab({ t }) {
 							<div className="space-y-1">
 								<div className="flex items-center gap-2 text-sm text-gray-700">
 									<Mail className="w-4 h-4 text-gray-400" />
-									<span className="truncate">{c.email}</span>
+									<span className="truncate font-medium">{c.email}</span>
 								</div>
 								<div className="flex items-center gap-2 text-sm text-gray-700">
 									<Phone className="w-4 h-4 text-gray-400" />
-									<span>{c.phone}</span>
+									<span className="font-medium">{c.phone}</span>
 								</div>
 							</div>
 						);
@@ -996,10 +1038,13 @@ function ClientsTab({ t }) {
 					if (key === "renewal") {
 						return (
 							<div className="text-sm">
-								<p className="text-gray-700">
+								<p className="text-gray-700 font-semibold">
 									{t("clients.renewalDate")}: {c.endDate}
 								</p>
-								<p className={`text-xs font-bold ${c.daysLeft <= 7 ? "text-rose-700" : c.daysLeft <= 30 ? "text-amber-700" : "text-gray-500"}`}>
+								<p className={cls(
+									"text-xs font-bold",
+									c.daysLeft <= 7 ? "text-rose-700" : c.daysLeft <= 30 ? "text-amber-700" : "text-gray-500"
+								)}>
 									{t("clients.daysLeft")}:{" "}
 									<span className="font-black">{c.daysLeft}</span> {t("clients.days")}
 								</p>
@@ -1011,8 +1056,8 @@ function ClientsTab({ t }) {
 						const b = getClientBadge(c.daysLeft);
 						const Icon = b.icon;
 						return (
-							<Badge className={`${b.className} border-2 px-3 py-1 font-bold text-xs`}>
-								<Icon className="w-3 h-3 mr-1.5" />
+							<Badge className={cls(b.className, "border-2 px-3 py-1.5 font-bold text-xs rounded-xl")}>
+								<Icon className="w-3.5 h-3.5 mr-1.5" />
 								{b.text}
 							</Badge>
 						);
@@ -1024,7 +1069,7 @@ function ClientsTab({ t }) {
 								<TooltipProvider>
 									<Tooltip>
 										<TooltipTrigger asChild>
-											<Button className="rounded-xl h-10 px-4 font-bold bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700">
+											<Button className="rounded-xl h-10 px-4 font-bold bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] hover:shadow-lg hover:shadow-[var(--color-primary-500)]/30 transition-all duration-200">
 												<Send className="w-4 h-4 mr-2" />
 												{t("clients.sendReminder")}
 											</Button>
@@ -1046,9 +1091,9 @@ function ClientsTab({ t }) {
 }
 
 // ==========================================
-// PACKAGES TAB (unchanged from your code)
+// PACKAGES TAB - Enhanced
 // ==========================================
-function PackagesTab({ t }) {
+function PackagesTab({ t, colors }) {
 	const [packages, setPackages] = useState([
 		{
 			id: 1,
@@ -1057,7 +1102,6 @@ function PackagesTab({ t }) {
 			price: 500,
 			duration: "شهري",
 			features: ["3 جلسات تدريبية", "دعم عبر الواتساب", "خطة تمارين مخصصة"],
-			gradient: "linear-gradient(300.09deg, #FAFAFA 74.95%, #B5CBE9 129.29%)",
 		},
 		{
 			id: 2,
@@ -1066,7 +1110,6 @@ function PackagesTab({ t }) {
 			price: 1200,
 			duration: "شهري",
 			features: ["8 جلسات تدريبية", "دعم 24/7", "خطة تمارين وتغذية", "متابعة أسبوعية"],
-			gradient: "linear-gradient(300.09deg, #FAFAFA 74.95%, #E9C6B5 129.29%)",
 		},
 		{
 			id: 3,
@@ -1075,7 +1118,6 @@ function PackagesTab({ t }) {
 			price: 2500,
 			duration: "شهري",
 			features: ["جلسات غير محدودة", "دعم VIP", "خطة شاملة", "تحليل جسم شامل", "مكملات غذائية"],
-			gradient: "linear-gradient(300.09deg, #FAFAFA 74.95%, #CCB5E9 129.29%)",
 		},
 	]);
 
@@ -1092,12 +1134,12 @@ function PackagesTab({ t }) {
 		features: [""],
 	});
 
-	const cardGradients = [
-		"linear-gradient(300.09deg, #FAFAFA 74.95%, #B5CBE9 129.29%)",
-		"linear-gradient(300.09deg, #FAFAFA 74.95%, #E9B5B5 129.29%)",
-		"linear-gradient(300.09deg, #FAFAFA 74.95%, #E9C6B5 129.29%)",
-		"linear-gradient(300.09deg, #FAFAFA 74.95%, #CCB5E9 129.29%)",
-		"linear-gradient(300.09deg, #FAFAFA 74.95%, #D4B9EF 129.29%)",
+	const packageGradients = [
+		"from-blue-50 to-indigo-50",
+		"from-amber-50 to-orange-50",
+		"from-violet-50 to-purple-50",
+		"from-emerald-50 to-teal-50",
+		"from-rose-50 to-pink-50",
 	];
 
 	const handleAddFeature = () => setFormData({ ...formData, features: [...formData.features, ""] });
@@ -1115,21 +1157,11 @@ function PackagesTab({ t }) {
 		if (editingPackage) {
 			setPackages(
 				packages.map((pkg) =>
-					pkg.id === editingPackage.id
-						? {
-							...pkg,
-							...formData,
-							gradient: cardGradients[Math.floor(Math.random() * cardGradients.length)],
-						}
-						: pkg
+					pkg.id === editingPackage.id ? { ...pkg, ...formData } : pkg
 				)
 			);
 		} else {
-			const newPackage = {
-				id: Date.now(),
-				...formData,
-				gradient: cardGradients[Math.floor(Math.random() * cardGradients.length)],
-			};
+			const newPackage = { id: Date.now(), ...formData };
 			setPackages([...packages, newPackage]);
 		}
 		setIsDialogOpen(false);
@@ -1163,7 +1195,6 @@ function PackagesTab({ t }) {
 
 	return (
 		<motion.div
-			key="packages"
 			initial={{ opacity: 0, y: 20 }}
 			animate={{ opacity: 1, y: 0 }}
 			exit={{ opacity: 0, y: -20 }}
@@ -1173,19 +1204,24 @@ function PackagesTab({ t }) {
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h2 className="text-2xl font-black text-gray-900 mb-2">{t("packages.title")}</h2>
-					<p className="text-gray-600">{t("packages.description")}</p>
+					<h2 className="text-3xl font-black bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] bg-clip-text text-transparent mb-2">
+						{t("packages.title")}
+					</h2>
+					<p className="text-gray-600 font-medium">{t("packages.description")}</p>
 				</div>
 				<div className="flex gap-3">
 					{/* Export All Button */}
 					<Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
 						<DialogTrigger asChild>
-							<Button variant="outline" className="h-14 px-8 rounded-2xl font-bold border-2">
+							<Button 
+								variant="outline" 
+								className="h-14 px-8 rounded-2xl font-bold border-2 hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] transition-all duration-200"
+							>
 								<Send className="w-5 h-5 mr-2" />
 								{t("packages.exportAll")}
 							</Button>
 						</DialogTrigger>
-						<DialogContent>
+						<DialogContent className="rounded-3xl">
 							<DialogHeader>
 								<DialogTitle className="text-2xl font-black">{t("packages.exportDialog.title")}</DialogTitle>
 								<DialogDescription>{t("packages.exportDialog.description")}</DialogDescription>
@@ -1207,13 +1243,17 @@ function PackagesTab({ t }) {
 										/>
 									</div>
 								</div>
-								<Alert className="bg-blue-50 border-blue-200">
+								<Alert className="bg-blue-50 border-blue-200 rounded-2xl">
 									<Info className="h-5 w-5 text-blue-600" />
 									<AlertDescription className="text-blue-900">{t("packages.exportDialog.info")}</AlertDescription>
 								</Alert>
 							</div>
 							<DialogFooter>
-								<Button variant="outline" onClick={() => setIsExportDialogOpen(false)} className="rounded-xl border-2">
+								<Button 
+									variant="outline" 
+									onClick={() => setIsExportDialogOpen(false)} 
+									className="rounded-xl border-2"
+								>
 									{t("common.cancel")}
 								</Button>
 								<Button
@@ -1241,7 +1281,7 @@ function PackagesTab({ t }) {
 					<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
 						<DialogTrigger asChild>
 							<Button
-								className="h-14 px-8 rounded-2xl font-bold bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 shadow-xl shadow-indigo-500/30"
+								className="h-14 px-8 rounded-2xl font-bold bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] hover:shadow-xl hover:shadow-[var(--color-primary-500)]/30 transition-all duration-200"
 								onClick={() => {
 									setEditingPackage(null);
 									setFormData({ name: "", nameEn: "", price: "", duration: "شهري", features: [""] });
@@ -1251,9 +1291,11 @@ function PackagesTab({ t }) {
 								{t("packages.addNew")}
 							</Button>
 						</DialogTrigger>
-						<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+						<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl">
 							<DialogHeader>
-								<DialogTitle className="text-2xl font-black">{editingPackage ? t("packages.edit") : t("packages.addNew")}</DialogTitle>
+								<DialogTitle className="text-2xl font-black">
+									{editingPackage ? t("packages.edit") : t("packages.addNew")}
+								</DialogTitle>
 								<DialogDescription>{t("packages.dialogDescription")}</DialogDescription>
 							</DialogHeader>
 
@@ -1263,13 +1305,23 @@ function PackagesTab({ t }) {
 										<Label htmlFor="name" className="text-sm font-bold mb-2 block">
 											{t("packages.form.nameAr")}
 										</Label>
-										<Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="h-12 rounded-xl border-2" />
+										<Input 
+											id="name" 
+											value={formData.name} 
+											onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+											className="h-12 rounded-xl border-2" 
+										/>
 									</div>
 									<div>
 										<Label htmlFor="nameEn" className="text-sm font-bold mb-2 block">
 											{t("packages.form.nameEn")}
 										</Label>
-										<Input id="nameEn" value={formData.nameEn} onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })} className="h-12 rounded-xl border-2" />
+										<Input 
+											id="nameEn" 
+											value={formData.nameEn} 
+											onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })} 
+											className="h-12 rounded-xl border-2" 
+										/>
 									</div>
 								</div>
 
@@ -1278,7 +1330,13 @@ function PackagesTab({ t }) {
 										<Label htmlFor="price" className="text-sm font-bold mb-2 block">
 											{t("packages.form.price")}
 										</Label>
-										<Input id="price" type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} className="h-12 rounded-xl border-2" />
+										<Input 
+											id="price" 
+											type="number" 
+											value={formData.price} 
+											onChange={(e) => setFormData({ ...formData, price: e.target.value })} 
+											className="h-12 rounded-xl border-2" 
+										/>
 									</div>
 									<div>
 										<Label htmlFor="duration" className="text-sm font-bold mb-2 block">
@@ -1301,7 +1359,13 @@ function PackagesTab({ t }) {
 								<div>
 									<div className="flex items-center justify-between mb-2">
 										<Label className="text-sm font-bold">{t("packages.form.features")}</Label>
-										<Button type="button" variant="outline" size="sm" onClick={handleAddFeature} className="rounded-xl">
+										<Button 
+											type="button" 
+											variant="outline" 
+											size="sm" 
+											onClick={handleAddFeature} 
+											className="rounded-xl"
+										>
 											<Plus className="w-4 h-4 mr-1" />
 											{t("packages.form.addFeature")}
 										</Button>
@@ -1316,7 +1380,13 @@ function PackagesTab({ t }) {
 													placeholder={`${t("packages.form.feature")} ${index + 1}`}
 												/>
 												{formData.features.length > 1 && (
-													<Button type="button" variant="outline" size="icon" onClick={() => handleRemoveFeature(index)} className="h-12 w-12 rounded-xl border-2">
+													<Button 
+														type="button" 
+														variant="outline" 
+														size="icon" 
+														onClick={() => handleRemoveFeature(index)} 
+														className="h-12 w-12 rounded-xl border-2"
+													>
 														<Trash2 className="w-4 h-4 text-rose-500" />
 													</Button>
 												)}
@@ -1327,10 +1397,17 @@ function PackagesTab({ t }) {
 							</div>
 
 							<DialogFooter>
-								<Button variant="outline" onClick={() => setIsDialogOpen(false)} className="rounded-xl border-2">
+								<Button 
+									variant="outline" 
+									onClick={() => setIsDialogOpen(false)} 
+									className="rounded-xl border-2"
+								>
 									{t("common.cancel")}
 								</Button>
-								<Button onClick={handleSubmit} className="rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700">
+								<Button 
+									onClick={handleSubmit} 
+									className="rounded-xl bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]"
+								>
 									{editingPackage ? t("common.update") : t("common.save")}
 								</Button>
 							</DialogFooter>
@@ -1339,25 +1416,38 @@ function PackagesTab({ t }) {
 				</div>
 			</div>
 
-			{/* Packages Grid */}
+			{/* Enhanced Packages Grid */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-				{packages.map((pkg) => (
-					<div
+				{packages.map((pkg, idx) => (
+					<motion.div
 						key={pkg.id}
-						className="rounded-2xl lg:rounded-3xl border-2 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden group hover:-translate-y-2"
-						style={{ background: pkg.gradient }}
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ delay: idx * 0.1 }}
+						whileHover={{ y: -8, scale: 1.02 }}
+						className={cls(
+							"rounded-3xl border-2 border-slate-200/60 shadow-lg hover:shadow-2xl",
+							"transition-all duration-300 overflow-hidden group",
+							"bg-gradient-to-br",
+							packageGradients[idx % packageGradients.length]
+						)}
 					>
 						<div className="p-6 relative">
 							<div className="flex items-start justify-between mb-6">
 								<div>
 									<h3 className="text-2xl font-black text-gray-900 mb-1">{pkg.name}</h3>
-									<p className="text-sm text-gray-600">{pkg.nameEn}</p>
+									<p className="text-sm text-gray-600 font-semibold">{pkg.nameEn}</p>
 								</div>
 								<div className="flex gap-2">
 									<TooltipProvider>
 										<Tooltip>
 											<TooltipTrigger asChild>
-												<Button variant="ghost" size="icon" onClick={() => handleEdit(pkg)} className="rounded-xl hover:bg-white/60">
+												<Button 
+													variant="ghost" 
+													size="icon" 
+													onClick={() => handleEdit(pkg)} 
+													className="rounded-xl hover:bg-white/80 transition-colors"
+												>
 													<Edit className="w-4 h-4" />
 												</Button>
 											</TooltipTrigger>
@@ -1370,7 +1460,12 @@ function PackagesTab({ t }) {
 									<TooltipProvider>
 										<Tooltip>
 											<TooltipTrigger asChild>
-												<Button variant="ghost" size="icon" onClick={() => handleDelete(pkg.id)} className="rounded-xl hover:bg-white/60 text-rose-500">
+												<Button 
+													variant="ghost" 
+													size="icon" 
+													onClick={() => handleDelete(pkg.id)} 
+													className="rounded-xl hover:bg-white/80 text-rose-500"
+												>
 													<Trash2 className="w-4 h-4" />
 												</Button>
 											</TooltipTrigger>
@@ -1384,22 +1479,28 @@ function PackagesTab({ t }) {
 
 							<div className="mb-6">
 								<div className="flex items-baseline gap-2">
-									<span className="text-4xl font-black text-gray-900">{pkg.price}</span>
+									<span className="text-5xl font-black text-gray-900">{pkg.price}</span>
 									<span className="text-lg font-bold text-gray-600">{t("currency")}</span>
 								</div>
-								<p className="text-sm text-gray-600 mt-1">{pkg.duration}</p>
+								<p className="text-sm text-gray-600 mt-1 font-semibold">{pkg.duration}</p>
 							</div>
 
 							<div className="space-y-3 mb-6">
 								{pkg.features.map((feature, idx) => (
-									<div key={idx} className="flex items-start gap-2">
-										<CheckCircle className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+									<motion.div 
+										key={idx} 
+										initial={{ opacity: 0, x: -20 }}
+										animate={{ opacity: 1, x: 0 }}
+										transition={{ delay: idx * 0.1 }}
+										className="flex items-start gap-2"
+									>
+										<CheckCircle className="w-5 h-5 text-[var(--color-primary-600)] flex-shrink-0 mt-0.5" />
 										<span className="text-sm font-medium text-gray-700">{feature}</span>
-									</div>
+									</motion.div>
 								))}
 							</div>
 						</div>
-					</div>
+					</motion.div>
 				))}
 			</div>
 		</motion.div>
@@ -1407,9 +1508,9 @@ function PackagesTab({ t }) {
 }
 
 // ==========================================
-// SUBSCRIPTIONS TAB (prettier filters + chips)
+// SUBSCRIPTIONS TAB - Enhanced
 // ==========================================
-function SubscriptionsTab({ t }) {
+function SubscriptionsTab({ t, colors }) {
 	const [filters, setFilters] = useState({
 		client: "",
 		fromDate: null,
@@ -1470,10 +1571,14 @@ function SubscriptionsTab({ t }) {
 
 	const filterChips = useMemo(() => {
 		const chips = [];
-		if (filters.client && filters.client !== "all") chips.push({ key: "client", label: `${t("filters.client")}: ${filters.client}` });
-		if (filters.fromDate) chips.push({ key: "fromDate", label: `${t("filters.fromDate")}: ${new Date(filters.fromDate).toLocaleDateString("ar-EG")}` });
-		if (filters.toDate) chips.push({ key: "toDate", label: `${t("filters.toDate")}: ${new Date(filters.toDate).toLocaleDateString("ar-EG")}` });
-		if (filters.sort) chips.push({ key: "sort", label: `${t("filters.sort")}: ${t(`filters.${filters.sort}`)}` });
+		if (filters.client && filters.client !== "all") 
+			chips.push({ key: "client", label: `${t("filters.client")}: ${filters.client}` });
+		if (filters.fromDate) 
+			chips.push({ key: "fromDate", label: `${t("filters.fromDate")}: ${new Date(filters.fromDate).toLocaleDateString("ar-EG")}` });
+		if (filters.toDate) 
+			chips.push({ key: "toDate", label: `${t("filters.toDate")}: ${new Date(filters.toDate).toLocaleDateString("ar-EG")}` });
+		if (filters.sort) 
+			chips.push({ key: "sort", label: `${t("filters.sort")}: ${t(`filters.${filters.sort}`)}` });
 		return chips;
 	}, [filters, t]);
 
@@ -1482,21 +1587,21 @@ function SubscriptionsTab({ t }) {
 			label: t("subscriptions.stats.active"),
 			value: "23",
 			icon: Users,
-			gradient: "linear-gradient(300.09deg, #FAFAFA 74.95%, #B5CBE9 129.29%)",
+			bgGradient: "from-blue-50 to-indigo-50",
 			iconCls: "text-blue-700",
 		},
 		{
 			label: t("subscriptions.stats.revenue"),
 			value: "12,500",
 			icon: DollarSign,
-			gradient: "linear-gradient(300.09deg, #FAFAFA 74.95%, #B5E9C6 129.29%)",
+			bgGradient: "from-emerald-50 to-teal-50",
 			iconCls: "text-emerald-700",
 		},
 		{
 			label: t("subscriptions.stats.renewal"),
 			value: "94%",
 			icon: RefreshCw,
-			gradient: "linear-gradient(300.09deg, #FAFAFA 74.95%, #CCB5E9 129.29%)",
+			bgGradient: "from-violet-50 to-purple-50",
 			iconCls: "text-violet-700",
 		},
 	];
@@ -1512,7 +1617,6 @@ function SubscriptionsTab({ t }) {
 
 	return (
 		<motion.div
-			key="subscriptions"
 			initial={{ opacity: 0, y: 20 }}
 			animate={{ opacity: 1, y: 0 }}
 			exit={{ opacity: 0, y: -20 }}
@@ -1521,31 +1625,47 @@ function SubscriptionsTab({ t }) {
 		>
 			{/* Quick Stats */}
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-				{stats.map((stat) => {
+				{stats.map((stat, idx) => {
 					const Icon = stat.icon;
 					return (
-						<div key={stat.label} className="rounded-2xl border-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1" style={{ background: stat.gradient }}>
-							<div className="p-2 !px-6 flex items-center justify-between ">
-								<div className="flex items-center justify-between gap-2 ">
-									<div className="w-14 h-14 rounded-2xl bg-gray-200/60 flex items-center justify-center">
-										<Icon className={`w-7 h-7 ${stat.iconCls}`} />
+						<motion.div 
+							key={stat.label}
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: idx * 0.1 }}
+							whileHover={{ y: -4, scale: 1.02 }}
+							className={cls(
+								"rounded-2xl border-2 border-slate-200/60 shadow-lg hover:shadow-xl",
+								"transition-all duration-300 p-6",
+								"bg-gradient-to-br",
+								stat.bgGradient
+							)}
+						>
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-4">
+									<div className="w-14 h-14 rounded-2xl bg-white/80 backdrop-blur flex items-center justify-center shadow-md">
+										<Icon className={cls("w-7 h-7", stat.iconCls)} />
 									</div>
-									<p className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-2">{stat.label}</p>
+									<div>
+										<p className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-1">
+											{stat.label}
+										</p>
+										<p className="text-4xl font-black text-gray-900">{stat.value}</p>
+									</div>
 								</div>
-								<p className="text-3xl font-black text-gray-900">{stat.value}</p>
 							</div>
-						</div>
+						</motion.div>
 					);
 				})}
 			</div>
 
-			{/* Filters */}
-			<Card className="rounded-3xl border-2 shadow-xl overflow-hidden">
+			{/* Enhanced Filters */}
+			<Card className="rounded-3xl border-2 border-slate-200/60 shadow-xl overflow-hidden bg-white/80 backdrop-blur-sm">
 				<CardHeader className="pb-4">
 					<div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
 						<div className="flex items-center gap-3">
-							<div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-								<Filter className="w-6 h-6 text-blue-600" />
+							<div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-secondary-100)] flex items-center justify-center shadow-md">
+								<Filter className="w-6 h-6 text-[var(--color-primary-600)]" />
 							</div>
 							<div>
 								<CardTitle className="text-xl font-bold">{t("filters.title")}</CardTitle>
@@ -1554,22 +1674,38 @@ function SubscriptionsTab({ t }) {
 						</div>
 
 						<div className="flex gap-2">
-							<Button variant="ghost" size="sm" onClick={resetFilters} className="rounded-xl font-semibold">
+							<Button 
+								variant="ghost" 
+								size="sm" 
+								onClick={resetFilters} 
+								className="rounded-xl font-semibold hover:bg-[var(--color-primary-50)]"
+							>
 								<RefreshCw className="w-4 h-4 mr-2" />
 								{t("filters.reset")}
 							</Button>
-							<Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="rounded-xl border-2 font-semibold">
+							<Button 
+								variant="outline" 
+								size="sm" 
+								onClick={() => setShowFilters(!showFilters)} 
+								className="rounded-xl border-2 font-semibold hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)]"
+							>
 								{showFilters ? t("filters.hide") : t("filters.show")}
-								<ChevronDown className={`w-4 h-4 ml-2 transition-transform ${showFilters ? "rotate-180" : ""}`} />
+								<ChevronDown className={cls(
+									"w-4 h-4 ml-2 transition-transform",
+									showFilters ? "rotate-180" : ""
+								)} />
 							</Button>
 						</div>
 					</div>
 
-					{/* Active filter chips */}
 					{filterChips.length > 0 && (
 						<div className="mt-4 flex flex-wrap gap-2">
 							{filterChips.map((c) => (
-								<Badge key={c.key} variant="secondary" className="px-3 py-1.5 rounded-xl font-bold">
+								<Badge 
+									key={c.key} 
+									variant="secondary" 
+									className="px-3 py-1.5 rounded-xl font-bold bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] border-2 border-[var(--color-primary-200)]"
+								>
 									{c.label}
 								</Badge>
 							))}
@@ -1644,7 +1780,7 @@ function SubscriptionsTab({ t }) {
 				</AnimatePresence>
 			</Card>
 
-			{/* Payments History TABLE (using reusable DataTable) */}
+			{/* Payments History TABLE */}
 			{loading ? (
 				<Card className="rounded-3xl border-2 shadow-xl overflow-hidden">
 					<CardHeader className="pb-4">
@@ -1662,10 +1798,18 @@ function SubscriptionsTab({ t }) {
 					headerSubtitle={t("payments.historyDescription")}
 					headerRight={
 						<div className="flex items-center gap-3">
-							<Badge variant="secondary" className="font-bold text-sm px-4 py-1.5">
+							<Badge 
+								variant="secondary" 
+								className="font-bold text-sm px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] border-2 border-[var(--color-primary-200)]"
+							>
+								<Receipt className="w-4 h-4 mr-2" />
 								{t("payments.total", { count: payments.length })}
 							</Badge>
-							<Button variant="outline" size="sm" className="rounded-xl border-2">
+							<Button
+								variant="outline"
+								size="sm"
+								className="rounded-xl border-2 font-bold hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)]"
+							>
 								<Download className="w-4 h-4 mr-2" />
 								{t("common.export")}
 							</Button>
@@ -1683,16 +1827,17 @@ function SubscriptionsTab({ t }) {
 							return (
 								<div>
 									<p className="font-bold text-gray-900">{p.clientName}</p>
-									<p className="text-sm text-gray-500">{p.email}</p>
+									<p className="text-sm text-gray-500 font-medium">{p.email}</p>
 									{p.phone && <p className="text-xs text-gray-400">{p.phone}</p>}
 								</div>
 							);
 						}
-						if (key === "description") return <p className="text-sm text-gray-700">{p.description}</p>;
+						if (key === "description") 
+							return <p className="text-sm text-gray-700 font-medium">{p.description}</p>;
 						if (key === "period") {
 							return (
 								<div className="text-sm">
-									<p className="text-gray-700">{p.periodFrom}</p>
+									<p className="text-gray-700 font-semibold">{p.periodFrom}</p>
 									<p className="text-xs text-gray-500">
 										{t("table.to")} {p.periodTo}
 									</p>
@@ -1702,14 +1847,14 @@ function SubscriptionsTab({ t }) {
 						if (key === "date") {
 							return (
 								<div className="text-sm">
-									<p className="text-gray-700">{p.date}</p>
+									<p className="text-gray-700 font-semibold">{p.date}</p>
 									<p className="text-xs text-gray-500">{p.time}</p>
 								</div>
 							);
 						}
 						if (key === "amount") {
 							return (
-								<div>
+								<div className="text-right">
 									<p className="text-lg font-black text-gray-900">{p.amount.toLocaleString()}</p>
 									<p className="text-xs font-semibold text-gray-500">{t("currency")}</p>
 								</div>
@@ -1721,7 +1866,11 @@ function SubscriptionsTab({ t }) {
 									<TooltipProvider>
 										<Tooltip>
 											<TooltipTrigger asChild>
-												<Button variant="ghost" size="icon" className="rounded-xl">
+												<Button 
+													variant="ghost" 
+													size="icon" 
+													className="rounded-xl hover:bg-[var(--color-primary-50)]"
+												>
 													<Eye className="w-4 h-4" />
 												</Button>
 											</TooltipTrigger>
@@ -1734,7 +1883,11 @@ function SubscriptionsTab({ t }) {
 									<TooltipProvider>
 										<Tooltip>
 											<TooltipTrigger asChild>
-												<Button variant="ghost" size="icon" className="rounded-xl text-rose-500">
+												<Button 
+													variant="ghost" 
+													size="icon" 
+													className="rounded-xl text-rose-500 hover:bg-rose-50"
+												>
 													<Trash2 className="w-4 h-4" />
 												</Button>
 											</TooltipTrigger>
@@ -1755,9 +1908,9 @@ function SubscriptionsTab({ t }) {
 }
 
 // ==========================================
-// CLIENT PAYMENTS TAB (your code unchanged)
+// CLIENT PAYMENTS TAB - Enhanced
 // ==========================================
-function ClientPaymentsTab({ t }) {
+function ClientPaymentsTab({ t, colors }) {
 	const [formData, setFormData] = useState({
 		client: "",
 		amount: "",
@@ -1805,7 +1958,6 @@ function ClientPaymentsTab({ t }) {
 
 	return (
 		<motion.div
-			key="client-payments"
 			initial={{ opacity: 0, y: 20 }}
 			animate={{ opacity: 1, y: 0 }}
 			exit={{ opacity: 0, y: -20 }}
@@ -1814,7 +1966,11 @@ function ClientPaymentsTab({ t }) {
 		>
 			<AnimatePresence>
 				{error && (
-					<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+					<motion.div 
+						initial={{ opacity: 0, y: -10 }} 
+						animate={{ opacity: 1, y: 0 }} 
+						exit={{ opacity: 0, y: -10 }}
+					>
 						<Alert variant="destructive" className="mb-6 rounded-2xl border-2">
 							<AlertCircle className="h-5 w-5" />
 							<AlertDescription className="text-base font-medium">{error}</AlertDescription>
@@ -1823,7 +1979,11 @@ function ClientPaymentsTab({ t }) {
 				)}
 
 				{success && (
-					<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+					<motion.div 
+						initial={{ opacity: 0, y: -10 }} 
+						animate={{ opacity: 1, y: 0 }} 
+						exit={{ opacity: 0, y: -10 }}
+					>
 						<Alert className="mb-6 rounded-2xl border-2 bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-900 border-emerald-200">
 							<CheckCircle className="h-5 w-5" />
 							<AlertDescription className="text-base font-medium">{success}</AlertDescription>
@@ -1832,26 +1992,38 @@ function ClientPaymentsTab({ t }) {
 				)}
 			</AnimatePresence>
 
-			<Card className="rounded-3xl border-2 shadow-2xl overflow-hidden">
-				<CardHeader className="pb-6 relative z-10">
+			<Card className="rounded-3xl border-2 border-slate-200/60 shadow-2xl overflow-hidden bg-white/80 backdrop-blur-sm">
+				<CardHeader className="pb-6 bg-gradient-to-r from-white/95 to-slate-50/50">
 					<div className="flex items-start gap-4">
-						<div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-xl shadow-blue-500/30">
+						<motion.div 
+							whileHover={{ rotate: 360 }}
+							transition={{ duration: 0.6 }}
+							className="w-16 h-16 rounded-3xl bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] flex items-center justify-center shadow-xl shadow-[var(--color-primary-500)]/30"
+						>
 							<Plus className="w-8 h-8 text-white" />
-						</div>
+						</motion.div>
 						<div>
-							<CardTitle className="text-3xl font-black mb-2">{t("form.title")}</CardTitle>
-							<CardDescription className="text-base">{t("form.description")}</CardDescription>
+							<CardTitle className="text-3xl font-black bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] bg-clip-text text-transparent mb-2">
+								{t("form.title")}
+							</CardTitle>
+							<CardDescription className="text-base font-medium">{t("form.description")}</CardDescription>
 						</div>
 					</div>
 				</CardHeader>
-				<CardContent className="relative z-10">
+				<CardContent className="p-8">
 					<form onSubmit={handleSubmit} className="space-y-8">
 						<div>
 							<Label htmlFor="client" className="text-base font-bold mb-3 block">
 								{t("form.client")} <span className="text-red-500">*</span>
 							</Label>
 							<Select value={formData.client} onValueChange={(v) => setFormData({ ...formData, client: v })}>
-								<SelectTrigger id="client" className={`h-14 rounded-2xl border-2 text-base ${errors.client ? "border-red-500" : ""}`}>
+								<SelectTrigger 
+									id="client" 
+									className={cls(
+										"h-14 rounded-2xl border-2 text-base",
+										errors.client ? "border-red-500" : ""
+									)}
+								>
 									<SelectValue placeholder={t("form.selectClient")} />
 								</SelectTrigger>
 								<SelectContent>
@@ -1861,7 +2033,11 @@ function ClientPaymentsTab({ t }) {
 								</SelectContent>
 							</Select>
 							{errors.client && (
-								<motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-sm text-red-500 mt-2 font-semibold flex items-center gap-1">
+								<motion.p 
+									initial={{ opacity: 0, y: -5 }} 
+									animate={{ opacity: 1, y: 0 }} 
+									className="text-sm text-red-500 mt-2 font-semibold flex items-center gap-1"
+								>
 									<AlertCircle className="w-4 h-4" />
 									{errors.client}
 								</motion.p>
@@ -1881,12 +2057,19 @@ function ClientPaymentsTab({ t }) {
 									min="0"
 									value={formData.amount}
 									onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-									className={`h-14 pl-12 rounded-2xl border-2 text-base ${errors.amount ? "border-red-500" : ""}`}
+									className={cls(
+										"h-14 pl-12 rounded-2xl border-2 text-base",
+										errors.amount ? "border-red-500" : ""
+									)}
 									placeholder="0.00"
 								/>
 							</div>
 							{errors.amount && (
-								<motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-sm text-red-500 mt-2 font-semibold flex items-center gap-1">
+								<motion.p 
+									initial={{ opacity: 0, y: -5 }} 
+									animate={{ opacity: 1, y: 0 }} 
+									className="text-sm text-red-500 mt-2 font-semibold flex items-center gap-1"
+								>
 									<AlertCircle className="w-4 h-4" />
 									{errors.amount}
 								</motion.p>
@@ -1902,11 +2085,18 @@ function ClientPaymentsTab({ t }) {
 								rows={5}
 								value={formData.description}
 								onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-								className={`rounded-2xl border-2 text-base resize-none ${errors.description ? "border-red-500" : ""}`}
+								className={cls(
+									"rounded-2xl border-2 text-base resize-none",
+									errors.description ? "border-red-500" : ""
+								)}
 								placeholder={t("form.descriptionPlaceholder")}
 							/>
 							{errors.description && (
-								<motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-sm text-red-500 mt-2 font-semibold flex items-center gap-1">
+								<motion.p 
+									initial={{ opacity: 0, y: -5 }} 
+									animate={{ opacity: 1, y: 0 }} 
+									className="text-sm text-red-500 mt-2 font-semibold flex items-center gap-1"
+								>
 									<AlertCircle className="w-4 h-4" />
 									{errors.description}
 								</motion.p>
@@ -1926,7 +2116,10 @@ function ClientPaymentsTab({ t }) {
 										value={formData.periodFrom}
 										onChange={([date]) => setFormData({ ...formData, periodFrom: date })}
 										options={{ dateFormat: "Y-m-d", locale: "ar" }}
-										className={`h-14 w-full rounded-2xl border-2 px-4 text-base ${errors.period ? "border-red-500" : ""}`}
+										className={cls(
+											"h-14 w-full rounded-2xl border-2 px-4 text-base",
+											errors.period ? "border-red-500" : ""
+										)}
 										placeholder={t("filters.selectDate")}
 									/>
 								</div>
@@ -1938,14 +2131,21 @@ function ClientPaymentsTab({ t }) {
 										value={formData.periodTo}
 										onChange={([date]) => setFormData({ ...formData, periodTo: date })}
 										options={{ dateFormat: "Y-m-d", locale: "ar" }}
-										className={`h-14 w-full rounded-2xl border-2 px-4 text-base ${errors.period ? "border-red-500" : ""}`}
+										className={cls(
+											"h-14 w-full rounded-2xl border-2 px-4 text-base",
+											errors.period ? "border-red-500" : ""
+										)}
 										placeholder={t("filters.selectDate")}
 									/>
 								</div>
 							</div>
 
 							{errors.period && (
-								<motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-sm text-red-500 mt-2 font-semibold flex items-center gap-1">
+								<motion.p 
+									initial={{ opacity: 0, y: -5 }} 
+									animate={{ opacity: 1, y: 0 }} 
+									className="text-sm text-red-500 mt-2 font-semibold flex items-center gap-1"
+								>
 									<AlertCircle className="w-4 h-4" />
 									{errors.period}
 								</motion.p>
@@ -1955,7 +2155,7 @@ function ClientPaymentsTab({ t }) {
 						<Button
 							type="submit"
 							disabled={submitting}
-							className="w-full h-16 rounded-2xl text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-2xl shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300"
+							className="w-full h-16 rounded-2xl text-lg font-bold bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] hover:shadow-2xl hover:shadow-[var(--color-primary-500)]/40 transition-all duration-300"
 						>
 							{submitting ? (
 								<>

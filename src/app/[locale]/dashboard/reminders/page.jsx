@@ -1,23 +1,45 @@
-
-
 'use client';
 
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Settings, Calendar as CalendarIcon, BellRing, Info, Edit2, Trash2, Zap, Square, X } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, Info, Edit2, Trash2, Zap, X } from 'lucide-react';
 
 import { Modal, TabsPill } from '@/components/dashboard/ui/UI';
 import Select from '@/components/atoms/Select';
 import { TimeField } from '@/components/atoms/InputTime';
-import InputDate from '@/components/atoms/InputDate';
 import MultiLangText from '@/components/atoms/MultiLangText';
 import { Controller, useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 
-import { WEEK_DAYS, PRAYERS, SOUND_SAMPLES, defaultSettings, defaultReminder, normalizeSchedule, computeNextOccurrence, fetchTodayPrayerTimes, listReminders, getUserSettingsApi, createReminderApi, updateReminderApi, deleteReminderApi, toggleActiveApi, markCompletedApi, updateUserSettingsApi, safeT, toISODate, useReminderWebSocket, humanDateTime, sameDay, humanDuration, stopCurrentReminderSound } from '@/components/pages/reminders/atoms';
+import {
+	WEEK_DAYS,
+	PRAYERS,
+	SOUND_SAMPLES,
+	defaultSettings,
+	defaultReminder,
+	normalizeSchedule,
+	computeNextOccurrence,
+	fetchTodayPrayerTimes,
+	listReminders,
+	getUserSettingsApi,
+	createReminderApi,
+	updateReminderApi,
+	deleteReminderApi,
+	toggleActiveApi,
+	markCompletedApi,
+	updateUserSettingsApi,
+	safeT,
+	toISODate,
+	useReminderWebSocket,
+	humanDateTime,
+	sameDay,
+	humanDuration,
+	stopCurrentReminderSound,
+} from '@/components/pages/reminders/atoms';
+
 import api from '@/utils/axios';
 import { Switcher } from '@/components/atoms/Switcher';
 
@@ -31,15 +53,19 @@ function formatTime12Local(hhmm) {
 	return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
+function getPrayerLabel(t, prayer) {
+	const rawName = (prayer?.name || '').toLowerCase().trim();
+	if (!rawName) return prayer?.name || safeT(t, 'prayer.fallback', 'Prayer');
+	return safeT(t, `prayer.${rawName}`, prayer.name || rawName);
+}
+
 function formatSchedule(t, rem) {
 	const s = rem.schedule || {};
 	const times = (s.times || []).map(formatTime12Local).join('، ');
 
 	if (s.mode === 'prayer' && s.prayer) {
 		const dir = s.prayer.direction === 'before' ? safeT(t, 'before', 'Before') : safeT(t, 'after', 'After');
-
 		const prayerLabel = getPrayerLabel(t, s.prayer);
-
 		return `${prayerLabel} • ${dir} ${s.prayer.offsetMin} ${safeT(t, 'minutesShort', 'min')}`;
 	}
 
@@ -48,26 +74,16 @@ function formatSchedule(t, rem) {
 		daily: `${safeT(t, 'mode.daily', 'Daily')} ${times}`,
 		weekly: `${safeT(t, 'mode.weekly', 'Weekly')} ${(s.daysOfWeek || []).join('، ') || '—'} ${times}`,
 		monthly: `${safeT(t, 'mode.monthly', 'Monthly')} ${times}`,
-		interval: s.interval ? `${safeT(t, 'mode.intervalEvery', 'Every')} ${s.interval.every} ${safeT(t, `interval.unit.${s.interval.unit || 'hour'}`, s.interval.unit || 'hour')}` : safeT(t, 'mode.interval', 'Interval'),
+		interval: s.interval
+			? `${safeT(t, 'mode.intervalEvery', 'Every')} ${s.interval.every} ${safeT(t, `interval.unit.${s.interval.unit || 'hour'}`, s.interval.unit || 'hour')}`
+			: safeT(t, 'mode.interval', 'Interval'),
 	};
 	return labelByMode[s.mode] || labelByMode.daily;
 }
 
-function getPrayerLabel(t, prayer) {
-	const rawName = (prayer?.name || '').toLowerCase().trim();
-
-	if (!rawName) {
-		return prayer?.name || safeT(t, 'prayer.fallback', 'Prayer');
-	}
-
-	return safeT(t, `prayer.${rawName}`, prayer.name || rawName);
-}
-
 function formatSchedule2(t, rem) {
 	const s = rem.schedule || {};
-
 	const times24 = Array.isArray(s.times) ? [...s.times].filter(Boolean).sort((a, b) => a.localeCompare(b)) : [];
-
 	const mappedTimes = times24.map(formatTime12Local);
 	const fullTime = mappedTimes[0] || '';
 
@@ -84,15 +100,12 @@ function formatSchedule2(t, rem) {
 
 	if (s.mode === 'prayer' && s.prayer) {
 		const dir = s.prayer.direction === 'before' ? safeT(t, 'before', 'Before') : safeT(t, 'after', 'After');
-
 		const prayerName = getPrayerLabel(t, s.prayer);
 		const offset = Number.isFinite(Number(s.prayer.offsetMin)) ? Number(s.prayer.offsetMin) : 0;
-
 		text = `${prayerName} • ${dir} ${offset} ${safeT(t, 'minutesShort', 'min')}`;
 	} else {
 		const every = s.interval && Number(s.interval.every) > 0 ? Number(s.interval.every) : null;
 		const unitLabel = s.interval && s.interval.unit ? safeT(t, `interval.unit.${s.interval.unit}`, s.interval.unit) : '';
-
 		const intervalLabel = s.interval && every ? `${safeT(t, 'mode.intervalEvery', 'Every')} ${every} ${unitLabel} ` : safeT(t, 'mode.interval', 'Interval');
 
 		const labelByMode = {
@@ -123,7 +136,6 @@ function formatTimelineTime(date) {
 		const parts = formatted.split(' ');
 		const time = parts[0] || '';
 		const period = parts[1] || '';
-
 		return [time, period];
 	} catch {
 		const fallback = date.toLocaleTimeString('en-US', {
@@ -131,7 +143,6 @@ function formatTimelineTime(date) {
 			minute: '2-digit',
 			hour12: true,
 		});
-
 		const parts = fallback.split(' ');
 		return [parts[0] || '', parts[1] || ''];
 	}
@@ -164,6 +175,7 @@ function supportsPush() {
 
 	return true;
 }
+
 export default function RemindersPage() {
 	const t = useTranslations('reminders');
 	const [notificationStatus, setNotificationStatus] = useState('checking');
@@ -183,8 +195,8 @@ export default function RemindersPage() {
 	const [openSettings, setOpenSettings] = useState(false);
 	const [openCalendar, setOpenCalendar] = useState(false);
 
- 	const now = new Date();
- 
+	const now = new Date();
+
 	const today = new Date();
 	const todayKey = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][today.getDay()];
 
@@ -192,14 +204,14 @@ export default function RemindersPage() {
 	const [activeDay, setActiveDay] = useState(todayKey);
 
 	function dateForWeekday(key) {
-		const now = new Date();
+		const n = new Date();
 		for (let i = 0; i < 7; i++) {
-			const d = new Date(now);
-			d.setDate(now.getDate() + i);
+			const d = new Date(n);
+			d.setDate(n.getDate() + i);
 			const k = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][d.getDay()];
 			if (k === key) return d;
 		}
-		return now;
+		return n;
 	}
 
 	const selectedDate = useMemo(() => dateForWeekday(activeDay), [activeDay]);
@@ -227,14 +239,6 @@ export default function RemindersPage() {
 	}, []);
 
 	useEffect(() => {
-		api
-			.get('/reminders/settings/user')
-			.then(res => setSettings(res.data))
-			.finally(() => setLoading(false));
-	}, []);
-
-
-	useEffect(() => {
 		setViewMode(viewFromQuery === 'timeline' ? 'timeline' : 'list');
 		setHighlightReminderId(reminderIdFromQuery || null);
 	}, [viewFromQuery, reminderIdFromQuery]);
@@ -244,23 +248,21 @@ export default function RemindersPage() {
 			setViewMode(nextMode);
 			if (!router || !pathname) return;
 			const params = new URLSearchParams(searchParamsString);
+
 			if (nextMode === 'timeline') {
 				params.set('view', 'timeline');
 				let reminderId = null;
-				if (options.reminderId) {
-					reminderId = options.reminderId;
-				} else if (options.keepReminderId && highlightReminderId) {
-					reminderId = highlightReminderId;
-				}
-				if (reminderId) {
-					params.set('reminderId', reminderId);
-				} else {
-					params.delete('reminderId');
-				}
+
+				if (options.reminderId) reminderId = options.reminderId;
+				else if (options.keepReminderId && highlightReminderId) reminderId = highlightReminderId;
+
+				if (reminderId) params.set('reminderId', reminderId);
+				else params.delete('reminderId');
 			} else {
 				params.delete('view');
 				params.delete('reminderId');
 			}
+
 			const qs = params.toString();
 			router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
 		},
@@ -269,28 +271,23 @@ export default function RemindersPage() {
 
 	useEffect(() => {
 		if (viewMode === 'timeline' && timelineSectionRef.current) {
-			timelineSectionRef.current.scrollIntoView({
-				behavior: 'smooth',
-				block: 'start',
-			});
+			timelineSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
 		}
 	}, [viewMode]);
 
 	useEffect(() => {
 		if (viewMode !== 'timeline' || !highlightReminderId) return;
 		const el = document.querySelector(`[data-reminder-id="${highlightReminderId}"]`);
-		if (el) {
-			el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-		}
+		if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 	}, [viewMode, highlightReminderId, timelineEntries]);
 
+	// ✅ Single boot fetch (fix: removed the duplicate /settings/user fetch that was ending loading too early)
 	useEffect(() => {
 		let mounted = true;
 
 		(async () => {
 			try {
 				const [rs, st] = await Promise.all([listReminders(), getUserSettingsApi()]);
-
 				if (!mounted) return;
 
 				const withAudio = (rs || []).map(r => ({
@@ -303,13 +300,14 @@ export default function RemindersPage() {
 
 				setReminders(withAudio);
 				setSettings(st);
-			} catch (error) {
+			} catch {
+				// ignore
 			} finally {
 				if (mounted) setLoading(false);
 			}
 		})();
 
-		// 2) تسجيل الـ Service Worker بشكل منفصل (لا يلمس loading)
+		// SW registration (separate)
 		if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window) {
 			(async () => {
 				try {
@@ -318,7 +316,6 @@ export default function RemindersPage() {
 						updateViaCache: 'none',
 					});
 
-					// ⚠️ لا تنتظر للأبد على state === 'activated'
 					if (registration.installing) {
 						const installingWorker = registration.installing;
 						await new Promise(resolve => {
@@ -326,7 +323,6 @@ export default function RemindersPage() {
 
 							const handler = e => {
 								const state = e.target.state;
-								// نعتبر activated أو redundant نهاية طبيعية
 								if (state === 'activated' || state === 'redundant') {
 									installingWorker.removeEventListener('statechange', handler);
 									resolve(null);
@@ -334,16 +330,17 @@ export default function RemindersPage() {
 							};
 
 							installingWorker.addEventListener('statechange', handler);
-
-							// safety timeout حتى لو ما جاء أي event
 							setTimeout(() => resolve(null), 5000);
 						});
 					}
+
 					try {
 						await subscribeToPush(registration);
-					} catch (e) {
+					} catch {
+						// ignore
 					}
-				} catch (swError) {
+				} catch {
+					// ignore
 				}
 			})();
 		}
@@ -355,7 +352,6 @@ export default function RemindersPage() {
 
 	useEffect(() => {
 		if (typeof window === 'undefined' || typeof Notification === 'undefined') {
-			// متصفح لا يدعم Notifications
 			setNotificationStatus('unsupported');
 			return;
 		}
@@ -363,12 +359,12 @@ export default function RemindersPage() {
 	}, []);
 
 	const filtered = useMemo(() => {
-		// Show ALL reminders sorted by next occurrence (regardless of selected tab)
-		const list = reminders.slice().sort((a, b) => (computeNextOccurrence(a, settings || {})?.getTime() || 0) - (computeNextOccurrence(b, settings || {})?.getTime() || 0));
+		const list = reminders
+			.slice()
+			.sort((a, b) => (computeNextOccurrence(a, settings || {})?.getTime() || 0) - (computeNextOccurrence(b, settings || {})?.getTime() || 0));
 		return list;
 	}, [reminders, settings]);
 
-	// build tabs with counts per weekday and localized labels (accurate per-day occurrences)
 	const tabs = useMemo(() => {
 		return WEEK_DAYS.map(d => {
 			const label = safeT(t, `weekday.${d.label}`, d.label);
@@ -378,7 +374,7 @@ export default function RemindersPage() {
 			const labelWithCount = count > 0 ? `${label} (${count})` : label;
 			return { key: d.key, label: labelWithCount };
 		});
-	}, [WEEK_DAYS, reminders, settings, t]);
+	}, [reminders, settings, t]);
 
 	useReminderWebSocket(rem => {
 		setReminders(prev => prev.map(r => (r.id === rem.id ? { ...r, ...rem } : r)));
@@ -389,6 +385,7 @@ export default function RemindersPage() {
 		setEditing(null);
 		setOpenForm(true);
 	};
+
 	const onEdit = rem => {
 		setEditing(rem);
 		setOpenForm(true);
@@ -417,6 +414,7 @@ export default function RemindersPage() {
 				updatedAt: new Date().toISOString(),
 			};
 			setReminders(optimistic);
+
 			try {
 				const saved = await updateReminderApi(draft.id, payload);
 				saved.sound.previewUrl = saved.sound?.id === 'drop' ? SOUND_SAMPLES.drop : saved.sound?.id === 'soft' ? SOUND_SAMPLES.soft : SOUND_SAMPLES.chime;
@@ -428,7 +426,6 @@ export default function RemindersPage() {
 			try {
 				const created = await createReminderApi(payload);
 				created.sound.previewUrl = created.sound?.id === 'drop' ? SOUND_SAMPLES.drop : created.sound?.id === 'soft' ? SOUND_SAMPLES.soft : SOUND_SAMPLES.chime;
-
 				setReminders(list => [created, ...list]);
 			} catch {
 				// ignore
@@ -449,6 +446,7 @@ export default function RemindersPage() {
 	const onToggleActive = async id => {
 		const before = reminders;
 		setReminders(before.map(r => (r.id === id ? { ...r, active: !r.active } : r)));
+
 		try {
 			const saved = await toggleActiveApi(id);
 			saved.sound.previewUrl = saved.sound?.id === 'drop' ? SOUND_SAMPLES.drop : saved.sound?.id === 'soft' ? SOUND_SAMPLES.soft : SOUND_SAMPLES.chime;
@@ -469,10 +467,12 @@ export default function RemindersPage() {
 				try {
 					const registration = await navigator.serviceWorker.ready;
 					await subscribeToPush(registration);
-				} catch (err) {
+				} catch {
+					// ignore
 				}
 			}
-		} catch (err) {
+		} catch {
+			// ignore
 		}
 	};
 
@@ -489,8 +489,9 @@ export default function RemindersPage() {
 	const quickCreate = async mins => {
 		const n = Number(mins);
 		if (Number.isNaN(n) || n <= 0) return;
-		const now = new Date();
-		const future = new Date(now.getTime() + n * 60 * 1000);
+
+		const nnow = new Date();
+		const future = new Date(nnow.getTime() + n * 60 * 1000);
 
 		const hh = String(future.getHours()).padStart(2, '0');
 		const mm = String(future.getMinutes()).padStart(2, '0');
@@ -507,6 +508,7 @@ export default function RemindersPage() {
 				timezone: settings?.timezone || 'Africa/Cairo',
 			},
 		});
+
 		try {
 			const created = await createReminderApi(payload);
 			created.sound.previewUrl = created.sound?.id === 'drop' ? SOUND_SAMPLES.drop : created.sound?.id === 'soft' ? SOUND_SAMPLES.soft : SOUND_SAMPLES.chime;
@@ -519,30 +521,36 @@ export default function RemindersPage() {
 	if (loading) {
 		return (
 			<main className='container !px-0'>
-				{/* Header skeleton */}
-				<div className='relative mb-4 overflow-hidden rounded-lg border border-indigo-100/60 bg-indigo-500/70'>
-					<div className='absolute inset-0 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-90' />
-					<div className='absolute inset-0 opacity-15' style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px)', backgroundSize: '22px 22px', backgroundPosition: '-1px -1px' }} />
+				<div className='relative mb-4 overflow-hidden rounded-lg border border-[var(--color-primary-100)] bg-[var(--color-primary-500)]'>
+					<div className='absolute inset-0 theme-gradient-bg opacity-95' />
+					<div
+						className='absolute inset-0 opacity-15'
+						style={{
+							backgroundImage:
+								'linear-gradient(rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px)',
+							backgroundSize: '22px 22px',
+							backgroundPosition: '-1px -1px',
+						}}
+					/>
 					<div className='absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/20 blur-3xl' />
-					<div className='absolute -bottom-16 -right-8 h-60 w-60 rounded-full bg-blue-300/30 blur-3xl' />
+					<div className='absolute -bottom-16 -right-8 h-60 w-60 rounded-full bg-white/10 blur-3xl' />
 
 					<div className='relative p-4 md:p-6 animate-pulse'>
 						<div className='flex items-center justify-between'>
 							<div className='h-5 w-40 rounded-full bg-white/40 mb-2' />
-							<div className='  md:hidden flex items-center gap-2'>
+							<div className='md:hidden flex items-center gap-2'>
 								<div className='h-8 w-8 rounded-full bg-white/40 mb-2' />
 								<div className='h-8 w-20 rounded-full bg-white/40 mb-2' />
 							</div>
 						</div>
-						<div className=' max-md:hidden h-4 w-64 rounded-full bg-white/30' />
-						<div className='mt-4 flex  max-md:justify-end flex-wrap gap-2'>
+						<div className='max-md:hidden h-4 w-64 rounded-full bg-white/30' />
+						<div className='mt-4 flex max-md:justify-end flex-wrap gap-2'>
 							<div className='h-8 w-20 rounded-full bg-white/30' />
 							<div className='h-8 w-20 rounded-full bg-white/20' />
 						</div>
 					</div>
 				</div>
 
-				{/* List skeleton */}
 				<div className='space-y-3'>
 					<div className='h-20 rounded-xl bg-slate-100 animate-pulse' />
 					<div className='h-20 rounded-xl bg-slate-100 animate-pulse' />
@@ -552,57 +560,38 @@ export default function RemindersPage() {
 		);
 	}
 
-
 	const telegramEnabled = settings?.telegramEnabled === true;
 	const needsActivation = notificationStatus !== 'granted' && !telegramEnabled;
 
 	if (needsActivation) {
 		return (
-			<main className="container !px-0">
-				<div className="max-w-xl mx-auto mt-10 rounded-2xl border border-dashed border-slate-300 bg-white p-6 md:p-8 text-center shadow-sm">
-					<h1 className="text-xl md:text-2xl font-semibold text-slate-900 mb-3">
-						{safeT(t, 'permission.title', 'تفعيل الإشعارات مطلوب')}
-					</h1>
+			<main className='container !px-0'>
+				<div className='max-w-xl mx-auto mt-10 rounded-2xl border border-dashed border-slate-300 bg-white p-6 md:p-8 text-center shadow-sm'>
+					<h1 className='text-xl md:text-2xl font-semibold text-slate-900 mb-3'>{safeT(t, 'permission.title', 'تفعيل الإشعارات مطلوب')}</h1>
 
-					<p className="text-sm md:text-base text-slate-600 mb-4">
-						{safeT(
-							t,
-							'permission.description',
-							'لكي تعمل صفحة التذكيرات بشكل صحيح وتستقبل تنبيهات، لازم تفعّل الإشعارات للمتصفح أو تيليجرام.'
-						)}
+					<p className='text-sm md:text-base text-slate-600 mb-4'>
+						{safeT(t, 'permission.description', 'لكي تعمل صفحة التذكيرات بشكل صحيح وتستقبل تنبيهات، لازم تفعّل الإشعارات للمتصفح أو تيليجرام.')}
 					</p>
 
-					{/* حالة: المتصفح لا يدعم الإشعارات */}
 					{notificationStatus === 'unsupported' && (
-						<p className="text-xs md:text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
-							{safeT(
-								t,
-								'permission.unsupported',
-								'متصفحك الحالي لا يدعم إشعارات المتصفح. يمكنك تفعيل الإشعارات عبر تيليجرام لاستقبال التذكيرات.'
-							)}
+						<p className='text-xs md:text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4'>
+							{safeT(t, 'permission.unsupported', 'متصفحك الحالي لا يدعم إشعارات المتصفح. يمكنك تفعيل الإشعارات عبر تيليجرام لاستقبال التذكيرات.')}
 						</p>
 					)}
 
 					{notificationStatus === 'denied' && (
-						<p className="text-xs md:text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
-							{safeT(
-								t,
-								'permission.denied',
-								'لقد قمت برفض الإشعارات من قبل. يمكنك تعديل الإعدادات من المتصفح، أو تفعيل الإشعارات عبر تيليجرام من الزر بالأسفل.'
-							)}
+						<p className='text-xs md:text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4'>
+							{safeT(t, 'permission.denied', 'لقد قمت برفض الإشعارات من قبل. يمكنك تعديل الإعدادات من المتصفح، أو تفعيل الإشعارات عبر تيليجرام من الزر بالأسفل.')}
 						</p>
 					)}
 
 					{notificationStatus === 'default' && (
-						<button
-							type="button"
-							onClick={requestNotificationPermission}
-							className="rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 px-5 py-2.5 text-sm md:text-base text-white font-medium mb-4"
-						>
+						<button type='button' onClick={requestNotificationPermission} className='rounded-lg theme-gradient-bg px-5 py-2.5 text-sm md:text-base text-white font-medium mb-4'>
 							{safeT(t, 'permission.button', 'تفعيل إشعارات المتصفح')}
 						</button>
 					)}
-					<div className="mt-4">
+
+					<div className='mt-4'>
 						<TelegramConnectSection settings={settings} />
 					</div>
 				</div>
@@ -610,40 +599,51 @@ export default function RemindersPage() {
 		);
 	}
 
-
-
 	return (
 		<main className='container !px-0'>
-			<div className='relative z-[10] rounded-lg border border-indigo-100/60 '>
+			<div className='relative z-[10] rounded-lg border border-[var(--color-primary-100)]'>
 				<div className='absolute rounded-lg inset-0 overflow-hidden'>
-					<div className='absolute inset-0 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-95' />
+					<div className='absolute inset-0 theme-gradient-bg opacity-95' />
 					<div
 						className='absolute inset-0 opacity-15'
 						style={{
-							backgroundImage: 'linear-gradient(rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px)',
+							backgroundImage:
+								'linear-gradient(rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px)',
 							backgroundSize: '22px 22px',
 							backgroundPosition: '-1px -1px',
 						}}
 					/>
 					<div className='absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/20 blur-3xl' />
-					<div className='absolute -bottom-16 -right-8 h-60 w-60 rounded-full bg-blue-300/30 blur-3xl' />
+					<div className='absolute -bottom-16 -right-8 h-60 w-60 rounded-full bg-white/10 blur-3xl' />
 				</div>
 
 				<div className='relative p-3 md:p-5 text-white'>
-					<div className='flex  flex-row  items-center  justify-between gap-3'>
+					<div className='flex flex-row items-center justify-between gap-3'>
 						<div>
 							<h1 className='text-xl md:text-4xl font-semibold max-md:text-center block'>{safeT(t, 'title', 'Reminders')}</h1>
 							<p className='text-white/85 mt-1 hidden md:block'>{safeT(t, 'subtitle', 'Manage your personal reminders')}</p>
 						</div>
 
 						<div className='flex flex-wrap max-md:justify-center items-center gap-2'>
-
-							<button type='button' onClick={() => setOpenCalendar(true)} title={t('actions.openCalendar')} aria-label={t('actions.openCalendar')} className=' flex items-center gap-1 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm hover:bg-white/20'>
+							<button
+								type='button'
+								onClick={() => setOpenCalendar(true)}
+								title={t('actions.openCalendar')}
+								aria-label={t('actions.openCalendar')}
+								className='flex items-center gap-1 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm hover:bg-white/20'
+							>
 								<CalendarIcon className='inline-block w-4 h-4' />
 							</button>
 
 							<QuickCreate t={t} onPick={quickCreate} />
-							<button type='button' onClick={onCreate} title={t('actions.createNew')} aria-label={t('actions.createNew')} className=' flex items-center gap-1 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm hover:bg-white/20'>
+
+							<button
+								type='button'
+								onClick={onCreate}
+								title={t('actions.createNew')}
+								aria-label={t('actions.createNew')}
+								className='flex items-center gap-1 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm hover:bg-white/20'
+							>
 								<Plus className='inline-block w-4 h-4' />
 								{t('actions.createNew')}
 							</button>
@@ -651,16 +651,23 @@ export default function RemindersPage() {
 					</div>
 
 					<div className='max-md:mt-[17px] flex items-center justify-between gap-3'>
-
 						<TelegramConnectSection settings={settings} />
 
-						<div className=' max-md:justify-end  flex items-center justify-between gap-2'>
+						<div className='max-md:justify-end flex items-center justify-between gap-2'>
 							<div className='flex items-center gap-2'>
-								<div className='flex  gap-1 rounded-full bg-white/10 p-2'>
+								<div className='flex gap-1 rounded-full bg-white/10 p-2'>
 									{viewToggleOptions.map(option => {
 										const active = viewMode === option.key;
 										return (
-											<button type='button' key={option.key} onClick={() => switchView(option.key, { keepReminderId: true })} className={`px-3 py-1.5 text-sm rounded-full transition ${active ? 'bg-white text-indigo-600 font-semibold' : 'text-white/80 hover:bg-white/10'}`}>
+											<button
+												type='button'
+												key={option.key}
+												onClick={() => switchView(option.key, { keepReminderId: true })}
+												className={[
+													'px-3 py-1.5 text-sm rounded-full transition',
+													active ? 'bg-white font-semibold text-[var(--color-primary-700)]' : 'text-white/80 hover:bg-white/10',
+												].join(' ')}
+											>
 												{option.label}
 											</button>
 										);
@@ -678,9 +685,9 @@ export default function RemindersPage() {
 				{viewMode === 'timeline' ? (
 					<ReminderTimeline t={t} entries={timelineEntries} highlightReminderId={highlightReminderId} />
 				) : (
-					<div className='grid grid-cols-1 '>
+					<div className='grid grid-cols-1'>
 						{filtered.length === 0 ? (
-							<div className=' border border-dashed border-slate-200 p-10 text-center'>
+							<div className='border border-dashed border-slate-200 p-10 text-center'>
 								<p className='text-slate-600'>{safeT(t, 'empty.day', 'No reminders for this day')}</p>
 							</div>
 						) : (
@@ -698,7 +705,6 @@ export default function RemindersPage() {
 									onEdit={() => onEdit(r)}
 									onDelete={() => onDelete(r.id)}
 									onToggleActive={() => onToggleActive(r.id)}
-									onAck={() => onAck(r)}
 								/>
 							))
 						)}
@@ -746,17 +752,14 @@ export default function RemindersPage() {
 	);
 }
 
+/* ---------- Telegram connect ---------- */
 
 export function TelegramConnectSection({ settings }) {
 	const t = useTranslations();
-	const [status, setStatus] = useState(
-		settings?.telegramEnabled ? 'linked' : 'idle'
-	);
+	const [status, setStatus] = useState(settings?.telegramEnabled ? 'linked' : 'idle');
 
 	useEffect(() => {
-		if (settings?.telegramEnabled) {
-			setStatus('linked');
-		}
+		if (settings?.telegramEnabled) setStatus('linked');
 	}, [settings?.telegramEnabled]);
 
 	const handleConnect = async () => {
@@ -764,7 +767,6 @@ export function TelegramConnectSection({ settings }) {
 
 		try {
 			setStatus('loading');
-
 			const res = await api.post('/reminders/telegram/link');
 			const botUrl = res.data?.botUrl;
 
@@ -775,7 +777,7 @@ export function TelegramConnectSection({ settings }) {
 
 			window.open(botUrl, '_blank');
 			setStatus('waiting');
-		} catch (err) {
+		} catch {
 			setStatus('error');
 		}
 	};
@@ -783,37 +785,25 @@ export function TelegramConnectSection({ settings }) {
 	const telegramAlreadyEnabled = settings?.telegramEnabled && settings?.telegramChatId;
 
 	return (
-		<div className=" ">
-
+		<div>
 			{status !== 'linked' && !telegramAlreadyEnabled && (
-				<>
-					<button
-						onClick={handleConnect}
-						disabled={status === 'loading'}
-						className="w-full px-3 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-xs disabled:opacity-50"
-					>
-						{status === 'loading'
-							? t('reminders.telegram.loading')
-							: t('reminders.telegram.activate')}
-					</button>
-
-				</>
+				<button
+					onClick={handleConnect}
+					disabled={status === 'loading'}
+					className='w-full px-3 py-2 rounded-lg text-xs text-white disabled:opacity-50 bg-[var(--color-primary-600)] hover:bg-[var(--color-primary-700)]'
+				>
+					{status === 'loading' ? t('reminders.telegram.loading') : t('reminders.telegram.activate')}
+				</button>
 			)}
 
 			{status === 'linked' && telegramAlreadyEnabled && (
-				<button
-					type="button"
-					disabled
-					className="w-full px-3 bg-emerald-600 text-white py-2 rounded-lg text-xs opacity-90 cursor-default"
-				>
+				<button type='button' disabled className='w-full px-3 py-2 rounded-lg text-xs text-white opacity-90 cursor-default bg-[var(--color-secondary-600)]'>
 					{t('reminders.telegram.enabled')}
 				</button>
 			)}
 		</div>
 	);
 }
-
-
 
 /* ---------- Timeline ---------- */
 
@@ -827,24 +817,45 @@ function ReminderTimeline({ t, entries, highlightReminderId }) {
 	}
 
 	return (
-		<div className=' '>
+		<div>
 			<div className='flex items-center gap-2 mb-4'>
-				<span className='h-2 w-2 rounded-full bg-emerald-500' />
+				<span className='h-2 w-2 rounded-full bg-[var(--color-secondary-500)]' />
 				<p className='text-xs md:text-sm text-slate-500'>{safeT(t, 'timeline.subtitle', 'Timeline of your reminders (today)')}</p>
 			</div>
+
 			<div className='relative'>
 				<div className='absolute left-4 top-0 bottom-0 hidden md:block border-l border-dashed border-slate-200' />
+
 				<div className='space-y-3 md:space-y-2'>
 					{entries.map(entry => {
 						const isHighlighted = highlightReminderId && entry.reminderId === highlightReminderId;
-						const statusLabel = entry.status === 'past' ? safeT(t, 'timeline.status.past', 'Earlier today') : entry.status === 'now' ? safeT(t, 'timeline.status.now', 'Happening now') : safeT(t, 'timeline.status.upcoming', 'Upcoming');
-						const statusClass = entry.status === 'past' ? 'bg-slate-100 text-slate-600' : entry.status === 'now' ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700';
+
+						const statusLabel =
+							entry.status === 'past'
+								? safeT(t, 'timeline.status.past', 'Earlier today')
+								: entry.status === 'now'
+									? safeT(t, 'timeline.status.now', 'Happening now')
+									: safeT(t, 'timeline.status.upcoming', 'Upcoming');
+
+						const statusClass =
+							entry.status === 'past'
+								? 'bg-slate-100 text-slate-600'
+								: entry.status === 'now'
+									? 'bg-[var(--color-secondary-100)] text-[var(--color-secondary-700)]'
+									: 'bg-[var(--color-primary-100)] text-[var(--color-primary-700)]';
 
 						const [time, period] = formatTimelineTime(entry.time);
 
 						return (
-							<div key={entry.id} data-reminder-id={entry.reminderId} className={`box-3d relative flex flex-col gap-2 md:flex-row md:items-center md:gap-4 rounded-2xl border px-4 py-3 transition ${isHighlighted ? 'border-emerald-300 ring-2 ring-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
-								<div className='absolute -left-[3px] top-4 hidden md:block h-3 w-3 rounded-full border-2 border-white bg-indigo-500 shadow-sm' />
+							<div
+								key={entry.id}
+								data-reminder-id={entry.reminderId}
+								className={[
+									'box-3d relative flex flex-col gap-2 md:flex-row md:items-center md:gap-4 rounded-2xl border px-4 py-3 transition',
+									isHighlighted ? 'border-[var(--color-secondary-300)] ring-2 ring-[var(--color-secondary-200)] bg-[var(--color-secondary-50)]' : 'border-slate-200 bg-white hover:bg-slate-50',
+								].join(' ')}
+							>
+								<div className='absolute -left-[3px] top-4 hidden md:block h-3 w-3 rounded-full border-2 border-white bg-[var(--color-primary-500)] shadow-sm' />
 
 								<div className='flex items-end gap-2'>
 									<div className='font-number text-3xl md:text-4xl font-[600] text-slate-900'>{time}</div>
@@ -869,7 +880,17 @@ function ReminderTimeline({ t, entries, highlightReminderId }) {
 
 function IconButton({ cn, icon, onClick, label, danger }) {
 	return (
-		<button type='button' onClick={onClick} aria-label={label} title={label} className={`${cn} rounded-lg border px-2.5 py-2 text-sm transition ${danger ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
+		<button
+			type='button'
+			onClick={onClick}
+			aria-label={label}
+			title={label}
+			className={[
+				cn,
+				'rounded-lg border px-2.5 py-2 text-sm transition',
+				danger ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+			].join(' ')}
+		>
 			{icon}
 		</button>
 	);
@@ -878,58 +899,77 @@ function IconButton({ cn, icon, onClick, label, danger }) {
 /* ---------- Reminder card ---------- */
 
 const ReminderCard = React.memo(function ReminderCard({ now, t, reminder, onEdit, onDelete, onToggleActive, settings }) {
-
-	const next = useMemo(() => computeNextOccurrence(reminder, settings || {}), [reminder.id, JSON.stringify(reminder?.schedule || {}), JSON.stringify(settings || {}), now?.getTime()]);
+	const next = useMemo(() => computeNextOccurrence(reminder, settings || {}), [reminder?.id, JSON.stringify(reminder?.schedule || {}), JSON.stringify(settings || {}), now?.getTime()]);
 
 	const due = next && next.getTime() <= now.getTime();
-
 	const muted = !reminder.active;
 
 	const remainingMs = next ? Math.max(0, next.getTime() - now.getTime()) : null;
 	const remainingStr = remainingMs === null ? '—' : remainingMs === 0 ? safeT(t, 'now', 'Now') : humanDuration(remainingMs, { hhmm: true });
-
 	const almostDue = remainingMs !== null && remainingMs <= 5 * 60 * 1000 && remainingMs > 0;
 
 	const [scheduleText, time, period] = formatSchedule2(t, reminder);
 
+	const borderState = muted
+		? 'border-slate-200'
+		: due
+			? 'border-[var(--color-secondary-500)] ring-2 ring-[var(--color-secondary-200)]'
+			: almostDue
+				? 'border-[var(--color-primary-300)] ring-1 ring-[var(--color-primary-200)]'
+				: 'border-slate-200';
+
 	return (
-		<div className={`  hover:bg-slate-50 group bg-white relative  border-b  py-3 px-4 backdrop-blur transition ${muted ? '  border-slate-200' : due ? 'border-emerald-400 ring-2 ring-emerald-300/70' : almostDue ? 'border-indigo-300 ring-1 ring-indigo-200' : 'border-slate-200'}`}>
+		<div className={`hover:bg-slate-50 group bg-white relative border-b py-3 px-4 backdrop-blur transition ${borderState}`}>
 			<div className='relative flex items-start justify-between gap-4'>
-				<div className=' w-fit '>
+				<div className='w-fit'>
 					<div className='text-xs mb-1 flex flex-wrap items-center gap-2 text-slate-600'>
 						<span className='inline-flex items-end gap-1 text-xs'>
 							<div className='relative'>
-								{period && <span className=' absolute ltr:-right-7 rtl:-left-7  font-en text-sm font-[800] lowercase font-number '>{period}</span>}
-								<span className='text-4xl font-[700] font-number  '>{time}</span>
+								{period && <span className='absolute ltr:-right-7 rtl:-left-7 font-en text-sm font-[800] lowercase font-number'>{period}</span>}
+								<span className='text-4xl font-[700] font-number'>{time}</span>
 							</div>
-							{scheduleText && <span className='text-nowrap truncate rtl:mr-[2px] ltr:ml-[2px] '>{scheduleText}</span>}
+							{scheduleText && <span className='text-nowrap truncate rtl:mr-[2px] ltr:ml-[2px]'>{scheduleText}</span>}
 						</span>
 					</div>
-					<div className='gap-2 flex flex-wrap items-center '>
-						<MultiLangText className='  truncate text-base font-semibold text-slate-800'>{reminder.title}</MultiLangText>
+
+					<div className='gap-2 flex flex-wrap items-center'>
+						<MultiLangText className='truncate text-base font-semibold text-slate-800'>{reminder.title}</MultiLangText>
+
 						{next && (
-							<span className=' text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-700'>
-								{safeT(t, 'next', 'Next')}: {next ? humanDateTime(next) : '—'}
+							<span className='text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-700'>
+								{safeT(t, 'next', 'Next')}: {humanDateTime(next)}
 							</span>
 						)}
 
-						{due && <span className={`px-2 py-0.5 rounded-md ${due ? 'bg-emerald-100 text-emerald-800' : 'bg-indigo-50 text-indigo-700'}`}>{due ? safeT(t, 'now', 'Now') : `${safeT(t, 'willStartAfter', 'يعمل بعد')} ${remainingStr}`} </span>}
+						{due && (
+							<span className='px-2 py-0.5 rounded-md bg-[var(--color-secondary-100)] text-[var(--color-secondary-800)]'>
+								{safeT(t, 'now', 'Now')}
+							</span>
+						)}
+
 						{due && <span className='px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 text-xs font-semibold'>⏱ {safeT(t, 'passed', 'Passed')}</span>}
+
+						{!due && almostDue && (
+							<span className='px-2 py-0.5 rounded-md bg-[var(--color-primary-50)] text-[var(--color-primary-800)]'>
+								{safeT(t, 'willStartAfter', 'يعمل بعد')} {remainingStr}
+							</span>
+						)}
 					</div>
+
 					{reminder.notes && <p className='mt-1 text-sm text-slate-600'>{reminder.notes}</p>}
 				</div>
 
 				<div className='max-md:ltr:absolute max-md:ltr:right-0 max-md:ltr:top-0 max-md:ltr:w-[118px] ltr:w-[150px] relative z-10 flex items-center gap-1 md:gap-2'>
-					<IconButton cn={' max-md:h-[30px] h-[35px]  flex items-center justify-center  '} icon={<Edit2 className='w-[16px] max-md:w-[12px] ' />} label={safeT(t, 'actions.edit', 'Edit')} onClick={onEdit} />
-					<IconButton cn={' max-md:h-[30px] h-[35px]  flex items-center justify-center  '} danger icon={<Trash2 className='w-[16px] max-md:w-[12px] ' />} label={safeT(t, 'actions.delete', 'Delete')} onClick={onDelete} />
-					<div className='max-md:scale-[.9] mt-1 rtl:ml-[-15px] ltr:mr-[-150px] '>
+					<IconButton cn='max-md:h-[30px] h-[35px] flex items-center justify-center' icon={<Edit2 className='w-[16px] max-md:w-[12px]' />} label={safeT(t, 'actions.edit', 'Edit')} onClick={onEdit} />
+					<IconButton cn='max-md:h-[30px] h-[35px] flex items-center justify-center' danger icon={<Trash2 className='w-[16px] max-md:w-[12px]' />} label={safeT(t, 'actions.delete', 'Delete')} onClick={onDelete} />
+					<div className='max-md:scale-[.9] mt-1 rtl:ml-[-15px] ltr:mr-[-150px]'>
 						<Switcher checked={reminder.active} onChange={onToggleActive} />
 					</div>
 				</div>
 			</div>
 		</div>
 	);
-})
+});
 
 /* ---------- timeline building ---------- */
 
@@ -943,6 +983,7 @@ function buildTimelineEntries(reminders = [], settings = {}, targetDate = new Da
 
 	for (const reminder of reminders) {
 		if (!reminder?.active) continue;
+
 		const schedule = reminder.schedule || {};
 		const times = Array.isArray(schedule.times) && schedule.times.length ? schedule.times : ['08:00'];
 
@@ -952,9 +993,7 @@ function buildTimelineEntries(reminders = [], settings = {}, targetDate = new Da
 
 		if (schedule.mode === 'interval' || schedule.mode === 'prayer') {
 			const next = computeNextOccurrence(reminder, normalizedSettings);
-			if (next && sameDay(next, today)) {
-				pushOccurrence(next);
-			}
+			if (next && sameDay(next, today)) pushOccurrence(next);
 			continue;
 		}
 
@@ -1018,20 +1057,12 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 			notes: initial?.notes || '',
 			active: initial?.active ?? true,
 			schedule: normalizeSchedule(initial?.schedule || {}),
-			sound: initial?.sound || {
-				id: 'chime',
-				name: 'Chime',
-				previewUrl: SOUND_SAMPLES.chime,
-				volume: 0.8,
-			},
+			sound: initial?.sound || { id: 'chime', name: 'Chime', previewUrl: SOUND_SAMPLES.chime, volume: 0.8 },
 			priority: initial?.priority || 'normal',
 			rrule: initial?.schedule?.rrule || '',
 			exdates: initial?.schedule?.exdates || [],
 			defaultSnooze: initial?.defaultSnooze ?? 10,
-			quietHours: initial?.quietHours || {
-				start: '12:00 PM',
-				end: '01:00 AM',
-			},
+			quietHours: initial?.quietHours || { start: '12:00 PM', end: '01:00 AM' },
 			timezone: initial?.timezone || settings.timezone || 'Africa/Cairo',
 		},
 	});
@@ -1044,20 +1075,12 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 			notes: initial?.notes || '',
 			active: initial?.active ?? true,
 			schedule: normalizeSchedule(initial?.schedule || {}),
-			sound: initial?.sound || {
-				id: 'chime',
-				name: 'Chime',
-				previewUrl: SOUND_SAMPLES.chime,
-				volume: 0.8,
-			},
+			sound: initial?.sound || { id: 'chime', name: 'Chime', previewUrl: SOUND_SAMPLES.chime, volume: 0.8 },
 			priority: initial?.priority || 'normal',
 			rrule: initial?.schedule?.rrule || '',
 			exdates: initial?.schedule?.exdates || [],
 			defaultSnooze: initial?.defaultSnooze ?? 10,
-			quietHours: initial?.quietHours || {
-				start: '10:00 PM',
-				end: '07:00 AM',
-			},
+			quietHours: initial?.quietHours || { start: '10:00 PM', end: '07:00 AM' },
 			timezone: initial?.timezone || settings.timezone || 'Africa/Cairo',
 		});
 	}, [initial, reset, settings.timezone]);
@@ -1065,7 +1088,6 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 	const mode = watch('schedule.mode');
 	const times = watch('schedule.times');
 	const [activeTab, setActiveTab] = useState('details');
-
 
 	const onSubmit = data => {
 		onSave({
@@ -1081,26 +1103,21 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 	};
 
 	const addTime = () => setValue('schedule.times', [...(times || []), '12:00']);
-	const removeTime = idx =>
-		setValue(
-			'schedule.times',
-			(times || []).filter((_, i) => i !== idx),
-		);
+	const removeTime = idx => setValue('schedule.times', (times || []).filter((_, i) => i !== idx));
 
 	const [todayTimes, setTodayTimes] = useState(null);
+
 	useEffect(() => {
 		let mounted = true;
 		fetchTodayPrayerTimes(settings)
 			.then(tms => {
 				if (mounted) setTodayTimes(tms);
 			})
-			.catch(() => { });
+			.catch(() => {});
 		return () => {
 			mounted = false;
 		};
 	}, [settings.city, settings.country]);
-
-
 
 	const MODE_OPTIONS = [
 		{ id: 'once', label: safeT(t, 'mode.once', 'Once') },
@@ -1111,58 +1128,48 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 		{ id: 'interval', label: safeT(t, 'mode.interval', 'Interval') },
 	];
 
-	const intervalOptions = [
-		{
-			id: '1',
-			label: safeT(t, 'interval.every1h', 'Every 1 hour'),
-			value: 1,
-		},
-		{
-			id: '2',
-			label: safeT(t, 'interval.every2h', 'Every 2 hours'),
-			value: 2,
-		},
-		{
-			id: '3',
-			label: safeT(t, 'interval.every3h', 'Every 3 hours'),
-			value: 3,
-		},
-		{
-			id: '4',
-			label: safeT(t, 'interval.every4h', 'Every 4 hours'),
-			value: 4,
-		},
-		{
-			id: '5',
-			label: safeT(t, 'interval.every5h', 'Every 5 hours'),
-			value: 5,
-		},
-		{
-			id: '6',
-			label: safeT(t, 'interval.every6h', 'Every 6 hours'),
-			value: 6,
-		},
-	];
+	const intervalOptions = [1, 2, 3, 4, 5, 6].map(v => ({
+		id: String(v),
+		label: safeT(t, `interval.every${v}h`, `Every ${v} hour`),
+		value: v,
+	}));
 
 	return (
 		<form className='grid gap-5' onSubmit={handleSubmit(onSubmit)}>
 			{activeTab === 'details' && (
 				<div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-					<Input label={safeT(t, 'form.title', 'Title')} placeholder={safeT(t, 'form.titlePh', 'Reminder title')} error={errors?.title && safeT(t, 'errors.title', 'Title is required')} value={watch('title')} {...register('title')} />
+					<Input
+						label={safeT(t, 'form.title', 'Title')}
+						placeholder={safeT(t, 'form.titlePh', 'Reminder title')}
+						error={errors?.title && safeT(t, 'errors.title', 'Title is required')}
+						value={watch('title')}
+						{...register('title')}
+					/>
 
 					<input type='hidden' value='custom' {...register('type')} />
 
-
-
-					<div className=' '>
+					<div>
 						<div className='mb-1.5 flex items-center gap-1.5'>
 							<label className='block text-sm font-medium text-slate-700'>{safeT(t, 'form.mode', 'Mode')}</label>
 							<Info className='w-3.5 h-3.5 text-slate-400' />
 						</div>
-						<Controller control={control} name='schedule.mode' render={({ field }) => <Select options={MODE_OPTIONS} value={field.value || 'daily'} onChange={val => field.onChange(val)} placeholder={safeT(t, 'form.modePh', 'Select mode')} className='min-w-[220px]' />} />
+
+						<Controller
+							control={control}
+							name='schedule.mode'
+							render={({ field }) => (
+								<Select
+									options={MODE_OPTIONS}
+									value={field.value || 'daily'}
+									onChange={val => field.onChange(val)}
+									placeholder={safeT(t, 'form.modePh', 'Select mode')}
+									className='min-w-[220px]'
+								/>
+							)}
+						/>
+
 						{errors?.schedule?.mode && <p className='mt-1.5 text-xs text-rose-600'>{safeT(t, 'errors.mode', 'Select a mode')}</p>}
 					</div>
-
 
 					{mode === 'weekly' && <WeeklyDaysSelector t={t} initial={initial} getDays={() => watch('schedule.daysOfWeek')} setDays={arr => setValue('schedule.daysOfWeek', arr)} />}
 
@@ -1172,6 +1179,7 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 								<label className='mb-1.5 block text-sm font-medium text-slate-700'>{safeT(t, 'form.intervalStart', 'Start time')}</label>
 								<TimeField showLabel={false} value={(times && times[0]) || '09:00'} onChange={val => setValue('schedule.times', [val])} />
 							</div>
+
 							<Controller
 								control={control}
 								name='schedule.interval.every'
@@ -1181,20 +1189,13 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 										<div>
 											<label className='mb-1.5 block text-sm font-medium text-slate-700'>{safeT(t, 'form.intervalEvery', 'Repeat every')}</label>
 											<Select
-												options={intervalOptions.map(o => ({
-													id: String(o.value),
-													label: o.label,
-												}))}
+												options={intervalOptions.map(o => ({ id: String(o.value), label: o.label }))}
 												value={String(currentEvery)}
 												onChange={val => {
 													const every = Number(val);
 													field.onChange(every);
 													const currentInterval = watch('schedule.interval') || {};
-													setValue('schedule.interval', {
-														...currentInterval,
-														every,
-														unit: currentInterval.unit || 'hour',
-													});
+													setValue('schedule.interval', { ...currentInterval, every, unit: currentInterval.unit || 'hour' });
 												}}
 											/>
 										</div>
@@ -1209,7 +1210,7 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 							<label className='mb-1.5 block text-sm font-medium text-slate-700'>{safeT(t, 'form.times', 'Times')}</label>
 							<div className='flex flex-wrap gap-2'>
 								{(times || []).map((tVal, i) => (
-									<div key={i} className=' relative flex items-center gap-2 '>
+									<div key={i} className='relative flex items-center gap-2'>
 										<TimeField
 											showLabel={false}
 											value={tVal}
@@ -1219,7 +1220,12 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 												setValue('schedule.times', next);
 											}}
 										/>
-										<IconButton cn={' absolute ltr:right-[5px] rtl:left-[5px] top-[7px] flex items-center justify-center h-[30px] w-[30px] border border-rose-300 '} danger icon={'✕'} onClick={() => removeTime(i)} />
+										<IconButton
+											cn='absolute ltr:right-[5px] rtl:left-[5px] top-[7px] flex items-center justify-center h-[30px] w-[30px] border border-rose-300'
+											danger
+											icon={'✕'}
+											onClick={() => removeTime(i)}
+										/>
 									</div>
 								))}
 								<button type='button' onClick={addTime} className='rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50'>
@@ -1239,16 +1245,14 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 										<div>
 											<label className='mb-1.5 block text-sm font-medium text-slate-700'>{safeT(t, 'form.prayer', 'Prayer')}</label>
 											<Select
-												options={PRAYERS.map(p => ({
-													id: p,
-													label: safeT(t, `prayer.${p.toLowerCase()}`, p),
-												}))}
+												options={PRAYERS.map(p => ({ id: p, label: safeT(t, `prayer.${p.toLowerCase()}`, p) }))}
 												value={field.value || 'Fajr'}
 												onChange={val => field.onChange(val)}
 											/>
 										</div>
 									)}
 								/>
+
 								<Controller
 									control={control}
 									name='schedule.prayer.direction'
@@ -1257,14 +1261,8 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 											<label className='mb-1.5 block text-sm font-medium text-slate-700'>{safeT(t, 'form.beforeAfter', 'Before/After')}</label>
 											<Select
 												options={[
-													{
-														id: 'before',
-														label: safeT(t, 'before', 'Before'),
-													},
-													{
-														id: 'after',
-														label: safeT(t, 'after', 'After'),
-													},
+													{ id: 'before', label: safeT(t, 'before', 'Before') },
+													{ id: 'after', label: safeT(t, 'after', 'After') },
 												]}
 												value={field.value || 'before'}
 												onChange={val => field.onChange(val)}
@@ -1272,7 +1270,20 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 										</div>
 									)}
 								/>
-								<Controller control={control} name='schedule.prayer.offsetMin' render={({ field }) => <Input label={safeT(t, 'form.minutes', 'Minutes')} type='number' value={field.value ?? 10} onChange={e => field.onChange(Number(e.target.value) || 0)} cnInputParent='h-[40px]' />} />
+
+								<Controller
+									control={control}
+									name='schedule.prayer.offsetMin'
+									render={({ field }) => (
+										<Input
+											label={safeT(t, 'form.minutes', 'Minutes')}
+											type='number'
+											value={field.value ?? 10}
+											onChange={e => field.onChange(Number(e.target.value) || 0)}
+											cnInputParent='h-[40px]'
+										/>
+									)}
+								/>
 							</div>
 
 							{todayTimes && (
@@ -1293,60 +1304,11 @@ function ReminderForm({ t, initial, onCancel, onSave, settings }) {
 				</div>
 			)}
 
-			{activeTab === 'settings' && (
-				<div className='grid gap-4'>
-					<div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
-						<div>
-							<label className='mb-1.5 block text-sm font-medium text-slate-700'>{safeT(t, 'settings.defaultSnooze', 'Default snooze (min)')}</label>
-							<Input type='number' cnInputParent='h-[40px]' value={watch('defaultSnooze') ?? 10} onChange={e => setValue('defaultSnooze', Number(e.target.value) || 10)} />
-						</div>
-					</div>
-
-					<div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
-						<div>
-							<label className='mb-1 block text-sm text-slate-600'>{safeT(t, 'settings.quietFrom', 'Quiet from')}</label>
-							<Input
-								placeholder='10:00 PM'
-								value={watch('quietHours.start') ?? '10:00 PM'}
-								onChange={e =>
-									setValue('quietHours', {
-										...(watch('quietHours') || {}),
-										start: e.target.value,
-									})
-								}
-							/>
-						</div>
-						<div>
-							<label className='mb-1 block text-sm text-slate-600'>{safeT(t, 'settings.quietTo', 'Quiet to')}</label>
-							<Input
-								placeholder='07:00 AM'
-								value={watch('quietHours.end') ?? '07:00 AM'}
-								onChange={e =>
-									setValue('quietHours', {
-										...(watch('quietHours') || {}),
-										end: e.target.value,
-									})
-								}
-							/>
-						</div>
-						<div>
-							<label className='mb-1 block text-sm text-slate-600'>{safeT(t, 'settings.timezone', 'Timezone')}</label>
-							<Input value={watch('timezone') ?? 'Africa/Cairo'} onChange={e => setValue('timezone', e.target.value)} />
-						</div>
-					</div>
-				</div>
-			)}
-
 			<div className='mt-4 flex items-center justify-end gap-2'>
-				<button
-					type='button'
-					onClick={() => {
-						onCancel();
-					}}
-					className='rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50'>
+				<button type='button' onClick={onCancel} className='rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50'>
 					{safeT(t, 'actions.cancel', 'Cancel')}
 				</button>
-				<button type='submit' className='rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 text-white px-4 py-2'>
+				<button type='submit' className='rounded-lg theme-gradient-bg text-white px-4 py-2'>
 					{safeT(t, 'actions.save', 'Save')}
 				</button>
 			</div>
@@ -1361,12 +1323,12 @@ function WeeklyDaysSelector({ t, initial, getDays, setDays }) {
 	const orderedDays = WEEK_DAYS;
 	const isSelected = k => (days || []).includes(k);
 	const setSorted = arr => setDays(Array.from(new Set(arr)));
+
 	const toggle = k => {
 		const cur = new Set(days || []);
 		cur.has(k) ? cur.delete(k) : cur.add(k);
 		setSorted([...cur]);
 	};
-
 
 	return (
 		<div className='md:col-span-2'>
@@ -1375,8 +1337,21 @@ function WeeklyDaysSelector({ t, initial, getDays, setDays }) {
 			<div className='flex flex-wrap gap-2'>
 				{orderedDays.map(d => {
 					const selected = isSelected(d.key);
+
 					return (
-						<button key={d.key} type='button' role='checkbox' aria-checked={selected} title={safeT(t, `weekday.${d.label}`, d.label)} onClick={() => toggle(d.key)} className={['h-9 min-w-9 px-3 rounded-lg text-sm font-medium transition-all select-none', 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50', selected ? 'bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 text-white shadow-sm' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'].join(' ')}>
+						<button
+							key={d.key}
+							type='button'
+							role='checkbox'
+							aria-checked={selected}
+							title={safeT(t, `weekday.${d.label}`, d.label)}
+							onClick={() => toggle(d.key)}
+							className={[
+								'h-9 min-w-9 px-3 rounded-lg text-sm font-medium transition-all select-none',
+								'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-300)]/50',
+								selected ? 'theme-gradient-bg text-white shadow-sm' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50',
+							].join(' ')}
+						>
 							{safeT(t, `weekday.${d.label}`, d.label)}
 						</button>
 					);
@@ -1391,6 +1366,7 @@ function WeeklyDaysSelector({ t, initial, getDays, setDays }) {
 function SettingsPanel({ t, value, onChange }) {
 	const [v, setV] = useState(value);
 	const set = patch => setV(s => ({ ...s, ...patch }));
+
 	const save = async () => {
 		try {
 			const saved = await updateUserSettingsApi(v);
@@ -1399,6 +1375,7 @@ function SettingsPanel({ t, value, onChange }) {
 			// ignore
 		}
 	};
+
 	return (
 		<div className='grid gap-4'>
 			<div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
@@ -1406,35 +1383,29 @@ function SettingsPanel({ t, value, onChange }) {
 				<Input label={safeT(t, 'settings.city', 'City')} cnInputParent='h-[40px]' value={v.city} onChange={e => set({ city: e.target.value })} />
 				<Input label={safeT(t, 'settings.country', 'Country')} cnInputParent='h-[40px]' value={v.country} onChange={e => set({ country: e.target.value })} />
 			</div>
+
 			<div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
 				<div>
 					<label className='mb-1 block text-sm text-slate-600'>{safeT(t, 'settings.quietFrom', 'Quiet from')}</label>
-					<Input
-						value={v.quietHours.start}
-						onChange={e =>
-							set({
-								quietHours: { ...v.quietHours, start: e.target.value },
-							})
-						}
-						placeholder='10:00 PM'
-					/>
+					<Input value={v.quietHours.start} onChange={e => set({ quietHours: { ...v.quietHours, start: e.target.value } })} placeholder='10:00 PM' />
 				</div>
+
 				<div>
 					<label className='mb-1 block text-sm text-slate-600'>{safeT(t, 'settings.quietTo', 'Quiet to')}</label>
-					<Input
-						value={v.quietHours.end}
-						onChange={e =>
-							set({
-								quietHours: { ...v.quietHours, end: e.target.value },
-							})
-						}
-						placeholder='07:00 AM'
-					/>
+					<Input value={v.quietHours.end} onChange={e => set({ quietHours: { ...v.quietHours, end: e.target.value } })} placeholder='07:00 AM' />
 				</div>
-				<Input label={safeT(t, 'settings.defaultSnooze', 'Default snooze (min)')} type='number' cnInputParent='h-[40px]' value={v.defaultSnooze} onChange={e => set({ defaultSnooze: Number(e.target.value) || 10 })} />
+
+				<Input
+					label={safeT(t, 'settings.defaultSnooze', 'Default snooze (min)')}
+					type='number'
+					cnInputParent='h-[40px]'
+					value={v.defaultSnooze}
+					onChange={e => set({ defaultSnooze: Number(e.target.value) || 10 })}
+				/>
 			</div>
+
 			<div className='flex justify-end'>
-				<button type='button' onClick={save} className='rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 text-white px-4 py-2'>
+				<button type='button' onClick={save} className='rounded-lg theme-gradient-bg text-white px-4 py-2'>
 					{safeT(t, 'actions.save', 'Save')}
 				</button>
 			</div>
@@ -1476,11 +1447,10 @@ function CalendarView({ t, reminders, settings }) {
 		for (let d = 1; d <= daysInMonth; d++) {
 			const day = new Date(y, m, d);
 			const key = toISODate(day);
+
 			if (s.mode === 'weekly') {
 				const code = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][day.getDay()];
-				if ((s.daysOfWeek || []).includes(code)) {
-					byDay.set(key, [...(byDay.get(key) || []), r]);
-				}
+				if ((s.daysOfWeek || []).includes(code)) byDay.set(key, [...(byDay.get(key) || []), r]);
 			} else {
 				byDay.set(key, [...(byDay.get(key) || []), r]);
 			}
@@ -1500,28 +1470,31 @@ function CalendarView({ t, reminders, settings }) {
 		<div className='w-full space-y-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-3 shadow-sm backdrop-blur-sm sm:p-4 lg:p-6'>
 			<div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
 				<div className='flex items-center justify-between gap-2 sm:gap-4'>
-					<button className='inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 text-lg leading-none shadow-sm transition hover:border-slate-300 hover:bg-slate-50 active:scale-95' onClick={() => setCursor(new Date(y, m - 1, 1))}>
+					<button
+						className='inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 text-lg leading-none shadow-sm transition hover:border-slate-300 hover:bg-slate-50 active:scale-95'
+						onClick={() => setCursor(new Date(y, m - 1, 1))}
+					>
 						‹
 					</button>
 
 					<div className='flex flex-col text-center sm:text-left'>
 						<span className='text-base font-semibold text-slate-900 sm:text-lg'>
-							{cursor.toLocaleDateString('ar-EG', {
-								month: 'long',
-								year: 'numeric',
-							})}
+							{cursor.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' })}
 						</span>
 						<span className='text-xs text-slate-500'>{safeT(t, 'calendar.subtitle', 'Tap a day to see reminders')}</span>
 					</div>
 
-					<button className='inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 text-lg leading-none shadow-sm transition hover:border-slate-300 hover:bg-slate-50 active:scale-95' onClick={() => setCursor(new Date(y, m + 1, 1))}>
+					<button
+						className='inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 text-lg leading-none shadow-sm transition hover:border-slate-300 hover:bg-slate-50 active:scale-95'
+						onClick={() => setCursor(new Date(y, m + 1, 1))}
+					>
 						›
 					</button>
 				</div>
 
 				<div className='flex items-center gap-2 sm:justify-end'>
 					<button onClick={goToToday} className='inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 active:scale-95'>
-						<span className='mr-1 h-2 w-2 rounded-full bg-emerald-500' />
+						<span className='mr-1 h-2 w-2 rounded-full bg-[var(--color-secondary-500)]' />
 						{safeT(t, 'calendar.today', 'Today')}
 					</button>
 				</div>
@@ -1539,26 +1512,25 @@ function CalendarView({ t, reminders, settings }) {
 
 					<div className='mt-2 grid grid-cols-7 gap-1.5 sm:gap-2'>
 						{daySlots.map((d, i) => {
-							if (!d) {
-								return <div key={i} className='aspect-square rounded-xl border border-transparent p-1' />;
-							}
+							if (!d) return <div key={i} className='aspect-square rounded-xl border border-transparent p-1' />;
 
 							const key = toISODate(d);
 							const list = byDay.get(key) || [];
 							const count = list.length;
+
 							const isToday = sameDay(d, new Date());
 							const isSelected = selectedDate && sameDay(d, selectedDate);
 
 							let stateClasses = 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700';
-							if (isToday) {
-								stateClasses = 'border-emerald-400 bg-emerald-50/70 text-emerald-900 shadow-[0_0_0_1px_rgba(16,185,129,0.25)]';
-							}
-							if (isSelected) {
-								stateClasses = 'border-blue-600 bg-blue-50/80 text-blue-900 shadow-[0_0_0_1px_rgba(37,99,235,0.3)]';
-							}
+							if (isToday) stateClasses = 'border-[var(--color-secondary-500)] bg-[var(--color-secondary-50)] text-slate-900 shadow-[0_0_0_1px_rgba(0,0,0,0.04)]';
+							if (isSelected) stateClasses = 'border-[var(--color-primary-600)] bg-[var(--color-primary-50)] text-slate-900 shadow-[0_0_0_1px_rgba(0,0,0,0.04)]';
 
 							return (
-								<button key={i} onClick={() => setSelectedDate(d)} className={`group flex flex-col justify-between rounded-2xl border p-1.5 text-left text-xs sm:p-2 sm:text-sm transition-all duration-150 ease-out min-h-[56px] sm:min-h-[72px] ${stateClasses}`}>
+								<button
+									key={i}
+									onClick={() => setSelectedDate(d)}
+									className={`group flex flex-col justify-between rounded-2xl border p-1.5 text-left text-xs sm:p-2 sm:text-sm transition-all duration-150 ease-out min-h-[56px] sm:min-h-[72px] ${stateClasses}`}
+								>
 									<div className='flex items-center justify-between gap-1'>
 										<span className='text-[11px] font-semibold sm:text-sm'>{d.getDate()}</span>
 										{count > 0 && <span className='rounded-full bg-slate-900/80 px-2 py-0.5 text-[10px] font-medium text-white sm:text-[11px]'>{count}</span>}
@@ -1584,13 +1556,10 @@ function CalendarView({ t, reminders, settings }) {
 							<div className='flex flex-col'>
 								<span className='text-sm font-semibold text-slate-800 sm:text-base'>
 									{selectedDate
-										? `${safeT(t, 'calendar.remindersOf', 'Reminders of')} ${selectedDate.toLocaleDateString('ar-EG', {
-											weekday: 'long',
-											day: 'numeric',
-											month: 'long',
-										})}`
+										? `${safeT(t, 'calendar.remindersOf', 'Reminders of')} ${selectedDate.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}`
 										: safeT(t, 'calendar.pickDay', 'Pick a day')}
 								</span>
+
 								{selectedDate && (
 									<span className='text-[11px] text-slate-500 sm:text-xs'>
 										{safeT(t, 'calendar.total', 'Total reminders:')} {selectedList.length}
@@ -1601,10 +1570,15 @@ function CalendarView({ t, reminders, settings }) {
 
 						<div className='flex-1 overflow-y-auto pr-1 space-y-2 max-h-[260px] sm:max-h-[320px]'>
 							{selectedList.length === 0 ? (
-								<p className='rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-3 py-4 text-center text-xs text-slate-500 sm:text-sm'>{selectedDate ? safeT(t, 'calendar.noneForDay', 'No reminders for this day') : safeT(t, 'calendar.none', 'Select a day to view reminders')}</p>
+								<p className='rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-3 py-4 text-center text-xs text-slate-500 sm:text-sm'>
+									{selectedDate ? safeT(t, 'calendar.noneForDay', 'No reminders for this day') : safeT(t, 'calendar.none', 'Select a day to view reminders')}
+								</p>
 							) : (
 								selectedList.map((r, idx) => (
-									<div key={idx} className='group rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs shadow-[0_1px_0_rgba(15,23,42,0.03)] transition hover:border-blue-500/60 hover:bg-blue-50/40 sm:text-sm'>
+									<div
+										key={idx}
+										className='group rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs shadow-[0_1px_0_rgba(15,23,42,0.03)] transition hover:border-[var(--color-primary-400)] hover:bg-[var(--color-primary-50)] sm:text-sm'
+									>
 										<div className='flex items-start justify-between gap-2'>
 											<div>
 												<div className='line-clamp-1 text-[13px] font-semibold text-slate-900 sm:text-sm'>{r.title || safeT(t, 'untitled', 'Untitled')}</div>
@@ -1617,23 +1591,6 @@ function CalendarView({ t, reminders, settings }) {
 						</div>
 					</div>
 				</div>
-			</div>
-
-			<div className='flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-500 shadow-sm sm:hidden'>
-				<span>
-					{selectedDate
-						? selectedDate.toLocaleDateString('ar-EG', {
-							weekday: 'short',
-							day: 'numeric',
-							month: 'short',
-						})
-						: safeT(t, 'calendar.mobileHint', 'Tap a day to see its reminders')}
-				</span>
-				{selectedDate && (
-					<span className='rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700'>
-						{selectedList.length} {safeT(t, 'calendar.remindersShort', 'reminders')}
-					</span>
-				)}
 			</div>
 		</div>
 	);
@@ -1652,17 +1609,30 @@ function QuickCreate({ t, onPick }) {
 		{ id: '50', label: '50' },
 		{ id: 'custom', label: safeT(t, 'quick.custom', 'Custom…') },
 	];
+
 	const [custom, setCustom] = useState('');
+
 	return (
-		//
-		<div className='relative  max-sm:hidden'>
-			<button type='button' onClick={() => setOpen(v => !v)} className='flex gap-1 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm hover:bg-white/20' aria-label={safeT(t, 'quick.title', 'Quick reminder')} title={safeT(t, 'quick.title', 'Quick reminder')}>
+		<div className='relative max-sm:hidden'>
+			<button
+				type='button'
+				onClick={() => setOpen(v => !v)}
+				className='flex gap-1 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm hover:bg-white/20'
+				aria-label={safeT(t, 'quick.title', 'Quick reminder')}
+				title={safeT(t, 'quick.title', 'Quick reminder')}
+			>
 				<Zap className='inline-block w-4 h-4 mt-[2px]' />
 				{safeT(t, 'quick.after', 'After X min')}
 			</button>
+
 			<AnimatePresence>
 				{open && (
-					<motion.div className='absolute ltr:left-0 rtl:right-0 mt-2 w-56 rounded-lg border border-slate-200 bg-white p-2 shadow-xl z-50' initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}>
+					<motion.div
+						className='absolute ltr:left-0 rtl:right-0 mt-2 w-56 rounded-lg border border-slate-200 bg-white p-2 shadow-xl z-50'
+						initial={{ opacity: 0, y: -4 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: -4 }}
+					>
 						<div className='grid gap-1 max-h-[105px] overflow-y-auto'>
 							{options.slice(0, 6).map(o => (
 								<button
@@ -1671,21 +1641,33 @@ function QuickCreate({ t, onPick }) {
 									onClick={() => {
 										onPick(Number(o.id));
 										setOpen(false);
-									}}>
+									}}
+								>
 									{safeT(t, 'quick.createIn', 'Create in')} {o.id} {safeT(t, 'minutesShort', 'min')}
 								</button>
 							))}
+
 							<div className='border-t border-slate-100 my-1' />
+
 							<div className='flex items-center gap-2 px-2'>
-								<input type='number' min={1} placeholder={safeT(t, 'quick.custom', 'Custom…')} className='text-slate-800 h-[36px] w-full rounded-lg border border-slate-300 px-2 text-base' value={custom} onChange={e => setCustom(e.target.value)} />
+								<input
+									type='number'
+									min={1}
+									placeholder={safeT(t, 'quick.custom', 'Custom…')}
+									className='text-slate-800 h-[36px] w-full rounded-lg border border-slate-300 px-2 text-base'
+									value={custom}
+									onChange={e => setCustom(e.target.value)}
+								/>
+
 								<button
-									className='rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 text-white px-3 py-2 text-xs'
+									className='rounded-lg theme-gradient-bg text-white px-3 py-2 text-xs'
 									onClick={() => {
 										const n = Number(custom);
 										if (!Number.isNaN(n) && n > 0) onPick(n);
 										setCustom('');
 										setOpen(false);
-									}}>
+									}}
+								>
 									{safeT(t, 'actions.add', 'Add')}
 								</button>
 							</div>
@@ -1702,15 +1684,18 @@ function QuickCreate({ t, onPick }) {
 function DueDialog({ open, reminder, onClose, onAck }) {
 	if (!open || !reminder) return null;
 	const t = useTranslations('reminders');
+
 	return (
 		<Modal open={open} onClose={onClose} title={reminder.title || 'Reminder'} maxW='max-w-md'>
 			<div className='grid gap-3'>
 				{reminder.notes && <p className='text-slate-700'>{reminder.notes}</p>}
+
 				<div className='flex items-center justify-end gap-2'>
 					<button onClick={onClose} className='rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50'>
 						{safeT(t, 'actions.close', 'Close')}
 					</button>
-					<button onClick={onAck} className='rounded-lg bg-gradient-to-br from-emerald-600 to-emerald-700 text-white px-4 py-2'>
+
+					<button onClick={onAck} className='rounded-lg bg-[var(--color-secondary-600)] hover:bg-[var(--color-secondary-700)] text-white px-4 py-2'>
 						{safeT(t, 'actions.done', 'Done')}
 					</button>
 				</div>
@@ -1722,14 +1707,14 @@ function DueDialog({ open, reminder, onClose, onAck }) {
 /* ---------- Push subscription helpers ---------- */
 
 const subscribeToPush = async registration => {
+	// keep your original logic
 	try {
-		// 🔍 Diagnostic: Check protocol
 		const protocol = window.location.protocol;
 		const hostname = window.location.hostname;
 		const isSecureContext = window.isSecureContext;
 
 		if (!isSecureContext && hostname !== 'localhost' && hostname !== '127.0.0.1') {
-			throw new Error(`⚠️ SECURITY ERROR: Push API requires HTTPS or localhost. ` + `Current: ${protocol}//${hostname}. ` + `If using IP address, switch to localhost or use HTTPS.`);
+			throw new Error(`⚠️ SECURITY ERROR: Push API requires HTTPS or localhost. Current: ${protocol}//${hostname}.`);
 		}
 
 		const data = await api.get('/reminders/push/vapid-key');
@@ -1737,90 +1722,59 @@ const subscribeToPush = async registration => {
 		if (!data?.data?.publicKey) {
 			throw new Error('No VAPID public key received from server');
 		}
+
 		let applicationServerKey;
-		try {
-			const publicKey = data.data.publicKey;
-			applicationServerKey = urlBase64ToUint8Array_local(publicKey);
-		} catch (convertError) {
-			throw new Error(`Failed to convert VAPID key: ${convertError.message}`);
-		}
+		const publicKey = data.data.publicKey;
+		applicationServerKey = urlBase64ToUint8Array_local(publicKey);
 
 		if (!registration.active) {
 			await new Promise(resolve => {
 				if (registration.installing) {
 					registration.installing.addEventListener('statechange', () => {
-						if (registration.active) {
-							resolve(null);
-						}
+						if (registration.active) resolve(null);
 					});
 				} else {
 					setTimeout(resolve, 1000);
 				}
 			});
-
-			if (!registration.active) {
-				throw new Error('Service Worker is not active after waiting');
-			}
+			if (!registration.active) throw new Error('Service Worker is not active after waiting');
 		}
 
 		let permission = Notification.permission;
-		if (permission === 'default') {
-			permission = await Notification.requestPermission();
-		}
-
-		if (permission !== 'granted') {
-			throw new Error('Notification permission not granted: ' + permission);
-		}
+		if (permission === 'default') permission = await Notification.requestPermission();
+		if (permission !== 'granted') throw new Error('Notification permission not granted: ' + permission);
 
 		let subscription = await registration.pushManager.getSubscription();
 
 		if (!subscription) {
 			try {
-
 				subscription = await registration.pushManager.subscribe({
 					userVisibleOnly: true,
-					applicationServerKey: applicationServerKey,
+					applicationServerKey,
 				});
-				console.log(subscription);
 			} catch (subscribeError) {
-
-				// Try alternate approach without applicationServerKey
 				if (subscribeError.name === 'AbortError') {
-					try {
-						const subWithoutKey = await registration.pushManager.subscribe({ userVisibleOnly: true });
-						subscription = subWithoutKey;
-					} catch (fallbackError) {
-						throw subscribeError; // Throw original error
-					}
+					const subWithoutKey = await registration.pushManager.subscribe({ userVisibleOnly: true });
+					subscription = subWithoutKey;
 				} else {
 					throw subscribeError;
 				}
 			}
 		}
-		if (!subscription) {
-			throw new Error('Subscription is null after creation');
-		}
 
 		const p256dh = subscription.getKey('p256dh');
 		const auth = subscription.getKey('auth');
-
-		if (!p256dh || !auth) {
-			throw new Error('Missing subscription keys');
-		}
-
-
-		const p256dhBase64 = arrayBufferToBase64_local(p256dh);
-		const authBase64 = arrayBufferToBase64_local(auth);
+		if (!p256dh || !auth) throw new Error('Missing subscription keys');
 
 		const subscriptionData = {
 			endpoint: subscription.endpoint,
 			keys: {
-				p256dh: p256dhBase64,
-				auth: authBase64,
+				p256dh: arrayBufferToBase64_local(p256dh),
+				auth: arrayBufferToBase64_local(auth),
 			},
 		};
 
-		const postResponse = await api.post('/reminders/push/subscribe', subscriptionData);
+		await api.post('/reminders/push/subscribe', subscriptionData);
 		return subscription;
 	} catch (error) {
 		throw error;
@@ -1828,78 +1782,67 @@ const subscribeToPush = async registration => {
 };
 
 function arrayBufferToBase64_local(buffer) {
-	if (!buffer) {
-		throw new Error('Buffer is null or undefined');
-	}
+	if (!buffer) throw new Error('Buffer is null or undefined');
 	const bytes = new Uint8Array(buffer);
-	console.log(`[arrayBufferToBase64] Converting ${bytes.byteLength} bytes to base64...`);
 
-	// استخدام طريقة آمنة تعمل على جميع المتصفحات
 	let binary = '';
-	const chunkSize = 8192; // معالجة 8KB في كل مرة لتجنب stack overflow
-
+	const chunkSize = 8192;
 	for (let i = 0; i < bytes.byteLength; i += chunkSize) {
 		const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.byteLength));
 		binary += String.fromCharCode.apply(null, chunk);
 	}
 
 	const base64 = window.btoa(binary);
-	const urlSafeBase64 = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-
-	console.log(`[arrayBufferToBase64] ✅ Success: ${bytes.byteLength} bytes → base64 (${urlSafeBase64.length} chars)`);
-	return urlSafeBase64;
+	return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 function urlBase64ToUint8Array_local(base64String) {
-	if (!base64String) {
-		throw new Error('Base64 string is empty');
-	}
+	if (!base64String) throw new Error('Base64 string is empty');
 
 	const cleaned = base64String.trim();
-
 	const padding = '='.repeat((4 - (cleaned.length % 4)) % 4);
 	const base64 = (cleaned + padding).replace(/\-/g, '+').replace(/_/g, '/');
 
-	try {
-		const rawData = window.atob(base64);
-		const outputArray = new Uint8Array(rawData.length);
-
-		for (let i = 0; i < rawData.length; ++i) {
-			outputArray[i] = rawData.charCodeAt(i);
-		}
-		return outputArray;
-	} catch (error) {
-		throw new Error(`Invalid VAPID public key format: ${error.message}`);
-	}
+	const rawData = window.atob(base64);
+	const outputArray = new Uint8Array(rawData.length);
+	for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+	return outputArray;
 }
 
-export function addMonths(date, months) {
-	const d = new Date(date);
-	d.setMonth(d.getMonth() + months);
-	return d;
-}
+/* ---------- Local Input component ---------- */
 
-/* ---------- Local Input component (replaces imported Input) ---------- */
-
-function Input({ label, type = 'text', error, placeholder, cnInputParent = '', className = '', name, onChange, onBlur, value, defaultValue, id, inputRef, disabled = false, clearable = true, cnInput = '', ...rest }) {
+function Input({
+	label,
+	type = 'text',
+	error,
+	placeholder,
+	cnInputParent = '',
+	className = '',
+	name,
+	onChange,
+	onBlur,
+	value,
+	defaultValue,
+	id,
+	inputRef,
+	disabled = false,
+	clearable = true,
+	cnInput = '',
+	...rest
+}) {
 	const inputId = id || (name ? `input-${name}` : undefined);
 
 	const handleChange = e => {
-		if (typeof onChange === 'function') {
-			onChange(e); // keep same API (event)
-		}
+		if (typeof onChange === 'function') onChange(e);
 	};
 
-	// derive current value to decide showing clear icon
 	const currentValue = typeof value !== 'undefined' ? value : typeof defaultValue !== 'undefined' ? defaultValue : '';
-
 	const showClear = clearable && !disabled && currentValue !== '';
 
 	const clearInput = e => {
 		e.stopPropagation();
 
 		if (typeof onChange === 'function') {
-			// Build a minimal event-like object so existing handlers using e.target.value / e.target.name still work
 			const fakeEvent = {
 				...e,
 				target: {
@@ -1911,9 +1854,7 @@ function Input({ label, type = 'text', error, placeholder, cnInputParent = '', c
 			onChange(fakeEvent);
 		}
 
-		if (inputRef && typeof inputRef === 'object' && inputRef.current) {
-			inputRef.current.focus();
-		}
+		if (inputRef && typeof inputRef === 'object' && inputRef.current) inputRef.current.focus();
 	};
 
 	return (
@@ -1924,8 +1865,31 @@ function Input({ label, type = 'text', error, placeholder, cnInputParent = '', c
 				</label>
 			)}
 
-			<div className={[cnInputParent, 'relative flex items-center rounded-lg border bg-white', disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text', error && error !== 'users' ? 'border-rose-500' : 'border-slate-300 hover:border-slate-400 focus-within:border-indigo-500', 'focus-within:ring-4 focus-within:ring-indigo-100', 'transition-colors'].join(' ')}>
-				<input id={inputId} name={name} type={type} placeholder={placeholder} className={`input-3d ${cnInput} h-[40px] ltr:pr-[28px] rtl:pl-[28px] w-full rounded-lg px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-gray-400`} value={value} defaultValue={defaultValue} onChange={handleChange} onBlur={onBlur} ref={inputRef} disabled={disabled} aria-invalid={!!error} {...rest} />
+			<div
+				className={[
+					cnInputParent,
+					'relative flex items-center rounded-lg border bg-white',
+					disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text',
+					error && error !== 'users' ? 'border-rose-500' : 'border-slate-300 hover:border-slate-400 focus-within:border-[var(--color-primary-500)]',
+					'focus-within:ring-4 focus-within:ring-[var(--color-primary-100)]',
+					'transition-colors',
+				].join(' ')}
+			>
+				<input
+					id={inputId}
+					name={name}
+					type={type}
+					placeholder={placeholder}
+					className={`input-3d ${cnInput} h-[40px] ltr:pr-[28px] rtl:pl-[28px] w-full rounded-lg px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-gray-400`}
+					value={value}
+					defaultValue={defaultValue}
+					onChange={handleChange}
+					onBlur={onBlur}
+					ref={inputRef}
+					disabled={disabled}
+					aria-invalid={!!error}
+					{...rest}
+				/>
 
 				{showClear && <X size={16} className='absolute rtl:left-3 ltr:right-3 top-1/2 -translate-y-1/2 cursor-pointer opacity-60 transition hover:opacity-100' onClick={clearInput} />}
 			</div>

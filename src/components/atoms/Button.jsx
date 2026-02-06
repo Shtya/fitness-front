@@ -1,6 +1,6 @@
 'use client';
 import { Link } from '@/i18n/navigation';
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function Button({
   name,
@@ -12,53 +12,108 @@ export default function Button({
   className = '',
   color = 'primary',
   loading = false,
-  type = 'button', 
+  type = 'button',
 }) {
-  const colorClasses = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-400/50',
-    violet: 'bg-violet-800 hover:bg-violet-700 text-white  focus-visible:ring-violet-400/50',
-    blue: 'bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-400/50',
-    green: 'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-400/50',
-    success: 'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-400/50',
-    red: 'bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-400/50',
-    danger: 'bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-400/50',
-    yellow: 'bg-amber-500 text-white hover:bg-amber-600 focus-visible:ring-amber-400/50',
-    warning: 'bg-amber-500 text-white hover:bg-amber-600 focus-visible:ring-amber-400/50',
-    black: 'bg-black text-white hover:bg-black/90 focus-visible:ring-black/40',
-    gray: 'bg-gray-800 text-white hover:bg-gray-900 focus-visible:ring-gray-400/40',
-    neutral: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus-visible:ring-gray-300',
-    outline: 'bg-transparent !text-gray-800 border border-gray-300 hover:bg-gray-50 focus-visible:ring-gray-300',
-    ghost: 'bg-transparent text-gray-800 hover:bg-gray-100 focus-visible:ring-gray-200',
-    subtle: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus-visible:ring-gray-300',
+  // Static semantic colors (these are intentionally NOT theme-driven)
+  const staticColors = {
+    violet:  { bg: '#7e22ce', hover: '#6b21a8', ring: 'rgba(139,92,246,0.4)' },
+    blue:    { bg: '#2563eb', hover: '#1d4ed8', ring: 'rgba(59,130,246,0.4)' },
+    green:   { bg: '#059669', hover: '#047857', ring: 'rgba(16,185,129,0.4)' },
+    success: { bg: '#059669', hover: '#047857', ring: 'rgba(16,185,129,0.4)' },
+    red:     { bg: '#e11d48', hover: '#be123c', ring: 'rgba(244,63,94,0.4)' },
+    danger:  { bg: '#e11d48', hover: '#be123c', ring: 'rgba(244,63,94,0.4)' },
+    yellow:  { bg: '#f59e0b', hover: '#d97706', ring: 'rgba(245,158,11,0.4)' },
+    warning: { bg: '#f59e0b', hover: '#d97706', ring: 'rgba(245,158,11,0.4)' },
+    black:   { bg: '#000000', hover: '#1a1a1a', ring: 'rgba(0,0,0,0.4)' },
+    gray:    { bg: '#1f2937', hover: '#111827', ring: 'rgba(107,114,128,0.4)' },
   };
 
-  const baseClass = ` !w-fit text-[16px] min-h-[40px] cursor-pointer w-full inline-flex items-center justify-center gap-2 rounded-lg text-lg max-md:text-base px-4 !py-[5px] transition-all duration-300`;
+  // Flat/ghost style colors (no filled background)
+  const flatColors = {
+    neutral: { bg: '#e5e7eb', hover: '#d1d5db', text: '#111827', ring: 'rgba(156,163,175,0.3)' },
+    outline: { bg: 'transparent', hover: '#f9fafb', text: '#1f2937', ring: 'rgba(156,163,175,0.3)', border: '#d1d5db' },
+    ghost:   { bg: 'transparent', hover: '#f3f4f6', text: '#1f2937', ring: 'rgba(156,163,175,0.2)' },
+    subtle:  { bg: '#f3f4f6', hover: '#e5e7eb', text: '#111827', ring: 'rgba(156,163,175,0.3)' },
+  };
 
-  const finalClass = `${baseClass} ${colorClasses[color]} ${disabled ? '!opacity-50 !cursor-not-allowed !pointer-events-none' : ''} ${className} transform perspective-1000`;
+  const isPrimary = color === 'primary';
+  const isFlat = color in flatColors;
+  const isStatic = color in staticColors;
 
-  const loadingContent = <div className='w-5 h-5 border-4 border-t-transparent border-white rounded-full animate-spin'></div>;
+  // --- Build inline style ---
+  const [isHovered, setIsHovered] = useState(false);
 
-  const content = loading ? (
-    loadingContent
-  ) : (
+  let inlineStyle = {};
+  let textColor = '#ffffff';
+
+  if (isPrimary) {
+    // Uses CSS variables — follows the theme palette
+    inlineStyle = {
+      background: isHovered
+        ? 'var(--color-primary-700)'
+        : 'var(--color-primary-600)',
+      color: '#fff',
+      transition: 'background 0.2s ease, box-shadow 0.2s ease',
+    };
+  } else if (isStatic) {
+    const c = staticColors[color];
+    inlineStyle = {
+      background: isHovered ? c.hover : c.bg,
+      color: '#fff',
+      transition: 'background 0.2s ease',
+    };
+  } else if (isFlat) {
+    const c = flatColors[color];
+    inlineStyle = {
+      background: isHovered ? c.hover : c.bg,
+      color: c.text,
+      border: c.border ? `1px solid ${c.border}` : undefined,
+      transition: 'background 0.2s ease',
+    };
+    textColor = c.text;
+  }
+
+  const baseClass = [
+    '!w-fit',
+    'min-h-[40px]',
+    'cursor-pointer',
+    'inline-flex items-center justify-center gap-2',
+    'rounded-xl',
+    'text-sm font-semibold',
+    'px-4 !py-[5px]',
+    'transition-all duration-200',
+    'outline-none',
+    disabled ? '!opacity-50 !cursor-not-allowed !pointer-events-none' : '',
+    className,
+  ].join(' ');
+
+  const loadingContent = (
+    <div className='w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin' />
+  );
+
+  const content = loading ? loadingContent : (
     <>
       {srcImg && <img src={srcImg} alt='icon' className='h-5 w-5 object-contain' />}
+      {icon && <span className='!w-fit flex-shrink-0'>{icon}</span>}
       {name && <span className='text-nowrap'>{name}</span>}
-      {icon && <span className='!w-fit'>{icon}</span>}
     </>
   );
 
   const handleClick = e => {
     if (disabled || loading) return;
-    if (onClick) {
-      e.preventDefault(); // Prevent default behavior
-      onClick(e);
-    }
+    if (onClick) { e.preventDefault(); onClick(e); }
+  };
+
+  const commonProps = {
+    style: inlineStyle,
+    className: baseClass,
+    onMouseEnter: () => setIsHovered(true),
+    onMouseLeave: () => setIsHovered(false),
   };
 
   if (href) {
     return (
-      <Link href={href} className={finalClass}>
+      <Link href={href} {...commonProps}>
         {content}
       </Link>
     );
@@ -66,10 +121,11 @@ export default function Button({
 
   return (
     <button
-      type={type} // Use the type prop
+      type={type}
       disabled={disabled || loading}
       onClick={handleClick}
-      className={finalClass}>
+      {...commonProps}
+    >
       {content}
     </button>
   );

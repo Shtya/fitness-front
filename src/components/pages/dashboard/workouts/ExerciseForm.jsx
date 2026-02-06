@@ -11,6 +11,7 @@ import api, { baseImg } from '@/utils/axios';
 import { useTranslations } from 'next-intl';
 import { useUser } from '@/hooks/useUser';
 import { Notification } from '@/config/Notification';
+import { useTheme } from '@/app/[locale]/theme';
 
 /* -------------------- helpers -------------------- */
 function parseArrayMaybe(v) {
@@ -50,23 +51,66 @@ function resolveUrlMaybe(v) {
 ================================================ */
 function Field({ label, hint, required, error, children, highlight }) {
   return (
-    <div className={'w-full transition-all ' + (highlight ? 'p-1 animate-pulse ring-2 ring-blue-400/60 rounded-lg bg-blue-50/40' : '')}>
+    <div
+      className={'w-full transition-all duration-300 ' + (highlight ? 'p-1 animate-pulse rounded-xl' : '')}
+      style={
+        highlight
+          ? {
+              boxShadow: '0 0 0 2px rgba(var(--ring-highlight), 0.5)',
+              background: 'rgba(var(--ring-highlight-bg), 0.15)',
+            }
+          : {}
+      }>
       {label ? (
-        <label className='mb-1.5 block text-sm font-medium text-slate-700'>
-          {label} {required ? <span className='text-rose-500'>*</span> : null}
+        <label className='mb-1.5 block text-sm font-semibold' style={{ color: 'var(--color-primary-700)' }}>
+          {label} {required ? <span style={{ color: 'var(--color-rose-500, #f43f5e)' }}>*</span> : null}
         </label>
       ) : null}
       {children}
-      {error ? <p className='mt-1 text-xs text-rose-600'>{error}</p> : hint ? <p className='mt-1 text-xs text-slate-500'>{hint}</p> : null}
+      {error ? (
+        <p className='mt-1.5 text-xs font-medium' style={{ color: 'var(--color-rose-500, #e11d48)' }}>
+          {error}
+        </p>
+      ) : hint ? (
+        <p className='mt-1.5 text-xs' style={{ color: 'var(--color-primary-400)' }}>
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }
 
 function TextInput({ value, onChange, placeholder, name, required, disabled, rightSlot, className = '', onBlur }) {
   return (
-    <div className={'relative flex items-center rounded-lg border ' + (disabled ? 'opacity-60 ' : '') + className + ' border-slate-200 bg-white shadow-sm'}>
-      <input name={name} value={value ?? ''} onChange={e => onChange(e.target.value)} onBlur={onBlur} placeholder={placeholder} required={required} disabled={disabled} className='peer w-full rounded-lg bg-transparent px-3.5 py-2.5 text-sm outline-none placeholder:text-slate-400' />
-      {rightSlot ? <div className='absolute rtl:left-1 ltr:right-1.5 flex items-center gap-1'>{rightSlot}</div> : null}
+    <div
+      className={'relative flex items-center rounded-xl border transition-all duration-200 ' + (disabled ? 'opacity-55 ' : '') + className}
+      style={{
+        borderColor: 'var(--color-primary-200)',
+        background: 'white',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+      }}>
+      <style>{`
+        .themed-input:focus-within {
+          border-color: var(--color-primary-500) !important;
+          box-shadow: 0 0 0 3px rgba(var(--focus-ring), 0.25), 0 1px 3px rgba(0,0,0,0.06) !important;
+        }
+      `}</style>
+      <input
+        name={name}
+        value={value ?? ''}
+        onChange={e => onChange(e.target.value)}
+        onBlur={onBlur}
+        placeholder={placeholder}
+        required={required}
+        disabled={disabled}
+        className={`themed-input peer w-full rounded-xl bg-transparent px-4 py-2.5 text-sm outline-none`}
+        style={{ color: 'var(--color-primary-900)' }}
+      />
+      {rightSlot ? (
+        <div className='absolute rtl:left-1.5 ltr:right-1.5 flex items-center gap-1'>
+          {rightSlot}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -74,13 +118,64 @@ function TextInput({ value, onChange, placeholder, name, required, disabled, rig
 function NumberInput({ value, onChange, name, min = 0, step = 1, disabled, placeholder }) {
   return (
     <div className='relative'>
-      <input type='number' inputMode='numeric' name={name} value={safeStr(value)} min={min} step={step} onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))} placeholder={placeholder} disabled={disabled} className='w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm shadow-sm outline-none placeholder:text-slate-400 focus:ring-4 focus:ring-blue-400/20' />
+      <style>{`
+        .themed-number-input:focus {
+          border-color: var(--color-primary-500) !important;
+          box-shadow: 0 0 0 3px rgba(var(--focus-ring), 0.25), 0 1px 3px rgba(0,0,0,0.06) !important;
+        }
+        .themed-number-input::-webkit-outer-spin-button,
+        .themed-number-input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+      `}</style>
+      <input
+        type='number'
+        inputMode='numeric'
+        name={name}
+        value={safeStr(value)}
+        min={min}
+        step={step}
+        onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}
+        placeholder={placeholder}
+        disabled={disabled}
+        className='themed-number-input w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all duration-200'
+        style={{
+          borderColor: 'var(--color-primary-200)',
+          background: 'white',
+          color: 'var(--color-primary-900)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+        }}
+      />
     </div>
   );
 }
 
 function TextArea({ value, onChange, rows = 3, placeholder, disabled }) {
-  return <textarea rows={rows} value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} className='w-full resize-y rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm shadow-sm outline-none placeholder:text-slate-400 focus:ring-4 focus:ring-blue-400/20' />;
+  return (
+    <>
+      <style>{`
+        .themed-textarea:focus {
+          border-color: var(--color-primary-500) !important;
+          box-shadow: 0 0 0 3px rgba(var(--focus-ring), 0.25), 0 1px 3px rgba(0,0,0,0.06) !important;
+        }
+      `}</style>
+      <textarea
+        rows={rows}
+        value={value ?? ''}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        className='themed-textarea w-full resize-y rounded-xl border px-4 py-2.5 text-sm outline-none transition-all duration-200'
+        style={{
+          borderColor: 'var(--color-primary-200)',
+          background: 'white',
+          color: 'var(--color-primary-900)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+        }}
+      />
+    </>
+  );
 }
 
 /* Tags input */
@@ -101,12 +196,29 @@ function TagsField({ value = [], onChange, placeholder = 'Type and press Enter',
   }
 
   return (
-    <div className='rounded-lg border border-slate-200 bg-white p-2 shadow-sm'>
+    <div
+      className='rounded-xl border p-2.5 transition-all duration-200'
+      style={{
+        borderColor: 'var(--color-primary-200)',
+        background: 'white',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+      }}>
       <div className='flex flex-wrap gap-2'>
         {(value || []).map((t, i) => (
-          <span key={`${t}-${i}`} className='group inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700'>
+          <span
+            key={`${t}-${i}`}
+            className='group inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all duration-150'
+            style={{
+              background: 'var(--color-primary-100)',
+              color: 'var(--color-primary-700)',
+            }}>
             {t}
-            <button type='button' onClick={() => removeTag(i)} className='opacity-60 hover:opacity-100' aria-label='Remove tag'>
+            <button
+              type='button'
+              onClick={() => removeTag(i)}
+              className='opacity-50 hover:opacity-100 transition-opacity'
+              style={{ color: 'var(--color-primary-600)' }}
+              aria-label='Remove tag'>
               <X className='h-3.5 w-3.5' />
             </button>
           </span>
@@ -121,7 +233,8 @@ function TagsField({ value = [], onChange, placeholder = 'Type and press Enter',
             }
           }}
           placeholder={placeholder}
-          className='min-w-[160px] flex-1 bg-transparent px-2 py-1 text-sm outline-none placeholder:text-slate-400'
+          className='min-w-[160px] flex-1 bg-transparent px-2 py-1 text-sm outline-none'
+          style={{ color: 'var(--color-primary-900)' }}
         />
       </div>
     </div>
@@ -130,12 +243,30 @@ function TagsField({ value = [], onChange, placeholder = 'Type and press Enter',
 
 function MediaPreview({ type = 'image', url }) {
   if (!url) return null;
-  return <div className='overflow-hidden rounded-lg border border-slate-200'>{type === 'video' ? <video src={url} controls className='h-44 w-full object-contain' /> : <img src={url} alt='' className='h-44 w-full object-contain' />}</div>;
+  return (
+    <div
+      className='mt-2 overflow-hidden rounded-xl border'
+      style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}>
+      {type === 'video' ? (
+        <video src={url} controls className='h-44 w-full object-contain' />
+      ) : (
+        <img src={url} alt='' className='h-44 w-full object-contain' />
+      )}
+    </div>
+  );
 }
 
 function PrimaryButton({ children, type = 'button', onClick, disabled, loading, fullWidth }) {
   return (
-    <button type={type} onClick={onClick} disabled={disabled || loading} className={'relative inline-flex items-center justify-center overflow-hidden rounded-lg px-4 py-2.5 text-sm font-semibold ' + 'bg-blue-600 text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-400/50 ' + (fullWidth ? 'w-full ' : '') + (disabled || loading ? 'opacity-70 cursor-not-allowed ' : '')}>
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled || loading}
+      className={'relative inline-flex items-center justify-center overflow-hidden rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 ' + (fullWidth ? 'w-full ' : '') + (disabled || loading ? 'opacity-60 cursor-not-allowed ' : 'hover:scale-[1.02] active:scale-[0.97]')}
+      style={{
+        background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+        boxShadow: '0 2px 10px rgba(var(--shadow-primary), 0.35)',
+      }}>
       {loading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : null}
       {children}
     </button>
@@ -147,6 +278,7 @@ function PrimaryButton({ children, type = 'button', onClick, disabled, loading, 
 ================================================ */
 export function ExerciseForm({ initial, onSubmit, categories }) {
   const t = useTranslations('workouts');
+  const { colors } = useTheme();
 
   const schema = useMemo(
     () =>
@@ -225,7 +357,6 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
     },
   });
 
-  // when initial changes → reset form + clear files
   useEffect(() => {
     reset({
       name: initial?.name || '',
@@ -248,7 +379,6 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
   }, [initial, reset]);
 
   const [setting, setSetting] = useState();
-
   const user = useUser();
 
   useEffect(() => {
@@ -265,11 +395,10 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
     setValue('videoUrl', vid);
   }, [initial, setValue]);
 
-  // show AI button after name length >= 2
   const nameVal = watch('name');
   useEffect(() => setShowAiButton(Boolean(nameVal && nameVal.trim().length >= 2)), [nameVal]);
 
-  // ---------- AI ----------
+  /* ---------- AI ---------- */
   async function suggestFromAI(exName) {
     const API_KEY = setting?.aiSecretKey;
     if (!API_KEY || !exName || exName.trim().length < 2) return null;
@@ -289,7 +418,8 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
           messages: [
             {
               role: 'system',
-              content: 'You output ONLY compact JSON matching this schema: { "details": string, "category": string, "primary": string[], "secondary": string[], "targetReps": string, "targetSets": number, "rest": number, "tempo": string, "image"?: string, "video"?: string }.',
+              content:
+                'You output ONLY compact JSON matching this schema: { "details": string, "category": string, "primary": string[], "secondary": string[], "targetReps": string, "targetSets": number, "rest": number, "tempo": string, "image"?: string, "video"?: string }.',
             },
             { role: 'user', content: `Suggest default values for exercise "${exName}". Keep category simple (e.g., "Back","Chest","Legs","Shoulders","Arms","Core","Full Body").` },
             { role: 'user', content: String.raw`Tempo must match ^\d+\/\d+\/\d+$ (e.g., "2/1/2").` },
@@ -321,57 +451,43 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
     const s = await suggestFromAI(exName);
     if (!s) return;
 
-    if (s.details) {
-      setValue('details', s.details, { shouldValidate: true });
-      flashField('details');
-    }
-
-    if (s.category) {
-      setValue('category', s.category, { shouldValidate: true });
-      flashField('category');
-    }
+    if (s.details) { setValue('details', s.details, { shouldValidate: true }); flashField('details'); }
+    if (s.category) { setValue('category', s.category, { shouldValidate: true }); flashField('category'); }
 
     const currentPrimary = getValues('primaryMusclesWorked');
     if (isEmptyish(currentPrimary) && Array.isArray(s.primary)) {
       setValue('primaryMusclesWorked', s.primary.filter(Boolean).slice(0, 20), { shouldValidate: true });
       flashField('primaryMusclesWorked');
     }
-
     const currentSecondary = getValues('secondaryMusclesWorked');
     if (isEmptyish(currentSecondary) && Array.isArray(s.secondary)) {
       setValue('secondaryMusclesWorked', s.secondary.filter(Boolean).slice(0, 20), { shouldValidate: true });
       flashField('secondaryMusclesWorked');
     }
-
     const currentReps = getValues('targetReps');
     if (isEmptyish(currentReps) && typeof s.targetReps === 'string') {
       setValue('targetReps', safeStr(s.targetReps), { shouldValidate: true });
       flashField('targetReps');
     }
-
     const currentSets = getValues('targetSets');
     if ((currentSets == null || currentSets === '') && typeof s.targetSets === 'number') {
       setValue('targetSets', s.targetSets, { shouldValidate: true });
       flashField('targetSets');
     }
-
     const currentRest = getValues('rest');
     if ((currentRest == null || currentRest === '') && typeof s.rest === 'number') {
       setValue('rest', s.rest, { shouldValidate: true });
       flashField('rest');
     }
-
     if (typeof s.tempo === 'string' && s.tempo.trim()) {
       setValue('tempo', safeStr(s.tempo.trim()), { shouldValidate: true });
       flashField('tempo');
     }
-
     const currentImg = getValues('imgUrl');
     if (isEmptyish(currentImg) && typeof s.image === 'string') {
       setValue('imgUrl', s.image, { shouldValidate: true });
       flashField('imgUrl');
     }
-
     const currentVideo = getValues('videoUrl');
     if (isEmptyish(currentVideo) && typeof s.video === 'string') {
       setValue('videoUrl', s.video, { shouldValidate: true });
@@ -399,18 +515,43 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
     await onSubmit?.(payload);
   });
 
+  /* Dynamic CSS vars injected once so nested components pick them up */
+  const ringHex = colors?.primary?.[500] || '#6366f1';
+
   return (
-    <form onSubmit={onValidSubmit} className='relative space-y-4'>
+    <form onSubmit={onValidSubmit} className='relative space-y-5'>
+      {/* Dynamic ring helper vars */}
+      <style>{`
+        :root {
+          --focus-ring: 99, 102, 241;
+          --shadow-primary: 99, 102, 241;
+          --ring-highlight: 99, 102, 241;
+          --ring-highlight-bg: 238, 242, 255;
+        }
+        .themed-input::placeholder,
+        .themed-number-input::placeholder,
+        .themed-textarea::placeholder { color: var(--color-primary-300); }
+      `}</style>
+
+      {/* AI Loading Overlay */}
       {aiLoading && (
-        <div className='absolute inset-0 z-10 grid place-items-center rounded-lg bg-white/70 backdrop-blur-sm'>
-          <div className='flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 shadow'>
-            <Loader2 className='h-4 w-4 animate-spin' />
-            <span className='text-sm text-slate-700'>{t('ai.fetching')}</span>
+        <div className='absolute inset-0 z-10 grid place-items-center rounded-2xl backdrop-blur-sm' style={{ background: 'rgba(255,255,255,0.75)' }}>
+          <div
+            className='flex items-center gap-2.5 rounded-xl px-5 py-3 shadow-lg'
+            style={{
+              border: '1px solid var(--color-primary-200)',
+              background: 'white',
+            }}>
+            <Loader2 className='h-4 w-4 animate-spin' style={{ color: 'var(--color-primary-500)' }} />
+            <span className='text-sm font-medium' style={{ color: 'var(--color-primary-700)' }}>
+              {t('ai.fetching')}
+            </span>
           </div>
         </div>
       )}
 
-      <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
+      <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+        {/* Name */}
         <Controller
           name='name'
           control={control}
@@ -423,7 +564,14 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
                 placeholder={t('placeholders.name')}
                 rightSlot={
                   showAiButton && setting?.aiSecretKey ? (
-                    <button type='button' onClick={applyAISuggestions} className='mr-1 inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-400/50'>
+                    <button
+                      type='button'
+                      onClick={applyAISuggestions}
+                      className='inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:scale-[1.04] active:scale-[0.96]'
+                      style={{
+                        background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+                        boxShadow: '0 1px 6px rgba(var(--shadow-primary), 0.3)',
+                      }}>
                       <Wand2 className='h-3.5 w-3.5' />
                       {t('actions.getAi')}
                     </button>
@@ -434,17 +582,29 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
           )}
         />
 
+        {/* Category */}
         <Controller
           name='category'
           control={control}
           render={({ field, fieldState }) => (
             <Field label={t('labels.category')} required error={fieldState.error?.message} highlight={aiHighlight.category}>
-              <Select searchable={false} clearable={false} className='!w-full' placeholder={t('placeholders.category')} options={categoryOptions} value={field.value} onChange={val => field.onChange(val)} allowCustom={true} createHint={t('hints.createCategory')} />
+              <Select
+                searchable={false}
+                clearable={false}
+                className='!w-full'
+                placeholder={t('placeholders.category')}
+                options={categoryOptions}
+                value={field.value}
+                onChange={val => field.onChange(val)}
+                allowCustom={true}
+                createHint={t('hints.createCategory')}
+              />
             </Field>
           )}
         />
 
-        <div className=' max-md:space-y-3 md:grid grid-cols-2 gap-2'>
+        {/* Reps + Sets row */}
+        <div className='max-md:space-y-4 md:grid md:grid-cols-2 md:gap-3'>
           <Controller
             name='targetReps'
             control={control}
@@ -454,7 +614,6 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
               </Field>
             )}
           />
-
           <Controller
             name='targetSets'
             control={control}
@@ -465,7 +624,9 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
             )}
           />
         </div>
-        <div className=' max-md:space-y-3 md:grid grid-cols-2 gap-2'>
+
+        {/* Rest + Tempo row */}
+        <div className='max-md:space-y-4 md:grid md:grid-cols-2 md:gap-3'>
           <Controller
             name='rest'
             control={control}
@@ -475,7 +636,6 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
               </Field>
             )}
           />
-
           <Controller
             name='tempo'
             control={control}
@@ -487,6 +647,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
           />
         </div>
 
+        {/* Details */}
         <Controller
           name='details'
           control={control}
@@ -499,6 +660,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
           )}
         />
 
+        {/* Primary Muscles */}
         <Controller
           name='primaryMusclesWorked'
           control={control}
@@ -509,6 +671,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
           )}
         />
 
+        {/* Secondary Muscles */}
         <Controller
           name='secondaryMusclesWorked'
           control={control}
@@ -519,12 +682,12 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
           )}
         />
 
-        {/* Media – URL or Upload */}
-        <div className='sm:col-span-2 grid grid-cols-1 gap-3 sm:grid-cols-2'>
-          {/* Hidden flags to drive validation */}
+        {/* Media */}
+        <div className='sm:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-2'>
           <Controller name='hasImgFile' control={control} render={() => null} />
           <Controller name='hasVideoFile' control={control} render={() => null} />
 
+          {/* Image */}
           <Controller
             name='imgUrl'
             control={control}
@@ -535,13 +698,17 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
                     <TextInput
                       name='imgUrl'
                       value={field.value}
-                      onChange={val => {
-                        field.onChange(val);
-                      }}
+                      onChange={val => { field.onChange(val); }}
                       placeholder={t('placeholders.mediaUrl')}
                       className='flex-1'
                     />
-                    <label className='inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-[10px] text-sm'>
+                    <label
+                      className='inline-flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-[10px] text-sm transition-all duration-200 hover:scale-[1.03]'
+                      style={{
+                        borderColor: 'var(--color-primary-200)',
+                        background: 'var(--color-primary-50)',
+                        color: 'var(--color-primary-600)',
+                      }}>
                       <UploadCloud className='h-4 w-4' />
                       <input
                         type='file'
@@ -558,14 +725,13 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
                       />
                     </label>
                   </div>
-                  <div className='mt-2'>
-                    <MediaPreview type='image' url={imgFile ? URL.createObjectURL(imgFile) : field.value} />
-                  </div>
+                  <MediaPreview type='image' url={imgFile ? URL.createObjectURL(imgFile) : field.value} />
                 </Field>
               </div>
             )}
           />
 
+          {/* Video */}
           <Controller
             name='videoUrl'
             control={control}
@@ -576,13 +742,17 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
                     <TextInput
                       name='videoUrl'
                       value={field.value}
-                      onChange={val => {
-                        field.onChange(val);
-                      }}
+                      onChange={val => { field.onChange(val); }}
                       placeholder={t('placeholders.mediaUrlVideo')}
                       className='flex-1'
                     />
-                    <label className='inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-[10px] text-sm'>
+                    <label
+                      className='inline-flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-[10px] text-sm transition-all duration-200 hover:scale-[1.03]'
+                      style={{
+                        borderColor: 'var(--color-primary-200)',
+                        background: 'var(--color-primary-50)',
+                        color: 'var(--color-primary-600)',
+                      }}>
                       <UploadCloud className='h-4 w-4' />
                       <input
                         type='file'
@@ -599,18 +769,30 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
                       />
                     </label>
                   </div>
-                  <div className='mt-2'>
-                    <MediaPreview type='video' url={videoFile ? URL.createObjectURL(videoFile) : field.value} />
-                  </div>
+                  <MediaPreview type='video' url={videoFile ? URL.createObjectURL(videoFile) : field.value} />
                 </Field>
               </div>
             )}
           />
 
-          {/* MuscleWiki note */}
-          <div className='sm:col-span-2 text-[11px] leading-relaxed text-slate-600 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2'>
-            <strong className='font-semibold'>{t('notes.muscleWikiTipLabel')}</strong> {t('notes.muscleWikiTipPrefix')}{' '}
-            <a href='https://musclewiki.com/' target='_blank' rel='noreferrer' className='text-blue-600 underline'>
+          {/* MuscleWiki tip */}
+          <div
+            className='sm:col-span-2 rounded-xl border border-dashed px-4 py-3 text-[11px] leading-relaxed'
+            style={{
+              borderColor: 'var(--color-primary-200)',
+              background: 'var(--color-primary-50)',
+              color: 'var(--color-primary-600)',
+            }}>
+            <strong className='font-semibold' style={{ color: 'var(--color-primary-700)' }}>
+              {t('notes.muscleWikiTipLabel')}
+            </strong>{' '}
+            {t('notes.muscleWikiTipPrefix')}{' '}
+            <a
+              href='https://musclewiki.com/'
+              target='_blank'
+              rel='noreferrer'
+              className='underline font-medium'
+              style={{ color: 'var(--color-primary-600)' }}>
               musclewiki.com
             </a>
             {t('notes.muscleWikiTipSuffix')}
@@ -618,14 +800,14 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
         </div>
       </div>
 
-      <div className='flex items-center justify-end gap-2 pt-2'>
+      {/* Action Buttons */}
+      <div className='flex items-center justify-end gap-3 pt-3'>
         {setting?.aiSecretKey && (
           <PrimaryButton type='button' onClick={applyAISuggestions} loading={aiLoading} disabled={!nameVal || nameVal.trim().length < 2}>
             <Sparkles className='mr-1.5 h-4 w-4' />
             {t('actions.fillWithAi')}
           </PrimaryButton>
         )}
-
         <PrimaryButton type='submit' loading={isSubmitting}>
           {t('actions.save')}
         </PrimaryButton>

@@ -1,16 +1,25 @@
 // components/TimeField.jsx
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState, useCallback, useLayoutEffect } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Clock, X } from 'lucide-react';
+import { Clock, X, CheckCircle2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 const hhmmRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const pad = n => String(n).padStart(2, '0');
 
-export function TimeField({ labelKey = 'timeField.label', name = 'time', value, onChange, className = '', error, minuteStep = 5, showLabel = true }) {
+export function TimeField({ 
+  labelKey = 'timeField.label', 
+  name = 'time', 
+  value, 
+  onChange, 
+  className = '', 
+  error, 
+  minuteStep = 5, 
+  showLabel = true 
+}) {
   const t = useTranslations();
 
   const [open, setOpen] = useState(false);
@@ -39,7 +48,7 @@ export function TimeField({ labelKey = 'timeField.label', name = 'time', value, 
     }
   }, [value]);
 
-  // Outside click: use pointerdown for better reliability
+  // Outside click
   useEffect(() => {
     const onDoc = e => {
       if (!open) return;
@@ -99,9 +108,8 @@ export function TimeField({ labelKey = 'timeField.label', name = 'time', value, 
     const vh = document.documentElement.clientHeight;
     const r = triggerEl.getBoundingClientRect();
 
-    const desiredWidth = Math.min(360, Math.max(350, r.width));
+    const desiredWidth = Math.min(380, Math.max(360, r.width));
 
-    // Prepare for measurement
     const prev = {
       width: panelEl.style.width,
       maxHeight: panelEl.style.maxHeight,
@@ -159,7 +167,6 @@ export function TimeField({ labelKey = 'timeField.label', name = 'time', value, 
       where,
     });
 
-    // Restore temp styles
     panelEl.style.width = prev.width;
     panelEl.style.maxHeight = prev.maxHeight;
     panelEl.style.visibility = prev.visibility;
@@ -168,17 +175,14 @@ export function TimeField({ labelKey = 'timeField.label', name = 'time', value, 
     panelEl.style.left = prev.left;
   }, [open]);
 
-  // Defer measurement until the panel is actually mounted & painted
   useEffect(() => {
     if (!open) return;
     let raf = requestAnimationFrame(() => {
-      // a second rAF ensures layout is settled
       raf = requestAnimationFrame(() => measureAndPlace());
     });
     return () => cancelAnimationFrame(raf);
   }, [open, measureAndPlace]);
 
-  // Keep in sync on scroll/resize
   useEffect(() => {
     if (!open) return;
     const reflow = () => measureAndPlace();
@@ -195,35 +199,57 @@ export function TimeField({ labelKey = 'timeField.label', name = 'time', value, 
       {open && (
         <motion.div
           ref={panelRef}
-          initial={{ opacity: 0, y: placement.where === 'bottom' ? -4 : 4, scale: 0.98 }}
+          initial={{ opacity: 0, y: placement.where === 'bottom' ? -8 : 8, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: placement.where === 'bottom' ? -4 : 4, scale: 0.98 }}
-          transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+          exit={{ opacity: 0, y: placement.where === 'bottom' ? -8 : 8, scale: 0.96 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 24, mass: 0.8 }}
           style={{
             position: 'fixed',
             top: placement.top,
             left: placement.left,
-            width: placement.width,
-            zIndex: 9999,
+            width: 440,
+            zIndex: 9999000000,
           }}
-          className='overflow-hidden rounded-lg shadow-2xl ring-1 ring-slate-200/70'>
-          <div className='bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 px-4 py-3 text-white'>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center gap-2'>
-                <Clock className='size-4 opacity-95' />
-                <p className='text-[13px] font-medium tracking-wide'>{t('timeField.choose')}</p>
+          className='overflow-hidden rounded-xl shadow-2xl ring-1 ring-slate-200/80 backdrop-blur-sm'>
+
+
+          <div className='relative overflow-hidden bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] px-5 py-4'>
+            {/* Subtle pattern overlay */}
+            <div className='absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent)] opacity-60' />
+            
+            <div className='relative flex items-center justify-between'>
+              <div className='flex items-center gap-2.5'>
+                <div className='flex h-9 w-9 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm ring-1 ring-white/30'>
+                  <Clock className='h-5 w-5 text-white' />
+                </div>
+                <div>
+                  <p className='text-sm font-semibold tracking-wide text-white'>{t('timeField.choose')}</p>
+                  <p className='text-xs text-white/80'>{t('timeField.selectTime')}</p>
+                </div>
               </div>
-              <button type='button' onClick={() => setOpen(false)} className='rounded-md p-1 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/40' aria-label={t('timeField.close')}>
-                <X className='size-4' />
+              <button 
+                type='button' 
+                onClick={() => setOpen(false)} 
+                className='rounded-lg bg-white/10 p-1.5 backdrop-blur-sm ring-1 ring-white/20 transition-all hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40' 
+                aria-label={t('timeField.close')}
+              >
+                <X className='h-4 w-4 text-white' />
               </button>
             </div>
           </div>
 
-          <div className='bg-white/95 backdrop-blur-sm' style={{ maxHeight: placement.maxHeight }}>
-            <div className=' grid grid-cols-2 gap-4 px-4 py-4'>
+          {/* Content */}
+          <div className='bg-white' style={{ maxHeight: placement.maxHeight }}>
+            <div className='grid grid-cols-2 gap-5 p-5'>
+              {/* Hours */}
               <div>
-                <div className='mb-1.5 text-xs font-medium text-slate-700'>{t('timeField.hour')}</div>
-                <div className=' grid max-h-40 grid-cols-6 gap-1'>
+                <div className='mb-3 flex items-center justify-between'>
+                  <span className='text-xs font-semibold uppercase tracking-wider text-slate-600'>
+                    {t('timeField.hour')}
+                  </span>
+                  <span className='text-xs font-bold text-[var(--color-primary-600)]'>{tempH}</span>
+                </div>
+                <div className='scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300 grid max-h-44 grid-cols-6 gap-1.5 overflow-y-auto'>
                   {hours.map(h => {
                     const active = h === tempH;
                     return (
@@ -234,17 +260,36 @@ export function TimeField({ labelKey = 'timeField.label', name = 'time', value, 
                           setTempH(h);
                           commit(h, tempM);
                         }}
-                        className={['h-7 cursor-pointer hover:scale-[0.9] duration-300 rounded-lg border text-xs font-medium transition-all focus:outline-none focus:ring-4', active ? 'border-transparent text-white shadow bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 focus:ring-indigo-100' : 'border-slate-200 text-slate-700 hover:bg-slate-50 focus:ring-slate-100'].join(' ')}>
-                        {h}
+                        className={[
+                          'relative h-9 rounded-lg text-xs font-semibold transition-all duration-200 focus:outline-none focus:ring-2',
+                          active
+                            ? 'bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-lg shadow-[var(--color-primary-500)]/30 ring-2 ring-[var(--color-primary-200)] focus:ring-[var(--color-primary-300)] scale-105'
+                            : 'border border-slate-200 bg-white text-slate-700 hover:border-[var(--color-primary-300)] hover:bg-[var(--color-primary-50)] hover:text-[var(--color-primary-700)] hover:scale-105 focus:ring-[var(--color-primary-200)]',
+                        ].join(' ')}
+                      >
+                         {active && (
+                          <motion.div
+                            layoutId="active-hour"
+                            className="absolute inset-0 rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]"
+                            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                          />
+                        )}
+                        <span className="relative z-10">{h}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
+              {/* Minutes */}
               <div>
-                <div className='mb-1.5 text-xs font-medium text-slate-700'>{t('timeField.minutes')}</div>
-                <div className='grid max-h-40 grid-cols-6 gap-1 '>
+                <div className='mb-3 flex items-center justify-between'>
+                  <span className='text-xs font-semibold uppercase tracking-wider text-slate-600'>
+                    {t('timeField.minutes')}
+                  </span>
+                  <span className='text-xs font-bold text-[var(--color-primary-600)]'>{tempM}</span>
+                </div>
+                <div className='scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300 grid max-h-44 grid-cols-6 gap-1.5 overflow-y-auto'>
                   {minutes.map(m => {
                     const active = m === tempM;
                     return (
@@ -255,8 +300,21 @@ export function TimeField({ labelKey = 'timeField.label', name = 'time', value, 
                           setTempM(m);
                           commit(tempH, m);
                         }}
-                        className={['h-7 cursor-pointer hover:scale-[0.9] duration-300  rounded-lg border text-xs font-medium transition-all focus:outline-none focus:ring-4', active ? 'border-transparent text-white shadow bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 focus:ring-indigo-100' : 'border-slate-200 text-slate-700 hover:bg-slate-50 focus:ring-slate-100'].join(' ')}>
-                        {m}
+                        className={[
+                          'relative h-9 rounded-lg text-xs font-semibold transition-all duration-200 focus:outline-none focus:ring-2',
+                          active
+                            ? 'bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-lg shadow-[var(--color-primary-500)]/30 ring-2 ring-[var(--color-primary-200)] focus:ring-[var(--color-primary-300)] scale-105'
+                            : 'border border-slate-200 bg-white text-slate-700 hover:border-[var(--color-primary-300)] hover:bg-[var(--color-primary-50)] hover:text-[var(--color-primary-700)] hover:scale-105 focus:ring-[var(--color-primary-200)]',
+                        ].join(' ')}
+                      >
+                         {active && (
+                          <motion.div
+                            layoutId="active-minute"
+                            className="absolute inset-0 rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]"
+                            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                          />
+                        )}
+                        <span className="relative z-10">{m}</span>
                       </button>
                     );
                   })}
@@ -264,11 +322,23 @@ export function TimeField({ labelKey = 'timeField.label', name = 'time', value, 
               </div>
             </div>
 
-            <div className='flex items-center justify-between border-t border-slate-100 bg-white/90 px-4 py-3 text-xs'>
-              <div className='text-slate-600'>
-                {t('timeField.selected')}: <span className='font-semibold text-slate-800'>{selectedDisplay}</span>
+            {/* Footer */}
+            <div className='flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-5 py-4'>
+              <div className='flex items-center gap-2'>
+                <div className='flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary-100)] text-[var(--color-primary-700)]'>
+                  <Clock className='h-4 w-4' />
+                </div>
+                <div>
+                  <p className='text-xs text-slate-500'>{t('timeField.selected')}</p>
+                  <p className='text-sm font-bold text-slate-900'>{selectedDisplay}</p>
+                </div>
               </div>
-              <button type='button' onClick={() => setOpen(false)} className='inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-white shadow-sm transition focus:outline-none focus:ring-4 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 focus:ring-indigo-100'>
+              <button 
+                type='button' 
+                onClick={() => setOpen(false)} 
+                className='group inline-flex items-center gap-2 rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[var(--color-primary-500)]/30 ring-1 ring-[var(--color-primary-200)] transition-all hover:shadow-xl hover:shadow-[var(--color-primary-500)]/40 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)] focus:ring-offset-2'
+              >
+                <CheckCircle2 className='h-4 w-4 transition-transform group-hover:scale-110' />
                 {t('timeField.done')}
               </button>
             </div>
@@ -281,12 +351,12 @@ export function TimeField({ labelKey = 'timeField.label', name = 'time', value, 
   return (
     <div ref={rootRef} className={`relative ${className}`}>
       {showLabel && (
-        <label htmlFor={name} className='mb-1 block text-sm font-medium text-slate-700'>
+        <label htmlFor={name} className='mb-2 block text-sm font-semibold text-slate-700'>
           {t(labelKey)}
         </label>
       )}
 
-      <div className='relative'>
+      <div className='group relative'>
         <input
           autoComplete='off'
           autoCorrect='off'
@@ -296,27 +366,44 @@ export function TimeField({ labelKey = 'timeField.label', name = 'time', value, 
           name={name}
           value={value || ''}
           onChange={onManual}
-          onPointerDown={() => setOpen(true)} // <— open early to avoid races
+          onPointerDown={() => setOpen(true)}
           onFocus={() => setOpen(true)}
           onClick={() => setOpen(true)}
           placeholder={t('timeField.placeholder')}
-          className={['w-full rounded-lg border bg-white/95 px-3.5 py-2.5 pe-10 text-sm shadow-sm', 'border-slate-200 placeholder:text-slate-400', 'focus:outline-none focus:ring-4 focus:ring-indigo-100', !isValid || error ? 'border-rose-300 focus:ring-rose-100' : '', 'disabled:opacity-60', 'transition-colors'].join(' ')}
+          className={[
+            'w-full rounded-lg border bg-white px-4 py-3 pe-11 text-sm font-medium shadow-sm transition-all duration-200',
+            'placeholder:text-slate-400',
+            'focus:outline-none focus:ring-4',
+            !isValid || error
+              ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-100'
+              : 'border-slate-200 focus:border-[var(--color-primary-500)] focus:ring-[var(--color-primary-100)] group-hover:border-slate-300',
+            'disabled:cursor-not-allowed disabled:opacity-60',
+          ].join(' ')}
           aria-invalid={!isValid || !!error}
           aria-describedby={!isValid || error ? `${name}-error` : undefined}
         />
         <button
           type='button'
           aria-label={t('timeField.openPicker')}
-          onPointerDown={() => setOpen(s => !s)} // <— toggles before click
-          className='absolute inset-y-0 end-0 grid w-10 place-items-center text-slate-500 hover:text-slate-700'>
-          <Clock className='size-5' />
+          onPointerDown={() => setOpen(s => !s)}
+          className='absolute inset-y-0 end-0 flex w-11 items-center justify-center text-slate-400 transition-colors hover:text-[var(--color-primary-600)] group-focus-within:text-[var(--color-primary-600)]'
+        >
+          <Clock className='h-5 w-5' />
         </button>
       </div>
 
       {!isValid || error ? (
-        <p id={`${name}-error`} className='mt-1 text-xs text-rose-600'>
+        <motion.p 
+          id={`${name}-error`} 
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className='mt-2 flex items-center gap-1.5 text-xs text-rose-600'
+        >
+          <span className='inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-100'>
+            <X className='h-3 w-3' />
+          </span>
           {error || t('timeField.invalid')}
-        </p>
+        </motion.p>
       ) : null}
 
       {mounted ? createPortal(Panel, document.body) : null}

@@ -11,7 +11,6 @@ import {
 	Video as VideoIcon,
 	Image as ImageIcon,
 	Headphones,
-	Upload,
 	CloudOff,
 	Cloud,
 	Info,
@@ -28,6 +27,7 @@ import { InlineVideo } from '@/components/pages/workouts/InlineVideo';
 import { useUser } from '@/hooks/useUser';
 import { useTranslations } from 'next-intl';
 import Img from '@/components/atoms/Img';
+import CardioTimerCard from '@/components/pages/workouts/CardioTimerCard';
 
 /* =========================
 	 Constants / tiny helpers
@@ -46,7 +46,7 @@ export const DEFAULT_SOUNDS = [
 ];
 
 const LOCAL_KEY_SELECTED_DAY = 'mw.selected.day';
-const LOCAL_KEY_QUEUE = 'mw.pendingPRs.v1'; // array of items: { userId, date, exerciseName, records, createdAt }
+const LOCAL_KEY_QUEUE = 'mw.pendingPRs.v1';
 
 const jsDayToId = d =>
 	['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][d] || 'monday';
@@ -151,6 +151,129 @@ function normalizeNumericInput(str = '') {
 }
 
 /* =========================
+	 Theme helpers (same style)
+========================= */
+const cx = (...c) => c.filter(Boolean).join(' ');
+
+function ThemeFrame({ children, className = '' }) {
+	return (
+		<div className={cx('rounded-2xl p-[1px]', className)}>
+			<div
+				className='rounded-2xl border bg-white/85 backdrop-blur-xl'
+				style={{
+					borderColor: 'var(--color-primary-200)',
+					boxShadow: '0 1px 0 rgba(15, 23, 42, 0.04), 0 18px 40px rgba(15, 23, 42, 0.10)',
+				}}
+			>
+				{children}
+			</div>
+		</div>
+	);
+}
+
+function SoftCard({ children, className = '' }) {
+	return (
+		<div
+			className={cx('rounded-2xl border bg-white', className)}
+			style={{
+				borderColor: 'var(--color-primary-200)',
+				boxShadow: '0 1px 0 rgba(15, 23, 42, 0.03), 0 10px 24px rgba(15, 23, 42, 0.06)',
+			}}
+		>
+			{children}
+		</div>
+	);
+}
+
+function Pill({ children, tone = 'primary' }) {
+	const tones = {
+		primary: {
+			border: 'var(--color-primary-200)',
+			bg: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
+			text: 'var(--color-primary-800)',
+		},
+		soft: {
+			border: '#e2e8f0',
+			bg: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
+			text: '#475569',
+		},
+	};
+	const s = tones[tone] || tones.primary;
+
+	return (
+		<span
+			className='inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold'
+			style={{
+				borderColor: s.border,
+				background: s.bg,
+				color: s.text,
+				boxShadow: '0 6px 16px rgba(15,23,42,0.06)',
+			}}
+		>
+			{children}
+		</span>
+	);
+}
+
+function GhostBtn({ children, onClick, disabled, title, className = '' }) {
+	return (
+		<button
+			type='button'
+			onClick={onClick}
+			disabled={disabled}
+			title={title}
+			aria-label={title}
+			className={cx(
+				'inline-flex items-center gap-2 h-10 px-3 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed',
+				className,
+			)}
+			style={{
+				borderColor: 'var(--color-primary-200)',
+				backgroundColor: 'rgba(255,255,255,0.9)',
+				color: 'var(--color-primary-800)',
+				boxShadow: '0 12px 24px rgba(15,23,42,0.08)',
+				// ring fix
+				['--tw-ring-color']: 'var(--color-primary-200)',
+			}}
+			onMouseEnter={e => {
+				if (!disabled) e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
+			}}
+			onMouseLeave={e => {
+				if (!disabled) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.9)';
+			}}
+		>
+			{children}
+		</button>
+	);
+}
+
+function GradientBtn({ children, onClick, disabled, title, className = '' }) {
+	return (
+		<button
+			type='button'
+			onClick={onClick}
+			disabled={disabled}
+			title={title}
+			aria-label={title}
+			className={cx(
+				'inline-flex items-center gap-2 h-10 px-4 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed',
+				className,
+			)}
+			style={{
+				borderColor: 'transparent',
+				background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+				color: 'white',
+				boxShadow: '0 18px 34px rgba(15,23,42,0.14)',
+				// ring fix
+				['--tw-ring-color']: 'var(--color-primary-200)',
+			}}
+		>
+			{children}
+		</button>
+	);
+}
+
+/* =========================
 	 API helpers
 ========================= */
 async function fetchActivePlan(userId) {
@@ -162,44 +285,28 @@ async function fetchActivePlan(userId) {
 	return { program: { days: Object.keys(weeklyProgram).map(k => weeklyProgram[k]) }, notes: [] };
 }
 
-function makeSafeId(str = '') {
-	return String(str)
-		.toLowerCase()
-		.trim()
-		.replace(/\s+/g, '-')
-		.replace(/[^a-z0-9-_]/g, '');
-}
-
 function normalizeDayProgram(dayProgram = {}) {
-  const warmup = Array.isArray(dayProgram.warmupExercises) ? dayProgram.warmupExercises : [];
-  const main = Array.isArray(dayProgram.exercises) ? dayProgram.exercises : [];
-  const cardio = Array.isArray(dayProgram.cardioExercises) ? dayProgram.cardioExercises : [];
+	const warmup = Array.isArray(dayProgram.warmupExercises) ? dayProgram.warmupExercises : [];
+	const main = Array.isArray(dayProgram.exercises) ? dayProgram.exercises : [];
+	const cardio = Array.isArray(dayProgram.cardioExercises) ? dayProgram.cardioExercises : [];
 
-  const withGroup = (arr, group) =>
-    arr.map((x, idx) => ({
-      ...x,
-      group,
-      // instanceId فريد داخل اليوم حتى لو نفس x.id تكرر
-      instanceId: `${group}:${x.id}:${idx}`,
-      // مهم جدًا: خلي id اللي تستخدمه في الجلسة هو instanceId
-      id: `${group}:${x.id}:${idx}`,
-      originalExerciseId: x.id,
-    }));
+	const withGroup = (arr, group) =>
+		arr.map((x, idx) => ({
+			...x,
+			group,
+			instanceId: `${group}:${x.id}:${idx}`,
+			id: `${group}:${x.id}:${idx}`,
+			originalExerciseId: x.id,
+		}));
 
-  return {
-    ...dayProgram,
-    warmupExercises: warmup,
-    exercises: main,
-    cardioExercises: cardio,
-    allExercises: [
-      ...withGroup(warmup, "warmup"),
-      ...withGroup(main, "workout"),
-      ...withGroup(cardio, "cardio"),
-    ],
-  };
+	return {
+		...dayProgram,
+		warmupExercises: warmup,
+		exercises: main,
+		cardioExercises: cardio,
+		allExercises: [...withGroup(warmup, 'warmup'), ...withGroup(main, 'workout'), ...withGroup(cardio, 'cardio')],
+	};
 }
-
-
 
 function pickInitialSection(dayProgramNorm) {
 	const warm = dayProgramNorm?.warmupExercises?.length ? 'warmup' : null;
@@ -217,13 +324,11 @@ async function fetchLastDayByName(userId, day, onOrBefore) {
 			{ exercises: [] };
 
 		const dayProgram = normalizeDayProgram(dayProgramRaw);
-
 		const exerciseNames = (dayProgram.allExercises || []).map(ex => ex.name).filter(Boolean);
-		if (exerciseNames.length === 0) {
-			return { date: null, day, recordsByExercise: {} };
-		}
+		if (exerciseNames.length === 0) return { date: null, day, recordsByExercise: {} };
 
 		const { data } = await api.post('/prs/last-workout-sets', { userId, exercises: exerciseNames });
+
 		const recordsByExercise = {};
 		(data?.exercises || []).forEach(exercise => {
 			if (exercise?.records?.length > 0) {
@@ -287,36 +392,8 @@ function removeQueueItem(item) {
 }
 
 /* =========================
-	 Small UI helpers
+	 Notes Modal (theme)
 ========================= */
-function ButtonMini({ name, icon, onClick, loading, disabled, className = '' }) {
-	return (
-		<button
-			type='button'
-			onClick={onClick}
-			disabled={disabled || loading}
-			className={[
-				'inline-flex items-center gap-2 rounded-lg px-3 h-9 text-sm font-medium shadow-sm',
-				'border border-indigo-200 bg-indigo-600 text-white hover:bg-indigo-700',
-				'active:scale-[.98] disabled:opacity-60 disabled:cursor-not-allowed',
-				className,
-			].join(' ')}
-		>
-			{loading ? (
-				<span className='relative flex items-center'>
-					<span className='mr-1 inline-block w-3.5 h-3.5 border-2 border-white/60 border-t-transparent rounded-full animate-spin' />
-					{name}
-				</span>
-			) : (
-				<>
-					{icon ? icon : null}
-					{name}
-				</>
-			)}
-		</button>
-	);
-}
-
 function NotesModal({ open, onClose, title, notes = [], t }) {
 	if (!open) return null;
 
@@ -334,17 +411,27 @@ function NotesModal({ open, onClose, title, notes = [], t }) {
 				animate={{ y: 0, opacity: 1, scale: 1 }}
 				exit={{ y: 22, opacity: 0, scale: 0.98 }}
 				transition={{ type: 'spring', stiffness: 260, damping: 26 }}
-				className='fixed left-1/2 top-[12%] -translate-x-1/2 z-[125] w-[92%] max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden'
+				className='fixed left-1/2 top-[12%] -translate-x-1/2 z-[125] w-[92%] max-w-lg rounded-3xl bg-white shadow-2xl border overflow-hidden'
+				style={{ borderColor: 'var(--color-primary-200)' }}
 				onClick={e => e.stopPropagation()}
 			>
-				<div className='p-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-50 to-white'>
+				<div
+					className='p-4 border-b flex items-center justify-between'
+					style={{
+						borderColor: 'rgba(226,232,240,0.9)',
+						background: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
+					}}
+				>
 					<div className='min-w-0'>
-						<div className='text-xs text-slate-500'>{t('notes.modalTitle')}</div>
-						<div className='text-sm font-semibold text-slate-900 truncate'>{title || t('notes.fallbackTitle')}</div>
+						<div className='text-xs' style={{ color: 'var(--color-primary-700)' }}>
+							{t('notes.modalTitle')}
+						</div>
+						<div className='text-sm font-extrabold text-slate-900 truncate'>{title || t('notes.fallbackTitle')}</div>
 					</div>
 					<button
 						onClick={onClose}
-						className='p-2 rounded-xl hover:bg-slate-100'
+						className='p-2 rounded-2xl hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4'
+						style={{ ['--tw-ring-color']: 'var(--color-primary-200)' }}
 						aria-label={t('actions.close')}
 						title={t('actions.close')}
 					>
@@ -358,10 +445,21 @@ function NotesModal({ open, onClose, title, notes = [], t }) {
 							{notes.map((n, idx) => (
 								<li
 									key={idx}
-									className='rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800'
+									className='rounded-2xl border px-3 py-2 text-sm text-slate-800'
+									style={{
+										borderColor: 'var(--color-primary-200)',
+										background: 'linear-gradient(135deg, rgba(255,255,255,0.92), var(--color-primary-50))',
+									}}
 								>
 									<div className='flex items-start gap-2'>
-										<span className='mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white text-xs font-semibold'>
+										<span
+											className='mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-xl text-xs font-extrabold'
+											style={{
+												background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+												color: 'white',
+												boxShadow: '0 12px 24px rgba(15,23,42,0.14)',
+											}}
+										>
 											{idx + 1}
 										</span>
 										<span className='leading-relaxed'>{String(n)}</span>
@@ -370,19 +468,22 @@ function NotesModal({ open, onClose, title, notes = [], t }) {
 							))}
 						</ul>
 					) : (
-						<div className='rounded-xl border border-slate-200 bg-white px-3 py-6 text-center text-sm text-slate-500'>
+						<div
+							className='rounded-2xl border bg-white px-3 py-6 text-center text-sm text-slate-500'
+							style={{ borderColor: 'var(--color-primary-200)' }}
+						>
 							{t('notes.empty')}
 						</div>
 					)}
 				</div>
 
-				<div className='p-3 border-t border-slate-100 flex items-center justify-end bg-white'>
-					<button
-						onClick={onClose}
-						className='h-9 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm'
-					>
+				<div
+					className='p-3 border-t flex items-center justify-end bg-white'
+					style={{ borderColor: 'rgba(226,232,240,0.9)' }}
+				>
+					<GhostBtn onClick={onClose} title={t('actions.close')}>
 						{t('actions.close')}
-					</button>
+					</GhostBtn>
 				</div>
 			</motion.div>
 		</AnimatePresence>
@@ -401,7 +502,7 @@ export default function MyWorkoutsPage() {
 	const [plan, setPlan] = useState(null);
 
 	const [selectedDay, setSelectedDay] = useState(() =>
-		typeof window !== 'undefined' ? localStorage.getItem(LOCAL_KEY_SELECTED_DAY) || 'monday' : 'monday'
+		typeof window !== 'undefined' ? localStorage.getItem(LOCAL_KEY_SELECTED_DAY) || 'monday' : 'monday',
 	);
 
 	const [activeSection, setActiveSection] = useState('workout'); // warmup | workout | cardio
@@ -410,24 +511,19 @@ export default function MyWorkoutsPage() {
 	const [currentExId, setCurrentExId] = useState(undefined);
 	const [hidden, setHidden] = useState(false);
 
-	// media tab
 	const [activeMedia, setActiveMedia] = useState('image');
 	const audioRef = useRef(null);
 	const ALERT_SOUND = DEFAULT_SOUNDS[2];
 	const [alerting, setAlerting] = useState(false);
 
-	// misc
 	const [audioOpen, setAudioOpen] = useState(false);
 	const [unsaved, setUnsaved] = useState(false);
 
-	// notes modal
 	const [notesOpen, setNotesOpen] = useState(false);
 
-	// mirrors and buffers
-	const lastSavedRef = useRef(new Map()); // setId -> { weight, reps, done }
-	const [inputBuffer, setInputBuffer] = useState({}); // key -> string
+	const lastSavedRef = useRef(new Map());
+	const [inputBuffer, setInputBuffer] = useState({});
 
-	// sync status
 	const [syncing, setSyncing] = useState(false);
 	const [lastSyncStatus, setLastSyncStatus] = useState('');
 	const [completedExercises, setCompletedExercises] = useState(new Set());
@@ -445,7 +541,6 @@ export default function MyWorkoutsPage() {
 		});
 	}, []);
 
-	// merge helper — **THIS updates the table after sync**
 	const applyRecordsToWorkout = useCallback((exerciseName, records) => {
 		if (!records || !records.length) return;
 		setWorkout(prev => {
@@ -475,7 +570,6 @@ export default function MyWorkoutsPage() {
 		});
 	}, []);
 
-	// apply initial PRs weight+reps+done (from server)
 	const applyInitialRecordsWithDone = useCallback((session, recordsByExercise) => {
 		if (!session?.sets?.length) return session;
 		const next = { ...session, sets: session.sets.map(s => ({ ...s })) };
@@ -523,9 +617,7 @@ export default function MyWorkoutsPage() {
 			const ex = prev.exercises?.find(e => e.id === currentExId);
 			if (!ex || !USER_ID) return prev;
 
-			const queued = loadQueue().find(
-				i => i.userId === USER_ID && i.exerciseName === ex.name && i.date === todayISO()
-			);
+			const queued = loadQueue().find(i => i.userId === USER_ID && i.exerciseName === ex.name && i.date === todayISO());
 			if (!queued) return prev;
 
 			const bySet = {};
@@ -541,7 +633,7 @@ export default function MyWorkoutsPage() {
 							weight: Number(bySet[s.set]?.weight) || 0,
 							reps: Number(bySet[s.set]?.reps) || 0,
 							done: !!bySet[s.set]?.done,
-						}
+						},
 				),
 			};
 
@@ -558,13 +650,12 @@ export default function MyWorkoutsPage() {
 			const exerciseSets = workout.sets.filter(s => s.exId === exerciseId);
 			return exerciseSets.length > 0 && exerciseSets.every(set => set.done);
 		},
-		[workout]
+		[workout],
 	);
 
 	const toggleExerciseCompletion = useCallback(
 		exerciseId => {
 			const isCompleted = isExerciseCompleted(exerciseId);
-
 			setWorkout(prev => {
 				if (!prev) return prev;
 
@@ -586,7 +677,7 @@ export default function MyWorkoutsPage() {
 				return next;
 			});
 		},
-		[isExerciseCompleted, USER_ID]
+		[isExerciseCompleted, USER_ID],
 	);
 
 	useEffect(() => {
@@ -598,6 +689,51 @@ export default function MyWorkoutsPage() {
 			setCompletedExercises(newCompleted);
 		}
 	}, [workout, isExerciseCompleted]);
+
+	const ensureSetsCountForExercise = useCallback(
+		(w, exId, desired, fallbackReps) => {
+			if (!w || exId == null) return w;
+
+			const exIdStr = String(exId);
+			const d = Math.max(1, Math.min(20, Number(desired) || 1));
+
+			const existing = (w.sets || []).filter(s => String(s.exId) === exIdStr);
+			const ex = (w.exercises || []).find(e => String(e.id) === exIdStr);
+
+			const keepBySetNumber = new Map();
+			existing
+				.sort((a, b) => Number(a.set) - Number(b.set))
+				.forEach(s => {
+					const sn = Number(s.set) || 1;
+					if (!keepBySetNumber.has(sn)) keepBySetNumber.set(sn, s);
+				});
+
+			const kept = [...keepBySetNumber.values()].slice(0, d);
+
+			let nextSets = (w.sets || []).filter(s => String(s.exId) !== exIdStr);
+			nextSets.push(...kept);
+
+			const base = kept[kept.length - 1] || { targetReps: fallbackReps || ex?.targetReps || '10', restTime: 90 };
+			for (let i = kept.length + 1; i <= d; i++) {
+				nextSets.push({
+					id: `${exIdStr}-set${i}`,
+					exId: exIdStr,
+					exName: ex?.name || t('exerciseFallback'),
+					set: i,
+					targetReps: fallbackReps || ex?.targetReps || base.targetReps,
+					weight: 0,
+					reps: 0,
+					effort: null,
+					done: false,
+					pr: false,
+					restTime: Number.isFinite(ex?.rest ?? ex?.restSeconds) ? ex?.rest ?? ex?.restSeconds : base.restTime,
+				});
+			}
+
+			return { ...w, sets: nextSets };
+		},
+		[t],
+	);
 
 	// Initial load
 	useEffect(() => {
@@ -616,8 +752,7 @@ export default function MyWorkoutsPage() {
 				const byKey = Object.fromEntries(serverDays.map(d => [d._key, d]));
 				const allKeys = serverDays.map(d => d._key);
 
-				const savedDay =
-					(typeof window !== 'undefined' && localStorage.getItem(LOCAL_KEY_SELECTED_DAY)) || null;
+				const savedDay = (typeof window !== 'undefined' && localStorage.getItem(LOCAL_KEY_SELECTED_DAY)) || null;
 				const initialDayId = savedDay || pickTodayId(allKeys.length ? allKeys : Object.keys(weeklyProgram));
 				setSelectedDay(initialDayId);
 
@@ -626,9 +761,8 @@ export default function MyWorkoutsPage() {
 				const initSection = pickInitialSection(dayProgramNorm);
 				setActiveSection(initSection);
 
-				let session = createSessionFromDay(dayProgramNorm); // uses allExercises now
-				const firstInSection =
-					(session.exercises || []).find(x => x.group === initSection) || session.exercises?.[0];
+				let session = createSessionFromDay(dayProgramNorm);
+				const firstInSection = (session.exercises || []).find(x => x.group === initSection) || session.exercises?.[0];
 
 				const firstId = firstInSection?.id;
 				setCurrentExId(firstId);
@@ -651,7 +785,7 @@ export default function MyWorkoutsPage() {
 				const firstEx = firstInSection;
 				if (firstEx && USER_ID) {
 					const queued = loadQueue().find(
-						i => i.userId === USER_ID && i.exerciseName === firstEx.name && i.date === todayISO()
+						i => i.userId === USER_ID && i.exerciseName === firstEx.name && i.date === todayISO(),
 					);
 					if (queued) {
 						const bySet = {};
@@ -666,7 +800,7 @@ export default function MyWorkoutsPage() {
 										weight: Number(bySet[s.set]?.weight) || 0,
 										reps: Number(bySet[s.set]?.reps) || 0,
 										done: !!bySet[s.set]?.done,
-									}
+									},
 							),
 						};
 						setUnsaved(true);
@@ -689,7 +823,7 @@ export default function MyWorkoutsPage() {
 		return () => {
 			mounted = false;
 		};
-	}, [USER_ID, preloadMedia, applyInitialRecordsWithDone]);
+	}, [USER_ID, preloadMedia, applyInitialRecordsWithDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// Keep "unsaved" badge accurate
 	useEffect(() => {
@@ -698,65 +832,15 @@ export default function MyWorkoutsPage() {
 			setUnsaved(false);
 			return;
 		}
-		const hasPending = loadQueue().some(
-			i => i.userId === USER_ID && i.exerciseName === exName && i.date === todayISO()
-		);
+		const hasPending = loadQueue().some(i => i.userId === USER_ID && i.exerciseName === exName && i.date === todayISO());
 		setUnsaved(hasPending);
 	}, [workout, currentExId, USER_ID]);
 
-	const ensureSetsCountForExercise = useCallback((w, exId, desired, fallbackReps) => {
-		if (!w || exId == null) return w;
-
-		const exIdStr = String(exId);
-		const d = Math.max(1, Math.min(20, Number(desired) || 1));
-
-		const existing = (w.sets || []).filter(s => String(s.exId) === exIdStr);
-		const ex = (w.exercises || []).find(e => String(e.id) === exIdStr);
-
-		// احذف أي sets زيادة + نظّف التكرارات لو موجودة
-		const keepBySetNumber = new Map();
-		existing
-			.sort((a, b) => Number(a.set) - Number(b.set))
-			.forEach(s => {
-				const sn = Number(s.set) || 1;
-				if (!keepBySetNumber.has(sn)) keepBySetNumber.set(sn, s); // أول واحد فقط
-			});
-
-		const kept = [...keepBySetNumber.values()].slice(0, d);
-
-		// خلي باقي sets للتمارين الأخرى كما هي
-		let nextSets = (w.sets || []).filter(s => String(s.exId) !== exIdStr);
-
-		// أضف الموجود
-		nextSets.push(...kept);
-
-		// كمّل الناقص
-		const base = kept[kept.length - 1] || { targetReps: fallbackReps || ex?.targetReps || '10', restTime: 90 };
-		for (let i = kept.length + 1; i <= d; i++) {
-			nextSets.push({
-				id: `${exIdStr}-set${i}`,
-				exId: exIdStr,
-				exName: ex?.name || t('exerciseFallback'),
-				set: i,
-				targetReps: fallbackReps || ex?.targetReps || base.targetReps,
-				weight: 0,
-				reps: 0,
-				effort: null,
-				done: false,
-				pr: false,
-				restTime: Number.isFinite(ex?.rest ?? ex?.restSeconds) ? (ex?.rest ?? ex?.restSeconds) : base.restTime,
-			});
-		}
-
-		return { ...w, sets: nextSets };
-	}, [t]);
-
-
-	// Change day (✅ FIX: setSelectedDay)
+	// Change day
 	const changeDay = useCallback(
 		async dayId => {
 			try {
-				setSelectedDay(dayId); // ✅ this is the main fix for TabsPill
+				setSelectedDay(dayId);
 
 				const raw = plan?.program?.days || [];
 				const byKey = Object.fromEntries(raw.map(d => [String(d.dayOfWeek ?? '').toLowerCase(), d]));
@@ -767,8 +851,7 @@ export default function MyWorkoutsPage() {
 				setActiveSection(nextSection);
 
 				let session = createSessionFromDay(dayProgramNorm);
-				const firstInSection =
-					(session.exercises || []).find(x => x.group === nextSection) || session.exercises?.[0];
+				const firstInSection = (session.exercises || []).find(x => x.group === nextSection) || session.exercises?.[0];
 
 				setWorkout(session);
 				setCurrentExId(firstInSection?.id != null ? String(firstInSection.id) : undefined);
@@ -797,7 +880,7 @@ export default function MyWorkoutsPage() {
 				console.error(e);
 			}
 		},
-		[plan, preloadMedia, USER_ID, applyInitialRecordsWithDone, applyLocalQueuedSnapshotIfAny, t]
+		[plan, preloadMedia, USER_ID, applyInitialRecordsWithDone, applyLocalQueuedSnapshotIfAny, t],
 	);
 
 	// === Set mutations
@@ -864,7 +947,7 @@ export default function MyWorkoutsPage() {
 				return next;
 			});
 		},
-		[currentExId, USER_ID]
+		[currentExId, USER_ID],
 	);
 
 	const bump = useCallback(
@@ -893,7 +976,7 @@ export default function MyWorkoutsPage() {
 				return next;
 			});
 		},
-		[currentExId, USER_ID]
+		[currentExId, USER_ID],
 	);
 
 	const setValue = useCallback(
@@ -917,7 +1000,7 @@ export default function MyWorkoutsPage() {
 				return next;
 			});
 		},
-		[currentExId, USER_ID]
+		[currentExId, USER_ID],
 	);
 
 	// Try sync entire queue
@@ -959,7 +1042,7 @@ export default function MyWorkoutsPage() {
 				!!exName && still.some(i => i.userId === USER_ID && i.exerciseName === exName && i.date === todayISO());
 			setUnsaved(hasPendingForCurrent);
 		},
-		[USER_ID, workout, currentExId, applyRecordsToWorkout]
+		[USER_ID, workout, currentExId, applyRecordsToWorkout],
 	);
 
 	useEffect(() => {
@@ -982,7 +1065,10 @@ export default function MyWorkoutsPage() {
 		return ex;
 	}, [workout?.exercises, currentExId, exercisesBySection]);
 
-	// keep currentExId valid when switching section
+
+	const isCardio = (currentExercise?.group || activeSection) === 'cardio';
+
+
 	useEffect(() => {
 		if (!exercisesBySection.length) return;
 		const exists = exercisesBySection.some(e => e.id === currentExId);
@@ -994,7 +1080,7 @@ export default function MyWorkoutsPage() {
 
 	const currentSets = useMemo(
 		() => (workout?.sets || []).filter(s => s.exId === currentExercise?.id),
-		[workout?.sets, currentExercise?.id]
+		[workout?.sets, currentExercise?.id],
 	);
 
 	const exTargetSets = useMemo(() => {
@@ -1006,10 +1092,11 @@ export default function MyWorkoutsPage() {
 	const exTempo = useMemo(() => normalizeTempo(currentExercise?.tempo), [currentExercise?.tempo]);
 	const exReps = useMemo(() => normalizeReps(currentExercise?.targetReps), [currentExercise?.targetReps]);
 
-	// Ensure sets count matches targetSets when exercise changes
 	useEffect(() => {
 		if (!currentExercise?.id) return;
-		setWorkout(w => ensureSetsCountForExercise(w, currentExercise.id, currentExercise?.targetSets ?? 1, exReps || currentExercise?.targetReps));
+		setWorkout(w =>
+			ensureSetsCountForExercise(w, currentExercise.id, currentExercise?.targetSets ?? 1, exReps || currentExercise?.targetReps),
+		);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [currentExercise?.id]);
 
@@ -1037,35 +1124,31 @@ export default function MyWorkoutsPage() {
 		if (hasWarmup) list.push({ key: 'warmup', label: t('sections.warmup') });
 		if (hasWorkout) list.push({ key: 'workout', label: t('sections.workout') });
 		if (hasCardio) list.push({ key: 'cardio', label: t('sections.cardio') });
-
-		// fallback if empty
 		return list.length ? list : [{ key: 'workout', label: t('sections.workout') }];
 	}, [workout?.exercises, t]);
 
 	const Actions = ({ className }) => (
-		<div className={`flex items-center gap-2 ${className}`}>
-			<button
+		<div className={cx('flex items-center gap-2', className)}>
+			<GhostBtn
 				onClick={() => {
 					!hidden && setAudioOpen(v => !v);
 					setHidden(false);
 				}}
-				className='px-2 inline-flex items-center gap-2 rounded-lg bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition'
-				aria-label={t('listen')}
 				title={t('listen')}
+				className='!bg-white/10 !text-white !border-white/30 hover:!bg-white/20'
 			>
 				<Headphones size={16} />
 				<span className='max-md:hidden'>{t('listen')}</span>
-			</button>
+			</GhostBtn>
 
-			<button
+			<GhostBtn
 				onClick={() => setNotesOpen(true)}
-				className='px-2 inline-flex items-center gap-2 rounded-lg bg-white/10 border border-white/30 text-white h-[37px] max-md:w-[37px] justify-center text-sm font-medium shadow hover:bg-white/20 active:scale-95 transition'
-				aria-label={t('notes.show')}
 				title={t('notes.show')}
+				className='!bg-white/10 !text-white !border-white/30 hover:!bg-white/20'
 			>
 				<StickyNote size={16} />
 				<span className='max-md:hidden'>{t('notes.show')}</span>
-			</button>
+			</GhostBtn>
 		</div>
 	);
 
@@ -1101,8 +1184,11 @@ export default function MyWorkoutsPage() {
 	if (loading) {
 		return (
 			<div className='space-y-5 sm:space-y-6 animate-pulse'>
-				<div className='rounded-lg overflow-hidden border border-indigo-200'>
-					<div className='relative p-6 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 text-white'>
+				<div className='rounded-2xl overflow-hidden border' style={{ borderColor: 'var(--color-primary-200)' }}>
+					<div
+						className='relative p-6 text-white'
+						style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
+					>
 						<div className='h-6 bg-white/20 rounded w-56'></div>
 						<div className='mt-2 h-4 bg-white/20 rounded w-64'></div>
 					</div>
@@ -1116,7 +1202,7 @@ export default function MyWorkoutsPage() {
 				</div>
 				<div className='grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6'>
 					<div className='space-y-4'>
-						<div className='rounded-lg border border-slate-200 bg-white p-4'>
+						<div className='rounded-2xl border border-slate-200 bg-white p-4'>
 							<div className='h-64 bg-slate-200 rounded-lg'></div>
 						</div>
 					</div>
@@ -1134,19 +1220,18 @@ export default function MyWorkoutsPage() {
 		<div className='space-y-5 sm:space-y-6'>
 			<audio ref={audioRef} src={ALERT_SOUND} preload='auto' />
 
-			{/* NOTES MODAL */}
-			<NotesModal
-				open={notesOpen}
-				onClose={() => setNotesOpen(false)}
-				title={plan?.name}
-				notes={plan?.notes || []}
-				t={t}
-			/>
+			<NotesModal open={notesOpen} onClose={() => setNotesOpen(false)} title={plan?.name} notes={plan?.notes || []} t={t} />
 
 			{/* HEADER */}
-			<div className={'relative overflow-hidden rounded-lg border border-indigo-100/60 bg-white/60 shadow-sm backdrop-blur '}>
+			<div
+				className='relative overflow-hidden rounded-2xl border bg-white/60 shadow-sm backdrop-blur'
+				style={{ borderColor: 'var(--color-primary-200)' }}
+			>
 				<div className='absolute inset-0 overflow-hidden'>
-					<div className='absolute inset-0 bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-95' />
+					<div
+						className='absolute inset-0 opacity-95'
+						style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
+					/>
 					<div
 						className='absolute inset-0 opacity-15'
 						style={{
@@ -1157,30 +1242,40 @@ export default function MyWorkoutsPage() {
 						}}
 					/>
 					<div className='absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/20 blur-3xl' />
-					<div className='absolute -bottom-16 -right-8 h-60 w-60 rounded-full bg-blue-300/30 blur-3xl' />
+					<div className='absolute -bottom-16 -right-8 h-60 w-60 rounded-full bg-white/20 blur-3xl' />
 				</div>
 
 				<div className='relative py-2 p-3 md:p-5 text-white'>
-					<div className='flex  flex-row  items-center justify-between gap-3 '>
+					<div className='flex flex-row items-center justify-between gap-3'>
 						<div className='min-w-0'>
-							<h1 className='text-xl md:text-4xl font-semibold truncate'>
-								{t('title')}
- 							</h1>
-							<p className='text-white/85 mt-1 max-md:hidden '>{t('subtitle')}</p>
+							<h1 className='text-xl md:text-4xl font-semibold truncate'>{t('title')}</h1>
+							<p className='text-white/85 mt-1 max-md:hidden'>{t('subtitle')}</p>
+							<div className='mt-2 flex items-center gap-2 flex-wrap'>
+								<Pill tone='primary'>
+									{t('sections.title')}: {t(`sections.${activeSection}`)}
+								</Pill>
+
+								<span className='inline-flex items-center gap-2 text-xs text-white/90'>
+									{unsaved ? (
+										<span className='inline-flex items-center gap-1'>
+											<CloudOff size={14} />
+											{t('sync.pending')}
+										</span>
+									) : (
+										<span className='inline-flex items-center gap-1'>
+											<Cloud size={14} />
+											{t('sync.synced')}
+										</span>
+									)}
+								</span>
+							</div>
 						</div>
-						<Actions className={' md:!hidden'} />
+						<Actions className='md:!hidden' />
 					</div>
 
-					<div className=' mt-2 md:mt-4 flex items-center justify-between '>
-						<TabsPill
-							className='!rounded-lg'
-							sliceInPhone={false}
-							id='day-tabs'
-							tabs={dayTabs}
-							active={selectedDay}
-							onChange={changeDay}
-						/>
-						<Actions className={'max-md:!hidden'} />
+					<div className='mt-2 md:mt-4 flex items-center justify-between'>
+						<TabsPill className='!rounded-2xl' sliceInPhone={false} id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={changeDay} />
+						<Actions className='max-md:!hidden' />
 					</div>
 				</div>
 			</div>
@@ -1200,402 +1295,487 @@ export default function MyWorkoutsPage() {
 			<motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
 				<div className='flex flex-col lg:flex-row gap-4'>
 					{/* LEFT */}
-					<div className='md:rounded-lg md:bg-white h-fit md:p-4 md:shadow-sm w-full  lg:flex-1 min-w-0'>
-						<div className={`relative md:bg-white/80 backdrop-blur md:rounded-lg md:overflow-hidden ${!hasExercises ? '!border-transparent' : ''}`}>
-							{!hasExercises ? (
-								<div className='p-5'>
-									<div className='relative flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300/80 bg-gradient-to-br from-slate-50 via-white to-slate-50 p-5 text-center shadow-sm'>
-										<div className='mb-4 grid h-16 w-16 place-items-center rounded-full bg-white shadow ring-1 ring-slate-200'>
-											<Dumbbell size={24} className='text-slate-500' />
+					<div className='w-full lg:flex-1 min-w-0'>
+						<ThemeFrame>
+							<div className={cx('p-3 md:p-4', !hasExercises && 'py-6')}>
+								{!hasExercises ? (
+									<div className='relative flex flex-col items-center justify-center rounded-3xl border border-dashed p-6 text-center'>
+										<div
+											className='mb-4 grid h-16 w-16 place-items-center rounded-3xl'
+											style={{
+												background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-secondary-100))',
+												boxShadow: '0 18px 36px rgba(15,23,42,0.12)',
+											}}
+										>
+											<Dumbbell size={24} style={{ color: 'var(--color-primary-700)' }} />
 										</div>
-										<h3 className='text-lg font-semibold text-slate-800'>{t('noExercises')}</h3>
-										<p className='mt-1  text-xs text-slate-400 italic '>{t('pickAnotherDay')}</p>
+										<h3 className='text-lg font-extrabold text-slate-900'>{t('noExercises')}</h3>
+										<p className='mt-1 text-xs text-slate-500 italic'>{t('pickAnotherDay')}</p>
 									</div>
-								</div>
-							) : (
-								<>
-									{/* SECTION TABS */}
-									<div className='px-1 pt-2'>
-										<div className='rounded-xl border border-slate-200 bg-white/70 p-1 inline-flex w-full sm:w-auto'>
-											{sectionTabs.map(st => {
-												const active = activeSection === st.key;
-												return (
-													<button
-														key={st.key}
-														onClick={() => setActiveSection(st.key)}
-														className={[
-															'relative flex-1 sm:flex-none px-3 py-2 text-xs rounded-xl transition font-medium min-h-[40px]',
-															active ? 'text-indigo-700' : 'text-slate-600 hover:text-slate-800',
-														].join(' ')}
-														aria-pressed={active}
-													>
-														{st.label}
-														{active && (
-															<motion.span
-																layoutId='secTab'
-																className='absolute inset-0 -z-10 rounded-xl bg-indigo-50 shadow-sm border border-indigo-100'
-																transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-															/>
-														)}
-													</button>
-												);
-											})}
-										</div>
-									</div>
-
-									<div className='mt-2'>
-										<div className='relative w-full rounded-lg overflow-hidden '>
-											<div className='max-md:h-[250px] md:aspect-[16/9] '>
-												{currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? (
-													<InlineVideo key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} />
-												) : (
-													<Img
-														showBlur={false}
-														key={currentExercise?.id + '-image'}
-														src={currentExercise?.img}
-														alt={currentExercise?.name}
-														className='w-full h-full object-contain '
-														loading='lazy'
-													/>
-												)}
+								) : (
+									<>
+										{/* SECTION TABS */}
+										<div className='px-1 pt-1'>
+											<div
+												className='rounded-2xl p-1 inline-flex w-full sm:w-auto border bg-white/70'
+												style={{ borderColor: 'var(--color-primary-200)' }}
+											>
+												{sectionTabs.map(st => {
+													const active = activeSection === st.key;
+													return (
+														<button
+															key={st.key}
+															onClick={() => setActiveSection(st.key)}
+															className={cx(
+																'relative flex-1 sm:flex-none px-3 py-2 text-xs rounded-2xl transition font-semibold min-h-[40px] focus-visible:outline-none focus-visible:ring-4',
+																active ? 'text-slate-900' : 'text-slate-600 hover:text-slate-800',
+															)}
+															style={{ ['--tw-ring-color']: 'var(--color-primary-200)' }}
+															aria-pressed={active}
+														>
+															{st.label}
+															{active && (
+																<motion.span
+																	layoutId='secTab'
+																	className='absolute inset-0 -z-10 rounded-2xl border'
+																	style={{
+																		borderColor: 'var(--color-primary-200)',
+																		background: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
+																	}}
+																	transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+																/>
+															)}
+														</button>
+													);
+												})}
 											</div>
+										</div>
 
-											{(() => {
-												const hasImg = !!currentExercise?.img;
-												const hasVideo1 = !!currentExercise?.video;
-												const hasVideo2 = !!currentExercise?.video2;
+										{/* Media */}
+										<div className='mt-3'>
+											<div
+												className='relative w-full rounded-2xl overflow-hidden border bg-white'
+												style={{ borderColor: 'var(--color-primary-200)' }}
+											>
+												<div className='max-md:h-[250px] md:aspect-[16/9]'>
+													{currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? (
+														<InlineVideo key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} />
+													) : (
+														<Img
+															showBlur={false}
+															key={currentExercise?.id + '-image'}
+															src={currentExercise?.img}
+															alt={currentExercise?.name}
+															className='w-full h-full object-contain'
+															loading='lazy'
+														/>
+													)}
+												</div>
 
-												return (
-													<div className={`absolute right-1  md:right-3 flex items-center gap-2 ${activeMedia === 'video' ? 'bottom-[70px] ' : ' bottom-1 md:bottom-3'} duration-500 `}>
-														<div className='inline-flex max-md:flex-col items-center gap-[4px] rounded-lg bg-slate-100/70 p-1 ring-1 ring-black/5 backdrop-blur-md'>
-															<button
-																type='button'
-																aria-pressed={activeMedia === 'image'}
-																disabled={!hasImg}
-																onClick={() => setActiveMedia('image')}
-																className={[
-																	'relative inline-flex items-center gap-1.5 w-[35px] h-[35px] justify-center text-xs sm:text-sm rounded-lg outline-none transition',
-																	activeMedia === 'image' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900',
-																	!hasImg ? 'opacity-50 cursor-not-allowed' : '',
-																	'focus-visible:ring-2 focus-visible:ring-indigo-400/40',
-																].join(' ')}
-																title={t('showImage')}
-																aria-label={t('showImage')}
-															>
-																<ImageIcon size={14} />
-																{activeMedia === 'image' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
-															</button>
+												{/* Media switcher */}
+												{(() => {
+													const hasImg = !!currentExercise?.img;
+													const hasVideo1 = !!currentExercise?.video;
+													const hasVideo2 = !!currentExercise?.video2;
 
-															<button
-																type='button'
-																aria-pressed={activeMedia === 'video'}
-																disabled={!hasVideo1}
-																onClick={() => setActiveMedia('video')}
-																className={[
-																	'relative inline-flex items-center gap-1.5 w-[35px] h-[35px] justify-center text-xs sm:text-sm rounded-lg outline-none transition',
-																	activeMedia === 'video' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900',
-																	!hasVideo1 ? 'opacity-50 cursor-not-allowed' : '',
-																	'focus-visible:ring-2 focus-visible:ring-indigo-400/40',
-																].join(' ')}
-																title={t('showVideo')}
-																aria-label={t('showVideo')}
-															>
-																<VideoIcon size={14} />
-																{activeMedia === 'video' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
-															</button>
-
-															{hasVideo2 && (
+													return (
+														<div
+															className={cx(
+																'absolute right-2 md:right-3 flex items-center gap-2',
+																activeMedia === 'video' ? 'bottom-[70px]' : 'bottom-2 md:bottom-3',
+															)}
+														>
+															<div className='inline-flex max-md:flex-col items-center gap-1 rounded-2xl bg-white/70 p-1 ring-1 ring-black/5 backdrop-blur-md'>
 																<button
 																	type='button'
-																	aria-pressed={activeMedia === 'video2'}
-																	onClick={() => setActiveMedia('video2')}
-																	className={[
-																		'relative inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm rounded-lg outline-none transition',
-																		activeMedia === 'video2' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900',
-																		'focus-visible:ring-2 focus-visible:ring-indigo-400/40',
-																	].join(' ')}
-																	title={t('showVideoAlt')}
-																	aria-label={t('showVideoAlt')}
+																	aria-pressed={activeMedia === 'image'}
+																	disabled={!hasImg}
+																	onClick={() => setActiveMedia('image')}
+																	className={cx(
+																		'relative inline-flex items-center w-[38px] h-[38px] justify-center rounded-2xl outline-none transition focus-visible:ring-4',
+																		activeMedia === 'image' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900',
+																		!hasImg && 'opacity-50 cursor-not-allowed',
+																	)}
+																	style={{
+																		['--tw-ring-color']: 'var(--color-primary-200)',
+																		border: activeMedia === 'image' ? `1px solid var(--color-primary-200)` : '1px solid transparent',
+																	}}
+																	title={t('showImage')}
+																	aria-label={t('showImage')}
 																>
-																	<VideoIcon size={14} />
-																	<span className='hidden sm:inline'>{t('alt')}</span>
-																	{activeMedia === 'video2' && <span className='absolute inset-x-2 -bottom-[6px] h-[2px] rounded-full bg-slate-900/80' />}
+																	<ImageIcon size={16} />
 																</button>
-															)}
+
+																<button
+																	type='button'
+																	aria-pressed={activeMedia === 'video'}
+																	disabled={!hasVideo1}
+																	onClick={() => setActiveMedia('video')}
+																	className={cx(
+																		'relative inline-flex items-center w-[38px] h-[38px] justify-center rounded-2xl outline-none transition focus-visible:ring-4',
+																		activeMedia === 'video' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900',
+																		!hasVideo1 && 'opacity-50 cursor-not-allowed',
+																	)}
+																	style={{
+																		['--tw-ring-color']: 'var(--color-primary-200)',
+																		border: activeMedia === 'video' ? `1px solid var(--color-primary-200)` : '1px solid transparent',
+																	}}
+																	title={t('showVideo')}
+																	aria-label={t('showVideo')}
+																>
+																	<VideoIcon size={16} />
+																</button>
+
+																{hasVideo2 && (
+																	<button
+																		type='button'
+																		aria-pressed={activeMedia === 'video2'}
+																		onClick={() => setActiveMedia('video2')}
+																		className={cx(
+																			'relative inline-flex items-center gap-1.5 px-3 h-[38px] justify-center rounded-2xl outline-none transition focus-visible:ring-4',
+																			activeMedia === 'video2' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900',
+																		)}
+																		style={{
+																			['--tw-ring-color']: 'var(--color-primary-200)',
+																			border: activeMedia === 'video2' ? `1px solid var(--color-primary-200)` : '1px solid transparent',
+																		}}
+																		title={t('showVideoAlt')}
+																		aria-label={t('showVideoAlt')}
+																	>
+																		<VideoIcon size={16} />
+																		<span className='hidden sm:inline'>{t('alt')}</span>
+																	</button>
+																)}
+															</div>
 														</div>
-													</div>
-												);
-											})()}
+													);
+												})()}
+											</div>
+
+											{/* MOBILE EXERCISE LIST */}
+											<div className='pt-3 lg:hidden'>
+												<ExerciseList
+													t={t}
+													workout={workout}
+													exercisesOverride={exercisesBySection}
+													currentExId={currentExercise?.id}
+													onPick={ex => {
+														setCurrentExId(ex.id);
+														setActiveMedia('image');
+														setWorkout(w => ensureSetsCountForExercise(w, ex.id, ex?.targetSets ?? 1, exReps || ex?.targetReps));
+														applyLocalQueuedSnapshotIfAny();
+													}}
+													completedExercises={completedExercises}
+													toggleExerciseCompletion={toggleExerciseCompletion}
+												/>
+											</div>
+
+											{!isCardio && (
+												<RestTimerCard
+													alerting={alerting}
+													setAlerting={setAlerting}
+													initialSeconds={
+														Number.isFinite(currentExercise?.restSeconds)
+															? currentExercise?.restSeconds
+															: Number.isFinite(currentExercise?.rest)
+																? currentExercise?.rest
+																: 90
+													}
+													audioEl={audioRef}
+													className='mt-3'
+												/>
+											)}
+
 										</div>
 
-										{/* MOBILE EXERCISE LIST */}
-										<div className='pt-2 lg:hidden'>
-											<ExerciseList
-												t={t}
-												workout={workout}
-												exercisesOverride={exercisesBySection}
-												currentExId={currentExercise?.id}
-												onPick={ex => {
-													setCurrentExId(ex.id);
-													setActiveMedia('image');
-													setWorkout(w => ensureSetsCountForExercise(w, ex.id, ex?.targetSets ?? 1, exReps || ex?.targetReps));
-													applyLocalQueuedSnapshotIfAny();
-												}}
-												completedExercises={completedExercises}
-												toggleExerciseCompletion={toggleExerciseCompletion}
+
+										{/* Sets table */}
+										{isCardio ? (
+											<CardioTimerCard
+												durationSeconds={currentExercise?.durationSeconds}
+												note={currentExercise?.note}
 											/>
-										</div>
-
-										<RestTimerCard
-											alerting={alerting}
-											setAlerting={setAlerting}
-											initialSeconds={
-												Number.isFinite(currentExercise?.restSeconds)
-													? currentExercise?.restSeconds
-													: Number.isFinite(currentExercise?.rest)
-														? currentExercise?.rest
-														: 90
-											}
-											audioEl={audioRef}
-											className=' mt-2 '
-										/>
-									</div>
-
-									{/* Exercise Meta */}
-									<div className='relative z-[100] mt-3 mb-2 flex flex-wrap items-center gap-2'>
-										<span className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700'>
-											<span className='font-semibold'>{t('Sets')}:</span>
-											<span className='tabular-nums'>{exTargetSets}</span>
-										</span>
-
-										<span className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700'>
-											<span className='font-semibold'>{t('Reps')}:</span>
-											<span className='tabular-nums'>{exReps || '—'}</span>
-										</span>
-
-										<span className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700'>
-											<span className='font-semibold'>{t('Tempo')}:</span>
-											<span className='tabular-nums'>{exTempo}</span>
-
-											<span className='relative group inline-flex'>
-												<Info size={14} className='text-slate-500' />
-												<span className='pointer-events-none absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 shadow-lg opacity-0 group-hover:opacity-100 transition'>
-													{t('tempoHelp')}
-												</span>
-											</span>
-										</span>
-									</div>
-
-									{/* Sets table */}
-									<div className='max-md:mb-2 md:mb-5 mt-3 rounded-lg border border-slate-200 overflow-hidden bg-white'>
-										<div className='overflow-x-auto'>
-											<table className='w-full text-sm'>
-												<thead className=' rounded-lg overflow-hidden bg-slate-200 backdrop-blur sticky top-0 z-10'>
-													<tr className='text-left rtl:text-right text-slate-600'>
-														<th className=' max-sm:hidden py-2.5 px-3 font-semibold'>{t('table.set')}</th>
-														<th className='py-2.5 px-3 font-semibold'>{t('table.weight')}</th>
-														<th className='py-2.5 px-3 font-semibold'>{t('table.reps')}</th>
-														<th className='py-2.5 px-3 font-semibold'>{t('table.done')}</th>
-													</tr>
-												</thead>
-
-												<tbody className='divide-y divide-slate-100'>
-													{currentSets.map((s, i) => (
-														<tr
-															key={s.id}
-															className={`transition-colors ${i % 2 === 1 ? 'bg-slate-50/40' : 'bg-white'} hover:bg-indigo-50/40`}
+										) : (
+											<SoftCard className='mt-3 overflow-hidden'>
+												<div className='overflow-x-auto'>
+													<table className='w-full text-sm'>
+														<thead
+															className='sticky top-0 z-10'
+															style={{
+																background: 'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
+																borderBottom: `1px solid var(--color-primary-200)`,
+															}}
 														>
-															<td className=' max-sm:hidden py-2.5 px-3'>
-																<span className='inline-flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-slate-100  border border-slate-200 text-slate-700 font-medium'>
-																	{s.set}
-																</span>
-															</td>
+															<tr className='text-left rtl:text-right text-slate-700'>
+																<th className='max-sm:hidden py-2.5 px-3 font-extrabold'>{t('table.set')}</th>
+																<th className='py-2.5 px-3 font-extrabold'>{t('table.weight')}</th>
+																<th className='py-2.5 px-3 font-extrabold'>{t('table.reps')}</th>
+																<th className='py-2.5 px-3 font-extrabold'>{t('table.done')}</th>
+															</tr>
+														</thead>
 
-															{/* WEIGHT */}
-															<td className='py-2.5 px-3'>
-																<div className='relative inline-block'>
-																	<input
-																		type='text'
-																		value={getBufferedValue(s.id, 'weight', s.weight)}
-																		onChange={e => handleInputChange(s.id, 'weight', e.target.value)}
-																		onFocus={e => e.target.select()}
-																		onBlur={() => handleInputBlur(s.id, 'weight')}
-																		onKeyDown={e => {
-																			if (e.key === 'Enter') e.currentTarget.blur();
-																		}}
-																		inputMode='decimal'
-																		placeholder='0'
-																		aria-label={t('table.weight')}
-																		className='text-center h-9 w-[100px] !text-[16px] tabular-nums rounded-lg border border-slate-200 bg-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 px-[26px] transition-shadow duration-200'
-																	/>
+														<tbody className='divide-y divide-slate-100'>
+															{currentSets.map((s, i) => (
+																<tr
+																	key={s.id}
+																	className={cx('transition-colors', i % 2 === 1 ? 'bg-slate-50/30' : 'bg-white')}
+																	onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-primary-50)')}
+																	onMouseLeave={e =>
+																		(e.currentTarget.style.backgroundColor = i % 2 === 1 ? 'rgba(248,250,252,0.4)' : 'white')
+																	}
+																>
+																	<td className='max-sm:hidden py-2.5 px-3'>
+																		<span
+																			className='inline-flex h-[30px] w-[30px] items-center justify-center rounded-2xl border text-slate-800 font-extrabold'
+																			style={{
+																				borderColor: 'var(--color-primary-200)',
+																				background: 'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
+																			}}
+																		>
+																			{s.set}
+																		</span>
+																	</td>
 
-																	<button
-																		type='button'
-																		onClick={() => bump(s.id, 'weight', -1)}
-																		title={t('minusOne')}
-																		aria-label={t('minusOne')}
-																		className='absolute left-[2px] top-1/2 -translate-y-1/2 grid h-[30px] w-[30px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
-																		tabIndex={-1}
-																	>
-																		<Minus size={16} />
-																	</button>
+																	{/* WEIGHT */}
+																	<td className='py-2.5 px-3'>
+																		<div className='relative inline-block'>
+																			<input
+																				type='text'
+																				value={getBufferedValue(s.id, 'weight', s.weight)}
+																				onChange={e => {
+																					const key = `${s.id}:weight`;
+																					let v = normalizeNumericInput(e.target.value);
+																					v = v.replace(/[^\d.]/g, '');
+																					const parts = v.split('.');
+																					if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+																					setInputBuffer(prev => ({ ...prev, [key]: v }));
+																				}}
+																				onFocus={e => {
+																					e.target.select();
+																					e.currentTarget.style.boxShadow = `0 0 0 4px var(--color-primary-200)`;
+																				}}
+																				onBlur={e => {
+																					e.currentTarget.style.boxShadow = 'none';
+																					handleInputBlur(s.id, 'weight');
+																				}}
+																				onKeyDown={e => {
+																					if (e.key === 'Enter') e.currentTarget.blur();
+																				}}
+																				inputMode='decimal'
+																				placeholder='0'
+																				aria-label={t('table.weight')}
+																				className='text-center h-10 w-[110px] !text-[16px] tabular-nums rounded-2xl border bg-white outline-none px-[30px] transition-shadow duration-200'
+																				style={{
+																					borderColor: 'var(--color-primary-200)',
+																				}}
+																			/>
 
-																	<button
-																		type='button'
-																		onClick={() => bump(s.id, 'weight', +1)}
-																		title={t('plusOne')}
-																		aria-label={t('plusOne')}
-																		className='absolute right-[2px] top-1/2 -translate-y-1/2 grid h-[30px] w-[30px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
-																		tabIndex={-1}
-																	>
-																		<Plus size={16} />
-																	</button>
-																</div>
-															</td>
+																			<button
+																				type='button'
+																				onClick={() => bump(s.id, 'weight', -1)}
+																				title={t('minusOne')}
+																				aria-label={t('minusOne')}
+																				className='absolute left-[4px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-xl active:scale-95 transition focus-visible:outline-none focus-visible:ring-4'
+																				style={{
+																					['--tw-ring-color']: 'var(--color-primary-200)',
+																					background: 'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
+																					border: `1px solid var(--color-primary-200)`,
+																					color: 'var(--color-primary-800)',
+																				}}
+																				tabIndex={-1}
+																			>
+																				<Minus size={16} />
+																			</button>
 
-															{/* REPS */}
-															<td className='py-2.5 px-3'>
-																<div className='relative inline-block'>
-																	<input
-																		type='text'
-																		value={getBufferedValue(s.id, 'reps', s.reps)}
-																		onChange={e => handleInputChange(s.id, 'reps', e.target.value)}
-																		onFocus={e => e.target.select()}
-																		onBlur={() => handleInputBlur(s.id, 'reps')}
-																		onKeyDown={e => {
-																			if (e.key === 'Enter') e.currentTarget.blur();
-																		}}
-																		inputMode='numeric'
-																		placeholder='0'
-																		aria-label={t('table.reps')}
-																		className='text-center h-9 w-[100px] !text-[16px] tabular-nums rounded-lg border border-slate-200 bg-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 px-[26px]'
-																	/>
+																			<button
+																				type='button'
+																				onClick={() => bump(s.id, 'weight', +1)}
+																				title={t('plusOne')}
+																				aria-label={t('plusOne')}
+																				className='absolute right-[4px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-xl active:scale-95 transition focus-visible:outline-none focus-visible:ring-4'
+																				style={{
+																					['--tw-ring-color']: 'var(--color-primary-200)',
+																					background: 'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
+																					border: `1px solid var(--color-primary-200)`,
+																					color: 'var(--color-primary-800)',
+																				}}
+																				tabIndex={-1}
+																			>
+																				<Plus size={16} />
+																			</button>
+																		</div>
+																	</td>
 
-																	<button
-																		type='button'
-																		onClick={() => bump(s.id, 'reps', -1)}
-																		title={t('minusOne')}
-																		aria-label={t('minusOne')}
-																		className='absolute left-[2px] top-1/2 -translate-y-1/2 grid h-[30px] w-[30px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
-																		tabIndex={-1}
-																	>
-																		<Minus size={16} />
-																	</button>
+																	{/* REPS */}
+																	<td className='py-2.5 px-3'>
+																		<div className='relative inline-block'>
+																			<input
+																				type='text'
+																				value={getBufferedValue(s.id, 'reps', s.reps)}
+																				onChange={e => handleInputChange(s.id, 'reps', e.target.value)}
+																				onFocus={e => {
+																					e.target.select();
+																					e.currentTarget.style.boxShadow = `0 0 0 4px var(--color-primary-200)`;
+																				}}
+																				onBlur={e => {
+																					e.currentTarget.style.boxShadow = 'none';
+																					handleInputBlur(s.id, 'reps');
+																				}}
+																				onKeyDown={e => {
+																					if (e.key === 'Enter') e.currentTarget.blur();
+																				}}
+																				inputMode='numeric'
+																				placeholder='0'
+																				aria-label={t('table.reps')}
+																				className='text-center h-10 w-[110px] !text-[16px] tabular-nums rounded-2xl border bg-white outline-none px-[30px]'
+																				style={{ borderColor: 'var(--color-primary-200)' }}
+																			/>
 
-																	<button
-																		type='button'
-																		onClick={() => bump(s.id, 'reps', +1)}
-																		title={t('plusOne')}
-																		aria-label={t('plusOne')}
-																		className='absolute right-[2px] top-1/2 -translate-y-1/2 grid h-[30px] w-[30px] place-items-center rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition duration-150 overflow-hidden'
-																		tabIndex={-1}
-																	>
-																		<Plus size={16} />
-																	</button>
-																</div>
-															</td>
+																			<button
+																				type='button'
+																				onClick={() => bump(s.id, 'reps', -1)}
+																				title={t('minusOne')}
+																				aria-label={t('minusOne')}
+																				className='absolute left-[4px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-xl active:scale-95 transition focus-visible:outline-none focus-visible:ring-4'
+																				style={{
+																					['--tw-ring-color']: 'var(--color-primary-200)',
+																					background: 'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
+																					border: `1px solid var(--color-primary-200)`,
+																					color: 'var(--color-primary-800)',
+																				}}
+																				tabIndex={-1}
+																			>
+																				<Minus size={16} />
+																			</button>
 
-															<td className='py-2.5 px-3'>
-																<CheckBox
-																	initialChecked={s.done}
-																	onChange={() => toggleDone(s.id)}
-																	aria-label={t('table.done')}
-																/>
-															</td>
-														</tr>
-													))}
-												</tbody>
-											</table>
-										</div>
+																			<button
+																				type='button'
+																				onClick={() => bump(s.id, 'reps', +1)}
+																				title={t('plusOne')}
+																				aria-label={t('plusOne')}
+																				className='absolute right-[4px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-xl active:scale-95 transition focus-visible:outline-none focus-visible:ring-4'
+																				style={{
+																					['--tw-ring-color']: 'var(--color-primary-200)',
+																					background: 'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
+																					border: `1px solid var(--color-primary-200)`,
+																					color: 'var(--color-primary-800)',
+																				}}
+																				tabIndex={-1}
+																			>
+																				<Plus size={16} />
+																			</button>
+																		</div>
+																	</td>
 
-										{/* Sync controls */}
-										<div className='flex flex-row items-center justify-between gap-2 px-3 py-2 text-[11px] text-slate-600 bg-slate-50/70 border-t border-slate-200'>
-											<div className='flex items-center gap-2'>
-												<button
-													onClick={removeSetFromCurrentExercise}
-													disabled={currentSets.length <= 1}
-													className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-200 ${currentSets.length <= 1
-															? 'cursor-not-allowed border border-slate-200 bg-white text-slate-400 shadow-inner'
-															: 'border border-red-400 text-red-600 bg-white hover:bg-red-50 hover:border-red-500 hover:text-red-700 active:scale-95 shadow-sm'
-														}`}
+																	<td className='py-2.5 px-3'>
+																		<CheckBox initialChecked={s.done} onChange={() => toggleDone(s.id)} aria-label={t('table.done')} />
+																	</td>
+																</tr>
+															))}
+														</tbody>
+													</table>
+												</div>
+
+												{/* Controls */}
+												<div
+													className='flex flex-row items-center justify-between gap-2 px-3 py-3 text-[11px] text-slate-600 border-t'
+													style={{
+														borderColor: 'var(--color-primary-200)',
+														background: 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))',
+													}}
 												>
-													{t('actions.removeSet')}
-												</button>
+													<div className='flex items-center gap-2'>
+														<GhostBtn
+															onClick={removeSetFromCurrentExercise}
+															disabled={currentSets.length <= 1}
+															title={t('actions.removeSet')}
+															className='!h-10'
+														>
+															{t('actions.removeSet')}
+														</GhostBtn>
 
-												<button
-													onClick={addSetForCurrentExercise}
-													className='inline-flex items-center gap-1.5 rounded-lg border border-indigo-400 px-3 py-1.5 text-xs font-medium 
-													   text-indigo-600 bg-white hover:bg-indigo-50 hover:border-indigo-500 hover:text-indigo-700
-													   active:scale-95 shadow-sm transition-all duration-200'
-												>
-													{t('actions.addSet')}
-												</button>
-											</div>
+														<GradientBtn onClick={addSetForCurrentExercise} title={t('actions.addSet')} className='!h-10'>
+															{t('actions.addSet')}
+														</GradientBtn>
+													</div>
 
-											<div className=' rtl:mr-auto ltr:ml-auto flex items-center gap-3'>
-												<button
-													type='button'
-													onClick={() => trySyncQueue(true)}
-													disabled={syncing}
-													className='inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 bg-white hover:bg-slate-50'
-												>
-													{syncing ? (
-														<span className='inline-block w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin' />
-													) : unsaved ? (
-														<CloudOff size={14} className='text-amber-600' />
-													) : (
-														<Cloud size={14} className='text-emerald-600' />
-													)}
-													{syncing ? t('sync.syncing') : unsaved ? t('sync.syncNow') : t('sync.synced')}
-												</button>
+													<div className='rtl:mr-auto ltr:ml-auto flex items-center gap-3'>
+														<GhostBtn
+															onClick={() => trySyncQueue(true)}
+															disabled={syncing}
+															title={syncing ? t('sync.syncing') : unsaved ? t('sync.syncNow') : t('sync.synced')}
+															className='!h-10'
+														>
+															{syncing ? (
+																<span className='inline-block w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin' />
+															) : unsaved ? (
+																<CloudOff size={16} style={{ color: '#b45309' }} />
+															) : (
+																<Cloud size={16} style={{ color: '#059669' }} />
+															)}
+															{syncing ? t('sync.syncing') : unsaved ? t('sync.syncNow') : t('sync.synced')}
+														</GhostBtn>
 
-												{lastSyncStatus === 'ok' && <span className='text-emerald-600'>{t('sync.synced')}</span>}
-												{lastSyncStatus === 'error' && <span className='text-rose-600'>{t('sync.someFailed')}</span>}
-											</div>
-										</div>
-									</div>
-								</>
-							)}
-						</div>
+														{lastSyncStatus === 'ok' && <span style={{ color: '#059669' }}>{t('sync.synced')}</span>}
+														{lastSyncStatus === 'error' && <span style={{ color: '#e11d48' }}>{t('sync.someFailed')}</span>}
+													</div>
+												</div>
+											</SoftCard>
+										)}
+									</>
+								)}
+							</div>
+						</ThemeFrame>
 					</div>
 
 					{/* RIGHT */}
-					<div className='rounded-lg bg-white h-fit p-4 shadow-sm hidden lg:block w-80'>
-						<div className='mb-3'>
-							<div className='text-xs text-slate-500'>{t('sections.title')}</div>
-							<div className='mt-1 flex flex-wrap gap-2'>
-								{sectionTabs.map(st => {
-									const active = activeSection === st.key;
-									return (
-										<button
-											key={st.key}
-											onClick={() => setActiveSection(st.key)}
-											className={[
-												'px-3 h-9 rounded-xl border text-sm font-medium transition',
-												active ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-											].join(' ')}
-										>
-											{st.label}
-										</button>
-									);
-								})}
-							</div>
-						</div>
+					<div className='hidden lg:block w-80'>
+						<ThemeFrame>
+							<div className='p-4'>
+								<div className='mb-3'>
+									<div className='text-xs' style={{ color: 'var(--color-primary-700)' }}>
+										{t('sections.title')}
+									</div>
+									<div className='mt-2 flex flex-wrap gap-2'>
+										{sectionTabs.map(st => {
+											const active = activeSection === st.key;
+											return (
+												<button
+													key={st.key}
+													onClick={() => setActiveSection(st.key)}
+													className='px-3 h-10 rounded-2xl border text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-4'
+													style={{
+														['--tw-ring-color']: 'var(--color-primary-200)',
+														borderColor: 'var(--color-primary-200)',
+														background: active
+															? 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))'
+															: 'rgba(255,255,255,0.9)',
+														color: active ? 'var(--color-primary-800)' : '#334155',
+													}}
+												>
+													{st.label}
+												</button>
+											);
+										})}
+									</div>
+								</div>
 
-						<ExerciseList
-							t={t}
-							workout={workout}
-							exercisesOverride={exercisesBySection}
-							currentExId={currentExercise?.id}
-							onPick={ex => {
-								setCurrentExId(ex.id);
-								setActiveMedia('image');
-								setWorkout(w => ensureSetsCountForExercise(w, ex.id, ex?.targetSets ?? 1, exReps || ex?.targetReps));
-								applyLocalQueuedSnapshotIfAny();
-							}}
-							completedExercises={completedExercises}
-							toggleExerciseCompletion={toggleExerciseCompletion}
-						/>
+								<ExerciseList
+									t={t}
+									workout={workout}
+									exercisesOverride={exercisesBySection}
+									currentExId={currentExercise?.id}
+									onPick={ex => {
+										setCurrentExId(ex.id);
+										setActiveMedia('image');
+										setWorkout(w => ensureSetsCountForExercise(w, ex.id, ex?.targetSets ?? 1, exReps || ex?.targetReps));
+										applyLocalQueuedSnapshotIfAny();
+									}}
+									completedExercises={completedExercises}
+									toggleExerciseCompletion={toggleExerciseCompletion}
+								/>
+							</div>
+						</ThemeFrame>
 					</div>
 				</div>
 			</motion.div>

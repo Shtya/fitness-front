@@ -4,20 +4,20 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import io from 'socket.io-client';
-import { Paperclip, Image as ImageIcon, Send, Search, Phone, UserCircle2, ChevronLeft, Loader2, Check, CheckCheck, Video, File as FileIcon, X, Inbox, Menu, ChevronRight, Bell } from 'lucide-react';
+import { Paperclip, Image as ImageIcon, Send, Search, Phone, UserCircle2, ChevronLeft, Loader2, Check, CheckCheck, Video, File as FileIcon, X, Inbox, Menu, ChevronRight, Bell, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import api from '@/utils/axios';
 import Img from '@/components/atoms/Img';
 import MultiLangText from '@/components/atoms/MultiLangText';
 import { useUser } from '@/hooks/useUser';
-import { useUnreadChats } from '@/components/molecules/Sidebar';
 import { useValues } from '@/context/GlobalContext';
+import { useTheme } from '@/app/[locale]/theme';
 
 const API_URL = process.env.NEXT_PUBLIC_BASE_URL;
 const cls = (...a) => a.filter(Boolean).join(' ');
 
-/* --------- Design tokens (tweak freely) --------- */
+/* --------- Design tokens with theme support --------- */
 const ui = {
   radius: {
     sm: 'rounded-md',
@@ -26,12 +26,12 @@ const ui = {
     xl: 'rounded-2xl',
   },
   shadow: {
-    sm: 'shadow-[0_2px_10px_-6px_rgba(2,6,23,0.15)]',
-    md: 'shadow-[0_12px_32px_-16px_rgba(99,102,241,0.25)]',
+    sm: 'shadow-sm',
+    md: 'shadow-md',
+    lg: 'shadow-lg',
   },
-  glass: 'bg-white/75 backdrop-blur supports-[backdrop-filter]:backdrop-blur',
-  gradientSoft: 'bg-gradient-to-br from-indigo-50 via-white to-blue-50',
-  ringFocus: 'focus:outline-none focus:ring-4 focus:ring-indigo-200/50',
+  glass: 'bg-white/80 backdrop-blur-sm supports-[backdrop-filter]:backdrop-blur-md',
+  ringFocus: 'focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus-visible:ring-2 focus-visible:ring-primary-500/30',
 };
 
 /* ---------------------------- Auth (me) ---------------------------- */
@@ -96,26 +96,45 @@ function dateLabel(dateStr) {
   if (sameDay(d, yday)) return 'Yesterday';
   return d.toLocaleDateString();
 }
+
 function UnreadBadge({ count }) {
   if (!count || count <= 0) return null;
-  return <span className='min-w-[20px] px-1 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-semibold grid place-items-center'>{count > 99 ? '99+' : count}</span>;
+  return (
+    <span className='min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-to-r from-[var(--color-primary-600)] to-[var(--color-primary-500)] text-white text-[10px] font-bold grid place-items-center shadow-sm'>
+      {count > 99 ? '99+' : count}
+    </span>
+  );
 }
+
 function ReadTicks({ meId, msg }) {
   const mine = msg?.sender?.id === meId;
   if (!mine) return null;
   const isRead = msg?.readBy && Array.isArray(msg.readBy) && msg.readBy.length > 0;
-  return <span className='inline-flex items-center gap-1 text-[11px] opacity-80'>{isRead ? <CheckCheck size={14} className='text-blue-500' /> : <Check size={14} />}</span>;
+  return (
+    <span className='inline-flex items-center gap-0.5 text-[10px] opacity-90'>
+      {isRead ? <CheckCheck size={13} className='text-white/90' /> : <Check size={13} className='text-white/70' />}
+    </span>
+  );
 }
+
 const getInitial = u => {
   const s = (u?.name || u?.email || '').trim();
   return s ? s[0].toUpperCase() : '?';
 };
-const pickAvatarClass = seed => {
-  const palette = ['from-indigo-100 to-blue-100 text-indigo-700 ring-indigo-200/70', 'from-rose-100 to-pink-100 text-rose-700 ring-rose-200/70', 'from-emerald-100 to-teal-100 text-emerald-700 ring-emerald-200/70', 'from-amber-100 to-yellow-100 text-amber-700 ring-amber-200/70', 'from-violet-100 to-purple-100 text-violet-700 ring-violet-200/70', 'from-cyan-100 to-sky-100 text-cyan-700 ring-cyan-200/70'];
+
+const pickAvatarGradient = (seed, colors) => {
+  const gradients = [
+    `from-[${colors.primary[100]}] to-[${colors.primary[200]}] text-[${colors.primary[700]}]`,
+    `from-[${colors.secondary[100]}] to-[${colors.secondary[200]}] text-[${colors.secondary[700]}]`,
+    `from-rose-100 to-pink-100 text-rose-700`,
+    `from-emerald-100 to-teal-100 text-emerald-700`,
+    `from-amber-100 to-yellow-100 text-amber-700`,
+    `from-cyan-100 to-sky-100 text-cyan-700`,
+  ];
   const str = String(seed || '');
   let h = 0;
   for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
-  return palette[h % palette.length];
+  return gradients[h % gradients.length];
 };
 
 /* ------------------------------- The Page ------------------------------ */
@@ -125,6 +144,7 @@ export default function ChatPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const me = useAuthMe();
+  const { theme, colors } = useTheme();
 
   const [socket, setSocket] = useState(null);
 
@@ -333,7 +353,6 @@ export default function ChatPage() {
     }
     setSearching(true);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    // faster debounce for phone feel
     searchTimerRef.current = setTimeout(async () => {
       try {
         const users = await searchUsers(search.trim());
@@ -341,7 +360,7 @@ export default function ChatPage() {
       } finally {
         setSearching(false);
       }
-    }, 500);
+    }, 400);
     return () => {
       if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     };
@@ -363,7 +382,7 @@ export default function ChatPage() {
   }
   async function contactAdmin() {
     if (!me?.adminId) {
-      alert('No coach assigned to your account');
+      alert('No admin assigned to your account');
       return;
     }
     await openDirectWith(me.adminId);
@@ -494,34 +513,88 @@ export default function ChatPage() {
   }, [activeConversation, me]);
 
   return (
-    <div className={cls('max-md:w-[calc(100%+20px)] max-md:ltr:ml-[-10px] max-md:rtl:mr-[-10px]', 'h-[calc(100vh-95px)] md:h-[calc(100vh-150px)] flex flex-col', 'md:border md:border-slate-200', ui.radius.lg, 'overflow-hidden', ui.gradientSoft)}>
-      {/* Desktop App bar */}
-      <div className={cls('hidden md:flex items-center justify-between h-14 px-3 border-b border-slate-200', ui.glass)}>
-        <div className='flex items-center gap-2'>
-          <div className='inline-flex items-center gap-2 px-2.5 h-8 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold border border-indigo-100'>
-            <Bell className='w-4 h-4' /> {t('appbar.title')}
+    <div 
+      className={cls(
+        'max-md:w-[calc(100%+20px)] max-md:ltr:ml-[-10px] max-md:rtl:mr-[-10px]',
+        'h-[calc(100vh-95px)] md:h-[calc(100vh-150px)] flex flex-col',
+        'md:border border-slate-200/60',
+        ui.radius.xl,
+        'overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-100/50',
+        'shadow-xl shadow-slate-200/50'
+      )}
+    >
+      {/* Desktop App bar - Enhanced with gradient */}
+      <div className={cls(
+        'hidden md:flex items-center justify-between h-16 px-4',
+        'border-b border-slate-200/60',
+        'bg-gradient-to-r from-white/95 via-white/90 to-white/95 backdrop-blur-xl'
+      )}>
+        <div className='flex items-center gap-3'>
+          <div className='inline-flex items-center gap-2 px-4 h-10 rounded-full bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] text-white text-sm font-bold shadow-lg shadow-[var(--color-primary-500)]/20'>
+            <Sparkles className='w-4 h-4' />
+            <span>{t('appbar.title')}</span>
           </div>
         </div>
 
-        <div className='flex items-center gap-2  '>
-          <div className='inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-1'>
-            <button onClick={() => setFilterTab('all')} className={cls('px-3 h-8 rounded-full text-xs font-medium transition-colors', ui.ringFocus, filterTab === 'all' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-600 hover:text-slate-900')}>
+        <div className='flex items-center gap-3'>
+          <div className='inline-flex items-center rounded-xl border border-slate-200 bg-white/80 p-1 shadow-sm'>
+            <button 
+              onClick={() => setFilterTab('all')} 
+              className={cls(
+                'px-4 h-9 rounded-lg text-sm font-medium transition-all duration-200',
+                ui.ringFocus,
+                filterTab === 'all' 
+                  ? 'bg-gradient-to-r from-[var(--color-primary-500)] to-[var(--color-primary-600)] text-white shadow-md shadow-[var(--color-primary-500)]/20' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              )}
+            >
               {t('tabs.all')}
             </button>
-            <button onClick={() => setFilterTab('unread')} className={cls('px-3 h-8 rounded-full text-xs font-medium transition-colors', ui.ringFocus, filterTab === 'unread' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-600 hover:text-slate-900')}>
+            <button 
+              onClick={() => setFilterTab('unread')} 
+              className={cls(
+                'px-4 h-9 rounded-lg text-sm font-medium transition-all duration-200',
+                ui.ringFocus,
+                filterTab === 'unread' 
+                  ? 'bg-gradient-to-r from-[var(--color-primary-500)] to-[var(--color-primary-600)] text-white shadow-md shadow-[var(--color-primary-500)]/20' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              )}
+            >
               {t('tabs.unread')}
             </button>
           </div>
 
           {user.role === 'client' && (
-            <div className='gap-2 flex items-center '>
-              <button type='button' onClick={contactCoach} className={cls('h-10 rounded-full border border-slate-200 bg-white/90 text-slate-800 text-xs inline-flex items-center justify-center px-2 gap-1 hover:bg-slate-50 active:scale-[.99] transition', ui.shadow.sm)}>
-                <Phone size={14} />
+            <div className='gap-2 flex items-center'>
+              <button 
+                type='button' 
+                onClick={contactCoach} 
+                className={cls(
+                  'h-10 rounded-xl border border-slate-200/60 bg-white text-slate-700 text-sm font-medium',
+                  'inline-flex items-center justify-center px-4 gap-2',
+                  'hover:bg-gradient-to-r hover:from-[var(--color-primary-50)] hover:to-[var(--color-secondary-50)]',
+                  'active:scale-[.98] transition-all duration-200',
+                  'shadow-sm hover:shadow-md',
+                  ui.ringFocus
+                )}
+              >
+                <Phone size={16} />
                 {t('quick.coach')}
               </button>
               {me?.adminId && (
-                <button type='button' onClick={contactAdmin} className={cls('h-10 rounded-full border border-slate-200 bg-white/90 text-slate-800 text-xs inline-flex items-center justify-center px-2 gap-1 hover:bg-slate-50 active:scale-[.99] transition', ui.shadow.sm)}>
-                  <Phone size={14} />
+                <button 
+                  type='button' 
+                  onClick={contactAdmin} 
+                  className={cls(
+                    'h-10 rounded-xl border border-slate-200/60 bg-white text-slate-700 text-sm font-medium',
+                    'inline-flex items-center justify-center px-4 gap-2',
+                    'hover:bg-gradient-to-r hover:from-[var(--color-primary-50)] hover:to-[var(--color-secondary-50)]',
+                    'active:scale-[.98] transition-all duration-200',
+                    'shadow-sm hover:shadow-md',
+                    ui.ringFocus
+                  )}
+                >
+                  <Phone size={16} />
                   {t('quick.admin')}
                 </button>
               )}
@@ -531,66 +604,116 @@ export default function ChatPage() {
       </div>
 
       {/* Content grid */}
-      <div className='flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[360px_minmax(0,1fr)]'>
-        {/* Desktop sidebar */}
-        <aside className={cls('hidden md:flex min-h-0 rtl:border-l ltr:border-r border-slate-200/70', ui.glass, 'flex-col')}>
-          {/* Search (sticky) */}
-          <div className={cls('border-b border-slate-200/70 z-10 px-3 py-2', ui.glass)}>
+      <div className='flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[380px_minmax(0,1fr)]'>
+        {/* Desktop sidebar - Enhanced design */}
+        <aside className={cls(
+          'hidden md:flex min-h-0 rtl:border-l ltr:border-r border-slate-200/60',
+          'bg-gradient-to-b from-white/80 to-slate-50/80 backdrop-blur-sm',
+          'flex-col'
+        )}>
+          {/* Search (sticky) - Enhanced */}
+          <div className='border-b border-slate-200/60 z-10 px-4 py-3 bg-white/60 backdrop-blur-sm'>
             <div className='relative group'>
-              <Search className='absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors' />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('search.placeholder')} aria-label={t('search.placeholder')} className={cls('h-11 w-full ltr:pl-10 rtl:pr-10 ltr:pr-12 rtl:pl-12 rounded-lg border border-slate-200 bg-slate-50/90 text-slate-900 transition', ui.ringFocus)} />
-              {searching && <Loader2 className='absolute ltr:right-3 rtl:left-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-slate-400 pointer-events-none' />}
+              <Search className='absolute ltr:left-4 rtl:right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[var(--color-primary-500)] transition-all duration-200' />
+              <input 
+                value={search} 
+                onChange={e => setSearch(e.target.value)} 
+                placeholder={t('search.placeholder')} 
+                aria-label={t('search.placeholder')} 
+                className={cls(
+                  'h-12 w-full ltr:pl-12 rtl:pr-12 ltr:pr-12 rtl:pl-12',
+                  'rounded-xl border-2 border-slate-200/60',
+                  'bg-white/80 text-slate-900 placeholder:text-slate-400',
+                  'transition-all duration-200',
+                  'hover:border-slate-300',
+                  'focus:border-[var(--color-primary-400)] focus:bg-white focus:shadow-lg focus:shadow-[var(--color-primary-500)]/10',
+                  ui.ringFocus
+                )}
+              />
+              {searching && <Loader2 className='absolute ltr:right-4 rtl:left-4 top-1/2 -translate-y-1/2 w-5 h-5 animate-spin text-[var(--color-primary-500)]' />}
               {!!search && !searching && (
-                <button type='button' onClick={() => setSearch('')} aria-label={t('search.clear', { defaultValue: 'Clear search' })} className='absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-slate-100 active:scale-95 transition'>
+                <button 
+                  type='button' 
+                  onClick={() => setSearch('')} 
+                  aria-label={t('search.clear', { defaultValue: 'Clear search' })} 
+                  className='absolute ltr:right-3 rtl:left-3 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-7 h-7 rounded-lg hover:bg-slate-100 active:scale-95 transition-all duration-200'
+                >
                   <X className='w-4 h-4 text-slate-400' />
                 </button>
               )}
             </div>
 
-            {/* Results */}
+            {/* Results - Enhanced */}
             {searching ? null : search && results.length === 0 ? (
-              <div className='mt-3 rounded-lg border border-slate-200 bg-white/70 p-6 text-center'>
-                <div className='mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100'>
-                  <Inbox className='w-6 h-6 text-slate-400' />
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className='mt-3 rounded-xl border border-slate-200/60 bg-white/90 backdrop-blur-sm p-8 text-center shadow-sm'
+              >
+                <div className='mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-slate-200/60'>
+                  <Inbox className='w-7 h-7 text-slate-400' />
                 </div>
-                <div className='text-sm font-medium text-slate-700'>{t('search.noResultsTitle', { defaultValue: 'No matches found' })}</div>
-                <div className='text-xs text-slate-500 mt-1'>{t('search.noResultsHint', { defaultValue: 'Try a different name or email' })}</div>
-              </div>
+                <div className='text-sm font-semibold text-slate-700'>{t('search.noResultsTitle', { defaultValue: 'No matches found' })}</div>
+                <div className='text-xs text-slate-500 mt-2'>{t('search.noResultsHint', { defaultValue: 'Try a different name or email' })}</div>
+              </motion.div>
             ) : (
               !!results.length && (
-                <div className='mt-3 rounded-lg border border-slate-200 overflow-hidden bg-white/80'>
-                  <div className='px-3 py-2 text-xs text-slate-500 bg-slate-50'>{t('search.results')}</div>
-                  <ul className='max-h-64 overflow-auto'>
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className='mt-3 rounded-xl border border-slate-200/60 overflow-hidden bg-white/95 backdrop-blur-sm shadow-sm'
+                >
+                  <div className='px-4 py-2.5 text-xs font-semibold text-slate-600 bg-gradient-to-r from-slate-50 to-slate-100/50 border-b border-slate-200/60'>
+                    {t('search.results')}
+                  </div>
+                  <ul className='max-h-72 overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
                     {results.map(u => {
                       const initial = getInitial(u);
-                      const avatarTone = pickAvatarClass(u.id || u.email);
+                      const avatarGradient = pickAvatarGradient(u.id || u.email, colors);
                       return (
-                        <li key={u.id} className='border-t border-slate-100'>
-                          <button onClick={() => openDirectWith(u.id)} className={cls('w-full px-3 py-2 text-left hover:bg-slate-50 active:bg-slate-100/60 flex items-center gap-3 transition group', ui.ringFocus)}>
-                            <div className={cls('h-8 w-8 rounded-lg bg-gradient-to-br grid place-items-center overflow-hidden ring-1 ring-inset', avatarTone)}>
-                              <span className='text-[11px] font-bold leading-none select-none'>{initial}</span>
+                        <li key={u.id} className='border-t border-slate-100/60 first:border-t-0'>
+                          <button 
+                            onClick={() => openDirectWith(u.id)} 
+                            className={cls(
+                              'w-full px-4 py-3 text-left',
+                              'hover:bg-gradient-to-r hover:from-[var(--color-primary-50)]/50 hover:to-white',
+                              'active:bg-[var(--color-primary-50)]',
+                              'flex items-center gap-3 transition-all duration-200 group',
+                              ui.ringFocus
+                            )}
+                          >
+                            <div className={cls(
+                              'h-10 w-10 rounded-xl bg-gradient-to-br grid place-items-center overflow-hidden',
+                              'ring-2 ring-slate-200/60 shadow-sm',
+                              'group-hover:ring-[var(--color-primary-300)] group-hover:shadow-md group-hover:shadow-[var(--color-primary-500)]/10',
+                              'transition-all duration-200',
+                              avatarGradient
+                            )}>
+                              <span className='text-sm font-bold leading-none select-none'>{initial}</span>
                             </div>
                             <div className='min-w-0 flex-1 flex flex-col'>
-                              <MultiLangText className='text-sm font-medium text-slate-900 truncate group-hover:text-slate-950'>{u.name || u.email}</MultiLangText>
+                              <MultiLangText className='text-sm font-semibold text-slate-900 truncate group-hover:text-[var(--color-primary-700)]'>
+                                {u.name || u.email}
+                              </MultiLangText>
                               <MultiLangText className='text-xs text-slate-500 truncate'>{u.email}</MultiLangText>
                             </div>
-                            <ChevronRight className='w-4 h-4 text-slate-300 rtl:rotate-180 group-hover:text-slate-400' />
+                            <ChevronRight className='w-5 h-5 text-slate-300 rtl:rotate-180 group-hover:text-[var(--color-primary-500)] group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-all duration-200' />
                           </button>
                         </li>
                       );
                     })}
                   </ul>
-                </div>
+                </motion.div>
               )
             )}
           </div>
 
-          {/* Conversation list */}
-          <div ref={listRef} className='flex-1 overflow-auto p-2'>
+          {/* Conversation list - Enhanced */}
+          <div ref={listRef} className='flex-1 overflow-auto p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
             {loadingConvos ? (
-              <div className='p-4 space-y-3'>
+              <div className='space-y-3'>
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className='h-14 rounded-lg bg-slate-100/80 animate-pulse' />
+                  <div key={i} className='h-20 rounded-xl bg-gradient-to-r from-slate-100/80 to-slate-200/40 animate-pulse' />
                 ))}
               </div>
             ) : filteredConvos.length ? (
@@ -605,153 +728,262 @@ export default function ChatPage() {
                   const hasUnread = Number(c.unreadCount) > 0;
 
                   return (
-                    <li key={c.id}>
-                      <button onClick={() => onSelectConversation(c.id)} className={cls('w-full px-3 py-3 text-left rounded-lg transition-all duration-200  ', ui.ringFocus, isActive ? 'bg-white shadow-sm ring-1 ring-slate-200' : 'bg-white/70 hover:bg-white active:bg-white/80 border border-transparent')}>
+                    <motion.li 
+                      key={c.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <button 
+                        onClick={() => onSelectConversation(c.id)} 
+                        className={cls(
+                          'w-full px-4 py-4 text-left rounded-xl transition-all duration-200',
+                          ui.ringFocus,
+                          isActive 
+                            ? 'bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] shadow-md ring-2 ring-[var(--color-primary-200)] border border-[var(--color-primary-200)]' 
+                            : 'bg-white/70 hover:bg-white hover:shadow-md border border-slate-200/60 hover:border-slate-300'
+                        )}
+                      >
                         <div className='flex items-center gap-3'>
-                          <div className='relative group w-max'>
-                            {/* Avatar */}
-                            <div className={cls('h-11 w-11 rounded-xl grid place-items-center overflow-hidden ring-1 ring-inset shadow-sm', 'transition-all duration-300 ease-out transform', hasUnread ? 'bg-gradient-to-br from-indigo-500 via-indigo-400 to-blue-400 ring-indigo-300 shadow-indigo-200/50 group-hover:shadow-[0_14px_30px_rgba(79,70,229,0.55)]' : 'bg-gradient-to-br from-slate-200 to-slate-100 ring-slate-300 shadow-slate-200/40 group-hover:shadow-[0_14px_30px_rgba(15,23,42,0.45)]', 'group-hover:-translate-y-0.5 group-hover:scale-[1.03]')}>
-                              <UserCircle2 className={cls('w-6 h-6 drop-shadow-sm transition-colors duration-300', hasUnread ? 'text-white' : 'text-slate-600')} />
+                          <div className='relative group/avatar'>
+                            <div className={cls(
+                              'h-12 w-12 rounded-xl grid place-items-center overflow-hidden',
+                              'transition-all duration-300 ease-out transform',
+                              'shadow-sm',
+                              hasUnread 
+                                ? 'bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] ring-2 ring-[var(--color-primary-300)] shadow-lg shadow-[var(--color-primary-500)]/20 group-hover/avatar:shadow-xl group-hover/avatar:shadow-[var(--color-primary-500)]/30' 
+                                : 'bg-gradient-to-br from-slate-200 to-slate-100 ring-2 ring-slate-200/60 group-hover/avatar:shadow-md',
+                              'group-hover/avatar:-translate-y-0.5 group-hover/avatar:scale-105'
+                            )}>
+                              <UserCircle2 className={cls(
+                                'w-7 h-7 drop-shadow-sm transition-colors duration-300',
+                                hasUnread ? 'text-white' : 'text-slate-600'
+                              )} />
                             </div>
 
-                            {/* Tooltip */}
                             {others?.[0]?.email && (
-                              <div className=' pointer-events-none absolute top-0 mt-2 px-2.5 py-1.5 rounded-md bg-slate-900/95 text-white text-[11px] whitespace-nowrap shadow-xl opacity-0 scale-95 translate-y-1 transition-all duration-200 origin-top group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 ltr:left-[50px] rtl:right-[50px] '>
+                              <div className='pointer-events-none absolute top-0 mt-2 px-3 py-2 rounded-lg bg-slate-900/95 text-white text-xs whitespace-nowrap shadow-xl opacity-0 scale-95 translate-y-1 transition-all duration-200 origin-top group-hover/avatar:opacity-100 group-hover/avatar:scale-100 group-hover/avatar:translate-y-0 ltr:left-[56px] rtl:right-[56px] z-10'>
                                 {others[0].email}
-                                <div className=' absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-slate-900/95 rotate-45 ltr:-left-1 rtl:-right-1 ' />
+                                <div className='absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-slate-900/95 rotate-45 ltr:-left-1 rtl:-right-1' />
                               </div>
                             )}
                           </div>
 
                           <div className='min-w-0 flex-1'>
-                            <div className='flex items-center justify-between gap-2'>
-                              <div className='flex flex-col '>
-                                <MultiLangText className='rtl:text-right ltr:text-left text-sm font-semibold text-slate-900 truncate'>{title}</MultiLangText>
-                              </div>
+                            <div className='flex items-center justify-between gap-2 mb-1'>
+                              <MultiLangText className={cls(
+                                'rtl:text-right ltr:text-left text-sm font-bold truncate',
+                                isActive ? 'text-[var(--color-primary-700)]' : 'text-slate-900'
+                              )}>
+                                {title}
+                              </MultiLangText>
                               <UnreadBadge count={c.unreadCount} />
                             </div>
 
-                            <div className='flex items-center justify-between gap-2 mt-1'>
-                              <MultiLangText className='text-xs text-slate-500 truncate flex-1 rtl:text-right'>{preview}</MultiLangText>
-                              <div className='font-en text-[11px] text-slate-500 shrink-0 tabular-nums'>{last?.created_at ? timeHHMM(last.created_at) : ''}</div>
+                            <div className='flex items-center justify-between gap-2'>
+                              <MultiLangText className='text-xs text-slate-500 truncate flex-1 rtl:text-right'>
+                                {preview}
+                              </MultiLangText>
+                              <div className='font-en text-[11px] text-slate-400 shrink-0 tabular-nums font-medium'>
+                                {last?.created_at ? timeHHMM(last.created_at) : ''}
+                              </div>
                             </div>
                           </div>
                         </div>
                       </button>
-                    </li>
+                    </motion.li>
                   );
                 })}
               </ul>
             ) : (
-              <div className='p-10 text-center text-slate-500'>
-                <div className='mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100'>
-                  <Inbox className='w-6 h-6 opacity-70' />
+              <div className='p-12 text-center text-slate-500'>
+                <div className='mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200/60 shadow-sm'>
+                  <Inbox className='w-8 h-8 text-slate-400' />
                 </div>
-                <div className='text-sm font-medium'>{t('list.empty')}</div>
-                <div className='text-xs mt-1 opacity-80'>{t('list.startHint', { defaultValue: 'Use search to start a chat' })}</div>
+                <div className='text-sm font-semibold text-slate-700'>{t('list.empty')}</div>
+                <div className='text-xs mt-2 text-slate-500'>{t('list.startHint', { defaultValue: 'Use search to start a chat' })}</div>
               </div>
             )}
           </div>
         </aside>
 
-        {/* Conversation area */}
+        {/* Conversation area - Enhanced */}
         <section className='flex flex-col min-h-0'>
-          <div className={cls('md:hidden h-14 border-b border-slate-200/70 px-3 flex items-center justify-between', ui.glass)}>
-            <div className='flex items-center gap-2'>
-              <button onClick={() => setDrawerOpen(true)} className={cls('flex-none inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-95 transition', ui.ringFocus)} title={t('actions.openList')} aria-label={t('actions.openList')}>
-                <Menu className='w-5 h-5' />
+          {/* Mobile header */}
+          <div className={cls(
+            'md:hidden h-16 border-b border-slate-200/60 px-4 flex items-center justify-between',
+            'bg-gradient-to-r from-white/95 via-white/90 to-white/95 backdrop-blur-xl'
+          )}>
+            <div className='flex items-center gap-3'>
+              <button 
+                onClick={() => setDrawerOpen(true)} 
+                className={cls(
+                  'flex-none inline-flex h-11 w-11 items-center justify-center',
+                  'rounded-xl border border-slate-200/60 bg-white hover:bg-slate-50',
+                  'active:scale-95 transition-all duration-200 shadow-sm',
+                  ui.ringFocus
+                )} 
+                title={t('actions.openList')} 
+                aria-label={t('actions.openList')}
+              >
+                <Menu className='w-5 h-5 text-slate-600' />
               </button>
-              <div className='text-sm w-full px-2 font-semibold'>{t('appbar.title')}</div>
+              <div className='text-sm font-bold bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] bg-clip-text text-transparent'>
+                {t('appbar.title')}
+              </div>
             </div>
 
-            <button onClick={() => setDrawerOpen(true)} className={cls('h-10 w-10 rounded-xl border border-slate-200 bg-white grid place-items-center', ui.ringFocus)} aria-label={t('actions.openList')} title={t('actions.openList')}>
-              <Search className='w-5 h-5' />
+            <button 
+              onClick={() => setDrawerOpen(true)} 
+              className={cls(
+                'h-11 w-11 rounded-xl border border-slate-200/60 bg-white',
+                'grid place-items-center shadow-sm hover:shadow-md',
+                'transition-all duration-200',
+                ui.ringFocus
+              )} 
+              aria-label={t('actions.openList')} 
+              title={t('actions.openList')}
+            >
+              <Search className='w-5 h-5 text-slate-600' />
             </button>
           </div>
 
-          <div className={cls('hidden md:flex h-14 border-b border-slate-200/70 px-3 items-center gap-3', ui.glass)}>
+          {/* Chat header - Enhanced */}
+          <div className={cls(
+            'hidden md:flex h-16 border-b border-slate-200/60 px-5 items-center gap-4',
+            'bg-gradient-to-r from-white/95 via-white/90 to-white/95 backdrop-blur-xl'
+          )}>
             {otherUser ? (
               <>
                 <div className='relative'>
-                  <div className={cls('h-9 w-9 rounded-lg bg-gradient-to-br grid place-items-center overflow-hidden ring-1 ring-inset', pickAvatarClass(otherUser.id || otherUser.email))}>
-                    <MultiLangText className='text-[11px] font-bold leading-none select-none'>{getInitial(otherUser)}</MultiLangText>
+                  <div className={cls(
+                    'h-11 w-11 rounded-xl bg-gradient-to-br grid place-items-center overflow-hidden',
+                    'ring-2 shadow-md transition-all duration-200',
+                    pickAvatarGradient(otherUser.id || otherUser.email, colors)
+                  )}>
+                    <MultiLangText className='text-sm font-bold leading-none select-none'>
+                      {getInitial(otherUser)}
+                    </MultiLangText>
                   </div>
-                  {otherUser?.online && <span className='absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white' />}
+                  {otherUser?.online && (
+                    <span className='absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-white shadow-sm' />
+                  )}
                 </div>
                 <div className='min-w-0'>
-                  <MultiLangText className='text-sm font-semibold text-slate-900 truncate'>{otherUser.name || otherUser.email}</MultiLangText>
-                  <div className='text-[11px] text-slate-500'>{typing ? t('header.typing') : t('header.direct')}</div>
+                  <MultiLangText className='text-base font-bold text-slate-900 truncate'>
+                    {otherUser.name || otherUser.email}
+                  </MultiLangText>
+                  <div className='text-xs text-slate-500 font-medium'>
+                    {typing ? (
+                      <span className='text-[var(--color-primary-600)] flex items-center gap-1'>
+                        <span className='inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-primary-600)] animate-bounce' style={{ animationDelay: '0ms' }} />
+                        <span className='inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-primary-600)] animate-bounce' style={{ animationDelay: '150ms' }} />
+                        <span className='inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-primary-600)] animate-bounce' style={{ animationDelay: '300ms' }} />
+                        <span className='ml-1'>{t('header.typing')}</span>
+                      </span>
+                    ) : (
+                      t('header.direct')
+                    )}
+                  </div>
                 </div>
               </>
             ) : activeId ? (
-              <div className='text-sm text-slate-500'>{t('header.loading')}</div>
+              <div className='text-sm text-slate-500 font-medium'>{t('header.loading')}</div>
             ) : (
-              <div className='text-sm text-slate-500'>{t('header.noselect')}</div>
+              <div className='text-sm text-slate-500 font-medium'>{t('header.noselect')}</div>
             )}
           </div>
 
-          <div className=' max-md:max-h-[calc(100%-120px)] space-y-2  flex-1 min-h-0 overflow-y-auto px-3 py-4 bg-gradient-to-b from-slate-50/60 to-slate-100/40'>
+          {/* Messages area - Enhanced with better background */}
+          <div className='max-md:max-h-[calc(100%-120px)] space-y-3 flex-1 min-h-0 overflow-y-auto px-4 py-5 bg-gradient-to-b from-slate-50/80 via-white/50 to-slate-100/60 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
             {!activeId ? (
-              <div className='h-full grid place-items-center text-slate-500 text-sm'>
+              <div className='h-full grid place-items-center text-slate-500'>
                 <div className='text-center'>
-                  <div className='mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-white shadow-sm border border-slate-200'>
-                    <Inbox className='w-6 h-6 text-slate-400' />
+                  <div className='mx-auto mb-5 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200/60 shadow-lg'>
+                    <Inbox className='w-10 h-10 text-slate-400' />
                   </div>
-                  <div>{t('empty.pick')}</div>
-                  <div className='text-xs text-slate-400 mt-1'>{t('empty.hint', { defaultValue: 'Select a conversation from the list' })}</div>
+                  <div className='text-base font-semibold text-slate-700'>{t('empty.pick')}</div>
+                  <div className='text-sm text-slate-400 mt-2'>{t('empty.hint', { defaultValue: 'Select a conversation from the list' })}</div>
                 </div>
               </div>
             ) : loadingMsgs ? (
               <MessageSkeleton />
             ) : (
-              <MessageList msgs={msgs} me={me} API_URL={API_URL} endRef={endRef} t={t} typing={typing} />
+              <MessageList msgs={msgs} me={me} API_URL={API_URL} endRef={endRef} t={t} typing={typing} colors={colors} />
             )}
           </div>
 
-          {/* Composer (safe-area for phone) */}
-          <div className={cls('border-t border-slate-200/70 p-2', ui.glass)} style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+          {/* Composer - Enhanced */}
+          <div 
+            className={cls(
+              'border-t border-slate-200/60 p-4',
+              'bg-gradient-to-r from-white/95 via-white/90 to-white/95 backdrop-blur-xl'
+            )} 
+            style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+          >
             {!activeId ? (
-              <div className='text-center text-xs text-slate-500 py-4'>{t('composer.disabled')}</div>
+              <div className='text-center text-sm text-slate-500 py-6 font-medium'>
+                {t('composer.disabled')}
+              </div>
             ) : (
               <>
                 {!!attaches.length && (
-                  <div className='px-1 pb-2 flex gap-2 overflow-x-auto'>
+                  <div className='px-1 pb-3 flex gap-2 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
                     {attaches.map((a, idx) => (
-                      <div key={idx} className='relative shrink-0 group'>
+                      <motion.div 
+                        key={idx} 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className='relative shrink-0 group'
+                      >
                         {/^\s*image\//.test(a.type) ? (
-                          <img src={a.url} alt={a.name} className='h-16 w-16 object-cover rounded-lg border border-slate-200 shadow-sm' />
+                          <img 
+                            src={a.url} 
+                            alt={a.name} 
+                            className='h-20 w-20 object-cover rounded-xl border-2 border-slate-200 shadow-md hover:shadow-lg transition-shadow duration-200' 
+                          />
                         ) : /^\s*video\//.test(a.type) ? (
-                          <div className='h-16 w-24 rounded-lg border border-slate-200 grid place-items-center bg-slate-50 shadow-sm'>
-                            <Video className='w-5 h-5 text-slate-600' />
+                          <div className='h-20 w-28 rounded-xl border-2 border-slate-200 grid place-items-center bg-slate-50 shadow-md hover:shadow-lg transition-shadow duration-200'>
+                            <Video className='w-6 h-6 text-slate-600' />
                           </div>
                         ) : (
-                          <div className='h-16 w-24 rounded-lg border border-slate-200 grid place-items-center bg-slate-50 shadow-sm'>
-                            <FileIcon className='w-5 h-5 text-slate-600' />
+                          <div className='h-20 w-28 rounded-xl border-2 border-slate-200 grid place-items-center bg-slate-50 shadow-md hover:shadow-lg transition-shadow duration-200'>
+                            <FileIcon className='w-6 h-6 text-slate-600' />
                           </div>
                         )}
-                        <div className='absolute bottom-1 ltr:left-1 ltr:right-7 rtl:right-1 rtl:left-7 truncate text-[10px] px-1 py-0.5 rounded-md bg-black/60 text-white'>{a.name}</div>
-                        <button onClick={() => removeAttach(idx)} className={cls('absolute top-1 ltr:right-1 rtl:left-1 h-6 w-6 rounded-full bg-black/70 text-white grid place-items-center hover:bg-black/90 transition-colors shadow', ui.ringFocus)} title={t('composer.remove')} aria-label={t('composer.remove')}>
+                        <div className='absolute bottom-1 ltr:left-1 ltr:right-9 rtl:right-1 rtl:left-9 truncate text-[10px] px-1.5 py-0.5 rounded-md bg-black/70 text-white font-medium'>
+                          {a.name}
+                        </div>
+                        <button 
+                          onClick={() => removeAttach(idx)} 
+                          className={cls(
+                            'absolute -top-2 ltr:-right-2 rtl:-left-2 h-7 w-7 rounded-full',
+                            'bg-gradient-to-br from-red-500 to-red-600 text-white',
+                            'grid place-items-center',
+                            'hover:from-red-600 hover:to-red-700',
+                            'shadow-lg hover:shadow-xl',
+                            'transition-all duration-200',
+                            'active:scale-95',
+                            ui.ringFocus
+                          )} 
+                          title={t('composer.remove')} 
+                          aria-label={t('composer.remove')}
+                        >
                           <X size={14} />
                         </button>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}
 
                 <div className='flex items-end gap-2'>
-                  {/* Composer shell */}
                   <div className='relative flex-1'>
-                    <input
+                    <textarea
                       value={text}
                       onChange={e => {
                         setText(e.target.value);
                         handleTyping();
                         const el = e.target;
-                        el.style.height = 'auto';
-                        el.style.height = Math.min(el.scrollHeight, 160) + 'px';
-                      }}
-                      onInput={e => {
-                        const el = e.currentTarget;
                         el.style.height = 'auto';
                         el.style.height = Math.min(el.scrollHeight, 160) + 'px';
                       }}
@@ -768,26 +1000,68 @@ export default function ChatPage() {
                       }}
                       rows={1}
                       placeholder={t('composer.placeholder')}
-                      className={cls('h-auto min-h-[48px] max-h-[160px] w-full rounded-lg  bg-white/90 text-slate-900', 'border border-slate-300 hover:border-slate-400 focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-100  transition px-3 py-2 text-base resize-none', ui.ringFocus, 'ltr:pr-[160px] rtl:pl-[160px]')}
+                      className={cls(
+                        'h-auto min-h-[52px] max-h-[160px] w-full rounded-xl',
+                        'bg-white text-slate-900 placeholder:text-slate-400',
+                        'border-2 border-slate-200',
+                        'hover:border-slate-300',
+                        'focus:border-[var(--color-primary-400)] focus:shadow-lg focus:shadow-[var(--color-primary-500)]/10',
+                        'transition-all duration-200',
+                        'px-4 py-3 text-base resize-none',
+                        'ltr:pr-[180px] rtl:pl-[180px]',
+                        ui.ringFocus
+                      )}
                     />
 
-                    {/* End cluster – send & pickers */}
-                    <div className='pointer-events-auto absolute inset-y-0 ltr:right-[5px] rtl:left-[5px] flex gap-1 items-center top-0'>
-                      <button onClick={send} disabled={sending || (!text.trim() && !hasAttaches)} className={cls('h-9 w-9 rounded-lg bg-indigo-600 text-white grid place-items-center disabled:opacity-60 hover:bg-indigo-700 active:scale-95 transition-all duration-200', ui.shadow.sm, ui.ringFocus)} title={t('composer.send')} aria-label={t('composer.send')}>
-                        {sending ? <Loader2 className='animate-spin w-4 h-4' /> : <Send className='w-4 h-4' />}
+                    {/* Action buttons cluster */}
+                    <div className='pointer-events-auto absolute inset-y-0 ltr:right-2 rtl:left-2 flex gap-1.5 items-center'>
+                      <button 
+                        onClick={send} 
+                        disabled={sending || (!text.trim() && !hasAttaches)} 
+                        className={cls(
+                          'h-10 w-10 rounded-xl',
+                          'bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]',
+                          'text-white grid place-items-center',
+                          'disabled:opacity-50 disabled:cursor-not-allowed',
+                          'hover:shadow-lg hover:shadow-[var(--color-primary-500)]/30',
+                          'active:scale-95 transition-all duration-200',
+                          ui.ringFocus
+                        )} 
+                        title={t('composer.send')} 
+                        aria-label={t('composer.send')}
+                      >
+                        {sending ? <Loader2 className='animate-spin w-5 h-5' /> : <Send className='w-5 h-5' />}
                       </button>
 
-                      <label className={cls('h-9 w-9 grid place-items-center rounded-lg border border-slate-200 bg-white cursor-pointer hover:bg-slate-50 active:scale-95 transition ', ui.ringFocus)}>
+                      <label className={cls(
+                        'h-10 w-10 grid place-items-center rounded-xl',
+                        'border-2 border-slate-200 bg-white cursor-pointer',
+                        'hover:bg-slate-50 hover:border-slate-300',
+                        'active:scale-95 transition-all duration-200',
+                        ui.ringFocus
+                      )}>
                         <ImageIcon className='w-5 h-5 text-slate-600' />
                         <input type='file' className='hidden' accept='image/*' multiple onChange={e => onPickFiles(e.target.files)} />
                       </label>
 
-                      <label className={cls('h-9 w-9 grid place-items-center rounded-lg border border-slate-200 bg-white cursor-pointer hover:bg-slate-50 active:scale-95 transition ', ui.ringFocus)}>
+                      <label className={cls(
+                        'h-10 w-10 grid place-items-center rounded-xl',
+                        'border-2 border-slate-200 bg-white cursor-pointer',
+                        'hover:bg-slate-50 hover:border-slate-300',
+                        'active:scale-95 transition-all duration-200',
+                        ui.ringFocus
+                      )}>
                         <Video className='w-5 h-5 text-slate-600' />
                         <input type='file' className='hidden' accept='video/*' multiple onChange={e => onPickFiles(e.target.files)} />
                       </label>
 
-                      <label className={cls('h-9 w-9 grid place-items-center rounded-lg border border-slate-200 bg-white cursor-pointer hover:bg-slate-50 active:scale-95 transition ', ui.ringFocus)}>
+                      <label className={cls(
+                        'h-10 w-10 grid place-items-center rounded-xl',
+                        'border-2 border-slate-200 bg-white cursor-pointer',
+                        'hover:bg-slate-50 hover:border-slate-300',
+                        'active:scale-95 transition-all duration-200',
+                        ui.ringFocus
+                      )}>
                         <Paperclip className='w-5 h-5 text-slate-600' />
                         <input type='file' className='hidden' multiple onChange={e => onPickFiles(e.target.files)} />
                       </label>
@@ -800,33 +1074,96 @@ export default function ChatPage() {
         </section>
       </div>
 
-      {/* Mobile conversations drawer */}
+      {/* Mobile conversations drawer - Enhanced */}
       <AnimatePresence>
         {drawerOpen && (
-          <motion.aside initial={{ x: isRTL ? '100%' : '-100%' }} animate={{ x: 0 }} exit={{ x: isRTL ? '100%' : '-100%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} className='fixed inset-0 z-50 md:hidden bg-white' dir={isRTL ? 'rtl' : 'ltr'}>
-            <div className={cls('h-14 border-b border-slate-200/70 px-3 flex items-center justify-between', ui.glass)}>
-              <div className='text-sm font-semibold'>{t('appbar.title')}</div>
-              <button onClick={() => setDrawerOpen(false)} className={cls('inline-flex items-center justify-center gap-2 h-9 px-3 rounded-lg border border-slate-200', 'bg-white hover:bg-slate-100 active:bg-slate-200 transition-all duration-200', 'text-slate-700 font-medium  ', 'focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:outline-none', ui.ringFocus)}>
-                <span className='text-sm font-semibold tracking-wide'>{t('actions.close')}</span>
+          <motion.aside 
+            initial={{ x: isRTL ? '100%' : '-100%' }} 
+            animate={{ x: 0 }} 
+            exit={{ x: isRTL ? '100%' : '-100%' }} 
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }} 
+            className='fixed inset-0 z-50 md:hidden bg-white' 
+            dir={isRTL ? 'rtl' : 'ltr'}
+          >
+            <div className={cls(
+              'h-16 border-b border-slate-200/60 px-4 flex items-center justify-between',
+              'bg-gradient-to-r from-white/95 via-white/90 to-white/95 backdrop-blur-xl'
+            )}>
+              <div className='text-base font-bold bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] bg-clip-text text-transparent'>
+                {t('appbar.title')}
+              </div>
+              <button 
+                onClick={() => setDrawerOpen(false)} 
+                className={cls(
+                  'inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl',
+                  'border-2 border-slate-200',
+                  'bg-white hover:bg-slate-50 active:bg-slate-100',
+                  'transition-all duration-200',
+                  'text-slate-700 font-semibold text-sm',
+                  ui.ringFocus
+                )}
+              >
+                <X className='w-4 h-4' />
+                <span>{t('actions.close')}</span>
               </button>
             </div>
 
-            <div className='p-3 border-b border-slate-200/70'>
+            <div className='p-4 border-b border-slate-200/60 bg-white/60 backdrop-blur-sm'>
               <div className='relative'>
-                <Search className={cls('absolute top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400', isRTL ? 'right-3' : 'left-3')} />
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('search.placeholder')} className={cls('w-full h-11 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white', ui.ringFocus, isRTL ? 'pr-9 pl-3' : 'pl-9 pr-3')} />
-                {searching && <Loader2 className={cls('absolute top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-slate-400', isRTL ? 'left-3' : 'right-3')} />}
+                <Search className={cls(
+                  'absolute top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400',
+                  isRTL ? 'right-4' : 'left-4'
+                )} />
+                <input 
+                  value={search} 
+                  onChange={e => setSearch(e.target.value)} 
+                  placeholder={t('search.placeholder')} 
+                  className={cls(
+                    'w-full h-12 rounded-xl border-2 border-slate-200',
+                    'bg-white/90 focus:bg-white',
+                    'focus:border-[var(--color-primary-400)] focus:shadow-lg focus:shadow-[var(--color-primary-500)]/10',
+                    'transition-all duration-200',
+                    ui.ringFocus,
+                    isRTL ? 'pr-12 pl-4' : 'pl-12 pr-4'
+                  )} 
+                />
+                {searching && (
+                  <Loader2 className={cls(
+                    'absolute top-1/2 -translate-y-1/2 w-5 h-5 animate-spin text-[var(--color-primary-500)]',
+                    isRTL ? 'left-4' : 'right-4'
+                  )} />
+                )}
               </div>
 
               {user.role === 'client' && (
-                <div className='gap-2 flex items-center mt-2 mb-[-4px] '>
-                  <button type='button' onClick={contactCoach} className={cls('h-10 rounded-full border border-slate-200 bg-white/90 text-slate-800 text-xs inline-flex items-center justify-center px-2 gap-1 hover:bg-slate-50 active:scale-[.99] transition', ui.shadow.sm)}>
-                    <Phone size={14} />
+                <div className='gap-2 flex items-center mt-3'>
+                  <button 
+                    type='button' 
+                    onClick={contactCoach} 
+                    className={cls(
+                      'flex-1 h-11 rounded-xl border-2 border-slate-200 bg-white text-slate-700 text-sm font-semibold',
+                      'inline-flex items-center justify-center gap-2',
+                      'hover:bg-slate-50 active:scale-[.98] transition-all duration-200',
+                      'shadow-sm',
+                      ui.ringFocus
+                    )}
+                  >
+                    <Phone size={16} />
                     {t('quick.coach')}
                   </button>
                   {me?.adminId && (
-                    <button type='button' onClick={contactAdmin} className={cls('h-10 rounded-full border border-slate-200 bg-white/90 text-slate-800 text-xs inline-flex items-center justify-center px-2 gap-1 hover:bg-slate-50 active:scale-[.99] transition', ui.shadow.sm)}>
-                      <Phone size={14} />
+                    <button 
+                      type='button' 
+                      onClick={contactAdmin} 
+                      className={cls(
+                        'flex-1 h-11 rounded-xl border-2 border-slate-200 bg-white text-slate-700 text-sm font-semibold',
+                        'inline-flex items-center justify-center gap-2',
+                        'hover:bg-slate-50 active:scale-[.98] transition-all duration-200',
+                        'shadow-sm',
+                        ui.ringFocus
+                      )}
+                    >
+                      <Phone size={16} />
                       {t('quick.admin')}
                     </button>
                   )}
@@ -834,17 +1171,29 @@ export default function ChatPage() {
               )}
 
               {!!results.length && (
-                <div className='mt-3 rounded-lg border border-slate-200 overflow-hidden'>
-                  <div className='px-3 py-2 text-xs text-slate-500 bg-slate-50'>{t('search.results')}</div>
-                  <ul className='max-h-64 overflow-auto'>
+                <div className='mt-3 rounded-xl border border-slate-200/60 overflow-hidden bg-white shadow-sm'>
+                  <div className='px-4 py-2.5 text-xs font-semibold text-slate-600 bg-slate-50'>
+                    {t('search.results')}
+                  </div>
+                  <ul className='max-h-64 overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
                     {results.map(u => (
-                      <li key={u.id} className='border-t border-slate-100'>
-                        <button onClick={() => openDirectWith(u.id)} className={cls('w-full px-3 py-2 hover:bg-slate-50 flex items-center gap-3', ui.ringFocus, isRTL ? 'text-right justify-end' : 'text-left')}>
-                          {!isRTL && <UserCircle2 className='w-6 h-6 text-slate-500' />}
+                      <li key={u.id} className='border-t border-slate-100/60 first:border-t-0'>
+                        <button 
+                          onClick={() => openDirectWith(u.id)} 
+                          className={cls(
+                            'w-full px-4 py-3 hover:bg-slate-50 flex items-center gap-3',
+                            'transition-all duration-200',
+                            ui.ringFocus,
+                            isRTL ? 'text-right justify-end' : 'text-left'
+                          )}
+                        >
+                          {!isRTL && <UserCircle2 className='w-7 h-7 text-slate-500' />}
                           <div className='min-w-0 flex-1'>
-                            <MultiLangText className='text-sm font-medium text-slate-900 truncate'>{u.name || u.email}</MultiLangText>
+                            <MultiLangText className='text-sm font-semibold text-slate-900 truncate'>
+                              {u.name || u.email}
+                            </MultiLangText>
                           </div>
-                          {isRTL && <UserCircle2 className='w-6 h-6 text-slate-500' />}
+                          {isRTL && <UserCircle2 className='w-7 h-7 text-slate-500' />}
                         </button>
                       </li>
                     ))}
@@ -853,7 +1202,7 @@ export default function ChatPage() {
               )}
             </div>
 
-            <div className='p-2 h-[calc(100%-140px)] overflow-auto'>
+            <div className='p-3 h-[calc(100%-180px)] overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
               {filteredConvos.length ? (
                 <ul className='space-y-2'>
                   {filteredConvos.map(c => {
@@ -864,20 +1213,48 @@ export default function ChatPage() {
 
                     return (
                       <li key={c.id}>
-                        <button onClick={() => onSelectConversation(c.id)} className={cls('w-full px-3 py-3 rounded-xl transition-all duration-200 border', ui.ringFocus, activeId === c.id ? 'bg-white shadow-sm border-slate-200' : 'border-transparent hover:bg-white/80 bg-white/60')}>
-                          <div className={cls('flex items-center gap-3', isRTL ? 'flex-row-reverse' : '')}>
+                        <button 
+                          onClick={() => onSelectConversation(c.id)} 
+                          className={cls(
+                            'w-full px-4 py-4 rounded-xl transition-all duration-200',
+                            'border-2',
+                            ui.ringFocus,
+                            activeId === c.id 
+                              ? 'bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] shadow-md border-[var(--color-primary-200)]' 
+                              : 'border-slate-200 hover:bg-white/80 bg-white/60 hover:shadow-md'
+                          )}
+                        >
+                          <div className={cls(
+                            'flex items-center gap-3',
+                            isRTL ? 'flex-row-reverse' : ''
+                          )}>
                             <div className='min-w-0 flex-1'>
-                              <div className={cls('flex items-center justify-between gap-2', isRTL ? 'flex-row-reverse' : '')}>
-                                <div className='font-en text-[11px] text-slate-500 shrink-0'>{last?.created_at ? timeHHMM(last.created_at) : ''}</div>
-                                <MultiLangText className='text-sm font-semibold text-slate-900 truncate'>{title}</MultiLangText>
+                              <div className={cls(
+                                'flex items-center justify-between gap-2 mb-1',
+                                isRTL ? 'flex-row-reverse' : ''
+                              )}>
+                                <div className='font-en text-xs text-slate-400 shrink-0 font-medium'>
+                                  {last?.created_at ? timeHHMM(last.created_at) : ''}
+                                </div>
+                                <MultiLangText className='text-sm font-bold text-slate-900 truncate'>
+                                  {title}
+                                </MultiLangText>
                               </div>
-                              <div className={cls('flex items-center justify-between gap-2 mt-1', isRTL ? 'flex-row-reverse' : '')}>
+                              <div className={cls(
+                                'flex items-center justify-between gap-2',
+                                isRTL ? 'flex-row-reverse' : ''
+                              )}>
                                 <UnreadBadge count={c.unreadCount} />
-                                <MultiLangText className='text-xs text-slate-500 truncate flex-1 rtl:text-left ltr:text-right'>{preview}</MultiLangText>
+                                <MultiLangText className='text-xs text-slate-500 truncate flex-1 rtl:text-left ltr:text-right'>
+                                  {preview}
+                                </MultiLangText>
                               </div>
                             </div>
-                            <div className='h-11 w-11 rounded-lg bg-gradient-to-br from-indigo-100 to-blue-100 grid place-items-center overflow-hidden'>
-                              <UserCircle2 className='w-6 h-6 text-indigo-500' />
+                            <div className={cls(
+                              'h-12 w-12 rounded-xl bg-gradient-to-br grid place-items-center overflow-hidden shadow-sm',
+                              'from-[var(--color-primary-100)] to-[var(--color-secondary-100)]'
+                            )}>
+                              <UserCircle2 className='w-7 h-7 text-[var(--color-primary-600)]' />
                             </div>
                           </div>
                         </button>
@@ -886,9 +1263,11 @@ export default function ChatPage() {
                   })}
                 </ul>
               ) : (
-                <div className='p-8 text-center text-slate-500'>
-                  <Inbox className='mx-auto mb-2 w-6 h-6 opacity-60' />
-                  <div className='text-sm'>{t('list.empty')}</div>
+                <div className='p-10 text-center text-slate-500'>
+                  <div className='mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200/60 shadow-lg'>
+                    <Inbox className='w-8 h-8 text-slate-400' />
+                  </div>
+                  <div className='text-sm font-semibold text-slate-700'>{t('list.empty')}</div>
                 </div>
               )}
             </div>
@@ -899,12 +1278,11 @@ export default function ChatPage() {
   );
 }
 
-/* --------------------------- MessageList --------------------------- */
-function MessageList({ msgs, me, API_URL, endRef, t, typing }) {
+/* --------------------------- MessageList - Enhanced --------------------------- */
+function MessageList({ msgs, me, API_URL, endRef, t, typing, colors }) {
   const groups = [];
   let lastDate = '';
 
-  // Group messages by date
   msgs.forEach(m => {
     const d = new Date(m.created_at).toDateString();
     if (d !== lastDate) {
@@ -914,7 +1292,6 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing }) {
     groups.push({ type: 'msg', data: m });
   });
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     const id = setTimeout(() => {
       endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -924,30 +1301,53 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing }) {
 
   return (
     <>
-      {groups.map(item => {
+      {groups.map((item, index) => {
         if (item.type === 'sep') {
           return (
-            <div key={item.id} className='sticky  top-2 z-10'>
-              <MultiLangText className='mx-auto block w-fit text-[11px] px-2 py-1 rounded-full bg-white/85 border border-slate-200 text-slate-600 shadow-sm'>{item.label}</MultiLangText>
-            </div>
+            <motion.div 
+              key={item.id} 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.02 }}
+              className='sticky top-2 z-10'
+            >
+              <MultiLangText className='mx-auto block w-fit text-xs px-4 py-2 rounded-full bg-white/95 backdrop-blur-sm border-2 border-slate-200 text-slate-600 font-semibold shadow-sm'>
+                {item.label}
+              </MultiLangText>
+            </motion.div>
           );
         }
 
         const m = item.data;
         const mine = (m?.sender?.id ?? m?.senderId) === me?.id;
-        const other = m?.sender || m?.from || m?.user || {}; // flexible
+        const other = m?.sender || m?.from || m?.user || {};
         const time = timeHHMM(m.created_at);
 
         const Content = () => {
           if (m.messageType === 'text' && !!m.content) {
-            return <MultiLangText className='whitespace-pre-wrap text-[15px] leading-6 break-words'>{m.content}</MultiLangText>;
+            return (
+              <MultiLangText className='whitespace-pre-wrap text-[15px] leading-relaxed break-words'>
+                {m.content}
+              </MultiLangText>
+            );
           }
           if (m.messageType === 'image' && Array.isArray(m.attachments)) {
             return (
               <div className='grid grid-cols-2 gap-2'>
                 {m.attachments.map((a, i) => (
-                  <a key={i} href={`${API_URL}${a.url}`} target='_blank' rel='noreferrer' className='block overflow-hidden  hover:opacity-90 transition'>
-                    <Img src={`${a.url}`} alt={a.name} className='w-[100px] h-40 object-contain' showBlur={false} />
+                  <a 
+                    key={i} 
+                    href={`${API_URL}${a.url}`} 
+                    target='_blank' 
+                    rel='noreferrer' 
+                    className='block overflow-hidden rounded-lg hover:opacity-90 transition-opacity duration-200 shadow-md hover:shadow-lg'
+                  >
+                    <Img 
+                      src={`${a.url}`} 
+                      alt={a.name} 
+                      className='w-full h-40 object-cover' 
+                      showBlur={false} 
+                    />
                   </a>
                 ))}
               </div>
@@ -957,7 +1357,12 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing }) {
             return (
               <div className='space-y-2'>
                 {m.attachments.map((a, i) => (
-                  <video key={i} src={`${API_URL}${a.url}`} controls className='w-full rounded-lg overflow-hidden max-h-64 border border-slate-200' />
+                  <video 
+                    key={i} 
+                    src={`${API_URL}${a.url}`} 
+                    controls 
+                    className='w-full rounded-xl overflow-hidden max-h-64 border-2 border-slate-200 shadow-md' 
+                  />
                 ))}
               </div>
             );
@@ -966,10 +1371,26 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing }) {
             return (
               <div className='space-y-2'>
                 {m.attachments.map((a, i) => (
-                  <a key={i} href={`${API_URL}${a.url}`} target='_blank' rel='noreferrer' className={cls('flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border', mine ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white' : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700')}>
-                    <FileIcon className={cls('w-4 h-4', mine ? 'text-white' : 'text-slate-600')} />
-                    <span className='text-xs truncate flex-1'>{a.name}</span>
-                    <span className={cls('text-[11px] tabular-nums', mine ? 'opacity-90' : 'text-slate-500')}>{a.size ? `(${Math.round(a.size / 1024)} KB)` : ''}</span>
+                  <a 
+                    key={i} 
+                    href={`${API_URL}${a.url}`} 
+                    target='_blank' 
+                    rel='noreferrer' 
+                    className={cls(
+                      'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border-2',
+                      mine 
+                        ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white shadow-md hover:shadow-lg' 
+                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm hover:shadow-md'
+                    )}
+                  >
+                    <FileIcon className={cls('w-5 h-5', mine ? 'text-white' : 'text-slate-600')} />
+                    <span className='text-sm truncate flex-1 font-medium'>{a.name}</span>
+                    <span className={cls(
+                      'text-xs tabular-nums font-medium',
+                      mine ? 'text-white/90' : 'text-slate-500'
+                    )}>
+                      {a.size ? `(${Math.round(a.size / 1024)} KB)` : ''}
+                    </span>
                   </a>
                 ))}
               </div>
@@ -979,38 +1400,68 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing }) {
         };
 
         return (
-          <div key={m.id || m.tempId} className={cls(' pt-2 flex items-end gap-2', mine ? 'justify-end' : 'justify-start')}>
+          <motion.div 
+            key={m.id || m.tempId} 
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: index * 0.02, duration: 0.2 }}
+            className={cls('pt-2 flex items-end gap-2.5', mine ? 'justify-end' : 'justify-start')}
+          >
             {!mine && (
-              <div className={cls('  h-8 w-8 rounded-full bg-gradient-to-br grid place-items-center ring-1 ring-inset shrink-0 select-none', pickAvatarClass(other?.id || other?.email))} title={other?.name || other?.email}>
-                <span className='text-[11px] font-bold font-en'>{getInitial(other)}</span>
+              <div 
+                className={cls(
+                  'h-9 w-9 rounded-full bg-gradient-to-br grid place-items-center',
+                  'ring-2 shadow-md shrink-0 select-none',
+                  pickAvatarGradient(other?.id || other?.email, colors)
+                )} 
+                title={other?.name || other?.email}
+              >
+                <span className='text-xs font-bold font-en'>{getInitial(other)}</span>
               </div>
             )}
 
-            <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className={cls('relative max-w-[400px] rounded-2xl px-3 py-2 shadow-sm', mine ? 'bg-indigo-600 text-white rtl:rounded-bl-sm ltr:rounded-br-sm' : 'bg-white text-slate-800 rtl:rounded-br-sm ltr:rounded-bl-sm border border-slate-200')}>
+            <div className={cls(
+              'relative max-w-[min(400px,75%)] rounded-2xl px-4 py-3',
+              'shadow-md hover:shadow-lg transition-shadow duration-200',
+              mine 
+                ? 'bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] text-white rtl:rounded-bl-sm ltr:rounded-br-sm' 
+                : 'bg-white text-slate-800 rtl:rounded-br-sm ltr:rounded-bl-sm border-2 border-slate-200'
+            )}>
               <Content />
-              <div className={cls('mt-1 text-[11px] flex items-center gap-1 tabular-nums', mine ? 'text-white/80' : 'text-slate-500')}>
+              <div className={cls(
+                'mt-2 text-xs flex items-center gap-1.5 tabular-nums font-medium',
+                mine ? 'text-white/90 justify-end' : 'text-slate-500'
+              )}>
                 <MultiLangText>{time}</MultiLangText>
                 <ReadTicks meId={me?.id} msg={m} />
               </div>
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
         );
       })}
 
-      {/* Typing indicator */}
+      {/* Typing indicator - Enhanced */}
       {typing && (
-        <div className='flex justify-start items-end gap-2'>
-          <div className='h-8 w-8 rounded-full bg-gradient-to-br from-indigo-100 to-blue-100 ring-1 ring-inset ring-indigo-200/70 grid place-items-center select-none'>
-            <span className='text-[11px] font-bold'>…</span>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className='flex justify-start items-end gap-2.5'
+        >
+          <div className={cls(
+            'h-9 w-9 rounded-full bg-gradient-to-br grid place-items-center',
+            'ring-2 shadow-md select-none',
+            'from-[var(--color-primary-100)] to-[var(--color-secondary-100)] ring-[var(--color-primary-200)]'
+          )}>
+            <span className='text-xs font-bold'>…</span>
           </div>
-          <div className='relative max-w-[78%] rounded-2xl px-3 py-3 shadow-sm bg-white border border-slate-200 rtl:rounded-br-sm ltr:rounded-bl-sm'>
-            <div className='flex gap-1 items-center'>
-              <div className='w-2 h-2 bg-slate-400 rounded-full animate-bounce' style={{ animationDelay: '0ms' }} />
-              <div className='w-2 h-2 bg-slate-400 rounded-full animate-bounce' style={{ animationDelay: '150ms' }} />
-              <div className='w-2 h-2 bg-slate-400 rounded-full animate-bounce' style={{ animationDelay: '300ms' }} />
+          <div className='relative max-w-[78%] rounded-2xl px-5 py-4 shadow-md bg-white border-2 border-slate-200 rtl:rounded-br-sm ltr:rounded-bl-sm'>
+            <div className='flex gap-1.5 items-center'>
+              <div className='w-2 h-2 bg-[var(--color-primary-500)] rounded-full animate-bounce' style={{ animationDelay: '0ms' }} />
+              <div className='w-2 h-2 bg-[var(--color-primary-500)] rounded-full animate-bounce' style={{ animationDelay: '150ms' }} />
+              <div className='w-2 h-2 bg-[var(--color-primary-500)] rounded-full animate-bounce' style={{ animationDelay: '300ms' }} />
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
 
       <div ref={endRef} />
@@ -1019,13 +1470,18 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing }) {
 }
 
 const MessageSkeleton = () => (
-  <div className='p-4 space-y-3'>
+  <div className='space-y-4'>
     {[...Array(6)].map((_, i) => {
       const mine = i % 2 === 1;
       return (
-        <div key={i} className={cls('flex items-end gap-2', mine ? 'justify-end' : 'justify-start')}>
-          {!mine && <div className='h-8 w-8 rounded-full bg-slate-200/70' />}
-          <div className={cls('rounded-2xl h-14 animate-pulse', mine ? 'bg-indigo-200/40 w-48' : 'bg-slate-200/70 w-56 border border-slate-200')} />
+        <div key={i} className={cls('flex items-end gap-2.5', mine ? 'justify-end' : 'justify-start')}>
+          {!mine && <div className='h-9 w-9 rounded-full bg-slate-200/80 shadow-sm' />}
+          <div className={cls(
+            'rounded-2xl h-16 animate-pulse shadow-md',
+            mine 
+              ? 'bg-gradient-to-r from-slate-200/60 to-slate-300/40 w-52' 
+              : 'bg-slate-200/80 w-60 border-2 border-slate-200'
+          )} />
         </div>
       );
     })}

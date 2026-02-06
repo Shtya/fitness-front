@@ -1,723 +1,1056 @@
-"use client"
+"use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { 
-  Moon, Droplet, Pill, Flame, Bell, BarChart3, 
-  Check, ArrowRight, Menu, X, Mail, Phone, MapPin,
-  Target, Calendar, TrendingUp, Star, Users, Shield,
-  Zap, Clock, Globe, MessageCircle, Twitter, Facebook, Linkedin, Instagram
+import { useMemo, useState } from "react"; import {
+	ClipboardCheck,
+	Lightbulb,
+	PenTool,
+	Code,
+	Search,
+	Settings,
+	Sparkles,
+	ArrowRight,
+	CheckCircle2, Trophy, Target, TrendingUp, Users , Check,
+	Zap,
+	Crown,
+	Rocket,
+	Star,
+	Dumbbell,
+  Mail,
+  Phone,
+  MapPin,
+  Facebook,
+  Twitter,
+  Instagram,
+  Linkedin,
+  Youtube,
+  Send,
+  Heart,
+  Shield,
+  Award, 
 } from "lucide-react";
-const features = [
-  {
-    icon: Moon,
-    title: "Smart Prayer Reminders",
-    description: "Automatically syncs with your local prayer times. Get notified before or after each prayer with customizable offsets."
-  },
-  {
-    icon: Droplet,
-    title: "Hydration Tracking",
-    description: "Set personalized water intake goals and receive gentle reminders throughout the day to stay healthy."
-  },
-  {
-    icon: Pill,
-    title: "Medicine Reminders",
-    description: "Never miss a dose again. Schedule complex medication routines with repeat patterns and snooze options."
-  },
-  {
-    icon: Flame,
-    title: "Habit Streaks",
-    description: "Build lasting habits with streak tracking. Visualize your consistency and celebrate milestones."
-  },
-  {
-    icon: Bell,
-    title: "Push Notifications",
-    description: "Cross-platform alerts that work on web, mobile, and even Telegram. Stay on track anywhere."
-  },
-  {
-    icon: BarChart3,
-    title: "Analytics Dashboard",
-    description: "Gain insights into your habits with detailed analytics. Track completion rates and identify patterns."
-  }
-];
-const steps = [
-  {
-    number: "01",
-    title: "Create Your Goals",
-    description: "Define the habits you want to build. Choose from templates like Adhkar, hydration, or create custom reminders tailored to your lifestyle."
-  },
-  {
-    number: "02",
-    title: "Set Your Schedule",
-    description: "Configure flexible timing options: daily, weekly, interval-based, or synced with prayer times. We adapt to your routine."
-  },
-  {
-    number: "03",
-    title: "Track & Improve",
-    description: "Monitor your streaks, analyze your progress, and celebrate wins. Our insights help you build habits that stick."
-  }
-];
-const pricingPlans = [
-  {
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    description: "Perfect for getting started",
-    features: [
-      "5 active reminders",
-      "Basic push notifications",
-      "Daily scheduling",
-      "7-day streak history",
-      "Community support"
-    ],
-    cta: "Start Free",
-    popular: false
-  },
-  {
-    name: "Basic",
-    price: "$4.99",
-    period: "/month",
-    description: "For individuals building habits",
-    features: [
-      "25 active reminders",
-      "Prayer time sync",
-      "Weekly & monthly schedules",
-      "30-day analytics",
-      "Email support"
-    ],
-    cta: "Get Started",
-    popular: false
-  },
-  {
-    name: "Professional",
-    price: "$9.99",
-    period: "/month",
-    description: "For serious habit builders",
-    features: [
-      "Unlimited reminders",
-      "Advanced analytics",
-      "Telegram integration",
-      "Custom sounds",
-      "Priority support",
-      "Data export"
-    ],
-    cta: "Go Professional",
-    popular: true
-  },
-  {
-    name: "Enterprise",
-    price: "Custom",
-    period: "",
-    description: "For teams and organizations",
-    features: [
-      "Everything in Professional",
-      "API access",
-      "Custom integrations",
-      "Dedicated account manager",
-      "SLA guarantee",
-      "On-premise option"
-    ],
-    cta: "Contact Sales",
-    popular: false
-  }
-];
-const testimonials = [
-  {
-    name: "Sarah Mitchell",
-    role: "Product Manager",
-    initials: "SM",
-    color: "bg-indigo-500",
-    quote: "Reflect has completely transformed my morning routine. The prayer time sync is incredibly accurate, and the streak tracking keeps me motivated every single day."
-  },
-  {
-    name: "Ahmed Hassan",
-    role: "Software Engineer",
-    initials: "AH",
-    color: "bg-emerald-500",
-    quote: "I've tried dozens of reminder apps, but nothing comes close to Reflect. The interval-based hydration reminders have genuinely improved my health."
-  },
-  {
-    name: "Emily Chen",
-    role: "Healthcare Professional",
-    initials: "EC",
-    color: "bg-amber-500",
-    quote: "As a nurse, I recommended Reflect to my patients for medication reminders. The reliability and ease of use make it perfect for all ages."
-  }
-];
-const faqs = [
-  {
-    question: "What is Reflect?",
-    answer: "Reflect is a comprehensive reminder and habit tracking system designed to help you build positive daily routines. From prayer times to medication schedules, hydration goals to custom habits, Reflect keeps you on track with intelligent notifications."
-  },
-  {
-    question: "How do prayer-time reminders work?",
-    answer: "Our system automatically calculates prayer times based on your location. You can set reminders to trigger before or after each prayer (Fajr, Dhuhr, Asr, Maghrib, Isha) with customizable offsets. Times update automatically as seasons change."
-  },
-  {
-    question: "Can I use this on multiple devices?",
-    answer: "Yes! Reflect works seamlessly across all your devices. Your account syncs in real-time, so whether you're on your phone, tablet, or computer, your reminders and progress are always up to date."
-  },
-  {
-    question: "Is my data secure?",
-    answer: "Absolutely. We use industry-standard encryption for all data transmission and storage. Your personal information and habit data are never shared with third parties. We're fully GDPR compliant."
-  },
-  {
-    question: "How do I cancel my subscription?",
-    answer: "You can cancel your subscription anytime from your account settings. There are no cancellation fees, and you'll continue to have access to paid features until the end of your billing period."
-  },
-  {
-    question: "Do you offer refunds?",
-    answer: "Yes, we offer a 14-day money-back guarantee for all paid plans. If you're not satisfied with Reflect, contact our support team within 14 days of purchase for a full refund."
-  }
-];
-export default function LandingPage() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [formData, setFormData] = useState({ name: "", email: "", message: "" });
-  const scrollToSection = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-    setMobileMenuOpen(false);
-  };
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <Zap className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="font-display text-xl font-bold text-foreground">Reflect</span>
-            </div>
-            
-            <div className="hidden md:flex items-center gap-8">
-              <button onClick={() => scrollToSection("features")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Features</button>
-              <button onClick={() => scrollToSection("how-it-works")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">How It Works</button>
-              <button onClick={() => scrollToSection("pricing")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Pricing</button>
-              <button onClick={() => scrollToSection("faq")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">FAQ</button>
-              <button onClick={() => scrollToSection("testimonials")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Testimonials</button>
-            </div>
-            <div className="hidden md:flex items-center gap-4">
-              <a href="/auth">
-                <Button variant="ghost">Log In</Button>
-              </a>
-              <a href="/auth">
-                <Button>Get Started</Button>
-              </a>
-            </div>
-            <button 
-              className="md:hidden p-2"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-        </div>
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-background border-b px-4 py-4 space-y-4">
-            <button onClick={() => scrollToSection("features")} className="block w-full text-left py-2 text-muted-foreground">Features</button>
-            <button onClick={() => scrollToSection("how-it-works")} className="block w-full text-left py-2 text-muted-foreground">How It Works</button>
-            <button onClick={() => scrollToSection("pricing")} className="block w-full text-left py-2 text-muted-foreground">Pricing</button>
-            <button onClick={() => scrollToSection("faq")} className="block w-full text-left py-2 text-muted-foreground">FAQ</button>
-            <button onClick={() => scrollToSection("testimonials")} className="block w-full text-left py-2 text-muted-foreground">Testimonials</button>
-            <div className="pt-4 border-t space-y-2">
-              <a href="/auth" className="block">
-                <Button variant="outline" className="w-full">Log In</Button>
-              </a>
-              <a href="/auth" className="block">
-                <Button className="w-full">Get Started</Button>
-              </a>
-            </div>
-          </div>
-        )}
-      </nav>
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="space-y-4">
-                <Badge variant="secondary" className="px-3 py-1">
-                  <Star className="w-3 h-3 mr-1 inline" />
-                  Trusted by 5,000+ users
-                </Badge>
-                <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
-                  Master Your Daily Habits with 
-                  <span className="text-primary"> Intelligent Reminders</span>
-                </h1>
-                <p className="text-lg text-muted-foreground max-w-xl">
-                  Build lasting habits with smart reminders that adapt to your lifestyle. From prayer times to hydration goals, Reflect keeps you on track effortlessly.
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <a href="/auth">
-                  <Button size="lg" className="w-full sm:w-auto gap-2">
-                    Start Free <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </a>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto gap-2" onClick={() => scrollToSection("how-it-works")}>
-                  See How It Works
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-6 pt-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-primary" />
-                  Free forever plan
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-primary" />
-                  No credit card required
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-primary" />
-                  Cancel anytime
-                </div>
-              </div>
-            </div>
-            {/* Hero Visual */}
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent rounded-3xl blur-3xl" />
-              <div className="relative bg-card border rounded-2xl p-6 shadow-xl">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between pb-4 border-b">
-                    <h3 className="font-display font-semibold">Today's Reminders</h3>
-                    <Badge variant="secondary">3 Active</Badge>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-4 p-3 rounded-lg bg-accent/50">
-                      <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                        <Moon className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">Morning Adhkar</p>
-                        <p className="text-xs text-muted-foreground">After Fajr Prayer</p>
-                      </div>
-                      <Badge className="bg-emerald-100 text-emerald-700 border-0">Done</Badge>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 p-3 rounded-lg bg-accent/50">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <Droplet className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">Drink Water</p>
-                        <p className="text-xs text-muted-foreground">Every 2 hours</p>
-                      </div>
-                      <Badge variant="secondary">4/8</Badge>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 p-3 rounded-lg bg-accent/50">
-                      <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center">
-                        <Pill className="w-5 h-5 text-rose-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">Vitamin D</p>
-                        <p className="text-xs text-muted-foreground">8:00 PM</p>
-                      </div>
-                      <Badge variant="outline">Upcoming</Badge>
-                    </div>
-                  </div>
-                  <div className="pt-4 border-t">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Current Streak</span>
-                      <span className="font-semibold flex items-center gap-1">
-                        <Flame className="w-4 h-4 text-orange-500" /> 12 days
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-      {/* Logos/Trust */}
-      <section className="py-12 border-y bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Users className="w-5 h-5" />
-              <span className="font-medium">5,000+ Active Users</span>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Globe className="w-5 h-5" />
-              <span className="font-medium">50+ Countries</span>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Shield className="w-5 h-5" />
-              <span className="font-medium">Enterprise Security</span>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="w-5 h-5" />
-              <span className="font-medium">99.9% Uptime</span>
-            </div>
-          </div>
-        </div>
-      </section>
-      {/* Features Section */}
-      <section id="features" className="py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <Badge variant="secondary" className="mb-4">Features</Badge>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              Everything You Need to Build Better Habits
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Powerful features designed to help you stay consistent and achieve your goals every single day.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => (
-              <Card key={index} className="group hover:border-primary/50 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-                    <feature.icon className="w-6 h-6 text-primary" />
-                  </div>
-                  <CardTitle className="font-display">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-base">{feature.description}</CardDescription>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-      {/* How It Works */}
-      <section id="how-it-works" className="py-24 px-4 sm:px-6 lg:px-8 bg-muted/30">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <Badge variant="secondary" className="mb-4">How It Works</Badge>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              Get Started in Three Simple Steps
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Setting up your personalized reminder system takes just a few minutes.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {steps.map((step, index) => (
-              <div key={index} className="relative">
-                <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-primary text-primary-foreground font-display text-2xl font-bold flex items-center justify-center mx-auto mb-6">
-                    {step.number}
-                  </div>
-                  <h3 className="font-display text-xl font-semibold mb-3">{step.title}</h3>
-                  <p className="text-muted-foreground">{step.description}</p>
-                </div>
-                {index < steps.length - 1 && (
-                  <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-px bg-border" />
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="text-center mt-12">
-            <a href="/auth">
-              <Button size="lg" className="gap-2">
-                Start Your Journey <ArrowRight className="w-4 h-4" />
-              </Button>
-            </a>
-          </div>
-        </div>
-      </section>
-      {/* Pricing Section */}
-      <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <Badge variant="secondary" className="mb-4">Pricing</Badge>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              Simple, Transparent Pricing
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Choose the plan that fits your needs. Upgrade or downgrade anytime.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {pricingPlans.map((plan, index) => (
-              <Card 
-                key={index} 
-                className={`relative ${plan.popular ? 'border-primary shadow-lg scale-105' : ''}`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
-                  </div>
-                )}
-                <CardHeader className="text-center pb-4">
-                  <CardTitle className="font-display text-xl">{plan.name}</CardTitle>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground">{plan.period}</span>
-                  </div>
-                  <CardDescription className="mt-2">{plan.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, fIndex) => (
-                      <li key={fIndex} className="flex items-start gap-2 text-sm">
-                        <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <a href="/auth" className="block">
-                    <Button 
-                      className="w-full" 
-                      variant={plan.popular ? "default" : "outline"}
-                    >
-                      {plan.cta}
-                    </Button>
-                  </a>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-      {/* Testimonials */}
-      <section id="testimonials" className="py-24 px-4 sm:px-6 lg:px-8 bg-muted/30">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <Badge variant="secondary" className="mb-4">Testimonials</Badge>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              Loved by Thousands of Users
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              See what our community has to say about their experience with Reflect.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="bg-card">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-1 mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  <p className="text-muted-foreground mb-6 italic">"{testimonial.quote}"</p>
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full ${testimonial.color} flex items-center justify-center text-white font-semibold text-sm`}>
-                      {testimonial.initials}
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{testimonial.name}</p>
-                      <p className="text-xs text-muted-foreground">{testimonial.role}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-      {/* FAQ Section */}
-      <section id="faq" className="py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-16">
-            <Badge variant="secondary" className="mb-4">FAQ</Badge>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Got questions? We've got answers.
-            </p>
-          </div>
-          <Accordion type="single" collapsible className="space-y-4">
-            {faqs.map((faq, index) => (
-              <AccordionItem 
-                key={index} 
-                value={`faq-${index}`} 
-                className="bg-card border rounded-lg px-6"
-              >
-                <AccordionTrigger className="text-left font-medium hover:no-underline">
-                  {faq.question}
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
-                  {faq.answer}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
-      </section>
-      {/* Contact Section */}
-      <section id="contact" className="py-24 px-4 sm:px-6 lg:px-8 bg-muted/30">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12">
-            <div>
-              <Badge variant="secondary" className="mb-4">Contact Us</Badge>
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-4">
-                Get In Touch
-              </h2>
-              <p className="text-lg text-muted-foreground mb-8">
-                Have questions or need help? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
-              </p>
-              <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Mail className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Email</p>
-                    <p className="text-muted-foreground">support@reflect.app</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <MessageCircle className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Live Chat</p>
-                    <p className="text-muted-foreground">Available 9 AM - 6 PM EST</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <MapPin className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Location</p>
-                    <p className="text-muted-foreground">San Francisco, CA</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <Card>
-              <CardContent className="pt-6">
-                <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Name</label>
-                      <Input 
-                        placeholder="Your name" 
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Email</label>
-                      <Input 
-                        type="email" 
-                        placeholder="you@example.com" 
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Message</label>
-                    <Textarea 
-                      placeholder="How can we help you?" 
-                      rows={5}
-                      value={formData.message}
-                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    />
-                  </div>
-                  <Button className="w-full" size="lg">
-                    Send Message
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-      {/* CTA Section */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-4">
-            Ready to Transform Your Habits?
-          </h2>
-          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join thousands of users who have already improved their daily routines with Reflect. Start your journey today.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/auth">
-              <Button size="lg" className="gap-2">
-                Start Free Today <ArrowRight className="w-4 h-4" />
-              </Button>
-            </a>
-            <Button size="lg" variant="outline" onClick={() => scrollToSection("pricing")}>
-              View Pricing
-            </Button>
-          </div>
-        </div>
-      </section>
-      {/* Footer */}
-      <footer className="bg-slate-900 text-slate-300 py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
-            <div className="lg:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-primary-foreground" />
-                </div>
-                <span className="font-display text-xl font-bold text-white">Reflect</span>
-              </div>
-              <p className="text-slate-400 mb-6 max-w-sm">
-                Build better habits with intelligent reminders. Your personal companion for daily wellness and spiritual growth.
-              </p>
-              <div className="flex gap-4">
-                <a href="#" className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition-colors">
-                  <Twitter className="w-5 h-5" />
-                </a>
-                <a href="#" className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition-colors">
-                  <Facebook className="w-5 h-5" />
-                </a>
-                <a href="#" className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition-colors">
-                  <Linkedin className="w-5 h-5" />
-                </a>
-                <a href="#" className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition-colors">
-                  <Instagram className="w-5 h-5" />
-                </a>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-4">Product</h4>
-              <ul className="space-y-3">
-                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
-                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Integrations</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Changelog</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-4">Company</h4>
-              <ul className="space-y-3">
-                <li><a href="#" className="hover:text-white transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-                <li><a href="#contact" className="hover:text-white transition-colors">Contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-4">Legal</h4>
-              <ul className="space-y-3">
-                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Cookie Policy</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">GDPR</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p className="text-slate-400 text-sm">
-              2024 Reflect. All rights reserved.
-            </p>
-            <p className="text-slate-400 text-sm">
-              Made with care for your daily wellness
-            </p>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
+import { useTranslations } from "next-intl"; 
+import { motion, AnimatePresence } from "framer-motion"; 
+import { useTheme } from "@/app/[locale]/theme";
+
+
+import FitnessHero from "@/components/pages/home/hero";
+import RoleTabsDemo from "@/components/pages/home/RoleTabs";
+import Testimonials from "@/components/pages/home/Testimonials";
+import ContactUs from "@/components/pages/home/Contactus";
+import FAQs from "@/components/pages/home/Faqs";
+import HowItWork from "@/components/pages/home/HowItWorks";
+import Navbar from "@/components/pages/home/Navbar";
+import ThemeShowcaseSection from "@/components/pages/home/ThemeSection";
+import Footer from "@/components/pages/home/Footer";
+
+
+export default function Page() {
+
+
+	return (
+		<div className="min-h-screen bg-white antialiased bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+
+			<div
+				className="absolute inset-0 opacity-10"
+				style={{
+					backgroundImage: `linear-gradient(rgba(59, 130, 246, 0.3) 1px, transparent 1px),
+                             linear-gradient(90deg, rgba(59, 130, 246, 0.3) 1px, transparent 1px)`,
+					backgroundSize: '50px 50px'
+				}}
+			/>
+			<Navbar />
+			<FitnessHero />
+			<StatsBar />
+			<ThemeShowcaseSection />
+			<RoleTabsDemo />
+			<Steps />
+			<PricingPlans />
+			<Testimonials />
+			<ContactUs />
+			<FAQs />
+			<HowItWork />
+			<Footer />
+
+
+		</div>
+	);
 }
+
+
+
+
+
+function StatsBar() {
+	const t = useTranslations("home.hero");
+
+	const stats = [
+		{ icon: Trophy, value: t("stats.coaches.value"), label: t("stats.coaches.label") },
+		{ icon: Target, value: t("stats.members.value"), label: t("stats.members.label") },
+		{ icon: TrendingUp, value: t("stats.programs.value"), label: t("stats.programs.label") },
+		{ icon: Users, value: "50,000+", label: t("trust.activeUsers") }
+	];
+
+	return (
+		<section className="relative">
+			<div className="container mx-auto px-6 py-16">
+				<div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+					{stats.map((stat, index) => {
+						const Icon = stat.icon;
+
+						// rotate theme usage a bit so cards don't look identical,
+						// but all still come from your CSS vars
+						const iconBg =
+							index % 2 === 0
+								? "bg-[linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))]"
+								: "bg-[linear-gradient(135deg,var(--color-primary-500),var(--color-secondary-500))]";
+
+						const valueText =
+							index % 2 === 0
+								? "theme-gradient-text"
+								: "bg-[linear-gradient(135deg,var(--color-primary-400),var(--color-secondary-400))] bg-clip-text text-transparent";
+
+						const bottomAccent =
+							index % 2 === 0
+								? "bg-[linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))]"
+								: "bg-[linear-gradient(135deg,var(--color-primary-500),var(--color-secondary-500))]";
+
+						return (
+							<div key={index} className="group relative">
+								{/* Glow (no inline styles) */}
+								<div className="absolute inset-0 rounded-2xl opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-100 bg-[radial-gradient(circle_at_30%_20%,color-mix(in_srgb,var(--color-primary-500)_35%,transparent),transparent_60%)]" />
+
+								{/* Card */}
+								<div
+									className={[
+										"relative rounded-2xl border border-slate-700/50 bg-gradient-to-br from-slate-800/80 to-slate-900/80",
+										"p-6 backdrop-blur-xl transition-all duration-300",
+										"group-hover:-translate-y-1 group-hover:border-slate-600",
+										"shadow-[0_10px_15px_-3px_rgba(0,0,0,0.30),0_4px_6px_-2px_rgba(0,0,0,0.20),inset_0_2px_4px_rgba(255,255,255,0.05)]"
+									].join(" ")}
+								>
+									<div className="flex flex-col items-center space-y-3 text-center">
+										{/* Icon */}
+										<div
+											className={[
+												"grid h-14 w-14 place-items-center rounded-xl shadow-lg",
+												"transition-transform duration-300 group-hover:scale-110",
+												iconBg
+											].join(" ")}
+										>
+											<Icon className="h-7 w-7 text-white" />
+										</div>
+
+										{/* Value */}
+										<p className={["text-4xl font-black font-en ", valueText].join(" ")}>
+											{stat.value}
+										</p>
+
+										{/* Label */}
+										<p className="text-sm font-bold uppercase tracking-wider text-gray-400">
+											{stat.label}
+										</p>
+									</div>
+
+									{/* Bottom Accent */}
+									<div
+										className={[
+											"absolute bottom-0 left-0 right-0 h-1 rounded-b-2xl",
+											"origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100",
+											bottomAccent
+										].join(" ")}
+									/>
+								</div>
+							</div>
+						);
+					})}
+				</div>
+			</div>
+		</section>
+	);
+}
+
+
+
+const containerVariants = {
+	hidden: { opacity: 0 },
+	visible: {
+		opacity: 1,
+		transition: {
+			staggerChildren: 0.1,
+			delayChildren: 0.2,
+		},
+	},
+};
+
+const stepVariants = {
+	hidden: {
+		opacity: 0,
+		scale: 0.8,
+		y: 30,
+	},
+	visible: {
+		opacity: 1,
+		scale: 1,
+		y: 0,
+		transition: {
+			type: "spring",
+			stiffness: 100,
+			damping: 15,
+		},
+	},
+};
+
+const headerVariants = {
+	hidden: { opacity: 0, y: -30 },
+	visible: {
+		opacity: 1,
+		y: 0,
+		transition: {
+			type: "spring",
+			stiffness: 100,
+			damping: 20,
+		},
+	},
+};
+
+const glowVariants = {
+	initial: { opacity: 0, scale: 0.8 },
+	animate: {
+		opacity: [0.2, 0.4, 0.2],
+		scale: [0.8, 1.2, 0.8],
+		transition: {
+			duration: 5,
+			repeat: Infinity,
+			ease: "easeInOut",
+		},
+	},
+};
+
+function Steps() {
+	const [activeStep, setActiveStep] = useState(null);
+	const [completedSteps, setCompletedSteps] = useState([]);
+	const t = useTranslations("home.steps");
+
+	const steps = [
+		{
+			id: 1,
+			categoryStep: t("step") + " 1:",
+			title: t("steps.validation.title"),
+			description: t("steps.validation.description"),
+			icon: ClipboardCheck,
+			color: "primary",
+		},
+		{
+			id: 2,
+			categoryStep: t("step") + " 2:",
+			title: t("steps.features.title"),
+			description: t("steps.features.description"),
+			icon: Lightbulb,
+			color: "secondary",
+		},
+		{
+			id: 3,
+			categoryStep: t("step") + " 3:",
+			title: t("steps.design.title"),
+			description: t("steps.design.description"),
+			icon: PenTool,
+			color: "primary",
+		},
+		{
+			id: 4,
+			categoryStep: t("step") + " 4:",
+			title: t("steps.coding.title"),
+			description: t("steps.coding.description"),
+			icon: Code,
+			color: "secondary",
+		},
+		{
+			id: 5,
+			categoryStep: t("step") + " 5:",
+			title: t("steps.testing.title"),
+			description: t("steps.testing.description"),
+			icon: Search,
+			color: "primary",
+		},
+		{
+			id: 6,
+			categoryStep: t("step") + " 6:",
+			title: t("steps.optimization.title"),
+			description: t("steps.optimization.description"),
+			icon: Settings,
+			color: "secondary",
+		},
+	];
+
+	const toggleStepCompletion = (stepId) => {
+		setCompletedSteps((prev) =>
+			prev.includes(stepId)
+				? prev.filter((id) => id !== stepId)
+				: [...prev, stepId]
+		);
+	};
+	function StepCard({
+		step,
+		index,
+		isActive,
+		isCompleted,
+		isLast,
+		onHoverStart,
+		onHoverEnd,
+		onToggleComplete,
+	}) {
+		const Icon = step.icon;
+
+		return (
+			<div className="relative flex-shrink-0 w-44 sm:w-48 lg:w-auto">
+				{/* Arrow - Desktop Only */}
+				{!isLast && (
+					<motion.div
+						initial={{ x: -10, opacity: 0 }}
+						animate={{ x: 0, opacity: 1 }}
+						transition={{ delay: index * 0.1 + 0.3 }}
+						className="hidden lg:block absolute top-16 ltr:-right-2 rtl:-left-2 transform -translate-y-1/2 z-20"
+					>
+						<ArrowRight
+							className={`w-5 h-5 transition-colors rtl:rotate-180 ${isCompleted ? "" : ""
+								}`}
+							style={{
+								color: isCompleted ? `var(--color-primary-400)` : `rgb(71, 85, 105)`,
+							}}
+						/>
+					</motion.div>
+				)}
+
+				{/* Step Card */}
+				<motion.div
+					variants={stepVariants}
+					onHoverStart={onHoverStart}
+					onHoverEnd={onHoverEnd}
+					whileHover={{ y: -8 }}
+					className="relative cursor-pointer"
+					onClick={onToggleComplete}
+				>
+					{/* Circle Container */}
+					<div className="flex flex-col items-center mb-3 md:mb-4">
+						{/* Outer Dashed Circle */}
+						<motion.div
+							className="relative w-28 h-28 md:w-32 md:h-32 rounded-full border-2 border-dashed flex items-center justify-center"
+							style={{
+								borderColor: isCompleted
+									? `var(--color-primary-400)`
+									: `var(--color-primary-400)`,
+								borderOpacity: isCompleted ? 0.6 : 0.3,
+							}}
+							animate={{
+								rotate: isActive ? 360 : 0,
+							}}
+							transition={{
+								rotate: { duration: 2, ease: "linear" },
+							}}
+						>
+							{/* Progress Arc */}
+							<svg
+								className="absolute inset-0 w-28 h-28 md:w-32 md:h-32 -rotate-90"
+								viewBox="0 0 128 128"
+							>
+								<motion.circle
+									cx="64"
+									cy="64"
+									r="60"
+									fill="none"
+									stroke={`var(--color-primary-500)`}
+									strokeWidth="4"
+									strokeDasharray="377"
+									strokeLinecap="round"
+									initial={{ strokeDashoffset: 377 }}
+									animate={{
+										strokeDashoffset: isCompleted
+											? 0
+											: isActive
+												? 377 * 0.3
+												: 377 - (377 * (step.id / 6)),
+									}}
+									transition={{ duration: 1, ease: "easeOut" }}
+								/>
+							</svg>
+
+							{/* Inner Circle with Icon */}
+							<motion.div
+								whileHover={{ scale: 1.1 }}
+								transition={{ type: "spring", stiffness: 300 }}
+								className="relative w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center shadow-xl border z-10"
+								style={{
+									background: isCompleted
+										? `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`
+										: `linear-gradient(to bottom right, rgba(51, 65, 85, 0.5), rgba(30, 41, 59, 0.5))`,
+									backdropFilter: 'blur(4px)',
+									borderColor: isCompleted
+										? `var(--color-primary-400)`
+										: `rgb(71, 85, 105)`,
+									borderOpacity: isCompleted ? 0.5 : 0.5,
+								}}
+							>
+								{/* Completion Checkmark */}
+								{isCompleted && (
+									<motion.div
+										initial={{ scale: 0, rotate: -180 }}
+										animate={{ scale: 1, rotate: 0 }}
+										className="absolute inset-0 flex items-center justify-center"
+									>
+										<CheckCircle2 className="w-10 h-10 md:w-12 md:h-12 text-white" />
+									</motion.div>
+								)}
+
+								{/* Icon */}
+								<Icon
+									className={`w-8 h-8 md:w-10 md:h-10 transition-all ${isCompleted ? "opacity-0" : ""
+										}`}
+									style={{
+										color: isCompleted
+											? "white"
+											: isActive
+												? `var(--color-primary-300)`
+												: `rgb(156, 163, 175)`,
+									}}
+									strokeWidth={1.5}
+								/>
+
+								{/* Shine Effect */}
+								<motion.div
+									className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent rounded-full rtl:translate-x-full ltr:-translate-x-full"
+									animate={{
+										translateX: isActive ? "200%" : "-100%",
+									}}
+									transition={{
+										duration: 1,
+										repeat: isActive ? Infinity : 0,
+										repeatDelay: 1,
+									}}
+								/>
+							</motion.div>
+						</motion.div>
+					</div>
+
+					{/* Step Number */}
+					<div className="text-center mb-2">
+						<span
+							className="text-sm md:text-base font-bold transition-colors"
+							style={{
+								color: isCompleted
+									? `var(--color-primary-600)`
+									: isActive
+										? `var(--color-primary-300)`
+										: `var(--color-primary-400)`,
+							}}
+						>
+							{step.categoryStep}
+						</span>
+					</div>
+
+					{/* Title */}
+					<h3
+						className={`text-base md:text-lg font-bold text-center mb-2 px-2 transition-all ${isCompleted ? "theme-gradient-text" : ""
+							}`}
+						style={{
+							color: isCompleted
+								? undefined
+								: isActive
+									? "white"
+									: `rgb(209, 213, 219)`,
+						}}
+					>
+						{step.title}
+					</h3>
+
+					{/* Description - Hidden on mobile */}
+					<p className="hidden lg:block text-gray-400 text-center text-xs leading-relaxed px-2 group-hover:text-gray-300 transition-colors">
+						{step.description}
+					</p>
+
+					{/* Completion Badge - Mobile */}
+					{isCompleted && (
+						<motion.div
+							initial={{ scale: 0 }}
+							animate={{ scale: 1 }}
+							className="lg:hidden absolute -top-2 ltr:-right-2 rtl:-left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-bold"
+						>
+							✓
+						</motion.div>
+					)}
+
+					{/* Glow Effect on Hover/Active */}
+					<motion.div
+						className="absolute inset-0 rounded-2xl -z-10 blur-xl"
+						style={{
+							backgroundColor: isCompleted
+								? `var(--color-primary-500)`
+								: `var(--color-primary-500)`,
+							opacity: isCompleted ? 0.2 : 0.1,
+						}}
+						animate={{
+							scale: isActive || isCompleted ? 1.2 : 1,
+							opacity: isActive || isCompleted ? (isCompleted ? 0.2 : 0.1) : 0,
+						}}
+						transition={{ duration: 0.3 }}
+					/>
+
+					{/* Click Indicator */}
+					<motion.div
+						className="absolute -bottom-6 ltr:left-1/2 rtl:right-1/2 transform ltr:-translate-x-1/2 rtl:translate-x-1/2 text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden lg:block"
+						initial={{ y: -5 }}
+						animate={{ y: 0 }}
+					>
+						{isCompleted ? "انقر للإلغاء" : "انقر للإكمال"}
+					</motion.div>
+				</motion.div>
+			</div>
+		);
+	}
+	return (
+		<section className="relative py-16 md:py-24 overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+
+			<div className="absolute inset-0 overflow-hidden pointer-events-none">
+
+				<motion.div
+					variants={glowVariants}
+					initial="initial"
+					animate="animate"
+					className="absolute top-10 md:top-20 ltr:right-10 rtl:left-10 ltr:md:right-20 rtl:md:left-20 w-64 h-64 md:w-96 md:h-96 rounded-full blur-3xl"
+					style={{
+						background: `radial-gradient(circle, var(--color-primary-500) 0%, transparent 70%)`,
+						opacity: 0.2,
+					}}
+				/>
+				<motion.div
+					variants={glowVariants}
+					initial="initial"
+					animate="animate"
+					transition={{ delay: 0.5 }}
+					className="absolute bottom-10 md:bottom-20 ltr:left-10 rtl:right-10 ltr:md:left-20 rtl:md:right-20 w-64 h-64 md:w-96 md:h-96 rounded-full blur-3xl"
+					style={{
+						background: `radial-gradient(circle, var(--color-secondary-500) 0%, transparent 70%)`,
+						opacity: 0.2,
+					}}
+				/>
+
+				{/* Grid Pattern */}
+				<div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_100px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_80%)]" />
+
+				{/* Floating Particles */}
+				{[...Array(20)].map((_, i) => (
+					<motion.div
+						key={i}
+						className="absolute w-1 h-1 rounded-full"
+						style={{
+							left: `${Math.random() * 100}%`,
+							top: `${Math.random() * 100}%`,
+							backgroundColor: `var(--color-primary-400)`,
+							opacity: 0.3,
+						}}
+						animate={{
+							y: [0, -30, 0],
+							opacity: [0.3, 0.6, 0.3],
+						}}
+						transition={{
+							duration: 3 + Math.random() * 2,
+							repeat: Infinity,
+							delay: Math.random() * 2,
+						}}
+					/>
+				))}
+			</div>
+
+			<div className="relative z-10 container mx-auto px-4 md:px-6">
+				{/* Section Header */}
+				<motion.div
+					variants={headerVariants}
+					initial="hidden"
+					animate="visible"
+					className="text-center mb-12 md:mb-20"
+				>
+					{/* Badge */}
+					<motion.div
+						initial={{ opacity: 0, scale: 0.9 }}
+						animate={{ opacity: 1, scale: 1 }}
+						transition={{ duration: 0.5 }}
+						className="inline-flex items-center gap-2 px-4 md:px-5 py-2 md:py-3 rounded-full backdrop-blur-sm border mb-4 md:mb-6"
+						style={{
+							background: `linear-gradient(to right, var(--color-primary-500), var(--color-secondary-500))`,
+							opacity: 0.2,
+							borderColor: `var(--color-primary-500)`,
+							borderOpacity: 0.3,
+						}}
+					>
+						<Sparkles
+							className="w-4 h-4 animate-pulse"
+							style={{ color: `var(--color-primary-400)` }}
+						/>
+						<span
+							className="text-xs md:text-sm font-bold uppercase tracking-wide"
+							style={{ color: `var(--color-primary-200)` }}
+						>
+							{t("badge")}
+						</span>
+					</motion.div>
+
+					{/* Title */}
+					<h2 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black text-white mb-4 md:mb-6 leading-tight px-4">
+						<span className="theme-gradient-text">{t("title")}</span>
+					</h2>
+
+					{/* Description */}
+					<p className="text-base md:text-lg lg:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed px-4">
+						{t("description")}
+					</p>
+				</motion.div>
+
+				{/* Steps Container */}
+				<div className="relative max-w-7xl mx-auto">
+					{/* Horizontal Connection Line - Desktop */}
+					<motion.div
+						className="hidden lg:block absolute top-16 ltr:left-0 rtl:right-0 ltr:right-0 rtl:left-0 h-0.5"
+						style={{
+							background: `linear-gradient(to right, transparent, var(--color-primary-500), transparent)`,
+							opacity: 0.3,
+						}}
+						initial={{ scaleX: 0 }}
+						animate={{ scaleX: 1 }}
+						transition={{ duration: 1, delay: 0.5 }}
+					/>
+
+					{/* Progress Line - Desktop */}
+					<motion.div
+						className="hidden lg:block absolute top-16 ltr:left-0 rtl:right-0 h-0.5 theme-gradient-bg"
+						initial={{ width: 0 }}
+						animate={{
+							width: `${(completedSteps.length / steps.length) * 100}%`,
+						}}
+						transition={{ duration: 0.5 }}
+					/>
+
+					{/* Steps Grid */}
+					<div className="overflow-x-auto pb-4 lg:overflow-visible scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300 scrollbar-thumb-slate-400:hover">
+						<motion.div
+							variants={containerVariants}
+							initial="hidden"
+							animate="visible"
+							className="flex lg:grid lg:grid-cols-6 gap-4 md:gap-6 lg:gap-4 min-w-max lg:min-w-0 px-4 lg:px-0"
+						>
+							{steps.map((step, index) => (
+								<StepCard
+									key={step.id}
+									step={step}
+									index={index}
+									isActive={activeStep === step.id}
+									isCompleted={completedSteps.includes(step.id)}
+									isLast={index === steps.length - 1}
+									onHoverStart={() => setActiveStep(step.id)}
+									onHoverEnd={() => setActiveStep(null)}
+									onToggleComplete={() => toggleStepCompletion(step.id)}
+								/>
+							))}
+						</motion.div>
+					</div>
+				</div>
+
+			</div>
+		</section>
+	);
+}
+
+
+function PricingPlans() {
+	const [billingCycle, setBillingCycle] = useState("month");
+	const t = useTranslations("home.pricing");
+	const { colors } = useTheme();
+
+	const billingCycles = [
+		{ id: "month", label: t("cycles.month"), discount: null },
+		{ id: "6months", label: t("cycles.6months"), discount: "15%" },
+		{ id: "year", label: t("cycles.year"), discount: "30%" },
+	];
+
+	const plans = [
+		{
+			id: "plus",
+			name: t("plans.plus.name"),
+			tagline: t("plans.plus.tagline"),
+			icon: Zap,
+			popular: false,
+			pricing: {
+				month: 29,
+				"6months": 24,
+				year: 20,
+			},
+			features: [
+				t("plans.plus.features.0"),
+				t("plans.plus.features.1"),
+				t("plans.plus.features.2"),
+				t("plans.plus.features.3"),
+				t("plans.plus.features.4"),
+				t("plans.plus.features.5"),
+			],
+		},
+		{
+			id: "professional",
+			name: t("plans.professional.name"),
+			tagline: t("plans.professional.tagline"),
+			icon: Crown,
+			popular: true,
+			pricing: {
+				month: 79,
+				"6months": 67,
+				year: 55,
+			},
+			features: [
+				t("plans.professional.features.0"),
+				t("plans.professional.features.1"),
+				t("plans.professional.features.2"),
+				t("plans.professional.features.3"),
+				t("plans.professional.features.4"),
+				t("plans.professional.features.5"),
+				t("plans.professional.features.6"),
+				t("plans.professional.features.7"),
+			],
+		},
+		{
+			id: "enterprise",
+			name: t("plans.enterprise.name"),
+			tagline: t("plans.enterprise.tagline"),
+			icon: Rocket,
+			popular: false,
+			pricing: {
+				month: 199,
+				"6months": 169,
+				year: 139,
+			},
+			features: [
+				t("plans.enterprise.features.0"),
+				t("plans.enterprise.features.1"),
+				t("plans.enterprise.features.2"),
+				t("plans.enterprise.features.3"),
+				t("plans.enterprise.features.4"),
+				t("plans.enterprise.features.5"),
+				t("plans.enterprise.features.6"),
+				t("plans.enterprise.features.7"),
+				t("plans.enterprise.features.8"),
+				t("plans.enterprise.features.9"),
+			],
+		},
+	];
+
+	// Animation variants
+	const containerVariants = {
+		hidden: { opacity: 0 },
+		visible: {
+			opacity: 1,
+			transition: {
+				staggerChildren: 0.1,
+				delayChildren: 0.2,
+			},
+		},
+	};
+
+	const cardVariants = {
+		hidden: { opacity: 0, y: 30, scale: 0.95 },
+		visible: {
+			opacity: 1,
+			y: 0,
+			scale: 1,
+			transition: {
+				duration: 0.5,
+				ease: [0.215, 0.61, 0.355, 1],
+			},
+		},
+	};
+
+	const featureVariants = {
+		hidden: { opacity: 0, x: -20 },
+		visible: (index) => ({
+			opacity: 1,
+			x: 0,
+			transition: {
+				delay: index * 0.05,
+				duration: 0.4,
+			},
+		}),
+	};
+
+	return (
+		<section className="relative py-16 sm:py-20 md:py-24 lg:py-28 overflow-hidden">
+			{/* Animated Background Blobs */}
+			<div className="absolute inset-0 overflow-hidden pointer-events-none">
+				<motion.div
+					className="absolute top-20 ltr:right-10 rtl:left-10 sm:ltr:right-20 sm:rtl:left-20 w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 bg-[var(--color-primary-500)] opacity-20 rounded-full blur-3xl"
+					animate={{
+						scale: [1, 1.2, 1],
+						opacity: [0.2, 0.3, 0.2],
+					}}
+					transition={{
+						duration: 8,
+						repeat: Infinity,
+						ease: "easeInOut",
+					}}
+				/>
+				<motion.div
+					className="absolute bottom-20 ltr:left-10 rtl:right-10 sm:ltr:left-20 sm:rtl:right-20 w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 bg-[var(--color-secondary-500)] opacity-20 rounded-full blur-3xl"
+					animate={{
+						scale: [1.2, 1, 1.2],
+						opacity: [0.3, 0.2, 0.3],
+					}}
+					transition={{
+						duration: 8,
+						repeat: Infinity,
+						ease: "easeInOut",
+					}}
+				/>
+			</div>
+
+			<div className="relative z-10 container mx-auto">
+				{/* Section Header */}
+				<motion.div
+					className="text-center mb-12 sm:mb-14 md:mb-16"
+					initial={{ opacity: 0, y: -20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.6 }}
+				>
+					{/* Badge */}
+					<motion.div
+						className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-3 rounded-full bg-[var(--color-primary-500)] bg-opacity-20 border border-[var(--color-primary-500)] border-opacity-30 backdrop-blur-sm mb-4 sm:mb-6"
+						whileHover={{ scale: 1.05 }}
+						transition={{ type: "spring", stiffness: 400, damping: 10 }}
+					>
+						<Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[var(--color-primary-400)] animate-pulse" />
+						<span className="text-xs sm:text-sm font-bold text-[var(--color-primary-200)] uppercase tracking-wide">
+							{t("badge")}
+						</span>
+					</motion.div>
+
+					{/* Title */}
+					<h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black text-white mb-4 sm:mb-6 px-4">
+						<span className="theme-gradient-text">{t("title")}</span>
+					</h2>
+
+					{/* Description */}
+					<p className="text-base sm:text-lg md:text-xl text-gray-300 max-w-3xl mx-auto px-4">
+						{t("description")}
+					</p>
+				</motion.div>
+
+				{/* Billing Cycle Tabs */}
+				<div className="flex justify-center mb-12 sm:mb-14 md:mb-16 px-4">
+					<div className="inline-flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 bg-slate-800 bg-opacity-50 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-slate-700 border-opacity-50 shadow-2xl w-full sm:w-auto overflow-x-auto scrollbar-thin">
+						{billingCycles.map((cycle) => {
+							const isActive = billingCycle === cycle.id;
+
+							return (
+								<motion.button
+									key={cycle.id}
+									onClick={() => setBillingCycle(cycle.id)}
+									className={`relative px-4 sm:px-6 md:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl font-bold text-sm sm:text-base md:text-lg transition-all whitespace-nowrap ${
+										isActive ? "text-white" : "text-gray-400 hover:text-white"
+									}`}
+									whileHover={{ scale: 1.05 }}
+									whileTap={{ scale: 0.95 }}
+								>
+									{isActive && (
+										<motion.div
+											layoutId="billing-active"
+											className="absolute inset-0 theme-gradient-bg rounded-lg sm:rounded-xl shadow-lg shadow-[var(--color-primary-500)] shadow-opacity-40"
+											transition={{
+												type: "spring",
+												stiffness: 380,
+												damping: 30,
+											}}
+										/>
+									)}
+									<span className="relative z-10 flex flex-col items-center">
+										<span>{cycle.label}</span>
+										{cycle.discount && (
+											<motion.span
+												className="text-[10px] sm:text-xs text-green-400 font-semibold mt-0.5 sm:mt-1"
+												initial={{ opacity: 0, y: -5 }}
+												animate={{ opacity: 1, y: 0 }}
+												transition={{ delay: 0.2 }}
+											>
+												{t("save")} {cycle.discount}
+											</motion.span>
+										)}
+									</span>
+								</motion.button>
+							);
+						})}
+					</div>
+				</div>
+
+				{/* Pricing Cards */}
+				<AnimatePresence mode="wait">
+					<motion.div
+						key={billingCycle}
+						className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-7xl mx-auto"
+						variants={containerVariants}
+						initial="hidden"
+						animate="visible"
+					>
+						{plans.map((plan, index) => {
+							const Icon = plan.icon;
+							const price = plan.pricing[billingCycle];
+							const monthlyEquivalent =
+								billingCycle === "6months"
+									? price * 6
+									: billingCycle === "year"
+									? price * 12
+									: price;
+
+							return (
+								<motion.div
+									key={plan.id}
+									className={`relative group ${
+										plan.popular ? "lg:-mt-4" : ""
+									}`}
+									variants={cardVariants}
+									whileHover={{
+										y: -8,
+										transition: { duration: 0.3 },
+									}}
+								>
+									{/* Popular Badge */}
+									{plan.popular && (
+										<motion.div
+											className="absolute -top-3 sm:-top-4 ltr:left-1/2 rtl:right-1/2 ltr:-translate-x-1/2 rtl:translate-x-1/2 z-20"
+											initial={{ y: -10, opacity: 0 }}
+											animate={{ y: 0, opacity: 1 }}
+											transition={{ delay: 0.5 }}
+										>
+											<div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 theme-gradient-bg rounded-full shadow-lg">
+												<Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white fill-white" />
+												<span className="text-white font-bold text-xs sm:text-sm uppercase">
+													{t("mostPopular")}
+												</span>
+											</div>
+										</motion.div>
+									)}
+
+									{/* Card */}
+									<div
+										className={`relative h-full bg-gradient-to-br from-slate-800 from-opacity-80 to-slate-900 to-opacity-80 backdrop-blur-xl rounded-[20px_20px_0_0]  p-6 sm:p-8 border-2 transition-all duration-300 ${
+											plan.popular
+												? "border-[var(--color-primary-500)] border-opacity-50 shadow-2xl shadow-[var(--color-primary-500)] shadow-opacity-30"
+												: "border-slate-700 border-opacity-50 shadow-xl"
+										}`}
+									>
+										{/* Animated Glow on Hover */}
+										<motion.div
+											className="absolute -inset-1 theme-gradient-bg rounded-2xl sm:rounded-3xl opacity-0 group-hover:opacity-20 blur-2xl transition-opacity duration-300"
+											aria-hidden="true"
+										/>
+
+										<div className="relative z-10">
+											{/* Icon */}
+											<motion.div
+												className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 theme-gradient-bg rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl mb-4 sm:mb-6"
+												whileHover={{
+													rotate: [0, -10, 10, -10, 0],
+													scale: 1.1,
+												}}
+												transition={{ duration: 0.5 }}
+											>
+												<Icon className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white" />
+											</motion.div>
+
+											{/* Plan Name */}
+											<h3 className="text-2xl sm:text-3xl font-black text-white mb-2">
+												{plan.name}
+											</h3>
+											<p className="text-gray-400 text-xs sm:text-sm mb-4 sm:mb-6">
+												{plan.tagline}
+											</p>
+
+											{/* Price */}
+											<div className="mb-6 sm:mb-8">
+												<div className="flex items-baseline gap-2">
+													<span className="text-4xl sm:text-5xl font-black text-white">
+														${price}
+													</span>
+													<span className="text-gray-400 font-semibold text-sm sm:text-base">
+														/{t("perMonth")}
+													</span>
+												</div>
+												{billingCycle !== "month" && (
+													<motion.p
+														className="text-xs sm:text-sm text-gray-500 mt-2"
+														initial={{ opacity: 0 }}
+														animate={{ opacity: 1 }}
+														transition={{ delay: 0.3 }}
+													>
+														${monthlyEquivalent}{" "}
+														{billingCycle === "6months"
+															? t("per6Months")
+															: t("perYear")}
+													</motion.p>
+												)}
+											</div>
+
+											{/* CTA Button */}
+											<motion.button
+												className={`w-full py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base md:text-lg mb-6 sm:mb-8 transition-all ${
+													plan.popular
+														? "theme-gradient-bg text-white shadow-xl shadow-[var(--color-primary-500)] shadow-opacity-40 hover:shadow-2xl"
+														: "bg-slate-700 bg-opacity-50 text-white border-2 border-slate-600 hover:border-slate-500 hover:bg-slate-700"
+												}`}
+												whileHover={{ scale: 1.02 }}
+												whileTap={{ scale: 0.98 }}
+											>
+												{t("getStarted")}
+											</motion.button>
+
+											{/* Features */}
+											<div className="space-y-3 sm:space-y-4">
+												<p className="text-xs sm:text-sm text-gray-400 font-bold uppercase tracking-wide mb-3 sm:mb-4">
+													{t("whatsIncluded")}
+												</p>
+												{plan.features.map((feature, idx) => (
+													<motion.div
+														key={idx}
+														className="flex items-start gap-2 sm:gap-3"
+														custom={idx}
+														variants={featureVariants}
+														initial="hidden"
+														animate="visible"
+													>
+														<div className="flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5 rounded-full theme-gradient-bg flex items-center justify-center mt-0.5">
+															<Check
+																className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white"
+																strokeWidth={3}
+															/>
+														</div>
+														<span className="text-gray-300 text-xs sm:text-sm leading-relaxed">
+															{feature}
+														</span>
+													</motion.div>
+												))}
+											</div>
+										</div>
+
+										{/* Bottom Accent Line */}
+										<motion.div
+											className="absolute bottom-0 ltr:left-0 rtl:right-0 ltr:right-0 rtl:left-0 h-1 theme-gradient-bg rounded-b-2xl sm:rounded-b-3xl origin-left rtl:origin-right"
+											initial={{ scaleX: 0 }}
+											whileInView={{ scaleX: 1 }}
+											viewport={{ once: true }}
+											transition={{ duration: 0.6, delay: 0.2 }}
+										/>
+									</div>
+								</motion.div>
+							);
+						})}
+					</motion.div>
+				</AnimatePresence>
+ 
+			</div>
+		</section>
+	);
+}
+
+
+

@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation';
 import { routing } from '../../i18n/routing';
 import { Cairo, Inter, Open_Sans, Roboto_Mono, Space_Grotesk } from 'next/font/google';
 import './globals.css';
+import "./theme-tokens.css";
+
 import React from 'react';
 import Layout from '../../components/molecules/Layout';
 import AddToHomeGuide from '@/components/atoms/AddToHomeGuide';

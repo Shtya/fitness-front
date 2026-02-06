@@ -1,13 +1,21 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'use-intl';
-import { FiChevronDown, FiChevronUp, FiEdit2, FiFileText, FiPlus, FiShare2, FiTrash2 } from 'react-icons/fi';
+import {
+  FiChevronDown,
+  FiChevronUp,
+  FiEdit2,
+  FiFileText,
+  FiPlus,
+  FiTrash2,
+  FiSearch,
+  FiX,
+} from 'react-icons/fi';
 
 import api from '@/utils/axios';
 import Button from '@/components/atoms/Button';
 import Input from '@/components/atoms/Input';
-
 import Select from '@/components/atoms/Select';
 import CheckBox from '@/components/atoms/CheckBox';
 import MultiLangText from '@/components/atoms/MultiLangText';
@@ -15,7 +23,7 @@ import MultiLangText from '@/components/atoms/MultiLangText';
 import { Modal } from '@/components/dashboard/ui/UI';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 import { Notification } from '@/config/Notification';
-import { PencilLine, Share2, Trash2, Files } from 'lucide-react'; // 👈 added Files
+import { PencilLine, Share2, Trash2, Files, Sparkles, Layers, Link as LinkIcon } from 'lucide-react';
 
 // -------- constants (i18n labels تُقرأ من ar.json) --------
 const FIELD_TYPE_OPTIONS = [
@@ -40,7 +48,123 @@ function genKey12() {
   return s;
 }
 
-function InputList({ label, value = [], onChange, placeholder = 'Add option and press Enter', className = '', disabled = false, maxItems, commitOnBlur = true }) {
+function ThemeFrame({ children, className = '' }) {
+  return (
+    <div
+      className={`rounded-3xl p-[1px] ${className}`}
+      style={{
+        background:
+          'linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-via), var(--color-gradient-to))',
+      }}
+    >
+      <div
+        className="rounded-3xl border bg-white/85 backdrop-blur-xl"
+        style={{
+          borderColor: 'var(--color-primary-200)',
+          boxShadow: '0 1px 0 rgba(15, 23, 42, 0.04), 0 18px 40px rgba(15, 23, 42, 0.10)',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SoftCard({ children, className = '' }) {
+  return (
+    <div
+      className={`rounded-2xl border bg-white ${className}`}
+      style={{
+        borderColor: 'var(--color-primary-200)',
+        boxShadow: '0 1px 0 rgba(15, 23, 42, 0.03), 0 10px 24px rgba(15, 23, 42, 0.06)',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function IconBadge({ children, active = false }) {
+  return (
+    <div
+      className="grid place-items-center rounded-2xl"
+      style={{
+        width: 48,
+        height: 48,
+        background: active
+          ? 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))'
+          : 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-200))',
+        boxShadow: active ? '0 14px 26px rgba(15, 23, 42, 0.12)' : '0 10px 18px rgba(15, 23, 42, 0.07)',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function TinyActionBtn({ title, onClick, children, tone = 'neutral' }) {
+  const tones = {
+    neutral: {
+      border: 'var(--color-primary-200)',
+      bg: 'white',
+      hoverBg: 'var(--color-primary-50)',
+      text: 'var(--color-primary-700)',
+      ring: 'var(--color-primary-200)',
+    },
+    accent: {
+      border: 'var(--color-primary-200)',
+      bg: 'white',
+      hoverBg: 'var(--color-primary-50)',
+      text: 'var(--color-primary-700)',
+      ring: 'var(--color-primary-200)',
+    },
+    danger: {
+      border: '#fecdd3', // keep danger semantic
+      bg: 'white',
+      hoverBg: '#fff1f2',
+      text: '#e11d48',
+      ring: '#fecdd3',
+    },
+  };
+
+  const t = tones[tone] || tones.neutral;
+
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4"
+      style={{
+        borderColor: t.border,
+        backgroundColor: t.bg,
+        color: t.text,
+        boxShadow: '0 6px 16px rgba(15,23,42,0.06)',
+        ['--tw-ring-color']: t.ring,
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.backgroundColor = t.hoverBg;
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.backgroundColor = t.bg;
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function InputList({
+  label,
+  value = [],
+  onChange,
+  placeholder = 'Add option and press Enter',
+  className = '',
+  disabled = false,
+  maxItems,
+  commitOnBlur = true,
+}) {
   const [items, setItems] = useState(Array.isArray(value) ? value : []);
   const [draft, setDraft] = useState('');
 
@@ -109,16 +233,42 @@ function InputList({ label, value = [], onChange, placeholder = 'Add option and 
 
   return (
     <div className={className}>
-      {label && <div className='text-sm font-medium text-slate-800 mb-1'>{label}</div>}
+      {label && <div className="text-sm font-semibold text-slate-800 mb-2">{label}</div>}
 
-      <div className={`rounded-lg border ${disabled ? 'bg-slate-50' : 'bg-white'} border-slate-200 p-2`}>
-        <div className='flex flex-wrap gap-2 mb-2'>
+      <div
+        className={`rounded-2xl border p-3 transition-all ${disabled ? 'opacity-70' : ''}`}
+        style={{
+          borderColor: disabled ? '#e2e8f0' : 'var(--color-primary-200)',
+          background:
+            'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.86))',
+          boxShadow: disabled ? 'none' : '0 10px 24px rgba(15, 23, 42, 0.06)',
+        }}
+      >
+        <div className="flex flex-wrap gap-2 mb-2">
           {items.map((opt, i) => (
-            <span key={`${opt}-${i}`} className='inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-700'>
+            <span
+              key={`${opt}-${i}`}
+              className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold"
+              style={{
+                borderColor: 'var(--color-primary-200)',
+                background:
+                  'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
+                color: 'var(--color-primary-800)',
+              }}
+            >
               {opt}
               {!disabled && (
-                <button type='button' onClick={() => removeAt(i)} className='ml-1 rounded hover:bg-slate-200 px-1' aria-label='remove option' title='remove'>
-                  ×
+                <button
+                  type="button"
+                  onClick={() => removeAt(i)}
+                  className="ml-0.5 rounded-full p-0.5 transition-colors"
+                  aria-label="remove option"
+                  title="remove"
+                  style={{ color: 'var(--color-primary-700)' }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-primary-100)')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  <FiX className="w-3 h-3" />
                 </button>
               )}
             </span>
@@ -126,7 +276,7 @@ function InputList({ label, value = [], onChange, placeholder = 'Add option and 
         </div>
 
         <input
-          type='text'
+          type="text"
           value={draft}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -135,7 +285,7 @@ function InputList({ label, value = [], onChange, placeholder = 'Add option and 
           }}
           placeholder={placeholder}
           disabled={disabled}
-          className='w-full border-0 outline-none text-sm placeholder:text-slate-400 disabled:bg-transparent'
+          className="w-full border-0 outline-none text-sm placeholder:text-slate-400 disabled:bg-transparent bg-transparent"
         />
       </div>
     </div>
@@ -143,7 +293,7 @@ function InputList({ label, value = [], onChange, placeholder = 'Add option and 
 }
 
 export default function FormsManagementPage() {
-  const t = useTranslations('forms'); // Namespace: forms
+  const t = useTranslations('forms');
 
   // list state
   const [forms, setForms] = useState([]);
@@ -225,7 +375,7 @@ export default function FormsManagementPage() {
         order: 0,
       },
     ]);
-    setEditingMap({ 0: true }); // open first field in edit mode
+    setEditingMap({ 0: true });
     setShowFormModal(true);
   };
 
@@ -244,9 +394,8 @@ export default function FormsManagementPage() {
           _uid: f._uid ?? f.id ?? crypto.randomUUID(),
         })),
       );
-      setEditingMap({}); // كل الحقول مغلقة في البداية
+      setEditingMap({});
     } else {
-      // fallback to create (used by some callers)
       openCreateFormModal();
       return;
     }
@@ -258,11 +407,9 @@ export default function FormsManagementPage() {
   const handleDuplicateForm = form => {
     if (!form) return;
 
-    // create mode => POST on submit
     setIsEditing(false);
     setSelectedForm(null);
 
-    // optional: add suffix like "(Copy)"
     const suffix = t('labels.copy_suffix', { default: ' (Copy)' });
     setFormTitle(`${form.title || ''}${suffix}`);
 
@@ -270,10 +417,9 @@ export default function FormsManagementPage() {
       .slice()
       .sort((a, b) => (a?.order ?? 1) - (b?.order ?? 1))
       .map((f, idx) => ({
-        _uid: crypto.randomUUID(), // new local uid
-        // no id so backend treats them as new fields
+        _uid: crypto.randomUUID(),
         label: f.label || '',
-        key: genKey12(), // new key to avoid collisions
+        key: genKey12(),
         type: f.type,
         placeholder: f.placeholder || '',
         required: !!f.required,
@@ -282,7 +428,7 @@ export default function FormsManagementPage() {
       }));
 
     setFormFields(cloned);
-    setEditingMap({}); // يمكن تخليها {0: true} لو حابب يفتح أول حقل
+    setEditingMap({});
     setShowFormModal(true);
   };
 
@@ -296,6 +442,7 @@ export default function FormsManagementPage() {
 
   // -------- CRUD --------
   const [loading, setLoading] = useState(false);
+
   const createForm = async () => {
     const title = (formTitle || '').trim();
     if (!title) {
@@ -323,7 +470,7 @@ export default function FormsManagementPage() {
           order: idx + 1,
         })),
       };
-      await api.post('/forms', payload); // POST for create / clone
+      await api.post('/forms', payload);
       Notification(t('messages.created'), 'success');
       setShowFormModal(false);
       resetFormState();
@@ -492,9 +639,43 @@ export default function FormsManagementPage() {
   };
 
   // -------- UI Bits --------
-  const Pill = ({ children, tone = 'slate' }) => <span className={tone === 'amber' ? 'inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-xs text-amber-800' : 'inline-flex items-center rounded-full border border-slate-300 bg-white px-2 py-0.5 text-xs text-slate-700'}>{children}</span>;
+  const Pill = ({ children, tone = 'primary' }) => {
+    const tones = {
+      primary: {
+        border: 'var(--color-primary-200)',
+        bg: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
+        text: 'var(--color-primary-800)',
+      },
+      soft: {
+        border: '#e2e8f0',
+        bg: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
+        text: '#475569',
+      },
+      warning: {
+        border: '#fde68a',
+        bg: 'linear-gradient(135deg, #fffbeb, #fef3c7)',
+        text: '#92400e',
+      },
+    };
 
-  // Field row with local drafts for عنوان الحقل + Placeholder
+    const s = tones[tone] || tones.primary;
+
+    return (
+      <span
+        className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
+        style={{
+          borderColor: s.border,
+          background: s.bg,
+          color: s.text,
+          boxShadow: '0 6px 16px rgba(15,23,42,0.06)',
+        }}
+      >
+        {children}
+      </span>
+    );
+  };
+
+  // Field row with local drafts
   const FieldRow = ({ field, index }) => {
     const typeOptions = FIELD_TYPE_OPTIONS.map(opt => ({
       id: opt.id,
@@ -526,75 +707,217 @@ export default function FormsManagementPage() {
     };
 
     return (
-      <div className='group flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 hover:border-slate-300 transition'>
+      <div
+        className="group relative overflow-hidden rounded-3xl border bg-white p-4 transition-all duration-200"
+        style={{
+          borderColor: editing ? 'var(--color-primary-300)' : 'var(--color-primary-200)',
+          boxShadow: editing
+            ? '0 1px 0 rgba(15,23,42,0.03), 0 18px 44px rgba(15,23,42,0.12)'
+            : '0 1px 0 rgba(15,23,42,0.03), 0 12px 30px rgba(15,23,42,0.07)',
+        }}
+      >
+        {/* Top theme line */}
+        <div
+          className="absolute left-0 right-0 top-0 h-1"
+          style={{
+            background: editing
+              ? 'linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-via), var(--color-gradient-to))'
+              : 'linear-gradient(90deg, var(--color-primary-100), rgba(255,255,255,0))',
+            opacity: editing ? 1 : 0.8,
+          }}
+        />
+
         {!editing ? (
-          <div className='flex items-start justify-between gap-3'>
-            <div className='min-w-0 pr-3'>
-              <div className='flex items-center gap-2 flex-wrap'>
-                <MultiLangText className='font-medium text-slate-900 break-all'>{field.label || t('labels.no_label')}</MultiLangText>
+          <div className="flex items-start justify-between gap-4 pt-1">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <MultiLangText className="font-extrabold text-slate-900 text-[15px] break-all">
+                  {field.label || t('labels.no_label')}
+                </MultiLangText>
                 <Pill>{t(`types_map.${field.type}`)}</Pill>
-                {field.required && <Pill tone='amber'>{t('labels.required')}</Pill>}
+                {field.required && <Pill tone="warning">{t('labels.required')}</Pill>}
               </div>
-              <div className='mt-1 text-xs text-slate-500 break-all'>
-                {t('labels.key')}: {field.key}
+
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <span
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl  border"
+                  style={{
+                    borderColor: 'var(--color-primary-200)',
+                    background:
+                      'linear-gradient(135deg, rgba(255,255,255,0.92), var(--color-primary-50))',
+                    color: 'var(--color-primary-800)',
+                  }}
+                >
+                  {t('labels.key')}: {field.key}
+                </span>
+
+                <span
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border font-semibold"
+                  style={{
+                    borderColor: 'var(--color-primary-200)',
+                    background:
+                      'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
+                    color: 'var(--color-primary-800)',
+                  }}
+                >
+                  {t('labels.order')}: {field.order ?? 1}
+                </span>
               </div>
+
               {field.placeholder && (
-                <MultiLangText className='mt-1 text-xs text-slate-500 break-all'>
-                  {t('labels.placeholder')}: {field.placeholder}
+                <MultiLangText className="text-sm text-slate-600 break-all mt-2">
+                  <span className="text-slate-400">{t('labels.placeholder')}:</span> {field.placeholder}
                 </MultiLangText>
               )}
-              {(field.type === 'select' || field.type === 'radio' || field.type === 'checklist') && field.options && field.options.length > 0 && (
-                <div className='mt-1 text-xs text-slate-500 break-all'>
-                  {t('editor.options')}: {field.options.join(', ')}
-                </div>
-              )}
+
+              {(field.type === 'select' || field.type === 'radio' || field.type === 'checklist') &&
+                field.options &&
+                field.options.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {field.options.slice(0, 5).map((opt, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-semibold"
+                        style={{
+                          borderColor: 'var(--color-primary-200)',
+                          background:
+                            'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
+                          color: 'var(--color-primary-800)',
+                        }}
+                      >
+                        {opt}
+                      </span>
+                    ))}
+                    {field.options.length > 5 && (
+                      <span className="inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-semibold"
+                        style={{
+                          borderColor: '#e2e8f0',
+                          background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
+                          color: '#475569',
+                        }}
+                      >
+                        +{field.options.length - 5}
+                      </span>
+                    )}
+                  </div>
+                )}
             </div>
 
-            <div className='flex items-center gap-1'>
-              <button type='button' title={t('actions.move_up')} aria-label={t('actions.move_up')} disabled={!canMoveUp} onClick={() => moveField(index, -1)} className='inline-flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-40 disabled:cursor-not-allowed'>
-                <FiChevronUp className='w-4 h-4' />
+            <div className="flex items-center gap-2">
+              <TinyActionBtn
+                title={t('actions.move_up')}
+                onClick={() => moveField(index, -1)}
+                tone="neutral"
+                disabled={!canMoveUp}
+              >
+                <FiChevronUp className="w-4 h-4" />
+              </TinyActionBtn>
+
+              <TinyActionBtn
+                title={t('actions.move_down')}
+                onClick={() => moveField(index, +1)}
+                tone="neutral"
+                disabled={!canMoveDown}
+              >
+                <FiChevronDown className="w-4 h-4" />
+              </TinyActionBtn>
+
+              <button
+                type="button"
+                title={t('actions.edit_field')}
+                aria-label={t('actions.edit_field')}
+                onClick={() => toggleEditField(index, true)}
+                className="inline-flex items-center justify-center h-9 w-9 rounded-xl border transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4"
+                style={{
+                  borderColor: 'transparent',
+                  background:
+                    'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+                  color: 'white',
+                  boxShadow: '0 12px 24px rgba(15,23,42,0.12)',
+                  ['--tw-ring-color']: 'var(--color-primary-200)',
+                }}
+              >
+                <FiEdit2 className="w-4 h-4" />
               </button>
 
-              <button type='button' title={t('actions.move_down')} aria-label={t('actions.move_down')} disabled={!canMoveDown} onClick={() => moveField(index, +1)} className='inline-flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-40 disabled:cursor-not-allowed'>
-                <FiChevronDown className='w-4 h-4' />
-              </button>
-
-              <button type='button' title={t('actions.edit_field')} aria-label={t('actions.edit_field')} onClick={() => toggleEditField(index, true)} className='inline-flex items-center gap-1 h-8 px-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400'>
-                <FiEdit2 className='w-4 h-4' />
-              </button>
-
-              <button type='button' title={t('actions.remove_field')} aria-label={t('actions.remove_field')} onClick={() => removeField(index)} className='inline-flex items-center gap-1 h-8 px-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400'>
-                <FiTrash2 className='w-4 h-4' />
-              </button>
+              <TinyActionBtn
+                title={t('actions.remove_field')}
+                onClick={() => removeField(index)}
+                tone="danger"
+              >
+                <FiTrash2 className="w-4 h-4" />
+              </TinyActionBtn>
             </div>
           </div>
         ) : (
-          <div className='space-y-3'>
-            <div className='grid grid-cols-1 md:grid-cols-[1fr_1fr_200px] gap-3'>
-              <Input label={t('editor.label')} placeholder={t('editor.placeholders.label')} value={labelDraft} onChange={v => setLabelDraft(v)} onBlur={commitDrafts} />
-              <Input label={t('editor.placeholder')} placeholder={t('editor.placeholders.placeholder')} value={placeholderDraft} onChange={v => setPlaceholderDraft(v)} onBlur={commitDrafts} />
-
-              <Select clearable={false} searchable={false} label={t('editor.type')} value={field.type} onChange={v => updateFieldProp(index, 'type', v)} options={typeOptions} />
-
-              <div className='md:col-span-2'>
-                <CheckBox label={t('editor.required')} initialChecked={!!field.required} onChange={val => updateFieldProp(index, 'required', !!val)} />
-              </div>
-
-              {(field.type === 'select' || field.type === 'radio' || field.type === 'checklist') && (
-                <div className='md:col-span-3'>
-                  <InputList label={t('editor.options')} value={field.options || []} onChange={arr => updateFieldProp(index, 'options', arr)} placeholder={t('editor.placeholders.option')} />
-                </div>
-              )}
+          <div className="space-y-4 pt-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label={t('editor.label')}
+                placeholder={t('editor.placeholders.label')}
+                value={labelDraft}
+                onChange={v => setLabelDraft(v)}
+                onBlur={commitDrafts}
+              />
+              <Input
+                label={t('editor.placeholder')}
+                placeholder={t('editor.placeholders.placeholder')}
+                value={placeholderDraft}
+                onChange={v => setPlaceholderDraft(v)}
+                onBlur={commitDrafts}
+              />
             </div>
 
-            <div className='flex items-center justify-end gap-2'>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Select
+                clearable={false}
+                searchable={false}
+                label={t('editor.type')}
+                value={field.type}
+                onChange={v => updateFieldProp(index, 'type', v)}
+                options={typeOptions}
+              />
+
+              <div className="flex items-end pb-2">
+                <CheckBox
+                  label={t('editor.required')}
+                  initialChecked={!!field.required}
+                  onChange={val => updateFieldProp(index, 'required', !!val)}
+                />
+              </div>
+            </div>
+
+            {(field.type === 'select' || field.type === 'radio' || field.type === 'checklist') && (
+              <div>
+                <InputList
+                  label={t('editor.options')}
+                  value={field.options || []}
+                  onChange={arr => updateFieldProp(index, 'options', arr)}
+                  placeholder={t('editor.placeholders.option')}
+                />
+              </div>
+            )}
+
+            <div
+              className="flex items-center justify-end gap-2 pt-4"
+              style={{ borderTop: '1px solid rgba(226,232,240,0.9)' }}
+            >
               <button
-                type='button'
+                type="button"
                 onClick={() => {
                   commitDrafts();
                   toggleEditField(index, false);
                 }}
-                className='inline-flex items-center justify-center h-9 px-4 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition focus:outline-none focus:ring-2 focus:ring-slate-300'>
+                className="inline-flex items-center justify-center h-11 px-6 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4"
+                style={{
+                  borderColor: 'transparent',
+                  background:
+                    'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+                  color: 'white',
+                  boxShadow: '0 14px 30px rgba(15,23,42,0.12)',
+                  ['--tw-ring-color']: 'var(--color-primary-200)',
+                }}
+              >
                 {t('actions.done')}
               </button>
             </div>
@@ -605,184 +928,453 @@ export default function FormsManagementPage() {
   };
 
   return (
-    <div className='min-h-screen bg-slate-50'>
-      <div className='container !px-0'>
-        <GradientStatsHeader onClick={openCreateFormModal} btnName={t('header.new')} title={t('header.title')} desc={t('header.desc')} />
+    <div
+      className="min-h-screen"
+       
+    >
+      <div className="  !px-0">
+        <GradientStatsHeader
+          onClick={openCreateFormModal}
+          btnName={t('header.new')}
+          title={t('header.title')}
+          desc={t('header.desc')}
+        />
 
         {isLoading ? (
-          <div className='min-h-screen bg-slate-50'>
-            <div className='container !px-0'>
-              <div className='grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6'>
-                <aside className='lg:col-span-4'>
-                  <div className='rounded-lg border border-slate-200 bg-white p-4 space-y-3'>
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className='h-16 rounded-lg border border-slate-100 bg-white shimmer' />
-                    ))}
-                  </div>
+          <div className="min-h-screen">
+            <div className="container !px-0">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+                <aside className="lg:col-span-4">
+                  <ThemeFrame>
+                    <div className="p-4 space-y-3">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="h-20 rounded-2xl border animate-shimmer"
+                          style={{
+                            borderColor: 'rgba(226,232,240,0.9)',
+                            background:
+                              'linear-gradient(90deg, rgba(226,232,240,0.65), rgba(226,232,240,1), rgba(226,232,240,0.65))',
+                            backgroundSize: '200% 100%',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </ThemeFrame>
                 </aside>
-                <section className='lg:col-span-8'>
-                  <div className='rounded-lg border border-slate-200 bg-white p-6 space-y-3'>
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className='h-20 rounded-lg border border-slate-100 bg-slate-50 shimmer' />
-                    ))}
-                  </div>
+                <section className="lg:col-span-8">
+                  <ThemeFrame>
+                    <div className="p-6 space-y-4">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="h-28 rounded-2xl border animate-shimmer"
+                          style={{
+                            borderColor: 'rgba(226,232,240,0.9)',
+                            background:
+                              'linear-gradient(90deg, rgba(226,232,240,0.65), rgba(226,232,240,1), rgba(226,232,240,0.65))',
+                            backgroundSize: '200% 100%',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </ThemeFrame>
                 </section>
               </div>
             </div>
           </div>
         ) : (
-          <div className='grid grid-cols-1 lg:grid-cols-12 gap-4 mt-4'>
-            <aside className='lg:col-span-4'>
-              <div className='rounded-lg border border-slate-200 bg-white'>
-                {filtered.length === 0 ? (
-                  <div className='p-8 text-center'>
-                    <FiFileText className='h-10 w-10 text-slate-500 mx-auto mb-3' />
-                    <div className='font-medium text-slate-900 mb-1'>{t('empty.title')}</div>
-                    <div className='text-slate-600 text-sm mb-4'>{t('empty.subtitle')}</div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+            {/* LEFT: forms list */}
+            <aside className="  lg:col-span-4">
+              <div className="sticky top-6">
+                <ThemeFrame>
+                  {/* Header + search */}
+                  <div
+                    className="p-4 border-b rounded-[20px_20px_0_0] "
+                    style={{
+                      borderColor: 'var(--color-primary-200)',
+                      background:
+                        'linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.75))',
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-extrabold text-slate-900">{t('header.title')}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">{t('header.desc')}</div>
+                      </div> 
+                    </div>
+
+                    <div className="mt-4 relative">
+                      <FiSearch className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        value={query}
+                        onChange={e => setQuery(e.target.value)}
+                        placeholder={t('labels.search', { default: 'Search forms...' })}
+                        className="w-full h-11 rounded-2xl border pl-10 pr-10 text-sm outline-none transition-all"
+                        style={{
+                          borderColor: 'var(--color-primary-200)',
+                          backgroundColor: 'rgba(255,255,255,0.92)',
+                          boxShadow: '0 10px 24px rgba(15,23,42,0.06)',
+                        }}
+                        onFocus={e => {
+                          e.currentTarget.style.borderColor = 'var(--color-primary-300)';
+                        }}
+                        onBlur={e => {
+                          e.currentTarget.style.borderColor = 'var(--color-primary-200)';
+                        }}
+                      />
+                      {query?.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setQuery('')}
+                          className="absolute ltr:right-3 rtl:left-3 top-1/2 -translate-y-1/2 rounded-full p-1 transition-all"
+                          title={t('actions.clear', { default: 'Clear' })}
+                          style={{ color: 'var(--color-primary-700)' }}
+                          onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-primary-100)')}
+                          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        >
+                          <FiX className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <ul className='divide-y divide-slate-100'>
-                    {filtered.map(f => {
-                      const isActive = selectedForm?.id === f.id;
-                      return (
-                        <li onClick={() => setSelectedForm(f)} key={f.id} className={`p-3 cursor-pointer transition rounded-lg border ${isActive ? 'bg-indigo-50/70 border-indigo-200' : 'hover:bg-slate-50 border-transparent'}`}>
-                          <div className='flex items-center gap-2'>
-                            <div className='p-2 bg-indigo-100 rounded-lg shrink-0'>
-                              <FiFileText className='h-5 w-5 text-indigo-600' />
-                            </div>
-                            <div className='min-w-0 flex-1'>
-                              <div className='flex items-start justify-between gap-3'>
-                                <div className='min-w-0'>
-                                  <MultiLangText className='font-semibold text-slate-900 truncate' as='h2'>
-                                    {f.title}
-                                  </MultiLangText>
-                                  <p className='text-sm text-slate-600'>
-                                    {f.fields?.length ?? 0} {t('labels.fields')}
-                                  </p>
+
+                  {/* List */}
+                  {filtered.length === 0 ? (
+                    <div className="p-10 text-center">
+                      <div
+                        className="mx-auto mb-4 grid place-items-center rounded-3xl"
+                        style={{
+                          width: 72,
+                          height: 72,
+                          background:
+                            'linear-gradient(135deg, var(--color-primary-100), var(--color-secondary-100))',
+                          boxShadow: '0 16px 28px rgba(15,23,42,0.10)',
+                        }}
+                      >
+                        <FiFileText className="h-8 w-8" style={{ color: 'var(--color-primary-700)' }} />
+                      </div>
+                      <div className="font-extrabold text-slate-900 mb-2 text-lg">{t('empty.title')}</div>
+                      <div className="text-slate-600 text-sm">{t('empty.subtitle')}</div>
+                    </div>
+                  ) : (
+                    <div className="max-h-[calc(100vh-310px)] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300">
+                      <ul className="p-3 space-y-2">
+                        {filtered.map(f => {
+                          const isActive = selectedForm?.id === f.id;
+
+                          return (
+                            <li key={f.id}>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedForm(f)}
+                                className="w-full text-left rounded-3xl border p-3.5 transition-all active:scale-[0.995]"
+                                style={{
+                                  borderColor: isActive ? 'var(--color-primary-300)' : 'rgba(226,232,240,0.9)',
+                                  background: isActive
+                                    ? 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))'
+                                    : 'rgba(255,255,255,0.92)',
+                                  boxShadow: isActive
+                                    ? '0 1px 0 rgba(15,23,42,0.03), 0 18px 40px rgba(15,23,42,0.12)'
+                                    : '0 1px 0 rgba(15,23,42,0.03), 0 10px 24px rgba(15,23,42,0.06)',
+                                }}
+                                onMouseEnter={e => {
+                                  if (!isActive) {
+                                    e.currentTarget.style.borderColor = 'var(--color-primary-200)';
+                                    e.currentTarget.style.background =
+                                      'linear-gradient(135deg, rgba(255,255,255,0.96), rgba(255,255,255,0.86))';
+                                  }
+                                }}
+                                onMouseLeave={e => {
+                                  if (!isActive) {
+                                    e.currentTarget.style.borderColor = 'rgba(226,232,240,0.9)';
+                                    e.currentTarget.style.background = 'rgba(255,255,255,0.92)';
+                                  }
+                                }}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <IconBadge active={isActive}>
+                                    <FiFileText className={isActive ? 'text-white' : ''} style={{ color: isActive ? 'white' : 'var(--color-primary-800)' }} />
+                                  </IconBadge>
+
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="min-w-0 flex-1">
+                                        <MultiLangText
+                                          className=" ltr:text-left rtl:text-right font-extrabold truncate block"
+                                          as="h2"
+                                          style={{ color: isActive ? 'var(--color-primary-900)' : '#0f172a' }}
+                                        >
+                                          {f.title}
+                                        </MultiLangText>
+
+                                        <p className="text-sm text-slate-600 flex items-center gap-1.5 mt-1">
+                                          <Layers className="w-4 h-4" style={{ color: 'var(--color-primary-700)' }} />
+                                          <span className="font-semibold">{f.fields?.length ?? 0}</span> {t('labels.fields')}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {/* row actions */}
+                                    <div className="mt-3 flex gap-2 flex-wrap">
+                                      {f?.adminId != null && (
+                                        <TinyActionBtn
+                                          title={t('actions.copy_link')}
+                                          onClick={e => {
+                                            e.stopPropagation();
+                                            copyLink(f.id);
+                                          }}
+                                          tone="accent"
+                                        >
+                                          <LinkIcon className="h-4 w-4" />
+                                        </TinyActionBtn>
+                                      )}
+
+                                      <TinyActionBtn
+                                        title={t('actions.duplicate', { default: 'Duplicate' })}
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          handleDuplicateForm(f);
+                                        }}
+                                        tone="accent"
+                                      >
+                                        <Files className="h-4 w-4" />
+                                      </TinyActionBtn>
+
+                                      {f?.adminId != null && (
+                                        <TinyActionBtn
+                                          title={t('actions.edit')}
+                                          onClick={e => {
+                                            e.stopPropagation();
+                                            openEditFormModal(f, true);
+                                          }}
+                                          tone="accent"
+                                        >
+                                          <PencilLine className="h-4 w-4" />
+                                        </TinyActionBtn>
+                                      )}
+
+                                      {f?.adminId != null && (
+                                        <TinyActionBtn
+                                          title={t('actions.delete')}
+                                          onClick={e => {
+                                            e.stopPropagation();
+                                            setDeletingId(f.id);
+                                            setShowDeleteModal(true);
+                                          }}
+                                          tone="danger"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </TinyActionBtn>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className='flex gap-[4px]'>
-                                  {f?.adminId != null && (
-                                    <button
-                                      onClick={e => {
-                                        e.stopPropagation();
-                                        copyLink(f.id);
-                                      }}
-                                      title={t('actions.copy_link')}
-                                      className='inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-white  text-sm font-medium text-emerald-600 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/30'>
-                                      <Share2 className='h-4 w-4' />
-                                    </button>
-                                  )}
-
-                                  {/* DUPLICATE BUTTON 👉 clone into create modal */}
-                                  <button
-                                    type='button'
-                                    title={t('actions.duplicate', { default: 'Duplicate' })}
-                                    onClick={e => {
-                                      e.stopPropagation();
-                                      handleDuplicateForm(f);
-                                    }}
-                                    className='cursor-pointer inline-flex h-8 w-8 items-center justify-center rounded-lg border border-violet-200 bg-white text-violet-700 hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-300/30'>
-                                    <Files className='h-4 w-4' />
-                                  </button>
-
-                                  {/* Edit */}
-                                  {f?.adminId != null && (
-                                    <button
-                                      type='button'
-                                      title={t('actions.edit')}
-                                      onClick={e => {
-                                        e.stopPropagation();
-                                        openEditFormModal(f, true);
-                                      }}
-                                      className=' cursor-pointer inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-indigo-700 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400/30'>
-                                      <PencilLine className='h-4 w-4' />
-                                    </button>
-                                  )}
-
-                                  {/* Delete */}
-                                  {f?.adminId != null && (
-                                    <button
-                                      type='button'
-                                      title={t('actions.delete')}
-                                      onClick={e => {
-                                        e.stopPropagation();
-                                        setDeletingId(f.id);
-                                        setShowDeleteModal(true);
-                                      }}
-                                      className=' cursor-pointer inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/30'>
-                                      <Trash2 className='h-4 w-4' />
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+                </ThemeFrame>
               </div>
             </aside>
 
-            {/* Right: details */}
-            <section className='lg:col-span-8'>
+            {/* RIGHT: selected form */}
+            <section className="lg:col-span-8">
               {!selectedForm ? (
-                <div className=' min-h-[183px] flex items-center justify-center rounded-lg border border-dashed border-slate-300 p-10 text-center bg-white'>
-                  <div className='text-slate-600'>{t('empty.select_hint')}</div>
-                </div>
+                <ThemeFrame>
+                  <div className="min-h-[320px] flex items-center justify-center p-12 text-center">
+                    <div>
+                      <div
+                        className="mx-auto mb-4 grid place-items-center rounded-3xl"
+                        style={{
+                          width: 88,
+                          height: 88,
+                          background:
+                            'linear-gradient(135deg, var(--color-primary-100), var(--color-secondary-100))',
+                          boxShadow: '0 18px 36px rgba(15,23,42,0.12)',
+                        }}
+                      >
+                        <Sparkles className="w-10 h-10" style={{ color: 'var(--color-primary-700)' }} />
+                      </div>
+                      <div className="text-slate-900 font-extrabold text-xl">{t('empty.select_hint')}</div>
+                      <div className="text-slate-600 text-sm mt-1">
+                        {t('empty.select_hint_sub', { default: 'Pick a form from the left to view details.' })}
+                      </div>
+                    </div>
+                  </div>
+                </ThemeFrame>
               ) : (
-                <div className='rounded-lg border border-slate-200 bg-white p-6 shadow-sm'>
-                  <div className='flex items-center justify-between gap-3 flex-wrap'>
-                    <div className='flex items-center w-full justify-between flex-wrap gap-3 min-w-0'>
-                      <div className='flex items-center gap-2'>
-                        <div className='p-2 bg-indigo-100 rounded-lg shrink-0'>
-                          <FiFileText className='h-6 w-6 text-indigo-600' />
-                        </div>
-                        <MultiLangText className='text-xl font-semibold text-slate-900 truncate'>{selectedForm.title}</MultiLangText>
+                <ThemeFrame>
+                  {/* Header */}
+                  <div
+                    className="rounded-[20px_20px_0_0]  p-6 border-b"
+                    style={{
+                      borderColor: 'var(--color-primary-200)',
+                      background:
+                        'linear-gradient(135deg, rgba(255,255,255,0.92), var(--color-primary-50))',
+                    }}
+                  >
+                    <div className="flex items-center gap-4">
+                      <IconBadge active>
+                        <FiFileText className="h-6 w-6 text-white" />
+                      </IconBadge>
+
+                      <div className="min-w-0 flex-1">
+                        <MultiLangText
+                          className="text-2xl font-extrabold truncate"
+                          style={{
+                            background:
+                              'linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))',
+                            WebkitBackgroundClip: 'text',
+                            backgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                          }}
+                        >
+                          {selectedForm.title}
+                        </MultiLangText>
+
+                        <p className="text-sm text-slate-600 mt-1 flex items-center gap-2">
+                          <Layers className="w-4 h-4" style={{ color: 'var(--color-primary-700)' }} />
+                          <span className="font-semibold">{selectedForm.fields?.length || 0}</span> {t('labels.fields')}
+                        </p>
+                      </div>
+
+                      {/* quick actions */}
+                      <div className="flex items-center gap-2">
+                        
+
+                        {selectedForm?.adminId != null && (
+                          <button
+                            type="button"
+                            onClick={() => openEditFormModal(selectedForm, true)}
+                            className="inline-flex items-center gap-2 h-11 px-4 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4"
+                            style={{
+                              borderColor: 'transparent',
+                              background:
+                                'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+                              color: 'white',
+                              boxShadow: '0 16px 30px rgba(15,23,42,0.12)',
+                              ['--tw-ring-color']: 'var(--color-primary-200)',
+                            }}
+                          >
+                            <FiEdit2 className="w-4 h-4" />
+                            <span className="font-semibold hidden sm:inline">{t('actions.edit')}</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   {/* Fields */}
-                  <div className='mt-6'>
+                  <div className="p-6">
                     {selectedForm.fields?.length ? (
-                      <div className='grid gap-3 overflow-y-auto max-h-[400px] px-6  w-[calc(100%+44px)] ltr:ml-[-22px] rtl:mr-[-22px] '>
+                      <div className="space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300 pr-2">
                         {(selectedForm.fields || [])
                           .slice()
                           .sort((a, b) => (a?.order ?? 1) - (b?.order ?? 1))
                           .map(field => (
-                            <div key={field.id} className='rounded-lg border border-slate-200 bg-slate-50 p-3'>
-                              <div className='flex items-start justify-between gap-3'>
-                                <div className='min-w-0'>
-                                  <div className='flex items-center gap-2 flex-wrap'>
-                                    <MultiLangText className='font-medium text-slate-900 break-all'>{field.label}</MultiLangText>
-                                    <span className='inline-flex items-center rounded-full border border-slate-300 bg-white px-2 py-0.5 text-xs text-slate-700'>{t(`types_map.${field.type}`)}</span>
-                                    {field.required && <span className='inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800 border border-amber-200'>{t('labels.required')}</span>}
+                            <SoftCard key={field.id} className="p-5 transition-all">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                                    <MultiLangText className="font-extrabold text-slate-900 text-[15px] break-all">
+                                      {field.label}
+                                    </MultiLangText>
+                                    <Pill>{t(`types_map.${field.type}`)}</Pill>
+                                    {field.required && <Pill tone="warning">{t('labels.required')}</Pill>}
                                   </div>
-                                  <div className='mt-1 text-xs text-slate-500 break-all'>
-                                    {t('labels.key')}: {field.key}
+
+                                  <div className="flex flex-wrap items-center gap-2 text-xs mb-2">
+                                    <span
+                                      className="  inline-flex items-center gap-1 px-2.5 py-1 rounded-xl  border"
+                                      style={{
+                                        borderColor: 'var(--color-primary-200)',
+                                        background:
+                                          'linear-gradient(135deg, rgba(255,255,255,0.92), var(--color-primary-50))',
+                                        color: 'var(--color-primary-800)',
+                                      }}
+                                    >
+                                      {t('labels.key')}: <span className='font-en' >{field.key}</span>
+                                    </span>
+                                    <span
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border font-semibold"
+                                      style={{
+                                        borderColor: 'var(--color-primary-200)',
+                                        background:
+                                          'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
+                                        color: 'var(--color-primary-800)',
+                                      }}
+                                    >
+                                      {t('labels.order')}: {field.order ?? 1}
+                                    </span>
                                   </div>
-                                </div>
-                                <div className='text-xs text-slate-500 shrink-0'>
-                                  {t('labels.order')}: {field.order ?? 1}
+
+                                  {field.placeholder && (
+                                     <span className='text-sm text-slate-600 break-all' > <span className="text-slate-400">{t('labels.placeholder')}:</span> {field.placeholder}</span>
+                                     
+                                  )}
+
+                                  {(field.type === 'select' || field.type === 'radio' || field.type === 'checklist') &&
+                                    field.options &&
+                                    field.options.length > 0 && (
+                                      <div className="mt-3 flex flex-wrap gap-1.5">
+                                        {field.options.map((opt, i) => (
+                                          <span
+                                            key={i}
+                                            className="inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-semibold"
+                                            style={{
+                                              borderColor: 'var(--color-primary-200)',
+                                              background:
+                                                'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
+                                              color: 'var(--color-primary-800)',
+                                            }}
+                                          >
+                                            {opt}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
                                 </div>
                               </div>
-                            </div>
+                            </SoftCard>
                           ))}
                       </div>
                     ) : (
-                      <div className='rounded-lg border border-dashed border-slate-300 p-6 text-center text-slate-600'>{t('empty.no_fields')}</div>
+                      <div
+                        className="rounded-3xl border border-dashed p-10 text-center"
+                        style={{
+                          borderColor: 'rgba(148, 163, 184, 0.7)',
+                          background: 'rgba(255,255,255,0.65)',
+                          boxShadow: '0 12px 24px rgba(15,23,42,0.06)',
+                        }}
+                      >
+                        <div
+                          className="mx-auto mb-4 grid place-items-center rounded-3xl"
+                          style={{
+                            width: 72,
+                            height: 72,
+                            background:
+                              'linear-gradient(135deg, rgba(226,232,240,0.9), rgba(241,245,249,0.9))',
+                          }}
+                        >
+                          <Layers className="w-8 h-8 text-slate-400" />
+                        </div>
+                        <div className="text-slate-700 font-semibold">{t('empty.no_fields')}</div>
+                      </div>
                     )}
                   </div>
-                </div>
+                </ThemeFrame>
               )}
             </section>
           </div>
         )}
       </div>
 
-      {/* Delete confirm */}
+      {/* Delete Modal */}
       <Modal
         open={showDeleteModal}
         onClose={() => {
@@ -792,13 +1384,26 @@ export default function FormsManagementPage() {
           }
         }}
         title={t('delete.title')}
-        maxW='max-w-md'>
-        <div className='space-y-4'>
-          <p className='text-slate-700'>{t('delete.message')}</p>
-          <div className='flex justify-end gap-2 pt-2'>
+        maxW="max-w-md"
+      >
+        <div className="space-y-6 pt-2">
+          <div className="flex items-start gap-4 p-4 rounded-2xl border"
+            style={{
+              borderColor: '#fecdd3',
+              background: 'linear-gradient(135deg, #fff1f2, rgba(255,255,255,0.9))',
+              boxShadow: '0 12px 24px rgba(15,23,42,0.06)',
+            }}
+          >
+            <div className="p-2 rounded-xl" style={{ backgroundColor: '#ffe4e6' }}>
+              <FiTrash2 className="w-5 h-5" style={{ color: '#e11d48' }} />
+            </div>
+            <p className="text-slate-700 text-sm leading-relaxed">{t('delete.message')}</p>
+          </div>
+
+          <div className="flex justify-end gap-3">
             <Button
               name={t('actions.cancel')}
-              className='!w-fit'
+              className="!w-fit"
               onClick={() => {
                 if (!isDeleting) {
                   setShowDeleteModal(false);
@@ -806,56 +1411,161 @@ export default function FormsManagementPage() {
                 }
               }}
             />
-            <Button name={isDeleting ? t('actions.deleting') : t('delete.confirm')} className='!w-fit' color='danger' onClick={() => deletingId && deleteForm(deletingId)} disabled={isDeleting} />
+            <Button
+              name={isDeleting ? t('actions.deleting') : t('delete.confirm')}
+              className="!w-fit"
+              color="danger"
+              onClick={() => deletingId && deleteForm(deletingId)}
+              disabled={isDeleting}
+            />
           </div>
         </div>
       </Modal>
 
       {/* Create/Edit Form Modal */}
-      <Modal open={showFormModal} onClose={() => setShowFormModal(false)} title={isEditing ? t('edit.title') : t('create.title')} maxW='max-w-4xl'>
+      <Modal
+        open={showFormModal}
+        onClose={() => setShowFormModal(false)}
+        title={isEditing ? t('edit.title') : t('create.title')}
+        maxW="max-w-5xl"
+      >
         <form
-          className='space-y-6 pt-2'
+          className="space-y-6 pt-4"
           onSubmit={e => {
             e.preventDefault();
             (isEditing ? updateForm : createForm)();
-          }}>
-          <Input placeholder={t('editor.placeholders.form_title')} value={formTitle} onChange={setFormTitle} className='max-w-[300px] w-full' />
+          }}
+        >
+          {/* Title */}
+          <div
+            className="p-4 rounded-3xl border"
+            style={{
+              borderColor: 'var(--color-primary-200)',
+              background:
+                'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
+              boxShadow: '0 12px 24px rgba(15,23,42,0.06)',
+            }}
+          >
+            <Input
+              placeholder={t('editor.placeholders.form_title')}
+              value={formTitle}
+              onChange={setFormTitle}
+              className="max-w-full"
+            />
+          </div>
 
+          {/* Fields section */}
           <div>
-            <div className='flex items-center justify-between mb-3'>
-              <h3 className='font-medium text-slate-900'>{t('editor.fields')}</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-extrabold text-slate-900 text-lg flex items-center gap-2">
+                <Layers className="w-5 h-5" style={{ color: 'var(--color-primary-700)' }} />
+                {t('editor.fields')}
+              </h3>
 
-              <button type='button' className='inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition focus:outline-none focus:ring-2 focus:ring-indigo-400' onClick={addInlineField}>
-                <FiPlus className='w-4 h-4' />
-                <span className='text-sm font-medium'>{t('editor.add_field')}</span>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 h-11 px-5 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4"
+                onClick={addInlineField}
+                style={{
+                  borderColor: 'transparent',
+                  background:
+                    'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+                  color: 'white',
+                  boxShadow: '0 16px 30px rgba(15,23,42,0.12)',
+                  ['--tw-ring-color']: 'var(--color-primary-200)',
+                }}
+              >
+                <FiPlus className="w-4 h-4" />
+                <span className="font-semibold">{t('editor.add_field')}</span>
               </button>
             </div>
 
             {formFields.length ? (
-              <div className='grid gap-3'>
+              <div className="space-y-4 max-h-[520px] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300 pr-2">
                 {formFields.map((f, idx) => (
                   <FieldRow key={f._uid} field={f} index={idx} />
                 ))}
               </div>
             ) : (
-              <div className='rounded-lg bg-white border border-dashed border-slate-300 p-6 text-center text-slate-600'>{t('empty.no_fields')}</div>
+              <div
+                className="rounded-3xl border border-dashed p-10 text-center"
+                style={{
+                  borderColor: 'rgba(148, 163, 184, 0.7)',
+                  background: 'rgba(255,255,255,0.65)',
+                  boxShadow: '0 12px 24px rgba(15,23,42,0.06)',
+                }}
+              >
+                <div
+                  className="mx-auto mb-4 grid place-items-center rounded-3xl"
+                  style={{
+                    width: 72,
+                    height: 72,
+                    background:
+                      'linear-gradient(135deg, rgba(226,232,240,0.9), rgba(241,245,249,0.9))',
+                  }}
+                >
+                  <Layers className="w-8 h-8 text-slate-400" />
+                </div>
+                <div className="text-slate-700 font-semibold">{t('empty.no_fields')}</div>
+              </div>
             )}
           </div>
 
-          <div className='flex justify-end gap-2 pt-2'>
-            <button type='button' onClick={() => setShowFormModal(false)} className='inline-flex items-center justify-center h-9 px-4 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition focus:outline-none focus:ring-2 focus:ring-slate-300'>
+          {/* Footer */}
+          <div
+            className="flex justify-end gap-3 pt-4"
+            style={{ borderTop: '1px solid rgba(226,232,240,0.9)' }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowFormModal(false)}
+              className="inline-flex items-center justify-center h-11 px-6 rounded-2xl border bg-white text-slate-700 font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 active:scale-[0.99]"
+              style={{
+                borderColor: 'rgba(226,232,240,0.9)',
+                boxShadow: '0 10px 22px rgba(15,23,42,0.06)',
+                ['--tw-ring-color']: 'rgba(148,163,184,0.4)',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'white')}
+            >
               {t('actions.cancel')}
             </button>
-            <button type='submit' disabled={loading} className={`inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg text-white font-medium text-sm transition  focus:outline-none focus:ring-2 ${isEditing ? 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-400' : 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-400'} ${loading && 'opacity-70 cursor-not-allowed'} `}>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-2xl text-white font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 active:scale-[0.99]"
+              style={{
+                borderColor: 'transparent',
+                background: isEditing
+                  ? 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))'
+                  : 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+                boxShadow: '0 18px 34px rgba(15,23,42,0.14)',
+                opacity: loading ? 0.75 : 1,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                ['--tw-ring-color']: 'var(--color-primary-200)',
+              }}
+            >
               {loading ? (
-                // Loader
-                <svg className='animate-spin w-4 h-4 text-white' viewBox='0 0 24 24'>
-                  <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4' fill='none' />
-                  <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z' />
+                <svg className="animate-spin w-5 h-5 text-white" viewBox="0 0 24 24">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                  />
                 </svg>
               ) : (
                 <>
-                  {isEditing ? <FiEdit2 className='w-4 h-4' /> : <FiPlus className='w-4 h-4' />}
+                  {isEditing ? <FiEdit2 className="w-5 h-5" /> : <FiPlus className="w-5 h-5" />}
                   <span>{isEditing ? t('edit.cta') : t('create.cta')}</span>
                 </>
               )}

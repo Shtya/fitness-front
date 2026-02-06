@@ -1,3 +1,7 @@
+/* 
+
+*/
+
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
@@ -36,6 +40,7 @@ import MultiLangText from '@/components/atoms/MultiLangText';
 import Img from '@/components/atoms/Img';
 import { Link } from '@/i18n/navigation';
 import { NotesListInput } from '../../nutrition/page';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
@@ -47,6 +52,20 @@ const useDebounced = (value, delay = 350) => {
 		return () => clearTimeout(t);
 	}, [value, delay]);
 	return deb;
+};
+
+const toMinutesFromSeconds = (secs) => {
+	const n = Number(secs);
+	if (!Number.isFinite(n) || n <= 0) return '';
+	return String(Math.round(n / 60));
+};
+
+const toSecondsFromMinutes = (mins) => {
+	const s = String(mins ?? '').trim();
+	if (!s) return null;
+	const n = Number(s);
+	if (!Number.isFinite(n) || n <= 0) return null;
+	return Math.trunc(n) * 60;
 };
 
 function buildPayloadFromPlan(sourcePlan, { userId, nameSuffix = ' (copy)', isActive = true } = {}) {
@@ -70,12 +89,13 @@ function buildPayloadFromPlan(sourcePlan, { userId, nameSuffix = ' (copy)', isAc
 			targetReps: ex.targetReps ?? 12,
 			tempo: ex.tempo ?? '1/1/1',
 		})),
+
+		// ✅ CARDIO: time + note only
 		cardioExercises: (d.cardioExercises || []).map((ex, idx) => ({
 			order: ex.order || ex.orderIndex || idx + 1,
 			exerciseId: ex.exerciseId || ex?.exercise?.id || ex?.id,
-			targetSets: ex.targetSets ?? 3,
-			targetReps: ex.targetReps ?? 12,
-			tempo: ex.tempo ?? '1/1/1',
+			durationSeconds: ex.durationSeconds ?? null,
+			note: ex.note ?? '',
 		})),
 	}));
 
@@ -88,11 +108,20 @@ function buildPayloadFromPlan(sourcePlan, { userId, nameSuffix = ' (copy)', isAc
 	};
 }
 
-/* =============================== PAGE ROOT =============================== */
 export default function PlansPage() {
 	const t = useTranslations('workoutPlans');
 	const user = useUser();
 	const scrollRef = useRef(null);
+
+	const searchParams = useSearchParams();
+	const router = useRouter();
+	const pathname = usePathname();
+
+	const openedFromUrlRef = useRef(null);
+	const skipNextUrlOpenRef = useRef(false);
+
+
+
 
 	const [items, setItems] = useState([]);
 	const [total, setTotal] = useState(0);
@@ -317,6 +346,49 @@ export default function PlansPage() {
 		[user?.id, user?.adminId, user?.role, t, markDuplicating],
 	);
 
+
+	useEffect(() => {
+		const planId = searchParams.get('planId');
+		if (!planId) return;
+
+		// ✅ if we just cleared the URL, ignore this one render
+		if (skipNextUrlOpenRef.current) {
+			skipNextUrlOpenRef.current = false;
+			return;
+		}
+
+		if (openedFromUrlRef.current === planId) return;
+		openedFromUrlRef.current = planId;
+
+		(async () => {
+			try {
+				const full = await getOne(planId);
+				setEditRow(full);
+			} catch {
+				const local = items.find(p => p.id === planId);
+				if (local) setEditRow(local);
+			}
+		})();
+	}, [searchParams, items]);
+
+
+	const clearPlanIdFromUrl = useCallback(() => {
+		skipNextUrlOpenRef.current = true; // ✅ prevent reopen glitch
+
+		const sp = new URLSearchParams(searchParams.toString());
+		sp.delete('planId');
+
+		const qs = sp.toString();
+		router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+
+		openedFromUrlRef.current = null;
+	}, [router, pathname, searchParams]);
+
+
+
+
+
+
 	return (
 		<div className='space-y-6'>
 			<GradientStatsHeader
@@ -346,7 +418,7 @@ export default function PlansPage() {
 								'h-11 w-full px-8 rounded-lg',
 								'border border-slate-200 bg-white/90 text-slate-900',
 								'shadow-sm hover:shadow transition',
-								'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40',
+								'focus:outline-none focus:ring-4 focus:ring-[color:var(--color-primary-200)]/40 focus:border-[color:var(--color-primary-500)]',
 							].join(' ')}
 							aria-label={t('placeholders.searchPlan')}
 						/>
@@ -387,7 +459,7 @@ export default function PlansPage() {
 								'inline-flex items-center gap-2 rounded-lg px-3 h-11 font-medium transition-all duration-300',
 								'border border-slate-200 bg-white/95 text-slate-800 shadow-sm',
 								'hover:shadow-md hover:bg-slate-50 active:scale-[.97]',
-								'focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200/40',
+								'focus:outline-none focus:ring-4 focus:ring-[color:var(--color-primary-200)]/40 focus:border-[color:var(--color-primary-500)]',
 							].join(' ')}
 						>
 							<Clock size={18} />
@@ -436,7 +508,16 @@ export default function PlansPage() {
 				/>
 			</Modal>
 
-			<Modal scrollRef={scrollRef} open={!!editRow} onClose={() => setEditRow(null)} title={`${t('plans.modals.editTitle')} ${editRow?.name || ''}`} maxW='max-w-5xl'>
+			<Modal
+				scrollRef={scrollRef}
+				open={!!editRow}
+				onClose={() => {
+					clearPlanIdFromUrl(); // ✅ first
+					setEditRow(null);
+				}}
+				title={`${t('plans.modals.editTitle')} ${editRow?.name || ''}`}
+				maxW="max-w-5xl"
+			>
 				{editRow && (
 					<NewPlanBuilder
 						scrollRef={scrollRef}
@@ -447,6 +528,7 @@ export default function PlansPage() {
 							try {
 								const saved = await updatePlan(editRow.id, payload);
 								setItems(arr => arr.map(p => (p.id === editRow.id ? saved : p)));
+								clearPlanIdFromUrl();
 								setEditRow(null);
 								Notification(t('notifications.planUpdated'), 'success');
 							} catch (e) {
@@ -554,7 +636,7 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 
 				return (
 					<div key={p.id} className='rounded-lg border border-y-slate-200 bg-white  group relative flex items-start gap-3 px-4 py-3 transition-all duration-300 hover:bg-slate-50/60'>
-						<div className='mt-0.5 grid h-8 w-8 shrink-0 place-content-center rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600 opacity-95 text-white shadow-sm'>
+						<div className='mt-0.5 grid h-8 w-8 shrink-0 place-content-center rounded-lg theme-gradient-bg opacity-95 text-white shadow-sm'>
 							<Dumbbell className='h-5 w-5' />
 						</div>
 
@@ -601,7 +683,7 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 									aria-busy={duplicatingIds?.has(p.id) ? 'true' : 'false'}
 									className={[
 										' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border bg-white focus-visible:outline-none focus-visible:ring-4 transition',
-										'border-violet-200 text-violet-700 hover:bg-violet-50 focus-visible:ring-violet-300/30',
+										'border-[color:var(--color-secondary-200)] text-[color:var(--color-secondary-700)] hover:bg-[color:var(--color-secondary-50)] focus-visible:ring-[color:var(--color-secondary-200)]/40',
 										duplicatingIds?.has(p.id) ? 'opacity-60 pointer-events-none cursor-not-allowed' : '',
 									].join(' ')}
 								>
@@ -622,7 +704,7 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 										type='button'
 										title={t('actions.edit')}
 										onClick={() => onEdit?.(p)}
-										className=' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-indigo-700 hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-400/30'
+										className=' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-[color:var(--color-primary-700)] hover:bg-[color:var(--color-primary-50)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--color-primary-200)]/40'
 									>
 										<PencilLine className='h-4 w-4' />
 									</button>
@@ -667,7 +749,9 @@ const PlanPreview = memo(function PlanPreview({ plan }) {
 						<section key={d.id || idx} className='rounded-xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden'>
 							<header className='flex items-center justify-between gap-2 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-3'>
 								<div className='flex items-center gap-2'>
-									<span className='inline-flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-xs font-semibold text-indigo-700'>{idx + 1}</span>
+									<span className='inline-flex h-8 w-8 items-center justify-center rounded-xl bg-[color:var(--color-primary-100)] text-xs font-semibold text-[color:var(--color-primary-700)]'>
+										{idx + 1}
+									</span>
 									<MultiLangText className='font-semibold text-slate-900'>{d.name}</MultiLangText>
 								</div>
 
@@ -683,32 +767,51 @@ const PlanPreview = memo(function PlanPreview({ plan }) {
 							<div className='bg-slate-50/80 px-3 py-3 sm:px-4 sm:py-4'>
 								{hasExercises ? (
 									<ol className='grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4'>
-										{exercises.map((ex, i) => (
-											<li
-												key={ex.id || ex.exerciseId || i}
-												className='group relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-xs transition-all hover:-translate-y-[1px] hover:border-indigo-200 hover:shadow-md'
-											>
-												<span className='pointer-events-none absolute top-0 rtl:-right-0 ltr:-left-0 z-10 inline-flex h-6 w-6 items-center justify-center rtl:rounded-[0_10px_0_10px] ltr:rounded-[10px_0_10px_0] bg-indigo-500 text-[11px] font-semibold text-white shadow-md'>
-													{i + 1}
-												</span>
+										{exercises.map((ex, i) => {
+											// detect cardio item (backend returns durationSeconds/note)
+											const isCardio = ex?.durationSeconds != null || ex?.note != null;
 
-												<div className='shrink-0'>
-													<Img showBlur={false} src={ex.img} alt={ex.name} className='h-16 w-16 rounded-lg bg-slate-50 object-contain' />
-												</div>
+											return (
+												<li
+													key={ex.id || ex.exerciseId || i}
+													className='group relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-xs transition-all hover:-translate-y-[1px] hover:border-[color:var(--color-primary-200)] hover:shadow-md'
+												>
+													<span className='pointer-events-none absolute top-0 rtl:-right-0 ltr:-left-0 z-10 inline-flex h-6 w-6 items-center justify-center rtl:rounded-[0_10px_0_10px] ltr:rounded-[10px_0_10px_0] bg-[color:var(--color-primary-500)] text-[11px] font-semibold text-white shadow-md'>
+														{i + 1}
+													</span>
 
-												<div className='flex min-w-0 flex-1 flex-col gap-0.5'>
-													<MultiLangText className='truncate text-sm font-semibold text-slate-900 leading-snug'>{ex.name}</MultiLangText>
+													<div className='shrink-0'>
+														<Img showBlur={false} src={ex.img} alt={ex.name} className='h-16 w-16 rounded-lg bg-slate-50 object-contain' />
+													</div>
 
-													{(ex.targetSets || ex.targetReps) && (
-														<p className='text-xs text-slate-500'>
-															{ex.targetSets ? `${ex.targetSets} ${t('preview.sets')}` : ''}
-															{ex.targetSets && ex.targetReps ? ' × ' : ''}
-															{ex.targetReps ? `${ex.targetReps} ${t('preview.reps')}` : ''}
-														</p>
-													)}
-												</div>
-											</li>
-										))}
+													<div className='flex min-w-0 flex-1 flex-col gap-0.5'>
+														<MultiLangText className='truncate text-sm font-semibold text-slate-900 leading-snug'>{ex.name}</MultiLangText>
+
+														{/* ✅ MAIN/WARMUP */}
+														{!isCardio && (ex.targetSets || ex.targetReps) && (
+															<p className='text-xs text-slate-500'>
+																{ex.targetSets ? `${ex.targetSets} ${t('preview.sets')}` : ''}
+																{ex.targetSets && ex.targetReps ? ' × ' : ''}
+																{ex.targetReps ? `${ex.targetReps} ${t('preview.reps')}` : ''}
+															</p>
+														)}
+
+														{/* ✅ CARDIO */}
+														{isCardio && (
+															<div className='text-xs text-slate-500 space-y-0.5'>
+																{ex.durationSeconds ? (
+																	<div className='inline-flex items-center gap-1'>
+																		<Clock className='w-3.5 h-3.5' />
+																		<span>{Math.round(Number(ex.durationSeconds) / 60)} min</span>
+																	</div>
+																) : null}
+																{ex.note ? <p className='text-[11px] text-slate-500 line-clamp-2'>{ex.note}</p> : null}
+															</div>
+														)}
+													</div>
+												</li>
+											);
+										})}
 									</ol>
 								) : (
 									<div className='flex items-center gap-2 rounded-lg border border-dashed border-slate-200 bg-white/70 px-3 py-3 text-xs text-slate-500'>
@@ -799,9 +902,12 @@ const AssignForm = memo(function AssignForm({ planId, onClose, onAssigned, optio
 			{selectedUsers.length > 0 && (
 				<div className='flex flex-wrap gap-2'>
 					{selectedUsers.map(user => (
-						<span key={user.id} className='inline-flex items-center gap-2 rounded-lg bg-indigo-100 text-indigo-700 text-sm px-3 py-1.5 border border-indigo-200'>
+						<span
+							key={user.id}
+							className='inline-flex items-center gap-2 rounded-lg bg-[color:var(--color-primary-100)] text-[color:var(--color-primary-700)] text-sm px-3 py-1.5 border border-[color:var(--color-primary-200)]'
+						>
 							{user.label}
-							<button type='button' onClick={() => removeUser(user.id)} className='hover:text-indigo-900 transition-colors' aria-label={t('assign.removeUser')}>
+							<button type='button' onClick={() => removeUser(user.id)} className='hover:text-slate-900 transition-colors' aria-label={t('assign.removeUser')}>
 								<X className='w-3 h-3' />
 							</button>
 						</span>
@@ -864,15 +970,15 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 				tempo: e.tempo ?? '1/1/1',
 			})),
 
+			// ✅ CARDIO: minutes + note (mapped from backend durationSeconds)
 			cardioExercises: (x.cardioExercises || []).map((e, j) => ({
 				exerciseId: e.exerciseId || e.exercise?.id || e.id,
 				name: e.name || e.exercise?.name,
 				img: e.img,
 				category: e.exercise?.category || e.category || null,
 				order: e.order || e.orderIndex || j + 1,
-				targetSets: e.targetSets ?? 3,
-				targetReps: e.targetReps ?? 12,
-				tempo: e.tempo ?? '1/1/1',
+				durationMinutes: toMinutesFromSeconds(e.durationSeconds),
+				note: e.note ?? '',
 			})),
 		}));
 
@@ -949,15 +1055,30 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 
 				const newOnes = pickedArray
 					.filter(x => !existingIdsSet.has(x.id))
-					.map(x => ({
-						exerciseId: x.id,
-						name: x.name,
-						category: x.category || null,
-						img: x.img,
-						targetSets: 3,
-						targetReps: 12,
-						tempo: '1/1/1',
-					}));
+					.map(x => {
+						// ✅ cardio defaults: time + note only
+						if (pickerBlock === 'cardio') {
+							return {
+								exerciseId: x.id,
+								name: x.name,
+								category: x.category || null,
+								img: x.img,
+								durationMinutes: '',
+								note: '',
+							};
+						}
+
+						// warmup/main defaults
+						return {
+							exerciseId: x.id,
+							name: x.name,
+							category: x.category || null,
+							img: x.img,
+							targetSets: 3,
+							targetReps: 12,
+							tempo: '1/1/1',
+						};
+					});
 
 				const merged = [...keptExisting, ...newOnes].map((ex, idx) => ({ ...ex, order: idx + 1 }));
 				return { ...day, [key]: merged };
@@ -998,6 +1119,7 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 				days: days.map(d => ({
 					dayOfWeek: d.dayOfWeek,
 					nameOfWeek: d.nameOfWeek,
+
 					warmupExercises: (d.warmupExercises || []).map(ex => ({
 						order: ex.order,
 						exerciseId: ex.exerciseId,
@@ -1005,6 +1127,7 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 						targetReps: ex.targetReps === '' || ex.targetReps == null ? null : Number(ex.targetReps),
 						tempo: ex.tempo === '' || ex.tempo == null ? null : String(ex.tempo).trim(),
 					})),
+
 					exercises: (d.exercises || []).map(ex => ({
 						order: ex.order,
 						exerciseId: ex.exerciseId,
@@ -1012,12 +1135,13 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 						targetReps: ex.targetReps === '' || ex.targetReps == null ? null : Number(ex.targetReps),
 						tempo: ex.tempo === '' || ex.tempo == null ? null : String(ex.tempo).trim(),
 					})),
+
+					// ✅ CARDIO payload: durationSeconds + note only
 					cardioExercises: (d.cardioExercises || []).map(ex => ({
 						order: ex.order,
 						exerciseId: ex.exerciseId,
-						targetSets: ex.targetSets === '' || ex.targetSets == null ? null : Number(ex.targetSets),
-						targetReps: ex.targetReps === '' || ex.targetReps == null ? null : Number(ex.targetReps),
-						tempo: ex.tempo === '' || ex.tempo == null ? null : String(ex.tempo).trim(),
+						durationSeconds: toSecondsFromMinutes(ex.durationMinutes),
+						note: String(ex.note ?? '').trim() || null,
 					})),
 				})),
 			},
@@ -1116,6 +1240,14 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 		return def;
 	};
 
+	const normalizeMinutesOrEmpty = (v) => {
+		const s = String(v ?? '').trim();
+		if (!s) return '';
+		const n = Number(s);
+		if (!Number.isFinite(n) || n <= 0) return '';
+		return String(Math.trunc(n));
+	};
+
 	const renderBlock = (day, block, list) => {
 		const key = block === 'warmup' ? 'warmupExercises' : block === 'cardio' ? 'cardioExercises' : 'exercises';
 
@@ -1142,6 +1274,8 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 		const removeExercise = exerciseId => {
 			setDays(arr => arr.map(d0 => (d0.id !== day.id ? d0 : { ...d0, [key]: (d0[key] || []).filter(e => e.exerciseId !== exerciseId) })));
 		};
+
+		const isCardio = block === 'cardio';
 
 		return (
 			<div className='mb-4'>
@@ -1177,7 +1311,7 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 										<MultiLangText className='truncate font-medium text-slate-900'>{ex.name}</MultiLangText>
 
 										{ex.category ? (
-											<span className='inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2 py-1 text-[11px] text-indigo-700'>
+											<span className='inline-flex items-center gap-1 rounded-lg border border-[color:var(--color-primary-200)] bg-[color:var(--color-primary-50)] px-2 py-1 text-[11px] text-[color:var(--color-primary-700)]'>
 												<Tag size={12} />
 												<MultiLangText>{ex.category}</MultiLangText>
 											</span>
@@ -1186,43 +1320,69 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 
 									<div className='flex items-center gap-2'>
 										<div className='w-full sm:w-auto'>
-											<div className='mt-2 sm:mt-0 sm:ml-auto grid grid-cols-3 gap-1.5 min-w-[210px] max-w-[260px]'>
-												<MiniField
-													inputMode='numeric'
-													type='number'
-													placeholder={t('preview.sets')}
-													value={ex.targetSets ?? ''}
-													onChange={e => setExerciseField(ex.exerciseId, { targetSets: e.target.value })}
-													onBlur={() => {
-														const s = String(ex.targetSets ?? '').trim();
-														if (!s) return;
-														setExerciseField(ex.exerciseId, { targetSets: normalizeIntOrDefault(ex.targetSets, 3) });
-													}}
-												/>
+											{/* ✅ MAIN/WARMUP fields */}
+											{!isCardio && (
+												<div className='mt-2 sm:mt-0 sm:ml-auto grid grid-cols-3 gap-1.5 min-w-[210px] max-w-[260px]'>
+													<MiniField
+														inputMode='numeric'
+														type='number'
+														placeholder={t('preview.sets')}
+														value={ex.targetSets ?? ''}
+														onChange={e => setExerciseField(ex.exerciseId, { targetSets: e.target.value })}
+														onBlur={() => {
+															const s = String(ex.targetSets ?? '').trim();
+															if (!s) return;
+															setExerciseField(ex.exerciseId, { targetSets: normalizeIntOrDefault(ex.targetSets, 3) });
+														}}
+													/>
 
-												<MiniField
-													inputMode='numeric'
-													placeholder={t('preview.reps')}
-													value={ex.targetReps ?? ''}
-													onChange={e => setExerciseField(ex.exerciseId, { targetReps: e.target.value })}
-													onBlur={() => {
-														const s = String(ex.targetReps ?? '').trim();
-														if (!s) return;
-														setExerciseField(ex.exerciseId, { targetReps: normalizeIntOrDefault(ex.targetReps, 12) });
-													}}
-												/>
+													<MiniField
+														inputMode='numeric'
+														placeholder={t('preview.reps')}
+														value={ex.targetReps ?? ''}
+														onChange={e => setExerciseField(ex.exerciseId, { targetReps: e.target.value })}
+														onBlur={() => {
+															const s = String(ex.targetReps ?? '').trim();
+															if (!s) return;
+															setExerciseField(ex.exerciseId, { targetReps: normalizeIntOrDefault(ex.targetReps, 12) });
+														}}
+													/>
 
-												<MiniField
-													placeholder={t('preview.tempo', { default: 'Tempo' })}
-													value={ex.tempo ?? ''}
-													onChange={e => setExerciseField(ex.exerciseId, { tempo: e.target.value })}
-													onBlur={() => {
-														const s = String(ex.tempo ?? '').trim();
-														if (!s) return;
-														setExerciseField(ex.exerciseId, { tempo: normalizeTempoOrDefault(ex.tempo, '1/1/1') });
-													}}
-												/>
-											</div>
+													<MiniField
+														placeholder={t('preview.tempo', { default: 'Tempo' })}
+														value={ex.tempo ?? ''}
+														onChange={e => setExerciseField(ex.exerciseId, { tempo: e.target.value })}
+														onBlur={() => {
+															const s = String(ex.tempo ?? '').trim();
+															if (!s) return;
+															setExerciseField(ex.exerciseId, { tempo: normalizeTempoOrDefault(ex.tempo, '1/1/1') });
+														}}
+													/>
+												</div>
+											)}
+
+											{/* ✅ CARDIO fields (time + note) */}
+											{isCardio && (
+												<div className=' flex items-center gap-1.5 '>
+													<MiniField
+														inputMode='numeric'
+														className='!h-[35px]  '
+														cnParent="!w-[120px]"
+														type='number'
+														placeholder={t('builder.cardio.minutes', { default: 'Minutes' })}
+														value={ex.durationMinutes ?? ''}
+														onChange={e => setExerciseField(ex.exerciseId, { durationMinutes: e.target.value })}
+														onBlur={() => setExerciseField(ex.exerciseId, { durationMinutes: normalizeMinutesOrEmpty(ex.durationMinutes) })}
+														iconLeft={<Clock className='w-3.5 h-4.5 text-slate-400' />}
+													/>
+
+													<MiniTextArea
+														placeholder={t('builder.cardio.note', { default: 'Cardio note (speed / RPE / intervals...)' })}
+														value={ex.note ?? ''}
+														onChange={(val) => setExerciseField(ex.exerciseId, { note: val })}
+													/>
+												</div>
+											)}
 										</div>
 
 										<button type='button' onClick={() => removeExercise(ex.exerciseId)} className={iconBtn} title={t('actions.delete')} aria-label={t('actions.delete')}>
@@ -1300,19 +1460,21 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 	);
 }
 
-const MiniField = memo(function MiniField({ value, placeholder, inputMode, onChange, onBlur, className = '', type = 'text' }) {
+const MiniField = memo(function MiniField({ cnParent, value, placeholder, inputMode, onChange, onBlur, className = '', type = 'text', iconLeft = null }) {
 	const hasValue = String(value ?? '').trim().length > 0;
 
 	return (
-		<div className='relative w-full'>
+		<div className={`relative w-full ${cnParent}`}>
 			<label
 				className={[
 					'absolute left-2 px-1 text-[10px] transition-all bg-white pointer-events-none',
-					hasValue ? 'top-[-6px] !bg-[linear-gradient(to_bottom,#f1f5f9_50%,#ffffff_50%)] text-indigo-500' : 'top-1/2 -translate-y-1/2 text-slate-400 opacity-0',
+					hasValue ? 'top-[-6px] !bg-[linear-gradient(to_bottom,#f1f5f9_50%,#ffffff_50%)] text-[color:var(--color-primary-600)]' : 'top-1/2 -translate-y-1/2 text-slate-400 opacity-0',
 				].join(' ')}
 			>
 				{placeholder}
 			</label>
+
+			{iconLeft ? <span className='absolute left-2 top-1/2 -translate-y-1/2'>{iconLeft}</span> : null}
 
 			<input
 				value={value ?? ''}
@@ -1323,9 +1485,41 @@ const MiniField = memo(function MiniField({ value, placeholder, inputMode, onCha
 				onBlur={onBlur}
 				className={[
 					'h-8 w-full rounded-md border px-2 text-[12px]',
+					iconLeft ? 'pl-8' : '',
 					'bg-white outline-none transition',
-					'focus:ring-4 focus:ring-slate-400/20',
-					hasValue ? 'border-indigo-300 hover:border-indigo-400' : 'border-slate-200 hover:border-slate-300',
+					'focus:ring-4 focus:ring-[color:var(--color-primary-200)]/25 focus:border-[color:var(--color-primary-400)]',
+					hasValue ? 'border-[color:var(--color-primary-300)] hover:border-[color:var(--color-primary-400)]' : 'border-slate-200 hover:border-slate-300',
+					className,
+				].join(' ')}
+			/>
+		</div>
+	);
+});
+
+const MiniTextArea = memo(function MiniTextArea({ value, placeholder, onChange, className = '' }) {
+	const hasValue = String(value ?? '').trim().length > 0;
+
+	return (
+		<div className='relative flex items-center w-full'>
+			<label
+				className={[
+					'absolute left-2 px-1 text-[10px] transition-all bg-white pointer-events-none',
+					hasValue ? 'top-[-6px] !bg-[linear-gradient(to_bottom,#f1f5f9_50%,#ffffff_50%)] text-[color:var(--color-primary-600)]' : 'top-3 text-slate-400 opacity-0',
+				].join(' ')}
+			>
+				{placeholder}
+			</label>
+
+			<textarea
+				rows={1}
+				value={value ?? ''}
+				placeholder={hasValue ? '' : placeholder}
+				onChange={(e) => onChange?.(e.target.value)}
+				className={[
+					'w-full rounded-md border px-2 py-2 text-[12px] resize-none',
+					'bg-white outline-none transition',
+					'focus:ring-4 focus:ring-[color:var(--color-primary-200)]/25 focus:border-[color:var(--color-primary-400)]',
+					hasValue ? 'border-[color:var(--color-primary-300)] hover:border-[color:var(--color-primary-400)]' : 'border-slate-200 hover:border-slate-300',
 					className,
 				].join(' ')}
 			/>

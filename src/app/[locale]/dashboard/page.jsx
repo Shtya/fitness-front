@@ -100,7 +100,7 @@ const LIME = '#84cc16';
 const PIE_COLORS = [INDIGO, EMERALD, AMBER, ROSE, VIOLET, TEAL, LIME];
 
 // ---------- UI ----------
-function GlowCard({ children, className }) {
+export function GlowCard({ children, className }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
