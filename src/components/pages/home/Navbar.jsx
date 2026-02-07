@@ -73,11 +73,7 @@ export default function PowerfulNavbar() {
             <div>
               <span className="text-2xl font-black tracking-tight text-white">
                 So7baFit
-              </span>
-              <div className="mt-0.5 flex items-center gap-1">
-                <div className="h-2 w-2 animate-pulse rounded-full bg-green-400" />
-                <span className="text-xs font-semibold text-gray-400">fitness app</span>
-              </div>
+              </span> 
             </div>
           </div>
 
@@ -189,10 +185,7 @@ export default function PowerfulNavbar() {
                 </svg>
               </a>
             ))}
-
-            {/* Mobile Language */}
-            <LanguageToggle className="scale-[1.4] !mt-3 mb-6 origin-right " />
-
+ 
             {/* Mobile CTA */}
             <Link href={"/auth"} className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-4 font-bold text-white shadow-xl transition-all duration-300 hover:shadow-2xl">
               <div className="absolute inset-0 theme-gradient-bg" />
