@@ -1434,6 +1434,47 @@
   },
 
   "users": {
+    "admin": {
+      "stats": {
+        "pending": "Pending accounts"
+      },
+      "common": {
+        "refresh": "Refresh",
+        "loadingPendingAccounts": "Loading pending accounts...",
+        "noPendingAccounts": "No pending accounts",
+        "allAccountsReviewed": "All accounts have been reviewed"
+      },
+      "pending": {
+        "bannerTitle": "{count} {text} awaiting review",
+        "accountSingular": "account",
+        "accountPlural": "accounts",
+        "bannerDescription": "Review and approve or reject these accounts to grant access.",
+        "from": "From",
+        "selfSignup": "Self sign-up",
+        "footerShowing": "Showing {count} pending {text}",
+        "footerReview": "Review each account carefully before approving",
+        "fromCoach": "From {name}"
+      },
+      "table": {
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "from": "From",
+        "created": "Created",
+        "actions": "Actions"
+      },
+      "actions": {
+        "approve": "Approve",
+        "approving": "Approving...",
+        "reject": "Reject",
+        "rejecting": "Rejecting..."
+      },
+      "roles": {
+        "Client": "Client",
+        "Coach": "Coach",
+        "Admin": "Admin"
+      }
+    },
     "editUser": "Edit User",
     "header": {
       "title": "User Management",

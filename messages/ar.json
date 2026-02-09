@@ -1432,6 +1432,47 @@
     }
   },
   "users": {
+    "admin": {
+      "stats": {
+        "pending": "الحسابات المعلقة"
+      },
+      "common": {
+        "refresh": "تحديث",
+        "loadingPendingAccounts": "جاري تحميل الحسابات المعلقة...",
+        "noPendingAccounts": "لا توجد حسابات معلقة",
+        "allAccountsReviewed": "تمت مراجعة جميع الحسابات"
+      },
+      "pending": {
+        "bannerTitle": "{count} {text} في انتظار المراجعة",
+        "accountSingular": "حساب",
+        "accountPlural": "حسابات",
+        "bannerDescription": "راجع واقبل أو ارفض هذه الحسابات لمنح الوصول.",
+        "from": "من",
+        "selfSignup": "تسجيل ذاتي",
+        "footerShowing": "عرض {count} {text} معلقة",
+        "footerReview": "راجع كل حساب بعناية قبل الموافقة",
+        "fromCoach": "من {name}"
+      },
+      "table": {
+        "name": "الاسم",
+        "email": "البريد الإلكتروني",
+        "role": "الدور",
+        "from": "من",
+        "created": "تاريخ الإنشاء",
+        "actions": "الإجراءات"
+      },
+      "actions": {
+        "approve": "قبول",
+        "approving": "جاري القبول...",
+        "reject": "رفض",
+        "rejecting": "جاري الرفض..."
+      },
+      "roles": {
+        "Client": "عميل",
+        "Coach": "مدرب",
+        "Admin": "مسؤول"
+      }
+    },
     "editUser": "تعديل مستخدم",
     "header": {
       "title": "إدارة المستخدمين",
