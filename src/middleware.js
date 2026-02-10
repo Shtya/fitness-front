@@ -67,15 +67,10 @@ const PUBLIC_PREFIXES = [
   '/auth',
   '/public',
   '/thank-you',
-  '/',
-
-  // existing regex
+  '/todos',
+  '/', 
   /^\/form\/\d+\/submit(?:\/|$)/,
-  /^\/workouts\/plans(?:\/|$)/,
-
-  // ✅ TENANT LANDING PAGES (IMPORTANT)
-  // Matches: /coach1 , /coach1/anything
-  // Excludes: /dashboard, /api, /auth, /_next, etc.
+  /^\/workouts\/plans(?:\/|$)/, 
   /^\/(?!auth|dashboard|api|_next|favicon\.ico|public|thank-you|form|workouts)([^/]+)(?:\/|$)/,
 ];
 

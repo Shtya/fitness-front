@@ -300,7 +300,7 @@ export default function ThemeSwitcher({ collapsed = false }) {
 						aria-label={t('ariaLabel')}
 						{...slideUp}
 						transition={spring}
-						className={cn('absolute z-[9999] bottom-full mb-4', collapsed ? 'rtl:right-0 ltr:left-0' : 'rtl:left-0 ltr:right-0 ')}
+						className={cn('absolute z-[9999] bottom-full mb-4', collapsed ? 'rtl:right-0 ltr:left-0' : 'rtl:right-0 ltr:left-0 ')}
 						style={{
 							filter: 'drop-shadow(0 25px 50px rgba(15, 23, 42, 0.35))',
 						}}>
@@ -308,7 +308,7 @@ export default function ThemeSwitcher({ collapsed = false }) {
 							initial={{ scale: 0 }}
 							animate={{ scale: 1 }}
 							transition={{ delay: 0.1, ...fastSpring }}
-							className={cn('absolute -bottom-[10px] z-[-1]', collapsed ? 'rtl:right-5  ltr:left-6' : ' rtl:left-10 ltr:right-10')}
+							className={cn('absolute -bottom-[10px] z-[-1]', collapsed ? 'rtl:left-5  ltr:left-6' : ' rtl:right-12 ltr:left-10')}
 							style={{
 								filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))',
 							}}>

@@ -195,11 +195,7 @@ const TitleLogin = React.memo(() => {
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ delay: 0.2, duration: 0.6 }}
 				style={{
-					background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
-					WebkitBackgroundClip: 'text',
-					WebkitTextFillColor: 'transparent',
-					backgroundClip: 'text',
-					backgroundSize: '200% 200%',
+					color: `${colors.gradient.from}` 
 				}}>
 				{t('signIn')}
 			</motion.h1>
@@ -356,16 +352,7 @@ const LoginForm = React.memo(({ onLoggedIn }) => {
 							onFocus={() => setFocusedField('email')}
 							onBlur={() => setFocusedField(null)}
 							{...register('email')}
-						/>
-						<motion.div
-							className="absolute bottom-0 left-0 right-0 h-1 rounded-b-2xl"
-							style={{
-								background: `linear-gradient(90deg, ${colors.gradient.from}, ${colors.gradient.to})`,
-							}}
-							initial={{ scaleX: 0 }}
-							animate={{ scaleX: focusedField === 'email' ? 1 : 0 }}
-							transition={{ duration: 0.3 }}
-						/>
+						/> 
 					</div>
 					<AnimatePresence>
 						{errors.email?.message && <FieldError msg={t(String(errors.email.message))} />}
@@ -408,15 +395,7 @@ const LoginForm = React.memo(({ onLoggedIn }) => {
 							}}>
 							{showPassword ? <EyeOff className="w-5 h-5" strokeWidth={2.5} /> : <Eye className="w-5 h-5" strokeWidth={2.5} />}
 						</motion.button>
-						<motion.div
-							className="absolute bottom-0 left-0 right-0 h-1 rounded-b-2xl"
-							style={{
-								background: `linear-gradient(90deg, ${colors.gradient.from}, ${colors.gradient.to})`,
-							}}
-							initial={{ scaleX: 0 }}
-							animate={{ scaleX: focusedField === 'password' ? 1 : 0 }}
-							transition={{ duration: 0.3 }}
-						/>
+						 
 					</div>
 					<AnimatePresence>
 						{errors.password?.message && <FieldError msg={t(String(errors.password.message))} />}
@@ -808,7 +787,7 @@ export default function AuthPage() {
 						initial={{ opacity: 0, y: 30 }} 
 						animate={{ opacity: 1, y: 0 }} 
 						transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} 
-						className="w-full max-w-[440px] relative z-10"
+						className="w-full max-w-[440px]  relative z-10"
 					>
 						<div 
 							className="rounded-3xl border-2 bg-white/95 backdrop-blur-xl shadow-2xl p-6 sm:p-8 relative overflow-hidden"
@@ -843,7 +822,7 @@ export default function AuthPage() {
 								</motion.div>
 							</AnimatePresence>
 
-							<TrustIndicators />
+							{/* <TrustIndicators /> */}
 						</div>
 					</motion.div>
 				</div>

@@ -48,35 +48,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import ThemeSwitcher from './ThemeSwitcher';
-
-// ============================================================================
-// ANIMATION CONFIGS
-// ============================================================================
+import { cn } from '@/utils/cn';
 
 const spring = { type: 'spring', stiffness: 500, damping: 32, mass: 0.6 };
 const flyoutSpring = { type: 'spring', stiffness: 550, damping: 35, mass: 0.6 };
 const smoothSpring = { type: 'spring', stiffness: 380, damping: 30, mass: 0.8 };
-const fastSpring = { type: 'spring', stiffness: 500, damping: 35, mass: 0.6 };
 
-const fadeScale = {
-	initial: { opacity: 0, scale: 0.92 },
-	animate: { opacity: 1, scale: 1 },
-	exit: { opacity: 0, scale: 0.92 },
-};
-
-const slideUp = {
-	initial: { opacity: 0, y: 20 },
-	animate: { opacity: 1, y: 0 },
-	exit: { opacity: 0, y: -10 },
-};
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-function cn(...args) {
-	return args.filter(Boolean).join(' ');
-}
 
 function isPathActive(pathname, href) {
 	if (!href) return false;
@@ -110,11 +87,7 @@ function getDir() {
 	if (typeof document === 'undefined') return 'ltr';
 	return document.documentElement.getAttribute('dir') || 'ltr';
 }
-
-// ============================================================================
-// NAV CONFIGURATION
-// ============================================================================
-
+ 
 export const NAV = [
 	// CLIENT
 	{
@@ -228,11 +201,7 @@ export const NAV = [
 		],
 	},
 ];
-
-// ============================================================================
-// HOOKS
-// ============================================================================
-
+ 
 export function useUnreadChats(pollMs = 300000) {
 	const [total, setTotal] = useState(0);
 	const { conversationId } = useValues();
@@ -252,59 +221,7 @@ export function useUnreadChats(pollMs = 300000) {
 
 	return { totalUnread: total, reloadUnread: load };
 }
-
-// ============================================================================
-// FLOATING PARTICLES
-// ============================================================================
-
-function FloatingParticles({ colors }) {
-	const particles = useMemo(() => {
-		return Array.from({ length: 15 }, (_, i) => ({
-			id: i,
-			size: Math.random() * 3 + 1.5,
-			x: Math.random() * 100,
-			y: Math.random() * 100,
-			duration: Math.random() * 10 + 15,
-			delay: Math.random() * 5,
-			opacity: Math.random() * 0.3 + 0.05,
-		}));
-	}, []);
-
-	return (
-		<div className="absolute inset-0 overflow-hidden pointer-events-none">
-			{particles.map((p) => (
-				<motion.div
-					key={p.id}
-					className="absolute rounded-full blur-sm"
-					style={{
-						width: p.size,
-						height: p.size,
-						left: `${p.x}%`,
-						top: `${p.y}%`,
-						background: colors[Math.floor(Math.random() * colors.length)],
-						opacity: p.opacity,
-					}}
-					animate={{
-						y: [0, -30, 0],
-						x: [0, Math.random() * 20 - 10, 0],
-						scale: [1, 1.2, 1],
-					}}
-					transition={{
-						duration: p.duration,
-						delay: p.delay,
-						repeat: Infinity,
-						ease: 'easeInOut',
-					}}
-				/>
-			))}
-		</div>
-	);
-}
-
-// ============================================================================
-// BADGE COMPONENT
-// ============================================================================
-
+ 
 function Badge({ value, className = '' }) {
 	const text = value > 99 ? '99+' : String(value);
 	return (
@@ -321,11 +238,7 @@ function Badge({ value, className = '' }) {
 		</motion.span>
 	);
 }
-
-// ============================================================================
-// COLLAPSED TOOLTIP
-// ============================================================================
-
+ 
 export function CollapsedTooltip({ label, anchorRef, offset = 12 }) {
 	const [mounted, setMounted] = useState(false);
 	const [pos, setPos] = useState(null);
@@ -384,11 +297,7 @@ export function CollapsedTooltip({ label, anchorRef, offset = 12 }) {
 
 	return createPortal(content, document.body);
 }
-
-// ============================================================================
-// FLYOUT MENU
-// ============================================================================
-
+ 
 function Flyout({ children, align = 'start' }) {
 	return (
 		<motion.div
@@ -407,11 +316,7 @@ function Flyout({ children, align = 'start' }) {
 		</motion.div>
 	);
 }
-
-// ============================================================================
-// SCROLL SHADOW
-// ============================================================================
-
+ 
 function ScrollShadow({ children }) {
 	const ref = useRef(null);
 	const [atTop, setAtTop] = useState(true);
@@ -456,11 +361,7 @@ function ScrollShadow({ children }) {
 		</div>
 	);
 }
-
-// ============================================================================
-// NAV ITEM COMPONENT
-// ============================================================================
-
+ 
 function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, totalUnread }) {
 	const Icon = item.icon || LayoutDashboard;
 	const hasChildren = Array.isArray(item.children) && item.children.length > 0;
@@ -501,7 +402,7 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.98 }}
 							className={cn(
-								'relative flex items-center justify-center rounded-2xl p-2.5 transition-all duration-300 border-2',
+								'relative py-1 flex items-center justify-center rounded-xl transition-all duration-300 border-1',
 								active
 									? 'border-[var(--color-primary-400)] shadow-xl text-white'
 									: 'border-transparent text-slate-600 hover:bg-gradient-to-br hover:from-slate-50 hover:to-slate-100 hover:border-slate-200'
@@ -516,11 +417,11 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 							}>
 							<div
 								className={cn(
-									'grid place-content-center w-10 h-10 rounded-xl transition-all duration-300',
-									active ? 'bg-white/20 backdrop-blur-sm text-white' : 'text-[var(--color-primary-700)]'
+									'grid place-content-center flex-none !w-11 h-11 rounded-lg transition-all duration-300',
+									active ? '' : 'text-[var(--color-primary-700)]'
 								)}
 								style={!active ? { backgroundColor: `var(--color-primary-50)` } : {}}>
-								<Icon className="size-5" strokeWidth={active ? 2.5 : 2} />
+								<Icon className={`${active ? "size-6" : ""}`} strokeWidth={active ? 2.5 : 2} />
 							</div>
 
 							{active && (
@@ -737,7 +638,7 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 						className="overflow-hidden">
 						<ul
 							className={cn(
-								'relative ltr:ml-2 rtl:mr-2 pl-5 mt-1.5 space-y-1',
+								'relative ltr:ml-2 rtl:mr-2 pl-5 mt-1  ',
 								"before:content-[''] before:absolute",
 								'ltr:before:left-4 rtl:before:right-4',
 								'before:top-0 before:bottom-0 before:w-px before:bg-gradient-to-b before:from-slate-300 before:via-slate-200 before:to-transparent'
@@ -748,7 +649,7 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 									<li
 										key={child.href || child.nameKey}
 										className={cn(
-											'relative py-0.5',
+											'relative ',
 											isLast &&
 												"after:content-[''] after:absolute ltr:after:left-4 rtl:after:right-4 after:bottom-0 after:h-4 after:w-px after:bg-white"
 										)}>
@@ -783,17 +684,10 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 // ============================================================================
 
 function NavSection({ sectionKey, items, pathname, onNavigate, collapsed = false, t, totalUnread = 0 }) {
-	const sectionLabel = sectionKey ? t(sectionKey) : null;
-	return (
-		<div className="mb-2">
-			{!collapsed && sectionLabel ? (
-				<div className="px-3 pb-2 flex items-center gap-2">
-					<span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{sectionLabel}</span>
-					<div className="flex-1 h-px bg-gradient-to-r from-slate-300 via-slate-200 to-transparent" />
-				</div>
-			) : null}
+ 	return (
+ 			 
 
-			<div className={cn('space-y-1.5', collapsed ? 'px-1' : 'px-1.5')}>
+			<div className={cn('space-y-1', collapsed ? 'px-1' : 'px-1.5')}>
 				{items.map((item) => (
 					<NavItem
 						key={item.href || item.nameKey}
@@ -806,8 +700,7 @@ function NavSection({ sectionKey, items, pathname, onNavigate, collapsed = false
 					/>
 				))}
 			</div>
-		</div>
-	);
+ 	);
 }
 
 // ============================================================================
@@ -1465,7 +1358,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 								<LayoutGroup id="sidebar-nav-mobile">
 									<div className="flex-1 overflow-hidden">
 										<ScrollShadow>
-											<nav className="w-full px-3 pt-2 pb-6 space-y-4">
+											<nav className="w-full px-3 pt-2 pb-6  ">
 												{sections?.map((section) => (
 													<NavSection
 														totalUnread={totalUnread}
@@ -1494,7 +1387,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 											whileHover={{ scale: 1.04 }}
 											whileTap={{ scale: 0.96 }}
 											onClick={() => window.location.reload()}
-											className="flex items-center justify-center w-11 h-11 rounded-xl text-white shadow-lg hover:shadow-xl transition-all duration-300"
+											className="flex items-center justify-center w-12 h-12 rounded-lg text-white shadow-lg hover:shadow-xl transition-all duration-300"
 											style={{
 												background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
 												boxShadow: `0 4px 16px -4px var(--color-primary-500)`,
