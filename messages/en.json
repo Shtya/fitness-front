@@ -2859,36 +2859,7 @@
     }
   },
 
-  "attachments": {
-    "modal": {
-      "title": "Your Files",
-      "subtitle": "Upload new files or choose from your library"
-    },
-    "errors": {
-      "loadFiles": "Failed to load your files. Please try again.",
-      "uploadFiles": "Failed to upload files. Please try again.",
-      "deleteFile": "Failed to delete file. Please try again.",
-      "maxFiles": "You can upload up to {count} files at once.",
-      "maxTotalBytes": "Total upload size exceeds the allowed limit of {max}."
-    },
-    "uploader": {
-      "upload": "Upload"
-    },
-    "labels": {
-      "close": "Close",
-      "attachFiles": "Attach files",
-      "image": "Image",
-      "totalFiles": "Total files"
-    },
-    "actions": {
-      "cancel": "Cancel",
-      "finishSelection": "Finish selection",
-      "finishSelectionWithCount": "Finish selection ({count})",
-      "deleteFile": "Delete {filename}",
-      "removeFile": "Remove {filename}"
-    }
-  },
-
+   
   "publicForm": {
     "messages": {
       "load_failed": "An error occurred while loading the form.",
@@ -2954,11 +2925,7 @@
       "create_from_query": "Create \"{value}\""
     }
   },
-
-  "ThankYouPage": {
-    "title": "Thank you for filling out the form!",
-    "description": "We’ve received your information and it will be reviewed as soon as possible. You can safely close this page."
-  },
+ 
   "submissions": {
     "header": {
       "title": "Form Submissions",
@@ -4382,29 +4349,29 @@
     }
   },
   "restTimer": {
-    "ariaLabel": "Rest timer",
-    "stopTimer": "Stop timer",
-    "configureTimer": "Configure timer",
+    "ariaLabel": "Rest Timer",
+    "stopTimer": "Stop Timer",
+    "configureTimer": "Configure Timer",
     "stopAlert": "Stop Alert Sound",
-    "adjustTime": "{seconds}s",
+    "adjustTime": "{seconds} seconds",
     "status": {
-      "ready": "REST TIMER",
-      "running": "RUNNING",
-      "paused": "PAUSED"
+      "ready": "Rest Timer",
+      "running": "Running",
+      "paused": "Paused"
     },
     "actions": {
-      "start": "START",
-      "pause": "PAUSE",
-      "resume": "RESUME",
+      "start": "Start",
+      "pause": "Pause",
+      "resume": "Resume",
       "stop": "Stop",
-      "reset": "Reset to default"
+      "reset": "Reset to Default"
     }
   },
   "cardioTimer": {
     "ariaLabel": "Cardio Timer",
     "stopTimer": "Stop Timer",
     "configureTimer": "Configure Timer",
-    "adjustTime": "Adjust time by {seconds}s",
+    "adjustTime": "Adjust time by {seconds} seconds",
     "note": "Note",
     "actions": {
       "start": "Start",
@@ -4412,6 +4379,51 @@
       "resume": "Resume",
       "stop": "Stop",
       "reset": "Reset"
+    }
+  },
+  "attachments": {
+    "labels": {
+      "attachFiles": "Attach Files",
+      "close": "Close",
+      "image": "Image",
+      "noFiles": "No files uploaded yet",
+      "uploadFirst": "Upload your first file to get started",
+      "totalFiles": "Total Files",
+      "selected": "Selected"
+    },
+    "modal": {
+      "title": "Attach Files",
+      "subtitle": "Upload new files or choose from existing ones"
+    },
+    "uploader": {
+      "dragDrop": "Drag and drop files here",
+      "orClickToSelect": "Or click the button below to select files",
+      "upload": "Upload Files"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "finishSelection": "Finish Selection",
+      "finishSelectionWithCount": "Finish Selection ({count})",
+      "deleteFile": "Delete file: {filename}",
+      "removeFile": "Remove file: {filename}"
+    },
+    "errors": {
+      "loadFiles": "Failed to load files. Please try again.",
+      "uploadFiles": "Failed to upload files. Please try again.",
+      "deleteFile": "Failed to delete file. Please try again.",
+      "maxFiles": "You can upload a maximum of {count} files.",
+      "maxTotalBytes": "The total file size is too large. The maximum allowed is {max}."
+    }
+  },
+  "ThankYouPage": {
+    "overline": "Mission Accomplished",
+    "title": "Thank You",
+    "description": "Your request has been successfully received. We will review it and get back to you as soon as possible.",
+    "stats": {
+      "successValue": "100%",
+      "successLabel": "Success Rate",
+      "experienceValue": "★★★★★",
+      "experienceLabel": "Experience"
     }
   }
 }
