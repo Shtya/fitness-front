@@ -1,99 +1,153 @@
 {
   "calendar": {
-    "title": "التقويم والأحداث",
-    "types": "الأنواع",
-    "all": "الكل",
-    "habits": "العادات",
-    "billings": "الفواتير",
-    "today": "اليوم",
-    "todayProgress": "تقدم اليوم",
-    "addNew": "إضافة جديد",
-    "searchPlaceholder": "ابحث عن الأحداث، العادات، الفواتير...",
-    "noItems": "لا توجد عناصر لهذا اليوم",
-    "confirmDelete": "هل تريد حذف هذا العنصر؟",
-    "editItem": "تعديل العنصر",
-    "type": "النوع",
     "title": "العنوان",
-    "titlePlaceholder": "أدخل العنوان...",
-    "description": "الوصف",
-    "descriptionPlaceholder": "أضف وصفًا...",
-    "startDate": "تاريخ البدء",
-    "time": "الوقت",
-    "frequency": "التكرار",
-    "once": "مرة واحدة (حدث لمرة واحدة)",
-    "days": "أيام",
+    "types": {
+      "habit": "عادة",
+      "event": "حدث",
+      "billing": "فاتورة",
+      "reminder": "تذكير"
+    },
+    "addType": "إضافة نوع",
+    "all": "الكل",
+    "today": "اليوم",
+    "addNew": "إضافة جديد",
+    "searchPlaceholder": "البحث عن الأحداث والعادات والفواتير...",
+    "totalItems": "إجمالي العناصر",
+    "todayProgress": "تقدم اليوم",
+    "dayNames": "الأحد,الاثنين,الثلاثاء,الأربعاء,الخميس,الجمعة,السبت",
+    "more": "المزيد",
+    "noItemsFound": "لم يتم العثور على عناصر",
+    "tryAdjustingFilters": "حاول تعديل المرشحات أو إضافة عنصر جديد",
+    "noItemsThisDay": "لا توجد عناصر لهذا اليوم",
+    "daysStreak": "أيام متتالية",
+    "confirmDelete": "هل تريد حذف هذا العنصر؟",
+    "confirmDeleteType": "حذف هذا النوع؟ سيتم نقل جميع العناصر إلى الأحداث.",
+    "addNewType": "إضافة نوع جديد",
+    "typeName": "اسم النوع",
+    "typeNamePlaceholder": "مثال: تمرين، دراسة، اجتماع",
     "icon": "الأيقونة",
-    "amount": "المبلغ",
-    "currency": "العملة",
-    "location": "الموقع",
-    "locationPlaceholder": "أضف الموقع...",
     "color": "اللون",
-    "pickColor": "اختر لونًا",
-    "enableReminder": "تفعيل التذكير",
-    "notes": "ملاحظات",
-    "notesPlaceholder": "أضف ملاحظات...",
+    "pickColor": "اختر لوناً",
     "cancel": "إلغاء",
     "create": "إنشاء",
-    "update": "تحديث"
+    "addNewItem": "إضافة عنصر جديد",
+    "editItem": "تعديل العنصر",
+    "type": "النوع",
+    "titlePlaceholder": "أدخل العنوان...",
+    "startDate": "تاريخ البدء",
+    "selectDate": "اختر التاريخ",
+    "time": "الوقت",
+    "selectTime": "اختر الوقت",
+    "frequency": "التكرار",
+    "days": "أيام",
+    "amount": "المبلغ",
+    "currency": "العملة",
+    "notes": "ملاحظات",
+    "notesPlaceholder": "أضف ملاحظات...",
+    "update": "تحديث",
+    "deleteItem": "حذف العنصر",
+    "frequencies": {
+      "once": "مرة واحدة",
+      "daily": "يومياً",
+      "every2days": "كل يومين",
+      "every3days": "كل 3 أيام",
+      "weekly": "أسبوعياً",
+      "biweekly": "كل أسبوعين",
+      "monthly": "شهرياً",
+      "custom": "مخصص..."
+    }
   },
   "todo": {
     "title": "المهام",
-    "systemFolders": "النظام",
+    "system": "النظام",
     "myFolders": "مجلداتي",
-    "activeTasks": "نشطة",
-    "completed": "مكتملة",
-    "folders": {
-      "inbox": "صندوق الوارد",
-      "today": "اليوم",
-      "starred": "المميزة",
-      "personal": "شخصي",
-      "work": "العمل",
-      "shopping": "تسوق"
-    },
     "addFolder": "إضافة مجلد",
     "folderNamePlaceholder": "اسم المجلد...",
     "pickColor": "اختر لوناً",
     "add": "إضافة",
     "cancel": "إلغاء",
-    "confirmDeleteFolder": "هل تريد حذف هذا المجلد؟",
-    "searchPlaceholder": "ابحث في المهام...",
-    "filter": "تصفية",
-    "sortManual": "يدوي",
-    "sortDueDate": "تاريخ الاستحقاق",
-    "sortPriority": "الأولوية",
-    "sortAlphabetical": "أ-ي",
-    "addTaskPlaceholder": "أضف مهمة جديدة...",
-    "quickEdit": "تعديل سريع",
-    "addSubtask": "إضافة مهمة فرعية",
-    "delete": "حذف",
+    "active": "نشطة",
+    "done": "تم",
+    "completed": "مكتملة",
     "confirmDelete": "هل تريد حذف هذه المهمة؟",
-    "noTasksFound": "لم يتم العثور على مهام",
-    "noTasks": "لا توجد مهام بعد",
-    "tryDifferentSearch": "جرب مصطلح بحث مختلف",
-    "addFirstTask": "أضف مهمتك الأولى للبدء!",
+    "confirmDeleteFolder": "حذف هذا المجلد؟ سيتم نقل جميع المهام إلى صندوق الوارد.",
+    "folders": {
+      "inbox": "صندوق الوارد",
+      "today": "اليوم",
+      "starred": "المميزة",
+      "personal": "شخصي",
+      "work": "عمل",
+      "shopping": "تسوق"
+    },
+    "addTaskPlaceholder": "إضافة مهمة جديدة...",
     "taskDetails": "تفاصيل المهمة",
-    "status": "الحالة",
-    "description": "الوصف",
-    "descriptionPlaceholder": "أضف وصفاً...",
     "priority": "الأولوية",
     "dueDate": "تاريخ الاستحقاق",
+    "selectDate": "اختر التاريخ",
     "time": "الوقت",
-    "repeat": "التكرار",
+    "selectTime": "اختر الوقت",
+    "repeat": {
+      "none": "لا يتكرر",
+      "daily": "يومياً",
+      "every2days": "كل يومين",
+      "every3days": "كل 3 أيام",
+      "weekly": "أسبوعياً",
+      "biweekly": "كل أسبوعين",
+      "monthly": "شهرياً",
+      "custom": "مخصص..."
+    },
     "days": "أيام",
-    "reminder": "التذكير",
+    "reminder": "تذكير",
     "enableReminder": "تفعيل التذكير",
-    "tags": "الوسوم",
-    "addTagPlaceholder": "أضف وسماً...",
+    "selectDateTime": "اختر التاريخ والوقت",
     "subtasks": "المهام الفرعية",
+    "addSubtask": "إضافة مهمة فرعية",
     "subtaskPlaceholder": "عنوان المهمة الفرعية...",
     "location": "الموقع",
     "locationPlaceholder": "أضف موقعاً...",
     "notes": "ملاحظات",
     "notesPlaceholder": "أضف ملاحظات...",
     "starred": "مميزة",
-    "addToStarred": "إضافة للمميزة",
+    "addToStarred": "إضافة إلى المميزة",
     "deleteTask": "حذف المهمة",
-    "all": "الكل"
+    "noTasks": "لا توجد مهام",
+    "addFirstTask": "أضف مهمتك الأولى للبدء!",
+    "attachments": "المرفقات",
+    "status": {
+      "todo": "للإنجاز",
+      "inProgress": "قيد التنفيذ",
+      "completed": "مكتملة",
+      "cancelled": "ملغاة"
+    },
+    "priorities": {
+      "all": "جميع الأولويات",
+      "none": "بدون",
+      "low": "منخفضة",
+      "medium": "متوسطة",
+      "high": "عالية",
+      "urgent": "عاجلة"
+    },
+    "sort": {
+      "manual": "يدوي",
+      "dueDate": "تاريخ الاستحقاق",
+      "priority": "الأولوية",
+      "alphabetical": "أبجدي (أ-ي)"
+    },
+    "settings": "الإعدادات",
+    "soundEffects": "المؤثرات الصوتية",
+    "soundEffectsDesc": "تشغيل الأصوات عند إكمال المهام",
+    "showCompleted": "إظهار المهام المكتملة",
+    "showCompletedDesc": "عرض المهام المكتملة في القوائم",
+    "compactView": "عرض مضغوط",
+    "compactViewDesc": "إظهار العنوان وزر التحديد والإجراءات فقط",
+    "autoArchive": "أرشفة تلقائية",
+    "autoArchiveDesc": "أرشفة المهام المكتملة تلقائياً بعد 7 أيام",
+    "defaultView": "العرض الافتراضي",
+    "listView": "عرض قائمة",
+    "gridView": "عرض شبكي",
+    "addTaskPosition": "موضع إضافة المهمة",
+    "addToTop": "إضافة للأعلى",
+    "addToBottom": "إضافة للأسفل"
   },
   "board": {
     "filters": {
@@ -2781,7 +2835,7 @@
     "labels": {
       "fields": "حقل",
       "key": "المفتاح",
-      "placeholder": "العنونة",
+      "placeholder": "العنوان",
       "options": "الخيارات",
       "required": "إلزامي",
       "order": "الترتيب",
@@ -2799,14 +2853,14 @@
       "regen_key": "توليد مفتاح جديد",
       "regen": "توليد",
       "type": "النوع",
-      "placeholder": "العنونة (Placeholder)",
+      "placeholder": "العنوان (Placeholder)",
       "required": "حقل إلزامي",
       "options": "الخيارات",
       "placeholders": {
         "form_title": "اكتب عنوان النموذج",
         "label": "اكتب عنوان الحقل",
         "key": "أدخل المفتاح (فريد)",
-        "placeholder": "نص العنونة",
+        "placeholder": "نص العنوان",
         "option": "أضف خيارًا ثم اضغط Enter"
       }
     },
@@ -2844,36 +2898,7 @@
       "title": "تعديل النموذج",
       "cta": "حفظ التغييرات"
     }
-  },
-  "attachments": {
-    "modal": {
-      "title": "ملفاتك",
-      "subtitle": "قم برفع ملفات جديدة أو اختر من مكتبتك"
-    },
-    "errors": {
-      "loadFiles": "فشل تحميل ملفاتك. حاول مرة أخرى.",
-      "uploadFiles": "فشل رفع الملفات. حاول مرة أخرى.",
-      "deleteFile": "فشل حذف الملف. حاول مرة أخرى.",
-      "maxFiles": "يمكنك رفع {count} ملفات كحد أقصى دفعة واحدة.",
-      "maxTotalBytes": "إجمالي حجم الرفع يتجاوز الحد المسموح وهو {max}."
-    },
-    "uploader": {
-      "upload": "رفع"
-    },
-    "labels": {
-      "close": "إغلاق",
-      "attachFiles": "إرفاق ملفات",
-      "image": "صورة",
-      "totalFiles": "إجمالي الملفات"
-    },
-    "actions": {
-      "cancel": "إلغاء",
-      "finishSelection": "إنهاء الاختيار",
-      "finishSelectionWithCount": "إنهاء الاختيار ({count})",
-      "deleteFile": "حذف {filename}",
-      "removeFile": "إزالة {filename}"
-    }
-  },
+  }, 
   "publicForm": {
     "messages": {
       "load_failed": "حدث خطأ أثناء تحميل النموذج.",
@@ -2938,11 +2963,7 @@
       "create_hint": "اكتب لإضافة خيار جديد...",
       "create_from_query": "إنشاء \"{value}\""
     }
-  },
-  "ThankYouPage": {
-    "title": "شكرًا لتعبئة النموذج!",
-    "description": "استلمنا بياناتك وسيتم مراجعتها في أقرب وقت ممكن. يمكنك إغلاق هذه الصفحة بأمان."
-  },
+  }, 
   "submissions": {
     "header": {
       "title": "إدخالات النماذج",
@@ -4399,6 +4420,52 @@
       "resume": "استئناف",
       "stop": "إيقاف",
       "reset": "إعادة تعيين"
+    }
+  },
+
+	"attachments": {
+    "labels": {
+      "attachFiles": "إرفاق ملفات",
+      "close": "إغلاق",
+      "image": "صورة",
+      "noFiles": "لا توجد ملفات مرفوعة بعد",
+      "uploadFirst": "قم برفع أول ملف للبدء",
+      "totalFiles": "إجمالي الملفات",
+      "selected": "المحدد"
+    },
+    "modal": {
+      "title": "إرفاق الملفات",
+      "subtitle": "ارفع ملفات جديدة أو اختر من الملفات الموجودة"
+    },
+    "uploader": {
+      "dragDrop": "اسحب الملفات وأفلتها هنا",
+      "orClickToSelect": "أو اضغط على الزر بالأسفل لاختيار الملفات",
+      "upload": "رفع الملفات"
+    },
+    "actions": {
+      "cancel": "إلغاء",
+      "finishSelection": "إنهاء الاختيار",
+      "finishSelectionWithCount": "إنهاء الاختيار ({count})",
+      "deleteFile": "حذف الملف: {filename}",
+      "removeFile": "إزالة الملف: {filename}"
+    },
+    "errors": {
+      "loadFiles": "تعذر تحميل الملفات. حاول مرة أخرى.",
+      "uploadFiles": "تعذر رفع الملفات. حاول مرة أخرى.",
+      "deleteFile": "تعذر حذف الملف. حاول مرة أخرى.",
+      "maxFiles": "يمكنك رفع بحد أقصى {count} ملفًا.",
+      "maxTotalBytes": "الحجم الإجمالي للملفات كبير جدًا. الحد الأقصى هو {max}."
+    }
+  },
+	 "ThankYouPage": {
+    "overline": "تمت المهمة بنجاح",
+    "title": "شكرًا لك",
+    "description": "تم استلام طلبك بنجاح. سنقوم بمراجعته والتواصل معك في أقرب وقت ممكن.",
+    "stats": {
+      "successValue": "100%",
+      "successLabel": "نسبة النجاح",
+      "experienceValue": "★★★★★",
+      "experienceLabel": "التجربة"
     }
   }
 }

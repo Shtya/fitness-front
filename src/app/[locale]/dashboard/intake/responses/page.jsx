@@ -1,12 +1,4 @@
-/*
-	✅ Updated Submissions page:
-	- Uses your ThemeProvider CSS vars (primary/secondary/gradient) everywhere
-	- Uses your GradientStatsHeader (theme-aware)
-	- Replaces static table with your DataTable (same logic + better UI)
-	- Uses the new PrettyPagination with 3+ page circles always
-	- Improves modal UI + answer cards (also theme-aware)
-*/
-
+ 
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';

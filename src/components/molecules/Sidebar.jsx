@@ -27,30 +27,20 @@ import {
 	Wallet,
 	CreditCard,
 	TrendingUp,
-	Sparkles,
 	User,
-	Palette,
-	Check,
-	Search,
-	Paintbrush,
-	MessageSquarePlus,
-	Send,
 	KanbanSquare,
 	ListTodo,
 	CalendarDays,
 	Clock,
+	Expand,
+	Maximize2,
+	Minimize2,
 } from 'lucide-react';
 import { usePathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
 import { FaInbox, FaUsers, FaWpforms } from 'react-icons/fa';
 import { useTranslations } from 'next-intl';
 import { useValues } from '@/context/GlobalContext';
-import { useTheme, COLOR_PALETTES } from '@/app/[locale]/theme';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import ThemeSwitcher from './ThemeSwitcher';
 import { cn } from '@/utils/cn';
 import FeedbackWidget from './FeedbackWidget';
@@ -170,7 +160,7 @@ export const NAV = [
 			{ nameKey: 'reports', href: '/dashboard/reports', icon: FileBarChart },
 		],
 	},
-	
+
 	{
 		role: 'coach',
 		sectionKey: 'sections.tools',
@@ -241,7 +231,7 @@ export const NAV = [
 				],
 			},
 		],
-	}, 
+	},
 	{
 		role: 'admin',
 		sectionKey: 'sections.tools',
@@ -823,7 +813,7 @@ function NavSection({ sectionKey, items, pathname, onNavigate, collapsed = false
 	);
 }
 
-export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCollapsed: setCollapsedProp }) {
+export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCollapsed: setCollapsedProp, focusMode, setFocusMode }) {
 	const pathname = usePathname();
 	const user = useUser();
 	const role = user?.role ?? null;
@@ -846,7 +836,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 			{/* DESKTOP SIDEBAR */}
 			<aside
 				className={cn(
-					'rtl:border-l z-[1000] ltr:border-r hidden lg:flex lg:flex-col shrink-0 transition-all duration-500 ease-in-out',
+					'  rtl:border-l z-[1000] ltr:border-r hidden lg:flex lg:flex-col shrink-0 transition-all duration-500 ease-in-out',
 					'bg-white/80 backdrop-blur-xl text-slate-900 relative',
 					collapsed ? 'w-[84px]' : 'w-[300px]'
 				)}
@@ -862,16 +852,20 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 					}}
 				/>
 
+
+
 				<div className="flex h-screen flex-col relative z-10">
 					{/* Header */}
 					<div
-						className={cn('h-16 border-b flex items-center gap-3 bg-white/90', 'px-4')}
+						className={cn('h-[63px] border-b flex items-center gap-3 bg-white/90', `${collapsed ? "px-1" : "px-2"}`)}
 						style={{
 							backdropFilter: 'saturate(180%) blur(20px)',
 							WebkitBackdropFilter: 'saturate(180%) blur(20px)',
 							borderColor: 'var(--color-primary-200)',
 						}}>
-						<div className="flex items-center gap-3 flex-1 min-w-0">
+						 <div className="absolute h-[62px] top-0 rtl:left-[-2px] ltr:right-[-2px] w-[2px] bg-white"   />
+
+						<div className={`${collapsed ? "hidden" : "flex"} items-center gap-3 flex-1 min-w-0`}>
 							<motion.div
 								whileHover={{ scale: 1.05, rotate: 5 }}
 								whileTap={{ scale: 0.95 }}
@@ -901,26 +895,65 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 							)}
 						</div>
 
-						<motion.button
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							onClick={() => setCollapsed((v) => !v)}
-							className="inline-flex items-center justify-center rounded-xl border-2 bg-white shadow-sm hover:shadow-md h-9 w-9 text-slate-500 transition-all duration-200 focus:outline-none focus:ring-2"
-							style={{
-								borderColor: 'var(--color-primary-200)',
-								'--tw-ring-color': `var(--color-primary-300)`,
-							}}>
-							<motion.div
-								animate={{ rotate: collapsed ? 0 : 180 }}
-								transition={spring}
-								style={{ color: 'var(--color-primary-600)' }}>
-								{collapsed ? (
-									<ChevronRight className="w-4 h-4 rtl:scale-x-[-1]" strokeWidth={2.5} />
+						<div className="inline-flex items-center gap-[7px] z-[10]">
+
+							<motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setCollapsed((v) => !v)}
+								className="inline-flex items-center justify-center rounded-lg border-2 bg-white shadow-sm hover:shadow-md h-9 w-9 text-slate-500 transition-all duration-200 focus:outline-none focus:ring-2" style={{
+									borderColor: focusMode
+										? "var(--color-gradient-to)"
+										: "var(--color-primary-300)",
+									background: focusMode
+										? "linear-gradient(135deg, var(--color-gradient-from) 0%, var(--color-gradient-via) 50%, var(--color-gradient-to) 100%)"
+										: "rgba(255, 255, 255, 0.95)",
+									["--tw-ring-color"]: `var(--color-primary-300)`,
+									color: focusMode ? "white" : "var(--color-primary-600)",
+								}}>
+								<motion.div animate={{ rotate: collapsed ? 0 : 180 }} transition={spring} style={{ color: 'var(--color-primary-600)' }}>
+									{collapsed ? (<ChevronRight className="w-4 h-4 rtl:scale-x-[-1]" strokeWidth={2.5} />) : (<ChevronLeft className="rtl:scale-x-[-1] w-4 h-4" strokeWidth={2.5} />)}
+								</motion.div>
+							</motion.button>
+
+
+							<motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setFocusMode((v) => !v)}
+								className={` ${focusMode ? ` ${collapsed ? " ltr:left-[260px] rtl:right-[260px]" : "ltr:left-[60px]  rtl:right-[60px]"} bottom-[8px] relative ` : ""} duration-300 inline-flex items-center justify-center rounded-lg border-2 bg-white shadow-sm hover:shadow-md h-9 w-9 transition-all duration-200 focus:outline-none focus:ring-2`}
+								style={{
+									borderColor: focusMode
+										? "var(--color-gradient-to)"
+										: "var(--color-primary-300)",
+									background: focusMode
+										? "linear-gradient(135deg, var(--color-gradient-from) 0%, var(--color-gradient-via) 50%, var(--color-gradient-to) 100%)"
+										: "rgba(255, 255, 255, 0.95)",
+									["--tw-ring-color"]: `var(--color-primary-300)`,
+									color: focusMode ? "white" : "var(--color-primary-600)",
+								}}
+								title={focusMode ? "Exit Focus Mode (ESC)" : "Enter Focus Mode (F)"}
+							>
+
+								{focusMode ? (
+									<motion.div
+										key="minimize"
+										initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+										animate={{ rotate: 0, opacity: 1, scale: 1 }}
+										exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
+										transition={{ duration: 0.3, type: "spring" }}
+									>
+										<Minimize2 className="w-5 h-5" strokeWidth={2.5} />
+									</motion.div>
 								) : (
-									<ChevronLeft className="rtl:scale-x-[-1] w-4 h-4" strokeWidth={2.5} />
+									<motion.div
+										key="maximize"
+										initial={{ rotate: 90, opacity: 0, scale: 0.5 }}
+										animate={{ rotate: 0, opacity: 1, scale: 1 }}
+										exit={{ rotate: -90, opacity: 0, scale: 0.5 }}
+										transition={{ duration: 0.3, type: "spring" }}
+									>
+										<Maximize2 className="w-5 h-5" strokeWidth={2.5} />
+									</motion.div>
 								)}
-							</motion.div>
-						</motion.button>
+							</motion.button>
+						</div>
+
+						
 					</div>
 
 					{/* Navigation */}

@@ -58,10 +58,7 @@ export default function Header({ onMenu }) {
   const isActive = (user?.status || '').toLowerCase() === 'active';
 
   return (
-    <header className="sticky top-0 z-40 w-full">
-
-			
-      {/* Ultra-modern glass background */}
+    <header className="sticky top-0 z-40 w-full"> 
       <div
         className="absolute inset-0"
         style={{
@@ -70,17 +67,17 @@ export default function Header({ onMenu }) {
           WebkitBackdropFilter: 'saturate(180%) blur(20px)',
         }}
       />
+      
 
       {/* Elegant gradient border */}
       <div
-        className="absolute inset-x-0 bottom-0 h-[1px]"
+        className=" border-[.2px] absolute bottom-0 w-full h-[1px]"
         style={{
-          border: `.5px solid var(--color-primary-200)`,
-          opacity: 0.4,
-        }}
+ 							borderColor: 'var(--color-primary-200)',
+						}}
       />
 
-      <div className="relative px-4 sm:px-6 lg:px-8">
+      <div className="relative px-4 sm:px-2">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* LEFT SECTION */}
           <div className="flex items-center gap-3">
@@ -89,7 +86,7 @@ export default function Header({ onMenu }) {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onMenu}
-              className="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200"
+              className="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200"
               style={{
                 background: 'var(--color-primary-50)',
                 color: 'var(--color-primary-700)',
@@ -106,7 +103,7 @@ export default function Header({ onMenu }) {
                 className="relative"
               >
                 <div
-                  className="w-9 h-9 rounded-xl grid place-items-center text-white text-xs font-black shadow-md relative overflow-hidden"
+                  className="w-9 h-9 rounded-lg grid place-items-center text-white text-xs font-black shadow-md relative overflow-hidden"
                   style={{
                     background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
                     boxShadow: `0 2px 8px -1px var(--color-primary-400)`,
@@ -234,7 +231,7 @@ export default function Header({ onMenu }) {
                     <div className="p-5">
                       <div className="flex items-start gap-3 mb-4">
                         <div
-                          className="w-11 h-11 rounded-xl grid place-items-center text-white flex-shrink-0"
+                          className="w-11 h-11 rounded-lg grid place-items-center text-white flex-shrink-0"
                           style={{
                             background: 'linear-gradient(135deg, #ef4444, #dc2626)',
                           }}
@@ -256,7 +253,7 @@ export default function Header({ onMenu }) {
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => setShowLogoutConfirm(false)}
-                          className="flex-1 h-10 rounded-xl font-semibold text-sm transition-all"
+                          className="flex-1 h-10 rounded-lg font-semibold text-sm transition-all"
                           style={{
                             border: '2px solid var(--color-primary-200)',
                             color: 'var(--color-primary-700)',
@@ -269,7 +266,7 @@ export default function Header({ onMenu }) {
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={handleLogout}
-                          className="flex-1 h-10 rounded-xl font-semibold text-sm text-white"
+                          className="flex-1 h-10 rounded-lg font-semibold text-sm text-white"
                           style={{
                             background: 'linear-gradient(135deg, #ef4444, #dc2626)',
                             boxShadow: '0 4px 12px -2px rgba(239, 68, 68, 0.5)',

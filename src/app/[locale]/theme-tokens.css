@@ -306,6 +306,37 @@
 
 
 /*
+
+css file 
+:root {
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
+
+  --color-secondary-50: #faf5ff;
+  --color-secondary-100: #f3e8ff;
+  --color-secondary-200: #e9d5ff;
+  --color-secondary-300: #d8b4fe;
+  --color-secondary-400: #c084fc;
+  --color-secondary-500: #a855f7;
+  --color-secondary-600: #9333ea;
+  --color-secondary-700: #7e22ce;
+  --color-secondary-800: #6b21a8;
+  --color-secondary-900: #581c87;
+
+  --color-gradient-from: #6366f1;
+  --color-gradient-via: #8b5cf6;
+  --color-gradient-to: #a855f7;
+}
+
+
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -638,4 +669,4 @@ export function ThemeProvider({ children }) {
 
 	return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
-*/
+*/ 

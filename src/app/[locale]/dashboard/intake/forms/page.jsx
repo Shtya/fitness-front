@@ -851,7 +851,7 @@ export default function FormsManagementPage() {
           </div>
         ) : (
           <div className="space-y-4 pt-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-4">
               <Input
                 label={t('editor.label')}
                 placeholder={t('editor.placeholders.label')}
@@ -866,9 +866,6 @@ export default function FormsManagementPage() {
                 onChange={v => setPlaceholderDraft(v)}
                 onBlur={commitDrafts}
               />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Select
                 clearable={false}
                 searchable={false}
@@ -886,6 +883,7 @@ export default function FormsManagementPage() {
                 />
               </div>
             </div>
+ 
 
             {(field.type === 'select' || field.type === 'radio' || field.type === 'checklist') && (
               <div>
@@ -989,8 +987,7 @@ export default function FormsManagementPage() {
             <aside className="  lg:col-span-4">
               <div className="sticky top-6">
                 <ThemeFrame>
-                  {/* Header + search */}
-                  <div
+                   <div
                     className="p-4 border-b rounded-[20px_20px_0_0] "
                     style={{
                       borderColor: 'var(--color-primary-200)',
@@ -999,45 +996,12 @@ export default function FormsManagementPage() {
                     }}
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-sm font-extrabold text-slate-900">{t('header.title')}</div>
-                        <div className="text-xs text-slate-500 mt-0.5">{t('header.desc')}</div>
+                      <div className="min-w-0  ">
+                        <div className="text-xl font-extrabold text-slate-900">{t('header.title')}</div>
+                        <div className="text-base text-slate-500 mt-1">{t('header.desc')}</div>
                       </div> 
                     </div>
-
-                    <div className="mt-4 relative">
-                      <FiSearch className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        value={query}
-                        onChange={e => setQuery(e.target.value)}
-                        placeholder={t('labels.search', { default: 'Search forms...' })}
-                        className="w-full h-11 rounded-2xl border pl-10 pr-10 text-sm outline-none transition-all"
-                        style={{
-                          borderColor: 'var(--color-primary-200)',
-                          backgroundColor: 'rgba(255,255,255,0.92)',
-                          boxShadow: '0 10px 24px rgba(15,23,42,0.06)',
-                        }}
-                        onFocus={e => {
-                          e.currentTarget.style.borderColor = 'var(--color-primary-300)';
-                        }}
-                        onBlur={e => {
-                          e.currentTarget.style.borderColor = 'var(--color-primary-200)';
-                        }}
-                      />
-                      {query?.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setQuery('')}
-                          className="absolute ltr:right-3 rtl:left-3 top-1/2 -translate-y-1/2 rounded-full p-1 transition-all"
-                          title={t('actions.clear', { default: 'Clear' })}
-                          style={{ color: 'var(--color-primary-700)' }}
-                          onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-primary-100)')}
-                          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                        >
-                          <FiX className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
+ 
                   </div>
 
                   {/* List */}

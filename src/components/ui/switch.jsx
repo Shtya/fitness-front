@@ -14,7 +14,6 @@ function useDocumentDir() {
 
 		setDir(getDir());
 
-		// لو اتجاه الصفحة ممكن يتغير ديناميكياً
 		const observer = new MutationObserver(() => setDir(getDir()));
 		observer.observe(document.documentElement, {
 			attributes: true,
@@ -38,11 +37,15 @@ function Switch({ className, ...props }) {
 			className={cn(
 				"peer inline-flex shrink-0 items-center rounded-full border border-transparent outline-none",
 				"h-6 w-11 p-[2px]",
-				"bg-input data-[state=checked]:bg-primary",
+				"bg-input data-[state=checked]:bg-[var(--color-primary-500)]",
+				// "bg-input data-[state=checked]:bg-primary",
 				"shadow-sm transition-colors",
 				"focus-visible:ring-4 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50",
 				className
 			)}
+			// style={{
+			// 	backgroundColor: "var(--color-primary-200)",
+			// }}
 			{...props}
 		>
 			<SwitchPrimitive.Thumb
@@ -55,8 +58,13 @@ function Switch({ className, ...props }) {
 						: "data-[state=checked]:-translate-x-[18px] data-[state=unchecked]:translate-x-[1px]"
 				)}
 			/>
+
+			
 		</SwitchPrimitive.Root>
 	);
 }
 
 export { Switch };
+
+
+ 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
 	Plus,
 	X,
@@ -32,20 +32,28 @@ import {
 	Settings,
 	Circle,
 	CreditCard,
-	Banknote,
 	CalendarDays,
 	ListTodo,
 	Grid3x3,
 	List,
-	Palette,
 	Sparkles,
 	TrendingUp,
 	MapPin,
 	FileText,
+	ChevronDown,
 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import flatpickr from 'flatpickr';
+import 'flatpickr/dist/flatpickr.min.css';
+
+// Import shadcn components
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 // Sound effects
 const playSound = (type, soundEnabled) => {
@@ -72,49 +80,49 @@ const playSound = (type, soundEnabled) => {
 
 // Default Event Types
 const defaultEventTypes = [
-	{ id: 'habit', label: 'Habit', color: '#6366f1', icon: 'Repeat', bgColor: 'bg-indigo-50', textColor: 'text-indigo-700', isDefault: true },
-	{ id: 'event', label: 'Event', color: '#8b5cf6', icon: 'CalendarDays', bgColor: 'bg-purple-50', textColor: 'text-purple-700', isDefault: true },
-	{ id: 'billing', label: 'Billing', color: '#10b981', icon: 'CreditCard', bgColor: 'bg-emerald-50', textColor: 'text-emerald-700', isDefault: true },
-	{ id: 'reminder', label: 'Reminder', color: '#f59e0b', icon: 'Bell', bgColor: 'bg-amber-50', textColor: 'text-amber-700', isDefault: true },
+	{ id: 'habit', label: 'habit', color: 'var(--color-primary-600)', icon: 'Repeat', bgColor: 'bg-indigo-50', textColor: 'text-indigo-700', isDefault: true },
+	{ id: 'event', label: 'event', color: 'var(--color-secondary-600)', icon: 'CalendarDays', bgColor: 'bg-purple-50', textColor: 'text-purple-700', isDefault: true },
+	{ id: 'billing', label: 'billing', color: '#10b981', icon: 'CreditCard', bgColor: 'bg-emerald-50', textColor: 'text-emerald-700', isDefault: true },
+	{ id: 'reminder', label: 'reminder', color: '#f59e0b', icon: 'Bell', bgColor: 'bg-amber-50', textColor: 'text-amber-700', isDefault: true },
 ];
 
-// Habit icons mapping
+// Icons mapping
 const iconComponents = {
 	Repeat, CalendarDays, CreditCard, Bell, Flame, Coffee, Dumbbell, Book, 
 	Briefcase, ShoppingCart, Users, Star, Target, Zap, Heart, Sparkles, 
 	TrendingUp, MapPin, FileText, Circle
 };
 
-// Available icons for selection
+// Available icons
 const availableIcons = [
-	{ id: 'Repeat', label: 'Repeat', icon: Repeat },
-	{ id: 'Flame', label: 'Flame', icon: Flame },
-	{ id: 'Coffee', label: 'Coffee', icon: Coffee },
-	{ id: 'Dumbbell', label: 'Exercise', icon: Dumbbell },
-	{ id: 'Book', label: 'Book', icon: Book },
-	{ id: 'Heart', label: 'Health', icon: Heart },
-	{ id: 'Target', label: 'Target', icon: Target },
-	{ id: 'Zap', label: 'Energy', icon: Zap },
-	{ id: 'Star', label: 'Star', icon: Star },
-	{ id: 'Briefcase', label: 'Work', icon: Briefcase },
-	{ id: 'ShoppingCart', label: 'Shopping', icon: ShoppingCart },
-	{ id: 'Users', label: 'People', icon: Users },
-	{ id: 'CalendarDays', label: 'Calendar', icon: CalendarDays },
-	{ id: 'Bell', label: 'Bell', icon: Bell },
-	{ id: 'CreditCard', label: 'Payment', icon: CreditCard },
-	{ id: 'Sparkles', label: 'Sparkles', icon: Sparkles },
+	{ id: 'Repeat', icon: Repeat },
+	{ id: 'Flame', icon: Flame },
+	{ id: 'Coffee', icon: Coffee },
+	{ id: 'Dumbbell', icon: Dumbbell },
+	{ id: 'Book', icon: Book },
+	{ id: 'Heart', icon: Heart },
+	{ id: 'Target', icon: Target },
+	{ id: 'Zap', icon: Zap },
+	{ id: 'Star', icon: Star },
+	{ id: 'Briefcase', icon: Briefcase },
+	{ id: 'ShoppingCart', icon: ShoppingCart },
+	{ id: 'Users', icon: Users },
+	{ id: 'CalendarDays', icon: CalendarDays },
+	{ id: 'Bell', icon: Bell },
+	{ id: 'CreditCard', icon: CreditCard },
+	{ id: 'Sparkles', icon: Sparkles },
 ];
 
 // Repeat frequencies
 const frequencies = [
-	{ id: 'once', label: 'Once (One-time)', days: null },
-	{ id: 'daily', label: 'Every day', days: 1 },
-	{ id: 'every-2-days', label: 'Every 2 days', days: 2 },
-	{ id: 'every-3-days', label: 'Every 3 days', days: 3 },
-	{ id: 'weekly', label: 'Weekly', days: 7 },
-	{ id: 'bi-weekly', label: 'Every 2 weeks', days: 14 },
-	{ id: 'monthly', label: 'Monthly', days: 30 },
-	{ id: 'custom', label: 'Custom...', days: null },
+	{ id: 'once', label: 'once' },
+	{ id: 'daily', label: 'daily', days: 1 },
+	{ id: 'every-2-days', label: 'every2days', days: 2 },
+	{ id: 'every-3-days', label: 'every3days', days: 3 },
+	{ id: 'weekly', label: 'weekly', days: 7 },
+	{ id: 'bi-weekly', label: 'biweekly', days: 14 },
+	{ id: 'monthly', label: 'monthly', days: 30 },
+	{ id: 'custom', label: 'custom' },
 ];
 
 // Helper functions
@@ -152,10 +160,12 @@ const shouldShowOnDate = (item, date) => {
 // Main Calendar Component
 export default function CalendarTab() {
 	const t = useTranslations('calendar');
+	const locale = useLocale();
+	const isRTL = locale === 'ar';
 	const today = new Date();
 	
 	const [currentDate, setCurrentDate] = useState(today);
-	const [selectedDate, setSelectedDate] = useState(today);
+	const [selectedDate, setSelectedDate] = useState(null);
 	const [soundEnabled, setSoundEnabled] = useState(true);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	const [selectedType, setSelectedType] = useState('all');
@@ -163,25 +173,22 @@ export default function CalendarTab() {
 	const [showAddTypeForm, setShowAddTypeForm] = useState(false);
 	const [selectedItem, setSelectedItem] = useState(null);
 	const [searchTerm, setSearchTerm] = useState('');
-	const [viewMode, setViewMode] = useState('month'); // 'month' or 'list'
-	const [showDaySidebar, setShowDaySidebar] = useState(true);
+	const [viewMode, setViewMode] = useState('month');
+	const [showDaySidebar, setShowDaySidebar] = useState(false);
 
-	// Event types state
 	const [eventTypes, setEventTypes] = useState(defaultEventTypes);
 
-	// Items state
 	const [items, setItems] = useState([
 		{
 			id: '1',
 			type: 'habit',
 			title: 'Morning Workout',
-			description: '30 minutes cardio and stretching',
 			startDate: '2024-02-01',
 			time: '06:00',
 			frequency: 'daily',
 			customDays: null,
 			icon: 'Dumbbell',
-			color: '#6366f1',
+			color: 'var(--color-primary-600)',
 			reminder: true,
 			reminderBefore: 15,
 			streak: 12,
@@ -192,7 +199,6 @@ export default function CalendarTab() {
 			id: '2',
 			type: 'billing',
 			title: 'Netflix Subscription',
-			description: 'Monthly subscription payment',
 			startDate: '2024-02-15',
 			time: '12:00',
 			frequency: 'monthly',
@@ -210,13 +216,12 @@ export default function CalendarTab() {
 			id: '3',
 			type: 'habit',
 			title: 'Read Book',
-			description: 'Read for 30 minutes',
 			startDate: '2024-02-01',
 			time: '21:00',
 			frequency: 'every-2-days',
 			customDays: null,
 			icon: 'Book',
-			color: '#8b5cf6',
+			color: 'var(--color-secondary-600)',
 			reminder: true,
 			reminderBefore: 30,
 			streak: 8,
@@ -225,12 +230,10 @@ export default function CalendarTab() {
 		},
 	]);
 
-	// Get items for date
 	const getItemsForDate = (date) => {
 		return items.filter(item => shouldShowOnDate(item, date));
 	};
 
-	// Get items for month
 	const getItemsForMonth = () => {
 		const year = currentDate.getFullYear();
 		const month = currentDate.getMonth();
@@ -247,7 +250,6 @@ export default function CalendarTab() {
 		return monthItems;
 	};
 
-	// Toggle completion
 	const handleToggleComplete = (itemId, date) => {
 		const dateStr = formatDate(date);
 		playSound('check', soundEnabled);
@@ -267,13 +269,11 @@ export default function CalendarTab() {
 		}));
 	};
 
-	// Add new item
 	const handleAddItem = (newItem) => {
 		setItems([...items, { ...newItem, id: Date.now().toString(), completed: {}, streak: 0 }]);
 		setShowAddForm(false);
 	};
 
-	// Update item
 	const handleUpdateItem = (itemId, updates) => {
 		setItems(items.map(item => item.id === itemId ? { ...item, ...updates } : item));
 		if (selectedItem?.id === itemId) {
@@ -281,30 +281,26 @@ export default function CalendarTab() {
 		}
 	};
 
-	// Delete item
 	const handleDeleteItem = (itemId) => {
 		setItems(items.filter(item => item.id !== itemId));
 		if (selectedItem?.id === itemId) {
 			setSelectedItem(null);
 		}
+		setShowDaySidebar(false);
 	};
 
-	// Add new event type
 	const handleAddEventType = (newType) => {
 		setEventTypes([...eventTypes, { ...newType, id: Date.now().toString(), isDefault: false }]);
 		setShowAddTypeForm(false);
 	};
 
-	// Delete event type
 	const handleDeleteEventType = (typeId) => {
-		// Move items of this type to 'event'
 		setItems(items.map(item => 
 			item.type === typeId ? { ...item, type: 'event' } : item
 		));
 		setEventTypes(eventTypes.filter(t => t.id !== typeId));
 	};
 
-	// Navigation
 	const goToPreviousMonth = () => {
 		setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
 	};
@@ -316,17 +312,21 @@ export default function CalendarTab() {
 	const goToToday = () => {
 		setCurrentDate(new Date());
 		setSelectedDate(new Date());
+		setShowDaySidebar(true);
+	};
+
+	const handleDateClick = (date) => {
+		setSelectedDate(date);
+		setShowDaySidebar(true);
 	};
 
 	const monthItems = getItemsForMonth();
-	const selectedDateItems = getItemsForDate(selectedDate);
+	const selectedDateItems = selectedDate ? getItemsForDate(selectedDate) : [];
 
-	// Stats
 	const totalItems = items.length;
 	const todayItems = getItemsForDate(today);
 	const todayCompleted = todayItems.filter(i => i.completed[formatDate(today)]).length;
 
-	// Filtered items for list view
 	const getFilteredItems = () => {
 		let filtered = items;
 		
@@ -336,8 +336,7 @@ export default function CalendarTab() {
 		
 		if (searchTerm) {
 			filtered = filtered.filter(i =>
-				i.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				i.description?.toLowerCase().includes(searchTerm.toLowerCase())
+				i.title.toLowerCase().includes(searchTerm.toLowerCase())
 			);
 		}
 		
@@ -345,25 +344,24 @@ export default function CalendarTab() {
 	};
 
 	return (
-		<div className="flex h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 overflow-hidden">
+		<div className="flex h-screen bg-gradient-to-br from-gray-50 via-white to-[var(--color-primary-50)] overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
 			{/* Left Sidebar */}
 			<div 
-				className={`bg-white border-r border-gray-200 transition-all duration-300 flex-shrink-0 ${
+				className={`bg-white border-${isRTL ? 'l' : 'r'}-2 border-gray-100 transition-all duration-300 flex-shrink-0 ${
 					sidebarCollapsed ? 'w-20' : 'w-80'
 				}`}
 			>
 				<div className="h-full flex flex-col">
-					{/* Header */}
-					<div className="p-6 border-b border-gray-200">
+					<div className="p-6 border-b-2 border-gray-100">
 						<div className="flex items-center justify-between mb-6">
 							{!sidebarCollapsed && (
-								<h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary-600 bg-clip-text text-transparent">
-									{t ? t('title') : 'Calendar'}
+								<h1 className="text-3xl font-black bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] bg-clip-text text-transparent">
+									{t('title')}
 								</h1>
 							)}
 							<button
 								onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-								className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+								className="p-2.5 hover:bg-gray-100 rounded-xl transition-all hover:scale-110"
 							>
 								<Menu className="w-5 h-5 text-gray-600" />
 							</button>
@@ -373,52 +371,51 @@ export default function CalendarTab() {
 							<div className="flex items-center gap-2">
 								<button
 									onClick={() => setSoundEnabled(!soundEnabled)}
-									className={`p-2.5 rounded-lg transition-all flex-1 ${
+									className={`p-3 rounded-xl transition-all flex-1 font-bold text-sm shadow-sm ${
 										soundEnabled
-											? 'bg-gradient-to-r from-primary to-secondary-600 text-white shadow-md'
+											? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white'
 											: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
 									}`}
 								>
 									{soundEnabled ? <Volume2 className="w-4 h-4 mx-auto" /> : <VolumeX className="w-4 h-4 mx-auto" />}
 								</button>
-								<button className="p-2.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex-1">
+								<button className="p-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all flex-1 shadow-sm">
 									<Settings className="w-4 h-4 text-gray-600 mx-auto" />
 								</button>
 							</div>
 						)}
 					</div>
 
-					{/* Filter Types */}
 					<div className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-thin">
 						<div className="mb-6">
 							{!sidebarCollapsed && (
 								<div className="flex items-center justify-between mb-3 px-3">
-									<h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-										{t ? t('types') : 'Types'}
+									<h3 className="text-xs font-black text-gray-500 uppercase tracking-wider">
+										{t('types')}
 									</h3>
 									<button
 										onClick={() => setShowAddTypeForm(true)}
-										className="p-1 hover:bg-primary/10 rounded-lg transition-colors"
-										title="Add Type"
+										className="p-2 hover:bg-[var(--color-primary-100)] rounded-xl transition-all hover:scale-110"
+										title={t('addType')}
 									>
-										<Plus className="w-4 h-4 text-primary" />
+										<Plus className="w-4 h-4 text-[var(--color-primary-600)]" />
 									</button>
 								</div>
 							)}
 							
 							<button
 								onClick={() => setSelectedType('all')}
-								className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+								className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all mb-1 ${
 									selectedType === 'all'
-										? 'bg-gradient-to-r from-primary to-secondary-600 text-white shadow-lg scale-[1.02]'
+										? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-lg scale-[1.02]'
 										: 'hover:bg-gray-50 text-gray-700'
 								}`}
 							>
 								<ListTodo className="w-5 h-5 flex-shrink-0" />
 								{!sidebarCollapsed && (
 									<>
-										<span className="flex-1 text-left font-semibold text-sm">{t ? t('all') : 'All'}</span>
-										<span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+										<span className="flex-1 text-left font-bold text-sm">{t('all')}</span>
+										<span className={`px-2.5 py-1 rounded-lg text-xs font-black ${
 											selectedType === 'all'
 												? 'bg-white/20 text-white'
 												: 'bg-gray-100 text-gray-700'
@@ -434,12 +431,12 @@ export default function CalendarTab() {
 								const count = items.filter(i => i.type === type.id).length;
 
 								return (
-									<div key={type.id} className="relative group/type">
+									<div key={type.id} className="relative group/type mb-1">
 										<button
 											onClick={() => setSelectedType(type.id)}
-											className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+											className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all ${
 												selectedType === type.id
-													? 'bg-gradient-to-r from-primary to-secondary-600 text-white shadow-lg scale-[1.02]'
+													? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-lg scale-[1.02]'
 													: 'hover:bg-gray-50 text-gray-700'
 											}`}
 										>
@@ -449,9 +446,9 @@ export default function CalendarTab() {
 											/>
 											{!sidebarCollapsed && (
 												<>
-													<span className="flex-1 text-left font-semibold text-sm">{type.label}</span>
+													<span className="flex-1 text-left font-bold text-sm">{t(`types.${type.label}`)}</span>
 													{count > 0 && (
-														<span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+														<span className={`px-2.5 py-1 rounded-lg text-xs font-black ${
 															selectedType === type.id
 																? 'bg-white/20 text-white'
 																: 'bg-gray-100 text-gray-700'
@@ -467,11 +464,11 @@ export default function CalendarTab() {
 											<button
 												onClick={(e) => {
 													e.stopPropagation();
-													if (confirm('Delete this type? All items will be moved to Events.')) {
+													if (confirm(t('confirmDeleteType'))) {
 														handleDeleteEventType(type.id);
 													}
 												}}
-												className="absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/type:opacity-100 p-1.5 bg-red-500 hover:bg-red-600 rounded-lg transition-all shadow-lg"
+												className={`absolute ${isRTL ? 'left-2' : 'right-2'} top-1/2 -translate-y-1/2 opacity-0 group-hover/type:opacity-100 p-2 bg-red-500 hover:bg-red-600 rounded-xl transition-all shadow-lg hover:scale-110`}
 											>
 												<Trash2 className="w-3.5 h-3.5 text-white" />
 											</button>
@@ -482,29 +479,28 @@ export default function CalendarTab() {
 						</div>
 					</div>
 
-					{/* Stats */}
 					{!sidebarCollapsed && (
-						<div className="p-4 border-t border-gray-200 bg-gradient-to-br from-primary/5 to-secondary-600/5">
-							<div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm mb-3">
-								<div className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary-600 bg-clip-text text-transparent">
+						<div className="p-5 border-t-2 border-gray-100 bg-gradient-to-br from-[var(--color-primary-50)] to-white">
+							<div className="bg-white rounded-2xl p-5 border-2 border-gray-100 shadow-sm mb-3">
+								<div className="text-4xl font-black bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] bg-clip-text text-transparent">
 									{totalItems}
 								</div>
-								<div className="text-xs text-gray-600 font-medium mt-1">{t ? t('totalItems') : 'Total Items'}</div>
+								<div className="text-xs text-gray-600 font-bold mt-1.5">{t('totalItems')}</div>
 							</div>
 							
 							{todayItems.length > 0 && (
-								<div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-									<div className="text-sm font-bold text-gray-700 mb-2">
-										{t ? t('todayProgress') : 'Today'}
+								<div className="bg-white rounded-2xl p-5 border-2 border-gray-100 shadow-sm">
+									<div className="text-sm font-black text-gray-700 mb-3">
+										{t('todayProgress')}
 									</div>
-									<div className="flex items-center gap-2">
-										<div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+									<div className="flex items-center gap-3">
+										<div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
 											<div 
-												className="h-full bg-gradient-to-r from-primary to-secondary-600 transition-all"
+												className="h-full bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] transition-all duration-500"
 												style={{ width: `${(todayCompleted / todayItems.length) * 100}%` }}
 											/>
 										</div>
-										<span className="text-xs font-bold text-gray-600">
+										<span className="text-xs font-black text-gray-600">
 											{todayCompleted}/{todayItems.length}
 										</span>
 									</div>
@@ -517,49 +513,47 @@ export default function CalendarTab() {
 
 			{/* Main Content */}
 			<div className="flex-1 flex flex-col overflow-hidden">
-				{/* Header */}
-				<div className="bg-white border-b border-gray-200 p-6 shadow-sm">
-					<div className="flex items-center justify-between mb-5">
+				<div className="bg-white border-b-2 border-gray-100 p-6 shadow-sm">
+					<div className="flex items-center justify-between mb-6">
 						<div className="flex items-center gap-4">
 							<button
 								onClick={goToPreviousMonth}
-								className="p-2.5 hover:bg-gray-100 rounded-lg transition-colors"
+								className="p-3 hover:bg-gray-100 rounded-xl transition-all hover:scale-110"
 							>
-								<ChevronLeft className="w-5 h-5 text-gray-600" />
+								{isRTL ? <ChevronRight className="w-5 h-5 text-gray-600" /> : <ChevronLeft className="w-5 h-5 text-gray-600" />}
 							</button>
 							
-							<div className="text-center min-w-[220px]">
-								<h2 className="text-3xl font-bold text-gray-900">
-									{currentDate.toLocaleDateString('en-US', { month: 'long' })}
+							<div className="text-center min-w-[240px]">
+								<h2 className="text-4xl font-black text-gray-900">
+									{currentDate.toLocaleDateString(locale, { month: 'long' })}
 								</h2>
-								<p className="text-sm text-gray-600 mt-1">
-									{currentDate.toLocaleDateString('en-US', { year: 'numeric' })}
+								<p className="text-sm text-gray-600 mt-2 font-semibold">
+									{currentDate.toLocaleDateString(locale, { year: 'numeric' })}
 								</p>
 							</div>
 							
 							<button
 								onClick={goToNextMonth}
-								className="p-2.5 hover:bg-gray-100 rounded-lg transition-colors"
+								className="p-3 hover:bg-gray-100 rounded-xl transition-all hover:scale-110"
 							>
-								<ChevronRight className="w-5 h-5 text-gray-600" />
+								{isRTL ? <ChevronLeft className="w-5 h-5 text-gray-600" /> : <ChevronRight className="w-5 h-5 text-gray-600" />}
 							</button>
 							
-							<button
+							<Button
 								onClick={goToToday}
-								className="px-5 py-2.5 bg-gradient-to-r from-primary to-secondary-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all text-sm"
+								className="bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white font-black hover:shadow-xl"
 							>
-								{t ? t('today') : 'Today'}
-							</button>
+								{t('today')}
+							</Button>
 						</div>
 						
 						<div className="flex items-center gap-3">
-							{/* View Mode Toggle */}
-							<div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+							<div className="flex items-center gap-1.5 bg-gray-100 rounded-xl p-1.5 shadow-sm">
 								<button
 									onClick={() => setViewMode('month')}
-									className={`p-2 rounded-md transition-all ${
+									className={`p-2.5 rounded-lg transition-all ${
 										viewMode === 'month'
-											? 'bg-white text-primary shadow-sm'
+											? 'bg-white text-[var(--color-primary-600)] shadow-sm'
 											: 'text-gray-600 hover:text-gray-900'
 									}`}
 								>
@@ -567,9 +561,9 @@ export default function CalendarTab() {
 								</button>
 								<button
 									onClick={() => setViewMode('list')}
-									className={`p-2 rounded-md transition-all ${
+									className={`p-2.5 rounded-lg transition-all ${
 										viewMode === 'list'
-											? 'bg-white text-primary shadow-sm'
+											? 'bg-white text-[var(--color-primary-600)] shadow-sm'
 											: 'text-gray-600 hover:text-gray-900'
 									}`}
 								>
@@ -577,105 +571,102 @@ export default function CalendarTab() {
 								</button>
 							</div>
 
-							<button
+							<Button
 								onClick={() => setShowAddForm(true)}
-								className="px-5 py-2.5 bg-gradient-to-r from-primary to-secondary-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center gap-2"
+								className="bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white font-black hover:shadow-xl"
 							>
-								<Plus className="w-5 h-5" />
-								{t ? t('addNew') : 'Add New'}
-							</button>
+								<Plus className="w-5 h-5 mr-2" />
+								{t('addNew')}
+							</Button>
 						</div>
 					</div>
-
-					{/* Search */}
-					<div className="relative">
-						<Search className="absolute ltr:left-4 rtl:right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-						<input
-							type="text"
-							value={searchTerm}
-							onChange={(e) => setSearchTerm(e.target.value)}
-							placeholder={t ? t('searchPlaceholder') : "Search events, habits, billings..."}
-							className="w-full ltr:pl-12 rtl:pr-12 ltr:pr-4 rtl:pl-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-						/>
-					</div>
+ 
 				</div>
 
-				{/* Content Area */}
-				<div className="flex-1 overflow-y-auto p-6">
+				<div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
 					{viewMode === 'month' ? (
 						<CalendarGrid
 							currentDate={currentDate}
 							selectedDate={selectedDate}
-							onSelectDate={setSelectedDate}
+							onSelectDate={handleDateClick}
 							monthItems={monthItems}
 							selectedType={selectedType}
 							onToggleComplete={handleToggleComplete}
 							eventTypes={eventTypes}
+							locale={locale}
+							t={t}
 						/>
 					) : (
 						<ListView
 							items={getFilteredItems()}
 							onToggleComplete={(itemId) => handleToggleComplete(itemId, new Date())}
-							onSelectItem={setSelectedItem}
+							onSelectItem={(item) => {
+								setSelectedItem(item);
+								setSelectedDate(new Date(item.startDate));
+								setShowDaySidebar(true);
+							}}
 							onDeleteItem={handleDeleteItem}
 							eventTypes={eventTypes}
+							locale={locale}
 							t={t}
 						/>
 					)}
 				</div>
 			</div>
 
-			{/* Right Sidebar - Always Visible */}
-			{showDaySidebar && (
-				<DayView
-					date={selectedDate}
-					items={selectedDateItems}
-					onToggleComplete={handleToggleComplete}
-					onSelectItem={setSelectedItem}
-					onDeleteItem={handleDeleteItem}
-					onClose={() => setShowDaySidebar(false)}
-					soundEnabled={soundEnabled}
-					eventTypes={eventTypes}
-					t={t}
-				/>
+			{/* Day Sidebar with blur overlay */}
+			{showDaySidebar && selectedDate && (
+				<>
+					{/* Blur Overlay */}
+					<div 
+						className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-300"
+						onClick={() => setShowDaySidebar(false)}
+					/>
+					
+					{/* Sidebar */}
+					<DayView
+						date={selectedDate}
+						items={selectedDateItems}
+						onToggleComplete={handleToggleComplete}
+						onSelectItem={setSelectedItem}
+						onDeleteItem={handleDeleteItem}
+						onClose={() => setShowDaySidebar(false)}
+						soundEnabled={soundEnabled}
+						eventTypes={eventTypes}
+						isRTL={isRTL}
+						locale={locale}
+						t={t}
+					/>
+				</>
 			)}
 
-			{/* Floating button to show sidebar if hidden */}
-			{!showDaySidebar && (
-				<button
-					onClick={() => setShowDaySidebar(true)}
-					className="fixed ltr:right-6 rtl:left-6 bottom-6 p-4 bg-gradient-to-r from-primary to-secondary-600 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all hover:scale-110"
-				>
-					<CalendarDays className="w-6 h-6" />
-				</button>
-			)}
-
-			{/* Add/Edit Form Modal */}
 			{showAddForm && (
 				<AddEditForm
+					open={showAddForm}
 					onClose={() => setShowAddForm(false)}
 					onSave={handleAddItem}
 					eventTypes={eventTypes}
 					t={t}
+					locale={locale}
 				/>
 			)}
 
-			{/* Add Type Form */}
 			{showAddTypeForm && (
 				<AddTypeForm
+					open={showAddTypeForm}
 					onClose={() => setShowAddTypeForm(false)}
 					onSave={handleAddEventType}
 					t={t}
 				/>
 			)}
 
-			{/* Item Detail Panel */}
 			{selectedItem && (
-				<ItemDetailPanel
+				<ItemDetailDialog
+					open={!!selectedItem}
 					item={selectedItem}
+					onClose={() => setSelectedItem(null)}
 					onUpdate={handleUpdateItem}
 					onDelete={handleDeleteItem}
-					onClose={() => setSelectedItem(null)}
 					eventTypes={eventTypes}
 					t={t}
 				/>
@@ -685,21 +676,19 @@ export default function CalendarTab() {
 }
 
 // Calendar Grid Component
-function CalendarGrid({ currentDate, selectedDate, onSelectDate, monthItems, selectedType, onToggleComplete, eventTypes }) {
+function CalendarGrid({ currentDate, selectedDate, onSelectDate, monthItems, selectedType, onToggleComplete, eventTypes, locale, t }) {
 	const year = currentDate.getFullYear();
 	const month = currentDate.getMonth();
 	const daysInMonth = getDaysInMonth(year, month);
 	const firstDay = getFirstDayOfMonth(year, month);
 	
 	const days = [];
-	const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	const dayNames = t('dayNames').split(',');
 	
-	// Empty cells
 	for (let i = 0; i < firstDay; i++) {
-		days.push(<div key={`empty-${i}`} className="min-h-[140px] bg-gray-50/30 rounded-lg" />);
+		days.push(<div key={`empty-${i}`} className="min-h-[140px] bg-gray-50/50 rounded-2xl border-2 border-transparent" />);
 	}
 	
-	// Days
 	for (let day = 1; day <= daysInMonth; day++) {
 		const date = new Date(year, month, day);
 		const dateStr = formatDate(date);
@@ -707,27 +696,27 @@ function CalendarGrid({ currentDate, selectedDate, onSelectDate, monthItems, sel
 		const filteredItems = selectedType === 'all' ? dayItems : dayItems.filter(i => i.type === selectedType);
 		
 		const isToday = formatDate(new Date()) === dateStr;
-		const isSelected = formatDate(selectedDate) === dateStr;
+		const isSelected = selectedDate && formatDate(selectedDate) === dateStr;
 		
 		days.push(
 			<div
 				key={day}
 				onClick={() => onSelectDate(date)}
-				className={`min-h-[140px] border-2 rounded-xl p-3 cursor-pointer transition-all hover:shadow-lg ${
+				className={`min-h-[140px] border-2 rounded-2xl p-4 cursor-pointer transition-all duration-200 ${
 					isSelected 
-						? 'border-primary bg-primary/5 shadow-xl ring-4 ring-primary/10' 
+						? 'border-[var(--color-gradient-from)] bg-gradient-to-br from-[var(--color-primary-50)] to-white shadow-2xl ring-4 ring-[var(--color-primary-100)] scale-[1.03]' 
 						: isToday 
-						? 'border-primary/40 bg-primary/5' 
-						: 'border-gray-200 hover:border-gray-300 bg-white'
+						? 'border-[var(--color-primary-400)] bg-gradient-to-br from-[var(--color-primary-50)] to-white shadow-lg hover:shadow-xl' 
+						: 'border-gray-200 bg-white hover:border-[var(--color-primary-300)] hover:shadow-lg hover:scale-[1.01]'
 				}`}
 			>
-				<div className={`text-sm font-bold mb-2 ${
-					isToday ? 'text-primary' : 'text-gray-700'
+				<div className={`text-base font-black mb-3 flex items-center justify-between ${
+					isToday ? 'text-[var(--color-primary-600)]' : 'text-gray-700'
 				}`}>
-					{day}
+					<span className="text-lg">{day}</span>
 					{isToday && (
-						<span className="ltr:ml-2 rtl:mr-2 text-xs px-2 py-0.5 bg-primary text-white rounded-full">
-							Today
+						<span className="text-[10px] px-2 py-0.5 bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white rounded-full font-black shadow-sm">
+							{t('today')}
 						</span>
 					)}
 				</div>
@@ -745,20 +734,20 @@ function CalendarGrid({ currentDate, selectedDate, onSelectDate, monthItems, sel
 									e.stopPropagation();
 									onToggleComplete(item.id, date);
 								}}
-								className={`text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 hover:scale-105 transition-transform cursor-pointer ${
-									isCompleted ? 'opacity-50 line-through' : ''
-								} ${type?.bgColor || 'bg-gray-100'}`}
-								style={{ borderLeft: `3px solid ${item.color}` }}
+								className={`text-[11px] px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer border-l-[3px] ${
+									isCompleted ? 'opacity-50 line-through' : 'hover:scale-[1.02]'
+								} ${type?.bgColor || 'bg-gray-100'} shadow-sm hover:shadow-md`}
+								style={{ borderLeftColor: item.color }}
 							>
 								{isCompleted && <Check className="w-3 h-3 text-green-600 flex-shrink-0" />}
 								<Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: item.color }} />
-								<span className="truncate font-semibold flex-1">{item.title}</span>
+								<span className="truncate font-bold flex-1">{item.title}</span>
 							</div>
 						);
 					})}
 					{filteredItems.length > 3 && (
-						<div className="text-xs text-gray-500 font-semibold px-2.5">
-							+{filteredItems.length - 3} more
+						<div className="text-[10px] text-gray-600 font-black px-2.5 py-1 bg-gray-100 rounded-lg inline-block">
+							+{filteredItems.length - 3} {t('more')}
 						</div>
 					)}
 				</div>
@@ -767,18 +756,16 @@ function CalendarGrid({ currentDate, selectedDate, onSelectDate, monthItems, sel
 	}
 	
 	return (
-		<div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-			{/* Day headers */}
-			<div className="grid grid-cols-7 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
+		<div className="bg-white rounded-3xl shadow-xl border-2 border-gray-100 overflow-hidden">
+			<div className="grid grid-cols-7 bg-gradient-to-r from-gray-50 to-white border-b-2 border-gray-100">
 				{dayNames.map((name) => (
-					<div key={name} className="p-4 text-center font-bold text-gray-700">
+					<div key={name} className="p-4 text-center font-black text-gray-700 text-sm">
 						{name}
 					</div>
 				))}
 			</div>
 			
-			{/* Calendar days */}
-			<div className="grid grid-cols-7 gap-2 p-2 bg-gray-50">
+			<div className="grid grid-cols-7 gap-2 p-2 bg-gradient-to-br from-gray-50 to-white">
 				{days}
 			</div>
 		</div>
@@ -786,19 +773,21 @@ function CalendarGrid({ currentDate, selectedDate, onSelectDate, monthItems, sel
 }
 
 // List View Component
-function ListView({ items, onToggleComplete, onSelectItem, onDeleteItem, eventTypes, t }) {
+function ListView({ items, onToggleComplete, onSelectItem, onDeleteItem, eventTypes, locale, t }) {
 	if (items.length === 0) {
 		return (
 			<div className="text-center py-20">
-				<CalendarIcon className="w-20 h-20 mx-auto text-gray-300 mb-4" />
-				<h3 className="text-xl font-bold text-gray-900 mb-2">No items found</h3>
-				<p className="text-gray-600">Try adjusting your filters or add a new item</p>
+				<div className="w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-secondary-100)] flex items-center justify-center shadow-lg">
+					<CalendarIcon className="w-16 h-16 text-[var(--color-primary-600)]" />
+				</div>
+				<h3 className="text-3xl font-black text-gray-900 mb-3">{t('noItemsFound')}</h3>
+				<p className="text-gray-600 text-lg font-semibold">{t('tryAdjustingFilters')}</p>
 			</div>
 		);
 	}
 
 	return (
-		<div className="space-y-3">
+		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 			{items.map((item) => {
 				const type = eventTypes.find(t => t.id === item.type);
 				const Icon = iconComponents[item.icon] || Circle;
@@ -806,74 +795,58 @@ function ListView({ items, onToggleComplete, onSelectItem, onDeleteItem, eventTy
 				return (
 					<div
 						key={item.id}
-						className="bg-white rounded-xl border-2 border-gray-200 hover:border-primary/30 transition-all p-5 group hover:shadow-lg"
+						onClick={() => onSelectItem(item)}
+						className="bg-white rounded-2xl border-2 border-gray-200 hover:border-[var(--color-primary-300)] transition-all p-5 cursor-pointer hover:shadow-xl hover:scale-[1.02] group"
 					>
-						<div className="flex items-start gap-4">
-							<Checkbox
-								checked={false}
-								onCheckedChange={() => onToggleComplete(item.id)}
-								className="data-[state=checked]:bg-primary data-[state=checked]:border-primary mt-1 flex-shrink-0"
-							/>
-
-							<div className="flex-1 min-w-0" onClick={() => onSelectItem(item)}>
-								<div className="flex items-center gap-3 mb-2">
-									<Icon className="w-5 h-5 flex-shrink-0" style={{ color: item.color }} />
-									<h4 className="font-bold text-gray-900 cursor-pointer hover:text-primary transition-colors">
+						<div className="flex items-start justify-between mb-4">
+							<div className="flex items-center gap-3">
+								<div className="p-3 rounded-xl" style={{ backgroundColor: `${item.color}15` }}>
+									<Icon className="w-6 h-6" style={{ color: item.color }} />
+								</div>
+								<div>
+									<h4 className="font-black text-gray-900 text-lg mb-1">
 										{item.title}
 									</h4>
-								</div>
-								
-								{item.description && (
-									<p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.description}</p>
-								)}
-								
-								<div className="flex items-center gap-2 flex-wrap">
-									<span className={`px-3 py-1 rounded-lg text-xs font-semibold ${type?.bgColor} ${type?.textColor}`}>
-										{type?.label}
+									<span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${type?.bgColor} ${type?.textColor}`}>
+										{t(`types.${type?.label}`)}
 									</span>
-									
-									{item.startDate && (
-										<span className="flex items-center gap-1 text-xs text-gray-600">
-											<CalendarIcon className="w-3.5 h-3.5" />
-											{new Date(item.startDate).toLocaleDateString()}
-										</span>
-									)}
-									
-									{item.time && (
-										<span className="flex items-center gap-1 text-xs text-gray-600">
-											<Clock className="w-3.5 h-3.5" />
-											{item.time}
-										</span>
-									)}
-									
-									{item.frequency && item.frequency !== 'once' && (
-										<span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-md font-semibold">
-											<Repeat className="w-3.5 h-3.5" />
-											{frequencies.find(f => f.id === item.frequency)?.label || item.frequency}
-										</span>
-									)}
 								</div>
-							</div>
-
-							<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-								<button
-									onClick={() => onSelectItem(item)}
-									className="p-2 hover:bg-primary/10 rounded-lg transition-colors"
-								>
-									<Edit2 className="w-4 h-4 text-primary" />
-								</button>
-								<button
-									onClick={() => {
-										if (confirm('Delete this item?')) {
-											onDeleteItem(item.id);
-										}
-									}}
-									className="p-2 hover:bg-red-100 rounded-lg transition-colors"
-								>
-									<Trash2 className="w-4 h-4 text-red-600" />
-								</button>
 							</div>
 						</div>
+						
+						<div className="flex items-center gap-3 text-sm text-gray-600 font-semibold">
+							{item.startDate && (
+								<span className="flex items-center gap-1.5">
+									<CalendarIcon className="w-4 h-4" />
+									{new Date(item.startDate).toLocaleDateString(locale)}
+								</span>
+							)}
+							
+							{item.time && (
+								<span className="flex items-center gap-1.5">
+									<Clock className="w-4 h-4" />
+									{item.time}
+								</span>
+							)}
+						</div>
+
+						{item.type === 'habit' && item.streak > 0 && (
+							<div className="mt-3 flex items-center gap-2 px-3 py-2 bg-orange-50 rounded-lg">
+								<Flame className="w-4 h-4 text-orange-600" />
+								<span className="text-sm font-black text-orange-600">
+									{item.streak} {t('daysStreak')}
+								</span>
+							</div>
+						)}
+
+						{item.type === 'billing' && item.amount && (
+							<div className="mt-3 flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg">
+								<DollarSign className="w-4 h-4 text-green-600" />
+								<span className="text-sm font-black text-green-600">
+									{item.amount} {item.currency}
+								</span>
+							</div>
+						)}
 					</div>
 				);
 			})}
@@ -881,52 +854,54 @@ function ListView({ items, onToggleComplete, onSelectItem, onDeleteItem, eventTy
 	);
 }
 
-// Day View Component (Right Sidebar)
-function DayView({ date, items, onToggleComplete, onSelectItem, onDeleteItem, onClose, soundEnabled, eventTypes, t }) {
+// Day View Sidebar
+function DayView({ date, items, onToggleComplete, onSelectItem, onDeleteItem, onClose, soundEnabled, eventTypes, isRTL, locale, t }) {
 	const dateStr = formatDate(date);
 	const isToday = formatDate(new Date()) === dateStr;
 	
 	return (
-		<div className="w-[420px] bg-white border-l border-gray-200 flex flex-col h-screen overflow-hidden ltr:animate-slide-in-right rtl:animate-slide-in-left shadow-2xl">
-			{/* Header */}
-			<div className="p-6 border-b border-gray-200 bg-gradient-to-br from-primary/5 to-secondary-600/5 flex-shrink-0">
-				<div className="flex items-center justify-between mb-4">
+		<div 
+			className={`fixed ${isRTL ? 'left-0' : 'right-0'} top-0 h-screen w-[420px] bg-white border-${isRTL ? 'r' : 'l'}-2 border-gray-100 shadow-2xl z-50 overflow-y-auto scrollbar-thin animate-slide-in-${isRTL ? 'left' : 'right'}`}
+		>
+			<div className="sticky top-0 bg-gradient-to-br from-[var(--color-primary-50)] via-white to-[var(--color-secondary-50)] border-b-2 border-gray-100 p-6 z-10">
+				<div className="flex items-start justify-between mb-6">
 					<div>
-						<div className="text-sm font-semibold text-gray-600 mb-1">
-							{date.toLocaleDateString('en-US', { weekday: 'long' })}
+						<div className="text-sm font-bold text-gray-600 mb-2">
+							{date.toLocaleDateString(locale, { weekday: 'long' })}
 						</div>
-						<div className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary-600 bg-clip-text text-transparent">
-							{date.toLocaleDateString('en-US', { day: 'numeric' })}
+						<div className="text-6xl font-black bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] bg-clip-text text-transparent mb-2">
+							{date.toLocaleDateString(locale, { day: 'numeric' })}
 						</div>
-						<div className="text-sm text-gray-600 mt-1">
-							{date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+						<div className="text-sm text-gray-600 font-semibold">
+							{date.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
 						</div>
 					</div>
 					
-					<button
+					<Button
 						onClick={onClose}
-						className="p-2 hover:bg-white rounded-lg transition-colors"
+						variant="ghost"
+						size="icon"
+						className="rounded-xl"
 					>
-						<X className="w-5 h-5 text-gray-600" />
-					</button>
+						<X className="w-5 h-5" />
+					</Button>
 				</div>
 				
 				{isToday && (
-					<div className="px-4 py-2 bg-gradient-to-r from-primary to-secondary-600 text-white rounded-xl text-sm font-bold inline-block shadow-md">
-						{t ? t('today') : 'Today'}
+					<div className="px-5 py-2.5 bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white rounded-xl text-sm font-black inline-block shadow-md">
+						{t('today')}
 					</div>
 				)}
 			</div>
 
-			{/* Items List */}
-			<div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin">
+			<div className="p-5 space-y-3">
 				{items.length === 0 ? (
-					<div className="text-center py-20">
-						<div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary/20 to-secondary-600/20 flex items-center justify-center">
-							<CalendarIcon className="w-10 h-10 text-primary" />
+					<div className="text-center py-16">
+						<div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-secondary-100)] flex items-center justify-center shadow-lg">
+							<CalendarIcon className="w-12 h-12 text-[var(--color-primary-600)]" />
 						</div>
-						<p className="text-gray-600 font-medium">
-							{t ? t('noItems') : 'No items for this day'}
+						<p className="text-gray-600 font-bold text-lg">
+							{t('noItemsThisDay')}
 						</p>
 					</div>
 				) : (
@@ -938,11 +913,10 @@ function DayView({ date, items, onToggleComplete, onSelectItem, onDeleteItem, on
 							onToggle={() => onToggleComplete(item.id, date)}
 							onSelect={() => onSelectItem(item)}
 							onDelete={() => {
-								if (confirm(t ? t('confirmDelete') : 'Delete this item?')) {
+								if (confirm(t('confirmDelete'))) {
 									onDeleteItem(item.id);
 								}
 							}}
-							soundEnabled={soundEnabled}
 							eventTypes={eventTypes}
 							t={t}
 						/>
@@ -953,89 +927,95 @@ function DayView({ date, items, onToggleComplete, onSelectItem, onDeleteItem, on
 	);
 }
 
-// Day View Item Component
-function DayViewItem({ item, date, onToggle, onSelect, onDelete, soundEnabled, eventTypes, t }) {
+// Day View Item
+function DayViewItem({ item, date, onToggle, onSelect, onDelete, eventTypes, t }) {
 	const type = eventTypes.find(t => t.id === item.type);
 	const Icon = iconComponents[item.icon] || Circle;
 	const dateStr = formatDate(date);
 	const isCompleted = item.completed[dateStr];
 	
 	return (
-		<div className="bg-white rounded-xl border-2 border-gray-200 hover:border-primary/30 transition-all p-4 group hover:shadow-md">
-			<div className="flex items-start gap-3">
+		<div className="bg-white rounded-2xl border-2 border-gray-200 hover:border-[var(--color-primary-300)] transition-all p-5 group hover:shadow-xl">
+			<div className="flex items-start gap-4">
 				<Checkbox
 					checked={isCompleted}
 					onCheckedChange={onToggle}
-					className="data-[state=checked]:bg-primary data-[state=checked]:border-primary mt-1 flex-shrink-0"
+					className="mt-1"
 				/>
 
 				<div className="flex-1 min-w-0" onClick={onSelect}>
-					<div className="flex items-center gap-2 mb-1">
-						<Icon className="w-4 h-4 flex-shrink-0" style={{ color: item.color }} />
-						<h4 className={`font-bold text-gray-900 cursor-pointer hover:text-primary transition-colors text-sm ${
+					<div className="flex items-center gap-2.5 mb-3">
+						<div className="p-2.5 rounded-xl" style={{ backgroundColor: `${item.color}15` }}>
+							<Icon className="w-5 h-5" style={{ color: item.color }} />
+						</div>
+						<h4 className={`font-black text-gray-900 cursor-pointer hover:text-[var(--color-primary-600)] transition-colors text-base ${
 							isCompleted ? 'line-through opacity-60' : ''
 						}`}>
 							{item.title}
 						</h4>
 					</div>
 					
-					{item.description && (
-						<p className="text-sm text-gray-600 mb-2 line-clamp-1">{item.description}</p>
-					)}
-					
-					<div className="flex items-center gap-2 text-xs flex-wrap">
-						<span className={`px-2 py-1 rounded-md font-semibold ${type?.bgColor} ${type?.textColor}`}>
-							{type?.label}
+					<div className="flex items-center gap-2 flex-wrap mb-3">
+						<span className={`px-3 py-1.5 rounded-lg font-bold text-xs ${type?.bgColor} ${type?.textColor} shadow-sm`}>
+							{t(`types.${type?.label}`)}
 						</span>
 						
 						{item.time && (
-							<span className="flex items-center gap-1 text-gray-600">
-								<Clock className="w-3 h-3" />
+							<span className="flex items-center gap-1.5 text-xs text-gray-600 font-semibold px-3 py-1.5 bg-gray-100 rounded-lg">
+								<Clock className="w-3.5 h-3.5" />
 								{item.time}
 							</span>
 						)}
-						
-						{item.type === 'billing' && item.amount && (
-							<span className="flex items-center gap-1 text-green-700 font-bold">
-								<DollarSign className="w-3 h-3" />
-								{item.amount}
-							</span>
-						)}
-						
-						{item.type === 'habit' && item.streak > 0 && (
-							<span className="flex items-center gap-1 text-orange-600 font-bold">
-								<Flame className="w-3 h-3" />
-								{item.streak}
-							</span>
-						)}
 					</div>
+
+					{item.type === 'billing' && item.amount && (
+						<div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg mb-2">
+							<DollarSign className="w-4 h-4 text-green-600" />
+							<span className="text-sm font-black text-green-600">
+								{item.amount} {item.currency}
+							</span>
+						</div>
+					)}
+					
+					{item.type === 'habit' && item.streak > 0 && (
+						<div className="flex items-center gap-2 px-3 py-2 bg-orange-50 rounded-lg">
+							<Flame className="w-4 h-4 text-orange-600" />
+							<span className="text-sm font-black text-orange-600">
+								{item.streak} {t('daysStreak')}
+							</span>
+						</div>
+					)}
 				</div>
 
-				<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-					<button
+				<div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+					<Button
 						onClick={onSelect}
-						className="p-1.5 hover:bg-primary/10 rounded-lg transition-colors"
+						variant="ghost"
+						size="icon"
+						className="h-9 w-9"
 					>
-						<Edit2 className="w-4 h-4 text-primary" />
-					</button>
-					<button
+						<Edit2 className="w-4 h-4 text-[var(--color-primary-600)]" />
+					</Button>
+					<Button
 						onClick={onDelete}
-						className="p-1.5 hover:bg-red-100 rounded-lg transition-colors"
+						variant="ghost"
+						size="icon"
+						className="h-9 w-9"
 					>
 						<Trash2 className="w-4 h-4 text-red-600" />
-					</button>
+					</Button>
 				</div>
 			</div>
 		</div>
 	);
 }
 
-// Add Type Form Component
-function AddTypeForm({ onClose, onSave, t }) {
+// Add Type Form Dialog
+function AddTypeForm({ open, onClose, onSave, t }) {
 	const [formData, setFormData] = useState({
 		label: '',
 		icon: 'Circle',
-		color: '#6366f1',
+		color: 'var(--color-primary-600)',
 		bgColor: 'bg-indigo-50',
 		textColor: 'text-indigo-700',
 	});
@@ -1043,113 +1023,130 @@ function AddTypeForm({ onClose, onSave, t }) {
 	const handleSubmit = (e) => {
 		e.preventDefault();
 		if (!formData.label.trim()) return;
-		
 		onSave(formData);
+		setFormData({
+			label: '',
+			icon: 'Circle',
+			color: 'var(--color-primary-600)',
+			bgColor: 'bg-indigo-50',
+			textColor: 'text-indigo-700',
+		});
 	};
 
 	return (
-		<div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-			<div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-				<form onSubmit={handleSubmit}>
-					<div className="p-6 border-b border-gray-200">
-						<div className="flex items-center justify-between">
-							<h2 className="text-xl font-bold text-gray-900">Add New Type</h2>
-							<button type="button" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
-								<X className="w-5 h-5" />
-							</button>
+		<Dialog open={open} onOpenChange={onClose}>
+			<DialogContent className="sm:max-w-[500px]">
+				<DialogHeader>
+					<DialogTitle className="text-2xl font-black">{t('addNewType')}</DialogTitle>
+				</DialogHeader>
+				
+				<form onSubmit={handleSubmit} className="space-y-6 mt-4">
+					<div>
+						<Label className="text-sm font-black mb-3 block">{t('typeName')}</Label>
+						<Input
+							type="text"
+							value={formData.label}
+							onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+							placeholder={t('typeNamePlaceholder')}
+							required
+						/>
+					</div>
+
+					<div>
+						<Label className="text-sm font-black mb-3 block">{t('icon')}</Label>
+						<div className="grid grid-cols-6 gap-2">
+							{availableIcons.slice(0, 12).map((icon) => {
+								const Icon = icon.icon;
+								return (
+									<button
+										key={icon.id}
+										type="button"
+										onClick={() => setFormData({ ...formData, icon: icon.id })}
+										className={`p-3 rounded-xl transition-all ${
+											formData.icon === icon.id
+												? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-md scale-110'
+												: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+										}`}
+									>
+										<Icon className="w-5 h-5 mx-auto" />
+									</button>
+								);
+							})}
 						</div>
 					</div>
 
-					<div className="p-6 space-y-4">
-						<div>
-							<label className="text-sm font-bold text-gray-700 mb-2 block">Type Name</label>
+					<div>
+						<Label className="text-sm font-black mb-3 block">{t('color')}</Label>
+						<div className="flex items-center gap-3">
 							<input
-								type="text"
-								value={formData.label}
-								onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-								placeholder="e.g., Workout, Study, Meeting"
-								className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-								required
+								type="color"
+								value={formData.color}
+								onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+								className="w-16 h-16 rounded-xl cursor-pointer border-2 border-gray-200 shadow-sm"
 							/>
-						</div>
-
-						<div>
-							<label className="text-sm font-bold text-gray-700 mb-3 block">Icon</label>
-							<div className="grid grid-cols-6 gap-2">
-								{availableIcons.slice(0, 12).map((icon) => {
-									const Icon = icon.icon;
-									return (
-										<button
-											key={icon.id}
-											type="button"
-											onClick={() => setFormData({ ...formData, icon: icon.id })}
-											className={`p-3 rounded-lg transition-all ${
-												formData.icon === icon.id
-													? 'bg-gradient-to-r from-primary to-secondary-600 text-white shadow-md'
-													: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-											}`}
-										>
-											<Icon className="w-5 h-5 mx-auto" />
-										</button>
-									);
-								})}
-							</div>
-						</div>
-
-						<div>
-							<label className="text-sm font-bold text-gray-700 mb-2 block">Color</label>
-							<div className="flex items-center gap-3">
-								<input
-									type="color"
-									value={formData.color}
-									onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-									className="w-16 h-16 rounded-xl cursor-pointer border-2 border-gray-200"
-								/>
-								<span className="text-sm text-gray-600">Pick a color</span>
-							</div>
+							<span className="text-sm text-gray-600 font-bold">{t('pickColor')}</span>
 						</div>
 					</div>
 
-					<div className="p-6 border-t border-gray-200 bg-gray-50 flex gap-3">
-						<button
-							type="button"
-							onClick={onClose}
-							className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl font-semibold transition-all"
-						>
-							Cancel
-						</button>
-						<button
-							type="submit"
-							className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-secondary-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
-						>
-							Create Type
-						</button>
+					<div className="flex gap-3 pt-4">
+						<Button type="button" onClick={onClose} variant="outline" className="flex-1 font-black">
+							{t('cancel')}
+						</Button>
+						<Button type="submit" className="flex-1 bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] font-black">
+							{t('create')}
+						</Button>
 					</div>
 				</form>
-			</div>
-		</div>
+			</DialogContent>
+		</Dialog>
 	);
 }
 
-// Add/Edit Form Component (simplified for space)
-function AddEditForm({ onClose, onSave, item, eventTypes, t }) {
+// Add/Edit Form Dialog with Flatpickr
+function AddEditForm({ open, onClose, onSave, item, eventTypes, t, locale }) {
 	const [formData, setFormData] = useState({
 		type: item?.type || 'habit',
 		title: item?.title || '',
-		description: item?.description || '',
 		startDate: item?.startDate || formatDate(new Date()),
 		time: item?.time || '09:00',
 		frequency: item?.frequency || 'daily',
 		customDays: item?.customDays || 1,
 		icon: item?.icon || 'Target',
-		color: item?.color || '#6366f1',
+		color: item?.color || 'var(--color-primary-600)',
 		reminder: item?.reminder ?? true,
 		reminderBefore: item?.reminderBefore || 15,
 		amount: item?.amount || '',
 		currency: item?.currency || 'USD',
-		location: item?.location || '',
 		notes: item?.notes || '',
 	});
+
+	const dateInputRef = useRef(null);
+	const timeInputRef = useRef(null);
+
+	useEffect(() => {
+		if (open && dateInputRef.current) {
+			flatpickr(dateInputRef.current, {
+				dateFormat: 'Y-m-d',
+				defaultDate: formData.startDate,
+				onChange: (selectedDates, dateStr) => {
+					setFormData({ ...formData, startDate: dateStr });
+				},
+			});
+		}
+
+		if (open && timeInputRef.current) {
+			flatpickr(timeInputRef.current, {
+				enableTime: true,
+				noCalendar: true,
+				dateFormat: 'H:i',
+				time_24hr: true,
+				defaultDate: formData.time,
+				onChange: (selectedDates, timeStr) => {
+					setFormData({ ...formData, time: timeStr });
+				},
+			});
+		}
+	}, [open]);
 
 	const handleSubmit = (e) => {
 		e.preventDefault();
@@ -1158,278 +1155,276 @@ function AddEditForm({ onClose, onSave, item, eventTypes, t }) {
 	};
 
 	return (
-		<div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-			<div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-				<form onSubmit={handleSubmit}>
-					<div className="p-6 border-b border-gray-200 bg-gradient-to-r from-primary/5 to-secondary-600/5 sticky top-0">
-						<div className="flex items-center justify-between">
-							<h2 className="text-2xl font-bold text-gray-900">
-								{item ? 'Edit Item' : 'Add New Item'}
-							</h2>
-							<button type="button" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
-								<X className="w-5 h-5" />
-							</button>
+		<Dialog open={open} onOpenChange={onClose}>
+			<DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+				<DialogHeader>
+					<DialogTitle className="text-2xl font-black">
+						{item ? t('editItem') : t('addNewItem')}
+					</DialogTitle>
+				</DialogHeader>
+				
+				<form onSubmit={handleSubmit} className="space-y-6 mt-4">
+					<div>
+						<Label className="text-sm font-black mb-3 block">{t('type')}</Label>
+						<div className="grid grid-cols-4 gap-3">
+							{eventTypes.slice(0, 4).map((type) => {
+								const Icon = iconComponents[type.icon] || Circle;
+								return (
+									<button
+										key={type.id}
+										type="button"
+										onClick={() => setFormData({ ...formData, type: type.id })}
+										className={`p-4 rounded-xl font-bold text-sm transition-all flex flex-col items-center gap-2 ${
+											formData.type === type.id
+												? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-lg scale-105'
+												: 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-2 border-gray-200'
+										}`}
+									>
+										<Icon className="w-6 h-6" />
+										{t(`types.${type.label}`)}
+									</button>
+								);
+							})}
 						</div>
 					</div>
 
-					<div className="p-6 space-y-6">
-						{/* Type Selection */}
-						<div>
-							<label className="text-sm font-bold text-gray-700 mb-3 block">Type</label>
-							<div className="grid grid-cols-4 gap-3">
-								{eventTypes.slice(0, 4).map((type) => {
-									const Icon = iconComponents[type.icon] || Circle;
-									return (
-										<button
-											key={type.id}
-											type="button"
-											onClick={() => setFormData({ ...formData, type: type.id })}
-											className={`p-4 rounded-xl font-semibold text-sm transition-all flex flex-col items-center gap-2 ${
-												formData.type === type.id
-													? 'bg-gradient-to-r from-primary to-secondary-600 text-white shadow-lg scale-105'
-													: 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-2 border-gray-200'
-											}`}
-										>
-											<Icon className="w-6 h-6" />
-											{type.label}
-										</button>
-									);
-								})}
-							</div>
-						</div>
+					<div>
+						<Label className="text-sm font-black mb-3 block">{t('title')}</Label>
+						<Input
+							type="text"
+							value={formData.title}
+							onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+							placeholder={t('titlePlaceholder')}
+							required
+						/>
+					</div>
 
-						{/* Title */}
+					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<label className="text-sm font-bold text-gray-700 mb-2 block">Title</label>
-							<input
+							<Label className="text-sm font-black mb-3 block">{t('startDate')}</Label>
+							<Input
+								ref={dateInputRef}
 								type="text"
-								value={formData.title}
-								onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-								placeholder="Enter title..."
-								className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-								required
+								placeholder={t('selectDate')}
+								readOnly
 							/>
 						</div>
-
-						{/* Description */}
 						<div>
-							<label className="text-sm font-bold text-gray-700 mb-2 block">Description</label>
-							<textarea
-								value={formData.description}
-								onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-								placeholder="Add description..."
-								className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 resize-none min-h-[80px]"
+							<Label className="text-sm font-black mb-3 block">{t('time')}</Label>
+							<Input
+								ref={timeInputRef}
+								type="text"
+								placeholder={t('selectTime')}
+								readOnly
 							/>
 						</div>
+					</div>
 
-						{/* Date and Time */}
-						<div className="grid grid-cols-2 gap-4">
-							<div>
-								<label className="text-sm font-bold text-gray-700 mb-2 block">Start Date</label>
-								<input
-									type="date"
-									value={formData.startDate}
-									onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-									className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+					<div>
+						<Label className="text-sm font-black mb-3 block">{t('frequency')}</Label>
+						<Select value={formData.frequency} onValueChange={(value) => setFormData({ ...formData, frequency: value })}>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{frequencies.map((freq) => (
+									<SelectItem key={freq.id} value={freq.id}>{t(`frequencies.${freq.label}`)}</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						
+						{formData.frequency === 'custom' && (
+							<div className="mt-3 flex items-center gap-2">
+								<Input
+									type="number"
+									min="1"
+									value={formData.customDays}
+									onChange={(e) => setFormData({ ...formData, customDays: parseInt(e.target.value) })}
+									className="w-24"
 								/>
-							</div>
-							<div>
-								<label className="text-sm font-bold text-gray-700 mb-2 block">Time</label>
-								<input
-									type="time"
-									value={formData.time}
-									onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-									className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-								/>
-							</div>
-						</div>
-
-						{/* Frequency */}
-						<div>
-							<label className="text-sm font-bold text-gray-700 mb-2 block">Frequency</label>
-							<Select value={formData.frequency} onValueChange={(value) => setFormData({ ...formData, frequency: value })}>
-								<SelectTrigger>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{frequencies.map((freq) => (
-										<SelectItem key={freq.id} value={freq.id}>{freq.label}</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							
-							{formData.frequency === 'custom' && (
-								<div className="mt-2 flex items-center gap-2">
-									<input
-										type="number"
-										min="1"
-										value={formData.customDays}
-										onChange={(e) => setFormData({ ...formData, customDays: parseInt(e.target.value) })}
-										className="w-20 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary"
-									/>
-									<span className="text-sm text-gray-600 font-medium">days</span>
-								</div>
-							)}
-						</div>
-
-						{/* Icon Selection */}
-						<div>
-							<label className="text-sm font-bold text-gray-700 mb-3 block">Icon</label>
-							<div className="grid grid-cols-8 gap-2">
-								{availableIcons.slice(0, 16).map((icon) => {
-									const Icon = icon.icon;
-									return (
-										<button
-											key={icon.id}
-											type="button"
-											onClick={() => setFormData({ ...formData, icon: icon.id })}
-											className={`p-3 rounded-lg transition-all ${
-												formData.icon === icon.id
-													? 'bg-gradient-to-r from-primary to-secondary-600 text-white shadow-md'
-													: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-											}`}
-										>
-											<Icon className="w-5 h-5 mx-auto" />
-										</button>
-									);
-								})}
-							</div>
-						</div>
-
-						{/* Amount (for billing) */}
-						{formData.type === 'billing' && (
-							<div className="grid grid-cols-3 gap-4">
-								<div className="col-span-2">
-									<label className="text-sm font-bold text-gray-700 mb-2 block">Amount</label>
-									<input
-										type="number"
-										step="0.01"
-										value={formData.amount}
-										onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-										placeholder="0.00"
-										className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary"
-									/>
-								</div>
-								<div>
-									<label className="text-sm font-bold text-gray-700 mb-2 block">Currency</label>
-									<Select value={formData.currency} onValueChange={(value) => setFormData({ ...formData, currency: value })}>
-										<SelectTrigger>
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="USD">USD</SelectItem>
-											<SelectItem value="EUR">EUR</SelectItem>
-											<SelectItem value="GBP">GBP</SelectItem>
-											<SelectItem value="EGP">EGP</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
+								<span className="text-sm text-gray-600 font-medium">{t('days')}</span>
 							</div>
 						)}
+					</div>
 
-						{/* Color */}
-						<div>
-							<label className="text-sm font-bold text-gray-700 mb-2 block">Color</label>
-							<div className="flex items-center gap-3">
-								<input
-									type="color"
-									value={formData.color}
-									onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-									className="w-16 h-16 rounded-xl cursor-pointer border-2 border-gray-200"
-								/>
-								<span className="text-sm text-gray-600">Pick a color</span>
-							</div>
+					<div>
+						<Label className="text-sm font-black mb-3 block">{t('icon')}</Label>
+						<div className="grid grid-cols-8 gap-2">
+							{availableIcons.slice(0, 16).map((icon) => {
+								const Icon = icon.icon;
+								return (
+									<button
+										key={icon.id}
+										type="button"
+										onClick={() => setFormData({ ...formData, icon: icon.id })}
+										className={`p-3 rounded-xl transition-all ${
+											formData.icon === icon.id
+												? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-md scale-110'
+												: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+										}`}
+									>
+										<Icon className="w-5 h-5 mx-auto" />
+									</button>
+								);
+							})}
 						</div>
+					</div>
 
-						{/* Reminder */}
-						<div>
-							<div className="flex items-center gap-3 mb-2">
-								<Checkbox
-									checked={formData.reminder}
-									onCheckedChange={(checked) => setFormData({ ...formData, reminder: checked })}
-									className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+					{formData.type === 'billing' && (
+						<div className="grid grid-cols-3 gap-4">
+							<div className="col-span-2">
+								<Label className="text-sm font-black mb-3 block">{t('amount')}</Label>
+								<Input
+									type="number"
+									step="0.01"
+									value={formData.amount}
+									onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+									placeholder="0.00"
 								/>
-								<label className="text-sm font-bold text-gray-700">Enable Reminder</label>
 							</div>
-							
-							{formData.reminder && (
-								<Select value={formData.reminderBefore.toString()} onValueChange={(value) => setFormData({ ...formData, reminderBefore: parseInt(value) })}>
+							<div>
+								<Label className="text-sm font-black mb-3 block">{t('currency')}</Label>
+								<Select value={formData.currency} onValueChange={(value) => setFormData({ ...formData, currency: value })}>
 									<SelectTrigger>
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="5">5 minutes before</SelectItem>
-										<SelectItem value="15">15 minutes before</SelectItem>
-										<SelectItem value="30">30 minutes before</SelectItem>
-										<SelectItem value="60">1 hour before</SelectItem>
-										<SelectItem value="1440">1 day before</SelectItem>
+										<SelectItem value="USD">USD</SelectItem>
+										<SelectItem value="EUR">EUR</SelectItem>
+										<SelectItem value="GBP">GBP</SelectItem>
+										<SelectItem value="EGP">EGP</SelectItem>
 									</SelectContent>
 								</Select>
-							)}
+							</div>
+						</div>
+					)}
+
+					<div>
+						<Label className="text-sm font-black mb-3 block">{t('color')}</Label>
+						<div className="flex items-center gap-3">
+							<input
+								type="color"
+								value={formData.color}
+								onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+								className="w-16 h-16 rounded-xl cursor-pointer border-2 border-gray-200 shadow-sm"
+							/>
+							<span className="text-sm text-gray-600 font-bold">{t('pickColor')}</span>
 						</div>
 					</div>
 
-					<div className="p-6 border-t border-gray-200 bg-gray-50 flex gap-3">
-						<button
-							type="button"
-							onClick={onClose}
-							className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl font-semibold transition-all"
-						>
-							Cancel
-						</button>
-						<button
-							type="submit"
-							className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-secondary-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
-						>
-							{item ? 'Update' : 'Create'}
-						</button>
+					<div>
+						<Label className="text-sm font-black mb-3 block">{t('notes')}</Label>
+						<Textarea
+							value={formData.notes}
+							onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+							placeholder={t('notesPlaceholder')}
+							rows={3}
+						/>
+					</div>
+
+					<div className="flex gap-3 pt-4">
+						<Button type="button" onClick={onClose} variant="outline" className="flex-1 font-black">
+							{t('cancel')}
+						</Button>
+						<Button type="submit" className="flex-1 bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] font-black">
+							{item ? t('update') : t('create')}
+						</Button>
 					</div>
 				</form>
-			</div>
-		</div>
+			</DialogContent>
+		</Dialog>
 	);
 }
 
-// Item Detail Panel (simplified)
-function ItemDetailPanel({ item, onUpdate, onDelete, onClose, eventTypes, t }) {
+// Item Detail Dialog
+function ItemDetailDialog({ open, item, onClose, onUpdate, onDelete, eventTypes, t }) {
+	const type = eventTypes.find(t => t.id === item.type);
+	const Icon = iconComponents[item.icon] || Circle;
+
 	return (
-		<div className="fixed ltr:right-0 rtl:left-0 top-0 h-screen w-[500px] bg-white border-l border-gray-200 shadow-2xl ltr:animate-slide-in-right rtl:animate-slide-in-left z-40 overflow-y-auto">
-			<div className="p-6 border-b border-gray-200 bg-gradient-to-br from-primary/5 to-secondary-600/5">
-				<div className="flex items-center justify-between">
-					<h2 className="text-xl font-bold text-gray-900">{item.title}</h2>
-					<button onClick={onClose} className="p-2 hover:bg-white rounded-lg">
-						<X className="w-5 h-5" />
-					</button>
+		<Dialog open={open} onOpenChange={onClose}>
+			<DialogContent className="sm:max-w-[500px]">
+				<DialogHeader>
+					<div className="flex items-center gap-3">
+						<div className="p-3 rounded-xl" style={{ backgroundColor: `${item.color}15` }}>
+							<Icon className="w-6 h-6" style={{ color: item.color }} />
+						</div>
+						<DialogTitle className="text-2xl font-black">{item.title}</DialogTitle>
+					</div>
+				</DialogHeader>
+				
+				<div className="space-y-5 mt-6">
+					<div>
+						<Label className="text-sm font-black mb-2 block">{t('type')}</Label>
+						<span className={`px-3 py-2 rounded-lg font-bold text-sm ${type?.bgColor} ${type?.textColor} inline-block`}>
+							{t(`types.${type?.label}`)}
+						</span>
+					</div>
+
+					{item.startDate && (
+						<div>
+							<Label className="text-sm font-black mb-2 block">{t('startDate')}</Label>
+							<p className="text-gray-700 font-semibold">
+								{new Date(item.startDate).toLocaleDateString()}
+							</p>
+						</div>
+					)}
+
+					{item.time && (
+						<div>
+							<Label className="text-sm font-black mb-2 block">{t('time')}</Label>
+							<p className="text-gray-700 font-semibold">{item.time}</p>
+						</div>
+					)}
+
+					{item.frequency && (
+						<div>
+							<Label className="text-sm font-black mb-2 block">{t('frequency')}</Label>
+							<p className="text-gray-700 font-semibold">
+								{t(`frequencies.${frequencies.find(f => f.id === item.frequency)?.label || item.frequency}`)}
+							</p>
+						</div>
+					)}
+
+					{item.notes && (
+						<div>
+							<Label className="text-sm font-black mb-2 block">{t('notes')}</Label>
+							<p className="text-gray-700 font-medium">{item.notes}</p>
+						</div>
+					)}
+
+					{item.type === 'habit' && item.streak > 0 && (
+						<div className="flex items-center gap-2 px-4 py-3 bg-orange-50 rounded-xl">
+							<Flame className="w-5 h-5 text-orange-600" />
+							<span className="text-base font-black text-orange-600">
+								{item.streak} {t('daysStreak')}
+							</span>
+						</div>
+					)}
+
+					{item.type === 'billing' && item.amount && (
+						<div className="flex items-center gap-2 px-4 py-3 bg-green-50 rounded-xl">
+							<DollarSign className="w-5 h-5 text-green-600" />
+							<span className="text-base font-black text-green-600">
+								{item.amount} {item.currency}
+							</span>
+						</div>
+					)}
+					
+					<Button
+						onClick={() => {
+							if (confirm(t('confirmDelete'))) {
+								onDelete(item.id);
+							}
+						}}
+						variant="destructive"
+						className="w-full font-black"
+					>
+						<Trash2 className="w-5 h-5 mr-2" />
+						{t('deleteItem')}
+					</Button>
 				</div>
-			</div>
-			
-			<div className="p-6 space-y-4">
-				{item.description && (
-					<div>
-						<h3 className="text-sm font-bold text-gray-700 mb-2">Description</h3>
-						<p className="text-gray-600">{item.description}</p>
-					</div>
-				)}
-				
-				{item.notes && (
-					<div>
-						<h3 className="text-sm font-bold text-gray-700 mb-2">Notes</h3>
-						<p className="text-gray-600">{item.notes}</p>
-					</div>
-				)}
-				
-				<button
-					onClick={() => {
-						if (confirm('Delete this item?')) {
-							onDelete(item.id);
-						}
-					}}
-					className="w-full p-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-				>
-					<Trash2 className="w-5 h-5" />
-					Delete Item
-				</button>
-			</div>
-		</div>
+			</DialogContent>
+		</Dialog>
 	);
 }

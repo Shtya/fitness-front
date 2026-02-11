@@ -1,18 +1,18 @@
+/* 
+	- 
+*/
+
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
 	Plus,
 	X,
-	Check,
-	ChevronRight,
 	Folder,
 	Calendar,
 	Clock,
 	Star,
 	StarOff,
-	Tag,
-	MoreHorizontal,
 	Trash2,
 	Edit2,
 	CheckCircle,
@@ -26,11 +26,8 @@ import {
 	Zap,
 	Target,
 	ListTodo,
-	Search,
-	Filter,
 	GripVertical,
 	FolderPlus,
-	ListPlus,
 	Hash,
 	FileText,
 	MapPin,
@@ -42,8 +39,19 @@ import {
 	Grid3x3,
 	List,
 	TrendingUp,
+	ChevronDown,
+	Filter,
+	Check,
+	Eye,
+	Image,
+	Paperclip,
+	Download,
+	ArrowUp,
+	ArrowDown,
 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import Flatpickr from 'react-flatpickr';
+import 'flatpickr/dist/flatpickr.min.css';
 import {
 	DndContext,
 	DragOverlay,
@@ -59,8 +67,15 @@ import {
 	useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
+// Import shadcn components
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 
 // Sound effects
 const playSound = (type, soundEnabled) => {
@@ -93,37 +108,44 @@ const playSound = (type, soundEnabled) => {
 	}
 };
 
-// Priority levels with beautiful colors
 const priorityLevels = [
-	{ id: 'none', label: 'None', color: '#94a3b8', icon: Circle },
-	{ id: 'low', label: 'Low', color: '#3b82f6', icon: Flag },
-	{ id: 'medium', label: 'Medium', color: '#f59e0b', icon: Flag },
-	{ id: 'high', label: 'High', color: '#ef4444', icon: Flag },
-	{ id: 'urgent', label: 'Urgent', color: '#dc2626', icon: Zap },
+	{ id: 'none', label: 'none', color: 'var(--color-primary-300)', icon: Circle },
+	{ id: 'low', label: 'low', color: 'var(--color-primary-500)', icon: Flag },
+	{ id: 'medium', label: 'medium', color: '#f59e0b', icon: Flag },
+	{ id: 'high', label: 'high', color: '#ef4444', icon: Flag },
+	{ id: 'urgent', label: 'urgent', color: '#dc2626', icon: Zap },
 ];
 
-// Repeat options
 const repeatOptions = [
-	{ id: 'none', label: 'Does not repeat' },
-	{ id: 'daily', label: 'Daily' },
-	{ id: 'every-2-days', label: 'Every 2 days' },
-	{ id: 'every-3-days', label: 'Every 3 days' },
-	{ id: 'weekly', label: 'Weekly' },
-	{ id: 'bi-weekly', label: 'Every 2 weeks' },
-	{ id: 'monthly', label: 'Monthly' },
-	{ id: 'custom', label: 'Custom...' },
+	{ id: 'none', label: 'none' },
+	{ id: 'daily', label: 'daily' },
+	{ id: 'every-2-days', label: 'every2days' },
+	{ id: 'every-3-days', label: 'every3days' },
+	{ id: 'weekly', label: 'weekly' },
+	{ id: 'bi-weekly', label: 'biweekly' },
+	{ id: 'monthly', label: 'monthly' },
+	{ id: 'custom', label: 'custom' },
 ];
 
-// Status options
 const statusOptions = [
-	{ id: 'todo', label: 'To Do', color: '#6366f1' },
-	{ id: 'in-progress', label: 'In Progress', color: '#f59e0b' },
-	{ id: 'completed', label: 'Completed', color: '#10b981' },
-	{ id: 'cancelled', label: 'Cancelled', color: '#ef4444' },
+	{ id: 'todo', label: 'todo', color: 'var(--color-primary-600)' },
+	{ id: 'in-progress', label: 'inProgress', color: '#f59e0b' },
+	{ id: 'completed', label: 'completed', color: '#10b981' },
+	{ id: 'cancelled', label: 'cancelled', color: '#ef4444' },
 ];
 
-// Sortable Task Item Component
-function SortableTaskItem({ task, onToggle, onSelect, onQuickEdit, onQuickDelete, onQuickAddSubtask, isSelected, soundEnabled, viewMode, t }) {
+function SortableTaskItem({ 
+	task, 
+	onToggle, 
+	onSelect, 
+	onQuickDelete, 
+	isSelected, 
+	viewMode,
+	onAddSubtask,
+	onToggleStar,
+	compactView,
+	t
+}) {
 	const {
 		attributes,
 		listeners,
@@ -132,6 +154,9 @@ function SortableTaskItem({ task, onToggle, onSelect, onQuickEdit, onQuickDelete
 		transition,
 		isDragging,
 	} = useSortable({ id: task.id });
+
+	const [showSubtaskInput, setShowSubtaskInput] = useState(false);
+	const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
 
 	const style = {
 		transform: CSS.Transform.toString(transform),
@@ -147,279 +172,412 @@ function SortableTaskItem({ task, onToggle, onSelect, onQuickEdit, onQuickDelete
 
 	const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.completed;
 
+	const handleAddSubtask = (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		if (newSubtaskTitle.trim()) {
+			onAddSubtask(task.id, newSubtaskTitle.trim());
+			setNewSubtaskTitle('');
+			setShowSubtaskInput(false);
+		}
+	};
+
+	if (compactView) {
+		return (
+			<div
+				ref={setNodeRef}
+				style={style}
+				className={`group bg-white rounded-xl border-2 transition-all hover:shadow-lg ${
+					isSelected
+						? 'border-[var(--color-gradient-from)] shadow-lg ring-2 ring-[var(--color-primary-100)]'
+						: 'border-gray-200 hover:border-[var(--color-primary-300)]'
+				}`}
+			>
+				<div className="flex items-center gap-3 p-3">
+					<div
+						{...attributes}
+						{...listeners}
+						className="flex-shrink-0 cursor-grab active:cursor-grabbing "
+					>
+						<GripVertical className="w-3.5 h-3.5 text-gray-400" />
+					</div>
+
+					<Checkbox
+						checked={task.completed}
+						onCheckedChange={() => onToggle(task.id)}
+						className="flex-shrink-0"
+					/>
+
+					<div className="flex-1 min-w-0" onClick={() => onSelect(task)}>
+						<h3 className={`font-bold text-sm leading-tight cursor-pointer ${
+							task.completed ? 'line-through text-gray-400' : 'text-gray-900'
+						}`}>
+							{task.title}
+						</h3>
+					</div>
+
+					<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								onToggleStar(task.id);
+							}}
+							className="p-1.5 hover:bg-yellow-50 rounded-lg transition-all"
+						>
+							<Star className={`w-3.5 h-3.5 ${task.isStarred ? 'fill-yellow-500 text-yellow-500' : 'text-gray-400'}`} />
+						</button>
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								setShowSubtaskInput(!showSubtaskInput);
+							}}
+							className="p-1.5 hover:bg-green-50 rounded-lg transition-all"
+						>
+							<Plus className="w-3.5 h-3.5 text-green-600" />
+						</button>
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								if (confirm(t('confirmDelete'))) {
+									onQuickDelete(task.id);
+								}
+							}}
+							className="p-1.5 hover:bg-red-50 rounded-lg transition-all"
+						>
+							<Trash2 className="w-3.5 h-3.5 text-red-600" />
+						</button>
+					</div>
+				</div>
+
+				{showSubtaskInput && (
+					<div className="px-3 pb-3 pt-0" onClick={(e) => e.stopPropagation()}>
+						<form onSubmit={handleAddSubtask} className="flex gap-2">
+							<Input
+								type="text"
+								value={newSubtaskTitle}
+								onChange={(e) => setNewSubtaskTitle(e.target.value)}
+								placeholder={t('subtaskPlaceholder')}
+								className="text-xs h-7"
+								autoFocus
+							/>
+							<Button type="submit" size="sm" className="h-7 px-2">
+								<Check className="w-3 h-3" />
+							</Button>
+							<Button type="button" size="sm" variant="ghost" onClick={() => setShowSubtaskInput(false)} className="h-7 px-2">
+								<X className="w-3 h-3" />
+							</Button>
+						</form>
+					</div>
+				)}
+			</div>
+		);
+	}
+
 	if (viewMode === 'grid') {
 		return (
 			<div
 				ref={setNodeRef}
 				style={style}
-				className={`group bg-white rounded-2xl border transition-all hover:shadow-lg ${
+				className={`group bg-white rounded-2xl border-2 transition-all hover:shadow-2xl hover:scale-[1.02] ${
 					isSelected
-						? 'border-primary shadow-xl ring-4 ring-primary/10'
-						: 'border-gray-200 hover:border-gray-300'
+						? 'border-[var(--color-gradient-from)] shadow-2xl ring-4 ring-[var(--color-primary-100)]'
+						: 'border-gray-200 hover:border-[var(--color-primary-300)]'
 				}`}
 			>
-				<div className="p-5">
-					{/* Drag Handle */}
-					<div className="flex items-start justify-between mb-3">
+				<div className="p-6">
+					<div className="flex items-start justify-between mb-4">
 						<div
 							{...attributes}
 							{...listeners}
-							className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+							className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded-lg"
 						>
 							<GripVertical className="w-4 h-4 text-gray-400" />
 						</div>
 						{task.isStarred && (
-							<Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+							<div className="p-2 bg-yellow-50 rounded-lg">
+								<Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+							</div>
 						)}
 					</div>
 
-					{/* Checkbox */}
-					<div className="mb-4">
+					<div className="mb-5">
 						<Checkbox
 							checked={task.completed}
 							onCheckedChange={() => onToggle(task.id)}
-							className="data-[state=checked]:bg-primary data-[state=checked]:border-primary w-6 h-6"
+							className="w-6 h-6"
 						/>
 					</div>
 
-					{/* Content */}
-					<div onClick={onSelect} className="cursor-pointer">
-						<h3 className={`font-semibold text-base mb-2 ${
+					<div onClick={() => onSelect(task)} className="cursor-pointer">
+						<h3 className={`font-bold text-base mb-3 leading-tight ${
 							task.completed ? 'line-through text-gray-400' : 'text-gray-900'
 						}`}>
 							{task.title}
 						</h3>
 
-						{task.description && !task.completed && (
-							<p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.description}</p>
+						{task.attachments && task.attachments.length > 0 && (
+							<div className="mb-3 flex flex-wrap gap-2">
+								{task.attachments.map((att, idx) => (
+									<div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border-2 border-gray-200">
+										<img src={att.url} alt={att.name} className="w-full h-full object-cover" />
+									</div>
+								))}
+							</div>
 						)}
 
-						{/* Meta */}
-						<div className="space-y-2">
+						<div className="space-y-2.5">
 							{task.priority !== 'none' && (
 								<div
-									className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-white"
+									className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-white shadow-sm"
 									style={{ backgroundColor: priority.color }}
 								>
-									<PriorityIcon className="w-3 h-3" />
-									{priority.label}
+									<PriorityIcon className="w-3.5 h-3.5" />
+									{t(`priorities.${priority.label}`)}
 								</div>
 							)}
 
 							{task.dueDate && (
-								<div className={`flex items-center gap-1.5 text-xs font-medium ${
-									isOverdue ? 'text-red-600' : 'text-gray-600'
+								<div className={`flex items-center gap-2 text-xs font-semibold ${
+									isOverdue ? 'text-red-600' : 'text-gray-700'
 								}`}>
-									<Calendar className="w-3.5 h-3.5" />
-									{new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+									<Calendar className="w-4 h-4" />
+									{new Date(task.dueDate).toLocaleDateString()}
 								</div>
 							)}
 
 							{totalSubtasks > 0 && (
-								<div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
-									<CheckCircle className="w-3.5 h-3.5" />
-									{completedSubtasks}/{totalSubtasks} tasks
+								<div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+									<CheckCircle className="w-4 h-4" />
+									{completedSubtasks}/{totalSubtasks}
 								</div>
 							)}
 						</div>
 					</div>
+
+					{!task.completed && (
+						<div className="mt-4 pt-4 border-t border-gray-100">
+							{!showSubtaskInput ? (
+								<button
+									onClick={(e) => {
+										e.stopPropagation();
+										setShowSubtaskInput(true);
+									}}
+									className="text-xs text-[var(--color-primary-600)] hover:text-[var(--color-primary-700)] font-bold flex items-center gap-1"
+								>
+									<Plus className="w-3.5 h-3.5" />
+									{t('addSubtask')}
+								</button>
+							) : (
+								<form onSubmit={handleAddSubtask} className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+									<Input
+										type="text"
+										value={newSubtaskTitle}
+										onChange={(e) => setNewSubtaskTitle(e.target.value)}
+										placeholder={t('subtaskPlaceholder')}
+										className="text-xs h-8"
+										autoFocus
+									/>
+									<Button type="submit" size="sm" className="h-8 px-2">
+										<Check className="w-3.5 h-3.5" />
+									</Button>
+									<Button type="button" size="sm" variant="ghost" onClick={() => setShowSubtaskInput(false)} className="h-8 px-2">
+										<X className="w-3.5 h-3.5" />
+									</Button>
+								</form>
+							)}
+						</div>
+					)}
 				</div>
 			</div>
 		);
 	}
 
-	// List view
 	return (
 		<div
 			ref={setNodeRef}
 			style={style}
-			className={`group bg-white rounded-xl border transition-all ${
+			className={`group bg-white rounded-2xl border-2 transition-all hover:shadow-xl ${
 				isSelected
-					? 'border-primary shadow-lg ring-4 ring-primary/10'
-					: 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+					? 'border-[var(--color-gradient-from)] shadow-xl ring-4 ring-[var(--color-primary-100)]'
+					: 'border-gray-200 hover:border-[var(--color-primary-300)]'
 			}`}
 		>
-			<div className="flex items-center gap-4 p-4">
-				{/* Drag Handle */}
-				<div
-					{...attributes}
-					{...listeners}
-					className="flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
-				>
-					<GripVertical className="w-4 h-4 text-gray-400" />
-				</div>
+			<div className="p-5">
+				<div className="flex items-center gap-4">
+					<div
+						{...attributes}
+						{...listeners}
+						className="flex-shrink-0 cursor-grab active:cursor-grabbing  hover:bg-gray-100 rounded-lg"
+					>
+						<GripVertical className="w-4 h-4 text-gray-400" />
+					</div>
 
-				{/* Checkbox */}
-				<Checkbox
-					checked={task.completed}
-					onCheckedChange={() => onToggle(task.id)}
-					className="data-[state=checked]:bg-primary data-[state=checked]:border-primary flex-shrink-0"
-				/>
+					<Checkbox
+						checked={task.completed}
+						onCheckedChange={() => onToggle(task.id)}
+						className="flex-shrink-0 w-6 h-6"
+					/>
 
-				{/* Content */}
-				<div className="flex-1 min-w-0" onClick={onSelect}>
-					<div className="flex items-start gap-3">
-						<div className="flex-1 min-w-0">
-							<h3 className={`font-semibold text-sm mb-1 ${
-								task.completed ? 'line-through text-gray-400' : 'text-gray-900'
-							}`}>
-								{task.title}
-							</h3>
+					<div className="flex-1 min-w-0" onClick={() => onSelect(task)}>
+						<div className="flex items-start gap-3">
+							<div className="flex-1 min-w-0">
+								<h3 className={`font-bold text-base mb-1 leading-tight ${
+									task.completed ? 'line-through text-gray-400' : 'text-gray-900'
+								}`}>
+									{task.title}
+								</h3>
 
-							{task.description && !task.completed && (
-								<p className="text-sm text-gray-600 line-clamp-1">{task.description}</p>
+								{task.attachments && task.attachments.length > 0 && (
+									<div className="  flex flex-wrap gap-2">
+										{task.attachments.map((att, idx) => (
+											<div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-200 group/img">
+												<img src={att.url} alt={att.name} className="w-full h-full object-cover" />
+												<div className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+													<Paperclip className="w-4 h-4 text-white" />
+												</div>
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+							
+							{task.isStarred && (
+								<div className="p-1.5 bg-yellow-50 rounded-lg">
+									<Star className="w-4 h-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+								</div>
 							)}
 						</div>
-						
-						{task.isStarred && (
-							<Star className="w-4 h-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
-						)}
+
+						<div className="flex items-center gap-2 mt-3 flex-wrap">
+							{task.priority !== 'none' && (
+								<span
+									className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold text-white shadow-sm"
+									style={{ backgroundColor: priority.color }}
+								>
+									<PriorityIcon className="w-3 h-3" />
+									{t(`priorities.${priority.label}`)}
+								</span>
+							)}
+
+							{task.dueDate && (
+								<span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+									isOverdue
+										? 'bg-red-50 text-red-700 border border-red-200'
+										: 'bg-gray-50 text-gray-700 border border-gray-200'
+								}`}>
+									<Calendar className="w-3.5 h-3.5" />
+									{new Date(task.dueDate).toLocaleDateString()}
+								</span>
+							)}
+
+							{task.repeat !== 'none' && (
+								<span className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-xs font-semibold">
+									<Repeat className="w-3.5 h-3.5" />
+								</span>
+							)}
+
+							{totalSubtasks > 0 && (
+								<span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+									completedSubtasks === totalSubtasks
+										? 'bg-green-50 text-green-700 border border-green-200'
+										: 'bg-gray-50 text-gray-700 border border-gray-200'
+								}`}>
+									<CheckCircle className="w-3.5 h-3.5" />
+									{completedSubtasks}/{totalSubtasks}
+								</span>
+							)}
+
+							{task.tags && task.tags.length > 0 && (
+								<span className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-semibold">
+									<Hash className="w-3.5 h-3.5" />
+									{task.tags.length}
+								</span>
+							)}
+						</div>
 					</div>
 
-					{/* Meta */}
-					<div className="flex items-center gap-2 mt-2 flex-wrap">
-						{task.priority !== 'none' && (
-							<span
-								className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold text-white"
-								style={{ backgroundColor: priority.color }}
+					<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+						<Button
+							size="icon"
+							variant="ghost"
+							onClick={(e) => {
+								e.stopPropagation();
+								if (confirm(t('confirmDelete'))) {
+									onQuickDelete(task.id);
+								}
+							}}
+							className="h-9 w-9"
+						>
+							<Trash2 className="w-4 h-4 text-red-600" />
+						</Button>
+					</div>
+				</div>
+
+				{!task.completed && (
+					<div className="mt-4 pt-4 border-t border-gray-100 ml-14">
+						{!showSubtaskInput ? (
+							<button
+								onClick={(e) => {
+									e.stopPropagation();
+									setShowSubtaskInput(true);
+								}}
+								className="text-sm text-[var(--color-primary-600)] hover:text-[var(--color-primary-700)] font-bold flex items-center gap-1.5"
 							>
-								<PriorityIcon className="w-3 h-3" />
-								{priority.label}
-							</span>
-						)}
-
-						{task.dueDate && (
-							<span className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${
-								isOverdue
-									? 'bg-red-100 text-red-700'
-									: 'bg-gray-100 text-gray-700'
-							}`}>
-								<Calendar className="w-3 h-3" />
-								{new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-							</span>
-						)}
-
-						{task.repeat !== 'none' && (
-							<span className="flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-md text-xs font-medium">
-								<Repeat className="w-3 h-3" />
-							</span>
-						)}
-
-						{totalSubtasks > 0 && (
-							<span className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${
-								completedSubtasks === totalSubtasks
-									? 'bg-green-100 text-green-700'
-									: 'bg-gray-100 text-gray-700'
-							}`}>
-								<CheckCircle className="w-3 h-3" />
-								{completedSubtasks}/{totalSubtasks}
-							</span>
-						)}
-
-						{task.tags && task.tags.length > 0 && (
-							<span className="flex items-center gap-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-md text-xs font-medium">
-								<Hash className="w-3 h-3" />
-								{task.tags.length}
-							</span>
+								<Plus className="w-4 h-4" />
+								{t('addSubtask')}
+							</button>
+						) : (
+							<form onSubmit={handleAddSubtask} className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+								<Input
+									type="text"
+									value={newSubtaskTitle}
+									onChange={(e) => setNewSubtaskTitle(e.target.value)}
+									placeholder={t('subtaskPlaceholder')}
+									className="text-sm"
+									autoFocus
+								/>
+								<Button type="submit" size="sm">
+									<Check className="w-4 h-4" />
+								</Button>
+								<Button type="button" size="sm" variant="ghost" onClick={() => setShowSubtaskInput(false)}>
+									<X className="w-4 h-4" />
+								</Button>
+							</form>
 						)}
 					</div>
-				</div>
-
-				{/* Quick Actions */}
-				<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-					<button
-						onClick={(e) => {
-							e.stopPropagation();
-							onQuickEdit(task);
-						}}
-						className="p-2 hover:bg-primary/10 rounded-lg transition-colors"
-						title={t ? t('quickEdit') : 'Edit'}
-					>
-						<Edit2 className="w-4 h-4 text-primary" />
-					</button>
-					<button
-						onClick={(e) => {
-							e.stopPropagation();
-							onQuickAddSubtask(task);
-						}}
-						className="p-2 hover:bg-green-100 rounded-lg transition-colors"
-						title={t ? t('addSubtask') : 'Add Subtask'}
-					>
-						<ListPlus className="w-4 h-4 text-green-600" />
-					</button>
-					<button
-						onClick={(e) => {
-							e.stopPropagation();
-							if (confirm(t ? t('confirmDelete') : 'Delete this task?')) {
-								onQuickDelete(task.id);
-							}
-						}}
-						className="p-2 hover:bg-red-100 rounded-lg transition-colors"
-						title={t ? t('delete') : 'Delete'}
-					>
-						<Trash2 className="w-4 h-4 text-red-600" />
-					</button>
-				</div>
+				)}
 			</div>
 		</div>
 	);
 }
 
-// Main Todo Component
 export default function TodoTab() {
 	const t = useTranslations('todo');
+	const locale = useLocale();
+	const isRTL = locale === 'ar';
 
-	// State
+	const [settings, setSettings] = useState({
+		soundEnabled: true,
+		showCompleted: true,
+		compactView: false,
+		autoArchive: false,
+		defaultView: 'list',
+		addTaskPosition: 'top',
+	});
+
 	const [folders, setFolders] = useState([
-		{ 
-			id: 'inbox', 
-			name: t ? t('folders.inbox') : 'Inbox', 
-			color: '#6366f1', 
-			icon: Inbox,
-			isSystem: true
-		},
-		{ 
-			id: 'today', 
-			name: t ? t('folders.today') : 'Today', 
-			color: '#f59e0b', 
-			icon: Sun,
-			isSystem: true
-		},
-		{ 
-			id: 'starred', 
-			name: t ? t('folders.starred') : 'Starred', 
-			color: '#eab308', 
-			icon: Star,
-			isSystem: true
-		},
-		{ 
-			id: 'personal', 
-			name: t ? t('folders.personal') : 'Personal', 
-			color: '#8b5cf6', 
-			icon: Target,
-			isSystem: false
-		},
-		{ 
-			id: 'work', 
-			name: t ? t('folders.work') : 'Work', 
-			color: '#06b6d4', 
-			icon: Sparkles,
-			isSystem: false
-		},
-		{ 
-			id: 'shopping', 
-			name: t ? t('folders.shopping') : 'Shopping', 
-			color: '#ec4899', 
-			icon: Zap,
-			isSystem: false
-		},
+		{ id: 'inbox', name: 'inbox', color: 'var(--color-primary-600)', icon: Inbox, isSystem: true },
+		{ id: 'today', name: 'today', color: '#f59e0b', icon: Sun, isSystem: true },
+		{ id: 'starred', name: 'starred', color: '#eab308', icon: Star, isSystem: true },
+		{ id: 'personal', name: 'personal', color: '#8b5cf6', icon: Target, isSystem: false },
+		{ id: 'work', name: 'work', color: '#06b6d4', icon: Sparkles, isSystem: false },
+		{ id: 'shopping', name: 'shopping', color: '#ec4899', icon: Zap, isSystem: false },
 	]);
 
 	const [tasks, setTasks] = useState([
 		{
 			id: '1',
 			title: 'Complete project proposal',
-			description: 'Finish the Q1 proposal for the new client with detailed breakdown',
 			folderId: 'work',
 			completed: false,
 			status: 'in-progress',
@@ -434,62 +592,11 @@ export default function TodoTab() {
 			isStarred: true,
 			location: 'Office - Meeting Room A',
 			notes: 'Remember to include the budget section',
+			attachments: [],
 			subtasks: [
-				{ id: 's1', title: 'Research competitor solutions', completed: true, dueDate: '2024-02-10' },
-				{ id: 's2', title: 'Create presentation deck', completed: false, dueDate: '2024-02-12' },
-				{ id: 's3', title: 'Review with team', completed: false, dueDate: '2024-02-14' },
-			],
-			createdAt: new Date('2024-02-01'),
-			updatedAt: new Date(),
-		},
-		{
-			id: '2',
-			title: 'Morning workout',
-			description: '30 min cardio + stretching routine',
-			folderId: 'personal',
-			completed: false,
-			status: 'todo',
-			priority: 'medium',
-			dueDate: null,
-			dueTime: '07:00',
-			repeat: 'daily',
-			customRepeatDays: null,
-			hasReminder: true,
-			reminderTime: '06:45',
-			tags: ['health', 'fitness'],
-			isStarred: true,
-			location: 'Home Gym',
-			notes: '',
-			subtasks: [
-				{ id: 's4', title: 'Warm up - 5 min', completed: false },
-				{ id: 's5', title: 'Cardio - 20 min', completed: false },
-				{ id: 's6', title: 'Stretching - 5 min', completed: false },
-			],
-			createdAt: new Date('2024-01-15'),
-			updatedAt: new Date(),
-		},
-		{
-			id: '3',
-			title: 'Buy groceries',
-			description: 'Weekly grocery shopping',
-			folderId: 'shopping',
-			completed: false,
-			status: 'todo',
-			priority: 'low',
-			dueDate: '2024-02-12',
-			dueTime: null,
-			repeat: 'none',
-			customRepeatDays: null,
-			hasReminder: false,
-			reminderTime: null,
-			tags: ['errands'],
-			isStarred: false,
-			location: 'Whole Foods Market',
-			notes: 'Check if we need milk',
-			subtasks: [
-				{ id: 's7', title: 'Fruits and vegetables', completed: false },
-				{ id: 's8', title: 'Dairy products', completed: false },
-				{ id: 's9', title: 'Pantry items', completed: false },
+				{ id: 's1', title: 'Research competitor solutions', completed: true },
+				{ id: 's2', title: 'Create presentation deck', completed: false },
+				{ id: 's3', title: 'Review with team', completed: false },
 			],
 			createdAt: new Date('2024-02-01'),
 			updatedAt: new Date(),
@@ -498,16 +605,16 @@ export default function TodoTab() {
 
 	const [selectedFolder, setSelectedFolder] = useState('inbox');
 	const [selectedTask, setSelectedTask] = useState(null);
-	const [searchTerm, setSearchTerm] = useState('');
-	const [soundEnabled, setSoundEnabled] = useState(true);
 	const [showAddFolder, setShowAddFolder] = useState(false);
 	const [newFolderName, setNewFolderName] = useState('');
-	const [newFolderColor, setNewFolderColor] = useState('#6366f1');
+	const [newFolderColor, setNewFolderColor] = useState('var(--color-primary-600)');
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	const [filterPriority, setFilterPriority] = useState('all');
 	const [sortBy, setSortBy] = useState('manual');
 	const [activeId, setActiveId] = useState(null);
-	const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
+	const [viewMode, setViewMode] = useState(settings.defaultView);
+	const [showSettings, setShowSettings] = useState(false);
+	const [showTaskSidebar, setShowTaskSidebar] = useState(false);
 
 	const sensors = useSensors(
 		useSensor(PointerSensor, {
@@ -517,14 +624,16 @@ export default function TodoTab() {
 		})
 	);
 
-	// Add new task
-	const handleAddTask = (title) => {
+	useEffect(() => {
+		setViewMode(settings.defaultView);
+	}, [settings.defaultView]);
+
+	const handleAddTask = (title, attachments = []) => {
 		if (!title.trim()) return;
 
 		const newTask = {
 			id: Date.now().toString(),
 			title: title.trim(),
-			description: '',
 			folderId: selectedFolder === 'today' || selectedFolder === 'starred' ? 'inbox' : selectedFolder,
 			completed: false,
 			status: 'todo',
@@ -539,17 +648,21 @@ export default function TodoTab() {
 			isStarred: selectedFolder === 'starred',
 			location: '',
 			notes: '',
+			attachments: attachments,
 			subtasks: [],
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		};
 
-		setTasks([...tasks, newTask]);
+		if (settings.addTaskPosition === 'top') {
+			setTasks([newTask, ...tasks]);
+		} else {
+			setTasks([...tasks, newTask]);
+		}
 	};
 
-	// Toggle task completion
 	const handleToggleTask = (taskId) => {
-		playSound(tasks.find(t => t.id === taskId)?.completed ? 'uncheck' : 'check', soundEnabled);
+		playSound(tasks.find(t => t.id === taskId)?.completed ? 'uncheck' : 'check', settings.soundEnabled);
 		
 		setTasks(tasks.map(t => 
 			t.id === taskId 
@@ -563,7 +676,6 @@ export default function TodoTab() {
 		));
 	};
 
-	// Update task
 	const handleUpdateTask = (taskId, updates) => {
 		setTasks(tasks.map(t => 
 			t.id === taskId 
@@ -576,32 +688,41 @@ export default function TodoTab() {
 		}
 	};
 
-	// Delete task
 	const handleDeleteTask = (taskId) => {
 		setTasks(tasks.filter(t => t.id !== taskId));
 		if (selectedTask?.id === taskId) {
 			setSelectedTask(null);
+			setShowTaskSidebar(false);
 		}
 	};
 
-	// Quick actions
-	const handleQuickEdit = (task) => {
+	const handleSelectTask = (task) => {
 		setSelectedTask(task);
+		setShowTaskSidebar(true);
 	};
 
-	const handleQuickAddSubtask = (task) => {
+	const handleAddSubtask = (taskId, subtaskTitle) => {
+		const task = tasks.find(t => t.id === taskId);
+		if (!task) return;
+		
 		const newSubtask = {
 			id: Date.now().toString(),
-			title: 'New subtask',
+			title: subtaskTitle,
 			completed: false,
 		};
-		handleUpdateTask(task.id, {
+		
+		handleUpdateTask(taskId, {
 			subtasks: [...(task.subtasks || []), newSubtask]
 		});
-		setSelectedTask(tasks.find(t => t.id === task.id));
 	};
 
-	// Add folder
+	const handleToggleStar = (taskId) => {
+		const task = tasks.find(t => t.id === taskId);
+		if (task) {
+			handleUpdateTask(taskId, { isStarred: !task.isStarred });
+		}
+	};
+
 	const handleAddFolder = () => {
 		if (!newFolderName.trim()) return;
 
@@ -615,12 +736,11 @@ export default function TodoTab() {
 
 		setFolders([...folders, newFolder]);
 		setNewFolderName('');
-		setNewFolderColor('#6366f1');
+		setNewFolderColor('var(--color-primary-600)');
 		setShowAddFolder(false);
 		setSelectedFolder(newFolder.id);
 	};
 
-	// Delete folder
 	const handleDeleteFolder = (folderId) => {
 		setTasks(tasks.map(t => 
 			t.folderId === folderId ? { ...t, folderId: 'inbox' } : t
@@ -629,7 +749,6 @@ export default function TodoTab() {
 		setSelectedFolder('inbox');
 	};
 
-	// Drag and drop handlers
 	const handleDragStart = (event) => {
 		setActiveId(event.active.id);
 	};
@@ -649,7 +768,6 @@ export default function TodoTab() {
 		});
 	};
 
-	// Get filtered tasks
 	const getFilteredTasks = () => {
 		let filtered = tasks;
 
@@ -666,12 +784,8 @@ export default function TodoTab() {
 			filtered = filtered.filter(t => t.folderId === selectedFolder);
 		}
 
-		if (searchTerm) {
-			filtered = filtered.filter(t =>
-				t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				t.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-			);
+		if (!settings.showCompleted) {
+			filtered = filtered.filter(t => !t.completed);
 		}
 
 		if (filterPriority && filterPriority !== 'all') {
@@ -699,25 +813,24 @@ export default function TodoTab() {
 	const activeTask = activeId ? tasks.find(t => t.id === activeId) : null;
 
 	return (
-		<div className="flex h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 overflow-hidden">
-			{/* Left Sidebar - Folders */}
+		<div className="flex h-screen bg-gradient-to-br from-gray-50 via-white to-[var(--color-primary-50)] overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+			{/* Left Sidebar */}
 			<div 
-				className={`bg-white border-r border-gray-200 transition-all duration-300 flex-shrink-0 ${
+				className={`bg-white border-${isRTL ? 'l' : 'r'}-2 border-gray-100 transition-all duration-300 flex-shrink-0 ${
 					sidebarCollapsed ? 'w-20' : 'w-80'
 				}`}
 			>
 				<div className="h-full flex flex-col">
-					{/* Header */}
-					<div className="p-6 border-b border-gray-200">
+					<div className="p-6 border-b-2 border-gray-100">
 						<div className="flex items-center justify-between mb-6">
 							{!sidebarCollapsed && (
-								<h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary-600 bg-clip-text text-transparent">
-									{t ? t('title') : 'Todos'}
+								<h1 className="text-3xl font-black bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] bg-clip-text text-transparent">
+									{t('title')}
 								</h1>
 							)}
 							<button
 								onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-								className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+								className="p-2.5 hover:bg-gray-100 rounded-xl transition-all hover:scale-110"
 							>
 								<Menu className="w-5 h-5 text-gray-600" />
 							</button>
@@ -725,49 +838,50 @@ export default function TodoTab() {
 
 						{!sidebarCollapsed && (
 							<div className="flex items-center gap-2">
-								<button
-									onClick={() => setSoundEnabled(!soundEnabled)}
-									className={`p-2.5 rounded-lg transition-all flex-1 ${
-										soundEnabled
-											? 'bg-gradient-to-r from-primary to-secondary-600 text-white shadow-md'
-											: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-									}`}
+								<Button
+									onClick={() => setSettings({ ...settings, soundEnabled: !settings.soundEnabled })}
+									variant={settings.soundEnabled ? "default" : "outline"}
+									size="sm"
+									className="flex-1"
 								>
-									{soundEnabled ? <Volume2 className="w-4 h-4 mx-auto" /> : <VolumeX className="w-4 h-4 mx-auto" />}
-								</button>
-								<button className="p-2.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex-1">
-									<Settings className="w-4 h-4 text-gray-600 mx-auto" />
-								</button>
+									{settings.soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+								</Button>
+								<Button
+									onClick={() => setShowSettings(true)}
+									variant="outline"
+									size="sm"
+									className="flex-1"
+								>
+									<Settings className="w-4 h-4" />
+								</Button>
 							</div>
 						)}
 					</div>
 
-					{/* Folders */}
 					<div className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-thin">
-						{/* System folders */}
 						<div className="mb-6">
 							{!sidebarCollapsed && (
-								<h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-3">
-									{t ? t('systemFolders') : 'System'}
+								<h3 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3 px-3">
+									{t('system')}
 								</h3>
 							)}
 							{folders.filter(f => f.isSystem).map((folder) => {
 								const Icon = folder.icon;
 								const count = folder.id === 'inbox' 
-									? tasks.filter(t => t.folderId === 'inbox' && !t.completed).length
+									? tasks.filter(t => t.folderId === 'inbox' && (!t.completed || settings.showCompleted)).length
 									: folder.id === 'today'
-									? getFilteredTasks().filter(t => !t.completed).length
+									? getFilteredTasks().filter(t => !t.completed || settings.showCompleted).length
 									: folder.id === 'starred'
-									? tasks.filter(t => t.isStarred && !t.completed).length
+									? tasks.filter(t => t.isStarred && (!t.completed || settings.showCompleted)).length
 									: 0;
 
 								return (
 									<button
 										key={folder.id}
 										onClick={() => setSelectedFolder(folder.id)}
-										className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group ${
+										className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all group mb-1 ${
 											selectedFolder === folder.id
-												? 'bg-gradient-to-r from-primary to-secondary-600 text-white shadow-lg scale-[1.02]'
+												? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-lg scale-[1.02]'
 												: 'hover:bg-gray-50 text-gray-700'
 										}`}
 									>
@@ -779,9 +893,9 @@ export default function TodoTab() {
 										/>
 										{!sidebarCollapsed && (
 											<>
-												<span className="flex-1 text-left font-semibold text-sm">{folder.name}</span>
+												<span className="flex-1 text-left font-bold text-sm">{t(`folders.${folder.name}`)}</span>
 												{count > 0 && (
-													<span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+													<span className={`px-2.5 py-1 rounded-lg text-xs font-black ${
 														selectedFolder === folder.id
 															? 'bg-white/20 text-white'
 															: 'bg-gray-100 text-gray-700'
@@ -796,34 +910,33 @@ export default function TodoTab() {
 							})}
 						</div>
 
-						{/* Custom folders */}
 						<div>
 							{!sidebarCollapsed && (
 								<div className="flex items-center justify-between mb-3 px-3">
-									<h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-										{t ? t('myFolders') : 'My Folders'}
+									<h3 className="text-xs font-black text-gray-500 uppercase tracking-wider">
+										{t('myFolders')}
 									</h3>
 									<button
 										onClick={() => setShowAddFolder(true)}
-										className="p-1.5 hover:bg-primary/10 rounded-lg transition-colors group"
-										title={t ? t('addFolder') : 'Add Folder'}
+										className="p-2.5 bg-[var(--color-primary-100)] hover:bg-[var(--color-primary-200)] rounded-xl transition-all hover:scale-110 shadow-sm"
+										title={t('addFolder')}
 									>
-										<FolderPlus className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+										<FolderPlus className="w-4 h-4 text-[var(--color-primary-700)]" />
 									</button>
 								</div>
 							)}
 							
 							{folders.filter(f => !f.isSystem).map((folder) => {
 								const Icon = folder.icon;
-								const count = tasks.filter(t => t.folderId === folder.id && !t.completed).length;
+								const count = tasks.filter(t => t.folderId === folder.id && (!t.completed || settings.showCompleted)).length;
 
 								return (
-									<div key={folder.id} className="relative group/folder">
+									<div key={folder.id} className="relative group/folder mb-1">
 										<button
 											onClick={() => setSelectedFolder(folder.id)}
-											className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+											className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all ${
 												selectedFolder === folder.id
-													? 'bg-gradient-to-r from-primary to-secondary-600 text-white shadow-lg scale-[1.02]'
+													? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-lg scale-[1.02]'
 													: 'hover:bg-gray-50 text-gray-700'
 											}`}
 										>
@@ -835,9 +948,9 @@ export default function TodoTab() {
 											/>
 											{!sidebarCollapsed && (
 												<>
-													<span className="flex-1 text-left font-semibold text-sm truncate">{folder.name}</span>
+													<span className="flex-1 text-left font-bold text-sm truncate">{t(`folders.${folder.name}`)}</span>
 													{count > 0 && (
-														<span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+														<span className={`px-2.5 py-1 rounded-lg text-xs font-black ${
 															selectedFolder === folder.id
 																? 'bg-white/20 text-white'
 																: 'bg-gray-100 text-gray-700'
@@ -853,11 +966,11 @@ export default function TodoTab() {
 											<button
 												onClick={(e) => {
 													e.stopPropagation();
-													if (confirm(t ? t('confirmDeleteFolder') : 'Delete this folder?')) {
+													if (confirm(t('confirmDeleteFolder'))) {
 														handleDeleteFolder(folder.id);
 													}
 												}}
-												className="absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/folder:opacity-100 p-1.5 bg-red-500 hover:bg-red-600 rounded-lg transition-all shadow-lg"
+												className={`absolute ${isRTL ? 'left-2' : 'right-2'} top-1/2 -translate-y-1/2 opacity-0 group-hover/folder:opacity-100 p-2 bg-red-500 hover:bg-red-600 rounded-xl transition-all shadow-lg hover:scale-110`}
 											>
 												<Trash2 className="w-3.5 h-3.5 text-white" />
 											</button>
@@ -867,60 +980,52 @@ export default function TodoTab() {
 							})}
 						</div>
 
-						{/* Add folder form */}
 						{showAddFolder && !sidebarCollapsed && (
-							<div className="mt-4 p-4 bg-gradient-to-br from-primary/5 to-secondary-600/5 rounded-xl border-2 border-primary/20">
-								<input
+							<div className="mt-4 p-5 bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-secondary-50)] rounded-2xl border-2 border-[var(--color-primary-200)] shadow-lg">
+								<Input
 									type="text"
 									value={newFolderName}
 									onChange={(e) => setNewFolderName(e.target.value)}
 									onKeyPress={(e) => e.key === 'Enter' && handleAddFolder()}
-									placeholder={t ? t('folderNamePlaceholder') : "Folder name..."}
-									className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm mb-3"
+									placeholder={t('folderNamePlaceholder')}
+									className="mb-4"
 									autoFocus
 								/>
-								<div className="flex items-center gap-3 mb-3">
+								<div className="flex items-center gap-3 mb-4">
 									<input
 										type="color"
 										value={newFolderColor}
 										onChange={(e) => setNewFolderColor(e.target.value)}
-										className="w-12 h-12 rounded-lg cursor-pointer border-2 border-gray-200"
+										className="w-14 h-14 rounded-xl cursor-pointer border-2 border-gray-200 shadow-sm"
 									/>
-									<span className="text-sm text-gray-600 font-medium">{t ? t('pickColor') : 'Pick a color'}</span>
+									<span className="text-sm text-gray-700 font-bold">{t('pickColor')}</span>
 								</div>
 								<div className="flex gap-2">
-									<button
-										onClick={handleAddFolder}
-										className="flex-1 px-4 py-2.5 bg-gradient-to-r from-primary to-secondary-600 text-white rounded-lg text-sm font-bold hover:shadow-lg transition-all"
-									>
-										{t ? t('add') : 'Add'}
-									</button>
-									<button
-										onClick={() => setShowAddFolder(false)}
-										className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-all"
-									>
-										{t ? t('cancel') : 'Cancel'}
-									</button>
+									<Button onClick={handleAddFolder} className="flex-1 bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]">
+										{t('add')}
+									</Button>
+									<Button onClick={() => setShowAddFolder(false)} variant="outline">
+										{t('cancel')}
+									</Button>
 								</div>
 							</div>
 						)}
 					</div>
 
-					{/* Stats */}
 					{!sidebarCollapsed && (
-						<div className="p-4 border-t border-gray-200 bg-gradient-to-br from-primary/5 to-secondary-600/5">
+						<div className="p-5 border-t-2 border-gray-100 bg-gradient-to-br from-[var(--color-primary-50)] to-white">
 							<div className="grid grid-cols-2 gap-3">
-								<div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-									<div className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary-600 bg-clip-text text-transparent">
+								<div className="bg-white rounded-2xl p-5 border-2 border-gray-100 shadow-sm">
+									<div className="text-4xl font-black bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] bg-clip-text text-transparent">
 										{tasks.filter(t => !t.completed).length}
 									</div>
-									<div className="text-xs text-gray-600 font-medium mt-1">{t ? t('activeTasks') : 'Active'}</div>
+									<div className="text-xs text-gray-600 font-bold mt-1.5">{t('active')}</div>
 								</div>
-								<div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-									<div className="text-3xl font-bold text-green-600">
+								<div className="bg-white rounded-2xl p-5 border-2 border-gray-100 shadow-sm">
+									<div className="text-4xl font-black text-green-600">
 										{tasks.filter(t => t.completed).length}
 									</div>
-									<div className="text-xs text-gray-600 font-medium mt-1">{t ? t('completed') : 'Done'}</div>
+									<div className="text-xs text-gray-600 font-bold mt-1.5">{t('done')}</div>
 								</div>
 							</div>
 						</div>
@@ -928,11 +1033,10 @@ export default function TodoTab() {
 				</div>
 			</div>
 
-			{/* Main Content - Task List */}
+			{/* Main Content */}
 			<div className="flex-1 flex flex-col overflow-hidden">
-				{/* Header */}
-				<div className="bg-white border-b border-gray-200 p-6 shadow-sm">
-					<div className="flex items-center justify-between mb-5">
+				<div className="bg-white border-b-2 border-gray-100 p-6 shadow-sm">
+					<div className="flex items-center justify-between mb-6">
 						<div className="flex items-center gap-4">
 							{currentFolder && (
 								<>
@@ -940,17 +1044,17 @@ export default function TodoTab() {
 										const Icon = currentFolder.icon;
 										return (
 											<div 
-												className="p-3 rounded-2xl shadow-md"
+												className="p-4 rounded-2xl shadow-md"
 												style={{ backgroundColor: `${currentFolder.color}15` }}
 											>
-												<Icon className="w-7 h-7" style={{ color: currentFolder.color }} />
+												<Icon className="w-8 h-8" style={{ color: currentFolder.color }} />
 											</div>
 										);
 									})()}
 									<div>
-										<h2 className="text-3xl font-bold text-gray-900">{currentFolder.name}</h2>
-										<p className="text-sm text-gray-600 mt-1">
-											{filteredTasks.filter(t => !t.completed).length} active tasks
+										<h2 className="text-4xl font-black text-gray-900">{t(`folders.${currentFolder.name}`)}</h2>
+										<p className="text-sm text-gray-600 mt-2 font-semibold">
+											{filteredTasks.filter(t => !t.completed).length} {t('active')} · {filteredTasks.filter(t => t.completed).length} {t('completed')}
 										</p>
 									</div>
 								</>
@@ -958,86 +1062,40 @@ export default function TodoTab() {
 						</div>
 						
 						<div className="flex items-center gap-3">
-							{/* View Mode Toggle */}
-							<div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+							<div className="flex items-center gap-1.5 bg-gray-100 rounded-lg p-1 shadow-sm">
 								<button
 									onClick={() => setViewMode('list')}
-									className={`p-2 rounded-md transition-all ${
+									className={`p-1.5 rounded-lg transition-all ${
 										viewMode === 'list'
-											? 'bg-white text-primary shadow-sm'
+											? 'bg-white text-[var(--color-primary-600)] shadow-sm'
 											: 'text-gray-600 hover:text-gray-900'
 									}`}
 								>
-									<List className="w-4 h-4" />
+									<List className="w-5 h-5" />
 								</button>
 								<button
 									onClick={() => setViewMode('grid')}
-									className={`p-2 rounded-md transition-all ${
+									className={`p-1.5 rounded-lg transition-all ${
 										viewMode === 'grid'
-											? 'bg-white text-primary shadow-sm'
+											? 'bg-white text-[var(--color-primary-600)] shadow-sm'
 											: 'text-gray-600 hover:text-gray-900'
 									}`}
 								>
-									<Grid3x3 className="w-4 h-4" />
+									<Grid3x3 className="w-5 h-5" />
 								</button>
 							</div>
 
-							{/* Priority Filter */}
-							<Select value={filterPriority} onValueChange={setFilterPriority}>
-								<SelectTrigger className="w-[140px] h-10">
-									<SelectValue placeholder="Priority" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">All Priorities</SelectItem>
-									{priorityLevels.slice(1).map((priority) => (
-										<SelectItem key={priority.id} value={priority.id}>
-											<div className="flex items-center gap-2">
-												<div
-													className="w-3 h-3 rounded-full"
-													style={{ backgroundColor: priority.color }}
-												/>
-												{priority.label}
-											</div>
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							
-							{/* Sort */}
-							<Select value={sortBy} onValueChange={setSortBy}>
-								<SelectTrigger className="w-[140px] h-10">
-									<SelectValue placeholder="Sort by" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="manual">Manual</SelectItem>
-									<SelectItem value="dueDate">Due Date</SelectItem>
-									<SelectItem value="priority">Priority</SelectItem>
-									<SelectItem value="alphabetical">A-Z</SelectItem>
-								</SelectContent>
-							</Select>
+							<FilterSelect value={filterPriority} onChange={setFilterPriority} t={t} />
+							<SortSelect value={sortBy} onChange={setSortBy} t={t} />
 						</div>
 					</div>
 
-					{/* Search */}
-					<div className="relative">
-						<Search className="absolute ltr:left-4 rtl:right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-						<input
-							type="text"
-							value={searchTerm}
-							onChange={(e) => setSearchTerm(e.target.value)}
-							placeholder={t ? t('searchPlaceholder') : "Search tasks..."}
-							className="w-full ltr:pl-12 rtl:pr-12 ltr:pr-4 rtl:pl-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-						/>
-					</div>
-
-					{/* Quick add task */}
 					<QuickAddTask onAdd={handleAddTask} t={t} />
 				</div>
 
-				{/* Task List with Drag and Drop */}
-				<div className="flex-1 overflow-y-auto p-6">
+				<div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
 					{filteredTasks.length === 0 ? (
-						<EmptyState selectedFolder={selectedFolder} searchTerm={searchTerm} t={t} />
+						<EmptyState selectedFolder={selectedFolder} t={t} />
 					) : (
 						<DndContext
 							sensors={sensors}
@@ -1052,13 +1110,13 @@ export default function TodoTab() {
 											key={task.id}
 											task={task}
 											onToggle={handleToggleTask}
-											onSelect={() => setSelectedTask(task)}
-											onQuickEdit={handleQuickEdit}
+											onSelect={handleSelectTask}
 											onQuickDelete={handleDeleteTask}
-											onQuickAddSubtask={handleQuickAddSubtask}
+											onAddSubtask={handleAddSubtask}
+											onToggleStar={handleToggleStar}
 											isSelected={selectedTask?.id === task.id}
-											soundEnabled={soundEnabled}
 											viewMode={viewMode}
+											compactView={settings.compactView}
 											t={t}
 										/>
 									))}
@@ -1067,8 +1125,8 @@ export default function TodoTab() {
 
 							<DragOverlay>
 								{activeTask ? (
-									<div className="bg-white rounded-xl border-2 border-primary shadow-2xl p-4 opacity-90 rotate-2">
-										<h3 className="font-semibold text-gray-800">{activeTask.title}</h3>
+									<div className="bg-white rounded-2xl border-2 border-[var(--color-primary-500)] shadow-2xl p-5 opacity-90 rotate-2">
+										<h3 className="font-bold text-gray-800">{activeTask.title}</h3>
 									</div>
 								) : null}
 							</DragOverlay>
@@ -1077,81 +1135,150 @@ export default function TodoTab() {
 				</div>
 			</div>
 
-			{/* Right Sidebar - Task Details */}
-			{selectedTask && (
-				<TaskDetailPanel
-					task={selectedTask}
-					onUpdate={handleUpdateTask}
-					onDelete={handleDeleteTask}
-					onClose={() => setSelectedTask(null)}
-					soundEnabled={soundEnabled}
-					t={t}
-				/>
+			{showTaskSidebar && selectedTask && (
+				<>
+					<div 
+						className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+						onClick={() => setShowTaskSidebar(false)}
+					/>
+					
+					<TaskDetailSidebar
+						task={selectedTask}
+						onUpdate={handleUpdateTask}
+						onDelete={handleDeleteTask}
+						onClose={() => setShowTaskSidebar(false)}
+						soundEnabled={settings.soundEnabled}
+						isRTL={isRTL}
+						t={t}
+						locale={locale}
+					/>
+				</>
 			)}
+
+			<SettingsDialog
+				open={showSettings}
+				onClose={() => setShowSettings(false)}
+				settings={settings}
+				onUpdateSettings={setSettings}
+				t={t}
+			/>
 		</div>
 	);
 }
 
-// Quick Add Task Component
+// Quick Add Task Component with image upload
 function QuickAddTask({ onAdd, t }) {
 	const [title, setTitle] = useState('');
+	const [attachments, setAttachments] = useState([]);
+	const fileInputRef = useRef(null);
 
 	const handleSubmit = (e) => {
 		e.preventDefault();
 		if (title.trim()) {
-			onAdd(title);
+			onAdd(title, attachments);
 			setTitle('');
+			setAttachments([]);
 		}
 	};
 
+	const handleFileChange = (e) => {
+		const files = Array.from(e.target.files);
+		const newAttachments = files.map(file => ({
+			name: file.name,
+			url: URL.createObjectURL(file),
+			type: file.type,
+		}));
+		setAttachments([...attachments, ...newAttachments]);
+	};
+
+	const handlePaste = (e) => {
+		const items = e.clipboardData?.items;
+		if (!items) return;
+
+		for (let i = 0; i < items.length; i++) {
+			if (items[i].type.indexOf('image') !== -1) {
+				const blob = items[i].getAsFile();
+				const url = URL.createObjectURL(blob);
+				setAttachments([...attachments, {
+					name: `pasted-image-${Date.now()}.png`,
+					url: url,
+					type: 'image/png',
+				}]);
+			}
+		}
+	};
+
+	const removeAttachment = (index) => {
+		setAttachments(attachments.filter((_, i) => i !== index));
+	};
+
 	return (
-		<form onSubmit={handleSubmit} className="mt-4">
-			<div className="flex items-center gap-3 p-4 bg-gradient-to-r from-primary/5 to-secondary-600/5 rounded-xl border-2 border-dashed border-primary/30 hover:border-primary transition-all">
-				<div className="p-2 bg-primary/10 rounded-lg">
-					<Plus className="w-5 h-5 text-primary flex-shrink-0" />
+		<form onSubmit={handleSubmit}>
+			<div className="p-4 bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] rounded-2xl border-2 border-dashed border-[var(--color-primary-300)] hover:border-[var(--color-primary-500)] transition-all">
+				{attachments.length > 0 && (
+					<div className="flex flex-wrap gap-2 mb-3">
+						{attachments.map((att, idx) => (
+							<div key={idx} className="relative group">
+								<img src={att.url} alt={att.name} className="w-16 h-16 object-cover rounded-lg border-2 border-gray-200" />
+								<button
+									type="button"
+									onClick={() => removeAttachment(idx)}
+									className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+								>
+									<X className="w-3 h-3 text-white" />
+								</button>
+							</div>
+						))}
+					</div>
+				)}
+				
+				<div className="flex items-center gap-3">
+					<div className="p-2.5 bg-[var(--color-primary-100)] rounded-xl">
+						<Plus className="w-5 h-5 text-[var(--color-primary-700)] flex-shrink-0" />
+					</div>
+					<input
+						type="text"
+						value={title}
+						onChange={(e) => setTitle(e.target.value)}
+						onPaste={handlePaste}
+						placeholder={t('addTaskPlaceholder')}
+						className="flex-1 bg-transparent border-none focus:outline-none text-gray-800 placeholder-gray-500 font-semibold"
+					/>
+					<input
+						ref={fileInputRef}
+						type="file"
+						accept="image/*"
+						multiple
+						onChange={handleFileChange}
+						className="hidden"
+					/>
+					<button
+						type="button"
+						onClick={() => fileInputRef.current?.click()}
+						className="p-2.5 hover:bg-[var(--color-primary-100)] rounded-xl transition-all"
+						title="Attach image"
+					>
+						<Image className="w-5 h-5 text-gray-600" />
+					</button>
 				</div>
-				<input
-					type="text"
-					value={title}
-					onChange={(e) => setTitle(e.target.value)}
-					placeholder={t ? t('addTaskPlaceholder') : "Add a new task..."}
-					className="flex-1 bg-transparent border-none focus:outline-none text-gray-800 placeholder-gray-500 font-medium"
-				/>
 			</div>
 		</form>
 	);
 }
 
-// Task Detail Panel Component
-function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t }) {
+// ... (Continue in next part due to character limit)
+
+// Task Detail Sidebar Component
+function TaskDetailSidebar({ task, onUpdate, onDelete, onClose, soundEnabled, isRTL, t, locale }) {
 	const [editingTitle, setEditingTitle] = useState(false);
 	const [title, setTitle] = useState(task.title);
-	const [description, setDescription] = useState(task.description || '');
-	const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-	const [showSubtaskInput, setShowSubtaskInput] = useState(false);
-	const [newTag, setNewTag] = useState('');
-	const [customRepeatDays, setCustomRepeatDays] = useState(task.customRepeatDays || 1);
+	const fileInputRef = useRef(null);
 
 	const handleSaveTitle = () => {
 		if (title.trim() && title !== task.title) {
 			onUpdate(task.id, { title: title.trim() });
 		}
 		setEditingTitle(false);
-	};
-
-	const handleAddSubtask = () => {
-		if (newSubtaskTitle.trim()) {
-			const newSubtask = {
-				id: Date.now().toString(),
-				title: newSubtaskTitle.trim(),
-				completed: false,
-			};
-			onUpdate(task.id, {
-				subtasks: [...(task.subtasks || []), newSubtask]
-			});
-			setNewSubtaskTitle('');
-			setShowSubtaskInput(false);
-		}
 	};
 
 	const handleToggleSubtask = (subtaskId) => {
@@ -1171,404 +1298,683 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 		onUpdate(task.id, { subtasks: updatedSubtasks });
 	};
 
-	const handleAddTag = () => {
-		if (newTag.trim() && !task.tags?.includes(newTag.trim())) {
-			onUpdate(task.id, {
-				tags: [...(task.tags || []), newTag.trim()]
-			});
-			setNewTag('');
-		}
+	const handleFileChange = (e) => {
+		const files = Array.from(e.target.files);
+		const newAttachments = files.map(file => ({
+			name: file.name,
+			url: URL.createObjectURL(file),
+			type: file.type,
+		}));
+		onUpdate(task.id, { attachments: [...(task.attachments || []), ...newAttachments] });
 	};
 
-	const handleRemoveTag = (tagToRemove) => {
-		onUpdate(task.id, {
-			tags: task.tags.filter(tag => tag !== tagToRemove)
-		});
+	const removeAttachment = (index) => {
+		const updatedAttachments = task.attachments.filter((_, i) => i !== index);
+		onUpdate(task.id, { attachments: updatedAttachments });
 	};
 
 	return (
-		<div className="w-[500px] bg-white border-l border-gray-200 flex flex-col h-screen overflow-hidden ltr:animate-slide-in-right rtl:animate-slide-in-left shadow-2xl">
-			{/* Header */}
-			<div className="p-6 border-b border-gray-200 bg-gradient-to-br from-primary/5 to-secondary-600/5 flex-shrink-0">
-				<div className="flex items-center justify-between mb-4">
-					<h2 className="text-lg font-bold text-gray-900">
-						{t ? t('taskDetails') : 'Task Details'}
+		<div className={`fixed ${isRTL ? 'left-0' : 'right-0'} top-0 h-screen w-[500px] bg-white border-${isRTL ? 'r' : 'l'}-2 border-gray-100 shadow-2xl z-50 overflow-y-auto scrollbar-thin animate-slide-in-${isRTL ? 'left' : 'right'}`}>
+			<div className="sticky top-0 bg-gradient-to-br from-[var(--color-primary-50)] via-white to-[var(--color-secondary-50)] border-b-2 border-gray-100 p-6 z-10">
+				<div className="flex items-center justify-between mb-5">
+					<h2 className="text-xl font-black text-gray-900">
+						{t('taskDetails')}
 					</h2>
-					<button
+					<Button
 						onClick={onClose}
-						className="p-2 hover:bg-white rounded-lg transition-colors"
+						variant="ghost"
+						size="icon"
+						className="rounded-xl"
 					>
-						<X className="w-5 h-5 text-gray-600" />
-					</button>
+						<X className="w-5 h-5" />
+					</Button>
 				</div>
 
-				{/* Title */}
 				{editingTitle ? (
-					<input
+					<Input
 						type="text"
 						value={title}
 						onChange={(e) => setTitle(e.target.value)}
 						onBlur={handleSaveTitle}
 						onKeyPress={(e) => e.key === 'Enter' && handleSaveTitle()}
-						className="w-full px-4 py-3 border-2 border-primary rounded-xl focus:outline-none text-xl font-bold"
+						className="text-xl font-black"
 						autoFocus
 					/>
 				) : (
 					<h3
 						onClick={() => setEditingTitle(true)}
-						className="text-xl font-bold text-gray-900 cursor-pointer hover:text-primary transition-colors px-4 py-3 hover:bg-white rounded-xl"
+						className="text-xl font-black text-gray-900 cursor-pointer hover:text-[var(--color-primary-600)] transition-colors px-4 py-3 hover:bg-white rounded-xl"
 					>
 						{task.title}
 					</h3>
 				)}
 			</div>
 
-			{/* Content - Scrollable */}
-			<div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
-				{/* Status */}
+			<div className="p-6 space-y-6">
+				{/* Attachments Section */}
 				<div>
-					<label className="text-sm font-bold text-gray-700 mb-2 block">
-						{t ? t('status') : 'Status'}
-					</label>
-					<Select value={task.status} onValueChange={(value) => onUpdate(task.id, { status: value })}>
-						<SelectTrigger>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{statusOptions.map((status) => (
-								<SelectItem key={status.id} value={status.id}>
-									<div className="flex items-center gap-2">
-										<div
-											className="w-3 h-3 rounded-full"
-											style={{ backgroundColor: status.color }}
-										/>
-										{status.label}
-									</div>
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-
-				{/* Description */}
-				<div>
-					<label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-						<AlignLeft className="w-4 h-4" />
-						{t ? t('description') : 'Description'}
-					</label>
-					<textarea
-						value={description}
-						onChange={(e) => setDescription(e.target.value)}
-						onBlur={() => onUpdate(task.id, { description })}
-						placeholder={t ? t('descriptionPlaceholder') : "Add a description..."}
-						className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 resize-none min-h-[100px]"
-					/>
-				</div>
-
-				{/* Priority */}
-				<div>
-					<label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-						<Flag className="w-4 h-4" />
-						{t ? t('priority') : 'Priority'}
-					</label>
-					<div className="grid grid-cols-2 gap-2">
-						{priorityLevels.map((priority) => {
-							const Icon = priority.icon;
-							return (
-								<button
-									key={priority.id}
-									onClick={() => onUpdate(task.id, { priority: priority.id })}
-									className={`p-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-										task.priority === priority.id
-											? 'text-white shadow-md scale-105'
-											: 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-2 border-gray-200'
-									}`}
-									style={{
-										backgroundColor: task.priority === priority.id ? priority.color : undefined
-									}}
-								>
-									<Icon className="w-4 h-4" />
-									{priority.label}
-								</button>
-							);
-						})}
-					</div>
-				</div>
-
-				{/* Due Date & Time */}
-				<div className="grid grid-cols-2 gap-4">
-					<div>
-						<label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-							<Calendar className="w-4 h-4" />
-							{t ? t('dueDate') : 'Due Date'}
-						</label>
-						<input
-							type="date"
-							value={task.dueDate || ''}
-							onChange={(e) => onUpdate(task.id, { dueDate: e.target.value })}
-							className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-						/>
-					</div>
-					<div>
-						<label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-							<Clock className="w-4 h-4" />
-							{t ? t('time') : 'Time'}
-						</label>
-						<input
-							type="time"
-							value={task.dueTime || ''}
-							onChange={(e) => onUpdate(task.id, { dueTime: e.target.value })}
-							className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-						/>
-					</div>
-				</div>
-
-				{/* Repeat */}
-				<div>
-					<label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-						<Repeat className="w-4 h-4" />
-						{t ? t('repeat') : 'Repeat'}
-					</label>
-					<Select value={task.repeat} onValueChange={(value) => onUpdate(task.id, { repeat: value })}>
-						<SelectTrigger>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{repeatOptions.map((option) => (
-								<SelectItem key={option.id} value={option.id}>
-									{option.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-					
-					{task.repeat === 'custom' && (
-						<div className="flex items-center gap-2 mt-2">
-							<input
-								type="number"
-								min="1"
-								value={customRepeatDays}
-								onChange={(e) => setCustomRepeatDays(parseInt(e.target.value))}
-								onBlur={() => onUpdate(task.id, { customRepeatDays })}
-								className="w-20 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary"
-							/>
-							<span className="text-sm text-gray-600 font-medium">
-								{t ? t('days') : 'days'}
-							</span>
-						</div>
-					)}
-				</div>
-
-				{/* Reminder */}
-				<div>
-					<label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-						<Bell className="w-4 h-4" />
-						{t ? t('reminder') : 'Reminder'}
-					</label>
-					<div className="flex items-center gap-3 mb-2">
-						<Checkbox
-							checked={task.hasReminder}
-							onCheckedChange={(checked) => onUpdate(task.id, { hasReminder: checked })}
-							className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-						/>
-						<span className="text-sm text-gray-700 font-medium">
-							{t ? t('enableReminder') : 'Enable reminder'}
-						</span>
-					</div>
-					{task.hasReminder && (
-						<input
-							type="datetime-local"
-							value={task.reminderTime || ''}
-							onChange={(e) => onUpdate(task.id, { reminderTime: e.target.value })}
-							className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-						/>
-					)}
-				</div>
-
-				{/* Tags */}
-				<div>
-					<label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-						<Hash className="w-4 h-4" />
-						{t ? t('tags') : 'Tags'}
-					</label>
-					<div className="flex flex-wrap gap-2 mb-2">
-						{task.tags?.map((tag, idx) => (
-							<span
-								key={idx}
-								className="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-semibold flex items-center gap-2"
-							>
-								#{tag}
-								<button
-									onClick={() => handleRemoveTag(tag)}
-									className="hover:text-indigo-900"
-								>
-									<X className="w-3.5 h-3.5" />
-								</button>
-							</span>
-						))}
-					</div>
-					<div className="flex gap-2">
-						<input
-							type="text"
-							value={newTag}
-							onChange={(e) => setNewTag(e.target.value)}
-							onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
-							placeholder={t ? t('addTagPlaceholder') : "Add tag..."}
-							className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-sm"
-						/>
-						<button
-							onClick={handleAddTag}
-							className="px-4 py-2 bg-gradient-to-r from-primary to-secondary-600 text-white rounded-lg font-bold hover:shadow-lg transition-all"
-						>
-							{t ? t('add') : 'Add'}
-						</button>
-					</div>
-				</div>
-
-				{/* Subtasks */}
-				<div>
-					<label className="text-sm font-bold text-gray-700 mb-3 flex items-center justify-between">
+					<Label className="text-sm font-black mb-3 flex items-center justify-between">
 						<span className="flex items-center gap-2">
-							<CheckCircle className="w-4 h-4" />
-							{t ? t('subtasks') : 'Subtasks'}
+							<Paperclip className="w-4 h-4" />
+							{t('attachments')}
 						</span>
-						<button
-							onClick={() => setShowSubtaskInput(true)}
-							className="text-primary hover:text-primary/80 text-sm font-bold"
+						<Button
+							size="sm"
+							variant="outline"
+							onClick={() => fileInputRef.current?.click()}
 						>
-							+ {t ? t('add') : 'Add'}
-						</button>
-					</label>
-
-					<div className="space-y-2 mb-3">
-						{task.subtasks?.map((subtask) => (
-							<div key={subtask.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg group transition-colors">
-								<Checkbox
-									checked={subtask.completed}
-									onCheckedChange={() => handleToggleSubtask(subtask.id)}
-									className="data-[state=checked]:bg-primary data-[state=checked]:border-primary flex-shrink-0"
-								/>
-								<span className={`flex-1 text-sm ${subtask.completed ? 'line-through text-gray-400' : 'text-gray-700 font-medium'}`}>
-									{subtask.title}
-								</span>
-								<button
-									onClick={() => handleDeleteSubtask(subtask.id)}
-									className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-100 rounded-lg transition-all"
-								>
-									<X className="w-3.5 h-3.5 text-red-600" />
-								</button>
-							</div>
-						))}
-					</div>
-
-					{showSubtaskInput && (
-						<div className="flex gap-2">
-							<input
-								type="text"
-								value={newSubtaskTitle}
-								onChange={(e) => setNewSubtaskTitle(e.target.value)}
-								onKeyPress={(e) => e.key === 'Enter' && handleAddSubtask()}
-								placeholder={t ? t('subtaskPlaceholder') : "Subtask title..."}
-								className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-sm"
-								autoFocus
-							/>
-							<button
-								onClick={handleAddSubtask}
-								className="px-4 py-2 bg-gradient-to-r from-primary to-secondary-600 text-white rounded-lg font-bold hover:shadow-lg transition-all"
-							>
-								{t ? t('add') : 'Add'}
-							</button>
-							<button
-								onClick={() => setShowSubtaskInput(false)}
-								className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-							>
-								<X className="w-5 h-5 text-gray-600" />
-							</button>
+							<Plus className="w-3.5 h-3.5 mr-1.5" />
+							{t('add')}
+						</Button>
+					</Label>
+					<input
+						ref={fileInputRef}
+						type="file"
+						accept="image/*"
+						multiple
+						onChange={handleFileChange}
+						className="hidden"
+					/>
+					{task.attachments && task.attachments.length > 0 && (
+						<div className="grid grid-cols-3 gap-3">
+							{task.attachments.map((att, idx) => (
+								<div key={idx} className="relative group">
+									<img src={att.url} alt={att.name} className="w-full h-24 object-cover rounded-lg border-2 border-gray-200" />
+									<button
+										onClick={() => removeAttachment(idx)}
+										className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+									>
+										<X className="w-3.5 h-3.5 text-white" />
+									</button>
+									<a
+										href={att.url}
+										download={att.name}
+										className="absolute bottom-2 right-2 p-1.5 bg-white/90 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+									>
+										<Download className="w-3.5 h-3.5 text-gray-700" />
+									</a>
+								</div>
+							))}
 						</div>
 					)}
 				</div>
 
-				{/* Location */}
-				<div>
-					<label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-						<MapPin className="w-4 h-4" />
-						{t ? t('location') : 'Location'}
-					</label>
-					<input
-						type="text"
-						value={task.location || ''}
-						onChange={(e) => onUpdate(task.id, { location: e.target.value })}
-						placeholder={t ? t('locationPlaceholder') : "Add location..."}
-						className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-					/>
-				</div>
-
-				{/* Notes */}
-				<div>
-					<label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-						<FileText className="w-4 h-4" />
-						{t ? t('notes') : 'Notes'}
-					</label>
-					<textarea
-						value={task.notes || ''}
-						onChange={(e) => onUpdate(task.id, { notes: e.target.value })}
-						placeholder={t ? t('notesPlaceholder') : "Add notes..."}
-						className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 resize-none min-h-[80px]"
-					/>
-				</div>
-
-				{/* Star */}
-				<div>
-					<button
-						onClick={() => onUpdate(task.id, { isStarred: !task.isStarred })}
-						className={`w-full p-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
-							task.isStarred
-								? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg'
-								: 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-2 border-gray-200'
-						}`}
-					>
-						{task.isStarred ? <Star className="w-5 h-5 fill-white" /> : <StarOff className="w-5 h-5" />}
-						{task.isStarred ? (t ? t('starred') : 'Starred') : (t ? t('addToStarred') : 'Add to Starred')}
-					</button>
-				</div>
+				<TaskStatusSection task={task} onUpdate={onUpdate} t={t} />
+				<TaskPrioritySection task={task} onUpdate={onUpdate} t={t} />
+				<TaskDateTimeSection task={task} onUpdate={onUpdate} t={t} locale={locale} />
+				<TaskRepeatSection task={task} onUpdate={onUpdate} t={t} />
+				<TaskReminderSection task={task} onUpdate={onUpdate} t={t} locale={locale} />
+				<TaskSubtasksSection 
+					task={task} 
+					onUpdate={onUpdate}
+					onToggleSubtask={handleToggleSubtask}
+					onDeleteSubtask={handleDeleteSubtask}
+					t={t}
+				/>
+				<TaskLocationSection task={task} onUpdate={onUpdate} t={t} />
+				<TaskNotesSection task={task} onUpdate={onUpdate} t={t} />
+				<TaskStarSection task={task} onUpdate={onUpdate} t={t} />
 			</div>
 
-			{/* Footer - Actions */}
-			<div className="p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
-				<button
+			<div className="sticky bottom-0 p-6 border-t-2 border-gray-100 bg-gray-50">
+				<Button
 					onClick={() => {
-						if (confirm(t ? t('confirmDelete') : 'Delete this task?')) {
+						if (confirm(t('confirmDelete'))) {
 							onDelete(task.id);
 						}
 					}}
-					className="w-full p-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+					variant="destructive"
+					className="w-full font-black"
+					size="lg"
 				>
-					<Trash2 className="w-5 h-5" />
-					{t ? t('deleteTask') : 'Delete Task'}
-				</button>
+					<Trash2 className="w-5 h-5 mr-2" />
+					{t('deleteTask')}
+				</Button>
 			</div>
 		</div>
 	);
 }
 
-// Empty State Component
-function EmptyState({ selectedFolder, searchTerm, t }) {
+// Task Detail Sections
+function TaskStatusSection({ task, onUpdate, t }) {
+	return (
+		<div>
+			<Label className="text-sm font-black mb-3 block">{t('status')}</Label>
+			<div className="grid grid-cols-2 gap-2">
+				{statusOptions.map((status) => (
+					<Button
+						key={status.id}
+						onClick={() => onUpdate(task.id, { status: status.id })}
+						variant={task.status === status.id ? "default" : "outline"}
+						className="justify-start gap-2"
+						style={{
+							backgroundColor: task.status === status.id ? status.color : undefined,
+							borderColor: status.color,
+						}}
+					>
+						<div
+							className="w-2.5 h-2.5 rounded-full"
+							style={{ backgroundColor: task.status === status.id ? 'white' : status.color }}
+						/>
+						{t(`status.${status.label}`)}
+					</Button>
+				))}
+			</div>
+		</div>
+	);
+}
+
+function TaskPrioritySection({ task, onUpdate, t }) {
+	return (
+		<div>
+			<Label className="text-sm font-black mb-3 flex items-center gap-2">
+				<Flag className="w-4 h-4" />
+				{t('priority')}
+			</Label>
+			<div className="grid grid-cols-2 gap-2">
+				{priorityLevels.map((priority) => {
+					const Icon = priority.icon;
+					return (
+						<Button
+							key={priority.id}
+							onClick={() => onUpdate(task.id, { priority: priority.id })}
+							variant={task.priority === priority.id ? "default" : "outline"}
+							className="justify-start gap-2"
+							style={{
+								backgroundColor: task.priority === priority.id ? priority.color : undefined,
+								borderColor: priority.color,
+							}}
+						>
+							<Icon className="w-4 h-4" />
+							{t(`priorities.${priority.label}`)}
+						</Button>
+					);
+				})}
+			</div>
+		</div>
+	);
+}
+
+function TaskDateTimeSection({ task, onUpdate, t, locale }) {
+	return (
+		<div className="grid grid-cols-2 gap-4">
+			<div>
+				<Label className="text-sm font-black mb-3 flex items-center gap-2">
+					<Calendar className="w-4 h-4" />
+					{t('dueDate')}
+				</Label>
+				<Flatpickr
+					value={task.dueDate || ''}
+					onChange={([date]) => onUpdate(task.id, { dueDate: date ? date.toISOString().split('T')[0] : null })}
+					options={{
+						dateFormat: 'Y-m-d',
+						locale: locale,
+					}}
+					className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[var(--color-primary-500)] focus:ring-2 focus:ring-[var(--color-primary-100)] font-medium"
+					placeholder={t('selectDate')}
+				/>
+			</div>
+			<div>
+				<Label className="text-sm font-black mb-3 flex items-center gap-2">
+					<Clock className="w-4 h-4" />
+					{t('time')}
+				</Label>
+				<Flatpickr
+					value={task.dueTime || ''}
+					onChange={([date]) => {
+						if (date) {
+							const hours = String(date.getHours()).padStart(2, '0');
+							const minutes = String(date.getMinutes()).padStart(2, '0');
+							onUpdate(task.id, { dueTime: `${hours}:${minutes}` });
+						}
+					}}
+					options={{
+						enableTime: true,
+						noCalendar: true,
+						dateFormat: 'H:i',
+						time_24hr: true,
+					}}
+					className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[var(--color-primary-500)] focus:ring-2 focus:ring-[var(--color-primary-100)] font-medium"
+					placeholder={t('selectTime')}
+				/>
+			</div>
+		</div>
+	);
+}
+
+function TaskRepeatSection({ task, onUpdate, t }) {
+	const [customDays, setCustomDays] = useState(task.customRepeatDays || 1);
+	
+	return (
+		<div>
+			<Label className="text-sm font-black mb-3 flex items-center gap-2">
+				<Repeat className="w-4 h-4" />
+				{t('repeat')}
+			</Label>
+			<select
+				value={task.repeat}
+				onChange={(e) => onUpdate(task.id, { repeat: e.target.value })}
+				className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary-500)] font-semibold bg-white"
+			>
+				{repeatOptions.map((option) => (
+					<option key={option.id} value={option.id}>{t(`repeat.${option.label}`)}</option>
+				))}
+			</select>
+			
+			{task.repeat === 'custom' && (
+				<div className="flex items-center gap-3 mt-3">
+					<Input
+						type="number"
+						min="1"
+						value={customDays}
+						onChange={(e) => setCustomDays(parseInt(e.target.value))}
+						onBlur={() => onUpdate(task.id, { customRepeatDays: customDays })}
+						className="w-24"
+					/>
+					<span className="text-sm text-gray-700 font-bold">{t('days')}</span>
+				</div>
+			)}
+		</div>
+	);
+}
+
+function TaskReminderSection({ task, onUpdate, t, locale }) {
+	return (
+		<div>
+			<Label className="text-sm font-black mb-3 flex items-center gap-2">
+				<Bell className="w-4 h-4" />
+				{t('reminder')}
+			</Label>
+			<div className="flex items-center gap-3 mb-3">
+				<Switch
+					checked={task.hasReminder}
+					onCheckedChange={(checked) => onUpdate(task.id, { hasReminder: checked })}
+				/>
+				<span className="text-sm text-gray-700 font-bold">{t('enableReminder')}</span>
+			</div>
+			{task.hasReminder && (
+				<Flatpickr
+					value={task.reminderTime || ''}
+					onChange={([date]) => onUpdate(task.id, { reminderTime: date ? date.toISOString() : null })}
+					options={{
+						enableTime: true,
+						dateFormat: 'Y-m-d H:i',
+						time_24hr: true,
+						locale: locale,
+					}}
+					className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary-500)] font-medium bg-white"
+					placeholder={t('selectDateTime')}
+				/>
+			)}
+		</div>
+	);
+}
+
+function TaskSubtasksSection({ task, onUpdate, onToggleSubtask, onDeleteSubtask, t }) {
+	const [showInput, setShowInput] = useState(false);
+	const [newTitle, setNewTitle] = useState('');
+
+	const handleAdd = (e) => {
+		e.preventDefault();
+		if (newTitle.trim()) {
+			const newSubtask = {
+				id: Date.now().toString(),
+				title: newTitle.trim(),
+				completed: false,
+			};
+			onUpdate(task.id, {
+				subtasks: [...(task.subtasks || []), newSubtask]
+			});
+			setNewTitle('');
+			setShowInput(false);
+		}
+	};
+
+	return (
+		<div>
+			<Label className="text-sm font-black mb-3 flex items-center justify-between">
+				<span className="flex items-center gap-2">
+					<CheckCircle className="w-4 h-4" />
+					{t('subtasks')}
+				</span>
+				<button
+					onClick={() => setShowInput(true)}
+					className="text-[var(--color-primary-600)] hover:text-[var(--color-primary-700)] text-sm font-black"
+				>
+					+ {t('add')}
+				</button>
+			</Label>
+
+			<div className="space-y-2 mb-3">
+				{task.subtasks?.map((subtask) => (
+					<div key={subtask.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl group transition-all border border-transparent hover:border-gray-200">
+						<Checkbox
+							checked={subtask.completed}
+							onCheckedChange={() => onToggleSubtask(subtask.id)}
+						/>
+						<span className={`flex-1 text-sm font-semibold ${subtask.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+							{subtask.title}
+						</span>
+						<Button
+							size="icon"
+							variant="ghost"
+							onClick={() => onDeleteSubtask(subtask.id)}
+							className="opacity-0 group-hover:opacity-100 h-8 w-8"
+						>
+							<X className="w-4 h-4 text-red-600" />
+						</Button>
+					</div>
+				))}
+			</div>
+
+			{showInput && (
+				<form onSubmit={handleAdd} className="flex gap-2">
+					<Input
+						type="text"
+						value={newTitle}
+						onChange={(e) => setNewTitle(e.target.value)}
+						placeholder={t('subtaskPlaceholder')}
+						autoFocus
+					/>
+					<Button type="submit">
+						<Check className="w-4 h-4" />
+					</Button>
+					<Button type="button" variant="ghost" onClick={() => setShowInput(false)}>
+						<X className="w-4 h-4" />
+					</Button>
+				</form>
+			)}
+		</div>
+	);
+}
+
+function TaskLocationSection({ task, onUpdate, t }) {
+	return (
+		<div>
+			<Label className="text-sm font-black mb-3 flex items-center gap-2">
+				<MapPin className="w-4 h-4" />
+				{t('location')}
+			</Label>
+			<Input
+				type="text"
+				value={task.location || ''}
+				onChange={(e) => onUpdate(task.id, { location: e.target.value })}
+				placeholder={t('locationPlaceholder')}
+			/>
+		</div>
+	);
+}
+
+function TaskNotesSection({ task, onUpdate, t }) {
+	return (
+		<div>
+			<Label className="text-sm font-black mb-3 flex items-center gap-2">
+				<FileText className="w-4 h-4" />
+				{t('notes')}
+			</Label>
+			<Textarea
+				value={task.notes || ''}
+				onChange={(e) => onUpdate(task.id, { notes: e.target.value })}
+				placeholder={t('notesPlaceholder')}
+				rows={3}
+			/>
+		</div>
+	);
+}
+
+function TaskStarSection({ task, onUpdate, t }) {
+	return (
+		<Button
+			onClick={() => onUpdate(task.id, { isStarred: !task.isStarred })}
+			variant={task.isStarred ? "default" : "outline"}
+			className="w-full gap-2 font-black"
+			size="lg"
+			style={{
+				background: task.isStarred ? 'linear-gradient(to right, var(--color-gradient-from), var(--color-gradient-to))' : undefined,
+			}}
+		>
+			{task.isStarred ? <Star className="w-5 h-5 fill-white" /> : <StarOff className="w-5 h-5" />}
+			{task.isStarred ? t('starred') : t('addToStarred')}
+		</Button>
+	);
+}
+
+// Settings Dialog
+function SettingsDialog({ open, onClose, settings, onUpdateSettings, t }) {
+	return (
+		<Dialog open={open} onOpenChange={onClose}>
+			<DialogContent className="sm:max-w-[500px]">
+				<DialogHeader>
+					<DialogTitle className="text-2xl font-black">{t('settings')}</DialogTitle>
+				</DialogHeader>
+				
+				<div className="space-y-6 mt-4">
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-3">
+							<Volume2 className="w-5 h-5 text-gray-600" />
+							<div>
+								<Label className="font-black">{t('soundEffects')}</Label>
+								<p className="text-xs text-gray-500">{t('soundEffectsDesc')}</p>
+							</div>
+						</div>
+						<Switch
+							checked={settings.soundEnabled}
+							onCheckedChange={(checked) => onUpdateSettings({ ...settings, soundEnabled: checked })}
+						/>
+					</div>
+
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-3">
+							<Eye className="w-5 h-5 text-gray-600" />
+							<div>
+								<Label className="font-black">{t('showCompleted')}</Label>
+								<p className="text-xs text-gray-500">{t('showCompletedDesc')}</p>
+							</div>
+						</div>
+						<Switch
+							checked={settings.showCompleted}
+							onCheckedChange={(checked) => onUpdateSettings({ ...settings, showCompleted: checked })}
+						/>
+					</div>
+
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-3">
+							<List className="w-5 h-5 text-gray-600" />
+							<div>
+								<Label className="font-black">{t('compactView')}</Label>
+								<p className="text-xs text-gray-500">{t('compactViewDesc')}</p>
+							</div>
+						</div>
+						<Switch
+							checked={settings.compactView}
+							onCheckedChange={(checked) => onUpdateSettings({ ...settings, compactView: checked })}
+						/>
+					</div>
+
+					<div>
+						<Label className="font-black mb-3 block">{t('addTaskPosition')}</Label>
+						<div className="grid grid-cols-2 gap-2">
+							<Button
+								variant={settings.addTaskPosition === 'top' ? 'default' : 'outline'}
+								onClick={() => onUpdateSettings({ ...settings, addTaskPosition: 'top' })}
+								className="justify-start gap-2"
+							>
+								<ArrowUp className="w-4 h-4" />
+								{t('addToTop')}
+							</Button>
+							<Button
+								variant={settings.addTaskPosition === 'bottom' ? 'default' : 'outline'}
+								onClick={() => onUpdateSettings({ ...settings, addTaskPosition: 'bottom' })}
+								className="justify-start gap-2"
+							>
+								<ArrowDown className="w-4 h-4" />
+								{t('addToBottom')}
+							</Button>
+						</div>
+					</div>
+
+					<div>
+						<Label className="font-black mb-3 block">{t('defaultView')}</Label>
+						<div className="grid grid-cols-2 gap-2">
+							<Button
+								variant={settings.defaultView === 'list' ? 'default' : 'outline'}
+								onClick={() => onUpdateSettings({ ...settings, defaultView: 'list' })}
+								className="justify-start gap-2"
+							>
+								<List className="w-4 h-4" />
+								{t('listView')}
+							</Button>
+							<Button
+								variant={settings.defaultView === 'grid' ? 'default' : 'outline'}
+								onClick={() => onUpdateSettings({ ...settings, defaultView: 'grid' })}
+								className="justify-start gap-2"
+							>
+								<Grid3x3 className="w-4 h-4" />
+								{t('gridView')}
+							</Button>
+						</div>
+					</div>
+				</div>
+
+				<div className="flex justify-end gap-2 mt-6">
+					<Button onClick={onClose} className="bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]">{t('done')}</Button>
+				</div>
+			</DialogContent>
+		</Dialog>
+	);
+}
+
+// Filter and Sort Selects
+function FilterSelect({ value, onChange, t }) {
+	const [isOpen, setIsOpen] = useState(false);
+	const selectRef = useRef(null);
+
+	useEffect(() => {
+		const handleClickOutside = (e) => {
+			if (selectRef.current && !selectRef.current.contains(e.target)) {
+				setIsOpen(false);
+			}
+		};
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => document.removeEventListener('mousedown', handleClickOutside);
+	}, []);
+
+	const selectedPriority = value === 'all' ? { label: 'all' } : priorityLevels.find(p => p.id === value);
+
+	return (
+		<div ref={selectRef} className="relative">
+			<Button
+				onClick={() => setIsOpen(!isOpen)}
+				variant="outline"
+				className="gap-2"
+			>
+				<Filter className="w-4 h-4" />
+				{t(`priorities.${selectedPriority?.label}`)}
+				<ChevronDown className="w-4 h-4" />
+			</Button>
+			{isOpen && (
+				<div className="absolute z-50 mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-2xl overflow-hidden min-w-[180px]">
+					<div className="py-2">
+						<div
+							onClick={() => {
+								onChange('all');
+								setIsOpen(false);
+							}}
+							className="px-4 py-3 hover:bg-[var(--color-primary-50)] cursor-pointer transition-colors text-sm font-bold"
+						>
+							{t('priorities.all')}
+						</div>
+						{priorityLevels.slice(1).map((priority) => (
+							<div
+								key={priority.id}
+								onClick={() => {
+									onChange(priority.id);
+									setIsOpen(false);
+								}}
+								className="px-4 py-3 hover:bg-[var(--color-primary-50)] cursor-pointer transition-colors flex items-center gap-2"
+							>
+								<div
+									className="w-3 h-3 rounded-full"
+									style={{ backgroundColor: priority.color }}
+								/>
+								<span className="text-sm font-bold">{t(`priorities.${priority.label}`)}</span>
+							</div>
+						))}
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
+function SortSelect({ value, onChange, t }) {
+	const [isOpen, setIsOpen] = useState(false);
+	const selectRef = useRef(null);
+
+	useEffect(() => {
+		const handleClickOutside = (e) => {
+			if (selectRef.current && !selectRef.current.contains(e.target)) {
+				setIsOpen(false);
+			}
+		};
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => document.removeEventListener('mousedown', handleClickOutside);
+	}, []);
+
+	const sortOptions = [
+		{ id: 'manual', label: 'manual' },
+		{ id: 'dueDate', label: 'dueDate' },
+		{ id: 'priority', label: 'priority' },
+		{ id: 'alphabetical', label: 'alphabetical' },
+	];
+
+	const selectedSort = sortOptions.find(s => s.id === value);
+
+	return (
+		<div ref={selectRef} className="relative">
+			<Button
+				onClick={() => setIsOpen(!isOpen)}
+				variant="outline"
+				className="gap-2"
+			>
+				<TrendingUp className="w-4 h-4" />
+				{t(`sort.${selectedSort?.label}`)}
+				<ChevronDown className="w-4 h-4" />
+			</Button>
+			{isOpen && (
+				<div className="absolute z-50 mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-2xl overflow-hidden min-w-[160px]">
+					<div className="py-2">
+						{sortOptions.map((option) => (
+							<div
+								key={option.id}
+								onClick={() => {
+									onChange(option.id);
+									setIsOpen(false);
+								}}
+								className="px-4 py-3 hover:bg-[var(--color-primary-50)] cursor-pointer transition-colors text-sm font-bold"
+							>
+								{t(`sort.${option.label}`)}
+							</div>
+						))}
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
+// Empty State
+function EmptyState({ selectedFolder, t }) {
 	return (
 		<div className="text-center py-20">
-			<div className="w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary/20 to-secondary-600/20 flex items-center justify-center">
-				<ListTodo className="w-16 h-16 text-primary" />
+			<div className="w-40 h-40 mx-auto mb-8 rounded-full bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-secondary-100)] flex items-center justify-center shadow-lg">
+				<ListTodo className="w-20 h-20 text-[var(--color-primary-600)]" />
 			</div>
-			<h3 className="text-2xl font-bold text-gray-900 mb-2">
-				{searchTerm 
-					? (t ? t('noTasksFound') : 'No tasks found')
-					: (t ? t('noTasks') : 'No tasks yet')
-				}
+			<h3 className="text-3xl font-black text-gray-900 mb-3">
+				{t('noTasks')}
 			</h3>
-			<p className="text-gray-600 text-lg">
-				{searchTerm
-					? (t ? t('tryDifferentSearch') : 'Try a different search term')
-					: (t ? t('addFirstTask') : 'Add your first task to get started!')
-				}
+			<p className="text-gray-600 text-lg font-semibold">
+				{t('addFirstTask')}
 			</p>
 		</div>
 	);

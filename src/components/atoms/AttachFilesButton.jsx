@@ -5,8 +5,10 @@ import { createPortal } from 'react-dom';
 import { FiUpload, FiX, FiCheck, FiAlertCircle } from 'react-icons/fi';
 import { FaFileUpload } from 'react-icons/fa';
 import api, { baseImg } from '@/utils/axios';
-import { File, FileText, ImageIcon, Music, Video } from 'lucide-react';
+import { File, FileText, ImageIcon, Music, Video, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from '@/app/[locale]/theme';
 
 // ---- helpers --------------------------------------------------------------
 
@@ -18,12 +20,12 @@ const safeJoin = (base, rel) => {
   return r ? `${b}/${r}` : b;
 };
 
-export const getFileIcon = mimeType => {
-  if (mimeType?.startsWith('image')) return <ImageIcon className='w-12 h-12 text-blue-500' />;
-  if (mimeType?.startsWith('video')) return <Video className='w-12 h-12 text-purple-500' />;
-  if (mimeType?.startsWith('audio')) return <Music className='w-12 h-12 text-green-500' />;
-  if (mimeType === 'application/pdf' || mimeType === 'document') return <FileText className='w-12 h-12 text-red-500' />;
-  return <File className='w-12 h-12 text-gray-400' />;
+export const getFileIcon = (mimeType, colors) => {
+  if (mimeType?.startsWith('image')) return <ImageIcon className='w-12 h-12' style={{ color: colors.primary[500] }} />;
+  if (mimeType?.startsWith('video')) return <Video className='w-12 h-12' style={{ color: colors.secondary[500] }} />;
+  if (mimeType?.startsWith('audio')) return <Music className='w-12 h-12' style={{ color: colors.primary[400] }} />;
+  if (mimeType === 'application/pdf' || mimeType === 'document') return <FileText className='w-12 h-12 text-rose-500' />;
+  return <File className='w-12 h-12' style={{ color: colors.primary[300] }} />;
 };
 
 const BYTES_IN_KB = 1024;
@@ -38,17 +40,40 @@ const formatSize = bytes => {
 };
 
 // small toast-ish inline message
-const InlineNotice = ({ tone = 'info', children }) => {
+const InlineNotice = ({ tone = 'info', children, colors }) => {
   const map = {
-    info: 'bg-blue-50 text-blue-700 border-blue-200',
-    warn: 'bg-amber-50 text-amber-800 border-amber-200',
-    error: 'bg-rose-50 text-rose-700 border-rose-200',
+    info: { 
+      bg: `${colors.primary[50]}80`, 
+      text: colors.primary[700], 
+      border: colors.primary[200] 
+    },
+    warn: { 
+      bg: '#fef3c780', 
+      text: '#92400e', 
+      border: '#fcd34d' 
+    },
+    error: { 
+      bg: '#fff1f280', 
+      text: '#be123c', 
+      border: '#fda4af' 
+    },
   };
+  const style = map[tone] || map.info;
+  
   return (
-    <div className={cx('flex items-center gap-2 text-sm border rounded-lg px-3 py-2', map[tone] || map.info)}>
-      <FiAlertCircle className='shrink-0' />
-      <div className='min-w-0'>{children}</div>
-    </div>
+    <motion.div 
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className='flex items-center gap-2 text-sm border-2 rounded-xl px-4 py-3 shadow-sm'
+      style={{ 
+        backgroundColor: style.bg, 
+        color: style.text, 
+        borderColor: style.border 
+      }}
+    >
+      <FiAlertCircle className='shrink-0' size={18} />
+      <div className='min-w-0 font-medium'>{children}</div>
+    </motion.div>
   );
 };
 
@@ -65,6 +90,7 @@ export default function AttachFilesButton({
   userId,
 }) {
   const t = useTranslations('attachments');
+  const { colors } = useTheme();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [attachments, setAttachments] = useState([]);
@@ -72,6 +98,7 @@ export default function AttachFilesButton({
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
 
   const dropRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -181,22 +208,22 @@ export default function AttachFilesButton({
 
     const onDrop = e => {
       stop(e);
+      setIsDragging(false);
       if (uploading) return;
       const files = Array.from(e.dataTransfer?.files || []);
       doUpload(files);
-      el.classList.remove('ring-2', 'ring-indigo-300');
     };
 
     const onDragEnter = e => {
       stop(e);
-      el.classList.add('ring-2', 'ring-indigo-300');
+      setIsDragging(true);
     };
 
     const onDragOver = stop;
 
     const onDragLeave = e => {
       stop(e);
-      el.classList.remove('ring-2', 'ring-indigo-300');
+      setIsDragging(false);
     };
 
     el.addEventListener('drop', onDrop);
@@ -230,95 +257,299 @@ export default function AttachFilesButton({
   const finishLabel = selected.length ? t('actions.finishSelectionWithCount', { count: selected.length }) : t('actions.finishSelection');
 
   const modalContent = (
-    <div className='fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center' onClick={e => e.target === e.currentTarget && setIsModalOpen(false)} role='dialog' aria-modal='true' aria-label={t('labels.attachFiles')}>
-      <div className='bg-white w-full max-w-[800px] rounded-lg shadow-2xl border border-slate-200 max-h-[85vh] overflow-hidden flex flex-col'>
-        {/* header */}
-        <div className='flex items-center justify-between gap-2 px-5 py-4 border-b border-slate-200'>
-          <div className='min-w-0'>
-            <h3 className='text-lg font-semibold text-slate-900'>{t('modal.title')}</h3>
-            <p className='text-xs text-slate-500'>{t('modal.subtitle')}</p>
+    <AnimatePresence>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className='fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-md flex items-center justify-center p-4' 
+        onClick={e => e.target === e.currentTarget && setIsModalOpen(false)} 
+        role='dialog' 
+        aria-modal='true' 
+        aria-label={t('labels.attachFiles')}
+      >
+        <motion.div 
+          initial={{ scale: 0.95, y: 20 }}
+          animate={{ scale: 1, y: 0 }}
+          exit={{ scale: 0.95, y: 20 }}
+          transition={{ type: "spring", duration: 0.3 }}
+          className='bg-white w-full max-w-[900px] rounded-2xl shadow-2xl border-2 max-h-[90vh] overflow-hidden flex flex-col'
+          style={{ borderColor: colors.primary[200] }}
+        >
+          {/* header */}
+          <div 
+            className='flex items-center justify-between gap-2 px-6 py-5 border-b-2'
+            style={{ 
+              background: `linear-gradient(135deg, ${colors.primary[50]}, white)`,
+              borderColor: colors.primary[200] 
+            }}
+          >
+            <div className='min-w-0'>
+              <h3 className='text-xl font-bold' style={{ color: colors.primary[900] }}>
+                {t('modal.title')}
+              </h3>
+              <p className='text-sm font-medium mt-1' style={{ color: colors.primary[600] }}>
+                {t('modal.subtitle')}
+              </p>
+            </div>
+            <motion.button 
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setIsModalOpen(false)} 
+              className='inline-flex items-center justify-center w-10 h-10 rounded-xl border-2 transition-all duration-200'
+              style={{ 
+                borderColor: colors.primary[200],
+                color: colors.primary[600]
+              }}
+              aria-label={t('labels.close')}
+            >
+              <FiX className='w-5 h-5' />
+            </motion.button>
           </div>
-          <button onClick={() => setIsModalOpen(false)} className='inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300' aria-label={t('labels.close')}>
-            <FiX className='w-4 h-4' />
-          </button>
-        </div>
 
-        {/* body */}
-        <div className='flex-1 overflow-y-auto p-5 space-y-4'>
-          <input ref={fileInputRef} type='file' className='hidden' multiple accept={accept} onChange={e => doUpload(Array.from(e.target.files || []))} />
+          {/* body */}
+          <div className='flex-1 overflow-y-auto p-6 space-y-5'>
+            <input ref={fileInputRef} type='file' className='hidden' multiple accept={accept} onChange={e => doUpload(Array.from(e.target.files || []))} />
 
-          <div ref={dropRef} className='rounded-lg border border-dashed border-slate-300 bg-slate-50/60 p-4'>
-            {/* drag & drop area (invisible UI, but active) */}
-          </div>
-
-          {errorMsg ? <InlineNotice tone='error'>{errorMsg}</InlineNotice> : null}
-
-          {/* grid */}
-          <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4'>
-            {/* uploader card as a tile */}
-            <button type='button' onClick={() => fileInputRef.current?.click()} disabled={uploading || loading} className={cx('group aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center transition', 'border-indigo-200 bg-indigo-50 hover:bg-indigo-100', (uploading || loading) && 'opacity-60 cursor-not-allowed')}>
-              <FiUpload className='w-6 h-6 text-indigo-500' />
-              <span className='mt-1 text-xs text-indigo-700'>{t('uploader.upload')}</span>
-            </button>
-
-            {/* files */}
-            {attachments.map(asset => {
-              const selectedState = isSelected(asset.id);
-              const url = asset?.mimeType?.startsWith('image/') ? safeJoin(baseImg, asset.url) : null;
-
-              return (
-                <div key={asset.id} onClick={() => handleFileSelectToggle(asset)} className={cx('group relative rounded-lg border p-2 bg-white transition cursor-pointer', 'hover:border-indigo-300 hover:shadow-sm', selectedState ? 'border-indigo-400 ring-1 ring-indigo-200' : 'border-slate-200')} tabIndex={0} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && handleFileSelectToggle(asset)}>
-                  {/* checkmark */}
-                  <div className={cx('absolute top-2 left-2 w-6 h-6 rounded-full border flex items-center justify-center transition', selectedState ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white/90 border-slate-300 text-transparent group-hover:text-slate-300')}>
-                    <FiCheck className='w-4 h-4' />
-                  </div>
-
-                  {/* delete */}
-                  <button type='button' onClick={e => handleDeleteFile(asset.id, e)} className='absolute top-2 right-2 w-7 h-7 rounded-lg border border-slate-200 bg-white/90 text-slate-600 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-rose-400' aria-label={t('actions.deleteFile', { filename: asset.filename })} disabled={uploading}>
-                    <FiX className='w-4 h-4 mx-auto' />
-                  </button>
-
-                  {/* preview */}
-                  <div className='aspect-square rounded-lg overflow-hidden flex items-center justify-center bg-slate-50'>
-                    {url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={url} alt={asset.filename || t('labels.image')} loading='lazy' className='w-full h-full object-contain' />
-                    ) : (
-                      <div className='flex items-center justify-center w-full h-full'>{getFileIcon(asset.mimeType)}</div>
-                    )}
-                  </div>
-
-                  {/* meta */}
-                  <div className='mt-2 text-xs'>
-                    <div className='truncate text-slate-800' title={asset.filename}>
-                      {asset.filename}
-                    </div>
-                    <div className='text-slate-500'>{formatSize(asset.size)}</div>
-                  </div>
+            {/* Drag & Drop Zone */}
+            <motion.div 
+              ref={dropRef} 
+              animate={{ 
+                scale: isDragging ? 1.02 : 1,
+                borderColor: isDragging ? colors.primary[500] : colors.primary[300]
+              }}
+              className='rounded-2xl border-2 border-dashed p-8 transition-all duration-300'
+              style={{ 
+                backgroundColor: isDragging ? `${colors.primary[50]}40` : `${colors.primary[50]}20`,
+                borderColor: isDragging ? colors.primary[500] : colors.primary[300]
+              }}
+            >
+              <div className='flex flex-col items-center justify-center gap-4'>
+                <div 
+                  className='w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg'
+                  style={{
+                    background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`
+                  }}
+                >
+                  <FiUpload className='w-8 h-8 text-white' />
                 </div>
-              );
-            })}
-          </div>
-        </div>
+                <div className='text-center'>
+                  <p className='text-lg font-semibold mb-1' style={{ color: colors.primary[900] }}>
+                    {t('uploader.dragDrop') || 'Drag and drop files here'}
+                  </p>
+                  <p className='text-sm font-medium' style={{ color: colors.primary[500] }}>
+                    {t('uploader.orClickToSelect') || 'or click the button below to select files'}
+                  </p>
+                </div>
+                <motion.button 
+                  type='button' 
+                  onClick={() => fileInputRef.current?.click()} 
+                  disabled={uploading || loading}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className='px-6 py-3 rounded-xl font-semibold text-white shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                  style={{
+                    background: `linear-gradient(to right, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
+                    boxShadow: `0 4px 12px ${colors.primary[200]}`
+                  }}
+                >
+                  <span className='flex items-center gap-2'>
+                    <FiUpload className='w-5 h-5' />
+                    {t('uploader.upload')}
+                  </span>
+                </motion.button>
+              </div>
+            </motion.div>
 
-        {/* footer */}
-        <div className='px-5 py-4 border-t bg-slate-50 flex items-center justify-between gap-3'>
-          <div className='text-xs text-slate-500'>
-            {t('labels.totalFiles')}: <span className='font-medium'>{attachments.length}</span>
+            {errorMsg ? <InlineNotice tone='error' colors={colors}>{errorMsg}</InlineNotice> : null}
+
+            {/* Loading state */}
+            {loading && (
+              <div className='flex items-center justify-center py-12'>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className='w-12 h-12 border-4 border-t-transparent rounded-full'
+                  style={{ borderColor: colors.primary[200], borderTopColor: 'transparent' }}
+                />
+              </div>
+            )}
+
+            {/* grid */}
+            {!loading && (
+              <motion.div 
+                layout
+                className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4'
+              >
+                {/* files */}
+                <AnimatePresence>
+                  {attachments.map(asset => {
+                    const selectedState = isSelected(asset.id);
+                    const url = asset?.mimeType?.startsWith('image/') ? safeJoin(baseImg, asset.url) : null;
+
+                    return (
+                      <motion.div 
+                        key={asset.id} 
+                        layout
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        whileHover={{ y: -4 }}
+                        onClick={() => handleFileSelectToggle(asset)} 
+                        className='group relative rounded-xl border-2 p-3 bg-white transition-all duration-200 cursor-pointer'
+                        style={{
+                          borderColor: selectedState ? colors.primary[500] : colors.primary[200],
+                          boxShadow: selectedState ? `0 4px 12px ${colors.primary[200]}` : '0 2px 4px rgba(0,0,0,0.05)'
+                        }}
+                        tabIndex={0} 
+                        onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && handleFileSelectToggle(asset)}
+                      >
+                        {/* checkmark */}
+                        <motion.div 
+                          initial={{ scale: 0 }}
+                          animate={{ scale: selectedState ? 1 : 0 }}
+                          className='absolute -top-2 -left-2 w-8 h-8 rounded-full border-2 flex items-center justify-center shadow-lg z-10'
+                          style={{
+                            backgroundColor: colors.primary[600],
+                            borderColor: 'white'
+                          }}
+                        >
+                          <FiCheck className='w-5 h-5 text-white' strokeWidth={3} />
+                        </motion.div>
+
+                        {/* delete */}
+                        <motion.button 
+                          type='button' 
+                          onClick={e => handleDeleteFile(asset.id, e)} 
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className='absolute -top-2 -right-2 w-8 h-8 rounded-full border-2 bg-white text-rose-500 hover:bg-rose-500 hover:text-white transition-all duration-200 opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none shadow-lg z-10'
+                          style={{ borderColor: 'white' }}
+                          aria-label={t('actions.deleteFile', { filename: asset.filename })} 
+                          disabled={uploading}
+                        >
+                          <Trash2 className='w-4 h-4 mx-auto' />
+                        </motion.button>
+
+                        {/* preview */}
+                        <div 
+                          className='aspect-square rounded-lg overflow-hidden flex items-center justify-center'
+                          style={{ backgroundColor: `${colors.primary[50]}60` }}
+                        >
+                          {url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={url} alt={asset.filename || t('labels.image')} loading='lazy' className='w-full h-full object-cover' />
+                          ) : (
+                            <div className='flex items-center justify-center w-full h-full'>{getFileIcon(asset.mimeType, colors)}</div>
+                          )}
+                        </div>
+
+                        {/* meta */}
+                        <div className='mt-3 space-y-1'>
+                          <div className='truncate text-xs font-semibold' style={{ color: colors.primary[900] }} title={asset.filename}>
+                            {asset.filename}
+                          </div>
+                          <div className='text-xs font-medium' style={{ color: colors.primary[500] }}>
+                            {formatSize(asset.size)}
+                          </div>
+                        </div>
+
+                        {/* Selected overlay */}
+                        {selectedState && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className='absolute inset-0 rounded-xl pointer-events-none'
+                            style={{
+                              background: `linear-gradient(135deg, ${colors.primary[500]}10, ${colors.primary[600]}10)`
+                            }}
+                          />
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </motion.div>
+            )}
+
+            {/* Empty state */}
+            {!loading && attachments.length === 0 && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className='text-center py-16'
+              >
+                <div 
+                  className='w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-4'
+                  style={{ backgroundColor: colors.primary[100] }}
+                >
+                  <FaFileUpload size={32} style={{ color: colors.primary[500] }} />
+                </div>
+                <p className='text-lg font-semibold' style={{ color: colors.primary[700] }}>
+                  {t('labels.noFiles') || 'No files uploaded yet'}
+                </p>
+                <p className='text-sm font-medium mt-1' style={{ color: colors.primary[500] }}>
+                  {t('labels.uploadFirst') || 'Upload your first file to get started'}
+                </p>
+              </motion.div>
+            )}
           </div>
 
-          <div className='flex items-center gap-2'>
-            <button type='button' onClick={() => setIsModalOpen(false)} className='inline-flex items-center justify-center h-9 px-4 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition focus:outline-none focus:ring-2 focus:ring-slate-300'>
-              {t('actions.cancel')}
-            </button>
+          {/* footer */}
+          <div 
+            className='px-6 py-4 border-t-2 flex items-center justify-between gap-3'
+            style={{ 
+              backgroundColor: colors.primary[50],
+              borderColor: colors.primary[200]
+            }}
+          >
+            <div className='text-sm font-semibold' style={{ color: colors.primary[700] }}>
+              {t('labels.totalFiles')}: <span style={{ color: colors.primary[900] }}>{attachments.length}</span>
+              {selected.length > 0 && (
+                <span className='ml-3'>
+                  {t('labels.selected') || 'Selected'}: <span style={{ color: colors.primary[900] }}>{selected.length}</span>
+                </span>
+              )}
+            </div>
 
-            <button type='button' onClick={handleOkClick} disabled={!selected.length} className={cx('inline-flex items-center gap-2 h-9 px-4 rounded-lg text-white transition focus:outline-none focus:ring-2', selected.length ? 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-400' : 'bg-indigo-300 cursor-not-allowed')}>
-              {finishLabel}
-            </button>
+            <div className='flex items-center gap-3'>
+              <motion.button 
+                type='button' 
+                onClick={() => setIsModalOpen(false)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className='inline-flex items-center justify-center h-11 px-6 rounded-xl border-2 font-semibold transition-all duration-200'
+                style={{
+                  borderColor: colors.primary[300],
+                  backgroundColor: 'white',
+                  color: colors.primary[700]
+                }}
+              >
+                {t('actions.cancel')}
+              </motion.button>
+
+              <motion.button 
+                type='button' 
+                onClick={handleOkClick} 
+                disabled={!selected.length}
+                whileHover={{ scale: selected.length ? 1.05 : 1 }}
+                whileTap={{ scale: selected.length ? 0.95 : 1 }}
+                className='inline-flex items-center text-sm text-nowrap gap-2 h-11 px-6 rounded-xl font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg'
+                style={{
+                  background: selected.length 
+                    ? `linear-gradient(to right, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})` 
+                    : colors.primary[300],
+                  boxShadow: selected.length ? `0 4px 12px ${colors.primary[200]}` : 'none'
+                }}
+              >
+                <FiCheck className='w-5 h-5' />
+                {finishLabel}
+              </motion.button>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 
   // ---- main trigger -------------------------------------------------------
@@ -326,24 +557,59 @@ export default function AttachFilesButton({
   return (
     <div className={cx('relative', className)}>
       <div className='flex flex-col items-start gap-4 my-6'>
-        <button type='button' onClick={toggleModal} className='flex-none px-5 py-2 inline-flex items-center gap-2 rounded-full border border-indigo-700 text-indigo-700 hover:bg-indigo-50 transition focus:outline-none focus:ring-2 focus:ring-indigo-300'>
-          <FaFileUpload size={18} />
-          <span className='font-medium'>{t('labels.attachFiles')}</span>
-        </button>
+        <motion.button 
+          type='button' 
+          onClick={toggleModal}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className='flex-none px-6 py-3 inline-flex items-center gap-3 rounded-xl border-2 font-semibold shadow-lg transition-all duration-200'
+          style={{
+            borderColor: colors.primary[500],
+            color: colors.primary[700],
+            backgroundColor: `${colors.primary[50]}80`
+          }}
+        >
+          <FaFileUpload size={20} />
+          <span>{t('labels.attachFiles')}</span>
+        </motion.button>
 
-        {!hiddenFiles && (
-          <ul className='flex flex-wrap items-center gap-2 w-full'>
-            {selected.map(file => (
-              <li key={file.id} className='flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full text-sm'>
-                <span className='truncate max-w-[160px]' title={file.filename}>
-                  {file.filename}
-                </span>
-                <button type='button' onClick={() => setSelected(prev => prev.filter(f => f.id !== file.id))} className='text-slate-500 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-300 rounded' aria-label={t('actions.removeFile', { filename: file.filename })}>
-                  <FiX className='w-3.5 h-3.5' />
-                </button>
-              </li>
-            ))}
-          </ul>
+        {!hiddenFiles && selected.length > 0 && (
+          <motion.ul 
+            layout
+            className='flex flex-wrap items-center gap-2 w-full'
+          >
+            <AnimatePresence>
+              {selected.map(file => (
+                <motion.li 
+                  key={file.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className='flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium shadow-sm border-2'
+                  style={{
+                    backgroundColor: colors.primary[100],
+                    borderColor: colors.primary[300],
+                    color: colors.primary[900]
+                  }}
+                >
+                  <span className='truncate max-w-[160px]' title={file.filename}>
+                    {file.filename}
+                  </span>
+                  <motion.button 
+                    type='button' 
+                    onClick={() => setSelected(prev => prev.filter(f => f.id !== file.id))}
+                    whileHover={{ scale: 1.2, rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
+                    className='text-rose-500 hover:text-rose-600 focus:outline-none rounded-full'
+                    aria-label={t('actions.removeFile', { filename: file.filename })}
+                  >
+                    <FiX className='w-4 h-4' strokeWidth={3} />
+                  </motion.button>
+                </motion.li>
+              ))}
+            </AnimatePresence>
+          </motion.ul>
         )}
       </div>
 
