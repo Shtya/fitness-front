@@ -1,14 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import {
 	Plus,
 	X,
 	Check,
 	ChevronRight,
-	ChevronDown,
 	Folder,
-	FolderOpen,
 	Calendar,
 	Clock,
 	Star,
@@ -17,7 +15,6 @@ import {
 	MoreHorizontal,
 	Trash2,
 	Edit2,
-	Copy,
 	CheckCircle,
 	Circle,
 	Repeat,
@@ -25,36 +22,26 @@ import {
 	Flag,
 	Inbox,
 	Sun,
-	Moon,
 	Sparkles,
 	Zap,
 	Target,
 	ListTodo,
 	Search,
 	Filter,
-	SortAsc,
-	Archive,
-	Share2,
-	Settings,
-	Volume2,
-	VolumeX,
-	Hash,
-	Palette,
-	FileText,
-	Paperclip,
-	User,
-	Users,
-	MapPin,
-	Link,
-	Type,
-	AlignLeft,
-	Menu,
-	Home,
-	TrendingUp,
-	BarChart3,
 	GripVertical,
 	FolderPlus,
 	ListPlus,
+	Hash,
+	FileText,
+	MapPin,
+	AlignLeft,
+	Menu,
+	Volume2,
+	VolumeX,
+	Settings,
+	Grid3x3,
+	List,
+	TrendingUp,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
@@ -72,6 +59,8 @@ import {
 	useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Sound effects
 const playSound = (type, soundEnabled) => {
@@ -104,9 +93,9 @@ const playSound = (type, soundEnabled) => {
 	}
 };
 
-// Priority levels
+// Priority levels with beautiful colors
 const priorityLevels = [
-	{ id: 'none', label: 'None', color: '#9ca3af', icon: Circle },
+	{ id: 'none', label: 'None', color: '#94a3b8', icon: Circle },
 	{ id: 'low', label: 'Low', color: '#3b82f6', icon: Flag },
 	{ id: 'medium', label: 'Medium', color: '#f59e0b', icon: Flag },
 	{ id: 'high', label: 'High', color: '#ef4444', icon: Flag },
@@ -115,17 +104,17 @@ const priorityLevels = [
 
 // Repeat options
 const repeatOptions = [
-	{ id: 'none', label: 'Does not repeat', interval: null },
-	{ id: 'daily', label: 'Daily', interval: 1 },
-	{ id: 'every-2-days', label: 'Every 2 days', interval: 2 },
-	{ id: 'every-3-days', label: 'Every 3 days', interval: 3 },
-	{ id: 'weekly', label: 'Weekly', interval: 7 },
-	{ id: 'bi-weekly', label: 'Every 2 weeks', interval: 14 },
-	{ id: 'monthly', label: 'Monthly', interval: 30 },
-	{ id: 'custom', label: 'Custom...', interval: null },
+	{ id: 'none', label: 'Does not repeat' },
+	{ id: 'daily', label: 'Daily' },
+	{ id: 'every-2-days', label: 'Every 2 days' },
+	{ id: 'every-3-days', label: 'Every 3 days' },
+	{ id: 'weekly', label: 'Weekly' },
+	{ id: 'bi-weekly', label: 'Every 2 weeks' },
+	{ id: 'monthly', label: 'Monthly' },
+	{ id: 'custom', label: 'Custom...' },
 ];
 
-// Task status options
+// Status options
 const statusOptions = [
 	{ id: 'todo', label: 'To Do', color: '#6366f1' },
 	{ id: 'in-progress', label: 'In Progress', color: '#f59e0b' },
@@ -134,7 +123,7 @@ const statusOptions = [
 ];
 
 // Sortable Task Item Component
-function SortableTaskItem({ task, onToggle, onSelect, onQuickEdit, onQuickDelete, onQuickAddSubtask, isSelected, soundEnabled, t }) {
+function SortableTaskItem({ task, onToggle, onSelect, onQuickEdit, onQuickDelete, onQuickAddSubtask, isSelected, soundEnabled, viewMode, t }) {
 	const {
 		attributes,
 		listeners,
@@ -158,64 +147,140 @@ function SortableTaskItem({ task, onToggle, onSelect, onQuickEdit, onQuickDelete
 
 	const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.completed;
 
+	if (viewMode === 'grid') {
+		return (
+			<div
+				ref={setNodeRef}
+				style={style}
+				className={`group bg-white rounded-2xl border transition-all hover:shadow-lg ${
+					isSelected
+						? 'border-primary shadow-xl ring-4 ring-primary/10'
+						: 'border-gray-200 hover:border-gray-300'
+				}`}
+			>
+				<div className="p-5">
+					{/* Drag Handle */}
+					<div className="flex items-start justify-between mb-3">
+						<div
+							{...attributes}
+							{...listeners}
+							className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+						>
+							<GripVertical className="w-4 h-4 text-gray-400" />
+						</div>
+						{task.isStarred && (
+							<Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+						)}
+					</div>
+
+					{/* Checkbox */}
+					<div className="mb-4">
+						<Checkbox
+							checked={task.completed}
+							onCheckedChange={() => onToggle(task.id)}
+							className="data-[state=checked]:bg-primary data-[state=checked]:border-primary w-6 h-6"
+						/>
+					</div>
+
+					{/* Content */}
+					<div onClick={onSelect} className="cursor-pointer">
+						<h3 className={`font-semibold text-base mb-2 ${
+							task.completed ? 'line-through text-gray-400' : 'text-gray-900'
+						}`}>
+							{task.title}
+						</h3>
+
+						{task.description && !task.completed && (
+							<p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.description}</p>
+						)}
+
+						{/* Meta */}
+						<div className="space-y-2">
+							{task.priority !== 'none' && (
+								<div
+									className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-white"
+									style={{ backgroundColor: priority.color }}
+								>
+									<PriorityIcon className="w-3 h-3" />
+									{priority.label}
+								</div>
+							)}
+
+							{task.dueDate && (
+								<div className={`flex items-center gap-1.5 text-xs font-medium ${
+									isOverdue ? 'text-red-600' : 'text-gray-600'
+								}`}>
+									<Calendar className="w-3.5 h-3.5" />
+									{new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+								</div>
+							)}
+
+							{totalSubtasks > 0 && (
+								<div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+									<CheckCircle className="w-3.5 h-3.5" />
+									{completedSubtasks}/{totalSubtasks} tasks
+								</div>
+							)}
+						</div>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	// List view
 	return (
 		<div
 			ref={setNodeRef}
 			style={style}
-			className={`group bg-white rounded-xl border-2 transition-all ${
+			className={`group bg-white rounded-xl border transition-all ${
 				isSelected
 					? 'border-primary shadow-lg ring-4 ring-primary/10'
-					: 'border-gray-100 hover:border-gray-200 hover:shadow-md'
+					: 'border-gray-200 hover:border-gray-300 hover:shadow-md'
 			}`}
 		>
-			<div className="flex items-start gap-3 p-4">
+			<div className="flex items-center gap-4 p-4">
 				{/* Drag Handle */}
 				<div
 					{...attributes}
 					{...listeners}
-					className="flex-shrink-0 mt-1 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+					className="flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
 				>
 					<GripVertical className="w-4 h-4 text-gray-400" />
 				</div>
 
 				{/* Checkbox */}
-				<button
-					onClick={(e) => {
-						e.stopPropagation();
-						onToggle(task.id);
-					}}
-					className="flex-shrink-0 mt-1 w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center hover:scale-110 active:scale-95"
-					style={{
-						borderColor: task.completed ? 'var(--color-primary-500)' : '#d1d5db',
-						backgroundColor: task.completed ? 'var(--color-primary-500)' : 'transparent',
-					}}
-				>
-					{task.completed && <Check className="w-4 h-4 text-white" />}
-				</button>
+				<Checkbox
+					checked={task.completed}
+					onCheckedChange={() => onToggle(task.id)}
+					className="data-[state=checked]:bg-primary data-[state=checked]:border-primary flex-shrink-0"
+				/>
 
 				{/* Content */}
 				<div className="flex-1 min-w-0" onClick={onSelect}>
-					<div className="flex items-start gap-2 mb-1">
-						<h3 className={`flex-1 font-semibold transition-colors cursor-pointer ${
-							task.completed ? 'line-through text-gray-400' : 'text-gray-800'
-						}`}>
-							{task.title}
-						</h3>
+					<div className="flex items-start gap-3">
+						<div className="flex-1 min-w-0">
+							<h3 className={`font-semibold text-sm mb-1 ${
+								task.completed ? 'line-through text-gray-400' : 'text-gray-900'
+							}`}>
+								{task.title}
+							</h3>
+
+							{task.description && !task.completed && (
+								<p className="text-sm text-gray-600 line-clamp-1">{task.description}</p>
+							)}
+						</div>
 						
 						{task.isStarred && (
 							<Star className="w-4 h-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />
 						)}
 					</div>
 
-					{task.description && !task.completed && (
-						<p className="text-sm text-gray-600 mb-2 line-clamp-1">{task.description}</p>
-					)}
-
 					{/* Meta */}
-					<div className="flex items-center gap-2 flex-wrap">
+					<div className="flex items-center gap-2 mt-2 flex-wrap">
 						{task.priority !== 'none' && (
 							<span
-								className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold text-white"
+								className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold text-white"
 								style={{ backgroundColor: priority.color }}
 							>
 								<PriorityIcon className="w-3 h-3" />
@@ -224,7 +289,7 @@ function SortableTaskItem({ task, onToggle, onSelect, onQuickEdit, onQuickDelete
 						)}
 
 						{task.dueDate && (
-							<span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
+							<span className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${
 								isOverdue
 									? 'bg-red-100 text-red-700'
 									: 'bg-gray-100 text-gray-700'
@@ -235,13 +300,13 @@ function SortableTaskItem({ task, onToggle, onSelect, onQuickEdit, onQuickDelete
 						)}
 
 						{task.repeat !== 'none' && (
-							<span className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-medium">
+							<span className="flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-md text-xs font-medium">
 								<Repeat className="w-3 h-3" />
 							</span>
 						)}
 
 						{totalSubtasks > 0 && (
-							<span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
+							<span className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${
 								completedSubtasks === totalSubtasks
 									? 'bg-green-100 text-green-700'
 									: 'bg-gray-100 text-gray-700'
@@ -252,7 +317,7 @@ function SortableTaskItem({ task, onToggle, onSelect, onQuickEdit, onQuickDelete
 						)}
 
 						{task.tags && task.tags.length > 0 && (
-							<span className="flex items-center gap-1 px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-medium">
+							<span className="flex items-center gap-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-md text-xs font-medium">
 								<Hash className="w-3 h-3" />
 								{task.tags.length}
 							</span>
@@ -309,42 +374,42 @@ export default function TodoTab() {
 		{ 
 			id: 'inbox', 
 			name: t ? t('folders.inbox') : 'Inbox', 
-			color: 'var(--color-primary-500)', 
+			color: '#6366f1', 
 			icon: Inbox,
 			isSystem: true
 		},
 		{ 
 			id: 'today', 
 			name: t ? t('folders.today') : 'Today', 
-			color: 'var(--color-secondary-500)', 
+			color: '#f59e0b', 
 			icon: Sun,
 			isSystem: true
 		},
 		{ 
 			id: 'starred', 
 			name: t ? t('folders.starred') : 'Starred', 
-			color: '#f59e0b', 
+			color: '#eab308', 
 			icon: Star,
 			isSystem: true
 		},
 		{ 
 			id: 'personal', 
 			name: t ? t('folders.personal') : 'Personal', 
-			color: 'var(--color-primary-400)', 
+			color: '#8b5cf6', 
 			icon: Target,
 			isSystem: false
 		},
 		{ 
 			id: 'work', 
 			name: t ? t('folders.work') : 'Work', 
-			color: 'var(--color-secondary-600)', 
+			color: '#06b6d4', 
 			icon: Sparkles,
 			isSystem: false
 		},
 		{ 
 			id: 'shopping', 
 			name: t ? t('folders.shopping') : 'Shopping', 
-			color: 'var(--color-primary-600)', 
+			color: '#ec4899', 
 			icon: Zap,
 			isSystem: false
 		},
@@ -367,9 +432,7 @@ export default function TodoTab() {
 			reminderTime: '2024-02-15T09:00',
 			tags: ['urgent', 'client', 'proposal'],
 			isStarred: true,
-			assignees: ['John Doe', 'Jane Smith'],
 			location: 'Office - Meeting Room A',
-			attachments: [],
 			notes: 'Remember to include the budget section',
 			subtasks: [
 				{ id: 's1', title: 'Research competitor solutions', completed: true, dueDate: '2024-02-10' },
@@ -395,9 +458,7 @@ export default function TodoTab() {
 			reminderTime: '06:45',
 			tags: ['health', 'fitness'],
 			isStarred: true,
-			assignees: [],
 			location: 'Home Gym',
-			attachments: [],
 			notes: '',
 			subtasks: [
 				{ id: 's4', title: 'Warm up - 5 min', completed: false },
@@ -417,15 +478,13 @@ export default function TodoTab() {
 			priority: 'low',
 			dueDate: '2024-02-12',
 			dueTime: null,
-			repeat: 'every-2-days',
+			repeat: 'none',
 			customRepeatDays: null,
 			hasReminder: false,
 			reminderTime: null,
 			tags: ['errands'],
 			isStarred: false,
-			assignees: [],
 			location: 'Whole Foods Market',
-			attachments: [],
 			notes: 'Check if we need milk',
 			subtasks: [
 				{ id: 's7', title: 'Fruits and vegetables', completed: false },
@@ -443,12 +502,12 @@ export default function TodoTab() {
 	const [soundEnabled, setSoundEnabled] = useState(true);
 	const [showAddFolder, setShowAddFolder] = useState(false);
 	const [newFolderName, setNewFolderName] = useState('');
-	const [newFolderColor, setNewFolderColor] = useState('var(--color-primary-500)');
+	const [newFolderColor, setNewFolderColor] = useState('#6366f1');
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-	const [showFilters, setShowFilters] = useState(false);
-	const [filterPriority, setFilterPriority] = useState(null);
+	const [filterPriority, setFilterPriority] = useState('all');
 	const [sortBy, setSortBy] = useState('manual');
 	const [activeId, setActiveId] = useState(null);
+	const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
 
 	const sensors = useSensors(
 		useSensor(PointerSensor, {
@@ -458,7 +517,7 @@ export default function TodoTab() {
 		})
 	);
 
-	// Add new task (without opening sidebar)
+	// Add new task
 	const handleAddTask = (title) => {
 		if (!title.trim()) return;
 
@@ -478,9 +537,7 @@ export default function TodoTab() {
 			reminderTime: null,
 			tags: [],
 			isStarred: selectedFolder === 'starred',
-			assignees: [],
 			location: '',
-			attachments: [],
 			notes: '',
 			subtasks: [],
 			createdAt: new Date(),
@@ -558,7 +615,7 @@ export default function TodoTab() {
 
 		setFolders([...folders, newFolder]);
 		setNewFolderName('');
-		setNewFolderColor('var(--color-primary-500)');
+		setNewFolderColor('#6366f1');
 		setShowAddFolder(false);
 		setSelectedFolder(newFolder.id);
 	};
@@ -601,9 +658,6 @@ export default function TodoTab() {
 			filtered = filtered.filter(t => {
 				if (t.dueDate === today) return true;
 				if (t.repeat === 'daily') return true;
-				if (t.repeat === 'every-2-days' || t.repeat === 'every-3-days') {
-					return true;
-				}
 				return false;
 			});
 		} else if (selectedFolder === 'starred') {
@@ -620,7 +674,7 @@ export default function TodoTab() {
 			);
 		}
 
-		if (filterPriority) {
+		if (filterPriority && filterPriority !== 'all') {
 			filtered = filtered.filter(t => t.priority === filterPriority);
 		}
 
@@ -645,11 +699,11 @@ export default function TodoTab() {
 	const activeTask = activeId ? tasks.find(t => t.id === activeId) : null;
 
 	return (
-		<div className="flex h-screen bg-white overflow-hidden">
+		<div className="flex h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 overflow-hidden">
 			{/* Left Sidebar - Folders */}
 			<div 
-				className={`bg-gradient-to-b from-gray-50 to-white border-r-2 border-gray-100 transition-all duration-300 flex-shrink-0 ${
-					sidebarCollapsed ? 'w-20' : 'w-72'
+				className={`bg-white border-r border-gray-200 transition-all duration-300 flex-shrink-0 ${
+					sidebarCollapsed ? 'w-20' : 'w-80'
 				}`}
 			>
 				<div className="h-full flex flex-col">
@@ -657,7 +711,7 @@ export default function TodoTab() {
 					<div className="p-6 border-b border-gray-200">
 						<div className="flex items-center justify-between mb-6">
 							{!sidebarCollapsed && (
-								<h1 className="text-2xl font-bold theme-gradient-text">
+								<h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary-600 bg-clip-text text-transparent">
 									{t ? t('title') : 'Todos'}
 								</h1>
 							)}
@@ -673,15 +727,15 @@ export default function TodoTab() {
 							<div className="flex items-center gap-2">
 								<button
 									onClick={() => setSoundEnabled(!soundEnabled)}
-									className={`p-2 rounded-lg transition-all ${
+									className={`p-2.5 rounded-lg transition-all flex-1 ${
 										soundEnabled
-											? 'bg-gradient-to-r from-primary to-secondary-500 text-white'
-											: 'bg-gray-100 text-gray-600'
+											? 'bg-gradient-to-r from-primary to-secondary-600 text-white shadow-md'
+											: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
 									}`}
 								>
-									{soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+									{soundEnabled ? <Volume2 className="w-4 h-4 mx-auto" /> : <VolumeX className="w-4 h-4 mx-auto" />}
 								</button>
-								<button className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex-1">
+								<button className="p-2.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex-1">
 									<Settings className="w-4 h-4 text-gray-600 mx-auto" />
 								</button>
 							</div>
@@ -693,7 +747,7 @@ export default function TodoTab() {
 						{/* System folders */}
 						<div className="mb-6">
 							{!sidebarCollapsed && (
-								<h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-3">
+								<h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-3">
 									{t ? t('systemFolders') : 'System'}
 								</h3>
 							)}
@@ -711,10 +765,10 @@ export default function TodoTab() {
 									<button
 										key={folder.id}
 										onClick={() => setSelectedFolder(folder.id)}
-										className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group ${
+										className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group ${
 											selectedFolder === folder.id
-												? 'theme-gradient-bg text-white shadow-lg'
-												: 'hover:bg-gray-100 text-gray-700'
+												? 'bg-gradient-to-r from-primary to-secondary-600 text-white shadow-lg scale-[1.02]'
+												: 'hover:bg-gray-50 text-gray-700'
 										}`}
 									>
 										<Icon 
@@ -725,12 +779,12 @@ export default function TodoTab() {
 										/>
 										{!sidebarCollapsed && (
 											<>
-												<span className="flex-1 text-left font-medium">{folder.name}</span>
+												<span className="flex-1 text-left font-semibold text-sm">{folder.name}</span>
 												{count > 0 && (
-													<span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+													<span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
 														selectedFolder === folder.id
 															? 'bg-white/20 text-white'
-															: 'bg-gray-200 text-gray-700'
+															: 'bg-gray-100 text-gray-700'
 													}`}>
 														{count}
 													</span>
@@ -745,13 +799,13 @@ export default function TodoTab() {
 						{/* Custom folders */}
 						<div>
 							{!sidebarCollapsed && (
-								<div className="flex items-center justify-between mb-2 px-3">
+								<div className="flex items-center justify-between mb-3 px-3">
 									<h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
 										{t ? t('myFolders') : 'My Folders'}
 									</h3>
 									<button
 										onClick={() => setShowAddFolder(true)}
-										className="p-1 hover:bg-primary/10 rounded-lg transition-colors group"
+										className="p-1.5 hover:bg-primary/10 rounded-lg transition-colors group"
 										title={t ? t('addFolder') : 'Add Folder'}
 									>
 										<FolderPlus className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
@@ -764,13 +818,13 @@ export default function TodoTab() {
 								const count = tasks.filter(t => t.folderId === folder.id && !t.completed).length;
 
 								return (
-									<div key={folder.id} className="relative group">
+									<div key={folder.id} className="relative group/folder">
 										<button
 											onClick={() => setSelectedFolder(folder.id)}
-											className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+											className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
 												selectedFolder === folder.id
-													? 'theme-gradient-bg text-white shadow-lg'
-													: 'hover:bg-gray-100 text-gray-700'
+													? 'bg-gradient-to-r from-primary to-secondary-600 text-white shadow-lg scale-[1.02]'
+													: 'hover:bg-gray-50 text-gray-700'
 											}`}
 										>
 											<Icon 
@@ -781,12 +835,12 @@ export default function TodoTab() {
 											/>
 											{!sidebarCollapsed && (
 												<>
-													<span className="flex-1 text-left font-medium truncate">{folder.name}</span>
+													<span className="flex-1 text-left font-semibold text-sm truncate">{folder.name}</span>
 													{count > 0 && (
-														<span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+														<span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
 															selectedFolder === folder.id
 																? 'bg-white/20 text-white'
-																: 'bg-gray-200 text-gray-700'
+																: 'bg-gray-100 text-gray-700'
 														}`}>
 															{count}
 														</span>
@@ -803,9 +857,9 @@ export default function TodoTab() {
 														handleDeleteFolder(folder.id);
 													}
 												}}
-												className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 bg-red-500 hover:bg-red-600 rounded-lg transition-all"
+												className="absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/folder:opacity-100 p-1.5 bg-red-500 hover:bg-red-600 rounded-lg transition-all shadow-lg"
 											>
-												<Trash2 className="w-3 h-3 text-white" />
+												<Trash2 className="w-3.5 h-3.5 text-white" />
 											</button>
 										)}
 									</div>
@@ -815,35 +869,35 @@ export default function TodoTab() {
 
 						{/* Add folder form */}
 						{showAddFolder && !sidebarCollapsed && (
-							<div className="mt-4 p-3 bg-white rounded-xl border-2 border-primary shadow-lg">
+							<div className="mt-4 p-4 bg-gradient-to-br from-primary/5 to-secondary-600/5 rounded-xl border-2 border-primary/20">
 								<input
 									type="text"
 									value={newFolderName}
 									onChange={(e) => setNewFolderName(e.target.value)}
 									onKeyPress={(e) => e.key === 'Enter' && handleAddFolder()}
 									placeholder={t ? t('folderNamePlaceholder') : "Folder name..."}
-									className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary text-sm mb-2"
+									className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm mb-3"
 									autoFocus
 								/>
-								<div className="flex items-center gap-2 mb-3">
+								<div className="flex items-center gap-3 mb-3">
 									<input
 										type="color"
 										value={newFolderColor}
 										onChange={(e) => setNewFolderColor(e.target.value)}
-										className="w-10 h-10 rounded-lg cursor-pointer border-2 border-gray-200"
+										className="w-12 h-12 rounded-lg cursor-pointer border-2 border-gray-200"
 									/>
-									<span className="text-xs text-gray-600">{t ? t('pickColor') : 'Pick a color'}</span>
+									<span className="text-sm text-gray-600 font-medium">{t ? t('pickColor') : 'Pick a color'}</span>
 								</div>
 								<div className="flex gap-2">
 									<button
 										onClick={handleAddFolder}
-										className="flex-1 px-3 py-2 theme-gradient-bg text-white rounded-lg text-sm font-bold hover:shadow-lg transition-all"
+										className="flex-1 px-4 py-2.5 bg-gradient-to-r from-primary to-secondary-600 text-white rounded-lg text-sm font-bold hover:shadow-lg transition-all"
 									>
 										{t ? t('add') : 'Add'}
 									</button>
 									<button
 										onClick={() => setShowAddFolder(false)}
-										className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-all"
+										className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-all"
 									>
 										{t ? t('cancel') : 'Cancel'}
 									</button>
@@ -854,19 +908,19 @@ export default function TodoTab() {
 
 					{/* Stats */}
 					{!sidebarCollapsed && (
-						<div className="p-4 border-t border-gray-200 bg-gradient-to-r from-primary/5 to-secondary-500/5">
+						<div className="p-4 border-t border-gray-200 bg-gradient-to-br from-primary/5 to-secondary-600/5">
 							<div className="grid grid-cols-2 gap-3">
-								<div className="bg-white rounded-lg p-3 border border-gray-200">
-									<div className="text-2xl font-bold theme-primary-text">
+								<div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+									<div className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary-600 bg-clip-text text-transparent">
 										{tasks.filter(t => !t.completed).length}
 									</div>
-									<div className="text-xs text-gray-600">{t ? t('activeTasks') : 'Active'}</div>
+									<div className="text-xs text-gray-600 font-medium mt-1">{t ? t('activeTasks') : 'Active'}</div>
 								</div>
-								<div className="bg-white rounded-lg p-3 border border-gray-200">
-									<div className="text-2xl font-bold text-green-600">
+								<div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+									<div className="text-3xl font-bold text-green-600">
 										{tasks.filter(t => t.completed).length}
 									</div>
-									<div className="text-xs text-gray-600">{t ? t('completed') : 'Done'}</div>
+									<div className="text-xs text-gray-600 font-medium mt-1">{t ? t('completed') : 'Done'}</div>
 								</div>
 							</div>
 						</div>
@@ -877,98 +931,104 @@ export default function TodoTab() {
 			{/* Main Content - Task List */}
 			<div className="flex-1 flex flex-col overflow-hidden">
 				{/* Header */}
-				<div className="bg-white border-b-2 border-gray-100 p-6">
-					<div className="flex items-center justify-between mb-4">
-						<div className="flex items-center gap-3">
+				<div className="bg-white border-b border-gray-200 p-6 shadow-sm">
+					<div className="flex items-center justify-between mb-5">
+						<div className="flex items-center gap-4">
 							{currentFolder && (
 								<>
 									{(() => {
 										const Icon = currentFolder.icon;
-										return <Icon className="w-8 h-8" style={{ color: currentFolder.color }} />;
+										return (
+											<div 
+												className="p-3 rounded-2xl shadow-md"
+												style={{ backgroundColor: `${currentFolder.color}15` }}
+											>
+												<Icon className="w-7 h-7" style={{ color: currentFolder.color }} />
+											</div>
+										);
 									})()}
-									<h2 className="text-3xl font-bold text-gray-800">{currentFolder.name}</h2>
+									<div>
+										<h2 className="text-3xl font-bold text-gray-900">{currentFolder.name}</h2>
+										<p className="text-sm text-gray-600 mt-1">
+											{filteredTasks.filter(t => !t.completed).length} active tasks
+										</p>
+									</div>
 								</>
 							)}
 						</div>
 						
-						<div className="flex items-center gap-2">
-							<button
-								onClick={() => setShowFilters(!showFilters)}
-								className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
-									showFilters || filterPriority
-										? 'theme-gradient-bg text-white shadow-lg'
-										: 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-								}`}
-							>
-								<Filter className="w-4 h-4" />
-								{t ? t('filter') : 'Filter'}
-							</button>
+						<div className="flex items-center gap-3">
+							{/* View Mode Toggle */}
+							<div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+								<button
+									onClick={() => setViewMode('list')}
+									className={`p-2 rounded-md transition-all ${
+										viewMode === 'list'
+											? 'bg-white text-primary shadow-sm'
+											: 'text-gray-600 hover:text-gray-900'
+									}`}
+								>
+									<List className="w-4 h-4" />
+								</button>
+								<button
+									onClick={() => setViewMode('grid')}
+									className={`p-2 rounded-md transition-all ${
+										viewMode === 'grid'
+											? 'bg-white text-primary shadow-sm'
+											: 'text-gray-600 hover:text-gray-900'
+									}`}
+								>
+									<Grid3x3 className="w-4 h-4" />
+								</button>
+							</div>
+
+							{/* Priority Filter */}
+							<Select value={filterPriority} onValueChange={setFilterPriority}>
+								<SelectTrigger className="w-[140px] h-10">
+									<SelectValue placeholder="Priority" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All Priorities</SelectItem>
+									{priorityLevels.slice(1).map((priority) => (
+										<SelectItem key={priority.id} value={priority.id}>
+											<div className="flex items-center gap-2">
+												<div
+													className="w-3 h-3 rounded-full"
+													style={{ backgroundColor: priority.color }}
+												/>
+												{priority.label}
+											</div>
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 							
-							<select
-								value={sortBy}
-								onChange={(e) => setSortBy(e.target.value)}
-								className="px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary text-sm bg-white hover:border-primary transition-all font-medium"
-							>
-								<option value="manual">{t ? t('sortManual') : 'Manual'}</option>
-								<option value="dueDate">{t ? t('sortDueDate') : 'Due Date'}</option>
-								<option value="priority">{t ? t('sortPriority') : 'Priority'}</option>
-								<option value="alphabetical">{t ? t('sortAlphabetical') : 'A-Z'}</option>
-							</select>
+							{/* Sort */}
+							<Select value={sortBy} onValueChange={setSortBy}>
+								<SelectTrigger className="w-[140px] h-10">
+									<SelectValue placeholder="Sort by" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="manual">Manual</SelectItem>
+									<SelectItem value="dueDate">Due Date</SelectItem>
+									<SelectItem value="priority">Priority</SelectItem>
+									<SelectItem value="alphabetical">A-Z</SelectItem>
+								</SelectContent>
+							</Select>
 						</div>
 					</div>
 
 					{/* Search */}
-					<div className="relative mb-4">
-						<Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+					<div className="relative">
+						<Search className="absolute ltr:left-4 rtl:right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
 						<input
 							type="text"
 							value={searchTerm}
 							onChange={(e) => setSearchTerm(e.target.value)}
 							placeholder={t ? t('searchPlaceholder') : "Search tasks..."}
-							className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
+							className="w-full ltr:pl-12 rtl:pr-12 ltr:pr-4 rtl:pl-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
 						/>
 					</div>
-
-					{/* Filters */}
-					{showFilters && (
-						<div className="p-4 bg-gray-50 rounded-xl border border-gray-200 animate-fade-in-up">
-							<label className="text-xs font-bold text-gray-700 mb-2 block uppercase">
-								{t ? t('filterByPriority') : 'Priority'}
-							</label>
-							<div className="flex items-center gap-2 flex-wrap">
-								<button
-									onClick={() => setFilterPriority(null)}
-									className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${
-										!filterPriority
-											? 'theme-gradient-bg text-white'
-											: 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-									}`}
-								>
-									{t ? t('all') : 'All'}
-								</button>
-								{priorityLevels.slice(1).map((priority) => {
-									const Icon = priority.icon;
-									return (
-										<button
-											key={priority.id}
-											onClick={() => setFilterPriority(filterPriority === priority.id ? null : priority.id)}
-											className={`px-3 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
-												filterPriority === priority.id
-													? 'text-white'
-													: 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-											}`}
-											style={{
-												backgroundColor: filterPriority === priority.id ? priority.color : undefined
-											}}
-										>
-											<Icon className="w-4 h-4" />
-											{priority.label}
-										</button>
-									);
-								})}
-							</div>
-						</div>
-					)}
 
 					{/* Quick add task */}
 					<QuickAddTask onAdd={handleAddTask} t={t} />
@@ -986,7 +1046,7 @@ export default function TodoTab() {
 							onDragEnd={handleDragEnd}
 						>
 							<SortableContext items={filteredTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-								<div className="space-y-2">
+								<div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4' : 'space-y-3'}>
 									{filteredTasks.map((task) => (
 										<SortableTaskItem
 											key={task.id}
@@ -998,6 +1058,7 @@ export default function TodoTab() {
 											onQuickAddSubtask={handleQuickAddSubtask}
 											isSelected={selectedTask?.id === task.id}
 											soundEnabled={soundEnabled}
+											viewMode={viewMode}
 											t={t}
 										/>
 									))}
@@ -1006,7 +1067,7 @@ export default function TodoTab() {
 
 							<DragOverlay>
 								{activeTask ? (
-									<div className="bg-white rounded-xl border-2 border-primary shadow-2xl p-4 opacity-90 rotate-3">
+									<div className="bg-white rounded-xl border-2 border-primary shadow-2xl p-4 opacity-90 rotate-2">
 										<h3 className="font-semibold text-gray-800">{activeTask.title}</h3>
 									</div>
 								) : null}
@@ -1016,7 +1077,7 @@ export default function TodoTab() {
 				</div>
 			</div>
 
-			{/* Right Sidebar - Task Details (Smooth Slide In) */}
+			{/* Right Sidebar - Task Details */}
 			{selectedTask && (
 				<TaskDetailPanel
 					task={selectedTask}
@@ -1045,8 +1106,10 @@ function QuickAddTask({ onAdd, t }) {
 
 	return (
 		<form onSubmit={handleSubmit} className="mt-4">
-			<div className="flex items-center gap-3 p-4 bg-gradient-to-r from-primary/5 to-secondary-500/5 rounded-xl border-2 border-dashed border-primary/30 hover:border-primary transition-all">
-				<Plus className="w-5 h-5 text-primary flex-shrink-0" />
+			<div className="flex items-center gap-3 p-4 bg-gradient-to-r from-primary/5 to-secondary-600/5 rounded-xl border-2 border-dashed border-primary/30 hover:border-primary transition-all">
+				<div className="p-2 bg-primary/10 rounded-lg">
+					<Plus className="w-5 h-5 text-primary flex-shrink-0" />
+				</div>
 				<input
 					type="text"
 					value={title}
@@ -1059,7 +1122,7 @@ function QuickAddTask({ onAdd, t }) {
 	);
 }
 
-// Task Detail Panel Component (with smooth slide-in animation)
+// Task Detail Panel Component
 function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t }) {
 	const [editingTitle, setEditingTitle] = useState(false);
 	const [title, setTitle] = useState(task.title);
@@ -1124,16 +1187,16 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 	};
 
 	return (
-		<div className="w-[500px] bg-white border-l-2 border-gray-100 flex flex-col h-screen overflow-hidden animate-slide-in-right shadow-2xl">
+		<div className="w-[500px] bg-white border-l border-gray-200 flex flex-col h-screen overflow-hidden ltr:animate-slide-in-right rtl:animate-slide-in-left shadow-2xl">
 			{/* Header */}
-			<div className="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white flex-shrink-0">
+			<div className="p-6 border-b border-gray-200 bg-gradient-to-br from-primary/5 to-secondary-600/5 flex-shrink-0">
 				<div className="flex items-center justify-between mb-4">
-					<h2 className="text-lg font-bold text-gray-800">
+					<h2 className="text-lg font-bold text-gray-900">
 						{t ? t('taskDetails') : 'Task Details'}
 					</h2>
 					<button
 						onClick={onClose}
-						className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+						className="p-2 hover:bg-white rounded-lg transition-colors"
 					>
 						<X className="w-5 h-5 text-gray-600" />
 					</button>
@@ -1153,7 +1216,7 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 				) : (
 					<h3
 						onClick={() => setEditingTitle(true)}
-						className="text-xl font-bold text-gray-800 cursor-pointer hover:text-primary transition-colors px-4 py-3 hover:bg-gray-50 rounded-xl"
+						className="text-xl font-bold text-gray-900 cursor-pointer hover:text-primary transition-colors px-4 py-3 hover:bg-white rounded-xl"
 					>
 						{task.title}
 					</h3>
@@ -1167,17 +1230,24 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 					<label className="text-sm font-bold text-gray-700 mb-2 block">
 						{t ? t('status') : 'Status'}
 					</label>
-					<select
-						value={task.status}
-						onChange={(e) => onUpdate(task.id, { status: e.target.value })}
-						className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary transition-all"
-					>
-						{statusOptions.map((status) => (
-							<option key={status.id} value={status.id}>
-								{status.label}
-							</option>
-						))}
-					</select>
+					<Select value={task.status} onValueChange={(value) => onUpdate(task.id, { status: value })}>
+						<SelectTrigger>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{statusOptions.map((status) => (
+								<SelectItem key={status.id} value={status.id}>
+									<div className="flex items-center gap-2">
+										<div
+											className="w-3 h-3 rounded-full"
+											style={{ backgroundColor: status.color }}
+										/>
+										{status.label}
+									</div>
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 				</div>
 
 				{/* Description */}
@@ -1210,7 +1280,7 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 									onClick={() => onUpdate(task.id, { priority: priority.id })}
 									className={`p-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
 										task.priority === priority.id
-											? 'text-white'
+											? 'text-white shadow-md scale-105'
 											: 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-2 border-gray-200'
 									}`}
 									style={{
@@ -1236,7 +1306,7 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 							type="date"
 							value={task.dueDate || ''}
 							onChange={(e) => onUpdate(task.id, { dueDate: e.target.value })}
-							className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary"
+							className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 						/>
 					</div>
 					<div>
@@ -1248,7 +1318,7 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 							type="time"
 							value={task.dueTime || ''}
 							onChange={(e) => onUpdate(task.id, { dueTime: e.target.value })}
-							className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary"
+							className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 						/>
 					</div>
 				</div>
@@ -1259,20 +1329,21 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 						<Repeat className="w-4 h-4" />
 						{t ? t('repeat') : 'Repeat'}
 					</label>
-					<select
-						value={task.repeat}
-						onChange={(e) => onUpdate(task.id, { repeat: e.target.value })}
-						className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary mb-2"
-					>
-						{repeatOptions.map((option) => (
-							<option key={option.id} value={option.id}>
-								{option.label}
-							</option>
-						))}
-					</select>
+					<Select value={task.repeat} onValueChange={(value) => onUpdate(task.id, { repeat: value })}>
+						<SelectTrigger>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{repeatOptions.map((option) => (
+								<SelectItem key={option.id} value={option.id}>
+									{option.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 					
 					{task.repeat === 'custom' && (
-						<div className="flex items-center gap-2">
+						<div className="flex items-center gap-2 mt-2">
 							<input
 								type="number"
 								min="1"
@@ -1281,7 +1352,7 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 								onBlur={() => onUpdate(task.id, { customRepeatDays })}
 								className="w-20 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary"
 							/>
-							<span className="text-sm text-gray-600">
+							<span className="text-sm text-gray-600 font-medium">
 								{t ? t('days') : 'days'}
 							</span>
 						</div>
@@ -1294,14 +1365,13 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 						<Bell className="w-4 h-4" />
 						{t ? t('reminder') : 'Reminder'}
 					</label>
-					<div className="flex items-center gap-2 mb-2">
-						<input
-							type="checkbox"
+					<div className="flex items-center gap-3 mb-2">
+						<Checkbox
 							checked={task.hasReminder}
-							onChange={(e) => onUpdate(task.id, { hasReminder: e.target.checked })}
-							className="w-5 h-5 text-primary rounded focus:ring-2 focus:ring-primary/20"
+							onCheckedChange={(checked) => onUpdate(task.id, { hasReminder: checked })}
+							className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
 						/>
-						<span className="text-sm text-gray-700">
+						<span className="text-sm text-gray-700 font-medium">
 							{t ? t('enableReminder') : 'Enable reminder'}
 						</span>
 					</div>
@@ -1310,7 +1380,7 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 							type="datetime-local"
 							value={task.reminderTime || ''}
 							onChange={(e) => onUpdate(task.id, { reminderTime: e.target.value })}
-							className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary"
+							className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 						/>
 					)}
 				</div>
@@ -1325,14 +1395,14 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 						{task.tags?.map((tag, idx) => (
 							<span
 								key={idx}
-								className="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium flex items-center gap-2"
+								className="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-semibold flex items-center gap-2"
 							>
 								#{tag}
 								<button
 									onClick={() => handleRemoveTag(tag)}
 									className="hover:text-indigo-900"
 								>
-									<X className="w-3 h-3" />
+									<X className="w-3.5 h-3.5" />
 								</button>
 							</span>
 						))}
@@ -1348,7 +1418,7 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 						/>
 						<button
 							onClick={handleAddTag}
-							className="px-4 py-2 theme-gradient-bg text-white rounded-lg font-bold hover:shadow-lg transition-all"
+							className="px-4 py-2 bg-gradient-to-r from-primary to-secondary-600 text-white rounded-lg font-bold hover:shadow-lg transition-all"
 						>
 							{t ? t('add') : 'Add'}
 						</button>
@@ -1372,25 +1442,20 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 
 					<div className="space-y-2 mb-3">
 						{task.subtasks?.map((subtask) => (
-							<div key={subtask.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg group">
-								<button
-									onClick={() => handleToggleSubtask(subtask.id)}
-									className="flex-shrink-0 w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center hover:scale-110"
-									style={{
-										borderColor: subtask.completed ? 'var(--color-primary-500)' : '#d1d5db',
-										backgroundColor: subtask.completed ? 'var(--color-primary-500)' : 'transparent',
-									}}
-								>
-									{subtask.completed && <Check className="w-3 h-3 text-white" />}
-								</button>
-								<span className={`flex-1 text-sm ${subtask.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+							<div key={subtask.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg group transition-colors">
+								<Checkbox
+									checked={subtask.completed}
+									onCheckedChange={() => handleToggleSubtask(subtask.id)}
+									className="data-[state=checked]:bg-primary data-[state=checked]:border-primary flex-shrink-0"
+								/>
+								<span className={`flex-1 text-sm ${subtask.completed ? 'line-through text-gray-400' : 'text-gray-700 font-medium'}`}>
 									{subtask.title}
 								</span>
 								<button
 									onClick={() => handleDeleteSubtask(subtask.id)}
-									className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all"
+									className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-100 rounded-lg transition-all"
 								>
-									<X className="w-3 h-3 text-red-600" />
+									<X className="w-3.5 h-3.5 text-red-600" />
 								</button>
 							</div>
 						))}
@@ -1409,7 +1474,7 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 							/>
 							<button
 								onClick={handleAddSubtask}
-								className="px-4 py-2 theme-gradient-bg text-white rounded-lg font-bold hover:shadow-lg transition-all"
+								className="px-4 py-2 bg-gradient-to-r from-primary to-secondary-600 text-white rounded-lg font-bold hover:shadow-lg transition-all"
 							>
 								{t ? t('add') : 'Add'}
 							</button>
@@ -1434,7 +1499,7 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 						value={task.location || ''}
 						onChange={(e) => onUpdate(task.id, { location: e.target.value })}
 						placeholder={t ? t('locationPlaceholder') : "Add location..."}
-						className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary"
+						className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 					/>
 				</div>
 
@@ -1468,7 +1533,7 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 				</div>
 			</div>
 
-			{/* Footer - Actions (Fixed) */}
+			{/* Footer - Actions */}
 			<div className="p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
 				<button
 					onClick={() => {
@@ -1476,7 +1541,7 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 							onDelete(task.id);
 						}
 					}}
-					className="w-full p-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+					className="w-full p-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
 				>
 					<Trash2 className="w-5 h-5" />
 					{t ? t('deleteTask') : 'Delete Task'}
@@ -1490,16 +1555,16 @@ function TaskDetailPanel({ task, onUpdate, onDelete, onClose, soundEnabled, t })
 function EmptyState({ selectedFolder, searchTerm, t }) {
 	return (
 		<div className="text-center py-20">
-			<div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary/20 to-secondary-500/20 flex items-center justify-center">
-				<ListTodo className="w-12 h-12 text-primary" />
+			<div className="w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary/20 to-secondary-600/20 flex items-center justify-center">
+				<ListTodo className="w-16 h-16 text-primary" />
 			</div>
-			<h3 className="text-2xl font-bold text-gray-800 mb-2">
+			<h3 className="text-2xl font-bold text-gray-900 mb-2">
 				{searchTerm 
 					? (t ? t('noTasksFound') : 'No tasks found')
 					: (t ? t('noTasks') : 'No tasks yet')
 				}
 			</h3>
-			<p className="text-gray-600">
+			<p className="text-gray-600 text-lg">
 				{searchTerm
 					? (t ? t('tryDifferentSearch') : 'Try a different search term')
 					: (t ? t('addFirstTask') : 'Add your first task to get started!')

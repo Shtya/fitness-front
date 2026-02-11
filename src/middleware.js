@@ -67,7 +67,7 @@ const PUBLIC_PREFIXES = [
   '/auth',
   '/public',
   '/thank-you',
-  '/todos',
+  '/workspace',
   '/', 
   /^\/form\/\d+\/submit(?:\/|$)/,
   /^\/workouts\/plans(?:\/|$)/, 

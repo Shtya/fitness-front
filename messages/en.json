@@ -1,4 +1,307 @@
 {
+  "calendar": {
+    "title": "Calendar & Events",
+    "types": "Types",
+    "all": "All",
+    "habits": "Habits",
+    "billings": "Billings",
+    "today": "Today",
+    "todayProgress": "Today's Progress",
+    "addNew": "Add New",
+    "searchPlaceholder": "Search for events, habits, billings...",
+    "noItems": "No items for today",
+    "confirmDelete": "Do you want to delete this item?",
+    "editItem": "Edit Item",
+    "type": "Type",
+    "title": "Title",
+    "titlePlaceholder": "Enter a title...",
+    "description": "Description",
+    "descriptionPlaceholder": "Add a description...",
+    "startDate": "Start Date",
+    "time": "Time",
+    "frequency": "Frequency",
+    "once": "One-time (single event)",
+    "days": "Days",
+    "icon": "Icon",
+    "amount": "Amount",
+    "currency": "Currency",
+    "location": "Location",
+    "locationPlaceholder": "Add a location...",
+    "color": "Color",
+    "pickColor": "Pick a color",
+    "enableReminder": "Enable reminder",
+    "notes": "Notes",
+    "notesPlaceholder": "Add notes...",
+    "cancel": "Cancel",
+    "create": "Create",
+    "update": "Update"
+  },
+  "todo": {
+    "title": "Tasks",
+    "systemFolders": "System",
+    "myFolders": "My Folders",
+    "activeTasks": "Active",
+    "completed": "Completed",
+    "folders": {
+      "inbox": "Inbox",
+      "today": "Today",
+      "starred": "Starred",
+      "personal": "Personal",
+      "work": "Work",
+      "shopping": "Shopping"
+    },
+    "addFolder": "Add Folder",
+    "folderNamePlaceholder": "Folder name...",
+    "pickColor": "Pick a color",
+    "add": "Add",
+    "cancel": "Cancel",
+    "confirmDeleteFolder": "Do you want to delete this folder?",
+    "searchPlaceholder": "Search tasks...",
+    "filter": "Filter",
+    "sortManual": "Manual",
+    "sortDueDate": "Due date",
+    "sortPriority": "Priority",
+    "sortAlphabetical": "A-Z",
+    "addTaskPlaceholder": "Add a new task...",
+    "quickEdit": "Quick edit",
+    "addSubtask": "Add subtask",
+    "delete": "Delete",
+    "confirmDelete": "Do you want to delete this task?",
+    "noTasksFound": "No tasks found",
+    "noTasks": "No tasks yet",
+    "tryDifferentSearch": "Try a different search term",
+    "addFirstTask": "Add your first task to get started!",
+    "taskDetails": "Task details",
+    "status": "Status",
+    "description": "Description",
+    "descriptionPlaceholder": "Add a description...",
+    "priority": "Priority",
+    "dueDate": "Due date",
+    "time": "Time",
+    "repeat": "Repeat",
+    "days": "Days",
+    "reminder": "Reminder",
+    "enableReminder": "Enable reminder",
+    "tags": "Tags",
+    "addTagPlaceholder": "Add a tag...",
+    "subtasks": "Subtasks",
+    "subtaskPlaceholder": "Subtask title...",
+    "location": "Location",
+    "locationPlaceholder": "Add a location...",
+    "notes": "Notes",
+    "notesPlaceholder": "Add notes...",
+    "starred": "Starred",
+    "addToStarred": "Add to starred",
+    "deleteTask": "Delete task",
+    "all": "All"
+  },
+  "board": {
+    "filters": {
+      "search": "Search cards...",
+      "filter": "Filter",
+      "sortNone": "No sorting",
+      "sortTitle": "Sort by title",
+      "sortDueDate": "Sort by due date",
+      "sortBy": "Sort by",
+      "labels": "Labels",
+      "members": "Members",
+      "selectLabel": "Select a label",
+      "selectMember": "Select a member",
+      "allLabels": "All labels",
+      "allMembers": "All members"
+    },
+    "list": {
+      "archive": "Archive list",
+      "delete": "Delete list",
+      "untitledCard": "Untitled card",
+      "cardTitlePlaceholder": "Enter card title...",
+      "addCard": "Add card",
+      "uploadImage": "Upload image",
+      "addCardButton": "Add new card"
+    },
+    "board": {
+      "listTitlePlaceholder": "Enter list title...",
+      "addList": "Add list",
+      "addListButton": "Add new list"
+    },
+    "card": {
+      "coverAlt": "Card cover image"
+    },
+    "modal": {
+      "coverAlt": "Cover image",
+      "inList": "In list:",
+      "labels": "Labels",
+      "members": "Members",
+      "description": "Description",
+      "descriptionPlaceholder": "Add a more detailed description...",
+      "attachments": "Attachments",
+      "checklist": "Checklist",
+      "addItem": "Add item",
+      "newChecklistItem": "New checklist item",
+      "comments": "Comments",
+      "addComment": "Write a comment...",
+      "reply": "Reply",
+      "replyingTo": "Replying to comment",
+      "addToCard": "Add to card",
+      "membersBtn": "Members",
+      "labelsBtn": "Labels",
+      "checklistBtn": "Checklist",
+      "attachmentBtn": "Attachment",
+      "coverBtn": "Cover",
+      "actions": "Actions",
+      "copyBtn": "Copy",
+      "archiveBtn": "Archive",
+      "deleteBtn": "Delete"
+    }
+  },
+  "todos": {
+    "title": "All-in-One Productivity Board",
+    "subtitle": "Organize your life, achieve your goals, track your progress",
+    "quickTask": "Quick task",
+    "addEvent": "Add appointment",
+    "addHabit": "Add habit",
+    "today": "Today",
+    "tabs": {
+      "calendar": "Calendar",
+      "dashboard": "Dashboard",
+      "boards": "Boards",
+      "azkar": "My Azkar",
+      "analytics": "Analytics",
+      "reminders": "Reminders",
+      "billing": "Billings & Wallet"
+    },
+    "tasksFor": "Tasks",
+    "eventsFor": "Appointments",
+    "remaining": "Remaining",
+    "noTasks": "No tasks on this day",
+    "addFirstTask": "Add your first task",
+    "noEvents": "No appointments on this day",
+    "stats": {
+      "tasks": "Tasks",
+      "habits": "Habits",
+      "events": "Appointments",
+      "happiness": "Happiness"
+    },
+    "next": "Next",
+    "none": "None",
+    "excellent": "Excellent!",
+    "good": "Good",
+    "canImprove": "Can be improved",
+    "todayTasks": "Today's tasks",
+    "add": "Add",
+    "min": "min",
+    "more": "More",
+    "edit": "Edit",
+    "delete": "Delete",
+    "dailyHabits": "My daily habits",
+    "projectBoards": "Project boards",
+    "newBoard": "New board",
+    "addCard": "Add card",
+    "dailyAzkar": "My daily Azkar",
+    "reset": "Reset",
+    "azkar": {
+      "morning": "Morning",
+      "evening": "Evening",
+      "sleep": "Sleep",
+      "general": "General"
+    },
+    "completed": "Completed",
+    "tasbih": "Tasbih",
+    "performanceStats": "Performance stats",
+    "totalCompletedTasks": "Total completed tasks",
+    "habitsCompletedToday": "Habits completed today",
+    "totalEvents": "Total appointments",
+    "weeklyOverview": "Weekly overview",
+    "quickAddTask": "Quick add task",
+    "quickAddTaskDesc": "Add a task quickly or tap 'Add details' for more options",
+    "taskTitle": "Task title",
+    "taskTitlePlaceholder": "Example: Finish the monthly report",
+    "addDetails": "Add details",
+    "editTask": "Edit task",
+    "addTaskDetails": "Add task details",
+    "priority": {
+      "label": "Priority",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "category": {
+      "label": "Category",
+      "personal": "Personal",
+      "work": "Work",
+      "study": "Study",
+      "health": "Health"
+    },
+    "estimatedTime": "Estimated time",
+    "deadline": "Deadline",
+    "notes": "Notes",
+    "notesPlaceholder": "Any additional details...",
+    "subtasks": "Subtasks",
+    "addSubtask": "Add subtask",
+    "subtaskPlaceholder": "Write a subtask...",
+    "tags": "Tags",
+    "addTag": "Add tag",
+    "attachments": "Attachments",
+    "save": "Save",
+    "cancel": "Cancel",
+    "addHabitModal": "Add a new habit",
+    "habitName": "Habit name",
+    "habitNamePlaceholder": "Example: Meditation",
+    "measurementType": "Measurement type",
+    "measurementTypes": {
+      "checkbox": "Yes/No",
+      "counter": "Counter",
+      "timer": "Timer"
+    },
+    "dailyGoal": "Daily goal",
+    "unit": "Unit",
+    "unitPlaceholder": "Cup, minute, time",
+    "color": "Color",
+    "colors": {
+      "purple": "Purple",
+      "blue": "Blue",
+      "green": "Green",
+      "red": "Red",
+      "yellow": "Yellow"
+    },
+    "addEventModal": "Add a new appointment",
+    "eventTitle": "Appointment title",
+    "eventTitlePlaceholder": "Example: Team meeting",
+    "startTime": "Start time",
+    "endTime": "End time",
+    "location": "Place or link",
+    "locationPlaceholder": "Example: Zoom, Office",
+    "eventType": "Appointment type",
+    "eventTypes": {
+      "meeting": "Meeting",
+      "personal": "Personal",
+      "study": "Study",
+      "health": "Health"
+    },
+    "recurrence": "Recurrence",
+    "recurrenceTypes": {
+      "none": "Does not repeat",
+      "days": "Repeats every N days"
+    },
+    "everyNDays": "Every how many days?",
+    "everyNDaysPlaceholder": "Example: 3",
+    "addBoardModal": "Add a new board",
+    "boardName": "Board name",
+    "boardNamePlaceholder": "Example: Ongoing projects",
+    "endOfDayReview": "End-of-day review",
+    "completionRate": "Completion rate",
+    "tasksCompleted": "Completed tasks",
+    "habitsCompleted": "Completed habits",
+    "howWasYourMood": "How was your mood today?",
+    "whatDidYouAccomplish": "What did you accomplish today?",
+    "accomplishPlaceholder": "Write your achievements and what you're proud of...",
+    "whatWasNotCompleted": "What wasn't completed and why?",
+    "notCompletedPlaceholder": "Identify reasons and how to improve them...",
+    "mainLesson": "Main lesson or note of the day",
+    "lessonPlaceholder": "What did you learn? What will you do differently?",
+    "saveReview": "Save review",
+    "close": "Close"
+  },
   "home": {
     "theme": {
       "themeShowcase": {
@@ -6,7 +309,7 @@
         "title": "Make it yours",
         "description": "Choose a color theme that reflects your style. Watch everything transform instantly with just one click.",
         "selector": {
-          "title": "Choose your favorite"
+          "title": "Pick your favorite"
         },
         "preview": {
           "title": "Live preview",
@@ -24,12 +327,11 @@
           "stat3": "Awesome"
         }
       },
-
       "themeSwitcher": {
         "trigger": "Theme",
         "ariaLabel": "Theme switcher",
-        "title": "Choose theme",
-        "subtitle": "Select your preferred color palette"
+        "title": "Choose a theme",
+        "subtitle": "Select your favorite color palette"
       }
     },
     "hero": {
@@ -47,15 +349,15 @@
         "journey": "your fitness journey",
         "withScience": "with science-backed training"
       },
-      "description": "Enjoy personalized, AI-powered workout plans. Track your progress, connect with certified coaches, and achieve results faster than ever.",
+      "description": "Enjoy personalized workout plans powered by AI. Track your progress, connect with certified coaches, and achieve faster results than ever before.",
       "cta": {
-        "getStarted": "Start a free trial",
+        "getStarted": "Start free trial",
         "watchDemo": "Watch demo",
         "learnMore": "Learn more"
       },
       "trust": {
         "activeUsers": "active user",
-        "rating": "from over 12k reviews"
+        "rating": "from 12K+ reviews"
       },
       "stats": {
         "coaches": {
@@ -96,7 +398,7 @@
     },
     "statsBar": {
       "trustedBy": "Trusted by",
-      "title": "World-leading companies",
+      "title": "world-leading companies",
       "stats": {
         "clients": {
           "value": "10K+",
@@ -132,11 +434,11 @@
         "button": "Subscribe",
         "submitting": "Subscribing...",
         "subscribed": "Subscribed",
-        "successNote": "Subscribed successfully! We'll send you the best tips soon."
+        "successNote": "Subscribed successfully! We'll send you our best tips soon."
       },
       "stats": {
         "users": { "value": "50K+", "label": "Users" },
-        "trainers": { "value": "200+", "label": "Trainers" },
+        "trainers": { "value": "200+", "label": "Coaches" },
         "workouts": { "value": "5K+", "label": "Workouts" },
         "success": { "value": "98%", "label": "Success" }
       },
@@ -213,22 +515,22 @@
           },
           "progress": {
             "title": "Progress analytics",
-            "description": "Track your fitness journey with detailed charts and graphs showing your improvements over time",
+            "description": "Track your fitness journey with detailed charts and graphs showing improvements over time",
             "badge": "Analytical"
           },
           "health": {
             "title": "Health metrics monitoring",
-            "description": "Monitor vital metrics, heart rate, calories, and other health indicators all in one place",
+            "description": "Monitor vital metrics, heart rate, calories, and other health indicators in one place",
             "badge": "Health"
           },
           "chat": {
             "title": "Instant coach support",
-            "description": "Connect with your coach directly via chat and messaging for guidance and support",
+            "description": "Chat directly with your coach for guidance and support",
             "badge": "Support"
           },
           "goals": {
             "title": "Goal setting & tracking",
-            "description": "Set personal fitness goals and track your progress with achievable milestones",
+            "description": "Set personal fitness goals and track progress with achievable milestones",
             "badge": "Goals"
           },
           "nutrition": {
@@ -240,13 +542,13 @@
         "cta": {
           "title": "Start your health journey today",
           "description": "Join thousands of clients achieving their goals",
-          "button": "Start now"
+          "button": "Get started"
         }
       },
       "coach": {
         "features": {
           "clients": {
-            "title": "Comprehensive client management",
+            "title": "Complete client management",
             "description": "Manage all your clients in one dashboard with detailed profiles and performance indicators",
             "badge": "Management"
           },
@@ -257,7 +559,7 @@
           },
           "analytics": {
             "title": "Client analytics",
-            "description": "Get deep insights into your clients’ progress, adherence, and results",
+            "description": "Get deep insights into your clients' progress, adherence, and results",
             "badge": "Analytics"
           },
           "scheduling": {
@@ -267,17 +569,17 @@
           },
           "certifications": {
             "title": "Certification management",
-            "description": "View and manage your professional certificates and qualifications",
+            "description": "View and manage your professional certifications and qualifications",
             "badge": "Professional"
           },
           "messaging": {
             "title": "Client messaging system",
-            "description": "Stay connected with your clients through an integrated messaging system",
+            "description": "Stay connected with clients through an integrated messaging system",
             "badge": "Communication"
           },
           "reports": {
             "title": "Performance reports",
-            "description": "Generate detailed reports for your clients showing their progress and achievements",
+            "description": "Generate detailed reports for clients showing their progress and achievements",
             "badge": "Reports"
           },
           "earnings": {
@@ -301,12 +603,12 @@
           },
           "verification": {
             "title": "Coach verification system",
-            "description": "Review and approve coach applications with credential verification",
+            "description": "Review and approve coach applications with certification verification",
             "badge": "Security"
           },
           "reporting": {
             "title": "Advanced reporting",
-            "description": "Access comprehensive platform reports and analytics for data-driven decision-making",
+            "description": "Access comprehensive platform reports and analytics for data-driven decisions",
             "badge": "Insights"
           },
           "settings": {
@@ -326,7 +628,7 @@
           },
           "rewards": {
             "title": "Rewards system",
-            "description": "Manage achievements, badges, and reward programs for user engagement",
+            "description": "Manage achievements, badges, and rewards programs for user engagement",
             "badge": "Incentives"
           },
           "automation": {
@@ -337,14 +639,14 @@
         },
         "cta": {
           "title": "Full control of the platform",
-          "description": "Powerful tools for platform administration",
+          "description": "Powerful tools to manage the platform",
           "button": "Dashboard"
         }
       }
     },
     "steps": {
       "badge": "Our process",
-      "title": "Steps to build a SaaS app",
+      "title": "Steps to building a SaaS app",
       "description": "Follow our proven methodology to turn your idea into a successful software product. From validation to deployment, we guide you through every stage.",
       "step": "Step",
       "cta": "Start your project",
@@ -376,11 +678,10 @@
         },
         "optimization": {
           "title": "Monitoring & optimization",
-          "description": "Monitor performance, gather user feedback, and continuously improve your product."
+          "description": "Monitor performance, collect user feedback, and continuously improve your product."
         }
       }
     },
-
     "pricing": {
       "badge": "Flexible pricing",
       "title": "Our pricing",
@@ -389,7 +690,7 @@
       "mostPopular": "Most popular",
       "perMonth": "month",
       "per6Months": "Billed every 6 months",
-      "perYear": "Billed yearly",
+      "perYear": "Billed annually",
       "getStarted": "Get started",
       "whatsIncluded": "What's included",
       "moneyBack": "30-day money-back guarantee on all plans",
@@ -400,26 +701,26 @@
       },
       "plans": {
         "plus": {
-          "name": "Premium Starter",
-          "tagline": "Perfect for getting started toward your fitness goals",
+          "name": "Plus Starter",
+          "tagline": "Perfect for starting to achieve your fitness goals",
           "features": ["Access to 100+ workout videos", "Basic progress tracking", "Access to the mobile app", "Email support", "Weekly fitness tips", "Access to the community forum"]
         },
         "professional": {
           "name": "Pro Athlete",
           "tagline": "For serious fitness enthusiasts and athletes",
-          "features": ["Everything in Premium Starter", "Unlimited workout videos and programs", "Advanced analytics dashboard", "Custom meal plans", "Monthly 1-on-1 coaching call", "Priority email & chat support", "Custom workout builder", "Progress photos and measurements"]
+          "features": ["Everything in Plus Starter", "Unlimited workout videos and programs", "Advanced analytics dashboard", "Custom meal plans", "Monthly 1:1 coaching call", "Priority email & chat support", "Custom workout builder", "Progress photos & measurements"]
         },
         "enterprise": {
           "name": "Elite Champion",
-          "tagline": "The perfect package for optimal performance",
-          "features": ["Everything in Pro Athlete", "Dedicated personal coach", "Weekly 1-on-1 video sessions", "Custom nutrition and supplement plan", "24/7 priority support", "Access to exclusive workshops", "Wearable device integration", "Body composition analysis", "Competition prep support", "Lifetime achievement badges"]
+          "tagline": "The perfect package for peak performance",
+          "features": ["Everything in Pro Athlete", "Dedicated personal coach", "Weekly 1:1 video sessions", "Custom nutrition & supplement plan", "24/7 priority support", "Access to exclusive workshops", "Wearable device integrations", "Body composition analysis", "Competition prep support", "Lifetime achievement badges"]
         }
       }
     },
     "testimonials": {
       "badge": "Success stories",
       "title": "What our clients say",
-      "description": "Real results from real people. Discover how our platform changed thousands of fitness journeys.",
+      "description": "Real results from real people. Discover how our platform transformed thousands of fitness journeys.",
       "items": [
         {
           "name": "Sarah Johnson",
@@ -431,18 +732,18 @@
           "name": "Mike Chen",
           "role": "Marathon runner",
           "text": "As a busy professional, I needed flexibility in my training. The app scheduling and progress tracking kept me accountable. I went from struggling with 5K to completing my first marathon!",
-          "achievement": "Completed the marathon"
+          "achievement": "Completed a marathon"
         },
         {
           "name": "Emma Williams",
           "role": "Fitness enthusiast",
-          "text": "The workout variety and the ability to reach my coach anytime made all the difference. I built strength, confidence, and lifelong healthy habits. Best decision I ever made!",
+          "text": "The variety of workouts and the ability to contact my coach anytime made all the difference. I built strength, confidence, and lifelong healthy habits. Best decision I've ever made!",
           "achievement": "50+ workouts"
         },
         {
           "name": "David Martinez",
           "role": "Body transformation",
-          "text": "From dad bod to fit dad! Nutrition guidance combined with effective workouts helped me lose 25 kg and gain muscle. My energy levels are so high and I feel 10 years younger!",
+          "text": "From dad bod to fit dad! The nutrition guidance along with effective workouts helped me lose 25 kg and gain muscle. My energy levels are so high, and I feel 10 years younger!",
           "achievement": "Lost 25 kg"
         }
       ],
@@ -455,7 +756,7 @@
     },
     "contact": {
       "title": "Contact our team",
-      "description": "Need help with something? Want a demo? Reach out to our friendly team and we’ll get back to you within two hours.",
+      "description": "Need help with something? Want a demo? Contact our friendly team and we'll get back to you within two hours.",
       "form": {
         "fields": {
           "firstName": "First name",
@@ -471,24 +772,24 @@
           "team": "I'm part of a team",
           "teamDesc": "I need to create an account for a team."
         },
-        "submit": "Get started with us",
+        "submit": "Get started",
         "submitting": "Submitting..."
       },
       "testimonials": {
         "0": {
-          "text": "FitnessHub helped us manage all our clients, progress, and schedules easily. It’s a great solution for coaches looking for an effective way to run their business end-to-end.",
+          "text": "FitnessHub helped us manage all our clients, progress, and schedules easily. It's a great solution for coaches looking for an effective way to run their business end-to-end.",
           "author": "Ahmed Mohamed",
           "role": "Founder & CEO",
           "company": "PowerGym"
         },
         "1": {
-          "text": "The results we achieved with FitnessHub were amazing. Client retention improved by 45% and client communication became smoother than ever.",
-          "author": "Sarah Ahmed",
-          "role": "Fitness Director",
+          "text": "The results we achieved with FitnessHub were amazing. Customer retention improved by 45%, and client communication became smoother than ever.",
+          "author": "Sara Ahmed",
+          "role": "Fitness Manager",
           "company": "FitLife Center"
         },
         "2": {
-          "text": "A comprehensive and easy-to-use platform. FitnessHub helps us track client progress, create custom training programs, and run our business more efficiently.",
+          "text": "A comprehensive and easy-to-use platform. FitnessHub helps us track our clients' progress, create personalized training programs, and run our business more efficiently.",
           "author": "Mohamed Ali",
           "role": "Personal trainer",
           "company": "Elite Fitness"
@@ -497,9 +798,9 @@
       }
     },
     "faqs": {
-      "badge": "FAQ",
+      "badge": "FAQs",
       "title": "Frequently asked questions",
-      "description": "Get quick answers to the most common questions about FitnessHub. If you can’t find what you’re looking for, feel free to contact our support team.",
+      "description": "Get quick answers to the most common questions about FitnessHub. If you don't find what you're looking for, feel free to contact our support team.",
       "searchPlaceholder": "Search FAQs...",
       "categories": {
         "all": "All",
@@ -513,7 +814,7 @@
         "general": {
           "0": {
             "question": "What is FitnessHub?",
-            "answer": "FitnessHub is an all-in-one fitness management platform that connects coaches, clients, and admins. We provide tools for progress tracking, workout scheduling, membership management, and more — all in one easy-to-use place."
+            "answer": "FitnessHub is an all-in-one fitness management platform that connects coaches, clients, and admins. We provide tools to track progress, schedule workouts, manage memberships, and more — all in one easy-to-use place."
           },
           "1": {
             "question": "How do I get started with FitnessHub?",
@@ -521,7 +822,7 @@
           },
           "2": {
             "question": "Is FitnessHub suitable for beginners?",
-            "answer": "Absolutely! FitnessHub is designed for everyone, from beginners to professional athletes. Our coaches can create customized training programs that match your fitness level and goals, ensuring you get the right support at every step of your journey."
+            "answer": "Absolutely! FitnessHub is designed for everyone, from beginners to professional athletes. Our coaches can create personalized programs that match your fitness level and goals, ensuring you get the right support at every step of your journey."
           }
         },
         "membership": {
@@ -531,49 +832,49 @@
           },
           "1": {
             "question": "Can I change my membership plan later?",
-            "answer": "Yes, you can upgrade or downgrade at any time. Changes take effect immediately, and we prorate the difference based on your billing cycle. You won’t lose any data or progress when switching plans."
+            "answer": "Yes, you can upgrade or downgrade at any time. Changes take effect immediately, and we'll prorate the difference based on your billing cycle. You won't lose any data or progress when switching plans."
           },
           "2": {
             "question": "Is there any long-term commitment?",
-            "answer": "No, all our plans are month-to-month with no long-term contracts. You can cancel anytime, and you won’t be charged for the next month. We also offer discounts for those who choose billing every 6 months or yearly."
+            "answer": "No, all our plans are billed monthly with no long-term contracts. You can cancel anytime and won't be charged for the next month. We also offer discounts for 6-month or annual billing."
           }
         },
         "training": {
           "0": {
-            "question": "How does personal training work?",
-            "answer": "Our certified coaches create customized training programs based on your goals, fitness level, and preferences. You’ll receive detailed workouts with video tutorials, progress tracking, and regular support through our messaging system."
+            "question": "How does personal coaching work?",
+            "answer": "Our certified coaches create customized training programs based on your goals, fitness level, and preferences. You'll get detailed workouts with video tutorials, progress tracking, and regular support through our messaging system."
           },
           "1": {
             "question": "Can I switch coaches?",
-            "answer": "Yes, you’re free to switch coaches at any time. We want you to find the perfect coach for your style and goals. You can browse coach profiles, reviews, and specialties before deciding."
+            "answer": "Yes, you're free to switch coaches at any time. We want you to find the perfect coach for your style and goals. You can browse coach profiles, reviews, and specialties before deciding."
           },
           "2": {
             "question": "What if I miss a workout?",
-            "answer": "No problem! Our platform gives you full flexibility to manage your schedule. You can reschedule workouts, and you can access all your previous workouts anytime. Your coach will help you get back on track without any judgment."
+            "answer": "No problem! Our platform is fully flexible for managing your schedule. You can reschedule workouts and access all your past workouts anytime. Your coach will help you get back on track with no judgment."
           }
         },
         "billing": {
           "0": {
             "question": "What payment methods are accepted?",
-            "answer": "We accept all major credit and debit cards (Visa, MasterCard, and American Express) as well as PayPal. All payments are secure and encrypted, and your payment info is stored safely for auto-renewal."
+            "answer": "We accept all major credit and debit cards (Visa, MasterCard, American Express) as well as PayPal. All payments are secure and encrypted, and your payment info is stored safely for automatic subscription renewals."
           },
           "1": {
             "question": "Are there any hidden fees?",
-            "answer": "Not at all. The subscription price you see is what you pay — no setup fees, no cancellation fees, and no hidden costs. We believe in transparent, honest pricing so you know exactly what you’re getting."
+            "answer": "Not at all. The subscription price you see is what you pay — no setup fees, no cancellation fees, and no hidden costs. We believe in transparent, honest pricing so you know exactly what you're getting."
           },
           "2": {
             "question": "Can I get a refund?",
-            "answer": "Yes, we offer a 30-day money-back guarantee on all plans. If you’re not completely satisfied with FitnessHub in your first month, contact us and we’ll refund you in full — no questions asked."
+            "answer": "Yes, we offer a 30-day money-back guarantee on all plans. If you're not fully satisfied with FitnessHub in your first month, contact us and we'll refund you in full — no questions asked."
           }
         },
         "technical": {
           "0": {
-            "question": "What devices does FitnessHub work on?",
-            "answer": "FitnessHub is available on all devices — iOS, Android, and web. You can switch seamlessly between your phone, tablet, and computer, with all your data syncing automatically across devices."
+            "question": "Which devices does FitnessHub work on?",
+            "answer": "FitnessHub is available on all devices — iOS, Android, and web. You can seamlessly switch between your phone, tablet, and computer, with all your data automatically synced across devices."
           },
           "1": {
             "question": "What if I run into technical issues?",
-            "answer": "Our technical support team is available 24/7 to help you. You can reach us via live chat, email, or phone, and we’ll resolve any issue quickly. We aim to respond within two hours or less."
+            "answer": "Our technical support team is available 24/7. You can reach us via live chat, email, or phone, and we'll resolve any issue quickly. We aim to respond within two hours or less."
           },
           "2": {
             "question": "Is my data secure?",
@@ -587,7 +888,7 @@
       },
       "cta": {
         "title": "Still have questions?",
-        "description": "Can’t find the answer you’re looking for? Talk to our friendly team.",
+        "description": "Can't find the answer you're looking for? Talk to our friendly team.",
         "email": "Email us",
         "call": "Call us"
       }
@@ -595,11 +896,11 @@
     "howItWorks": {
       "badge": "How it works",
       "title": "Get started in 3 simple steps",
-      "description": "Join thousands of people who achieved their fitness goals. Our easy process makes getting started quick and smooth.",
+      "description": "Join thousands of people who achieved their fitness goals. Our simple process makes getting started quick and smooth.",
       "steps": {
         "0": {
           "title": "Set your goals",
-          "description": "Tell us about your fitness and health goals. Whether you want to lose weight, build muscle, or improve endurance, we’re here to help.",
+          "description": "Tell us about your fitness and health goals. Whether you want to lose weight, build muscle, or improve endurance, we're here to help you.",
           "features": {
             "0": "Create a personalized profile",
             "1": "Choose your health goals",
@@ -608,16 +909,16 @@
         },
         "1": {
           "title": "Set your schedule",
-          "description": "Choose a workout schedule that fits your lifestyle. Our flexible programs adapt to your timetable, so you’ll never miss a workout.",
+          "description": "Choose the workout schedule that fits your lifestyle. Our flexible programs adapt to your timeline, so you never miss a workout.",
           "features": {
-            "0": "Pick workout days",
+            "0": "Choose workout days",
             "1": "Set preferred times",
-            "2": "Get a custom workout plan"
+            "2": "Get a personalized workout plan"
           }
         },
         "2": {
-          "title": "Track and improve",
-          "description": "Monitor your progress using our advanced analytics dashboard. Track workouts, calories, and key milestones as you work toward your goals.",
+          "title": "Track & improve",
+          "description": "Monitor your progress using our advanced analytics dashboard. Track workouts, calories, and key milestones as you reach your goals.",
           "features": {
             "0": "Detailed performance metrics",
             "1": "Real-time progress tracking",
@@ -627,15 +928,73 @@
       },
       "cta": {
         "title": "Ready to transform your fitness journey?",
-        "description": "Join FitnessHub today and get a personalized training plan designed specifically for your goals and lifestyle.",
+        "description": "Join FitnessHub today and get a personalized training plan tailored to your goals and lifestyle.",
         "primary": "Start the free assessment",
         "secondary": "Talk to a coach",
         "benefits": {
           "0": "No credit card required",
           "1": "Free 5-minute assessment",
-          "2": "Instant custom plan"
+          "2": "Instant personalized plan"
         }
       }
+    }
+  },
+  "nav": {
+    "brand": {
+      "portalTitle": "Portal",
+      "superAdminPortal": "Super Admin Portal",
+      "adminPortal": "Admin Portal",
+      "coachPortal": "Coach Portal",
+      "clientPortal": "Client Portal"
+    },
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "refresh": "Refresh",
+    "sections": {
+      "dashboard": "Dashboard",
+      "mySpace": "My Space",
+      "myWorkspace": "My Workspace",
+      "overview": "Overview",
+      "clientManagement": "Client Management",
+      "clients": "Clients",
+      "management": "Management",
+      "programs": "Programs",
+      "clientIntake": "Client Intake",
+      "timeManagement": "Time Management",
+      "tools": "Tools",
+      "operations": "Operations",
+      "system": "System",
+      "account": "Account",
+      "billing": "Billing"
+    },
+    "items": {
+      "overview": "Overview",
+      "dashboard": "Dashboard",
+      "allUsers": "All users",
+      "allExercises": "All exercises",
+      "myWorkouts": "My workouts",
+      "myNutrition": "My nutrition",
+      "myReminders": "My reminders",
+      "weeklyStrength": "Weekly strength",
+      "workoutPlans": "Workout plans",
+      "mealPlans": "Meal plans",
+      "reports": "Reports",
+      "messages": "Messages",
+      "calorieCalculator": "Calorie calculator",
+      "profile": "Profile",
+      "clientIntake": "Client intake",
+      "manageForms": "Manage forms",
+      "responses": "Responses",
+      "systemSettings": "System settings",
+      "billing": "Billing",
+      "feedback": "Feedback",
+      "analytics": "Analytics",
+      "withdrawalApprovals": "Withdrawal approvals",
+      "allWallets": "All wallets",
+      "timeManagement": "Time management",
+      "kanbanBoard": "Kanban board",
+      "todos": "To-do list",
+      "calendar": "Calendar"
     }
   },
   "themeSwitcher": {
@@ -912,67 +1271,7 @@
       "loading": "Loading..."
     }
   },
-  "nav": {
-    "reload-page": "Reload page",
-    "brand": {
-      "portalTitle": "Control area",
-      "superAdminPortal": "Super Admin Portal",
-      "adminPortal": "Admin Portal",
-      "coachPortal": "Coach Portal",
-      "clientPortal": "My personal space"
-    },
-    "sections": {
-      "mySpace": "My space",
-      "clientManagement": "Client management",
-      "overview": "Overview",
-      "programs": "Programs",
-      "operations": "Operations",
-      "billing": "Billing & wallet"
-    },
-    "items": {
-      "dashboard": "Dashboard",
-      "training": "Training",
-      "myWorkouts": "My workouts",
-      "myProgress": "My progress",
-      "progress": "Progress",
-      "myNutrition": "My nutrition",
-      "myReminders": "My reminders",
-      "weeklyStrength": "Weekly report",
-      "calorieCalculator": "Calorie calculator",
-      "profile": "Profile",
-      "nutrition": "Nutrition",
-      "foodLibrary": "Food library",
-      "groceryList": "Grocery list",
-      "nutritionManagement": "Nutrition management",
-      "mealPlans": "Meal plans",
-      "reports": "Reports",
-      "trainingManagement": "Training management",
-      "workoutPlans": "Workout plans",
-      "allWorkouts": "All workouts",
-      "allUsers": "All users",
-      "allExercises": "All exercises",
-      "clientIntake": "Client intake form",
-      "manageForms": "Manage forms",
-      "responses": "Responses",
-      "messages": "Messages",
-      "feedback": "Feedback",
-      "systemSettings": "System settings",
-      "billing": "Billing & wallet",
-      "overview": "Overview",
-      "transactions": "Transactions",
-      "subscriptions": "Subscriptions",
-      "withdraw": "Withdraw",
-      "clientPayments": "Client payments",
-      "withdrawalApprovals": "Withdrawal approvals",
-      "allWallets": "All wallets",
-      "analytics": "Analytics"
-    },
-    "tooltips": {
-      "expand": "Expand sidebar",
-      "collapse": "Collapse sidebar",
-      "closeMenu": "Close menu"
-    }
-  },
+
   "header": {
     "actions": {
       "openMenu": "Open menu",
@@ -2222,7 +2521,11 @@
       "show": "Show notes",
       "modalTitle": "Plan notes",
       "fallbackTitle": "Current plan",
-      "empty": "No notes for this plan"
+      "empty": "No notes for this plan",
+      "sets": "Sets",
+      "reps": "Reps",
+      "tempo": "Tempo",
+      "rest": "Rest"
     },
     "Sets": "Sets",
     "Reps": "Reps",
@@ -2336,7 +2639,9 @@
       "edit_title": "Edit",
       "assign_title": "Assign",
       "details_title": "Meal Plan Details",
-      "duplicate_title": "Duplicate plan"
+      "duplicate_title": "Duplicate plan",
+      "assign_select_client": "Select client",
+      "assign_placeholder": "Choose a client from the list"
     },
     "form": {
       "plan_name": "Plan name",
@@ -2350,7 +2655,9 @@
       "calories": "Calories",
       "supplement_name": "Supplement name",
       "time_hhmm": "Time (HH:MM)",
-      "best_with": "Best with"
+      "best_with": "Best with",
+      "qty_count": "Qty (count)",
+      "select_client": "Select client"
     },
     "days": {
       "monday": "Monday",
@@ -2373,12 +2680,19 @@
     "table": {
       "item": "Item",
       "qty_g": "Quantity (g)",
-      "calories": "Calories"
+      "calories": "Calories",
+      "qty": "Qty"
+    },
+    "unit": {
+      "g": "g",
+      "count": "count",
+      "count_short": "pcs"
     },
     "list": {
       "empty_title": "No plans",
       "empty_desc": "Try a different search or create a new plan.",
-      "no_desc": "No description."
+      "no_desc": "No description.",
+      "no_clients": "No clients found"
     },
     "assign": {
       "title": "Assign to",
@@ -3519,6 +3833,7 @@
 
   "my-nutrition": {
     "gram": "g",
+    "count": "count",
     "common": {
       "loading": "Loading...",
       "cancel": "Cancel",
@@ -4064,6 +4379,39 @@
       "newPasswordRequired": "New password is required",
       "confirmPasswordRequired": "Confirm password is required",
       "passwordsMustMatch": "Passwords must match"
+    }
+  },
+  "restTimer": {
+    "ariaLabel": "Rest timer",
+    "stopTimer": "Stop timer",
+    "configureTimer": "Configure timer",
+    "stopAlert": "Stop Alert Sound",
+    "adjustTime": "{seconds}s",
+    "status": {
+      "ready": "REST TIMER",
+      "running": "RUNNING",
+      "paused": "PAUSED"
+    },
+    "actions": {
+      "start": "START",
+      "pause": "PAUSE",
+      "resume": "RESUME",
+      "stop": "Stop",
+      "reset": "Reset to default"
+    }
+  },
+  "cardioTimer": {
+    "ariaLabel": "Cardio Timer",
+    "stopTimer": "Stop Timer",
+    "configureTimer": "Configure Timer",
+    "adjustTime": "Adjust time by {seconds}s",
+    "note": "Note",
+    "actions": {
+      "start": "Start",
+      "pause": "Pause",
+      "resume": "Resume",
+      "stop": "Stop",
+      "reset": "Reset"
     }
   }
 }

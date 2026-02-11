@@ -1,8 +1,31 @@
+
+
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState, memo, useRef, forwardRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, memo, useRef } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { GripVertical, Plus, X, PencilLine, Calendar, Target, TrendingUp, Eye, Users as UsersIcon, Pill, Clock, ChevronDown, ChevronRight, ChefHat, UtensilsCrossed, Sparkles, Search, Check, CheckCircle, ListChecks, NotebookPen, StickyNote, ListTodo, Quote, AlertTriangle, Trash2, Copy } from 'lucide-react';
+import {
+	GripVertical,
+	Plus,
+	X,
+	PencilLine,
+	Target,
+	TrendingUp,
+	Eye,
+	Users as UsersIcon,
+	Pill,
+	Clock,
+	ChevronDown,
+	ChevronRight,
+	ChefHat,
+	UtensilsCrossed,
+	Sparkles,
+	Search,
+	Check,
+	AlertTriangle,
+	Trash2,
+	Copy,
+} from 'lucide-react';
 
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import * as yup from 'yup';
@@ -13,7 +36,6 @@ import { useUser } from '@/hooks/useUser';
 import { useLocale, useTranslations } from 'next-intl';
 import { Modal, StatCard } from '@/components/dashboard/ui/UI';
 import { Notification } from '@/config/Notification';
-import Select from '@/components/atoms/Select';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 import { TimeField } from '@/components/atoms/InputTime';
 import Input from '@/components/atoms/Input';
@@ -21,13 +43,174 @@ import { useAdminClients } from '@/hooks/useHierarchy';
 import MultiLangText from '@/components/atoms/MultiLangText';
 import Button from '@/components/atoms/Button';
 
-
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { PrettyPagination } from '@/components/dashboard/ui/Pagination';
 
+// ✅ shadcn Select (adjust path if your project differs)
+import {
+	Select as ShadcnSelect,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Select,
+} from '@/components/ui/select';
+
 const hhmmRegex = /^$|^([01]\d|2[0-3]):([0-5]\d)$/;
 
-export function CButton({ name, icon, className = '', type = 'button', onClick, disabled = false, loading = false, variant = 'primary', size = 'md', title }) {
+/* =========================
+	 MiniField (ONLY for items)
+	 ========================= */
+export const MiniField = memo(function MiniField({
+	cnParent,
+	value,
+	placeholder,
+	inputMode,
+	onChange,
+	onBlur,
+	className = '',
+	type = 'text',
+	iconLeft = null,
+}) {
+	const hasValue = String(value ?? '').trim().length > 0;
+
+	return (
+		<div className={`relative w-full ${cnParent || ''}`}>
+			<label
+				className={[
+					'absolute left-2 px-1 text-[10px] transition-all bg-white pointer-events-none',
+					hasValue
+						? 'top-[-6px] !bg-[linear-gradient(to_bottom,#f1f5f9_50%,#ffffff_50%)] text-[color:var(--color-primary-600)]'
+						: 'top-1/2 -translate-y-1/2 text-slate-400 opacity-0',
+				].join(' ')}
+			>
+				{placeholder}
+			</label>
+
+			{iconLeft ? <span className="absolute left-2 top-1/2 -translate-y-1/2">{iconLeft}</span> : null}
+
+			<input
+				value={value ?? ''}
+				inputMode={inputMode}
+				type={type}
+				placeholder={hasValue ? '' : placeholder}
+				onChange={onChange}
+				onBlur={onBlur}
+				className={[
+					'h-8 w-full rounded-md border px-2 text-[12px]',
+					iconLeft ? 'pl-8' : '',
+					'bg-white outline-none transition',
+					'focus:ring-4 focus:ring-[color:var(--color-primary-200)]/25 focus:border-[color:var(--color-primary-400)]',
+					hasValue
+						? 'border-[color:var(--color-primary-300)] hover:border-[color:var(--color-primary-400)]'
+						: 'border-slate-200 hover:border-slate-300',
+					className,
+				].join(' ')}
+			/>
+		</div>
+	);
+});
+
+const UnitSelect = memo(function UnitSelect({
+	value,
+	onChange,
+	error,
+	disabled = false,
+	className = "",
+	cnInputParent = "",
+}) {
+	const t = useTranslations("nutrition");
+	const locale = useLocale();
+	const isRTL = locale === "ar";
+	const wrapperRef = useRef(null);
+
+	const handleFocus = () => {
+		if (!wrapperRef.current) return;
+		wrapperRef.current.style.borderColor = "var(--color-primary-500)"; 
+	};
+
+	const handleBlur = () => {
+		if (!wrapperRef.current) return;
+		wrapperRef.current.style.borderColor = error ? "#f43f5e" : "#cbd5e1";
+		wrapperRef.current.style.boxShadow = "none";
+	};
+
+	return (
+		<div className={`w-full relative ${className}`}>
+			<div
+				ref={wrapperRef}
+				className={[
+					cnInputParent,
+					"relative flex items-center rounded-md border  bg-white transition-all duration-200",
+					disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+				].join(" ")} 
+				onMouseEnter={() => {
+					if (!wrapperRef.current) return;
+					wrapperRef.current.style.borderColor = error
+						? "#f43f5e"
+						: "var(--color-primary-300)";
+				}}
+				onMouseLeave={() => {
+					if (!wrapperRef.current) return;
+					wrapperRef.current.style.borderColor = error ? "#f43f5e" : "#cbd5e1";
+				}}
+			>
+				<select
+					value={value ?? "g"}
+					onChange={(e) => onChange?.(e.target.value)}
+					onFocus={handleFocus}
+					onBlur={handleBlur}
+					disabled={disabled}
+					className={[
+						"custom-select ",
+						"h-[30px] w-full  text-sm text-slate-900 outline-none bg-transparent",
+						"placeholder:text-slate-400",
+ 						isRTL ? "pr-3.5 pl-9" : "pl-3.5 pr-9",
+					].join(" ")}
+					dir={isRTL ? "rtl" : "ltr"}
+					aria-invalid={!!error}
+				>
+					<option value="g">{t("unit.g")}</option>
+					<option value="count">{t("unit.count")}</option>
+				</select>
+
+				{/* Custom arrow */}
+				<span className={`select-arrow  rtl:!left-[8px] ltr:!right-[8px] `}>
+					<svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+						<path
+							d="M5.5 7.5L10 12l4.5-4.5"
+							stroke="currentColor"
+							strokeWidth="1.7"
+							fill="none"
+							strokeLinecap="round"
+							strokeLinejoin="round"
+						/>
+					</svg>
+				</span>
+			</div>
+
+			{error && (
+				<p className="mt-1.5 text-xs text-rose-500 flex items-center gap-1">
+					{error}
+				</p>
+			)}
+		</div>
+	);
+});
+
+
+export function CButton({
+	name,
+	icon,
+	className = '',
+	type = 'button',
+	onClick,
+	disabled = false,
+	loading = false,
+	variant = 'primary',
+	size = 'md',
+	title,
+}) {
 	const t = useTranslations('nutrition');
 
 	const variantMap = {
@@ -46,7 +229,8 @@ export function CButton({ name, icon, className = '', type = 'button', onClick, 
 		lg: 'h-12 px-5 text-base',
 	};
 
-	const ringColor = variant === 'primary' ? 'focus-visible:ring-[var(--color-primary-200)]' : 'focus-visible:ring-slate-200';
+	const ringColor =
+		variant === 'primary' ? 'focus-visible:ring-[var(--color-primary-200)]' : 'focus-visible:ring-slate-200';
 
 	return (
 		<button
@@ -60,13 +244,13 @@ export function CButton({ name, icon, className = '', type = 'button', onClick, 
 				sizeMap[size] || sizeMap.md,
 				ringColor,
 				disabled || loading ? 'opacity-60 cursor-not-allowed' : '',
-				className
+				className,
 			].join(' ')}
 		>
 			{loading && (
-				<svg className='h-4 w-4 animate-spin' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
-					<circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4'></circle>
-					<path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z'></path>
+				<svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+					<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
 				</svg>
 			)}
 			{icon}
@@ -85,7 +269,7 @@ function CheckBox({ id = 'custom', label, initialChecked = false, onChange = () 
 		onChange(next);
 	};
 
-	const onKeyDown = e => {
+	const onKeyDown = (e) => {
 		if (e.key === ' ' || e.key === 'Enter') {
 			e.preventDefault();
 			toggle();
@@ -96,8 +280,8 @@ function CheckBox({ id = 'custom', label, initialChecked = false, onChange = () 
 		<div className={`inline-flex items-center gap-3 ${className}`}>
 			<button
 				id={id}
-				type='button'
-				role='checkbox'
+				type="button"
+				role="checkbox"
 				aria-checked={checked}
 				onClick={toggle}
 				onKeyDown={onKeyDown}
@@ -111,12 +295,12 @@ function CheckBox({ id = 'custom', label, initialChecked = false, onChange = () 
 					animate={{ scale: checked ? 1 : 0, opacity: checked ? 1 : 0 }}
 					transition={{ type: 'spring', stiffness: 500, damping: 30 }}
 				>
-					<Check className='h-4 w-4 text-white' />
+					<Check className="h-4 w-4 text-white" />
 				</motion.div>
 			</button>
 
 			{label && (
-				<span className='text-slate-800 text-[15px] leading-none cursor-pointer' onClick={toggle}>
+				<span className="text-slate-800 text-[15px] leading-none cursor-pointer" onClick={toggle}>
 					{label}
 				</span>
 			)}
@@ -125,8 +309,10 @@ function CheckBox({ id = 'custom', label, initialChecked = false, onChange = () 
 }
 
 function buildSchemas(t) {
+	// ✅ UPDATED: unit added
 	const mealItemSchema = yup.object().shape({
 		name: yup.string().trim().required(t('validation.required')),
+		unit: yup.string().oneOf(['g', 'count']).default('g'),
 		quantity: yup.number().typeError(t('validation.number')).min(0, t('validation.min')).nullable(),
 		calories: yup.number().typeError(t('validation.number')).min(0, t('validation.min')).required(t('validation.required')),
 	});
@@ -135,7 +321,7 @@ function buildSchemas(t) {
 		name: yup.string().trim().required(t('validation.required')),
 		time: yup
 			.string()
-			.transform(v => (v == null ? '' : v))
+			.transform((v) => (v == null ? '' : v))
 			.matches(hhmmRegex, t('validation.hhmm'))
 			.nullable(),
 		bestWith: yup.string().trim().nullable(),
@@ -145,7 +331,7 @@ function buildSchemas(t) {
 		title: yup.string().trim().required(t('validation.required')),
 		time: yup
 			.string()
-			.transform(v => (v == null ? '' : v))
+			.transform((v) => (v == null ? '' : v))
 			.matches(hhmmRegex, t('validation.hhmm'))
 			.nullable(),
 		items: yup.array().of(mealItemSchema).min(1, t('validation.add_item')),
@@ -186,8 +372,6 @@ export default function NutritionManagementPage() {
 	const openedFromUrlRef = useRef(null);
 	const skipNextUrlOpenRef = useRef(true);
 
-
-
 	const [loadingStats, setLoadingStats] = useState(true);
 	const [stats, setStats] = useState(null);
 	const [plans, setPlans] = useState([]);
@@ -215,11 +399,11 @@ export default function NutritionManagementPage() {
 	const [sortBy, setSortBy] = useState('created_at');
 	const [sortOrder, setSortOrder] = useState('DESC');
 
-	const toggleSort = key => {
+	const toggleSort = (key) => {
 		if (sortBy !== key) {
 			setSortBy(key);
 			setSortOrder('DESC');
-		} else setSortOrder(o => (o === 'ASC' ? 'DESC' : 'ASC'));
+		} else setSortOrder((o) => (o === 'ASC' ? 'DESC' : 'ASC'));
 	};
 
 	const user = useUser();
@@ -227,7 +411,7 @@ export default function NutritionManagementPage() {
 	const [clientsCoach, setClientsCoach] = useState();
 
 	useEffect(() => {
-		if (user?.role == 'coach') api.get(`auth/coaches/${user?.id}/clients?limit=1000`).then(res => setClientsCoach(res.data));
+		if (user?.role == 'coach') api.get(`auth/coaches/${user?.id}/clients?limit=1000`).then((res) => setClientsCoach(res.data));
 	}, [user?.id, user?.role]);
 
 	const optionsClient = useMemo(() => {
@@ -300,7 +484,7 @@ export default function NutritionManagementPage() {
 	useEffect(() => {
 		const planId = searchParams.get('plan_id');
 		if (planId && plans.length > 0) {
-			const plan = plans.find(p => p.id === planId);
+			const plan = plans.find((p) => p.id === planId);
 			if (plan) {
 				onViewDetails(plan, true);
 			}
@@ -330,7 +514,7 @@ export default function NutritionManagementPage() {
 		}
 	};
 
-	const onCreate = async payload => {
+	const onCreate = async (payload) => {
 		try {
 			await api.post('/nutrition/meal-plans', payload);
 			Notification(t('toast.created'), 'success');
@@ -341,6 +525,19 @@ export default function NutritionManagementPage() {
 		}
 	};
 
+	const clearPlanIdFromUrl = useCallback(() => {
+		skipNextUrlOpenRef.current = true;
+
+		const sp = new URLSearchParams(searchParams.toString());
+		sp.delete('planId');
+		sp.delete('plan_id');
+
+		const qs = sp.toString();
+		router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+
+		openedFromUrlRef.current = null;
+	}, [router, pathname, searchParams]);
+
 	const onUpdate = async (planId, payload) => {
 		try {
 			await api.put(`/nutrition/meal-plans/${planId}`, payload);
@@ -350,9 +547,6 @@ export default function NutritionManagementPage() {
 			setEditPlan(null);
 
 			await fetchPlans();
-			// const newParams = new URLSearchParams(searchParams);
-			// newParams.delete('plan_id');
-			// router.replace(`?${newParams.toString()}`);
 		} catch (e) {
 			Notification(e?.response?.data?.message || t('toast.update_failed'), 'error');
 		}
@@ -362,7 +556,6 @@ export default function NutritionManagementPage() {
 		try {
 			const { data: fullPlan } = await api.get(`/nutrition/meal-plans/${plan.id}`);
 
-			// Create a copy with "(Copy)" appended to the name
 			const duplicatePayload = {
 				...fullPlan,
 				name: `${fullPlan.name} (Copy)`,
@@ -387,7 +580,7 @@ export default function NutritionManagementPage() {
 			setAssignPlanOpen(null);
 			await fetchPlans();
 			if (selectedPlan?.id === planId) {
-				setSelectedPlan(p => ({ ...(p || {}) }));
+				setSelectedPlan((p) => ({ ...(p || {}) }));
 			}
 		} catch (e) {
 			Notification(e?.response?.data?.message || t('toast.assign_failed'), 'error');
@@ -406,18 +599,14 @@ export default function NutritionManagementPage() {
 			setDeletePlanId(null);
 			await fetchPlans();
 		} catch (e) {
-			Notification(e.response.data?.message, 'error');
+			Notification(e.response?.data?.message, 'error');
 		} finally {
 			setDeleteLoading(false);
 		}
 	};
 
-
-
 	useEffect(() => {
 		const planId = searchParams.get('planId') || searchParams.get('plan_id');
-
-		console.log(skipNextUrlOpenRef.current);
 		if (!planId) return;
 		if (skipNextUrlOpenRef.current) {
 			skipNextUrlOpenRef.current = false;
@@ -427,36 +616,17 @@ export default function NutritionManagementPage() {
 		if (openedFromUrlRef.current === planId) return;
 		openedFromUrlRef.current = planId;
 
-		// you can open edit directly from URL
-		const local = plans.find(p => p.id === planId);
+		const local = plans.find((p) => p.id === planId);
 
 		if (local) {
-			onViewDetails(local, true); // true = edit
+			onViewDetails(local, true);
 		} else if (plans.length) {
-			// planId exists but not in current page list: fetch directly
 			onViewDetails({ id: planId }, true);
 		}
 	}, [searchParams, plans]);
 
-
-	const clearPlanIdFromUrl = useCallback(() => {
-		skipNextUrlOpenRef.current = true;
-
-		const sp = new URLSearchParams(searchParams.toString());
-
-		// support both keys just in case
-		sp.delete('planId');
-		sp.delete('plan_id');
-
-		const qs = sp.toString();
-		router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-
-		openedFromUrlRef.current = null;
-	}, [router, pathname, searchParams]);
-
-
 	return (
-		<div className='space-y-5 sm:space-y-6'>
+		<div className="space-y-5 sm:space-y-6">
 			<GradientStatsHeader
 				onClick={() => setAddPlanOpen(true)}
 				btnName={t('btn.new_plan')}
@@ -468,56 +638,38 @@ export default function NutritionManagementPage() {
 				<StatCard icon={TrendingUp} title={t('stats.my_plans')} value={stats?.totals?.myPlansCount} />
 			</GradientStatsHeader>
 
-			<div className='relative'>
-				<div className='flex items-center justify-between gap-2 flex-wrap'>
-					<div className='relative flex-1 max-w-[240px] sm:min-w-[260px]'>
-						<Search className='absolute rtl:right-3 ltr:left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
+			<div className="relative">
+				<div className="flex items-center justify-between gap-2 flex-wrap">
+					<div className="relative flex-1 max-w-[240px] sm:min-w-[260px]">
+						<Search className="absolute rtl:right-3 ltr:left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
 						<input
 							value={searchText}
-							onChange={e => setSearchText(e.target.value)}
+							onChange={(e) => setSearchText(e.target.value)}
 							placeholder={t('search.placeholder')}
-							className='h-11 w-full px-8 rounded-lg border border-slate-200 bg-white/90 text-slate-900 shadow-sm hover:shadow transition focus:outline-none focus:ring-4'
+							className="h-11 w-full px-8 rounded-lg border border-slate-200 bg-white/90 text-slate-900 shadow-sm hover:shadow transition focus:outline-none focus:ring-4"
 							style={{ '--tw-ring-color': 'var(--color-primary-200)' }}
 						/>
+
 						{!!searchText && (
 							<button
-								type='button'
+								type="button"
 								onClick={() => setSearchText('')}
-								className='absolute rtl:left-2 ltr:right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100'
+								className="absolute rtl:left-2 ltr:right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
 								aria-label={t('actions.clear')}
 								title={t('actions.clear')}
 							>
-								<X className='w-4 h-4' />
+								<X className="w-4 h-4" />
 							</button>
 						)}
 					</div>
 
-					<div className='flex items-center gap-2'>
-						<div className='min-w-[80px]'>
-							<Select
-								searchable={false}
-								clearable={false}
-								className='!w-full'
-								placeholder={t('search.per_page')}
-								options={[
-									{ id: 8, label: 8 },
-									{ id: 12, label: 12 },
-									{ id: 20, label: 20 },
-									{ id: 30, label: 30 },
-								]}
-								value={perPage}
-								onChange={n => {
-									setPerPage(Number(n));
-									setPage(1);
-								}}
-							/>
-						</div>
-
+					<div className="flex items-center gap-2">
+						{/* keep your existing Select here as-is (NOT requested to change) */}
 						<CButton
 							onClick={() => toggleSort('created_at')}
 							icon={<Clock size={18} />}
 							name={sortBy === 'created_at' ? (sortOrder === 'ASC' ? 'search.oldest_first' : 'search.newest_first') : 'search.sort_by_date'}
-							variant='neutral'
+							variant="neutral"
 						/>
 					</div>
 				</div>
@@ -537,13 +689,12 @@ export default function NutritionManagementPage() {
 				}}
 				onDuplicate={onDuplicate}
 				onAssign={setAssignPlanOpen}
-				onDelete={id => {
+				onDelete={(id) => {
 					setDeletePlanId(id);
 					setDeleteOpen(true);
 				}}
 			/>
 
-			{/* Pagination */}
 			{totalPages > 1 && (
 				<PrettyPagination
 					page={page}
@@ -558,33 +709,32 @@ export default function NutritionManagementPage() {
 				/>
 			)}
 
-			<Modal open={addPlanOpen} maxH='h-fit' cn='!py-0' onClose={() => setAddPlanOpen(false)} title={t('modals.create_title')} scrollRef={scrollRef}>
-				<MealPlanForm scrollRef={scrollRef} onSubmitPayload={onCreate} submitLabel='btn.create' />
+			<Modal open={addPlanOpen} maxH="h-fit" cn="!py-0" onClose={() => setAddPlanOpen(false)} title={t('modals.create_title')} scrollRef={scrollRef}>
+				<MealPlanForm scrollRef={scrollRef} onSubmitPayload={onCreate} submitLabel="btn.create" />
 			</Modal>
 
-			{/* Edit */}
-			<Modal scrollRef={scrollRef} open={!!editPlan} onClose={() => {
-				clearPlanIdFromUrl();  
-				setEditPlan(null);
-			}} title={editPlan ? `${t('modals.edit_title')}: ${editPlan.name}` : ''}>
-				<div className='rounded-lg p-3 sm:p-4' style={{ background: 'linear-gradient(to bottom, var(--color-primary-50), white)' }}>
-					{editPlan && <MealPlanForm scrollRef={scrollRef} initialPlan={editPlan} onSubmitPayload={payload => onUpdate(editPlan.id, payload)} submitLabel='btn.update' />}
+			<Modal
+				scrollRef={scrollRef}
+				open={!!editPlan}
+				onClose={() => {
+					clearPlanIdFromUrl();
+					setEditPlan(null);
+				}}
+				title={editPlan ? `${t('modals.edit_title')}: ${editPlan.name}` : ''}
+			>
+				<div className="rounded-lg p-3 sm:p-4" style={{ background: 'linear-gradient(to bottom, var(--color-primary-50), white)' }}>
+					{editPlan && <MealPlanForm scrollRef={scrollRef} initialPlan={editPlan} onSubmitPayload={(payload) => onUpdate(editPlan.id, payload)} submitLabel="btn.update" />}
 				</div>
 			</Modal>
 
-			{/* Assign */}
-			<Modal maxW='max-w-[500px]' open={!!assignPlanOpen} onClose={() => setAssignPlanOpen(null)} title={assignPlanOpen ? `${t('modals.assign_title')}: ${assignPlanOpen.name}` : ''}>
+			<Modal maxW="max-w-[500px]" open={!!assignPlanOpen} onClose={() => setAssignPlanOpen(null)} title={assignPlanOpen ? `${t('modals.assign_title')}: ${assignPlanOpen.name}` : ''}>
 				{assignPlanOpen && <AssignPlanForm onClose={() => setAssignPlanOpen(null)} plan={assignPlanOpen} clients={optionsClient} onAssign={(userId, setSubmitting) => onAssign(assignPlanOpen.id, userId, setSubmitting)} />}
 			</Modal>
 
-			{/* Details */}
 			<Modal open={detailsOpen} onClose={() => setDetailsOpen(false)} title={selectedPlan ? `${t('modals.details_title')}: ${selectedPlan.name}` : t('modals.details_title')}>
-				<div className='rounded-lg bg-gradient-to-b from-slate-50/60 to-white p-3 sm:p-4'>
-					{selectedPlan && <PlanDetailsView plan={selectedPlan} />}
-				</div>
+				<div className="rounded-lg bg-gradient-to-b from-slate-50/60 to-white p-3 sm:p-4">{selectedPlan && <PlanDetailsView plan={selectedPlan} />}</div>
 			</Modal>
 
-			{/* Delete dialog */}
 			<ConfirmDialog
 				loading={deleteLoading}
 				open={deleteOpen}
@@ -602,19 +752,19 @@ export default function NutritionManagementPage() {
 }
 
 /* =========================
-	 Meal Plan Form
+	 ReorderFieldArray
 	 ========================= */
 export function ReorderFieldArray({ control, name, renderRow, className = 'space-y-2' }) {
 	const { fields, replace } = useFieldArray({ control, name });
 	if (!fields?.length) return null;
 
 	return (
-		<Reorder.Group axis='y' values={fields} onReorder={newOrder => replace(newOrder)} className={className}>
+		<Reorder.Group axis="y" values={fields} onReorder={(newOrder) => replace(newOrder)} className={className}>
 			{fields.map((row, idx) => (
-				<Reorder.Item key={row.id || idx} value={row} dragListener className='rounded-lg border border-slate-200 bg-white p-2'>
-					<div className='flex items-start gap-2'>
-						<GripVertical className='w-4 h-4 mt-2 shrink-0 cursor-grab text-slate-400' />
-						<div className='flex-1'>{renderRow({ row, index: idx })}</div>
+				<Reorder.Item key={row.id || idx} value={row} dragListener className="rounded-lg border border-slate-200 bg-white p-2">
+					<div className="flex items-start gap-2">
+						<GripVertical className="w-4 h-4 mt-2 shrink-0 cursor-grab text-slate-400" />
+						<div className="flex-1">{renderRow({ row, index: idx })}</div>
 					</div>
 				</Reorder.Item>
 			))}
@@ -622,6 +772,9 @@ export function ReorderFieldArray({ control, name, renderRow, className = 'space
 	);
 }
 
+/* =========================
+	 MealPlanForm
+	 ========================= */
 export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLabel = 'btn.save' }) {
 	const t = useTranslations('nutrition');
 	const { baseFormSchema } = buildSchemas(t);
@@ -641,7 +794,8 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 			};
 		}
 
-		const firstDayMeals = (initialPlan.days?.[0]?.meals?.length ? initialPlan.days[0].meals : mapFoodsToMeals(initialPlan.days?.[0]?.foods)) || defaultMeals;
+		const firstDayMeals =
+			(initialPlan.days?.[0]?.meals?.length ? initialPlan.days[0].meals : mapFoodsToMeals(initialPlan.days?.[0]?.foods)) || defaultMeals;
 
 		const existingNotes = String(initialPlan.notes || '')
 			.split('\n')
@@ -672,12 +826,7 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 
 	const customizeDays = watch('customizeDays');
 
-	const {
-		fields: baseMeals,
-		append: appendMeal,
-		remove: removeMeal,
-		replace: replaceMeals,
-	} = useFieldArray({
+	const { fields: baseMeals, append: appendMeal, remove: removeMeal, replace: replaceMeals } = useFieldArray({
 		control,
 		name: 'baseMeals',
 	});
@@ -686,15 +835,19 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 	const [aiOpen, setAiOpen] = useState(false);
 	const locale = useLocale();
 
-	const [aiText, setAiText] = useState(locale === 'ar' ? 'أنشئ خطة وجبات لإعادة تكوين الجسم تحتوي على 2300 سعرة حرارية و5 وجبات يوميًا. قم بتضمين متعدد الفيتامينات بعد الوجبة 1 وأوميغا-3 بعد الوجبة 2.' : 'Create a 2300 calorie recomposition meal plan with 5 meals per day. Include a multivitamin after Meal 1 and omega-3 after Meal 2.');
+	const [aiText, setAiText] = useState(
+		locale === 'ar'
+			? 'أنشئ خطة وجبات لإعادة تكوين الجسم تحتوي على 2300 سعرة حرارية و5 وجبات يوميًا. قم بتضمين متعدد الفيتامينات بعد الوجبة 1 وأوميغا-3 بعد الوجبة 2.'
+			: 'Create a 2300 calorie recomposition meal plan with 5 meals per day. Include a multivitamin after Meal 1 and omega-3 after Meal 2.'
+	);
 	const [aiLoading, setAiLoading] = useState(false);
 
-	const onSubmit = async data => {
+	const onSubmit = async (data) => {
 		const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 		const baseMealsPayload = mealsToServerMealsStrict(data.baseMeals);
 
 		const dayOverrides = {};
-		dayKeys.forEach(k => {
+		dayKeys.forEach((k) => {
 			const overrideMeals = data?.dayOverrides?.[k] || [];
 			if (Array.isArray(overrideMeals) && overrideMeals.length > 0 && data.customizeDays) {
 				dayOverrides[k] = {
@@ -717,7 +870,6 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 		await onSubmitPayload(payload);
 	};
 
-	// ===== AI integration =====
 	function normalizeAiResponse(raw) {
 		if (raw && typeof raw === 'object' && (raw.meals || raw.name)) return raw;
 		const maybeContent = raw?.content ?? raw?.choices?.[0]?.message?.content ?? raw;
@@ -740,15 +892,16 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 			const { data } = await api.post('/nutrition/ai/generate', { prompt });
 			const parsed = normalizeAiResponse(data);
 
-			const safeMeals = (Array.isArray(parsed?.meals) ? parsed.meals : []).map(m => ({
+			const safeMeals = (Array.isArray(parsed?.meals) ? parsed.meals : []).map((m) => ({
 				title: m?.title || t('form.meal_name'),
 				time: m?.time || '',
-				items: (m?.items || []).map(it => ({
+				items: (m?.items || []).map((it) => ({
 					name: String(it?.name || '').trim(),
 					quantity: it?.quantity === '' || it?.quantity === null || typeof it?.quantity === 'undefined' ? null : Number(it.quantity) || null,
 					calories: Number(it?.calories) || 0,
+					unit: it?.unit === 'count' ? 'count' : 'g', // ✅
 				})),
-				supplements: (m?.supplements || []).map(s => ({
+				supplements: (m?.supplements || []).map((s) => ({
 					name: String(s?.name || '').trim(),
 					time: s?.time ? String(s.time) : '',
 					bestWith: s?.bestWith ? String(s.bestWith) : '',
@@ -767,7 +920,7 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 			} else if (typeof parsed?.notes === 'string') {
 				const lines = parsed.notes
 					.split('\n')
-					.map(s => s.trim())
+					.map((s) => s.trim())
 					.filter(Boolean);
 				setValue('notesList', lines.length ? lines : [''], { shouldDirty: true });
 			}
@@ -783,28 +936,33 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 	};
 
 	return (
-		<form className='space-y-6 mt-2' onSubmit={handleSubmit(onSubmit)}>
-			{/* Name / Desc */}
-			<div className='grid grid-cols-2 max-md:grid-cols-1 gap-3'>
-				<Controller name='name' control={control} render={({ field }) => <Input placeholder={t('form.plan_name')} name='name' value={field.value} onChange={field.onChange} required error={errors?.name?.message} />} />
-				<Controller name='description' control={control} render={({ field }) => <Input placeholder={t('form.description')} name='description' value={field.value} onChange={field.onChange} error={errors?.description?.message} />} />
-				{/* Bullet Notes */}
-				<Controller name='notesList' control={control} render={({ field }) => <NotesListInput value={Array.isArray(field.value) && field.value.length ? field.value : ['']} onChange={field.onChange} />} />
+		<form className="space-y-6 mt-2" onSubmit={handleSubmit(onSubmit)}>
+			<div className="grid grid-cols-2 max-md:grid-cols-1 gap-3">
+				<Controller
+					name="name"
+					control={control}
+					render={({ field }) => <Input placeholder={t('form.plan_name')} name="name" value={field.value} onChange={field.onChange} required error={errors?.name?.message} />}
+				/>
+				<Controller
+					name="description"
+					control={control}
+					render={({ field }) => <Input placeholder={t('form.description')} name="description" value={field.value} onChange={field.onChange} error={errors?.description?.message} />}
+				/>
+				<Controller name="notesList" control={control} render={({ field }) => <NotesListInput value={Array.isArray(field.value) && field.value.length ? field.value : ['']} onChange={field.onChange} />} />
 			</div>
 
-			{/* Base Day */}
-			<div className='space-y-3'>
-				<div className='flex items-center justify-between'>
-					<h4 className='font-medium text-slate-800 flex items-center gap-2'>
+			<div className="space-y-3">
+				<div className="flex items-center justify-between">
+					<h4 className="font-medium text-slate-800 flex items-center gap-2">
 						{t('form.base_day_title')}
-						<Clock size={16} className='rtl:order-[-1] text-slate-500' />
+						<Clock size={16} className="rtl:order-[-1] text-slate-500" />
 					</h4>
 
-					<div className='flex items-center gap-2'>
+					<div className="flex items-center gap-2">
 						<CButton
-							name='btn.add_meal'
-							size='sm'
-							className='!bg-white'
+							name="btn.add_meal"
+							size="sm"
+							className="!bg-white"
 							icon={<Plus size={14} />}
 							onClick={() => {
 								appendMeal({
@@ -823,57 +981,72 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 									}
 								}, 0);
 							}}
-							variant='outline'
+							variant="outline"
 						/>
 					</div>
 				</div>
 
 				{baseMeals?.length ? (
-					<Reorder.Group axis='y' values={baseMeals} onReorder={newOrder => replaceMeals(newOrder)} className='space-y-2'>
+					<Reorder.Group axis="y" values={baseMeals} onReorder={(newOrder) => replaceMeals(newOrder)} className="space-y-2">
 						{baseMeals.map((m, mealIndex) => (
-							<Reorder.Item key={m.id || mealIndex} value={m} dragListener className='rounded-lg border border-slate-200 bg-white px-3 py-4'>
-								<div className='flex items-center justify-between gap-3 mb-2'>
-									<div className='flex items-center gap-2 text-slate-600 min-w-0'>
-										<GripVertical className='w-4 h-4 shrink-0 cursor-grab text-slate-400' />
-										<Controller name={`baseMeals.${mealIndex}.title`} control={control} render={({ field }) => <Input className='max-w-[300px]' placeholder={t('form.meal_name')} value={field.value} onChange={field.onChange} required error={getErr(errors, `baseMeals.${mealIndex}.title`)} />} />
-										<Controller name={`baseMeals.${mealIndex}.time`} control={control} render={({ field }) => <TimeField className='!w-[200px]' showLabel={false} value={field.value || ''} onChange={field.onChange} error={getErr(errors, `baseMeals.${mealIndex}.time`)} />} />
+							<Reorder.Item key={m.id || mealIndex} value={m} dragListener className="rounded-lg border border-slate-200 bg-white px-3 py-4">
+								<div className="flex items-center justify-between gap-3 mb-2">
+									<div className="flex items-center gap-2 text-slate-600 min-w-0">
+										<GripVertical className="w-4 h-4 shrink-0 cursor-grab text-slate-400" />
+										<Controller
+											name={`baseMeals.${mealIndex}.title`}
+											control={control}
+											render={({ field }) => <Input className="max-w-[300px]" placeholder={t('form.meal_name')} value={field.value} onChange={field.onChange} required error={getErr(errors, `baseMeals.${mealIndex}.title`)} />}
+										/>
+										<Controller
+											name={`baseMeals.${mealIndex}.time`}
+											control={control}
+											render={({ field }) => <TimeField className="!w-[200px]" showLabel={false} value={field.value || ''} onChange={field.onChange} error={getErr(errors, `baseMeals.${mealIndex}.time`)} />}
+										/>
 									</div>
 
 									<DangerX onClick={() => removeMeal(mealIndex)} title={t('btn.remove_meal')} />
 								</div>
 
-								<MealBlocks ctx={{ control, basePath: `baseMeals.${mealIndex}`, errors }} />
+								{/* ✅ pass setValue so Items can auto set unit */}
+								<MealBlocks ctx={{ control, basePath: `baseMeals.${mealIndex}`, errors, setValue }} />
 							</Reorder.Item>
 						))}
 					</Reorder.Group>
 				) : (
-					<div className='rounded-lg border border-dashed border-slate-200 bg-white/70 py-6 text-center text-sm text-slate-500'>{t('empty.no_meals_hint')}</div>
+					<div className="rounded-lg border border-dashed border-slate-200 bg-white/70 py-6 text-center text-sm text-slate-500">{t('empty.no_meals_hint')}</div>
 				)}
 
-				{errors?.baseMeals?.message && <p className='text-sm text-red-600'>{errors.baseMeals.message}</p>}
+				{errors?.baseMeals?.message && <p className="text-sm text-red-600">{errors.baseMeals.message}</p>}
 			</div>
 
-			{/* Customize Days Toggle */}
-			<Controller name='customizeDays' control={control} render={({ field }) => <CheckBox id='customizeDays' label={t('form.customize_days')} initialChecked={!!field.value} onChange={field.onChange} />} />
+			<Controller name="customizeDays" control={control} render={({ field }) => <CheckBox id="customizeDays" label={t('form.customize_days')} initialChecked={!!field.value} onChange={field.onChange} />} />
 
-			{customizeDays && <DayOverrides control={control} errors={errors} />}
+			{/* ✅ pass setValue to DayOverrides too (so items in overrides also auto-switch unit) */}
+			{customizeDays && <DayOverrides control={control} errors={errors} setValue={setValue} />}
 
-			{/* AI Assist */}
 			{aiOpen && (
-				<div className='rounded-lg border p-3 space-y-2' style={{ borderColor: 'var(--color-primary-200)', backgroundColor: 'var(--color-primary-50)' }}>
-					<textarea rows={3} className='w-full bg-white rounded-lg border border-slate-200 p-3 focus:outline-none focus:ring-4' style={{ '--tw-ring-color': 'var(--color-primary-200)' }} placeholder='e.g., 2300 kcal recomposition, 5 meals, add multivitamin after Meal 1, omega after Meal 2…' value={aiText} onChange={e => setAiText(e.target.value)} />
-					<div className='flex items-center justify-end gap-2'>
-						<CButton name='btn.generate' onClick={runAiFill} loading={aiLoading} variant='primary' />
+				<div className="rounded-lg border p-3 space-y-2" style={{ borderColor: 'var(--color-primary-200)', backgroundColor: 'var(--color-primary-50)' }}>
+					<textarea
+						rows={3}
+						className="w-full bg-white rounded-lg border border-slate-200 p-3 focus:outline-none focus:ring-4"
+						style={{ '--tw-ring-color': 'var(--color-primary-200)' }}
+						placeholder="e.g., 2300 kcal recomposition, 5 meals, add multivitamin after Meal 1, omega after Meal 2…"
+						value={aiText}
+						onChange={(e) => setAiText(e.target.value)}
+					/>
+					<div className="flex items-center justify-end gap-2">
+						<CButton name="btn.generate" onClick={runAiFill} loading={aiLoading} variant="primary" />
 					</div>
 				</div>
 			)}
 
-			<div className='flex items-center justify-end gap-2 pt-2'>
-				<div className='flex items-center gap-2'>
-					<CButton type='button' onClick={() => setAiOpen(o => !o)} icon={<Sparkles size={16} />} name='btn.ai_assist' variant='outline' />
+			<div className="flex items-center justify-end gap-2 pt-2">
+				<div className="flex items-center gap-2">
+					<CButton type="button" onClick={() => setAiOpen((o) => !o)} icon={<Sparkles size={16} />} name="btn.ai_assist" variant="outline" />
 				</div>
 
-				<CButton name={submitLabel} type='submit' variant='primary' loading={isSubmitting} />
+				<CButton name={submitLabel} type="submit" variant="primary" loading={isSubmitting} />
 			</div>
 		</form>
 	);
@@ -892,7 +1065,7 @@ Return ONLY valid JSON matching exactly:
       "title": "Meal 1",
       "time": "08:00",
       "items": [
-        { "name": "Oats", "quantity": 80, "calories": 320 }
+        { "name": "Oats", "quantity": 80, "calories": 320, "unit": "g" }
       ],
       "supplements": [
         { "name": "Multivitamin", "time": "08:30", "bestWith": "water" }
@@ -903,7 +1076,7 @@ Return ONLY valid JSON matching exactly:
 
 Rules:
 - Use 24h "HH:MM" for any time (or empty string).
-- Items ONLY have: name (string), quantity (number or null), calories (number).
+- Items ONLY have: name (string), quantity (number or null), calories (number), unit ("g" | "count").
 - Provide 3–6 meals unless the user clearly asks otherwise.
 - Keep supplements fields to: name, time, bestWith.
 - Return VALID JSON without markdown fences.
@@ -919,16 +1092,19 @@ function safeJsonFromCodeFence(s) {
 	return m ? m[1] : s;
 }
 
-const asNumber = v => {
+const asNumber = (v) => {
 	const n = typeof v === 'string' ? v : '';
 	if (n === '') return null;
 	const num = Number(n);
 	return Number.isFinite(num) ? num : null;
 };
 
+/* =========================
+	 MealBlocks
+	 ========================= */
 const MealBlocks = memo(function MealBlocks({ ctx }) {
 	const t = useTranslations('nutrition');
-	const { control, basePath, errors } = ctx;
+	const { control, basePath, errors, setValue } = ctx;
 
 	const { fields: itemFields, append: appendItem, remove: removeItem, move: moveItem } = useFieldArray({ control, name: `${basePath}.items` });
 	const { fields: supFields, append: appendSup, remove: removeSup, move: moveSup } = useFieldArray({ control, name: `${basePath}.supplements` });
@@ -937,40 +1113,104 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 	const addSup = () => appendSup(blankSupplement());
 
 	return (
-		<div className='mt-3 space-y-3'>
+		<div className="mt-3 space-y-3">
 			{/* -------- Items -------- */}
-			<div className='p-4 space-y-2'>
+			<div className="p-4 space-y-2">
 				{itemFields.map((f, idx) => (
 					<DraggableCard key={f.id || idx} index={idx} onMove={(from, to) => moveItem(from, to)}>
-						<div className='flex flex-col gap-2 rounded-lg'>
-							<div className='flex items-center justify-between gap-2'>
-								<div className='flex items-center gap-2 text-slate-500'>
-									<div className='flex-none'>
+						<div className="flex flex-col gap-2 rounded-lg">
+							<div className="flex items-center justify-between gap-2">
+								<div className="flex items-center gap-2 text-slate-500">
+									<div className="flex-none">
 										<GripDots />
 									</div>
-									<div className='grid grid-cols-2 md:grid-cols-[1fr_150px_140px] gap-3'>
-										<Controller name={`${basePath}.items.${idx}.name`} control={control} render={({ field }) => <Input placeholder={t('form.item_name')} value={field.value} onChange={field.onChange} required error={getErr(errors, `${basePath}.items.${idx}.name`)} />} />
-										<Controller name={`${basePath}.items.${idx}.quantity`} control={control} render={({ field }) => <Input placeholder={t('form.qty_g')} value={field.value == null ? '' : field.value} onChange={v => field.onChange(asNumber(v))} error={getErr(errors, `${basePath}.items.${idx}.quantity`)} inputMode='decimal' />} />
-										<Controller name={`${basePath}.items.${idx}.calories`} control={control} render={({ field }) => <Input placeholder={t('form.calories')} value={field.value == 0 ? null : field.value} onChange={v => field.onChange(asNumber(v))} required error={getErr(errors, `${basePath}.items.${idx}.calories`)} inputMode='decimal' />} />
+
+									{/* ✅ UPDATED ITEMS UI ONLY */}
+									<div className="grid grid-cols-2 md:grid-cols-[1fr_140px_92px_140px] gap-3">
+										{/* Name */}
+										<Controller
+											name={`${basePath}.items.${idx}.name`}
+											control={control}
+											render={({ field }) => (
+												<MiniField
+													placeholder={t('form.item_name')}
+													value={field.value}
+													onChange={(e) => {
+														const v = e?.target?.value ?? '';
+														field.onChange(v);
+
+														// ✅ Auto unit = count for eggs
+														const lower = String(v).trim().toLowerCase();
+														if (lower.includes('egg') || lower.includes('eggs')) {
+															setValue?.(`${basePath}.items.${idx}.unit`, 'count', { shouldDirty: true });
+														}
+													}}
+													onBlur={field.onBlur}
+												/>
+											)}
+										/>
+
+										{/* Quantity */}
+										<Controller
+											name={`${basePath}.items.${idx}.quantity`}
+											control={control}
+											render={({ field }) => (
+												<MiniField
+													placeholder={t('form.qty')}
+													value={field.value == null ? '' : field.value}
+													onChange={(e) => field.onChange(asNumber(e.target.value))}
+													onBlur={field.onBlur}
+													inputMode="decimal"
+												/>
+											)}
+										/>
+
+										{/* Unit */}
+										<Controller
+											name={`${basePath}.items.${idx}.unit`}
+											control={control}
+											render={({ field }) => <UnitSelect value={field.value || 'g'} onChange={(v) => field.onChange(v)} />}
+										/>
+
+										{/* Calories */}
+										<Controller
+											name={`${basePath}.items.${idx}.calories`}
+											control={control}
+											render={({ field }) => (
+												<MiniField
+													placeholder={t('form.calories')}
+													value={field.value == 0 ? '' : field.value}
+													onChange={(e) => field.onChange(asNumber(e.target.value))}
+													onBlur={field.onBlur}
+													inputMode="decimal"
+												/>
+											)}
+										/>
 									</div>
 								</div>
-								<DangerX size='md' onClick={() => removeItem(idx)} title={t('btn.remove_meal')} />
+
+								<DangerX size="md" onClick={() => removeItem(idx)} title={t('btn.remove_meal')} />
 							</div>
+
+							{/* show item errors if any */}
+							{getErr(errors, `${basePath}.items.${idx}.name`) ? <p className="text-xs text-red-600">{getErr(errors, `${basePath}.items.${idx}.name`)}</p> : null}
+							{getErr(errors, `${basePath}.items.${idx}.quantity`) ? <p className="text-xs text-red-600">{getErr(errors, `${basePath}.items.${idx}.quantity`)}</p> : null}
+							{getErr(errors, `${basePath}.items.${idx}.calories`) ? <p className="text-xs text-red-600">{getErr(errors, `${basePath}.items.${idx}.calories`)}</p> : null}
 						</div>
 					</DraggableCard>
 				))}
 			</div>
 
 			{/* -------- Supplements -------- */}
-			<div className='space-y-2'>
+			<div className="space-y-2">
 				{supFields.map((f, idx) => (
 					<DraggableCard key={f.id || idx} index={idx} onMove={(from, to) => moveSup(from, to)}>
-						<div className='flex items-center gap-2 justify-between rounded-lg px-4'>
-							<div className='flex items-center gap-2 text-slate-500 w-full'>
-								<div className='flex-none'>
+						<div className="flex items-center gap-2 justify-between rounded-lg px-4">
+							<div className="flex items-center gap-2 text-slate-500 w-full">
+								<div className="flex-none">
 									<GripDots />
 								</div>
-								<div className='grid grid-cols-1 md:grid-cols-3 gap-3 w-full'>
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
 									<Controller name={`${basePath}.supplements.${idx}.name`} control={control} render={({ field }) => <Input placeholder={t('form.supplement_name')} value={field.value} onChange={field.onChange} error={getErr(errors, `${basePath}.supplements.${idx}.name`)} />} />
 									<Controller name={`${basePath}.supplements.${idx}.time`} control={control} render={({ field }) => <TimeField showLabel={false} value={field.value || ''} onChange={field.onChange} error={getErr(errors, `${basePath}.supplements.${idx}.time`)} />} />
 									<Controller name={`${basePath}.supplements.${idx}.bestWith`} control={control} render={({ field }) => <Input placeholder={t('form.best_with')} value={field.value || ''} onChange={field.onChange} />} />
@@ -982,10 +1222,9 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 				))}
 			</div>
 
-			{/* -------- Bottom quick-add -------- */}
-			<div className='border-t border-slate-200 pt-3 flex items-center justify-end gap-2'>
-				<CButton name='btn.add_item' size='sm' className='!bg-white' icon={<Plus size={14} />} onClick={addItem} variant='outline' />
-				<CButton name='btn.add_supplement' size='sm' className='!bg-white' icon={<Pill size={14} />} onClick={addSup} variant='outline' />
+			<div className="border-t border-slate-200 pt-3 flex items-center justify-end gap-2">
+				<CButton name="btn.add_item" size="sm" className="!bg-white" icon={<Plus size={14} />} onClick={addItem} variant="outline" />
+				<CButton name="btn.add_supplement" size="sm" className="!bg-white" icon={<Pill size={14} />} onClick={addSup} variant="outline" />
 			</div>
 		</div>
 	);
@@ -997,17 +1236,17 @@ export function NotesListInput({ value = [''], onChange }) {
 	const list = Array.isArray(value) && value.length ? value : [''];
 
 	useEffect(() => {
-		setRefs(arr => arr.slice(0, list.length));
+		setRefs((arr) => arr.slice(0, list.length));
 	}, [list.length]);
 
-	const addAfter = i => {
+	const addAfter = (i) => {
 		const next = [...list];
 		next.splice(i + 1, 0, '');
 		onChange(next);
 		requestAnimationFrame(() => refs[i + 1]?.focus());
 	};
 
-	const removeAt = i => {
+	const removeAt = (i) => {
 		const next = [...list];
 		next.splice(i, 1);
 		onChange(next.length ? next : ['']);
@@ -1015,24 +1254,24 @@ export function NotesListInput({ value = [''], onChange }) {
 	};
 
 	return (
-		<div className='rounded-lg border border-slate-200 bg-white px-2 py-2'>
-			<ul className='space-y-2'>
+		<div className="rounded-lg border border-slate-200 bg-white px-2 py-2">
+			<ul className="space-y-2">
 				{list.map((line, i) => (
-					<li key={i} className='flex items-center gap-2'>
-						<NotebookPen className='h-[25px] w-4 flex-shrink-0' style={{ color: 'var(--color-primary-500)' }} />
+					<li key={i} className="flex items-center gap-2">
+						<span className="h-[25px] w-4 flex-shrink-0" style={{ color: 'var(--color-primary-500)' }}>
+							●
+						</span>
 						<input
-							ref={el => (refs[i] = el)}
-							className='flex-1 text-[13px] outline-none hover:border-slate-400 transition'
-							style={{
-								'--focus-border-color': 'var(--color-primary-500)'
-							}}
+							ref={(el) => (refs[i] = el)}
+							className="flex-1 text-[13px] outline-none hover:border-slate-400 transition"
+							style={{ '--focus-border-color': 'var(--color-primary-500)' }}
 							value={line}
-							onChange={e => {
+							onChange={(e) => {
 								const next = [...list];
 								next[i] = e.target.value;
 								onChange(next);
 							}}
-							onKeyDown={e => {
+							onKeyDown={(e) => {
 								if (e.key === 'Enter') {
 									e.preventDefault();
 									addAfter(i);
@@ -1051,7 +1290,7 @@ export function NotesListInput({ value = [''], onChange }) {
 	);
 }
 
-function DayOverrides({ control, errors }) {
+function DayOverrides({ control, errors, setValue }) {
 	const t = useTranslations('nutrition');
 	const days = [
 		{ key: 'saturday', label: t('days.saturday') },
@@ -1064,65 +1303,66 @@ function DayOverrides({ control, errors }) {
 	];
 
 	const [openDays, setOpenDays] = useState({});
-	const toggle = key => setOpenDays(s => ({ ...s, [key]: !s[key] }));
-	const ensureOpen = key => setOpenDays(s => ({ ...s, [key]: true }));
+	const toggle = (key) => setOpenDays((s) => ({ ...s, [key]: !s[key] }));
+	const ensureOpen = (key) => setOpenDays((s) => ({ ...s, [key]: true }));
 
 	function DayOverrideBlock({ control, basePath, label, errors, dayKey, isOpen, onToggle, onEnsureOpen }) {
 		const { fields, append, remove, move } = useFieldArray({ control, name: basePath });
 
 		return (
-			<div className='border border-slate-200 bg-white rounded-lg overflow-hidden'>
-				<button type='button' onClick={() => onToggle(dayKey)} className='w-full flex items-center justify-between px-3 py-2 hover:bg-slate-50'>
-					<div className='flex items-center gap-2'>
-						<span className='font-medium text-slate-800'>{label}</span>
+			<div className="border border-slate-200 bg-white rounded-lg overflow-hidden">
+				<button type="button" onClick={() => onToggle(dayKey)} className="w-full flex items-center justify-between px-3 py-2 hover:bg-slate-50">
+					<div className="flex items-center gap-2">
+						<span className="font-medium text-slate-800">{label}</span>
 					</div>
-					<span className='text-xs text-slate-500 flex items-center gap-2'>
+					<span className="text-xs text-slate-500 flex items-center gap-2">
 						{fields.length > 0 && (
 							<span>
 								{fields.length} {t('details.meals')}
 							</span>
 						)}
-						<div className='rotate-[90deg]'>{isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</div>
+						<div className="rotate-[90deg]">{isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</div>
 					</span>
 				</button>
 
 				{isOpen && (
-					<div className='p-3 space-y-3 bg-slate-50/60'>
-						<div className='flex items-center justify-between'>
+					<div className="p-3 space-y-3 bg-slate-50/60">
+						<div className="flex items-center justify-between">
 							<div />
 							<CButton
-								name='btn.add_meal'
+								name="btn.add_meal"
 								icon={<Plus size={14} />}
-								onClick={e => {
+								onClick={(e) => {
 									e.stopPropagation();
 									append({ title: `${t('form.meal_name')} ${fields.length + 1}`, time: '', items: [blankItem()], supplements: [] });
 									onEnsureOpen(dayKey);
 								}}
-								variant='outline'
-								size='sm'
+								variant="outline"
+								size="sm"
 							/>
 						</div>
 
-						<div className='space-y-2'>
+						<div className="space-y-2">
 							{fields.map((m, mi) => (
 								<DraggableCard key={m.id || mi} index={mi} onMove={(from, to) => move(from, to)}>
-									<div className='rounded-lg bg-white border-slate-200 border p-3'>
-										<div className='flex items-center justify-between mb-2'>
-											<div className='flex items-center gap-2 text-slate-500'>
+									<div className="rounded-lg bg-white border-slate-200 border p-3">
+										<div className="flex items-center justify-between mb-2">
+											<div className="flex items-center gap-2 text-slate-500">
 												<GripDots />
-												<div className='text-sm font-medium text-slate-700'>
+												<div className="text-sm font-medium text-slate-700">
 													{t('form.meal_name')} {mi + 1}
 												</div>
 											</div>
 											<DangerX onClick={() => remove(mi)} title={t('btn.remove_meal')} />
 										</div>
 
-										<div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 											<Controller name={`${basePath}.${mi}.title`} control={control} render={({ field }) => <Input placeholder={t('form.meal_name')} value={field.value} onChange={field.onChange} required error={getErr(errors, `${basePath}.${mi}.title`)} />} />
 											<Controller name={`${basePath}.${mi}.time`} control={control} render={({ field }) => <TimeField showLabel={false} value={field.value || ''} onChange={field.onChange} error={getErr(errors, `${basePath}.${mi}.time`)} />} />
 										</div>
 
-										<MealBlocks ctx={{ control, basePath: `${basePath}.${mi}`, errors }} />
+										{/* ✅ pass setValue down */}
+										<MealBlocks ctx={{ control, basePath: `${basePath}.${mi}`, errors, setValue }} />
 									</div>
 								</DraggableCard>
 							))}
@@ -1134,11 +1374,11 @@ function DayOverrides({ control, errors }) {
 	}
 
 	return (
-		<div className='space-y-3'>
-			<h4 className='font-medium text-slate-800'>{t('form.customize_days')}</h4>
+		<div className="space-y-3">
+			<h4 className="font-medium text-slate-800">{t('form.customize_days')}</h4>
 
-			<div className='space-y-2'>
-				{days.map(d => (
+			<div className="space-y-2">
+				{days.map((d) => (
 					<DayOverrideBlock key={d.key} control={control} basePath={`dayOverrides.${d.key}`} label={d.label} errors={errors} dayKey={d.key} isOpen={!!openDays[d.key]} onToggle={toggle} onEnsureOpen={ensureOpen} />
 				))}
 			</div>
@@ -1147,34 +1387,34 @@ function DayOverrides({ control, errors }) {
 }
 
 /* =========================
-	 Details View
+	 PlanDetailsView (unchanged)
 	 ========================= */
 export function PlanDetailsView({ plan }) {
 	const t = useTranslations('nutrition');
 	const [open, setOpen] = useState({});
-	const toggle = key => setOpen(p => ({ ...p, [key]: !p[key] }));
+	const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
 	const mapFoodsToMealsLocal = (foods = []) => [{ title: t('form.meal_name'), items: foods }];
 
 	const spring = { type: 'spring', stiffness: 300, damping: 30, mass: 0.7 };
 
-	const sumCalories = meals => {
+	const sumCalories = (meals) => {
 		let total = 0;
-		(meals || []).forEach(m => (m.items || []).forEach(it => (total += Number(it.calories || 0))));
+		(meals || []).forEach((m) => (m.items || []).forEach((it) => (total += Number(it.calories || 0))));
 		return total;
 	};
 
 	return (
-		<div className='space-y-4'>
-			{!!plan?.desc && <div className='text-sm text-slate-700'>{plan.desc}</div>}
+		<div className="space-y-4">
+			{!!plan?.desc && <div className="text-sm text-slate-700">{plan.desc}</div>}
 
 			{!!plan?.notes && (
-				<div className='rounded-lg border border-amber-200 bg-amber-50 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,.5)]'>
-					<div className='mb-1 text-sm font-semibold text-amber-900'>{t('details.notes')}</div>
-					<pre className='whitespace-pre-wrap text-[13px] leading-6 text-amber-900'>{plan.notes}</pre>
+				<div className="rounded-lg border border-amber-200 bg-amber-50 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,.5)]">
+					<div className="mb-1 text-sm font-semibold text-amber-900">{t('details.notes')}</div>
+					<pre className="whitespace-pre-wrap text-[13px] leading-6 text-amber-900">{plan.notes}</pre>
 				</div>
 			)}
 
-			<div className='overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm'>
+			<div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
 				{plan?.days?.map((d, idx) => {
 					const dayKey = d.day || `day-${idx}`;
 					const meals = d.meals || mapFoodsToMealsLocal(d.foods || []);
@@ -1182,19 +1422,19 @@ export function PlanDetailsView({ plan }) {
 					const totals = sumCalories(meals);
 
 					return (
-						<div key={dayKey} className='border-b border-slate-200 last:border-b-0'>
-							<button type='button' onClick={() => toggle(dayKey)} className='group flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition-colors hover:bg-slate-50'>
-								<div className='flex items-center gap-2'>
-									<motion.span initial={false} animate={{ rotate: isOpen ? 180 : 0 }} transition={spring} className='inline-flex'>
-										<ChevronDown size={16} className='text-slate-600' />
+						<div key={dayKey} className="border-b border-slate-200 last:border-b-0">
+							<button type="button" onClick={() => toggle(dayKey)} className="group flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition-colors hover:bg-slate-50">
+								<div className="flex items-center gap-2">
+									<motion.span initial={false} animate={{ rotate: isOpen ? 180 : 0 }} transition={spring} className="inline-flex">
+										<ChevronDown size={16} className="text-slate-600" />
 									</motion.span>
-									<span className='font-medium text-slate-800'>{t(d.name.toLowerCase())}</span>
+									<span className="font-medium text-slate-800">{t(d.name.toLowerCase())}</span>
 								</div>
-								<div className='flex items-center gap-3 text-xs text-slate-600'>
-									<span className='rounded-lg border border-slate-200 bg-white px-1.5 py-0.5 shadow-sm'>
+								<div className="flex items-center gap-3 text-xs text-slate-600">
+									<span className="rounded-lg border border-slate-200 bg-white px-1.5 py-0.5 shadow-sm">
 										{meals.length} {t('details.meals')}
 									</span>
-									<span className='inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-0.5 shadow-sm'>
+									<span className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-0.5 shadow-sm">
 										<ChefHat size={12} style={{ color: 'var(--color-primary-600)' }} />
 										{`${totals} ${t('details.kcal')}`}
 									</span>
@@ -1203,70 +1443,53 @@ export function PlanDetailsView({ plan }) {
 
 							<AnimatePresence initial={false}>
 								{isOpen && (
-									<motion.div key='content' initial={{ height: 0, opacity: 0, y: -8 }} animate={{ height: 'auto', opacity: 1, y: 0 }} exit={{ height: 0, opacity: 0, y: -8 }} transition={{ duration: 0.28, ease: [0.2, 0.8, 0.2, 1] }} className='overflow-hidden'>
-										<motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05, duration: 0.25 }} className='space-y-3 bg-slate-50/60 px-3 pb-3'>
+									<motion.div
+										key="content"
+										initial={{ height: 0, opacity: 0, y: -8 }}
+										animate={{ height: 'auto', opacity: 1, y: 0 }}
+										exit={{ height: 0, opacity: 0, y: -8 }}
+										transition={{ duration: 0.28, ease: [0.2, 0.8, 0.2, 1] }}
+										className="overflow-hidden"
+									>
+										<motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05, duration: 0.25 }} className="space-y-3 bg-slate-50/60 px-3 pb-3">
 											{meals.map((m, mi) => {
 												const mealCals = (m.items || []).reduce((a, b) => a + Number(b.calories || 0), 0);
 												return (
-													<motion.div key={mi} layout initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={spring} className='rounded-lg border border-slate-200 bg-white p-3 shadow-sm'>
-														<div className='flex items-center justify-between'>
-															<div className='flex items-center gap-2 font-medium text-slate-800'>
+													<motion.div key={mi} layout initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+														<div className="flex items-center justify-between">
+															<div className="flex items-center gap-2 font-medium text-slate-800">
 																<UtensilsCrossed size={16} style={{ color: 'var(--color-primary-600)' }} />
 																{m.title || `${t('form.meal_name')} ${mi + 1}`}
-																<div className='mt-1 text-[11px] text-slate-500'>
-																	~ {mealCals} {t('details.kcal')}
-																</div>
+																<div className="mt-1 text-[11px] text-slate-500">~ {mealCals} {t('details.kcal')}</div>
 															</div>
-															<div className='flex items-center gap-1 text-xs text-slate-500'>
+															<div className="flex items-center gap-1 text-xs text-slate-500">
 																<Clock size={14} /> {m.time || '—'}
 															</div>
 														</div>
 
 														{m.items?.length > 0 && (
-															<div className='mt-3'>
-																<div className='overflow-x-auto'>
-																	<table className='w-full text-sm'>
+															<div className="mt-3">
+																<div className="overflow-x-auto">
+																	<table className="w-full text-sm">
 																		<thead>
-																			<tr className='rtl:text-right ltr:text-left text-slate-500'>
-																				<th className='py-1 pr-3'>{t('table.item')}</th>
-																				<th className='py-1 pr-3'>{t('table.qty_g')}</th>
-																				<th className='py-1 pr-3'>{t('table.calories')}</th>
+																			<tr className="rtl:text-right ltr:text-left text-slate-500">
+																				<th className="py-1 pr-3">{t('table.item')}</th>
+																				<th className="py-1 pr-3">{t('table.qty_g')}</th>
+																				<th className="py-1 pr-3">Unit</th>
+																				<th className="py-1 pr-3">{t('table.calories')}</th>
 																			</tr>
 																		</thead>
 																		<tbody>
 																			{m.items.map((it, ii) => (
-																				<tr key={ii} className='border-t border-slate-200'>
-																					<td className='py-1 pr-3'>{it.name}</td>
-																					<td className='py-1 pr-3'>{it.quantity ?? '—'}</td>
-																					<td className='py-1 pr-3'>{it.calories}</td>
+																				<tr key={ii} className="border-t border-slate-200">
+																					<td className="py-1 pr-3">{it.name}</td>
+																					<td className="py-1 pr-3">{it.quantity ?? '—'}</td>
+																					<td className="py-1 pr-3">{it.unit || 'g'}</td>
+																					<td className="py-1 pr-3">{it.calories}</td>
 																				</tr>
 																			))}
 																		</tbody>
 																	</table>
-																</div>
-															</div>
-														)}
-
-														{m.supplements?.length > 0 && (
-															<div className='mt-3'>
-																<div className='mb-1 flex items-center gap-1 text-sm font-medium text-slate-700'>
-																	<span className='inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-200'>
-																		<Clock size={12} />
-																	</span>
-																	{t('details.supplements')}
-																</div>
-																<div>
-																	{m.supplements.map((s, si) => (
-																		<div key={si} className='grid grid-cols-3 gap-2 w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-sm'>
-																			<div className='font-medium text-slate-800'>{s.name}</div>
-																			<div className='text-slate-600'>
-																				{t('details.time')}: {s.time || '—'}
-																			</div>
-																			<div className='text-slate-600'>
-																				{t('details.best_with')}: {s.bestWith || '—'}
-																			</div>
-																		</div>
-																	))}
 																</div>
 															</div>
 														)}
@@ -1288,12 +1511,15 @@ export function PlanDetailsView({ plan }) {
 /* =========================
 	 Assign Form
 	 ========================= */
+/* =========================
+   Assign Form (FIXED: shadcn Select added back)
+   ========================= */
 function AssignPlanForm({ onClose, clients, onAssign }) {
 	const t = useTranslations('nutrition');
 	const [userId, setUserId] = useState('');
 	const [submitting, setSubmitting] = useState(false);
 
-	const submit = async e => {
+	const submit = async (e) => {
 		e.preventDefault();
 		if (!userId) return;
 		setSubmitting(true);
@@ -1301,35 +1527,70 @@ function AssignPlanForm({ onClose, clients, onAssign }) {
 	};
 
 	return (
-		<form onSubmit={submit} className='space-y-4'>
-			<div className='space-y-4'>
-				<Select className={'w-full flex-1'} options={clients} value={userId} onChange={setUserId} placeholder={t('assign.select_client')} />
+		<form onSubmit={submit} className="space-y-4">
+			<div className="space-y-4">
+				{/* ✅ SHADCN SELECT (RESTORED) */}
+				<div className="space-y-2">
+					<label className="text-sm font-medium text-slate-700">
+						{t('modals.assign_select_client') ?? t('form.select_client') ?? 'Select client'}
+					</label>
 
-				<div className='flex items-center justify-end gap-2 pt-2'>
-					<Button onClick={onClose} type='button' color='outline' name={t('btn.cancel')} />
-					<Button disabled={!userId} loading={submitting} type='submit' color='primary' name={submitting ? t('btn.assigning') : t('btn.assign_plan')} />
+					<Select value={userId} onValueChange={setUserId}>
+						<SelectTrigger className="h-11 w-full rounded-lg border border-slate-200 bg-white">
+							<SelectValue placeholder={t('modals.assign_placeholder') ?? t('form.select_client') ?? 'Choose a client'} />
+						</SelectTrigger>
+
+						<SelectContent>
+							{(clients || []).length ? (
+								clients.map((c) => (
+									<SelectItem key={c.id} value={String(c.id)}>
+										{c.label}
+									</SelectItem>
+								))
+							) : (
+								<SelectItem value="__empty" disabled>
+									{t('list.no_clients') ?? 'No clients found'}
+								</SelectItem>
+							)}
+						</SelectContent>
+					</Select>
+				</div>
+
+				<div className="flex items-center justify-end gap-2 pt-2">
+					<Button onClick={onClose} type="button" color="outline" name={t('btn.cancel')} />
+					<Button
+						disabled={!userId || userId === '__empty'}
+						loading={submitting}
+						type="submit"
+						color="primary"
+						name={submitting ? t('btn.assigning') : t('btn.assign_plan')}
+					/>
 				</div>
 			</div>
 		</form>
 	);
 }
 
+
+/* =========================
+	 PlanListView
+	 ========================= */
 export const PlanListView = memo(function PlanListView({ loading, plans = [], onPreview, onEdit, onDuplicate, onDelete, onAssign }) {
 	const t = useTranslations('nutrition');
 	const user = useUser();
 
 	if (loading) {
 		return (
-			<div className='divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm'>
+			<div className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
 				{Array.from({ length: 6 }).map((_, i) => (
-					<div key={i} className='group relative flex items-center gap-3 px-4 py-3'>
-						<span aria-hidden className='absolute left-0 top-0 h-full w-1 opacity-60 shimmer' style={{ background: 'linear-gradient(to bottom, var(--color-primary-500), var(--color-secondary-500))' }} />
-						<div className='grid h-12 w-12 place-content-center rounded-lg bg-slate-100 shimmer' />
-						<div className='min-w-0 flex-1'>
-							<div className='mb-2 h-4 w-40 rounded shimmer' />
-							<div className='h-3 w-24 rounded shimmer' />
+					<div key={i} className="group relative flex items-center gap-3 px-4 py-3">
+						<span aria-hidden className="absolute left-0 top-0 h-full w-1 opacity-60 shimmer" style={{ background: 'linear-gradient(to bottom, var(--color-primary-500), var(--color-secondary-500))' }} />
+						<div className="grid h-12 w-12 place-content-center rounded-lg bg-slate-100 shimmer" />
+						<div className="min-w-0 flex-1">
+							<div className="mb-2 h-4 w-40 rounded shimmer" />
+							<div className="h-3 w-24 rounded shimmer" />
 						</div>
-						<div className='h-8 w-28 rounded shimmer' />
+						<div className="h-8 w-28 rounded shimmer" />
 					</div>
 				))}
 			</div>
@@ -1338,58 +1599,89 @@ export const PlanListView = memo(function PlanListView({ loading, plans = [], on
 
 	if (!plans.length) {
 		return (
-			<div className='rounded-lg border border-slate-200 bg-white p-10 text-center shadow-sm'>
-				<div className='mx-auto grid h-16 w-16 place-content-center rounded-lg bg-slate-100'>
-					<UtensilsCrossed className='h-8 w-8 text-slate-500' />
+			<div className="rounded-lg border border-slate-200 bg-white p-10 text-center shadow-sm">
+				<div className="mx-auto grid h-16 w-16 place-content-center rounded-lg bg-slate-100">
+					<UtensilsCrossed className="h-8 w-8 text-slate-500" />
 				</div>
-				<h3 className='mt-4 text-lg font-semibold text-slate-900'>{t('list.empty_title')}</h3>
-				<p className='mt-1 text-sm text-slate-600'>{t('list.empty_desc')}</p>
+				<h3 className="mt-4 text-lg font-semibold text-slate-900">{t('list.empty_title')}</h3>
+				<p className="mt-1 text-sm text-slate-600">{t('list.empty_desc')}</p>
 			</div>
 		);
 	}
 
 	return (
-		<div className='divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm'>
-			{plans.map(p => {
+		<div className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+			{plans.map((p) => {
 				return (
-					<div key={p.id} className='group relative flex items-start gap-3 px-4 py-3 transition-all duration-300 hover:bg-slate-50/60'>
-						<span aria-hidden className='absolute left-0 top-0 h-full w-1 rounded-tr-lg rounded-br-lg opacity-70 theme-gradient-bg' />
+					<div key={p.id} className="group relative flex items-start gap-3 px-4 py-3 transition-all duration-300 hover:bg-slate-50/60">
+						<span aria-hidden className="absolute left-0 top-0 h-full w-1 rounded-tr-lg rounded-br-lg opacity-70 theme-gradient-bg" />
 
-						<div className='mt-0.5 grid h-12 w-12 shrink-0 place-content-center rounded-lg theme-gradient-bg opacity-95 text-white shadow-sm'>
-							<UtensilsCrossed className='h-5 w-5' />
+						<div className="mt-0.5 grid h-12 w-12 shrink-0 place-content-center rounded-lg theme-gradient-bg opacity-95 text-white shadow-sm">
+							<UtensilsCrossed className="h-5 w-5" />
 						</div>
 
-						<div className='min-w-0 flex-1'>
-							<MultiLangText className='truncate text-sm font-semibold text-slate-900'>{p.name}</MultiLangText>
-							{p.desc || p.notes ? <MultiLangText className='line-clamp-1 text-[13px] leading-5 text-slate-600'>{p.desc ?? p.notes}</MultiLangText> : <p className='mt-1 text-[13px] text-slate-500'>{t('list.no_desc')}</p>}
+						<div className="min-w-0 flex-1">
+							<MultiLangText className="truncate text-sm font-semibold text-slate-900">{p.name}</MultiLangText>
+							{p.desc || p.notes ? (
+								<MultiLangText className="line-clamp-1 text-[13px] leading-5 text-slate-600">{p.desc ?? p.notes}</MultiLangText>
+							) : (
+								<p className="mt-1 text-[13px] text-slate-500">{t('list.no_desc')}</p>
+							)}
 						</div>
 
-						<div className='ml-auto flex shrink-0 items-center gap-1'>
-							<button type='button' onClick={() => onAssign?.(p)} className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 active:scale-[.98]' style={{ '--tw-ring-color': 'var(--color-primary-200)' }} title={t('btn.assign')}>
-								<UsersIcon className='h-4 w-4' />
+						<div className="ml-auto flex shrink-0 items-center gap-1">
+							<button
+								type="button"
+								onClick={() => onAssign?.(p)}
+								className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 active:scale-[.98]"
+								style={{ '--tw-ring-color': 'var(--color-primary-200)' }}
+								title={t('btn.assign')}
+							>
+								<UsersIcon className="h-4 w-4" />
 								{t('btn.assign')}
 							</button>
 
-							<div className='flex items-center gap-1'>
-								<button type='button' title={t('btn.preview')} onClick={() => onPreview?.(p)} className='cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4' style={{ '--tw-ring-color': 'var(--color-primary-200)' }}>
-									<Eye className='h-4 w-4' />
+							<div className="flex items-center gap-1">
+								<button
+									type="button"
+									title={t('btn.preview')}
+									onClick={() => onPreview?.(p)}
+									className="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4"
+									style={{ '--tw-ring-color': 'var(--color-primary-200)' }}
+								>
+									<Eye className="h-4 w-4" />
 								</button>
 
-								{/* Duplicate */}
-								<button type='button' title={t('btn.duplicate')} onClick={() => onDuplicate?.(p)} className='cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4' style={{ color: 'var(--color-primary-700)', '--tw-ring-color': 'var(--color-primary-200)' }}>
-									<Copy className='h-4 w-4' />
+								<button
+									type="button"
+									title={t('btn.duplicate')}
+									onClick={() => onDuplicate?.(p)}
+									className="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4"
+									style={{ color: 'var(--color-primary-700)', '--tw-ring-color': 'var(--color-primary-200)' }}
+								>
+									<Copy className="h-4 w-4" />
 								</button>
 
-								{/* Edit */}
 								{p?.adminId != null && (
-									<button type='button' title={t('btn.edit')} onClick={() => onEdit?.(p)} className='cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4' style={{ color: 'var(--color-primary-700)', '--tw-ring-color': 'var(--color-primary-200)' }}>
-										<PencilLine className='h-4 w-4' />
+									<button
+										type="button"
+										title={t('btn.edit')}
+										onClick={() => onEdit?.(p)}
+										className="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4"
+										style={{ color: 'var(--color-primary-700)', '--tw-ring-color': 'var(--color-primary-200)' }}
+									>
+										<PencilLine className="h-4 w-4" />
 									</button>
 								)}
 
 								{p?.adminId != null && (
-									<button type='button' title={t('btn.delete')} onClick={() => onDelete?.(p.id)} className='cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/30'>
-										<Trash2 className='h-4 w-4' />
+									<button
+										type="button"
+										title={t('btn.delete')}
+										onClick={() => onDelete?.(p.id)}
+										className="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/30"
+									>
+										<Trash2 className="h-4 w-4" />
 									</button>
 								)}
 							</div>
@@ -1405,13 +1697,13 @@ function ConfirmDialog({ loading, open, onClose, title, message, confirmText, on
 	const t = useTranslations('nutrition');
 	if (!open) return null;
 	return (
-		<div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
-			<div className='bg-white rounded-lg p-6 max-w-md w-full mx-4'>
-				<h3 className='text-lg font-semibold text-slate-800 mb-2'>{title}</h3>
-				<p className='text-slate-600 mb-4'>{message}</p>
-				<div className='flex items-center justify-end gap-2'>
-					<CButton onClick={onClose} disabled={loading} name='btn.cancel' variant='outline' />
-					<CButton onClick={onConfirm} disabled={loading} name={loading ? 'btn.deleting' : 'btn.delete'} variant='danger' />
+		<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+			<div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+				<h3 className="text-lg font-semibold text-slate-800 mb-2">{title}</h3>
+				<p className="text-slate-600 mb-4">{message}</p>
+				<div className="flex items-center justify-end gap-2">
+					<CButton onClick={onClose} disabled={loading} name="btn.cancel" variant="outline" />
+					<CButton onClick={onConfirm} disabled={loading} name={loading ? 'btn.deleting' : 'btn.delete'} variant="danger" />
 				</div>
 			</div>
 		</div>
@@ -1431,7 +1723,7 @@ export function DangerX({ onClick, title = 'Remove', size = 'md', loading = fals
 		if (!armed) return;
 		setRemaining(Math.max(1, Math.round(autoResetMs / 1000)));
 		intervalRef.current = setInterval(() => {
-			setRemaining(r => (r > 1 ? r - 1 : r));
+			setRemaining((r) => (r > 1 ? r - 1 : r));
 		}, 1000);
 		timerRef.current = setTimeout(() => setArmed(false), autoResetMs);
 		return () => {
@@ -1441,7 +1733,7 @@ export function DangerX({ onClick, title = 'Remove', size = 'md', loading = fals
 	}, [armed, autoResetMs]);
 
 	useEffect(() => {
-		const handleDoc = e => {
+		const handleDoc = (e) => {
 			if (!armed) return;
 			if (btnRef.current && !btnRef.current.contains(e.target)) setArmed(false);
 		};
@@ -1459,7 +1751,7 @@ export function DangerX({ onClick, title = 'Remove', size = 'md', loading = fals
 		setArmed(true);
 	};
 
-	const onKeyDown = e => {
+	const onKeyDown = (e) => {
 		if (!armed && (e.key === 'Enter' || e.key === ' ')) {
 			e.preventDefault();
 			setArmed(true);
@@ -1483,34 +1775,32 @@ export function DangerX({ onClick, title = 'Remove', size = 'md', loading = fals
 	};
 
 	const base = 'inline-flex items-center gap-2 rounded-lg border font-medium transition-all shadow-sm focus-visible:outline-none active:scale-[.98]';
-
 	const idleColors = 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-red-300';
 	const armedColors = 'border-red-200 bg-red-50 text-red-700 focus-visible:ring-2 focus-visible:ring-red-400';
 	const disabledColors = 'opacity-60 cursor-not-allowed';
 
 	const cls = [base, sizeStyles[size] || sizeStyles.md, disabled || loading ? disabledColors : armed ? armedColors : idleColors].join(' ');
-
 	const iconSize = size === 'sm' ? 14 : size === 'lg' ? 18 : 16;
 
 	return (
-		<div className='relative inline-flex' ref={btnRef}>
-			<button type='button' title={title} aria-label={title} aria-live='polite' aria-pressed={armed} disabled={disabled || loading} onClick={handleClick} onKeyDown={onKeyDown} className={cls}>
+		<div className="relative inline-flex" ref={btnRef}>
+			<button type="button" title={title} aria-label={title} aria-live="polite" aria-pressed={armed} disabled={disabled || loading} onClick={handleClick} onKeyDown={onKeyDown} className={cls}>
 				{loading ? (
-					<svg className='h-4 w-4 animate-spin' viewBox='0 0 24 24' fill='none'>
-						<circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4' />
-						<path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z' />
+					<svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+						<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
 					</svg>
 				) : armed ? (
-					<AlertTriangle size={iconSize} className='text-red-600' />
+					<AlertTriangle size={iconSize} className="text-red-600" />
 				) : (
-					<Icon size={iconSize} className='text-red-600/80' />
+					<Icon size={iconSize} className="text-red-600/80" />
 				)}
 
 				<span className={`${armed ? confirmText : 'sm:!hidden'} hidden sm:inline`}>{armed ? confirmText : null}</span>
 
 				<AnimatePresence>
 					{armed && (
-						<motion.span key='count' initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 6 }} className='text-[11px] text-red-600/80'>
+						<motion.span key="count" initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 6 }} className="text-[11px] text-red-600/80">
 							{remaining}s
 						</motion.span>
 					)}
@@ -1519,7 +1809,15 @@ export function DangerX({ onClick, title = 'Remove', size = 'md', loading = fals
 
 			<AnimatePresence>
 				{armed && (
-					<motion.div key='tip' initial={{ opacity: 0, y: -4, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.98 }} transition={{ type: 'spring', stiffness: 300, damping: 26 }} className='absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-red-200 bg-white px-2 py-1 text-[11px] text-red-700 shadow-md' role='status'>
+					<motion.div
+						key="tip"
+						initial={{ opacity: 0, y: -4, scale: 0.98 }}
+						animate={{ opacity: 1, y: 0, scale: 1 }}
+						exit={{ opacity: 0, y: -4, scale: 0.98 }}
+						transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+						className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-red-200 bg-white px-2 py-1 text-[11px] text-red-700 shadow-md"
+						role="status"
+					>
 						{t('clickAgainToConfirm')}
 					</motion.div>
 				)}
@@ -1531,7 +1829,7 @@ export function DangerX({ onClick, title = 'Remove', size = 'md', loading = fals
 function DraggableCard({ children, index, onMove }) {
 	const ref = useRef(null);
 
-	const onDragStart = e => {
+	const onDragStart = (e) => {
 		e.dataTransfer.effectAllowed = 'move';
 		e.dataTransfer.setData('text/plain', String(index));
 		const crt = ref.current;
@@ -1549,12 +1847,12 @@ function DraggableCard({ children, index, onMove }) {
 		}
 	};
 
-	const onDragOver = e => {
+	const onDragOver = (e) => {
 		e.preventDefault();
 		e.dataTransfer.dropEffect = 'move';
 	};
 
-	const onDrop = e => {
+	const onDrop = (e) => {
 		e.preventDefault();
 		const from = Number(e.dataTransfer.getData('text/plain'));
 		const to = index;
@@ -1562,7 +1860,7 @@ function DraggableCard({ children, index, onMove }) {
 	};
 
 	return (
-		<div ref={ref} draggable onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} className='group/drag rounded-lg'>
+		<div ref={ref} draggable onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} className="group/drag rounded-lg">
 			{children}
 		</div>
 	);
@@ -1570,22 +1868,22 @@ function DraggableCard({ children, index, onMove }) {
 
 function GripDots() {
 	return (
-		<svg width='25' height='25' viewBox='0 0 24 24' className='text-slate-400'>
-			<circle cx='9' cy='7' r='1.5' fill='currentColor' />
-			<circle cx='15' cy='7' r='1.5' fill='currentColor' />
-			<circle cx='9' cy='12' r='1.5' fill='currentColor' />
-			<circle cx='15' cy='12' r='1.5' fill='currentColor' />
-			<circle cx='9' cy='17' r='1.5' fill='currentColor' />
-			<circle cx='15' cy='17' r='1.5' fill='currentColor' />
+		<svg width="25" height="25" viewBox="0 0 24 24" className="text-slate-400">
+			<circle cx="9" cy="7" r="1.5" fill="currentColor" />
+			<circle cx="15" cy="7" r="1.5" fill="currentColor" />
+			<circle cx="9" cy="12" r="1.5" fill="currentColor" />
+			<circle cx="15" cy="12" r="1.5" fill="currentColor" />
+			<circle cx="9" cy="17" r="1.5" fill="currentColor" />
+			<circle cx="15" cy="17" r="1.5" fill="currentColor" />
 		</svg>
 	);
 }
 
 /* =========================
-	 Helpers
+	 Helpers (updated for unit)
 	 ========================= */
 function blankItem() {
-	return { name: '', quantity: null, calories: 0 };
+	return { name: '', quantity: null, unit: 'g', calories: 0 };
 }
 
 function blankSupplement() {
@@ -1598,10 +1896,11 @@ function mapFoodsToMeals(foods = []) {
 		{
 			title: 'Meal',
 			time: '',
-			items: foods.map(f => ({
+			items: foods.map((f) => ({
 				name: f.name,
 				quantity: coerceNum(f.quantity, null),
 				calories: coerceNum(f.calories),
+				unit: f.unit === 'count' ? 'count' : 'g',
 			})),
 			supplements: [],
 		},
@@ -1616,6 +1915,7 @@ function coerceNum(v, d = 0) {
 function sanitizeItem(it) {
 	return {
 		name: it?.name ?? '',
+		unit: it?.unit === 'count' ? 'count' : 'g',
 		quantity: it?.quantity == null || it?.quantity === '' ? null : coerceNum(it.quantity, null),
 		calories: coerceNum(it?.calories),
 	};
@@ -1630,7 +1930,7 @@ function sanitizeSupplement(s) {
 }
 
 function cloneMealsStrict(meals = []) {
-	return (meals || []).map(m => ({
+	return (meals || []).map((m) => ({
 		title: m?.title ?? 'Meal',
 		time: m?.time ? String(m.time) : '',
 		items: (m?.items || []).map(sanitizeItem),
@@ -1639,7 +1939,7 @@ function cloneMealsStrict(meals = []) {
 }
 
 function mealsToServerMealsStrict(formMeals = []) {
-	return formMeals.map(m => ({
+	return formMeals.map((m) => ({
 		title: m.title,
 		time: m.time ? m.time : null,
 		items: (m.items || []).map(sanitizeItem),

@@ -33,16 +33,25 @@ export default function CheckBox({ id = 'custom', label, initialChecked = false,
         aria-checked={checked}
         onClick={toggle}
         onKeyDown={onKeyDown}
-        className={` input-3d-checkbox relative cursor-pointer flex h-6.5 w-6.5 items-center justify-center rounded-md border transition-colors duration-300
-          ${checked ? 'bg-gradient-to-br from-blue-600 to-indigo-600 border-blue-600' : 'bg-white border-gray-300'}
-          focus:outline-none focus:ring-2 focus:ring-blue-400`}>
-        <motion.div initial={false} animate={{ scale: checked ? 1 : 0, opacity: checked ? 1 : 0 }} transition={{ type: 'spring', stiffness: 500, damping: 30 }}>
+        className={`input-3d-checkbox relative cursor-pointer flex h-6.5 w-6.5 items-center justify-center rounded-md border transition-all duration-300
+          ${checked ? 'theme-gradient-bg shadow-md' : 'bg-white border-slate-300 hover:border-slate-400'}
+          focus:outline-none focus:ring-2`}
+        style={{
+          borderColor: checked ? 'var(--color-primary-600)' : undefined,
+          '--tw-ring-color': 'var(--color-primary-400)'
+        }}
+      >
+        <motion.div 
+          initial={false} 
+          animate={{ scale: checked ? 1 : 0, opacity: checked ? 1 : 0 }} 
+          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        >
           <Check className='h-4 w-4 text-white' />
         </motion.div>
       </button>
 
       {label && (
-        <span className='text-slate-800 text-[15px] leading-none cursor-pointer' onClick={toggle}>
+        <span className='text-slate-800 text-[15px] leading-none cursor-pointer select-none' onClick={toggle}>
           {label}
         </span>
       )}

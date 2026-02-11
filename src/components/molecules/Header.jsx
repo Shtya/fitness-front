@@ -23,6 +23,7 @@ function fmtRole(role) {
 
 export default function Header({ onMenu }) {
   const t = useTranslations('header');
+  const t_myProfile = useTranslations('');
   const user = useUser?.();
   const router = useRouter();
   const { colors } = useTheme();
@@ -172,8 +173,8 @@ export default function Header({ onMenu }) {
                 className="text-[10px] font-semibold leading-tight uppercase tracking-wide"
                 style={{ color: 'var(--color-primary-400)' }}
               >
-                {fmtRole(user?.role)}
-              </span>
+								{t_myProfile(`myProfile.roles.${user?.role}`)}
+               </span>
             </div>
           </div>
 

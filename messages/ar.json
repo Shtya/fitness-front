@@ -1,5 +1,5 @@
 {
-	"calendar": {
+  "calendar": {
     "title": "التقويم والأحداث",
     "types": "الأنواع",
     "all": "الكل",
@@ -36,26 +36,37 @@
     "create": "إنشاء",
     "update": "تحديث"
   },
-	"todo": {
+  "todo": {
     "title": "المهام",
     "systemFolders": "النظام",
     "myFolders": "مجلداتي",
-    "activeTasks": "نشط",
-    "completed": "مكتمل",
-    "filter": "تصفية",
-    "all": "الكل",
-    "sortManual": "يدوي",
-    "sortDueDate": "تاريخ الاستحقاق",
-    "sortPriority": "الأولوية",
-    "sortAlphabetical": "أبجدي",
-    "searchPlaceholder": "البحث في المهام...",
-    "addTaskPlaceholder": "إضافة مهمة جديدة...",
-    "filterByPriority": "تصفية حسب الأولوية",
+    "activeTasks": "نشطة",
+    "completed": "مكتملة",
+    "folders": {
+      "inbox": "صندوق الوارد",
+      "today": "اليوم",
+      "starred": "المميزة",
+      "personal": "شخصي",
+      "work": "العمل",
+      "shopping": "تسوق"
+    },
+    "addFolder": "إضافة مجلد",
     "folderNamePlaceholder": "اسم المجلد...",
-    "pickColor": "اختر لونًا",
+    "pickColor": "اختر لوناً",
     "add": "إضافة",
     "cancel": "إلغاء",
     "confirmDeleteFolder": "هل تريد حذف هذا المجلد؟",
+    "searchPlaceholder": "ابحث في المهام...",
+    "filter": "تصفية",
+    "sortManual": "يدوي",
+    "sortDueDate": "تاريخ الاستحقاق",
+    "sortPriority": "الأولوية",
+    "sortAlphabetical": "أ-ي",
+    "addTaskPlaceholder": "أضف مهمة جديدة...",
+    "quickEdit": "تعديل سريع",
+    "addSubtask": "إضافة مهمة فرعية",
+    "delete": "حذف",
+    "confirmDelete": "هل تريد حذف هذه المهمة؟",
     "noTasksFound": "لم يتم العثور على مهام",
     "noTasks": "لا توجد مهام بعد",
     "tryDifferentSearch": "جرب مصطلح بحث مختلف",
@@ -63,7 +74,7 @@
     "taskDetails": "تفاصيل المهمة",
     "status": "الحالة",
     "description": "الوصف",
-    "descriptionPlaceholder": "أضف وصفًا...",
+    "descriptionPlaceholder": "أضف وصفاً...",
     "priority": "الأولوية",
     "dueDate": "تاريخ الاستحقاق",
     "time": "الوقت",
@@ -71,98 +82,72 @@
     "days": "أيام",
     "reminder": "التذكير",
     "enableReminder": "تفعيل التذكير",
-    "tags": "العلامات",
-    "addTagPlaceholder": "إضافة علامة...",
+    "tags": "الوسوم",
+    "addTagPlaceholder": "أضف وسماً...",
     "subtasks": "المهام الفرعية",
     "subtaskPlaceholder": "عنوان المهمة الفرعية...",
     "location": "الموقع",
-    "locationPlaceholder": "إضافة موقع...",
+    "locationPlaceholder": "أضف موقعاً...",
     "notes": "ملاحظات",
-    "notesPlaceholder": "إضافة ملاحظات...",
-    "starred": "مميز",
-    "addToStarred": "إضافة إلى المميزة",
+    "notesPlaceholder": "أضف ملاحظات...",
+    "starred": "مميزة",
+    "addToStarred": "إضافة للمميزة",
     "deleteTask": "حذف المهمة",
-    "confirmDelete": "هل تريد حذف هذه المهمة؟",
-    "folders": {
-      "inbox": "صندوق الوارد",
-      "today": "اليوم",
-      "starred": "المميزة",
-      "personal": "شخصي",
-      "work": "العمل",
-      "shopping": "التسوق"
-    },
-    "priorities": {
-      "none": "بدون",
-      "low": "منخفضة",
-      "medium": "متوسطة",
-      "high": "عالية",
-      "urgent": "عاجلة"
-    },
-    "repeatOptions": {
-      "none": "لا يتكرر",
-      "daily": "يومي",
-      "every2Days": "كل يومين",
-      "every3Days": "كل 3 أيام",
-      "weekly": "أسبوعي",
-      "biWeekly": "كل أسبوعين",
-      "monthly": "شهري",
-      "custom": "مخصص..."
-    },
-    "statusOptions": {
-      "todo": "قيد الانتظار",
-      "inProgress": "قيد التنفيذ",
-      "completed": "مكتمل",
-      "cancelled": "ملغي"
-    }
-  }, 
-	"board": {
-    "card": {
-      "coverAlt": "صورة غلاف البطاقة"
-    },
-    "list": {
-      "archive": "أرشفة هذه القائمة",
-      "delete": "حذف هذه القائمة",
-      "untitledCard": "بدون عنوان",
-      "cardTitlePlaceholder": "أدخل عنواناً لهذه البطاقة...",
-      "addCard": "إضافة بطاقة",
-      "uploadImage": "رفع صورة",
-      "addCardButton": "إضافة بطاقة"
-    },
-    "board": {
-      "listTitlePlaceholder": "أدخل عنوان القائمة...",
-      "addList": "إضافة قائمة",
-      "addListButton": "إضافة قائمة أخرى"
-    },
+    "all": "الكل"
+  },
+  "board": {
     "filters": {
-      "search": "البحث في البطاقات...",
+      "search": "ابحث في البطاقات...",
       "filter": "تصفية",
       "sortNone": "بدون ترتيب",
       "sortTitle": "ترتيب حسب العنوان",
       "sortDueDate": "ترتيب حسب تاريخ الاستحقاق",
+      "sortBy": "ترتيب حسب",
       "labels": "التصنيفات",
-      "members": "الأعضاء"
+      "members": "الأعضاء",
+      "selectLabel": "اختر تصنيف",
+      "selectMember": "اختر عضو",
+      "allLabels": "كل التصنيفات",
+      "allMembers": "كل الأعضاء"
+    },
+    "list": {
+      "archive": "أرشفة القائمة",
+      "delete": "حذف القائمة",
+      "untitledCard": "بطاقة بدون عنوان",
+      "cardTitlePlaceholder": "أدخل عنوان البطاقة...",
+      "addCard": "إضافة بطاقة",
+      "uploadImage": "رفع صورة",
+      "addCardButton": "إضافة بطاقة جديدة"
+    },
+    "board": {
+      "listTitlePlaceholder": "أدخل عنوان القائمة...",
+      "addList": "إضافة قائمة",
+      "addListButton": "إضافة قائمة جديدة"
+    },
+    "card": {
+      "coverAlt": "صورة غلاف البطاقة"
     },
     "modal": {
       "coverAlt": "صورة الغلاف",
-      "inList": "في القائمة",
+      "inList": "في القائمة:",
       "labels": "التصنيفات",
       "members": "الأعضاء",
       "description": "الوصف",
-      "descriptionPlaceholder": "أضف وصفاً تفصيلياً...",
+      "descriptionPlaceholder": "أضف وصفاً أكثر تفصيلاً...",
+      "attachments": "المرفقات",
       "checklist": "قائمة المهام",
       "addItem": "إضافة عنصر",
       "newChecklistItem": "عنصر جديد في قائمة المهام",
-      "activity": "النشاط",
-      "you": "أنت",
-      "commentPlaceholder": "اكتب تعليقاً...",
-      "save": "حفظ",
+      "comments": "التعليقات",
+      "addComment": "اكتب تعليقاً...",
+      "reply": "رد",
+      "replyingTo": "الرد على التعليق",
       "addToCard": "إضافة إلى البطاقة",
       "membersBtn": "الأعضاء",
       "labelsBtn": "التصنيفات",
       "checklistBtn": "قائمة المهام",
-      "datesBtn": "التواريخ",
       "attachmentBtn": "مرفق",
-      "coverBtn": "الغلاف",
+      "coverBtn": "غلاف",
       "actions": "الإجراءات",
       "copyBtn": "نسخ",
       "archiveBtn": "أرشفة",
@@ -182,8 +167,8 @@
       "boards": "اللوحات",
       "azkar": "أذكاري",
       "analytics": "الإحصائيات",
-			"reminders" : "التذكيرات",
-			"billing" : "الفواتير والمحفظة"
+      "reminders": "التذكيرات",
+      "billing": "الفواتير والمحفظة"
     },
     "tasksFor": "مهام",
     "eventsFor": "مواعيد",
@@ -956,6 +941,64 @@
       }
     }
   },
+	"nav": {
+    "brand": {
+      "portalTitle": "بوابة",
+      "superAdminPortal": "بوابة المدير الأعلى",
+      "adminPortal": "بوابة الإدارة",
+      "coachPortal": "بوابة المدرب",
+      "clientPortal": "بوابة العميل"
+    },
+    "expand": "توسيع",
+    "collapse": "طي",
+    "refresh": "تحديث",
+    "sections": {
+      "dashboard": "لوحة التحكم",
+      "mySpace": "مساحتي",
+      "myWorkspace": "مساحة العمل",
+      "overview": "نظرة عامة",
+      "clientManagement": "إدارة العملاء",
+      "clients": "العملاء",
+      "management": "الإدارة",
+      "programs": "البرامج",
+      "clientIntake": "استقبال العملاء",
+      "timeManagement": "إدارة الوقت",
+      "tools": "الأدوات",
+      "operations": "العمليات",
+      "system": "النظام",
+      "account": "الحساب",
+      "billing": "الفوترة"
+    },
+    "items": {
+      "overview": "نظرة عامة",
+      "dashboard": "لوحة التحكم",
+      "allUsers": "جميع المستخدمين",
+      "allExercises": "جميع التمارين",
+      "myWorkouts": "تماريني",
+      "myNutrition": "تغذيتي",
+      "myReminders": "تذكيراتي",
+      "weeklyStrength": "القوة الأسبوعية",
+      "workoutPlans": "خطط التمارين",
+      "mealPlans": "خطط الوجبات",
+      "reports": "التقارير",
+      "messages": "الرسائل",
+      "calorieCalculator": "حاسبة السعرات",
+      "profile": "الملف الشخصي",
+      "clientIntake": "استقبال العملاء",
+      "manageForms": "إدارة النماذج",
+      "responses": "الردود",
+      "systemSettings": "إعدادات النظام",
+      "billing": "الفوترة",
+      "feedback": "التعليقات",
+      "analytics": "التحليلات",
+      "withdrawalApprovals": "موافقات السحب",
+      "allWallets": "جميع المحافظ",
+      "timeManagement": "إدارة الوقت",
+      "kanbanBoard": "لوحة كانبان",
+      "todos": "قائمة المهام",
+      "calendar": "التقويم"
+    }
+  },
   "themeSwitcher": {
     "ariaLabel": "محدد ألوان الثيم",
     "trigger": "ألوان الثيم",
@@ -1230,67 +1273,7 @@
       "loading": "جاري التحميل..."
     }
   },
-  "nav": {
-    "reload-page": "إعادة تحميل الصفحة",
-    "brand": {
-      "portalTitle": "منطقة التحكم",
-      "superAdminPortal": "بوابة المدير العام",
-      "adminPortal": "بوابة المشرف",
-      "coachPortal": "بوابة المدرب",
-      "clientPortal": "مساحتي الشخصية"
-    },
-    "sections": {
-      "mySpace": "مساحتي",
-      "clientManagement": "إدارة العملاء",
-      "overview": "نظرة عامة",
-      "programs": "البرامج",
-      "operations": "العمليات",
-      "billing": "الفواتير والمحفظة"
-    },
-    "items": {
-      "dashboard": "لوحة التحكم",
-      "training": "التدريب",
-      "myWorkouts": "تماريني",
-      "myProgress": "تقدمي",
-      "progress": "التقدم",
-      "myNutrition": "تغذيتي",
-      "myReminders": "تذكيراتي",
-      "weeklyStrength": "التقرير الأسبوعي",
-      "calorieCalculator": "حاسبة السعرات",
-      "profile": "الملف الشخصي",
-      "nutrition": "التغذية",
-      "foodLibrary": "مكتبة الأطعمة",
-      "groceryList": "قائمة المشتريات",
-      "nutritionManagement": "إدارة التغذية",
-      "mealPlans": "خطط الوجبات",
-      "reports": "التقارير",
-      "trainingManagement": "إدارة التدريب",
-      "workoutPlans": "خطط التمارين",
-      "allWorkouts": "كل التمارين",
-      "allUsers": "كل المستخدمين",
-      "allExercises": "كل التمارين",
-      "clientIntake": "استبيان العملاء",
-      "manageForms": "إدارة النماذج",
-      "responses": "الردود",
-      "messages": "الرسائل",
-      "feedback": "آراء وملاحظات",
-      "systemSettings": "إعدادات النظام",
-      "billing": "الفواتير والمحفظة",
-      "overview": "النظرة العامة",
-      "transactions": "العمليات",
-      "subscriptions": "الاشتراكات",
-      "withdraw": "السحب",
-      "clientPayments": "دفعات العملاء",
-      "withdrawalApprovals": "الموافقة على السحب",
-      "allWallets": "جميع المحافظ",
-      "analytics": "التحليلات"
-    },
-    "tooltips": {
-      "expand": "توسيع الشريط الجانبي",
-      "collapse": "طي الشريط الجانبي",
-      "closeMenu": "إغلاق القائمة"
-    }
-  },
+  
   "header": {
     "actions": {
       "openMenu": "فتح القائمة",
@@ -2526,7 +2509,11 @@
       "show": "عرض الملاحظات",
       "modalTitle": "ملاحظات الخطة",
       "fallbackTitle": "الخطة الحالية",
-      "empty": "لا توجد ملاحظات لهذه الخطة"
+      "empty": "لا توجد ملاحظات لهذه الخطة",
+      "sets": "المجموعات",
+      "reps": "التكرارات",
+      "tempo": "التمبو",
+      "rest": "الراحة"
     },
     "Sets": "المجموعات",
     "Reps": "التكرارات",
@@ -2639,7 +2626,9 @@
       "edit_title": "تعديل",
       "assign_title": "تعيين",
       "details_title": "تفاصيل خطة الوجبات",
-      "duplicate_title": "نسخ الخطة"
+      "duplicate_title": "نسخ الخطة",
+      "assign_select_client": "اختر العميل",
+      "assign_placeholder": "اختر عميلاً من القائمة"
     },
     "form": {
       "plan_name": "اسم الخطة",
@@ -2653,7 +2642,15 @@
       "calories": "السعرات",
       "supplement_name": "اسم المكمل",
       "time_hhmm": "وقت (HH:MM)",
-      "best_with": "أفضل مع"
+      "best_with": "أفضل مع",
+      "qty_count": "الكمية (عدد)",
+      "qty": "الكمية",
+      "select_client": "اختيار العميل"
+    },
+    "unit": {
+      "g": "غ",
+      "count": "عدد",
+      "count_short": "قطعة"
     },
     "days": {
       "monday": "الاثنين",
@@ -2676,12 +2673,14 @@
     "table": {
       "item": "العنصر",
       "qty_g": "الكمية (جم)",
-      "calories": "السعرات"
+      "calories": "السعرات",
+      "qty": "الكمية"
     },
     "list": {
       "empty_title": "لا توجد خطط",
       "empty_desc": "جرّب بحثًا مختلفًا أو أنشئ خطة جديدة.",
-      "no_desc": "لا يوجد وصف."
+      "no_desc": "لا يوجد وصف.",
+      "no_clients": "لا يوجد عملاء"
     },
     "assign": {
       "title": "تعيين إلى",
@@ -3837,6 +3836,7 @@
   },
   "my-nutrition": {
     "gram": "جرام",
+    "count": "عدد",
     "common": {
       "loading": "جاري التحميل...",
       "cancel": "إلغاء",
@@ -4366,6 +4366,39 @@
       "newPasswordRequired": "كلمة المرور الجديدة مطلوبة",
       "confirmPasswordRequired": "تأكيد كلمة المرور مطلوب",
       "passwordsMustMatch": "كلمات المرور يجب أن تتطابق"
+    }
+  },
+	"restTimer": {
+    "ariaLabel": "مؤقت الراحة",
+    "stopTimer": "إيقاف المؤقت",
+    "configureTimer": "إعداد المؤقت",
+    "stopAlert": "إيقاف صوت التنبيه",
+    "adjustTime": "{seconds} ثانية",
+    "status": {
+      "ready": "مؤقت الراحة",
+      "running": "قيد التشغيل",
+      "paused": "متوقف مؤقتاً"
+    },
+    "actions": {
+      "start": "ابدأ",
+      "pause": "إيقاف مؤقت",
+      "resume": "استئناف",
+      "stop": "إيقاف",
+      "reset": "إعادة تعيين للافتراضي"
+    }
+  },
+	"cardioTimer": {
+    "ariaLabel": "مؤقت الكارديو",
+    "stopTimer": "إيقاف المؤقت",
+    "configureTimer": "تكوين المؤقت",
+    "adjustTime": "تعديل الوقت بمقدار {seconds} ثانية",
+    "note": "ملاحظة",
+    "actions": {
+      "start": "ابدأ",
+      "pause": "إيقاف مؤقت",
+      "resume": "استئناف",
+      "stop": "إيقاف",
+      "reset": "إعادة تعيين"
     }
   }
 }

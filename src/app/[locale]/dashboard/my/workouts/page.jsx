@@ -15,6 +15,8 @@ import {
 	Cloud,
 	Info,
 	StickyNote,
+	Check,
+	Target,
 } from 'lucide-react';
 import CheckBox from '@/components/atoms/CheckBox';
 import api from '@/utils/axios';
@@ -28,9 +30,11 @@ import { useUser } from '@/hooks/useUser';
 import { useTranslations } from 'next-intl';
 import Img from '@/components/atoms/Img';
 import CardioTimerCard from '@/components/pages/workouts/CardioTimerCard';
+import { Repeat, Timer, Clock } from 'lucide-react';
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 /* =========================
-	 Constants / tiny helpers
+	Constants / tiny helpers
 ========================= */
 export const DEFAULT_SOUNDS = [
 	'/sounds/1.mp3',
@@ -1250,25 +1254,7 @@ export default function MyWorkoutsPage() {
 						<div className='min-w-0'>
 							<h1 className='text-xl md:text-4xl font-semibold truncate'>{t('title')}</h1>
 							<p className='text-white/85 mt-1 max-md:hidden'>{t('subtitle')}</p>
-							<div className='mt-2 flex items-center gap-2 flex-wrap'>
-								<Pill tone='primary'>
-									{t('sections.title')}: {t(`sections.${activeSection}`)}
-								</Pill>
 
-								<span className='inline-flex items-center gap-2 text-xs text-white/90'>
-									{unsaved ? (
-										<span className='inline-flex items-center gap-1'>
-											<CloudOff size={14} />
-											{t('sync.pending')}
-										</span>
-									) : (
-										<span className='inline-flex items-center gap-1'>
-											<Cloud size={14} />
-											{t('sync.synced')}
-										</span>
-									)}
-								</span>
-							</div>
 						</div>
 						<Actions className='md:!hidden' />
 					</div>
@@ -1314,36 +1300,114 @@ export default function MyWorkoutsPage() {
 									</div>
 								) : (
 									<>
-										{/* SECTION TABS */}
-										<div className='px-1 pt-1'>
+
+
+										{/* SECTION TABS - Enhanced */}
+										<div className='pt-1'>
 											<div
-												className='rounded-2xl p-1 inline-flex w-full sm:w-auto border bg-white/70'
-												style={{ borderColor: 'var(--color-primary-200)' }}
+												className='rounded-2xl p-1 inline-flex w-full sm:w-auto border backdrop-blur-md shadow-lg relative overflow-hidden'
+												style={{
+													borderColor: 'var(--color-primary-200)',
+													background: 'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
+												}}
 											>
-												{sectionTabs.map(st => {
+												{/* Ambient gradient glow */}
+												<div
+													className='absolute inset-0 opacity-30 blur-2xl pointer-events-none'
+													style={{
+														background: 'radial-gradient(circle at 50% 50%, var(--color-primary-200), transparent 70%)',
+													}}
+												/>
+
+												{sectionTabs.map((st, idx) => {
 													const active = activeSection === st.key;
 													return (
 														<button
 															key={st.key}
 															onClick={() => setActiveSection(st.key)}
 															className={cx(
-																'relative flex-1 sm:flex-none px-3 py-2 text-xs rounded-2xl transition font-semibold min-h-[40px] focus-visible:outline-none focus-visible:ring-4',
-																active ? 'text-slate-900' : 'text-slate-600 hover:text-slate-800',
+																'relative flex-1 sm:flex-none px-3.5 sm:px-4 py-2 text-xs sm:text-sm rounded-xl transition-all duration-300 font-semibold min-h-[38px] sm:min-h-[40px] focus-visible:outline-none focus-visible:ring-3 group',
+																active
+																	? 'text-white scale-[1.02]'
+																	: 'text-slate-600 hover:text-slate-800 hover:scale-[1.01] active:scale-[0.98]',
 															)}
-															style={{ ['--tw-ring-color']: 'var(--color-primary-200)' }}
+															style={{
+																'--tw-ring-color': 'var(--color-primary-300)',
+															}}
 															aria-pressed={active}
 														>
-															{st.label}
+															<span className='relative z-10 flex items-center justify-center gap-1.5'>
+																{st.icon && (
+																	<st.icon
+																		className={cx(
+																			'w-3.5 h-3.5 sm:w-4 sm:h-4 transition-all duration-300',
+																			active ? 'scale-110' : 'group-hover:scale-105'
+																		)}
+																	/>
+																)}
+																<span className='whitespace-nowrap'>{st.label}</span>
+															</span>
+
+															{/* Active background with gradient */}
 															{active && (
-																<motion.span
-																	layoutId='secTab'
-																	className='absolute inset-0 -z-10 rounded-2xl border'
+																<>
+																	<motion.span
+																		layoutId='secTab'
+																		className='absolute inset-0 rounded-xl shadow-lg overflow-hidden'
+																		style={{
+																			background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+																		}}
+																		transition={{
+																			type: 'spring',
+																			stiffness: 400,
+																			damping: 30,
+																			mass: 0.8,
+																		}}
+																	/>
+
+																	{/* Shine effect */}
+																	<motion.span
+																		initial={{ x: '-100%' }}
+																		animate={{ x: '100%' }}
+																		transition={{
+																			duration: 0.6,
+																			ease: 'easeInOut',
+																			delay: 0.1,
+																		}}
+																		className='absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-xl pointer-events-none'
+																		style={{ width: '50%' }}
+																	/>
+
+																	{/* Subtle inner glow */}
+																	<span
+																		className='absolute inset-0 rounded-xl opacity-50 blur-md'
+																		style={{
+																			background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+																		}}
+																	/>
+																</>
+															)}
+
+															{/* Hover background for inactive tabs */}
+															{!active && (
+																<span
+																	className='absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300'
 																	style={{
-																		borderColor: 'var(--color-primary-200)',
-																		background: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
+																		background: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.8))',
 																	}}
-																	transition={{ type: 'spring', stiffness: 420, damping: 34 }}
 																/>
+															)}
+
+															{/* Badge indicator (optional - if you want to show counts) */}
+															{st.badge && (
+																<span
+																	className={cx(
+																		'absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center transition-all duration-300',
+																		active ? 'bg-white text-primary-600 shadow-md' : 'bg-primary-100 text-primary-700'
+																	)}
+																>
+																	{st.badge}
+																</span>
 															)}
 														</button>
 													);
@@ -1496,231 +1560,330 @@ export default function MyWorkoutsPage() {
 												note={currentExercise?.note}
 											/>
 										) : (
-											<SoftCard className='mt-3 overflow-hidden'>
-												<div className='overflow-x-auto'>
-													<table className='w-full text-sm'>
-														<thead
-															className='sticky top-0 z-10'
-															style={{
-																background: 'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
-																borderBottom: `1px solid var(--color-primary-200)`,
-															}}
-														>
-															<tr className='text-left rtl:text-right text-slate-700'>
-																<th className='max-sm:hidden py-2.5 px-3 font-extrabold'>{t('table.set')}</th>
-																<th className='py-2.5 px-3 font-extrabold'>{t('table.weight')}</th>
-																<th className='py-2.5 px-3 font-extrabold'>{t('table.reps')}</th>
-																<th className='py-2.5 px-3 font-extrabold'>{t('table.done')}</th>
-															</tr>
-														</thead>
-
-														<tbody className='divide-y divide-slate-100'>
-															{currentSets.map((s, i) => (
-																<tr
-																	key={s.id}
-																	className={cx('transition-colors', i % 2 === 1 ? 'bg-slate-50/30' : 'bg-white')}
-																	onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-primary-50)')}
-																	onMouseLeave={e =>
-																		(e.currentTarget.style.backgroundColor = i % 2 === 1 ? 'rgba(248,250,252,0.4)' : 'white')
-																	}
-																>
-																	<td className='max-sm:hidden py-2.5 px-3'>
-																		<span
-																			className='inline-flex h-[30px] w-[30px] items-center justify-center rounded-2xl border text-slate-800 font-extrabold'
-																			style={{
-																				borderColor: 'var(--color-primary-200)',
-																				background: 'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
-																			}}
-																		>
-																			{s.set}
-																		</span>
-																	</td>
-
-																	{/* WEIGHT */}
-																	<td className='py-2.5 px-3'>
-																		<div className='relative inline-block'>
-																			<input
-																				type='text'
-																				value={getBufferedValue(s.id, 'weight', s.weight)}
-																				onChange={e => {
-																					const key = `${s.id}:weight`;
-																					let v = normalizeNumericInput(e.target.value);
-																					v = v.replace(/[^\d.]/g, '');
-																					const parts = v.split('.');
-																					if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
-																					setInputBuffer(prev => ({ ...prev, [key]: v }));
-																				}}
-																				onFocus={e => {
-																					e.target.select();
-																					e.currentTarget.style.boxShadow = `0 0 0 4px var(--color-primary-200)`;
-																				}}
-																				onBlur={e => {
-																					e.currentTarget.style.boxShadow = 'none';
-																					handleInputBlur(s.id, 'weight');
-																				}}
-																				onKeyDown={e => {
-																					if (e.key === 'Enter') e.currentTarget.blur();
-																				}}
-																				inputMode='decimal'
-																				placeholder='0'
-																				aria-label={t('table.weight')}
-																				className='text-center h-10 w-[110px] !text-[16px] tabular-nums rounded-2xl border bg-white outline-none px-[30px] transition-shadow duration-200'
-																				style={{
-																					borderColor: 'var(--color-primary-200)',
-																				}}
-																			/>
-
-																			<button
-																				type='button'
-																				onClick={() => bump(s.id, 'weight', -1)}
-																				title={t('minusOne')}
-																				aria-label={t('minusOne')}
-																				className='absolute left-[4px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-xl active:scale-95 transition focus-visible:outline-none focus-visible:ring-4'
-																				style={{
-																					['--tw-ring-color']: 'var(--color-primary-200)',
-																					background: 'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
-																					border: `1px solid var(--color-primary-200)`,
-																					color: 'var(--color-primary-800)',
-																				}}
-																				tabIndex={-1}
-																			>
-																				<Minus size={16} />
-																			</button>
-
-																			<button
-																				type='button'
-																				onClick={() => bump(s.id, 'weight', +1)}
-																				title={t('plusOne')}
-																				aria-label={t('plusOne')}
-																				className='absolute right-[4px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-xl active:scale-95 transition focus-visible:outline-none focus-visible:ring-4'
-																				style={{
-																					['--tw-ring-color']: 'var(--color-primary-200)',
-																					background: 'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
-																					border: `1px solid var(--color-primary-200)`,
-																					color: 'var(--color-primary-800)',
-																				}}
-																				tabIndex={-1}
-																			>
-																				<Plus size={16} />
-																			</button>
-																		</div>
-																	</td>
-
-																	{/* REPS */}
-																	<td className='py-2.5 px-3'>
-																		<div className='relative inline-block'>
-																			<input
-																				type='text'
-																				value={getBufferedValue(s.id, 'reps', s.reps)}
-																				onChange={e => handleInputChange(s.id, 'reps', e.target.value)}
-																				onFocus={e => {
-																					e.target.select();
-																					e.currentTarget.style.boxShadow = `0 0 0 4px var(--color-primary-200)`;
-																				}}
-																				onBlur={e => {
-																					e.currentTarget.style.boxShadow = 'none';
-																					handleInputBlur(s.id, 'reps');
-																				}}
-																				onKeyDown={e => {
-																					if (e.key === 'Enter') e.currentTarget.blur();
-																				}}
-																				inputMode='numeric'
-																				placeholder='0'
-																				aria-label={t('table.reps')}
-																				className='text-center h-10 w-[110px] !text-[16px] tabular-nums rounded-2xl border bg-white outline-none px-[30px]'
-																				style={{ borderColor: 'var(--color-primary-200)' }}
-																			/>
-
-																			<button
-																				type='button'
-																				onClick={() => bump(s.id, 'reps', -1)}
-																				title={t('minusOne')}
-																				aria-label={t('minusOne')}
-																				className='absolute left-[4px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-xl active:scale-95 transition focus-visible:outline-none focus-visible:ring-4'
-																				style={{
-																					['--tw-ring-color']: 'var(--color-primary-200)',
-																					background: 'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
-																					border: `1px solid var(--color-primary-200)`,
-																					color: 'var(--color-primary-800)',
-																				}}
-																				tabIndex={-1}
-																			>
-																				<Minus size={16} />
-																			</button>
-
-																			<button
-																				type='button'
-																				onClick={() => bump(s.id, 'reps', +1)}
-																				title={t('plusOne')}
-																				aria-label={t('plusOne')}
-																				className='absolute right-[4px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-xl active:scale-95 transition focus-visible:outline-none focus-visible:ring-4'
-																				style={{
-																					['--tw-ring-color']: 'var(--color-primary-200)',
-																					background: 'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
-																					border: `1px solid var(--color-primary-200)`,
-																					color: 'var(--color-primary-800)',
-																				}}
-																				tabIndex={-1}
-																			>
-																				<Plus size={16} />
-																			</button>
-																		</div>
-																	</td>
-
-																	<td className='py-2.5 px-3'>
-																		<CheckBox initialChecked={s.done} onChange={() => toggleDone(s.id)} aria-label={t('table.done')} />
-																	</td>
+											<>
+												<ExerciseNotesBar exercise={currentExercise} t={t} />
+												<SoftCard className='mt-3 overflow-hidden shadow-sm'>
+													<div className='overflow-x-auto'>
+														<table className='w-full text-sm'>
+															<thead
+																className='sticky top-0 z-10 backdrop-blur-sm'
+																style={{
+																	background: 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))',
+																	borderBottom: `1.5px solid var(--color-primary-200)`,
+																}}
+															>
+																<tr className='text-left rtl:text-right'>
+																	<th className='max-sm:hidden py-2 px-2 font-bold text-[10px] uppercase tracking-wide' style={{ color: 'var(--color-primary-700)' }}>
+																		{t('table.set')}
+																	</th>
+																	<th className='py-2 px-2 font-bold text-[10px] uppercase tracking-wide' style={{ color: 'var(--color-primary-700)' }}>
+																		{t('table.weight')}
+																	</th>
+																	<th className='py-2 px-2 font-bold text-[10px] uppercase tracking-wide' style={{ color: 'var(--color-primary-700)' }}>
+																		{t('table.reps')}
+																	</th>
+																	<th className='py-2 px-2 font-bold text-[10px] uppercase tracking-wide text-center' style={{ color: 'var(--color-primary-700)' }}>
+																		{t('table.done')}
+																	</th>
 																</tr>
-															))}
-														</tbody>
-													</table>
-												</div>
+															</thead>
 
-												{/* Controls */}
-												<div
-													className='flex flex-row items-center justify-between gap-2 px-3 py-3 text-[11px] text-slate-600 border-t'
-													style={{
-														borderColor: 'var(--color-primary-200)',
-														background: 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))',
-													}}
-												>
-													<div className='flex items-center gap-2'>
-														<GhostBtn
-															onClick={removeSetFromCurrentExercise}
-															disabled={currentSets.length <= 1}
-															title={t('actions.removeSet')}
-															className='!h-10'
-														>
-															{t('actions.removeSet')}
-														</GhostBtn>
+															<tbody className='divide-y' style={{ borderColor: 'var(--color-primary-100)' }}>
+																{currentSets.map((s, i) => (
+																	<tr
+																		key={s.id}
+																		className='transition-colors duration-150'
+																		style={{
+																			backgroundColor: i % 2 === 1 ? 'rgba(248,250,252,0.3)' : 'white',
+																		}}
+																		onMouseEnter={e => {
+																			e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
+																		}}
+																		onMouseLeave={e => {
+																			e.currentTarget.style.backgroundColor = i % 2 === 1 ? 'rgba(248,250,252,0.3)' : 'white';
+																		}}
+																	>
+																		<td className='max-sm:hidden py-2 px-2'>
+																			<span
+																				className='inline-flex h-6 w-6 items-center justify-center rounded-lg text-[11px] font-extrabold'
+																				style={{
+																					background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))',
+																					color: 'var(--color-primary-700)',
+																				}}
+																			>
+																				{s.set}
+																			</span>
+																		</td>
 
-														<GradientBtn onClick={addSetForCurrentExercise} title={t('actions.addSet')} className='!h-10'>
-															{t('actions.addSet')}
-														</GradientBtn>
+																		{/* WEIGHT */}
+																		<td className='py-2 px-2'>
+																			<div className='relative inline-block'>
+																				<input
+																					type='text'
+																					value={getBufferedValue(s.id, 'weight', s.weight)}
+																					onChange={e => {
+																						const key = `${s.id}:weight`;
+																						let v = normalizeNumericInput(e.target.value);
+																						v = v.replace(/[^\d.]/g, '');
+																						const parts = v.split('.');
+																						if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+																						setInputBuffer(prev => ({ ...prev, [key]: v }));
+																					}}
+																					onFocus={e => {
+																						e.target.select();
+																						e.currentTarget.style.boxShadow = `0 0 0 2px var(--color-primary-200)`;
+																						e.currentTarget.style.borderColor = 'var(--color-primary-300)';
+																					}}
+																					onBlur={e => {
+																						e.currentTarget.style.boxShadow = 'none';
+																						e.currentTarget.style.borderColor = 'var(--color-primary-200)';
+																						handleInputBlur(s.id, 'weight');
+																					}}
+																					onKeyDown={e => {
+																						if (e.key === 'Enter') e.currentTarget.blur();
+																					}}
+																					inputMode='decimal'
+																					placeholder='0'
+																					aria-label={t('table.weight')}
+																					className='text-center h-8 w-[90px] text-sm font-semibold tabular-nums rounded-lg border bg-white outline-none px-[26px] transition-all duration-150'
+																					style={{
+																						borderColor: 'var(--color-primary-200)',
+																					}}
+																				/>
+
+																				<button
+																					type='button'
+																					onClick={() => bump(s.id, 'weight', -1)}
+																					title={t('minusOne')}
+																					aria-label={t('minusOne')}
+																					className='absolute left-[3px] top-1/2 -translate-y-1/2 grid h-[26px] w-[26px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
+																					style={{
+																						background: 'linear-gradient(135deg, var(--color-primary-50), white)',
+																						border: `1px solid var(--color-primary-200)`,
+																						color: 'var(--color-primary-600)',
+																					}}
+																					tabIndex={-1}
+																				>
+																					<Minus size={12} strokeWidth={2.5} />
+																				</button>
+
+																				<button
+																					type='button'
+																					onClick={() => bump(s.id, 'weight', +1)}
+																					title={t('plusOne')}
+																					aria-label={t('plusOne')}
+																					className='absolute right-[3px] top-1/2 -translate-y-1/2 grid h-[26px] w-[26px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
+																					style={{
+																						background: 'linear-gradient(135deg, var(--color-primary-50), white)',
+																						border: `1px solid var(--color-primary-200)`,
+																						color: 'var(--color-primary-600)',
+																					}}
+																					tabIndex={-1}
+																				>
+																					<Plus size={12} strokeWidth={2.5} />
+																				</button>
+																			</div>
+																		</td>
+
+																		{/* REPS */}
+																		<td className='py-2 px-2'>
+																			<div className='relative inline-block'>
+																				<input
+																					type='text'
+																					value={getBufferedValue(s.id, 'reps', s.reps)}
+																					onChange={e => handleInputChange(s.id, 'reps', e.target.value)}
+																					onFocus={e => {
+																						e.target.select();
+																						e.currentTarget.style.boxShadow = `0 0 0 2px var(--color-primary-200)`;
+																						e.currentTarget.style.borderColor = 'var(--color-primary-300)';
+																					}}
+																					onBlur={e => {
+																						e.currentTarget.style.boxShadow = 'none';
+																						e.currentTarget.style.borderColor = 'var(--color-primary-200)';
+																						handleInputBlur(s.id, 'reps');
+																					}}
+																					onKeyDown={e => {
+																						if (e.key === 'Enter') e.currentTarget.blur();
+																					}}
+																					inputMode='numeric'
+																					placeholder='0'
+																					aria-label={t('table.reps')}
+																					className='text-center h-8 w-[90px] text-sm font-semibold tabular-nums rounded-lg border bg-white outline-none px-[26px] transition-all duration-150'
+																					style={{ borderColor: 'var(--color-primary-200)' }}
+																				/>
+
+																				<button
+																					type='button'
+																					onClick={() => bump(s.id, 'reps', -1)}
+																					title={t('minusOne')}
+																					aria-label={t('minusOne')}
+																					className='absolute left-[3px] top-1/2 -translate-y-1/2 grid h-[26px] w-[26px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
+																					style={{
+																						background: 'linear-gradient(135deg, var(--color-primary-50), white)',
+																						border: `1px solid var(--color-primary-200)`,
+																						color: 'var(--color-primary-600)',
+																					}}
+																					tabIndex={-1}
+																				>
+																					<Minus size={12} strokeWidth={2.5} />
+																				</button>
+
+																				<button
+																					type='button'
+																					onClick={() => bump(s.id, 'reps', +1)}
+																					title={t('plusOne')}
+																					aria-label={t('plusOne')}
+																					className='absolute right-[3px] top-1/2 -translate-y-1/2 grid h-[26px] w-[26px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
+																					style={{
+																						background: 'linear-gradient(135deg, var(--color-primary-50), white)',
+																						border: `1px solid var(--color-primary-200)`,
+																						color: 'var(--color-primary-600)',
+																					}}
+																					tabIndex={-1}
+																				>
+																					<Plus size={12} strokeWidth={2.5} />
+																				</button>
+																			</div>
+																		</td>
+
+																		{/* DONE CHECKBOX */}
+																		<td className='py-2 px-2'>
+																			<div className='flex justify-center'>
+																				<button
+																					type='button'
+																					role='checkbox'
+																					aria-checked={s.done}
+																					onClick={() => toggleDone(s.id)}
+																					aria-label={t('table.done')}
+																					className='relative cursor-pointer flex h-6 w-6 items-center justify-center rounded-md border transition-all duration-200 active:scale-95'
+																					style={{
+																						borderColor: s.done ? 'var(--color-primary-500)' : 'var(--color-primary-200)',
+																						background: s.done ? 'var(--color-gradient-from)' : 'white',
+																					}}
+																				>
+																					{s.done && (
+																						<motion.div
+																							initial={{ scale: 0, opacity: 0 }}
+																							animate={{ scale: 1, opacity: 1 }}
+																							exit={{ scale: 0, opacity: 0 }}
+																							transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+																						>
+																							<Check className='h-3.5 w-3.5 text-white' strokeWidth={3} />
+																						</motion.div>
+																					)}
+																				</button>
+																			</div>
+																		</td>
+																	</tr>
+																))}
+															</tbody>
+														</table>
 													</div>
 
-													<div className='rtl:mr-auto ltr:ml-auto flex items-center gap-3'>
-														<GhostBtn
-															onClick={() => trySyncQueue(true)}
-															disabled={syncing}
-															title={syncing ? t('sync.syncing') : unsaved ? t('sync.syncNow') : t('sync.synced')}
-															className='!h-10'
-														>
-															{syncing ? (
-																<span className='inline-block w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin' />
-															) : unsaved ? (
-																<CloudOff size={16} style={{ color: '#b45309' }} />
-															) : (
-																<Cloud size={16} style={{ color: '#059669' }} />
-															)}
-															{syncing ? t('sync.syncing') : unsaved ? t('sync.syncNow') : t('sync.synced')}
-														</GhostBtn>
+													{/* Controls */}
 
-														{lastSyncStatus === 'ok' && <span style={{ color: '#059669' }}>{t('sync.synced')}</span>}
-														{lastSyncStatus === 'error' && <span style={{ color: '#e11d48' }}>{t('sync.someFailed')}</span>}
+
+													<div
+														className='flex items-center justify-between gap-2 px-3 py-2.5 border-t'
+														style={{
+															borderColor: 'var(--color-primary-200)',
+															background: 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))',
+															color: 'var(--color-primary-900)',
+														}}
+													>
+														<TooltipProvider delayDuration={300}>
+															{/* Left side - Set controls */}
+															<div className='flex items-center gap-2'>
+																<Tooltip>
+																	<TooltipTrigger asChild>
+																		<GhostBtn
+																			onClick={removeSetFromCurrentExercise}
+																			disabled={currentSets.length <= 1}
+																			className='!h-9 !w-9 !p-0 flex items-center justify-center'
+																		>
+																			<Minus size={16} />
+																		</GhostBtn>
+																	</TooltipTrigger>
+																	<TooltipContent>
+																		<p>{t('actions.removeSet')}</p>
+																	</TooltipContent>
+																</Tooltip>
+
+																<Tooltip>
+																	<TooltipTrigger asChild>
+																		<GradientBtn
+																			onClick={addSetForCurrentExercise}
+																			className='!h-9 !w-9 !p-0 flex items-center justify-center shadow-sm'
+																		>
+																			<Plus size={16} />
+																		</GradientBtn>
+																	</TooltipTrigger>
+																	<TooltipContent>
+																		<p>{t('actions.addSet')}</p>
+																	</TooltipContent>
+																</Tooltip>
+															</div>
+
+															{/* Right side - Sync status */}
+															<div className='flex items-center gap-2'>
+																<Tooltip>
+																	<TooltipTrigger asChild>
+																		<GhostBtn
+																			onClick={() => trySyncQueue(true)}
+																			disabled={syncing}
+																			className='!h-9 !w-9 !p-0 flex items-center justify-center'
+																		>
+																			{syncing ? (
+																				<span
+																					className='inline-block w-4 h-4 border-2 rounded-full animate-spin'
+																					style={{
+																						borderColor: 'var(--color-primary-300)',
+																						borderTopColor: 'transparent'
+																					}}
+																				/>
+																			) : unsaved ? (
+																				<CloudOff size={16} style={{ color: '#b45309' }} />
+																			) : (
+																				<Cloud size={16} style={{ color: '#059669' }} />
+																			)}
+																		</GhostBtn>
+																	</TooltipTrigger>
+																	<TooltipContent>
+																		<p>{syncing ? t('sync.syncing') : unsaved ? t('sync.syncNow') : t('sync.synced')}</p>
+																	</TooltipContent>
+																</Tooltip>
+
+																{/* Status indicator badges */}
+																{lastSyncStatus === 'ok' && (
+																	<Tooltip>
+																		<TooltipTrigger asChild>
+																			<span className='inline-flex items-center justify-center w-9 h-9 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700'>
+																				<Cloud size={16} />
+																			</span>
+																		</TooltipTrigger>
+																		<TooltipContent>
+																			<p>{t('sync.synced')}</p>
+																		</TooltipContent>
+																	</Tooltip>
+																)}
+
+																{lastSyncStatus === 'error' && (
+																	<Tooltip>
+																		<TooltipTrigger asChild>
+																			<span className='inline-flex items-center justify-center w-9 h-9 rounded-md bg-rose-50 border border-rose-200 text-rose-700'>
+																				<CloudOff size={16} />
+																			</span>
+																		</TooltipTrigger>
+																		<TooltipContent>
+																			<p>{t('sync.someFailed')}</p>
+																		</TooltipContent>
+																	</Tooltip>
+																)}
+															</div>
+														</TooltipProvider>
 													</div>
-												</div>
-											</SoftCard>
+												</SoftCard>
+											</>
 										)}
 									</>
 								)}
@@ -1782,3 +1945,100 @@ export default function MyWorkoutsPage() {
 		</div>
 	);
 }
+
+
+
+
+function ExerciseNotesBar({ exercise, t }) {
+	if (!exercise) return null;
+
+	const reps = normalizeReps(exercise?.targetReps);
+	const tempo = normalizeTempo(exercise?.tempo);
+	const sets = Math.min(20, Math.max(1, Number(exercise?.targetSets) || 1));
+
+	const rest =
+		Number.isFinite(exercise?.restSeconds) ? exercise.restSeconds : Number.isFinite(exercise?.rest) ? exercise.rest : null;
+
+	const note = String(exercise?.note ?? '').trim();
+
+	const items = [
+		// { label: t('notes.sets'), value: String(sets), icon: Target },
+		{ label: t('notes.reps'), value: reps || '-', icon: Repeat },
+		{ label: t('notes.tempo'), value: tempo || '-', icon: Timer },
+		// ...(rest != null ? [{ label: t('notes.rest'), value: `${rest}s`, icon: Clock }] : []),
+	];
+
+	return (
+		<div
+			style={{
+				background: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.8))',
+				borderColor: 'var(--color-primary-200)',
+			}}
+			className='mt-2 rounded-xl  shadow-sm border overflow-hidden'
+		>
+
+
+			{/* Stats Grid */}
+			<div className='p-2'>
+				<div className='grid grid-cols-2 gap-1.5'>
+					{items.map((it, idx) => {
+						const Icon = it.icon;
+						return (
+							<div
+								key={idx}
+								className='bg-white/50 backdrop-blur-2xl rounded-lg px-2.5 py-2 border shadow-sm transition-all duration-150 hover:shadow-md'
+								style={{ borderColor: 'var(--color-primary-100)' }}
+							>
+								<div className='flex items-center justify-between gap-2'>
+									<div className='flex items-center gap-1.5 min-w-0'>
+										<div
+											className='flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center'
+											style={{
+												background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))',
+											}}
+										>
+											<Icon size={11} style={{ color: 'var(--color-primary-600)' }} strokeWidth={2.5} />
+										</div>
+										<span className='text-[9px] font-bold uppercase tracking-wider truncate' style={{ color: 'var(--color-primary-700)' }}>
+											{it.label}
+										</span>
+									</div>
+									<span className='text-sm font-extrabold flex-shrink-0' style={{ color: 'var(--color-primary-900)' }}>
+										{it.value}
+									</span>
+								</div>
+							</div>
+						);
+					})}
+				</div>
+
+				{/* Note Section */}
+				{note && (
+					<div
+						className='mt-2 rounded-lg px-2.5 py-2 border'
+						style={{
+							background: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.7))',
+							borderColor: 'var(--color-primary-200)',
+						}}
+					>
+						<div className='flex items-start gap-2'>
+							<div
+								className='flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center mt-0.5'
+								style={{
+									background: 'linear-gradient(135deg, var(--color-primary-200), var(--color-primary-100))',
+								}}
+							>
+								<StickyNote size={11} style={{ color: 'var(--color-primary-700)' }} strokeWidth={2.5} />
+							</div>
+							<p className='text-[10px] leading-relaxed font-medium flex-1' style={{ color: 'var(--color-primary-900)' }}>
+								{note}
+							</p>
+						</div>
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
+

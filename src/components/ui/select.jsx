@@ -121,7 +121,7 @@ function SelectContent({
 				}}
 				className={cn(
 					[
-						"relative z-50 overflow-hidden",
+						"relative z-[10000000000] overflow-hidden",
 						// modern container
 						"rounded-md border border-border/70 bg-popover text-popover-foreground shadow-xl",
 						// animation

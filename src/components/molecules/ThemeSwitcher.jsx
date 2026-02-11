@@ -16,13 +16,7 @@ import { cn } from '@/lib/utils';
 
 const spring = { type: 'spring', stiffness: 400, damping: 30, mass: 0.8 };
 const fastSpring = { type: 'spring', stiffness: 500, damping: 35, mass: 0.6 };
-const smoothSpring = { type: 'spring', stiffness: 300, damping: 28, mass: 0.9 };
 
-const fadeScale = {
-	initial: { opacity: 0, scale: 0.92 },
-	animate: { opacity: 1, scale: 1 },
-	exit: { opacity: 0, scale: 0.92 },
-};
 
 const slideUp = {
 	initial: { opacity: 0, y: 20 },
@@ -78,9 +72,6 @@ function FloatingParticles({ colors }) {
 	);
 }
 
-// ============================================================================
-// THEME CARD COMPONENT
-// ============================================================================
 
 function ThemeCard({ themeKey, palette, isActive, onClick }) {
 	const t = useTranslations('themeSwitcher');
@@ -92,23 +83,20 @@ function ThemeCard({ themeKey, palette, isActive, onClick }) {
 			whileTap={{ scale: 0.98 }}
 			onClick={onClick}
 			className={cn(
-				'group w-full relative rounded-2xl text-left transition-all duration-300 overflow-hidden',
-				'p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+				'group w-full border border-slate-100 relative rounded-md text-left transition-all duration-300 overflow-hidden',
+				'p-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
 				isActive ? 'ring-2 ring-offset-2 shadow-2xl' : 'shadow-lg hover:shadow-2xl',
 			)}
 			style={{
 				backgroundColor: 'white',
 				ringColor: isActive ? palette.primary[500] : 'transparent',
 			}}>
-			{/* Gradient background overlay */}
 			<div
 				className='absolute inset-0 opacity-[0.07] group-hover:opacity-[0.12] transition-opacity duration-500'
 				style={{
 					background: `radial-gradient(circle at 30% 20%, ${palette.gradient.from}88, transparent 70%), radial-gradient(circle at 70% 80%, ${palette.gradient.to}88, transparent 70%)`,
 				}}
 			/>
-
-			{/* Animated border gradient */}
 			<div
 				className='absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500'
 				style={{
@@ -120,9 +108,9 @@ function ThemeCard({ themeKey, palette, isActive, onClick }) {
 				}}
 			/>
 
-			<div className='relative z-10'>
+			<div className='relative  z-10'>
 				{/* Top gradient bar with shimmer */}
-				<div className='relative overflow-hidden rounded-xl mb-3 h-14 shadow-lg ring-1 ring-black/5'>
+				<div className='relative overflow-hidden rounded-md  h-14 shadow-lg ring-1 ring-black/5'>
 					<div
 						className='absolute inset-0'
 						style={{
@@ -148,13 +136,13 @@ function ThemeCard({ themeKey, palette, isActive, onClick }) {
 					/>
 
 					{/* Floating sparkles */}
-					<div className='absolute inset-0 flex items-center justify-center opacity-70'>
+					<div className='absolute  top-1/2 -translate-y-1/2  rtl:!left-[20px] ltr:!right-[20px] flex items-center justify-center opacity-70'>
 						<Sparkles className='w-6 h-6 text-white' strokeWidth={2} />
 					</div>
 				</div>
 
 				{/* Color swatches with 3D effect */}
-				<div className='flex items-center gap-2 mb-3'>
+				<div className='flex items-center absolute bottom-[5px] ltr:left-[5px] rtl:right-[5px] gap-2 '>
 					{[palette.primary[500], palette.secondary[500], palette.primary[300]].map((color, idx) => (
 						<motion.div
 							key={idx}
@@ -164,16 +152,16 @@ function ThemeCard({ themeKey, palette, isActive, onClick }) {
 							animate={{ opacity: 1, scale: 1 }}
 							transition={{ delay: idx * 0.05 }}>
 							<div
-								className='w-8 h-8 rounded-xl ring-2 ring-white shadow-lg relative overflow-hidden'
+								className='w-5 h-5 rounded-sm ring-2 ring-white shadow-lg relative overflow-hidden'
 								style={{ backgroundColor: color }}>
 								{/* Gloss effect */}
 								<div className='absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent' />
 							</div>
 						</motion.div>
 					))}
- 
+
 				</div>
- 
+
 				{/* Hover glow effect */}
 				<div
 					className='absolute -inset-2 rounded-2xl opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500 -z-10'
@@ -300,7 +288,7 @@ export default function ThemeSwitcher({ collapsed = false }) {
 						aria-label={t('ariaLabel')}
 						{...slideUp}
 						transition={spring}
-						className={cn('absolute z-[9999] bottom-full mb-4', collapsed ? 'rtl:right-0 ltr:left-0' : 'rtl:right-0 ltr:left-0 ')}
+						className={cn('  absolute z-[9999] bottom-full mb-4', collapsed ? 'rtl:right-0 ltr:left-0' : 'rtl:right-0 ltr:left-0 ')}
 						style={{
 							filter: 'drop-shadow(0 25px 50px rgba(15, 23, 42, 0.35))',
 						}}>
@@ -308,7 +296,7 @@ export default function ThemeSwitcher({ collapsed = false }) {
 							initial={{ scale: 0 }}
 							animate={{ scale: 1 }}
 							transition={{ delay: 0.1, ...fastSpring }}
-							className={cn('absolute -bottom-[10px] z-[-1]', collapsed ? 'rtl:left-5  ltr:left-6' : ' rtl:right-12 ltr:left-10')}
+							className={cn('absolute -bottom-[10px] z-[-1]', collapsed ? 'rtl:right-5  ltr:left-6' : ' rtl:right-12 ltr:left-10')}
 							style={{
 								filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))',
 							}}>
@@ -322,7 +310,7 @@ export default function ThemeSwitcher({ collapsed = false }) {
 						</motion.div>
 
 						<div
-							className="min-w-[380px] max-w-[480px] overflow-hidden rounded-3xl border border-white/40"
+							className="  min-w-[380px] max-w-[480px] overflow-hidden rounded-3xl border border-white/40"
 							style={{
 								background: 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.98))',
 								backdropFilter: 'blur(20px)',
@@ -330,7 +318,7 @@ export default function ThemeSwitcher({ collapsed = false }) {
 							<FloatingParticles colors={particleColors} />
 
 							<div className="relative px-6 pt-6 pb-5 border-b border-slate-200/50">
-								<div className="flex items-start gap-4">
+								<div className="flex items-center gap-4">
 									<motion.div
 										initial={{ scale: 0, rotate: -180 }}
 										animate={{ scale: 1, rotate: 0 }}
@@ -349,32 +337,22 @@ export default function ThemeSwitcher({ collapsed = false }) {
 										/>
 
 										<div
-											className="relative w-14 h-14 rounded-2xl grid place-content-center text-white shadow-2xl"
+											className="relative w-10 h-10 rounded-2xl grid place-content-center text-white shadow-2xl"
 											style={{
 												background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
 											}}>
-											<Paintbrush className="w-7 h-7" strokeWidth={2.5} />
+											<Paintbrush className="w-5 h-5" strokeWidth={2.5} />
 										</div>
 									</motion.div>
 
 									<div className="flex-1 min-w-0">
-										<div className="flex items-center gap-2 flex-wrap">
-											<motion.h3
-												initial={{ opacity: 0, x: -20 }}
-												animate={{ opacity: 1, x: 0 }}
-												transition={{ delay: 0.1 }}
-												className="font-black text-xl text-slate-900 leading-tight">
-												{t('title')}
-											</motion.h3>
-										</div>
-
-										<motion.p
-											initial={{ opacity: 0 }}
-											animate={{ opacity: 1 }}
-											transition={{ delay: 0.2 }}
-											className="text-sm text-slate-600 font-medium mt-1.5 leading-relaxed">
-											{t('subtitle')}
-										</motion.p>
+										<motion.h3
+											initial={{ opacity: 0, x: -20 }}
+											animate={{ opacity: 1, x: 0 }}
+											transition={{ delay: 0.1 }}
+											className="font-black text-xl text-slate-900 leading-tight">
+											{t('title')}
+										</motion.h3>
 									</div>
 								</div>
 							</div>
