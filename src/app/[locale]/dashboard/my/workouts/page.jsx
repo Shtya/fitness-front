@@ -1453,7 +1453,7 @@ export default function MyWorkoutsPage() {
 																		{/* Reps Stat */}
 																		<div className='flex items-center gap-2 flex-1'>
 																			<div
-																				className='w-9 h-9 rounded-xl flex items-center justify-center shadow-lg'
+																				className=' border border-white/60 w-9 h-9 rounded-xl flex items-center justify-center shadow-lg'
 																				style={{
 																					background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600))',
 																				}}
@@ -1461,7 +1461,7 @@ export default function MyWorkoutsPage() {
 																				<Repeat size={18} className='text-white' strokeWidth={2.5} />
 																			</div>
 																			<div>
-																				<div className='text-[10px] font-semibold uppercase tracking-wider text-white/60'>
+																				<div className='text-[10px] font-semibold uppercase tracking-wider text-white'>
 																					{t("notes.reps")}
 																				</div>
 																				<div className='text-lg font-black text-white leading-none mt-0.5'>
@@ -1476,7 +1476,7 @@ export default function MyWorkoutsPage() {
 																		{/* Tempo Stat */}
 																		<div className='flex items-center gap-2 flex-1'>
 																			<div
-																				className='w-9 h-9 rounded-xl flex items-center justify-center shadow-lg'
+																				className='w-9 h-9  border border-white/60 rounded-xl flex items-center justify-center shadow-lg'
 																				style={{
 																					background: 'linear-gradient(135deg, var(--color-primary-400), var(--color-primary-500))',
 																				}}
@@ -1484,7 +1484,7 @@ export default function MyWorkoutsPage() {
 																				<Timer size={18} className='text-white' strokeWidth={2.5} />
 																			</div>
 																			<div>
-																				<div className='text-[10px] font-semibold uppercase tracking-wider text-white/60'>
+																				<div className='text-[10px] font-semibold uppercase tracking-wider text-white'>
 																					{t("notes.tempo")}
 																				</div>
 																				<div className='text-lg font-black text-white leading-none mt-0.5'>
