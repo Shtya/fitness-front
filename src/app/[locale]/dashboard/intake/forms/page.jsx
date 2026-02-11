@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslations } from 'use-intl';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiChevronDown,
   FiChevronUp,
@@ -23,9 +24,13 @@ import MultiLangText from '@/components/atoms/MultiLangText';
 import { Modal } from '@/components/dashboard/ui/UI';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 import { Notification } from '@/config/Notification';
-import { PencilLine, Share2, Trash2, Files, Sparkles, Layers, Link as LinkIcon } from 'lucide-react';
+import { 
+  PencilLine, Share2, Trash2, Files, Sparkles, Layers, 
+  Link as LinkIcon, Zap, Eye, Download, Check, AlertCircle,
+  ChevronRight, BarChart3, Database, Settings
+} from 'lucide-react';
 
-// -------- constants (i18n labels تُقرأ من ar.json) --------
+// -------- constants --------
 const FIELD_TYPE_OPTIONS = [
   { id: 'text', labelKey: 'types.text' },
   { id: 'email', labelKey: 'types.email' },
@@ -48,110 +53,159 @@ function genKey12() {
   return s;
 }
 
-function ThemeFrame({ children, className = '' }) {
+/* ==================== LUXURY THEME COMPONENTS ==================== */
+
+function LuxuryFrame({ children, className = '', glow = false }) {
   return (
-    <div
-      className={`rounded-3xl p-[1px] ${className}`}
-      style={{
-        background:
-          'linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-via), var(--color-gradient-to))',
-      }}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      className={`relative group ${className}`}
     >
+ 
       <div
-        className="rounded-3xl border bg-white/85 backdrop-blur-xl"
+        className="relative rounded-md p-[1px]"
         style={{
-          borderColor: 'var(--color-primary-200)',
-          boxShadow: '0 1px 0 rgba(15, 23, 42, 0.04), 0 18px 40px rgba(15, 23, 42, 0.10)',
+          background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-via), var(--color-gradient-to))',
         }}
       >
-        {children}
+        <div
+          className="rounded-md border bg-white/90 backdrop-blur-2xl"
+           
+        >
+          {children}
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
-function SoftCard({ children, className = '' }) {
+function GlassCard({ children, className = '', hover = false }) {
   return (
-    <div
-      className={`rounded-2xl border bg-white ${className}`}
+    <motion.div
+      whileHover={hover ? { y: -4, scale: 1.01 } : {}}
+      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      className={`rounded-lg border backdrop-blur-xl ${className}`}
       style={{
+        background: 'rgba(255, 255, 255, 0.85)',
         borderColor: 'var(--color-primary-200)',
-        boxShadow: '0 1px 0 rgba(15, 23, 42, 0.03), 0 10px 24px rgba(15, 23, 42, 0.06)',
+        boxShadow: '0 12px 40px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
       }}
     >
       {children}
-    </div>
+    </motion.div>
   );
 }
 
-function IconBadge({ children, active = false }) {
+function IconBadge({ children, active = false, size = 'md' }) {
+  const sizes = {
+    sm: 'w-10 h-10',
+    md: 'w-12 h-12',
+    lg: 'w-16 h-16',
+  };
+
   return (
-    <div
-      className="grid place-items-center rounded-2xl"
+    <motion.div
+      whileHover={{ rotate: 5, scale: 1.05 }}
+      transition={{ type: 'spring', stiffness: 400 }}
+      className={`grid place-items-center rounded-lg ${sizes[size]}`}
       style={{
-        width: 48,
-        height: 48,
         background: active
           ? 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))'
           : 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-200))',
-        boxShadow: active ? '0 14px 26px rgba(15, 23, 42, 0.12)' : '0 10px 18px rgba(15, 23, 42, 0.07)',
+        boxShadow: active 
+          ? '0 12px 30px rgba(15, 23, 42, 0.15)' 
+          : '0 8px 20px rgba(15, 23, 42, 0.08)',
       }}
     >
       {children}
-    </div>
+    </motion.div>
   );
 }
 
-function TinyActionBtn({ title, onClick, children, tone = 'neutral' }) {
-  const tones = {
-    neutral: {
-      border: 'var(--color-primary-200)',
+function ActionButton({ title, onClick, children, variant = 'ghost', disabled = false }) {
+  const variants = {
+    ghost: {
       bg: 'white',
+      border: 'var(--color-primary-200)',
+      color: 'var(--color-primary-700)',
       hoverBg: 'var(--color-primary-50)',
-      text: 'var(--color-primary-700)',
-      ring: 'var(--color-primary-200)',
     },
-    accent: {
-      border: 'var(--color-primary-200)',
-      bg: 'white',
-      hoverBg: 'var(--color-primary-50)',
-      text: 'var(--color-primary-700)',
-      ring: 'var(--color-primary-200)',
+    gradient: {
+      bg: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+      border: 'transparent',
+      color: 'white',
+      hoverBg: 'linear-gradient(135deg, var(--color-gradient-via), var(--color-gradient-to))',
     },
     danger: {
-      border: '#fecdd3', // keep danger semantic
       bg: 'white',
+      border: '#fecdd3',
+      color: '#e11d48',
       hoverBg: '#fff1f2',
-      text: '#e11d48',
-      ring: '#fecdd3',
     },
   };
 
-  const t = tones[tone] || tones.neutral;
+  const style = variants[variant] || variants.ghost;
 
   return (
-    <button
+    <motion.button
       type="button"
       title={title}
       aria-label={title}
       onClick={onClick}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4"
+      disabled={disabled}
+      whileHover={{ scale: disabled ? 1 : 1.05, y: disabled ? 0 : -2 }}
+      whileTap={{ scale: disabled ? 1 : 0.95 }}
+      className="inline-flex h-10 w-10 items-center justify-center rounded-lg border transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-4"
       style={{
-        borderColor: t.border,
-        backgroundColor: t.bg,
-        color: t.text,
-        boxShadow: '0 6px 16px rgba(15,23,42,0.06)',
-        ['--tw-ring-color']: t.ring,
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.backgroundColor = t.hoverBg;
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.backgroundColor = t.bg;
+        background: style.bg,
+        borderColor: style.border,
+        color: style.color,
+        boxShadow: variant === 'gradient' 
+          ? '0 10px 25px rgba(15, 23, 42, 0.15)' 
+          : '0 6px 18px rgba(15, 23, 42, 0.08)',
+        ['--tw-ring-color']: 'var(--color-primary-200)',
       }}
     >
       {children}
-    </button>
+    </motion.button>
+  );
+}
+
+function StatusPill({ children, variant = 'primary' }) {
+  const variants = {
+    primary: {
+      border: 'var(--color-primary-200)',
+      bg: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
+      text: 'var(--color-primary-800)',
+    },
+    warning: {
+      border: '#fde68a',
+      bg: 'linear-gradient(135deg, #fffbeb, #fef3c7)',
+      text: '#92400e',
+    },
+    success: {
+      border: '#bbf7d0',
+      bg: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+      text: '#166534',
+    },
+  };
+
+  const style = variants[variant] || variants.primary;
+
+  return (
+    <span
+      className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold tracking-wide"
+      style={{
+        borderColor: style.border,
+        background: style.bg,
+        color: style.text,
+        boxShadow: '0 4px 12px rgba(15,23,42,0.06)',
+      }}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -233,47 +287,51 @@ function InputList({
 
   return (
     <div className={className}>
-      {label && <div className="text-sm font-semibold text-slate-800 mb-2">{label}</div>}
+      {label && <div className="text-sm font-bold text-slate-800 mb-2">{label}</div>}
 
       <div
-        className={`rounded-2xl border p-3 transition-all ${disabled ? 'opacity-70' : ''}`}
+        className={`rounded-lg border p-3 transition-all ${disabled ? 'opacity-70' : ''}`}
         style={{
           borderColor: disabled ? '#e2e8f0' : 'var(--color-primary-200)',
-          background:
-            'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.86))',
-          boxShadow: disabled ? 'none' : '0 10px 24px rgba(15, 23, 42, 0.06)',
+          background: 'rgba(255, 255, 255, 0.9)',
+          boxShadow: disabled ? 'none' : '0 8px 20px rgba(15, 23, 42, 0.08)',
         }}
       >
-        <div className="flex flex-wrap gap-2 mb-2">
-          {items.map((opt, i) => (
-            <span
-              key={`${opt}-${i}`}
-              className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold"
-              style={{
-                borderColor: 'var(--color-primary-200)',
-                background:
-                  'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
-                color: 'var(--color-primary-800)',
-              }}
-            >
-              {opt}
-              {!disabled && (
-                <button
-                  type="button"
-                  onClick={() => removeAt(i)}
-                  className="ml-0.5 rounded-full p-0.5 transition-colors"
-                  aria-label="remove option"
-                  title="remove"
-                  style={{ color: 'var(--color-primary-700)' }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-primary-100)')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  <FiX className="w-3 h-3" />
-                </button>
-              )}
-            </span>
-          ))}
-        </div>
+        <AnimatePresence mode="popLayout">
+          <div className="flex flex-wrap gap-2 mb-2">
+            {items.map((opt, i) => (
+              <motion.span
+                key={`${opt}-${i}`}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold"
+                style={{
+                  borderColor: 'var(--color-primary-300)',
+                  background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))',
+                  color: 'var(--color-primary-800)',
+                }}
+              >
+                {opt}
+                {!disabled && (
+                  <motion.button
+                    type="button"
+                    onClick={() => removeAt(i)}
+                    whileHover={{ scale: 1.2, rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
+                    className="rounded-full p-0.5 transition-colors"
+                    aria-label="remove option"
+                    title="remove"
+                    style={{ color: 'var(--color-primary-700)' }}
+                  >
+                    <FiX className="w-3 h-3" />
+                  </motion.button>
+                )}
+              </motion.span>
+            ))}
+          </div>
+        </AnimatePresence>
 
         <input
           type="text"
@@ -285,7 +343,7 @@ function InputList({
           }}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full border-0 outline-none text-sm placeholder:text-slate-400 disabled:bg-transparent bg-transparent"
+          className="w-full border-0 outline-none text-sm placeholder:text-slate-400 disabled:bg-transparent bg-transparent font-medium"
         />
       </div>
     </div>
@@ -320,6 +378,10 @@ export default function FormsManagementPage() {
 
   // edit vs create
   const [isEditing, setIsEditing] = useState(false);
+
+  // Refs for scroll functionality
+  const fieldsContainerRef = useRef(null);
+  const newFieldRef = useRef(null);
 
   // fetch
   const fetchForms = useCallback(async () => {
@@ -357,6 +419,24 @@ export default function FormsManagementPage() {
     setFormFields([]);
     setEditingMap({});
   };
+
+  // Scroll to new field functionality
+  const scrollToNewField = useCallback(() => {
+    if (newFieldRef.current && fieldsContainerRef.current) {
+      setTimeout(() => {
+        newFieldRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+        
+        // Add highlight effect
+        if (newFieldRef.current) {
+          newFieldRef.current.style.animation = 'field-highlight 1.5s ease-out';
+        }
+      }, 100);
+    }
+  }, []);
 
   // -------- NEW FORM (create mode) --------
   const openCreateFormModal = () => {
@@ -591,6 +671,9 @@ export default function FormsManagementPage() {
     ]);
 
     setEditingMap(m => ({ ...m, [idx]: true }));
+    
+    // Scroll to new field after it's added
+    setTimeout(scrollToNewField, 100);
   };
 
   const removeField = index => {
@@ -638,45 +721,8 @@ export default function FormsManagementPage() {
     });
   };
 
-  // -------- UI Bits --------
-  const Pill = ({ children, tone = 'primary' }) => {
-    const tones = {
-      primary: {
-        border: 'var(--color-primary-200)',
-        bg: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
-        text: 'var(--color-primary-800)',
-      },
-      soft: {
-        border: '#e2e8f0',
-        bg: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
-        text: '#475569',
-      },
-      warning: {
-        border: '#fde68a',
-        bg: 'linear-gradient(135deg, #fffbeb, #fef3c7)',
-        text: '#92400e',
-      },
-    };
-
-    const s = tones[tone] || tones.primary;
-
-    return (
-      <span
-        className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
-        style={{
-          borderColor: s.border,
-          background: s.bg,
-          color: s.text,
-          boxShadow: '0 6px 16px rgba(15,23,42,0.06)',
-        }}
-      >
-        {children}
-      </span>
-    );
-  };
-
-  // Field row with local drafts
-  const FieldRow = ({ field, index }) => {
+  // -------- Field row component --------
+  const FieldRow = ({ field, index, isNew = false }) => {
     const typeOptions = FIELD_TYPE_OPTIONS.map(opt => ({
       id: opt.id,
       label: t(`types_map.${opt.id}`),
@@ -707,529 +753,545 @@ export default function FormsManagementPage() {
     };
 
     return (
-      <div
-        className="group relative overflow-hidden rounded-3xl border bg-white p-4 transition-all duration-200"
+      <motion.div
+        ref={isNew ? newFieldRef : null}
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9, y: -20 }}
+        transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+        className="group relative overflow-hidden rounded-md border bg-white transition-all duration-300"
         style={{
-          borderColor: editing ? 'var(--color-primary-300)' : 'var(--color-primary-200)',
+          borderColor: editing ? 'var(--color-primary-400)' : 'var(--color-primary-200)',
           boxShadow: editing
-            ? '0 1px 0 rgba(15,23,42,0.03), 0 18px 44px rgba(15,23,42,0.12)'
-            : '0 1px 0 rgba(15,23,42,0.03), 0 12px 30px rgba(15,23,42,0.07)',
+            ? '0 20px 50px rgba(15,23,42,0.15), 0 2px 8px rgba(15,23,42,0.06)'
+            : '0 10px 30px rgba(15,23,42,0.08)',
         }}
       >
-        {/* Top theme line */}
-        <div
+        {/* Animated top gradient line */}
+        <motion.div
           className="absolute left-0 right-0 top-0 h-1"
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
           style={{
             background: editing
               ? 'linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-via), var(--color-gradient-to))'
-              : 'linear-gradient(90deg, var(--color-primary-100), rgba(255,255,255,0))',
-            opacity: editing ? 1 : 0.8,
+              : 'linear-gradient(90deg, var(--color-primary-200), rgba(255,255,255,0))',
+            transformOrigin: 'left',
           }}
         />
 
-        {!editing ? (
-          <div className="flex items-start justify-between gap-4 pt-1">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap mb-2">
-                <MultiLangText className="font-extrabold text-slate-900 text-[15px] break-all">
-                  {field.label || t('labels.no_label')}
-                </MultiLangText>
-                <Pill>{t(`types_map.${field.type}`)}</Pill>
-                {field.required && <Pill tone="warning">{t('labels.required')}</Pill>}
-              </div>
+        <div className="p-5">
+          {!editing ? (
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap mb-3">
+                  <MultiLangText className="font-black text-slate-900 text-base">
+                    {field.label || t('labels.no_label')}
+                  </MultiLangText>
+                  <StatusPill variant="primary">{t(`types_map.${field.type}`)}</StatusPill>
+                  {field.required && <StatusPill variant="warning">{t('labels.required')}</StatusPill>}
+                </div>
 
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl  border"
-                  style={{
-                    borderColor: 'var(--color-primary-200)',
-                    background:
-                      'linear-gradient(135deg, rgba(255,255,255,0.92), var(--color-primary-50))',
-                    color: 'var(--color-primary-800)',
-                  }}
-                >
-                  {t('labels.key')}: {field.key}
-                </span>
+                <div className="flex flex-wrap items-center gap-2 text-xs mb-2">
+                  <span
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-mono font-semibold"
+                    style={{
+                      borderColor: 'var(--color-primary-200)',
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))',
+                      color: 'var(--color-primary-800)',
+                    }}
+                  >
+                    <Database className="w-3 h-3" />
+                    {field.key}
+                  </span>
 
-                <span
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border font-semibold"
-                  style={{
-                    borderColor: 'var(--color-primary-200)',
-                    background:
-                      'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
-                    color: 'var(--color-primary-800)',
-                  }}
-                >
-                  {t('labels.order')}: {field.order ?? 1}
-                </span>
-              </div>
+                  <span
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-bold"
+                    style={{
+                      borderColor: 'var(--color-primary-300)',
+                      background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))',
+                      color: 'var(--color-primary-800)',
+                    }}
+                  >
+                    <BarChart3 className="w-3 h-3" />
+                    {t('labels.order')}: {field.order ?? 1}
+                  </span>
+                </div>
 
-              {field.placeholder && (
-                <MultiLangText className="text-sm text-slate-600 break-all mt-2">
-                  <span className="text-slate-400">{t('labels.placeholder')}:</span> {field.placeholder}
-                </MultiLangText>
-              )}
-
-              {(field.type === 'select' || field.type === 'radio' || field.type === 'checklist') &&
-                field.options &&
-                field.options.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {field.options.slice(0, 5).map((opt, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-semibold"
-                        style={{
-                          borderColor: 'var(--color-primary-200)',
-                          background:
-                            'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
-                          color: 'var(--color-primary-800)',
-                        }}
-                      >
-                        {opt}
-                      </span>
-                    ))}
-                    {field.options.length > 5 && (
-                      <span className="inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-semibold"
-                        style={{
-                          borderColor: '#e2e8f0',
-                          background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
-                          color: '#475569',
-                        }}
-                      >
-                        +{field.options.length - 5}
-                      </span>
-                    )}
-                  </div>
+                {field.placeholder && (
+                  <MultiLangText className="text-sm text-slate-600 mt-2 flex items-start gap-2">
+                    <span className="text-slate-400 flex-shrink-0">{t('labels.placeholder')}:</span> 
+                    <span className="break-all">{field.placeholder}</span>
+                  </MultiLangText>
                 )}
-            </div>
 
-            <div className="flex items-center gap-2">
-              <TinyActionBtn
-                title={t('actions.move_up')}
-                onClick={() => moveField(index, -1)}
-                tone="neutral"
-                disabled={!canMoveUp}
-              >
-                <FiChevronUp className="w-4 h-4" />
-              </TinyActionBtn>
+                {(field.type === 'select' || field.type === 'radio' || field.type === 'checklist') &&
+                  field.options &&
+                  field.options.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {field.options.slice(0, 5).map((opt, i) => (
+                        <motion.span
+                          key={i}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: i * 0.05 }}
+                          className="inline-flex items-center rounded-lg border px-3 py-1 text-xs font-bold"
+                          style={{
+                            borderColor: 'var(--color-primary-300)',
+                            background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))',
+                            color: 'var(--color-primary-800)',
+                          }}
+                        >
+                          {opt}
+                        </motion.span>
+                      ))}
+                      {field.options.length > 5 && (
+                        <StatusPill variant="primary">
+                          +{field.options.length - 5}
+                        </StatusPill>
+                      )}
+                    </div>
+                  )}
+              </div>
 
-              <TinyActionBtn
-                title={t('actions.move_down')}
-                onClick={() => moveField(index, +1)}
-                tone="neutral"
-                disabled={!canMoveDown}
-              >
-                <FiChevronDown className="w-4 h-4" />
-              </TinyActionBtn>
+              <div className="flex items-center gap-2">
+                <ActionButton
+                  title={t('actions.move_up')}
+                  onClick={() => moveField(index, -1)}
+                  variant="ghost"
+                  disabled={!canMoveUp}
+                >
+                  <FiChevronUp className="w-4 h-4" />
+                </ActionButton>
 
-              <button
-                type="button"
-                title={t('actions.edit_field')}
-                aria-label={t('actions.edit_field')}
-                onClick={() => toggleEditField(index, true)}
-                className="inline-flex items-center justify-center h-9 w-9 rounded-xl border transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4"
-                style={{
-                  borderColor: 'transparent',
-                  background:
-                    'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                  color: 'white',
-                  boxShadow: '0 12px 24px rgba(15,23,42,0.12)',
-                  ['--tw-ring-color']: 'var(--color-primary-200)',
-                }}
-              >
-                <FiEdit2 className="w-4 h-4" />
-              </button>
+                <ActionButton
+                  title={t('actions.move_down')}
+                  onClick={() => moveField(index, +1)}
+                  variant="ghost"
+                  disabled={!canMoveDown}
+                >
+                  <FiChevronDown className="w-4 h-4" />
+                </ActionButton>
 
-              <TinyActionBtn
-                title={t('actions.remove_field')}
-                onClick={() => removeField(index)}
-                tone="danger"
-              >
-                <FiTrash2 className="w-4 h-4" />
-              </TinyActionBtn>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4 pt-3">
-            <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-4">
-              <Input
-                label={t('editor.label')}
-                placeholder={t('editor.placeholders.label')}
-                value={labelDraft}
-                onChange={v => setLabelDraft(v)}
-                onBlur={commitDrafts}
-              />
-              <Input
-                label={t('editor.placeholder')}
-                placeholder={t('editor.placeholders.placeholder')}
-                value={placeholderDraft}
-                onChange={v => setPlaceholderDraft(v)}
-                onBlur={commitDrafts}
-              />
-              <Select
-                clearable={false}
-                searchable={false}
-                label={t('editor.type')}
-                value={field.type}
-                onChange={v => updateFieldProp(index, 'type', v)}
-                options={typeOptions}
-              />
+                <ActionButton
+                  title={t('actions.edit_field')}
+                  onClick={() => toggleEditField(index, true)}
+                  variant="gradient"
+                >
+                  <FiEdit2 className="w-4 h-4" />
+                </ActionButton>
 
-              <div className="flex items-end pb-2">
-                <CheckBox
-                  label={t('editor.required')}
-                  initialChecked={!!field.required}
-                  onChange={val => updateFieldProp(index, 'required', !!val)}
-                />
+                <ActionButton
+                  title={t('actions.remove_field')}
+                  onClick={() => removeField(index)}
+                  variant="danger"
+                >
+                  <FiTrash2 className="w-4 h-4" />
+                </ActionButton>
               </div>
             </div>
- 
+          ) : (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-4"
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div className="lg:col-span-1">
+                  <Input
+                    label={t('editor.label')}
+                    placeholder={t('editor.placeholders.label')}
+                    value={labelDraft}
+                    onChange={v => setLabelDraft(v)}
+                    onBlur={commitDrafts}
+                  />
+                </div>
+                <div className="lg:col-span-1">
+                  <Input
+                    label={t('editor.placeholder')}
+                    placeholder={t('editor.placeholders.placeholder')}
+                    value={placeholderDraft}
+                    onChange={v => setPlaceholderDraft(v)}
+                    onBlur={commitDrafts}
+                  />
+                </div>
+                <div className="lg:col-span-1">
+                  <Select
+                    clearable={false}
+                    searchable={false}
+                    label={t('editor.type')}
+                    value={field.type}
+                    onChange={v => updateFieldProp(index, 'type', v)}
+                    options={typeOptions}
+                  />
+                </div>
 
-            {(field.type === 'select' || field.type === 'radio' || field.type === 'checklist') && (
-              <div>
+                <div className="flex items-end pb-2">
+                  <CheckBox
+                    label={t('editor.required')}
+                    initialChecked={!!field.required}
+                    onChange={val => updateFieldProp(index, 'required', !!val)}
+                  />
+                </div>
+              </div>
+
+              {(field.type === 'select' || field.type === 'radio' || field.type === 'checklist') && (
                 <InputList
                   label={t('editor.options')}
                   value={field.options || []}
                   onChange={arr => updateFieldProp(index, 'options', arr)}
                   placeholder={t('editor.placeholders.option')}
                 />
-              </div>
-            )}
+              )}
 
-            <div
-              className="flex items-center justify-end gap-2 pt-4"
-              style={{ borderTop: '1px solid rgba(226,232,240,0.9)' }}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  commitDrafts();
-                  toggleEditField(index, false);
-                }}
-                className="inline-flex items-center justify-center h-11 px-6 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4"
-                style={{
-                  borderColor: 'transparent',
-                  background:
-                    'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                  color: 'white',
-                  boxShadow: '0 14px 30px rgba(15,23,42,0.12)',
-                  ['--tw-ring-color']: 'var(--color-primary-200)',
-                }}
+              <div
+                className="flex items-center justify-end gap-2 pt-4"
+                style={{ borderTop: '1px solid var(--color-primary-200)' }}
               >
-                {t('actions.done')}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+                <motion.button
+                  type="button"
+                  onClick={() => {
+                    commitDrafts();
+                    toggleEditField(index, false);
+                  }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="inline-flex items-center gap-2 h-11 px-6 rounded-lg text-white font-bold transition-all"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+                    boxShadow: '0 12px 30px rgba(15,23,42,0.15)',
+                  }}
+                >
+                  <Check className="w-4 h-4" />
+                  {t('actions.done')}
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </motion.div>
     );
   };
 
   return (
     <div
-      className="min-h-screen"
-       
+      className="min-h-screen pb-12"
+      style={{
+        background:
+          'radial-gradient(1200px 600px at 15% 12%, var(--color-primary-50), transparent 60%),' +
+          'radial-gradient(900px 500px at 85% 18%, var(--color-secondary-50), transparent 60%),' +
+          'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+      }}
     >
-      <div className="  !px-0">
+      {/* Animated background orbs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <motion.div
+          animate={{ 
+            scale: [1, 1.15, 1],
+            opacity: [0.08, 0.12, 0.08],
+          }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -top-40 -right-40 w-96 h-96 rounded-full"
+          style={{
+            background: `radial-gradient(circle, var(--color-primary-300), transparent 70%)`,
+          }}
+        />
+      </div>
+
+      <div className="relative">
         <GradientStatsHeader
           onClick={openCreateFormModal}
           btnName={t('header.new')}
           title={t('header.title')}
           desc={t('header.desc')}
+          icon={Sparkles}
         />
 
         {isLoading ? (
-          <div className="min-h-screen">
-            <div className="container !px-0">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-                <aside className="lg:col-span-4">
-                  <ThemeFrame>
-                    <div className="p-4 space-y-3">
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="h-20 rounded-2xl border animate-shimmer"
-                          style={{
-                            borderColor: 'rgba(226,232,240,0.9)',
-                            background:
-                              'linear-gradient(90deg, rgba(226,232,240,0.65), rgba(226,232,240,1), rgba(226,232,240,0.65))',
-                            backgroundSize: '200% 100%',
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </ThemeFrame>
-                </aside>
-                <section className="lg:col-span-8">
-                  <ThemeFrame>
-                    <div className="p-6 space-y-4">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="h-28 rounded-2xl border animate-shimmer"
-                          style={{
-                            borderColor: 'rgba(226,232,240,0.9)',
-                            background:
-                              'linear-gradient(90deg, rgba(226,232,240,0.65), rgba(226,232,240,1), rgba(226,232,240,0.65))',
-                            backgroundSize: '200% 100%',
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </ThemeFrame>
-                </section>
-              </div>
+          <div className="mt-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <aside className="lg:col-span-4">
+                <LuxuryFrame>
+                  <div className="p-5 space-y-3">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="h-24 rounded-lg animate-pulse"
+                        style={{
+                          background: 'linear-gradient(90deg, #e2e8f0, #f1f5f9, #e2e8f0)',
+                          backgroundSize: '200% 100%',
+                        }}
+                      />
+                    ))}
+                  </div>
+                </LuxuryFrame>
+              </aside>
+              <section className="lg:col-span-8">
+                <LuxuryFrame>
+                  <div className="p-6 space-y-4">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="h-32 rounded-lg animate-pulse"
+                        style={{
+                          background: 'linear-gradient(90deg, #e2e8f0, #f1f5f9, #e2e8f0)',
+                          backgroundSize: '200% 100%',
+                        }}
+                      />
+                    ))}
+                  </div>
+                </LuxuryFrame>
+              </section>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
             {/* LEFT: forms list */}
-            <aside className="  lg:col-span-4">
+            <aside className="lg:col-span-4">
               <div className="sticky top-6">
-                <ThemeFrame>
-                   <div
-                    className="p-4 border-b rounded-[20px_20px_0_0] "
+                <LuxuryFrame glow>
+                  <div
+                    className="p-5 border-b rounded-[8px_8px_0_0]"
                     style={{
                       borderColor: 'var(--color-primary-200)',
-                      background:
-                        'linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.75))',
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))',
                     }}
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0  ">
-                        <div className="text-xl font-extrabold text-slate-900">{t('header.title')}</div>
-                        <div className="text-base text-slate-500 mt-1">{t('header.desc')}</div>
-                      </div> 
+                    <div className="flex items-center justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-3">
+                        <IconBadge active size="md">
+                          <Database className="w-6 h-6 text-white" />
+                        </IconBadge>
+                        <div>
+                          <div className="text-xl font-black text-slate-900">{t('header.title')}</div>
+                          <div className="text-sm text-slate-500 font-medium">{forms.length} Forms</div>
+                        </div>
+                      </div>
                     </div>
  
                   </div>
 
                   {/* List */}
                   {filtered.length === 0 ? (
-                    <div className="p-10 text-center">
-                      <div
-                        className="mx-auto mb-4 grid place-items-center rounded-3xl"
-                        style={{
-                          width: 72,
-                          height: 72,
-                          background:
-                            'linear-gradient(135deg, var(--color-primary-100), var(--color-secondary-100))',
-                          boxShadow: '0 16px 28px rgba(15,23,42,0.10)',
-                        }}
-                      >
-                        <FiFileText className="h-8 w-8" style={{ color: 'var(--color-primary-700)' }} />
-                      </div>
-                      <div className="font-extrabold text-slate-900 mb-2 text-lg">{t('empty.title')}</div>
-                      <div className="text-slate-600 text-sm">{t('empty.subtitle')}</div>
-                    </div>
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="p-10 text-center"
+                    >
+                      <IconBadge size="lg">
+                        <FiFileText className="w-8 h-8" style={{ color: 'var(--color-primary-700)' }} />
+                      </IconBadge>
+                      <div className="mt-4 font-black text-slate-900 text-lg">{t('empty.title')}</div>
+                      <div className="text-slate-600 text-sm mt-1">{t('empty.subtitle')}</div>
+                    </motion.div>
                   ) : (
                     <div className="max-h-[calc(100vh-310px)] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300">
                       <ul className="p-3 space-y-2">
-                        {filtered.map(f => {
-                          const isActive = selectedForm?.id === f.id;
+                        <AnimatePresence mode="popLayout">
+                          {filtered.map((f, index) => {
+                            const isActive = selectedForm?.id === f.id;
 
-                          return (
-                            <li key={f.id}>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedForm(f)}
-                                className="w-full text-left rounded-3xl border p-3.5 transition-all active:scale-[0.995]"
-                                style={{
-                                  borderColor: isActive ? 'var(--color-primary-300)' : 'rgba(226,232,240,0.9)',
-                                  background: isActive
-                                    ? 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))'
-                                    : 'rgba(255,255,255,0.92)',
-                                  boxShadow: isActive
-                                    ? '0 1px 0 rgba(15,23,42,0.03), 0 18px 40px rgba(15,23,42,0.12)'
-                                    : '0 1px 0 rgba(15,23,42,0.03), 0 10px 24px rgba(15,23,42,0.06)',
-                                }}
-                                onMouseEnter={e => {
-                                  if (!isActive) {
-                                    e.currentTarget.style.borderColor = 'var(--color-primary-200)';
-                                    e.currentTarget.style.background =
-                                      'linear-gradient(135deg, rgba(255,255,255,0.96), rgba(255,255,255,0.86))';
-                                  }
-                                }}
-                                onMouseLeave={e => {
-                                  if (!isActive) {
-                                    e.currentTarget.style.borderColor = 'rgba(226,232,240,0.9)';
-                                    e.currentTarget.style.background = 'rgba(255,255,255,0.92)';
-                                  }
-                                }}
+                            return (
+                              <motion.li 
+                                key={f.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                transition={{ delay: index * 0.05 }}
                               >
-                                <div className="flex items-start gap-3">
-                                  <IconBadge active={isActive}>
-                                    <FiFileText className={isActive ? 'text-white' : ''} style={{ color: isActive ? 'white' : 'var(--color-primary-800)' }} />
-                                  </IconBadge>
+                                <motion.button
+                                  type="button"
+                                  onClick={() => setSelectedForm(f)}
+                                  whileHover={{ scale: 1.01 }}
+                                  whileTap={{ scale: 0.99 }}
+                                  className="w-full text-left rounded-md border p-4 transition-all"
+                                  style={{
+                                    borderColor: isActive ? 'var(--color-primary-400)' : 'var(--color-primary-200)',
+                                    background: isActive
+                                      ? 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.95))'
+                                      : 'rgba(255,255,255,0.9)',
+                                    boxShadow: isActive
+                                      ? '0 12px 35px rgba(15,23,42,0.12)'
+                                      : '0 6px 20px rgba(15,23,42,0.06)',
+                                  }}
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <IconBadge active={isActive} size="sm">
+                                      <FiFileText 
+                                        className="w-4 h-4" 
+                                        style={{ color: isActive ? 'white' : 'var(--color-primary-800)' }} 
+                                      />
+                                    </IconBadge>
 
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-start justify-between gap-3">
-                                      <div className="min-w-0 flex-1">
-                                        <MultiLangText
-                                          className=" ltr:text-left rtl:text-right font-extrabold truncate block"
-                                          as="h2"
-                                          style={{ color: isActive ? 'var(--color-primary-900)' : '#0f172a' }}
+                                    <div className="min-w-0 flex-1">
+                                      <MultiLangText
+                                        className=" rtl:text-right font-black text-base truncate block mb-2"
+                                        style={{ color: isActive ? 'var(--color-primary-900)' : '#0f172a' }}
+                                      >
+                                        {f.title}
+                                      </MultiLangText>
+
+                                      <div className="flex items-center gap-2 text-sm text-slate-600 mb-3">
+                                        <Layers className="w-4 h-4" style={{ color: 'var(--color-primary-600)' }} />
+                                        <span className="font-bold">{f.fields?.length ?? 0}</span>
+                                        <span>{t('labels.fields')}</span>
+                                      </div>
+
+                                      {/* Actions */}
+                                      <div className="flex gap-1.5 flex-wrap">
+                                        {f?.adminId != null && (
+                                          <ActionButton
+                                            title={t('actions.copy_link')}
+                                            onClick={e => {
+                                              e.stopPropagation();
+                                              copyLink(f.id);
+                                            }}
+                                            variant="ghost"
+                                          >
+                                            <LinkIcon className="w-3.5 h-3.5" />
+                                          </ActionButton>
+                                        )}
+
+                                        <ActionButton
+                                          title={t('actions.duplicate')}
+                                          onClick={e => {
+                                            e.stopPropagation();
+                                            handleDuplicateForm(f);
+                                          }}
+                                          variant="ghost"
                                         >
-                                          {f.title}
-                                        </MultiLangText>
+                                          <Files className="w-3.5 h-3.5" />
+                                        </ActionButton>
 
-                                        <p className="text-sm text-slate-600 flex items-center gap-1.5 mt-1">
-                                          <Layers className="w-4 h-4" style={{ color: 'var(--color-primary-700)' }} />
-                                          <span className="font-semibold">{f.fields?.length ?? 0}</span> {t('labels.fields')}
-                                        </p>
+                                        {f?.adminId != null && (
+                                          <ActionButton
+                                            title={t('actions.edit')}
+                                            onClick={e => {
+                                              e.stopPropagation();
+                                              openEditFormModal(f, true);
+                                            }}
+                                            variant="gradient"
+                                          >
+                                            <PencilLine className="w-3.5 h-3.5" />
+                                          </ActionButton>
+                                        )}
+
+                                        {f?.adminId != null && (
+                                          <ActionButton
+                                            title={t('actions.delete')}
+                                            onClick={e => {
+                                              e.stopPropagation();
+                                              setDeletingId(f.id);
+                                              setShowDeleteModal(true);
+                                            }}
+                                            variant="danger"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </ActionButton>
+                                        )}
                                       </div>
                                     </div>
-
-                                    {/* row actions */}
-                                    <div className="mt-3 flex gap-2 flex-wrap">
-                                      {f?.adminId != null && (
-                                        <TinyActionBtn
-                                          title={t('actions.copy_link')}
-                                          onClick={e => {
-                                            e.stopPropagation();
-                                            copyLink(f.id);
-                                          }}
-                                          tone="accent"
-                                        >
-                                          <LinkIcon className="h-4 w-4" />
-                                        </TinyActionBtn>
-                                      )}
-
-                                      <TinyActionBtn
-                                        title={t('actions.duplicate', { default: 'Duplicate' })}
-                                        onClick={e => {
-                                          e.stopPropagation();
-                                          handleDuplicateForm(f);
-                                        }}
-                                        tone="accent"
-                                      >
-                                        <Files className="h-4 w-4" />
-                                      </TinyActionBtn>
-
-                                      {f?.adminId != null && (
-                                        <TinyActionBtn
-                                          title={t('actions.edit')}
-                                          onClick={e => {
-                                            e.stopPropagation();
-                                            openEditFormModal(f, true);
-                                          }}
-                                          tone="accent"
-                                        >
-                                          <PencilLine className="h-4 w-4" />
-                                        </TinyActionBtn>
-                                      )}
-
-                                      {f?.adminId != null && (
-                                        <TinyActionBtn
-                                          title={t('actions.delete')}
-                                          onClick={e => {
-                                            e.stopPropagation();
-                                            setDeletingId(f.id);
-                                            setShowDeleteModal(true);
-                                          }}
-                                          tone="danger"
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </TinyActionBtn>
-                                      )}
-                                    </div>
                                   </div>
-                                </div>
-                              </button>
-                            </li>
-                          );
-                        })}
+                                </motion.button>
+                              </motion.li>
+                            );
+                          })}
+                        </AnimatePresence>
                       </ul>
                     </div>
                   )}
-                </ThemeFrame>
+                </LuxuryFrame>
               </div>
             </aside>
 
             {/* RIGHT: selected form */}
             <section className="lg:col-span-8">
               {!selectedForm ? (
-                <ThemeFrame>
-                  <div className="min-h-[320px] flex items-center justify-center p-12 text-center">
+                <LuxuryFrame>
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="min-h-[400px] flex items-center justify-center p-12 text-center"
+                  >
                     <div>
-                      <div
-                        className="mx-auto mb-4 grid place-items-center rounded-3xl"
-                        style={{
-                          width: 88,
-                          height: 88,
-                          background:
-                            'linear-gradient(135deg, var(--color-primary-100), var(--color-secondary-100))',
-                          boxShadow: '0 18px 36px rgba(15,23,42,0.12)',
+                      <motion.div
+                        animate={{ 
+                          y: [0, -10, 0],
+                          rotate: [0, 5, -5, 0]
                         }}
+                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                       >
-                        <Sparkles className="w-10 h-10" style={{ color: 'var(--color-primary-700)' }} />
-                      </div>
-                      <div className="text-slate-900 font-extrabold text-xl">{t('empty.select_hint')}</div>
-                      <div className="text-slate-600 text-sm mt-1">
+                        <IconBadge size="lg">
+                          <Sparkles className="w-10 h-10" style={{ color: 'var(--color-primary-700)' }} />
+                        </IconBadge>
+                      </motion.div>
+                      <div className="mt-6 text-2xl font-black text-slate-900">{t('empty.select_hint')}</div>
+                      <div className="text-slate-600 mt-2">
                         {t('empty.select_hint_sub', { default: 'Pick a form from the left to view details.' })}
                       </div>
                     </div>
-                  </div>
-                </ThemeFrame>
+                  </motion.div>
+                </LuxuryFrame>
               ) : (
-                <ThemeFrame>
+                <LuxuryFrame glow>
                   {/* Header */}
                   <div
-                    className="rounded-[20px_20px_0_0]  p-6 border-b"
+                    className="rounded-[8px_8px_0_0] p-6 border-b"
                     style={{
                       borderColor: 'var(--color-primary-200)',
-                      background:
-                        'linear-gradient(135deg, rgba(255,255,255,0.92), var(--color-primary-50))',
+                      background: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.95))',
                     }}
                   >
-                    <div className="flex items-center gap-4">
-                      <IconBadge active>
-                        <FiFileText className="h-6 w-6 text-white" />
-                      </IconBadge>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
+                        <IconBadge active size="md">
+                          <FiFileText className="w-6 h-6 text-white" />
+                        </IconBadge>
 
-                      <div className="min-w-0 flex-1">
-                        <MultiLangText
-                          className="text-2xl font-extrabold truncate"
-                          style={{
-                            background:
-                              'linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))',
-                            WebkitBackgroundClip: 'text',
-                            backgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                          }}
-                        >
-                          {selectedForm.title}
-                        </MultiLangText>
-
-                        <p className="text-sm text-slate-600 mt-1 flex items-center gap-2">
-                          <Layers className="w-4 h-4" style={{ color: 'var(--color-primary-700)' }} />
-                          <span className="font-semibold">{selectedForm.fields?.length || 0}</span> {t('labels.fields')}
-                        </p>
-                      </div>
-
-                      {/* quick actions */}
-                      <div className="flex items-center gap-2">
-                        
-
-                        {selectedForm?.adminId != null && (
-                          <button
-                            type="button"
-                            onClick={() => openEditFormModal(selectedForm, true)}
-                            className="inline-flex items-center gap-2 h-11 px-4 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4"
+                        <div className="min-w-0 flex-1">
+                          <div
+                            className=" rtl:text-right w-fit text-2xl font-black mb-2 truncate"
                             style={{
-                              borderColor: 'transparent',
-                              background:
-                                'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                              color: 'white',
-                              boxShadow: '0 16px 30px rgba(15,23,42,0.12)',
-                              ['--tw-ring-color']: 'var(--color-primary-200)',
+                              background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+                              WebkitBackgroundClip: 'text',
+                              backgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
                             }}
                           >
-                            <FiEdit2 className="w-4 h-4" />
-                            <span className="font-semibold hidden sm:inline">{t('actions.edit')}</span>
-                          </button>
-                        )}
+                            {selectedForm.title}
+                          </div>
+
+                          <div className="flex items-center gap-2 text-sm">
+                            <Layers className="w-4 h-4" style={{ color: 'var(--color-primary-700)' }} />
+                            <span className="font-bold text-slate-900">{selectedForm.fields?.length || 0}</span>
+                            <span className="text-slate-600">{t('labels.fields')}</span>
+                          </div>
+                        </div>
                       </div>
+
+                      {selectedForm?.adminId != null && (
+                        <motion.button
+                          type="button"
+                          onClick={() => openEditFormModal(selectedForm, true)}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="flex items-center gap-2 h-11 px-5 rounded-lg text-white font-bold"
+                          style={{
+                            background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+                            boxShadow: '0 12px 30px rgba(15,23,42,0.15)',
+                          }}
+                        >
+                          <FiEdit2 className="w-4 h-4" />
+                          <span className="hidden sm:inline">{t('actions.edit')}</span>
+                        </motion.button>
+                      )}
                     </div>
                   </div>
 
@@ -1237,101 +1299,87 @@ export default function FormsManagementPage() {
                   <div className="p-6">
                     {selectedForm.fields?.length ? (
                       <div className="space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300 pr-2">
-                        {(selectedForm.fields || [])
-                          .slice()
-                          .sort((a, b) => (a?.order ?? 1) - (b?.order ?? 1))
-                          .map(field => (
-                            <SoftCard key={field.id} className="p-5 transition-all">
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2 flex-wrap mb-2">
-                                    <MultiLangText className="font-extrabold text-slate-900 text-[15px] break-all">
-                                      {field.label}
-                                    </MultiLangText>
-                                    <Pill>{t(`types_map.${field.type}`)}</Pill>
-                                    {field.required && <Pill tone="warning">{t('labels.required')}</Pill>}
-                                  </div>
+                        <AnimatePresence mode="popLayout">
+                          {(selectedForm.fields || [])
+                            .slice()
+                            .sort((a, b) => (a?.order ?? 1) - (b?.order ?? 1))
+                            .map((field, index) => (
+                              <GlassCard key={field.id} hover className="p-5">
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap mb-3">
+                                      <MultiLangText className="font-black text-slate-900 text-base">
+                                        {field.label}
+                                      </MultiLangText>
+                                      <StatusPill variant="primary">{t(`types_map.${field.type}`)}</StatusPill>
+                                      {field.required && <StatusPill variant="warning">{t('labels.required')}</StatusPill>}
+                                    </div>
 
-                                  <div className="flex flex-wrap items-center gap-2 text-xs mb-2">
-                                    <span
-                                      className="  inline-flex items-center gap-1 px-2.5 py-1 rounded-xl  border"
-                                      style={{
-                                        borderColor: 'var(--color-primary-200)',
-                                        background:
-                                          'linear-gradient(135deg, rgba(255,255,255,0.92), var(--color-primary-50))',
-                                        color: 'var(--color-primary-800)',
-                                      }}
-                                    >
-                                      {t('labels.key')}: <span className='font-en' >{field.key}</span>
-                                    </span>
-                                    <span
-                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border font-semibold"
-                                      style={{
-                                        borderColor: 'var(--color-primary-200)',
-                                        background:
-                                          'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
-                                        color: 'var(--color-primary-800)',
-                                      }}
-                                    >
-                                      {t('labels.order')}: {field.order ?? 1}
-                                    </span>
-                                  </div>
+                                    <div className="flex flex-wrap items-center gap-2 text-xs mb-2">
+                                      <span
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-mono font-semibold"
+                                        style={{
+                                          borderColor: 'var(--color-primary-200)',
+                                          background: 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))',
+                                          color: 'var(--color-primary-800)',
+                                        }}
+                                      >
+                                        {t('labels.key')}: <span className="font-en">{field.key}</span>
+                                      </span>
+                                      <span
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-bold"
+                                        style={{
+                                          borderColor: 'var(--color-primary-300)',
+                                          background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))',
+                                          color: 'var(--color-primary-800)',
+                                        }}
+                                      >
+                                        {t('labels.order')}: {field.order ?? 1}
+                                      </span>
+                                    </div>
 
-                                  {field.placeholder && (
-                                     <span className='text-sm text-slate-600 break-all' > <span className="text-slate-400">{t('labels.placeholder')}:</span> {field.placeholder}</span>
-                                     
-                                  )}
-
-                                  {(field.type === 'select' || field.type === 'radio' || field.type === 'checklist') &&
-                                    field.options &&
-                                    field.options.length > 0 && (
-                                      <div className="mt-3 flex flex-wrap gap-1.5">
-                                        {field.options.map((opt, i) => (
-                                          <span
-                                            key={i}
-                                            className="inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-semibold"
-                                            style={{
-                                              borderColor: 'var(--color-primary-200)',
-                                              background:
-                                                'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
-                                              color: 'var(--color-primary-800)',
-                                            }}
-                                          >
-                                            {opt}
-                                          </span>
-                                        ))}
-                                      </div>
+                                    {field.placeholder && (
+                                      <span className="text-sm text-slate-600 break-all flex items-start gap-2">
+                                        <span className="text-slate-400 flex-shrink-0">{t('labels.placeholder')}:</span>
+                                        {field.placeholder}
+                                      </span>
                                     )}
+
+                                    {(field.type === 'select' || field.type === 'radio' || field.type === 'checklist') &&
+                                      field.options &&
+                                      field.options.length > 0 && (
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                          {field.options.map((opt, i) => (
+                                            <StatusPill key={i} variant="primary">
+                                              {opt}
+                                            </StatusPill>
+                                          ))}
+                                        </div>
+                                      )}
+                                  </div>
                                 </div>
-                              </div>
-                            </SoftCard>
-                          ))}
+                              </GlassCard>
+                            ))}
+                        </AnimatePresence>
                       </div>
                     ) : (
-                      <div
-                        className="rounded-3xl border border-dashed p-10 text-center"
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="rounded-md border border-dashed p-12 text-center"
                         style={{
-                          borderColor: 'rgba(148, 163, 184, 0.7)',
-                          background: 'rgba(255,255,255,0.65)',
-                          boxShadow: '0 12px 24px rgba(15,23,42,0.06)',
+                          borderColor: 'var(--color-primary-300)',
+                          background: 'rgba(255,255,255,0.7)',
                         }}
                       >
-                        <div
-                          className="mx-auto mb-4 grid place-items-center rounded-3xl"
-                          style={{
-                            width: 72,
-                            height: 72,
-                            background:
-                              'linear-gradient(135deg, rgba(226,232,240,0.9), rgba(241,245,249,0.9))',
-                          }}
-                        >
+                        <IconBadge size="lg">
                           <Layers className="w-8 h-8 text-slate-400" />
-                        </div>
-                        <div className="text-slate-700 font-semibold">{t('empty.no_fields')}</div>
-                      </div>
+                        </IconBadge>
+                        <div className="mt-4 text-slate-700 font-bold text-lg">{t('empty.no_fields')}</div>
+                      </motion.div>
                     )}
                   </div>
-                </ThemeFrame>
+                </LuxuryFrame>
               )}
             </section>
           </div>
@@ -1351,18 +1399,20 @@ export default function FormsManagementPage() {
         maxW="max-w-md"
       >
         <div className="space-y-6 pt-2">
-          <div className="flex items-start gap-4 p-4 rounded-2xl border"
-            style={{
-              borderColor: '#fecdd3',
-              background: 'linear-gradient(135deg, #fff1f2, rgba(255,255,255,0.9))',
-              boxShadow: '0 12px 24px rgba(15,23,42,0.06)',
-            }}
-          >
-            <div className="p-2 rounded-xl" style={{ backgroundColor: '#ffe4e6' }}>
-              <FiTrash2 className="w-5 h-5" style={{ color: '#e11d48' }} />
+          <GlassCard className="p-5">
+            <div className="flex items-start gap-4">
+              <div 
+                className="p-3 rounded-lg" 
+                style={{ 
+                  background: 'linear-gradient(135deg, #ffe4e6, #fecdd3)',
+                  boxShadow: '0 6px 18px rgba(225, 29, 72, 0.2)'
+                }}
+              >
+                <AlertCircle className="w-6 h-6 text-rose-600" />
+              </div>
+              <p className="text-slate-700 leading-relaxed">{t('delete.message')}</p>
             </div>
-            <p className="text-slate-700 text-sm leading-relaxed">{t('delete.message')}</p>
-          </div>
+          </GlassCard>
 
           <div className="flex justify-end gap-3">
             <Button
@@ -1391,7 +1441,7 @@ export default function FormsManagementPage() {
         open={showFormModal}
         onClose={() => setShowFormModal(false)}
         title={isEditing ? t('edit.title') : t('create.title')}
-        maxW="max-w-5xl"
+        maxW="max-w-6xl"
       >
         <form
           className="space-y-6 pt-4"
@@ -1401,142 +1451,134 @@ export default function FormsManagementPage() {
           }}
         >
           {/* Title */}
-          <div
-            className="p-4 rounded-3xl border"
-            style={{
-              borderColor: 'var(--color-primary-200)',
-              background:
-                'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
-              boxShadow: '0 12px 24px rgba(15,23,42,0.06)',
-            }}
-          >
+          <GlassCard className="p-5">
             <Input
               placeholder={t('editor.placeholders.form_title')}
               value={formTitle}
               onChange={setFormTitle}
               className="max-w-full"
             />
-          </div>
+          </GlassCard>
 
           {/* Fields section */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-extrabold text-slate-900 text-lg flex items-center gap-2">
-                <Layers className="w-5 h-5" style={{ color: 'var(--color-primary-700)' }} />
+              <h3 className="font-black text-slate-900 text-xl flex items-center gap-2">
+                <Layers className="w-6 h-6" style={{ color: 'var(--color-primary-700)' }} />
                 {t('editor.fields')}
               </h3>
 
-              <button
+              <motion.button
                 type="button"
-                className="inline-flex items-center gap-2 h-11 px-5 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4"
                 onClick={addInlineField}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="inline-flex items-center gap-2 h-11 px-5 rounded-lg text-white font-bold"
                 style={{
-                  borderColor: 'transparent',
-                  background:
-                    'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                  color: 'white',
-                  boxShadow: '0 16px 30px rgba(15,23,42,0.12)',
-                  ['--tw-ring-color']: 'var(--color-primary-200)',
+                  background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+                  boxShadow: '0 12px 30px rgba(15,23,42,0.15)',
                 }}
               >
                 <FiPlus className="w-4 h-4" />
-                <span className="font-semibold">{t('editor.add_field')}</span>
-              </button>
+                <span>{t('editor.add_field')}</span>
+              </motion.button>
             </div>
 
             {formFields.length ? (
-              <div className="space-y-4 max-h-[520px] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300 pr-2">
-                {formFields.map((f, idx) => (
-                  <FieldRow key={f._uid} field={f} index={idx} />
-                ))}
+              <div 
+                ref={fieldsContainerRef}
+                className="space-y-4 max-h-[520px] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300 pr-2"
+              >
+                <AnimatePresence mode="popLayout">
+                  {formFields.map((f, idx) => (
+                    <FieldRow 
+                      key={f._uid} 
+                      field={f} 
+                      index={idx}
+                      isNew={idx === formFields.length - 1 && editingMap[idx]}
+                    />
+                  ))}
+                </AnimatePresence>
               </div>
             ) : (
-              <div
-                className="rounded-3xl border border-dashed p-10 text-center"
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="rounded-md border border-dashed p-12 text-center"
                 style={{
-                  borderColor: 'rgba(148, 163, 184, 0.7)',
-                  background: 'rgba(255,255,255,0.65)',
-                  boxShadow: '0 12px 24px rgba(15,23,42,0.06)',
+                  borderColor: 'var(--color-primary-300)',
+                  background: 'rgba(255,255,255,0.7)',
                 }}
               >
-                <div
-                  className="mx-auto mb-4 grid place-items-center rounded-3xl"
-                  style={{
-                    width: 72,
-                    height: 72,
-                    background:
-                      'linear-gradient(135deg, rgba(226,232,240,0.9), rgba(241,245,249,0.9))',
-                  }}
-                >
+                <IconBadge size="lg">
                   <Layers className="w-8 h-8 text-slate-400" />
-                </div>
-                <div className="text-slate-700 font-semibold">{t('empty.no_fields')}</div>
-              </div>
+                </IconBadge>
+                <div className="mt-4 text-slate-700 font-bold text-lg">{t('empty.no_fields')}</div>
+              </motion.div>
             )}
           </div>
 
           {/* Footer */}
           <div
             className="flex justify-end gap-3 pt-4"
-            style={{ borderTop: '1px solid rgba(226,232,240,0.9)' }}
+            style={{ borderTop: '2px solid var(--color-primary-200)' }}
           >
-            <button
+            <motion.button
               type="button"
               onClick={() => setShowFormModal(false)}
-              className="inline-flex items-center justify-center h-11 px-6 rounded-2xl border bg-white text-slate-700 font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 active:scale-[0.99]"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="inline-flex items-center h-11 px-6 rounded-lg border bg-white text-slate-700 font-bold"
               style={{
-                borderColor: 'rgba(226,232,240,0.9)',
-                boxShadow: '0 10px 22px rgba(15,23,42,0.06)',
-                ['--tw-ring-color']: 'rgba(148,163,184,0.4)',
+                borderColor: 'var(--color-primary-200)',
+                boxShadow: '0 8px 20px rgba(15,23,42,0.08)',
               }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'white')}
             >
               {t('actions.cancel')}
-            </button>
+            </motion.button>
 
-            <button
+            <motion.button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-2xl text-white font-semibold transition-all focus-visible:outline-none focus-visible:ring-4 active:scale-[0.99]"
+              whileHover={{ scale: loading ? 1 : 1.02 }}
+              whileTap={{ scale: loading ? 1 : 0.98 }}
+              className="inline-flex items-center gap-2 h-11 px-6 rounded-lg text-white font-bold"
               style={{
-                borderColor: 'transparent',
-                background: isEditing
-                  ? 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))'
-                  : 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                boxShadow: '0 18px 34px rgba(15,23,42,0.14)',
-                opacity: loading ? 0.75 : 1,
+                background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+                boxShadow: '0 12px 30px rgba(15,23,42,0.15)',
+                opacity: loading ? 0.7 : 1,
                 cursor: loading ? 'not-allowed' : 'pointer',
-                ['--tw-ring-color']: 'var(--color-primary-200)',
               }}
             >
               {loading ? (
-                <svg className="animate-spin w-5 h-5 text-white" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
-                  />
-                </svg>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                >
+                  <Zap className="w-5 h-5" />
+                </motion.div>
               ) : (
                 <>
                   {isEditing ? <FiEdit2 className="w-5 h-5" /> : <FiPlus className="w-5 h-5" />}
                   <span>{isEditing ? t('edit.cta') : t('create.cta')}</span>
                 </>
               )}
-            </button>
+            </motion.button>
           </div>
         </form>
       </Modal>
+
+      {/* Add custom animations */}
+      <style jsx global>{`
+        @keyframes field-highlight {
+          0%, 100% {
+            background-color: transparent;
+          }
+          50% {
+            background-color: var(--color-primary-100);
+          }
+        }
+      `}</style>
     </div>
   );
 }
