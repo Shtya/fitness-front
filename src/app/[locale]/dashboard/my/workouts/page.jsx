@@ -161,12 +161,11 @@ const cx = (...c) => c.filter(Boolean).join(' ');
 
 function ThemeFrame({ children, className = '' }) {
 	return (
-		<div className={cx('rounded-2xl p-[1px]', className)}>
+		<div className={cx('md:rounded-2xl md:p-[1px]', className)}>
 			<div
-				className='rounded-2xl border bg-white/85 backdrop-blur-xl'
+				className='md:rounded-2xl md:border md:bg-white/85 md:backdrop-blur-xl'
 				style={{
 					borderColor: 'var(--color-primary-200)',
-					boxShadow: '0 1px 0 rgba(15, 23, 42, 0.04), 0 18px 40px rgba(15, 23, 42, 0.10)',
 				}}
 			>
 				{children}
@@ -1283,7 +1282,7 @@ export default function MyWorkoutsPage() {
 					{/* LEFT */}
 					<div className='w-full lg:flex-1 min-w-0'>
 						<ThemeFrame>
-							<div className={cx('p-3 md:p-4', !hasExercises && 'py-6')}>
+							<div className={cx(' md:p-4', !hasExercises && 'py-6')}>
 								{!hasExercises ? (
 									<div className='relative flex flex-col items-center justify-center rounded-3xl border border-dashed p-6 text-center'>
 										<div
@@ -1302,8 +1301,7 @@ export default function MyWorkoutsPage() {
 									<>
 
 
-										{/* SECTION TABS - Enhanced */}
-										<div className='pt-1'>
+										<div className={`pt-1 ${sectionTabs?.length == 1 && "hidden"}`}>
 											<div
 												className='rounded-2xl p-1 inline-flex w-full sm:w-auto border backdrop-blur-md shadow-lg relative overflow-hidden'
 												style={{
@@ -1417,10 +1415,7 @@ export default function MyWorkoutsPage() {
 
 										{/* Media */}
 										<div className='mt-3'>
-											<div
-												className='relative w-full rounded-2xl overflow-hidden border bg-white'
-												style={{ borderColor: 'var(--color-primary-200)' }}
-											>
+											<div className=' mb-[60px] relative w-full rounded-[20px_20px_0_0] border bg-white' style={{ borderColor: 'var(--color-primary-200)' }}>
 												<div className='max-md:h-[250px] md:aspect-[16/9]'>
 													{currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? (
 														<InlineVideo key={currentExercise.id + '-video'} src={currentExercise[activeMedia]} />
@@ -1436,17 +1431,102 @@ export default function MyWorkoutsPage() {
 													)}
 												</div>
 
-												{/* Media switcher */}
+ 												{currentExercise && (() => {
+													const reps = normalizeReps(currentExercise?.targetReps);
+													const tempo = normalizeTempo(currentExercise?.tempo);
+ 
+													return (
+														<div className='absolute  w-[calc(100%+3px)] overflow-hidden top-full rounded-[0_0_20px_20px] left-[-1.5px] pointer-events-none' >
+															{/* Main Stats Bar */}
+															<div
+																className='relative overflow-hidden'
+																style={{
+  background: `linear-gradient(to top, 
+    color-mix(in srgb, var(--color-primary-600) 75%, black 20%) 0%, 
+    color-mix(in srgb, var(--color-primary-500) 50%, black 10%) 50%, 
+    transparent 100%)`,
+  backdropFilter: 'blur(12px)',
+}}
+															>
+																<div className='px-3 py-3 md:px-4 md:py-3.5'>
+																	<div className='flex items-center justify-between gap-3'>
+																		{/* Reps Stat */}
+																		<div className='flex items-center gap-2 flex-1'>
+																			<div
+																				className='w-9 h-9 rounded-xl flex items-center justify-center shadow-lg'
+																				style={{
+																					background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600))',
+																				}}
+																			>
+																				<Repeat size={18} className='text-white' strokeWidth={2.5} />
+																			</div>
+																			<div>
+																				<div className='text-[10px] font-semibold uppercase tracking-wider text-white/60'>
+																					{t("notes.reps")}
+																				</div>
+																				<div className='text-lg font-black text-white leading-none mt-0.5'>
+																					{reps || '-'}
+																				</div>
+																			</div>
+																		</div>
+
+																		{/* Divider */}
+																		<div className='h-10 w-px bg-white/20'></div>
+
+																		{/* Tempo Stat */}
+																		<div className='flex items-center gap-2 flex-1'>
+																			<div
+																				className='w-9 h-9 rounded-xl flex items-center justify-center shadow-lg'
+																				style={{
+																					background: 'linear-gradient(135deg, var(--color-primary-400), var(--color-primary-500))',
+																				}}
+																			>
+																				<Timer size={18} className='text-white' strokeWidth={2.5} />
+																			</div>
+																			<div>
+																				<div className='text-[10px] font-semibold uppercase tracking-wider text-white/60'>
+																					{t("notes.tempo")}
+																				</div>
+																				<div className='text-lg font-black text-white leading-none mt-0.5'>
+																					{tempo || '-'}
+																				</div>
+																			</div>
+																		</div>
+ 
+																	</div>
+ 
+																</div>
+
+																{/* Subtle top glow accent */}
+																<div
+																	className='absolute top-0 left-0 right-0 h-px'
+																	style={{
+																		background: 'linear-gradient(to right, transparent, var(--color-primary-400), transparent)',
+																		opacity: 0.4,
+																	}}
+																></div>
+															</div>
+														</div>
+													);
+												})()}
+
+												{/* Media switcher - Adjusted position to not overlap */}
 												{(() => {
 													const hasImg = !!currentExercise?.img;
 													const hasVideo1 = !!currentExercise?.video;
 													const hasVideo2 = !!currentExercise?.video2;
+													const note = String(currentExercise?.note ?? '').trim();
 
 													return (
 														<div
 															className={cx(
 																'absolute right-2 md:right-3 flex items-center gap-2',
-																activeMedia === 'video' ? 'bottom-[70px]' : 'bottom-2 md:bottom-3',
+																// Adjust bottom position based on whether note exists and media type
+																activeMedia === 'video'
+																	? 'bottom-[70px]'
+																	: note
+																		? 'bottom-[90px]'
+																		: 'bottom-[60px]',
 															)}
 														>
 															<div className='inline-flex max-md:flex-col items-center gap-1 rounded-2xl bg-white/70 p-1 ring-1 ring-black/5 backdrop-blur-md'>
@@ -1561,7 +1641,7 @@ export default function MyWorkoutsPage() {
 											/>
 										) : (
 											<>
-												<ExerciseNotesBar exercise={currentExercise} t={t} />
+												{/* <ExerciseNotesBar exercise={currentExercise} t={t} /> */}
 												<SoftCard className='mt-3 overflow-hidden shadow-sm'>
 													<div className='overflow-x-auto'>
 														<table className='w-full text-sm'>
@@ -1645,7 +1725,7 @@ export default function MyWorkoutsPage() {
 																					inputMode='decimal'
 																					placeholder='0'
 																					aria-label={t('table.weight')}
-																					className='text-center h-8 w-[90px] text-sm font-semibold tabular-nums rounded-lg border bg-white outline-none px-[26px] transition-all duration-150'
+																					className='text-center h-[40px] w-[110px] text-base font-semibold tabular-nums rounded-lg border bg-white outline-none px-[26px] transition-all duration-150'
 																					style={{
 																						borderColor: 'var(--color-primary-200)',
 																					}}
@@ -1656,7 +1736,7 @@ export default function MyWorkoutsPage() {
 																					onClick={() => bump(s.id, 'weight', -1)}
 																					title={t('minusOne')}
 																					aria-label={t('minusOne')}
-																					className='absolute left-[3px] top-1/2 -translate-y-1/2 grid h-[26px] w-[26px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
+																					className='absolute left-[3px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
 																					style={{
 																						background: 'linear-gradient(135deg, var(--color-primary-50), white)',
 																						border: `1px solid var(--color-primary-200)`,
@@ -1672,7 +1752,7 @@ export default function MyWorkoutsPage() {
 																					onClick={() => bump(s.id, 'weight', +1)}
 																					title={t('plusOne')}
 																					aria-label={t('plusOne')}
-																					className='absolute right-[3px] top-1/2 -translate-y-1/2 grid h-[26px] w-[26px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
+																					className='absolute right-[3px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
 																					style={{
 																						background: 'linear-gradient(135deg, var(--color-primary-50), white)',
 																						border: `1px solid var(--color-primary-200)`,
@@ -1708,7 +1788,7 @@ export default function MyWorkoutsPage() {
 																					inputMode='numeric'
 																					placeholder='0'
 																					aria-label={t('table.reps')}
-																					className='text-center h-8 w-[90px] text-sm font-semibold tabular-nums rounded-lg border bg-white outline-none px-[26px] transition-all duration-150'
+																					className='text-center h-[40px] w-[110px] text-base font-semibold tabular-nums rounded-lg border bg-white outline-none px-[26px] transition-all duration-150'
 																					style={{ borderColor: 'var(--color-primary-200)' }}
 																				/>
 
@@ -1717,7 +1797,7 @@ export default function MyWorkoutsPage() {
 																					onClick={() => bump(s.id, 'reps', -1)}
 																					title={t('minusOne')}
 																					aria-label={t('minusOne')}
-																					className='absolute left-[3px] top-1/2 -translate-y-1/2 grid h-[26px] w-[26px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
+																					className='absolute left-[3px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
 																					style={{
 																						background: 'linear-gradient(135deg, var(--color-primary-50), white)',
 																						border: `1px solid var(--color-primary-200)`,
@@ -1733,7 +1813,7 @@ export default function MyWorkoutsPage() {
 																					onClick={() => bump(s.id, 'reps', +1)}
 																					title={t('plusOne')}
 																					aria-label={t('plusOne')}
-																					className='absolute right-[3px] top-1/2 -translate-y-1/2 grid h-[26px] w-[26px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
+																					className='absolute right-[3px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
 																					style={{
 																						background: 'linear-gradient(135deg, var(--color-primary-50), white)',
 																						border: `1px solid var(--color-primary-200)`,
@@ -1974,7 +2054,7 @@ function ExerciseNotesBar({ exercise, t }) {
 				background: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.8))',
 				borderColor: 'var(--color-primary-200)',
 			}}
-			className='mt-2 rounded-xl  shadow-sm border overflow-hidden'
+			className='mt-2 rounded-xl border overflow-hidden'
 		>
 
 
