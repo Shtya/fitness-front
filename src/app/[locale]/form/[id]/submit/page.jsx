@@ -1552,7 +1552,7 @@ export default function FormSubmissionPage() {
 				headers: { 'Content-Type': 'multipart/form-data' },
 			});
 
-			if (form?.id) localStorage.removeItem(buildDraftKey(form.id));
+			// if (form?.id) localStorage.removeItem(buildDraftKey(form.id));
 
 			toast.success(t('messages.submit_success'));
 			router.push('/thank-you');
