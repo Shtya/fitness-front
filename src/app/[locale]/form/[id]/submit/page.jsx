@@ -52,7 +52,7 @@ import MultiLangText from '@/components/atoms/MultiLangText';
 // Theme
 import { useTheme } from '@/app/[locale]/theme';
 
- 
+
 const COUNTRY_META = {
 	'+20': {
 		iso2: 'EG',
@@ -2017,12 +2017,12 @@ export default function FormSubmissionPage() {
 						className="fixed bottom-6 left-0 right-0 px-4 sm:px-6 lg:px-8 pointer-events-none z-30"
 					>
 						<div className="max-w-5xl mx-auto">
-							<div className="rounded-2xl bg-white/95 backdrop-blur-xl shadow-2xl border-2 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pointer-events-auto" style={{ borderColor: colors.primary[200] }}>
+							<div className=" max-md:flex-row max-md:justify-center rounded-2xl bg-white/95 backdrop-blur-xl shadow-2xl border-2 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pointer-events-auto" style={{ borderColor: colors.primary[200] }}>
 								<div className="flex items-center gap-3">
 									<div className="hidden sm:flex w-10 h-10 rounded-xl items-center justify-center" style={{ background: `linear-gradient(135deg, ${colors.primary[100]}, ${colors.primary[50]})` }}>
 										<FiAlertCircle style={{ color: colors.primary[600] }} size={20} />
 									</div>
-									<p className="text-base font-medium" style={{ color: colors.primary[700] }}>
+									<p className=" w-full max-md:text-sm max-md:text-center text-base font-medium" style={{ color: colors.primary[700] }}>
 										{t('footer.review_before_submit')}
 									</p>
 								</div>
@@ -2032,7 +2032,7 @@ export default function FormSubmissionPage() {
 									disabled={isSubmitting}
 									whileHover={{ scale: 1.02 }}
 									whileTap={{ scale: 0.98 }}
-									className="w-full sm:w-auto px-8 py-3 rounded-xl font-semibold text-white shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+									className=" max-md:w-fit max-md:px-4 w-full sm:w-auto px-8 py-3 max-md:py-4 rounded-xl font-semibold text-white shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
 									style={{
 										background: `linear-gradient(to right, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
 										boxShadow: `0 4px 12px ${colors.primary[200]}`,
@@ -2043,12 +2043,12 @@ export default function FormSubmissionPage() {
 									{isSubmitting ? (
 										<>
 											<motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-											<span>{t('cta.submitting')}</span>
+											<span className='max-md:hidden' >{t('cta.submitting')}</span>
 										</>
 									) : (
 										<>
 											<FiSend size={18} />
-											<span>{t('cta.submit')}</span>
+											<span className='max-md:hidden' >{t('cta.submit')}</span>
 										</>
 									)}
 								</motion.button>
@@ -2106,7 +2106,7 @@ function PrettyFileInput({
 					}}
 				/>
 
-				<div className="flex items-start justify-between gap-3">
+				<div className="flex max-md:flex-col items-center justify-between gap-3">
 					<div className="min-w-0 flex-1">
 						{valueNames?.length ? (
 							<div className="space-y-1">
@@ -2117,14 +2117,12 @@ function PrettyFileInput({
 								))}
 							</div>
 						) : (
-							<p className="text-base font-medium truncate" style={{ color: colors.primary[900] }}>
-								{t('fileInput.no_files_selected')}
-							</p>
-						)}
-
-						<p className="text-xs mt-2" style={{ color: colors.primary[600] }}>
-							{t('fileInput.helper')}
-						</p>
+							<div>
+								<p className="text-base font-medium truncate" style={{ color: colors.primary[900] }}>
+									{t('fileInput.no_files_selected')}
+								</p> 
+							</div>
+						)} 
 					</div>
 
 					<div className="flex items-center gap-2 flex-shrink-0">
