@@ -4,7 +4,7 @@ import axios from 'axios';
 export const baseImg = process.env.NEXT_PUBLIC_BASE_URL;
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BASE_URL + '/api/v1',
-  timeout: 30000,
+  timeout: 120000,
 });
 
 // Detect lang from current URL

@@ -1548,9 +1548,7 @@ export default function FormSubmissionPage() {
 
 			fd.append('answers', JSON.stringify(answersOnly));
 
-			await api.post(`/forms/${params.id}/submit`, fd, {
-				headers: { 'Content-Type': 'multipart/form-data' },
-			});
+			await api.post(`/forms/${params.id}/submit`, fd);
 
 			// if (form?.id) localStorage.removeItem(buildDraftKey(form.id));
 
@@ -2120,9 +2118,9 @@ function PrettyFileInput({
 							<div>
 								<p className="text-base font-medium truncate" style={{ color: colors.primary[900] }}>
 									{t('fileInput.no_files_selected')}
-								</p> 
+								</p>
 							</div>
-						)} 
+						)}
 					</div>
 
 					<div className="flex items-center gap-2 flex-shrink-0">

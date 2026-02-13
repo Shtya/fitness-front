@@ -2217,7 +2217,7 @@
       "category": "Select a category",
       "details": "Execution tips, body position, target muscle...",
       "tag": "Type the muscle name and press Enter",
-      "mediaUrl": "Upload an image or provide a valid URL",
+      "mediaUrl": "Upload an image, paste an image directly, or provide a URL",
       "mediaUrlVideo": "Upload a video or provide a valid URL",
       "search": "Search by name…",
       "perPage": "Items per page"
@@ -2859,9 +2859,8 @@
     }
   },
 
-   
   "publicForm": {
-		"fileInput": {
+    "fileInput": {
       "no_files_selected": "No files selected",
       "helper": "Click “Choose files” to upload.",
       "remove_all": "Remove all",
@@ -2931,7 +2930,7 @@
       "create_from_query": "Create \"{value}\""
     }
   },
- 
+
   "submissions": {
     "header": {
       "title": "Form Submissions",

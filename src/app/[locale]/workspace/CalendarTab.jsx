@@ -1,3 +1,13 @@
+/* 
+	fix the two side scroll 
+	- fix when i click on the edit action on the sidebar open also the edit modal in the calendar 
+
+	- in hte edit when click on the dropdown close the popover
+	- add action to detle the types that not global 
+
+	- handle the color of the card ( text , background )
+*/
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";

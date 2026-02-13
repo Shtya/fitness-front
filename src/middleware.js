@@ -73,8 +73,7 @@ const PUBLIC_PREFIXES = [
   /^\/workouts\/plans(?:\/|$)/, 
   /^\/(?!auth|dashboard|api|_next|favicon\.ico|public|thank-you|form|workouts)([^/]+)(?:\/|$)/,
 ];
-
-
+ 
 function normalize(p) {
   if (!p) return '/';
   if (p !== '/' && p.endsWith('/')) return p.slice(0, -1);
