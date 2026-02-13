@@ -193,14 +193,7 @@ export const NAV = [
 				],
 			},
 		],
-	},
-	// {
-	// 	role: 'admin',
-	// 	sectionKey: 'sections.dashboard',
-	// 	items: [
-	// 		{ nameKey: 'overview', href: '/dashboard', icon: LayoutDashboard },
-	// 	],
-	// },
+	}, 
 	{
 		role: 'admin',
 		sectionKey: 'sections.management',

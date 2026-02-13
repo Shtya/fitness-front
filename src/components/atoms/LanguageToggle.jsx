@@ -204,4 +204,4 @@ export default function LanguageToggle({ className = '', size = 35 }) {
 			</AnimatePresence>
 		</motion.button>
 	);
-}
+} 

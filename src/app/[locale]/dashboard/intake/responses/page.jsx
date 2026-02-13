@@ -568,6 +568,7 @@ function InfoRow({ k, v, mono }) {
 }
 
 function renderAnswers(submission, forms, t) {
+	console.log(submission);
 	const form = forms.find(f => f.id == (submission.form_id ?? submission.form?.id));
 	const fieldsByKey = new Map((form?.fields || []).map(fld => [fld.key, fld]));
 	const entries = Object.entries(submission.answers || {});
@@ -576,13 +577,61 @@ function renderAnswers(submission, forms, t) {
 		return <div className="text-slate-600">{t('detail.no_answers')}</div>;
 	}
 
+	// ---- helpers ----
+	const isUrl = (s) => typeof s === 'string' && /^(https?:)?\/\//i.test(s.trim());
+	const isProbablyPath = (s) => typeof s === 'string' && /\/uploads\/|^uploads\/|^\/uploads\//i.test(s.trim());
+	const isImageUrl = (s) =>
+		typeof s === 'string' &&
+		/\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/i.test(s.trim());
+
+	const normalizeUrl = (raw) => {
+		if (!raw || typeof raw !== 'string') return '';
+		const cleaned = raw.replace(/\\/g, '/').trim();
+
+		// absolute URL -> keep as is
+		if (isUrl(cleaned)) return cleaned;
+
+		// relative path -> prefix with baseImg (if you use it)
+		// NOTE: baseImg must be defined in your scope like before.
+		if (typeof baseImg !== 'undefined' && baseImg) {
+			if (cleaned.startsWith('/')) return `${baseImg}${cleaned}`;
+			return `${baseImg}/${cleaned}`;
+		}
+
+		// fallback
+		return cleaned;
+	};
+
+	const extractFiles = (value) => {
+		// if value is array => treat as files list (common for file fields)
+		if (Array.isArray(value)) {
+			return value
+				.filter(v => typeof v === 'string' && v.trim())
+				.map(v => v.replace(/\\/g, '/').trim());
+		}
+
+		// if value is string:
+		if (typeof value === 'string') {
+			const v = value.trim();
+			// legacy: "upload...." or paths
+			if (v.toLowerCase().startsWith('upload') || isUrl(v) || isProbablyPath(v)) {
+				return [v.replace(/\\/g, '/').trim()];
+			}
+		}
+
+		return [];
+	};
+
 	return entries.map(([key, value]) => {
 		const fld = fieldsByKey.get(key);
 		const label = fld?.label || key;
 
-		const isUploadImage = typeof value === 'string' && value.trim().toLowerCase().startsWith('upload');
-		const imgSrc = isUploadImage ? value.replace(/\\/g, '/') : null;
+		const files = extractFiles(value);
 
+		// image files only (for preview grid)
+		const imageFiles = files.filter(isImageUrl);
+
+		// printable fallback for non-file answers
 		const out =
 			value == null
 				? ''
@@ -619,24 +668,77 @@ function renderAnswers(submission, forms, t) {
 				</div>
 
 				<div className="mt-3 text-sm text-slate-900 break-words">
-					{isUploadImage ? (
-						<a
-							href={baseImg + '/' + imgSrc}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="w-full inline-flex flex-col gap-2"
-						>
-							<div
-								className="rounded-2xl border overflow-hidden"
-								style={{ borderColor: 'var(--color-primary-200)' }}
-							>
-								<Img src={imgSrc} alt={label} className="w-full h-[220px] object-cover" />
+					{/* ✅ IMAGE PREVIEW GRID (when image urls exist) */}
+					{imageFiles.length > 0 ? (
+						<div className="w-full">
+							{console.log(imageFiles)}
+							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+								{imageFiles.map((rawUrl, idx) => {
+									const href = normalizeUrl(rawUrl);
+									return (
+										<a
+											key={`${key}-img-${idx}`}
+											href={href}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="block"
+										>
+											<div
+												className="rounded-2xl border overflow-hidden"
+												style={{ borderColor: 'var(--color-primary-200)' }}
+											>
+												{/* use Img with the FINAL url */}
+												<Img
+													src={rawUrl}
+													alt={`${label} ${idx + 1}`}
+													className="aspect-square object-cover"
+												/>
+											</div> 
+										</a>
+									);
+								})}
 							</div>
-							<div className="text-xs text-slate-600">
-								<span className="font-semibold">{t('labels.open', { default: 'Open' })}:</span>{' '}
-								{imgSrc}
-							</div>
-						</a>
+
+							{/* ✅ show non-image files too if they exist */}
+							{files.length > imageFiles.length && (
+								<div className="mt-3 space-y-2">
+									{files
+										.filter(u => !isImageUrl(u))
+										.map((rawUrl, idx) => {
+											const href = normalizeUrl(rawUrl);
+											return (
+												<a
+													key={`${key}-file-${idx}`}
+													href={href}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-xs underline text-slate-700"
+												>
+													{t('labels.open', { default: 'Open' })}: {rawUrl}
+												</a>
+											);
+										})}
+								</div>
+							)}
+						</div>
+					) : files.length > 0 ? (
+						/* ✅ FILE LINKS (non-image or unknown extension) */
+						<div className="space-y-2">
+							{files.map((rawUrl, idx) => {
+								const href = normalizeUrl(rawUrl);
+								return (
+									<a
+										key={`${key}-link-${idx}`}
+										href={href}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="text-sm underline text-slate-700"
+									>
+										{t('labels.open', { default: 'Open' })}: {rawUrl}
+									</a>
+								);
+							})}
+						</div>
 					) : out ? (
 						<MultiLangText>{out}</MultiLangText>
 					) : (
@@ -647,11 +749,11 @@ function renderAnswers(submission, forms, t) {
 				<div
 					className="mt-4 h-px"
 					style={{
-						background:
-							'linear-gradient(90deg, transparent, var(--color-primary-200), transparent)',
+						background: 'linear-gradient(90deg, transparent, var(--color-primary-200), transparent)',
 					}}
 				/>
 			</div>
 		);
 	});
 }
+

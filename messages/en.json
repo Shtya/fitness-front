@@ -2861,6 +2861,12 @@
 
    
   "publicForm": {
+		"fileInput": {
+      "no_files_selected": "No files selected",
+      "helper": "Click “Choose files” to upload.",
+      "remove_all": "Remove all",
+      "choose_files": "Choose files"
+    },
     "messages": {
       "load_failed": "An error occurred while loading the form.",
       "submit_success": "Form submitted successfully.",

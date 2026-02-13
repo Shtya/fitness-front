@@ -2,8 +2,8 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL+ "/api/v1"
 
 export const api = {
-  // Generic request method
-  async request(endpoint, options = {}) {
+
+	async request(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
     const token = localStorage.getItem('token');
 
