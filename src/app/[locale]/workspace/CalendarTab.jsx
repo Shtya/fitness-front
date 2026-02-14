@@ -6,6 +6,8 @@
 	- add action to detle the types that not global 
 
 	- handle the color of the card ( text , background )
+
+	- add note when i create eth item 
 */
 
 "use client";

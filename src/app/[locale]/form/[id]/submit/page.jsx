@@ -9,7 +9,7 @@ import React, {
 	useState,
 	useCallback,
 } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -1310,6 +1310,9 @@ export default function FormSubmissionPage() {
 	const [fileNames, setFileNames] = useState({});
 	const [clientIp, setClientIp] = useState('');
 
+	const searchParams = useSearchParams();
+	const reportTo = searchParams.get('report_to'); 
+
 	// Fetch form (public)
 	useEffect(() => {
 		fetchForm();
@@ -1548,12 +1551,12 @@ export default function FormSubmissionPage() {
 
 			fd.append('answers', JSON.stringify(answersOnly));
 
-			await api.post(`/forms/${params.id}/submit`, fd);
+			await api.post(`/forms/${params.id}/submit?report_to=${encodeURIComponent(reportTo)}`, fd);
 
-			// if (form?.id) localStorage.removeItem(buildDraftKey(form.id));
+			if (form?.id) localStorage.removeItem(buildDraftKey(form.id));
 
 			toast.success(t('messages.submit_success'));
-			router.push('/thank-you');
+			// router.push('/thank-you');
 		} catch (e) {
 			console.error(e);
 			const msg = e?.response?.data?.message || t('messages.submit_failed');

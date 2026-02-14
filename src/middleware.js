@@ -23,6 +23,8 @@ export const NAV_HREFS = {
     '/dashboard/chat',
     '/dashboard/calculator',
 		'/dashboard/my-account',
+		'/dashboard/intake/forms',
+		'/dashboard/intake/responses',
   ],
   admin: [
     '/dashboard/users',

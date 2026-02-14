@@ -161,6 +161,23 @@ export const NAV = [
 		],
 	},
 
+
+	{
+		role: 'coach',
+		sectionKey: 'sections.clientIntake',
+		items: [
+			{
+				nameKey: 'clientIntake',
+				icon: FaUsers,
+				expand: false,
+				children: [
+					{ nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FaWpforms },
+					{ nameKey: 'responses', href: '/dashboard/intake/responses', icon: FaInbox },
+				],
+			},
+		],
+	},
+
 	{
 		role: 'coach',
 		sectionKey: 'sections.tools',
