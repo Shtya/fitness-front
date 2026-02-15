@@ -174,7 +174,7 @@ export default function CardioTimerCard({
       `}</style>
 
       <div
-        className='relative rounded-2xl border backdrop-blur shadow-lg transition-all duration-500'
+        className='relative rounded-lg border backdrop-blur shadow-lg transition-all duration-500'
         style={{
           background: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.95))',
           borderColor: 'var(--color-primary-200)',
@@ -445,7 +445,7 @@ export default function CardioTimerCard({
         {!!note && (
           <div className='px-3 pb-3'>
             <div
-              className='rounded-xl border px-3 py-2 text-xs'
+              className='rounded-lg border px-3 py-2 text-xs'
               style={{
                 borderColor: 'var(--color-primary-200)',
                 background: 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))',

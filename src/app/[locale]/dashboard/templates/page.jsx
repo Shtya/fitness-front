@@ -207,7 +207,7 @@ export default function TemplatesPage() {
         </div>
 
         {error ? (
-          <div className="mt-6 rounded-xl border p-4 text-sm text-red-500">
+          <div className="mt-6 rounded-lg border p-4 text-sm text-red-500">
             {error}
           </div>
         ) : null}
@@ -283,7 +283,7 @@ export default function TemplatesPage() {
                       <button
                         key={th.id}
                         onClick={() => setSelectedTheme(th)}
-                        className={`w-full text-left rounded-xl border px-4 py-3 transition ${
+                        className={`w-full text-left rounded-lg border px-4 py-3 transition ${
                           active ? "border-primary" : "hover:bg-muted/50"
                         }`}
                       >
@@ -392,7 +392,7 @@ export default function TemplatesPage() {
                   This will take the final HTML (with edits + theme) and send it to your backend.
                 </div>
 
-                <div className="rounded-xl border p-3 text-sm">
+                <div className="rounded-lg border p-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Template</span>
                     <span className="font-semibold">{selectedTemplate?.title || "—"}</span>

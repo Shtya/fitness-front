@@ -645,7 +645,7 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 								<MultiLangText className='truncate text-base font-semibold text-slate-900'>{p.name}</MultiLangText>
 								<span
 									className={[
-										'inline-flex items-center gap-1 rounded-md px-2 py-0.5   ring-1 ring-inset',
+										'inline-flex items-center gap-1 rounded-lg px-2 py-0.5   ring-1 ring-inset',
 										active ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-slate-100 text-slate-600 ring-slate-200',
 									].join(' ')}
 								>
@@ -746,10 +746,10 @@ const PlanPreview = memo(function PlanPreview({ plan }) {
 					const hasExercises = exercises.length > 0;
 
 					return (
-						<section key={d.id || idx} className='rounded-xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden'>
+						<section key={d.id || idx} className='rounded-lg border border-slate-200 bg-white/90 shadow-sm overflow-hidden'>
 							<header className='flex items-center justify-between gap-2 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-3'>
 								<div className='flex items-center gap-2'>
-									<span className='inline-flex h-8 w-8 items-center justify-center rounded-xl bg-[color:var(--color-primary-100)] text-xs font-semibold text-[color:var(--color-primary-700)]'>
+									<span className='inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[color:var(--color-primary-100)] text-xs font-semibold text-[color:var(--color-primary-700)]'>
 										{idx + 1}
 									</span>
 									<MultiLangText className='font-semibold text-slate-900'>{d.name}</MultiLangText>
@@ -774,7 +774,7 @@ const PlanPreview = memo(function PlanPreview({ plan }) {
 											return (
 												<li
 													key={ex.id || ex.exerciseId || i}
-													className='group relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-xs transition-all hover:-translate-y-[1px] hover:border-[color:var(--color-primary-200)] hover:shadow-md'
+													className='group relative flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-xs transition-all hover:-translate-y-[1px] hover:border-[color:var(--color-primary-200)] hover:shadow-md'
 												>
 													<span className='pointer-events-none absolute top-0 rtl:-right-0 ltr:-left-0 z-10 inline-flex h-6 w-6 items-center justify-center rtl:rounded-[0_10px_0_10px] ltr:rounded-[10px_0_10px_0] bg-[color:var(--color-primary-500)] text-[11px] font-semibold text-white shadow-md'>
 														{i + 1}
@@ -827,7 +827,7 @@ const PlanPreview = memo(function PlanPreview({ plan }) {
 					);
 				})}
 
-				{!days.length && <div className='rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-sm text-slate-500'>{t('preview.noDaysYet')}</div>}
+				{!days.length && <div className='rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-sm text-slate-500'>{t('preview.noDaysYet')}</div>}
 			</div>
 
 			<footer className='rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5 text-[11px] text-slate-500'>
@@ -1450,7 +1450,7 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 			))}
 
 			{previewImg && (
-				<div className='fixed inset-0 z-50 flex items-center justify-center rounded-md bg-black/70 backdrop-blur-xs' onClick={() => setPreviewImg(null)}>
+				<div className='fixed inset-0 z-50 flex items-center justify-center rounded-lg bg-black/70 backdrop-blur-xs' onClick={() => setPreviewImg(null)}>
 					<div className='max-w-[90vw] max-h-[90vh] p-4'>
 						<Img src={previewImg} alt={t('actions.preview')} className='max-h-[90vh] h-full max-w-full rounded-lg bg-white' onClick={e => e.stopPropagation()} />
 					</div>
@@ -1484,7 +1484,7 @@ const MiniField = memo(function MiniField({ cnParent, value, placeholder, inputM
 				onChange={onChange}
 				onBlur={onBlur}
 				className={[
-					'h-8 w-full rounded-md border px-2 text-[12px]',
+					'h-8 w-full rounded-lg border px-2 text-[12px]',
 					iconLeft ? 'pl-8' : '',
 					'bg-white outline-none transition',
 					'focus:ring-4 focus:ring-[color:var(--color-primary-200)]/25 focus:border-[color:var(--color-primary-400)]',
@@ -1516,7 +1516,7 @@ const MiniTextArea = memo(function MiniTextArea({ value, placeholder, onChange, 
 				placeholder={hasValue ? '' : placeholder}
 				onChange={(e) => onChange?.(e.target.value)}
 				className={[
-					'w-full rounded-md border px-2 py-2 text-[12px] resize-none',
+					'w-full rounded-lg border px-2 py-2 text-[12px] resize-none',
 					'bg-white outline-none transition',
 					'focus:ring-4 focus:ring-[color:var(--color-primary-200)]/25 focus:border-[color:var(--color-primary-400)]',
 					hasValue ? 'border-[color:var(--color-primary-300)] hover:border-[color:var(--color-primary-400)]' : 'border-slate-200 hover:border-slate-300',

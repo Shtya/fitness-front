@@ -179,7 +179,7 @@ function EnhancedExerciseCard({ exercise, locale }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl sm:rounded-3xl overflow-hidden mb-3 sm:mb-4 shadow-xl animate-fade-in">
+    <div className="bg-white rounded-lg sm:rounded-lg overflow-hidden mb-3 sm:mb-4 shadow-xl animate-fade-in">
       {/* Exercise Image - Responsive */}
       <div className="relative h-[180px] sm:h-[200px] md:h-[220px] bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-primary-200)] flex items-center justify-center">
         {/* Exercise Illustration - Responsive size */}
@@ -237,7 +237,7 @@ function EnhancedExerciseCard({ exercise, locale }) {
         </div>
 
         {/* Sets Table - Responsive */}
-        <div className="bg-gray-50 rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-4 sm:mb-5">
+        <div className="bg-gray-50 rounded-lg sm:rounded-lg p-3 sm:p-4 mb-4 sm:mb-5">
           {/* Table Header */}
           <div className="grid grid-cols-[40px_1fr_1fr] sm:grid-cols-[50px_1fr_1fr] gap-0.5 pb-2 sm:pb-3 mb-2 sm:mb-3 border-b-2 border-gray-200 text-center text-[11px] sm:text-[13px] font-bold text-gray-500">
             <div>{t("table.done")}</div>
@@ -259,7 +259,7 @@ function EnhancedExerciseCard({ exercise, locale }) {
                 <button
                   onClick={() => updateSet(index, 'done', !set.done)}
                   className={`
-                    w-4 h-4 sm:w-5 sm:h-5 rounded-md sm:rounded-lg border-0 flex items-center justify-center transition-all
+                    w-4 h-4 sm:w-5 sm:h-5 rounded-lg sm:rounded-lg border-0 flex items-center justify-center transition-all
                     ${set.done 
                       ? 'theme-gradient-bg shadow-md shadow-[var(--color-primary-500)]/30' 
                       : 'bg-white border-[2px] sm:border-[2.5px] border-gray-300'
@@ -304,10 +304,10 @@ function EnhancedExerciseCard({ exercise, locale }) {
 // ─── Counter Control Component - Responsive ──────────────────────────────────────────
 function CounterControl({ value, onIncrement, onDecrement }) {
   return (
-    <div className="flex items-center justify-center gap-0.5 bg-white px-1 sm:px-1.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl shadow-sm">
+    <div className="flex items-center justify-center gap-0.5 bg-white px-1 sm:px-1.5 py-1 sm:py-1.5 rounded-lg sm:rounded-lg shadow-sm">
       <button
         onClick={onDecrement}
-        className="w-[22px] h-[22px] sm:w-[25px] sm:h-[25px] rounded-md sm:rounded-lg bg-gray-100 border-none flex items-center justify-center transition-transform active:scale-90"
+        className="w-[22px] h-[22px] sm:w-[25px] sm:h-[25px] rounded-lg sm:rounded-lg bg-gray-100 border-none flex items-center justify-center transition-transform active:scale-90"
       >
         <Minus className="w-3 h-3 sm:w-4 sm:h-4 text-gray-700" />
       </button>
@@ -316,7 +316,7 @@ function CounterControl({ value, onIncrement, onDecrement }) {
       </span>
       <button
         onClick={onIncrement}
-        className="w-[22px] h-[22px] sm:w-[25px] sm:h-[25px] rounded-md sm:rounded-lg bg-gray-100 border-none flex items-center justify-center transition-transform active:scale-90"
+        className="w-[22px] h-[22px] sm:w-[25px] sm:h-[25px] rounded-lg sm:rounded-lg bg-gray-100 border-none flex items-center justify-center transition-transform active:scale-90"
       >
         <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-gray-700" />
       </button>
@@ -430,7 +430,7 @@ export default function ResponsiveHero() {
 
             {/* CTA Buttons - Responsive */}
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 animate-fade-in justify-center lg:justify-start" style={{ animationDelay: '400ms' }}>
-              <button className="group relative theme-gradient-bg text-white px-8 sm:px-10 md:px-12 py-4 sm:py-5 md:py-6 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg transition-all shadow-2xl shadow-[var(--color-primary-500)]/50 hover:shadow-[var(--color-primary-500)]/70 hover:scale-105 overflow-hidden w-full sm:w-auto">
+              <button className="group relative theme-gradient-bg text-white px-8 sm:px-10 md:px-12 py-4 sm:py-5 md:py-6 rounded-lg sm:rounded-lg font-bold text-base sm:text-lg transition-all shadow-2xl shadow-[var(--color-primary-500)]/50 hover:shadow-[var(--color-primary-500)]/70 hover:scale-105 overflow-hidden w-full sm:w-auto">
                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                 <span className="relative flex items-center justify-center gap-2">
                   <Zap className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -441,7 +441,7 @@ export default function ResponsiveHero() {
                 </span>
               </button>
               
-              <button className="relative bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white px-8 sm:px-10 md:px-12 py-4 sm:py-5 md:py-6 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg hover:bg-white/20 hover:border-white/50 transition-all group w-full sm:w-auto">
+              <button className="relative bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white px-8 sm:px-10 md:px-12 py-4 sm:py-5 md:py-6 rounded-lg sm:rounded-lg font-bold text-base sm:text-lg hover:bg-white/20 hover:border-white/50 transition-all group w-full sm:w-auto">
                 <span className="flex items-center justify-center gap-2">
                   <Play className="w-5 h-5 sm:w-6 sm:h-6 group-hover:scale-110 transition-transform" />
                   {t("cta.watchDemo")}
@@ -479,9 +479,9 @@ function TrustIndicators({ t }) {
     <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 pt-4 sm:pt-6 animate-fade-in" style={{ animationDelay: '500ms' }}>
       {/* Active Users Card - Responsive */}
       <div className="group relative w-full sm:w-auto">
-        <div className="absolute -inset-1 bg-gradient-to-r from-[var(--color-primary-500)] via-[var(--color-secondary-500)] to-pink-500 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-75 blur-lg transition-all duration-500 animate-pulse" />
+        <div className="absolute -inset-1 bg-gradient-to-r from-[var(--color-primary-500)] via-[var(--color-secondary-500)] to-pink-500 rounded-lg sm:rounded-lg opacity-0 group-hover:opacity-75 blur-lg transition-all duration-500 animate-pulse" />
         
-        <div className="relative flex items-center gap-3 sm:gap-4 bg-slate-800/80 backdrop-blur-xl rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 border border-slate-700/50 group-hover:border-[var(--color-primary-500)]/50 transition-all duration-300 shadow-lg">
+        <div className="relative flex items-center gap-3 sm:gap-4 bg-slate-800/80 backdrop-blur-xl rounded-lg sm:rounded-lg px-4 sm:px-6 py-3 sm:py-4 border border-slate-700/50 group-hover:border-[var(--color-primary-500)]/50 transition-all duration-300 shadow-lg">
           <div className="flex -space-x-4 sm:-space-x-6">
             {[
               { color: 'from-[var(--color-primary-400)] to-[var(--color-primary-600)]' },
@@ -529,9 +529,9 @@ function TrustIndicators({ t }) {
 function RatingCard({ t }) {
   return (
     <div className="group relative w-full sm:w-auto">
-      <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500 via-orange-500 to-yellow-500 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-75 blur-lg transition-all duration-500" />
+      <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500 via-orange-500 to-yellow-500 rounded-lg sm:rounded-lg opacity-0 group-hover:opacity-75 blur-lg transition-all duration-500" />
       
-      <div className="relative flex items-center gap-2 sm:gap-3 bg-slate-800/80 backdrop-blur-xl rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 border border-slate-700/50 group-hover:border-yellow-500/50 transition-all duration-300 shadow-lg">
+      <div className="relative flex items-center gap-2 sm:gap-3 bg-slate-800/80 backdrop-blur-xl rounded-lg sm:rounded-lg px-4 sm:px-6 py-3 sm:py-4 border border-slate-700/50 group-hover:border-yellow-500/50 transition-all duration-300 shadow-lg">
         <div className="flex gap-0">
           {[...Array(5)].map((_, i) => (
             <div
@@ -636,11 +636,11 @@ function FloatingStats({ t }) {
         return (
           <div
             key={index}
-            className={`${stat.position} max-md:hidden bg-gradient-to-br ${stat.gradient} rounded-xl sm:rounded-2xl p-2.5 sm:p-3 md:p-4 cursor-pointer transform hover:scale-110 transition-all animate-float shadow-xl sm:shadow-2xl`}
+            className={`${stat.position} max-md:hidden bg-gradient-to-br ${stat.gradient} rounded-lg sm:rounded-lg p-2.5 sm:p-3 md:p-4 cursor-pointer transform hover:scale-110 transition-all animate-float shadow-xl sm:shadow-2xl`}
             style={{ animationDelay: stat.delay }}
           >
             <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 px-0.5 sm:px-1">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center backdrop-blur-sm">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-white/20 rounded-lg sm:rounded-lg flex items-center justify-center backdrop-blur-sm">
                 <Icon className={`w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5 text-white ${stat.fill ? 'fill-white' : ''} animate-pulse`} />
               </div>
               <div className="flex items-center gap-0.5 sm:gap-1">

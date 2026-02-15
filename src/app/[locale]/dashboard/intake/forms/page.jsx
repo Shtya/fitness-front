@@ -83,7 +83,7 @@ function PremiumCard({ children, className = '', hover = true, glow = false }) {
 		<motion.div
 			whileHover={hover ? { y: -2 } : {}}
 			transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-			className={`relative rounded-2xl border backdrop-blur-xl ${className}`}
+			className={`relative rounded-lg border backdrop-blur-xl ${className}`}
 			style={{
 				background: 'rgba(255, 255, 255, 0.95)',
 				borderColor: 'var(--color-primary-200)',
@@ -118,7 +118,7 @@ function IconWrapper({ children, active = false, size = 'md', variant = 'primary
 		<motion.div
 			whileHover={{ scale: 1.1, rotate: 5 }}
 			transition={{ type: 'spring', stiffness: 400 }}
-			className={`grid place-items-center rounded-xl ${sizes[size]}`}
+			className={`grid place-items-center rounded-lg ${sizes[size]}`}
 			style={{
 				background: variants[variant],
 				boxShadow: active ? '0 8px 24px rgba(99, 102, 241, 0.25)' : '0 4px 12px rgba(15, 23, 42, 0.08)',
@@ -168,7 +168,7 @@ function PremiumButton({ title, onClick, children, variant = 'ghost', disabled =
 			disabled={disabled}
 			whileHover={{ scale: disabled ? 1 : 1.08, y: disabled ? 0 : -2 }}
 			whileTap={{ scale: disabled ? 1 : 0.95 }}
-			className={`inline-flex items-center justify-center rounded-xl border transition-all disabled:opacity-40 disabled:cursor-not-allowed ${sizes[size]}`}
+			className={`inline-flex items-center justify-center rounded-lg border transition-all disabled:opacity-40 disabled:cursor-not-allowed ${sizes[size]}`}
 			style={{
 				background: style.bg,
 				borderColor: style.border,
@@ -289,7 +289,7 @@ function TooltipButton({ tooltip, onClick, children, variant = 'ghost', disabled
 				onMouseLeave={() => setShowTooltip(false)}
 				whileHover={{ scale: disabled ? 1 : 1.02, y: disabled ? 0 : -2 }}
 				whileTap={{ scale: disabled ? 1 : 0.98 }}
-				className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+				className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border transition-all disabled:opacity-40 disabled:cursor-not-allowed"
 				style={{
 					background: style.bg,
 					borderColor: style.border,
@@ -471,7 +471,7 @@ function InputList({
 			{label && <div className="text-sm font-bold text-slate-800 mb-2">{label}</div>}
 
 			<div
-				className="rounded-xl border p-3"
+				className="rounded-lg border p-3"
 				style={{
 					borderColor: 'var(--color-primary-200)',
 					background: 'rgba(255, 255, 255, 0.95)',
@@ -682,7 +682,7 @@ const FieldRow = React.memo(function FieldRow({
 									}}
 									whileHover={{ scale: 1.02 }}
 									whileTap={{ scale: 0.98 }}
-									className="inline-flex items-center gap-2 h-11 px-6 rounded-xl text-white font-bold"
+									className="inline-flex items-center gap-2 h-11 px-6 rounded-lg text-white font-bold"
 									style={{
 										background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 										boxShadow: '0 8px 24px rgba(99, 102, 241, 0.3)',
@@ -1115,11 +1115,11 @@ export default function FormsManagementPage() {
 						<div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 							{/* Left skeleton */}
 							<div className="lg:col-span-4">
-								<div className="h-[600px] rounded-2xl animate-pulse" style={{ background: 'linear-gradient(135deg, #e2e8f0, #f1f5f9)' }} />
+								<div className="h-[600px] rounded-lg animate-pulse" style={{ background: 'linear-gradient(135deg, #e2e8f0, #f1f5f9)' }} />
 							</div>
 							{/* Right skeleton */}
 							<div className="lg:col-span-8">
-								<div className="h-[600px] rounded-2xl animate-pulse" style={{ background: 'linear-gradient(135deg, #e2e8f0, #f1f5f9)' }} />
+								<div className="h-[600px] rounded-lg animate-pulse" style={{ background: 'linear-gradient(135deg, #e2e8f0, #f1f5f9)' }} />
 							</div>
 						</div>
 					) : (
@@ -1175,7 +1175,7 @@ export default function FormsManagementPage() {
 																	transition={{ delay: index * 0.05 }}
 																>
 																	<div
-																		className="w-full text-left rounded-xl border transition-all group relative"
+																		className="w-full text-left rounded-lg border transition-all group relative"
 																		style={{
 																			borderColor: isActive ? 'var(--color-primary-400)' : 'var(--color-primary-200)',
 																			background: isActive
@@ -1462,7 +1462,7 @@ export default function FormsManagementPage() {
 												<motion.div
 													initial={{ opacity: 0 }}
 													animate={{ opacity: 1 }}
-													className="rounded-xl border border-dashed p-16 text-center"
+													className="rounded-lg border border-dashed p-16 text-center"
 													style={{
 														borderColor: 'var(--color-primary-300)',
 														background: 'rgba(255, 255, 255, 0.7)',
@@ -1556,7 +1556,7 @@ export default function FormsManagementPage() {
 								onClick={addInlineField}
 								whileHover={{ scale: 1.05 }}
 								whileTap={{ scale: 0.95 }}
-								className="inline-flex items-center gap-2 h-12 px-6 rounded-xl text-white font-bold"
+								className="inline-flex items-center gap-2 h-12 px-6 rounded-lg text-white font-bold"
 								style={{
 									background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 									boxShadow: '0 8px 24px rgba(99, 102, 241, 0.3)',
@@ -1593,7 +1593,7 @@ export default function FormsManagementPage() {
 							<motion.div
 								initial={{ opacity: 0 }}
 								animate={{ opacity: 1 }}
-								className="rounded-xl border border-dashed p-16 text-center"
+								className="rounded-lg border border-dashed p-16 text-center"
 								style={{
 									borderColor: 'var(--color-primary-300)',
 									background: 'rgba(255, 255, 255, 0.7)',
@@ -1613,7 +1613,7 @@ export default function FormsManagementPage() {
 							onClick={() => setShowFormModal(false)}
 							whileHover={{ scale: 1.02 }}
 							whileTap={{ scale: 0.98 }}
-							className="inline-flex items-center h-12 px-6 rounded-xl border bg-white text-slate-700 font-bold"
+							className="inline-flex items-center h-12 px-6 rounded-lg border bg-white text-slate-700 font-bold"
 							style={{
 								borderColor: 'var(--color-primary-200)',
 								boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
@@ -1627,7 +1627,7 @@ export default function FormsManagementPage() {
 							disabled={loading}
 							whileHover={{ scale: loading ? 1 : 1.02 }}
 							whileTap={{ scale: loading ? 1 : 0.98 }}
-							className="inline-flex items-center gap-2 h-12 px-8 rounded-xl text-white font-bold"
+							className="inline-flex items-center gap-2 h-12 px-8 rounded-lg text-white font-bold"
 							style={{
 								background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 								boxShadow: '0 8px 24px rgba(99, 102, 241, 0.3)',

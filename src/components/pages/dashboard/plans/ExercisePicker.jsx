@@ -265,7 +265,7 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
 																			ev.stopPropagation();
 																			setShowVideo(e.video);
 																		}}
-																		className='absolute left-1.5 bottom-1.5 inline-flex items-center gap-1 rounded-md bg-black/65 px-1.5 py-[3px] text-[10px] text-white opacity-90 hover:opacity-100 active:scale-95 transition'
+																		className='absolute left-1.5 bottom-1.5 inline-flex items-center gap-1 rounded-lg bg-black/65 px-1.5 py-[3px] text-[10px] text-white opacity-90 hover:opacity-100 active:scale-95 transition'
 																		aria-label={t('picker.previewVideo')}
 																	>
 																		<PlayCircle className='h-3.5 w-3.5' />
@@ -281,7 +281,7 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
 
 														{checked && (
 															<span
-																className='absolute right-2 top-2 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium text-white shadow-sm'
+																className='absolute right-2 top-2 inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-medium text-white shadow-sm'
 																style={{ backgroundColor: 'var(--color-primary-600)' }}
 															>
 																<Check className='h-3.5 w-3.5' />
@@ -298,7 +298,7 @@ export const ExercisePicker = memo(function ExercisePicker({ open, onClose, onDo
 
 													{e.category && (
 														<span
-															className='inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px]'
+															className='inline-flex items-center gap-1 rounded-lg border px-1.5 py-0.5 text-[11px]'
 															style={{
 																borderColor: 'var(--color-primary-200)',
 																backgroundColor: 'var(--color-primary-50)',

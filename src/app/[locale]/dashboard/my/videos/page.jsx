@@ -14,7 +14,7 @@ function TopBar({ title, subtitle }) {
         </div>
         <a
           href="/admin"
-          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10"
+          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10"
         >
           Admin
         </a>
@@ -25,7 +25,7 @@ function TopBar({ title, subtitle }) {
 
 function VideoCard({ v }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-white/10 bg-white/5 shadow-sm">
       <div className="aspect-video w-full bg-zinc-900">
         {v.thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -56,7 +56,7 @@ function VideoCard({ v }) {
           href={v.url}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex w-full items-center justify-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-200"
+          className="inline-flex w-full items-center justify-center rounded-lg bg-white px-3 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-200"
         >
           Watch
         </a>
@@ -95,7 +95,7 @@ export default function ClientPage() {
       <TopBar title="Videos" subtitle="Gym • التشريح • Nutrition • Mobility" />
 
       <div className="mx-auto max-w-lg px-4 py-4">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="rounded-lg border border-white/10 bg-white/5 p-4">
           <p className="text-sm text-zinc-300">
             Choose a category to learn about the gym, anatomy (التشريح), and training.
           </p>
@@ -120,7 +120,7 @@ export default function ClientPage() {
         {loading ? (
           <div className="mt-4 text-zinc-400">Loading...</div>
         ) : filtered.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-6 text-zinc-300">
+          <div className="mt-4 rounded-lg border border-white/10 bg-white/5 p-6 text-zinc-300">
             No videos available.
           </div>
         ) : (

@@ -552,9 +552,9 @@ export default function RemindersPage() {
 				</div>
 
 				<div className='space-y-3'>
-					<div className='h-20 rounded-xl bg-slate-100 animate-pulse' />
-					<div className='h-20 rounded-xl bg-slate-100 animate-pulse' />
-					<div className='h-20 rounded-xl bg-slate-100 animate-pulse' />
+					<div className='h-20 rounded-lg bg-slate-100 animate-pulse' />
+					<div className='h-20 rounded-lg bg-slate-100 animate-pulse' />
+					<div className='h-20 rounded-lg bg-slate-100 animate-pulse' />
 				</div>
 			</main>
 		);
@@ -566,7 +566,7 @@ export default function RemindersPage() {
 	if (needsActivation) {
 		return (
 			<main className='container !px-0'>
-				<div className='max-w-xl mx-auto mt-10 rounded-2xl border border-dashed border-slate-300 bg-white p-6 md:p-8 text-center shadow-sm'>
+				<div className='max-w-xl mx-auto mt-10 rounded-lg border border-dashed border-slate-300 bg-white p-6 md:p-8 text-center shadow-sm'>
 					<h1 className='text-xl md:text-2xl font-semibold text-slate-900 mb-3'>{safeT(t, 'permission.title', 'تفعيل الإشعارات مطلوب')}</h1>
 
 					<p className='text-sm md:text-base text-slate-600 mb-4'>
@@ -810,7 +810,7 @@ export function TelegramConnectSection({ settings }) {
 function ReminderTimeline({ t, entries, highlightReminderId }) {
 	if (!entries.length) {
 		return (
-			<div className='rounded-3xl border border-dashed border-slate-200 bg-white/70 p-10 text-center'>
+			<div className='rounded-lg border border-dashed border-slate-200 bg-white/70 p-10 text-center'>
 				<p className='text-slate-600'>{safeT(t, 'timeline.empty', 'No reminders scheduled for today')}</p>
 			</div>
 		);
@@ -851,7 +851,7 @@ function ReminderTimeline({ t, entries, highlightReminderId }) {
 								key={entry.id}
 								data-reminder-id={entry.reminderId}
 								className={[
-									'box-3d relative flex flex-col gap-2 md:flex-row md:items-center md:gap-4 rounded-2xl border px-4 py-3 transition',
+									'box-3d relative flex flex-col gap-2 md:flex-row md:items-center md:gap-4 rounded-lg border px-4 py-3 transition',
 									isHighlighted ? 'border-[var(--color-secondary-300)] ring-2 ring-[var(--color-secondary-200)] bg-[var(--color-secondary-50)]' : 'border-slate-200 bg-white hover:bg-slate-50',
 								].join(' ')}
 							>
@@ -936,21 +936,21 @@ const ReminderCard = React.memo(function ReminderCard({ now, t, reminder, onEdit
 						<MultiLangText className='truncate text-base font-semibold text-slate-800'>{reminder.title}</MultiLangText>
 
 						{next && (
-							<span className='text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-700'>
+							<span className='text-xs px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700'>
 								{safeT(t, 'next', 'Next')}: {humanDateTime(next)}
 							</span>
 						)}
 
 						{due && (
-							<span className='px-2 py-0.5 rounded-md bg-[var(--color-secondary-100)] text-[var(--color-secondary-800)]'>
+							<span className='px-2 py-0.5 rounded-lg bg-[var(--color-secondary-100)] text-[var(--color-secondary-800)]'>
 								{safeT(t, 'now', 'Now')}
 							</span>
 						)}
 
-						{due && <span className='px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 text-xs font-semibold'>⏱ {safeT(t, 'passed', 'Passed')}</span>}
+						{due && <span className='px-2 py-0.5 rounded-lg bg-slate-200 text-slate-700 text-xs font-semibold'>⏱ {safeT(t, 'passed', 'Passed')}</span>}
 
 						{!due && almostDue && (
-							<span className='px-2 py-0.5 rounded-md bg-[var(--color-primary-50)] text-[var(--color-primary-800)]'>
+							<span className='px-2 py-0.5 rounded-lg bg-[var(--color-primary-50)] text-[var(--color-primary-800)]'>
 								{safeT(t, 'willStartAfter', 'يعمل بعد')} {remainingStr}
 							</span>
 						)}
@@ -1467,7 +1467,7 @@ function CalendarView({ t, reminders, settings }) {
 	};
 
 	return (
-		<div className='w-full space-y-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-3 shadow-sm backdrop-blur-sm sm:p-4 lg:p-6'>
+		<div className='w-full space-y-4 rounded-lg border border-slate-200 bg-slate-50/60 p-3 shadow-sm backdrop-blur-sm sm:p-4 lg:p-6'>
 			<div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
 				<div className='flex items-center justify-between gap-2 sm:gap-4'>
 					<button
@@ -1501,7 +1501,7 @@ function CalendarView({ t, reminders, settings }) {
 			</div>
 
 			<div className='grid gap-4 lg:grid-cols-5'>
-				<div className='lg:col-span-3 rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 lg:p-5 shadow-sm'>
+				<div className='lg:col-span-3 rounded-lg border border-slate-200 bg-white p-3 sm:p-4 lg:p-5 shadow-sm'>
 					<div className='grid grid-cols-7 gap-1.5 text-center text-[11px] font-medium uppercase tracking-wide text-slate-400 sm:gap-2 sm:text-[12px]'>
 						{['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map(d => (
 							<div key={d} className='py-1'>
@@ -1512,7 +1512,7 @@ function CalendarView({ t, reminders, settings }) {
 
 					<div className='mt-2 grid grid-cols-7 gap-1.5 sm:gap-2'>
 						{daySlots.map((d, i) => {
-							if (!d) return <div key={i} className='aspect-square rounded-xl border border-transparent p-1' />;
+							if (!d) return <div key={i} className='aspect-square rounded-lg border border-transparent p-1' />;
 
 							const key = toISODate(d);
 							const list = byDay.get(key) || [];
@@ -1529,7 +1529,7 @@ function CalendarView({ t, reminders, settings }) {
 								<button
 									key={i}
 									onClick={() => setSelectedDate(d)}
-									className={`group flex flex-col justify-between rounded-2xl border p-1.5 text-left text-xs sm:p-2 sm:text-sm transition-all duration-150 ease-out min-h-[56px] sm:min-h-[72px] ${stateClasses}`}
+									className={`group flex flex-col justify-between rounded-lg border p-1.5 text-left text-xs sm:p-2 sm:text-sm transition-all duration-150 ease-out min-h-[56px] sm:min-h-[72px] ${stateClasses}`}
 								>
 									<div className='flex items-center justify-between gap-1'>
 										<span className='text-[11px] font-semibold sm:text-sm'>{d.getDate()}</span>
@@ -1551,7 +1551,7 @@ function CalendarView({ t, reminders, settings }) {
 				</div>
 
 				<div className='lg:col-span-2'>
-					<div className='flex flex-col rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm h-full'>
+					<div className='flex flex-col rounded-lg border border-slate-200 bg-white p-3 sm:p-4 shadow-sm h-full'>
 						<div className='mb-3 flex items-center justify-between gap-2'>
 							<div className='flex flex-col'>
 								<span className='text-sm font-semibold text-slate-800 sm:text-base'>
@@ -1570,14 +1570,14 @@ function CalendarView({ t, reminders, settings }) {
 
 						<div className='flex-1 overflow-y-auto pr-1 space-y-2 max-h-[260px] sm:max-h-[320px]'>
 							{selectedList.length === 0 ? (
-								<p className='rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-3 py-4 text-center text-xs text-slate-500 sm:text-sm'>
+								<p className='rounded-lg border border-dashed border-slate-200 bg-slate-50/80 px-3 py-4 text-center text-xs text-slate-500 sm:text-sm'>
 									{selectedDate ? safeT(t, 'calendar.noneForDay', 'No reminders for this day') : safeT(t, 'calendar.none', 'Select a day to view reminders')}
 								</p>
 							) : (
 								selectedList.map((r, idx) => (
 									<div
 										key={idx}
-										className='group rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs shadow-[0_1px_0_rgba(15,23,42,0.03)] transition hover:border-[var(--color-primary-400)] hover:bg-[var(--color-primary-50)] sm:text-sm'
+										className='group rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs shadow-[0_1px_0_rgba(15,23,42,0.03)] transition hover:border-[var(--color-primary-400)] hover:bg-[var(--color-primary-50)] sm:text-sm'
 									>
 										<div className='flex items-start justify-between gap-2'>
 											<div>
@@ -1637,7 +1637,7 @@ function QuickCreate({ t, onPick }) {
 							{options.slice(0, 6).map(o => (
 								<button
 									key={o.id}
-									className='rtl:text-right text-left rounded-md text-slate-800 px-3 py-2 text-sm hover:bg-slate-50'
+									className='rtl:text-right text-left rounded-lg text-slate-800 px-3 py-2 text-sm hover:bg-slate-50'
 									onClick={() => {
 										onPick(Number(o.id));
 										setOpen(false);

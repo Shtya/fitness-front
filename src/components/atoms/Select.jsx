@@ -240,7 +240,7 @@ export default function Select({
         className={[
           cnInputParent || '',
           'h-[43px] relative w-full inline-flex items-center justify-between gap-2',
-          'rounded-xl border bg-white px-3 py-2.5 text-sm',
+          'rounded-lg border bg-white px-3 py-2.5 text-sm',
           disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
           'transition-all duration-200 outline-none',
         ].join(' ')}
@@ -280,7 +280,7 @@ export default function Select({
           >
             <div
               ref={listRef}
-              className='max-h-[215px] overflow-auto rounded-xl border border-slate-200 bg-white'
+              className='max-h-[215px] overflow-auto rounded-lg border border-slate-200 bg-white'
               style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06)' }}
               onKeyDown={onKeyDown}
             >

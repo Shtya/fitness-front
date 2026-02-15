@@ -52,7 +52,7 @@ function resolveUrlMaybe(v) {
 function Field({ label, hint, required, error, children, highlight }) {
 	return (
 		<div
-			className={'w-full transition-all duration-300 ' + (highlight ? 'p-1 animate-pulse rounded-xl' : '')}
+			className={'w-full transition-all duration-300 ' + (highlight ? 'p-1 animate-pulse rounded-lg' : '')}
 			style={
 				highlight
 					? {
@@ -83,7 +83,7 @@ function Field({ label, hint, required, error, children, highlight }) {
 function TextInput({ value, onChange, placeholder, name, required, disabled, rightSlot, className = '', onBlur, onPaste }) {
 	return (
 		<div
-			className={'relative flex items-center rounded-xl border transition-all duration-200 ' + (disabled ? 'opacity-55 ' : '') + className}
+			className={'relative flex items-center rounded-lg border transition-all duration-200 ' + (disabled ? 'opacity-55 ' : '') + className}
 			style={{
 				borderColor: 'var(--color-primary-200)',
 				background: 'white',
@@ -104,7 +104,7 @@ function TextInput({ value, onChange, placeholder, name, required, disabled, rig
 				placeholder={placeholder}
 				required={required}
 				disabled={disabled}
-				className="themed-input peer w-full rounded-xl bg-transparent px-4 py-2.5 text-sm outline-none"
+				className="themed-input peer w-full rounded-lg bg-transparent px-4 py-2.5 text-sm outline-none"
 			/>
 			{rightSlot ? <div className="absolute rtl:left-1.5 ltr:right-1.5 flex items-center gap-1">{rightSlot}</div> : null}
 		</div>
@@ -135,7 +135,7 @@ function NumberInput({ value, onChange, name, min = 0, step = 1, disabled, place
 				onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}
 				placeholder={placeholder}
 				disabled={disabled}
-				className='themed-number-input w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all duration-200'
+				className='themed-number-input w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition-all duration-200'
 				style={{
 					borderColor: 'var(--color-primary-200)',
 					background: 'white',
@@ -162,7 +162,7 @@ function TextArea({ value, onChange, rows = 3, placeholder, disabled }) {
 				onChange={e => onChange(e.target.value)}
 				placeholder={placeholder}
 				disabled={disabled}
-				className='themed-textarea w-full resize-y rounded-xl border px-4 py-2.5 text-sm outline-none transition-all duration-200'
+				className='themed-textarea w-full resize-y rounded-lg border px-4 py-2.5 text-sm outline-none transition-all duration-200'
 				style={{
 					borderColor: 'var(--color-primary-200)',
 					background: 'white',
@@ -193,7 +193,7 @@ function TagsField({ value = [], onChange, placeholder = 'Type and press Enter',
 
 	return (
 		<div
-			className='rounded-xl border p-2.5 transition-all duration-200'
+			className='rounded-lg border p-2.5 transition-all duration-200'
 			style={{
 				borderColor: 'var(--color-primary-200)',
 				background: 'white',
@@ -241,7 +241,7 @@ function MediaPreview({ type = 'image', url }) {
 	if (!url) return null;
 	return (
 		<div
-			className='mt-2 overflow-hidden rounded-xl border'
+			className='mt-2 overflow-hidden rounded-lg border'
 			style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}>
 			{type === 'video' ? (
 				<video src={url} controls className='h-44 w-full object-contain' />
@@ -258,7 +258,7 @@ function PrimaryButton({ children, type = 'button', onClick, disabled, loading, 
 			type={type}
 			onClick={onClick}
 			disabled={disabled || loading}
-			className={'relative inline-flex items-center justify-center overflow-hidden rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 ' + (fullWidth ? 'w-full ' : '') + (disabled || loading ? 'opacity-60 cursor-not-allowed ' : 'hover:scale-[1.02] active:scale-[0.97]')}
+			className={'relative inline-flex items-center justify-center overflow-hidden rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 ' + (fullWidth ? 'w-full ' : '') + (disabled || loading ? 'opacity-60 cursor-not-allowed ' : 'hover:scale-[1.02] active:scale-[0.97]')}
 			style={{
 				background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 				boxShadow: '0 2px 10px rgba(var(--shadow-primary), 0.35)',
@@ -538,9 +538,9 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
 
 			{/* AI Loading Overlay */}
 			{aiLoading && (
-				<div className='absolute inset-0 z-10 grid place-items-center rounded-2xl backdrop-blur-sm' style={{ background: 'rgba(255,255,255,0.75)' }}>
+				<div className='absolute inset-0 z-10 grid place-items-center rounded-lg backdrop-blur-sm' style={{ background: 'rgba(255,255,255,0.75)' }}>
 					<div
-						className='flex items-center gap-2.5 rounded-xl px-5 py-3 shadow-lg'
+						className='flex items-center gap-2.5 rounded-lg px-5 py-3 shadow-lg'
 						style={{
 							border: '1px solid var(--color-primary-200)',
 							background: 'white',
@@ -736,7 +736,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
 
 										/>
 										<label
-											className='inline-flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-[10px] text-sm transition-all duration-200 hover:scale-[1.03]'
+											className='inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-[10px] text-sm transition-all duration-200 hover:scale-[1.03]'
 											style={{
 												borderColor: 'var(--color-primary-200)',
 												background: 'var(--color-primary-50)',
@@ -781,7 +781,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
 											className='flex-1'
 										/>
 										<label
-											className='inline-flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-[10px] text-sm transition-all duration-200 hover:scale-[1.03]'
+											className='inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-[10px] text-sm transition-all duration-200 hover:scale-[1.03]'
 											style={{
 												borderColor: 'var(--color-primary-200)',
 												background: 'var(--color-primary-50)',
@@ -811,7 +811,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
 
 					{/* MuscleWiki tip */}
 					<div
-						className='sm:col-span-2 rounded-xl border border-dashed px-4 py-3 text-[11px] leading-relaxed'
+						className='sm:col-span-2 rounded-lg border border-dashed px-4 py-3 text-[11px] leading-relaxed'
 						style={{
 							borderColor: 'var(--color-primary-200)',
 							background: 'var(--color-primary-50)',

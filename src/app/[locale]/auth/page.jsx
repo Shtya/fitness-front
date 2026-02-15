@@ -233,7 +233,7 @@ const FieldError = React.memo(({ msg }) => {
 			initial={{ opacity: 0, y: -5, scale: 0.95 }}
 			animate={{ opacity: 1, y: 0, scale: 1 }}
 			exit={{ opacity: 0, scale: 0.95 }}
-			className="mt-3 flex items-center gap-2 text-sm text-red-600 font-bold bg-red-50 px-4 py-2.5 rounded-2xl border-2 border-red-200">
+			className="mt-3 flex items-center gap-2 text-sm text-red-600 font-bold bg-red-50 px-4 py-2.5 rounded-lg border-2 border-red-200">
 			<AlertCircle className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
 			<span>{msg}</span>
 		</motion.div>
@@ -334,7 +334,7 @@ const LoginForm = React.memo(({ onLoggedIn }) => {
 					<label className="block text-sm font-black text-slate-800 px-1">{t('email')}</label>
 					<div className="relative group">
 						<motion.div
-							className="absolute inset-0 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity -z-10"
+							className="absolute inset-0 rounded-lg blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity -z-10"
 							style={{
 								background: `linear-gradient(135deg, ${colors.primary[300]}, ${colors.secondary[300]})`,
 							}}
@@ -344,7 +344,7 @@ const LoginForm = React.memo(({ onLoggedIn }) => {
 							inputMode="email"
 							placeholder={t('enterEmail')}
 							autoComplete="email"
-							className="w-full h-14 rounded-2xl border-2 bg-white px-4 text-base font-semibold outline-none transition-all duration-300"
+							className="w-full h-14 rounded-lg border-2 bg-white px-4 text-base font-semibold outline-none transition-all duration-300"
 							style={{
 								borderColor: focusedField === 'email' ? colors.primary[400] : colors.primary[200],
 								boxShadow: focusedField === 'email' ? `0 0 0 4px ${colors.primary[500]}15, 0 10px 30px -10px ${colors.primary[500]}30` : 'none',
@@ -364,7 +364,7 @@ const LoginForm = React.memo(({ onLoggedIn }) => {
 					<label className="block text-sm font-black text-slate-800 px-1">{t('password')}</label>
 					<div className="relative group">
 						<motion.div
-							className="absolute inset-0 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity -z-10"
+							className="absolute inset-0 rounded-lg blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity -z-10"
 							style={{
 								background: `linear-gradient(135deg, ${colors.primary[300]}, ${colors.secondary[300]})`,
 							}}
@@ -373,7 +373,7 @@ const LoginForm = React.memo(({ onLoggedIn }) => {
 							type={showPassword ? 'text' : 'password'}
 							placeholder={t('enterPassword')}
 							autoComplete="current-password"
-							className="w-full h-14 rounded-2xl border-2 bg-white px-4 ltr:pr-14 rtl:pl-14 text-base font-semibold outline-none transition-all duration-300"
+							className="w-full h-14 rounded-lg border-2 bg-white px-4 ltr:pr-14 rtl:pl-14 text-base font-semibold outline-none transition-all duration-300"
 							style={{
 								borderColor: focusedField === 'password' ? colors.primary[400] : colors.primary[200],
 								boxShadow: focusedField === 'password' ? `0 0 0 4px ${colors.primary[500]}15, 0 10px 30px -10px ${colors.primary[500]}30` : 'none',
@@ -388,7 +388,7 @@ const LoginForm = React.memo(({ onLoggedIn }) => {
 							whileTap={{ scale: 0.95 }}
 							aria-label={showPassword ? t('a11y.hidePassword') : t('a11y.showPassword')}
 							onClick={togglePasswordVisibility}
-							className="absolute inset-y-0 ltr:right-2 rtl:left-2 my-auto h-10 w-10 grid place-items-center rounded-xl transition-all duration-300"
+							className="absolute inset-y-0 ltr:right-2 rtl:left-2 my-auto h-10 w-10 grid place-items-center rounded-lg transition-all duration-300"
 							style={{
 								backgroundColor: showPassword ? `${colors.primary[500]}20` : colors.primary[50],
 								color: colors.primary[600],
@@ -408,7 +408,7 @@ const LoginForm = React.memo(({ onLoggedIn }) => {
 						disabled={loading}
 						whileHover={{ scale: loading ? 1 : 1.02, y: loading ? 0 : -2 }}
 						whileTap={{ scale: loading ? 1 : 0.98 }}
-						className="relative w-full inline-flex items-center justify-center gap-3 overflow-hidden rounded-2xl px-6 py-4 font-black text-base text-white transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed group shadow-2xl"
+						className="relative w-full inline-flex items-center justify-center gap-3 overflow-hidden rounded-lg px-6 py-4 font-black text-base text-white transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed group shadow-2xl"
 						style={{
 							background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
 							boxShadow: `0 20px 40px -10px ${colors.primary[500]}60`,
@@ -465,7 +465,7 @@ const LoginForm = React.memo(({ onLoggedIn }) => {
 							)}
 						</span>
 
-						<div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-white/0 via-white/30 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+						<div className="absolute inset-0 rounded-lg bg-gradient-to-r from-white/0 via-white/30 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 					</motion.button>
 				</div>
 			</motion.form>
@@ -566,7 +566,7 @@ const HeroSide = React.memo(() => {
 									initial={{ opacity: 0, x: -20 }}
 									animate={{ opacity: 1, x: 0 }}
 									transition={{ duration: 0.5, delay: 0.3 + i * 0.1 }}>
-									<div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white/10 backdrop-blur-sm border-2 border-white/20 shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:bg-white/20">
+									<div className="w-12 h-12 rounded-lg flex items-center justify-center bg-white/10 backdrop-blur-sm border-2 border-white/20 shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:bg-white/20">
 										<Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
 									</div>
 									<span className="text-base font-bold text-white group-hover:translate-x-1 transition-transform">{feature.text}</span>
@@ -582,7 +582,7 @@ const HeroSide = React.memo(() => {
 								<motion.div
 									key={i}
 									whileHover={{ y: -5 }}
-									className="text-center p-3 rounded-2xl bg-white/10 backdrop-blur-sm border-2 border-white/20">
+									className="text-center p-3 rounded-lg bg-white/10 backdrop-blur-sm border-2 border-white/20">
 									<Icon className="w-5 h-5 text-white mx-auto mb-2" strokeWidth={2.5} />
 									<div className="text-2xl font-black text-white mb-1">{stat.value}</div>
 									<div className="text-xs font-semibold text-white/90">{stat.label}</div>
@@ -631,7 +631,7 @@ const TrustIndicators = React.memo(() => {
 							{i > 0 && <div className="hidden sm:block w-px h-10" style={{ backgroundColor: colors.primary[200] }} />}
 							<div className="flex flex-col sm:flex-row items-center gap-2" style={{ color: colors.primary[700] }}>
 								<div 
-									className="w-9 h-9 rounded-xl flex items-center justify-center"
+									className="w-9 h-9 rounded-lg flex items-center justify-center"
 									style={{ backgroundColor: colors.primary[100] }}
 								>
 									<Icon className="w-5 h-5" strokeWidth={2.5} />
@@ -708,7 +708,7 @@ export default function AuthPage() {
 						<FloatingParticles />
 
 						<motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} className="w-full max-w-[520px] relative z-10">
-							<div className="bg-white/95 backdrop-blur-xl border-2 rounded-3xl p-8 lg:p-10 shadow-2xl relative overflow-hidden" style={{ borderColor: colors.primary[200] }}>
+							<div className="bg-white/95 backdrop-blur-xl border-2 rounded-lg p-8 lg:p-10 shadow-2xl relative overflow-hidden" style={{ borderColor: colors.primary[200] }}>
 								<div
 									className="absolute top-0 left-0 right-0 h-2 rounded-t-3xl"
 									style={{
@@ -790,7 +790,7 @@ export default function AuthPage() {
 						className="w-full max-w-[440px]  relative z-10"
 					>
 						<div 
-							className="rounded-3xl border-2 bg-white/95 backdrop-blur-xl shadow-2xl p-6 sm:p-8 relative overflow-hidden"
+							className="rounded-lg border-2 bg-white/95 backdrop-blur-xl shadow-2xl p-6 sm:p-8 relative overflow-hidden"
 							style={{
 								borderColor: `${colors.primary[200]}60`,
 								boxShadow: `0 30px 60px -10px ${colors.primary[900]}20, 0 0 0 1px ${colors.primary[200]}40`,
@@ -804,7 +804,7 @@ export default function AuthPage() {
 							/>
 
 							<motion.div
-								className="absolute top-4 ltr:right-4 rtl:left-4 w-16 h-16 rounded-2xl opacity-10"
+								className="absolute top-4 ltr:right-4 rtl:left-4 w-16 h-16 rounded-lg opacity-10"
 								style={{
 									background: `linear-gradient(135deg, ${colors.primary[500]}, ${colors.secondary[500]})`,
 								}}

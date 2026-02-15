@@ -325,3 +325,286 @@
 }
 
  
+
+
+
+.menu-button-container {
+  position: fixed; 
+  z-index: 1000;
+}
+
+.menu-button {
+  position: relative;
+  overflow: visible;
+  background: none;
+  border: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.menu-button-body {
+  position: relative;
+  border-radius: 1rem;
+  padding: 0.875rem 1.25rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.menu-button-open {
+  box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.5);
+}
+
+/* Shimmer Effect */
+.menu-button-shimmer {
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  background-size: 200% 100%;
+  pointer-events: none;
+}
+
+/* Icon Styles */
+.menu-button-icon {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: white;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* Ripple Effect */
+.menu-button-ripple {
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+
+/* Pulsing Glow */
+.menu-button-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.4),
+    rgba(168, 85, 247, 0.4)
+  );
+  filter: blur(12px);
+  pointer-events: none;
+}
+
+/* Elastic Tails */
+.elastic-tail {
+  position: absolute;
+  pointer-events: none;
+}
+
+.elastic-tail-left {
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) translateX(-100%);
+  transform-origin: right;
+  width: 1.5rem;
+  height: 2.5rem;
+}
+
+.elastic-tail-right {
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) translateX(100%);
+  transform-origin: left;
+  width: 1.5rem;
+  height: 2.5rem;
+}
+
+.elastic-tail-top {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  transform-origin: bottom;
+  height: 1.5rem;
+  width: 2.5rem;
+}
+
+.elastic-tail-bottom {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(100%);
+  transform-origin: top;
+  height: 1.5rem;
+  width: 2.5rem;
+}
+
+/* Elastic Tail Gradients */
+.elastic-tail-gradient {
+  width: 100%;
+  height: 100%;
+  filter: blur(4px);
+}
+
+.elastic-tail-gradient-left {
+  background: linear-gradient(
+    to left,
+    rgba(99, 102, 241, 0.6),
+    rgba(168, 85, 247, 0.4),
+    transparent
+  );
+  border-radius: 1rem 0 0 1rem;
+}
+
+.elastic-tail-gradient-right {
+  background: linear-gradient(
+    to right,
+    rgba(168, 85, 247, 0.6),
+    rgba(99, 102, 241, 0.4),
+    transparent
+  );
+  border-radius: 0 1rem 1rem 0;
+}
+
+.elastic-tail-gradient-top {
+  background: linear-gradient(
+    to top,
+    rgba(99, 102, 241, 0.5),
+    rgba(168, 85, 247, 0.3),
+    transparent
+  );
+  border-radius: 1rem 1rem 0 0;
+}
+
+.elastic-tail-gradient-bottom {
+  background: linear-gradient(
+    to bottom,
+    rgba(168, 85, 247, 0.5),
+    rgba(99, 102, 241, 0.3),
+    transparent
+  );
+  border-radius: 0 0 1rem 1rem;
+}
+
+/* Outer Ring */
+.menu-button-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  border: 2px solid var(--color-primary-300);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* RTL Support */
+[dir='rtl'] .menu-button-container {
+  right: 0px !important;
+  left: 0px !important;
+}
+[dir='ltr'] .menu-button-container {
+  right: 0px !important;
+  left: 0px !important;
+}
+
+[dir='rtl'] .elastic-tail-left {
+  left: auto;
+  right: 0;
+  transform: translateY(-50%) translateX(100%);
+  transform-origin: left;
+}
+
+[dir='rtl'] .elastic-tail-right {
+  right: auto;
+  left: 0;
+  transform: translateY(-50%) translateX(-100%);
+  transform-origin: right;
+}
+
+[dir='rtl'] .elastic-tail-gradient-left {
+  background: linear-gradient(
+    to right,
+    rgba(99, 102, 241, 0.6),
+    rgba(168, 85, 247, 0.4),
+    transparent
+  );
+  border-radius: 0 1rem 1rem 0;
+}
+
+[dir='rtl'] .elastic-tail-gradient-right {
+  background: linear-gradient(
+    to left,
+    rgba(168, 85, 247, 0.6),
+    rgba(99, 102, 241, 0.4),
+    transparent
+  );
+  border-radius: 1rem 0 0 1rem;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+ 
+
+  .menu-button-body {
+    padding: 0.75rem 1rem;
+  }
+
+  .menu-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .elastic-tail-left,
+  .elastic-tail-right {
+    width: 1.25rem;
+    height: 2rem;
+  }
+
+  .elastic-tail-top,
+  .elastic-tail-bottom {
+    height: 1.25rem;
+    width: 2rem;
+  }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .menu-button {
+    touch-action: manipulation;
+  }
+  
+  .menu-button-body {
+    padding: 1rem 1.25rem;
+  }
+}
+
+/* High Performance Mode - Reduce animations on low-end devices */
+@media (prefers-reduced-motion: reduce) {
+  .menu-button-shimmer,
+  .menu-button-glow,
+  .elastic-tail,
+  .menu-button-ring {
+    display: none;
+  }
+  
+  .menu-button-body {
+    transition: transform 0.2s ease;
+  }
+}

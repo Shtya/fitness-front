@@ -12,9 +12,9 @@ import Providers from '@/context/ReactQuery';
 import Link from 'next/link';
 import { ThemeProvider } from '@/app/[locale]/theme';
 import { useInitialRoleRedirect } from '@/hooks/useInitialRoleRedirect';
+import Header from './Header';
 
 const Sidebar = dynamic(() => import('./Sidebar'), { ssr: false });
-const Header = dynamic(() => import('./Header'), { ssr: false });
 
 const LS_KEY = 'sidebar:collapsed';
 
@@ -102,12 +102,12 @@ export default function Layout({ children }) {
 							}}
 						/>
 
-						<div className="max-w-md w-full rounded-3xl border-2 p-8 shadow-2xl bg-white/80 backdrop-blur-xl relative z-10"
+						<div className="max-w-md w-full rounded-lg border-2 p-8 shadow-2xl bg-white/80 backdrop-blur-xl relative z-10"
 							style={{ borderColor: 'var(--color-primary-200)' }}
 						>
 							<div className="text-center">
 								<div
-									className="w-20 h-20 mx-auto mb-6 rounded-2xl grid place-items-center text-white shadow-xl"
+									className="w-20 h-20 mx-auto mb-6 rounded-lg grid place-items-center text-white shadow-xl"
 									style={{
 										background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
 									}}
@@ -123,7 +123,7 @@ export default function Layout({ children }) {
 								<p className="text-slate-600 mb-6 text-sm leading-relaxed">{t('desktop_required_message')}</p>
 
 								<Link
-									className="inline-flex items-center justify-center h-12 px-6 rounded-xl font-bold text-white shadow-lg transition-all hover:shadow-xl"
+									className="inline-flex items-center justify-center h-12 px-6 rounded-lg font-bold text-white shadow-lg transition-all hover:shadow-xl"
 									href={'/auth'}
 									style={{
 										background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
@@ -152,34 +152,36 @@ export default function Layout({ children }) {
 						<div className="fixed top-0 right-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl" style={{ background: `radial-gradient(circle, var(--color-primary-200), transparent 70%)`, }} /> 
 						<div className="fixed bottom-0 left-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl" style={{ background: `radial-gradient(circle, var(--color-secondary-200), transparent 70%)`, }} />
 
-						<div className="flex min-h-screen w-screen overflow-hidden ">
+						<div className="flex min-h-screen w-screen overflow-hidden">
 							{!isAuthRoute && (
-								<div className={` z-[10] duration-300 ${focusMode ? `flex-nones w-[0px] ${!sidebarOpen ? "rtl:translate-x-[300px] ltr:translate-x-[-300px] " : " rtl:translate-x-[84px] ltr:translate-x-[-84px]"} ` : ""}`} >
+								<div className={`z-[100] duration-300 ${focusMode ? `flex-none w-[0px] ${!sidebarOpen ? "rtl:translate-x-[300px] ltr:translate-x-[-300px]" : "rtl:translate-x-[84px] ltr:translate-x-[-84px]"}` : ""}`}>
 									<Sidebar
-									open={sidebarOpen}
-									setOpen={setSidebarOpen}
-									collapsed={sidebarCollapsed}
-									setCollapsed={setSidebarCollapsed}
-									focusMode={focusMode}
-									setFocusMode={setFocusMode}
-								/>
+										open={sidebarOpen}
+										setOpen={setSidebarOpen}
+										collapsed={sidebarCollapsed}
+										setCollapsed={setSidebarCollapsed}
+										focusMode={focusMode}
+										setFocusMode={setFocusMode}
+									/>
 								</div>
 							)}
 
-							<div className="relative flex-1 min-w-0  overflow-x-hidden  h-screen ">
-								<div className={` duration-300 ${focusMode ? "translate-y-[-64px] " : " " }`} > {!isAuthRoute && <Header onMenu={() => setSidebarOpen(true)} />} </div>
-
+							<div className={`relative flex-1 min-w-0  overflow-x-hidden h-screen`}>
 								<AnimatePresence mode="wait">
+									<div className='max-[1025px]:block hidden' >
+										<Header onMenu={()=> setSidebarOpen(!sidebarOpen)} />
+									</div>
 									<motion.main
 										key={pathname}
 										initial={{ opacity: 0, y: 8 }}
 										animate={{ opacity: 1, y: 0 }}
 										exit={{ opacity: 0, y: -8 }}
 										transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+										className="h-screen"
 									>
 										<div
 											id="body"
-											className={`${!isAuthRoute &&  ` duration-300 ${focusMode ? "h-[100vh]  translate-y-[-64px]   " : "h-[calc(100vh-64px)]"} overflow-auto p-4 md:p-6` }`}
+											className={`${!isAuthRoute && `h-screen overflow-auto p-3 md:p-6`}`}
 										>
 											{children}
 										</div>

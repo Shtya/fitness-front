@@ -33,7 +33,7 @@ export default function CheckBox({ id = 'custom', label, initialChecked = false,
         aria-checked={checked}
         onClick={toggle}
         onKeyDown={onKeyDown}
-        className={`input-3d-checkbox relative cursor-pointer flex h-6.5 w-6.5 items-center justify-center rounded-md border transition-all duration-300
+        className={`input-3d-checkbox relative cursor-pointer flex h-6.5 w-6.5 items-center justify-center rounded-lg border transition-all duration-300
           ${checked ? 'theme-gradient-bg shadow-md' : 'bg-white border-slate-300 hover:border-slate-400'}
           focus:outline-none focus:ring-2`}
         style={{

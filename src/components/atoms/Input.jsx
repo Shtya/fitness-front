@@ -81,7 +81,7 @@ export default function Input({
         className={[
           cnInputParent || '',
           'relative flex items-center',
-          'rounded-xl border bg-white',
+          'rounded-lg border bg-white',
           disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text',
           'transition-all duration-200',
         ].join(' ')}
@@ -120,7 +120,7 @@ export default function Input({
           className={[
             'input-3d',
             cnInput || '',
-            'h-[43px] w-full rounded-xl py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400',
+            'h-[43px] w-full rounded-lg py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400',
             icon ? 'ltr:pl-9 rtl:pr-9' : 'px-3.5',
             showClear ? 'ltr:pr-9 rtl:pl-9' : 'ltr:pr-3.5 rtl:pl-3.5',
           ].join(' ')}
@@ -198,7 +198,7 @@ export const Input2 = forwardRef(function Input2(
         ref={wrapperRef}
         className={[
           cnInputParent,
-          'relative flex items-center rounded-xl border bg-white',
+          'relative flex items-center rounded-lg border bg-white',
           disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text',
           'transition-all duration-200',
         ].join(' ')}
@@ -233,7 +233,7 @@ export const Input2 = forwardRef(function Input2(
           className={[
             'input-3d',
             cnInput,
-            'h-[43px] w-full rounded-xl py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400',
+            'h-[43px] w-full rounded-lg py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400',
             icon ? 'ltr:pl-9 rtl:pr-9' : 'px-3.5',
             showClear ? 'ltr:pr-9 rtl:pl-9' : 'ltr:pr-3.5 rtl:pl-3.5',
           ].join(' ')}

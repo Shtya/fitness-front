@@ -139,7 +139,7 @@ function SortableCard({ card, listId, onCardClick }) {
 					e.stopPropagation();
 					onCardClick(card, listId);
 				}}
-				className="group relative bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing transition-all duration-200 hover:-translate-y-0.5"
+				className="group relative bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing transition-all duration-200 hover:-translate-y-0.5"
 			>
 				<div className="p-4">
 					{card.coverImage && (
@@ -157,7 +157,7 @@ function SortableCard({ card, listId, onCardClick }) {
 							{card.labels.map((label) => (
 								<span
 									key={label.id}
-									className="px-2.5 py-1 rounded-md text-xs font-semibold text-white"
+									className="px-2.5 py-1 rounded-lg text-xs font-semibold text-white"
 									style={{ backgroundColor: label.color }}
 								>
 									{label.name}
@@ -182,7 +182,7 @@ function SortableCard({ card, listId, onCardClick }) {
 					<div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
 						{card.dueDate && (
 							<span
-								className={`flex items-center gap-1 px-2 py-1 rounded-md ${
+								className={`flex items-center gap-1 px-2 py-1 rounded-lg ${
 									new Date(card.dueDate) < new Date()
 										? 'bg-red-100 text-red-700 font-semibold'
 										: 'bg-gray-100 text-gray-700'
@@ -197,7 +197,7 @@ function SortableCard({ card, listId, onCardClick }) {
 						)}
 						{card.checklist && card.checklist.length > 0 && (
 							<span
-								className={`flex items-center gap-1 px-2 py-1 rounded-md ${
+								className={`flex items-center gap-1 px-2 py-1 rounded-lg ${
 									card.checklist.every((c) => c.completed)
 										? 'bg-green-100 text-green-700 font-semibold'
 										: 'bg-gray-100 text-gray-700'
@@ -208,18 +208,18 @@ function SortableCard({ card, listId, onCardClick }) {
 							</span>
 						)}
 						{card.description && (
-							<span className="flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded-md">
+							<span className="flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded-lg">
 								<AlignLeft className="w-3.5 h-3.5" />
 							</span>
 						)}
 						{card.comments && card.comments.length > 0 && (
-							<span className="flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded-md">
+							<span className="flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded-lg">
 								<MessageSquare className="w-3.5 h-3.5" />
 								{card.comments.length}
 							</span>
 						)}
 						{card.attachments && card.attachments.length > 0 && (
-							<span className="flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded-md">
+							<span className="flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded-lg">
 								<Paperclip className="w-3.5 h-3.5" />
 								{card.attachments.length}
 							</span>
@@ -367,7 +367,7 @@ function SortableList({
 	return (
 		<div ref={setNodeRef} style={style} className="flex-shrink-0 w-80">
 			<div 
-				className="bg-gray-50 rounded-xl shadow-sm overflow-hidden h-fit border border-gray-200"
+				className="bg-gray-50 rounded-lg shadow-sm overflow-hidden h-fit border border-gray-200"
 			>
 				{/* Header with gradient */}
 				<div 
@@ -423,7 +423,7 @@ function SortableList({
 							{showListMenu && (
 								<>
 									<div className="fixed inset-0 z-10" onClick={() => setShowListMenu(false)} />
-									<div className="absolute ltr:right-0 rtl:left-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-20 w-48">
+									<div className="absolute ltr:right-0 rtl:left-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 w-48">
 										<button className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 transition-colors text-gray-700">
 											<Archive className="w-4 h-4" />
 											<span className="font-medium">{t('list.archive')}</span>
@@ -456,7 +456,7 @@ function SortableList({
 
 						{/* Add Card */}
 						{isAddingCard ? (
-							<div className="bg-white rounded-xl p-3 shadow-sm border border-gray-200 mt-2">
+							<div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200 mt-2">
 								{cardImages.length > 0 && (
 									<div className="mb-3 space-y-2">
 										{cardImages.map((img, idx) => (
@@ -1039,7 +1039,7 @@ export default function BoardTab() {
 									<SelectItem key={label.id} value={label.id}>
 										<div className="flex items-center gap-2">
 											<div
-												className="w-3 h-3 rounded-sm"
+												className="w-3 h-3 rounded-lg"
 												style={{ backgroundColor: label.color }}
 											/>
 											{label.name}
@@ -1114,7 +1114,7 @@ export default function BoardTab() {
 						{/* Add List */}
 						{isAddingList ? (
 							<div className="flex-shrink-0 w-80">
-								<div className="bg-white rounded-xl p-3 shadow-sm border border-gray-200">
+								<div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
 									<input
 										type="text"
 										value={newListTitle}
@@ -1148,7 +1148,7 @@ export default function BoardTab() {
 						) : (
 							<button
 								onClick={() => setIsAddingList(true)}
-								className="flex-shrink-0 w-80 p-3 bg-white hover:bg-gray-50 rounded-xl transition-all flex items-center gap-2 group border border-gray-200 shadow-sm text-sm font-medium text-gray-600"
+								className="flex-shrink-0 w-80 p-3 bg-white hover:bg-gray-50 rounded-lg transition-all flex items-center gap-2 group border border-gray-200 shadow-sm text-sm font-medium text-gray-600"
 							>
 								<Plus className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors" />
 								<span className="group-hover:text-primary transition-colors">
@@ -1162,14 +1162,14 @@ export default function BoardTab() {
 				<DragOverlay>
 					{activeCard ? (
 						<div className="w-80 opacity-90">
-							<div className="bg-white rounded-xl border-2 border-primary shadow-lg">
+							<div className="bg-white rounded-lg border-2 border-primary shadow-lg">
 								<div className="p-4">
 									<h4 className="font-semibold text-gray-900">{activeCard.title}</h4>
 								</div>
 							</div>
 						</div>
 					) : activeList ? (
-						<div className="bg-white rounded-xl p-3 shadow-lg border-2 border-primary w-80 opacity-90">
+						<div className="bg-white rounded-lg p-3 shadow-lg border-2 border-primary w-80 opacity-90">
 							<h3 className="font-semibold text-gray-800">{activeList.title}</h3>
 						</div>
 					) : null}

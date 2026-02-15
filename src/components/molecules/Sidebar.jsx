@@ -4,7 +4,7 @@ import React, { useLayoutEffect, useEffect, useMemo, useRef, useState, useCallba
 import { createPortal } from 'react-dom';
 import api from '@/utils/axios';
 import Link from 'next/link';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup, useAnimationControls } from 'framer-motion';
 import {
 	LayoutDashboard,
 	Users,
@@ -23,7 +23,6 @@ import {
 	Newspaper,
 	ServerCog,
 	AlarmClock,
-	RotateCcw,
 	Wallet,
 	CreditCard,
 	TrendingUp,
@@ -32,9 +31,12 @@ import {
 	ListTodo,
 	CalendarDays,
 	Clock,
-	Expand,
 	Maximize2,
 	Minimize2,
+	LogOut,
+	Icon,
+	Menu,
+	Sparkles,
 } from 'lucide-react';
 import { usePathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
@@ -43,12 +45,20 @@ import { useTranslations } from 'next-intl';
 import { useValues } from '@/context/GlobalContext';
 import ThemeSwitcher from './ThemeSwitcher';
 import { cn } from '@/utils/cn';
-import FeedbackWidget from './FeedbackWidget';
+import LanguageToggle from '../atoms/LanguageToggle';
+import { useRouter } from '@/i18n/navigation';
+import MultiLangText from '../atoms/MultiLangText';
 
 const spring = { type: 'spring', stiffness: 500, damping: 32, mass: 0.6 };
 const flyoutSpring = { type: 'spring', stiffness: 550, damping: 35, mass: 0.6 };
 const smoothSpring = { type: 'spring', stiffness: 380, damping: 30, mass: 0.8 };
 
+function initialsFrom(name, email) {
+	const src = (name && name.trim()) || (email && email.split('@')[0]) || 'G';
+	const parts = src.trim().split(/\s+/);
+	if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+	return src.slice(0, 2).toUpperCase();
+}
 
 function isPathActive(pathname, href) {
 	if (!href) return false;
@@ -102,7 +112,6 @@ export const NAV = [
 			{ nameKey: 'weeklyStrength', href: '/dashboard/my/report', icon: Newspaper },
 		],
 	},
-
 	{
 		role: 'client',
 		sectionKey: 'sections.tools',
@@ -136,13 +145,6 @@ export const NAV = [
 			},
 		],
 	},
-	// {
-	// 	role: 'coach',
-	// 	sectionKey: 'sections.dashboard',
-	// 	items: [
-	// 		{ nameKey: 'overview', href: '/dashboard', icon: LayoutDashboard },
-	// 	],
-	// },
 	{
 		role: 'coach',
 		sectionKey: 'sections.clients',
@@ -160,8 +162,6 @@ export const NAV = [
 			{ nameKey: 'reports', href: '/dashboard/reports', icon: FileBarChart },
 		],
 	},
-
-
 	{
 		role: 'coach',
 		sectionKey: 'sections.clientIntake',
@@ -177,7 +177,6 @@ export const NAV = [
 			},
 		],
 	},
-
 	{
 		role: 'coach',
 		sectionKey: 'sections.tools',
@@ -210,7 +209,7 @@ export const NAV = [
 				],
 			},
 		],
-	}, 
+	},
 	{
 		role: 'admin',
 		sectionKey: 'sections.management',
@@ -325,7 +324,6 @@ export const NAV = [
 	},
 ];
 
-
 export function useUnreadChats(pollMs = 300000) {
 	const [total, setTotal] = useState(0);
 	const { conversationId } = useValues();
@@ -406,7 +404,7 @@ export function CollapsedTooltip({ label, anchorRef, offset = 12 }) {
 				zIndex: 9999,
 				pointerEvents: 'none',
 			}}>
-			<div className="relative rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 text-white text-xs font-semibold px-3 py-2 shadow-2xl shadow-slate-900/60 border border-slate-700/50 backdrop-blur-sm">
+			<div className="relative rounded-lg bg-gradient-to-br from-slate-900 to-slate-800 text-white text-xs font-semibold px-3 py-2 shadow-2xl shadow-slate-900/60 border border-slate-700/50 backdrop-blur-sm">
 				{label}
 				<div
 					className={cn(
@@ -431,7 +429,7 @@ function Flyout({ children, align = 'start' }) {
 			exit={{ opacity: 0, x: -12, scale: 0.96 }}
 			transition={flyoutSpring}
 			className={cn(
-				'absolute z-50 top-0 ms-[76px] min-w-[280px] rounded-2xl border-2 overflow-hidden',
+				'absolute z-50 top-0 ms-[76px] min-w-[280px] rounded-lg border-2 overflow-hidden',
 				'bg-white/98 backdrop-blur-xl shadow-2xl',
 				'border-slate-200/80',
 				align === 'end' && 'origin-top-left'
@@ -526,7 +524,7 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.98 }}
 							className={cn(
-								'relative py-1 flex items-center justify-center rounded-xl transition-all duration-300 border-1',
+								'relative py-1 flex items-center justify-center rounded-lg transition-all duration-300 border-1',
 								active
 									? 'border-[var(--color-primary-400)] shadow-xl text-white'
 									: 'border-transparent text-slate-600 hover:bg-gradient-to-br hover:from-slate-50 hover:to-slate-100 hover:border-slate-200'
@@ -566,9 +564,9 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 						<motion.div
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.98 }}
-							className="relative flex items-center justify-center rounded-2xl p-2.5 transition-all duration-300 border-2 border-transparent text-slate-600 hover:bg-gradient-to-br hover:from-slate-50 hover:to-slate-100 hover:border-slate-200">
+							className="relative flex items-center justify-center rounded-lg p-2.5 transition-all duration-300 border-2 border-transparent text-slate-600 hover:bg-gradient-to-br hover:from-slate-50 hover:to-slate-100 hover:border-slate-200">
 							<div
-								className="grid place-content-center w-10 h-10 rounded-xl text-[var(--color-primary-700)]"
+								className="grid place-content-center w-10 h-10 rounded-lg text-[var(--color-primary-700)]"
 								style={{ backgroundColor: `var(--color-primary-50)` }}>
 								<Icon className="size-5" strokeWidth={2} />
 							</div>
@@ -596,7 +594,7 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 												href={child.href}
 												onClick={onNavigate}
 												className={cn(
-													'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 focus:outline-none focus:ring-2 group',
+													'flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200 focus:outline-none focus:ring-2 group',
 													activeChild
 														? 'shadow-sm text-[var(--color-primary-900)]'
 														: 'hover:bg-slate-50 text-slate-700'
@@ -655,7 +653,7 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 					whileHover={{ x: active ? 0 : 4 }}
 					whileTap={{ scale: 0.98 }}
 					className={cn(
-						'relative flex items-center gap-3 rounded-2xl px-3 py-3 transition-all duration-300 border-2 overflow-visible',
+						'relative flex items-center gap-3 rounded-lg px-3 py-3 transition-all duration-300 border-2 overflow-visible',
 						active
 							? 'border-[var(--color-primary-200)] text-[var(--color-primary-900)] shadow-lg'
 							: 'border-transparent text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100 hover:border-slate-200'
@@ -682,7 +680,7 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 
 					<div
 						className={cn(
-							'relative z-10 grid place-content-center w-9 h-9 rounded-xl transition-all duration-300',
+							'relative z-10 grid place-content-center w-9 h-9 rounded-lg transition-all duration-300',
 							active ? 'text-white shadow-md scale-105' : 'text-[var(--color-primary-700)] group-hover:scale-105'
 						)}
 						style={
@@ -727,7 +725,7 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 				onClick={() => setOpen((v) => !v)}
 				onKeyDown={onKeyToggle}
 				className={cn(
-					'w-full flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-300 border-2',
+					'w-full flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-all duration-300 border-2',
 					open
 						? 'bg-gradient-to-r from-slate-50 to-slate-100 text-slate-900 border-slate-200 shadow-sm'
 						: 'text-slate-700 hover:bg-slate-50 border-transparent hover:border-slate-200'
@@ -735,7 +733,7 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 				aria-expanded={open}>
 				<span
 					className={cn(
-						'grid place-content-center w-9 h-9 rounded-xl transition-all duration-300',
+						'grid place-content-center w-9 h-9 rounded-lg transition-all duration-300',
 						open ? 'bg-gradient-to-br from-slate-200 to-slate-300 text-slate-700' : 'text-[var(--color-primary-700)]'
 					)}
 					style={!open ? { backgroundColor: `var(--color-primary-50)` } : {}}>
@@ -762,7 +760,7 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 						className="overflow-hidden">
 						<ul
 							className={cn(
-								'relative ltr:ml-2 rtl:mr-2 pl-5 mt-1  ',
+								'relative ltr:ml-2 rtl:mr-2 pl-5 mt-1',
 								"before:content-[''] before:absolute",
 								'ltr:before:left-4 rtl:before:right-4',
 								'before:top-0 before:bottom-0 before:w-px before:bg-gradient-to-b before:from-slate-300 before:via-slate-200 before:to-transparent'
@@ -773,7 +771,7 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 									<li
 										key={child.href || child.nameKey}
 										className={cn(
-											'relative ',
+											'relative',
 											isLast &&
 											"after:content-[''] after:absolute ltr:after:left-4 rtl:after:right-4 after:bottom-0 after:h-4 after:w-px after:bg-white"
 										)}>
@@ -805,8 +803,6 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 
 function NavSection({ sectionKey, items, pathname, onNavigate, collapsed = false, t, totalUnread = 0 }) {
 	return (
-
-
 		<div className={cn('space-y-1', collapsed ? 'px-1' : 'px-1.5')}>
 			{items.map((item) => (
 				<NavItem
@@ -823,16 +819,175 @@ function NavSection({ sectionKey, items, pathname, onNavigate, collapsed = false
 	);
 }
 
+function UserProfileCard({ user, collapsed, setCollapsed }) {
+	const t_myProfile = useTranslations('');
+	const avatarText = initialsFrom(user?.name, user?.email);
+	const isActive = (user?.status || '').toLowerCase() === 'active';
+
+	// if (collapsed) {
+	// 	return (
+	// 		<div className="px-2 pb-3">
+	// 			<motion.div
+	// 				whileHover={{ scale: 1.05 }}
+	// 				className="relative"
+	// 			>
+	// 				<div
+	// 					className="w-11 h-11 rounded-lg grid place-items-center text-white text-xs font-black shadow-lg relative overflow-hidden mx-auto"
+	// 					style={{
+	// 						background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
+	// 						boxShadow: `0 4px 16px -4px var(--color-primary-500)`,
+	// 					}}
+	// 				>
+	// 					{avatarText}
+	// 					<motion.div
+	// 						className="absolute inset-0"
+	// 						animate={{
+	// 							backgroundPosition: ['-100% -100%', '200% 200%'],
+	// 						}}
+	// 						transition={{
+	// 							duration: 3,
+	// 							repeat: Infinity,
+	// 							ease: 'linear',
+	// 						}}
+	// 						style={{
+	// 							background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%)',
+	// 							backgroundSize: '200% 200%',
+	// 						}}
+	// 					/>
+	// 				</div>
+	// 				<motion.span
+	// 					initial={{ scale: 0 }}
+	// 					animate={{ scale: 1 }}
+	// 					className="absolute -right-0.5 -bottom-0.5 w-3 h-3 rounded-full ring-2 ring-white"
+	// 					style={{ background: isActive ? '#10b981' : '#94a3b8' }}
+	// 				>
+	// 					{isActive && (
+	// 						<motion.span
+	// 							className="absolute inset-0 rounded-full"
+	// 							animate={{
+	// 								scale: [1, 1.5, 1],
+	// 								opacity: [0.7, 0, 0.7],
+	// 							}}
+	// 							transition={{
+	// 								duration: 2,
+	// 								repeat: Infinity,
+	// 								ease: 'easeInOut',
+	// 							}}
+	// 							style={{ background: '#10b981' }}
+	// 						/>
+	// 					)}
+	// 				</motion.span>
+	// 			</motion.div>
+	// 		</div>
+	// 	);
+	// }
+
+	return (
+		<div className="px-3 pb-3">
+			<div
+				className={`${!collapsed && "p-4 "} relative rounded-lg border-2 overflow-hidden`}
+				style={{
+					borderColor: 'var(--color-primary-200)',
+					background: `linear-gradient(135deg, var(--color-primary-50), var(--color-secondary-50))`,
+				}}
+			>
+				<div className="flex items-center gap-3">
+					{!collapsed && <div className="relative flex-shrink-0">
+						<div
+							className="w-12 h-12 rounded-lg grid place-items-center text-white text-sm font-black shadow-lg relative overflow-hidden"
+							style={{
+								background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
+								boxShadow: `0 4px 16px -4px var(--color-primary-500)`,
+							}}
+						>
+							{avatarText}
+							<motion.div
+								className="absolute inset-0"
+								animate={{
+									backgroundPosition: ['-100% -100%', '200% 200%'],
+								}}
+								transition={{
+									duration: 3,
+									repeat: Infinity,
+									ease: 'linear',
+								}}
+								style={{
+									background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%)',
+									backgroundSize: '200% 200%',
+								}}
+							/>
+						</div>
+						<motion.span
+							initial={{ scale: 0 }}
+							animate={{ scale: 1 }}
+							className="absolute -right-1 -bottom-1 w-3.5 h-3.5 rounded-full ring-2 ring-white shadow-md"
+							style={{ background: isActive ? '#10b981' : '#94a3b8' }}
+						>
+							{isActive && (
+								<motion.span
+									className="absolute inset-0 rounded-full"
+									animate={{
+										scale: [1, 1.5, 1],
+										opacity: [0.7, 0, 0.7],
+									}}
+									transition={{
+										duration: 2,
+										repeat: Infinity,
+										ease: 'easeInOut',
+									}}
+									style={{ background: '#10b981' }}
+								/>
+							)}
+						</motion.span>
+					</div>}
+
+					{!collapsed && <div className="flex-1 min-w-0">
+						<MultiLangText className="text-sm font-bold leading-tight truncate" style={{ color: 'var(--color-primary-900)' }} >{user?.name}</MultiLangText>
+						<p className="text-[10px] font-semibold leading-tight uppercase tracking-wide truncate" style={{ color: 'var(--color-primary-500)' }} >
+							{t_myProfile(`myProfile.roles.${user?.role}`)}
+						</p>
+					</div>}
+
+					<div className={`${collapsed && " w-full justify-center"} flex items-center gap-2  `}>
+						<motion.button
+							whileHover={{ scale: 1.05 }}
+							whileTap={{ scale: 0.95 }}
+							onClick={() => setCollapsed((v) => !v)}
+							className="inline-flex items-center justify-center rounded-lg border-2 bg-white shadow-sm hover:shadow-md h-10 w-10 transition-all duration-200"
+							style={{
+								borderColor: 'var(--color-primary-300)',
+								color: 'var(--color-primary-600)',
+							}}
+							title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+						>
+							<motion.div animate={{ rotate: collapsed ? 0 : 180 }} transition={spring}>
+								{collapsed ? (
+									<ChevronRight className="w-5 h-5 rtl:scale-x-[-1]" strokeWidth={2.5} />
+								) : (
+									<ChevronLeft className="w-5 h-5 ltr:scale-x-[-1]" strokeWidth={2.5} />
+								)}
+							</motion.div>
+						</motion.button>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
+
 export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCollapsed: setCollapsedProp, focusMode, setFocusMode }) {
 	const pathname = usePathname();
+	const router = useRouter();
 	const user = useUser();
 	const role = user?.role ?? null;
 	const t = useTranslations('nav');
+	const t_header = useTranslations('header');
 	const { totalUnread } = useUnreadChats();
 
 	const [collapsedLS, setCollapsedLS] = useLocalStorageState('sidebar:collapsed', false);
 	const collapsed = typeof collapsedProp === 'boolean' ? collapsedProp : collapsedLS;
 	const setCollapsed = typeof setCollapsedProp === 'function' ? setCollapsedProp : setCollapsedLS;
+	const [showLogout, setShowLogout] = useState(false);
 
 	const sections = useMemo(() => {
 		if (!role) return null;
@@ -841,12 +996,43 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 
 	const onNavigate = () => setOpen && setOpen(false);
 
+	const handleLogout = async () => {
+		try {
+			await fetch('/api/auth/logout', { method: 'POST' });
+			localStorage.removeItem('user');
+			localStorage.removeItem('accessToken');
+			localStorage.removeItem('refreshToken');
+		} catch (err) {
+			console.error('Logout failed:', err);
+		} finally {
+			router.push('/auth');
+		}
+	};
+
+
+	const controls = useAnimationControls();
+
+	const stretchSpring = {
+		type: 'spring',
+		stiffness: 200,
+		damping: 15,
+		mass: 0.8
+	};
+
+	const handleClick = () => {
+		controls.start({
+			scaleX: [1, 0.85, 1.15, 1],
+			scaleY: [1, 1.2, 0.9, 1],
+			transition: { duration: 0.4, ease: "easeOut" }
+		});
+		setOpen((v) => !v);
+	};
 	return (
 		<>
 			{/* DESKTOP SIDEBAR */}
 			<aside
 				className={cn(
-					'  rtl:border-l z-[1000] ltr:border-r hidden lg:flex lg:flex-col shrink-0 transition-all duration-500 ease-in-out',
+					'rtl:border-l z-[1000] ltr:border-r hidden lg:flex lg:flex-col shrink-0 transition-all duration-500 ease-in-out',
 					'bg-white/80 backdrop-blur-xl text-slate-900 relative',
 					collapsed ? 'w-[84px]' : 'w-[300px]'
 				)}
@@ -862,113 +1048,16 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 					}}
 				/>
 
-
-
 				<div className="flex h-screen flex-col relative z-10">
-					{/* Header */}
-					<div
-						className={cn('h-[63px] border-b flex items-center gap-3 bg-white/90', `${collapsed ? "px-1" : "px-2"}`)}
-						style={{
-							backdropFilter: 'saturate(180%) blur(20px)',
-							WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-							borderColor: 'var(--color-primary-200)',
-						}}>
-						 <div className="absolute h-[62px] top-0 rtl:left-[-2px] ltr:right-[-2px] w-[2px] bg-white"   />
 
-						<div className={`${collapsed ? "hidden" : "flex"} items-center gap-3 flex-1 min-w-0`}>
-							<motion.div
-								whileHover={{ scale: 1.05, rotate: 5 }}
-								whileTap={{ scale: 0.95 }}
-								className="relative flex items-center justify-center rounded-xl shadow-lg w-11 h-11 overflow-hidden group"
-								style={{
-									background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
-								}}>
-								<img src="/logo/logo1.png" alt="Logo" className="w-7 h-7 object-contain relative z-10" />
-							</motion.div>
-
-							{!collapsed && (
-								<motion.div
-									initial={{ opacity: 0, x: -10 }}
-									animate={{ opacity: 1, x: 0 }}
-									exit={{ opacity: 0, x: -10 }}
-									className="flex flex-col min-w-0">
-									<span className="text-[9px] uppercase tracking-[0.2em] text-slate-400 font-black">
-										{t('brand.portalTitle')}
-									</span>
-									<span className="text-sm font-black text-slate-800 truncate">
-										{role === 'super_admin' && t('brand.superAdminPortal')}
-										{role === 'admin' && t('brand.adminPortal')}
-										{role === 'coach' && t('brand.coachPortal')}
-										{role === 'client' && t('brand.clientPortal')}
-									</span>
-								</motion.div>
-							)}
-						</div>
-
-						<div className="inline-flex items-center gap-[7px] z-[10]">
-
-							<motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setCollapsed((v) => !v)}
-								className="inline-flex items-center justify-center rounded-lg border-2 bg-white shadow-sm hover:shadow-md h-9 w-9 text-slate-500 transition-all duration-200 focus:outline-none focus:ring-2" style={{
-									borderColor: focusMode
-										? "var(--color-gradient-to)"
-										: "var(--color-primary-300)",
-									background: focusMode
-										? "linear-gradient(135deg, var(--color-gradient-from) 0%, var(--color-gradient-via) 50%, var(--color-gradient-to) 100%)"
-										: "rgba(255, 255, 255, 0.95)",
-									["--tw-ring-color"]: `var(--color-primary-300)`,
-									color: focusMode ? "white" : "var(--color-primary-600)",
-								}}>
-								<motion.div animate={{ rotate: collapsed ? 0 : 180 }} transition={spring} style={{ color: 'var(--color-primary-600)' }}>
-									{collapsed ? (<ChevronRight className="w-4 h-4 rtl:scale-x-[-1]" strokeWidth={2.5} />) : (<ChevronLeft className="rtl:scale-x-[-1] w-4 h-4" strokeWidth={2.5} />)}
-								</motion.div>
-							</motion.button>
-
-
-							<motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setFocusMode((v) => !v)}
-								className={` ${focusMode ? ` ${collapsed ? " ltr:left-[260px] rtl:right-[260px]" : "ltr:left-[60px]  rtl:right-[60px]"} bottom-[8px] relative ` : ""} duration-300 inline-flex items-center justify-center rounded-lg border-2 bg-white shadow-sm hover:shadow-md h-9 w-9 transition-all duration-200 focus:outline-none focus:ring-2`}
-								style={{
-									borderColor: focusMode
-										? "var(--color-gradient-to)"
-										: "var(--color-primary-300)",
-									background: focusMode
-										? "linear-gradient(135deg, var(--color-gradient-from) 0%, var(--color-gradient-via) 50%, var(--color-gradient-to) 100%)"
-										: "rgba(255, 255, 255, 0.95)",
-									["--tw-ring-color"]: `var(--color-primary-300)`,
-									color: focusMode ? "white" : "var(--color-primary-600)",
-								}}
-								title={focusMode ? "Exit Focus Mode (ESC)" : "Enter Focus Mode (F)"}
-							>
-
-								{focusMode ? (
-									<motion.div
-										key="minimize"
-										initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
-										animate={{ rotate: 0, opacity: 1, scale: 1 }}
-										exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
-										transition={{ duration: 0.3, type: "spring" }}
-									>
-										<Minimize2 className="w-5 h-5" strokeWidth={2.5} />
-									</motion.div>
-								) : (
-									<motion.div
-										key="maximize"
-										initial={{ rotate: 90, opacity: 0, scale: 0.5 }}
-										animate={{ rotate: 0, opacity: 1, scale: 1 }}
-										exit={{ rotate: -90, opacity: 0, scale: 0.5 }}
-										transition={{ duration: 0.3, type: "spring" }}
-									>
-										<Maximize2 className="w-5 h-5" strokeWidth={2.5} />
-									</motion.div>
-								)}
-							</motion.button>
-						</div>
-
-						
+					{/* User Profile Card */}
+					<div className="pt-4">
+						<UserProfileCard setCollapsed={setCollapsed} user={user} collapsed={collapsed} />
 					</div>
 
 					{/* Navigation */}
 					<LayoutGroup id="sidebar-nav">
-						<div className="flex-1 py-4 overflow-auto">
+						<div className="flex-1 py-2 overflow-auto">
 							<ScrollShadow>
 								<nav className={cn(collapsed ? 'px-2 space-y-2' : 'px-3 space-y-4')}>
 									{sections?.map((section) => (
@@ -988,54 +1077,58 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 						</div>
 					</LayoutGroup>
 
-					{/* Footer */}
-					<div
-						className="p-3 border-t space-y-2 bg-gradient-to-br from-slate-50/30 to-transparent"
-						style={{
-							borderColor: 'var(--color-primary-200)',
-						}}>
-						<ThemeSwitcher collapsed={collapsed} />
-						{!collapsed && (
-							<div className="flex items-center gap-2">
-								<motion.button
-									whileHover={{ scale: 1.04 }}
-									whileTap={{ scale: 0.96 }}
-									onClick={() => window.location.reload()}
-									className="flex items-center justify-center w-11 h-11 rounded-xl text-white shadow-lg hover:shadow-xl transition-all duration-300"
-									style={{
-										background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
-										boxShadow: `0 4px 16px -4px var(--color-primary-500)`,
-									}}>
-									<motion.div whileHover={{ rotate: -180 }} transition={{ duration: 0.3 }}>
-										<RotateCcw className="w-4 h-4" strokeWidth={2.5} />
-									</motion.div>
-								</motion.button>
-
-								<div className="flex-1">
-									<FeedbackWidget collapsed={false} />
-								</div>
+					{/* Footer - Actions */}
+					<div className="border-t bg-gradient-to-br from-slate-50/30 to-transparent" style={{ borderColor: 'var(--color-primary-200)', }}>
+						<div className={cn("px-3", collapsed && "flex-col")} >
+							<div className={cn(" mb-3 mt-3 flex-1", collapsed && "w-full")}>
+								<LanguageToggle collapsed={collapsed} />
 							</div>
-						)}
-						{collapsed && (
+							<div className={cn("flex-1", collapsed && "w-full")}>
+								<ThemeSwitcher collapsed={collapsed} />
+							</div>
+						</div>
+
+						{/* Logout Button */}
+						<div className="p-3">
 							<motion.button
-								whileHover={{ scale: 1.04 }}
-								whileTap={{ scale: 0.96 }}
-								onClick={() => window.location.reload()}
-								className="flex items-center justify-center w-full h-11 rounded-xl text-white shadow-lg hover:shadow-xl transition-all duration-300"
+								whileHover={{ scale: 1.02 }}
+								whileTap={{ scale: 0.98 }}
+								onClick={handleLogout}
+								className={cn(
+									"w-full h-11 rounded-lg font-bold text-sm text-white flex items-center justify-center gap-2 relative overflow-hidden group",
+									collapsed && "!h-11"
+								)}
 								style={{
-									background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
-									boxShadow: `0 4px 16px -4px var(--color-primary-500)`,
-								}}>
-								<motion.div whileHover={{ rotate: -180 }} transition={{ duration: 0.3 }}>
-									<RotateCcw className="w-4 h-4" strokeWidth={2.5} />
-								</motion.div>
+									background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+									boxShadow: '0 4px 12px -2px rgba(239, 68, 68, 0.5)',
+								}}
+							>
+								<LogOut className={cn(" rtl:scale-x-[-1]", collapsed ? "w-5 h-5" : "w-5 h-5")} strokeWidth={2.5} />
+								{!collapsed && <span>{t_header('actions.signOut')}</span>}
+								<motion.div
+									className="absolute inset-0 opacity-0 group-hover:opacity-100"
+									animate={{
+										backgroundPosition: ['-100% -100%', '200% 200%'],
+									}}
+									transition={{
+										duration: 1.5,
+										repeat: Infinity,
+										ease: 'linear',
+									}}
+									style={{
+										background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%)',
+										backgroundSize: '200% 200%',
+									}}
+								/>
 							</motion.button>
-						)}
+						</div>
 					</div>
 				</div>
+
 			</aside>
 
-			{/* MOBILE DRAWER */}
+			 
+
 			<AnimatePresence>
 				{open && (
 					<>
@@ -1068,6 +1161,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 							/>
 
 							<div className="relative z-10 h-full flex flex-col">
+								{/* Mobile Header */}
 								<div
 									className="h-20 px-4 border-b-2 flex items-center justify-between bg-white/90"
 									style={{
@@ -1078,7 +1172,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 									<div className="flex items-center gap-3">
 										<motion.div
 											whileHover={{ scale: 1.05, rotate: 5 }}
-											className="w-11 h-11 rounded-xl grid place-content-center text-white shadow-lg"
+											className="w-11 h-11 rounded-lg grid place-content-center text-white shadow-lg"
 											style={{
 												background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
 												boxShadow: `0 4px 16px -4px var(--color-primary-500)`,
@@ -1102,19 +1196,21 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 									<motion.button
 										whileHover={{ scale: 1.05, rotate: 90 }}
 										whileTap={{ scale: 0.95 }}
-										onClick={() => setOpen && setOpen(false)}
-										className="inline-flex items-center justify-center w-9 h-9 rounded-xl border-2 bg-white text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all duration-200"
+										onClick={() => setOpen(false)}
+										className="inline-flex items-center justify-center w-9 h-9 rounded-lg border-2 bg-white text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all duration-200"
 										style={{
 											borderColor: 'var(--color-primary-200)',
 										}}>
 										<X className="w-4 h-4" strokeWidth={2.5} />
 									</motion.button>
 								</div>
+ 
 
+								{/* Mobile Navigation */}
 								<LayoutGroup id="sidebar-nav-mobile">
 									<div className="flex-1 overflow-hidden">
 										<ScrollShadow>
-											<nav className="w-full px-3 pt-2 pb-6  ">
+											<nav className="w-full px-3 pt-2 pb-6">
 												{sections?.map((section) => (
 													<NavSection
 														totalUnread={totalUnread}
@@ -1133,29 +1229,51 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 
 								{/* Mobile Footer */}
 								<div
-									className="p-4 border-t-2 space-y-3 bg-gradient-to-br from-slate-50/50 to-transparent"
+									className="border-t-2 bg-gradient-to-br from-slate-50/50 to-transparent"
 									style={{
 										borderColor: 'var(--color-primary-200)',
 									}}>
-									<ThemeSwitcher collapsed={false} />
-									<div className="flex items-center gap-2">
-										<motion.button
-											whileHover={{ scale: 1.04 }}
-											whileTap={{ scale: 0.96 }}
-											onClick={() => window.location.reload()}
-											className="flex items-center justify-center w-12 h-12 rounded-lg text-white shadow-lg hover:shadow-xl transition-all duration-300"
-											style={{
-												background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
-												boxShadow: `0 4px 16px -4px var(--color-primary-500)`,
-											}}>
-											<motion.div whileHover={{ rotate: -180 }} transition={{ duration: 0.3 }}>
-												<RotateCcw className="w-4 h-4" strokeWidth={2.5} />
-											</motion.div>
-										</motion.button>
-
+									{/* Language & Theme */}
+									<div className="flex items-center gap-2 px-4 py-2 "
+										style={{
+											borderColor: 'var(--color-primary-200)',
+										}}>
+										 
 										<div className="flex-1">
-											<FeedbackWidget collapsed={false} />
+											<ThemeSwitcher collapsed={false} />
 										</div>
+									</div>
+
+									{/* Logout */}
+									<div className="px-4 pb-2">
+										<motion.button
+											whileHover={{ scale: 1.02 }}
+											whileTap={{ scale: 0.98 }}
+											onClick={() => setShowLogout(true)}
+											className="w-full h-12 rounded-lg font-bold text-sm text-white flex items-center justify-center gap-2 relative overflow-hidden group"
+											style={{
+												background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+												boxShadow: '0 4px 12px -2px rgba(239, 68, 68, 0.5)',
+											}}
+										>
+											<LogOut className="w-5 h-5  rtl:scale-x-[-1]" strokeWidth={2.5} />
+											<span>{t_header('actions.signOut')}</span>
+											<motion.div
+												className="absolute inset-0 opacity-0 group-hover:opacity-100"
+												animate={{
+													backgroundPosition: ['-100% -100%', '200% 200%'],
+												}}
+												transition={{
+													duration: 1.5,
+													repeat: Infinity,
+													ease: 'linear',
+												}}
+												style={{
+													background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%)',
+													backgroundSize: '200% 200%',
+												}}
+											/>
+										</motion.button>
 									</div>
 								</div>
 							</div>
@@ -1166,5 +1284,3 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 		</>
 	);
 }
-
-

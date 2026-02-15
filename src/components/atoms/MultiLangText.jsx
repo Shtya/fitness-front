@@ -39,8 +39,7 @@ function segmentByScript(text = '') {
 export default function MultiLangText({ text, children, as: Tag = 'span', className = '', dirAuto = false, ...rest }) {
   const content = typeof text === 'string' ? text : String(children ?? '');
   const segments = segmentByScript(content);
-
-  // dir تلقائي: لو أول حرف عربي خليه rtl وإلا ltr
+ 
   const firstArabic = segments.find(s => s.text.trim())?.arabic ?? false;
   const dir = dirAuto ? (firstArabic ? 'rtl' : 'ltr') : undefined;
   const lang = firstArabic ? 'ar' : 'en';

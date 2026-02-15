@@ -89,13 +89,13 @@ export function PrettyPagination({
 			<motion.div
 				initial={{ opacity: 0, y: 10 }}
 				animate={{ opacity: 1, y: 0 }}
-				className="relative inline-flex items-center gap-2 rounded-2xl p-2 border-2 bg-white/95 backdrop-blur-xl shadow-2xl"
+				className="relative inline-flex items-center gap-2 rounded-lg p-2 border-2 bg-white/95 backdrop-blur-xl shadow-2xl"
 				style={{
 					borderColor: 'var(--color-primary-200)',
 					boxShadow: '0 20px 60px -15px rgba(15, 23, 42, 0.15), 0 0 0 1px var(--color-primary-100)',
 				}}>
 				{/* Floating particles background */}
-				<div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+				<div className="absolute inset-0 overflow-hidden rounded-lg pointer-events-none">
 					<motion.div
 						className="absolute w-32 h-32 rounded-full blur-3xl opacity-20"
 						style={{
@@ -180,7 +180,7 @@ export function PrettyPagination({
 					{isCompact ? (
 						<motion.div
 							whileHover={{ scale: 1.02 }}
-							className="mx-1 min-w-[120px] px-4 h-10 rounded-xl border-2 inline-flex items-center justify-center text-sm font-semibold relative overflow-hidden"
+							className="mx-1 min-w-[120px] px-4 h-10 rounded-lg border-2 inline-flex items-center justify-center text-sm font-semibold relative overflow-hidden"
 							style={{
 								borderColor: 'var(--color-primary-200)',
 								backgroundColor: 'white',
@@ -211,7 +211,7 @@ export function PrettyPagination({
 												initial={{ opacity: 0, scale: 0.8 }}
 												animate={{ opacity: 1, scale: 1 }}
 												exit={{ opacity: 0, scale: 0.8 }}
-												className="inline-flex items-center justify-center h-10 min-w-10 rounded-xl"
+												className="inline-flex items-center justify-center h-10 min-w-10 rounded-lg"
 												style={{ color: 'var(--color-primary-400)' }}>
 												<MoreHorizontal size={18} strokeWidth={2.5} />
 											</motion.div>
@@ -233,7 +233,7 @@ export function PrettyPagination({
 											type="button"
 											onClick={() => go(p)}
 											aria-current={active ? 'page' : undefined}
-											className="relative h-10 min-w-10 px-3 rounded-xl text-sm font-bold transition-all duration-200 overflow-hidden"
+											className="relative h-10 min-w-10 px-3 rounded-lg text-sm font-bold transition-all duration-200 overflow-hidden"
 											style={
 												active
 													? {
@@ -341,7 +341,7 @@ function NavButton({ onClick, disabled, icon: Icon, label, isHovered, onHover, o
 			whileTap={!disabled ? { scale: 0.92 } : {}}
 			onMouseEnter={onHover}
 			onMouseLeave={onLeave}
-			className="relative h-10 w-10 rounded-xl inline-flex items-center justify-center transition-all duration-200 overflow-hidden disabled:cursor-not-allowed group"
+			className="relative h-10 w-10 rounded-lg inline-flex items-center justify-center transition-all duration-200 overflow-hidden disabled:cursor-not-allowed group"
 			style={
 				disabled
 					? {
@@ -387,7 +387,7 @@ function PageSizeSelect({ value, onChange, options }) {
 				whileHover={{ scale: 1.02 }}
 				whileTap={{ scale: 0.98 }}
 				onClick={() => setIsOpen(!isOpen)}
-				className="h-10 rounded-xl px-4 inline-flex items-center gap-3 border-2 transition-all duration-200 relative overflow-hidden group"
+				className="h-10 rounded-lg px-4 inline-flex items-center gap-3 border-2 transition-all duration-200 relative overflow-hidden group"
 				style={{
 					borderColor: 'var(--color-primary-100)',
 					backgroundColor: 'white',
@@ -435,13 +435,13 @@ function PageSizeSelect({ value, onChange, options }) {
 							animate={{ opacity: 1, y: 0, scale: 1 }}
 							exit={{ opacity: 0, y: -10, scale: 0.95 }}
 							transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-							className="absolute top-full mt-2 left-0 min-w-[140px] rounded-2xl border-2 bg-white/98 backdrop-blur-xl shadow-2xl p-2 z-50"
+							className="absolute top-full mt-2 left-0 min-w-[140px] rounded-lg border-2 bg-white/98 backdrop-blur-xl shadow-2xl p-2 z-50"
 							style={{
 								borderColor: 'var(--color-primary-200)',
 								boxShadow: '0 20px 60px -15px rgba(15, 23, 42, 0.25)',
 							}}>
 							{/* Floating particles background */}
-							<div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+							<div className="absolute inset-0 overflow-hidden rounded-lg pointer-events-none">
 								<motion.div
 									className="absolute w-20 h-20 rounded-full blur-2xl opacity-20"
 									style={{
@@ -473,7 +473,7 @@ function PageSizeSelect({ value, onChange, options }) {
 												onChange?.(opt);
 												setIsOpen(false);
 											}}
-											className="w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-between overflow-hidden relative group"
+											className="w-full text-left px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center justify-between overflow-hidden relative group"
 											style={
 												isSelected
 													? {

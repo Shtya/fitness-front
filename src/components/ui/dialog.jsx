@@ -72,7 +72,7 @@ function DialogContent({
 
 							// base button
 							"group inline-flex items-center justify-center",
-							"h-10 w-10 rounded-xl",
+							"h-10 w-10 rounded-lg",
 
 							// premium background (glass + gradient)
 							"bg-white/70 dark:bg-slate-900/40 backdrop-blur",
@@ -93,7 +93,7 @@ function DialogContent({
 						)}
 					>
 						{/* subtle glow on hover */}
-						<span className="absolute inset-0 rounded-xl bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+						<span className="absolute inset-0 rounded-lg bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
 						{/* icon */}
 						 <XIcon

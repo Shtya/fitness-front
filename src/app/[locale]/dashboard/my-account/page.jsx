@@ -58,9 +58,9 @@ const cx = (...c) => c.filter(Boolean).join(' ');
 
 function ThemeFrame({ children, className = '' }) {
   return (
-    <div className={cx('rounded-3xl p-[1px]', className)}>
+    <div className={cx('rounded-lg p-[1px]', className)}>
       <div
-        className="rounded-3xl border bg-white/85 backdrop-blur-xl"
+        className="rounded-lg border bg-white/85 backdrop-blur-xl"
         style={{
           borderColor: 'var(--color-primary-200)',
           boxShadow: '0 1px 0 rgba(15, 23, 42, 0.04), 0 18px 44px rgba(15, 23, 42, 0.10)',
@@ -78,7 +78,7 @@ function SoftCard({ children, className = '' }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={spring}
-      className={cx('rounded-3xl border bg-white/90 backdrop-blur-xl', className)}
+      className={cx('rounded-lg border bg-white/90 backdrop-blur-xl', className)}
       style={{
         borderColor: 'var(--color-primary-200)',
         boxShadow: '0 1px 0 rgba(15, 23, 42, 0.03), 0 12px 28px rgba(15, 23, 42, 0.08)',
@@ -94,7 +94,7 @@ function SectionHead({ icon: Icon, title, subtitle, right }) {
     <div className="flex items-start justify-between gap-3">
       <div className="flex items-start gap-3">
         <div
-          className="grid place-items-center rounded-2xl"
+          className="grid place-items-center rounded-lg"
           style={{
             width: 44,
             height: 44,
@@ -151,7 +151,7 @@ function ReadOnlyField({ label, value, icon }) {
   const Icon = icon;
   return (
     <div
-      className="rounded-2xl border p-3"
+      className="rounded-lg border p-3"
       style={{
         borderColor: 'var(--color-primary-200)',
         background: 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))',
@@ -169,7 +169,7 @@ function ReadOnlyField({ label, value, icon }) {
 function HintBox({ text }) {
   return (
     <div
-      className="flex items-start gap-2 rounded-2xl border p-3"
+      className="flex items-start gap-2 rounded-lg border p-3"
       style={{
         borderColor: 'var(--color-primary-200)',
         background: 'linear-gradient(135deg, rgba(255,255,255,0.92), var(--color-primary-50))',
@@ -321,18 +321,18 @@ export default function ProfilePage() {
         onClick={fetchProfile}
       >
 
-           <div className="rounded-2xl border border-white/25 bg-white/10 backdrop-blur p-4">
+           <div className="rounded-lg border border-white/25 bg-white/10 backdrop-blur p-4">
             <div className="text-xs text-white/80">{t('header.name')}</div>
             <div className="text-lg font-extrabold text-white truncate">{user?.name || '—'}</div>
             <div className="mt-1 text-xs text-white/80 truncate">{user?.email || '—'}</div>
           </div>
 
-          <div className="rounded-2xl border border-white/25 bg-white/10 backdrop-blur p-4">
+          <div className="rounded-lg border border-white/25 bg-white/10 backdrop-blur p-4">
             <div className="text-xs text-white/80">{t('header.role')}</div>
             <div className="text-lg font-extrabold text-white">{headerStats.role}</div>
           </div>
 
-          <div className="hidden md:block rounded-2xl border border-white/25 bg-white/10 backdrop-blur p-4">
+          <div className="hidden md:block rounded-lg border border-white/25 bg-white/10 backdrop-blur p-4">
             <div className="text-xs text-white/80">{t('header.membership')}</div>
             <div className="text-lg font-extrabold text-white">{headerStats.membership}</div>
           </div>
@@ -531,7 +531,7 @@ export default function ProfilePage() {
 
             <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div
-                className="rounded-2xl border p-4"
+                className="rounded-lg border p-4"
                 style={{
                   borderColor: 'var(--color-primary-200)',
                   background: 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))',
@@ -544,7 +544,7 @@ export default function ProfilePage() {
               </div>
 
               <div
-                className="rounded-2xl border p-4"
+                className="rounded-lg border p-4"
                 style={{
                   borderColor: 'var(--color-primary-200)',
                   background: 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))',

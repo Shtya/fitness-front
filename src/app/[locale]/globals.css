@@ -66,12 +66,12 @@ body {
   color: black;
 }
 
-[dir='ltr'] body {
-  font-family: var(--font-open-sans) !important;
+[dir='ltr'] body * {
+  font-family: var(--font-open-sans) ;
 }
 
-[dir='rtl'] body {
-  font-family: var(--font-arabic) !important;
+[dir='rtl'] body * {
+  font-family: var(--font-arabic) ;
 }
 .font-ar {
   font-family: var(--font-arabic) !important;

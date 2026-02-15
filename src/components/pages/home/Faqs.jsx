@@ -207,7 +207,7 @@ export default function FAQs() {
 					>
 						{/* Badge */}
 						<motion.div
-							className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl mb-6 backdrop-blur-xl"
+							className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg mb-6 backdrop-blur-xl"
 							style={{
 								background: `linear-gradient(135deg, ${colors.primary[500]}20, ${colors.secondary[500]}20)`,
 								border: `2px solid ${colors.primary[500]}30`,
@@ -259,7 +259,7 @@ export default function FAQs() {
 									placeholder={t("searchPlaceholder")}
 									value={searchQuery}
 									onChange={(e) => setSearchQuery(e.target.value)}
-									className="w-full ltr:pl-14 rtl:pr-14 ltr:pr-5 rtl:pl-5 py-4 bg-slate-800/60 backdrop-blur-xl border-2 border-slate-700/50 rounded-2xl text-white placeholder-white/40 focus:border-opacity-100 focus:ring-4 transition-all outline-none font-medium"
+									className="w-full ltr:pl-14 rtl:pr-14 ltr:pr-5 rtl:pl-5 py-4 bg-slate-800/60 backdrop-blur-xl border-2 border-slate-700/50 rounded-lg text-white placeholder-white/40 focus:border-opacity-100 focus:ring-4 transition-all outline-none font-medium"
 									style={{
 										borderColor: searchQuery ? colors.primary[500] : '',
 										boxShadow: searchQuery ? `0 0 0 4px ${colors.primary[500]}15` : '',
@@ -295,7 +295,7 @@ export default function FAQs() {
 									<motion.button
 										key={category.id}
 										onClick={() => setActiveCategory(category.id)}
-										className="relative flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all text-sm overflow-hidden"
+										className="relative flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all text-sm overflow-hidden"
 										style={{
 											backgroundColor: isActive
 												? colors.primary[500]
@@ -340,7 +340,7 @@ export default function FAQs() {
 										className="text-center py-20"
 									>
 										<div
-											className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6"
+											className="w-24 h-24 rounded-lg flex items-center justify-center mx-auto mb-6"
 											style={{
 												background: `linear-gradient(135deg, ${colors.primary[900]}40, ${colors.secondary[900]}40)`,
 											}}
@@ -371,7 +371,7 @@ export default function FAQs() {
 													whileTap={{ scale: 0.99 }}
 												>
 													<div
-														className="relative bg-slate-800/40 backdrop-blur-xl rounded-2xl border-2 transition-all duration-300 overflow-hidden p-6"
+														className="relative bg-slate-800/40 backdrop-blur-xl rounded-lg border-2 transition-all duration-300 overflow-hidden p-6"
 														style={{
 															borderColor: isOpen
 																? colors.primary[500]
@@ -409,7 +409,7 @@ export default function FAQs() {
 
 															{/* Expand/Collapse Icon */}
 															<motion.div
-																className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300"
+																className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300"
 																style={{
 																	background: isOpen
 																		? `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})`
@@ -470,7 +470,7 @@ export default function FAQs() {
 						>
 							<div className="relative">
 								<motion.div
-									className="absolute -inset-4 rounded-3xl blur-2xl opacity-30"
+									className="absolute -inset-4 rounded-lg blur-2xl opacity-30"
 									style={{
 										background: `linear-gradient(135deg, ${colors.primary[500]}, ${colors.secondary[500]})`,
 									}}
@@ -479,7 +479,7 @@ export default function FAQs() {
 								/>
 
 								<div
-									className="relative backdrop-blur-xl rounded-3xl p-8 border-2"
+									className="relative backdrop-blur-xl rounded-lg p-8 border-2"
 									style={{
 										backgroundColor: 'rgba(30, 41, 59, 0.6)',
 										borderColor: `${colors.primary[500]}30`,
@@ -487,7 +487,7 @@ export default function FAQs() {
 								>
 									<div className="flex flex-col md:flex-row items-center gap-6">
 										<motion.div
-											className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl shrink-0"
+											className="w-16 h-16 rounded-lg flex items-center justify-center shadow-2xl shrink-0"
 											style={{
 												background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})`,
 											}}
@@ -508,7 +508,7 @@ export default function FAQs() {
 
 										<div className="flex gap-3">
 											<motion.button
-												className="group relative text-white px-6 py-3 rounded-xl font-bold shadow-xl overflow-hidden"
+												className="group relative text-white px-6 py-3 rounded-lg font-bold shadow-xl overflow-hidden"
 												style={{
 													background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})`,
 													boxShadow: `0 10px 40px ${colors.primary[500]}30`,
@@ -529,7 +529,7 @@ export default function FAQs() {
 											</motion.button>
 
 											<motion.button
-												className="group relative text-white px-6 py-3 rounded-xl font-bold border-2 transition-colors bg-slate-700/30"
+												className="group relative text-white px-6 py-3 rounded-lg font-bold border-2 transition-colors bg-slate-700/30"
 												style={{
 													borderColor: `${colors.primary[500]}40`,
 												}}
@@ -568,7 +568,7 @@ export default function FAQs() {
 							<div className="relative">
 								{/* FAQ Illustration Placeholder */}
 								<motion.div
-									className="relative w-full aspect-square rounded-3xl overflow-hidden"
+									className="relative w-full aspect-square rounded-lg overflow-hidden"
 									style={{
 										background: `linear-gradient(135deg, ${colors.primary[900]}20, ${colors.secondary[900]}20)`,
 										border: `2px solid ${colors.primary[500]}20`,
@@ -621,7 +621,7 @@ export default function FAQs() {
 											}}
 										>
 											<div
-												className="w-12 h-12 rounded-xl flex items-center justify-center"
+												className="w-12 h-12 rounded-lg flex items-center justify-center"
 												style={{
 													background: `linear-gradient(135deg, ${colors.primary[500]}, ${colors.secondary[500]})`,
 												}}

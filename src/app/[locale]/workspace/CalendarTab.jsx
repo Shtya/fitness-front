@@ -1,13 +1,14 @@
 /* 
-	fix the two side scroll 
-	- fix when i click on the edit action on the sidebar open also the edit modal in the calendar 
+	- add note in the endpoint for create it 
+	- fix when i click on the edit action from the sidebar open also the edit modal in the calendar 
 
-	- in hte edit when click on the dropdown close the popover
+
+	- in the edit when click on the dropdown close the popover
 	- add action to detle the types that not global 
 
-	- handle the color of the card ( text , background )
+	- and when i make the item his repetation is "daily" send in the ( recurrenceInterval ) the last key that have shoudl when daily send on this number 1
+	- and another things when i choose a type for exmaple  food and this type his bg is blue he put the text also is from my (--primary-color)  you should handle the all colors on this item based on his background with some thing diff to show 
 
-	- add note when i create eth item 
 */
 
 "use client";
@@ -54,6 +55,7 @@ import {
 	TrendingUp,
 	ListTodo,
 	Home,
+	FileText,
 } from "lucide-react";
 import { Play, Pause, RotateCcw, Zap, Trophy } from "lucide-react";
 
@@ -65,6 +67,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import api from "@/utils/axios";
 import MultiLangText from "@/components/atoms/MultiLangText";
@@ -121,7 +124,7 @@ const ICON_COMPONENTS = {
 const COLOR_OPTIONS = [
 	{
 		value: "bg-gradient-to-br from-rose-400 via-pink-400 to-rose-500",
-		text: "text-rose-800",
+		text: "text-white",
 		border: "border-rose-300",
 		ring: "ring-rose-500",
 		nameKey: "colors.red",
@@ -130,7 +133,7 @@ const COLOR_OPTIONS = [
 	},
 	{
 		value: "bg-gradient-to-br from-blue-400 via-cyan-400 to-blue-500",
-		text: "text-blue-800",
+		text: "text-white",
 		border: "border-blue-300",
 		ring: "ring-blue-500",
 		nameKey: "colors.blue",
@@ -139,7 +142,7 @@ const COLOR_OPTIONS = [
 	},
 	{
 		value: "bg-gradient-to-br from-emerald-400 via-teal-400 to-emerald-500",
-		text: "text-emerald-800",
+		text: "text-white",
 		border: "border-emerald-300",
 		ring: "ring-emerald-500",
 		nameKey: "colors.green",
@@ -148,7 +151,7 @@ const COLOR_OPTIONS = [
 	},
 	{
 		value: "theme-gradient-bg",
-		text: "theme-primary-text",
+		text: "text-white",
 		border: "theme-soft-border",
 		ring: "ring-primary-500",
 		nameKey: "colors.purple",
@@ -158,7 +161,7 @@ const COLOR_OPTIONS = [
 	},
 	{
 		value: "bg-gradient-to-br from-amber-400 via-orange-400 to-amber-500",
-		text: "text-amber-800",
+		text: "text-white",
 		border: "border-amber-300",
 		ring: "ring-amber-500",
 		nameKey: "colors.orange",
@@ -167,7 +170,7 @@ const COLOR_OPTIONS = [
 	},
 	{
 		value: "bg-gradient-to-br from-indigo-400 via-violet-400 to-indigo-500",
-		text: "text-indigo-800",
+		text: "text-white",
 		border: "border-indigo-300",
 		ring: "ring-indigo-500",
 		nameKey: "colors.indigo",
@@ -181,11 +184,11 @@ const COLOR_OPTIONS = [
 // -----------------------------
 const DEFAULT_TYPES = [
 	{ id: "all", nameKey: "types.all", color: "bg-gradient-to-br from-gray-100 to-gray-200", textColor: "text-gray-800", border: "border-gray-300", ring: "ring-gray-500", icon: "LayoutGrid", shadow: "shadow-gray-200", glow: "from-gray-400 to-gray-500" },
-	{ id: "habit", nameKey: "types.habit", color: "bg-gradient-to-br from-emerald-400 via-teal-400 to-emerald-500", textColor: "text-emerald-900", border: "border-emerald-300", ring: "ring-emerald-500", icon: "Target", shadow: "shadow-emerald-200", glow: "from-emerald-400 to-teal-500" },
-	{ id: "task", nameKey: "types.task", color: "theme-gradient-bg", textColor: "theme-primary-text", border: "theme-soft-border", ring: "ring-primary-500", icon: "CheckSquare", shadow: "shadow-primary-200", glow: "var(--color-gradient-from) var(--color-gradient-to)" },
-	{ id: "meeting", nameKey: "types.meeting", color: "bg-gradient-to-br from-purple-400 via-fuchsia-400 to-purple-500", textColor: "text-purple-900", border: "border-purple-300", ring: "ring-purple-500", icon: "Users", shadow: "shadow-purple-200", glow: "from-purple-400 to-fuchsia-500" },
-	{ id: "reminder", nameKey: "types.reminder", color: "bg-gradient-to-br from-amber-400 via-orange-400 to-amber-500", textColor: "text-amber-900", border: "border-amber-300", ring: "ring-amber-500", icon: "Bell", shadow: "shadow-amber-200", glow: "from-amber-400 to-orange-500" },
-	{ id: "billing", nameKey: "types.billing", color: "bg-gradient-to-br from-rose-400 via-pink-400 to-rose-500", textColor: "text-rose-900", border: "border-rose-300", ring: "ring-rose-500", icon: "DollarSign", shadow: "shadow-rose-200", glow: "from-rose-400 to-pink-500" },
+	{ id: "habit", nameKey: "types.habit", color: "bg-gradient-to-br from-emerald-400 via-teal-400 to-emerald-500", textColor: "text-white", border: "border-emerald-300", ring: "ring-emerald-500", icon: "Target", shadow: "shadow-emerald-200", glow: "from-emerald-400 to-teal-500" },
+	{ id: "task", nameKey: "types.task", color: "theme-gradient-bg", textColor: "text-white", border: "theme-soft-border", ring: "ring-primary-500", icon: "CheckSquare", shadow: "shadow-primary-200", glow: "var(--color-gradient-from) var(--color-gradient-to)" },
+	{ id: "meeting", nameKey: "types.meeting", color: "bg-gradient-to-br from-purple-400 via-fuchsia-400 to-purple-500", textColor: "text-white", border: "border-purple-300", ring: "ring-purple-500", icon: "Users", shadow: "shadow-purple-200", glow: "from-purple-400 to-fuchsia-500" },
+	{ id: "reminder", nameKey: "types.reminder", color: "bg-gradient-to-br from-amber-400 via-orange-400 to-amber-500", textColor: "text-white", border: "border-amber-300", ring: "ring-amber-500", icon: "Bell", shadow: "shadow-amber-200", glow: "from-amber-400 to-orange-500" },
+	{ id: "billing", nameKey: "types.billing", color: "bg-gradient-to-br from-rose-400 via-pink-400 to-rose-500", textColor: "text-white", border: "border-rose-300", ring: "ring-rose-500", icon: "DollarSign", shadow: "shadow-rose-200", glow: "from-rose-400 to-pink-500" },
 ];
 
 // -----------------------------
@@ -231,12 +234,12 @@ function ItemFormContent({
 		<div className="p-6 space-y-5 bg-gradient-to-b from-white via-gray-50 to-white">
 			<div className="flex items-center justify-between border-b-2 pb-4 theme-soft-border">
 				<div className="flex items-center gap-3">
-					<div className="w-10 h-10 rounded-md  theme-gradient-bg flex items-center justify-center shadow-lg">
+					<div className="w-10 h-10 rounded-lg theme-gradient-bg flex items-center justify-center shadow-lg">
 						<Sparkles className="h-5 w-5 text-white" />
 					</div>
 					<h3 className="text-xl font-black text-gray-900">{editingItem ? t("editItem") : t("addNewItem")}</h3>
 				</div>
-				<Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 rounded-md  hover:bg-gray-100">
+				<Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 rounded-lg hover:bg-gray-100">
 					<X className="h-5 w-5" />
 				</Button>
 			</div>
@@ -251,19 +254,45 @@ function ItemFormContent({
 						value={itemForm.title}
 						onChange={(e) => setItemForm((prev) => ({ ...prev, title: e.target.value }))}
 						placeholder={t("enterTitle")}
-						className="border-2 focus:ring-2 rounded-md  h-12 text-base font-medium shadow-sm hover:shadow-md transition-shadow"
+						className="border-2 focus:ring-2 rounded-lg h-12 text-base font-medium shadow-sm hover:shadow-md transition-shadow"
 						autoFocus
+					/>
+				</div>
+
+				<div className="space-y-2">
+					<Label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+						<FileText className="h-3.5 w-3.5" />
+						{t("note")} ({t("optional")})
+					</Label>
+					<Textarea
+						value={itemForm.note || ""}
+						onChange={(e) => setItemForm((prev) => ({ ...prev, note: e.target.value }))}
+						placeholder={t("addNote")}
+						className="border-2 focus:ring-2 rounded-lg text-base font-medium shadow-sm hover:shadow-md transition-shadow min-h-[80px] resize-none"
 					/>
 				</div>
 
 				<div className="grid grid-cols-2 gap-4">
 					<div className="space-y-2">
 						<Label className="text-sm font-bold text-gray-700">{t("type")}</Label>
-						<Select value={itemForm.type} onValueChange={(value) => setItemForm((prev) => ({ ...prev, type: value }))}>
-							<SelectTrigger className="border-2 rounded-md  h-12 shadow-sm hover:shadow-md transition-shadow">
+						<Select 
+							value={itemForm.type} 
+							onValueChange={(value) => {
+								setItemForm((prev) => ({ ...prev, type: value }));
+								// Close the popover when selecting a type
+								setTimeout(() => {
+									const openPopovers = document.querySelectorAll('[data-radix-popper-content-wrapper]');
+									openPopovers.forEach(popover => {
+										const closeButton = popover.querySelector('button[aria-label="Close"]');
+										if (closeButton) closeButton.click();
+									});
+								}, 0);
+							}}
+						>
+							<SelectTrigger className="border-2 rounded-lg h-12 shadow-sm hover:shadow-md transition-shadow">
 								<SelectValue />
 							</SelectTrigger>
-							<SelectContent className="rounded-md ">
+							<SelectContent className="rounded-lg">
 								{eventTypes
 									.filter((tt) => tt.id !== "all")
 									.map((type) => (
@@ -280,11 +309,28 @@ function ItemFormContent({
 
 					<div className="space-y-2">
 						<Label className="text-sm font-bold text-gray-700">{t("recurrence")}</Label>
-						<Select value={itemForm.recurrence} onValueChange={(value) => setItemForm((prev) => ({ ...prev, recurrence: value }))}>
-							<SelectTrigger className="border-2 rounded-md  h-12 shadow-sm hover:shadow-md transition-shadow">
+						<Select 
+							value={itemForm.recurrence} 
+							onValueChange={(value) => {
+								setItemForm((prev) => ({ 
+									...prev, 
+									recurrence: value,
+									recurrenceInterval: value === "daily" ? 1 : (value === "weekly" ? 1 : (value === "monthly" ? 1 : prev.recurrenceInterval))
+								}));
+								// Close the popover when selecting recurrence
+								setTimeout(() => {
+									const openPopovers = document.querySelectorAll('[data-radix-popper-content-wrapper]');
+									openPopovers.forEach(popover => {
+										const closeButton = popover.querySelector('button[aria-label="Close"]');
+										if (closeButton) closeButton.click();
+									});
+								}, 0);
+							}}
+						>
+							<SelectTrigger className="border-2 rounded-lg h-12 shadow-sm hover:shadow-md transition-shadow">
 								<SelectValue />
 							</SelectTrigger>
-							<SelectContent className="rounded-md ">
+							<SelectContent className="rounded-lg">
 								<SelectItem value="none" className="rounded-lg my-1">{t("none")}</SelectItem>
 								<SelectItem value="daily" className="rounded-lg my-1">{t("daily")}</SelectItem>
 								<SelectItem value="weekly" className="rounded-lg my-1">{t("weekly")}</SelectItem>
@@ -297,7 +343,7 @@ function ItemFormContent({
 				</div>
 
 				{itemForm.recurrence === "every_x_days" && (
-					<div className="space-y-2 p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-md  border-2 border-blue-200">
+					<div className="space-y-2 p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-200">
 						<Label className="text-sm font-bold text-blue-900">{t("repeatEveryDays")}</Label>
 						<Input
 							type="number"
@@ -305,7 +351,7 @@ function ItemFormContent({
 							value={itemForm.recurrenceInterval}
 							onChange={(e) => setItemForm((prev) => ({ ...prev, recurrenceInterval: parseInt(e.target.value, 10) || 1 }))}
 							placeholder="3"
-							className="border-2 rounded-md  h-11"
+							className="border-2 rounded-lg h-11"
 						/>
 					</div>
 				)}
@@ -317,7 +363,7 @@ function ItemFormContent({
 							type="date"
 							value={itemForm.startDate}
 							onChange={(e) => setItemForm((prev) => ({ ...prev, startDate: e.target.value }))}
-							className="border-2 rounded-md  h-12 shadow-sm hover:shadow-md transition-shadow"
+							className="border-2 rounded-lg h-12 shadow-sm hover:shadow-md transition-shadow"
 						/>
 					</div>
 
@@ -329,13 +375,13 @@ function ItemFormContent({
 							type="time"
 							value={itemForm.startTime || ""}
 							onChange={(e) => setItemForm((prev) => ({ ...prev, startTime: e.target.value }))}
-							className="border-2 rounded-md  h-12 shadow-sm hover:shadow-md transition-shadow"
+							className="border-2 rounded-lg h-12 shadow-sm hover:shadow-md transition-shadow"
 						/>
 					</div>
 				</div>
 
 				{itemForm.recurrence === "custom" && (
-					<div className="space-y-3 p-4 bg-[var(--color-primary-50)] rounded-md  border-2 theme-soft-border">
+					<div className="space-y-3 p-4 bg-[var(--color-primary-50)] rounded-lg border-2 theme-soft-border">
 						<Label className="text-sm font-bold theme-primary-text">{t("selectDays")}</Label>
 						<div className="flex gap-2 flex-wrap">
 							{dayNames.map((day, idx) => (
@@ -345,7 +391,7 @@ function ItemFormContent({
 									variant={itemForm.recurrenceDays.includes(idx) ? "default" : "outline"}
 									size="sm"
 									className={cn(
-										"rounded-md  transition-all",
+										"rounded-lg transition-all",
 										itemForm.recurrenceDays.includes(idx) && "theme-gradient-bg shadow-lg"
 									)}
 									onClick={() => {
@@ -366,13 +412,13 @@ function ItemFormContent({
 			</div>
 
 			<div className="flex gap-3 pt-4 border-t-2 border-gray-100">
-				<Button variant="outline" onClick={onClose} className="flex-1 rounded-md  h-12 font-bold border-2 hover:bg-gray-50">
+				<Button variant="outline" onClick={onClose} className="flex-1 rounded-lg h-12 font-bold border-2 hover:bg-gray-50">
 					{t("cancel")}
 				</Button>
 				<Button
 					onClick={handleSaveItem}
 					disabled={!itemForm.title || !itemForm.startDate}
-					className="flex-1 rounded-md  h-12 font-bold shadow-lg hover:shadow-xl transition-all theme-gradient-bg text-white"
+					className="flex-1 rounded-lg h-12 font-bold shadow-lg hover:shadow-xl transition-all theme-gradient-bg text-white"
 				>
 					<Check className="h-5 w-5 mr-2" />
 					{editingItem ? t("save") : t("add")}
@@ -413,6 +459,8 @@ export default function CalendarPage() {
 	const [showSettingsDialog, setShowSettingsDialog] = useState(false);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [itemToDelete, setItemToDelete] = useState(null);
+	const [showDeleteTypeConfirm, setShowDeleteTypeConfirm] = useState(false);
+	const [typeToDelete, setTypeToDelete] = useState(null);
 
 	// Add new item popover (top)
 	const [showAddPopover, setShowAddPopover] = useState(false);
@@ -434,6 +482,7 @@ export default function CalendarPage() {
 	const [itemForm, setItemForm] = useState({
 		id: "",
 		title: "",
+		note: "",
 		type: "task",
 		startDate: "",
 		startTime: "",
@@ -648,18 +697,18 @@ export default function CalendarPage() {
 
 			switch (item.recurrence) {
 				case "daily":
-					return diffDays % item.recurrenceInterval === 0;
+					return diffDays % (item.recurrenceInterval || 1) === 0;
 				case "weekly":
-					return diffDays % (7 * item.recurrenceInterval) === 0;
+					return diffDays % (7 * (item.recurrenceInterval || 1)) === 0;
 				case "monthly":
 					return (
 						date.getDate() === startDate.getDate() &&
-						(date.getMonth() - startDate.getMonth() + 12 * (date.getFullYear() - startDate.getFullYear())) % item.recurrenceInterval === 0
+						(date.getMonth() - startDate.getMonth() + 12 * (date.getFullYear() - startDate.getFullYear())) % (item.recurrenceInterval || 1) === 0
 					);
 				case "custom":
 					return item.recurrenceDays.includes(date.getDay()) && diffDays >= 0;
 				case "every_x_days":
-					return diffDays % item.recurrenceInterval === 0;
+					return diffDays % (item.recurrenceInterval || 1) === 0;
 				default:
 					return false;
 			}
@@ -690,6 +739,7 @@ export default function CalendarPage() {
 		setItemForm({
 			id: "",
 			title: "",
+			note: "",
 			type: "task",
 			startDate: dateStr,
 			startTime: "",
@@ -703,10 +753,12 @@ export default function CalendarPage() {
 
 	const openEditPopover = (item, dateStr) => {
 		setShowAddPopover(false);
+		setShowDaySlidePanel(false);
 
 		setEditingItem(item);
 		setItemForm({
 			...item,
+			note: item.note || "",
 			recurrenceDays: item.recurrenceDays || [],
 			recurrenceInterval: item.recurrenceInterval || 1,
 		});
@@ -735,8 +787,17 @@ export default function CalendarPage() {
 	const handleSaveItem = useCallback(async () => {
 		if (!itemForm.title || !itemForm.startDate) return;
 
+		// Ensure recurrenceInterval is set correctly for daily
+		const finalForm = {
+			...itemForm,
+			recurrenceInterval: itemForm.recurrence === "daily" ? 1 : 
+							   itemForm.recurrence === "weekly" ? 1 :
+							   itemForm.recurrence === "monthly" ? 1 :
+							   itemForm.recurrenceInterval
+		};
+
 		if (editingItem) {
-			const updated = { ...itemForm, id: editingItem.id };
+			const updated = { ...finalForm, id: editingItem.id };
 
 			setItems((prev) => prev.map((it) => (it.id === editingItem.id ? updated : it)));
 
@@ -750,7 +811,7 @@ export default function CalendarPage() {
 			}
 		} else {
 			const tempId = `tmp_${Date.now()}`;
-			const createdLocal = { ...itemForm, id: tempId };
+			const createdLocal = { ...finalForm, id: tempId };
 
 			setItems((prev) => [...prev, createdLocal]);
 
@@ -785,6 +846,8 @@ export default function CalendarPage() {
 		setItems((prev) => prev.filter((i) => i.id !== item.id));
 		setShowDeleteConfirm(false);
 		setItemToDelete(null);
+		setEditingPopoverId(null);
+		setEditingItem(null);
 		playSound();
 
 		try {
@@ -802,7 +865,7 @@ export default function CalendarPage() {
 			id: `custom_${Date.now()}`,
 			name: newTypeName,
 			color: newTypeColor,
-			textColor: selectedColor?.text || "text-gray-700",
+			textColor: selectedColor?.text || "text-white",
 			border: selectedColor?.border || "border-gray-200",
 			ring: selectedColor?.ring || "ring-gray-500",
 			shadow: selectedColor?.shadow || "shadow-gray-200",
@@ -828,19 +891,28 @@ export default function CalendarPage() {
 		playSound();
 	};
 
-	const handleDeleteType = async (typeId) => {
+	const handleDeleteType = (typeId) => {
 		const type = eventTypes.find((tt) => tt.id === typeId);
 		if (!type || !type.custom) return;
+
+		setTypeToDelete(type);
+		setShowDeleteTypeConfirm(true);
+	};
+
+	const confirmDeleteType = async () => {
+		if (!typeToDelete) return;
 
 		const prevTypes = eventTypes;
 		const prevItems = items;
 
-		setEventTypes((prev) => prev.filter((tt) => tt.id !== typeId));
-		setItems((prev) => prev.filter((it) => it.type !== typeId));
+		setEventTypes((prev) => prev.filter((tt) => tt.id !== typeToDelete.id));
+		setItems((prev) => prev.filter((it) => it.type !== typeToDelete.id));
+		setShowDeleteTypeConfirm(false);
+		setTypeToDelete(null);
 		playSound();
 
 		try {
-			await apiDelete(ENDPOINTS.typeById(typeId));
+			await apiDelete(ENDPOINTS.typeById(typeToDelete.id));
 		} catch {
 			setEventTypes(prevTypes);
 			setItems(prevItems);
@@ -900,9 +972,9 @@ export default function CalendarPage() {
 		return (
 			<div className="space-y-0">
 				{/* Day names */}
-				<div className={cn("grid border-b-2 border-gray-200/50", settings.showWeekNumbers ? "grid-cols-8" : "grid-cols-7")}>
+				<div className={cn("grid border border-gray-300", settings.showWeekNumbers ? "grid-cols-8" : "grid-cols-7")}>
 					{settings.showWeekNumbers && (
-						<div className="bg-gradient-to-br from-gray-50 to-gray-100 text-center text-xs font-black text-gray-600 py-5 border-r-2 border-gray-200/50">
+						<div className="bg-gradient-to-br from-gray-50 to-gray-100 text-center text-xs font-black text-gray-600 py-5 border-r border-gray-300">
 							{t("week")}
 						</div>
 					)}
@@ -911,8 +983,8 @@ export default function CalendarPage() {
 						<div
 							key={idx}
 							className={cn(
-								"bg-gradient-to-br from-gray-50 via-white to-gray-50 text-center text-sm font-black py-5 text-gray-700 border-r-2 border-gray-200/50",
-								idx === 6 && "border-r-0"
+								"bg-gradient-to-br from-gray-50 via-white to-gray-50 text-center text-sm font-black py-5 text-gray-700",
+								idx < 6 && "border-r border-gray-300"
 							)}
 						>
 							{day}
@@ -921,18 +993,18 @@ export default function CalendarPage() {
 				</div>
 
 				{/* Grid */}
-				<div className="border-2 border-gray-200/50 border-t-0 rounded-b-2xl overflow-hidden shadow-xl">
+				<div className="border border-gray-300 border-t-0 rounded-b-xl overflow-hidden shadow-lg">
 					{weeks.map((week, weekIdx) => (
 						<div
 							key={weekIdx}
 							className={cn(
 								"grid",
 								settings.showWeekNumbers ? "grid-cols-8" : "grid-cols-7",
-								weekIdx < weeks.length - 1 && "border-b-2 border-gray-200/50"
+								weekIdx < weeks.length - 1 && "border-b border-gray-300"
 							)}
 						>
 							{settings.showWeekNumbers && (
-								<div className="bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center text-xs text-gray-600 font-black border-r-2 border-gray-200/50">
+								<div className="bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center text-xs text-gray-600 font-black border-r border-gray-300">
 									{week[0].date && getWeekNumber(week[0].date)}
 								</div>
 							)}
@@ -942,7 +1014,7 @@ export default function CalendarPage() {
 									return (
 										<div
 											key={dayIdx}
-											className={cn("bg-gradient-to-br from-gray-100/30 to-gray-50/30 min-h-[130px] border-r-2 border-gray-200/50", dayIdx === 6 && "border-r-0")}
+											className={cn("bg-gradient-to-br from-gray-100/30 to-gray-50/30 min-h-[130px]", dayIdx < 6 && "border-r border-gray-300")}
 										/>
 									);
 								}
@@ -962,10 +1034,10 @@ export default function CalendarPage() {
 									<div
 										key={dayIdx}
 										className={cn(
-											"bg-white min-h-[130px] rounded-lg p-2 cursor-pointer transition-all hover:bg-gradient-to-br hover:from-blue-50/30 hover:to-purple-50/30 group relative border-r-2 border-gray-200/50",
-											dayIdx === 6 && "border-r-0",
-											isToday && "ring-2 ring-inset ring-[var(--color-primary-500)] shadow-2xl",
-											isSelected && "ring-2 ring-inset ring-[var(--color-primary-300)]  shadow-2xl",
+											"bg-white min-h-[130px] p-2 cursor-pointer transition-all hover:bg-gradient-to-br hover:from-blue-50/30 hover:to-purple-50/30 group relative",
+											dayIdx < 6 && "border-r border-gray-300",
+											isToday && "ring-2 ring-inset ring-[var(--color-primary-500)] shadow-xl",
+											isSelected && "ring-2 ring-inset ring-[var(--color-primary-300)] shadow-xl",
 											isWeekendDay && settings.highlightWeekend && !isToday && !isSelected && "bg-gradient-to-br from-rose-50/40 via-pink-50/40 to-orange-50/30"
 										)}
 										style={{
@@ -991,7 +1063,7 @@ export default function CalendarPage() {
 											<div
 												className={cn(
 													"text-lg font-black transition-all relative",
-													isToday && "rounded-md  w-10 h-10 flex items-center justify-center text-white shadow-2xl text-base"
+													isToday && "rounded-lg w-10 h-10 flex items-center justify-center text-white shadow-xl text-base"
 												)}
 												style={
 													isToday
@@ -1003,7 +1075,7 @@ export default function CalendarPage() {
 												}
 											>
 												{isToday && (
-													<div className="absolute inset-0 rounded-md  theme-gradient-bg animate-pulse opacity-50 blur-md" />
+													<div className="absolute inset-0 rounded-lg theme-gradient-bg animate-pulse opacity-50 blur-md" />
 												)}
 												<span className="relative z-10">{date.getDate()}</span>
 											</div>
@@ -1053,7 +1125,7 @@ export default function CalendarPage() {
 													<div
 														key={item.id}
 														className={cn(
-															"text-xs px-2 py-2.5 rounded-sm flex items-center gap-2 transition-all border-2 group/item relative overflow-hidden shadow-md hover:shadow-xl hover:scale-105",
+															"text-xs px-2 py-2.5 rounded-lg flex items-center gap-2 transition-all border group/item relative overflow-hidden shadow-sm hover:shadow-lg hover:scale-105",
 															type?.color || "bg-gradient-to-br from-gray-100 to-gray-200",
 															type?.border,
 															completed && "opacity-60"
@@ -1077,14 +1149,14 @@ export default function CalendarPage() {
 																	<div className="absolute inset-0 bg-emerald-400 rounded-full blur-md animate-pulse opacity-50" />
 																</div>
 															) : (
-																<Circle className="h-4 w-4 text-gray-400 group-hover/item:text-gray-600 transition-colors" />
+																<Circle className={cn("h-4 w-4 transition-colors", type?.textColor || "text-gray-400")} />
 															)}
 														</Button>
 
 														<MultiLangText
 															className={cn(
-																"flex-1  font-bold text-[9px] z-10 leading-tight",
-																type?.textColor,
+																"flex-1 font-bold text-[9px] z-10 leading-tight",
+																type?.textColor || "text-gray-800",
 																completed && "line-through"
 															)}
 														>
@@ -1112,11 +1184,11 @@ export default function CalendarPage() {
 																			openEditPopover(item, dateStr);
 																		}}
 																	>
-																		<Pencil size={8} className=" scale-[.7] text-blue-600"  />
+																		<Pencil size={8} className="scale-[.7] text-blue-600" />
 																	</Button>
 																</PopoverTrigger>
 																<PopoverContent
-																	className="w-96 p-0 rounded-md  shadow-2xl border-2"
+																	className="w-96 p-0 rounded-lg shadow-2xl border-2"
 																	side={isRTL ? "left" : "right"}
 																	align="start"
 																	sideOffset={10}
@@ -1151,7 +1223,7 @@ export default function CalendarPage() {
 																	handleDeleteItem(item);
 																}}
 															>
-																<Trash2 size={8} className=" scale-[.7] " />
+																<Trash2 size={8} className="scale-[.7]" />
 															</Button>
 														</div>
 													</div>
@@ -1159,7 +1231,7 @@ export default function CalendarPage() {
 											})}
 
 											{filteredItems.length > 2 && (
-												<div className="text-[10px] text-gray-700 text-center py-2 bg-gradient-to-r from-[var(--color-primary-100)] via-[var(--color-secondary-100)] to-blue-100 rounded-md  font-black shadow-md border-2 theme-soft-border">
+												<div className="text-[10px] text-gray-700 text-center py-2 bg-gradient-to-r from-[var(--color-primary-100)] via-[var(--color-secondary-100)] to-blue-100 rounded-lg font-black shadow-md border border-gray-200">
 													<Sparkles className="h-3 w-3 inline mr-1" />
 													+{filteredItems.length - 2} {t("more")}
 												</div>
@@ -1176,7 +1248,7 @@ export default function CalendarPage() {
 	};
 
 	return (
-		<div dir={isRTL ? "rtl" : "ltr"} className="overflow-x-hidden mt-[-25px] w-[calc(100%+50px)] relative rtl:left-[25px] ">
+		<div dir={isRTL ? "rtl" : "ltr"} className="overflow-x-hidden mt-[-25px] w-[calc(100%+50px)] relative rtl:left-[25px]">
 			{(showAddTypeDrawer || showDaySlidePanel) && (
 				<div
 					className="fixed inset-0 bg-black/50 backdrop-blur-md z-40 transition-all"
@@ -1189,7 +1261,7 @@ export default function CalendarPage() {
 				/>
 			)}
 
-			<div className="flex flex-col ">
+			<div className="flex flex-col">
 				{/* Top Bar */}
 				<div className="bg-gradient-to-r from-white via-[var(--color-primary-50)]/30 to-[var(--color-secondary-50)]/30 backdrop-blur-xl border-b-2 theme-soft-border px-6 py-5 flex items-center justify-between shadow-lg">
 					<div className="flex items-center gap-4">
@@ -1197,7 +1269,7 @@ export default function CalendarPage() {
 							variant="ghost"
 							size="icon"
 							onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
-							className="hover:bg-white/70 rounded-md  shadow-md hover:shadow-xl transition-all h-11 w-11"
+							className="hover:bg-white/70 rounded-lg shadow-md hover:shadow-xl transition-all h-11 w-11"
 						>
 							{isRTL ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
 						</Button>
@@ -1216,7 +1288,7 @@ export default function CalendarPage() {
 							variant="ghost"
 							size="icon"
 							onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
-							className="hover:bg-white/70 rounded-md  shadow-md hover:shadow-xl transition-all h-11 w-11"
+							className="hover:bg-white/70 rounded-lg shadow-md hover:shadow-xl transition-all h-11 w-11"
 						>
 							{isRTL ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
 						</Button>
@@ -1227,10 +1299,10 @@ export default function CalendarPage() {
 					<div className="flex items-center gap-3">
 						{/* Tab Selector Dropdown */}
 						<Select value={currentTab} onValueChange={handleTabChange}>
-							<SelectTrigger className="w-fit bg-white shadow-lg hover:shadow-xl transition-all border-2 border-[var(--color-primary-300)] rounded-md  h-11 font-bold">
+							<SelectTrigger className="w-[150px] bg-white shadow-lg hover:shadow-xl transition-all border-2 border-[var(--color-primary-300)] rounded-lg h-11 font-bold">
 								<SelectValue>
 									<div className="flex items-center gap-2">
-										<span className="text-[var(--color-primary-900)] " >{t_navbar(TAB_OPTIONS.find(tab => tab.value === currentTab)?.label)}</span>
+										<span className="text-[var(--color-primary-900)]">{t_navbar(TAB_OPTIONS.find(tab => tab.value === currentTab)?.label)}</span>
 										{TAB_OPTIONS.find(tab => tab.value === currentTab)?.icon && (
 											<>
 												{(() => {
@@ -1242,7 +1314,7 @@ export default function CalendarPage() {
 									</div>
 								</SelectValue>
 							</SelectTrigger>
-							<SelectContent className="rounded-md  shadow-2xl border-2">
+							<SelectContent className="rounded-lg shadow-2xl border-2">
 								{TAB_OPTIONS.map((tab) => (
 									<SelectItem key={tab.value} value={tab.value} className="rounded-lg my-1">
 										<div className="flex items-center gap-2">
@@ -1256,21 +1328,21 @@ export default function CalendarPage() {
 
 						<Popover>
 							<PopoverTrigger asChild>
-								<Button variant="outline" className="flex items-center gap-2 bg-white shadow-lg hover:shadow-xl transition-all border-2 rounded-md  h-11 font-bold">
+								<Button variant="outline" className="flex items-center gap-2 bg-white shadow-lg hover:shadow-xl transition-all border-2 rounded-lg h-11 font-bold">
 									{renderIcon(selectedTypeObj?.icon || "LayoutGrid", "h-5 w-5")}
-									<span className="font-black ">{getTypeLabel(selectedTypeObj)}</span>
+									<span className="font-black">{getTypeLabel(selectedTypeObj)}</span>
 									<ChevronDown className="h-4 w-4 text-gray-400" />
 								</Button>
 							</PopoverTrigger>
 
-							<PopoverContent className="w-72 p-3 rounded-md  shadow-2xl border-2" align="end">
+							<PopoverContent className="w-72 p-3 rounded-lg shadow-2xl border-2" align="end">
 								<div className="space-y-1">
 									{eventTypes.map((type) => (
 										<Button
 											key={type.id}
 											variant="ghost"
 											className={cn(
-												"w-full justify-start gap-3 rounded-md  h-12 font-bold transition-all",
+												"w-full justify-start gap-3 rounded-lg h-12 font-bold transition-all",
 												selectedType === type.id && "bg-gradient-to-r from-[var(--color-primary-100)] to-[var(--color-secondary-100)] shadow-md"
 											)}
 											onClick={() => setSelectedType(type.id)}
@@ -1286,7 +1358,7 @@ export default function CalendarPage() {
 									<div className="border-t-2 pt-3 mt-3">
 										<Button
 											variant="ghost"
-											className="w-full justify-start gap-2 theme-primary-text rounded-md  h-12 font-black hover:bg-[var(--color-primary-50)]"
+											className="w-full justify-start gap-2 theme-primary-text rounded-lg h-12 font-black hover:bg-[var(--color-primary-50)]"
 											onClick={() => setShowAddTypeDrawer(true)}
 										>
 											<Plus className="h-5 w-5" />
@@ -1311,20 +1383,19 @@ export default function CalendarPage() {
 							>
 								<PopoverTrigger asChild>
 									<Button
-										className=" w-[45px] flex-none shadow-xl hover:shadow-2xl transition-all theme-gradient-bg text-white rounded-md  h-11 font-black relative overflow-hidden group"
+										className="w-[45px] flex-none shadow-xl hover:shadow-2xl transition-all theme-gradient-bg text-white rounded-lg h-11 font-black relative overflow-hidden group"
 										onClick={() => {
 											setEditingItem(null);
 											setEditingPopoverId(null);
 											resetItemForm();
 										}}
 									>
-										<div className=" absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+										<div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
 										<Plus className="h-5 w-5 relative z-10" />
-										{/* <span className="relative z-10">{t("addNew")}</span> */}
 									</Button>
 								</PopoverTrigger>
 
-								<PopoverContent className="w-96 p-0 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 rounded-md  shadow-2xl border-2" align="end" sideOffset={5}>
+								<PopoverContent className="w-96 p-0 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 rounded-lg shadow-2xl border-2" align="end" sideOffset={5}>
 									<ItemFormContent
 										t={t}
 										isRTL={isRTL}
@@ -1346,7 +1417,7 @@ export default function CalendarPage() {
 								size="icon"
 								onClick={() => setSoundEnabled(!soundEnabled)}
 								className={cn(
-									"transition-all shadow-lg rounded-md  h-11 w-11 border-2",
+									"transition-all shadow-lg rounded-lg h-11 w-11 border-2",
 									soundEnabled && "bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-600 border-emerald-300"
 								)}
 							>
@@ -1357,7 +1428,7 @@ export default function CalendarPage() {
 								variant="outline"
 								size="icon"
 								onClick={() => setShowSettingsDialog(true)}
-								className="shadow-lg rounded-md  h-11 w-11 border-2 hover:bg-gradient-to-br hover:from-gray-100 hover:to-gray-200"
+								className="shadow-lg rounded-lg h-11 w-11 border-2 hover:bg-gradient-to-br hover:from-gray-100 hover:to-gray-200"
 							>
 								<Settings className="h-5 w-5" />
 							</Button>
@@ -1375,11 +1446,11 @@ export default function CalendarPage() {
 				>
 					<div className="p-6 border-b-2 theme-soft-border bg-gradient-to-r from-[var(--color-primary-100)]/50 to-[var(--color-secondary-100)]/50">
 						<div className="flex items-center justify-between mb-4">
-							<h2 className=" text-2xl font-black text-gray-900 flex items-center gap-2">
+							<h2 className="text-2xl font-black text-gray-900 flex items-center gap-2">
 								<LayoutGrid className="h-6 w-6" />
 								{t("manageTypes")}
 							</h2>
-							<Button variant="ghost" size="icon" onClick={() => setShowAddTypeDrawer(false)} className="rounded-md ">
+							<Button variant="ghost" size="icon" onClick={() => setShowAddTypeDrawer(false)} className="rounded-lg">
 								<X className="h-5 w-5" />
 							</Button>
 						</div>
@@ -1397,7 +1468,7 @@ export default function CalendarPage() {
 									<Button
 										variant="ghost"
 										className={cn(
-											"flex-1 justify-start rounded-md  transition-all h-12",
+											"flex-1 justify-start rounded-lg transition-all h-12",
 											selectedType === type.id && "bg-gradient-to-r from-[var(--color-primary-100)] to-[var(--color-secondary-100)] shadow-md font-black"
 										)}
 										onClick={() => {
@@ -1416,7 +1487,7 @@ export default function CalendarPage() {
 										<Button
 											variant="ghost"
 											size="icon"
-											className="opacity-0 group-hover:opacity-100 transition-opacity rounded-md "
+											className="opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
 											onClick={() => handleDeleteType(type.id)}
 										>
 											<Trash2 className="h-4 w-4 text-red-500" />
@@ -1426,7 +1497,7 @@ export default function CalendarPage() {
 							))}
 						</div>
 
-						<Card className="p-5 space-y-4 border-2 shadow-xl border-dashed theme-soft-border bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-secondary-50)] rounded-md ">
+						<Card className="p-5 space-y-4 border-2 shadow-xl border-dashed theme-soft-border bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-secondary-50)] rounded-lg">
 							<h3 className="text-sm font-black theme-primary-text flex items-center gap-2">
 								<Plus className="h-4 w-4" />
 								{t("createNewType")}
@@ -1436,7 +1507,7 @@ export default function CalendarPage() {
 								placeholder={t("typeName")}
 								value={newTypeName}
 								onChange={(e) => setNewTypeName(e.target.value)}
-								className="rounded-md  border-2 h-11 font-medium"
+								className="rounded-lg border-2 h-11 font-medium"
 							/>
 
 							<div>
@@ -1448,7 +1519,7 @@ export default function CalendarPage() {
 											type="button"
 											onClick={() => setNewTypeIcon(iconOption.value)}
 											className={cn(
-												"p-2 rounded-md  hover:bg-[var(--color-primary-100)] transition-all flex items-center justify-center border-2",
+												"p-2 rounded-lg hover:bg-[var(--color-primary-100)] transition-all flex items-center justify-center border-2",
 												newTypeIcon === iconOption.value && "theme-gradient-bg theme-ring shadow-lg"
 											)}
 											aria-label={iconOption.label}
@@ -1469,7 +1540,7 @@ export default function CalendarPage() {
 											type="button"
 											onClick={() => setNewTypeColor(color.value)}
 											className={cn(
-												"w-12 h-12 rounded-md  transition-all shadow-md hover:shadow-xl",
+												"w-12 h-12 rounded-lg transition-all shadow-md hover:shadow-xl",
 												color.value,
 												newTypeColor === color.value && "ring-4 ring-offset-2 theme-ring scale-110"
 											)}
@@ -1482,7 +1553,7 @@ export default function CalendarPage() {
 
 							<Button
 								onClick={handleAddType}
-								className="w-full theme-gradient-bg text-white rounded-md  h-12 font-black shadow-lg hover:shadow-xl transition-all"
+								className="w-full theme-gradient-bg text-white rounded-lg h-12 font-black shadow-lg hover:shadow-xl transition-all"
 								disabled={!newTypeName.trim()}
 							>
 								<Check className="h-5 w-5 mr-2" />
@@ -1512,7 +1583,7 @@ export default function CalendarPage() {
 								<div className="relative z-10">
 									<div className="flex items-start justify-between mb-6">
 										<div className="flex items-center gap-4">
-											<div className="bg-white/20 backdrop-blur-md rounded-md  p-5 shadow-2xl border-2 border-white/30">
+											<div className="bg-white/20 backdrop-blur-md rounded-lg p-5 shadow-2xl border-2 border-white/30">
 												<h2 className="text-6xl font-black text-white drop-shadow-2xl">{selectedDate.getDate()}</h2>
 											</div>
 											<div>
@@ -1527,7 +1598,7 @@ export default function CalendarPage() {
 											variant="ghost"
 											size="icon"
 											onClick={() => setShowDaySlidePanel(false)}
-											className="rounded-md  hover:bg-white/20 text-white h-11 w-11 backdrop-blur-sm"
+											className="rounded-lg hover:bg-white/20 text-white h-11 w-11 backdrop-blur-sm"
 										>
 											<X className="h-6 w-6" />
 										</Button>
@@ -1539,7 +1610,7 @@ export default function CalendarPage() {
 										if (progress.total <= 0) return null;
 
 										return (
-											<div className="bg-white/90 backdrop-blur-xl rounded-md  p-5 shadow-2xl border-2 border-white/40">
+											<div className="bg-white/90 backdrop-blur-xl rounded-lg p-5 shadow-2xl border-2 border-white/40">
 												<div className="flex items-center gap-4">
 													<div className="relative w-20 h-20 flex-shrink-0">
 														<div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary-200)] to-[var(--color-secondary-200)] rounded-full blur-lg opacity-60 animate-pulse" />
@@ -1607,7 +1678,7 @@ export default function CalendarPage() {
 															<div className="w-36 h-36 mx-auto rounded-full opacity-20 blur-3xl theme-gradient-bg" />
 														</div>
 
-														<div className="relative w-36 h-36 mx-auto rounded-md  flex items-center justify-center shadow-2xl theme-gradient-bg">
+														<div className="relative w-36 h-36 mx-auto rounded-lg flex items-center justify-center shadow-2xl theme-gradient-bg">
 															<CalendarIcon className="h-20 w-20 text-white drop-shadow-2xl" />
 														</div>
 													</div>
@@ -1619,11 +1690,12 @@ export default function CalendarPage() {
 
 													<Button
 														size="lg"
-														className="shadow-2xl hover:shadow-3xl transition-all hover:-translate-y-1 font-black px-8 rounded-md  theme-gradient-bg text-white h-14 text-base"
+														className="shadow-2xl hover:shadow-3xl transition-all hover:-translate-y-1 font-black px-8 rounded-lg theme-gradient-bg text-white h-14 text-base"
 														onClick={() => {
 															resetItemForm();
 															setItemForm((prev) => ({ ...prev, startDate: dateStr }));
 															setShowAddPopover(true);
+															setShowDaySlidePanel(false);
 														}}
 													>
 														<Plus className="h-6 w-6 mr-2" />
@@ -1652,7 +1724,7 @@ export default function CalendarPage() {
 													<div
 														key={item.id}
 														className={cn(
-															"group relative overflow-hidden rounded-md  transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] border-2",
+															"group relative overflow-hidden rounded-lg transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] border-2",
 															completed && "opacity-60",
 															type?.border
 														)}
@@ -1674,12 +1746,12 @@ export default function CalendarPage() {
 																			<div className="absolute inset-0 bg-emerald-400/40 rounded-full blur-lg animate-pulse" />
 																		</div>
 																	) : (
-																		<div className={cn("h-8 w-8 rounded-full border-4 transition-all shadow-lg", "border-gray-300 hover:border-[var(--color-primary-400)]")} />
+																		<div className={cn("h-8 w-8 rounded-full border-4 transition-all shadow-lg", "border-white/80 hover:border-white")} />
 																	)}
 																</button>
 
 																<div className="flex-1 flex items-center gap-3 min-w-0">
-																	<div className={cn("p-3 rounded-md  shadow-md flex-shrink-0", type?.color, "ring-2 ring-white/50")}>
+																	<div className={cn("p-3 rounded-lg shadow-md flex-shrink-0 ring-2 ring-white/50", type?.color)}>
 																		{renderIcon(type?.icon, cn("h-5 w-5", type?.textColor))}
 																	</div>
 
@@ -1688,17 +1760,23 @@ export default function CalendarPage() {
 																			{item.title}
 																		</MultiLangText>
 
+																		{item.note && (
+																			<p className={cn("text-sm mb-2 opacity-90 font-medium", type?.textColor)}>
+																				{item.note}
+																			</p>
+																		)}
+
 																		{(item.startTime || item.recurrence !== "none") && (
 																			<div className="flex items-center gap-2 flex-wrap">
 																				{item.startTime && (
-																					<div className="font-en inline-flex items-center gap-1.5 text-xs font-black bg-white/70 backdrop-blur-sm px-3 py-1.5 rounded-md  shadow-md">
+																					<div className="font-en inline-flex items-center gap-1.5 text-xs font-black bg-white/70 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-md">
 																						<Clock className="h-3.5 w-3.5" />
 																						{formatTime(item.startTime)}
 																					</div>
 																				)}
 
 																				{item.recurrence !== "none" && (
-																					<div className="inline-flex items-center gap-1.5 text-xs font-black bg-white/70 backdrop-blur-sm px-3 py-1.5 rounded-md  shadow-md">
+																					<div className="inline-flex items-center gap-1.5 text-xs font-black bg-white/70 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-md">
 																						<Repeat className="h-3.5 w-3.5" />
 																						{recurrenceLabel}
 																					</div>
@@ -1724,7 +1802,7 @@ export default function CalendarPage() {
 																			<Button
 																				variant="ghost"
 																				size="icon"
-																				className="h-10 w-10 rounded-md  bg-white/90 hover:bg-white shadow-lg backdrop-blur-sm"
+																				className="h-10 w-10 rounded-lg bg-white/90 hover:bg-white shadow-lg backdrop-blur-sm"
 																				onClick={() => openEditPopover(item, dateStr)}
 																			>
 																				<Pencil className="h-4 w-4 text-blue-600" />
@@ -1732,7 +1810,7 @@ export default function CalendarPage() {
 																		</PopoverTrigger>
 
 																		<PopoverContent
-																			className="w-96 p-0 rounded-md  shadow-2xl border-2"
+																			className="w-96 p-0 rounded-lg shadow-2xl border-2"
 																			side={isRTL ? "left" : "right"}
 																			align="start"
 																			sideOffset={10}
@@ -1761,7 +1839,7 @@ export default function CalendarPage() {
 																	<Button
 																		variant="ghost"
 																		size="icon"
-																		className="h-10 w-10 rounded-md  bg-white/90 hover:bg-white shadow-lg backdrop-blur-sm"
+																		className="h-10 w-10 rounded-lg bg-white/90 hover:bg-white shadow-lg backdrop-blur-sm"
 																		onClick={() => handleDeleteItem(item)}
 																	>
 																		<Trash2 className="h-4 w-4 text-red-600" />
@@ -1790,7 +1868,7 @@ export default function CalendarPage() {
 
 			{/* Settings Dialog */}
 			<Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
-				<DialogContent className="max-w-md rounded-md  border-2" dir={isRTL ? "rtl" : "ltr"}>
+				<DialogContent className="max-w-md rounded-lg border-2" dir={isRTL ? "rtl" : "ltr"}>
 					<DialogHeader>
 						<DialogTitle className="flex items-center gap-2 text-2xl font-black">
 							<Settings className="h-6 w-6" />
@@ -1799,7 +1877,7 @@ export default function CalendarPage() {
 					</DialogHeader>
 
 					<div className="space-y-6">
-						<div className="flex items-center justify-between p-4 bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-secondary-50)] rounded-md  border-2 theme-soft-border">
+						<div className="flex items-center justify-between p-4 bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-secondary-50)] rounded-lg border-2 theme-soft-border">
 							<div className="space-y-0.5">
 								<Label className="text-base font-bold">{t("showWeekNumbers")}</Label>
 								<p className="text-sm text-gray-600 font-medium">{t("showWeekNumbersDesc")}</p>
@@ -1807,7 +1885,7 @@ export default function CalendarPage() {
 							<Switch checked={settings.showWeekNumbers} onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, showWeekNumbers: checked }))} />
 						</div>
 
-						<div className="flex items-center justify-between p-4 bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-secondary-50)] rounded-md  border-2 theme-soft-border">
+						<div className="flex items-center justify-between p-4 bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-secondary-50)] rounded-lg border-2 theme-soft-border">
 							<div className="space-y-0.5">
 								<Label className="text-base font-bold">{t("highlightWeekend")}</Label>
 								<p className="text-sm text-gray-600 font-medium">{t("highlightWeekendDesc")}</p>
@@ -1815,7 +1893,7 @@ export default function CalendarPage() {
 							<Switch checked={settings.highlightWeekend} onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, highlightWeekend: checked }))} />
 						</div>
 
-						<div className="flex items-center justify-between p-4 bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-secondary-50)] rounded-md  border-2 theme-soft-border">
+						<div className="flex items-center justify-between p-4 bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-secondary-50)] rounded-lg border-2 theme-soft-border">
 							<div className="space-y-0.5">
 								<Label className="text-base font-bold">{t("confirmBeforeDelete")}</Label>
 								<p className="text-sm text-gray-600 font-medium">{t("confirmBeforeDeleteDesc")}</p>
@@ -1823,14 +1901,14 @@ export default function CalendarPage() {
 							<Switch checked={settings.confirmBeforeDelete} onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, confirmBeforeDelete: checked }))} />
 						</div>
 
-						<div className="space-y-3 p-4 bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-secondary-50)] rounded-md  border-2 theme-soft-border">
+						<div className="space-y-3 p-4 bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-secondary-50)] rounded-lg border-2 theme-soft-border">
 							<Label className="text-base font-bold">{t("startOfWeek")}</Label>
 							<p className="text-sm text-gray-600 mb-2 font-medium">{t("startOfWeekDesc")}</p>
 							<Select value={settings.startOfWeek.toString()} onValueChange={(value) => setSettings((prev) => ({ ...prev, startOfWeek: parseInt(value, 10) }))}>
-								<SelectTrigger className="rounded-md  border-2">
+								<SelectTrigger className="rounded-lg border-2">
 									<SelectValue />
 								</SelectTrigger>
-								<SelectContent className="rounded-md ">
+								<SelectContent className="rounded-lg">
 									<SelectItem value="0" className="rounded-lg my-1">{t("sunday")}</SelectItem>
 									<SelectItem value="1" className="rounded-lg my-1">{t("monday")}</SelectItem>
 									<SelectItem value="6" className="rounded-lg my-1">{t("saturday")}</SelectItem>
@@ -1842,7 +1920,7 @@ export default function CalendarPage() {
 					<DialogFooter>
 						<Button
 							onClick={() => setShowSettingsDialog(false)}
-							className="w-full theme-gradient-bg text-white rounded-md  h-12 font-black shadow-lg"
+							className="w-full theme-gradient-bg text-white rounded-lg h-12 font-black shadow-lg"
 						>
 							{t("close")}
 						</Button>
@@ -1850,9 +1928,9 @@ export default function CalendarPage() {
 				</DialogContent>
 			</Dialog>
 
-			{/* Delete Confirmation Dialog */}
+			{/* Delete Item Confirmation Dialog */}
 			<Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-				<DialogContent dir={isRTL ? "rtl" : "ltr"} className="rounded-md  border-2">
+				<DialogContent dir={isRTL ? "rtl" : "ltr"} className="rounded-lg border-2">
 					<DialogHeader>
 						<DialogTitle className="text-2xl font-black">{t("confirmDelete")}</DialogTitle>
 					</DialogHeader>
@@ -1865,14 +1943,46 @@ export default function CalendarPage() {
 						<Button
 							variant="outline"
 							onClick={() => setShowDeleteConfirm(false)}
-							className="rounded-md  h-12 font-bold border-2"
+							className="rounded-lg h-12 font-bold border-2"
 						>
 							{t("cancel")}
 						</Button>
 						<Button
 							variant="destructive"
 							onClick={() => confirmDelete()}
-							className="bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 rounded-md  h-12 font-black shadow-lg"
+							className="bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 rounded-lg h-12 font-black shadow-lg"
+						>
+							{t("delete")}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Delete Type Confirmation Dialog */}
+			<Dialog open={showDeleteTypeConfirm} onOpenChange={setShowDeleteTypeConfirm}>
+				<DialogContent dir={isRTL ? "rtl" : "ltr"} className="rounded-lg border-2">
+					<DialogHeader>
+						<DialogTitle className="text-2xl font-black">{t("confirmDeleteType")}</DialogTitle>
+					</DialogHeader>
+
+					<p className="text-gray-700 font-medium text-lg">
+						{t("areYouSureDeleteType")} "<span className="font-black">{typeToDelete?.name}</span>"?
+						<br />
+						<span className="text-red-600 text-sm">{t("deleteTypeWarning")}</span>
+					</p>
+
+					<DialogFooter className="gap-2">
+						<Button
+							variant="outline"
+							onClick={() => setShowDeleteTypeConfirm(false)}
+							className="rounded-lg h-12 font-bold border-2"
+						>
+							{t("cancel")}
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={() => confirmDeleteType()}
+							className="bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 rounded-lg h-12 font-black shadow-lg"
 						>
 							{t("delete")}
 						</Button>
@@ -1987,9 +2097,9 @@ function CountdownTimer() {
 
 	return (
 		<div className="relative group" dir={isRTL ? "rtl" : "ltr"}>
-			<div className=" opacity-30 absolute inset-0 rounded-md  blur-xl  group-hover:opacity-80 transition-opacity animate-pulse theme-gradient-bg" style={{ animationDuration: "3s" }} />
+			<div className="opacity-30 absolute inset-0 rounded-lg blur-xl group-hover:opacity-80 transition-opacity animate-pulse theme-gradient-bg" style={{ animationDuration: "3s" }} />
 
-			<div className="relative rounded-md  px-4 py-3 shadow-2xl overflow-hidden theme-gradient-bg">
+			<div className="relative rounded-lg px-4 py-3 shadow-2xl overflow-hidden theme-gradient-bg">
 				<div className="absolute inset-0 opacity-20">
 					<div className="absolute top-0 right-0 w-24 h-24 bg-white rounded-full blur-3xl animate-pulse" style={{ animationDelay: "0s", animationDuration: "4s" }} />
 					<div className="absolute bottom-0 left-0 w-20 h-20 bg-white rounded-full blur-2xl animate-pulse" style={{ animationDelay: "2s", animationDuration: "5s" }} />
@@ -1999,7 +2109,7 @@ function CountdownTimer() {
 					{!startTime ? (
 						<button
 							onClick={handleStart}
-							className="flex-shrink-0 w-10 h-10 rounded-md  bg-white/25 hover:bg-white/35 backdrop-blur-md flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-xl border-2 border-white/30"
+							className="flex-shrink-0 w-10 h-10 rounded-lg bg-white/25 hover:bg-white/35 backdrop-blur-md flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-xl border-2 border-white/30"
 							title={t("startCommitment")}
 						>
 							<Play className="h-5 w-5 text-white drop-shadow-2xl ml-0.5" />
@@ -2008,7 +2118,7 @@ function CountdownTimer() {
 						<div className="flex items-center gap-2">
 							<button
 								onClick={isRunning ? handlePause : () => setIsRunning(true)}
-								className="flex-shrink-0 w-9 h-9 rounded-md  bg-white/25 hover:bg-white/35 backdrop-blur-md flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-xl border-2 border-white/30"
+								className="flex-shrink-0 w-9 h-9 rounded-lg bg-white/25 hover:bg-white/35 backdrop-blur-md flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-xl border-2 border-white/30"
 								title={isRunning ? t("pause") : t("resume")}
 							>
 								{isRunning ? <Pause className="h-4 w-4 text-white drop-shadow-2xl" /> : <Play className="h-4 w-4 text-white drop-shadow-2xl ml-0.5" />}
@@ -2016,7 +2126,7 @@ function CountdownTimer() {
 
 							<button
 								onClick={handleReset}
-								className="flex-shrink-0 w-9 h-9 rounded-md  bg-white/25 hover:bg-red-400/40 backdrop-blur-md flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-xl border-2 border-white/30"
+								className="flex-shrink-0 w-9 h-9 rounded-lg bg-white/25 hover:bg-red-400/40 backdrop-blur-md flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-xl border-2 border-white/30"
 								title={t("reset")}
 							>
 								<RotateCcw className="h-4 w-4 text-white drop-shadow-2xl" />
@@ -2045,7 +2155,7 @@ function CountdownTimer() {
 												strokeLinecap="round"
 											/>
 										</svg>
-										<div className="absolute inset-0 flex gap-[2px]  items-center justify-center">
+										<div className="absolute inset-0 flex gap-[2px] items-center justify-center">
 											<span className="text-sm font-black text-white font-en drop-shadow-2xl">{formatTime(elapsed.days)}</span>
 											<span className="text-[6px] text-white/95 font-black mt-1 tracking-wider drop-shadow-lg">{t("days")}</span>
 										</div>
@@ -2096,7 +2206,7 @@ function CountdownTimer() {
 											strokeLinecap="round"
 										/>
 									</svg>
-									<div className="absolute inset-0 gap-[2px]  flex items-center justify-center">
+									<div className="absolute inset-0 gap-[2px] flex items-center justify-center">
 										<span className="text-sm font-black text-white font-en drop-shadow-2xl">{formatTime(elapsed.minutes)}</span>
 										<span className="text-[6px] text-white/95 font-black mt-1 tracking-wider drop-shadow-lg">{t("minutes")}</span>
 									</div>
@@ -2107,7 +2217,7 @@ function CountdownTimer() {
 								<div className="relative ml-1">
 									<div className="absolute inset-0 blur-lg opacity-60" style={{ background: `linear-gradient(135deg, ${milestone.color})` }} />
 									<div
-										className="relative w-10 h-10 rounded-md  flex items-center justify-center shadow-2xl border-2 border-white/40"
+										className="relative w-10 h-10 rounded-lg flex items-center justify-center shadow-2xl border-2 border-white/40"
 										style={{ background: `linear-gradient(135deg, #FBBF24, #F59E0B)` }}
 										title={milestone.text}
 									>
@@ -2132,13 +2242,13 @@ function CountdownTimer() {
 					<>
 						<div className="fixed inset-0 bg-black/60 backdrop-blur-lg z-[9999] animate-in fade-in duration-200" onClick={() => setShowDatePicker(false)} />
 						<div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10000] animate-in zoom-in-95 fade-in duration-300">
-							<div className="bg-white rounded-md  shadow-2xl p-8 w-[440px] border-2 relative overflow-hidden theme-soft-border" dir={isRTL ? "rtl" : "ltr"}>
+							<div className="bg-white rounded-lg shadow-2xl p-8 w-[440px] border-2 relative overflow-hidden theme-soft-border" dir={isRTL ? "rtl" : "ltr"}>
 								<div className="absolute top-0 right-0 w-64 h-64 opacity-10 theme-gradient-bg" />
 
 								<div className="relative flex items-center gap-4 mb-8">
 									<div className="relative">
-										<div className="absolute inset-0 rounded-md  blur-xl opacity-60 theme-gradient-bg" />
-										<div className="relative w-16 h-16 rounded-md  flex items-center justify-center shadow-2xl theme-gradient-bg">
+										<div className="absolute inset-0 rounded-lg blur-xl opacity-60 theme-gradient-bg" />
+										<div className="relative w-16 h-16 rounded-lg flex items-center justify-center shadow-2xl theme-gradient-bg">
 											<Calendar className="h-8 w-8 text-white drop-shadow-2xl" />
 										</div>
 									</div>
@@ -2151,7 +2261,7 @@ function CountdownTimer() {
 								<div className="space-y-4 mb-8">
 									<button
 										onClick={handleStartFromNow}
-										className="w-full p-5 rounded-md  border-2 transition-all hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] group relative overflow-hidden theme-soft-border bg-gradient-to-r from-[var(--color-primary-50)] to-white"
+										className="w-full p-5 rounded-lg border-2 transition-all hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] group relative overflow-hidden theme-soft-border bg-gradient-to-r from-[var(--color-primary-50)] to-white"
 									>
 										<div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000">
 											<div className="h-full w-1/2 bg-gradient-to-r from-transparent via-[var(--color-primary-200)]/60 to-transparent skew-x-12" />
@@ -2164,7 +2274,7 @@ function CountdownTimer() {
 											</div>
 											<div className="relative">
 												<div className="absolute inset-0 blur-lg opacity-50 group-hover:opacity-75 transition-opacity theme-gradient-bg" />
-												<div className="relative w-14 h-14 rounded-md  flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xl theme-gradient-bg">
+												<div className="relative w-14 h-14 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xl theme-gradient-bg">
 													<Play className="h-7 w-7 text-white ml-0.5 drop-shadow-2xl" />
 												</div>
 											</div>
@@ -2191,7 +2301,7 @@ function CountdownTimer() {
 												value={selectedDate}
 												onChange={(e) => setSelectedDate(e.target.value)}
 												max={new Date().toISOString().slice(0, 16)}
-												className="w-full px-4 py-4 border-2 rounded-md  text-sm font-bold focus:outline-none focus:ring-4 transition-all shadow-md hover:shadow-lg theme-soft-border"
+												className="w-full px-4 py-4 border-2 rounded-lg text-sm font-bold focus:outline-none focus:ring-4 transition-all shadow-md hover:shadow-lg theme-soft-border"
 												style={{ "--tw-ring-color": "var(--color-primary-300)" }}
 											/>
 										</label>
@@ -2199,7 +2309,7 @@ function CountdownTimer() {
 										<button
 											onClick={handleStartFromDate}
 											disabled={!selectedDate}
-											className="w-full py-4 rounded-md  font-black text-white transition-all hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-base relative overflow-hidden group theme-gradient-bg"
+											className="w-full py-4 rounded-lg font-black text-white transition-all hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-base relative overflow-hidden group theme-gradient-bg"
 										>
 											{selectedDate && (
 												<div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000">
@@ -2214,7 +2324,7 @@ function CountdownTimer() {
 									</div>
 								</div>
 
-								<button onClick={() => setShowDatePicker(false)} className="w-full py-3 text-sm font-black text-gray-500 hover:text-gray-900 transition-colors rounded-md  hover:bg-gray-50">
+								<button onClick={() => setShowDatePicker(false)} className="w-full py-3 text-sm font-black text-gray-500 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-50">
 									{t("dialog.cancel")}
 								</button>
 							</div>

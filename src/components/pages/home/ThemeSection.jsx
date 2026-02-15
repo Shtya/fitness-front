@@ -35,7 +35,7 @@ function ThemeSelectorCard({ themeKey, palette, isActive, onClick, index }) {
     >
       {/* Main Card */}
       <div
-        className={`relative overflow-hidden rounded-2xl transition-all duration-500 ${
+        className={`relative overflow-hidden rounded-lg transition-all duration-500 ${
           isActive ? "shadow-2xl scale-105" : "shadow-lg hover:shadow-xl"
         }`}
         style={{
@@ -127,7 +127,7 @@ function ThemeSelectorCard({ themeKey, palette, isActive, onClick, index }) {
 
       {/* Glow Effect */}
       <motion.div
-        className="absolute -inset-1 rounded-2xl blur-xl -z-10"
+        className="absolute -inset-1 rounded-lg blur-xl -z-10"
         style={{
           background: `linear-gradient(135deg, ${palette.gradient.from}, ${palette.gradient.to})`,
         }}
@@ -206,7 +206,7 @@ function InteractivePreview({ currentPalette }) {
               onClick={() =>
                 setActiveElement(isActive ? null : element.id)
               }
-              className=" bg-slate-800 relative text-left p-6 rounded-2xl border-2 transition-all duration-300 group"
+              className=" bg-slate-800 relative text-left p-6 rounded-lg border-2 transition-all duration-300 group"
               style={{
                 borderColor: isActive
                   ? currentPalette.primary[500]
@@ -224,7 +224,7 @@ function InteractivePreview({ currentPalette }) {
               <div className="flex items-start gap-4">
                 {/* Icon */}
                 <motion.div
-                  className="w-14 h-14 rounded-xl flex items-center justify-center shadow-lg shrink-0"
+                  className="w-14 h-14 rounded-lg flex items-center justify-center shadow-lg shrink-0"
                   style={{
                     background: `linear-gradient(135deg, ${currentPalette.gradient.from}, ${currentPalette.gradient.to})`,
                   }}
@@ -284,7 +284,7 @@ function InteractivePreview({ currentPalette }) {
                       >
                         {element.id === "button" && (
                           <motion.button
-                            className="px-6 py-3 rounded-xl font-bold text-white shadow-lg"
+                            className="px-6 py-3 rounded-lg font-bold text-white shadow-lg"
                             style={{
                               background: `linear-gradient(135deg, ${currentPalette.gradient.from}, ${currentPalette.gradient.to})`,
                             }}
@@ -297,7 +297,7 @@ function InteractivePreview({ currentPalette }) {
 
                         {element.id === "card" && (
                           <div
-                            className="p-4 rounded-xl border-2"
+                            className="p-4 rounded-lg border-2"
                             style={{
                               borderColor: `${currentPalette.primary[500]}30`,
                               background: `linear-gradient(135deg, ${currentPalette.primary[50]}, white)`,

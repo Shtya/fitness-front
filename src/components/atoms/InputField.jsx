@@ -34,7 +34,7 @@ const InputField = memo(function InputField({
         onChange={onChange}
         onBlur={onBlur}
         className={[
-          "h-8 w-full rounded-md border px-2 text-[12px]",
+          "h-8 w-full rounded-lg border px-2 text-[12px]",
           "bg-white outline-none transition",
           "focus:ring-4 focus:ring-slate-400/20",
           hasValue

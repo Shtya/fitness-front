@@ -61,7 +61,7 @@ function SummarySkeleton() {
 
 function CardGlass({ children, className = "" }) {
 	return (
-		<div className={`rounded-xl border border-slate-200/60 bg-white/80 shadow-sm backdrop-blur-sm ${className}`}>
+		<div className={`rounded-lg border border-slate-200/60 bg-white/80 shadow-sm backdrop-blur-sm ${className}`}>
 			{children}
 		</div>
 	);
@@ -292,7 +292,7 @@ function dedupeByWeekOf(records = []) {
 
 /* ============================== * Shared Components * ============================== */
 export function Card({ className, children , onClick }) {
-	return <div onClick={()=> onClick?.()}  className={`rounded-xl border border-slate-200 bg-white p-6 shadow-sm ${className || ""}`}>{children}</div>;
+	return <div onClick={()=> onClick?.()}  className={`rounded-lg border border-slate-200 bg-white p-6 shadow-sm ${className || ""}`}>{children}</div>;
 }
 
 export function SectionHeader({ icon, title, subtitle, right }) {
@@ -342,7 +342,7 @@ function KPI({ label, value, delta, good, icon: Icon, tone = "indigo" }) {
 		fuchsia: "from-fuchsia-500/10 to-fuchsia-500/0",
 	}[tone];
 	return (
-		<div className={`relative overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br p-5 shadow-sm ${toneGrad}`}>
+		<div className={`relative overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br p-5 shadow-sm ${toneGrad}`}>
 			<p className="text-xs font-medium uppercase tracking-wide text-slate-600">{label}</p>
 			<div className="mt-2 flex items-baseline gap-2">
 				{Icon && <Icon className="h-5 w-5 text-[var(--color-primary-600)]" />}
@@ -1027,7 +1027,7 @@ function SummaryTab({ data }) {
 						<div className="relative">
 							<div className="mb-4 flex items-center justify-between">
 								<div className="flex items-center gap-3">
-									<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-md transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+									<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-md transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
 										<Dumbbell className="h-6 w-6" />
 									</div>
 									<div>
@@ -1077,7 +1077,7 @@ function SummaryTab({ data }) {
 						<div className="relative">
 							<div className="mb-4 flex items-center justify-between">
 								<div className="flex items-center gap-3">
-									<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-md transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+									<div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-md transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
 										<UtensilsCrossed className="h-6 w-6" />
 									</div>
 									<div>
@@ -1642,7 +1642,7 @@ function ReportModal({ open, report, onClose, onPrev, onNext, t }) {
 						animate={{ scale: 1, opacity: 1 }}
 						exit={{ scale: 0.95, opacity: 0 }}
 						transition={spring}
-						className="relative max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-2xl scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300"
+						className="relative max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-2xl scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300"
 						onClick={(e) => e.stopPropagation()}
 					>
 						{/* Header */}

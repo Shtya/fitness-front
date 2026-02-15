@@ -1134,7 +1134,8 @@
     "roles": {
       "admin": "Admin",
       "coach": "Coach",
-      "user": "User"
+      "user": "User",
+			"client" : "trainee"
     },
     "subscription": {
       "start": "Subscription start",

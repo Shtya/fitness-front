@@ -78,7 +78,7 @@ export default function Button({
     'min-h-[40px]',
     'cursor-pointer',
     'inline-flex items-center justify-center gap-2',
-    'rounded-xl',
+    'rounded-lg',
     'text-sm font-semibold',
     'px-4 !py-[5px]',
     'transition-all duration-200',

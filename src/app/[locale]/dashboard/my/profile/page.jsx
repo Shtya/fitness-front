@@ -67,7 +67,7 @@ const themePrimaryBg = { backgroundColor: 'var(--color-primary-500)' };
 // ============================================================================
 
 const card =
-	'group relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm hover:shadow-md transition-all duration-300';
+	'group relative overflow-hidden rounded-lg border border-slate-200/60 bg-white shadow-sm hover:shadow-md transition-all duration-300';
 const sectionTitle = 'text-lg font-bold text-slate-900 tracking-tight';
 
 const fadeUp = {
@@ -111,15 +111,15 @@ const daysLeft = (end) => {
 
 const shimmer =
 	'relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_1.5s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/60 before:to-transparent';
-const skeletonBase = 'bg-slate-200/50 rounded-xl';
+const skeletonBase = 'bg-slate-200/50 rounded-lg';
 const ShimmerStyle = () => <style>{`@keyframes shimmer{100%{transform:translateX(100%);}}`}</style>;
 
 function HeaderSkeleton() {
 	return (
-		<div className='rounded-3xl border border-slate-200/60 overflow-hidden shadow-lg'>
+		<div className='rounded-lg border border-slate-200/60 overflow-hidden shadow-lg'>
 			<div className='p-8' style={themeGradientStyle}>
 				<div className='flex items-center gap-6'>
-					<div className={`${skeletonBase} ${shimmer} h-24 w-24 rounded-2xl`} />
+					<div className={`${skeletonBase} ${shimmer} h-24 w-24 rounded-lg`} />
 					<div className='flex-1 space-y-3'>
 						<div className={`${skeletonBase} ${shimmer} h-8 w-64`} />
 						<div className={`${skeletonBase} ${shimmer} h-5 w-96`} />
@@ -171,7 +171,7 @@ function Btn({
 	};
 
 	const base =
-		'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none';
+		'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none';
 
 	if (variant === 'primary') {
 		return (
@@ -231,7 +231,7 @@ function BeforeAfter({ before, after, name, t }) {
 	const [pos, setPos] = useState(50);
 
 	return (
-		<div className='relative aspect-[4/3] w-full rounded-2xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 border-2 border-white shadow-2xl'>
+		<div className='relative aspect-[4/3] w-full rounded-lg overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 border-2 border-white shadow-2xl'>
 			{before ? (
 				<Img src={before} alt={`${name} ${t('labels.before')}`} className='absolute inset-0 w-full h-full object-cover' />
 			) : (
@@ -290,8 +290,8 @@ function BeforeAfter({ before, after, name, t }) {
 function WeightTrendChart({ data = [], t }) {
 	if (!data.length) {
 		return (
-			<div className='flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50 px-6 py-12'>
-				<div className='flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-lg ring-1 ring-slate-200/50'>
+			<div className='flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50 px-6 py-12'>
+				<div className='flex h-16 w-16 items-center justify-center rounded-lg bg-white shadow-lg ring-1 ring-slate-200/50'>
 					<Scale className='h-8 w-8 text-slate-400' />
 				</div>
 				<p className='mt-4 text-base font-semibold text-slate-700'>{t('messages.noMeasurements')}</p>
@@ -325,7 +325,7 @@ function WeightTrendChart({ data = [], t }) {
 		<div className='space-y-4'>
 			<div className='flex items-center justify-between'>
 				<div className='flex items-center gap-3'>
-					<div className='flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-lg' style={themeGradientStyle}>
+					<div className='flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-lg' style={themeGradientStyle}>
 						<TrendingUp className='h-5 w-5' />
 					</div>
 					<div>
@@ -336,14 +336,14 @@ function WeightTrendChart({ data = [], t }) {
 			</div>
 
 			<div className='flex flex-wrap gap-2'>
-				<div className='flex items-center gap-2 rounded-xl bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-2 ring-1 ring-slate-200'>
+				<div className='flex items-center gap-2 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-2 ring-1 ring-slate-200'>
 					<span className='text-xs font-medium text-slate-600'>{t('labels.start')}</span>
 					<span className='text-sm font-bold text-slate-900'>
 						{first.weight ?? '-'} {t('units.kg')}
 					</span>
 				</div>
 
-				<div className='flex items-center gap-2 rounded-xl bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-2 ring-1 ring-slate-200'>
+				<div className='flex items-center gap-2 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-2 ring-1 ring-slate-200'>
 					<span className='text-xs font-medium text-slate-600'>{t('labels.current')}</span>
 					<span className='text-sm font-bold text-slate-900'>
 						{last.weight ?? '-'} {t('units.kg')}
@@ -351,7 +351,7 @@ function WeightTrendChart({ data = [], t }) {
 				</div>
 
 				<div
-					className={`flex items-center gap-2 rounded-xl px-4 py-2 ring-1 ${deltaColor}`}
+					className={`flex items-center gap-2 rounded-lg px-4 py-2 ring-1 ${deltaColor}`}
 					style={{
 						background:
 							'linear-gradient(90deg, color-mix(in srgb, var(--color-primary-50) 90%, white), color-mix(in srgb, var(--color-secondary-50) 90%, white))',
@@ -365,7 +365,7 @@ function WeightTrendChart({ data = [], t }) {
 				</div>
 			</div>
 
-			<div className='relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/50 p-4 ring-1 ring-slate-200'>
+			<div className='relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-50 to-slate-100/50 p-4 ring-1 ring-slate-200'>
 				<svg viewBox='0 0 100 80' className='w-full h-48'>
 					<defs>
 						<linearGradient id='weightLine' x1='0' y1='0' x2='1' y2='0'>
@@ -425,7 +425,7 @@ function WeightTrendChart({ data = [], t }) {
 				{sorted.slice(-5).map((m) => (
 					<div
 						key={m.id || m.date}
-						className='flex items-center gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200 whitespace-nowrap'
+						className='flex items-center gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200 whitespace-nowrap'
 					>
 						<Calendar className='h-3 w-3 text-slate-400' />
 						<span className='text-xs text-slate-600'>{String(m.date || '').slice(5)}</span>
@@ -482,7 +482,7 @@ function NutritionGoalsCard({ user, t }) {
 		<motion.div {...fadeUp} className={card + ' p-6'}>
 			<div className='flex items-center justify-between mb-6'>
 				<div className='flex items-center gap-3'>
-					<div className='flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-lg' style={themeGradientStyle}>
+					<div className='flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-lg' style={themeGradientStyle}>
 						<Target className='h-5 w-5' />
 					</div>
 					<div>
@@ -497,7 +497,7 @@ function NutritionGoalsCard({ user, t }) {
 					<motion.div
 						key={idx}
 						variants={staggerItem}
-						className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${goal.bg} p-4 ring-1 ring-slate-200/50`}
+						className={`relative overflow-hidden rounded-lg bg-gradient-to-br ${goal.bg} p-4 ring-1 ring-slate-200/50`}
 					>
 						<div className={`absolute top-0 right-0 -mr-4 -mt-4 h-24 w-24 rounded-full bg-gradient-to-br ${goal.color} opacity-10`} />
 
@@ -539,8 +539,8 @@ function MeasurementsTable({
 }) {
 	if (!measurements.length) {
 		return (
-			<div className='flex flex-col items-center justify-center py-12 px-6 rounded-2xl border-2 border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50'>
-				<div className='flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-lg ring-1 ring-slate-200/50'>
+			<div className='flex flex-col items-center justify-center py-12 px-6 rounded-lg border-2 border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50'>
+				<div className='flex h-16 w-16 items-center justify-center rounded-lg bg-white shadow-lg ring-1 ring-slate-200/50'>
 					<Ruler className='h-8 w-8 text-slate-400' />
 				</div>
 				<p className='mt-4 text-base font-semibold text-slate-700'>{t('messages.noMeasurements')}</p>
@@ -550,7 +550,7 @@ function MeasurementsTable({
 	}
 
 	return (
-		<div className='overflow-hidden rounded-2xl border border-slate-200'>
+		<div className='overflow-hidden rounded-lg border border-slate-200'>
 			<div className='overflow-x-auto'>
 				<table className='w-full'>
 					<thead>
@@ -1129,7 +1129,7 @@ export default function ProfileOverviewPage() {
 					className=''
 					someThing={
 						<div
-							className='flex items-center gap-2 rounded-xl px-4 py-2 text-white shadow-lg border-2 border-white/20 bg-white/10 backdrop-blur-sm'
+							className='flex items-center gap-2 rounded-lg px-4 py-2 text-white shadow-lg border-2 border-white/20 bg-white/10 backdrop-blur-sm'
 							title={String(user?.subscriptionEnd || '')}
 						>
 							<Clock className='h-4 w-4' />
@@ -1143,7 +1143,7 @@ export default function ProfileOverviewPage() {
 					<StatCard resPhone icon={Apple} title={t('stats.mealPlan')} value={user?.activeMealPlan?.name || t('profile.none')} />
 				</GradientStatsHeader>
 
-				<div className='flex items-center gap-2 p-1.5 bg-white rounded-2xl border border-slate-200 shadow-sm'>
+				<div className='flex items-center gap-2 p-1.5 bg-white rounded-lg border border-slate-200 shadow-sm'>
 					{tabs.map((tb) => {
 						const active = tab === tb.key;
 						return (
@@ -1151,7 +1151,7 @@ export default function ProfileOverviewPage() {
 								key={tb.key}
 								onClick={() => setTab(tb.key)}
 								className={[
-									'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200',
+									'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-200',
 									active ? 'text-white shadow-lg' : 'text-slate-600 hover:bg-slate-50',
 								].join(' ')}
 								style={active ? themeGradientStyle : undefined}
@@ -1181,7 +1181,7 @@ export default function ProfileOverviewPage() {
 							<motion.div variants={staggerItem} className={card + ' lg:col-span-3 p-6'}>
 								<div className='flex items-center justify-between mb-6'>
 									<div className='flex items-center gap-3'>
-										<div className='flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-lg' style={themeGradientStyle}>
+										<div className='flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-lg' style={themeGradientStyle}>
 											<ImageIcon className='h-5 w-5' />
 										</div>
 										<div>
@@ -1227,7 +1227,7 @@ export default function ProfileOverviewPage() {
 								{compare.beforeId && compare.afterId && compare.side !== 'all' ? (
 									<BeforeAfter before={leftSrc()} after={rightSrc()} name='progress' t={t} />
 								) : (
-									<div className='flex flex-col items-center justify-center py-16 rounded-2xl border-2 border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50'>
+									<div className='flex flex-col items-center justify-center py-16 rounded-lg border-2 border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50'>
 										<ImageIcon className='h-12 w-12 text-slate-300 mb-3' />
 										<p className='text-sm font-medium text-slate-600'>{t('messages.chooseTwoSets')}</p>
 									</div>
@@ -1240,7 +1240,7 @@ export default function ProfileOverviewPage() {
 						<motion.div key='body' {...fadeUp} className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
 							<div className={card + ' p-6'}>
 								<div className='flex items-center gap-3 mb-6'>
-									<div className='flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-lg' style={themeGradientStyle}>
+									<div className='flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-lg' style={themeGradientStyle}>
 										<Plus className='h-5 w-5' />
 									</div>
 									<div>
@@ -1276,7 +1276,7 @@ export default function ProfileOverviewPage() {
 
 							<div className={card + ' p-6 lg:col-span-2'}>
 								<div className='flex items-center gap-3 mb-6'>
-									<div className='flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-lg' style={themeGradientStyle}>
+									<div className='flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-lg' style={themeGradientStyle}>
 										<Ruler className='h-5 w-5' />
 									</div>
 									<div>
@@ -1306,7 +1306,7 @@ export default function ProfileOverviewPage() {
 							<div className={card + ' p-6'}>
 								<div className='flex items-center justify-between mb-6'>
 									<div className='flex items-center gap-3'>
-										<div className='flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-lg' style={themeGradientStyle}>
+										<div className='flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-lg' style={themeGradientStyle}>
 											<Camera className='h-5 w-5' />
 										</div>
 										<div>
@@ -1344,7 +1344,7 @@ export default function ProfileOverviewPage() {
 												].map(({ key, label, file, setter }) => (
 													<div
 														key={key}
-														className='relative rounded-xl border-2 border-dashed bg-slate-50 aspect-square overflow-hidden transition-colors'
+														className='relative rounded-lg border-2 border-dashed bg-slate-50 aspect-square overflow-hidden transition-colors'
 														style={{ borderColor: 'color-mix(in srgb, var(--color-primary-300) 55%, #e2e8f0)' }}
 													>
 														{!file ? (
@@ -1397,7 +1397,7 @@ export default function ProfileOverviewPage() {
 							<div className={card + ' lg:col-span-2 p-6'}>
 								<div className='flex items-center justify-between mb-6'>
 									<div className='flex items-center gap-3'>
-										<div className='flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-lg' style={themeGradientStyle}>
+										<div className='flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-lg' style={themeGradientStyle}>
 											<ImageIcon className='h-5 w-5' />
 										</div>
 										<div>
@@ -1424,7 +1424,7 @@ export default function ProfileOverviewPage() {
 								</div>
 
 								{!photoMonths.length ? (
-									<div className='flex flex-col items-center justify-center py-16 rounded-2xl border-2 border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50'>
+									<div className='flex flex-col items-center justify-center py-16 rounded-lg border-2 border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100/50'>
 										<ImagePlus className='h-12 w-12 text-slate-300 mb-3' />
 										<p className='text-sm font-medium text-slate-600 mb-4'>{t('messages.noTimeline')}</p>
 										<Btn variant='primary' icon={Upload} onClick={() => setShowUploadBlock(true)}>
@@ -1436,7 +1436,7 @@ export default function ProfileOverviewPage() {
 										{photoMonths.map((entry) => (
 											<div
 												key={entry.id}
-												className='min-w-[320px] snap-start rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-lg transition-shadow'
+												className='min-w-[320px] snap-start rounded-lg border border-slate-200 bg-white p-4 shadow-sm hover:shadow-lg transition-shadow'
 											>
 												<div className='flex items-center justify-between mb-3'>
 													<div>
@@ -1467,7 +1467,7 @@ export default function ProfileOverviewPage() {
 																	label: `${entry.takenAt} — ${t(`sides.${side}`)}`,
 																})
 															}
-															className='overflow-hidden rounded-xl border border-slate-200 bg-slate-50 transition-all'
+															className='overflow-hidden rounded-lg border border-slate-200 bg-slate-50 transition-all'
 															style={{ boxShadow: '0 0 0 0px transparent' }}
 															onMouseEnter={(e) => {
 																e.currentTarget.style.boxShadow =
@@ -1493,7 +1493,7 @@ export default function ProfileOverviewPage() {
 
 				<Modal open={!!photoPreview} onClose={() => setPhotoPreview(null)} title={photoPreview?.label} maxW='max-w-4xl'>
 					{photoPreview?.src ? (
-						<div className='rounded-2xl overflow-hidden'>
+						<div className='rounded-lg overflow-hidden'>
 							<Img src={photoPreview.src} alt={photoPreview.label} className='w-full' />
 						</div>
 					) : photoPreview?.before && photoPreview?.after ? (
@@ -1524,7 +1524,7 @@ export default function ProfileOverviewPage() {
 				<Modal open={tipsOpen} onClose={() => setTipsOpen(false)} title={t('modals.photographyTipsTitle')} maxW='max-w-2xl'>
 					<div className='space-y-4'>
 						{['lighting', 'distance', 'angles', 'cameraHeight', 'timer', 'clothes', 'background', 'frequency'].map((key) => (
-							<div key={key} className='flex gap-4 p-4 rounded-xl bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200'>
+							<div key={key} className='flex gap-4 p-4 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200'>
 								<div className='flex h-8 w-8 items-center justify-center rounded-lg text-white flex-shrink-0' style={themePrimaryBg}>
 									<Lightbulb className='h-4 w-4' />
 								</div>
@@ -1583,7 +1583,7 @@ export default function ProfileOverviewPage() {
 				<Modal open={cropOpen} onClose={() => setCropOpen(false)} title={t('modals.cropImageTitle')} maxW='max-w-3xl'>
 					{cropImageSrc && (
 						<div className='space-y-4'>
-							<div className='relative w-full aspect-square bg-slate-100 rounded-2xl overflow-hidden'>
+							<div className='relative w-full aspect-square bg-slate-100 rounded-lg overflow-hidden'>
 								<Cropper
 									image={cropImageSrc}
 									crop={crop}

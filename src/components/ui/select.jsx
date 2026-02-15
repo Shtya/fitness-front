@@ -53,7 +53,7 @@ function SelectTrigger({ className, size = "default", children, ...props }) {
 				[
 					"relative rtl:flex-row-reverse inline-flex w-full items-center justify-between gap-2",
 					" h-[37px]  ",
-					"rounded-md border-[1px] border-input bg-background/60",
+					"rounded-lg border-[1px] border-input bg-background/60",
 					"px-3.5 text-sm text-foreground", 
 					"transition-all duration-200",
 					"hover:bg-background hover:shadow-md",
@@ -68,7 +68,7 @@ function SelectTrigger({ className, size = "default", children, ...props }) {
 			{...props}
 		>
 			{/* subtle inner glow */}
-			<span className="pointer-events-none absolute inset-0 rounded-md bg-gradient-to-b from-white/30 to-transparent opacity-0 transition-opacity duration-200 dark:from-white/10 group-hover:opacity-100" />
+			<span className="pointer-events-none absolute inset-0 rounded-lg bg-gradient-to-b from-white/30 to-transparent opacity-0 transition-opacity duration-200 dark:from-white/10 group-hover:opacity-100" />
 			<span className="relative  z-10 flex min-w-0   items-center">{children}</span>
 
 			<SelectPrimitive.Icon asChild>
@@ -123,7 +123,7 @@ function SelectContent({
 					[
 						"relative z-[10000000000] overflow-hidden",
 						// modern container
-						"rounded-md border border-border/70 bg-popover text-popover-foreground shadow-xl",
+						"rounded-lg border border-border/70 bg-popover text-popover-foreground shadow-xl",
 						// animation
 						"data-[state=open]:animate-in data-[state=closed]:animate-out",
 						"data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
@@ -179,7 +179,7 @@ function SelectItem({
 			data-slot="select-item"
 			className={cn(
 				[
-					"group relative rtl:flex-row-reverse flex w-full cursor-default select-none items-center gap-2 rounded-md px-3 py-2 text-sm outline-none",
+					"group relative rtl:flex-row-reverse flex w-full cursor-default select-none items-center gap-2 rounded-lg px-3 py-2 text-sm outline-none",
 					"transition-colors",
 					"focus:bg-accent focus:text-accent-foreground",
 					"data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
@@ -192,7 +192,7 @@ function SelectItem({
 			<SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
 
 			{/* subtle hover highlight */}
-			<span className="pointer-events-none absolute inset-0 rounded-md bg-gradient-to-r from-primary/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+			<span className="pointer-events-none absolute inset-0 rounded-lg bg-gradient-to-r from-primary/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
 		</SelectPrimitive.Item>
 	)
 }

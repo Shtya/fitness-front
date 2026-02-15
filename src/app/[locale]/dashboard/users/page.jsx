@@ -227,7 +227,7 @@ export function ToggleGroup({ label, options = [], value, onChange, error, class
 							whileHover={{ scale: 1.03 }}
 							whileTap={{ scale: 0.96 }}
 							transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-							className='relative px-4 py-[7px] rounded-xl text-sm select-none focus:outline-none transition-all duration-200'
+							className='relative px-4 py-[7px] rounded-lg text-sm select-none focus:outline-none transition-all duration-200'
 							style={active ? {
 								...activeStyle,
 								color: '#fff',
@@ -243,7 +243,7 @@ export function ToggleGroup({ label, options = [], value, onChange, error, class
 								{active && (
 									<motion.span
 										layoutId='toggleGlow'
-										className='absolute inset-0 rounded-xl'
+										className='absolute inset-0 rounded-lg'
 										style={activeRingStyle}
 										initial={{ opacity: 0 }}
 										animate={{ opacity: 1 }}
@@ -256,7 +256,7 @@ export function ToggleGroup({ label, options = [], value, onChange, error, class
 							{/* Hover state for inactive */}
 							{!active && (
 								<span
-									className='absolute inset-0 rounded-xl opacity-0 hover:opacity-100 transition-opacity duration-200'
+									className='absolute inset-0 rounded-lg opacity-0 hover:opacity-100 transition-opacity duration-200'
 									style={{ background: 'color-mix(in srgb, var(--color-primary-500) 6%, white)', border: '1px solid color-mix(in srgb, var(--color-primary-500) 40%, transparent)' }}
 								/>
 							)}
@@ -385,7 +385,7 @@ function PlanPickerModal({ open, onClose, title, icon: Icon, fetchUrl, assignUrl
 				{loading ? (
 					<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
 						{Array.from({ length: 6 }).map((_, i) => (
-							<div key={i} className='h-28 rounded-xl border border-slate-200 bg-slate-50 animate-pulse' />
+							<div key={i} className='h-28 rounded-lg border border-slate-200 bg-slate-50 animate-pulse' />
 						))}
 					</div>
 				) : (
@@ -872,7 +872,7 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 						<button
 							type='submit'
 							disabled={creating || isSubmitting}
-							className='inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 shadow-md'
+							className='inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 shadow-md'
 							style={{
 								background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))',
 								boxShadow: '0 4px 14px color-mix(in srgb, var(--color-primary-500) 35%, transparent)',
@@ -1007,7 +1007,7 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 			{currentStep === 'send' && (
 				<div className='space-y-5'>
 					{/* Success banner */}
-					<div className='flex items-center gap-3 p-4 rounded-xl border' style={{ background: 'color-mix(in srgb, var(--color-primary-500) 6%, white)', borderColor: 'color-mix(in srgb, var(--color-primary-500) 20%, transparent)' }}>
+					<div className='flex items-center gap-3 p-4 rounded-lg border' style={{ background: 'color-mix(in srgb, var(--color-primary-500) 6%, white)', borderColor: 'color-mix(in srgb, var(--color-primary-500) 20%, transparent)' }}>
 						<div className='mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center' style={{ background: 'color-mix(in srgb, var(--color-primary-500) 15%, white)' }}>
 							<CheckCircle2 className='w-5 h-5' style={{ color: 'var(--color-primary-600)' }} />
 						</div>
@@ -1356,7 +1356,7 @@ export default function UsersList() {
 							value={searchText}
 							onChange={e => { setSearchText(e.target.value); setPage(1); }}
 							placeholder={t('placeholders.search')}
-							className='h-[42px] w-full ltr:pl-9 rtl:pr-9 rounded-xl bg-white text-slate-800 border border-slate-200 font-medium text-sm shadow-sm focus:outline-none transition-all duration-200'
+							className='h-[42px] w-full ltr:pl-9 rtl:pr-9 rounded-lg bg-white text-slate-800 border border-slate-200 font-medium text-sm shadow-sm focus:outline-none transition-all duration-200'
 							style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
 							onFocus={e => { e.target.style.borderColor = 'var(--color-primary-400)'; e.target.style.boxShadow = '0 0 0 3px color-mix(in srgb, var(--color-primary-500) 15%, transparent)'; }}
 							onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)'; }}
@@ -1377,7 +1377,7 @@ export default function UsersList() {
 				{/* Sort button */}
 				<button
 					onClick={() => toggleSort('created_at')}
-					className='bg-white inline-flex items-center h-[42px] gap-2 px-4 py-2 rounded-xl border border-slate-200 font-semibold text-sm text-slate-600 shadow-sm transition-all duration-200 hover:shadow-md'
+					className='bg-white inline-flex items-center h-[42px] gap-2 px-4 py-2 rounded-lg border border-slate-200 font-semibold text-sm text-slate-600 shadow-sm transition-all duration-200 hover:shadow-md'
 					style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
 					onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-primary-400)'; }}
 					onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; }}
@@ -1392,7 +1392,7 @@ export default function UsersList() {
 					<button
 						type='button'
 						onClick={fetchPendingForReview}
-						className='inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 text-sm font-semibold shadow-sm hover:bg-amber-100 transition-colors'
+						className='inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 text-sm font-semibold shadow-sm hover:bg-amber-100 transition-colors'
 					>
 						<BadgeCheck className='w-4 h-4' />
 						<span>{t_('stats.pending') || 'Pending accounts'}</span>
@@ -1406,11 +1406,11 @@ export default function UsersList() {
 			{/* ===== TABLE ===== */}
 			<div className='space-y-3'>
 				{err && (
-					<div className='p-3.5 rounded-xl bg-red-50 text-red-700 border border-red-100 text-sm flex items-center gap-2'>
+					<div className='p-3.5 rounded-lg bg-red-50 text-red-700 border border-red-100 text-sm flex items-center gap-2'>
 						<XCircle className='w-4 h-4 flex-shrink-0' /> {err}
 					</div>
 				)}
-				<div className='overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm' style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+				<div className='overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm' style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
 					<DataTable
 						columns={columns} data={rows} loading={loading} itemsPerPage={limit}
 						pagination selectable={false} serverPagination page={page}
@@ -1499,7 +1499,7 @@ export function CutomInput({ value, onChange, onBlur, name, inputRef, className,
 		<div className={`w-full relative ${className || ''}`}>
 			{rest.label && <label className='mb-1.5 block text-sm font-semibold text-slate-600 tracking-wide uppercase' style={{ fontSize: '0.7rem', letterSpacing: '0.06em' }}>{rest.label}</label>}
 			<div
-				className='relative flex items-center rounded-xl border bg-white transition-all duration-200'
+				className='relative flex items-center rounded-lg border bg-white transition-all duration-200'
 				style={{ borderColor: '#cbd5e1' }}
 				onFocus={e => {
 					const wrapper = e.currentTarget;
@@ -1519,7 +1519,7 @@ export function CutomInput({ value, onChange, onBlur, name, inputRef, className,
 					value={value}
 					onChange={onChange}
 					onBlur={onBlur}
-					className={`${cnInput || ''} h-[43px] w-full rounded-xl px-3.5 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400`}
+					className={`${cnInput || ''} h-[43px] w-full rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400`}
 				/>
 			</div>
 			{rest.error && <p className='mt-1.5 text-xs text-rose-500 flex items-center gap-1'><XCircle className='w-3 h-3' />{rest.error}</p>}
@@ -1650,7 +1650,7 @@ function EnhancedPendingModal({
 						</div>
 
 						{/* Scrollable table */}
-						<div className="max-h-[420px] overflow-y-auto rounded-xl border border-slate-200 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+						<div className="max-h-[420px] overflow-y-auto rounded-lg border border-slate-200 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
 							<table className="min-w-full text-sm">
 								<thead className="bg-slate-50 text-slate-600 sticky top-0 z-10">
 									<tr>

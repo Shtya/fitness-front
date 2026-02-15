@@ -89,7 +89,7 @@ function PaginationBar({ page, totalPages, onPageChange }) {
 				variant="outline"
 				disabled={!canPrev}
 				onClick={() => onPageChange(page - 1)}
-				className="h-11 px-6 rounded-xl border-2 font-bold hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] transition-all duration-200"
+				className="h-11 px-6 rounded-lg border-2 font-bold hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] transition-all duration-200"
 			>
 				← السابق
 			</Button>
@@ -107,7 +107,7 @@ function PaginationBar({ page, totalPages, onPageChange }) {
 							size="sm"
 							onClick={() => onPageChange(p)}
 							className={cls(
-								"w-10 h-10 rounded-xl font-bold transition-all duration-200",
+								"w-10 h-10 rounded-lg font-bold transition-all duration-200",
 								page === p
 									? "bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-lg shadow-[var(--color-primary-500)]/30"
 									: "hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)]"
@@ -123,7 +123,7 @@ function PaginationBar({ page, totalPages, onPageChange }) {
 				variant="outline"
 				disabled={!canNext}
 				onClick={() => onPageChange(page + 1)}
-				className="h-11 px-6 rounded-xl border-2 font-bold hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] transition-all duration-200"
+				className="h-11 px-6 rounded-lg border-2 font-bold hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] transition-all duration-200"
 			>
 				التالي →
 			</Button>
@@ -160,7 +160,7 @@ function DataTable({
 	}, [totalPages]);
 
 	return (
-		<Card className="rounded-3xl border-2 border-slate-200/60 shadow-xl overflow-hidden bg-white/80 backdrop-blur-sm">
+		<Card className="rounded-lg border-2 border-slate-200/60 shadow-xl overflow-hidden bg-white/80 backdrop-blur-sm">
 			{(headerTitle || headerRight) && (
 				<CardHeader className="pb-4 bg-gradient-to-r from-white/95 to-slate-50/50">
 					<div className="flex items-start justify-between gap-4">
@@ -177,7 +177,7 @@ function DataTable({
 				{rows.length === 0 ? (
 					<div className="text-center py-20">
 						{EmptyIcon ? (
-							<div className="mx-auto mb-5 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200/60 shadow-lg">
+							<div className="mx-auto mb-5 inline-flex h-20 w-20 items-center justify-center rounded-lg bg-gradient-to-br from-slate-100 to-slate-200/60 shadow-lg">
 								<EmptyIcon className="w-10 h-10 text-slate-400" />
 							</div>
 						) : null}
@@ -186,7 +186,7 @@ function DataTable({
 					</div>
 				) : (
 					<>
-						<div className="rounded-2xl border-2 border-slate-200/60 overflow-hidden shadow-sm">
+						<div className="rounded-lg border-2 border-slate-200/60 overflow-hidden shadow-sm">
 							<Table>
 								<TableHeader>
 									<TableRow className="bg-gradient-to-r from-slate-50 to-slate-100/50 border-b-2 border-slate-200/60">
@@ -315,7 +315,7 @@ export default function BillingPage() {
 						<div className="flex items-start gap-4 lg:gap-6">
 							<motion.div 
 								whileHover={{ scale: 1.05, rotate: 5 }}
-								className="w-20 h-20 lg:w-24 lg:h-24 rounded-3xl bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] flex items-center justify-center shadow-2xl shadow-[var(--color-primary-500)]/30 relative overflow-hidden group"
+								className="w-20 h-20 lg:w-24 lg:h-24 rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] flex items-center justify-center shadow-2xl shadow-[var(--color-primary-500)]/30 relative overflow-hidden group"
 							>
 								<Wallet className="w-10 h-10 lg:w-12 lg:h-12 text-white relative z-10 group-hover:scale-110 transition-transform duration-300" />
 								<div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
@@ -335,7 +335,7 @@ export default function BillingPage() {
 									<TooltipProvider>
 										<Tooltip>
 											<TooltipTrigger asChild>
-												<button className="w-9 h-9 rounded-xl bg-white border-2 border-slate-200 flex items-center justify-center hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] transition-all duration-200 shadow-sm">
+												<button className="w-9 h-9 rounded-lg bg-white border-2 border-slate-200 flex items-center justify-center hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] transition-all duration-200 shadow-sm">
 													<Info className="w-5 h-5 text-[var(--color-primary-600)]" />
 												</button>
 											</TooltipTrigger>
@@ -359,7 +359,7 @@ export default function BillingPage() {
 					transition={{ delay: 0.1 }}
 					className="mb-8 lg:mb-10"
 				>
-					<div className="w-full lg:w-fit bg-white/80 backdrop-blur-xl rounded-2xl lg:rounded-3xl p-2 border-2 border-slate-200/60 shadow-xl">
+					<div className="w-full lg:w-fit bg-white/80 backdrop-blur-xl rounded-lg lg:rounded-lg p-2 border-2 border-slate-200/60 shadow-xl">
 						<div className="flex gap-2 overflow-x-auto scrollbar-none">
 							{tabs.map((tab) => {
 								const Icon = tab.icon;
@@ -373,7 +373,7 @@ export default function BillingPage() {
 										whileTap={{ scale: 0.98 }}
 										className={cls(
 											"relative flex items-center gap-2.5",
-											"px-5 lg:px-7 py-3.5 lg:py-4 rounded-xl lg:rounded-2xl text-sm lg:text-base font-bold",
+											"px-5 lg:px-7 py-3.5 lg:py-4 rounded-lg lg:rounded-lg text-sm lg:text-base font-bold",
 											"whitespace-nowrap select-none transition-all duration-300",
 											"focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)]/50",
 											isActive ? "text-white shadow-lg" : "text-slate-700 hover:bg-slate-50"
@@ -382,7 +382,7 @@ export default function BillingPage() {
 										{isActive && (
 											<motion.span
 												layoutId="activeTabPill"
-												className="absolute inset-0 rounded-xl lg:rounded-2xl bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] shadow-lg shadow-[var(--color-primary-500)]/30"
+												className="absolute inset-0 rounded-lg lg:rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] shadow-lg shadow-[var(--color-primary-500)]/30"
 												transition={{ type: "spring", stiffness: 500, damping: 35 }}
 											/>
 										)}
@@ -543,7 +543,7 @@ function OverviewTab({ walletData, t, onNavigateToSubscriptions, colors }) {
 			className="space-y-6 lg:space-y-8"
 		>
 			{error && (
-				<Alert variant="destructive" className="rounded-2xl border-2">
+				<Alert variant="destructive" className="rounded-lg border-2">
 					<AlertCircle className="h-5 w-5" />
 					<AlertDescription className="text-base">{error}</AlertDescription>
 				</Alert>
@@ -562,7 +562,7 @@ function OverviewTab({ walletData, t, onNavigateToSubscriptions, colors }) {
 							transition={{ delay: idx * 0.1 }}
 							whileHover={{ y: -8, scale: 1.02 }}
 							className={cls(
-								"group relative rounded-3xl border-2 border-slate-200/60",
+								"group relative rounded-lg border-2 border-slate-200/60",
 								"shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden",
 								"bg-gradient-to-br",
 								stat.bgGradient
@@ -584,7 +584,7 @@ function OverviewTab({ walletData, t, onNavigateToSubscriptions, colors }) {
 										<motion.div 
 											whileHover={{ rotate: 360, scale: 1.1 }}
 											transition={{ duration: 0.6 }}
-											className="w-14 h-14 rounded-2xl bg-white/80 backdrop-blur-sm border-2 border-white/60 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300"
+											className="w-14 h-14 rounded-lg bg-white/80 backdrop-blur-sm border-2 border-white/60 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300"
 										>
 											<Icon className={cls("w-7 h-7", stat.iconColor)} strokeWidth={2.5} />
 										</motion.div>
@@ -604,7 +604,7 @@ function OverviewTab({ walletData, t, onNavigateToSubscriptions, colors }) {
 									{stat.trend && (
 										<Badge 
 											className={cls(
-												"px-2.5 py-1 rounded-xl text-xs font-black border-2",
+												"px-2.5 py-1 rounded-lg text-xs font-black border-2",
 												stat.trend.direction === "up"
 													? "bg-emerald-50/80 border-emerald-200 text-emerald-700"
 													: "bg-rose-50/80 border-rose-200 text-rose-700"
@@ -632,7 +632,7 @@ function OverviewTab({ walletData, t, onNavigateToSubscriptions, colors }) {
 					<div className="flex items-center gap-3">
 						<Badge 
 							variant="secondary" 
-							className="font-bold text-sm px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] border-2 border-[var(--color-primary-200)]"
+							className="font-bold text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] border-2 border-[var(--color-primary-200)]"
 						>
 							<BarChart3 className="w-4 h-4 mr-2" />
 							{t("payments.total", { count: recentTransactions.length })}
@@ -640,7 +640,7 @@ function OverviewTab({ walletData, t, onNavigateToSubscriptions, colors }) {
 						<Button
 							variant="outline"
 							size="sm"
-							className="rounded-xl border-2 font-bold hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] transition-all duration-200"
+							className="rounded-lg border-2 font-bold hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] transition-all duration-200"
 							onClick={onNavigateToSubscriptions}
 						>
 							{t("common.viewAll")}
@@ -659,7 +659,7 @@ function OverviewTab({ walletData, t, onNavigateToSubscriptions, colors }) {
 					if (key === "client") {
 						return (
 							<div className="flex items-center gap-3">
-								<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-secondary-100)] flex items-center justify-center shadow-sm">
+								<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-secondary-100)] flex items-center justify-center shadow-sm">
 									<User className="w-5 h-5 text-[var(--color-primary-600)]" />
 								</div>
 								<span className="font-bold text-gray-900">{tx.client}</span>
@@ -707,7 +707,7 @@ function TxStatusBadge({ status, t }) {
 	const Icon = cfg.icon;
 
 	return (
-		<Badge className={cls(cfg.cls, "border-2 px-3 py-1.5 font-bold text-xs rounded-xl")}>
+		<Badge className={cls(cfg.cls, "border-2 px-3 py-1.5 font-bold text-xs rounded-lg")}>
 			<Icon className="w-3.5 h-3.5 mr-1.5" />
 			{t(`status.${status}`)}
 		</Badge>
@@ -927,7 +927,7 @@ function ClientsTab({ t, colors }) {
 							transition={{ delay: idx * 0.05 }}
 							whileHover={{ y: -4, scale: 1.02 }}
 							className={cls(
-								"group relative rounded-2xl border-2 border-slate-200/60",
+								"group relative rounded-lg border-2 border-slate-200/60",
 								"shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden",
 								"bg-gradient-to-br",
 								s.bgGradient
@@ -938,7 +938,7 @@ function ClientsTab({ t, colors }) {
 							<div className="relative p-4">
 								<div className="flex items-start justify-between gap-2 mb-3">
 									<div className="flex items-center gap-2">
-										<div className="w-10 h-10 rounded-xl bg-white/70 backdrop-blur flex items-center justify-center border border-white/60 group-hover:scale-105 transition-transform shadow-sm">
+										<div className="w-10 h-10 rounded-lg bg-white/70 backdrop-blur flex items-center justify-center border border-white/60 group-hover:scale-105 transition-transform shadow-sm">
 											<Icon className={cls("w-5 h-5", s.iconCls)} />
 										</div>
 
@@ -985,7 +985,7 @@ function ClientsTab({ t, colors }) {
 				headerRight={
 					<Badge 
 						variant="secondary" 
-						className="font-bold text-sm px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] border-2 border-[var(--color-primary-200)]"
+						className="font-bold text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] border-2 border-[var(--color-primary-200)]"
 					>
 						<Users className="w-4 h-4 mr-2" />
 						{t("payments.total", { count: filtered.length })}
@@ -1056,7 +1056,7 @@ function ClientsTab({ t, colors }) {
 						const b = getClientBadge(c.daysLeft);
 						const Icon = b.icon;
 						return (
-							<Badge className={cls(b.className, "border-2 px-3 py-1.5 font-bold text-xs rounded-xl")}>
+							<Badge className={cls(b.className, "border-2 px-3 py-1.5 font-bold text-xs rounded-lg")}>
 								<Icon className="w-3.5 h-3.5 mr-1.5" />
 								{b.text}
 							</Badge>
@@ -1069,7 +1069,7 @@ function ClientsTab({ t, colors }) {
 								<TooltipProvider>
 									<Tooltip>
 										<TooltipTrigger asChild>
-											<Button className="rounded-xl h-10 px-4 font-bold bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] hover:shadow-lg hover:shadow-[var(--color-primary-500)]/30 transition-all duration-200">
+											<Button className="rounded-lg h-10 px-4 font-bold bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] hover:shadow-lg hover:shadow-[var(--color-primary-500)]/30 transition-all duration-200">
 												<Send className="w-4 h-4 mr-2" />
 												{t("clients.sendReminder")}
 											</Button>
@@ -1215,13 +1215,13 @@ function PackagesTab({ t, colors }) {
 						<DialogTrigger asChild>
 							<Button 
 								variant="outline" 
-								className="h-14 px-8 rounded-2xl font-bold border-2 hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] transition-all duration-200"
+								className="h-14 px-8 rounded-lg font-bold border-2 hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] transition-all duration-200"
 							>
 								<Send className="w-5 h-5 mr-2" />
 								{t("packages.exportAll")}
 							</Button>
 						</DialogTrigger>
-						<DialogContent className="rounded-3xl">
+						<DialogContent className="rounded-lg">
 							<DialogHeader>
 								<DialogTitle className="text-2xl font-black">{t("packages.exportDialog.title")}</DialogTitle>
 								<DialogDescription>{t("packages.exportDialog.description")}</DialogDescription>
@@ -1239,11 +1239,11 @@ function PackagesTab({ t, colors }) {
 											placeholder="01XXXXXXXXX"
 											value={phoneNumber}
 											onChange={(e) => setPhoneNumber(e.target.value)}
-											className="h-14 pl-12 rounded-2xl border-2 text-base"
+											className="h-14 pl-12 rounded-lg border-2 text-base"
 										/>
 									</div>
 								</div>
-								<Alert className="bg-blue-50 border-blue-200 rounded-2xl">
+								<Alert className="bg-blue-50 border-blue-200 rounded-lg">
 									<Info className="h-5 w-5 text-blue-600" />
 									<AlertDescription className="text-blue-900">{t("packages.exportDialog.info")}</AlertDescription>
 								</Alert>
@@ -1252,14 +1252,14 @@ function PackagesTab({ t, colors }) {
 								<Button 
 									variant="outline" 
 									onClick={() => setIsExportDialogOpen(false)} 
-									className="rounded-xl border-2"
+									className="rounded-lg border-2"
 								>
 									{t("common.cancel")}
 								</Button>
 								<Button
 									onClick={handleExportAllPackages}
 									disabled={!phoneNumber || exportingPackages}
-									className="rounded-xl bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+									className="rounded-lg bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
 								>
 									{exportingPackages ? (
 										<>
@@ -1281,7 +1281,7 @@ function PackagesTab({ t, colors }) {
 					<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
 						<DialogTrigger asChild>
 							<Button
-								className="h-14 px-8 rounded-2xl font-bold bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] hover:shadow-xl hover:shadow-[var(--color-primary-500)]/30 transition-all duration-200"
+								className="h-14 px-8 rounded-lg font-bold bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] hover:shadow-xl hover:shadow-[var(--color-primary-500)]/30 transition-all duration-200"
 								onClick={() => {
 									setEditingPackage(null);
 									setFormData({ name: "", nameEn: "", price: "", duration: "شهري", features: [""] });
@@ -1291,7 +1291,7 @@ function PackagesTab({ t, colors }) {
 								{t("packages.addNew")}
 							</Button>
 						</DialogTrigger>
-						<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl">
+						<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg">
 							<DialogHeader>
 								<DialogTitle className="text-2xl font-black">
 									{editingPackage ? t("packages.edit") : t("packages.addNew")}
@@ -1309,7 +1309,7 @@ function PackagesTab({ t, colors }) {
 											id="name" 
 											value={formData.name} 
 											onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
-											className="h-12 rounded-xl border-2" 
+											className="h-12 rounded-lg border-2" 
 										/>
 									</div>
 									<div>
@@ -1320,7 +1320,7 @@ function PackagesTab({ t, colors }) {
 											id="nameEn" 
 											value={formData.nameEn} 
 											onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })} 
-											className="h-12 rounded-xl border-2" 
+											className="h-12 rounded-lg border-2" 
 										/>
 									</div>
 								</div>
@@ -1335,7 +1335,7 @@ function PackagesTab({ t, colors }) {
 											type="number" 
 											value={formData.price} 
 											onChange={(e) => setFormData({ ...formData, price: e.target.value })} 
-											className="h-12 rounded-xl border-2" 
+											className="h-12 rounded-lg border-2" 
 										/>
 									</div>
 									<div>
@@ -1343,7 +1343,7 @@ function PackagesTab({ t, colors }) {
 											{t("packages.form.duration")}
 										</Label>
 										<Select value={formData.duration} onValueChange={(v) => setFormData({ ...formData, duration: v })}>
-											<SelectTrigger className="h-12 rounded-xl border-2">
+											<SelectTrigger className="h-12 rounded-lg border-2">
 												<SelectValue />
 											</SelectTrigger>
 											<SelectContent>
@@ -1364,7 +1364,7 @@ function PackagesTab({ t, colors }) {
 											variant="outline" 
 											size="sm" 
 											onClick={handleAddFeature} 
-											className="rounded-xl"
+											className="rounded-lg"
 										>
 											<Plus className="w-4 h-4 mr-1" />
 											{t("packages.form.addFeature")}
@@ -1376,7 +1376,7 @@ function PackagesTab({ t, colors }) {
 												<Input
 													value={feature}
 													onChange={(e) => handleFeatureChange(index, e.target.value)}
-													className="h-12 rounded-xl border-2"
+													className="h-12 rounded-lg border-2"
 													placeholder={`${t("packages.form.feature")} ${index + 1}`}
 												/>
 												{formData.features.length > 1 && (
@@ -1385,7 +1385,7 @@ function PackagesTab({ t, colors }) {
 														variant="outline" 
 														size="icon" 
 														onClick={() => handleRemoveFeature(index)} 
-														className="h-12 w-12 rounded-xl border-2"
+														className="h-12 w-12 rounded-lg border-2"
 													>
 														<Trash2 className="w-4 h-4 text-rose-500" />
 													</Button>
@@ -1400,13 +1400,13 @@ function PackagesTab({ t, colors }) {
 								<Button 
 									variant="outline" 
 									onClick={() => setIsDialogOpen(false)} 
-									className="rounded-xl border-2"
+									className="rounded-lg border-2"
 								>
 									{t("common.cancel")}
 								</Button>
 								<Button 
 									onClick={handleSubmit} 
-									className="rounded-xl bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]"
+									className="rounded-lg bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]"
 								>
 									{editingPackage ? t("common.update") : t("common.save")}
 								</Button>
@@ -1426,7 +1426,7 @@ function PackagesTab({ t, colors }) {
 						transition={{ delay: idx * 0.1 }}
 						whileHover={{ y: -8, scale: 1.02 }}
 						className={cls(
-							"rounded-3xl border-2 border-slate-200/60 shadow-lg hover:shadow-2xl",
+							"rounded-lg border-2 border-slate-200/60 shadow-lg hover:shadow-2xl",
 							"transition-all duration-300 overflow-hidden group",
 							"bg-gradient-to-br",
 							packageGradients[idx % packageGradients.length]
@@ -1446,7 +1446,7 @@ function PackagesTab({ t, colors }) {
 													variant="ghost" 
 													size="icon" 
 													onClick={() => handleEdit(pkg)} 
-													className="rounded-xl hover:bg-white/80 transition-colors"
+													className="rounded-lg hover:bg-white/80 transition-colors"
 												>
 													<Edit className="w-4 h-4" />
 												</Button>
@@ -1464,7 +1464,7 @@ function PackagesTab({ t, colors }) {
 													variant="ghost" 
 													size="icon" 
 													onClick={() => handleDelete(pkg.id)} 
-													className="rounded-xl hover:bg-white/80 text-rose-500"
+													className="rounded-lg hover:bg-white/80 text-rose-500"
 												>
 													<Trash2 className="w-4 h-4" />
 												</Button>
@@ -1635,7 +1635,7 @@ function SubscriptionsTab({ t, colors }) {
 							transition={{ delay: idx * 0.1 }}
 							whileHover={{ y: -4, scale: 1.02 }}
 							className={cls(
-								"rounded-2xl border-2 border-slate-200/60 shadow-lg hover:shadow-xl",
+								"rounded-lg border-2 border-slate-200/60 shadow-lg hover:shadow-xl",
 								"transition-all duration-300 p-6",
 								"bg-gradient-to-br",
 								stat.bgGradient
@@ -1643,7 +1643,7 @@ function SubscriptionsTab({ t, colors }) {
 						>
 							<div className="flex items-center justify-between">
 								<div className="flex items-center gap-4">
-									<div className="w-14 h-14 rounded-2xl bg-white/80 backdrop-blur flex items-center justify-center shadow-md">
+									<div className="w-14 h-14 rounded-lg bg-white/80 backdrop-blur flex items-center justify-center shadow-md">
 										<Icon className={cls("w-7 h-7", stat.iconCls)} />
 									</div>
 									<div>
@@ -1660,11 +1660,11 @@ function SubscriptionsTab({ t, colors }) {
 			</div>
 
 			{/* Enhanced Filters */}
-			<Card className="rounded-3xl border-2 border-slate-200/60 shadow-xl overflow-hidden bg-white/80 backdrop-blur-sm">
+			<Card className="rounded-lg border-2 border-slate-200/60 shadow-xl overflow-hidden bg-white/80 backdrop-blur-sm">
 				<CardHeader className="pb-4">
 					<div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
 						<div className="flex items-center gap-3">
-							<div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-secondary-100)] flex items-center justify-center shadow-md">
+							<div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-secondary-100)] flex items-center justify-center shadow-md">
 								<Filter className="w-6 h-6 text-[var(--color-primary-600)]" />
 							</div>
 							<div>
@@ -1678,7 +1678,7 @@ function SubscriptionsTab({ t, colors }) {
 								variant="ghost" 
 								size="sm" 
 								onClick={resetFilters} 
-								className="rounded-xl font-semibold hover:bg-[var(--color-primary-50)]"
+								className="rounded-lg font-semibold hover:bg-[var(--color-primary-50)]"
 							>
 								<RefreshCw className="w-4 h-4 mr-2" />
 								{t("filters.reset")}
@@ -1687,7 +1687,7 @@ function SubscriptionsTab({ t, colors }) {
 								variant="outline" 
 								size="sm" 
 								onClick={() => setShowFilters(!showFilters)} 
-								className="rounded-xl border-2 font-semibold hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)]"
+								className="rounded-lg border-2 font-semibold hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)]"
 							>
 								{showFilters ? t("filters.hide") : t("filters.show")}
 								<ChevronDown className={cls(
@@ -1704,7 +1704,7 @@ function SubscriptionsTab({ t, colors }) {
 								<Badge 
 									key={c.key} 
 									variant="secondary" 
-									className="px-3 py-1.5 rounded-xl font-bold bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] border-2 border-[var(--color-primary-200)]"
+									className="px-3 py-1.5 rounded-lg font-bold bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] border-2 border-[var(--color-primary-200)]"
 								>
 									{c.label}
 								</Badge>
@@ -1726,7 +1726,7 @@ function SubscriptionsTab({ t, colors }) {
 									<div>
 										<Label className="text-sm font-semibold mb-2 block">{t("filters.client")}</Label>
 										<Select value={filters.client} onValueChange={(v) => setFilters({ ...filters, client: v })}>
-											<SelectTrigger className="h-11 rounded-xl border-2">
+											<SelectTrigger className="h-11 rounded-lg border-2">
 												<SelectValue placeholder={t("filters.selectClient")} />
 											</SelectTrigger>
 											<SelectContent>
@@ -1743,7 +1743,7 @@ function SubscriptionsTab({ t, colors }) {
 											value={filters.fromDate}
 											onChange={([date]) => setFilters({ ...filters, fromDate: date })}
 											options={{ dateFormat: "Y-m-d", locale: "ar" }}
-											className="h-11 w-full rounded-xl border-2 px-3 text-sm"
+											className="h-11 w-full rounded-lg border-2 px-3 text-sm"
 											placeholder={t("filters.selectDate")}
 										/>
 									</div>
@@ -1754,7 +1754,7 @@ function SubscriptionsTab({ t, colors }) {
 											value={filters.toDate}
 											onChange={([date]) => setFilters({ ...filters, toDate: date })}
 											options={{ dateFormat: "Y-m-d", locale: "ar" }}
-											className="h-11 w-full rounded-xl border-2 px-3 text-sm"
+											className="h-11 w-full rounded-lg border-2 px-3 text-sm"
 											placeholder={t("filters.selectDate")}
 										/>
 									</div>
@@ -1762,7 +1762,7 @@ function SubscriptionsTab({ t, colors }) {
 									<div>
 										<Label className="text-sm font-semibold mb-2 block">{t("filters.sort")}</Label>
 										<Select value={filters.sort} onValueChange={(v) => setFilters({ ...filters, sort: v })}>
-											<SelectTrigger className="h-11 rounded-xl border-2">
+											<SelectTrigger className="h-11 rounded-lg border-2">
 												<SelectValue />
 											</SelectTrigger>
 											<SelectContent>
@@ -1782,13 +1782,13 @@ function SubscriptionsTab({ t, colors }) {
 
 			{/* Payments History TABLE */}
 			{loading ? (
-				<Card className="rounded-3xl border-2 shadow-xl overflow-hidden">
+				<Card className="rounded-lg border-2 shadow-xl overflow-hidden">
 					<CardHeader className="pb-4">
 						<CardTitle className="text-xl font-bold">{t("payments.history")}</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-4">
 						{[1, 2, 3].map((i) => (
-							<Skeleton key={i} className="h-20 w-full rounded-2xl" />
+							<Skeleton key={i} className="h-20 w-full rounded-lg" />
 						))}
 					</CardContent>
 				</Card>
@@ -1800,7 +1800,7 @@ function SubscriptionsTab({ t, colors }) {
 						<div className="flex items-center gap-3">
 							<Badge 
 								variant="secondary" 
-								className="font-bold text-sm px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] border-2 border-[var(--color-primary-200)]"
+								className="font-bold text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] border-2 border-[var(--color-primary-200)]"
 							>
 								<Receipt className="w-4 h-4 mr-2" />
 								{t("payments.total", { count: payments.length })}
@@ -1808,7 +1808,7 @@ function SubscriptionsTab({ t, colors }) {
 							<Button
 								variant="outline"
 								size="sm"
-								className="rounded-xl border-2 font-bold hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)]"
+								className="rounded-lg border-2 font-bold hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)]"
 							>
 								<Download className="w-4 h-4 mr-2" />
 								{t("common.export")}
@@ -1869,7 +1869,7 @@ function SubscriptionsTab({ t, colors }) {
 												<Button 
 													variant="ghost" 
 													size="icon" 
-													className="rounded-xl hover:bg-[var(--color-primary-50)]"
+													className="rounded-lg hover:bg-[var(--color-primary-50)]"
 												>
 													<Eye className="w-4 h-4" />
 												</Button>
@@ -1886,7 +1886,7 @@ function SubscriptionsTab({ t, colors }) {
 												<Button 
 													variant="ghost" 
 													size="icon" 
-													className="rounded-xl text-rose-500 hover:bg-rose-50"
+													className="rounded-lg text-rose-500 hover:bg-rose-50"
 												>
 													<Trash2 className="w-4 h-4" />
 												</Button>
@@ -1971,7 +1971,7 @@ function ClientPaymentsTab({ t, colors }) {
 						animate={{ opacity: 1, y: 0 }} 
 						exit={{ opacity: 0, y: -10 }}
 					>
-						<Alert variant="destructive" className="mb-6 rounded-2xl border-2">
+						<Alert variant="destructive" className="mb-6 rounded-lg border-2">
 							<AlertCircle className="h-5 w-5" />
 							<AlertDescription className="text-base font-medium">{error}</AlertDescription>
 						</Alert>
@@ -1984,7 +1984,7 @@ function ClientPaymentsTab({ t, colors }) {
 						animate={{ opacity: 1, y: 0 }} 
 						exit={{ opacity: 0, y: -10 }}
 					>
-						<Alert className="mb-6 rounded-2xl border-2 bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-900 border-emerald-200">
+						<Alert className="mb-6 rounded-lg border-2 bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-900 border-emerald-200">
 							<CheckCircle className="h-5 w-5" />
 							<AlertDescription className="text-base font-medium">{success}</AlertDescription>
 						</Alert>
@@ -1992,13 +1992,13 @@ function ClientPaymentsTab({ t, colors }) {
 				)}
 			</AnimatePresence>
 
-			<Card className="rounded-3xl border-2 border-slate-200/60 shadow-2xl overflow-hidden bg-white/80 backdrop-blur-sm">
+			<Card className="rounded-lg border-2 border-slate-200/60 shadow-2xl overflow-hidden bg-white/80 backdrop-blur-sm">
 				<CardHeader className="pb-6 bg-gradient-to-r from-white/95 to-slate-50/50">
 					<div className="flex items-start gap-4">
 						<motion.div 
 							whileHover={{ rotate: 360 }}
 							transition={{ duration: 0.6 }}
-							className="w-16 h-16 rounded-3xl bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] flex items-center justify-center shadow-xl shadow-[var(--color-primary-500)]/30"
+							className="w-16 h-16 rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] flex items-center justify-center shadow-xl shadow-[var(--color-primary-500)]/30"
 						>
 							<Plus className="w-8 h-8 text-white" />
 						</motion.div>
@@ -2020,7 +2020,7 @@ function ClientPaymentsTab({ t, colors }) {
 								<SelectTrigger 
 									id="client" 
 									className={cls(
-										"h-14 rounded-2xl border-2 text-base",
+										"h-14 rounded-lg border-2 text-base",
 										errors.client ? "border-red-500" : ""
 									)}
 								>
@@ -2058,7 +2058,7 @@ function ClientPaymentsTab({ t, colors }) {
 									value={formData.amount}
 									onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
 									className={cls(
-										"h-14 pl-12 rounded-2xl border-2 text-base",
+										"h-14 pl-12 rounded-lg border-2 text-base",
 										errors.amount ? "border-red-500" : ""
 									)}
 									placeholder="0.00"
@@ -2086,7 +2086,7 @@ function ClientPaymentsTab({ t, colors }) {
 								value={formData.description}
 								onChange={(e) => setFormData({ ...formData, description: e.target.value })}
 								className={cls(
-									"rounded-2xl border-2 text-base resize-none",
+									"rounded-lg border-2 text-base resize-none",
 									errors.description ? "border-red-500" : ""
 								)}
 								placeholder={t("form.descriptionPlaceholder")}
@@ -2117,7 +2117,7 @@ function ClientPaymentsTab({ t, colors }) {
 										onChange={([date]) => setFormData({ ...formData, periodFrom: date })}
 										options={{ dateFormat: "Y-m-d", locale: "ar" }}
 										className={cls(
-											"h-14 w-full rounded-2xl border-2 px-4 text-base",
+											"h-14 w-full rounded-lg border-2 px-4 text-base",
 											errors.period ? "border-red-500" : ""
 										)}
 										placeholder={t("filters.selectDate")}
@@ -2132,7 +2132,7 @@ function ClientPaymentsTab({ t, colors }) {
 										onChange={([date]) => setFormData({ ...formData, periodTo: date })}
 										options={{ dateFormat: "Y-m-d", locale: "ar" }}
 										className={cls(
-											"h-14 w-full rounded-2xl border-2 px-4 text-base",
+											"h-14 w-full rounded-lg border-2 px-4 text-base",
 											errors.period ? "border-red-500" : ""
 										)}
 										placeholder={t("filters.selectDate")}
@@ -2155,7 +2155,7 @@ function ClientPaymentsTab({ t, colors }) {
 						<Button
 							type="submit"
 							disabled={submitting}
-							className="w-full h-16 rounded-2xl text-lg font-bold bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] hover:shadow-2xl hover:shadow-[var(--color-primary-500)]/40 transition-all duration-300"
+							className="w-full h-16 rounded-lg text-lg font-bold bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] hover:shadow-2xl hover:shadow-[var(--color-primary-500)]/40 transition-all duration-300"
 						>
 							{submitting ? (
 								<>

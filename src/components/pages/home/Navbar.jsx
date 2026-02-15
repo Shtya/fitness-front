@@ -58,12 +58,12 @@ export default function PowerfulNavbar() {
           <div className="group flex cursor-pointer items-center gap-4">
             <div className="relative">
               {/* Glow ring */}
-              <div className="absolute inset-0 rounded-2xl blur-xl opacity-60 transition-opacity duration-300 animate-pulse group-hover:opacity-100 theme-gradient-bg" />
+              <div className="absolute inset-0 rounded-lg blur-xl opacity-60 transition-opacity duration-300 animate-pulse group-hover:opacity-100 theme-gradient-bg" />
 
               {/* Logo container */}
-              <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl shadow-2xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 theme-gradient-bg">
+              <div className="relative flex h-14 w-14 items-center justify-center rounded-lg shadow-2xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 theme-gradient-bg">
                 <Dumbbell className="h-7 w-7 text-white" strokeWidth={2.5} />
-                <div className="absolute inset-0 rounded-2xl bg-white/15 blur-sm" />
+                <div className="absolute inset-0 rounded-lg bg-white/15 blur-sm" />
               </div>
 
               {/* sparkle */}
@@ -83,10 +83,10 @@ export default function PowerfulNavbar() {
               <a
                 key={index}
                 href={item.href}
-                className="group relative rounded-xl px-5 py-2.5 text-sm font-bold text-gray-300 transition-all duration-300 hover:text-white"
+                className="group relative rounded-lg px-5 py-2.5 text-sm font-bold text-gray-300 transition-all duration-300 hover:text-white"
               >
                 {/* Hover BG */}
-                <div className="absolute inset-0 rounded-xl bg-white/0 transition-all duration-300 group-hover:bg-white/5" />
+                <div className="absolute inset-0 rounded-lg bg-white/0 transition-all duration-300 group-hover:bg-white/5" />
                 {/* Text */}
                 <span className="relative">{item.label}</span>
                 {/* Bottom Indicator */}
@@ -131,13 +131,13 @@ export default function PowerfulNavbar() {
             <button
               onClick={() => setIsMobileMenuOpen((v) => !v)}
               className={[
-                "relative flex h-12 w-12 items-center justify-center rounded-xl",
+                "relative flex h-12 w-12 items-center justify-center rounded-lg",
                 "border border-slate-700/50 bg-slate-800/80 transition-all duration-300",
                 "hover:bg-slate-700/80 hover:border-white/20 lg:hidden",
                 "group",
               ].join(" ")}
             >
-              <div className="absolute inset-0 rounded-xl opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.00))]" />
+              <div className="absolute inset-0 rounded-lg opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.00))]" />
               {isMobileMenuOpen ? (
                 <X className="relative h-6 w-6 text-white" strokeWidth={2.5} />
               ) : (
@@ -160,7 +160,7 @@ export default function PowerfulNavbar() {
                 key={index}
                 href={item.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="group flex items-center gap-4 rounded-xl border border-slate-700/30 bg-slate-800/50 px-4 py-3.5 transition-all duration-300 hover:bg-slate-700/50 hover:border-white/20"
+                className="group flex items-center gap-4 rounded-lg border border-slate-700/30 bg-slate-800/50 px-4 py-3.5 transition-all duration-300 hover:bg-slate-700/50 hover:border-white/20"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-xl transition-transform duration-300 group-hover:scale-110">
                   {item.icon}
@@ -187,7 +187,7 @@ export default function PowerfulNavbar() {
             ))}
  
             {/* Mobile CTA */}
-            <Link href={"/auth"} className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-4 font-bold text-white shadow-xl transition-all duration-300 hover:shadow-2xl">
+            <Link href={"/auth"} className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-lg px-6 py-4 font-bold text-white shadow-xl transition-all duration-300 hover:shadow-2xl">
               <div className="absolute inset-0 theme-gradient-bg" />
               <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-[linear-gradient(135deg,var(--color-primary-600),var(--color-secondary-600))]" />
               <div className="absolute inset-0 translate-x-[-100%] transition-transform duration-1000 group-hover:translate-x-[100%] bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.30),transparent)]" />

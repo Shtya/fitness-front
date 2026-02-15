@@ -166,7 +166,7 @@ export default function HowItWorks() {
         >
           {/* Badge */}
           <motion.div 
-            className="inline-flex items-center gap-3 px-8 py-4 rounded-3xl mb-8 backdrop-blur-xl"
+            className="inline-flex items-center gap-3 px-8 py-4 rounded-lg mb-8 backdrop-blur-xl"
             style={{
               background: `linear-gradient(135deg, ${colors.primary[500]}20, ${colors.secondary[500]}20)`,
               border: `2px solid ${colors.primary[500]}30`,
@@ -264,7 +264,7 @@ export default function HowItWorks() {
                       transition={{ delay: 1.2 + index * 0.2, type: "spring" }}
                     >
                       <motion.div 
-                        className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-2xl"
+                        className="w-10 h-10 rounded-lg flex items-center justify-center shadow-2xl"
                         style={{
                           background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})`,
                         }}
@@ -279,7 +279,7 @@ export default function HowItWorks() {
 
                 {/* Step Card */}
                 <motion.div
-                  className="relative bg-slate-800/40 backdrop-blur-2xl rounded-3xl p-8 border-2 transition-all duration-500 cursor-pointer overflow-hidden group"
+                  className="relative bg-slate-800/40 backdrop-blur-2xl rounded-lg p-8 border-2 transition-all duration-500 cursor-pointer overflow-hidden group"
                   style={{
                     borderColor: isHovered || isActive 
                       ? colors.primary[500]
@@ -293,7 +293,7 @@ export default function HowItWorks() {
                 >
                   {/* Animated Glow */}
                   <motion.div
-                    className="absolute -inset-2 rounded-3xl blur-2xl -z-10"
+                    className="absolute -inset-2 rounded-lg blur-2xl -z-10"
                     style={{
                       background: `linear-gradient(135deg, ${colors.primary[500]}, ${colors.secondary[500]})`,
                     }}
@@ -331,7 +331,7 @@ export default function HowItWorks() {
                       }}
                     >
                       <motion.div 
-                        className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-2xl relative overflow-hidden"
+                        className="w-20 h-20 rounded-lg flex items-center justify-center shadow-2xl relative overflow-hidden"
                         style={{
                           background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})`,
                         }}
@@ -399,7 +399,7 @@ export default function HowItWorks() {
                         transition={{ duration: 0.6 }}
                       >
                         <motion.div 
-                          className="w-28 h-28 rounded-3xl flex items-center justify-center shadow-2xl relative overflow-hidden"
+                          className="w-28 h-28 rounded-lg flex items-center justify-center shadow-2xl relative overflow-hidden"
                           style={{
                             background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})`,
                           }}
@@ -456,7 +456,7 @@ export default function HowItWorks() {
                             whileHover={{ scale: 1.3, rotate: 360 }}
                           >
                             <div 
-                              className="w-14 h-14 backdrop-blur-xl border-2 rounded-2xl flex items-center justify-center shadow-xl"
+                              className="w-14 h-14 backdrop-blur-xl border-2 rounded-lg flex items-center justify-center shadow-xl"
                               style={{
                                 backgroundColor: `${colors.primary[900]}60`,
                                 borderColor: `${colors.primary[500]}30`,
@@ -477,7 +477,7 @@ export default function HowItWorks() {
                       {/* Title with Icon */}
                       <div className="flex items-center gap-4">
                         <motion.div 
-                          className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg shrink-0"
+                          className="w-14 h-14 rounded-lg flex items-center justify-center shadow-lg shrink-0"
                           style={{
                             background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})`,
                           }}
@@ -510,7 +510,7 @@ export default function HowItWorks() {
                             return (
                               <motion.div
                                 key={idx}
-                                className="flex items-center gap-3 p-3 rounded-xl transition-all group/feature"
+                                className="flex items-center gap-3 p-3 rounded-lg transition-all group/feature"
                                 style={{
                                   backgroundColor: `${colors.primary[900]}20`,
                                 }}
@@ -529,7 +529,7 @@ export default function HowItWorks() {
                                 }}
                               >
                                 <motion.div 
-                                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                                   style={{
                                     background: `linear-gradient(135deg, ${colors.primary[500]}, ${colors.secondary[500]})`,
                                   }}
@@ -610,7 +610,7 @@ export default function HowItWorks() {
           transition={{ delay: 1, duration: 0.8 }}
         >
           <motion.button
-            className="group relative px-10 py-5 rounded-2xl font-black text-lg text-white shadow-2xl overflow-hidden"
+            className="group relative px-10 py-5 rounded-lg font-black text-lg text-white shadow-2xl overflow-hidden"
             style={{
               background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})`,
               boxShadow: `0 20px 60px ${colors.primary[500]}40`,

@@ -38,9 +38,9 @@ const cx = (...c) => c.filter(Boolean).join(' ');
 /* ---------------- Theme helpers (same as other page) ---------------- */
 function ThemeFrame({ children, className = '' }) {
 	return (
-		<div className={cx('rounded-2xl p-[1px]', className)}>
+		<div className={cx('rounded-lg p-[1px]', className)}>
 			<div
-				className="rounded-2xl border bg-white/85 backdrop-blur-xl"
+				className="rounded-lg border bg-white/85 backdrop-blur-xl"
 				style={{
 					borderColor: 'var(--color-primary-200)',
 					boxShadow: '0 1px 0 rgba(15, 23, 42, 0.04), 0 18px 40px rgba(15, 23, 42, 0.10)',
@@ -55,7 +55,7 @@ function ThemeFrame({ children, className = '' }) {
 function SoftCard({ children, className = '' }) {
 	return (
 		<div
-			className={cx('rounded-2xl border bg-white', className)}
+			className={cx('rounded-lg border bg-white', className)}
 			style={{
 				borderColor: 'var(--color-primary-200)',
 				boxShadow: '0 1px 0 rgba(15, 23, 42, 0.03), 0 10px 24px rgba(15, 23, 42, 0.06)',
@@ -114,7 +114,7 @@ function GhostBtn({ children, onClick, disabled, title }) {
 			disabled={disabled}
 			title={title}
 			aria-label={title}
-			className="inline-flex items-center gap-2 h-11 px-4 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed"
+			className="inline-flex items-center gap-2 h-11 px-4 rounded-lg border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed"
 			style={{
 				borderColor: 'var(--color-primary-200)',
 				backgroundColor: 'rgba(255,255,255,0.9)',
@@ -142,7 +142,7 @@ function GradientBtn({ children, onClick, disabled, title }) {
 			disabled={disabled}
 			title={title}
 			aria-label={title}
-			className="inline-flex items-center gap-2 h-11 px-5 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed"
+			className="inline-flex items-center gap-2 h-11 px-5 rounded-lg border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed"
 			style={{
 				borderColor: 'transparent',
 				background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
@@ -423,7 +423,7 @@ export default function ReportsUnifiedPage() {
 					return (
 						<div className="flex items-center gap-3 min-w-[260px]">
 							<div
-								className="grid place-items-center rounded-2xl"
+								className="grid place-items-center rounded-lg"
 								style={{
 									width: 44,
 									height: 44,
@@ -463,7 +463,7 @@ export default function ReportsUnifiedPage() {
 					const w = row?.measurements?.weight;
 					return (
 						<span
-							className="inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-semibold"
+							className="inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-semibold"
 							style={{
 								borderColor: 'var(--color-primary-200)',
 								background: 'linear-gradient(135deg, rgba(255,255,255,0.92), var(--color-primary-50))',
@@ -483,7 +483,7 @@ export default function ReportsUnifiedPage() {
 					const c = row?.training?.cardioAdherence;
 					return (
 						<span
-							className="inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-semibold"
+							className="inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-semibold"
 							style={{
 								borderColor: 'var(--color-primary-200)',
 								background: 'linear-gradient(135deg, rgba(255,255,255,0.92), var(--color-secondary-50))',
@@ -671,7 +671,7 @@ export default function ReportsUnifiedPage() {
 					emptyState={
 						<div className="text-center py-12">
 							<div
-								className="mx-auto mb-4 grid place-items-center rounded-3xl"
+								className="mx-auto mb-4 grid place-items-center rounded-lg"
 								style={{
 									width: 72,
 									height: 72,
@@ -709,7 +709,7 @@ export default function ReportsUnifiedPage() {
 							<div className="flex items-start justify-between gap-3 flex-wrap">
 								<div className="flex items-center gap-3">
 									<div
-										className="grid place-items-center rounded-2xl"
+										className="grid place-items-center rounded-lg"
 										style={{
 											width: 44,
 											height: 44,
@@ -763,7 +763,7 @@ export default function ReportsUnifiedPage() {
 									return (
 										<div
 											key={side}
-											className="rounded-2xl border p-2"
+											className="rounded-lg border p-2"
 											style={{
 												borderColor: 'var(--color-primary-200)',
 												background: 'linear-gradient(135deg, rgba(255,255,255,0.96), var(--color-primary-50))',
@@ -773,10 +773,10 @@ export default function ReportsUnifiedPage() {
 												{t(`reports.detail.section.photos.${side}`)}
 											</div>
 											{url ? (
-												<Img src={url} alt={side} className="h-40 w-full object-contain rounded-xl bg-white" />
+												<Img src={url} alt={side} className="h-40 w-full object-contain rounded-lg bg-white" />
 											) : (
 												<div
-													className="h-40 grid place-content-center rounded-xl bg-white text-slate-400 text-xs border"
+													className="h-40 grid place-content-center rounded-lg bg-white text-slate-400 text-xs border"
 													style={{ borderColor: 'rgba(226,232,240,0.9)' }}
 												>
 													{t('reports.detail.noPhoto')}
@@ -844,7 +844,7 @@ export default function ReportsUnifiedPage() {
 									<div className="pt-2">
 										<div className="text-xs text-slate-500 mb-1">{t('reports.detail.section.training.notes.title')}</div>
 										<div
-											className="rounded-2xl border p-3 text-slate-800 text-sm whitespace-pre-wrap"
+											className="rounded-lg border p-3 text-slate-800 text-sm whitespace-pre-wrap"
 											style={{
 												borderColor: 'rgba(226,232,240,0.9)',
 												background: 'linear-gradient(135deg, #f8fafc, #ffffff)',
@@ -884,7 +884,7 @@ export default function ReportsUnifiedPage() {
 							<div className="flex items-center justify-between gap-2 mb-3">
 								<div className="flex items-center gap-2">
 									<div
-										className="grid place-items-center rounded-2xl"
+										className="grid place-items-center rounded-lg"
 										style={{
 											width: 40,
 											height: 40,
@@ -905,7 +905,7 @@ export default function ReportsUnifiedPage() {
 							</div>
 
 							<textarea
-								className="w-full rounded-2xl border bg-white px-4 py-3 text-sm min-h-[120px] focus:outline-none focus-visible:ring-4"
+								className="w-full rounded-lg border bg-white px-4 py-3 text-sm min-h-[120px] focus:outline-none focus-visible:ring-4"
 								style={{
 									borderColor: 'rgba(148,163,184,0.8)',
 									['--tw-ring-color']: 'var(--color-primary-200)',

@@ -128,7 +128,7 @@ function FoodPill({ name, count }) {
     <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700">
       <UtensilsCrossed className="h-3.5 w-3.5 text-slate-500" />
       <span className="truncate max-w-[14ch]">{name}</span>
-      <span className="ml-1 rounded-md bg-white border border-slate-200 px-1.5 py-0.5 text-[11px]">{count}</span>
+      <span className="ml-1 rounded-lg bg-white border border-slate-200 px-1.5 py-0.5 text-[11px]">{count}</span>
     </span>
   );
 }
@@ -281,7 +281,7 @@ export default function NutritionProgressTab({ data }) {
                                 {t("logs.at")} <span className="font-en" >{formatDate(m.eatenAt || m.created_at)}</span>
                               </div>
                             </div>
-                            <span className="rounded-md bg-emerald-50 ring-1 ring-emerald-100 text-emerald-700 text-xs px-2 py-1">
+                            <span className="rounded-lg bg-emerald-50 ring-1 ring-emerald-100 text-emerald-700 text-xs px-2 py-1">
                               {t("logs.adherence", { n: m.adherence ?? 0 })}
                             </span>
                           </div>

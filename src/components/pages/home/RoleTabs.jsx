@@ -364,7 +364,7 @@ export default function RoleTabsFinal() {
         {/* Tab Navigation */}
         <div className="flex justify-center mb-12 md:mb-16 px-4">
           <LayoutGroup id="role-tabs">
-            <div className="grid grid-cols-3 gap-1 sm:gap-2 rounded-2xl bg-white/5 backdrop-blur-xl p-1 shadow-2xl ring-1 ring-white/10 w-full max-w-2xl">
+            <div className="grid grid-cols-3 gap-1 sm:gap-2 rounded-lg bg-white/5 backdrop-blur-xl p-1 shadow-2xl ring-1 ring-white/10 w-full max-w-2xl">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -373,14 +373,14 @@ export default function RoleTabsFinal() {
                   <motion.button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className="relative rounded-xl px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 cursor-pointer transition-all"
+                    className="relative rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 cursor-pointer transition-all"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
                     {isActive && (
                       <motion.span
                         layoutId="active-pill"
-                        className="absolute inset-0 rounded-xl theme-gradient-bg"
+                        className="absolute inset-0 rounded-lg theme-gradient-bg"
                         style={{
                           boxShadow: `0 0 20px var(--color-primary-500)`,
                           opacity: 0.5,
@@ -460,7 +460,7 @@ function FeatureCard({ feature, index, t }) {
       className="group relative h-full"
     >
       {/* Card Container */}
-      <div className="h-full bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm border border-white/10 rounded-2xl p-4 md:p-6 transition-all duration-300 hover:shadow-2xl"
+      <div className="h-full bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm border border-white/10 rounded-lg p-4 md:p-6 transition-all duration-300 hover:shadow-2xl"
         style={{
           borderColor: `var(--color-primary-500)`,
           borderOpacity: 0.1,
@@ -468,7 +468,7 @@ function FeatureCard({ feature, index, t }) {
       >
         {/* Hover Glow Effect */}
         <div 
-          className="absolute -inset-0.5 theme-gradient-bg rounded-2xl opacity-0 group-hover:opacity-10 blur-xl transition-opacity duration-300" 
+          className="absolute -inset-0.5 theme-gradient-bg rounded-lg opacity-0 group-hover:opacity-10 blur-xl transition-opacity duration-300" 
         />
 
         <div className="relative space-y-4 md:space-y-5">
@@ -480,7 +480,7 @@ function FeatureCard({ feature, index, t }) {
                 rotate: [0, -10, 10, -10, 0],
                 transition: { duration: 0.5 },
               }}
-              className="relative w-14 h-14 md:w-16 md:h-16 theme-gradient-bg rounded-2xl flex items-center justify-center shadow-lg overflow-hidden"
+              className="relative w-14 h-14 md:w-16 md:h-16 theme-gradient-bg rounded-lg flex items-center justify-center shadow-lg overflow-hidden"
             >
               <Icon className="w-7 h-7 md:w-8 md:h-8 text-white relative z-10" />
               {/* Shine Effect */}
@@ -546,7 +546,7 @@ function CTACard({ activeTab, t, icon: Icon }) {
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}
-      className="inline-flex flex-col md:flex-row items-center gap-4 md:gap-6 p-6 md:p-8 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl rounded-3xl border border-white/10 hover:shadow-2xl relative overflow-hidden group w-full max-w-4xl"
+      className="inline-flex flex-col md:flex-row items-center gap-4 md:gap-6 p-6 md:p-8 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl rounded-lg border border-white/10 hover:shadow-2xl relative overflow-hidden group w-full max-w-4xl"
       style={{
         borderColor: `var(--color-primary-500)`,
         borderOpacity: 0.1,
@@ -561,7 +561,7 @@ function CTACard({ activeTab, t, icon: Icon }) {
           rotate: 360,
           transition: { duration: 0.6 },
         }}
-        className="relative w-16 h-16 md:w-20 md:h-20 theme-gradient-bg rounded-2xl flex items-center justify-center shadow-xl z-10 flex-shrink-0"
+        className="relative w-16 h-16 md:w-20 md:h-20 theme-gradient-bg rounded-lg flex items-center justify-center shadow-xl z-10 flex-shrink-0"
       >
         <Icon className="w-8 h-8 md:w-10 md:h-10 text-white" />
       </motion.div>
@@ -580,7 +580,7 @@ function CTACard({ activeTab, t, icon: Icon }) {
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="w-full md:w-auto md:ltr:ml-auto md:rtl:mr-auto group/btn relative theme-gradient-bg text-white px-6 md:px-8 py-3 md:py-4 rounded-xl font-bold text-base md:text-lg shadow-xl overflow-hidden z-10 flex-shrink-0"
+        className="w-full md:w-auto md:ltr:ml-auto md:rtl:mr-auto group/btn relative theme-gradient-bg text-white px-6 md:px-8 py-3 md:py-4 rounded-lg font-bold text-base md:text-lg shadow-xl overflow-hidden z-10 flex-shrink-0"
         style={{
           boxShadow: `0 10px 40px var(--color-primary-500)`,
           opacity: 0.3,

@@ -652,7 +652,7 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
 
 									{/* Card */}
 									<div className={`${isLeft ? 'md:order-2 md:rtl:pr-8 md:ltr:pl-8' : 'md:order-1 md:rtl:pl-8 md:ltr:pr-8'}`}>
-										<motion.div className="rounded-xl relative border border-slate-200 bg-white p-4 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden" whileHover={{ y: -2 }}>
+										<motion.div className="rounded-lg relative border border-slate-200 bg-white p-4 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden" whileHover={{ y: -2 }}>
 											{/* Gradient accent bar */}
 											<div
 												className="absolute top-0 left-0 right-0 h-1"
@@ -885,7 +885,7 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
 								</div>
 
 								<div className={`${idx % 2 === 0 ? 'md:order-2 md:pl-8' : 'md:order-1 md:pr-8'}`}>
-									<motion.div className="rounded-xl border border-slate-200 bg-white p-4 shadow-md hover:shadow-xl transition-all duration-300" whileHover={{ y: -2 }}>
+									<motion.div className="rounded-lg border border-slate-200 bg-white p-4 shadow-md hover:shadow-xl transition-all duration-300" whileHover={{ y: -2 }}>
 										<div className="flex items-start justify-between gap-3">
 											<div className="min-w-0 flex-1">
 												<div className="font-semibold text-slate-900 flex items-center gap-2.5 text-sm">
@@ -1007,7 +1007,7 @@ function InlineMealEditor({ dayKey, mealIndex, initialItems = [], onCancel, onSa
 	return (
 		<form
 			onSubmit={handleSubmit(submit)}
-			className="mt-4 space-y-3 rounded-xl border-2 p-4 shadow-inner"
+			className="mt-4 space-y-3 rounded-lg border-2 p-4 shadow-inner"
 			style={{
 				borderColor: `var(--color-primary-200)`,
 				background: `linear-gradient(135deg, var(--color-primary-50), var(--color-secondary-50))`,

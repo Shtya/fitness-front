@@ -186,7 +186,7 @@ function SectionDivider({ variant = "default" }) {
 
 					{/* Center Icon */}
 					<motion.div
-						className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shadow-lg theme-gradient-bg"
+						className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shadow-lg theme-gradient-bg"
 						initial={{ scale: 0, rotate: -180 }}
 						whileInView={{ scale: 1, rotate: 0 }}
 						viewport={{ once: true }}
@@ -244,7 +244,7 @@ function StatsBar() {
 							>
 								{/* Glow Effect */}
 								<motion.div
-									className="absolute inset-0 rounded-2xl sm:rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+									className="absolute inset-0 rounded-lg sm:rounded-lg blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
 									style={{
 										background: `radial-gradient(circle at 30% 20%, ${colors.primary[500]}35, transparent 60%)`,
 									}}
@@ -252,7 +252,7 @@ function StatsBar() {
 
 								{/* Card */}
 								<div
-									className="relative rounded-2xl sm:rounded-3xl border bg-gradient-to-br from-slate-800/80 to-slate-900/80 p-4 sm:p-6 backdrop-blur-xl transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-2xl"
+									className="relative rounded-lg sm:rounded-lg border bg-gradient-to-br from-slate-800/80 to-slate-900/80 p-4 sm:p-6 backdrop-blur-xl transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-2xl"
 									style={{
 										borderColor: `${colors.primary[500]}20`,
 										boxShadow: `0 10px 15px -3px rgba(0,0,0,0.30), 0 4px 6px -2px rgba(0,0,0,0.20), inset 0 2px 4px ${colors.primary[500]}05`,
@@ -261,7 +261,7 @@ function StatsBar() {
 									<div className="flex flex-col items-center space-y-2 sm:space-y-3 text-center">
 										{/* Icon */}
 										<motion.div
-											className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg theme-gradient-bg"
+											className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-lg flex items-center justify-center shadow-lg theme-gradient-bg"
 											whileHover={{ scale: 1.1, rotate: 5 }}
 											transition={{ type: "spring", stiffness: 300 }}
 										>
@@ -598,7 +598,7 @@ function Steps() {
 
 					{/* Glow Effect on Hover/Active */}
 					<motion.div
-						className="absolute inset-0 rounded-2xl -z-10 blur-xl"
+						className="absolute inset-0 rounded-lg -z-10 blur-xl"
 						style={{
 							backgroundColor: isCompleted
 								? `var(--color-primary-500)`
@@ -896,7 +896,7 @@ function StepCard({ step, index, isActive, isCompleted, onHoverStart, onHoverEnd
 
 				{/* Glow Effect */}
 				<motion.div
-					className="absolute inset-0 rounded-2xl -z-10 blur-xl"
+					className="absolute inset-0 rounded-lg -z-10 blur-xl"
 					style={{
 						backgroundColor: colors.primary[500],
 						opacity: isCompleted ? 0.2 : 0.1,
@@ -1036,7 +1036,7 @@ function PricingPlans() {
 
 				{/* Billing Cycle Tabs - Mobile Scrollable */}
 				<div className="flex justify-center mb-12 sm:mb-16 px-4">
-					<div className="inline-flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-2xl overflow-x-auto scrollbar-thin w-full sm:w-auto">
+					<div className="inline-flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 bg-slate-800/50 backdrop-blur-xl rounded-lg border border-slate-700/50 shadow-2xl overflow-x-auto scrollbar-thin w-full sm:w-auto">
 						{billingCycles.map((cycle) => {
 							const isActive = billingCycle === cycle.id;
 
@@ -1044,7 +1044,7 @@ function PricingPlans() {
 								<motion.button
 									key={cycle.id}
 									onClick={() => setBillingCycle(cycle.id)}
-									className={`relative px-4 sm:px-6 md:px-8 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base transition-all whitespace-nowrap flex-shrink-0 ${
+									className={`relative px-4 sm:px-6 md:px-8 py-3 sm:py-4 rounded-lg font-bold text-sm sm:text-base transition-all whitespace-nowrap flex-shrink-0 ${
 										isActive ? "text-white" : "text-gray-400"
 									}`}
 									whileHover={{ scale: 1.05 }}
@@ -1053,7 +1053,7 @@ function PricingPlans() {
 									{isActive && (
 										<motion.div
 											layoutId="billing-active"
-											className="absolute inset-0 theme-gradient-bg rounded-xl shadow-lg"
+											className="absolute inset-0 theme-gradient-bg rounded-lg shadow-lg"
 											style={{
 												boxShadow: `0 0 20px ${colors.primary[500]}40`,
 											}}
@@ -1142,7 +1142,7 @@ function PricingCard({ plan, billingCycle, index, colors, t }) {
 
 			{/* Card */}
 			<div
-				className={`relative h-full bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border-2 transition-all duration-300 ${
+				className={`relative h-full bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl rounded-lg p-6 sm:p-8 border-2 transition-all duration-300 ${
 					plan.popular
 						? "border-opacity-50 shadow-2xl"
 						: "border-slate-700/50 shadow-xl"
@@ -1154,14 +1154,14 @@ function PricingCard({ plan, billingCycle, index, colors, t }) {
 			>
 				{/* Animated Glow */}
 				<motion.div
-					className="absolute -inset-1 theme-gradient-bg rounded-3xl opacity-0 group-hover:opacity-20 blur-2xl transition-opacity duration-300"
+					className="absolute -inset-1 theme-gradient-bg rounded-lg opacity-0 group-hover:opacity-20 blur-2xl transition-opacity duration-300"
 					aria-hidden="true"
 				/>
 
 				<div className="relative z-10">
 					{/* Icon */}
 					<motion.div
-						className="w-14 h-14 sm:w-16 sm:h-16 theme-gradient-bg rounded-2xl flex items-center justify-center shadow-xl mb-6"
+						className="w-14 h-14 sm:w-16 sm:h-16 theme-gradient-bg rounded-lg flex items-center justify-center shadow-xl mb-6"
 						whileHover={{ rotate: [0, -10, 10, -10, 0], scale: 1.1 }}
 						transition={{ duration: 0.5 }}
 					>
@@ -1194,7 +1194,7 @@ function PricingCard({ plan, billingCycle, index, colors, t }) {
 
 					{/* CTA Button */}
 					<motion.button
-						className={`w-full py-4 rounded-xl font-bold text-base mb-8 transition-all ${
+						className={`w-full py-4 rounded-lg font-bold text-base mb-8 transition-all ${
 							plan.popular
 								? "theme-gradient-bg text-white shadow-xl"
 								: "bg-slate-700/50 text-white border-2 border-slate-600"

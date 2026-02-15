@@ -663,7 +663,7 @@ function GroupedTree({ rows, onSetStatus, onAssignCoach, onDelete, onImpersonate
 		];
 
 		return (
-			<div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+			<div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
 				<div className="flex items-center justify-between px-4 py-3">
 					<div className="flex items-center gap-3 min-w-0">
 						{hasChildren ? (
@@ -756,7 +756,7 @@ function GroupedTree({ rows, onSetStatus, onAssignCoach, onDelete, onImpersonate
 		];
 
 		return (
-			<div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+			<div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
 				<div className="flex items-center justify-between px-3 py-2 bg-slate-50">
 					<div className="flex items-center gap-3 min-w-0">
 						{hasChildren ? (
@@ -820,9 +820,9 @@ function GroupedTree({ rows, onSetStatus, onAssignCoach, onDelete, onImpersonate
 
 
 			{loading ? (
-				<div className="rounded-xl border border-slate-200 bg-white overflow-hidden p-4 text-slate-500">Loading…</div>
+				<div className="rounded-lg border border-slate-200 bg-white overflow-hidden p-4 text-slate-500">Loading…</div>
 			) : !tree.length ? (
-				<div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500 bg-white">No data found for the current filters.</div>
+				<div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-slate-500 bg-white">No data found for the current filters.</div>
 			) : (
 				tree.map(a => <AdminCard key={a.admin.id} a={a} />)
 			)}
@@ -977,7 +977,7 @@ export default function SuperAdminUsersPage() {
 	return (
 		<div className="space-y-6">
 			{/* Header */}
-			<div className="relative overflow-hidden rounded-2xl border border-indigo-100/60 bg-white/60 shadow-sm backdrop-blur">
+			<div className="relative overflow-hidden rounded-lg border border-indigo-100/60 bg-white/60 shadow-sm backdrop-blur">
 				<div className="absolute inset-0 overflow-hidden">
 					<div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-indigo-500 to-blue-600 opacity-95" />
 					<div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.25) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.25) 1px, transparent 1px)', backgroundSize: '22px 22px', backgroundPosition: '-1px -1px' }} />
@@ -1023,7 +1023,7 @@ export default function SuperAdminUsersPage() {
 			</div>
 
 			{/* Toolbar */}
-			<div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+			<div className="rounded-lg border border-slate-200 bg-white shadow-sm">
 				<div className="flex flex-wrap items-center gap-2 p-3">
 					<div className="relative w-full md:w-72">
 						<Search className="absolute right-3 ltr:left-3 z-[10] top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -1063,7 +1063,7 @@ export default function SuperAdminUsersPage() {
 
 			{/* Table / Tree */}
 			{viewMode === 'flat' ? (
-				<div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+				<div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
 					{loading ? (
 						<div className="p-4 text-slate-500">Loading…</div>
 					) : (

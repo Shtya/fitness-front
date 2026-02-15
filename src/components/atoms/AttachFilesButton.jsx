@@ -64,7 +64,7 @@ const InlineNotice = ({ tone = 'info', children, colors }) => {
     <motion.div 
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className='flex items-center gap-2 text-sm border-2 rounded-xl px-4 py-3 shadow-sm'
+      className='flex items-center gap-2 text-sm border-2 rounded-lg px-4 py-3 shadow-sm'
       style={{ 
         backgroundColor: style.bg, 
         color: style.text, 
@@ -273,7 +273,7 @@ export default function AttachFilesButton({
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.95, y: 20 }}
           transition={{ type: "spring", duration: 0.3 }}
-          className='bg-white w-full max-w-[900px] rounded-2xl shadow-2xl border-2 max-h-[90vh] overflow-hidden flex flex-col'
+          className='bg-white w-full max-w-[900px] rounded-lg shadow-2xl border-2 max-h-[90vh] overflow-hidden flex flex-col'
           style={{ borderColor: colors.primary[200] }}
         >
           {/* header */}
@@ -296,7 +296,7 @@ export default function AttachFilesButton({
               whileHover={{ scale: 1.1, rotate: 90 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => setIsModalOpen(false)} 
-              className='inline-flex items-center justify-center w-10 h-10 rounded-xl border-2 transition-all duration-200'
+              className='inline-flex items-center justify-center w-10 h-10 rounded-lg border-2 transition-all duration-200'
               style={{ 
                 borderColor: colors.primary[200],
                 color: colors.primary[600]
@@ -318,7 +318,7 @@ export default function AttachFilesButton({
                 scale: isDragging ? 1.02 : 1,
                 borderColor: isDragging ? colors.primary[500] : colors.primary[300]
               }}
-              className='rounded-2xl border-2 border-dashed p-8 transition-all duration-300'
+              className='rounded-lg border-2 border-dashed p-8 transition-all duration-300'
               style={{ 
                 backgroundColor: isDragging ? `${colors.primary[50]}40` : `${colors.primary[50]}20`,
                 borderColor: isDragging ? colors.primary[500] : colors.primary[300]
@@ -326,7 +326,7 @@ export default function AttachFilesButton({
             >
               <div className='flex flex-col items-center justify-center gap-4'>
                 <div 
-                  className='w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg'
+                  className='w-16 h-16 rounded-lg flex items-center justify-center shadow-lg'
                   style={{
                     background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`
                   }}
@@ -347,7 +347,7 @@ export default function AttachFilesButton({
                   disabled={uploading || loading}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className='px-6 py-3 rounded-xl font-semibold text-white shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                  className='px-6 py-3 rounded-lg font-semibold text-white shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
                   style={{
                     background: `linear-gradient(to right, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
                     boxShadow: `0 4px 12px ${colors.primary[200]}`
@@ -396,7 +396,7 @@ export default function AttachFilesButton({
                         exit={{ opacity: 0, scale: 0.8 }}
                         whileHover={{ y: -4 }}
                         onClick={() => handleFileSelectToggle(asset)} 
-                        className='group relative rounded-xl border-2 p-3 bg-white transition-all duration-200 cursor-pointer'
+                        className='group relative rounded-lg border-2 p-3 bg-white transition-all duration-200 cursor-pointer'
                         style={{
                           borderColor: selectedState ? colors.primary[500] : colors.primary[200],
                           boxShadow: selectedState ? `0 4px 12px ${colors.primary[200]}` : '0 2px 4px rgba(0,0,0,0.05)'
@@ -459,7 +459,7 @@ export default function AttachFilesButton({
                           <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className='absolute inset-0 rounded-xl pointer-events-none'
+                            className='absolute inset-0 rounded-lg pointer-events-none'
                             style={{
                               background: `linear-gradient(135deg, ${colors.primary[500]}10, ${colors.primary[600]}10)`
                             }}
@@ -480,7 +480,7 @@ export default function AttachFilesButton({
                 className='text-center py-16'
               >
                 <div 
-                  className='w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-4'
+                  className='w-20 h-20 mx-auto rounded-lg flex items-center justify-center mb-4'
                   style={{ backgroundColor: colors.primary[100] }}
                 >
                   <FaFileUpload size={32} style={{ color: colors.primary[500] }} />
@@ -518,7 +518,7 @@ export default function AttachFilesButton({
                 onClick={() => setIsModalOpen(false)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className='inline-flex items-center justify-center h-11 px-6 rounded-xl border-2 font-semibold transition-all duration-200'
+                className='inline-flex items-center justify-center h-11 px-6 rounded-lg border-2 font-semibold transition-all duration-200'
                 style={{
                   borderColor: colors.primary[300],
                   backgroundColor: 'white',
@@ -534,7 +534,7 @@ export default function AttachFilesButton({
                 disabled={!selected.length}
                 whileHover={{ scale: selected.length ? 1.05 : 1 }}
                 whileTap={{ scale: selected.length ? 0.95 : 1 }}
-                className='inline-flex items-center text-sm text-nowrap gap-2 h-11 px-6 rounded-xl font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg'
+                className='inline-flex items-center text-sm text-nowrap gap-2 h-11 px-6 rounded-lg font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg'
                 style={{
                   background: selected.length 
                     ? `linear-gradient(to right, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})` 
@@ -562,7 +562,7 @@ export default function AttachFilesButton({
           onClick={toggleModal}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className='flex-none px-6 py-3 inline-flex items-center gap-3 rounded-xl border-2 font-semibold shadow-lg transition-all duration-200'
+          className='flex-none px-6 py-3 inline-flex items-center gap-3 rounded-lg border-2 font-semibold shadow-lg transition-all duration-200'
           style={{
             borderColor: colors.primary[500],
             color: colors.primary[700],
@@ -586,7 +586,7 @@ export default function AttachFilesButton({
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
-                  className='flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium shadow-sm border-2'
+                  className='flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium shadow-sm border-2'
                   style={{
                     backgroundColor: colors.primary[100],
                     borderColor: colors.primary[300],

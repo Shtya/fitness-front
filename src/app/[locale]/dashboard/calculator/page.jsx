@@ -95,7 +95,7 @@ function Surface({ className = '', children }) {
   return (
     <div
       className={cx(
-        'relative overflow-hidden rounded-2xl border bg-white/80 backdrop-blur-xl shadow-sm',
+        'relative overflow-hidden rounded-lg border bg-white/80 backdrop-blur-xl shadow-sm',
         className,
       )}
       style={{
@@ -127,7 +127,7 @@ function SectionHeader({ icon: Icon, title, subtitle }) {
     >
       <div className="flex items-center gap-3">
         <div
-          className="grid h-10 w-10 place-items-center rounded-2xl border shadow-sm"
+          className="grid h-10 w-10 place-items-center rounded-lg border shadow-sm"
           style={{
             borderColor: 'var(--color-primary-200)',
             background:
@@ -153,7 +153,7 @@ function Tooltip({ label, children }) {
     <span className="relative inline-flex items-center group cursor-help">
       {children}
       <span
-        className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 rtl:left-auto rtl:right-0 rtl:translate-x-0 whitespace-pre rounded-xl border bg-white px-2.5 py-1.5 text-[11px] text-slate-700 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-30"
+        className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 rtl:left-auto rtl:right-0 rtl:translate-x-0 whitespace-pre rounded-lg border bg-white px-2.5 py-1.5 text-[11px] text-slate-700 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-30"
         style={{ borderColor: 'var(--color-primary-200)' }}
       >
         {label}
@@ -193,7 +193,7 @@ function StatPill({ title, value, hint, tone = 'primary' }) {
         };
 
   return (
-    <div className="rounded-2xl border p-3.5" style={toneStyles}>
+    <div className="rounded-lg border p-3.5" style={toneStyles}>
       <div className="flex items-start justify-between gap-2">
         <div className="text-xs font-medium opacity-80">{title}</div>
         {hint ? (
@@ -208,7 +208,7 @@ function StatPill({ title, value, hint, tone = 'primary' }) {
 function SummaryRow({ label, value }) {
   return (
     <div
-      className="flex items-center justify-between rounded-2xl border px-4 py-3"
+      className="flex items-center justify-between rounded-lg border px-4 py-3"
       style={{
         borderColor: 'var(--color-primary-200)',
         background:
@@ -283,7 +283,7 @@ function FoodSearch({ foods, value, onChange, onPick, placeholder }) {
  
         <input
           className={cx(
-            'foodSearchInput w-full h-11 rounded-xl border outline-none text-sm bg-white transition',
+            'foodSearchInput w-full h-11 rounded-lg border outline-none text-sm bg-white transition',
             'focus:ring-4',
           )}
           style={{
@@ -304,7 +304,7 @@ function FoodSearch({ foods, value, onChange, onPick, placeholder }) {
 
       {open && q && (
         <div
-          className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border bg-white shadow-xl"
+          className="absolute z-30 mt-2 w-full overflow-hidden rounded-lg border bg-white shadow-xl"
           style={{ borderColor: 'var(--color-primary-200)' }}
         >
           <div className="max-h-[300px] overflow-auto overscroll-contain">
@@ -662,7 +662,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
                 <button
                   type="button"
                   onClick={generateSummary}
-                  className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-2xl border font-semibold transition active:scale-[0.98]"
+                  className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-lg border font-semibold transition active:scale-[0.98]"
                   style={{
                     borderColor: 'transparent',
                     color: 'white',
@@ -677,7 +677,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
                 <button
                   type="button"
                   onClick={resetAll}
-                  className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-2xl border font-semibold transition active:scale-[0.98]"
+                  className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-lg border font-semibold transition active:scale-[0.98]"
                   style={{
                     borderColor: 'var(--color-primary-200)',
                     background: 'white',
@@ -720,7 +720,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
             {/* Summary */}
             {showSummary && (
               <div
-                className="rounded-2xl border p-4 sm:p-5"
+                className="rounded-lg border p-4 sm:p-5"
                 style={{
                   borderColor: 'var(--color-primary-200)',
                   background:
@@ -729,7 +729,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
               >
                 <div className="flex items-center gap-2 mb-3">
                   <div
-                    className="grid h-10 w-10 place-items-center rounded-2xl border"
+                    className="grid h-10 w-10 place-items-center rounded-lg border"
                     style={{
                       borderColor: 'var(--color-primary-200)',
                       background: 'rgba(255,255,255,0.7)',
@@ -755,7 +755,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   <div
-                    className="rounded-2xl border p-4"
+                    className="rounded-lg border p-4"
                     style={{ borderColor: 'rgba(226,232,240,0.9)', background: 'rgba(255,255,255,0.7)' }}
                   >
                     <div className="text-xs text-slate-500">{isEn ? 'Body Fat' : 'نسبة الدهون'}</div>
@@ -763,7 +763,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
                   </div>
 
                   <div
-                    className="rounded-2xl border p-4"
+                    className="rounded-lg border p-4"
                     style={{ borderColor: 'rgba(226,232,240,0.9)', background: 'rgba(255,255,255,0.7)' }}
                   >
                     <div className="text-xs text-slate-500">{isEn ? 'Lean Mass' : 'الكتلة الخالية من الدهون'}</div>
@@ -773,7 +773,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   <div
-                    className="rounded-2xl border p-4"
+                    className="rounded-lg border p-4"
                     style={{ borderColor: 'rgba(226,232,240,0.9)', background: 'rgba(255,255,255,0.7)' }}
                   >
                     <div className="text-xs text-slate-500">
@@ -783,7 +783,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
                   </div>
 
                   <div
-                    className="rounded-2xl border p-4"
+                    className="rounded-lg border p-4"
                     style={{ borderColor: 'rgba(226,232,240,0.9)', background: 'rgba(255,255,255,0.7)' }}
                   >
                     <div className="text-xs text-slate-500">
@@ -833,7 +833,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
 
             {/* Selected food preview */}
             <div
-              className="rounded-2xl border p-4"
+              className="rounded-lg border p-4"
               style={{
                 borderColor: 'rgba(226,232,240,0.9)',
                 background:
@@ -864,7 +864,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
                   type="button"
                   onClick={addItem}
                   disabled={!selectedFood || qtyN <= 0}
-                  className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-2xl font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-lg font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     color: 'white',
                     background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
@@ -878,7 +878,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
                 <button
                   type="button"
                   onClick={() => setMealItems([])}
-                  className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-2xl border font-semibold transition active:scale-[0.98]"
+                  className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-lg border font-semibold transition active:scale-[0.98]"
                   style={{
                     borderColor: 'rgba(226,232,240,0.9)',
                     background: 'white',
@@ -894,7 +894,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
             {/* Meal table */}
             {mealItems.length === 0 ? (
               <div
-                className="rounded-2xl border border-dashed p-8 text-center"
+                className="rounded-lg border border-dashed p-8 text-center"
                 style={{ borderColor: 'rgba(148,163,184,0.6)', background: 'rgba(248,250,252,0.8)' }}
               >
                 <Apple className="h-10 w-10 mx-auto mb-3" style={{ color: 'var(--color-primary-300)' }} />
@@ -902,7 +902,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
                 <div className="mt-1 text-sm text-slate-600">{isEn ? 'Search a food and add it to your meal.' : 'ابحث عن طعام وأضفه للوجبة.'}</div>
               </div>
             ) : (
-              <div className="overflow-hidden rounded-2xl border" style={{ borderColor: 'rgba(226,232,240,0.9)' }}>
+              <div className="overflow-hidden rounded-lg border" style={{ borderColor: 'rgba(226,232,240,0.9)' }}>
                 <div className="overflow-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -969,7 +969,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
                                   onChange={(e) => updateQty(it.id, e.target.value)}
                                   placeholder="0"
                                   inputMode="numeric"
-                                  className="w-[110px] text-right rounded-xl border px-3 py-2 text-sm outline-none transition focus:ring-4"
+                                  className="w-[110px] text-right rounded-lg border px-3 py-2 text-sm outline-none transition focus:ring-4"
                                   style={{
                                     borderColor: 'rgba(148,163,184,0.75)',
                                   }}
@@ -987,7 +987,7 @@ export default function CaloriesDailyPage({ foods = DEFAULT_FOODS }) {
                               <button
                                 type="button"
                                 onClick={() => removeItem(it.id)}
-                                className="inline-flex items-center justify-center h-10 w-10 rounded-2xl border transition active:scale-[0.98]"
+                                className="inline-flex items-center justify-center h-10 w-10 rounded-lg border transition active:scale-[0.98]"
                                 style={{
                                   borderColor: 'rgba(254,202,202,1)',
                                   background: 'rgba(255,241,242,0.9)',

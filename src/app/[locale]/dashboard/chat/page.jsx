@@ -20,10 +20,10 @@ const cls = (...a) => a.filter(Boolean).join(' ');
 /* --------- Design tokens with theme support --------- */
 const ui = {
   radius: {
-    sm: 'rounded-md',
+    sm: 'rounded-lg',
     md: 'rounded-lg',
-    lg: 'rounded-xl',
-    xl: 'rounded-2xl',
+    lg: 'rounded-lg',
+    xl: 'rounded-lg',
   },
   shadow: {
     sm: 'shadow-sm',
@@ -537,7 +537,7 @@ export default function ChatPage() {
         </div>
 
         <div className='flex items-center gap-3'>
-          <div className='inline-flex items-center rounded-xl border border-slate-200 bg-white/80 p-1 shadow-sm'>
+          <div className='inline-flex items-center rounded-lg border border-slate-200 bg-white/80 p-1 shadow-sm'>
             <button 
               onClick={() => setFilterTab('all')} 
               className={cls(
@@ -570,7 +570,7 @@ export default function ChatPage() {
                 type='button' 
                 onClick={contactCoach} 
                 className={cls(
-                  'h-10 rounded-xl border border-slate-200/60 bg-white text-slate-700 text-sm font-medium',
+                  'h-10 rounded-lg border border-slate-200/60 bg-white text-slate-700 text-sm font-medium',
                   'inline-flex items-center justify-center px-4 gap-2',
                   'hover:bg-gradient-to-r hover:from-[var(--color-primary-50)] hover:to-[var(--color-secondary-50)]',
                   'active:scale-[.98] transition-all duration-200',
@@ -586,7 +586,7 @@ export default function ChatPage() {
                   type='button' 
                   onClick={contactAdmin} 
                   className={cls(
-                    'h-10 rounded-xl border border-slate-200/60 bg-white text-slate-700 text-sm font-medium',
+                    'h-10 rounded-lg border border-slate-200/60 bg-white text-slate-700 text-sm font-medium',
                     'inline-flex items-center justify-center px-4 gap-2',
                     'hover:bg-gradient-to-r hover:from-[var(--color-primary-50)] hover:to-[var(--color-secondary-50)]',
                     'active:scale-[.98] transition-all duration-200',
@@ -622,7 +622,7 @@ export default function ChatPage() {
                 aria-label={t('search.placeholder')} 
                 className={cls(
                   'h-12 w-full ltr:pl-12 rtl:pr-12 ltr:pr-12 rtl:pl-12',
-                  'rounded-xl border-2 border-slate-200/60',
+                  'rounded-lg border-2 border-slate-200/60',
                   'bg-white/80 text-slate-900 placeholder:text-slate-400',
                   'transition-all duration-200',
                   'hover:border-slate-300',
@@ -648,9 +648,9 @@ export default function ChatPage() {
               <motion.div 
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className='mt-3 rounded-xl border border-slate-200/60 bg-white/90 backdrop-blur-sm p-8 text-center shadow-sm'
+                className='mt-3 rounded-lg border border-slate-200/60 bg-white/90 backdrop-blur-sm p-8 text-center shadow-sm'
               >
-                <div className='mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-slate-200/60'>
+                <div className='mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-slate-100 to-slate-200/60'>
                   <Inbox className='w-7 h-7 text-slate-400' />
                 </div>
                 <div className='text-sm font-semibold text-slate-700'>{t('search.noResultsTitle', { defaultValue: 'No matches found' })}</div>
@@ -661,7 +661,7 @@ export default function ChatPage() {
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className='mt-3 rounded-xl border border-slate-200/60 overflow-hidden bg-white/95 backdrop-blur-sm shadow-sm'
+                  className='mt-3 rounded-lg border border-slate-200/60 overflow-hidden bg-white/95 backdrop-blur-sm shadow-sm'
                 >
                   <div className='px-4 py-2.5 text-xs font-semibold text-slate-600 bg-gradient-to-r from-slate-50 to-slate-100/50 border-b border-slate-200/60'>
                     {t('search.results')}
@@ -683,7 +683,7 @@ export default function ChatPage() {
                             )}
                           >
                             <div className={cls(
-                              'h-10 w-10 rounded-xl bg-gradient-to-br grid place-items-center overflow-hidden',
+                              'h-10 w-10 rounded-lg bg-gradient-to-br grid place-items-center overflow-hidden',
                               'ring-2 ring-slate-200/60 shadow-sm',
                               'group-hover:ring-[var(--color-primary-300)] group-hover:shadow-md group-hover:shadow-[var(--color-primary-500)]/10',
                               'transition-all duration-200',
@@ -713,7 +713,7 @@ export default function ChatPage() {
             {loadingConvos ? (
               <div className='space-y-3'>
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className='h-20 rounded-xl bg-gradient-to-r from-slate-100/80 to-slate-200/40 animate-pulse' />
+                  <div key={i} className='h-20 rounded-lg bg-gradient-to-r from-slate-100/80 to-slate-200/40 animate-pulse' />
                 ))}
               </div>
             ) : filteredConvos.length ? (
@@ -737,7 +737,7 @@ export default function ChatPage() {
                       <button 
                         onClick={() => onSelectConversation(c.id)} 
                         className={cls(
-                          'w-full px-4 py-4 text-left rounded-xl transition-all duration-200',
+                          'w-full px-4 py-4 text-left rounded-lg transition-all duration-200',
                           ui.ringFocus,
                           isActive 
                             ? 'bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] shadow-md ring-2 ring-[var(--color-primary-200)] border border-[var(--color-primary-200)]' 
@@ -747,7 +747,7 @@ export default function ChatPage() {
                         <div className='flex items-center gap-3'>
                           <div className='relative group/avatar'>
                             <div className={cls(
-                              'h-12 w-12 rounded-xl grid place-items-center overflow-hidden',
+                              'h-12 w-12 rounded-lg grid place-items-center overflow-hidden',
                               'transition-all duration-300 ease-out transform',
                               'shadow-sm',
                               hasUnread 
@@ -797,7 +797,7 @@ export default function ChatPage() {
               </ul>
             ) : (
               <div className='p-12 text-center text-slate-500'>
-                <div className='mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200/60 shadow-sm'>
+                <div className='mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-slate-100 to-slate-200/60 shadow-sm'>
                   <Inbox className='w-8 h-8 text-slate-400' />
                 </div>
                 <div className='text-sm font-semibold text-slate-700'>{t('list.empty')}</div>
@@ -819,7 +819,7 @@ export default function ChatPage() {
                 onClick={() => setDrawerOpen(true)} 
                 className={cls(
                   'flex-none inline-flex h-11 w-11 items-center justify-center',
-                  'rounded-xl border border-slate-200/60 bg-white hover:bg-slate-50',
+                  'rounded-lg border border-slate-200/60 bg-white hover:bg-slate-50',
                   'active:scale-95 transition-all duration-200 shadow-sm',
                   ui.ringFocus
                 )} 
@@ -836,7 +836,7 @@ export default function ChatPage() {
             <button 
               onClick={() => setDrawerOpen(true)} 
               className={cls(
-                'h-11 w-11 rounded-xl border border-slate-200/60 bg-white',
+                'h-11 w-11 rounded-lg border border-slate-200/60 bg-white',
                 'grid place-items-center shadow-sm hover:shadow-md',
                 'transition-all duration-200',
                 ui.ringFocus
@@ -857,7 +857,7 @@ export default function ChatPage() {
               <>
                 <div className='relative'>
                   <div className={cls(
-                    'h-11 w-11 rounded-xl bg-gradient-to-br grid place-items-center overflow-hidden',
+                    'h-11 w-11 rounded-lg bg-gradient-to-br grid place-items-center overflow-hidden',
                     'ring-2 shadow-md transition-all duration-200',
                     pickAvatarGradient(otherUser.id || otherUser.email, colors)
                   )}>
@@ -899,7 +899,7 @@ export default function ChatPage() {
             {!activeId ? (
               <div className='h-full grid place-items-center text-slate-500'>
                 <div className='text-center'>
-                  <div className='mx-auto mb-5 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200/60 shadow-lg'>
+                  <div className='mx-auto mb-5 inline-flex h-20 w-20 items-center justify-center rounded-lg bg-gradient-to-br from-slate-100 to-slate-200/60 shadow-lg'>
                     <Inbox className='w-10 h-10 text-slate-400' />
                   </div>
                   <div className='text-base font-semibold text-slate-700'>{t('empty.pick')}</div>
@@ -940,18 +940,18 @@ export default function ChatPage() {
                           <img 
                             src={a.url} 
                             alt={a.name} 
-                            className='h-20 w-20 object-cover rounded-xl border-2 border-slate-200 shadow-md hover:shadow-lg transition-shadow duration-200' 
+                            className='h-20 w-20 object-cover rounded-lg border-2 border-slate-200 shadow-md hover:shadow-lg transition-shadow duration-200' 
                           />
                         ) : /^\s*video\//.test(a.type) ? (
-                          <div className='h-20 w-28 rounded-xl border-2 border-slate-200 grid place-items-center bg-slate-50 shadow-md hover:shadow-lg transition-shadow duration-200'>
+                          <div className='h-20 w-28 rounded-lg border-2 border-slate-200 grid place-items-center bg-slate-50 shadow-md hover:shadow-lg transition-shadow duration-200'>
                             <Video className='w-6 h-6 text-slate-600' />
                           </div>
                         ) : (
-                          <div className='h-20 w-28 rounded-xl border-2 border-slate-200 grid place-items-center bg-slate-50 shadow-md hover:shadow-lg transition-shadow duration-200'>
+                          <div className='h-20 w-28 rounded-lg border-2 border-slate-200 grid place-items-center bg-slate-50 shadow-md hover:shadow-lg transition-shadow duration-200'>
                             <FileIcon className='w-6 h-6 text-slate-600' />
                           </div>
                         )}
-                        <div className='absolute bottom-1 ltr:left-1 ltr:right-9 rtl:right-1 rtl:left-9 truncate text-[10px] px-1.5 py-0.5 rounded-md bg-black/70 text-white font-medium'>
+                        <div className='absolute bottom-1 ltr:left-1 ltr:right-9 rtl:right-1 rtl:left-9 truncate text-[10px] px-1.5 py-0.5 rounded-lg bg-black/70 text-white font-medium'>
                           {a.name}
                         </div>
                         <button 
@@ -1001,7 +1001,7 @@ export default function ChatPage() {
                       rows={1}
                       placeholder={t('composer.placeholder')}
                       className={cls(
-                        'h-auto min-h-[52px] max-h-[160px] w-full rounded-xl',
+                        'h-auto min-h-[52px] max-h-[160px] w-full rounded-lg',
                         'bg-white text-slate-900 placeholder:text-slate-400',
                         'border-2 border-slate-200',
                         'hover:border-slate-300',
@@ -1019,7 +1019,7 @@ export default function ChatPage() {
                         onClick={send} 
                         disabled={sending || (!text.trim() && !hasAttaches)} 
                         className={cls(
-                          'h-10 w-10 rounded-xl',
+                          'h-10 w-10 rounded-lg',
                           'bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]',
                           'text-white grid place-items-center',
                           'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -1034,7 +1034,7 @@ export default function ChatPage() {
                       </button>
 
                       <label className={cls(
-                        'h-10 w-10 grid place-items-center rounded-xl',
+                        'h-10 w-10 grid place-items-center rounded-lg',
                         'border-2 border-slate-200 bg-white cursor-pointer',
                         'hover:bg-slate-50 hover:border-slate-300',
                         'active:scale-95 transition-all duration-200',
@@ -1045,7 +1045,7 @@ export default function ChatPage() {
                       </label>
 
                       <label className={cls(
-                        'h-10 w-10 grid place-items-center rounded-xl',
+                        'h-10 w-10 grid place-items-center rounded-lg',
                         'border-2 border-slate-200 bg-white cursor-pointer',
                         'hover:bg-slate-50 hover:border-slate-300',
                         'active:scale-95 transition-all duration-200',
@@ -1056,7 +1056,7 @@ export default function ChatPage() {
                       </label>
 
                       <label className={cls(
-                        'h-10 w-10 grid place-items-center rounded-xl',
+                        'h-10 w-10 grid place-items-center rounded-lg',
                         'border-2 border-slate-200 bg-white cursor-pointer',
                         'hover:bg-slate-50 hover:border-slate-300',
                         'active:scale-95 transition-all duration-200',
@@ -1095,7 +1095,7 @@ export default function ChatPage() {
               <button 
                 onClick={() => setDrawerOpen(false)} 
                 className={cls(
-                  'inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl',
+                  'inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg',
                   'border-2 border-slate-200',
                   'bg-white hover:bg-slate-50 active:bg-slate-100',
                   'transition-all duration-200',
@@ -1119,7 +1119,7 @@ export default function ChatPage() {
                   onChange={e => setSearch(e.target.value)} 
                   placeholder={t('search.placeholder')} 
                   className={cls(
-                    'w-full h-12 rounded-xl border-2 border-slate-200',
+                    'w-full h-12 rounded-lg border-2 border-slate-200',
                     'bg-white/90 focus:bg-white',
                     'focus:border-[var(--color-primary-400)] focus:shadow-lg focus:shadow-[var(--color-primary-500)]/10',
                     'transition-all duration-200',
@@ -1141,7 +1141,7 @@ export default function ChatPage() {
                     type='button' 
                     onClick={contactCoach} 
                     className={cls(
-                      'flex-1 h-11 rounded-xl border-2 border-slate-200 bg-white text-slate-700 text-sm font-semibold',
+                      'flex-1 h-11 rounded-lg border-2 border-slate-200 bg-white text-slate-700 text-sm font-semibold',
                       'inline-flex items-center justify-center gap-2',
                       'hover:bg-slate-50 active:scale-[.98] transition-all duration-200',
                       'shadow-sm',
@@ -1156,7 +1156,7 @@ export default function ChatPage() {
                       type='button' 
                       onClick={contactAdmin} 
                       className={cls(
-                        'flex-1 h-11 rounded-xl border-2 border-slate-200 bg-white text-slate-700 text-sm font-semibold',
+                        'flex-1 h-11 rounded-lg border-2 border-slate-200 bg-white text-slate-700 text-sm font-semibold',
                         'inline-flex items-center justify-center gap-2',
                         'hover:bg-slate-50 active:scale-[.98] transition-all duration-200',
                         'shadow-sm',
@@ -1171,7 +1171,7 @@ export default function ChatPage() {
               )}
 
               {!!results.length && (
-                <div className='mt-3 rounded-xl border border-slate-200/60 overflow-hidden bg-white shadow-sm'>
+                <div className='mt-3 rounded-lg border border-slate-200/60 overflow-hidden bg-white shadow-sm'>
                   <div className='px-4 py-2.5 text-xs font-semibold text-slate-600 bg-slate-50'>
                     {t('search.results')}
                   </div>
@@ -1216,7 +1216,7 @@ export default function ChatPage() {
                         <button 
                           onClick={() => onSelectConversation(c.id)} 
                           className={cls(
-                            'w-full px-4 py-4 rounded-xl transition-all duration-200',
+                            'w-full px-4 py-4 rounded-lg transition-all duration-200',
                             'border-2',
                             ui.ringFocus,
                             activeId === c.id 
@@ -1251,7 +1251,7 @@ export default function ChatPage() {
                               </div>
                             </div>
                             <div className={cls(
-                              'h-12 w-12 rounded-xl bg-gradient-to-br grid place-items-center overflow-hidden shadow-sm',
+                              'h-12 w-12 rounded-lg bg-gradient-to-br grid place-items-center overflow-hidden shadow-sm',
                               'from-[var(--color-primary-100)] to-[var(--color-secondary-100)]'
                             )}>
                               <UserCircle2 className='w-7 h-7 text-[var(--color-primary-600)]' />
@@ -1264,7 +1264,7 @@ export default function ChatPage() {
                 </ul>
               ) : (
                 <div className='p-10 text-center text-slate-500'>
-                  <div className='mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200/60 shadow-lg'>
+                  <div className='mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-slate-100 to-slate-200/60 shadow-lg'>
                     <Inbox className='w-8 h-8 text-slate-400' />
                   </div>
                   <div className='text-sm font-semibold text-slate-700'>{t('list.empty')}</div>
@@ -1361,7 +1361,7 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing, colors }) {
                     key={i} 
                     src={`${API_URL}${a.url}`} 
                     controls 
-                    className='w-full rounded-xl overflow-hidden max-h-64 border-2 border-slate-200 shadow-md' 
+                    className='w-full rounded-lg overflow-hidden max-h-64 border-2 border-slate-200 shadow-md' 
                   />
                 ))}
               </div>
@@ -1377,7 +1377,7 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing, colors }) {
                     target='_blank' 
                     rel='noreferrer' 
                     className={cls(
-                      'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border-2',
+                      'flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 border-2',
                       mine 
                         ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white shadow-md hover:shadow-lg' 
                         : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm hover:shadow-md'
@@ -1421,7 +1421,7 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing, colors }) {
             )}
 
             <div className={cls(
-              'relative max-w-[min(400px,75%)] rounded-2xl px-4 py-3',
+              'relative max-w-[min(400px,75%)] rounded-lg px-4 py-3',
               'shadow-md hover:shadow-lg transition-shadow duration-200',
               mine 
                 ? 'bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] text-white rtl:rounded-bl-sm ltr:rounded-br-sm' 
@@ -1454,7 +1454,7 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing, colors }) {
           )}>
             <span className='text-xs font-bold'>…</span>
           </div>
-          <div className='relative max-w-[78%] rounded-2xl px-5 py-4 shadow-md bg-white border-2 border-slate-200 rtl:rounded-br-sm ltr:rounded-bl-sm'>
+          <div className='relative max-w-[78%] rounded-lg px-5 py-4 shadow-md bg-white border-2 border-slate-200 rtl:rounded-br-sm ltr:rounded-bl-sm'>
             <div className='flex gap-1.5 items-center'>
               <div className='w-2 h-2 bg-[var(--color-primary-500)] rounded-full animate-bounce' style={{ animationDelay: '0ms' }} />
               <div className='w-2 h-2 bg-[var(--color-primary-500)] rounded-full animate-bounce' style={{ animationDelay: '150ms' }} />
@@ -1477,7 +1477,7 @@ const MessageSkeleton = () => (
         <div key={i} className={cls('flex items-end gap-2.5', mine ? 'justify-end' : 'justify-start')}>
           {!mine && <div className='h-9 w-9 rounded-full bg-slate-200/80 shadow-sm' />}
           <div className={cls(
-            'rounded-2xl h-16 animate-pulse shadow-md',
+            'rounded-lg h-16 animate-pulse shadow-md',
             mine 
               ? 'bg-gradient-to-r from-slate-200/60 to-slate-300/40 w-52' 
               : 'bg-slate-200/80 w-60 border-2 border-slate-200'

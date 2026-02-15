@@ -35,11 +35,11 @@ const cx = (...c) => c.filter(Boolean).join(' ');
 function ThemeFrame({ children, className = '' }) {
 	return (
 		<div
-			className={cx('rounded-2xl p-[1px]', className)}
+			className={cx('rounded-lg p-[1px]', className)}
 
 		>
 			<div
-				className="rounded-2xl border bg-white/85 backdrop-blur-xl"
+				className="rounded-lg border bg-white/85 backdrop-blur-xl"
 				style={{
 					borderColor: 'var(--color-primary-200)',
 					boxShadow: '0 1px 0 rgba(15, 23, 42, 0.04), 0 18px 40px rgba(15, 23, 42, 0.10)',
@@ -54,7 +54,7 @@ function ThemeFrame({ children, className = '' }) {
 function SoftCard({ children, className = '' }) {
 	return (
 		<div
-			className={cx('rounded-2xl border bg-white', className)}
+			className={cx('rounded-lg border bg-white', className)}
 			style={{
 				borderColor: 'var(--color-primary-200)',
 				boxShadow: '0 1px 0 rgba(15, 23, 42, 0.03), 0 10px 24px rgba(15, 23, 42, 0.06)',
@@ -104,7 +104,7 @@ function GhostBtn({ children, onClick, disabled, title }) {
 			disabled={disabled}
 			title={title}
 			aria-label={title}
-			className="inline-flex items-center gap-2 h-11 px-4 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed"
+			className="inline-flex items-center gap-2 h-11 px-4 rounded-lg border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed"
 			style={{
 				borderColor: 'var(--color-primary-200)',
 				backgroundColor: 'rgba(255,255,255,0.9)',
@@ -132,7 +132,7 @@ function GradientBtn({ children, onClick, disabled, title }) {
 			disabled={disabled}
 			title={title}
 			aria-label={title}
-			className="inline-flex items-center gap-2 h-11 px-5 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed"
+			className="inline-flex items-center gap-2 h-11 px-5 rounded-lg border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed"
 			style={{
 				borderColor: 'transparent',
 				background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
@@ -297,7 +297,7 @@ export default function SubmissionsPage() {
 					return (
 						<div className="flex items-center gap-3 min-w-[240px]">
 							<div
-								className="grid place-items-center rounded-2xl"
+								className="grid place-items-center rounded-lg"
 								style={{
 									width: 40,
 									height: 40,
@@ -348,7 +348,7 @@ export default function SubmissionsPage() {
 				className: 'font-en',
 				cell: row => (
 					<span
-						className="inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-mono"
+						className="inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-mono"
 						style={{
 							borderColor: 'var(--color-primary-200)',
 							background: 'linear-gradient(135deg, rgba(255,255,255,0.92), var(--color-primary-50))',
@@ -464,7 +464,7 @@ export default function SubmissionsPage() {
 							emptyState={
 								<div className="text-center py-12">
 									<div
-										className="mx-auto mb-4 grid place-items-center rounded-3xl"
+										className="mx-auto mb-4 grid place-items-center rounded-lg"
 										style={{
 											width: 72,
 											height: 72,
@@ -502,7 +502,7 @@ export default function SubmissionsPage() {
 							<div className="flex items-center justify-between gap-3 flex-wrap">
 								<div className="flex items-center gap-3">
 									<div
-										className="grid place-items-center rounded-2xl"
+										className="grid place-items-center rounded-lg"
 										style={{
 											width: 44,
 											height: 44,
@@ -553,7 +553,7 @@ export default function SubmissionsPage() {
 function InfoRow({ k, v, mono }) {
 	return (
 		<div
-			className="rounded-2xl border p-3"
+			className="rounded-lg border p-3"
 			style={{
 				borderColor: 'var(--color-primary-200)',
 				background: 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))',
@@ -644,7 +644,7 @@ function renderAnswers(submission, forms, t) {
 		return (
 			<div
 				key={key}
-				className="rounded-3xl border bg-white p-4 w-full overflow-hidden"
+				className="rounded-lg border bg-white p-4 w-full overflow-hidden"
 				style={{
 					borderColor: 'var(--color-primary-200)',
 					boxShadow: '0 1px 0 rgba(15,23,42,0.03), 0 10px 24px rgba(15,23,42,0.06)',
@@ -684,7 +684,7 @@ function renderAnswers(submission, forms, t) {
 											className="block"
 										>
 											<div
-												className="rounded-2xl border overflow-hidden"
+												className="rounded-lg border overflow-hidden"
 												style={{ borderColor: 'var(--color-primary-200)' }}
 											>
 												{/* use Img with the FINAL url */}

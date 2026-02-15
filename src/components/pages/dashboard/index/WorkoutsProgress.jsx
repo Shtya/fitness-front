@@ -284,9 +284,9 @@ export default function WorkoutsProgress({ data }) {
 										<div className="text-sm font-medium text-slate-900 truncate">{p.exercise}</div>
 										<div className="mt-0.5 text-xs text-slate-500">{formatDate(p.date)}</div>
 										<div className="mt-2 flex items-center gap-3 text-xs text-slate-600">
-											<span className="rounded-md bg-slate-100 px-2 py-1">{t("prs.e1rm", { n: p.e1rm || 0 })}</span>
-											<span className="rounded-md bg-slate-100 px-2 py-1">{t("prs.weight", { n: p.weight || 0 })}</span>
-											<span className="rounded-md bg-slate-100 px-2 py-1">{t("prs.reps", { n: p.reps || 0 })}</span>
+											<span className="rounded-lg bg-slate-100 px-2 py-1">{t("prs.e1rm", { n: p.e1rm || 0 })}</span>
+											<span className="rounded-lg bg-slate-100 px-2 py-1">{t("prs.weight", { n: p.weight || 0 })}</span>
+											<span className="rounded-lg bg-slate-100 px-2 py-1">{t("prs.reps", { n: p.reps || 0 })}</span>
 										</div>
 									</li>
 								))}

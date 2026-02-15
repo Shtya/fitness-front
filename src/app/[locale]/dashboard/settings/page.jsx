@@ -49,7 +49,7 @@ const CardShell = ({ title, desc, right, open, onToggle, children, icon: Icon })
 	<motion.div
 		initial={{ opacity: 0, y: 20 }}
 		animate={{ opacity: 1, y: 0 }}
-		className="rounded-2xl border-2 bg-white/95 backdrop-blur-xl shadow-xl overflow-hidden relative"
+		className="rounded-lg border-2 bg-white/95 backdrop-blur-xl shadow-xl overflow-hidden relative"
 		style={{
 			borderColor: 'var(--color-primary-200)',
 			boxShadow: '0 20px 60px -15px rgba(15, 23, 42, 0.15)',
@@ -90,7 +90,7 @@ const CardShell = ({ title, desc, right, open, onToggle, children, icon: Icon })
 			{/* Icon */}
 			{Icon && (
 				<div
-					className="w-12 h-12 rounded-xl grid place-content-center text-white shadow-lg"
+					className="w-12 h-12 rounded-lg grid place-content-center text-white shadow-lg"
 					style={{
 						background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
 					}}>
@@ -173,7 +173,7 @@ const Button = ({ children, color = 'primary', className = '', loading = false, 
 			whileHover={{ scale: 1.02 }}
 			whileTap={{ scale: 0.98 }}
 			{...props}
-			className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+			className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
 			style={getStyles()}>
 			{loading && (
 				<motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
@@ -200,7 +200,7 @@ const Chip = ({ children, icon: Icon }) => (
 
 const Help = ({ children }) => (
 	<div
-		className="flex items-start gap-3 text-xs rounded-xl p-3 border-2"
+		className="flex items-start gap-3 text-xs rounded-lg p-3 border-2"
 		style={{
 			backgroundColor: 'var(--color-primary-50)',
 			borderColor: 'var(--color-primary-200)',
@@ -232,7 +232,7 @@ const Modal = ({ open, onClose, children, title }) => {
 					animate={{ opacity: 1, scale: 1, y: 0 }}
 					exit={{ opacity: 0, scale: 0.95, y: 20 }}
 					transition={spring}
-					className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(880px,96vw)] rounded-2xl bg-white shadow-2xl border-2 overflow-hidden"
+					className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(880px,96vw)] rounded-lg bg-white shadow-2xl border-2 overflow-hidden"
 					style={{
 						borderColor: 'var(--color-primary-200)',
 					}}>
@@ -282,13 +282,13 @@ function UploadBox({ file, onFile, previewUrl, onClear, label }) {
 			}}
 			onDragLeave={() => setIsDragging(false)}
 			onDrop={onDrop}
-			className={`rounded-xl border-2 border-dashed transition-all duration-200 p-6 ${
+			className={`rounded-lg border-2 border-dashed transition-all duration-200 p-6 ${
 				isDragging ? 'border-[var(--color-primary-500)] bg-[var(--color-primary-50)]' : 'border-slate-300 bg-slate-50/60'
 			}`}>
 			{!file ? (
 				<label className="flex flex-col items-center gap-3 cursor-pointer">
 					<div
-						className="w-16 h-16 rounded-xl grid place-content-center"
+						className="w-16 h-16 rounded-lg grid place-content-center"
 						style={{
 							background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
 						}}>
@@ -301,7 +301,7 @@ function UploadBox({ file, onFile, previewUrl, onClear, label }) {
 			) : (
 				<div className="flex items-center gap-4">
 					{previewUrl ? (
-						<div className="w-32 h-24 overflow-hidden rounded-xl border-2 bg-white shadow-lg" style={{ borderColor: 'var(--color-primary-200)' }}>
+						<div className="w-32 h-24 overflow-hidden rounded-lg border-2 bg-white shadow-lg" style={{ borderColor: 'var(--color-primary-200)' }}>
 							<img src={previewUrl} className="w-full h-full object-cover" alt="preview" />
 						</div>
 					) : null}
@@ -332,7 +332,7 @@ function PaletteSelector({ value, onChange }) {
 				whileHover={{ scale: 1.02 }}
 				whileTap={{ scale: 0.98 }}
 				onClick={() => setOpen(!open)}
-				className="w-full rounded-xl border-2 p-4 text-left transition-all duration-200 relative overflow-hidden group"
+				className="w-full rounded-lg border-2 p-4 text-left transition-all duration-200 relative overflow-hidden group"
 				style={{
 					borderColor: 'var(--color-primary-200)',
 					backgroundColor: 'white',
@@ -346,7 +346,7 @@ function PaletteSelector({ value, onChange }) {
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-3">
 						<div
-							className="w-12 h-12 rounded-xl shadow-lg"
+							className="w-12 h-12 rounded-lg shadow-lg"
 							style={{
 								background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
 							}}
@@ -371,7 +371,7 @@ function PaletteSelector({ value, onChange }) {
 							animate={{ opacity: 1, y: 0, scale: 1 }}
 							exit={{ opacity: 0, y: -10, scale: 0.95 }}
 							transition={spring}
-							className="absolute z-50 mt-2 w-full max-h-[400px] overflow-y-auto rounded-2xl border-2 bg-white/98 backdrop-blur-xl shadow-2xl p-3"
+							className="absolute z-50 mt-2 w-full max-h-[400px] overflow-y-auto rounded-lg border-2 bg-white/98 backdrop-blur-xl shadow-2xl p-3"
 							style={{
 								borderColor: 'var(--color-primary-200)',
 							}}>
@@ -387,7 +387,7 @@ function PaletteSelector({ value, onChange }) {
 												onChange(key);
 												setOpen(false);
 											}}
-											className="w-full rounded-xl p-3 text-left transition-all duration-200 relative overflow-hidden group"
+											className="w-full rounded-lg p-3 text-left transition-all duration-200 relative overflow-hidden group"
 											style={
 												isActive
 													? {
@@ -425,7 +425,7 @@ function PaletteSelector({ value, onChange }) {
 														{[palette.primary[500], palette.secondary[500], palette.primary[300]].map((color, idx) => (
 															<div
 																key={idx}
-																className="w-6 h-6 rounded-md shadow-sm"
+																className="w-6 h-6 rounded-lg shadow-sm"
 																style={{ backgroundColor: color }}
 															/>
 														))}
@@ -814,7 +814,7 @@ export default function SettingsPage() {
 						<div className="space-y-4">
 							{/* Gradient header preview */}
 							<div
-								className="relative overflow-hidden rounded-2xl shadow-xl"
+								className="relative overflow-hidden rounded-lg shadow-xl"
 								style={{
 									background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
 								}}>
@@ -836,7 +836,7 @@ export default function SettingsPage() {
 								<div className="relative z-10 p-6 md:p-8 text-white">
 									<h2 className="text-2xl md:text-3xl font-black">{t('branding.headerDemo.title')}</h2>
 									<p className="text-white/90 mt-2 text-lg">{t('branding.headerDemo.desc')}</p>
-									<div className="mt-4 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold bg-white/20 backdrop-blur-sm border-2 border-white/30">
+									<div className="mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold bg-white/20 backdrop-blur-sm border-2 border-white/30">
 										<Sparkles className="w-4 h-4" />
 										{t('branding.headerDemo.badge')}
 									</div>
@@ -844,9 +844,9 @@ export default function SettingsPage() {
 							</div>
 
 							{/* Surface preview */}
-							<div className="rounded-2xl p-6 border-2" style={{ borderColor: 'var(--color-primary-200)', backgroundColor: 'var(--color-primary-50)' }}>
+							<div className="rounded-lg p-6 border-2" style={{ borderColor: 'var(--color-primary-200)', backgroundColor: 'var(--color-primary-50)' }}>
 								<div
-									className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 font-bold shadow-lg"
+									className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 font-bold shadow-lg"
 									style={{
 										background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
 										color: 'white',
@@ -955,7 +955,7 @@ export default function SettingsPage() {
 						<div className="space-y-3">
 							{(siteMeta.ogImageUrl || ogPreviewUrl) && (
 								<div className="flex items-center gap-4">
-									<div className="w-32 h-24 overflow-hidden rounded-xl border-2 bg-white shadow-lg" style={{ borderColor: 'var(--color-primary-200)' }}>
+									<div className="w-32 h-24 overflow-hidden rounded-lg border-2 bg-white shadow-lg" style={{ borderColor: 'var(--color-primary-200)' }}>
 										<img src={ogPreviewUrl || siteMeta.ogImageUrl} className="w-full h-full object-cover" alt="og-preview" />
 									</div>
 									<Button color="danger" onClick={clearOg}>
@@ -1002,7 +1002,7 @@ export default function SettingsPage() {
 								<motion.label
 									key={item.id}
 									whileHover={{ x: 4 }}
-									className="flex items-center justify-between rounded-xl border-2 bg-white px-4 py-3 cursor-pointer transition-all duration-200"
+									className="flex items-center justify-between rounded-lg border-2 bg-white px-4 py-3 cursor-pointer transition-all duration-200"
 									style={{
 										borderColor: activeDhikrId === item.id ? 'var(--color-primary-300)' : 'var(--color-primary-100)',
 										backgroundColor: activeDhikrId === item.id ? 'var(--color-primary-50)' : 'white',
@@ -1050,7 +1050,7 @@ export default function SettingsPage() {
 							{Object.entries(report.items).map(([key, val]) => (
 								<label
 									key={key}
-									className="flex items-center gap-3 rounded-xl border-2 p-3 cursor-pointer transition-all duration-200"
+									className="flex items-center gap-3 rounded-lg border-2 p-3 cursor-pointer transition-all duration-200"
 									style={{
 										borderColor: val ? 'var(--color-primary-300)' : 'var(--color-primary-100)',
 										backgroundColor: val ? 'var(--color-primary-50)' : 'white',
@@ -1071,7 +1071,7 @@ export default function SettingsPage() {
 					<Row label={t('reminders.list')}>
 						<div className="space-y-3">
 							{reminders.map((r) => (
-								<div key={r.id} className="grid sm:grid-cols-[1fr_160px_36px] gap-3 rounded-xl border-2 p-3" style={{ borderColor: 'var(--color-primary-100)' }}>
+								<div key={r.id} className="grid sm:grid-cols-[1fr_160px_36px] gap-3 rounded-lg border-2 p-3" style={{ borderColor: 'var(--color-primary-100)' }}>
 									<Input value={r.title} onChange={(v) => updateReminder(r.id, { title: v })} placeholder={t('reminders.titlePh')} />
 									<Input type="time" value={r.time} onChange={(v) => updateReminder(r.id, { time: v })} />
 									<motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} type="button" onClick={() => removeReminder(r.id)}>
@@ -1114,12 +1114,12 @@ export default function SettingsPage() {
 
 			{/* Loader Preview Modal */}
 			<Modal open={loaderPreviewOpen} onClose={() => setLoaderPreviewOpen(false)} title="Loader Preview">
-				<div className="relative h-[70vh] rounded-xl overflow-hidden">
+				<div className="relative h-[70vh] rounded-lg overflow-hidden">
 					<div className="absolute inset-0">
 						<DhikrLoading />
 					</div>
 					<div
-						className="absolute left-1/2 bottom-6 -translate-x-1/2 rounded-xl px-6 py-3 border-2 shadow-xl backdrop-blur-xl"
+						className="absolute left-1/2 bottom-6 -translate-x-1/2 rounded-lg px-6 py-3 border-2 shadow-xl backdrop-blur-xl"
 						style={{
 							backgroundColor: 'var(--color-primary-50)',
 							borderColor: 'var(--color-primary-200)',

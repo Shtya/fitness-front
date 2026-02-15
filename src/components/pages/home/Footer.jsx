@@ -178,7 +178,7 @@ export default function Footer() {
               >
                 <div className="relative">
                   <motion.div 
-                    className="absolute inset-0 rounded-2xl blur-lg"
+                    className="absolute inset-0 rounded-lg blur-lg"
                     style={{
                       background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})`,
                     }}
@@ -189,7 +189,7 @@ export default function Footer() {
                     transition={{ duration: 2, repeat: Infinity }}
                   />
                   <div 
-                    className="relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl"
+                    className="relative w-14 h-14 rounded-lg flex items-center justify-center shadow-2xl"
                     style={{
                       background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})`,
                     }}
@@ -227,7 +227,7 @@ export default function Footer() {
                           className="flex items-center gap-4 text-white/70 hover:text-white transition-all group"
                         >
                           <motion.div 
-                            className="w-12 h-12 rounded-xl flex items-center justify-center transition-all"
+                            className="w-12 h-12 rounded-lg flex items-center justify-center transition-all"
                             style={{
                               backgroundColor: 'rgba(30, 41, 59, 0.6)',
                             }}
@@ -243,7 +243,7 @@ export default function Footer() {
                       ) : (
                         <div className="flex items-center gap-4 text-white/70">
                           <div 
-                            className="w-12 h-12 rounded-xl flex items-center justify-center"
+                            className="w-12 h-12 rounded-lg flex items-center justify-center"
                             style={{
                               backgroundColor: 'rgba(30, 41, 59, 0.6)',
                             }}
@@ -338,7 +338,7 @@ export default function Footer() {
                     key={index}
                     href={social.href}
                     aria-label={social.label}
-                    className="relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all group overflow-hidden"
+                    className="relative w-12 h-12 rounded-lg flex items-center justify-center transition-all group overflow-hidden"
                     style={{
                       backgroundColor: 'rgba(30, 41, 59, 0.6)',
                     }}
@@ -405,7 +405,7 @@ export default function Footer() {
               return (
                 <motion.div
                   key={index}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg"
                   style={{
                     backgroundColor: `${badge.color}10`,
                     border: `1px solid ${badge.color}20`,

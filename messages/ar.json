@@ -126,19 +126,6 @@
     }
   },
   "todo": {
-    "title": "المهام",
-    "system": "النظام",
-    "myFolders": "مجلداتي",
-    "addFolder": "إضافة مجلد",
-    "folderNamePlaceholder": "اسم المجلد...",
-    "pickColor": "اختر لوناً",
-    "add": "إضافة",
-    "cancel": "إلغاء",
-    "active": "نشطة",
-    "done": "تم",
-    "completed": "مكتملة",
-    "confirmDelete": "هل تريد حذف هذه المهمة؟",
-    "confirmDeleteFolder": "حذف هذا المجلد؟ سيتم نقل جميع المهام إلى صندوق الوارد.",
     "folders": {
       "inbox": "صندوق الوارد",
       "today": "اليوم",
@@ -147,72 +134,73 @@
       "work": "عمل",
       "shopping": "تسوق"
     },
-    "addTaskPlaceholder": "إضافة مهمة جديدة...",
-    "taskDetails": "تفاصيل المهمة",
-    "priority": "الأولوية",
-    "dueDate": "تاريخ الاستحقاق",
-    "selectDate": "اختر التاريخ",
-    "time": "الوقت",
-    "selectTime": "اختر الوقت",
-    "repeat": {
-      "none": "لا يتكرر",
-      "daily": "يومياً",
-      "every2days": "كل يومين",
-      "every3days": "كل 3 أيام",
-      "weekly": "أسبوعياً",
-      "biweekly": "كل أسبوعين",
-      "monthly": "شهرياً",
-      "custom": "مخصص..."
-    },
-    "days": "أيام",
-    "reminder": "تذكير",
-    "enableReminder": "تفعيل التذكير",
-    "selectDateTime": "اختر التاريخ والوقت",
-    "subtasks": "المهام الفرعية",
-    "addSubtask": "إضافة مهمة فرعية",
-    "subtaskPlaceholder": "عنوان المهمة الفرعية...",
-    "location": "الموقع",
-    "locationPlaceholder": "أضف موقعاً...",
-    "notes": "ملاحظات",
-    "notesPlaceholder": "أضف ملاحظات...",
-    "starred": "مميزة",
-    "addToStarred": "إضافة إلى المميزة",
-    "deleteTask": "حذف المهمة",
+    "myFolders": "مجلداتي",
+    "addFolder": "إضافة مجلد",
+    "folderNamePlaceholder": "اسم المجلد...",
+    "pickColor": "اختر اللون",
+    "add": "إضافة",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد",
+    "done": "تم",
+    "active": "نشطة",
+    "completed": "مكتملة",
     "noTasks": "لا توجد مهام",
-    "addFirstTask": "أضف مهمتك الأولى للبدء!",
-    "attachments": "المرفقات",
+    "addFirstTask": "أضف أول مهمة لك للبدء",
+    "addTaskPlaceholder": "أضف مهمة جديدة...",
+    "attachImage": "إرفاق صورة",
+    "toAddTask": "لإضافة المهمة",
+    "toAddSubtask": "لإضافة مهمة فرعية",
+    "forNewLine": "لسطر جديد",
+    "taskDetails": "تفاصيل المهمة",
+    "deleteTask": "حذف المهمة",
+    "deleteTaskDescription": "هل أنت متأكد من حذف هذه المهمة؟ لا يمكن التراجع عن هذا الإجراء.",
+    "deleteFolder": "حذف المجلد",
+    "deleteFolderDescription": "سيتم نقل جميع المهام في هذا المجلد إلى صندوق الوارد. هل تريد المتابعة؟",
     "status": {
-      "todo": "للإنجاز",
+      "todo": "قيد الانتظار",
       "inProgress": "قيد التنفيذ",
       "completed": "مكتملة",
-      "cancelled": "ملغاة"
+      "cancelled": "ملغية"
     },
     "priorities": {
-      "all": "جميع الأولويات",
+      "all": "الكل",
       "none": "بدون",
       "low": "منخفضة",
       "medium": "متوسطة",
       "high": "عالية",
       "urgent": "عاجلة"
     },
+    "repeat": {
+      "none": "بدون",
+      "daily": "يومياً",
+      "every2days": "كل يومين",
+      "every3days": "كل 3 أيام",
+      "weekly": "أسبوعياً",
+      "biweekly": "كل أسبوعين",
+      "monthly": "شهرياً",
+      "custom": "مخصص"
+    },
     "sort": {
       "manual": "يدوي",
       "dueDate": "تاريخ الاستحقاق",
       "priority": "الأولوية",
-      "alphabetical": "أبجدي (أ-ي)"
+      "alphabetical": "أبجدي"
     },
+    "addSubtask": "إضافة مهمة فرعية",
+    "subtaskPlaceholder": "عنوان المهمة الفرعية...",
+    "subtasks": "المهام الفرعية",
+    "dueDate": "تاريخ الاستحقاق",
+    "selectDate": "اختر التاريخ",
+    "time": "الوقت",
+    "selectTime": "اختر الوقت",
+    "attachments": "المرفقات",
+    "notes": "ملاحظات",
+    "notesPlaceholder": "أضف ملاحظاتك هنا...",
     "settings": "الإعدادات",
     "soundEffects": "المؤثرات الصوتية",
-    "soundEffectsDesc": "تشغيل الأصوات عند إكمال المهام",
+    "soundEffectsDesc": "تشغيل الأصوات عند إتمام المهام",
     "showCompleted": "إظهار المهام المكتملة",
     "showCompletedDesc": "عرض المهام المكتملة في القوائم",
-    "compactView": "عرض مضغوط",
-    "compactViewDesc": "إظهار العنوان وزر التحديد والإجراءات فقط",
-    "autoArchive": "أرشفة تلقائية",
-    "autoArchiveDesc": "أرشفة المهام المكتملة تلقائياً بعد 7 أيام",
-    "defaultView": "العرض الافتراضي",
-    "listView": "عرض قائمة",
-    "gridView": "عرض شبكي",
     "addTaskPosition": "موضع إضافة المهمة",
     "addToTop": "إضافة للأعلى",
     "addToBottom": "إضافة للأسفل"
@@ -1063,7 +1051,13 @@
       }
     }
   },
+	"navbar": {
+    "kanbanBoard": "لوحة كانبان",
+    "calendar": "التقويم",
+    "todos": "المهام"
+  },
   "nav": {
+		
     "brand": {
       "portalTitle": "بوابة",
       "superAdminPortal": "بوابة المدير الأعلى",
@@ -1258,7 +1252,8 @@
     "roles": {
       "admin": "أدمن",
       "coach": "مدرب",
-      "user": "مستخدم"
+      "user": "مستخدم",
+      "client": "متدرب"
     },
     "subscription": {
       "start": "بداية الاشتراك",

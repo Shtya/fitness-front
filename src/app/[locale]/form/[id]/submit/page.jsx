@@ -289,7 +289,7 @@ function PhoneField({
 
 				<div
 					dir="ltr"
-					className="relative flex items-center rounded-xl border-2 transition-all duration-300 flex-1 group overflow-hidden"
+					className="relative flex items-center rounded-lg border-2 transition-all duration-300 flex-1 group overflow-hidden"
 					style={
 						hasError
 							? {
@@ -333,7 +333,7 @@ function PhoneField({
 						value={number}
 						onChange={handleNumberChange}
 						disabled={disabled}
-						className="h-[48px] w-full rounded-xl py-3 text-base font-medium outline-none placeholder:font-normal bg-transparent disabled:cursor-not-allowed transition-all duration-300"
+						className="h-[48px] w-full rounded-lg py-3 text-base font-medium outline-none placeholder:font-normal bg-transparent disabled:cursor-not-allowed transition-all duration-300"
 						aria-invalid={!!hasError}
 						style={{
 							paddingLeft: 'calc(3rem)',
@@ -352,7 +352,7 @@ function PhoneField({
 					)}
 
 					<div
-						className="absolute inset-0 rounded-xl pointer-events-none transition-all duration-300 opacity-0 group-focus-within:opacity-100"
+						className="absolute inset-0 rounded-lg pointer-events-none transition-all duration-300 opacity-0 group-focus-within:opacity-100"
 						style={{
 							boxShadow: hasError
 								? '0 0 0 4px rgba(244, 63, 94, 0.15)'
@@ -363,7 +363,7 @@ function PhoneField({
 
 					{!hasError && (
 						<div
-							className="absolute inset-0 rounded-xl pointer-events-none transition-opacity duration-300 opacity-0 group-focus-within:opacity-5"
+							className="absolute inset-0 rounded-lg pointer-events-none transition-opacity duration-300 opacity-0 group-focus-within:opacity-5"
 							style={{
 								background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
 							}}
@@ -448,7 +448,7 @@ const Textarea = forwardRef(function Textarea(
 			)}
 
 			<div
-				className={`${cnInput} relative flex items-start rounded-xl border-2 transition-all duration-300 group overflow-hidden`}
+				className={`${cnInput} relative flex items-start rounded-lg border-2 transition-all duration-300 group overflow-hidden`}
 				style={
 					hasError
 						? {
@@ -529,7 +529,7 @@ const Textarea = forwardRef(function Textarea(
 				)}
 
 				<div
-					className="absolute inset-0 rounded-xl pointer-events-none transition-all duration-300 opacity-0 group-focus-within:opacity-100"
+					className="absolute inset-0 rounded-lg pointer-events-none transition-all duration-300 opacity-0 group-focus-within:opacity-100"
 					style={{
 						boxShadow: hasError
 							? '0 0 0 4px rgba(244, 63, 94, 0.15)'
@@ -540,7 +540,7 @@ const Textarea = forwardRef(function Textarea(
 
 				{!hasError && (
 					<div
-						className="absolute inset-0 rounded-xl pointer-events-none transition-opacity duration-300 opacity-0 group-focus-within:opacity-5"
+						className="absolute inset-0 rounded-lg pointer-events-none transition-opacity duration-300 opacity-0 group-focus-within:opacity-5"
 						style={{
 							background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
 						}}
@@ -637,7 +637,7 @@ const Input = forwardRef(function Input(
 			)}
 
 			<div
-				className="relative flex items-center group rounded-xl border-2 bg-white transition-all duration-300"
+				className="relative flex items-center group rounded-lg border-2 bg-white transition-all duration-300"
 				style={
 					disabled
 						? {
@@ -689,7 +689,7 @@ const Input = forwardRef(function Input(
 					onChange={handleChange}
 					onBlur={handleBlur}
 					onFocus={() => setIsFocused(true)}
-					className="h-12 w-full rounded-xl py-3 text-base font-medium outline-none placeholder:text-slate-400 placeholder:font-normal bg-transparent"
+					className="h-12 w-full rounded-lg py-3 text-base font-medium outline-none placeholder:text-slate-400 placeholder:font-normal bg-transparent"
 					style={{
 						paddingLeft: icon ? '3rem' : '1rem',
 						paddingRight: clearable && hasValue ? '3rem' : '1rem',
@@ -716,7 +716,7 @@ const Input = forwardRef(function Input(
 
 				{!error && (
 					<div
-						className="absolute inset-0 rounded-xl pointer-events-none transition-opacity duration-300 opacity-0 group-focus-within:opacity-5"
+						className="absolute inset-0 rounded-lg pointer-events-none transition-opacity duration-300 opacity-0 group-focus-within:opacity-5"
 						style={{
 							background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
 						}}
@@ -793,7 +793,7 @@ function InlineSelect({
 				ref={buttonRef}
 				onClick={() => (open ? closeMenu() : setOpen(true))}
 				disabled={disabled}
-				className="h-12 w-full inline-flex items-center justify-between rounded-xl border-2 bg-white px-4 py-3 text-base font-medium cursor-pointer transition-all duration-300 outline-none"
+				className="h-12 w-full inline-flex items-center justify-between rounded-lg border-2 bg-white px-4 py-3 text-base font-medium cursor-pointer transition-all duration-300 outline-none"
 				style={
 					disabled
 						? {
@@ -827,7 +827,7 @@ function InlineSelect({
 			{open && (
 				<div
 					ref={listRef}
-					className="absolute z-50 mt-2 w-full max-h-60 overflow-auto rounded-xl border-2 bg-white shadow-2xl"
+					className="absolute z-50 mt-2 w-full max-h-60 overflow-auto rounded-lg border-2 bg-white shadow-2xl"
 					style={{ borderColor: colors.primary[200] }}
 				>
 					<ul className="py-1">
@@ -1064,7 +1064,7 @@ function Select({
 				onClick={() => (open ? closeMenu() : openMenu())}
 				onKeyDown={onKeyDown}
 				disabled={disabled}
-				className="h-12 group relative w-full inline-flex items-center justify-between rounded-xl border-2 bg-white px-4 py-3 text-base font-medium cursor-pointer transition-all duration-300 outline-none"
+				className="h-12 group relative w-full inline-flex items-center justify-between rounded-lg border-2 bg-white px-4 py-3 text-base font-medium cursor-pointer transition-all duration-300 outline-none"
 				style={
 					disabled
 						? {
@@ -1141,7 +1141,7 @@ function Select({
 					>
 						<div
 							ref={listRef}
-							className="max-h-80 overflow-auto rounded-xl border-2 bg-white shadow-2xl ring-1 ring-black/5"
+							className="max-h-80 overflow-auto rounded-lg border-2 bg-white shadow-2xl ring-1 ring-black/5"
 							style={{ borderColor: colors.primary[200] }}
 							onKeyDown={onKeyDown}
 						>
@@ -1590,7 +1590,7 @@ export default function FormSubmissionPage() {
 								key={opt}
 								whileHover={{ scale: 1.02 }}
 								whileTap={{ scale: 0.98 }}
-								className="group relative flex items-center justify-between gap-3 rounded-xl border-2 p-4 cursor-pointer transition-all duration-200"
+								className="group relative flex items-center justify-between gap-3 rounded-lg border-2 p-4 cursor-pointer transition-all duration-200"
 								style={{
 									borderColor: active ? colors.primary[500] : colors.primary[200],
 									background: active ? `linear-gradient(135deg, ${colors.primary[50]}, white)` : 'white',
@@ -1710,7 +1710,7 @@ export default function FormSubmissionPage() {
 								value={fieldValue}
 								onChange={([date]) => setValue(field.key, date, { shouldValidate: true })}
 								options={{ dateFormat: 'Y-m-d', allowInput: true }}
-								className="w-full h-12 pl-4 pr-12 border-2 rounded-xl shadow-sm transition-all duration-200 text-base font-medium outline-none bg-white"
+								className="w-full h-12 pl-4 pr-12 border-2 rounded-lg shadow-sm transition-all duration-200 text-base font-medium outline-none bg-white"
 								placeholder={field.placeholder || t('fields.date.placeholder')}
 								style={{
 									borderColor: error ? '#f43f5e' : colors.primary[300],
@@ -1835,7 +1835,7 @@ export default function FormSubmissionPage() {
 			</div>
 
 			<div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-				<div className="bg-white shadow-xl rounded-2xl overflow-hidden border" style={{ borderColor: colors.primary[200] }}>
+				<div className="bg-white shadow-xl rounded-lg overflow-hidden border" style={{ borderColor: colors.primary[200] }}>
 					<div className="px-6 sm:px-8 py-6 border-b" style={{ background: `linear-gradient(to right, ${colors.primary[50]}, white)`, borderColor: colors.primary[200] }}>
 						<div className="flex items-center gap-3 animate-pulse">
 							<div className="h-8 w-32 rounded-full" style={{ backgroundColor: colors.primary[200] }} />
@@ -1849,11 +1849,11 @@ export default function FormSubmissionPage() {
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 								<div className="space-y-2">
 									<div className="h-4 w-20 rounded" style={{ backgroundColor: colors.primary[200] }} />
-									<div className="h-12 w-full rounded-xl" style={{ backgroundColor: colors.primary[200] }} />
+									<div className="h-12 w-full rounded-lg" style={{ backgroundColor: colors.primary[200] }} />
 								</div>
 								<div className="space-y-2">
 									<div className="h-4 w-20 rounded" style={{ backgroundColor: colors.primary[200] }} />
-									<div className="h-12 w-full rounded-xl" style={{ backgroundColor: colors.primary[200] }} />
+									<div className="h-12 w-full rounded-lg" style={{ backgroundColor: colors.primary[200] }} />
 								</div>
 							</div>
 						</section>
@@ -1863,9 +1863,9 @@ export default function FormSubmissionPage() {
 
 			<div className="fixed bottom-6 left-0 right-0 px-4 sm:px-6 lg:px-8 pointer-events-none">
 				<div className="max-w-5xl mx-auto">
-					<div className="rounded-2xl bg-white shadow-2xl border p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-pulse pointer-events-auto" style={{ borderColor: colors.primary[200] }}>
+					<div className="rounded-lg bg-white shadow-2xl border p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-pulse pointer-events-auto" style={{ borderColor: colors.primary[200] }}>
 						<div className="h-4 w-56 rounded" style={{ backgroundColor: colors.primary[200] }} />
-						<div className="h-12 w-full sm:w-44 rounded-xl" style={{ backgroundColor: colors.primary[200] }} />
+						<div className="h-12 w-full sm:w-44 rounded-lg" style={{ backgroundColor: colors.primary[200] }} />
 					</div>
 				</div>
 			</div>
@@ -1932,12 +1932,12 @@ export default function FormSubmissionPage() {
 			</motion.div>
 
 			<form onSubmit={handleSubmit(onSubmit)} className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-				<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white shadow-xl rounded-2xl overflow-visible border" style={{ borderColor: colors.primary[200] }}>
+				<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white shadow-xl rounded-lg overflow-visible border" style={{ borderColor: colors.primary[200] }}>
 					<div className="p-6 sm:p-8 space-y-12">
 						<motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} aria-labelledby="contact-info" className="space-y-5">
 							<div className="flex items-center gap-3">
 								<div
-									className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
+									className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg"
 									style={{
 										background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
 										boxShadow: `0 4px 12px ${colors.primary[200]}`,
@@ -1978,7 +1978,7 @@ export default function FormSubmissionPage() {
 							<motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} aria-labelledby="additional-info" className="space-y-5">
 								<div className="flex items-center gap-3">
 									<div
-										className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
+										className="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg"
 										style={{
 											background: `linear-gradient(135deg, ${colors.secondary[500]}, ${colors.secondary[600]})`,
 											boxShadow: `0 4px 12px ${colors.secondary[200]}`,
@@ -2018,9 +2018,9 @@ export default function FormSubmissionPage() {
 						className="fixed bottom-6 left-0 right-0 px-4 sm:px-6 lg:px-8 pointer-events-none z-30"
 					>
 						<div className="max-w-5xl mx-auto">
-							<div className=" max-md:flex-row max-md:justify-center rounded-2xl bg-white/95 backdrop-blur-xl shadow-2xl border-2 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pointer-events-auto" style={{ borderColor: colors.primary[200] }}>
+							<div className=" max-md:flex-row max-md:justify-center rounded-lg bg-white/95 backdrop-blur-xl shadow-2xl border-2 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pointer-events-auto" style={{ borderColor: colors.primary[200] }}>
 								<div className="flex items-center gap-3">
-									<div className="hidden sm:flex w-10 h-10 rounded-xl items-center justify-center" style={{ background: `linear-gradient(135deg, ${colors.primary[100]}, ${colors.primary[50]})` }}>
+									<div className="hidden sm:flex w-10 h-10 rounded-lg items-center justify-center" style={{ background: `linear-gradient(135deg, ${colors.primary[100]}, ${colors.primary[50]})` }}>
 										<FiAlertCircle style={{ color: colors.primary[600] }} size={20} />
 									</div>
 									<p className=" w-full max-md:text-sm max-md:text-center text-base font-medium" style={{ color: colors.primary[700] }}>
@@ -2033,7 +2033,7 @@ export default function FormSubmissionPage() {
 									disabled={isSubmitting}
 									whileHover={{ scale: 1.02 }}
 									whileTap={{ scale: 0.98 }}
-									className=" max-md:w-fit max-md:px-4 w-full sm:w-auto px-8 py-3 max-md:py-4 rounded-xl font-semibold text-white shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+									className=" max-md:w-fit max-md:px-4 w-full sm:w-auto px-8 py-3 max-md:py-4 rounded-lg font-semibold text-white shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
 									style={{
 										background: `linear-gradient(to right, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
 										boxShadow: `0 4px 12px ${colors.primary[200]}`,
@@ -2085,7 +2085,7 @@ function PrettyFileInput({
 			</label>
 
 			<div
-				className="rounded-2xl border-2 p-4 transition-all duration-300 bg-white"
+				className="rounded-lg border-2 p-4 transition-all duration-300 bg-white"
 				style={
 					disabled
 						? { borderColor: colors.primary[200], backgroundColor: colors.primary[50], opacity: 0.7 }
@@ -2134,7 +2134,7 @@ function PrettyFileInput({
 									if (inputRef.current) inputRef.current.value = '';
 									onClear();
 								}}
-								className="px-3 h-10 rounded-xl border text-base font-semibold transition-all"
+								className="px-3 h-10 rounded-lg border text-base font-semibold transition-all"
 								style={{ borderColor: colors.primary[200], color: colors.primary[700] }}
 							>
 								{t('fileInput.remove_all')}
@@ -2145,7 +2145,7 @@ function PrettyFileInput({
 							type="button"
 							disabled={disabled}
 							onClick={() => inputRef.current?.click()}
-							className="px-4 h-10 rounded-xl text-base font-semibold text-white shadow-lg transition-all active:scale-[0.98]"
+							className="px-4 h-10 rounded-lg text-base font-semibold text-white shadow-lg transition-all active:scale-[0.98]"
 							style={{
 								background: `linear-gradient(to right, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
 								opacity: disabled ? 0.6 : 1,

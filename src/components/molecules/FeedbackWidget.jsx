@@ -78,8 +78,8 @@ function FeedbackWidget({ collapsed }) {
 				aria-label={t('floatingButtonAria')}
 				className={
 					collapsed
-						? 'flex items-center justify-center w-12 h-12 rounded-2xl text-white shadow-xl hover:shadow-2xl transition-all duration-300 relative overflow-hidden'
-						: 'flex items-center gap-3 h-12 px-5 rounded-2xl font-bold text-white shadow-xl hover:shadow-2xl transition-all duration-300 w-full justify-center relative overflow-hidden'
+						? 'flex items-center justify-center w-12 h-12 rounded-lg text-white shadow-xl hover:shadow-2xl transition-all duration-300 relative overflow-hidden'
+						: 'flex items-center gap-3 h-12 px-5 rounded-lg font-bold text-white shadow-xl hover:shadow-2xl transition-all duration-300 w-full justify-center relative overflow-hidden'
 				}
 				style={{
 					background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
@@ -148,7 +148,7 @@ function FeedbackWidget({ collapsed }) {
 							onClick={(e) => e.stopPropagation()}
 						>
 							<div 
-								className="relative w-full max-w-md rounded-3xl border-2 bg-white shadow-2xl overflow-hidden"
+								className="relative w-full max-w-md rounded-lg border-2 bg-white shadow-2xl overflow-hidden"
 								style={{
 									borderColor: 'var(--color-primary-200)',
 									boxShadow: '0 25px 50px -12px var(--color-primary-500)'
@@ -170,7 +170,7 @@ function FeedbackWidget({ collapsed }) {
 									<div className="flex items-start justify-between gap-3">
 										<div className="flex items-start gap-3">
 											<div
-												className=" flex-none w-12 h-12 rounded-xl grid place-content-center text-white shadow-lg"
+												className=" flex-none w-12 h-12 rounded-lg grid place-content-center text-white shadow-lg"
 												style={{
 													background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
 													boxShadow: `0 4px 12px -2px var(--color-primary-500)`
@@ -192,7 +192,7 @@ function FeedbackWidget({ collapsed }) {
 											whileHover={{ scale: 1.1, rotate: 90 }}
 											whileTap={{ scale: 0.9 }}
 											onClick={() => setOpen(false)}
-											className="h-10 w-10 flex-none rounded-xl border-2 border-slate-200 hover:bg-slate-50 grid place-content-center transition-all"
+											className="h-10 w-10 flex-none rounded-lg border-2 border-slate-200 hover:bg-slate-50 grid place-content-center transition-all"
 											aria-label={t('close')}
 										>
 											<X className="h-5 w-5 text-slate-600" strokeWidth={2.5} />
@@ -210,7 +210,7 @@ function FeedbackWidget({ collapsed }) {
 										<Select value={type} onValueChange={setType}>
 											<SelectTrigger 
 												id="type" 
-												className="h-11 rounded-xl border-2 transition-all focus:ring-2"
+												className="h-11 rounded-lg border-2 transition-all focus:ring-2"
 												style={{
 													borderColor: 'var(--color-primary-200)',
 													'--tw-ring-color': 'var(--color-primary-300)'
@@ -251,7 +251,7 @@ function FeedbackWidget({ collapsed }) {
 											placeholder={t('titlePlaceholder')}
 											value={title}
 											onChange={(e) => setTitle(e.target.value)}
-											className="h-11 rounded-xl border-2 transition-all focus:ring-2"
+											className="h-11 rounded-lg border-2 transition-all focus:ring-2"
 											style={{
 												borderColor: 'var(--color-primary-200)',
 												'--tw-ring-color': 'var(--color-primary-300)'
@@ -270,7 +270,7 @@ function FeedbackWidget({ collapsed }) {
 											placeholder={t('detailsPlaceholder')}
 											value={description}
 											onChange={(e) => setDescription(e.target.value)}
-											className="rounded-xl border-2 transition-all focus:ring-2 resize-none"
+											className="rounded-lg border-2 transition-all focus:ring-2 resize-none"
 											style={{
 												borderColor: 'var(--color-primary-200)',
 												'--tw-ring-color': 'var(--color-primary-300)'
@@ -292,7 +292,7 @@ function FeedbackWidget({ collapsed }) {
 											placeholder={t('emailPlaceholder')}
 											value={email}
 											onChange={(e) => setEmail(e.target.value)}
-											className="h-11 rounded-xl border-2 transition-all focus:ring-2"
+											className="h-11 rounded-lg border-2 transition-all focus:ring-2"
 											style={{
 												borderColor: 'var(--color-primary-200)',
 												'--tw-ring-color': 'var(--color-primary-300)'
@@ -307,7 +307,7 @@ function FeedbackWidget({ collapsed }) {
 												initial={{ opacity: 0, y: -10 }}
 												animate={{ opacity: 1, y: 0 }}
 												exit={{ opacity: 0, y: -10 }}
-												className="p-3 rounded-xl bg-red-50 border-2 border-red-200"
+												className="p-3 rounded-lg bg-red-50 border-2 border-red-200"
 											>
 												<p className="text-sm font-semibold text-red-700">{error}</p>
 											</motion.div>
@@ -317,7 +317,7 @@ function FeedbackWidget({ collapsed }) {
 												initial={{ opacity: 0, y: -10 }}
 												animate={{ opacity: 1, y: 0 }}
 												exit={{ opacity: 0, y: -10 }}
-												className="p-3 rounded-xl border-2"
+												className="p-3 rounded-lg border-2"
 												style={{
 													backgroundColor: 'var(--color-primary-50)',
 													borderColor: 'var(--color-primary-200)'
@@ -339,7 +339,7 @@ function FeedbackWidget({ collapsed }) {
 										disabled={isSubmitting}
 										whileHover={{ scale: 1.02 }}
 										whileTap={{ scale: 0.98 }}
-										className="w-full h-12 rounded-xl font-bold text-white shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+										className="w-full h-12 rounded-lg font-bold text-white shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
 										style={{
 											background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
 											boxShadow: `0 4px 12px -2px var(--color-primary-500)`

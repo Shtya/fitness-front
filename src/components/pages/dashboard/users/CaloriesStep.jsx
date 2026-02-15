@@ -171,12 +171,12 @@ export default function CaloriesStep({ userId, initialValues = {}, onBack, onNex
                 type='number'
                 {...field}
                 placeholder={t('placeholders.calories') || '2200'}
-                className='bg-white h-[48px] w-full rounded-xl ltr:pl-10 rtl:pr-10 ltr:pr-16 rtl:pl-16 text-sm font-semibold border transition-all duration-200 outline-none'
+                className='bg-white h-[48px] w-full rounded-lg ltr:pl-10 rtl:pr-10 ltr:pr-16 rtl:pl-16 text-sm font-semibold border transition-all duration-200 outline-none'
                 style={{ borderColor: errors.caloriesTarget ? '#fca5a5' : '#cbd5e1' }}
                 onFocus={e => applyFocus(e.target)}
                 onBlur={e => removeFocus(e.target, !!errors.caloriesTarget)}
               />
-              <span className='absolute rtl:left-3.5 ltr:right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md'>
+              <span className='absolute rtl:left-3.5 ltr:right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg'>
                 kcal
               </span>
               {errors.caloriesTarget?.message && (
@@ -212,7 +212,7 @@ export default function CaloriesStep({ userId, initialValues = {}, onBack, onNex
                         type='number'
                         {...field}
                         placeholder={card.placeholder}
-                        className='bg-white h-[44px] w-full rounded-xl ltr:pl-3 rtl:pr-3 ltr:pr-10 rtl:pl-10 text-sm font-semibold border transition-all duration-200 outline-none'
+                        className='bg-white h-[44px] w-full rounded-lg ltr:pl-3 rtl:pr-3 ltr:pr-10 rtl:pl-10 text-sm font-semibold border transition-all duration-200 outline-none'
                         style={{ borderColor: errors[card.name] ? '#fca5a5' : '#cbd5e1' }}
                         onFocus={e => applyFocus(e.target)}
                         onBlur={e => removeFocus(e.target, !!errors[card.name])}
@@ -278,7 +278,7 @@ export default function CaloriesStep({ userId, initialValues = {}, onBack, onNex
               {...field}
               rows={3}
               placeholder={t('calories.notesPh') || 'Add any dietary preferences, allergies, or notes...'}
-              className='bg-white w-full rounded-xl px-3.5 py-3 text-sm border transition-all duration-200 outline-none resize-none'
+              className='bg-white w-full rounded-lg px-3.5 py-3 text-sm border transition-all duration-200 outline-none resize-none'
               style={{ borderColor: errors.notes ? '#fca5a5' : '#cbd5e1' }}
               onFocus={e => applyFocus(e.target)}
               onBlur={e => removeFocus(e.target, !!errors.notes)}

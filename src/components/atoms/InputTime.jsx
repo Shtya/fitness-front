@@ -210,7 +210,7 @@ export function TimeField({
             width: 440,
             zIndex: 9999000000,
           }}
-          className='overflow-hidden rounded-xl shadow-2xl ring-1 ring-slate-200/80 backdrop-blur-sm'>
+          className='overflow-hidden rounded-lg shadow-2xl ring-1 ring-slate-200/80 backdrop-blur-sm'>
 
 
           <div className='relative overflow-hidden bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] px-5 py-4'>

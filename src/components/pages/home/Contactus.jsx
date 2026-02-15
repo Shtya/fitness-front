@@ -263,7 +263,7 @@ export default function ContactUsNew() {
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
-                          className="absolute left-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 shadow-2xl"
+                          className="absolute left-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-lg border border-slate-700 bg-slate-800 shadow-2xl"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {countryCodes.map((country) => (
@@ -320,7 +320,7 @@ export default function ContactUsNew() {
                           setFormData((p) => ({ ...p, teamSize: option.id }))
                         }
                         className={[
-                          "flex w-full items-start gap-4 rounded-2xl border-2 p-5 text-left transition-all",
+                          "flex w-full items-start gap-4 rounded-lg border-2 p-5 text-left transition-all",
                           isSelected
                             ? "border-[color:var(--color-primary-500)] bg-white/5"
                             : "border-gray-700 bg-transparent hover:border-gray-600",
@@ -330,7 +330,7 @@ export default function ContactUsNew() {
                       >
                         <div
                           className={[
-                            "flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl",
+                            "flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg",
                             isSelected ? "theme-gradient-bg" : "bg-gray-800",
                           ].join(" ")}
                         >
@@ -376,7 +376,7 @@ export default function ContactUsNew() {
               <motion.button
                 type="submit"
                 disabled={isSubmitting}
-                className="group relative w-full overflow-hidden rounded-2xl px-8 py-5 text-lg font-bold text-white shadow-xl disabled:cursor-not-allowed disabled:opacity-50 theme-gradient-bg"
+                className="group relative w-full overflow-hidden rounded-lg px-8 py-5 text-lg font-bold text-white shadow-xl disabled:cursor-not-allowed disabled:opacity-50 theme-gradient-bg"
                 whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
                 whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
               >
@@ -417,7 +417,7 @@ export default function ContactUsNew() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.97 }}
                 transition={{ duration: 0.5 }}
-                className="relative overflow-hidden rounded-3xl border border-slate-700/50 bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.45)]"
+                className="relative overflow-hidden rounded-lg border border-slate-700/50 bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.45)]"
               >
                 {/* animated theme overlay */}
                 <motion.div
@@ -430,7 +430,7 @@ export default function ContactUsNew() {
                 <div className="relative border-b border-slate-700/50 p-8">
                   <div className="flex items-center gap-4">
                     <motion.div
-                      className="flex h-16 w-16 items-center justify-center rounded-2xl shadow-xl theme-gradient-bg"
+                      className="flex h-16 w-16 items-center justify-center rounded-lg shadow-xl theme-gradient-bg"
                       whileHover={{ rotate: [0, -10, 10, -10, 0], scale: 1.08 }}
                       transition={{ duration: 0.5 }}
                     >

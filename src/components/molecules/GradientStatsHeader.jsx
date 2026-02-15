@@ -31,7 +31,7 @@ export function GradientStatsHeader({
 			initial={{ opacity: 0, y: 20 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={smoothSpring}
-			className={`relative overflow-hidden rounded-3xl border-2 shadow-md backdrop-blur-xl ${className}`}
+			className={`relative overflow-hidden rounded-lg border-2 shadow-md backdrop-blur-xl ${className}`}
 			style={{
 				borderColor: 'var(--color-primary-300)',
 			}}
@@ -130,7 +130,7 @@ export function GradientStatsHeader({
 						{Icon && (
 							<motion.div
 								whileHover={{ scale: 1.1, rotate: 5 }}
-								className='flex-shrink-0 w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm grid place-content-center shadow-xl border-2 border-white/30'
+								className='flex-shrink-0 w-16 h-16 rounded-lg bg-white/20 backdrop-blur-sm grid place-content-center shadow-xl border-2 border-white/30'
 							>
 								<Icon className='w-8 h-8 text-white' strokeWidth={2.5} />
 							</motion.div>
@@ -180,7 +180,7 @@ export function GradientStatsHeader({
 								whileHover={{ scale: 1.05, y: -2 }}
 								whileTap={{ scale: 0.95 }}
 								onClick={onClick}
-								className='group relative inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white border-2 border-white/30 bg-white/20 hover:bg-white/30 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all overflow-hidden'
+								className='group relative inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-bold text-white border-2 border-white/30 bg-white/20 hover:bg-white/30 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all overflow-hidden'
 							>
 
 								<motion.div
@@ -266,7 +266,7 @@ function KpiSkeleton() {
 					initial={{ opacity: 0, scale: 0.9 }}
 					animate={{ opacity: 1, scale: 1 }}
 					transition={{ delay: i * 0.1, ...smoothSpring }}
-					className='relative overflow-hidden rounded-2xl border-2 border-white/20 bg-white/10 backdrop-blur-sm p-5'
+					className='relative overflow-hidden rounded-lg border-2 border-white/20 bg-white/10 backdrop-blur-sm p-5'
 				>
 
 					<motion.div
@@ -284,7 +284,7 @@ function KpiSkeleton() {
 
 					<div className='relative flex items-center gap-4'>
 
-						<div className='flex-shrink-0 w-12 h-12 rounded-xl bg-white/20 animate-pulse' />
+						<div className='flex-shrink-0 w-12 h-12 rounded-lg bg-white/20 animate-pulse' />
 
 
 						<div className='flex-1'>
@@ -304,14 +304,14 @@ export function KpiCard({ icon: Icon, label, value, trend, trendValue, loading }
 
 	if (loading) {
 		return (
-			<div className='relative overflow-hidden rounded-2xl border-2 border-white/20 bg-white/10 backdrop-blur-sm p-5'>
+			<div className='relative overflow-hidden rounded-lg border-2 border-white/20 bg-white/10 backdrop-blur-sm p-5'>
 				<motion.div
 					className='absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent'
 					animate={{ x: ['-100%', '100%'] }}
 					transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
 				/>
 				<div className='relative flex items-center gap-4'>
-					<div className='w-12 h-12 rounded-xl bg-white/20 animate-pulse' />
+					<div className='w-12 h-12 rounded-lg bg-white/20 animate-pulse' />
 					<div className='flex-1'>
 						<div className='h-3 bg-white/20 rounded-full w-20 mb-2 animate-pulse' />
 						<div className='h-5 bg-white/30 rounded-full w-16 animate-pulse' />
@@ -325,7 +325,7 @@ export function KpiCard({ icon: Icon, label, value, trend, trendValue, loading }
 		<motion.div
 			whileHover={{ scale: 1.03, y: -4 }}
 			whileTap={{ scale: 0.98 }}
-			className='group relative overflow-hidden rounded-2xl border-2 border-white/20 bg-white/10 backdrop-blur-sm p-5 cursor-pointer transition-all hover:border-white/40 hover:shadow-2xl'
+			className='group relative overflow-hidden rounded-lg border-2 border-white/20 bg-white/10 backdrop-blur-sm p-5 cursor-pointer transition-all hover:border-white/40 hover:shadow-2xl'
 		>
 
 			<div className='absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300' />
@@ -346,7 +346,7 @@ export function KpiCard({ icon: Icon, label, value, trend, trendValue, loading }
 					<motion.div
 						whileHover={{ rotate: 360 }}
 						transition={{ duration: 0.6, ease: 'easeInOut' }}
-						className='flex-shrink-0 w-12 h-12 rounded-xl bg-white/20 grid place-content-center shadow-lg'
+						className='flex-shrink-0 w-12 h-12 rounded-lg bg-white/20 grid place-content-center shadow-lg'
 					>
 						<Icon className='w-6 h-6 text-white' strokeWidth={2.5} />
 					</motion.div>

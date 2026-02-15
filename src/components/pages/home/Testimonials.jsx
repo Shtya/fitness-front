@@ -166,14 +166,14 @@ export default function Testimonials() {
               >
                 <div
                   className={[
-                    "relative overflow-hidden rounded-3xl border border-slate-700/50",
+                    "relative overflow-hidden rounded-lg border border-slate-700/50",
                     "bg-gradient-to-br from-slate-800/80 to-slate-900/80 p-12 backdrop-blur-xl",
                     "shadow-[0_25px_50px_-12px_rgba(0,0,0,0.45)]",
                   ].join(" ")}
                 >
                   {/* Animated glow shell (theme gradient) */}
                   <motion.div
-                    className="pointer-events-none absolute -inset-1 rounded-3xl opacity-20 blur-2xl theme-gradient-bg"
+                    className="pointer-events-none absolute -inset-1 rounded-lg opacity-20 blur-2xl theme-gradient-bg"
                     animate={{ opacity: [0.18, 0.28, 0.18] }}
                     transition={{ duration: 3, repeat: Infinity }}
                   />
@@ -181,7 +181,7 @@ export default function Testimonials() {
                   <div className="relative z-10">
                     {/* Quote icon */}
                     <motion.div
-                      className="absolute -left-6 -top-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-700 to-slate-800 shadow-xl"
+                      className="absolute -left-6 -top-6 flex h-16 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-slate-700 to-slate-800 shadow-xl"
                       initial={{ scale: 0, rotate: -180 }}
                       animate={{ scale: 1, rotate: 0 }}
                       transition={{ type: "spring", stiffness: 200, delay: 0.2 }}

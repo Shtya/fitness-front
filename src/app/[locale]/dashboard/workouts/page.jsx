@@ -335,7 +335,7 @@ export default function ExercisesPage() {
               value={searchText}
               onChange={e => setSearchText(e.target.value)}
               placeholder={t('placeholders.search')}
-              className='themed-search h-11 w-full px-8 rounded-xl border text-sm outline-none transition-all duration-200'
+              className='themed-search h-11 w-full px-8 rounded-lg border text-sm outline-none transition-all duration-200'
               style={{
                 borderColor: 'var(--color-primary-200)',
                 background: 'white',
@@ -377,7 +377,7 @@ export default function ExercisesPage() {
             {/* Sort button */}
             <button
               onClick={() => toggleSort('created_at')}
-              className='inline-flex items-center gap-2 rounded-xl px-3 h-11 text-sm font-medium transition-all duration-200 active:scale-[.97]'
+              className='inline-flex items-center gap-2 rounded-lg px-3 h-11 text-sm font-medium transition-all duration-200 active:scale-[.97]'
               style={{
                 borderWidth: 1,
                 borderColor: 'var(--color-primary-200)',
@@ -405,7 +405,7 @@ export default function ExercisesPage() {
 
       {/* Error banner */}
       {err ? (
-        <div className='p-3 rounded-xl border text-sm' style={{ background: '#fef2f2', borderColor: '#fecaca', color: '#b91c1c' }}>
+        <div className='p-3 rounded-lg border text-sm' style={{ background: '#fef2f2', borderColor: '#fecaca', color: '#b91c1c' }}>
           {err}
         </div>
       ) : null}
@@ -469,7 +469,7 @@ const GridView = memo(({ loading, items, onView, onEdit, onDelete, onDuplicate, 
     return (
       <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'>
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className='relative overflow-hidden rounded-xl border shadow-sm' style={{ borderColor: 'var(--color-primary-200)', background: 'white' }}>
+          <div key={i} className='relative overflow-hidden rounded-lg border shadow-sm' style={{ borderColor: 'var(--color-primary-200)', background: 'white' }}>
             <div className='aspect-video w-full overflow-hidden'>
               <div className='h-full w-full animate-shimmer' style={{ background: 'linear-gradient(90deg, var(--color-primary-50) 25%, var(--color-primary-100) 50%, var(--color-primary-50) 75%)', backgroundSize: '200% 100%' }} />
             </div>
@@ -486,8 +486,8 @@ const GridView = memo(({ loading, items, onView, onEdit, onDelete, onDuplicate, 
 
   if (!items?.length) {
     return (
-      <div className='rounded-xl border p-12 text-center shadow-sm' style={{ borderColor: 'var(--color-primary-200)', background: 'white' }}>
-        <div className='mx-auto w-16 h-16 rounded-xl grid place-content-center' style={{ background: 'var(--color-primary-50)' }}>
+      <div className='rounded-lg border p-12 text-center shadow-sm' style={{ borderColor: 'var(--color-primary-200)', background: 'white' }}>
+        <div className='mx-auto w-16 h-16 rounded-lg grid place-content-center' style={{ background: 'var(--color-primary-50)' }}>
           <Dumbbell className='w-8 h-8' style={{ color: 'var(--color-primary-500)' }} />
         </div>
         <h3 className='mt-4 text-lg font-semibold' style={{ color: 'var(--color-primary-800)' }}>{t('empty.title')}</h3>
@@ -510,12 +510,12 @@ const GridView = memo(({ loading, items, onView, onEdit, onDelete, onDuplicate, 
             initial={{ opacity: 0, y: 12, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={spring}
-            className='group relative overflow-hidden rounded-xl border shadow-sm transition-shadow duration-300 hover:shadow-md'
+            className='group relative overflow-hidden rounded-lg border shadow-sm transition-shadow duration-300 hover:shadow-md'
             style={{ borderColor: 'var(--color-primary-200)', background: 'white' }}>
 
             {/* Hover gradient glow border */}
             <div
-              className='pointer-events-none absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300'
+              className='pointer-events-none absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300'
               style={{
                 background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
                 WebkitMaskImage: 'linear-gradient(#000 50%, transparent)',
@@ -528,7 +528,7 @@ const GridView = memo(({ loading, items, onView, onEdit, onDelete, onDuplicate, 
                 opacity: 0.12 !important;
               }
             `}</style>
-            <div className='card-glow-inner pointer-events-none absolute inset-0 rounded-xl transition-opacity duration-300' style={{
+            <div className='card-glow-inner pointer-events-none absolute inset-0 rounded-lg transition-opacity duration-300' style={{
               background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
               opacity: 0,
             }} />
@@ -545,7 +545,7 @@ const GridView = memo(({ loading, items, onView, onEdit, onDelete, onDuplicate, 
 
               {/* Action toolbar */}
               <div className='absolute right-2 top-2'>
-                <div className='flex flex-col items-center gap-1 rounded-xl border px-1 py-1 shadow-md backdrop-blur-sm transition-all duration-200' style={{ background: 'rgba(255,255,255,0.92)', borderColor: 'var(--color-primary-200)' }}>
+                <div className='flex flex-col items-center gap-1 rounded-lg border px-1 py-1 shadow-md backdrop-blur-sm transition-all duration-200' style={{ background: 'rgba(255,255,255,0.92)', borderColor: 'var(--color-primary-200)' }}>
                   <IconBtn title={t('actions.view')} onClick={() => onView?.(e)}>
                     <Eye className='w-4 h-4' style={{ color: 'var(--color-primary-600)' }} />
                   </IconBtn>
@@ -624,7 +624,7 @@ const ExercisePreview = memo(({ exercise, baseMedia = '', t }) => {
     <div className='space-y-5'>
       {/* Media Tabs */}
       {(hasImg || hasVideo) && (
-        <div className='inline-flex items-center gap-1.5 rounded-xl p-1' style={{ background: 'var(--color-primary-50)', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.06)' }}>
+        <div className='inline-flex items-center gap-1.5 rounded-lg p-1' style={{ background: 'var(--color-primary-50)', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.06)' }}>
           {['image', 'video'].map(key => {
             const isActive = tab === key;
             const isDisabled = key === 'image' ? !hasImg : !hasVideo;
@@ -654,17 +654,17 @@ const ExercisePreview = memo(({ exercise, baseMedia = '', t }) => {
       )}
 
       {/* Media Frame */}
-      <div className='relative w-full overflow-hidden rounded-xl shadow-sm' style={{ background: 'var(--color-primary-50)', border: '1px solid var(--color-primary-200)' }}>
+      <div className='relative w-full overflow-hidden rounded-lg shadow-sm' style={{ background: 'var(--color-primary-50)', border: '1px solid var(--color-primary-200)' }}>
         <div className='aspect-[16/9] grid place-items-center'>
           {tab === 'image' && hasImg ? (
             <Img src={exercise.img} alt={exercise?.name || t('titles.untitled')} className='h-full w-full object-contain' draggable={false} loading='eager' />
           ) : tab === 'video' && hasVideo ? (
             <video
               src={exercise?.video?.startsWith('http') ? exercise?.video : baseImg + exercise?.video}
-              controls className='h-full max-h-[400px] w-full object-contain rounded-xl' preload='metadata' />
+              controls className='h-full max-h-[400px] w-full object-contain rounded-lg' preload='metadata' />
           ) : (
             <div className='flex flex-col items-center justify-center gap-2 p-6 text-center'>
-              <div className='grid h-14 w-14 place-items-center rounded-xl' style={{ background: 'var(--color-primary-100)' }}>
+              <div className='grid h-14 w-14 place-items-center rounded-lg' style={{ background: 'var(--color-primary-100)' }}>
                 {tab === 'image'
                   ? <ImageIcon size={22} style={{ color: 'var(--color-primary-400)' }} />
                   : <PlayCircle size={22} style={{ color: 'var(--color-primary-400)' }} />}

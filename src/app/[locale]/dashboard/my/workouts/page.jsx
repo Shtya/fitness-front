@@ -161,9 +161,9 @@ const cx = (...c) => c.filter(Boolean).join(' ');
 
 function ThemeFrame({ children, className = '' }) {
 	return (
-		<div className={cx('md:rounded-2xl md:p-[1px]', className)}>
+		<div className={cx('md:rounded-lg md:p-[1px]', className)}>
 			<div
-				className='md:rounded-2xl md:border md:bg-white/85 md:backdrop-blur-xl'
+				className='md:rounded-lg md:border md:bg-white/85 md:backdrop-blur-xl'
 				style={{
 					borderColor: 'var(--color-primary-200)',
 				}}
@@ -177,7 +177,7 @@ function ThemeFrame({ children, className = '' }) {
 function SoftCard({ children, className = '' }) {
 	return (
 		<div
-			className={cx('rounded-2xl border bg-white', className)}
+			className={cx('rounded-lg border bg-white', className)}
 			style={{
 				borderColor: 'var(--color-primary-200)',
 				boxShadow: '0 1px 0 rgba(15, 23, 42, 0.03), 0 10px 24px rgba(15, 23, 42, 0.06)',
@@ -227,7 +227,7 @@ function GhostBtn({ children, onClick, disabled, title, className = '' }) {
 			title={title}
 			aria-label={title}
 			className={cx(
-				'inline-flex items-center gap-2 h-10 px-3 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed',
+				'inline-flex items-center gap-2 h-10 px-3 rounded-lg border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed',
 				className,
 			)}
 			style={{
@@ -259,7 +259,7 @@ function GradientBtn({ children, onClick, disabled, title, className = '' }) {
 			title={title}
 			aria-label={title}
 			className={cx(
-				'inline-flex items-center gap-2 h-10 px-4 rounded-2xl border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed',
+				'inline-flex items-center gap-2 h-10 px-4 rounded-lg border transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 disabled:opacity-60 disabled:cursor-not-allowed',
 				className,
 			)}
 			style={{
@@ -414,7 +414,7 @@ function NotesModal({ open, onClose, title, notes = [], t }) {
 				animate={{ y: 0, opacity: 1, scale: 1 }}
 				exit={{ y: 22, opacity: 0, scale: 0.98 }}
 				transition={{ type: 'spring', stiffness: 260, damping: 26 }}
-				className='fixed left-1/2 top-[12%] -translate-x-1/2 z-[125] w-[92%] max-w-lg rounded-3xl bg-white shadow-2xl border overflow-hidden'
+				className='fixed left-1/2 top-[12%] -translate-x-1/2 z-[125] w-[92%] max-w-lg rounded-lg bg-white shadow-2xl border overflow-hidden'
 				style={{ borderColor: 'var(--color-primary-200)' }}
 				onClick={e => e.stopPropagation()}
 			>
@@ -433,7 +433,7 @@ function NotesModal({ open, onClose, title, notes = [], t }) {
 					</div>
 					<button
 						onClick={onClose}
-						className='p-2 rounded-2xl hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4'
+						className='p-2 rounded-lg hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4'
 						style={{ ['--tw-ring-color']: 'var(--color-primary-200)' }}
 						aria-label={t('actions.close')}
 						title={t('actions.close')}
@@ -448,7 +448,7 @@ function NotesModal({ open, onClose, title, notes = [], t }) {
 							{notes.map((n, idx) => (
 								<li
 									key={idx}
-									className='rounded-2xl border px-3 py-2 text-sm text-slate-800'
+									className='rounded-lg border px-3 py-2 text-sm text-slate-800'
 									style={{
 										borderColor: 'var(--color-primary-200)',
 										background: 'linear-gradient(135deg, rgba(255,255,255,0.92), var(--color-primary-50))',
@@ -456,7 +456,7 @@ function NotesModal({ open, onClose, title, notes = [], t }) {
 								>
 									<div className='flex items-start gap-2'>
 										<span
-											className='mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-xl text-xs font-extrabold'
+											className='mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-xs font-extrabold'
 											style={{
 												background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 												color: 'white',
@@ -472,7 +472,7 @@ function NotesModal({ open, onClose, title, notes = [], t }) {
 						</ul>
 					) : (
 						<div
-							className='rounded-2xl border bg-white px-3 py-6 text-center text-sm text-slate-500'
+							className='rounded-lg border bg-white px-3 py-6 text-center text-sm text-slate-500'
 							style={{ borderColor: 'var(--color-primary-200)' }}
 						>
 							{t('notes.empty')}
@@ -1187,7 +1187,7 @@ export default function MyWorkoutsPage() {
 	if (loading) {
 		return (
 			<div className='space-y-5 sm:space-y-6 animate-pulse'>
-				<div className='rounded-2xl overflow-hidden border' style={{ borderColor: 'var(--color-primary-200)' }}>
+				<div className='rounded-lg overflow-hidden border' style={{ borderColor: 'var(--color-primary-200)' }}>
 					<div
 						className='relative p-6 text-white'
 						style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
@@ -1205,7 +1205,7 @@ export default function MyWorkoutsPage() {
 				</div>
 				<div className='grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6'>
 					<div className='space-y-4'>
-						<div className='rounded-2xl border border-slate-200 bg-white p-4'>
+						<div className='rounded-lg border border-slate-200 bg-white p-4'>
 							<div className='h-64 bg-slate-200 rounded-lg'></div>
 						</div>
 					</div>
@@ -1227,7 +1227,7 @@ export default function MyWorkoutsPage() {
 
 			{/* HEADER */}
 			<div
-				className='relative overflow-hidden rounded-2xl border bg-white/60 shadow-sm backdrop-blur'
+				className='relative overflow-hidden rounded-lg border bg-white/60 shadow-sm backdrop-blur'
 				style={{ borderColor: 'var(--color-primary-200)' }}
 			>
 				<div className='absolute inset-0 overflow-hidden'>
@@ -1259,7 +1259,7 @@ export default function MyWorkoutsPage() {
 					</div>
 
 					<div className='mt-2 md:mt-4 flex items-center justify-between'>
-						<TabsPill className='!rounded-2xl' sliceInPhone={false} id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={changeDay} />
+						<TabsPill className='!rounded-lg' sliceInPhone={false} id='day-tabs' tabs={dayTabs} active={selectedDay} onChange={changeDay} />
 						<Actions className='max-md:!hidden' />
 					</div>
 				</div>
@@ -1284,9 +1284,9 @@ export default function MyWorkoutsPage() {
 						<ThemeFrame>
 							<div className={cx(' md:p-4', !hasExercises && 'py-6')}>
 								{!hasExercises ? (
-									<div className='relative flex flex-col items-center justify-center rounded-3xl border border-dashed p-6 text-center'>
+									<div className='relative flex flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center'>
 										<div
-											className='mb-4 grid h-16 w-16 place-items-center rounded-3xl'
+											className='mb-4 grid h-16 w-16 place-items-center rounded-lg'
 											style={{
 												background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-secondary-100))',
 												boxShadow: '0 18px 36px rgba(15,23,42,0.12)',
@@ -1303,7 +1303,7 @@ export default function MyWorkoutsPage() {
 
 										<div className={`pt-1 ${sectionTabs?.length == 1 && "hidden"}`}>
 											<div
-												className='rounded-2xl p-1 inline-flex w-full sm:w-auto border backdrop-blur-md shadow-lg relative overflow-hidden'
+												className='rounded-lg p-1 inline-flex w-full sm:w-auto border backdrop-blur-md shadow-lg relative overflow-hidden'
 												style={{
 													borderColor: 'var(--color-primary-200)',
 													background: 'linear-gradient(135deg, rgba(255,255,255,0.9), var(--color-primary-50))',
@@ -1324,7 +1324,7 @@ export default function MyWorkoutsPage() {
 															key={st.key}
 															onClick={() => setActiveSection(st.key)}
 															className={cx(
-																'relative flex-1 sm:flex-none px-3.5 sm:px-4 py-2 text-xs sm:text-sm rounded-xl transition-all duration-300 font-semibold min-h-[38px] sm:min-h-[40px] focus-visible:outline-none focus-visible:ring-3 group',
+																'relative flex-1 sm:flex-none px-3.5 sm:px-4 py-2 text-xs sm:text-sm rounded-lg transition-all duration-300 font-semibold min-h-[38px] sm:min-h-[40px] focus-visible:outline-none focus-visible:ring-3 group',
 																active
 																	? 'text-white scale-[1.02]'
 																	: 'text-slate-600 hover:text-slate-800 hover:scale-[1.01] active:scale-[0.98]',
@@ -1351,7 +1351,7 @@ export default function MyWorkoutsPage() {
 																<>
 																	<motion.span
 																		layoutId='secTab'
-																		className='absolute inset-0 rounded-xl shadow-lg overflow-hidden'
+																		className='absolute inset-0 rounded-lg shadow-lg overflow-hidden'
 																		style={{
 																			background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 																		}}
@@ -1372,13 +1372,13 @@ export default function MyWorkoutsPage() {
 																			ease: 'easeInOut',
 																			delay: 0.1,
 																		}}
-																		className='absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-xl pointer-events-none'
+																		className='absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-lg pointer-events-none'
 																		style={{ width: '50%' }}
 																	/>
 
 																	{/* Subtle inner glow */}
 																	<span
-																		className='absolute inset-0 rounded-xl opacity-50 blur-md'
+																		className='absolute inset-0 rounded-lg opacity-50 blur-md'
 																		style={{
 																			background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 																		}}
@@ -1389,7 +1389,7 @@ export default function MyWorkoutsPage() {
 															{/* Hover background for inactive tabs */}
 															{!active && (
 																<span
-																	className='absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300'
+																	className='absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300'
 																	style={{
 																		background: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.8))',
 																	}}
@@ -1453,7 +1453,7 @@ export default function MyWorkoutsPage() {
 																		{/* Reps Stat */}
 																		<div className='flex items-center gap-2 flex-1'>
 																			<div
-																				className=' border border-white/60 w-9 h-9 rounded-xl flex items-center justify-center shadow-lg'
+																				className=' border border-white/60 w-9 h-9 rounded-lg flex items-center justify-center shadow-lg'
 																				style={{
 																					background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600))',
 																				}}
@@ -1476,7 +1476,7 @@ export default function MyWorkoutsPage() {
 																		{/* Tempo Stat */}
 																		<div className='flex items-center gap-2 flex-1'>
 																			<div
-																				className='w-9 h-9  border border-white/60 rounded-xl flex items-center justify-center shadow-lg'
+																				className='w-9 h-9  border border-white/60 rounded-lg flex items-center justify-center shadow-lg'
 																				style={{
 																					background: 'linear-gradient(135deg, var(--color-primary-400), var(--color-primary-500))',
 																				}}
@@ -1529,14 +1529,14 @@ export default function MyWorkoutsPage() {
 																		: 'bottom-[60px]',
 															)}
 														>
-															<div className='inline-flex max-md:flex-col items-center gap-1 rounded-2xl bg-white/70 p-1 ring-1 ring-black/5 backdrop-blur-md'>
+															<div className='inline-flex max-md:flex-col items-center gap-1 rounded-lg bg-white/70 p-1 ring-1 ring-black/5 backdrop-blur-md'>
 																<button
 																	type='button'
 																	aria-pressed={activeMedia === 'image'}
 																	disabled={!hasImg}
 																	onClick={() => setActiveMedia('image')}
 																	className={cx(
-																		'relative inline-flex items-center w-[38px] h-[38px] justify-center rounded-2xl outline-none transition focus-visible:ring-4',
+																		'relative inline-flex items-center w-[38px] h-[38px] justify-center rounded-lg outline-none transition focus-visible:ring-4',
 																		activeMedia === 'image' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900',
 																		!hasImg && 'opacity-50 cursor-not-allowed',
 																	)}
@@ -1556,7 +1556,7 @@ export default function MyWorkoutsPage() {
 																	disabled={!hasVideo1}
 																	onClick={() => setActiveMedia('video')}
 																	className={cx(
-																		'relative inline-flex items-center w-[38px] h-[38px] justify-center rounded-2xl outline-none transition focus-visible:ring-4',
+																		'relative inline-flex items-center w-[38px] h-[38px] justify-center rounded-lg outline-none transition focus-visible:ring-4',
 																		activeMedia === 'video' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900',
 																		!hasVideo1 && 'opacity-50 cursor-not-allowed',
 																	)}
@@ -1576,7 +1576,7 @@ export default function MyWorkoutsPage() {
 																		aria-pressed={activeMedia === 'video2'}
 																		onClick={() => setActiveMedia('video2')}
 																		className={cx(
-																			'relative inline-flex items-center gap-1.5 px-3 h-[38px] justify-center rounded-2xl outline-none transition focus-visible:ring-4',
+																			'relative inline-flex items-center gap-1.5 px-3 h-[38px] justify-center rounded-lg outline-none transition focus-visible:ring-4',
 																			activeMedia === 'video2' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-700 hover:text-slate-900',
 																		)}
 																		style={{
@@ -1736,7 +1736,7 @@ export default function MyWorkoutsPage() {
 																					onClick={() => bump(s.id, 'weight', -1)}
 																					title={t('minusOne')}
 																					aria-label={t('minusOne')}
-																					className='absolute left-[3px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
+																					className='absolute left-[3px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-lg active:scale-90 transition-all duration-100 hover:scale-105'
 																					style={{
 																						background: 'linear-gradient(135deg, var(--color-primary-50), white)',
 																						border: `1px solid var(--color-primary-200)`,
@@ -1752,7 +1752,7 @@ export default function MyWorkoutsPage() {
 																					onClick={() => bump(s.id, 'weight', +1)}
 																					title={t('plusOne')}
 																					aria-label={t('plusOne')}
-																					className='absolute right-[3px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
+																					className='absolute right-[3px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-lg active:scale-90 transition-all duration-100 hover:scale-105'
 																					style={{
 																						background: 'linear-gradient(135deg, var(--color-primary-50), white)',
 																						border: `1px solid var(--color-primary-200)`,
@@ -1797,7 +1797,7 @@ export default function MyWorkoutsPage() {
 																					onClick={() => bump(s.id, 'reps', -1)}
 																					title={t('minusOne')}
 																					aria-label={t('minusOne')}
-																					className='absolute left-[3px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
+																					className='absolute left-[3px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-lg active:scale-90 transition-all duration-100 hover:scale-105'
 																					style={{
 																						background: 'linear-gradient(135deg, var(--color-primary-50), white)',
 																						border: `1px solid var(--color-primary-200)`,
@@ -1813,7 +1813,7 @@ export default function MyWorkoutsPage() {
 																					onClick={() => bump(s.id, 'reps', +1)}
 																					title={t('plusOne')}
 																					aria-label={t('plusOne')}
-																					className='absolute right-[3px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-md active:scale-90 transition-all duration-100 hover:scale-105'
+																					className='absolute right-[3px] top-1/2 -translate-y-1/2 grid h-[32px] w-[32px] place-items-center rounded-lg active:scale-90 transition-all duration-100 hover:scale-105'
 																					style={{
 																						background: 'linear-gradient(135deg, var(--color-primary-50), white)',
 																						border: `1px solid var(--color-primary-200)`,
@@ -1835,7 +1835,7 @@ export default function MyWorkoutsPage() {
 																					aria-checked={s.done}
 																					onClick={() => toggleDone(s.id)}
 																					aria-label={t('table.done')}
-																					className='relative cursor-pointer flex h-6 w-6 items-center justify-center rounded-md border transition-all duration-200 active:scale-95'
+																					className='relative cursor-pointer flex h-6 w-6 items-center justify-center rounded-lg border transition-all duration-200 active:scale-95'
 																					style={{
 																						borderColor: s.done ? 'var(--color-primary-500)' : 'var(--color-primary-200)',
 																						background: s.done ? 'var(--color-gradient-from)' : 'white',
@@ -1937,7 +1937,7 @@ export default function MyWorkoutsPage() {
 																{lastSyncStatus === 'ok' && (
 																	<Tooltip>
 																		<TooltipTrigger asChild>
-																			<span className='inline-flex items-center justify-center w-9 h-9 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700'>
+																			<span className='inline-flex items-center justify-center w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700'>
 																				<Cloud size={16} />
 																			</span>
 																		</TooltipTrigger>
@@ -1950,7 +1950,7 @@ export default function MyWorkoutsPage() {
 																{lastSyncStatus === 'error' && (
 																	<Tooltip>
 																		<TooltipTrigger asChild>
-																			<span className='inline-flex items-center justify-center w-9 h-9 rounded-md bg-rose-50 border border-rose-200 text-rose-700'>
+																			<span className='inline-flex items-center justify-center w-9 h-9 rounded-lg bg-rose-50 border border-rose-200 text-rose-700'>
 																				<CloudOff size={16} />
 																			</span>
 																		</TooltipTrigger>
@@ -1986,7 +1986,7 @@ export default function MyWorkoutsPage() {
 												<button
 													key={st.key}
 													onClick={() => setActiveSection(st.key)}
-													className='px-3 h-10 rounded-2xl border text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-4'
+													className='px-3 h-10 rounded-lg border text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-4'
 													style={{
 														['--tw-ring-color']: 'var(--color-primary-200)',
 														borderColor: 'var(--color-primary-200)',
@@ -2054,7 +2054,7 @@ function ExerciseNotesBar({ exercise, t }) {
 				background: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.8))',
 				borderColor: 'var(--color-primary-200)',
 			}}
-			className='mt-2 rounded-xl border overflow-hidden'
+			className='mt-2 rounded-lg border overflow-hidden'
 		>
 
 
@@ -2072,7 +2072,7 @@ function ExerciseNotesBar({ exercise, t }) {
 								<div className='flex items-center justify-between gap-2'>
 									<div className='flex items-center gap-1.5 min-w-0'>
 										<div
-											className='flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center'
+											className='flex-shrink-0 w-5 h-5 rounded-lg flex items-center justify-center'
 											style={{
 												background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))',
 											}}
@@ -2103,7 +2103,7 @@ function ExerciseNotesBar({ exercise, t }) {
 					>
 						<div className='flex items-start gap-2'>
 							<div
-								className='flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center mt-0.5'
+								className='flex-shrink-0 w-5 h-5 rounded-lg flex items-center justify-center mt-0.5'
 								style={{
 									background: 'linear-gradient(135deg, var(--color-primary-200), var(--color-primary-100))',
 								}}

@@ -148,7 +148,7 @@ export default function AddToHomeGuide({
 					animate={{ opacity: 1, scale: 1, y: 0 }}
 					exit={{ opacity: 0, scale: 0.95, y: 20 }}
 					transition={spring}
-					className="relative w-full max-w-lg rounded-3xl border-2 shadow-2xl overflow-hidden"
+					className="relative w-full max-w-lg rounded-lg border-2 shadow-2xl overflow-hidden"
 					style={{
 						borderColor: 'var(--color-primary-200)',
 						boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.3)',
@@ -220,7 +220,7 @@ export default function AddToHomeGuide({
 							whileHover={{ scale: 1.1, rotate: 90 }}
 							whileTap={{ scale: 0.9 }}
 							onClick={closeGuide}
-							className="absolute top-4 ltr:right-4 rtl:left-4 w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm border-2 border-white/30 grid place-content-center transition-colors hover:bg-white/30"
+							className="absolute top-4 ltr:right-4 rtl:left-4 w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm border-2 border-white/30 grid place-content-center transition-colors hover:bg-white/30"
 							aria-label="Close">
 							<X className="w-5 h-5" strokeWidth={2.5} />
 						</motion.button>
@@ -231,7 +231,7 @@ export default function AddToHomeGuide({
 								initial={{ scale: 0, rotate: -180 }}
 								animate={{ scale: 1, rotate: 0 }}
 								transition={{ delay: 0.2, ...spring }}
-								className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 mb-4">
+								className="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-white/20 backdrop-blur-sm border-2 border-white/30 mb-4">
 								<Smartphone className="w-8 h-8" strokeWidth={2.5} />
 							</motion.div>
 
@@ -260,7 +260,7 @@ export default function AddToHomeGuide({
 								transition={{ delay: 0.5 }}
 								className="mt-4">
 								<Select
-									className="bg-white/10 backdrop-blur-sm border-2 border-white/20 text-white rounded-xl"
+									className="bg-white/10 backdrop-blur-sm border-2 border-white/20 text-white rounded-lg"
 									options={Object.entries(t.raw('browserOptions')).map(([key, label]) => ({
 										label: <MultiLangText>{label}</MultiLangText>,
 										id: key,
@@ -283,7 +283,7 @@ export default function AddToHomeGuide({
 								whileTap={{ scale: 0.98 }}
 								onClick={triggerInstall}
 								disabled={installing}
-								className="w-full rounded-xl py-3.5 font-bold text-white shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+								className="w-full rounded-lg py-3.5 font-bold text-white shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
 								style={{
 									background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
 									boxShadow: '0 8px 24px -8px var(--color-primary-500)',
@@ -341,7 +341,7 @@ export default function AddToHomeGuide({
 										className="flex gap-3 items-start group">
 										{/* Step number */}
 										<span
-											className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white text-sm font-black shadow-lg transition-all duration-200 group-hover:scale-110"
+											className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white text-sm font-black shadow-lg transition-all duration-200 group-hover:scale-110"
 											style={{
 												background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
 											}}>
@@ -376,7 +376,7 @@ export default function AddToHomeGuide({
 								whileHover={{ scale: 1.02 }}
 								whileTap={{ scale: 0.98 }}
 								onClick={closeGuide}
-								className="rounded-xl px-6 py-2.5 font-bold border-2 transition-all duration-200"
+								className="rounded-lg px-6 py-2.5 font-bold border-2 transition-all duration-200"
 								style={{
 									borderColor: 'var(--color-primary-200)',
 									backgroundColor: 'var(--color-primary-50)',

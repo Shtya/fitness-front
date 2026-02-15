@@ -4,7 +4,8 @@ import { useLocale } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from '@/app/[locale]/theme';
+import { Globe } from 'lucide-react';
+
 /* ---------------- helpers: lang & cookie & dir ---------------- */
 function setDocumentLangDir(nextLocale) {
 	if (typeof document === 'undefined') return;
@@ -44,20 +45,15 @@ function swapLocaleInPath(pathname, nextLocale) {
 	return '/' + [nextLocale, ...segs].join('/');
 }
 
-export default function LanguageToggle({ className = '', size = 35 }) {
+export default function LanguageToggle({ collapsed = false , cn }) {
 	const locale = useLocale();
 	const router = useRouter();
 	const pathname = usePathname();
 	const search = useSearchParams();
 	const [isPending, startTransition] = useTransition();
 	const [focused, setFocused] = useState(false);
-	const { colors } = useTheme();
 
 	const isEN = locale === 'en';
-	const W = Math.max(72, Math.floor(size * 2.0));
-	const H = Math.max(28, Math.floor(size));
-	const knob = H - 6;
-
 	const nextLocale = isEN ? 'ar' : 'en';
 	const nextHref = useMemo(() => {
 		const base = swapLocaleInPath(pathname || '/', nextLocale);
@@ -79,34 +75,26 @@ export default function LanguageToggle({ className = '', size = 35 }) {
 		setDocumentLangDir(locale);
 	}, [locale]);
 
-	return (
-		<motion.button
-			type='button'
-			onClick={toggle}
-			onFocus={() => setFocused(true)}
-			onBlur={() => setFocused(false)}
-			aria-label={isEN ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
-			className={[
-				'relative inline-flex select-none items-center rounded-md',
-				'border-2 shadow-sm hover:shadow-md',
-				'active:scale-[0.98] transition-all',
-				'focus:outline-none',
-				className
-			].join(' ')}
-			style={{ 
-				height: H, 
-				width: W,
-				background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
-				borderColor: 'var(--color-primary-400)',
-				boxShadow: `0 4px 12px -2px var(--color-primary-500)`
-			}}
-			whileTap={{ scale: 0.96 }}
-			whileHover={{ scale: 1.02 }}
-		>
-			{/* Shimmer effect */}
-			<span className='pointer-events-none absolute inset-0 overflow-hidden rounded-xl'>
+	if (collapsed) {
+		return (
+			<motion.button
+				type='button'
+				onClick={toggle}
+				onFocus={() => setFocused(true)}
+				onBlur={() => setFocused(false)}
+				aria-label={isEN ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
+				className={`relative w-full h-11 rounded-lg border-2 shadow-sm hover:shadow-md active:scale-[0.98] transition-all focus:outline-none overflow-hidden group ${cn}`}
+				style={{ 
+					background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
+					borderColor: 'var(--color-primary-400)',
+					boxShadow: `0 4px 12px -2px var(--color-primary-500)`
+				}}
+				whileTap={{ scale: 0.96 }}
+				whileHover={{ scale: 1.02 }}
+			>
+				{/* Shimmer effect */}
 				<motion.span 
-					className='absolute -top-1/2 left-0 right-0 h-full translate-y-1/2 rotate-12 bg-white/20'
+					className='pointer-events-none absolute -top-1/2 left-0 right-0 h-full translate-y-1/2 rotate-12 bg-white/20'
 					animate={{
 						x: ['-100%', '100%']
 					}}
@@ -116,80 +104,170 @@ export default function LanguageToggle({ className = '', size = 35 }) {
 						ease: "linear"
 					}}
 				/>
+
+				{/* Focus ring */}
 				<AnimatePresence>
 					{focused && (
 						<motion.span
-							className='absolute inset-0 rounded-xl ring-2 ring-white/60'
+							className='absolute inset-0 rounded-lg ring-2 ring-white/60'
 							initial={{ opacity: 0 }}
 							animate={{ opacity: 1 }}
 							exit={{ opacity: 0 }}
 						/>
 					)}
 				</AnimatePresence>
-			</span>
 
-			{/* Labels */}
-			<div dir='ltr' className='relative z-10 flex w-full items-center justify-between px-2 text-[12px] font-black text-white tracking-wide'>
-				<motion.span
-					aria-hidden
-					className={`${isEN ? 'opacity-60' : 'opacity-100 text-slate-900'} font-en mt-1`}
+				{/* Globe icon with current locale */}
+				<div className={`relative z-10 flex flex-col items-center justify-center h-full text-white `}>
+					<Globe className={`w-5 h-5 mb-0.5 ${cn && "hidden"}`} strokeWidth={2.5} />
+					<motion.span
+						className="text-[10px] font-black tracking-wider"
+						animate={{ 
+							scale: [1, 1.1, 1]
+						}}
+						transition={{
+							duration: 2,
+							repeat: Infinity,
+							ease: "easeInOut"
+						}}
+					>
+						{locale.toUpperCase()}
+					</motion.span>
+				</div>
+
+				{/* Loading overlay */}
+				<AnimatePresence>
+					{isPending && (
+						<motion.span
+							className='pointer-events-none absolute inset-0 z-20 rounded-lg bg-white/20 backdrop-blur-sm grid place-items-center'
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+						>
+							<motion.div
+								animate={{ rotate: 360 }}
+								transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+								className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+							/>
+						</motion.span>
+					)}
+				</AnimatePresence>
+			</motion.button>
+		);
+	}
+
+	// Expanded state - full width toggle
+	return (
+		<motion.button
+			type='button'
+			onClick={toggle}
+			onFocus={() => setFocused(true)}
+			onBlur={() => setFocused(false)}
+			aria-label={isEN ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
+			className="relative w-full h-11 rounded-lg border-2 shadow-sm hover:shadow-md active:scale-[0.98] transition-all focus:outline-none overflow-hidden"
+			style={{ 
+				background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
+				borderColor: 'var(--color-primary-400)',
+				boxShadow: `0 4px 12px -2px var(--color-primary-500)`
+			}}
+			whileTap={{ scale: 0.98 }}
+			whileHover={{ scale: 1.01 }}
+		>
+			{/* Shimmer effect */}
+			<motion.span 
+				className='pointer-events-none absolute -top-1/2 left-0 right-0 h-full translate-y-1/2 rotate-12 bg-white/20'
+				animate={{
+					x: ['-100%', '100%']
+				}}
+				transition={{
+					duration: 3,
+					repeat: Infinity,
+					ease: "linear"
+				}}
+			/>
+
+			{/* Focus ring */}
+			<AnimatePresence>
+				{focused && (
+					<motion.span
+						className='absolute inset-0 rounded-lg ring-2 ring-white/60'
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+					/>
+				)}
+			</AnimatePresence>
+
+			{/* Container for labels and knob */}
+			<div className="relative z-10 h-full flex items-center px-2">
+				{/* Left side - AR */}
+				<motion.div
+					className="flex-1 flex items-center justify-center gap-2"
 					animate={{ 
 						opacity: isEN ? 0.6 : 1,
-						scale: isEN ? 0.9 : 1
+						scale: isEN ? 0.95 : 1
 					}}
 					transition={{ duration: 0.2 }}
 				>
-					AR
-				</motion.span>
-				<motion.span
-					aria-hidden
-					className={`${!isEN ? 'opacity-60' : 'opacity-100 text-slate-900'} font-en mt-1`}
+					<Globe className={`w-4 h-4 text-white ${isEN ? 'stroke-white' : 'stroke-slate-900'}`} strokeWidth={2.5} />
+					<span className={`text-sm font-black tracking-wide ${isEN ? 'text-white' : 'text-slate-900'}`}>
+						العربية
+					</span>
+				</motion.div>
+
+				{/* Divider */}
+				<div className="h-6 w-px bg-white/30" />
+
+				{/* Right side - EN */}
+				<motion.div
+					className="flex-1 flex items-center justify-center gap-2"
 					animate={{ 
 						opacity: !isEN ? 0.6 : 1,
-						scale: !isEN ? 0.9 : 1
+						scale: !isEN ? 0.95 : 1
 					}}
 					transition={{ duration: 0.2 }}
 				>
-					EN
-				</motion.span>
-			</div>
+					<Globe className={`w-4 h-4 text-white ${!isEN ? 'stroke-white' : 'stroke-slate-900'}`} strokeWidth={2.5} />
+					<span className={`text-sm font-black tracking-wide ${!isEN ? 'text-white ' : 'text-slate-900'}`}>
+						English
+					</span>
+				</motion.div>
 
-			{/* Knob */}
-			<motion.span
-				layout
-				className='absolute rounded-sm bg-white shadow-lg'
-				style={{
-					width: knob,
-					height: knob,
-					top: 1,
-					left: isEN ? W - knob - 5 : 1,
-				}}
-				transition={{ type: 'spring', stiffness: 380, damping: 28, mass: 0.7 }}
-			>
-				<span className='pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br from-white/70 to-white/40' />
-				
-				{/* Animated glow on knob */}
-				<motion.span
-					className='absolute inset-0 rounded-xl'
+				{/* Sliding background indicator */}
+				<motion.div
+					className="absolute top-1 bottom-1 rounded-lg bg-[var(--primary-color-50)/30] shadow-lg"
+					initial={false}
 					animate={{
-						boxShadow: [
-							'0 0 0 0 rgba(255,255,255,0.4)',
-							'0 0 0 4px rgba(255,255,255,0)',
-						]
+						left: isEN ? 'calc(50% + 1px)' : '4px',
+						right: isEN ? '4px' : 'calc(50% + 1px)',
 					}}
-					transition={{
-						duration: 1.5,
-						repeat: Infinity,
-						ease: "easeInOut"
-					}}
-				/>
-			</motion.span>
+					transition={{ type: 'spring', stiffness: 380, damping: 28, mass: 0.7 }}
+				>
+					<span className='pointer-events-none absolute inset-0 rounded-lg bg-gradient-to-br from-white/70 to-white/40' />
+					
+					{/* Animated glow */}
+					<motion.span
+						className='absolute inset-0 rounded-lg'
+						animate={{
+							boxShadow: [
+								'0 0 0 0 rgba(255,255,255,0.4)',
+								'0 0 0 4px rgba(255,255,255,0)',
+							]
+						}}
+						transition={{
+							duration: 1.5,
+							repeat: Infinity,
+							ease: "easeInOut"
+						}}
+					/>
+				</motion.div>
+			</div>
 
 			{/* Loading overlay */}
 			<AnimatePresence>
 				{isPending && (
 					<motion.span
-						className='pointer-events-none absolute inset-0 z-10 rounded-xl bg-white/20 backdrop-blur-sm grid place-items-center'
+						className='pointer-events-none absolute inset-0 z-20 rounded-lg bg-white/20 backdrop-blur-sm grid place-items-center'
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
@@ -197,11 +275,11 @@ export default function LanguageToggle({ className = '', size = 35 }) {
 						<motion.div
 							animate={{ rotate: 360 }}
 							transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-							className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+							className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
 						/>
 					</motion.span>
 				)}
 			</AnimatePresence>
 		</motion.button>
 	);
-} 
+}

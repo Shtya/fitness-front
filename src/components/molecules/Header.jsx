@@ -1,5 +1,5 @@
 'use client';
-
+ 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, LogOut, Sparkles, AlertCircle } from 'lucide-react';
@@ -16,11 +16,7 @@ function initialsFrom(name, email) {
   return src.slice(0, 2).toUpperCase();
 }
 
-function fmtRole(role) {
-  if (!role) return 'Guest';
-  return role[0].toUpperCase() + role.slice(1);
-}
-
+ 
 export default function Header({ onMenu }) {
   const t = useTranslations('header');
   const t_myProfile = useTranslations('');
@@ -178,7 +174,9 @@ export default function Header({ onMenu }) {
           {/* RIGHT SECTION */}
           <div className="flex items-center gap-2">
             {/* Language Toggle */}
-            <LanguageToggle />
+            <div className='flex-none w-[50px] ' >
+							<LanguageToggle collapsed={true} cn={" !h-9 "} />
+						</div>
 
             {/* Logout Button */}
             <div className="relative" ref={logoutRef}>
@@ -186,7 +184,7 @@ export default function Header({ onMenu }) {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowLogoutConfirm(true)}
-                className="inline-flex items-center justify-center w-9 h-9 rounded-md transition-all duration-200 relative overflow-hidden group"
+                className="inline-flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 relative overflow-hidden group"
                 style={{
                   background: 'linear-gradient(135deg, #ef4444, #dc2626)',
                   boxShadow: '0 2px 8px -1px rgba(239, 68, 68, 0.4)',
@@ -221,7 +219,7 @@ export default function Header({ onMenu }) {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
                     transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    className="absolute rtl:left-0 ltr:right-0 top-[calc(100%+8px)] w-72 rounded-2xl overflow-hidden shadow-2xl"
+                    className="absolute rtl:left-0 ltr:right-0 top-[calc(100%+8px)] w-72 rounded-lg overflow-hidden shadow-2xl"
                     style={{
                       background: 'rgba(255, 255, 255, 0.98)',
                       backdropFilter: 'blur(20px)',

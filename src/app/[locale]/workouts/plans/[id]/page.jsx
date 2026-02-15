@@ -173,7 +173,7 @@ const openAndScrollTo = (idx) => {
         {status === 'loading' && <LoadingSkeleton />}
 
         {status === 'error' && (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-700">
+          <div className="rounded-lg border border-rose-200 bg-rose-50 p-5 text-rose-700">
             <p className="text-sm">{error || t('cantLoad')}</p>
             <div className="mt-3">
               <button onClick={load} className="btn-subtle">
@@ -191,10 +191,10 @@ const openAndScrollTo = (idx) => {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-[280px,1fr]">
             {/* Index – Desktop */}
             <aside className="hidden md:block">
-              <nav className="sticky top-[96px] rounded-2xl border border-indigo-100 bg-white p-3 shadow-sm">
+              <nav className="sticky top-[96px] rounded-lg border border-indigo-100 bg-white p-3 shadow-sm">
                 <div className="mb-2 flex items-center justify-between px-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500">{t('index')}</p>
-                  <div className="inline-flex items-center rounded-xl border border-slate-200 bg-white p-0.5 shadow-sm">
+                  <div className="inline-flex items-center rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
                     <motion.button
                       whileTap={{ scale: 0.97 }}
                       onClick={expandAll}
@@ -233,7 +233,7 @@ const openAndScrollTo = (idx) => {
                         <button
                           onClick={() => openAndScrollTo(idx)}
                           className={[
-                            'w-full group flex items-center justify-between rounded-xl px-2 py-1.5 text-sm transition',
+                            'w-full group flex items-center justify-between rounded-lg px-2 py-1.5 text-sm transition',
                             isActive
                               ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200'
                               : 'text-slate-700 hover:bg-slate-50',
@@ -268,7 +268,7 @@ const openAndScrollTo = (idx) => {
                     key={idKey}
                     id={idKey}
                     ref={(el) => (sectionsRef.current[idKey] = el)}
-                    className="scroll-mt-28 rounded-2xl border border-indigo-100 bg-white/70 shadow-sm"
+                    className="scroll-mt-28 rounded-lg border border-indigo-100 bg-white/70 shadow-sm"
                     initial={{ opacity: 0, y: 8 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: '-10% 0% -10% 0%' }}
@@ -280,7 +280,7 @@ const openAndScrollTo = (idx) => {
                       aria-expanded={open}
                     >
                       <div className="flex min-w-0 items-center gap-3">
-                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-[13px] font-bold text-indigo-700 ring-1 ring-indigo-200">
+                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-[13px] font-bold text-indigo-700 ring-1 ring-indigo-200">
                           {idx + 1}
                         </span>
                         <div className="min-w-0">
@@ -348,7 +348,7 @@ function ExerciseCard({ ex, t, index = 0, dir = 'ltr' }) {
   const startClass = dir === 'rtl' ? 'end-2' : 'start-2';
 
   return (
-    <motion.li variants={fadeUp} className="group relative overflow-hidden rounded-2xl border border-indigo-100 bg-white shadow-sm transition hover:shadow-md">
+    <motion.li variants={fadeUp} className="group relative overflow-hidden rounded-lg border border-indigo-100 bg-white shadow-sm transition hover:shadow-md">
       <div className="relative">
         {/* Media */}
         <div className="relative h-44 w-full overflow-hidden bg-gradient-to-b from-indigo-50 to-slate-50">
@@ -466,7 +466,7 @@ function VideoModal({ title, src, onClose }) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 8, scale: 0.98 }}
         transition={{ duration: 0.2 }}
-        className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white"
+        className="w-full max-w-3xl overflow-hidden rounded-lg bg-white"
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
           <h4 className="text-sm font-semibold text-slate-900">{title}</h4>
@@ -497,7 +497,7 @@ function ActionsClient({ t }) {
       <button
         type="button"
         onClick={handleShare}
-        className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-300/30"
+        className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-300/30"
         title={t('share')}
       >
         <ShareIcon className="h-4 w-4" />
@@ -507,7 +507,7 @@ function ActionsClient({ t }) {
       <button
         type="button"
         onClick={() => copyLink(t)}
-        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30"
+        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30"
         title={t('copy')}
       >
         <CopyIcon className="h-4 w-4" />
@@ -517,7 +517,7 @@ function ActionsClient({ t }) {
       <button
         type="button"
         onClick={() => window.print()}
-        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30"
+        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30"
         title={t('print')}
       >
         <PrintIcon className="h-4 w-4" />
@@ -553,10 +553,10 @@ function LoadingSkeleton() {
   return (
     <div className="space-y-6">
       {[...Array(3)].map((_, i) => (
-        <div key={i} className="rounded-2xl border border-indigo-100 bg-white shadow-sm">
+        <div key={i} className="rounded-lg border border-indigo-100 bg-white shadow-sm">
           <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
             <div className="flex items-center gap-3">
-              <span className="h-8 w-8 animate-pulse rounded-xl bg-indigo-100" />
+              <span className="h-8 w-8 animate-pulse rounded-lg bg-indigo-100" />
               <div>
                 <div className="h-3 w-40 animate-pulse rounded bg-slate-200" />
                 <div className="mt-1 h-2 w-24 animate-pulse rounded bg-slate-200" />
@@ -566,8 +566,8 @@ function LoadingSkeleton() {
           </div>
           <div className="grid grid-cols-1 gap-4 px-4 py-4 sm:grid-cols-2 lg:grid-cols-4">
             {[...Array(3)].map((_, j) => (
-              <div key={j} className="rounded-2xl border border-slate-200 bg-white p-3">
-                <div className="h-44 w-full animate-pulse rounded-xl bg-slate-100" />
+              <div key={j} className="rounded-lg border border-slate-200 bg-white p-3">
+                <div className="h-44 w-full animate-pulse rounded-lg bg-slate-100" />
                 <div className="mt-3 h-3 w-36 animate-pulse rounded bg-slate-200" />
                 <div className="mt-2 flex gap-2">
                   <div className="h-5 w-20 animate-pulse rounded-full bg-slate-200" />
@@ -585,8 +585,8 @@ function LoadingSkeleton() {
 
 function EmptyState({ title, subtitle }) {
   return (
-    <div className="rounded-3xl border border-indigo-100 bg-white p-10 text-center shadow-sm">
-      <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-indigo-50" />
+    <div className="rounded-lg border border-indigo-100 bg-white p-10 text-center shadow-sm">
+      <div className="mx-auto mb-3 h-12 w-12 rounded-lg bg-indigo-50" />
       <h3 className="text-base font-semibold text-slate-900">{title}</h3>
       <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
     </div>
@@ -735,7 +735,7 @@ function StyleHelpers() {
   return (
     <style>{`
       .btn-subtle {
-        @apply inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30;
+        @apply inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30;
       }
       .btn-icon {
         @apply inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50;

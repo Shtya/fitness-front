@@ -78,7 +78,7 @@ export function ExerciseList({
 							}}
 						>
 							<div className='max-lg:p-[2px] lg:p-3 flex items-center gap-3'>
-								<div className='relative max-lg:w-13 max-lg:h-13 w-12 h-12 rounded-md overflow-hidden lg:bg-slate-100 ring-1 ring-slate-200 shrink-0'>
+								<div className='relative max-lg:w-13 max-lg:h-13 w-12 h-12 rounded-lg overflow-hidden lg:bg-slate-100 ring-1 ring-slate-200 shrink-0'>
 									{ex?.img ? (
 										<Img src={ex.img} alt={ex?.name || 'exercise'} className='object-contain w-full h-full' showBlur={false} />
 									) : (
@@ -102,7 +102,7 @@ export function ExerciseList({
 													style={{ width: `${progress}%` }} 
 												/>
 											</div>
-											<div className='absolute top-1 left-1 rounded-md bg-white/90 border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-800'>
+											<div className='absolute top-1 left-1 rounded-lg bg-white/90 border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-800'>
 												{doneLabel}
 											</div>
 										</>
@@ -124,7 +124,7 @@ export function ExerciseList({
 													e.stopPropagation();
 													toggleExerciseCompletion?.(exId);
 												}}
-												className={`cursor-pointer hover:scale-[1.05] origin-center p-1 rounded-md transition-all ${
+												className={`cursor-pointer hover:scale-[1.05] origin-center p-1 rounded-lg transition-all ${
 													isCompleted 
 														? 'theme-primary-bg text-white shadow-lg' 
 														: 'bg-white text-slate-400 border border-slate-300 hover:bg-slate-50'

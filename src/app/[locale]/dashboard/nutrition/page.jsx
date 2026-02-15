@@ -97,7 +97,7 @@ export const MiniField = memo(function MiniField({
 				onChange={onChange}
 				onBlur={onBlur}
 				className={[
-					'h-8 w-full rounded-md border px-2 text-[12px]',
+					'h-8 w-full rounded-lg border px-2 text-[12px]',
 					iconLeft ? 'pl-8' : '',
 					'bg-white outline-none transition',
 					'focus:ring-4 focus:ring-[color:var(--color-primary-200)]/25 focus:border-[color:var(--color-primary-400)]',
@@ -141,7 +141,7 @@ const UnitSelect = memo(function UnitSelect({
 				ref={wrapperRef}
 				className={[
 					cnInputParent,
-					"relative flex items-center rounded-md border  bg-white transition-all duration-200",
+					"relative flex items-center rounded-lg border  bg-white transition-all duration-200",
 					disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
 				].join(" ")} 
 				onMouseEnter={() => {
@@ -285,7 +285,7 @@ function CheckBox({ id = 'custom', label, initialChecked = false, onChange = () 
 				aria-checked={checked}
 				onClick={toggle}
 				onKeyDown={onKeyDown}
-				className={`relative cursor-pointer flex h-7 w-7 items-center justify-center rounded-md border transition-colors duration-300
+				className={`relative cursor-pointer flex h-7 w-7 items-center justify-center rounded-lg border transition-colors duration-300
 					${checked ? 'theme-gradient-bg border-transparent' : 'bg-white border-slate-200'}
 					focus:outline-none focus:ring-2`}
 				style={checked ? {} : { '--tw-ring-color': 'var(--color-primary-200)' }}
@@ -1815,7 +1815,7 @@ export function DangerX({ onClick, title = 'Remove', size = 'md', loading = fals
 						animate={{ opacity: 1, y: 0, scale: 1 }}
 						exit={{ opacity: 0, y: -4, scale: 0.98 }}
 						transition={{ type: 'spring', stiffness: 300, damping: 26 }}
-						className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-red-200 bg-white px-2 py-1 text-[11px] text-red-700 shadow-md"
+						className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-red-200 bg-white px-2 py-1 text-[11px] text-red-700 shadow-md"
 						role="status"
 					>
 						{t('clickAgainToConfirm')}

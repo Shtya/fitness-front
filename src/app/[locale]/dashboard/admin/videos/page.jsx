@@ -20,7 +20,7 @@ function TopBar({ title, subtitle, right }) {
 
 function VideoCard({ v, actions }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-white/10 bg-white/5 shadow-sm">
       <div className="aspect-video w-full bg-zinc-900">
         {v.thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -67,7 +67,7 @@ function VideoCard({ v, actions }) {
           href={v.url}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center justify-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-200"
+          className="inline-flex items-center justify-center rounded-lg bg-white px-3 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-200"
         >
           Watch
         </a>
@@ -80,7 +80,7 @@ function Modal({ open, onClose, title, children, footer }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-zinc-950 p-4 shadow-xl">
+      <div className="w-full max-w-xl rounded-lg border border-white/10 bg-zinc-950 p-4 shadow-xl">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">{title}</h2>
@@ -90,7 +90,7 @@ function Modal({ open, onClose, title, children, footer }) {
           </div>
           <button
             onClick={onClose}
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
           >
             Close
           </button>
@@ -230,13 +230,13 @@ export default function AdminPage() {
           <>
             <a
               href="/client"
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
             >
               Open Client Page
             </a>
             <button
               onClick={openAdd}
-              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-200"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-200"
             >
               + Add Video
             </button>
@@ -245,14 +245,14 @@ export default function AdminPage() {
       />
 
       <div className="mx-auto max-w-6xl px-4 py-6">
-        <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 md:grid-cols-3">
+        <div className="grid gap-3 rounded-lg border border-white/10 bg-white/5 p-4 md:grid-cols-3">
           <div className="md:col-span-2">
             <label className="text-sm text-zinc-300">Search</label>
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search title, tags, تشريح..."
-              className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none focus:border-white/20"
+              className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none focus:border-white/20"
             />
           </div>
 
@@ -261,7 +261,7 @@ export default function AdminPage() {
             <select
               value={cat}
               onChange={(e) => setCat(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-white/10 bg-zinc-950 px-3 py-2 outline-none focus:border-white/20"
+              className="mt-2 w-full rounded-lg border border-white/10 bg-zinc-950 px-3 py-2 outline-none focus:border-white/20"
             >
               <option value="All">All</option>
               {CATEGORIES.map((c) => (
@@ -275,7 +275,7 @@ export default function AdminPage() {
           <div className="flex items-center gap-2 md:col-span-3">
             <button
               onClick={() => setShowHidden((s) => !s)}
-              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
+              className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
             >
               {showHidden ? "Showing hidden" : "Hiding hidden"}
             </button>
@@ -288,7 +288,7 @@ export default function AdminPage() {
         {loading ? (
           <div className="mt-6 text-zinc-400">Loading...</div>
         ) : filtered.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-6 text-zinc-300">
+          <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-6 text-zinc-300">
             No videos found.
           </div>
         ) : (
@@ -301,13 +301,13 @@ export default function AdminPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => openEdit(v)}
-                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10"
+                      className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => remove(v.id)}
-                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10"
+                      className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10"
                     >
                       Delete
                     </button>
@@ -327,14 +327,14 @@ export default function AdminPage() {
           <>
             <button
               onClick={() => setOpen(false)}
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
             >
               Cancel
             </button>
             <button
               disabled={saving || !title.trim() || !url.trim()}
               onClick={save}
-              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-zinc-900 disabled:opacity-50"
+              className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-zinc-900 disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save"}
             </button>
@@ -347,7 +347,7 @@ export default function AdminPage() {
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none focus:border-white/20"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none focus:border-white/20"
               placeholder="مثال: التشريح - عضلات الصدر"
             />
           </div>
@@ -357,7 +357,7 @@ export default function AdminPage() {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="min-h-[80px] rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none focus:border-white/20"
+              className="min-h-[80px] rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none focus:border-white/20"
               placeholder="Short explanation..."
             />
           </div>
@@ -367,7 +367,7 @@ export default function AdminPage() {
             <input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none focus:border-white/20"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none focus:border-white/20"
               placeholder="https://youtube.com/..."
             />
           </div>
@@ -377,7 +377,7 @@ export default function AdminPage() {
             <input
               value={thumbnail}
               onChange={(e) => setThumbnail(e.target.value)}
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none focus:border-white/20"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none focus:border-white/20"
               placeholder="https://image..."
             />
           </div>
@@ -388,7 +388,7 @@ export default function AdminPage() {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="rounded-xl border border-white/10 bg-zinc-950 px-3 py-2 outline-none focus:border-white/20"
+                className="rounded-lg border border-white/10 bg-zinc-950 px-3 py-2 outline-none focus:border-white/20"
               >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>
@@ -402,7 +402,7 @@ export default function AdminPage() {
               <label className="text-sm text-zinc-300">Visibility</label>
               <button
                 onClick={() => setIsPublic((p) => !p)}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left hover:bg-white/10"
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-left hover:bg-white/10"
               >
                 {isPublic ? "Public (client can see)" : "Hidden (admin only)"}
               </button>
@@ -414,7 +414,7 @@ export default function AdminPage() {
             <input
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none focus:border-white/20"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none focus:border-white/20"
               placeholder="تشريح, عضلات, beginner"
             />
           </div>

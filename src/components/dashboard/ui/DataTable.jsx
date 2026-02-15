@@ -124,7 +124,7 @@ export default function DataTable({
   return (
     <div className="w-full">
       <div
-        className="overflow-hidden rounded-2xl   bg-white shadow-sm"
+        className="overflow-hidden rounded-lg   bg-white shadow-sm"
         style={{
           boxShadow:
             '0 1px 0 rgba(15, 23, 42, 0.04), 0 10px 24px rgba(15, 23, 42, 0.06)',
@@ -363,7 +363,7 @@ function PageNumberBtn({ active, children, disabled, onClick, ariaLabel }) {
       onClick={onClick}
       aria-label={ariaLabel}
       title={ariaLabel}
-      className="inline-flex items-center justify-center w-9 h-9 rounded-md border transition-all select-none"
+      className="inline-flex items-center justify-center w-9 h-9 rounded-lg border transition-all select-none"
       style={
         disabled
           ? {
@@ -395,7 +395,7 @@ function PageNumberBtn({ active, children, disabled, onClick, ariaLabel }) {
 function EllipsisPill() {
   return (
     <span
-      className="inline-flex items-center justify-center h-9 px-3 rounded-md border select-none"
+      className="inline-flex items-center justify-center h-9 px-3 rounded-lg border select-none"
       style={{
         borderColor: '#e2e8f0',
         backgroundColor: 'white',
@@ -486,7 +486,7 @@ function DefaultEmptyState() {
   return (
     <div className="text-center py-10">
       <div
-        className="mx-auto w-14 h-14 rounded-xl grid place-items-center mb-3"
+        className="mx-auto w-14 h-14 rounded-lg grid place-items-center mb-3"
         style={{ backgroundColor: 'var(--color-primary-50)' }}
       >
         <Inbox className="w-6 h-6" style={{ color: 'var(--color-primary-400)' }} />

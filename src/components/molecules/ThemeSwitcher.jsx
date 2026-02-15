@@ -83,9 +83,9 @@ function ThemeCard({ themeKey, palette, isActive, onClick }) {
 			whileTap={{ scale: 0.98 }}
 			onClick={onClick}
 			className={cn(
-				'group w-full border border-slate-100 relative rounded-md text-left transition-all duration-300 overflow-hidden',
-				'p-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-				isActive ? 'ring-2 ring-offset-2 shadow-2xl' : 'shadow-lg hover:shadow-2xl',
+				'group w-full  border border-slate-100 relative rounded-lg text-left transition-all duration-300 overflow-hidden',
+				'p-1 focus:outline-none focus-visible:ring-1 focus-visible:ring-offset-1',
+				isActive ? 'ring-1 ring-offset-1 shadow-2xl' : 'shadow-lg hover:shadow-2xl',
 			)}
 			style={{
 				backgroundColor: 'white',
@@ -98,7 +98,7 @@ function ThemeCard({ themeKey, palette, isActive, onClick }) {
 				}}
 			/>
 			<div
-				className='absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500'
+				className='absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500'
 				style={{
 					background: `linear-gradient(135deg, ${palette.gradient.from}22, ${palette.gradient.to}22)`,
 					padding: '1px',
@@ -110,7 +110,7 @@ function ThemeCard({ themeKey, palette, isActive, onClick }) {
 
 			<div className='relative  z-10'>
 				{/* Top gradient bar with shimmer */}
-				<div className='relative overflow-hidden rounded-md  h-14 shadow-lg ring-1 ring-black/5'>
+				<div className='relative overflow-hidden rounded-lg  h-14 shadow-lg ring-1 ring-black/5'>
 					<div
 						className='absolute inset-0'
 						style={{
@@ -136,7 +136,7 @@ function ThemeCard({ themeKey, palette, isActive, onClick }) {
 					/>
 
 					{/* Floating sparkles */}
-					<div className='absolute  top-1/2 -translate-y-1/2  rtl:!left-[20px] ltr:!right-[20px] flex items-center justify-center opacity-70'>
+					<div className='absolute  top-1/2 -translate-y-1/2  rtl:!left-[10px] ltr:!right-[10px] flex items-center justify-center opacity-70'>
 						<Sparkles className='w-6 h-6 text-white' strokeWidth={2} />
 					</div>
 				</div>
@@ -152,7 +152,7 @@ function ThemeCard({ themeKey, palette, isActive, onClick }) {
 							animate={{ opacity: 1, scale: 1 }}
 							transition={{ delay: idx * 0.05 }}>
 							<div
-								className='w-5 h-5 rounded-sm ring-2 ring-white shadow-lg relative overflow-hidden'
+								className='w-5 h-5 rounded-lg ring-2 ring-white shadow-lg relative overflow-hidden'
 								style={{ backgroundColor: color }}>
 								{/* Gloss effect */}
 								<div className='absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent' />
@@ -164,7 +164,7 @@ function ThemeCard({ themeKey, palette, isActive, onClick }) {
 
 				{/* Hover glow effect */}
 				<div
-					className='absolute -inset-2 rounded-2xl opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500 -z-10'
+					className='absolute -inset-2 rounded-lg opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500 -z-10'
 					style={{
 						background: `radial-gradient(circle at 50% 50%, ${palette.gradient.from}33, ${palette.gradient.to}33, transparent 70%)`,
 					}}
@@ -215,7 +215,7 @@ export default function ThemeSwitcher({ collapsed = false }) {
 	}, [open]);
 
 	return (
-		<div className="relative z-[1000]">
+		<div className="relative  z-[100000000]">
 			<motion.button
 				ref={triggerRef}
 				whileHover={{ scale: 1.04, y: -1 }}
@@ -226,7 +226,7 @@ export default function ThemeSwitcher({ collapsed = false }) {
 				className={cn(
 					'group relative overflow-hidden transition-all duration-300',
 					'outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2',
-					collapsed ? 'w-14 h-14 rounded-2xl' : 'w-full h-14 rounded-2xl px-5'
+					collapsed ? 'w-full h-11 rounded-lg' : 'w-full h-11 rounded-lg px-5'
 				)}
 				style={{
 					background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
@@ -271,10 +271,9 @@ export default function ThemeSwitcher({ collapsed = false }) {
 
 					{!collapsed && (
 						<>
-							<motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex-1 text-left">
+							<motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className=" w-fit">
 								<div className="font-black text-sm tracking-tight">{t('trigger')}</div>
-								{currentPalette?.name && <div className="text-xs opacity-90 font-semibold">{currentPalette.name}</div>}
-							</motion.div>
+ 							</motion.div>
 						</>
 					)}
 				</div>
@@ -310,7 +309,7 @@ export default function ThemeSwitcher({ collapsed = false }) {
 						</motion.div>
 
 						<div
-							className="  min-w-[380px] max-w-[480px] overflow-hidden rounded-3xl border border-white/40"
+							className=" w-[350px] max-md:w-[280px]  overflow-hidden rounded-lg border border-white/40"
 							style={{
 								background: 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.98))',
 								backdropFilter: 'blur(20px)',
@@ -325,7 +324,7 @@ export default function ThemeSwitcher({ collapsed = false }) {
 										transition={spring}
 										className="relative shrink-0">
 										<motion.div
-											className="absolute inset-0 rounded-2xl blur-lg"
+											className="absolute inset-0 rounded-lg blur-lg"
 											animate={{
 												scale: [1, 1.2, 1],
 												opacity: [0.5, 0.8, 0.5],
@@ -337,7 +336,7 @@ export default function ThemeSwitcher({ collapsed = false }) {
 										/>
 
 										<div
-											className="relative w-10 h-10 rounded-2xl grid place-content-center text-white shadow-2xl"
+											className="relative w-10 h-10 rounded-lg grid place-content-center text-white shadow-2xl"
 											style={{
 												background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
 											}}>
@@ -357,7 +356,7 @@ export default function ThemeSwitcher({ collapsed = false }) {
 								</div>
 							</div>
 
-							<div className="relative p-5 max-h-[500px] overflow-y-auto custom-scrollbar">
+							<div className="relative p-3 md:p-5 max-h-[500px] overflow-y-auto custom-scrollbar">
 								<motion.div
 									variants={{
 										hidden: { opacity: 0 },
@@ -368,7 +367,7 @@ export default function ThemeSwitcher({ collapsed = false }) {
 									}}
 									initial="hidden"
 									animate="show"
-									className="grid grid-cols-2 gap-3">
+									className="grid grid-cols-2 gap-1 md:gap-3">
 									{themeEntries.map(([key, palette]) => (
 										<motion.div
 											key={key}
