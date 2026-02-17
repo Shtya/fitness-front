@@ -1,12 +1,13 @@
 /* 
- - when finish task go to down 
- - fix reorder not working 
- - 
-*/
+ - make checkbox to make unchecked all task and recheck them and put this action in suitable place  
 
+ - when click on the task title and the subtask show input instead of the title to can edit on it this input without any border or outline to be pretty 
+ - show tool tip on teh sidebar to show the title of rhte folders 
+ - show the time in the card of the task and order by form 01:00AM to 12:00PM as option in the dropdown of the sort 
+*/
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
 	Plus,
 	X,
@@ -42,6 +43,8 @@ import {
 	ArrowUp,
 	ArrowDown,
 	Home,
+	ChevronsUpDown,
+	MoveRight,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -63,10 +66,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// ✅ API helper
 import api from '@/utils/axios';
 
-// Import shadcn components
 import {
 	Dialog,
 	DialogContent,
@@ -88,80 +89,46 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { isArabic } from '@/utils/isArabic';
+import MultiLangText from '@/components/atoms/MultiLangText';
 
-/**
- * ==========================================================
- * ✅ Reorder persistence (easy way): localStorage
- * - We store an "order array" of taskIds per folder scope.
- * - On load (after API fetch), we apply the saved order.
- * - On drag end (manual sort), we persist new order.
- *
- * If you want backend persistence later:
- * - Add a `position` or `order` field in DB, OR
- * - Add endpoint PATCH /todos/reorder { folderId, orderedIds }
- * - Then call it after local save (see commented section).
- * ==========================================================
- */
-
+// ============================================================
+// localStorage order persistence
+// ============================================================
 const LS_ORDER_KEY = 'todo_task_order_v1';
 
-// Helpers for localStorage order map: { [folderId]: string[] }
 function safeParseJSON(str, fallback) {
-	try {
-		return JSON.parse(str);
-	} catch {
-		return fallback;
-	}
+	try { return JSON.parse(str); } catch { return fallback; }
 }
-
 function loadOrderMap() {
 	if (typeof window === 'undefined') return {};
 	const raw = window.localStorage.getItem(LS_ORDER_KEY);
 	return raw ? safeParseJSON(raw, {}) : {};
 }
-
 function saveOrderMap(map) {
 	if (typeof window === 'undefined') return;
 	window.localStorage.setItem(LS_ORDER_KEY, JSON.stringify(map));
 }
-
 function getFolderScopeId(selectedFolder) {
-	// reorder should be persisted for "real" folder scopes only:
-	// - today/starred views are derived, so we store to inbox
-	// - inbox stays inbox
 	if (selectedFolder === 'today' || selectedFolder === 'starred') return 'inbox';
 	return selectedFolder || 'inbox';
 }
-
-// Apply order array to a list of tasks (only within a folder)
 function applyOrderToTasks(allTasks, folderId, orderIds) {
 	if (!Array.isArray(orderIds) || orderIds.length === 0) return allTasks;
-
 	const folderTasks = allTasks.filter((t) => t.folderId === folderId);
 	const otherTasks = allTasks.filter((t) => t.folderId !== folderId);
-
 	const byId = new Map(folderTasks.map((t) => [t.id, t]));
 	const ordered = [];
-
-	// first: tasks that exist in order list
-	for (const id of orderIds) {
-		const task = byId.get(id);
-		if (task) ordered.push(task);
-	}
-
-	// then: tasks not in order list (new tasks) appended at end
-	for (const t of folderTasks) {
-		if (!orderIds.includes(t.id)) ordered.push(t);
-	}
-
+	for (const id of orderIds) { const task = byId.get(id); if (task) ordered.push(task); }
+	for (const t of folderTasks) { if (!orderIds.includes(t.id)) ordered.push(t); }
 	return [...ordered, ...otherTasks];
 }
-
-// Update folder order array based on current folder tasks order
 function computeFolderOrder(allTasks, folderId) {
 	return allTasks.filter((t) => t.folderId === folderId).map((t) => t.id);
 }
 
+// ============================================================
+// CustomCheckbox
+// ============================================================
 function CustomCheckbox({ checked, onCheckedChange, className = '' }) {
 	return (
 		<button
@@ -179,72 +146,27 @@ function CustomCheckbox({ checked, onCheckedChange, className = '' }) {
 		>
 			{checked && (
 				<>
-					<div
-						className="absolute -inset-1 rounded-lg opacity-0 animate-ping"
-						style={{
-							background:
-								'linear-gradient(135deg, var(--color-primary-400), var(--color-secondary-400))',
-							animationDuration: '1s',
-							animationIterationCount: '1',
-						}}
-					/>
+					<div className="absolute -inset-1 rounded-lg opacity-0 animate-ping" style={{ background: 'linear-gradient(135deg, var(--color-primary-400), var(--color-secondary-400))', animationDuration: '1s', animationIterationCount: '1' }} />
 					<div className="absolute inset-0 rounded-lg overflow-hidden">
-						<div
-							className="absolute inset-0 -translate-x-full animate-shimmer"
-							style={{
-								background:
-									'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
-								backgroundSize: '200% 100%',
-								animation: 'shimmer 2s ease-in-out infinite',
-							}}
-						/>
+						<div className="absolute inset-0 -translate-x-full animate-shimmer" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)', backgroundSize: '200% 100%', animation: 'shimmer 2s ease-in-out infinite' }} />
 					</div>
 					<div className="absolute inset-0">
 						{[...Array(6)].map((_, i) => (
-							<div
-								key={i}
-								className="absolute w-1 h-1 rounded-full animate-particle-burst"
-								style={{
-									background:
-										'linear-gradient(135deg, var(--color-primary-300), var(--color-secondary-300))',
-									top: '50%',
-									left: '50%',
-									transform: `rotate(${i * 60}deg) translateY(-12px)`,
-									animation: `particle-burst 0.6s ease-out ${i * 0.05}s`,
-									opacity: 0,
-								}}
-							/>
+							<div key={i} className="absolute w-1 h-1 rounded-full" style={{ background: 'linear-gradient(135deg, var(--color-primary-300), var(--color-secondary-300))', top: '50%', left: '50%', transform: `rotate(${i * 60}deg) translateY(-12px)`, animation: `particle-burst 0.6s ease-out ${i * 0.05}s`, opacity: 0 }} />
 						))}
 					</div>
 				</>
 			)}
-
 			{checked && (
 				<div className="relative w-full h-full flex items-center justify-center">
 					<div className="absolute inset-0 flex items-center justify-center">
-						<div
-							className="w-3 h-3 rounded-full blur-sm opacity-60 animate-pulse"
-							style={{ background: 'rgba(255, 255, 255, 0.5)' }}
-						/>
+						<div className="w-3 h-3 rounded-full blur-sm opacity-60 animate-pulse" style={{ background: 'rgba(255, 255, 255, 0.5)' }} />
 					</div>
-					<Check
-						className="w-4 h-4 text-white relative z-10 drop-shadow-md"
-						style={{
-							animation:
-								'check-draw 0.5s ease-out forwards, check-bounce 0.6s ease-out 0.3s',
-						}}
-					/>
+					<Check className="w-4 h-4 text-white relative z-10 drop-shadow-md" style={{ animation: 'check-draw 0.5s ease-out forwards, check-bounce 0.6s ease-out 0.3s' }} />
 				</div>
 			)}
-
 			{!checked && (
-				<div
-					className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-					style={{
-						background:
-							'radial-gradient(circle, var(--color-primary-100) 0%, transparent 70%)',
-					}}
-				/>
+				<div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'radial-gradient(circle, var(--color-primary-100) 0%, transparent 70%)' }} />
 			)}
 		</button>
 	);
@@ -260,27 +182,23 @@ const styles = `
 `;
 export { styles as checkboxStyles };
 
-// Sound effects
+// ============================================================
+// Sound
+// ============================================================
 const playSound = (type, soundEnabled) => {
 	if (!soundEnabled) return;
-
 	const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 	const oscillator = audioContext.createOscillator();
 	const gainNode = audioContext.createGain();
-
 	oscillator.connect(gainNode);
 	gainNode.connect(audioContext.destination);
-
 	if (type === 'check') {
 		oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime);
 		oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1);
 		oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2);
 		oscillator.type = 'sine';
 		gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-		gainNode.gain.exponentialRampToValueAtTime(
-			0.01,
-			audioContext.currentTime + 0.5
-		);
+		gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
 		oscillator.start(audioContext.currentTime);
 		oscillator.stop(audioContext.currentTime + 0.5);
 	} else if (type === 'uncheck') {
@@ -288,15 +206,15 @@ const playSound = (type, soundEnabled) => {
 		oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1);
 		oscillator.type = 'sine';
 		gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-		gainNode.gain.exponentialRampToValueAtTime(
-			0.01,
-			audioContext.currentTime + 0.3
-		);
+		gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
 		oscillator.start(audioContext.currentTime);
 		oscillator.stop(audioContext.currentTime + 0.3);
 	}
 };
 
+// ============================================================
+// Constants
+// ============================================================
 const priorityLevels = [
 	{ id: 'none', label: 'none', color: 'var(--color-primary-300)', icon: Circle },
 	{ id: 'low', label: 'low', color: 'var(--color-primary-500)', icon: Flag },
@@ -329,16 +247,28 @@ const TAB_OPTIONS = [
 	{ value: 'tasks', label: 'todos', icon: ListTodo },
 ];
 
-// ===== Helpers to normalize backend response =====
+// ============================================================
+// Format time helper: "14:30" → "02:30 PM"
+// ============================================================
+function formatTime12h(timeStr) {
+	if (!timeStr) return '';
+	const [h, m] = timeStr.split(':').map(Number);
+	const period = h >= 12 ? 'PM' : 'AM';
+	const hour = h % 12 || 12;
+	return `${String(hour).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+// ============================================================
+// Normalizers
+// ============================================================
 const normalizeFolder = (f) => ({
 	id: String(f.id ?? f._id ?? f.uuid ?? f.folderId ?? ''),
-	uuid: f.uuid ?? f.id ?? f._id ?? null,   // ✅ keep uuid
+	uuid: f.uuid ?? f.id ?? f._id ?? null,
 	name: f.name ?? '',
 	color: f.color ?? 'var(--color-primary-600)',
 	icon: Folder,
 	isSystem: !!f.isSystem,
 });
-
 
 const normalizeSubtask = (st) => ({
 	id: String(st.id ?? st._id ?? st.uuid ?? ''),
@@ -346,7 +276,6 @@ const normalizeSubtask = (st) => ({
 	completed: !!st.completed,
 	orderIndex: typeof st.orderIndex === 'number' ? st.orderIndex : 0,
 });
-
 
 const normalizeTask = (t) => ({
 	id: String(t.id ?? t._id ?? t.uuid ?? ''),
@@ -364,7 +293,6 @@ const normalizeTask = (t) => ({
 	notes: t.notes ?? '',
 	attachments: Array.isArray(t.attachments) ? t.attachments : [],
 	subtasks: Array.isArray(t.subtasks) ? t.subtasks.map(normalizeSubtask) : [],
-
 	createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
 	updatedAt: t.updatedAt ? new Date(t.updatedAt) : new Date(),
 });
@@ -377,7 +305,9 @@ async function uploadFilesToAssets(files) {
 	}));
 }
 
-// Sortable Subtask Item
+// ============================================================
+// SortableSubtaskItem – inline edit, no border/outline
+// ============================================================
 function SortableSubtaskItem({
 	subtask,
 	onToggle,
@@ -400,25 +330,14 @@ function SortableSubtaskItem({
 
 	const isEditing = editingSubtaskId === subtask.id;
 
-	const handleCheckboxClick = () => onToggle();
-
-	const handleSpanClick = () => {
-		if (!isEditing) onEdit();
-	};
-
 	return (
 		<div ref={setNodeRef} style={style} className="rtl:mr-[-39px] relative group/subtask">
-			<div
-				className={`flex items-center gap-2.5 transition-all duration-200 ${isRTL
-					? 'group-hover/subtask:-translate-x-0.5'
-					: 'group-hover/subtask:translate-x-0.5'
-					}`}
-			>
+			<div className={`flex items-center gap-2.5 transition-all duration-200 ${isRTL ? 'group-hover/subtask:-translate-x-0.5' : 'group-hover/subtask:translate-x-0.5'}`}>
 				<div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1">
 					<GripVertical className="w-3 h-3 text-gray-400" />
 				</div>
 
-				<CustomCheckbox checked={subtask.completed} onCheckedChange={handleCheckboxClick} className="w-4 h-4 shrink-0" />
+				<CustomCheckbox checked={subtask.completed} onCheckedChange={onToggle} className="w-4 h-4 shrink-0" />
 
 				{isEditing ? (
 					<input
@@ -427,17 +346,15 @@ function SortableSubtaskItem({
 						onChange={(e) => setEditSubtaskTitle(e.target.value)}
 						onBlur={onSaveEdit}
 						onKeyDown={(e) => {
-							if (e.key === 'Enter') onSaveEdit();
-							if (e.key === 'Escape') onSaveEdit();
+							if (e.key === 'Enter' || e.key === 'Escape') onSaveEdit();
 						}}
-						className="w-full text-base font-bold bg-transparent border-none focus:outline-none focus:ring-0 px-0"
+						className="flex-1 text-sm font-medium bg-transparent border-none outline-none focus:outline-none focus:ring-0 px-2 py-1"
 						autoFocus
 					/>
 				) : (
 					<span
-						className={`text-sm font-medium flex-1 transition-colors cursor-pointer px-2 py-1 rounded hover:bg-white/30 ${subtask.completed ? 'line-through text-gray-400' : 'text-gray-700'
-							}`}
-						onClick={handleSpanClick}
+						className={`text-sm font-medium flex-1 transition-colors cursor-pointer px-2 py-1 rounded hover:bg-white/30 ${subtask.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}
+						onClick={onEdit}
 					>
 						{subtask.title}
 					</span>
@@ -446,7 +363,7 @@ function SortableSubtaskItem({
 				<Button
 					size="icon"
 					variant="ghost"
-					onClick={() => onDelete()}
+					onClick={onDelete}
 					className="h-6 w-6 opacity-0 group-hover/subtask:opacity-100 transition-opacity"
 				>
 					<X className="w-3 h-3 text-red-600" />
@@ -454,16 +371,16 @@ function SortableSubtaskItem({
 
 				<div
 					className="w-1 h-5 rounded-full opacity-0 group-hover/subtask:opacity-100 transition-all duration-200 shrink-0"
-					style={{
-						background:
-							'linear-gradient(to bottom, var(--color-primary-400), var(--color-secondary-500))',
-					}}
+					style={{ background: 'linear-gradient(to bottom, var(--color-primary-400), var(--color-secondary-500))' }}
 				/>
 			</div>
 		</div>
 	);
 }
 
+// ============================================================
+// SortableTaskItem
+// ============================================================
 function SortableTaskItem({
 	task,
 	onToggle,
@@ -474,23 +391,35 @@ function SortableTaskItem({
 	onToggleSubtask,
 	onUpdateTask,
 	onDeleteSubtask,
+	onReorderSubtasks,
+	onMoveToFolder,
+	folders,
 	t,
-	onReorderSubtasks
 }) {
 	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
 	const [showSubtaskInput, setShowSubtaskInput] = useState(false);
 	const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-	const [editingTask, setEditingTask] = useState(false);
+	const [editingTitle, setEditingTitle] = useState(false);
 	const [editTitle, setEditTitle] = useState(task.title);
 	const [editingSubtaskId, setEditingSubtaskId] = useState(null);
 	const [editSubtaskTitle, setEditSubtaskTitle] = useState('');
+	const [showMoveMenu, setShowMoveMenu] = useState(false);
 	const fileInputRef = useRef(null);
 	const [activeSubtaskId, setActiveSubtaskId] = useState(null);
+	const subtaskInputRef = useRef(null);
+	const moveMenuRef = useRef(null);
 
+	useEffect(() => { setEditTitle(task.title); }, [task.title]);
+
+	// Close move menu on outside click
 	useEffect(() => {
-		setEditTitle(task.title);
-	}, [task.title]);
+		const handler = (e) => {
+			if (moveMenuRef.current && !moveMenuRef.current.contains(e.target)) setShowMoveMenu(false);
+		};
+		document.addEventListener('mousedown', handler);
+		return () => document.removeEventListener('mousedown', handler);
+	}, []);
 
 	const style = {
 		transform: CSS.Transform.toString(transform),
@@ -503,54 +432,33 @@ function SortableTaskItem({
 		if (newSubtaskTitle.trim()) {
 			onAddSubtask(task.id, newSubtaskTitle.trim());
 			setNewSubtaskTitle('');
+			// refocus subtask input
+			setTimeout(() => subtaskInputRef.current?.focus(), 50);
 		}
 	};
 
-	const handleSaveEdit = () => {
+	const handleSaveTitle = () => {
 		if (editTitle.trim() && editTitle !== task.title) {
 			onUpdateTask(task.id, { title: editTitle.trim() });
 		}
-		setEditingTask(false);
+		setEditingTitle(false);
 	};
 
 	const handleFileChange = async (e) => {
 		const files = Array.from(e.target.files || []);
 		if (!files.length) return;
-
 		const newAttachments = await uploadFilesToAssets(files);
-		onUpdateTask(task.id, {
-			attachments: [...(task.attachments || []), ...newAttachments],
-		});
-	};
-
-	const handlePaste = async (e) => {
-		const items = e.clipboardData?.items;
-		if (!items) return;
-
-		const files = [];
-		for (let i = 0; i < items.length; i++) {
-			if (items[i].type.indexOf('image') !== -1) {
-				const blob = items[i].getAsFile();
-				if (blob) files.push(blob);
-			}
-		}
-		if (!files.length) return;
-
-		const newAttachments = await uploadFilesToAssets(files);
-		onUpdateTask(task.id, {
-			attachments: [...(task.attachments || []), ...newAttachments],
-		});
+		onUpdateTask(task.id, { attachments: [...(task.attachments || []), ...newAttachments] });
 	};
 
 	const handleSubtaskDragEnd = (event) => {
 		const { active, over } = event;
 		if (!over || active.id === over.id) return;
-
 		const oldIndex = task.subtasks.findIndex((st) => st.id === active.id);
 		const newIndex = task.subtasks.findIndex((st) => st.id === over.id);
-
-		const reorderedSubtasks = arrayMove(task.subtasks, oldIndex, newIndex);
-		onReorderSubtasks(task.id, reorderedSubtasks);
+		if (oldIndex === -1 || newIndex === -1) return;
+		const reordered = arrayMove(task.subtasks, oldIndex, newIndex);
+		onReorderSubtasks(task.id, reordered);
 	};
 
 	const handleEditSubtask = (subtaskId) => {
@@ -563,115 +471,76 @@ function SortableTaskItem({
 
 	const handleSaveSubtaskEdit = () => {
 		if (editSubtaskTitle.trim() && editingSubtaskId) {
-			const updatedSubtasks = task.subtasks.map((st) =>
+			const updated = task.subtasks.map((st) =>
 				st.id === editingSubtaskId ? { ...st, title: editSubtaskTitle.trim() } : st
 			);
-			onUpdateTask(task.id, { subtasks: updatedSubtasks });
+			onUpdateTask(task.id, { subtasks: updated });
 		}
 		setEditingSubtaskId(null);
 		setEditSubtaskTitle('');
 	};
 
-	const sensors = useSensors(
-		useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-	);
+	const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
-	const isRTL = document.dir === 'rtl' || document.documentElement.dir === 'rtl';
+	const isRTL = typeof document !== 'undefined' && (document.dir === 'rtl' || document.documentElement.dir === 'rtl');
 
 	const handleTaskClick = (e) => {
-		if (
-			e.target.closest('button') ||
-			e.target.closest('input') ||
-			e.target.closest('textarea') ||
-			e.target.tagName === 'INPUT' ||
-			e.target.tagName === 'BUTTON'
-		) {
-			return;
-		}
+		if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
 		onSelect(task);
 	};
 
-	const handleTitleClick = () => setEditingTask(true);
+	// Folders user can move to (exclude current and system today/starred)
+	const movableFolders = folders.filter((f) => {
+		const realFolderId = task.folderId === 'inbox' ? 'inbox' : task.folderId;
+		if (f.id === realFolderId) return false;
+		if (f.id === 'today' || f.id === 'starred') return false;
+		return true;
+	});
 
 	return (
-		<div
-			ref={setNodeRef}
-			style={style}
-			className="group bg-white border border-gray-200 transition-all duration-300 overflow-hidden hover:bg-gray-50"
-		>
+		<div ref={setNodeRef} style={style} className="group bg-white border border-gray-200 transition-all duration-300 overflow-visible hover:bg-gray-50">
 			<div className="py-3 px-5" onClick={handleTaskClick}>
 				<div className="flex items-start gap-4">
-					<div
-						{...attributes}
-						{...listeners}
-						className="shrink-0 cursor-grab active:cursor-grabbing hover:bg-linear-to-br hover:from-(--color-primary-100) hover:to-(--color-secondary-100) rounded-lg p-1.5 transition-all"
-					>
+					<div {...attributes} {...listeners} className="shrink-0 cursor-grab active:cursor-grabbing hover:bg-linear-to-br hover:from-(--color-primary-100) hover:to-(--color-secondary-100) rounded-lg p-1.5 transition-all">
 						<GripVertical className="w-4 h-4 text-gray-400" />
 					</div>
 
-					<CustomCheckbox
-						checked={task.completed}
-						onCheckedChange={() => onToggle(task.id)}
-						className="shrink-0 mt-1"
-					/>
+					<CustomCheckbox checked={task.completed} onCheckedChange={() => onToggle(task.id)} className="shrink-0 mt-1" />
 
 					<div className="flex-1 min-w-0 mt-1">
 						<div className="flex items-start gap-3">
 							<div className="flex-1 min-w-0">
-								<div className="flex-1">
-									{editingTask ? (
-										<div className="space-y-2">
-											<input
-												type="text"
-												value={editTitle}
-												onChange={(e) => setEditTitle(e.target.value)}
-												onBlur={handleSaveEdit}
-												onPaste={handlePaste}
-												onKeyDown={(e) => {
-													if (e.key === 'Enter') handleSaveEdit();
-													if (e.key === 'Escape') setEditingTask(false);
-												}}
-												className="w-full text-base font-bold bg-transparent border-none focus:outline-none focus:ring-0 px-0"
-												autoFocus
-											/>
-											<div className="flex items-center gap-2">
-												<input
-													ref={fileInputRef}
-													type="file"
-													accept="image/*"
-													multiple
-													onChange={handleFileChange}
-													className="hidden"
-												/>
-												<Button
-													type="button"
-													size="sm"
-													variant="outline"
-													onClick={() => fileInputRef.current?.click()}
-												>
-													<Image className="w-3.5 h-3.5 mr-1" />
-													{t('attachImage')}
-												</Button>
-											</div>
-										</div>
-									) : (
-										<h3
-											onClick={handleTitleClick}
-											className={`font-bold font-en text-base leading-tight cursor-pointer hover:text-(--color-primary-600) transition-colors ${task.completed ? 'line-through text-gray-400' : 'text-gray-900'
-												}`}
-										>
-											{task.title}
-										</h3>
-									)}
-								</div>
+								{/* Title – inline edit, no border/outline */}
+								{editingTitle ? (
+									<input
+										type="text"
+										value={editTitle}
+										onChange={(e) => setEditTitle(e.target.value)}
+										onBlur={handleSaveTitle}
+										onKeyDown={(e) => {
+											if (e.key === 'Enter') handleSaveTitle();
+											if (e.key === 'Escape') setEditingTitle(false);
+										}}
+										className="w-full font-bold text-base leading-tight bg-transparent border-none outline-none focus:outline-none focus:ring-0 p-0 text-gray-900"
+										autoFocus
+									/>
+								) : (
+									<MultiLangText onClick={(e) => { e.stopPropagation(); setEditingTitle(true); }} className={`font-bold font-en text-base leading-tight cursor-pointer hover:text-(--color-primary-600) transition-colors ${task.completed ? 'line-through text-gray-400' : 'text-gray-900'}`} >{task.title} </MultiLangText>
+								)}
 
+								{/* Time display */}
+								{task.dueTime && (
+									<div className="flex items-center gap-1 mt-1">
+										<Clock className="w-3 h-3 text-gray-400" />
+										<span className="text-xs text-gray-500 font-medium">{formatTime12h(task.dueTime)}</span>
+									</div>
+								)}
+
+								{/* Attachments */}
 								{task.attachments && task.attachments.length > 0 && (
 									<div className="flex flex-wrap gap-2 mb-2 mt-2">
 										{task.attachments.map((att, idx) => (
-											<div
-												key={idx}
-												className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-200 group/img"
-											>
+											<div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-200 group/img">
 												<img src={att.url} alt={att.name} className="w-full h-full object-cover" />
 												<div className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
 													<Paperclip className="w-4 h-4 text-white" />
@@ -681,6 +550,7 @@ function SortableTaskItem({
 									</div>
 								)}
 
+								{/* Subtasks */}
 								{task.subtasks && task.subtasks.length > 0 && (
 									<div className="mt-4 relative">
 										<DndContext
@@ -692,10 +562,7 @@ function SortableTaskItem({
 												setActiveSubtaskId(null);
 											}}
 										>
-											<SortableContext
-												items={task.subtasks.map((st) => st.id)}
-												strategy={verticalListSortingStrategy}
-											>
+											<SortableContext items={task.subtasks.map((st) => st.id)} strategy={verticalListSortingStrategy}>
 												<div className="space-y-2">
 													{task.subtasks.map((subtask) => (
 														<SortableSubtaskItem
@@ -713,7 +580,6 @@ function SortableTaskItem({
 													))}
 												</div>
 											</SortableContext>
-
 											<DragOverlay>
 												{activeSubtaskId ? (
 													<div className="bg-white border-2 border-(--color-primary-500) shadow-2xl p-3 opacity-90 rounded">
@@ -730,96 +596,96 @@ function SortableTaskItem({
 						</div>
 					</div>
 
-					<div className="flex items-center gap-2 transition-all duration-300">
-						<button onClick={() => onToggleStar(task.id)} className="group/action relative">
-							<div
-								className={`
-								relative h-8 w-8 rounded-lg flex items-center justify-center
-								transition-all duration-500 ease-out
-								${task.isStarred
-										? 'bg-linear-to-br from-yellow-400 via-yellow-500 to-amber-600 shadow-lg shadow-yellow-500/50 scale-105'
-										: 'bg-white/80 backdrop-blur-sm border-2 border-gray-200 hover:border-yellow-400 hover:shadow-lg hover:shadow-yellow-500/30 hover:scale-105'
-									}
-							`}
+					{/* Action buttons */}
+					<div className="flex items-center gap-2 transition-all duration-300 flex-shrink-0">
+						{/* Move to folder */}
+						<div className="relative" ref={moveMenuRef}>
+							<button
+								onClick={(e) => { e.stopPropagation(); setShowMoveMenu(!showMoveMenu); }}
+								className="group/action relative"
+								title={t('moveToFolder')}
 							>
-								{task.isStarred && (
-									<div className="absolute inset-0 rounded-lg bg-linear-to-br from-yellow-300 to-amber-500 blur-md opacity-60 animate-pulse" />
-								)}
-
-								<div className="relative z-10">
-									{task.isStarred ? (
-										<Star className="w-4 h-4 text-white fill-white drop-shadow-md" />
-									) : (
-										<Star className="w-4 h-4 text-gray-400 group-hover/action:text-yellow-500 transition-colors duration-300" />
-									)}
+								<div className="relative h-8 w-8 rounded-lg flex items-center justify-center bg-white/80 backdrop-blur-sm border-2 border-gray-200 hover:border-blue-400 transition-all duration-500 ease-out hover:shadow-lg hover:shadow-blue-500/30 hover:scale-105">
+									<div className="absolute inset-0 rounded-lg bg-linear-to-br from-blue-300 to-indigo-500 blur-md opacity-0 group-hover/action:opacity-60 transition-opacity duration-500" />
+									<MoveRight className="w-4 h-4 text-gray-400 group-hover/action:text-blue-500 relative z-10 transition-colors duration-300" />
 								</div>
+							</button>
 
-								<div className="absolute inset-0 rounded-lg overflow-hidden opacity-0 group-hover/action:opacity-100 transition-opacity duration-500">
-									<div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/action:translate-x-full transition-transform duration-1000" />
+							{showMoveMenu && (
+								<div className="absolute z-50 top-full mt-1 ltr:right-0 rtl:left-0 bg-white border-2 border-gray-200 rounded-lg shadow-2xl overflow-hidden min-w-[180px]">
+									<div className="p-2 border-b border-gray-100">
+										<span className="text-xs font-black text-gray-500 uppercase tracking-wider px-2">{t('moveTo')}</span>
+									</div>
+									<div className="py-1">
+										{movableFolders.map((folder) => {
+											const Icon = folder.icon;
+											return (
+												<button
+													key={folder.id}
+													onClick={() => {
+														onMoveToFolder(task.id, folder.id);
+														setShowMoveMenu(false);
+													}}
+													className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left transition-colors"
+												>
+													<Icon className="w-4 h-4 flex-shrink-0" style={{ color: folder.color }} />
+													<span className="text-sm font-semibold text-gray-700 truncate">
+														{t.has && t.has(`folders.${folder.name}`) ? t(`folders.${folder.name}`) : folder.name}
+													</span>
+												</button>
+											);
+										})}
+										{movableFolders.length === 0 && (
+											<div className="px-3 py-2 text-xs text-gray-400 font-medium">{t('noOtherFolders')}</div>
+										)}
+									</div>
+								</div>
+							)}
+						</div>
+
+						{/* Star */}
+						<button onClick={() => onToggleStar(task.id)} className="group/action relative">
+							<div className={`relative h-8 w-8 rounded-lg flex items-center justify-center transition-all duration-500 ease-out ${task.isStarred ? 'bg-linear-to-br from-yellow-400 via-yellow-500 to-amber-600 shadow-lg shadow-yellow-500/50 scale-105' : 'bg-white/80 backdrop-blur-sm border-2 border-gray-200 hover:border-yellow-400 hover:shadow-lg hover:shadow-yellow-500/30 hover:scale-105'}`}>
+								{task.isStarred && <div className="absolute inset-0 rounded-lg bg-linear-to-br from-yellow-300 to-amber-500 blur-md opacity-60 animate-pulse" />}
+								<div className="relative z-10">
+									{task.isStarred ? <Star className="w-4 h-4 text-white fill-white drop-shadow-md" /> : <Star className="w-4 h-4 text-gray-400 group-hover/action:text-yellow-500 transition-colors duration-300" />}
 								</div>
 							</div>
 						</button>
 
+						{/* Add subtask */}
 						{!task.completed && (
-							<button
-								onClick={() => setShowSubtaskInput(!showSubtaskInput)}
-								className="group/action relative"
-							>
-								<div
-									className={`
-									relative h-8 w-8 rounded-lg flex items-center justify-center
-									transition-all duration-500 ease-out
-									${showSubtaskInput
-											? 'bg-linear-to-br from-green-400 via-emerald-500 to-teal-600 shadow-lg shadow-green-500/50 scale-105'
-											: 'bg-white/80 backdrop-blur-sm border-2 border-gray-200 hover:border-green-400 hover:shadow-lg hover:shadow-green-500/30 hover:scale-105'
-										}
-								`}
-								>
-									{showSubtaskInput && (
-										<div className="absolute inset-0 rounded-lg bg-linear-to-br from-green-300 to-teal-500 blur-md opacity-60 animate-pulse" />
-									)}
-
-									<div
-										className={`relative z-10 transition-transform duration-500 ${showSubtaskInput ? 'rotate-180' : 'rotate-0'
-											}`}
-									>
-										{showSubtaskInput ? (
-											<X className="w-4 h-4 text-white drop-shadow-md" />
-										) : (
-											<Plus className="w-4 h-4 text-gray-400 group-hover/action:text-green-500 transition-colors duration-300" />
-										)}
-									</div>
-
-									<div className="absolute inset-0 rounded-lg overflow-hidden opacity-0 group-hover/action:opacity-100 transition-opacity duration-500">
-										<div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/action:translate-x-full transition-transform duration-1000" />
+							<button onClick={() => setShowSubtaskInput(!showSubtaskInput)} className="group/action relative">
+								<div className={`relative h-8 w-8 rounded-lg flex items-center justify-center transition-all duration-500 ease-out ${showSubtaskInput ? 'bg-linear-to-br from-green-400 via-emerald-500 to-teal-600 shadow-lg shadow-green-500/50 scale-105' : 'bg-white/80 backdrop-blur-sm border-2 border-gray-200 hover:border-green-400 hover:shadow-lg hover:shadow-green-500/30 hover:scale-105'}`}>
+									{showSubtaskInput && <div className="absolute inset-0 rounded-lg bg-linear-to-br from-green-300 to-teal-500 blur-md opacity-60 animate-pulse" />}
+									<div className={`relative z-10 transition-transform duration-500 ${showSubtaskInput ? 'rotate-180' : 'rotate-0'}`}>
+										{showSubtaskInput ? <X className="w-4 h-4 text-white drop-shadow-md" /> : <Plus className="w-4 h-4 text-gray-400 group-hover/action:text-green-500 transition-colors duration-300" />}
 									</div>
 								</div>
 							</button>
 						)}
 
+						{/* Delete */}
 						<button onClick={() => onQuickDelete(task.id)} className="group/action relative">
 							<div className="relative h-8 w-8 rounded-lg flex items-center justify-center bg-white/80 backdrop-blur-sm border-2 border-gray-200 hover:border-red-400 transition-all duration-500 ease-out hover:shadow-lg hover:shadow-red-500/30 hover:scale-105">
 								<div className="absolute inset-0 rounded-lg bg-linear-to-br from-red-300 to-rose-500 blur-md opacity-0 group-hover/action:opacity-60 transition-opacity duration-500" />
-								<div className="relative z-10">
-									<Trash2 className="w-4 h-4 text-gray-400 group-hover/action:text-red-500 transition-all duration-300 group-hover/action:scale-110" />
-								</div>
-								<div className="absolute inset-0 rounded-lg overflow-hidden opacity-0 group-hover/action:opacity-100 transition-opacity duration-500">
-									<div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/action:translate-x-full transition-transform duration-1000" />
-								</div>
+								<Trash2 className="w-4 h-4 text-gray-400 group-hover/action:text-red-500 relative z-10 transition-all duration-300 group-hover/action:scale-110" />
 							</div>
 						</button>
 					</div>
 				</div>
 
+				{/* Subtask add form */}
 				{!task.completed && showSubtaskInput && (
 					<div className="mt-4 pt-4 border-t border-gray-200 ml-14">
 						<form onSubmit={handleAddSubtask} className="flex gap-2">
 							<Input
+								ref={subtaskInputRef}
 								type="text"
 								value={newSubtaskTitle}
 								onChange={(e) => setNewSubtaskTitle(e.target.value)}
 								onKeyDown={(e) => {
-									if (e.key === 'Enter' && e.shiftKey) {
+									if (e.key === 'Enter' && !e.shiftKey) {
 										e.preventDefault();
 										handleAddSubtask(e);
 									}
@@ -828,11 +694,7 @@ function SortableTaskItem({
 								className="text-sm bg-white border-2 border-(--color-primary-200) focus:border-(--color-primary-400)"
 								autoFocus
 							/>
-							<Button
-								type="submit"
-								size="sm"
-								className="bg-linear-to-r from-(--color-gradient-from) to-(--color-gradient-to)"
-							>
+							<Button type="submit" size="sm" className="bg-linear-to-r from-(--color-gradient-from) to-(--color-gradient-to)">
 								<Check className="w-4 h-4" />
 							</Button>
 							<Button type="button" size="sm" variant="ghost" onClick={() => setShowSubtaskInput(false)}>
@@ -846,9 +708,9 @@ function SortableTaskItem({
 	);
 }
 
-
-
-
+// ============================================================
+// Main TodoTab
+// ============================================================
 export default function TodoTab() {
 	const t = useTranslations('todo');
 	const t_navbar = useTranslations('navbar');
@@ -858,7 +720,6 @@ export default function TodoTab() {
 	const searchParams = useSearchParams();
 
 	const currentTab = searchParams.get('tab') || 'tasks';
-
 	const handleTabChange = (tab) => {
 		const params = new URLSearchParams(searchParams);
 		params.set('tab', tab);
@@ -871,12 +732,9 @@ export default function TodoTab() {
 		addTaskPosition: 'top',
 	});
 
-	// ✅ Start empty; load from API
 	const [folders, setFolders] = useState([]);
 	const [tasks, setTasks] = useState([]);
-
 	const [loading, setLoading] = useState(true);
-
 	const [selectedFolder, setSelectedFolder] = useState('inbox');
 	const [selectedTask, setSelectedTask] = useState(null);
 	const [showAddFolder, setShowAddFolder] = useState(false);
@@ -890,48 +748,40 @@ export default function TodoTab() {
 	const [showTaskSidebar, setShowTaskSidebar] = useState(false);
 	const [showDeleteFolderConfirm, setShowDeleteFolderConfirm] = useState(false);
 	const [folderToDelete, setFolderToDelete] = useState(null);
-	const [keepAddingTasks, setKeepAddingTasks] = useState(true);
+	const [keepAddingTasks] = useState(true);
 
-	// localStorage order map cached
-	const orderMapRef = useRef({}); // { [folderId]: string[] }
+	const orderMapRef = useRef({});
 
+	// ============================================================
+	// Reorder subtasks
+	// ============================================================
 	const handleReorderSubtasks = async (taskId, reorderedSubtasks) => {
 		const task = tasks.find((t) => t.id === taskId);
 		if (!task) return;
 
-		// optimistic reorder locally
-		setTasks((prev) =>
-			prev.map((t) => (t.id === taskId ? { ...t, subtasks: reorderedSubtasks } : t))
-		);
+		setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, subtasks: reorderedSubtasks } : t)));
 		if (selectedTask?.id === taskId) setSelectedTask((prev) => ({ ...prev, subtasks: reorderedSubtasks }));
 
 		try {
-			// only send real ids to server (skip tmp)
 			const real = reorderedSubtasks.filter((st) => !String(st.id).startsWith('tmpst-'));
-
 			await api.post('/tasks/subtasks/reorder', {
 				taskId,
 				items: real.map((st, idx) => ({ id: st.id, orderIndex: idx })),
 			});
 		} catch (e) {
 			console.error('Reorder subtasks failed', e);
-			// rollback
 			setTasks((prev) => prev.map((t) => (t.id === taskId ? task : t)));
 			if (selectedTask?.id === taskId) setSelectedTask(task);
 		}
 	};
 
-	const sensors = useSensors(
-		useSensor(PointerSensor, {
-			activationConstraint: { distance: 8 },
-		})
-	);
+	const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
-	// ✅ Load folders + tasks from API
+	// ============================================================
+	// Load data
+	// ============================================================
 	useEffect(() => {
 		let mounted = true;
-
-		// load order map once on client
 		orderMapRef.current = loadOrderMap();
 
 		const load = async () => {
@@ -948,7 +798,6 @@ export default function TodoTab() {
 				const normalizedFolders = foldersArr.map(normalizeFolder);
 				let normalizedTasks = tasksArr.map(normalizeTask);
 
-				// Always ensure system folders exist in UI
 				const system = [
 					{ id: 'inbox', name: 'inbox', color: 'var(--color-primary-600)', icon: Inbox, isSystem: true },
 					{ id: 'today', name: 'today', color: '#f59e0b', icon: Sun, isSystem: true },
@@ -962,7 +811,6 @@ export default function TodoTab() {
 						.map((f) => ({ ...f, icon: Folder, isSystem: false })),
 				];
 
-				// ✅ apply saved order for each folder (including inbox)
 				const map = orderMapRef.current || {};
 				for (const folderId of Object.keys(map)) {
 					normalizedTasks = applyOrderToTasks(normalizedTasks, folderId, map[folderId]);
@@ -976,7 +824,6 @@ export default function TodoTab() {
 				if (!hasSelected) setSelectedFolder('inbox');
 			} catch (e) {
 				console.error('Failed to load todo data', e);
-
 				if (!mounted) return;
 				setFolders([
 					{ id: 'inbox', name: 'inbox', color: 'var(--color-primary-600)', icon: Inbox, isSystem: true },
@@ -990,25 +837,18 @@ export default function TodoTab() {
 		};
 
 		load();
-		return () => {
-			mounted = false;
-		};
+		return () => { mounted = false; };
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	// ======================
-	// API-backed CRUD
-	// ======================
-
+	// ============================================================
+	// CRUD
+	// ============================================================
 	const handleAddTask = async (title, attachments = []) => {
 		if (!title.trim()) return;
 
-		const folderId =
-			selectedFolder === 'today' || selectedFolder === 'starred'
-				? 'inbox'
-				: selectedFolder;
+		const folderId = selectedFolder === 'today' || selectedFolder === 'starred' ? 'inbox' : selectedFolder;
 
-		// Find folder UUID if needed
 		let folderUUID = folderId;
 		if (!/^[0-9a-fA-F-]{36}$/.test(folderId)) {
 			const found = folders.find((f) => f.id === folderId);
@@ -1032,30 +872,16 @@ export default function TodoTab() {
 		};
 
 		const tempId = `tmp-${Date.now()}`;
-		const optimistic = {
-			id: tempId,
-			...payload,
-			createdAt: new Date(),
-			updatedAt: new Date(),
-		};
+		const optimistic = { id: tempId, ...payload, subtasks: [], createdAt: new Date(), updatedAt: new Date() };
 
 		setTasks((prev) => {
-			const next =
-				settings.addTaskPosition === 'top' ? [optimistic, ...prev] : [...prev, optimistic];
-
-			// ✅ update local order immediately for this folder
-			const scopeFolderId = folderId;
+			const next = settings.addTaskPosition === 'top' ? [optimistic, ...prev] : [...prev, optimistic];
 			const current = orderMapRef.current || {};
-			const folderOrder = (current[scopeFolderId] || []).filter((id) => id !== tempId);
-			const nextOrder =
-				settings.addTaskPosition === 'top'
-					? [tempId, ...folderOrder]
-					: [...folderOrder, tempId];
-
-			current[scopeFolderId] = nextOrder;
+			const folderOrder = (current[folderId] || []).filter((id) => id !== tempId);
+			const nextOrder = settings.addTaskPosition === 'top' ? [tempId, ...folderOrder] : [...folderOrder, tempId];
+			current[folderId] = nextOrder;
 			orderMapRef.current = current;
 			saveOrderMap(current);
-
 			return next;
 		});
 
@@ -1065,23 +891,18 @@ export default function TodoTab() {
 
 			setTasks((prev) => prev.map((t) => (t.id === tempId ? created : t)));
 
-			// ✅ replace tempId in order with real id
-			const scopeFolderId = folderId;
 			const current = orderMapRef.current || {};
-			if (Array.isArray(current[scopeFolderId])) {
-				current[scopeFolderId] = current[scopeFolderId].map((id) => (id === tempId ? created.id : id));
+			if (Array.isArray(current[folderId])) {
+				current[folderId] = current[folderId].map((id) => (id === tempId ? created.id : id));
 				orderMapRef.current = current;
 				saveOrderMap(current);
 			}
 		} catch (e) {
 			console.error('Create task failed', e);
 			setTasks((prev) => prev.filter((t) => t.id !== tempId));
-
-			// remove tempId from order
-			const scopeFolderId = folderId;
 			const current = orderMapRef.current || {};
-			if (Array.isArray(current[scopeFolderId])) {
-				current[scopeFolderId] = current[scopeFolderId].filter((id) => id !== tempId);
+			if (Array.isArray(current[folderId])) {
+				current[folderId] = current[folderId].filter((id) => id !== tempId);
 				orderMapRef.current = current;
 				saveOrderMap(current);
 			}
@@ -1094,13 +915,33 @@ export default function TodoTab() {
 
 		playSound(task.completed ? 'uncheck' : 'check', settings.soundEnabled);
 
-		const updates = {
-			completed: !task.completed,
-			status: !task.completed ? 'completed' : 'todo',
-			updatedAt: new Date(),
-		};
+		const willComplete = !task.completed;
+		const updates = { completed: willComplete, status: willComplete ? 'completed' : 'todo', updatedAt: new Date() };
 
-		setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t)));
+		setTasks((prev) => {
+			const updated = prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t));
+
+			if (willComplete) {
+				// Move completed task to bottom of its folder group
+				const folderId = task.folderId || 'inbox';
+				const folderTasks = updated.filter((t) => t.folderId === folderId);
+				const otherTasks = updated.filter((t) => t.folderId !== folderId);
+
+				const incomplete = folderTasks.filter((t) => !t.completed);
+				const complete = folderTasks.filter((t) => t.completed);
+				const reordered = [...incomplete, ...complete];
+
+				// Persist order
+				const current = orderMapRef.current || {};
+				current[folderId] = reordered.map((t) => t.id);
+				orderMapRef.current = current;
+				saveOrderMap(current);
+
+				return [...reordered, ...otherTasks];
+			}
+			return updated;
+		});
+
 		if (selectedTask?.id === taskId) setSelectedTask((prev) => ({ ...prev, ...updates }));
 
 		try {
@@ -1123,22 +964,18 @@ export default function TodoTab() {
 		if (!task) return;
 
 		const merged = { ...task, ...updates, updatedAt: new Date() };
-
 		setTasks((prev) => prev.map((t) => (t.id === taskId ? merged : t)));
 		if (selectedTask?.id === taskId) setSelectedTask(merged);
 
 		try {
 			if (String(taskId).startsWith('tmp-')) return;
-
 			const payload = {
 				...merged,
 				createdAt: merged.createdAt instanceof Date ? merged.createdAt.toISOString() : merged.createdAt,
 				updatedAt: new Date().toISOString(),
 			};
-
 			const res = await api.patch(`/todos/${taskId}`, payload);
 			const saved = normalizeTask(res?.data ?? res);
-
 			setTasks((prev) => prev.map((t) => (t.id === taskId ? saved : t)));
 			if (selectedTask?.id === taskId) setSelectedTask(saved);
 		} catch (e) {
@@ -1150,8 +987,6 @@ export default function TodoTab() {
 
 	const handleDeleteTask = async (taskId) => {
 		const prev = tasks;
-
-		// remove from local order map (for the task's folder)
 		const task = tasks.find((t) => t.id === taskId);
 		if (task) {
 			const current = orderMapRef.current || {};
@@ -1164,10 +999,7 @@ export default function TodoTab() {
 		}
 
 		setTasks((p) => p.filter((t) => t.id !== taskId));
-		if (selectedTask?.id === taskId) {
-			setSelectedTask(null);
-			setShowTaskSidebar(false);
-		}
+		if (selectedTask?.id === taskId) { setSelectedTask(null); setShowTaskSidebar(false); }
 
 		try {
 			if (String(taskId).startsWith('tmp-')) return;
@@ -1178,142 +1010,113 @@ export default function TodoTab() {
 		}
 	};
 
-	const handleSelectTask = (task) => {
-		setSelectedTask(task);
-		setShowTaskSidebar(true);
+	// Move task to another folder
+	const handleMoveToFolder = async (taskId, targetFolderId) => {
+		const task = tasks.find((t) => t.id === taskId);
+		if (!task) return;
+
+		// Find the real UUID for the target folder
+		let targetUUID = targetFolderId;
+		if (targetFolderId !== 'inbox' && !/^[0-9a-fA-F-]{36}$/.test(targetFolderId)) {
+			const found = folders.find((f) => f.id === targetFolderId);
+			if (found && found.uuid) targetUUID = found.uuid;
+		}
+
+		const prevFolderId = task.folderId || 'inbox';
+
+		// Remove from old folder order, add to new folder order
+		const current = orderMapRef.current || {};
+		if (Array.isArray(current[prevFolderId])) {
+			current[prevFolderId] = current[prevFolderId].filter((id) => id !== taskId);
+		}
+		if (!Array.isArray(current[targetFolderId])) current[targetFolderId] = [];
+		current[targetFolderId].push(taskId);
+		orderMapRef.current = current;
+		saveOrderMap(current);
+
+		const merged = { ...task, folderId: targetFolderId, updatedAt: new Date() };
+		setTasks((prev) => prev.map((t) => (t.id === taskId ? merged : t)));
+		if (selectedTask?.id === taskId) setSelectedTask(merged);
+
+		try {
+			if (String(taskId).startsWith('tmp-')) return;
+			await api.patch(`/todos/${taskId}`, {
+				...merged,
+				folderId: targetUUID === 'inbox' ? null : targetUUID,
+				createdAt: merged.createdAt instanceof Date ? merged.createdAt.toISOString() : merged.createdAt,
+				updatedAt: new Date().toISOString(),
+			});
+		} catch (e) {
+			console.error('Move task failed', e);
+			setTasks((prev) => prev.map((t) => (t.id === taskId ? task : t)));
+			if (selectedTask?.id === taskId) setSelectedTask(task);
+		}
 	};
+
+	const handleSelectTask = (task) => { setSelectedTask(task); setShowTaskSidebar(true); };
 
 	const handleAddSubtask = async (taskId, subtaskTitle) => {
 		const task = tasks.find((t) => t.id === taskId);
 		if (!task) return;
 
-		// optimistic UI subtask (tmp id)
 		const tmpId = `tmpst-${Date.now()}`;
 		const optimistic = { id: tmpId, title: subtaskTitle, completed: false, orderIndex: (task.subtasks?.length || 0) };
 
-		setTasks((prev) =>
-			prev.map((t) => (t.id === taskId ? { ...t, subtasks: [...(t.subtasks || []), optimistic] } : t))
-		);
-		if (selectedTask?.id === taskId) {
-			setSelectedTask((prev) => ({ ...prev, subtasks: [...(prev.subtasks || []), optimistic] }));
-		}
+		setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, subtasks: [...(t.subtasks || []), optimistic] } : t)));
+		if (selectedTask?.id === taskId) setSelectedTask((prev) => ({ ...prev, subtasks: [...(prev.subtasks || []), optimistic] }));
 
 		try {
-			if (String(taskId).startsWith('tmp-')) return; // task not saved yet
-
+			if (String(taskId).startsWith('tmp-')) return;
 			const res = await api.post(`/tasks/${taskId}/subtasks`, { title: subtaskTitle, completed: false });
 			const created = normalizeSubtask(res?.data ?? res);
 
-			setTasks((prev) =>
-				prev.map((t) =>
-					t.id === taskId
-						? { ...t, subtasks: (t.subtasks || []).map((st) => (st.id === tmpId ? created : st)) }
-						: t
-				)
-			);
-			if (selectedTask?.id === taskId) {
-				setSelectedTask((prev) => ({
-					...prev,
-					subtasks: (prev.subtasks || []).map((st) => (st.id === tmpId ? created : st)),
-				}));
-			}
+			setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, subtasks: (t.subtasks || []).map((st) => (st.id === tmpId ? created : st)) } : t));
+			if (selectedTask?.id === taskId) setSelectedTask((prev) => ({ ...prev, subtasks: (prev.subtasks || []).map((st) => (st.id === tmpId ? created : st)) }));
 		} catch (e) {
 			console.error('Add subtask failed', e);
-			// rollback
-			setTasks((prev) =>
-				prev.map((t) =>
-					t.id === taskId ? { ...t, subtasks: (t.subtasks || []).filter((st) => st.id !== tmpId) } : t
-				)
-			);
-			if (selectedTask?.id === taskId) {
-				setSelectedTask((prev) => ({
-					...prev,
-					subtasks: (prev.subtasks || []).filter((st) => st.id !== tmpId),
-				}));
-			}
+			setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, subtasks: (t.subtasks || []).filter((st) => st.id !== tmpId) } : t));
+			if (selectedTask?.id === taskId) setSelectedTask((prev) => ({ ...prev, subtasks: (prev.subtasks || []).filter((st) => st.id !== tmpId) }));
 		}
 	};
-
 
 	const handleToggleSubtask = async (taskId, subtaskId) => {
 		const task = tasks.find((t) => t.id === taskId);
 		if (!task) return;
-
 		const st = task.subtasks?.find((x) => x.id === subtaskId);
 		if (!st) return;
 
 		playSound(st.completed ? 'uncheck' : 'check', settings.soundEnabled);
 
-		// optimistic toggle
-		setTasks((prev) =>
-			prev.map((t) =>
-				t.id === taskId
-					? { ...t, subtasks: (t.subtasks || []).map((x) => (x.id === subtaskId ? { ...x, completed: !x.completed } : x)) }
-					: t
-			)
-		);
-		if (selectedTask?.id === taskId) {
-			setSelectedTask((prev) => ({
-				...prev,
-				subtasks: (prev.subtasks || []).map((x) => (x.id === subtaskId ? { ...x, completed: !x.completed } : x)),
-			}));
-		}
+		setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, subtasks: (t.subtasks || []).map((x) => (x.id === subtaskId ? { ...x, completed: !x.completed } : x)) } : t));
+		if (selectedTask?.id === taskId) setSelectedTask((prev) => ({ ...prev, subtasks: (prev.subtasks || []).map((x) => (x.id === subtaskId ? { ...x, completed: !x.completed } : x)) }));
 
 		try {
-			// tmp subtasks (client-only) can't be toggled on server
 			if (String(subtaskId).startsWith('tmpst-')) return;
-
 			await api.post(`/tasks/${taskId}/subtasks/${subtaskId}/toggle`);
 		} catch (e) {
 			console.error('Toggle subtask failed', e);
-			// rollback
-			setTasks((prev) =>
-				prev.map((t) =>
-					t.id === taskId
-						? { ...t, subtasks: (t.subtasks || []).map((x) => (x.id === subtaskId ? st : x)) }
-						: t
-				)
-			);
-			if (selectedTask?.id === taskId) {
-				setSelectedTask((prev) => ({
-					...prev,
-					subtasks: (prev.subtasks || []).map((x) => (x.id === subtaskId ? st : x)),
-				}));
-			}
+			setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, subtasks: (t.subtasks || []).map((x) => (x.id === subtaskId ? st : x)) } : t));
+			if (selectedTask?.id === taskId) setSelectedTask((prev) => ({ ...prev, subtasks: (prev.subtasks || []).map((x) => (x.id === subtaskId ? st : x)) }));
 		}
 	};
-
 
 	const handleDeleteSubtask = async (taskId, subtaskId) => {
 		const task = tasks.find((t) => t.id === taskId);
 		if (!task) return;
-
 		const prevSubtasks = task.subtasks || [];
 
-		// optimistic delete
-		setTasks((prev) =>
-			prev.map((t) =>
-				t.id === taskId ? { ...t, subtasks: (t.subtasks || []).filter((st) => st.id !== subtaskId) } : t
-			)
-		);
-		if (selectedTask?.id === taskId) {
-			setSelectedTask((prev) => ({
-				...prev,
-				subtasks: (prev.subtasks || []).filter((st) => st.id !== subtaskId),
-			}));
-		}
+		setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, subtasks: (t.subtasks || []).filter((st) => st.id !== subtaskId) } : t));
+		if (selectedTask?.id === taskId) setSelectedTask((prev) => ({ ...prev, subtasks: (prev.subtasks || []).filter((st) => st.id !== subtaskId) }));
 
 		try {
 			if (String(subtaskId).startsWith('tmpst-')) return;
 			await api.delete(`/tasks/${taskId}/subtasks/${subtaskId}`);
 		} catch (e) {
 			console.error('Delete subtask failed', e);
-			// rollback
 			setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, subtasks: prevSubtasks } : t)));
 			if (selectedTask?.id === taskId) setSelectedTask((prev) => ({ ...prev, subtasks: prevSubtasks }));
 		}
 	};
-
 
 	const handleToggleStar = (taskId) => {
 		const task = tasks.find((t) => t.id === taskId);
@@ -1321,23 +1124,34 @@ export default function TodoTab() {
 		handleUpdateTask(taskId, { isStarred: !task.isStarred });
 	};
 
+	// ============================================================
+	// Uncheck all / Recheck all
+	// ============================================================
+	const handleUncheckAll = async () => {
+		const visible = getFilteredTasks();
+		const allCompleted = visible.every((t) => t.completed);
+
+		if (allCompleted) {
+			// Recheck all (set back to incomplete)
+			visible.forEach((task) => {
+				handleUpdateTask(task.id, { completed: false, status: 'todo' });
+			});
+		} else {
+			// Uncheck all completed in view
+			visible.filter((t) => t.completed).forEach((task) => {
+				handleUpdateTask(task.id, { completed: false, status: 'todo' });
+			});
+		}
+	};
+
+	// ============================================================
+	// Folders
+	// ============================================================
 	const handleAddFolder = async () => {
 		if (!newFolderName.trim()) return;
-
-		const payload = {
-			name: newFolderName.trim(),
-			color: newFolderColor,
-			isSystem: false,
-		};
-
+		const payload = { name: newFolderName.trim(), color: newFolderColor, isSystem: false };
 		const tempId = `tmpf-${Date.now()}`;
-		const optimistic = {
-			id: tempId,
-			name: payload.name,
-			color: payload.color,
-			icon: Folder,
-			isSystem: false,
-		};
+		const optimistic = { id: tempId, name: payload.name, color: payload.color, icon: Folder, isSystem: false };
 
 		setFolders((prev) => [...prev, optimistic]);
 		setNewFolderName('');
@@ -1350,7 +1164,6 @@ export default function TodoTab() {
 			const created = normalizeFolder(res?.data ?? res);
 			created.icon = Folder;
 			created.isSystem = false;
-
 			setFolders((prev) => prev.map((f) => (f.id === tempId ? created : f)));
 			setSelectedFolder(created.id);
 		} catch (e) {
@@ -1364,13 +1177,8 @@ export default function TodoTab() {
 		const prevFolders = folders;
 		const prevTasks = tasks;
 
-		// remove order scope for that folder
 		const current = orderMapRef.current || {};
-		if (current[folderId]) {
-			delete current[folderId];
-			orderMapRef.current = current;
-			saveOrderMap(current);
-		}
+		if (current[folderId]) { delete current[folderId]; orderMapRef.current = current; saveOrderMap(current); }
 
 		setTasks((prev) => prev.map((t) => (t.folderId === folderId ? { ...t, folderId: 'inbox' } : t)));
 		setFolders((prev) => prev.filter((f) => f.id !== folderId));
@@ -1388,21 +1196,20 @@ export default function TodoTab() {
 		}
 	};
 
-	// Drag reorder
+	// ============================================================
+	// Drag / sort
+	// ============================================================
 	const handleDragStart = (event) => setActiveId(event.active.id);
 
 	const handleDragEnd = (event) => {
 		const { active, over } = event;
 		setActiveId(null);
 		if (!over || active.id === over.id) return;
-
-		// ✅ allow reorder only in manual sort mode
 		if (sortBy !== 'manual') return;
 
 		const scopeFolderId = getFolderScopeId(selectedFolder);
 
 		setTasks((prev) => {
-			// reorder inside visible list, but persist for the folder list
 			const visible = getFilteredTasks(prev);
 			const oldIndex = visible.findIndex((t) => t.id === active.id);
 			const newIndex = visible.findIndex((t) => t.id === over.id);
@@ -1410,18 +1217,13 @@ export default function TodoTab() {
 
 			const movedVisible = arrayMove(visible, oldIndex, newIndex);
 			const movedIds = new Set(movedVisible.map((t) => t.id));
-
 			const rest = prev.filter((t) => !movedIds.has(t.id));
 			const next = [...movedVisible, ...rest];
 
-			// ✅ Persist order for this folder scope
 			const current = orderMapRef.current || {};
 			current[scopeFolderId] = computeFolderOrder(next, scopeFolderId);
 			orderMapRef.current = current;
 			saveOrderMap(current);
-
-			// OPTIONAL: backend persistence (if you create endpoint)
-			// api.patch('/todos/reorder', { folderId: scopeFolderId, orderedIds: current[scopeFolderId] }).catch(console.error);
 
 			return next;
 		});
@@ -1432,11 +1234,7 @@ export default function TodoTab() {
 
 		if (selectedFolder === 'today') {
 			const today = new Date().toISOString().split('T')[0];
-			filtered = filtered.filter((t) => {
-				if (t.dueDate === today) return true;
-				if (t.repeat === 'daily') return true;
-				return false;
-			});
+			filtered = filtered.filter((t) => t.dueDate === today || t.repeat === 'daily');
 		} else if (selectedFolder === 'starred') {
 			filtered = filtered.filter((t) => t.isStarred);
 		} else if (selectedFolder !== 'inbox') {
@@ -1444,10 +1242,7 @@ export default function TodoTab() {
 		}
 
 		if (!settings.showCompleted) filtered = filtered.filter((t) => !t.completed);
-
-		if (filterPriority && filterPriority !== 'all') {
-			filtered = filtered.filter((t) => t.priority === filterPriority);
-		}
+		if (filterPriority && filterPriority !== 'all') filtered = filtered.filter((t) => t.priority === filterPriority);
 
 		if (sortBy === 'dueDate') {
 			filtered.sort((a, b) => {
@@ -1460,8 +1255,13 @@ export default function TodoTab() {
 			filtered.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
 		} else if (sortBy === 'alphabetical') {
 			filtered.sort((a, b) => a.title.localeCompare(b.title));
+		} else if (sortBy === 'time') {
+			filtered.sort((a, b) => {
+				if (!a.dueTime) return 1;
+				if (!b.dueTime) return -1;
+				return a.dueTime.localeCompare(b.dueTime);
+			});
 		}
-		// sortBy === 'manual' means: keep current array order (we persist it)
 
 		return filtered;
 	};
@@ -1470,228 +1270,114 @@ export default function TodoTab() {
 	const currentFolder = folders.find((f) => f.id === selectedFolder);
 	const activeTask = activeId ? tasks.find((t) => t.id === activeId) : null;
 
+	const completedCount = filteredTasks.filter((t) => t.completed).length;
+	const hasCompleted = completedCount > 0;
+
 	return (
-		<div className="flex mt-[-20px] w-[calc(100%+50px)] relative ltr:right-[25px] rtl:left-[25px] overflow-hidden">
+		<div className="flex mt-[-20px]  w-[calc(100%+50px)] relative ltr:right-[25px] rtl:left-[25px] overflow-hidden">
 			{/* Left Sidebar */}
-			<div
-				className={`bg-white border-${isRTL ? 'l' : 'r'}-2 border-gray-100 transition-all duration-300 flex-shrink-0 ${sidebarCollapsed ? 'w-20' : 'w-80'
-					}`}
-			>
+			<div className={` sticky top-0 h-screen bg-white border-${isRTL ? 'l' : 'r'}-2 border-gray-100 transition-all duration-300 flex-shrink-0 ${sidebarCollapsed ? 'w-20' : 'w-80'}`}>
 				<div className="h-full flex flex-col">
 					<div className="p-4 border-b-2 border-gray-100 flex items-center justify-between">
 						{!sidebarCollapsed && (
 							<div className="flex-none w-[150px] flex items-center gap-2">
-								<Button
-									onClick={() =>
-										setSettings({ ...settings, soundEnabled: !settings.soundEnabled })
-									}
-									variant={settings.soundEnabled ? 'default' : 'outline'}
-									size="sm"
-									className="flex-1 !h-[35px]"
-								>
-									{settings.soundEnabled ? (
-										<Volume2 className="w-4 h-4" />
-									) : (
-										<VolumeX className="w-4 h-4" />
-									)}
+								<Button onClick={() => setSettings({ ...settings, soundEnabled: !settings.soundEnabled })} variant={settings.soundEnabled ? 'default' : 'outline'} size="sm" className="flex-1 !h-[35px]">
+									{settings.soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
 								</Button>
-								<Button
-									onClick={() => setShowSettings(true)}
-									variant="outline"
-									size="sm"
-									className="flex-1 !h-[35px]"
-								>
+								<Button onClick={() => setShowSettings(true)} variant="outline" size="sm" className="flex-1 !h-[35px]">
 									<Settings className="w-4 h-4" />
 								</Button>
 							</div>
 						)}
-						<button
-							onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-							className="p-2.5 hover:bg-gray-100 rounded-lg transition-all hover:scale-110"
-						>
+						<button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-2.5 hover:bg-gray-100 rounded-lg transition-all hover:scale-110">
 							<Menu className="w-5 h-5 text-gray-600" />
 						</button>
 					</div>
 
 					<div className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-thin">
 						<div className="mb-6">
-							{folders
-								.filter((f) => f.isSystem)
-								.map((folder) => {
-									const Icon = folder.icon;
-									const count =
-										folder.id === 'inbox'
-											? tasks.filter(
-												(t) =>
-													t.folderId === 'inbox' &&
-													(!t.completed || settings.showCompleted)
-											).length
-											: folder.id === 'today'
-												? getFilteredTasks().filter(
-													(t) => !t.completed || settings.showCompleted
-												).length
-												: folder.id === 'starred'
-													? tasks.filter(
-														(t) =>
-															t.isStarred && (!t.completed || settings.showCompleted)
-													).length
-													: 0;
+							{folders.filter((f) => f.isSystem).map((folder) => {
+								const Icon = folder.icon;
+								const count =
+									folder.id === 'inbox' ? tasks.filter((t) => t.folderId === 'inbox' && (!t.completed || settings.showCompleted)).length
+										: folder.id === 'today' ? getFilteredTasks().filter((t) => !t.completed || settings.showCompleted).length
+											: folder.id === 'starred' ? tasks.filter((t) => t.isStarred && (!t.completed || settings.showCompleted)).length
+												: 0;
 
-									return (
-										<button
-											key={folder.id}
-											onClick={() => setSelectedFolder(folder.id)}
-											className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg transition-all group mb-1 ${selectedFolder === folder.id
-												? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-lg scale-[1.02]'
-												: 'hover:bg-gray-50 text-gray-700'
-												}`}
-										>
-											<Icon
-												className={`w-5 h-5 flex-shrink-0 ${selectedFolder === folder.id ? 'text-white' : ''
-													}`}
-												style={{
-													color:
-														selectedFolder !== folder.id ? folder.color : undefined,
-												}}
-											/>
-											{!sidebarCollapsed && (
-												<>
-													<span className="flex-1 text-left font-bold text-sm">
-														{t.has(`folders.${folder.name}`)
-															? t(`folders.${folder.name}`)
-															: folder.name}
-													</span>
-													{count > 0 && (
-														<span
-															className={`px-2.5 py-1 rounded-lg text-xs font-black ${selectedFolder === folder.id
-																? 'bg-white/20 text-white'
-																: 'bg-gray-100 text-gray-700'
-																}`}
-														>
-															{count}
-														</span>
-													)}
-												</>
-											)}
-										</button>
-									);
-								})}
+								const folderLabel = t.has && t.has(`folders.${folder.name}`) ? t(`folders.${folder.name}`) : folder.name;
+
+								return (
+									<button
+										key={folder.id}
+										onClick={() => setSelectedFolder(folder.id)}
+										title={sidebarCollapsed ? folderLabel : undefined}
+										className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg transition-all group mb-1 ${selectedFolder === folder.id ? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-lg scale-[1.02]' : 'hover:bg-gray-50 text-gray-700'}`}
+									>
+										<Icon className={`w-5 h-5 flex-shrink-0 ${selectedFolder === folder.id ? 'text-white' : ''}`} style={{ color: selectedFolder !== folder.id ? folder.color : undefined }} />
+										{!sidebarCollapsed && (
+											<>
+												<span className="flex-1 text-left font-bold text-sm">{folderLabel}</span>
+												{count > 0 && <span className={`px-2.5 py-1 rounded-lg text-xs font-black ${selectedFolder === folder.id ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'}`}>{count}</span>}
+											</>
+										)}
+									</button>
+								);
+							})}
 						</div>
 
 						<div>
 							{!sidebarCollapsed && (
 								<div className="flex items-center justify-between mb-3 px-3">
-									<h3 className="text-xs font-black text-gray-500 uppercase tracking-wider">
-										{t('myFolders')}
-									</h3>
-									<button
-										onClick={() => setShowAddFolder(true)}
-										className="flex items-center gap-2 px-3 py-2 bg-[var(--color-primary-100)] hover:bg-[var(--color-primary-200)] rounded-lg transition-all hover:scale-110 shadow-sm"
-									>
+									<h3 className="text-xs font-black text-gray-500 uppercase tracking-wider">{t('myFolders')}</h3>
+									<button onClick={() => setShowAddFolder(true)} className="flex items-center gap-2 px-3 py-2 bg-[var(--color-primary-100)] hover:bg-[var(--color-primary-200)] rounded-lg transition-all hover:scale-110 shadow-sm">
 										<FolderPlus className="w-4 h-4 text-[var(--color-primary-700)]" />
-										<span className="text-sm font-medium text-[var(--color-primary-700)]">
-											{t('addFolder')}
-										</span>
+										<span className="text-sm font-medium text-[var(--color-primary-700)]">{t('addFolder')}</span>
 									</button>
 								</div>
 							)}
 
-							{folders
-								.filter((f) => !f.isSystem)
-								.map((folder) => {
-									const Icon = folder.icon;
-									const count = tasks.filter(
-										(t) =>
-											t.folderId === folder.id &&
-											(!t.completed || settings.showCompleted)
-									).length;
+							{folders.filter((f) => !f.isSystem).map((folder) => {
+								const Icon = folder.icon;
+								const count = tasks.filter((t) => t.folderId === folder.id && (!t.completed || settings.showCompleted)).length;
+								const folderLabel = t.has && t.has(`folders.${folder.name}`) ? t(`folders.${folder.name}`) : folder.name;
 
-									return (
-										<button
-											onClick={() => setSelectedFolder(folder.id)}
-											className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg transition-all ${selectedFolder === folder.id
-												? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-lg scale-[1.02]'
-												: 'hover:bg-gray-50 text-gray-700'
-												}`}
-											key={folder.id}
-										>
-											<Icon
-												className={`w-5 h-5 flex-shrink-0 ${selectedFolder === folder.id ? 'text-white' : ''
-													}`}
-												style={{
-													color:
-														selectedFolder !== folder.id ? folder.color : undefined,
-												}}
-											/>
-											{!sidebarCollapsed && (
-												<>
-													<span className="flex-1 text-left font-bold text-sm truncate">
-														{t.has(`folders.${folder.name}`)
-															? t(`folders.${folder.name}`)
-															: folder.name}
-													</span>
-													{count > 0 && (
-														<span
-															className={`px-2.5 py-1 rounded-lg text-xs font-black ${selectedFolder === folder.id
-																? 'bg-white/20 text-white'
-																: 'bg-gray-100 text-gray-700'
-																}`}
-														>
-															{count}
-														</span>
-													)}
-												</>
-											)}
-
-											{!sidebarCollapsed && !folder.isSystem && (
-												<button
-													onClick={(e) => {
-														e.stopPropagation();
-														setFolderToDelete(folder.id);
-														setShowDeleteFolderConfirm(true);
-													}}
-													className="p-1.5 bg-red-500 hover:bg-red-600 rounded-lg transition-all shadow-lg hover:scale-110"
-												>
-													<Trash2 className="w-3 h-3 text-white" />
-												</button>
-											)}
-										</button>
-									);
-								})}
+								return (
+									<button
+										key={folder.id}
+										onClick={() => setSelectedFolder(folder.id)}
+										title={sidebarCollapsed ? folderLabel : undefined}
+										className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg transition-all ${selectedFolder === folder.id ? 'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white shadow-lg scale-[1.02]' : 'hover:bg-gray-50 text-gray-700'}`}
+									>
+										<Icon className={`w-5 h-5 flex-shrink-0 ${selectedFolder === folder.id ? 'text-white' : ''}`} style={{ color: selectedFolder !== folder.id ? folder.color : undefined }} />
+										{!sidebarCollapsed && (
+											<>
+												<span className="flex-1 text-left font-bold text-sm truncate">{folderLabel}</span>
+												{count > 0 && <span className={`px-2.5 py-1 rounded-lg text-xs font-black ${selectedFolder === folder.id ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'}`}>{count}</span>}
+											</>
+										)}
+										{!sidebarCollapsed && !folder.isSystem && (
+											<button
+												onClick={(e) => { e.stopPropagation(); setFolderToDelete(folder.id); setShowDeleteFolderConfirm(true); }}
+												className="p-1.5 bg-red-500 hover:bg-red-600 rounded-lg transition-all shadow-lg hover:scale-110"
+											>
+												<Trash2 className="w-3 h-3 text-white" />
+											</button>
+										)}
+									</button>
+								);
+							})}
 						</div>
 
 						{showAddFolder && !sidebarCollapsed && (
 							<div className="mt-4 p-5 bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-secondary-50)] rounded-lg border-2 border-[var(--color-primary-200)] shadow-lg">
-								<Input
-									type="text"
-									value={newFolderName}
-									onChange={(e) => setNewFolderName(e.target.value)}
-									onKeyDown={(e) => e.key === 'Enter' && handleAddFolder()}
-									placeholder={t('folderNamePlaceholder')}
-									className="mb-4"
-									autoFocus
-								/>
+								<Input type="text" value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddFolder()} placeholder={t('folderNamePlaceholder')} className="mb-4" autoFocus />
 								<div className="flex items-center gap-3 mb-4">
-									<input
-										type="color"
-										value={newFolderColor}
-										onChange={(e) => setNewFolderColor(e.target.value)}
-										className="w-14 h-14 rounded-lg cursor-pointer border-2 border-gray-200 shadow-sm"
-									/>
-									<span className="text-sm text-gray-700 font-bold">
-										{t('pickColor')}
-									</span>
+									<input type="color" value={newFolderColor} onChange={(e) => setNewFolderColor(e.target.value)} className="w-14 h-14 rounded-lg cursor-pointer border-2 border-gray-200 shadow-sm" />
+									<span className="text-sm text-gray-700 font-bold">{t('pickColor')}</span>
 								</div>
 								<div className="flex gap-2">
-									<Button
-										onClick={handleAddFolder}
-										className="flex-1 bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]"
-									>
-										{t('add')}
-									</Button>
-									<Button onClick={() => setShowAddFolder(false)} variant="outline">
-										{t('cancel')}
-									</Button>
+									<Button onClick={handleAddFolder} className="flex-1 bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]">{t('add')}</Button>
+									<Button onClick={() => setShowAddFolder(false)} variant="outline">{t('cancel')}</Button>
 								</div>
 							</div>
 						)}
@@ -1704,47 +1390,51 @@ export default function TodoTab() {
 				<div className="bg-white border-b-2 border-gray-100 p-6 shadow-sm">
 					<div className="flex items-center justify-between mb-6">
 						<div className="flex items-center gap-4">
-							{currentFolder && (
-								<>
-									{(() => {
-										const Icon = currentFolder.icon;
-										return (
-											<div
-												className="p-4 rounded-lg border border-[var(--color-primary-100)]"
-												style={{ backgroundColor: `${currentFolder.color}15` }}
-											>
-												<Icon className="w-8 h-8" style={{ color: currentFolder.color }} />
-											</div>
-										);
-									})()}
-									<div>
-										<h2 className="text-4xl font-black text-gray-900">
-											{t.has(`folders.${currentFolder.name}`)
-												? t(`folders.${currentFolder.name}`)
-												: currentFolder.name}
-										</h2>
-										<p className="text-sm text-gray-600 mt-2 font-semibold">
-											{filteredTasks.filter((t) => !t.completed).length} {t('active')} ·{' '}
-											{filteredTasks.filter((t) => t.completed).length} {t('completed')}
-										</p>
-									</div>
-								</>
-							)}
+							{currentFolder && (() => {
+								const Icon = currentFolder.icon;
+								const folderLabel = t.has && t.has(`folders.${currentFolder.name}`) ? t(`folders.${currentFolder.name}`) : currentFolder.name;
+								return (
+									<>
+										<div className="p-4 rounded-lg border border-[var(--color-primary-100)]" style={{ backgroundColor: `${currentFolder.color}15` }}>
+											<Icon className="w-8 h-8" style={{ color: currentFolder.color }} />
+										</div>
+										<div>
+											<h2 className="text-4xl font-black text-gray-900">{folderLabel}</h2>
+											<p className="text-sm text-gray-600 mt-2 font-semibold">
+												{filteredTasks.filter((t) => !t.completed).length} {t('active')} · {filteredTasks.filter((t) => t.completed).length} {t('completed')}
+											</p>
+										</div>
+									</>
+								);
+							})()}
 						</div>
 
 						<div className="flex items-center gap-3">
+							{/* Uncheck all / Recheck all button */}
+							{hasCompleted && (
+								<Button
+									onClick={handleUncheckAll}
+									variant="outline"
+									size="sm"
+									className="gap-2 border-2 border-gray-200 hover:border-(--color-primary-400) transition-all"
+									title={t('uncheckAll')}
+								>
+									<ChevronsUpDown className="w-4 h-4" />
+									<span className="hidden sm:inline text-xs font-bold">
+										{filteredTasks.every((t) => t.completed) ? t('recheckAll') : t('uncheckAll')}
+									</span>
+								</Button>
+							)}
+
 							<Select value={currentTab} onValueChange={handleTabChange}>
 								<SelectTrigger className="w-[150px] !h-[36px] bg-white transition-all border-1 border-[var(--color-primary-300)] rounded-lg font-bold">
 									<SelectValue>
 										<div className="flex items-center gap-2">
-											<span className="text-[var(--color-primary-900)]">
-												{t_navbar(TAB_OPTIONS.find((tab) => tab.value === currentTab)?.label)}
-											</span>
-											{TAB_OPTIONS.find((tab) => tab.value === currentTab)?.icon &&
-												(() => {
-													const Icon = TAB_OPTIONS.find((tab) => tab.value === currentTab)?.icon;
-													return Icon ? <Icon className="h-4 w-4 stroke-[var(--color-primary-900)]" /> : null;
-												})()}
+											<span className="text-[var(--color-primary-900)]">{t_navbar(TAB_OPTIONS.find((tab) => tab.value === currentTab)?.label)}</span>
+											{TAB_OPTIONS.find((tab) => tab.value === currentTab)?.icon && (() => {
+												const Icon = TAB_OPTIONS.find((tab) => tab.value === currentTab)?.icon;
+												return Icon ? <Icon className="h-4 w-4 stroke-[var(--color-primary-900)]" /> : null;
+											})()}
 										</div>
 									</SelectValue>
 								</SelectTrigger>
@@ -1770,24 +1460,15 @@ export default function TodoTab() {
 
 				<div className="max-w-6xl w-full px-2 mx-auto mt-2 flex-1 overflow-y-auto scrollbar-thin">
 					{loading ? (
-						<div className="py-16 text-center text-gray-600 font-semibold">
-							Loading...
-						</div>
+						<div className="py-16 text-center text-gray-600 font-semibold">Loading...</div>
 					) : filteredTasks.length === 0 ? (
 						<EmptyState selectedFolder={selectedFolder} t={t} />
 					) : (
-						<DndContext
-							sensors={sensors}
-							collisionDetection={closestCorners}
-							onDragStart={handleDragStart}
-							onDragEnd={handleDragEnd}
-						>
+						<DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
 							<SortableContext items={filteredTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
 								<div className="space-y-1">
 									{filteredTasks.map((task) => (
 										<SortableTaskItem
-											onReorderSubtasks={handleReorderSubtasks}
-
 											key={task.id}
 											task={task}
 											onToggle={handleToggleTask}
@@ -1798,7 +1479,9 @@ export default function TodoTab() {
 											onToggleSubtask={handleToggleSubtask}
 											onDeleteSubtask={handleDeleteSubtask}
 											onUpdateTask={handleUpdateTask}
-											isSelected={selectedTask?.id === task.id}
+											onReorderSubtasks={handleReorderSubtasks}
+											onMoveToFolder={handleMoveToFolder}
+											folders={folders}
 											t={t}
 											soundEnabled={settings.soundEnabled}
 										/>
@@ -1820,10 +1503,7 @@ export default function TodoTab() {
 
 			{showTaskSidebar && selectedTask && (
 				<>
-					<div
-						className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
-						onClick={() => setShowTaskSidebar(false)}
-					/>
+					<div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" onClick={() => setShowTaskSidebar(false)} />
 					<TaskDetailSidebar
 						task={selectedTask}
 						onUpdate={handleUpdateTask}
@@ -1839,41 +1519,17 @@ export default function TodoTab() {
 				</>
 			)}
 
-			<SettingsDialog
-				open={showSettings}
-				onClose={() => setShowSettings(false)}
-				settings={settings}
-				onUpdateSettings={setSettings}
-				t={t}
-			/>
+			<SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} settings={settings} onUpdateSettings={setSettings} t={t} />
 
-			<Dialog
-				open={showDeleteFolderConfirm}
-				onOpenChange={() => {
-					setShowDeleteFolderConfirm(false);
-					setFolderToDelete(null);
-				}}
-			>
+			<Dialog open={showDeleteFolderConfirm} onOpenChange={() => { setShowDeleteFolderConfirm(false); setFolderToDelete(null); }}>
 				<DialogContent className="sm:max-w-[425px]">
 					<DialogHeader>
 						<DialogTitle className="text-xl font-bold">{t('deleteFolder')}</DialogTitle>
-						<DialogDescription className="text-sm text-gray-600 mt-2">
-							{t('deleteFolderDescription')}
-						</DialogDescription>
+						<DialogDescription className="text-sm text-gray-600 mt-2">{t('deleteFolderDescription')}</DialogDescription>
 					</DialogHeader>
 					<DialogFooter className="gap-2 mt-4">
-						<Button
-							variant="outline"
-							onClick={() => {
-								setShowDeleteFolderConfirm(false);
-								setFolderToDelete(null);
-							}}
-						>
-							{t('cancel')}
-						</Button>
-						<Button variant="destructive" onClick={() => handleDeleteFolder(folderToDelete)}>
-							{t('confirm')}
-						</Button>
+						<Button variant="outline" onClick={() => { setShowDeleteFolderConfirm(false); setFolderToDelete(null); }}>{t('cancel')}</Button>
+						<Button variant="destructive" onClick={() => handleDeleteFolder(folderToDelete)}>{t('confirm')}</Button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
@@ -1881,24 +1537,35 @@ export default function TodoTab() {
 	);
 }
 
-// Quick Add Task Component
+// ============================================================
+// QuickAddTask – refocus after submit
+// ============================================================
 function QuickAddTask({ onAdd, t, keepAdding }) {
-	const [tasks, setTasks] = useState([{ id: '1', title: '', attachments: [] }]);
+	const [taskList, setTaskList] = useState([{ id: '1', title: '', attachments: [] }]);
 	const fileInputRefs = useRef({});
+	const inputRefs = useRef({});
 
 	const handleSubmit = async (taskId, e) => {
 		e?.preventDefault();
-		const task = tasks.find((t) => t.id === taskId);
+		const task = taskList.find((t) => t.id === taskId);
 		if (task && task.title.trim()) {
 			await onAdd(task.title, task.attachments);
 
 			if (keepAdding) {
-				setTasks([
-					...tasks.filter((t) => t.id !== taskId),
-					{ id: Date.now().toString(), title: '', attachments: [] },
+				const newId = Date.now().toString();
+				setTaskList((prev) => [
+					...prev.filter((t) => t.id !== taskId),
+					{ id: newId, title: '', attachments: [] },
 				]);
+				// Refocus after state update
+				setTimeout(() => {
+					const keys = Object.keys(inputRefs.current);
+					const latestKey = keys[keys.length - 1];
+					if (latestKey) inputRefs.current[latestKey]?.focus();
+				}, 80);
 			} else {
-				setTasks(tasks.map((t) => (t.id === taskId ? { ...t, title: '', attachments: [] } : t)));
+				setTaskList((prev) => prev.map((t) => (t.id === taskId ? { ...t, title: '', attachments: [] } : t)));
+				setTimeout(() => inputRefs.current[taskId]?.focus(), 50);
 			}
 		}
 	};
@@ -1911,65 +1578,51 @@ function QuickAddTask({ onAdd, t, keepAdding }) {
 	};
 
 	const updateTask = (taskId, updates) => {
-		setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t)));
+		setTaskList((prev) => prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t)));
 	};
 
 	const handleFileChange = async (taskId, e) => {
 		const files = Array.from(e.target.files || []);
 		if (!files.length) return;
-
 		const newAttachments = await uploadFilesToAssets(files);
-		const task = tasks.find((t) => t.id === taskId);
+		const task = taskList.find((t) => t.id === taskId);
 		updateTask(taskId, { attachments: [...task.attachments, ...newAttachments] });
 	};
 
 	const handlePaste = async (taskId, e) => {
 		const items = e.clipboardData?.items;
 		if (!items) return;
-
 		const files = [];
 		for (let i = 0; i < items.length; i++) {
-			if (items[i].type.indexOf('image') !== -1) {
-				const blob = items[i].getAsFile();
-				if (blob) files.push(blob);
-			}
+			if (items[i].type.indexOf('image') !== -1) { const blob = items[i].getAsFile(); if (blob) files.push(blob); }
 		}
 		if (!files.length) return;
-
 		const newAttachments = await uploadFilesToAssets(files);
-		const task = tasks.find((t) => t.id === taskId);
+		const task = taskList.find((t) => t.id === taskId);
 		updateTask(taskId, { attachments: [...task.attachments, ...newAttachments] });
 	};
 
 	const removeAttachment = (taskId, index) => {
-		const task = tasks.find((t) => t.id === taskId);
+		const task = taskList.find((t) => t.id === taskId);
 		updateTask(taskId, { attachments: task.attachments.filter((_, i) => i !== index) });
 	};
 
 	const removeTask = (taskId) => {
-		if (tasks.length > 1) setTasks(tasks.filter((t) => t.id !== taskId));
-		else setTasks([{ id: Date.now().toString(), title: '', attachments: [] }]);
+		if (taskList.length > 1) setTaskList(taskList.filter((t) => t.id !== taskId));
+		else setTaskList([{ id: Date.now().toString(), title: '', attachments: [] }]);
 	};
 
 	return (
 		<div className="space-y-0 max-w-6xl w-full px-2 mx-auto mt-8">
-			{tasks.map((task) => (
+			{taskList.map((task) => (
 				<form key={task.id} onSubmit={(e) => handleSubmit(task.id, e)} className="mb-0">
 					<div className="p-4 bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] rounded-lg border-2 border-dashed border-[var(--color-primary-300)] hover:border-[var(--color-primary-500)] transition-all">
 						{task.attachments.length > 0 && (
 							<div className="flex flex-wrap gap-2 mb-3">
 								{task.attachments.map((att, idx) => (
 									<div key={idx} className="relative group">
-										<img
-											src={att.url}
-											alt={att.name}
-											className="w-16 h-16 object-cover rounded-lg border-2 border-gray-200"
-										/>
-										<button
-											type="button"
-											onClick={() => removeAttachment(task.id, idx)}
-											className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-lg"
-										>
+										<img src={att.url} alt={att.name} className="w-16 h-16 object-cover rounded-lg border-2 border-gray-200" />
+										<button type="button" onClick={() => removeAttachment(task.id, idx)} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-lg">
 											<X className="w-3 h-3 text-white" />
 										</button>
 									</div>
@@ -1982,38 +1635,23 @@ function QuickAddTask({ onAdd, t, keepAdding }) {
 								<Plus className="w-5 h-5 text-[var(--color-primary-700)] flex-shrink-0" />
 							</div>
 							<textarea
+								ref={(el) => (inputRefs.current[task.id] = el)}
 								value={task.title}
 								onChange={(e) => updateTask(task.id, { title: e.target.value })}
 								onPaste={(e) => handlePaste(task.id, e)}
 								onKeyDown={(e) => handleKeyDown(task.id, e)}
 								dir={isArabic(task.title).dir}
 								placeholder={t('addTaskPlaceholder')}
-								className="flex-1  bg-transparent border-none focus:outline-none text-gray-800 placeholder-gray-500 font-semibold resize-none"
+								className="flex-1 bg-transparent border-none focus:outline-none text-gray-800 placeholder-gray-500 font-semibold resize-none"
 								rows={1}
-								style={{ minHeight: "24px", maxHeight: "120px", fontFamily : isArabic(task.title).fontFamily }}
+								style={{ minHeight: '24px', maxHeight: '120px', fontFamily: isArabic(task.title).fontFamily }}
 							/>
-							<input
-								ref={(el) => (fileInputRefs.current[task.id] = el)}
-								type="file"
-								accept="image/*"
-								multiple
-								onChange={(e) => handleFileChange(task.id, e)}
-								className="hidden"
-							/>
-							<button
-								type="button"
-								onClick={() => fileInputRefs.current[task.id]?.click()}
-								className="p-2.5 hover:bg-[var(--color-primary-100)] rounded-lg transition-all"
-								title={t('attachImage')}
-							>
+							<input ref={(el) => (fileInputRefs.current[task.id] = el)} type="file" accept="image/*" multiple onChange={(e) => handleFileChange(task.id, e)} className="hidden" />
+							<button type="button" onClick={() => fileInputRefs.current[task.id]?.click()} className="p-2.5 hover:bg-[var(--color-primary-100)] rounded-lg transition-all" title={t('attachImage')}>
 								<Image className="w-5 h-5 text-gray-600" />
 							</button>
-							{tasks.length > 1 && (
-								<button
-									type="button"
-									onClick={() => removeTask(task.id)}
-									className="p-2.5 hover:bg-red-100 rounded-lg transition-all"
-								>
+							{taskList.length > 1 && (
+								<button type="button" onClick={() => removeTask(task.id)} className="p-2.5 hover:bg-red-100 rounded-lg transition-all">
 									<X className="w-5 h-5 text-red-600" />
 								</button>
 							)}
@@ -2025,7 +1663,9 @@ function QuickAddTask({ onAdd, t, keepAdding }) {
 	);
 }
 
-// Task Detail Sidebar
+// ============================================================
+// TaskDetailSidebar
+// ============================================================
 function TaskDetailSidebar({ task, onUpdate, onDelete, onClose, onToggleSubtask, onDeleteSubtask, isRTL, t, locale }) {
 	const [editingTitle, setEditingTitle] = useState(false);
 	const [title, setTitle] = useState(task.title);
@@ -2041,7 +1681,6 @@ function TaskDetailSidebar({ task, onUpdate, onDelete, onClose, onToggleSubtask,
 	const handleFileChange = async (e) => {
 		const files = Array.from(e.target.files || []);
 		if (!files.length) return;
-
 		const newAttachments = await uploadFilesToAssets(files);
 		onUpdate(task.id, { attachments: [...(task.attachments || []), ...newAttachments] });
 	};
@@ -2060,17 +1699,8 @@ function TaskDetailSidebar({ task, onUpdate, onDelete, onClose, onToggleSubtask,
 				<div className="flex items-center justify-between mb-5">
 					<h2 className="text-xl font-black text-gray-900">{t('taskDetails')}</h2>
 					<div className="flex items-center gap-2">
-						<Button
-							onClick={() => onUpdate(task.id, { isStarred: !task.isStarred })}
-							variant="ghost"
-							size="icon"
-							className={`rounded-lg transition-all hover:scale-110 ${task.isStarred ? 'bg-gradient-to-br from-yellow-100 to-yellow-200' : ''}`}
-						>
-							{task.isStarred ? (
-								<Star className="w-5 h-5 fill-yellow-500 text-yellow-500" />
-							) : (
-								<StarOff className="w-5 h-5 text-gray-600" />
-							)}
+						<Button onClick={() => onUpdate(task.id, { isStarred: !task.isStarred })} variant="ghost" size="icon" className={`rounded-lg transition-all hover:scale-110 ${task.isStarred ? 'bg-gradient-to-br from-yellow-100 to-yellow-200' : ''}`}>
+							{task.isStarred ? <Star className="w-5 h-5 fill-yellow-500 text-yellow-500" /> : <StarOff className="w-5 h-5 text-gray-600" />}
 						</Button>
 						<Button onClick={() => onDelete(task.id)} variant="ghost" size="icon" className="rounded-lg hover:bg-gradient-to-br hover:from-red-100 hover:to-red-200 transition-all hover:scale-110">
 							<Trash2 className="w-5 h-5 text-red-600" />
@@ -2082,20 +1712,9 @@ function TaskDetailSidebar({ task, onUpdate, onDelete, onClose, onToggleSubtask,
 				</div>
 
 				{editingTitle ? (
-					<Input
-						type="text"
-						value={title}
-						onChange={(e) => setTitle(e.target.value)}
-						onBlur={handleSaveTitle}
-						onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
-						className="text-xl font-black"
-						autoFocus
-					/>
+					<Input type="text" value={title} onChange={(e) => setTitle(e.target.value)} onBlur={handleSaveTitle} onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()} className="text-xl font-black" autoFocus />
 				) : (
-					<h3
-						onClick={() => setEditingTitle(true)}
-						className="text-xl font-black text-gray-900 cursor-pointer hover:text-[var(--color-primary-600)] transition-colors px-4 py-3 hover:bg-white rounded-lg"
-					>
+					<h3 onClick={() => setEditingTitle(true)} className="text-xl font-black text-gray-900 cursor-pointer hover:text-[var(--color-primary-600)] transition-colors px-4 py-3 hover:bg-white rounded-lg">
 						{task.title}
 					</h3>
 				)}
@@ -2125,17 +1744,10 @@ function TaskDetailSidebar({ task, onUpdate, onDelete, onClose, onToggleSubtask,
 							{task.attachments.map((att, idx) => (
 								<div key={idx} className="relative group">
 									<img src={att.url} alt={att.name} className="w-full h-24 object-cover rounded-lg border-2 border-gray-200" />
-									<button
-										onClick={() => removeAttachment(idx)}
-										className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-									>
+									<button onClick={() => removeAttachment(idx)} className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
 										<X className="w-3.5 h-3.5 text-white" />
 									</button>
-									<a
-										href={att.url}
-										download={att.name}
-										className="absolute bottom-2 right-2 p-1.5 bg-white/90 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
-									>
+									<a href={att.url} download={att.name} className="absolute bottom-2 right-2 p-1.5 bg-white/90 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
 										<Download className="w-3.5 h-3.5 text-gray-700" />
 									</a>
 								</div>
@@ -2152,18 +1764,15 @@ function TaskDetailSidebar({ task, onUpdate, onDelete, onClose, onToggleSubtask,
 	);
 }
 
+// ============================================================
 // Badge Components
+// ============================================================
 function StatusBadge({ task, onUpdate, t }) {
 	const [isOpen, setIsOpen] = useState(false);
 	const status = statusOptions.find((s) => s.id === task.status) || statusOptions[0];
-
 	return (
 		<div className="relative">
-			<button
-				onClick={() => setIsOpen(!isOpen)}
-				className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-md hover:shadow-lg transition-all"
-				style={{ backgroundColor: status.color }}
-			>
+			<button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-md hover:shadow-lg transition-all" style={{ backgroundColor: status.color }}>
 				<div className="w-2 h-2 rounded-full bg-white" />
 				{t(`status.${status.label}`)}
 				<ChevronDown className="w-3 h-3" />
@@ -2171,14 +1780,7 @@ function StatusBadge({ task, onUpdate, t }) {
 			{isOpen && (
 				<div className="absolute z-50 mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-2xl overflow-hidden min-w-[150px]">
 					{statusOptions.map((s) => (
-						<button
-							key={s.id}
-							onClick={() => {
-								onUpdate(task.id, { status: s.id });
-								setIsOpen(false);
-							}}
-							className="w-full px-4 py-2 hover:bg-gray-50 text-left flex items-center gap-2"
-						>
+						<button key={s.id} onClick={() => { onUpdate(task.id, { status: s.id }); setIsOpen(false); }} className="w-full px-4 py-2 hover:bg-gray-50 text-left flex items-center gap-2">
 							<div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
 							<span className="text-sm font-bold">{t(`status.${s.label}`)}</span>
 						</button>
@@ -2192,18 +1794,11 @@ function StatusBadge({ task, onUpdate, t }) {
 function PriorityBadge({ task, onUpdate, t }) {
 	const [isOpen, setIsOpen] = useState(false);
 	const priority = priorityLevels.find((p) => p.id === task.priority);
-
 	if (!priority || task.priority === 'none') return null;
-
 	const Icon = priority.icon;
-
 	return (
 		<div className="relative">
-			<button
-				onClick={() => setIsOpen(!isOpen)}
-				className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-md hover:shadow-lg transition-all"
-				style={{ backgroundColor: priority.color }}
-			>
+			<button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-md hover:shadow-lg transition-all" style={{ backgroundColor: priority.color }}>
 				<Icon className="w-3 h-3" />
 				{t(`priorities.${priority.label}`)}
 				<ChevronDown className="w-3 h-3" />
@@ -2211,14 +1806,7 @@ function PriorityBadge({ task, onUpdate, t }) {
 			{isOpen && (
 				<div className="absolute z-50 mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-2xl overflow-hidden min-w-[150px]">
 					{priorityLevels.slice(1).map((p) => (
-						<button
-							key={p.id}
-							onClick={() => {
-								onUpdate(task.id, { priority: p.id });
-								setIsOpen(false);
-							}}
-							className="w-full px-4 py-2 hover:bg-gray-50 text-left flex items-center gap-2"
-						>
+						<button key={p.id} onClick={() => { onUpdate(task.id, { priority: p.id }); setIsOpen(false); }} className="w-full px-4 py-2 hover:bg-gray-50 text-left flex items-center gap-2">
 							<div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
 							<span className="text-sm font-bold">{t(`priorities.${p.label}`)}</span>
 						</button>
@@ -2232,15 +1820,10 @@ function PriorityBadge({ task, onUpdate, t }) {
 function RepeatBadge({ task, onUpdate, t }) {
 	const [isOpen, setIsOpen] = useState(false);
 	const repeat = repeatOptions.find((r) => r.id === task.repeat);
-
 	if (!repeat || task.repeat === 'none') return null;
-
 	return (
 		<div className="relative">
-			<button
-				onClick={() => setIsOpen(!isOpen)}
-				className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500 text-xs font-bold text-white shadow-md hover:shadow-lg transition-all"
-			>
+			<button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500 text-xs font-bold text-white shadow-md hover:shadow-lg transition-all">
 				<Repeat className="w-3 h-3" />
 				{t(`repeat.${repeat.label}`)}
 				<ChevronDown className="w-3 h-3" />
@@ -2248,14 +1831,7 @@ function RepeatBadge({ task, onUpdate, t }) {
 			{isOpen && (
 				<div className="absolute z-50 mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-2xl overflow-hidden min-w-[150px]">
 					{repeatOptions.map((r) => (
-						<button
-							key={r.id}
-							onClick={() => {
-								onUpdate(task.id, { repeat: r.id });
-								setIsOpen(false);
-							}}
-							className="w-full px-4 py-2 hover:bg-gray-50 text-left"
-						>
+						<button key={r.id} onClick={() => { onUpdate(task.id, { repeat: r.id }); setIsOpen(false); }} className="w-full px-4 py-2 hover:bg-gray-50 text-left">
 							<span className="text-sm font-bold">{t(`repeat.${r.label}`)}</span>
 						</button>
 					))}
@@ -2265,7 +1841,9 @@ function RepeatBadge({ task, onUpdate, t }) {
 	);
 }
 
+// ============================================================
 // Task Detail Sections
+// ============================================================
 function TaskDateTimeSection({ task, onUpdate, t, locale }) {
 	return (
 		<div className="grid grid-cols-2 gap-4">
@@ -2315,7 +1893,6 @@ function TaskSubtasksSection({ task, onUpdate, onToggleSubtask, onDeleteSubtask,
 			await api.post(`/tasks/${task.id}/subtasks`, { title: newTitle.trim(), completed: false });
 			const refreshed = await api.get(`/todos/${task.id}`);
 			onUpdate(task.id, normalizeTask(refreshed?.data ?? refreshed));
-
 			setNewTitle('');
 			setShowInput(false);
 		}
@@ -2335,14 +1912,9 @@ function TaskSubtasksSection({ task, onUpdate, onToggleSubtask, onDeleteSubtask,
 
 			<div className="space-y-3 mb-3">
 				{task.subtasks?.map((subtask) => (
-					<div
-						key={subtask.id}
-						className="flex items-center gap-3 p-3 hover:bg-gradient-to-r hover:from-[var(--color-primary-50)] hover:to-transparent rounded-lg group transition-all border-2 border-transparent hover:border-[var(--color-primary-200)]"
-					>
+					<div key={subtask.id} className="flex items-center gap-3 p-3 hover:bg-gradient-to-r hover:from-[var(--color-primary-50)] hover:to-transparent rounded-lg group transition-all border-2 border-transparent hover:border-[var(--color-primary-200)]">
 						<CustomCheckbox checked={subtask.completed} onCheckedChange={() => onToggleSubtask(task.id, subtask.id)} />
-						<span className={`flex-1 text-sm font-semibold ${subtask.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-							{subtask.title}
-						</span>
+						<span className={`flex-1 text-sm font-semibold ${subtask.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>{subtask.title}</span>
 						<Button size="icon" variant="ghost" onClick={() => onDeleteSubtask(task.id, subtask.id)} className="opacity-0 group-hover:opacity-100 h-8 w-8 transition-opacity">
 							<X className="w-4 h-4 text-red-600" />
 						</Button>
@@ -2352,20 +1924,9 @@ function TaskSubtasksSection({ task, onUpdate, onToggleSubtask, onDeleteSubtask,
 
 			{showInput && (
 				<form onSubmit={handleAdd} className="flex gap-2">
-					<Input
-						type="text"
-						className="w-full text-base font-bold bg-transparent border-none focus:outline-none focus:ring-0 px-0"
-						value={newTitle}
-						onChange={(e) => setNewTitle(e.target.value)}
-						placeholder={t('subtaskPlaceholder')}
-						autoFocus
-					/>
-					<Button type="submit">
-						<Check className="w-4 h-4" />
-					</Button>
-					<Button type="button" variant="ghost" onClick={() => setShowInput(false)}>
-						<X className="w-4 h-4" />
-					</Button>
+					<Input type="text" className="w-full" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder={t('subtaskPlaceholder')} autoFocus />
+					<Button type="submit"><Check className="w-4 h-4" /></Button>
+					<Button type="button" variant="ghost" onClick={() => setShowInput(false)}><X className="w-4 h-4" /></Button>
 				</form>
 			)}
 		</div>
@@ -2384,7 +1945,9 @@ function TaskNotesSection({ task, onUpdate, t }) {
 	);
 }
 
+// ============================================================
 // Settings Dialog
+// ============================================================
 function SettingsDialog({ open, onClose, settings, onUpdateSettings, t }) {
 	return (
 		<Dialog open={open} onOpenChange={onClose}>
@@ -2392,7 +1955,6 @@ function SettingsDialog({ open, onClose, settings, onUpdateSettings, t }) {
 				<DialogHeader>
 					<DialogTitle className="text-2xl font-black">{t('settings')}</DialogTitle>
 				</DialogHeader>
-
 				<div className="space-y-6 mt-4">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-3">
@@ -2404,7 +1966,6 @@ function SettingsDialog({ open, onClose, settings, onUpdateSettings, t }) {
 						</div>
 						<Switch checked={settings.soundEnabled} onCheckedChange={(checked) => onUpdateSettings({ ...settings, soundEnabled: checked })} />
 					</div>
-
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-3">
 							<Eye className="w-5 h-5 text-gray-600" />
@@ -2415,51 +1976,39 @@ function SettingsDialog({ open, onClose, settings, onUpdateSettings, t }) {
 						</div>
 						<Switch checked={settings.showCompleted} onCheckedChange={(checked) => onUpdateSettings({ ...settings, showCompleted: checked })} />
 					</div>
-
 					<div>
 						<Label className="font-black mb-3 block">{t('addTaskPosition')}</Label>
 						<div className="grid grid-cols-2 gap-2">
-							<Button
-								variant={settings.addTaskPosition === 'top' ? 'default' : 'outline'}
-								onClick={() => onUpdateSettings({ ...settings, addTaskPosition: 'top' })}
-								className="justify-start gap-2"
-							>
+							<Button variant={settings.addTaskPosition === 'top' ? 'default' : 'outline'} onClick={() => onUpdateSettings({ ...settings, addTaskPosition: 'top' })} className="justify-start gap-2">
 								<ArrowUp className="w-4 h-4" />
 								{t('addToTop')}
 							</Button>
-							<Button
-								variant={settings.addTaskPosition === 'bottom' ? 'default' : 'outline'}
-								onClick={() => onUpdateSettings({ ...settings, addTaskPosition: 'bottom' })}
-								className="justify-start gap-2"
-							>
+							<Button variant={settings.addTaskPosition === 'bottom' ? 'default' : 'outline'} onClick={() => onUpdateSettings({ ...settings, addTaskPosition: 'bottom' })} className="justify-start gap-2">
 								<ArrowDown className="w-4 h-4" />
 								{t('addToBottom')}
 							</Button>
 						</div>
 					</div>
 				</div>
-
 				<div className="flex justify-end gap-2 mt-6">
-					<Button onClick={onClose} className="bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]">
-						{t('done')}
-					</Button>
+					<Button onClick={onClose} className="bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]">{t('done')}</Button>
 				</div>
 			</DialogContent>
 		</Dialog>
 	);
 }
 
+// ============================================================
 // Filter and Sort Selects
+// ============================================================
 function FilterSelect({ value, onChange, t }) {
 	const [isOpen, setIsOpen] = useState(false);
 	const selectRef = useRef(null);
 
 	useEffect(() => {
-		const handleClickOutside = (e) => {
-			if (selectRef.current && !selectRef.current.contains(e.target)) setIsOpen(false);
-		};
-		document.addEventListener('mousedown', handleClickOutside);
-		return () => document.removeEventListener('mousedown', handleClickOutside);
+		const handler = (e) => { if (selectRef.current && !selectRef.current.contains(e.target)) setIsOpen(false); };
+		document.addEventListener('mousedown', handler);
+		return () => document.removeEventListener('mousedown', handler);
 	}, []);
 
 	const selectedPriority = value === 'all' ? { label: 'all' } : priorityLevels.find((p) => p.id === value);
@@ -2474,24 +2023,11 @@ function FilterSelect({ value, onChange, t }) {
 			{isOpen && (
 				<div className="absolute rtl:left-0 ltr:right-0 z-50 mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-2xl overflow-hidden min-w-[180px]">
 					<div className="py-2">
-						<div
-							onClick={() => {
-								onChange('all');
-								setIsOpen(false);
-							}}
-							className="px-4 py-3 hover:bg-[var(--color-primary-50)] cursor-pointer transition-colors text-sm font-bold"
-						>
+						<div onClick={() => { onChange('all'); setIsOpen(false); }} className="px-4 py-3 hover:bg-[var(--color-primary-50)] cursor-pointer transition-colors text-sm font-bold">
 							{t('priorities.all')}
 						</div>
 						{priorityLevels.slice(1).map((priority) => (
-							<div
-								key={priority.id}
-								onClick={() => {
-									onChange(priority.id);
-									setIsOpen(false);
-								}}
-								className="px-4 py-3 hover:bg-[var(--color-primary-50)] cursor-pointer transition-colors flex items-center gap-2"
-							>
+							<div key={priority.id} onClick={() => { onChange(priority.id); setIsOpen(false); }} className="px-4 py-3 hover:bg-[var(--color-primary-50)] cursor-pointer transition-colors flex items-center gap-2">
 								<div className="w-3 h-3 rounded-full" style={{ backgroundColor: priority.color }} />
 								<span className="text-sm font-bold">{t(`priorities.${priority.label}`)}</span>
 							</div>
@@ -2508,16 +2044,15 @@ function SortSelect({ value, onChange, t }) {
 	const selectRef = useRef(null);
 
 	useEffect(() => {
-		const handleClickOutside = (e) => {
-			if (selectRef.current && !selectRef.current.contains(e.target)) setIsOpen(false);
-		};
-		document.addEventListener('mousedown', handleClickOutside);
-		return () => document.removeEventListener('mousedown', handleClickOutside);
+		const handler = (e) => { if (selectRef.current && !selectRef.current.contains(e.target)) setIsOpen(false); };
+		document.addEventListener('mousedown', handler);
+		return () => document.removeEventListener('mousedown', handler);
 	}, []);
 
 	const sortOptions = [
 		{ id: 'manual', label: 'manual' },
 		{ id: 'dueDate', label: 'dueDate' },
+		{ id: 'time', label: 'time' },
 		{ id: 'priority', label: 'priority' },
 		{ id: 'alphabetical', label: 'alphabetical' },
 	];
@@ -2535,14 +2070,7 @@ function SortSelect({ value, onChange, t }) {
 				<div className="absolute z-50 rtl:left-0 ltr:right-0 mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-2xl overflow-hidden min-w-[160px]">
 					<div className="py-2">
 						{sortOptions.map((option) => (
-							<div
-								key={option.id}
-								onClick={() => {
-									onChange(option.id);
-									setIsOpen(false);
-								}}
-								className="px-4 py-3 hover:bg-[var(--color-primary-50)] cursor-pointer transition-colors text-sm font-bold"
-							>
+							<div key={option.id} onClick={() => { onChange(option.id); setIsOpen(false); }} className="px-4 py-3 hover:bg-[var(--color-primary-50)] cursor-pointer transition-colors text-sm font-bold">
 								{t(`sort.${option.label}`)}
 							</div>
 						))}
@@ -2553,7 +2081,9 @@ function SortSelect({ value, onChange, t }) {
 	);
 }
 
+// ============================================================
 // Empty State
+// ============================================================
 function EmptyState({ t }) {
 	return (
 		<div className="text-center py-20">

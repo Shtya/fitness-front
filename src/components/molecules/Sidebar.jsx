@@ -106,25 +106,25 @@ export const NAV = [
 		role: 'client',
 		sectionKey: 'sections.myWorkspace',
 		items: [
-			{ nameKey: 'myWorkouts', href: '/dashboard/my/workouts', icon: ClipboardList },
-			{ nameKey: 'myNutrition', href: '/dashboard/my/nutrition', icon: Apple },
-			{ nameKey: 'myReminders', href: '/dashboard/reminders', icon: AlarmClock },
-			{ nameKey: 'weeklyStrength', href: '/dashboard/my/report', icon: Newspaper },
+			{ nameKey: 'myWorkouts', href: '/dashboard/my/workouts', icon: ClipboardList }, //
+			{ nameKey: 'myNutrition', href: '/dashboard/my/nutrition', icon: Apple }, //
+			{ nameKey: 'myReminders', href: '/dashboard/reminders', icon: AlarmClock }, //
+			{ nameKey: 'weeklyStrength', href: '/dashboard/my/report', icon: Newspaper }, //
 		],
 	},
 	{
 		role: 'client',
 		sectionKey: 'sections.tools',
 		items: [
-			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
-			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
+			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },  //
+			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare }, //
 		],
 	},
 	{
 		role: 'client',
 		sectionKey: 'sections.account',
 		items: [
-			{ nameKey: 'profile', href: '/dashboard/my/profile', icon: UserIcon },
+			{ nameKey: 'profile', href: '/dashboard/my/profile', icon: UserIcon }, //
 		],
 	},
 
@@ -149,17 +149,17 @@ export const NAV = [
 		role: 'coach',
 		sectionKey: 'sections.clients',
 		items: [
-			{ nameKey: 'allUsers', href: '/dashboard/users', icon: Users },
-			{ nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
+			{ nameKey: 'allUsers', href: '/dashboard/users', icon: Users },//
+			{ nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },//
 		],
 	},
 	{
 		role: 'coach',
 		sectionKey: 'sections.programs',
 		items: [
-			{ nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: NotebookPen },
-			{ nameKey: 'mealPlans', href: '/dashboard/nutrition', icon: ChefHat },
-			{ nameKey: 'reports', href: '/dashboard/reports', icon: FileBarChart },
+			{ nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: NotebookPen },//
+			{ nameKey: 'mealPlans', href: '/dashboard/nutrition', icon: ChefHat },//
+			{ nameKey: 'reports', href: '/dashboard/reports', icon: FileBarChart },//
 		],
 	},
 	{
@@ -171,8 +171,8 @@ export const NAV = [
 				icon: FaUsers,
 				expand: false,
 				children: [
-					{ nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FaWpforms },
-					{ nameKey: 'responses', href: '/dashboard/intake/responses', icon: FaInbox },
+					{ nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FaWpforms },//
+					{ nameKey: 'responses', href: '/dashboard/intake/responses', icon: FaInbox },//
 				],
 			},
 		],
@@ -181,15 +181,15 @@ export const NAV = [
 		role: 'coach',
 		sectionKey: 'sections.tools',
 		items: [
-			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
-			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
+			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },//
+			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },//
 		],
 	},
 	{
 		role: 'coach',
 		sectionKey: 'sections.account',
 		items: [
-			{ nameKey: 'profile', icon: User, href: '/dashboard/my-account' },
+			{ nameKey: 'profile', icon: User, href: '/dashboard/my-account' }, //
 		],
 	},
 
@@ -214,16 +214,16 @@ export const NAV = [
 		role: 'admin',
 		sectionKey: 'sections.management',
 		items: [
-			{ nameKey: 'allUsers', href: '/dashboard/users', icon: Users },
-			{ nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
+			{ nameKey: 'allUsers', href: '/dashboard/users', icon: Users }, //
+			{ nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList }, //
 		],
 	},
 	{
 		role: 'admin',
 		sectionKey: 'sections.programs',
 		items: [
-			{ nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: NotebookPen },
-			{ nameKey: 'mealPlans', href: '/dashboard/nutrition', icon: ChefHat },
+			{ nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: NotebookPen }, //
+			{ nameKey: 'mealPlans', href: '/dashboard/nutrition', icon: ChefHat }, //
 		],
 	},
 	{
@@ -235,8 +235,8 @@ export const NAV = [
 				icon: FaUsers,
 				expand: false,
 				children: [
-					{ nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FaWpforms },
-					{ nameKey: 'responses', href: '/dashboard/intake/responses', icon: FaInbox },
+					{ nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FaWpforms }, //
+					{ nameKey: 'responses', href: '/dashboard/intake/responses', icon: FaInbox }, //
 				],
 			},
 		],
@@ -245,24 +245,24 @@ export const NAV = [
 		role: 'admin',
 		sectionKey: 'sections.tools',
 		items: [
-			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
-			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
-			{ nameKey: 'reports', href: '/dashboard/reports', icon: FileBarChart },
+			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare }, //
+			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator }, //
+			{ nameKey: 'reports', href: '/dashboard/reports', icon: FileBarChart }, //
 		],
 	},
 	{
 		role: 'admin',
 		sectionKey: 'sections.system',
 		items: [
-			{ nameKey: 'systemSettings', href: '/dashboard/settings', icon: ServerCog },
+			{ nameKey: 'systemSettings', href: '/dashboard/settings', icon: ServerCog }, //
 		],
 	},
 	{
 		role: 'admin',
 		sectionKey: 'sections.account',
 		items: [
-			{ nameKey: 'billing', icon: Wallet, href: '/dashboard/billing' },
-			{ nameKey: 'profile', icon: User, href: '/dashboard/my-account' },
+			{ nameKey: 'billing', icon: Wallet, href: '/dashboard/billing' },  //
+			{ nameKey: 'profile', icon: User, href: '/dashboard/my-account' },  //
 		],
 	},
 

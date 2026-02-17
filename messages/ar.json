@@ -1,4 +1,141 @@
 {
+	"superAdmin": {
+    "title": "لوحة المشرف العام — المستخدمون",
+    "subtitle": "إجمالي {{count}} مستخدم مُدار",
+    "loading": "جارٍ تحميل المستخدمين…",
+    "status": {
+      "active": "نشط",
+      "pending": "قيد الانتظار",
+      "suspended": "موقوف"
+    },
+    "role": {
+      "admin": "مدير",
+      "coach": "مدرب",
+      "client": "عميل",
+      "super_admin": "مشرف عام"
+    },
+    "stats": {
+      "total": "الإجمالي",
+      "admins": "المديرون",
+      "coaches": "المدربون",
+      "clients": "العملاء",
+      "active": "نشطون",
+      "pending": "قيد الانتظار",
+      "suspended": "موقوفون",
+      "totalUsers": "إجمالي المستخدمين",
+      "activeUsers": "النشطون"
+    },
+    "sections": {
+      "admins": "المديرون",
+      "others": "أخرى"
+    },
+    "filters": {
+      "searchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني…",
+      "allStatuses": "جميع الحالات",
+      "allRoles": "جميع الأدوار",
+      "sortLabel": "الترتيب"
+    },
+    "sort": {
+      "name_asc": "الاسم أ ← ي",
+      "name_desc": "الاسم ي ← أ",
+      "date_desc": "الأحدث أولاً",
+      "date_asc": "الأقدم أولاً",
+      "status": "حسب الحالة"
+    },
+    "actions": {
+      "createAdmin": "إنشاء مستخدم",
+      "loginAs": "تسجيل دخول",
+      "loginAsAdmin": "الدخول كمدير",
+      "activate": "تفعيل",
+      "setPending": "تعيين كقيد الانتظار",
+      "suspend": "إيقاف الحساب",
+      "viewDashboard": "عرض لوحة التحكم",
+      "editData": "تعديل البيانات",
+      "copyCredentials": "نسخ بيانات الدخول",
+      "deleteUser": "حذف المستخدم",
+      "cancel": "إلغاء",
+      "statusUpdated": "تم تحديث الحالة بنجاح"
+    },
+    "impersonation": {
+      "loading": "جارٍ تسجيل الدخول كمستخدم…",
+      "loggedAs": "تسجيل دخول بصفة",
+      "success": "تم تسجيل الدخول بنجاح بصفة {{name}}",
+      "failed": "فشل تسجيل الدخول بصفة المستخدم",
+      "return": "العودة إلى المشرف العام",
+      "returned": "تم الرجوع إلى حساب المشرف العام"
+    },
+    "empty": {
+      "noUsers": "لا يوجد مستخدمون",
+      "tryAdjust": "حاول تعديل الفلاتر أو مصطلح البحث",
+      "noCoaches": "لا يوجد مدربون مُعيَّنون بعد",
+      "noClients": "لا يوجد عملاء مُعيَّنون"
+    },
+    "subscription": {
+      "expired": "منتهية الصلاحية"
+    },
+    "pagination": {
+      "prev": "→ السابق",
+      "next": "التالي ←"
+    },
+    "errors": {
+      "loadFailed": "فشل تحميل المستخدمين",
+      "loadCoaches": "فشل تحميل المدربين",
+      "loadClients": "فشل تحميل العملاء",
+      "createFailed": "فشل إنشاء المستخدم",
+      "statusFailed": "فشل تحديث الحالة",
+      "restoreFailed": "فشل استعادة الجلسة",
+      "credsFailed": "فشل جلب بيانات الدخول",
+      "deleteFailed": "فشل حذف المستخدم",
+      "updateFailed": "فشل تحديث المستخدم"
+    },
+    "createModal": {
+      "title": "إنشاء مستخدم جديد",
+      "subtitle": "أدخل البيانات أدناه",
+      "created": "تم إنشاء المستخدم!",
+      "tempPassLabel": "تم إنشاء كلمة مرور مؤقتة. شاركها بأمان.",
+      "success": "تم إنشاء المستخدم بنجاح!",
+      "done": "تم",
+      "submit": "إنشاء المستخدم",
+      "fields": {
+        "name": "الاسم الكامل",
+        "email": "البريد الإلكتروني",
+        "phone": "رقم الهاتف",
+        "role": "الدور"
+      },
+      "placeholders": {
+        "name": "مثال: أحمد محمد",
+        "email": "مثال: ahmed@example.com",
+        "phone": "مثال: +966 5x xxx xxxx"
+      },
+      "validation": {
+        "nameEmail": "الاسم والبريد الإلكتروني مطلوبان"
+      }
+    },
+    "editModal": {
+      "title": "تعديل بيانات المستخدم",
+      "save": "حفظ التغييرات",
+      "success": "تم تحديث المستخدم بنجاح"
+    },
+    "deleteModal": {
+      "title": "حذف المستخدم؟",
+      "warning": "لا يمكن التراجع عن هذا الإجراء.",
+      "confirm": "حذف",
+      "success": "تم حذف المستخدم"
+    },
+    "credsModal": {
+      "title": "بيانات تسجيل الدخول",
+      "email": "البريد الإلكتروني",
+      "tempPassword": "كلمة المرور المؤقتة",
+      "warning": "هذه كلمة مرور مؤقتة. شاركها بأمان واطلب من المستخدم تغييرها.",
+      "fetching": "جارٍ جلب البيانات…",
+      "done": "تم"
+    },
+    "header": {
+      "title": "المشرف العام — المستخدمون",
+      "subtitle": "إدارة جميع المستخدمين في المنصة",
+      "createNewUser": "إنشاء مستخدم جديد"
+    }
+  },
   "calendar": {
     "january": "يناير",
     "february": "فبراير",
@@ -2169,101 +2306,7 @@
     "d6": "6 أشهر",
     "d12": "12 شهر"
   },
-  "superAdmin": {
-    "header": {
-      "title": "لوحة السوبر أدمن",
-      "subtitle": "إنشاء المسؤولين وإدارة المدراء والمدربين والعملاء عبر النظام.",
-      "createAdmin": "إنشاء مسؤول جديد"
-    },
-    "stats": {
-      "totalAdmins": "إجمالي المسؤولين",
-      "activeAdmins": "المسؤولون النشطون",
-      "totalCoaches": "إجمالي المدربين",
-      "totalClients": "إجمالي العملاء"
-    },
-    "table": {
-      "admin": "المسؤول",
-      "phone": "رقم الهاتف",
-      "status": "الحالة",
-      "coaches": "المدربون",
-      "clients": "العملاء",
-      "createdAt": "تاريخ الإنشاء",
-      "clientName": "اسم العميل",
-      "clientEmail": "بريد العميل",
-      "joinDate": "تاريخ الانضمام"
-    },
-    "badges": {
-      "coaches": "{n} مدرب",
-      "clients": "{n} عميل"
-    },
-    "actions": {
-      "viewExpand": "عرض التفاصيل",
-      "edit": "تعديل",
-      "suspend": "إيقاف مؤقت",
-      "activate": "تفعيل",
-      "delete": "حذف"
-    },
-    "expand": {
-      "coaches": "قائمة المدربين",
-      "noCoaches": "لا يوجد مدربون لهذا المسؤول.",
-      "showClients": "عرض العملاء",
-      "hideClients": "إخفاء العملاء",
-      "clientsCount": "{n} عميل",
-      "noClients": "لا يوجد عملاء لهذا المدرب."
-    },
-    "createModal": {
-      "title": "إنشاء مسؤول جديد",
-      "create": "إنشاء"
-    },
-    "fields": {
-      "name": "الاسم",
-      "email": "البريد الإلكتروني",
-      "phone": "رقم الهاتف",
-      "password": "كلمة المرور",
-      "status": "الحالة"
-    },
-    "placeholders": {
-      "name": "محمد أحمد",
-      "email": "example@domain.com",
-      "phone": "+20 1X XXX XXXX",
-      "status": "اختر الحالة",
-      "search": "ابحث بالاسم أو البريد الإلكتروني..."
-    },
-    "status": {
-      "active": "نشط",
-      "suspended": "موقوف"
-    },
-    "common": {
-      "cancel": "إلغاء",
-      "creating": "جاري الإنشاء..."
-    },
-    "errors": {
-      "nameMin": "يجب ألا يقل الاسم عن حرفين",
-      "nameRequired": "الاسم مطلوب",
-      "emailInvalid": "البريد الإلكتروني غير صالح",
-      "emailRequired": "البريد الإلكتروني مطلوب",
-      "phoneInvalid": "تنسيق رقم الهاتف غير صالح",
-      "passwordRequired": "كلمة المرور مطلوبة",
-      "passwordMin": "يجب ألا تقل كلمة المرور عن 8 أحرف",
-      "statusRequired": "يجب تحديد الحالة"
-    },
-    "alerts": {
-      "passwordGenerated": "تم إنشاء كلمة مرور قوية",
-      "adminCreated": "تم إنشاء المسؤول بنجاح",
-      "createFailed": "فشل إنشاء المسؤول",
-      "loadFailed": "فشل تحميل البيانات",
-      "statusUpdated": "تم تحديث الحالة إلى {status}",
-      "updateFailed": "فشل التحديث",
-      "deleted": "تم الحذف بنجاح",
-      "deleteFailed": "فشل الحذف"
-    },
-    "dialogs": {
-      "deleteConfirm": "هل أنت متأكد من حذف {name}؟ لا يمكن التراجع عن هذا الإجراء."
-    },
-    "hints": {
-      "editComingSoon": "شاشة التعديل ستتوفر لاحقاً."
-    }
-  },
+ 
   "workouts": {
     "titles": {
       "exercises": "التمارين",

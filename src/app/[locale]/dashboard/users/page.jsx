@@ -19,7 +19,6 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import DataTable from '@/components/dashboard/ui/DataTable';
 import api from '@/utils/axios';
-import { Modal, StatCard } from '@/components/dashboard/ui/UI';
 import Select from '@/components/atoms/Select';
 import ActionsMenu from '@/components/molecules/ActionsMenu';
 import Input from '@/components/atoms/Input';
@@ -34,6 +33,7 @@ import { useAdminCoaches } from '@/hooks/useHierarchy';
 import { useUser } from '@/hooks/useUser';
 import PhoneField from '@/components/atoms/PhoneField';
 import CaloriesStep from '@/components/pages/dashboard/users/CaloriesStep';
+import { Modal, StatCard } from '@/components/dashboard/ui/UI';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 
 /* ---------- helpers ---------- */
