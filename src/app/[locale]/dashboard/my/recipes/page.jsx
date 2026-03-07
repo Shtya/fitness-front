@@ -1,84 +1,146 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { initialMeals, categories } from "../../recipes/data";
+ 
+import { Input }  from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Badge }     from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  Dialog, DialogContent,
+} from "@/components/ui/dialog";
+import {
+  Search, SlidersHorizontal, Clock, Users,
+  BarChart2, ChefHat, Lightbulb, X,
+} from "lucide-react";
+import { useTranslations } from "next-intl";
 
-const categoryColor = (cat) => {
-  const map = { Breakfast: "#E8956D", Lunch: "#5B8A5F", Dinner: "#6B5EA8", Snack: "#C4943A", Drink: "#4A90B8", Dessert: "#C4627A" };
-  return map[cat] || "#888";
+/* ─── constants ──────────────────────────────────────────── */
+const CAT_META = {
+  Breakfast: { color: "#E8956D", bg: "#FEF3EC", icon: "🌅" },
+  Lunch:     { color: "#5B8A5F", bg: "#EEF6EF", icon: "☀️"  },
+  Dinner:    { color: "#6B5EA8", bg: "#F0EEF9", icon: "🌙"  },
+  Snack:     { color: "#C4943A", bg: "#FBF3E3", icon: "🍎"  },
+  Drink:     { color: "#4A90B8", bg: "#EBF4FA", icon: "🥤"  },
+  Dessert:   { color: "#C4627A", bg: "#FCEEF1", icon: "🍮"  },
 };
+const catColor = (c) => CAT_META[c]?.color || "#888";
+const catBg    = (c) => CAT_META[c]?.bg    || "#f5f5f5";
+const catIcon  = (c) => CAT_META[c]?.icon  || "🍽️";
 
-const macroBar = (val, max, color) => (
-  <div style={{ height: 4, background: "#EDE7D9", borderRadius: 2, overflow: "hidden" }}>
-    <div style={{ width: `${Math.min(100, (val / max) * 100)}%`, height: "100%", background: color, borderRadius: 2, transition: "width 0.6s ease" }} />
-  </div>
-);
+/* ─── tiny MacroBar ──────────────────────────────────────── */
+function MacroBar({ val, max, color }) {
+  return (
+    <div className="h-1.5 rounded-full overflow-hidden"
+      style={{ background: "var(--color-primary-100)" }}>
+      <div className="h-full rounded-full transition-all duration-500"
+        style={{ width: `${Math.min(100, (val / max) * 100)}%`, background: color }} />
+    </div>
+  );
+}
 
+/* ═══════════════════════════════════════════════════════════
+   PAGE
+═══════════════════════════════════════════════════════════ */
 export default function LibraryPage() {
-  const [meals] = useState(initialMeals);
+  const t = useTranslations();
+
+  const [meals]          = useState(initialMeals);
   const [activeCategory, setActiveCategory] = useState("All");
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState(null);
-  const [sortBy, setSortBy] = useState("name");
+  const [search,         setSearch]         = useState("");
+  const [selected,       setSelected]       = useState(null);
+  const [sortBy,         setSortBy]         = useState("name");
 
-  const filtered = meals
-    .filter(m =>
-      (activeCategory === "All" || m.category === activeCategory) &&
-      (m.name.toLowerCase().includes(search.toLowerCase()) ||
-        m.ingredients.some(i => i.name.toLowerCase().includes(search.toLowerCase())))
-    )
-    .sort((a, b) => {
-      if (sortBy === "calories") return a.calories - b.calories;
-      if (sortBy === "time") return a.time - b.time;
-      if (sortBy === "protein") return b.macros.protein - a.macros.protein;
-      return a.name.localeCompare(b.name);
-    });
+  const filtered = useMemo(() =>
+    meals
+      .filter(m =>
+        (activeCategory === "All" || m.category === activeCategory) &&
+        (m.name.toLowerCase().includes(search.toLowerCase()) ||
+          m.ingredients.some(i => i.name.toLowerCase().includes(search.toLowerCase())))
+      )
+      .sort((a, b) => {
+        if (sortBy === "calories") return a.calories - b.calories;
+        if (sortBy === "time")     return a.time - b.time;
+        if (sortBy === "protein")  return b.macros.protein - a.macros.protein;
+        return a.name.localeCompare(b.name);
+      }),
+    [meals, activeCategory, search, sortBy]
+  );
 
-  const allCats = ["All", ...categories];
+  const allCats   = ["All", ...categories];
+  const avgCal    = Math.round(meals.reduce((s, m) => s + m.calories,       0) / meals.length);
+  const avgProt   = Math.round(meals.reduce((s, m) => s + m.macros.protein, 0) / meals.length);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#FAF7F2", fontFamily: "Georgia, serif" }}>
+    <div className="min-h-screen" style={{ background: "var(--color-primary-50)" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        .meal-card { transition: all 0.25s ease; cursor: pointer; }
-        .meal-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.13) !important; }
-        .cat-pill { transition: all 0.2s ease; cursor: pointer; }
-        .cat-pill:hover { transform: scale(1.04); }
-        .modal-overlay { position: fixed; inset: 0; background: rgba(44,36,22,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(3px); animation: fadeIn 0.2s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        @keyframes fadeUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #EDE7D9; }
-        ::-webkit-scrollbar-thumb { background: #C4943A; border-radius: 3px; }
-        .close-btn:hover { background: #C4627A !important; color: #fff !important; }
+        @keyframes fadeUp  { from { transform:translateY(14px); opacity:0 } to { transform:translateY(0); opacity:1 } }
+        @keyframes slideUp { from { transform:translateY(28px); opacity:0 } to { transform:translateY(0); opacity:1 } }
       `}</style>
 
-      {/* Hero Header */}
-      <header style={{ background: "#2C2416", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 30% 50%, #4A3520 0%, transparent 60%)" }} />
-        <div style={{ position: "absolute", top: -40, right: -40, width: 280, height: 280, background: "#C4943A10", borderRadius: "50%" }} />
-        <div style={{ position: "absolute", bottom: -60, right: 60, width: 180, height: 180, background: "#C4943A08", borderRadius: "50%" }} />
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px", position: "relative" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 24 }}>
+      {/* ══ HERO ══════════════════════════════════════════════ */}
+      <header className="relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, var(--color-primary-950, #0f172a) 0%, var(--color-primary-900, #1e293b) 100%)" }}>
+
+        {/* decorative blobs */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse at 25% 60%, color-mix(in srgb, var(--color-gradient-from) 12%, transparent) 0%, transparent 65%)" }} />
+        <div className="absolute -top-16 -right-16 w-80 h-80 rounded-full pointer-events-none"
+          style={{ background: "color-mix(in srgb, var(--color-gradient-from) 8%, transparent)" }} />
+        <div className="absolute -bottom-20 right-24 w-48 h-48 rounded-full pointer-events-none"
+          style={{ background: "color-mix(in srgb, var(--color-gradient-to) 6%, transparent)" }} />
+
+        <div className="max-w-6xl mx-auto px-6 py-14 relative">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-10 flex-wrap">
+
+            {/* left: title */}
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                <div style={{ width: 36, height: 36, background: "#C4943A", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🍳</div>
-                <span style={{ color: "#A89880", fontSize: 12, letterSpacing: 3, textTransform: "uppercase" }}>Your Nutrition Plan</span>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-9 h-9 rounded-xl grid place-items-center shadow-lg"
+                  style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
+                  <ChefHat className="w-4.5 h-4.5 text-white" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-[0.22em]"
+                  style={{ color: "var(--color-primary-400)" }}>
+                  {t("library.hero.eyebrow")}
+                </span>
               </div>
-              <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 48, color: "#FAF7F2", fontWeight: 700, lineHeight: 1.1, marginBottom: 12 }}>
-                Meal <span style={{ color: "#C4943A", fontStyle: "italic" }}>Library</span>
+
+              <h1 className="text-5xl font-bold leading-[1.08] mb-4" style={{ color: "white" }}>
+                {t("library.hero.title_plain")}{" "}
+                <span style={{
+                  background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-via, var(--color-gradient-to)))",
+                  WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent",
+                }}>
+                  {t("library.hero.title_accent")}
+                </span>
               </h1>
-              <p style={{ color: "#A89880", fontSize: 16, fontStyle: "italic", maxWidth: 400, lineHeight: 1.6 }}>
-                Curated recipes from your coach — browse ingredients, macros, and discover your next meal.
+
+              <p className="text-sm leading-relaxed max-w-[400px]"
+                style={{ color: "var(--color-primary-400)" }}>
+                {t("library.hero.subtitle")}
               </p>
             </div>
-            <div style={{ display: "flex", gap: 20 }}>
-              {[["🥗", meals.length, "Total Meals"], ["🔥", Math.round(meals.reduce((s, m) => s + m.calories, 0) / meals.length), "Avg Calories"], ["💪", Math.round(meals.reduce((s, m) => s + m.macros.protein, 0) / meals.length) + "g", "Avg Protein"]].map(([icon, val, label]) => (
-                <div key={label} style={{ textAlign: "center", background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "16px 20px", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <div style={{ fontSize: 22, marginBottom: 4 }}>{icon}</div>
-                  <div style={{ color: "#C4943A", fontFamily: "'Playfair Display', Georgia, serif", fontSize: 22, fontWeight: 700 }}>{val}</div>
-                  <div style={{ color: "#A89880", fontSize: 11, textTransform: "uppercase", letterSpacing: 1 }}>{label}</div>
+
+            {/* right: stat cards */}
+            <div className="flex gap-3 flex-wrap">
+              {[
+                { icon: "🥗", val: meals.length, label: t("library.stats.total")   },
+                { icon: "🔥", val: avgCal,        label: t("library.stats.avg_cal") },
+                { icon: "💪", val: `${avgProt}g`, label: t("library.stats.avg_prot")},
+              ].map(({ icon, val, label }) => (
+                <div key={label}
+                  className="rounded-2xl border px-5 py-4 text-center min-w-[90px]"
+                  style={{ background: "rgba(255,255,255,0.055)", borderColor: "rgba(255,255,255,0.09)" }}>
+                  <div className="text-2xl mb-1">{icon}</div>
+                  <div className="text-xl font-bold"
+                    style={{ color: "var(--color-gradient-from)" }}>{val}</div>
+                  <div className="text-[11px] uppercase tracking-wider mt-0.5"
+                    style={{ color: "var(--color-primary-500)" }}>{label}</div>
                 </div>
               ))}
             </div>
@@ -86,211 +148,359 @@ export default function LibraryPage() {
         </div>
       </header>
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "36px 24px" }}>
-        {/* Search & Sort */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 28, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 240, position: "relative" }}>
-            <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 16, color: "#A89880" }}>🔍</span>
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search meals or ingredients..."
-              style={{ width: "100%", padding: "12px 16px 12px 42px", border: "1.5px solid #DDD4C4", borderRadius: 10, background: "#fff", fontFamily: "Georgia, serif", fontSize: 14, color: "#2C2416", outline: "none" }} />
+      {/* ══ BODY ══════════════════════════════════════════════ */}
+      <div className="max-w-6xl mx-auto px-6 py-9">
+
+        {/* search + sort */}
+        <div className="flex gap-3 mb-6 flex-wrap">
+          <div className="relative flex-1 min-w-56">
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+              style={{ color: "var(--color-primary-400)" }} />
+            <Input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder={t("library.search.placeholder")}
+              className="ps-9 h-10 rounded-xl bg-white text-sm"
+              style={{ borderColor: "var(--color-primary-200)" }}
+            />
           </div>
-          <select value={sortBy} onChange={e => setSortBy(e.target.value)}
-            style={{ padding: "12px 20px", border: "1.5px solid #DDD4C4", borderRadius: 10, background: "#fff", fontFamily: "Georgia, serif", fontSize: 14, color: "#2C2416", cursor: "pointer", outline: "none" }}>
-            <option value="name">Sort: A–Z</option>
-            <option value="calories">Sort: Calories</option>
-            <option value="time">Sort: Prep Time</option>
-            <option value="protein">Sort: Protein</option>
-          </select>
+
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-48 h-10 rounded-xl bg-white text-sm gap-1.5"
+              style={{ borderColor: "var(--color-primary-200)" }}>
+              <SlidersHorizontal className="w-3.5 h-3.5 flex-shrink-0"
+                style={{ color: "var(--color-primary-400)" }} />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">     {t("library.sort.name")}    </SelectItem>
+              <SelectItem value="calories"> {t("library.sort.calories")}</SelectItem>
+              <SelectItem value="time">     {t("library.sort.time")}    </SelectItem>
+              <SelectItem value="protein">  {t("library.sort.protein")} </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Category Pills */}
-        <div style={{ display: "flex", gap: 10, marginBottom: 32, flexWrap: "wrap" }}>
+        {/* category pills */}
+        <div className="flex gap-2 mb-6 flex-wrap">
           {allCats.map(cat => {
             const active = activeCategory === cat;
-            const col = cat === "All" ? "#2C2416" : categoryColor(cat);
+            const col    = cat === "All" ? "var(--color-gradient-from)" : catColor(cat);
             return (
-              <button key={cat} className="cat-pill" onClick={() => setActiveCategory(cat)}
+              <button key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className="inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold
+                           transition-all duration-150 hover:scale-105 active:scale-95"
                 style={{
-                  padding: "8px 20px", border: `2px solid ${active ? col : "#DDD4C4"}`,
-                  borderRadius: 24, background: active ? col : "#fff",
-                  color: active ? "#fff" : "#6B5840",
-                  fontFamily: "Georgia, serif", fontSize: 13, fontWeight: active ? 700 : 400,
-                  cursor: "pointer",
+                  borderColor: active ? col : "var(--color-primary-200)",
+                  background:  active ? col : "white",
+                  color:       active ? "white" : "var(--color-primary-600)",
                 }}>
-                {cat}
-                {cat !== "All" && <span style={{ marginLeft: 6, opacity: 0.7, fontSize: 11 }}>({meals.filter(m => m.category === cat).length})</span>}
+                {cat !== "All" && <span>{catIcon(cat)}</span>}
+                {cat === "All" ? t("library.categories.all") : t(`library.categories.${cat.toLowerCase()}`)}
+                {cat !== "All" && (
+                  <span className="text-[10px] rounded-full px-1.5 py-0.5 font-bold"
+                    style={{
+                      background: active ? "rgba(255,255,255,0.25)" : "var(--color-primary-100)",
+                      color:      active ? "white" : "var(--color-primary-500)",
+                    }}>
+                    {meals.filter(m => m.category === cat).length}
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
 
-        {/* Results count */}
-        <p style={{ color: "#A89880", fontSize: 13, fontStyle: "italic", marginBottom: 20, fontFamily: "Georgia, serif" }}>
-          {filtered.length} meal{filtered.length !== 1 ? "s" : ""} found{search ? ` for "${search}"` : ""}
+        {/* results count */}
+        <p className="text-xs font-medium mb-5" style={{ color: "var(--color-primary-500)" }}>
+          {t("library.results.count", { count: filtered.length })}
+          {search && <> {t("library.results.for", { query: search })}</>}
         </p>
 
-        {/* Meal Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 24, animation: "fadeUp 0.3s ease" }}>
+        {/* ── meal grid ───────────────────────────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"
+          style={{ animation: "fadeUp 0.3s ease" }}>
+
           {filtered.map(meal => (
-            <div key={meal.id} className="meal-card" onClick={() => setSelected(meal)}
-              style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", border: "1px solid #EDE7D9" }}>
-              {/* Image */}
-              <div style={{ position: "relative", height: 190, overflow: "hidden" }}>
-                <img src={meal.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"} alt={meal.name}
-                  style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.4s ease" }}
-                  onMouseOver={e => e.target.style.transform = "scale(1.05)"}
-                  onMouseOut={e => e.target.style.transform = "scale(1)"} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(44,36,22,0.6) 0%, transparent 50%)" }} />
-                <div style={{ position: "absolute", top: 14, left: 14 }}>
-                  <span style={{ background: categoryColor(meal.category), color: "#fff", padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                    {meal.category}
+            <article key={meal.id}
+              onClick={() => setSelected(meal)}
+              className="bg-white rounded-2xl overflow-hidden border cursor-pointer group
+                         hover:-translate-y-1.5 transition-all duration-250"
+              style={{
+                borderColor: "var(--color-primary-150, var(--color-primary-200))",
+                boxShadow: "0 2px 14px rgba(15,23,42,0.06)",
+              }}>
+
+              {/* image */}
+              <div className="relative h-48 overflow-hidden">
+                <img
+                  src={meal.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80"}
+                  alt={meal.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0"
+                  style={{ background: "linear-gradient(to top, rgba(15,23,42,0.65) 0%, transparent 55%)" }} />
+
+                {/* category badge */}
+                <div className="absolute top-3 start-3">
+                  <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
+                    style={{ background: catColor(meal.category), color: "white" }}>
+                    {catIcon(meal.category)}
+                    {t(`library.categories.${meal.category.toLowerCase()}`)}
                   </span>
                 </div>
-                <div style={{ position: "absolute", bottom: 14, left: 16, right: 16, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                  <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 18, color: "#FAF7F2", fontWeight: 700, lineHeight: 1.2 }}>{meal.name}</h3>
-                  <span style={{ color: "#C4943A", fontFamily: "'Playfair Display', Georgia, serif", fontSize: 18, fontWeight: 700, background: "rgba(44,36,22,0.7)", padding: "2px 8px", borderRadius: 6 }}>{meal.calories}</span>
+
+                {/* title + kcal overlay */}
+                <div className="absolute bottom-3 start-4 end-4 flex justify-between items-end gap-2">
+                  <h3 className="text-white text-base font-bold leading-tight">{meal.name}</h3>
+                  <div className="rounded-lg px-2.5 py-1 text-right flex-shrink-0"
+                    style={{ background: "rgba(15,23,42,0.72)" }}>
+                    <div className="text-sm font-bold tabular-nums"
+                      style={{ color: "var(--color-gradient-from)" }}>{meal.calories}</div>
+                    <div className="text-[9px] uppercase tracking-wider"
+                      style={{ color: "rgba(255,255,255,0.45)" }}>{t("library.card.kcal")}</div>
+                  </div>
                 </div>
               </div>
 
-              <div style={{ padding: "18px 20px 20px" }}>
-                {/* Meta */}
-                <div style={{ display: "flex", gap: 16, marginBottom: 16, paddingBottom: 14, borderBottom: "1px solid #EDE7D9" }}>
-                  {[["⏱", `${meal.time} min`], ["👤", `${meal.servings} serving`], ["📊", meal.satiety]].map(([icon, val]) => (
-                    <span key={val} style={{ color: "#A89880", fontSize: 12, fontFamily: "Georgia, serif" }}>{icon} {val}</span>
+              {/* card body */}
+              <div className="p-4 space-y-3">
+
+                {/* meta row */}
+                <div className="flex gap-3 pb-3 border-b flex-wrap"
+                  style={{ borderColor: "var(--color-primary-100)" }}>
+                  {[
+                    [Clock,    `${meal.time} ${t("library.card.min")}`],
+                    [Users,    `${meal.servings} ${t("library.card.serving")}`],
+                    [BarChart2, t(`library.satiety.${meal.satiety.toLowerCase()}`)],
+                  ].map(([Icon, val], idx) => (
+                    <span key={idx} className="flex items-center gap-1 text-xs"
+                      style={{ color: "var(--color-primary-500)" }}>
+                      <Icon className="w-3 h-3" /> {val}
+                    </span>
                   ))}
                 </div>
 
-                {/* Macros */}
-                <div style={{ marginBottom: 16 }}>
-                  <p style={{ color: "#A89880", fontSize: 11, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 10 }}>Macros per serving</p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {[["Carbs", meal.macros.carbs, 80, "#E8956D"], ["Protein", meal.macros.protein, 60, "#5B8A5F"], ["Fats", meal.macros.fats, 40, "#6B5EA8"]].map(([label, val, max, col]) => (
-                      <div key={label}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                          <span style={{ color: "#6B5840", fontSize: 12 }}>{label}</span>
-                          <span style={{ color: col, fontSize: 12, fontWeight: 700 }}>{val}g</span>
-                        </div>
-                        {macroBar(val, max, col)}
+                {/* macro bars */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest"
+                    style={{ color: "var(--color-primary-400)" }}>
+                    {t("library.card.macros_label")}
+                  </p>
+                  {[
+                    [t("library.macros.carbs"),   meal.macros.carbs,   80, "#E8956D"],
+                    [t("library.macros.protein"), meal.macros.protein, 60, "#5B8A5F"],
+                    [t("library.macros.fats"),    meal.macros.fats,    40, "#6B5EA8"],
+                  ].map(([label, val, max, col]) => (
+                    <div key={label}>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-[11px]" style={{ color: "var(--color-primary-500)" }}>{label}</span>
+                        <span className="text-[11px] font-bold tabular-nums" style={{ color: col }}>{val}g</span>
                       </div>
-                    ))}
-                  </div>
+                      <MacroBar val={val} max={max} color={col} />
+                    </div>
+                  ))}
                 </div>
 
-                {/* Ingredients */}
+                {/* ingredient tags */}
                 <div>
-                  <p style={{ color: "#A89880", fontSize: 11, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 }}>
-                    Key Ingredients
+                  <p className="text-[10px] font-bold uppercase tracking-widest mb-2"
+                    style={{ color: "var(--color-primary-400)" }}>
+                    {t("library.card.key_ingredients")}
                   </p>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  <div className="flex flex-wrap gap-1.5">
                     {meal.ingredients.slice(0, 4).map((ing, i) => (
-                      <span key={i} style={{ background: "#FAF7F2", border: "1px solid #EDE7D9", borderRadius: 6, padding: "3px 10px", fontSize: 12, color: "#6B5840", fontFamily: "Georgia, serif" }}>
+                      <span key={i}
+                        className="rounded-md border px-2 py-0.5 text-[11px] font-medium"
+                        style={{
+                          borderColor: "var(--color-primary-200)",
+                          background:  "var(--color-primary-50)",
+                          color:       "var(--color-primary-600)",
+                        }}>
                         {ing.name}
                       </span>
                     ))}
                     {meal.ingredients.length > 4 && (
-                      <span style={{ background: "#C4943A15", border: "1px solid #C4943A30", borderRadius: 6, padding: "3px 10px", fontSize: 12, color: "#C4943A", fontFamily: "Georgia, serif" }}>
-                        +{meal.ingredients.length - 4} more
-                      </span>
+                      <Badge variant="secondary"
+                        className="text-[11px] font-bold px-2 py-0.5 rounded-md"
+                        style={{ background: catBg(meal.category), color: catColor(meal.category), border: "none" }}>
+                        +{meal.ingredients.length - 4} {t("library.card.more")}
+                      </Badge>
                     )}
                   </div>
                 </div>
               </div>
-            </div>
+            </article>
           ))}
         </div>
 
+        {/* empty state */}
         {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: "80px 40px", color: "#A89880", fontFamily: "Georgia, serif" }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🍽️</div>
-            <p style={{ fontSize: 18, fontStyle: "italic", fontFamily: "'Playfair Display', Georgia, serif", color: "#6B5840" }}>No meals found</p>
-            <p style={{ fontSize: 14, marginTop: 8 }}>Try a different search term or category</p>
+          <div className="flex flex-col items-center py-24 gap-3">
+            <div className="text-5xl">🍽️</div>
+            <p className="text-lg font-bold" style={{ color: "var(--color-primary-700)" }}>
+              {t("library.empty.title")}
+            </p>
+            <p className="text-sm" style={{ color: "var(--color-primary-400)" }}>
+              {t("library.empty.subtitle")}
+            </p>
           </div>
         )}
       </div>
 
-      {/* Modal Detail */}
-      {selected && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setSelected(null)}>
-          <div style={{ background: "#FAF7F2", borderRadius: 20, maxWidth: 780, width: "100%", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 80px rgba(0,0,0,0.3)", animation: "slideUp 0.3s ease" }}>
-            {/* Modal Image */}
-            <div style={{ position: "relative", height: 240, flexShrink: 0 }}>
-              <img src={selected.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"} alt={selected.name}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(44,36,22,0.8) 0%, transparent 50%)" }} />
-              <button className="close-btn" onClick={() => setSelected(null)}
-                style={{ position: "absolute", top: 16, right: 16, width: 36, height: 36, border: "none", background: "rgba(44,36,22,0.7)", color: "#FAF7F2", borderRadius: "50%", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
-                ×
-              </button>
-              <div style={{ position: "absolute", top: 16, left: 16 }}>
-                <span style={{ background: categoryColor(selected.category), color: "#fff", padding: "5px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  {selected.category}
-                </span>
-              </div>
-              <div style={{ position: "absolute", bottom: 20, left: 24, right: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                <div>
-                  <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 28, color: "#FAF7F2", fontWeight: 700, marginBottom: 4 }}>{selected.name}</h2>
-                  <div style={{ display: "flex", gap: 16 }}>
-                    {[`⏱ ${selected.time} min`, `👤 ${selected.servings} serving`, `📊 ${selected.satiety} satiety`].map(t => (
-                      <span key={t} style={{ color: "rgba(250,247,242,0.75)", fontSize: 13, fontFamily: "Georgia, serif" }}>{t}</span>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ color: "#C4943A", fontFamily: "'Playfair Display', Georgia, serif", fontSize: 32, fontWeight: 700, lineHeight: 1 }}>{selected.calories}</div>
-                  <div style={{ color: "rgba(250,247,242,0.6)", fontSize: 11, textTransform: "uppercase", letterSpacing: 1 }}>kcal</div>
-                </div>
-              </div>
-            </div>
+      {/* ══ DETAIL MODAL ══════════════════════════════════════ */}
+      <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
+        <DialogContent
+          className="max-w-2xl p-0 overflow-hidden rounded-2xl border gap-0"
+          style={{ borderColor: "var(--color-primary-200)", maxHeight: "90vh", display: "flex", flexDirection: "column" }}
+          // hide default shadcn close button — we render our own in the image
+          hideCloseButton
+        >
+          {selected && (
+            <>
+              {/* hero image */}
+              <div className="relative h-56 flex-shrink-0 overflow-hidden">
+                <img
+                  src={selected.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80"}
+                  alt={selected.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0"
+                  style={{ background: "linear-gradient(to top, rgba(15,23,42,0.78) 0%, transparent 52%)" }} />
 
-            {/* Modal Body */}
-            <div style={{ overflowY: "auto", padding: "28px 32px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-                {/* Ingredients */}
-                <div>
-                  <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 20, color: "#2C2416", fontWeight: 700, marginBottom: 16 }}>
-                    Ingredients
-                  </h3>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {selected.ingredients.map((ing, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "#fff", borderRadius: 8, border: "1px solid #EDE7D9" }}>
-                        <span style={{ color: "#2C2416", fontSize: 14, fontFamily: "Georgia, serif" }}>{ing.name}</span>
-                        <span style={{ color: "#C4943A", fontSize: 14, fontFamily: "Georgia, serif", fontWeight: 700 }}>{ing.amount} {ing.unit}</span>
-                      </div>
-                    ))}
-                  </div>
+                {/* close */}
+                <button
+                  onClick={() => setSelected(null)}
+                  aria-label={t("library.modal.close")}
+                  className="absolute top-4 end-4 w-9 h-9 rounded-full border grid place-items-center
+                             transition-colors hover:bg-rose-500 hover:border-rose-500"
+                  style={{ background: "rgba(15,23,42,0.65)", borderColor: "rgba(255,255,255,0.15)", color: "white" }}>
+                  <X className="w-4 h-4" />
+                </button>
+
+                {/* category */}
+                <div className="absolute top-4 start-4">
+                  <span className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold"
+                    style={{ background: catColor(selected.category), color: "white" }}>
+                    {catIcon(selected.category)}
+                    {t(`library.categories.${selected.category.toLowerCase()}`)}
+                  </span>
                 </div>
 
-                {/* Macros + Tips */}
-                <div>
-                  <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 20, color: "#2C2416", fontWeight: 700, marginBottom: 16 }}>
-                    Nutrition Facts
-                  </h3>
-                  <div style={{ background: "#2C2416", borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                      <span style={{ color: "#A89880", fontSize: 12, textTransform: "uppercase", letterSpacing: 1 }}>Calories</span>
-                      <span style={{ color: "#C4943A", fontFamily: "'Playfair Display', Georgia, serif", fontSize: 24, fontWeight: 700 }}>{selected.calories}</span>
+                {/* title + kcal */}
+                <div className="absolute bottom-4 start-5 end-5 flex justify-between items-end gap-3">
+                  <div>
+                    <h2 className="text-white text-2xl font-bold mb-1.5 leading-tight">{selected.name}</h2>
+                    <div className="flex gap-4 flex-wrap">
+                      {[
+                        [Clock,    `${selected.time} ${t("library.card.min")}`],
+                        [Users,    `${selected.servings} ${t("library.card.serving")}`],
+                        [BarChart2, `${t(`library.satiety.${selected.satiety.toLowerCase()}`)} ${t("library.modal.satiety_suffix")}`],
+                      ].map(([Icon, val], i) => (
+                        <span key={i} className="flex items-center gap-1 text-xs"
+                          style={{ color: "rgba(255,255,255,0.72)" }}>
+                          <Icon className="w-3 h-3" /> {val}
+                        </span>
+                      ))}
                     </div>
-                    <div style={{ height: 1, background: "#4A3520", marginBottom: 12 }} />
-                    {[["Carbohydrates", selected.macros.carbs + "g", "#E8956D"], ["Protein", selected.macros.protein + "g", "#5B8A5F"], ["Fats", selected.macros.fats + "g", "#6B5EA8"]].map(([label, val, col]) => (
-                      <div key={label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                        <span style={{ color: "#A89880", fontSize: 13, fontFamily: "Georgia, serif" }}>{label}</span>
-                        <span style={{ color: col, fontSize: 13, fontWeight: 700, fontFamily: "Georgia, serif" }}>{val}</span>
-                      </div>
-                    ))}
                   </div>
-                  {selected.tips && (
-                    <div style={{ background: "#C4943A15", border: "1.5px solid #C4943A30", borderRadius: 12, padding: 16 }}>
-                      <p style={{ color: "#C4943A", fontSize: 11, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 6, fontFamily: "Georgia, serif" }}>💡 Coach Tip</p>
-                      <p style={{ color: "#6B5840", fontSize: 14, fontFamily: "Georgia, serif", fontStyle: "italic", lineHeight: 1.6 }}>{selected.tips}</p>
-                    </div>
-                  )}
+                  <div className="text-end flex-shrink-0">
+                    <div className="text-3xl font-bold tabular-nums"
+                      style={{ color: "var(--color-gradient-from)" }}>{selected.calories}</div>
+                    <div className="text-[10px] uppercase tracking-wider"
+                      style={{ color: "rgba(255,255,255,0.45)" }}>{t("library.card.kcal")}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+
+              {/* scrollable body */}
+              <div className="overflow-y-auto p-6 space-y-6 flex-1"
+                style={{ background: "var(--color-primary-50)" }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                  {/* ingredients list */}
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wider mb-3"
+                      style={{ color: "var(--color-primary-700)" }}>
+                      {t("library.modal.ingredients")}
+                    </h3>
+                    <div className="space-y-2">
+                      {selected.ingredients.map((ing, i) => (
+                        <div key={i}
+                          className="flex items-center justify-between rounded-xl px-3 py-2.5 border bg-white"
+                          style={{ borderColor: "var(--color-primary-150, var(--color-primary-200))" }}>
+                          <span className="text-sm" style={{ color: "var(--color-primary-800)" }}>{ing.name}</span>
+                          <span className="text-sm font-bold tabular-nums"
+                            style={{ color: "var(--color-gradient-from)" }}>
+                            {ing.amount} {ing.unit}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* nutrition + tips */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-wider mb-3"
+                        style={{ color: "var(--color-primary-700)" }}>
+                        {t("library.modal.nutrition_title")}
+                      </h3>
+
+                      {/* dark nutrition card */}
+                      <div className="rounded-2xl p-5 space-y-3"
+                        style={{ background: "linear-gradient(135deg, var(--color-primary-950, #0f172a), var(--color-primary-900, #1e293b))" }}>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs uppercase tracking-wider"
+                            style={{ color: "var(--color-primary-400)" }}>
+                            {t("library.modal.calories")}
+                          </span>
+                          <span className="text-2xl font-bold tabular-nums"
+                            style={{ color: "var(--color-gradient-from)" }}>
+                            {selected.calories}
+                          </span>
+                        </div>
+
+                        <Separator style={{ borderColor: "rgba(255,255,255,0.08)" }} />
+
+                        {[
+                          [t("library.macros.carbs"),         selected.macros.carbs   + "g", "#E8956D"],
+                          [t("library.macros.protein"),       selected.macros.protein + "g", "#5B8A5F"],
+                          [t("library.macros.fats"),          selected.macros.fats    + "g", "#6B5EA8"],
+                        ].map(([label, val, col]) => (
+                          <div key={label} className="flex justify-between items-center">
+                            <span className="text-xs" style={{ color: "var(--color-primary-400)" }}>{label}</span>
+                            <span className="text-sm font-bold" style={{ color: col }}>{val}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* coach tip */}
+                    {selected.tips && (
+                      <div className="rounded-xl p-4 border"
+                        style={{ background: "var(--color-primary-50)", borderColor: "var(--color-primary-200)" }}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Lightbulb className="w-3.5 h-3.5" style={{ color: "#C4943A" }} />
+                          <span className="text-xs font-bold uppercase tracking-wider"
+                            style={{ color: "#C4943A" }}>
+                            {t("library.modal.coach_tip")}
+                          </span>
+                        </div>
+                        <p className="text-sm leading-relaxed"
+                          style={{ color: "var(--color-primary-700)" }}>
+                          {selected.tips}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

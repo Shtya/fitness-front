@@ -87,7 +87,7 @@ export default function Layout({ children }) {
 	const params   = useParams();
 	const locale   = params?.locale || 'en';
 
-	useInitialRoleRedirect();
+	// useInitialRoleRedirect();
 	const t = useTranslations('mobile');
 	const [role, setRole]       = useState('user');
 	const [isMobile, setIsMobile] = useState(false);

@@ -15,13 +15,17 @@ import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import {
 	LayoutDashboard, Users, User as UserIcon, ClipboardList, Apple,
 	NotebookPen, MessageSquare, Calculator, FileBarChart, ChefHat,
-	ChevronDown, ChevronRight, X, Newspaper, ServerCog, AlarmClock,
+	ChevronDown, X, Newspaper, ServerCog, AlarmClock,
 	Wallet, CreditCard, TrendingUp, User, KanbanSquare, ListTodo,
 	CalendarDays, Clock, LogOut, Globe, Palette, Paintbrush, Check,
 	PanelLeftClose, PanelLeftOpen,
 	ReceiptJapaneseYen,
 } from 'lucide-react';
-import { usePathname as useNextPathname, useSearchParams, useRouter as useNextRouter } from 'next/navigation';
+import {
+	usePathname as useNextPathname,
+	useSearchParams,
+	useRouter as useNextRouter
+} from 'next/navigation';
 import { useUser } from '@/hooks/useUser';
 import { FaInbox, FaUsers, FaWpforms } from 'react-icons/fa';
 import { useTranslations } from 'next-intl';
@@ -29,7 +33,6 @@ import { useValues } from '@/context/GlobalContext';
 import { useTheme, COLOR_PALETTES } from '@/app/[locale]/theme';
 import { useLocale } from 'next-intl';
 import { useTransition } from 'react';
-import { cn } from '@/utils/cn';
 import MultiLangText from '../atoms/MultiLangText';
 import { useRouter as useI18nRouter } from '@/i18n/navigation';
 
@@ -52,7 +55,6 @@ const T = {
 	textLight: '#cbd5e1',
 };
 
-
 /* ─── Helpers ───────────────────────────────────────────────── */
 function initialsFrom(name, email) {
 	const src = (name && name.trim()) || (email && email.split('@')[0]) || 'G';
@@ -66,7 +68,6 @@ function isPathActive(pathname, href, searchParams) {
 
 	const [hrefPath, hrefQuery] = href.split('?');
 
-	// exact path match
 	if (pathname === hrefPath) {
 		if (!hrefQuery) return true;
 
@@ -79,7 +80,6 @@ function isPathActive(pathname, href, searchParams) {
 		return true;
 	}
 
-	// nested route match
 	if (pathname?.startsWith(hrefPath + '/')) {
 		return !hrefQuery;
 	}
@@ -87,23 +87,31 @@ function isPathActive(pathname, href, searchParams) {
 	return false;
 }
 
-function anyChildActive(pathname, children = []) {
-	return children.some((c) => isPathActive(pathname, c.href));
+function anyChildActive(pathname, children = [], searchParams) {
+	return children.some((c) => isPathActive(pathname, c.href, searchParams));
 }
+
 function getDir() {
 	if (typeof document === 'undefined') return 'ltr';
 	return document.documentElement.getAttribute('dir') || 'ltr';
 }
+
 function useLocalStorageState(key, initial) {
 	const [val, set] = useState(() => {
 		try {
 			const v = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
 			return v == null ? initial : JSON.parse(v);
-		} catch { return initial; }
+		} catch {
+			return initial;
+		}
 	});
+
 	useEffect(() => {
-		try { localStorage.setItem(key, JSON.stringify(val)); } catch { }
+		try {
+			localStorage.setItem(key, JSON.stringify(val));
+		} catch { }
 	}, [key, val]);
+
 	return [val, set];
 }
 
@@ -111,11 +119,13 @@ function useLocalStorageState(key, initial) {
 export const NAV = [
 	// CLIENT
 	{
-		role: 'client', sectionKey: 'sections.dashboard',
+		role: 'client',
+		sectionKey: 'sections.dashboard',
 		items: [{ nameKey: 'overview', href: '/dashboard', icon: LayoutDashboard }]
 	},
 	{
-		role: 'client', sectionKey: 'sections.myWorkspace',
+		role: 'client',
+		sectionKey: 'sections.myWorkspace',
 		items: [
 			{ nameKey: 'myWorkouts', href: '/dashboard/my/workouts', icon: ClipboardList },
 			{ nameKey: 'myNutrition', href: '/dashboard/my/nutrition', icon: Apple },
@@ -124,21 +134,28 @@ export const NAV = [
 		]
 	},
 	{
-		role: 'client', sectionKey: 'sections.tools',
+		role: 'client',
+		sectionKey: 'sections.tools',
 		items: [
 			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
 			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
 		]
 	},
 	{
-		role: 'client', sectionKey: 'sections.account',
+		role: 'client',
+		sectionKey: 'sections.account',
 		items: [{ nameKey: 'profile', href: '/dashboard/my/profile', icon: UserIcon }]
 	},
+
 	// COACH
 	{
-		role: 'coach', sectionKey: 'sections.timeManagement',
+		role: 'coach',
+		sectionKey: 'sections.timeManagement',
 		items: [{
-			nameKey: 'timeManagement', icon: Clock, expand: false, children: [
+			nameKey: 'timeManagement',
+			icon: Clock,
+			expand: false,
+			children: [
 				{ nameKey: 'kanbanBoard', href: '/workspace?tab=boards', icon: KanbanSquare },
 				{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
 				{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
@@ -146,15 +163,16 @@ export const NAV = [
 		}]
 	},
 	{
-		role: 'coach', sectionKey: 'sections.clients',
+		role: 'coach',
+		sectionKey: 'sections.clients',
 		items: [
 			{ nameKey: 'allUsers', href: '/dashboard/users', icon: Users },
 			{ nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
-			
 		]
 	},
 	{
-		role: 'coach', sectionKey: 'sections.programs',
+		role: 'coach',
+		sectionKey: 'sections.programs',
 		items: [
 			{ nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: NotebookPen },
 			{ nameKey: 'mealPlans', href: '/dashboard/nutrition', icon: ChefHat },
@@ -162,30 +180,41 @@ export const NAV = [
 		]
 	},
 	{
-		role: 'coach', sectionKey: 'sections.clientIntake',
+		role: 'coach',
+		sectionKey: 'sections.clientIntake',
 		items: [{
-			nameKey: 'clientIntake', icon: FaUsers, expand: false, children: [
+			nameKey: 'clientIntake',
+			icon: FaUsers,
+			expand: false,
+			children: [
 				{ nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FaWpforms },
 				{ nameKey: 'responses', href: '/dashboard/intake/responses', icon: FaInbox },
 			]
 		}]
 	},
 	{
-		role: 'coach', sectionKey: 'sections.tools',
+		role: 'coach',
+		sectionKey: 'sections.tools',
 		items: [
 			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
 			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
 		]
 	},
 	{
-		role: 'coach', sectionKey: 'sections.account',
+		role: 'coach',
+		sectionKey: 'sections.account',
 		items: [{ nameKey: 'profile', icon: User, href: '/dashboard/my-account' }]
 	},
+
 	// ADMIN
 	{
-		role: 'admin', sectionKey: 'sections.timeManagement',
+		role: 'admin',
+		sectionKey: 'sections.timeManagement',
 		items: [{
-			nameKey: 'timeManagement', icon: Clock, expand: false, children: [
+			nameKey: 'timeManagement',
+			icon: Clock,
+			expand: false,
+			children: [
 				{ nameKey: 'kanbanBoard', href: '/workspace?tab=boards', icon: KanbanSquare },
 				{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
 				{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
@@ -193,7 +222,8 @@ export const NAV = [
 		}]
 	},
 	{
-		role: 'admin', sectionKey: 'sections.management',
+		role: 'admin',
+		sectionKey: 'sections.management',
 		items: [
 			{ nameKey: 'allUsers', href: '/dashboard/users', icon: Users },
 			{ nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
@@ -201,23 +231,29 @@ export const NAV = [
 		]
 	},
 	{
-		role: 'admin', sectionKey: 'sections.programs',
+		role: 'admin',
+		sectionKey: 'sections.programs',
 		items: [
 			{ nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: NotebookPen },
 			{ nameKey: 'mealPlans', href: '/dashboard/nutrition', icon: ChefHat },
 		]
 	},
 	{
-		role: 'admin', sectionKey: 'sections.clientIntake',
+		role: 'admin',
+		sectionKey: 'sections.clientIntake',
 		items: [{
-			nameKey: 'clientIntake', icon: FaUsers, expand: false, children: [
+			nameKey: 'clientIntake',
+			icon: FaUsers,
+			expand: false,
+			children: [
 				{ nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FaWpforms },
 				{ nameKey: 'responses', href: '/dashboard/intake/responses', icon: FaInbox },
 			]
 		}]
 	},
 	{
-		role: 'admin', sectionKey: 'sections.tools',
+		role: 'admin',
+		sectionKey: 'sections.tools',
 		items: [
 			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
 			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
@@ -225,23 +261,28 @@ export const NAV = [
 		]
 	},
 	{
-		role: 'admin', sectionKey: 'sections.system',
+		role: 'admin',
+		sectionKey: 'sections.system',
 		items: [{ nameKey: 'systemSettings', href: '/dashboard/settings', icon: ServerCog }]
 	},
 	{
-		role: 'admin', sectionKey: 'sections.account',
+		role: 'admin',
+		sectionKey: 'sections.account',
 		items: [
 			{ nameKey: 'billing', icon: Wallet, href: '/dashboard/billing' },
 			{ nameKey: 'profile', icon: User, href: '/dashboard/my-account' },
 		]
 	},
+
 	// SUPER ADMIN
 	{
-		role: 'super_admin', sectionKey: 'sections.dashboard',
+		role: 'super_admin',
+		sectionKey: 'sections.dashboard',
 		items: [{ nameKey: 'overview', href: '/dashboard', icon: LayoutDashboard }]
 	},
 	{
-		role: 'super_admin', sectionKey: 'sections.management',
+		role: 'super_admin',
+		sectionKey: 'sections.management',
 		items: [
 			{ nameKey: 'allUsers', href: '/dashboard/super-admin/users', icon: Users },
 			{ nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
@@ -249,9 +290,13 @@ export const NAV = [
 		]
 	},
 	{
-		role: 'super_admin', sectionKey: 'sections.billing',
+		role: 'super_admin',
+		sectionKey: 'sections.billing',
 		items: [{
-			nameKey: 'billing', icon: Wallet, expand: false, children: [
+			nameKey: 'billing',
+			icon: Wallet,
+			expand: false,
+			children: [
 				{ nameKey: 'analytics', href: '/dashboard/billing/analytics', icon: TrendingUp },
 				{ nameKey: 'withdrawalApprovals', href: '/dashboard/billing/withdrawal-approvals', icon: CreditCard },
 				{ nameKey: 'allWallets', href: '/dashboard/billing/all-wallets', icon: Users },
@@ -259,9 +304,13 @@ export const NAV = [
 		}]
 	},
 	{
-		role: 'super_admin', sectionKey: 'sections.timeManagement',
+		role: 'super_admin',
+		sectionKey: 'sections.timeManagement',
 		items: [{
-			nameKey: 'timeManagement', icon: Clock, expand: false, children: [
+			nameKey: 'timeManagement',
+			icon: Clock,
+			expand: false,
+			children: [
 				{ nameKey: 'kanbanBoard', href: '/workspace?tab=boards', icon: KanbanSquare },
 				{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
 				{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
@@ -269,7 +318,8 @@ export const NAV = [
 		}]
 	},
 	{
-		role: 'super_admin', sectionKey: 'sections.system',
+		role: 'super_admin',
+		sectionKey: 'sections.system',
 		items: [{ nameKey: 'systemSettings', href: '/dashboard/settings', icon: ServerCog }]
 	},
 ];
@@ -278,10 +328,20 @@ export const NAV = [
 export function useUnreadChats(pollMs = 300000) {
 	const [total, setTotal] = useState(0);
 	const { conversationId } = useValues();
+
 	async function load() {
-		try { const res = await api.get('/chat/unread'); setTotal(res?.data?.totalUnread ?? 0); } catch { }
+		try {
+			const res = await api.get('/chat/unread');
+			setTotal(res?.data?.totalUnread ?? 0);
+		} catch { }
 	}
-	useEffect(() => { load(); const id = setInterval(load, pollMs); return () => clearInterval(id); }, [pollMs, conversationId]);
+
+	useEffect(() => {
+		load();
+		const id = setInterval(load, pollMs);
+		return () => clearInterval(id);
+	}, [pollMs, conversationId]);
+
 	return { totalUnread: total, reloadUnread: load };
 }
 
@@ -293,14 +353,22 @@ function Badge({ value }) {
 			animate={{ scale: 1, rotate: 0 }}
 			transition={snap}
 			style={{
-				display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-				minWidth: 18, height: 18, borderRadius: 99, fontSize: 10, fontWeight: 900,
-				color: '#fff', padding: '0 5px',
+				display: 'inline-flex',
+				alignItems: 'center',
+				justifyContent: 'center',
+				minWidth: 18,
+				height: 18,
+				borderRadius: 99,
+				fontSize: 10,
+				fontWeight: 900,
+				color: '#fff',
+				padding: '0 5px',
 				background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 				boxShadow: '0 2px 8px color-mix(in srgb, var(--color-primary-500) 45%, transparent)',
 				letterSpacing: '0.01em',
 			}}
-			aria-label={`${value} unread`}>
+			aria-label={`${value} unread`}
+		>
 			{value > 99 ? '99+' : value}
 		</motion.span>
 	);
@@ -312,7 +380,9 @@ export function CollapsedTooltip({ label, anchorRef, offset = 10 }) {
 	const [pos, setPos] = useState(null);
 	const tipRef = useRef(null);
 	const isRTL = useMemo(() => getDir() === 'rtl', []);
+
 	useEffect(() => setMounted(true), []);
+
 	useLayoutEffect(() => {
 		if (!mounted || !anchorRef?.current || !tipRef.current) return;
 		const rect = anchorRef.current.getBoundingClientRect();
@@ -322,7 +392,9 @@ export function CollapsedTooltip({ label, anchorRef, offset = 10 }) {
 		left = Math.max(8, Math.min(left, window.innerWidth - tipRect.width - 8));
 		setPos({ top, left });
 	}, [mounted, anchorRef, label, offset, isRTL]);
+
 	if (!mounted) return null;
+
 	return createPortal(
 		<motion.div
 			ref={tipRef}
@@ -331,21 +403,36 @@ export function CollapsedTooltip({ label, anchorRef, offset = 10 }) {
 			exit={{ opacity: 0, x: isRTL ? 5 : -5, scale: 0.95 }}
 			transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
 			style={{
-				position: 'fixed', top: pos?.top ?? -9999, left: pos?.left ?? -9999,
-				transform: 'translateY(-50%)', zIndex: 9999, pointerEvents: 'none'
-			}}>
+				position: 'fixed',
+				top: pos?.top ?? -9999,
+				left: pos?.left ?? -9999,
+				transform: 'translateY(-50%)',
+				zIndex: 9999,
+				pointerEvents: 'none'
+			}}
+		>
 			<div style={{
-				fontSize: 11.5, fontWeight: 700, padding: '5px 12px', borderRadius: 8,
-				whiteSpace: 'nowrap', color: 'white', letterSpacing: '0.025em',
+				fontSize: 11.5,
+				fontWeight: 700,
+				padding: '5px 12px',
+				borderRadius: 8,
+				whiteSpace: 'nowrap',
+				color: 'white',
+				letterSpacing: '0.025em',
 				background: 'linear-gradient(135deg, #0f172a, #1e293b)',
 				boxShadow: '0 6px 20px rgba(0,0,0,0.2)',
 				position: 'relative',
 			}}>
 				{label}
 				<span style={{
-					position: 'absolute', top: '50%', transform: 'translateY(-50%) rotate(45deg)',
+					position: 'absolute',
+					top: '50%',
+					transform: 'translateY(-50%) rotate(45deg)',
 					[isRTL ? 'right' : 'left']: -3.5,
-					width: 7, height: 7, background: '#0f172a', borderRadius: 1,
+					width: 7,
+					height: 7,
+					background: '#0f172a',
+					borderRadius: 1,
 				}} />
 			</div>
 		</motion.div>,
@@ -359,43 +446,62 @@ function PortalFlyout({ children, anchorRef, offset = 10 }) {
 	const [pos, setPos] = useState(null);
 	const flyRef = useRef(null);
 	const isRTL = useMemo(() => getDir() === 'rtl', []);
+
 	useEffect(() => setMounted(true), []);
+
 	useLayoutEffect(() => {
 		if (!mounted || !anchorRef?.current) return;
+
 		const place = () => {
 			if (!anchorRef.current) return;
+
 			const rect = anchorRef.current.getBoundingClientRect();
 			const flyW = flyRef.current?.offsetWidth ?? 240;
 			const flyH = flyRef.current?.offsetHeight ?? 160;
 			const pad = 8;
+
 			let left = isRTL ? rect.left - flyW - offset : rect.right + offset;
 			if (!isRTL && left + flyW > window.innerWidth - pad) left = rect.left - flyW - offset;
 			if (isRTL && left < pad) left = rect.right + offset;
+
 			let top = rect.top;
 			if (top + flyH > window.innerHeight - pad) top = window.innerHeight - flyH - pad;
 			if (top < pad) top = pad;
+
 			setPos({ top, left });
 		};
+
 		place();
 		const ro = new ResizeObserver(place);
 		if (flyRef.current) ro.observe(flyRef.current);
 		return () => ro.disconnect();
 	}, [mounted, anchorRef, offset, isRTL]);
+
 	if (!mounted) return null;
+
 	const xFrom = isRTL ? 8 : -8;
+
 	return createPortal(
 		<motion.div
-			ref={flyRef} role="menu"
+			ref={flyRef}
+			role="menu"
 			initial={{ opacity: 0, x: xFrom, scale: 0.96 }}
 			animate={{ opacity: 1, x: 0, scale: 1 }}
 			exit={{ opacity: 0, x: xFrom, scale: 0.96 }}
 			transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
 			style={{
-				position: 'fixed', top: pos?.top ?? -9999, left: pos?.left ?? -9999,
-				zIndex: 9998, minWidth: 230, borderRadius: 14, overflow: 'hidden',
-				background: '#fff', border: `1.5px solid ${T.border}`,
+				position: 'fixed',
+				top: pos?.top ?? -9999,
+				left: pos?.left ?? -9999,
+				zIndex: 9998,
+				minWidth: 230,
+				borderRadius: 14,
+				overflow: 'hidden',
+				background: '#fff',
+				border: `1.5px solid ${T.border}`,
 				boxShadow: '0 16px 48px rgba(15,23,42,0.1), 0 4px 12px rgba(15,23,42,0.06)',
-			}}>
+			}}
+		>
 			{children}
 		</motion.div>,
 		document.body
@@ -407,30 +513,43 @@ function ScrollShadow({ children }) {
 	const ref = useRef(null);
 	const [atTop, setAtTop] = useState(true);
 	const [atBottom, setAtBottom] = useState(false);
+
 	const onScroll = useCallback(() => {
-		const el = ref.current; if (!el) return;
+		const el = ref.current;
+		if (!el) return;
 		setAtTop(el.scrollTop <= 0);
 		setAtBottom(el.scrollTop + el.clientHeight >= el.scrollHeight - 1);
 	}, []);
+
 	useEffect(() => {
-		const el = ref.current; if (!el) return;
+		const el = ref.current;
+		if (!el) return;
 		onScroll();
 		el.addEventListener('scroll', onScroll, { passive: true });
 		return () => el.removeEventListener('scroll', onScroll);
 	}, [onScroll]);
+
 	return (
 		<div style={{ position: 'relative', height: '100%' }}>
 			<div ref={ref} style={{ height: '100%', overflowY: 'auto', scrollbarWidth: 'none' }}>
 				{children}
 			</div>
 			<div style={{
-				pointerEvents: 'none', position: 'absolute', inset: '0 0 auto 0', height: 32,
-				opacity: atTop ? 0 : 1, transition: 'opacity .2s',
+				pointerEvents: 'none',
+				position: 'absolute',
+				inset: '0 0 auto 0',
+				height: 32,
+				opacity: atTop ? 0 : 1,
+				transition: 'opacity .2s',
 				background: 'linear-gradient(to bottom, #fff 20%, transparent)'
 			}} />
 			<div style={{
-				pointerEvents: 'none', position: 'absolute', inset: 'auto 0 0 0', height: 32,
-				opacity: atBottom ? 0 : 1, transition: 'opacity .2s',
+				pointerEvents: 'none',
+				position: 'absolute',
+				inset: 'auto 0 0 0',
+				height: 32,
+				opacity: atBottom ? 0 : 1,
+				transition: 'opacity .2s',
 				background: 'linear-gradient(to top, #fff 20%, transparent)'
 			}} />
 		</div>
@@ -442,14 +561,19 @@ function SectionLabel({ label }) {
 	return (
 		<div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 10px', marginBottom: 2, marginTop: 14 }}>
 			<span style={{
-				fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
-				letterSpacing: '0.22em', color: 'var(--color-primary-400)',
-				whiteSpace: 'nowrap', flexShrink: 0,
+				fontSize: 9,
+				fontWeight: 800,
+				textTransform: 'uppercase',
+				letterSpacing: '0.22em',
+				color: 'var(--color-primary-400)',
+				whiteSpace: 'nowrap',
+				flexShrink: 0,
 			}}>
 				{label}
 			</span>
 			<div style={{
-				flex: 1, height: 1,
+				flex: 1,
+				height: 1,
 				background: 'linear-gradient(to right, var(--color-primary-100), transparent)'
 			}} />
 		</div>
@@ -457,7 +581,16 @@ function SectionLabel({ label }) {
 }
 
 /* ─── NavItem ────────────────────────────────────────────────── */
-function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, totalUnread }) {
+function NavItem({
+	item,
+	pathname,
+	searchParams,
+	depth = 0,
+	onNavigate,
+	collapsed = false,
+	t,
+	totalUnread
+}) {
 	const Icon = item.icon || LayoutDashboard;
 	const hasChildren = Array.isArray(item.children) && item.children.length > 0;
 	const label = t(`items.${item.nameKey}`);
@@ -468,63 +601,110 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 
 	useEffect(() => {
 		if (collapsed) return;
+
 		if (hasChildren) {
-			if (item.expand) setOpen(true);
-			else setOpen(anyChildActive(pathname, item.children) || isPathActive(pathname, item.href));
+			if (item.expand) {
+				setOpen(true);
+			} else {
+				setOpen(
+					anyChildActive(pathname, item.children, searchParams) ||
+					isPathActive(pathname, item.href, searchParams)
+				);
+			}
 		}
-	}, [pathname, collapsed, hasChildren, item.expand, item.children, item.href]);
+	}, [pathname, searchParams, collapsed, hasChildren, item.expand, item.children, item.href]);
 
 	/* COLLAPSED */
 	if (collapsed) {
 		const firstChildHref = hasChildren ? item.children.find((c) => c.href)?.href : null;
 		const href = hasChildren ? firstChildHref : item.href;
-		const active = isPathActive(pathname, href || '');
+		const active = isPathActive(pathname, href || '', searchParams);
+
 		return (
-			<div ref={liRef} style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}
-				onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+			<div
+				ref={liRef}
+				style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}
+				onMouseEnter={() => setHover(true)}
+				onMouseLeave={() => setHover(false)}
+			>
 				{href ? (
 					<Link href={href} onClick={onNavigate} style={{ display: 'block' }}>
-						<motion.div whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
+						<motion.div
+							whileHover={{ scale: 1.08 }}
+							whileTap={{ scale: 0.93 }}
 							style={{
-								position: 'relative', display: 'flex', alignItems: 'center',
-								justifyContent: 'center', width: 40, height: 40, borderRadius: 11, transition: 'all .18s',
+								position: 'relative',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								width: 40,
+								height: 40,
+								borderRadius: 11,
+								transition: 'all .18s',
 								...(active ? {
 									background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 									boxShadow: '0 4px 14px color-mix(in srgb, var(--color-primary-500) 38%, transparent)',
 									color: '#fff',
 								} : { color: 'var(--color-primary-500)' }),
-							}}>
-							{!active && <span style={{
-								position: 'absolute', inset: 0, borderRadius: 11,
-								background: 'var(--color-primary-50)', opacity: hover ? 1 : 0, transition: 'opacity .18s'
-							}} />}
+							}}
+						>
+							{!active && (
+								<span style={{
+									position: 'absolute',
+									inset: 0,
+									borderRadius: 11,
+									background: 'var(--color-primary-50)',
+									opacity: hover ? 1 : 0,
+									transition: 'opacity .18s'
+								}} />
+							)}
 							<Icon style={{ position: 'relative', zIndex: 1, width: 16, height: 16 }} strokeWidth={active ? 2.5 : 2} />
 						</motion.div>
 					</Link>
 				) : (
-					<motion.div whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
+					<motion.div
+						whileHover={{ scale: 1.08 }}
+						whileTap={{ scale: 0.93 }}
 						style={{
-							position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
-							width: 40, height: 40, borderRadius: 11, cursor: 'pointer', color: 'var(--color-primary-500)'
-						}}>
+							position: 'relative',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							width: 40,
+							height: 40,
+							borderRadius: 11,
+							cursor: 'pointer',
+							color: 'var(--color-primary-500)'
+						}}
+					>
 						<span style={{
-							position: 'absolute', inset: 0, borderRadius: 11, background: 'var(--color-primary-50)',
-							opacity: hover ? 1 : 0, transition: 'opacity .18s'
+							position: 'absolute',
+							inset: 0,
+							borderRadius: 11,
+							background: 'var(--color-primary-50)',
+							opacity: hover ? 1 : 0,
+							transition: 'opacity .18s'
 						}} />
 						<Icon style={{ position: 'relative', zIndex: 1, width: 16, height: 16 }} strokeWidth={2} />
 					</motion.div>
 				)}
+
 				<AnimatePresence>
 					{hover && !hasChildren && <CollapsedTooltip label={label} anchorRef={liRef} />}
 				</AnimatePresence>
+
 				<AnimatePresence>
 					{hover && hasChildren && (
 						<PortalFlyout anchorRef={liRef}>
 							<div style={{ padding: '10px 0' }}>
 								<div style={{ padding: '0 12px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
 									<span style={{
-										fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
-										letterSpacing: '0.22em', color: 'var(--color-primary-400)', whiteSpace: 'nowrap'
+										fontSize: 9,
+										fontWeight: 800,
+										textTransform: 'uppercase',
+										letterSpacing: '0.22em',
+										color: 'var(--color-primary-400)',
+										whiteSpace: 'nowrap'
 									}}>
 										{label}
 									</span>
@@ -533,20 +713,34 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 								<div style={{ padding: '0 6px' }}>
 									{item.children.map((child) => {
 										const A = child.icon || LayoutDashboard;
-										const ca = isPathActive(pathname, child.href);
+										const ca = isPathActive(pathname, child.href, searchParams);
+
 										return (
-											<Link key={child.href} href={child.href} onClick={onNavigate}
+											<Link
+												key={child.href}
+												href={child.href}
+												onClick={onNavigate}
 												style={{
-													display: 'flex', alignItems: 'center', gap: 10, borderRadius: 9,
-													padding: '8px 10px', transition: 'all .15s',
+													display: 'flex',
+													alignItems: 'center',
+													gap: 10,
+													borderRadius: 9,
+													padding: '8px 10px',
+													transition: 'all .15s',
 													...(ca ? {
 														background: 'linear-gradient(90deg, var(--color-primary-50), transparent)',
 														color: 'var(--color-primary-800)',
 													} : { color: 'var(--color-primary-600)' })
-												}}>
+												}}
+											>
 												<span style={{
-													display: 'grid', placeContent: 'center', width: 26, height: 26,
-													borderRadius: 7, flexShrink: 0, transition: 'all .15s',
+													display: 'grid',
+													placeContent: 'center',
+													width: 26,
+													height: 26,
+													borderRadius: 7,
+													flexShrink: 0,
+													transition: 'all .15s',
 													...(ca ? {
 														background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 														color: '#fff',
@@ -558,10 +752,15 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 												<span style={{ fontSize: 12.5, fontWeight: ca ? 700 : 500, letterSpacing: '0.01em' }}>
 													{t(`items.${child.nameKey}`)}
 												</span>
-												{ca && <span style={{
-													marginLeft: 'auto', width: 5, height: 5, borderRadius: '50%',
-													background: 'var(--color-primary-400)'
-												}} />}
+												{ca && (
+													<span style={{
+														marginLeft: 'auto',
+														width: 5,
+														height: 5,
+														borderRadius: '50%',
+														background: 'var(--color-primary-400)'
+													}} />
+												)}
 											</Link>
 										);
 									})}
@@ -576,59 +775,101 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 
 	/* LEAF */
 	if (!hasChildren) {
-		const active = isPathActive(pathname, item.href);
+		const active = isPathActive(pathname, item.href, searchParams);
 		const isMessages = item.nameKey === 'messages';
+
 		return (
 			<Link href={item.href} onClick={onNavigate} style={{ display: 'block' }}>
 				<motion.div
 					whileHover={!active ? { x: isRTL ? -2 : 2 } : {}}
 					whileTap={{ scale: 0.985 }}
 					style={{
-						position: 'relative', display: 'flex', alignItems: 'center', gap: 10,
-						borderRadius: 11, padding: '7px 10px', transition: 'all .18s', overflow: 'hidden',
+						position: 'relative',
+						display: 'flex',
+						alignItems: 'center',
+						gap: 10,
+						borderRadius: 11,
+						padding: '7px 10px',
+						transition: 'all .18s',
+						overflow: 'hidden',
 						...(active ? {
 							background: 'linear-gradient(110deg, var(--color-primary-50) 0%, var(--color-secondary-50) 100%)',
 							color: 'var(--color-primary-900)',
 							boxShadow: 'inset 0 0 0 1.5px var(--color-primary-100)',
 						} : { color: 'var(--color-primary-600)' }),
 					}}
-					aria-current={active ? 'page' : undefined}>
-
-					{/* Active rail */}
+					aria-current={active ? 'page' : undefined}
+				>
 					{active && (
-						<motion.span layoutId="active-rail" transition={snap}
+						<motion.span
+							layoutId="active-rail"
+							transition={snap}
 							style={{
-								position: 'absolute', [isRTL ? 'right' : 'left']: 0,
-								top: '18%', bottom: '18%', width: 3, borderRadius: 99,
+								position: 'absolute',
+								[isRTL ? 'right' : 'left']: 0,
+								top: '18%',
+								bottom: '18%',
+								width: 3,
+								borderRadius: 99,
 								background: 'linear-gradient(180deg, var(--color-gradient-from), var(--color-gradient-to))',
-							}} />
+							}}
+						/>
 					)}
-					{/* Hover bg */}
+
 					{!active && (
-						<motion.span initial={{ opacity: 0 }} whileHover={{ opacity: 1 }}
-							style={{ position: 'absolute', inset: 0, borderRadius: 11, background: 'var(--color-primary-50)' }} />
+						<motion.span
+							initial={{ opacity: 0 }}
+							whileHover={{ opacity: 1 }}
+							style={{
+								position: 'absolute',
+								inset: 0,
+								borderRadius: 11,
+								background: 'var(--color-primary-50)'
+							}}
+						/>
 					)}
-					{/* Icon */}
+
 					<span style={{
-						position: 'relative', zIndex: 1, flexShrink: 0,
-						display: 'grid', placeContent: 'center', width: 30, height: 30, borderRadius: 9, transition: 'all .18s',
+						position: 'relative',
+						zIndex: 1,
+						flexShrink: 0,
+						display: 'grid',
+						placeContent: 'center',
+						width: 30,
+						height: 30,
+						borderRadius: 9,
+						transition: 'all .18s',
 						...(active ? {
 							background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 							color: '#fff',
 							boxShadow: '0 3px 10px color-mix(in srgb, var(--color-primary-500) 38%, transparent)',
-						} : { background: T.bgSub, color: 'var(--color-primary-500)', boxShadow: `inset 0 0 0 1px ${T.border}` }),
+						} : {
+							background: T.bgSub,
+							color: 'var(--color-primary-500)',
+							boxShadow: `inset 0 0 0 1px ${T.border}`
+						}),
 					}}>
 						<Icon style={{ width: 14, height: 14 }} strokeWidth={active ? 2.5 : 2} />
 					</span>
+
 					<span style={{
-						position: 'relative', zIndex: 1, flex: 1, overflow: 'hidden',
-						textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-						fontSize: 13, fontWeight: active ? 700 : 500, letterSpacing: '0.01em'
+						position: 'relative',
+						zIndex: 1,
+						flex: 1,
+						overflow: 'hidden',
+						textOverflow: 'ellipsis',
+						whiteSpace: 'nowrap',
+						fontSize: 13,
+						fontWeight: active ? 700 : 500,
+						letterSpacing: '0.01em'
 					}}>
 						{label}
 					</span>
+
 					{isMessages && totalUnread > 0 && (
-						<span style={{ position: 'relative', zIndex: 1 }}><Badge value={totalUnread} /></span>
+						<span style={{ position: 'relative', zIndex: 1 }}>
+							<Badge value={totalUnread} />
+						</span>
 					)}
 				</motion.div>
 			</Link>
@@ -636,72 +877,129 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 	}
 
 	/* GROUP */
-	const groupActive = anyChildActive(pathname, item.children);
+	const groupActive = anyChildActive(pathname, item.children, searchParams);
+
 	return (
 		<div style={{ width: '100%' }}>
-			<button type="button" onClick={() => setOpen((v) => !v)}
+			<button
+				type="button"
+				onClick={() => setOpen((v) => !v)}
 				style={{
-					position: 'relative', width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-					borderRadius: 11, padding: '7px 10px',
-					textAlign: isRTL ? 'right' : 'left', border: 'none', cursor: 'pointer', transition: 'all .18s',
+					position: 'relative',
+					width: '100%',
+					display: 'flex',
+					alignItems: 'center',
+					gap: 10,
+					borderRadius: 11,
+					padding: '7px 10px',
+					textAlign: isRTL ? 'right' : 'left',
+					border: 'none',
+					cursor: 'pointer',
+					transition: 'all .18s',
 					...(open
 						? { background: 'var(--color-primary-50)', color: 'var(--color-primary-900)' }
 						: { background: 'transparent', color: 'var(--color-primary-600)' }),
 				}}
-				aria-expanded={open}>
+				aria-expanded={open}
+			>
 				{!open && (
-					<motion.span initial={{ opacity: 0 }} whileHover={{ opacity: 1 }}
+					<motion.span
+						initial={{ opacity: 0 }}
+						whileHover={{ opacity: 1 }}
 						style={{
-							position: 'absolute', inset: 0, borderRadius: 11,
-							background: 'var(--color-primary-50)', pointerEvents: 'none'
-						}} />
+							position: 'absolute',
+							inset: 0,
+							borderRadius: 11,
+							background: 'var(--color-primary-50)',
+							pointerEvents: 'none'
+						}}
+					/>
 				)}
+
 				<span style={{
-					position: 'relative', flexShrink: 0, display: 'grid', placeContent: 'center',
-					width: 30, height: 30, borderRadius: 9, transition: 'all .18s',
+					position: 'relative',
+					flexShrink: 0,
+					display: 'grid',
+					placeContent: 'center',
+					width: 30,
+					height: 30,
+					borderRadius: 9,
+					transition: 'all .18s',
 					...(open
 						? { background: 'var(--color-primary-100)', color: 'var(--color-primary-700)' }
 						: { background: T.bgSub, color: 'var(--color-primary-500)', boxShadow: `inset 0 0 0 1px ${T.border}` }),
 				}}>
 					<Icon style={{ width: 14, height: 14 }} strokeWidth={2} />
 				</span>
+
 				<span style={{
-					position: 'relative', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis',
-					whiteSpace: 'nowrap', fontSize: 13, fontWeight: 600, letterSpacing: '0.01em'
+					position: 'relative',
+					flex: 1,
+					overflow: 'hidden',
+					textOverflow: 'ellipsis',
+					whiteSpace: 'nowrap',
+					fontSize: 13,
+					fontWeight: 600,
+					letterSpacing: '0.01em'
 				}}>
 					{label}
 				</span>
+
 				{!open && groupActive && (
 					<span style={{
-						width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+						width: 6,
+						height: 6,
+						borderRadius: '50%',
+						flexShrink: 0,
 						background: 'var(--color-primary-400)'
 					}} />
 				)}
-				<motion.span animate={{ rotate: open ? 180 : 0 }} transition={snap}
-					style={{ color: open ? 'var(--color-primary-500)' : T.textLight, flexShrink: 0 }}>
+
+				<motion.span
+					animate={{ rotate: open ? 180 : 0 }}
+					transition={snap}
+					style={{ color: open ? 'var(--color-primary-500)' : T.textLight, flexShrink: 0 }}
+				>
 					<ChevronDown style={{ width: 14, height: 14 }} strokeWidth={2.5} />
 				</motion.span>
 			</button>
 
 			<AnimatePresence initial={false}>
 				{open && (
-					<motion.div key="sub"
-						initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-						exit={{ height: 0, opacity: 0 }} transition={gentle} style={{ overflow: 'hidden' }}>
+					<motion.div
+						key="sub"
+						initial={{ height: 0, opacity: 0 }}
+						animate={{ height: 'auto', opacity: 1 }}
+						exit={{ height: 0, opacity: 0 }}
+						transition={gentle}
+						style={{ overflow: 'hidden' }}
+					>
 						<div style={{
-							position: 'relative', marginTop: 2, marginBottom: 2,
+							position: 'relative',
+							marginTop: 2,
+							marginBottom: 2,
 							[isRTL ? 'marginRight' : 'marginLeft']: 19,
 						}}>
 							<div style={{
-								position: 'absolute', top: 0, bottom: 0,
-								[isRTL ? 'right' : 'left']: 0, width: 1,
+								position: 'absolute',
+								top: 0,
+								bottom: 0,
+								[isRTL ? 'right' : 'left']: 0,
+								width: 1,
 								background: 'linear-gradient(to bottom, var(--color-primary-100), transparent)',
 							}} />
 							<ul style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: 12, margin: 0, listStyle: 'none' }}>
 								{item.children.map((child) => (
 									<li key={child.href || child.nameKey}>
-										<NavItem item={child} pathname={pathname} depth={depth + 1}
-											onNavigate={onNavigate} t={t} totalUnread={totalUnread} />
+										<NavItem
+											item={child}
+											pathname={pathname}
+											searchParams={searchParams}
+											depth={depth + 1}
+											onNavigate={onNavigate}
+											t={t}
+											totalUnread={totalUnread}
+										/>
 									</li>
 								))}
 							</ul>
@@ -714,15 +1012,33 @@ function NavItem({ item, pathname, depth = 0, onNavigate, collapsed = false, t, 
 }
 
 /* ─── NavSection ─────────────────────────────────────────────── */
-function NavSection({ sectionKey, items, pathname, onNavigate, collapsed = false, t, totalUnread = 0 }) {
+function NavSection({
+	sectionKey,
+	items,
+	pathname,
+	searchParams,
+	onNavigate,
+	collapsed = false,
+	t,
+	totalUnread = 0
+}) {
 	const t_nav = useTranslations('nav');
 	const label = t_nav(sectionKey, { defaultValue: '' });
+
 	return (
 		<div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
 			{!collapsed && label && <SectionLabel label={label} />}
 			{items.map((item) => (
-				<NavItem key={item.href || item.nameKey} item={item} pathname={pathname}
-					onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} />
+				<NavItem
+					key={item.href || item.nameKey}
+					item={item}
+					pathname={pathname}
+					searchParams={searchParams}
+					onNavigate={onNavigate}
+					collapsed={collapsed}
+					t={t}
+					totalUnread={totalUnread}
+				/>
 			))}
 		</div>
 	);
@@ -733,36 +1049,52 @@ function Avatar({ user, size = 'md' }) {
 	const text = initialsFrom(user?.name, user?.email);
 	const isActive = (user?.status || '').toLowerCase() === 'active';
 	const dim = size === 'sm' ? { w: 34, h: 34, font: 11 } : { w: 42, h: 42, font: 13 };
+
 	return (
 		<div style={{ position: 'relative', flexShrink: 0 }}>
 			<div style={{
-				display: 'grid', placeItems: 'center', borderRadius: 8,
-				fontWeight: 900, color: '#fff', position: 'relative', overflow: 'hidden',
-				width: dim.w, height: dim.h, fontSize: dim.font,
+				display: 'grid',
+				placeItems: 'center',
+				borderRadius: 8,
+				fontWeight: 900,
+				color: '#fff',
+				position: 'relative',
+				overflow: 'hidden',
+				width: dim.w,
+				height: dim.h,
+				fontSize: dim.font,
 				background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 				boxShadow: '0 3px 12px color-mix(in srgb, var(--color-primary-500) 38%, transparent)',
 			}}>
 				<span style={{ position: 'relative', zIndex: 1 }}>{text}</span>
-				{/* shimmer sweep */}
-				<motion.div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+				<motion.div
+					style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
 					animate={{ x: ['-100%', '200%'] }}
-					transition={{ duration: 3.5, repeat: Infinity, ease: 'linear', repeatDelay: 1.5 }}>
+					transition={{ duration: 3.5, repeat: Infinity, ease: 'linear', repeatDelay: 1.5 }}
+				>
 					<div style={{
-						width: '60%', height: '100%',
+						width: '60%',
+						height: '100%',
 						background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.28) 50%, transparent 70%)'
 					}} />
 				</motion.div>
 			</div>
 			<span style={{
-				position: 'absolute', right: size === 'sm' ? -2 : -3, bottom: size === 'sm' ? -2 : -3,
-				width: size === 'sm' ? 9 : 11, height: size === 'sm' ? 9 : 11,
-				borderRadius: '50%', background: isActive ? '#22c55e' : '#94a3b8',
+				position: 'absolute',
+				right: size === 'sm' ? -2 : -3,
+				bottom: size === 'sm' ? -2 : -3,
+				width: size === 'sm' ? 9 : 11,
+				height: size === 'sm' ? 9 : 11,
+				borderRadius: '50%',
+				background: isActive ? '#22c55e' : '#94a3b8',
 				boxShadow: '0 0 0 2px white',
 			}}>
 				{isActive && (
-					<motion.span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#22c55e' }}
+					<motion.span
+						style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#22c55e' }}
 						animate={{ scale: [1, 1.7, 1], opacity: [0.6, 0, 0.6] }}
-						transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }} />
+						transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+					/>
 				)}
 			</span>
 		</div>
@@ -772,43 +1104,74 @@ function Avatar({ user, size = 'md' }) {
 /* ─── UserProfileCard ────────────────────────────────────────── */
 function UserProfileCard({ user, collapsed, setCollapsed }) {
 	const t_r = useTranslations('');
+
 	return (
 		<div style={{ padding: '0 10px' }}>
-			<div className='gap-[10px]' style={{
-				display: 'flex', alignItems: 'center', borderRadius: 13, transition: 'all .3s',
-				flexDirection: collapsed ? 'column' : 'row',
-				gap: collapsed ? 7 : 10,
-				padding: collapsed ? '8px 4px' : '10px 12px',
-				background: collapsed ? 'transparent' : 'white',
-				border: collapsed ? 'none' : `1.5px solid ${T.border}`,
-				boxShadow: collapsed ? 'none' : '0 2px 8px rgba(15,23,42,0.05)',
-			}}>
+			<div
+				className="gap-[10px]"
+				style={{
+					display: 'flex',
+					alignItems: 'center',
+					borderRadius: 13,
+					transition: 'all .3s',
+					flexDirection: collapsed ? 'column' : 'row',
+					gap: collapsed ? 7 : 10,
+					padding: collapsed ? '8px 4px' : '10px 12px',
+					background: collapsed ? 'transparent' : 'white',
+					border: collapsed ? 'none' : `1.5px solid ${T.border}`,
+					boxShadow: collapsed ? 'none' : '0 2px 8px rgba(15,23,42,0.05)',
+				}}
+			>
 				<Avatar user={user} size={collapsed ? 'sm' : 'md'} />
+
 				{!collapsed && (
 					<div style={{ flex: 1, minWidth: 0 }}>
 						<MultiLangText style={{
-							display: 'block', overflow: 'hidden', textOverflow: 'ellipsis',
-							whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700, color: T.text, lineHeight: 1.3
+							display: 'block',
+							overflow: 'hidden',
+							textOverflow: 'ellipsis',
+							whiteSpace: 'nowrap',
+							fontSize: 13,
+							fontWeight: 700,
+							color: T.text,
+							lineHeight: 1.3
 						}}>
 							{user?.name}
 						</MultiLangText>
 						<p style={{
-							fontSize: 9.5, marginTop: 3, textTransform: 'uppercase',
-							fontWeight: 700, letterSpacing: '0.18em', color: 'var(--color-primary-400)'
+							fontSize: 9.5,
+							marginTop: 3,
+							textTransform: 'uppercase',
+							fontWeight: 700,
+							letterSpacing: '0.18em',
+							color: 'var(--color-primary-400)'
 						}}>
 							{t_r(`myProfile.roles.${user?.role}`)}
 						</p>
 					</div>
 				)}
-				<motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.92 }}
+
+				<motion.button
+					whileHover={{ scale: 1.1 }}
+					whileTap={{ scale: 0.92 }}
 					onClick={() => setCollapsed((v) => !v)}
 					style={{
-						flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-						width: 33, height: 33, borderRadius: 8, border: 'none', cursor: 'pointer',
-						background: 'var(--color-primary-50)', color: 'var(--color-primary-400)',
-						boxShadow: `inset 0 0 0 1px var(--color-primary-100)`, transition: 'all .18s',
+						flexShrink: 0,
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						width: 33,
+						height: 33,
+						borderRadius: 8,
+						border: 'none',
+						cursor: 'pointer',
+						background: 'var(--color-primary-50)',
+						color: 'var(--color-primary-400)',
+						boxShadow: `inset 0 0 0 1px var(--color-primary-100)`,
+						transition: 'all .18s',
 					}}
-					title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+					title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+				>
 					<motion.div animate={{ rotate: collapsed ? 0 : 180 }} transition={snap}>
 						{collapsed
 							? <PanelLeftOpen style={{ width: 13, height: 13 }} strokeWidth={2} />
@@ -827,25 +1190,35 @@ function setDocumentLangDir(locale) {
 	document.documentElement.lang = locale;
 	document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
 }
+
 function setLocaleCookie(locale) {
 	if (typeof document === 'undefined') return;
 	document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=${60 * 60 * 24 * 365}`;
 }
+
 function showGlobalLoader(ms = 1100) {
 	if (typeof document === 'undefined') return;
 	const el = document.getElementById('lang-switch-loader');
 	if (el) el.remove();
+
 	const root = document.createElement('div');
 	root.id = 'lang-switch-loader';
 	root.className = 'fixed inset-0 z-[9999] grid place-items-center backdrop-blur-sm bg-black/40';
 	root.innerHTML = `<div class="h-10 w-10 rounded-full border-4 border-white/30 border-t-white animate-spin"></div>`;
 	document.body.appendChild(root);
+
 	setTimeout(() => root.remove(), ms);
 }
+
 function swapLocaleInPath(pathname, nextLocale) {
 	const safePath = pathname || '/';
 	const segs = safePath.split('/').filter(Boolean);
-	if (segs.length > 0 && (segs[0] === 'en' || segs[0] === 'ar')) { segs[0] = nextLocale; return '/' + segs.join('/'); }
+
+	if (segs.length > 0 && (segs[0] === 'en' || segs[0] === 'ar')) {
+		segs[0] = nextLocale;
+		return '/' + segs.join('/');
+	}
+
 	return '/' + [nextLocale, ...segs].join('/');
 }
 
@@ -858,46 +1231,87 @@ function SidebarLanguageToggle({ collapsed }) {
 	const [pending, start] = useTransition();
 	const isEN = locale === 'en';
 	const nextLocale = isEN ? 'ar' : 'en';
+
 	const nextHref = useMemo(() => {
 		const base = swapLocaleInPath(pathname || '/', nextLocale);
 		const qs = search?.toString();
 		return qs ? `${base}?${qs}` : base;
 	}, [pathname, search, nextLocale]);
+
 	function toggle() {
-		start(() => { showGlobalLoader(); setLocaleCookie(nextLocale); setDocumentLangDir(nextLocale); router.replace(nextHref); router.refresh(); });
+		start(() => {
+			showGlobalLoader();
+			setLocaleCookie(nextLocale);
+			setDocumentLangDir(nextLocale);
+			router.replace(nextHref);
+			router.refresh();
+		});
 	}
 
 	if (collapsed) {
 		return (
-			<motion.button type="button" onClick={toggle}
-				whileHover={{ scale: 1.07 }} whileTap={{ scale: 0.95 }}
+			<motion.button
+				type="button"
+				onClick={toggle}
+				whileHover={{ scale: 1.07 }}
+				whileTap={{ scale: 0.95 }}
 				title={isEN ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
 				style={{
-					position: 'relative', width: 40, height: 40, borderRadius: 11,
-					display: 'flex', alignItems: 'center', justifyContent: 'center',
-					cursor: 'pointer', border: `1px solid ${T.border}`,
-					background: T.bgSub, color: 'var(--color-primary-500)',
-					overflow: 'hidden', transition: 'all .18s',
-				}}>
+					position: 'relative',
+					width: 40,
+					height: 40,
+					borderRadius: 11,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					cursor: 'pointer',
+					border: `1px solid ${T.border}`,
+					background: T.bgSub,
+					color: 'var(--color-primary-500)',
+					overflow: 'hidden',
+					transition: 'all .18s',
+				}}
+			>
 				<Globe style={{ position: 'relative', zIndex: 1, width: 15, height: 15 }} strokeWidth={2} />
 				<span style={{
-					position: 'absolute', bottom: 5, left: '50%', transform: 'translateX(-50%)',
-					fontSize: 8, fontWeight: 900, letterSpacing: '0.06em',
-					color: 'var(--color-primary-400)', zIndex: 1
+					position: 'absolute',
+					bottom: 5,
+					left: '50%',
+					transform: 'translateX(-50%)',
+					fontSize: 8,
+					fontWeight: 900,
+					letterSpacing: '0.06em',
+					color: 'var(--color-primary-400)',
+					zIndex: 1
 				}}>
 					{locale.toUpperCase()}
 				</span>
 				{pending && (
-					<motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+					<motion.span
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
 						style={{
-							position: 'absolute', inset: 0, zIndex: 20, background: T.bgSub,
-							display: 'grid', placeItems: 'center', borderRadius: 11
-						}}>
-						<motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+							position: 'absolute',
+							inset: 0,
+							zIndex: 20,
+							background: T.bgSub,
+							display: 'grid',
+							placeItems: 'center',
+							borderRadius: 11
+						}}
+					>
+						<motion.div
+							animate={{ rotate: 360 }}
+							transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
 							style={{
-								width: 14, height: 14, border: `2px solid ${T.border}`,
-								borderTopColor: 'var(--color-primary-500)', borderRadius: '50%'
-							}} />
+								width: 14,
+								height: 14,
+								border: `2px solid ${T.border}`,
+								borderTopColor: 'var(--color-primary-500)',
+								borderRadius: '50%'
+							}}
+						/>
 					</motion.span>
 				)}
 			</motion.button>
@@ -905,58 +1319,115 @@ function SidebarLanguageToggle({ collapsed }) {
 	}
 
 	return (
-		<motion.button type="button" onClick={toggle}
-			whileHover={{ scale: 1.005 }} whileTap={{ scale: 0.995 }}
+		<motion.button
+			type="button"
+			onClick={toggle}
+			whileHover={{ scale: 1.005 }}
+			whileTap={{ scale: 0.995 }}
 			style={{
-				position: 'relative', width: '100%', height: 36, borderRadius: 11,
-				display: 'flex', alignItems: 'center', overflow: 'hidden',
-				cursor: 'pointer', border: `1px solid ${T.border}`, background: T.bgSub, transition: 'all .18s',
-			}}>
+				position: 'relative',
+				width: '100%',
+				height: 36,
+				borderRadius: 11,
+				display: 'flex',
+				alignItems: 'center',
+				overflow: 'hidden',
+				cursor: 'pointer',
+				border: `1px solid ${T.border}`,
+				background: T.bgSub,
+				transition: 'all .18s',
+			}}
+		>
 			<motion.span
 				animate={{ left: isEN ? 'calc(50% + 2px)' : '3px', right: isEN ? '3px' : 'calc(50% + 2px)' }}
 				transition={snap}
 				style={{
-					position: 'absolute', top: 3, bottom: 3, borderRadius: 8,
+					position: 'absolute',
+					top: 3,
+					bottom: 3,
+					borderRadius: 8,
 					background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 					boxShadow: '0 2px 8px color-mix(in srgb, var(--color-primary-500) 35%, transparent)',
-				}} />
-			{/* AR */}
-			<motion.div animate={{ opacity: isEN ? 0.5 : 1 }} transition={{ duration: .2 }}
+				}}
+			/>
+
+			<motion.div
+				animate={{ opacity: isEN ? 0.5 : 1 }}
+				transition={{ duration: .2 }}
 				style={{
-					position: 'relative', zIndex: 1, flex: 1,
-					display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5
-				}}>
+					position: 'relative',
+					zIndex: 1,
+					flex: 1,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					gap: 5
+				}}
+			>
 				<Globe style={{ width: 12, height: 12, color: isEN ? '#fff' : 'var(--color-primary-500)' }} strokeWidth={2.5} />
 				<span style={{
-					fontSize: 11, fontWeight: 800, letterSpacing: '0.03em',
+					fontSize: 11,
+					fontWeight: 800,
+					letterSpacing: '0.03em',
 					color: isEN ? '#fff' : 'var(--color-primary-500)'
-				}}>العربية</span>
-			</motion.div>
-			<span style={{ position: 'relative', zIndex: 1, width: 1, height: 16, background: T.border, flexShrink: 0 }} />
-			{/* EN */}
-			<motion.div animate={{ opacity: !isEN ? 0.5 : 1 }} transition={{ duration: .2 }}
-				style={{
-					position: 'relative', zIndex: 1, flex: 1,
-					display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5
 				}}>
+					العربية
+				</span>
+			</motion.div>
+
+			<span style={{ position: 'relative', zIndex: 1, width: 1, height: 16, background: T.border, flexShrink: 0 }} />
+
+			<motion.div
+				animate={{ opacity: !isEN ? 0.5 : 1 }}
+				transition={{ duration: .2 }}
+				style={{
+					position: 'relative',
+					zIndex: 1,
+					flex: 1,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					gap: 5
+				}}
+			>
 				<Globe style={{ width: 12, height: 12, color: !isEN ? '#fff' : 'var(--color-primary-500)' }} strokeWidth={2.5} />
 				<span style={{
-					fontSize: 11, fontWeight: 800, letterSpacing: '0.03em',
+					fontSize: 11,
+					fontWeight: 800,
+					letterSpacing: '0.03em',
 					color: !isEN ? '#fff' : 'var(--color-primary-500)'
-				}}>English</span>
+				}}>
+					English
+				</span>
 			</motion.div>
+
 			<AnimatePresence>
 				{pending && (
-					<motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+					<motion.span
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
 						style={{
-							position: 'absolute', inset: 0, zIndex: 20, background: 'rgba(255,255,255,.85)',
-							borderRadius: 11, display: 'grid', placeItems: 'center'
-						}}>
-						<motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+							position: 'absolute',
+							inset: 0,
+							zIndex: 20,
+							background: 'rgba(255,255,255,.85)',
+							borderRadius: 11,
+							display: 'grid',
+							placeItems: 'center'
+						}}
+					>
+						<motion.div
+							animate={{ rotate: 360 }}
+							transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
 							style={{
-								width: 14, height: 14, border: `2px solid ${T.border}`,
-								borderTopColor: 'var(--color-primary-500)', borderRadius: '50%'
-							}} />
+								width: 14,
+								height: 14,
+								border: `2px solid ${T.border}`,
+								borderTopColor: 'var(--color-primary-500)',
+								borderRadius: '50%'
+							}}
+						/>
 					</motion.span>
 				)}
 			</AnimatePresence>
@@ -977,66 +1448,95 @@ function SidebarThemeSwitcher({ collapsed }) {
 
 	useEffect(() => {
 		if (!open) return;
+
 		const fn = (e) => {
 			if (panelRef.current?.contains(e.target)) return;
 			if (triggerRef.current?.contains(e.target)) return;
 			setOpen(false);
 		};
+
 		document.addEventListener('mousedown', fn);
 		return () => document.removeEventListener('mousedown', fn);
 	}, [open]);
+
 	useEffect(() => {
 		if (!open) return;
 		const fn = (e) => { if (e.key === 'Escape') setOpen(false); };
 		document.addEventListener('keydown', fn);
 		return () => document.removeEventListener('keydown', fn);
 	}, [open]);
+
 	useLayoutEffect(() => {
 		if (!open || !triggerRef.current) return;
+
 		const place = () => {
-			const rect = triggerRef.current?.getBoundingClientRect(); if (!rect) return;
-			const panelW = 320; const pad = 8;
+			const rect = triggerRef.current?.getBoundingClientRect();
+			if (!rect) return;
+
+			const panelW = 320;
+			const pad = 8;
 			let left = isRTL ? rect.left - panelW - pad : rect.right + pad;
+
 			if (!isRTL && left + panelW > window.innerWidth - pad) left = rect.left - panelW - pad;
 			if (isRTL && left < pad) left = rect.right + pad;
+
 			const approxH = 460;
 			let bottom = window.innerHeight - rect.bottom;
+
 			if (rect.bottom - approxH < pad) bottom = window.innerHeight - rect.top - approxH;
 			setPanelPos({ left, bottom: Math.max(pad, bottom) });
 		};
+
 		place();
 	}, [open, isRTL]);
+
 	const xFrom = isRTL ? 8 : -8;
 
 	return (
 		<div style={{
-			position: 'relative', display: collapsed ? 'flex' : 'block',
+			position: 'relative',
+			display: collapsed ? 'flex' : 'block',
 			justifyContent: collapsed ? 'center' : undefined
 		}}>
-			<motion.button ref={triggerRef} type="button" onClick={() => setOpen((v) => !v)}
-				whileHover={{ scale: collapsed ? 1.07 : 1.005 }} whileTap={{ scale: collapsed ? 0.95 : 0.995 }}
+			<motion.button
+				ref={triggerRef}
+				type="button"
+				onClick={() => setOpen((v) => !v)}
+				whileHover={{ scale: collapsed ? 1.07 : 1.005 }}
+				whileTap={{ scale: collapsed ? 0.95 : 0.995 }}
 				style={{
-					display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
-					border: 'none', transition: 'all .18s',
-					...(collapsed ? { width: 40, height: 40, borderRadius: 11, justifyContent: 'center' }
+					display: 'flex',
+					alignItems: 'center',
+					gap: 8,
+					cursor: 'pointer',
+					border: 'none',
+					transition: 'all .18s',
+					...(collapsed
+						? { width: 40, height: 40, borderRadius: 11, justifyContent: 'center' }
 						: { width: '100%', height: 36, borderRadius: 11, padding: '0 10px' }),
 					...(open ? {
 						background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 						color: '#fff',
 						boxShadow: '0 3px 12px color-mix(in srgb, var(--color-primary-500) 35%, transparent)',
 					} : {
-						background: T.bgSub, color: 'var(--color-primary-600)',
+						background: T.bgSub,
+						color: 'var(--color-primary-600)',
 						boxShadow: `inset 0 0 0 1px ${T.border}`,
 					}),
-				}}>
+				}}
+			>
 				<Palette style={{ width: 14, height: 14, flexShrink: 0 }} strokeWidth={2} />
+
 				{!collapsed && (
 					<>
 						<span style={{ fontSize: 12, fontWeight: 700, flex: 1, letterSpacing: '0.02em' }}>Theme</span>
 						<div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
 							{currentPalette && [currentPalette.primary[500], currentPalette.secondary[500], currentPalette.primary[300]].map((c, i) => (
 								<span key={i} style={{
-									width: 8, height: 8, borderRadius: 3, background: c,
+									width: 8,
+									height: 8,
+									borderRadius: 3,
+									background: c,
 									boxShadow: '0 0 0 1px rgba(255,255,255,.4)'
 								}} />
 							))}
@@ -1047,11 +1547,20 @@ function SidebarThemeSwitcher({ collapsed }) {
 					</>
 				)}
 			</motion.button>
+
 			{open && typeof window !== 'undefined' && createPortal(
-				<ThemePanel ref={panelRef} themeEntries={themeEntries}
-					currentTheme={currentTheme} currentPalette={currentPalette}
-					onSelect={(key) => { setTheme(key); setTimeout(() => setOpen(false), 250); }}
-					pos={panelPos} xFrom={xFrom} />,
+				<ThemePanel
+					ref={panelRef}
+					themeEntries={themeEntries}
+					currentTheme={currentTheme}
+					currentPalette={currentPalette}
+					onSelect={(key) => {
+						setTheme(key);
+						setTimeout(() => setOpen(false), 250);
+					}}
+					pos={panelPos}
+					xFrom={xFrom}
+				/>,
 				document.body
 			)}
 		</div>
@@ -1060,28 +1569,45 @@ function SidebarThemeSwitcher({ collapsed }) {
 
 /* ─── ThemePanel ─────────────────────────────────────────────── */
 const ThemePanel = React.forwardRef(function ThemePanel(
-	{ themeEntries, currentTheme, currentPalette, onSelect, pos, xFrom }, ref
+	{ themeEntries, currentTheme, currentPalette, onSelect, pos, xFrom },
+	ref
 ) {
 	return (
 		<AnimatePresence>
-			<motion.div ref={ref}
+			<motion.div
+				ref={ref}
 				initial={{ opacity: 0, x: xFrom, scale: 0.96 }}
 				animate={{ opacity: 1, x: 0, scale: 1 }}
 				exit={{ opacity: 0, x: xFrom, scale: 0.96 }}
 				transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
 				style={{
-					position: 'fixed', bottom: pos?.bottom ?? 16, left: pos?.left ?? 300,
-					zIndex: 9999, width: 320, borderRadius: 16, overflow: 'hidden',
-					background: '#fff', border: `1.5px solid ${T.border}`,
+					position: 'fixed',
+					bottom: pos?.bottom ?? 16,
+					left: pos?.left ?? 300,
+					zIndex: 9999,
+					width: 320,
+					borderRadius: 16,
+					overflow: 'hidden',
+					background: '#fff',
+					border: `1.5px solid ${T.border}`,
 					boxShadow: '0 24px 64px rgba(15,23,42,0.1), 0 6px 20px rgba(15,23,42,0.06)',
-				}}>
+				}}
+			>
 				<div style={{
-					padding: '14px 16px 12px', display: 'flex', alignItems: 'center', gap: 12,
+					padding: '14px 16px 12px',
+					display: 'flex',
+					alignItems: 'center',
+					gap: 12,
 					borderBottom: `1px solid ${T.bgSub}`
 				}}>
 					<div style={{
-						width: 34, height: 34, borderRadius: 10, display: 'grid', placeContent: 'center',
-						color: '#fff', flexShrink: 0,
+						width: 34,
+						height: 34,
+						borderRadius: 10,
+						display: 'grid',
+						placeContent: 'center',
+						color: '#fff',
+						flexShrink: 0,
 						background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 						boxShadow: '0 3px 10px color-mix(in srgb, var(--color-primary-500) 35%, transparent)'
 					}}>
@@ -1090,67 +1616,103 @@ const ThemePanel = React.forwardRef(function ThemePanel(
 					<div>
 						<p style={{ fontSize: 13, fontWeight: 800, color: T.text, letterSpacing: '0.01em' }}>Color Theme</p>
 						<p style={{
-							fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase',
-							letterSpacing: '0.18em', color: T.textMuted, marginTop: 2
+							fontSize: 9.5,
+							fontWeight: 700,
+							textTransform: 'uppercase',
+							letterSpacing: '0.18em',
+							color: T.textMuted,
+							marginTop: 2
 						}}>
 							{themeEntries.length} palettes available
 						</p>
 					</div>
 				</div>
+
 				<div style={{ padding: 12, maxHeight: 370, overflowY: 'auto', scrollbarWidth: 'thin' }}>
 					<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
 						{themeEntries.map(([key, palette], idx) => {
 							const isActive = currentTheme === key;
+
 							return (
-								<motion.button key={key}
-									initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+								<motion.button
+									key={key}
+									initial={{ opacity: 0, y: 8 }}
+									animate={{ opacity: 1, y: 0 }}
 									transition={{ delay: idx * 0.022 }}
-									whileHover={{ scale: 1.03, y: -1 }} whileTap={{ scale: 0.97 }}
+									whileHover={{ scale: 1.03, y: -1 }}
+									whileTap={{ scale: 0.97 }}
 									onClick={() => onSelect(key)}
 									style={{
-										position: 'relative', borderRadius: 11, overflow: 'hidden',
-										textAlign: 'left', cursor: 'pointer',
+										position: 'relative',
+										borderRadius: 11,
+										overflow: 'hidden',
+										textAlign: 'left',
+										cursor: 'pointer',
 										border: isActive ? `2px solid ${palette.primary[400]}` : `1.5px solid #f1f5f9`,
 										background: isActive ? palette.primary[50] : '#fafafa',
 										boxShadow: isActive
 											? `0 4px 16px color-mix(in srgb, ${palette.primary[400]} 22%, transparent)`
 											: '0 1px 4px rgba(0,0,0,0.04)',
-									}}>
+									}}
+								>
 									<div style={{
-										height: 42, position: 'relative', overflow: 'hidden',
+										height: 42,
+										position: 'relative',
+										overflow: 'hidden',
 										background: `linear-gradient(135deg, ${palette.gradient.from}, ${palette.gradient.to})`
 									}}>
 										<motion.div
 											animate={{ backgroundPosition: ['-200% 0', '200% 0'] }}
 											transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
 											style={{
-												position: 'absolute', inset: 0,
+												position: 'absolute',
+												inset: 0,
 												background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,.3) 50%, transparent 100%)',
 												backgroundSize: '200% 100%'
-											}} />
+											}}
+										/>
+
 										{isActive && (
-											<motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={snap}
+											<motion.div
+												initial={{ scale: 0 }}
+												animate={{ scale: 1 }}
+												transition={snap}
 												style={{
-													position: 'absolute', top: 6, right: 6, width: 20, height: 20,
-													borderRadius: '50%', background: 'white',
-													display: 'grid', placeContent: 'center',
+													position: 'absolute',
+													top: 6,
+													right: 6,
+													width: 20,
+													height: 20,
+													borderRadius: '50%',
+													background: 'white',
+													display: 'grid',
+													placeContent: 'center',
 													boxShadow: '0 2px 6px rgba(0,0,0,0.12)'
-												}}>
+												}}
+											>
 												<Check style={{ width: 11, height: 11, color: palette.primary[500] }} strokeWidth={3} />
 											</motion.div>
 										)}
 									</div>
+
 									<div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 9px' }}>
 										{[palette.primary[500], palette.secondary[500], palette.primary[300]].map((c, i) => (
 											<span key={i} style={{
-												width: 13, height: 13, borderRadius: 4,
-												background: c, boxShadow: '0 0 0 1px rgba(0,0,0,.06)'
+												width: 13,
+												height: 13,
+												borderRadius: 4,
+												background: c,
+												boxShadow: '0 0 0 1px rgba(0,0,0,.06)'
 											}} />
 										))}
 										{isActive && (
 											<span style={{
-												marginLeft: 'auto', fontSize: 9, fontWeight: 900,
-												textTransform: 'uppercase', letterSpacing: '0.1em', color: palette.primary[500]
+												marginLeft: 'auto',
+												fontSize: 9,
+												fontWeight: 900,
+												textTransform: 'uppercase',
+												letterSpacing: '0.1em',
+												color: palette.primary[500]
 											}}>
 												Active
 											</span>
@@ -1171,86 +1733,78 @@ function Divider() {
 	return <div style={{ margin: '4px 12px', height: 1, background: T.border }} />;
 }
 
-/* ─── BrandStrip ─────────────────────────────────────────────── */
-function BrandStrip({ role, t, collapsed }) {
-	const labels = {
-		super_admin: t('brand.superAdminPortal'),
-		admin: t('brand.adminPortal'),
-		coach: t('brand.coachPortal'),
-		client: t('brand.clientPortal'),
-	};
-	return (
-		<div style={{ padding: collapsed ? '12px 10px 0' : '14px 10px 0' }}>
-			<div style={{
-				display: 'flex', alignItems: 'center', gap: 8, borderRadius: 11,
-				padding: collapsed ? '8px' : '9px 11px',
-				justifyContent: collapsed ? 'center' : 'flex-start',
-				background: 'linear-gradient(110deg, var(--color-primary-50) 0%, var(--color-secondary-50) 100%)',
-				border: '1px solid var(--color-primary-100)',
-			}}>
-				<div style={{
-					width: 28, height: 28, borderRadius: 8, display: 'grid', placeContent: 'center',
-					color: '#fff', flexShrink: 0,
-					background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-					boxShadow: '0 2px 8px color-mix(in srgb, var(--color-primary-500) 35%, transparent)',
-				}}>
-					<LayoutDashboard style={{ width: 14, height: 14 }} strokeWidth={2.5} />
-				</div>
-				{!collapsed && (
-					<span style={{
-						fontSize: 11, fontWeight: 800, color: 'var(--color-primary-800)',
-						letterSpacing: '0.05em', textTransform: 'uppercase',
-						overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-					}}>
-						{labels[role] ?? ''}
-					</span>
-				)}
-			</div>
-		</div>
-	);
-}
-
 /* ─── SidebarFooter ──────────────────────────────────────────── */
 function SidebarFooter({ collapsed, onLogout, logoutLabel }) {
 	const isRTL = getDir() === 'rtl';
+
 	return (
 		<div style={{ flexShrink: 0, borderTop: `1px solid ${T.border}`, background: T.bgSub }}>
 			<div style={{
 				padding: collapsed ? '10px 8px 6px' : '10px 10px 6px',
-				display: 'flex', flexDirection: 'column', gap: 6,
+				display: 'flex',
+				flexDirection: 'column',
+				gap: 6,
 				alignItems: collapsed ? 'center' : 'stretch',
 			}}>
 				<SidebarLanguageToggle collapsed={collapsed} />
 				<SidebarThemeSwitcher collapsed={collapsed} />
 			</div>
+
 			<div style={{
 				padding: collapsed ? '0 8px 10px' : '0 10px 10px',
-				display: 'flex', justifyContent: collapsed ? 'center' : 'stretch'
+				display: 'flex',
+				justifyContent: collapsed ? 'center' : 'stretch'
 			}}>
-				<motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={onLogout}
+				<motion.button
+					whileHover={{ scale: 1.02 }}
+					whileTap={{ scale: 0.97 }}
+					onClick={onLogout}
 					style={{
-						position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
-						gap: 8, borderRadius: 11, fontWeight: 600, fontSize: 13, overflow: 'hidden',
-						cursor: 'pointer', border: 'none', color: 'white', letterSpacing: '0.02em',
+						position: 'relative',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						gap: 8,
+						borderRadius: 11,
+						fontWeight: 600,
+						fontSize: 13,
+						overflow: 'hidden',
+						cursor: 'pointer',
+						border: 'none',
+						color: 'white',
+						letterSpacing: '0.02em',
 						...(collapsed ? { width: 40, height: 40 } : { width: '100%', height: 36, padding: '0 14px' }),
 						background: 'linear-gradient(135deg, #ef4444, #dc2626)',
 						boxShadow: '0 3px 10px rgba(239,68,68,0.28)',
 					}}
 					onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(239,68,68,0.4)'}
-					onMouseLeave={e => e.currentTarget.style.boxShadow = '0 3px 10px rgba(239,68,68,0.28)'}>
-					<motion.div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+					onMouseLeave={e => e.currentTarget.style.boxShadow = '0 3px 10px rgba(239,68,68,0.28)'}
+				>
+					<motion.div
+						style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
 						animate={{ backgroundPosition: ['-200% -200%', '300% 300%'] }}
-						transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}>
+						transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
+					>
 						<div style={{
-							width: '100%', height: '100%',
+							width: '100%',
+							height: '100%',
 							background: 'linear-gradient(45deg, transparent 35%, rgba(255,255,255,0.18) 50%, transparent 65%)',
 							backgroundSize: '300% 300%'
 						}} />
 					</motion.div>
-					<LogOut style={{
-						position: 'relative', zIndex: 1, width: 15, height: 15,
-						transform: isRTL ? 'scaleX(-1)' : 'none', flexShrink: 0
-					}} strokeWidth={2} />
+
+					<LogOut
+						style={{
+							position: 'relative',
+							zIndex: 1,
+							width: 15,
+							height: 15,
+							transform: isRTL ? 'scaleX(-1)' : 'none',
+							flexShrink: 0
+						}}
+						strokeWidth={2}
+					/>
+
 					{!collapsed && <span style={{ position: 'relative', zIndex: 1 }}>{logoutLabel}</span>}
 				</motion.button>
 			</div>
@@ -1259,10 +1813,16 @@ function SidebarFooter({ collapsed, onLogout, logoutLabel }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-	 MAIN EXPORT
+   MAIN EXPORT
 ═══════════════════════════════════════════════════════════════ */
-export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCollapsed: setCollapsedProp }) {
+export default function Sidebar({
+	open,
+	setOpen,
+	collapsed: collapsedProp,
+	setCollapsed: setCollapsedProp
+}) {
 	const pathname = useNextPathname();
+	const searchParams = useSearchParams();
 	const router = useI18nRouter();
 	const user = useUser();
 	const role = user?.role ?? null;
@@ -1286,8 +1846,11 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 		try {
 			await fetch('/api/auth/logout', { method: 'POST' });
 			['user', 'accessToken', 'refreshToken'].forEach(k => localStorage.removeItem(k));
-		} catch (err) { console.error('Logout failed:', err); }
-		finally { router.push('/auth'); }
+		} catch (err) {
+			console.error('Logout failed:', err);
+		} finally {
+			router.push('/auth');
+		}
 	};
 
 	/* ── DESKTOP ── */
@@ -1296,42 +1859,60 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 			className="hidden lg:flex flex-col shrink-0 rtl:border-l ltr:border-r"
 			style={{
 				width: collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W,
-				height: '100vh', position: 'relative', zIndex: 1000, overflow: 'hidden',
-				background: T.bg, borderColor: T.border,
+				height: '100vh',
+				position: 'relative',
+				zIndex: 1000,
+				overflow: 'hidden',
+				background: T.bg,
+				borderColor: T.border,
 				boxShadow: '2px 0 16px rgba(15,23,42,0.04)',
 				transition: 'width .3s cubic-bezier(0.22,1,0.36,1)',
-			}}>
-			{/* Fine dot-grid texture */}
+			}}
+		>
 			<div style={{
-				position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
+				position: 'absolute',
+				inset: 0,
+				pointerEvents: 'none',
+				zIndex: 0,
 				backgroundImage: 'radial-gradient(circle, #e2e8f0 1px, transparent 1px)',
-				backgroundSize: '24px 24px', opacity: 0.3,
+				backgroundSize: '24px 24px',
+				opacity: 0.3,
 			}} />
-
 
 			<div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
 				<div style={{ flexShrink: 0, marginTop: 10 }}>
 					<UserProfileCard user={user} collapsed={collapsed} setCollapsed={setCollapsed} />
 				</div>
+
 				<Divider />
+
 				<LayoutGroup id="sidebar-desktop">
 					<div style={{ flex: 1, overflow: 'hidden', padding: '4px 0' }}>
 						<ScrollShadow>
 							<nav style={{
-								padding: '2px 8px', display: 'flex', flexDirection: 'column',
+								padding: '2px 8px',
+								display: 'flex',
+								flexDirection: 'column',
 								gap: collapsed ? 16 : 20
 							}}>
 								{sections?.map((section) => (
 									<NavSection
 										key={section.sectionKey || section.items[0]?.nameKey}
-										sectionKey={section.sectionKey} items={section.items}
-										pathname={pathname} onNavigate={onNavigate}
-										collapsed={collapsed} t={t} totalUnread={totalUnread} />
+										sectionKey={section.sectionKey}
+										items={section.items}
+										pathname={pathname}
+										searchParams={searchParams}
+										onNavigate={onNavigate}
+										collapsed={collapsed}
+										t={t}
+										totalUnread={totalUnread}
+									/>
 								))}
 							</nav>
 						</ScrollShadow>
 					</div>
 				</LayoutGroup>
+
 				<SidebarFooter collapsed={collapsed} onLogout={handleLogout} logoutLabel={logoutLabel} />
 			</div>
 		</aside>
@@ -1342,39 +1923,68 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 		<AnimatePresence>
 			{open && (
 				<>
-					<motion.div key="overlay"
-						initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+					<motion.div
+						key="overlay"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
 						transition={{ duration: 0.2 }}
 						onClick={() => setOpen && setOpen(false)}
 						className="fixed inset-0 z-40 lg:hidden"
-						style={{ background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(5px)' }} />
-					<motion.aside key="drawer"
-						initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }} transition={slide}
+						style={{ background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(5px)' }}
+					/>
+
+					<motion.aside
+						key="drawer"
+						initial={{ x: -300 }}
+						animate={{ x: 0 }}
+						exit={{ x: -300 }}
+						transition={slide}
 						className="fixed z-50 top-0 left-0 h-dvh flex flex-col lg:hidden"
 						style={{
-							width: 280, background: T.bg, borderRight: `1px solid ${T.border}`,
+							width: 280,
+							background: T.bg,
+							borderRight: `1px solid ${T.border}`,
 							boxShadow: '16px 0 48px rgba(15,23,42,0.1)'
-						}}>
+						}}
+					>
 						<div style={{
-							position: 'absolute', top: 0, left: 0, right: 0, height: 3, zIndex: 2,
+							position: 'absolute',
+							top: 0,
+							left: 0,
+							right: 0,
+							height: 3,
+							zIndex: 2,
 							background: 'linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to), transparent)',
 							opacity: 0.7
 						}} />
-						{/* Mobile header */}
+
 						<div style={{
-							flexShrink: 0, height: 58, padding: '0 14px',
-							display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+							flexShrink: 0,
+							height: 58,
+							padding: '0 14px',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'space-between',
 							borderBottom: `1px solid ${T.border}`
 						}}>
 							<div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-								<div style={{
-									width: 32, height: 32, borderRadius: 9, display: 'grid', placeContent: 'center',
-									color: '#fff',
-									background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-									boxShadow: '0 2px 8px color-mix(in srgb, var(--color-primary-500) 35%, transparent)'
-								}}>
+								<Link
+									href="/"
+									style={{
+										width: 32,
+										height: 32,
+										borderRadius: 9,
+										display: 'grid',
+										placeContent: 'center',
+										color: '#fff',
+										background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+										boxShadow: '0 2px 8px color-mix(in srgb, var(--color-primary-500) 35%, transparent)'
+									}}
+								>
 									<LayoutDashboard style={{ width: 15, height: 15 }} strokeWidth={2.5} />
-								</div>
+								</Link>
+
 								<span style={{ fontSize: 12.5, fontWeight: 800, color: T.text, letterSpacing: '0.01em' }}>
 									{role === 'super_admin' && t('brand.superAdminPortal')}
 									{role === 'admin' && t('brand.adminPortal')}
@@ -1382,17 +1992,27 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 									{role === 'client' && t('brand.clientPortal')}
 								</span>
 							</div>
-							<motion.button whileHover={{ scale: 1.09 }} whileTap={{ scale: 0.93 }}
+
+							<motion.button
+								whileHover={{ scale: 1.09 }}
+								whileTap={{ scale: 0.93 }}
 								onClick={() => setOpen(false)}
 								style={{
-									width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.border}`,
-									background: T.bgSub, color: T.textMuted,
-									display: 'grid', placeContent: 'center', cursor: 'pointer'
-								}}>
+									width: 28,
+									height: 28,
+									borderRadius: 8,
+									border: `1px solid ${T.border}`,
+									background: T.bgSub,
+									color: T.textMuted,
+									display: 'grid',
+									placeContent: 'center',
+									cursor: 'pointer'
+								}}
+							>
 								<X style={{ width: 14, height: 14 }} strokeWidth={2.5} />
 							</motion.button>
 						</div>
-						{/* Mobile nav */}
+
 						<LayoutGroup id="sidebar-mobile">
 							<div style={{ flex: 1, overflow: 'hidden' }}>
 								<ScrollShadow>
@@ -1400,14 +2020,20 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 										{sections?.map((section) => (
 											<NavSection
 												key={section.sectionKey || section.items[0]?.nameKey}
-												sectionKey={section.sectionKey} items={section.items}
-												pathname={pathname} onNavigate={onNavigate}
-												t={t} totalUnread={totalUnread} />
+												sectionKey={section.sectionKey}
+												items={section.items}
+												pathname={pathname}
+												searchParams={searchParams}
+												onNavigate={onNavigate}
+												t={t}
+												totalUnread={totalUnread}
+											/>
 										))}
 									</nav>
 								</ScrollShadow>
 							</div>
 						</LayoutGroup>
+
 						<SidebarFooter collapsed={false} onLogout={handleLogout} logoutLabel={logoutLabel} />
 					</motion.aside>
 				</>

@@ -78,20 +78,28 @@ function genKey12() {
 
 /* ==================== PREMIUM UI COMPONENTS ==================== */
 
-function PremiumCard({ children, className = '', hover = true, glow = false }) {
+function PremiumCard({ children, className = '', hover = true, glow = false, accent = false }) {
 	return (
 		<motion.div
-			whileHover={hover ? { y: -2 } : {}}
+			whileHover={hover ? { y: -1, boxShadow: '0 12px 40px rgba(15, 23, 42, 0.12)' } : {}}
 			transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-			className={`relative rounded-lg border backdrop-blur-xl ${className}`}
+			className={`relative rounded-xl border overflow-hidden ${className}`}
 			style={{
-				background: 'rgba(255, 255, 255, 0.95)',
-				borderColor: 'var(--color-primary-200)',
+				background: 'rgba(255, 255, 255, 0.97)',
+				borderColor: glow ? 'var(--color-primary-300)' : 'var(--color-primary-100)',
 				boxShadow: glow
-					? '0 20px 60px rgba(99, 102, 241, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.8) inset'
-					: '0 8px 32px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.8) inset',
+					? '0 0 0 1px var(--color-primary-200), 0 16px 48px rgba(99, 102, 241, 0.1)'
+					: '0 1px 4px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.04)',
 			}}
 		>
+			{accent && (
+				<div
+					className="absolute top-0 left-0 right-0 h-0.5"
+					style={{
+						background: 'linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-via, var(--color-gradient-to)), var(--color-gradient-to))',
+					}}
+				/>
+			)}
 			{children}
 		</motion.div>
 	);
@@ -102,58 +110,60 @@ function IconWrapper({ children, active = false, size = 'md', variant = 'primary
 		sm: 'w-8 h-8',
 		md: 'w-10 h-10',
 		lg: 'w-12 h-12',
-		xl: 'w-16 h-16',
+		xl: 'w-14 h-14',
 	};
 
-	const variants = {
-		primary: active
-			? 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))'
-			: 'linear-gradient(135deg, var(--color-primary-50), var(--color-primary-100))',
-		danger: 'linear-gradient(135deg, #fee2e2, #fecaca)',
-		success: 'linear-gradient(135deg, #dcfce7, #bbf7d0)',
-		warning: 'linear-gradient(135deg, #fef3c7, #fde68a)',
+	const getStyle = () => {
+		if (variant === 'danger') return { background: 'linear-gradient(135deg, #fef2f2, #fee2e2)', color: '#dc2626' };
+		if (variant === 'success') return { background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', color: '#16a34a' };
+		if (variant === 'warning') return { background: 'linear-gradient(135deg, #fffbeb, #fef3c7)', color: '#d97706' };
+		if (active) return {
+			background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+			boxShadow: '0 6px 20px rgba(99, 102, 241, 0.3)',
+			color: 'white',
+		};
+		return {
+			background: 'linear-gradient(135deg, var(--color-primary-50), var(--color-primary-100))',
+			color: 'var(--color-primary-700)',
+		};
 	};
 
 	return (
-		<motion.div
-			whileHover={{ scale: 1.1, rotate: 5 }}
-			transition={{ type: 'spring', stiffness: 400 }}
-			className={`grid place-items-center rounded-lg ${sizes[size]}`}
-			style={{
-				background: variants[variant],
-				boxShadow: active ? '0 8px 24px rgba(99, 102, 241, 0.25)' : '0 4px 12px rgba(15, 23, 42, 0.08)',
-			}}
+		<div
+			className={`grid place-items-center rounded-xl flex-shrink-0 ${sizes[size]}`}
+			style={getStyle()}
 		>
 			{children}
-		</motion.div>
+		</div>
 	);
 }
 
 function PremiumButton({ title, onClick, children, variant = 'ghost', disabled = false, size = 'md' }) {
 	const sizes = {
 		sm: 'h-8 w-8 text-xs',
-		md: 'h-10 w-10 text-sm',
-		lg: 'h-12 w-12 text-base',
+		md: 'h-9 w-9 text-sm',
+		lg: 'h-10 w-10 text-base',
 	};
 
 	const variants = {
 		ghost: {
-			bg: 'rgba(255, 255, 255, 0.9)',
+			bg: 'white',
 			border: 'var(--color-primary-200)',
-			color: 'var(--color-primary-700)',
-			shadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
+			color: 'var(--color-primary-600)',
+			shadow: '0 1px 3px rgba(15, 23, 42, 0.08)',
+			hoverBorder: 'var(--color-primary-400)',
 		},
 		primary: {
 			bg: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 			border: 'transparent',
 			color: 'white',
-			shadow: '0 8px 20px rgba(99, 102, 241, 0.3)',
+			shadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
 		},
 		danger: {
-			bg: 'linear-gradient(135deg, #fee2e2, #fca5a5)',
-			border: 'transparent',
-			color: '#991b1b',
-			shadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+			bg: '#fef2f2',
+			border: '#fecaca',
+			color: '#dc2626',
+			shadow: '0 1px 3px rgba(239, 68, 68, 0.1)',
 		},
 	};
 
@@ -166,9 +176,9 @@ function PremiumButton({ title, onClick, children, variant = 'ghost', disabled =
 			aria-label={title}
 			onClick={onClick}
 			disabled={disabled}
-			whileHover={{ scale: disabled ? 1 : 1.08, y: disabled ? 0 : -2 }}
-			whileTap={{ scale: disabled ? 1 : 0.95 }}
-			className={`inline-flex items-center justify-center rounded-lg border transition-all disabled:opacity-40 disabled:cursor-not-allowed ${sizes[size]}`}
+			whileHover={{ scale: disabled ? 1 : 1.05 }}
+			whileTap={{ scale: disabled ? 1 : 0.94 }}
+			className={`inline-flex items-center justify-center rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${sizes[size]}`}
 			style={{
 				background: style.bg,
 				borderColor: style.border,
@@ -184,23 +194,23 @@ function PremiumButton({ title, onClick, children, variant = 'ghost', disabled =
 function Badge({ children, variant = 'primary', icon = null }) {
 	const variants = {
 		primary: {
-			bg: 'linear-gradient(135deg, var(--color-primary-50), var(--color-primary-100))',
-			border: 'var(--color-primary-300)',
-			text: 'var(--color-primary-800)',
+			bg: 'var(--color-primary-50)',
+			border: 'var(--color-primary-200)',
+			text: 'var(--color-primary-700)',
 		},
 		warning: {
-			bg: 'linear-gradient(135deg, #fef3c7, #fde68a)',
-			border: '#f59e0b',
+			bg: '#fffbeb',
+			border: '#fde68a',
 			text: '#92400e',
 		},
 		success: {
-			bg: 'linear-gradient(135deg, #dcfce7, #bbf7d0)',
-			border: '#22c55e',
+			bg: '#f0fdf4',
+			border: '#bbf7d0',
 			text: '#166534',
 		},
 		danger: {
-			bg: 'linear-gradient(135deg, #fee2e2, #fecaca)',
-			border: '#ef4444',
+			bg: '#fef2f2',
+			border: '#fecaca',
 			text: '#991b1b',
 		},
 	};
@@ -209,14 +219,14 @@ function Badge({ children, variant = 'primary', icon = null }) {
 
 	return (
 		<span
-			className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold"
+			className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-semibold tracking-tight"
 			style={{
 				background: style.bg,
 				borderColor: style.border,
 				color: style.text,
 			}}
 		>
-			{icon && <span className="text-sm">{icon}</span>}
+			{icon && <span className="text-[10px] leading-none">{icon}</span>}
 			{children}
 		</span>
 	);
@@ -225,14 +235,14 @@ function Badge({ children, variant = 'primary', icon = null }) {
 function OptionTag({ label, onRemove, disabled = false }) {
 	return (
 		<motion.span
-			initial={{ scale: 0, opacity: 0 }}
+			initial={{ scale: 0.8, opacity: 0 }}
 			animate={{ scale: 1, opacity: 1 }}
-			exit={{ scale: 0, opacity: 0 }}
-			transition={{ type: 'spring', stiffness: 300 }}
-			className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-semibold"
+			exit={{ scale: 0.8, opacity: 0 }}
+			transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+			className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold"
 			style={{
-				borderColor: 'var(--color-primary-300)',
-				background: 'linear-gradient(135deg, var(--color-primary-50), white)',
+				borderColor: 'var(--color-primary-200)',
+				background: 'var(--color-primary-50)',
 				color: 'var(--color-primary-800)',
 			}}
 		>
@@ -241,12 +251,12 @@ function OptionTag({ label, onRemove, disabled = false }) {
 				<motion.button
 					type="button"
 					onClick={onRemove}
-					whileHover={{ scale: 1.3, rotate: 90 }}
+					whileHover={{ scale: 1.2 }}
 					whileTap={{ scale: 0.9 }}
-					className="rounded-full p-0.5"
-					style={{ color: 'var(--color-primary-700)' }}
+					className="rounded-sm opacity-60 hover:opacity-100 transition-opacity"
+					style={{ color: 'var(--color-primary-600)' }}
 				>
-					<FiX className="w-3.5 h-3.5" />
+					<FiX className="w-3 h-3" />
 				</motion.button>
 			)}
 		</motion.span>
@@ -258,22 +268,22 @@ function TooltipButton({ tooltip, onClick, children, variant = 'ghost', disabled
 
 	const variants = {
 		ghost: {
-			bg: 'rgba(255, 255, 255, 0.9)',
+			bg: 'white',
 			border: 'var(--color-primary-200)',
 			color: 'var(--color-primary-700)',
-			shadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
+			shadow: '0 1px 3px rgba(15, 23, 42, 0.08)',
 		},
 		primary: {
 			bg: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 			border: 'transparent',
 			color: 'white',
-			shadow: '0 8px 20px rgba(99, 102, 241, 0.3)',
+			shadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
 		},
 		danger: {
-			bg: 'linear-gradient(135deg, #fee2e2, #fca5a5)',
-			border: 'transparent',
-			color: '#991b1b',
-			shadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+			bg: '#fef2f2',
+			border: '#fecaca',
+			color: '#dc2626',
+			shadow: '0 1px 3px rgba(239, 68, 68, 0.1)',
 		},
 	};
 
@@ -287,9 +297,9 @@ function TooltipButton({ tooltip, onClick, children, variant = 'ghost', disabled
 				disabled={disabled}
 				onMouseEnter={() => setShowTooltip(true)}
 				onMouseLeave={() => setShowTooltip(false)}
-				whileHover={{ scale: disabled ? 1 : 1.02, y: disabled ? 0 : -2 }}
-				whileTap={{ scale: disabled ? 1 : 0.98 }}
-				className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+				whileHover={{ scale: disabled ? 1 : 1.02 }}
+				whileTap={{ scale: disabled ? 1 : 0.97 }}
+				className="inline-flex items-center gap-2 h-9 px-4 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-sm font-semibold"
 				style={{
 					background: style.bg,
 					borderColor: style.border,
@@ -303,24 +313,21 @@ function TooltipButton({ tooltip, onClick, children, variant = 'ghost', disabled
 			<AnimatePresence>
 				{showTooltip && !disabled && (
 					<motion.div
-						initial={{ opacity: 0, y: 5 }}
-						animate={{ opacity: 1, y: 0 }}
-						exit={{ opacity: 0, y: 5 }}
-						transition={{ duration: 0.15 }}
-						className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap pointer-events-none z-50"
+						initial={{ opacity: 0, y: 4, scale: 0.96 }}
+						animate={{ opacity: 1, y: 0, scale: 1 }}
+						exit={{ opacity: 0, y: 4, scale: 0.96 }}
+						transition={{ duration: 0.12 }}
+						className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap pointer-events-none z-50"
 						style={{
-							background: 'linear-gradient(135deg, #1e293b, #334155)',
-							color: 'white',
-							boxShadow: '0 8px 24px rgba(15, 23, 42, 0.4)',
+							background: '#1e293b',
+							color: '#f8fafc',
+							boxShadow: '0 8px 24px rgba(15, 23, 42, 0.35)',
 						}}
 					>
 						{tooltip}
 						<div
-							className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 rotate-45"
-							style={{
-								background: '#334155',
-								marginTop: '-4px',
-							}}
+							className="absolute left-1/2 -translate-x-1/2 top-full w-1.5 h-1.5 rotate-45"
+							style={{ background: '#1e293b', marginTop: '-3px' }}
 						/>
 					</motion.div>
 				)}
@@ -333,21 +340,13 @@ function QuickActionIcon({ tooltip, onClick, icon, variant = 'ghost', disabled =
 	const [showTooltip, setShowTooltip] = useState(false);
 
 	const variants = {
-		ghost: {
-			bg: 'rgba(255, 255, 255, 0.95)',
-			border: 'var(--color-primary-200)',
-			color: 'var(--color-primary-700)',
-		},
+		ghost: { bg: 'white', border: 'var(--color-primary-200)', color: 'var(--color-primary-600)' },
 		primary: {
 			bg: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 			border: 'transparent',
 			color: 'white',
 		},
-		danger: {
-			bg: 'linear-gradient(135deg, #fee2e2, #fca5a5)',
-			border: 'transparent',
-			color: '#991b1b',
-		},
+		danger: { bg: '#fef2f2', border: '#fecaca', color: '#dc2626' },
 	};
 
 	const style = variants[variant] || variants.ghost;
@@ -361,13 +360,13 @@ function QuickActionIcon({ tooltip, onClick, icon, variant = 'ghost', disabled =
 				onMouseEnter={() => setShowTooltip(true)}
 				onMouseLeave={() => setShowTooltip(false)}
 				whileHover={{ scale: disabled ? 1 : 1.1 }}
-				whileTap={{ scale: disabled ? 1 : 0.95 }}
-				className="inline-flex items-center justify-center w-7 h-7 rounded-lg border transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+				whileTap={{ scale: disabled ? 1 : 0.93 }}
+				className="inline-flex items-center justify-center w-7 h-7 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 				style={{
 					background: style.bg,
 					borderColor: style.border,
 					color: style.color,
-					boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
+					boxShadow: '0 1px 3px rgba(15, 23, 42, 0.07)',
 				}}
 			>
 				{icon}
@@ -376,24 +375,21 @@ function QuickActionIcon({ tooltip, onClick, icon, variant = 'ghost', disabled =
 			<AnimatePresence>
 				{showTooltip && !disabled && (
 					<motion.div
-						initial={{ opacity: 0, y: 5 }}
+						initial={{ opacity: 0, y: 4 }}
 						animate={{ opacity: 1, y: 0 }}
-						exit={{ opacity: 0, y: 5 }}
-						transition={{ duration: 0.15 }}
-						className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap pointer-events-none z-50"
+						exit={{ opacity: 0, y: 4 }}
+						transition={{ duration: 0.12 }}
+						className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap pointer-events-none z-50"
 						style={{
-							background: 'linear-gradient(135deg, #1e293b, #334155)',
-							color: 'white',
-							boxShadow: '0 8px 24px rgba(15, 23, 42, 0.4)',
+							background: '#1e293b',
+							color: '#f8fafc',
+							boxShadow: '0 8px 24px rgba(15, 23, 42, 0.35)',
 						}}
 					>
 						{tooltip}
 						<div
-							className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 rotate-45"
-							style={{
-								background: '#334155',
-								marginTop: '-4px',
-							}}
+							className="absolute left-1/2 -translate-x-1/2 top-full w-1.5 h-1.5 rotate-45"
+							style={{ background: '#1e293b', marginTop: '-3px' }}
 						/>
 					</motion.div>
 				)}
@@ -428,17 +424,11 @@ function InputList({
 		(text) => {
 			const raw = (text ?? '').trim();
 			if (!raw) return;
-
-			const parts = raw
-				.split(',')
-				.map((s) => s.trim())
-				.filter(Boolean);
-
+			const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
 			let next = [...items];
 			for (const p of parts) {
 				if (!next.includes(p)) next.push(p);
 			}
-
 			emit(next);
 			setDraft('');
 		},
@@ -447,12 +437,10 @@ function InputList({
 
 	const handleKeyDown = (e) => {
 		if (disabled) return;
-
 		if (e.key === 'Enter' || e.key === ',') {
 			e.preventDefault();
 			commitDraft(draft);
 		}
-
 		if (e.key === 'Backspace' && draft === '' && items.length > 0) {
 			e.preventDefault();
 			const next = items.slice(0, -1);
@@ -468,24 +456,21 @@ function InputList({
 
 	return (
 		<div>
-			{label && <div className="text-sm font-bold text-slate-800 mb-2">{label}</div>}
-
+			{label && <div className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">{label}</div>}
 			<div
-				className="rounded-lg border p-3"
+				className="rounded-xl border p-3 min-h-[60px]"
 				style={{
 					borderColor: 'var(--color-primary-200)',
-					background: 'rgba(255, 255, 255, 0.95)',
-					boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
+					background: 'var(--color-primary-50)',
 				}}
 			>
-				<div className="flex flex-wrap gap-2 mb-2">
+				<div className="flex flex-wrap gap-1.5 mb-2">
 					<AnimatePresence mode="popLayout">
 						{items.map((opt, i) => (
 							<OptionTag key={`${opt}-${i}`} label={opt} onRemove={() => removeAt(i)} disabled={disabled} />
 						))}
 					</AnimatePresence>
 				</div>
-
 				<input
 					type="text"
 					value={draft}
@@ -494,7 +479,7 @@ function InputList({
 					onBlur={() => commitDraft(draft)}
 					placeholder={placeholder}
 					disabled={disabled}
-					className="w-full border-0 outline-none text-sm bg-transparent font-medium"
+					className="w-full border-0 outline-none text-sm bg-transparent font-medium placeholder-slate-400"
 					style={{ color: 'var(--color-primary-900)' }}
 				/>
 			</div>
@@ -541,98 +526,82 @@ const FieldRow = React.memo(function FieldRow({
 	return (
 		<motion.div
 			ref={isNew ? newFieldRef : null}
-			initial={{ opacity: 0, y: 20 }}
+			initial={{ opacity: 0, y: 16 }}
 			animate={{ opacity: 1, y: 0 }}
-			exit={{ opacity: 0, scale: 0.95 }}
-			transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+			exit={{ opacity: 0, scale: 0.97 }}
+			transition={{ type: 'spring', stiffness: 280, damping: 24 }}
 			className="group relative"
 		>
-			<PremiumCard hover={!editing} glow={editing}>
-				{editing && (
-					<div
-						className="absolute left-0 right-0 top-0 h-1 rounded-t-2xl"
-						style={{
-							background: 'linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-via), var(--color-gradient-to))',
-						}}
-					/>
-				)}
-
-				<div className="p-5">
+			<PremiumCard hover={!editing} glow={editing} accent={editing}>
+				<div className="p-4">
 					{!editing ? (
-						<div className="flex items-start justify-between gap-4">
-							<div className="flex items-start gap-3 flex-1 min-w-0">
-								<div className="text-2xl mt-1">{fieldIcon}</div>
+						<div className="flex items-center justify-between gap-3">
+							{/* Left: drag handle visual + icon + info */}
+							<div className="flex items-center gap-3 flex-1 min-w-0">
+								{/* Order indicator */}
+								<div
+									className="flex-shrink-0 w-6 h-6 rounded-md grid place-items-center text-xs font-bold"
+									style={{
+										background: 'var(--color-primary-100)',
+										color: 'var(--color-primary-600)',
+									}}
+								>
+									{index + 1}
+								</div>
+
+								<div className="text-xl leading-none flex-shrink-0">{fieldIcon}</div>
 
 								<div className="flex-1 min-w-0">
-									<div className="flex items-center gap-2 flex-wrap mb-3">
-										<MultiLangText className="font-bold text-slate-900 text-base">
+									<div className="flex items-center gap-2 flex-wrap">
+										<MultiLangText className="font-semibold text-slate-900 text-sm truncate">
 											{field.label || t('labels.no_label')}
 										</MultiLangText>
 										<Badge variant="primary">{t(`types_map.${field.type}`)}</Badge>
-										{field.required && <Badge variant="warning" icon="⚠️">{t('labels.required')}</Badge>}
+										{field.required && <Badge variant="warning">⚠️ {t('labels.required')}</Badge>}
 									</div>
 
-									<div className="flex flex-wrap items-center gap-2 mb-3">
-										<Badge variant="primary" icon="🔑">
-											{field.key}
-										</Badge>
-										<Badge variant="primary" icon="📊">
-											{t('labels.order')}: {field.order ?? 1}
-										</Badge>
+									<div className="flex items-center gap-2 mt-1">
+										<span className="text-xs text-slate-400 font-mono">{field.key}</span>
 									</div>
 
 									{(field.type === 'select' || field.type === 'radio' || field.type === 'checklist') &&
-										field.options &&
-										field.options.length > 0 && (
-											<div className="flex flex-wrap gap-2">
-												{field.options.slice(0, 4).map((opt, i) => (
-													<Badge key={i} variant="primary">
-														{opt}
-													</Badge>
+										field.options && field.options.length > 0 && (
+											<div className="flex flex-wrap gap-1 mt-2">
+												{field.options.slice(0, 3).map((opt, i) => (
+													<Badge key={i} variant="primary">{opt}</Badge>
 												))}
-												{field.options.length > 4 && (
-													<Badge variant="primary">+{field.options.length - 4} more</Badge>
+												{field.options.length > 3 && (
+													<Badge variant="primary">+{field.options.length - 3}</Badge>
 												)}
 											</div>
 										)}
 								</div>
 							</div>
 
-							<div className="flex items-center gap-1.5">
-								<PremiumButton
-									title={t('actions.move_up')}
-									onClick={() => moveField(index, -1)}
-									disabled={!canMoveUp}
-									size="sm"
-								>
-									<FiChevronUp className="w-4 h-4" />
+							{/* Right: actions */}
+							<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+								<PremiumButton title={t('actions.move_up')} onClick={() => moveField(index, -1)} disabled={!canMoveUp} size="sm">
+									<FiChevronUp className="w-3.5 h-3.5" />
 								</PremiumButton>
-
-								<PremiumButton
-									title={t('actions.move_down')}
-									onClick={() => moveField(index, +1)}
-									disabled={!canMoveDown}
-									size="sm"
-								>
-									<FiChevronDown className="w-4 h-4" />
+								<PremiumButton title={t('actions.move_down')} onClick={() => moveField(index, +1)} disabled={!canMoveDown} size="sm">
+									<FiChevronDown className="w-3.5 h-3.5" />
 								</PremiumButton>
-
-								<PremiumButton
-									title={t('actions.edit_field')}
-									onClick={() => toggleEditField(index, true)}
-									variant="primary"
-									size="sm"
-								>
-									<FiEdit2 className="w-4 h-4" />
+								<PremiumButton title={t('actions.edit_field')} onClick={() => toggleEditField(index, true)} variant="primary" size="sm">
+									<FiEdit2 className="w-3.5 h-3.5" />
 								</PremiumButton>
-
 								<PremiumButton title={t('actions.remove_field')} onClick={() => removeField(index)} variant="danger" size="sm">
-									<FiTrash2 className="w-4 h-4" />
+									<FiTrash2 className="w-3.5 h-3.5" />
 								</PremiumButton>
 							</div>
 						</div>
 					) : (
-						<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 pt-2">
+						<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+							{/* Editing mode header */}
+							<div className="flex items-center gap-2 pb-3 border-b" style={{ borderColor: 'var(--color-primary-100)' }}>
+								<div className="text-xl">{fieldIcon}</div>
+								<span className="text-sm font-semibold text-slate-600">{t('editor.editing_field', { default: 'Editing field' })} #{index + 1}</span>
+							</div>
+
 							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 								<div className="md:col-span-1">
 									<Input
@@ -643,7 +612,6 @@ const FieldRow = React.memo(function FieldRow({
 										onBlur={commitDrafts}
 									/>
 								</div>
-
 								<div className="md:col-span-1">
 									<Select
 										clearable={false}
@@ -654,7 +622,6 @@ const FieldRow = React.memo(function FieldRow({
 										options={typeOptions}
 									/>
 								</div>
-
 								<div className="flex items-end pb-2">
 									<CheckBox
 										label={t('editor.required')}
@@ -673,7 +640,7 @@ const FieldRow = React.memo(function FieldRow({
 								/>
 							)}
 
-							<div className="flex justify-end pt-4">
+							<div className="flex justify-end pt-2">
 								<motion.button
 									type="button"
 									onClick={() => {
@@ -681,14 +648,14 @@ const FieldRow = React.memo(function FieldRow({
 										toggleEditField(index, false);
 									}}
 									whileHover={{ scale: 1.02 }}
-									whileTap={{ scale: 0.98 }}
-									className="inline-flex items-center gap-2 h-11 px-6 rounded-lg text-white font-bold"
+									whileTap={{ scale: 0.97 }}
+									className="inline-flex items-center gap-2 h-9 px-5 rounded-lg text-white text-sm font-semibold"
 									style={{
 										background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-										boxShadow: '0 8px 24px rgba(99, 102, 241, 0.3)',
+										boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)',
 									}}
 								>
-									<Check className="w-5 h-5" />
+									<Check className="w-4 h-4" />
 									{t('actions.done')}
 								</motion.button>
 							</div>
@@ -708,7 +675,7 @@ export default function FormsManagementPage() {
 
 	const [forms, setForms] = useState([]);
 	const [query, setQuery] = useState('');
-	const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+	const [viewMode, setViewMode] = useState('grid');
 
 	const [selectedForm, setSelectedForm] = useState(null);
 	const [isLoading, setIsLoading] = useState(true);
@@ -776,10 +743,7 @@ export default function FormsManagementPage() {
 	const scrollToNewField = useCallback(() => {
 		if (newFieldRef.current && fieldsContainerRef.current) {
 			setTimeout(() => {
-				newFieldRef.current?.scrollIntoView({
-					behavior: 'smooth',
-					block: 'center',
-				});
+				newFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 			}, 100);
 		}
 	}, []);
@@ -810,21 +774,13 @@ export default function FormsManagementPage() {
 				setIsEditing(true);
 				setSelectedForm(form);
 				setFormTitle(form?.title || '');
-
 				const normalized = (form?.fields || []).slice().sort((a, b) => (a?.order ?? 1) - (b?.order ?? 1));
-
-				setFormFields(
-					normalized.map((f) => ({
-						...f,
-						_uid: f._uid ?? f.id ?? crypto.randomUUID(),
-					}))
-				);
+				setFormFields(normalized.map((f) => ({ ...f, _uid: f._uid ?? f.id ?? crypto.randomUUID() })));
 				setEditingMap({});
 			} else {
 				openCreateFormModal();
 				return;
 			}
-
 			setShowFormModal(true);
 		},
 		[openCreateFormModal]
@@ -833,13 +789,10 @@ export default function FormsManagementPage() {
 	const handleDuplicateForm = useCallback(
 		(form) => {
 			if (!form) return;
-
 			setIsEditing(false);
 			setSelectedForm(null);
-
 			const suffix = t('labels.copy_suffix', { default: ' (Copy)' });
 			setFormTitle(`${form.title || ''}${suffix}`);
-
 			const cloned = (form.fields || [])
 				.slice()
 				.sort((a, b) => (a?.order ?? 1) - (b?.order ?? 1))
@@ -856,7 +809,6 @@ export default function FormsManagementPage() {
 						order: idx,
 					};
 				});
-
 			setFormFields(cloned);
 			setEditingMap({});
 			setShowFormModal(true);
@@ -882,32 +834,16 @@ export default function FormsManagementPage() {
 
 	const createForm = useCallback(async () => {
 		const title = (formTitle || '').trim();
-		if (!title) {
-			Notification(t('errors.title_required'), 'error');
-			return;
-		}
-
+		if (!title) { Notification(t('errors.title_required'), 'error'); return; }
 		const invalidField = (formFields || []).find((f) => !(f.label || '').trim());
-		if (invalidField) {
-			Notification(t('errors.required'), 'error');
-			return;
-		}
-
+		if (invalidField) { Notification(t('errors.required'), 'error'); return; }
 		setLoading(true);
 		try {
 			const payload = {
 				title,
 				fields: (formFields || []).map((f, idx) => {
 					const label = (f.label || '').trim();
-					return {
-						label,
-						key: f.key,
-						placeholder: label,
-						type: f.type,
-						required: !!f.required,
-						options: f.options || [],
-						order: idx + 1,
-					};
+					return { label, key: f.key, placeholder: label, type: f.type, required: !!f.required, options: f.options || [], order: idx + 1 };
 				}),
 			};
 			await api.post('/forms', payload);
@@ -925,61 +861,32 @@ export default function FormsManagementPage() {
 	const updateForm = useCallback(async () => {
 		if (!selectedForm?.id) return;
 		const title = (formTitle || '').trim();
-		if (!title) {
-			Notification(t('errors.title_required'), 'error');
-			return;
-		}
-
+		if (!title) { Notification(t('errors.title_required'), 'error'); return; }
 		setLoading(true);
-
 		try {
 			const ordered = formFields.map((f, idx) => ({ ...f, order: idx }));
 			setFormFields(ordered);
-
 			const existing = ordered.filter((f) => !!f.id);
 			const newlyAdded = ordered.filter((f) => !f.id);
-
 			await api.patch('/forms', {
 				id: selectedForm.id,
 				title,
 				fields: existing.map((f) => {
 					const label = (f.label || '').trim();
-					return {
-						id: f.id,
-						label,
-						key: f.key,
-						placeholder: label,
-						type: f.type,
-						required: !!f.required,
-						options: f.options || [],
-						order: f.order,
-					};
+					return { id: f.id, label, key: f.key, placeholder: label, type: f.type, required: !!f.required, options: f.options || [], order: f.order };
 				}),
 			});
-
 			if (newlyAdded.length) {
 				await api.post(`/forms/${selectedForm.id}/fields`, {
 					fields: newlyAdded.map((f) => {
 						const label = (f.label || '').trim();
-						return {
-							label,
-							key: f.key,
-							placeholder: label,
-							type: f.type,
-							required: !!f.required,
-							options: f.options || [],
-							order: f.order,
-						};
+						return { label, key: f.key, placeholder: label, type: f.type, required: !!f.required, options: f.options || [], order: f.order };
 					}),
 				});
 			}
-
 			if (existing.length) {
-				await api.patch('/forms/re-order', {
-					fields: existing.map((f) => ({ id: f.id, order: f.order })),
-				});
+				await api.patch('/forms/re-order', { fields: existing.map((f) => ({ id: f.id, order: f.order })) });
 			}
-
 			Notification(t('messages.updated'), 'success');
 			setShowFormModal(false);
 			resetFormState();
@@ -988,7 +895,6 @@ export default function FormsManagementPage() {
 			const msg = e?.response?.data?.message;
 			Notification(Array.isArray(msg) ? msg.join(', ') : t('errors.update_failed'), 'error');
 		}
-
 		setLoading(false);
 	}, [fetchForms, formFields, formTitle, resetFormState, selectedForm?.id, t]);
 
@@ -1012,10 +918,7 @@ export default function FormsManagementPage() {
 	);
 
 	const toggleEditField = useCallback((index, on = undefined) => {
-		setEditingMap((m) => ({
-			...m,
-			[index]: typeof on === 'boolean' ? on : !m[index],
-		}));
+		setEditingMap((m) => ({ ...m, [index]: typeof on === 'boolean' ? on : !m[index] }));
 	}, []);
 
 	const updateFieldProp = useCallback((index, prop, val) => {
@@ -1025,27 +928,15 @@ export default function FormsManagementPage() {
 	const addInlineField = useCallback(() => {
 		setFormFields((prev) => {
 			const idx = prev.length;
-			const next = [
+			return [
 				...prev,
-				{
-					_uid: crypto.randomUUID(),
-					label: '',
-					key: genKey12(),
-					type: 'text',
-					placeholder: '',
-					required: false,
-					options: [],
-					order: idx,
-				},
+				{ _uid: crypto.randomUUID(), label: '', key: genKey12(), type: 'text', placeholder: '', required: false, options: [], order: idx },
 			];
-			return next;
 		});
-
 		setEditingMap((m) => {
 			const idx = formFields.length;
 			return { ...m, [idx]: true };
 		});
-
 		setTimeout(scrollToNewField, 100);
 	}, [formFields.length, scrollToNewField]);
 
@@ -1074,7 +965,6 @@ export default function FormsManagementPage() {
 			clone[newIndex] = tmp;
 			return clone.map((f, i) => ({ ...f, order: i }));
 		});
-
 		setEditingMap((m) => {
 			const newIndex = index + dir;
 			const newMap = {};
@@ -1097,10 +987,7 @@ export default function FormsManagementPage() {
 	const canEdit = (form) => !form?.adminId || form?.adminId === user?.id;
 
 	return (
-		<div
-			className="min-h-screen pb-16"
-			 
-		>
+		<div className="min-h-screen pb-16">
 			<div className="relative">
 				<GradientStatsHeader
 					onClick={openCreateFormModal}
@@ -1110,58 +997,88 @@ export default function FormsManagementPage() {
 					icon={Sparkles}
 				/>
 
-				<div className="  mt-8">
+				<div className="mt-8">
 					{isLoading ? (
 						<div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-							{/* Left skeleton */}
 							<div className="lg:col-span-4">
-								<div className="h-[600px] rounded-lg animate-pulse" style={{ background: 'linear-gradient(135deg, #e2e8f0, #f1f5f9)' }} />
+								<div className="h-[600px] rounded-xl animate-pulse" style={{ background: 'linear-gradient(180deg, #f1f5f9, #e2e8f0)' }} />
 							</div>
-							{/* Right skeleton */}
 							<div className="lg:col-span-8">
-								<div className="h-[600px] rounded-lg animate-pulse" style={{ background: 'linear-gradient(135deg, #e2e8f0, #f1f5f9)' }} />
+								<div className="h-[600px] rounded-xl animate-pulse" style={{ background: 'linear-gradient(180deg, #f1f5f9, #e2e8f0)' }} />
 							</div>
 						</div>
 					) : (
 						<div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-							{/* LEFT SIDEBAR - Forms List */}
+
+							{/* ── LEFT SIDEBAR ── */}
 							<aside className="lg:col-span-4">
 								<div className="sticky top-6">
-									<PremiumCard glow>
-										{/* Header */}
+									<PremiumCard glow accent>
+										{/* Sidebar header */}
 										<div
-											className="p-5 border-b rounded-t-2xl"
-											style={{
-												borderColor: 'var(--color-primary-200)',
-												background: 'linear-gradient(135deg, rgba(255,255,255,0.95), var(--color-primary-50))',
-											}}
+											className="px-5 pt-5 pb-4"
+											style={{ borderBottom: '1px solid var(--color-primary-100)' }}
 										>
-											<div className="flex items-center gap-3 mb-4">
-												<IconWrapper active size="md">
-													<Database className="w-6 h-6 text-white" />
-												</IconWrapper>
-												<div>
-													<div className="text-xl font-black text-slate-900">{t('header.title')}</div>
-													<div className="text-sm text-slate-500 font-medium">
-														{forms.length} {t('labels.forms')}
+											<div className="flex items-center justify-between mb-4">
+												<div className="flex items-center gap-3">
+													<IconWrapper active size="md">
+														<Database className="w-5 h-5" style={{ color: 'white' }} />
+													</IconWrapper>
+													<div>
+														<div className="text-base font-bold text-slate-900 leading-tight">{t('header.title')}</div>
+														<div className="text-xs text-slate-500 font-medium mt-0.5">
+															{forms.length} {t('labels.forms')}
+														</div>
 													</div>
+												</div>
+
+												{/* Count pill */}
+												<div
+													className="text-xs font-bold px-2.5 py-1 rounded-full"
+													style={{
+														background: 'var(--color-primary-100)',
+														color: 'var(--color-primary-700)',
+													}}
+												>
+													{filtered.length}/{forms.length}
 												</div>
 											</div>
 
+											{/* Search */}
+											<div className="relative">
+												<FiSearch
+													className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none"
+													style={{ color: 'var(--color-primary-400)' }}
+												/>
+												<input
+													type="text"
+													value={query}
+													onChange={(e) => setQuery(e.target.value)}
+													placeholder={t('labels.search', { default: 'Search forms…' })}
+													className="w-full pl-9 pr-3 h-9 rounded-lg border text-sm font-medium outline-none transition-colors"
+													style={{
+														borderColor: 'var(--color-primary-200)',
+														background: 'white',
+														color: 'var(--color-primary-900)',
+													}}
+													onFocus={(e) => (e.target.style.borderColor = 'var(--color-primary-400)')}
+													onBlur={(e) => (e.target.style.borderColor = 'var(--color-primary-200)')}
+												/>
+											</div>
 										</div>
 
-										{/* Forms List */}
+										{/* Forms list */}
 										{filtered.length === 0 ? (
 											<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-10 text-center">
 												<IconWrapper size="lg">
-													<FiFileText className="w-8 h-8" style={{ color: 'var(--color-primary-700)' }} />
+													<FiFileText className="w-6 h-6" style={{ color: 'var(--color-primary-500)' }} />
 												</IconWrapper>
-												<div className="mt-4 font-black text-slate-900 text-base">{t('empty.title')}</div>
-												<div className="text-slate-600 text-sm mt-1">{t('empty.subtitle')}</div>
+												<div className="mt-3 font-semibold text-slate-700 text-sm">{t('empty.title')}</div>
+												<div className="text-slate-500 text-xs mt-1">{t('empty.subtitle')}</div>
 											</motion.div>
 										) : (
-											<div className="max-h-[calc(100vh-280px)] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300">
-												<ul className="p-3 space-y-2">
+											<div className="max-h-[calc(100vh-300px)] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200">
+												<ul className="p-2.5 space-y-1.5">
 													<AnimatePresence mode="popLayout">
 														{filtered.map((form, index) => {
 															const isActive = selectedForm?.id === form.id;
@@ -1169,114 +1086,82 @@ export default function FormsManagementPage() {
 															return (
 																<motion.li
 																	key={form.id}
-																	initial={{ opacity: 0, x: -20 }}
+																	initial={{ opacity: 0, x: -12 }}
 																	animate={{ opacity: 1, x: 0 }}
-																	exit={{ opacity: 0, x: 20 }}
-																	transition={{ delay: index * 0.05 }}
+																	exit={{ opacity: 0, x: 12 }}
+																	transition={{ delay: index * 0.04 }}
 																>
 																	<div
-																		className="w-full text-left rounded-lg border transition-all group relative"
+																		className="rounded-xl border overflow-hidden transition-all group"
 																		style={{
-																			borderColor: isActive ? 'var(--color-primary-400)' : 'var(--color-primary-200)',
+																			borderColor: isActive ? 'var(--color-primary-300)' : 'transparent',
 																			background: isActive
-																				? 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.95))'
-																				: 'rgba(255,255,255,0.9)',
-																			boxShadow: isActive ? '0 12px 35px rgba(15,23,42,0.12)' : '0 6px 20px rgba(15,23,42,0.06)',
+																				? 'linear-gradient(135deg, var(--color-primary-50), white)'
+																				: 'transparent',
+																			boxShadow: isActive ? '0 2px 8px rgba(99,102,241,0.1)' : 'none',
 																		}}
 																	>
 																		<motion.button
 																			type="button"
 																			onClick={() => setSelectedForm(form)}
-																			whileHover={{ scale: 1.01 }}
-																			whileTap={{ scale: 0.99 }}
-																			className="w-full text-left p-4"
+																			whileHover={{ x: 2 }}
+																			className="w-full text-left px-3 py-3"
 																		>
-																			<div className="flex items-start gap-3 mb-3">
-																				<IconWrapper active={isActive} size="sm">
+																			<div className="flex items-center gap-2.5">
+																				<div
+																					className="w-8 h-8 rounded-lg grid place-items-center flex-shrink-0 transition-colors"
+																					style={{
+																						background: isActive
+																							? 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))'
+																							: 'var(--color-primary-100)',
+																					}}
+																				>
 																					<FiFileText
 																						className="w-4 h-4"
-																						style={{ color: isActive ? 'white' : 'var(--color-primary-800)' }}
+																						style={{ color: isActive ? 'white' : 'var(--color-primary-600)' }}
 																					/>
-																				</IconWrapper>
+																				</div>
 
 																				<div className="min-w-0 flex-1">
 																					<MultiLangText
-																						className="rtl:text-right font-black text-base truncate block mb-1"
-																						style={{ color: isActive ? 'var(--color-primary-900)' : '#0f172a' }}
+																						className="font-semibold text-sm truncate block"
+																						style={{ color: isActive ? 'var(--color-primary-900)' : '#1e293b' }}
 																					>
 																						{form.title}
 																					</MultiLangText>
-
-																					<div className="flex items-center gap-2 text-xs text-slate-600">
-																						<Layers className="w-3 h-3" style={{ color: 'var(--color-primary-600)' }} />
-																						<span className="font-bold">{form.fields?.length ?? 0}</span>
-																						<span>{t('labels.fields')}</span>
+																					<div className="flex items-center gap-1.5 mt-0.5">
+																						<span className="text-xs text-slate-400 font-medium">
+																							{form.fields?.length ?? 0} {t('labels.fields')}
+																						</span>
+																						{form.adminId === user?.id ? (
+																							<Badge variant="success">own</Badge>
+																						) : (
+																							<Badge variant="warning">shared</Badge>
+																						)}
 																					</div>
 																				</div>
 
 																				<ChevronRight
-																					className={` rtl:scale-x-[-1] w-5 h-5 transition-transform ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-																					style={{ color: 'var(--color-primary-600)' }}
+																					className={`rtl:scale-x-[-1] w-4 h-4 flex-shrink-0 transition-all ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'}`}
+																					style={{ color: 'var(--color-primary-500)' }}
 																				/>
 																			</div>
 																		</motion.button>
 
-																		{/* Quick Actions */}
-																		<div className=' px-2 pb-2 flex items-center justify-between gap-2 ' >
-																			<div className="px-4  flex items-center gap-1.5 ">
-																				<QuickActionIcon
-																					tooltip={t('actions.copy_link')}
-																					onClick={(e) => {
-																						e.stopPropagation();
-																						copyLink(form.id);
-																					}}
-																					icon={<LinkIcon className="w-3.5 h-3.5" />}
-																				/>
-
-																				<QuickActionIcon
-																					tooltip={t('actions.duplicate')}
-																					onClick={(e) => {
-																						e.stopPropagation();
-																						handleDuplicateForm(form);
-																					}}
-																					icon={<Files className="w-3.5 h-3.5" />}
-																				/>
-
+																		{/* Quick actions — show on hover or active */}
+																		<div
+																			className={`px-3 pb-2.5 flex items-center justify-between gap-2 transition-all ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+																		>
+																			<div className="flex items-center gap-1">
+																				<QuickActionIcon tooltip={t('actions.copy_link')} onClick={(e) => { e.stopPropagation(); copyLink(form.id); }} icon={<LinkIcon className="w-3 h-3" />} />
+																				<QuickActionIcon tooltip={t('actions.duplicate')} onClick={(e) => { e.stopPropagation(); handleDuplicateForm(form); }} icon={<Files className="w-3 h-3" />} />
 																				{canEdit(form) && (
 																					<>
-																						<QuickActionIcon
-																							tooltip={t('actions.edit')}
-																							onClick={(e) => {
-																								e.stopPropagation();
-																								openEditFormModal(form, true);
-																							}}
-																							icon={<PencilLine className="w-3.5 h-3.5" />}
-																							variant="primary"
-																						/>
-
-																						<QuickActionIcon
-																							tooltip={t('actions.delete')}
-																							onClick={(e) => {
-																								e.stopPropagation();
-																								setDeletingId(form.id);
-																								setShowDeleteModal(true);
-																							}}
-																							icon={<LucideTrash2 className="w-3.5 h-3.5" />}
-																							variant="danger"
-																						/>
+																						<QuickActionIcon tooltip={t('actions.edit')} onClick={(e) => { e.stopPropagation(); openEditFormModal(form, true); }} icon={<PencilLine className="w-3 h-3" />} variant="primary" />
+																						<QuickActionIcon tooltip={t('actions.delete')} onClick={(e) => { e.stopPropagation(); setDeletingId(form.id); setShowDeleteModal(true); }} icon={<LucideTrash2 className="w-3 h-3" />} variant="danger" />
 																					</>
 																				)}
 																			</div>
-
-																			{form.adminId === user?.id ? (
-																				<Badge variant="success" icon="✓">
-																					{t('labels.own')}
-																				</Badge>
-																			) : (
-																				<Badge variant="warning" icon="👤">
-																					{t('labels.shared')}
-																				</Badge>
-																			)}
 																		</div>
 																	</div>
 																</motion.li>
@@ -1290,52 +1175,44 @@ export default function FormsManagementPage() {
 								</div>
 							</aside>
 
-							{/* RIGHT SIDE - Selected Form Details */}
+							{/* ── RIGHT MAIN PANEL ── */}
 							<section className="lg:col-span-8">
 								{!selectedForm ? (
 									<PremiumCard>
 										<motion.div
-											initial={{ opacity: 0, scale: 0.95 }}
+											initial={{ opacity: 0, scale: 0.97 }}
 											animate={{ opacity: 1, scale: 1 }}
 											className="min-h-[500px] flex items-center justify-center p-12 text-center"
 										>
 											<div>
 												<motion.div
-													animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }}
+													animate={{ y: [0, -8, 0] }}
 													transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
 												>
-													<IconWrapper size="xl">
-														<Sparkles className="w-10 h-10" style={{ color: 'var(--color-primary-700)' }} />
+													<IconWrapper size="xl" active>
+														<Sparkles className="w-7 h-7 text-white" />
 													</IconWrapper>
 												</motion.div>
-												<div className="mt-6 text-2xl font-black text-slate-900">
-													{t('empty.select_hint')}
-												</div>
-												<div className="text-slate-600 mt-2">
-													{t('empty.select_hint_sub')}
-												</div>
+												<div className="mt-5 text-xl font-bold text-slate-800">{t('empty.select_hint')}</div>
+												<div className="text-slate-500 text-sm mt-1.5">{t('empty.select_hint_sub')}</div>
 											</div>
 										</motion.div>
 									</PremiumCard>
 								) : (
-									<PremiumCard glow>
-										{/* Header */}
+									<PremiumCard glow accent>
+										{/* Detail header */}
 										<div
-											className="p-6 border-b rounded-t-2xl"
-											style={{
-												borderColor: 'var(--color-primary-200)',
-												background: 'linear-gradient(135deg, var(--color-primary-50), rgba(255, 255, 255, 0.95))',
-											}}
+											className="px-6 py-5"
+											style={{ borderBottom: '1px solid var(--color-primary-100)' }}
 										>
 											<div className="flex items-start justify-between gap-4 mb-4">
-												<div className="flex items-center gap-4 min-w-0 flex-1">
+												<div className="flex items-start gap-4 min-w-0 flex-1">
 													<IconWrapper active size="lg">
-														<FiFileText className="w-8 h-8 text-white" />
+														<FiFileText className="w-6 h-6 text-white" />
 													</IconWrapper>
-
-													<div className="min-w-0 flex-1">
-														<div
-															className="rtl:text-right w-fit text-3xl font-black mb-3"
+													<div className="min-w-0 flex-1 pt-0.5">
+														<MultiLangText
+															className="rtl:text-right text-2xl font-bold tracking-tight mb-2 block"
 															style={{
 																background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 																WebkitBackgroundClip: 'text',
@@ -1344,115 +1221,90 @@ export default function FormsManagementPage() {
 															}}
 														>
 															{selectedForm.title}
-														</div>
-
-														<div className="flex items-center gap-3 flex-wrap">
+														</MultiLangText>
+														<div className="flex items-center gap-2 flex-wrap">
 															<Badge variant="primary" icon="📊">
 																{selectedForm.fields?.length || 0} {t('labels.fields')}
 															</Badge>
 															{isCoachRole && selectedForm.adminId && selectedForm.adminId !== user?.id && (
-																<Badge variant="warning" icon="👤">
-																	{t('labels.shared_form')}
-																</Badge>
+																<Badge variant="warning" icon="👤">{t('labels.shared_form')}</Badge>
 															)}
 														</div>
 													</div>
 												</div>
 											</div>
 
-											{/* Action Buttons */}
+											{/* Action row */}
 											<div className="flex flex-wrap gap-2">
-												<TooltipButton
-													tooltip={t('actions.copy_link')}
-													onClick={() => copyLink(selectedForm.id)}
-													variant="ghost"
-												>
+												<TooltipButton tooltip={t('actions.copy_link')} onClick={() => copyLink(selectedForm.id)} variant="ghost">
 													<LinkIcon className="w-4 h-4" />
-													<span className="hidden sm:inline text-sm">{t('actions.copy_link')}</span>
+													<span className="hidden sm:inline">{t('actions.copy_link')}</span>
 												</TooltipButton>
-
-												<TooltipButton
-													tooltip={t('actions.duplicate')}
-													onClick={() => handleDuplicateForm(selectedForm)}
-													variant="ghost"
-												>
+												<TooltipButton tooltip={t('actions.duplicate')} onClick={() => handleDuplicateForm(selectedForm)} variant="ghost">
 													<Files className="w-4 h-4" />
-													<span className="hidden sm:inline text-sm">{t('actions.duplicate')}</span>
+													<span className="hidden sm:inline">{t('actions.duplicate')}</span>
 												</TooltipButton>
-
 												{canEdit(selectedForm) && (
 													<>
-														<TooltipButton
-															tooltip={t('actions.edit')}
-															onClick={() => openEditFormModal(selectedForm, true)}
-															variant="primary"
-														>
+														<TooltipButton tooltip={t('actions.edit')} onClick={() => openEditFormModal(selectedForm, true)} variant="primary">
 															<PencilLine className="w-4 h-4" />
-															<span className="hidden sm:inline text-sm">{t('actions.edit')}</span>
+															<span className="hidden sm:inline">{t('actions.edit')}</span>
 														</TooltipButton>
-
-														<TooltipButton
-															tooltip={t('actions.delete')}
-															onClick={() => {
-																setDeletingId(selectedForm.id);
-																setShowDeleteModal(true);
-															}}
-															variant="danger"
-														>
+														<TooltipButton tooltip={t('actions.delete')} onClick={() => { setDeletingId(selectedForm.id); setShowDeleteModal(true); }} variant="danger">
 															<LucideTrash2 className="w-4 h-4" />
-															<span className="hidden sm:inline text-sm">{t('actions.delete')}</span>
+															<span className="hidden sm:inline">{t('actions.delete')}</span>
 														</TooltipButton>
 													</>
 												)}
 											</div>
 										</div>
 
-										{/* Fields Grid */}
+										{/* Fields */}
 										<div className="p-6">
 											{selectedFormSortedFields.length ? (
-												<div className="space-y-3 max-h-[calc(100vh-380px)] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300 pr-2">
+												<div className="space-y-2.5 max-h-[calc(100vh-380px)] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200 pr-1">
 													<AnimatePresence mode="popLayout">
 														{selectedFormSortedFields.map((field) => {
 															const fieldIcon = FIELD_TYPE_OPTIONS.find((opt) => opt.id === field.type)?.icon || '📝';
-
 															return (
 																<motion.div
 																	key={field.id}
-																	initial={{ opacity: 0, scale: 0.95 }}
-																	animate={{ opacity: 1, scale: 1 }}
-																	exit={{ opacity: 0, scale: 0.9 }}
+																	initial={{ opacity: 0, y: 8 }}
+																	animate={{ opacity: 1, y: 0 }}
+																	exit={{ opacity: 0, scale: 0.97 }}
 																>
-																	<PremiumCard hover>
-																		<div className="p-5">
-																			<div className="flex items-start gap-3">
-																				<div className="text-2xl">{fieldIcon}</div>
-																				<div className="flex-1 min-w-0">
-																					<MultiLangText className="font-bold text-slate-900 text-base mb-2">
-																						{field.label}
-																					</MultiLangText>
-																					<div className="flex flex-wrap gap-2 mb-3">
-																						<Badge variant="primary">{t(`types_map.${field.type}`)}</Badge>
-																						{field.required && <Badge variant="warning" icon="⚠️">{t('labels.required')}</Badge>}
-																						<Badge variant="primary" icon="📊">
-																							{t('labels.order')}: {field.order ?? 1}
-																						</Badge>
-																					</div>
+																	<div
+																		className="rounded-xl border p-4 flex items-start gap-3 transition-colors hover:border-[var(--color-primary-200)]"
+																		style={{
+																			borderColor: 'var(--color-primary-100)',
+																			background: 'rgba(255,255,255,0.8)',
+																		}}
+																	>
+																		{/* Order + icon */}
+																		<div className="flex items-center gap-2 flex-shrink-0">
+																			<div
+																				className="w-5 h-5 rounded-md grid place-items-center text-[10px] font-bold"
+																				style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-600)' }}
+																			>
+																				{field.order ?? 1}
+																			</div>
+																			<div className="text-lg leading-none">{fieldIcon}</div>
+																		</div>
 
-																					{(field.type === 'select' || field.type === 'radio' || field.type === 'checklist') &&
-																						field.options &&
-																						field.options.length > 0 && (
-																							<div className="flex flex-wrap gap-2 pt-3 border-t" style={{ borderColor: 'var(--color-primary-100)' }}>
-																								{field.options.map((opt, i) => (
-																									<Badge key={i} variant="primary">
-																										{opt}
-																									</Badge>
-																								))}
-																							</div>
-																						)}
-																				</div>
+																		<div className="flex-1 min-w-0">
+																			<MultiLangText className="font-semibold text-slate-900 text-sm mb-1.5">
+																				{field.label}
+																			</MultiLangText>
+																			<div className="flex flex-wrap gap-1.5">
+																				<Badge variant="primary">{t(`types_map.${field.type}`)}</Badge>
+																				{field.required && <Badge variant="warning">⚠️ {t('labels.required')}</Badge>}
+																				{(field.type === 'select' || field.type === 'radio' || field.type === 'checklist') &&
+																					field.options && field.options.length > 0 && field.options.map((opt, i) => (
+																						<Badge key={i} variant="primary">{opt}</Badge>
+																					))}
 																			</div>
 																		</div>
-																	</PremiumCard>
+																	</div>
 																</motion.div>
 															);
 														})}
@@ -1462,16 +1314,13 @@ export default function FormsManagementPage() {
 												<motion.div
 													initial={{ opacity: 0 }}
 													animate={{ opacity: 1 }}
-													className="rounded-lg border border-dashed p-16 text-center"
-													style={{
-														borderColor: 'var(--color-primary-300)',
-														background: 'rgba(255, 255, 255, 0.7)',
-													}}
+													className="rounded-xl border border-dashed p-16 text-center"
+													style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}
 												>
-													<IconWrapper size="xl">
-														<Layers className="w-10 h-10" style={{ color: 'var(--color-primary-700)' }} />
+													<IconWrapper size="xl" active={false}>
+														<Layers className="w-7 h-7" style={{ color: 'var(--color-primary-500)' }} />
 													</IconWrapper>
-													<div className="mt-4 text-slate-700 font-bold text-lg">{t('empty.no_fields')}</div>
+													<div className="mt-3 text-slate-600 font-semibold text-sm">{t('empty.no_fields')}</div>
 												</motion.div>
 											)}
 										</div>
@@ -1483,38 +1332,29 @@ export default function FormsManagementPage() {
 				</div>
 			</div>
 
-			{/* Delete Modal */}
+			{/* ── DELETE MODAL ── */}
 			<Modal
 				open={showDeleteModal}
-				onClose={() => {
-					if (!isDeleting) {
-						setShowDeleteModal(false);
-						setDeletingId(null);
-					}
-				}}
+				onClose={() => { if (!isDeleting) { setShowDeleteModal(false); setDeletingId(null); } }}
 				title={t('delete.title')}
 				maxW="max-w-md"
 			>
-				<div className="space-y-6 pt-2">
-					<PremiumCard>
-						<div className="p-5 flex items-start gap-4">
-							<IconWrapper variant="danger" size="md">
-								<AlertCircle className="w-6 h-6 text-rose-600" />
-							</IconWrapper>
-							<p className="text-slate-700 leading-relaxed flex-1">{t('delete.message')}</p>
-						</div>
-					</PremiumCard>
+				<div className="space-y-5 pt-2">
+					<div
+						className="flex items-start gap-4 p-4 rounded-xl border"
+						style={{ borderColor: '#fecaca', background: '#fef2f2' }}
+					>
+						<IconWrapper variant="danger" size="md">
+							<AlertCircle className="w-5 h-5 text-rose-600" />
+						</IconWrapper>
+						<p className="text-slate-700 text-sm leading-relaxed flex-1">{t('delete.message')}</p>
+					</div>
 
-					<div className="flex justify-end gap-3">
+					<div className="flex justify-end gap-2.5">
 						<Button
 							name={t('actions.cancel')}
 							className="!w-fit"
-							onClick={() => {
-								if (!isDeleting) {
-									setShowDeleteModal(false);
-									setDeletingId(null);
-								}
-							}}
+							onClick={() => { if (!isDeleting) { setShowDeleteModal(false); setDeletingId(null); } }}
 						/>
 						<Button
 							name={isDeleting ? t('actions.deleting') : t('delete.confirm')}
@@ -1527,48 +1367,67 @@ export default function FormsManagementPage() {
 				</div>
 			</Modal>
 
-			{/* Create/Edit Form Modal */}
-			<Modal open={showFormModal} onClose={() => setShowFormModal(false)} title={isEditing ? t('edit.title') : t('create.title')} maxW="max-w-5xl">
+			{/* ── CREATE / EDIT MODAL ── */}
+			<Modal
+				open={showFormModal}
+				onClose={() => setShowFormModal(false)}
+				title={isEditing ? t('edit.title') : t('create.title')}
+				maxW="max-w-5xl"
+			>
 				<form
-					className="space-y-6 pt-4"
-					onSubmit={(e) => {
-						e.preventDefault();
-						(isEditing ? updateForm : createForm)();
-					}}
+					className="space-y-5 pt-4"
+					onSubmit={(e) => { e.preventDefault(); (isEditing ? updateForm : createForm)(); }}
 				>
-					<PremiumCard>
-						<div className="p-5">
-							<Input placeholder={t('editor.placeholders.form_title')} value={formTitle} onChange={setFormTitle} className="max-w-full" />
-						</div>
-					</PremiumCard>
+					{/* Title */}
+					<div
+						className="rounded-xl border p-4"
+						style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}
+					>
+						<Input
+							placeholder={t('editor.placeholders.form_title')}
+							value={formTitle}
+							onChange={setFormTitle}
+							className="max-w-full"
+						/>
+					</div>
 
+					{/* Fields section */}
 					<div>
-						<div className="flex items-center justify-between mb-4">
-							<h3 className="font-black text-slate-900 text-2xl flex items-center gap-3">
-								<IconWrapper active size="md">
-									<Layers className="w-6 h-6 text-white" />
+						<div className="flex items-center justify-between mb-3">
+							<div className="flex items-center gap-2.5">
+								<IconWrapper active size="sm">
+									<Layers className="w-4 h-4 text-white" />
 								</IconWrapper>
-								{t('editor.fields')}
-							</h3>
+								<h3 className="font-bold text-slate-900 text-base">{t('editor.fields')}</h3>
+								<div
+									className="text-xs font-bold px-2 py-0.5 rounded-full"
+									style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-700)' }}
+								>
+									{formFields.length}
+								</div>
+							</div>
 
 							<motion.button
 								type="button"
 								onClick={addInlineField}
-								whileHover={{ scale: 1.05 }}
-								whileTap={{ scale: 0.95 }}
-								className="inline-flex items-center gap-2 h-12 px-6 rounded-lg text-white font-bold"
+								whileHover={{ scale: 1.03 }}
+								whileTap={{ scale: 0.97 }}
+								className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-white text-sm font-semibold"
 								style={{
 									background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-									boxShadow: '0 8px 24px rgba(99, 102, 241, 0.3)',
+									boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)',
 								}}
 							>
-								<FiPlus className="w-5 h-5" />
-								<span>{t('editor.add_field')}</span>
+								<FiPlus className="w-4 h-4" />
+								{t('editor.add_field')}
 							</motion.button>
 						</div>
 
 						{formFields.length ? (
-							<div ref={fieldsContainerRef} className="space-y-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-300">
+							<div
+								ref={fieldsContainerRef}
+								className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200"
+							>
 								<AnimatePresence mode="popLayout">
 									{formFields.map((f, idx) => (
 										<FieldRow
@@ -1593,31 +1452,29 @@ export default function FormsManagementPage() {
 							<motion.div
 								initial={{ opacity: 0 }}
 								animate={{ opacity: 1 }}
-								className="rounded-lg border border-dashed p-16 text-center"
-								style={{
-									borderColor: 'var(--color-primary-300)',
-									background: 'rgba(255, 255, 255, 0.7)',
-								}}
+								className="rounded-xl border border-dashed p-12 text-center"
+								style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}
 							>
 								<IconWrapper size="xl">
-									<Layers className="w-8 h-8" style={{ color: 'var(--color-primary-700)' }} />
+									<Layers className="w-7 h-7" style={{ color: 'var(--color-primary-500)' }} />
 								</IconWrapper>
-								<div className="mt-4 text-slate-700 font-bold text-lg">{t('empty.no_fields')}</div>
+								<div className="mt-3 text-slate-600 font-semibold text-sm">{t('empty.no_fields')}</div>
 							</motion.div>
 						)}
 					</div>
 
-					<div className="flex justify-end gap-3 pt-6 border-t-2" style={{ borderColor: 'var(--color-primary-200)' }}>
+					{/* Footer */}
+					<div
+						className="flex justify-end gap-2.5 pt-4 border-t"
+						style={{ borderColor: 'var(--color-primary-100)' }}
+					>
 						<motion.button
 							type="button"
 							onClick={() => setShowFormModal(false)}
-							whileHover={{ scale: 1.02 }}
+							whileHover={{ scale: 1.01 }}
 							whileTap={{ scale: 0.98 }}
-							className="inline-flex items-center h-12 px-6 rounded-lg border bg-white text-slate-700 font-bold"
-							style={{
-								borderColor: 'var(--color-primary-200)',
-								boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
-							}}
+							className="inline-flex items-center h-10 px-5 rounded-lg border text-sm font-semibold text-slate-700"
+							style={{ borderColor: 'var(--color-primary-200)', background: 'white' }}
 						>
 							{t('actions.cancel')}
 						</motion.button>
@@ -1626,23 +1483,23 @@ export default function FormsManagementPage() {
 							type="submit"
 							disabled={loading}
 							whileHover={{ scale: loading ? 1 : 1.02 }}
-							whileTap={{ scale: loading ? 1 : 0.98 }}
-							className="inline-flex items-center gap-2 h-12 px-8 rounded-lg text-white font-bold"
+							whileTap={{ scale: loading ? 1 : 0.97 }}
+							className="inline-flex items-center gap-2 h-10 px-6 rounded-lg text-white text-sm font-semibold"
 							style={{
 								background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-								boxShadow: '0 8px 24px rgba(99, 102, 241, 0.3)',
-								opacity: loading ? 0.7 : 1,
+								boxShadow: '0 4px 16px rgba(99, 102, 241, 0.35)',
+								opacity: loading ? 0.75 : 1,
 								cursor: loading ? 'not-allowed' : 'pointer',
 							}}
 						>
 							{loading ? (
 								<motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-									<Zap className="w-5 h-5" />
+									<Zap className="w-4 h-4" />
 								</motion.div>
 							) : (
 								<>
-									{isEditing ? <FiEdit2 className="w-5 h-5" /> : <FiPlus className="w-5 h-5" />}
-									<span>{isEditing ? t('edit.cta') : t('create.cta')}</span>
+									{isEditing ? <FiEdit2 className="w-4 h-4" /> : <FiPlus className="w-4 h-4" />}
+									{isEditing ? t('edit.cta') : t('create.cta')}
 								</>
 							)}
 						</motion.button>

@@ -4,7 +4,7 @@
   "description": "Professional fitness coaching with personalized plans and progress tracking",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#7C3AED",
+  "theme_color": "#1e293b",
   "orientation": "portrait-primary",
   "start_url": "/ar/",
   "scope": "/",

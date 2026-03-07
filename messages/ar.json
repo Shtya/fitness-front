@@ -1,7 +1,7 @@
 {
   "superAdmin": {
     "title": "لوحة المشرف العام — المستخدمون",
-    "subtitle": "إجمالي {{count}} مستخدم مُدار",
+    "subtitle": "إجمالي {count} مستخدم مُدار",
     "loading": "جارٍ تحميل المستخدمين…",
     "status": {
       "active": "نشط",
@@ -59,7 +59,7 @@
     "impersonation": {
       "loading": "جارٍ تسجيل الدخول كمستخدم…",
       "loggedAs": "تسجيل دخول بصفة",
-      "success": "تم تسجيل الدخول بنجاح بصفة {{name}}",
+      "success": "تم تسجيل الدخول بنجاح بصفة {name}",
       "failed": "فشل تسجيل الدخول بصفة المستخدم",
       "return": "العودة إلى المشرف العام",
       "returned": "تم الرجوع إلى حساب المشرف العام"
@@ -1302,8 +1302,8 @@
       "timeManagement": "إدارة الوقت",
       "kanbanBoard": "لوحة كانبان",
       "todos": "قائمة المهام",
-      "calendar": "التقويم" ,
-			"allRecipes" : "جميع الوصفات"
+      "calendar": "التقويم",
+      "allRecipes": "جميع الوصفات"
     }
   },
   "themeSwitcher": {
@@ -1320,69 +1320,69 @@
     "footer": "سيتم تطبيق التغيير فورًا على كامل لوحة التحكم"
   },
   "auth": {
-  "Incorrect email or password": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
-  "welcome": "مرحباً بعودتك",
-  "signIn": "تسجيل الدخول",
-  "subtitle": "سجل دخولك للوصول إلى حسابك ومتابعة رحلتك الصحية",
-  "email": "البريد الإلكتروني",
-  "enterEmail": "أدخل بريدك الإلكتروني",
-  "password": "كلمة المرور",
-  "enterPassword": "أدخل كلمة المرور",
-  "signInButton": "تسجيل الدخول",
-  "invalidEmail": "البريد الإلكتروني غير صالح",
-  "passwordRequired": "كلمة المرور مطلوبة",
+    "Incorrect email or password": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+    "welcome": "مرحباً بعودتك",
+    "signIn": "تسجيل الدخول",
+    "subtitle": "سجل دخولك للوصول إلى حسابك ومتابعة رحلتك الصحية",
+    "email": "البريد الإلكتروني",
+    "enterEmail": "أدخل بريدك الإلكتروني",
+    "password": "كلمة المرور",
+    "enterPassword": "أدخل كلمة المرور",
+    "signInButton": "تسجيل الدخول",
+    "invalidEmail": "البريد الإلكتروني غير صالح",
+    "passwordRequired": "كلمة المرور مطلوبة",
 
-  "a11y": {
-    "showPassword": "إظهار كلمة المرور",
-    "hidePassword": "إخفاء كلمة المرور"
+    "a11y": {
+      "showPassword": "إظهار كلمة المرور",
+      "hidePassword": "إخفاء كلمة المرور"
+    },
+
+    "loading": {
+      "signingIn": "جارٍ تسجيل الدخول..."
+    },
+
+    "success": {
+      "signedIn": "تم تسجيل الدخول بنجاح"
+    },
+
+    "errors": {
+      "loginFailed": "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى",
+      "accountPending": "حسابك قيد المراجعة",
+      "accountSuspended": "تم تعليق حسابك. يرجى التواصل مع الدعم",
+      "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+    },
+
+    "hero": {
+      "badge": "منصة اللياقة البدنية المتميزة",
+      "title": "حوّل جسمك، غيّر حياتك",
+      "subtitle": "انضم إلى آلاف الأشخاص الذين حققوا أهدافهم الصحية معنا",
+      "perkPersonalized": "تمارين مخصصة لك",
+      "perkPersonalizedDetail": "مصممة خصيصاً لجسمك",
+      "perkProgress": "تتبع التقدم",
+      "perkProgressDetail": "تحليلات فورية لأدائك",
+      "perkChat": "مدربون خبراء",
+      "perkChatDetail": "تواصل مباشر في أي وقت",
+      "perkPrivacy": "الخصوصية أولاً",
+      "perkPrivacyDetail": "بياناتك تبقى ملكك",
+      "secure": "SSL مفعل"
+    },
+
+    "stats": {
+      "users": "رياضيون",
+      "satisfaction": "رضا العملاء",
+      "support": "التوفر"
+    },
+
+    "trust": {
+      "secure": "آمن",
+      "encrypted": "مؤمن عبر SSL · البيانات مشفرة أثناء التخزين",
+      "verified": "موثق"
+    },
+
+    "notes": {
+      "protected": "بياناتك محمية ومشفرة"
+    }
   },
-
-  "loading": {
-    "signingIn": "جارٍ تسجيل الدخول..."
-  },
-
-  "success": {
-    "signedIn": "تم تسجيل الدخول بنجاح"
-  },
-
-  "errors": {
-    "loginFailed": "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى",
-    "accountPending": "حسابك قيد المراجعة",
-    "accountSuspended": "تم تعليق حسابك. يرجى التواصل مع الدعم",
-    "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة"
-  },
-
-  "hero": {
-    "badge": "منصة اللياقة البدنية المتميزة",
-    "title": "حوّل جسمك، غيّر حياتك",
-    "subtitle": "انضم إلى آلاف الأشخاص الذين حققوا أهدافهم الصحية معنا",
-    "perkPersonalized": "تمارين مخصصة لك",
-    "perkPersonalizedDetail": "مصممة خصيصاً لجسمك",
-    "perkProgress": "تتبع التقدم",
-    "perkProgressDetail": "تحليلات فورية لأدائك",
-    "perkChat": "مدربون خبراء",
-    "perkChatDetail": "تواصل مباشر في أي وقت",
-    "perkPrivacy": "الخصوصية أولاً",
-    "perkPrivacyDetail": "بياناتك تبقى ملكك",
-    "secure": "SSL مفعل"
-  },
-
-  "stats": {
-    "users": "رياضيون",
-    "satisfaction": "رضا العملاء",
-    "support": "التوفر"
-  },
-
-  "trust": {
-    "secure": "آمن",
-    "encrypted": "مؤمن عبر SSL · البيانات مشفرة أثناء التخزين",
-    "verified": "موثق"
-  },
-
-  "notes": {
-    "protected": "بياناتك محمية ومشفرة"
-  }
-},
   "Incorrect email or password": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
   "myProfile": {
     "header": {
@@ -3147,17 +3147,17 @@
       "form_created": "تم إنشاء النموذج.",
       "create_form_failed": "تعذّر إنشاء النموذج.",
       "assigned_ok": "تم تعيين الإدخال للمستخدم.",
-      "assign_failed": "تعذّر التعيين." ,
-			 "delete_success": "تم الحذف بنجاح" 
-    }, 
+      "assign_failed": "تعذّر التعيين.",
+      "delete_success": "تم الحذف بنجاح"
+    },
 
-		"review": {
-    "label": "مراجعة",
-    "checked": "تمت المراجعة",
-    "unchecked": "لم تتم المراجعة",
-    "loading": "جارٍ التحديث...",
-    "aria_label": "تحديد حالة المراجعة"
-  },
+    "review": {
+      "label": "مراجعة",
+      "checked": "تمت المراجعة",
+      "unchecked": "لم تتم المراجعة",
+      "loading": "جارٍ التحديث...",
+      "aria_label": "تحديد حالة المراجعة"
+    },
 
     "table": {
       "form": "النموذج",
@@ -3165,16 +3165,16 @@
       "phone": "الهاتف",
       "ip": "عنوان IP",
       "submitted": "وقت الإرسال",
-      "actions": "إجراءات" ,
-			"reviewed" :"تمت المراجعة"
+      "actions": "إجراءات",
+      "reviewed": "تمت المراجعة"
     },
     "actions": {
       "view": "عرض",
       "clear": "مسح",
       "refresh": "تحديث",
       "load_more": "تحميل المزيد",
-      "delete": "حذف  " ,
-			"confirm_delete": "هل أنت متأكد من أنك تريد حذف هذا العنصر؟"
+      "delete": "حذف  ",
+      "confirm_delete": "هل أنت متأكد من أنك تريد حذف هذا العنصر؟"
     },
     "empty": {
       "title": "لا توجد إدخالات",
@@ -4663,6 +4663,139 @@
       "customDate": "اختر تاريخ ووقت مخصص",
       "startFromDate": "ابدأ من التاريخ المحدد",
       "cancel": "إلغاء"
+    }
+  },
+
+	"library-admin": {
+		"header": {
+			"brand": "نيوتري كوتش",
+			"brand_accent": "ستوديو",
+			"subtitle": "لوحة تحكم المدرب",
+			"meal_count": "{count} وجبة في المكتبة"
+		},
+		"title": {
+			"eyebrow": "إدارة الوجبات",
+			"plain": "مكتبة",
+			"accent": "الوصفات"
+		},
+		"tabs": {
+			"list": "كل الوجبات ({count})",
+			"add": "+ إضافة وجبة",
+			"edit": "✏ تعديل وجبة"
+		},
+		"toast": {
+			"name_required": "اسم الوجبة مطلوب",
+			"updated": "تم تحديث الوجبة بنجاح",
+			"added": "تمت إضافة الوجبة إلى المكتبة",
+			"removed": "تم حذف الوجبة"
+		},
+		"list": {
+			"search_placeholder": "ابحث عن وجبة...",
+			"new_meal": "وجبة جديدة"
+		},
+		"card": {
+			"time": "الوقت",
+			"serves": "الحصص",
+			"satiety": "الإشباع",
+			"macro_c": "كربو",
+			"macro_p": "بروتين",
+			"macro_f": "دهون",
+			"edit": "تعديل",
+			"remove": "حذف"
+		},
+		"form": {
+			"basic_info": "المعلومات الأساسية",
+			"meal_name": "اسم الوجبة",
+			"meal_name_placeholder": "مثال: توست الأفوكادو الكريمي",
+			"image_url": "رابط الصورة",
+			"image_preview": "معاينة الصورة",
+			"category": "الفئة",
+			"satiety": "مستوى الإشباع",
+			"calories": "سعرات حرارية",
+			"time": "الوقت (دقيقة)",
+			"servings": "الحصص",
+			"macros_title": "المغذيات الكبرى",
+			"carbs": "كربوهيدرات (ج)",
+			"protein": "بروتين (ج)",
+			"fats": "دهون (ج)",
+			"tips_title": "نصائح المدرب",
+			"tips_placeholder": "نصائح مفيدة لعملائك في التحضير...",
+			"add_ingredient": "إضافة",
+			"remove_ingredient": "حذف المكوّن",
+			"col_ingredient": "المكوّن",
+			"col_amount": "الكمية",
+			"col_unit": "الوحدة",
+			"ing_name_placeholder": "الاسم...",
+			"ing_qty_placeholder": "الكمية",
+			"submit_save": "حفظ في المكتبة",
+			"submit_update": "تحديث الوجبة",
+			"cancel_edit": "إلغاء التعديل"
+		}
+	},
+  "library": {
+    "hero": {
+      "eyebrow": "خطتك الغذائية",
+      "title_plain": "مكتبة",
+      "title_accent": "الوجبات",
+      "subtitle": "وصفات منتقاة بعناية من مدربك — تصفّح المكونات والمغذيات واكتشف وجبتك التالية."
+    },
+    "stats": {
+      "total": "إجمالي الوجبات",
+      "avg_cal": "متوسط السعرات",
+      "avg_prot": "متوسط البروتين"
+    },
+    "search": {
+      "placeholder": "ابحث عن وجبات أو مكونات..."
+    },
+    "sort": {
+      "name": "ترتيب: أ – ي",
+      "calories": "ترتيب: السعرات",
+      "time": "ترتيب: وقت التحضير",
+      "protein": "ترتيب: البروتين"
+    },
+    "categories": {
+      "all": "الكل",
+      "breakfast": "الإفطار",
+      "lunch": "الغداء",
+      "dinner": "العشاء",
+      "snack": "وجبة خفيفة",
+      "drink": "مشروبات",
+      "dessert": "حلويات"
+    },
+    "results": {
+      "count": "{count} وجبة",
+      "count_plural": "{count} وجبات",
+      "for": "لـ \"{query}\""
+    },
+    "card": {
+      "kcal": "سعرة حرارية",
+      "min": "دقيقة",
+      "serving": "حصة",
+      "macros_label": "المغذيات الكبرى لكل حصة",
+      "key_ingredients": "المكونات الأساسية",
+      "more": "المزيد"
+    },
+    "macros": {
+      "carbs": "الكربوهيدرات",
+      "protein": "البروتين",
+      "fats": "الدهون"
+    },
+    "satiety": {
+      "low": "إشباع منخفض",
+      "medium": "إشباع متوسط",
+      "high": "إشباع عالٍ"
+    },
+    "empty": {
+      "title": "لا توجد وجبات",
+      "subtitle": "جرّب مصطلح بحث أو فئة مختلفة"
+    },
+    "modal": {
+      "close": "إغلاق",
+      "satiety_suffix": "إشباع",
+      "ingredients": "المكونات",
+      "nutrition_title": "القيم الغذائية",
+      "calories": "السعرات الحرارية",
+      "coach_tip": "نصيحة المدرب"
     }
   }
 }

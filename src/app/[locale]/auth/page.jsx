@@ -197,6 +197,7 @@ const LoginForm = React.memo(({ onLoggedIn }) => {
 							style={fieldStyle('email')}
 							onFocus={() => setFocused('email')}
 							onBlur={() => setFocused(null)}
+							className='!text-base'
 							{...register('email')}
 						/>
 						<motion.div
@@ -240,6 +241,7 @@ const LoginForm = React.memo(({ onLoggedIn }) => {
 							style={fieldStyle('password')}
 							onFocus={() => setFocused('password')}
 							onBlur={() => setFocused(null)}
+							className='!text-base'
 							{...register('password')}
 						/>
 						<motion.div

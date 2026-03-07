@@ -18,7 +18,7 @@ const stagger = (delay = 0) => ({
 // ─── IPhone Mockup ────────────────────────────────────────────────────────────
 function IPhoneMockup({ children }) {
   return (
-    <div className="relative mx-auto w-full max-w-[320px]">
+    <div className="relative mx-auto w-full max-w-[300px] sm:max-w-[320px]">
       <div className="rounded-[44px] p-[9px] bg-gradient-to-br from-[#2a2a2c] via-[#1a1a1c] to-[#0f0f10]
         shadow-[0_0_0_0.5px_rgba(255,255,255,0.08),0_32px_80px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.4)]">
 
@@ -29,7 +29,7 @@ function IPhoneMockup({ children }) {
         <div className="absolute -right-[3px] top-[138px] w-[3px] h-16 bg-gradient-to-b from-[#333] to-[#222] rounded-r-sm" />
 
         {/* Screen */}
-        <div className="rounded-[36px] overflow-hidden flex flex-col h-[640px] bg-[#f5f5f7]
+        <div className="rounded-[36px] overflow-hidden flex flex-col h-[580px] sm:h-[640px] bg-[#f5f5f7]
           shadow-[inset_0_0_0_0.5px_rgba(0,0,0,0.1)]">
           {children}
         </div>
@@ -164,7 +164,7 @@ function ExerciseCard({ locale }) {
   return (
     <div className="bg-white overflow-hidden">
       {/* Hero image */}
-      <div className="relative h-[160px] bg-gradient-to-br from-[#eef2ff] to-[#ede9fe]
+      <div className="relative h-[140px] sm:h-[160px] bg-gradient-to-br from-[#eef2ff] to-[#ede9fe]
         flex items-center justify-center overflow-hidden">
         <svg className="absolute inset-0 w-full h-full opacity-[0.06]" viewBox="0 0 200 160">
           {[...Array(8)].map((_,i) => (
@@ -293,8 +293,6 @@ function ExerciseCard({ locale }) {
   );
 }
 
- 
-
 // ─── Phone Showcase ───────────────────────────────────────────────────────────
 function PhoneShowcase({ locale }) {
   return (
@@ -302,16 +300,16 @@ function PhoneShowcase({ locale }) {
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.9, ease: [0.25, 0.1, 0.25, 1], delay: 0.2 }}
-      className="w-full relative px-20 py-5"
+      className="w-full relative px-4 sm:px-8 lg:px-10 py-5"
     >
       {/* Glow */}
       <div className="absolute -inset-5 rounded-full
         bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.25),transparent_70%)]
         blur-[32px] pointer-events-none z-0" />
 
-      {/* Spinning rings */}
+      {/* Spinning rings — hidden on small screens to avoid overflow */}
       {[380,440,500].map((size, i) => (
-        <div key={i} className="absolute rounded-full pointer-events-none top-1/2 left-1/2"
+        <div key={i} className="absolute rounded-full pointer-events-none top-1/2 left-1/2 hidden lg:block"
           style={{
             width: size, height: size,
             border: `1px solid rgba(${["99,102,241","139,92,246","168,85,247"][i]},${[0.2,0.15,0.1][i]})`,
@@ -331,7 +329,6 @@ function PhoneShowcase({ locale }) {
           <HomeIndicator />
         </IPhoneMockup>
       </div>
- 
     </motion.div>
   );
 }
@@ -343,24 +340,24 @@ function TrustStrip({ t }) {
       <div className="flex items-center bg-white/[0.04] border border-white/[0.08]
         rounded-2xl overflow-hidden backdrop-blur-xl">
         {/* Users */}
-        <div className="flex-1 px-5 py-[14px]">
-          <p className="text-[22px] font-black text-white leading-none font-body tracking-tight">50K+</p>
-          <p className="text-[11px] text-white/45 font-medium font-body mt-0.5">{t("trust.activeUsers")}</p>
+        <div className="flex-1 px-3 sm:px-5 py-[14px]">
+          <p className="text-[20px] sm:text-[22px] font-black text-white leading-none font-body tracking-tight">50K+</p>
+          <p className="text-[10px] sm:text-[11px] text-white/45 font-medium font-body mt-0.5">{t("trust.activeUsers")}</p>
         </div>
         <div className="w-px h-10 bg-white/10 shrink-0" />
         {/* Rating */}
-        <div className="flex-1 px-5 py-[14px]">
+        <div className="flex-1 px-3 sm:px-5 py-[14px]">
           <div className="flex items-center gap-1">
-            <p className="text-[22px] font-black text-white leading-none font-body tracking-tight">4.9</p>
+            <p className="text-[20px] sm:text-[22px] font-black text-white leading-none font-body tracking-tight">4.9</p>
             <svg width="16" height="16" viewBox="0 0 24 24" className="-mt-0.5">
               <path fill="#fbbf24" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
           </div>
-          <p className="text-[11px] text-white/45 font-medium font-body mt-0.5">{t("trust.rating")}</p>
+          <p className="text-[10px] sm:text-[11px] text-white/45 font-medium font-body mt-0.5">{t("trust.rating")}</p>
         </div>
         <div className="w-px h-10 bg-white/10 shrink-0" />
         {/* Avatar stack */}
-        <div className="px-5 py-[14px] flex items-center">
+        <div className="px-3 sm:px-5 py-[14px] flex items-center">
           <div className="flex">
             {[
               "from-[var(--color-primary-400)] to-[var(--color-primary-600)]",
@@ -369,12 +366,12 @@ function TrustStrip({ t }) {
               "from-blue-400 to-blue-600",
             ].map((grad, i) => (
               <div key={i}
-                className={`w-7 h-7 rounded-full bg-gradient-to-br ${grad}
+                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br ${grad}
                   border-2 border-[rgba(10,10,20,0.9)]
                   flex items-center justify-center ${i > 0 ? "-ml-2" : ""}`}
                 style={{ zIndex: 4 - i }}
               >
-                <User size={12} color="#fff" />
+                <User size={10} color="#fff" />
               </div>
             ))}
           </div>
@@ -392,7 +389,6 @@ export default function ResponsiveHero() {
 
   return (
     <>
- 
       <style>{`
         @keyframes hero-float {
           0%,100% { transform: translateY(0px); }
@@ -406,11 +402,10 @@ export default function ResponsiveHero() {
           0%,100% { opacity:1; transform:scale(1); }
           50%     { opacity:0.5; transform:scale(1.5); }
         }
-        /* Grid layout — pure CSS so it works regardless of Tailwind JIT scan */
         .hero-grid {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 48px;
+          gap: 32px;
           align-items: center;
           width: 100%;
         }
@@ -443,7 +438,7 @@ export default function ResponsiveHero() {
           animate={{ scale:[1,1.15,1], opacity:[0.15,0.28,0.15] }}
           transition={{ duration:7, repeat:Infinity, ease:"easeInOut" }}
           className={`absolute top-[5%] ${isRTL ? "left-[5%]" : "right-[5%]"}
-            w-[500px] h-[500px] rounded-full pointer-events-none z-0 blur-[80px]
+            w-[300px] h-[300px] sm:w-[500px] sm:h-[500px] rounded-full pointer-events-none z-0 blur-[80px]
             bg-[radial-gradient(circle,var(--color-primary-500)_0%,transparent_70%)]`}
         />
         {/* Orb 2 */}
@@ -451,7 +446,7 @@ export default function ResponsiveHero() {
           animate={{ scale:[1,1.2,1], opacity:[0.12,0.22,0.12] }}
           transition={{ duration:9, repeat:Infinity, ease:"easeInOut", delay:2 }}
           className={`absolute bottom-0 ${isRTL ? "right-[10%]" : "left-[10%]"}
-            w-[400px] h-[400px] rounded-full pointer-events-none z-0 blur-[70px]
+            w-[250px] h-[250px] sm:w-[400px] sm:h-[400px] rounded-full pointer-events-none z-0 blur-[70px]
             bg-[radial-gradient(circle,var(--color-secondary-500)_0%,transparent_70%)]`}
         />
         {/* Grid pattern */}
@@ -460,8 +455,8 @@ export default function ResponsiveHero() {
           bg-[size:80px_80px]
           [mask-image:radial-gradient(ellipse_at_50%_50%,black_20%,transparent_80%)]" />
 
-        {/* ── Content — max-width 1440px ── */}
-        <div className="relative z-[1] w-full max-w-[1440px] mx-auto px-6 lg:px-16 py-10 pb-20 flex-1 flex items-center">
+        {/* ── Content ── */}
+        <div className="relative z-[1] w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-16 py-8 pb-16 sm:pb-20 flex-1 flex items-center">
           <div className="hero-grid">
 
             {/* ─── Text column ─────────────────────────────────── */}
@@ -469,20 +464,18 @@ export default function ResponsiveHero() {
               initial="hidden"
               animate="show"
               variants={{ show: { transition: { staggerChildren: 0.12 } } }}
-              className="  w-full"
+              className="w-full min-w-0"
             >
-               
-
               {/* Headlines */}
-              <div className="mb-6">
+              <div className="mb-5 sm:mb-6">
                 <motion.h1 variants={stagger(0.08)}
-                  className="font-display text-[clamp(52px,8vw,96px)] leading-[0.93]
+                  className="font-display text-[clamp(40px,10vw,96px)] leading-[0.93]
                     text-white max-md:text-center m-0 tracking-[0.01em]">
                   {t("headline.transform")}
                 </motion.h1>
 
                 <motion.h1 variants={stagger(0.16)}
-                  className="font-display max-md:text-center text-[clamp(52px,8vw,96px)] leading-[0.93] m-0
+                  className="font-display max-md:text-center text-[clamp(40px,10vw,96px)] leading-[0.93] m-0
                     bg-gradient-to-br from-[var(--color-primary-400)] to-[var(--color-secondary-400)]
                     bg-clip-text text-transparent
                     drop-shadow-[0_0_40px_rgba(99,102,241,0.5)]">
@@ -490,7 +483,7 @@ export default function ResponsiveHero() {
                 </motion.h1>
 
                 <motion.h2 variants={stagger(0.24)}
-                  className="font-display max-md:text-center text-[clamp(28px,4.5vw,52px)] leading-[1.1]
+                  className="font-display max-md:text-center text-[clamp(20px,5vw,52px)] leading-[1.1]
                     m-0 mt-1 text-white/[0.38] tracking-[0.02em] font-normal">
                   {t("headline.withScience")}
                 </motion.h2>
@@ -498,23 +491,24 @@ export default function ResponsiveHero() {
 
               {/* Description */}
               <motion.p variants={stagger(0.32)}
-                className="font-body max-md:text-center text-[clamp(15px,1.8vw,18px)] text-white/50
-                  leading-[1.7] m-0 mb-8 max-w-[460px]">
+                className="font-body max-md:text-center text-[clamp(14px,1.8vw,18px)] text-white/50
+                  leading-[1.7] m-0 mb-6 sm:mb-8 max-w-full sm:max-w-[460px]
+                  overflow-hidden">
                 {t("description")}
               </motion.p>
 
               {/* Phone — mobile only */}
-              <motion.div variants={stagger(0.36)} className="hero-phone-mobile mb-9">
-                <div className="max-w-[500px] mx-auto relative">
+              <motion.div variants={stagger(0.36)} className="hero-phone-mobile mb-7 sm:mb-9">
+                <div className="max-w-[360px] sm:max-w-[500px] mx-auto relative">
                   <PhoneShowcase locale={locale} />
                 </div>
               </motion.div>
 
               {/* CTAs */}
-              <motion.div variants={stagger(0.40)} className="flex max-md:justify-center flex-wrap gap-3 mb-8">
+              <motion.div variants={stagger(0.40)} className="flex max-md:justify-center flex-wrap gap-3 mb-6 sm:mb-8">
                 <button
                   className="group relative flex items-center gap-2 border-none rounded-[14px]
-                    px-7 py-[14px] text-[15px] font-bold font-body text-white cursor-pointer
+                    px-5 sm:px-7 py-[12px] sm:py-[14px] text-[14px] sm:text-[15px] font-bold font-body text-white cursor-pointer
                     theme-gradient-bg overflow-hidden
                     shadow-[0_4px_24px_rgba(99,102,241,0.45),inset_0_1px_0_rgba(255,255,255,0.15)]
                     hover:-translate-y-px hover:shadow-[0_8px_32px_rgba(99,102,241,0.55)]
@@ -531,7 +525,7 @@ export default function ResponsiveHero() {
 
                 <button
                   className="flex items-center gap-2 border border-white/[0.12] rounded-[14px]
-                    px-6 py-[14px] text-[15px] font-semibold font-body text-white/80 cursor-pointer
+                    px-5 sm:px-6 py-[12px] sm:py-[14px] text-[14px] sm:text-[15px] font-semibold font-body text-white/80 cursor-pointer
                     bg-white/[0.06] backdrop-blur-lg
                     hover:bg-white/10 hover:border-white/[0.22]
                     transition-all duration-150"
