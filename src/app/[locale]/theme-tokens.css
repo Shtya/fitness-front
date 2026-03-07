@@ -24,7 +24,11 @@
   --color-gradient-from: #6366f1;
   --color-gradient-via: #8b5cf6;
   --color-gradient-to: #a855f7;
+} 
+.opacity-04 {
+	opacity:  .04 !important;
 }
+
 
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;

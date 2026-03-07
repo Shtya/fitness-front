@@ -4,33 +4,33 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-	ChevronDown,
-	Sparkles,
-	HelpCircle,
-	Search,
-	User,
-	Dumbbell,
-	CreditCard,
-	Settings,
-	Shield,
-	Zap,
-	Heart,
-	TrendingUp,
-	MessageSquare,
-	Phone,
-	Mail,
-	Plus,
-	Minus
+	ChevronDown, Sparkles, HelpCircle, Search,
+	User, Dumbbell, CreditCard, Settings, Shield,
+	Zap, Heart, TrendingUp, MessageSquare,
+	Phone, Mail, Plus, Minus,
 } from "lucide-react";
-import { useTheme } from "@/app/[locale]/theme";
+
+// ─── Stable particle positions — never re-randomised on render ────────────────
+const PARTICLES = Array.from({ length: 10 }, (_, i) => ({
+	left: `${(i * 41 + 7) % 100}%`,
+	top: `${(i * 67 + 13) % 100}%`,
+	dur: 3 + (i % 3),
+	del: (i * 0.28) % 2,
+}));
+
+// ─── Illustration floating icons ──────────────────────────────────────────────
+const FLOAT_ICONS = [
+	{ Icon: Sparkles, top: "20%", left: "12%" },
+	{ Icon: Heart, top: "35%", left: "68%" },
+	{ Icon: Zap, top: "58%", left: "18%" },
+	{ Icon: Shield, top: "72%", left: "65%" },
+];
 
 export default function FAQs() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [activeCategory, setActiveCategory] = useState("all");
 	const [openIndex, setOpenIndex] = useState(null);
-
 	const t = useTranslations("home.faqs");
-	const { colors } = useTheme();
 
 	const categories = [
 		{ id: "all", label: t("categories.all"), icon: HelpCircle },
@@ -38,413 +38,229 @@ export default function FAQs() {
 		{ id: "membership", label: t("categories.membership"), icon: User },
 		{ id: "training", label: t("categories.training"), icon: Dumbbell },
 		{ id: "billing", label: t("categories.billing"), icon: CreditCard },
-		{ id: "technical", label: t("categories.technical"), icon: Settings }
+		{ id: "technical", label: t("categories.technical"), icon: Settings },
 	];
 
 	const faqs = [
-		{
-			category: "general",
-			question: t("questions.general.0.question"),
-			answer: t("questions.general.0.answer"),
-			icon: Sparkles,
-		},
-		{
-			category: "general",
-			question: t("questions.general.1.question"),
-			answer: t("questions.general.1.answer"),
-			icon: Heart,
-		},
-		{
-			category: "general",
-			question: t("questions.general.2.question"),
-			answer: t("questions.general.2.answer"),
-			icon: TrendingUp,
-		},
-		{
-			category: "membership",
-			question: t("questions.membership.0.question"),
-			answer: t("questions.membership.0.answer"),
-			icon: User,
-		},
-		{
-			category: "membership",
-			question: t("questions.membership.1.question"),
-			answer: t("questions.membership.1.answer"),
-			icon: Shield,
-		},
-		{
-			category: "membership",
-			question: t("questions.membership.2.question"),
-			answer: t("questions.membership.2.answer"),
-			icon: Zap,
-		},
-		{
-			category: "training",
-			question: t("questions.training.0.question"),
-			answer: t("questions.training.0.answer"),
-			icon: Dumbbell,
-		},
-		{
-			category: "training",
-			question: t("questions.training.1.question"),
-			answer: t("questions.training.1.answer"),
-			icon: TrendingUp,
-		},
-		{
-			category: "training",
-			question: t("questions.training.2.question"),
-			answer: t("questions.training.2.answer"),
-			icon: Heart,
-		},
-		{
-			category: "billing",
-			question: t("questions.billing.0.question"),
-			answer: t("questions.billing.0.answer"),
-			icon: CreditCard,
-		},
-		{
-			category: "billing",
-			question: t("questions.billing.1.question"),
-			answer: t("questions.billing.1.answer"),
-			icon: Shield,
-		},
-		{
-			category: "billing",
-			question: t("questions.billing.2.question"),
-			answer: t("questions.billing.2.answer"),
-			icon: Zap,
-		},
-		{
-			category: "technical",
-			question: t("questions.technical.0.question"),
-			answer: t("questions.technical.0.answer"),
-			icon: Settings,
-		},
-		{
-			category: "technical",
-			question: t("questions.technical.1.question"),
-			answer: t("questions.technical.1.answer"),
-			icon: Phone,
-		},
-		{
-			category: "technical",
-			question: t("questions.technical.2.question"),
-			answer: t("questions.technical.2.answer"),
-			icon: Shield,
-		}
+		{ category: "general", icon: Sparkles, question: t("questions.general.0.question"), answer: t("questions.general.0.answer") },
+		{ category: "general", icon: Heart, question: t("questions.general.1.question"), answer: t("questions.general.1.answer") },
+		{ category: "general", icon: TrendingUp, question: t("questions.general.2.question"), answer: t("questions.general.2.answer") },
+		{ category: "membership", icon: User, question: t("questions.membership.0.question"), answer: t("questions.membership.0.answer") },
+		{ category: "membership", icon: Shield, question: t("questions.membership.1.question"), answer: t("questions.membership.1.answer") },  
 	];
 
-	const filteredFaqs = faqs.filter(faq => {
-		const matchesCategory = activeCategory === "all" || faq.category === activeCategory;
-		const matchesSearch = faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
-		return matchesCategory && matchesSearch;
+	const filtered = faqs.filter(f => {
+		const inCategory = activeCategory === "all" || f.category === activeCategory;
+		const q = searchQuery.toLowerCase();
+		const inSearch = !q || f.question.toLowerCase().includes(q) || f.answer.toLowerCase().includes(q);
+		return inCategory && inSearch;
 	});
 
-	const toggleFAQ = (index) => {
-		setOpenIndex(openIndex === index ? null : index);
-	};
+	const toggle = (i) => setOpenIndex(openIndex === i ? null : i);
 
 	return (
 		<section className="relative py-20 sm:py-24 md:py-28 lg:py-32 overflow-hidden">
-			{/* Decorative Background Elements */}
+
+			{/* ── Background ── */}
 			<div className="absolute inset-0 overflow-hidden pointer-events-none">
 				<motion.div
-					className="absolute top-20 ltr:right-20 rtl:left-20 w-[500px] h-[500px] rounded-full blur-3xl opacity-20"
-					style={{
-						background: `radial-gradient(circle, ${colors.primary[400]}, transparent)`,
-					}}
-					animate={{
-						scale: [1, 1.2, 1],
-						opacity: [0.2, 0.3, 0.2]
-					}}
+					className="absolute top-20 ltr:right-20 rtl:left-20 w-[500px] h-[500px]
+            rounded-full blur-3xl opacity-[0.13]
+            bg-[radial-gradient(circle,var(--color-primary-400),transparent)]"
+					animate={{ scale: [1, 1.2, 1], opacity: [0.12, 0.2, 0.12] }}
 					transition={{ duration: 8, repeat: Infinity }}
 				/>
 				<motion.div
-					className="absolute bottom-20 ltr:left-20 rtl:right-20 w-[500px] h-[500px] rounded-full blur-3xl opacity-20"
-					style={{
-						background: `radial-gradient(circle, ${colors.secondary[400]}, transparent)`,
-					}}
-					animate={{
-						scale: [1.2, 1, 1.2],
-						opacity: [0.3, 0.2, 0.3]
-					}}
+					className="absolute bottom-20 ltr:left-20 rtl:right-20 w-[500px] h-[500px]
+            rounded-full blur-3xl opacity-[0.13]
+            bg-[radial-gradient(circle,var(--color-secondary-400),transparent)]"
+					animate={{ scale: [1.2, 1, 1.2], opacity: [0.18, 0.12, 0.18] }}
 					transition={{ duration: 8, repeat: Infinity, delay: 1 }}
 				/>
-
-				{/* Floating Particles */}
-				{[...Array(10)].map((_, i) => (
+				{/* Fine grid */}
+				<div className="absolute inset-0 opacity-[0.025]
+          bg-[linear-gradient(rgba(255,255,255,1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,1)_1px,transparent_1px)]
+          bg-[size:60px_60px]
+          [mask-image:radial-gradient(ellipse_at_50%_50%,black_30%,transparent_80%)]" />
+				{/* Stable particles */}
+				{PARTICLES.map((p, i) => (
 					<motion.div
 						key={i}
-						className="absolute w-1.5 h-1.5 rounded-full"
-						style={{
-							background: colors.primary[400],
-							left: `${Math.random() * 100}%`,
-							top: `${Math.random() * 100}%`,
-						}}
-						animate={{
-							y: [0, -20, 0],
-							opacity: [0, 0.5, 0],
-							scale: [0, 1, 0],
-						}}
-						transition={{
-							duration: 3 + Math.random() * 2,
-							repeat: Infinity,
-							delay: Math.random() * 2,
-						}}
+						className="absolute w-1.5 h-1.5 rounded-full
+              bg-[var(--color-primary-400)]"
+						style={{ left: p.left, top: p.top }}
+						animate={{ y: [0, -18, 0], opacity: [0, 0.45, 0], scale: [0, 1, 0] }}
+						transition={{ duration: p.dur, repeat: Infinity, delay: p.del }}
 					/>
 				))}
 			</div>
 
-			<div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8">
-				<div className=" h-fit grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+			{/* ── Content ── */}
+			<div className="relative z-10 max-w-[1440px] mx-auto px-6 lg:px-16">
 
-					{/* Right Side - Header & Illustration */}
-					<motion.div className="lg:col-span-7"
-						initial={{ opacity: 0, x: 30 }}
-						animate={{ opacity: 1, x: 0 }}
-						transition={{ duration: 0.8 }}
+				<div className="flex flex-col items-center ">
+				 
+
+					{/* Title */}
+					<h2 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl
+              leading-tight tracking-tight mb-5">
+						<span className="theme-gradient-text">{t("title")}</span>
+					</h2>
+
+					{/* Description */}
+					<p className="font-body text-center text-base md:text-lg text-white/55 mb-8 leading-relaxed max-w-xl">
+						{t("description")}
+					</p>
+ 
+
+					{/* ── Category pills ── */}
+					<div className="flex flex-wrap gap-2 mb-8">
+						{categories.map((cat, idx) => {
+							const Icon = cat.icon;
+							const isActive = activeCategory === cat.id;
+							return (
+								<motion.button
+									key={cat.id}
+									onClick={() => { setActiveCategory(cat.id); setOpenIndex(null); }}
+									className={[
+										"relative flex items-center gap-1.5 px-4 py-2 rounded-xl",
+										"font-body font-bold text-xs overflow-hidden",
+										"border-2 transition-colors duration-200",
+										isActive
+											? "text-white border-transparent"
+											: "text-white/50 border-slate-700/40 bg-slate-800/30 hover:text-white/80 hover:border-slate-600/60",
+									].join(" ")}
+									whileHover={{ scale: 1.04 }}
+									whileTap={{ scale: 0.96 }}
+									initial={{ opacity: 0, x: -12 }}
+									whileInView={{ opacity: 1, x: 0 }}
+									viewport={{ once: true }}
+									transition={{ delay: idx * 0.04 }}
+								>
+									{/* Sliding active bg */}
+									{isActive && (
+										<motion.div
+											className="absolute inset-0 theme-gradient-bg"
+											layoutId="activeCategory"
+											transition={{ type: "spring", stiffness: 400, damping: 32 }}
+										/>
+									)}
+									<Icon className={`w-3.5 h-3.5 relative z-10 ${isActive ? "animate-pulse" : ""}`} />
+									<span className="relative z-10">{cat.label}</span>
+								</motion.button>
+							);
+						})}
+					</div>
+				</div>
+				<div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+
+
+					<motion.div
+						className="lg:col-span-7"
+						initial={{ opacity: 0, x: 24 }}
+						whileInView={{ opacity: 1, x: 0 }}
+						viewport={{ once: true }}
+						transition={{ duration: 0.7 }}
 					>
-						{/* Badge */}
-						<motion.div
-							className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg mb-6 backdrop-blur-xl"
-							style={{
-								background: `linear-gradient(135deg, ${colors.primary[500]}20, ${colors.secondary[500]}20)`,
-								border: `2px solid ${colors.primary[500]}30`,
-							}}
-							animate={{ y: [0, -3, 0] }}
-							transition={{ duration: 3, repeat: Infinity }}
-						>
-							<motion.div
-								animate={{ rotate: 360 }}
-								transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-							>
-								<HelpCircle className="w-4 h-4" style={{ color: colors.primary[400] }} />
-							</motion.div>
-							<span className="text-sm font-black uppercase tracking-wider" style={{ color: colors.primary[300] }}>
-								{t("badge")}
-							</span>
-						</motion.div>
 
-						{/* Title */}
-						<h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-6 leading-tight tracking-tight">
-							<span
-								style={{
-									background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})`,
-									WebkitBackgroundClip: "text",
-									backgroundClip: "text",
-									WebkitTextFillColor: "transparent",
-								}}
-							>
-								{t("title")}
-							</span>
-						</h2>
 
-						{/* Description */}
-						<p className="text-lg md:text-xl text-white/80 mb-8 leading-relaxed font-medium">
-							{t("description")}
-						</p>
-
-						{/* Search Bar */}
-						<motion.div
-							className="relative mb-8"
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: 0.2 }}
-						>
-							<div className="relative">
-								<Search className="absolute ltr:left-5 rtl:right-5 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/40" />
-								<input
-									type="text"
-									placeholder={t("searchPlaceholder")}
-									value={searchQuery}
-									onChange={(e) => setSearchQuery(e.target.value)}
-									className="w-full ltr:pl-14 rtl:pr-14 ltr:pr-5 rtl:pl-5 py-4 bg-slate-800/60 backdrop-blur-xl border-2 border-slate-700/50 rounded-lg text-white placeholder-white/40 focus:border-opacity-100 focus:ring-4 transition-all outline-none font-medium"
-									style={{
-										borderColor: searchQuery ? colors.primary[500] : '',
-										boxShadow: searchQuery ? `0 0 0 4px ${colors.primary[500]}15` : '',
-									}}
-								/>
-								{searchQuery && (
-									<motion.button
-										initial={{ opacity: 0, scale: 0.8 }}
-										animate={{ opacity: 1, scale: 1 }}
-										onClick={() => setSearchQuery("")}
-										className="absolute ltr:right-5 rtl:left-5 top-1/2 transform -translate-y-1/2 text-white/40 hover:text-white transition-colors"
-									>
-										<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-										</svg>
-									</motion.button>
-								)}
-							</div>
-						</motion.div>
-
-						{/* Category Pills */}
-						<motion.div
-							className="flex flex-wrap gap-2 mb-8"
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: 0.3 }}
-						>
-							{categories.map((category, idx) => {
-								const Icon = category.icon;
-								const isActive = activeCategory === category.id;
-
-								return (
-									<motion.button
-										key={category.id}
-										onClick={() => setActiveCategory(category.id)}
-										className="relative flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all text-sm overflow-hidden"
-										style={{
-											backgroundColor: isActive
-												? colors.primary[500]
-												: 'rgba(30, 41, 59, 0.4)',
-											color: isActive ? 'white' : 'rgba(255, 255, 255, 0.6)',
-											border: `2px solid ${isActive ? colors.primary[500] : 'rgba(71, 85, 105, 0.3)'}`,
-										}}
-										whileHover={{ scale: 1.05 }}
-										whileTap={{ scale: 0.95 }}
-										initial={{ opacity: 0, x: -20 }}
-										animate={{ opacity: 1, x: 0 }}
-										transition={{ delay: idx * 0.05 }}
-									>
-										{isActive && (
-											<motion.div
-												className="absolute inset-0"
-												style={{
-													background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})`,
-												}}
-												layoutId="activeCategory"
-												transition={{
-													type: "spring",
-													stiffness: 380,
-													damping: 30
-												}}
-											/>
-										)}
-										<Icon className={`w-4 h-4 relative z-10 ${isActive ? 'animate-pulse' : ''}`} />
-										<span className="relative z-10">{category.label}</span>
-									</motion.button>
-								);
-							})}
-						</motion.div>
-
-						<div className="space-y-4">
+						{/* ── FAQ accordion ── */}
+						<div className="space-y-3">
 							<AnimatePresence mode="popLayout">
-								{filteredFaqs.length === 0 ? (
+								{filtered.length === 0 ? (
 									<motion.div
-										initial={{ opacity: 0, scale: 0.9 }}
+										key="empty"
+										initial={{ opacity: 0, scale: 0.95 }}
 										animate={{ opacity: 1, scale: 1 }}
-										exit={{ opacity: 0, scale: 0.9 }}
-										className="text-center py-20"
+										exit={{ opacity: 0, scale: 0.95 }}
+										className="text-center py-16"
 									>
-										<div
-											className="w-24 h-24 rounded-lg flex items-center justify-center mx-auto mb-6"
-											style={{
-												background: `linear-gradient(135deg, ${colors.primary[900]}40, ${colors.secondary[900]}40)`,
-											}}
-										>
-											<Search className="w-12 h-12 text-white/40" />
+										<div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5
+                      bg-white/[0.04] border border-white/[0.08]">
+											<Search className="w-9 h-9 text-white/25" />
 										</div>
-										<h3 className="text-3xl font-black text-white mb-3">{t("noResults.title")}</h3>
-										<p className="text-white/60 text-lg">{t("noResults.description")}</p>
+										<h3 className="font-body text-2xl font-black text-white mb-2">
+											{t("noResults.title")}
+										</h3>
+										<p className="font-body text-white/45">{t("noResults.description")}</p>
 									</motion.div>
 								) : (
-									filteredFaqs.map((faq, index) => {
-										const Icon = faq.icon;
+									filtered.map((faq, index) => {
 										const isOpen = openIndex === index;
-
 										return (
 											<motion.div
-												key={index}
+												key={`${activeCategory}-${index}`}
 												layout
-												initial={{ opacity: 0, y: 20 }}
+												initial={{ opacity: 0, y: 16 }}
 												animate={{ opacity: 1, y: 0 }}
-												exit={{ opacity: 0, y: -20 }}
+												exit={{ opacity: 0, y: -16 }}
 												transition={{ delay: index * 0.03 }}
 											>
 												<motion.button
-													onClick={() => toggleFAQ(index)}
-													className="relative w-full text-left group"
-													whileHover={{ scale: 1.01 }}
-													whileTap={{ scale: 0.99 }}
+													onClick={() => toggle(index)}
+													className="w-full text-left group"
+													whileTap={{ scale: 0.995 }}
 												>
-													<div
-														className="relative bg-slate-800/40 backdrop-blur-xl rounded-lg border-2 transition-all duration-300 overflow-hidden p-6"
-														style={{
-															borderColor: isOpen
-																? colors.primary[500]
-																: 'rgba(71, 85, 85, 0.3)',
-															boxShadow: isOpen
-																? `0 0 40px ${colors.primary[500]}20`
-																: '0 4px 20px rgba(0, 0, 0, 0.1)',
-														}}
-													>
-														{/* Animated gradient background */}
+													<div className={[
+														"relative bg-slate-800/45 backdrop-blur-xl",
+														"rounded-xl border-2 transition-all duration-300 overflow-hidden p-5 sm:p-6",
+														isOpen
+															? "border-[var(--color-primary-500)]/60 shadow-[0_0_32px_var(--color-primary-500)/15]"
+															: "border-slate-700/35 hover:border-[var(--color-primary-500)]/30",
+													].join(" ")}>
+
+														{/* Open — subtle tint */}
 														{isOpen && (
 															<motion.div
-																className="absolute inset-0 opacity-5"
-																style={{
-																	background: `linear-gradient(135deg, ${colors.primary[500]}, ${colors.secondary[500]})`,
-																}}
+																className="absolute inset-0 theme-gradient-bg opacity-[0.04] pointer-events-none"
 																initial={{ opacity: 0 }}
-																animate={{ opacity: 0.05 }}
+																animate={{ opacity: 0.04 }}
 															/>
 														)}
 
-														{/* Header Section - Always Visible */}
+														{/* Question row */}
 														<div className="relative flex items-start justify-between gap-4">
-															{/* Question Text */}
-															<div className="flex-1">
-																<h3
-																	className="text-lg font-bold transition-colors leading-snug pr-4"
-																	style={{
-																		color: isOpen ? colors.primary[300] : 'white',
-																	}}
-																>
-																	{faq.question}
-																</h3>
-															</div>
+															<h3 className={[
+																"font-body text-base font-bold leading-snug transition-colors duration-200 flex-1 ltr:pr-2 rtl:pl-2",
+																isOpen ? "text-[var(--color-primary-200)]" : "text-white group-hover:text-[var(--color-primary-200)]",
+															].join(" ")}>
+																{faq.question}
+															</h3>
 
-															{/* Expand/Collapse Icon */}
+															{/* Toggle chip */}
 															<motion.div
-																className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300"
-																style={{
-																	background: isOpen
-																		? `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})`
-																		: 'rgba(51, 65, 85, 0.6)',
-																}}
-																whileHover={{ scale: 1.1 }}
+																className={[
+																	"w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+																	"transition-colors duration-200",
+																	isOpen ? "theme-gradient-bg" : "bg-slate-700/60 group-hover:bg-slate-600/60",
+																].join(" ")}
 																animate={{ rotate: isOpen ? 180 : 0 }}
+																transition={{ duration: 0.25 }}
 															>
-																{isOpen ? (
-																	<Minus className="w-5 h-5 text-white" strokeWidth={3} />
-																) : (
-																	<Plus className="w-5 h-5 text-white/60" strokeWidth={3} />
-																)}
+																{isOpen
+																	? <Minus className="w-4 h-4 text-white" strokeWidth={3} />
+																	: <Plus className="w-4 h-4 text-white/60" strokeWidth={3} />
+																}
 															</motion.div>
 														</div>
 
-														{/* Answer - Expands Inside */}
+														{/* Answer */}
 														<AnimatePresence>
 															{isOpen && (
 																<motion.div
 																	initial={{ height: 0, opacity: 0, marginTop: 0 }}
-																	animate={{ height: "auto", opacity: 1, marginTop: 20 }}
+																	animate={{ height: "auto", opacity: 1, marginTop: 16 }}
 																	exit={{ height: 0, opacity: 0, marginTop: 0 }}
-																	transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+																	transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
 																	className="overflow-hidden"
 																>
-																	<div className="relative ltr:pl-4 rtl:pr-4 ltr:border-l-2 rtl:border-r-2"
-																		style={{
-																			borderColor: `${colors.primary[500]}30`,
-																		}}
-																	>
+																	<div className="ltr:pl-4 rtl:pr-4
+                                    ltr:border-l-2 rtl:border-r-2
+                                    border-[var(--color-primary-500)]/30">
 																		<motion.p
-																			initial={{ y: -10 }}
+																			initial={{ y: -8 }}
 																			animate={{ y: 0 }}
-																			className="text-white/70 leading-relaxed text-base"
+																			className="font-body text-sm text-white/60 leading-relaxed"
 																		>
 																			{faq.answer}
 																		</motion.p>
@@ -461,180 +277,217 @@ export default function FAQs() {
 							</AnimatePresence>
 						</div>
 
-						{/* Still Have Questions CTA */}
+						{/* ── Still have questions CTA ── */}
 						<motion.div
-							className="mt-12"
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: 0.6 }}
+							className="mt-10 relative"
+							initial={{ opacity: 0, y: 16 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							transition={{ delay: 0.4 }}
 						>
-							<div className="relative">
-								<motion.div
-									className="absolute -inset-4 rounded-lg blur-2xl opacity-30"
-									style={{
-										background: `linear-gradient(135deg, ${colors.primary[500]}, ${colors.secondary[500]})`,
-									}}
-									animate={{ opacity: [0.3, 0.5, 0.3] }}
-									transition={{ duration: 3, repeat: Infinity }}
-								/>
+							{/* Glow behind card */}
+							<motion.div
+								className="absolute -inset-4 rounded-2xl blur-2xl theme-gradient-bg opacity-20 -z-10"
+								animate={{ opacity: [0.18, 0.28, 0.18] }}
+								transition={{ duration: 3, repeat: Infinity }}
+							/>
 
-								<div
-									className="relative backdrop-blur-xl rounded-lg p-8 border-2"
-									style={{
-										backgroundColor: 'rgba(30, 41, 59, 0.6)',
-										borderColor: `${colors.primary[500]}30`,
-									}}
-								>
-									<div className="flex flex-col md:flex-row items-center gap-6">
-										<motion.div
-											className="w-16 h-16 rounded-lg flex items-center justify-center shadow-2xl shrink-0"
-											style={{
-												background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})`,
-											}}
-											whileHover={{ rotate: 360, scale: 1.1 }}
-											transition={{ duration: 0.6 }}
+							<div className="relative bg-slate-800/55 backdrop-blur-xl rounded-2xl p-7
+                border border-[var(--color-primary-500)]/25">
+								<div className="flex flex-col sm:flex-row items-center gap-6">
+									{/* Icon */}
+									<motion.div
+										className="w-14 h-14 rounded-xl theme-gradient-bg
+                      flex items-center justify-center shadow-xl shrink-0"
+										whileHover={{ rotate: 360, scale: 1.1 }}
+										transition={{ duration: 0.55 }}
+									>
+										<MessageSquare className="w-7 h-7 text-white" />
+									</motion.div>
+
+									{/* Text */}
+									<div className="flex-1 text-center sm:ltr:text-left sm:rtl:text-right">
+										<h3 className="font-body text-xl font-black text-white mb-1">
+											{t("cta.title")}
+										</h3>
+										<p className="font-body text-sm text-white/45">
+											{t("cta.description")}
+										</p>
+									</div>
+
+									{/* Buttons */}
+									<div className="flex gap-3 shrink-0">
+										<motion.button
+											className="group relative flex items-center gap-2
+                        px-5 py-3 rounded-xl font-body font-bold text-sm text-white
+                        theme-gradient-bg shadow-xl overflow-hidden
+                        shadow-[0_6px_24px_var(--color-primary-500)/30]"
+											whileHover={{ scale: 1.04, y: -2 }}
+											whileTap={{ scale: 0.96 }}
 										>
-											<MessageSquare className="w-8 h-8 text-white" />
-										</motion.div>
+											<motion.div
+												className="absolute inset-0 bg-white/20"
+												initial={{ x: "-100%" }}
+												whileHover={{ x: "100%" }}
+												transition={{ duration: 0.55 }}
+											/>
+											<Mail className="w-4 h-4 relative z-10" />
+											<span className="relative z-10">{t("cta.email")}</span>
+										</motion.button>
 
-										<div className="flex-1 text-center md:text-left">
-											<h3 className="text-2xl font-black text-white mb-2">
-												{t("cta.title")}
-											</h3>
-											<p className="text-white/60 font-medium">
-												{t("cta.description")}
-											</p>
-										</div>
-
-										<div className="flex gap-3">
-											<motion.button
-												className="group relative text-white px-6 py-3 rounded-lg font-bold shadow-xl overflow-hidden"
-												style={{
-													background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})`,
-													boxShadow: `0 10px 40px ${colors.primary[500]}30`,
-												}}
-												whileHover={{ scale: 1.05, y: -2 }}
-												whileTap={{ scale: 0.95 }}
-											>
-												<motion.div
-													className="absolute inset-0 bg-white/20"
-													initial={{ x: '-100%' }}
-													whileHover={{ x: '100%' }}
-													transition={{ duration: 0.6 }}
-												/>
-												<span className="relative flex items-center gap-2">
-													<Mail className="w-5 h-5" />
-													{t("cta.email")}
-												</span>
-											</motion.button>
-
-											<motion.button
-												className="group relative text-white px-6 py-3 rounded-lg font-bold border-2 transition-colors bg-slate-700/30"
-												style={{
-													borderColor: `${colors.primary[500]}40`,
-												}}
-												whileHover={{
-													scale: 1.05,
-													y: -2,
-													borderColor: colors.primary[500],
-												}}
-												whileTap={{ scale: 0.95 }}
-											>
-												<span className="relative flex items-center gap-2">
-													<Phone className="w-5 h-5" />
-													{t("cta.call")}
-												</span>
-											</motion.button>
-										</div>
+										<motion.button
+											className="flex items-center gap-2
+                        px-5 py-3 rounded-xl font-body font-bold text-sm text-white/70
+                        border-2 border-slate-600/50 bg-slate-700/30
+                        hover:border-[var(--color-primary-500)]/50 hover:text-white
+                        transition-colors duration-200"
+											whileHover={{ scale: 1.04, y: -2 }}
+											whileTap={{ scale: 0.96 }}
+										>
+											<Phone className="w-4 h-4" />
+											{t("cta.call")}
+										</motion.button>
 									</div>
 								</div>
 							</div>
 						</motion.div>
 					</motion.div>
 
-					{/* Left Side - FAQ List */}
-					<motion.div className=" lg:col-span-5 lg:sticky top-8 h-fit lg:self-start"
-						initial={{ opacity: 0, x: -30 }}
-						animate={{ opacity: 1, x: 0 }}
-						transition={{ duration: 0.8, delay: 0.2 }}
+					{/* ═══════════════════════════════════════════════
+              RIGHT: Sticky illustration
+          ═══════════════════════════════════════════════ */}
+					<motion.div
+						className="lg:col-span-5 lg:sticky lg:top-8 lg:self-start"
+						initial={{ opacity: 0, x: -24 }}
+						whileInView={{ opacity: 1, x: 0 }}
+						viewport={{ once: true }}
+						transition={{ duration: 0.7, delay: 0.15 }}
 					>
-						{/* Illustration Area */}
-						<motion.div
-							className="mt-12"
-							initial={{ opacity: 0, scale: 0.9 }}
-							animate={{ opacity: 1, scale: 1 }}
-							transition={{ delay: 0.5 }}
-						>
-							<div className="relative">
-								{/* FAQ Illustration Placeholder */}
+						{/* Illustration card */}
+						<div className="relative w-full aspect-square rounded-2xl overflow-hidden
+              border border-[var(--color-primary-500)]/20
+              bg-[linear-gradient(135deg,var(--color-primary-900)/20,var(--color-secondary-900)/20)]">
+
+							{/* Animated border glow */}
+							<motion.div
+								className="absolute -inset-[1px] rounded-2xl theme-gradient-bg -z-10 blur-lg"
+								animate={{ opacity: [0.18, 0.32, 0.18] }}
+								transition={{ duration: 4, repeat: Infinity }}
+							/>
+
+							{/* Concentric rings */}
+							{[180, 260, 340].map((size, i) => (
 								<motion.div
-									className="relative w-full aspect-square rounded-lg overflow-hidden"
-									style={{
-										background: `linear-gradient(135deg, ${colors.primary[900]}20, ${colors.secondary[900]}20)`,
-										border: `2px solid ${colors.primary[500]}20`,
+									key={i}
+									className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+                    rounded-full border border-dashed border-[var(--color-primary-500)]/[0.12]"
+									style={{ width: size, height: size }}
+									animate={{ rotate: i % 2 === 0 ? 360 : -360 }}
+									transition={{ duration: 18 + i * 6, repeat: Infinity, ease: "linear" }}
+								/>
+							))}
+
+							{/* Central question mark */}
+							<motion.div
+								className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+                  w-28 h-28 rounded-2xl theme-gradient-bg
+                  flex items-center justify-center shadow-2xl"
+								animate={{ scale: [1, 1.06, 1], rotate: [0, 4, -4, 0] }}
+								transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+							>
+								<HelpCircle className="w-14 h-14 text-white" strokeWidth={1.5} />
+							</motion.div>
+
+							{/* Floating icon chips */}
+							{FLOAT_ICONS.map(({ Icon, top, left }, i) => (
+								<motion.div
+									key={i}
+									className="absolute w-12 h-12 rounded-xl theme-gradient-bg
+                    flex items-center justify-center shadow-lg"
+									style={{ top, left }}
+									animate={{ y: [0, -14, 0], rotate: [0, 360] }}
+									transition={{
+										y: { duration: 3 + i, repeat: Infinity, ease: "easeInOut", delay: i * 0.5 },
+										rotate: { duration: 6 + i, repeat: Infinity, ease: "linear", delay: i * 0.5 },
 									}}
-									animate={{
-										boxShadow: [
-											`0 0 60px ${colors.primary[500]}20`,
-											`0 0 80px ${colors.secondary[500]}30`,
-											`0 0 60px ${colors.primary[500]}20`,
-										],
-									}}
-									transition={{ duration: 4, repeat: Infinity }}
 								>
-									{/* Question Mark */}
-									<motion.div
-										className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-										animate={{
-											rotate: [0, 10, -10, 0],
-											scale: [1, 1.1, 1],
-										}}
-										transition={{ duration: 6, repeat: Infinity }}
-									>
-										<HelpCircle
-											className="w-32 h-32"
-											style={{
-												color: colors.primary[400],
-												opacity: 0.2,
-											}}
-										/>
-									</motion.div>
-
-									{/* Floating Icons */}
-									{[Sparkles, Heart, Zap, Shield].map((Icon, i) => (
-										<motion.div
-											key={i}
-											className="absolute"
-											style={{
-												top: `${25 + (i * 15)}%`,
-												left: `${15 + (i % 2) * 60}%`,
-											}}
-											animate={{
-												y: [0, -15, 0],
-												rotate: [0, 360],
-												scale: [1, 1.2, 1],
-											}}
-											transition={{
-												duration: 3 + i,
-												repeat: Infinity,
-												delay: i * 0.5,
-											}}
-										>
-											<div
-												className="w-12 h-12 rounded-lg flex items-center justify-center"
-												style={{
-													background: `linear-gradient(135deg, ${colors.primary[500]}, ${colors.secondary[500]})`,
-												}}
-											>
-												<Icon className="w-6 h-6 text-white" />
-											</div>
-										</motion.div>
-									))}
+									<Icon className="w-6 h-6 text-white" />
 								</motion.div>
-							</div>
-						</motion.div>
-					</motion.div>
+							))}
 
+							{/* Stats chips */}
+							<motion.div
+								className="absolute bottom-6 ltr:left-6 rtl:right-6
+                  flex items-center gap-2.5 px-4 py-2.5 rounded-xl
+                  bg-slate-900/80 border border-white/[0.08] backdrop-blur-sm shadow-xl"
+								initial={{ opacity: 0, y: 12 }}
+								whileInView={{ opacity: 1, y: 0 }}
+								viewport={{ once: true }}
+								transition={{ delay: 0.6 }}
+							>
+								<div className="w-8 h-8 rounded-lg theme-gradient-bg flex items-center justify-center">
+									<MessageSquare className="w-4 h-4 text-white" />
+								</div>
+								<div>
+									<p className="font-body text-xs font-black text-white leading-none">
+										{t("badge")}
+									</p>
+									<p className="font-body text-[10px] text-white/40 mt-0.5">
+										24/7
+									</p>
+								</div>
+							</motion.div>
+
+							{/* Answered count chip */}
+							<motion.div
+								className="absolute top-6 ltr:right-6 rtl:left-6
+                  flex items-center gap-2 px-3.5 py-2 rounded-xl
+                  bg-slate-900/80 border border-white/[0.08] backdrop-blur-sm shadow-xl"
+								initial={{ opacity: 0, y: -12 }}
+								whileInView={{ opacity: 1, y: 0 }}
+								viewport={{ once: true }}
+								transition={{ delay: 0.7 }}
+							>
+								<span className="font-display text-xl text-[var(--color-primary-400)] leading-none">
+									{faqs.length}+
+								</span>
+								<span className="font-body text-[10px] text-white/40 leading-tight max-w-[48px]">
+									{t("categories.all")}
+								</span>
+							</motion.div>
+						</div>
+
+						{/* FAQ count by category */}
+						<div className="mt-5 grid grid-cols-3 gap-3">
+							{categories.filter(c => c.id !== "all").slice(0, 3).map((cat) => {
+								const count = faqs.filter(f => f.category === cat.id).length;
+								const Icon = cat.icon;
+								return (
+									<motion.button
+										key={cat.id}
+										onClick={() => { setActiveCategory(cat.id); setOpenIndex(null); }}
+										className={[
+											"flex flex-col items-center gap-1.5 p-3 rounded-xl",
+											"border transition-all duration-200 text-center",
+											activeCategory === cat.id
+												? "theme-gradient-bg border-transparent shadow-lg"
+												: "bg-slate-800/40 border-white/[0.06] hover:border-[var(--color-primary-500)]/30",
+										].join(" ")}
+										whileHover={{ y: -3 }}
+										whileTap={{ scale: 0.97 }}
+									>
+										<Icon className={`w-5 h-5 ${activeCategory === cat.id ? "text-white" : "text-[var(--color-primary-400)]"}`} />
+										<span className={`font-display text-xl leading-none ${activeCategory === cat.id ? "text-white" : "theme-gradient-text"}`}>
+											{count}
+										</span>
+										<span className={`font-body text-[10px] font-bold uppercase tracking-wide ${activeCategory === cat.id ? "text-white/70" : "text-white/35"}`}>
+											{cat.label}
+										</span>
+									</motion.button>
+								);
+							})}
+						</div>
+					</motion.div>
 
 				</div>
 			</div>

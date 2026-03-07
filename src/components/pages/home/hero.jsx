@@ -1,54 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Image as ImageIcon, 
-  Video, 
-  Plus, 
-  Minus, 
-  Check, 
-  Play, 
-  Heart, 
-  Activity, 
-  Zap, 
-  Flame, 
-  User 
+import { motion } from "framer-motion";
+import {
+  ImageIcon, Video, Plus, Minus, Check,
+  Play, Heart, Activity, Zap, Flame, User,
+  ArrowRight, Timer,
 } from "lucide-react";
 
-// ─── Glow Variants ──────────────────────────────────────────
-export const glowVariants = {
-  initial: { opacity: 0, scale: 0.8 },
-  animate: {
-    opacity: [0.2, 0.4, 0.2],
-    scale: [0.8, 1.2, 0.8],
-    transition: {
-      duration: 5,
-      repeat: Infinity,
-      ease: "easeInOut",
-    },
-  },
-};
+// ─── Framer variants ──────────────────────────────────────────────────────────
+const stagger = (delay = 0) => ({
+  hidden: { opacity: 0, y: 24 },
+  show:   { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1], delay } },
+});
 
-// ─── iPhone Mockup Component - Responsive ──────────────────────────────────────────
-function IPhoneMockup({ children, className = "" }) {
+// ─── IPhone Mockup ────────────────────────────────────────────────────────────
+function IPhoneMockup({ children }) {
   return (
-    <div className={`relative ${className}`} style={{ 
-      width: '100%', 
-      maxWidth: '360px',
-      margin: '0 auto'
-    }}>
-      {/* iPhone Frame */}
-      <div className="bg-[#1a1a1a] rounded-[36px] sm:rounded-[44px] md:rounded-[52px] p-[8px] sm:p-[10px] shadow-[0_15px_40px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.1)] sm:shadow-[0_25px_70px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.1)]">
-        {/* Physical Buttons - Responsive */}
-        <div className="absolute left-[-2px] sm:left-[-3px] top-[100px] sm:top-[120px] w-[2px] sm:w-[3px] h-[28px] sm:h-[32px] bg-[#2a2a2a] rounded-l-[2px] sm:rounded-l-[3px]" />
-        <div className="absolute left-[-2px] sm:left-[-3px] top-[138px] sm:top-[162px] w-[2px] sm:w-[3px] h-[40px] sm:h-[48px] bg-[#2a2a2a] rounded-l-[2px] sm:rounded-l-[3px]" />
-        <div className="absolute left-[-2px] sm:left-[-3px] top-[188px] sm:top-[220px] w-[2px] sm:w-[3px] h-[40px] sm:h-[48px] bg-[#2a2a2a] rounded-l-[2px] sm:rounded-l-[3px]" />
-        <div className="absolute right-[-2px] sm:right-[-3px] top-[136px] sm:top-[160px] w-[2px] sm:w-[3px] h-[60px] sm:h-[72px] bg-[#2a2a2a] rounded-r-[2px] sm:rounded-r-[3px]" />
+    <div className="relative mx-auto w-full max-w-[320px]">
+      <div className="rounded-[44px] p-[9px] bg-gradient-to-br from-[#2a2a2c] via-[#1a1a1c] to-[#0f0f10]
+        shadow-[0_0_0_0.5px_rgba(255,255,255,0.08),0_32px_80px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.4)]">
 
-        {/* Screen Container - Responsive height */}
-        <div className="bg-gray-50 rounded-[30px] sm:rounded-[38px] md:rounded-[44px] overflow-hidden flex flex-col h-[580px] sm:h-[640px] md:h-[700px]">
+        {/* Side buttons */}
+        <div className="absolute -left-[3px] top-[100px] w-[3px] h-7  bg-gradient-to-b from-[#333] to-[#222] rounded-l-sm" />
+        <div className="absolute -left-[3px] top-[140px] w-[3px] h-11 bg-gradient-to-b from-[#333] to-[#222] rounded-l-sm" />
+        <div className="absolute -left-[3px] top-[196px] w-[3px] h-11 bg-gradient-to-b from-[#333] to-[#222] rounded-l-sm" />
+        <div className="absolute -right-[3px] top-[138px] w-[3px] h-16 bg-gradient-to-b from-[#333] to-[#222] rounded-r-sm" />
+
+        {/* Screen */}
+        <div className="rounded-[36px] overflow-hidden flex flex-col h-[640px] bg-[#f5f5f7]
+          shadow-[inset_0_0_0_0.5px_rgba(0,0,0,0.1)]">
           {children}
         </div>
       </div>
@@ -56,103 +38,83 @@ function IPhoneMockup({ children, className = "" }) {
   );
 }
 
-// ─── Status Bar Component - Responsive ──────────────────────────────────────────
+// ─── Status Bar ───────────────────────────────────────────────────────────────
 function StatusBar() {
-  const now = new Date();
-  const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+  const [time, setTime] = useState("");
+  useEffect(() => {
+    const tick = () => {
+      const n = new Date();
+      setTime(`${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}`);
+    };
+    tick();
+    const id = setInterval(tick, 10000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
-    <div className="flex justify-between items-center px-4 sm:px-6 h-9 sm:h-11 text-[10px] sm:text-xs font-semibold text-gray-900 flex-shrink-0 bg-gray-50">
-      <span className="tracking-tight">{time}</span>
-      
-      {/* Dynamic Island - Responsive */}
-      <div className="absolute left-1/2 top-[10px] sm:top-[14px] -translate-x-1/2 w-[100px] sm:w-[126px] h-7 sm:h-9 bg-black rounded-[16px] sm:rounded-[20px]" />
-
-      {/* Status Icons - Responsive */}
-      <div className="flex items-center gap-1 sm:gap-1.5 scale-90 sm:scale-100">
-        <SignalIcon />
-        <WiFiIcon />
-        <BatteryIcon />
+    <div className="relative flex items-center justify-between px-[22px] h-11 bg-[#f5f5f7] shrink-0">
+      <span className="text-[12px] font-bold text-[#1a1a1a] tracking-tight font-body">{time}</span>
+      <div className="absolute left-1/2 -translate-x-1/2 top-[10px] w-[120px] h-[30px] bg-black rounded-[20px]" />
+      <div className="flex items-center gap-[5px]">
+        <svg width="16" height="12" viewBox="0 0 16 12">
+          {[0,1,2,3].map(i => (
+            <rect key={i} x={i*4} y={12-(3+i*3)} width={3} height={3+i*3} rx={0.8}
+              fill={i < 3 ? "#1a1a1a" : "#c7c7cc"} />
+          ))}
+        </svg>
+        <svg width="14" height="11" viewBox="0 0 14 11">
+          <circle cx="7" cy="9.5" r="1.5" fill="#1a1a1a"/>
+          <path d="M4.5 7a3.5 3.5 0 015 0" stroke="#1a1a1a" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
+          <path d="M2 4.5a6.5 6.5 0 0110 0" stroke="#1a1a1a" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
+          <path d="M0 2a9 9 0 0114 0" stroke="#c7c7cc" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
+        </svg>
+        <svg width="24" height="11" viewBox="0 0 24 11">
+          <rect x="0.5" y="0.5" width="20" height="10" rx="3" stroke="#1a1a1a" strokeOpacity="0.35" fill="none"/>
+          <rect x="2" y="2" width="14" height="7" rx="1.5" fill="#1a1a1a"/>
+          <path d="M22 3.5v4a2 2 0 000-4z" fill="#1a1a1a" fillOpacity="0.4"/>
+        </svg>
       </div>
     </div>
   );
 }
 
-function SignalIcon() {
-  return (
-    <svg width="14" height="10" viewBox="0 0 17 12" fill="none" className="sm:w-[17px] sm:h-[12px]">
-      {[2, 5, 8, 12].map((h, i) => (
-        <rect 
-          key={i} 
-          x={i * 4.2} 
-          y={12 - h} 
-          width="3" 
-          height={h} 
-          rx="0.8" 
-          fill={i < 3 ? '#1a1a1a' : '#C7C7CC'} 
-        />
-      ))}
-    </svg>
-  );
-}
-
-function WiFiIcon() {
-  return (
-    <svg width="13" height="10" viewBox="0 0 16 12" fill="none" className="sm:w-[16px] sm:h-[12px]">
-      <path d="M8 9.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" fill="#1a1a1a" />
-      <path d="M5.5 8a3.5 3.5 0 015 0" stroke="#1a1a1a" strokeWidth="1.2" strokeLinecap="round" />
-      <path d="M3 5.5a6.5 6.5 0 0110 0" stroke="#1a1a1a" strokeWidth="1.2" strokeLinecap="round" />
-      <path d="M0.5 3a9.5 9.5 0 0115 0" stroke="#C7C7CC" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function BatteryIcon() {
-  return (
-    <svg width="24" height="11" viewBox="0 0 28 13" fill="none" className="sm:w-[28px] sm:h-[13px]">
-      <rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke="#1a1a1a" strokeOpacity="0.35" />
-      <rect x="2" y="2" width="17" height="9" rx="2" fill="#1a1a1a" />
-      <path d="M25 4.5v4a2 2 0 000-4z" fill="#1a1a1a" fillOpacity="0.4" />
-    </svg>
-  );
-}
-
-// ─── Home Indicator Component ──────────────────────────────────────────
+// ─── Home Indicator ───────────────────────────────────────────────────────────
 function HomeIndicator() {
   return (
-    <div className="h-[28px] sm:h-[34px] flex items-center justify-center flex-shrink-0 bg-gray-50">
-      <div className="w-[110px] sm:w-[134px] h-[4px] sm:h-[5px] bg-black rounded-[2.5px] sm:rounded-[3px] opacity-25" />
+    <div className="h-[30px] flex items-center justify-center shrink-0 bg-[#f5f5f7]">
+      <div className="w-[120px] h-1 bg-black rounded-full opacity-[0.18]" />
     </div>
   );
 }
 
-// ─── App Header with Tabs - Responsive ──────────────────────────────────────────
+// ─── App Header ───────────────────────────────────────────────────────────────
 function AppHeader({ locale }) {
-  const t = useTranslations("mobile.exercise");
-  const isRTL = locale === 'ar';
+  const t     = useTranslations("mobile.exercise");
+  const isRTL = locale === "ar";
+  const tabs  = [t("tabs.exercises"), t("tabs.reps"), t("tabs.cardio")];
+  const [active, setActive] = useState(1);
 
   return (
-    <div className="theme-gradient-bg p-3 sm:p-4 pb-4 sm:pb-5 flex-shrink-0" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
-      {/* Title */}
-      <div className="flex items-center justify-center mb-3 sm:mb-4">
-        <h1 className="text-white text-base sm:text-lg font-bold tracking-tight">
-          {t("title")}
-        </h1>
-      </div>
-
-      {/* Tabs - Responsive */}
-      <div className="flex gap-1.5 sm:gap-2 bg-white/10 p-1 sm:p-1.5 rounded-[12px] sm:rounded-[14px]">
-        {[t("tabs.exercises"), t("tabs.reps"), t("tabs.cardio")].map((tab, i) => (
+    <div
+      className="theme-gradient-bg px-4 pt-[14px] pb-4 shrink-0"
+      style={{ direction: isRTL ? "rtl" : "ltr" }}
+    >
+      <p className="text-center text-white/70 text-[11px] font-semibold font-body
+        tracking-[0.12em] uppercase mb-[10px]">
+        {t("title")}
+      </p>
+      <div className="flex gap-1.5 bg-black/20 p-1 rounded-[14px]">
+        {tabs.map((tab, i) => (
           <button
             key={i}
-            className={`
-              flex-1 py-2 sm:py-2.5 rounded-[8px] sm:rounded-[10px] text-[11px] sm:text-[13px] font-bold transition-all duration-300
-              active:scale-95
-              ${i === 1 
-                ? 'bg-white text-[var(--color-primary-600)] shadow-sm' 
-                : 'bg-transparent text-white'
-              }
-            `}
+            onClick={() => setActive(i)}
+            className={[
+              "flex-1 py-2 rounded-[10px] border-none cursor-pointer",
+              "text-[11px] font-bold font-body tracking-[0.02em] transition-all duration-200",
+              active === i
+                ? "bg-white text-[var(--color-primary-600)] shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
+                : "bg-transparent text-white/70",
+            ].join(" ")}
           >
             {tab}
           </button>
@@ -162,137 +124,167 @@ function AppHeader({ locale }) {
   );
 }
 
-// ─── Enhanced Exercise Card - Responsive ──────────────────────────────────────────
-function EnhancedExerciseCard({ exercise, locale }) {
-  const isRTL = locale === 'ar';
-  const t = useTranslations("mobile.exercise");
-  const [sets, setSets] = useState([
-    { done: false, weight: 0, reps: 0 },
-    { done: false, weight: 0, reps: 0 },
-    { done: false, weight: 0, reps: 0 },
-  ]);
+// ─── Counter ─────────────────────────────────────────────────────────────────
+function Counter({ value, onDec, onInc, unit = "" }) {
+  return (
+    <div className="flex items-center justify-center gap-1 bg-[#f0f0f2] rounded-[10px] px-1.5 py-1">
+      <button onClick={onDec}
+        className="w-[22px] h-[22px] rounded-[7px] border-none bg-white cursor-pointer
+          flex items-center justify-center shadow-[0_1px_3px_rgba(0,0,0,0.12)]
+          active:scale-90 transition-transform">
+        <Minus size={11} className="text-[#555]" />
+      </button>
+      <span className="min-w-[32px] text-center text-[13px] font-extrabold text-[#1a1a1a] font-body">
+        {value}{unit}
+      </span>
+      <button onClick={onInc}
+        className="w-[22px] h-[22px] rounded-[7px] border-none bg-white cursor-pointer
+          flex items-center justify-center shadow-[0_1px_3px_rgba(0,0,0,0.12)]
+          active:scale-90 transition-transform">
+        <Plus size={11} className="text-[#555]" />
+      </button>
+    </div>
+  );
+}
 
-  const updateSet = (index, field, value) => {
-    const newSets = [...sets];
-    newSets[index][field] = value;
-    setSets(newSets);
-  };
+// ─── Exercise Card ────────────────────────────────────────────────────────────
+function ExerciseCard({ locale }) {
+  const t     = useTranslations("mobile.exercise");
+  const isRTL = locale === "ar";
+  const [sets, setSets] = useState([
+    { done: false, weight: 60, reps: 8 },
+    { done: true,  weight: 70, reps: 6 },
+    { done: false, weight: 75, reps: 5 },
+  ]);
+  const [restTime, setRestTime] = useState(60);
+
+  const toggle = (i) => setSets(p => p.map((s, idx) => idx === i ? { ...s, done: !s.done } : s));
+  const update = (i, f, v) => setSets(p => p.map((s, idx) => idx === i ? { ...s, [f]: v } : s));
 
   return (
-    <div className="bg-white rounded-lg sm:rounded-lg overflow-hidden mb-3 sm:mb-4 shadow-xl animate-fade-in">
-      {/* Exercise Image - Responsive */}
-      <div className="relative h-[180px] sm:h-[200px] md:h-[220px] bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-primary-200)] flex items-center justify-center">
-        {/* Exercise Illustration - Responsive size */}
-        <div className="relative w-[100px] sm:w-[120px] md:w-[140px] h-[100px] sm:h-[120px] md:h-[140px] animate-pulse-slow">
-          <svg width="100%" height="100%" viewBox="0 0 140 140" fill="none">
-            <circle cx="70" cy="70" r="60" fill="var(--color-primary-500)" opacity="0.1" />
-            <circle cx="70" cy="70" r="45" fill="var(--color-primary-500)" opacity="0.2" />
-            <path d="M50 70h40M70 50v40" stroke="var(--color-primary-500)" strokeWidth="5" strokeLinecap="round" />
-            <circle cx="50" cy="70" r="8" fill="var(--color-primary-500)" />
-            <circle cx="90" cy="70" r="8" fill="var(--color-primary-500)" />
-            <circle cx="70" cy="50" r="8" fill="var(--color-primary-500)" />
-            <circle cx="70" cy="90" r="8" fill="var(--color-primary-500)" />
-          </svg>
+    <div className="bg-white overflow-hidden">
+      {/* Hero image */}
+      <div className="relative h-[160px] bg-gradient-to-br from-[#eef2ff] to-[#ede9fe]
+        flex items-center justify-center overflow-hidden">
+        <svg className="absolute inset-0 w-full h-full opacity-[0.06]" viewBox="0 0 200 160">
+          {[...Array(8)].map((_,i) => (
+            <circle key={i} cx={i*30} cy={80} r={40+i*5}
+              fill="none" stroke="var(--color-primary-600)" strokeWidth="1"/>
+          ))}
+        </svg>
+        <svg width="120" height="80" viewBox="0 0 120 80" fill="none" className="relative z-[1]">
+          <rect x="20" y="36" width="80" height="8" rx="4" fill="var(--color-primary-400)" opacity="0.4"/>
+          <rect x="8"  y="24" width="16" height="32" rx="6" fill="var(--color-primary-500)"/>
+          <rect x="4"  y="30" width="8"  height="20" rx="4" fill="var(--color-primary-700)"/>
+          <rect x="96" y="24" width="16" height="32" rx="6" fill="var(--color-primary-500)"/>
+          <rect x="108" y="30" width="8" height="20" rx="4" fill="var(--color-primary-700)"/>
+          <rect x="52" y="32" width="16" height="16" rx="3" fill="var(--color-primary-600)"/>
+        </svg>
+        {/* Name overlay */}
+        <div
+          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white/95 to-transparent
+            pt-5 pb-2 px-[14px]"
+          style={{ direction: isRTL ? "rtl" : "ltr" }}
+        >
+          <p className="text-[15px] font-extrabold text-[#1a1a1a] font-body tracking-tight leading-tight">
+            {locale === "ar" ? "تمرين الصدر" : "Bench Press"}
+          </p>
+          <p className="text-[11px] font-semibold font-body text-[var(--color-primary-500)]">
+            {locale === "ar" ? "عضلات الصدر" : "Chest · Triceps · Shoulders"}
+          </p>
         </div>
-
-        {/* Media Buttons - Responsive */}
-        <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 flex gap-2">
-          <button className="w-9 h-9 sm:w-11 sm:h-11 rounded-[12px] sm:rounded-[14px] bg-white/95 backdrop-blur-md border-none flex items-center justify-center shadow-lg transition-transform active:scale-90">
-            <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5 theme-primary-text" />
-          </button>
-          <button className="w-9 h-9 sm:w-11 sm:h-11 rounded-[12px] sm:rounded-[14px] bg-white/95 backdrop-blur-md border-none flex items-center justify-center shadow-lg transition-transform active:scale-90">
-            <Video className="w-4 h-4 sm:w-5 sm:h-5 theme-primary-text" />
-          </button>
+        {/* Media buttons */}
+        <div className={`absolute top-[10px] flex gap-1.5 ${isRTL ? "left-[10px]" : "right-[10px]"}`}>
+          {[ImageIcon, Video].map((Icon, i) => (
+            <button key={i}
+              className="w-8 h-8 rounded-[10px] border-none bg-white/90 backdrop-blur-md
+                flex items-center justify-center cursor-pointer
+                shadow-[0_2px_8px_rgba(0,0,0,0.12)] active:scale-90 transition-transform">
+              <Icon size={14} style={{ color: "var(--color-primary-600)" }} />
+            </button>
+          ))}
         </div>
-
-        {/* Gradient Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 h-[40%] bg-gradient-to-t from-white/90 to-transparent" />
       </div>
 
-      {/* Exercise Info - Responsive padding */}
-      <div className="p-3" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
-        {/* Timer Controls - Responsive */}
-        <div className="flex items-center justify-between mb-5 sm:mb-6 md:mb-7 gap-2">
-          <button className="theme-gradient-bg text-white px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-[12px] sm:rounded-[14px] font-bold text-[13px] sm:text-[15px] flex items-center gap-1.5 sm:gap-2 shadow-lg shadow-[var(--color-primary-500)]/30 transition-transform active:scale-95">
-            <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="white" />
-            <span className="hidden sm:inline">{t("start")}</span>
-            <span className="sm:hidden">▶</span>
+      {/* Content */}
+      <div className="p-[14px]" style={{ direction: isRTL ? "rtl" : "ltr" }}>
+        {/* Rest timer */}
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <button className="theme-gradient-bg flex items-center gap-1.5 border-none
+            rounded-xl px-[14px] py-2 text-[12px] font-bold text-white cursor-pointer font-body
+            shadow-[0_4px_12px_rgba(99,102,241,0.35)] active:scale-95 transition-transform">
+            <Play size={12} fill="white" />
+            {t("start")}
           </button>
-
-          <div className="flex items-center gap-1 bg-gray-100 px-2 sm:px-2.5 py-2 sm:py-2.5 rounded-[12px] sm:rounded-[14px]">
-            <button className="w-[28px] h-[28px] sm:w-[34px] sm:h-[34px] rounded-[8px] sm:rounded-[10px] bg-white border-none flex items-center justify-center shadow-sm transition-transform active:scale-90">
-              <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
+          <div className="flex items-center gap-1.5 bg-[#f0f0f2] rounded-xl px-[10px] py-1.5">
+            <Timer size={13} className="text-[#888]" />
+            <button onClick={() => setRestTime(r => Math.max(15, r - 15))}
+              className="border-none bg-white rounded-md w-[22px] h-[22px] cursor-pointer
+                flex items-center justify-center">
+              <Minus size={11} className="text-[#555]" />
             </button>
-            <span className="text-[15px] sm:text-[17px] font-bold text-gray-800 min-w-[40px] sm:min-w-[50px] text-center">
-              1:00
+            <span className="text-[14px] font-extrabold text-[#1a1a1a] min-w-[38px] text-center font-body">
+              {Math.floor(restTime/60)}:{String(restTime%60).padStart(2,"0")}
             </span>
-            <button className="w-[28px] h-[28px] sm:w-[34px] sm:h-[34px] rounded-[8px] sm:rounded-[10px] bg-white border-none flex items-center justify-center shadow-sm transition-transform active:scale-90">
-              <Minus className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
+            <button onClick={() => setRestTime(r => r + 15)}
+              className="border-none bg-white rounded-md w-[22px] h-[22px] cursor-pointer
+                flex items-center justify-center">
+              <Plus size={11} className="text-[#555]" />
             </button>
-          </div>
-
-          <div className=" flex-none w-[50px] h-[50px] sm:w-[60px] sm:h-[60px] rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-xs sm:text-sm font-bold text-gray-500 border-2 sm:border-3 border-white shadow-md">
-            1:00
           </div>
         </div>
 
-        {/* Sets Table - Responsive */}
-        <div className="bg-gray-50 rounded-lg sm:rounded-lg p-3 sm:p-4 mb-4 sm:mb-5">
-          {/* Table Header */}
-          <div className="grid grid-cols-[40px_1fr_1fr] sm:grid-cols-[50px_1fr_1fr] gap-0.5 pb-2 sm:pb-3 mb-2 sm:mb-3 border-b-2 border-gray-200 text-center text-[11px] sm:text-[13px] font-bold text-gray-500">
-            <div>{t("table.done")}</div>
-            <div>{t("table.weight")}</div>
-            <div>{t("table.reps")}</div>
+        {/* Sets table */}
+        <div className="bg-[#f8f8fa] rounded-xl overflow-hidden border border-black/5 mb-3">
+          <div className="grid grid-cols-[36px_1fr_1fr] px-3 py-2 border-b border-black/[0.06] bg-[#f0f0f2]">
+            {[t("table.done"), t("table.weight"), t("table.reps")].map((h, i) => (
+              <span key={i}
+                className="text-[10px] font-bold text-[#999] uppercase tracking-[0.08em] text-center font-body">
+                {h}
+              </span>
+            ))}
           </div>
-
-          {/* Sets Rows */}
-          {sets.map((set, index) => (
-            <div
-              key={index}
-              className={`grid grid-cols-[30px_1fr_1fr] gap-1 sm:gap-1.5 py-1 items-center ${
-                index < sets.length - 1 ? 'border-b border-gray-200' : ''
-              } animate-slide-in`}
-              style={{ animationDelay: `${index * 100}ms` }}
+          {sets.map((set, i) => (
+            <div key={i}
+              className={[
+                "grid grid-cols-[36px_1fr_1fr] px-3 py-2 items-center transition-colors duration-200",
+                i < sets.length - 1 ? "border-b border-black/[0.04]" : "",
+                set.done ? "bg-indigo-500/[0.04]" : "bg-transparent",
+              ].join(" ")}
             >
-              {/* Checkbox */}
               <div className="flex justify-center">
-                <button
-                  onClick={() => updateSet(index, 'done', !set.done)}
-                  className={`
-                    w-4 h-4 sm:w-5 sm:h-5 rounded-lg sm:rounded-lg border-0 flex items-center justify-center transition-all
-                    ${set.done 
-                      ? 'theme-gradient-bg shadow-md shadow-[var(--color-primary-500)]/30' 
-                      : 'bg-white border-[2px] sm:border-[2.5px] border-gray-300'
-                    }
-                  `}
+                <button onClick={() => toggle(i)}
+                  className={[
+                    "w-5 h-5 rounded-[6px] border-none cursor-pointer",
+                    "flex items-center justify-center transition-all duration-200",
+                    set.done
+                      ? "theme-gradient-bg shadow-[0_2px_8px_rgba(99,102,241,0.4)]"
+                      : "bg-[#e0e0e6]",
+                  ].join(" ")}
                 >
-                  {set.done && <Check className="w-3 h-3 sm:w-4 sm:h-4 text-white" strokeWidth={3} />}
+                  {set.done && <Check size={11} color="#fff" strokeWidth={3} />}
                 </button>
               </div>
-
-              {/* Weight Counter */}
-              <CounterControl
-                value={set.weight}
-                onIncrement={() => updateSet(index, 'weight', set.weight + 5)}
-                onDecrement={() => updateSet(index, 'weight', Math.max(0, set.weight - 5))}
-              />
-
-              {/* Reps Counter */}
-              <CounterControl
-                value={set.reps}
-                onIncrement={() => updateSet(index, 'reps', set.reps + 1)}
-                onDecrement={() => updateSet(index, 'reps', Math.max(0, set.reps - 1))}
-              />
+              <Counter value={set.weight} unit=" kg"
+                onDec={() => update(i,"weight", Math.max(0, set.weight-5))}
+                onInc={() => update(i,"weight", set.weight+5)} />
+              <Counter value={set.reps}
+                onDec={() => update(i,"reps", Math.max(0, set.reps-1))}
+                onInc={() => update(i,"reps", set.reps+1)} />
             </div>
           ))}
         </div>
 
-        {/* Action Buttons - Responsive */}
-        <div className="flex gap-2 sm:gap-3">
-          <button className="flex-1 py-3 sm:py-4 rounded-[12px] sm:rounded-[14px] theme-gradient-bg border-none text-white text-[13px] sm:text-[15px] font-bold shadow-lg shadow-[var(--color-primary-500)]/30 transition-transform active:scale-98">
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          <button className="flex-1 py-[10px] rounded-xl border-none theme-gradient-bg
+            text-white text-[13px] font-bold font-body cursor-pointer
+            shadow-[0_4px_14px_rgba(99,102,241,0.35)] active:scale-[0.98] transition-transform">
             {t("buttons.addSet")}
           </button>
-          <button className="px-4 sm:px-5 py-3 sm:py-4 rounded-[12px] sm:rounded-[14px] bg-gray-100 border-none text-gray-500 text-[13px] sm:text-[15px] font-bold transition-transform active:scale-98">
+          <button className="px-4 py-[10px] rounded-xl border border-[#e0e0e6] bg-white
+            text-[#666] text-[13px] font-bold font-body cursor-pointer
+            active:scale-[0.98] transition-transform">
             {t("buttons.save")}
           </button>
         </div>
@@ -301,375 +293,266 @@ function EnhancedExerciseCard({ exercise, locale }) {
   );
 }
 
-// ─── Counter Control Component - Responsive ──────────────────────────────────────────
-function CounterControl({ value, onIncrement, onDecrement }) {
+ 
+
+// ─── Phone Showcase ───────────────────────────────────────────────────────────
+function PhoneShowcase({ locale }) {
   return (
-    <div className="flex items-center justify-center gap-0.5 bg-white px-1 sm:px-1.5 py-1 sm:py-1.5 rounded-lg sm:rounded-lg shadow-sm">
-      <button
-        onClick={onDecrement}
-        className="w-[22px] h-[22px] sm:w-[25px] sm:h-[25px] rounded-lg sm:rounded-lg bg-gray-100 border-none flex items-center justify-center transition-transform active:scale-90"
-      >
-        <Minus className="w-3 h-3 sm:w-4 sm:h-4 text-gray-700" />
-      </button>
-      <span className="text-sm sm:text-base font-bold text-gray-800 min-w-[25px] sm:min-w-[30px] text-center">
-        {value}
-      </span>
-      <button
-        onClick={onIncrement}
-        className="w-[22px] h-[22px] sm:w-[25px] sm:h-[25px] rounded-lg sm:rounded-lg bg-gray-100 border-none flex items-center justify-center transition-transform active:scale-90"
-      >
-        <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-gray-700" />
-      </button>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.9, ease: [0.25, 0.1, 0.25, 1], delay: 0.2 }}
+      className="w-full relative px-20 py-5"
+    >
+      {/* Glow */}
+      <div className="absolute -inset-5 rounded-full
+        bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.25),transparent_70%)]
+        blur-[32px] pointer-events-none z-0" />
+
+      {/* Spinning rings */}
+      {[380,440,500].map((size, i) => (
+        <div key={i} className="absolute rounded-full pointer-events-none top-1/2 left-1/2"
+          style={{
+            width: size, height: size,
+            border: `1px solid rgba(${["99,102,241","139,92,246","168,85,247"][i]},${[0.2,0.15,0.1][i]})`,
+            transform: "translate(-50%,-50%)",
+            animation: `hero-spin-ring ${[22,28,35][i]}s linear infinite ${i%2===0?"":"reverse"}`,
+          }} />
+      ))}
+
+      {/* Phone */}
+      <div className="relative z-[1]">
+        <IPhoneMockup>
+          <StatusBar />
+          <div className="flex-1 overflow-y-auto">
+            <AppHeader locale={locale} />
+            <ExerciseCard locale={locale} />
+          </div>
+          <HomeIndicator />
+        </IPhoneMockup>
+      </div>
+ 
+    </motion.div>
   );
 }
 
-// ─── Exercise Screen Content ──────────────────────────────────────────
-function ExerciseScreenContent({ locale }) {
-  const exercise = {
-    name: locale === 'ar' ? 'تمرين الصدر' : 'Bench Press',
-  };
-
+// ─── Trust Strip ──────────────────────────────────────────────────────────────
+function TrustStrip({ t }) {
   return (
-    <>
-      <AppHeader locale={locale} />
-      <div className="flex-1 overflow-y-auto p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300">
-        <EnhancedExerciseCard exercise={exercise} locale={locale} />
-      </div>
-    </>
-  );
-}
-
-// ─── Main Hero Component - Fully Responsive ──────────────────────────────────────────
-export default function ResponsiveHero() {
-  const t = useTranslations("home.hero");
-  const locale = useLocale();
-  const isRTL = locale === 'ar';
-
-  return (
-    <div className="min-h-screen relative overflow-hidden flex flex-col pt-16 max-md:pt-[120px] " >
-      {/* Background Effects - Responsive */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Animated Gradient Orbs - Responsive sizes */}
-        <motion.div
-          variants={glowVariants}
-          initial="initial"
-          animate="animate"
-          className="absolute top-10 sm:top-20 ltr:right-5 rtl:left-5 sm:ltr:right-10 sm:rtl:left-10 md:ltr:right-20 md:rtl:left-20 w-48 h-48 sm:w-64 sm:h-64 md:w-96 md:h-96 rounded-full blur-2xl sm:blur-3xl"
-          style={{
-            background: `radial-gradient(circle, var(--color-primary-500) 0%, transparent 70%)`,
-            opacity: 0.2,
-          }}
-        />
-        <motion.div
-          variants={glowVariants}
-          initial="initial"
-          animate="animate"
-          transition={{ delay: 0.5 }}
-          className="absolute bottom-10 sm:bottom-20 ltr:left-5 rtl:right-5 sm:ltr:left-10 sm:rtl:right-10 md:ltr:left-20 md:rtl:right-20 w-48 h-48 sm:w-64 sm:h-64 md:w-96 md:h-96 rounded-full blur-2xl sm:blur-3xl"
-          style={{
-            background: `radial-gradient(circle, var(--color-secondary-500) 0%, transparent 70%)`,
-            opacity: 0.2,
-          }}
-        />
-
-        {/* Grid Pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px] sm:bg-[size:100px_100px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_80%)]" />
-
-        {/* Floating Particles - Responsive */}
-        {[...Array(15)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-0.5 h-0.5 sm:w-1 sm:h-1 rounded-full"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              backgroundColor: `var(--color-primary-400)`,
-              opacity: 0.3,
-            }}
-            animate={{
-              y: [0, -20, 0],
-              opacity: [0.3, 0.6, 0.3],
-            }}
-            transition={{
-              duration: 3 + Math.random() * 2,
-              repeat: Infinity,
-              delay: Math.random() * 2,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Hero Content - Responsive */}
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 flex-1 flex items-center justify-center py-8 sm:py-12">
-        <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center w-full">
-          {/* Left Content - Responsive */}
-          <div className="space-y-6 sm:space-y-8 md:space-y-10 animate-fade-in-up text-center lg:text-left">
-            {/* Headlines - Responsive text sizes */}
-            <div className="space-y-3 sm:space-y-4 md:space-y-6">
-              <h1 className="rtl:md:text-right font-black text-white leading-tight tracking-tight">
-                <span className=" rtl:md:text-right block text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl mb-1 sm:mb-2 animate-slide-in-right">
-                  {t("headline.transform")}
-                </span>
-                <span className="xl:leading-[130px] rtl:md:text-right block text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl theme-gradient-text animate-slide-in-right" style={{ animationDelay: '100ms', textShadow: '0 0 60px var(--color-primary-500)' }}>
-                  {t("headline.journey")}
-                </span>
-                <span className=" rtl:md:text-right block text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl mt-1 sm:mt-2 text-gray-300 animate-slide-in-right" style={{ animationDelay: '200ms' }}>
-                  {t("headline.withScience")}
-                </span>
-              </h1>
-
-              <p className="rtl:md:text-right text-base sm:text-lg md:text-xl lg:text-2xl text-gray-300 leading-relaxed max-w-2xl mx-auto lg:mx-0 font-medium animate-fade-in px-4 sm:px-0" style={{ animationDelay: '300ms' }}>
-                {t("description")}
-              </p>
-            </div>
-
-						<div className="md:hidden">
-            <MobileShowcase locale={locale} t={t} />
-          </div>
-
-            {/* CTA Buttons - Responsive */}
-            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 animate-fade-in justify-center lg:justify-start" style={{ animationDelay: '400ms' }}>
-              <button className="group relative theme-gradient-bg text-white px-8 sm:px-10 md:px-12 py-4 sm:py-5 md:py-6 rounded-lg sm:rounded-lg font-bold text-base sm:text-lg transition-all shadow-2xl shadow-[var(--color-primary-500)]/50 hover:shadow-[var(--color-primary-500)]/70 hover:scale-105 overflow-hidden w-full sm:w-auto">
-                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                <span className="relative flex items-center justify-center gap-2">
-                  <Zap className="w-5 h-5 sm:w-6 sm:h-6" />
-                  {t("cta.getStarted")}
-                  <svg className="rtl:scale-x-[-1] w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                </span>
-              </button>
-              
-              <button className="relative bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white px-8 sm:px-10 md:px-12 py-4 sm:py-5 md:py-6 rounded-lg sm:rounded-lg font-bold text-base sm:text-lg hover:bg-white/20 hover:border-white/50 transition-all group w-full sm:w-auto">
-                <span className="flex items-center justify-center gap-2">
-                  <Play className="w-5 h-5 sm:w-6 sm:h-6 group-hover:scale-110 transition-transform" />
-                  {t("cta.watchDemo")}
-                </span>
-              </button>
-            </div>
-
-            {/* Trust Indicators - Responsive */}
-            <TrustIndicators t={t} />
-          </div>
-
-          <div className="max-md:hidden">
-            <MobileShowcase locale={locale} t={t} />
-          </div>
+    <motion.div variants={stagger(0.55)} initial="hidden" animate="show">
+      <div className="flex items-center bg-white/[0.04] border border-white/[0.08]
+        rounded-2xl overflow-hidden backdrop-blur-xl">
+        {/* Users */}
+        <div className="flex-1 px-5 py-[14px]">
+          <p className="text-[22px] font-black text-white leading-none font-body tracking-tight">50K+</p>
+          <p className="text-[11px] text-white/45 font-medium font-body mt-0.5">{t("trust.activeUsers")}</p>
         </div>
-      </div>
-
-      {/* Custom Animations */}
-      <style jsx>{`
-        @keyframes pulse-slow {
-          0%, 100% { opacity: 0.7; }
-          50% { opacity: 1; }
-        }
-        .animate-pulse-slow {
-          animation: pulse-slow 3s ease-in-out infinite;
-        }
-      `}</style>
-    </div>
-  );
-}
-
-// ─── Trust Indicators Component - Responsive ──────────────────────────────────────────
-function TrustIndicators({ t }) {
-  return (
-    <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 pt-4 sm:pt-6 animate-fade-in" style={{ animationDelay: '500ms' }}>
-      {/* Active Users Card - Responsive */}
-      <div className="group relative w-full sm:w-auto">
-        <div className="absolute -inset-1 bg-gradient-to-r from-[var(--color-primary-500)] via-[var(--color-secondary-500)] to-pink-500 rounded-lg sm:rounded-lg opacity-0 group-hover:opacity-75 blur-lg transition-all duration-500 animate-pulse" />
-        
-        <div className="relative flex items-center gap-3 sm:gap-4 bg-slate-800/80 backdrop-blur-xl rounded-lg sm:rounded-lg px-4 sm:px-6 py-3 sm:py-4 border border-slate-700/50 group-hover:border-[var(--color-primary-500)]/50 transition-all duration-300 shadow-lg">
-          <div className="flex -space-x-4 sm:-space-x-6">
+        <div className="w-px h-10 bg-white/10 shrink-0" />
+        {/* Rating */}
+        <div className="flex-1 px-5 py-[14px]">
+          <div className="flex items-center gap-1">
+            <p className="text-[22px] font-black text-white leading-none font-body tracking-tight">4.9</p>
+            <svg width="16" height="16" viewBox="0 0 24 24" className="-mt-0.5">
+              <path fill="#fbbf24" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+          </div>
+          <p className="text-[11px] text-white/45 font-medium font-body mt-0.5">{t("trust.rating")}</p>
+        </div>
+        <div className="w-px h-10 bg-white/10 shrink-0" />
+        {/* Avatar stack */}
+        <div className="px-5 py-[14px] flex items-center">
+          <div className="flex">
             {[
-              { color: 'from-[var(--color-primary-400)] to-[var(--color-primary-600)]' },
-              { color: 'from-[var(--color-secondary-400)] to-[var(--color-secondary-600)]' },
-              { color: 'from-pink-400 to-pink-600' },
-              { color: 'from-blue-400 to-blue-600' }
-            ].map((avatar, i) => (
-              <div
-                key={i}
-                className={`z-[10] w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br ${avatar.color} border-2 sm:border-3 border-slate-800 flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-all duration-300`}
+              "from-[var(--color-primary-400)] to-[var(--color-primary-600)]",
+              "from-[var(--color-secondary-400)] to-[var(--color-secondary-600)]",
+              "from-pink-400 to-pink-600",
+              "from-blue-400 to-blue-600",
+            ].map((grad, i) => (
+              <div key={i}
+                className={`w-7 h-7 rounded-full bg-gradient-to-br ${grad}
+                  border-2 border-[rgba(10,10,20,0.9)]
+                  flex items-center justify-center ${i > 0 ? "-ml-2" : ""}`}
+                style={{ zIndex: 4 - i }}
               >
-                <User className="w-4 h-4 sm:w-5 sm:h-5 text-white animate-pulse" />
+                <User size={12} color="#fff" />
               </div>
             ))}
           </div>
-
-          <div>
-            <p className="text-white font-black text-xl sm:text-2xl bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent group-hover:from-[var(--color-primary-400)] group-hover:to-[var(--color-secondary-400)] transition-all duration-300">
-              50,000+
-            </p>
-            <p className="text-gray-400 text-xs sm:text-sm font-semibold group-hover:text-gray-300 transition-colors">
-              {t("trust.activeUsers")}
-            </p>
-          </div>
-
-          <div className="absolute -top-2 -right-2 w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg animate-bounce">
-            <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" strokeWidth={3} />
-          </div>
         </div>
       </div>
-
-      {/* Divider - Hidden on mobile */}
-      <div className="hidden sm:block relative h-12 sm:h-16 w-px">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-600 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[var(--color-primary-500)] via-[var(--color-secondary-500)] to-pink-500 animate-pulse opacity-50 blur-sm" />
-      </div>
-
-      {/* Rating Card - Responsive */}
-      <RatingCard t={t} />
-    </div>
+    </motion.div>
   );
 }
 
-// ─── Rating Card Component - Responsive ──────────────────────────────────────────
-function RatingCard({ t }) {
-  return (
-    <div className="group relative w-full sm:w-auto">
-      <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500 via-orange-500 to-yellow-500 rounded-lg sm:rounded-lg opacity-0 group-hover:opacity-75 blur-lg transition-all duration-500" />
-      
-      <div className="relative flex items-center gap-2 sm:gap-3 bg-slate-800/80 backdrop-blur-xl rounded-lg sm:rounded-lg px-4 sm:px-6 py-3 sm:py-4 border border-slate-700/50 group-hover:border-yellow-500/50 transition-all duration-300 shadow-lg">
-        <div className="flex gap-0">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="transform group-hover:scale-110 transition-all duration-300"
-              style={{ 
-                animationDelay: `${i * 100}ms`,
-                filter: 'drop-shadow(0 2px 4px rgba(251, 191, 36, 0.5))'
-              }}
-            >
-              <svg className="w-6 h-6 sm:w-8 sm:h-8 animate-pulse" viewBox="0 0 24 24" style={{ animationDelay: `${i * 200}ms` }}>
-                <defs>
-                  <linearGradient id={`star-gradient-${i}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#fbbf24" />
-                    <stop offset="100%" stopColor="#f59e0b" />
-                  </linearGradient>
-                </defs>
-                <path fill={`url(#star-gradient-${i})`} d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-            </div>
-          ))}
-        </div>
-
-        <div>
-          <p className="text-white font-black text-xl sm:text-2xl bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
-            4.9/5
-          </p>
-          <p className="text-gray-400 text-xs sm:text-sm font-semibold group-hover:text-gray-300 transition-colors">
-            {t("trust.rating")}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Mobile Showcase Component - Responsive ──────────────────────────────────────────
-function MobileShowcase({ locale, t }) {
-  return (
-    <div className="relative animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-      {/* Decorative Rings - Responsive sizes */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="absolute w-[400px] sm:w-[450px] md:w-[550px] h-[400px] sm:h-[450px] md:h-[550px] rounded-full border-2 sm:border-3 md:border-4 border-[var(--color-primary-500)]/30 animate-spin-slow shadow-xl sm:shadow-2xl shadow-[var(--color-primary-500)]/20" style={{ animationDuration: '20s' }} />
-        <div className="absolute w-[380px] sm:w-[420px] md:w-[520px] h-[380px] sm:h-[420px] md:h-[520px] rounded-full border-2 sm:border-3 md:border-4 border-[var(--color-secondary-500)]/30 animate-spin-slow shadow-xl sm:shadow-2xl shadow-[var(--color-secondary-500)]/20" style={{ animationDuration: '25s', animationDirection: 'reverse' }} />
-        <div className="absolute w-[360px] sm:w-[390px] md:w-[490px] h-[360px] sm:h-[390px] md:h-[490px] rounded-full border-2 sm:border-3 md:border-4 border-pink-500/30 animate-spin-slow shadow-xl sm:shadow-2xl shadow-pink-500/20" style={{ animationDuration: '30s' }} />
-
-        {/* Background blur */}
-        <div className="absolute w-[300px] sm:w-[350px] md:w-[450px] h-[300px] sm:h-[350px] md:h-[450px] rounded-full bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm" />
-      </div>
-
-      {/* Central Mobile Mockup */}
-      <div className="relative z-10 flex items-center justify-center">
-        <div className="transform hover:scale-105 transition-transform duration-500">
-          <IPhoneMockup>
-            <StatusBar />
-            <ExerciseScreenContent locale={locale} />
-            <HomeIndicator />
-          </IPhoneMockup>
-        </div>
-      </div>
-
-      {/* Floating Stats - Responsive */}
-      <FloatingStats t={t} />
-    </div>
-  );
-}
-
-// ─── Floating Stats Component - Responsive ──────────────────────────────────────────
-function FloatingStats({ t }) {
-  const stats = [
-    {
-      icon: Activity,
-      value: t("floatingStats.exercises.value"),
-      label: t("floatingStats.exercises.label"),
-      gradient: 'from-[var(--color-primary-500)] to-[var(--color-primary-600)]',
-      position: 'absolute -top-2 sm:-top-4 left-[30px] sm:left-[50px]',
-      delay: '0s'
-    },
-    {
-      icon: Flame,
-      value: t("floatingStats.calories.value"),
-      label: t("floatingStats.calories.label"),
-      gradient: 'from-[var(--color-secondary-500)] to-[var(--color-secondary-600)]',
-      position: 'absolute -bottom-2 sm:-bottom-4 right-0',
-      delay: '1s'
-    },
-    {
-      icon: Heart,
-      value: t("floatingStats.heartRate.value"),
-      label: t("floatingStats.heartRate.label"),
-      gradient: 'from-pink-500 to-pink-600',
-      position: 'absolute top-1/2 left-4 sm:left-8',
-      delay: '2s',
-      fill: true
-    }
-  ];
+// ─── Main Export ─────────────────────────────────────────────────────────────
+export default function ResponsiveHero() {
+  const t      = useTranslations("home.hero");
+  const locale = useLocale();
+  const isRTL  = locale === "ar";
 
   return (
     <>
-      {stats.map((stat, index) => {
-        const Icon = stat.icon;
-        return (
-          <div
-            key={index}
-            className={`${stat.position} max-md:hidden bg-gradient-to-br ${stat.gradient} rounded-lg sm:rounded-lg p-2.5 sm:p-3 md:p-4 cursor-pointer transform hover:scale-110 transition-all animate-float shadow-xl sm:shadow-2xl`}
-            style={{ animationDelay: stat.delay }}
-          >
-            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 px-0.5 sm:px-1">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-white/20 rounded-lg sm:rounded-lg flex items-center justify-center backdrop-blur-sm">
-                <Icon className={`w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5 text-white ${stat.fill ? 'fill-white' : ''} animate-pulse`} />
-              </div>
-              <div className="flex items-center gap-0.5 sm:gap-1">
-                <p className="text-lg sm:text-xl md:text-2xl font-black text-white">{stat.value}</p>
-                <p className="text-[10px] sm:text-xs text-white/90 font-semibold max-w-[40px] sm:max-w-none">{stat.label}</p>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-      
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-15px); }
+ 
+      <style>{`
+        @keyframes hero-float {
+          0%,100% { transform: translateY(0px); }
+          50%      { transform: translateY(-14px); }
         }
-        @media (min-width: 640px) {
-          @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
+        @keyframes hero-spin-ring {
+          from { transform: translate(-50%,-50%) rotate(0deg); }
+          to   { transform: translate(-50%,-50%) rotate(360deg); }
+        }
+        @keyframes hero-pulse-dot {
+          0%,100% { opacity:1; transform:scale(1); }
+          50%     { opacity:0.5; transform:scale(1.5); }
+        }
+        /* Grid layout — pure CSS so it works regardless of Tailwind JIT scan */
+        .hero-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 48px;
+          align-items: center;
+          width: 100%;
+        }
+        @media (min-width: 1024px) {
+          .hero-grid { grid-template-columns: 1fr 1fr; gap: 64px; }
+        }
+        .hero-phone-desktop { display: none; }
+        @media (min-width: 1024px) {
+          .hero-phone-desktop {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            min-height: 600px;
           }
         }
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        .hero-phone-mobile { display: block; }
+        @media (min-width: 1024px) {
+          .hero-phone-mobile { display: none; }
         }
-        .animate-float { animation: float 3s ease-in-out infinite; }
-        .animate-spin-slow { animation: spin-slow linear infinite; }
       `}</style>
+
+      <section
+        className="relative min-h-screen overflow-hidden flex flex-col pt-20
+          bg-gradient-to-br from-[#070711] via-[#0d0d1a] to-[#090913]"
+        style={{ direction: isRTL ? "rtl" : "ltr" }}
+      >
+        {/* Orb 1 */}
+        <motion.div
+          animate={{ scale:[1,1.15,1], opacity:[0.15,0.28,0.15] }}
+          transition={{ duration:7, repeat:Infinity, ease:"easeInOut" }}
+          className={`absolute top-[5%] ${isRTL ? "left-[5%]" : "right-[5%]"}
+            w-[500px] h-[500px] rounded-full pointer-events-none z-0 blur-[80px]
+            bg-[radial-gradient(circle,var(--color-primary-500)_0%,transparent_70%)]`}
+        />
+        {/* Orb 2 */}
+        <motion.div
+          animate={{ scale:[1,1.2,1], opacity:[0.12,0.22,0.12] }}
+          transition={{ duration:9, repeat:Infinity, ease:"easeInOut", delay:2 }}
+          className={`absolute bottom-0 ${isRTL ? "right-[10%]" : "left-[10%]"}
+            w-[400px] h-[400px] rounded-full pointer-events-none z-0 blur-[70px]
+            bg-[radial-gradient(circle,var(--color-secondary-500)_0%,transparent_70%)]`}
+        />
+        {/* Grid pattern */}
+        <div className="absolute inset-0 z-0 pointer-events-none
+          bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)]
+          bg-[size:80px_80px]
+          [mask-image:radial-gradient(ellipse_at_50%_50%,black_20%,transparent_80%)]" />
+
+        {/* ── Content — max-width 1440px ── */}
+        <div className="relative z-[1] w-full max-w-[1440px] mx-auto px-6 lg:px-16 py-10 pb-20 flex-1 flex items-center">
+          <div className="hero-grid">
+
+            {/* ─── Text column ─────────────────────────────────── */}
+            <motion.div
+              initial="hidden"
+              animate="show"
+              variants={{ show: { transition: { staggerChildren: 0.12 } } }}
+              className="  w-full"
+            >
+               
+
+              {/* Headlines */}
+              <div className="mb-6">
+                <motion.h1 variants={stagger(0.08)}
+                  className="font-display text-[clamp(52px,8vw,96px)] leading-[0.93]
+                    text-white max-md:text-center m-0 tracking-[0.01em]">
+                  {t("headline.transform")}
+                </motion.h1>
+
+                <motion.h1 variants={stagger(0.16)}
+                  className="font-display max-md:text-center text-[clamp(52px,8vw,96px)] leading-[0.93] m-0
+                    bg-gradient-to-br from-[var(--color-primary-400)] to-[var(--color-secondary-400)]
+                    bg-clip-text text-transparent
+                    drop-shadow-[0_0_40px_rgba(99,102,241,0.5)]">
+                  {t("headline.journey")}
+                </motion.h1>
+
+                <motion.h2 variants={stagger(0.24)}
+                  className="font-display max-md:text-center text-[clamp(28px,4.5vw,52px)] leading-[1.1]
+                    m-0 mt-1 text-white/[0.38] tracking-[0.02em] font-normal">
+                  {t("headline.withScience")}
+                </motion.h2>
+              </div>
+
+              {/* Description */}
+              <motion.p variants={stagger(0.32)}
+                className="font-body max-md:text-center text-[clamp(15px,1.8vw,18px)] text-white/50
+                  leading-[1.7] m-0 mb-8 max-w-[460px]">
+                {t("description")}
+              </motion.p>
+
+              {/* Phone — mobile only */}
+              <motion.div variants={stagger(0.36)} className="hero-phone-mobile mb-9">
+                <div className="max-w-[500px] mx-auto relative">
+                  <PhoneShowcase locale={locale} />
+                </div>
+              </motion.div>
+
+              {/* CTAs */}
+              <motion.div variants={stagger(0.40)} className="flex max-md:justify-center flex-wrap gap-3 mb-8">
+                <button
+                  className="group relative flex items-center gap-2 border-none rounded-[14px]
+                    px-7 py-[14px] text-[15px] font-bold font-body text-white cursor-pointer
+                    theme-gradient-bg overflow-hidden
+                    shadow-[0_4px_24px_rgba(99,102,241,0.45),inset_0_1px_0_rgba(255,255,255,0.15)]
+                    hover:-translate-y-px hover:shadow-[0_8px_32px_rgba(99,102,241,0.55)]
+                    transition-all duration-150"
+                >
+                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20
+                    to-transparent -translate-x-full group-hover:translate-x-full
+                    transition-transform duration-700 pointer-events-none" />
+                  <Zap size={16} fill="white" className="relative z-[1]" />
+                  <span className="relative z-[1]">{t("cta.getStarted")}</span>
+                  <ArrowRight size={15}
+                    className={`relative z-[1] ${isRTL ? "scale-x-[-1]" : ""}`} />
+                </button>
+
+                <button
+                  className="flex items-center gap-2 border border-white/[0.12] rounded-[14px]
+                    px-6 py-[14px] text-[15px] font-semibold font-body text-white/80 cursor-pointer
+                    bg-white/[0.06] backdrop-blur-lg
+                    hover:bg-white/10 hover:border-white/[0.22]
+                    transition-all duration-150"
+                >
+                  <Play size={15} />
+                  {t("cta.watchDemo")}
+                </button>
+              </motion.div>
+
+              {/* Trust */}
+              <TrustStrip t={t} />
+            </motion.div>
+
+            {/* ─── Phone — desktop only ─────────────────────────── */}
+            <div className="hero-phone-desktop">
+              <PhoneShowcase locale={locale} />
+            </div>
+
+          </div>
+        </div>
+      </section>
     </>
   );
 }

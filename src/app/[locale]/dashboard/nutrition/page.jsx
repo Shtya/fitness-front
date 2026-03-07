@@ -25,9 +25,10 @@ import {
 	AlertTriangle,
 	Trash2,
 	Copy,
+	Replace,
 } from 'lucide-react';
 
-import { useForm, Controller, useFieldArray } from 'react-hook-form';
+import { useForm, Controller, useFieldArray, useWatch } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 
@@ -315,6 +316,15 @@ function buildSchemas(t) {
 		unit: yup.string().oneOf(['g', 'count']).default('g'),
 		quantity: yup.number().typeError(t('validation.number')).min(0, t('validation.min')).nullable(),
 		calories: yup.number().typeError(t('validation.number')).min(0, t('validation.min')).required(t('validation.required')),
+		alternative: yup
+			.object()
+			.nullable()
+			.shape({
+				name: yup.string().trim().default(''),
+				unit: yup.string().oneOf(['g', 'count']).default('g'),
+				quantity: yup.number().nullable(),
+				calories: yup.number().min(0).default(0),
+			}),
 	});
 
 	const supplementSchema = yup.object().shape({
@@ -555,19 +565,34 @@ export default function NutritionManagementPage() {
 	const onDuplicate = async (plan) => {
 		try {
 			const { data: fullPlan } = await api.get(`/nutrition/meal-plans/${plan.id}`);
-
-			const duplicatePayload = {
-				...fullPlan,
-				name: `${fullPlan.name} (Copy)`,
-			};
-
-			delete duplicatePayload.id;
-			delete duplicatePayload.created_at;
-			delete duplicatePayload.updated_at;
-
-			await api.post('/nutrition/meal-plans', duplicatePayload);
-			Notification(t('toast.duplicated'), 'success');
-			await fetchPlans();
+			const draft = JSON.parse(JSON.stringify(fullPlan));
+			draft.id = undefined;
+			draft.name = `${draft.name || fullPlan.name} (Copy)`;
+			draft.created_at = undefined;
+			draft.updated_at = undefined;
+			if (draft.days) {
+				draft.days.forEach((d) => {
+					d.id = undefined;
+					d.created_at = undefined;
+					d.updated_at = undefined;
+					(d.meals || []).forEach((m) => {
+						m.id = undefined;
+						m.created_at = undefined;
+						m.updated_at = undefined;
+						(m.items || []).forEach((it) => {
+							it.id = undefined;
+							it.created_at = undefined;
+							it.updated_at = undefined;
+						});
+						(m.supplements || []).forEach((s) => {
+							s.id = undefined;
+							s.created_at = undefined;
+							s.updated_at = undefined;
+						});
+					});
+				});
+			}
+			setEditPlan(draft);
 		} catch (e) {
 			Notification(e?.response?.data?.message || t('toast.duplicate_failed'), 'error');
 		}
@@ -720,10 +745,24 @@ export default function NutritionManagementPage() {
 					clearPlanIdFromUrl();
 					setEditPlan(null);
 				}}
-				title={editPlan ? `${t('modals.edit_title')}: ${editPlan.name}` : ''}
+				title={editPlan ? (editPlan.id ? `${t('modals.edit_title')}: ${editPlan.name}` : `${t('btn.duplicate')}: ${editPlan.name}`) : ''}
 			>
-				<div className="rounded-lg p-3 sm:p-4" style={{ background: 'linear-gradient(to bottom, var(--color-primary-50), white)' }}>
-					{editPlan && <MealPlanForm scrollRef={scrollRef} initialPlan={editPlan} onSubmitPayload={(payload) => onUpdate(editPlan.id, payload)} submitLabel="btn.update" />}
+				<div className=" "  >
+					{editPlan && (
+						<MealPlanForm
+							scrollRef={scrollRef}
+							initialPlan={editPlan}
+							onSubmitPayload={async (payload) => {
+								if (editPlan?.id) {
+									await onUpdate(editPlan.id, payload);
+								} else {
+									await onCreate(payload);
+									setEditPlan(null);
+								}
+							}}
+							submitLabel={editPlan?.id ? 'btn.update' : 'btn.create'}
+						/>
+					)}
 				</div>
 			</Modal>
 
@@ -936,7 +975,7 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 	};
 
 	return (
-		<form className="space-y-6 mt-2" onSubmit={handleSubmit(onSubmit)}>
+		<form className="space-y-6 " onSubmit={handleSubmit(onSubmit)}>
 			<div className="grid grid-cols-2 max-md:grid-cols-1 gap-3">
 				<Controller
 					name="name"
@@ -948,8 +987,8 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 					control={control}
 					render={({ field }) => <Input placeholder={t('form.description')} name="description" value={field.value} onChange={field.onChange} error={errors?.description?.message} />}
 				/>
-				<Controller name="notesList" control={control} render={({ field }) => <NotesListInput value={Array.isArray(field.value) && field.value.length ? field.value : ['']} onChange={field.onChange} />} />
 			</div>
+				<Controller name="notesList" control={control} render={({ field }) => <NotesListInput value={Array.isArray(field.value) && field.value.length ? field.value : ['']} onChange={field.onChange} />} />
 
 			<div className="space-y-3">
 				<div className="flex items-center justify-between">
@@ -1108,6 +1147,7 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 
 	const { fields: itemFields, append: appendItem, remove: removeItem, move: moveItem } = useFieldArray({ control, name: `${basePath}.items` });
 	const { fields: supFields, append: appendSup, remove: removeSup, move: moveSup } = useFieldArray({ control, name: `${basePath}.supplements` });
+	const watchedItems = useWatch({ control, name: `${basePath}.items` });
 
 	const addItem = () => appendItem(blankItem());
 	const addSup = () => appendSup(blankSupplement());
@@ -1116,7 +1156,9 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 		<div className="mt-3 space-y-3">
 			{/* -------- Items -------- */}
 			<div className="p-4 space-y-2">
-				{itemFields.map((f, idx) => (
+				{itemFields.map((f, idx) => {
+					const ex = watchedItems?.[idx];
+					return (
 					<DraggableCard key={f.id || idx} index={idx} onMove={(from, to) => moveItem(from, to)}>
 						<div className="flex flex-col gap-2 rounded-lg">
 							<div className="flex items-center justify-between gap-2">
@@ -1189,8 +1231,44 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 									</div>
 								</div>
 
-								<DangerX size="md" onClick={() => removeItem(idx)} title={t('btn.remove_meal')} />
+								<div className="flex items-center gap-1">
+									<button
+										type="button"
+										title={t('form.add_alternative', { default: 'Add alternative item' })}
+										onClick={() => setValue?.(`${basePath}.items.${idx}.alternative`, ex.alternative ? null : blankAlternative(), { shouldDirty: true })}
+										className={[
+											'inline-flex h-10 w-10 items-center justify-center rounded-lg border transition',
+											ex.alternative ? 'border-slate-200 bg-slate-50 text-slate-500' : 'border-[color:var(--color-primary-200)] bg-[color:var(--color-primary-50)] text-[color:var(--color-primary-600)] hover:bg-[color:var(--color-primary-100)]',
+										].join(' ')}
+										aria-label={t('form.add_alternative', { default: 'Add alternative' })}
+									>
+										<Replace className="w-4 h-4" />
+									</button>
+									<DangerX size="md" onClick={() => removeItem(idx)} title={t('btn.remove_meal')} />
+								</div>
 							</div>
+
+							{/* Alternative item row */}
+							{ex.alternative && (
+								<div className="mt-2 pl-6 border-l-2 border-amber-200 bg-amber-50/50 rounded-r-lg p-3 space-y-2">
+									<div className="flex items-center justify-between gap-2 mb-1">
+										<span className="text-xs font-semibold text-amber-800">{t('form.alternative_item', { default: 'Alternative (if main not available)' })}</span>
+										<button
+											type="button"
+											onClick={() => setValue?.(`${basePath}.items.${idx}.alternative`, null, { shouldDirty: true })}
+											className="text-xs text-amber-700 hover:text-amber-900 underline"
+										>
+											{t('btn.remove_alternative', { default: 'Remove alternative' })}
+										</button>
+									</div>
+									<div className="grid grid-cols-2 md:grid-cols-[1fr_140px_92px_140px] gap-3">
+										<Controller name={`${basePath}.items.${idx}.alternative.name`} control={control} render={({ field }) => <MiniField placeholder={t('form.item_name')} value={field.value} onChange={(e) => field.onChange(e.target.value)} onBlur={field.onBlur} />} />
+										<Controller name={`${basePath}.items.${idx}.alternative.quantity`} control={control} render={({ field }) => <MiniField placeholder={t('form.qty')} value={field.value == null ? '' : field.value} onChange={(e) => field.onChange(asNumber(e.target.value))} onBlur={field.onBlur} inputMode="decimal" />} />
+										<Controller name={`${basePath}.items.${idx}.alternative.unit`} control={control} render={({ field }) => <UnitSelect value={field.value || 'g'} onChange={(v) => field.onChange(v)} />} />
+										<Controller name={`${basePath}.items.${idx}.alternative.calories`} control={control} render={({ field }) => <MiniField placeholder={t('form.calories')} value={field.value == 0 ? '' : field.value} onChange={(e) => field.onChange(asNumber(e.target.value))} onBlur={field.onBlur} inputMode="decimal" />} />
+									</div>
+								</div>
+							)}
 
 							{/* show item errors if any */}
 							{getErr(errors, `${basePath}.items.${idx}.name`) ? <p className="text-xs text-red-600">{getErr(errors, `${basePath}.items.${idx}.name`)}</p> : null}
@@ -1198,7 +1276,8 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 							{getErr(errors, `${basePath}.items.${idx}.calories`) ? <p className="text-xs text-red-600">{getErr(errors, `${basePath}.items.${idx}.calories`)}</p> : null}
 						</div>
 					</DraggableCard>
-				))}
+					);
+				})}
 			</div>
 
 			{/* -------- Supplements -------- */}
@@ -1481,12 +1560,22 @@ export function PlanDetailsView({ plan }) {
 																		</thead>
 																		<tbody>
 																			{m.items.map((it, ii) => (
-																				<tr key={ii} className="border-t border-slate-200">
-																					<td className="py-1 pr-3">{it.name}</td>
-																					<td className="py-1 pr-3">{it.quantity ?? '—'}</td>
-																					<td className="py-1 pr-3">{it.unit || 'g'}</td>
-																					<td className="py-1 pr-3">{it.calories}</td>
-																				</tr>
+																				<React.Fragment key={ii}>
+																					<tr className="border-t border-slate-200">
+																						<td className="py-1 pr-3">{it.name}</td>
+																						<td className="py-1 pr-3">{it.quantity ?? '—'}</td>
+																						<td className="py-1 pr-3">{it.unit || 'g'}</td>
+																						<td className="py-1 pr-3">{it.calories}</td>
+																					</tr>
+																					{(it.alternativeName != null && String(it.alternativeName || '').trim()) && (
+																						<tr className="border-t border-amber-100 bg-amber-50/50">
+																							<td className="py-1 pr-3 text-amber-800 text-xs">↳ {t('form.alternative_item', { default: 'Alternative' })}: {it.alternativeName}</td>
+																							<td className="py-1 pr-3">{it.alternativeQuantity ?? '—'}</td>
+																							<td className="py-1 pr-3">{it.alternativeUnit || 'g'}</td>
+																							<td className="py-1 pr-3">{it.alternativeCalories ?? '—'}</td>
+																						</tr>
+																					)}
+																				</React.Fragment>
 																			))}
 																		</tbody>
 																	</table>
@@ -1774,7 +1863,7 @@ export function DangerX({ onClick, title = 'Remove', size = 'md', loading = fals
 		lg: 'h-11 px-3.5 text-base',
 	};
 
-	const base = 'inline-flex items-center gap-2 rounded-lg border font-medium transition-all shadow-sm focus-visible:outline-none active:scale-[.98]';
+	const base = 'inline-flex items-center gap-2 rounded-lg border font-medium transition-all focus-visible:outline-none active:scale-[.98]';
 	const idleColors = 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-red-300';
 	const armedColors = 'border-red-200 bg-red-50 text-red-700 focus-visible:ring-2 focus-visible:ring-red-400';
 	const disabledColors = 'opacity-60 cursor-not-allowed';
@@ -1883,6 +1972,10 @@ function GripDots() {
 	 Helpers (updated for unit)
 	 ========================= */
 function blankItem() {
+	return { name: '', quantity: null, unit: 'g', calories: 0, alternative: null };
+}
+
+function blankAlternative() {
 	return { name: '', quantity: null, unit: 'g', calories: 0 };
 }
 
@@ -1901,6 +1994,7 @@ function mapFoodsToMeals(foods = []) {
 				quantity: coerceNum(f.quantity, null),
 				calories: coerceNum(f.calories),
 				unit: f.unit === 'count' ? 'count' : 'g',
+				alternative: (f.alternativeName != null && String(f.alternativeName || '').trim()) ? { name: f.alternativeName, quantity: coerceNum(f.alternativeQuantity, null), unit: f.alternativeUnit === 'count' ? 'count' : 'g', calories: coerceNum(f.alternativeCalories) } : null,
 			})),
 			supplements: [],
 		},
@@ -1913,11 +2007,14 @@ function coerceNum(v, d = 0) {
 }
 
 function sanitizeItem(it) {
+	const alt = it?.alternative;
+	const hasAlt = alt && String(alt?.name ?? '').trim();
 	return {
 		name: it?.name ?? '',
 		unit: it?.unit === 'count' ? 'count' : 'g',
 		quantity: it?.quantity == null || it?.quantity === '' ? null : coerceNum(it.quantity, null),
 		calories: coerceNum(it?.calories),
+		...(hasAlt ? { alternative: { name: String(alt.name).trim(), quantity: alt.quantity == null || alt.quantity === '' ? null : coerceNum(alt.quantity, null), unit: alt.unit === 'count' ? 'count' : 'g', calories: coerceNum(alt.calories) } } : {}),
 	};
 }
 
@@ -1933,7 +2030,14 @@ function cloneMealsStrict(meals = []) {
 	return (meals || []).map((m) => ({
 		title: m?.title ?? 'Meal',
 		time: m?.time ? String(m.time) : '',
-		items: (m?.items || []).map(sanitizeItem),
+		items: (m?.items || []).map((it) => {
+			const base = sanitizeItem(it);
+			const alt = it?.alternative;
+			const hasAlt = alt && String(alt?.name ?? '').trim();
+			if (hasAlt) base.alternative = { name: String(alt.name).trim(), quantity: alt.quantity == null || alt.quantity === '' ? null : coerceNum(alt.quantity, null), unit: alt.unit === 'count' ? 'count' : 'g', calories: coerceNum(alt.calories) };
+			else base.alternative = null;
+			return base;
+		}),
 		supplements: (m?.supplements || []).map(sanitizeSupplement),
 	}));
 }

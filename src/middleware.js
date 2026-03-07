@@ -3,8 +3,7 @@ import { NextResponse } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
 
 export const NAV_HREFS = {
-  client: [
-    // '/dashboard/my',
+  client: [ 
     '/dashboard/my/workouts',
     '/dashboard/my/progress',
     '/dashboard/my/nutrition',
@@ -70,6 +69,9 @@ const PUBLIC_PREFIXES = [
   '/public',
   '/thank-you',
   '/workspace',
+  '/money',
+  '/dashboard/recipes',
+  '/dashboard/my/recipes',
   '/', 
   /^\/form\/\d+\/submit(?:\/|$)/,
   /^\/workouts\/plans(?:\/|$)/, 

@@ -61,17 +61,117 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+ 
 }
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.bg-primary-50 {
+  background-color: #eef2ff;
+}
+.bg-primary-100 {
+  background-color: #e0e7ff;
+}
+.text-primary-500 {
+  color: #6366f1;
+}
+.text-primary-600 {
+  color: #4f46e5;
+}
+.text-primary-700 {
+  color: #4338ca;
+}
+.border-primary-200 {
+  border-color: #c7d2fe;
+}
+.border-primary-300 {
+  border-color: #a5b4fc;
+}
+.border-primary-400 {
+  border-color: #818cf8;
+}
+.bg-secondary-100 {
+  background-color: #f3e8ff;
+}
+.text-secondary-700 {
+  color: #7e22ce;
+}
+.border-secondary-200 {
+  border-color: #e9d5ff;
+}
+.from-primary-50 {
+  --tw-gradient-from: #eef2ff;
+}
+.from-primary-100 {
+  --tw-gradient-from: #e0e7ff;
+}
+.from-primary-500 {
+  --tw-gradient-from: #6366f1;
+}
+.from-primary-600 {
+  --tw-gradient-from: #4f46e5;
+}
+.to-secondary-500 {
+  --tw-gradient-to: #a855f7;
+}
+.to-secondary-600 {
+  --tw-gradient-to: #9333ea;
+}
+.to-primary-100 {
+  --tw-gradient-to: #e0e7ff;
+}
+.from-secondary-100 {
+  --tw-gradient-from: #f3e8ff;
+}
+.ring-primary-400 {
+  --tw-ring-color: #818cf8;
+}
+.shadow-primary-200 {
+  --tw-shadow-color: #c7d2fe;
+}
+.shadow-primary-500\/25 {
+  --tw-shadow-color: rgba(99, 102, 241, 0.25);
+}
+.shadow-primary-500\/35 {
+  --tw-shadow-color: rgba(99, 102, 241, 0.35);
+}
+.focus-visible\:ring-primary-400:focus-visible {
+  --tw-ring-color: #818cf8;
+}
+.focus\:ring-primary-400:focus {
+  --tw-ring-color: #818cf8;
+}
+.accent-amber-500 {
+  accent-color: #f59e0b;
+}
+
 body {
   color: black;
 }
 
 [dir='ltr'] body * {
-  font-family: var(--font-open-sans) ;
+  font-family: var(--font-open-sans);
 }
 
 [dir='rtl'] body * {
-  font-family: var(--font-arabic) ;
+  font-family: var(--font-arabic);
 }
 .font-ar {
   font-family: var(--font-arabic) !important;

@@ -150,6 +150,9 @@ export default function Layout({ children }) {
 		pathname.startsWith('/auth') ||
 		pathname.startsWith('/thank-you') ||
 		pathname.startsWith('/form') ||
+		pathname === '/' ||
+		pathname === '/money' ||
+		pathname.startsWith('/workspace') ||
 		pathname.includes('/dashboard/builder/preview')
 	);
 	const blockFormOnMobile = !isFormRoute && isMobile && isAdminOrCoach;
@@ -290,9 +293,9 @@ export default function Layout({ children }) {
 
 							<div className="relative flex-1 min-w-0 overflow-x-hidden h-screen">
 								<AnimatePresence mode="wait">
-									<div className="max-[1025px]:block hidden">
+									{!isAuthRoute && <div className="max-[1025px]:block hidden">
 										<Header onMenu={() => setSidebarOpen(!sidebarOpen)} />
-									</div>
+									</div>}
 									<motion.main
 										key={pathname}
 										initial={{ opacity: 0, y: 8 }}
@@ -304,7 +307,7 @@ export default function Layout({ children }) {
 										{/* Add bottom padding when impersonating so content isn't hidden behind bar */}
 										<div
 											id="body"
-											className={`${!isAuthRoute && `h-screen overflow-auto p-3 md:p-6`} ${isImpersonating ? 'pb-16' : ''}`}
+											className={`${!isAuthRoute && `h-screen overflow-auto p-3 md:p-4`} ${isImpersonating ? 'pb-16' : ''}`}
 										>
 											{children}
 										</div>

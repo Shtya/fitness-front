@@ -1,654 +1,849 @@
 'use client';
 
-import React, { useState, createContext, useContext, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, createContext, useContext, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence, LazyMotion, domAnimation } from 'framer-motion';
+import { motion, AnimatePresence, LazyMotion, domAnimation, useMotionValue, useTransform } from 'framer-motion';
 import axios from 'axios';
 import { useTranslations } from 'next-intl';
 import {
-	AlertCircle,
-	Eye,
-	EyeOff,
-	Star,
-	Shield,
-	Zap,
-	Lock,
-	ArrowRight,
-	CheckCircle2,
-	Award,
-	Users,
-	Activity,
-	Dumbbell,
-	Heart,
+	AlertCircle, Eye, EyeOff, Shield, Zap, Lock,
+	ArrowRight, CheckCircle2, Award, Users, Activity,
+	Dumbbell, Heart, TrendingUp, Star,
+	User,
 } from 'lucide-react';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { loginPersist } from '@/app/role-access';
 import { useTheme } from '@/app/[locale]/theme';
 
-/* ================== ANIMATION CONFIGS ================== */
-const spring = { type: 'spring', stiffness: 400, damping: 30, mass: 0.8 };
-const smoothSpring = { type: 'spring', stiffness: 300, damping: 28, mass: 0.9 };
-
-/* ================== Axios Instance ================== */
+/* ── Axios ─────────────────────────────────────────────────────────────── */
 const axiosInstance = axios.create({
 	baseURL: process.env.NEXT_PUBLIC_BASE_URL + '/api/v1',
 	headers: { 'Content-Type': 'application/json' },
 });
-
-axiosInstance.interceptors.request.use(
-	(config) => {
-		if (typeof window !== 'undefined') {
-			const token = localStorage.getItem('accessToken');
-			if (token) config.headers.Authorization = `Bearer ${token}`;
-		}
-		return config;
-	},
-	(error) => Promise.reject(error)
-);
-
-axiosInstance.interceptors.response.use(
-	(response) => response,
-	async (error) => {
-		const originalRequest = error.config;
-		const url = (originalRequest?.url || '').toLowerCase();
-		const AUTH_SKIP = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout'];
-		const isAuthEndpoint = AUTH_SKIP.some((p) => url.includes(p));
-		
-		if (isAuthEndpoint) {
-			return Promise.reject(error);
-		}
-
-		if (error.response?.status === 401 && !originalRequest?._retry) {
-			const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
-			if (!refreshToken) return Promise.reject(error);
-
-			originalRequest._retry = true;
-			try {
-				const { data } = await axiosInstance.post('/auth/refresh', { refreshToken });
-				const { accessToken, refreshToken: newRefreshToken } = data || {};
-				if (typeof window !== 'undefined') {
-					if (accessToken) localStorage.setItem('accessToken', accessToken);
-					if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken);
-				}
-				if (accessToken) originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-				return axiosInstance(originalRequest);
-			} catch (refreshError) {
-				if (typeof window !== 'undefined') {
-					localStorage.removeItem('accessToken');
-					localStorage.removeItem('refreshToken');
-					localStorage.removeItem('user');
-					window.location.href = '/auth';
-				}
-				return Promise.reject(refreshError);
-			}
-		}
-		return Promise.reject(error);
+axiosInstance.interceptors.request.use((cfg) => {
+	if (typeof window !== 'undefined') {
+		const tok = localStorage.getItem('accessToken');
+		if (tok) cfg.headers.Authorization = `Bearer ${tok}`;
 	}
-);
+	return cfg;
+}, (e) => Promise.reject(e));
+axiosInstance.interceptors.response.use((r) => r, async (error) => {
+	const orig = error.config;
+	const url = (orig?.url || '').toLowerCase();
+	const SKIP = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout'];
+	if (SKIP.some(p => url.includes(p))) return Promise.reject(error);
+	if (error.response?.status === 401 && !orig?._retry) {
+		const rt = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+		if (!rt) return Promise.reject(error);
+		orig._retry = true;
+		try {
+			const { data } = await axiosInstance.post('/auth/refresh', { refreshToken: rt });
+			const { accessToken: at, refreshToken: nrt } = data || {};
+			if (typeof window !== 'undefined') {
+				if (at) localStorage.setItem('accessToken', at);
+				if (nrt) localStorage.setItem('refreshToken', nrt);
+			}
+			if (at) orig.headers.Authorization = `Bearer ${at}`;
+			return axiosInstance(orig);
+		} catch (re) {
+			if (typeof window !== 'undefined') {
+				['accessToken', 'refreshToken', 'user'].forEach(k => localStorage.removeItem(k));
+				window.location.href = '/auth';
+			}
+			return Promise.reject(re);
+		}
+	}
+	return Promise.reject(error);
+});
 
+/* ── Context / Schema ───────────────────────────────────────────────────── */
 const AuthContext = createContext(null);
-
 const loginSchema = yup.object().shape({
 	email: yup.string().email('invalidEmail').required('invalidEmail'),
 	password: yup.string().min(1, 'passwordRequired').required('passwordRequired'),
 });
-
-/* ================== Helper Functions ================== */
 function getPostLoginPath(role) {
 	const r = (role || '').toString().toLowerCase();
-	if (r === 'admin') return '/dashboard/users';
-	if (r === 'coach' || r === 'cocach') return '/dashboard/users';
+	if (r === 'admin' || r === 'coach' || r === 'cocach') return '/dashboard/users';
 	if (r === 'client') return '/dashboard/my/workouts';
 	return '/dashboard/users';
 }
 
-/* ================== FLOATING PARTICLES - OPTIMIZED ================== */
-const FloatingParticles = React.memo(() => {
-	const { colors } = useTheme();
-	const particles = useMemo(() => 
-		Array.from({ length: 20 }, (_, i) => ({
-			id: i,
-			size: Math.random() * 5 + 2,
-			x: Math.random() * 100,
-			y: Math.random() * 100,
-			duration: Math.random() * 8 + 12,
-			delay: Math.random() * 5,
-			opacity: Math.random() * 0.35 + 0.1,
-		})), []
-	);
+/* ── CSS-in-JS tokens ───────────────────────────────────────────────────── */
+const C = {
+	bg: '#f8f9fb',
+	surface: '#ffffff',
+	border: 'rgba(0,0,0,0.08)',
+	textHi: '#0f172a',
+	textMid: '#64748b',
+	textLow: '#cbd5e1',
+	error: '#dc2626',
+};
 
-	return (
-		<div className="absolute inset-0 overflow-hidden pointer-events-none">
-			{particles.map((p) => (
-				<motion.div
-					key={p.id}
-					className="absolute rounded-full will-change-transform"
-					style={{
-						width: p.size,
-						height: p.size,
-						left: `${p.x}%`,
-						top: `${p.y}%`,
-						background: p.id % 2 === 0 ? colors.primary[400] : colors.secondary[400],
-						opacity: p.opacity,
-						boxShadow: `0 0 ${p.size * 2}px ${p.id % 2 === 0 ? colors.primary[400] : colors.secondary[400]}`,
-					}}
-					animate={{
-						y: [0, -40, 0],
-						x: [0, Math.random() * 30 - 15, 0],
-						scale: [1, 1.4, 1],
-						opacity: [p.opacity, p.opacity * 1.5, p.opacity],
-					}}
-					transition={{
-						duration: p.duration,
-						delay: p.delay,
-						repeat: Infinity,
-						ease: 'easeInOut',
-					}}
-				/>
-			))}
-		</div>
-	);
-});
-
-FloatingParticles.displayName = 'FloatingParticles';
-
-/* ================== TITLE COMPONENT - ENHANCED ================== */
-const TitleLogin = React.memo(() => {
-	const t = useTranslations('auth');
-	const { colors } = useTheme();
-
-	return (
-		<motion.div 
-			className="mb-8 text-center" 
-			initial={{ opacity: 0, y: 30 }} 
-			animate={{ opacity: 1, y: 0 }} 
-			transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-		>
-			{/* Badge */}
-			<motion.div
-				initial={{ opacity: 0, scale: 0.8 }}
-				animate={{ opacity: 1, scale: 1 }}
-				transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-				className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full mb-6 border-2 backdrop-blur-xl relative overflow-hidden"
-				style={{
-					backgroundColor: `${colors.primary[50]}`,
-					borderColor: `${colors.primary[200]}`,
-				}}>
-				<motion.div
-					animate={{ rotate: 360 }}
-					transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-				>
-					<Star className="w-4 h-4" style={{ color: colors.primary[600] }} />
-				</motion.div>
-				<span className="text-xs font-black uppercase tracking-wider" style={{ color: colors.primary[700] }}>
-					{t('welcome', { defaultValue: 'Welcome Back' })}
-				</span>
-			</motion.div>
-
-			{/* Title with enhanced gradient */}
-			<motion.h1
-				className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-3 leading-tight"
-				initial={{ opacity: 0, y: 20 }}
-				animate={{ opacity: 1, y: 0 }}
-				transition={{ delay: 0.2, duration: 0.6 }}
-				style={{
-					color: `${colors.gradient.from}` 
-				}}>
-				{t('signIn')}
-			</motion.h1>
-
-			<motion.p 
-				className="text-sm sm:text-base font-bold text-slate-600"
-				initial={{ opacity: 0 }}
-				animate={{ opacity: 1 }}
-				transition={{ delay: 0.3 }}
-			>
-				{t('subtitle')}
-			</motion.p>
-
-			{/* Decorative line */}
-			<motion.div
-				className="mt-5 h-1 w-20 mx-auto rounded-full"
-				style={{
-					background: `linear-gradient(90deg, ${colors.gradient.from}, ${colors.gradient.to})`,
-				}}
-				initial={{ scaleX: 0 }}
-				animate={{ scaleX: 1 }}
-				transition={{ delay: 0.4, duration: 0.6 }}
-			/>
-		</motion.div>
-	);
-});
-
-TitleLogin.displayName = 'TitleLogin';
-
-/* ================== FIELD ERROR ================== */
+/* ══════════════════════════════════════════════════════════════════════════
+	 FIELD ERROR
+══════════════════════════════════════════════════════════════════════════ */
 const FieldError = React.memo(({ msg }) => {
 	if (!msg) return null;
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: -5, scale: 0.95 }}
-			animate={{ opacity: 1, y: 0, scale: 1 }}
-			exit={{ opacity: 0, scale: 0.95 }}
-			className="mt-3 flex items-center gap-2 text-sm text-red-600 font-bold bg-red-50 px-4 py-2.5 rounded-lg border-2 border-red-200">
-			<AlertCircle className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
-			<span>{msg}</span>
-		</motion.div>
+		<motion.p
+			initial={{ opacity: 0, y: -4 }}
+			animate={{ opacity: 1, y: 0 }}
+			exit={{ opacity: 0 }}
+			style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: C.error }}
+		>
+			<AlertCircle size={13} strokeWidth={2.5} style={{ flexShrink: 0 }} />
+			{msg}
+		</motion.p>
 	);
 });
-
 FieldError.displayName = 'FieldError';
 
-/* ================== LOGIN FORM - ENHANCED ================== */
+/* ══════════════════════════════════════════════════════════════════════════
+	 LOGIN FORM
+══════════════════════════════════════════════════════════════════════════ */
 const LoginForm = React.memo(({ onLoggedIn }) => {
 	const t = useTranslations('auth');
 	const auth = useContext(AuthContext);
 	const { colors } = useTheme();
-
-	if (!auth) {
-		throw new Error('AuthContext is not provided');
-	}
-
+	if (!auth) throw new Error('AuthContext missing');
 	const { setLoading, setError, loading } = auth;
-	const [showPassword, setShowPassword] = useState(false);
-	const [focusedField, setFocusedField] = useState(null);
+	const [showPwd, setShowPwd] = useState(false);
+	const [focused, setFocused] = useState(null);
 
-	const {
-		register,
-		handleSubmit,
-		formState: { errors },
-		setError: setRHError,
-	} = useForm({
+	const { register, handleSubmit, formState: { errors }, setError: setRHError } = useForm({
 		resolver: yupResolver(loginSchema),
 		defaultValues: { email: '', password: '' },
 	});
 
 	const onSubmit = useCallback(async (data) => {
-		setLoading(true);
-		setError(null);
-
+		setLoading(true); setError(null);
 		try {
-			const response = await axiosInstance.post('/auth/login', data);
-			const { accessToken, refreshToken, user } = response.data || {};
-
+			const res = await axiosInstance.post('/auth/login', data);
+			const { accessToken, refreshToken, user } = res.data || {};
 			if (!accessToken || !refreshToken) throw new Error('Missing tokens');
-
 			if (typeof window !== 'undefined') {
 				localStorage.setItem('accessToken', accessToken);
 				localStorage.setItem('refreshToken', refreshToken);
 				localStorage.setItem('user', JSON.stringify(user || {}));
 			}
-
 			await fetch('/api/auth/login', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				method: 'POST', headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ accessToken, refreshToken, user }),
 			});
-
 			loginPersist(user);
 			toast.success(t('success.signedIn'));
 			onLoggedIn?.(user);
 		} catch (err) {
 			let msg = err?.response?.data?.message || t('errors.loginFailed');
-
 			if (err?.response?.status === 401) {
 				const low = String(msg || '').toLowerCase();
 				if (low.includes('pending')) msg = t('errors.accountPending');
 				else if (low.includes('suspended')) msg = t('errors.accountSuspended');
 			}
-
-			const lowerMsg = String(msg).toLowerCase();
-			if (lowerMsg.includes('email')) {
-				setRHError('email', { type: 'server', message: 'invalidEmail' });
-			} else if (lowerMsg.includes('password')) {
-				setRHError('password', { type: 'server', message: 'passwordRequired' });
-			}
-
-			setError(msg);
-			if (msg === 'Incorrect email or password') return toast.error(t(msg));
-			toast.error(msg);
-		} finally {
-			setLoading(false);
-		}
+			const lm = String(msg).toLowerCase();
+			if (lm.includes('email')) setRHError('email', { type: 'server', message: 'invalidEmail' });
+			else if (lm.includes('password')) setRHError('password', { type: 'server', message: 'passwordRequired' });
+			setError(msg); toast.error(msg);
+		} finally { setLoading(false); }
 	}, [setLoading, setError, setRHError, onLoggedIn, t]);
 
-	const togglePasswordVisibility = useCallback(() => {
-		setShowPassword(prev => !prev);
-	}, []);
+	const fieldStyle = (name) => ({
+		background: 'transparent',
+		border: 'none',
+		borderBottom: `1px solid`,
+		borderBottomColor: focused === name
+			? colors.primary[400]
+			: errors[name]
+				? C.error
+				: '#e2e8f0',
+		borderRadius: 0,
+		padding: '11px 36px 11px 0',
+		width: '100%',
+		fontSize: 14,
+		fontWeight: 500,
+		outline: 'none',
+		color: '#0f172a',
+		transition: 'border-color 0.2s',
+		letterSpacing: '0.01em',
+	});
 
 	return (
 		<LazyMotion features={domAnimation}>
-			<motion.form 
-				initial={{ opacity: 0, y: 20 }} 
-				animate={{ opacity: 1, y: 0 }} 
-				transition={{ duration: 0.5, delay: 0.1 }} 
-				onSubmit={handleSubmit(onSubmit)} 
-				className="w-full space-y-5" 
+			<motion.form
+				initial={{ opacity: 0, y: 8 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.45, delay: 0.1 }}
+				onSubmit={handleSubmit(onSubmit)}
 				noValidate
+				style={{ width: '100%' }}
 			>
-				{/* Email */}
-				<div className="space-y-2.5">
-					<label className="block text-sm font-black text-slate-800 px-1">{t('email')}</label>
-					<div className="relative group">
-						<motion.div
-							className="absolute inset-0 rounded-lg blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity -z-10"
-							style={{
-								background: `linear-gradient(135deg, ${colors.primary[300]}, ${colors.secondary[300]})`,
-							}}
-						/>
+				{/* ── Email ── */}
+				<div style={{ marginBottom: 28 }}>
+					<label style={{
+						display: 'block', fontSize: 10, fontWeight: 700,
+						letterSpacing: '0.2em', textTransform: 'uppercase',
+						color: '#64748b', marginBottom: 10,
+					}}>
+						{t('email')}
+					</label>
+					<div style={{ position: 'relative' }}>
 						<input
-							type="email"
-							inputMode="email"
-							placeholder={t('enterEmail')}
-							autoComplete="email"
-							className="w-full h-14 rounded-lg border-2 bg-white px-4 text-base font-semibold outline-none transition-all duration-300"
-							style={{
-								borderColor: focusedField === 'email' ? colors.primary[400] : colors.primary[200],
-								boxShadow: focusedField === 'email' ? `0 0 0 4px ${colors.primary[500]}15, 0 10px 30px -10px ${colors.primary[500]}30` : 'none',
-							}}
-							onFocus={() => setFocusedField('email')}
-							onBlur={() => setFocusedField(null)}
+							type="email" inputMode="email"
+							placeholder={t('enterEmail')} autoComplete="email"
+							style={fieldStyle('email')}
+							onFocus={() => setFocused('email')}
+							onBlur={() => setFocused(null)}
 							{...register('email')}
-						/> 
+						/>
+						<motion.div
+							style={{
+								position: 'absolute', bottom: 0, left: 0, right: 0, height: 1,
+								background: `linear-gradient(90deg, ${colors.primary[500]}, ${colors.primary[300]})`,
+								originX: 0,
+							}}
+							animate={{ scaleX: focused === 'email' ? 1 : 0 }}
+							transition={{ duration: 0.28 }}
+						/>
+
+						<button
+							type="button"
+							style={{
+								position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
+								background: 'none', border: 'none', cursor: 'pointer',
+								color: '#64748b', padding: '4px', display: 'flex', alignItems: 'center',
+							}}
+						>
+							<User size={15} strokeWidth={2} />
+						</button>
+
 					</div>
-					<AnimatePresence>
-						{errors.email?.message && <FieldError msg={t(String(errors.email.message))} />}
-					</AnimatePresence>
+					<AnimatePresence>{errors.email?.message && <FieldError msg={t(String(errors.email.message))} />}</AnimatePresence>
 				</div>
 
-				{/* Password */}
-				<div className="space-y-2.5">
-					<label className="block text-sm font-black text-slate-800 px-1">{t('password')}</label>
-					<div className="relative group">
-						<motion.div
-							className="absolute inset-0 rounded-lg blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity -z-10"
-							style={{
-								background: `linear-gradient(135deg, ${colors.primary[300]}, ${colors.secondary[300]})`,
-							}}
-						/>
+				{/* ── Password ── */}
+				<div style={{ marginBottom: 36 }}>
+					<label style={{
+						display: 'block', fontSize: 10, fontWeight: 700,
+						letterSpacing: '0.2em', textTransform: 'uppercase',
+						color: '#64748b', marginBottom: 10,
+					}}>
+						{t('password')}
+					</label>
+					<div style={{ position: 'relative' }}>
 						<input
-							type={showPassword ? 'text' : 'password'}
-							placeholder={t('enterPassword')}
-							autoComplete="current-password"
-							className="w-full h-14 rounded-lg border-2 bg-white px-4 ltr:pr-14 rtl:pl-14 text-base font-semibold outline-none transition-all duration-300"
-							style={{
-								borderColor: focusedField === 'password' ? colors.primary[400] : colors.primary[200],
-								boxShadow: focusedField === 'password' ? `0 0 0 4px ${colors.primary[500]}15, 0 10px 30px -10px ${colors.primary[500]}30` : 'none',
-							}}
-							onFocus={() => setFocusedField('password')}
-							onBlur={() => setFocusedField(null)}
+							type={showPwd ? 'text' : 'password'}
+							placeholder={t('enterPassword')} autoComplete="current-password"
+							style={fieldStyle('password')}
+							onFocus={() => setFocused('password')}
+							onBlur={() => setFocused(null)}
 							{...register('password')}
 						/>
-						<motion.button
-							type="button"
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							aria-label={showPassword ? t('a11y.hidePassword') : t('a11y.showPassword')}
-							onClick={togglePasswordVisibility}
-							className="absolute inset-y-0 ltr:right-2 rtl:left-2 my-auto h-10 w-10 grid place-items-center rounded-lg transition-all duration-300"
+						<motion.div
 							style={{
-								backgroundColor: showPassword ? `${colors.primary[500]}20` : colors.primary[50],
-								color: colors.primary[600],
-							}}>
-							{showPassword ? <EyeOff className="w-5 h-5" strokeWidth={2.5} /> : <Eye className="w-5 h-5" strokeWidth={2.5} />}
-						</motion.button>
-						 
+								position: 'absolute', bottom: 0, left: 0, right: 0, height: 1,
+								background: `linear-gradient(90deg, ${colors.primary[500]}, ${colors.primary[300]})`,
+								originX: 0,
+							}}
+							animate={{ scaleX: focused === 'password' ? 1 : 0 }}
+							transition={{ duration: 0.28 }}
+						/>
+						<button
+							type="button"
+							onClick={() => setShowPwd(p => !p)}
+							aria-label={showPwd ? t('a11y.hidePassword') : t('a11y.showPassword')}
+							style={{
+								position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
+								background: 'none', border: 'none', cursor: 'pointer',
+								color: '#64748b', padding: '4px', display: 'flex', alignItems: 'center',
+							}}
+						>
+							{showPwd ? <EyeOff size={15} strokeWidth={2} /> : <Eye size={15} strokeWidth={2} />}
+						</button>
 					</div>
-					<AnimatePresence>
-						{errors.password?.message && <FieldError msg={t(String(errors.password.message))} />}
-					</AnimatePresence>
+					<AnimatePresence>{errors.password?.message && <FieldError msg={t(String(errors.password.message))} />}</AnimatePresence>
 				</div>
 
-				{/* Submit Button */}
-				<div className="pt-3">
-					<motion.button
-						disabled={loading}
-						whileHover={{ scale: loading ? 1 : 1.02, y: loading ? 0 : -2 }}
-						whileTap={{ scale: loading ? 1 : 0.98 }}
-						className="relative w-full inline-flex items-center justify-center gap-3 overflow-hidden rounded-lg px-6 py-4 font-black text-base text-white transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed group shadow-2xl"
-						style={{
-							background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
-							boxShadow: `0 20px 40px -10px ${colors.primary[500]}60`,
-						}}>
+				{/* ── Submit ── */}
+				<motion.button
+					type="submit"
+					disabled={loading}
+					whileHover={!loading ? { scale: 1.01 } : {}}
+					whileTap={!loading ? { scale: 0.99 } : {}}
+					style={{
+						position: 'relative', width: '100%', height: 50,
+						borderRadius: 6, border: 'none',
+						cursor: loading ? 'not-allowed' : 'pointer',
+						overflow: 'hidden', opacity: loading ? 0.65 : 1,
+						background: `linear-gradient(135deg, ${colors.gradient.from} 0%, ${colors.gradient.to} 100%)`,
+						boxShadow: loading ? 'none' : `0 8px 32px -8px ${colors.primary[500]}60`,
+					}}
+				>
+					{loading && (
 						<motion.div
-							className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
-							initial={{ x: '-100%' }}
-							animate={{ x: loading ? '200%' : '-100%' }}
-							transition={{
-								repeat: loading ? Infinity : 0,
-								duration: 1.5,
-								ease: 'linear',
-							}}
-						/>
-
-						<motion.div
-							className="absolute inset-0"
 							style={{
-								background: `radial-gradient(circle, ${colors.primary[300]}40, transparent)`,
+								position: 'absolute', inset: 0,
+								background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%)',
 							}}
-							animate={loading ? {
-								scale: [1, 1.5, 1],
-								opacity: [0.5, 0, 0.5],
-							} : {}}
-							transition={{
-								duration: 2,
-								repeat: Infinity,
-							}}
+							initial={{ x: '-100%' }}
+							animate={{ x: '200%' }}
+							transition={{ repeat: Infinity, duration: 1.1, ease: 'linear' }}
 						/>
+					)}
+					<span style={{
+						position: 'relative', zIndex: 1,
+						display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+						color: 'white', fontWeight: 800, fontSize: 13,
+						letterSpacing: '0.1em', textTransform: 'uppercase',
 
-						<span className="relative z-10 flex items-center gap-2.5">
-							{loading ? (
-								<>
-									<span className="tracking-wide">{t('loading.signingIn')}</span>
-									<motion.div 
-										animate={{ rotate: 360 }} 
-										transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} 
-										className="w-5 h-5"
-									>
-										<Zap className="w-5 h-5" strokeWidth={2.5} />
-									</motion.div>
-								</>
-							) : (
-								<>
-									<span className="tracking-wide">{t('signInButton')}</span>
-									<motion.div 
-										className="w-5 h-5" 
-										animate={{ x: [0, 5, 0] }} 
-										transition={{ repeat: Infinity, duration: 1.5 }}
-									>
-										<ArrowRight className="w-5 h-5 rtl:scale-x-[-1]" strokeWidth={2.5} />
-									</motion.div>
-								</>
-							)}
-						</span>
+					}}>
+						{loading ? (
+							<>
+								<motion.div
+									style={{
+										width: 15, height: 15, borderRadius: '50%',
+										border: '2px solid rgba(255,255,255,0.25)',
+										borderTopColor: 'white',
+									}}
+									animate={{ rotate: 360 }}
+									transition={{ repeat: Infinity, duration: 0.75, ease: 'linear' }}
+								/>
+								{t('loading.signingIn')}
+							</>
+						) : (
+							<>
+								{t('signInButton')}
+								<ArrowRight size={15} strokeWidth={2.5} className="rtl:scale-x-[-1]" />
+							</>
+						)}
+					</span>
+				</motion.button>
 
-						<div className="absolute inset-0 rounded-lg bg-gradient-to-r from-white/0 via-white/30 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-					</motion.button>
+				{/* Security note */}
+				<div style={{
+					display: 'flex', alignItems: 'center', gap: 7,
+					marginTop: 18, paddingTop: 18,
+					borderTop: `1px solid ${'#e2e8f0'}`,
+				}}>
+					<Lock size={11} strokeWidth={2} style={{ color: '#94a3b8', flexShrink: 0 }} />
+					<span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500 }}>
+						{t('trust.encrypted', { defaultValue: 'SSL secured · Data encrypted at rest' })}
+					</span>
 				</div>
 			</motion.form>
 		</LazyMotion>
 	);
 });
-
 LoginForm.displayName = 'LoginForm';
 
-/* ================== HERO SIDE - OPTIMIZED ================== */
+/* ══════════════════════════════════════════════════════════════════════════
+	 HERO SIDE  — dark editorial, diagonal slash, 3-D parallax tilt
+══════════════════════════════════════════════════════════════════════════ */
 const HeroSide = React.memo(() => {
 	const t = useTranslations('auth');
 	const { colors } = useTheme();
+	const ref = useRef(null);
+	const mx = useMotionValue(0.5);
+	const my = useMotionValue(0.5);
+	const rX = useTransform(my, [0, 1], [4, -4]);
+	const rY = useTransform(mx, [0, 1], [-5, 5]);
+
+	const onMove = useCallback((e) => {
+		if (!ref.current) return;
+		const { left, top, width, height } = ref.current.getBoundingClientRect();
+		mx.set((e.clientX - left) / width);
+		my.set((e.clientY - top) / height);
+	}, [mx, my]);
 
 	const features = useMemo(() => [
-		{ icon: Dumbbell, text: t('hero.perkPersonalized', { defaultValue: 'Personalized Workouts' }) },
-		{ icon: Activity, text: t('hero.perkProgress', { defaultValue: 'Track Progress' }) },
-		{ icon: Users, text: t('hero.perkChat', { defaultValue: 'Coach Support' }) },
-		{ icon: Heart, text: t('hero.perkPrivacy', { defaultValue: 'Privacy First' }) },
-	], [t]);
-
-	const stats = useMemo(() => [
-		{ value: '10K+', label: t('stats.users', { defaultValue: 'Active Users' }), icon: Users },
-		{ value: '95%', label: t('stats.satisfaction', { defaultValue: 'Satisfaction' }), icon: Award },
-		{ value: '24/7', label: t('stats.support', { defaultValue: 'Support' }), icon: Shield },
+		{ icon: Dumbbell, label: t('hero.perkPersonalized', { defaultValue: 'Custom Programs' }), sub: t('hero.perkPersonalizedDetail', { defaultValue: 'Built for your body' }) },
+		{ icon: TrendingUp, label: t('hero.perkProgress', { defaultValue: 'Progress Tracking' }), sub: t('hero.perkProgressDetail', { defaultValue: 'Real-time analytics' }) },
+		{ icon: Users, label: t('hero.perkChat', { defaultValue: 'Expert Coaches' }), sub: t('hero.perkChatDetail', { defaultValue: 'Direct access, always' }) },
+		{ icon: Heart, label: t('hero.perkPrivacy', { defaultValue: 'Privacy First' }), sub: t('hero.perkPrivacyDetail', { defaultValue: 'Your data stays yours' }) },
 	], [t]);
 
 	return (
-		<div className="relative w-full h-full overflow-hidden">
-			<div
-				className="absolute inset-0"
-				style={{
-					background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
-				}}
-			/>
+		<div
+			ref={ref}
+			onMouseMove={onMove}
+			style={{ position: 'relative', width: '100%', height: '100%', background: '#f0f4ff', overflow: 'hidden' }}
+		>
+			{/* ── Background layers ── */}
+			{/* Bottom-right accent bloom */}
+			<div style={{
+				position: 'absolute', bottom: '-20%', right: '-15%',
+				width: '75%', height: '75%',
+				background: `radial-gradient(ellipse at center, ${colors.primary[300]}55, transparent 62%)`,
+				pointerEvents: 'none',
+			}} />
+			{/* Top-left subtle glow */}
+			<div style={{
+				position: 'absolute', top: '-15%', left: '-10%',
+				width: '50%', height: '50%',
+				background: `radial-gradient(ellipse at center, ${colors.primary[200]}60, transparent 65%)`,
+				pointerEvents: 'none',
+			}} />
+			{/* Fine dot matrix */}
+			<div style={{
+				position: 'absolute', inset: 0,
+				backgroundImage: `radial-gradient(${colors.primary[300]}80 1px, transparent 1px)`,
+				backgroundSize: '30px 30px',
+				pointerEvents: 'none',
+			}} />
+			{/* Diagonal shard — the signature element */}
+			<div style={{
+				position: 'absolute', top: 0, right: 0,
+				width: '42%', height: '100%',
+				background: `linear-gradient(155deg, ${colors.primary[100]}cc, ${colors.primary[50]}99)`,
+				clipPath: 'polygon(22% 0%, 100% 0%, 100% 100%, 0% 100%)',
+				borderLeft: `1px solid ${colors.primary[200]}`,
+				pointerEvents: 'none',
+			}} />
+			{/* Second smaller shard */}
+			<div style={{
+				position: 'absolute', top: 0, right: 0,
+				width: '25%', height: '100%',
+				background: `linear-gradient(155deg, ${colors.primary[200]}50, transparent)`,
+				clipPath: 'polygon(30% 0%, 100% 0%, 100% 100%, 0% 100%)',
+				pointerEvents: 'none',
+			}} />
 
-			<motion.div
-				className="absolute -top-32 ltr:-left-32 rtl:-right-32 h-96 w-96 rounded-full opacity-30 blur-3xl will-change-transform"
-				style={{
-					background: `radial-gradient(circle, ${colors.primary[300]}, transparent)`,
-				}}
-				animate={{
-					y: [0, 30, 0],
-					x: [0, 20, 0],
-					scale: [1, 1.2, 1],
-				}}
-				transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-			/>
-			<motion.div
-				className="absolute bottom-0 ltr:right-0 rtl:left-0 h-96 w-96 rounded-full opacity-30 blur-3xl will-change-transform"
-				style={{
-					background: `radial-gradient(circle, ${colors.secondary[300]}, transparent)`,
-				}}
-				animate={{
-					y: [0, -30, 0],
-					x: [0, -20, 0],
-					scale: [1, 1.3, 1],
-				}}
-				transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
-			/>
+			{/* Giant background word — wallpaper texture */}
+			<div style={{
+				position: 'absolute', top: '44%', left: '-3%',
+				transform: 'translateY(-50%) rotate(-8deg)',
+				fontSize: 'clamp(110px, 16vw, 200px)',
+				fontWeight: 900, letterSpacing: '-0.04em',
+				color: `${colors.primary[200]}80`,
+				userSelect: 'none', pointerEvents: 'none', lineHeight: 1,
 
-			<FloatingParticles />
+				whiteSpace: 'nowrap',
+			}}>
+				FITNESS
+			</div>
 
-			<div
-				className="absolute inset-0 opacity-[0.03]"
-				style={{
-					backgroundImage: `linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)`,
-					backgroundSize: '50px 50px',
-				}}
-			/>
+			{/* ── Content ── */}
+			<div style={{
+				position: 'relative', zIndex: 10, height: '100%',
+				display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+				padding: 'clamp(36px, 4vh, 56px) clamp(36px, 4vw, 60px)',
+			}}>
 
-			<div className="relative z-10 max-w-2xl mx-auto h-full flex items-center px-8 lg:px-12 py-16">
-				<div className="w-full">
+				{/* Brand mark */}
+				<motion.div
+					initial={{ opacity: 0, y: -10 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.45 }}
+					style={{ display: 'flex', alignItems: 'center', gap: 11 }}
+				>
+					<div style={{
+						width: 36, height: 36, borderRadius: 9,
+						background: `linear-gradient(135deg, ${colors.primary[400]}, ${colors.primary[700]})`,
+						display: 'flex', alignItems: 'center', justifyContent: 'center',
+						boxShadow: `0 0 20px ${colors.primary[500]}45, 0 0 60px ${colors.primary[500]}15`,
+					}}>
+						<Dumbbell size={18} color="white" strokeWidth={2} />
+					</div>
+					<span style={{ color: '#1e293b', fontWeight: 700, fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+						So7baFit
+					</span>
+				</motion.div>
+
+				{/* ── Hero copy with subtle 3D tilt ── */}
+				<motion.div style={{ perspective: 900 }}>
 					<motion.div
-						initial={{ opacity: 0, y: -20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.6 }}
-						className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border-2 border-white/20 mb-6">
-						<Star className="w-4 h-4 text-yellow-400" strokeWidth={2.5} />
-						<span className="text-sm font-bold text-white">{t('hero.badge', { defaultValue: 'Premium Fitness Platform' })}</span>
+						style={{ rotateX: rX, rotateY: rY, transformStyle: 'preserve-3d' }}
+						transition={{ type: 'spring', stiffness: 80, damping: 25 }}
+					>
+						{/* Overline */}
+						<motion.div
+							initial={{ opacity: 0, x: -16 }}
+							animate={{ opacity: 1, x: 0 }}
+							transition={{ delay: 0.18, duration: 0.5 }}
+							style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}
+						>
+							<div style={{
+								width: 28, height: 2, borderRadius: 2,
+								background: `linear-gradient(90deg, ${colors.primary[400]}, transparent)`,
+							}} />
+							<span style={{
+								fontSize: 9.5, fontWeight: 800, letterSpacing: '0.26em',
+								textTransform: 'uppercase', color: colors.primary[400],
+							}}>
+								{t('hero.badge', { defaultValue: 'Premium Platform' })}
+							</span>
+						</motion.div>
+
+						{/* Main headline */}
+						<motion.h1
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: 0.24, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+							style={{
+								fontSize: 'clamp(2.2rem, 3.8vw, 3.6rem)',
+								fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1.0,
+								color: '#0f172a', marginBottom: 16,
+
+							}}
+						>
+							{t('hero.title')}
+							<span style={{ color: colors.primary[400] }}>.</span>
+						</motion.h1>
+
+						<motion.p
+							initial={{ opacity: 0, y: 10 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: 0.34, duration: 0.5 }}
+							style={{
+								fontSize: 14, lineHeight: 1.75, color: '#4b5563',
+								fontWeight: 500, maxWidth: 340, marginBottom: 36,
+							}}
+						>
+							{t('hero.subtitle')}
+						</motion.p>
+
+						{/* Feature chips */}
+						<motion.div
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							transition={{ delay: 0.46 }}
+							style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}
+						>
+							{features.map((f, i) => {
+								const Icon = f.icon;
+								return (
+									<motion.div
+										key={i}
+										initial={{ opacity: 0, y: 10 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ delay: 0.48 + i * 0.07, duration: 0.35 }}
+										style={{
+											display: 'flex', alignItems: 'flex-start', gap: 10,
+											padding: '12px 14px',
+											borderRadius: 8,
+											background: 'rgba(255,255,255,0.7)',
+											border: `1px solid ${'#e2e8f0'}`,
+											backdropFilter: 'blur(6px)',
+										}}
+									>
+										<div style={{
+											width: 28, height: 28, borderRadius: 6, flexShrink: 0,
+											background: `${colors.primary[50]}`,
+											border: `1px solid ${colors.primary[100]}`,
+											display: 'flex', alignItems: 'center', justifyContent: 'center',
+										}}>
+											<Icon size={14} style={{ color: colors.primary[400] }} strokeWidth={2} />
+										</div>
+										<div>
+											<div style={{ fontSize: 12, fontWeight: 700, color: '#1e293b', lineHeight: 1.2 }}>{f.label}</div>
+											<div style={{ fontSize: 11, fontWeight: 500, color: '#64748b', marginTop: 2 }}>{f.sub}</div>
+										</div>
+									</motion.div>
+								);
+							})}
+						</motion.div>
 					</motion.div>
+				</motion.div>
 
-					<motion.h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-5 text-white drop-shadow-2xl leading-tight" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}>
-						{t('hero.title')}
-					</motion.h1>
+				{/* ── Stats row ── */}
+				<motion.div
+					initial={{ opacity: 0, y: 12 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ delay: 0.72, duration: 0.5 }}
+					style={{
+						display: 'flex', alignItems: 'center', gap: 0,
+						paddingTop: 24, borderTop: `1px solid ${'#e2e8f0'}`,
+					}}
+				>
+					{[
+						{ val: '10K+', label: t('stats.users', { defaultValue: 'Athletes' }) },
+						{ val: '95%', label: t('stats.satisfaction', { defaultValue: 'Satisfaction' }) },
+						{ val: '24/7', label: t('stats.support', { defaultValue: 'Availability' }) },
+					].map((s, i) => (
+						<div key={i} style={{
+							flex: 1,
+							paddingRight: i < 2 ? 20 : 0,
+							marginRight: i < 2 ? 20 : 0,
+							borderRight: i < 2 ? `1px solid ${'#e2e8f0'}` : 'none',
+						}}>
+							<div style={{
+								fontSize: 'clamp(1.2rem, 1.8vw, 1.6rem)',
+								fontWeight: 900, color: '#0f172a',
+								letterSpacing: '-0.03em', lineHeight: 1,
 
-					<motion.p className="text-lg md:text-xl text-white/95 mb-8 font-semibold leading-relaxed" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}>
-						{t('hero.subtitle')}
-					</motion.p>
+							}}>
+								{s.val}
+							</div>
+							<div style={{
+								fontSize: 10, color: '#64748b', fontWeight: 700,
+								marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.12em',
+							}}>
+								{s.label}
+							</div>
+						</div>
+					))}
 
-					<div className="space-y-3 mb-8">
-						{features.map((feature, i) => {
-							const Icon = feature.icon;
-							return (
-								<motion.div
-									key={i}
-									className="flex gap-3 items-center group"
-									initial={{ opacity: 0, x: -20 }}
-									animate={{ opacity: 1, x: 0 }}
-									transition={{ duration: 0.5, delay: 0.3 + i * 0.1 }}>
-									<div className="w-12 h-12 rounded-lg flex items-center justify-center bg-white/10 backdrop-blur-sm border-2 border-white/20 shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:bg-white/20">
-										<Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
-									</div>
-									<span className="text-base font-bold text-white group-hover:translate-x-1 transition-transform">{feature.text}</span>
-								</motion.div>
-							);
-						})}
+					<div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+						<div style={{
+							width: 6, height: 6, borderRadius: '50%',
+							background: '#22c55e',
+							boxShadow: '0 0 6px #22c55e80',
+						}} />
+						<span style={{ fontSize: 10, color: '#64748b', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+							{t('hero.secure', { defaultValue: 'SSL Live' })}
+						</span>
+					</div>
+				</motion.div>
+
+			</div>
+		</div>
+	);
+});
+HeroSide.displayName = 'HeroSide';
+
+/* ══════════════════════════════════════════════════════════════════════════
+	 FORM PANEL  — dark, tight, editorial
+══════════════════════════════════════════════════════════════════════════ */
+const FormPanel = React.memo(({ onLoggedIn }) => {
+	const t = useTranslations('auth');
+	const { colors } = useTheme();
+
+	return (
+		<div style={{
+			position: 'relative', height: '100%',
+			display: 'flex', flexDirection: 'column', justifyContent: 'center',
+			background: '#ffffff',
+			padding: 'clamp(32px, 5vh, 64px) clamp(32px, 5vw, 72px)',
+		}}>
+			{/* Corner glow */}
+			<div style={{
+				position: 'absolute', top: -40, right: -40,
+				width: 220, height: 220,
+				background: `radial-gradient(circle, ${colors.primary[100]}, transparent 65%)`,
+				pointerEvents: 'none',
+			}} />
+			{/* Top rule */}
+			<div style={{ position: 'absolute', top: 0, left: 40, right: 40, height: 1, background: '#f1f5f9' }} />
+			{/* Bottom rule */}
+			<div style={{ position: 'absolute', bottom: 0, left: 40, right: 40, height: 1, background: '#e2e8f0' }} />
+
+			{/* Editorial page number */}
+			<motion.div
+				initial={{ opacity: 0 }}
+				animate={{ opacity: 1 }}
+				transition={{ delay: 0.05 }}
+				style={{
+					position: 'absolute', top: 28, right: 'clamp(32px, 5vw, 72px)',
+					fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
+					textTransform: 'uppercase', color: '#94a3b8',
+					userSelect: 'none',
+				}}
+			>
+				01 — Auth
+			</motion.div>
+
+			<div style={{ maxWidth: 400, width: '100%' }}>
+				{/* Heading block */}
+				<motion.div
+					initial={{ opacity: 0, y: 14 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+					style={{ marginBottom: 44 }}
+				>
+					{/* Glowing dot + overline */}
+					<div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+						<div style={{
+							width: 7, height: 7, borderRadius: '50%',
+							background: colors.primary[400],
+							boxShadow: `0 0 10px ${colors.primary[400]}90, 0 0 22px ${colors.primary[400]}40`,
+						}} />
+						<span style={{
+							fontSize: 9.5, fontWeight: 800, letterSpacing: '0.22em',
+							textTransform: 'uppercase', color: colors.primary[400],
+						}}>
+							{t('welcome', { defaultValue: 'Welcome Back' })}
+						</span>
 					</div>
 
-					<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.8 }} className="grid grid-cols-3 gap-3">
-						{stats.map((stat, i) => {
-							const Icon = stat.icon;
-							return (
-								<motion.div
-									key={i}
-									whileHover={{ y: -5 }}
-									className="text-center p-3 rounded-lg bg-white/10 backdrop-blur-sm border-2 border-white/20">
-									<Icon className="w-5 h-5 text-white mx-auto mb-2" strokeWidth={2.5} />
-									<div className="text-2xl font-black text-white mb-1">{stat.value}</div>
-									<div className="text-xs font-semibold text-white/90">{stat.label}</div>
-								</motion.div>
-							);
-						})}
-					</motion.div>
+					<h1 style={{
+						fontSize: 'clamp(1.8rem, 3vw, 2.7rem)',
+						fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1.0,
+						color: '#0f172a', marginBottom: 10,
 
-					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 1 }} className="mt-8 flex items-center gap-3">
-						<div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-						<CheckCircle2 className="w-4 h-4 text-emerald-400" strokeWidth={2.5} />
-						<span className="text-sm font-bold text-white/90">{t('hero.secure', { defaultValue: 'Secure & Encrypted' })}</span>
-						<div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-					</motion.div>
+					}}>
+						{t('signIn')}
+					</h1>
+					<p style={{ fontSize: 13, color: '#64748b', fontWeight: 500, lineHeight: 1.65 }}>
+						{t('subtitle')}
+					</p>
+				</motion.div>
+
+				<AnimatePresence mode="wait">
+					<LoginForm onLoggedIn={onLoggedIn} />
+				</AnimatePresence>
+			</div>
+		</div>
+	);
+});
+FormPanel.displayName = 'FormPanel';
+
+/* ══════════════════════════════════════════════════════════════════════════
+	 MOBILE HERO STRIP
+══════════════════════════════════════════════════════════════════════════ */
+const MobileHero = React.memo(() => {
+	const t = useTranslations('auth');
+	const { colors } = useTheme();
+
+	return (
+		<div style={{
+			position: 'relative', overflow: 'hidden',
+			background: '#f0f4ff',
+			padding: '44px 24px 56px',
+			minHeight: '40vh',
+			display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+		}}>
+			{/* BG bloom */}
+			<div style={{
+				position: 'absolute', bottom: '-20%', right: '-15%',
+				width: '70%', height: '70%',
+				background: `radial-gradient(ellipse, ${colors.primary[300]}55, transparent 62%)`,
+				pointerEvents: 'none',
+			}} />
+			{/* Dot matrix */}
+			<div style={{
+				position: 'absolute', inset: 0,
+				backgroundImage: `radial-gradient(${colors.primary[300]}70 1px, transparent 1px)`,
+				backgroundSize: '26px 26px', pointerEvents: 'none',
+			}} />
+			{/* Diagonal shard */}
+			<div style={{
+				position: 'absolute', top: 0, right: 0,
+				width: '40%', height: '100%',
+				background: `linear-gradient(155deg, ${colors.primary[100]}, transparent)`,
+				clipPath: 'polygon(22% 0%, 100% 0%, 100% 100%, 0% 100%)',
+				borderLeft: `1px solid ${colors.primary[200]}`,
+				pointerEvents: 'none',
+			}} />
+			{/* BG word */}
+			<div style={{
+				position: 'absolute', bottom: -12, left: -6,
+				fontSize: 100, fontWeight: 900, letterSpacing: '-0.04em',
+				color: `${colors.primary[200]}80`, userSelect: 'none', pointerEvents: 'none',
+
+			}}>FITNESS</div>
+
+			{/* Brand */}
+			<div  className='rtl:right-[34px] ltr:left-[34px]' style={{
+				position: 'absolute', top: 36,  
+				display: 'flex', alignItems: 'center', gap: 10,
+			}}>
+				<div style={{
+					width: 30, height: 30, borderRadius: 7,
+					background: `linear-gradient(135deg, ${colors.primary[400]}, ${colors.primary[700]})`,
+					display: 'flex', alignItems: 'center', justifyContent: 'center',
+					boxShadow: `0 0 14px ${colors.primary[500]}40`,
+				}}>
+					<Dumbbell size={14} color="white" strokeWidth={2} />
+				</div>
+				<span style={{ color: '#1e293b', fontWeight: 700, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+					So7baFit
+				</span>
+			</div>
+
+			<div style={{ position: 'relative', zIndex: 10 }}>
+				<div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.24em', textTransform: 'uppercase', color: colors.primary[400], marginBottom: 10 }}>
+					{t('hero.badge', { defaultValue: 'Premium Fitness' })}
+				</div>
+				<h2 style={{
+					fontSize: 'clamp(1.9rem, 7vw, 2.8rem)', fontWeight: 900,
+					letterSpacing: '-0.04em', lineHeight: 1.0, color: '#0f172a',
+					marginBottom: 10,
+				}}>
+					{t('hero.title')}<span style={{ color: colors.primary[400] }}>.</span>
+				</h2>
+				<p style={{ fontSize: 13, color: '#4b5563', fontWeight: 500, lineHeight: 1.6, maxWidth: 300, marginBottom: 22 }}>
+					{t('hero.subtitle')}
+				</p>
+
+				{/* Compact stats row */}
+				<div style={{ display: 'flex', gap: 20 }}>
+					{[{ v: '10K+', l: 'Athletes' }, { v: '95%', l: 'Rating' }, { v: '24/7', l: 'Support' }].map((s, i) => (
+						<div key={i}>
+							<div style={{ fontSize: 18, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.03em', fontFamily: "'Syne', sans-serif" }}>{s.v}</div>
+							<div style={{ fontSize: 9, color: '#64748b', fontWeight: 700, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{s.l}</div>
+						</div>
+					))}
 				</div>
 			</div>
 		</div>
 	);
 });
+MobileHero.displayName = 'MobileHero';
 
-HeroSide.displayName = 'HeroSide';
-
-/* ================== TRUST INDICATORS ================== */
-const TrustIndicators = React.memo(() => {
+/* ══════════════════════════════════════════════════════════════════════════
+	 MOBILE FORM SHEET
+══════════════════════════════════════════════════════════════════════════ */
+const MobileFormSheet = React.memo(({ onLoggedIn }) => {
 	const t = useTranslations('auth');
 	const { colors } = useTheme();
 
-	const indicators = useMemo(() => [
-		{ icon: Shield, label: t('trust.secure', { defaultValue: 'Secure' }) },
-		{ icon: Lock, label: t('trust.encrypted', { defaultValue: 'Encrypted' }) },
-		{ icon: CheckCircle2, label: t('trust.verified', { defaultValue: 'Verified' }) },
-	], [t]);
-
 	return (
 		<motion.div
-			initial={{ opacity: 0 }}
-			animate={{ opacity: 1 }}
-			transition={{ delay: 0.5 }}
-			className="mt-6 pt-5 border-t-2"
-			style={{ borderColor: colors.primary[100] }}>
-			<div className="flex items-center justify-center gap-4 sm:gap-6 text-xs font-black flex-wrap">
-				{indicators.map((item, i) => {
-					const Icon = item.icon;
-					return (
-						<React.Fragment key={i}>
-							{i > 0 && <div className="hidden sm:block w-px h-10" style={{ backgroundColor: colors.primary[200] }} />}
-							<div className="flex flex-col sm:flex-row items-center gap-2" style={{ color: colors.primary[700] }}>
-								<div 
-									className="w-9 h-9 rounded-lg flex items-center justify-center"
-									style={{ backgroundColor: colors.primary[100] }}
-								>
-									<Icon className="w-5 h-5" strokeWidth={2.5} />
-								</div>
-								<span>{item.label}</span>
-							</div>
-						</React.Fragment>
-					);
-				})}
+			initial={{ y: 20, opacity: 0 }}
+			animate={{ y: 0, opacity: 1 }}
+			transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+			style={{
+				background: '#ffffff',
+				borderTopLeftRadius: 20, borderTopRightRadius: 20,
+				marginTop: -20, position: 'relative', zIndex: 20,
+				padding: '28px 24px 44px',
+				boxShadow: '0 -20px 60px rgba(0,0,0,0.1)',
+				flex: 1,
+			}}
+		>
+			{/* Pull handle */}
+			<div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
+				<div style={{ width: 34, height: 3, borderRadius: 99, background: '#e2e8f0' }} />
 			</div>
+
+
+
+			{/* Heading */}
+			<div style={{ marginBottom: 36 }}>
+				<div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+					<div style={{
+						width: 6, height: 6, borderRadius: '50%',
+						background: colors.primary[400],
+						boxShadow: `0 0 8px ${colors.primary[400]}80`,
+					}} />
+					<span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase', color: colors.primary[400] }}>
+						{t('welcome', { defaultValue: 'Welcome Back' })}
+					</span>
+				</div>
+				<h2 style={{
+					fontSize: 'clamp(1.7rem, 6vw, 2.1rem)', fontWeight: 900,
+					letterSpacing: '-0.04em', lineHeight: 1.0, color: '#0f172a',
+					marginBottom: 7,
+				}}>
+					{t('signIn')}
+				</h2>
+				<p style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>{t('subtitle')}</p>
+			</div>
+
+			<AnimatePresence mode="wait">
+				<LoginForm onLoggedIn={onLoggedIn} />
+			</AnimatePresence>
 		</motion.div>
 	);
 });
+MobileFormSheet.displayName = 'MobileFormSheet';
 
-TrustIndicators.displayName = 'TrustIndicators';
-
-/* ================== MAIN PAGE ================== */
+/* ══════════════════════════════════════════════════════════════════════════
+	 MAIN PAGE
+══════════════════════════════════════════════════════════════════════════ */
 export default function AuthPage() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -657,175 +852,80 @@ export default function AuthPage() {
 
 	const token = searchParams?.get('accessToken');
 	const redirectUrl = searchParams?.get('redirect') || '/dashboard/my/workouts';
-
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 
 	useEffect(() => {
-		const handleOAuthLogin = async () => {
-			if (!token) return;
+		if (!token) return;
+		(async () => {
 			try {
-				if (typeof window !== 'undefined') {
-					localStorage.setItem('accessToken', token);
-				}
+				if (typeof window !== 'undefined') localStorage.setItem('accessToken', token);
 				const { data: user } = await axiosInstance.get('/auth/me', {
 					headers: { Authorization: `Bearer ${token}` },
 				});
-				if (typeof window !== 'undefined') {
-					localStorage.setItem('user', JSON.stringify(user || {}));
-				}
+				if (typeof window !== 'undefined') localStorage.setItem('user', JSON.stringify(user || {}));
 				toast.success(t('success.signedIn'));
-				const path = getPostLoginPath(user?.role) || redirectUrl;
-				router.push(path);
+				router.push(getPostLoginPath(user?.role) || redirectUrl);
 			} catch (e) {
-				console.error('Failed to complete OAuth login', e);
+				console.error('OAuth login failed', e);
 				toast.error(t('errors.loginFailed'));
 			}
-		};
-		handleOAuthLogin();
+		})();
 	}, [token, redirectUrl, router, t]);
 
 	const handleLoggedIn = useCallback((user) => {
-		const path = getPostLoginPath(user?.role) || '/dashboard/users';
-		router.push(path);
+		router.push(getPostLoginPath(user?.role) || '/dashboard/users');
 	}, [router]);
 
-	const authContextValue = useMemo(() => ({ loading, setLoading, error, setError }), [loading, error]);
+	const ctxVal = useMemo(() => ({ loading, setLoading, error, setError }), [loading, error]);
 
 	return (
-		<AuthContext.Provider value={authContextValue}>
-			<div className="relative min-h-screen overflow-hidden">
-				{/* Desktop layout */}
-				<div className="hidden lg:flex lg:min-h-screen">
-					<div className="relative lg:w-1/2">
-						<HeroSide />
-					</div>
-					<div
-						className="flex-1 flex items-center justify-center px-6 lg:px-10 py-12 relative"
-						style={{
-							background: `linear-gradient(135deg, ${colors.primary[50]}, white, ${colors.secondary[50]})`,
-						}}>
-						<FloatingParticles />
+		<AuthContext.Provider value={ctxVal}>
+			<style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
 
-						<motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} className="w-full max-w-[520px] relative z-10">
-							<div className="bg-white/95 backdrop-blur-xl border-2 rounded-lg p-8 lg:p-10 shadow-2xl relative overflow-hidden" style={{ borderColor: colors.primary[200] }}>
-								<div
-									className="absolute top-0 left-0 right-0 h-2 rounded-t-3xl"
-									style={{
-										background: `linear-gradient(90deg, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
-									}}
-								/>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-								<TitleLogin />
-								<AnimatePresence mode="wait">
-									<motion.div key="login-desktop" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
-										<LoginForm onLoggedIn={handleLoggedIn} />
-									</motion.div>
-								</AnimatePresence>
+        .fit-auth input::placeholder { color: #94a3b8; }
+        .fit-auth input { caret-color: ${colors.primary[400]}; }
+        .fit-auth ::selection { background: ${colors.primary[600]}55; color: #1e293b; }
 
-								<TrustIndicators />
-							</div>
-						</motion.div>
+        /* ── Scrollbar ── */
+        .fit-auth ::-webkit-scrollbar { width: 3px; }
+        .fit-auth ::-webkit-scrollbar-track { background: #f8f9fb; }
+        .fit-auth ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+        /* ── Responsive grid ── */
+        .fit-desktop { display: none; }
+        .fit-mobile  { display: flex; flex-direction: column; min-height: 100vh; }
+
+        @media (min-width: 1024px) {
+          .fit-desktop { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
+          .fit-mobile  { display: none; }
+        }
+      `}</style>
+
+			<div className="fit-auth" style={{ background: '#f8f9fb', minHeight: '100vh' }}>
+
+				{/* ── DESKTOP ── */}
+				<div className="fit-desktop">
+					<HeroSide />
+					<div style={{ position: 'relative' }}>
+						{/* Vertical divider between panels */}
+						<div style={{
+							position: 'absolute', top: 0, bottom: 0, left: 0, width: 1,
+							background: 'linear-gradient(180deg, transparent 0%, #e2e8f0 15%, #e2e8f0 85%, transparent 100%)',
+						}} />
+						<FormPanel onLoggedIn={handleLoggedIn} />
 					</div>
 				</div>
 
-				{/* Mobile/Tablet layout */}
-				<div
-					className="min-h-screen lg:hidden flex items-center justify-center px-4 sm:px-6 py-8 relative overflow-hidden"
-					style={{
-						background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
-					}}>
-					
-					<motion.div
-						className="absolute -top-40 ltr:-left-40 rtl:-right-40 h-[500px] w-[500px] rounded-full opacity-30 blur-3xl will-change-transform"
-						style={{
-							background: `radial-gradient(circle, ${colors.primary[300]}, transparent)`,
-						}}
-						animate={{
-							y: [0, 30, 0],
-							x: [0, 20, 0],
-							scale: [1, 1.3, 1],
-						}}
-						transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-					/>
-					<motion.div
-						className="absolute -bottom-40 ltr:-right-40 rtl:-left-40 h-[500px] w-[500px] rounded-full opacity-25 blur-3xl will-change-transform"
-						style={{
-							background: `radial-gradient(circle, ${colors.secondary[300]}, transparent)`,
-						}}
-						animate={{
-							y: [0, -30, 0],
-							x: [0, -20, 0],
-							scale: [1, 1.4, 1],
-						}}
-						transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
-					/>
-					<motion.div
-						className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-[400px] w-[400px] rounded-full opacity-20 blur-3xl will-change-transform"
-						style={{
-							background: `radial-gradient(circle, ${colors.primary[400]}, transparent)`,
-						}}
-						animate={{
-							scale: [1, 1.2, 1],
-							opacity: [0.2, 0.3, 0.2],
-							rotate: [0, 180, 360],
-						}}
-						transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
-					/>
-
-					<FloatingParticles />
-
-					<div
-						className="absolute inset-0 opacity-[0.03]"
-						style={{
-							backgroundImage: 'linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)',
-							backgroundSize: '40px 40px',
-						}}
-					/>
-
-					<motion.div 
-						initial={{ opacity: 0, y: 30 }} 
-						animate={{ opacity: 1, y: 0 }} 
-						transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} 
-						className="w-full max-w-[440px]  relative z-10"
-					>
-						<div 
-							className="rounded-lg border-2 bg-white/95 backdrop-blur-xl shadow-2xl p-6 sm:p-8 relative overflow-hidden"
-							style={{
-								borderColor: `${colors.primary[200]}60`,
-								boxShadow: `0 30px 60px -10px ${colors.primary[900]}20, 0 0 0 1px ${colors.primary[200]}40`,
-							}}
-						>
-							<div
-								className="absolute top-0 left-0 right-0 h-2 rounded-t-3xl"
-								style={{
-									background: `linear-gradient(90deg, ${colors.gradient.from}, ${colors.gradient.via}, ${colors.gradient.to})`,
-								}}
-							/>
-
-							<motion.div
-								className="absolute top-4 ltr:right-4 rtl:left-4 w-16 h-16 rounded-lg opacity-10"
-								style={{
-									background: `linear-gradient(135deg, ${colors.primary[500]}, ${colors.secondary[500]})`,
-								}}
-								animate={{
-									rotate: [0, 90, 0],
-									scale: [1, 1.1, 1],
-								}}
-								transition={{ duration: 8, repeat: Infinity }}
-							/>
-
-							<TitleLogin />
-							<AnimatePresence mode="wait">
-								<motion.div key="login-mobile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
-									<LoginForm onLoggedIn={handleLoggedIn} />
-								</motion.div>
-							</AnimatePresence>
-
-							{/* <TrustIndicators /> */}
-						</div>
-					</motion.div>
+				{/* ── MOBILE / TABLET ── */}
+				<div className="fit-mobile">
+					<MobileHero />
+					<MobileFormSheet onLoggedIn={handleLoggedIn} />
 				</div>
+
 			</div>
 		</AuthContext.Provider>
 	);

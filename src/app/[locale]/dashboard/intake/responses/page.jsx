@@ -1,4 +1,4 @@
- 
+
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import api, { baseImg } from '@/utils/axios';
 import { toast } from 'react-hot-toast';
 
-import { FiEye, FiSearch, FiX } from 'react-icons/fi';
+import { FiEye, FiSearch, FiX, FiTrash2 } from 'react-icons/fi';
 import { FaSpinner } from 'react-icons/fa6';
 
 import Select from '@/components/atoms/Select';
@@ -154,6 +154,8 @@ export default function SubmissionsPage() {
 
 	const [forms, setForms] = useState([]);
 	const [submissions, setSubmissions] = useState([]);
+	const [updatingReviewed, setUpdatingReviewed] = useState(new Set());
+	const [deletingId, setDeletingId] = useState(null);
 
 	const [loadingForms, setLoadingForms] = useState(true);
 	const [loadingSubs, setLoadingSubs] = useState(false);
@@ -281,6 +283,45 @@ export default function SubmissionsPage() {
 		setShowSubmissionModal(true);
 	};
 
+	const setReviewed = async (row, checked) => {
+		const formId = row.form_id ?? row.form?.id;
+		if (formId == null || row.id == null) return;
+		const key = `${formId}-${row.id}`;
+		updatingReviewed.add(key);
+		setUpdatingReviewed(new Set(updatingReviewed));
+		try {
+			await api.patch(`/forms/${formId}/submissions/${row.id}`, { reviewed: !!checked });
+			setSubmissions(prev =>
+				prev.map(s => (s.id === row.id ? { ...s, reviewed: !!checked } : s)),
+			);
+		} catch (err) {
+			toast.error(t('messages.update_reviewed_failed', { default: 'Failed to update reviewed status' }));
+		} finally {
+			setUpdatingReviewed(prev => { const next = new Set(prev); next.delete(key); return next; });
+		}
+	};
+
+	const deleteSubmission = async (row) => {
+		const formId = row.form_id ?? row.form?.id;
+		if (formId == null || row.id == null) return;
+		if (!window.confirm(t('actions.confirm_delete', { default: 'Delete this response? This cannot be undone.' }))) return;
+		setDeletingId(row.id);
+		try {
+			await api.delete(`/forms/${formId}/submissions/${row.id}`);
+			setSubmissions(prev => prev.filter(s => s.id !== row.id));
+			setTotal(prev => Math.max(0, (prev ?? 0) - 1));
+			if (selectedSubmission?.id === row.id) {
+				setShowSubmissionModal(false);
+				setSelectedSubmission(null);
+			}
+			toast.success(t('messages.delete_success', { default: 'Response deleted' }));
+		} catch (err) {
+			toast.error(t('messages.delete_failed', { default: 'Failed to delete response' }));
+		} finally {
+			setDeletingId(null);
+		}
+	};
+
 	const headerStats = useMemo(() => {
 		const totalShown = filteredSubmissions.length;
 		const uniqueForms = new Set(filteredSubmissions.map(s => String(s.form_id ?? ''))).size;
@@ -290,30 +331,65 @@ export default function SubmissionsPage() {
 	const columns = useMemo(
 		() => [
 			{
+				header: t('table.reviewed', { default: 'Reviewed' }),
+				accessor: 'reviewed',
+				cell: row => {
+					const formId = row.form_id ?? row.form?.id;
+					const key = formId != null && row.id != null ? `${formId}-${row.id}` : '';
+					const loading = key ? updatingReviewed.has(key) : false;
+					return (
+
+						<label
+							className={` inline-flex items-center gap-2.5 cursor-pointer select-none group transition-opacity duration-150 ${loading ? "opacity-60 cursor-not-allowed" : ""} `}
+							aria-label={t("review.aria_label")}
+						>
+							<span className="relative flex items-center justify-center">
+								<input
+									type="checkbox"
+									checked={!!row.reviewed}
+									disabled={loading}
+									onChange={e => setReviewed(row, e.target.checked)}
+									aria-label={t("review.aria_label")}
+									className={` peer appearance-none w-4.5 h-4.5 rounded border border-gray-300 bg-white checked:bg-indigo-600 checked:border-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-1 transition-colors duration-150 cursor-pointer disabled:cursor-not-allowed `}
+								/>
+								{/* Custom checkmark */}
+								<svg
+									className="absolute w-3 h-3 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity duration-150"
+									viewBox="0 0 12 12" fill="none"
+								>
+									<path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+								</svg>
+							</span>
+
+							<span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors duration-150">
+								{loading
+									? t("review.loading")
+									: row.reviewed
+										? t("review.checked")
+										: t("review.label")}
+							</span>
+
+							{loading && (
+								<FaSpinner className="animate-spin w-3.5 h-3.5 text-indigo-400 shrink-0" />
+							)}
+						</label>
+					);
+				},
+			},
+			{
 				header: t('table.form'),
 				accessor: '__formTitle',
 				cell: row => {
 					const form = forms.find(f => f.id == row.form_id);
 					return (
 						<div className="flex items-center gap-3 min-w-[240px]">
-							<div
-								className="grid place-items-center rounded-lg"
-								style={{
-									width: 40,
-									height: 40,
-									background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-200))',
-									boxShadow: '0 12px 20px rgba(15,23,42,0.08)',
-								}}
-							>
-								<FileText className="w-5 h-5" style={{ color: 'var(--color-primary-800)' }} />
-							</div>
+						 
 							<div className="min-w-0">
 								<MultiLangText className="font-extrabold text-slate-900 truncate max-w-[420px]">
 									{form?.title || t('labels.unknown_form')}
 								</MultiLangText>
 								<div className="mt-0.5 text-xs text-slate-500 flex items-center gap-2">
-									<Pill tone="primary">#{row.id}</Pill>
-									<span className="hidden sm:inline">
+ 									<span className="hidden sm:inline">
 										{new Date(row.created_at).toLocaleDateString()} • {new Date(row.created_at).toLocaleTimeString()}
 									</span>
 								</div>
@@ -369,21 +445,101 @@ export default function SubmissionsPage() {
 					</span>
 				),
 			},
+			
 			{
 				header: t('table.actions'),
 				accessor: '__actions',
 				cell: row => (
 					<div className="flex justify-end">
-						<GhostBtn title={t('actions.view')} onClick={() => viewSubmission(row)}>
-							<Eye className="w-4 h-4" />
-							<span className="text-sm font-semibold">{t('actions.view')}</span>
-						</GhostBtn>
+						<div
+							className="
+      inline-flex relative z-[100] items-center gap-1 rounded-2xl border border-gray-200/80
+      bg-white/80 backdrop-blur-sm
+      shadow-[0_4px_18px_rgba(0,0,0,0.06)]
+      p-1
+    "
+						>
+							{/* View Action */}
+							<button
+								type="button"
+								onClick={() => viewSubmission(row)}
+								title={t('actions.view')}
+								className="
+        group relative inline-flex items-center justify-center
+        h-9 w-9 rounded-xl
+        text-slate-500
+        transition-all duration-200 ease-out
+        hover:bg-gradient-to-br hover:from-sky-50 hover:to-blue-100
+        hover:text-sky-700
+        hover:shadow-sm
+        hover:-translate-y-0.5
+        active:translate-y-0 active:scale-95
+        focus:outline-none focus:ring-2 focus:ring-sky-200
+      "
+							>
+								<Eye className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
+
+								<span
+									className="
+          pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2
+          whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1
+          text-[11px] font-medium text-white opacity-0 shadow-lg
+          transition-all duration-200
+          group-hover:-translate-y-0.5 group-hover:opacity-100
+        "
+								>
+									{t('actions.view')}
+								</span>
+							</button>
+
+							{/* Divider */}
+							<div className="h-5 w-px bg-gray-200" />
+
+							{/* Delete Action */}
+							<button
+								type="button"
+								onClick={() => deleteSubmission(row)}
+								disabled={deletingId === row.id}
+								title={t('actions.delete', { default: 'Delete' })}
+								className="
+        group relative inline-flex items-center justify-center
+        h-9 w-9 rounded-xl
+        text-rose-500
+        transition-all duration-200 ease-out
+        hover:bg-gradient-to-br hover:from-rose-50 hover:to-red-100
+        hover:text-rose-700
+        hover:shadow-sm
+        hover:-translate-y-0.5
+        active:translate-y-0 active:scale-95
+        disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0
+        focus:outline-none focus:ring-2 focus:ring-rose-200
+      "
+							>
+								{deletingId === row.id ? (
+									<FaSpinner className="h-4 w-4 animate-spin" />
+								) : (
+									<FiTrash2 className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
+								)}
+
+								<span
+									className="
+          pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2
+          whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1
+          text-[11px] font-medium text-white opacity-0 shadow-lg
+          transition-all duration-200
+          group-hover:-translate-y-0.5 group-hover:opacity-100
+        "
+								>
+									{t('actions.delete', { default: 'Delete' })}
+								</span>
+							</button>
+						</div>
 					</div>
 				),
 				className: 'text-right',
 			},
 		],
-		[forms, t],
+		[forms, t, updatingReviewed, deletingId],
 	);
 
 	if (loadingForms && !forms.length) {
@@ -568,7 +724,6 @@ function InfoRow({ k, v, mono }) {
 }
 
 function renderAnswers(submission, forms, t) {
-	console.log(submission);
 	const form = forms.find(f => f.id == (submission.form_id ?? submission.form?.id));
 	const fieldsByKey = new Map((form?.fields || []).map(fld => [fld.key, fld]));
 	const entries = Object.entries(submission.answers || {});
@@ -671,7 +826,6 @@ function renderAnswers(submission, forms, t) {
 					{/* ✅ IMAGE PREVIEW GRID (when image urls exist) */}
 					{imageFiles.length > 0 ? (
 						<div className="w-full">
-							{console.log(imageFiles)}
 							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 								{imageFiles.map((rawUrl, idx) => {
 									const href = normalizeUrl(rawUrl);
@@ -693,7 +847,7 @@ function renderAnswers(submission, forms, t) {
 													alt={`${label} ${idx + 1}`}
 													className="aspect-square object-cover"
 												/>
-											</div> 
+											</div>
 										</a>
 									);
 								})}

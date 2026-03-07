@@ -1377,7 +1377,11 @@ export default function FormSubmissionPage() {
 
 			switch (field.type) {
 				case 'file':
-					shape[field.key] = yup.array().of(yup.mixed()).nullable();
+					shape[field.key] = yup
+						.array()
+						.of(yup.mixed())
+						.default([])
+						.min(1, t('validation.required_generic', { label }));
 					break;
 
 				case 'checklist':
@@ -1412,6 +1416,13 @@ export default function FormSubmissionPage() {
 			}
 		}
 
+		// Optional file fields: ensure they are always arrays so submit never fails on undefined
+		for (const field of dynamicFields) {
+			if (field?.type === 'file' && !field?.required && !shape[field.key]) {
+				shape[field.key] = yup.array().of(yup.mixed()).default([]).nullable();
+			}
+		}
+
 		return yup.object().shape(shape);
 	}, [dynamicFields, t]);
 
@@ -1440,6 +1451,14 @@ export default function FormSubmissionPage() {
 			return null;
 		}
 	}
+
+	// Initialize file fields to [] so optional file fields never block submit
+	useEffect(() => {
+		if (!form?.fields?.length) return;
+		dynamicFields.forEach((f) => {
+			if (f.type === 'file') setValue(f.key, [], { shouldValidate: false });
+		});
+	}, [form?.id, dynamicFields, setValue]);
 
 	// Restore draft
 	useEffect(() => {

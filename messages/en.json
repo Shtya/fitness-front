@@ -12,8 +12,7 @@
     "noItems": "No items for today",
     "confirmDelete": "Do you want to delete this item?",
     "editItem": "Edit Item",
-    "type": "Type",
-    "title": "Title",
+    "type": "Type", 
     "titlePlaceholder": "Enter a title...",
     "description": "Description",
     "descriptionPlaceholder": "Add a description...",
@@ -1021,7 +1020,7 @@
     "signInButton": "Sign in",
     "invalidEmail": "Invalid email",
     "passwordRequired": "Password is required",
-
+		"Incorrect email or password" : "Incorrect email or password.",
     "a11y": {
       "showPassword": "Show password",
       "hidePassword": "Hide password"

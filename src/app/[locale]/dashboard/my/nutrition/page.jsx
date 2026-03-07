@@ -73,33 +73,98 @@ function BasicButton({ labelKey, onClick, icon: Icon, variant = 'outline', submi
 	);
 }
 
-/** Minimal checkbox visual with theme support */
-function MiniCheck({ checked, tone = 'primary', className = '' }) {
-	const { colors } = useTheme();
+/** Animated path checkmark */
+function AnimatedCheckPath({ visible }) {
+	return (
+		<svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ display: 'block' }}>
+			<motion.path
+				d="M1.5 5l2.5 2.5 4.5-5"
+				stroke="currentColor"
+				strokeWidth="1.75"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				initial={{ pathLength: 0, opacity: 0 }}
+				animate={{ pathLength: visible ? 1 : 0, opacity: visible ? 1 : 0 }}
+				transition={{ duration: 0.25, ease: 'easeOut' }}
+			/>
+		</svg>
+	);
+}
 
-	const getCheckStyles = () => {
-		if (checked) {
-			return tone === 'emerald'
-				? 'bg-emerald-600 border-emerald-600'
-				: 'bg-[var(--color-primary-600)] border-[var(--color-primary-700)]';
+/** Sparkle burst particles on check */
+function SparkleBurst({ active }) {
+	const angles = [0, 45, 90, 135, 180, 225, 270, 315];
+	return (
+		<AnimatePresence>
+			{active &&
+				angles.map((deg, i) => (
+					<motion.span
+						key={deg}
+						initial={{ opacity: 1, x: 0, y: 0, scale: 0 }}
+						animate={{
+							opacity: 0,
+							x: Math.cos((deg * Math.PI) / 180) * 16,
+							y: Math.sin((deg * Math.PI) / 180) * 16,
+							scale: 1,
+						}}
+						exit={{ opacity: 0 }}
+						transition={{ duration: 0.45, delay: i * 0.015, ease: 'easeOut' }}
+						style={{
+							position: 'absolute',
+							width: 3,
+							height: 3,
+							borderRadius: '50%',
+							background: `hsl(${210 + i * 18}, 80%, 55%)`,
+							pointerEvents: 'none',
+							zIndex: 10,
+						}}
+					/>
+				))}
+		</AnimatePresence>
+	);
+}
+
+/** Enhanced MiniCheck with animation */
+function MiniCheck({ checked, tone = 'primary', className = '' }) {
+	const [justChecked, setJustChecked] = useState(false);
+
+	// Track transition from unchecked → checked for sparkle
+	const prevChecked = useRef(checked);
+	useEffect(() => {
+		if (!prevChecked.current && checked) {
+			setJustChecked(true);
+			const t = setTimeout(() => setJustChecked(false), 500);
+			return () => clearTimeout(t);
 		}
-		return 'bg-white border-slate-300';
-	};
+		prevChecked.current = checked;
+	}, [checked]);
+
+	const isEmerald = tone === 'emerald';
 
 	return (
 		<span
 			aria-hidden="true"
-			className={`flex-none relative inline-flex h-4 w-4 items-center justify-center rounded border transition-all pointer-events-none ${getCheckStyles()} ${className}`}
+			className={`flex-none relative inline-flex h-[22px] w-[22px] items-center justify-center rounded-md transition-all pointer-events-none ${className}`}
+			style={{
+				background: checked
+					? isEmerald
+						? 'linear-gradient(135deg, #059669, #10b981)'
+						: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))'
+					: 'white',
+				border: checked
+					? 'none'
+					: '1.5px solid #cbd5e1',
+				boxShadow: checked
+					? isEmerald
+						? '0 2px 8px rgba(16,185,129,0.35)'
+						: '0 2px 8px rgba(var(--color-primary-rgb, 99,102,241),0.3)'
+					: 'none',
+				transform: checked ? 'scale(1)' : 'scale(1)',
+				color: 'white',
+			}}
 		>
-			{checked ? (
-				<svg className="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor">
-					<path
-						fillRule="evenodd"
-						d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414l2.293 2.293 6.543-6.543a1 1 0 011.414 0z"
-						clipRule="evenodd"
-					/>
-				</svg>
-			) : null}
+			<AnimatedCheckPath visible={checked} />
+			<SparkleBurst active={justChecked} />
 		</span>
 	);
 }
@@ -268,7 +333,7 @@ export default function ClientMealPlanPage() {
 						name: i.name,
 						taken: !!value,
 						qty: i.quantity == null ? null : Number(i.quantity),
-						unit: i.unit === 'count' ? 'count' : 'g', // ✅ include unit
+						unit: i.unit === 'count' ? 'count' : 'g',
 					})),
 					notifyCoach: false,
 					extraFoods: [],
@@ -331,7 +396,7 @@ export default function ClientMealPlanPage() {
 							name: item.name,
 							taken: !!value,
 							qty: item.quantity == null ? null : Number(item.quantity),
-							unit: item.unit === 'count' ? 'count' : 'g', // ✅ include unit
+							unit: item.unit === 'count' ? 'count' : 'g',
 						},
 					],
 					notifyCoach: false,
@@ -404,7 +469,7 @@ export default function ClientMealPlanPage() {
 				items: (items || []).map(i => ({
 					name: (i.name || '').trim(),
 					quantity: i.quantity == null || i.quantity === '' ? null : Number(i.quantity),
-					unit: i.unit === 'count' ? 'count' : 'g', // ✅ save unit
+					unit: i.unit === 'count' ? 'count' : 'g',
 					calories: i.calories == null || i.calories === '' ? null : Number(i.calories),
 				})),
 			});
@@ -519,6 +584,167 @@ function NotFoundPanel({ onRefresh }) {
 	);
 }
 
+/* =========================================================================
+	 FOOD ITEM ROW — enhanced version
+	 ========================================================================= */
+function FoodItemRow({ it, checked, onToggle, qtyLabel, t, dayKey, mi }) {
+	const [justChecked, setJustChecked] = useState(false);
+	const prevRef = useRef(checked);
+
+	useEffect(() => {
+		if (!prevRef.current && checked) {
+			setJustChecked(true);
+			const timer = setTimeout(() => setJustChecked(false), 600);
+			return () => clearTimeout(timer);
+		}
+		prevRef.current = checked;
+	}, [checked]);
+
+	return (
+		<motion.div
+			role="checkbox"
+			aria-checked={checked}
+			tabIndex={0}
+			onKeyDown={e => {
+				if (e.key === ' ' || e.key === 'Enter') {
+					e.preventDefault();
+					onToggle();
+				}
+			}}
+			onClick={onToggle}
+			whileHover={{ y: -1 }}
+			whileTap={{ scale: 0.98 }}
+			style={{
+				position: 'relative',
+				overflow: 'hidden',
+				background: checked
+					? 'linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-secondary-50) 100%)'
+					: '#f8fafc',
+				border: `1.5px solid ${checked ? 'var(--color-primary-200)' : '#e2e8f0'}`,
+				boxShadow: checked
+					? 'inset 0 0 0 1px var(--color-primary-100), 0 4px 12px -2px rgba(99,102,241,0.1)'
+					: '0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
+				transition: 'background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+			}}
+			className="group inline-flex w-full items-start gap-3 rounded-xl p-3 text-sm cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)]"
+		>
+			{/* Shimmer sweep on check */}
+			<AnimatePresence>
+				{justChecked && (
+					<motion.div
+						initial={{ x: '-100%', opacity: 0.5 }}
+						animate={{ x: '200%', opacity: 0 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: 0.5, ease: 'easeOut' }}
+						style={{
+							position: 'absolute',
+							inset: 0,
+							background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.65), transparent)',
+							pointerEvents: 'none',
+							zIndex: 5,
+						}}
+					/>
+				)}
+			</AnimatePresence>
+
+			{/* Animated checkbox */}
+			<div className="pt-0.5 shrink-0">
+				<MiniCheck checked={checked} tone="primary" />
+			</div>
+
+			{/* Content */}
+			<div className="flex-1 min-w-0">
+				{/* Main row */}
+				<div dir="rtl" className="flex items-center gap-2 flex-wrap">
+					<span
+						className="flex-1 truncate leading-none"
+						style={{
+							fontWeight: checked ? 650 : 500,
+							color: checked ? 'var(--color-primary-900)' : '#334155',
+							fontSize: 13.5,
+							letterSpacing: '-0.01em',
+							transition: 'font-weight 0.15s ease, color 0.15s ease',
+						}}
+					>
+						{it.name}
+					</span>
+
+					{qtyLabel && (
+						<span className="text-xs text-slate-400 font-medium shrink-0" style={{ letterSpacing: '0.02em' }}>
+							{qtyLabel}
+						</span>
+					)}
+
+					{/* Calorie badge */}
+					<motion.span
+						layout
+						className="inline-flex items-center gap-1 shrink-0 rounded-full px-2 py-0.5"
+						style={{
+							fontSize: 11,
+							fontWeight: 700,
+							letterSpacing: '0.02em',
+							background: checked
+								? 'linear-gradient(135deg, rgba(var(--color-primary-rgb,99,102,241),0.12), rgba(99,130,246,0.12))'
+								: 'rgba(148,163,184,0.1)',
+							color: checked ? 'var(--color-primary-700)' : '#64748b',
+							border: `1px solid ${checked ? 'var(--color-primary-200)' : 'rgba(148,163,184,0.2)'}`,
+							transition: 'all 0.2s ease',
+						}}
+					>
+						<motion.span
+							animate={checked ? { rotate: [0, -15, 10, 0] } : { rotate: 0 }}
+							transition={{ duration: 0.4 }}
+							style={{ display: 'flex' }}
+						>
+							<Flame size={11} />
+						</motion.span>
+						{Number(it.calories)} {t('nutrition.units.kcal')}
+					</motion.span>
+				</div>
+
+				{/* Alternative row — animates open */}
+				<AnimatePresence>
+					{it.alternativeName != null && String(it.alternativeName || '').trim() && (
+						<motion.div
+							initial={{ opacity: 0, height: 0, marginTop: 0 }}
+							animate={{ opacity: 1, height: 'auto', marginTop: 5 }}
+							exit={{ opacity: 0, height: 0, marginTop: 0 }}
+							transition={{ duration: 0.2 }}
+							className="overflow-hidden"
+						>
+							<div className="flex items-center gap-1.5 flex-wrap">
+								<span
+									className="inline-flex items-center rounded px-1.5 py-px text-[10px] font-bold tracking-wider uppercase"
+									style={{
+										background: '#fef3c7',
+										border: '1px solid #fde68a',
+										color: '#92400e',
+									}}
+								>
+									{t('nutrition.alternative', { default: 'Or' })}
+								</span>
+								<span className="text-xs font-medium" style={{ color: '#92400e' }}>
+									{it.alternativeName}
+								</span>
+								{(it.alternativeQuantity != null || it.alternativeCalories != null) && (
+									<span className="text-xs" style={{ color: '#b45309', opacity: 0.8 }}>
+										· {it.alternativeQuantity ?? '—'}
+										{it.alternativeUnit === 'count' ? ' ' + (t('count') || '') : 'g'}
+										{' '}· {it.alternativeCalories ?? '—'} kcal
+									</span>
+								)}
+							</div>
+						</motion.div>
+					)}
+				</AnimatePresence>
+			</div>
+		</motion.div>
+	);
+}
+
+/* =========================================================================
+	 DAY PANEL
+	 ========================================================================= */
 function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, setItemTaken, setSupplementTaken, onInlineSave }) {
 	const t = useTranslations('my-nutrition');
 	const { colors } = useTheme();
@@ -536,16 +762,11 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
 	const formatQtyWithUnit = (it) => {
 		if (it?.quantity == null || it?.quantity === '' || Number.isNaN(Number(it.quantity))) return null;
 		const qty = Number(it.quantity);
-
 		const unit = it?.unit === 'count' ? 'count' : 'g';
-
-		// Keep your existing "gram" translation for g, and fallback for count
 		const unitLabel =
 			unit === 'g'
 				? (t('gram') || 'g')
 				: (t('count') || t('nutrition.units.count') || 'count');
-
-		// Example output: "120g" or "2 count"
 		return unit === 'g' ? `${qty}${unitLabel}` : `${qty} ${unitLabel}`;
 	};
 
@@ -728,58 +949,26 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
 														</div>
 													</div>
 
-													{/* VIEW MODE (enhanced chips) */}
+													{/* ── ENHANCED FOOD ITEM ROWS ── */}
 													{!isEditing && !!meal.items?.length && (
 														<div className="mt-4 flex flex-col gap-2">
 															{(meal.items || []).map((it, i) => {
 																const id = it?.id || `${it?.name}-${i}`;
 																const checked = !!itemTakenMap[kItemByName(dayKey, mi, it.name)];
 																const toggle = () => setItemTaken(dayKey, mi, it, !checked);
-																const qtyLabel = formatQtyWithUnit(it); // ✅ g vs count
+																const qtyLabel = formatQtyWithUnit(it);
 
 																return (
-																	<motion.div
+																	<FoodItemRow
 																		key={id}
-																		role="checkbox"
-																		aria-checked={checked}
-																		tabIndex={0}
-																		onKeyDown={e => {
-																			if (e.key === ' ' || e.key === 'Enter') {
-																				e.preventDefault();
-																				toggle();
-																			}
-																		}}
-																		onClick={toggle}
-																		whileTap={{ scale: 0.98 }}
-																		className={[
-																			'!p-3 group inline-flex items-center gap-3 rounded-lg border text-sm transition-all cursor-pointer select-none',
-																			'focus-visible:outline-none focus-visible:ring-2',
-																			checked ? 'border-transparent shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300',
-																		].join(' ')}
-																		style={
-																			checked
-																				? {
-																						background: `linear-gradient(135deg, var(--color-primary-50), var(--color-secondary-50))`,
-																						color: `var(--color-primary-900)`,
-																						boxShadow: `inset 0 0 0 1px var(--color-primary-200)`,
-																				  }
-																				: {}
-																		}
-																	>
-																		<MiniCheck checked={checked} tone="primary" />
-
-																		<div dir="rtl" className={`${checked ? 'font-semibold' : 'font-medium'} flex items-center gap-2 leading-none flex-1`}>
-																			<span className="flex-1">{it.name}</span>
-
-																			{/* ✅ quantity label now respects unit (g / count) */}
-																			{qtyLabel ? <span className="text-xs opacity-75">{qtyLabel}</span> : null}
-
-																			<span className="inline-flex items-center gap-1 text-xs font-bold" style={{ color: checked ? `var(--color-primary-700)` : 'inherit' }}>
-																				<Flame size={12} />
-																				{Number(it.calories)} {t('nutrition.units.kcal')}
-																			</span>
-																		</div>
-																	</motion.div>
+																		it={it}
+																		checked={checked}
+																		onToggle={toggle}
+																		qtyLabel={qtyLabel}
+																		t={t}
+																		dayKey={dayKey}
+																		mi={mi}
+																	/>
 																);
 															})}
 														</div>
@@ -963,7 +1152,7 @@ const inlineSchema = yup.object().shape({
 		.of(
 			yup.object().shape({
 				name: yup.string().required('Required'),
-				unit: yup.string().oneOf(['g', 'count']).default('g'), // ✅ add unit
+				unit: yup.string().oneOf(['g', 'count']).default('g'),
 				quantity: yup
 					.number()
 					.nullable()
@@ -991,7 +1180,7 @@ function InlineMealEditor({ dayKey, mealIndex, initialItems = [], onCancel, onSa
 		defaultValues: {
 			items: (initialItems || []).map(i => ({
 				name: i.name || '',
-				unit: i.unit === 'count' ? 'count' : 'g', // ✅ keep incoming unit
+				unit: i.unit === 'count' ? 'count' : 'g',
 				quantity: i.quantity != null ? Number(i.quantity) : null,
 				calories: i.calories != null ? Number(i.calories) : null,
 			})),
@@ -1051,7 +1240,6 @@ function InlineMealEditor({ dayKey, mealIndex, initialItems = [], onCancel, onSa
 								)}
 							/>
 
-							{/* ✅ unit editor (g / count) */}
 							<Controller
 								name={`items.${idx}.unit`}
 								control={control}
@@ -1078,7 +1266,7 @@ function InlineMealEditor({ dayKey, mealIndex, initialItems = [], onCancel, onSa
 			<div className="flex flex-col md:flex-row items-center justify-between gap-3 pt-2">
 				<button
 					type="button"
-					onClick={() => append({ name: '', unit: 'g', quantity: null, calories: null })} // ✅ include unit default
+					onClick={() => append({ name: '', unit: 'g', quantity: null, calories: null })}
 					className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50 shadow-sm transition-colors"
 				>
 					<Plus className="h-4 w-4" /> {t('nutrition.inline.addItem')}
@@ -1187,7 +1375,7 @@ function mapFoodsToMeals(foods = []) {
 				name: f.name,
 				quantity: Number.isFinite(Number(f.quantity)) ? Number(f.quantity) : null,
 				calories: Number.isFinite(Number(f.calories)) ? Number(f.calories) : null,
-				unit: f.unit === 'count' ? 'count' : 'g', // ✅ preserve unit
+				unit: f.unit === 'count' ? 'count' : 'g',
 			})),
 		},
 	];

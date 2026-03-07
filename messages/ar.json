@@ -1,5 +1,5 @@
 {
-	"superAdmin": {
+  "superAdmin": {
     "title": "لوحة المشرف العام — المستخدمون",
     "subtitle": "إجمالي {{count}} مستخدم مُدار",
     "loading": "جارٍ تحميل المستخدمين…",
@@ -550,6 +550,60 @@
     "close": "إغلاق"
   },
   "home": {
+    "navbar": {
+      "brand": {
+        "name": "صحبة فيت",
+        "tagline": "نادي اللياقة البدنية"
+      },
+      "nav": {
+        "home": "الرئيسية",
+        "about": "من نحن",
+        "community": "المجتمع",
+        "pricing": "الأسعار",
+        "joinNow": "انضم الآن"
+      },
+      "langSwitch": {
+        "ar": "ع",
+        "en": "EN",
+        "ariaToAr": "التبديل إلى العربية",
+        "ariaToEn": "Switch to English",
+        "switchingToAr": "جارٍ التبديل إلى العربية…",
+        "switchingToEn": "Switching to English…"
+      },
+      "roles": {
+        "super_admin": "مدير عام",
+        "admin": "مدير",
+        "coach": "مدرب",
+        "client": "عضو"
+      },
+      "status": {
+        "active": "نشط",
+        "inactive": "غير نشط",
+        "suspended": "موقوف"
+      },
+      "dropdown": {
+        "openMenu": "فتح قائمة الحساب",
+        "dashboard": "لوحة التحكم",
+        "myProfile": "ملفي الشخصي",
+        "signOut": "تسجيل الخروج",
+        "points": "نقطة",
+        "pts": "نقطة"
+      },
+      "quickLinks": {
+        "sectionLabel": "وصول سريع",
+        "workspace": "مساحة العمل",
+        "money": "المالية",
+        "myExercise": "تمريناتي",
+        "myCalendar": "تقويمي"
+      },
+      "mobile": {
+        "open": "فتح القائمة",
+        "close": "إغلاق القائمة",
+        "sectionNav": "التنقل",
+        "sectionAccount": "الحساب",
+        "joinCta": "انضم الآن — مجاناً"
+      }
+    },
     "theme": {
       "themeShowcase": {
         "badge": "المظاهر والألوان",
@@ -1188,13 +1242,12 @@
       }
     }
   },
-	"navbar": {
+  "navbar": {
     "kanbanBoard": "لوحة كانبان",
     "calendar": "التقويم",
     "todos": "المهام"
   },
   "nav": {
-		
     "brand": {
       "portalTitle": "بوابة",
       "superAdminPortal": "بوابة المدير الأعلى",
@@ -1249,7 +1302,8 @@
       "timeManagement": "إدارة الوقت",
       "kanbanBoard": "لوحة كانبان",
       "todos": "قائمة المهام",
-      "calendar": "التقويم"
+      "calendar": "التقويم" ,
+			"allRecipes" : "جميع الوصفات"
     }
   },
   "themeSwitcher": {
@@ -1266,64 +1320,69 @@
     "footer": "سيتم تطبيق التغيير فورًا على كامل لوحة التحكم"
   },
   "auth": {
-    "welcome": "مرحباً بعودتك",
-    "signIn": "تسجيل الدخول",
-    "subtitle": "سجل دخولك للوصول إلى حسابك ومتابعة رحلتك الصحية",
-    "email": "البريد الإلكتروني",
-    "enterEmail": "أدخل بريدك الإلكتروني",
-    "password": "كلمة المرور",
-    "enterPassword": "أدخل كلمة المرور",
-    "signInButton": "تسجيل الدخول",
-    "invalidEmail": "البريد الإلكتروني غير صالح",
-    "passwordRequired": "كلمة المرور مطلوبة",
+  "Incorrect email or password": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+  "welcome": "مرحباً بعودتك",
+  "signIn": "تسجيل الدخول",
+  "subtitle": "سجل دخولك للوصول إلى حسابك ومتابعة رحلتك الصحية",
+  "email": "البريد الإلكتروني",
+  "enterEmail": "أدخل بريدك الإلكتروني",
+  "password": "كلمة المرور",
+  "enterPassword": "أدخل كلمة المرور",
+  "signInButton": "تسجيل الدخول",
+  "invalidEmail": "البريد الإلكتروني غير صالح",
+  "passwordRequired": "كلمة المرور مطلوبة",
 
-    "a11y": {
-      "showPassword": "إظهار كلمة المرور",
-      "hidePassword": "إخفاء كلمة المرور"
-    },
-
-    "loading": {
-      "signingIn": "جاري تسجيل الدخول..."
-    },
-
-    "success": {
-      "signedIn": "تم تسجيل الدخول بنجاح"
-    },
-
-    "errors": {
-      "loginFailed": "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى",
-      "accountPending": "حسابك قيد المراجعة",
-      "accountSuspended": "تم تعليق حسابك. يرجى الاتصال بالدعم",
-      "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة"
-    },
-
-    "hero": {
-      "badge": "منصة اللياقة البدنية المتميزة",
-      "title": "حوّل جسمك، غيّر حياتك",
-      "subtitle": "انضم إلى آلاف الأشخاص الذين حققوا أهدافهم الصحية معنا",
-      "perkPersonalized": "تمارين مخصصة لك",
-      "perkProgress": "تتبع التقدم",
-      "perkChat": "دعم من المدربين",
-      "perkPrivacy": "الخصوصية أولاً",
-      "secure": "آمن ومشفر"
-    },
-
-    "stats": {
-      "users": "مستخدم نشط",
-      "satisfaction": "رضا العملاء",
-      "support": "دعم متواصل"
-    },
-
-    "trust": {
-      "secure": "آمن",
-      "encrypted": "مشفر",
-      "verified": "موثق"
-    },
-
-    "notes": {
-      "protected": "بياناتك محمية ومشفرة"
-    }
+  "a11y": {
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور"
   },
+
+  "loading": {
+    "signingIn": "جارٍ تسجيل الدخول..."
+  },
+
+  "success": {
+    "signedIn": "تم تسجيل الدخول بنجاح"
+  },
+
+  "errors": {
+    "loginFailed": "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى",
+    "accountPending": "حسابك قيد المراجعة",
+    "accountSuspended": "تم تعليق حسابك. يرجى التواصل مع الدعم",
+    "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+  },
+
+  "hero": {
+    "badge": "منصة اللياقة البدنية المتميزة",
+    "title": "حوّل جسمك، غيّر حياتك",
+    "subtitle": "انضم إلى آلاف الأشخاص الذين حققوا أهدافهم الصحية معنا",
+    "perkPersonalized": "تمارين مخصصة لك",
+    "perkPersonalizedDetail": "مصممة خصيصاً لجسمك",
+    "perkProgress": "تتبع التقدم",
+    "perkProgressDetail": "تحليلات فورية لأدائك",
+    "perkChat": "مدربون خبراء",
+    "perkChatDetail": "تواصل مباشر في أي وقت",
+    "perkPrivacy": "الخصوصية أولاً",
+    "perkPrivacyDetail": "بياناتك تبقى ملكك",
+    "secure": "SSL مفعل"
+  },
+
+  "stats": {
+    "users": "رياضيون",
+    "satisfaction": "رضا العملاء",
+    "support": "التوفر"
+  },
+
+  "trust": {
+    "secure": "آمن",
+    "encrypted": "مؤمن عبر SSL · البيانات مشفرة أثناء التخزين",
+    "verified": "موثق"
+  },
+
+  "notes": {
+    "protected": "بياناتك محمية ومشفرة"
+  }
+},
   "Incorrect email or password": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
   "myProfile": {
     "header": {
@@ -2306,7 +2365,7 @@
     "d6": "6 أشهر",
     "d12": "12 شهر"
   },
- 
+
   "workouts": {
     "titles": {
       "exercises": "التمارين",
@@ -2626,6 +2685,8 @@
     "builder": {
       "namePlaceholder": "اسم الخطة (مثلاً: دفع/سحب/أرجل...)",
       "daysSectionTitle": "الأيام",
+      "restTime": "وقت الراحة",
+      "exerciseNote": "ملاحظة التمرين",
       "validation": {
         "nameRequired": "اسم الخطة مطلوب",
         "needDay": "يجب إضافة يوم واحد على الأقل",
@@ -2645,7 +2706,10 @@
       "savePlanBtn": "حفظ الخطة",
       "cardio": {
         "minutes": "الدقائق",
-        "note": "ملاحظات"
+        "seconds": "الثواني",
+        "note": "ملاحظات",
+        "min": "دقيقة",
+        "sec": "ثواني"
       }
     },
     "days": {
@@ -2673,7 +2737,9 @@
       "sets": "المجموعات",
       "reps": "التكرارات",
       "tempo": "التمبو",
-      "rest": "الراحة"
+      "rest": "الراحة",
+      "note": "ملاحظة",
+      "duration": "المدة"
     },
     "Sets": "المجموعات",
     "Reps": "التكرارات",
@@ -2749,6 +2815,8 @@
       "subtitle": "أنشئ خطط وجبات، اسندها للعملاء، واعرض التفاصيل في صفحة واحدة."
     },
     "btn": {
+      "remove_alternative": "حذف البديل",
+
       "new_plan": "خطة جديدة",
       "create": "إنشاء",
       "update": "تحديث",
@@ -2805,7 +2873,9 @@
       "best_with": "أفضل مع",
       "qty_count": "الكمية (عدد)",
       "qty": "الكمية",
-      "select_client": "اختيار العميل"
+      "select_client": "اختيار العميل",
+      "alternative_item": "عنصر بديل",
+      "add_alternative": "إضافة بديل"
     },
     "unit": {
       "g": "غ",
@@ -2884,7 +2954,6 @@
     }
   },
   "forms": {
-		
     "search": "البحث في النماذج...",
     "header": {
       "new": "نموذج جديد",
@@ -2902,9 +2971,9 @@
       "order": "الترتيب",
       "key": "المفتاح",
       "options": "الخيارات",
-      "copy_suffix": " (نسخة)" ,
-			"own": "خاص بي",
-"own_form": "نموذج خاص بي"
+      "copy_suffix": " (نسخة)",
+      "own": "خاص بي",
+      "own_form": "نموذج خاص بي"
     },
     "types_map": {
       "text": "نص",
@@ -3078,21 +3147,34 @@
       "form_created": "تم إنشاء النموذج.",
       "create_form_failed": "تعذّر إنشاء النموذج.",
       "assigned_ok": "تم تعيين الإدخال للمستخدم.",
-      "assign_failed": "تعذّر التعيين."
-    },
+      "assign_failed": "تعذّر التعيين." ,
+			 "delete_success": "تم الحذف بنجاح" 
+    }, 
+
+		"review": {
+    "label": "مراجعة",
+    "checked": "تمت المراجعة",
+    "unchecked": "لم تتم المراجعة",
+    "loading": "جارٍ التحديث...",
+    "aria_label": "تحديد حالة المراجعة"
+  },
+
     "table": {
       "form": "النموذج",
       "email": "الإيميل",
       "phone": "الهاتف",
       "ip": "عنوان IP",
       "submitted": "وقت الإرسال",
-      "actions": "إجراءات"
+      "actions": "إجراءات" ,
+			"reviewed" :"تمت المراجعة"
     },
     "actions": {
       "view": "عرض",
       "clear": "مسح",
       "refresh": "تحديث",
-      "load_more": "تحميل المزيد"
+      "load_more": "تحميل المزيد",
+      "delete": "حذف  " ,
+			"confirm_delete": "هل أنت متأكد من أنك تريد حذف هذا العنصر؟"
     },
     "empty": {
       "title": "لا توجد إدخالات",
@@ -4002,7 +4084,9 @@
         "itemUpdateFailed": "فشل في تحديث العنصر",
         "supplementUpdateFailed": "فشل في تحديث المكمل",
         "inlineSaveFailed": "فشل في حفظ التعديلات"
-      }
+      },
+
+      "alternative": "البديل"
     }
   },
   "timeField": {

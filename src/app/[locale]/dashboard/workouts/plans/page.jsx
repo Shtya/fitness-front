@@ -1,6 +1,3 @@
-/* 
-
-*/
 
 'use client';
 
@@ -68,6 +65,20 @@ const toSecondsFromMinutes = (mins) => {
 	return Math.trunc(n) * 60;
 };
 
+const toSecondsFromValueAndUnit = (value, unit) => {
+	const s = String(value ?? '').trim();
+	if (!s) return null;
+	const n = Number(s);
+	if (!Number.isFinite(n) || n <= 0) return null;
+	return unit === 'sec' ? Math.trunc(n) : Math.trunc(n) * 60;
+};
+
+const fromDurationSeconds = (secs, unit) => {
+	const n = Number(secs);
+	if (!Number.isFinite(n) || n <= 0) return '';
+	return unit === 'sec' ? String(Math.trunc(n)) : String(Math.round(n / 60));
+};
+
 function buildPayloadFromPlan(sourcePlan, { userId, nameSuffix = ' (copy)', isActive = true } = {}) {
 	const srcDays = sourcePlan?.program?.days || sourcePlan?.days || [];
 	const safeName = (sourcePlan?.name || 'Plan') + nameSuffix;
@@ -81,6 +92,8 @@ function buildPayloadFromPlan(sourcePlan, { userId, nameSuffix = ' (copy)', isAc
 			targetSets: ex.targetSets ?? 3,
 			targetReps: ex.targetReps ?? 12,
 			tempo: ex.tempo ?? '1/1/1',
+			restSeconds: ex.restSeconds ?? null,
+			note: ex.note ?? null,
 		})),
 		exercises: (d.exercises || []).map((ex, idx) => ({
 			order: ex.order || ex.orderIndex || idx + 1,
@@ -88,9 +101,11 @@ function buildPayloadFromPlan(sourcePlan, { userId, nameSuffix = ' (copy)', isAc
 			targetSets: ex.targetSets ?? 3,
 			targetReps: ex.targetReps ?? 12,
 			tempo: ex.tempo ?? '1/1/1',
+			restSeconds: ex.restSeconds ?? null,
+			note: ex.note ?? null,
 		})),
 
-		// ✅ CARDIO: time + note only
+		// ✅ CARDIO: durationSeconds + note
 		cardioExercises: (d.cardioExercises || []).map((ex, idx) => ({
 			order: ex.order || ex.orderIndex || idx + 1,
 			exerciseId: ex.exerciseId || ex?.exercise?.id || ex?.id,
@@ -789,11 +804,15 @@ const PlanPreview = memo(function PlanPreview({ plan }) {
 
 														{/* ✅ MAIN/WARMUP */}
 														{!isCardio && (ex.targetSets || ex.targetReps) && (
-															<p className='text-xs text-slate-500'>
-																{ex.targetSets ? `${ex.targetSets} ${t('preview.sets')}` : ''}
-																{ex.targetSets && ex.targetReps ? ' × ' : ''}
-																{ex.targetReps ? `${ex.targetReps} ${t('preview.reps')}` : ''}
-															</p>
+															<div className='text-xs text-slate-500 space-y-0.5'>
+																<p>
+																	{ex.targetSets ? `${ex.targetSets} ${t('preview.sets')}` : ''}
+																	{ex.targetSets && ex.targetReps ? ' × ' : ''}
+																	{ex.targetReps ? `${ex.targetReps} ${t('preview.reps')}` : ''}
+																	{(ex.restSeconds ?? ex.rest) ? ` • ${t('builder.restTime')} ${ex.restSeconds ?? ex.rest}s` : ''}
+																</p>
+																{ex.note ? <p className='text-[11px] text-slate-500 line-clamp-2'>{ex.note}</p> : null}
+															</div>
 														)}
 
 														{/* ✅ CARDIO */}
@@ -802,7 +821,11 @@ const PlanPreview = memo(function PlanPreview({ plan }) {
 																{ex.durationSeconds ? (
 																	<div className='inline-flex items-center gap-1'>
 																		<Clock className='w-3.5 h-3.5' />
-																		<span>{Math.round(Number(ex.durationSeconds) / 60)} min</span>
+																		<span>
+																			{Number(ex.durationSeconds) >= 60
+																				? `${Math.round(Number(ex.durationSeconds) / 60)} min`
+																				: `${Math.round(Number(ex.durationSeconds))} sec`}
+																		</span>
 																	</div>
 																) : null}
 																{ex.note ? <p className='text-[11px] text-slate-500 line-clamp-2'>{ex.note}</p> : null}
@@ -957,6 +980,8 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 				targetSets: e.targetSets ?? 3,
 				targetReps: e.targetReps ?? 12,
 				tempo: e.tempo ?? '1/1/1',
+				restSeconds: e.restSeconds ?? e.rest ?? null,
+				note: e.note ?? '',
 			})),
 
 			exercises: (x.exercises || []).map((e, j) => ({
@@ -968,16 +993,19 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 				targetSets: e.targetSets ?? 3,
 				targetReps: e.targetReps ?? 12,
 				tempo: e.tempo ?? '1/1/1',
+				restSeconds: e.restSeconds ?? e.rest ?? null,
+				note: e.note ?? '',
 			})),
 
-			// ✅ CARDIO: minutes + note (mapped from backend durationSeconds)
+			// ✅ CARDIO: durationValue + durationUnit + note (mapped from backend durationSeconds)
 			cardioExercises: (x.cardioExercises || []).map((e, j) => ({
 				exerciseId: e.exerciseId || e.exercise?.id || e.id,
 				name: e.name || e.exercise?.name,
 				img: e.img,
 				category: e.exercise?.category || e.category || null,
 				order: e.order || e.orderIndex || j + 1,
-				durationMinutes: toMinutesFromSeconds(e.durationSeconds),
+				durationValue: fromDurationSeconds(e.durationSeconds, 'min'),
+				durationUnit: 'min',
 				note: e.note ?? '',
 			})),
 		}));
@@ -1056,14 +1084,15 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 				const newOnes = pickedArray
 					.filter(x => !existingIdsSet.has(x.id))
 					.map(x => {
-						// ✅ cardio defaults: time + note only
+						// ✅ cardio defaults: duration + note
 						if (pickerBlock === 'cardio') {
 							return {
 								exerciseId: x.id,
 								name: x.name,
 								category: x.category || null,
 								img: x.img,
-								durationMinutes: '',
+								durationValue: '',
+								durationUnit: 'min',
 								note: '',
 							};
 						}
@@ -1077,6 +1106,8 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 							targetSets: 3,
 							targetReps: 12,
 							tempo: '1/1/1',
+							restSeconds: null,
+							note: '',
 						};
 					});
 
@@ -1126,6 +1157,8 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 						targetSets: ex.targetSets === '' || ex.targetSets == null ? null : Number(ex.targetSets),
 						targetReps: ex.targetReps === '' || ex.targetReps == null ? null : Number(ex.targetReps),
 						tempo: ex.tempo === '' || ex.tempo == null ? null : String(ex.tempo).trim(),
+						restSeconds: ex.restSeconds === '' || ex.restSeconds == null ? null : Number(ex.restSeconds),
+						note: String(ex.note ?? '').trim() || null,
 					})),
 
 					exercises: (d.exercises || []).map(ex => ({
@@ -1134,13 +1167,15 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 						targetSets: ex.targetSets === '' || ex.targetSets == null ? null : Number(ex.targetSets),
 						targetReps: ex.targetReps === '' || ex.targetReps == null ? null : Number(ex.targetReps),
 						tempo: ex.tempo === '' || ex.tempo == null ? null : String(ex.tempo).trim(),
+						restSeconds: ex.restSeconds === '' || ex.restSeconds == null ? null : Number(ex.restSeconds),
+						note: String(ex.note ?? '').trim() || null,
 					})),
 
-					// ✅ CARDIO payload: durationSeconds + note only
+					// ✅ CARDIO payload: durationSeconds + note
 					cardioExercises: (d.cardioExercises || []).map(ex => ({
 						order: ex.order,
 						exerciseId: ex.exerciseId,
-						durationSeconds: toSecondsFromMinutes(ex.durationMinutes),
+						durationSeconds: toSecondsFromValueAndUnit(ex.durationValue, ex.durationUnit ?? 'min'),
 						note: String(ex.note ?? '').trim() || null,
 					})),
 				})),
@@ -1322,62 +1357,126 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 										<div className='w-full sm:w-auto'>
 											{/* ✅ MAIN/WARMUP fields */}
 											{!isCardio && (
-												<div className='mt-2 sm:mt-0 sm:ml-auto grid grid-cols-3 gap-1.5 min-w-[210px] max-w-[260px]'>
-													<MiniField
-														inputMode='numeric'
-														type='number'
-														placeholder={t('preview.sets')}
-														value={ex.targetSets ?? ''}
-														onChange={e => setExerciseField(ex.exerciseId, { targetSets: e.target.value })}
-														onBlur={() => {
-															const s = String(ex.targetSets ?? '').trim();
-															if (!s) return;
-															setExerciseField(ex.exerciseId, { targetSets: normalizeIntOrDefault(ex.targetSets, 3) });
-														}}
-													/>
+												<>
+													<div className='mt-2 sm:mt-0 sm:ml-auto grid grid-cols-4 gap-1.5 min-w-[280px] max-w-[340px]'>
+														<MiniField
+															inputMode='numeric'
+															type='number'
+															placeholder={t('preview.sets')}
+															value={ex.targetSets ?? ''}
+															onChange={e => setExerciseField(ex.exerciseId, { targetSets: e.target.value })}
+															onBlur={() => {
+																const s = String(ex.targetSets ?? '').trim();
+																if (!s) return;
+																setExerciseField(ex.exerciseId, { targetSets: normalizeIntOrDefault(ex.targetSets, 3) });
+															}}
+														/>
 
-													<MiniField
-														inputMode='numeric'
-														placeholder={t('preview.reps')}
-														value={ex.targetReps ?? ''}
-														onChange={e => setExerciseField(ex.exerciseId, { targetReps: e.target.value })}
-														onBlur={() => {
-															const s = String(ex.targetReps ?? '').trim();
-															if (!s) return;
-															setExerciseField(ex.exerciseId, { targetReps: normalizeIntOrDefault(ex.targetReps, 12) });
-														}}
-													/>
+														<MiniField
+															inputMode='numeric'
+															placeholder={t('preview.reps')}
+															value={ex.targetReps ?? ''}
+															onChange={e => setExerciseField(ex.exerciseId, { targetReps: e.target.value })}
+															onBlur={() => {
+																const s = String(ex.targetReps ?? '').trim();
+																if (!s) return;
+																setExerciseField(ex.exerciseId, { targetReps: normalizeIntOrDefault(ex.targetReps, 12) });
+															}}
+														/>
 
-													<MiniField
-														placeholder={t('preview.tempo', { default: 'Tempo' })}
-														value={ex.tempo ?? ''}
-														onChange={e => setExerciseField(ex.exerciseId, { tempo: e.target.value })}
-														onBlur={() => {
-															const s = String(ex.tempo ?? '').trim();
-															if (!s) return;
-															setExerciseField(ex.exerciseId, { tempo: normalizeTempoOrDefault(ex.tempo, '1/1/1') });
-														}}
+														<MiniField
+															placeholder={t('preview.tempo', { default: 'Tempo' })}
+															value={ex.tempo ?? ''}
+															onChange={e => setExerciseField(ex.exerciseId, { tempo: e.target.value })}
+															onBlur={() => {
+																const s = String(ex.tempo ?? '').trim();
+																if (!s) return;
+																setExerciseField(ex.exerciseId, { tempo: normalizeTempoOrDefault(ex.tempo, '1/1/1') });
+															}}
+														/>
+
+														<MiniField
+															inputMode='numeric'
+															type='number'
+															placeholder={t('builder.restTime')}
+															value={ex.restSeconds ?? ''}
+															onChange={e => setExerciseField(ex.exerciseId, { restSeconds: e.target.value })}
+															onBlur={() => {
+																const s = String(ex.restSeconds ?? '').trim();
+																if (!s) return;
+																setExerciseField(ex.exerciseId, { restSeconds: normalizeIntOrDefault(ex.restSeconds, 90) });
+															}}
+														/>
+													</div>
+													<MiniTextArea
+														className='mt-2 !min-w-[200px]'
+														placeholder={t('builder.exerciseNote', { default: 'Note for this exercise...' })}
+														value={ex.note ?? ''}
+														onChange={(val) => setExerciseField(ex.exerciseId, { note: val })}
 													/>
-												</div>
+												</>
 											)}
 
-											{/* ✅ CARDIO fields (time + note) */}
+											{/* ✅ CARDIO fields (duration + unit toggle + note) */}
 											{isCardio && (
-												<div className=' flex items-center gap-1.5 '>
-													<MiniField
-														inputMode='numeric'
-														className='!h-[35px]  '
-														cnParent="!w-[120px]"
-														type='number'
-														placeholder={t('builder.cardio.minutes', { default: 'Minutes' })}
-														value={ex.durationMinutes ?? ''}
-														onChange={e => setExerciseField(ex.exerciseId, { durationMinutes: e.target.value })}
-														onBlur={() => setExerciseField(ex.exerciseId, { durationMinutes: normalizeMinutesOrEmpty(ex.durationMinutes) })}
-														iconLeft={<Clock className='w-3.5 h-4.5 text-slate-400' />}
-													/>
+												<div className='flex   items-center gap-1.5'>
+													<div className='w-full  relative flex items-center rounded-lg border border-slate-200 '>
+														<div className='   flex border-l border-slate-200'>
+															<button
+																type='button'
+																onClick={() => {
+																	const unit = 'min';
+																	const prevVal = ex.durationValue;
+																	const prevUnit = ex.durationUnit ?? 'min';
+																	const secs = toSecondsFromValueAndUnit(prevVal, prevUnit);
+																	const newVal = secs != null ? fromDurationSeconds(secs, unit) : '';
+																	setExerciseField(ex.exerciseId, { durationUnit: unit, durationValue: newVal });
+																}}
+																className={[
+																	'px-2 py-1.5 rounded-md text-[11px] font-semibold transition',
+																	(ex.durationUnit ?? 'min') === 'min'
+																		? 'bg-[color:var(--color-primary-500)] text-white'
+																		: 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+																].join(' ')}
+															>
+																{t('builder.cardio.min', { default: 'min' })}
+															</button>
+															<button
+																type='button'
+																onClick={() => {
+																	const unit = 'sec';
+																	const prevVal = ex.durationValue;
+																	const prevUnit = ex.durationUnit ?? 'min';
+																	const secs = toSecondsFromValueAndUnit(prevVal, prevUnit);
+																	const newVal = secs != null ? fromDurationSeconds(secs, unit) : '';
+																	setExerciseField(ex.exerciseId, { durationUnit: unit, durationValue: newVal });
+																}}
+																className={[
+																	'px-2 py-1.5 rounded-md text-[11px] font-semibold transition',
+																	(ex.durationUnit ?? 'min') === 'sec'
+																		? 'bg-[color:var(--color-primary-500)] text-white'
+																		: 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+																].join(' ')}
+															>
+																{t('builder.cardio.sec', { default: 'sec' })}
+															</button>
+														</div>
+														<MiniField
+															inputMode='numeric'
+															className='!h-[35px] !rounded-none !border-0'
+															cnParent=" w-full "
+															type='number'
+															placeholder={ex.durationUnit === 'sec' ? t('builder.cardio.seconds' ) : t('builder.cardio.minutes', { default: 'Min' })}
+															value={ex.durationValue ?? ''}
+															onChange={e => setExerciseField(ex.exerciseId, { durationValue: e.target.value })}
+															onBlur={() => setExerciseField(ex.exerciseId, { durationValue: normalizeMinutesOrEmpty(ex.durationValue) })}
+															iconLeft={<Clock className='w-3.5 h-4.5 text-slate-400' />}
+														/>
+													</div>
 
 													<MiniTextArea
-														placeholder={t('builder.cardio.note', { default: 'Cardio note (speed / RPE / intervals...)' })}
+														className=" "
+														placeholder={t('builder.cardio.note')}
 														value={ex.note ?? ''}
 														onChange={(val) => setExerciseField(ex.exerciseId, { note: val })}
 													/>

@@ -1434,7 +1434,10 @@ export default function MyWorkoutsPage() {
  												{currentExercise && (() => {
 													const reps = normalizeReps(currentExercise?.targetReps);
 													const tempo = normalizeTempo(currentExercise?.tempo);
- 
+													const secs = Number(currentExercise?.durationSeconds ?? 0);
+													const isCardioEx = (currentExercise?.group || activeSection) === 'cardio';
+													const durationLabel = secs >= 60 ? `${Math.round(secs / 60)} min` : secs > 0 ? `${Math.round(secs)} sec` : null;
+
 													return (
 														<div className='absolute  w-[calc(100%+3px)] overflow-hidden top-full rounded-[0_0_20px_20px] left-[-1.5px] pointer-events-none' >
 															{/* Main Stats Bar */}
@@ -1450,7 +1453,7 @@ export default function MyWorkoutsPage() {
 															>
 																<div className='px-3 py-3 md:px-4 md:py-3.5'>
 																	<div className='flex items-center justify-between gap-3'>
-																		{/* Reps Stat */}
+																		{/* Reps or Duration Stat */}
 																		<div className='flex items-center gap-2 flex-1'>
 																			<div
 																				className=' border border-white/60 w-9 h-9 rounded-lg flex items-center justify-center shadow-lg'
@@ -1458,14 +1461,14 @@ export default function MyWorkoutsPage() {
 																					background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600))',
 																				}}
 																			>
-																				<Repeat size={18} className='text-white' strokeWidth={2.5} />
+																				{isCardioEx ? <Clock size={18} className='text-white' strokeWidth={2.5} /> : <Repeat size={18} className='text-white' strokeWidth={2.5} />}
 																			</div>
 																			<div>
 																				<div className='text-[10px] font-semibold uppercase tracking-wider text-white'>
-																					{t("notes.reps")}
+																					{isCardioEx ? t('notes.duration', { default: 'Duration' }) : t("notes.reps")}
 																				</div>
 																				<div className='text-lg font-black text-white leading-none mt-0.5'>
-																					{reps || '-'}
+																					{isCardioEx ? (durationLabel || '-') : (reps || '-')}
 																				</div>
 																			</div>
 																		</div>
@@ -1473,7 +1476,7 @@ export default function MyWorkoutsPage() {
 																		{/* Divider */}
 																		<div className='h-10 w-px bg-white/20'></div>
 
-																		{/* Tempo Stat */}
+																		{/* Tempo (non-cardio) or Note (cardio) Stat */}
 																		<div className='flex items-center gap-2 flex-1'>
 																			<div
 																				className='w-9 h-9  border border-white/60 rounded-lg flex items-center justify-center shadow-lg'
@@ -1481,14 +1484,14 @@ export default function MyWorkoutsPage() {
 																					background: 'linear-gradient(135deg, var(--color-primary-400), var(--color-primary-500))',
 																				}}
 																			>
-																				<Timer size={18} className='text-white' strokeWidth={2.5} />
+																				{isCardioEx ? <StickyNote size={18} className='text-white' strokeWidth={2.5} /> : <Timer size={18} className='text-white' strokeWidth={2.5} />}
 																			</div>
-																			<div>
+																			<div className='min-w-0 flex-1'>
 																				<div className='text-[10px] font-semibold uppercase tracking-wider text-white'>
-																					{t("notes.tempo")}
+																					{isCardioEx ? t('notes.note', { default: 'Note' }) : t("notes.tempo")}
 																				</div>
-																				<div className='text-lg font-black text-white leading-none mt-0.5'>
-																					{tempo || '-'}
+																				<div className='text-sm font-black text-white leading-none mt-0.5 truncate'>
+																					{isCardioEx ? (String(currentExercise?.note ?? '').trim() || '-') : (tempo || '-')}
 																				</div>
 																			</div>
 																		</div>
@@ -1614,6 +1617,18 @@ export default function MyWorkoutsPage() {
 												/>
 											</div>
 
+											{!isCardio && String(currentExercise?.note ?? '').trim() && (
+												<div
+													className='mt-2 rounded-lg border px-3 py-2 text-xs'
+													style={{
+														borderColor: 'var(--color-primary-200)',
+														background: 'linear-gradient(135deg, var(--color-primary-50), rgba(255,255,255,0.9))',
+													}}
+												>
+													<span className='font-semibold' style={{ color: 'var(--color-primary-700)' }}>{t('notes.note', { default: 'Note' })}:</span>{' '}
+													<span className='text-slate-600'>{String(currentExercise?.note ?? '').trim()}</span>
+												</div>
+											)}
 											{!isCardio && (
 												<RestTimerCard
 													alerting={alerting}
