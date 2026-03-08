@@ -28,6 +28,32 @@
 }
 
 :root {
+	--color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
+
+  --color-secondary-50: #faf5ff;
+  --color-secondary-100: #f3e8ff;
+  --color-secondary-200: #e9d5ff;
+  --color-secondary-300: #d8b4fe;
+  --color-secondary-400: #c084fc;
+  --color-secondary-500: #a855f7;
+  --color-secondary-600: #9333ea;
+  --color-secondary-700: #7e22ce;
+  --color-secondary-800: #6b21a8;
+  --color-secondary-900: #581c87;
+
+  --color-gradient-from: #6366f1;
+  --color-gradient-via: #8b5cf6;
+  --color-gradient-to: #a855f7;
+	
   --main: oklch(51.1% 0.262 276.966);
   --radius: 0.625rem;
   --background: oklch(1 0 0);
@@ -663,4 +689,23 @@ input[type='number'] {
   font-size: 10px;
   color: #64748b; /* slate-500 */
   pointer-events: none;
+}
+
+
+
+
+.bg-card {
+  @apply  rounded-lg border transition-all duration-300   border-gray-300/70; 
+
+  transition:
+    box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.3s ease;
+}
+
+.bg-card {
+  box-shadow:
+    rgba(50, 50, 93, 0.04) 0px 2px 8px 0px,
+    rgba(50, 50, 93, 0.06) 0px 8px 32px -4px,
+    rgba(0, 0, 0, 0.03) 0px 16px 48px -8px,
+    rgba(255, 255, 255, 0.9) 0px -1px 0px 0px inset !important;
 }

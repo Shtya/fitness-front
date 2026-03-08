@@ -117,11 +117,89 @@ function useLocalStorageState(key, initial) {
 
 /* ─── NAV ───────────────────────────────────────────────────── */
 export const NAV = [
+ 
+	{
+		role: 'admin',
+		sectionKey: 'sections.dashboard',
+ 		items: [
+			{ nameKey: 'allUsers', href: '/dashboard/users', icon: Users },
+			{ nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
+			{ nameKey: 'allRecipes', href: '/dashboard/recipes', icon: ReceiptJapaneseYen },
+		]
+	},
+	{
+		role: 'admin',
+		sectionKey: 'sections.programs',
+		items: [
+			{ nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: NotebookPen },
+			{ nameKey: 'mealPlans', href: '/dashboard/nutrition', icon: ChefHat },
+			{ nameKey: 'recipes', href: '/dashboard/recipes', icon: ChefHat },
+		]
+	},
+	{
+		role: 'admin',
+		sectionKey: 'sections.clientIntake',
+		items: [
+			{
+				nameKey: 'clientIntake',
+				icon: FaUsers,
+				expand: false,
+				children: [
+					{ nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FaWpforms },
+					{ nameKey: 'responses', href: '/dashboard/intake/responses', icon: FaInbox },
+				]
+			}
+		]
+	},
+	{
+		role: 'admin',
+		sectionKey: 'sections.timeManagement',
+		items: [
+			{
+				nameKey: 'timeManagement',
+				icon: Clock,
+				expand: false,
+				children: [
+					{ nameKey: 'kanbanBoard', href: '/workspace?tab=boards', icon: KanbanSquare },
+					{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
+					{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
+				]
+			}
+		]
+	},
+	{
+		role: 'admin',
+		sectionKey: 'sections.tools',
+		items: [
+			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
+			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
+			{ nameKey: 'reports', href: '/dashboard/reports', icon: FileBarChart },
+		]
+	},
+	{
+		role: 'admin',
+		sectionKey: 'sections.account',
+		items: [
+			{ nameKey: 'billing', href: '/dashboard/billing', icon: Wallet },
+			{ nameKey: 'profile', href: '/dashboard/my-account', icon: User },
+			{ nameKey: 'money', href: '/money', icon: Wallet },
+		]
+	},
+	{
+		role: 'admin',
+		sectionKey: 'sections.system',
+		items: [
+			{ nameKey: 'systemSettings', href: '/dashboard/settings', icon: ServerCog }
+		]
+	},
+
 	// CLIENT
 	{
 		role: 'client',
 		sectionKey: 'sections.dashboard',
-		items: [{ nameKey: 'overview', href: '/dashboard', icon: LayoutDashboard }]
+		items: [
+			{ nameKey: 'overview', href: '/dashboard', icon: LayoutDashboard }
+		]
 	},
 	{
 		role: 'client',
@@ -144,24 +222,12 @@ export const NAV = [
 	{
 		role: 'client',
 		sectionKey: 'sections.account',
-		items: [{ nameKey: 'profile', href: '/dashboard/my/profile', icon: UserIcon }]
+		items: [
+			{ nameKey: 'profile', href: '/dashboard/my/profile', icon: UserIcon }
+		]
 	},
 
 	// COACH
-	{
-		role: 'coach',
-		sectionKey: 'sections.timeManagement',
-		items: [{
-			nameKey: 'timeManagement',
-			icon: Clock,
-			expand: false,
-			children: [
-				{ nameKey: 'kanbanBoard', href: '/workspace?tab=boards', icon: KanbanSquare },
-				{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
-				{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
-			]
-		}]
-	},
 	{
 		role: 'coach',
 		sectionKey: 'sections.clients',
@@ -182,95 +248,47 @@ export const NAV = [
 	{
 		role: 'coach',
 		sectionKey: 'sections.clientIntake',
-		items: [{
-			nameKey: 'clientIntake',
-			icon: FaUsers,
-			expand: false,
-			children: [
-				{ nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FaWpforms },
-				{ nameKey: 'responses', href: '/dashboard/intake/responses', icon: FaInbox },
-			]
-		}]
-	},
-	{
-		role: 'coach',
-		sectionKey: 'sections.tools',
 		items: [
-			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
-			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
+			{
+				nameKey: 'clientIntake',
+				icon: FaUsers,
+				expand: false,
+				children: [
+					{ nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FaWpforms },
+					{ nameKey: 'responses', href: '/dashboard/intake/responses', icon: FaInbox },
+				]
+			}
 		]
 	},
 	{
 		role: 'coach',
-		sectionKey: 'sections.account',
-		items: [{ nameKey: 'profile', icon: User, href: '/dashboard/my-account' }]
-	},
-
-	// ADMIN
-	{
-		role: 'admin',
 		sectionKey: 'sections.timeManagement',
-		items: [{
-			nameKey: 'timeManagement',
-			icon: Clock,
-			expand: false,
-			children: [
-				{ nameKey: 'kanbanBoard', href: '/workspace?tab=boards', icon: KanbanSquare },
-				{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
-				{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
-			]
-		}]
-	},
-	{
-		role: 'admin',
-		sectionKey: 'sections.management',
 		items: [
-			{ nameKey: 'allUsers', href: '/dashboard/users', icon: Users },
-			{ nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
-			{ nameKey: 'allRecipes', href: '/dashboard/recipes', icon: ReceiptJapaneseYen },
+			{
+				nameKey: 'timeManagement',
+				icon: Clock,
+				expand: false,
+				children: [
+					{ nameKey: 'kanbanBoard', href: '/workspace?tab=boards', icon: KanbanSquare },
+					{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
+					{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
+				]
+			}
 		]
 	},
 	{
-		role: 'admin',
-		sectionKey: 'sections.programs',
-		items: [
-			{ nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: NotebookPen },
-			{ nameKey: 'mealPlans', href: '/dashboard/nutrition', icon: ChefHat },
-		]
-	},
-	{
-		role: 'admin',
-		sectionKey: 'sections.clientIntake',
-		items: [{
-			nameKey: 'clientIntake',
-			icon: FaUsers,
-			expand: false,
-			children: [
-				{ nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FaWpforms },
-				{ nameKey: 'responses', href: '/dashboard/intake/responses', icon: FaInbox },
-			]
-		}]
-	},
-	{
-		role: 'admin',
+		role: 'coach',
 		sectionKey: 'sections.tools',
 		items: [
 			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
 			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
-			{ nameKey: 'reports', href: '/dashboard/reports', icon: FileBarChart },
 		]
 	},
 	{
-		role: 'admin',
-		sectionKey: 'sections.system',
-		items: [{ nameKey: 'systemSettings', href: '/dashboard/settings', icon: ServerCog }]
-	},
-	{
-		role: 'admin',
+		role: 'coach',
 		sectionKey: 'sections.account',
 		items: [
-			{ nameKey: 'billing', icon: Wallet, href: '/dashboard/billing' },
-			{ nameKey: 'profile', icon: User, href: '/dashboard/my-account' },
+			{ nameKey: 'profile', icon: User, href: '/dashboard/my-account' }
 		]
 	},
 
@@ -278,7 +296,9 @@ export const NAV = [
 	{
 		role: 'super_admin',
 		sectionKey: 'sections.dashboard',
-		items: [{ nameKey: 'overview', href: '/dashboard', icon: LayoutDashboard }]
+		items: [
+			{ nameKey: 'overview', href: '/dashboard', icon: LayoutDashboard }
+		]
 	},
 	{
 		role: 'super_admin',
@@ -292,35 +312,41 @@ export const NAV = [
 	{
 		role: 'super_admin',
 		sectionKey: 'sections.billing',
-		items: [{
-			nameKey: 'billing',
-			icon: Wallet,
-			expand: false,
-			children: [
-				{ nameKey: 'analytics', href: '/dashboard/billing/analytics', icon: TrendingUp },
-				{ nameKey: 'withdrawalApprovals', href: '/dashboard/billing/withdrawal-approvals', icon: CreditCard },
-				{ nameKey: 'allWallets', href: '/dashboard/billing/all-wallets', icon: Users },
-			]
-		}]
+		items: [
+			{
+				nameKey: 'billing',
+				icon: Wallet,
+				expand: false,
+				children: [
+					{ nameKey: 'analytics', href: '/dashboard/billing/analytics', icon: TrendingUp },
+					{ nameKey: 'withdrawalApprovals', href: '/dashboard/billing/withdrawal-approvals', icon: CreditCard },
+					{ nameKey: 'allWallets', href: '/dashboard/billing/all-wallets', icon: Users },
+				]
+			}
+		]
 	},
 	{
 		role: 'super_admin',
 		sectionKey: 'sections.timeManagement',
-		items: [{
-			nameKey: 'timeManagement',
-			icon: Clock,
-			expand: false,
-			children: [
-				{ nameKey: 'kanbanBoard', href: '/workspace?tab=boards', icon: KanbanSquare },
-				{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
-				{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
-			]
-		}]
+		items: [
+			{
+				nameKey: 'timeManagement',
+				icon: Clock,
+				expand: false,
+				children: [
+					{ nameKey: 'kanbanBoard', href: '/workspace?tab=boards', icon: KanbanSquare },
+					{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
+					{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
+				]
+			}
+		]
 	},
 	{
 		role: 'super_admin',
 		sectionKey: 'sections.system',
-		items: [{ nameKey: 'systemSettings', href: '/dashboard/settings', icon: ServerCog }]
+		items: [
+			{ nameKey: 'systemSettings', href: '/dashboard/settings', icon: ServerCog }
+		]
 	},
 ];
 
@@ -1010,8 +1036,7 @@ function NavItem({
 		</div>
 	);
 }
-
-/* ─── NavSection ─────────────────────────────────────────────── */
+ 
 function NavSection({
 	sectionKey,
 	items,
@@ -1026,7 +1051,7 @@ function NavSection({
 	const label = t_nav(sectionKey, { defaultValue: '' });
 
 	return (
-		<div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+		<div style={{ display: 'flex', flexDirection: 'column'  }}>
 			{!collapsed && label && <SectionLabel label={label} />}
 			{items.map((item) => (
 				<NavItem
@@ -1813,7 +1838,7 @@ function SidebarFooter({ collapsed, onLogout, logoutLabel }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   MAIN EXPORT
+	 MAIN EXPORT
 ═══════════════════════════════════════════════════════════════ */
 export default function Sidebar({
 	open,
@@ -1893,7 +1918,7 @@ export default function Sidebar({
 								padding: '2px 8px',
 								display: 'flex',
 								flexDirection: 'column',
-								gap: collapsed ? 16 : 20
+								gap: collapsed ? 0 : 4
 							}}>
 								{sections?.map((section) => (
 									<NavSection

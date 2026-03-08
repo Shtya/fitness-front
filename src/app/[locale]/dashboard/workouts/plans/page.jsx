@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
@@ -19,6 +18,11 @@ import {
 	Loader2,
 	Share2,
 	CopyPlus,
+	ChevronDown,
+	ChevronUp,
+	BarChart3,
+	Calendar,
+	Zap,
 } from 'lucide-react';
 
 import api from '@/utils/axios';
@@ -51,20 +55,6 @@ const useDebounced = (value, delay = 350) => {
 	return deb;
 };
 
-const toMinutesFromSeconds = (secs) => {
-	const n = Number(secs);
-	if (!Number.isFinite(n) || n <= 0) return '';
-	return String(Math.round(n / 60));
-};
-
-const toSecondsFromMinutes = (mins) => {
-	const s = String(mins ?? '').trim();
-	if (!s) return null;
-	const n = Number(s);
-	if (!Number.isFinite(n) || n <= 0) return null;
-	return Math.trunc(n) * 60;
-};
-
 const toSecondsFromValueAndUnit = (value, unit) => {
 	const s = String(value ?? '').trim();
 	if (!s) return null;
@@ -82,7 +72,6 @@ const fromDurationSeconds = (secs, unit) => {
 function buildPayloadFromPlan(sourcePlan, { userId, nameSuffix = ' (copy)', isActive = true } = {}) {
 	const srcDays = sourcePlan?.program?.days || sourcePlan?.days || [];
 	const safeName = (sourcePlan?.name || 'Plan') + nameSuffix;
-
 	const days = srcDays.map((d, i) => ({
 		dayOfWeek: String(d.dayOfWeek || d.day || 'saturday').toLowerCase(),
 		nameOfWeek: d.nameOfWeek || d.name || `Day #${i + 1}`,
@@ -104,8 +93,6 @@ function buildPayloadFromPlan(sourcePlan, { userId, nameSuffix = ' (copy)', isAc
 			restSeconds: ex.restSeconds ?? null,
 			note: ex.note ?? null,
 		})),
-
-		// ✅ CARDIO: durationSeconds + note
 		cardioExercises: (d.cardioExercises || []).map((ex, idx) => ({
 			order: ex.order || ex.orderIndex || idx + 1,
 			exerciseId: ex.exerciseId || ex?.exercise?.id || ex?.id,
@@ -113,7 +100,6 @@ function buildPayloadFromPlan(sourcePlan, { userId, nameSuffix = ' (copy)', isAc
 			note: ex.note ?? '',
 		})),
 	}));
-
 	return {
 		userId: userId ?? null,
 		name: safeName.trim(),
@@ -134,9 +120,6 @@ export default function PlansPage() {
 
 	const openedFromUrlRef = useRef(null);
 	const skipNextUrlOpenRef = useRef(false);
-
-
-
 
 	const [items, setItems] = useState([]);
 	const [total, setTotal] = useState(0);
@@ -164,7 +147,6 @@ export default function PlansPage() {
 
 	useEffect(() => {
 		if (user?.role == 'coach') api.get(`auth/coaches/${user?.id}/clients?limit=1000`).then(res => setClientsCoach(res.data));
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const optionsClient = useMemo(() => {
@@ -186,26 +168,19 @@ export default function PlansPage() {
 
 	const fetchList = useCallback(async () => {
 		if (abortControllerRef.current) abortControllerRef.current.abort();
-
 		abortControllerRef.current = new AbortController();
 		setErr(null);
 		setLoading(true);
-
 		const myId = ++reqId.current;
 		try {
 			const params = { page, limit: perPage, sortBy, sortOrder };
 			if (debounced) params.search = debounced;
-
 			const res = await api.get(user?.role == 'admin' ? '/plans' : `/plans?user_id=${user?.adminId}`, {
 				params,
 				signal: abortControllerRef.current.signal,
 			});
 			const data = res.data || {};
-
-			let records = [];
-			let totalRecords = 0;
-			let serverPerPage = perPage;
-
+			let records = [], totalRecords = 0, serverPerPage = perPage;
 			if (Array.isArray(data.records)) {
 				records = data.records;
 				totalRecords = Number(data.total_records || data.records.length || 0);
@@ -218,7 +193,6 @@ export default function PlansPage() {
 				totalRecords = Number(data.total || data.items.length || 0);
 				serverPerPage = Number(data.limit || perPage);
 			}
-
 			if (myId !== reqId.current) return;
 			setTotal(totalRecords);
 			setPerPage(serverPerPage);
@@ -239,9 +213,7 @@ export default function PlansPage() {
 			if (debounced) params.search = debounced;
 			const res = await api.get('/plans/overview', { params });
 			setStats(res.data);
-		} catch {
-			// ignore
-		} finally {
+		} catch { } finally {
 			setLoadingStats(false);
 		}
 	}, [debounced]);
@@ -249,35 +221,22 @@ export default function PlansPage() {
 	useEffect(() => setPage(1), [debounced, sortBy, sortOrder, perPage]);
 	useEffect(() => void fetchList(), [changePlans, fetchList]);
 	useEffect(() => void fetchStats(), [fetchStats]);
-
 	useEffect(() => {
-		return () => {
-			if (abortControllerRef.current) abortControllerRef.current.abort();
-		};
+		return () => { if (abortControllerRef.current) abortControllerRef.current.abort(); };
 	}, []);
 
-	const toggleSort = useCallback(
-		field => {
-			if (sortBy === field) setSortOrder(o => (o === 'ASC' ? 'DESC' : 'ASC'));
-			else {
-				setSortBy(field);
-				setSortOrder('ASC');
-			}
-		},
-		[sortBy],
-	);
+	const toggleSort = useCallback(field => {
+		if (sortBy === field) setSortOrder(o => (o === 'ASC' ? 'DESC' : 'ASC'));
+		else { setSortBy(field); setSortOrder('ASC'); }
+	}, [sortBy]);
 
 	const getOne = async id => (await api.get(`/plans/${id}`)).data;
 
-	/* ----------------------------- CRUD Handlers ---------------------------- */
 	const [deleteId, setDeleteId] = useState(null);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [deleteLoading, setDeleteLoading] = useState(false);
 
-	const askDelete = useCallback(id => {
-		setDeleteId(id);
-		setDeleteOpen(true);
-	}, []);
+	const askDelete = useCallback(id => { setDeleteId(id); setDeleteOpen(true); }, []);
 
 	const handleDelete = useCallback(async () => {
 		if (!deleteId) return;
@@ -301,80 +260,51 @@ export default function PlansPage() {
 	const updatePlan = async (id, payload) => (await api.put(`/plans/${id}`, payload, { headers: { 'Content-Type': 'application/json' } })).data;
 
 	const openPreview = async plan => {
-		try {
-			setPreview(await getOne(plan.id));
-		} catch {
-			setPreview(plan);
-		}
+		try { setPreview(await getOne(plan.id)); } catch { setPreview(plan); }
 	};
-
 	const openEdit = async plan => {
-		try {
-			setEditRow(await getOne(plan.id));
-		} catch {
-			setEditRow(plan);
-		}
+		try { setEditRow(await getOne(plan.id)); } catch { setEditRow(plan); }
 	};
-
 	const openAssign = plan => setAssignOpen(plan);
 
 	const totalPages = useMemo(() => Math.max(1, Math.ceil(total / Math.max(1, perPage))), [total, perPage]);
-	const sortLabel =
-		sortBy === 'created_at'
-			? sortOrder === 'ASC'
-				? t('plans.filters.oldestFirst')
-				: t('plans.filters.newestFirst')
-			: t('plans.filters.sortByDate');
+	const sortLabel = sortBy === 'created_at'
+		? sortOrder === 'ASC' ? t('plans.filters.oldestFirst') : t('plans.filters.newestFirst')
+		: t('plans.filters.sortByDate');
 
 	const [duplicatingIds, setDuplicatingIds] = useState(() => new Set());
 	const markDuplicating = useCallback((id, on) => {
-		setDuplicatingIds(prev => {
-			const next = new Set(prev);
-			on ? next.add(id) : next.delete(id);
-			return next;
-		});
+		setDuplicatingIds(prev => { const next = new Set(prev); on ? next.add(id) : next.delete(id); return next; });
 	}, []);
 
-	const handleDuplicate = useCallback(
-		async plan => {
-			if (!plan?.id) return;
-			markDuplicating(plan.id, true);
-			try {
-				const full = await getOne(plan.id).catch(() => plan);
-				const payload = buildPayloadFromPlan(full, {
-					userId: user?.role == 'admin' ? user?.id : user?.adminId,
-					nameSuffix: ` ${t('copySuffix', '(copy)')}`,
-					isActive: full?.isActive ?? true,
-				});
-				const created = await createPlan(payload);
-				setItems(arr => [created, ...arr]);
-				setTotal(tot => tot + 1);
-				Notification(t('notifications.planDuplicated', 'Plan duplicated. You can edit it now.'), 'success');
-				setEditRow(created);
-			} catch (e) {
-				const msg = e?.response?.data?.message || t('notifications.duplicateFailed', 'Could not duplicate plan');
-				Notification(msg, 'error');
-			} finally {
-				markDuplicating(plan.id, false);
-			}
-		},
-		[user?.id, user?.adminId, user?.role, t, markDuplicating],
-	);
-
+	const handleDuplicate = useCallback(async plan => {
+		if (!plan?.id) return;
+		markDuplicating(plan.id, true);
+		try {
+			const full = await getOne(plan.id).catch(() => plan);
+			const payload = buildPayloadFromPlan(full, {
+				userId: user?.role == 'admin' ? user?.id : user?.adminId,
+				nameSuffix: ` ${t('copySuffix', '(copy)')}`,
+				isActive: full?.isActive ?? true,
+			});
+			const created = await createPlan(payload);
+			setItems(arr => [created, ...arr]);
+			setTotal(tot => tot + 1);
+			Notification(t('notifications.planDuplicated', 'Plan duplicated. You can edit it now.'), 'success');
+			setEditRow(created);
+		} catch (e) {
+			Notification(e?.response?.data?.message || t('notifications.duplicateFailed', 'Could not duplicate plan'), 'error');
+		} finally {
+			markDuplicating(plan.id, false);
+		}
+	}, [user?.id, user?.adminId, user?.role, t, markDuplicating]);
 
 	useEffect(() => {
 		const planId = searchParams.get('planId');
 		if (!planId) return;
-
-		// ✅ if we just cleared the URL, ignore this one render
-		if (skipNextUrlOpenRef.current) {
-			skipNextUrlOpenRef.current = false;
-			return;
-		}
-
+		if (skipNextUrlOpenRef.current) { skipNextUrlOpenRef.current = false; return; }
 		if (openedFromUrlRef.current === planId) return;
 		openedFromUrlRef.current = planId;
-
 		(async () => {
 			try {
 				const full = await getOne(planId);
@@ -386,26 +316,17 @@ export default function PlansPage() {
 		})();
 	}, [searchParams, items]);
 
-
 	const clearPlanIdFromUrl = useCallback(() => {
-		skipNextUrlOpenRef.current = true; // ✅ prevent reopen glitch
-
+		skipNextUrlOpenRef.current = true;
 		const sp = new URLSearchParams(searchParams.toString());
 		sp.delete('planId');
-
 		const qs = sp.toString();
 		router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-
 		openedFromUrlRef.current = null;
 	}, [router, pathname, searchParams]);
 
-
-
-
-
-
 	return (
-		<div className='space-y-6'>
+		<div className="space-y-6">
 			<GradientStatsHeader
 				onClick={() => setAddOpen(true)}
 				btnName={t('plans.header.newPlanButton')}
@@ -415,76 +336,64 @@ export default function PlansPage() {
 			>
 				{user?.role == 'admin' && (
 					<>
-						<StatCard className=' ' icon={Layers} title={t('plans.stats.globalPlans')} value={stats?.plans?.total || 0} />
-						<StatCard className=' ' icon={Layers} title={t('plans.stats.personalPlans')} value={stats?.plans?.totalPlansPersonal || 0} />
+						<StatCard icon={Layers} title={t('plans.stats.globalPlans')} value={stats?.plans?.total || 0} />
+						<StatCard icon={Layers} title={t('plans.stats.personalPlans')} value={stats?.plans?.totalPlansPersonal || 0} />
 					</>
 				)}
 			</GradientStatsHeader>
 
-			<div className='relative '>
-				<div className='flex items-center justify-between gap-2 flex-wrap'>
-					<div className='relative flex-1 max-w-[240px] sm:min-w-[260px]'>
-						<Search className='absolute rtl:right-3 ltr:left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' />
-						<input
-							value={searchText}
-							onChange={e => setSearchText(e.target.value)}
-							placeholder={t('placeholders.searchPlan')}
-							className={[
-								'h-11 w-full px-8 rounded-lg',
-								'border border-slate-200 bg-white/90 text-slate-900',
-								'shadow-sm hover:shadow transition',
-								'focus:outline-none focus:ring-4 focus:ring-[color:var(--color-primary-200)]/40 focus:border-[color:var(--color-primary-500)]',
-							].join(' ')}
-							aria-label={t('placeholders.searchPlan')}
-						/>
-						{!!searchText && (
-							<button
-								type='button'
-								onClick={() => setSearchText('')}
-								className='absolute rtl:left-2 ltr:right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100'
-								aria-label={t('actions.clear')}
-								title={t('actions.clear')}
-							>
-								<X className='w-4 h-4' />
-							</button>
-						)}
-					</div>
-
-					<div className='flex items-center gap-2'>
-						<div className='min-w-[80px]'>
-							<Select
-								searchable={false}
-								clearable={false}
-								className='!w-full'
-								placeholder={t('plans.filters.perPage')}
-								options={[
-									{ id: 8, label: 8 },
-									{ id: 12, label: 12 },
-									{ id: 20, label: 20 },
-									{ id: 30, label: 30 },
-								]}
-								value={perPage}
-								onChange={n => setPerPage(Number(n))}
-							/>
-						</div>
-
+			{/* ── Toolbar ── */}
+			<div className="flex items-center justify-between gap-3 flex-wrap">
+				{/* Search */}
+				<div className="relative flex-1 min-w-[220px] max-w-[320px]">
+					<Search className="absolute left-3 rtl:right-3 rtl:left-auto top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+					<input
+						value={searchText}
+						onChange={e => setSearchText(e.target.value)}
+						placeholder={t('placeholders.searchPlan')}
+						className="h-10 w-full pl-9 pr-8 rtl:pr-9 rtl:pl-8 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 shadow-xs placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)] focus:border-[color:var(--color-primary-400)] hover:border-slate-300"
+						aria-label={t('placeholders.searchPlan')}
+					/>
+					{!!searchText && (
 						<button
-							onClick={() => toggleSort('created_at')}
-							className={[
-								'inline-flex items-center gap-2 rounded-lg px-3 h-11 font-medium transition-all duration-300',
-								'border border-slate-200 bg-white/95 text-slate-800 shadow-sm',
-								'hover:shadow-md hover:bg-slate-50 active:scale-[.97]',
-								'focus:outline-none focus:ring-4 focus:ring-[color:var(--color-primary-200)]/40 focus:border-[color:var(--color-primary-500)]',
-							].join(' ')}
+							type="button"
+							onClick={() => setSearchText('')}
+							className="absolute right-2 rtl:left-2 rtl:right-auto top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
 						>
-							<Clock size={18} />
-							<span className='text-sm tracking-wide'>{sortLabel}</span>
+							<X className="w-3.5 h-3.5" />
 						</button>
+					)}
+				</div>
+
+				{/* Right controls */}
+				<div className="flex items-center gap-2">
+					<div className="w-[76px]">
+						<Select
+							searchable={false}
+							clearable={false}
+							placeholder={t('plans.filters.perPage')}
+							options={[{ id: 8, label: 8 }, { id: 12, label: 12 }, { id: 20, label: 20 }, { id: 30, label: 30 }]}
+							value={perPage}
+							onChange={n => setPerPage(Number(n))}
+						/>
 					</div>
+
+					<button
+						onClick={() => toggleSort('created_at')}
+						className="inline-flex items-center gap-1.5 h-10 rounded-xl px-3 border border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 hover:border-slate-300 transition focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]"
+					>
+						{sortOrder === 'ASC' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+						<span>{sortLabel}</span>
+					</button>
 				</div>
 			</div>
 
-			{err ? <div className='p-3 rounded-lg bg-red-50 text-red-700 border border-red-100'>{err}</div> : null}
+			{err && (
+				<div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 text-red-700 border border-red-100 text-sm">
+					<span className="shrink-0 w-1.5 h-1.5 rounded-full bg-red-500 mt-px" />
+					{err}
+				</div>
+			)}
 
 			<ListView
 				loading={loading}
@@ -499,11 +408,12 @@ export default function PlansPage() {
 
 			<PrettyPagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
-			<Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name || t('plans.modals.previewTitle')} maxW='max-w-4xl'>
+			{/* Modals */}
+			<Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name || t('plans.modals.previewTitle')} maxW="max-w-4xl">
 				{preview && <PlanPreview plan={preview} />}
 			</Modal>
 
-			<Modal scrollRef={scrollRef} open={addOpen} onClose={() => setAddOpen(false)} title={t('plans.modals.createTitle')} maxW='max-w-5xl'>
+			<Modal scrollRef={scrollRef} open={addOpen} onClose={() => setAddOpen(false)} title={t('plans.modals.createTitle')} maxW="max-w-5xl">
 				<NewPlanBuilder
 					scrollRef={scrollRef}
 					userId={user?.id}
@@ -526,10 +436,7 @@ export default function PlansPage() {
 			<Modal
 				scrollRef={scrollRef}
 				open={!!editRow}
-				onClose={() => {
-					clearPlanIdFromUrl(); // ✅ first
-					setEditRow(null);
-				}}
+				onClose={() => { clearPlanIdFromUrl(); setEditRow(null); }}
 				title={`${t('plans.modals.editTitle')} ${editRow?.name || ''}`}
 				maxW="max-w-5xl"
 			>
@@ -555,7 +462,7 @@ export default function PlansPage() {
 				)}
 			</Modal>
 
-			<Modal open={!!assignOpen} onClose={() => setAssignOpen(null)} title={t('plans.modals.assignTitle', { name: assignOpen?.name || '' })} maxW='max-w-md'>
+			<Modal open={!!assignOpen} onClose={() => setAssignOpen(null)} title={t('plans.modals.assignTitle', { name: assignOpen?.name || '' })} maxW="max-w-md">
 				{assignOpen && (
 					<AssignForm
 						setChangePlans={setChangePlans}
@@ -572,10 +479,7 @@ export default function PlansPage() {
 			<ConfirmDialog
 				loading={deleteLoading}
 				open={deleteOpen}
-				onClose={() => {
-					setDeleteOpen(false);
-					setDeleteId(null);
-				}}
+				onClose={() => { setDeleteOpen(false); setDeleteId(null); }}
 				title={t('confirm.deletePlanTitle')}
 				message={t('confirm.deletePlanMsg')}
 				confirmText={t('confirm.confirmBtn')}
@@ -585,46 +489,44 @@ export default function PlansPage() {
 	);
 }
 
-/* ---------------------------- Subcomponents ---------------------------- */
+/* ─────────────────── ConfirmDialog ─────────────────── */
 const ConfirmDialog = memo(function ConfirmDialog({ open, onClose, loading, title, message, onConfirm, confirmText }) {
 	const t = useTranslations('workoutPlans');
 	return (
-		<Modal open={open} onClose={onClose} title={title || t('confirm.titleDefault')} maxW='max-w-md'>
-			<div className='space-y-4'>
-				{message ? <p className='text-sm text-slate-600'>{message}</p> : null}
-				<div className='flex items-center justify-end gap-2'>
-					<Button
-						name={confirmText || t('confirm.confirmBtn')}
-						loading={loading}
-						color='danger'
-						className='!w-fit'
-						onClick={() => {
-							onConfirm?.();
-							onClose?.();
-						}}
-					/>
+		<Modal open={open} onClose={onClose} title={title || t('confirm.titleDefault')} maxW="max-w-md">
+			<div className="space-y-5">
+				{message && <p className="text-sm text-slate-600 leading-relaxed">{message}</p>}
+				<div className="flex items-center justify-end gap-2">
+					<button
+						type="button"
+						onClick={onClose}
+						className="h-9 px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+					>
+						{t('actions.cancel')}
+					</button>
+					<Button name={confirmText || t('confirm.confirmBtn')} loading={loading} color="danger" className="!w-fit !h-9" onClick={onConfirm} />
 				</div>
 			</div>
 		</Modal>
 	);
 });
 
-/* ================================ LIST VIEW ================================ */
+/* ─────────────────── LIST VIEW ─────────────────── */
 export const ListView = memo(function ListView({ loading, items = [], onPreview, onEdit, onDelete, onAssign, onDuplicate, duplicatingIds }) {
 	const t = useTranslations('workoutPlans');
 	const user = useUser();
 
 	if (loading) {
 		return (
-			<div className='divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm'>
-				{Array.from({ length: 6 }).map((_, i) => (
-					<div key={i} className='group relative flex items-center gap-3 px-4 py-3'>
-						<div className='grid h-12 w-12 place-content-center rounded-lg bg-slate-100 shimmer' />
-						<div className='min-w-0 flex-1'>
-							<div className='mb-2 h-4 w-40 rounded shimmer' />
-							<div className='h-3 w-24 rounded shimmer' />
+			<div className="space-y-2">
+				{Array.from({ length: 5 }).map((_, i) => (
+					<div key={i} className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white px-5 py-4">
+						<div className="h-10 w-10 rounded-xl bg-slate-100 shimmer shrink-0" />
+						<div className="flex-1 space-y-2">
+							<div className="h-3.5 w-44 rounded-full bg-slate-100 shimmer" />
+							<div className="h-2.5 w-24 rounded-full bg-slate-100 shimmer" />
 						</div>
-						<div className='h-8 w-28 rounded shimmer' />
+						<div className="h-8 w-32 rounded-xl bg-slate-100 shimmer" />
 					</div>
 				))}
 			</div>
@@ -633,215 +535,221 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 
 	if (!items.length) {
 		return (
-			<div className='rounded-lg border border-slate-200 bg-white p-10 text-center shadow-sm'>
-				<div className='mx-auto grid h-16 w-16 place-content-center rounded-lg bg-slate-100'>
-					<Dumbbell className='h-8 w-8 text-slate-500' />
+			<div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 py-16">
+				<div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+					<Dumbbell className="h-7 w-7 text-slate-400" />
 				</div>
-				<h3 className='mt-4 text-lg font-semibold text-slate-900'>{t('plans.list.noPlansTitle')}</h3>
-				<p className='mt-1 text-sm text-slate-600'>{t('plans.list.noPlansDesc')}</p>
+				<div className="text-center space-y-1">
+					<h3 className="text-base font-semibold text-slate-800">{t('plans.list.noPlansTitle')}</h3>
+					<p className="text-sm text-slate-500 max-w-xs">{t('plans.list.noPlansDesc')}</p>
+				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className='divide-y flex flex-col gap-3 divide-slate-100 overflow-hidden '>
-			{items.map(p => {
+		<div className="space-y-2">
+			{items.map((p, idx) => {
 				const dayCount = Array.isArray(p?.program?.days) ? p.program.days.length : 0;
 				const active = !!p?.isActive;
 
 				return (
-					<div key={p.id} className='rounded-lg border border-y-slate-200 bg-white  group relative flex items-start gap-3 px-4 py-3 transition-all duration-300 hover:bg-slate-50/60'>
-						<div className='mt-0.5 grid h-8 w-8 shrink-0 place-content-center rounded-lg theme-gradient-bg opacity-95 text-white shadow-sm'>
-							<Dumbbell className='h-5 w-5' />
+					<motion.div
+						key={p.id}
+						initial={{ opacity: 0, y: 6 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ delay: idx * 0.04, duration: 0.22 }}
+						className=" bg-card group relative flex items-center gap-4 rounded-2xl border border-slate-100 bg-white px-5 py-3.5 shadow-xs hover:shadow-sm hover:border-slate-200 transition-all duration-200"
+					>
+						{/* Icon */}
+						<div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-xl theme-gradient-bg text-white shadow-sm">
+							<Dumbbell className="h-5 w-5" />
 						</div>
 
-						<div className='min-w-0 flex-1'>
-							<div className='flex flex-wrap items-center gap-2'>
-								<MultiLangText className='truncate text-base font-semibold text-slate-900'>{p.name}</MultiLangText>
-								<span
-									className={[
-										'inline-flex items-center gap-1 rounded-lg px-2 py-0.5   ring-1 ring-inset',
-										active ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-slate-100 text-slate-600 ring-slate-200',
-									].join(' ')}
-								>
+						{/* Name + badge */}
+						<div className="min-w-0 flex-1">
+							<div className="flex flex-wrap items-center gap-2">
+								<MultiLangText className="truncate text-sm font-semibold text-slate-900 leading-snug">{p.name}</MultiLangText>
+								<span className={[
+									'inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset',
+									active ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-slate-100 text-slate-500 ring-slate-200',
+								].join(' ')}>
+									<Calendar className="w-3 h-3" />
 									{t('plans.list.dayCountLabel', { count: dayCount })}
 								</span>
 							</div>
 						</div>
 
-						<div className='ml-auto flex shrink-0 items-center gap-1'>
+						{/* Actions */}
+						<div className="flex items-center gap-1.5 shrink-0">
+							{/* Assign */}
 							<button
-								type='button'
+								type="button"
 								onClick={() => onAssign?.(p)}
-								className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 active:scale-[.98]'
+								className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
 								title={t('actions.assign')}
 							>
-								<UsersIcon className='h-4 w-4' />
+								<UsersIcon className="h-3.5 w-3.5 text-slate-400" />
 								{t('actions.assign')}
 							</button>
 
-							<div className='flex items-center gap-2'>
-								<Link
-									href={`/workouts/plans/${p.id}`}
-									target='_blank'
-									rel='noopener noreferrer'
-									className='inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 bg-white  text-sm font-medium text-emerald-600 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/30'
-								>
-									<Share2 className='h-4 w-4' />
-								</Link>
+							<div className="w-px h-5 bg-slate-100 mx-0.5" />
 
+							{/* Share */}
+							<Link
+								href={`/workouts/plans/${p.id}`}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-200 bg-white text-emerald-600 hover:bg-emerald-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+								title={t('actions.share', { default: 'Share' })}
+							>
+								<Share2 className="h-3.5 w-3.5" />
+							</Link>
+
+							{/* Duplicate */}
+							<button
+								type="button"
+								title={t('actions.duplicate', { default: 'Duplicate' })}
+								onClick={() => !duplicatingIds?.has(p.id) && onDuplicate?.(p)}
+								disabled={duplicatingIds?.has(p.id)}
+								className={[
+									'inline-flex h-8 w-8 items-center justify-center rounded-xl border bg-white transition focus-visible:outline-none focus-visible:ring-2',
+									'border-[color:var(--color-secondary-200)] text-[color:var(--color-secondary-700)] hover:bg-[color:var(--color-secondary-50)] focus-visible:ring-[color:var(--color-secondary-300)]',
+									duplicatingIds?.has(p.id) ? 'opacity-50 pointer-events-none' : '',
+								].join(' ')}
+							>
+								{duplicatingIds?.has(p.id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Layers className="h-3.5 w-3.5" />}
+							</button>
+
+							{/* Preview */}
+							<button
+								type="button"
+								title={t('actions.preview')}
+								onClick={() => onPreview?.(p)}
+								className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+							>
+								<Eye className="h-3.5 w-3.5" />
+							</button>
+
+							{p?.adminId != null && (
 								<button
-									type='button'
-									title={t('actions.duplicate', { default: 'Duplicate' })}
-									onClick={() => !duplicatingIds?.has(p.id) && onDuplicate?.(p)}
-									disabled={duplicatingIds?.has(p.id)}
-									aria-busy={duplicatingIds?.has(p.id) ? 'true' : 'false'}
-									className={[
-										' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border bg-white focus-visible:outline-none focus-visible:ring-4 transition',
-										'border-[color:var(--color-secondary-200)] text-[color:var(--color-secondary-700)] hover:bg-[color:var(--color-secondary-50)] focus-visible:ring-[color:var(--color-secondary-200)]/40',
-										duplicatingIds?.has(p.id) ? 'opacity-60 pointer-events-none cursor-not-allowed' : '',
-									].join(' ')}
+									type="button"
+									title={t('actions.edit')}
+									onClick={() => onEdit?.(p)}
+									className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[color:var(--color-primary-200)] bg-white text-[color:var(--color-primary-600)] hover:bg-[color:var(--color-primary-50)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
 								>
-									{duplicatingIds?.has(p.id) ? <Loader2 className='h-4 w-4 animate-spin' /> : <Layers className='h-4 w-4' />}
+									<PencilLine className="h-3.5 w-3.5" />
 								</button>
+							)}
 
+							{p?.adminId != null && (
 								<button
-									type='button'
-									title={t('actions.preview')}
-									onClick={() => onPreview?.(p)}
-									className=' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30'
+									type="button"
+									title={t('actions.delete')}
+									onClick={() => onDelete?.(p.id)}
+									className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-500 hover:bg-rose-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
 								>
-									<Eye className='h-4 w-4' />
+									<Trash2 className="h-3.5 w-3.5" />
 								</button>
-
-								{p?.adminId != null && (
-									<button
-										type='button'
-										title={t('actions.edit')}
-										onClick={() => onEdit?.(p)}
-										className=' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-[color:var(--color-primary-700)] hover:bg-[color:var(--color-primary-50)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--color-primary-200)]/40'
-									>
-										<PencilLine className='h-4 w-4' />
-									</button>
-								)}
-
-								{p?.adminId != null && (
-									<button
-										type='button'
-										title={t('actions.delete')}
-										onClick={() => onDelete?.(p.id)}
-										className=' cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-300/30'
-									>
-										<Trash2 className='h-4 w-4' />
-									</button>
-								)}
-							</div>
+							)}
 						</div>
-					</div>
+					</motion.div>
 				);
 			})}
 		</div>
 	);
 });
 
+/* ─────────────────── PlanPreview ─────────────────── */
 const PlanPreview = memo(function PlanPreview({ plan }) {
 	const t = useTranslations('workoutPlans');
 	const days = plan?.program?.days || [];
 	const formatDateTime = value => (value ? new Date(value).toLocaleString() : '—');
 
 	return (
-		<div className='space-y-6'>
-			<div className='space-y-4'>
+		<div className="space-y-5">
+			<div className="space-y-3">
 				{days.map((d, idx) => {
 					const warmup = d.warmupExercises || [];
 					const main = d.exercises || [];
 					const cardio = d.cardioExercises || [];
-
 					const exercises = [...warmup, ...main, ...cardio];
 					const hasExercises = exercises.length > 0;
 
 					return (
-						<section key={d.id || idx} className='rounded-lg border border-slate-200 bg-white/90 shadow-sm overflow-hidden'>
-							<header className='flex items-center justify-between gap-2 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-3'>
-								<div className='flex items-center gap-2'>
-									<span className='inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[color:var(--color-primary-100)] text-xs font-semibold text-[color:var(--color-primary-700)]'>
+						<section key={d.id || idx} className="rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-xs">
+							{/* Day header */}
+							<header className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
+								<div className="flex items-center gap-3">
+									<span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[color:var(--color-primary-100)] text-[11px] font-bold text-[color:var(--color-primary-700)]">
 										{idx + 1}
 									</span>
-									<MultiLangText className='font-semibold text-slate-900'>{d.name}</MultiLangText>
+									<MultiLangText className="text-sm font-semibold text-slate-800">{d.name}</MultiLangText>
 								</div>
-
-								<div className='flex items-center gap-2 text-[11px]'>
-									<span className='inline-flex items-center rounded-full bg-slate-900/5 px-2.5 py-1 text-[11px] font-medium text-slate-600'>{t(`days.${d.dayOfWeek}`)}</span>
-									<span className='inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700'>
-										{exercises.length}{' '}
-										<span className='ms-1 font-normal text-emerald-700/80'>{exercises.length === 1 ? t('preview.exercise') : t('preview.exercises')}</span>
+								<div className="flex items-center gap-2">
+									<span className="rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+										{t(`days.${d.dayOfWeek}`)}
+									</span>
+									<span className="rounded-lg bg-emerald-50 border border-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+										{exercises.length} {exercises.length === 1 ? t('preview.exercise') : t('preview.exercises')}
 									</span>
 								</div>
 							</header>
 
-							<div className='bg-slate-50/80 px-3 py-3 sm:px-4 sm:py-4'>
+							<div className="p-4">
 								{hasExercises ? (
-									<ol className='grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4'>
+									<ol className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
 										{exercises.map((ex, i) => {
-											// detect cardio item (backend returns durationSeconds/note)
-											const isCardio = ex?.durationSeconds != null || ex?.note != null;
-
+											const isCardio = ex?.durationSeconds != null || (ex?.note != null && ex?.targetSets == null);
 											return (
-												<li
-													key={ex.id || ex.exerciseId || i}
-													className='group relative flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-xs transition-all hover:-translate-y-[1px] hover:border-[color:var(--color-primary-200)] hover:shadow-md'
-												>
-													<span className='pointer-events-none absolute top-0 rtl:-right-0 ltr:-left-0 z-10 inline-flex h-6 w-6 items-center justify-center rtl:rounded-[0_10px_0_10px] ltr:rounded-[10px_0_10px_0] bg-[color:var(--color-primary-500)] text-[11px] font-semibold text-white shadow-md'>
+												<li key={ex.id || ex.exerciseId || i} className="relative flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5 hover:border-[color:var(--color-primary-200)] hover:bg-white transition-all duration-150">
+													<span className="absolute -top-0 -left-0 z-10 inline-flex h-5 w-5 items-center justify-center rounded-br-lg rounded-tl-xl bg-[color:var(--color-primary-500)] text-[10px] font-bold text-white">
 														{i + 1}
 													</span>
-
-													<div className='shrink-0'>
-														<Img showBlur={false} src={ex.img} alt={ex.name} className='h-16 w-16 rounded-lg bg-slate-50 object-contain' />
+													<div className="shrink-0 mt-0.5">
+														<Img showBlur={false} src={ex.img} alt={ex.name} className="h-14 w-14 rounded-xl bg-white object-contain border border-slate-100" />
 													</div>
-
-													<div className='flex min-w-0 flex-1 flex-col gap-0.5'>
-														<MultiLangText className='truncate text-sm font-semibold text-slate-900 leading-snug'>{ex.name}</MultiLangText>
-
-														{/* ✅ MAIN/WARMUP */}
+													<div className="flex min-w-0 flex-1 flex-col gap-1">
+														<MultiLangText className="text-xs font-semibold text-slate-900 truncate leading-snug">{ex.name}</MultiLangText>
 														{!isCardio && (ex.targetSets || ex.targetReps) && (
-															<div className='text-xs text-slate-500 space-y-0.5'>
-																<p>
-																	{ex.targetSets ? `${ex.targetSets} ${t('preview.sets')}` : ''}
-																	{ex.targetSets && ex.targetReps ? ' × ' : ''}
-																	{ex.targetReps ? `${ex.targetReps} ${t('preview.reps')}` : ''}
-																	{(ex.restSeconds ?? ex.rest) ? ` • ${t('builder.restTime')} ${ex.restSeconds ?? ex.rest}s` : ''}
-																</p>
-																{ex.note ? <p className='text-[11px] text-slate-500 line-clamp-2'>{ex.note}</p> : null}
-															</div>
-														)}
-
-														{/* ✅ CARDIO */}
-														{isCardio && (
-															<div className='text-xs text-slate-500 space-y-0.5'>
-																{ex.durationSeconds ? (
-																	<div className='inline-flex items-center gap-1'>
-																		<Clock className='w-3.5 h-3.5' />
-																		<span>
-																			{Number(ex.durationSeconds) >= 60
-																				? `${Math.round(Number(ex.durationSeconds) / 60)} min`
-																				: `${Math.round(Number(ex.durationSeconds))} sec`}
-																		</span>
-																	</div>
+															<div className="flex flex-wrap gap-1">
+																{ex.targetSets && (
+																	<span className="rounded-md bg-white border border-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+																		{ex.targetSets} {t('preview.sets')}
+																	</span>
+																)}
+																{ex.targetReps && (
+																	<span className="rounded-md bg-white border border-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+																		{ex.targetReps} {t('preview.reps')}
+																	</span>
+																)}
+																{(ex.restSeconds ?? ex.rest) ? (
+																	<span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+																		{t('builder.restTime')} {ex.restSeconds ?? ex.rest}s
+																	</span>
 																) : null}
-																{ex.note ? <p className='text-[11px] text-slate-500 line-clamp-2'>{ex.note}</p> : null}
 															</div>
 														)}
+														{isCardio && ex.durationSeconds && (
+															<div className="inline-flex items-center gap-1 rounded-md bg-blue-50 border border-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 w-fit">
+																<Clock className="w-3 h-3" />
+																{Number(ex.durationSeconds) >= 60
+																	? `${Math.round(Number(ex.durationSeconds) / 60)} min`
+																	: `${Math.round(Number(ex.durationSeconds))} sec`}
+															</div>
+														)}
+														{ex.note && <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">{ex.note}</p>}
 													</div>
 												</li>
 											);
 										})}
 									</ol>
 								) : (
-									<div className='flex items-center gap-2 rounded-lg border border-dashed border-slate-200 bg-white/70 px-3 py-3 text-xs text-slate-500'>
-										<span className='flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-[13px]'>💡</span>
-										<div className='flex flex-col'>
-											<span className='font-medium text-slate-700'>{t('preview.noExercisesYetTitle')}</span>
-											<span className='text-[11px] text-slate-400'>{t('preview.noExercisesYetHelper')}</span>
+									<div className="flex items-center gap-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">
+										<span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-base">💡</span>
+										<div>
+											<p className="font-medium text-slate-700 text-xs">{t('preview.noExercisesYetTitle')}</p>
+											<p className="text-[11px] text-slate-400">{t('preview.noExercisesYetHelper')}</p>
 										</div>
 									</div>
 								)}
@@ -850,25 +758,25 @@ const PlanPreview = memo(function PlanPreview({ plan }) {
 					);
 				})}
 
-				{!days.length && <div className='rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-sm text-slate-500'>{t('preview.noDaysYet')}</div>}
+				{!days.length && (
+					<div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-400">
+						{t('preview.noDaysYet')}
+					</div>
+				)}
 			</div>
 
-			<footer className='rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5 text-[11px] text-slate-500'>
-				<div className='flex flex-wrap items-center gap-x-3 gap-y-1'>
-					<span>
-						{t('preview.createdAt')} <span className='font-medium text-slate-700'>{formatDateTime(plan.created_at)}</span>
-					</span>
-					<span className='hidden text-slate-300 sm:inline'>•</span>
-					<span>
-						{t('preview.updatedAt')} <span className='font-medium text-slate-700'>{formatDateTime(plan.updated_at)}</span>
-					</span>
+			<footer className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5">
+				<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400">
+					<span>{t('preview.createdAt')} <span className="font-medium text-slate-600">{formatDateTime(plan.created_at)}</span></span>
+					<span className="hidden sm:inline text-slate-200">•</span>
+					<span>{t('preview.updatedAt')} <span className="font-medium text-slate-600">{formatDateTime(plan.updated_at)}</span></span>
 				</div>
 			</footer>
 		</div>
 	);
 });
 
-/* ================================ ASSIGN ================================= */
+/* ─────────────────── ASSIGN ─────────────────── */
 const AssignForm = memo(function AssignForm({ planId, onClose, onAssigned, optionsClient, setChangePlans }) {
 	const t = useTranslations('workoutPlans');
 	const [selectedUsers, setSelectedUsers] = useState([]);
@@ -881,25 +789,16 @@ const AssignForm = memo(function AssignForm({ planId, onClose, onAssigned, optio
 		if (!user) return;
 		setSelectedUsers(prev => [...prev, user]);
 	};
-
 	const removeUser = userId => setSelectedUsers(prev => prev.filter(u => u.id !== userId));
 
 	const submit = async e => {
 		e.preventDefault();
 		if (!selectedUsers.length) return;
 		setSubmitting(true);
-
 		try {
 			const athleteIds = selectedUsers.map(u => u.id);
-
-			await api.post(`/plans/${planId}/assign`, {
-				athleteIds,
-				isActive: true,
-				confirm: 'yes',
-			});
-
+			await api.post(`/plans/${planId}/assign`, { athleteIds, isActive: true, confirm: 'yes' });
 			setChangePlans(JSON.stringify(athleteIds + planId));
-
 			Notification(t('notifications.assignedSuccess'), 'success');
 			onAssigned?.();
 		} catch (err) {
@@ -910,42 +809,52 @@ const AssignForm = memo(function AssignForm({ planId, onClose, onAssigned, optio
 	};
 
 	return (
-		<form onSubmit={submit} className='space-y-4'>
+		<form onSubmit={submit} className="space-y-5">
 			<div>
-				<label className='text-sm font-medium text-slate-700 mb-2 block'>{t('assign.selectUsersLabel')}</label>
+				<label className="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">{t('assign.selectUsersLabel')}</label>
 				<Select
 					placeholder={t('assign.selectUsersPlaceholder')}
 					options={optionsClient.filter(o => !selectedUsers.some(u => u.id === o.id))}
 					value={null}
 					onChange={addUser}
-					searchable={true}
+					searchable
 				/>
 			</div>
 
 			{selectedUsers.length > 0 && (
-				<div className='flex flex-wrap gap-2'>
+				<div className="flex flex-wrap gap-1.5">
 					{selectedUsers.map(user => (
 						<span
 							key={user.id}
-							className='inline-flex items-center gap-2 rounded-lg bg-[color:var(--color-primary-100)] text-[color:var(--color-primary-700)] text-sm px-3 py-1.5 border border-[color:var(--color-primary-200)]'
+							className="inline-flex items-center gap-1.5 rounded-xl border border-[color:var(--color-primary-200)] bg-[color:var(--color-primary-50)] text-[color:var(--color-primary-700)] text-xs px-3 py-1.5 font-medium"
 						>
 							{user.label}
-							<button type='button' onClick={() => removeUser(user.id)} className='hover:text-slate-900 transition-colors' aria-label={t('assign.removeUser')}>
-								<X className='w-3 h-3' />
+							<button type="button" onClick={() => removeUser(user.id)} className="hover:text-[color:var(--color-primary-900)] transition" aria-label={t('assign.removeUser')}>
+								<X className="w-3 h-3" />
 							</button>
 						</span>
 					))}
 				</div>
 			)}
 
-			<div className='flex items-center justify-end gap-2 pt-2'>
-				<Button onClick={onClose} type='button' color='outline' name={t('actions.cancel')} />
-				<Button disabled={submitting || selectedUsers.length === 0} type='submit' color='primary' name={submitting ? t('assign.assigning') : t('actions.assign')} loading={submitting} />
+			<div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+				<button type="button" onClick={onClose} className="h-9 px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+					{t('actions.cancel')}
+				</button>
+				<Button
+					disabled={submitting || selectedUsers.length === 0}
+					type="submit"
+					color="primary"
+					name={submitting ? t('assign.assigning') : t('actions.assign')}
+					loading={submitting}
+					className="!h-9 !w-fit"
+				/>
 			</div>
 		</form>
 	);
 });
 
+/* ─────────────────── NewPlanBuilder ─────────────────── */
 const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCancel, onCreate }) {
 	const t = useTranslations('workoutPlans');
 	const [name, setName] = useState(initial?.name || '');
@@ -953,7 +862,7 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 		const v = initial?.notes;
 		return Array.isArray(v) && v.length ? v : [''];
 	});
-	const [pickerBlock, setPickerBlock] = useState('main'); // 'warmup' | 'main' | 'cardio'
+	const [pickerBlock, setPickerBlock] = useState('main');
 
 	const makeNewDay = idx => ({
 		id: `day_${Date.now()}_${idx}`,
@@ -970,7 +879,6 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 			id: x.id,
 			dayOfWeek: (x.day || x.dayOfWeek || '').toLowerCase() || 'saturday',
 			nameOfWeek: x.nameOfWeek || x.name || t('builder.dayNumber', { num: i + 1 }),
-
 			warmupExercises: (x.warmupExercises || []).map((e, j) => ({
 				exerciseId: e.exerciseId || e.exercise?.id || e.id,
 				name: e.name || e.exercise?.name,
@@ -983,7 +891,6 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 				restSeconds: e.restSeconds ?? e.rest ?? null,
 				note: e.note ?? '',
 			})),
-
 			exercises: (x.exercises || []).map((e, j) => ({
 				exerciseId: e.exerciseId || e.exercise?.id || e.id,
 				name: e.name || e.exercise?.name,
@@ -996,8 +903,6 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 				restSeconds: e.restSeconds ?? e.rest ?? null,
 				note: e.note ?? '',
 			})),
-
-			// ✅ CARDIO: durationValue + durationUnit + note (mapped from backend durationSeconds)
 			cardioExercises: (x.cardioExercises || []).map((e, j) => ({
 				exerciseId: e.exerciseId || e.exercise?.id || e.id,
 				name: e.name || e.exercise?.name,
@@ -1009,7 +914,6 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 				note: e.note ?? '',
 			})),
 		}));
-
 		if (mapped.length > 0) return mapped;
 		return [makeNewDay(1)];
 	});
@@ -1025,26 +929,20 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 		setDays(arr => {
 			const index = arr.findIndex(d => d.id === id);
 			if (index === -1) return arr;
-
 			const source = arr[index];
 			const newId = `day_${Date.now()}_${index + 1}`;
-
 			const copyList = list => (list || []).map((ex, idx) => ({ ...ex, order: idx + 1 }));
-
 			const duplicated = {
-				...source,
-				id: newId,
+				...source, id: newId,
 				nameOfWeek: `${source.nameOfWeek} ${t('copySuffix', '(copy)')}`,
 				warmupExercises: copyList(source.warmupExercises),
 				exercises: copyList(source.exercises),
 				cardioExercises: copyList(source.cardioExercises),
 			};
-
 			const next = [...arr];
 			next.splice(index + 1, 0, duplicated);
 			return next;
 		});
-
 		setTimeout(() => {
 			if (scrollRef?.current) scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
 		}, 0);
@@ -1070,65 +968,29 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 
 	const onPickerDone = pickedArray => {
 		const key = pickerBlock === 'warmup' ? 'warmupExercises' : pickerBlock === 'cardio' ? 'cardioExercises' : 'exercises';
-
-		setDays(arr =>
-			arr.map(day => {
-				if (day.id !== pickerDayId) return day;
-
-				const current = day[key] || [];
-				const pickedIds = pickedArray.map(x => x.id);
-
-				const keptExisting = current.filter(ex => pickedIds.includes(ex.exerciseId));
-				const existingIdsSet = new Set(current.map(ex => ex.exerciseId));
-
-				const newOnes = pickedArray
-					.filter(x => !existingIdsSet.has(x.id))
-					.map(x => {
-						// ✅ cardio defaults: duration + note
-						if (pickerBlock === 'cardio') {
-							return {
-								exerciseId: x.id,
-								name: x.name,
-								category: x.category || null,
-								img: x.img,
-								durationValue: '',
-								durationUnit: 'min',
-								note: '',
-							};
-						}
-
-						// warmup/main defaults
-						return {
-							exerciseId: x.id,
-							name: x.name,
-							category: x.category || null,
-							img: x.img,
-							targetSets: 3,
-							targetReps: 12,
-							tempo: '1/1/1',
-							restSeconds: null,
-							note: '',
-						};
-					});
-
-				const merged = [...keptExisting, ...newOnes].map((ex, idx) => ({ ...ex, order: idx + 1 }));
-				return { ...day, [key]: merged };
-			}),
-		);
-
+		setDays(arr => arr.map(day => {
+			if (day.id !== pickerDayId) return day;
+			const current = day[key] || [];
+			const pickedIds = pickedArray.map(x => x.id);
+			const keptExisting = current.filter(ex => pickedIds.includes(ex.exerciseId));
+			const existingIdsSet = new Set(current.map(ex => ex.exerciseId));
+			const newOnes = pickedArray.filter(x => !existingIdsSet.has(x.id)).map(x => {
+				if (pickerBlock === 'cardio') return { exerciseId: x.id, name: x.name, category: x.category || null, img: x.img, durationValue: '', durationUnit: 'min', note: '' };
+				return { exerciseId: x.id, name: x.name, category: x.category || null, img: x.img, targetSets: 3, targetReps: 12, tempo: '1/1/1', restSeconds: null, note: '' };
+			});
+			const merged = [...keptExisting, ...newOnes].map((ex, idx) => ({ ...ex, order: idx + 1 }));
+			return { ...day, [key]: merged };
+		}));
 		setPickerOpen(false);
 		setPickerDayId(null);
 	};
 
 	const onReorderExercises = (dayId, block, newOrder) => {
 		const key = block === 'warmup' ? 'warmupExercises' : block === 'cardio' ? 'cardioExercises' : 'exercises';
-		setDays(arr =>
-			arr.map(d => {
-				if (d.id !== dayId) return d;
-				const reordered = newOrder.map((ex, idx) => ({ ...ex, order: idx + 1 }));
-				return { ...d, [key]: reordered };
-			}),
-		);
+		setDays(arr => arr.map(d => {
+			if (d.id !== dayId) return d;
+			return { ...d, [key]: newOrder.map((ex, idx) => ({ ...ex, order: idx + 1 })) };
+		}));
 	};
 
 	const [loading, setLoading] = useState(false);
@@ -1140,7 +1002,6 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 		if (days.some(d => !(d.exercises?.length || d.warmupExercises?.length || d.cardioExercises?.length))) {
 			return Notification(t('builder.validation.needExercisePerDay'), 'error');
 		}
-
 		const payload = {
 			userId: user?.role == 'admin' ? user?.id : user?.adminId,
 			name: name.trim(),
@@ -1150,38 +1011,30 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 				days: days.map(d => ({
 					dayOfWeek: d.dayOfWeek,
 					nameOfWeek: d.nameOfWeek,
-
 					warmupExercises: (d.warmupExercises || []).map(ex => ({
-						order: ex.order,
-						exerciseId: ex.exerciseId,
+						order: ex.order, exerciseId: ex.exerciseId,
 						targetSets: ex.targetSets === '' || ex.targetSets == null ? null : Number(ex.targetSets),
 						targetReps: ex.targetReps === '' || ex.targetReps == null ? null : Number(ex.targetReps),
 						tempo: ex.tempo === '' || ex.tempo == null ? null : String(ex.tempo).trim(),
 						restSeconds: ex.restSeconds === '' || ex.restSeconds == null ? null : Number(ex.restSeconds),
 						note: String(ex.note ?? '').trim() || null,
 					})),
-
 					exercises: (d.exercises || []).map(ex => ({
-						order: ex.order,
-						exerciseId: ex.exerciseId,
+						order: ex.order, exerciseId: ex.exerciseId,
 						targetSets: ex.targetSets === '' || ex.targetSets == null ? null : Number(ex.targetSets),
 						targetReps: ex.targetReps === '' || ex.targetReps == null ? null : Number(ex.targetReps),
 						tempo: ex.tempo === '' || ex.tempo == null ? null : String(ex.tempo).trim(),
 						restSeconds: ex.restSeconds === '' || ex.restSeconds == null ? null : Number(ex.restSeconds),
 						note: String(ex.note ?? '').trim() || null,
 					})),
-
-					// ✅ CARDIO payload: durationSeconds + note
 					cardioExercises: (d.cardioExercises || []).map(ex => ({
-						order: ex.order,
-						exerciseId: ex.exerciseId,
+						order: ex.order, exerciseId: ex.exerciseId,
 						durationSeconds: toSecondsFromValueAndUnit(ex.durationValue, ex.durationUnit ?? 'min'),
 						note: String(ex.note ?? '').trim() || null,
 					})),
 				})),
 			},
 		};
-
 		setLoading(true);
 		await onCreate?.(payload);
 		setLoading(false);
@@ -1198,17 +1051,17 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 	];
 
 	return (
-		<div className='space-y-4 py-1'>
-			<div className='  flex items-center justify-between pb-2 border-b border-slate-100'>
-				<Input className='max-w-[400px] w-full' placeholder={t('builder.namePlaceholder')} value={name} onChange={e => setName(e)} />
-
+		<div className="space-y-5 py-1">
+			{/* Top bar */}
+			<div className="flex items-center justify-between gap-3 pb-4 border-b border-slate-100">
+				<Input className="max-w-[380px] w-full" placeholder={t('builder.namePlaceholder')} value={name} onChange={e => setName(e)} />
 				<button
-					type='button'
+					type="button"
 					onClick={addDay}
-					className='inline-flex items-center gap-2 rounded-lg border border-slate-300  bg-white px-4 py-2 text-sm font-medium text-slate-800  shadow-sm hover:bg-slate-50 active:scale-[.97]  focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30  transition-all duration-200'
+					className="inline-flex items-center gap-2 h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 hover:border-slate-300 active:scale-[.97] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
 				>
-					<Plus className='w-4 h-4 text-slate-700' />
-					<span>{t('actions.addDay')}</span>
+					<Plus className="w-4 h-4 text-slate-500" />
+					{t('actions.addDay')}
 				</button>
 			</div>
 
@@ -1225,40 +1078,33 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 				spring={spring}
 			/>
 
-			<div className='flex items-center justify-end gap-3 pt-4 border-t border-slate-100'>
+			{/* Footer actions */}
+			<div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
 				<button
-					type='button'
+					type="button"
 					onClick={onCancel}
-					className='inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300  bg-white px-4 py-2.5 text-sm font-medium text-slate-700  shadow-sm hover:bg-slate-50 active:scale-[.97]  focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30  transition-all duration-200'
+					className="inline-flex items-center justify-center h-10 px-5 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 active:scale-[.97] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
 				>
 					{t('actions.cancel')}
 				</button>
-
-				<Button name={t('builder.savePlanBtn')} loading={loading} type='button' onClick={submit} className='!w-fit text-sm !h-[39px]'></Button>
+				<Button name={t('builder.savePlanBtn')} loading={loading} type="button" onClick={submit} className="!w-fit !h-10 text-sm" />
 			</div>
 
 			<ExercisePicker
 				open={pickerOpen}
 				dayId={pickerDayId}
 				initialSelected={pickerInitialSelected}
-				onClose={() => {
-					setPickerOpen(false);
-					setPickerDayId(null);
-				}}
+				onClose={() => { setPickerOpen(false); setPickerDayId(null); }}
 				onDone={onPickerDone}
 			/>
 		</div>
 	);
 });
 
+/* ─────────────────── DaysListSection ─────────────────── */
 export function DaysListSection({ duplicateDay, days, setDays, openPicker, removeDay, onReorderExercises, DAY_OPTIONS, spring }) {
 	const t = useTranslations('workoutPlans');
 	const [previewImg, setPreviewImg] = useState(null);
-
-	const btnBase = ' h-[35px] inline-flex items-center justify-center gap-2 rounded-lg text-sm transition ' + 'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-400/30 active:scale-[.98]';
-	const btnOutline = 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 px-3 py-1.5 shadow-sm';
-	const btnGhostDanger = 'border border-slate-200 bg-white text-rose-600 hover:bg-rose-50 px-2.5 py-1.5';
-	const iconBtn = 'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white ' + 'text-slate-700 hover:bg-slate-50 focus-visible:ring-4 focus-visible:ring-slate-400/30';
 
 	const normalizeIntOrDefault = (v, def) => {
 		const s = String(v ?? '').trim();
@@ -1275,7 +1121,7 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 		return def;
 	};
 
-	const normalizeMinutesOrEmpty = (v) => {
+	const normalizeMinutesOrEmpty = v => {
 		const s = String(v ?? '').trim();
 		if (!s) return '';
 		const n = Number(s);
@@ -1283,264 +1129,239 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 		return String(Math.trunc(n));
 	};
 
+	/* Block labels */
+	const blockMeta = {
+		warmup: { color: 'amber', icon: <Zap className="w-3 h-3" /> },
+		main: { color: 'primary', icon: <Dumbbell className="w-3 h-3" /> },
+		cardio: { color: 'blue', icon: <Clock className="w-3 h-3" /> },
+	};
+
+	const blockColorMap = {
+		warmup: 'bg-amber-50 text-amber-700 border-amber-200',
+		main: 'bg-[color:var(--color-primary-50)] text-[color:var(--color-primary-700)] border-[color:var(--color-primary-200)]',
+		blue: 'bg-blue-50 text-blue-700 border-blue-200',
+	};
+
 	const renderBlock = (day, block, list) => {
 		const key = block === 'warmup' ? 'warmupExercises' : block === 'cardio' ? 'cardioExercises' : 'exercises';
-
-		const title =
-			block === 'warmup'
-				? t('builder.blocks.warmup', { default: 'Warmup' })
-				: block === 'cardio'
-					? t('builder.blocks.cardio', { default: 'Cardio' })
-					: t('builder.blocks.workout', { default: 'Workout' });
+		const title = block === 'warmup'
+			? t('builder.blocks.warmup', { default: 'Warmup' })
+			: block === 'cardio'
+				? t('builder.blocks.cardio', { default: 'Cardio' })
+				: t('builder.blocks.workout', { default: 'Workout' });
 
 		const setExerciseField = (exerciseId, patch) => {
-			setDays(arr =>
-				arr.map(d0 =>
-					d0.id !== day.id
-						? d0
-						: {
-							...d0,
-							[key]: (d0[key] || []).map(e => (e.exerciseId !== exerciseId ? e : { ...e, ...patch })),
-						},
-				),
-			);
+			setDays(arr => arr.map(d0 => d0.id !== day.id ? d0 : {
+				...d0,
+				[key]: (d0[key] || []).map(e => e.exerciseId !== exerciseId ? e : { ...e, ...patch }),
+			}));
 		};
 
 		const removeExercise = exerciseId => {
-			setDays(arr => arr.map(d0 => (d0.id !== day.id ? d0 : { ...d0, [key]: (d0[key] || []).filter(e => e.exerciseId !== exerciseId) })));
+			setDays(arr => arr.map(d0 => d0.id !== day.id ? d0 : { ...d0, [key]: (d0[key] || []).filter(e => e.exerciseId !== exerciseId) }));
 		};
 
 		const isCardio = block === 'cardio';
+		const blockColor = block === 'cardio' ? 'blue' : block;
 
 		return (
-			<div className='mb-4'>
-				<div className='mb-2 text-xs font-semibold text-slate-700'>{title}</div>
+			<div className="mb-5 last:mb-0">
+				<div className="flex items-center gap-2 mb-2.5">
+					<span className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[11px] font-semibold ${blockColorMap[blockColor]}`}>
+						{blockMeta[block]?.icon}
+						{title}
+					</span>
+					{list?.length > 0 && (
+						<span className="text-[11px] text-slate-400">{list.length} {list.length === 1 ? t('preview.exercise') : t('preview.exercises')}</span>
+					)}
+				</div>
 
 				{list?.length ? (
-					<Reorder.Group axis='y' values={list} onReorder={newOrder => onReorderExercises(day.id, block, newOrder)} className='space-y-2'>
+					<Reorder.Group
+						axis="y"
+						values={list}
+						onReorder={newOrder => onReorderExercises(day.id, block, newOrder)}
+						className="space-y-2"
+					>
 						{list.map(ex => (
 							<Reorder.Item
 								key={ex.exerciseId}
 								value={ex}
 								dragListener
 								dragConstraints={{ top: 0, bottom: 0 }}
-								className='rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 transition-colors hover:bg-slate-100'
+								className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 hover:border-slate-300 hover:shadow-xs transition-all cursor-default"
 							>
-								<div className='flex items-center justify-between gap-3'>
-									<div className='flex min-w-0 items-center gap-3'>
-										<GripVertical className='w-4 h-4 shrink-0 cursor-grab text-slate-400' />
-
-										<div className='relative w-[45px] group'>
-											<Img src={ex?.img} showBlur={false} className='w-full rounded' />
+								<div className="flex items-center gap-3">
+									{/* Drag + image */}
+									<div className=" flex items-center gap-2 shrink-0 mt-0.5">
+										<GripVertical className="w-3.5 h-3.5 text-slate-300 cursor-grab hover:text-slate-400 transition shrink-0" />
+										<div className="relative w-11 h-11 group shrink-0">
+											<Img src={ex?.img} showBlur={false} className="w-full h-full rounded-xl object-contain bg-slate-50 border border-slate-100" />
 											<button
-												type='button'
+												type="button"
 												onClick={() => setPreviewImg(ex.img)}
-												className='absolute inset-0 flex items-center justify-center  bg-black/40 opacity-0 group-hover:opacity-100  transition-opacity rounded'
-												aria-label={t('actions.preview')}
-												title={t('actions.preview')}
+												className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition rounded-xl"
 											>
-												<Eye className='h-4 w-4 text-white' />
+												<Eye className="h-3.5 w-3.5 text-white" />
 											</button>
 										</div>
-
-										<MultiLangText className='truncate font-medium text-slate-900'>{ex.name}</MultiLangText>
-
-										{ex.category ? (
-											<span className='inline-flex items-center gap-1 rounded-lg border border-[color:var(--color-primary-200)] bg-[color:var(--color-primary-50)] px-2 py-1 text-[11px] text-[color:var(--color-primary-700)]'>
-												<Tag size={12} />
-												<MultiLangText>{ex.category}</MultiLangText>
-											</span>
-										) : null}
-									</div>
-
-									<div className='flex items-center gap-2'>
-										<div className='w-full sm:w-auto'>
-											{/* ✅ MAIN/WARMUP fields */}
-											{!isCardio && (
-												<>
-													<div className='mt-2 sm:mt-0 sm:ml-auto grid grid-cols-4 gap-1.5 min-w-[280px] max-w-[340px]'>
-														<MiniField
-															inputMode='numeric'
-															type='number'
-															placeholder={t('preview.sets')}
-															value={ex.targetSets ?? ''}
-															onChange={e => setExerciseField(ex.exerciseId, { targetSets: e.target.value })}
-															onBlur={() => {
-																const s = String(ex.targetSets ?? '').trim();
-																if (!s) return;
-																setExerciseField(ex.exerciseId, { targetSets: normalizeIntOrDefault(ex.targetSets, 3) });
-															}}
-														/>
-
-														<MiniField
-															inputMode='numeric'
-															placeholder={t('preview.reps')}
-															value={ex.targetReps ?? ''}
-															onChange={e => setExerciseField(ex.exerciseId, { targetReps: e.target.value })}
-															onBlur={() => {
-																const s = String(ex.targetReps ?? '').trim();
-																if (!s) return;
-																setExerciseField(ex.exerciseId, { targetReps: normalizeIntOrDefault(ex.targetReps, 12) });
-															}}
-														/>
-
-														<MiniField
-															placeholder={t('preview.tempo', { default: 'Tempo' })}
-															value={ex.tempo ?? ''}
-															onChange={e => setExerciseField(ex.exerciseId, { tempo: e.target.value })}
-															onBlur={() => {
-																const s = String(ex.tempo ?? '').trim();
-																if (!s) return;
-																setExerciseField(ex.exerciseId, { tempo: normalizeTempoOrDefault(ex.tempo, '1/1/1') });
-															}}
-														/>
-
-														<MiniField
-															inputMode='numeric'
-															type='number'
-															placeholder={t('builder.restTime')}
-															value={ex.restSeconds ?? ''}
-															onChange={e => setExerciseField(ex.exerciseId, { restSeconds: e.target.value })}
-															onBlur={() => {
-																const s = String(ex.restSeconds ?? '').trim();
-																if (!s) return;
-																setExerciseField(ex.exerciseId, { restSeconds: normalizeIntOrDefault(ex.restSeconds, 90) });
-															}}
-														/>
-													</div>
-													<MiniTextArea
-														className='mt-2 !min-w-[200px]'
-														placeholder={t('builder.exerciseNote', { default: 'Note for this exercise...' })}
-														value={ex.note ?? ''}
-														onChange={(val) => setExerciseField(ex.exerciseId, { note: val })}
-													/>
-												</>
-											)}
-
-											{/* ✅ CARDIO fields (duration + unit toggle + note) */}
-											{isCardio && (
-												<div className='flex   items-center gap-1.5'>
-													<div className='w-full  relative flex items-center rounded-lg border border-slate-200 '>
-														<div className='   flex border-l border-slate-200'>
-															<button
-																type='button'
-																onClick={() => {
-																	const unit = 'min';
-																	const prevVal = ex.durationValue;
-																	const prevUnit = ex.durationUnit ?? 'min';
-																	const secs = toSecondsFromValueAndUnit(prevVal, prevUnit);
-																	const newVal = secs != null ? fromDurationSeconds(secs, unit) : '';
-																	setExerciseField(ex.exerciseId, { durationUnit: unit, durationValue: newVal });
-																}}
-																className={[
-																	'px-2 py-1.5 rounded-md text-[11px] font-semibold transition',
-																	(ex.durationUnit ?? 'min') === 'min'
-																		? 'bg-[color:var(--color-primary-500)] text-white'
-																		: 'bg-slate-100 text-slate-600 hover:bg-slate-200',
-																].join(' ')}
-															>
-																{t('builder.cardio.min', { default: 'min' })}
-															</button>
-															<button
-																type='button'
-																onClick={() => {
-																	const unit = 'sec';
-																	const prevVal = ex.durationValue;
-																	const prevUnit = ex.durationUnit ?? 'min';
-																	const secs = toSecondsFromValueAndUnit(prevVal, prevUnit);
-																	const newVal = secs != null ? fromDurationSeconds(secs, unit) : '';
-																	setExerciseField(ex.exerciseId, { durationUnit: unit, durationValue: newVal });
-																}}
-																className={[
-																	'px-2 py-1.5 rounded-md text-[11px] font-semibold transition',
-																	(ex.durationUnit ?? 'min') === 'sec'
-																		? 'bg-[color:var(--color-primary-500)] text-white'
-																		: 'bg-slate-100 text-slate-600 hover:bg-slate-200',
-																].join(' ')}
-															>
-																{t('builder.cardio.sec', { default: 'sec' })}
-															</button>
-														</div>
-														<MiniField
-															inputMode='numeric'
-															className='!h-[35px] !rounded-none !border-0'
-															cnParent=" w-full "
-															type='number'
-															placeholder={ex.durationUnit === 'sec' ? t('builder.cardio.seconds' ) : t('builder.cardio.minutes', { default: 'Min' })}
-															value={ex.durationValue ?? ''}
-															onChange={e => setExerciseField(ex.exerciseId, { durationValue: e.target.value })}
-															onBlur={() => setExerciseField(ex.exerciseId, { durationValue: normalizeMinutesOrEmpty(ex.durationValue) })}
-															iconLeft={<Clock className='w-3.5 h-4.5 text-slate-400' />}
-														/>
-													</div>
-
-													<MiniTextArea
-														className=" "
-														placeholder={t('builder.cardio.note')}
-														value={ex.note ?? ''}
-														onChange={(val) => setExerciseField(ex.exerciseId, { note: val })}
-													/>
-												</div>
+										<div className="flex items-center gap-2 flex-wrap min-w-0">
+											<MultiLangText className="text-xs font-semibold text-slate-900 truncate">{ex.name}</MultiLangText>
+											{ex.category && (
+												<span className="inline-flex items-center gap-1 rounded-lg border border-[color:var(--color-primary-200)] bg-[color:var(--color-primary-50)] px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--color-primary-700)]">
+													<Tag size={9} />
+													<MultiLangText>{ex.category}</MultiLangText>
+												</span>
 											)}
 										</div>
+									</div>
 
-										<button type='button' onClick={() => removeExercise(ex.exerciseId)} className={iconBtn} title={t('actions.delete')} aria-label={t('actions.delete')}>
-											<Trash2 className='w-4 h-4' />
-										</button>
+									{/* Info + fields */}
+									<div className="flex-1 ">
+										{!isCardio && (
+											<div className=" justify-end flex items-center gap-2 flex-1">
+												<div className="max-w-[400px] w-full grid grid-cols-4 gap-1.5">
+													<MiniField inputMode="numeric" type="number" placeholder={t('preview.sets')} value={ex.targetSets ?? ''} onChange={e => setExerciseField(ex.exerciseId, { targetSets: e.target.value })} onBlur={() => { if (String(ex.targetSets ?? '').trim()) setExerciseField(ex.exerciseId, { targetSets: normalizeIntOrDefault(ex.targetSets, 3) }); }} />
+													<MiniField inputMode="numeric" placeholder={t('preview.reps')} value={ex.targetReps ?? ''} onChange={e => setExerciseField(ex.exerciseId, { targetReps: e.target.value })} onBlur={() => { if (String(ex.targetReps ?? '').trim()) setExerciseField(ex.exerciseId, { targetReps: normalizeIntOrDefault(ex.targetReps, 12) }); }} />
+													<MiniField placeholder={t('preview.tempo', { default: 'Tempo' })} value={ex.tempo ?? ''} onChange={e => setExerciseField(ex.exerciseId, { tempo: e.target.value })} onBlur={() => { if (String(ex.tempo ?? '').trim()) setExerciseField(ex.exerciseId, { tempo: normalizeTempoOrDefault(ex.tempo, '1/1/1') }); }} />
+													<MiniField inputMode="numeric" type="number" placeholder={t('builder.restTime')} value={ex.restSeconds ?? ''} onChange={e => setExerciseField(ex.exerciseId, { restSeconds: e.target.value })} onBlur={() => { if (String(ex.restSeconds ?? '').trim()) setExerciseField(ex.exerciseId, { restSeconds: normalizeIntOrDefault(ex.restSeconds, 90) }); }} />
+												</div>
+												<MiniTextArea className=" mb-[-6px] max-w-[200px] " placeholder={t('builder.exerciseNote', { default: 'Note for this exercise...' })} value={ex.note ?? ''} onChange={val => setExerciseField(ex.exerciseId, { note: val })} />
+												<button
+													type="button"
+													onClick={() => removeExercise(ex.exerciseId)}
+													className=" mb-[2px] shrink-0 h-9 w-9 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50 transition"
+													title={t('actions.delete')}
+												>
+													<Trash2 className="w-3.5 h-3.5" />
+												</button>
+											</div>
+										)}
+
+										{/* Cardio fields */}
+										{isCardio && (
+											<div className="flex items-start justify-end gap-2">
+												<div className="flex border border-slate-200  bg-white shrink-0">
+													{/* Unit toggle */}
+													<div className="flex">
+														{['min', 'sec'].map(unit => (
+															<button
+																key={unit}
+																type="button"
+																onClick={() => {
+																	const prevVal = ex.durationValue;
+																	const prevUnit = ex.durationUnit ?? 'min';
+																	const secs = toSecondsFromValueAndUnit(prevVal, prevUnit);
+																	const newVal = secs != null ? fromDurationSeconds(secs, unit) : '';
+																	setExerciseField(ex.exerciseId, { durationUnit: unit, durationValue: newVal });
+																}}
+																className={[
+																	'px-2.5 py-1.5 text-[11px] font-semibold transition border-r border-slate-200',
+																	(ex.durationUnit ?? 'min') === unit
+																		? 'bg-[color:var(--color-primary-500)] text-white'
+																		: 'bg-white text-slate-500 hover:bg-slate-50',
+																].join(' ')}
+															>
+																{t(`builder.cardio.${unit}`, { default: unit })}
+															</button>
+														))}
+													</div>
+													{/* Duration input */}
+													<MiniField
+														inputMode="numeric"
+														type="number"
+														placeholder={ex.durationUnit === 'sec' ? t('builder.cardio.seconds') : t('builder.cardio.minutes', { default: 'Min' })}
+														value={ex.durationValue ?? ''}
+														onChange={e => setExerciseField(ex.exerciseId, { durationValue: e.target.value })}
+														onBlur={() => setExerciseField(ex.exerciseId, { durationValue: normalizeMinutesOrEmpty(ex.durationValue) })}
+														iconLeft={<Clock className="w-3 h-3 text-slate-400" />}
+														className=" !max-w-[100px] !rounded-none !border-0 !h-[35px] w-28"
+													/>
+												</div>
+												<MiniTextArea
+													placeholder={t('builder.cardio.note')}
+													value={ex.note ?? ''}
+													onChange={val => setExerciseField(ex.exerciseId, { note: val })}
+													className="flex-1 max-w-[300px]"
+													cnInput=" !h-[38px] !rounded-none"
+												/>
+											</div>
+										)}
 									</div>
 								</div>
 							</Reorder.Item>
 						))}
 					</Reorder.Group>
 				) : (
-					<div className='rounded-lg border border-dashed border-slate-200 bg-slate-50 py-6 text-center text-sm text-slate-500'>{t('builder.noExercisesHint')}</div>
+					<div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 py-5 text-center">
+						<p className="text-xs text-slate-400">{t('builder.noExercisesHint')}</p>
+					</div>
 				)}
 			</div>
 		);
 	};
 
 	return (
-		<div className='space-y-4'>
+		<div className="space-y-3">
 			{days.map(d => (
-				<motion.div key={d.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={spring} className='overflow-hidden rounded-lg border border-slate-200 bg-white'>
-					<div className='flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/60 px-4 py-3'>
-						<div className='flex flex-wrap items-center gap-3'>
-							<Select
-								clearable={false}
-								searchable={false}
-								className='!w-[160px]'
-								placeholder={t('builder.selectDayPlaceholder')}
-								options={DAY_OPTIONS.map(o => ({ id: o.id, label: o.label }))}
-								value={d.dayOfWeek}
-								onChange={val => setDays(arr => arr.map(x => (x.id === d.id ? { ...x, dayOfWeek: val } : x)))}
-							/>
-						</div>
+				<motion.div
+					key={d.id}
+					initial={{ opacity: 0, y: 8 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={spring}
+					className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs"
+				>
+					{/* Day header */}
+					<div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+						<Select
+							clearable={false}
+							searchable={false}
+							className="!w-[150px]"
+							placeholder={t('builder.selectDayPlaceholder')}
+							options={DAY_OPTIONS.map(o => ({ id: o.id, label: o.label }))}
+							value={d.dayOfWeek}
+							onChange={val => setDays(arr => arr.map(x => x.id === d.id ? { ...x, dayOfWeek: val } : x))}
+						/>
 
-						<div className='flex items-center gap-2'>
-							<button type='button' onClick={() => openPicker(d.id, 'warmup')} className={`${btnBase} ${btnOutline}`}>
-								{t('builder.addWarmup', { default: '+ Warmup' })}
+						<div className="flex items-center gap-1.5 flex-wrap">
+							{[
+								{ key: 'warmup', label: t('builder.addWarmup', { default: '+ Warmup' }), colorClass: 'border-amber-200 text-amber-700 hover:bg-amber-50' },
+								{ key: 'main', label: t('builder.addWorkout', { default: '+ Workout' }), colorClass: 'border-[color:var(--color-primary-200)] text-[color:var(--color-primary-700)] hover:bg-[color:var(--color-primary-50)]' },
+								{ key: 'cardio', label: t('builder.addCardio', { default: '+ Cardio' }), colorClass: 'border-blue-200 text-blue-700 hover:bg-blue-50' },
+							].map(btn => (
+								<button
+									key={btn.key}
+									type="button"
+									onClick={() => openPicker(d.id, btn.key)}
+									className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border bg-white text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 ${btn.colorClass}`}
+								>
+									{btn.label}
+								</button>
+							))}
+
+							<button
+								type="button"
+								onClick={() => duplicateDay(d.id)}
+								className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition"
+								title={t('actions.duplicateDay', { default: 'Duplicate day' })}
+							>
+								<CopyPlus className="w-3.5 h-3.5" />
+								<span className="hidden sm:inline">{t('actions.duplicateDay', { default: 'Duplicate day' })}</span>
 							</button>
 
-							<button type='button' onClick={() => openPicker(d.id, 'main')} className={`${btnBase} ${btnOutline}`}>
-								{t('builder.addWorkout', { default: '+ Workout' })}
-							</button>
-
-							<button type='button' onClick={() => openPicker(d.id, 'cardio')} className={`${btnBase} ${btnOutline}`}>
-								{t('builder.addCardio', { default: '+ Cardio' })}
-							</button>
-
-							<button type='button' onClick={() => duplicateDay(d.id)} className={`${btnBase} ${btnOutline} !px-3 !py-1.5`} title={t('actions.duplicateDay', { default: 'Duplicate day' })}>
-								<CopyPlus className='w-4 h-4' />
-								<span className='hidden sm:inline'>{t('actions.duplicateDay', { default: 'Duplicate day' })}</span>
-							</button>
-
-							<button type='button' onClick={() => removeDay(d.id)} className={`${btnBase} ${btnGhostDanger}`} title={t('actions.removeDay')} aria-label={t('actions.removeDay')}>
-								<Trash2 className='w-4 h-4' />
+							<button
+								type="button"
+								onClick={() => removeDay(d.id)}
+								className="inline-flex items-center justify-center h-8 w-8 rounded-xl border border-rose-200 bg-white text-rose-500 hover:bg-rose-50 transition"
+								title={t('actions.removeDay')}
+							>
+								<Trash2 className="w-3.5 h-3.5" />
 							</button>
 						</div>
 					</div>
 
-					<div className='p-4'>
+					{/* Day body */}
+					<div className="px-4 pt-4 pb-3">
 						{renderBlock(d, 'warmup', d.warmupExercises)}
 						{renderBlock(d, 'main', d.exercises)}
 						{renderBlock(d, 'cardio', d.cardioExercises)}
@@ -1548,10 +1369,19 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 				</motion.div>
 			))}
 
+			{/* Image Preview Overlay */}
 			{previewImg && (
-				<div className='fixed inset-0 z-50 flex items-center justify-center rounded-lg bg-black/70 backdrop-blur-xs' onClick={() => setPreviewImg(null)}>
-					<div className='max-w-[90vw] max-h-[90vh] p-4'>
-						<Img src={previewImg} alt={t('actions.preview')} className='max-h-[90vh] h-full max-w-full rounded-lg bg-white' onClick={e => e.stopPropagation()} />
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+					onClick={() => setPreviewImg(null)}
+				>
+					<div className="max-w-[90vw] max-h-[90vh] p-4">
+						<Img
+							src={previewImg}
+							alt={t('actions.preview')}
+							className="max-h-[90vh] h-full max-w-full rounded-2xl bg-white"
+							onClick={e => e.stopPropagation()}
+						/>
 					</div>
 				</div>
 			)}
@@ -1559,35 +1389,33 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 	);
 }
 
-const MiniField = memo(function MiniField({ cnParent, value, placeholder, inputMode, onChange, onBlur, className = '', type = 'text', iconLeft = null }) {
+/* ─────────────────── MiniField ─────────────────── */
+export const MiniField = memo(function MiniField({ cnParent, value, placeholder, inputMode, onChange, onBlur, className = '', type = 'text', iconLeft = null }) {
 	const hasValue = String(value ?? '').trim().length > 0;
 
 	return (
-		<div className={`relative w-full ${cnParent}`}>
-			<label
-				className={[
-					'absolute left-2 px-1 text-[10px] transition-all bg-white pointer-events-none',
-					hasValue ? 'top-[-6px] !bg-[linear-gradient(to_bottom,#f1f5f9_50%,#ffffff_50%)] text-[color:var(--color-primary-600)]' : 'top-1/2 -translate-y-1/2 text-slate-400 opacity-0',
-				].join(' ')}
-			>
-				{placeholder}
-			</label>
-
-			{iconLeft ? <span className='absolute left-2 top-1/2 -translate-y-1/2'>{iconLeft}</span> : null}
-
+		<div className={`relative w-full ${cnParent ?? ''}`}>
+			{hasValue && (
+				<label className="absolute left-2 px-0.5 text-[9px] font-semibold -top-[7px] z-10 text-[color:var(--color-primary-600)] pointer-events-none"
+					style={{ background: 'linear-gradient(to bottom, #f8fafc 50%, #ffffff 50%)' }}>
+					{placeholder}
+				</label>
+			)}
+			{iconLeft && <span className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none">{iconLeft}</span>}
 			<input
 				value={value ?? ''}
 				inputMode={inputMode}
 				type={type}
-				placeholder={hasValue ? '' : placeholder}
+				placeholder={placeholder}
 				onChange={onChange}
 				onBlur={onBlur}
 				className={[
-					'h-8 w-full rounded-lg border px-2 text-[12px]',
-					iconLeft ? 'pl-8' : '',
-					'bg-white outline-none transition',
-					'focus:ring-4 focus:ring-[color:var(--color-primary-200)]/25 focus:border-[color:var(--color-primary-400)]',
-					hasValue ? 'border-[color:var(--color-primary-300)] hover:border-[color:var(--color-primary-400)]' : 'border-slate-200 hover:border-slate-300',
+					'h-8 w-full h-[33px] border px-2 text-xs bg-white outline-none transition placeholder:text-slate-400',
+					iconLeft ? 'pl-7' : '',
+					'focus:ring-2 focus:ring-[color:var(--color-primary-200)] focus:border-[color:var(--color-primary-400)]',
+					hasValue
+						? 'border-[color:var(--color-primary-300)] hover:border-[color:var(--color-primary-400)]'
+						: 'border-slate-200 hover:border-slate-300',
 					className,
 				].join(' ')}
 			/>
@@ -1595,31 +1423,29 @@ const MiniField = memo(function MiniField({ cnParent, value, placeholder, inputM
 	);
 });
 
-const MiniTextArea = memo(function MiniTextArea({ value, placeholder, onChange, className = '' }) {
+/* ─────────────────── MiniTextArea ─────────────────── */
+export const MiniTextArea = memo(function MiniTextArea({ value, cnInput, placeholder, onChange, className = '' }) {
 	const hasValue = String(value ?? '').trim().length > 0;
 
 	return (
-		<div className='relative flex items-center w-full'>
-			<label
-				className={[
-					'absolute left-2 px-1 text-[10px] transition-all bg-white pointer-events-none',
-					hasValue ? 'top-[-6px] !bg-[linear-gradient(to_bottom,#f1f5f9_50%,#ffffff_50%)] text-[color:var(--color-primary-600)]' : 'top-3 text-slate-400 opacity-0',
-				].join(' ')}
-			>
-				{placeholder}
-			</label>
-
+		<div className={`relative w-full !h-fit ${className}`}>
+			{hasValue && (
+				<label className="absolute left-2 px-0.5 text-[9px] font-semibold -top-[7px] z-10 text-[color:var(--color-primary-600)] pointer-events-none"
+					style={{ background: 'linear-gradient(to bottom, #f8fafc 50%, #ffffff 50%)' }}>
+					{placeholder}
+				</label>
+			)}
 			<textarea
 				rows={1}
 				value={value ?? ''}
-				placeholder={hasValue ? '' : placeholder}
-				onChange={(e) => onChange?.(e.target.value)}
+				placeholder={placeholder}
+				onChange={e => onChange?.(e.target.value)}
 				className={[
-					'w-full rounded-lg border px-2 py-2 text-[12px] resize-none',
-					'bg-white outline-none transition',
-					'focus:ring-4 focus:ring-[color:var(--color-primary-200)]/25 focus:border-[color:var(--color-primary-400)]',
-					hasValue ? 'border-[color:var(--color-primary-300)] hover:border-[color:var(--color-primary-400)]' : 'border-slate-200 hover:border-slate-300',
-					className,
+					cnInput + '  w-full  h-[35px] border px-2.5 py-2 text-xs resize-none bg-white outline-none transition placeholder:text-slate-400',
+					'focus:ring-2 focus:ring-[color:var(--color-primary-200)] focus:border-[color:var(--color-primary-400)]',
+					hasValue
+						? 'border-[color:var(--color-primary-300)] hover:border-[color:var(--color-primary-400)]'
+						: 'border-slate-200 hover:border-slate-300',
 				].join(' ')}
 			/>
 		</div>

@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, forwardRef } from 'react';
 import { X } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 
 export default function Input({
   cnInputParent,
@@ -19,10 +18,10 @@ export default function Input({
   className = '',
   cnInput,
   icon,
+  required,
 }) {
   const inputRef = useRef(null);
-  const wrapperRef = useRef(null);
-  const t = useTranslations();
+  const [focused, setFocused] = useState(false);
 
   const toStr = v => (v === null || v === undefined ? '' : String(v));
   const [internal, setInternal] = useState(toStr(value));
@@ -36,27 +35,13 @@ export default function Input({
   }
 
   function handleBlur(e) {
+    setFocused(false);
     if (type === 'number') {
       const s = e.target.value.trim();
       if (s === '') onChange('');
-      else {
-        const n = Number(s);
-        onChange(Number.isNaN(n) ? '' : n);
-      }
+      else { const n = Number(s); onChange(Number.isNaN(n) ? '' : n); }
     }
     onBlur?.(e);
-    // Remove focus ring
-    if (wrapperRef.current) {
-      wrapperRef.current.style.borderColor = error ? '#f43f5e' : '#cbd5e1';
-      wrapperRef.current.style.boxShadow = 'none';
-    }
-  }
-
-  function handleFocus() {
-    if (wrapperRef.current) {
-      wrapperRef.current.style.borderColor = 'var(--color-primary-500)';
-      wrapperRef.current.style.boxShadow = '0 0 0 3px color-mix(in srgb, var(--color-primary-500) 15%, transparent)';
-    }
   }
 
   function clearInput(e) {
@@ -67,42 +52,28 @@ export default function Input({
   }
 
   const showClear = clearable && !disabled && internal !== '';
+  const hasError = error && error !== 'users';
 
   return (
     <div className={`w-full relative ${className}`}>
       {label && (
-        <label className='mb-1.5 block text-sm font-semibold text-slate-600 tracking-wide uppercase' style={{ fontSize: '0.7rem', letterSpacing: '0.06em' }}>
-          {label}
+        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-500">
+          {label}{required && <span className="ml-0.5 text-rose-400">*</span>}
         </label>
       )}
 
-      <div
-        ref={wrapperRef}
-        className={[
-          cnInputParent || '',
-          'relative flex items-center',
-          'rounded-lg border bg-white',
-          disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text',
-          'transition-all duration-200',
-        ].join(' ')}
-        style={{
-          borderColor: error && error !== 'users' ? '#f43f5e' : '#cbd5e1',
-        }}
-        onMouseEnter={e => {
-          // Only show hover border if not focused
-          if (document.activeElement !== inputRef.current && wrapperRef.current) {
-            wrapperRef.current.style.borderColor = error && error !== 'users' ? '#f43f5e' : 'var(--color-primary-300)';
-          }
-        }}
-        onMouseLeave={e => {
-          if (document.activeElement !== inputRef.current && wrapperRef.current) {
-            wrapperRef.current.style.borderColor = error && error !== 'users' ? '#f43f5e' : '#cbd5e1';
-          }
-        }}
-      >
-        {/* Left icon */}
+      <div className={[
+        cnInputParent || '',
+        'relative flex items-center rounded-xl border bg-white transition-all duration-200',
+        disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text',
+        hasError
+          ? 'border-rose-300 ring-2 ring-rose-100'
+          : focused
+            ? 'border-[color:var(--color-primary-400)] ring-2 ring-[color:var(--color-primary-200)]'
+            : 'border-slate-200 hover:border-slate-300',
+      ].join(' ')}>
         {icon && (
-          <span className='absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none flex-shrink-0'>
+          <span className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none flex-shrink-0">
             {icon}
           </span>
         )}
@@ -115,29 +86,34 @@ export default function Input({
           value={internal}
           onChange={handleChange}
           onBlur={handleBlur}
-          onFocus={handleFocus}
+          onFocus={() => setFocused(true)}
           disabled={disabled}
           className={[
-            'input-3d',
             cnInput || '',
-            'h-[43px] w-full rounded-lg py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400',
-            icon ? 'ltr:pl-9 rtl:pr-9' : 'px-3.5',
-            showClear ? 'ltr:pr-9 rtl:pl-9' : 'ltr:pr-3.5 rtl:pl-3.5',
+            'h-10 w-full rounded-xl bg-transparent py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400',
+            icon ? 'ltr:pl-9 rtl:pr-9' : 'px-3',
+            showClear ? 'ltr:pr-8 rtl:pl-8' : 'ltr:pr-3 rtl:pl-3',
           ].join(' ')}
-          aria-invalid={!!error}
+          aria-invalid={!!hasError}
         />
 
         {showClear && (
-          <X
-            size={16}
-            className='absolute rtl:left-3 ltr:right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-slate-600 transition'
+          <button
+            type="button"
             onClick={clearInput}
-          />
+            className="absolute rtl:left-2.5 ltr:right-2.5 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+            tabIndex={-1}
+          >
+            <X size={12} />
+          </button>
         )}
       </div>
 
-      {error && error !== 'users' && (
-        <p className='mt-1.5 text-xs text-rose-500 flex items-center gap-1'>
+      {hasError && (
+        <p className="mt-1.5 flex items-center gap-1 text-xs text-rose-500">
+          <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-100 shrink-0">
+            <X className="h-2.5 w-2.5" />
+          </span>
           {error}
         </p>
       )}
@@ -162,60 +138,40 @@ export const Input2 = forwardRef(function Input2(
     className = '',
     cnInput = '',
     icon,
+    required,
     ...rest
   },
   ref,
 ) {
   const val = value ?? '';
-  const wrapperRef = useRef(null);
+  const [focused, setFocused] = useState(false);
+  const hasError = error && error !== 'users';
 
-  const handleChange = e => { onChange?.(e.target.value); };
-  const handleBlur = e => {
-    onBlur?.(e);
-    if (wrapperRef.current) {
-      wrapperRef.current.style.borderColor = error ? '#f43f5e' : '#cbd5e1';
-      wrapperRef.current.style.boxShadow = 'none';
-    }
-  };
-  const handleFocus = () => {
-    if (wrapperRef.current) {
-      wrapperRef.current.style.borderColor = 'var(--color-primary-500)';
-      wrapperRef.current.style.boxShadow = '0 0 0 3px color-mix(in srgb, var(--color-primary-500) 15%, transparent)';
-    }
-  };
+  const handleChange = e => onChange?.(e.target.value);
+  const handleBlur = e => { setFocused(false); onBlur?.(e); };
   const clearInput = e => { e.stopPropagation(); onChange?.(''); };
   const showClear = clearable && !disabled && val !== '';
 
   return (
     <div className={`w-full relative ${className}`}>
       {label && (
-        <label className='mb-1.5 block text-sm font-semibold text-slate-600 tracking-wide uppercase' style={{ fontSize: '0.7rem', letterSpacing: '0.06em' }}>
-          {label}
+        <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-500">
+          {label}{required && <span className="ml-0.5 text-rose-400">*</span>}
         </label>
       )}
 
-      <div
-        ref={wrapperRef}
-        className={[
-          cnInputParent,
-          'relative flex items-center rounded-lg border bg-white',
-          disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text',
-          'transition-all duration-200',
-        ].join(' ')}
-        style={{ borderColor: error && error !== 'users' ? '#f43f5e' : '#cbd5e1' }}
-        onMouseEnter={() => {
-          if (wrapperRef.current && document.activeElement?.tagName !== 'INPUT') {
-            wrapperRef.current.style.borderColor = error && error !== 'users' ? '#f43f5e' : 'var(--color-primary-300)';
-          }
-        }}
-        onMouseLeave={() => {
-          if (wrapperRef.current && document.activeElement?.tagName !== 'INPUT') {
-            wrapperRef.current.style.borderColor = error && error !== 'users' ? '#f43f5e' : '#cbd5e1';
-          }
-        }}
-      >
+      <div className={[
+        cnInputParent,
+        'relative flex items-center rounded-xl border bg-white transition-all duration-200',
+        disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text',
+        hasError
+          ? 'border-rose-300 ring-2 ring-rose-100'
+          : focused
+            ? 'border-[color:var(--color-primary-400)] ring-2 ring-[color:var(--color-primary-200)]'
+            : 'border-slate-200 hover:border-slate-300',
+      ].join(' ')}>
         {icon && (
-          <span className='absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none flex-shrink-0'>
+          <span className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none flex-shrink-0">
             {icon}
           </span>
         )}
@@ -228,30 +184,37 @@ export const Input2 = forwardRef(function Input2(
           value={val}
           onChange={handleChange}
           onBlur={handleBlur}
-          onFocus={handleFocus}
+          onFocus={() => setFocused(true)}
           disabled={disabled}
           className={[
-            'input-3d',
             cnInput,
-            'h-[43px] w-full rounded-lg py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400',
-            icon ? 'ltr:pl-9 rtl:pr-9' : 'px-3.5',
-            showClear ? 'ltr:pr-9 rtl:pl-9' : 'ltr:pr-3.5 rtl:pl-3.5',
+            'h-10 w-full rounded-xl bg-transparent py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400',
+            icon ? 'ltr:pl-9 rtl:pr-9' : 'px-3',
+            showClear ? 'ltr:pr-8 rtl:pl-8' : 'ltr:pr-3 rtl:pl-3',
           ].join(' ')}
-          aria-invalid={!!error}
+          aria-invalid={!!hasError}
           {...rest}
         />
 
         {showClear && (
-          <X
-            size={16}
-            className='absolute rtl:left-3 ltr:right-3 top-1/2 -translate-y-1/2 cursor-pointer text-slate-400 hover:text-slate-600 transition'
+          <button
+            type="button"
             onClick={clearInput}
-          />
+            className="absolute rtl:left-2.5 ltr:right-2.5 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+            tabIndex={-1}
+          >
+            <X size={12} />
+          </button>
         )}
       </div>
 
-      {error && error !== 'users' && (
-        <p className='mt-1.5 text-xs text-rose-500'>{error}</p>
+      {hasError && (
+        <p className="mt-1.5 flex items-center gap-1 text-xs text-rose-500">
+          <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-100 shrink-0">
+            <X className="h-2.5 w-2.5" />
+          </span>
+          {error}
+        </p>
       )}
     </div>
   );

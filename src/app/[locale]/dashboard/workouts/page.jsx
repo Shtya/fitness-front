@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Dumbbell, PencilLine, LayoutGrid, Rows, Eye, Trash2, Layers,
+  Dumbbell, PencilLine, Eye, Trash2, Layers,
   Settings, RefreshCcw, Clock, X, Tag, Search, Play,
-  Image as ImageIcon, PlayCircle, TagIcon
+  Image as ImageIcon, PlayCircle, TagIcon, ChevronUp, ChevronDown, Copy
 } from 'lucide-react';
 
 import api, { baseImg } from '@/utils/axios';
@@ -69,43 +69,36 @@ const buildMultipartIfNeeded = payload => {
 };
 
 /* ---------------------------- Memoized Components --------------------------- */
+
+/** Muscle chip — subtle, pill-shaped tag */
 const Chip = memo(({ children }) => (
-  <span
-    className='inline-flex items-center rounded-lg px-2.5 py-1 mr-1 mb-1 text-[11px] font-medium transition-all duration-150'
-    style={{
-      background: 'var(--color-secondary-100)',
-      color: 'var(--color-secondary-700)',
-    }}>
+  <span className='inline-flex items-center rounded-full px-2.5 py-0.5 mr-1 mb-1 text-[11px] font-medium tracking-wide bg-[var(--color-secondary-100)] text-[var(--color-secondary-700)]'>
     {children}
   </span>
 ));
 
+/** Compact icon button used inside cards */
 const IconBtn = memo(({ title, onClick, danger, children }) => (
   <button
     type='button'
     title={title}
     onClick={onClick}
     aria-label={title}
-    className='size-8 grid place-content-center rounded-lg border shadow-sm active:scale-90 transition-all duration-150'
-    style={
+    className={[
+      'size-7 grid place-content-center rounded-md border transition-all duration-150 active:scale-90',
       danger
-        ? { borderColor: '#fecaca', background: 'white', color: '#e11d48' }
-        : { borderColor: 'var(--color-primary-200)', background: 'white', color: 'var(--color-primary-700)' }
-    }>
+        ? 'border-red-200 bg-white text-rose-600 hover:bg-rose-50'
+        : 'border-[var(--color-primary-200)] bg-white text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)]',
+    ].join(' ')}>
     {children}
   </button>
 ));
 
+/** Small stat badge */
 const StatPill = memo(({ label, value }) => (
-  <span
-    className='inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-0.5 text-xs'
-    style={{
-      borderColor: 'var(--color-primary-200)',
-      background: 'var(--color-primary-50)',
-      color: 'var(--color-primary-700)',
-    }}>
-    <span className='font-semibold' style={{ color: 'var(--color-primary-800)' }}>{label}</span>
-    <span className='opacity-75'>{value}</span>
+  <span className='inline-flex items-center gap-1.5 rounded-md border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2.5 py-0.5 text-xs text-[var(--color-primary-700)]'>
+    <span className='font-semibold text-[var(--color-primary-800)]'>{label}</span>
+    <span className='opacity-70'>{value}</span>
   </span>
 ));
 
@@ -301,14 +294,17 @@ export default function ExercisesPage() {
   }, []);
 
   return (
-    <div className='space-y-6'>
-      {/* Header / Stats */}
+    <div className='space-y-7'>
+
+      {/* ── Header / Stats ── */}
       <GradientStatsHeader
         onClick={() => { setDuplicateInitial(null); setAddOpen(true); }}
         btnName={t('actions.addExercise')}
         title={t('descriptions.exercises')}
         desc={t('descriptions.manageLibrary')}
-        loadingStats={loadingStats}>
+        loadingStats={loadingStats}
+				// stats={stats}
+				>
         <>
           <StatCard icon={Layers} title={t('stats.totalGlobalExercise')} value={stats?.totals?.totalGlobalExercise - stats?.totals?.totalPersonalExercise ?? 0} />
           {stats?.totals?.totalPersonalExercise != null && stats?.totals?.totalPersonalExercise != '0' && (
@@ -319,118 +315,128 @@ export default function ExercisesPage() {
         </>
       </GradientStatsHeader>
 
-      {/* Filters + Search */}
-      <div className='relative'>
-        <div className='flex items-center justify-between gap-2 flex-wrap'>
-          {/* Search */}
-          <div className='relative flex-1 max-w-[240px] sm:min-w-[260px]'>
-            <Search className='absolute rtl:right-3 ltr:left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none' style={{ color: 'var(--color-primary-400)' }} />
-            <style>{`
-              .themed-search:focus {
-                border-color: var(--color-primary-500) !important;
-                box-shadow: 0 0 0 3px rgba(var(--search-ring, 99,102,241), 0.2), 0 1px 3px rgba(0,0,0,0.06) !important;
-              }
-            `}</style>
-            <input
-              value={searchText}
-              onChange={e => setSearchText(e.target.value)}
-              placeholder={t('placeholders.search')}
-              className='themed-search h-11 w-full px-8 rounded-lg border text-sm outline-none transition-all duration-200'
-              style={{
-                borderColor: 'var(--color-primary-200)',
-                background: 'white',
-                color: 'var(--color-primary-900)',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-              }}
-              aria-label={t('placeholders.search')}
-            />
-            {!!searchText && (
-              <button
-                type='button'
-                onClick={() => setSearchText('')}
-                className='absolute rtl:left-2 ltr:right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg transition-colors duration-150'
-                style={{ color: 'var(--color-primary-400)' }}
-                aria-label={t('actions.clear')}
-                title={t('actions.clear')}>
-                <X className='w-4 h-4' />
-              </button>
-            )}
-          </div>
+      {/* ── Toolbar: Search + Controls ── */}
+      <div className='flex items-center justify-between gap-3 flex-wrap'>
 
-          <div className='flex items-center gap-2'>
-            {/* Per page */}
-            <div className='min-w-[80px]'>
-              <Select
-                searchable={false}
-                clearable={false}
-                className='!w-full'
-                placeholder={t('placeholders.perPage')}
-                options={[
-                  { id: 8, label: 8 }, { id: 12, label: 12 },
-                  { id: 20, label: 20 }, { id: 30, label: 30 },
-                ]}
-                value={perPage}
-                onChange={n => setPerPage(Number(n))}
-              />
-            </div>
-
-            {/* Sort button */}
+        {/* Search */}
+        <div className='relative flex-1 max-w-xs'>
+          <Search
+            className='pointer-events-none absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-primary-400)]'
+          />
+          <input
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
+            placeholder={t('placeholders.search')}
+            aria-label={t('placeholders.search')}
+            className={[
+              'h-10 w-full rounded-lg border bg-white text-sm outline-none transition-all duration-200',
+              'ltr:pl-9 ltr:pr-8 rtl:pr-9 rtl:pl-8',
+              'border-[var(--color-primary-200)] text-[var(--color-primary-900)] placeholder:text-[var(--color-primary-400)]',
+              'focus:border-[var(--color-primary-500)] focus:ring-2 focus:ring-[var(--color-primary-200)]',
+              'shadow-[0_1px_2px_rgba(0,0,0,0.05)]',
+            ].join(' ')}
+          />
+          {!!searchText && (
             <button
-              onClick={() => toggleSort('created_at')}
-              className='inline-flex items-center gap-2 rounded-lg px-3 h-11 text-sm font-medium transition-all duration-200 active:scale-[.97]'
-              style={{
-                borderWidth: 1,
-                borderColor: 'var(--color-primary-200)',
-                background: 'white',
-                color: 'var(--color-primary-800)',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-              }}>
-              <Clock size={17} style={{ color: 'var(--color-primary-500)' }} />
-              <span className='tracking-wide'>
-                {sortBy === 'created_at'
-                  ? (sortOrder === 'ASC' ? t('actions.oldestFirst') : t('actions.newestFirst'))
-                  : t('actions.sortByDate')}
-              </span>
+              type='button'
+              onClick={() => setSearchText('')}
+              aria-label={t('actions.clear')}
+              className='absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 grid h-6 w-6 place-items-center rounded-md text-[var(--color-primary-400)] hover:text-[var(--color-primary-700)] transition-colors'>
+              <X className='w-3.5 h-3.5' />
             </button>
+          )}
+        </div>
+
+        {/* Right controls */}
+        <div className='flex items-center gap-2'>
+          {/* Per-page select */}
+          <div className='w-[80px]'>
+            <Select
+              searchable={false}
+              clearable={false}
+              className='!w-full'
+              placeholder={t('placeholders.perPage')}
+              options={[
+                { id: 8, label: 8 }, { id: 12, label: 12 },
+                { id: 20, label: 20 }, { id: 30, label: 30 },
+              ]}
+              value={perPage}
+              onChange={n => setPerPage(Number(n))}
+            />
           </div>
+
+          {/* Sort button */}
+          <button
+            onClick={() => toggleSort('created_at')}
+            className={[
+              'inline-flex items-center gap-1.5 rounded-lg border px-3 h-10 text-sm font-medium',
+              'border-[var(--color-primary-200)] bg-white text-[var(--color-primary-800)]',
+              'shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:bg-[var(--color-primary-50)]',
+              'transition-all duration-200 active:scale-[.97]',
+            ].join(' ')}>
+            <Clock size={15} className='text-[var(--color-primary-500)]' />
+            <span className='text-xs tracking-wide'>
+              {sortBy === 'created_at'
+                ? (sortOrder === 'ASC' ? t('actions.oldestFirst') : t('actions.newestFirst'))
+                : t('actions.sortByDate')}
+            </span>
+            {sortBy === 'created_at'
+              ? sortOrder === 'ASC'
+                ? <ChevronUp size={13} className='text-[var(--color-primary-400)]' />
+                : <ChevronDown size={13} className='text-[var(--color-primary-400)]' />
+              : null}
+          </button>
         </div>
       </div>
 
-      {/* Category Tabs */}
+      {/* ── Category Tabs ── */}
       {tabs?.length > 1 && (
-        <div>
-          <TabsPill id='exercise-cats' className='!bg-white' tabs={tabs} active={activeCat} onChange={key => setActiveCat(key)} />
+        <TabsPill
+          id='exercise-cats'
+          className='!bg-white'
+          tabs={tabs}
+          active={activeCat}
+          onChange={key => setActiveCat(key)}
+        />
+      )}
+
+      {/* ── Error banner ── */}
+      {err && (
+        <div className='flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'>
+          <X className='mt-0.5 h-4 w-4 shrink-0' />
+          {err}
         </div>
       )}
 
-      {/* Error banner */}
-      {err ? (
-        <div className='p-3 rounded-lg border text-sm' style={{ background: '#fef2f2', borderColor: '#fecaca', color: '#b91c1c' }}>
-          {err}
-        </div>
-      ) : null}
-
-      {/* Grid */}
-      <GridView t={t} loading={loading} items={items} onView={setPreview} onEdit={setEditRow} onDelete={askDelete} onDuplicate={handleDuplicate} />
+      {/* ── Grid ── */}
+      <GridView
+        t={t}
+        loading={loading}
+        items={items}
+        onView={setPreview}
+        onEdit={setEditRow}
+        onDelete={askDelete}
+        onDuplicate={handleDuplicate}
+      />
 
       <PrettyPagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
-      {/* Preview Modal */}
+      {/* ── Preview Modal ── */}
       <Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name || t('titles.preview')} maxW='max-w-3xl'>
         {preview && <ExercisePreview t={t} exercise={preview} />}
       </Modal>
 
-      {/* Add / Duplicate Modal */}
+      {/* ── Add / Duplicate Modal ── */}
       <Modal open={addOpen} onClose={() => { setAddOpen(false); setDuplicateInitial(null); }} title={t('titles.addExercise')}>
         <ExerciseForm categories={categories} initial={duplicateInitial || null} onSubmit={handleAddSubmit} />
       </Modal>
 
-      {/* Edit Modal */}
+      {/* ── Edit Modal ── */}
       <Modal open={!!editRow} onClose={() => setEditRow(null)} title={t('titles.editExercise', { name: editRow?.name || '' })}>
         {editRow && <ExerciseForm categories={categories} initial={editRow} onSubmit={handleEditSubmit} />}
       </Modal>
 
-      {/* Delete Confirm */}
+      {/* ── Delete Confirm ── */}
       <ConfirmDialog
         t={t}
         loading={deleteLoading}
@@ -445,11 +451,13 @@ export default function ExercisesPage() {
   );
 }
 
-/* ---------------------------- Subcomponents ---------------------------- */
+/* ─────────────────────────────── Confirm Dialog ──────────────────────────── */
 const ConfirmDialog = memo(({ open, onClose, loading, title, message, onConfirm, confirmText, t }) => (
   <Modal open={open} onClose={onClose} title={title} maxW='max-w-md'>
-    <div className='space-y-4'>
-      {message ? <p className='text-sm' style={{ color: 'var(--color-primary-600)' }}>{message}</p> : null}
+    <div className='space-y-5'>
+      {message && (
+        <p className='text-sm leading-relaxed text-[var(--color-primary-600)]'>{message}</p>
+      )}
       <div className='flex items-center justify-end gap-2'>
         <Button
           name={confirmText}
@@ -463,273 +471,278 @@ const ConfirmDialog = memo(({ open, onClose, loading, title, message, onConfirm,
   </Modal>
 ));
 
-/* ----------------------------- Grid / Cards -------------------------------- */
+/* ──────────────────────────────── Grid / Cards ───────────────────────────── */
+const SkeletonCard = () => (
+  <div className='overflow-hidden rounded-xl border border-[var(--color-primary-100)] bg-white shadow-sm'>
+    <div className='aspect-[16/8] w-full animate-pulse bg-[var(--color-primary-100)]' />
+    <div className='p-4 space-y-3'>
+      <div className='h-4 w-3/4 rounded-md animate-pulse bg-[var(--color-primary-100)]' />
+      <div className='h-3 w-1/2 rounded-md animate-pulse bg-[var(--color-primary-100)]' />
+      <div className='flex gap-2'>
+        <div className='h-5 w-14 rounded-full animate-pulse bg-[var(--color-primary-100)]' />
+        <div className='h-5 w-14 rounded-full animate-pulse bg-[var(--color-primary-100)]' />
+      </div>
+    </div>
+  </div>
+);
+
 const GridView = memo(({ loading, items, onView, onEdit, onDelete, onDuplicate, t }) => {
   if (loading) {
     return (
       <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'>
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className='relative overflow-hidden rounded-lg border shadow-sm' style={{ borderColor: 'var(--color-primary-200)', background: 'white' }}>
-            <div className='aspect-video w-full overflow-hidden'>
-              <div className='h-full w-full animate-shimmer' style={{ background: 'linear-gradient(90deg, var(--color-primary-50) 25%, var(--color-primary-100) 50%, var(--color-primary-50) 75%)', backgroundSize: '200% 100%' }} />
-            </div>
-            <div className='p-4 space-y-2.5'>
-              <div className='h-4 w-4/5 rounded-lg animate-shimmer' style={{ background: 'linear-gradient(90deg, var(--color-primary-100) 25%, var(--color-primary-200) 50%, var(--color-primary-100) 75%)', backgroundSize: '200% 100%' }} />
-              <div className='h-3 w-2/3 rounded-lg animate-shimmer' style={{ background: 'linear-gradient(90deg, var(--color-primary-100) 25%, var(--color-primary-200) 50%, var(--color-primary-100) 75%)', backgroundSize: '200% 100%' }} />
-              <div className='h-3 w-1/2 rounded-lg animate-shimmer' style={{ background: 'linear-gradient(90deg, var(--color-primary-100) 25%, var(--color-primary-200) 50%, var(--color-primary-100) 75%)', backgroundSize: '200% 100%' }} />
-            </div>
-          </div>
-        ))}
+        {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
       </div>
     );
   }
 
   if (!items?.length) {
     return (
-      <div className='rounded-lg border p-12 text-center shadow-sm' style={{ borderColor: 'var(--color-primary-200)', background: 'white' }}>
-        <div className='mx-auto w-16 h-16 rounded-lg grid place-content-center' style={{ background: 'var(--color-primary-50)' }}>
-          <Dumbbell className='w-8 h-8' style={{ color: 'var(--color-primary-500)' }} />
+      <div className='flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-[var(--color-primary-200)] bg-white py-20 text-center shadow-sm'>
+        <div className='grid h-16 w-16 place-content-center rounded-2xl bg-[var(--color-primary-50)]'>
+          <Dumbbell className='h-8 w-8 text-[var(--color-primary-400)]' />
         </div>
-        <h3 className='mt-4 text-lg font-semibold' style={{ color: 'var(--color-primary-800)' }}>{t('empty.title')}</h3>
-        <p className='text-sm mt-1' style={{ color: 'var(--color-primary-500)' }}>{t('empty.subtitle')}</p>
+        <div>
+          <h3 className='text-base font-semibold text-[var(--color-primary-800)]'>{t('empty.title')}</h3>
+          <p className='mt-1 text-sm text-[var(--color-primary-400)]'>{t('empty.subtitle')}</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'>
-      {items.map(e => {
-        const hasImg = Boolean(e.img);
-        const hasVideo = Boolean(e.video);
-        const sets = e.targetSets ?? 3;
-        const rest = e.rest ?? 90;
-
-        return (
-          <motion.div
-            key={e.id}
-            initial={{ opacity: 0, y: 12, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={spring}
-            className='group relative overflow-hidden rounded-lg border shadow-sm transition-shadow duration-300 hover:shadow-md'
-            style={{ borderColor: 'var(--color-primary-200)', background: 'white' }}>
-
-            {/* Hover gradient glow border */}
-            <div
-              className='pointer-events-none absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300'
-              style={{
-                background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                WebkitMaskImage: 'linear-gradient(#000 50%, transparent)',
-                maskImage: 'linear-gradient(#000 50%, transparent)',
-                opacity: 0,
-              }}
-            />
-            <style>{`
-              .card-glow:hover .card-glow-inner {
-                opacity: 0.12 !important;
-              }
-            `}</style>
-            <div className='card-glow-inner pointer-events-none absolute inset-0 rounded-lg transition-opacity duration-300' style={{
-              background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-              opacity: 0,
-            }} />
-
-            {/* Media Thumb */}
-            <div className='card-glow relative aspect-[16/8] ' style={{ background: 'var(--color-primary-50)' }}>
-              {hasImg ? (
-                <Img showBlur={false} src={e.img} alt={e.name} className='w-full h-full object-contain' loading='lazy' />
-              ) : (
-                <div className='w-full h-full grid place-content-center' style={{ color: hasVideo ? 'var(--color-primary-400)' : 'var(--color-primary-300)' }}>
-                  <Play className='w-9 h-9' />
-                </div>
-              )}
-
-              {/* Action toolbar */}
-              <div className='absolute right-2 top-2'>
-                <div className='flex flex-col items-center gap-1 rounded-lg border px-1 py-1 shadow-md backdrop-blur-sm transition-all duration-200' style={{ background: 'rgba(255,255,255,0.92)', borderColor: 'var(--color-primary-200)' }}>
-                  <IconBtn title={t('actions.view')} onClick={() => onView?.(e)}>
-                    <Eye className='w-4 h-4' style={{ color: 'var(--color-primary-600)' }} />
-                  </IconBtn>
-                  {e?.adminId != null && (
-                    <IconBtn title={t('actions.edit')} onClick={() => onEdit?.(e)}>
-                      <PencilLine className='w-4 h-4' style={{ color: 'var(--color-primary-600)' }} />
-                    </IconBtn>
-                  )}
-                  <IconBtn title='Duplicate' onClick={() => onDuplicate?.(e)}>
-                    <Layers className='w-4 h-4' style={{ color: 'var(--color-secondary-600)' }} />
-                  </IconBtn>
-                  {e?.adminId != null && (
-                    <IconBtn title={t('actions.delete')} onClick={() => onDelete?.(e.id)} danger>
-                      <Trash2 className='w-4 h-4' />
-                    </IconBtn>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Card Body */}
-            <div className='p-4 space-y-2'>
-              <div className=' font-en font-semibold leading-5  ' title={e.name} style={{ color: 'var(--color-primary-900)' }}>
-                {e.name}
-              </div>
-
-              {e.category ? (
-                <span
-                  className='inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm'
-                  style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}>
-                  <Tag size={11} />
-                  <MultiLangText>{e.category}</MultiLangText>
-                </span>
-              ) : null}
-
-              {e.details ? (
-                <MultiLangText dir='ltr' className='text-sm line-clamp-1' style={{ color: 'var(--color-primary-500)' }}>
-                  {e.details}
-                </MultiLangText>
-              ) : null}
-
-              <div className='flex flex-wrap items-center gap-2 pt-1'>
-                <span className='text-[11px] rounded-lg border px-2 py-1' style={{ borderColor: 'var(--color-primary-200)', color: 'var(--color-primary-600)', background: 'var(--color-primary-50)' }}>
-                  {t('meta.sets')} <span className='font-semibold' style={{ color: 'var(--color-primary-800)' }}>/ {sets}</span>
-                </span>
-                <span className='text-[11px] rounded-lg border px-2 py-1' style={{ borderColor: 'var(--color-primary-200)', color: 'var(--color-primary-600)', background: 'var(--color-primary-50)' }}>
-                  {t('meta.rest')} <span className='font-semibold' style={{ color: 'var(--color-primary-800)' }}>{rest}s</span>
-                </span>
-                {e.tempo ? (
-                  <span className='text-[11px] rounded-lg border px-2 py-1' style={{ borderColor: 'var(--color-primary-200)', color: 'var(--color-primary-600)', background: 'var(--color-primary-50)' }}>
-                    {t('meta.tempo')} <span className='font-semibold' style={{ color: 'var(--color-primary-800)' }}>{e.tempo}</span>
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          </motion.div>
-        );
-      })}
+      {items.map(e => <ExerciseCard key={e.id} exercise={e} t={t} onView={onView} onEdit={onEdit} onDelete={onDelete} onDuplicate={onDuplicate} />)}
     </div>
   );
 });
 
-/* ----------------------------- Preview Modal ------------------------------- */
+/** Individual card — extracted for clarity and memoization */
+const ExerciseCard = memo(({ exercise: e, t, onView, onEdit, onDelete, onDuplicate }) => {
+  const hasImg = Boolean(e.img);
+  const sets   = e.targetSets ?? 3;
+  const rest   = e.rest ?? 90;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={spring}
+      className='group relative overflow-hidden rounded-xl border border-[var(--color-primary-100)] bg-white shadow-sm hover:shadow-md hover:border-[var(--color-primary-300)] transition-all duration-300'>
+
+      {/* ── Thumbnail ── */}
+      <div className='relative aspect-[16/8] bg-[var(--color-primary-50)]'>
+        {hasImg ? (
+          <Img
+            showBlur={false}
+            src={e.img}
+            alt={e.name}
+            className='h-full w-full object-contain'
+            loading='lazy'
+          />
+        ) : (
+          <div className='flex h-full w-full items-center justify-center text-[var(--color-primary-300)]'>
+            <Play className='w-10 h-10 opacity-40' />
+          </div>
+        )}
+
+        {/* Media badge */}
+        {(hasImg || e.video) && (
+          <span className='absolute bottom-2 ltr:left-2 rtl:right-2 inline-flex items-center gap-1 rounded-md bg-black/50 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm'>
+            {hasImg ? <ImageIcon size={10} /> : <PlayCircle size={10} />}
+            {hasImg ? t('media.image') : t('media.video')}
+          </span>
+        )}
+
+        {/* Action panel — revealed on hover */}
+        <div className='absolute inset-y-0 ltr:right-0 rtl:left-0 flex flex-col items-center justify-center gap-1 px-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200'>
+          <div className='flex flex-col gap-1 rounded-lg border border-[var(--color-primary-100)] bg-white/95 p-1 shadow-lg backdrop-blur-sm'>
+            <IconBtn title={t('actions.view')} onClick={() => onView?.(e)}>
+              <Eye className='w-3.5 h-3.5' />
+            </IconBtn>
+            {e?.adminId != null && (
+              <IconBtn title={t('actions.edit')} onClick={() => onEdit?.(e)}>
+                <PencilLine className='w-3.5 h-3.5' />
+              </IconBtn>
+            )}
+            <IconBtn title='Duplicate' onClick={() => onDuplicate?.(e)}>
+              <Copy className='w-3.5 h-3.5 text-[var(--color-secondary-600)]' />
+            </IconBtn>
+            {e?.adminId != null && (
+              <IconBtn title={t('actions.delete')} onClick={() => onDelete?.(e.id)} danger>
+                <Trash2 className='w-3.5 h-3.5' />
+              </IconBtn>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Card body ── */}
+      <div className='p-3.5 space-y-2'>
+
+        {/* Name */}
+        <p
+          className='font-en truncate text-sm font-semibold leading-snug text-[var(--color-primary-900)]'
+          title={e.name}>
+          {e.name}
+        </p>
+
+        {/* Category badge */}
+        {e.category && (
+          <span className='inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold text-white bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] shadow-sm'>
+            <Tag size={9} />
+            <MultiLangText>{e.category}</MultiLangText>
+          </span>
+        )}
+
+        {/* Description */}
+        {e.details && (
+          <MultiLangText
+            dir='ltr'
+            className='line-clamp-1 text-xs text-[var(--color-primary-500)]'>
+            {e.details}
+          </MultiLangText>
+        )}
+
+        {/* Stats row */}
+        <div className='flex flex-wrap gap-1.5 pt-0.5'>
+          <span className='inline-flex items-center gap-1 rounded-md border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2 py-0.5 text-[10px] text-[var(--color-primary-600)]'>
+            {t('meta.sets')}
+            <span className='font-bold text-[var(--color-primary-800)]'>{sets}</span>
+          </span>
+          <span className='inline-flex items-center gap-1 rounded-md border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2 py-0.5 text-[10px] text-[var(--color-primary-600)]'>
+            {t('meta.rest')}
+            <span className='font-bold text-[var(--color-primary-800)]'>{rest}s</span>
+          </span>
+          {e.tempo && (
+            <span className='inline-flex items-center gap-1 rounded-md border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2 py-0.5 text-[10px] text-[var(--color-primary-600)]'>
+              {t('meta.tempo')}
+              <span className='font-bold text-[var(--color-primary-800)]'>{e.tempo}</span>
+            </span>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+});
+
+/* ─────────────────────────── Preview Modal Content ──────────────────────── */
 const ExercisePreview = memo(({ exercise, baseMedia = '', t }) => {
-  const hasImg = !!exercise?.img;
+  const hasImg   = !!exercise?.img;
   const hasVideo = !!exercise?.video;
   const [tab, setTab] = useState(hasImg ? 'image' : 'video');
 
   useEffect(() => { setTab(hasImg ? 'image' : 'video'); }, [exercise?.id, hasImg, hasVideo]);
 
-  const primary = useMemo(() => exercise?.primaryMusclesWorked || [], [exercise]);
+  const primary   = useMemo(() => exercise?.primaryMusclesWorked || [], [exercise]);
   const secondary = useMemo(() => exercise?.secondaryMusclesWorked || [], [exercise]);
-  const activeTabDisabled = (tab === 'image' && !hasImg) || (tab === 'video' && !hasVideo);
+
+  const mediaTabs = [
+    { key: 'image', Icon: ImageIcon, disabled: !hasImg },
+    { key: 'video', Icon: PlayCircle, disabled: !hasVideo },
+  ];
 
   return (
     <div className='space-y-5'>
-      {/* Media Tabs */}
+
+      {/* Media tab switcher */}
       {(hasImg || hasVideo) && (
-        <div className='inline-flex items-center gap-1.5 rounded-lg p-1' style={{ background: 'var(--color-primary-50)', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.06)' }}>
-          {['image', 'video'].map(key => {
-            const isActive = tab === key;
-            const isDisabled = key === 'image' ? !hasImg : !hasVideo;
-            const Icon = key === 'image' ? ImageIcon : PlayCircle;
+        <div className='inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary-50)] p-1 shadow-[inset_0_1px_3px_rgba(0,0,0,0.06)]'>
+          {mediaTabs.map(({ key, Icon, disabled }) => {
+            const active = tab === key;
             return (
               <button
                 key={key}
                 type='button'
-                aria-pressed={isActive}
-                disabled={isDisabled}
+                aria-pressed={active}
+                disabled={disabled}
                 onClick={() => setTab(key)}
-                className='relative inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm rounded-lg outline-none transition-all duration-200'
-                style={{
-                  background: isActive ? 'white' : 'transparent',
-                  color: isActive ? 'var(--color-primary-800)' : 'var(--color-primary-500)',
-                  boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  opacity: isDisabled ? 0.45 : 1,
-                  cursor: isDisabled ? 'not-allowed' : 'pointer',
-                }}>
+                className={[
+                  'inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-sm font-medium outline-none transition-all duration-200',
+                  active
+                    ? 'bg-white text-[var(--color-primary-800)] shadow'
+                    : 'text-[var(--color-primary-500)] hover:text-[var(--color-primary-700)]',
+                  disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
+                ].join(' ')}>
                 <Icon size={14} />
                 {t('media.' + key)}
-                {isActive && <span className='absolute inset-x-3 -bottom-[5px] h-[2px] rounded-full' style={{ background: 'var(--color-primary-500)' }} />}
               </button>
             );
           })}
         </div>
       )}
 
-      {/* Media Frame */}
-      <div className='relative w-full overflow-hidden rounded-lg shadow-sm' style={{ background: 'var(--color-primary-50)', border: '1px solid var(--color-primary-200)' }}>
-        <div className='aspect-[16/9] grid place-items-center'>
+      {/* Media frame */}
+      <div className='relative w-full overflow-hidden rounded-xl border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] shadow-sm'>
+        <div className='aspect-video flex items-center justify-center'>
           {tab === 'image' && hasImg ? (
-            <Img src={exercise.img} alt={exercise?.name || t('titles.untitled')} className='h-full w-full object-contain' draggable={false} loading='eager' />
+            <Img
+              src={exercise.img}
+              alt={exercise?.name || t('titles.untitled')}
+              className='h-full w-full object-contain'
+              draggable={false}
+              loading='eager'
+            />
           ) : tab === 'video' && hasVideo ? (
             <video
-              src={exercise?.video?.startsWith('http') ? exercise?.video : baseImg + exercise?.video}
-              controls className='h-full max-h-[400px] w-full object-contain rounded-lg' preload='metadata' />
+              src={exercise?.video?.startsWith('http') ? exercise.video : baseImg + exercise.video}
+              controls
+              className='h-full max-h-[400px] w-full rounded-xl object-contain'
+              preload='metadata'
+            />
           ) : (
-            <div className='flex flex-col items-center justify-center gap-2 p-6 text-center'>
-              <div className='grid h-14 w-14 place-items-center rounded-lg' style={{ background: 'var(--color-primary-100)' }}>
+            <div className='flex flex-col items-center gap-3 py-10 text-center'>
+              <div className='grid h-12 w-12 place-items-center rounded-xl bg-[var(--color-primary-100)]'>
                 {tab === 'image'
-                  ? <ImageIcon size={22} style={{ color: 'var(--color-primary-400)' }} />
-                  : <PlayCircle size={22} style={{ color: 'var(--color-primary-400)' }} />}
+                  ? <ImageIcon size={20} className='text-[var(--color-primary-400)]' />
+                  : <PlayCircle size={20} className='text-[var(--color-primary-400)]' />}
               </div>
-              <p className='text-sm' style={{ color: 'var(--color-primary-500)' }}>
+              <p className='text-sm text-[var(--color-primary-500)]'>
                 {t('media.none', { kind: tab === 'image' ? t('media.image') : t('media.video') })}
               </p>
             </div>
           )}
         </div>
-
-        {activeTabDisabled && (
-          <div className='pointer-events-none absolute inset-0 grid place-items-center' style={{ background: 'rgba(255,255,255,0.65)' }}>
-            <span className='rounded-lg px-3 py-1.5 text-xs shadow-sm' style={{ background: 'white', color: 'var(--color-primary-600)', border: '1px solid var(--color-primary-200)' }}>
-              {tab === 'image' ? t('media.noImage') : t('media.noVideo')}
-            </span>
-          </div>
-        )}
       </div>
 
-      {/* Details */}
-      <div className='flex items-start justify-between gap-3'>
-        <div className='min-w-0'>
-          <div className='flex items-center gap-2 flex-wrap'>
-            <h3 className='text-lg font-bold truncate' style={{ color: 'var(--color-primary-900)' }}>
-              {exercise?.name || t('titles.untitled')}
-            </h3>
-            {exercise?.category ? (
-              <span
-                className='inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-0.5 text-xs font-semibold'
-                style={{
-                  borderColor: 'var(--color-primary-200)',
-                  background: 'var(--color-primary-50)',
-                  color: 'var(--color-primary-700)',
-                }}>
-                <TagIcon size={11} />
-                {exercise.category}
-              </span>
-            ) : null}
-          </div>
-
-          {exercise?.details ? (
-            <p className='mt-1.5 max-w-prose text-sm leading-6' style={{ color: 'var(--color-primary-600)' }}>
-              {exercise.details}
-            </p>
-          ) : null}
-
-          <div className='mt-2 flex flex-wrap items-center gap-2'>
-            <StatPill label={t('meta.sets')} value={exercise?.targetSets ?? 3} />
-            <StatPill label={t('meta.rest')} value={`${exercise?.rest ?? 90}s`} />
-            {exercise?.tempo ? <StatPill label={t('meta.tempo')} value={exercise.tempo} /> : null}
-          </div>
-
-          {(primary.length > 0 || secondary.length > 0) && (
-            <div className='pt-4'>
-              <div className='mb-1.5 text-xs font-semibold uppercase tracking-wide' style={{ color: 'var(--color-primary-400)' }}>
-                {t('labels.muscles')}
-              </div>
-              <div className='flex flex-wrap gap-1.5'>
-                {primary.map(m => <Chip key={`p-${m}`}>{m}</Chip>)}
-                {secondary.map(m => <Chip key={`s-${m}`}>{m}</Chip>)}
-              </div>
-            </div>
+      {/* Details section */}
+      <div className='space-y-3'>
+        <div className='flex items-start flex-wrap gap-2'>
+          <h3 className='text-lg font-bold text-[var(--color-primary-900)]'>
+            {exercise?.name || t('titles.untitled')}
+          </h3>
+          {exercise?.category && (
+            <span className='inline-flex items-center gap-1.5 rounded-md border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary-700)]'>
+              <TagIcon size={11} />
+              {exercise.category}
+            </span>
           )}
         </div>
+
+        {exercise?.details && (
+          <p className='max-w-prose text-sm leading-6 text-[var(--color-primary-600)]'>
+            {exercise.details}
+          </p>
+        )}
+
+        {/* Stats pills */}
+        <div className='flex flex-wrap gap-2'>
+          <StatPill label={t('meta.sets')} value={exercise?.targetSets ?? 3} />
+          <StatPill label={t('meta.rest')} value={`${exercise?.rest ?? 90}s`} />
+          {exercise?.tempo && <StatPill label={t('meta.tempo')} value={exercise.tempo} />}
+        </div>
+
+        {/* Muscles */}
+        {(primary.length > 0 || secondary.length > 0) && (
+          <div className='pt-2'>
+            <p className='mb-2 text-[11px] font-semibold uppercase tracking-widest text-[var(--color-primary-400)]'>
+              {t('labels.muscles')}
+            </p>
+            <div className='flex flex-wrap'>
+              {primary.map(m   => <Chip key={`p-${m}`}>{m}</Chip>)}
+              {secondary.map(m => <Chip key={`s-${m}`}>{m}</Chip>)}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

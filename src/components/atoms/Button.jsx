@@ -14,45 +14,44 @@ export default function Button({
   loading = false,
   type = 'button',
 }) {
-  // Static semantic colors (these are intentionally NOT theme-driven)
+  // Static semantic colors (intentionally NOT theme-driven)
   const staticColors = {
-    violet:  { bg: '#7e22ce', hover: '#6b21a8', ring: 'rgba(139,92,246,0.4)' },
-    blue:    { bg: '#2563eb', hover: '#1d4ed8', ring: 'rgba(59,130,246,0.4)' },
-    green:   { bg: '#059669', hover: '#047857', ring: 'rgba(16,185,129,0.4)' },
-    success: { bg: '#059669', hover: '#047857', ring: 'rgba(16,185,129,0.4)' },
-    red:     { bg: '#e11d48', hover: '#be123c', ring: 'rgba(244,63,94,0.4)' },
-    danger:  { bg: '#e11d48', hover: '#be123c', ring: 'rgba(244,63,94,0.4)' },
-    yellow:  { bg: '#f59e0b', hover: '#d97706', ring: 'rgba(245,158,11,0.4)' },
-    warning: { bg: '#f59e0b', hover: '#d97706', ring: 'rgba(245,158,11,0.4)' },
-    black:   { bg: '#000000', hover: '#1a1a1a', ring: 'rgba(0,0,0,0.4)' },
-    gray:    { bg: '#1f2937', hover: '#111827', ring: 'rgba(107,114,128,0.4)' },
+    violet:  { bg: '#7c3aed', hover: '#6d28d9', shadow: 'rgba(124,58,237,0.35)' },
+    blue:    { bg: '#2563eb', hover: '#1d4ed8', shadow: 'rgba(37,99,235,0.35)' },
+    green:   { bg: '#059669', hover: '#047857', shadow: 'rgba(5,150,105,0.35)' },
+    success: { bg: '#059669', hover: '#047857', shadow: 'rgba(5,150,105,0.35)' },
+    red:     { bg: '#e11d48', hover: '#be123c', shadow: 'rgba(225,29,72,0.35)' },
+    danger:  { bg: '#e11d48', hover: '#be123c', shadow: 'rgba(225,29,72,0.35)' },
+    yellow:  { bg: '#d97706', hover: '#b45309', shadow: 'rgba(217,119,6,0.35)' },
+    warning: { bg: '#d97706', hover: '#b45309', shadow: 'rgba(217,119,6,0.35)' },
+    black:   { bg: '#111827', hover: '#1f2937', shadow: 'rgba(17,24,39,0.4)' },
+    gray:    { bg: '#374151', hover: '#1f2937', shadow: 'rgba(55,65,81,0.35)' },
   };
 
-  // Flat/ghost style colors (no filled background)
   const flatColors = {
-    neutral: { bg: '#e5e7eb', hover: '#d1d5db', text: '#111827', ring: 'rgba(156,163,175,0.3)' },
-    outline: { bg: 'transparent', hover: '#f9fafb', text: '#1f2937', ring: 'rgba(156,163,175,0.3)', border: '#d1d5db' },
-    ghost:   { bg: 'transparent', hover: '#f3f4f6', text: '#1f2937', ring: 'rgba(156,163,175,0.2)' },
-    subtle:  { bg: '#f3f4f6', hover: '#e5e7eb', text: '#111827', ring: 'rgba(156,163,175,0.3)' },
+    neutral: { bg: '#f1f5f9', hover: '#e2e8f0', text: '#1e293b', shadow: 'rgba(0,0,0,0.06)' },
+    outline: { bg: 'transparent', hover: '#f8fafc', text: '#334155', border: '#e2e8f0', shadow: 'rgba(0,0,0,0.04)' },
+    ghost:   { bg: 'transparent', hover: '#f1f5f9', text: '#475569', shadow: 'none' },
+    subtle:  { bg: '#f8fafc', hover: '#f1f5f9', text: '#334155', shadow: 'rgba(0,0,0,0.04)' },
   };
 
   const isPrimary = color === 'primary';
   const isFlat = color in flatColors;
   const isStatic = color in staticColors;
 
-  // --- Build inline style ---
   const [isHovered, setIsHovered] = useState(false);
 
   let inlineStyle = {};
-  let textColor = '#ffffff';
 
   if (isPrimary) {
-    // Uses CSS variables — follows the theme palette
     inlineStyle = {
       background: isHovered
-        ? 'var(--color-primary-700)'
-        : 'var(--color-primary-600)',
+        ? 'linear-gradient(135deg, var(--color-primary-700), var(--color-primary-600))'
+        : 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
       color: '#fff',
+      boxShadow: isHovered
+        ? '0 6px 20px -6px var(--color-primary-600)'
+        : '0 4px 14px -6px var(--color-primary-500)',
       transition: 'background 0.2s ease, box-shadow 0.2s ease',
     };
   } else if (isStatic) {
@@ -60,7 +59,8 @@ export default function Button({
     inlineStyle = {
       background: isHovered ? c.hover : c.bg,
       color: '#fff',
-      transition: 'background 0.2s ease',
+      boxShadow: isHovered ? `0 6px 18px -6px ${c.shadow}` : `0 3px 12px -6px ${c.shadow}`,
+      transition: 'background 0.2s ease, box-shadow 0.2s ease',
     };
   } else if (isFlat) {
     const c = flatColors[color];
@@ -68,34 +68,39 @@ export default function Button({
       background: isHovered ? c.hover : c.bg,
       color: c.text,
       border: c.border ? `1px solid ${c.border}` : undefined,
-      transition: 'background 0.2s ease',
+      boxShadow: c.shadow !== 'none' && isHovered ? `0 2px 8px -4px ${c.shadow}` : undefined,
+      transition: 'background 0.2s ease, box-shadow 0.2s ease',
     };
-    textColor = c.text;
   }
 
   const baseClass = [
     '!w-fit',
-    'min-h-[40px]',
+    'min-h-[38px]',
     'cursor-pointer',
     'inline-flex items-center justify-center gap-2',
-    'rounded-lg',
+    'rounded-xl',
     'text-sm font-semibold',
-    'px-4 !py-[5px]',
+    'px-4 py-2',
     'transition-all duration-200',
     'outline-none',
+    'focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] focus-visible:ring-offset-1',
+    'active:scale-[.97]',
     disabled ? '!opacity-50 !cursor-not-allowed !pointer-events-none' : '',
     className,
   ].join(' ');
 
   const loadingContent = (
-    <div className='w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin' />
+    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+    </svg>
   );
 
   const content = loading ? loadingContent : (
     <>
-      {srcImg && <img src={srcImg} alt='icon' className='h-5 w-5 object-contain' />}
-      {icon && <span className='!w-fit flex-shrink-0'>{icon}</span>}
-      {name && <span className='text-nowrap'>{name}</span>}
+      {srcImg && <img src={srcImg} alt="icon" className="h-4 w-4 object-contain" />}
+      {icon && <span className="flex-shrink-0 leading-none">{icon}</span>}
+      {name && <span className="text-nowrap leading-none">{name}</span>}
     </>
   );
 
@@ -112,20 +117,11 @@ export default function Button({
   };
 
   if (href) {
-    return (
-      <Link href={href} {...commonProps}>
-        {content}
-      </Link>
-    );
+    return <Link href={href} {...commonProps}>{content}</Link>;
   }
 
   return (
-    <button
-      type={type}
-      disabled={disabled || loading}
-      onClick={handleClick}
-      {...commonProps}
-    >
+    <button type={type} disabled={disabled || loading} onClick={handleClick} {...commonProps}>
       {content}
     </button>
   );

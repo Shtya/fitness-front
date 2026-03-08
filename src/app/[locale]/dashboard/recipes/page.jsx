@@ -1,547 +1,1194 @@
-"use client"
-import { useState, useMemo } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+'use client';
+
+import axios from 'axios';
+import { useState, useMemo, useRef, useEffect, useCallback, memo } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 import {
-	Search, Plus, Pencil, Trash2, X, Clock, Users, BarChart2,
-	ChefHat, Flame, Beef, Wheat, Droplets, BookOpen, Lightbulb,
-	ArrowRight, LayoutGrid, SlidersHorizontal
-} from "lucide-react";
-import { useTranslations } from "next-intl";
+	Flame, Heart, Eye, Plus, Search, Trash2, Edit2,
+	Star, Users, Beef, Wheat, Droplets, X, BookOpen, TrendingUp, ChevronDown, ChevronLeft, ChevronRight, Check, Image as ImageIcon, Lightbulb, PlayCircle, BookMarked,
+	Camera, Link2, Tag, Utensils, ListChecks, FileText, Soup,
+} from 'lucide-react';
+import { PageHeader } from '@/components/molecules/PageHeader';
 
-/* ─── constants ─── */
-const categories = ["Breakfast", "Lunch", "Dinner", "Snack", "Drink", "Dessert"];
-const units = ["g", "ml", "pcs", "pc", "tsp", "tbsp", "slices", "cups", "cloves", "pinch"];
-const satietyLevels = ["Low", "Medium", "High"];
+const API_BASE = `${process.env.NEXT_PUBLIC_BASE_URL}/api/v1`;
 
-const CAT_META = {
-	Breakfast: { color: "#E8956D", bg: "#FEF3EC", icon: "🌅" },
-	Lunch: { color: "#5B8A5F", bg: "#EEF6EF", icon: "☀️" },
-	Dinner: { color: "#6B5EA8", bg: "#F0EEF9", icon: "🌙" },
-	Snack: { color: "#C4943A", bg: "#FBF3E3", icon: "🍎" },
-	Drink: { color: "#4A90B8", bg: "#EBF4FA", icon: "🥤" },
-	Dessert: { color: "#C4627A", bg: "#FCEEF1", icon: "🍮" },
+/* ═══════════════════════════════════════════
+   EMPTY FORM
+═══════════════════════════════════════════ */
+const EMPTY_FORM = {
+	id: null,
+	title: '',
+	satiety: 'medium',
+	category: '',
+	calories: '',
+	protein: '',
+	carbs: '',
+	fat: '',
+	ingredients: [''],
+	creamIngredients: [],
+	sauceIngredients: [],
+	directions: [''],
+	tips: '',
+	videoUrl: '',
+	imageUrl: '',
+	imageFile: null,
 };
 
-const SEED = [
-	{ id: 1, name: "Avocado Toast", category: "Breakfast", servings: 1, time: 10, calories: 320, satiety: "Medium", image: "https://images.unsplash.com/photo-1603046891744-1f057bd8a0ff?w=600&q=80", ingredients: [{ name: "Sourdough bread", amount: "2", unit: "slices" }, { name: "Avocado", amount: "1", unit: "pc" }, { name: "Lemon juice", amount: "1", unit: "tsp" }, { name: "Sea salt", amount: "1", unit: "pinch" }], macros: { carbs: 38, protein: 8, fats: 18 }, tips: "Add a poached egg for extra protein." },
-	{ id: 2, name: "Grilled Salmon Bowl", category: "Lunch", servings: 1, time: 25, calories: 520, satiety: "High", image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80", ingredients: [{ name: "Salmon fillet", amount: "180", unit: "g" }, { name: "Brown rice", amount: "150", unit: "g" }, { name: "Spinach", amount: "60", unit: "g" }, { name: "Sesame oil", amount: "1", unit: "tbsp" }], macros: { carbs: 45, protein: 38, fats: 16 }, tips: "Marinate salmon in miso for 20 minutes beforehand." },
-	{ id: 3, name: "Berry Protein Smoothie", category: "Drink", servings: 1, time: 5, calories: 280, satiety: "Medium", image: "https://images.unsplash.com/photo-1570696516188-ade861b84a49?w=600&q=80", ingredients: [{ name: "Mixed berries", amount: "150", unit: "g" }, { name: "Greek yogurt", amount: "100", unit: "g" }, { name: "Almond milk", amount: "200", unit: "ml" }, { name: "Protein powder", amount: "30", unit: "g" }], macros: { carbs: 32, protein: 28, fats: 4 }, tips: "Freeze berries overnight for a thicker texture." },
-	{ id: 4, name: "Chicken & Quinoa", category: "Dinner", servings: 2, time: 35, calories: 480, satiety: "High", image: "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=600&q=80", ingredients: [{ name: "Chicken breast", amount: "300", unit: "g" }, { name: "Quinoa", amount: "120", unit: "g" }, { name: "Cherry tomatoes", amount: "100", unit: "g" }, { name: "Olive oil", amount: "2", unit: "tbsp" }], macros: { carbs: 42, protein: 44, fats: 14 }, tips: "Rest chicken 5 min before slicing to keep juicy." },
-	{ id: 5, name: "Greek Yogurt Parfait", category: "Snack", servings: 1, time: 5, calories: 210, satiety: "Medium", image: "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=600&q=80", ingredients: [{ name: "Greek yogurt", amount: "200", unit: "g" }, { name: "Granola", amount: "40", unit: "g" }, { name: "Honey", amount: "1", unit: "tbsp" }, { name: "Blueberries", amount: "60", unit: "g" }], macros: { carbs: 28, protein: 18, fats: 5 }, tips: "Layer ingredients just before eating to keep granola crunchy." },
-	{ id: 6, name: "Dark Chocolate Mousse", category: "Dessert", servings: 2, time: 15, calories: 340, satiety: "Low", image: "https://images.unsplash.com/photo-1604329760661-e71dc83f8f26?w=600&q=80", ingredients: [{ name: "Dark chocolate 70%", amount: "100", unit: "g" }, { name: "Coconut cream", amount: "150", unit: "ml" }, { name: "Maple syrup", amount: "2", unit: "tbsp" }, { name: "Vanilla extract", amount: "1", unit: "tsp" }], macros: { carbs: 30, protein: 4, fats: 22 }, tips: "Chill for at least 2 hours for the best texture." },
-];
+/* ═══════════════════════════════════════════
+   FLOATING LABEL PRIMITIVE
+═══════════════════════════════════════════ */
+const FloatLabel = ({ show, text }) => (
+	<AnimatePresence>
+		{show && (
+			<motion.span
+				initial={{ opacity: 0, y: 3 }}
+				animate={{ opacity: 1, y: 0 }}
+				exit={{ opacity: 0, y: 3 }}
+				transition={{ duration: 0.13 }}
+				className="pointer-events-none absolute z-10 px-1 text-[9px] font-bold"
+				style={{
+					top: -8,
+					insetInlineStart: 9,
+					color: 'var(--color-primary-600)',
+					background: 'linear-gradient(to bottom,var(--color-primary-50) 50%,white 50%)',
+					letterSpacing: '0.05em'
+				}}
+			>
+				{text}
+			</motion.span>
+		)}
+	</AnimatePresence>
+);
 
-const emptyMeal = { name: "", category: "Breakfast", servings: 1, time: 10, calories: 0, satiety: "Medium", image: "", ingredients: [{ name: "", amount: "", unit: "g" }], macros: { carbs: 0, protein: 0, fats: 0 }, tips: "" };
+const BASE = 'h-[36px] w-full rounded-xl border bg-white px-3 text-xs font-semibold outline-none transition-all duration-150 placeholder:text-slate-300 focus:ring-2 focus:ring-[color:var(--color-primary-200)] focus:border-[color:var(--color-primary-400)]';
+const filled = 'border-[color:var(--color-primary-300)] text-slate-800';
+const unfilled = 'border-slate-200 text-slate-700 hover:border-slate-300';
 
-/* ─── helpers ─── */
-const catColor = (c) => CAT_META[c]?.color || "#888";
-const catBg = (c) => CAT_META[c]?.bg || "#f5f5f5";
-const catIcon = (c) => CAT_META[c]?.icon || "🍽️";
-
-function MacroBar({ val, max, color }) {
+/* ═══════════════════════════════════════════
+   MINI FIELD
+═══════════════════════════════════════════ */
+const MiniField = memo(({ value, placeholder, onChange, type = 'text', iconLeft = null, className = '', cnParent = '' }) => {
+	const has = String(value ?? '').trim().length > 0;
 	return (
-		<div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--color-primary-100)" }}>
-			<div className="h-full rounded-full transition-all duration-500"
-				style={{ width: `${Math.min(100, (val / max) * 100)}%`, background: color }} />
+		<div className={`relative w-full ${cnParent}`}>
+			<FloatLabel show={has} text={placeholder} />
+			{iconLeft && <span className="pointer-events-none absolute z-10 top-1/2 -translate-y-1/2 opacity-40" style={{ insetInlineStart: 10 }}>{iconLeft}</span>}
+			<input
+				value={value ?? ''}
+				type={type}
+				placeholder={placeholder}
+				onChange={onChange}
+				className={[BASE, iconLeft ? 'ps-8' : '', has ? filled : unfilled, className].join(' ')}
+			/>
+		</div>
+	);
+});
+
+/* ═══════════════════════════════════════════
+   MINI TEXTAREA
+═══════════════════════════════════════════ */
+const MiniTextArea = memo(({ value, placeholder, onChange, rows = 3 }) => {
+	const has = String(value ?? '').trim().length > 0;
+	return (
+		<div className="relative w-full">
+			<FloatLabel show={has} text={placeholder} />
+			<textarea
+				value={value ?? ''}
+				placeholder={placeholder}
+				rows={rows}
+				onChange={e => onChange?.(e.target.value)}
+				className={[
+					'w-full rounded-xl border bg-white px-3 py-2.5 text-xs font-semibold leading-relaxed outline-none transition-all duration-150 placeholder:text-slate-300 resize-none focus:ring-2 focus:ring-[color:var(--color-primary-200)] focus:border-[color:var(--color-primary-400)]',
+					has ? filled : unfilled
+				].join(' ')}
+			/>
+		</div>
+	);
+});
+
+/* ═══════════════════════════════════════════
+   SEGMENT CONTROL
+═══════════════════════════════════════════ */
+function SegmentControl({ value, onChange, options, cn, id }) {
+	return (
+		<div className={`flex ${cn} gap-1 rounded-xl border p-1`} style={{ borderColor: 'var(--color-primary-100)', background: 'var(--color-primary-50)' }}>
+			{options.map(opt => {
+				const active = value === opt.value;
+				return (
+					<button
+						key={opt.value}
+						type="button"
+						onClick={() => onChange(opt.value)}
+						className="relative flex-1 rounded-lg py-1.5 text-[11px] font-bold transition-colors"
+						style={{ color: active ? 'white' : 'var(--color-primary-600)' }}
+					>
+						{active && (
+							<motion.div
+								layoutId={`seg-${id}`}
+								className="absolute inset-0 rounded-lg"
+								style={{ background: 'linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))' }}
+								transition={{ type: 'spring', stiffness: 500, damping: 36 }}
+							/>
+						)}
+						<span className="relative z-10">{opt.label}</span>
+					</button>
+				);
+			})}
 		</div>
 	);
 }
 
-function StatPill({ icon: Icon, label, value, color }) {
+/* ═══════════════════════════════════════════
+   CATEGORY COMBO
+═══════════════════════════════════════════ */
+function CategoryCombo({ value, onChange, presets, placeholder }) {
+	const [open, setOpen] = useState(false);
+	const ref = useRef();
+
+	const preset = presets.find(c => c.value === value);
+	const displayVal = preset ? preset.label : value ?? '';
+	const has = !!value;
+
+	useEffect(() => {
+		const h = e => { if (!ref.current?.contains(e.target)) setOpen(false); };
+		document.addEventListener('mousedown', h);
+		return () => document.removeEventListener('mousedown', h);
+	}, []);
+
 	return (
-		<div className="flex items-center gap-2 rounded-xl px-3 py-2 border"
-			style={{ borderColor: "var(--color-primary-200)", background: "var(--color-primary-50)" }}>
-			<Icon className="w-3.5 h-3.5" style={{ color }} />
-			<span className="text-xs font-semibold" style={{ color: "var(--color-primary-700)" }}>{label}:</span>
-			<span className="text-xs font-bold" style={{ color }}>{value}</span>
+		<div ref={ref} className="relative w-full">
+			<FloatLabel show={has} text={placeholder} />
+			<div
+				className={['flex h-[36px] w-full items-center rounded-xl border bg-white ps-3 pe-2 transition-all cursor-pointer focus-within:ring-2 focus-within:ring-[color:var(--color-primary-200)] focus-within:border-[color:var(--color-primary-400)]', has ? 'border-[color:var(--color-primary-300)]' : 'border-slate-200 hover:border-slate-300'].join(' ')}
+				onClick={() => setOpen(true)}
+			>
+				{value && <span className="me-1.5 text-sm select-none">{preset?.emoji ?? '🏷️'}</span>}
+				<input
+					value={displayVal}
+					readOnly
+					placeholder={placeholder}
+					className="flex-1 bg-transparent text-xs font-semibold outline-none placeholder:text-slate-300 text-slate-800 min-w-0 cursor-pointer"
+				/>
+				<motion.button
+					type="button"
+					animate={{ rotate: open ? 180 : 0 }}
+					transition={{ duration: 0.2 }}
+					onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
+					className="ms-1 grid h-6 w-6 shrink-0 place-items-center rounded-lg hover:bg-slate-100"
+				>
+					<ChevronDown className="h-3.5 w-3.5" style={{ color: 'var(--color-primary-500)' }} />
+				</motion.button>
+			</div>
+
+			<AnimatePresence>
+				{open && (
+					<motion.div
+						initial={{ opacity: 0, y: 6, scale: 0.97 }}
+						animate={{ opacity: 1, y: 0, scale: 1 }}
+						exit={{ opacity: 0, y: 4, scale: 0.97 }}
+						transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+						className="absolute inset-x-0 top-full z-[200] mt-1.5 overflow-hidden rounded-2xl border bg-white"
+						style={{ borderColor: 'var(--color-primary-100)', boxShadow: '0 16px 48px rgba(201,123,46,0.18),0 2px 8px rgba(0,0,0,0.06)' }}
+					>
+						<div className="p-1.5">
+							{presets.map(c => (
+								<button
+									key={c.value}
+									type="button"
+									onClick={() => { onChange(c.value); setOpen(false); }}
+									className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold transition-all"
+									style={{ color: value === c.value ? 'var(--color-primary-700)' : 'var(--ink-mid)', background: value === c.value ? 'var(--color-primary-50)' : 'transparent' }}
+								>
+									<span className="text-base w-6 text-center">{c.emoji}</span>
+									<span>{c.label}</span>
+									{value === c.value && <Check className="ms-auto h-3.5 w-3.5" style={{ color: 'var(--color-primary-500)' }} />}
+								</button>
+							))}
+						</div>
+					</motion.div>
+				)}
+			</AnimatePresence>
 		</div>
 	);
 }
 
-function Toast({ toast }) {
-	if (!toast) return null;
+/* ═══════════════════════════════════════════
+   NUTRITION TILE
+═══════════════════════════════════════════ */
+function NutritionTile({ label, value, onChange, color, icon: Icon, unit }) {
+	const [focused, setFocused] = useState(false);
 	return (
-		<div className="fixed top-5 end-5 z-[9999] flex items-center gap-3 rounded-xl px-5 py-3.5 text-sm font-semibold shadow-2xl"
+		<div
+			className="flex flex-col gap-1.5 rounded-2xl border p-3 transition-all"
 			style={{
-				background: toast.type === "error"
-					? "linear-gradient(135deg, #C4627A, #a84d66)"
-					: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))",
-				color: "white",
-				animation: "slideIn 0.25s ease",
-				boxShadow: "0 8px 32px rgba(15,23,42,0.25)",
-			}}>
-			{toast.type === "error" ? <X className="w-4 h-4" /> : <ChefHat className="w-4 h-4" />}
-			{toast.msg}
+				borderColor: focused ? color : 'var(--color-primary-100)',
+				background: focused ? `${color}0d` : 'white',
+				boxShadow: focused ? `0 0 0 3px ${color}18` : 'none'
+			}}
+		>
+			<div className="flex items-center gap-1.5">
+				{Icon && <Icon className="h-3 w-3" style={{ color, opacity: 0.75 }} />}
+				<span className="text-[9px] font-black uppercase tracking-[0.14em]" style={{ color }}>{label}</span>
+			</div>
+			<input
+				type="number"
+				min={0}
+				value={value ?? ''}
+				onChange={e => onChange(e.target.value)}
+				onFocus={() => setFocused(true)}
+				onBlur={() => setFocused(false)}
+				placeholder="0"
+				className="w-full border-none bg-transparent text-2xl font-black outline-none placeholder:text-slate-200"
+				style={{ color: 'var(--ink)' }}
+			/>
+			<span className="text-[9px] font-semibold" style={{ color: 'var(--color-primary-400)' }}>{unit}</span>
 		</div>
 	);
 }
 
-/* ═══════════════════════════════════════════════════════════
-	 ADMIN PAGE
-═══════════════════════════════════════════════════════════ */
-export default function AdminPage() {
-	const t = useTranslations("");
-
-	const [meals, setMeals] = useState(SEED);
-	const [form, setForm] = useState({ ...emptyMeal, ingredients: [{ name: "", amount: "", unit: "g" }] });
-	const [editId, setEditId] = useState(null);
-	const [activeTab, setActiveTab] = useState("list");
-	const [search, setSearch] = useState("");
-	const [filterCat, setFilterCat] = useState("All");
-	const [toast, setToast] = useState(null);
-
-	const showToast = (msg, type = "success") => {
-		setToast({ msg, type });
-		setTimeout(() => setToast(null), 2800);
-	};
-
-	const filtered = meals.filter(m =>
-		(filterCat === "All" || m.category === filterCat) &&
-		m.name.toLowerCase().includes(search.toLowerCase())
+/* ═══════════════════════════════════════════
+   SECTION CARD + LABEL
+═══════════════════════════════════════════ */
+function SCard({ children, className = '' }) {
+	return (
+		<div className={`rounded-2xl border p-4 ${className}`} style={{ borderColor: 'var(--color-primary-100)', background: 'rgba(253,248,240,0.55)' }}>
+			{children}
+		</div>
 	);
+}
 
-	const handleIngredient = (i, field, val) => {
-		const ing = [...form.ingredients];
-		ing[i] = { ...ing[i], [field]: val };
-		setForm(f => ({ ...f, ingredients: ing }));
+function SLabel({ icon: Icon, children, button }) {
+	return (
+		<div className="mb-3 flex items-center justify-between gap-2">
+			<div className='flex items-center gap-2'>
+				{Icon && (
+					<div className="grid h-6 w-6 place-items-center rounded-lg" style={{ background: 'var(--color-primary-100)' }}>
+						<Icon className="h-3.5 w-3.5" style={{ color: 'var(--color-primary-600)' }} />
+					</div>
+				)}
+				<span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: 'var(--color-primary-600)' }}>{children}</span>
+			</div>
+			{button}
+		</div>
+	);
+}
+
+/* ═══════════════════════════════════════════
+   LIST EDITOR
+═══════════════════════════════════════════ */
+function ListEditor({ label, icon: Icon, items, placeholder, onChange, onAdd, onRemove, numbered = false }) {
+	return (
+		<SCard>
+			<SLabel
+				icon={Icon}
+				button={
+					<button
+						onClick={onAdd}
+						className="flex w-fit px-2 items-center justify-center gap-1.5 rounded-xl border-2 border-dashed py-2 text-xs font-bold transition-all hover:border-solid hover:bg-[color:var(--color-primary-50)]"
+						style={{ borderColor: 'var(--color-primary-200)', color: 'var(--color-primary-600)' }}
+					>
+						<Plus className="h-3.5 w-3.5" />
+					</button>
+				}
+			>
+				{label}
+			</SLabel>
+
+			<div className="space-y-2">
+				<AnimatePresence initial={false}>
+					{(items || []).map((item, i) => (
+						<motion.div
+							key={i}
+							initial={{ opacity: 0, x: -8 }}
+							animate={{ opacity: 1, x: 0 }}
+							exit={{ opacity: 0, x: -8 }}
+							transition={{ duration: 0.16 }}
+							className="flex items-center gap-2"
+						>
+							{numbered ? (
+								<span
+									className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg text-[9px] font-black text-white"
+									style={{ background: 'linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))' }}
+								>
+									{i + 1}
+								</span>
+							) : (
+								<span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: 'var(--color-primary-400)' }} />
+							)}
+							<MiniField value={item} placeholder={placeholder} onChange={e => onChange(i, e.target.value)} className="flex-1" />
+							<button
+								onClick={() => onRemove(i)}
+								className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border transition-all hover:bg-rose-50"
+								style={{ borderColor: '#fecaca', color: '#ef4444' }}
+							>
+								<X className="h-3 w-3" />
+							</button>
+						</motion.div>
+					))}
+				</AnimatePresence>
+			</div>
+		</SCard>
+	);
+}
+
+/* ═══════════════════════════════════════════
+   SLIDE PANEL
+═══════════════════════════════════════════ */
+function SlidePanel({ open, onClose, onSave, initial, loading }) {
+	const t = useTranslations('recipesPage.slidePanel');
+	const tCat = useTranslations('recipesPage.categories');
+	const tS = useTranslations('recipesPage.slidePanel.satietyOptions');
+
+	const [form, setForm] = useState(EMPTY_FORM);
+	const fileRef = useRef();
+
+	useEffect(() => {
+		setForm(initial ? { ...EMPTY_FORM, ...initial } : EMPTY_FORM);
+	}, [initial, open]);
+
+	const set = useCallback((k, v) => setForm(f => ({ ...f, [k]: v })), []);
+	const addList = k => set(k, [...(form[k] || []), '']);
+	const updList = (k, i, v) => {
+		const a = [...(form[k] || [])];
+		a[i] = v;
+		set(k, a);
+	};
+	const remList = (k, i) => set(k, (form[k] || []).filter((_, x) => x !== i));
+
+	const handleImg = e => {
+		const f = e.target.files?.[0];
+		if (!f) return;
+		const preview = URL.createObjectURL(f);
+		set('imageFile', f);
+		set('imageUrl', preview);
 	};
 
-	const addIngredient = () => setForm(f => ({ ...f, ingredients: [...f.ingredients, { name: "", amount: "", unit: "g" }] }));
-	const removeIngredient = (i) => setForm(f => ({ ...f, ingredients: f.ingredients.filter((_, idx) => idx !== i) }));
-
-	const handleSubmit = () => {
-		if (!form.name.trim()) return showToast(t("library-admin.toast.name_required"), "error");
-		if (editId !== null) {
-			setMeals(m => m.map(x => x.id === editId ? { ...form, id: editId } : x));
-			showToast(t("library-admin.toast.updated"));
-		} else {
-			setMeals(m => [...m, { ...form, id: Date.now() }]);
-			showToast(t("library-admin.toast.added"));
-		}
-		setForm({ ...emptyMeal, ingredients: [{ name: "", amount: "", unit: "g" }] });
-		setEditId(null);
-		setActiveTab("list");
+	const handleSave = () => {
+		if (!form.title?.trim()) return;
+		onSave?.(form);
 	};
 
-	const startEdit = (meal) => { setForm({ ...meal }); setEditId(meal.id); setActiveTab("form"); };
-	const deleteMeal = (id) => { setMeals(m => m.filter(x => x.id !== id)); showToast(t("library-admin.toast.removed")); };
+	const CATEGORY_PRESETS = [
+		{ value: 'breakfast', label: tCat('breakfast'), emoji: '🌅' },
+		{ value: 'lunch', label: tCat('lunch'), emoji: '☀️' },
+		{ value: 'dinner', label: tCat('dinner'), emoji: '🌙' },
+		{ value: 'snack', label: tCat('snack'), emoji: '🌿' },
+	];
 
-	const resetForm = () => setForm({ ...emptyMeal, ingredients: [{ name: "", amount: "", unit: "g" }] });
+	const SATIETY_OPTS = [
+		{ value: 'low', label: tS('low') },
+		{ value: 'medium', label: tS('medium') },
+		{ value: 'high', label: tS('high') }
+	];
+
+	const total = ((+form.protein) || 0) + ((+form.carbs) || 0) + ((+form.fat) || 0) || 1;
+	const isValid = !!form.title?.trim();
 
 	return (
-		<div className="min-h-screen"  >
-			<style>{`
-        @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeUp  { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-      `}</style>
+		<AnimatePresence>
+			{open && (
+				<>
+					<motion.div
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: 0.22 }}
+						className="fixed inset-0 z-[1000]"
+						style={{ background: 'rgba(26,18,8,0.52)', backdropFilter: 'blur(6px)' }}
+						onClick={onClose}
+					/>
 
-			<Toast toast={toast} />
-
- 
-
-			<div className="max-w-6xl mx-auto px-6 py-10">
-				{/* ── Title ── */}
-				<div className="mb-8">
-					<p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "var(--color-primary-500)" }}>
-						{t("library-admin.title.eyebrow")}
-					</p>
-					<h1 className="text-4xl font-bold mb-1" style={{ color: "var(--color-primary-900)" }}>
-						{t("library-admin.title.plain")}{" "}
-						<span style={{
-							background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))",
-							WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent"
-						}}>{t("library-admin.title.accent")}</span>
-					</h1>
-					<div className="h-0.5 w-12 rounded-full mt-3"
-						style={{ background: "linear-gradient(to right, var(--color-gradient-from), var(--color-gradient-to))" }} />
-				</div>
-
-				{/* ── Tabs ── */}
-				<div className="flex gap-1 mb-8 p-1 rounded-xl w-fit"
-					style={{ background: "var(--color-primary-100)", border: "1px solid var(--color-primary-200)" }}>
-					{[
-						{ key: "list", label: t("library-admin.tabs.list", { count: meals.length }), icon: LayoutGrid },
-						{ key: "form", label: editId ? t("library-admin.tabs.edit") : t("library-admin.tabs.add"), icon: editId ? Pencil : Plus },
-					].map(({ key, label, icon: Icon }) => {
-						const active = activeTab === key;
-						return (
-							<button key={key}
-								onClick={() => {
-									setActiveTab(key);
-									if (key === "form" && editId === null) resetForm();
-								}}
-								className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
-								style={{
-									background: active ? "white" : "transparent",
-									color: active ? "var(--color-primary-900)" : "var(--color-primary-500)",
-									boxShadow: active ? "0 1px 4px rgba(15,23,42,0.1)" : "none",
-								}}>
-								<Icon className="w-3.5 h-3.5" />
-								{label}
-							</button>
-						);
-					})}
-				</div>
-
-				{/* ═══ LIST TAB ═══ */}
-				{activeTab === "list" && (
-					<div style={{ animation: "fadeUp 0.3s ease" }}>
-						<div className="flex gap-3 mb-6 flex-wrap">
-							<div className="relative flex-1 min-w-56">
-								<Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--color-primary-400)" }} />
-								<Input value={search} onChange={e => setSearch(e.target.value)}
-									placeholder={t("library-admin.list.search_placeholder")}
-									className="ps-9 h-10 rounded-xl border text-sm"
-									style={{ borderColor: "var(--color-primary-200)" }} />
+					<motion.div
+						initial={{ x: '100%' }}
+						animate={{ x: 0 }}
+						exit={{ x: '100%' }}
+						transition={{ type: 'spring', stiffness: 300, damping: 34, mass: 1.05 }}
+						className="fixed inset-y-0 rtl:start-0 ltr:end-0 z-[1000] flex w-full flex-col sm:max-w-[490px]"
+						style={{ background: 'var(--color-primary-50)', boxShadow: '-32px 0 100px -8px rgba(26,18,8,0.26)' }}
+					>
+						<div className="relative flex shrink-0 items-center justify-between border-b px-5 py-4" style={{ borderColor: 'var(--color-primary-200)', background: 'white' }}>
+							<div className="absolute inset-x-0 top-0 h-0.5" style={{ background: 'linear-gradient(90deg,var(--color-gradient-from),var(--color-gradient-to))' }} />
+							<div className="flex items-center gap-3">
+								<div
+									className="grid h-10 w-10 place-items-center rounded-2xl"
+									style={{ background: 'linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))', boxShadow: '0 4px 14px rgba(201,123,46,0.35)' }}
+								>
+									<BookOpen className="h-5 w-5 text-white" />
+								</div>
+								<div>
+									<p className="text-sm font-black" style={{ color: 'var(--ink)' }}>{initial ? t('editTitle') : t('addTitle')}</p>
+									<p className="text-[10px] font-semibold" style={{ color: 'var(--color-primary-500)' }}>{t('fromCookbook')}</p>
+								</div>
 							</div>
-
-							<Select value={filterCat} onValueChange={setFilterCat}>
-								<SelectTrigger className="w-44 h-10 rounded-xl border text-sm" style={{ borderColor: "var(--color-primary-200)" }}>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="All">{t("library.categories.all")}</SelectItem>
-									{categories.map(c => (
-										<SelectItem key={c} value={c}>{catIcon(c)} {t(`library.categories.${c.toLowerCase()}`)}</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-
-							<Button
-								onClick={() => { setActiveTab("form"); setEditId(null); resetForm(); }}
-								className="h-10 px-5 rounded-xl text-sm font-semibold text-white"
-								style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
-								<Plus className="w-4 h-4 me-1.5" /> {t("library-admin.list.new_meal")}
-							</Button>
+							<button
+								onClick={onClose}
+								className="grid h-8 w-8 place-items-center rounded-xl border transition-all hover:bg-slate-100"
+								style={{ borderColor: 'var(--color-primary-200)', color: 'var(--ink-lt)' }}
+							>
+								<X className="h-4 w-4" />
+							</button>
 						</div>
 
-						<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-							{filtered.map(meal => (
-								<Card key={meal.id} className="overflow-hidden border group hover:-translate-y-1 transition-all duration-200"
-									style={{ borderColor: "var(--color-primary-150, var(--color-primary-200))", boxShadow: "0 2px 12px rgba(15,23,42,0.06)" }}>
-									<div className="relative h-44 overflow-hidden">
-										<img src={meal.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80"}
-											alt={meal.name}
-											className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-										<div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(15,23,42,0.55) 0%, transparent 55%)" }} />
-										<div className="absolute top-3 start-3">
-											<span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider"
-												style={{ background: catColor(meal.category), color: "white" }}>
-												{catIcon(meal.category)} {t(`library.categories.${meal.category.toLowerCase()}`)}
-											</span>
+						<div className="flex-1 overflow-y-auto space-y-4 p-5">
+							<div
+								onClick={() => fileRef.current?.click()}
+								className="relative flex cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition-all hover:border-[color:var(--color-primary-400)]"
+								style={{ height: 156, borderColor: 'var(--color-primary-200)', background: form.imageUrl ? 'transparent' : 'white' }}
+							>
+								{form.imageUrl ? (
+									<>
+										<img src={form.imageUrl} alt="" className="h-full w-full object-cover" />
+										<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/35 opacity-0 hover:opacity-100 transition-opacity">
+											<Camera className="h-6 w-6 text-white" />
+											<span className="text-xs font-bold text-white">{t('changePhoto')}</span>
 										</div>
-										<div className="absolute top-3 end-3 rounded-lg px-2.5 py-1" style={{ background: "rgba(15,23,42,0.75)" }}>
-											<span className="text-sm font-bold" style={{ color: "var(--color-gradient-from)" }}>
-												{meal.calories} {t("library.card.kcal")}
-											</span>
+									</>
+								) : (
+									<div className="flex flex-col items-center gap-2.5">
+										<div className="grid h-12 w-12 place-items-center rounded-2xl" style={{ background: 'var(--color-primary-100)' }}>
+											<ImageIcon className="h-6 w-6" style={{ color: 'var(--color-primary-400)' }} />
 										</div>
-										<div className="absolute bottom-3 start-4 end-4">
-											<h3 className="text-white text-base font-bold leading-tight drop-shadow">{meal.name}</h3>
-										</div>
+										<p className="text-xs font-bold" style={{ color: 'var(--color-primary-600)' }}>{t('uploadPhoto')}</p>
+										<p className="text-[10px]" style={{ color: 'var(--color-primary-400)' }}>{t('photoFormats')}</p>
+									</div>
+								)}
+								<input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImg} />
+							</div>
+
+							<SCard>
+								<SLabel icon={FileText}>{t('sections.info')}</SLabel>
+								<div className="space-y-3">
+									<div className='grid grid-cols-2 gap-2'>
+										<MiniField value={form.title} placeholder={t('fields.recipeName')} onChange={e => set('title', e.target.value)} />
+										<CategoryCombo
+											value={form.category}
+											onChange={v => set('category', v)}
+											presets={CATEGORY_PRESETS}
+											placeholder={t('fields.category')}
+										/>
 									</div>
 
-									<CardContent className="p-4 space-y-4">
-										<div className="flex flex-wrap gap-1.5">
-											<StatPill icon={Clock} label={t("library-admin.card.time")} value={`${meal.time}${t("library.card.min_short", { defaultValue: "m" })}`} color="var(--color-primary-600)" />
-											<StatPill icon={Users} label={t("library-admin.card.serves")} value={meal.servings} color="var(--color-primary-600)" />
-											<StatPill icon={BarChart2} label={t("library-admin.card.satiety")} value={t(`library.satiety.${meal.satiety.toLowerCase()}`)} color={catColor(meal.category)} />
-										</div>
+									<div className='flex items-center gap-2 w-full'>
+										<p className="mb-1.5 text-[10px] font-bold" style={{ color: 'var(--color-primary-600)' }}>{t('fields.satiety')}</p>
+										<SegmentControl cn={"!max-w-[300px] rtl:mr-auto w-full"} value={form.satiety} onChange={v => set('satiety', v)} options={SATIETY_OPTS} id="sat" />
+									</div>
+								</div>
+							</SCard>
 
-										<div className="grid grid-cols-3 gap-2">
+							<SCard>
+								<SLabel icon={Flame}>{t('sections.nutrition')}</SLabel>
+								<div className="grid grid-cols-4 gap-2">
+									<NutritionTile label={t('fields.calories')} value={form.calories} onChange={v => set('calories', v)} color="var(--color-primary-500)" icon={Flame} unit={t('fields.kcal')} />
+									<NutritionTile label={t('fields.protein')} value={form.protein} onChange={v => set('protein', v)} color="#3b82f6" icon={Beef} unit={t('fields.grams')} />
+									<NutritionTile label={t('fields.carbs')} value={form.carbs} onChange={v => set('carbs', v)} color="#f59e0b" icon={Wheat} unit={t('fields.grams')} />
+									<NutritionTile label={t('fields.fat')} value={form.fat} onChange={v => set('fat', v)} color="#ec4899" icon={Droplets} unit={t('fields.grams')} />
+								</div>
+
+								{(form.protein || form.carbs || form.fat) && (
+									<div className="mt-4 space-y-1.5">
+										<p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-primary-500)' }}>{t('macroPreview')}</p>
+										<div className="flex h-2.5 overflow-hidden rounded-full gap-0.5">
 											{[
-												[t("library-admin.card.macro_c"), meal.macros.carbs, "#E8956D"],
-												[t("library-admin.card.macro_p"), meal.macros.protein, "#5B8A5F"],
-												[t("library-admin.card.macro_f"), meal.macros.fats, "#6B5EA8"],
-											].map(([l, v, c]) => (
-												<div key={l} className="rounded-lg p-2 text-center"
-													style={{ background: c + "18", border: `1px solid ${c}30` }}>
-													<div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: c }}>{l}</div>
-													<div className="text-sm font-bold" style={{ color: "var(--color-primary-900)" }}>{v}g</div>
-												</div>
+												[(+form.protein || 0), '#3b82f6'],
+												[(+form.carbs || 0), '#f59e0b'],
+												[(+form.fat || 0), '#ec4899']
+											].map(([v, c], i) => (
+												<motion.div
+													key={i}
+													className="rounded-full"
+													style={{ width: `${(v / total) * 100}%`, background: c }}
+													initial={{ width: 0 }}
+													animate={{ width: `${(v / total) * 100}%` }}
+													transition={{ duration: 0.35, delay: i * 0.08 }}
+												/>
 											))}
 										</div>
+									</div>
+								)}
+							</SCard>
 
-										<div>
-											<p className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "var(--color-primary-400)" }}>
-												{t("library.card.key_ingredients")} · {meal.ingredients.length}
-											</p>
-											<p className="text-xs leading-relaxed" style={{ color: "var(--color-primary-600)" }}>
-												{meal.ingredients.slice(0, 3).map(i => i.name).join(", ")}
-												{meal.ingredients.length > 3 && (
-													<span style={{ color: "var(--color-gradient-from)" }}>
-														{" "}+{meal.ingredients.length - 3} {t("library.card.more")}
-													</span>
-												)}
-											</p>
-										</div>
+							<ListEditor
+								label={t('sections.ingredients')}
+								icon={Utensils}
+								items={form.ingredients}
+								placeholder={t('fields.ingredientPlaceholder')}
+								onChange={(i, v) => updList('ingredients', i, v)}
+								onAdd={() => addList('ingredients')}
+								onRemove={i => remList('ingredients', i)}
+							/>
 
-										<Separator style={{ borderColor: "var(--color-primary-100)" }} />
+							<ListEditor
+								label={t('sections.creamIngredients')}
+								icon={Soup}
+								items={form.creamIngredients}
+								placeholder={t('fields.ingredientPlaceholder')}
+								onChange={(i, v) => updList('creamIngredients', i, v)}
+								onAdd={() => addList('creamIngredients')}
+								onRemove={i => remList('creamIngredients', i)}
+							/>
 
-										<div className="flex gap-2">
-											<Button variant="outline" size="sm" onClick={() => startEdit(meal)}
-												className="flex-1 h-9 rounded-lg text-xs font-bold border transition-colors"
-												style={{ borderColor: "var(--color-gradient-from)", color: "var(--color-gradient-from)" }}
-												onMouseOver={e => { e.currentTarget.style.background = "var(--color-gradient-from)"; e.currentTarget.style.color = "white"; }}
-												onMouseOut={e => { e.currentTarget.style.background = ""; e.currentTarget.style.color = "var(--color-gradient-from)"; }}>
-												<Pencil className="w-3.5 h-3.5 me-1.5" /> {t("library-admin.card.edit")}
-											</Button>
-											<Button variant="outline" size="sm" onClick={() => deleteMeal(meal.id)}
-												className="flex-1 h-9 rounded-lg text-xs font-bold border transition-colors hover:text-white hover:bg-rose-500 hover:border-rose-500"
-												style={{ borderColor: "#fecaca", color: "#dc2626" }}>
-												<Trash2 className="w-3.5 h-3.5 me-1.5" /> {t("library-admin.card.remove")}
-											</Button>
-										</div>
-									</CardContent>
-								</Card>
-							))}
+							<ListEditor
+								label={t('sections.sauceIngredients')}
+								icon={Soup}
+								items={form.sauceIngredients}
+								placeholder={t('fields.ingredientPlaceholder')}
+								onChange={(i, v) => updList('sauceIngredients', i, v)}
+								onAdd={() => addList('sauceIngredients')}
+								onRemove={i => remList('sauceIngredients', i)}
+							/>
 
-							{filtered.length === 0 && (
-								<div className="col-span-full flex flex-col items-center py-20 gap-3">
-									<div className="w-14 h-14 rounded-2xl grid place-items-center text-2xl"
-										style={{ background: "var(--color-primary-100)" }}>🍽️</div>
-									<p className="text-sm font-medium" style={{ color: "var(--color-primary-500)" }}>
-										{t("library.empty.title")}
-									</p>
-								</div>
-							)}
+							<ListEditor
+								label={t('sections.directions')}
+								icon={ListChecks}
+								items={form.directions}
+								placeholder={t('fields.stepPlaceholder')}
+								onChange={(i, v) => updList('directions', i, v)}
+								onAdd={() => addList('directions')}
+								onRemove={i => remList('directions', i)}
+								numbered
+							/>
+
+							<SCard>
+								<SLabel icon={Lightbulb}>{t('sections.tips')}</SLabel>
+								<MiniTextArea value={form.tips} placeholder={t('fields.tipsPlaceholder')} onChange={v => set('tips', v)} rows={2} />
+							</SCard>
+
+							<SCard>
+								<SLabel icon={Link2}>{t('sections.video')}</SLabel>
+								<MiniField
+									value={form.videoUrl}
+									placeholder={t('fields.videoPlaceholder')}
+									onChange={e => set('videoUrl', e.target.value)}
+									iconLeft={<Link2 className="h-3.5 w-3.5 text-slate-400" />}
+								/>
+							</SCard>
+
+							<div className="h-2" />
 						</div>
+
+						<div className="shrink-0 border-t px-5 py-4" style={{ borderColor: 'var(--color-primary-200)', background: 'white' }}>
+							<div className="flex gap-2.5">
+								<button
+									onClick={onClose}
+									className="flex h-11 flex-1 items-center justify-center rounded-2xl border text-sm font-bold transition-all hover:bg-slate-50"
+									style={{ borderColor: 'var(--color-primary-200)', color: 'var(--ink-mid)' }}
+								>
+									{t('cancel')}
+								</button>
+								<motion.button
+									whileHover={{ scale: 1.01 }}
+									whileTap={{ scale: 0.98 }}
+									onClick={handleSave}
+									disabled={!isValid || loading}
+									className="flex h-11 flex-[2] items-center justify-center gap-2 rounded-2xl text-sm font-black text-white transition-all disabled:opacity-40"
+									style={{
+										background: isValid ? 'linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))' : '#cbd5e1',
+										boxShadow: isValid ? '0 6px 20px rgba(201,123,46,0.38)' : 'none'
+									}}
+								>
+									<Check className="h-4 w-4" strokeWidth={3} />
+									{loading ? t('saving') : initial ? t('save') : t('add')}
+								</motion.button>
+							</div>
+						</div>
+					</motion.div>
+				</>
+			)}
+		</AnimatePresence>
+	);
+}
+
+/* ═══════════════════════════════════════════
+   RECIPE CARD
+═══════════════════════════════════════════ */
+function RecipeCard({ recipe, idx, onDelete, onEdit }) {
+	const t = useTranslations('recipesPage.card');
+	const tCat = useTranslations('recipesPage.categories');
+
+	const [expanded, setExpanded] = useState(false);
+	const [hovered, setHovered] = useState(false);
+
+	const total = (recipe.protein || 0) + (recipe.carbs || 0) + (recipe.fat || 0) || 1;
+
+	return (
+		<motion.div
+			initial={{ opacity: 0, y: 24 }}
+			animate={{ opacity: 1, y: 0 }}
+			exit={{ opacity: 0, scale: 0.96 }}
+			transition={{ delay: idx * 0.05, duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+			layout
+			onHoverStart={() => setHovered(true)}
+			onHoverEnd={() => setHovered(false)}
+			className="relative flex flex-col overflow-hidden rounded-2xl border bg-white"
+			style={{
+				borderColor: 'var(--color-primary-100)',
+				boxShadow: hovered ? '0 16px 48px rgba(201,123,46,0.16),0 4px 12px rgba(0,0,0,0.06)' : '0 2px 8px rgba(0,0,0,0.04)',
+				transform: hovered ? 'translateY(-5px)' : 'translateY(0)',
+				transition: 'box-shadow 0.3s,transform 0.3s',
+			}}
+		>
+			<div className="h-0.5" style={{ background: 'linear-gradient(90deg,var(--color-gradient-from),var(--color-gradient-to))' }} />
+
+			<div
+				className="relative overflow-hidden"
+				style={{ height: 168, background: 'linear-gradient(135deg,var(--color-primary-50),var(--color-primary-100))' }}
+			>
+				{recipe.imageUrl ? (
+					<img
+						src={recipe.imageUrl}
+						alt={recipe.title}
+						className="h-full w-full object-cover"
+						style={{ transform: hovered ? 'scale(1.05)' : 'scale(1)', transition: 'transform 0.5s' }}
+					/>
+				) : (
+					<div className="flex h-full items-center justify-center opacity-20">
+						<BookMarked className="h-10 w-10" style={{ color: 'var(--color-primary-500)' }} />
 					</div>
 				)}
+				<div className="absolute bottom-2.5 start-2.5">
+					<span
+						className="inline-flex items-center rounded-xl px-2.5 py-1 text-[10px] font-black uppercase text-white"
+						style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}
+					>
+						{tCat(recipe.category) || recipe.category}
+					</span>
+				</div>
+			</div>
 
-				{/* ═══ FORM TAB ═══ */}
-				{activeTab === "form" && (
-					<div style={{ animation: "fadeUp 0.3s ease" }}>
-						<div className="grid grid-cols-1 lg:grid-cols-2 gap-7">
+			<div className="flex flex-1 flex-col p-4">
+				<div className="mb-2 flex items-start gap-2">
+					<h3 className="flex-1 text-sm font-black leading-snug" style={{ color: 'var(--ink)' }}>{recipe.title}</h3>
+				</div>
 
-							{/* ── Left column ── */}
-							<div className="space-y-5">
-								{/* Basic Info */}
-								<Card className="border" style={{ borderColor: "var(--color-primary-200)", boxShadow: "0 2px 12px rgba(15,23,42,0.05)" }}>
-									<CardHeader className="pb-3 border-b" style={{ borderColor: "var(--color-primary-100)" }}>
-										<CardTitle className="text-base font-bold flex items-center gap-2" style={{ color: "var(--color-primary-900)" }}>
-											<ChefHat className="w-4 h-4" style={{ color: "var(--color-gradient-from)" }} />
-											{t("library-admin.form.basic_info")}
-										</CardTitle>
-									</CardHeader>
-									<CardContent className="pt-5 space-y-4">
-										<div>
-											<Label className="text-xs font-bold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--color-primary-600)" }}>
-												{t("library-admin.form.meal_name")}
-											</Label>
-											<Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-												placeholder={t("library-admin.form.meal_name_placeholder")}
-												className="h-10 rounded-xl text-sm" style={{ borderColor: "var(--color-primary-200)" }} />
-										</div>
+				<div className="mb-3 flex flex-wrap gap-1.5">
+					{recipe.satiety && (
+						<span
+							className="rounded-lg px-2 py-0.5 text-[10px] font-black"
+							style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary-700)' }}
+						>
+							{t('satiety')}: {recipe.satiety}
+						</span>
+					)}
+				</div>
 
-										<div>
-											<Label className="text-xs font-bold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--color-primary-600)" }}>
-												{t("library-admin.form.image_url")}
-											</Label>
-											<Input value={form.image} onChange={e => setForm(f => ({ ...f, image: e.target.value }))}
-												placeholder="https://…"
-												className="h-10 rounded-xl text-sm font-mono" style={{ borderColor: "var(--color-primary-200)" }} />
-										</div>
+				<div className="mb-3 rounded-xl border p-3" style={{ background: 'var(--cream)', borderColor: 'var(--border)' }}>
+					<p className="mb-2 text-[9px] font-black uppercase tracking-[0.14em]" style={{ color: 'var(--color-primary-600)' }}>
+						{t('nutrition')}
+					</p>
+					<div className="flex items-end justify-between">
+						<div>
+							<p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: 'var(--ink-lt)' }}>{t('calories')}</p>
+							<p className="text-2xl font-black leading-none" style={{ color: 'var(--color-primary-700)' }}>{recipe.calories}</p>
+						</div>
+						<div className="flex gap-3">
+							{[[t('carbs'), recipe.carbs, '#f59e0b'], [t('protein'), recipe.protein, '#3b82f6'], [t('fat'), recipe.fat, '#ec4899']].map(([label, val, color]) => (
+								<div key={label} className="text-center">
+									<p className="text-sm font-black" style={{ color: 'var(--ink)' }}>{val}g</p>
+									<div className="mx-auto my-1 h-1 w-5 rounded-full" style={{ background: color }} />
+									<p className="text-[9px] font-bold" style={{ color: 'var(--ink-lt)' }}>{label}</p>
+								</div>
+							))}
+						</div>
+					</div>
+					<div className="mt-2 flex h-1.5 overflow-hidden rounded-full gap-0.5">
+						{[[recipe.carbs, '#f59e0b'], [recipe.protein, '#3b82f6'], [recipe.fat, '#ec4899']].map(([v, c], i) => (
+							<div key={i} className="rounded-full" style={{ width: `${(v / total) * 100}%`, background: c }} />
+						))}
+					</div>
+				</div>
 
-										{form.image && (
-											<div className="rounded-xl overflow-hidden border" style={{ borderColor: "var(--color-primary-200)" }}>
-												<img src={form.image} alt="Preview" className="w-full h-32 object-cover"
-													onError={e => e.target.style.display = "none"} />
-												<p className="px-3 py-1.5 text-xs" style={{ color: "var(--color-primary-500)" }}>
-													{t("library-admin.form.image_preview")}
-												</p>
-											</div>
-										)}
+				<AnimatePresence initial={false}>
+					{expanded && (
+						<motion.div
+							initial={{ height: 0, opacity: 0 }}
+							animate={{ height: 'auto', opacity: 1 }}
+							exit={{ height: 0, opacity: 0 }}
+							transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+							className="overflow-hidden"
+						>
+							<div className="mb-3 space-y-4 pt-1">
+								<div>
+									<p className="mb-2 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--color-primary-600)' }}>{t('ingredients')}</p>
+									<ul className="space-y-1">
+										{recipe.ingredients?.map((ing, i) => (
+											<li key={i} className="flex items-start gap-2 text-xs font-medium" style={{ color: 'var(--ink-mid)' }}>
+												<span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: 'var(--color-primary-400)' }} />
+												{ing}
+											</li>
+										))}
+									</ul>
 
-										<div className="grid grid-cols-2 gap-3">
-											<div>
-												<Label className="text-xs font-bold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--color-primary-600)" }}>
-													{t("library-admin.form.category")}
-												</Label>
-												<Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
-													<SelectTrigger className="h-10 rounded-xl text-sm" style={{ borderColor: "var(--color-primary-200)" }}>
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent>
-														{categories.map(c => (
-															<SelectItem key={c} value={c}>{catIcon(c)} {t(`library.categories.${c.toLowerCase()}`)}</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
-											</div>
-											<div>
-												<Label className="text-xs font-bold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--color-primary-600)" }}>
-													{t("library-admin.form.satiety")}
-												</Label>
-												<Select value={form.satiety} onValueChange={v => setForm(f => ({ ...f, satiety: v }))}>
-													<SelectTrigger className="h-10 rounded-xl text-sm" style={{ borderColor: "var(--color-primary-200)" }}>
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent>
-														{satietyLevels.map(s => (
-															<SelectItem key={s} value={s}>{t(`library.satiety.${s.toLowerCase()}`)}</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
-											</div>
-										</div>
+									{recipe.creamIngredients?.length > 0 && (
+										<>
+											<p className="mt-3 mb-1.5 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--ink-lt)' }}>{t('creamIngredients')}</p>
+											<ul className="space-y-1">
+												{recipe.creamIngredients.map((ing, i) => (
+													<li key={i} className="flex items-start gap-2 text-xs font-medium" style={{ color: 'var(--ink-lt)' }}>
+														<span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300" />
+														{ing}
+													</li>
+												))}
+											</ul>
+										</>
+									)}
 
-										<div className="grid grid-cols-3 gap-3">
-											{[
-												[t("library-admin.form.calories"), "calories"],
-												[t("library-admin.form.time"), "time"],
-												[t("library-admin.form.servings"), "servings"],
-											].map(([label, field]) => (
-												<div key={field}>
-													<Label className="text-xs font-bold uppercase tracking-wider mb-1.5 block" style={{ color: "var(--color-primary-600)" }}>
-														{label}
-													</Label>
-													<Input type="number" value={form[field]}
-														onChange={e => setForm(f => ({ ...f, [field]: Number(e.target.value) }))}
-														className="h-10 rounded-xl text-sm text-center"
-														style={{ borderColor: "var(--color-primary-200)" }} />
-												</div>
-											))}
-										</div>
-									</CardContent>
-								</Card>
+									{recipe.sauceIngredients?.length > 0 && (
+										<>
+											<p className="mt-3 mb-1.5 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--ink-lt)' }}>{t('sauceIngredients')}</p>
+											<ul className="space-y-1">
+												{recipe.sauceIngredients.map((ing, i) => (
+													<li key={i} className="flex items-start gap-2 text-xs font-medium" style={{ color: 'var(--ink-lt)' }}>
+														<span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300" />
+														{ing}
+													</li>
+												))}
+											</ul>
+										</>
+									)}
+								</div>
 
-								{/* Macros */}
-								<Card className="border" style={{ borderColor: "var(--color-primary-200)", boxShadow: "0 2px 12px rgba(15,23,42,0.05)" }}>
-									<CardHeader className="pb-3 border-b" style={{ borderColor: "var(--color-primary-100)" }}>
-										<CardTitle className="text-base font-bold flex items-center gap-2" style={{ color: "var(--color-primary-900)" }}>
-											<Flame className="w-4 h-4" style={{ color: "#E8956D" }} />
-											{t("library-admin.form.macros_title")}
-										</CardTitle>
-									</CardHeader>
-									<CardContent className="pt-5">
-										<div className="grid grid-cols-3 gap-3">
-											{[
-												[t("library-admin.form.carbs"), "carbs", "#E8956D", Wheat],
-												[t("library-admin.form.protein"), "protein", "#5B8A5F", Beef],
-												[t("library-admin.form.fats"), "fats", "#6B5EA8", Droplets],
-											].map(([label, field, col, Icon]) => (
-												<div key={field}>
-													<Label className="text-xs font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1" style={{ color: col }}>
-														<Icon className="w-3 h-3" /> {label}
-													</Label>
-													<Input type="number" value={form.macros[field]}
-														onChange={e => setForm(f => ({ ...f, macros: { ...f.macros, [field]: Number(e.target.value) } }))}
-														className="h-10 rounded-xl text-sm text-center"
-														style={{ borderColor: col + "55", background: col + "0a" }} />
-												</div>
-											))}
-										</div>
-									</CardContent>
-								</Card>
+								<div>
+									<p className="mb-2 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--color-primary-600)' }}>{t('directions')}</p>
+									<ol className="space-y-1.5">
+										{recipe.directions?.map((step, i) => (
+											<li key={i} className="flex gap-2 text-xs" style={{ color: 'var(--ink-mid)' }}>
+												<span className="shrink-0 font-black" style={{ color: 'var(--color-primary-500)' }}>{i + 1}.</span>
+												{step}
+											</li>
+										))}
+									</ol>
+								</div>
 
-								{/* Tips */}
-								<Card className="border" style={{ borderColor: "var(--color-primary-200)", boxShadow: "0 2px 12px rgba(15,23,42,0.05)" }}>
-									<CardHeader className="pb-3 border-b" style={{ borderColor: "var(--color-primary-100)" }}>
-										<CardTitle className="text-base font-bold flex items-center gap-2" style={{ color: "var(--color-primary-900)" }}>
-											<Lightbulb className="w-4 h-4" style={{ color: "#C4943A" }} />
-											{t("library-admin.form.tips_title")}
-										</CardTitle>
-									</CardHeader>
-									<CardContent className="pt-5">
-										<Textarea value={form.tips} onChange={e => setForm(f => ({ ...f, tips: e.target.value }))}
-											placeholder={t("library-admin.form.tips_placeholder")}
-											rows={3} className="rounded-xl text-sm resize-none"
-											style={{ borderColor: "var(--color-primary-200)" }} />
-									</CardContent>
-								</Card>
-							</div>
+								{recipe.tips && (
+									<div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+										<Lightbulb className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />
+										<p className="text-xs font-medium text-amber-800">{recipe.tips}</p>
+									</div>
+								)}
 
-							{/* ── Right column: Ingredients ── */}
-							<div className="space-y-5">
-								<Card className="border" style={{ borderColor: "var(--color-primary-200)", boxShadow: "0 2px 12px rgba(15,23,42,0.05)" }}>
-									<CardHeader className="pb-3 border-b" style={{ borderColor: "var(--color-primary-100)" }}>
-										<div className="flex items-center justify-between">
-											<CardTitle className="text-base font-bold flex items-center gap-2" style={{ color: "var(--color-primary-900)" }}>
-												<BookOpen className="w-4 h-4" style={{ color: "var(--color-gradient-from)" }} />
-												{t("library.modal.ingredients")}
-												<Badge variant="secondary" className="text-xs ms-1">{form.ingredients.length}</Badge>
-											</CardTitle>
-											<Button size="sm" onClick={addIngredient}
-												className="h-8 px-3 rounded-lg text-xs font-bold text-white"
-												style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
-												<Plus className="w-3.5 h-3.5 me-1" /> {t("library-admin.form.add_ingredient")}
-											</Button>
-										</div>
-									</CardHeader>
-									<CardContent className="pt-4">
-										<div className="grid grid-cols-[1fr_72px_72px_32px] gap-2 mb-2 px-1">
-											{[
-												t("library-admin.form.col_ingredient"),
-												t("library-admin.form.col_amount"),
-												t("library-admin.form.col_unit"),
-												"",
-											].map((h, i) => (
-												<span key={i} className="text-[10px] font-bold uppercase tracking-wider"
-													style={{ color: "var(--color-primary-400)" }}>{h}</span>
-											))}
-										</div>
-
-										<div className="space-y-2 max-h-[420px] overflow-y-auto pe-1" style={{ scrollbarWidth: "thin" }}>
-											{form.ingredients.map((ing, i) => (
-												<div key={i} className="grid grid-cols-[1fr_72px_72px_32px] gap-2 items-center p-2.5 rounded-xl transition-colors"
-													style={{ background: "var(--color-primary-50)", border: "1px solid var(--color-primary-100)" }}>
-													<Input value={ing.name} onChange={e => handleIngredient(i, "name", e.target.value)}
-														placeholder={t("library-admin.form.ing_name_placeholder")}
-														className="h-8 rounded-lg text-xs border" style={{ borderColor: "var(--color-primary-200)" }} />
-													<Input value={ing.amount} onChange={e => handleIngredient(i, "amount", e.target.value)}
-														placeholder={t("library-admin.form.ing_qty_placeholder")}
-														className="h-8 rounded-lg text-xs text-center border" style={{ borderColor: "var(--color-primary-200)" }} />
-													<Select value={ing.unit} onValueChange={v => handleIngredient(i, "unit", v)}>
-														<SelectTrigger className="h-8 rounded-lg text-xs border" style={{ borderColor: "var(--color-primary-200)" }}>
-															<SelectValue />
-														</SelectTrigger>
-														<SelectContent>
-															{units.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-														</SelectContent>
-													</Select>
-													<button onClick={() => removeIngredient(i)} disabled={form.ingredients.length === 1}
-														aria-label={t("library-admin.form.remove_ingredient")}
-														className="w-8 h-8 rounded-lg grid place-items-center transition-colors disabled:opacity-30"
-														style={{ background: "#fee2e2", color: "#dc2626" }}
-														onMouseOver={e => { if (form.ingredients.length > 1) { e.currentTarget.style.background = "#dc2626"; e.currentTarget.style.color = "white"; } }}
-														onMouseOut={e => { e.currentTarget.style.background = "#fee2e2"; e.currentTarget.style.color = "#dc2626"; }}>
-														<X className="w-3.5 h-3.5" />
-													</button>
-												</div>
-											))}
-										</div>
-									</CardContent>
-								</Card>
-
-								<Button onClick={handleSubmit}
-									className="w-full h-12 rounded-xl text-base font-bold text-white flex items-center justify-center gap-2"
-									style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 4px 20px rgba(99,102,241,0.3)" }}>
-									{editId ? <Pencil className="w-4 h-4" /> : <ChefHat className="w-4 h-4" />}
-									{editId ? t("library-admin.form.submit_update") : t("library-admin.form.submit_save")}
-									<ArrowRight className="w-4 h-4 ms-1" />
-								</Button>
-
-								{editId && (
-									<Button variant="outline"
-										onClick={() => { setEditId(null); setActiveTab("list"); resetForm(); }}
-										className="w-full h-10 rounded-xl text-sm"
-										style={{ borderColor: "var(--color-primary-200)", color: "var(--color-primary-500)" }}>
-										{t("library-admin.form.cancel_edit")}
-									</Button>
+								{recipe.videoUrl && (
+									<a
+										href={recipe.videoUrl}
+										target="_blank"
+										rel="noreferrer"
+										className="flex items-center gap-2 rounded-xl border p-2.5 text-xs font-bold transition-colors hover:bg-slate-50"
+										style={{ borderColor: 'var(--color-primary-200)', color: 'var(--color-primary-700)' }}
+									>
+										<PlayCircle className="h-4 w-4" />
+										{t('watchVideo')}
+									</a>
 								)}
 							</div>
+						</motion.div>
+					)}
+				</AnimatePresence>
+
+				<button
+					onClick={() => setExpanded(e => !e)}
+					className="mb-3 flex w-full items-center justify-center gap-1.5 rounded-xl border py-2 text-[11px] font-bold transition-all"
+					style={{ borderColor: 'var(--color-primary-200)', color: 'var(--color-primary-600)', background: expanded ? 'var(--color-primary-50)' : 'white' }}
+				>
+					{expanded ? t('hideFull') : t('viewFull')}
+					<motion.span animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
+						<ChevronDown className="h-3.5 w-3.5" />
+					</motion.span>
+				</button>
+
+				<div className="flex items-center justify-between border-t pt-3" style={{ borderColor: 'var(--color-primary-100)' }}>
+					<div className="flex gap-1.5">
+						<button
+							onClick={() => onEdit(recipe)}
+							className="inline-flex h-8 items-center gap-1.5 rounded-xl border px-2.5 text-[11px] font-bold transition-all hover:-translate-y-0.5"
+							style={{ borderColor: 'var(--color-primary-200)', color: 'var(--color-primary-700)', background: 'var(--color-primary-50)' }}
+						>
+							<Edit2 className="h-3.5 w-3.5" />
+							{t('edit')}
+						</button>
+						<button
+							onClick={() => onDelete(recipe.id)}
+							className="inline-flex h-8 items-center gap-1.5 rounded-xl border px-2.5 text-[11px] font-bold transition-all hover:-translate-y-0.5"
+							style={{ borderColor: '#fecaca', color: '#dc2626', background: '#fff1f2' }}
+						>
+							<Trash2 className="h-3.5 w-3.5" />
+							{t('delete')}
+						</button>
+					</div>
+				</div>
+			</div>
+		</motion.div>
+	);
+}
+
+/* ═══════════════════════════════════════════
+   PAGINATION
+═══════════════════════════════════════════ */
+function Pagination({ page, total, perPage, onChange }) {
+	const pages = Math.ceil(total / perPage);
+	if (pages <= 1) return null;
+
+	return (
+		<div className="flex items-center justify-center gap-2 pt-8">
+			<button
+				disabled={page === 1}
+				onClick={() => onChange(page - 1)}
+				className="grid h-9 w-9 place-items-center rounded-xl border font-bold transition-all disabled:opacity-30"
+				style={{ borderColor: 'var(--color-primary-200)', color: 'var(--color-primary-600)' }}
+			>
+				<ChevronRight className="h-4 w-4" />
+			</button>
+
+			{Array.from({ length: pages }, (_, i) => i + 1).map(p => (
+				<button
+					key={p}
+					onClick={() => onChange(p)}
+					className="grid h-9 w-9 place-items-center rounded-xl border text-sm font-black transition-all"
+					style={p === page
+						? { background: 'linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))', color: 'white', borderColor: 'transparent', boxShadow: '0 4px 14px rgba(201,123,46,0.38)' }
+						: { borderColor: 'var(--color-primary-100)', color: 'var(--color-primary-600)', background: 'white' }}
+				>
+					{p}
+				</button>
+			))}
+
+			<button
+				disabled={page === pages}
+				onClick={() => onChange(page + 1)}
+				className="grid h-9 w-9 place-items-center rounded-xl border font-bold transition-all disabled:opacity-30"
+				style={{ borderColor: 'var(--color-primary-200)', color: 'var(--color-primary-600)' }}
+			>
+				<ChevronLeft className="h-4 w-4" />
+			</button>
+		</div>
+	);
+}
+
+/* ═══════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════ */
+function splitTipsText(value) {
+	if (!value) return [];
+	return value
+		.split('\n')
+		.map(v => v.trim())
+		.filter(Boolean);
+}
+
+function mapRecipeFromApi(item) {
+	return {
+		id: item.id,
+		title: item.title || '',
+		satiety: item.satiety_index || 'medium',
+		category: item.meal_type || '',
+		calories: item?.nutrition?.calories ?? 0,
+		protein: item?.nutrition?.protein_g ?? 0,
+		carbs: item?.nutrition?.carbs_g ?? 0,
+		fat: item?.nutrition?.fat_g ?? 0,
+		ingredients: item.ingredients || [],
+		creamIngredients: item.cream_ingredients || [],
+		sauceIngredients: item.sauce_ingredients || [],
+		directions: item.directions || [],
+		tips: Array.isArray(item.tips) ? item.tips.join('\n') : '',
+		videoUrl: item.video_url || '',
+		imageUrl: item.image_url ? `${process.env.NEXT_PUBLIC_BASE_URL}${item.image_url}` : '',
+		imageFile: null,
+		createdAt: item.created_at,
+		updatedAt: item.updated_at,
+	};
+}
+
+function buildRecipeFormData(form) {
+	const fd = new FormData();
+
+	fd.append('title', form.title || '');
+	fd.append('satiety_index', form.satiety || 'medium');
+	fd.append('meal_type', form.category || '');
+	fd.append('video_url', form.videoUrl || '');
+	fd.append('nutrition', JSON.stringify({
+		calories: Number(form.calories || 0),
+		carbs_g: Number(form.carbs || 0),
+		protein_g: Number(form.protein || 0),
+		fat_g: Number(form.fat || 0),
+	}));
+	fd.append('ingredients', JSON.stringify((form.ingredients || []).map(v => v.trim()).filter(Boolean)));
+	fd.append('cream_ingredients', JSON.stringify((form.creamIngredients || []).map(v => v.trim()).filter(Boolean)));
+	fd.append('sauce_ingredients', JSON.stringify((form.sauceIngredients || []).map(v => v.trim()).filter(Boolean)));
+	fd.append('directions', JSON.stringify((form.directions || []).map(v => v.trim()).filter(Boolean)));
+	fd.append('tips', JSON.stringify(splitTipsText(form.tips)));
+
+	if (form.imageFile) {
+		fd.append('image', form.imageFile);
+	}
+
+	return fd;
+}
+
+/* ═══════════════════════════════════════════
+   MAIN PAGE
+═══════════════════════════════════════════ */
+export default function RecipesPage() {
+	const t = useTranslations('recipesPage');
+	const ts = useTranslations('recipesPage.stats');
+	const tF = useTranslations('recipesPage.filters');
+	const tCat = useTranslations('recipesPage.categories');
+	const tSrch = useTranslations('recipesPage.search');
+	const tEmt = useTranslations('recipesPage.empty');
+
+	const [recipes, setRecipes] = useState([]);
+	const [loading, setLoading] = useState(true);
+	const [saving, setSaving] = useState(false);
+	const [activeTab, setActiveTab] = useState('all');
+	const [searchQuery, setSearchQuery] = useState('');
+	const [page, setPage] = useState(1);
+	const [total, setTotal] = useState(0);
+	const [slideOpen, setSlideOpen] = useState(false);
+	const [editRecipe, setEditRecipe] = useState(null);
+
+	const PER_PAGE = 6;
+
+	const TABS = [
+		{ id: 'all', label: t('tabs.all'), icon: BookOpen },
+		{ id: 'breakfast', label: tCat('breakfast'), icon: BookOpen },
+		{ id: 'lunch', label: tCat('lunch'), icon: BookOpen },
+		{ id: 'dinner', label: tCat('dinner'), icon: BookOpen },
+		{ id: 'snack', label: tCat('snack'), icon: BookOpen },
+	];
+
+	const fetchRecipes = useCallback(async () => {
+		try {
+			setLoading(true);
+
+			const params = {
+				page,
+				limit: PER_PAGE,
+			};
+
+			if (searchQuery.trim()) params.search = searchQuery.trim();
+			if (activeTab !== 'all') params.meal_type = activeTab;
+
+			const res = await axios.get(`${API_BASE}/recipes`, { params });
+			const items = res?.data?.items || [];
+
+			setRecipes(items.map(mapRecipeFromApi));
+			setTotal(res?.data?.total || 0);
+		} catch (error) {
+			console.error('Failed to fetch recipes:', error);
+			setRecipes([]);
+			setTotal(0);
+		} finally {
+			setLoading(false);
+		}
+	}, [page, searchQuery, activeTab]);
+
+	useEffect(() => {
+		fetchRecipes();
+	}, [fetchRecipes]);
+
+	const stats = useMemo(() => [
+		{ label: ts('totalRecipes'), value: total, icon: BookOpen },
+		{ label: ts('shownOnPage'), value: recipes.length, icon: Eye },
+		{ label: ts('avgCalories'), value: recipes.length ? Math.round(recipes.reduce((s, r) => s + (Number(r.calories) || 0), 0) / recipes.length) : 0, icon: Flame },
+	], [recipes, total, ts]);
+
+	const tabsWithCount = TABS.map(tab => ({
+		...tab,
+		count: undefined,
+	}));
+
+	const handleDelete = async id => {
+		try {
+			await axios.delete(`${API_BASE}/recipes/${id}`);
+			if (recipes.length === 1 && page > 1) {
+				setPage(prev => prev - 1);
+			} else {
+				fetchRecipes();
+			}
+		} catch (error) {
+			console.error('Failed to delete recipe:', error);
+		}
+	};
+
+	const handleEdit = recipe => {
+		setEditRecipe(recipe);
+		setSlideOpen(true);
+	};
+
+	const handleAdd = () => {
+		setEditRecipe(null);
+		setSlideOpen(true);
+	};
+
+	const handleSave = async form => {
+		try {
+			setSaving(true);
+			const payload = buildRecipeFormData(form);
+
+			if (editRecipe?.id) {
+				await axios.put(`${API_BASE}/recipes/${editRecipe.id}`, payload, {
+					headers: { 'Content-Type': 'multipart/form-data' },
+				});
+			} else {
+				await axios.post(`${API_BASE}/recipes`, payload, {
+					headers: { 'Content-Type': 'multipart/form-data' },
+				});
+			}
+
+			setSlideOpen(false);
+			setEditRecipe(null);
+			setPage(1);
+			await fetchRecipes();
+		} catch (error) {
+			console.error('Failed to save recipe:', error);
+		} finally {
+			setSaving(false);
+		}
+	};
+
+	return (
+		<>
+			<div className="min-h-screen pb-16" style={{ background: 'var(--cream)', fontFamily: "'Cairo', system-ui, sans-serif" }}>
+				<PageHeader
+					title={t('page.title')}
+					desc={t('page.desc')}
+					icon={BookMarked}
+					stats={stats}
+					tabs={tabsWithCount}
+					activeTab={activeTab}
+					onTabChange={id => {
+						setActiveTab(id);
+						setPage(1);
+					}}
+					filters={[]}
+					filterValues={{}}
+					onFilterChange={() => {}}
+					onFilterReset={() => {}}
+					actions={
+						<motion.button
+							whileHover={{ scale: 1.04 }}
+							whileTap={{ scale: 0.95 }}
+							onClick={handleAdd}
+							className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-black text-white"
+							style={{ background: 'rgba(255,255,255,0.22)', backdropFilter: 'blur(16px)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.3),0 4px 16px rgba(0,0,0,0.1)' }}
+						>
+							<Plus className="h-4 w-4" />
+							{t('addButton')}
+						</motion.button>
+					}
+				/>
+
+				<div
+					className="border-x border-b bg-white px-5 pb-10 pt-5 sm:px-6 lg:px-8"
+					style={{ borderColor: 'var(--color-primary-100)', borderRadius: '0 0 24px 24px', boxShadow: '0 12px 40px rgba(201,123,46,0.07)' }}
+				>
+					<div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+						<div className="relative w-full max-w-sm">
+							<Search className="pointer-events-none absolute top-1/2 -translate-y-1/2 h-4 w-4 opacity-40" style={{ insetInlineStart: 12, color: 'var(--ink)' }} />
+							<input
+								value={searchQuery}
+								onChange={e => {
+									setSearchQuery(e.target.value);
+									setPage(1);
+								}}
+								placeholder={tSrch('placeholder')}
+								className="h-10 w-full rounded-xl border ps-9 pe-9 text-sm font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-all"
+								style={{ borderColor: 'var(--color-primary-200)', color: 'var(--ink)', background: 'var(--paper)' }}
+							/>
+							{searchQuery && (
+								<button
+									onClick={() => {
+										setSearchQuery('');
+										setPage(1);
+									}}
+									className="absolute top-1/2 -translate-y-1/2"
+									style={{ insetInlineEnd: 12, color: 'var(--ink-lt)' }}
+								>
+									<X className="h-3.5 w-3.5" />
+								</button>
+							)}
+						</div>
+
+						<div className="flex items-center gap-3">
+							<span className="text-sm font-bold" style={{ color: 'var(--ink-lt)' }}>
+								{total} {total === 1 ? tSrch('results') : tSrch('results_plural')}
+							</span>
 						</div>
 					</div>
-				)}
+
+					<AnimatePresence mode="wait">
+						{loading ? (
+							<motion.div
+								key="loading"
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								className="flex flex-col items-center justify-center py-24"
+							>
+								<p className="text-sm font-bold" style={{ color: 'var(--ink-lt)' }}>{t('loading')}</p>
+							</motion.div>
+						) : recipes.length === 0 ? (
+							<motion.div
+								key="empty"
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								exit={{ opacity: 0 }}
+								className="flex flex-col items-center justify-center py-24"
+							>
+								<div
+									className="mb-5 grid h-20 w-20 place-items-center rounded-3xl"
+									style={{ background: 'linear-gradient(135deg,var(--color-primary-100),var(--color-primary-50))' }}
+								>
+									<BookOpen className="h-9 w-9" style={{ color: 'var(--color-primary-300)' }} />
+								</div>
+								<p className="text-lg font-black" style={{ color: 'var(--ink-mid)' }}>{tEmt('title')}</p>
+								<p className="mt-1 text-sm" style={{ color: 'var(--ink-lt)' }}>{tEmt('desc')}</p>
+								<motion.button
+									whileHover={{ scale: 1.03 }}
+									whileTap={{ scale: 0.97 }}
+									onClick={handleAdd}
+									className="mt-5 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-black text-white"
+									style={{ background: 'linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))', boxShadow: '0 6px 20px rgba(201,123,46,0.35)' }}
+								>
+									<Plus className="h-4 w-4" />
+									{tEmt('addFirst')}
+								</motion.button>
+							</motion.div>
+						) : (
+							<motion.div
+								key={activeTab + searchQuery + page}
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								transition={{ duration: 0.18 }}
+								className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3"
+							>
+								{recipes.map((recipe, i) => (
+									<RecipeCard
+										key={recipe.id}
+										recipe={recipe}
+										idx={i}
+										onDelete={handleDelete}
+										onEdit={handleEdit}
+									/>
+								))}
+							</motion.div>
+						)}
+					</AnimatePresence>
+
+					<Pagination page={page} total={total} perPage={PER_PAGE} onChange={setPage} />
+				</div>
 			</div>
-		</div>
+
+			<SlidePanel
+				open={slideOpen}
+				onClose={() => {
+					setSlideOpen(false);
+					setEditRecipe(null);
+				}}
+				onSave={handleSave}
+				initial={editRecipe}
+				loading={saving}
+			/>
+		</>
 	);
 }

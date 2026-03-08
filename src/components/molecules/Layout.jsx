@@ -191,61 +191,61 @@ export default function Layout({ children }) {
 	}, [sidebarCollapsed]);
 
 	// ── Mobile block screen ─────────────────────────────────────────────────
-	if (blockFormOnMobile) {
-		return (
-			<GlobalProvider>
-				<ThemeProvider>
-					<motion.div
-						className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden"
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-					>
-						{/* Animated background */}
-						<div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-50" />
-						<div
-							className="absolute inset-0 opacity-[0.03]"
-							style={{
-								backgroundImage: `radial-gradient(circle at 2px 2px, var(--color-primary-400) 1px, transparent 0)`,
-								backgroundSize: '40px 40px',
-							}}
-						/>
+	// if (blockFormOnMobile) {
+	// 	return (
+	// 		<GlobalProvider>
+	// 			<ThemeProvider>
+	// 				<motion.div
+	// 					className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden"
+	// 					initial={{ opacity: 0 }}
+	// 					animate={{ opacity: 1 }}
+	// 					exit={{ opacity: 0 }}
+	// 				>
+	// 					{/* Animated background */}
+	// 					<div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-50" />
+	// 					<div
+	// 						className="absolute inset-0 opacity-[0.03]"
+	// 						style={{
+	// 							backgroundImage: `radial-gradient(circle at 2px 2px, var(--color-primary-400) 1px, transparent 0)`,
+	// 							backgroundSize: '40px 40px',
+	// 						}}
+	// 					/>
 
-						<div
-							className="max-w-md w-full rounded-lg border-2 p-8 shadow-2xl bg-white/80 backdrop-blur-xl relative z-10"
-							style={{ borderColor: 'var(--color-primary-200)' }}
-						>
-							<div className="text-center">
-								<div
-									className="w-20 h-20 mx-auto mb-6 rounded-lg grid place-items-center text-white shadow-xl"
-									style={{ background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))` }}
-								>
-									<svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-									</svg>
-								</div>
-								<h1 className="text-2xl font-black mb-3" style={{ color: 'var(--color-primary-900)' }}>
-									{t('desktop_required_title')}
-								</h1>
-								<p className="text-slate-600 mb-6 text-sm leading-relaxed">
-									{t('desktop_required_message')}
-								</p>
-								<Link
-									className="inline-flex items-center justify-center h-12 px-6 rounded-lg font-bold text-white shadow-lg transition-all hover:shadow-xl"
-									href={'/auth'}
-									style={{ background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))` }}
-								>
-									{t('reload_button')}
-								</Link>
-							</div>
-						</div>
-					</motion.div>
-					<ConfigAos />
-					<Toaster position="top-center" />
-				</ThemeProvider>
-			</GlobalProvider>
-		);
-	}
+	// 					<div
+	// 						className="max-w-md w-full rounded-lg border-2 p-8 shadow-2xl bg-white/80 backdrop-blur-xl relative z-10"
+	// 						style={{ borderColor: 'var(--color-primary-200)' }}
+	// 					>
+	// 						<div className="text-center">
+	// 							<div
+	// 								className="w-20 h-20 mx-auto mb-6 rounded-lg grid place-items-center text-white shadow-xl"
+	// 								style={{ background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))` }}
+	// 							>
+	// 								<svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+	// 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+	// 								</svg>
+	// 							</div>
+	// 							<h1 className="text-2xl font-black mb-3" style={{ color: 'var(--color-primary-900)' }}>
+	// 								{t('desktop_required_title')}
+	// 							</h1>
+	// 							<p className="text-slate-600 mb-6 text-sm leading-relaxed">
+	// 								{t('desktop_required_message')}
+	// 							</p>
+	// 							<Link
+	// 								className="inline-flex items-center justify-center h-12 px-6 rounded-lg font-bold text-white shadow-lg transition-all hover:shadow-xl"
+	// 								href={'/auth'}
+	// 								style={{ background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))` }}
+	// 							>
+	// 								{t('reload_button')}
+	// 							</Link>
+	// 						</div>
+	// 					</div>
+	// 				</motion.div>
+	// 				<ConfigAos />
+	// 				<Toaster position="top-center" />
+	// 			</ThemeProvider>
+	// 		</GlobalProvider>
+	// 	);
+	// }
 
 	// ── Main layout ─────────────────────────────────────────────────────────
 	return (
