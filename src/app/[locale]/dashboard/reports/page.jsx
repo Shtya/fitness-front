@@ -27,6 +27,7 @@ import {
   FileText,
   MessageSquareText,
 } from 'lucide-react';
+import ActionButtons from '@/components/atoms/Actions';
 
 /* ─── Constants ──────────────────────────────────────────────── */
 const PAGE_SIZE = 12;
@@ -437,17 +438,28 @@ export default function ReportsUnifiedPage() {
       ),
     },
     {
-      header: t('reports.view'),
-      accessor: '__actions',
-      className: 'text-right',
-      cell: row => (
-        <div className="flex justify-end">
-          <div className="inline-flex items-center gap-1 rounded-2xl border border-[color:var(--color-primary-100)] bg-white p-1 shadow-sm">
-            <ViewBtn onClick={() => openDetail(row.id)} label={t('reports.view')} />
-          </div>
-        </div>
-      ),
-    },
+  header: t('reports.view'),
+  accessor: '__actions',
+  className: 'text-right',
+  cell: row => (
+    <div className="flex justify-start">
+         <ActionButtons
+          row={row}
+          gap="gap-1"
+          actions={[
+            {
+              icon: <Eye className="h-3.5 w-3.5" />,
+              tooltip: t('reports.view'),
+              variant: 'blue',
+              size: 'md',
+              hidden: !row?.id,
+              onClick: r => openDetail(r.id),
+            },
+          ]}
+        />
+     </div>
+  ),
+}
   ], [t]);
 
   /* ─────────────────────────────────────────────────────────────

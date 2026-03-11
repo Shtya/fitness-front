@@ -2,1222 +2,646 @@
 
 import { useTranslations, useLocale } from "next-intl";
 import {
-  Dumbbell, Menu, X, Zap, LogOut, LayoutDashboard,
-  User, Crown, Shield, ChevronDown, Star,
-  Building2, Wallet, CalendarDays,
+	Dumbbell, Menu, X, Zap, LogOut, LayoutDashboard,
+	User, Crown, Shield, Star, ChevronDown,
+	Building2, Wallet, CalendarDays,
 } from "lucide-react";
 import { useState, useEffect, useRef, useTransition, useMemo } from "react";
 import { Link } from "@/i18n/navigation";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-// ─── CSS Variables ─────────────────────────────────────────────────────────────
-const CSS_VARS = `
-  :root {
-    --color-primary-50:#eef2ff;--color-primary-100:#e0e7ff;--color-primary-200:#c7d2fe;
-    --color-primary-300:#a5b4fc;--color-primary-400:#818cf8;--color-primary-500:#6366f1;
-    --color-primary-600:#4f46e5;--color-primary-700:#4338ca;--color-primary-800:#3730a3;
-    --color-primary-900:#312e81;--color-secondary-50:#faf5ff;--color-secondary-100:#f3e8ff;
-    --color-secondary-200:#e9d5ff;--color-secondary-300:#d8b4fe;--color-secondary-400:#c084fc;
-    --color-secondary-500:#a855f7;--color-secondary-600:#9333ea;--color-secondary-700:#7e22ce;
-    --color-secondary-800:#6b21a8;--color-secondary-900:#581c87;
-    --color-gradient-from:#6366f1;--color-gradient-via:#8b5cf6;--color-gradient-to:#a855f7;
-  }
-`;
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function setDocumentLangDir(nextLocale) {
-  if (typeof document === "undefined") return;
-  document.documentElement.lang = nextLocale;
-  document.documentElement.dir = nextLocale === "ar" ? "rtl" : "ltr";
+function setDocumentLangDir(locale) {
+	if (typeof document === "undefined") return;
+	document.documentElement.lang = locale;
+	document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
 }
 
-function setLocaleCookie(nextLocale) {
-  if (typeof document === "undefined") return;
-  document.cookie = `NEXT_LOCALE=${nextLocale}; path=/; max-age=${60 * 60 * 24 * 365}`;
+function setLocaleCookie(locale) {
+	if (typeof document === "undefined") return;
+	document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=${60 * 60 * 24 * 365}`;
 }
 
 function showGlobalLoader(label) {
-  if (typeof document === "undefined") return;
-  const existing = document.getElementById("lang-switch-loader");
-  if (existing) existing.remove();
-  const root = document.createElement("div");
-  root.id = "lang-switch-loader";
-  root.style.cssText =
-    "position:fixed;inset:0;z-index:9999;display:grid;place-items:center;backdrop-filter:blur(6px);background:rgba(8,8,18,0.75)";
-  root.innerHTML = `
-    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
-      <div style="position:relative;height:56px;width:56px;">
-        <div style="position:absolute;inset:0;border-radius:50%;border:3px solid rgba(99,102,241,0.2);border-top-color:#6366f1;animation:nspin 0.8s linear infinite;"></div>
-        <div style="position:absolute;inset:6px;border-radius:50%;border:3px solid rgba(168,85,247,0.2);border-bottom-color:#a855f7;animation:nspin 1.2s linear infinite reverse;"></div>
-        <div style="position:absolute;inset:0;display:grid;place-items:center;">
-          <div style="height:8px;width:8px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#a855f7);animation:npulse 1s ease-in-out infinite;"></div>
-        </div>
+	if (typeof document === "undefined") return;
+	document.getElementById("lang-switch-loader")?.remove();
+	const root = document.createElement("div");
+	root.id = "lang-switch-loader";
+	root.style.cssText = "position:fixed;inset:0;z-index:9999;display:grid;place-items:center;backdrop-filter:blur(8px);background:rgba(8,8,20,0.8)";
+	root.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:14px;">
+      <div style="position:relative;height:48px;width:48px;">
+        <div style="position:absolute;inset:0;border-radius:50%;border:2.5px solid rgba(99,102,241,0.2);border-top-color:var(--color-gradient-from,#6366f1);animation:_sp 0.8s linear infinite;"></div>
+        <div style="position:absolute;inset:7px;border-radius:50%;border:2px solid rgba(168,85,247,0.15);border-bottom-color:var(--color-gradient-to,#a855f7);animation:_sp 1.2s linear infinite reverse;"></div>
       </div>
-      <span style="font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">${label}</span>
+      <span style="font-size:10px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:var(--color-primary-400,#818cf8);">${label}</span>
     </div>
-    <style>
-      @keyframes nspin{to{transform:rotate(360deg)}}
-      @keyframes npulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(0.8)}}
-    </style>`;
-  document.body.appendChild(root);
-  setTimeout(() => root.remove(), 1100);
+    <style>@keyframes _sp{to{transform:rotate(360deg)}}</style>`;
+	document.body.appendChild(root);
+	setTimeout(() => root.remove(), 1100);
 }
 
 function swapLocaleInPath(pathname, nextLocale) {
-  const segs = pathname.split("/").filter(Boolean);
-  if (segs.length && (segs[0] === "en" || segs[0] === "ar")) {
-    segs[0] = nextLocale;
-    return "/" + segs.join("/");
-  }
-  return "/" + [nextLocale, ...segs].join("/");
-}
-
-// ─── Lang Switch ──────────────────────────────────────────────────────────────
-
-
-function LangSwitch() {
-  const t = useTranslations("home.navbar");
-  const locale = useLocale();
-  const router = useRouter();
-  const pathname = usePathname();
-  const search = useSearchParams();
-  const [isPending, startTransition] = useTransition();
-
-  const isEN = locale === "en";
-  const nextLocale = isEN ? "ar" : "en";
-
-  const nextHref = useMemo(() => {
-    const base = swapLocaleInPath(pathname || "/", nextLocale);
-    const qs = search?.toString();
-    return qs ? `${base}?${qs}` : base;
-  }, [pathname, search, nextLocale]);
-
-  function toggle() {
-    startTransition(() => {
-      showGlobalLoader(
-        isEN ? t("langSwitch.switchingToAr") : t("langSwitch.switchingToEn")
-      );
-      setLocaleCookie(nextLocale);
-      setDocumentLangDir(nextLocale);
-      router.replace(nextHref);
-      router.refresh();
-    });
-  }
-
-  useEffect(() => { setDocumentLangDir(locale); }, [locale]);
-
-  return (
-    <>
-      {/* Scoped keyframes — injected once */}
-      <style>{`
-        @keyframes ls-slide-ltr {
-          from { transform: translateX(0%); }
-          to   { transform: translateX(100%); }
-        }
-        @keyframes ls-slide-rtl {
-          from { transform: translateX(100%); }
-          to   { transform: translateX(0%); }
-        }
-        @keyframes ls-spin {
-          to { transform: rotate(360deg); }
-        }
-        .ls-root {
-          position: relative;
-          display: inline-flex;
-          align-items: center;
-          height: 36px;
-          border-radius: 10px;
-          padding: 3px;
-          cursor: pointer;
-          border: none;
-          background: rgba(255,255,255,0.06);
-          box-shadow:
-            inset 0 1px 3px rgba(0,0,0,0.35),
-            0 0 0 1px rgba(255,255,255,0.08);
-          transition: box-shadow 0.25s ease, opacity 0.2s;
-          gap: 0;
-        }
-        .ls-root:hover {
-          box-shadow:
-            inset 0 1px 3px rgba(0,0,0,0.35),
-            0 0 0 1px rgba(99,102,241,0.45),
-            0 0 18px rgba(99,102,241,0.18);
-        }
-        .ls-root:disabled {
-          opacity: 0.5;
-          cursor: wait;
-        }
-        /* The sliding thumb */
-        .ls-thumb {
-          position: absolute;
-          top: 3px;
-          bottom: 3px;
-          width: calc(50% - 3px);
-          border-radius: 7px;
-          background: linear-gradient(
-            135deg,
-            var(--color-gradient-from, #6366f1),
-            var(--color-gradient-to,   #a855f7)
-          );
-          box-shadow:
-            0 2px 10px rgba(99,102,241,0.55),
-            inset 0 1px 0 rgba(255,255,255,0.2);
-          transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-          pointer-events: none;
-          z-index: 1;
-        }
-        /* Label common */
-        .ls-label {
-          position: relative;
-          z-index: 2;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 4px;
-          width: 52px;
-          height: 100%;
-          font-size: 11px;
-          font-weight: 800;
-          letter-spacing: 0.07em;
-          text-transform: uppercase;
-          border-radius: 7px;
-          transition: color 0.22s ease;
-          user-select: none;
-        }
-        /* Flag emoji — crisp sizing */
-        .ls-flag {
-          font-size: 13px;
-          line-height: 1;
-          display: inline-block;
-        }
-        /* Pending spinner overlay */
-        .ls-spinner {
-          position: absolute;
-          inset: 0;
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 10;
-          background: rgba(8,8,18,0.6);
-          backdrop-filter: blur(2px);
-        }
-        .ls-spinner-ring {
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          border: 2px solid rgba(99,102,241,0.3);
-          border-top-color: #818cf8;
-          animation: ls-spin 0.7s linear infinite;
-        }
-      `}</style>
-
-      <button
-        onClick={toggle}
-        disabled={isPending}
-        aria-label={isEN ? t("langSwitch.ariaToAr") : t("langSwitch.ariaToEn")}
-        className="ls-root"
-      >
-        {/* Sliding gradient thumb */}
-        <span
-          className="ls-thumb"
-          style={{
-            left: isEN
-              ? "3px"                    /* EN side (left) */
-              : "calc(50% + 0px)",       /* AR side (right) */
-          }}
-        />
-
-        {/* EN option */}
-        <span
-          className="ls-label"
-          style={{ color: isEN ? "#fff" : "rgba(255,255,255,0.38)" }}
-        >
-          <span className="ls-flag">🇬🇧</span>
-          EN
-        </span>
-
-        {/* AR option */}
-        <span
-          className="ls-label"
-          style={{ color: !isEN ? "#fff" : "rgba(255,255,255,0.38)" }}
-        >
-          <span className="ls-flag">🇸🇦</span>
-          ع
-        </span>
-
-        {/* Loading overlay */}
-        {isPending && (
-          <span className="ls-spinner">
-            <span className="ls-spinner-ring" />
-          </span>
-        )}
-      </button>
-    </>
-  );
-}
-
-// ─── Role Helpers ─────────────────────────────────────────────────────────────
-
-function getDashboardPath(role) {
-  switch (role) {
-    case "admin":
-    case "coach": return "/dashboard/users";
-    case "super_admin": return "/dashboard/super-admin/users";
-    default: return "/dashboard/my/workouts";
-  }
-}
-
-function getRoleIcon(role) {
-  switch (role) {
-    case "super_admin": return <Crown style={{ height: "11px", width: "11px" }} />;
-    case "admin":       return <Shield style={{ height: "11px", width: "11px" }} />;
-    case "coach":       return <Star style={{ height: "11px", width: "11px" }} />;
-    default:            return <User style={{ height: "11px", width: "11px" }} />;
-  }
-}
-
-function getRoleGradient(role) {
-  switch (role) {
-    case "super_admin": return "linear-gradient(135deg,#f59e0b,#f97316)";
-    case "admin":       return "linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))";
-    case "coach":       return "linear-gradient(135deg,var(--color-primary-400),var(--color-secondary-400))";
-    default:            return "linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))";
-  }
+	const segs = pathname.split("/").filter(Boolean);
+	if (segs.length && (segs[0] === "en" || segs[0] === "ar")) {
+		segs[0] = nextLocale;
+		return "/" + segs.join("/");
+	}
+	return "/" + [nextLocale, ...segs].join("/");
 }
 
 function getInitials(name) {
-  if (!name) return "?";
-  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+	if (!name) return "?";
+	return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
-// ─── Role-based quick links ───────────────────────────────────────────────────
+function getDashboardPath(role) {
+	if (role === "admin" || role === "coach") return "/dashboard/users";
+	if (role === "super_admin") return "/dashboard/super-admin/users";
+	return "/dashboard/my/workouts";
+}
+
+function getRoleIcon(role) {
+	const s = { height: "10px", width: "10px" };
+	if (role === "super_admin") return <Crown style={s} />;
+	if (role === "admin") return <Shield style={s} />;
+	if (role === "coach") return <Star style={s} />;
+	return <User style={s} />;
+}
+
+function getRoleLabel(role, t) {
+	try { return t(`roles.${role}`); } catch { return role; }
+}
 
 function getRoleQuickLinks(role, t) {
-  const isAdmin = role === "admin" || role === "super_admin" || role === "coach";
-  const isClient = role === "client";
-
-  if (isAdmin) {
-    return [
-      {
-        href: "/dashboard/workspace",
-        icon: <Building2 style={{ height: "14px", width: "14px" }} />,
-        label: t("quickLinks.workspace"),
-        color: "rgba(99,102,241,0.15)",
-        iconColor: "#818cf8",
-      },
-			{
-        href: "/workspace?tab=calendar",
-        icon: <CalendarDays style={{ height: "14px", width: "14px" }} />,
-        label: t("quickLinks.myCalendar"),
-        color: "rgba(168,85,247,0.12)",
-        iconColor: "#c084fc",
-      },
-      {
-        href: "/money",
-        icon: <Wallet style={{ height: "14px", width: "14px" }} />,
-        label: t("quickLinks.money"),
-        color: "rgba(16,185,129,0.12)",
-        iconColor: "#10b981",
-      },
-    ];
-  }
-
-  if (isClient) {
-    return [
-      {
-        href: "/dashboard/my/workouts",
-        icon: <Dumbbell style={{ height: "14px", width: "14px" }} />,
-        label: t("quickLinks.myExercise"),
-        color: "rgba(99,102,241,0.15)",
-        iconColor: "#818cf8",
-      },
-      {
-        href: "/workspace?tab=calendar",
-        icon: <CalendarDays style={{ height: "14px", width: "14px" }} />,
-        label: t("quickLinks.myCalendar"),
-        color: "rgba(168,85,247,0.12)",
-        iconColor: "#c084fc",
-      },
-      {
-        href: "/money",
-        icon: <Wallet style={{ height: "14px", width: "14px" }} />,
-        label: t("quickLinks.money"),
-        color: "rgba(16,185,129,0.12)",
-        iconColor: "#10b981",
-      },
-    ];
-  }
-
-  return [];
+	const isAdmin = ["admin", "super_admin", "coach"].includes(role);
+	const common = [
+		{ href: "/workspace?tab=calendar", icon: <CalendarDays className="h-3.5 w-3.5" />, label: t("quickLinks.myCalendar") },
+		{ href: "/money", icon: <Wallet className="h-3.5 w-3.5" />, label: t("quickLinks.money") },
+	];
+	if (isAdmin) return [{ href: "/dashboard/workspace", icon: <Building2 className="h-3.5 w-3.5" />, label: t("quickLinks.workspace") }, ...common];
+	return [{ href: "/dashboard/my/workouts", icon: <Dumbbell className="h-3.5 w-3.5" />, label: t("quickLinks.myExercise") }, ...common];
 }
 
- 
- 
+// ─── LangSwitch ───────────────────────────────────────────────────────────────
+
+export function LangSwitch() {
+	const t = useTranslations("home.navbar");
+	const locale = useLocale();
+	const router = useRouter();
+	const pathname = usePathname();
+	const search = useSearchParams();
+	const [isPending, startTransition] = useTransition();
+
+	const isEN = locale === "en";
+	const nextLocale = isEN ? "ar" : "en";
+	const nextHref = useMemo(() => {
+		const base = swapLocaleInPath(pathname || "/", nextLocale);
+		const qs = search?.toString();
+		return qs ? `${base}?${qs}` : base;
+	}, [pathname, search, nextLocale]);
+
+	function toggle() {
+		startTransition(() => {
+			showGlobalLoader(isEN ? t("langSwitch.switchingToAr") : t("langSwitch.switchingToEn"));
+			setLocaleCookie(nextLocale);
+			setDocumentLangDir(nextLocale);
+			router.replace(nextHref);
+			router.refresh();
+		});
+	}
+
+	useEffect(() => { setDocumentLangDir(locale); }, [locale]);
+
+	return (
+		<>
+			<style>{`
+        .ls-wrap {
+          position:relative; display:inline-flex; align-items:center;
+          height:34px; border-radius:10px; padding:3px; cursor:pointer;
+          background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.18);
+          transition:border-color 0.2s, box-shadow 0.2s; gap:0;
+        }
+        .ls-wrap:hover { border-color:rgba(99,102,241,0.4); box-shadow:0 0 14px rgba(99,102,241,0.15); }
+        .ls-wrap:disabled { opacity:0.5; cursor:wait; }
+        .ls-thumb {
+          position:absolute; top:3px; bottom:3px; width:calc(50% - 3px); border-radius:7px;
+          background:linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to));
+          box-shadow:0 2px 8px rgba(99,102,241,0.4);
+          transition:left 0.26s cubic-bezier(0.4,0,0.2,1); pointer-events:none; z-index:1;
+        }
+        .ls-seg {
+          position:relative; z-index:2; display:flex; align-items:center; justify-content:center; gap:3px;
+          width:48px; height:100%; font-size:10px; font-weight:800; letter-spacing:0.06em;
+          text-transform:uppercase; border-radius:7px; transition:color 0.2s; user-select:none;
+        }
+        .ls-spin { position:absolute; inset:0; border-radius:10px; display:flex; align-items:center; justify-content:center; z-index:10; background:rgba(8,8,20,0.55); }
+        .ls-ring { width:14px; height:14px; border-radius:50%; border:2px solid rgba(99,102,241,0.25); border-top-color:var(--color-primary-400,#818cf8); animation:_sp 0.7s linear infinite; }
+      `}</style>
+			<button onClick={toggle} disabled={isPending} className="ls-wrap" aria-label={isEN ? t("langSwitch.ariaToAr") : t("langSwitch.ariaToEn")}>
+				<span className="ls-thumb" style={{ left: isEN ? "3px" : "calc(50% + 0px)" }} />
+				<span className="ls-seg" style={{ color: isEN ? "#fff" : "rgba(255,255,255,0.35)" }}>
+					<span style={{ fontSize: "12px" }}>🇬🇧</span>EN
+				</span>
+				<span className="ls-seg" style={{ color: !isEN ? "#fff" : "rgba(255,255,255,0.35)" }}>
+					<span style={{ fontSize: "12px" }}>🇸🇦</span>ع
+				</span>
+				{isPending && <span className="ls-spin"><span className="ls-ring" /></span>}
+			</button>
+		</>
+	);
+}
+
+// ─── UserDropdown ─────────────────────────────────────────────────────────────
+
 function UserDropdown({ user, onClose, isRTL }) {
-  const t = useTranslations("home.navbar");
-  const dashboardPath = getDashboardPath(user.role);
-  const roleGradient  = getRoleGradient(user.role);
-  const quickLinks    = getRoleQuickLinks(user.role, t);
+	const t = useTranslations("home.navbar");
+	const quickLinks = getRoleQuickLinks(user.role, t);
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    window.location.href = "/";
-  };
+	const handleLogout = () => { localStorage.removeItem("user"); window.location.href = "/"; };
 
-  const actions = [
-    {
-      href: dashboardPath,
-      icon: <LayoutDashboard className="h-[15px] w-[15px]" />,
-      label: t("dropdown.dashboard"),
-      useRoleGrad: true,
-    },
-    {
-      href: "/profile",
-      icon: <User className="h-[15px] w-[15px]" />,
-      label: t("dropdown.myProfile"),
-      useRoleGrad: false,
-    },
-  ];
- 
-  const gradStyle = { "--role-grad": roleGradient } 
-
-  return (
-    <div
-      style={gradStyle}
-      className={[
-        "absolute top-[calc(100%+14px)] z-50",
-        isRTL ? "left-0 right-auto" : "right-0 left-auto",
-        isRTL ? "direction-rtl" : "direction-ltr",
-        "w-[300px] rounded-[20px]",
-        "border border-indigo-500/20",
-        "bg-[rgba(10,10,20,0.97)] backdrop-blur-2xl",
-        "shadow-[0_24px_60px_rgba(0,0,0,0.7),0_0_0_1px_rgba(99,102,241,0.1)]",
-        "overflow-hidden",
-        "animate-ud-in",
-      ].join(" ")}
-    >
-      <style>{`
-        @keyframes ud-in {
-          from { opacity:0; transform:translateY(-8px) scale(0.97); }
-          to   { opacity:1; transform:translateY(0)    scale(1);    }
-        }
-        .animate-ud-in { animation: ud-in 0.22s cubic-bezier(0.34,1.56,0.64,1) both; }
-
-        @keyframes ud-dot-pulse {
-          0%,100% { box-shadow: 0 0 0 0   rgba(16,185,129,0.55); }
-          50%      { box-shadow: 0 0 0 5px rgba(16,185,129,0);    }
-        }
-        .ud-dot { animation: ud-dot-pulse 2.2s ease infinite; }
-
-        /* role gradient helper — reads --role-grad CSS var */
-        .ud-role-grad { background: var(--role-grad); }
-
-        .ud-action-arrow { opacity:0; transition: opacity 0.15s, transform 0.15s; }
-        .ud-action-row:hover .ud-action-arrow { opacity:1; transform: translateX(${isRTL ? "-2px" : "2px"}); }
-
-        .ud-quick-chip { transition: transform 0.15s, box-shadow 0.15s; }
-        .ud-quick-chip:hover { transform: translateY(-1px); }
+	return (
+		<>
+			<style>{`
+        @keyframes _udin { from{opacity:0;transform:translateY(-6px) scale(0.975)} to{opacity:1;transform:translateY(0) scale(1)} }
+        .ud-wrap { animation:_udin 0.2s cubic-bezier(0.34,1.56,0.64,1) both; }
+        @keyframes _onl { 0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0.5)} 50%{box-shadow:0 0 0 4px rgba(16,185,129,0)} }
+        .ud-online { animation:_onl 2.4s ease infinite; }
+        .ud-row:hover .ud-arr { opacity:1; transform:translateX(${isRTL ? "-2px" : "2px"}); }
       `}</style>
+			<div
+				className="ud-wrap absolute top-[calc(100%+12px)] z-50 w-[280px] rounded-2xl overflow-hidden"
+				style={{
+					[isRTL ? "left" : "right"]: 0,
+					direction: isRTL ? "rtl" : "ltr",
+					background: "rgba(9,9,20,0.98)",
+					border: "1px solid rgba(255,255,255,0.07)",
+					backdropFilter: "blur(28px)",
+					boxShadow: "0 20px 60px rgba(0,0,0,0.65)",
+				}}
+			>
+				{/* Accent bar */}
+				<div style={{ height: "2px", background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))" }} />
 
-      {/* ── Top gradient bar ── */}
-      <div className="ud-role-grad h-[3px] w-full" />
+				{/* User info */}
+				<div className="px-3.5 pt-3.5 pb-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+					<div className="flex items-center gap-2.5">
+						<div className="relative shrink-0">
+							<div className="h-11 w-11 rounded-[11px] flex items-center justify-center text-[15px] font-black text-white"
+								style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 4px 14px rgba(99,102,241,0.35)" }}>
+								{getInitials(user.name)}
+							</div>
+							<span className={`ud-online absolute -bottom-0.5 ${isRTL ? "-left-0.5" : "-right-0.5"} h-3 w-3 rounded-full bg-emerald-400 border-2 border-[#09091a] block`} />
+						</div>
+						<div className="min-w-0 flex-1">
+							<p className="text-[13px] font-bold text-white truncate leading-tight">{user.name}</p>
+							<p className="text-[10px] text-white/35 truncate mt-0.5">{user.email}</p>
+							<span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider text-white"
+								style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
+								{getRoleIcon(user.role)}{getRoleLabel(user.role, t)}
+							</span>
+						</div>
+					</div>
 
-      {/* ── Background radial glow ── */}
-      <div className="pointer-events-none absolute -top-10 left-1/2 h-24 w-48 -translate-x-1/2 rounded-full bg-indigo-500/10 blur-2xl" />
+					{user.points != null && (
+						<div className="mt-2.5 flex items-center justify-between rounded-xl px-3 py-2"
+							style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.14)" }}>
+							<div className="flex items-center gap-1.5">
+								<Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+								<span className="text-[13px] font-black text-white">{user.points.toLocaleString()}</span>
+								<span className="text-[10px] text-white/35">{t("dropdown.points")}</span>
+							</div>
+							<div className="flex items-center gap-1.5">
+								<span className={`h-1.5 w-1.5 rounded-full ${user.status === "active" ? "bg-emerald-400" : "bg-white/20"}`} />
+								<span className={`text-[10px] font-semibold ${user.status === "active" ? "text-emerald-400" : "text-white/35"}`}>
+									{t(`status.${user.status}`)}
+								</span>
+							</div>
+						</div>
+					)}
+				</div>
 
-      {/* ══ User info ══ */}
-      <div className="border-b border-white/[0.06] px-4 pb-3 pt-4">
-        <div className="flex items-center gap-3">
+				{/* Quick chips */}
+				{quickLinks.length > 0 && (
+					<div className="px-3 pt-2.5 pb-1">
+						<p className="text-[9px] font-bold uppercase tracking-[0.13em] text-white/20 mb-2">{t("quickLinks.sectionLabel")}</p>
+						<div className="flex flex-wrap gap-1">
+							{quickLinks.map((l) => (
+								<Link key={l.href} href={l.href} onClick={onClose}
+									className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] text-[10px] font-bold no-underline transition-all hover:-translate-y-px"
+									style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.18)", color: "var(--color-primary-400)" }}>
+									{l.icon}{l.label}
+								</Link>
+							))}
+						</div>
+						<div className="mt-2.5 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
+					</div>
+				)}
 
-          {/* Avatar */}
-          <div className="relative shrink-0">
-            <div className="ud-role-grad flex h-[52px] w-[52px] items-center justify-center rounded-[14px] text-lg font-black text-white shadow-[0_4px_16px_rgba(99,102,241,0.4)]">
-              {getInitials(user.name)}
-            </div>
-            <span
-              className={[
-                "ud-dot absolute -bottom-0.5 block h-3.5 w-3.5 rounded-full",
-                "bg-emerald-400 border-[2.5px] border-[#0a0a14]",
-                isRTL ? "-left-0.5" : "-right-0.5",
-              ].join(" ")}
-            />
-          </div>
+				{/* Actions */}
+				<div className="p-1.5 space-y-px">
+					{[
+						{ href: getDashboardPath(user.role), icon: <LayoutDashboard className="h-[14px] w-[14px]" />, label: t("dropdown.dashboard"), accent: true },
+						{ href: "/profile", icon: <User className="h-[14px] w-[14px]" />, label: t("dropdown.myProfile"), accent: false },
+					].map((item) => (
+						<Link key={item.label} href={item.href} onClick={onClose}
+							className="ud-row group flex items-center gap-2.5 px-2.5 py-2 rounded-[10px] no-underline transition-colors hover:bg-white/[0.05]">
+							<div className="h-7 w-7 rounded-[8px] flex items-center justify-center text-white shrink-0"
+								style={item.accent
+									? { background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }
+									: { background: "rgba(255,255,255,0.06)" }
+								}>
+								{item.icon}
+							</div>
+							<span className="flex-1 text-[12px] font-semibold text-white/60 group-hover:text-white transition-colors">{item.label}</span>
+							<svg className="ud-arr h-3 w-3 text-white/25 opacity-0 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+								style={isRTL ? { transform: "scaleX(-1)" } : {}}>
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+							</svg>
+						</Link>
+					))}
+				</div>
 
-          {/* Name / email / role badge */}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-extrabold leading-tight text-white">
-              {user.name}
-            </p>
-            <p className="mt-0.5 truncate text-[11px] text-white/40">
-              {user.email}
-            </p>
-            <div className="ud-role-grad mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-white">
-              {getRoleIcon(user.role)}
-              {t(`roles.${user.role}`)}
-            </div>
-          </div>
-        </div>
-
-        {/* Points + status */}
-        {user.points != null && (
-          <div className="mt-3 flex items-center justify-between rounded-xl border border-indigo-500/[0.15] bg-indigo-500/[0.08] px-3 py-2">
-            <div className="flex items-center gap-1.5">
-              <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-              <span className="text-[13px] font-black text-white">
-                {user.points.toLocaleString()}
-              </span>
-              <span className="text-[11px] text-white/40">{t("dropdown.points")}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className={[
-                "h-1.5 w-1.5 rounded-full",
-                user.status === "active"
-                  ? "bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.8)]"
-                  : "bg-white/20",
-              ].join(" ")} />
-              <span className={[
-                "text-[11px] font-semibold",
-                user.status === "active" ? "text-emerald-400" : "text-white/40",
-              ].join(" ")}>
-                {t(`status.${user.status}`)}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ══ Quick role links ══ */}
-      {quickLinks.length > 0 && (
-        <>
-          <div className="px-3 pb-1 pt-3">
-            <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.14em] text-white/25">
-              {t("quickLinks.sectionLabel")}
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {quickLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={onClose}
-                  className="ud-quick-chip inline-flex items-center gap-1.5 rounded-[9px] px-2.5 py-1.5 text-[11px] font-bold no-underline"
-                  style={{
-                    background: link.color,
-                    border: `1px solid ${link.iconColor}35`,
-                    color: link.iconColor,
-                  }}
-                >
-                  {link.icon}
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-          <div className="mx-3 mt-2 h-px bg-white/[0.05]" />
-        </>
-      )}
-
-      {/* ══ Main action links ══ */}
-      <div className="space-y-0.5 p-2">
-        {actions.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            onClick={onClose}
-            className="ud-action-row group flex items-center gap-2.5 rounded-xl px-3 py-2.5 no-underline transition-colors duration-150 hover:bg-indigo-500/10"
-          >
-            <div className={[
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] text-white",
-              item.useRoleGrad ? "ud-role-grad shadow-sm" : "bg-white/[0.06]",
-            ].join(" ")}>
-              {item.icon}
-            </div>
-            <span className="flex-1 text-[13px] font-semibold text-white/70 transition-colors group-hover:text-white">
-              {item.label}
-            </span>
-            <svg
-              className={[
-                "ud-action-arrow h-3.5 w-3.5 text-white/30",
-                isRTL ? "scale-x-[-1]" : "",
-              ].join(" ")}
-              fill="none" viewBox="0 0 24 24" stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
-        ))}
-      </div>
-
-      {/* ══ Sign out ══ */}
-      <div className="border-t border-white/[0.05] p-2">
-        <button
-          onClick={handleLogout}
-          className="group flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 transition-colors duration-150 hover:bg-red-500/10"
-        >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-red-500/10 text-red-400 transition-colors group-hover:bg-red-500/20">
-            <LogOut className="h-[15px] w-[15px]" />
-          </div>
-          <span className="flex-1 text-left text-[13px] font-semibold text-red-400 transition-colors group-hover:text-red-300">
-            {t("dropdown.signOut")}
-          </span>
-        </button>
-      </div>
-    </div>
-  );
+				{/* Sign out */}
+				<div className="p-1.5" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+					<button onClick={handleLogout}
+						className="group flex w-full items-center gap-2.5 px-2.5 py-2 rounded-[10px] transition-colors hover:bg-red-500/[0.09] cursor-pointer">
+						<div className="h-7 w-7 rounded-[8px] flex items-center justify-center text-red-400 group-hover:bg-red-500/18 transition-colors shrink-0"
+							style={{ background: "rgba(239,68,68,0.1)" }}>
+							<LogOut className="h-[13px] w-[13px]" />
+						</div>
+						<span className="text-[12px] font-semibold text-red-400 group-hover:text-red-300 transition-colors">{t("dropdown.signOut")}</span>
+					</button>
+				</div>
+			</div>
+		</>
+	);
 }
 
- 
+// ─── AvatarButton ─────────────────────────────────────────────────────────────
+
 function AvatarButton({ user, isRTL }) {
-  const t = useTranslations("home.navbar");
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  const roleGradient = getRoleGradient(user.role);
-  const firstName = user.name?.split(" ")[0] ?? user.name;
+	const t = useTranslations("home.navbar");
+	const [open, setOpen] = useState(false);
+	const ref = useRef(null);
+	const firstName = user.name?.split(" ")[0] ?? user.name;
 
-  // Close on outside click
-  useEffect(() => {
-    function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+	useEffect(() => {
+		function h(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+		document.addEventListener("mousedown", h);
+		return () => document.removeEventListener("mousedown", h);
+	}, []);
+	useEffect(() => {
+		function h(e) { if (e.key === "Escape") setOpen(false); }
+		document.addEventListener("keydown", h);
+		return () => document.removeEventListener("keydown", h);
+	}, []);
 
-  // Close on Escape
-  useEffect(() => {
-    function handleKey(e) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, []);
-
-  return (
-    <>
-      <style>{`
-        @keyframes ab-pulse {
-          0%,100% { box-shadow: 0 0 0 0   rgba(16,185,129,0.55); }
-          50%      { box-shadow: 0 0 0 4px rgba(16,185,129,0);    }
-        }
-        @keyframes ab-shimmer {
-          0%   { background-position: -200% center; }
-          100% { background-position:  200% center; }
-        }
-
-        .ab-btn {
-          display: flex;
-          align-items: center;
-          gap: 9px;
-          padding: 4px 10px 4px 4px;
-          border-radius: 14px;
-          border: 1px solid rgba(255,255,255,0.07);
-          background: rgba(255,255,255,0.03);
-          cursor: pointer;
-          transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-          outline: none;
-          position: relative;
-          overflow: hidden;
-        }
-
-        /* Shimmer sweep on hover */
-        .ab-btn::before {
-          content: "";
-          position: absolute; inset: 0;
-          background: linear-gradient(
-            90deg,
-            transparent 0%,
-            rgba(255,255,255,0.05) 50%,
-            transparent 100%
-          );
-          background-size: 200% 100%;
-          opacity: 0;
-          transition: opacity 0.2s;
-          pointer-events: none;
-        }
-        .ab-btn:hover::before {
-          opacity: 1;
-          animation: ab-shimmer 1.4s ease infinite;
-        }
-
-        /* Hover state */
-        .ab-btn:hover {
-          border-color: rgba(99,102,241,0.4);
-          background: rgba(99,102,241,0.07);
-          box-shadow: 0 0 0 3px rgba(99,102,241,0.08), 0 4px 20px rgba(0,0,0,0.3);
-        }
-
-        /* Open state */
-        .ab-btn--open {
-          border-color: rgba(99,102,241,0.55) !important;
-          background: rgba(99,102,241,0.1) !important;
-          box-shadow: 0 0 0 3px rgba(99,102,241,0.12), 0 0 24px rgba(99,102,241,0.2) !important;
-        }
-
-        /* Avatar hover lift */
-        .ab-avatar-inner {
-          transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .ab-btn:hover .ab-avatar-inner,
-        .ab-btn--open .ab-avatar-inner {
-          transform: scale(1.06);
-          box-shadow: 0 4px 14px rgba(99,102,241,0.5);
-        }
-
-        /* Glow ring behind avatar */
-        .ab-avatar-glow {
-          position: absolute; inset: -3px;
-          border-radius: 13px;
-          filter: blur(8px);
-          opacity: 0;
-          transition: opacity 0.25s;
-          z-index: 0;
-          pointer-events: none;
-        }
-        .ab-btn:hover .ab-avatar-glow,
-        .ab-btn--open .ab-avatar-glow { opacity: 0.45; }
-
-        /* Pulsing online dot */
-        .ab-dot {
-          animation: ab-pulse 2.4s ease infinite;
-        }
-
-        /* Chevron */
-        .ab-chevron {
-          transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), color 0.2s;
-        }
-        .ab-btn:hover .ab-chevron { color: rgba(255,255,255,0.7) !important; }
-        .ab-btn--open .ab-chevron {
-          transform: rotate(180deg);
-          color: #a5b4fc !important;
-        }
-
-        /* Focus ring */
-        .ab-btn:focus-visible {
-          box-shadow: 0 0 0 2px #6366f1;
-        }
-      `}</style>
-
-      <div ref={ref} style={{ position: "relative" }}>
-        <button
-          onClick={() => setOpen((v) => !v)}
-          aria-label={t("dropdown.openMenu")}
-          aria-expanded={open}
-          aria-haspopup="true"
-          className={`ab-btn${open ? " ab-btn--open" : ""}`}
-        >
-          {/* ── Avatar ── */}
-          <div style={{ position: "relative", flexShrink: 0 }}>
-            {/* Blurred glow ring */}
-            <div
-              className="ab-avatar-glow"
-              style={{ background: roleGradient }}
-            />
-            {/* Avatar square */}
-            <div
-              className="ab-avatar-inner"
-              style={{
-                width: "30px", height: "30px",
-                borderRadius: "10px",
-                background: roleGradient,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#fff", fontWeight: 900, fontSize: "13px",
-                letterSpacing: "-0.02em",
-                position: "relative", zIndex: 1,
-              }}
-            >
-              {getInitials(user.name)}
-            </div>
-            {/* Online dot — flips side for RTL */}
-            <span
-              className="ab-dot"
-              style={{
-                position: "absolute",
-                bottom: "-2px",
-                ...(isRTL ? { left: "-2px" } : { right: "-2px" }),
-                width: "10px", height: "10px",
-                borderRadius: "50%",
-                background: "#10b981",
-                border: "2px solid #080812",
-                display: "block",
-                zIndex: 2,
-              }}
-            />
-          </div>
-
-          {/* ── Name + role (hidden on xs, shown sm+) ── */}
-          <div
-            className="navbar-avatar-name"
-            style={{ display: "none", flexDirection: "column", gap: "1px", minWidth: 0 }}
-          >
-            <span style={{
-              fontSize: "12px", fontWeight: 800,
-              color: "#fff", lineHeight: 1.2,
-              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-              maxWidth: "80px",
-            }}>
-              {firstName}
-            </span> 
-          </div>
-
-          {/* ── Chevron ── */}
-          <svg
-            className="ab-chevron"
-            style={{
-              width: "14px", height: "14px",
-              color: "rgba(255,255,255,0.35)",
-              flexShrink: 0,
-            }}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-
-        {open && <UserDropdown user={user} onClose={() => setOpen(false)} isRTL={isRTL} />}
-      </div>
-    </>
-  );
-}
- 
-function MobileOverlay({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
-  const t = useTranslations("home.navbar");
-  const roleGradient = user
-    ? getRoleGradient(user.role)
-    : "linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))";
-
-  // Slide in from the leading edge (left in LTR, right in RTL)
-  const drawerEdge = isRTL
-    ? { right: 0, left: "auto", borderLeft: "1px solid rgba(99,102,241,0.15)", boxShadow: "-8px 0 60px rgba(0,0,0,0.8)" }
-    : { left: 0, right: "auto", borderRight: "1px solid rgba(99,102,241,0.15)", boxShadow: "8px 0 60px rgba(0,0,0,0.8)" };
-
-  const slideOut = isRTL ? "translateX(100%)" : "translateX(-100%)";
-  const arrowFlip = { height: "14px", width: "14px", opacity: 0.35, flexShrink: 0, transform: isRTL ? "scaleX(-1)" : "none" };
-
-  return (
-    <>
-      <style>{`
-        @keyframes noverlayIn{from{opacity:0}to{opacity:1}}
-        @keyframes nslideItem{from{opacity:0;transform:translateX(${isRTL ? "24px" : "-24px"})}to{opacity:1;transform:translateX(0)}}
-        .mnav-item{animation:nslideItem 0.4s cubic-bezier(0.34,1.56,0.64,1) both;}
-        .mnav-item:nth-child(1){animation-delay:.05s}.mnav-item:nth-child(2){animation-delay:.1s}
-        .mnav-item:nth-child(3){animation-delay:.15s}.mnav-item:nth-child(4){animation-delay:.2s}
-        .mnav-item:nth-child(5){animation-delay:.25s}.mnav-item:nth-child(6){animation-delay:.3s}
-      `}</style>
-
-      {/* Backdrop */}
-      <div onClick={onClose} style={{
-        position: "fixed", inset: 0, zIndex: 200,
-        background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)",
-        animation: "noverlayIn 0.3s ease",
-        display: isOpen ? "block" : "none",
-      }} />
-
-      {/* Drawer */}
-      <div style={{
-        position: "fixed", top: 0, bottom: 0,
-        width: "min(320px,85vw)", zIndex: 201,
-        background: "rgba(8,8,18,0.98)", backdropFilter: "blur(32px)",
-        ...drawerEdge,
-        transform: isOpen ? "translateX(0)" : slideOut,
-        transition: "transform 0.4s cubic-bezier(0.4,0,0.2,1)",
-        display: "flex", flexDirection: "column", overflowY: "auto",
-        direction: isRTL ? "rtl" : "ltr",
-      }}>
-        {/* Top gradient line */}
-        <div style={{ height: "3px", background: "linear-gradient(90deg,var(--color-gradient-from),var(--color-gradient-via),var(--color-gradient-to))", flexShrink: 0 }} />
-
-        {/* Header */}
-        <div style={{ padding: "20px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <div style={{
-                height: "38px", width: "38px", borderRadius: "11px",
-                background: "linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 4px 16px rgba(99,102,241,0.4)",
-              }}>
-                <Dumbbell style={{ height: "20px", width: "20px", color: "#fff" }} strokeWidth={2.5} />
-              </div>
-              <div>
-                <span style={{ fontSize: "15px", fontWeight: 900, color: "#fff" }}>{t("brand.name")}</span>
-                <p style={{ fontSize: "9px", fontWeight: 600, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.15em" }}>
-                  {t("brand.tagline")}
-                </p>
-              </div>
-            </div>
-            <button onClick={onClose} aria-label={t("mobile.close")} style={{
-              height: "36px", width: "36px", borderRadius: "10px",
-              border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", color: "rgba(255,255,255,0.6)",
-            }}>
-              <X style={{ height: "16px", width: "16px" }} />
-            </button>
-          </div>
-        </div>
-
-        {/* User card */}
-        {user && (
-          <div style={{ padding: "16px", borderBottom: "1px solid rgba(255,255,255,0.05)", flexShrink: 0 }}>
-            <div style={{ borderRadius: "16px", background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.15)", overflow: "hidden" }}>
-              <div style={{ height: "2px", background: roleGradient }} />
-              <div style={{ padding: "14px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <div style={{ position: "relative", flexShrink: 0 }}>
-                    <div style={{
-                      height: "44px", width: "44px", borderRadius: "12px",
-                      background: roleGradient,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      color: "#fff", fontWeight: 900, fontSize: "15px",
-                    }}>
-                      {getInitials(user.name)}
-                    </div>
-                    <span style={{
-                      position: "absolute", bottom: "-1px",
-                      ...(isRTL ? { left: "-1px" } : { right: "-1px" }),
-                      height: "12px", width: "12px", borderRadius: "50%",
-                      background: "#10b981", border: "2px solid #080812",
-                    }} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontWeight: 800, color: "#fff", fontSize: "14px" }}>{user.name}</p>
-                    <div style={{
-                      marginTop: "4px", display: "inline-flex", alignItems: "center", gap: "3px",
-                      borderRadius: "20px", padding: "2px 7px",
-                      background: roleGradient, fontSize: "9px", fontWeight: 800,
-                      textTransform: "uppercase", letterSpacing: "0.1em", color: "#fff",
-                    }}>
-                      {getRoleIcon(user.role)}
-                      {t(`roles.${user.role}`)}
-                    </div>
-                  </div>
-                  {user.points != null && (
-                    <div style={{
-                      display: "flex", flexDirection: "column", alignItems: "center",
-                      background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)",
-                      borderRadius: "10px", padding: "5px 8px", flexShrink: 0,
-                    }}>
-                      <Star style={{ height: "11px", width: "11px", color: "#fbbf24", fill: "#fbbf24" }} />
-                      <span style={{ fontSize: "12px", fontWeight: 900, color: "#fff", lineHeight: 1.1 }}>{user.points}</span>
-                      <span style={{ fontSize: "8px", color: "rgba(255,255,255,0.35)", textTransform: "uppercase" }}>
-                        {t("dropdown.pts")}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Nav section */}
-        <nav style={{ padding: "12px", flex: 1 }}>
-          <p style={{ fontSize: "9px", fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.15em", padding: "4px 10px 10px" }}>
-            {t("mobile.sectionNav")}
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            {navItems.map((item, index) => (
-              <a key={index} href={item.href} onClick={onClose} className="mnav-item" style={{
-                display: "flex", alignItems: "center", gap: "12px",
-                padding: "12px 14px", borderRadius: "12px",
-                border: "1px solid rgba(255,255,255,0.04)", background: "rgba(255,255,255,0.02)",
-                color: "rgba(255,255,255,0.65)", fontWeight: 600, fontSize: "14px",
-                textDecoration: "none", transition: "all 0.2s",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(99,102,241,0.1)"; e.currentTarget.style.border = "1px solid rgba(99,102,241,0.2)"; e.currentTarget.style.color = "#fff"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.02)"; e.currentTarget.style.border = "1px solid rgba(255,255,255,0.04)"; e.currentTarget.style.color = "rgba(255,255,255,0.65)"; }}
-              >
-                <div style={{
-                  height: "36px", width: "36px", borderRadius: "10px",
-                  background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.15)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "17px", flexShrink: 0,
-                }}>
-                  {item.icon}
-                </div>
-                <span style={{ flex: 1 }}>{item.label}</span>
-                <svg style={arrowFlip} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </a>
-            ))}
-          </div>
-
-          {/* Account section */}
-          {user && (
-            <>
-              <p style={{ fontSize: "9px", fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.15em", padding: "16px 10px 10px" }}>
-                {t("mobile.sectionAccount")}
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <Link href={getDashboardPath(user.role)} onClick={onClose} style={{
-                  display: "flex", alignItems: "center", gap: "12px",
-                  padding: "12px 14px", borderRadius: "12px",
-                  background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)",
-                  color: "#c4b5fd", fontWeight: 700, fontSize: "14px",
-                  textDecoration: "none", transition: "all 0.2s",
-                }}>
-                  <div style={{ height: "36px", width: "36px", borderRadius: "10px", background: roleGradient, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <LayoutDashboard style={{ height: "16px", width: "16px", color: "#fff" }} />
-                  </div>
-                  {t("dropdown.dashboard")}
-                </Link>
-
-                {/* Role quick links in mobile */}
-                {getRoleQuickLinks(user.role, t).map((link) => (
-                  <Link key={link.href} href={link.href} onClick={onClose} style={{
-                    display: "flex", alignItems: "center", gap: "12px",
-                    padding: "12px 14px", borderRadius: "12px",
-                    background: link.color,
-                    border: `1px solid ${link.iconColor}25`,
-                    color: link.iconColor, fontWeight: 700, fontSize: "14px",
-                    textDecoration: "none", transition: "all 0.2s",
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
-                  onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
-                  >
-                    <div style={{
-                      height: "36px", width: "36px", borderRadius: "10px", flexShrink: 0,
-                      background: `${link.iconColor}18`,
-                      border: `1px solid ${link.iconColor}30`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      color: link.iconColor,
-                    }}>
-                      {link.icon}
-                    </div>
-                    {link.label}
-                  </Link>
-                ))}
-
-                <button onClick={() => { onLogout(); onClose(); }} style={{
-                  display: "flex", alignItems: "center", gap: "12px",
-                  padding: "12px 14px", borderRadius: "12px",
-                  background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)",
-                  color: "#f87171", fontWeight: 700, fontSize: "14px",
-                  cursor: "pointer", width: "100%", transition: "all 0.2s",
-                }}>
-                  <div style={{ height: "36px", width: "36px", borderRadius: "10px", background: "rgba(239,68,68,0.12)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <LogOut style={{ height: "16px", width: "16px" }} />
-                  </div>
-                  {t("dropdown.signOut")}
-                </button>
-              </div>
-            </>
-          )}
-        </nav>
-
-        {/* Guest CTA */}
-        {!user && (
-          <div style={{ padding: "16px", flexShrink: 0 }}>
-            <Link href="/auth" onClick={onClose} style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-              padding: "14px", borderRadius: "14px",
-              background: "linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))",
-              color: "#fff", fontWeight: 800, fontSize: "14px",
-              textDecoration: "none", boxShadow: "0 4px 24px rgba(99,102,241,0.45)",
-            }}>
-              <Zap style={{ height: "15px", width: "15px" }} fill="white" />
-              {t("mobile.joinCta")}
-            </Link>
-          </div>
-        )}
-
-        {/* Bottom fade */}
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "80px", background: "linear-gradient(to top,rgba(8,8,18,0.95),transparent)", pointerEvents: "none" }} />
-      </div>
-    </>
-  );
+	return (
+		<div ref={ref} className="relative">
+			<button
+				onClick={() => setOpen((v) => !v)}
+				aria-label={t("dropdown.openMenu")}
+				aria-expanded={open}
+				className="flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-[12px] cursor-pointer outline-none transition-all duration-200"
+				style={{
+					border: open
+						? "1px solid rgba(99,102,241,0.4)"
+						: "1px solid rgba(255,255,255,0.08)",
+					background: open
+						? "rgba(99,102,241,0.1)"
+						: "rgba(255,255,255,0.03)",
+					boxShadow: open ? "0 0 0 3px rgba(99,102,241,0.1)" : "none",
+				}}
+			>
+				<div className="relative shrink-0">
+					<div className="h-[28px] w-[28px] rounded-[9px] flex items-center justify-center text-[12px] font-black text-white"
+						style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
+						{getInitials(user.name)}
+					</div>
+					<span className="absolute -bottom-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-[2px] border-[#08081a] block"
+						style={isRTL ? { left: "-2px" } : { right: "-2px" }} />
+				</div>
+				<span className="hidden sm:block text-[12px] font-bold text-white max-w-[72px] truncate">{firstName}</span>
+				<ChevronDown className={`h-[13px] w-[13px] text-white/30 shrink-0 transition-transform duration-250 ${open ? "rotate-180" : ""}`} />
+			</button>
+			{open && <UserDropdown user={user} onClose={() => setOpen(false)} isRTL={isRTL} />}
+		</div>
+	);
 }
 
-// ─── Main Navbar ───────────────────────────────────────────────────────────────
+// ─── MobileDrawer ─────────────────────────────────────────────────────────────
+
+function MobileDrawer({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
+	const t = useTranslations("home.navbar");
+
+	return (
+		<>
+			<style>{`
+        @keyframes _bdin { from{opacity:0} to{opacity:1} }
+        @keyframes _itmIn { from{opacity:0;transform:translateX(${isRTL ? "16px" : "-16px"})} to{opacity:1;transform:translateX(0)} }
+        .drw-item { animation:_itmIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both; }
+        .drw-item:nth-child(1){animation-delay:0.03s}.drw-item:nth-child(2){animation-delay:0.07s}
+        .drw-item:nth-child(3){animation-delay:0.11s}.drw-item:nth-child(4){animation-delay:0.15s}
+        .drw-item:nth-child(5){animation-delay:0.19s}.drw-item:nth-child(6){animation-delay:0.23s}
+      `}</style>
+
+			{/* Backdrop */}
+			{isOpen && (
+				<div onClick={onClose} className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-[3px]"
+					style={{ animation: "_bdin 0.25s ease" }} />
+			)}
+
+			{/* Drawer — compact: 272px on mobile, 310px on sm+ */}
+			<div
+				className={`fixed top-0 bottom-0 z-[201] flex flex-col overflow-y-auto transition-transform duration-[380ms] ease-[cubic-bezier(0.4,0,0.2,1)]
+          w-[272px] sm:w-[310px]
+          ${isRTL ? "right-0 left-auto" : "left-0 right-auto"}
+          ${isOpen ? "translate-x-0" : isRTL ? "translate-x-full" : "-translate-x-full"}
+        `}
+				style={{
+					direction: isRTL ? "rtl" : "ltr",
+					background: "rgba(7,7,17,0.99)",
+					backdropFilter: "blur(28px)",
+					borderLeft: isRTL ? "none" : undefined,
+					borderRight: isRTL ? undefined : "none",
+					border: isRTL ? "0 0 0 1px rgba(255,255,255,0.06)" : "0 1px 0 0 rgba(255,255,255,0.06)",
+					boxShadow: isRTL ? "-10px 0 48px rgba(0,0,0,0.7)" : "10px 0 48px rgba(0,0,0,0.7)",
+				}}
+			>
+				{/* Top accent */}
+				<div className="h-[2px] shrink-0" style={{ background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-via), var(--color-gradient-to))" }} />
+
+				{/* Header */}
+				<div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+					<div className="flex items-center gap-2.5">
+						<div className="h-9 w-9 rounded-[10px] flex items-center justify-center shrink-0"
+							style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 4px 14px rgba(99,102,241,0.35)" }}>
+							<Dumbbell className="h-[18px] w-[18px] text-white" strokeWidth={2.5} />
+						</div>
+						<div>
+							<p className="text-[14px] font-black text-white leading-none">{t("brand.name")}</p>
+							<p className="text-[8px] font-semibold uppercase tracking-[0.18em] mt-0.5" style={{ color: "var(--color-primary-400)" }}>{t("brand.tagline")}</p>
+						</div>
+					</div>
+					<button onClick={onClose} aria-label={t("mobile.close")}
+						className="h-8 w-8 flex items-center justify-center rounded-[9px] cursor-pointer transition-colors"
+						style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)" }}>
+						<X className="h-[14px] w-[14px]" />
+					</button>
+				</div>
+
+				{/* User card */}
+				{user && (
+					<div className="px-3 py-2.5 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+						<div className="rounded-[14px] overflow-hidden" style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.14)" }}>
+							<div className="h-[2px]" style={{ background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))" }} />
+							<div className="p-3 flex items-center gap-2.5">
+								<div className="relative shrink-0">
+									<div className="h-10 w-10 rounded-[11px] flex items-center justify-center text-[14px] font-black text-white"
+										style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
+										{getInitials(user.name)}
+									</div>
+									<span className={`absolute -bottom-0.5 ${isRTL ? "-left-0.5" : "-right-0.5"} h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-[#07071a] block`} />
+								</div>
+								<div className="flex-1 min-w-0">
+									<p className="text-[13px] font-extrabold text-white truncate">{user.name}</p>
+									<span className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-[2px] rounded-full text-[8px] font-black uppercase tracking-wider text-white"
+										style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
+										{getRoleIcon(user.role)}{getRoleLabel(user.role, t)}
+									</span>
+								</div>
+								{user.points != null && (
+									<div className="flex flex-col items-center shrink-0 px-2 py-1.5 rounded-[9px]"
+										style={{ background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.18)" }}>
+										<Star className="h-[10px] w-[10px] fill-yellow-400 text-yellow-400" />
+										<span className="text-[11px] font-black text-white leading-none mt-0.5">{user.points}</span>
+										<span className="text-[7px] text-white/30 uppercase">{t("dropdown.pts")}</span>
+									</div>
+								)}
+							</div>
+						</div>
+					</div>
+				)}
+
+				{/* Nav */}
+				<nav className="p-2.5 flex-1">
+
+
+					{user && (
+						<>
+							<p className="text-[8px] font-bold uppercase tracking-[0.16em] text-white/20 px-2 pb-2 pt-1">{t("mobile.sectionNav")}</p>
+							<div className="flex flex-col gap-0.5">
+								<Link href={getDashboardPath(user.role)} onClick={onClose}
+									className="flex items-center gap-2.5 px-3 py-2.5 rounded-[11px] no-underline font-semibold text-[13px] transition-colors"
+									style={{ background: "rgba(99,102,241,0.09)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--color-primary-300)" }}>
+									<div className="h-8 w-8 rounded-[9px] flex items-center justify-center text-white shrink-0"
+										style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
+										<LayoutDashboard className="h-[14px] w-[14px]" />
+									</div>
+									{t("dropdown.dashboard")}
+								</Link>
+
+								{getRoleQuickLinks(user.role, t).map((link) => (
+									<Link key={link.href} href={link.href} onClick={onClose}
+										className="flex items-center gap-2.5 px-3 py-2.5 rounded-[11px] no-underline font-semibold text-[13px] transition-all hover:bg-white/[0.04]"
+										style={{ border: "1px solid rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)" }}>
+										<div className="h-8 w-8 rounded-[9px] flex items-center justify-center shrink-0"
+											style={{ background: "rgba(99,102,241,0.08)", color: "var(--color-primary-400)" }}>
+											{link.icon}
+										</div>
+										{link.label}
+									</Link>
+								))}
+
+								<button onClick={() => { onLogout(); onClose(); }}
+									className="flex items-center gap-2.5 px-3 py-2.5 rounded-[11px] w-full cursor-pointer font-semibold text-[13px] transition-colors"
+									style={{ border: "1px solid rgba(239,68,68,0.15)", background: "rgba(239,68,68,0.05)", color: "#f87171" }}
+									onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,0.1)"}
+									onMouseLeave={e => e.currentTarget.style.background = "rgba(239,68,68,0.05)"}>
+									<div className="h-8 w-8 rounded-[9px] flex items-center justify-center shrink-0" style={{ background: "rgba(239,68,68,0.1)" }}>
+										<LogOut className="h-[14px] w-[14px]" />
+									</div>
+									{t("dropdown.signOut")}
+								</button>
+							</div>
+						</>
+					)}
+				</nav>
+
+				{!user && (
+					<div className="p-3 shrink-0">
+						<Link href="/auth" onClick={onClose}
+							className="flex items-center justify-center gap-2 py-3 rounded-[12px] text-white font-extrabold text-[13px] no-underline transition-all hover:-translate-y-0.5"
+							style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 4px 20px rgba(99,102,241,0.4)" }}>
+							<Zap className="h-[13px] w-[13px] fill-white" />
+							{t("mobile.joinCta")}
+						</Link>
+					</div>
+				)}
+
+				<div className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-[rgba(7,7,17,0.9)] to-transparent" />
+			</div>
+		</>
+	);
+}
+
+// ─── Navbar ───────────────────────────────────────────────────────────────────
 
 export default function PowerfulNavbar() {
-  const t = useTranslations("home.navbar");
-  const locale = useLocale();
-  const isRTL = locale === "ar";
+	const t = useTranslations("home.navbar");
+	const locale = useLocale();
+	const isRTL = locale === "ar";
 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
-  const [user, setUser] = useState(null);
+	const [mobileOpen, setMobileOpen] = useState(false);
+	const [scrolled, setScrolled] = useState(false);
+	const [visible, setVisible] = useState(true);
+	const [lastY, setLastY] = useState(0);
+	const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("user");
-      if (raw) setUser(JSON.parse(raw));
-    } catch (_) {}
-  }, []);
+	useEffect(() => {
+		try { const r = localStorage.getItem("user"); if (r) setUser(JSON.parse(r)); } catch (_) { }
+	}, []);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const y = window.scrollY;
-      setIsScrolled(y > 50);
-      setIsVisible(y < lastScrollY || y < 100);
-      if (y > lastScrollY && y > 100) setIsMobileMenuOpen(false);
-      setLastScrollY(y);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY]);
+	useEffect(() => {
+		const onScroll = () => {
+			const y = window.scrollY;
+			setScrolled(y > 40);
+			setVisible(y < lastY || y < 80);
+			if (y > lastY && y > 80) setMobileOpen(false);
+			setLastY(y);
+		};
+		window.addEventListener("scroll", onScroll, { passive: true });
+		return () => window.removeEventListener("scroll", onScroll);
+	}, [lastY]);
 
-  useEffect(() => {
-    document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [isMobileMenuOpen]);
+	useEffect(() => {
+		document.body.style.overflow = mobileOpen ? "hidden" : "";
+		return () => { document.body.style.overflow = ""; };
+	}, [mobileOpen]);
 
-  const navItems = [
-    { label: t("nav.home"),      href: "#home",      icon: "🏠" },
-    { label: t("nav.about"),     href: "#about",     icon: "ℹ️" },
-    { label: t("nav.community"), href: "#community", icon: "👥" },
-    { label: t("nav.pricing"),   href: "#pricing",   icon: "💰" },
-  ];
+	const navItems = [
+		{ label: t("nav.home"), href: "#home", icon: "🏠" },
+		{ label: t("nav.about"), href: "#about", icon: "ℹ️" },
+		{ label: t("nav.community"), href: "#community", icon: "👥" },
+		{ label: t("nav.pricing"), href: "#pricing", icon: "💰" },
+	];
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    setUser(null);
-  };
+	const handleLogout = () => { localStorage.removeItem("user"); setUser(null); };
 
-  return (
-    <>
-      <style>{CSS_VARS}</style>
-      <style>{`
-        @keyframes nnavGlow{0%,100%{opacity:0.5}50%{opacity:0.85}}
-        .navbar-logo-glow{animation:nnavGlow 3s ease-in-out infinite;}
-        .navbar-avatar-name{display:none;}
-        @media(min-width:640px){.navbar-avatar-name{display:block !important;}}
-        @media(min-width:1024px){.lg-flex{display:flex !important;}.lg-hide{display:none !important;}}
-        @media(min-width:768px){.md-block{display:block !important;}.md-flex{display:flex !important;}}
+	return (
+		<>
+			<style>{`
+        @keyframes _glw { 0%,100%{opacity:0.45} 50%{opacity:0.8} }
+        .logo-glow { animation:_glw 3.5s ease-in-out infinite; }
+        .nav-lnk { position:relative; }
+        .nav-lnk::after {
+          content:''; position:absolute; bottom:5px; left:50%;
+          width:0; height:1.5px; border-radius:2px;
+          background:linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to));
+          transform:translateX(-50%); transition:width 0.22s ease;
+        }
+        .nav-lnk:hover::after { width:55%; }
       `}</style>
 
-      <nav style={{
-        position: "fixed", left: 0, right: 0, top: 0, zIndex: 50,
-        transition: "transform 0.5s cubic-bezier(0.4,0,0.2,1),background 0.3s ease,box-shadow 0.3s ease",
-        transform: isVisible ? "translateY(0)" : "translateY(-100%)",
-        background: isScrolled
-          ? "rgba(8,8,18,0.97)"
-          : "linear-gradient(to bottom,rgba(8,8,18,0.75),transparent)",
-        backdropFilter: "blur(24px)",
-        borderBottom: isScrolled ? "1px solid rgba(99,102,241,0.12)" : "1px solid transparent",
-        boxShadow: isScrolled ? "0 4px 40px rgba(0,0,0,0.5)" : "none",
-        direction: isRTL ? "rtl" : "ltr",
-      }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 24px" }}>
-          <div style={{ display: "flex", height: "72px", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
+			<nav
+				className={`fixed left-0 right-0 top-0 z-50 transition-[transform,background,box-shadow,border-color] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
+          ${visible ? "translate-y-0" : "-translate-y-full"}
+        `}
+				style={{
+					direction: isRTL ? "rtl" : "ltr",
+					background: scrolled ? "rgba(7,7,17,0.97)" : "linear-gradient(to bottom, rgba(7,7,17,0.7), transparent)",
+					borderBottom: scrolled ? "1px solid rgba(255,255,255,0.07)" : "1px solid transparent",
+					backdropFilter: "blur(24px)",
+					boxShadow: scrolled ? "0 2px 30px rgba(0,0,0,0.5)" : "none",
+				}}
+			>
+				<div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+					<div className="flex h-[62px] sm:h-[68px] items-center justify-between gap-3">
 
-            {/* Logo */}
-            <Link href="/" style={{ display: "flex", alignItems: "center", gap: "12px", textDecoration: "none", flexShrink: 0 }}>
-              <div style={{ position: "relative" }}>
-                <div className="navbar-logo-glow" style={{
-                  position: "absolute", inset: 0, borderRadius: "12px",
-                  background: "linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))",
-                  filter: "blur(16px)", pointerEvents: "none",
-                }} />
-                <div style={{
-                  position: "relative", height: "46px", width: "46px", borderRadius: "13px",
-                  background: "linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  boxShadow: "0 4px 20px rgba(99,102,241,0.45),inset 0 1px 0 rgba(255,255,255,0.2)",
-                }}>
-                  <Dumbbell style={{ height: "24px", width: "24px", color: "#fff" }} strokeWidth={2.5} />
-                </div>
-              </div>
-              <div>
-                <span style={{ fontSize: "20px", fontWeight: 900, color: "#fff", letterSpacing: "-0.02em", lineHeight: 1 }}>
-                  {t("brand.name")}
-                </span>
-                <p style={{ fontSize: "9px", fontWeight: 700, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.2em", marginTop: "2px" }}>
-                  {t("brand.tagline")}
-                </p>
-              </div>
-            </Link>
+						{/* Logo */}
+						<Link href="/" className="flex items-center gap-2.5 no-underline shrink-0 group">
+							<div className="relative">
+								<div className="logo-glow absolute inset-0 rounded-[12px] blur-[12px] pointer-events-none"
+									style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }} />
+								<div className="relative h-[40px] w-[40px] sm:h-[42px] sm:w-[42px] rounded-[12px] flex items-center justify-center transition-transform duration-200 group-hover:scale-[1.05]"
+									style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 4px 16px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.18)" }}>
+									<Dumbbell className="h-[20px] w-[20px] sm:h-[22px] sm:w-[22px] text-white" strokeWidth={2.5} />
+								</div>
+							</div>
+							<div>
+								<span className="text-[17px] sm:text-[19px] font-black text-white tracking-[-0.02em] leading-none">{t("brand.name")}</span>
+								<p className="text-[8px] font-bold uppercase tracking-[0.2em] mt-[3px]" style={{ color: "var(--color-primary-400)" }}>{t("brand.tagline")}</p>
+							</div>
+						</Link>
 
-            {/* Desktop nav */}
-            <div style={{ display: "none", alignItems: "center", gap: "2px" }} className="lg-flex">
-              {navItems.map((item, i) => (
-                <a key={i} href={item.href} style={{
-                  padding: "8px 16px", borderRadius: "12px",
-                  fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.55)",
-                  textDecoration: "none", transition: "all 0.25s", letterSpacing: "0.01em",
-                }}
-                onMouseEnter={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.background = "rgba(99,102,241,0.08)"; }}
-                onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.55)"; e.currentTarget.style.background = "transparent"; }}
-                >
-                  {item.label}
-                </a>
-              ))}
-            </div>
+						{/* Desktop links */}
+						<div className="hidden lg:flex items-center gap-0.5">
+							{navItems.map((item, i) => (
+								<a key={i} href={item.href}
+									className="nav-lnk px-4 py-2 rounded-[10px] text-[13px] font-semibold no-underline transition-all duration-200 tracking-[0.01em]"
+									style={{ color: "rgba(255,255,255,0.5)" }}
+									onMouseEnter={e => { e.currentTarget.style.color = "rgba(255,255,255,0.9)"; e.currentTarget.style.background = "rgba(99,102,241,0.07)"; }}
+									onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; e.currentTarget.style.background = ""; }}>
+									{item.label}
+								</a>
+							))}
+						</div>
 
-            {/* Right side actions */}
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
-              <LangSwitch />
+						{/* Right side */}
+						<div className="flex items-center gap-2 shrink-0">
+							<LangSwitch />
 
-              {user ? (
-                <div style={{ display: "none" }} className="md-block">
-                  <AvatarButton user={user} isRTL={isRTL} />
-                </div>
-              ) : (
-                <Link href="/auth" style={{
-                  display: "none", alignItems: "center", gap: "7px",
-                  padding: "9px 18px", borderRadius: "12px",
-                  background: "linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-to))",
-                  color: "#fff", fontWeight: 700, fontSize: "13px",
-                  textDecoration: "none",
-                  boxShadow: "0 2px 16px rgba(99,102,241,0.4),inset 0 1px 0 rgba(255,255,255,0.15)",
-                  transition: "all 0.25s", letterSpacing: "0.01em",
-                }} className="md-flex"
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 24px rgba(99,102,241,0.5)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "0 2px 16px rgba(99,102,241,0.4),inset 0 1px 0 rgba(255,255,255,0.15)"; }}
-                >
-                  <Zap style={{ height: "14px", width: "14px" }} fill="white" />
-                  {t("nav.joinNow")}
-                </Link>
-              )}
+							{user ? (
+								<div className="hidden md:block">
+									<AvatarButton user={user} isRTL={isRTL} />
+								</div>
+							) : (
+								<Link href="/auth"
+									className="hidden md:flex items-center gap-1.5 px-4 py-2 rounded-[11px] text-white font-bold text-[13px] no-underline transition-all duration-200 hover:-translate-y-px tracking-[0.01em]"
+									style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 2px 14px rgba(99,102,241,0.38), inset 0 1px 0 rgba(255,255,255,0.14)" }}
+									onMouseEnter={e => e.currentTarget.style.boxShadow = "0 6px 22px rgba(99,102,241,0.5), inset 0 1px 0 rgba(255,255,255,0.14)"}
+									onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 14px rgba(99,102,241,0.38), inset 0 1px 0 rgba(255,255,255,0.14)"}>
+									<Zap className="h-[13px] w-[13px] fill-white" />
+									{t("nav.joinNow")}
+								</Link>
+							)}
 
-              {/* Hamburger */}
-              <button
-                onClick={() => setIsMobileMenuOpen((v) => !v)}
-                aria-label={isMobileMenuOpen ? t("mobile.close") : t("mobile.open")}
-                style={{
-                  display: "flex", height: "40px", width: "40px",
-                  alignItems: "center", justifyContent: "center", borderRadius: "11px",
-                  border: isMobileMenuOpen ? "1px solid rgba(99,102,241,0.4)" : "1px solid rgba(255,255,255,0.08)",
-                  background: isMobileMenuOpen ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.04)",
-                  cursor: "pointer", transition: "all 0.25s", color: "#fff",
-                }}
-                className="lg-hide"
-              >
-                <div style={{ transition: "transform 0.3s", transform: isMobileMenuOpen ? "rotate(90deg)" : "rotate(0deg)" }}>
-                  {isMobileMenuOpen
-                    ? <X style={{ height: "18px", width: "18px" }} strokeWidth={2.5} />
-                    : <Menu style={{ height: "18px", width: "18px" }} strokeWidth={2.5} />}
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
+							{/* Hamburger */}
+							<button
+								onClick={() => setMobileOpen((v) => !v)}
+								aria-label={mobileOpen ? t("mobile.close") : t("mobile.open")}
+								className="lg:hidden flex h-9 w-9 items-center justify-center rounded-[10px] cursor-pointer transition-all duration-200"
+								style={{
+									border: mobileOpen ? "1px solid rgba(99,102,241,0.38)" : "1px solid rgba(255,255,255,0.08)",
+									background: mobileOpen ? "rgba(99,102,241,0.1)" : "rgba(255,255,255,0.03)",
+									color: mobileOpen ? "var(--color-primary-300)" : "rgba(255,255,255,0.6)",
+								}}
+							>
+								<div className={`transition-transform duration-300 ${mobileOpen ? "rotate-90" : ""}`}>
+									{mobileOpen ? <X className="h-[15px] w-[15px]" strokeWidth={2.5} /> : <Menu className="h-[15px] w-[15px]" strokeWidth={2.5} />}
+								</div>
+							</button>
+						</div>
+					</div>
+				</div>
 
-        {/* Scrolled accent line */}
-        {isScrolled && (
-          <div style={{
-            position: "absolute", bottom: 0, left: 0, right: 0, height: "1px",
-            background: "linear-gradient(90deg,transparent,var(--color-gradient-from) 30%,var(--color-gradient-to) 70%,transparent)",
-            opacity: 0.5,
-          }} />
-        )}
-      </nav>
+				{/* Bottom shimmer when scrolled */}
+				{scrolled && (
+					<div className="absolute bottom-0 left-0 right-0 h-px opacity-45 pointer-events-none"
+						style={{ background: "linear-gradient(90deg, transparent 0%, var(--color-gradient-from) 30%, var(--color-gradient-to) 70%, transparent 100%)" }} />
+				)}
+			</nav>
 
-      <MobileOverlay
-        isOpen={isMobileMenuOpen}
-        onClose={() => setIsMobileMenuOpen(false)}
-        navItems={navItems}
-        user={user}
-        onLogout={handleLogout}
-        isRTL={isRTL}
-      />
-    </>
-  );
+			<MobileDrawer
+				isOpen={mobileOpen}
+				onClose={() => setMobileOpen(false)}
+				navItems={navItems}
+				user={user}
+				onLogout={handleLogout}
+				isRTL={isRTL}
+			/>
+		</>
+	);
 }

@@ -364,10 +364,10 @@ export default function ThemeShowcaseSection() {
   const currentPalette = colors;
 
   return (
-    <section className="relative py-16 sm:py-20 md:py-24 lg:py-28 overflow-hidden">
+    <section className="relative py-16 sm:py-20 md:py-24 lg:py-28 ">
 
       {/* ── Background orbs ── */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0  pointer-events-none">
         <motion.div
           className="absolute -top-20 ltr:-left-20 rtl:-right-20 w-[500px] h-[500px]
             rounded-full blur-[100px] opacity-[0.12]"
@@ -381,12 +381,7 @@ export default function ThemeShowcaseSection() {
           style={{ background: `radial-gradient(circle, ${currentPalette.secondary[400]}, transparent)` }}
           animate={{ scale: [1,1.2,1], opacity:[0.1,0.16,0.1] }}
           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-        />
-        {/* Fine grid */}
-        <div className="absolute inset-0 opacity-[0.02]
-          bg-[linear-gradient(rgba(255,255,255,1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,1)_1px,transparent_1px)]
-          bg-[size:60px_60px]
-          [mask-image:radial-gradient(ellipse_at_50%_50%,black_30%,transparent_80%)]" />
+        /> 
       </div>
 
       <div className="relative z-10 max-w-[1440px] mx-auto px-6 lg:px-16">

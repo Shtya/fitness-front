@@ -117,11 +117,11 @@ function useLocalStorageState(key, initial) {
 
 /* ─── NAV ───────────────────────────────────────────────────── */
 export const NAV = [
- 
+
 	{
 		role: 'admin',
 		sectionKey: 'sections.dashboard',
- 		items: [
+		items: [
 			{ nameKey: 'allUsers', href: '/dashboard/users', icon: Users },
 			{ nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
 			{ nameKey: 'allRecipes', href: '/dashboard/recipes', icon: ReceiptJapaneseYen },
@@ -133,7 +133,7 @@ export const NAV = [
 		items: [
 			{ nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: NotebookPen },
 			{ nameKey: 'mealPlans', href: '/dashboard/nutrition', icon: ChefHat },
-			{ nameKey: 'recipes', href: '/dashboard/recipes', icon: ChefHat },
+			
 		]
 	},
 	{
@@ -155,16 +155,8 @@ export const NAV = [
 		role: 'admin',
 		sectionKey: 'sections.timeManagement',
 		items: [
-			{
-				nameKey: 'timeManagement',
-				icon: Clock,
-				expand: false,
-				children: [
-					{ nameKey: 'kanbanBoard', href: '/workspace?tab=boards', icon: KanbanSquare },
-					{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
-					{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
-				]
-			}
+			{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
+			{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
 		]
 	},
 	{
@@ -194,13 +186,13 @@ export const NAV = [
 	},
 
 	// CLIENT
-	{
-		role: 'client',
-		sectionKey: 'sections.dashboard',
-		items: [
-			{ nameKey: 'overview', href: '/dashboard', icon: LayoutDashboard }
-		]
-	},
+	// {
+	// 	role: 'client',
+	// 	sectionKey: 'sections.dashboard',
+	// 	items: [
+	// 		{ nameKey: 'overview', href: '/dashboard', icon: LayoutDashboard }
+	// 	]
+	// },
 	{
 		role: 'client',
 		sectionKey: 'sections.myWorkspace',
@@ -209,12 +201,14 @@ export const NAV = [
 			{ nameKey: 'myNutrition', href: '/dashboard/my/nutrition', icon: Apple },
 			{ nameKey: 'myReminders', href: '/dashboard/reminders', icon: AlarmClock },
 			{ nameKey: 'weeklyStrength', href: '/dashboard/my/report', icon: Newspaper },
+			{ nameKey: 'recipes', href: '/dashboard/recipes', icon: ChefHat },
 		]
 	},
 	{
 		role: 'client',
 		sectionKey: 'sections.tools',
 		items: [
+			{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
 			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
 			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
 		]
@@ -223,7 +217,8 @@ export const NAV = [
 		role: 'client',
 		sectionKey: 'sections.account',
 		items: [
-			{ nameKey: 'profile', href: '/dashboard/my/profile', icon: UserIcon }
+			{ nameKey: 'money', href: '/money', icon: Wallet },
+			{ nameKey: 'profile', href: '/dashboard/my/profile', icon: UserIcon } ,
 		]
 	},
 
@@ -264,16 +259,8 @@ export const NAV = [
 		role: 'coach',
 		sectionKey: 'sections.timeManagement',
 		items: [
-			{
-				nameKey: 'timeManagement',
-				icon: Clock,
-				expand: false,
-				children: [
-					{ nameKey: 'kanbanBoard', href: '/workspace?tab=boards', icon: KanbanSquare },
-					{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
-					{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
-				]
-			}
+			{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
+			{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
 		]
 	},
 	{
@@ -329,16 +316,8 @@ export const NAV = [
 		role: 'super_admin',
 		sectionKey: 'sections.timeManagement',
 		items: [
-			{
-				nameKey: 'timeManagement',
-				icon: Clock,
-				expand: false,
-				children: [
-					{ nameKey: 'kanbanBoard', href: '/workspace?tab=boards', icon: KanbanSquare },
-					{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
-					{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
-				]
-			}
+			{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
+			{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
 		]
 	},
 	{
@@ -1036,7 +1015,7 @@ function NavItem({
 		</div>
 	);
 }
- 
+
 function NavSection({
 	sectionKey,
 	items,
@@ -1051,7 +1030,7 @@ function NavSection({
 	const label = t_nav(sectionKey, { defaultValue: '' });
 
 	return (
-		<div style={{ display: 'flex', flexDirection: 'column'  }}>
+		<div style={{ display: 'flex', flexDirection: 'column' }}>
 			{!collapsed && label && <SectionLabel label={label} />}
 			{items.map((item) => (
 				<NavItem
@@ -1605,10 +1584,11 @@ const ThemePanel = React.forwardRef(function ThemePanel(
 				animate={{ opacity: 1, x: 0, scale: 1 }}
 				exit={{ opacity: 0, x: xFrom, scale: 0.96 }}
 				transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+				className='rtl:right-[10px] ltr:left-[10px]'
 				style={{
 					position: 'fixed',
 					bottom: pos?.bottom ?? 16,
-					left: pos?.left ?? 300,
+					// left: pos?.left ?? 300,
 					zIndex: 9999,
 					width: 320,
 					borderRadius: 16,
@@ -2066,5 +2046,5 @@ export default function Sidebar({
 		</AnimatePresence>
 	);
 
-	return <>{DesktopSidebar}{MobileDrawer}</>;
+	return <div style={{boxShadow:"rgba(50,50,93,.14) 0px 20px 60px -12px, rgba(0,0,0,.14) 0px 14px 36px -24px"}} >{DesktopSidebar}{MobileDrawer}</div>;
 }

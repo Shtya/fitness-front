@@ -307,7 +307,7 @@ export default function Layout({ children }) {
 										{/* Add bottom padding when impersonating so content isn't hidden behind bar */}
 										<div
 											id="body"
-											className={`${!isAuthRoute && `h-screen overflow-auto p-3 md:p-4`} ${isImpersonating ? 'pb-16' : ''}`}
+											className={`${!isAuthRoute && ` overflow-x-hidden overflow-auto p-3 md:p-4`} ${isImpersonating ? 'pb-8' : ''}`}
 										>
 											{children}
 										</div>

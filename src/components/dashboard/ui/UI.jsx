@@ -36,14 +36,61 @@ export function PageHeader({ className = '', icon: Icon, title, subtitle, action
 /* ─────────────────────────── Stat Cards ─────────────────────────── */
 export function StatCard({ resPhone, cnParent, cn, icon: Icon, title, value }) {
   return (
-    <div className={`${cnParent ?? ''} ${resPhone ? 'max-md:h-fit' : ''} relative overflow-hidden rounded-xl border border-white/20 bg-white/10 p-3 text-white`}>
-      <div className={`flex items-center justify-between gap-2 ${resPhone ? 'max-md:flex-col' : ''}`}>
-        <div className={`grid place-items-center rounded-lg bg-white/15 p-2 ${resPhone ? 'max-md:hidden' : ''}`}>
-          <Icon className='h-5 w-5' />
-        </div>
-        <div className={`flex items-center gap-2 flex-1 justify-between max-md:flex-wrap max-md:gap-[2px] ${cn ?? ''} ${resPhone ? 'max-md:flex-col max-md:gap-[2px]' : ''}`}>
-          <p className={`text-sm text-white/85 ${resPhone ? 'max-md:text-center max-md:text-xs' : ''}`}>{title}</p>
-          <p className='text-lg font-bold tracking-tight flex-none'>{value}</p>
+    <div
+      className={`group relative cursor-default overflow-hidden ${cnParent ?? ''} ${resPhone ? 'max-md:h-fit' : ''}`}
+      style={{
+        borderRadius: 18,
+        background: 'rgba(255,255,255,0.13)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        boxShadow: '0 2px 12px -2px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.2)',
+        transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+      }}
+    >
+      {/* Hover shimmer */}
+      <div
+        className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%)',
+          borderRadius: 18,
+        }}
+      />
+
+      {/* Left accent bar */}
+      <div
+        className="absolute left-0 top-4 bottom-4 w-0.5 rounded-full opacity-40 transition-opacity group-hover:opacity-70"
+        style={{ background: 'rgba(255,255,255,0.6)' }}
+      />
+
+      <div className={`relative px-4 py-4 ${resPhone ? 'max-md:py-3' : ''}`}>
+        <div
+          className={`flex items-start justify-between gap-2 ${
+            resPhone ? 'max-md:flex-col max-md:items-center max-md:text-center' : ''
+          } ${cn ?? ''}`}
+        >
+          <div className={`min-w-0 ${resPhone ? 'max-md:w-full' : ''}`}>
+            <p
+              className={`text-[10px] font-black uppercase tracking-[0.14em] leading-tight ${
+                resPhone ? 'max-md:text-center' : ''
+              }`}
+              style={{ color: 'rgba(255,255,255,0.6)' }}
+            >
+              {title}
+            </p>
+
+            <p className="mt-2.5 text-2xl font-black leading-none tracking-tight text-white">
+              {value}
+            </p>
+          </div>
+
+          {Icon && (
+            <div className={`${resPhone ? 'max-md:hidden' : ''}`}>
+              <Icon
+                className="h-4 w-4 shrink-0 transition-all duration-200 group-hover:scale-110"
+                style={{ color: 'rgba(255,255,255,0.45)' }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

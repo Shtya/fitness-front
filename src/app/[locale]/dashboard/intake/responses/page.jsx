@@ -30,6 +30,7 @@ import {
   CheckCircle2,
   Clock,
 } from 'lucide-react';
+import ActionButtons from '@/components/atoms/Actions';
 
 const PAGE_SIZE = 50;
 const cx = (...c) => c.filter(Boolean).join(' ');
@@ -572,30 +573,38 @@ export default function SubmissionsPage() {
       ),
     },
     {
-      header: t('table.actions'),
-      accessor: '__actions',
-      className: 'text-right',
-      cell: row => (
-        <div className="flex justify-end">
-          <div className="inline-flex items-center gap-1 rounded-2xl border border-[color:var(--color-primary-100)] bg-white p-1 shadow-sm">
-            <TipBtn tooltip={t('actions.view')} onClick={() => viewSubmission(row)} variant="view">
-              <Eye className="h-3.5 w-3.5" />
-            </TipBtn>
-            <div className="h-4 w-px bg-slate-100" />
-            <TipBtn
-              tooltip={t('actions.delete', { default: 'Delete' })}
-              onClick={() => deleteSubmission(row)}
-              disabled={deletingId === row.id}
-              variant="danger"
-            >
-              {deletingId === row.id
+  header: t('table.actions'),
+  accessor: '__actions',
+  className: 'text-right',
+  cell: row => (
+    <div className="flex justify-end">
+         <ActionButtons
+          row={row}
+          gap="gap-1"
+          actions={[
+            {
+              icon: <Eye className="h-3.5 w-3.5" />,
+              tooltip: t('actions.view'),
+              variant: 'blue',
+              size: 'md',
+              onClick: r => viewSubmission(r),
+            },
+            {
+              icon: deletingId === row.id
                 ? <FaSpinner className="h-3.5 w-3.5 animate-spin" />
-                : <FiTrash2 className="h-3.5 w-3.5" />}
-            </TipBtn>
-          </div>
-        </div>
-      ),
-    },
+                : <FiTrash2 className="h-3.5 w-3.5" />,
+              tooltip: t('actions.delete', { default: 'Delete' }),
+              variant: 'red',
+              size: 'md',
+              disabled: deletingId === row.id,
+              hidden: false,
+              onClick: r => deleteSubmission(r),
+            },
+          ]}
+        />
+     </div>
+  ),
+},
   ], [forms, t, updatingReviewed, deletingId, setReviewed, deleteSubmission, viewSubmission]);
 
   // ─────────────────────────────────────────────────────────────

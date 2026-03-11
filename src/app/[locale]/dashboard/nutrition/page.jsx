@@ -54,6 +54,7 @@ import {
 	SelectValue,
 	Select,
 } from '@/components/ui/select';
+import ActionButtons from '@/components/atoms/Actions';
 
 const hhmmRegex = /^$|^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -1347,40 +1348,43 @@ export const PlanListView = memo(function PlanListView({ loading, plans = [], on
 						)}
 					</div>
 
-					{/* Actions */}
-					<div className="flex items-center gap-1.5 shrink-0">
-						<button
-							type="button"
-							onClick={() => onAssign?.(p)}
-							className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
-							title={t('btn.assign')}
-						>
-							<UsersIcon className="h-3.5 w-3.5 text-slate-400" />
-							{t('btn.assign')}
-						</button>
-
-						<div className="w-px h-5 bg-slate-100 mx-0.5" />
-
-						<button type="button" title={t('btn.preview')} onClick={() => onPreview?.(p)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">
-							<Eye className="h-3.5 w-3.5" />
-						</button>
-
-						<button type="button" title={t('btn.duplicate')} onClick={() => onDuplicate?.(p)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[color:var(--color-secondary-200)] bg-white text-[color:var(--color-secondary-700)] hover:bg-[color:var(--color-secondary-50)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-secondary-300)]">
-							<Copy className="h-3.5 w-3.5" />
-						</button>
-
-						{p?.adminId != null && (
-							<button type="button" title={t('btn.edit')} onClick={() => onEdit?.(p)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[color:var(--color-primary-200)] bg-white text-[color:var(--color-primary-600)] hover:bg-[color:var(--color-primary-50)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]">
-								<PencilLine className="h-3.5 w-3.5" />
-							</button>
-						)}
-
-						{p?.adminId != null && (
-							<button type="button" title={t('btn.delete')} onClick={() => onDelete?.(p.id)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-500 hover:bg-rose-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300">
-								<Trash2 className="h-3.5 w-3.5" />
-							</button>
-						)}
-					</div>
+					 <ActionButtons
+	row={p}
+	actions={[
+		{
+			icon: <UsersIcon />,
+			tooltip: t('btn.assign'),
+			variant: 'blue',
+			onClick: row => onAssign?.(row),
+		},
+		{
+			icon: <Eye />,
+			tooltip: t('btn.preview'),
+			variant: 'slate',
+			onClick: row => onPreview?.(row),
+		},
+		{
+			icon: <Copy />,
+			tooltip: t('btn.duplicate'),
+			variant: 'purple',
+			onClick: row => onDuplicate?.(row),
+		},
+		{
+			icon: <PencilLine />,
+			tooltip: t('btn.edit'),
+			variant: 'amber',
+			hidden: p?.adminId == null,
+			onClick: row => onEdit?.(row),
+		},
+		{
+			icon: <Trash2 />,
+			tooltip: t('btn.delete'),
+			variant: 'red',
+			hidden: p?.adminId == null,
+			onClick: row => onDelete?.(row.id),
+		},
+	]}
+/>
 				</motion.div>
 			))}
 		</div>

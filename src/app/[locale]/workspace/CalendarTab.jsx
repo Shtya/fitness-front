@@ -59,6 +59,19 @@ const DESIGN_STYLES = `
   .cal-wrap ::-webkit-scrollbar-thumb { background:var(--cal-surface4); border-radius:4px; }
   .cal-wrap { scrollbar-width:thin; scrollbar-color:var(--cal-surface4) transparent; }
 
+  /* ── All inputs / selects / textareas: 16px to prevent iOS zoom ── */
+  .cal-input,
+  .cal-input[type="text"],
+  .cal-input[type="date"],
+  .cal-input[type="time"],
+  .cal-input[type="number"],
+  .cal-input[type="datetime-local"],
+  .cal-wrap textarea.cal-input,
+  .cal-wrap select.cal-input,
+  [data-cal-input] {
+    font-size: 16px !important;
+  }
+
   /* ── Hero ── */
   .cal-hero { position:relative; overflow:hidden; background:var(--cal-grad); padding:20px 24px 0; }
   .cal-hero::before { content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(255,255,255,.12) 0%,rgba(255,255,255,0) 60%,rgba(0,0,0,.06) 100%); pointer-events:none; }
@@ -173,6 +186,20 @@ const DESIGN_STYLES = `
   .cal-item-check { flex-shrink:0; background:transparent; border:none; color:var(--cal-text3); cursor:pointer; padding:0; display:flex; align-items:center; transition:color .15s; margin-top:1px; }
   .cal-item-check:hover { color:#16a34a; }
   .cal-item-check.done { color:#16a34a; }
+
+  /* ── Mobile item check — bigger tap target ── */
+  .cal-item-check-mob {
+    flex-shrink:0; background:transparent; border:none;
+    color:var(--cal-text3); cursor:pointer;
+    padding:6px; margin:-6px;          /* bigger hit area */
+    display:flex; align-items:center; justify-content:center;
+    transition:color .15s; margin-top:-3px;
+    -webkit-tap-highlight-color:transparent;
+    min-width:44px; min-height:44px;  /* iOS 44×44 touch target */
+  }
+  .cal-item-check-mob:active { transform:scale(.88); }
+  .cal-item-check-mob.done { color:#16a34a; }
+
   .cal-item-body { flex:1; min-width:0; }
   .cal-item-title { font-size:13px; font-weight:500; color:var(--cal-text); line-height:1.4; margin-bottom:5px; }
   .cal-item-title.done { text-decoration:line-through; color:var(--cal-text3); }
@@ -181,6 +208,10 @@ const DESIGN_STYLES = `
   .cal-item-badge { display:inline-flex; align-items:center; gap:3px; padding:2px 7px; border-radius:100px; font-size:10px; font-weight:600; background:var(--cal-surface3); color:var(--cal-text2); border:1px solid var(--cal-border); }
   .cal-item-actions { display:flex; gap:2px; opacity:0; transition:opacity .15s; flex-shrink:0; }
   .cal-item-card:hover .cal-item-actions { opacity:1; }
+  /* On mobile always show actions */
+  @media (max-width:640px) {
+    .cal-item-actions { opacity:1 !important; }
+  }
   .cal-action-btn { width:26px; height:26px; background:transparent; border:none; border-radius:6px; color:var(--cal-text3); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
   .cal-action-btn:hover { background:var(--cal-surface4); color:var(--cal-text); }
   .cal-action-btn.danger:hover { background:rgba(239,68,68,.1); color:#ef4444; }
@@ -203,7 +234,18 @@ const DESIGN_STYLES = `
   .cal-form-body { padding:16px 18px; display:flex; flex-direction:column; gap:12px; }
   .cal-form-footer { padding:12px 18px 16px; border-top:1px solid var(--cal-border); display:flex; gap:8px; }
   .cal-label { font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--cal-text3); display:flex; align-items:center; gap:4px; margin-bottom:5px; }
-  .cal-input { width:100%; background:var(--cal-surface2); border:1px solid var(--cal-border2); border-radius:var(--cal-radius-sm); padding:8px 11px; color:var(--cal-text); font-family:var(--cal-font-b); font-size:13px; outline:none; transition:border-color .2s,box-shadow .2s; }
+  .cal-input {
+    width:100%;
+    background:var(--cal-surface2);
+    border:1px solid var(--cal-border2);
+    border-radius:var(--cal-radius-sm);
+    padding:8px 11px;
+    color:var(--cal-text);
+    font-family:var(--cal-font-b);
+    font-size:16px;  /* Always 16px to prevent iOS zoom */
+    outline:none;
+    transition:border-color .2s,box-shadow .2s;
+  }
   .cal-input:focus { border-color:var(--cal-accent-gl); box-shadow:0 0 0 3px color-mix(in srgb,var(--color-primary-500,#6366f1) 8%,transparent); }
   .cal-input::placeholder { color:var(--cal-text3); }
   .cal-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -232,6 +274,32 @@ const DESIGN_STYLES = `
   .cal-overlay { background:rgba(0,0,0,.35); backdrop-filter:blur(6px); }
   .cal-prog-ring { flex-shrink:0; }
 
+  /* ── Desktop slide panel for add/edit ── */
+  .cal-desk-panel-overlay { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.25); backdrop-filter:blur(4px); }
+  .cal-desk-panel {
+    position:fixed; top:0; bottom:0; right:0; z-index:61;
+    width: min(480px, 44vw);
+    background:var(--cal-surface);
+    border-left:1px solid var(--cal-border2);
+    box-shadow:-12px 0 48px rgba(0,0,0,.12);
+    display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+  .cal-desk-panel[dir="rtl"] { right:auto; left:0; border-left:none; border-right:1px solid var(--cal-border2); box-shadow:12px 0 48px rgba(0,0,0,.12); }
+  .cal-desk-panel-head {
+    padding:20px 22px 16px;
+    border-bottom:1px solid var(--cal-border);
+    display:flex; align-items:center; justify-content:space-between;
+    background:linear-gradient(135deg,var(--color-gradient-from,#6366f1),var(--color-gradient-to,#a855f7));
+    position:relative; overflow:hidden;
+  }
+  .cal-desk-panel-head::before { content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(255,255,255,.12) 0%,transparent 100%); pointer-events:none; }
+  .cal-desk-panel-htitle { font-family:var(--cal-font-d); font-size:18px; font-weight:400; color:#fff; display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
+  .cal-desk-panel-icon { width:32px; height:32px; background:rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.3); border-radius:9px; display:flex; align-items:center; justify-content:center; color:#fff; }
+  .cal-desk-panel-close { position:relative; z-index:1; width:34px; height:34px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.2); border-radius:10px; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .2s; }
+  .cal-desk-panel-close:hover { background:rgba(255,255,255,.28); }
+  .cal-desk-panel-body { flex:1; overflow-y:auto; }
+
   /* ── Responsive ── */
   @media (max-width:1024px) { .cal-sidebar { display:none !important; } }
 
@@ -245,12 +313,14 @@ const DESIGN_STYLES = `
     .cal-hero { padding:14px 16px 0; }
     .cal-hero-month { font-size:17px; }
     .cal-hero-month span { font-size:15px; }
+    /* Mobile: bigger action buttons on item cards */
+    .cal-action-btn { width:32px; height:32px; }
   }
 `;
 
 function DesignStyles() {
   useEffect(() => {
-    const id = "cal-ds-v4";
+    const id = "cal-ds-v5";
     if (!document.getElementById(id)) {
       const el = document.createElement("style");
       el.id = id; el.textContent = DESIGN_STYLES;
@@ -312,6 +382,7 @@ const ENDPOINTS = {
   sound:      "/calendar/sound",
 };
 
+// TAB_OPTIONS kept for settings dialog and internal use but NOT rendered as a select in hero
 const TAB_OPTIONS = [
   { value:"boards",   label:"kanbanBoard", icon:Home        },
   { value:"calendar", label:"calendar",    icon:CalendarIcon },
@@ -337,14 +408,11 @@ function ProgressRing({ pct, size = 24 }) {
   );
 }
 
-// ─── Slide Panel (bottom sheet for mobile) ────────────────────────────────────
-function SlidePanel({ open, onClose, children, title, className }) {
+// ─── Desktop Side Panel (slide in from right/left) ────────────────────────────
+function DesktopSidePanel({ open, onClose, title, children, isRTL }) {
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    if (open) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
@@ -354,7 +422,58 @@ function SlidePanel({ open, onClose, children, title, className }) {
     <AnimatePresence>
       {open && (
         <>
-          {/* Backdrop */}
+          <motion.div
+            key="desk-overlay"
+            className="cal-desk-panel-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+          />
+          <motion.div
+            key="desk-panel"
+            className="cal-desk-panel"
+            dir={isRTL ? "rtl" : "ltr"}
+            initial={{ x: isRTL ? "-100%" : "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: isRTL ? "-100%" : "100%" }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <div className="cal-desk-panel-head">
+              <div className="cal-desk-panel-htitle">
+                <div className="cal-desk-panel-icon"><Sparkles size={15}/></div>
+                {title}
+              </div>
+              <button className="cal-desk-panel-close" onClick={onClose}>
+                <X size={15}/>
+              </button>
+            </div>
+            <div className="cal-desk-panel-body">
+              {children}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body
+  );
+}
+
+// ─── Mobile Slide Panel (bottom sheet) ────────────────────────────────────────
+function SlidePanel({ open, onClose, children, title, className }) {
+  useEffect(() => {
+    if (open) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <AnimatePresence>
+      {open && (
+        <>
           <motion.div
             key="backdrop"
             className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
@@ -364,7 +483,6 @@ function SlidePanel({ open, onClose, children, title, className }) {
             transition={{ duration: 0.22 }}
             onClick={onClose}
           />
-          {/* Panel */}
           <motion.div
             key="panel"
             className={cn(
@@ -378,11 +496,9 @@ function SlidePanel({ open, onClose, children, title, className }) {
             exit={{ y: "100%" }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
           >
-            {/* Drag handle */}
             <div className="flex items-center justify-center pt-3 pb-1 flex-shrink-0">
               <div className="w-10 h-1 rounded-full bg-[var(--cal-border3)]" />
             </div>
-            {/* Header */}
             {title && (
               <div className="flex items-center justify-between px-5 pt-2 pb-3 border-b border-[var(--cal-border)] flex-shrink-0">
                 <span className="font-[var(--cal-font-d)] text-[17px] font-normal text-[var(--cal-text)]">{title}</span>
@@ -394,7 +510,6 @@ function SlidePanel({ open, onClose, children, title, className }) {
                 </button>
               </div>
             )}
-            {/* Content */}
             <div className="flex-1 overflow-y-auto">
               {children}
             </div>
@@ -410,6 +525,7 @@ function SlidePanel({ open, onClose, children, title, className }) {
 function ItemCard({ item, date, dateStr, eventTypes, completions, onToggle, onEdit,
   onDelete, getTypeLabel, renderIcon, formatTime, t, dayNames, isRTL, source }) {
 
+  const isMobile = source === "mobile";
   const type   = eventTypes.find(tt => tt.id === item.type);
   const { hex, bg } = resolveTypeHex(type);
   const done   = !!completions[`${item.id}_${dateStr}`];
@@ -421,9 +537,18 @@ function ItemCard({ item, date, dateStr, eventTypes, completions, onToggle, onEd
   return (
     <div className={cn("cal-item-card", done && "done")}>
       <div className="cal-item-accent" style={{ background: hex }}/>
-      <button className={cn("cal-item-check", done && "done")} onClick={() => onToggle(item.id, date)}>
-        {done ? <CheckCircle2 size={16} style={{ color:"#4ade80" }}/> : <Circle size={16}/>}
+
+      {/* Check button — bigger on mobile */}
+      <button
+        className={cn(isMobile ? "cal-item-check-mob" : "cal-item-check", done && "done")}
+        onClick={() => onToggle(item.id, date)}
+      >
+        {done
+          ? <CheckCircle2 size={isMobile ? 22 : 16} style={{ color:"#4ade80" }}/>
+          : <Circle size={isMobile ? 22 : 16}/>
+        }
       </button>
+
       <div className="cal-item-body">
         <div className={cn("cal-item-title", done && "done")}>{item.title}</div>
         {item.note && <div className="cal-item-note">{item.note}</div>}
@@ -437,10 +562,10 @@ function ItemCard({ item, date, dateStr, eventTypes, completions, onToggle, onEd
       </div>
       <div className="cal-item-actions">
         <button className="cal-action-btn" onClick={() => onEdit(item, dateStr, source)}>
-          <Pencil size={13}/>
+          <Pencil size={isMobile ? 15 : 13}/>
         </button>
         <button className="cal-action-btn danger" onClick={() => onDelete(item)}>
-          <Trash2 size={13}/>
+          <Trash2 size={isMobile ? 15 : 13}/>
         </button>
       </div>
     </div>
@@ -481,7 +606,7 @@ function ItemFormContent({ t, isRTL, editingItem, itemForm, setItemForm, handleS
             <label className="cal-label">{t("type")}</label>
             <Select open={typeOpen} onOpenChange={setTypeOpen} value={itemForm.type}
               onValueChange={v => { setItemForm(p => ({ ...p, type:v })); setTypeOpen(false); }}>
-              <SelectTrigger className="cal-input" style={{ height:36 }}><SelectValue/></SelectTrigger>
+              <SelectTrigger className="cal-input" style={{ height:44, fontSize:16 }}><SelectValue/></SelectTrigger>
               <SelectContent className="rounded-xl z-[9999]" style={{ background:"var(--cal-surface)", border:"1px solid var(--cal-border2)" }}>
                 {eventTypes.filter(tt => tt.id !== "all").map(type => (
                   <SelectItem key={type.id} value={type.id} className="text-sm" style={{ color:"var(--cal-text)" }}>
@@ -495,7 +620,7 @@ function ItemFormContent({ t, isRTL, editingItem, itemForm, setItemForm, handleS
             <label className="cal-label">{t("recurrence")}</label>
             <Select open={recurrenceOpen} onOpenChange={setRecurrenceOpen} value={itemForm.recurrence}
               onValueChange={v => { setItemForm(p => ({ ...p, recurrence:v, recurrenceInterval:["daily","weekly","monthly"].includes(v)?1:p.recurrenceInterval })); setRecurrenceOpen(false); }}>
-              <SelectTrigger className="cal-input" style={{ height:36 }}><SelectValue/></SelectTrigger>
+              <SelectTrigger className="cal-input" style={{ height:44, fontSize:16 }}><SelectValue/></SelectTrigger>
               <SelectContent className="rounded-xl z-[9999]" style={{ background:"var(--cal-surface)", border:"1px solid var(--cal-border2)" }}>
                 {["none","daily","weekly","monthly","every_x_days","custom"].map(v => (
                   <SelectItem key={v} value={v} className="text-sm" style={{ color:"var(--cal-text)" }}>
@@ -559,7 +684,7 @@ function ItemFormContent({ t, isRTL, editingItem, itemForm, setItemForm, handleS
   );
 }
 
-// ─── Mobile Day Panel (slide panel) ──────────────────────────────────────────
+// ─── Mobile Day Panel (bottom sheet) ─────────────────────────────────────────
 function MobileDayPanel({ selectedDate, items, completions, eventTypes, selectedType,
   onToggle, onEdit, onDelete, onAdd, getItemsForDate, getProgressForDate,
   getTypeLabel, renderIcon, formatTime, t, dayNames, monthNames, isRTL, onClose }) {
@@ -587,12 +712,12 @@ function MobileDayPanel({ selectedDate, items, completions, eventTypes, selected
         <div className="ml-auto flex flex-col items-end gap-1">
           <div className="bg-[var(--cal-border3)] rounded-full h-1.5 overflow-hidden w-16">
             <div
-              className="h-full rounded-full bg-[var(--cal-grad)] transition-[width] duration-500"
-              style={{ width:`${prog.percentage}%` }}
+              className="h-full rounded-full transition-[width] duration-500"
+              style={{ width:`${prog.percentage}%`, background:"var(--cal-grad)" }}
             />
           </div>
           <div className="text-[10px] font-semibold text-[var(--cal-text3)]">
-            <span className="text-[var(--cal-accent)]">{prog.completed}</span>/{prog.total}
+            <span style={{ color:"var(--cal-accent)" }}>{prog.completed}</span>/{prog.total}
           </div>
         </div>
       )}
@@ -601,14 +726,11 @@ function MobileDayPanel({ selectedDate, items, completions, eventTypes, selected
 
   return (
     <SlidePanel open={!!selectedDate} onClose={onClose} title={title}>
-      {/* Add button */}
       <div className="px-4 pt-3 pb-1">
         <button className="cal-sidebar-add w-full" onClick={() => onAdd(dateStr)}>
           <Plus size={12}/> {t("addNewItem")}
         </button>
       </div>
-
-      {/* Items */}
       <div className="px-3 pb-6 pt-2 flex flex-col gap-2">
         {!filtered.length ? (
           <div className="cal-empty-state py-8">
@@ -628,19 +750,42 @@ function MobileDayPanel({ selectedDate, items, completions, eventTypes, selected
   );
 }
 
-// ─── Item Slide Panel ─────────────────────────────────────────────────────────
-function ItemSlidePanel({ open, onClose, t, isRTL, editingItem, itemForm, setItemForm,
-  handleSaveItem, dayNames, eventTypes, renderIcon, getTypeLabel }) {
+// ─── Item Panel (desktop = side panel, mobile = bottom sheet) ─────────────────
+function ItemPanel({ open, onClose, t, isRTL, editingItem, itemForm, setItemForm,
+  handleSaveItem, dayNames, eventTypes, renderIcon, getTypeLabel, isMobileView }) {
+
+  const panelTitle = editingItem ? t("editItem") : t("addNewItem");
+
+  if (isMobileView) {
+    return (
+      <SlidePanel
+        open={open}
+        onClose={onClose}
+        title={
+          <div className="flex items-center gap-2">
+            <div className="cal-form-icon"><Sparkles size={14}/></div>
+            <span>{panelTitle}</span>
+          </div>
+        }
+      >
+        <ItemFormContent
+          t={t} isRTL={isRTL} editingItem={editingItem}
+          itemForm={itemForm} setItemForm={setItemForm}
+          handleSaveItem={handleSaveItem}
+          dayNames={dayNames} eventTypes={eventTypes}
+          renderIcon={renderIcon} getTypeLabel={getTypeLabel}
+          onClose={onClose}
+        />
+      </SlidePanel>
+    );
+  }
+
   return (
-    <SlidePanel
+    <DesktopSidePanel
       open={open}
       onClose={onClose}
-      title={
-        <div className="flex items-center gap-2">
-          <div className="cal-form-icon"><Sparkles size={14}/></div>
-          <span>{editingItem ? t("editItem") : t("addNewItem")}</span>
-        </div>
-      }
+      title={panelTitle}
+      isRTL={isRTL}
     >
       <ItemFormContent
         t={t} isRTL={isRTL} editingItem={editingItem}
@@ -650,8 +795,21 @@ function ItemSlidePanel({ open, onClose, t, isRTL, editingItem, itemForm, setIte
         renderIcon={renderIcon} getTypeLabel={getTypeLabel}
         onClose={onClose}
       />
-    </SlidePanel>
+    </DesktopSidePanel>
   );
+}
+
+// ─── Hook: detect mobile ──────────────────────────────────────────────────────
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    setIsMobile(mq.matches);
+    const h = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", h);
+    return () => mq.removeEventListener("change", h);
+  }, []);
+  return isMobile;
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -663,6 +821,7 @@ export default function CalendarPage() {
   const isRTL    = locale === "ar";
   const router   = useRouter();
   const searchParams = useSearchParams();
+  const isMobile = useIsMobile();
 
   // State
   const [currentDate,           setCurrentDate]          = useState(new Date());
@@ -681,10 +840,8 @@ export default function CalendarPage() {
   const [itemToDelete,          setItemToDelete]         = useState(null);
   const [showDeleteTypeConfirm, setShowDeleteTypeConfirm]= useState(false);
   const [typeToDelete,          setTypeToDelete]         = useState(null);
-  // Unified slide panel for add/edit
   const [showItemPanel,         setShowItemPanel]        = useState(false);
   const [editingItem,           setEditingItem]          = useState(null);
-  // Mobile day panel
   const [showDayPanel,          setShowDayPanel]         = useState(false);
   const [settings,              setSettings]             = useState({
     showWeekNumbers:false, highlightWeekend:true,
@@ -1081,7 +1238,7 @@ export default function CalendarPage() {
 
   // ─── JSX ─────────────────────────────────────────────────────────────────
   return (
-    <div   className="cal-wrap !p-0 w-[calc(100%+30px)] rtl:mr-[-15px] mt-[-15px] min-h-screen  flex flex-col">
+    <div className="cal-wrap !p-0  min-h-screen flex flex-col">
       <DesignStyles/>
 
       {/* Overlay for drawers */}
@@ -1090,7 +1247,7 @@ export default function CalendarPage() {
       )}
 
       {/* ═══ HERO ════════════════════════════════════════════════ */}
-      <div className="cal-hero">
+      <div className="cal-hero !rounded-md">
         <div className="cal-hero-orb1"/><div className="cal-hero-orb2"/>
         <div className="cal-hero-noise"/><div className="cal-hero-dots"/><div className="cal-hero-hl"/>
         <svg className="absolute right-[-40px] top-0 h-full w-auto opacity-[0.04] pointer-events-none"
@@ -1121,28 +1278,8 @@ export default function CalendarPage() {
             <CountdownTimer t={tCommit} isRTL={isRTL}/>
           </div>
 
-          {/* Action buttons */}
+          {/* Action buttons — NO tab select dropdown */}
           <div className="cal-hero-actions">
-            {/* Tab select (sm+) */}
-            <div className="hidden sm:block">
-              <Select value={currentTab} onValueChange={handleTabChange}>
-                <SelectTrigger className="cal-hero-btn-glass w-[130px] border-white/20">
-                  <SelectValue>
-                    <span className="text-white text-xs font-semibold">
-                      {tNav(TAB_OPTIONS.find(tt=>tt.value===currentTab)?.label)}
-                    </span>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="bg-[var(--cal-surface)] border border-[var(--cal-border2)] rounded-xl">
-                  {TAB_OPTIONS.map(tab=>(
-                    <SelectItem key={tab.value} value={tab.value} className="text-[var(--cal-text)] text-sm">
-                      <div className="flex items-center gap-2">{tNav(tab.label)}<tab.icon size={13}/></div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Type filter (sm+) */}
             <div className="hidden sm:block">
               <Popover>
@@ -1214,7 +1351,7 @@ export default function CalendarPage() {
       </div>
 
       {/* ═══ BODY ════════════════════════════════════════════════ */}
-      <div className="cal-body flex-1">
+      <div className="cal-body  flex-1">
 
         {/* Desktop grid */}
         <div className="cal-main overflow-y-auto">
@@ -1225,7 +1362,7 @@ export default function CalendarPage() {
         {renderMobileCalendar()}
 
         {/* Desktop sidebar */}
-        <div className="cal-sidebar flex">
+        <div className={` cal-sidebar flex  ${selectedDate ? "!w-[300px]" : " !w-[250px] "} duration-300`}>
           {selectedDate ? (
             <>
               <div className="cal-sidebar-head">
@@ -1274,7 +1411,7 @@ export default function CalendarPage() {
               </div>
             </>
           ) : (
-            <div className="cal-empty-state flex-1">
+            <div className="cal-empty-state  flex-1">
               <div className="cal-empty-icon"><CalendarIcon size={22}/></div>
               <div className="cal-empty-title">{t("selectDayTitle")}</div>
               <div className="cal-empty-sub">{t("selectDayDesc")}</div>
@@ -1301,8 +1438,8 @@ export default function CalendarPage() {
         }}
       />
 
-      {/* ═══ ITEM SLIDE PANEL (add/edit) ════════════════════════ */}
-      <ItemSlidePanel
+      {/* ═══ ITEM PANEL — desktop side panel / mobile bottom sheet ══ */}
+      <ItemPanel
         open={showItemPanel}
         onClose={closeItemPanel}
         t={t} isRTL={isRTL}
@@ -1311,6 +1448,7 @@ export default function CalendarPage() {
         handleSaveItem={handleSaveItem}
         dayNames={dayNames} eventTypes={eventTypes}
         renderIcon={renderIcon} getTypeLabel={getTypeLabel}
+        isMobileView={isMobile}
       />
 
       {/* ═══ ADD TYPE DRAWER ════════════════════════════════════ */}
@@ -1400,7 +1538,7 @@ export default function CalendarPage() {
             <div className="cal-settings-row flex-col items-start gap-2.5">
               <div><div className="cal-settings-lbl">{t("startOfWeek")}</div><div className="cal-settings-desc">{t("startOfWeekDesc")}</div></div>
               <Select value={settings.startOfWeek.toString()} onValueChange={v=>setSettings(p=>({...p,startOfWeek:parseInt(v,10)}))}>
-                <SelectTrigger className="cal-input h-9 w-full"><SelectValue/></SelectTrigger>
+                <SelectTrigger className="cal-input h-9 w-full" style={{fontSize:16}}><SelectValue/></SelectTrigger>
                 <SelectContent className="bg-[var(--cal-surface)] border border-[var(--cal-border2)]">
                   {[["0",t("sunday")],["1",t("monday")],["6",t("saturday")]].map(([v,l])=>(
                     <SelectItem key={v} value={v} className="text-[var(--cal-text)]">{l}</SelectItem>
@@ -1425,9 +1563,9 @@ export default function CalendarPage() {
           <p className="text-[13px] text-[var(--cal-text2)] leading-relaxed">
             {t("areYouSureDelete")} "<span className="font-semibold text-[var(--cal-text)]">{itemToDelete?.title}</span>"?
           </p>
-          <DialogFooter className="gap-2">
+          <DialogFooter className="flex items-center justify-between w-full flex-row gap-2">
             <button className="cal-btn-ghost flex-1 justify-center" onClick={()=>setShowDeleteConfirm(false)}>{t("cancel")}</button>
-            <button className="flex-[2] h-9 px-4 bg-red-500 border-none rounded-xl text-white font-[var(--cal-font-b)] text-[13px] font-semibold cursor-pointer flex items-center justify-center gap-1.5"
+            <button className=" h-9 flex-1 px-4 bg-red-500 border-none rounded-xl text-white font-[var(--cal-font-b)] text-[13px] font-semibold cursor-pointer flex items-center justify-center gap-1.5"
               onClick={()=>confirmDelete()}>
               <Trash2 size={13}/> {t("delete")}
             </button>
@@ -1540,7 +1678,8 @@ function CountdownTimer({ t, isRTL }) {
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10000] w-[min(400px,calc(100vw-32px))]">
             <div className="bg-[var(--cal-surface)] border border-[var(--cal-border2)] rounded-[20px] p-6 shadow-[0_32px_80px_rgba(0,0,0,.2)]" dir={isRTL?"rtl":"ltr"}>
               <div className="flex items-center gap-3 mb-5">
-                <div className="w-11 h-11 rounded-[13px] bg-[var(--cal-grad)] flex items-center justify-center shadow-[0_4px_12px_var(--cal-accent-gl)]">
+                <div className="w-11 h-11 rounded-[13px] bg-[var(--cal-grad)] flex items-center justify-center shadow-[0_4px_12px_var(--cal-accent-gl)]"
+                  style={{background:"var(--cal-grad)"}}>
                   <Calendar size={20} className="text-white"/>
                 </div>
                 <div>
@@ -1555,7 +1694,8 @@ function CountdownTimer({ t, isRTL }) {
                     <div className="text-[13px] font-semibold text-[var(--cal-text)] mb-0.5">{t("dialog.startNow")}</div>
                     <div className="text-[11px] text-[var(--cal-text3)]">{t("dialog.startNowDesc")}</div>
                   </div>
-                  <div className="w-9 h-9 rounded-[10px] bg-[var(--cal-grad)] flex items-center justify-center flex-shrink-0 shadow-[0_4px_12px_var(--cal-accent-gl)]">
+                  <div className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 shadow-[0_4px_12px_var(--cal-accent-gl)]"
+                    style={{background:"var(--cal-grad)"}}>
                     <Play size={14} className="text-white"/>
                   </div>
                 </button>

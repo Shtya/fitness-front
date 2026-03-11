@@ -137,173 +137,140 @@
 		}
 	},
 	"calendar": {
-    "appName": "التقويم",
-    "january": "يناير",
-    "february": "فبراير",
-    "march": "مارس",
-    "april": "أبريل",
-    "may": "مايو",
-    "june": "يونيو",
-    "july": "يوليو",
-    "august": "أغسطس",
-    "september": "سبتمبر",
-    "october": "أكتوبر",
-    "november": "نوفمبر",
-    "december": "ديسمبر",
-    "sunday": "الأحد",
-    "monday": "الإثنين",
-    "tuesday": "الثلاثاء",
-    "wednesday": "الأربعاء",
-    "thursday": "الخميس",
-    "friday": "الجمعة",
-    "saturday": "السبت",
-    "am": "ص",
-    "pm": "م",
-    "add": "إضافة",
-    "save": "حفظ",
-    "cancel": "إلغاء",
-    "delete": "حذف",
-    "close": "إغلاق",
-    "more": "أكثر",
-    "of": "من",
-    "done": "منجز",
-    "optional": "اختياري",
-    "title": "العنوان",
-    "note": "ملاحظة",
-    "type": "النوع",
-    "recurrence": "التكرار",
-    "startDate": "تاريخ البداية",
-    "startTime": "وقت البداية",
-    "selectDays": "اختر الأيام",
-    "repeatEveryDays": "تكرار كل عدد من الأيام",
-    "enterTitle": "أدخل العنوان",
-    "addNote": "أضف ملاحظة...",
-    "addNewItem": "إضافة عنصر جديد",
-    "editItem": "تعديل العنصر",
-    "addNewType": "إضافة نوع جديد",
-    "manageTypes": "إدارة الأنواع",
-    "createNewType": "إنشاء نوع جديد",
-    "allTypes": "جميع الأنواع",
-    "typeName": "اسم النوع",
-    "selectIcon": "اختر أيقونة",
-    "selectColor": "اختر لوناً",
-    "settings": "الإعدادات",
-    "commitment": "الالتزام",
-    "navigate": "التنقل",
-    "filter": "تصفية",
-    "menu": "القائمة",
-    "soundOn": "الصوت مفعّل",
-    "soundOff": "الصوت معطّل",
-    "showWeekNumbers": "إظهار أرقام الأسابيع",
-    "showWeekNumbersDesc": "عرض رقم الأسبوع في بداية كل صف",
-    "highlightWeekend": "تمييز عطلة نهاية الأسبوع",
-    "highlightWeekendDesc": "إبراز أيام الجمعة والسبت بشكل مختلف",
-    "confirmBeforeDelete": "تأكيد قبل الحذف",
-    "confirmBeforeDeleteDesc": "طلب التأكيد قبل حذف أي عنصر",
-    "startOfWeek": "بداية الأسبوع",
-    "startOfWeekDesc": "اليوم الأول في الأسبوع",
-    "confirmDelete": "تأكيد الحذف",
-    "areYouSureDelete": "هل تريد حذف",
-    "confirmDeleteType": "تأكيد حذف النوع",
-    "areYouSureDeleteType": "هل تريد حذف النوع",
-    "deleteTypeWarning": "سيتم حذف جميع العناصر المرتبطة بهذا النوع أيضاً.",
-    "noTasksTitle": "لا توجد مهام",
-    "noTasksDesc": "لا توجد عناصر لهذا اليوم. انقر على إضافة لإنشاء واحد.",
-    "selectDayTitle": "اختر يوماً",
-    "selectDayDesc": "انقر على أي يوم في التقويم لعرض مهامه وتفاصيله.",
-    "everyXDays": "كل عدد من الأيام",
-    "everyXDaysLabel": "كل {count} يوم",
-    "none": "بدون تكرار",
-    "daily": "يومياً",
-    "weekly": "أسبوعياً",
-    "monthly": "شهرياً",
-    "custom": "مخصص",
-    "recurrenceLabels": {
-      "daily": "يومياً",
-      "weekly": "أسبوعياً",
-      "monthly": "شهرياً",
-      "custom": "مخصص"
-    },
-    "types": {
-      "all": "الكل",
-      "habit": "عادة",
-      "task": "مهمة",
-      "meeting": "اجتماع",
-      "reminder": "تذكير",
-      "billing": "فاتورة"
-    },
-    "colors": {
-      "red": "أحمر",
-      "blue": "أزرق",
-      "green": "أخضر",
-      "purple": "بنفسجي",
-      "orange": "برتقالي",
-      "indigo": "نيلي"
-    },
-    "icons": {
-      "target": "هدف",
-      "check": "تحقق",
-      "money": "مال",
-      "bell": "جرس",
-      "star": "نجمة",
-      "book": "كتاب",
-      "phone": "هاتف",
-      "music": "موسيقى",
-      "health": "صحة",
-      "email": "بريد",
-      "shopping": "تسوق",
-      "fitness": "رياضة",
-      "ideas": "أفكار",
-      "important": "مهم"
-    }
-  }, 
-	"todo": {
-		"folders": {
-			"inbox": "صندوق الوارد",
-			"today": "اليوم",
-			"starred": "المميزة",
-			"personal": "شخصي",
-			"work": "عمل",
-			"shopping": "تسوق"
-		},
-		"myFolders": "مجلداتي",
-		"addFolder": "إضافة مجلد",
-		"folderNamePlaceholder": "اسم المجلد...",
-		"pickColor": "اختر اللون",
+		"appName": "التقويم",
+		"january": "يناير",
+		"february": "فبراير",
+		"march": "مارس",
+		"april": "أبريل",
+		"may": "مايو",
+		"june": "يونيو",
+		"july": "يوليو",
+		"august": "أغسطس",
+		"september": "سبتمبر",
+		"october": "أكتوبر",
+		"november": "نوفمبر",
+		"december": "ديسمبر",
+		"sunday": "الأحد",
+		"monday": "الإثنين",
+		"tuesday": "الثلاثاء",
+		"wednesday": "الأربعاء",
+		"thursday": "الخميس",
+		"friday": "الجمعة",
+		"saturday": "السبت",
+		"am": "ص",
+		"pm": "م",
 		"add": "إضافة",
+		"save": "حفظ",
 		"cancel": "إلغاء",
-		"confirm": "تأكيد",
-		"done": "تم",
-		"active": "نشطة",
-		"completed": "مكتملة",
-		"noTasks": "لا توجد مهام",
-		"addFirstTask": "أضف أول مهمة لك للبدء",
-		"addTaskPlaceholder": "أضف مهمة جديدة...",
-		"attachImage": "إرفاق صورة",
-		"toAddTask": "لإضافة المهمة",
-		"toAddSubtask": "لإضافة مهمة فرعية",
-		"forNewLine": "لسطر جديد",
-		"taskDetails": "تفاصيل المهمة",
-		"deleteTask": "حذف المهمة",
-		"deleteTaskDescription": "هل أنت متأكد من حذف هذه المهمة؟ لا يمكن التراجع عن هذا الإجراء.",
-		"deleteFolder": "حذف المجلد",
-		"deleteFolderDescription": "سيتم نقل جميع المهام في هذا المجلد إلى صندوق الوارد. هل تريد المتابعة؟",
-		"status": {
-			"todo": "قيد الانتظار",
-			"inProgress": "قيد التنفيذ",
-			"completed": "مكتملة",
-			"cancelled": "ملغية"
+		"delete": "حذف",
+		"close": "إغلاق",
+		"more": "أكثر",
+		"of": "من",
+		"done": "منجز",
+		"optional": "اختياري",
+		"title": "العنوان",
+		"note": "ملاحظة",
+		"type": "النوع",
+		"recurrence": "التكرار",
+		"startDate": "تاريخ البداية",
+		"startTime": "وقت البداية",
+		"selectDays": "اختر الأيام",
+		"repeatEveryDays": "تكرار كل عدد من الأيام",
+		"enterTitle": "أدخل العنوان",
+		"addNote": "أضف ملاحظة...",
+		"addNewItem": "إضافة عنصر جديد",
+		"editItem": "تعديل العنصر",
+		"addNewType": "إضافة نوع جديد",
+		"manageTypes": "إدارة الأنواع",
+		"createNewType": "إنشاء نوع جديد",
+		"allTypes": "جميع الأنواع",
+		"typeName": "اسم النوع",
+		"selectIcon": "اختر أيقونة",
+		"selectColor": "اختر لوناً",
+		"settings": "الإعدادات",
+		"commitment": "الالتزام",
+		"navigate": "التنقل",
+		"filter": "تصفية",
+		"menu": "القائمة",
+		"soundOn": "الصوت مفعّل",
+		"soundOff": "الصوت معطّل",
+		"showWeekNumbers": "إظهار أرقام الأسابيع",
+		"showWeekNumbersDesc": "عرض رقم الأسبوع في بداية كل صف",
+		"highlightWeekend": "تمييز عطلة نهاية الأسبوع",
+		"highlightWeekendDesc": "إبراز أيام الجمعة والسبت بشكل مختلف",
+		"confirmBeforeDelete": "تأكيد قبل الحذف",
+		"confirmBeforeDeleteDesc": "طلب التأكيد قبل حذف أي عنصر",
+		"startOfWeek": "بداية الأسبوع",
+		"startOfWeekDesc": "اليوم الأول في الأسبوع",
+		"confirmDelete": "تأكيد الحذف",
+		"areYouSureDelete": "هل تريد حذف",
+		"confirmDeleteType": "تأكيد حذف النوع",
+		"areYouSureDeleteType": "هل تريد حذف النوع",
+		"deleteTypeWarning": "سيتم حذف جميع العناصر المرتبطة بهذا النوع أيضاً.",
+		"noTasksTitle": "لا توجد مهام",
+		"noTasksDesc": "لا توجد عناصر لهذا اليوم. انقر على إضافة لإنشاء واحد.",
+		"selectDayTitle": "اختر يوماً",
+		"selectDayDesc": "انقر على أي يوم في التقويم لعرض مهامه وتفاصيله.",
+		"everyXDays": "كل عدد من الأيام",
+		"everyXDaysLabel": "كل {count} يوم",
+		"none": "بدون تكرار",
+		"daily": "يومياً",
+		"weekly": "أسبوعياً",
+		"monthly": "شهرياً",
+		"custom": "مخصص",
+		"recurrenceLabels": {
+			"daily": "يومياً",
+			"weekly": "أسبوعياً",
+			"monthly": "شهرياً",
+			"custom": "مخصص"
 		},
-		"priorities": {
+		"types": {
 			"all": "الكل",
-			"none": "بدون",
-			"low": "منخفضة",
-			"medium": "متوسطة",
-			"high": "عالية",
-			"urgent": "عاجلة"
+			"habit": "عادة",
+			"task": "مهمة",
+			"meeting": "اجتماع",
+			"reminder": "تذكير",
+			"billing": "فاتورة"
 		},
+		"colors": {
+			"red": "أحمر",
+			"blue": "أزرق",
+			"green": "أخضر",
+			"purple": "بنفسجي",
+			"orange": "برتقالي",
+			"indigo": "نيلي"
+		},
+		"icons": {
+			"target": "هدف",
+			"check": "تحقق",
+			"money": "مال",
+			"bell": "جرس",
+			"star": "نجمة",
+			"book": "كتاب",
+			"phone": "هاتف",
+			"music": "موسيقى",
+			"health": "صحة",
+			"email": "بريد",
+			"shopping": "تسوق",
+			"fitness": "رياضة",
+			"ideas": "أفكار",
+			"important": "مهم"
+		}
+	},
+	"todo": {
+		"todos": "المهام",
+		"title": "العنوان",
+		"notes": "ملاحظات",
+		"optional": "اختياري",
+		"status": {
+			"todo": "للتنفيذ",
+			"inProgress": "قيد التنفيذ",
+			"completed": "مكتمل",
+			"cancelled": "ملغى"
+		},
+		"priority": "الأولوية",
 		"repeat": {
-			"none": "بدون",
+			"none": "بدون تكرار",
 			"daily": "يومياً",
 			"every2days": "كل يومين",
 			"every3days": "كل 3 أيام",
@@ -312,30 +279,69 @@
 			"monthly": "شهرياً",
 			"custom": "مخصص"
 		},
-		"sort": {
-			"manual": "يدوي",
-			"dueDate": "تاريخ الاستحقاق",
-			"priority": "الأولوية",
-			"alphabetical": "أبجدي"
-		},
-		"addSubtask": "إضافة مهمة فرعية",
-		"subtaskPlaceholder": "عنوان المهمة الفرعية...",
-		"subtasks": "المهام الفرعية",
 		"dueDate": "تاريخ الاستحقاق",
-		"selectDate": "اختر التاريخ",
 		"time": "الوقت",
-		"selectTime": "اختر الوقت",
+		"selectDate": "اختر تاريخاً",
+		"selectTime": "اختر وقتاً",
+		"add": "إضافة",
+		"save": "حفظ",
+		"cancel": "إلغاء",
+		"done": "تم",
+		"confirm": "تأكيد",
+		"edit": "تعديل",
+		"addTask": "إضافة مهمة",
+		"editTask": "تعديل المهمة",
+		"addTaskPlaceholder": "ما الذي تحتاج إنجازه؟",
+		"noTasks": "لا توجد مهام",
+		"addFirstTask": "أضف مهمتك الأولى أعلاه",
+		"loading": "جارٍ التحميل...",
+		"active": "نشط",
+		"completed": "مكتمل",
+		"taskDetails": "تفاصيل المهمة",
+		"subtasks": "المهام الفرعية",
+		"subtaskPlaceholder": "إضافة مهمة فرعية...",
 		"attachments": "المرفقات",
-		"notes": "ملاحظات",
-		"notesPlaceholder": "أضف ملاحظاتك هنا...",
+		"notesPlaceholder": "إضافة ملاحظات...",
+		"moveToFolder": "نقل إلى مجلد",
+		"moveTo": "نقل إلى",
+		"noOtherFolders": "لا توجد مجلدات أخرى",
+		"addFolder": "إضافة مجلد",
+		"folderName": "اسم المجلد",
+		"folderNamePlaceholder": "اسم المجلد...",
+		"myFolders": "مجلداتي",
+		"pickColor": "اختر لوناً",
+		"deleteFolder": "حذف المجلد",
+		"deleteFolderDescription": "سيتم نقل جميع المهام الموجودة في هذا المجلد إلى صندوق الوارد. هذا الإجراء لا يمكن التراجع عنه.",
+		"uncheckAll": "إلغاء التحديد",
+		"recheckAll": "إعادة التحديد",
 		"settings": "الإعدادات",
 		"soundEffects": "المؤثرات الصوتية",
-		"soundEffectsDesc": "تشغيل الأصوات عند إتمام المهام",
-		"showCompleted": "إظهار المهام المكتملة",
-		"showCompletedDesc": "عرض المهام المكتملة في القوائم",
+		"soundEffectsDesc": "تشغيل أصوات عند إكمال المهام",
+		"showCompleted": "إظهار المكتملة",
+		"showCompletedDesc": "إظهار المهام المكتملة في القائمة",
 		"addTaskPosition": "موضع إضافة المهمة",
-		"addToTop": "إضافة للأعلى",
-		"addToBottom": "إضافة للأسفل"
+		"addToTop": "إضافة في الأعلى",
+		"addToBottom": "إضافة في الأسفل",
+		"folders": {
+			"inbox": "الوارد",
+			"today": "اليوم",
+			"starred": "المميزة"
+		},
+		"priorities": {
+			"all": "كل الأولويات",
+			"none": "بدون أولوية",
+			"low": "منخفضة",
+			"medium": "متوسطة",
+			"high": "عالية",
+			"urgent": "عاجلة"
+		},
+		"sort": {
+			"manual": "ترتيب يدوي",
+			"dueDate": "تاريخ الاستحقاق",
+			"time": "الوقت",
+			"priority": "الأولوية",
+			"alphabetical": "أبجدياً"
+		}
 	},
 	"board": {
 		"filters": {
@@ -2646,7 +2652,8 @@
 			"addExercises": "إضافة تمارين",
 			"removeDay": "حذف اليوم",
 			"savePlan": "حفظ الخطة",
-			"duplicateDay": "تكرار اليوم"
+			"duplicateDay": "تكرار اليوم",
+			"share": "مشاركة"
 		},
 		"errors": {
 			"loadExercises": "حدث خطأ أثناء تحميل التمارين.",
@@ -4163,52 +4170,45 @@
 		"copyFail": "تعذّر النسخ — انسخه يدويًا."
 	},
 	"audioHub": {
-		"audio": "الصوت",
-		"live": "مباشر",
-		"nowPlaying": "يعمل الآن",
-		"volume": "الصوت",
-		"quranStations": "محطات القرآن",
-		"playlist": "قائمة التشغيل",
-		"stationFallback": "محطة",
-		"stationTagFallback": "محطة",
-		"filterPlaceholder": "تصفية المحطات… (مثال: السديس)",
-		"filterAria": "تصفية المحطات",
-		"noStationsMatch": "لا توجد محطات مطابقة لبحثك.",
-		"tapToLoad": "اضغط لتحميل الفيديو",
-		"tapToLoadTitle": "اضغط لتحميل الفيديو",
-		"openInYouTube": "فتح في يوتيوب",
-		"noYouTubeLinksYet": "لا توجد روابط يوتيوب حتى الآن.",
-		"podcastTitle": "بودكاست {n}",
-		"tabs": {
-			"stations": "المحطات",
-			"podcasts": "البودكاست"
-		},
-		"actions": {
-			"play": "تشغيل",
-			"pause": "إيقاف مؤقت",
-			"mute": "كتم",
-			"unmute": "إلغاء الكتم",
-			"retry": "إعادة المحاولة",
-			"close": "إغلاق",
-			"hidePanelTitle": "إخفاء اللوحة (يستمر التشغيل)",
-			"showPanelTitle": "إظهار اللوحة",
-			"hidePanelAria": "إخفاء اللوحة",
-			"showPanelAria": "إظهار اللوحة"
-		},
-		"states": {
-			"loading": "جارٍ التحميل",
-			"buffering": "جارٍ التخزين المؤقت",
-			"ready": "جاهز",
-			"playing": "يعمل",
-			"idle": "متوقف",
-			"live": "مباشر"
-		},
-		"errors": {
-			"bufferTooLong": "يستغرق التحميل وقتًا طويلًا. جرّب مرة أخرى أو غيّر المحطة.",
-			"streamErrorTryAnother": "خطأ في البث. جرّب محطة أخرى.",
-			"autoplayBlocked": "تم منع التشغيل التلقائي. اضغط تشغيل مرة أخرى."
-		}
-	},
+    "audio": "الصوت",
+    "live": "مباشر",
+    "nowPlaying": "يتم التشغيل الآن",
+    "stationFallback": "اختر محطة",
+    "quranStations": "محطات القرآن",
+    "filterPlaceholder": "ابحث عن محطة...",
+    "filterAria": "تصفية المحطات",
+    "noStationsMatch": "لا توجد محطات مطابقة",
+    "tapToLoad": "اضغط لتحميل المقطع",
+    "openInYouTube": "افتح في يوتيوب",
+    "noYouTubeLinksYet": "لا توجد روابط يوتيوب بعد",
+    "playlist": "قائمة التشغيل",
+    "volume": "مستوى الصوت",
+    "podcastTitle": "البودكاست {n}",
+    "tabs": {
+      "stations": "المحطات",
+      "podcasts": "البودكاست"
+    },
+    "states": {
+      "live": "على الهواء",
+      "connected": "متصل الآن",
+      "buffering": "جارٍ التخزين المؤقت...",
+      "ready": "جاهز"
+    },
+    "actions": {
+      "mute": "كتم الصوت",
+      "unmute": "إلغاء كتم الصوت",
+      "retry": "إعادة المحاولة",
+      "showPanelTitle": "إظهار اللوحة",
+      "hidePanelTitle": "إخفاء اللوحة",
+      "close": "إغلاق"
+    },
+    "errors": {
+      "stream-dead": "انقطع البث. حاول إعادة التشغيل.",
+      "load-failed": "فشل تحميل البث. حاول مرة أخرى.",
+      "stream-error": "حدث خطأ في البث. جرّب محطة أخرى.",
+      "streamErrorTryAnother": "حدث خطأ في البث. جرّب محطة أخرى."
+    }
+  },
 	"mobile": {
 		"desktop_required_title": "يتطلب جهاز كمبيوتر",
 		"desktop_required_message": "هذا النموذج متاح فقط على أجهزة الكمبيوتر لحسابات المشرفين والمدربين، لأن واجهة لوحة التحكم غير مهيأة للاستخدام على الهاتف المحمول.",
@@ -4590,24 +4590,19 @@
 		}
 	},
 	"restTimer": {
-		"ariaLabel": "مؤقت الراحة",
-		"stopTimer": "إيقاف المؤقت",
-		"configureTimer": "إعداد المؤقت",
-		"stopAlert": "إيقاف صوت التنبيه",
-		"adjustTime": "{seconds} ثانية",
-		"status": {
-			"ready": "مؤقت الراحة",
-			"running": "قيد التشغيل",
-			"paused": "متوقف مؤقتاً"
-		},
-		"actions": {
-			"start": "ابدأ",
-			"pause": "إيقاف مؤقت",
-			"resume": "استئناف",
-			"stop": "إيقاف",
-			"reset": "إعادة تعيين للافتراضي"
-		}
-	},
+    "stopAlert": "إيقاف التنبيه",
+    "warning": "اقترب الوقت!",
+    "states": {
+      "paused": "متوقف مؤقتًا",
+      "running": "استراحة"
+    },
+    "actions": {
+      "start": "ابدأ",
+      "pause": "إيقاف مؤقت",
+      "resume": "استئناف",
+      "reset": "إعادة ضبط"
+    }
+  },
 	"cardioTimer": {
 		"ariaLabel": "مؤقت الكارديو",
 		"stopTimer": "إيقاف المؤقت",
@@ -4676,11 +4671,11 @@
 		"hours": "س",
 		"minutes": "د",
 		"streak": "الالتزام",
-    "milestone": {
-      "day": "يوم كامل! 🎉",
-      "week": "أسبوع كامل! 🏆",
-      "month": "شهر كامل! 🌟"
-    },
+		"milestone": {
+			"day": "يوم كامل! 🎉",
+			"week": "أسبوع كامل! 🏆",
+			"month": "شهر كامل! 🌟"
+		},
 		"dialog": {
 			"title": "ابدأ الالتزام",
 			"subtitle": "اختر متى تبدأ التتبع",
@@ -4834,199 +4829,173 @@
 		"pages_suffix": "صفحة",
 		"rows_label": "صف",
 		"page_size_label": "عدد الصفوف في الصفحة"
-	},
-	"recipesPage": {
-		"loading": "جاري تحميل الوصفات...",
-		"page": {
-			"title": "الوصفات",
-			"desc": "إدارة الوصفات وربطها مع النظام"
-		},
-		"tabs": {
-			"all": "الكل"
-		},
-		"stats": {
-			"totalRecipes": "إجمالي الوصفات",
-			"shownOnPage": "المعروض في الصفحة",
-			"avgCalories": "متوسط السعرات"
-		},
-		"filters": {
-			"category": "التصنيف"
-		},
-		"categories": {
-			"breakfast": "فطور",
-			"lunch": "غداء",
-			"dinner": "عشاء",
-			"snack": "سناك"
-		},
-		"search": {
-			"placeholder": "ابحث عن وصفة...",
-			"results": "نتيجة",
-			"results_plural": "نتائج"
-		},
-		"empty": {
-			"title": "لا توجد وصفات",
-			"desc": "ابدأ بإضافة أول وصفة",
-			"addFirst": "إضافة أول وصفة"
-		},
-		"addButton": "إضافة وصفة",
-		"card": {
-			"satiety": "الشبع",
-			"nutrition": "القيم الغذائية",
-			"calories": "السعرات",
-			"carbs": "كربوهيدرات",
-			"protein": "بروتين",
-			"fat": "دهون",
-			"ingredients": "المكونات",
-			"creamIngredients": "مكونات الكريمة",
-			"sauceIngredients": "مكونات الصوص",
-			"directions": "الخطوات",
-			"watchVideo": "مشاهدة الفيديو",
-			"viewFull": "عرض التفاصيل",
-			"hideFull": "إخفاء التفاصيل",
-			"edit": "تعديل",
-			"delete": "حذف"
-		},
-		"slidePanel": {
-			"addTitle": "إضافة وصفة",
-			"editTitle": "تعديل وصفة",
-			"fromCookbook": "من كتاب الوصفات",
-			"changePhoto": "تغيير الصورة",
-			"uploadPhoto": "رفع صورة",
-			"photoFormats": "PNG, JPG, WEBP",
-			"cancel": "إلغاء",
-			"add": "إضافة",
-			"save": "حفظ",
-			"saving": "جاري الحفظ...",
-			"macroPreview": "معاينة الماكروز",
-			"sections": {
-				"info": "معلومات الوصفة",
-				"nutrition": "القيم الغذائية",
-				"ingredients": "المكونات",
-				"creamIngredients": "مكونات الكريمة",
-				"sauceIngredients": "مكونات الصوص",
-				"directions": "الخطوات",
-				"tips": "نصائح",
-				"video": "الفيديو"
-			},
-			"fields": {
-				"recipeName": "اسم الوصفة",
-				"category": "الوجبة",
-				"satiety": "مؤشر الشبع",
-				"calories": "السعرات",
-				"protein": "البروتين",
-				"carbs": "الكربوهيدرات",
-				"fat": "الدهون",
-				"kcal": "سعرة",
-				"grams": "جم",
-				"ingredientPlaceholder": "اكتب مكونًا",
-				"stepPlaceholder": "اكتب خطوة التحضير",
-				"tipsPlaceholder": "اكتب النصائح، كل سطر نصيحة",
-				"videoPlaceholder": "رابط الفيديو"
-			},
-			"satietyOptions": {
-				"low": "منخفض",
-				"medium": "متوسط",
-				"high": "مرتفع"
-			}
-		}
-	},
+	}, 
 	"money": {
-    "appTitle": "ملخص فلوسي",
-    "appDesc": "تتبع دخلك ومصاريفك والتزاماتك بذكاء",
-    "tab_preview": "الشهور",
-    "tab_income": "الدخل",
-    "tab_expenses": "المصروفات",
-    "tab_commits": "الالتزامات",
-    "tab_zakat": "الزكاة",
-    "months": [
-      "يناير",
-      "فبراير",
-      "مارس",
-      "أبريل",
-      "مايو",
-      "يونيو",
-      "يوليو",
-      "أغسطس",
-      "سبتمبر",
-      "أكتوبر",
-      "نوفمبر",
-      "ديسمبر"
-    ],
-    "stat_balance": "الرصيد",
-    "stat_income": "الدخل",
-    "stat_expenses": "المصروفات",
-    "stat_net": "الصافي",
-    "monthly_comparison": "مقارنة شهرية",
-    "total_income": "الدخل",
-    "total_expenses": "المصروف",
-    "net": "الصافي",
-    "saving_rate": "معدل الادخار",
-    "best_month": "أفضل شهر",
-    "no_data": "لا توجد بيانات لهذا الشهر",
-    "avg_income": "متوسط الدخل",
-    "avg_expenses": "متوسط المصروف",
-    "total_all_income": "إجمالي الدخل",
-    "total_all_expenses": "إجمالي المصروف",
-    "income_title": "إجمالي الدخل",
-    "expenses_title": "إجمالي المصروفات",
-    "currency": "جنيه",
-    "commit_pending": "مستحق",
-    "commit_paid": "مدفوع",
-    "all": "الكل",
-    "commit_type_fixed": "التزام ثابت",
-    "commit_type_sub": "اشتراك",
-    "commit_type_jamia": "جمعية",
-    "priority_high": "عالي",
-    "priority_medium": "متوسط",
-    "priority_low": "منخفض",
-    "jamia_start_month": "شهر البداية",
-    "jamia_end_month": "شهر النهاية",
-    "jamia_collect_month": "شهر القبض",
-    "add_title": "إضافة عملية جديدة",
-    "add_desc": "سجّل دخلك ومصاريفك",
-    "op_type": "نوع العملية",
-    "commit_subtype": "نوع الالتزام",
-    "details": "التفاصيل",
-    "source_placeholder": "اسم الجهة / الشركة",
-    "desc_placeholder": "وصف العملية",
-    "zakat_placeholder": "مستفيد الزكاة / الصدقة",
-    "amount_placeholder": "المبلغ (جنيه)",
-    "date_placeholder": "التاريخ",
-    "cancel": "إلغاء",
-    "save": "حفظ العملية",
-    "recurrence": "التكرار",
-    "repeat_never": "لا تتكرر",
-    "repeat_weekly": "أسبوعياً",
-    "repeat_monthly": "شهرياً",
-    "repeat_every_x": "كل عدة أشهر",
-    "repeat_every_x_months": "كل كم شهر؟",
-    "zakat_calc_title": "حساب الزكاة",
-    "zakat_info": "💡 زكاة المال 2.5% على المال الذي بلغ النصاب وحال عليه الحول. اختر الأساس المناسب لحسابك.",
-    "zakat_base_net": "الصافي",
-    "zakat_base_total": "الإجمالي",
-    "zakat_base_custom": "مخصص",
-    "zakat_rate": "نسبة الزكاة",
-    "zakat_due": "المطلوب",
-    "zakat_paid": "مُخرَج",
-    "zakat_remaining": "متبقي",
-    "zakat_done": "تم إخراجه",
-    "zakat_complete_msg": "✅ تم إخراج الزكاة كاملاً — جزاك الله خيراً",
-    "charity_log": "سجل الصدقات والزكاة",
-    "charity_total": "إجمالي ما أُخرج",
-    "nisab_note": "النصاب = 85 جرام ذهب ≈ 250,000 جنيه",
-    "above_nisab": "بلغ النصاب ✓",
-    "below_nisab": "لم يبلغ النصاب بعد",
-    "notif_title": "التنبيهات",
-    "notif_active": "تنبيهات نشطة",
-    "filter_title": "خيارات التصفية",
-    "filter_active": "نشط",
-    "filter_reset": "مسح الكل",
-    "filter_apply": "تطبيق الفلتر",
-    "filter_type": "نوع العملية",
-    "filter_income": "دخل",
-    "filter_expense": "مصروف",
-    "filter_commitment": "التزام",
-    "filter_zakat_label": "زكاة"
+    "common": {
+      "add": "إضافة",
+      "save": "حفظ",
+      "saving": "جارٍ الحفظ...",
+      "cancel": "إلغاء",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "deleteConfirm": "هل أنت متأكد من الحذف؟",
+      "loading": "جارٍ التحميل...",
+      "currency": "ج.م"
+    },
+    "header": {
+      "title": "إدارة الأموال",
+      "subtitle": "تابع دخلك ومصروفاتك والتزاماتك بسهولة"
+    },
+    "tabs": {
+      "income": "الدخل",
+      "expenses": "المصروفات",
+      "commitments": "الالتزامات",
+      "zakat": "الزكاة",
+      "expected": "المتوقع"
+    },
+    "stats": {
+      "balance": "الرصيد",
+      "income": "الدخل",
+      "expenses": "المصروفات",
+      "commitments": "الالتزامات",
+      "remaining": "المتبقي"
+    },
+    "months": {
+      "spendRate": "معدل الصرف",
+      "healthy": "معدل الصرف ممتاز",
+      "moderate": "معدل الصرف متوسط",
+      "high": "معدل الصرف مرتفع"
+    },
+    "forecast": {
+      "title": "التوقعات المالية",
+      "button": "التوقعات",
+      "from": "من",
+      "to": "إلى",
+      "oneMonth": "شهر",
+      "threeMonths": "3 أشهر",
+      "sixMonths": "6 أشهر",
+      "oneYear": "سنة",
+      "income": "الدخل المتوقع",
+      "expenses": "المصروفات المتوقعة",
+      "commitments": "الالتزامات المتوقعة",
+      "expected": "المبالغ المنتظرة",
+      "netBalance": "صافي الرصيد",
+      "spendRate": "معدل الصرف"
+    },
+    "form": {
+      "addTitle": "إضافة عنصر جديد",
+      "editTitle": "تعديل العنصر",
+      "types": {
+        "income": "دخل",
+        "expense": "مصروف",
+        "commitment": "التزام",
+        "zakat": "زكاة"
+      },
+      "sections": {
+        "type": "النوع",
+        "commitmentType": "نوع الالتزام",
+        "details": "التفاصيل",
+        "recurrence": "التكرار",
+        "jamia": "بيانات الجمعية"
+      },
+      "commitmentTypes": {
+        "fixed": "التزام",
+        "subscription": "اشتراك",
+        "jamia": "جمعية"
+      },
+      "recurrence": {
+        "monthly": "شهري",
+        "weekly": "أسبوعي",
+        "customMonths": "كل عدة أشهر"
+      },
+      "recurringQuestion": "هل هذا العنصر متكرر؟",
+      "placeholders": {
+        "source": "مصدر الدخل",
+        "description": "الوصف",
+        "zakatDescription": "وصف الزكاة",
+        "amount": "المبلغ",
+        "recurrenceEvery": "يتكرر كل كم شهر",
+        "jamiaStart": "تاريخ بداية الجمعية",
+        "jamiaEnd": "تاريخ نهاية الجمعية",
+        "jamiaMyMonth": "شهر استلامي"
+      }
+    },
+    "table": {
+      "source": "المصدر",
+      "description": "الوصف",
+      "amount": "المبلغ",
+      "date": "التاريخ",
+      "type": "النوع",
+      "oneTime": "مرة واحدة",
+      "name": "الاسم",
+      "dueDate": "تاريخ الاستحقاق",
+      "status": "الحالة"
+    },
+    "income": {
+      "total": "إجمالي الدخل"
+    },
+    "expenses": {
+      "total": "إجمالي المصروفات"
+    },
+    "commitments": {
+      "progress": "نسبة الإنجاز",
+      "pending": "المعلّق",
+      "paid": "المدفوع",
+      "markAsPaid": "تحديد كمدفوع",
+      "markedPaid": "تم الدفع",
+      "filters": {
+        "all": "الكل",
+        "fixed": "التزامات",
+        "subscription": "اشتراكات",
+        "jamia": "جمعيات"
+      }
+    },
+    "zakat": {
+      "title": "الزكاة",
+      "subtitle": "احسب وتتبع زكاتك بسهولة",
+      "reachedNisab": "بلغ النصاب",
+      "notReachedNisab": "لم يبلغ النصاب",
+      "due": "الزكاة الواجبة",
+      "paid": "المدفوع",
+      "remaining": "المتبقي",
+      "calculationBase": "أساس الحساب",
+      "baseNet": "الصافي",
+      "baseTotal": "الإجمالي",
+      "baseCustom": "مخصص",
+      "customBasePlaceholder": "أدخل المبلغ المخصص",
+      "percentage": "النسبة",
+      "logTitle": "سجل الزكاة"
+    },
+    "expected": {
+      "addTitle": "إضافة مبلغ متوقع",
+      "editTitle": "تعديل مبلغ متوقع",
+      "totalLabel": "إجمالي المتوقع",
+      "descLabel": "الوصف",
+      "descPlaceholder": "مثال: دفعة من عميل",
+      "amountLabel": "المبلغ",
+      "dateLabel": "التاريخ المتوقع",
+      "notesLabel": "ملاحظات",
+      "notesPlaceholder": "أي تفاصيل إضافية",
+      "emptyTitle": "لا توجد مبالغ متوقعة",
+      "emptySubtitle": "أضف أول مبلغ متوقع لتتبعه"
+    },
+    "notifications": {
+      "title": "الإشعارات",
+      "new": "جديد",
+      "empty": "لا توجد إشعارات"
+    },
+    "states": {
+      "noIncome": "لا يوجد دخل حتى الآن",
+      "noExpenses": "لا توجد مصروفات حتى الآن",
+      "noCommitments": "لا توجد التزامات حتى الآن",
+      "noZakat": "لا توجد سجلات زكاة",
+      "addFirst": "ابدأ بإضافة أول عنصر"
+    },
+    "recurrence": {
+      "monthly": "شهري",
+      "weekly": "أسبوعي",
+      "custom_months": "مخصص"
+    }
   },
 	"recipeLibrary": {
 		"loading": "جاري تحميل الوصفات...",
@@ -5094,5 +5063,88 @@
 			"title": "لا توجد وصفات",
 			"desc": "جرّب بحثًا مختلفًا أو امسح الفلاتر."
 		}
-	}
+	},
+
+
+	"table": {
+    "pagination": {
+      "showing": "عرض",
+      "of": "من",
+      "records": "سجل",
+      "perPage": "لكل صفحة",
+      "firstPage": "الصفحة الأولى",
+      "lastPage": "الصفحة الأخيرة",
+      "prevPage": "الصفحة السابقة",
+      "nextPage": "الصفحة التالية"
+    },
+    "toolbar": {
+      "search": "بحث...",
+      "filters": "الفلاتر",
+      "apply": "تطبيق",
+      "reset": "إعادة تعيين"
+    },
+    "empty": {
+      "title": "لا توجد نتائج",
+      "subtitle": "حاول تعديل البحث أو الفلاتر"
+    },
+    "image": {
+      "preview": "معاينة الصورة"
+    }
+  },
+ 
+	"recipesPage": {
+    "page": {
+      "title": "وصفاتي",
+      "desc": "مكتبتك الغذائية الشخصية"
+    },
+    "featured": "وصفة مميزة",
+    "tabs": {
+      "all": "الكل"
+    },
+    "mealTypes": {
+      "savory_breakfast": "فطور مالح",
+      "breakfast": "فطور",
+      "lunch": "غداء",
+      "dinner": "عشاء",
+      "snack": "وجبة خفيفة",
+      "sweet": "حلويات",
+      "salad": "سلطة",
+      "soup": "شوربة",
+      "drink": "مشروب",
+      "dessert": "ديسرت"
+    },
+    "satiety": {
+      "label": "مستوى الشبع",
+      "low": "منخفض",
+      "medium": "متوسط",
+      "high": "مرتفع"
+    },
+    "stats": {
+      "totalRecipes": "إجمالي الوصفات",
+      "shownOnPage": "معروض الآن",
+      "avgCalories": "متوسط السعرات"
+    },
+    "search": {
+      "placeholder": "ابحث عن وصفة..."
+    },
+    "table": {
+      "filters": "فلتر",
+      "reset": "مسح الفلاتر",
+      "emptyTitle": "لا توجد وصفات",
+      "emptySubtitle": "جرّب تغيير البحث أو الفلاتر"
+    },
+    "card": {
+      "viewFull": "عرض الوصفة",
+      "watchVideo": "مشاهدة الفيديو",
+      "nutrition": "القيم الغذائية",
+      "calories": "سعرات حرارية",
+      "protein": "بروتين",
+      "carbs": "كربوهيدرات",
+      "fat": "دهون",
+      "ingredients": "المكونات الأساسية",
+      "creamIngredients": "مكونات الكريمة",
+      "sauceIngredients": "مكونات الصوص",
+      "directions": "طريقة التحضير"
+    }
+  }
 }

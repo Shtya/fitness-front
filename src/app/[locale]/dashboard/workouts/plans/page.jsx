@@ -42,6 +42,7 @@ import Img from '@/components/atoms/Img';
 import { Link } from '@/i18n/navigation';
 import { NotesListInput } from '../../nutrition/page';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import ActionButtons from '@/components/atoms/Actions';
 
 const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
@@ -581,8 +582,53 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 						</div>
 
 						{/* Actions */}
-						<div className="flex items-center gap-1.5 shrink-0">
-							{/* Assign */}
+<ActionButtons
+	row={p}
+	actions={[
+		{
+			icon: <UsersIcon />,
+			tooltip: t('actions.assign'),
+			variant: 'blue',
+			onClick: row => onAssign?.(row),
+		},
+		{
+			icon: <Share2 />,
+			tooltip: t('actions.share', { default: 'Share' }),
+			variant: 'emerald',
+			onClick: row => window.open(`/workouts/plans/${row.id}`, '_blank', 'noopener,noreferrer'),
+		},
+		{
+			icon: duplicatingIds?.has(p.id) ? <Loader2 className="animate-spin" /> : <Layers />,
+			tooltip: t('actions.duplicate', { default: 'Duplicate' }),
+			variant: 'purple',
+			disabled: duplicatingIds?.has(p.id),
+			onClick: row => onDuplicate?.(row),
+		},
+		{
+			icon: <Eye />,
+			tooltip: t('actions.preview'),
+			variant: 'slate',
+			onClick: row => onPreview?.(row),
+		},
+		{
+			icon: <PencilLine />,
+			tooltip: t('actions.edit'),
+			variant: 'amber',
+			hidden: p?.adminId == null,
+			onClick: row => onEdit?.(row),
+		},
+		{
+			icon: <Trash2 />,
+			tooltip: t('actions.delete'),
+			variant: 'red',
+			hidden: p?.adminId == null,
+			onClick: row => onDelete?.(row.id),
+		},
+	]}
+/>
+
+						{/* Actions */}
+						{/* <div className="flex items-center gap-1.5 shrink-0">
 							<button
 								type="button"
 								onClick={() => onAssign?.(p)}
@@ -595,7 +641,6 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 
 							<div className="w-px h-5 bg-slate-100 mx-0.5" />
 
-							{/* Share */}
 							<Link
 								href={`/workouts/plans/${p.id}`}
 								target="_blank"
@@ -606,7 +651,6 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 								<Share2 className="h-3.5 w-3.5" />
 							</Link>
 
-							{/* Duplicate */}
 							<button
 								type="button"
 								title={t('actions.duplicate', { default: 'Duplicate' })}
@@ -621,7 +665,6 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 								{duplicatingIds?.has(p.id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Layers className="h-3.5 w-3.5" />}
 							</button>
 
-							{/* Preview */}
 							<button
 								type="button"
 								title={t('actions.preview')}
@@ -652,7 +695,7 @@ export const ListView = memo(function ListView({ loading, items = [], onPreview,
 									<Trash2 className="h-3.5 w-3.5" />
 								</button>
 							)}
-						</div>
+						</div> */}
 					</motion.div>
 				);
 			})}

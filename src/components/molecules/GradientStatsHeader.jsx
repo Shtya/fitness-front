@@ -393,15 +393,15 @@ export function GradientStatsHeader({
 			<div className='relative z-10 px-6 pt-7 sm:px-8 lg:px-10'>
 
 				{/* ── Top row: icon + title | actions ── */}
-				<div className={`flex flex-wrap items-start justify-between gap-5 ${innerCn}`}>
+				<div className={`flex max-md:flex-col flex-wrap items-start justify-between gap-5 ${innerCn}`}>
 
 					{/* Left — icon + title/desc */}
-					<div className='flex min-w-0 flex-1 items-center gap-5'>
+					<div className='flex  flex-1 items-center gap-5'>
 						{Icon && (
 							<motion.div
 								whileHover={{ scale: 1.08, rotate: 6 }}
 								transition={sp}
-								className='relative grid shrink-0 place-content-center rounded-2xl border border-white/[0.26] bg-white/[0.16] backdrop-blur-xl shadow-[0_6px_28px_rgba(0,0,0,.28),0_1px_0_rgba(255,255,255,.2)_inset]'
+								className=' max-md:!w-[40px] max-md:!h-[40px] relative grid shrink-0 place-content-center rounded-2xl border border-white/[0.26] bg-white/[0.16] backdrop-blur-xl shadow-[0_6px_28px_rgba(0,0,0,.28),0_1px_0_rgba(255,255,255,.2)_inset]'
 								style={{ width: 64, height: 64, animation: 'float-icon 4.2s ease-in-out infinite' }}>
 								{/* Pulsing ring */}
 								<div className='absolute -inset-2 rounded-[22px] border border-white/20'
@@ -414,7 +414,7 @@ export function GradientStatsHeader({
 						<div className='min-w-0 flex-1'>
 							<motion.h1
 								initial={{ opacity: 0, x: -18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.07, ...sm }}
-								className='mb-1.5 flex items-center gap-2.5 text-[clamp(1.5rem,3vw,2.2rem)] font-black leading-tight tracking-tight text-white'
+								className='mb-1.5 flex items-center gap-2.5 max-md:text-base text-[clamp(1.5rem,3vw,2.2rem)] font-black leading-tight tracking-tight text-white'
 								style={{ textShadow: '0 1px 12px rgba(0,0,0,0.12)' }}>
 								{title}
 								<motion.span
@@ -439,8 +439,7 @@ export function GradientStatsHeader({
 					<div className='flex flex-wrap items-center gap-2.5'>
 						{someThing}
 						{actions}
-
-						{/* Filter button */}
+ 
 						{filters.length > 0 && (
 							<div ref={filterBtnRef} className='relative'>
 								<motion.button
@@ -534,7 +533,13 @@ export function GradientStatsHeader({
 
 
 									{stats.length > 0 && (
-										<div className={['grid gap-3', 'grid-cols-2 sm:grid-cols-4', hiddenStats ? 'max-md:hidden' : ''].join(' ')}>
+										<div
+											className={[
+												'grid gap-3',
+												'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4',
+												hiddenStats ? 'max-md:hidden' : '',
+											].join(' ')}
+										>
 											{loadingStats
 												? <KpiSkeleton count={stats.length} />
 												: stats.map((s, i) => {
@@ -542,28 +547,78 @@ export function GradientStatsHeader({
 													return (
 														<motion.div
 															key={s.label ?? i}
-															initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-															transition={{ delay: 0.1 + i * 0.07 }}
-															className='gsh-kpi relative overflow-hidden cursor-default rounded-2xl border border-white/[0.12] bg-white/[0.09] shadow-[0_4px_20px_rgba(0,0,0,.18)] backdrop-blur-xl'>
+															initial={{ opacity: 0, y: 16 }}
+															animate={{ opacity: 1, y: 0 }}
+															transition={{
+																delay: 0.1 + i * 0.07,
+																duration: 0.45,
+																ease: [0.16, 1, 0.3, 1],
+															}}
+															whileHover={{ y: -3 }}
+															className='group relative cursor-default overflow-hidden'
+															style={{
+																borderRadius: 18,
+																background: 'rgba(255,255,255,0.13)',
+																backdropFilter: 'blur(12px)',
+																WebkitBackdropFilter: 'blur(12px)',
+																boxShadow: '0 2px 12px -2px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.2)',
+																transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+															}}
+														>
+															{/* Hover shimmer */}
+															<div
+																className='absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100'
+																style={{
+																	background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%)',
+																	borderRadius: 18,
+																}}
+															/>
 
-															{/* Top stripe */}
-															<div className='absolute left-0 right-0 top-0 h-[3px] rounded-t-2xl'
-																style={{ background: 'linear-gradient(90deg,rgba(165,180,252,.8),rgba(192,132,252,.9))' }} />
-
-															{/* Left bar */}
-															<div className='absolute left-0 top-4 bottom-4 w-0.5 rounded-full opacity-40'
-																style={{ background: 'rgba(255,255,255,0.6)' }} />
+															{/* Left accent bar */}
+															<div
+																className='absolute left-0 top-4 bottom-4 w-0.5 rounded-full opacity-40 transition-opacity group-hover:opacity-70'
+																style={{ background: 'rgba(255,255,255,0.6)' }}
+															/>
 
 															<div className='relative px-4 py-4'>
 																<div className='flex items-start justify-between gap-2'>
-																	<p className='text-[9px] font-black uppercase tracking-[0.14em] leading-tight text-white/[0.55]'>{s.label}</p>
-																	{SIcon && <SIcon className='h-4 w-4 shrink-0 text-white/[0.45]' />}
+																	<p
+																		className='text-[9px] font-black uppercase leading-tight tracking-[0.14em]'
+																		style={{ color: 'rgba(255,255,255,0.6)' }}
+																	>
+																		{s.label}
+																	</p>
+
+																	{SIcon && (
+																		<SIcon
+																			className='h-4 w-4 shrink-0 transition-all duration-200 group-hover:scale-110'
+																			style={{ color: 'rgba(255,255,255,0.45)' }}
+																		/>
+																	)}
 																</div>
-																<p className='mt-2.5 text-[23px] font-black leading-none tracking-tight text-white'>{s.value}</p>
-																{s.sub && <p className='mt-1.5 text-[10px] font-medium text-white/50'>{s.sub}</p>}
+
+																<p className='mt-2.5 text-2xl font-black leading-none tracking-tight text-white'>
+																	{s.value}
+																</p>
+
+																{s.sub && (
+																	<p
+																		className='mt-1.5 text-[10px] font-medium'
+																		style={{ color: 'rgba(255,255,255,0.5)' }}
+																	>
+																		{s.sub}
+																	</p>
+																)}
+
 																{s.change !== undefined && (
-																	<span className='mt-2 inline-flex items-center gap-1 text-[10px] font-bold rounded-lg px-2 py-0.5'
-																		style={{ background: s.change >= 0 ? 'rgba(5,150,105,0.25)' : 'rgba(220,38,38,0.25)', color: 'white' }}>
+																	<span
+																		className='mt-2 inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold text-white'
+																		style={{
+																			background: s.change >= 0
+																				? 'rgba(5,150,105,0.22)'
+																				: 'rgba(220,38,38,0.22)',
+																		}}
+																	>
 																		{s.change >= 0
 																			? <ArrowUpRight className='h-3 w-3' />
 																			: <ArrowDownRight className='h-3 w-3' />}
@@ -571,9 +626,6 @@ export function GradientStatsHeader({
 																	</span>
 																)}
 															</div>
-
-															{/* Bottom edge */}
-															<div className='absolute bottom-0 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-white/10 to-transparent' />
 														</motion.div>
 													);
 												})

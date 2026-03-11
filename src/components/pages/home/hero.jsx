@@ -430,7 +430,7 @@ export default function ResponsiveHero() {
 
       <section
         className="relative min-h-screen overflow-hidden flex flex-col pt-20
-          bg-gradient-to-br from-[#070711] via-[#0d0d1a] to-[#090913]"
+          "
         style={{ direction: isRTL ? "rtl" : "ltr" }}
       >
         {/* Orb 1 */}
@@ -449,11 +449,7 @@ export default function ResponsiveHero() {
             w-[250px] h-[250px] sm:w-[400px] sm:h-[400px] rounded-full pointer-events-none z-0 blur-[70px]
             bg-[radial-gradient(circle,var(--color-secondary-500)_0%,transparent_70%)]`}
         />
-        {/* Grid pattern */}
-        <div className="absolute inset-0 z-0 pointer-events-none
-          bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)]
-          bg-[size:80px_80px]
-          [mask-image:radial-gradient(ellipse_at_50%_50%,black_20%,transparent_80%)]" />
+        
 
         {/* ── Content ── */}
         <div className="relative z-[1] w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-16 py-8 pb-16 sm:pb-20 flex-1 flex items-center">
