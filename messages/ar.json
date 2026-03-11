@@ -1718,119 +1718,120 @@
 		"year": "سنه"
 	},
 	"weekly": {
-		"title": "تقرير الأسبوع",
-		"subtitle": "املأ تقرير تقدمك الأسبوعي بالتفاصيل عشان الكوتش يقدر يتابعك بشكل أدق.",
-		"errors": {
-			"required": "هذا الحقل مطلوب",
-			"unknown": "حدث خطأ غير متوقع، حاول مرة أخرى."
-		},
-		"weekOf": "أسبوع بتاريخ",
-		"cardioAdherence": "التزامك بالكارديو",
-		"diet": {
-			"title": "التغذية",
-			"hungry": "هل تشعر بالجوع خلال اليوم؟",
-			"comfort": "هل أنت مرتاح نفسيًا مع النظام الغذائي؟",
-			"wantSpecific": {
-				"title": "هل في أكل معيّن حابب تضيفه في نظامك؟",
-				"ph": "اكتب هنا أي طلبات خاصة بخصوص الأكل..."
-			},
-			"tooMuch": "هل تشعر أن كمية الأكل في النظام كبيرة عليك؟",
-			"deviation": {
-				"title": "هل خرجت عن النظام الغذائي هذا الأسبوع؟",
-				"times": "كم مرة خرجت عن النظام؟",
-				"details": "صف بإيجاز ماذا أكلت خارج النظام.",
-				"ph": "مثال: أكلت بيتزا يوم الجمعة، شوكولاتة يوم الثلاثاء..."
-			}
-		},
-		"training": {
-			"title": "التمرين والنشاط",
-			"intensityOk": "هل شدة التمرين مناسبة لك؟",
-			"daysDeviation": "هل فاتتك أيام من التمرين هذا الأسبوع؟",
-			"deviation": {
-				"count": "كم يوم فاتك من التمرين؟",
-				"reason": "اشرح باختصار سبب عدم الالتزام بالتمرين."
-			},
-			"shape": "هل تشعر أن شكل جسمك بدأ يتغيّر؟",
-			"fitness": "هل لياقتك تحسّنت؟",
-			"sleepEnough": "هل ساعات نومك كافية؟",
-			"sleepHours": "كم ساعة تنام في اليوم تقريباً؟",
-			"notes": {
-				"title": "ملاحظات إضافية عن التمرين",
-				"ph": "اكتب هنا أي ملاحظات أو مشاكل في التمرين أو المعدات..."
-			}
-		},
-		"measurements": {
-			"title": "القياسات",
-			"addNew": "إضافة قياسات جديدة",
-			"hideAdd": "إخفاء نموذج إضافة القياسات",
-			"pick": "اختيار من القياسات السابقة",
-			"date": "تاريخ القياس",
-			"weight": "الوزن (كجم)",
-			"waist": "محيط الخصر (سم)",
-			"chest": "محيط الصدر (سم)",
-			"chestShort": "الصدر",
-			"hips": "محيط الحوض (سم)",
-			"arms": "محيط الذراع (سم)",
-			"thighs": "محيط الفخذ (سم)",
-			"save": "حفظ القياسات"
-		},
-		"photos": {
-			"title": "صور التقدم",
-			"addNew": "إضافة مجموعة صور جديدة",
-			"hideAdd": "إخفاء نموذج إضافة الصور",
-			"pickSet": "اختيار مجموعة صور سابقة",
-			"pickFromHistory": {
-				"btn": "الاختيار من سجل الصور",
-				"title": "اختيار صور من الصور السابقة",
-				"empty": "لا يوجد صور محفوظة حتى الآن."
-			},
-			"front": "صورة أمامية",
-			"back": "صورة خلفية",
-			"right": "صورة من اليمين",
-			"left": "صورة من اليسار",
-			"upload": "رفع صورة",
-			"date": "تاريخ التقاط الصور",
-			"weight": "الوزن وقت الصورة (اختياري)",
-			"note": "ملاحظات عن الصور (اختياري)",
-			"uploadSet": "رفع مجموعة الصور",
-			"errors": {
-				"noFiles": "يرجى اختيار صورة واحدة على الأقل قبل الرفع.",
-				"dateRequired": "يجب إدخال تاريخ لمجموعة الصور."
-			}
-		},
-		"actions": {
-			"close": "إغلاق"
-		},
-		"success": "تم إرسال تقرير الأسبوع بنجاح ✅",
-		"submit": {
-			"hint": "بعد ما تنتهي من تعبئة الحقول المهمة، اضغط إرسال لتأكيد تقرير الأسبوع.",
-			"sending": "جاري الإرسال...",
-			"cta": "إرسال التقرير"
-		},
-		"unreadFeedback": {
-			"loading": "جاري تحميل ملاحظات الكوتش غير المقروءة...",
-			"badge": "لديك {count} ملاحظة من الكوتش غير مقروءة"
-		},
-		"prevReports": {
-			"goTo": "عرض تقاريري السابقة",
-			"title": "تقاريري السابقة",
-			"loading": "جاري تحميل تقاريرك السابقة...",
-			"error": "لم نتمكن من تحميل التقارير السابقة، حاول مرة أخرى.",
-			"empty": "لا يوجد تقارير سابقة حتى الآن.",
-			"weekOf": "تقرير أسبوع",
-			"createdAt": "تاريخ إنشاء التقرير",
-			"noNote": "لا يوجد ملاحظة من الكوتش لهذا التقرير.",
-			"noteRead": "تمت قراءة ملاحظة الكوتش",
-			"noteUnread": "ملاحظة الكوتش غير مقروءة",
-			"viewNote": "عرض ملاحظة الكوتش",
-			"pagination": "صفحة {page}",
-			"prev": "السابق",
-			"next": "التالي",
-			"noteTitle": "ملاحظة الكوتش لتقرير أسبوع {week}",
-			"noteLabel": "نص ملاحظة الكوتش",
-			"markingRead": "جاري تعليم الملاحظة كمقروءة..."
-		}
-	},
+    "title": "التقرير الأسبوعي",
+    "subtitle": "شاركنا تقدمك هذا الأسبوع حتى يتمكن مدربك من متابعتك عن كثب",
+    "weekOf": "أسبوع",
+    "cardioAdherence": "الالتزام بالكارديو",
+    "unreadFeedback": {
+      "loading": "جارٍ التحميل...",
+      "badge": "لديك {count} ملاحظة غير مقروءة"
+    },
+    "diet": {
+      "title": "النظام الغذائي",
+      "hungry": "هل شعرت بالجوع خلال الأسبوع؟",
+      "comfort": "هل تناولت طعاماً بسبب الراحة النفسية؟",
+      "tooMuch": "هل شعرت أنك تناولت أكثر مما يجب؟",
+      "wantSpecific": {
+        "title": "هل تشتهي طعاماً معيناً؟",
+        "ph": "مثال: شوكولاتة، بيتزا..."
+      },
+      "deviation": {
+        "title": "هل حدث انحراف عن الحمية؟",
+        "times": "عدد المرات",
+        "details": "التفاصيل",
+        "ph": "صف ما حدث باختصار..."
+      }
+    },
+    "training": {
+      "title": "التدريب",
+      "intensityOk": "هل كانت شدة التدريب مناسبة؟",
+      "daysDeviation": "هل انحرفت عن أيام التدريب المقررة؟",
+      "shape": "هل لاحظت تحسناً في شكل جسمك؟",
+      "fitness": "هل لاحظت تحسناً في لياقتك البدنية؟",
+      "sleepEnough": "هل نمت ساعات كافية؟",
+      "sleepHours": "كم ساعة نمت تقريباً في اليوم؟",
+      "deviation": {
+        "count": "عدد أيام الانحراف",
+        "reason": "سبب الانحراف"
+      },
+      "notes": {
+        "title": "ملاحظات على البرنامج",
+        "ph": "أي ملاحظات أو تعليقات تريد مشاركتها مع مدربك..."
+      }
+    },
+    "measurements": {
+      "title": "القياسات",
+      "pick": "اختر قياساً محفوظاً",
+      "addNew": "إضافة قياس جديد",
+      "hideAdd": "إخفاء النموذج",
+      "save": "حفظ القياس",
+      "date": "تاريخ القياس",
+      "weight": "الوزن (كجم)",
+      "waist": "الخصر (سم)",
+      "chest": "الصدر (سم)",
+      "hips": "الأرداف (سم)",
+      "arms": "الذراعان (سم)",
+      "thighs": "الأفخاذ (سم)"
+    },
+    "photos": {
+      "title": "صور التقدم",
+      "pickSet": "اختر مجموعة صور محفوظة",
+      "addNew": "إضافة صور جديدة",
+      "hideAdd": "إخفاء النموذج",
+      "upload": "اضغط للرفع",
+      "uploadSet": "رفع المجموعة",
+      "front": "أمامي",
+      "back": "خلفي",
+      "left": "جانب أيسر",
+      "right": "جانب أيمن",
+      "date": "تاريخ الصور",
+      "weight": "الوزن عند الالتقاط (كجم)",
+      "note": "ملاحظة",
+      "pickFromHistory": {
+        "btn": "اختر من المكتبة",
+        "title": "اختر صور من السجل",
+        "empty": "لا توجد صور محفوظة بعد."
+      },
+      "errors": {
+        "noFiles": "يرجى إضافة صورة واحدة على الأقل.",
+        "dateRequired": "يرجى تحديد تاريخ الصور."
+      }
+    },
+    "submit": {
+      "hint": "اكتمال التقرير",
+      "fieldsComplete": "حقول مكتملة",
+      "cta": "إرسال التقرير",
+      "sending": "جارٍ الإرسال..."
+    },
+    "actions": {
+      "close": "إغلاق",
+      "confirm": "تأكيد"
+    },
+    "success": "تم إرسال التقرير بنجاح! سيتواصل معك مدربك قريباً.",
+    "errors": {
+      "required": "هذا الحقل مطلوب.",
+      "unknown": "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى."
+    },
+    "prevReports": {
+      "title": "التقارير السابقة",
+      "goTo": "التقارير السابقة",
+      "loading": "جارٍ تحميل التقارير...",
+      "error": "تعذّر تحميل التقارير. يرجى المحاولة لاحقاً.",
+      "empty": "لا توجد تقارير سابقة بعد.",
+      "weekOf": "أسبوع",
+      "createdAt": "تاريخ الإرسال",
+      "noteRead": "تمت القراءة",
+      "noteUnread": "ملاحظة جديدة",
+      "noNote": "لا توجد ملاحظة بعد",
+      "viewNote": "عرض الملاحظة",
+      "noteTitle": "ملاحظة المدرب — أسبوع {week}",
+      "noteLabel": "ملاحظة المدرب",
+      "markingRead": "جارٍ تحديد الملاحظة كمقروءة...",
+      "pagination": "الصفحة {page}",
+      "prev": "السابق",
+      "next": "التالي"
+    }
+  },
 	"chat": {
 		"search": {
 			"placeholder": "ابحث بالاسم أو البريد الإلكتروني...",
@@ -4065,6 +4066,13 @@
 		}
 	},
 	"my-nutrition": {
+		"sunday": "الأحد",
+		"monday": "الإثنين",
+		"tuesday": "الثلاثاء",
+		"wednesday": "الأربعاء",
+		"thursday": "الخميس",
+		"friday": "الجمعة",
+		"saturday": "السبت",
 		"gram": "جرام",
 		"count": "عدد",
 		"common": {
@@ -4170,45 +4178,45 @@
 		"copyFail": "تعذّر النسخ — انسخه يدويًا."
 	},
 	"audioHub": {
-    "audio": "الصوت",
-    "live": "مباشر",
-    "nowPlaying": "يتم التشغيل الآن",
-    "stationFallback": "اختر محطة",
-    "quranStations": "محطات القرآن",
-    "filterPlaceholder": "ابحث عن محطة...",
-    "filterAria": "تصفية المحطات",
-    "noStationsMatch": "لا توجد محطات مطابقة",
-    "tapToLoad": "اضغط لتحميل المقطع",
-    "openInYouTube": "افتح في يوتيوب",
-    "noYouTubeLinksYet": "لا توجد روابط يوتيوب بعد",
-    "playlist": "قائمة التشغيل",
-    "volume": "مستوى الصوت",
-    "podcastTitle": "البودكاست {n}",
-    "tabs": {
-      "stations": "المحطات",
-      "podcasts": "البودكاست"
-    },
-    "states": {
-      "live": "على الهواء",
-      "connected": "متصل الآن",
-      "buffering": "جارٍ التخزين المؤقت...",
-      "ready": "جاهز"
-    },
-    "actions": {
-      "mute": "كتم الصوت",
-      "unmute": "إلغاء كتم الصوت",
-      "retry": "إعادة المحاولة",
-      "showPanelTitle": "إظهار اللوحة",
-      "hidePanelTitle": "إخفاء اللوحة",
-      "close": "إغلاق"
-    },
-    "errors": {
-      "stream-dead": "انقطع البث. حاول إعادة التشغيل.",
-      "load-failed": "فشل تحميل البث. حاول مرة أخرى.",
-      "stream-error": "حدث خطأ في البث. جرّب محطة أخرى.",
-      "streamErrorTryAnother": "حدث خطأ في البث. جرّب محطة أخرى."
-    }
-  },
+		"audio": "الصوت",
+		"live": "مباشر",
+		"nowPlaying": "يتم التشغيل الآن",
+		"stationFallback": "اختر محطة",
+		"quranStations": "محطات القرآن",
+		"filterPlaceholder": "ابحث عن محطة...",
+		"filterAria": "تصفية المحطات",
+		"noStationsMatch": "لا توجد محطات مطابقة",
+		"tapToLoad": "اضغط لتحميل المقطع",
+		"openInYouTube": "افتح في يوتيوب",
+		"noYouTubeLinksYet": "لا توجد روابط يوتيوب بعد",
+		"playlist": "قائمة التشغيل",
+		"volume": "مستوى الصوت",
+		"podcastTitle": "البودكاست {n}",
+		"tabs": {
+			"stations": "المحطات",
+			"podcasts": "البودكاست"
+		},
+		"states": {
+			"live": "على الهواء",
+			"connected": "متصل الآن",
+			"buffering": "جارٍ التخزين المؤقت...",
+			"ready": "جاهز"
+		},
+		"actions": {
+			"mute": "كتم الصوت",
+			"unmute": "إلغاء كتم الصوت",
+			"retry": "إعادة المحاولة",
+			"showPanelTitle": "إظهار اللوحة",
+			"hidePanelTitle": "إخفاء اللوحة",
+			"close": "إغلاق"
+		},
+		"errors": {
+			"stream-dead": "انقطع البث. حاول إعادة التشغيل.",
+			"load-failed": "فشل تحميل البث. حاول مرة أخرى.",
+			"stream-error": "حدث خطأ في البث. جرّب محطة أخرى.",
+			"streamErrorTryAnother": "حدث خطأ في البث. جرّب محطة أخرى."
+		}
+	},
 	"mobile": {
 		"desktop_required_title": "يتطلب جهاز كمبيوتر",
 		"desktop_required_message": "هذا النموذج متاح فقط على أجهزة الكمبيوتر لحسابات المشرفين والمدربين، لأن واجهة لوحة التحكم غير مهيأة للاستخدام على الهاتف المحمول.",
@@ -4590,19 +4598,19 @@
 		}
 	},
 	"restTimer": {
-    "stopAlert": "إيقاف التنبيه",
-    "warning": "اقترب الوقت!",
-    "states": {
-      "paused": "متوقف مؤقتًا",
-      "running": "استراحة"
-    },
-    "actions": {
-      "start": "ابدأ",
-      "pause": "إيقاف مؤقت",
-      "resume": "استئناف",
-      "reset": "إعادة ضبط"
-    }
-  },
+		"stopAlert": "إيقاف التنبيه",
+		"warning": "اقترب الوقت!",
+		"states": {
+			"paused": "متوقف مؤقتًا",
+			"running": "استراحة"
+		},
+		"actions": {
+			"start": "ابدأ",
+			"pause": "إيقاف مؤقت",
+			"resume": "استئناف",
+			"reset": "إعادة ضبط"
+		}
+	},
 	"cardioTimer": {
 		"ariaLabel": "مؤقت الكارديو",
 		"stopTimer": "إيقاف المؤقت",
@@ -4829,24 +4837,23 @@
 		"pages_suffix": "صفحة",
 		"rows_label": "صف",
 		"page_size_label": "عدد الصفوف في الصفحة"
-	}, 
+	},
 	"money": {
+    "header": {
+      "title": "المحفظة",
+      "subtitle": "تتبع أموالك بذكاء"
+    },
     "common": {
-      "add": "إضافة",
+      "currency": "ج.م",
       "save": "حفظ",
-      "saving": "جارٍ الحفظ...",
+      "saving": "جارٍ الحفظ…",
       "cancel": "إلغاء",
       "edit": "تعديل",
       "delete": "حذف",
-      "deleteConfirm": "هل أنت متأكد من الحذف؟",
-      "loading": "جارٍ التحميل...",
-      "currency": "ج.م"
-    },
-    "header": {
-      "title": "إدارة الأموال",
-      "subtitle": "تابع دخلك ومصروفاتك والتزاماتك بسهولة"
+      "deleteConfirm": "هل أنت متأكد من الحذف؟"
     },
     "tabs": {
+      "wallets": "الحسابات",
       "income": "الدخل",
       "expenses": "المصروفات",
       "commitments": "الالتزامات",
@@ -4854,82 +4861,17 @@
       "expected": "المتوقع"
     },
     "stats": {
-      "balance": "الرصيد",
-      "income": "الدخل",
-      "expenses": "المصروفات",
-      "commitments": "الالتزامات",
-      "remaining": "المتبقي"
+      "income": "دخل",
+      "expenses": "مصروف",
+      "commitments": "التزام",
+      "remaining": "متبقي"
     },
     "months": {
-      "spendRate": "معدل الصرف",
-      "healthy": "معدل الصرف ممتاز",
-      "moderate": "معدل الصرف متوسط",
-      "high": "معدل الصرف مرتفع"
+      "spendRate": "معدل الإنفاق"
     },
-    "forecast": {
-      "title": "التوقعات المالية",
-      "button": "التوقعات",
-      "from": "من",
-      "to": "إلى",
-      "oneMonth": "شهر",
-      "threeMonths": "3 أشهر",
-      "sixMonths": "6 أشهر",
-      "oneYear": "سنة",
-      "income": "الدخل المتوقع",
-      "expenses": "المصروفات المتوقعة",
-      "commitments": "الالتزامات المتوقعة",
-      "expected": "المبالغ المنتظرة",
-      "netBalance": "صافي الرصيد",
-      "spendRate": "معدل الصرف"
-    },
-    "form": {
-      "addTitle": "إضافة عنصر جديد",
-      "editTitle": "تعديل العنصر",
-      "types": {
-        "income": "دخل",
-        "expense": "مصروف",
-        "commitment": "التزام",
-        "zakat": "زكاة"
-      },
-      "sections": {
-        "type": "النوع",
-        "commitmentType": "نوع الالتزام",
-        "details": "التفاصيل",
-        "recurrence": "التكرار",
-        "jamia": "بيانات الجمعية"
-      },
-      "commitmentTypes": {
-        "fixed": "التزام",
-        "subscription": "اشتراك",
-        "jamia": "جمعية"
-      },
-      "recurrence": {
-        "monthly": "شهري",
-        "weekly": "أسبوعي",
-        "customMonths": "كل عدة أشهر"
-      },
-      "recurringQuestion": "هل هذا العنصر متكرر؟",
-      "placeholders": {
-        "source": "مصدر الدخل",
-        "description": "الوصف",
-        "zakatDescription": "وصف الزكاة",
-        "amount": "المبلغ",
-        "recurrenceEvery": "يتكرر كل كم شهر",
-        "jamiaStart": "تاريخ بداية الجمعية",
-        "jamiaEnd": "تاريخ نهاية الجمعية",
-        "jamiaMyMonth": "شهر استلامي"
-      }
-    },
-    "table": {
-      "source": "المصدر",
-      "description": "الوصف",
-      "amount": "المبلغ",
-      "date": "التاريخ",
-      "type": "النوع",
-      "oneTime": "مرة واحدة",
-      "name": "الاسم",
-      "dueDate": "تاريخ الاستحقاق",
-      "status": "الحالة"
+    "wallets": {
+      "addTitle": "إضافة حساب",
+      "editTitle": "تعديل الحساب"
     },
     "income": {
       "total": "إجمالي الدخل"
@@ -4938,166 +4880,236 @@
       "total": "إجمالي المصروفات"
     },
     "commitments": {
-      "progress": "نسبة الإنجاز",
-      "pending": "المعلّق",
+      "title": "الالتزامات الشهرية",
       "paid": "المدفوع",
       "markAsPaid": "تحديد كمدفوع",
-      "markedPaid": "تم الدفع",
+      "markedPaid": "مدفوع",
       "filters": {
         "all": "الكل",
-        "fixed": "التزامات",
-        "subscription": "اشتراكات",
-        "jamia": "جمعيات"
+        "fixed": "التزام",
+        "subscription": "اشتراك",
+        "jamia": "جمعية"
       }
     },
     "zakat": {
       "title": "الزكاة",
-      "subtitle": "احسب وتتبع زكاتك بسهولة",
+      "subtitle": "أدِّ حق الله في مالك",
       "reachedNisab": "بلغ النصاب",
       "notReachedNisab": "لم يبلغ النصاب",
-      "due": "الزكاة الواجبة",
-      "paid": "المدفوع",
+      "paid": "مدفوع",
+      "due": "المستحق",
       "remaining": "المتبقي",
       "calculationBase": "أساس الحساب",
-      "baseNet": "الصافي",
-      "baseTotal": "الإجمالي",
+      "baseNet": "صافي",
+      "baseTotal": "إجمالي",
       "baseCustom": "مخصص",
-      "customBasePlaceholder": "أدخل المبلغ المخصص",
-      "percentage": "النسبة",
+      "customBasePlaceholder": "أدخل المبلغ",
+      "percentage": "نسبة الزكاة",
       "logTitle": "سجل الزكاة"
     },
     "expected": {
-      "addTitle": "إضافة مبلغ متوقع",
-      "editTitle": "تعديل مبلغ متوقع",
       "totalLabel": "إجمالي المتوقع",
-      "descLabel": "الوصف",
-      "descPlaceholder": "مثال: دفعة من عميل",
-      "amountLabel": "المبلغ",
-      "dateLabel": "التاريخ المتوقع",
-      "notesLabel": "ملاحظات",
-      "notesPlaceholder": "أي تفاصيل إضافية",
-      "emptyTitle": "لا توجد مبالغ متوقعة",
-      "emptySubtitle": "أضف أول مبلغ متوقع لتتبعه"
+      "emptyTitle": "لا يوجد دخل متوقع",
+      "emptySubtitle": "أضف مبالغ تتوقع استلامها قريبًا"
+    },
+    "forecast": {
+      "title": "التوقعات المالية",
+      "from": "من",
+      "to": "إلى",
+      "oneMonth": "شهر",
+      "threeMonths": "٣ أشهر",
+      "sixMonths": "٦ أشهر",
+      "oneYear": "سنة",
+      "income": "الدخل المتوقع",
+      "expenses": "المصروفات المتوقعة",
+      "commitments": "الالتزامات المتوقعة",
+      "expected": "مبالغ متوقعة",
+      "netBalance": "الرصيد الصافي",
+      "spendRate": "معدل الإنفاق"
+    },
+    "form": {
+      "addTitle": "إضافة عملية",
+      "editTitle": "تعديل العملية",
+      "recurringQuestion": "هل تتكرر هذه العملية؟",
+      "types": {
+        "income": "دخل",
+        "expense": "مصروف",
+        "commitment": "التزام",
+        "zakat": "زكاة"
+      },
+      "commitmentTypes": {
+        "fixed": "التزام",
+        "subscription": "اشتراك",
+        "jamia": "جمعية"
+      },
+      "recurrence": {
+        "monthly": "شهريًا",
+        "weekly": "أسبوعيًا",
+        "customMonths": "كل عدة أشهر"
+      },
+      "placeholders": {
+        "source": "مصدر الدخل",
+        "description": "وصف المصروف أو الالتزام",
+        "zakatDescription": "وصف الزكاة",
+        "amount": "المبلغ",
+        "recurrenceEvery": "كل كم شهر؟"
+      }
     },
     "notifications": {
       "title": "الإشعارات",
       "new": "جديد",
       "empty": "لا توجد إشعارات"
     },
-    "states": {
-      "noIncome": "لا يوجد دخل حتى الآن",
-      "noExpenses": "لا توجد مصروفات حتى الآن",
-      "noCommitments": "لا توجد التزامات حتى الآن",
-      "noZakat": "لا توجد سجلات زكاة",
-      "addFirst": "ابدأ بإضافة أول عنصر"
+    "table": {
+      "source": "المصدر",
+      "description": "الوصف",
+      "amount": "المبلغ",
+      "date": "التاريخ",
+      "dueDate": "تاريخ الاستحقاق",
+      "type": "النوع",
+      "name": "الاسم",
+      "status": "الحالة",
+      "actions": "إجراءات",
+      "oneTime": "مرة واحدة"
     },
-    "recurrence": {
-      "monthly": "شهري",
-      "weekly": "أسبوعي",
-      "custom_months": "مخصص"
+    "states": {
+      "noIncome": "لا يوجد دخل بعد",
+      "noExpenses": "لا توجد مصروفات بعد",
+      "noCommitments": "لا توجد التزامات بعد",
+      "noZakat": "لم يُسجَّل أي زكاة بعد",
+      "addFirst": "أضف أول عملية من زر + أعلاه"
     }
   },
 	"recipeLibrary": {
-		"loading": "جاري تحميل الوصفات...",
-		"footerQuote": "الطعام الجيد هو أساس السعادة الحقيقية.",
-		"page": {
-			"title": "مكتبة الوصفات",
-			"desc": "تصفح وصفاتنا المختارة بعناية — أكل حقيقي وقيم غذائية واضحة."
-		},
-		"tabs": {
-			"all": "كل الوصفات"
-		},
-		"stats": {
-			"totalRecipes": "إجمالي الوصفات",
-			"shownNow": "المعروض الآن",
-			"avgCalories": "متوسط السعرات",
-			"perRecipe": "لكل وصفة"
-		},
-		"categories": {
-			"breakfast": "فطور",
-			"lunch": "غداء",
-			"dinner": "عشاء",
-			"snack": "سناك"
-		},
-		"filters": {
-			"button": "فلترة",
-			"title": "فلترة الوصفات",
-			"active": "نشط",
-			"clear": "مسح",
-			"clearInline": "مسح الفلاتر",
-			"apply": "تطبيق الفلاتر",
-			"category": "الوجبة",
-			"satiety": "مؤشر الشبع",
-			"satietyLow": "منخفض",
-			"satietyMedium": "متوسط",
-			"satietyHigh": "مرتفع"
-		},
-		"search": {
-			"placeholder": "ابحث عن وصفة...",
-			"result": "نتيجة",
-			"results": "نتائج"
-		},
-		"featured": {
-			"badge": "✦ وصفة مميزة",
-			"cta": "عرض الوصفة كاملة →"
-		},
-		"card": {
-			"satiety": "الشبع",
-			"calories": "السعرات",
-			"protein": "بروتين",
-			"carbs": "كربوهيدرات",
-			"fat": "دهون",
-			"kcal": "سعرة",
-			"viewFull": "عرض الوصفة كاملة →"
-		},
-		"modal": {
-			"nutritionTitle": "القيم الغذائية",
-			"ingredients": "المكونات",
-			"creamIngredients": "مكونات الكريمة",
-			"sauceIngredients": "مكونات الصوص",
-			"directions": "الخطوات",
-			"chefTip": "نصيحة الشيف",
-			"watchVideo": "مشاهدة الفيديو"
-		},
-		"empty": {
-			"title": "لا توجد وصفات",
-			"desc": "جرّب بحثًا مختلفًا أو امسح الفلاتر."
-		}
-	},
-
-
-	"table": {
-    "pagination": {
-      "showing": "عرض",
-      "of": "من",
-      "records": "سجل",
-      "perPage": "لكل صفحة",
-      "firstPage": "الصفحة الأولى",
-      "lastPage": "الصفحة الأخيرة",
-      "prevPage": "الصفحة السابقة",
-      "nextPage": "الصفحة التالية"
+    "page": {
+      "title": "إدارة الوصفات",
+      "desc": "إضافة وتعديل وحذف وإدارة جميع الوصفات"
     },
-    "toolbar": {
-      "search": "بحث...",
+    "addButton": "إضافة وصفة",
+    "tabs": {
+      "all": "الكل"
+    },
+    "categories": {
+      "breakfast": "فطور",
+      "lunch": "غداء",
+      "dinner": "عشاء",
+      "snack": "سناك",
+      "savory_breakfast": "فطور مالح",
+      "sweet": "حلويات",
+      "salad": "سلطة",
+      "soup": "شوربة",
+      "drink": "مشروب",
+      "dessert": "تحلية"
+    },
+    "satiety": {
+      "low": "شبع منخفض",
+      "medium": "شبع متوسط",
+      "high": "شبع مرتفع"
+    },
+    "stats": {
+      "totalRecipes": "إجمالي الوصفات",
+      "shownOnPage": "المعروض في الصفحة",
+      "avgCalories": "متوسط السعرات"
+    },
+    "search": {
+      "placeholder": "ابحث باسم الوصفة أو المكونات أو الخطوات..."
+    },
+    "table": {
+      "name": "اسم الوصفة",
+      "category": "التصنيف",
+      "satiety": "درجة الشبع",
+      "nutrition": "القيم الغذائية",
+      "ingredients": "المكونات",
+      "items": "عنصر",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "confirmDelete": "هل أنت متأكد من حذف هذه الوصفة؟",
       "filters": "الفلاتر",
       "apply": "تطبيق",
-      "reset": "إعادة تعيين"
+      "emptyTitle": "لا توجد وصفات",
+      "emptySubtitle": "لم يتم العثور على أي وصفات مطابقة"
     },
-    "empty": {
-      "title": "لا توجد نتائج",
-      "subtitle": "حاول تعديل البحث أو الفلاتر"
-    },
-    "image": {
-      "preview": "معاينة الصورة"
+    "slidePanel": {
+      "addTitle": "إضافة وصفة",
+      "editTitle": "تعديل الوصفة",
+      "fromCookbook": "من لوحة إدارة الوصفات",
+      "changePhoto": "تغيير الصورة",
+      "uploadPhoto": "رفع صورة للوصفة",
+      "photoFormats": "JPG, PNG, WEBP",
+      "cancel": "إلغاء",
+      "save": "حفظ التعديلات",
+      "add": "إضافة الوصفة",
+      "saving": "جارٍ الحفظ...",
+      "macroPreview": "معاينة الماكروز",
+      "sections": {
+        "info": "المعلومات الأساسية",
+        "nutrition": "القيم الغذائية",
+        "ingredients": "المكونات الأساسية",
+        "creamIngredients": "مكونات الكريمة",
+        "sauceIngredients": "مكونات الصوص",
+        "directions": "خطوات التحضير",
+        "tips": "النصائح",
+        "video": "رابط الفيديو"
+      },
+      "fields": {
+        "recipeName": "اسم الوصفة",
+        "category": "التصنيف",
+        "satiety": "درجة الشبع",
+        "calories": "السعرات",
+        "protein": "البروتين",
+        "carbs": "الكربوهيدرات",
+        "fat": "الدهون",
+        "kcal": "سعرة",
+        "grams": "جرام",
+        "ingredientPlaceholder": "اكتب مكونًا",
+        "stepPlaceholder": "اكتب خطوة التحضير",
+        "tipsPlaceholder": "اكتب النصائح، كل سطر كنصيحة مستقلة",
+        "videoPlaceholder": "أدخل رابط الفيديو"
+      },
+      "satietyOptions": {
+        "low": "منخفض",
+        "medium": "متوسط",
+        "high": "مرتفع"
+      }
     }
   },
- 
+	"table": {
+		"pagination": {
+			"showing": "عرض",
+			"of": "من",
+			"records": "سجل",
+			"perPage": "لكل صفحة",
+			"firstPage": "الصفحة الأولى",
+			"lastPage": "الصفحة الأخيرة",
+			"prevPage": "الصفحة السابقة",
+			"nextPage": "الصفحة التالية"
+		},
+		"toolbar": {
+			"search": "بحث...",
+			"filters": "الفلاتر",
+			"apply": "تطبيق",
+			"reset": "إعادة تعيين"
+		},
+		"empty": {
+			"title": "لا توجد نتائج",
+			"subtitle": "حاول تعديل البحث أو الفلاتر"
+		},
+		"image": {
+			"preview": "معاينة الصورة"
+		}
+	},
 	"recipesPage": {
+		"recipe" : "وصفة",
     "page": {
-      "title": "وصفاتي",
-      "desc": "مكتبتك الغذائية الشخصية"
+      "title": "الوصفات الغذائية",
+      "desc": "تصفح وصفاتك الصحية واكتشف وجبات جديدة"
     },
-    "featured": "وصفة مميزة",
+    "stats": {
+      "totalRecipes": "إجمالي الوصفات",
+      "shownOnPage": "المعروضة",
+      "avgCalories": "متوسط السعرات",
+      "avgProtein": "متوسط البروتين"
+    },
     "tabs": {
       "all": "الكل"
     },
@@ -5115,36 +5127,54 @@
     },
     "satiety": {
       "label": "مستوى الشبع",
-      "low": "منخفض",
-      "medium": "متوسط",
-      "high": "مرتفع"
+      "low": "شبع منخفض",
+      "medium": "شبع متوسط",
+      "high": "شبع عالي"
     },
-    "stats": {
-      "totalRecipes": "إجمالي الوصفات",
-      "shownOnPage": "معروض الآن",
-      "avgCalories": "متوسط السعرات"
-    },
+    "featured": "وصفة مميزة",
     "search": {
       "placeholder": "ابحث عن وصفة..."
     },
+    "filter": {
+      "title": "الفلاتر والترتيب",
+      "maxCalories": "الحد الأقصى للسعرات" ,
+			"mealType" : "نوع الوجبة"
+    },
+    "sort": {
+      "label": "الترتيب",
+      "newest": "الأحدث",
+      "calories": "السعرات",
+      "protein": "البروتين",
+      "carbs": "الكربوهيدرات",
+      "fat": "الدهون",
+      "title": "الاسم"
+    },
     "table": {
-      "filters": "فلتر",
-      "reset": "مسح الفلاتر",
+      "filters": "الفلاتر",
+      "reset": "إعادة ضبط",
       "emptyTitle": "لا توجد وصفات",
-      "emptySubtitle": "جرّب تغيير البحث أو الفلاتر"
+      "emptySubtitle": "جرب تغيير الفلاتر أو البحث بكلمة مختلفة"
     },
     "card": {
       "viewFull": "عرض الوصفة",
-      "watchVideo": "مشاهدة الفيديو",
       "nutrition": "القيم الغذائية",
       "calories": "سعرات حرارية",
       "protein": "بروتين",
       "carbs": "كربوهيدرات",
       "fat": "دهون",
-      "ingredients": "المكونات الأساسية",
+      "ingredients": "المكونات",
       "creamIngredients": "مكونات الكريمة",
       "sauceIngredients": "مكونات الصوص",
-      "directions": "طريقة التحضير"
+      "directions": "طريقة التحضير",
+      "watchVideo": "مشاهدة فيديو الوصفة"
     }
-  }
+  },
+	"ActionButtons": {
+		"moreActions": "إجراءات إضافية",
+		"confirm": {
+			"defaultMessage": "هل أنت متأكد أنك تريد المتابعة؟",
+			"cancel": "إلغاء",
+			"confirm": "تأكيد"
+		}
+	}
 }

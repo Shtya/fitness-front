@@ -459,13 +459,18 @@ function EditUserModal({ open, onClose, user, onSaved, optionsCoach }) {
 
 	const generatePassword = e => {
 		e?.preventDefault?.();
-		const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
-		let p = '';
-		for (let i = 0; i < 12; i++) p += chars[Math.floor(Math.random() * chars.length)];
-		setValue('password', p);
+
+		const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+
+		let password = '';
+		for (let i = 0; i < 12; i++) {
+			password += chars[Math.floor(Math.random() * chars.length)];
+		}
+
+		setValue('password', password);
 		trigger('password');
+
 		Notification(t('alerts.passwordGenerated'), 'info');
-		return p;
 	};
 
 	const onSubmit = async data => {
@@ -512,7 +517,7 @@ function EditUserModal({ open, onClose, user, onSaved, optionsCoach }) {
 								value={field.value || ''} onChange={field.onChange}
 								error={errors.password?.message ? t(errors.password.message) : undefined} />
 						)} />
-						<div className='absolute rtl:left-2 ltr:right-2 top-9 flex items-center gap-1'>
+						<div className='absolute rtl:left-2 ltr:right-2 top-[31px flex items-center gap-1'>
 							<Button color='neutral' className='!min-h-[30px] !px-2 !py-1 !text-xs rounded-lg' onClick={() => setShowPassword(v => !v)} name='' icon={showPassword ? <EyeOff className='w-4 h-4' /> : <EyeIcon className='w-4 h-4' />} />
 							<Button color='neutral' className='!min-h-[30px] !px-2 !py-1 !text-xs rounded-lg' onClick={generatePassword} name='' icon={<Sparkles className='w-4 h-4' />} />
 						</div>
@@ -697,10 +702,17 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 
 	const generatePassword = e => {
 		e?.preventDefault?.();
-		const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
-		let p = '';
-		for (let i = 0; i < 12; i++) p += chars[Math.floor(Math.random() * chars.length)];
-		setValue('password', p); trigger('password');
+
+		const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+
+		let password = '';
+		for (let i = 0; i < 12; i++) {
+			password += chars[Math.floor(Math.random() * chars.length)];
+		}
+
+		setValue('password', password);
+		trigger('password');
+
 		Notification(t('alerts.passwordGenerated'), 'info');
 	};
 
@@ -815,7 +827,7 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 									value={field.value} onChange={field.onChange}
 									error={errors.password?.message ? t(errors.password.message) : undefined} />
 							)} />
-							<div className='absolute rtl:left-2 ltr:right-2 top-9 flex items-center gap-1'>
+							<div className='absolute rtl:left-2 ltr:right-2 top-[31px] flex items-center gap-1'>
 								<Button color='neutral' className='!min-h-[30px] !px-2 !py-1 !text-xs rounded-lg' onClick={() => setShowPassword(v => !v)} name='' icon={showPassword ? <EyeOff className='w-4 h-4' /> : <EyeIcon className='w-4 h-4' />} />
 								<Button color='neutral' className='!min-h-[30px] !px-2 !py-1 !text-xs rounded-lg' onClick={generatePassword} name='' icon={<Sparkles className='w-4 h-4' />} />
 							</div>
@@ -1566,7 +1578,7 @@ function EnhancedPendingModal({
 			onClose={onClose}
 			title={
 				<div className="flex items-center justify-between w-full">
-					<span>{t_('stats.pending')}</span> 
+					<span>{t_('stats.pending')}</span>
 				</div>
 			}
 			maxW="max-w-[900px]"

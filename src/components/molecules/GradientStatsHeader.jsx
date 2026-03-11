@@ -158,7 +158,7 @@ function FilterToggle({ group, value, onChange }) {
 						<button
 							key={opt.value}
 							onClick={() => onChange(active ? '' : opt.value)}
-							className='relative inline-flex items-center gap-1.5 overflow-hidden rounded-2xl border px-3.5 py-2 text-xs font-bold transition-all duration-200 active:scale-95 focus:outline-none'
+							className='relative inline-flex items-center gap-1.5 overflow-hidden rounded-lg border px-3.5 py-2 text-xs font-bold transition-all duration-200 active:scale-95 focus:outline-none'
 							style={active
 								? { background: 'linear-gradient(135deg,var(--color-gradient-from,#4f46e5),var(--color-gradient-to,#7c3aed))', color: 'white', borderColor: 'transparent', boxShadow: '0 4px 16px -2px rgba(99,102,241,0.4)' }
 								: { borderColor: '#f1f5f9', background: '#f8fafc', color: '#64748b' }}>
@@ -178,7 +178,7 @@ function FilterPanelContent({ filters, filterValues, onFilterChange, onFilterRes
 			{/* Header */}
 			<div className='flex items-center justify-between border-b px-5 py-4' style={{ borderColor: 'var(--color-primary-100,#e0e7ff)' }}>
 				<div className='flex items-center gap-3'>
-					<div className='grid h-8 w-8 place-items-center rounded-2xl shadow-sm'
+					<div className='grid h-8 w-8 place-items-center rounded-lg shadow-sm'
 						style={{ background: 'linear-gradient(135deg,var(--color-gradient-from,#4f46e5),var(--color-gradient-to,#7c3aed))' }}>
 						<SlidersHorizontal className='h-3.5 w-3.5 text-white' />
 					</div>
@@ -186,7 +186,7 @@ function FilterPanelContent({ filters, filterValues, onFilterChange, onFilterRes
 					<AnimatePresence>
 						{activeFilterCount > 0 && (
 							<motion.span key='badge' initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-								className='rounded-xl px-2 py-0.5 text-[9px] font-black'
+								className='rounded-lg px-2 py-0.5 text-[9px] font-black'
 								style={{ background: 'var(--color-primary-100,#e0e7ff)', color: 'var(--color-primary-700,#4338ca)' }}>
 								{activeFilterCount} active
 							</motion.span>
@@ -199,12 +199,12 @@ function FilterPanelContent({ filters, filterValues, onFilterChange, onFilterRes
 							<motion.button key='reset'
 								initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }}
 								onClick={onFilterReset}
-								className='inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[10px] font-bold text-rose-500 transition-all hover:bg-rose-50'>
+								className='inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-bold text-rose-500 transition-all hover:bg-rose-50'>
 								<RefreshCw className='h-3 w-3' /> Clear all
 							</motion.button>
 						)}
 					</AnimatePresence>
-					<button onClick={onClose} className='grid h-7 w-7 place-items-center rounded-xl text-slate-300 transition-all hover:bg-slate-100 hover:text-slate-600'>
+					<button onClick={onClose} className='grid h-7 w-7 place-items-center rounded-lg text-slate-300 transition-all hover:bg-slate-100 hover:text-slate-600'>
 						<X className='h-3.5 w-3.5' />
 					</button>
 				</div>
@@ -220,7 +220,7 @@ function FilterPanelContent({ filters, filterValues, onFilterChange, onFilterRes
 			{/* Apply */}
 			<div className='border-t px-5 py-4' style={{ borderColor: 'var(--color-primary-100,#e0e7ff)' }}>
 				<button onClick={onClose}
-					className='relative w-full overflow-hidden rounded-2xl py-3 text-sm font-black text-white shadow-lg transition-all hover:opacity-95'
+					className='relative w-full overflow-hidden rounded-lg py-3 text-sm font-black text-white shadow-lg transition-all hover:opacity-95'
 					style={{ background: 'linear-gradient(135deg,var(--color-gradient-from,#4f46e5),var(--color-gradient-to,#7c3aed))' }}>
 					<span className='flex items-center justify-center gap-2'>
 						<Check className='h-4 w-4' strokeWidth={3} /> Apply Filters
@@ -236,8 +236,8 @@ function FilterPanelContent({ filters, filterValues, onFilterChange, onFilterRes
 ═══════════════════════════════════════════════════════════════ */
 function KpiSkeleton({ count = 4 }) {
 	return Array.from({ length: count }).map((_, i) => (
-		<div key={i} className='flex items-center gap-3.5 rounded-2xl border border-white/10 bg-white/[0.07] p-[17px]'>
-			<div className='h-[42px] w-[42px] shrink-0 rounded-xl bg-white/[0.14] animate-pulse' />
+		<div key={i} className='flex items-center gap-3.5 rounded-lg border border-white/10 bg-white/[0.07] p-[17px]'>
+			<div className='h-[42px] w-[42px] shrink-0 rounded-lg bg-white/[0.14] animate-pulse' />
 			<div className='flex-1 space-y-2'>
 				<div className='h-2 w-[52%] rounded-full bg-white/[0.14] animate-pulse' />
 				<div className='h-4 w-[36%] rounded-full bg-white/20 animate-pulse' />
@@ -255,7 +255,7 @@ export function KpiCard({ icon: Icon, label, value, trend, trendValue, sub, load
 	const up = trend === 'up';
 
 	return (
-		<div className='gsh-kpi relative cursor-default overflow-hidden rounded-2xl border border-white/[0.12] bg-white/[0.09] p-[17px] shadow-[0_4px_20px_rgba(0,0,0,.18)] backdrop-blur-xl'>
+		<div className='gsh-kpi relative cursor-default overflow-hidden rounded-lg border border-white/[0.12] bg-white/[0.09] p-[17px] shadow-[0_4px_20px_rgba(0,0,0,.18)] backdrop-blur-xl'>
 
 			{/* Top accent stripe */}
 			<div className='absolute left-0 right-0 top-0 h-[3px] rounded-t-2xl'
@@ -266,7 +266,7 @@ export function KpiCard({ icon: Icon, label, value, trend, trendValue, sub, load
 				}} />
 
 			{/* Corner glow */}
-			<div className='pointer-events-none absolute inset-0 rounded-2xl'
+			<div className='pointer-events-none absolute inset-0 rounded-lg'
 				style={{
 					background: up
 						? 'linear-gradient(135deg,rgba(165,180,252,.08) 0%,transparent 55%)'
@@ -279,7 +279,7 @@ export function KpiCard({ icon: Icon, label, value, trend, trendValue, sub, load
 
 			<div className='flex items-center gap-3.5'>
 				{Icon && (
-					<div className='grid h-11 w-11 shrink-0 place-content-center rounded-xl border border-white/20 bg-white/[0.13] shadow-[0_2px_10px_rgba(0,0,0,.2)]'>
+					<div className='grid h-11 w-11 shrink-0 place-content-center rounded-lg border border-white/20 bg-white/[0.13] shadow-[0_2px_10px_rgba(0,0,0,.2)]'>
 						<Icon className='h-[19px] w-[19px] text-white' strokeWidth={2.2} />
 					</div>
 				)}
@@ -345,7 +345,7 @@ export function GradientStatsHeader({
 			initial={{ opacity: 0, y: 28, scale: 0.972 }}
 			animate={{ opacity: 1, y: 0, scale: 1 }}
 			transition={en}
-			className={`relative overflow-hidden ${tabs.length > 0 ? 'rounded-[14px_14px_0_0]' : 'rounded-xl'} border border-white/[0.16] ${className}`}>
+			className={`relative overflow-hidden ${tabs.length > 0 ? 'rounded-[14px_14px_0_0]' : 'rounded-lg'} border border-white/[0.16] ${className}`}>
 
 			{/* ══════════════════════════════════════
           BACKGROUND STACK
@@ -401,7 +401,7 @@ export function GradientStatsHeader({
 							<motion.div
 								whileHover={{ scale: 1.08, rotate: 6 }}
 								transition={sp}
-								className=' max-md:!w-[40px] max-md:!h-[40px] relative grid shrink-0 place-content-center rounded-2xl border border-white/[0.26] bg-white/[0.16] backdrop-blur-xl shadow-[0_6px_28px_rgba(0,0,0,.28),0_1px_0_rgba(255,255,255,.2)_inset]'
+								className=' max-md:!w-[40px] max-md:!h-[40px] relative grid shrink-0 place-content-center rounded-lg border border-white/[0.26] bg-white/[0.16] backdrop-blur-xl shadow-[0_6px_28px_rgba(0,0,0,.28),0_1px_0_rgba(255,255,255,.2)_inset]'
 								style={{ width: 64, height: 64, animation: 'float-icon 4.2s ease-in-out infinite' }}>
 								{/* Pulsing ring */}
 								<div className='absolute -inset-2 rounded-[22px] border border-white/20'
@@ -677,7 +677,7 @@ export function GradientStatsHeader({
 											{isActive && tab.count !== undefined && (
 												<motion.span
 													key='chip' initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-													className='rounded-xl px-2 py-0.5 text-[9px] font-black'
+													className='rounded-lg px-2 py-0.5 text-[9px] font-black'
 													style={{ background: 'color-mix(in srgb,var(--color-primary-100,#e0e7ff) 70%,white)', color: 'var(--color-primary-700,#4338ca)' }}>
 													{tab.count}
 												</motion.span>

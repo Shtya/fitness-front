@@ -48,7 +48,7 @@ function ImpersonationBar({ onExit }) {
 		>
 			{/* Left — info */}
 			<div className="flex items-center gap-3 min-w-0">
-				<div className="p-1.5 rounded-xl bg-white/20 backdrop-blur-sm shrink-0">
+				<div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm shrink-0">
 					<Shield size={14} />
 				</div>
 				<div className="min-w-0">
@@ -67,7 +67,7 @@ function ImpersonationBar({ onExit }) {
 				whileHover={{ scale: 1.04 }}
 				whileTap={{ scale: 0.96 }}
 				onClick={onExit}
-				className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-sm font-bold border border-white/30 transition-all backdrop-blur-sm"
+				className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-sm font-bold border border-white/30 transition-all backdrop-blur-sm"
 			>
 				<LogOut size={13} />
 				Return to Super Admin

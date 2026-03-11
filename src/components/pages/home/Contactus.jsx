@@ -136,7 +136,7 @@ export default function ContactUs() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   className="flex flex-col items-center gap-5 py-16 text-center
-                    border border-[var(--color-primary-500)]/25 rounded-2xl
+                    border border-[var(--color-primary-500)]/25 rounded-lg
                     bg-[var(--color-primary-500)]/[0.06] backdrop-blur-sm"
                 >
                   <motion.div
@@ -220,7 +220,7 @@ export default function ContactUs() {
                               exit={{ opacity: 0, y: -8, scale: 0.97 }}
                               transition={{ duration: 0.15 }}
                               className="absolute ltr:left-0 rtl:right-0 top-full mt-2 z-50
-                                w-56 rounded-xl overflow-hidden
+                                w-56 rounded-lg overflow-hidden
                                 border border-white/[0.08] bg-slate-800 shadow-2xl"
                               onClick={(e) => e.stopPropagation()}
                             >
@@ -262,7 +262,7 @@ export default function ContactUs() {
                             type="button"
                             onClick={() => setFormData(p => ({ ...p, teamSize: option.id }))}
                             className={[
-                              "flex w-full items-start gap-4 rounded-xl border-2 p-4 text-left",
+                              "flex w-full items-start gap-4 rounded-lg border-2 p-4 text-left",
                               "transition-all duration-200",
                               isSelected
                                 ? "border-[var(--color-primary-500)]/70 bg-[var(--color-primary-500)]/[0.07]"
@@ -272,7 +272,7 @@ export default function ContactUs() {
                             whileTap={{ scale: 0.99 }}
                           >
                             <div className={[
-                              "w-11 h-11 shrink-0 rounded-xl flex items-center justify-center",
+                              "w-11 h-11 shrink-0 rounded-lg flex items-center justify-center",
                               isSelected ? "theme-gradient-bg" : "bg-white/[0.06]",
                             ].join(" ")}>
                               <Icon className={`w-5 h-5 ${isSelected ? "text-white" : "text-white/40"}`} />
@@ -308,7 +308,7 @@ export default function ContactUs() {
                   <motion.button
                     type="submit"
                     disabled={isSubmitting}
-                    className="group relative w-full overflow-hidden rounded-xl px-8 py-4
+                    className="group relative w-full overflow-hidden rounded-lg px-8 py-4
                       font-body text-base font-bold text-white
                       theme-gradient-bg shadow-[0_8px_32px_var(--color-primary-500)/30]
                       hover:shadow-[0_12px_40px_var(--color-primary-500)/45]
@@ -360,7 +360,7 @@ export default function ContactUs() {
                 animate={{ opacity: 1, scale: 1,    y: 0  }}
                 exit={{   opacity: 0, scale: 0.97, y: -10 }}
                 transition={{ duration: 0.4 }}
-                className="relative overflow-hidden rounded-2xl
+                className="relative overflow-hidden rounded-lg
                   border border-white/[0.08]
                   bg-gradient-to-br from-slate-800/90 to-slate-900/90
                   backdrop-blur-xl
@@ -377,7 +377,7 @@ export default function ContactUs() {
                 <div className="relative border-b border-white/[0.07] p-7">
                   <div className="flex items-center gap-4">
                     <motion.div
-                      className="w-14 h-14 rounded-xl theme-gradient-bg
+                      className="w-14 h-14 rounded-lg theme-gradient-bg
                         flex items-center justify-center shadow-xl shrink-0"
                       whileHover={{ rotate:[0,-10,10,-8,0], scale:1.06 }}
                       transition={{ duration: 0.5 }}

@@ -171,7 +171,7 @@ function UserDropdown({ user, onClose, isRTL }) {
         .ud-row:hover .ud-arr { opacity:1; transform:translateX(${isRTL ? "-2px" : "2px"}); }
       `}</style>
 			<div
-				className="ud-wrap absolute top-[calc(100%+12px)] z-50 w-[280px] rounded-2xl overflow-hidden"
+				className="ud-wrap absolute top-[calc(100%+12px)] z-50 w-[280px] rounded-lg overflow-hidden"
 				style={{
 					[isRTL ? "left" : "right"]: 0,
 					direction: isRTL ? "rtl" : "ltr",
@@ -205,7 +205,7 @@ function UserDropdown({ user, onClose, isRTL }) {
 					</div>
 
 					{user.points != null && (
-						<div className="mt-2.5 flex items-center justify-between rounded-xl px-3 py-2"
+						<div className="mt-2.5 flex items-center justify-between rounded-lg px-3 py-2"
 							style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.14)" }}>
 							<div className="flex items-center gap-1.5">
 								<Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />

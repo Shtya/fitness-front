@@ -154,7 +154,7 @@ function StatsBar() {
 
 			<div className="max-w-[1440px] mx-auto px-6 lg:px-16">
 				<div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0
-          divide-white/[0.06] border border-white/[0.06] rounded-2xl overflow-hidden
+          divide-white/[0.06] border border-white/[0.06] rounded-lg overflow-hidden
           bg-white/[0.02] backdrop-blur-sm">
 					{stats.map((stat, i) => {
 						const Icon = stat.icon;
@@ -173,7 +173,7 @@ function StatsBar() {
                   bg-[radial-gradient(ellipse_at_center,var(--color-primary-500)/8%,transparent_70%)]" />
 
 								{/* Icon chip */}
-								<div className="relative w-10 h-10 rounded-xl theme-gradient-bg
+								<div className="relative w-10 h-10 rounded-lg theme-gradient-bg
                   flex items-center justify-center shadow-lg
                   group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
 									<Icon className="w-5 h-5 text-white" />
@@ -539,7 +539,7 @@ function PricingPlans() {
 				{/* Billing toggle */}
 				<div className="flex justify-center mb-12 sm:mb-16">
 					<div className="inline-flex items-center gap-1 p-1.5
-            bg-white/[0.04] backdrop-blur-xl rounded-xl
+            bg-white/[0.04] backdrop-blur-xl rounded-lg
             border border-white/[0.08] shadow-2xl">
 						{cycles.map((c) => {
 							const active = cycle === c.id;
@@ -630,7 +630,7 @@ function PricingCard({ plan, cycle, index, t }) {
 
 			{/* Card body */}
 			<div className={[
-				"relative h-full rounded-2xl p-6 sm:p-7 border overflow-hidden",
+				"relative h-full rounded-lg p-6 sm:p-7 border overflow-hidden",
 				"flex flex-col transition-shadow duration-300",
 				plan.popular
 					? "theme-gradient-bg border-[var(--color-primary-400)]/30 shadow-[0_20px_60px_var(--color-primary-500)/30]"
@@ -646,7 +646,7 @@ function PricingCard({ plan, cycle, index, t }) {
 				<div className="flex items-start gap-4 mb-5">
 					<motion.div
 						className={[
-							"w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg",
+							"w-12 h-12 rounded-lg flex items-center justify-center shrink-0 shadow-lg",
 							plan.popular ? "bg-white/20" : "theme-gradient-bg",
 						].join(" ")}
 						whileHover={{ rotate: -8, scale: 1.1 }}
@@ -699,7 +699,7 @@ function PricingCard({ plan, cycle, index, t }) {
 				{/* CTA */}
 				<motion.button
 					className={[
-						"w-full py-3.5 rounded-xl font-body font-bold text-sm mb-7",
+						"w-full py-3.5 rounded-lg font-body font-bold text-sm mb-7",
 						"border transition-all duration-200",
 						plan.popular
 							? "bg-white text-[var(--color-primary-700)] border-transparent hover:bg-white/90"

@@ -154,7 +154,7 @@ const Input = forwardRef(function Input(
 				</label>
 			)}
 			<div
-				className="relative flex items-center rounded-xl border-2 bg-white transition-colors duration-200"
+				className="relative flex items-center rounded-lg border-2 bg-white transition-colors duration-200"
 				style={{
 					borderColor: disabled ? colors.primary[200] : hasError ? '#f43f5e' : colors.primary[300],
 					background: disabled ? colors.primary[50] : hasError ? '#fff8f8' : 'white',
@@ -175,7 +175,7 @@ const Input = forwardRef(function Input(
 					defaultValue={defaultValue}
 					onChange={handleChange}
 					onBlur={handleBlur}
-					className={`h-12 w-full rounded-xl  py-3 text-sm font-medium outline-none placeholder:text-slate-400 bg-transparent ${icon && "rtl:!pr-[40px] ltr:!pl-[40px]"}`}
+					className={`h-12 w-full rounded-lg  py-3 text-sm font-medium outline-none placeholder:text-slate-400 bg-transparent ${icon && "rtl:!pr-[40px] ltr:!pl-[40px]"}`}
 					style={{
 						paddingLeft: icon ? '2.75rem' : '1rem',
 						paddingRight: clearable && hasValue ? '2.5rem' : '1rem',
@@ -221,7 +221,7 @@ const Textarea = forwardRef(function Textarea(
 				</label>
 			)}
 			<div
-				className="rounded-xl border-2 bg-white transition-colors duration-200 overflow-hidden"
+				className="rounded-lg border-2 bg-white transition-colors duration-200 overflow-hidden"
 				style={{
 					borderColor: disabled ? colors.primary[200] : hasError ? '#f43f5e' : colors.primary[300],
 					background: disabled ? colors.primary[50] : hasError ? '#fff8f8' : 'white',
@@ -317,7 +317,7 @@ function PhoneField({ label, value, onChange, error, required, name, setError, c
 			 */}
 			<div
 				dir="ltr"
-				className="flex items-stretch rounded-xl border-2 bg-white overflow-hidden transition-colors duration-200"
+				className="flex items-stretch rounded-lg border-2 bg-white overflow-hidden transition-colors duration-200"
 				style={{
 					borderColor: hasError ? '#f43f5e' : colors.primary[300],
 					background: hasError ? '#fff8f8' : 'white',
@@ -479,7 +479,7 @@ function Select({ options = [], value = null, onChange = () => { }, placeholder,
 				ref={buttonRef}
 				onClick={() => (open ? closeMenu() : openMenu())}
 				disabled={disabled}
-				className="h-12 w-full inline-flex items-center justify-between rounded-xl border-2 bg-white px-4 text-sm font-medium cursor-pointer transition-colors duration-200 outline-none"
+				className="h-12 w-full inline-flex items-center justify-between rounded-lg border-2 bg-white px-4 text-sm font-medium cursor-pointer transition-colors duration-200 outline-none"
 				style={{
 					borderColor: disabled ? colors.primary[200] : errorState ? '#f43f5e' : open ? colors.primary[400] : colors.primary[300],
 					background: errorState ? '#fff8f8' : 'white',
@@ -508,7 +508,7 @@ function Select({ options = [], value = null, onChange = () => { }, placeholder,
 				>
 					<div
 						ref={listRef}
-						className="max-h-72 overflow-auto rounded-xl border-2 bg-white shadow-2xl"
+						className="max-h-72 overflow-auto rounded-lg border-2 bg-white shadow-2xl"
 						style={{ borderColor: colors.primary[200] }}
 					>
 						{searchable && !createMode && (
@@ -587,7 +587,7 @@ function PrettyFileInput({ label, required, error, valueNames = [], onPickMany, 
 			)}
 
 			<div
-				className="rounded-xl border-2 transition-colors duration-200"
+				className="rounded-lg border-2 transition-colors duration-200"
 				style={{
 					borderColor: disabled ? colors.primary[200] : hasError ? '#f43f5e' : hasFiles ? colors.primary[400] : colors.primary[300],
 					background: hasError ? '#fff8f8' : hasFiles ? colors.primary[50] : 'white',
@@ -631,7 +631,7 @@ function PrettyFileInput({ label, required, error, valueNames = [], onPickMany, 
 					<button type="button" onClick={() => inputRef.current?.click()} disabled={disabled}
 						className="w-full flex flex-col items-center justify-center gap-2 py-8 transition-colors"
 						style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}>
-						<div className="w-10 h-10 rounded-xl grid place-items-center"
+						<div className="w-10 h-10 rounded-lg grid place-items-center"
 							style={{ background: colors.primary[100] }}>
 							<Upload className="w-5 h-5" style={{ color: colors.primary[600] }} />
 						</div>
@@ -653,7 +653,7 @@ function SectionHeader({ icon: Icon, title, colors }) {
 	return (
 		<div className="flex items-center gap-3 mb-5 pb-4 border-b" style={{ borderColor: colors.primary[100] }}>
 			<div
-				className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+				className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
 				style={{ background: `linear-gradient(135deg, ${colors.gradient.from}, ${colors.gradient.to})` }}
 			>
 				<Icon className="text-white w-4 h-4" />
@@ -859,7 +859,7 @@ export default function FormSubmissionPage() {
 						return (
 							<label
 								key={opt}
-								className="flex items-center gap-3 rounded-xl border-2 p-3.5 cursor-pointer transition-colors duration-200"
+								className="flex items-center gap-3 rounded-lg border-2 p-3.5 cursor-pointer transition-colors duration-200"
 								style={{
 									borderColor: active ? colors.primary[400] : colors.primary[200],
 									background: active ? colors.primary[50] : 'white',
@@ -952,7 +952,7 @@ export default function FormSubmissionPage() {
 							{field.required && <span className="text-rose-500 ml-0.5">*</span>}
 						</label>
 						<div
-							className="relative rounded-xl border-2 bg-white overflow-hidden transition-colors"
+							className="relative rounded-lg border-2 bg-white overflow-hidden transition-colors"
 							style={{ borderColor: error ? '#f43f5e' : colors.primary[300] }}
 						>
 							<Flatpickr
@@ -1066,9 +1066,9 @@ export default function FormSubmissionPage() {
 					</div>
 				</div>
 				<div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-4 animate-pulse">
-					<div className="h-10 w-full rounded-xl bg-slate-200" />
-					<div className="h-10 w-full rounded-xl bg-slate-200" />
-					<div className="h-10 w-2/3 rounded-xl bg-slate-200" />
+					<div className="h-10 w-full rounded-lg bg-slate-200" />
+					<div className="h-10 w-full rounded-lg bg-slate-200" />
+					<div className="h-10 w-2/3 rounded-lg bg-slate-200" />
 				</div>
 			</div>
 		);
@@ -1078,7 +1078,7 @@ export default function FormSubmissionPage() {
 		return (
 			<div className="min-h-screen flex items-center justify-center px-4" style={{ background: colors.primary[50] }}>
 				<div className="text-center">
-					<div className="mx-auto w-16 h-16 rounded-2xl grid place-items-center mb-5"
+					<div className="mx-auto w-16 h-16 rounded-lg grid place-items-center mb-5"
 						style={{ background: colors.primary[100] }}>
 						<FiXCircle className="w-8 h-8" style={{ color: colors.primary[400] }} />
 					</div>
@@ -1156,7 +1156,7 @@ export default function FormSubmissionPage() {
 
 				{/* Card */}
 				<div
-					className="bg-white rounded-2xl border overflow-hidden"
+					className="bg-white rounded-lg border overflow-hidden"
 					style={{
 						borderColor: colors.primary[150] || colors.primary[200],
 						boxShadow: '0 1px 4px rgba(15,23,42,0.06), 0 8px 28px rgba(15,23,42,0.07)',
@@ -1226,7 +1226,7 @@ export default function FormSubmissionPage() {
 							<button
 								type="submit"
 								disabled={isSubmitting}
-								className="ml-auto flex max-md:!mx-auto items-center gap-2 h-11 px-7 rounded-xl text-white text-sm font-bold transition-opacity"
+								className="ml-auto flex max-md:!mx-auto items-center gap-2 h-11 px-7 rounded-lg text-white text-sm font-bold transition-opacity"
 								style={{
 									background: `linear-gradient(to right, ${colors.gradient.from}, ${colors.gradient.via || colors.gradient.to}, ${colors.gradient.to})`,
 									boxShadow: `0 4px 16px ${colors.primary[200]}`,

@@ -86,7 +86,7 @@ const IconBtn = memo(({ title, onClick, danger, children }) => (
 		onClick={onClick}
 		aria-label={title}
 		className={[
-			'size-7 grid place-content-center rounded-md border transition-all duration-150 active:scale-90',
+			'size-7 grid place-content-center rounded-lg border transition-all duration-150 active:scale-90',
 			danger
 				? 'border-red-200 bg-white text-rose-600 hover:bg-rose-50'
 				: 'border-[var(--color-primary-200)] bg-white text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)]',
@@ -97,7 +97,7 @@ const IconBtn = memo(({ title, onClick, danger, children }) => (
 
 /** Small stat badge */
 const StatPill = memo(({ label, value }) => (
-	<span className='inline-flex items-center gap-1.5 rounded-md border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2.5 py-0.5 text-xs text-[var(--color-primary-700)]'>
+	<span className='inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2.5 py-0.5 text-xs text-[var(--color-primary-700)]'>
 		<span className='font-semibold text-[var(--color-primary-800)]'>{label}</span>
 		<span className='opacity-70'>{value}</span>
 	</span>
@@ -342,7 +342,7 @@ export default function ExercisesPage() {
 							type='button'
 							onClick={() => setSearchText('')}
 							aria-label={t('actions.clear')}
-							className='absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 grid h-6 w-6 place-items-center rounded-md text-[var(--color-primary-400)] hover:text-[var(--color-primary-700)] transition-colors'>
+							className='absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 grid h-6 w-6 place-items-center rounded-lg text-[var(--color-primary-400)] hover:text-[var(--color-primary-700)] transition-colors'>
 							<X className='w-3.5 h-3.5' />
 						</button>
 					)}
@@ -474,11 +474,11 @@ const ConfirmDialog = memo(({ open, onClose, loading, title, message, onConfirm,
 
 /* ──────────────────────────────── Grid / Cards ───────────────────────────── */
 const SkeletonCard = () => (
-	<div className='overflow-hidden rounded-xl border border-[var(--color-primary-100)] bg-white shadow-sm'>
+	<div className='overflow-hidden rounded-lg border border-[var(--color-primary-100)] bg-white shadow-sm'>
 		<div className='aspect-[16/8] w-full animate-pulse bg-[var(--color-primary-100)]' />
 		<div className='p-4 space-y-3'>
-			<div className='h-4 w-3/4 rounded-md animate-pulse bg-[var(--color-primary-100)]' />
-			<div className='h-3 w-1/2 rounded-md animate-pulse bg-[var(--color-primary-100)]' />
+			<div className='h-4 w-3/4 rounded-lg animate-pulse bg-[var(--color-primary-100)]' />
+			<div className='h-3 w-1/2 rounded-lg animate-pulse bg-[var(--color-primary-100)]' />
 			<div className='flex gap-2'>
 				<div className='h-5 w-14 rounded-full animate-pulse bg-[var(--color-primary-100)]' />
 				<div className='h-5 w-14 rounded-full animate-pulse bg-[var(--color-primary-100)]' />
@@ -498,8 +498,8 @@ const GridView = memo(({ loading, items, onView, onEdit, onDelete, onDuplicate, 
 
 	if (!items?.length) {
 		return (
-			<div className='flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-[var(--color-primary-200)] bg-white py-20 text-center shadow-sm'>
-				<div className='grid h-16 w-16 place-content-center rounded-2xl bg-[var(--color-primary-50)]'>
+			<div className='flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-[var(--color-primary-200)] bg-white py-20 text-center shadow-sm'>
+				<div className='grid h-16 w-16 place-content-center rounded-lg bg-[var(--color-primary-50)]'>
 					<Dumbbell className='h-8 w-8 text-[var(--color-primary-400)]' />
 				</div>
 				<div>
@@ -528,7 +528,7 @@ const ExerciseCard = memo(({ exercise: e, t, onView, onEdit, onDelete, onDuplica
 			initial={{ opacity: 0, y: 14, scale: 0.97 }}
 			animate={{ opacity: 1, y: 0, scale: 1 }}
 			transition={spring}
-			className='group relative overflow-hidden rounded-xl border border-[var(--color-primary-100)] bg-white shadow-sm hover:shadow-md hover:border-[var(--color-primary-300)] transition-all duration-300'>
+			className='group relative overflow-hidden rounded-lg border border-[var(--color-primary-100)] bg-white shadow-sm hover:shadow-md hover:border-[var(--color-primary-300)] transition-all duration-300'>
 
 			{/* ── Thumbnail ── */}
 			<div className='relative aspect-[16/8] bg-[var(--color-primary-50)]'>
@@ -548,7 +548,7 @@ const ExerciseCard = memo(({ exercise: e, t, onView, onEdit, onDelete, onDuplica
 
 				{/* Media badge */}
 				{(hasImg || e.video) && (
-					<span className='absolute bottom-2 ltr:left-2 rtl:right-2 inline-flex items-center gap-1 rounded-md bg-black/50 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm'>
+					<span className='absolute bottom-2 ltr:left-2 rtl:right-2 inline-flex items-center gap-1 rounded-lg bg-black/50 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm'>
 						{hasImg ? <ImageIcon size={10} /> : <PlayCircle size={10} />}
 						{hasImg ? t('media.image') : t('media.video')}
 					</span>
@@ -626,16 +626,16 @@ const ExerciseCard = memo(({ exercise: e, t, onView, onEdit, onDelete, onDuplica
 
 				{/* Stats row */}
 				<div className='flex flex-wrap gap-1.5 pt-0.5'>
-					<span className='inline-flex items-center gap-1 rounded-md border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2 py-0.5 text-[10px] text-[var(--color-primary-600)]'>
+					<span className='inline-flex items-center gap-1 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2 py-0.5 text-[10px] text-[var(--color-primary-600)]'>
 						{t('meta.sets')}
 						<span className='font-bold text-[var(--color-primary-800)]'>{sets}</span>
 					</span>
-					<span className='inline-flex items-center gap-1 rounded-md border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2 py-0.5 text-[10px] text-[var(--color-primary-600)]'>
+					<span className='inline-flex items-center gap-1 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2 py-0.5 text-[10px] text-[var(--color-primary-600)]'>
 						{t('meta.rest')}
 						<span className='font-bold text-[var(--color-primary-800)]'>{rest}s</span>
 					</span>
 					{e.tempo && (
-						<span className='inline-flex items-center gap-1 rounded-md border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2 py-0.5 text-[10px] text-[var(--color-primary-600)]'>
+						<span className='inline-flex items-center gap-1 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2 py-0.5 text-[10px] text-[var(--color-primary-600)]'>
 							{t('meta.tempo')}
 							<span className='font-bold text-[var(--color-primary-800)]'>{e.tempo}</span>
 						</span>
@@ -678,7 +678,7 @@ const ExercisePreview = memo(({ exercise, baseMedia = '', t }) => {
 								disabled={disabled}
 								onClick={() => setTab(key)}
 								className={[
-									'inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-sm font-medium outline-none transition-all duration-200',
+									'inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium outline-none transition-all duration-200',
 									active
 										? 'bg-white text-[var(--color-primary-800)] shadow'
 										: 'text-[var(--color-primary-500)] hover:text-[var(--color-primary-700)]',
@@ -693,7 +693,7 @@ const ExercisePreview = memo(({ exercise, baseMedia = '', t }) => {
 			)}
 
 			{/* Media frame */}
-			<div className='relative w-full overflow-hidden rounded-xl border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] shadow-sm'>
+			<div className='relative w-full overflow-hidden rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] shadow-sm'>
 				<div className='aspect-video flex items-center justify-center'>
 					{tab === 'image' && hasImg ? (
 						<Img
@@ -707,12 +707,12 @@ const ExercisePreview = memo(({ exercise, baseMedia = '', t }) => {
 						<video
 							src={exercise?.video?.startsWith('http') ? exercise.video : baseImg + exercise.video}
 							controls
-							className='h-full max-h-[400px] w-full rounded-xl object-contain'
+							className='h-full max-h-[400px] w-full rounded-lg object-contain'
 							preload='metadata'
 						/>
 					) : (
 						<div className='flex flex-col items-center gap-3 py-10 text-center'>
-							<div className='grid h-12 w-12 place-items-center rounded-xl bg-[var(--color-primary-100)]'>
+							<div className='grid h-12 w-12 place-items-center rounded-lg bg-[var(--color-primary-100)]'>
 								{tab === 'image'
 									? <ImageIcon size={20} className='text-[var(--color-primary-400)]' />
 									: <PlayCircle size={20} className='text-[var(--color-primary-400)]' />}
@@ -732,7 +732,7 @@ const ExercisePreview = memo(({ exercise, baseMedia = '', t }) => {
 						{exercise?.name || t('titles.untitled')}
 					</h3>
 					{exercise?.category && (
-						<span className='inline-flex items-center gap-1.5 rounded-md border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary-700)]'>
+						<span className='inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary-700)]'>
 							<TagIcon size={11} />
 							{exercise.category}
 						</span>

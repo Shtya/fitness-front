@@ -198,7 +198,7 @@ export default function Testimonials() {
                 }}
               >
                 {/* Card */}
-                <div className="relative overflow-hidden rounded-2xl
+                <div className="relative overflow-hidden rounded-lg
                   border border-white/[0.08]
                   bg-slate-800/50 backdrop-blur-xl
                   shadow-[0_24px_56px_rgba(0,0,0,0.45)]
@@ -206,18 +206,18 @@ export default function Testimonials() {
 
                   {/* Animated glow shell */}
                   <motion.div
-                    className="absolute -inset-[2px] rounded-2xl theme-gradient-bg -z-10 blur-2xl"
+                    className="absolute -inset-[2px] rounded-lg theme-gradient-bg -z-10 blur-2xl"
                     animate={{ opacity:[0.14,0.24,0.14] }}
                     transition={{ duration: 3, repeat: Infinity }}
                   />
 
                   {/* Shimmer overlay */}
-                  <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.03)_0%,transparent_50%)] pointer-events-none rounded-2xl" />
+                  <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.03)_0%,transparent_50%)] pointer-events-none rounded-lg" />
 
                   {/* Quote chip — top corner */}
                   <motion.div
                     className="absolute -top-5 ltr:-left-5 rtl:-right-5
-                      w-14 h-14 rounded-xl theme-gradient-bg
+                      w-14 h-14 rounded-lg theme-gradient-bg
                       flex items-center justify-center shadow-xl"
                     initial={{ scale: 0, rotate: -160 }}
                     animate={{ scale: 1, rotate: 0 }}

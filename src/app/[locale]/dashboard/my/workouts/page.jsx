@@ -220,7 +220,7 @@ function IconBtn({ children, onClick, disabled, title, className = '', active = 
 			title={title}
 			aria-label={title}
 			className={cx(
-				'inline-flex items-center justify-center rounded-xl border transition-all duration-150',
+				'inline-flex items-center justify-center rounded-lg border transition-all duration-150',
 				'active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-300)]',
 				'disabled:opacity-50 disabled:cursor-not-allowed',
 				active
@@ -244,7 +244,7 @@ function PrimaryBtn({ children, onClick, disabled, title, className = '' }) {
 			title={title}
 			aria-label={title}
 			className={cx(
-				'inline-flex items-center justify-center gap-2 rounded-xl border border-transparent',
+				'inline-flex items-center justify-center gap-2 rounded-lg border border-transparent',
 				'bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]',
 				'text-white font-semibold text-sm shadow-lg shadow-[var(--color-primary-200)]',
 				'transition-all duration-150 active:scale-95',
@@ -275,7 +275,7 @@ function NotesModal({ open, onClose, title, notes = [], t }) {
 				animate={{ y: 0, opacity: 1, scale: 1 }}
 				exit={{ y: 24, opacity: 0, scale: 0.97 }}
 				transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-				className="fixed left-1/2 top-[10%] -translate-x-1/2 z-[125] w-[92%] max-w-md rounded-2xl bg-white shadow-2xl border border-[var(--color-primary-200)] overflow-hidden"
+				className="fixed left-1/2 top-[10%] -translate-x-1/2 z-[125] w-[92%] max-w-md rounded-lg bg-white shadow-2xl border border-[var(--color-primary-200)] overflow-hidden"
 				onClick={e => e.stopPropagation()}
 			>
 				<div className="p-4 border-b border-[var(--color-primary-100)] bg-gradient-to-r from-[var(--color-primary-50)] to-white flex items-center justify-between gap-3">
@@ -290,7 +290,7 @@ function NotesModal({ open, onClose, title, notes = [], t }) {
 
 				<div className="p-4 space-y-2 max-h-[60vh] overflow-y-auto">
 					{Array.isArray(notes) && notes.length ? notes.map((n, idx) => (
-						<div key={idx} className="flex items-start gap-3 rounded-xl border border-[var(--color-primary-100)] bg-[var(--color-primary-50)] p-3">
+						<div key={idx} className="flex items-start gap-3 rounded-lg border border-[var(--color-primary-100)] bg-[var(--color-primary-50)] p-3">
 							<span className="shrink-0 w-5 h-5 rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white text-[10px] font-bold flex items-center justify-center mt-0.5">
 								{idx + 1}
 							</span>
@@ -302,7 +302,7 @@ function NotesModal({ open, onClose, title, notes = [], t }) {
 				</div>
 
 				<div className="p-3 border-t border-slate-100 bg-white">
-					<button onClick={onClose} className="w-full h-10 rounded-xl border border-[var(--color-primary-200)] text-sm font-semibold text-[var(--color-primary-700)] hover:bg-[var(--color-primary-50)] transition-colors">
+					<button onClick={onClose} className="w-full h-10 rounded-lg border border-[var(--color-primary-200)] text-sm font-semibold text-[var(--color-primary-700)] hover:bg-[var(--color-primary-50)] transition-colors">
 						{t('actions.close')}
 					</button>
 				</div>
@@ -311,15 +311,11 @@ function NotesModal({ open, onClose, title, notes = [], t }) {
 	);
 }
 
-/* DayPicker replaced by TabsPill inside WorkoutHeader — imported below */
-
-/* ─────────────────────────────────────────
-	 SECTION TABS
-───────────────────────────────────────── */
+ 
 function SectionTabs({ tabs, active, onChange }) {
 	if (tabs.length <= 1) return null;
 	return (
-		<div className="flex gap-1.5 p-1 rounded-xl bg-[var(--color-primary-50)] border border-[var(--color-primary-100)]">
+		<div className="flex gap-1.5 p-1 rounded-lg bg-[var(--color-primary-50)] border border-[var(--color-primary-100)]">
 			{tabs.map(tab => {
 				const isActive = tab.key === active;
 				return (
@@ -430,7 +426,7 @@ export function ExerciseList({ workout, exercisesOverride, currentExId, onPick, 
 	if (!workout || exercises.length === 0) {
 		return (
 			<div className="flex flex-col items-center justify-center py-10 text-center">
-				<div className="w-12 h-12 rounded-2xl bg-[var(--color-primary-50)] flex items-center justify-center mb-3">
+				<div className="w-12 h-12 rounded-lg bg-[var(--color-primary-50)] flex items-center justify-center mb-3">
 					<Dumbbell size={20} className="text-[var(--color-primary-400)]" />
 				</div>
 				<p className="text-sm font-medium text-slate-500">{t('noExercises')}</p>
@@ -461,7 +457,7 @@ export function ExerciseList({ workout, exercisesOverride, currentExId, onPick, 
 							type="button"
 							onClick={() => onPick?.(ex)}
 							className={cx(
-								'w-full text-left rounded-xl border transition-all duration-200 overflow-hidden',
+								'w-full text-left rounded-lg border transition-all duration-200 overflow-hidden',
 								'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-300)]',
 								isCompleted
 									? 'border-emerald-200 bg-emerald-50/60'
@@ -473,7 +469,7 @@ export function ExerciseList({ workout, exercisesOverride, currentExId, onPick, 
 
 							{/* ── MOBILE CARD ── */}
 							<div className="lg:hidden p-.5">
-								<div className="relative w-16 h-16 rounded-xl overflow-hidden bg-slate-100">
+								<div className="relative w-16 h-16 rounded-lg overflow-hidden bg-slate-100">
 									{ex?.img
 										? <Img src={ex.img} alt={ex?.name || 'exercise'} className="object-contain w-full h-full" showBlur={false} />
 										: <div className="grid place-items-center w-full h-full"><Dumbbell size={16} className="text-slate-400" /></div>
@@ -481,7 +477,7 @@ export function ExerciseList({ workout, exercisesOverride, currentExId, onPick, 
 
 									{/* Active ring overlay */}
 									{isActive && !isCompleted && (
-										<div className="absolute inset-0 ring-2 ring-[var(--color-primary-400)] ring-inset rounded-xl" />
+										<div className="absolute inset-0 ring-2 ring-[var(--color-primary-400)] ring-inset rounded-lg" />
 									)}
 
 									{/* Completed overlay */}
@@ -491,7 +487,7 @@ export function ExerciseList({ workout, exercisesOverride, currentExId, onPick, 
 												initial={{ opacity: 0 }}
 												animate={{ opacity: 1 }}
 												exit={{ opacity: 0 }}
-												className="absolute inset-0 bg-emerald-500/25 flex items-center justify-center rounded-xl"
+												className="absolute inset-0 bg-emerald-500/25 flex items-center justify-center rounded-lg"
 											>
 												<div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-md">
 													<Check size={12} strokeWidth={3} className="text-white" />
@@ -520,7 +516,7 @@ export function ExerciseList({ workout, exercisesOverride, currentExId, onPick, 
 								{/* Thumbnail + ring wrapper */}
 								<div className="relative shrink-0">
 									<div className={cx(
-										'w-11 h-11 rounded-xl overflow-hidden bg-slate-100',
+										'w-11 h-11 rounded-lg overflow-hidden bg-slate-100',
 										isCompleted && 'opacity-80',
 									)}>
 										{ex?.img
@@ -535,7 +531,7 @@ export function ExerciseList({ workout, exercisesOverride, currentExId, onPick, 
 													animate={{ opacity: 1, scale: 1 }}
 													exit={{ opacity: 0, scale: 0.7 }}
 													transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-													className="absolute inset-0 bg-emerald-500/30 flex items-center justify-center rounded-xl"
+													className="absolute inset-0 bg-emerald-500/30 flex items-center justify-center rounded-lg"
 												>
 													<div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
 														<Check size={10} strokeWidth={3} className="text-white" />
@@ -592,7 +588,7 @@ export function ExerciseList({ workout, exercisesOverride, currentExId, onPick, 
 									type="button"
 									onClick={e => { e.stopPropagation(); toggleExerciseCompletion?.(exId); }}
 									className={cx(
-										'w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 shrink-0',
+										'w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0',
 										'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-300)]',
 										'active:scale-90',
 										isCompleted
@@ -639,7 +635,7 @@ export function ExerciseList({ workout, exercisesOverride, currentExId, onPick, 
 function StatChip({ icon: Icon, label, value, accent = false }) {
 	return (
 		<div className={cx(
-			'flex items-center gap-2 flex-1 min-w-0 px-3 py-2.5 rounded-xl border',
+			'flex items-center gap-2 flex-1 min-w-0 px-3 py-2.5 rounded-lg border',
 			accent ? 'bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-via)] border-transparent' : 'bg-white border-[var(--color-primary-100)]',
 		)}>
 			<div className={cx('w-7 h-7 rounded-lg flex items-center justify-center shrink-0', accent ? 'bg-white/20' : 'bg-[var(--color-primary-50)]')}>
@@ -687,7 +683,7 @@ function SetsTable({
 	};
 
 	return (
-		<div className="mt-3 rounded-2xl border border-[var(--color-primary-100)] bg-white overflow-hidden shadow-sm">
+		<div className="mt-3 rounded-lg border border-[var(--color-primary-100)] bg-white overflow-hidden shadow-sm">
 			{/* Header */}
 			<div className="grid grid-cols-[auto_1fr_1fr_auto] gap-0 border-b border-[var(--color-primary-100)] bg-[var(--color-primary-50)]">
 				{['#', t('table.weight'), t('table.reps'), t('table.done')].map((h, i) => (
@@ -846,7 +842,7 @@ function SetInput({ value, onChange, onBlur, onMinus, onPlus, placeholder, input
 				inputMode={inputMode}
 				placeholder={placeholder}
 				aria-label={aria}
-				className="w-full h-9 text-center text-base font-bold tabular-nums rounded-xl border border-[var(--color-primary-200)] bg-white outline-none px-8 focus:border-[var(--color-primary-400)] focus:ring-2 focus:ring-[var(--color-primary-100)] transition-all"
+				className="w-full h-9 text-center text-base font-bold tabular-nums rounded-lg border border-[var(--color-primary-200)] bg-white outline-none px-8 focus:border-[var(--color-primary-400)] focus:ring-2 focus:ring-[var(--color-primary-100)] transition-all"
 			/>
 			<button
 				type="button"
@@ -899,7 +895,7 @@ function CardioTimerCard({ durationSeconds = 0, note, className = '' }) {
 	const isComplete = !running && duration > 0 && remaining === 0;
 
 	return (
-		<div className={cx('mt-3 rounded-2xl border border-[var(--color-primary-100)] bg-white overflow-hidden shadow-sm', className)}>
+		<div className={cx('mt-3 rounded-lg border border-[var(--color-primary-100)] bg-white overflow-hidden shadow-sm', className)}>
 			<div className="flex items-center gap-4 p-4">
 				{/* Ring */}
 				<div className="relative shrink-0 w-16 h-16 flex items-center justify-center">
@@ -932,18 +928,18 @@ function CardioTimerCard({ durationSeconds = 0, note, className = '' }) {
 							<button onMouseDown={() => startHold(-15)} onMouseUp={endHold} onMouseLeave={endHold}
 								onTouchStart={() => startHold(-15)} onTouchEnd={endHold}
 								onClick={() => { step(-15); haptic(); }}
-								className="w-8 h-8 rounded-xl border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] text-[var(--color-primary-600)] flex items-center justify-center active:scale-90 transition-all"
+								className="w-8 h-8 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] text-[var(--color-primary-600)] flex items-center justify-center active:scale-90 transition-all"
 							><Minus size={13} /></button>
-							<div className="flex-1 text-center text-sm font-bold text-[var(--color-primary-700)] bg-[var(--color-primary-50)] rounded-xl py-1.5 border border-[var(--color-primary-100)]">
+							<div className="flex-1 text-center text-sm font-bold text-[var(--color-primary-700)] bg-[var(--color-primary-50)] rounded-lg py-1.5 border border-[var(--color-primary-100)]">
 								{toMMSS(seconds)}
 							</div>
 							<button onMouseDown={() => startHold(15)} onMouseUp={endHold} onMouseLeave={endHold}
 								onTouchStart={() => startHold(15)} onTouchEnd={endHold}
 								onClick={() => { step(15); haptic(); }}
-								className="w-8 h-8 rounded-xl bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white flex items-center justify-center active:scale-90 transition-all"
+								className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white flex items-center justify-center active:scale-90 transition-all"
 							><Plus size={13} /></button>
 							{seconds !== initial && (
-								<button onClick={handleReset} className="w-8 h-8 rounded-xl border border-[var(--color-primary-200)] bg-white text-[var(--color-primary-500)] flex items-center justify-center active:scale-90 transition-all">
+								<button onClick={handleReset} className="w-8 h-8 rounded-lg border border-[var(--color-primary-200)] bg-white text-[var(--color-primary-500)] flex items-center justify-center active:scale-90 transition-all">
 									<RotateCcw size={12} />
 								</button>
 							)}
@@ -958,7 +954,7 @@ function CardioTimerCard({ durationSeconds = 0, note, className = '' }) {
 						) : paused ? (
 							<>
 								<button onClick={() => { resume(); haptic(); }}
-									className="flex-1 h-9 rounded-xl text-sm font-bold text-[var(--color-primary-700)] bg-[var(--color-primary-50)] border border-[var(--color-primary-200)] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+									className="flex-1 h-9 rounded-lg text-sm font-bold text-[var(--color-primary-700)] bg-[var(--color-primary-50)] border border-[var(--color-primary-200)] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
 									<Play size={13} fill="currentColor" /> {t('actions.resume')}
 								</button>
 								<IconBtn onClick={() => { stop(); haptic(20); }} className="w-9 h-9 !border-rose-200 !text-rose-500 hover:!bg-rose-50">
@@ -968,7 +964,7 @@ function CardioTimerCard({ durationSeconds = 0, note, className = '' }) {
 						) : (
 							<>
 								<button onClick={() => { pause(); haptic(); }}
-									className="flex-1 h-9 rounded-xl text-sm font-bold text-[var(--color-primary-700)] bg-white border border-[var(--color-primary-200)] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+									className="flex-1 h-9 rounded-lg text-sm font-bold text-[var(--color-primary-700)] bg-white border border-[var(--color-primary-200)] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
 									<Pause size={13} /> {t('actions.pause')}
 								</button>
 								<IconBtn onClick={() => { stop(); haptic(20); }} className="w-9 h-9 !border-rose-200 !text-rose-500 hover:!bg-rose-50">
@@ -982,7 +978,7 @@ function CardioTimerCard({ durationSeconds = 0, note, className = '' }) {
 
 			{!!note && (
 				<div className="px-4 pb-4">
-					<div className="rounded-xl bg-[var(--color-primary-50)] border border-[var(--color-primary-100)] px-3 py-2.5 text-xs text-slate-600">
+					<div className="rounded-lg bg-[var(--color-primary-50)] border border-[var(--color-primary-100)] px-3 py-2.5 text-xs text-slate-600">
 						<span className="font-semibold text-[var(--color-primary-700)]">{t('note')}:</span> {String(note)}
 					</div>
 				</div>
@@ -997,16 +993,16 @@ function CardioTimerCard({ durationSeconds = 0, note, className = '' }) {
 function LoadingSkeleton() {
 	return (
 		<div className="space-y-4 animate-pulse p-4">
-			<div className="h-28 rounded-2xl bg-gradient-to-r from-[var(--color-primary-100)] to-[var(--color-primary-50)]" />
+			<div className="h-28 rounded-lg bg-gradient-to-r from-[var(--color-primary-100)] to-[var(--color-primary-50)]" />
 			<div className="flex gap-2">
-				{[1, 2, 3, 4].map(i => <div key={i} className="h-10 w-14 rounded-xl bg-slate-200" />)}
+				{[1, 2, 3, 4].map(i => <div key={i} className="h-10 w-14 rounded-lg bg-slate-200" />)}
 			</div>
-			<div className="aspect-video rounded-2xl bg-slate-200" />
+			<div className="aspect-video rounded-lg bg-slate-200" />
 			<div className="flex gap-3">
-				<div className="h-14 flex-1 rounded-xl bg-slate-100" />
-				<div className="h-14 flex-1 rounded-xl bg-slate-100" />
+				<div className="h-14 flex-1 rounded-lg bg-slate-100" />
+				<div className="h-14 flex-1 rounded-lg bg-slate-100" />
 			</div>
-			<div className="h-40 rounded-2xl bg-slate-100" />
+			<div className="h-40 rounded-lg bg-slate-100" />
 		</div>
 	);
 }
@@ -1470,7 +1466,7 @@ export default function MyWorkoutsPage() {
 				<div className="space-y-0 lg:space-y-4">
 					{!hasExercises ? (
 						<div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-							<div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-primary-50)] flex items-center justify-center mb-4 shadow-sm">
+							<div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-primary-50)] flex items-center justify-center mb-4 shadow-sm">
 								<Dumbbell size={28} className="text-[var(--color-primary-400)]" />
 							</div>
 							<h3 className="text-base font-bold text-slate-700">{t('noExercises')}</h3>
@@ -1490,7 +1486,7 @@ export default function MyWorkoutsPage() {
 
 							{/* Media card */}
 							<div className="mx-3 lg:mx-0 pt-3 pb-1">
-								<div className="rounded-2xl border border-[var(--color-primary-100)] bg-white overflow-hidden shadow-sm">
+								<div className="rounded-lg border border-[var(--color-primary-100)] bg-white overflow-hidden shadow-sm">
 									{/* Image / Video */}
 									<div className="relative aspect-video bg-slate-50">
 										{currentExercise && (activeMedia === 'video' || activeMedia === 'video2') && currentExercise[activeMedia] ? (
@@ -1515,7 +1511,7 @@ export default function MyWorkoutsPage() {
 
 										{/* Media switcher */}
 										<div className="absolute top-2 right-2">
-											<div className="flex flex-col gap-1 bg-white/80 backdrop-blur-sm rounded-xl p-1 border border-white/60 shadow-sm">
+											<div className="flex flex-col gap-1 bg-white/80 backdrop-blur-sm rounded-lg p-1 border border-white/60 shadow-sm">
 												{[
 													{ key: 'image', icon: ImageIcon, title: t('showImage'), disabled: !currentExercise?.img },
 													{ key: 'video', icon: VideoIcon, title: t('showVideo'), disabled: !currentExercise?.video },
@@ -1575,7 +1571,7 @@ export default function MyWorkoutsPage() {
 									{/* Note (non-cardio) */}
 									{!isCardio && String(currentExercise?.note ?? '').trim() && (
 										<div className="px-3 pb-3">
-											<div className="rounded-xl bg-[var(--color-primary-50)] border border-[var(--color-primary-100)] px-3 py-2.5 text-xs text-slate-600">
+											<div className="rounded-lg bg-[var(--color-primary-50)] border border-[var(--color-primary-100)] px-3 py-2.5 text-xs text-slate-600">
 												<span className="font-semibold text-[var(--color-primary-700)]">{t('notes.note', { default: 'Note' })}:</span>{' '}
 												{String(currentExercise.note).trim()}
 											</div>
@@ -1630,7 +1626,7 @@ export default function MyWorkoutsPage() {
 
 				{/* ── RIGHT SIDEBAR (desktop only) ── */}
 				<div className="hidden lg:block">
-					<div className="rounded-2xl border border-[var(--color-primary-100)] bg-white p-4 shadow-sm sticky top-6">
+					<div className="rounded-lg border border-[var(--color-primary-100)] bg-white p-4 shadow-sm sticky top-6">
 						{sectionTabs.length > 1 && (
 							<div className="mb-4">
 								<SectionTabs tabs={sectionTabs} active={activeSection} onChange={setActiveSection} />
@@ -1707,7 +1703,7 @@ export function TabsPill({
 			disabled={disabled}
 			className={cx(
 				'max-md:hidden shrink-0 inline-flex items-center justify-center',
-				'w-8 h-8 rounded-xl border transition-all duration-150',
+				'w-8 h-8 rounded-lg border transition-all duration-150',
 				'bg-white/10 border-white/20 text-white',
 				'hover:bg-white/20 hover:border-white/40',
 				'disabled:opacity-30 disabled:cursor-not-allowed',
@@ -1735,9 +1731,8 @@ export function TabsPill({
 					<LayoutGroup id={id}>
 						<div
 							className={cx(
-								'inline-flex p-1 rounded-2xl',
-								/* Frosted glass pill container sitting on the gradient header */
-								'bg-white/10 border border-white/20 backdrop-blur-sm',
+								'inline-flex p-1 rounded-lg',
+ 								'bg-white/10 border border-white/20 backdrop-blur-sm',
 								isLoading ? 'gap-1.5' : 'gap-1',
 								className,
 							)}
@@ -1750,7 +1745,7 @@ export function TabsPill({
 										<div
 											key={`skel-${i}`}
 											aria-hidden
-											className="h-8 rounded-xl bg-white/20 animate-pulse"
+											className="h-8 rounded-lg bg-white/20 animate-pulse"
 											style={{ width: widths[i % widths.length] }}
 										/>
 									);
@@ -1765,7 +1760,7 @@ export function TabsPill({
 											ref={el => (tabRefs.current[tab.key] = el)}
 											onClick={() => onChange(tab.key)}
 											className={cx(
-												'relative select-none rounded-xl px-3 py-1.5 outline-none',
+												'relative select-none rounded-lg max-md:px-2 px-3 py-1.5 outline-none',
 												'focus-visible:ring-2 focus-visible:ring-white/50',
 												'transition-colors duration-150',
 												isActive ? 'text-[var(--color-primary-700)]' : 'text-white/80 hover:text-white',
@@ -1779,7 +1774,7 @@ export function TabsPill({
 												<motion.span
 													layoutId="tabs-pill-bg"
 													className={cx(
-														'absolute inset-0 rounded-xl',
+														'absolute inset-0 rounded-lg',
 														'bg-white shadow-md',
 													)}
 													transition={{ type: 'spring', stiffness: 380, damping: 32 }}
@@ -1800,7 +1795,7 @@ export function TabsPill({
 												{/* Full label */}
 												<span
 													className={cx(
-														'text-xs font-bold uppercase tracking-wide',
+														'text-xs max-md:text-[10px] font-bold uppercase tracking-wide',
 														sliceInPhone ? 'hidden md:inline' : 'inline',
 													)}
 												>
@@ -1834,7 +1829,7 @@ export function HeaderActions({ onAudioClick, onNotesClick, listenLabel, notesLa
 				title={listenLabel}
 				aria-label={listenLabel}
 				className={cx(
-					'inline-flex items-center gap-1.5 rounded-xl border border-white/25 bg-white/10',
+					'inline-flex items-center gap-1.5 rounded-lg border border-white/25 bg-white/10',
 					'h-9 px-3',
 					'text-white text-xs font-semibold',
 					'transition-all duration-150 hover:bg-white/20 hover:border-white/40',
@@ -1852,7 +1847,7 @@ export function HeaderActions({ onAudioClick, onNotesClick, listenLabel, notesLa
 				title={notesLabel}
 				aria-label={notesLabel}
 				className={cx(
-					'inline-flex items-center gap-1.5 rounded-xl border border-white/25 bg-white/10',
+					'inline-flex items-center gap-1.5 rounded-lg border border-white/25 bg-white/10',
 					'h-9 px-3',
 					'text-white text-xs font-semibold',
 					'transition-all duration-150 hover:bg-white/20 hover:border-white/40',
@@ -1879,7 +1874,7 @@ export function WorkoutHeader({
 	t,
 }) {
 	return (
-		<div className="relative overflow-hidden">
+		<div className="relative overflow-hidden rounded-lg">
 			{/* ── Gradient background layer ── */}
 			<div className="absolute inset-0 bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]" />
 

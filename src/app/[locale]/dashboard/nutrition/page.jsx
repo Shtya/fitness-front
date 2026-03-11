@@ -89,7 +89,7 @@ export const MiniField = memo(function MiniField({
 				onChange={onChange}
 				onBlur={onBlur}
 				className={[
-					'h-8 w-full rounded-xl border px-2 text-xs bg-white outline-none transition placeholder:text-slate-400',
+					'h-8 w-full rounded-lg border px-2 text-xs bg-white outline-none transition placeholder:text-slate-400',
 					iconLeft ? 'pl-7' : '',
 					'focus:ring-2 focus:ring-[color:var(--color-primary-200)] focus:border-[color:var(--color-primary-400)]',
 					hasValue
@@ -111,7 +111,7 @@ const UnitSelect = memo(function UnitSelect({ value, onChange, error, disabled =
 	return (
 		<div className={`w-full relative ${className}`}>
 			<div className={[
-				'relative flex items-center rounded-xl border bg-white transition-all duration-200',
+				'relative flex items-center rounded-lg border bg-white transition-all duration-200',
 				error ? 'border-rose-400' : 'border-slate-200 hover:border-[color:var(--color-primary-300)]',
 				disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
 			].join(' ')}>
@@ -178,7 +178,7 @@ export function CButton({
 			disabled={disabled || loading}
 			onClick={onClick}
 			className={[
-				'inline-flex items-center gap-2 rounded-xl font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] active:scale-[.98]',
+				'inline-flex items-center gap-2 rounded-lg font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] active:scale-[.98]',
 				variantMap[variant] || variantMap.primary,
 				sizeMap[size] || sizeMap.md,
 				disabled || loading ? 'opacity-60 cursor-not-allowed' : '',
@@ -477,7 +477,7 @@ export default function NutritionManagementPage() {
 						value={searchText}
 						onChange={e => setSearchText(e.target.value)}
 						placeholder={t('search.placeholder')}
-						className="h-10 w-full pl-9 pr-8 rtl:pr-9 rtl:pl-8 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 shadow-xs placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)] focus:border-[color:var(--color-primary-400)] hover:border-slate-300"
+						className="h-10 w-full pl-9 pr-8 rtl:pr-9 rtl:pl-8 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 shadow-xs placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)] focus:border-[color:var(--color-primary-400)] hover:border-slate-300"
 					/>
 					{!!searchText && (
 						<button
@@ -564,7 +564,7 @@ export default function NutritionManagementPage() {
 			</Modal>
 
 			<Modal open={detailsOpen} onClose={() => setDetailsOpen(false)} title={selectedPlan ? `${t('modals.details_title')}: ${selectedPlan.name}` : t('modals.details_title')}>
-				<div className="rounded-xl bg-slate-50/60 p-3 sm:p-4">
+				<div className="rounded-lg bg-slate-50/60 p-3 sm:p-4">
 					{selectedPlan && <PlanDetailsView plan={selectedPlan} />}
 				</div>
 			</Modal>
@@ -590,7 +590,7 @@ export function ReorderFieldArray({ control, name, renderRow, className = 'space
 	return (
 		<Reorder.Group axis="y" values={fields} onReorder={newOrder => replace(newOrder)} className={className}>
 			{fields.map((row, idx) => (
-				<Reorder.Item key={row.id || idx} value={row} dragListener className="rounded-xl border border-slate-200 bg-white p-2">
+				<Reorder.Item key={row.id || idx} value={row} dragListener className="rounded-lg border border-slate-200 bg-white p-2">
 					<div className="flex items-start gap-2">
 						<GripVertical className="w-4 h-4 mt-2 shrink-0 cursor-grab text-slate-300 hover:text-slate-400 transition" />
 						<div className="flex-1">{renderRow({ row, index: idx })}</div>
@@ -747,7 +747,7 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 				{baseMeals?.length ? (
 					<Reorder.Group axis="y" values={baseMeals} onReorder={newOrder => replaceMeals(newOrder)} className="space-y-2">
 						{baseMeals.map((m, mealIndex) => (
-							<Reorder.Item key={m.id || mealIndex} value={m} dragListener className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
+							<Reorder.Item key={m.id || mealIndex} value={m} dragListener className="rounded-lg border border-slate-200 bg-white overflow-hidden shadow-xs">
 								{/* Meal header */}
 								<div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50/70 px-3 py-2.5">
 									<GripVertical className="w-4 h-4 shrink-0 cursor-grab text-slate-300 hover:text-slate-400 transition" />
@@ -790,7 +790,7 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 						))}
 					</Reorder.Group>
 				) : (
-					<div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-8 text-center">
+					<div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 py-8 text-center">
 						<UtensilsCrossed className="w-8 h-8 text-slate-300 mx-auto mb-2" />
 						<p className="text-sm text-slate-400">{t('empty.no_meals_hint')}</p>
 					</div>
@@ -813,7 +813,7 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 						animate={{ opacity: 1, y: 0, scale: 1 }}
 						exit={{ opacity: 0, y: -8, scale: 0.98 }}
 						transition={{ duration: 0.2 }}
-						className="rounded-2xl border border-[color:var(--color-primary-200)] bg-[color:var(--color-primary-50)] p-4 space-y-3"
+						className="rounded-lg border border-[color:var(--color-primary-200)] bg-[color:var(--color-primary-50)] p-4 space-y-3"
 					>
 						<div className="flex items-center gap-2 mb-1">
 							<Sparkles size={14} className="text-[color:var(--color-primary-600)]" />
@@ -821,7 +821,7 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 						</div>
 						<textarea
 							rows={3}
-							className="w-full bg-white rounded-xl border border-slate-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)] focus:border-[color:var(--color-primary-400)] resize-none placeholder:text-slate-400 transition"
+							className="w-full bg-white rounded-lg border border-slate-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)] focus:border-[color:var(--color-primary-400)] resize-none placeholder:text-slate-400 transition"
 							placeholder="e.g., 2300 kcal recomposition, 5 meals, add multivitamin after Meal 1…"
 							value={aiText}
 							onChange={e => setAiText(e.target.value)}
@@ -881,7 +881,7 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 						const ex = watchedItems?.[idx];
 						return (
 							<DraggableCard key={f.id || idx} index={idx} onMove={(from, to) => moveItem(from, to)}>
-								<div className="rounded-xl border border-slate-200 bg-white p-2.5 space-y-2 hover:border-slate-300 transition">
+								<div className="rounded-lg border border-slate-200 bg-white p-2.5 space-y-2 hover:border-slate-300 transition">
 									<div className="flex items-center gap-2">
 										<GripDots />
 										<div className="grid grid-cols-2 md:grid-cols-[1fr_110px_88px_110px] gap-2 flex-1">
@@ -916,7 +916,7 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 												title={t('form.add_alternative', { default: 'Add alternative' })}
 												onClick={() => setValue?.(`${basePath}.items.${idx}.alternative`, ex?.alternative ? null : blankAlternative(), { shouldDirty: true })}
 												className={[
-													'h-8 w-8 inline-flex items-center justify-center rounded-xl border transition',
+													'h-8 w-8 inline-flex items-center justify-center rounded-lg border transition',
 													ex?.alternative
 														? 'border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100'
 														: 'border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100',
@@ -934,7 +934,7 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 											initial={{ opacity: 0, height: 0 }}
 											animate={{ opacity: 1, height: 'auto' }}
 											exit={{ opacity: 0, height: 0 }}
-											className="ml-5 rounded-xl border-l-2 border-amber-300 bg-amber-50/60 p-2.5 space-y-2"
+											className="ml-5 rounded-lg border-l-2 border-amber-300 bg-amber-50/60 p-2.5 space-y-2"
 										>
 											<div className="flex items-center justify-between">
 												<span className="text-[10px] font-semibold text-amber-800 uppercase tracking-wide">{t('form.alternative_item', { default: 'Alternative' })}</span>
@@ -966,7 +966,7 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 					<p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide px-1">{t('btn.add_supplement')}</p>
 					{supFields.map((f, idx) => (
 						<DraggableCard key={f.id || idx} index={idx} onMove={(from, to) => moveSup(from, to)}>
-							<div className="rounded-xl border border-slate-200 bg-white p-2.5 hover:border-slate-300 transition">
+							<div className="rounded-lg border border-slate-200 bg-white p-2.5 hover:border-slate-300 transition">
 								<div className="flex items-center gap-2">
 									<GripDots />
 									<div className="grid grid-cols-1 md:grid-cols-3 gap-2 flex-1">
@@ -1011,7 +1011,7 @@ export function NotesListInput({ value = [''], onChange }) {
 	};
 
 	return (
-		<div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 space-y-1.5">
+		<div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 space-y-1.5">
 			{list.map((line, i) => (
 				<div key={i} className="flex items-center gap-2.5 group">
 					<span className="w-3.5 text-[color:var(--color-primary-400)] text-[10px] shrink-0 select-none">●</span>
@@ -1053,7 +1053,7 @@ function DayOverrides({ control, errors, setValue }) {
 		const { fields, append, remove, move } = useFieldArray({ control, name: basePath });
 
 		return (
-			<div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+			<div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
 				<button
 					type="button"
 					onClick={() => onToggle(dayKey)}
@@ -1078,7 +1078,7 @@ function DayOverrides({ control, errors, setValue }) {
 						<div className="space-y-2">
 							{fields.map((m, mi) => (
 								<DraggableCard key={m.id || mi} index={mi} onMove={(from, to) => move(from, to)}>
-									<div className="rounded-xl border border-slate-200 bg-white p-3">
+									<div className="rounded-lg border border-slate-200 bg-white p-3">
 										<div className="flex items-center gap-2 justify-between mb-3">
 											<div className="flex items-center gap-2">
 												<GripDots />
@@ -1127,13 +1127,13 @@ export function PlanDetailsView({ plan }) {
 			{!!plan?.desc && <p className="text-sm text-slate-700">{plan.desc}</p>}
 
 			{!!plan?.notes && (
-				<div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+				<div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
 					<p className="text-xs font-semibold text-amber-800 mb-1">{t('details.notes')}</p>
 					<pre className="whitespace-pre-wrap text-xs leading-6 text-amber-900">{plan.notes}</pre>
 				</div>
 			)}
 
-			<div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-xs">
+			<div className="rounded-lg border border-slate-200 bg-white overflow-hidden shadow-xs">
 				{plan?.days?.map((d, idx) => {
 					const dayKey = d.day || `day-${idx}`;
 					const meals = d.meals || mapFoodsToMealsLocal(d.foods || []);
@@ -1178,7 +1178,7 @@ export function PlanDetailsView({ plan }) {
 											{meals.map((m, mi) => {
 												const mealCals = (m.items || []).reduce((a, b) => a + Number(b.calories || 0), 0);
 												return (
-													<motion.div key={mi} layout initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
+													<motion.div key={mi} layout initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={spring} className="rounded-lg border border-slate-200 bg-white p-3 shadow-xs">
 														<div className="flex items-center justify-between mb-2">
 															<div className="flex items-center gap-2">
 																<UtensilsCrossed size={13} className="text-[color:var(--color-primary-500)]" />
@@ -1261,7 +1261,7 @@ function AssignPlanForm({ onClose, clients, onAssign }) {
 					{t('modals.assign_select_client') ?? 'Select client'}
 				</label>
 				<Select value={userId} onValueChange={setUserId}>
-					<SelectTrigger className="h-10 w-full rounded-xl border border-slate-200 bg-white text-sm">
+					<SelectTrigger className="h-10 w-full rounded-lg border border-slate-200 bg-white text-sm">
 						<SelectValue placeholder={t('modals.assign_placeholder') ?? 'Choose a client'} />
 					</SelectTrigger>
 					<SelectContent>
@@ -1275,7 +1275,7 @@ function AssignPlanForm({ onClose, clients, onAssign }) {
 			</div>
 
 			<div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
-				<button type="button" onClick={onClose} className="h-9 px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+				<button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
 					{t('btn.cancel')}
 				</button>
 				<Button disabled={!userId || userId === '__empty'} loading={submitting} type="submit" color="primary" name={submitting ? t('btn.assigning') : t('btn.assign_plan')} className="!h-9 !w-fit" />
@@ -1293,13 +1293,13 @@ export const PlanListView = memo(function PlanListView({ loading, plans = [], on
 		return (
 			<div className="space-y-2">
 				{Array.from({ length: 5 }).map((_, i) => (
-					<div key={i} className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white px-5 py-4">
-						<div className="h-10 w-10 rounded-xl bg-slate-100 shimmer shrink-0" />
+					<div key={i} className="flex items-center gap-4 rounded-lg border border-slate-100 bg-white px-5 py-4">
+						<div className="h-10 w-10 rounded-lg bg-slate-100 shimmer shrink-0" />
 						<div className="flex-1 space-y-2">
 							<div className="h-3.5 w-44 rounded-full bg-slate-100 shimmer" />
 							<div className="h-2.5 w-64 rounded-full bg-slate-100 shimmer" />
 						</div>
-						<div className="h-8 w-32 rounded-xl bg-slate-100 shimmer" />
+						<div className="h-8 w-32 rounded-lg bg-slate-100 shimmer" />
 					</div>
 				))}
 			</div>
@@ -1308,8 +1308,8 @@ export const PlanListView = memo(function PlanListView({ loading, plans = [], on
 
 	if (!plans.length) {
 		return (
-			<div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 py-16">
-				<div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+			<div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-slate-200 bg-slate-50/60 py-16">
+				<div className="flex h-16 w-16 items-center justify-center rounded-lg bg-slate-100">
 					<UtensilsCrossed className="h-7 w-7 text-slate-400" />
 				</div>
 				<div className="text-center space-y-1">
@@ -1328,13 +1328,13 @@ export const PlanListView = memo(function PlanListView({ loading, plans = [], on
 					initial={{ opacity: 0, y: 6 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ delay: idx * 0.04, duration: 0.22 }}
-					className="group relative bg-card flex items-center gap-4 rounded-2xl border border-slate-100 bg-white px-5 py-3.5 shadow-xs hover:shadow-sm hover:border-slate-200 transition-all duration-200"
+					className="group relative bg-card flex items-center gap-4 rounded-lg border border-slate-100 bg-white px-5 py-3.5 shadow-xs hover:shadow-sm hover:border-slate-200 transition-all duration-200"
 				>
 					{/* Accent line */}
 					<span aria-hidden className="absolute left-0 top-0 h-full w-1 rounded-l-2xl theme-gradient-bg opacity-70" />
 
 					{/* Icon */}
-					<div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-xl theme-gradient-bg text-white shadow-sm">
+					<div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg theme-gradient-bg text-white shadow-sm">
 						<UtensilsCrossed className="h-5 w-5" />
 					</div>
 
@@ -1400,12 +1400,12 @@ function ConfirmDialog({ loading, open, onClose, title, message, confirmText, on
 			<motion.div
 				initial={{ opacity: 0, scale: 0.96, y: 8 }}
 				animate={{ opacity: 1, scale: 1, y: 0 }}
-				className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl"
+				className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
 			>
 				<h3 className="text-base font-semibold text-slate-800 mb-2">{title}</h3>
 				<p className="text-sm text-slate-500 mb-5 leading-relaxed">{message}</p>
 				<div className="flex items-center justify-end gap-2">
-					<button type="button" onClick={onClose} disabled={loading} className="h-9 px-4 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+					<button type="button" onClick={onClose} disabled={loading} className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
 						{t('btn.cancel')}
 					</button>
 					<CButton onClick={onConfirm} disabled={loading} name={loading ? 'btn.deleting' : 'btn.delete'} variant="danger" size="sm" className="!h-9" />
@@ -1458,7 +1458,7 @@ export function DangerX({ onClick, title = 'Remove', size = 'md', loading = fals
 				disabled={disabled || loading}
 				onClick={handleClick}
 				className={[
-					'inline-flex items-center gap-1.5 rounded-xl border font-medium transition-all focus-visible:outline-none active:scale-[.97]',
+					'inline-flex items-center gap-1.5 rounded-lg border font-medium transition-all focus-visible:outline-none active:scale-[.97]',
 					sizeStyles[size],
 					disabled || loading ? 'opacity-60 cursor-not-allowed' : armed
 						? 'border-rose-200 bg-rose-50 text-rose-700'
@@ -1492,7 +1492,7 @@ export function DangerX({ onClick, title = 'Remove', size = 'md', loading = fals
 						initial={{ opacity: 0, y: -4 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: -4 }}
-						className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-xl border border-rose-200 bg-white px-2.5 py-1 text-[11px] text-rose-700 shadow-md z-10"
+						className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-[11px] text-rose-700 shadow-md z-10"
 					>
 						{t('clickAgainToConfirm')}
 					</motion.div>

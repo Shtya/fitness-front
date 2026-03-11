@@ -41,7 +41,7 @@ const cx = (...c) => c.filter(Boolean).join(' ');
 function Card({ children, className = '', accent = false }) {
   return (
     <div
-      className={cx('relative overflow-hidden rounded-2xl border bg-white', className)}
+      className={cx('relative overflow-hidden rounded-lg border bg-white', className)}
       style={{
         borderColor: 'var(--color-primary-100)',
         boxShadow: '0 1px 3px rgba(15,23,42,0.05), 0 8px 24px rgba(15,23,42,0.06)',
@@ -69,7 +69,7 @@ function Pill({ children, tone = 'primary' }) {
   const s = tones[tone] || tones.primary;
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-xl border px-2.5 py-0.5 text-xs font-semibold"
+      className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-0.5 text-xs font-semibold"
       style={{ borderColor: s.border, background: s.bg, color: s.text }}
     >
       {children}
@@ -85,7 +85,7 @@ function IconBox({ children, active = false, variant = 'primary', size = 'md' })
   else if (active) style = { background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))', color: 'white', boxShadow: '0 4px 14px -4px var(--color-primary-500)' };
   else style = { background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))', color: 'var(--color-primary-600)' };
   return (
-    <div className={cx('grid flex-shrink-0 place-items-center rounded-xl', sizes[size])} style={style}>
+    <div className={cx('grid flex-shrink-0 place-items-center rounded-lg', sizes[size])} style={style}>
       {children}
     </div>
   );
@@ -100,7 +100,7 @@ function GhostBtn({ children, onClick, disabled, title }) {
       disabled={disabled}
       title={title}
       aria-label={title}
-      className="inline-flex h-9 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] hover:bg-[color:var(--color-primary-50)]"
+      className="inline-flex h-9 items-center gap-2 rounded-lg border px-4 text-sm font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] hover:bg-[color:var(--color-primary-50)]"
       style={{
         borderColor: 'var(--color-primary-200)',
         background: 'white',
@@ -122,7 +122,7 @@ function GradientBtn({ children, onClick, disabled, title }) {
       disabled={disabled}
       title={title}
       aria-label={title}
-      className="inline-flex h-9 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] hover:opacity-90 active:scale-[.97]"
+      className="inline-flex h-9 items-center gap-2 rounded-lg px-5 text-sm font-semibold text-white transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] hover:opacity-90 active:scale-[.97]"
       style={{
         background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
         boxShadow: '0 4px 14px -4px var(--color-primary-500)',
@@ -143,13 +143,13 @@ function ViewBtn({ onClick, label }) {
         onClick={onClick}
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[color:var(--color-primary-200)] bg-white text-[color:var(--color-primary-600)] shadow-sm transition-all duration-150 hover:bg-[color:var(--color-primary-50)] hover:border-[color:var(--color-primary-300)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--color-primary-200)] bg-white text-[color:var(--color-primary-600)] shadow-sm transition-all duration-150 hover:bg-[color:var(--color-primary-50)] hover:border-[color:var(--color-primary-300)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
       >
         <Eye className="h-3.5 w-3.5" />
       </button>
       <div
         className={cx(
-          'pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-[11px] font-semibold text-white transition-all duration-150',
+          'pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white transition-all duration-150',
           show ? 'opacity-100 -translate-y-0.5' : 'opacity-0 translate-y-1',
         )}
         style={{ background: '#0f172a', boxShadow: '0 8px 24px rgba(15,23,42,0.3)' }}
@@ -178,7 +178,7 @@ function DataRow({ label, value }) {
 function StatBadge({ icon: Icon, value, secondary = false }) {
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-xs font-semibold"
+      className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold"
       style={{
         borderColor: 'var(--color-primary-200)',
         background: secondary
@@ -594,7 +594,7 @@ export default function ReportsUnifiedPage() {
           emptyState={
             <div className="py-16 text-center">
               <div
-                className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl"
+                className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-lg"
                 style={{ background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))' }}
               >
                 <FileText className="h-7 w-7" style={{ color: 'var(--color-primary-500)' }} />
@@ -668,7 +668,7 @@ export default function ReportsUnifiedPage() {
                   return (
                     <div
                       key={side}
-                      className="overflow-hidden rounded-xl border transition-colors hover:border-[color:var(--color-primary-200)]"
+                      className="overflow-hidden rounded-lg border transition-colors hover:border-[color:var(--color-primary-200)]"
                       style={{ borderColor: 'var(--color-primary-100)', background: 'var(--color-primary-50)' }}
                     >
                       <div className="border-b border-[color:var(--color-primary-100)] bg-white px-3 py-1.5">
@@ -696,7 +696,7 @@ export default function ReportsUnifiedPage() {
                 <Pill tone="primary">{active?.measurements?.date || '—'}</Pill>
               </div>
 
-              <div className="overflow-auto rounded-xl border border-[color:var(--color-primary-100)]">
+              <div className="overflow-auto rounded-lg border border-[color:var(--color-primary-100)]">
                 <table className="min-w-[600px] w-full text-sm">
                   <thead>
                     <tr style={{ background: 'var(--color-primary-50)' }}>
@@ -746,7 +746,7 @@ export default function ReportsUnifiedPage() {
                       {t('reports.detail.section.training.notes.title')}
                     </p>
                     <div
-                      className="rounded-xl border p-3 text-sm whitespace-pre-wrap text-slate-800"
+                      className="rounded-lg border p-3 text-sm whitespace-pre-wrap text-slate-800"
                       style={{ borderColor: 'var(--color-primary-100)', background: 'var(--color-primary-50)' }}
                     >
                       {active.training.programNotes}
@@ -806,7 +806,7 @@ export default function ReportsUnifiedPage() {
               </div>
 
               <textarea
-                className="min-h-[120px] w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]"
+                className="min-h-[120px] w-full rounded-lg border bg-white px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]"
                 style={{ borderColor: 'var(--color-primary-200)' }}
                 placeholder={t('reports.detail.feedbackPh')}
                 value={feedbackDraft}

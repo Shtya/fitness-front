@@ -54,24 +54,9 @@ export default function Header({ onMenu }) {
   const isActive = (user?.status || '').toLowerCase() === 'active';
 
   return (
-    <header className="sticky top-0 z-40 w-full"> 
-      <div
-        className="absolute inset-0"
-        style={{
-          background: 'rgba(255, 255, 255, 0.75)',
-          backdropFilter: 'saturate(180%) blur(20px)',
-          WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-        }}
-      />
+    <header className="sticky top-0 z-40 w-full" style={{boxShadow: '2px 0 16px rgba(15,23,42,0.04)' , background : "#eef0f4" , border : "1px solid #ccc"}}> 
       
-
-      {/* Elegant gradient border */}
-      <div
-        className=" border-[.2px] absolute bottom-0 w-full h-[1px]"
-        style={{
- 							borderColor: 'var(--color-primary-200)',
-						}}
-      />
+       
 
       <div className="relative px-4 sm:px-2">
         <div className="flex h-16 items-center justify-between gap-4">

@@ -77,7 +77,7 @@ function Avatar({ name, size = 'md' }) {
 		xl: 'w-14 h-14 text-base',
 	};
 	return (
-		<div className={`${sizeMap[size]} rounded-xl bg-gradient-to-br ${color} flex items-center justify-center text-white font-black shrink-0 shadow-md ring-2 ring-white/20 dark:ring-black/20`}>
+		<div className={`${sizeMap[size]} rounded-lg bg-gradient-to-br ${color} flex items-center justify-center text-white font-black shrink-0 shadow-md ring-2 ring-white/20 dark:ring-black/20`}>
 			{initials}
 		</div>
 	);
@@ -151,13 +151,13 @@ function CredentialsModal({ user, onClose, t }) {
 				initial={{ scale: 0.92, opacity: 0, y: 16 }}
 				animate={{ scale: 1, opacity: 1, y: 0 }}
 				exit={{ scale: 0.92, opacity: 0, y: 16 }}
-				className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-sm overflow-hidden"
+				className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-sm overflow-hidden"
 			>
 				<div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800"
 					style={{ background: 'linear-gradient(135deg, var(--color-primary-50), var(--color-secondary-50))' }}
 				>
 					<div className="flex items-center gap-2">
-						<div className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-lg"
+						<div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-lg"
 							style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
 						>
 							<KeyRound size={14} />
@@ -184,7 +184,7 @@ function CredentialsModal({ user, onClose, t }) {
 								{ label: 'Email', value: creds.email || user.email, icon: Mail },
 								{ label: 'Temp Password', value: creds.tempPassword, icon: KeyRound },
 							].map(({ label, value, icon: Icon }) => (
-								<div key={label} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3">
+								<div key={label} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3">
 									<p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
 										<Icon size={9} />{label}
 									</p>
@@ -194,7 +194,7 @@ function CredentialsModal({ user, onClose, t }) {
 									</div>
 								</div>
 							))}
-							<div className="mt-2 flex items-start gap-2 px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40">
+							<div className="mt-2 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40">
 								<AlertTriangle size={12} className="text-amber-500 shrink-0 mt-0.5" />
 								<p className="text-[10px] text-amber-700 dark:text-amber-400">This is a temporary password. Share securely and ask the user to change it.</p>
 							</div>
@@ -204,7 +204,7 @@ function CredentialsModal({ user, onClose, t }) {
 
 				<div className="px-5 pb-5">
 					<button onClick={onClose}
-						className="w-full h-10 rounded-xl text-white text-sm font-bold transition-all shadow-lg"
+						className="w-full h-10 rounded-lg text-white text-sm font-bold transition-all shadow-lg"
 						style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
 					>
 						Done
@@ -241,13 +241,13 @@ function EditUserModal({ user, onClose, onUpdated, t }) {
 				initial={{ scale: 0.92, opacity: 0, y: 16 }}
 				animate={{ scale: 1, opacity: 1, y: 0 }}
 				exit={{ scale: 0.92, opacity: 0, y: 16 }}
-				className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md overflow-hidden"
+				className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md overflow-hidden"
 			>
 				<div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800"
 					style={{ background: 'linear-gradient(135deg, var(--color-primary-50), var(--color-secondary-50))' }}
 				>
 					<div className="flex items-center gap-2">
-						<div className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-lg"
+						<div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-lg"
 							style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
 						>
 							<Edit size={14} />
@@ -278,7 +278,7 @@ function EditUserModal({ user, onClose, onUpdated, t }) {
 									type={f.type} value={form[f.key]}
 									onChange={e => set(f.key, e.target.value)}
 									placeholder={f.ph}
-									className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-500)]/30 focus:border-[var(--color-primary-400)] transition-all"
+									className="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-500)]/30 focus:border-[var(--color-primary-400)] transition-all"
 								/>
 							</div>
 						);
@@ -287,12 +287,12 @@ function EditUserModal({ user, onClose, onUpdated, t }) {
 
 				<div className="flex gap-2 px-5 pb-5">
 					<button onClick={onClose}
-						className="flex-1 h-10 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+						className="flex-1 h-10 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
 					>
 						Cancel
 					</button>
 					<button onClick={submit} disabled={loading}
-						className="flex-1 h-10 rounded-xl text-white text-sm font-bold transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
+						className="flex-1 h-10 rounded-lg text-white text-sm font-bold transition-all shadow-lg disabled:opacity-60 flex items-center justify-center gap-2"
 						style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
 					>
 						{loading ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
@@ -327,10 +327,10 @@ function DeleteModal({ user, onClose, onDeleted, t }) {
 				initial={{ scale: 0.92, opacity: 0 }}
 				animate={{ scale: 1, opacity: 1 }}
 				exit={{ scale: 0.92, opacity: 0 }}
-				className="bg-white dark:bg-slate-900 rounded-2xl border border-red-200 dark:border-red-900/50 shadow-2xl w-full max-w-sm overflow-hidden"
+				className="bg-white dark:bg-slate-900 rounded-lg border border-red-200 dark:border-red-900/50 shadow-2xl w-full max-w-sm overflow-hidden"
 			>
 				<div className="p-6 text-center">
-					<div className="w-14 h-14 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 flex items-center justify-center mx-auto mb-4">
+					<div className="w-14 h-14 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 flex items-center justify-center mx-auto mb-4">
 						<Trash2 size={24} className="text-red-500" />
 					</div>
 					<h3 className="font-black text-slate-900 dark:text-slate-100 text-base mb-1">Delete User?</h3>
@@ -340,12 +340,12 @@ function DeleteModal({ user, onClose, onDeleted, t }) {
 				</div>
 				<div className="flex gap-2 px-5 pb-5">
 					<button onClick={onClose}
-						className="flex-1 h-10 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+						className="flex-1 h-10 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
 					>
 						Cancel
 					</button>
 					<button onClick={doDelete} disabled={loading}
-						className="flex-1 h-10 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+						className="flex-1 h-10 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
 					>
 						{loading ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
 						Delete
@@ -376,7 +376,7 @@ function ActionBar({ user, onImpersonate, onStatusChange, onEdit, onDelete, onSh
 			<motion.button
 				whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
 				onClick={() => onImpersonate(user)}
-				className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-white text-[10px] font-bold shadow-md transition-all"
+				className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-white text-[10px] font-bold shadow-md transition-all"
 				style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
 				title="Login as this user"
 			>
@@ -400,7 +400,7 @@ function ActionBar({ user, onImpersonate, onStatusChange, onEdit, onDelete, onSh
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.9, y: -6 }}
 							transition={{ duration: 0.14 }}
-							className="absolute ltr:right-0 rtl:left-0 top-9 z-40 w-48 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl py-1 overflow-hidden"
+							className="absolute ltr:right-0 rtl:left-0 top-9 z-40 w-48 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xl py-1 overflow-hidden"
 						>
 							{/* View Dashboard */}
 							<button onClick={() => { onImpersonate(user); setMenu(false); }}
@@ -506,7 +506,7 @@ function ImpersonationBar({ t }) {
 				</span>
 			</div>
 			<button onClick={onExit}
-				className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-sm font-bold border border-white/30 transition-all backdrop-blur-sm"
+				className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-sm font-bold border border-white/30 transition-all backdrop-blur-sm"
 			>
 				<LogOut size={13} />
 				{t ? t('impersonation.return') : 'Return to Super Admin'}
@@ -679,7 +679,7 @@ function AdminCard({ admin, onImpersonate, onStatusChange, onEdit, onDelete, onS
 			layout
 			initial={{ opacity: 0, y: 14 }}
 			animate={{ opacity: 1, y: 0 }}
-			className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-lg hover:shadow-[var(--color-primary-500)]/5 transition-all duration-300"
+			className="bg-white dark:bg-slate-900/80 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-lg hover:shadow-[var(--color-primary-500)]/5 transition-all duration-300"
 		>
 			{/* Gradient top accent */}
 			<div className="h-0.5 w-full" style={{ background: 'linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))' }} />
@@ -691,7 +691,7 @@ function AdminCard({ admin, onImpersonate, onStatusChange, onEdit, onDelete, onS
 					<motion.button
 						whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
 						onClick={loadCoaches}
-						className="mt-1 w-8 h-8 rounded-xl border flex items-center justify-center transition-all shrink-0"
+						className="mt-1 w-8 h-8 rounded-lg border flex items-center justify-center transition-all shrink-0"
 						style={{
 							background: open
 								? 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))'
@@ -751,14 +751,14 @@ function AdminCard({ admin, onImpersonate, onStatusChange, onEdit, onDelete, onS
 							].map((s, i) => {
 								const Icon = s.icon;
 								return (
-									<div key={i} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl ${s.bg}`}>
+									<div key={i} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg ${s.bg}`}>
 										<Icon size={12} className={s.color} />
 										<span className="text-xs font-black text-slate-700 dark:text-slate-300">{s.val}</span>
 										<span className="text-[10px] text-slate-400">{s.label}</span>
 									</div>
 								);
 							})}
-							<div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800">
+							<div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800">
 								<Calendar size={11} className="text-slate-400" />
 								<span className="text-[10px] text-slate-400">{fmt(admin.created_at, locale)}</span>
 							</div>
@@ -837,13 +837,13 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 				initial={{ scale: 0.93, opacity: 0, y: 20 }}
 				animate={{ scale: 1, opacity: 1, y: 0 }}
 				exit={{ scale: 0.93, opacity: 0, y: 20 }}
-				className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md overflow-hidden"
+				className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md overflow-hidden"
 			>
 				<div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800"
 					style={{ background: 'linear-gradient(135deg, var(--color-primary-50), var(--color-secondary-50))' }}
 				>
 					<div className="flex items-center gap-2.5">
-						<div className="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-lg"
+						<div className="w-9 h-9 rounded-lg flex items-center justify-center text-white shadow-lg"
 							style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
 						>
 							<Plus size={16} />
@@ -861,14 +861,14 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 				<div className="p-5 space-y-4">
 					{tempPass ? (
 						<div className="text-center py-4">
-							<div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"
+							<div className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4 shadow-lg"
 								style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
 							>
 								<CheckCircle2 size={30} className="text-white" />
 							</div>
 							<p className="font-black text-slate-900 dark:text-slate-100 text-base mb-1">User Created!</p>
 							<p className="text-xs text-slate-500 mb-4">Temporary password generated. Share securely.</p>
-							<div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+							<div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
 								<code className="flex-1 text-sm font-mono font-black" style={{ color: 'var(--color-primary-600)' }}>{tempPass}</code>
 								<CopyBtn value={tempPass} />
 							</div>
@@ -890,7 +890,7 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 											type={f.type} value={form[f.key]}
 											onChange={e => set(f.key, e.target.value)}
 											placeholder={f.ph}
-											className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 transition-all"
+											className="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 transition-all"
 											style={{ '--tw-ring-color': 'var(--color-primary-500)' }}
 										/>
 									</div>
@@ -903,7 +903,7 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 								<select
 									value={form.role}
 									onChange={e => set('role', e.target.value)}
-									className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none appearance-none"
+									className="w-full h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 focus:outline-none appearance-none"
 								>
 									<option value="admin">Admin</option>
 									<option value="coach">Coach</option>
@@ -917,7 +917,7 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 				<div className="flex gap-2 px-5 pb-5">
 					{tempPass ? (
 						<button onClick={handleClose}
-							className="flex-1 h-10 rounded-xl text-white text-sm font-bold transition-all shadow-lg"
+							className="flex-1 h-10 rounded-lg text-white text-sm font-bold transition-all shadow-lg"
 							style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
 						>
 							Done
@@ -925,12 +925,12 @@ function CreateUserModal({ open, onClose, onCreated, t }) {
 					) : (
 						<>
 							<button onClick={handleClose}
-								className="flex-1 h-10 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+								className="flex-1 h-10 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
 							>
 								Cancel
 							</button>
 							<button onClick={submit} disabled={loading}
-								className="flex-1 h-10 rounded-xl text-white text-sm font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg"
+								className="flex-1 h-10 rounded-lg text-white text-sm font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg"
 								style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
 							>
 								{loading ? <RefreshCw size={14} className="animate-spin" /> : <Plus size={14} />}
@@ -1107,7 +1107,7 @@ export default function SuperAdminUsersPage() {
 					initial={{ opacity: 0, y: 10 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ delay: 0.15 }}
-					className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 mb-5 shadow-sm"
+					className="bg-white dark:bg-slate-900/80 rounded-lg border border-slate-200 dark:border-slate-800 p-3 mb-5 shadow-sm"
 				>
 					<div className="flex flex-col sm:flex-row gap-2.5">
 						{/* Search */}
@@ -1117,7 +1117,7 @@ export default function SuperAdminUsersPage() {
 								value={search}
 								onChange={e => handleSearch(e.target.value)}
 								placeholder="Search by name, email…"
-								className="w-full h-10 ltr:pl-9 rtl:pr-9 ltr:pr-4 rtl:pl-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-[var(--color-primary-400)] transition-all"
+								className="w-full h-10 ltr:pl-9 rtl:pr-9 ltr:pr-4 rtl:pl-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-[var(--color-primary-400)] transition-all"
 								style={{ '--tw-ring-color': 'rgba(99,102,241,0.25)' }}
 							/>
 						</div>
@@ -1128,7 +1128,7 @@ export default function SuperAdminUsersPage() {
 							<select
 								value={roleFilter}
 								onChange={e => { setRole(e.target.value); setPage(1); }}
-								className="h-10 ltr:pl-8 rtl:pr-8 ltr:pr-8 rtl:pl-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 appearance-none min-w-[130px] cursor-pointer"
+								className="h-10 ltr:pl-8 rtl:pr-8 ltr:pr-8 rtl:pl-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 appearance-none min-w-[130px] cursor-pointer"
 							>
 								<option value="">All Roles</option>
 								<option value="admin">Admin</option>
@@ -1143,7 +1143,7 @@ export default function SuperAdminUsersPage() {
 							<select
 								value={statusFilter}
 								onChange={e => { setStatus(e.target.value); setPage(1); }}
-								className="h-10 ltr:pl-7 rtl:pr-7 ltr:pr-8 rtl:pl-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 appearance-none min-w-[140px] cursor-pointer"
+								className="h-10 ltr:pl-7 rtl:pr-7 ltr:pr-8 rtl:pl-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 appearance-none min-w-[140px] cursor-pointer"
 							>
 								<option value="">All Statuses</option>
 								<option value="active">Active</option>
@@ -1158,7 +1158,7 @@ export default function SuperAdminUsersPage() {
 							<select
 								value={sortBy}
 								onChange={e => { setSortBy(e.target.value); setPage(1); }}
-								className="h-10 ltr:pl-8 rtl:pr-8 ltr:pr-8 rtl:pl-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 appearance-none min-w-[148px] cursor-pointer"
+								className="h-10 ltr:pl-8 rtl:pr-8 ltr:pr-8 rtl:pl-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 appearance-none min-w-[148px] cursor-pointer"
 							>
 								{SORT_OPTIONS.map(o => (
 									<option key={o.value} value={o.value}>{o.label}</option>
@@ -1170,7 +1170,7 @@ export default function SuperAdminUsersPage() {
 						<motion.button
 							whileHover={{ rotate: 180 }} transition={{ duration: 0.4 }}
 							onClick={fetchUsers}
-							className="w-10 h-10 shrink-0 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-[var(--color-primary-500)] transition-colors"
+							className="w-10 h-10 shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-[var(--color-primary-500)] transition-colors"
 						>
 							<RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
 						</motion.button>
@@ -1180,7 +1180,7 @@ export default function SuperAdminUsersPage() {
 				{/* ── Content ── */}
 				{loading ? (
 					<div className="flex flex-col items-center justify-center py-28 gap-4">
-						<div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl"
+						<div className="w-14 h-14 rounded-lg flex items-center justify-center shadow-xl"
 							style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
 						>
 							<RefreshCw size={22} className="animate-spin text-white" />
@@ -1189,7 +1189,7 @@ export default function SuperAdminUsersPage() {
 					</div>
 				) : items.length === 0 ? (
 					<div className="flex flex-col items-center justify-center py-28 text-slate-400 gap-4">
-						<div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+						<div className="w-16 h-16 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
 							<Users size={28} className="opacity-40" />
 						</div>
 						<p className="font-bold text-slate-600 dark:text-slate-400">No users found</p>
@@ -1225,7 +1225,7 @@ export default function SuperAdminUsersPage() {
 										Others ({others.length})
 									</p>
 								</div>
-								<div className="bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 shadow-sm">
+								<div className="bg-white dark:bg-slate-900/80 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 shadow-sm">
 									{others.map(u => (
 										<div
 											key={u.id}
@@ -1259,7 +1259,7 @@ export default function SuperAdminUsersPage() {
 								<button
 									disabled={page === 1}
 									onClick={() => setPage(p => p - 1)}
-									className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-400 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+									className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-400 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
 								>
 									← Prev
 								</button>
@@ -1268,7 +1268,7 @@ export default function SuperAdminUsersPage() {
 									<button
 										key={n}
 										onClick={() => setPage(n)}
-										className={`w-8 h-8 rounded-xl text-xs font-black transition-all ${n === page
+										className={`w-8 h-8 rounded-lg text-xs font-black transition-all ${n === page
 												? 'text-white shadow-lg'
 												: 'border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
 											}`}
@@ -1281,7 +1281,7 @@ export default function SuperAdminUsersPage() {
 								<button
 									disabled={page === totalPages}
 									onClick={() => setPage(p => p + 1)}
-									className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-400 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+									className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-400 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
 								>
 									Next →
 								</button>

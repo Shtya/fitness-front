@@ -224,7 +224,7 @@ export default function HowItWorks() {
                       transition={{ delay: 1.2 + index * 0.2, type: "spring" }}
                     >
                       <motion.div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center
+                        className="w-9 h-9 rounded-lg flex items-center justify-center
                           theme-gradient-bg shadow-xl"
                         animate={{ rotate: 360 }}
                         transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
@@ -237,7 +237,7 @@ export default function HowItWorks() {
 
                 {/* ── Card ── */}
                 <motion.div
-                  className="relative bg-slate-800/40 backdrop-blur-2xl rounded-2xl p-7
+                  className="relative bg-slate-800/40 backdrop-blur-2xl rounded-lg p-7
                     border-2 cursor-pointer overflow-hidden group
                     transition-colors duration-300"
                   style={{
@@ -253,7 +253,7 @@ export default function HowItWorks() {
                 >
                   {/* Glow bloom behind card */}
                   <motion.div
-                    className="absolute -inset-3 rounded-2xl blur-2xl -z-10"
+                    className="absolute -inset-3 rounded-lg blur-2xl -z-10"
                     style={{ background: `linear-gradient(135deg, ${colors.primary[500]}, ${colors.secondary[500]})` }}
                     animate={{ opacity: lit ? 0.35 : 0, scale: lit ? 1 : 0.85 }}
                     transition={{ duration: 0.4 }}
@@ -281,7 +281,7 @@ export default function HowItWorks() {
                       transition={{ delay: index * 0.14 + 0.4, type: "spring", stiffness: 200, damping: 16 }}
                     >
                       <motion.div
-                        className="w-16 h-16 rounded-xl flex items-center justify-center
+                        className="w-16 h-16 rounded-lg flex items-center justify-center
                           theme-gradient-bg shadow-2xl overflow-hidden relative"
                         whileHover={{ rotate: 15, scale: 1.1 }}
                         transition={{ duration: 0.4 }}
@@ -338,7 +338,7 @@ export default function HowItWorks() {
                         transition={{ duration: 0.5 }}
                       >
                         <motion.div
-                          className="w-24 h-24 rounded-2xl flex items-center justify-center
+                          className="w-24 h-24 rounded-lg flex items-center justify-center
                             theme-gradient-bg shadow-2xl overflow-hidden relative"
                           animate={isHovered ? {
                             boxShadow: [
@@ -382,7 +382,7 @@ export default function HowItWorks() {
                           whileHover={{ scale: 1.25, rotate: 20 }}
                         >
                           <div
-                            className="w-12 h-12 backdrop-blur-xl rounded-xl
+                            className="w-12 h-12 backdrop-blur-xl rounded-lg
                               flex items-center justify-center shadow-xl border"
                             style={{
                               backgroundColor: `${colors.primary[900]}55`,
@@ -400,7 +400,7 @@ export default function HowItWorks() {
                       {/* Title row */}
                       <div className="flex items-center gap-3">
                         <motion.div
-                          className="w-12 h-12 rounded-xl flex items-center justify-center
+                          className="w-12 h-12 rounded-lg flex items-center justify-center
                             theme-gradient-bg shadow-lg shrink-0"
                           whileHover={{ rotate: 15, scale: 1.1 }}
                           transition={{ duration: 0.4 }}
@@ -425,7 +425,7 @@ export default function HowItWorks() {
                             return (
                               <motion.div
                                 key={idx}
-                                className="flex items-center gap-3 p-2.5 rounded-xl
+                                className="flex items-center gap-3 p-2.5 rounded-lg
                                   transition-colors duration-200 cursor-default"
                                 style={{ backgroundColor: `${colors.primary[900]}18` }}
                                 initial={{ opacity: 0, x: -16 }}
@@ -498,7 +498,7 @@ export default function HowItWorks() {
         >
           <motion.button
             className="group relative inline-flex items-center gap-3
-              px-10 py-5 rounded-2xl font-body font-black text-lg text-white
+              px-10 py-5 rounded-lg font-body font-black text-lg text-white
               theme-gradient-bg shadow-2xl overflow-hidden"
             style={{ boxShadow: `0 18px 54px ${colors.primary[500]}35` }}
             whileHover={{ scale: 1.04, y: -4 }}

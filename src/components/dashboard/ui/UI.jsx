@@ -17,7 +17,7 @@ export function PageHeader({ className = '', icon: Icon, title, subtitle, action
             initial={{ rotate: -8, scale: 0.9 }}
             animate={{ rotate: 0, scale: 1 }}
             transition={spring}
-            className='h-10 w-10 grid place-content-center rounded-xl theme-primary-bg text-white shadow-md'>
+            className='h-10 w-10 grid place-content-center rounded-lg theme-primary-bg text-white shadow-md'>
             <Icon className='w-5 h-5' />
           </motion.div>
         )}
@@ -99,7 +99,7 @@ export function StatCard({ resPhone, cnParent, cn, icon: Icon, title, value }) {
 
 export function StatCardArray({ icon: Icon, title = [], value = [] }) {
   return (
-    <div className='relative overflow-hidden rounded-xl border border-white/20 bg-white/10 p-3'>
+    <div className='relative overflow-hidden rounded-lg border border-white/20 bg-white/10 p-3'>
       <div className='flex items-start justify-between gap-2'>
         <div className='grid place-items-center rounded-lg bg-white/15 border border-slate-100/30 p-2'>
           <Icon className='h-5 w-5' />
@@ -178,7 +178,7 @@ export function SearchInput({ value, onChange, placeholder = 'Search…', classN
         <button
           onClick={() => onChange({ target: { value: '' } })}
           aria-label='Clear'
-          className='absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 grid h-6 w-6 place-items-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors'>
+          className='absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 grid h-6 w-6 place-items-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors'>
           <X className='w-3.5 h-3.5' />
         </button>
       )}
@@ -274,7 +274,7 @@ export function Modal({ scrollRef, cn, maxHBody, open, onClose, title, children,
             aria-label={title}
             ref={containerRef}
             className={[
-              'relative w-full rounded-xl md:rounded-2xl',
+              'relative w-full rounded-lg md:rounded-lg',
               'border border-white/10 border-t-2 border-t-[var(--color-primary-200)]',
               'bg-gradient-to-b from-white/80 to-white backdrop-blur-2xl',
               'shadow-2xl md:p-6 p-4',
@@ -315,7 +315,7 @@ export function EmptyState({ title = 'No data', subtitle = 'Adjust filters or ad
   return (
     <div className='flex flex-col items-center justify-center gap-3 py-20 text-center'>
       {icon && (
-        <div className='grid h-14 w-14 place-items-center rounded-2xl bg-slate-100'>
+        <div className='grid h-14 w-14 place-items-center rounded-lg bg-slate-100'>
           {icon}
         </div>
       )}
@@ -448,7 +448,7 @@ export function TabsPill({
 
         <div ref={scrollerRef} tabIndex={0} className='outline-none'>
           <LayoutGroup id={id}>
-            <div className={`inline-flex p-1 rounded-xl border border-slate-200 bg-slate-100/80 ring-1 ring-black/5 ${isLoading ? 'gap-1.5' : 'gap-0.5'}`}>
+            <div className={`inline-flex p-1 rounded-lg border border-slate-200 bg-slate-100/80 ring-1 ring-black/5 ${isLoading ? 'gap-1.5' : 'gap-0.5'}`}>
               {isLoading
                 ? Array.from({ length: skeletonCount }).map((_, i) => {
                     const widths = [64, 84, 72, 92, 68, 88, 76];
@@ -617,7 +617,7 @@ export function FileDrop({ label = 'Upload', accept = 'image/*', multiple = fals
       onDragOver={e => e.preventDefault()}
       onDrop={e => { e.preventDefault(); onFiles?.(e.dataTransfer.files); }}
       className={[
-        'flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-6',
+        'flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg p-6',
         'bg-white hover:bg-slate-50 cursor-pointer transition-colors duration-200',
         'border-[var(--color-primary-200)] hover:border-[var(--color-primary-400)]',
         className,
@@ -766,7 +766,7 @@ export function ConfirmDialog({ open, title = 'Are you sure?', desc, confirmText
     <div className='fixed inset-0 z-50'>
       <div className='absolute inset-0 bg-black/30 backdrop-blur-[2px]' onClick={onClose} />
       <div className='absolute inset-0 grid place-items-center p-4'>
-        <div className='w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-xl'>
+        <div className='w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-xl'>
           <div className='text-base font-semibold theme-primary-text'>{title}</div>
           {desc && <div className='mt-1.5 text-sm text-slate-500 leading-relaxed'>{desc}</div>}
           <div className='mt-5 flex items-center justify-end gap-2'>
@@ -799,7 +799,7 @@ export function Field({ label, hint, children, className = '' }) {
 /* ─────────────────────────── SectionCard ─────────────────────────── */
 export function SectionCard({ title, subtitle, children, className = '' }) {
   return (
-    <div className={`rounded-xl border border-[var(--color-primary-100)] bg-white p-5 shadow-sm ${className}`}>
+    <div className={`rounded-lg border border-[var(--color-primary-100)] bg-white p-5 shadow-sm ${className}`}>
       <div className='mb-4'>
         <div className='font-semibold theme-primary-text'>{title}</div>
         {subtitle && <div className='mt-0.5 text-sm text-slate-500'>{subtitle}</div>}
@@ -813,7 +813,7 @@ export function SectionCard({ title, subtitle, children, className = '' }) {
 export function SaveBar({ onSave, onCancel, saving = false }) {
   return (
     <div className='sticky bottom-3 z-10'>
-      <div className='mx-auto max-w-5xl rounded-xl border border-slate-200 bg-white/90 backdrop-blur-md p-3 shadow-lg'>
+      <div className='mx-auto max-w-5xl rounded-lg border border-slate-200 bg-white/90 backdrop-blur-md p-3 shadow-lg'>
         <div className='flex items-center justify-end gap-2'>
           <button onClick={onCancel} className='px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-50 transition-colors'>
             Cancel
@@ -924,7 +924,7 @@ export function PercentInput({ value, onChange, className = '' }) {
 /* ─────────────────────────── StatPill ─────────────────────────── */
 export function StatPill({ label, value, sub }) {
   return (
-    <div className='rounded-xl border border-[var(--color-primary-100)] bg-white p-3 shadow-sm'>
+    <div className='rounded-lg border border-[var(--color-primary-100)] bg-white p-3 shadow-sm'>
       <div className='text-xs text-slate-500'>{label}</div>
       <div className='text-xl font-bold theme-primary-text tracking-tight mt-0.5'>{value}</div>
       {sub && <div className='mt-1 text-xs text-slate-400'>{sub}</div>}
@@ -937,7 +937,7 @@ export function CapacityMeter({ current = 0, max = 100 }) {
   const pct = Math.min(100, Math.round((current / Math.max(1, max)) * 100));
   const barCls = pct < 70 ? 'theme-gradient-bg' : pct < 90 ? 'bg-amber-500' : 'bg-red-500';
   return (
-    <div className='rounded-xl border border-[var(--color-primary-100)] bg-white p-4 shadow-sm'>
+    <div className='rounded-lg border border-[var(--color-primary-100)] bg-white p-4 shadow-sm'>
       <div className='flex items-end justify-between'>
         <div>
           <div className='text-xs text-slate-500 mb-0.5'>Current occupancy</div>
@@ -984,7 +984,7 @@ export function MiniMonth({ date = new Date(), onChange }) {
   const isSame = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   const today  = new Date();
   return (
-    <div className='rounded-xl border border-[var(--color-primary-100)] bg-white p-4 shadow-sm'>
+    <div className='rounded-lg border border-[var(--color-primary-100)] bg-white p-4 shadow-sm'>
       <div className='flex items-center justify-between mb-3'>
         <button className='rounded-lg border border-slate-200 px-2.5 py-1 text-sm text-slate-600 hover:bg-slate-50 transition-colors' onClick={() => onChange?.(new Date(date.getFullYear(), date.getMonth() - 1, 1))}>‹</button>
         <div className='text-sm font-semibold theme-primary-text'>{date.toLocaleString(undefined, { month: 'long', year: 'numeric' })}</div>
@@ -1050,7 +1050,7 @@ export function SegmentPicker({ value = { role: 'All', status: 'All', tags: [], 
   const selectCls = 'w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:border-[var(--color-primary-400)] focus:ring-2 focus:ring-[var(--color-primary-200)] transition-all';
   const inputCls  = 'w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:border-[var(--color-primary-400)] focus:ring-2 focus:ring-[var(--color-primary-200)] transition-all';
   return (
-    <div className='rounded-xl border border-[var(--color-primary-100)] bg-white p-4 space-y-3 shadow-sm'>
+    <div className='rounded-lg border border-[var(--color-primary-100)] bg-white p-4 space-y-3 shadow-sm'>
       <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
         <div>
           <label className='text-xs font-medium text-slate-500 uppercase tracking-wider'>Role</label>
@@ -1088,7 +1088,7 @@ export function FileDropzone({ onFiles, accept = '*/*', className = '' }) {
       onDrop={handle}
       onDragOver={e => e.preventDefault()}
       className={[
-        'grid place-items-center cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition-colors duration-200',
+        'grid place-items-center cursor-pointer rounded-lg border-2 border-dashed p-6 text-center transition-colors duration-200',
         'bg-slate-50 hover:bg-white border-[var(--color-primary-200)] hover:border-[var(--color-primary-400)]',
         className,
       ].join(' ')}>
@@ -1197,7 +1197,7 @@ export function RestTimer({ initial = 90 }) {
   const reset = (v = initial) => { setSeconds(v); setRunning(false); };
   const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
   const ss = String(seconds % 60).padStart(2, '0');
-  const btnCls = 'px-2.5 py-1 rounded-md border border-slate-200 bg-white text-xs text-slate-700 hover:bg-slate-50 transition-colors';
+  const btnCls = 'px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 hover:bg-slate-50 transition-colors';
 
   return (
     <div className='inline-flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5'>
@@ -1257,7 +1257,7 @@ export function BadgeDot({ color = 'slate', children }) {
 export function PhotoGrid({ photos = [], onOpen }) {
   if (!photos.length) {
     return (
-      <div className='rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-400'>
+      <div className='rounded-lg border border-slate-200 bg-white p-5 text-sm text-slate-400'>
         No photos yet. Upload from the Check‑in tab.
       </div>
     );
@@ -1268,7 +1268,7 @@ export function PhotoGrid({ photos = [], onOpen }) {
         <button
           key={p.id || idx}
           onClick={() => onOpen?.(idx)}
-          className='group relative aspect-square overflow-hidden rounded-xl border border-[var(--color-primary-100)] bg-slate-100 hover:shadow-md hover:border-[var(--color-primary-300)] transition-all duration-200'>
+          className='group relative aspect-square overflow-hidden rounded-lg border border-[var(--color-primary-100)] bg-slate-100 hover:shadow-md hover:border-[var(--color-primary-300)] transition-all duration-200'>
           <img src={p.url} alt={p.label || 'Progress photo'} className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105' />
           <div className='absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1.5'>
             <div className='text-[10px] text-white/90 truncate'>{p.date || ''}</div>
@@ -1294,7 +1294,7 @@ export function Lightbox({ open, setOpen, photos = [], index = 0, setIndex }) {
       <button onClick={prev} className={`${navBtn} left-4`}>‹</button>
       <button onClick={next} className={`${navBtn} right-4`}>›</button>
       <div className='max-w-[92vw] max-h-[86vh] text-center'>
-        {p && <img src={p.url} alt={p.label || 'photo'} className='max-h-[86vh] max-w-[92vw] rounded-xl shadow-2xl' />}
+        {p && <img src={p.url} alt={p.label || 'photo'} className='max-h-[86vh] max-w-[92vw] rounded-lg shadow-2xl' />}
         <div className='mt-2 text-xs text-white/70'>{p?.date}{p?.label ? ` · ${p.label}` : ''}</div>
       </div>
     </div>

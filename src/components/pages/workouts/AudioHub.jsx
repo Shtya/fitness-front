@@ -443,7 +443,7 @@ function StationCard({ station, isActive, isPlaying, onSelect }) {
       type="button"
       onClick={() => onSelect(station.url)}
       className={cx(
-        'w-full text-left rounded-xl border p-3 transition-all duration-150 active:scale-[0.98]',
+        'w-full text-left rounded-lg border p-3 transition-all duration-150 active:scale-[0.98]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-300)]',
         isActive
           ? 'border-[var(--color-primary-300)] bg-[var(--color-primary-50)]'
@@ -452,7 +452,7 @@ function StationCard({ station, isActive, isPlaying, onSelect }) {
     >
       <div className="flex items-center gap-3">
         <div className={cx(
-          'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all',
+          'w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-all',
           isActive
             ? 'bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] shadow-sm'
             : 'bg-[var(--color-primary-50)] border border-[var(--color-primary-100)]',
@@ -483,10 +483,10 @@ function StationCard({ station, isActive, isPlaying, onSelect }) {
 ───────────────────────────────────────── */
 function NowPlayingPanel({ station, playing, loading, error, volume, muted, onToggle, onMute, onVolumeChange, onRetry, t }) {
   return (
-    <div className="rounded-2xl border border-[var(--color-primary-100)] bg-gradient-to-br from-[var(--color-primary-50)] via-white to-white overflow-hidden">
+    <div className="rounded-lg border border-[var(--color-primary-100)] bg-gradient-to-br from-[var(--color-primary-50)] via-white to-white overflow-hidden">
       {/* Station display */}
       <div className="px-4 pt-5 pb-4 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] flex items-center justify-center mx-auto mb-3 shadow-lg shadow-[var(--color-primary-200)]">
+        <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] flex items-center justify-center mx-auto mb-3 shadow-lg shadow-[var(--color-primary-200)]">
           <Headphones size={26} className="text-white" />
         </div>
         <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--color-primary-400)] mb-1">
@@ -508,7 +508,7 @@ function NowPlayingPanel({ station, playing, loading, error, volume, muted, onTo
         <button
           onClick={onMute}
           className={cx(
-            'w-10 h-10 rounded-xl flex items-center justify-center border transition-all active:scale-90',
+            'w-10 h-10 rounded-lg flex items-center justify-center border transition-all active:scale-90',
             muted ? 'border-rose-200 bg-rose-50 text-rose-500' : 'border-[var(--color-primary-200)] bg-white text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)]',
           )}
           aria-label={muted ? t('actions.unmute') : t('actions.mute')}
@@ -520,7 +520,7 @@ function NowPlayingPanel({ station, playing, loading, error, volume, muted, onTo
 
         <button
           onClick={onRetry}
-          className="w-10 h-10 rounded-xl flex items-center justify-center border border-[var(--color-primary-200)] bg-white text-[var(--color-primary-500)] hover:bg-[var(--color-primary-50)] transition-all active:scale-90"
+          className="w-10 h-10 rounded-lg flex items-center justify-center border border-[var(--color-primary-200)] bg-white text-[var(--color-primary-500)] hover:bg-[var(--color-primary-50)] transition-all active:scale-90"
           aria-label={t('actions.retry')}
           title={t('actions.retry')}
         >
@@ -663,13 +663,13 @@ export const AudioHubInline = React.memo(function AudioHubInline({
         transition={{ type: 'spring', stiffness: 300, damping: 28 }}
         className={cx('w-full', hidden && 'hidden')}
       >
-        <div className="rounded-2xl border border-[var(--color-primary-100)] bg-white shadow-xl shadow-[var(--color-primary-100)]/50 overflow-hidden">
+        <div className="rounded-lg border border-[var(--color-primary-100)] bg-white shadow-xl shadow-[var(--color-primary-100)]/50 overflow-hidden">
 
           {/* ── HEADER ── */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-primary-100)] bg-gradient-to-r from-[var(--color-primary-50)] to-white">
             <div className="flex items-center gap-2.5">
               <div className={cx(
-                'w-8 h-8 rounded-xl flex items-center justify-center',
+                'w-8 h-8 rounded-lg flex items-center justify-center',
                 'bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]',
               )}>
                 <Headphones size={15} className="text-white" />
@@ -686,14 +686,14 @@ export const AudioHubInline = React.memo(function AudioHubInline({
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setHidden(h => !h)}
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-[var(--color-primary-50)] transition-all active:scale-90"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-[var(--color-primary-50)] transition-all active:scale-90"
                 title={hidden ? t('actions.showPanelTitle') : t('actions.hidePanelTitle')}
               >
                 {hidden ? <Eye size={15} /> : <EyeOff size={15} />}
               </button>
               <button
                 onClick={handleClose}
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-rose-50 hover:text-rose-400 transition-all active:scale-90"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-rose-50 hover:text-rose-400 transition-all active:scale-90"
                 aria-label={t('actions.close')}
               >
                 <X size={15} />
@@ -703,7 +703,7 @@ export const AudioHubInline = React.memo(function AudioHubInline({
 
           {/* ── TABS ── */}
           <div className="px-4 pt-3">
-            <div className="flex gap-1 p-1 rounded-xl bg-[var(--color-primary-50)] border border-[var(--color-primary-100)]">
+            <div className="flex gap-1 p-1 rounded-lg bg-[var(--color-primary-50)] border border-[var(--color-primary-100)]">
               {[
                 { key: 'stations', label: t('tabs.stations'), icon: Radio },
                 { key: 'podcasts', label: t('tabs.podcasts'), icon: Mic2 },
@@ -776,7 +776,7 @@ export const AudioHubInline = React.memo(function AudioHubInline({
           {tab === 'podcasts' && (
             <div className="p-4 space-y-3">
               {/* Video player */}
-              <div className="rounded-2xl border border-[var(--color-primary-100)] overflow-hidden bg-black aspect-video relative">
+              <div className="rounded-lg border border-[var(--color-primary-100)] overflow-hidden bg-black aspect-video relative">
                 {podcastsLoading ? (
                   <div className="w-full h-full animate-pulse bg-slate-200 flex items-center justify-center">
                     <Music2 size={28} className="text-slate-300" />
@@ -804,7 +804,7 @@ export const AudioHubInline = React.memo(function AudioHubInline({
                     <a
                       href={currentPodcast.url}
                       target="_blank" rel="noopener noreferrer"
-                      className="absolute bottom-2 end-2 z-20 inline-flex items-center gap-1.5 rounded-xl bg-black/70 backdrop-blur-sm text-white text-[11px] font-medium px-2.5 py-1.5 hover:bg-black/80 transition-all"
+                      className="absolute bottom-2 end-2 z-20 inline-flex items-center gap-1.5 rounded-lg bg-black/70 backdrop-blur-sm text-white text-[11px] font-medium px-2.5 py-1.5 hover:bg-black/80 transition-all"
                     >
                       <ExternalLink size={11} /> {t('openInYouTube')}
                     </a>
@@ -820,7 +820,7 @@ export const AudioHubInline = React.memo(function AudioHubInline({
                   <button
                     onClick={() => { setCurrentPodcastIdx(i => Math.max(0, i - 1)); setUserWantsEmbed(false); }}
                     disabled={currentPodcastIdx === 0}
-                    className="w-9 h-9 rounded-xl border border-[var(--color-primary-200)] flex items-center justify-center text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)] disabled:opacity-30 transition-all active:scale-90"
+                    className="w-9 h-9 rounded-lg border border-[var(--color-primary-200)] flex items-center justify-center text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)] disabled:opacity-30 transition-all active:scale-90"
                   >
                     <ChevronLeft className='rtl:scale-x-[-1] ' size={16} />
                   </button>
@@ -831,7 +831,7 @@ export const AudioHubInline = React.memo(function AudioHubInline({
                   <button
                     onClick={() => { setCurrentPodcastIdx(i => Math.min(podcastList.length - 1, i + 1)); setUserWantsEmbed(false); }}
                     disabled={currentPodcastIdx === podcastList.length - 1}
-                    className="w-9 h-9 rounded-xl border border-[var(--color-primary-200)] flex items-center justify-center text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)] disabled:opacity-30 transition-all active:scale-90"
+                    className="w-9 h-9 rounded-lg border border-[var(--color-primary-200)] flex items-center justify-center text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)] disabled:opacity-30 transition-all active:scale-90"
                   >
                     <ChevronRight className='rtl:scale-x-[-1] ' size={16} />
                   </button>
@@ -844,14 +844,14 @@ export const AudioHubInline = React.memo(function AudioHubInline({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-52 overflow-y-auto">
                   {podcastsLoading
                     ? Array.from({ length: 6 }).map((_, i) => (
-                      <div key={i} className="aspect-video rounded-xl bg-slate-100 animate-pulse" />
+                      <div key={i} className="aspect-video rounded-lg bg-slate-100 animate-pulse" />
                     ))
                     : podcastList.map((p, i) => (
                       <button
                         key={p.id}
                         onClick={() => { setCurrentPodcastIdx(i); setUserWantsEmbed(false); }}
                         className={cx(
-                          'relative aspect-video rounded-xl overflow-hidden border-2 transition-all active:scale-95',
+                          'relative aspect-video rounded-lg overflow-hidden border-2 transition-all active:scale-95',
                           i === currentPodcastIdx
                             ? 'border-[var(--color-primary-400)] ring-2 ring-[var(--color-primary-200)]'
                             : 'border-transparent hover:border-[var(--color-primary-200)]',

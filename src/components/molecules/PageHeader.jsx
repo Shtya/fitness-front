@@ -99,7 +99,7 @@ function FilterPortal({ anchorRef, open, onClose, children }) {
 							borderRadius: '24px',
 							overflow: 'hidden',
 						}}
-						className=" rtl:ml-[50px] ltr:mr-[50px] overflow-hidden rounded-3xl border border-white/60 bg-white/95"
+						className=" rtl:ml-[50px] ltr:mr-[50px] overflow-hidden rounded-lg border border-white/60 bg-white/95"
 
 					>
 						{children}
@@ -126,7 +126,7 @@ function FilterToggle({ group, value, onChange }) {
 							key={opt.value}
 							onClick={() => onChange(isActive ? '' : opt.value)}
 							className={cx(
-								'relative inline-flex items-center gap-1.5 overflow-hidden rounded-2xl border px-3.5 py-2 text-xs font-bold transition-all duration-200',
+								'relative inline-flex items-center gap-1.5 overflow-hidden rounded-lg border px-3.5 py-2 text-xs font-bold transition-all duration-200',
 								'active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
 								isActive
 									? 'border-transparent text-white shadow-lg'
@@ -168,7 +168,7 @@ function FilterMulti({ group, value, onChange }) {
 							key={opt.value}
 							onClick={() => toggle(opt.value)}
 							className={cx(
-								'flex w-full items-center justify-between rounded-2xl px-3.5 py-2.5 text-xs font-semibold transition-all duration-150',
+								'flex w-full items-center justify-between rounded-lg px-3.5 py-2.5 text-xs font-semibold transition-all duration-150',
 								'focus:outline-none',
 								isChecked
 									? 'bg-slate-50 text-slate-800'
@@ -221,7 +221,7 @@ function FilterSelect({ group, value, onChange }) {
 				<select
 					value={value || ''}
 					onChange={e => onChange(e.target.value)}
-					className="h-10 w-full appearance-none rounded-2xl border border-slate-100 bg-slate-50 px-4 pe-9 text-xs font-semibold text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all"
+					className="h-10 w-full appearance-none rounded-lg border border-slate-100 bg-slate-50 px-4 pe-9 text-xs font-semibold text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all"
 					style={{ focusRingColor: 'var(--color-primary-300)' }}
 				>
 					<option value="">الكل</option>
@@ -241,7 +241,7 @@ function FilterRange({ group, value, onChange }) {
 		<div>
 			<div className="mb-3 flex items-center justify-between">
 				<p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">{group.label}</p>
-				<span className="rounded-xl px-2.5 py-1 text-[10px] font-black"
+				<span className="rounded-lg px-2.5 py-1 text-[10px] font-black"
 					style={{ background: 'color-mix(in srgb, var(--color-primary-100) 60%, white)', color: 'var(--color-primary-700)' }}>
 					{min} – {max} {group.unit || ''}
 				</span>
@@ -296,7 +296,7 @@ function FilterPanelContent({ filters, filterValues, onFilterChange, onFilterRes
 			<div className="relative flex items-center justify-between border-b border-slate-100 px-5 py-4">
 				<div className="flex items-center gap-3">
 					<div
-						className="grid h-8 w-8 place-items-center rounded-2xl shadow-sm"
+						className="grid h-8 w-8 place-items-center rounded-lg shadow-sm"
 						style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
 					>
 						<SlidersHorizontal className="h-3.5 w-3.5 text-white" />
@@ -310,7 +310,7 @@ function FilterPanelContent({ filters, filterValues, onFilterChange, onFilterRes
 									initial={{ scale: 0, opacity: 0 }}
 									animate={{ scale: 1, opacity: 1 }}
 									exit={{ scale: 0, opacity: 0 }}
-									className="rounded-xl px-2 py-0.5 text-[9px] font-black"
+									className="rounded-lg px-2 py-0.5 text-[9px] font-black"
 									style={{ background: 'color-mix(in srgb, var(--color-primary-100) 70%, white)', color: 'var(--color-primary-700)' }}
 								>
 									{activeFilterCount} نشط
@@ -329,7 +329,7 @@ function FilterPanelContent({ filters, filterValues, onFilterChange, onFilterRes
 								animate={{ opacity: 1, x: 0 }}
 								exit={{ opacity: 0, x: 8 }}
 								onClick={onFilterReset}
-								className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[10px] font-bold text-rose-500 transition-all hover:bg-rose-50 hover:text-rose-600"
+								className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-bold text-rose-500 transition-all hover:bg-rose-50 hover:text-rose-600"
 							>
 								<RefreshCw className="h-3 w-3" />
 								مسح الكل
@@ -338,7 +338,7 @@ function FilterPanelContent({ filters, filterValues, onFilterChange, onFilterRes
 					</AnimatePresence>
 					<button
 						onClick={onClose}
-						className="grid h-7 w-7 place-items-center rounded-xl text-slate-300 transition-all hover:bg-slate-100 hover:text-slate-600"
+						className="grid h-7 w-7 place-items-center rounded-lg text-slate-300 transition-all hover:bg-slate-100 hover:text-slate-600"
 					>
 						<X className="h-3.5 w-3.5" />
 					</button>
@@ -372,7 +372,7 @@ function FilterPanelContent({ filters, filterValues, onFilterChange, onFilterRes
 			<div className="border-t border-slate-100 px-5 py-4">
 				<button
 					onClick={onClose}
-					className="relative w-full overflow-hidden rounded-2xl py-3 text-sm font-black text-white shadow-lg transition-all hover:opacity-95 hover:shadow-xl active:scale-[.98] focus:outline-none"
+					className="relative w-full overflow-hidden rounded-lg py-3 text-sm font-black text-white shadow-lg transition-all hover:opacity-95 hover:shadow-xl active:scale-[.98] focus:outline-none"
 					style={{
 						background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 						boxShadow: '0 8px 24px -4px color-mix(in srgb, var(--color-gradient-to) 45%, transparent)',
@@ -388,7 +388,7 @@ function FilterPanelContent({ filters, filterValues, onFilterChange, onFilterRes
 						<Check className="h-4 w-4" strokeWidth={3} />
 						تطبيق الفلتر
 						{activeFilterCount > 0 && (
-							<span className="rounded-xl bg-white/25 px-2 py-0.5 text-[10px] font-black">
+							<span className="rounded-lg bg-white/25 px-2 py-0.5 text-[10px] font-black">
 								{activeFilterCount}
 							</span>
 						)}
@@ -735,7 +735,7 @@ export function PageHeader({
 													initial={{ scale: 0, opacity: 0 }}
 													animate={{ scale: 1, opacity: 1 }}
 													exit={{ scale: 0, opacity: 0 }}
-													className="rounded-xl px-2 py-0.5 text-[9px] font-black"
+													className="rounded-lg px-2 py-0.5 text-[9px] font-black"
 													style={{
 														background: 'color-mix(in srgb, var(--color-primary-100) 70%, white)',
 														color: 'var(--color-primary-700)',

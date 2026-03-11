@@ -43,7 +43,7 @@ const cx = (...c) => c.filter(Boolean).join(' ');
 function Card({ children, className = '' }) {
   return (
     <div
-      className={cx('overflow-hidden rounded-2xl border bg-white', className)}
+      className={cx('overflow-hidden rounded-lg border bg-white', className)}
       style={{
         borderColor: 'var(--color-primary-100)',
         boxShadow: '0 1px 3px rgba(15,23,42,0.05), 0 8px 24px rgba(15,23,42,0.06)',
@@ -69,7 +69,7 @@ function Pill({ children, tone = 'primary' }) {
   const s = tones[tone] || tones.primary;
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-xl border px-2.5 py-0.5 text-xs font-semibold"
+      className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-0.5 text-xs font-semibold"
       style={{ borderColor: s.border, background: s.bg, color: s.text }}
     >
       {children}
@@ -94,14 +94,14 @@ function TipBtn({ tooltip, onClick, disabled, children, variant = 'ghost' }) {
         disabled={disabled}
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
         style={{ background: s.bg, borderColor: s.border, color: s.color, boxShadow: '0 1px 3px rgba(15,23,42,0.07)' }}
       >
         {children}
       </button>
       <div
         className={cx(
-          'pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-[11px] font-semibold text-white transition-all duration-150',
+          'pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white transition-all duration-150',
           show ? 'opacity-100 -translate-y-0.5' : 'opacity-0 translate-y-1',
         )}
         style={{ background: '#0f172a', boxShadow: '0 8px 24px rgba(15,23,42,0.3)' }}
@@ -120,7 +120,7 @@ function TipBtn({ tooltip, onClick, disabled, children, variant = 'ghost' }) {
 function InfoRow({ k, v, mono = false }) {
   return (
     <div
-      className="rounded-xl border p-3"
+      className="rounded-lg border p-3"
       style={{
         borderColor: 'var(--color-primary-100)',
         background: 'linear-gradient(135deg, #ffffff, var(--color-primary-50))',
@@ -157,7 +157,7 @@ function ReviewedCell({ row, updatingReviewed, setReviewed, t }) {
           checked={!!row.reviewed}
           disabled={loading}
           onChange={e => setReviewed(row, e.target.checked)}
-          className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-slate-300 bg-white transition-colors checked:border-[color:var(--color-primary-500)] checked:bg-[color:var(--color-primary-500)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] focus-visible:ring-offset-1 disabled:cursor-not-allowed"
+          className="peer h-5 w-5 cursor-pointer appearance-none rounded-lg border border-slate-300 bg-white transition-colors checked:border-[color:var(--color-primary-500)] checked:bg-[color:var(--color-primary-500)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] focus-visible:ring-offset-1 disabled:cursor-not-allowed"
         />
         {/* Checkmark SVG */}
         <svg
@@ -219,7 +219,7 @@ function AnswerCard({ fieldKey, label, value, forms, submission, t }) {
 
   return (
     <div
-      className="overflow-hidden rounded-xl border bg-white p-4 transition-colors hover:border-[color:var(--color-primary-200)]"
+      className="overflow-hidden rounded-lg border bg-white p-4 transition-colors hover:border-[color:var(--color-primary-200)]"
       style={{ borderColor: 'var(--color-primary-100)' }}
     >
       {/* Header row */}
@@ -246,7 +246,7 @@ function AnswerCard({ fieldKey, label, value, forms, submission, t }) {
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {imageFiles.map((rawUrl, i) => (
                 <a key={i} href={normalizeUrl(rawUrl)} target="_blank" rel="noopener noreferrer" className="group block">
-                  <div className="overflow-hidden rounded-xl border border-[color:var(--color-primary-100)] transition-all group-hover:border-[color:var(--color-primary-300)] group-hover:shadow-md">
+                  <div className="overflow-hidden rounded-lg border border-[color:var(--color-primary-100)] transition-all group-hover:border-[color:var(--color-primary-300)] group-hover:shadow-md">
                     <Img src={rawUrl} alt={`${label} ${i + 1}`} className="aspect-square w-full object-cover transition-transform group-hover:scale-105" />
                   </div>
                 </a>
@@ -512,7 +512,7 @@ export default function SubmissionsPage() {
         return (
           <div className="flex min-w-[200px] items-center gap-3">
             <div
-              className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-xl"
+              className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-lg"
               style={{ background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))' }}
             >
               <FileText className="h-4 w-4" style={{ color: 'var(--color-primary-500)' }} />
@@ -552,7 +552,7 @@ export default function SubmissionsPage() {
       accessor: 'ipAddress',
       cell: row => (
         <span
-          className="inline-flex items-center rounded-xl border px-2.5 py-1 font-mono text-xs font-medium"
+          className="inline-flex items-center rounded-lg border px-2.5 py-1 font-mono text-xs font-medium"
           style={{
             borderColor: 'var(--color-primary-200)',
             background: 'var(--color-primary-50)',
@@ -672,7 +672,7 @@ export default function SubmissionsPage() {
             emptyState={
               <div className="py-16 text-center">
                 <div
-                  className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl"
+                  className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-lg"
                   style={{
                     background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))',
                   }}
@@ -703,7 +703,7 @@ export default function SubmissionsPage() {
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div
-                    className="grid h-10 w-10 place-items-center rounded-xl"
+                    className="grid h-10 w-10 place-items-center rounded-lg"
                     style={{ background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))' }}
                   >
                     <FileText className="h-5 w-5" style={{ color: 'var(--color-primary-600)' }} />

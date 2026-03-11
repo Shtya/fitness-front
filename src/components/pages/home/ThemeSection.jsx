@@ -22,7 +22,7 @@ function ThemeSelectorCard({ themeKey, palette, isActive, onClick, index }) {
       onClick={onClick}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
-      className="relative group w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-2xl"
+      className="relative group w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-lg"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.06, duration: 0.45 }}
@@ -30,7 +30,7 @@ function ThemeSelectorCard({ themeKey, palette, isActive, onClick, index }) {
     >
       {/* Glow ring — behind card */}
       <motion.div
-        className="absolute -inset-[2px] rounded-2xl blur-lg -z-10"
+        className="absolute -inset-[2px] rounded-lg blur-lg -z-10"
         style={{ background: `linear-gradient(135deg, ${palette.gradient.from}, ${palette.gradient.to})` }}
         animate={{ opacity: isActive ? 0.55 : hovered ? 0.3 : 0 }}
         transition={{ duration: 0.3 }}
@@ -38,7 +38,7 @@ function ThemeSelectorCard({ themeKey, palette, isActive, onClick, index }) {
 
       {/* Card */}
       <div className={[
-        "relative overflow-hidden rounded-2xl border-2 transition-all duration-300",
+        "relative overflow-hidden rounded-lg border-2 transition-all duration-300",
         "bg-slate-900/90 backdrop-blur-sm",
         isActive
           ? "border-white/30 shadow-2xl scale-[1.02]"
@@ -147,7 +147,7 @@ function InteractivePreview({ currentPalette }) {
       {/* Preview header */}
       <div className="flex items-center gap-3 pb-4 border-b border-white/[0.07]">
         <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-lg"
+          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 shadow-lg"
           style={{ background: `linear-gradient(135deg, ${currentPalette.gradient.from}, ${currentPalette.gradient.to})` }}
         >
           <Palette className="w-4 h-4 text-white" />
@@ -173,7 +173,7 @@ function InteractivePreview({ currentPalette }) {
               key={el.id}
               onClick={() => setActiveEl(isActive ? null : el.id)}
               className={[
-                "relative text-left w-full rounded-xl border transition-all duration-200",
+                "relative text-left w-full rounded-lg border transition-all duration-200",
                 "bg-slate-800/60 backdrop-blur-sm overflow-hidden",
                 isActive ? "border-white/20" : "border-white/[0.06] hover:border-white/12",
               ].join(" ")}
@@ -198,7 +198,7 @@ function InteractivePreview({ currentPalette }) {
               <div className="flex items-start gap-3 p-4">
                 {/* Icon */}
                 <motion.div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg shrink-0"
+                  className="w-11 h-11 rounded-lg flex items-center justify-center shadow-lg shrink-0"
                   style={{ background: `linear-gradient(135deg, ${currentPalette.gradient.from}, ${currentPalette.gradient.to})` }}
                   animate={isActive ? { rotate: [0, -6, 6, -4, 0], scale: [1, 1.1, 1] } : {}}
                   transition={{ duration: 0.5 }}
@@ -231,12 +231,12 @@ function InteractivePreview({ currentPalette }) {
                         className="overflow-hidden"
                       >
                         {/* Demo canvas */}
-                        <div className="rounded-xl bg-slate-950/60 border border-white/[0.06] p-4">
+                        <div className="rounded-lg bg-slate-950/60 border border-white/[0.06] p-4">
                           {el.id === "button" && (
                             <div className="flex flex-wrap gap-3 items-center">
                               {/* Primary button */}
                               <motion.button
-                                className="px-5 py-2.5 rounded-xl font-body font-bold text-sm text-white shadow-lg"
+                                className="px-5 py-2.5 rounded-lg font-body font-bold text-sm text-white shadow-lg"
                                 style={{ background: `linear-gradient(135deg, ${currentPalette.gradient.from}, ${currentPalette.gradient.to})` }}
                                 whileHover={{ scale: 1.04, y: -1 }}
                                 whileTap={{ scale: 0.97 }}
@@ -245,7 +245,7 @@ function InteractivePreview({ currentPalette }) {
                               </motion.button>
                               {/* Ghost button */}
                               <motion.button
-                                className="px-5 py-2.5 rounded-xl font-body font-semibold text-sm border"
+                                className="px-5 py-2.5 rounded-lg font-body font-semibold text-sm border"
                                 style={{
                                   borderColor: `${currentPalette.primary[500]}50`,
                                   color: currentPalette.primary[400],
@@ -261,7 +261,7 @@ function InteractivePreview({ currentPalette }) {
 
                           {el.id === "card" && (
                             <div
-                              className="rounded-xl p-4 border"
+                              className="rounded-lg p-4 border"
                               style={{
                                 borderColor: `${currentPalette.primary[500]}25`,
                                 background: `linear-gradient(135deg, ${currentPalette.primary[500]}10, ${currentPalette.secondary[500]}08)`,
@@ -330,7 +330,7 @@ function InteractivePreview({ currentPalette }) {
         <p className="font-body text-[10px] font-bold uppercase tracking-[0.14em] text-white/30 mb-2">
           {t("preview.title")} · Scale
         </p>
-        <div className="flex rounded-xl overflow-hidden h-7">
+        <div className="flex rounded-lg overflow-hidden h-7">
           {[900,800,700,600,500,400,300,200,100].map((shade) => (
             <motion.div
               key={shade}
@@ -340,7 +340,7 @@ function InteractivePreview({ currentPalette }) {
             />
           ))}
         </div>
-        <div className="flex rounded-xl overflow-hidden h-7 mt-1.5">
+        <div className="flex rounded-lg overflow-hidden h-7 mt-1.5">
           {[900,800,700,600,500,400,300,200,100].map((shade) => (
             <motion.div
               key={shade}
@@ -474,7 +474,7 @@ export default function ThemeShowcaseSection() {
             transition={{ duration: 0.6, delay: 0.15 }}
           >
             {/* Preview card wrapper */}
-            <div className="rounded-2xl border border-white/[0.08] bg-slate-900/70
+            <div className="rounded-lg border border-white/[0.08] bg-slate-900/70
               backdrop-blur-xl p-5 sm:p-6
               shadow-[0_24px_64px_rgba(0,0,0,0.5)]">
 

@@ -146,7 +146,7 @@ export default function RoleTabsFinal() {
         {/* ── Tab switcher ── */}
         <div className="flex justify-center mb-10 md:mb-14 px-4">
           <LayoutGroup id="role-tabs">
-            <div className="grid grid-cols-3 gap-1 sm:gap-1.5 rounded-xl
+            <div className="grid grid-cols-3 gap-1 sm:gap-1.5 rounded-lg
               bg-white/[0.04] backdrop-blur-xl p-1.5
               shadow-2xl ring-1 ring-white/[0.08]
               w-full max-w-xl">
@@ -236,14 +236,14 @@ function FeatureCard({ feature, index, t }) {
       className="group relative h-full"
     >
       {/* Outer glow on hover */}
-      <div className="absolute -inset-[1px] rounded-2xl theme-gradient-bg
+      <div className="absolute -inset-[1px] rounded-lg theme-gradient-bg
         opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-300 -z-10" />
 
       {/* Card */}
       <div className="relative h-full flex flex-col
         bg-white/[0.04] backdrop-blur-sm
         border border-white/[0.08] group-hover:border-[var(--color-primary-500)]/30
-        rounded-2xl p-5 md:p-6
+        rounded-lg p-5 md:p-6
         transition-colors duration-300
         shadow-[0_4px_16px_rgba(0,0,0,0.25)]
         group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.4)]
@@ -261,7 +261,7 @@ function FeatureCard({ feature, index, t }) {
             {/* Icon */}
             <motion.div
               className="relative w-13 h-13 md:w-14 md:h-14 theme-gradient-bg
-                rounded-xl flex items-center justify-center shadow-lg shrink-0 overflow-hidden"
+                rounded-lg flex items-center justify-center shadow-lg shrink-0 overflow-hidden"
               whileHover={{ rotate: [0,-8,8,-6,0], transition: { duration: 0.5 } }}
             >
               <Icon className="w-6 h-6 md:w-7 md:h-7 text-white relative z-10" />
@@ -334,7 +334,7 @@ function CTACard({ activeTab, t, icon: Icon }) {
         p-6 md:p-8
         bg-white/[0.03] backdrop-blur-xl
         border border-white/[0.08] group-hover:border-[var(--color-primary-500)]/30
-        rounded-2xl overflow-hidden
+        rounded-lg overflow-hidden
         transition-colors duration-300
         shadow-[0_8px_32px_rgba(0,0,0,0.35)]"
     >
@@ -346,7 +346,7 @@ function CTACard({ activeTab, t, icon: Icon }) {
       <motion.div
         whileHover={{ rotate: 360, transition: { duration: 0.55 } }}
         className="relative w-16 h-16 md:w-20 md:h-20
-          theme-gradient-bg rounded-2xl flex items-center justify-center
+          theme-gradient-bg rounded-lg flex items-center justify-center
           shadow-xl shrink-0 z-10"
       >
         <Icon className="w-8 h-8 md:w-10 md:h-10 text-white" />
@@ -369,7 +369,7 @@ function CTACard({ activeTab, t, icon: Icon }) {
         className="group/btn relative w-full md:w-auto shrink-0
           theme-gradient-bg text-white
           px-7 md:px-8 py-3.5 md:py-4
-          rounded-xl font-body font-bold text-base
+          rounded-lg font-body font-bold text-base
           shadow-[0_8px_32px_var(--color-primary-500)/30]
           hover:shadow-[0_12px_40px_var(--color-primary-500)/50]
           overflow-hidden z-10

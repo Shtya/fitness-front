@@ -83,7 +83,7 @@ function Card({ children, className = '', glow = false, accent = false, hover = 
 		<motion.div
 			whileHover={hover ? { y: -1 } : {}}
 			transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-			className={`relative overflow-hidden rounded-2xl border bg-white ${className}`}
+			className={`relative overflow-hidden rounded-lg border bg-white ${className}`}
 			style={{
 				borderColor: glow ? 'var(--color-primary-300)' : 'var(--color-primary-100)',
 				boxShadow: glow
@@ -124,7 +124,7 @@ function IconBox({ children, active = false, variant = 'primary', size = 'md' })
 	};
 
 	return (
-		<div className={`grid place-items-center rounded-xl flex-shrink-0 ${sizes[size]} ${iconSizes[size]}`} style={style}>
+		<div className={`grid place-items-center rounded-lg flex-shrink-0 ${sizes[size]} ${iconSizes[size]}`} style={style}>
 			{children}
 		</div>
 	);
@@ -177,7 +177,7 @@ function IconBtn({ tooltip, onClick, children, variant = 'ghost', disabled = fal
 				onMouseLeave={() => setShow(false)}
 				whileHover={{ scale: disabled ? 1 : 1.08 }}
 				whileTap={{ scale: disabled ? 1 : 0.92 }}
-				className={`inline-flex items-center justify-center rounded-xl border transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] ${sizes[size]}`}
+				className={`inline-flex items-center justify-center rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] ${sizes[size]}`}
 				style={{ background: s.bg, borderColor: s.border, color: s.color, boxShadow: disabled ? 'none' : s.shadow }}
 			>
 				{children}
@@ -190,7 +190,7 @@ function IconBtn({ tooltip, onClick, children, variant = 'ghost', disabled = fal
 						animate={{ opacity: 1, y: 0, scale: 1 }}
 						exit={{ opacity: 0, y: 4, scale: 0.95 }}
 						transition={{ duration: 0.1 }}
-						className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-[11px] font-semibold text-white"
+						className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white"
 						style={{ background: '#0f172a', boxShadow: '0 8px 24px rgba(15,23,42,0.3)' }}
 					>
 						{tooltip}
@@ -221,7 +221,7 @@ function ActionBtn({ tooltip, onClick, children, variant = 'ghost', disabled = f
 			title={tooltip}
 			whileHover={{ scale: disabled ? 1 : 1.02 }}
 			whileTap={{ scale: disabled ? 1 : 0.97 }}
-			className="inline-flex h-9 items-center gap-2 rounded-xl border px-3.5 text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
+			className="inline-flex h-9 items-center gap-2 rounded-lg border px-3.5 text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
 			style={{ background: s.bg, borderColor: s.border, color: s.color, boxShadow: disabled ? 'none' : s.shadow }}
 		>
 			{children}
@@ -289,7 +289,7 @@ function InputList({ label, value = [], onChange, placeholder, disabled = false 
 		<div>
 			{label && <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">{label}</p>}
 			<div
-				className="min-h-[52px] rounded-xl border p-3 transition-colors"
+				className="min-h-[52px] rounded-lg border p-3 transition-colors"
 				style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}
 			>
 				<div className="mb-2 flex flex-wrap gap-1.5">
@@ -350,7 +350,7 @@ const FieldRow = React.memo(function FieldRow({
 			className="group relative"
 		>
 			<div
-				className={`relative overflow-hidden rounded-2xl border transition-all duration-200 ${editing
+				className={`relative overflow-hidden rounded-lg border transition-all duration-200 ${editing
 					? 'border-[color:var(--color-primary-300)] shadow-md shadow-[color:var(--color-primary-100)]'
 					: 'border-[color:var(--color-primary-100)] hover:border-[color:var(--color-primary-200)] hover:shadow-sm'
 					} bg-white`}
@@ -464,7 +464,7 @@ const FieldRow = React.memo(function FieldRow({
 									onClick={() => { commitDrafts(); toggleEditField(index, false); }}
 									whileHover={{ scale: 1.02 }}
 									whileTap={{ scale: 0.97 }}
-									className="inline-flex h-9 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
+									className="inline-flex h-9 items-center gap-2 rounded-lg px-5 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
 									style={{
 										background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 										boxShadow: '0 4px 14px -4px var(--color-primary-500)',
@@ -487,8 +487,8 @@ const FieldRow = React.memo(function FieldRow({
 // ─────────────────────────────────────────────────────────────
 function SkeletonRow() {
 	return (
-		<div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-3">
-			<div className="h-8 w-8 animate-pulse rounded-xl bg-slate-100" />
+		<div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-white p-3">
+			<div className="h-8 w-8 animate-pulse rounded-lg bg-slate-100" />
 			<div className="flex-1 space-y-2">
 				<div className="h-3 w-1/3 animate-pulse rounded-full bg-slate-100" />
 				<div className="h-2.5 w-1/4 animate-pulse rounded-full bg-slate-100" />
@@ -782,7 +782,7 @@ export default function FormsManagementPage() {
 						</div>
 						<div className="lg:col-span-8">
 							<Card className="p-6 space-y-3">
-								<div className="h-10 w-2/3 animate-pulse rounded-xl bg-slate-100" />
+								<div className="h-10 w-2/3 animate-pulse rounded-lg bg-slate-100" />
 								{Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)}
 							</Card>
 						</div>
@@ -831,7 +831,7 @@ export default function FormsManagementPage() {
 												value={query}
 												onChange={e => setQuery(e.target.value)}
 												placeholder={t('labels.search', { default: 'Search forms…' })}
-												className="h-9 w-full rounded-xl border bg-white text-sm font-medium outline-none transition-all ltr:pl-9 rtl:pr-9 ltr:pr-3 rtl:pl-3 placeholder:text-slate-400 focus:ring-2 focus:ring-[color:var(--color-primary-200)]"
+												className="h-9 w-full rounded-lg border bg-white text-sm font-medium outline-none transition-all ltr:pl-9 rtl:pr-9 ltr:pr-3 rtl:pl-3 placeholder:text-slate-400 focus:ring-2 focus:ring-[color:var(--color-primary-200)]"
 												style={{ borderColor: 'var(--color-primary-200)', color: 'var(--color-primary-900)' }}
 											/>
 										</div>
@@ -861,7 +861,7 @@ export default function FormsManagementPage() {
 																transition={{ delay: index * 0.035 }}
 															>
 																<div
-																	className="overflow-hidden rounded-xl border transition-all group cursor-pointer"
+																	className="overflow-hidden rounded-lg border transition-all group cursor-pointer"
 																	style={{
 																		borderColor: isActive ? 'var(--color-primary-300)' : 'transparent',
 																		background: isActive
@@ -1073,12 +1073,12 @@ export default function FormsManagementPage() {
 																		initial={{ opacity: 0, y: 6 }}
 																		animate={{ opacity: 1, y: 0 }}
 																		exit={{ opacity: 0, scale: 0.97 }}
-																		className="flex items-start gap-3 rounded-xl border p-3.5 transition-colors hover:border-[color:var(--color-primary-200)]"
+																		className="flex items-start gap-3 rounded-lg border p-3.5 transition-colors hover:border-[color:var(--color-primary-200)]"
 																		style={{ borderColor: 'var(--color-primary-100)', background: 'rgba(255,255,255,0.8)' }}
 																	>
 																		<div className="flex flex-shrink-0 items-center gap-2">
 																			<span
-																				className="grid h-5 w-5 place-items-center rounded-md text-[10px] font-bold"
+																				className="grid h-5 w-5 place-items-center rounded-lg text-[10px] font-bold"
 																				style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-600)' }}
 																			>
 																				{field.order ?? 1}
@@ -1106,7 +1106,7 @@ export default function FormsManagementPage() {
 													<motion.div
 														initial={{ opacity: 0 }}
 														animate={{ opacity: 1 }}
-														className="rounded-2xl border border-dashed p-16 text-center"
+														className="rounded-lg border border-dashed p-16 text-center"
 														style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}
 													>
 														<IconBox size="xl" className="mx-auto mb-3">
@@ -1136,7 +1136,7 @@ export default function FormsManagementPage() {
 			>
 				<div className="space-y-5 pt-2">
 					<div
-						className="flex items-start gap-4 rounded-2xl border p-4"
+						className="flex items-start gap-4 rounded-lg border p-4"
 						style={{ borderColor: '#fecaca', background: '#fef2f2' }}
 					>
 						<IconBox variant="danger" size="md">
@@ -1177,7 +1177,7 @@ export default function FormsManagementPage() {
 				>
 					{/* Title input */}
 					<div
-						className="rounded-2xl border p-4"
+						className="rounded-lg border p-4"
 						style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}
 					>
 						<Input
@@ -1208,7 +1208,7 @@ export default function FormsManagementPage() {
 								onClick={addInlineField}
 								whileHover={{ scale: 1.03 }}
 								whileTap={{ scale: 0.97 }}
-								className="inline-flex h-9 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
+								className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
 								style={{
 									background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 									boxShadow: '0 4px 14px -4px var(--color-primary-500)',
@@ -1248,7 +1248,7 @@ export default function FormsManagementPage() {
 							<motion.div
 								initial={{ opacity: 0 }}
 								animate={{ opacity: 1 }}
-								className="rounded-2xl border border-dashed p-12 text-center"
+								className="rounded-lg border border-dashed p-12 text-center"
 								style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}
 							>
 								<IconBox size="xl" className="mx-auto mb-3">
@@ -1269,7 +1269,7 @@ export default function FormsManagementPage() {
 							onClick={() => setShowFormModal(false)}
 							whileHover={{ scale: 1.01 }}
 							whileTap={{ scale: 0.98 }}
-							className="inline-flex h-10 items-center rounded-xl border px-5 text-sm font-semibold text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
+							className="inline-flex h-10 items-center rounded-lg border px-5 text-sm font-semibold text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
 							style={{ borderColor: 'var(--color-primary-200)', background: 'white' }}
 						>
 							{t('actions.cancel')}
@@ -1280,7 +1280,7 @@ export default function FormsManagementPage() {
 							disabled={loading}
 							whileHover={{ scale: loading ? 1 : 1.02 }}
 							whileTap={{ scale: loading ? 1 : 0.97 }}
-							className="inline-flex h-10 items-center gap-2 rounded-xl px-6 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
+							className="inline-flex h-10 items-center gap-2 rounded-lg px-6 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
 							style={{
 								background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
 								boxShadow: '0 4px 16px -4px var(--color-primary-500)',

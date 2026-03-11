@@ -131,7 +131,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
       )}
 
       {/* ── Compact horizontal strip ── */}
-      <div className="flex items-stretch rounded-2xl border border-[var(--color-primary-100)] bg-white shadow-sm overflow-hidden h-12">
+      <div className="flex items-stretch rounded-lg border border-[var(--color-primary-100)] bg-white shadow-sm overflow-hidden h-12">
 
         {/* LEFT — arc + time */}
         <div className="flex items-center gap-1.5 pl-2.5 pr-2 bg-gradient-to-r from-[var(--color-primary-50)] to-transparent shrink-0">
@@ -236,7 +236,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
           {!running ? (
             <button
               onClick={handleStart}
-              className="flex items-center gap-1 rounded-xl px-3 h-8 text-[11px] font-bold text-white active:scale-95 transition-transform"
+              className="flex items-center gap-1 rounded-lg px-3 h-8 text-[11px] font-bold text-white active:scale-95 transition-transform"
               style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
             >
               <Play size={10} fill="currentColor" className="translate-x-px" />
@@ -246,14 +246,14 @@ export const RestTimerCard = React.memo(function RestTimerCard({
             <>
               <button
                 onClick={() => { resume(); haptic(); }}
-                className="flex items-center gap-1 rounded-xl px-2.5 h-8 text-[11px] font-bold border border-[var(--color-primary-200)] text-[var(--color-primary-700)] bg-[var(--color-primary-50)] active:scale-95 transition-transform"
+                className="flex items-center gap-1 rounded-lg px-2.5 h-8 text-[11px] font-bold border border-[var(--color-primary-200)] text-[var(--color-primary-700)] bg-[var(--color-primary-50)] active:scale-95 transition-transform"
               >
                 <Play size={10} fill="currentColor" className="translate-x-px" />
                 {t('actions.resume')}
               </button>
               <button
                 onClick={() => { stop(); stopAlert(); haptic(20); }}
-                className="w-7 h-7 rounded-xl border border-rose-100 flex items-center justify-center text-rose-300 hover:text-rose-500 hover:bg-rose-50 active:scale-90 transition-all"
+                className="w-7 h-7 rounded-lg border border-rose-100 flex items-center justify-center text-rose-300 hover:text-rose-500 hover:bg-rose-50 active:scale-90 transition-all"
               >
                 <X size={12} strokeWidth={2.5} />
               </button>
@@ -262,14 +262,14 @@ export const RestTimerCard = React.memo(function RestTimerCard({
             <>
               <button
                 onClick={() => { pause(); haptic(); }}
-                className="flex items-center gap-1 rounded-xl px-2.5 h-8 text-[11px] font-bold border border-[var(--color-primary-200)] text-[var(--color-primary-700)] bg-white active:scale-95 transition-transform"
+                className="flex items-center gap-1 rounded-lg px-2.5 h-8 text-[11px] font-bold border border-[var(--color-primary-200)] text-[var(--color-primary-700)] bg-white active:scale-95 transition-transform"
               >
                 <Pause size={10} />
                 {t('actions.pause')}
               </button>
               <button
                 onClick={() => { stop(); stopAlert(); haptic(20); }}
-                className="w-7 h-7 rounded-xl border border-rose-100 flex items-center justify-center text-rose-300 hover:text-rose-500 hover:bg-rose-50 active:scale-90 transition-all"
+                className="w-7 h-7 rounded-lg border border-rose-100 flex items-center justify-center text-rose-300 hover:text-rose-500 hover:bg-rose-50 active:scale-90 transition-all"
               >
                 <X size={12} strokeWidth={2.5} />
               </button>

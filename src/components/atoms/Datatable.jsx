@@ -82,7 +82,7 @@ const SearchInput = memo(function SearchInput({ value, onChange, onKeyDown, plac
 	return (
 		<div
 			onClick={() => ref.current?.focus()}
-			className="relative flex items-center h-10 rounded-xl cursor-text bg-white w-full max-w-[340px] transition-all duration-200"
+			className="relative flex items-center h-10 rounded-lg cursor-text bg-white w-full max-w-[340px] transition-all duration-200"
 			style={{
 				border: focused
 					? "1.5px solid var(--color-primary-400)"
@@ -122,7 +122,7 @@ const SearchInput = memo(function SearchInput({ value, onChange, onKeyDown, plac
 				onFocus={() => setFocused(true)}
 				onBlur={() => setFocused(false)}
 				placeholder=""
-				className="absolute inset-0 w-full h-full bg-transparent outline-none ps-9 pe-9 text-sm text-slate-800 rounded-xl"
+				className="absolute inset-0 w-full h-full bg-transparent outline-none ps-9 pe-9 text-sm text-slate-800 rounded-lg"
 			/>
 
 			<AnimatePresence>
@@ -133,7 +133,7 @@ const SearchInput = memo(function SearchInput({ value, onChange, onKeyDown, plac
 						exit={{ opacity: 0, scale: 0.7 }}
 						type="button"
 						onClick={(e) => { e.stopPropagation(); onChange?.(""); }}
-						className="absolute end-3 w-5 h-5 rounded-md flex items-center justify-center transition-colors"
+						className="absolute end-3 w-5 h-5 rounded-lg flex items-center justify-center transition-colors"
 						style={{ color: "#94a3b8" }}
 					>
 						<X size={11} />
@@ -172,7 +172,7 @@ export const TableToolbar = memo(function TableToolbar({
 						whileTap={{ scale: 0.96 }}
 						onClick={onToggleFilters}
 						type="button"
-						className="relative h-10 px-4 rounded-xl border text-sm font-semibold flex items-center gap-2 transition-all duration-200"
+						className="relative h-10 px-4 rounded-lg border text-sm font-semibold flex items-center gap-2 transition-all duration-200"
 						style={
 							isFiltersOpen
 								? {
@@ -216,7 +216,7 @@ export const TableToolbar = memo(function TableToolbar({
 						onClick={action.onClick}
 						type="button"
 						disabled={action.disabled}
-						className="h-10 px-4 rounded-xl border text-sm font-semibold flex items-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+						className="h-10 px-4 rounded-lg border text-sm font-semibold flex items-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
 						style={
 							action.color === "primary"
 								? {
@@ -258,7 +258,7 @@ export const TableFilters = memo(function TableFilters({ children, onApply, appl
 			transition={{ duration: 0.24, ease: "easeInOut" }}
 		>
 			<div
-				className="mt-3 rounded-2xl overflow-hidden"
+				className="mt-3 rounded-lg overflow-hidden"
 				style={{
 					border: "1.5px solid var(--color-primary-100)",
 					background: "color-mix(in oklab, var(--color-primary-50) 60%, white)",
@@ -278,7 +278,7 @@ export const TableFilters = memo(function TableFilters({ children, onApply, appl
 							whileTap={{ scale: 0.96 }}
 							onClick={onApply}
 							type="button"
-							className="h-10 px-4 rounded-xl text-white text-sm font-semibold flex items-center gap-2 flex-shrink-0 transition-all"
+							className="h-10 px-4 rounded-lg text-white text-sm font-semibold flex items-center gap-2 flex-shrink-0 transition-all"
 							style={{
 								background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))",
 								boxShadow: "0 4px 16px color-mix(in oklab, var(--color-primary-500) 30%, transparent)",
@@ -348,7 +348,7 @@ export const TablePagination = memo(function TablePagination({
 			onClick={onClick}
 			disabled={isLoading || disabled}
 			title={title}
-			className="w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
+			className="w-9 h-9 rounded-lg flex items-center justify-center border transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
 			style={{ background: "white", borderColor: "#e2e8f0", color: "#64748b" }}
 			onMouseEnter={(e) => {
 				if (!disabled && !isLoading) {
@@ -408,7 +408,7 @@ export const TablePagination = memo(function TablePagination({
 								whileTap={{ scale: 0.92 }}
 								onClick={() => goTo(p)}
 								disabled={isLoading}
-								className="relative w-9 h-9 rounded-xl text-xs font-bold border transition-all duration-150 overflow-hidden"
+								className="relative w-9 h-9 rounded-lg text-xs font-bold border transition-all duration-150 overflow-hidden"
 								style={
 									p === currentPage
 										? {
@@ -441,7 +441,7 @@ export const TablePagination = memo(function TablePagination({
 			<div className="flex items-center gap-2 flex-shrink-0">
 				<span className="text-xs hidden sm:block" style={{ color: "#94a3b8" }}>{t("perPage")}</span>
 				<div
-					className="flex items-center gap-0.5 p-1 rounded-xl"
+					className="flex items-center gap-0.5 p-1 rounded-lg"
 					style={{ border: "1.5px solid #e2e8f0", background: "white" }}
 				>
 					{perPageOptions.map((lim) => (
@@ -486,7 +486,7 @@ const TableSkeleton = memo(function TableSkeleton({ columns, rows = 6, compact }
 					{columns.map((col, ci) => (
 						<TableCell key={ci} className={cn("!px-5", compact ? "py-2.5" : "py-4")}>
 							<div
-								className="rounded-xl animate-pulse"
+								className="rounded-lg animate-pulse"
 								style={{
 									height: 14,
 									width: col.type === "img" ? 40 : `${45 + ((ri * 13 + ci * 7) % 40)}%`,
@@ -511,7 +511,7 @@ const ImgCell = memo(function ImgCell({ src, alt, onOpen }) {
 			whileTap={{ scale: 0.95 }}
 			type="button"
 			onClick={() => onOpen(full, alt)}
-			className="group/img relative w-10 h-10 rounded-xl overflow-hidden shadow-sm transition-all duration-200 block"
+			className="group/img relative w-10 h-10 rounded-lg overflow-hidden shadow-sm transition-all duration-200 block"
 			style={{ border: "2px solid var(--color-primary-100)" }}
 			onMouseEnter={(e) => {
 				e.currentTarget.style.borderColor = "var(--color-primary-400)";
@@ -545,7 +545,7 @@ const ImgsCell = memo(function ImgsCell({ images, onOpen }) {
 						whileHover={{ scale: 1.14, zIndex: 50, y: -2 }}
 						whileTap={{ scale: 0.95 }}
 						transition={{ type: "spring", stiffness: 400, damping: 28 }}
-						className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-md cursor-pointer"
+						className="relative w-10 h-10 rounded-lg overflow-hidden border-2 border-white shadow-md cursor-pointer"
 					>
 						<img src={full} alt={img.alt} className="w-full h-full object-cover" loading="lazy" />
 					</motion.button>
@@ -571,7 +571,7 @@ const ImageModal = memo(function ImageModal({ src, alt, open, onClose, labels = 
 		<Dialog open={open} onOpenChange={(o) => !o && onClose()}>
 			<DialogContent
 				showCloseButton={false}
-				className="max-w-3xl !p-0 overflow-hidden rounded-2xl bg-white shadow-2xl"
+				className="max-w-3xl !p-0 overflow-hidden rounded-lg bg-white shadow-2xl"
 				style={{ border: "1.5px solid var(--color-primary-100)" }}
 			>
 				<div
@@ -584,7 +584,7 @@ const ImageModal = memo(function ImageModal({ src, alt, open, onClose, labels = 
 				>
 					<div className="flex items-center gap-3">
 						<div
-							className="w-9 h-9 rounded-xl flex items-center justify-center"
+							className="w-9 h-9 rounded-lg flex items-center justify-center"
 							style={{
 								background: "var(--color-primary-50)",
 								border: "1.5px solid var(--color-primary-200)",
@@ -601,7 +601,7 @@ const ImageModal = memo(function ImageModal({ src, alt, open, onClose, labels = 
 						<motion.button
 							whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
 							onClick={download}
-							className="w-8 h-8 rounded-xl flex items-center justify-center text-white"
+							className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
 							style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}
 						>
 							<Download size={13} />
@@ -609,7 +609,7 @@ const ImageModal = memo(function ImageModal({ src, alt, open, onClose, labels = 
 						<motion.button
 							whileHover={{ scale: 1.08, rotate: 90 }} whileTap={{ scale: 0.92 }}
 							onClick={onClose}
-							className="w-8 h-8 rounded-xl border flex items-center justify-center text-slate-500 transition-all hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200"
+							className="w-8 h-8 rounded-lg border flex items-center justify-center text-slate-500 transition-all hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200"
 							style={{ borderColor: "#e2e8f0" }}
 						>
 							<X size={13} />
@@ -622,7 +622,7 @@ const ImageModal = memo(function ImageModal({ src, alt, open, onClose, labels = 
 						animate={{ scale: zoomed ? 1.6 : 1 }}
 						transition={{ type: "spring", stiffness: 280, damping: 28 }}
 						onClick={() => setZoomed((z) => !z)}
-						className="max-w-full max-h-[60vh] object-contain rounded-2xl shadow-2xl cursor-zoom-in"
+						className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-2xl cursor-zoom-in"
 						style={{ border: "4px solid white" }}
 					/>
 				</div>
@@ -688,7 +688,7 @@ export default function DataTable({
 				initial={{ opacity: 0, y: 14 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-				className="relative rounded-2xl overflow-hidden"
+				className="relative rounded-lg overflow-hidden"
 				style={{
 					background: "white",
 					border: "1.5px solid var(--color-primary-100)",
@@ -811,7 +811,7 @@ export default function DataTable({
 													<motion.div
 														animate={{ rotate: [0, -5, 5, 0] }}
 														transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-														className="relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm"
+														className="relative w-14 h-14 rounded-lg flex items-center justify-center shadow-sm"
 														style={{
 															background: "var(--color-primary-50)",
 															border: "1.5px solid var(--color-primary-200)",

@@ -211,15 +211,15 @@ function ExerciseCard({ locale }) {
         {/* Rest timer */}
         <div className="flex items-center justify-between gap-2 mb-3">
           <button className="theme-gradient-bg flex items-center gap-1.5 border-none
-            rounded-xl px-[14px] py-2 text-[12px] font-bold text-white cursor-pointer font-body
+            rounded-lg px-[14px] py-2 text-[12px] font-bold text-white cursor-pointer font-body
             shadow-[0_4px_12px_rgba(99,102,241,0.35)] active:scale-95 transition-transform">
             <Play size={12} fill="white" />
             {t("start")}
           </button>
-          <div className="flex items-center gap-1.5 bg-[#f0f0f2] rounded-xl px-[10px] py-1.5">
+          <div className="flex items-center gap-1.5 bg-[#f0f0f2] rounded-lg px-[10px] py-1.5">
             <Timer size={13} className="text-[#888]" />
             <button onClick={() => setRestTime(r => Math.max(15, r - 15))}
-              className="border-none bg-white rounded-md w-[22px] h-[22px] cursor-pointer
+              className="border-none bg-white rounded-lg w-[22px] h-[22px] cursor-pointer
                 flex items-center justify-center">
               <Minus size={11} className="text-[#555]" />
             </button>
@@ -227,7 +227,7 @@ function ExerciseCard({ locale }) {
               {Math.floor(restTime/60)}:{String(restTime%60).padStart(2,"0")}
             </span>
             <button onClick={() => setRestTime(r => r + 15)}
-              className="border-none bg-white rounded-md w-[22px] h-[22px] cursor-pointer
+              className="border-none bg-white rounded-lg w-[22px] h-[22px] cursor-pointer
                 flex items-center justify-center">
               <Plus size={11} className="text-[#555]" />
             </button>
@@ -235,7 +235,7 @@ function ExerciseCard({ locale }) {
         </div>
 
         {/* Sets table */}
-        <div className="bg-[#f8f8fa] rounded-xl overflow-hidden border border-black/5 mb-3">
+        <div className="bg-[#f8f8fa] rounded-lg overflow-hidden border border-black/5 mb-3">
           <div className="grid grid-cols-[36px_1fr_1fr] px-3 py-2 border-b border-black/[0.06] bg-[#f0f0f2]">
             {[t("table.done"), t("table.weight"), t("table.reps")].map((h, i) => (
               <span key={i}
@@ -277,12 +277,12 @@ function ExerciseCard({ locale }) {
 
         {/* Action buttons */}
         <div className="flex gap-2">
-          <button className="flex-1 py-[10px] rounded-xl border-none theme-gradient-bg
+          <button className="flex-1 py-[10px] rounded-lg border-none theme-gradient-bg
             text-white text-[13px] font-bold font-body cursor-pointer
             shadow-[0_4px_14px_rgba(99,102,241,0.35)] active:scale-[0.98] transition-transform">
             {t("buttons.addSet")}
           </button>
-          <button className="px-4 py-[10px] rounded-xl border border-[#e0e0e6] bg-white
+          <button className="px-4 py-[10px] rounded-lg border border-[#e0e0e6] bg-white
             text-[#666] text-[13px] font-bold font-body cursor-pointer
             active:scale-[0.98] transition-transform">
             {t("buttons.save")}
@@ -338,7 +338,7 @@ function TrustStrip({ t }) {
   return (
     <motion.div variants={stagger(0.55)} initial="hidden" animate="show">
       <div className="flex items-center bg-white/[0.04] border border-white/[0.08]
-        rounded-2xl overflow-hidden backdrop-blur-xl">
+        rounded-lg overflow-hidden backdrop-blur-xl">
         {/* Users */}
         <div className="flex-1 px-3 sm:px-5 py-[14px]">
           <p className="text-[20px] sm:text-[22px] font-black text-white leading-none font-body tracking-tight">50K+</p>

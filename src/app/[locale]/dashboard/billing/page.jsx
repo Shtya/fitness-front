@@ -58,7 +58,7 @@ const CSS_VARS = `
 function Surface({ children, className = "", accent = false, glow = false }) {
   return (
     <div
-      className={cls("relative overflow-hidden rounded-2xl border bg-white/90 backdrop-blur-xl", className)}
+      className={cls("relative overflow-hidden rounded-lg border bg-white/90 backdrop-blur-xl", className)}
       style={{
         borderColor: "var(--color-primary-100)",
         boxShadow: glow
@@ -82,7 +82,7 @@ function KpiCard({ icon: Icon, title, subtitle, value, trend, bgFrom, bgTo, icon
       initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
       transition={{ delay: idx * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       whileHover={{ y: -6, scale: 1.015 }}
-      className="group relative overflow-hidden rounded-2xl border-2 border-white/60 shadow-lg hover:shadow-2xl transition-all duration-300"
+      className="group relative overflow-hidden rounded-lg border-2 border-white/60 shadow-lg hover:shadow-2xl transition-all duration-300"
       style={{ background: `linear-gradient(135deg, ${bgFrom}, ${bgTo})` }}
     >
       <motion.div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none"
@@ -91,7 +91,7 @@ function KpiCard({ icon: Icon, title, subtitle, value, trend, bgFrom, bgTo, icon
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
             <motion.div whileHover={{ rotate: 15, scale: 1.1 }} transition={{ duration: 0.3 }}
-              className="h-12 w-12 rounded-xl bg-white/75 backdrop-blur border border-white/60 shadow flex items-center justify-center shrink-0">
+              className="h-12 w-12 rounded-lg bg-white/75 backdrop-blur border border-white/60 shadow flex items-center justify-center shrink-0">
               <Icon className={cls("w-6 h-6", iconColor)} strokeWidth={2} />
             </motion.div>
             <div>
@@ -100,7 +100,7 @@ function KpiCard({ icon: Icon, title, subtitle, value, trend, bgFrom, bgTo, icon
             </div>
           </div>
           {trend && (
-            <span className={cls("shrink-0 inline-flex items-center gap-1 rounded-xl border px-2 py-1 text-[11px] font-black",
+            <span className={cls("shrink-0 inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-black",
               trend.direction === "up" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700")}>
               {trend.direction === "up" ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
               {trend.value}
@@ -125,7 +125,7 @@ function StatusBadge({ status, label, icon: Icon }) {
     ended:     "border-slate-200  bg-slate-50  text-slate-600",
   };
   return (
-    <span className={cls("inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[11px] font-bold", styles[status] || styles.pending)}>
+    <span className={cls("inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-bold", styles[status] || styles.pending)}>
       {Icon && <Icon className="w-3 h-3" />}
       {label}
     </span>
@@ -145,7 +145,7 @@ function TipIconBtn({ tooltip, onClick, disabled, children, variant = "ghost" })
       <Tooltip>
         <TooltipTrigger asChild>
           <button type="button" onClick={onClick} disabled={disabled}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none hover:-translate-y-0.5 active:scale-95"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none hover:-translate-y-0.5 active:scale-95"
             style={{ borderColor: s.border, background: s.bg, color: s.color, boxShadow: "0 1px 3px rgba(15,23,42,0.07)" }}>
             {children}
           </button>
@@ -158,7 +158,7 @@ function TipIconBtn({ tooltip, onClick, disabled, children, variant = "ghost" })
 
 function ActionPill({ children }) {
   return (
-    <div className="inline-flex items-center gap-1 rounded-2xl border border-[color:var(--color-primary-100)] bg-white p-1 shadow-sm">
+    <div className="inline-flex items-center gap-1 rounded-lg border border-[color:var(--color-primary-100)] bg-white p-1 shadow-sm">
       {children}
     </div>
   );
@@ -182,7 +182,7 @@ function PaginationBar({ page, totalPages, onPageChange }) {
     return withDots;
   }, [page, totalPages]);
 
-  const btnBase = "inline-flex h-9 items-center gap-1.5 rounded-xl border border-[color:var(--color-primary-200)] bg-white px-4 text-sm font-semibold text-[color:var(--color-primary-700)] shadow-sm transition-all hover:bg-[color:var(--color-primary-50)] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none";
+  const btnBase = "inline-flex h-9 items-center gap-1.5 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-4 text-sm font-semibold text-[color:var(--color-primary-700)] shadow-sm transition-all hover:bg-[color:var(--color-primary-50)] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none";
 
   return (
     <div className="flex items-center justify-between mt-6 pt-5 border-t border-[color:var(--color-primary-100)]">
@@ -193,10 +193,10 @@ function PaginationBar({ page, totalPages, onPageChange }) {
             <span key={p} className="px-1.5 text-slate-400 text-sm font-bold select-none">…</span>
           ) : (
             <motion.button key={p} onClick={() => onPageChange(p)} whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.94 }}
-              className={cls("relative h-9 w-9 rounded-xl text-sm font-bold transition-all focus:outline-none",
+              className={cls("relative h-9 w-9 rounded-lg text-sm font-bold transition-all focus:outline-none",
                 page === p ? "text-white shadow-md" : "border border-[color:var(--color-primary-200)] bg-white text-slate-700 hover:bg-[color:var(--color-primary-50)]")}>
               {page === p && (
-                <motion.span layoutId="pgActive" className="absolute inset-0 rounded-xl"
+                <motion.span layoutId="pgActive" className="absolute inset-0 rounded-lg"
                   style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}
                   transition={{ type: "spring", stiffness: 500, damping: 35 }} />
               )}
@@ -232,7 +232,7 @@ function DataTable({ columns, rows, getRowKey, renderCell, emptyTitle, emptyIcon
         {rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             {EmptyIcon && (
-              <div className="mb-4 grid h-16 w-16 place-items-center rounded-2xl"
+              <div className="mb-4 grid h-16 w-16 place-items-center rounded-lg"
                 style={{ background: "linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))" }}>
                 <EmptyIcon className="h-7 w-7" style={{ color: "var(--color-primary-500)" }} />
               </div>
@@ -242,7 +242,7 @@ function DataTable({ columns, rows, getRowKey, renderCell, emptyTitle, emptyIcon
           </div>
         ) : (
           <>
-            <div className="overflow-hidden rounded-xl border border-[color:var(--color-primary-100)]">
+            <div className="overflow-hidden rounded-lg border border-[color:var(--color-primary-100)]">
               <Table>
                 <TableHeader>
                   <TableRow className="border-b border-[color:var(--color-primary-100)]"
@@ -390,7 +390,7 @@ export default function BillingPage() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <motion.button whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-xl"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg"
                       style={{ background: "rgba(255,255,255,0.16)", backdropFilter: "blur(16px)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.3)" }}>
                       <Info className="h-4 w-4 text-white" />
                     </motion.button>
@@ -401,7 +401,7 @@ export default function BillingPage() {
 
               {/* Export button */}
               <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.95 }}
-                className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-black text-white"
+                className="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-black text-white"
                 style={{ background: "rgba(255,255,255,0.22)", backdropFilter: "blur(16px)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.3),0 4px 16px rgba(0,0,0,0.1)" }}>
                 <Download className="h-4 w-4" />
                 {t("common.export")}
@@ -473,12 +473,12 @@ function OverviewTab({ walletData, t, onNavigateToSubscriptions }) {
         headerSubtitle={t("transactions.recentSubtitle") || t("transactions.recent")}
         headerRight={
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold"
+            <span className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold"
               style={{ borderColor: "var(--color-primary-200)", background: "var(--color-primary-50)", color: "var(--color-primary-700)" }}>
               <BarChart3 className="h-3.5 w-3.5" />{t("payments.total", { count: recentTransactions.length })}
             </span>
             <button onClick={onNavigateToSubscriptions}
-              className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[color:var(--color-primary-200)] bg-white px-3 text-xs font-bold text-[color:var(--color-primary-700)] shadow-sm transition-all hover:bg-[color:var(--color-primary-50)]">
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-3 text-xs font-bold text-[color:var(--color-primary-700)] shadow-sm transition-all hover:bg-[color:var(--color-primary-50)]">
               {t("common.viewAll")}<ArrowUpRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -489,7 +489,7 @@ function OverviewTab({ walletData, t, onNavigateToSubscriptions }) {
           if (key === "status")      return <TxStatusBadge status={tx.status} t={t} />;
           if (key === "client")      return (
             <div className="flex items-center gap-2.5">
-              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl"
+              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
                 style={{ background: "linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))" }}>
                 <User className="h-4 w-4" style={{ color: "var(--color-primary-600)" }} />
               </div>
@@ -575,11 +575,11 @@ function ClientsTab({ t }) {
           return (
             <motion.div key={s.key} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.06, duration: 0.4 }} whileHover={{ y: -4, scale: 1.015 }}
-              className="group relative overflow-hidden rounded-2xl border border-white/60 shadow transition-all duration-300 hover:shadow-lg"
+              className="group relative overflow-hidden rounded-lg border border-white/60 shadow transition-all duration-300 hover:shadow-lg"
               style={{ background: `linear-gradient(135deg, ${s.bgFrom}, ${s.bgTo})` }}>
               <div className="p-4">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/70 shadow-sm border border-white/60 transition-transform group-hover:scale-105">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/70 shadow-sm border border-white/60 transition-transform group-hover:scale-105">
                     <Icon className={cls("h-4 w-4", s.iconColor)} strokeWidth={2} />
                   </div>
                   {s.chip && (
@@ -607,14 +607,14 @@ function ClientsTab({ t }) {
         <span className="pointer-events-none absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 text-slate-400">🔍</span>
         <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
           placeholder={t("clients.search") || "بحث عن عميل…"}
-          className="h-10 w-full rounded-xl border border-[color:var(--color-primary-200)] bg-white pl-9 pr-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]" />
+          className="h-10 w-full rounded-lg border border-[color:var(--color-primary-200)] bg-white pl-9 pr-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]" />
       </div>
 
       <DataTable
         headerTitle={t("clients.management") || "إدارة العملاء"}
         headerSubtitle={`${filtered.length} ${t("clients.results") || "نتيجة"}`}
         headerRight={
-          <span className="inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold"
+          <span className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold"
             style={{ borderColor: "var(--color-primary-200)", background: "var(--color-primary-50)", color: "var(--color-primary-700)" }}>
             <Users className="h-3.5 w-3.5" />{t("payments.total", { count: filtered.length })}
           </span>
@@ -643,7 +643,7 @@ function ClientsTab({ t }) {
             </div>
           );
           if (key === "package") return (
-            <span className="inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-bold"
+            <span className="inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-bold"
               style={{ borderColor: "var(--color-primary-200)", background: "var(--color-primary-50)", color: "var(--color-primary-800)" }}>
               {c.package}
             </span>
@@ -711,7 +711,7 @@ function PackagesTab({ t }) {
     { from: "#faf5ff", to: "#ede9fe", accent: "#8b5cf6" },
   ];
 
-  const inputCls = "h-11 w-full rounded-xl border border-[color:var(--color-primary-200)] bg-white px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]";
+  const inputCls = "h-11 w-full rounded-lg border border-[color:var(--color-primary-200)] bg-white px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]";
 
   return (
     <TabPane>
@@ -727,11 +727,11 @@ function PackagesTab({ t }) {
           {/* Export dialog */}
           <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
             <DialogTrigger asChild>
-              <button className="inline-flex h-10 items-center gap-2 rounded-xl border border-[color:var(--color-primary-200)] bg-white px-4 text-sm font-bold text-[color:var(--color-primary-700)] shadow-sm transition-all hover:bg-[color:var(--color-primary-50)] focus:outline-none">
+              <button className="inline-flex h-10 items-center gap-2 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-4 text-sm font-bold text-[color:var(--color-primary-700)] shadow-sm transition-all hover:bg-[color:var(--color-primary-50)] focus:outline-none">
                 <Send className="h-4 w-4" />{t("packages.exportAll")}
               </button>
             </DialogTrigger>
-            <DialogContent className="rounded-2xl">
+            <DialogContent className="rounded-lg">
               <DialogHeader>
                 <DialogTitle className="text-xl font-black">{t("packages.exportDialog.title")}</DialogTitle>
                 <DialogDescription>{t("packages.exportDialog.description")}</DialogDescription>
@@ -742,18 +742,18 @@ function PackagesTab({ t }) {
                   <div className="relative">
                     <Phone className="pointer-events-none absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 h-4 w-4 text-slate-400" />
                     <input value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} type="tel" placeholder="01XXXXXXXXX"
-                      className="h-11 w-full rounded-xl border border-[color:var(--color-primary-200)] bg-white ltr:pl-9 rtl:pr-9 px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]" />
+                      className="h-11 w-full rounded-lg border border-[color:var(--color-primary-200)] bg-white ltr:pl-9 rtl:pr-9 px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]" />
                   </div>
                 </div>
-                <div className="flex items-start gap-2.5 rounded-xl bg-blue-50 border border-blue-200 p-3">
+                <div className="flex items-start gap-2.5 rounded-lg bg-blue-50 border border-blue-200 p-3">
                   <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
                   <p className="text-xs font-medium text-blue-800">{t("packages.exportDialog.info")}</p>
                 </div>
               </div>
               <DialogFooter>
-                <button onClick={() => setIsExportDialogOpen(false)} className="h-9 rounded-xl border border-[color:var(--color-primary-200)] bg-white px-4 text-sm font-bold hover:bg-[color:var(--color-primary-50)]">{t("common.cancel")}</button>
+                <button onClick={() => setIsExportDialogOpen(false)} className="h-9 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-4 text-sm font-bold hover:bg-[color:var(--color-primary-50)]">{t("common.cancel")}</button>
                 <button onClick={handleExport} disabled={!phoneNumber || exportingPackages}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-green-600 px-5 text-sm font-bold text-white transition-all hover:bg-green-700 disabled:opacity-50">
+                  className="inline-flex h-9 items-center gap-2 rounded-lg bg-green-600 px-5 text-sm font-bold text-white transition-all hover:bg-green-700 disabled:opacity-50">
                   {exportingPackages ? <><RefreshCw className="h-4 w-4 animate-spin" />{t("packages.exportDialog.sending")}</> : <><Send className="h-4 w-4" />{t("packages.exportDialog.send")}</>}
                 </button>
               </DialogFooter>
@@ -764,12 +764,12 @@ function PackagesTab({ t }) {
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <button onClick={() => { setEditingPackage(null); setFormData({ name: "", nameEn: "", price: "", duration: "شهري", features: [""] }); }}
-                className="inline-flex h-10 items-center gap-2 rounded-xl px-5 text-sm font-bold text-white shadow transition-all hover:opacity-90 active:scale-[.97] focus:outline-none"
+                className="inline-flex h-10 items-center gap-2 rounded-lg px-5 text-sm font-bold text-white shadow transition-all hover:opacity-90 active:scale-[.97] focus:outline-none"
                 style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 4px 14px -4px var(--color-primary-500)" }}>
                 <Plus className="h-4 w-4" />{t("packages.addNew")}
               </button>
             </DialogTrigger>
-            <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-2xl">
+            <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-lg">
               <DialogHeader>
                 <DialogTitle className="text-xl font-black">{editingPackage ? t("packages.edit") : t("packages.addNew")}</DialogTitle>
                 <DialogDescription>{t("packages.dialogDescription")}</DialogDescription>
@@ -791,7 +791,7 @@ function PackagesTab({ t }) {
                   <div>
                     <Label className="mb-1.5 block text-xs font-bold uppercase tracking-wide">{t("packages.form.duration")}</Label>
                     <Select value={formData.duration} onValueChange={v => setFormData(p => ({ ...p, duration: v }))}>
-                      <SelectTrigger className="h-11 rounded-xl border-[color:var(--color-primary-200)]"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-11 rounded-lg border-[color:var(--color-primary-200)]"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {[["شهري","monthly"],["ربع سنوي","quarterly"],["نصف سنوي","semiAnnual"],["سنوي","annual"]].map(([v, k]) => (
                           <SelectItem key={v} value={v}>{t(`packages.form.${k}`)}</SelectItem>
@@ -815,7 +815,7 @@ function PackagesTab({ t }) {
                           placeholder={`${t("packages.form.feature")} ${i + 1}`} className={cls(inputCls, "flex-1")} />
                         {formData.features.length > 1 && (
                           <button type="button" onClick={() => handleRemoveFeature(i)}
-                            className="flex h-10 w-10 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100">
+                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}
@@ -825,8 +825,8 @@ function PackagesTab({ t }) {
                 </div>
               </div>
               <DialogFooter>
-                <button onClick={() => setIsDialogOpen(false)} className="h-9 rounded-xl border border-[color:var(--color-primary-200)] bg-white px-4 text-sm font-bold hover:bg-[color:var(--color-primary-50)]">{t("common.cancel")}</button>
-                <button onClick={handleSubmit} className="h-9 rounded-xl px-5 text-sm font-bold text-white"
+                <button onClick={() => setIsDialogOpen(false)} className="h-9 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-4 text-sm font-bold hover:bg-[color:var(--color-primary-50)]">{t("common.cancel")}</button>
+                <button onClick={handleSubmit} className="h-9 rounded-lg px-5 text-sm font-bold text-white"
                   style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
                   {editingPackage ? t("common.update") : t("common.save")}
                 </button>
@@ -843,7 +843,7 @@ function PackagesTab({ t }) {
           return (
             <motion.div key={pkg.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1, duration: 0.45 }} whileHover={{ y: -8, scale: 1.015 }}
-              className="group relative overflow-hidden rounded-2xl border-2 border-white/70 shadow-lg hover:shadow-2xl transition-all duration-300"
+              className="group relative overflow-hidden rounded-lg border-2 border-white/70 shadow-lg hover:shadow-2xl transition-all duration-300"
               style={{ background: `linear-gradient(135deg, ${pal.from}, ${pal.to})` }}>
               <div className="absolute inset-x-0 top-0 h-1 rounded-t-2xl" style={{ background: pal.accent }} />
               <motion.div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
@@ -936,7 +936,7 @@ function SubscriptionsTab({ t }) {
         <div className="p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-xl"
+              <div className="grid h-10 w-10 place-items-center rounded-lg"
                 style={{ background: "linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))" }}>
                 <Filter className="h-5 w-5" style={{ color: "var(--color-primary-600)" }} />
               </div>
@@ -947,11 +947,11 @@ function SubscriptionsTab({ t }) {
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => setFilters({ client: "", fromDate: null, toDate: null, sort: "newest" })}
-                className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[color:var(--color-primary-200)] bg-white px-3 text-xs font-bold text-slate-600 hover:bg-[color:var(--color-primary-50)]">
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-3 text-xs font-bold text-slate-600 hover:bg-[color:var(--color-primary-50)]">
                 <RefreshCw className="h-3.5 w-3.5" />{t("filters.reset")}
               </button>
               <button onClick={() => setShowFilters(s => !s)}
-                className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[color:var(--color-primary-200)] bg-white px-3 text-xs font-bold text-slate-600 hover:bg-[color:var(--color-primary-50)]">
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-3 text-xs font-bold text-slate-600 hover:bg-[color:var(--color-primary-50)]">
                 {showFilters ? t("filters.hide") : t("filters.show")}
                 <ChevronDown className={cls("h-3.5 w-3.5 transition-transform", showFilters ? "rotate-180" : "")} />
               </button>
@@ -961,7 +961,7 @@ function SubscriptionsTab({ t }) {
           {filterChips.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
               {filterChips.map(c => (
-                <span key={c.key} className="inline-flex items-center rounded-xl border px-2.5 py-1 text-xs font-semibold"
+                <span key={c.key} className="inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-semibold"
                   style={{ borderColor: "var(--color-primary-200)", background: "var(--color-primary-50)", color: "var(--color-primary-700)" }}>
                   {c.label}
                 </span>
@@ -976,7 +976,7 @@ function SubscriptionsTab({ t }) {
                   <div>
                     <Label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">{t("filters.client")}</Label>
                     <Select value={filters.client} onValueChange={v => setFilters(f => ({ ...f, client: v }))}>
-                      <SelectTrigger className="h-10 rounded-xl border-[color:var(--color-primary-200)]">
+                      <SelectTrigger className="h-10 rounded-lg border-[color:var(--color-primary-200)]">
                         <SelectValue placeholder={t("filters.selectClient")} />
                       </SelectTrigger>
                       <SelectContent>
@@ -990,20 +990,20 @@ function SubscriptionsTab({ t }) {
                     <Label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">{t("filters.fromDate")}</Label>
                     <Flatpickr value={filters.fromDate} onChange={([d]) => setFilters(f => ({ ...f, fromDate: d }))}
                       options={{ dateFormat: "Y-m-d" }}
-                      className="h-10 w-full rounded-xl border border-[color:var(--color-primary-200)] bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]"
+                      className="h-10 w-full rounded-lg border border-[color:var(--color-primary-200)] bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]"
                       placeholder={t("filters.selectDate")} />
                   </div>
                   <div>
                     <Label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">{t("filters.toDate")}</Label>
                     <Flatpickr value={filters.toDate} onChange={([d]) => setFilters(f => ({ ...f, toDate: d }))}
                       options={{ dateFormat: "Y-m-d" }}
-                      className="h-10 w-full rounded-xl border border-[color:var(--color-primary-200)] bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]"
+                      className="h-10 w-full rounded-lg border border-[color:var(--color-primary-200)] bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]"
                       placeholder={t("filters.selectDate")} />
                   </div>
                   <div>
                     <Label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">{t("filters.sort")}</Label>
                     <Select value={filters.sort} onValueChange={v => setFilters(f => ({ ...f, sort: v }))}>
-                      <SelectTrigger className="h-10 rounded-xl border-[color:var(--color-primary-200)]"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-10 rounded-lg border-[color:var(--color-primary-200)]"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {[["newest","newest"],["oldest","oldest"],["amountHigh","amountHigh"],["amountLow","amountLow"]].map(([v, k]) => (
                           <SelectItem key={v} value={v}>{t(`filters.${k}`)}</SelectItem>
@@ -1019,18 +1019,18 @@ function SubscriptionsTab({ t }) {
       </Surface>
 
       {loading ? (
-        <Surface><div className="space-y-3 p-5">{[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}</div></Surface>
+        <Surface><div className="space-y-3 p-5">{[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}</div></Surface>
       ) : (
         <DataTable
           headerTitle={t("payments.history")}
           headerSubtitle={t("payments.historyDescription")}
           headerRight={
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold"
+              <span className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold"
                 style={{ borderColor: "var(--color-primary-200)", background: "var(--color-primary-50)", color: "var(--color-primary-700)" }}>
                 <Receipt className="h-3.5 w-3.5" />{t("payments.total", { count: payments.length })}
               </span>
-              <button className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[color:var(--color-primary-200)] bg-white px-3 text-xs font-bold text-[color:var(--color-primary-700)] shadow-sm hover:bg-[color:var(--color-primary-50)]">
+              <button className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-3 text-xs font-bold text-[color:var(--color-primary-700)] shadow-sm hover:bg-[color:var(--color-primary-50)]">
                 <Download className="h-3.5 w-3.5" />{t("common.export")}
               </button>
             </div>
@@ -1109,7 +1109,7 @@ function ClientPaymentsTab({ t }) {
   };
 
   const inputCls = hasError => cls(
-    "h-12 w-full rounded-xl border bg-white px-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]",
+    "h-12 w-full rounded-lg border bg-white px-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]",
     hasError ? "border-rose-400 bg-rose-50/50" : "border-[color:var(--color-primary-200)]"
   );
 
@@ -1118,7 +1118,7 @@ function ClientPaymentsTab({ t }) {
       <AnimatePresence>
         {error && (
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <div className="mb-2 flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3.5">
+            <div className="mb-2 flex items-start gap-2.5 rounded-lg border border-rose-200 bg-rose-50 p-3.5">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
               <p className="text-sm font-medium text-rose-800">{error}</p>
             </div>
@@ -1126,7 +1126,7 @@ function ClientPaymentsTab({ t }) {
         )}
         {success && (
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <div className="mb-2 flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5">
+            <div className="mb-2 flex items-start gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50 p-3.5">
               <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
               <p className="text-sm font-medium text-emerald-800">{success}</p>
             </div>
@@ -1137,7 +1137,7 @@ function ClientPaymentsTab({ t }) {
       <Surface accent glow>
         <div className="flex items-center gap-4 border-b border-[color:var(--color-primary-50)] p-5 sm:p-6">
           <motion.div whileHover={{ rotate: 360, scale: 1.1 }} transition={{ duration: 0.6 }}
-            className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl shadow-lg"
+            className="grid h-14 w-14 shrink-0 place-items-center rounded-lg shadow-lg"
             style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 8px 24px -8px var(--color-primary-500)" }}>
             <Plus className="h-7 w-7 text-white" />
           </motion.div>
@@ -1150,7 +1150,7 @@ function ClientPaymentsTab({ t }) {
         <form onSubmit={handleSubmit} className="space-y-6 p-5 sm:p-6">
           <FormField label={t("form.client")} required error={errors.client}>
             <Select value={formData.client} onValueChange={v => set("client", v)}>
-              <SelectTrigger className={cls("h-12 rounded-xl", errors.client ? "border-rose-400" : "border-[color:var(--color-primary-200)]")}>
+              <SelectTrigger className={cls("h-12 rounded-lg", errors.client ? "border-rose-400" : "border-[color:var(--color-primary-200)]")}>
                 <SelectValue placeholder={t("form.selectClient")} />
               </SelectTrigger>
               <SelectContent>
@@ -1174,7 +1174,7 @@ function ClientPaymentsTab({ t }) {
             <textarea rows={4} value={formData.description} onChange={e => set("description", e.target.value)}
               placeholder={t("form.descriptionPlaceholder")}
               className={cls(
-                "w-full resize-none rounded-xl border bg-white p-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]",
+                "w-full resize-none rounded-lg border bg-white p-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]",
                 errors.description ? "border-rose-400 bg-rose-50/50" : "border-[color:var(--color-primary-200)]"
               )} />
           </FormField>
@@ -1199,7 +1199,7 @@ function ClientPaymentsTab({ t }) {
 
           <motion.button type="submit" disabled={submitting}
             whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-            className="relative w-full overflow-hidden rounded-xl py-3.5 text-base font-black text-white transition-all disabled:opacity-60 focus:outline-none"
+            className="relative w-full overflow-hidden rounded-lg py-3.5 text-base font-black text-white transition-all disabled:opacity-60 focus:outline-none"
             style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 8px 24px -8px var(--color-primary-500)" }}>
             <motion.div className="absolute inset-0 bg-white/20" initial={{ x: "-100%" }} whileHover={{ x: "100%" }} transition={{ duration: 0.5 }} />
             <span className="relative flex items-center justify-center gap-2">

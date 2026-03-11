@@ -143,11 +143,11 @@ export default function Footer() {
               <div className="relative">
                 {/* Glow behind logo */}
                 <motion.div
-                  className="absolute inset-0 rounded-xl blur-lg theme-gradient-bg"
+                  className="absolute inset-0 rounded-lg blur-lg theme-gradient-bg"
                   animate={{ opacity:[0.45,0.75,0.45], scale:[1,1.12,1] }}
                   transition={{ duration: 2.5, repeat: Infinity }}
                 />
-                <div className="relative w-14 h-14 rounded-xl theme-gradient-bg
+                <div className="relative w-14 h-14 rounded-lg theme-gradient-bg
                   flex items-center justify-center shadow-2xl">
                   <Dumbbell className="w-7 h-7 text-white" strokeWidth={2.5} />
                 </div>
@@ -165,7 +165,7 @@ export default function Footer() {
                 const Icon = item.icon;
                 const inner = (
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-800/70
+                    <div className="w-10 h-10 rounded-lg bg-slate-800/70
                       group-hover:bg-[var(--color-primary-500)]/15
                       flex items-center justify-center
                       transition-colors duration-200 shrink-0">
@@ -276,7 +276,7 @@ export default function Footer() {
                   key={i}
                   href={social.href}
                   aria-label={social.label}
-                  className="relative w-10 h-10 rounded-xl overflow-hidden
+                  className="relative w-10 h-10 rounded-lg overflow-hidden
                     bg-slate-800/60 flex items-center justify-center"
                   onMouseEnter={() => setHoveredSocial(i)}
                   onMouseLeave={() => setHoveredSocial(null)}
@@ -335,7 +335,7 @@ export default function Footer() {
           {TRUST_BADGES.map(({ icon: Icon, textKey, iconCls, bgCls }, i) => (
             <motion.div
               key={i}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${bgCls}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${bgCls}
                 transition-all duration-200 hover:scale-105`}
               initial={{ opacity: 0, y: 8 }}
               whileInView={{ opacity: 1, y: 0 }}

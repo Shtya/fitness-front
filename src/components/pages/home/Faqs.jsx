@@ -123,7 +123,7 @@ export default function FAQs() {
 									key={cat.id}
 									onClick={() => { setActiveCategory(cat.id); setOpenIndex(null); }}
 									className={[
-										"relative flex items-center gap-1.5 px-4 py-2 rounded-xl",
+										"relative flex items-center gap-1.5 px-4 py-2 rounded-lg",
 										"font-body font-bold text-xs overflow-hidden",
 										"border-2 transition-colors duration-200",
 										isActive
@@ -175,7 +175,7 @@ export default function FAQs() {
 										exit={{ opacity: 0, scale: 0.95 }}
 										className="text-center py-16"
 									>
-										<div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5
+										<div className="w-20 h-20 rounded-lg flex items-center justify-center mx-auto mb-5
                       bg-white/[0.04] border border-white/[0.08]">
 											<Search className="w-9 h-9 text-white/25" />
 										</div>
@@ -203,7 +203,7 @@ export default function FAQs() {
 												>
 													<div className={[
 														"relative bg-slate-800/45 backdrop-blur-xl",
-														"rounded-xl border-2 transition-all duration-300 overflow-hidden p-5 sm:p-6",
+														"rounded-lg border-2 transition-all duration-300 overflow-hidden p-5 sm:p-6",
 														isOpen
 															? "border-[var(--color-primary-500)]/60 shadow-[0_0_32px_var(--color-primary-500)/15]"
 															: "border-slate-700/35 hover:border-[var(--color-primary-500)]/30",
@@ -230,7 +230,7 @@ export default function FAQs() {
 															{/* Toggle chip */}
 															<motion.div
 																className={[
-																	"w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+																	"w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
 																	"transition-colors duration-200",
 																	isOpen ? "theme-gradient-bg" : "bg-slate-700/60 group-hover:bg-slate-600/60",
 																].join(" ")}
@@ -287,17 +287,17 @@ export default function FAQs() {
 						>
 							{/* Glow behind card */}
 							<motion.div
-								className="absolute -inset-4 rounded-2xl blur-2xl theme-gradient-bg opacity-20 -z-10"
+								className="absolute -inset-4 rounded-lg blur-2xl theme-gradient-bg opacity-20 -z-10"
 								animate={{ opacity: [0.18, 0.28, 0.18] }}
 								transition={{ duration: 3, repeat: Infinity }}
 							/>
 
-							<div className="relative bg-slate-800/55 backdrop-blur-xl rounded-2xl p-7
+							<div className="relative bg-slate-800/55 backdrop-blur-xl rounded-lg p-7
                 border border-[var(--color-primary-500)]/25">
 								<div className="flex flex-col sm:flex-row items-center gap-6">
 									{/* Icon */}
 									<motion.div
-										className="w-14 h-14 rounded-xl theme-gradient-bg
+										className="w-14 h-14 rounded-lg theme-gradient-bg
                       flex items-center justify-center shadow-xl shrink-0"
 										whileHover={{ rotate: 360, scale: 1.1 }}
 										transition={{ duration: 0.55 }}
@@ -319,7 +319,7 @@ export default function FAQs() {
 									<div className="flex gap-3 shrink-0">
 										<motion.button
 											className="group relative flex items-center gap-2
-                        px-5 py-3 rounded-xl font-body font-bold text-sm text-white
+                        px-5 py-3 rounded-lg font-body font-bold text-sm text-white
                         theme-gradient-bg shadow-xl overflow-hidden
                         shadow-[0_6px_24px_var(--color-primary-500)/30]"
 											whileHover={{ scale: 1.04, y: -2 }}
@@ -337,7 +337,7 @@ export default function FAQs() {
 
 										<motion.button
 											className="flex items-center gap-2
-                        px-5 py-3 rounded-xl font-body font-bold text-sm text-white/70
+                        px-5 py-3 rounded-lg font-body font-bold text-sm text-white/70
                         border-2 border-slate-600/50 bg-slate-700/30
                         hover:border-[var(--color-primary-500)]/50 hover:text-white
                         transition-colors duration-200"
@@ -364,13 +364,13 @@ export default function FAQs() {
 						transition={{ duration: 0.7, delay: 0.15 }}
 					>
 						{/* Illustration card */}
-						<div className="relative w-full aspect-square rounded-2xl overflow-hidden
+						<div className="relative w-full aspect-square rounded-lg overflow-hidden
               border border-[var(--color-primary-500)]/20
               bg-[linear-gradient(135deg,var(--color-primary-900)/20,var(--color-secondary-900)/20)]">
 
 							{/* Animated border glow */}
 							<motion.div
-								className="absolute -inset-[1px] rounded-2xl theme-gradient-bg -z-10 blur-lg"
+								className="absolute -inset-[1px] rounded-lg theme-gradient-bg -z-10 blur-lg"
 								animate={{ opacity: [0.18, 0.32, 0.18] }}
 								transition={{ duration: 4, repeat: Infinity }}
 							/>
@@ -390,7 +390,7 @@ export default function FAQs() {
 							{/* Central question mark */}
 							<motion.div
 								className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                  w-28 h-28 rounded-2xl theme-gradient-bg
+                  w-28 h-28 rounded-lg theme-gradient-bg
                   flex items-center justify-center shadow-2xl"
 								animate={{ scale: [1, 1.06, 1], rotate: [0, 4, -4, 0] }}
 								transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
@@ -402,7 +402,7 @@ export default function FAQs() {
 							{FLOAT_ICONS.map(({ Icon, top, left }, i) => (
 								<motion.div
 									key={i}
-									className="absolute w-12 h-12 rounded-xl theme-gradient-bg
+									className="absolute w-12 h-12 rounded-lg theme-gradient-bg
                     flex items-center justify-center shadow-lg"
 									style={{ top, left }}
 									animate={{ y: [0, -14, 0], rotate: [0, 360] }}
@@ -418,7 +418,7 @@ export default function FAQs() {
 							{/* Stats chips */}
 							<motion.div
 								className="absolute bottom-6 ltr:left-6 rtl:right-6
-                  flex items-center gap-2.5 px-4 py-2.5 rounded-xl
+                  flex items-center gap-2.5 px-4 py-2.5 rounded-lg
                   bg-slate-900/80 border border-white/[0.08] backdrop-blur-sm shadow-xl"
 								initial={{ opacity: 0, y: 12 }}
 								whileInView={{ opacity: 1, y: 0 }}
@@ -441,7 +441,7 @@ export default function FAQs() {
 							{/* Answered count chip */}
 							<motion.div
 								className="absolute top-6 ltr:right-6 rtl:left-6
-                  flex items-center gap-2 px-3.5 py-2 rounded-xl
+                  flex items-center gap-2 px-3.5 py-2 rounded-lg
                   bg-slate-900/80 border border-white/[0.08] backdrop-blur-sm shadow-xl"
 								initial={{ opacity: 0, y: -12 }}
 								whileInView={{ opacity: 1, y: 0 }}
@@ -467,7 +467,7 @@ export default function FAQs() {
 										key={cat.id}
 										onClick={() => { setActiveCategory(cat.id); setOpenIndex(null); }}
 										className={[
-											"flex flex-col items-center gap-1.5 p-3 rounded-xl",
+											"flex flex-col items-center gap-1.5 p-3 rounded-lg",
 											"border transition-all duration-200 text-center",
 											activeCategory === cat.id
 												? "theme-gradient-bg border-transparent shadow-lg"

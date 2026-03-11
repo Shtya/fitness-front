@@ -23,7 +23,7 @@ function TruncatedText({ value, max = 18 }) {
   return (
     <span className='group relative inline-flex whitespace-nowrap align-middle'>
       <span className='border-b border-dashed border-slate-300 cursor-help'>{visible}</span>
-      <span className='pointer-events-none absolute left-0 top-[calc(100%+6px)] z-30 hidden min-w-[160px] max-w-[240px] whitespace-normal break-words rounded-xl border border-[var(--color-primary-100)] bg-white px-3 py-2 text-xs text-slate-700 shadow-xl ring-1 ring-black/5 group-hover:block'>
+      <span className='pointer-events-none absolute left-0 top-[calc(100%+6px)] z-30 hidden min-w-[160px] max-w-[240px] whitespace-normal break-words rounded-lg border border-[var(--color-primary-100)] bg-white px-3 py-2 text-xs text-slate-700 shadow-xl ring-1 ring-black/5 group-hover:block'>
         {text}
       </span>
     </span>
@@ -115,7 +115,7 @@ export default function DataTable({
 
   return (
     <div className='w-full'>
-      <div className='overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04),0_12px_32px_rgba(15,23,42,0.07)]'>
+      <div className='overflow-hidden rounded-lg border border-slate-200/80 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04),0_12px_32px_rgba(15,23,42,0.07)]'>
 
         {/* ── Scrollable table ── */}
         <div className='overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200'>
@@ -362,7 +362,7 @@ function DefaultEmptyState() {
   const t = useTranslations('DataTable');
   return (
     <div className='flex flex-col items-center justify-center gap-3 py-14 text-center'>
-      <div className='grid h-14 w-14 place-items-center rounded-2xl bg-[var(--color-primary-50)]'>
+      <div className='grid h-14 w-14 place-items-center rounded-lg bg-[var(--color-primary-50)]'>
         <Inbox className='h-6 w-6 text-[var(--color-primary-400)]' />
       </div>
       <div>

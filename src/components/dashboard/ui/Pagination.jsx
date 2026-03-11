@@ -92,7 +92,7 @@ export function PrettyPagination({
         initial={{ opacity: 0, y: 8, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-        className="relative  bg-card w-fit inline-flex items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-lg shadow-slate-200/60 backdrop-blur-md"
+        className="relative  bg-card w-fit inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/95 p-1.5 shadow-lg shadow-slate-200/60 backdrop-blur-md"
       >
         {/* Ambient top-edge glow */}
         <div
@@ -101,7 +101,7 @@ export function PrettyPagination({
         />
         {/* Soft inner bg tint */}
         <div
-          className="pointer-events-none absolute inset-0 rounded-2xl opacity-[0.025]"
+          className="pointer-events-none absolute inset-0 rounded-lg opacity-[0.025]"
           style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
         />
 
@@ -135,7 +135,7 @@ export function PrettyPagination({
           {/* ── Compact display ── */}
           {isCompact ? (
             <div
-              className="mx-1 flex h-9 min-w-[96px] items-center justify-center gap-1 rounded-xl px-3 tabular-nums"
+              className="mx-1 flex h-9 min-w-[96px] items-center justify-center gap-1 rounded-lg px-3 tabular-nums"
               style={{
                 border: '1.5px solid var(--color-primary-200)',
                 background: 'linear-gradient(135deg, var(--color-primary-50), white)',
@@ -186,7 +186,7 @@ export function PrettyPagination({
               className="h-6 w-px mx-0.5 flex-shrink-0"
               style={{ background: 'linear-gradient(180deg, transparent, var(--color-primary-200), transparent)' }}
             />
-            <div className="flex h-9 select-none items-center gap-1 rounded-xl px-2.5 tabular-nums text-xs">
+            <div className="flex h-9 select-none items-center gap-1 rounded-lg px-2.5 tabular-nums text-xs">
               <span className="font-bold text-slate-700">{page}</span>
               <span className="font-light text-slate-300">/</span>
               <span className="text-slate-400 font-medium">{totalPages}</span>
@@ -216,7 +216,7 @@ function PageNumber({ p, active, onClick, t }) {
       aria-label={t('go_to_page', { page: p })}
       title={t('go_to_page', { page: p })}
       className={[
-        'relative h-9 min-w-[36px] px-2 rounded-xl text-sm font-bold transition-colors duration-150 overflow-hidden',
+        'relative h-9 min-w-[36px] px-2 rounded-lg text-sm font-bold transition-colors duration-150 overflow-hidden',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] focus-visible:ring-offset-1',
         active ? 'text-white' : 'text-slate-600 hover:text-[color:var(--color-primary-700)] hover:bg-[color:var(--color-primary-50)]',
       ].join(' ')}
@@ -229,7 +229,7 @@ function PageNumber({ p, active, onClick, t }) {
       {active && (
         <motion.span
           layoutId="pag-active-pill"
-          className="absolute inset-0 rounded-xl"
+          className="absolute inset-0 rounded-lg"
           style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
           transition={{ type: 'spring', stiffness: 420, damping: 32 }}
         />
@@ -265,7 +265,7 @@ function NavBtn({ children, onClick, disabled, label }) {
       aria-label={label}
       title={label}
       className={[
-        'h-9 w-9 inline-flex items-center justify-center rounded-xl transition-colors duration-150',
+        'h-9 w-9 inline-flex items-center justify-center rounded-lg transition-colors duration-150',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] focus-visible:ring-offset-1',
         disabled
           ? 'text-slate-300 cursor-not-allowed'
@@ -350,7 +350,7 @@ function PageSizeSelect({ value, onChange, options, t }) {
           exit={{ opacity: 0, y: pos.openUp ? 8 : -8, scale: 0.96 }}
           transition={{ type: 'spring', stiffness: 440, damping: 30, mass: 0.65 }}
           style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 99999 }}
-          className="rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-2xl shadow-slate-300/40 backdrop-blur-md"
+          className="rounded-lg border border-slate-200/90 bg-white p-1.5 shadow-2xl shadow-slate-300/40 backdrop-blur-md"
         >
           {/* Top edge glow */}
           <div
@@ -359,7 +359,7 @@ function PageSizeSelect({ value, onChange, options, t }) {
           />
           {/* Subtle bg tint */}
           <div
-            className="pointer-events-none absolute inset-0 rounded-2xl opacity-[0.018]"
+            className="pointer-events-none absolute inset-0 rounded-lg opacity-[0.018]"
             style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
           />
 
@@ -376,7 +376,7 @@ function PageSizeSelect({ value, onChange, options, t }) {
                   whileTap={{ scale: 0.97 }}
                   onClick={() => { onChange?.(opt); setIsOpen(false); }}
                   className={[
-                    'w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold',
+                    'w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold',
                     'transition-colors duration-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]',
                     sel
                       ? 'text-white'
@@ -390,7 +390,7 @@ function PageSizeSelect({ value, onChange, options, t }) {
                   {/* Shimmer on selected */}
                   {sel && (
                     <motion.span
-                      className="pointer-events-none absolute inset-0 rounded-xl"
+                      className="pointer-events-none absolute inset-0 rounded-lg"
                       animate={{ backgroundPosition: ['-200% 0', '200% 0'] }}
                       transition={{ duration: 2.6, repeat: Infinity, ease: 'linear' }}
                       style={{
@@ -439,7 +439,7 @@ function PageSizeSelect({ value, onChange, options, t }) {
         aria-expanded={isOpen}
         aria-label={t('page_size_label')}
         className={[
-          'h-9 rounded-xl px-3 inline-flex items-center gap-2.5 border transition-all duration-150',
+          'h-9 rounded-lg px-3 inline-flex items-center gap-2.5 border transition-all duration-150',
           'focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)] focus-visible:ring-offset-1',
           isOpen
             ? 'border-[color:var(--color-primary-300)] bg-[color:var(--color-primary-50)]'

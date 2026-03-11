@@ -42,7 +42,7 @@ function Field({ label, hint, required, error, children, highlight }) {
   return (
     <div className={[
       'w-full transition-all duration-300',
-      highlight ? 'rounded-xl ring-2 ring-[var(--color-primary-400)]/40 bg-[var(--color-primary-50)]/60 p-1 animate-pulse' : '',
+      highlight ? 'rounded-lg ring-2 ring-[var(--color-primary-400)]/40 bg-[var(--color-primary-50)]/60 p-1 animate-pulse' : '',
     ].join(' ')}>
       {label && (
         <label className='mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-primary-600)]'>
@@ -149,7 +149,7 @@ function TagsField({ value = [], onChange, placeholder = 'Type and press Enter',
         {(value || []).map((t, i) => (
           <span
             key={`${t}-${i}`}
-            className='inline-flex items-center gap-1 rounded-md bg-[var(--color-primary-100)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary-700)]'>
+            className='inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary-100)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary-700)]'>
             {t}
             <button
               type='button'
@@ -206,7 +206,7 @@ function AiChip({ onClick, label }) {
       type='button'
       onClick={onClick}
       className={[
-        'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold text-white',
+        'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white',
         'bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]',
         'shadow-sm hover:opacity-90 active:scale-95 transition-all duration-150',
       ].join(' ')}>
@@ -403,8 +403,8 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
 
       {/* AI loading overlay */}
       {aiLoading && (
-        <div className='absolute inset-0 z-10 grid place-items-center rounded-xl backdrop-blur-sm bg-white/75'>
-          <div className='flex items-center gap-2.5 rounded-xl border border-[var(--color-primary-200)] bg-white px-5 py-3 shadow-lg'>
+        <div className='absolute inset-0 z-10 grid place-items-center rounded-lg backdrop-blur-sm bg-white/75'>
+          <div className='flex items-center gap-2.5 rounded-lg border border-[var(--color-primary-200)] bg-white px-5 py-3 shadow-lg'>
             <Loader2 className='h-4 w-4 animate-spin text-[var(--color-primary-500)]' />
             <span className='text-sm font-medium text-[var(--color-primary-700)]'>{t('ai.fetching')}</span>
           </div>

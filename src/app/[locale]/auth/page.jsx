@@ -750,7 +750,7 @@ const MobileHero = React.memo(() => {
 				}}>
 					<Dumbbell size={14} color="white" strokeWidth={2} />
 				</div>
-				<span style={{ color: '#1e293b', fontWeight: 700, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+				<span className=' !text-lg font-[Inter] ' style={{ color: '#1e293b', fontWeight: 700, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
 					So7baFit
 				</span>
 			</div>

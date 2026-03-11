@@ -655,7 +655,7 @@ function SortableTaskItem({ task, onToggle, onSelect, onQuickDelete, onAddSubtas
             <MoveRight className="w-3.5 h-3.5" />
           </button>
           {showMoveMenu && (
-            <div className="absolute z-50 top-full mt-1 ltr:right-0 rtl:left-0 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden min-w-[180px]">
+            <div className="absolute z-50 top-full mt-1 ltr:right-0 rtl:left-0 bg-white border border-gray-200 rounded-lg shadow-2xl overflow-hidden min-w-[180px]">
               <div className="px-3 py-2 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">{t('moveTo')}</div>
               {movableFolders.map(folder => (
                 <button key={folder.id}
@@ -737,7 +737,7 @@ function TaskFormContent({ t, editingTask, taskForm, setTaskForm, handleSave, on
             <Select open={statusOpen} onOpenChange={setStatusOpen} value={taskForm.status}
               onValueChange={(v) => { setTaskForm(p => ({ ...p, status: v })); setStatusOpen(false); }}>
               <SelectTrigger className="todo-input" style={{ height: 44, fontSize: 16 }}><SelectValue /></SelectTrigger>
-              <SelectContent className="rounded-xl z-[9999]" style={{ background: 'var(--cal-surface,#fff)' }}>
+              <SelectContent className="rounded-lg z-[9999]" style={{ background: 'var(--cal-surface,#fff)' }}>
                 {statusOptions.map(s => (
                   <SelectItem key={s.id} value={s.id} className="text-sm">
                     <div className="flex items-center gap-2">
@@ -754,7 +754,7 @@ function TaskFormContent({ t, editingTask, taskForm, setTaskForm, handleSave, on
             <Select open={priorityOpen} onOpenChange={setPriorityOpen} value={taskForm.priority}
               onValueChange={(v) => { setTaskForm(p => ({ ...p, priority: v })); setPriorityOpen(false); }}>
               <SelectTrigger className="todo-input" style={{ height: 44, fontSize: 16 }}><SelectValue /></SelectTrigger>
-              <SelectContent className="rounded-xl z-[9999]" style={{ background: 'var(--cal-surface,#fff)' }}>
+              <SelectContent className="rounded-lg z-[9999]" style={{ background: 'var(--cal-surface,#fff)' }}>
                 {priorityLevels.map(p => (
                   <SelectItem key={p.id} value={p.id} className="text-sm">
                     <div className="flex items-center gap-2">
@@ -801,7 +801,7 @@ function TaskFormContent({ t, editingTask, taskForm, setTaskForm, handleSave, on
           <Select open={repeatOpen} onOpenChange={setRepeatOpen} value={taskForm.repeat}
             onValueChange={(v) => { setTaskForm(p => ({ ...p, repeat: v })); setRepeatOpen(false); }}>
             <SelectTrigger className="todo-input" style={{ height: 44, fontSize: 16 }}><SelectValue /></SelectTrigger>
-            <SelectContent className="rounded-xl z-[9999]" style={{ background: 'var(--cal-surface,#fff)' }}>
+            <SelectContent className="rounded-lg z-[9999]" style={{ background: 'var(--cal-surface,#fff)' }}>
               {repeatOptions.map(r => (
                 <SelectItem key={r.id} value={r.id} className="text-sm">{t(`repeat.${r.label}`)}</SelectItem>
               ))}
@@ -1317,7 +1317,7 @@ export default function TodoTab() {
           <QuickAddBar onAdd={handleAddTaskQuick} t={t} />
 
           {/* Task list */}
-          <div className="mx-5 mb-6 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="mx-5 mb-6 bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
             {loading ? (
               <div className="py-16 text-center text-gray-500 text-sm font-medium">
                 <div className="w-8 h-8 border-2 border-gray-200 border-t-[var(--color-primary-500,#6366f1)] rounded-full animate-spin mx-auto mb-3" />
@@ -1325,7 +1325,7 @@ export default function TodoTab() {
               </div>
             ) : filteredTasks.length === 0 ? (
               <div className="py-16 text-center">
-                <div className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                <div className="w-14 h-14 mx-auto mb-4 rounded-lg flex items-center justify-center"
                   style={{ background: 'linear-gradient(135deg,var(--color-primary-50,#eef2ff),var(--color-secondary-50,#f5f3ff))' }}>
                   <ListTodo className="w-7 h-7" style={{ color: 'var(--color-primary-500,#6366f1)' }} />
                 </div>
@@ -1356,7 +1356,7 @@ export default function TodoTab() {
                 </SortableContext>
                 <DragOverlay>
                   {activeTask ? (
-                    <div className="bg-white border-2 shadow-2xl p-4 rounded-xl opacity-90 rotate-1"
+                    <div className="bg-white border-2 shadow-2xl p-4 rounded-lg opacity-90 rotate-1"
                       style={{ borderColor: 'var(--color-primary-400,#818cf8)' }}>
                       <p className="font-semibold text-gray-900 text-sm">{activeTask.title}</p>
                     </div>
@@ -1398,7 +1398,7 @@ export default function TodoTab() {
 
       {/* ═══ ADD FOLDER DIALOG ══════════════════════════ */}
       <Dialog open={showAddFolder} onOpenChange={setShowAddFolder}>
-        <DialogContent className="max-w-sm rounded-2xl" style={{ background: 'var(--cal-surface,#fff)' }}>
+        <DialogContent className="max-w-sm rounded-lg" style={{ background: 'var(--cal-surface,#fff)' }}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
               <FolderPlus size={18} style={{ color: 'var(--color-primary-500,#6366f1)' }} />
@@ -1431,14 +1431,14 @@ export default function TodoTab() {
 
       {/* ═══ DELETE FOLDER ══════════════════════════════ */}
       <Dialog open={showDeleteFolderConfirm} onOpenChange={() => { setShowDeleteFolderConfirm(false); setFolderToDelete(null); }}>
-        <DialogContent className="max-w-sm rounded-2xl" style={{ background: 'var(--cal-surface,#fff)' }}>
+        <DialogContent className="max-w-sm rounded-lg" style={{ background: 'var(--cal-surface,#fff)' }}>
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold">{t('deleteFolder')}</DialogTitle>
             <DialogDescription className="text-sm text-gray-600 mt-1">{t('deleteFolderDescription')}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 mt-4">
             <button className="todo-btn-ghost flex-1 justify-center" onClick={() => { setShowDeleteFolderConfirm(false); setFolderToDelete(null); }}>{t('cancel')}</button>
-            <button className="flex-1 h-9 px-4 bg-red-500 border-none rounded-xl text-white text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5"
+            <button className="flex-1 h-9 px-4 bg-red-500 border-none rounded-lg text-white text-sm font-semibold cursor-pointer flex items-center justify-center gap-1.5"
               onClick={() => handleDeleteFolder(folderToDelete)}>
               <Trash2 size={13} />{t('confirm')}
             </button>
@@ -1471,7 +1471,7 @@ function FilterPopover({ value, onChange, t }) {
         <ChevronDown size={10} className="opacity-70" />
       </button>
       {open && (
-        <div className="absolute z-50 top-full mt-1 ltr:right-0 rtl:left-0 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden min-w-[160px]">
+        <div className="absolute z-50 top-full mt-1 ltr:right-0 rtl:left-0 bg-white border border-gray-200 rounded-lg shadow-2xl overflow-hidden min-w-[160px]">
           <button onClick={() => { onChange('all'); setOpen(false); }}
             className="w-full px-3 py-2.5 hover:bg-gray-50 text-left text-sm font-medium text-gray-700">
             {t('priorities.all')}
@@ -1513,7 +1513,7 @@ function SortPopover({ value, onChange, t }) {
         <ChevronDown size={10} className="opacity-70" />
       </button>
       {open && (
-        <div className="absolute z-50 top-full mt-1 ltr:right-0 rtl:left-0 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden min-w-[160px]">
+        <div className="absolute z-50 top-full mt-1 ltr:right-0 rtl:left-0 bg-white border border-gray-200 rounded-lg shadow-2xl overflow-hidden min-w-[160px]">
           {sortOptions.map(opt => (
             <button key={opt.id} onClick={() => { onChange(opt.id); setOpen(false); }}
               className={cn('w-full px-3 py-2.5 hover:bg-gray-50 text-left text-sm font-medium text-gray-700', value === opt.id && 'bg-[var(--color-primary-50,#eef2ff)] text-[var(--color-primary-700,#4338ca)]')}>
@@ -1678,7 +1678,7 @@ function StatusBadge({ task, onUpdate, t }) {
         <ChevronDown size={10} />
       </button>
       {open && (
-        <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden min-w-[150px]">
+        <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-2xl overflow-hidden min-w-[150px]">
           {statusOptions.map(s => (
             <button key={s.id} onClick={() => { onUpdate(task.id, { status: s.id }); setOpen(false); }}
               className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left">
@@ -1706,7 +1706,7 @@ function PriorityBadge({ task, onUpdate, t }) {
         <Flag size={10} />{t(`priorities.${priority.label}`)}<ChevronDown size={10} />
       </button>
       {open && (
-        <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden min-w-[150px]">
+        <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-2xl overflow-hidden min-w-[150px]">
           {priorityLevels.slice(1).map(p => (
             <button key={p.id} onClick={() => { onUpdate(task.id, { priority: p.id }); setOpen(false); }}
               className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left">
@@ -1733,7 +1733,7 @@ function RepeatBadge({ task, onUpdate, t }) {
         <Repeat size={10} />{t(`repeat.${repeat.label}`)}<ChevronDown size={10} />
       </button>
       {open && (
-        <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden min-w-[150px]">
+        <div className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-2xl overflow-hidden min-w-[150px]">
           {repeatOptions.map(r => (
             <button key={r.id} onClick={() => { onUpdate(task.id, { repeat: r.id }); setOpen(false); }}
               className="w-full px-3 py-2 hover:bg-gray-50 text-left text-sm font-medium text-gray-700">
@@ -1810,7 +1810,7 @@ function TaskSubtasksSection({ task, onUpdate, onToggleSubtask, onDeleteSubtask,
 function SettingsDialog({ open, onClose, settings, onUpdateSettings, t }) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm rounded-2xl" style={{ background: 'var(--cal-surface,#fff)' }}>
+      <DialogContent className="max-w-sm rounded-lg" style={{ background: 'var(--cal-surface,#fff)' }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
             <Settings size={18} style={{ color: 'var(--color-primary-500,#6366f1)' }} /> {t('settings')}
@@ -1821,7 +1821,7 @@ function SettingsDialog({ open, onClose, settings, onUpdateSettings, t }) {
             { key: 'soundEnabled', label: t('soundEffects'), desc: t('soundEffectsDesc'), icon: Volume2 },
             { key: 'showCompleted', label: t('showCompleted'), desc: t('showCompletedDesc'), icon: Eye },
           ].map(({ key, label, desc, icon: Icon }) => (
-            <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+            <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
               <div className="flex items-center gap-2">
                 <Icon size={15} className="text-gray-500" />
                 <div>
@@ -1832,7 +1832,7 @@ function SettingsDialog({ open, onClose, settings, onUpdateSettings, t }) {
               <Switch checked={settings[key]} onCheckedChange={(v) => onUpdateSettings({ ...settings, [key]: v })} />
             </div>
           ))}
-          <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
             <div className="text-sm font-semibold text-gray-800 mb-2">{t('addTaskPosition')}</div>
             <div className="grid grid-cols-2 gap-2">
               {[{ id: 'top', label: t('addToTop'), Icon: ArrowUp }, { id: 'bottom', label: t('addToBottom'), Icon: ArrowDown }].map(({ id, label, Icon }) => (

@@ -64,7 +64,7 @@ export default function Input({
 
       <div className={[
         cnInputParent || '',
-        'relative flex items-center rounded-xl border bg-white transition-all duration-200',
+        'relative flex items-center rounded-lg border bg-white transition-all duration-200',
         disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text',
         hasError
           ? 'border-rose-300 ring-2 ring-rose-100'
@@ -90,7 +90,7 @@ export default function Input({
           disabled={disabled}
           className={[
             cnInput || '',
-            'h-10 w-full rounded-xl bg-transparent py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400',
+            'h-10 w-full !text-base rounded-lg bg-transparent py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400',
             icon ? 'ltr:pl-9 rtl:pr-9' : 'px-3',
             showClear ? 'ltr:pr-8 rtl:pl-8' : 'ltr:pr-3 rtl:pl-3',
           ].join(' ')}
@@ -101,7 +101,7 @@ export default function Input({
           <button
             type="button"
             onClick={clearInput}
-            className="absolute rtl:left-2.5 ltr:right-2.5 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+            className="absolute rtl:left-2.5 ltr:right-2.5 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
             tabIndex={-1}
           >
             <X size={12} />
@@ -162,7 +162,7 @@ export const Input2 = forwardRef(function Input2(
 
       <div className={[
         cnInputParent,
-        'relative flex items-center rounded-xl border bg-white transition-all duration-200',
+        'relative flex items-center rounded-lg border bg-white transition-all duration-200',
         disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text',
         hasError
           ? 'border-rose-300 ring-2 ring-rose-100'
@@ -188,7 +188,7 @@ export const Input2 = forwardRef(function Input2(
           disabled={disabled}
           className={[
             cnInput,
-            'h-10 w-full rounded-xl bg-transparent py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400',
+            'h-10 w-full rounded-lg bg-transparent py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400',
             icon ? 'ltr:pl-9 rtl:pr-9' : 'px-3',
             showClear ? 'ltr:pr-8 rtl:pl-8' : 'ltr:pr-3 rtl:pl-3',
           ].join(' ')}
@@ -200,7 +200,7 @@ export const Input2 = forwardRef(function Input2(
           <button
             type="button"
             onClick={clearInput}
-            className="absolute rtl:left-2.5 ltr:right-2.5 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+            className="absolute rtl:left-2.5 ltr:right-2.5 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
             tabIndex={-1}
           >
             <X size={12} />

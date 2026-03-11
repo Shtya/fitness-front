@@ -47,7 +47,7 @@ function Card({ children, className = '', accent = false }) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={spring}
-      className={cx('relative overflow-hidden rounded-2xl border bg-white', className)}
+      className={cx('relative overflow-hidden rounded-lg border bg-white', className)}
       style={{
         borderColor: 'var(--color-primary-100)',
         boxShadow: '0 1px 3px rgba(15,23,42,0.05), 0 10px 30px rgba(15,23,42,0.07)',
@@ -70,7 +70,7 @@ function SectionHead({ icon: Icon, title, subtitle, right }) {
     <div className="flex items-start justify-between gap-3">
       <div className="flex items-start gap-3">
         <div
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-lg"
           style={{ background: 'linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))' }}
         >
           {Icon && <Icon className="h-5 w-5" style={{ color: 'var(--color-primary-600)' }} />}
@@ -94,7 +94,7 @@ function Pill({ icon: Icon, label, value, tone = 'primary' }) {
   const s = tones[tone] || tones.primary;
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-xs font-bold"
+      className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold"
       style={{ borderColor: s.border, background: s.bg, color: s.text }}
     >
       {Icon && <Icon className="h-3.5 w-3.5" />}
@@ -108,7 +108,7 @@ function Pill({ icon: Icon, label, value, tone = 'primary' }) {
 function ReadOnlyField({ label, value, icon: Icon }) {
   return (
     <div
-      className="rounded-xl border p-3"
+      className="rounded-lg border p-3"
       style={{
         borderColor: 'var(--color-primary-100)',
         background: 'linear-gradient(135deg, #ffffff, var(--color-primary-50))',
@@ -127,7 +127,7 @@ function ReadOnlyField({ label, value, icon: Icon }) {
 function HintBox({ text }) {
   return (
     <div
-      className="flex items-start gap-2.5 rounded-xl border p-3"
+      className="flex items-start gap-2.5 rounded-lg border p-3"
       style={{
         borderColor: 'var(--color-primary-100)',
         background: 'linear-gradient(135deg, #ffffff, var(--color-primary-50))',
@@ -143,7 +143,7 @@ function HintBox({ text }) {
 function DateCard({ label, value }) {
   return (
     <div
-      className="rounded-xl border p-4"
+      className="rounded-lg border p-4"
       style={{
         borderColor: 'var(--color-primary-100)',
         background: 'linear-gradient(135deg, #ffffff, var(--color-primary-50))',
@@ -285,20 +285,20 @@ export default function ProfilePage() {
         onClick={fetchProfile}
       >
         {/* Name / email mini card */}
-        <div className="rounded-xl border border-white/25 bg-white/10 p-4 backdrop-blur">
+        <div className="rounded-lg border border-white/25 bg-white/10 p-4 backdrop-blur">
           <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">{t('header.name')}</p>
           <p className="mt-1 truncate text-base font-black text-white">{user?.name || '—'}</p>
           <p className="mt-0.5 truncate text-xs text-white/70">{user?.email || '—'}</p>
         </div>
 
         {/* Role */}
-        <div className="rounded-xl border border-white/25 bg-white/10 p-4 backdrop-blur">
+        <div className="rounded-lg border border-white/25 bg-white/10 p-4 backdrop-blur">
           <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">{t('header.role')}</p>
           <p className="mt-1 text-base font-black text-white">{headerStats.role}</p>
         </div>
 
         {/* Membership */}
-        <div className="hidden rounded-xl border border-white/25 bg-white/10 p-4 backdrop-blur md:block">
+        <div className="hidden rounded-lg border border-white/25 bg-white/10 p-4 backdrop-blur md:block">
           <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">{t('header.membership')}</p>
           <p className="mt-1 text-base font-black text-white">{headerStats.membership}</p>
         </div>

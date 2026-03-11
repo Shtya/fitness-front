@@ -607,7 +607,7 @@ function ItemFormContent({ t, isRTL, editingItem, itemForm, setItemForm, handleS
             <Select open={typeOpen} onOpenChange={setTypeOpen} value={itemForm.type}
               onValueChange={v => { setItemForm(p => ({ ...p, type:v })); setTypeOpen(false); }}>
               <SelectTrigger className="cal-input" style={{ height:44, fontSize:16 }}><SelectValue/></SelectTrigger>
-              <SelectContent className="rounded-xl z-[9999]" style={{ background:"var(--cal-surface)", border:"1px solid var(--cal-border2)" }}>
+              <SelectContent className="rounded-lg z-[9999]" style={{ background:"var(--cal-surface)", border:"1px solid var(--cal-border2)" }}>
                 {eventTypes.filter(tt => tt.id !== "all").map(type => (
                   <SelectItem key={type.id} value={type.id} className="text-sm" style={{ color:"var(--cal-text)" }}>
                     <div className="flex items-center gap-2">{renderIcon(type.icon,"h-3.5 w-3.5")}{getTypeLabel(type)}</div>
@@ -621,7 +621,7 @@ function ItemFormContent({ t, isRTL, editingItem, itemForm, setItemForm, handleS
             <Select open={recurrenceOpen} onOpenChange={setRecurrenceOpen} value={itemForm.recurrence}
               onValueChange={v => { setItemForm(p => ({ ...p, recurrence:v, recurrenceInterval:["daily","weekly","monthly"].includes(v)?1:p.recurrenceInterval })); setRecurrenceOpen(false); }}>
               <SelectTrigger className="cal-input" style={{ height:44, fontSize:16 }}><SelectValue/></SelectTrigger>
-              <SelectContent className="rounded-xl z-[9999]" style={{ background:"var(--cal-surface)", border:"1px solid var(--cal-border2)" }}>
+              <SelectContent className="rounded-lg z-[9999]" style={{ background:"var(--cal-surface)", border:"1px solid var(--cal-border2)" }}>
                 {["none","daily","weekly","monthly","every_x_days","custom"].map(v => (
                   <SelectItem key={v} value={v} className="text-sm" style={{ color:"var(--cal-text)" }}>
                     {t(v === "every_x_days" ? "everyXDays" : v)}
@@ -1247,7 +1247,7 @@ export default function CalendarPage() {
       )}
 
       {/* ═══ HERO ════════════════════════════════════════════════ */}
-      <div className="cal-hero !rounded-md">
+      <div className="cal-hero !rounded-lg">
         <div className="cal-hero-orb1"/><div className="cal-hero-orb2"/>
         <div className="cal-hero-noise"/><div className="cal-hero-dots"/><div className="cal-hero-hl"/>
         <svg className="absolute right-[-40px] top-0 h-full w-auto opacity-[0.04] pointer-events-none"
@@ -1483,7 +1483,7 @@ export default function CalendarPage() {
           </div>
           <div className="pt-3.5 border-t border-[var(--cal-border)]">
             <div className="text-[10px] font-bold tracking-widest uppercase text-[var(--cal-text3)] mb-3">{t("createNewType")}</div>
-            <div className="bg-[var(--cal-surface2)] rounded-xl p-3.5 border border-dashed border-[var(--cal-border2)] flex flex-col gap-3">
+            <div className="bg-[var(--cal-surface2)] rounded-lg p-3.5 border border-dashed border-[var(--cal-border2)] flex flex-col gap-3">
               <input className="cal-input" placeholder={t("typeName")} value={newTypeName} onChange={e=>setNewTypeName(e.target.value)}/>
               <div>
                 <div className="cal-label mb-2">{t("selectIcon")}</div>
@@ -1518,7 +1518,7 @@ export default function CalendarPage() {
 
       {/* ═══ SETTINGS DIALOG ════════════════════════════════════ */}
       <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
-        <DialogContent className="max-w-sm sm:max-w-md rounded-2xl bg-[var(--cal-surface)] border border-[var(--cal-border2)] text-[var(--cal-text)]" dir={isRTL?"rtl":"ltr"}>
+        <DialogContent className="max-w-sm sm:max-w-md rounded-lg bg-[var(--cal-surface)] border border-[var(--cal-border2)] text-[var(--cal-text)]" dir={isRTL?"rtl":"ltr"}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-[var(--cal-font-d)] text-xl font-normal text-[var(--cal-text)]">
               <Settings size={18}/> {t("settings")}
@@ -1556,7 +1556,7 @@ export default function CalendarPage() {
 
       {/* ═══ DELETE ITEM ═════════════════════════════════════════ */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent dir={isRTL?"rtl":"ltr"} className="max-w-sm rounded-2xl bg-[var(--cal-surface)] border border-[var(--cal-border2)] text-[var(--cal-text)]">
+        <DialogContent dir={isRTL?"rtl":"ltr"} className="max-w-sm rounded-lg bg-[var(--cal-surface)] border border-[var(--cal-border2)] text-[var(--cal-text)]">
           <DialogHeader>
             <DialogTitle className="font-[var(--cal-font-d)] text-lg font-normal">{t("confirmDelete")}</DialogTitle>
           </DialogHeader>
@@ -1565,7 +1565,7 @@ export default function CalendarPage() {
           </p>
           <DialogFooter className="flex items-center justify-between w-full flex-row gap-2">
             <button className="cal-btn-ghost flex-1 justify-center" onClick={()=>setShowDeleteConfirm(false)}>{t("cancel")}</button>
-            <button className=" h-9 flex-1 px-4 bg-red-500 border-none rounded-xl text-white font-[var(--cal-font-b)] text-[13px] font-semibold cursor-pointer flex items-center justify-center gap-1.5"
+            <button className=" h-9 flex-1 px-4 bg-red-500 border-none rounded-lg text-white font-[var(--cal-font-b)] text-[13px] font-semibold cursor-pointer flex items-center justify-center gap-1.5"
               onClick={()=>confirmDelete()}>
               <Trash2 size={13}/> {t("delete")}
             </button>
@@ -1575,7 +1575,7 @@ export default function CalendarPage() {
 
       {/* ═══ DELETE TYPE ═════════════════════════════════════════ */}
       <Dialog open={showDeleteTypeConfirm} onOpenChange={setShowDeleteTypeConfirm}>
-        <DialogContent dir={isRTL?"rtl":"ltr"} className="max-w-sm rounded-2xl bg-[var(--cal-surface)] border border-[var(--cal-border2)] text-[var(--cal-text)]">
+        <DialogContent dir={isRTL?"rtl":"ltr"} className="max-w-sm rounded-lg bg-[var(--cal-surface)] border border-[var(--cal-border2)] text-[var(--cal-text)]">
           <DialogHeader>
             <DialogTitle className="font-[var(--cal-font-d)] text-lg font-normal">{t("confirmDeleteType")}</DialogTitle>
           </DialogHeader>
@@ -1585,7 +1585,7 @@ export default function CalendarPage() {
           </p>
           <DialogFooter className="gap-2">
             <button className="cal-btn-ghost flex-1 justify-center" onClick={()=>setShowDeleteTypeConfirm(false)}>{t("cancel")}</button>
-            <button className="flex-[2] h-9 px-4 bg-red-500 border-none rounded-xl text-white font-[var(--cal-font-b)] text-[13px] font-semibold cursor-pointer flex items-center justify-center gap-1.5"
+            <button className="flex-[2] h-9 px-4 bg-red-500 border-none rounded-lg text-white font-[var(--cal-font-b)] text-[13px] font-semibold cursor-pointer flex items-center justify-center gap-1.5"
               onClick={()=>confirmDeleteType()}>
               <Trash2 size={13}/> {t("delete")}
             </button>
@@ -1689,7 +1689,7 @@ function CountdownTimer({ t, isRTL }) {
               </div>
               <div className="flex flex-col gap-2.5">
                 <button onClick={startNow}
-                  className="p-3.5 bg-[var(--cal-accent-lt)] border border-[var(--cal-accent-gl)] rounded-xl cursor-pointer flex items-center justify-between gap-3 transition-all duration-200 hover:bg-[var(--cal-accent-gl)]">
+                  className="p-3.5 bg-[var(--cal-accent-lt)] border border-[var(--cal-accent-gl)] rounded-lg cursor-pointer flex items-center justify-between gap-3 transition-all duration-200 hover:bg-[var(--cal-accent-gl)]">
                   <div className="text-left">
                     <div className="text-[13px] font-semibold text-[var(--cal-text)] mb-0.5">{t("dialog.startNow")}</div>
                     <div className="text-[11px] text-[var(--cal-text3)]">{t("dialog.startNowDesc")}</div>

@@ -4,23 +4,20 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
 	UtensilsCrossed,
 	Clock,
-	History,
 	Send,
 	Plus,
 	Target,
-	Calendar,
 	TrendingUp,
-	StickyNote,
 	Pill,
 	Inbox,
-	PencilLine,
-	Check,
 	CheckCircle,
 	CircleCheck,
 	Flame,
 	Activity,
-	Zap,
 	Apple,
+	BookOpen,
+	Eye,
+	X,
 } from 'lucide-react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import * as yup from 'yup';
@@ -28,36 +25,30 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import api from '@/utils/axios';
-import { Modal, StatCard, StatCardArray, TabsPill } from '@/components/dashboard/ui/UI';
+import { Modal } from '@/components/dashboard/ui/UI';
 import { Input } from '@/components/atoms/Input2';
 import MultiLangText from '@/components/atoms/MultiLangText';
 import { Notification } from '@/config/Notification';
 import HistoryViewer from '@/components/pages/dashboard/nutrition/HistoryViewer';
 import { useUser } from '@/hooks/useUser';
 import { useTranslations } from 'next-intl';
-import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 import { useTheme } from '@/app/[locale]/theme';
+import { TabsPill } from '../workouts/page';
 
 /* =========================================================================
-	 SMALL UI PRIMITIVES (IN-FILE)
+	 SMALL UI PRIMITIVES
 	 ========================================================================= */
 function BasicButton({ labelKey, onClick, icon: Icon, variant = 'outline', submit = false, loading = false }) {
 	const t = useTranslations('my-nutrition');
-	const { colors } = useTheme();
 
-	const base = 'inline-flex items-center justify-center gap-2 rounded-lg border text-sm font-medium h-9 px-3 transition active:scale-95';
+	const base =
+		'inline-flex items-center justify-center gap-2 rounded-lg border text-sm font-medium h-9 px-3 transition active:scale-95';
 
-	const getVariantStyles = () => {
-		switch (variant) {
-			case 'primary':
-				return `bg-[var(--color-primary-600)] text-white border-[var(--color-primary-700)] hover:bg-[var(--color-primary-700)] shadow-sm`;
-			case 'warning':
-				return 'bg-amber-500 text-white border-amber-600 hover:bg-amber-600 shadow-sm';
-			case 'neutral':
-				return 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50';
-			default:
-				return 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50';
-		}
+	const variants = {
+		primary: 'bg-[var(--color-primary-600)] text-white border-[var(--color-primary-700)] hover:bg-[var(--color-primary-700)] shadow-sm',
+		warning: 'bg-amber-500 text-white border-amber-600 hover:bg-amber-600 shadow-sm',
+		neutral: 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50',
+		outline: 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50',
 	};
 
 	return (
@@ -65,7 +56,7 @@ function BasicButton({ labelKey, onClick, icon: Icon, variant = 'outline', submi
 			type={submit ? 'submit' : 'button'}
 			onClick={onClick}
 			disabled={loading}
-			className={`${base} ${getVariantStyles()} disabled:opacity-60`}
+			className={`${base} ${variants[variant] ?? variants.outline} disabled:opacity-60`}
 		>
 			{Icon ? <Icon className="h-4 w-4" /> : null}
 			<span>{loading ? t('common.loading') : t(labelKey)}</span>
@@ -73,7 +64,6 @@ function BasicButton({ labelKey, onClick, icon: Icon, variant = 'outline', submi
 	);
 }
 
-/** Animated path checkmark */
 function AnimatedCheckPath({ visible }) {
 	return (
 		<svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ display: 'block' }}>
@@ -91,7 +81,6 @@ function AnimatedCheckPath({ visible }) {
 	);
 }
 
-/** Sparkle burst particles on check */
 function SparkleBurst({ active }) {
 	const angles = [0, 45, 90, 135, 180, 225, 270, 315];
 	return (
@@ -109,14 +98,9 @@ function SparkleBurst({ active }) {
 						}}
 						exit={{ opacity: 0 }}
 						transition={{ duration: 0.45, delay: i * 0.015, ease: 'easeOut' }}
+						className="absolute w-[3px] h-[3px] rounded-full pointer-events-none z-10"
 						style={{
-							position: 'absolute',
-							width: 3,
-							height: 3,
-							borderRadius: '50%',
 							background: `hsl(${210 + i * 18}, 80%, 55%)`,
-							pointerEvents: 'none',
-							zIndex: 10,
 						}}
 					/>
 				))}
@@ -124,12 +108,10 @@ function SparkleBurst({ active }) {
 	);
 }
 
-/** Enhanced MiniCheck with animation */
 function MiniCheck({ checked, tone = 'primary', className = '' }) {
 	const [justChecked, setJustChecked] = useState(false);
-
-	// Track transition from unchecked → checked for sparkle
 	const prevChecked = useRef(checked);
+
 	useEffect(() => {
 		if (!prevChecked.current && checked) {
 			setJustChecked(true);
@@ -144,28 +126,44 @@ function MiniCheck({ checked, tone = 'primary', className = '' }) {
 	return (
 		<span
 			aria-hidden="true"
-			className={`flex-none relative inline-flex h-[22px] w-[22px] items-center justify-center rounded-md transition-all pointer-events-none ${className}`}
-			style={{
-				background: checked
+			className={[
+				'flex-none relative inline-flex h-[22px] w-[22px] items-center justify-center rounded-lg transition-all pointer-events-none',
+				checked
 					? isEmerald
-						? 'linear-gradient(135deg, #059669, #10b981)'
-						: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))'
-					: 'white',
-				border: checked
-					? 'none'
-					: '1.5px solid #cbd5e1',
-				boxShadow: checked
-					? isEmerald
-						? '0 2px 8px rgba(16,185,129,0.35)'
-						: '0 2px 8px rgba(var(--color-primary-rgb, 99,102,241),0.3)'
-					: 'none',
-				transform: checked ? 'scale(1)' : 'scale(1)',
-				color: 'white',
-			}}
+						? 'bg-gradient-to-br from-emerald-600 to-emerald-500 shadow-[0_2px_8px_rgba(16,185,129,0.35)] border-0'
+						: 'bg-gradient-to-br from-[var(--color-primary-600)] to-[var(--color-primary-500)] shadow-[0_2px_8px_rgba(99,102,241,0.3)] border-0'
+					: 'bg-white border border-slate-300',
+				'text-white',
+				className,
+			].join(' ')}
 		>
 			<AnimatedCheckPath visible={checked} />
 			<SparkleBurst active={justChecked} />
 		</span>
+	);
+}
+
+/* =========================================================================
+	 STAT PILL — matches RecipePage header stats
+	 ========================================================================= */
+function HeaderStatPill({ label, value, icon: Icon, delay = 0 }) {
+	return (
+		<motion.div
+			initial={{ opacity: 0, y: 10 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ delay, duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+			className="relative overflow-hidden rounded-lg sm:rounded-lg p-2 sm:p-4 bg-white/[0.13] backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
+		>
+			<div className="flex items-start justify-between gap-1 mb-1 sm:mb-2">
+				<p className="text-[7px] sm:text-[9px] font-black uppercase tracking-[0.1em] text-white/55 leading-tight">
+					{label}
+				</p>
+				{Icon && <Icon className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 text-white/35 shrink-0" />}
+			</div>
+			<p className="text-base sm:text-2xl font-black text-white leading-none tabular-nums">
+				{value ?? 0}
+			</p>
+		</motion.div>
 	);
 }
 
@@ -176,7 +174,6 @@ export default function ClientMealPlanPage() {
 	const [loading, setLoading] = useState(true);
 	const [plan, setPlan] = useState(null);
 	const t = useTranslations('my-nutrition');
-	const { colors } = useTheme();
 
 	const [activeDayKey, setActiveDayKey] = useState(null);
 	const [history, setHistory] = useState([]);
@@ -205,7 +202,6 @@ export default function ClientMealPlanPage() {
 			.get('/nutrition/my/meal-plan')
 			.then(r => r?.data || null)
 			.catch(() => null);
-
 		setPlan(planRes);
 
 		if (planRes?.days?.length) {
@@ -213,9 +209,7 @@ export default function ClientMealPlanPage() {
 			const hasToday = (planRes.days || []).some(d => (d.day || '').toLowerCase() === todayKey);
 			const initialDay = hasToday ? todayKey : planRes.days?.[0]?.day || null;
 			setActiveDayKey(initialDay);
-
-			const dateISO = dateForDayKeyInCurrentWeek(initialDay, new Date());
-			setSelectedDateISO(dateISO);
+			setSelectedDateISO(dateForDayKeyInCurrentWeek(initialDay, new Date()));
 		} else {
 			setActiveDayKey(null);
 			setSelectedDateISO(null);
@@ -237,9 +231,7 @@ export default function ClientMealPlanPage() {
 					.get('/nutrition/my/meal-logs', { params: { date: dateISO } })
 					.then(r => r?.data || [])
 					.catch(() => []);
-
 				setHistory(logs);
-
 				const hydrated = deriveTakenMapsFromHistory(planRef || plan, logs);
 				setTakenMap(hydrated.mealMap);
 				setItemTakenMap(hydrated.itemMap);
@@ -270,9 +262,7 @@ export default function ClientMealPlanPage() {
 	}, [activeDayKey, plan, fetchLogsForDate]);
 
 	const refresh = () => {
-		if (selectedDateISO && activeDayKey) {
-			fetchLogsForDate(selectedDateISO, activeDayKey, plan);
-		}
+		if (selectedDateISO && activeDayKey) fetchLogsForDate(selectedDateISO, activeDayKey, plan);
 	};
 
 	const days = useMemo(() => normalizeWeekOrder(plan?.days || []), [plan]);
@@ -280,72 +270,61 @@ export default function ClientMealPlanPage() {
 		() =>
 			(plan?.days?.length ? days : []).map(d => ({
 				key: (d.day || '').toLowerCase(),
-				label: capitalize(d.name || d.day),
+				label: t(d.day),
 			})),
 		[days, plan],
 	);
 	const activeDay = useMemo(
-		() => (plan?.days?.length ? days.find(d => (d.day || '').toLowerCase() === (activeDayKey || '').toLowerCase()) || null : null),
+		() =>
+			plan?.days?.length
+				? days.find(d => (d.day || '').toLowerCase() === (activeDayKey || '').toLowerCase()) || null
+				: null,
 		[days, activeDayKey, plan],
 	);
 
 	const stats = useMemo(() => {
-		if (!activeDay) return { meals: 0, kcal: 0, adherenceAvg: 0, streak: 0 };
-		const meals = (activeDay?.meals || []).length;
-		const kcal = sumCaloriesDay(activeDay?.meals || []);
-		return { meals, kcal };
-	}, [activeDay, history]);
+		if (!activeDay) return { meals: 0, kcal: 0 };
+		return {
+			meals: (activeDay?.meals || []).length,
+			kcal: sumCaloriesDay(activeDay?.meals || []),
+		};
+	}, [activeDay]);
 
-	const kMeal = (dayKey, mi) => `${dayKey}:${mi}`;
+	const user = useUser();
+	const hasNotes = !!(plan?.notes && String(plan.notes).trim().length);
 
-	// PESSIMISTIC UPDATE: meal
+	/* taken handlers (unchanged logic) */
 	const setMealTaken = async (dayKey, mealIndex, meal, value) => {
 		const lockKey = `meal:${dayKey}:${mealIndex}`;
-
 		await runLocked(lockKey, async () => {
-			const mealKey = kMeal(dayKey, mealIndex);
+			const mealKey = `${dayKey}:${mealIndex}`;
 			const itemKeys = (meal.items || []).map(i => kItemByName(dayKey, mealIndex, i.name));
-
 			const prevMealValue = !!takenMap[mealKey];
 			const prevItemValues = {};
-			itemKeys.forEach(k => {
-				prevItemValues[k] = itemTakenMap[k];
-			});
-
+			itemKeys.forEach(k => { prevItemValues[k] = itemTakenMap[k]; });
 			setTakenMap(prev => ({ ...prev, [mealKey]: value }));
 			setItemTakenMap(prev => {
 				const next = { ...prev };
-				itemKeys.forEach(k => {
-					next[k] = value;
-				});
+				itemKeys.forEach(k => { next[k] = value; });
 				return next;
 			});
-
 			try {
 				await api.post('/nutrition/food-logs', {
-					planId: plan?.id,
-					day: dayKey,
-					mealIndex,
-					eatenAt: new Date().toISOString(),
-					adherence: value ? 5 : 3,
+					planId: plan?.id, day: dayKey, mealIndex,
+					eatenAt: new Date().toISOString(), adherence: value ? 5 : 3,
 					mealTitle: meal?.title || t('nutrition.meal.defaultTitle', { index: mealIndex + 1 }),
 					items: (meal.items || []).map(i => ({
-						name: i.name,
-						taken: !!value,
+						name: i.name, taken: !!value,
 						qty: i.quantity == null ? null : Number(i.quantity),
 						unit: i.unit === 'count' ? 'count' : 'g',
 					})),
-					notifyCoach: false,
-					extraFoods: [],
-					supplementsTaken: [],
+					notifyCoach: false, extraFoods: [], supplementsTaken: [],
 				});
 			} catch (e) {
 				setTakenMap(prev => ({ ...prev, [mealKey]: prevMealValue }));
 				setItemTakenMap(prev => {
 					const next = { ...prev };
-					itemKeys.forEach(k => {
-						next[k] = prevItemValues[k];
-					});
+					itemKeys.forEach(k => { next[k] = prevItemValues[k]; });
 					return next;
 				});
 				Notification(e?.response?.data?.message || t('nutrition.errors.mealLogFailed'), 'error');
@@ -353,119 +332,65 @@ export default function ClientMealPlanPage() {
 		});
 	};
 
-	// OPTIMISTIC UPDATE: single item
 	const setItemTaken = async (dayKey, mealIndex, item, value) => {
 		const lockKey = `item:${dayKey}:${mealIndex}:${normName(item.name)}`;
-
 		await runLocked(lockKey, async () => {
 			const key = kItemByName(dayKey, mealIndex, item.name);
 			const meal = activeDay?.meals?.[mealIndex];
-			const mealKey = kMeal(dayKey, mealIndex);
-
+			const mealKey = `${dayKey}:${mealIndex}`;
 			const prevItemValue = !!itemTakenMap[key];
 			const prevMealValue = !!takenMap[mealKey];
-
 			setItemTakenMap(prev => {
 				const next = { ...prev, [key]: value };
-
 				if (meal?.items?.length) {
-					const allTrue = meal.items.every(i => {
-						const k = kItemByName(dayKey, mealIndex, i.name);
-						return !!next[k];
-					});
-
-					setTakenMap(prevMeals => ({
-						...prevMeals,
-						[mealKey]: allTrue,
-					}));
+					const allTrue = meal.items.every(i => !!next[kItemByName(dayKey, mealIndex, i.name)]);
+					setTakenMap(prevMeals => ({ ...prevMeals, [mealKey]: allTrue }));
 				}
-
 				return next;
 			});
-
 			try {
 				await api.post('/nutrition/food-logs', {
-					planId: plan?.id,
-					day: dayKey,
-					mealIndex,
-					eatenAt: new Date().toISOString(),
-					adherence: value ? 4 : 3,
+					planId: plan?.id, day: dayKey, mealIndex,
+					eatenAt: new Date().toISOString(), adherence: value ? 4 : 3,
 					mealTitle: meal?.title || t('nutrition.meal.defaultTitle', { index: mealIndex + 1 }),
-					items: [
-						{
-							name: item.name,
-							taken: !!value,
-							qty: item.quantity == null ? null : Number(item.quantity),
-							unit: item.unit === 'count' ? 'count' : 'g',
-						},
-					],
-					notifyCoach: false,
-					extraFoods: [],
-					supplementsTaken: [],
+					items: [{ name: item.name, taken: !!value, qty: item.quantity == null ? null : Number(item.quantity), unit: item.unit === 'count' ? 'count' : 'g' }],
+					notifyCoach: false, extraFoods: [], supplementsTaken: [],
 				});
 			} catch (e) {
-				setItemTakenMap(prev => ({
-					...prev,
-					[key]: prevItemValue,
-				}));
-
-				setTakenMap(prevMeals => ({
-					...prevMeals,
-					[mealKey]: prevMealValue,
-				}));
-
+				setItemTakenMap(prev => ({ ...prev, [key]: prevItemValue }));
+				setTakenMap(prevMeals => ({ ...prevMeals, [mealKey]: prevMealValue }));
 				Notification(e?.response?.data?.message || t('nutrition.errors.itemUpdateFailed'), 'error');
 			}
 		});
 	};
 
-	// OPTIMISTIC UPDATE: supplements
 	const setSupplementTaken = async (dayKey, scope, idOrIndex, supp, value, mealIndex = null) => {
 		const localKey = kSuppByName(dayKey, scope, mealIndex, supp.name);
 		const lockKey = `supp:${localKey}`;
-
 		await runLocked(lockKey, async () => {
 			const prevValue = !!suppTakenMap[localKey];
-
-			setSuppTakenMap(prev => ({
-				...prev,
-				[localKey]: value,
-			}));
-
+			setSuppTakenMap(prev => ({ ...prev, [localKey]: value }));
 			try {
 				await api.post('/nutrition/food-logs', {
-					planId: plan?.id,
-					day: dayKey,
-					mealIndex,
-					eatenAt: new Date().toISOString(),
-					adherence: 5,
-					mealTitle:
-						mealIndex != null
-							? activeDay?.meals?.[mealIndex]?.title || t('nutrition.meal.defaultTitle', { index: Number(mealIndex) + 1 })
-							: t('nutrition.supplements.logTitle'),
-					items: [],
-					notifyCoach: false,
-					extraFoods: [],
+					planId: plan?.id, day: dayKey, mealIndex,
+					eatenAt: new Date().toISOString(), adherence: 5,
+					mealTitle: mealIndex != null
+						? activeDay?.meals?.[mealIndex]?.title || t('nutrition.meal.defaultTitle', { index: Number(mealIndex) + 1 })
+						: t('nutrition.supplements.logTitle'),
+					items: [], notifyCoach: false, extraFoods: [],
 					supplementsTaken: [{ name: supp.name, taken: !!value }],
 				});
 			} catch (e) {
-				setSuppTakenMap(prev => ({
-					...prev,
-					[localKey]: prevValue,
-				}));
-
+				setSuppTakenMap(prev => ({ ...prev, [localKey]: prevValue }));
 				Notification(e?.response?.data?.message || t('nutrition.errors.supplementUpdateFailed'), 'error');
 			}
 		});
 	};
 
-	const hasNotes = !!(plan?.notes && String(plan.notes).trim().length);
-
 	const saveInlineMeal = async ({ dayKey, mealIndex, items }) => {
 		try {
 			await api.post('/nutrition/my/meal-overrides', {
-				day: dayKey,
-				mealIndex,
+				day: dayKey, mealIndex,
 				items: (items || []).map(i => ({
 					name: (i.name || '').trim(),
 					quantity: i.quantity == null || i.quantity === '' ? null : Number(i.quantity),
@@ -479,42 +404,87 @@ export default function ClientMealPlanPage() {
 		}
 	};
 
-	const user = useUser();
-
 	return (
-		<div className="space-y-6 max-md:space-y-3">
-			{/* Header with Gradient */}
-			<GradientStatsHeader
-				loadingStats={loading}
-				onClick={() => setNotesOpen(true)}
-				btnName={hasNotes && t('nutrition.header.notes')}
-				title={<MultiLangText className="max-sm:text-center block text-xl md:text-4xl font-semibold truncate">{plan?.name}</MultiLangText>}
-				desc={<MultiLangText className="  block text-white/85 mt-1 max-md:text-sm max-md:line-clamp-2">{plan?.desc}</MultiLangText>}
-			>
-				<StatCard resPhone={true} icon={Target} title={t('nutrition.header.dailyTarget')} value={user?.caloriesTarget ?? 0} />
-				<StatCard resPhone={true} icon={Activity} title={t('nutrition.header.FiberTarget')} value={user?.FiberTarget ?? 0} />
-				<StatCard resPhone={true} icon={Flame} title={t('nutrition.header.todayCalories')} value={stats?.kcal ?? 0} />
-				<StatCard resPhone={true} icon={TrendingUp} title={t('nutrition.header.mealsSelectedDay')} value={stats?.meals ?? 0} />
-			</GradientStatsHeader>
+		<div className="w-[calc(100%+14px)] rtl:mr-[-7px] ltr:ml-[-7px] mt-[-7px] min-h-screen flex  overflow-x-hidden flex-col ">
 
-			{/* Enhanced Tabs */}
-			<div className="mt-1 md:mt-4 flex items-center justify-between">
-				<TabsPill className="bg-white shadow-sm border border-slate-200" tabs={tabs} active={(activeDayKey || '').toLowerCase()} onChange={key => setActiveDayKey(key)} />
+
+			<div className="  rounded-lg relative overflow-hidden bg-gradient-to-br from-[var(--color-primary-800)] via-[var(--color-primary-700)] to-[var(--color-secondary-600)]">
+
+				{/* noise overlay */}
+				<div
+					className="absolute inset-0 opacity-[0.055] pointer-events-none mix-blend-overlay"
+					style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E\")" }}
+				/>
+				{/* glow blobs */}
+				<div className="absolute w-72 h-72 rounded-full blur-[60px] -top-36 -start-20 pointer-events-none bg-white/[0.07]" />
+				<div className="absolute w-56 h-56 rounded-full blur-[50px] -bottom-20 -end-12 pointer-events-none bg-white/[0.05]" />
+				{/* edge fades */}
+				<div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent pointer-events-none" />
+				<div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
+				{/* decorative rings */}
+				<div className="absolute -top-8 -end-8 w-36 h-36 rounded-full border border-white/10 pointer-events-none" />
+				<div className="absolute -top-3 -end-3 w-20 h-20 rounded-full border border-white/[0.07] pointer-events-none" />
+
+				<div className="relative z-10 px-3 sm:px-6 pt-4 sm:pt-5 pb-0">
+
+					{/* ── Title row ── */}
+					<div className="flex items-start justify-between gap-3 mb-4 sm:mb-5">
+						<div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
+							<motion.div
+								whileHover={{ scale: 1.06, rotate: 4 }}
+								transition={{ type: 'spring', stiffness: 380, damping: 20 }}
+								className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-lg grid place-items-center shrink-0 bg-white/[0.16] backdrop-blur-[16px] shadow-[0_6px_24px_-4px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.35)]"
+							>
+								<UtensilsCrossed className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
+							</motion.div>
+							<div className="min-w-0 flex-1">
+								<MultiLangText className="block text-base sm:text-2xl font-black text-white leading-tight tracking-tight truncate">
+									{plan?.name || t('nutrition.header.defaultTitle')}
+								</MultiLangText>
+								<MultiLangText className="block text-[9px] sm:text-xs text-white/55 mt-0.5 font-medium line-clamp-1">
+									{plan?.desc || ''}
+								</MultiLangText>
+							</div>
+						</div>
+
+						{/* Notes button */}
+						{hasNotes && (
+							<motion.button
+								whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+								onClick={() => setNotesOpen(true)}
+								className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.14] backdrop-blur-sm border border-white/20 text-white text-[10px] sm:text-xs font-bold transition-all hover:bg-white/[0.22]"
+							>
+								<BookOpen className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+								<span className="hidden sm:inline">{t('nutrition.header.notes')}</span>
+							</motion.button>
+						)}
+					</div>
+
+					{/* ── Stats grid (4-col) ── */}
+					<div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-3 mb-4 sm:mb-5">
+						<HeaderStatPill label={t('nutrition.header.dailyTarget')} value={user?.caloriesTarget ?? 0} icon={Target} delay={0.05} />
+						<HeaderStatPill label={t('nutrition.header.FiberTarget')} value={user?.FiberTarget ?? 0} icon={Activity} delay={0.11} />
+						<HeaderStatPill label={t('nutrition.header.todayCalories')} value={stats?.kcal ?? 0} icon={Flame} delay={0.17} />
+						<HeaderStatPill label={t('nutrition.header.mealsSelectedDay')} value={stats?.meals ?? 0} icon={TrendingUp} delay={0.23} />
+					</div>
+
+					{/* ── Day Tabs ── */}
+					<div className="pb-4">
+						<TabsPill
+							id="nutrition-day-tabs"
+							tabs={tabs}
+							active={(activeDayKey || '').toLowerCase()}
+							onChange={setActiveDayKey}
+							sliceInPhone={false}
+							hiddenArrow={false}
+						/>
+					</div>
+
+				</div>
 			</div>
 
-			{/* Notes Modal */}
-			<Modal open={notesOpen} onClose={() => setNotesOpen(false)} title={t('nutrition.notes.modalTitle')}>
-				{hasNotes ? (
-					<div className="rounded-lg border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4 shadow-inner">
-						<MultiLangText className="whitespace-pre-wrap text-[13px] leading-6 text-slate-900">{plan.notes}</MultiLangText>
-					</div>
-				) : (
-					<div className="text-sm text-slate-600">—</div>
-				)}
-			</Modal>
+			<div className="flex-1 pt-4 sm:pt-6 pb-24">
 
-			{/* Content */}
-			<div className="">
 				{loading ? (
 					<SkeletonPanel />
 				) : !plan || !activeDay ? (
@@ -533,7 +503,20 @@ export default function ClientMealPlanPage() {
 				)}
 			</div>
 
-			{/* History modal */}
+			{/* Notes Modal */}
+			<Modal open={notesOpen} onClose={() => setNotesOpen(false)} title={t('nutrition.notes.modalTitle')}>
+				{hasNotes ? (
+					<div className="rounded-lg border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4 shadow-inner">
+						<MultiLangText className="whitespace-pre-wrap text-[13px] leading-6 text-slate-900">
+							{plan.notes}
+						</MultiLangText>
+					</div>
+				) : (
+					<div className="text-sm text-slate-600">—</div>
+				)}
+			</Modal>
+
+			{/* History Modal */}
 			<Modal open={historyOpen} onClose={() => setHistoryOpen(false)} title={t('nutrition.history.modalTitle')}>
 				<HistoryViewer history={history} />
 			</Modal>
@@ -556,8 +539,6 @@ function SkeletonPanel() {
 
 function NotFoundPanel({ onRefresh }) {
 	const t = useTranslations('my-nutrition');
-	const { colors } = useTheme();
-
 	return (
 		<div className="p-6 md:p-8">
 			<motion.div
@@ -566,12 +547,7 @@ function NotFoundPanel({ onRefresh }) {
 				transition={{ type: 'spring', stiffness: 320, damping: 28 }}
 				className="mx-auto max-w-xl text-center"
 			>
-				<div
-					className="mx-auto flex h-16 w-16 items-center justify-center rounded-full shadow-lg"
-					style={{
-						background: `linear-gradient(135deg, var(--color-primary-500), var(--color-secondary-500))`,
-					}}
-				>
+				<div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full shadow-lg bg-gradient-to-br from-[var(--color-primary-500)] to-[var(--color-secondary-500)]">
 					<Inbox className="h-8 w-8 text-white" />
 				</div>
 				<h3 className="mt-4 text-lg font-semibold text-slate-900">{t('nutrition.notFound.title')}</h3>
@@ -585,9 +561,9 @@ function NotFoundPanel({ onRefresh }) {
 }
 
 /* =========================================================================
-	 FOOD ITEM ROW — enhanced version
+	 FOOD ITEM ROW
 	 ========================================================================= */
-function FoodItemRow({ it, checked, onToggle, qtyLabel, t, dayKey, mi }) {
+function FoodItemRow({ it, checked, onToggle, qtyLabel, t }) {
 	const [justChecked, setJustChecked] = useState(false);
 	const prevRef = useRef(checked);
 
@@ -605,30 +581,20 @@ function FoodItemRow({ it, checked, onToggle, qtyLabel, t, dayKey, mi }) {
 			role="checkbox"
 			aria-checked={checked}
 			tabIndex={0}
-			onKeyDown={e => {
-				if (e.key === ' ' || e.key === 'Enter') {
-					e.preventDefault();
-					onToggle();
-				}
-			}}
+			onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onToggle(); } }}
 			onClick={onToggle}
 			whileHover={{ y: -1 }}
 			whileTap={{ scale: 0.98 }}
-			style={{
-				position: 'relative',
-				overflow: 'hidden',
-				background: checked
-					? 'linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-secondary-50) 100%)'
-					: '#f8fafc',
-				border: `1.5px solid ${checked ? 'var(--color-primary-200)' : '#e2e8f0'}`,
-				boxShadow: checked
-					? 'inset 0 0 0 1px var(--color-primary-100), 0 4px 12px -2px rgba(99,102,241,0.1)'
-					: '0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
-				transition: 'background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
-			}}
-			className="group inline-flex w-full items-start gap-3 rounded-xl p-3 text-sm cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)]"
+			className={[
+				'group relative inline-flex w-full items-start gap-3 rounded-lg p-3 text-sm cursor-pointer select-none',
+				'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)]',
+				'border-[1.5px] transition-all duration-200 overflow-hidden',
+				checked
+					? 'bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-secondary-50)] border-[var(--color-primary-200)] shadow-[inset_0_0_0_1px_var(--color-primary-100),0_4px_12px_-2px_rgba(99,102,241,0.1)]'
+					: 'bg-slate-50 border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.9)]',
+			].join(' ')}
 		>
-			{/* Shimmer sweep on check */}
+			{/* Shimmer sweep */}
 			<AnimatePresence>
 				{justChecked && (
 					<motion.div
@@ -636,65 +602,45 @@ function FoodItemRow({ it, checked, onToggle, qtyLabel, t, dayKey, mi }) {
 						animate={{ x: '200%', opacity: 0 }}
 						exit={{ opacity: 0 }}
 						transition={{ duration: 0.5, ease: 'easeOut' }}
-						style={{
-							position: 'absolute',
-							inset: 0,
-							background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.65), transparent)',
-							pointerEvents: 'none',
-							zIndex: 5,
-						}}
+						className="absolute inset-0 bg-gradient-to-r from-transparent via-white/65 to-transparent pointer-events-none z-[5]"
 					/>
 				)}
 			</AnimatePresence>
 
-			{/* Animated checkbox */}
 			<div className="pt-0.5 shrink-0">
 				<MiniCheck checked={checked} tone="primary" />
 			</div>
 
-			{/* Content */}
 			<div className="flex-1 min-w-0">
-				{/* Main row */}
 				<div dir="rtl" className="flex items-center gap-2 flex-wrap">
 					<span
-						className="flex-1 truncate leading-none"
-						style={{
-							fontWeight: checked ? 650 : 500,
-							color: checked ? 'var(--color-primary-900)' : '#334155',
-							fontSize: 13.5,
-							letterSpacing: '-0.01em',
-							transition: 'font-weight 0.15s ease, color 0.15s ease',
-						}}
+						className={[
+							'flex-1 truncate leading-none text-[13.5px] tracking-[-0.01em] transition-all duration-150',
+							checked ? 'font-[650] text-[var(--color-primary-900)]' : 'font-medium text-slate-700',
+						].join(' ')}
 					>
 						{it.name}
 					</span>
 
 					{qtyLabel && (
-						<span className="text-xs text-slate-400 font-medium shrink-0" style={{ letterSpacing: '0.02em' }}>
+						<span className="text-xs text-slate-400 font-medium shrink-0 tracking-[0.02em]">
 							{qtyLabel}
 						</span>
 					)}
 
-					{/* Calorie badge */}
 					<motion.span
 						layout
-						className="inline-flex items-center gap-1 shrink-0 rounded-full px-2 py-0.5"
-						style={{
-							fontSize: 11,
-							fontWeight: 700,
-							letterSpacing: '0.02em',
-							background: checked
-								? 'linear-gradient(135deg, rgba(var(--color-primary-rgb,99,102,241),0.12), rgba(99,130,246,0.12))'
-								: 'rgba(148,163,184,0.1)',
-							color: checked ? 'var(--color-primary-700)' : '#64748b',
-							border: `1px solid ${checked ? 'var(--color-primary-200)' : 'rgba(148,163,184,0.2)'}`,
-							transition: 'all 0.2s ease',
-						}}
+						className={[
+							'inline-flex items-center gap-1 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tracking-[0.02em] border transition-all duration-200',
+							checked
+								? 'bg-[rgba(var(--color-primary-rgb,99,102,241),0.12)] text-[var(--color-primary-700)] border-[var(--color-primary-200)]'
+								: 'bg-slate-100/60 text-slate-500 border-slate-200/50',
+						].join(' ')}
 					>
 						<motion.span
 							animate={checked ? { rotate: [0, -15, 10, 0] } : { rotate: 0 }}
 							transition={{ duration: 0.4 }}
-							style={{ display: 'flex' }}
+							className="flex"
 						>
 							<Flame size={11} />
 						</motion.span>
@@ -702,7 +648,6 @@ function FoodItemRow({ it, checked, onToggle, qtyLabel, t, dayKey, mi }) {
 					</motion.span>
 				</div>
 
-				{/* Alternative row — animates open */}
 				<AnimatePresence>
 					{it.alternativeName != null && String(it.alternativeName || '').trim() && (
 						<motion.div
@@ -713,21 +658,12 @@ function FoodItemRow({ it, checked, onToggle, qtyLabel, t, dayKey, mi }) {
 							className="overflow-hidden"
 						>
 							<div className="flex items-center gap-1.5 flex-wrap">
-								<span
-									className="inline-flex items-center rounded px-1.5 py-px text-[10px] font-bold tracking-wider uppercase"
-									style={{
-										background: '#fef3c7',
-										border: '1px solid #fde68a',
-										color: '#92400e',
-									}}
-								>
+								<span className="inline-flex items-center rounded px-1.5 py-px text-[10px] font-bold tracking-wider uppercase bg-amber-100 border border-amber-200 text-amber-800">
 									{t('nutrition.alternative', { default: 'Or' })}
 								</span>
-								<span className="text-xs font-medium" style={{ color: '#92400e' }}>
-									{it.alternativeName}
-								</span>
+								<span className="text-xs font-medium text-amber-800">{it.alternativeName}</span>
 								{(it.alternativeQuantity != null || it.alternativeCalories != null) && (
-									<span className="text-xs" style={{ color: '#b45309', opacity: 0.8 }}>
+									<span className="text-xs text-amber-700/80">
 										· {it.alternativeQuantity ?? '—'}
 										{it.alternativeUnit === 'count' ? ' ' + (t('count') || '') : 'g'}
 										{' '}· {it.alternativeCalories ?? '—'} kcal
@@ -747,7 +683,6 @@ function FoodItemRow({ it, checked, onToggle, qtyLabel, t, dayKey, mi }) {
 	 ========================================================================= */
 function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, setItemTaken, setSupplementTaken, onInlineSave }) {
 	const t = useTranslations('my-nutrition');
-	const { colors } = useTheme();
 
 	const meals = day?.meals || mapFoodsToMeals(day?.foods || []);
 	const daySupps = Array.isArray(day?.supplements) ? day.supplements : [];
@@ -759,50 +694,25 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
 		setEditing(prev => ({ ...prev, [key]: !prev[key] }));
 	};
 
-	const formatQtyWithUnit = (it) => {
+	const formatQtyWithUnit = it => {
 		if (it?.quantity == null || it?.quantity === '' || Number.isNaN(Number(it.quantity))) return null;
 		const qty = Number(it.quantity);
 		const unit = it?.unit === 'count' ? 'count' : 'g';
-		const unitLabel =
-			unit === 'g'
-				? (t('gram') || 'g')
-				: (t('count') || t('nutrition.units.count') || 'count');
+		const unitLabel = unit === 'g' ? (t('gram') || 'g') : (t('count') || t('nutrition.units.count') || 'count');
 		return unit === 'g' ? `${qty}${unitLabel}` : `${qty} ${unitLabel}`;
 	};
 
 	const timeline = useMemo(() => {
-		const toMin = timeVal => {
-			if (!timeVal) return 24 * 60 + 1;
-			const [h, m = '0'] = String(timeVal).split(':');
-			return Number(h) * 60 + Number(m);
-		};
-		const mealBlocks = (meals || []).map((m, mi) => ({
-			type: 'meal',
-			time: m.time || '',
-			sortKey: toMin(m.time),
-			key: `meal-${mi}`,
-			meta: { mi, meal: m },
-		}));
-		const suppBlocks = (daySupps || []).map((s, si) => ({
-			type: 'supp',
-			time: s.time || '',
-			sortKey: toMin(s.time),
-			key: `supp-${si}`,
-			meta: { si, supp: s },
-		}));
+		const toMin = v => { if (!v) return 24 * 60 + 1; const [h, m = '0'] = String(v).split(':'); return Number(h) * 60 + Number(m); };
+		const mealBlocks = (meals || []).map((m, mi) => ({ type: 'meal', time: m.time || '', sortKey: toMin(m.time), key: `meal-${mi}`, meta: { mi, meal: m } }));
+		const suppBlocks = (daySupps || []).map((s, si) => ({ type: 'supp', time: s.time || '', sortKey: toMin(s.time), key: `supp-${si}`, meta: { si, supp: s } }));
 		return [...mealBlocks, ...suppBlocks].sort((a, b) => a.sortKey - b.sortKey);
 	}, [meals, daySupps]);
 
 	return (
 		<div className="relative">
-			{/* Timeline line */}
-			<div
-				className="hidden md:block absolute left-1/2 top-0 bottom-0 w-[2px] -translate-x-1/2 opacity-30"
-				style={{
-					background: `linear-gradient(180deg, var(--color-primary-400), var(--color-secondary-400))`,
-				}}
-				aria-hidden="true"
-			/>
+			{/* Timeline centre line */}
+			<div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-[2px] -translate-x-1/2 opacity-30 bg-gradient-to-b from-[var(--color-primary-400)] to-[var(--color-secondary-400)]" aria-hidden="true" />
 
 			<div className="space-y-8">
 				<AnimatePresence mode="popLayout">
@@ -828,27 +738,16 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
 									transition={{ type: 'spring', stiffness: 300, damping: 30 }}
 									layout
 								>
-									{/* Timeline marker / time (desktop) */}
-									<div className={`hidden md:block ${isLeft ? 'order-1 pr-8' : 'order-2 pl-8'} relative`}>
-										{!isLeft && (
-											<span
-												className="absolute rtl:-right-[24px] ltr:-left-[9px] top-4 h-4 w-4 rounded-full shadow-lg ring-4 ring-white"
-												style={{
-													background: `linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))`,
-												}}
-											/>
-										)}
-										{isLeft && (
-											<span
-												className="absolute rtl:-left-[24px] ltr:-right-[9px] top-4 h-4 w-4 rounded-full shadow-lg ring-4 ring-white"
-												style={{
-													background: `linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))`,
-												}}
-											/>
-										)}
-										<span
-											className={`flex flex-col gap-1 absolute  font-en text-xs text-slate-600 whitespace-nowrap font-medium top-[16px] ${isLeft ? 'rtl:left-[-29px] ltr:right-[48px] translate-x-8' : 'rtl:right-[-22px] ltr:left-[48px] -translate-x-8'}`}
-										>
+									{/* Time column (desktop) */}
+									<div className={`hidden md:block relative ${isLeft ? 'order-1 pr-8' : 'order-2 pl-8'}`}>
+										<span className={[
+											'absolute top-4 h-4 w-4 rounded-full shadow-lg ring-4 ring-white bg-gradient-to-r from-[var(--color-primary-500)] to-[var(--color-primary-800)]',
+											isLeft ? 'rtl:-left-[24px] ltr:-right-[9px]' : 'rtl:-right-[24px] ltr:-left-[9px]',
+										].join(' ')} />
+										<span className={[
+											'flex flex-col gap-1 absolute font-en text-xs text-slate-600 whitespace-nowrap font-medium top-[16px]',
+											isLeft ? 'rtl:left-[-29px] ltr:right-[48px] translate-x-8' : 'rtl:right-[-22px] ltr:left-[48px] -translate-x-8',
+										].join(' ')}>
 											<span className="flex items-center gap-1.5">
 												<Clock size={14} className="text-[var(--color-primary-500)]" />
 												{time12}
@@ -856,126 +755,113 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
 										</span>
 									</div>
 
-									{/* Mobile bullet/time */}
-									<div className="md:hidden relative flex items-center gap-3 px-2 py-2 mb-2">
-										<span className="relative flex h-4 w-4">
-											<span className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping" style={{ background: `var(--color-primary-400)` }} />
-											<span
-												className="relative inline-flex h-4 w-4 rounded-full ring-4 ring-white shadow-md"
-												style={{ background: `linear-gradient(135deg, var(--color-primary-500), var(--color-secondary-500))` }}
-											/>
-										</span>
-										<span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-											<Clock size={14} className="text-[var(--color-primary-500)]" />
+									{/* Mobile time */}
+									<div className="md:hidden flex items-center gap-3 px-2 py-2 mb-0">
+										<span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 bg-slate-50 rounded-full px-2.5 py-1 border border-slate-100">
+											<Clock size={12} className="text-[var(--color-primary-600)]" />
 											{time12}
 										</span>
 									</div>
 
 									{/* Card */}
 									<div className={`${isLeft ? 'md:order-2 md:rtl:pr-8 md:ltr:pl-8' : 'md:order-1 md:rtl:pl-8 md:ltr:pr-8'}`}>
-										<motion.div className="rounded-lg relative border border-slate-200 bg-white p-4 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden" whileHover={{ y: -2 }}>
-											{/* Gradient accent bar */}
-											<div
-												className="absolute top-0 left-0 right-0 h-1"
-												style={{
-													background: `linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))`,
-												}}
-											/>
+										<motion.div
+											whileHover={{ y: -3, boxShadow: '0 20px 40px -12px rgba(0,0,0,0.12)' }}
+											transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+											className="rounded-lg relative border border-slate-100 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] overflow-hidden"
+										>
+											{/* Top gradient accent bar */}
+											<div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]" />
 
-											<div className="flex items-start justify-between gap-3 mt-1">
-												<div className="min-w-0 w-full">
-													<div className="flex justify-between gap-2 items-start">
-														{/* TOP: Meal info */}
-														<div className="flex flex-wrap items-center gap-2.5 text-sm font-semibold text-slate-900">
-															<span
-																className="inline-flex h-8 w-8 items-center justify-center rounded-lg shadow-sm ring-1"
-																style={{
-																	background: `linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))`,
-																	color: `var(--color-primary-700)`,
-																	borderColor: `var(--color-primary-200)`,
-																}}
-															>
-																<UtensilsCrossed size={16} />
+											{/* Subtle radial glow top-right */}
+											<div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-[var(--color-primary-100)] opacity-20 blur-3xl pointer-events-none" />
+
+											<div className="p-5 pt-5 relative">
+												{/* ── Header row ── */}
+												<div className="flex justify-between gap-3 items-start">
+													{/* Left: icon + title + calorie badge */}
+													<div className="flex items-center gap-3 flex-wrap min-w-0">
+														{/* Icon */}
+														<div className="relative flex-none">
+															<div className="h-10 w-10 flex items-center justify-center rounded-lg bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-primary-50)] text-[var(--color-primary-700)] shadow-sm ring-1 ring-[var(--color-primary-200)]">
+																<UtensilsCrossed size={17} />
+															</div>
+															{mealTaken && (
+																<motion.div
+																	initial={{ scale: 0 }}
+																	animate={{ scale: 1 }}
+																	className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-gradient-to-br from-[var(--color-primary-500)] to-[var(--color-primary-600)] flex items-center justify-center shadow-md"
+																>
+																	<CheckCircle size={11} className="text-white" />
+																</motion.div>
+															)}
+														</div>
+
+														{/* Title + badge */}
+														<div className="flex flex-col gap-1 min-w-0">
+															<span className="text-sm font-black text-slate-900 leading-tight truncate">
+																{t('nutrition.meal.title', { index: idx + 1 })}
 															</span>
-															<span className="truncate">{t('nutrition.meal.title', { index: idx + 1 })}</span>
-															<span
-																className="rounded-full px-3 py-1 text-xs font-semibold shadow-sm"
-																style={{
-																	background: `var(--color-primary-50)`,
-																	color: `var(--color-primary-700)`,
-																	border: `1px solid var(--color-primary-200)`,
-																}}
-															>
-																<Flame size={12} className="inline mr-1" />
+															<span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-orange-50 to-amber-50 text-orange-600 border border-orange-100 w-fit">
+																<Flame size={10} className="text-orange-500 flex-none" />
 																{mealCals} {t('nutrition.units.kcal')}
 															</span>
 														</div>
-
-														{/* Actions */}
-														<div className="flex flex-wrap items-center gap-2">
-															{!isEditing && (
-																<motion.button
-																	type="button"
-																	onClick={() => setMealTaken(dayKey, mi, meal, !mealTaken)}
-																	aria-pressed={mealTaken}
-																	whileTap={{ scale: 0.95 }}
-																	className={[
-																		'inline-flex h-10 items-center gap-2 rounded-lg px-4 text-xs font-semibold transition-all shadow-sm',
-																		'focus-visible:outline-none focus-visible:ring-2',
-																		mealTaken ? 'text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-50 ring-1 ring-slate-200',
-																	].join(' ')}
-																	style={
-																		mealTaken
-																			? {
-																					background: `linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))`,
-																					boxShadow: `0 4px 12px -2px var(--color-primary-400)`,
-																			  }
-																			: {}
-																	}
-																>
-																	{mealTaken ? (
-																		<>
-																			<CheckCircle className="flex-none" size={18} />
-																			<span className="max-md:hidden">تم</span>
-																		</>
-																	) : (
-																		<>
-																			<CircleCheck className="flex-none" size={18} style={{ color: `var(--color-primary-600)` }} />
-																			<span className="max-md:hidden">تحديد</span>
-																		</>
-																	)}
-																</motion.button>
-															)}
-														</div>
 													</div>
 
-													{/* ── ENHANCED FOOD ITEM ROWS ── */}
-													{!isEditing && !!meal.items?.length && (
-														<div className="mt-4 flex flex-col gap-2">
-															{(meal.items || []).map((it, i) => {
-																const id = it?.id || `${it?.name}-${i}`;
-																const checked = !!itemTakenMap[kItemByName(dayKey, mi, it.name)];
-																const toggle = () => setItemTaken(dayKey, mi, it, !checked);
-																const qtyLabel = formatQtyWithUnit(it);
+													{/* Mark taken button */}
+													{!isEditing && (
+														<motion.button
+															type="button"
+															onClick={() => setMealTaken(dayKey, mi, meal, !mealTaken)}
+															aria-pressed={mealTaken}
+															whileTap={{ scale: 0.93 }}
+															whileHover={{ scale: 1.03 }}
+															className={[
+																'flex-none inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-xs font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2',
+																mealTaken
+																	? 'text-white bg-gradient-to-br from-[var(--color-primary-500)] to-[var(--color-primary-700)] shadow-[0_4px_14px_-2px_var(--color-primary-400)]'
+																	: 'bg-slate-50 text-slate-600 hover:bg-[var(--color-primary-50)] hover:text-[var(--color-primary-700)] ring-1 ring-slate-200 hover:ring-[var(--color-primary-200)]',
+															].join(' ')}
+														>
+															{mealTaken ? (
+																<><CheckCircle size={15} className="flex-none" /><span className="max-md:hidden">تم</span></>
+															) : (
+																<><CircleCheck size={15} className="flex-none" /><span className="max-md:hidden">تحديد</span></>
+															)}
+														</motion.button>
+													)}
+												</div>
 
-																return (
+												{/* ── Food items ── */}
+												{!isEditing && !!meal.items?.length && (
+													<div className="mt-4 flex flex-col gap-1.5">
+														{(meal.items || []).map((it, i) => {
+															const id = it?.id || `${it?.name}-${i}`;
+															const checked = !!itemTakenMap[kItemByName(dayKey, mi, it.name)];
+															return (
+																<motion.div
+																	key={id}
+																	initial={{ opacity: 0, x: -6 }}
+																	animate={{ opacity: 1, x: 0 }}
+																	transition={{ delay: i * 0.04, duration: 0.25 }}
+																>
 																	<FoodItemRow
-																		key={id}
 																		it={it}
 																		checked={checked}
-																		onToggle={toggle}
-																		qtyLabel={qtyLabel}
+																		onToggle={() => setItemTaken(dayKey, mi, it, !checked)}
+																		qtyLabel={formatQtyWithUnit(it)}
 																		t={t}
-																		dayKey={dayKey}
-																		mi={mi}
 																	/>
-																);
-															})}
-														</div>
-													)}
+																</motion.div>
+															);
+														})}
+													</div>
+												)}
 
-													{/* EDIT MODE */}
-													{isEditing && (
+												{/* ── Edit mode ── */}
+												{isEditing && (
+													<div className="mt-4">
 														<InlineMealEditor
 															dayKey={dayKey}
 															mealIndex={mi}
@@ -986,71 +872,97 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
 																setEditing(prev => ({ ...prev, [editKey]: false }));
 															}}
 														/>
-													)}
+													</div>
+												)}
 
-													{/* MEAL-LEVEL SUPPLEMENTS */}
-													{!!meal.supplements?.length && !isEditing && (
-														<div className="mt-4 pt-4 border-t border-slate-100">
-															<div className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-3">
-																<span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200 shadow-sm">
-																	<Pill size={14} />
-																</span>
+												{/* ── Supplements ── */}
+												{!!meal.supplements?.length && !isEditing && (
+													<div className="mt-4 pt-4 border-t border-dashed border-slate-100">
+														{/* Section header */}
+														<div className="flex items-center gap-2 mb-3">
+															<div className="h-6 w-6 flex items-center justify-center rounded-lg bg-gradient-to-br from-emerald-100 to-teal-50 text-emerald-600 ring-1 ring-emerald-200 shadow-sm flex-none">
+																<Pill size={12} />
+															</div>
+															<span className="text-xs font-black text-slate-700 uppercase tracking-wider">
 																{t('nutrition.supplements.title')}
-															</div>
-															<div className="flex flex-col gap-2">
-																{meal.supplements.map((s, si) => {
-																	const key = kSuppByName(dayKey, 'meal', mi, s.name);
-																	const taken = !!suppTakenMap[key];
-																	const toggle = () => setSupplementTaken(dayKey, 'meal', `${mi}-${s.id || si}`, s, !taken, mi);
-
-																	return (
-																		<motion.div
-																			key={s.id || si}
-																			role="checkbox"
-																			aria-checked={taken}
-																			tabIndex={0}
-																			onKeyDown={e => {
-																				if (e.key === ' ' || e.key === 'Enter') {
-																					e.preventDefault();
-																					toggle();
-																				}
-																			}}
-																			onClick={toggle}
-																			whileTap={{ scale: 0.98 }}
-																			className={[
-																				'!p-3 group inline-flex items-center justify-between gap-3 rounded-lg border text-sm transition-all',
-																				'cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60',
-																				taken ? 'bg-emerald-50 text-emerald-900 border-emerald-200 ring-1 ring-emerald-300 shadow-sm' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50',
-																			].join(' ')}
-																		>
-																			<div className="min-w-0 text-slate-700 flex-1">
-																				<div className="flex items-center gap-2">
-																					<MiniCheck checked={taken} tone="emerald" />
-																					<span className="font-medium text-slate-800 truncate">
-																						{s.name}
-																						{s.time && ` • ${formatTime12(s.time)}`}
-																						{s.timing && ` • ${s.timing}`}
-																						{s.bestWith && ` • ${t('nutrition.supplements.bestWith', { value: s.bestWith })}`}
-																					</span>
-																					{taken && <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">{t('nutrition.supplements.takenTag')}</span>}
-																				</div>
-																			</div>
-																		</motion.div>
-																	);
-																})}
-															</div>
+															</span>
+															<div className="flex-1 h-px bg-gradient-to-r from-emerald-100 to-transparent" />
 														</div>
-													)}
-												</div>
+
+														<div className="flex flex-col gap-1.5">
+															{meal.supplements.map((s, si) => {
+																const key = kSuppByName(dayKey, 'meal', mi, s.name);
+																const taken = !!suppTakenMap[key];
+																const toggle = () => setSupplementTaken(dayKey, 'meal', `${mi}-${s.id || si}`, s, !taken, mi);
+																return (
+																	<motion.div
+																		key={s.id || si}
+																		role="checkbox"
+																		aria-checked={taken}
+																		tabIndex={0}
+																		onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); } }}
+																		onClick={toggle}
+																		whileTap={{ scale: 0.985 }}
+																		initial={{ opacity: 0, y: 4 }}
+																		animate={{ opacity: 1, y: 0 }}
+																		transition={{ delay: si * 0.05, duration: 0.22 }}
+																		className={[
+																			'inline-flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm transition-all duration-200',
+																			'cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60',
+																			taken
+																				? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-900 border-emerald-200 shadow-sm'
+																				: 'bg-slate-50/60 text-slate-700 border-slate-100 hover:bg-white hover:border-slate-200 hover:shadow-sm',
+																		].join(' ')}
+																	>
+																		<div className="flex items-center gap-2.5 min-w-0 flex-1">
+																			<MiniCheck checked={taken} tone="emerald" />
+																			<div className="min-w-0 flex-1">
+																				<span className={`font-semibold truncate block text-xs leading-tight ${taken ? 'text-emerald-800' : 'text-slate-800'}`}>
+																					{s.name}
+																				</span>
+																				{(s.time || s.timing || s.bestWith) && (
+																					<span className="text-[10px] text-slate-400 truncate block mt-0.5">
+																						{[
+																							s.time && formatTime12(s.time),
+																							s.timing,
+																							s.bestWith && t('nutrition.supplements.bestWith', { value: s.bestWith }),
+																						].filter(Boolean).join(' · ')}
+																					</span>
+																				)}
+																			</div>
+																			{taken && (
+																				<span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-black text-emerald-700 uppercase tracking-wide flex-none">
+																					{t('nutrition.supplements.takenTag')}
+																				</span>
+																			)}
+																		</div>
+																	</motion.div>
+																);
+															})}
+														</div>
+													</div>
+												)}
 											</div>
+
+											{/* Bottom shimmer when taken */}
+											{mealTaken && (
+												<motion.div
+													initial={{ opacity: 0 }}
+													animate={{ opacity: 1 }}
+													className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]"
+												/>
+											)}
 										</motion.div>
 									</div>
 								</motion.div>
 							);
 						}
 
-						// Day-level supplement block
+						/* Day-level supplement block */
 						const { supp } = block.meta;
+						const takenKey = kSuppByName(dayKey, 'day', null, supp.name);
+						const taken = !!suppTakenMap[takenKey];
+						const toggle = () => setSupplementTaken(dayKey, 'day', `${supp.id || block.key}`, supp, !taken, null);
 
 						return (
 							<motion.div
@@ -1062,9 +974,11 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
 								transition={{ type: 'spring', stiffness: 300, damping: 30 }}
 								layout
 							>
-								<div className={`hidden md:block ${idx % 2 === 0 ? 'order-1 pr-8' : 'order-2 pl-8'} relative`}>
-									{idx % 2 !== 0 && <span className="absolute -left-[9px] top-4 h-4 w-4 rounded-full shadow-lg ring-4 ring-white" style={{ background: `linear-gradient(135deg, var(--color-primary-500), var(--color-secondary-500))` }} />}
-									{idx % 2 === 0 && <span className="absolute -right-[9px] top-4 h-4 w-4 rounded-full shadow-lg ring-4 ring-white" style={{ background: `linear-gradient(135deg, var(--color-primary-500), var(--color-secondary-500))` }} />}
+								<div className={`hidden md:block relative ${idx % 2 === 0 ? 'order-1 pr-8' : 'order-2 pl-8'}`}>
+									<span className={[
+										'absolute top-4 h-4 w-4 rounded-full shadow-lg ring-4 ring-white bg-gradient-to-br from-[var(--color-primary-500)] to-[var(--color-secondary-500)]',
+										idx % 2 !== 0 ? '-left-[9px]' : '-right-[9px]',
+									].join(' ')} />
 									<span className={`absolute top-8 text-xs text-slate-600 whitespace-nowrap font-medium ${idx % 2 === 0 ? 'right-0 translate-x-8' : 'left-0 -translate-x-8'}`}>
 										<span className="inline-flex items-center gap-1.5">
 											<Clock size={14} className="text-[var(--color-primary-500)]" />
@@ -1074,7 +988,10 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
 								</div>
 
 								<div className={`${idx % 2 === 0 ? 'md:order-2 md:pl-8' : 'md:order-1 md:pr-8'}`}>
-									<motion.div className="rounded-lg border border-slate-200 bg-white p-4 shadow-md hover:shadow-xl transition-all duration-300" whileHover={{ y: -2 }}>
+									<motion.div
+										whileHover={{ y: -2 }}
+										className="rounded-lg border border-slate-200 bg-white p-4 shadow-md hover:shadow-xl transition-all duration-300"
+									>
 										<div className="flex items-start justify-between gap-3">
 											<div className="min-w-0 flex-1">
 												<div className="font-semibold text-slate-900 flex items-center gap-2.5 text-sm">
@@ -1084,49 +1001,41 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
 												<div className="mt-2 text-sm text-slate-600">
 													{supp.bestWith ? (
 														<>
-															{t('nutrition.supplements.bestWithLabel')} <span className="font-medium text-slate-800">{supp.bestWith}</span>
+															{t('nutrition.supplements.bestWithLabel')}
+															<span className="font-medium text-slate-800 ml-1">{supp.bestWith}</span>
 														</>
-													) : (
-														'—'
-													)}
+													) : '—'}
 													{supp.timing && <span className="ml-2 text-slate-700">• {supp.timing}</span>}
 												</div>
 											</div>
 
-											{(() => {
-												const takenKey = kSuppByName(dayKey, 'day', null, supp.name);
-												const taken = !!suppTakenMap[takenKey];
-												const toggle = () => setSupplementTaken(dayKey, 'day', `${supp.id || block.key}`, supp, !taken, null);
-												return (
-													<motion.div
-														role="checkbox"
-														aria-checked={taken}
-														tabIndex={0}
-														onKeyDown={e => {
-															if (e.key === ' ' || e.key === 'Enter') {
-																e.preventDefault();
-																toggle();
-															}
-														}}
-														onClick={toggle}
-														whileTap={{ scale: 0.95 }}
-														className={[
-															'block !p-2.5 !px-4 group inline-flex items-center gap-2 rounded-lg border text-sm font-medium transition-all shadow-sm',
-															'cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60',
-															taken ? 'bg-emerald-600 text-white border-emerald-700 shadow-md' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50',
-														].join(' ')}
-													>
-														<MiniCheck checked={taken} tone="emerald" className={!taken ? 'opacity-60' : ''} />
-														<span className="leading-none">{taken ? t('nutrition.supplements.takenTag') : t('nutrition.supplements.markTaken')}</span>
-													</motion.div>
-												);
-											})()}
+											<motion.div
+												role="checkbox"
+												aria-checked={taken}
+												tabIndex={0}
+												onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); } }}
+												onClick={toggle}
+												whileTap={{ scale: 0.95 }}
+												className={[
+													'p-2.5 px-4 inline-flex items-center gap-2 rounded-lg border text-sm font-medium transition-all shadow-sm',
+													'cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60',
+													taken
+														? 'bg-emerald-600 text-white border-emerald-700 shadow-md'
+														: 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50',
+												].join(' ')}
+											>
+												<MiniCheck checked={taken} tone="emerald" className={!taken ? 'opacity-60' : ''} />
+												<span className="leading-none">
+													{taken ? t('nutrition.supplements.takenTag') : t('nutrition.supplements.markTaken')}
+												</span>
+											</motion.div>
 										</div>
 									</motion.div>
 								</div>
 
+								{/* Mobile bullet */}
 								<div className="md:hidden pl-10 relative mb-2">
-									<span className="absolute left-0 top-3 h-4 w-4 rounded-full shadow-md ring-4 ring-white" style={{ background: `linear-gradient(135deg, var(--color-primary-500), var(--color-secondary-500))` }} />
+									<span className="absolute left-0 top-3 h-4 w-4 rounded-full shadow-md ring-4 ring-white bg-gradient-to-br from-[var(--color-primary-500)] to-[var(--color-secondary-500)]" />
 									<span className="absolute left-0 top-8 text-xs text-slate-600 translate-x-6 font-medium">
 										<span className="inline-flex items-center gap-1.5">
 											<Clock size={14} className="text-[var(--color-primary-500)]" />
@@ -1147,34 +1056,19 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
 	 INLINE MEAL EDITOR
 	 ========================================================================= */
 const inlineSchema = yup.object().shape({
-	items: yup
-		.array()
-		.of(
-			yup.object().shape({
-				name: yup.string().required('Required'),
-				unit: yup.string().oneOf(['g', 'count']).default('g'),
-				quantity: yup
-					.number()
-					.nullable()
-					.transform(v => (Number.isNaN(v) ? null : v)),
-				calories: yup
-					.number()
-					.nullable()
-					.transform(v => (Number.isNaN(v) ? null : v)),
-			}),
-		)
-		.min(1, 'Add at least one item'),
+	items: yup.array().of(
+		yup.object().shape({
+			name: yup.string().required('Required'),
+			unit: yup.string().oneOf(['g', 'count']).default('g'),
+			quantity: yup.number().nullable().transform(v => (Number.isNaN(v) ? null : v)),
+			calories: yup.number().nullable().transform(v => (Number.isNaN(v) ? null : v)),
+		}),
+	).min(1, 'Add at least one item'),
 });
 
 function InlineMealEditor({ dayKey, mealIndex, initialItems = [], onCancel, onSave }) {
 	const t = useTranslations('my-nutrition');
-	const { colors } = useTheme();
-
-	const {
-		control,
-		handleSubmit,
-		formState: { isSubmitting },
-	} = useForm({
+	const { control, handleSubmit, formState: { isSubmitting } } = useForm({
 		resolver: yupResolver(inlineSchema),
 		mode: 'onChange',
 		defaultValues: {
@@ -1186,75 +1080,30 @@ function InlineMealEditor({ dayKey, mealIndex, initialItems = [], onCancel, onSa
 			})),
 		},
 	});
-
 	const { fields, append, remove } = useFieldArray({ control, name: 'items' });
-
-	const submit = async vals => {
-		await onSave?.(vals.items);
-	};
 
 	return (
 		<form
-			onSubmit={handleSubmit(submit)}
-			className="mt-4 space-y-3 rounded-lg border-2 p-4 shadow-inner"
-			style={{
-				borderColor: `var(--color-primary-200)`,
-				background: `linear-gradient(135deg, var(--color-primary-50), var(--color-secondary-50))`,
-			}}
+			onSubmit={handleSubmit(async vals => { await onSave?.(vals.items); })}
+			className="mt-4 space-y-3 rounded-lg border-2 border-[var(--color-primary-200)] p-4 shadow-inner bg-gradient-to-br from-[var(--color-primary-50)] to-[var(--color-secondary-50)]"
 		>
 			{!fields.length ? (
-				<div className="rounded-lg border border-slate-200 p-4 text-sm text-slate-600 bg-white shadow-sm">{t('nutrition.inline.noItems')}</div>
+				<div className="rounded-lg border border-slate-200 p-4 text-sm text-slate-600 bg-white shadow-sm">
+					{t('nutrition.inline.noItems')}
+				</div>
 			) : (
 				<div className="space-y-2.5">
 					{fields.map((f, idx) => (
 						<div key={f.id || idx} className="grid grid-cols-1 md:grid-cols-[1.2fr_.7fr_.6fr_.55fr_auto] gap-2.5 border border-slate-200 rounded-lg p-3 bg-white shadow-sm">
-							<Controller
-								name={`items.${idx}.name`}
-								control={control}
-								render={({ field, fieldState }) => <Input placeholder={t('nutrition.inline.namePlaceholder')} value={field.value} onChange={field.onChange} error={fieldState?.error?.message} />}
-							/>
-							<Controller
-								name={`items.${idx}.quantity`}
-								control={control}
-								render={({ field, fieldState }) => (
-									<Input
-										placeholder={t('nutrition.inline.quantityPlaceholder')}
-										type="number"
-										value={field.value ?? ''}
-										onChange={v => field.onChange(v === '' ? '' : Number(v))}
-										error={fieldState?.error?.message}
-									/>
-								)}
-							/>
-							<Controller
-								name={`items.${idx}.calories`}
-								control={control}
-								render={({ field, fieldState }) => (
-									<Input
-										placeholder={t('nutrition.inline.caloriesPlaceholder')}
-										type="number"
-										value={field.value ?? ''}
-										onChange={v => field.onChange(v === '' ? '' : Number(v))}
-										error={fieldState?.error?.message}
-									/>
-								)}
-							/>
-
-							<Controller
-								name={`items.${idx}.unit`}
-								control={control}
-								render={({ field }) => (
-									<select
-										value={field.value || 'g'}
-										onChange={(e) => field.onChange(e.target.value)}
-										className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-700"
-									>
-										<option value="g">g</option>
-										<option value="count">count</option>
-									</select>
-								)}
-							/>
-
+							<Controller name={`items.${idx}.name`} control={control} render={({ field, fieldState }) => <Input placeholder={t('nutrition.inline.namePlaceholder')} value={field.value} onChange={field.onChange} error={fieldState?.error?.message} />} />
+							<Controller name={`items.${idx}.quantity`} control={control} render={({ field, fieldState }) => <Input placeholder={t('nutrition.inline.quantityPlaceholder')} type="number" value={field.value ?? ''} onChange={v => field.onChange(v === '' ? '' : Number(v))} error={fieldState?.error?.message} />} />
+							<Controller name={`items.${idx}.calories`} control={control} render={({ field, fieldState }) => <Input placeholder={t('nutrition.inline.caloriesPlaceholder')} type="number" value={field.value ?? ''} onChange={v => field.onChange(v === '' ? '' : Number(v))} error={fieldState?.error?.message} />} />
+							<Controller name={`items.${idx}.unit`} control={control} render={({ field }) => (
+								<select value={field.value || 'g'} onChange={e => field.onChange(e.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-700">
+									<option value="g">g</option>
+									<option value="count">count</option>
+								</select>
+							)} />
 							<button type="button" onClick={() => remove(idx)} className="rounded-lg border border-slate-300 px-3 text-sm hover:bg-red-50 hover:border-red-300 hover:text-red-600 h-9 font-medium transition-colors">
 								{t('nutrition.inline.remove')}
 							</button>
@@ -1271,7 +1120,6 @@ function InlineMealEditor({ dayKey, mealIndex, initialItems = [], onCancel, onSa
 				>
 					<Plus className="h-4 w-4" /> {t('nutrition.inline.addItem')}
 				</button>
-
 				<div className="flex items-center gap-2.5">
 					<BasicButton labelKey="common.cancel" variant="neutral" onClick={onCancel} />
 					<BasicButton labelKey="common.save" variant="primary" submit loading={isSubmitting} />
@@ -1281,48 +1129,39 @@ function InlineMealEditor({ dayKey, mealIndex, initialItems = [], onCancel, onSa
 	);
 }
 
-// Helper functions
+/* =========================================================================
+	 HELPERS
+	 ========================================================================= */
 function deriveTakenMapsFromHistory(plan, history) {
-	const mealMap = {};
-	const itemMap = {};
-	const suppMap = {};
-
+	const mealMap = {}, itemMap = {}, suppMap = {};
 	const sorted = [...(history || [])].sort((a, b) => +new Date(a.eatenAt || a.createdAt) - +new Date(b.eatenAt || b.createdAt));
-
 	for (const log of sorted) {
 		const dayKey = (log.day || '').toLowerCase();
 		const mi = typeof log.mealIndex === 'number' ? log.mealIndex : null;
-
 		if (Array.isArray(log.items) && mi != null) {
 			for (const it of log.items) {
 				if (!it?.name) continue;
 				itemMap[kItemByName(dayKey, mi, it.name)] = !!it.taken;
 			}
 		}
-
 		if (Array.isArray(log.supplementsTaken) && log.supplementsTaken.length) {
 			const scope = mi != null ? 'meal' : 'day';
 			log.supplementsTaken.forEach(s => {
 				if (!s?.name) return;
-				const key = kSuppByName(dayKey, scope, mi, s.name);
-				suppMap[key] = !!s.taken;
+				suppMap[kSuppByName(dayKey, scope, mi, s.name)] = !!s.taken;
 			});
 		}
 	}
-
 	if (plan?.days?.length) {
-		const days = normalizeWeekOrder(plan.days);
-		days.forEach(d => {
+		normalizeWeekOrder(plan.days).forEach(d => {
 			const dayKey = (d.day || '').toLowerCase();
 			(d.meals || []).forEach((meal, mi) => {
 				const items = meal.items || [];
 				if (!items.length) return;
-				const allTrue = items.every(it => itemMap[kItemByName(dayKey, mi, it.name)]);
-				mealMap[`${dayKey}:${mi}`] = allTrue;
+				mealMap[`${dayKey}:${mi}`] = items.every(it => itemMap[kItemByName(dayKey, mi, it.name)]);
 			});
 		});
 	}
-
 	return { mealMap, itemMap, suppMap };
 }
 
@@ -1332,20 +1171,15 @@ function formatTime12(hhmm) {
 	let h = Number(hStr);
 	const m = Number(mStr);
 	const ap = h >= 12 ? 'PM' : 'AM';
-	h = h % 12;
-	if (h === 0) h = 12;
+	h = h % 12 || 12;
 	return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ap}`;
 }
 
-function capitalize(s) {
-	if (!s) return s;
-	return s.charAt(0).toUpperCase() + s.slice(1);
-}
+function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
 function weekdayKeySaturdayFirst(d) {
-	const js = d.getDay();
 	const map = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-	return map[js];
+	return map[d.getDay()];
 }
 
 function normalizeWeekOrder(days = []) {
@@ -1357,39 +1191,17 @@ function normalizeWeekOrder(days = []) {
 
 function sumCaloriesDay(meals = []) {
 	let total = 0;
-	(meals || []).forEach(m =>
-		(m.items || []).forEach(it => {
-			total += Number(it.calories || 0);
-		}),
-	);
+	(meals || []).forEach(m => (m.items || []).forEach(it => { total += Number(it.calories || 0); }));
 	return total;
 }
 
 function mapFoodsToMeals(foods = []) {
 	if (!foods?.length) return [];
-	return [
-		{
-			title: '',
-			time: '',
-			items: foods.map(f => ({
-				name: f.name,
-				quantity: Number.isFinite(Number(f.quantity)) ? Number(f.quantity) : null,
-				calories: Number.isFinite(Number(f.calories)) ? Number(f.calories) : null,
-				unit: f.unit === 'count' ? 'count' : 'g',
-			})),
-		},
-	];
+	return [{ title: '', time: '', items: foods.map(f => ({ name: f.name, quantity: Number.isFinite(Number(f.quantity)) ? Number(f.quantity) : null, calories: Number.isFinite(Number(f.calories)) ? Number(f.calories) : null, unit: f.unit === 'count' ? 'count' : 'g' })) }];
 }
 
-function normName(s) {
-	return String(s || '')
-		.trim()
-		.toLowerCase()
-		.replace(/\s+/g, ' ');
-}
-
+function normName(s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
 const kItemByName = (dayKey, mi, name) => `${dayKey}:${mi}:name::${normName(name)}`;
-
 const kSuppByName = (dayKey, scope, mealIndexOrNull, name) => {
 	const base = `${dayKey}:${scope}:name::${normName(name)}`;
 	return scope === 'meal' ? `${base}@${mealIndexOrNull}` : base;
@@ -1399,21 +1211,16 @@ function dateForDayKeyInCurrentWeek(dayKey, now = new Date()) {
 	const WEEK = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 	const idx = WEEK.indexOf((dayKey || '').toLowerCase());
 	if (idx === -1) return formatLocalDateYYYYMMDD(now);
-
 	const jsDay = now.getDay();
 	const backToSat = (jsDay + 1) % 7;
 	const weekStart = new Date(now);
 	weekStart.setHours(0, 0, 0, 0);
 	weekStart.setDate(weekStart.getDate() - backToSat);
-
 	const target = new Date(weekStart);
 	target.setDate(weekStart.getDate() + idx);
 	return formatLocalDateYYYYMMDD(target);
 }
 
 function formatLocalDateYYYYMMDD(d) {
-	const y = d.getFullYear();
-	const m = String(d.getMonth() + 1).padStart(2, '0');
-	const day = String(d.getDate()).padStart(2, '0');
-	return `${y}-${m}-${day}`;
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }

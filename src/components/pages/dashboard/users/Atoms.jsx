@@ -10,708 +10,726 @@ import MultiLangText from '@/components/atoms/MultiLangText';
 import Button from '@/components/atoms/Button';
 
 /* ===========================
-   Stepper
+	 Stepper
 =========================== */
 export function Stepper({ step = 1, steps = 4 }) {
-  const t = useTranslations('Stepper');
-  const items = Array.from({ length: steps }, (_, i) => i + 1);
+	const t = useTranslations('Stepper');
+	const items = Array.from({ length: steps }, (_, i) => i + 1);
 
-  const lineVariants = {
-    initial: { scaleX: 0, opacity: 0.4 },
-    active: { scaleX: 1, opacity: 1, transition: { duration: 0.45, ease: 'easeOut' } },
-    inactive: { scaleX: 1, opacity: 0.25 },
-  };
+	const lineVariants = {
+		initial: { scaleX: 0, opacity: 0.4 },
+		active: { scaleX: 1, opacity: 1, transition: { duration: 0.45, ease: 'easeOut' } },
+		inactive: { scaleX: 1, opacity: 0.25 },
+	};
 
-  const bubbleVariants = {
-    initial: { y: 8, scale: 0.8, opacity: 0 },
-    enter: i => ({
-      y: 0,
-      scale: 1,
-      opacity: 1,
-      transition: { delay: i * 0.05, type: 'spring', stiffness: 380, damping: 26 },
-    }),
-    active: {
-      scale: 1.06,
-      transition: { type: 'spring', stiffness: 320, damping: 20 },
-    },
-    inactive: { scale: 1, opacity: 0.9 },
-  };
+	const bubbleVariants = {
+		initial: { y: 8, scale: 0.8, opacity: 0 },
+		enter: i => ({
+			y: 0,
+			scale: 1,
+			opacity: 1,
+			transition: { delay: i * 0.05, type: 'spring', stiffness: 380, damping: 26 },
+		}),
+		active: {
+			scale: 1.06,
+			transition: { type: 'spring', stiffness: 320, damping: 20 },
+		},
+		inactive: { scale: 1, opacity: 0.9 },
+	};
 
-  return (
-    <div dir='ltr' className='relative overflow-hidden'>
-      <div className='flex py-3 items-center justify-between gap-4 mb-4' aria-label={t('progress')} role='progressbar' aria-valuemin={1} aria-valuemax={steps} aria-valuenow={step}>
-        {items.map(idx => {
-          const isActive = step >= idx;
+	return (
+		<div dir='ltr' className='relative overflow-hidden'>
+			<div className='flex py-3 items-center justify-between gap-4 mb-4' aria-label={t('progress')} role='progressbar' aria-valuemin={1} aria-valuemax={steps} aria-valuenow={step}>
+				{items.map(idx => {
+					const isActive = step >= idx;
 
-          return (
-            <div key={idx} className='flex-1 relative'>
-              {/* Base track */}
-              <div className='h-2.5 rounded-full bg-slate-200 overflow-hidden' />
+					return (
+						<div key={idx} className='flex-1 relative'>
+							{/* Base track */}
+							<div className='h-2.5 rounded-full bg-slate-200 overflow-hidden' />
 
-              {/* Animated fill - now uses theme gradient */}
-              <motion.div
-                className='absolute inset-0 h-2.5 origin-left rounded-full theme-gradient-bg'
-                style={
-                  isActive
-                    ? {
-                        boxShadow: '0 0 12px var(--color-primary-500)',
-                        opacity: 0.9,
-                      }
-                    : { opacity: 0 }
-                }
-                variants={lineVariants}
-                initial='initial'
-                animate={isActive ? 'active' : 'inactive'}
-              />
+							{/* Animated fill - now uses theme gradient */}
+							<motion.div
+								className='absolute inset-0 h-2.5 origin-left rounded-full theme-gradient-bg'
+								style={
+									isActive
+										? {
+											boxShadow: '0 0 12px var(--color-primary-500)',
+											opacity: 0.9,
+										}
+										: { opacity: 0 }
+								}
+								variants={lineVariants}
+								initial='initial'
+								animate={isActive ? 'active' : 'inactive'}
+							/>
 
-              {/* Shimmer accent on active */}
-              <AnimatePresence>
-                {isActive && (
-                  <motion.div
-                    key={`shimmer-${idx}`}
-                    className='pointer-events-none absolute inset-0 h-2.5 rounded-full'
-                    initial={{ x: '-100%' }}
-                    animate={{ x: '100%' }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
-                    style={{
-                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent)',
-                    }}
-                  />
-                )}
-              </AnimatePresence>
+							{/* Shimmer accent on active */}
+							<AnimatePresence>
+								{isActive && (
+									<motion.div
+										key={`shimmer-${idx}`}
+										className='pointer-events-none absolute inset-0 h-2.5 rounded-full'
+										initial={{ x: '-100%' }}
+										animate={{ x: '100%' }}
+										exit={{ opacity: 0 }}
+										transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
+										style={{
+											background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent)',
+										}}
+									/>
+								)}
+							</AnimatePresence>
 
-              {/* Step bubble */}
-              <motion.div custom={idx * 0.5} variants={bubbleVariants} initial='initial' animate='enter' className='absolute -top-3 left-1/2 -translate-x-1/2'>
-                <motion.div
-                  animate={isActive ? 'active' : 'inactive'}
-                  className={`h-7 w-7 rounded-full border-2 flex items-center justify-center text-[11px] font-semibold transition-all
+							{/* Step bubble */}
+							<motion.div custom={idx * 0.5} variants={bubbleVariants} initial='initial' animate='enter' className='absolute -top-3 left-1/2 -translate-x-1/2'>
+								<motion.div
+									animate={isActive ? 'active' : 'inactive'}
+									className={`h-7 w-7 rounded-full border-2 flex items-center justify-center text-[11px] font-semibold transition-all
                     ${isActive ? 'text-white shadow-md' : 'text-slate-500 border-slate-300 bg-white'}`}
-                  style={
-                    isActive
-                      ? {
-                          background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                          borderColor: 'var(--color-primary-300)',
-                        }
-                      : {}
-                  }>
-                  {idx}
-                </motion.div>
-              </motion.div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+									style={
+										isActive
+											? {
+												background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+												borderColor: 'var(--color-primary-300)',
+											}
+											: {}
+									}>
+									{idx}
+								</motion.div>
+							</motion.div>
+						</div>
+					);
+				})}
+			</div>
+		</div>
+	);
 }
 
 export function PlanPicker({
-  workoutPlans,
-  visibleWorkouts,
-  setVisibleWorkouts,
-  buttonName,
-  plans = [],
-  defaultSelectedId = null,
-  onSelect,
-  onAssign,
-  onSkip,
-  assigning = false,
-  loading = false,
+	workoutPlans,
+	visibleWorkouts,
+	setVisibleWorkouts,
+	buttonName,
+	plans = [],
+	defaultSelectedId = null,
+	onSelect,
+	onAssign,
+	onSkip,
+	assigning = false,
+	loading = false,
 }) {
-  const t = useTranslations('Plans');
-  const tc = useTranslations('Common');
-  const common = useTranslations('common');
+	const t = useTranslations('Plans');
+	const tc = useTranslations('Common');
+	const common = useTranslations('common');
 
-  const [expanded, setExpanded] = useState(null);
-  const [selectedId, setSelectedId] = useState(defaultSelectedId);
+	const [expanded, setExpanded] = useState(null);
+	const [selectedId, setSelectedId] = useState(defaultSelectedId);
 
-  const handleSelect = id => {
-    setSelectedId(id);
-    onSelect?.(id);
-  };
+	const handleSelect = id => {
+		setSelectedId(id);
+		onSelect?.(id);
+	};
 
-  const visiblePlans = plans.slice(0, visibleWorkouts || plans.length);
-  const showEmpty = !loading && plans.length === 0;
+	const visiblePlans = plans.slice(0, visibleWorkouts || plans.length);
+	const showEmpty = !loading && plans.length === 0;
 
-  const renderSkeletonCard = (_, i) => (
-    <motion.div 
-      key={`skeleton-${i}`} 
-      initial={{ opacity: 0, y: 8 }} 
-      animate={{ opacity: 1, y: 0 }} 
-      transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }} 
-      className='rounded-lg border bg-white p-4 shadow-sm animate-pulse'
-      style={{ borderColor: 'var(--color-primary-100)' }}>
-      <div className='flex items-center gap-3 mb-3'>
-        <div className='h-5 w-5 rounded-full' style={{ backgroundColor: 'var(--color-primary-200)' }} />
-        <div className='flex-1 space-y-2'>
-          <div className='h-3 w-2/3 rounded bg-slate-200' />
-          <div className='h-2.5 w-1/3 rounded bg-slate-100' />
-        </div>
-      </div>
-      <div className='flex flex-wrap gap-2'>
-        {Array.from({ length: 3 }).map((__, idx) => (
-          <div key={idx} className='h-6 w-20 rounded-full bg-slate-100' />
-        ))}
-      </div>
-    </motion.div>
-  );
+	const renderSkeletonCard = (_, i) => (
+		<motion.div
+			key={`skeleton-${i}`}
+			initial={{ opacity: 0, y: 8 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }}
+			className='rounded-lg border bg-white p-4 shadow-sm animate-pulse'
+			style={{ borderColor: 'var(--color-primary-100)' }}>
+			<div className='flex items-center gap-3 mb-3'>
+				<div className='h-5 w-5 rounded-full' style={{ backgroundColor: 'var(--color-primary-200)' }} />
+				<div className='flex-1 space-y-2'>
+					<div className='h-3 w-2/3 rounded bg-slate-200' />
+					<div className='h-2.5 w-1/3 rounded bg-slate-100' />
+				</div>
+			</div>
+			<div className='flex flex-wrap gap-2'>
+				{Array.from({ length: 3 }).map((__, idx) => (
+					<div key={idx} className='h-6 w-20 rounded-full bg-slate-100' />
+				))}
+			</div>
+		</motion.div>
+	);
 
-  return (
-    <div className='space-y-4'>
-      <AnimatePresence mode='popLayout'>
-        {loading ? (
-          <motion.div key='loading' layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
-            {Array.from({ length: 6 }).map(renderSkeletonCard)}
-          </motion.div>
-        ) : showEmpty ? (
-          <motion.div 
-            key='empty' 
-            initial={{ opacity: 0, y: 8 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            exit={{ opacity: 0 }} 
-            className='rounded-lg border border-dashed p-6 text-center text-slate-500 bg-slate-50/60'
-            style={{ borderColor: 'var(--color-primary-200)' }}>
-            {t('empty')}
-          </motion.div>
-        ) : (
-          <motion.div key='plans' layout className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
-            {visiblePlans.map((plan, i) => {
-              const isSelected = selectedId === plan.id;
-              const rawDays = plan.program?.days || plan.days || [];
-              const orderedDays = orderDays(rawDays);
+	return (
+		<div className='space-y-4'>
+			<AnimatePresence mode='popLayout'>
+				{loading ? (
+					<motion.div key='loading' layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
+						{Array.from({ length: 6 }).map(renderSkeletonCard)}
+					</motion.div>
+				) : showEmpty ? (
+					<motion.div
+						key='empty'
+						initial={{ opacity: 0, y: 8 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0 }}
+						className='rounded-lg border border-dashed p-6 text-center text-slate-500 bg-slate-50/60'
+						style={{ borderColor: 'var(--color-primary-200)' }}>
+						{t('empty')}
+					</motion.div>
+				) : (
+					<motion.div key='plans' layout className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
+						{visiblePlans.map((plan, i) => {
+							const isSelected = selectedId === plan.id;
+							const rawDays = plan.program?.days || plan.days || [];
+							const orderedDays = orderDays(rawDays);
 
-              return (
-                <motion.button 
-                  key={plan.id} 
-                  layout 
-                  type='button' 
-                  onClick={() => handleSelect(plan.id)} 
-                  initial={{ opacity: 0, y: 8 }} 
-                  animate={{ opacity: 1, y: 0 }} 
-                  transition={{ delay: i * 0.03, duration: 0.35, ease: 'easeOut' }} 
-                  className='flex flex-col group relative text-left rounded-lg border p-4 transition-all bg-white hover:shadow-md'
-                  style={
-                    isSelected
-                      ? {
-                          borderColor: 'var(--color-primary-400)',
-                          boxShadow: '0 0 0 3px var(--color-primary-100)',
-                        }
-                      : {
-                          borderColor: '#e2e8f0',
-                        }
-                  }>
-                  {/* Title row */}
-                  <div className='flex items-start gap-3'>
-                    <CheckCircle2 
-                      className='h-5 w-5 transition-colors' 
-                      style={{ 
-                        color: isSelected ? 'var(--color-primary-500)' : '#cbd5e1' 
-                      }} 
-                    />
-                    <div className='flex-1 flex gap-2 items-center justify-between min-w-0'>
-                      <MultiLangText className='font-semibold text-slate-800'>{plan.name || t('untitled')}</MultiLangText>
-                    </div>
-                  </div>
+							return (
+								<motion.button
+									key={plan.id}
+									layout
+									type='button'
+									onClick={() => handleSelect(plan.id)}
+									initial={{ opacity: 0, y: 8 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ delay: i * 0.03, duration: 0.35, ease: 'easeOut' }}
+									className='flex flex-col group relative text-left rounded-lg border p-4 transition-all bg-white hover:shadow-md'
+									style={
+										isSelected
+											? {
+												borderColor: 'var(--color-primary-400)',
+												boxShadow: '0 0 0 3px var(--color-primary-100)',
+											}
+											: {
+												borderColor: '#e2e8f0',
+											}
+									}>
+									{/* Title row */}
+									<div className='flex items-start gap-3'>
+										<CheckCircle2
+											className='h-5 w-5 transition-colors'
+											style={{
+												color: isSelected ? 'var(--color-primary-500)' : '#cbd5e1'
+											}}
+										/>
+										<div className='flex-1 flex gap-2 items-center justify-between min-w-0'>
+											<MultiLangText className='font-semibold text-slate-800'>{plan.name || t('untitled')}</MultiLangText>
+										</div>
+									</div>
 
-                  {/* Expand details */}
-                  <div className='mt-2'>
-                    {orderedDays.length > 0 && (
-                      <div className='flex items-center justify-between'>
-                        <span className='flex-none inline-flex items-center gap-1 text-xs text-slate-600'>
-                          <CalendarDays className='h-3.5 w-3.5' />
-                          {t('daysCount', { count: orderedDays.length })}
-                        </span>
-                        <button
-                          type='button'
-                          onClick={e => {
-                            e.stopPropagation();
-                            setExpanded(expanded === plan.id ? null : plan.id);
-                          }}
-                          className='inline-flex items-center gap-1 text-xs theme-primary-text hover:opacity-80 transition-opacity'>
-                          {t('details')}
-                          <ChevronDown className={`h-4 w-4 transition-transform ${expanded === plan.id ? 'rotate-180' : ''}`} />
-                        </button>
-                      </div>
-                    )}
+									{/* Expand details */}
+									<div className='mt-2'>
+										{orderedDays.length > 0 && (
+											<div className='flex items-center justify-between'>
+												<span className='flex-none inline-flex items-center gap-1 text-xs text-slate-600'>
+													<CalendarDays className='h-3.5 w-3.5' />
+													{t('daysCount', { count: orderedDays.length })}
+												</span>
+												<button
+													type='button'
+													onClick={e => {
+														e.stopPropagation();
+														setExpanded(expanded === plan.id ? null : plan.id);
+													}}
+													className='inline-flex items-center gap-1 text-xs theme-primary-text hover:opacity-80 transition-opacity'>
+													{t('details')}
+													<ChevronDown className={`h-4 w-4 transition-transform ${expanded === plan.id ? 'rotate-180' : ''}`} />
+												</button>
+											</div>
+										)}
 
-                    <AnimatePresence initial={false}>
-                      {expanded === plan.id && (
-                        <motion.div 
-                          key='details' 
-                          initial={{ height: 0, opacity: 0 }} 
-                          animate={{ height: 'auto', opacity: 1 }} 
-                          exit={{ height: 0, opacity: 0 }} 
-                          transition={{ duration: 0.25 }} 
-                          className='overflow-hidden'>
-                          <div className='mt-3 flex flex-wrap gap-2'>
-                            {orderedDays.slice(0, 6).map(d => (
-                              <span 
-                                key={d.id || d.dayOfWeek} 
-                                className='rtl:flex-row-reverse inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border bg-slate-50 text-slate-600'
-                                style={{ borderColor: 'var(--color-primary-200)' }}>
-                                <span className='font-medium capitalize'>{common(d.dayOfWeek || d?.day || d.id)}</span>
-                                <span className='text-slate-400'>•</span>
-                                <span className='truncate max-w-[140px]'>{common('day')}</span>
-                              </span>
-                            ))}
-                            {orderedDays.length > 6 && (
-                              <span 
-                                className='inline-flex items-center px-2.5 py-1 rounded-full text-xs border bg-slate-50 text-slate-600'
-                                style={{ borderColor: 'var(--color-primary-200)' }}>
-                                {t('moreCount', { count: orderedDays.length - 6 })}
-                              </span>
-                            )}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </motion.button>
-              );
-            })}
+										<AnimatePresence initial={false}>
+											{expanded === plan.id && (
+												<motion.div
+													key='details'
+													initial={{ height: 0, opacity: 0 }}
+													animate={{ height: 'auto', opacity: 1 }}
+													exit={{ height: 0, opacity: 0 }}
+													transition={{ duration: 0.25 }}
+													className='overflow-hidden'>
+													<div className='mt-3 flex flex-wrap gap-2'>
+														{orderedDays.slice(0, 6).map(d => (
+															<span
+																key={d.id || d.dayOfWeek}
+																className='rtl:flex-row-reverse inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border bg-slate-50 text-slate-600'
+																style={{ borderColor: 'var(--color-primary-200)' }}>
+																<span className='font-medium capitalize'>{common(d.dayOfWeek || d?.day || d.id)}</span>
+																<span className='text-slate-400'>•</span>
+																<span className='truncate max-w-[140px]'>{common('day')}</span>
+															</span>
+														))}
+														{orderedDays.length > 6 && (
+															<span
+																className='inline-flex items-center px-2.5 py-1 rounded-full text-xs border bg-slate-50 text-slate-600'
+																style={{ borderColor: 'var(--color-primary-200)' }}>
+																{t('moreCount', { count: orderedDays.length - 6 })}
+															</span>
+														)}
+													</div>
+												</motion.div>
+											)}
+										</AnimatePresence>
+									</div>
+								</motion.button>
+							);
+						})}
 
-            {/* See more */}
-            {workoutPlans?.length > (visibleWorkouts || 0) ? (
-              <div className='flex'>
-                <Button name={tc('seeMore')} color='neutral' onClick={() => setVisibleWorkouts(v => v + 6)} />
-              </div>
-            ) : null}
-          </motion.div>
-        )}
-      </AnimatePresence>
+						{/* See more */}
+						{workoutPlans?.length > (visibleWorkouts || 0) ? (
+							<div className='flex'>
+								<Button name={tc('seeMore')} color='neutral' onClick={() => setVisibleWorkouts(v => v + 6)} />
+							</div>
+						) : null}
+					</motion.div>
+				)}
+			</AnimatePresence>
 
-      {/* Footer actions */}
-      <div className='flex justify-between gap-2 pt-2'>
-        <div className='flex justify-end w-full gap-2'>
-          {!buttonName && (
-            <button 
-              type='button' 
-              onClick={onSkip} 
-              className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
-              {tc('skip')}
-            </button>
-          )}
+			{/* Footer actions */}
+			<div className='flex justify-between gap-2 pt-2'>
+				<div className='flex justify-end w-full gap-2'>
+					{!buttonName && (
+						<button
+							type='button'
+							onClick={onSkip}
+							className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
+							{tc('skip')}
+						</button>
+					)}
 
-          <button
-            type='button'
-            onClick={() => onAssign?.(selectedId)}
-            disabled={!selectedId || assigning}
-            className='rounded-lg px-4 py-2 text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed theme-gradient-bg hover:opacity-95 shadow-sm'>
-            {assigning ? tc('assigning') : buttonName || tc('assignNext')}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+					<button
+						type='button'
+						onClick={() => onAssign?.(selectedId)}
+						disabled={!selectedId || assigning}
+						className='rounded-lg px-4 py-2 text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed theme-gradient-bg hover:opacity-95 shadow-sm'>
+						{assigning ? tc('assigning') : buttonName || tc('assignNext')}
+					</button>
+				</div>
+			</div>
+		</div>
+	);
 }
 
 const WEEK_ORDER = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 export function orderDays(days) {
-  const map = Object.fromEntries(WEEK_ORDER.map((d, i) => [d, i]));
-  return [...days].sort((a, b) => (map[a.day] ?? 99) - (map[b.day] ?? 99));
+	const map = Object.fromEntries(WEEK_ORDER.map((d, i) => [d, i]));
+	return [...days].sort((a, b) => (map[a.day] ?? 99) - (map[b.day] ?? 99));
 }
 
 export function MealPlanPicker({
-  loading,
-  mealPlans = [],
-  visibleMeals,
-  setVisibleMeals,
-  meals = [],
-  defaultSelectedId = null,
-  assigning = false,
-  onSelect,
-  onBack,
-  onSkip,
-  onAssign,
+	loading,
+	mealPlans = [],
+	visibleMeals,
+	setVisibleMeals,
+	meals = [],
+	defaultSelectedId = null,
+	assigning = false,
+	onSelect,
+	onBack,
+	onSkip,
+	onAssign,
 }) {
-  const t = useTranslations('Meals');
-  const tc = useTranslations('Common');
+	const t = useTranslations('Meals');
+	const tc = useTranslations('Common');
 
-  const [selectedId, setSelectedId] = useState(defaultSelectedId);
+	const [selectedId, setSelectedId] = useState(defaultSelectedId);
 
-  const handleSelect = id => {
-    setSelectedId(id);
-    onSelect?.(id);
-  };
+	const handleSelect = id => {
+		setSelectedId(id);
+		onSelect?.(id);
+	};
 
-  const renderSkeletonCard = (_, i) => (
-    <motion.div 
-      key={`meal-skeleton-${i}`} 
-      initial={{ opacity: 0, y: 8 }} 
-      animate={{ opacity: 1, y: 0 }} 
-      transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }} 
-      className='rounded-lg border bg-white p-4 shadow-sm animate-pulse'
-      style={{ borderColor: 'var(--color-primary-100)' }}>
-      <div className='flex items-start gap-3 mb-2'>
-        <div className='h-5 w-5 rounded-full' style={{ backgroundColor: 'var(--color-primary-200)' }} />
-        <div className='flex-1 space-y-2'>
-          <div className='h-3 w-2/3 rounded bg-slate-200' />
-          <div className='h-2.5 w-full rounded bg-slate-100' />
-          <div className='h-2.5 w-3/4 rounded bg-slate-100' />
-        </div>
-      </div>
-    </motion.div>
-  );
+	const renderSkeletonCard = (_, i) => (
+		<motion.div
+			key={`meal-skeleton-${i}`}
+			initial={{ opacity: 0, y: 8 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ delay: i * 0.04, duration: 0.35, ease: 'easeOut' }}
+			className='rounded-lg border bg-white p-4 shadow-sm animate-pulse'
+			style={{ borderColor: 'var(--color-primary-100)' }}>
+			<div className='flex items-start gap-3 mb-2'>
+				<div className='h-5 w-5 rounded-full' style={{ backgroundColor: 'var(--color-primary-200)' }} />
+				<div className='flex-1 space-y-2'>
+					<div className='h-3 w-2/3 rounded bg-slate-200' />
+					<div className='h-2.5 w-full rounded bg-slate-100' />
+					<div className='h-2.5 w-3/4 rounded bg-slate-100' />
+				</div>
+			</div>
+		</motion.div>
+	);
 
-  return (
-    <div className='space-y-4'>
-      {/* Grid */}
-      <AnimatePresence mode='popLayout'>
-        {loading ? (
-          <motion.div key='loading' layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
-            {Array.from({ length: 6 }).map(renderSkeletonCard)}
-          </motion.div>
-        ) : meals.length === 0 ? (
-          <motion.div 
-            key='empty' 
-            initial={{ opacity: 0, y: 8 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            exit={{ opacity: 0 }} 
-            className='rounded-lg border border-dashed p-6 text-center text-slate-500 bg-slate-50/60'
-            style={{ borderColor: 'var(--color-primary-200)' }}>
-            {t('empty')}
-          </motion.div>
-        ) : (
-          <motion.div key='meals' layout className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
-            {meals.map((plan, i) => {
-              const isSelected = selectedId === plan.id;
+	return (
+		<div className='space-y-4'>
+			{/* Grid */}
+			<AnimatePresence mode='popLayout'>
+				{loading ? (
+					<motion.div key='loading' layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
+						{Array.from({ length: 6 }).map(renderSkeletonCard)}
+					</motion.div>
+				) : meals.length === 0 ? (
+					<motion.div
+						key='empty'
+						initial={{ opacity: 0, y: 8 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0 }}
+						className='rounded-lg border border-dashed p-6 text-center text-slate-500 bg-slate-50/60'
+						style={{ borderColor: 'var(--color-primary-200)' }}>
+						{t('empty')}
+					</motion.div>
+				) : (
+					<motion.div key='meals' layout className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
+						{meals.map((plan, i) => {
+							const isSelected = selectedId === plan.id;
 
-              return (
-                <motion.button 
-                  key={plan.id} 
-                  layout 
-                  type='button' 
-                  onClick={() => handleSelect(plan.id)} 
-                  initial={{ opacity: 0, y: 8 }} 
-                  animate={{ opacity: 1, y: 0 }} 
-                  transition={{ delay: i * 0.03, duration: 0.35, ease: 'easeOut' }} 
-                  className='flex flex-col group relative text-left rounded-lg border p-4 transition-all bg-white hover:shadow-md'
-                  style={
-                    isSelected
-                      ? {
-                          borderColor: 'var(--color-primary-400)',
-                          boxShadow: '0 0 0 3px var(--color-primary-100)',
-                        }
-                      : {
-                          borderColor: '#e2e8f0',
-                        }
-                  }>
-                  {/* Title row */}
-                  <div className='flex items-start gap-3'>
-                    <CheckCircle2 
-                      className='h-5 w-5 transition-colors' 
-                      style={{ 
-                        color: isSelected ? 'var(--color-primary-500)' : '#cbd5e1' 
-                      }} 
-                    />
-                    <div className='flex-1 min-w-0'>
-                      <MultiLangText className='text-sm font-semibold text-slate-800'>{plan.name || t('untitled')}</MultiLangText>
-                      {plan.desc && <MultiLangText className='mt-1 text-sm text-slate-600 line-clamp-2'>{plan.desc}</MultiLangText>}
-                    </div>
-                  </div>
-                </motion.button>
-              );
-            })}
-          </motion.div>
-        )}
+							return (
+								<motion.button
+									key={plan.id}
+									layout
+									type='button'
+									onClick={() => handleSelect(plan.id)}
+									initial={{ opacity: 0, y: 8 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ delay: i * 0.03, duration: 0.35, ease: 'easeOut' }}
+									className='flex flex-col group relative text-left rounded-lg border p-4 transition-all bg-white hover:shadow-md'
+									style={
+										isSelected
+											? {
+												borderColor: 'var(--color-primary-400)',
+												boxShadow: '0 0 0 3px var(--color-primary-100)',
+											}
+											: {
+												borderColor: '#e2e8f0',
+											}
+									}>
+									{/* Title row */}
+									<div className='flex items-start gap-3'>
+										<CheckCircle2
+											className='h-5 w-5 transition-colors'
+											style={{
+												color: isSelected ? 'var(--color-primary-500)' : '#cbd5e1'
+											}}
+										/>
+										<div className='flex-1 min-w-0'>
+											<MultiLangText className='text-sm font-semibold text-slate-800'>{plan.name || t('untitled')}</MultiLangText>
+											{plan.desc && <MultiLangText className='mt-1 text-sm text-slate-600 line-clamp-2'>{plan.desc}</MultiLangText>}
+										</div>
+									</div>
+								</motion.button>
+							);
+						})}
+					</motion.div>
+				)}
 
-        {/* See more */}
-        {mealPlans.length > visibleMeals ? (
-          <div className='flex justify-start'>
-            <Button name={tc('seeMore')} color='neutral' onClick={() => setVisibleMeals(v => v + 6)} />
-          </div>
-        ) : null}
-      </AnimatePresence>
+				{/* See more */}
+				{mealPlans.length > visibleMeals ? (
+					<div className='flex justify-start'>
+						<Button name={tc('seeMore')} color='neutral' onClick={() => setVisibleMeals(v => v + 6)} />
+					</div>
+				) : null}
+			</AnimatePresence>
 
-      {/* Footer actions */}
-      <div className='flex justify-between gap-2 pt-2'>
-        <button 
-          type='button' 
-          onClick={onBack} 
-          className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
-          {tc('back')}
-        </button>
-        <div className='flex gap-2'>
-          <button 
-            type='button' 
-            onClick={onSkip} 
-            className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
-            {tc('skip')}
-          </button>
-          <button 
-            type='button' 
-            onClick={() => onAssign?.(selectedId)} 
-            disabled={!selectedId || assigning} 
-            className='rounded-lg px-4 py-2 text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed theme-gradient-bg hover:opacity-95 shadow-sm'>
-            {assigning ? tc('assigning') : tc('assignFinish')}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+			{/* Footer actions */}
+			<div className='flex justify-between gap-2 pt-2'>
+				<button
+					type='button'
+					onClick={onBack}
+					className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
+					{tc('back')}
+				</button>
+				<div className='flex gap-2'>
+					<button
+						type='button'
+						onClick={onSkip}
+						className='rounded-lg px-4 py-2 text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors'>
+						{tc('skip')}
+					</button>
+					<button
+						type='button'
+						onClick={() => onAssign?.(selectedId)}
+						disabled={!selectedId || assigning}
+						className='rounded-lg px-4 py-2 text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed theme-gradient-bg hover:opacity-95 shadow-sm'>
+						{assigning ? tc('assigning') : tc('assignFinish')}
+					</button>
+				</div>
+			</div>
+		</div>
+	);
 }
 
 /* ===========================
-   FieldRow
+	 FieldRow
 =========================== */
 export function FieldRow({ icon, label, value, canCopy }) {
-  const tc = useTranslations('Common');
-  return (
-    <div className='flex items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2 shadow-sm' style={{ borderColor: 'var(--color-primary-100)' }}>
-      <div className='flex items-center gap-2 min-w-0'>
-        <div 
-          className='grid place-items-center h-8 w-8 rounded-lg' 
-          style={{ 
-            backgroundColor: 'var(--color-primary-100)', 
-            color: 'var(--color-primary-700)' 
-          }}>
-          {icon}
-        </div>
-        <div className='min-w-0'>
-          <div className='text-xs text-slate-500'>{label}</div>
-          <div className='text-sm font-medium text-slate-800 truncate'>{value || '—'}</div>
-        </div>
-      </div>
-      {canCopy && <CopyButton text={String(value ?? '')} />}
-    </div>
-  );
+	const tc = useTranslations('Common');
+	return (
+		<div className='flex items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2 shadow-sm' style={{ borderColor: 'var(--color-primary-100)' }}>
+			<div className='flex items-center gap-2 min-w-0'>
+				<div
+					className='grid place-items-center h-8 w-8 rounded-lg'
+					style={{
+						backgroundColor: 'var(--color-primary-100)',
+						color: 'var(--color-primary-700)'
+					}}>
+					{icon}
+				</div>
+				<div className='min-w-0'>
+					<div className='text-xs text-slate-500'>{label}</div>
+					<div className='text-sm font-medium text-slate-800 truncate'>{value || '—'}</div>
+				</div>
+			</div>
+			{canCopy && <CopyButton text={String(value ?? '')} />}
+		</div>
+	);
 }
 
 /* ===========================
-   PasswordRow
+	 PasswordRow
 =========================== */
 export function PasswordRow({ label, value, canCopy }) {
-  const [show, setShow] = useState(false);
-  const isMasked = !show && value && value !== 'sent to email (or set by admin)';
-  const masked = isMasked ? '•'.repeat(Math.min(String(value).length, 12) || 8) : value;
-  const t = useTranslations('Common');
-  
-  return (
-    <div className='flex items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2 shadow-sm' style={{ borderColor: 'var(--color-primary-100)' }}>
-      <div className='flex items-center gap-2 min-w-0'>
-        <div 
-          className='grid place-items-center h-8 w-8 rounded-lg' 
-          style={{ 
-            backgroundColor: 'var(--color-primary-100)', 
-            color: 'var(--color-primary-700)' 
-          }}>
-          <KeyRound className='h-4 w-4' />
-        </div>
-        <div className='min-w-0'>
-          <div className='text-xs text-slate-500'>{label}</div>
-          <div className='text-sm font-medium text-slate-800 truncate'>{masked || '—'}</div>
-        </div>
-      </div>
+	const [show, setShow] = useState(false);
+	const isMasked = !show && value && value !== 'sent to email (or set by admin)';
+	const masked = isMasked ? '•'.repeat(Math.min(String(value).length, 12) || 8) : value;
+	const t = useTranslations('Common');
 
-      <div className='flex items-center gap-2'>
-        {isMasked && (
-          <button 
-            type='button' 
-            onClick={() => setShow(true)} 
-            className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 transition-colors' 
-            aria-label={t('showPassword')} 
-            title={t('showPassword')}>
-            <Eye className='h-4 w-4' /> {t('show')}
-          </button>
-        )}
-        {!isMasked && value && value !== 'sent to email (or set by admin)' && (
-          <button 
-            type='button' 
-            onClick={() => setShow(false)} 
-            className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 transition-colors' 
-            aria-label={t('hidePassword')} 
-            title={t('hidePassword')}>
-            <EyeOff className='h-4 w-4' /> {t('hide')}
-          </button>
-        )}
-        {canCopy && value && value !== 'sent to email (or set by admin)' && <CopyButton text={String(value)} />}
-      </div>
-    </div>
-  );
+	return (
+		<div className='flex items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2 shadow-sm' style={{ borderColor: 'var(--color-primary-100)' }}>
+			<div className='flex items-center gap-2 min-w-0'>
+				<div
+					className='grid place-items-center h-8 w-8 rounded-lg'
+					style={{
+						backgroundColor: 'var(--color-primary-100)',
+						color: 'var(--color-primary-700)'
+					}}>
+					<KeyRound className='h-4 w-4' />
+				</div>
+				<div className='min-w-0'>
+					<div className='text-xs text-slate-500'>{label}</div>
+					<div className='text-sm font-medium text-slate-800 truncate'>{masked || '—'}</div>
+				</div>
+			</div>
+
+			<div className='flex items-center gap-2'>
+				{isMasked && (
+					<button
+						type='button'
+						onClick={() => setShow(true)}
+						className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 transition-colors'
+						aria-label={t('showPassword')}
+						title={t('showPassword')}>
+						<Eye className='h-4 w-4' /> {t('show')}
+					</button>
+				)}
+				{!isMasked && value && value !== 'sent to email (or set by admin)' && (
+					<button
+						type='button'
+						onClick={() => setShow(false)}
+						className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 transition-colors'
+						aria-label={t('hidePassword')}
+						title={t('hidePassword')}>
+						<EyeOff className='h-4 w-4' /> {t('hide')}
+					</button>
+				)}
+				{canCopy && value && value !== 'sent to email (or set by admin)' && <CopyButton text={String(value)} />}
+			</div>
+		</div>
+	);
 }
 
 /* ===========================
-   CopyButton
+	 CopyButton
 =========================== */
 export function CopyButton({ text }) {
-  const t = useTranslations('Common');
-  const [copied, setCopied] = useState(false);
+	const t = useTranslations('Common');
+	const [copied, setCopied] = useState(false);
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Handle error silently or show toast
-    }
-  };
+	const handleCopy = async () => {
+		try {
+			await navigator.clipboard.writeText(text);
+			setCopied(true);
+			setTimeout(() => setCopied(false), 2000);
+		} catch {
+			// Handle error silently or show toast
+		}
+	};
 
-  return (
-    <button
-      type='button'
-      onClick={handleCopy}
-      className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors'
-      style={{
-        color: copied ? 'var(--color-primary-600)' : '#64748b',
-        backgroundColor: copied ? 'var(--color-primary-50)' : 'transparent',
-      }}
-      aria-label={t('copyToClipboard')}
-      title={t('copy')}>
-      {copied ? (
-        <>
-          <Check className='h-4 w-4' /> {t('copied')}
-        </>
-      ) : (
-        <>
-          <Copy className='h-4 w-4' /> {t('copy')}
-        </>
-      )}
-    </button>
-  );
+	return (
+		<button
+			type='button'
+			onClick={handleCopy}
+			className='inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors'
+			style={{
+				color: copied ? 'var(--color-primary-600)' : '#64748b',
+				backgroundColor: copied ? 'var(--color-primary-50)' : 'transparent',
+			}}
+			aria-label={t('copyToClipboard')}
+			title={t('copy')}>
+			{copied ? (
+				<>
+					<Check className='h-4 w-4' /> {t('copied')}
+				</>
+			) : (
+				<>
+					<Copy className='h-4 w-4' /> {t('copy')}
+				</>
+			)}
+		</button>
+	);
 }
 
 /* ===========================
-   WhatsApp Link (kept bilingual logic)
+	 WhatsApp Link (kept bilingual logic)
 =========================== */
 export function buildWhatsAppLink({ phone, email, password, role, lang = 'en' }) {
-  const to = String(phone || '').replace(/[^0-9]/g, '');
-  if (!to) return null;
+	const to = String(phone || '').replace(/[^0-9]/g, '');
+	if (!to) return null;
 
-  const safe = v => (v == null ? '' : String(v));
-  const hasPwd = Boolean(password);
+	const hasPwd = Boolean(password);
 
-  const url = safe(`${process.env.NEXT_PUBLIC_WEBSITE_URL}/en/auth`);
-  const urlLine = url ? (lang === 'ar' ? `رابط تسجيل الدخول: ${url}` : `Login here: ${url}`) : '';
+	const baseUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://so7bafit.com';
+	const loginUrl = `${baseUrl}/en/auth`;
 
-  const linesEN = ['Your account is ready!', email ? `• Email: ${email}` : null, hasPwd ? `• Password: ${password}` : '• Password: (sent to email / set by admin)', urlLine || null, '', "You can sign in right away. If you didn't request this, ignore this message."].filter(Boolean);
+	const urlLine =
+		lang === 'ar'
+			? `رابط تسجيل الدخول: ${loginUrl}`
+			: `Login here: ${loginUrl}`;
 
-  const linesAR = ['تم إنشاء حسابك بنجاح!', email ? `• البريد الإلكتروني: ${email}` : null, hasPwd ? `• كلمة المرور: ${password}` : '• كلمة المرور: (أُرسلت على الإيميل / يحددها المشرف)', urlLine || null, '', 'تقدر تسجّل دخولك مباشرة. إذا ما طلبتش إنشاء الحساب، تجاهل الرسالة.'].filter(Boolean);
+	const linesEN = [
+		'Your account is ready!',
+		email ? `• Email: ${email}` : null,
+		hasPwd ? `• Password: ${password}` : '• Password: (sent to email / set by admin)',
+		urlLine,
+		'',
+		"You can sign in right away. If you didn't request this, ignore this message.",
+	].filter(Boolean);
 
-  const text = encodeURIComponent((lang === 'ar' ? linesAR : linesEN).join('\n'));
-  return `https://wa.me/${to}?text=${text}`;
+	const linesAR = [
+		'تم إنشاء حسابك بنجاح!',
+		email ? `• البريد الإلكتروني: ${email}` : null,
+		hasPwd ? `• كلمة المرور: ${password}` : '• كلمة المرور: (أُرسلت على الإيميل / يحددها المشرف)',
+		urlLine,
+		'',
+		'تقدر تسجّل دخولك مباشرة. إذا ما طلبتش إنشاء الحساب، تجاهل الرسالة.',
+	].filter(Boolean);
+
+	const message = lang === 'ar' ? linesAR.join('\n') : linesEN.join('\n');
+
+	return `https://wa.me/${to}?text=${encodeURIComponent(message)}`;
 }
-
 /* ===========================
-   SubscriptionPeriodPicker
+	 SubscriptionPeriodPicker
 =========================== */
 export function SubscriptionPeriodPicker({
-  startValue,
-  endValue,
-  setValue,
-  errorStart,
-  errorEnd,
+	startValue,
+	endValue,
+	setValue,
+	errorStart,
+	errorEnd,
 }) {
-  const t = useTranslations('date');
+	const t = useTranslations('date');
 
-  const today = useMemo(() => formatISO(new Date(), { representation: 'date' }), []);
-  const threeMonthsFrom = date => formatISO(addMonths(date, 3), { representation: 'date' });
+	const today = useMemo(() => formatISO(new Date(), { representation: 'date' }), []);
+	const threeMonthsFrom = date => formatISO(addMonths(date, 3), { representation: 'date' });
 
-  const invalidRange = useMemo(() => {
-    if (!startValue || !endValue) return false;
-    return isBefore(parseISO(endValue), parseISO(startValue));
-  }, [startValue, endValue]);
+	const invalidRange = useMemo(() => {
+		if (!startValue || !endValue) return false;
+		return isBefore(parseISO(endValue), parseISO(startValue));
+	}, [startValue, endValue]);
 
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className='mt-1'>
-      <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
-        {/* START DATE */}
-        <div>
-          <label className='text-sm font-[500] text-slate-700'>{t('startLabel')}</label>
+	return (
+		<motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className='mt-1'>
+			<div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+				{/* START DATE */}
+				<div>
+					<label className='text-sm font-[500] text-slate-700'>{t('startLabel')}</label>
 
-          <div className='mt-1 bg-white rounded-lg'>
-            <Flatpickr
-              value={startValue ? parseISO(startValue) : null}
-              options={{
-                dateFormat: 'Y-m-d',
-                minDate: startValue || today,
-                disableMobile: true,
-              }}
-              onChange={dates => {
-                const d = dates?.[0];
-                if (!d) return;
+					<div className='mt-1 bg-white rounded-lg'>
+						<Flatpickr
+							value={startValue ? parseISO(startValue) : null}
+							options={{
+								dateFormat: 'Y-m-d',
+								minDate: startValue || today,
+								disableMobile: true,
+							}}
+							onChange={dates => {
+								const d = dates?.[0];
+								if (!d) return;
 
-                const iso = formatISO(d, { representation: 'date' });
-                setValue('subscriptionStart', iso, { shouldValidate: true });
+								const iso = formatISO(d, { representation: 'date' });
+								setValue('subscriptionStart', iso, { shouldValidate: true });
 
-                if (endValue && isBefore(parseISO(endValue), d)) {
-                  const newEnd = threeMonthsFrom(d);
-                  setValue('subscriptionEnd', newEnd, { shouldValidate: true });
-                }
-              }}
-              className='w-full rounded-lg border px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 transition-shadow'
-              style={
-                errorStart
-                  ? { borderColor: '#f43f5e', '--tw-ring-color': '#fda4af' }
-                  : { borderColor: '#cbd5e1', '--tw-ring-color': 'var(--color-primary-300)' }
-              }
-            />
-          </div>
+								if (endValue && isBefore(parseISO(endValue), d)) {
+									const newEnd = threeMonthsFrom(d);
+									setValue('subscriptionEnd', newEnd, { shouldValidate: true });
+								}
+							}}
+							className='w-full rounded-lg border px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 transition-shadow'
+							style={
+								errorStart
+									? { borderColor: '#f43f5e', '--tw-ring-color': '#fda4af' }
+									: { borderColor: '#cbd5e1', '--tw-ring-color': 'var(--color-primary-300)' }
+							}
+						/>
+					</div>
 
-          {errorStart && <p className='mt-1 text-xs text-rose-600'>{errorStart}</p>}
-        </div>
+					{errorStart && <p className='mt-1 text-xs text-rose-600'>{errorStart}</p>}
+				</div>
 
-        {/* END DATE */}
-        <div>
-          <label className='text-sm font-[500] text-slate-700'>{t('endLabel')}</label>
+				{/* END DATE */}
+				<div>
+					<label className='text-sm font-[500] text-slate-700'>{t('endLabel')}</label>
 
-          <div className='mt-1 bg-white rounded-lg'>
-            <Flatpickr
-              value={endValue ? parseISO(endValue) : null}
-              options={{
-                dateFormat: 'Y-m-d',
-                minDate: today,
-                disableMobile: true,
-              }}
-              onChange={dates => {
-                const d = dates?.[0];
-                if (!d) return;
+					<div className='mt-1 bg-white rounded-lg'>
+						<Flatpickr
+							value={endValue ? parseISO(endValue) : null}
+							options={{
+								dateFormat: 'Y-m-d',
+								minDate: today,
+								disableMobile: true,
+							}}
+							onChange={dates => {
+								const d = dates?.[0];
+								if (!d) return;
 
-                const iso = formatISO(d, { representation: 'date' });
-                setValue('subscriptionEnd', iso, { shouldValidate: true });
-              }}
-              className='w-full rounded-lg border px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 transition-shadow'
-              style={
-                errorEnd || invalidRange
-                  ? { borderColor: '#f43f5e', '--tw-ring-color': '#fda4af' }
-                  : { borderColor: '#cbd5e1', '--tw-ring-color': 'var(--color-primary-300)' }
-              }
-              placeholder={t('pickEnd')}
-            />
-          </div>
+								const iso = formatISO(d, { representation: 'date' });
+								setValue('subscriptionEnd', iso, { shouldValidate: true });
+							}}
+							className='w-full rounded-lg border px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 transition-shadow'
+							style={
+								errorEnd || invalidRange
+									? { borderColor: '#f43f5e', '--tw-ring-color': '#fda4af' }
+									: { borderColor: '#cbd5e1', '--tw-ring-color': 'var(--color-primary-300)' }
+							}
+							placeholder={t('pickEnd')}
+						/>
+					</div>
 
-          {(errorEnd || invalidRange) && <p className='mt-1 text-xs text-rose-600'>{errorEnd || t('endAfterStart')}</p>}
-        </div>
-      </div>
-    </motion.div>
-  );
+					{(errorEnd || invalidRange) && <p className='mt-1 text-xs text-rose-600'>{errorEnd || t('endAfterStart')}</p>}
+				</div>
+			</div>
+		</motion.div>
+	);
 }
 
 /* ---------- helpers ---------- */
 export function formatISO(date, { representation = 'date' } = {}) {
-  const d = new Date(date);
-  if (representation === 'date') {
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${d.getFullYear()}-${mm}-${dd}`;
-  }
-  return d.toISOString();
+	const d = new Date(date);
+	if (representation === 'date') {
+		const mm = String(d.getMonth() + 1).padStart(2, '0');
+		const dd = String(d.getDate()).padStart(2, '0');
+		return `${d.getFullYear()}-${mm}-${dd}`;
+	}
+	return d.toISOString();
 }
 
 export function parseISO(s) {
-  return new Date(`${s}T00:00:00`);
+	return new Date(`${s}T00:00:00`);
 }
 
 export function addMonths(date, months, inclusiveMinusOneDay = false) {
-  const d = new Date(date);
-  const day = d.getDate();
-  d.setMonth(d.getMonth() + months);
-  if (d.getDate() < day) d.setDate(0);
-  if (inclusiveMinusOneDay) d.setDate(d.getDate() - 1);
-  return d;
+	const d = new Date(date);
+	const day = d.getDate();
+	d.setMonth(d.getMonth() + months);
+	if (d.getDate() < day) d.setDate(0);
+	if (inclusiveMinusOneDay) d.setDate(d.getDate() - 1);
+	return d;
 }
 
 export function isBefore(a, b) {
-  return a.getTime() < b.getTime();
+	return a.getTime() < b.getTime();
 }
