@@ -117,217 +117,223 @@ function useLocalStorageState(key, initial) {
 
 /* ─── NAV ───────────────────────────────────────────────────── */
 export const NAV = [
+	// ADMIN
+{
+  role: 'admin',
+  sectionKey: 'sections.dashboard',
+  items: [
+    { nameKey: 'overview', href: '/dashboard', icon: LayoutDashboard },
+  ]
+},
+{
+  role: 'admin',
+  sectionKey: 'sections.content',
+  items: [
+    { nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
+    { nameKey: 'allRecipes',   href: '/dashboard/recipes',  icon: ReceiptJapaneseYen },
+  ]
+},
+{
+  role: 'admin',
+  sectionKey: 'sections.programs',
+  items: [
+    { nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: NotebookPen },
+    { nameKey: 'mealPlans',    href: '/dashboard/nutrition',      icon: ChefHat },
+    { nameKey: 'reports',      href: '/dashboard/reports',        icon: FileBarChart },
+  ]
+},
+{
+  role: 'admin',
+  sectionKey: 'sections.clients',
+  items: [
+    { nameKey: 'allUsers', href: '/dashboard/users', icon: Users },
+    {
+      nameKey: 'clientIntake',
+      icon: FaUsers,
+      expand: false,
+      children: [
+        { nameKey: 'manageForms', href: '/dashboard/intake/forms',      icon: FaWpforms },
+        { nameKey: 'responses',   href: '/dashboard/intake/responses',  icon: FaInbox },
+      ]
+    }
+  ]
+},
+{
+  role: 'admin',
+  sectionKey: 'sections.workspace',
+  items: [
+    { nameKey: 'todos',    href: '/workspace?tab=tasks',    icon: ListTodo },
+    { nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
+  ]
+},
+{
+  role: 'admin',
+  sectionKey: 'sections.communication',
+  items: [
+    { nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
+  ]
+},
+{
+  role: 'admin',
+  sectionKey: 'sections.tools',
+  items: [
+    { nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
+  ]
+},
+{
+  role: 'admin',
+  sectionKey: 'sections.finance',
+  items: [
+    { nameKey: 'billing', href: '/dashboard/billing', icon: Wallet },
+    { nameKey: 'money',   href: '/money',             icon: Wallet },
+  ]
+},
+{
+  role: 'admin',
+  sectionKey: 'sections.account',
+  items: [
+    { nameKey: 'profile',         href: '/dashboard/my-account',   icon: User },
+    { nameKey: 'systemSettings',  href: '/dashboard/settings',     icon: ServerCog },
+  ]
+},
 
-	{
-		role: 'admin',
-		sectionKey: 'sections.dashboard',
-		items: [
-			{ nameKey: 'allUsers', href: '/dashboard/users', icon: Users },
-			{ nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
-			{ nameKey: 'allRecipes', href: '/dashboard/recipes', icon: ReceiptJapaneseYen },
-		]
-	},
-	{
-		role: 'admin',
-		sectionKey: 'sections.programs',
-		items: [
-			{ nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: NotebookPen },
-			{ nameKey: 'mealPlans', href: '/dashboard/nutrition', icon: ChefHat },
-			
-		]
-	},
-	{
-		role: 'admin',
-		sectionKey: 'sections.clientIntake',
-		items: [
-			{
-				nameKey: 'clientIntake',
-				icon: FaUsers,
-				expand: false,
-				children: [
-					{ nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FaWpforms },
-					{ nameKey: 'responses', href: '/dashboard/intake/responses', icon: FaInbox },
-				]
-			}
-		]
-	},
-	{
-		role: 'admin',
-		sectionKey: 'sections.timeManagement',
-		items: [
-			{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
-			{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
-		]
-	},
-	{
-		role: 'admin',
-		sectionKey: 'sections.tools',
-		items: [
-			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
-			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
-			{ nameKey: 'reports', href: '/dashboard/reports', icon: FileBarChart },
-		]
-	},
-	{
-		role: 'admin',
-		sectionKey: 'sections.account',
-		items: [
-			{ nameKey: 'billing', href: '/dashboard/billing', icon: Wallet },
-			{ nameKey: 'profile', href: '/dashboard/my-account', icon: User },
-			{ nameKey: 'money', href: '/money', icon: Wallet },
-		]
-	},
-	{
-		role: 'admin',
-		sectionKey: 'sections.system',
-		items: [
-			{ nameKey: 'systemSettings', href: '/dashboard/settings', icon: ServerCog }
-		]
-	},
+// CLIENT
+{
+  role: 'client',
+  sectionKey: 'sections.myWorkspace',
+  items: [
+    { nameKey: 'myWorkouts',      href: '/dashboard/my/workouts', icon: ClipboardList },
+    { nameKey: 'myNutrition',     href: '/dashboard/my/nutrition', icon: Apple },
+    { nameKey: 'recipes',         href: '/dashboard/my/recipes',  icon: ChefHat },
+    { nameKey: 'weeklyStrength',  href: '/dashboard/my/report',   icon: Newspaper },
+    { nameKey: 'myReminders',     href: '/dashboard/reminders',   icon: AlarmClock },
+  ]
+},
+{
+  role: 'client',
+  sectionKey: 'sections.workspace',
+  items: [
+    { nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
+		{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
+{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
+{ nameKey: 'money', href: '/money', icon: Wallet },
+{ nameKey: 'profile', href: '/dashboard/my/profile', icon: UserIcon },
+  ]
+},
+ 
 
-	// CLIENT
-	// {
-	// 	role: 'client',
-	// 	sectionKey: 'sections.dashboard',
-	// 	items: [
-	// 		{ nameKey: 'overview', href: '/dashboard', icon: LayoutDashboard }
-	// 	]
-	// },
-	{
-		role: 'client',
-		sectionKey: 'sections.myWorkspace',
-		items: [
-			{ nameKey: 'myWorkouts', href: '/dashboard/my/workouts', icon: ClipboardList },
-			{ nameKey: 'myNutrition', href: '/dashboard/my/nutrition', icon: Apple },
-			{ nameKey: 'myReminders', href: '/dashboard/reminders', icon: AlarmClock },
-			{ nameKey: 'weeklyStrength', href: '/dashboard/my/report', icon: Newspaper },
-			{ nameKey: 'recipes', href: '/dashboard/my/recipes', icon: ChefHat },
-		]
-	},
-	{
-		role: 'client',
-		sectionKey: 'sections.tools',
-		items: [
-			{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
-			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
-			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
-		]
-	},
-	{
-		role: 'client',
-		sectionKey: 'sections.account',
-		items: [
-			{ nameKey: 'money', href: '/money', icon: Wallet },
-			{ nameKey: 'profile', href: '/dashboard/my/profile', icon: UserIcon } ,
-		]
-	},
+// COACH
+{
+  role: 'coach',
+  sectionKey: 'sections.content',
+  items: [
+    { nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
+  ]
+},
+{
+  role: 'coach',
+  sectionKey: 'sections.programs',
+  items: [
+    { nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: NotebookPen },
+    { nameKey: 'mealPlans',    href: '/dashboard/nutrition',      icon: ChefHat },
+    { nameKey: 'reports',      href: '/dashboard/reports',        icon: FileBarChart },
+  ]
+},
+{
+  role: 'coach',
+  sectionKey: 'sections.clients',
+  items: [
+    { nameKey: 'allUsers', href: '/dashboard/users', icon: Users },
+    {
+      nameKey: 'clientIntake',
+      icon: FaUsers,
+      expand: false,
+      children: [
+        { nameKey: 'manageForms', href: '/dashboard/intake/forms',     icon: FaWpforms },
+        { nameKey: 'responses',   href: '/dashboard/intake/responses', icon: FaInbox },
+      ]
+    }
+  ]
+},
+{
+  role: 'coach',
+  sectionKey: 'sections.workspace',
+  items: [
+    { nameKey: 'todos',    href: '/workspace?tab=tasks',    icon: ListTodo },
+    { nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
+  ]
+},
+{
+  role: 'coach',
+  sectionKey: 'sections.communication',
+  items: [
+    { nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
+  ]
+},
+{
+  role: 'coach',
+  sectionKey: 'sections.tools',
+  items: [
+    { nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
+  ]
+},
+{
+  role: 'coach',
+  sectionKey: 'sections.account',
+  items: [
+    { nameKey: 'profile', href: '/dashboard/my-account', icon: User },
+  ]
+},
 
-	// COACH
-	{
-		role: 'coach',
-		sectionKey: 'sections.clients',
-		items: [
-			{ nameKey: 'allUsers', href: '/dashboard/users', icon: Users },
-			{ nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
-		]
-	},
-	{
-		role: 'coach',
-		sectionKey: 'sections.programs',
-		items: [
-			{ nameKey: 'workoutPlans', href: '/dashboard/workouts/plans', icon: NotebookPen },
-			{ nameKey: 'mealPlans', href: '/dashboard/nutrition', icon: ChefHat },
-			{ nameKey: 'reports', href: '/dashboard/reports', icon: FileBarChart },
-		]
-	},
-	{
-		role: 'coach',
-		sectionKey: 'sections.clientIntake',
-		items: [
-			{
-				nameKey: 'clientIntake',
-				icon: FaUsers,
-				expand: false,
-				children: [
-					{ nameKey: 'manageForms', href: '/dashboard/intake/forms', icon: FaWpforms },
-					{ nameKey: 'responses', href: '/dashboard/intake/responses', icon: FaInbox },
-				]
-			}
-		]
-	},
-	{
-		role: 'coach',
-		sectionKey: 'sections.timeManagement',
-		items: [
-			{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
-			{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
-		]
-	},
-	{
-		role: 'coach',
-		sectionKey: 'sections.tools',
-		items: [
-			{ nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare },
-			{ nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator },
-		]
-	},
-	{
-		role: 'coach',
-		sectionKey: 'sections.account',
-		items: [
-			{ nameKey: 'profile', icon: User, href: '/dashboard/my-account' }
-		]
-	},
-
-	// SUPER ADMIN
-	{
-		role: 'super_admin',
-		sectionKey: 'sections.dashboard',
-		items: [
-			{ nameKey: 'overview', href: '/dashboard', icon: LayoutDashboard }
-		]
-	},
-	{
-		role: 'super_admin',
-		sectionKey: 'sections.management',
-		items: [
-			{ nameKey: 'allUsers', href: '/dashboard/super-admin/users', icon: Users },
-			{ nameKey: 'allExercises', href: '/dashboard/workouts', icon: ClipboardList },
-			{ nameKey: 'feedback', href: '/dashboard/super-admin/feedback', icon: MessageSquare },
-		]
-	},
-	{
-		role: 'super_admin',
-		sectionKey: 'sections.billing',
-		items: [
-			{
-				nameKey: 'billing',
-				icon: Wallet,
-				expand: false,
-				children: [
-					{ nameKey: 'analytics', href: '/dashboard/billing/analytics', icon: TrendingUp },
-					{ nameKey: 'withdrawalApprovals', href: '/dashboard/billing/withdrawal-approvals', icon: CreditCard },
-					{ nameKey: 'allWallets', href: '/dashboard/billing/all-wallets', icon: Users },
-				]
-			}
-		]
-	},
-	{
-		role: 'super_admin',
-		sectionKey: 'sections.timeManagement',
-		items: [
-			{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
-			{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
-		]
-	},
-	{
-		role: 'super_admin',
-		sectionKey: 'sections.system',
-		items: [
-			{ nameKey: 'systemSettings', href: '/dashboard/settings', icon: ServerCog }
-		]
-	},
-];
+// SUPER ADMIN
+{
+  role: 'super_admin',
+  sectionKey: 'sections.dashboard',
+  items: [
+    { nameKey: 'overview', href: '/dashboard', icon: LayoutDashboard },
+  ]
+},
+{
+  role: 'super_admin',
+  sectionKey: 'sections.clients',
+  items: [
+    { nameKey: 'allUsers',    href: '/dashboard/super-admin/users', icon: Users },
+    { nameKey: 'allExercises', href: '/dashboard/workouts',         icon: ClipboardList },
+    { nameKey: 'feedback',    href: '/dashboard/super-admin/feedback', icon: MessageSquare },
+  ]
+},
+{
+  role: 'super_admin',
+  sectionKey: 'sections.finance',
+  items: [
+    {
+      nameKey: 'billing',
+      icon: Wallet,
+      expand: false,
+      children: [
+        { nameKey: 'analytics',           href: '/dashboard/billing/analytics',            icon: TrendingUp },
+        { nameKey: 'withdrawalApprovals', href: '/dashboard/billing/withdrawal-approvals', icon: CreditCard },
+        { nameKey: 'allWallets',          href: '/dashboard/billing/all-wallets',          icon: Users },
+      ]
+    }
+  ]
+},
+{
+  role: 'super_admin',
+  sectionKey: 'sections.workspace',
+  items: [
+    { nameKey: 'todos',    href: '/workspace?tab=tasks',    icon: ListTodo },
+    { nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
+  ]
+},
+{
+  role: 'super_admin',
+  sectionKey: 'sections.account',
+  items: [
+    { nameKey: 'systemSettings', href: '/dashboard/settings', icon: ServerCog },
+  ]
+},
+]
 
 /* ─── useUnreadChats ─────────────────────────────────────────── */
 export function useUnreadChats(pollMs = 300000) {

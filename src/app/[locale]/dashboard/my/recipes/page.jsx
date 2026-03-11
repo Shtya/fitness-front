@@ -729,7 +729,7 @@ function Pagination({ page, totalPages, onPage }) {
 	}, [page, totalPages]);
 
 	return (
-		<div className="flex items-center justify-center gap-1.5 pt-8 flex-wrap">
+		<div className="flex items-center justify-center gap-1.5 pt-4 pb-4 flex-wrap">
 			<button disabled={page === 1} onClick={() => onPage(p => p - 1)}
 				className="w-8 h-8 rounded-xl border border-[var(--color-primary-100)] flex items-center justify-center text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed bg-white hover:bg-[var(--color-primary-50)] hover:border-[var(--color-primary-300)] text-slate-600 cursor-pointer">
 				<ChevronLeft className=" rtl:scale-x-[-1] h-3.5 w-3.5" />

@@ -1286,78 +1286,58 @@
 		"todos": "المهام"
 	},
 	"nav": {
-		"brand": {
-			"portalTitle": "بوابة",
-			"superAdminPortal": "بوابة المدير الأعلى",
-			"adminPortal": "بوابة الإدارة",
-			"coachPortal": "بوابة المدرب",
-			"clientPortal": "بوابة العميل"
+		"brand" : {
+			"clientPortal" : "متدرب",
+			"adminPortal" : "مدير ",
+			"coachPortal" : "مدرب"
 		},
-		"expand": "توسيع",
-		"collapse": "طي",
-		"refresh": "تحديث",
-		"sections": {
-			"dashboard": "لوحة التحكم",
-			"mySpace": "مساحتي",
-			"myWorkspace": "مساحة العمل",
-			"overview": "نظرة عامة",
-			"clientManagement": "إدارة العملاء",
-			"clients": "العملاء",
-			"management": "الإدارة",
-			"programs": "البرامج",
-			"clientIntake": "استقبال العملاء",
-			"timeManagement": "إدارة الوقت",
-			"tools": "الأدوات",
-			"operations": "العمليات",
-			"system": "النظام",
-			"account": "الحساب",
-			"billing": "الفواتير"
-		},
-		"items": {
-			"sections": {
-				"dashboard": "لوحة التحكم",
-				"management": "الإدارة",
-				"programs": "البرامج",
-				"clientIntake": "استقبال العملاء",
-				"timeManagement": "إدارة الوقت",
-				"tools": "الأدوات",
-				"system": "النظام",
-				"account": "الحساب",
-				"myWorkspace": "مساحة عملي",
-				"clients": "العملاء",
-				"billing": "الفواتير"
-			},
-			"overview": "نظرة عامة",
-			"money": "الأموال",
-			"recipes": "الوصفات",
-			"timeManagement": "إدارة الوقت",
-			"kanbanBoard": "لوحة كانبان",
-			"todos": "المهام",
-			"calendar": "التقويم",
-			"allUsers": "جميع المستخدمين",
-			"allExercises": "جميع التمارين",
-			"allRecipes": "جميع الوصفات",
-			"workoutPlans": "خطط التمارين",
-			"mealPlans": "الخطط الغذائية",
-			"clientIntake": "استقبال العملاء",
-			"manageForms": "إدارة النماذج",
-			"responses": "الردود",
-			"messages": "الرسائل",
-			"calorieCalculator": "حاسبة السعرات",
-			"reports": "التقارير",
-			"systemSettings": "إعدادات النظام",
-			"billing": "الفواتير",
-			"profile": "الملف الشخصي",
-			"myWorkouts": "تماريني",
-			"myNutrition": "تغذيتي",
-			"myReminders": "تذكيراتي",
-			"weeklyStrength": "التقرير الأسبوعي",
-			"feedback": "الملاحظات",
-			"analytics": "التحليلات",
-			"withdrawalApprovals": "موافقات السحب",
-			"allWallets": "جميع المحافظ"
-		}
-	},
+    "sections": {
+      "dashboard":      "لوحة التحكم",
+      "content":        "المحتوى",
+      "programs":       "البرامج",
+      "clients":        "العملاء",
+      "myWorkspace":    "مساحتي",
+      "workspace":      "المساحة الشخصية",
+      "communication":  "التواصل",
+      "tools":          "الأدوات",
+      "finance":        "المالية",
+      "account":        "الحساب",
+      "management":     "الإدارة",
+      "system":         "النظام",
+      "billing":        "الفواتير",
+      "timeManagement": "إدارة الوقت",
+      "clientIntake":   "استقبال العملاء"
+    },
+    "items": {
+      "overview":             "نظرة عامة",
+      "allUsers":             "جميع المستخدمين",
+      "allExercises":         "جميع التمارين",
+      "allRecipes":           "جميع الوصفات",
+      "workoutPlans":         "خطط التمارين",
+      "mealPlans":            "خطط الوجبات",
+      "reports":              "التقارير",
+      "clientIntake":         "استقبال العملاء",
+      "manageForms":          "إدارة النماذج",
+      "responses":            "الردود",
+      "todos":                "المهام",
+      "calendar":             "التقويم",
+      "messages":             "الرسائل",
+      "calorieCalculator":    "حاسبة السعرات",
+      "billing":              "الفواتير",
+      "money":                "المحفظة",
+      "profile":              "الملف الشخصي",
+      "systemSettings":       "إعدادات النظام",
+      "myWorkouts":           "تمارينى",
+      "myNutrition":          "تغذيتي",
+      "myReminders":          "تذكيراتي",
+      "weeklyStrength":       "تقرير القوة الأسبوعي",
+      "recipes":              "الوصفات",
+      "analytics":            "التحليلات",
+      "withdrawalApprovals":  "موافقات السحب",
+      "allWallets":           "جميع المحافظ",
+      "feedback":             "الملاحظات والتقييمات"
+    }
+  },
 	"themeSwitcher": {
 		"ariaLabel": "محدد ألوان الثيم",
 		"trigger": "ألوان الثيم",
@@ -4989,6 +4969,19 @@
     "tabs": {
       "all": "الكل"
     },
+		"mealTypes": {
+      "savory_breakfast": "فطور مالح",
+			"sweet_breakfast" : "فطور حلو",
+      "breakfast": "فطور",
+      "lunch": "غداء",
+      "dinner": "عشاء",
+      "snack": "وجبة خفيفة",
+      "sweet": "حلويات",
+      "salad": "سلطة",
+      "soup": "شوربة",
+      "drink": "مشروب",
+      "dessert": "ديسرت"
+    },
     "categories": {
       "breakfast": "فطور",
       "lunch": "غداء",
@@ -5115,6 +5108,7 @@
     },
     "mealTypes": {
       "savory_breakfast": "فطور مالح",
+			"sweet_breakfast" : "فطور حلو",
       "breakfast": "فطور",
       "lunch": "غداء",
       "dinner": "عشاء",
@@ -5176,5 +5170,23 @@
 			"cancel": "إلغاء",
 			"confirm": "تأكيد"
 		}
-	}
+	},
+
+	"creditCard": {
+    "network": {
+      "visa": "فيزا",
+      "mastercard": "ماستركارد",
+      "amex": "أمريكان إكسبريس"
+    },
+    "labels": {
+      "monthBalance": "رصيد الشهر",
+      "availableBalance": "الرصيد المتاح",
+      "cardHolder": "حامل البطاقة",
+      "expires": "تاريخ الانتهاء",
+      "income": "الدخل",
+      "expenses": "المصروفات",
+      "commitments": "الالتزامات",
+      "remaining": "المتبقي"
+    }
+  }
 }

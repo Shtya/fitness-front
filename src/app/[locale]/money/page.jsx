@@ -11,10 +11,11 @@ import {
 	Lock, AlignLeft, Hash, Check, FileText, Repeat,
 	Star, Sparkles, ArrowUpRight, ArrowDownRight,
 	Target, Edit2, Trash2, Wifi, AlertTriangle,
-	CreditCard, Banknote, LandmarkIcon,
+	CreditCard, Banknote, LandmarkIcon, Link,
+	Link2,
+	ChevronRight,
 } from 'lucide-react';
 import api from '@/utils/axios';
-
 // ─── API ─────────────────────────────────────────────────────────────────────
 const moneyApi = {
 	getDashboard: mode => api.get('/money/dashboard', { params: { mode } }),
@@ -110,8 +111,7 @@ function Styles() {
       .mn-hero{background:linear-gradient(150deg,var(--color-primary-800) 0%,var(--color-primary-700) 28%,var(--color-gradient-via) 62%,var(--color-secondary-600) 100%);}
       .mn-card-bg{
         background:linear-gradient(135deg,var(--color-primary-800) 0%,var(--color-primary-700) 30%,var(--color-gradient-via) 62%,var(--color-secondary-600) 100%);
-        box-shadow:0 22px 55px -8px rgba(99,102,241,.48),inset 0 0 0 1px rgba(255,255,255,.12);
-      }
+       }
       .mn-save-btn{background:linear-gradient(135deg,var(--color-gradient-from),var(--color-gradient-via),var(--color-gradient-to));}
 
       /* table */
@@ -222,13 +222,13 @@ function TableActions({ row, onEdit, onDelete, editTooltip, deleteTooltip, delet
 // ─── Badge ────────────────────────────────────────────────────────────────────
 function Badge({ children, color = 'default', icon: Icon }) {
 	const s = {
-		default:   'bg-white/10 text-white/70 border-white/15',
-		primary:   'bg-[var(--color-primary-100)] text-[var(--color-primary-600)] border-[var(--color-primary-200)]',
+		default: 'bg-white/10 text-white/70 border-white/15',
+		primary: 'bg-[var(--color-primary-100)] text-[var(--color-primary-600)] border-[var(--color-primary-200)]',
 		secondary: 'bg-[var(--color-secondary-100)] text-[var(--color-secondary-600)] border-[var(--color-secondary-200)]',
-		green:     'bg-emerald-50 text-emerald-700 border-emerald-200',
-		red:       'bg-rose-50 text-rose-700 border-rose-200',
-		amber:     'bg-amber-50 text-amber-700 border-amber-200',
-		muted:     'bg-zinc-50 text-zinc-500 border-zinc-200',
+		green: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+		red: 'bg-rose-50 text-rose-700 border-rose-200',
+		amber: 'bg-amber-50 text-amber-700 border-amber-200',
+		muted: 'bg-zinc-50 text-zinc-500 border-zinc-200',
 	};
 	return (
 		<span className={cn('inline-flex text-nowrap items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9.5px] font-semibold border', s[color])}>
@@ -328,140 +328,362 @@ function Progress({ value, color = 'primary', h = 4 }) {
 	);
 }
 
-// ─── StatsCard — compact 4-col, mobile-first ─────────────────────────────────
-function StatsCard({ income, expenses, commitments, remaining, t }) {
-	const max = Math.max(income, expenses, commitments, Math.abs(remaining), 1);
-	const rows = [
-		{ k: 'income',      v: income,              sign: '+', vc: 'text-emerald-300', dc: 'bg-emerald-400', I: TrendingUp  },
-		{ k: 'expenses',    v: expenses,             sign: '-', vc: 'text-rose-300',    dc: 'bg-rose-400',    I: TrendingDown },
-		{ k: 'commitments', v: commitments,          sign: '-', vc: 'text-[var(--color-secondary-300)]', dc: 'bg-[var(--color-secondary-400)]', I: Lock },
-		{ k: 'remaining',   v: Math.abs(remaining),  sign: remaining < 0 ? '-' : '', vc: remaining >= 0 ? 'text-sky-300' : 'text-rose-300', dc: remaining >= 0 ? 'bg-sky-400' : 'bg-rose-400', I: Wallet },
-	];
+
+
+
+function ChipSVG() {
 	return (
-		<div className="grid grid-cols-4 gap-1">
-			{rows.map((r, i) => (
-				<motion.div key={r.k}
-					initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-					transition={{ delay: i * 0.055, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-					className="relative flex flex-col gap-1 rounded-xl border border-white/10 bg-white/[0.07] backdrop-blur-sm p-2 overflow-hidden">
-					{/* background fill bar */}
-					<div className={cn('absolute bottom-0 inset-x-0 rounded-b-xl opacity-15', r.dc)}
-						style={{ height: `${Math.round((r.v / max) * 100)}%` }} />
-					{/* icon + label */}
-					<div className="relative flex items-center gap-1">
-						<r.I size={9} className={r.vc} />
-						<span className="text-[7.5px] font-extrabold uppercase tracking-wider text-white/35 truncate leading-none">
-							{t(`stats.${r.k}`)}
-						</span>
-					</div>
-					{/* value */}
-					<div className={cn('relative font-mono font-black tabular-nums leading-none text-[11px] sm:text-[12px]', r.vc)}>
-						{r.sign}{fmt(r.v)}
-					</div>
-					{/* micro bar */}
-					<div className="relative h-[1.5px] w-full rounded-full bg-white/10 overflow-hidden">
-						<div className={cn('h-full rounded-full', r.dc)} style={{ width: `${Math.round((r.v / max) * 100)}%` }} />
-					</div>
-				</motion.div>
-			))}
+		<svg width="44" height="34" viewBox="0 0 44 34" fill="none">
+			<defs>
+				<linearGradient id="cg" x1="0" y1="0" x2="44" y2="34" gradientUnits="userSpaceOnUse">
+					<stop offset="0%" stopColor="#e8c96a" />
+					<stop offset="30%" stopColor="#f5e27a" />
+					<stop offset="55%" stopColor="#c8960c" />
+					<stop offset="80%" stopColor="#e2b84a" />
+					<stop offset="100%" stopColor="#d4af37" />
+				</linearGradient>
+				<linearGradient id="cs" x1="0" y1="0" x2="0" y2="34" gradientUnits="userSpaceOnUse">
+					<stop offset="0%" stopColor="rgba(255,255,255,0.48)" />
+					<stop offset="55%" stopColor="rgba(255,255,255,0)" />
+					<stop offset="100%" stopColor="rgba(0,0,0,0.15)" />
+				</linearGradient>
+			</defs>
+			<rect width="44" height="34" rx="5" fill="url(#cg)" />
+			<rect width="44" height="34" rx="5" fill="url(#cs)" />
+			<line x1="0" y1="11.3" x2="44" y2="11.3" stroke="rgba(100,65,0,.32)" strokeWidth="0.7" />
+			<line x1="0" y1="22.7" x2="44" y2="22.7" stroke="rgba(100,65,0,.32)" strokeWidth="0.7" />
+			<line x1="14.7" y1="0" x2="14.7" y2="34" stroke="rgba(100,65,0,.32)" strokeWidth="0.7" />
+			<line x1="29.3" y1="0" x2="29.3" y2="34" stroke="rgba(100,65,0,.32)" strokeWidth="0.7" />
+			<rect x="16" y="12" width="12" height="10" rx="2" fill="rgba(100,65,0,0.18)" />
+			<rect x="17.5" y="13.5" width="9" height="7" rx="1.2" fill="rgba(170,110,0,0.22)" />
+			<rect x="2" y="2" width="10.7" height="7.3" rx="1.5" fill="rgba(100,65,0,0.13)" />
+			<rect x="31.3" y="2" width="10.7" height="7.3" rx="1.5" fill="rgba(100,65,0,0.13)" />
+			<rect x="2" y="24.7" width="10.7" height="7.3" rx="1.5" fill="rgba(100,65,0,0.13)" />
+			<rect x="31.3" y="24.7" width="10.7" height="7.3" rx="1.5" fill="rgba(100,65,0,0.13)" />
+			<rect width="44" height="15" rx="5" fill="rgba(255,255,255,0.07)" />
+		</svg>
+	);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+	 CONTACTLESS ICON
+──────────────────────────────────────────────────────────────────────────── */
+function ContactlessIcon() {
+	return (
+		<svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ color: "rgba(255,255,255,0.35)" }}>
+			<path d="M8.8 17.2 A6.5 6.5 0 0 1 8.8 6.8" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" opacity="0.6" />
+			<path d="M5.6 20.4 A9.6 9.6 0 0 1 5.6 3.6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" opacity="0.42" />
+			<path d="M12  14.5 A3.5 3.5 0 0 1 12  9.5" stroke="currentColor" strokeWidth="2.0" strokeLinecap="round" opacity="0.78" />
+			<circle cx="14.5" cy="12" r="1.8" fill="currentColor" opacity="0.82" />
+		</svg>
+	);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+	 MASTERCARD LOGO
+──────────────────────────────────────────────────────────────────────────── */
+function MastercardLogo() {
+	return (
+		<div style={{ display: "flex", alignItems: "center", position: "relative", width: 46, height: 28 }}>
+			<div style={{ width: 28, height: 28, borderRadius: "50%", background: "#eb001b", opacity: 0.92, position: "absolute", left: 0 }} />
+			<div style={{ width: 28, height: 28, borderRadius: "50%", background: "#f79e1b", opacity: 0.85, position: "absolute", left: 18, mixBlendMode: "multiply" }} />
 		</div>
 	);
 }
 
-// ─── Summary pills — 4-col compact ───────────────────────────────────────────
-function SummaryPills({ currentMoneyBalance, monthlyBalance, realAccountsTotal, mode }) {
-	const pills = [
-		{ l: 'Current',  v: currentMoneyBalance,  cls: 'bg-emerald-50 text-emerald-700 border-emerald-200',  I: Wallet     },
-		{ l: 'Monthly',  v: monthlyBalance,        cls: 'bg-[var(--color-primary-100)] text-[var(--color-primary-700)] border-[var(--color-primary-200)]', I: BarChart3  },
-		{ l: 'Accounts', v: realAccountsTotal,     cls: 'bg-amber-50 text-amber-700 border-amber-200',        I: CreditCard },
-		{ l: 'Mode',     v: mode === 'month' ? 'Month' : 'Today', cls: 'bg-[var(--color-secondary-100)] text-[var(--color-secondary-700)] border-[var(--color-secondary-200)]', I: Clock, isText: true },
-	];
+/* ────────────────────────────────────────────────────────────────────────────
+	 SPEND RATE BAR
+──────────────────────────────────────────────────────────────────────────── */
+function SpendRateBar({ spendRate }) {
+	const color = spendRate < 60 ? "#34d399" : spendRate < 80 ? "#fbbf24" : "#f87171";
+	const glow = spendRate < 60 ? "0 0 10px #34d39970" : spendRate < 80 ? "0 0 10px #fbbf2470" : "0 0 10px #f8717170";
 	return (
-		<div className="grid grid-cols-4 gap-1 mt-1.5">
-			{pills.map(p => (
-				<div key={p.l} className={cn('rounded-xl border px-2 py-1.5', p.cls)}>
-					<div className="flex items-center justify-between mb-0.5">
-						<span className="text-[7.5px] font-extrabold uppercase tracking-widest opacity-55">{p.l}</span>
-						<p.I size={8} />
-					</div>
-					<div className="font-mono text-[10.5px] sm:text-[11px] font-bold tabular-nums leading-snug">
-						{p.isText ? p.v : fmt(p.v)}
-					</div>
-				</div>
-			))}
-		</div>
-	);
-}
-
-// ─── Balance mode switch ──────────────────────────────────────────────────────
-function BalanceModeSwitch({ value, onChange }) {
-	return (
-		<div className="inline-flex items-center rounded-full bg-white/10 border border-white/15 p-0.5 backdrop-blur-sm">
-			{['today', 'month'].map(m => (
-				<button key={m} onClick={() => onChange(m)}
-					className={cn('px-2.5 py-1 rounded-full text-[10px] font-bold transition-all cursor-pointer border-none', value === m ? 'bg-white text-[var(--color-primary-700)] shadow' : 'text-white/65 hover:text-white bg-transparent')}>
-					{m === 'today' ? 'Until Today' : 'This Month'}
-				</button>
-			))}
-		</div>
-	);
-}
-
-// ─── Credit card ──────────────────────────────────────────────────────────────
-function CreditCardDisplay({ balance, income, expenses, commitments, remaining, currency, spendRate, t, balanceMode }) {
-	const sc = spendRate < 60 ? 'text-emerald-400' : spendRate < 80 ? 'text-amber-400' : 'text-rose-400';
-	const sb = spendRate < 60 ? 'bg-emerald-400' : spendRate < 80 ? 'bg-amber-400' : 'bg-rose-400';
-	return (
-		<div className="relative w-full select-none">
-			<div className="relative w-full rounded-2xl overflow-hidden mn-card-bg" style={{ minHeight: 185 }}>
-				<div className="mn-holo absolute inset-0 pointer-events-none z-10" />
-				<div className="absolute inset-0 opacity-[0.05] pointer-events-none z-10"
-					style={{ backgroundImage: 'radial-gradient(circle,rgba(255,255,255,1) 1px,transparent 1px)', backgroundSize: '18px 18px' }} />
-				<div className="absolute -top-14 -end-14 w-44 h-44 rounded-full border border-white/10 pointer-events-none" />
-				<div className="absolute -bottom-10 -start-6 w-36 h-36 rounded-full bg-white/[0.025] pointer-events-none" />
-
-				{/* chip + wifi */}
-				<div className="relative z-20 flex items-start justify-between px-4 pt-3.5">
-					<div className="relative mn-chip w-8 h-5 rounded-[4px] overflow-hidden flex-shrink-0"
-						style={{ background: 'linear-gradient(135deg,#d4af37,#f5e77a 40%,#c8960c 70%,#e8c84a)' }}>
-						<div className="absolute inset-0 grid grid-cols-3 grid-rows-3 gap-px p-0.5">
-							{Array.from({ length: 9 }).map((_, i) => <div key={i} className="rounded-[1px] opacity-50" style={{ background: 'rgba(100,65,0,.6)' }} />)}
-						</div>
-					</div>
-					<Wifi size={13} className="text-white/25" strokeWidth={1.5} />
-				</div>
-
-				{/* balance */}
-				<div className="relative z-20 px-4 pt-1.5">
-					<div className="text-[8px] font-bold tracking-[0.16em] uppercase text-white/30 mb-0.5">
-						{balanceMode === 'month' ? 'Month Balance' : 'Current Money'}
-					</div>
-					<div className="mn-serif text-[34px] text-white leading-none tracking-[-1.5px] drop-shadow">
-						{fmt(balance)}<span className="text-xs opacity-45 ms-1.5 font-normal tracking-normal">{currency}</span>
-					</div>
-				</div>
-
-				{/* spend rate */}
-				{spendRate > 0 && (
-					<div className="relative z-20 px-4 mt-2">
-						<div className="flex items-center justify-between mb-0.5">
-							<span className="text-[7.5px] font-bold uppercase tracking-widest text-white/25">{t('months.spendRate')}</span>
-							<span className={cn('text-[9px] font-black tabular-nums', sc)}>{spendRate}%</span>
-						</div>
-						<div className="h-[2px] w-full rounded-full bg-white/12 overflow-hidden">
-							<div className={cn('h-full rounded-full transition-all duration-700', sb)} style={{ width: `${Math.min(spendRate, 100)}%` }} />
-						</div>
-					</div>
-				)}
-
-				{/* stats */}
-				<div className="relative z-20 px-4 mt-2.5 pb-3.5">
-					<StatsCard income={income} expenses={expenses} commitments={commitments} remaining={remaining} t={t} />
-				</div>
+		<div style={{ marginBottom: 4 }}>
+			<div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+				<span style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.22)" }}>
+					Spend Rate
+				</span>
+				<span style={{ fontSize: 10, fontWeight: 900, color, fontVariantNumeric: "tabular-nums" }}>{spendRate}%</span>
+			</div>
+			<div style={{ position: "relative", height: 3, width: "100%", borderRadius: 99, background: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
+				<div style={{
+					position: "absolute", inset: "0 auto 0 0",
+					width: `${Math.min(spendRate, 100)}%`,
+					borderRadius: 99, background: color, boxShadow: glow,
+					transition: "width 0.8s cubic-bezier(.4,0,.2,1)"
+				}} />
 			</div>
 		</div>
 	);
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+	 STAT ROW
+──────────────────────────────────────────────────────────────────────────── */
+function StatRow({ label, value, currency, accent }) {
+	return (
+		<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4.5px 0" }}>
+			<div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+				<span style={{
+					width: 5, height: 5, borderRadius: "50%", flexShrink: 0,
+					background: accent, boxShadow: `0 0 6px ${accent}`,
+					display: "inline-block"
+				}} />
+				<span style={{ fontSize: 9.5, fontWeight: 600, color: "rgba(255,255,255,0.42)", letterSpacing: "0.04em" }}>{label}</span>
+			</div>
+			<span style={{ fontSize: 12.5, fontWeight: 900, color: accent, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+				{fmt(value)}
+				<span style={{ fontSize: 8, fontWeight: 600, opacity: 0.55, marginLeft: 2 }}>{currency}</span>
+			</span>
+		</div>
+	);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+	 DIVIDER
+──────────────────────────────────────────────────────────────────────────── */
+const Divider = () => (
+	<div style={{ height: 1, margin: "7px 0", background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.09),transparent)" }} />
+);
+
+ 
+function CreditCardDisplay({
+  balance = 12450.8,
+  income = 5200,
+  expenses = 1870.5,
+  commitments = 950,
+  remaining = 2379.5,
+  currency = "SAR",
+  spendRate = 64,
+  balanceMode = "month",
+  cardName = "Ahmed Al-Rashid",
+  last4 = "4291",
+  network = "visa"
+}) {
+  const t = useTranslations("creditCard");
+
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [shine, setShine] = useState({ x: 50, y: 50 });
+  const [hovered, setHovered] = useState(false);
+
+  const handleMouseMove = (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width;
+    const y = (e.clientY - r.top) / r.height;
+    setTilt({ x: (y - 0.5) * 16, y: (x - 0.5) * -16 });
+    setShine({ x: x * 100, y: y * 100 });
+  };
+
+  const handleMouseLeave = () => {
+    setTilt({ x: 0, y: 0 });
+    setShine({ x: 50, y: 50 });
+    setHovered(false);
+  };
+
+  const groups = ["••••", "••••", "••••", last4];
+
+  return (
+    <div style={{ position: "relative", userSelect: "none", perspective: 1200 }}>
+      <div
+        onMouseMove={handleMouseMove}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={handleMouseLeave}
+        className="mn-card-bg"
+        style={{
+          position: "relative",
+          width: "100%",
+          borderRadius: 22,
+          overflow: "hidden",
+          minHeight: 290,
+          cursor: "default",
+          transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(${hovered ? 1.015 : 1})`,
+          transition: hovered
+            ? "transform 0.08s linear, box-shadow 0.3s ease"
+            : "transform 0.6s cubic-bezier(.4,0,.2,1), box-shadow 0.4s ease"
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            zIndex: 8,
+            borderRadius: 22,
+            overflow: "hidden",
+            background: `
+              radial-gradient(ellipse 120% 80% at ${shine.x}% ${shine.y}%, rgba(255,255,255,0.18) 0%, transparent 55%),
+              radial-gradient(ellipse 180% 80% at 20% 30%, rgba(255,255,255,0.08) 0%, transparent 55%),
+              radial-gradient(ellipse 140% 100% at 80% 70%, rgba(255,255,255,0.06) 0%, transparent 55%)
+            `,
+            mixBlendMode: "overlay",
+            opacity: hovered ? 1 : 0.7,
+            transition: "opacity 0.3s ease"
+          }}
+        />
+
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            zIndex: 9,
+            background: `linear-gradient(${105 + tilt.y * 2}deg, transparent 35%, rgba(255,255,255,0.04) 45%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.04) 55%, transparent 65%)`,
+            borderRadius: 22
+          }}
+        />
+
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            zIndex: 5,
+            backgroundImage: "radial-gradient(circle,rgba(255,255,255,0.035) 1px,transparent 1px)",
+            backgroundSize: "18px 18px"
+          }}
+        />
+
+        <div
+          style={{
+            position: "absolute",
+            top: -65,
+            right: -55,
+            width: 210,
+            height: 210,
+            borderRadius: "50%",
+            border: "1px solid rgba(255,255,255,0.055)",
+            pointerEvents: "none"
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: -55,
+            left: -35,
+            width: 170,
+            height: 170,
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.016)",
+            pointerEvents: "none"
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            top: -95,
+            right: -95,
+            width: 340,
+            height: 340,
+            borderRadius: "50%",
+            background: "radial-gradient(circle,rgba(99,102,241,0.08) 0%,transparent 65%)",
+            pointerEvents: "none"
+          }}
+        />
+
+        <div style={{ position: "relative", zIndex: 20, padding: "18px 22px 16px", display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
+            <ChipSVG />
+            <div style={{ display: "flex", alignItems: "center", gap: 9, paddingTop: 2 }}>
+              <ContactlessIcon />
+              {network === "visa" && (
+                <span
+                  style={{
+                    fontFamily: "'Helvetica Neue',sans-serif",
+                    fontStyle: "italic",
+                    fontWeight: 900,
+                    fontSize: 20,
+                    color: "white",
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1
+                  }}
+                >
+                  {t("network.visa")}
+                </span>
+              )}
+              {network === "mastercard" && <MastercardLogo />}
+              {network === "amex" && (
+                <span
+                  style={{
+                    fontFamily: "'Helvetica Neue',sans-serif",
+                    fontWeight: 900,
+                    fontSize: 11,
+                    color: "rgba(255,255,255,0.85)",
+                    letterSpacing: "0.06em"
+                  }}
+                >
+                  {t("network.amex")}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 2 }}>
+            <div
+              style={{
+                fontSize: 7.5,
+                fontWeight: 800,
+                letterSpacing: "0.22em",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.26)",
+                marginBottom: 4
+              }}
+            >
+              {balanceMode === "month" ? t("labels.monthBalance") : t("labels.availableBalance")}
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+              <span
+                style={{
+                  fontFamily: "'SF Pro Display','Helvetica Neue',sans-serif",
+                  fontSize: 34,
+                  fontWeight: 900,
+                  letterSpacing: "-2px",
+                  color: "white",
+                  textShadow: "0 2px 14px rgba(0,0,0,0.4)",
+                  lineHeight: 1
+                }}
+              >
+                {fmt(balance)}
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)" }}>{currency}</span>
+            </div>
+          </div>
+ 
+  
+          {spendRate > 0 && <SpendRateBar spendRate={spendRate} />}
+
+          <Divider />
+
+          <div>
+            <StatRow label={t("labels.income")} value={income} currency={currency} accent="#34d399" />
+            <StatRow label={t("labels.expenses")} value={expenses} currency={currency} accent="#f87171" />
+            <StatRow label={t("labels.commitments")} value={commitments} currency={currency} accent="#fbbf24" />
+            <div style={{ height: 1, margin: "5px 0", background: "rgba(255,255,255,0.06)" }} />
+            <StatRow label={t("labels.remaining")} value={remaining} currency={currency} accent="#a78bfa" />
+          </div>
+        </div>
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          bottom: -14,
+          left: 28,
+          right: 28,
+          height: 48,
+          borderRadius: "50%",
+          background: "radial-gradient(ellipse, var(--color-primary-600) 0%, transparent 70%)",
+          filter: "blur(22px)",
+          zIndex: -1,
+          pointerEvents: "none",
+          transition: "opacity 0.3s",
+          opacity: hovered ? 1 : 0.65
+        }}
+      />
+    </div>
+  );
+}
+
+
 
 // ─── Panels ───────────────────────────────────────────────────────────────────
 function DesktopPanel({ open, onClose, title, children, isRTL }) {
@@ -552,11 +774,11 @@ function ForecastPanel({ open, onClose, income, expenses, commitments, expected,
 	const sRate = (projI + projX) > 0 ? Math.round(((projE + projC) / (projI + projX)) * 100) : 0;
 	const presets = [{ v: 1, l: t('forecast.oneMonth') }, { v: 3, l: t('forecast.threeMonths') }, { v: 6, l: t('forecast.sixMonths') }, { v: 12, l: t('forecast.oneYear') }];
 	const cards = [
-		{ l: t('forecast.income'),     v: projI, px: '+', cl: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-100', ib: 'bg-emerald-500',   I: TrendingUp  },
-		{ l: t('forecast.expenses'),   v: projE, px: '-', cl: 'text-rose-700',    bg: 'bg-rose-50 border-rose-100',       ib: 'bg-rose-500',     I: TrendingDown },
-		{ l: t('forecast.commitments'),v: projC, px: '-', cl: 'text-[var(--color-primary-700)]', bg: 'bg-[var(--color-primary-100)] border-[var(--color-primary-200)]', ib: 'bg-[var(--color-primary-500)]', I: Lock  },
-		{ l: t('forecast.expected'),   v: projX, px: '+', cl: 'text-amber-700',   bg: 'bg-amber-50 border-amber-100',     ib: 'bg-amber-500',    I: Star   },
-		{ l: t('forecast.netBalance'), v: net,   px: net >= 0 ? '+' : '', cl: net >= 0 ? 'text-emerald-700' : 'text-rose-700', bg: net >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100', ib: net >= 0 ? 'bg-emerald-500' : 'bg-rose-500', I: Wallet },
+		{ l: t('forecast.income'), v: projI, px: '+', cl: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-100', ib: 'bg-emerald-500', I: TrendingUp },
+		{ l: t('forecast.expenses'), v: projE, px: '-', cl: 'text-rose-700', bg: 'bg-rose-50 border-rose-100', ib: 'bg-rose-500', I: TrendingDown },
+		{ l: t('forecast.commitments'), v: projC, px: '-', cl: 'text-[var(--color-primary-700)]', bg: 'bg-[var(--color-primary-100)] border-[var(--color-primary-200)]', ib: 'bg-[var(--color-primary-500)]', I: Lock },
+		{ l: t('forecast.expected'), v: projX, px: '+', cl: 'text-amber-700', bg: 'bg-amber-50 border-amber-100', ib: 'bg-amber-500', I: Star },
+		{ l: t('forecast.netBalance'), v: net, px: net >= 0 ? '+' : '', cl: net >= 0 ? 'text-emerald-700' : 'text-rose-700', bg: net >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100', ib: net >= 0 ? 'bg-emerald-500' : 'bg-rose-500', I: Wallet },
 	];
 	return (
 		<Panel open={open} onClose={onClose} title={t('forecast.title')} mob={mob} isRTL={isRTL}>
@@ -614,12 +836,12 @@ function AddForm({ t, onSave, onClose, loading, initialData }) {
 	} : { type: 'income', source: '', desc: '', amount: '', date: today, zakatDesc: '', recurring: false, recurrenceType: 'monthly', recurrenceEvery: 1, commitType: 'التزام', jamiaStart: '', jamiaEnd: '', jamiaMyMonth: '' });
 	const set = (k, v) => setF(p => ({ ...p, [k]: v }));
 	const types = [
-		{ v: 'income',     l: t('form.types.income'),     I: TrendingUp,  ab: 'bg-emerald-50', abo: 'border-emerald-300', at: 'text-emerald-700', ion: 'bg-emerald-500'  },
-		{ v: 'expense',    l: t('form.types.expense'),    I: TrendingDown, ab: 'bg-rose-50',    abo: 'border-rose-300',    at: 'text-rose-700',    ion: 'bg-rose-500'    },
-		{ v: 'commitment', l: t('form.types.commitment'), I: Lock,  ab: 'bg-[var(--color-primary-100)]', abo: 'border-[var(--color-primary-400)]', at: 'text-[var(--color-primary-700)]', ion: 'bg-[var(--color-primary-500)]' },
-		{ v: 'zakat',      l: t('form.types.zakat'),      I: Heart,       ab: 'bg-amber-50',   abo: 'border-amber-300',   at: 'text-amber-700',   ion: 'bg-amber-500'   },
+		{ v: 'income', l: t('form.types.income'), I: TrendingUp, ab: 'bg-emerald-50', abo: 'border-emerald-300', at: 'text-emerald-700', ion: 'bg-emerald-500' },
+		{ v: 'expense', l: t('form.types.expense'), I: TrendingDown, ab: 'bg-rose-50', abo: 'border-rose-300', at: 'text-rose-700', ion: 'bg-rose-500' },
+		{ v: 'commitment', l: t('form.types.commitment'), I: Lock, ab: 'bg-[var(--color-primary-100)]', abo: 'border-[var(--color-primary-400)]', at: 'text-[var(--color-primary-700)]', ion: 'bg-[var(--color-primary-500)]' },
+		{ v: 'zakat', l: t('form.types.zakat'), I: Heart, ab: 'bg-amber-50', abo: 'border-amber-300', at: 'text-amber-700', ion: 'bg-amber-500' },
 	];
-	const ct  = [{ v: 'التزام', l: t('form.commitmentTypes.fixed') }, { v: 'اشتراك', l: t('form.commitmentTypes.subscription') }, { v: 'جمعية', l: t('form.commitmentTypes.jamia') }];
+	const ct = [{ v: 'التزام', l: t('form.commitmentTypes.fixed') }, { v: 'اشتراك', l: t('form.commitmentTypes.subscription') }, { v: 'جمعية', l: t('form.commitmentTypes.jamia') }];
 	const rec = [{ value: 'monthly', label: t('form.recurrence.monthly') }, { value: 'weekly', label: t('form.recurrence.weekly') }, { value: 'custom_months', label: t('form.recurrence.customMonths') }];
 	const valid = f.amount && (f.source?.trim() || f.desc?.trim() || f.zakatDesc?.trim());
 	return (
@@ -651,9 +873,9 @@ function AddForm({ t, onSave, onClose, loading, initialData }) {
 					</div>
 				)}
 				<div className="flex flex-col gap-2">
-					{f.type === 'income'     && <Inp icon={Building2} value={f.source}   onChange={e => set('source', e.target.value)}   placeholder={t('form.placeholders.source')} />}
+					{f.type === 'income' && <Inp icon={Building2} value={f.source} onChange={e => set('source', e.target.value)} placeholder={t('form.placeholders.source')} />}
 					{(f.type === 'expense' || f.type === 'commitment') && <Inp icon={AlignLeft} value={f.desc} onChange={e => set('desc', e.target.value)} placeholder={t('form.placeholders.description')} />}
-					{f.type === 'zakat'      && <Inp icon={Heart}    value={f.zakatDesc} onChange={e => set('zakatDesc', e.target.value)} placeholder={t('form.placeholders.zakatDescription')} />}
+					{f.type === 'zakat' && <Inp icon={Heart} value={f.zakatDesc} onChange={e => set('zakatDesc', e.target.value)} placeholder={t('form.placeholders.zakatDescription')} />}
 					<div className="grid grid-cols-2 gap-2">
 						<Inp icon={DollarSign} type="number" value={f.amount} onChange={e => set('amount', e.target.value)} placeholder={t('form.placeholders.amount')} />
 						<Inp type="date" value={f.date} onChange={e => set('date', e.target.value)} />
@@ -676,8 +898,8 @@ function AddForm({ t, onSave, onClose, loading, initialData }) {
 				{f.type === 'commitment' && f.commitType === 'جمعية' && (
 					<div className="flex flex-col gap-2">
 						<div className="grid grid-cols-2 gap-2">
-							<Inp label="Start" type="date" value={f.jamiaStart}   onChange={e => set('jamiaStart', e.target.value)} />
-							<Inp label="End"   type="date" value={f.jamiaEnd}     onChange={e => set('jamiaEnd', e.target.value)} />
+							<Inp label="Start" type="date" value={f.jamiaStart} onChange={e => set('jamiaStart', e.target.value)} />
+							<Inp label="End" type="date" value={f.jamiaEnd} onChange={e => set('jamiaEnd', e.target.value)} />
 						</div>
 						<Inp label="My Month" type="date" value={f.jamiaMyMonth} onChange={e => set('jamiaMyMonth', e.target.value)} />
 					</div>
@@ -773,9 +995,9 @@ function TotalBanner({ total, color, icon: Icon, label, currency }) {
 
 function walletTypeMeta(type) {
 	const map = {
-		bank:          { icon: LandmarkIcon, badge: 'Bank',       cls: 'bg-blue-50 text-blue-700 border-blue-200',     wrap: 'bg-blue-50 text-blue-500' },
-		mastercard:    { icon: CreditCard,   badge: 'Mastercard', cls: 'bg-[var(--color-secondary-100)] text-[var(--color-secondary-700)] border-[var(--color-secondary-200)]', wrap: 'bg-[var(--color-secondary-100)] text-[var(--color-secondary-500)]' },
-		vodafone_cash: { icon: Wallet,       badge: 'Vodafone',   cls: 'bg-rose-50 text-rose-700 border-rose-200',     wrap: 'bg-rose-50 text-rose-500' },
+		bank: { icon: LandmarkIcon, badge: 'Bank', cls: 'bg-blue-50 text-blue-700 border-blue-200', wrap: 'bg-blue-50 text-blue-500' },
+		mastercard: { icon: CreditCard, badge: 'Mastercard', cls: 'bg-[var(--color-secondary-100)] text-[var(--color-secondary-700)] border-[var(--color-secondary-200)]', wrap: 'bg-[var(--color-secondary-100)] text-[var(--color-secondary-500)]' },
+		vodafone_cash: { icon: Wallet, badge: 'Vodafone', cls: 'bg-rose-50 text-rose-700 border-rose-200', wrap: 'bg-rose-50 text-rose-500' },
 	};
 	return map[type] ?? { icon: Banknote, badge: 'Cash', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', wrap: 'bg-emerald-50 text-emerald-500' };
 }
@@ -962,9 +1184,9 @@ function ZakatTab({ incTotal, expTotal, log, locale, t, onDelete }) {
 	const [custom, setCst] = useState('');
 	const [pct, setPct] = useState(2.5);
 	const base = mode === 'net' ? Math.max(incTotal - expTotal, 0) : mode === 'total' ? incTotal : Number(custom || 0);
-	const due  = Math.round((base * pct) / 100);
+	const due = Math.round((base * pct) / 100);
 	const paid = log.reduce((s, i) => s + Number(i.amount || 0), 0);
-	const rem  = Math.max(due - paid, 0);
+	const rem = Math.max(due - paid, 0);
 	const prog = due > 0 ? Math.min(100, Math.round((paid / due) * 100)) : 0;
 	const nisab = base >= 85 * 55.5;
 	const R = 36, C = 2 * Math.PI * R, off = C - (prog / 100) * C;
@@ -1002,9 +1224,9 @@ function ZakatTab({ incTotal, expTotal, log, locale, t, onDelete }) {
 						</div>
 						<div className="flex-1 flex flex-col gap-1.5">
 							{[
-								{ l: t('zakat.due'),       v: due,  a: 'bg-white/10 border-white/14',           d: 'bg-white/45' },
-								{ l: t('zakat.paid'),      v: paid, a: 'bg-emerald-400/20 border-emerald-300/25', d: 'bg-emerald-400' },
-								{ l: t('zakat.remaining'), v: rem,  a: rem > 0 ? 'bg-amber-400/18 border-amber-300/22' : 'bg-emerald-400/15 border-emerald-300/20', d: rem > 0 ? 'bg-amber-400' : 'bg-emerald-400' },
+								{ l: t('zakat.due'), v: due, a: 'bg-white/10 border-white/14', d: 'bg-white/45' },
+								{ l: t('zakat.paid'), v: paid, a: 'bg-emerald-400/20 border-emerald-300/25', d: 'bg-emerald-400' },
+								{ l: t('zakat.remaining'), v: rem, a: rem > 0 ? 'bg-amber-400/18 border-amber-300/22' : 'bg-emerald-400/15 border-emerald-300/20', d: rem > 0 ? 'bg-amber-400' : 'bg-emerald-400' },
 							].map(s => (
 								<div key={s.l} className={cn('flex items-center justify-between px-2.5 py-1.5 rounded-xl border', s.a)}>
 									<div className="flex items-center gap-1.5">
@@ -1108,37 +1330,37 @@ function ExpectedTab({ data, locale, t, onEdit, onDelete }) {
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════
 export default function MoneyPage() {
-	const t      = useTranslations('money');
+	const t = useTranslations('money');
 	const locale = useLocale();
-	const isRTL  = locale === 'ar';
-	const mob    = useIsMobile();
+	const isRTL = locale === 'ar';
+	const mob = useIsMobile();
 
-	const [tab, setTab]               = useState('wallets');
+	const [tab, setTab] = useState('income');
 	const [balanceMode, setBalanceMode] = useState('today');
-	const [loading, setLoading]       = useState(true);
-	const [saving, setSaving]         = useState(false);
-	const [toggling, setToggling]     = useState(null);
+	const [loading, setLoading] = useState(true);
+	const [saving, setSaving] = useState(false);
+	const [toggling, setToggling] = useState(null);
 
-	const [notifOpen, setNotifOpen]   = useState(false);
-	const [addOpen, setAddOpen]       = useState(false);
-	const [editOpen, setEditOpen]     = useState(false);
-	const [editData, setEditData]     = useState(null);
-	const [walletAddOpen, setWalletAddOpen]   = useState(false);
+	const [notifOpen, setNotifOpen] = useState(false);
+	const [addOpen, setAddOpen] = useState(false);
+	const [editOpen, setEditOpen] = useState(false);
+	const [editData, setEditData] = useState(null);
+	const [walletAddOpen, setWalletAddOpen] = useState(false);
 	const [walletEditOpen, setWalletEditOpen] = useState(false);
 	const [walletEditData, setWalletEditData] = useState(null);
-	const [expAddOpen, setExpAddOpen]   = useState(false);
+	const [expAddOpen, setExpAddOpen] = useState(false);
 	const [expEditOpen, setExpEditOpen] = useState(false);
 	const [expEditData, setExpEditData] = useState(null);
 	const [forecastOpen, setForecastOpen] = useState(false);
 
-	const [dash,     setDash]     = useState(null);
-	const [wallets,  setWallets]  = useState([]);
-	const [income,   setIncome]   = useState([]);
+	const [dash, setDash] = useState(null);
+	const [wallets, setWallets] = useState([]);
+	const [income, setIncome] = useState([]);
 	const [expenses, setExpenses] = useState([]);
-	const [commits,  setCommits]  = useState([]);
-	const [zakat,    setZakat]    = useState([]);
+	const [commits, setCommits] = useState([]);
+	const [zakat, setZakat] = useState([]);
 	const [expected, setExpected] = useState([]);
-	const [notifs,   setNotifs]   = useState([]);
+	const [notifs, setNotifs] = useState([]);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -1180,8 +1402,8 @@ export default function MoneyPage() {
 
 	const handleDelete = async (id, type) => {
 		try {
-			if (type === 'income')     await moneyApi.deleteIncome(id);
-			if (type === 'expense')    await moneyApi.deleteExpense(id);
+			if (type === 'income') await moneyApi.deleteIncome(id);
+			if (type === 'expense') await moneyApi.deleteExpense(id);
 			if (type === 'commitment') await moneyApi.deleteCommitment(id);
 			await load();
 		} catch (err) { console.error(err); }
@@ -1206,12 +1428,12 @@ export default function MoneyPage() {
 	};
 
 	const stats = dash?.stats || {};
-	const visibleBalance      = Number(stats.balance || 0);
+	const visibleBalance = Number(stats.balance || 0);
 	const currentMoneyBalance = Number(stats.currentMoneyBalance || 0);
-	const monthlyBalance      = Number(stats.monthlyBalance || 0);
-	const realAccountsTotal   = Number(stats.realAccountsTotal || 0);
-	const incT     = Number(stats.totalIncome || 0);
-	const expT     = Number(stats.totalExpenses || 0);
+	const monthlyBalance = Number(stats.monthlyBalance || 0);
+	const realAccountsTotal = Number(stats.realAccountsTotal || 0);
+	const incT = Number(stats.totalIncome || 0);
+	const expT = Number(stats.totalExpenses || 0);
 	const totalCom = Number(stats.totalCommitments || 0);
 	const totalZak = Number(stats.totalZakatPaid || 0);
 	const totalRem = incT + Number(stats.totalExpected || 0) - expT - totalCom - totalZak;
@@ -1219,12 +1441,12 @@ export default function MoneyPage() {
 	const unread = notifs.filter(i => !i.isRead).length;
 
 	const tabs = useMemo(() => [
-		{ id: 'wallets',  l: t('tabs.wallets'),     I: Wallet,      n: wallets.length  },
-		{ id: 'income',   l: t('tabs.income'),      I: TrendingUp,  n: income.length   },
-		{ id: 'expenses', l: t('tabs.expenses'),    I: TrendingDown,n: expenses.length },
-		{ id: 'commits',  l: t('tabs.commitments'), I: Layers,      n: commits.length  },
-		{ id: 'zakat',    l: t('tabs.zakat'),       I: Landmark,    n: zakat.length    },
-		{ id: 'expected', l: t('tabs.expected'),    I: Star,        n: expected.length },
+		// { id: 'wallets',  l: t('tabs.wallets'),     I: Wallet,      n: wallets.length  },
+		{ id: 'income', l: t('tabs.income'), I: TrendingUp, n: income.length },
+		{ id: 'expenses', l: t('tabs.expenses'), I: TrendingDown, n: expenses.length },
+		{ id: 'commits', l: t('tabs.commitments'), I: Layers, n: commits.length },
+		{ id: 'zakat', l: t('tabs.zakat'), I: Landmark, n: zakat.length },
+		{ id: 'expected', l: t('tabs.expected'), I: Star, n: expected.length },
 	], [t, wallets.length, income.length, expenses.length, commits.length, zakat.length, expected.length]);
 
 	return (
@@ -1243,7 +1465,7 @@ export default function MoneyPage() {
 					<div>
 						<div className="mn-serif text-[21px] text-white leading-tight tracking-[-0.01em]">{t('header.title')}</div>
 						<div className="text-[10px] text-white/38 mt-0.5">{t('header.subtitle')}</div>
-						<div className="mt-2"><BalanceModeSwitch value={balanceMode} onChange={setBalanceMode} /></div>
+						{/* <div className="mt-2"><BalanceModeSwitch value={balanceMode} onChange={setBalanceMode} /></div> */}
 					</div>
 					<div className="flex items-center gap-1 shrink-0">
 						<button onClick={() => setForecastOpen(true)} className="h-8 w-8 flex items-center justify-center rounded-xl cursor-pointer border border-white/20 bg-white/10 text-white/80 backdrop-blur-sm hover:bg-white/18 transition-all active:scale-95"><Target size={12} /></button>
@@ -1263,7 +1485,7 @@ export default function MoneyPage() {
 					{loading ? <div className="rounded-2xl bg-[var(--color-primary-700)] h-[180px]" /> : (
 						<>
 							<CreditCardDisplay balance={visibleBalance} income={incT} expenses={expT} commitments={totalCom} remaining={totalRem} currency={t('common.currency')} spendRate={spendRate} t={t} balanceMode={balanceMode} />
-							<SummaryPills currentMoneyBalance={currentMoneyBalance} monthlyBalance={monthlyBalance} realAccountsTotal={realAccountsTotal} mode={balanceMode} />
+							{/* <SummaryPills currentMoneyBalance={currentMoneyBalance} monthlyBalance={monthlyBalance} realAccountsTotal={realAccountsTotal} mode={balanceMode} /> */}
 						</>
 					)}
 				</div>
@@ -1291,20 +1513,20 @@ export default function MoneyPage() {
 				) : tab === 'wallets' ? (
 					<WalletsTab data={wallets} total={realAccountsTotal} onEdit={item => { setWalletEditData(item); setWalletEditOpen(true); }} onDelete={async id => { try { await moneyApi.deleteWallet(id); await load(); } catch (e) { console.error(e); } }} />
 				) : tab === 'income' ? <IncomeTab data={income} locale={locale} t={t} onEdit={handleEdit} onDelete={handleDelete} />
-				: tab === 'expenses' ? <ExpensesTab data={expenses} locale={locale} t={t} onEdit={handleEdit} onDelete={handleDelete} />
-				: tab === 'commits' ? <CommitmentsTab data={commits} locale={locale} t={t} onToggle={async id => { setToggling(id); try { await moneyApi.toggleCommitmentStatus(id); await load(); } catch (e) { console.error(e); } finally { setToggling(null); } }} togglingId={toggling} onEdit={handleEdit} onDelete={handleDelete} />
-				: tab === 'zakat' ? <ZakatTab incTotal={incT} expTotal={expT} log={zakat} locale={locale} t={t} onDelete={async id => { try { await moneyApi.deleteZakat(id); await load(); } catch (e) { console.error(e); } }} />
-				: <ExpectedTab data={expected} locale={locale} t={t} onEdit={item => { setExpEditData(item); setExpEditOpen(true); }} onDelete={async id => { try { await moneyApi.deleteExpected(id); await load(); } catch (e) { console.error(e); } }} />}
+					: tab === 'expenses' ? <ExpensesTab data={expenses} locale={locale} t={t} onEdit={handleEdit} onDelete={handleDelete} />
+						: tab === 'commits' ? <CommitmentsTab data={commits} locale={locale} t={t} onToggle={async id => { setToggling(id); try { await moneyApi.toggleCommitmentStatus(id); await load(); } catch (e) { console.error(e); } finally { setToggling(null); } }} togglingId={toggling} onEdit={handleEdit} onDelete={handleDelete} />
+							: tab === 'zakat' ? <ZakatTab incTotal={incT} expTotal={expT} log={zakat} locale={locale} t={t} onDelete={async id => { try { await moneyApi.deleteZakat(id); await load(); } catch (e) { console.error(e); } }} />
+								: <ExpectedTab data={expected} locale={locale} t={t} onEdit={item => { setExpEditData(item); setExpEditOpen(true); }} onDelete={async id => { try { await moneyApi.deleteExpected(id); await load(); } catch (e) { console.error(e); } }} />}
 			</div>
 
 			{/* PANELS */}
-			<Panel open={addOpen}       onClose={() => setAddOpen(false)}                               title={t('form.addTitle')}     mob={mob} isRTL={isRTL}><AddForm t={t} onSave={handleSave} onClose={() => setAddOpen(false)} loading={saving} /></Panel>
-			<Panel open={editOpen}      onClose={() => { setEditOpen(false); setEditData(null); }}       title={t('form.editTitle')}    mob={mob} isRTL={isRTL}>{editData && <AddForm t={t} initialData={editData} onSave={handleSave} onClose={() => { setEditOpen(false); setEditData(null); }} loading={saving} />}</Panel>
-			<Panel open={walletAddOpen} onClose={() => setWalletAddOpen(false)}                         title={t('wallets.addTitle')}  mob={mob} isRTL={isRTL}><WalletForm onSave={handleWalletSave} onClose={() => setWalletAddOpen(false)} loading={saving} /></Panel>
+			<Panel open={addOpen} onClose={() => setAddOpen(false)} title={t('form.addTitle')} mob={mob} isRTL={isRTL}><AddForm t={t} onSave={handleSave} onClose={() => setAddOpen(false)} loading={saving} /></Panel>
+			<Panel open={editOpen} onClose={() => { setEditOpen(false); setEditData(null); }} title={t('form.editTitle')} mob={mob} isRTL={isRTL}>{editData && <AddForm t={t} initialData={editData} onSave={handleSave} onClose={() => { setEditOpen(false); setEditData(null); }} loading={saving} />}</Panel>
+			<Panel open={walletAddOpen} onClose={() => setWalletAddOpen(false)} title={t('wallets.addTitle')} mob={mob} isRTL={isRTL}><WalletForm onSave={handleWalletSave} onClose={() => setWalletAddOpen(false)} loading={saving} /></Panel>
 			<Panel open={walletEditOpen} onClose={() => { setWalletEditOpen(false); setWalletEditData(null); }} title={t('wallets.editTitle')} mob={mob} isRTL={isRTL}>{walletEditData && <WalletForm initialData={walletEditData} onSave={handleWalletSave} onClose={() => { setWalletEditOpen(false); setWalletEditData(null); }} loading={saving} />}</Panel>
-			<Panel open={expAddOpen}    onClose={() => setExpAddOpen(false)}                            title="Add Expected"           mob={mob} isRTL={isRTL}><ExpectedForm t={t} onSave={handleExpectedSave} onClose={() => setExpAddOpen(false)} loading={saving} /></Panel>
-			<Panel open={expEditOpen}   onClose={() => { setExpEditOpen(false); setExpEditData(null); }} title="Edit Expected"          mob={mob} isRTL={isRTL}>{expEditData && <ExpectedForm t={t} initialData={expEditData} onSave={handleExpectedSave} onClose={() => { setExpEditOpen(false); setExpEditData(null); }} loading={saving} />}</Panel>
-			<Panel open={notifOpen}     onClose={() => setNotifOpen(false)}                             title={t('notifications.title')} mob={mob} isRTL={isRTL}>
+			<Panel open={expAddOpen} onClose={() => setExpAddOpen(false)} title="Add Expected" mob={mob} isRTL={isRTL}><ExpectedForm t={t} onSave={handleExpectedSave} onClose={() => setExpAddOpen(false)} loading={saving} /></Panel>
+			<Panel open={expEditOpen} onClose={() => { setExpEditOpen(false); setExpEditData(null); }} title="Edit Expected" mob={mob} isRTL={isRTL}>{expEditData && <ExpectedForm t={t} initialData={expEditData} onSave={handleExpectedSave} onClose={() => { setExpEditOpen(false); setExpEditData(null); }} loading={saving} />}</Panel>
+			<Panel open={notifOpen} onClose={() => setNotifOpen(false)} title={t('notifications.title')} mob={mob} isRTL={isRTL}>
 				<div className="flex flex-col gap-2 p-4">
 					{notifs.length ? notifs.map(item => {
 						const s = ({ warn: 'bg-amber-50 border-amber-200 text-amber-800', ok: 'bg-emerald-50 border-emerald-200 text-emerald-800', alert: 'bg-rose-50 border-rose-200 text-rose-800' })[item.type] || 'bg-amber-50 border-amber-200 text-amber-800';
