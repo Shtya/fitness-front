@@ -201,7 +201,7 @@ export const NAV = [
 			{ nameKey: 'myNutrition', href: '/dashboard/my/nutrition', icon: Apple },
 			{ nameKey: 'myReminders', href: '/dashboard/reminders', icon: AlarmClock },
 			{ nameKey: 'weeklyStrength', href: '/dashboard/my/report', icon: Newspaper },
-			{ nameKey: 'recipes', href: '/dashboard/recipes', icon: ChefHat },
+			{ nameKey: 'recipes', href: '/dashboard/my/recipes', icon: ChefHat },
 		]
 	},
 	{
