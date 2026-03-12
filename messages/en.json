@@ -550,736 +550,6 @@
 		"saveReview": "Save Review",
 		"close": "Close"
 	},
-	"home": {
-		"navbar": {
-			"brand": {
-				"name": "Sohba Fit",
-				"tagline": "Fitness Club"
-			},
-			"nav": {
-				"home": "Home",
-				"about": "About Us",
-				"community": "Community",
-				"pricing": "Pricing",
-				"joinNow": "Join Now"
-			},
-			"langSwitch": {
-				"ar": "AR",
-				"en": "EN",
-				"ariaToAr": "Switch to Arabic",
-				"ariaToEn": "Switch to English",
-				"switchingToAr": "Switching to Arabic…",
-				"switchingToEn": "Switching to English…"
-			},
-			"roles": {
-				"super_admin": "Super Admin",
-				"admin": "Admin",
-				"coach": "Coach",
-				"client": "Member"
-			},
-			"status": {
-				"active": "Active",
-				"inactive": "Inactive",
-				"suspended": "Suspended"
-			},
-			"dropdown": {
-				"openMenu": "Open account menu",
-				"dashboard": "Dashboard",
-				"myProfile": "My Profile",
-				"signOut": "Sign Out",
-				"points": "Point",
-				"pts": "Point"
-			},
-			"quickLinks": {
-				"sectionLabel": "Quick Access",
-				"workspace": "Workspace",
-				"money": "Finance",
-				"myExercise": "My Exercises",
-				"myCalendar": "My Calendar"
-			},
-			"mobile": {
-				"open": "Open menu",
-				"close": "Close menu",
-				"sectionNav": "Navigation",
-				"sectionAccount": "Account",
-				"joinCta": "Join Now — Free"
-			}
-		},
-		"theme": {
-			"themeShowcase": {
-				"badge": "Themes & Colors",
-				"title": "Make It Yours",
-				"description": "Choose a color theme that reflects your style. Watch everything transform instantly with just one click.",
-				"selector": {
-					"title": "Pick your favorite"
-				},
-				"preview": {
-					"title": "Live Preview",
-					"heading": "See it in action",
-					"subheading": "Click any element below to see how your theme affects different components",
-					"button": "Buttons",
-					"buttonDesc": "Vibrant and eye-catching buttons",
-					"card": "Cards",
-					"cardDesc": "Beautiful content containers in your colors",
-					"badge": "Badges",
-					"badgeDesc": "Colorful labels and status indicators",
-					"sampleButton": "Click Here",
-					"stat1": "Themes",
-					"stat2": "Colors",
-					"stat3": "Awesome"
-				}
-			},
-			"themeSwitcher": {
-				"trigger": "Theme",
-				"ariaLabel": "Theme switcher",
-				"title": "Choose Theme",
-				"subtitle": "Select your preferred color palette"
-			}
-		},
-		"hero": {
-			"brand": "FitnessHub",
-			"badge": "AI-Powered Training Platform",
-			"nav": {
-				"home": "Home",
-				"about": "About Us",
-				"community": "Community",
-				"pricing": "Pricing",
-				"joinNow": "Join Now"
-			},
-			"headline": {
-				"transform": "Transform",
-				"journey": "Your Fitness Journey",
-				"withScience": "with Science-Driven Training"
-			},
-			"description": "Enjoy personalized AI-powered workout plans. Track your progress, connect with certified coaches, and achieve faster results than ever before.",
-			"cta": {
-				"getStarted": "Start Free Trial",
-				"watchDemo": "Watch Demo",
-				"learnMore": "Learn More"
-			},
-			"trust": {
-				"activeUsers": "Active Users",
-				"rating": "from over 12K reviews"
-			},
-			"stats": {
-				"coaches": {
-					"value": "+500",
-					"label": "Expert Coaches"
-				},
-				"members": {
-					"value": "+50K",
-					"label": "Active Members"
-				},
-				"programs": {
-					"value": "+200",
-					"label": "Programs"
-				}
-			},
-			"floatingStats": {
-				"exercises": {
-					"value": "12",
-					"label": "Exercises"
-				},
-				"calories": {
-					"value": "450",
-					"label": "Calories"
-				},
-				"heartRate": {
-					"value": "142",
-					"label": "Beats"
-				},
-				"videos": {
-					"value": "+1.2K",
-					"label": "Instructional Videos"
-				},
-				"heartbeat": {
-					"value": "98",
-					"label": "Heart Rate"
-				}
-			}
-		},
-		"statsBar": {
-			"trustedBy": "Trusted by",
-			"title": "Leading Companies Worldwide",
-			"stats": {
-				"clients": {
-					"value": "10K+",
-					"label": "Active Clients"
-				},
-				"satisfaction": {
-					"value": "98%",
-					"label": "Client Satisfaction"
-				},
-				"countries": {
-					"value": "50+",
-					"label": "Countries Worldwide"
-				},
-				"awards": {
-					"value": "25+",
-					"label": "Awards & Recognitions"
-				}
-			}
-		},
-		"footer": {
-			"brand": {
-				"tagline": "Smart Fitness App",
-				"description": "Start your journey toward a stronger body and better health. Personalized training plans, progress tracking, and a motivating community that helps you stay consistent.",
-				"emailLabel": "Email",
-				"phoneLabel": "Phone",
-				"locationLabel": "Location",
-				"location": "Cairo, Egypt"
-			},
-			"newsletter": {
-				"title": "Subscribe to the Newsletter",
-				"subtitle": "Weekly tips + updates and new features",
-				"placeholder": "Enter your email",
-				"button": "Subscribe",
-				"submitting": "Subscribing...",
-				"subscribed": "Subscribed",
-				"successNote": "Subscribed successfully! We’ll send you the best tips soon."
-			},
-			"stats": {
-				"users": {
-					"value": "50K+",
-					"label": "Users"
-				},
-				"trainers": {
-					"value": "200+",
-					"label": "Trainers"
-				},
-				"workouts": {
-					"value": "5K+",
-					"label": "Workouts"
-				},
-				"success": {
-					"value": "98%",
-					"label": "Success"
-				}
-			},
-			"links": {
-				"product": {
-					"title": "Product",
-					"features": "Features",
-					"pricing": "Pricing",
-					"faq": "FAQ",
-					"testimonials": "Testimonials"
-				},
-				"company": {
-					"title": "Company",
-					"about": "About Us",
-					"careers": "Careers",
-					"blog": "Blog",
-					"press": "Press"
-				},
-				"resources": {
-					"title": "Resources",
-					"community": "Community",
-					"support": "Support",
-					"docs": "Documentation",
-					"api": "API"
-				},
-				"legal": {
-					"title": "Legal",
-					"privacy": "Privacy Policy",
-					"terms": "Terms & Conditions",
-					"cookies": "Cookies",
-					"licenses": "Licenses"
-				}
-			},
-			"social": {
-				"title": "Follow Us"
-			},
-			"trust": {
-				"secure": "Secure Payment",
-				"certified": "Certified Trainers",
-				"rated": "Excellent Reviews"
-			},
-			"copyright": {
-				"text": "© 2026 All rights reserved.",
-				"made": "Made with",
-				"by": "by"
-			}
-		},
-		"roles": {
-			"badge": "Discover the Platform",
-			"title": "An Experience Designed for Every Role",
-			"description": "Whether you're a client pursuing your health goals, a coach managing your clients, or an admin overseeing the platform — we have the perfect tools for you",
-			"included": "Included",
-			"tabs": {
-				"client": "Client",
-				"coach": "Coach",
-				"admin": "Admin"
-			},
-			"client": {
-				"features": {
-					"schedule": {
-						"title": "Smart Schedule Management",
-						"description": "Easily schedule and manage your training sessions with automatic reminders and calendar integration",
-						"badge": "Essential"
-					},
-					"tracking": {
-						"title": "Advanced Workout Tracking",
-						"description": "Log your workouts and track weights, sets, and reps with detailed progress visuals",
-						"badge": "Advanced"
-					},
-					"tutorials": {
-						"title": "Exercise Video Library",
-						"description": "Get professional video guidance for every exercise to ensure proper form and technique",
-						"badge": "Premium"
-					},
-					"progress": {
-						"title": "Progress Analytics",
-						"description": "Track your fitness journey with detailed charts and graphs that show your improvements over time",
-						"badge": "Analytics"
-					},
-					"health": {
-						"title": "Health Metrics Monitoring",
-						"description": "Monitor vital metrics, heart rate, calories, and other health indicators in one place",
-						"badge": "Health"
-					},
-					"chat": {
-						"title": "Instant Coach Support",
-						"description": "Connect with your coach directly through chat and messages for guidance and support",
-						"badge": "Support"
-					},
-					"goals": {
-						"title": "Goal Setting & Tracking",
-						"description": "Set personal fitness goals and track your progress with achievable milestones",
-						"badge": "Goals"
-					},
-					"nutrition": {
-						"title": "Nutrition Plans",
-						"description": "Receive personalized meal plans and nutrition guidance tailored to your goals",
-						"badge": "Nutrition"
-					}
-				},
-				"cta": {
-					"title": "Start Your Health Journey Today",
-					"description": "Join thousands of clients achieving their goals",
-					"button": "Get Started"
-				}
-			},
-			"coach": {
-				"features": {
-					"clients": {
-						"title": "Comprehensive Client Management",
-						"description": "Manage all your clients in one dashboard with detailed profiles and performance indicators",
-						"badge": "Management"
-					},
-					"plans": {
-						"title": "Workout Plan Builder",
-						"description": "Create and customize detailed workout plans with a drag-and-drop interface",
-						"badge": "Plans"
-					},
-					"analytics": {
-						"title": "Client Analytics",
-						"description": "Gain deep insights into your clients’ progress, adherence, and results",
-						"badge": "Analytics"
-					},
-					"scheduling": {
-						"title": "Flexible Scheduling",
-						"description": "Manage your coaching schedule, book sessions, and prevent appointment conflicts",
-						"badge": "Scheduling"
-					},
-					"certifications": {
-						"title": "Certification Management",
-						"description": "Showcase and manage your professional certifications and qualifications",
-						"badge": "Professional"
-					},
-					"messaging": {
-						"title": "Client Messaging System",
-						"description": "Stay connected with your clients through an integrated messaging system",
-						"badge": "Communication"
-					},
-					"reports": {
-						"title": "Performance Reports",
-						"description": "Generate detailed reports for your clients showing their progress and achievements",
-						"badge": "Reports"
-					},
-					"earnings": {
-						"title": "Earnings Tracking",
-						"description": "Monitor your earnings, payments, and financial metrics in real time",
-						"badge": "Financial"
-					}
-				},
-				"cta": {
-					"title": "Grow Your Coaching Business",
-					"description": "Professional tools for serious coaches",
-					"button": "Become a Coach"
-				}
-			},
-			"admin": {
-				"features": {
-					"management": {
-						"title": "Full Database Management",
-						"description": "Full control over all users, coaches, and data with powerful management tools",
-						"badge": "Control"
-					},
-					"verification": {
-						"title": "Coach Verification System",
-						"description": "Review and approve coach applications with certification verification",
-						"badge": "Security"
-					},
-					"reporting": {
-						"title": "Advanced Reporting",
-						"description": "Access comprehensive platform reports and analytics for data-driven decisions",
-						"badge": "Insights"
-					},
-					"settings": {
-						"title": "System Settings",
-						"description": "Configure platform settings, permissions, and customizations",
-						"badge": "Settings"
-					},
-					"security": {
-						"title": "Security Center",
-						"description": "Manage security, permissions, and access control for the entire platform",
-						"badge": "Protection"
-					},
-					"notifications": {
-						"title": "Notification Management",
-						"description": "Control system-wide notifications, alerts, and communications",
-						"badge": "Alerts"
-					},
-					"rewards": {
-						"title": "Rewards System",
-						"description": "Manage achievements, badges, and rewards programs for user engagement",
-						"badge": "Incentives"
-					},
-					"automation": {
-						"title": "Automation Tools",
-						"description": "Automate routine tasks, workflows, and processes to increase efficiency",
-						"badge": "Automation"
-					}
-				},
-				"cta": {
-					"title": "Complete Platform Control",
-					"description": "Powerful tools for platform management",
-					"button": "Dashboard"
-				}
-			}
-		},
-		"steps": {
-			"badge": "Our Process",
-			"title": "Steps to Build a SaaS App",
-			"description": "Follow our proven methodology to turn your idea into a successful software product. From validation to launch, we guide you through every stage.",
-			"step": "Step",
-			"cta": "Start Your Project",
-			"categories": {
-				"planning": "Feature Planning",
-				"development": "Development",
-				"monitoring": "Monitoring"
-			},
-			"steps": {
-				"validation": {
-					"title": "Market Validation",
-					"description": "Research your target market, validate your idea, and ensure there is demand for your solution."
-				},
-				"features": {
-					"title": "Feature Planning",
-					"description": "Define core features, prioritize functionality, and create a detailed product roadmap."
-				},
-				"design": {
-					"title": "UI Design",
-					"description": "Design intuitive interfaces and user experiences that delight your customers."
-				},
-				"coding": {
-					"title": "Development",
-					"description": "Build your app with clean code, scalable architecture, and best practices."
-				},
-				"testing": {
-					"title": "Quality Assurance & Testing",
-					"description": "Rigorous testing to ensure quality, performance, and reliability across all features."
-				},
-				"optimization": {
-					"title": "Monitoring & Optimization",
-					"description": "Monitor performance, gather user feedback, and continuously improve your product."
-				}
-			}
-		},
-		"pricing": {
-			"badge": "Flexible Pricing",
-			"title": "Our Pricing",
-			"description": "Choose the perfect plan for your fitness journey. All plans include access to our platform with no hidden fees.",
-			"save": "Save",
-			"mostPopular": "Most Popular",
-			"perMonth": "month",
-			"per6Months": "billed every 6 months",
-			"perYear": "billed yearly",
-			"getStarted": "Get Started",
-			"whatsIncluded": "What’s Included",
-			"moneyBack": "30-day money-back guarantee on all plans",
-			"cycles": {
-				"month": "Month",
-				"6months": "6 Months",
-				"year": "Year"
-			},
-			"plans": {
-				"plus": {
-					"name": "Premium Start",
-					"tagline": "Perfect for getting started on your fitness goals",
-					"features": [
-						"Access to 100+ workout videos",
-						"Basic progress tracking",
-						"Mobile app access",
-						"Email support",
-						"Weekly fitness tips",
-						"Access to the community forum"
-					]
-				},
-				"professional": {
-					"name": "Pro Athlete",
-					"tagline": "For serious fitness enthusiasts and athletes",
-					"features": [
-						"Everything in Premium Start",
-						"Unlimited workout videos and programs",
-						"Advanced analytics dashboard",
-						"Custom meal plans",
-						"Monthly one-on-one coaching call",
-						"Priority email and chat support",
-						"Custom workout builder",
-						"Progress photos and measurements"
-					]
-				},
-				"enterprise": {
-					"name": "Elite Champion",
-					"tagline": "The ultimate package for peak performance",
-					"features": [
-						"Everything in Pro Athlete",
-						"Dedicated personal coach",
-						"Weekly one-on-one video sessions",
-						"Custom nutrition and supplement plan",
-						"24/7 priority support",
-						"Access to exclusive workshops",
-						"Wearable device integration",
-						"Body composition analysis",
-						"Competition prep support",
-						"Lifetime achievement badges"
-					]
-				}
-			}
-		},
-		"testimonials": {
-			"badge": "Success Stories",
-			"title": "What Our Clients Say",
-			"description": "Real results from real people. Discover how our platform has transformed thousands of fitness journeys.",
-			"items": [
-				{
-					"name": "Sarah Johnson",
-					"role": "Lost 30 kg in 6 months",
-					"text": "This platform completely changed my life! The personalized workout plans and supportive community helped me achieve what I thought was impossible. My coach was amazing and pushed me to be my best every day.",
-					"achievement": "Lost 30 kg"
-				},
-				{
-					"name": "Mike Chen",
-					"role": "Marathon Runner",
-					"text": "As a busy professional, I needed flexibility in my training. The app’s scheduling and progress tracking kept me accountable. I went from struggling with 5K to completing my first marathon!",
-					"achievement": "Completed a marathon"
-				},
-				{
-					"name": "Emma Williams",
-					"role": "Fitness Enthusiast",
-					"text": "The variety of workouts and the ability to connect with my coach anytime made all the difference. I’ve built strength, confidence, and lifelong healthy habits. Best decision I ever made!",
-					"achievement": "50+ workouts"
-				},
-				{
-					"name": "David Martinez",
-					"role": "Body Transformation",
-					"text": "From dad bod to fit dad! The nutrition guidance combined with effective workouts helped me lose 25 kg and gain muscle. My energy levels are through the roof, and I feel 10 years younger!",
-					"achievement": "Lost 25 kg"
-				}
-			],
-			"stats": {
-				"clients": "Happy Clients",
-				"rating": "Average Rating",
-				"success": "Success Rate",
-				"growth": "Average Growth"
-			}
-		},
-		"contact": {
-			"title": "Contact Our Team",
-			"description": "Need help with something? Want a demo? Get in touch with our friendly team and we’ll get back to you within two hours.",
-			"form": {
-				"fields": {
-					"firstName": "First Name",
-					"lastName": "Last Name",
-					"jobTitle": "Job Title",
-					"email": "Work Email",
-					"phone": "Phone Number",
-					"teamSize": "Team Size"
-				},
-				"teamSize": {
-					"solo": "I’m an individual coach",
-					"soloDesc": "I need to create an account for myself.",
-					"team": "I’m part of a team",
-					"teamDesc": "I need to create an account for a team."
-				},
-				"submit": "Get Started With Us",
-				"submitting": "Submitting..."
-			},
-			"testimonials": {
-				"0": {
-					"text": "FitnessHub helped us manage all our clients, progress, and schedules with ease. It’s a great solution for coaches looking for an effective way to manage their entire business.",
-					"author": "Ahmed Mohamed",
-					"role": "Founder & CEO",
-					"company": "PowerGym"
-				},
-				"1": {
-					"text": "The results we achieved with FitnessHub were amazing. Client retention improved by 45%, and communication with clients became smoother than ever.",
-					"author": "Sarah Ahmed",
-					"role": "Fitness Director",
-					"company": "FitLife Center"
-				},
-				"2": {
-					"text": "A comprehensive and easy-to-use platform. FitnessHub helps us track our clients’ progress, create custom training programs, and manage our business more efficiently.",
-					"author": "Mohamed Ali",
-					"role": "Personal Trainer",
-					"company": "Elite Fitness"
-				},
-				"subtitle": "Success Stories"
-			}
-		},
-		"faqs": {
-			"badge": "Frequently Asked Questions",
-			"title": "FAQ",
-			"description": "Get quick answers to the most common questions about FitnessHub. If you can’t find what you’re looking for, feel free to contact our support team.",
-			"searchPlaceholder": "Search FAQs...",
-			"categories": {
-				"all": "All",
-				"general": "General",
-				"membership": "Membership",
-				"training": "Training",
-				"billing": "Billing",
-				"technical": "Technical Support"
-			},
-			"questions": {
-				"general": {
-					"0": {
-						"question": "What is FitnessHub?",
-						"answer": "FitnessHub is a complete fitness management platform that connects coaches, clients, and admins. We provide tools for progress tracking, workout scheduling, membership management, and more — all in one easy-to-use place."
-					},
-					"1": {
-						"question": "How do I get started with FitnessHub?",
-						"answer": "Getting started is easy! Simply sign up for a free account, choose your role (client, coach, or admin), and complete your profile. Our team will guide you through the initial setup process and help you get the most out of the platform."
-					},
-					"2": {
-						"question": "Is FitnessHub suitable for beginners?",
-						"answer": "Absolutely! FitnessHub is designed for everyone, from beginners to professional athletes. Our coaches can create customized training programs based on your fitness level and goals, ensuring you get the right support every step of the way."
-					}
-				},
-				"membership": {
-					"0": {
-						"question": "What membership plans are available?",
-						"answer": "We offer three main membership plans: Plus ($29/month) for individuals, Professional ($79/month) for coaches, and Enterprise ($199/month) for gyms and organizations. All plans include access to core features, with extra features at higher tiers."
-					},
-					"1": {
-						"question": "Can I change my membership plan later?",
-						"answer": "Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately, and we’ll prorate the difference based on your billing cycle. You won’t lose any data or progress when switching plans."
-					},
-					"2": {
-						"question": "Is there any long-term commitment?",
-						"answer": "No, all our plans are monthly with no long-term contracts. You can cancel anytime, and you won’t be charged for the next month. We also offer discounts for users who choose 6-month or yearly billing."
-					}
-				},
-				"training": {
-					"0": {
-						"question": "How does personal training work?",
-						"answer": "Our certified coaches create customized training programs based on your goals, fitness level, and preferences. You’ll get detailed workouts with video tutorials, progress tracking, and regular support through our messaging system."
-					},
-					"1": {
-						"question": "Can I switch coaches?",
-						"answer": "Yes, you’re free to switch coaches at any time. We want you to find the perfect coach who matches your style and goals. You can browse coach profiles, reviews, and specialties before deciding."
-					},
-					"2": {
-						"question": "What if I miss a workout?",
-						"answer": "No problem! Our platform offers full flexibility to manage your schedule. You can reschedule workouts, and all your previous workouts remain accessible anytime. Your coach will help you get back on track without judgment."
-					}
-				},
-				"billing": {
-					"0": {
-						"question": "What payment methods are accepted?",
-						"answer": "We accept all major credit and debit cards (Visa, MasterCard, and American Express) as well as PayPal. All payments are secure and encrypted, and your payment information is stored safely for automatic subscription renewal."
-					},
-					"1": {
-						"question": "Are there any hidden fees?",
-						"answer": "Not at all. The subscription price you see is what you pay — no setup fees, cancellation fees, or hidden costs. We believe in transparent and honest pricing, so you know exactly what you’re getting."
-					},
-					"2": {
-						"question": "Can I get a refund?",
-						"answer": "Yes, we offer a 30-day money-back guarantee on all plans. If you’re not completely satisfied with FitnessHub during your first month, contact us and we’ll issue a full refund — no questions asked."
-					}
-				},
-				"technical": {
-					"0": {
-						"question": "What devices does FitnessHub work on?",
-						"answer": "FitnessHub is available on all devices — iOS, Android, and web. You can switch seamlessly between your phone, tablet, and computer, with all your data automatically synced across devices."
-					},
-					"1": {
-						"question": "What if I run into technical issues?",
-						"answer": "Our technical support team is available 24/7 to help you. You can reach us via live chat, email, or phone, and we’ll resolve any issue quickly. We aim to respond within two hours or less."
-					},
-					"2": {
-						"question": "Is my data secure?",
-						"answer": "Absolutely. We use bank-level encryption and follow industry standards to protect data. Your personal information, health data, and financial details are all encrypted and stored securely. We will never sell your data or share it with third parties."
-					}
-				}
-			},
-			"noResults": {
-				"title": "No results found",
-				"description": "Try using different keywords or browse the categories below"
-			},
-			"cta": {
-				"title": "Still have questions?",
-				"description": "Can’t find the answer you’re looking for? Talk to our friendly team.",
-				"email": "Email Us",
-				"call": "Call Us"
-			}
-		},
-		"howItWorks": {
-			"badge": "How It Works",
-			"title": "Get Started in 3 Simple Steps",
-			"description": "Join thousands of people who’ve achieved their fitness goals. Our easy process makes getting started fast and smooth.",
-			"steps": {
-				"0": {
-					"title": "Set Your Goals",
-					"description": "Tell us about your fitness and health goals. Whether you want to lose weight, build muscle, or improve endurance, we’re here to help.",
-					"features": {
-						"0": "Create a personalized profile",
-						"1": "Choose your health goals",
-						"2": "Set your fitness level"
-					}
-				},
-				"1": {
-					"title": "Set Your Schedule",
-					"description": "Choose the workout schedule that fits your lifestyle. Our flexible programs adapt to your timetable, so you’ll never miss a workout.",
-					"features": {
-						"0": "Choose workout days",
-						"1": "Set preferred times",
-						"2": "Get a custom workout plan"
-					}
-				},
-				"2": {
-					"title": "Track and Improve",
-					"description": "Monitor your progress using our advanced analytics dashboard. Track workouts, calories, and key milestones as you achieve your goals.",
-					"features": {
-						"0": "Detailed performance metrics",
-						"1": "Real-time progress tracking",
-						"2": "Celebrate your achievements"
-					}
-				}
-			},
-			"cta": {
-				"title": "Ready to transform your fitness journey?",
-				"description": "Join FitnessHub today and get a personalized training plan tailored to your goals and lifestyle.",
-				"primary": "Start Free Assessment",
-				"secondary": "Talk to a Coach",
-				"benefits": {
-					"0": "No credit card required",
-					"1": "5-minute free assessment",
-					"2": "Instant custom plan"
-				}
-			}
-		}
-	},
 	"navbar": {
 		"kanbanBoard": "Kanban Board",
 		"calendar": "Calendar",
@@ -2703,6 +1973,15 @@
 				"createTitle": "Create plan",
 				"editTitle": "Edit:",
 				"assignTitle": "Assign plan: {name}"
+			},
+			"table": {
+				"name": "Plan",
+				"days": "Days",
+				"status": "Status",
+				"createdAt": "Created",
+				"actions": "Actions",
+				"active": "Active",
+				"inactive": "Inactive"
 			}
 		},
 		"preview": {
@@ -2948,7 +2227,13 @@
 			"item": "Item",
 			"qty_g": "Quantity (g)",
 			"calories": "Calories",
-			"qty": "Quantity"
+			"qty": "Quantity",
+			"name": "Plan",
+			"days": "Days",
+			"createdAt": "Created",
+			"actions": "Actions",
+			"description": "Description",
+			"notes": "Notes"
 		},
 		"list": {
 			"empty_title": "No plans",
@@ -3004,11 +2289,19 @@
 			"title": "Form management",
 			"desc": "Create and manage your custom forms"
 		},
+		"table": {
+			"title": "Title",
+			"fields": "Fields",
+			"owner": "Owner",
+			"actions": "Actions"
+		},
 		"labels": {
+			"search": "Search...",
+			"own": "Own",
+			"shared": "Shared",
 			"forms": "Forms",
 			"fields": "Fields",
 			"field": "Field",
-			"shared": "Shared",
 			"shared_form": "Shared form",
 			"no_label": "No label",
 			"required": "Required",
@@ -3016,7 +2309,6 @@
 			"key": "Key",
 			"options": "Options",
 			"copy_suffix": " (copy)",
-			"own": "My own",
 			"own_form": "My own form"
 		},
 		"types_map": {
@@ -3167,99 +2459,104 @@
 	},
 	"submissions": {
 		"header": {
-			"title": "Form submissions",
-			"desc": "Review and manage form submissions from clients.",
-			"new_form": "New form",
-			"new": "New form"
+			"title": "Form Submissions",
+			"desc": "Browse and manage form submissions from customers.",
+			"new_form": "New Form",
+			"new": "New Form"
 		},
 		"filters": {
-			"from": "From date",
-			"to": "To date",
+			"title": "Filters",
+			"apply": "Apply",
+			"from": "From Date",
+			"to": "To Date",
 			"form": "Form",
-			"search_placeholder": "Search by email, phone, answers, or IP",
-			"all_forms": "All forms"
+			"all_forms": "All Forms",
+			"search_placeholder": "Search by email, phone, answers, or IP"
 		},
 		"errors": {
-			"from_before_to": "\"From\" date must be before \"To\" date.",
+			"from_before_to": "The 'From' date must be before the 'To' date.",
 			"title_required": "Form title is required.",
-			"user_required": "Choose the user first.",
-			"required": "Field name and placeholder are required for each field"
-		},
-		"messages": {
-			"load_forms_failed": "Failed to load forms.",
-			"load_submissions_failed": "Failed to load submissions.",
-			"form_created": "Form created.",
-			"create_form_failed": "Failed to create form.",
-			"assigned_ok": "Submission assigned to user.",
-			"assign_failed": "Failed to assign.",
-			"delete_success": "Deleted successfully"
-		},
-		"review": {
-			"label": "Review",
-			"checked": "Reviewed",
-			"unchecked": "Not reviewed",
-			"loading": "Updating...",
-			"aria_label": "Set review status"
+			"user_required": "Select a user first.",
+			"required": "Field name and placeholder are required for each field."
 		},
 		"table": {
+			"reviewed": "Reviewed",
 			"form": "Form",
 			"email": "Email",
 			"phone": "Phone",
-			"ip": "IP address",
-			"submitted": "Submission time",
-			"actions": "Actions",
-			"reviewed": "Reviewed"
+			"ip": "IP Address",
+			"submitted": "Submission Time",
+			"actions": "Actions"
+		},
+		"labels": {
+			"total": "Total",
+			"shown": "Shown",
+			"forms": "Forms",
+			"unknown_form": "Unknown Form",
+			"results": "Results",
+			"all_forms": "All Forms",
+			"one_form": "One Form",
+			"note": "Note",
+			"all_forms_note": "Only the first page of each form is displayed (aggregated view).",
+			"open": "Open"
+		},
+		"review": {
+			"aria_label": "Set review status",
+			"label": "Review",
+			"checked": "Reviewed",
+			"unchecked": "Not Reviewed",
+			"loading": "Updating..."
+		},
+		"messages": {
+			"update_reviewed_failed": "Failed to update review status",
+			"delete_success": "Submission deleted successfully",
+			"delete_failed": "Failed to delete submission",
+			"load_forms_failed": "Failed to load forms.",
+			"load_submissions_failed": "Failed to load submissions.",
+			"form_created": "Form created successfully.",
+			"create_form_failed": "Failed to create form.",
+			"assigned_ok": "Submission assigned to user.",
+			"assign_failed": "Failed to assign submission."
 		},
 		"actions": {
 			"view": "View",
 			"clear": "Clear",
 			"refresh": "Refresh",
-			"load_more": "Load more",
+			"load_more": "Load More",
 			"delete": "Delete",
 			"confirm_delete": "Are you sure you want to delete this item?"
 		},
 		"empty": {
-			"title": "No submissions",
-			"subtitle_all": "No submissions have been sent yet.",
-			"subtitle_one": "There are no submissions for the selected form."
-		},
-		"labels": {
-			"unknown_form": "Unknown form",
-			"total": "Total",
-			"shown": "Shown",
-			"forms": "Forms",
-			"results": "Results",
-			"all_forms": "All forms",
-			"one_form": "One form",
-			"note": "Note",
-			"all_forms_note": "Only the first page of each form is shown (aggregated view).",
-			"open": "Open"
+			"title": "No Submissions",
+			"subtitle_all": "No submissions have been received yet.",
+			"subtitle_one": "No submissions for the selected form."
 		},
 		"detail": {
-			"title": "Submission details",
-			"contact": "Contact information",
-			"form": "Form details",
+			"title": "Submission Details",
+			"contact": "Contact Information",
+			"form": "Form Details",
 			"submission_id": "Submission ID",
 			"answers": "Answers",
-			"no_answers": "No answers."
+			"no_answers": "No answers available."
 		},
 		"assign": {
-			"title": "Assign submission to client",
+			"title": "Assign Submission to Client",
 			"client": "Client",
 			"client_id": "Client ID",
-			"cta": "Assign now",
+			"cta": "Assign Now",
 			"assigned_to": "Assigned to:"
 		},
 		"create": {
-			"title": "Create new form",
-			"form_title": "Form title",
-			"form_title_ph": "Write the form title",
+			"title": "Create New Form",
+			"form_title": "Form Title",
+			"form_title_ph": "Enter form title",
 			"assign_optional": "Assign (optional) — enter user ID",
 			"assign_optional_ph": "You can assign later from the submission details",
 			"cta": "Create"
 		}
 	},
 	"reports": {
+		"statusReview" : "Status Review",
 		"title": "Weekly reports",
 		"subtitle": "Review trainee progress and weekly reports easily",
 		"total": "Total",
@@ -3294,7 +2591,10 @@
 			"kg": "kg",
 			"cardio": "Cardio"
 		},
+		"searchPlaceholder": "Search is not available here", 
 		"filters": {
+			"title": "Filters",
+			"apply": "Apply",
 			"reviewed": {
 				"label": "Review status",
 				"any": "All",
@@ -3538,90 +2838,6 @@
 				"water": "Drink a glass of water"
 			},
 			"firebaseNote": "Sent via Firebase Cloud Messaging after setting up server keys."
-		}
-	},
-	"dashboard": {
-		"filters": {
-			"from": "From",
-			"to": "To",
-			"adminOptional": "Admin (optional)",
-			"adminPlaceholder": "Admin ID (UUID)",
-			"apply": "Apply",
-			"reloadPreview": "Reload preview"
-		},
-		"error": {
-			"previewFallback": "Failed to load statistics — preview data is shown."
-		},
-		"kpi": {
-			"totalClients": "Total clients",
-			"activeClients": "Active clients",
-			"newInRange": "New in range",
-			"churned": "Churned",
-			"formSubmissions": "Submitted forms",
-			"unreadNotices": "Unread notices",
-			"assetsUploaded": "Uploaded assets",
-			"pendingVideos": "Videos pending review"
-		},
-		"charts": {
-			"usersCreatedDaily": {
-				"title": "User creation (daily)"
-			},
-			"duo": {
-				"title": "Workout volume vs meal log",
-				"exerciseVolume": "Workout volume",
-				"mealLogs": "Meal logs"
-			}
-		},
-		"donuts": {
-			"memberships": {
-				"title": "Memberships"
-			},
-			"status": {
-				"title": "User status"
-			}
-		},
-		"gauge": {
-			"activeRate": {
-				"title": "Active client rate",
-				"tooltip": "Active percentage",
-				"caption": "of clients are active"
-			}
-		},
-		"list": {
-			"memberships": {
-				"title": "Membership breakdown"
-			},
-			"status": {
-				"title": "Status breakdown"
-			},
-			"topConversations": {
-				"title": "Top conversations"
-			}
-		},
-		"review": {
-			"title": "Review list",
-			"weeklyReports": "Weekly reports pending review",
-			"videos": "Workout videos pending review",
-			"foodSuggestions": "Food suggestions pending review"
-		},
-		"membership": {
-			"basic": "Basic",
-			"pro": "Pro",
-			"elite": "Elite",
-			"trial": "Trial"
-		},
-		"status": {
-			"active": "Active",
-			"idle": "Idle",
-			"suspended": "Suspended",
-			"churned": "Churned"
-		},
-		"conv": {
-			"nutritionQA": "Nutrition questions",
-			"formSubmissions": "Form submissions",
-			"workoutReviews": "Workout reviews",
-			"general": "General",
-			"support": "Support"
 		}
 	},
 	"client360": {
@@ -4062,7 +3278,8 @@
 				"mealsSelectedDay": "Meals (selected day)",
 				"notes": "Coach notes",
 				"history": "History",
-				"FiberTarget": "Fiber"
+				"FiberTarget": "Fiber",
+				"defaultTitle": "loading the plan.."
 			},
 			"notFound": {
 				"title": "No nutrition plan available",
@@ -4190,31 +3407,6 @@
 			"load-failed": "Failed to load the stream. Try again.",
 			"stream-error": "A stream error occurred. Try another station.",
 			"streamErrorTryAnother": "A stream error occurred. Try another station."
-		}
-	},
-	"mobile": {
-		"desktop_required_title": "Desktop required",
-		"desktop_required_message": "This form is only available on desktop devices for admin and coach accounts, because the dashboard interface is not optimized for mobile use.",
-		"desktop_required_guide": "Tip: Please open the form from a desktop or laptop for the best experience.",
-		"reload_button": "Retry",
-		"exercise": {
-			"title": "Exercises",
-			"start": "Start",
-			"tabs": {
-				"exercises": "Exercises",
-				"reps": "Reps",
-				"cardio": "Cardio"
-			},
-			"table": {
-				"done": "Done",
-				"weight": "Weight",
-				"reps": "Reps"
-			},
-			"buttons": {
-				"add": "Add",
-				"addSet": "Add set",
-				"save": "Save"
-			}
 		}
 	},
 	"billing": {
@@ -5167,20 +4359,908 @@
 		}
 	},
 	"creditCard": {
-    "network": {
-      "visa": "VISA",
-      "mastercard": "Mastercard",
-      "amex": "AMEX"
-    },
-    "labels": {
-      "monthBalance": "Month Balance",
-      "availableBalance": "Available Balance",
-      "cardHolder": "Card Holder",
-      "expires": "Expires",
-      "income": "Income",
-      "expenses": "Expenses",
-      "commitments": "Commitments",
-      "remaining": "Remaining"
-    }
-  }
+		"network": {
+			"visa": "VISA",
+			"mastercard": "Mastercard",
+			"amex": "AMEX"
+		},
+		"labels": {
+			"monthBalance": "Month Balance",
+			"availableBalance": "Available Balance",
+			"cardHolder": "Card Holder",
+			"expires": "Expires",
+			"income": "Income",
+			"expenses": "Expenses",
+			"commitments": "Commitments",
+			"remaining": "Remaining"
+		}
+	},
+	"dashboard": {
+		"filters": {
+			"from": "From",
+			"to": "To",
+			"adminOptional": "Admin (optional)",
+			"adminPlaceholder": "Admin ID (UUID)",
+			"apply": "Apply",
+			"reloadPreview": "Reload preview"
+		},
+		"title": "Dashboard",
+		"subtitle": "Overview of statistics",
+		"overview": "Overview",
+		"period": "Time period",
+		"liveLabel": "Live",
+		"refresh": "Refresh",
+		"loading": "Loading data...",
+		"dateRange": "From {from} to {to}",
+		"allClients": "All clients",
+		"error": {
+			"previewFallback": "Failed to load statistics — showing preview data.",
+			"loadFailed": "Failed to load statistics. Please try again.",
+			"retry": "Retry"
+		},
+		"kpi": {
+			"newInRange": "New in range",
+			"unreadNotices": "Unread notices",
+			"totalClients": "Total clients",
+			"totalClientsSub": "Since the beginning",
+			"activeClients": "Active clients",
+			"activeClientsSub": "Currently active",
+			"newClients": "New clients",
+			"newClientsSub": "This period",
+			"notifications": "Notifications",
+			"notificationsSub": "Unread",
+			"formSubmissions": "Form submissions",
+			"formSubmissionsSub": "This period",
+			"churned": "Churned",
+			"churnedSub": "This period",
+			"assetsUploaded": "Uploaded files",
+			"assetsUploadedSub": "Media files",
+			"pendingVideos": "Pending videos",
+			"pendingVideosSub": "Workout videos",
+			"activeRate": "Activity rate"
+		},
+		"charts": {
+			"usersCreatedDaily": {
+				"title": "Users created (daily)"
+			},
+			"duo": {
+				"title": "Exercise volume vs meal logs",
+				"exerciseVolume": "Exercise volume",
+				"mealLogs": "Meal logs"
+			},
+			"activityTrends": "Activity trends",
+			"activityTrendsSub": "Last 13 days · clients, nutrition, and workouts",
+			"newUsers": "New clients",
+			"mealLogs": "Meal logs",
+			"mealLogsTitle": "Daily meal logs",
+			"mealLogsSub": "Nutrition tracking activity",
+			"logs": "Logs",
+			"membershipTiers": "Membership tiers",
+			"membershipSub": "Client distribution",
+			"topConversations": "Most active conversations",
+			"topConversationsSub": "By message count",
+			"messages": "Message",
+			"totalMessages": "Total messages",
+			"reviewQueue": "Review queue",
+			"reviewQueueSub": "Waiting for your review",
+			"weeklyReports": "Weekly reports",
+			"pendingVideos": "Pending videos",
+			"foodSuggestions": "Food suggestions",
+			"exerciseVolume": "Exercise volume",
+			"exerciseVolumeSub": "Daily training activity",
+			"conversation": "Conversation",
+			"peakDay": "Peak day",
+			"totalSessions": "Total sessions",
+			"last13Days": "Last 13 days",
+			"totalMeals": "Total meals",
+			"dailyAvg": "Daily average",
+			"peak": "Peak",
+			"total": "Total",
+			"consistency": "Consistency"
+		},
+		"donuts": {
+			"memberships": {
+				"title": "Memberships"
+			},
+			"status": {
+				"title": "User status"
+			}
+		},
+		"gauge": {
+			"activeRate": {
+				"title": "Active client rate",
+				"tooltip": "Active %",
+				"caption": "of clients are active"
+			}
+		},
+		"list": {
+			"memberships": {
+				"title": "Membership breakdown"
+			},
+			"status": {
+				"title": "Status breakdown"
+			},
+			"topConversations": {
+				"title": "Top conversations"
+			}
+		},
+		"review": {
+			"title": "Review queue",
+			"weeklyReports": "Weekly reports under review",
+			"videos": "Workout videos under review",
+			"foodSuggestions": "Food suggestions under review"
+		},
+		"membership": {
+			"basic": "Basic",
+			"pro": "Pro",
+			"elite": "Elite",
+			"trial": "Trial",
+			"gold": "Gold",
+			"platinum": "Platinum"
+		},
+		"status": {
+			"active": "Active",
+			"idle": "Idle",
+			"suspended": "Suspended",
+			"churned": "Churned",
+			"joinedOn": "Joined on {date}",
+			"requiresAttention": "Requires attention"
+		},
+		"conv": {
+			"nutritionQA": "Nutrition Q&A",
+			"formSubmissions": "Form submissions",
+			"workoutReviews": "Workout reviews",
+			"general": "General",
+			"support": "Support"
+		},
+		"empty": {
+			"noData": "No data for this period",
+			"title": "No statistics yet",
+			"subtitle": "Apply filters or try again later."
+		},
+		"stats": {
+			"vsLastPeriod": "vs last period",
+			"increase": "Increase",
+			"decrease": "Decrease",
+			"noChange": "No change",
+			"ofTotal": "of total",
+			"pending": "Pending"
+		}
+	},
+	"clientDashboard": {
+		"title": "Client Dashboard",
+		"subtitle": "Overview of your progress",
+		"overview": "Overview",
+		"liveLabel": "Live",
+		"refresh": "Refresh",
+		"loading": "Loading data...",
+		"hero": {
+			"compliance": "Compliance",
+			"weeklyWorkouts": "Workouts this week",
+			"weeklyMeals": "Meals this week",
+			"personalRecords": "Personal records",
+			"weeklyReport": "Weekly report",
+			"coachLabel": "Coach",
+			"points": "Points"
+		},
+		"kpi": {
+			"totalSessions": "Total sessions",
+			"personalRecords": "Personal records",
+			"totalVolume": "Total volume",
+			"totalMeals": "Total meals",
+			"perfectDays": "Perfect days",
+			"compliance": "Compliance rate",
+			"weeklyWorkouts": "Weekly workouts",
+			"points": "Points",
+			"periodSub": "This period",
+			"allTime": "All time",
+			"nutritionSub": "Full nutrition",
+			"thisWeek": "This week",
+			"totalPoints": "Total points",
+			"unread": "Unread"
+		},
+		"charts": {
+			"activityTrends": "Activity trends",
+			"activityTrendsSub": "Last 13 days · workouts and meal logs",
+			"exerciseVolume": "Exercise volume",
+			"exerciseVolumeSub": "Daily training activity",
+			"mealLogs": "Meal logs",
+			"mealLogsTitle": "Daily meal logs",
+			"mealLogsSub": "Nutrition tracking activity",
+			"logs": "Logs",
+			"peakDay": "Peak day",
+			"totalSessions": "Total sessions",
+			"last13Days": "Last 13 days",
+			"consistency": "Consistency",
+			"total": "Total",
+			"dailyAvg": "Daily average",
+			"peak": "Peak"
+		},
+		"workout": {
+			"title": "Workout statistics",
+			"subtitle": "Exercise performance and volume",
+			"totalSessions": "Total sessions",
+			"totalVolume": "Total volume",
+			"avgVolume": "Average volume per session",
+			"personalRecords": "Personal records",
+			"compliance": "Compliance rate",
+			"recentTitle": "Recent workouts",
+			"recentSub": "By training volume",
+			"prs": "PRs"
+		},
+		"nutrition": {
+			"title": "Nutrition statistics",
+			"subtitle": "Meal tracking and adherence",
+			"adherence": "Adherence",
+			"adherenceLabel": "Meal adherence rate",
+			"totalMeals": "Total meals",
+			"perfectDays": "Perfect days",
+			"avgAdherence": "Average adherence"
+		},
+		"weight": {
+			"title": "Weight progress",
+			"subtitle": "Weight evolution over time",
+			"label": "Weight (kg)",
+			"current": "Current weight",
+			"avg": "Average",
+			"change": "Change"
+		},
+		"plans": {
+			"title": "Active plans",
+			"subtitle": "Workout and nutrition plans",
+			"exercisePlan": "Exercise plan",
+			"mealPlan": "Meal plan",
+			"points": "Points earned"
+		},
+		"measurements": {
+			"title": "Measurements",
+			"weight": "Weight",
+			"change": "Weight change"
+		},
+		"membership": {
+			"basic": "Basic",
+			"gold": "Gold",
+			"platinum": "Platinum"
+		},
+		"error": {
+			"loadFailed": "Failed to load data. Please try again.",
+			"retry": "Retry"
+		}
+	},
+	"home": {
+		"hero": {
+			"headline": {
+				"transform": "Manage",
+				"journey": "the client journey",
+				"withScience": "in one platform"
+			},
+			"description": "Manage clients, plans, reports, and communication inside one system that helps admins, coaches, and clients work with more clarity and efficiency.",
+			"cta": {
+				"getStarted": "Get Started",
+				"watchDemo": "Watch Demo"
+			},
+			"trust": {
+				"activeUsers": "A unified client management experience",
+				"rating": "Better organization for daily operations"
+			},
+			"stats": {
+				"coaches": {
+					"value": "3+",
+					"label": "Core roles"
+				},
+				"members": {
+					"value": "10+",
+					"label": "Essential pages"
+				},
+				"programs": {
+					"value": "100%",
+					"label": "Full client journey coverage"
+				},
+				"roles": {
+					"value": "24/7",
+					"label": "Continuous follow-up"
+				}
+			}
+		},
+		"theme": {
+			"themeShowcase": {
+				"badge": "Theme customization",
+				"title": "Choose your platform theme",
+				"description": "Customize the system appearance to match your brand, with live previews of the core interface elements.",
+				"selectorTitle": "System colors and themes",
+				"hint": "Choose a theme and preview the change instantly.",
+				"preview": {
+					"heading": "Live preview",
+					"title": "Component showcase",
+					"subheading": "See how the theme affects system components",
+					"button": "Buttons",
+					"buttonDesc": "Preview primary and secondary action buttons.",
+					"card": "Cards",
+					"cardDesc": "A sample of cards used to display data and plans.",
+					"badge": "Badges",
+					"badgeDesc": "Preview badges used for statuses and important elements.",
+					"sampleButton": "Primary action",
+					"secondaryButton": "Secondary action",
+					"scalePrimary": "Primary color",
+					"scaleSecondary": "Secondary color",
+					"badges": {
+						"admin": "Admin",
+						"active": "Active",
+						"featured": "Featured"
+					}
+				}
+			}
+		},
+		"howItWorks": {
+			"badge": "How it works",
+			"title": "A simple and clear workflow",
+			"description": "Start with client data, prepare plans, then track progress inside one platform.",
+			"cta": "Start your journey",
+			"steps": [
+				{
+					"title": "Collect data",
+					"description": "Start by gathering the client’s core information through forms and questionnaires.",
+					"features": [
+						"Capture essential data",
+						"Define goals and needs",
+						"Review the starting status"
+					]
+				},
+				{
+					"title": "Prepare plans",
+					"description": "After reviewing the data, create the account and prepare workout and nutrition plans.",
+					"features": [
+						"Build the right program",
+						"Organize days and schedule",
+						"Assign plans to the client"
+					]
+				},
+				{
+					"title": "Track progress",
+					"description": "Clients track their progress while coaches and admins review reports, measurements, and chats.",
+					"features": [
+						"Track reports and updates",
+						"Measure commitment level",
+						"Improve results through follow-up"
+					]
+				}
+			]
+		},
+		"roles": {
+			"badge": "Permissions",
+			"title": "A tailored experience for every user",
+			"description": "The system provides different tools based on permissions, so each user gets what fits their role.",
+			"tabs": {
+				"client": "Client",
+				"coach": "Coach",
+				"admin": "Admin"
+			},
+			"included": "Included in the system",
+			"client": {
+				"features": {
+					"workouts": {
+						"title": "My workouts",
+						"description": "View workout plans by day and log performance, weights, and reps.",
+						"badge": "Workouts"
+					},
+					"nutrition": {
+						"title": "Nutrition plan",
+						"description": "Track daily meals, supplements, and alternatives with calorie and nutrition details.",
+						"badge": "Nutrition"
+					},
+					"exercises": {
+						"title": "Exercise guides",
+						"description": "View images or videos that help clients perform exercises correctly.",
+						"badge": "Content"
+					},
+					"progress": {
+						"title": "Progress tracking",
+						"description": "Track development, commitment, and results through clear indicators inside the system.",
+						"badge": "Progress"
+					},
+					"reports": {
+						"title": "Weekly report",
+						"description": "Send measurements, progress photos, and notes to the coach in an organized way.",
+						"badge": "Reports"
+					},
+					"chat": {
+						"title": "Chats",
+						"description": "Communicate directly with the coach or admin and send messages and files in one place.",
+						"badge": "Communication"
+					},
+					"reminders": {
+						"title": "Reminders",
+						"description": "Organize daily reminders and recurring personal alerts easily.",
+						"badge": "Organization"
+					},
+					"recipes": {
+						"title": "Recipes",
+						"description": "Browse recipes with nutrition values and preparation details that support plan adherence.",
+						"badge": "Recipes"
+					}
+				},
+				"cta": {
+					"title": "A daily interface that helps clients stay consistent",
+					"description": "Everything the client needs from workouts, nutrition, reports, and chats in one clear experience.",
+					"button": "Explore client experience"
+				}
+			},
+			"coach": {
+				"features": {
+					"clients": {
+						"title": "Client management",
+						"description": "Track client profiles, status, progress, and access each client’s journey details.",
+						"badge": "Clients"
+					},
+					"workoutPlans": {
+						"title": "Workout plans",
+						"description": "Create, edit, customize, and assign workout plans to clients with ease.",
+						"badge": "Plans"
+					},
+					"nutritionPlans": {
+						"title": "Nutrition plans",
+						"description": "Build nutrition plans and organize meals, alternatives, and supplements based on client goals.",
+						"badge": "Nutrition"
+					},
+					"reports": {
+						"title": "Report reviews",
+						"description": "Review weekly reports, add coach notes, and monitor commitment and progress.",
+						"badge": "Reports"
+					},
+					"exerciseLibrary": {
+						"title": "Exercise library",
+						"description": "Access an organized exercise library to use inside training programs.",
+						"badge": "Library"
+					},
+					"chat": {
+						"title": "Client communication",
+						"description": "Manage daily conversations with clients to speed up follow-up and answer questions.",
+						"badge": "Chats"
+					},
+					"forms": {
+						"title": "Forms",
+						"description": "Use form data and client responses to better understand each case before building the program.",
+						"badge": "Forms"
+					},
+					"sharedTools": {
+						"title": "Shared tools",
+						"description": "Access shared tools available by permissions such as the calculator, chats, and workspace.",
+						"badge": "Shared"
+					}
+				},
+				"cta": {
+					"title": "Tools that help coaches manage clients",
+					"description": "Plans, reports, chats, and follow-up in a practical interface built for coaches.",
+					"button": "Explore coach experience"
+				}
+			},
+			"admin": {
+				"features": {
+					"dashboard": {
+						"title": "Dashboard",
+						"description": "A complete view of key metrics, platform activity, and cases that need review.",
+						"badge": "Dashboard"
+					},
+					"users": {
+						"title": "User management",
+						"description": "Manage accounts, users, pending cases, and core actions such as add, edit, and approve.",
+						"badge": "Users"
+					},
+					"billing": {
+						"title": "Billing and payments",
+						"description": "Track packages, subscriptions, payments, and client financial records.",
+						"badge": "Billing"
+					},
+					"plans": {
+						"title": "Plan management",
+						"description": "Organize workout and nutrition plans and assign them to clients with full content control.",
+						"badge": "Programs"
+					},
+					"forms": {
+						"title": "Forms and responses",
+						"description": "Create intake forms, review responses, and check data and attachments before starting service.",
+						"badge": "Intake"
+					},
+					"reports": {
+						"title": "Reports and follow-up",
+						"description": "Review client weekly reports and monitor cases that need attention.",
+						"badge": "Follow-up"
+					},
+					"content": {
+						"title": "Libraries and content",
+						"description": "Manage the exercise library, recipe library, and internal content used in programs and plans.",
+						"badge": "Content"
+					},
+					"operations": {
+						"title": "Operations management",
+						"description": "Organize daily operations through shared tools, calendar, messaging, and overall workflow tracking.",
+						"badge": "Operations"
+					}
+				},
+				"cta": {
+					"title": "Full control over platform operations",
+					"description": "From users and billing to content and reports, all admin tools in one place.",
+					"button": "Explore admin experience"
+				}
+			}
+		},
+		"steps": {
+			"badge": "Workflow",
+			"title": "From signup to follow-up",
+			"description": "The system covers the full workflow from data collection to plans, reports, and daily follow-up.",
+			"step": "Step",
+			"progress": "Progress level",
+			"steps": {
+				"intake": {
+					"title": "Collect data",
+					"description": "Create a custom intake form and share it with the client to collect essential details, goals, and health status."
+				},
+				"review": {
+					"title": "Review responses",
+					"description": "Review client answers and attachments and confirm that the information is complete before creating the account."
+				},
+				"account": {
+					"title": "Create account",
+					"description": "Add the client’s basic information, define the account type, and connect the client to the responsible coach."
+				},
+				"plans": {
+					"title": "Prepare plans",
+					"description": "Create or customize workout and nutrition plans based on the available library and content."
+				},
+				"assignment": {
+					"title": "Assign programs",
+					"description": "Link the plans to the client account so the client can follow workouts, nutrition, and log progress."
+				},
+				"followup": {
+					"title": "Follow-up and reports",
+					"description": "Track the client journey through the profile, weekly reports, chats, and reminders on an ongoing basis."
+				}
+			}
+		},
+		"pricing": {
+			"badge": "Pricing",
+			"title": "Choose the right plan",
+			"description": "Flexible plans for coaches, teams, and admins to manage clients, plans, and reports from one place.",
+			"cycles": {
+				"month": "Monthly",
+				"6months": "6 Months",
+				"year": "Yearly"
+			},
+			"save": "Save",
+			"mostPopular": "Most Popular",
+			"perMonth": "per month",
+			"per6Months": "per 6 months",
+			"perYear": "per year",
+			"getStarted": "Get Started",
+			"whatsIncluded": "What’s included",
+			"plans": {
+				"starter": {
+					"name": "Starter",
+					"tagline": "For solo coaches or a structured start",
+					"features": {
+						"0": "Basic client and account management",
+						"1": "Create and assign workout plans",
+						"2": "Create and assign nutrition plans",
+						"3": "Access the exercise library",
+						"4": "Weekly reports and follow-up",
+						"5": "In-system chats"
+					}
+				},
+				"professional": {
+					"name": "Professional",
+					"tagline": "For teams and coaches who need more professional management",
+					"features": {
+						"0": "Everything in Starter",
+						"1": "Advanced users and permissions management",
+						"2": "Organized nutrition recipe library",
+						"3": "Custom intake forms for clients",
+						"4": "Review form responses and attachments",
+						"5": "Clearer dashboards and reports",
+						"6": "More precise daily workflow management",
+						"7": "Better coach-client follow-up experience"
+					}
+				},
+				"enterprise": {
+					"name": "Enterprise",
+					"tagline": "For complete operations at a higher level",
+					"features": {
+						"0": "Everything in Professional",
+						"1": "Advanced billing and payments management",
+						"2": "Financial packages and subscriptions management",
+						"3": "Broader financial and admin oversight",
+						"4": "Deeper operational customization",
+						"5": "Better multi-role support",
+						"6": "Stronger full client journey organization",
+						"7": "Unified operations for admins and coaches",
+						"8": "Scalable for teams and centers",
+						"9": "Broader visibility into performance and follow-up"
+					}
+				}
+			}
+		},
+		"testimonials": {
+			"badge": "User testimonials",
+			"title": "Experiences that reflect the system’s value",
+			"description": "The platform helped organize the client journey more clearly, improve cooperation between admins and coaches, and simplify daily follow-up.",
+			"items": [
+				{
+					"name": "Sarah",
+					"role": "Client on the platform",
+					"text": "I started tracking my workouts, nutrition plan, and weekly reports from one place, which made staying consistent much easier than using multiple separate tools.",
+					"achievement": "Clearer daily follow-up"
+				},
+				{
+					"name": "Ahmed",
+					"role": "Coach",
+					"text": "The system gave me a practical way to manage clients, plans, reports, and chats, and accessing each client’s details became faster and more organized.",
+					"achievement": "Faster follow-up and better client management"
+				},
+				{
+					"name": "Noura",
+					"role": "Operations and admin",
+					"text": "We now have more clarity in user management, form reviews, billing follow-up, and day-to-day operations inside the platform instead of relying on separate tools.",
+					"achievement": "More organized and clearer operations"
+				},
+				{
+					"name": "Khaled",
+					"role": "Coach and client follow-up",
+					"text": "Having workouts, nutrition, reports, and chats in one system improved how we follow up with clients and made it easier to deliver a more professional service.",
+					"achievement": "A more professional service experience"
+				}
+			]
+		},
+		"faqs": {
+			"title": "Frequently asked questions",
+			"description": "Short answers about how the platform works, different roles, plans, reports, and billing.",
+			"badge": "Help Center",
+			"searchPlaceholder": "Search FAQs...",
+			"questionsCount": "Questions",
+			"categories": {
+				"all": "All",
+				"general": "General",
+				"membership": "Accounts",
+				"training": "Plans",
+				"billing": "Billing",
+				"technical": "Settings"
+			},
+			"questions": {
+				"general": {
+					"0": {
+						"question": "What does this system mainly provide?",
+						"answer": "The system provides an integrated platform for managing clients, workout plans, nutrition, weekly reports, chats, forms, and billing in one organized and clear place."
+					},
+					"1": {
+						"question": "Is the system suitable for clients, coaches, and admins together?",
+						"answer": "Yes. The system is designed to provide a tailored experience for each role based on permissions, so clients, coaches, and admins each get the right interface and tools."
+					},
+					"2": {
+						"question": "How does the system help track progress?",
+						"answer": "The system helps track progress through the client profile, weekly reports, adherence logs, measurements, and progress photos, making faster and more accurate decisions possible."
+					}
+				},
+				"membership": {
+					"0": {
+						"question": "How is a new client account created inside the system?",
+						"answer": "The process usually starts with an intake form or client data collection, then responses are reviewed, the account is created, linked to the responsible coach, and plans are assigned before follow-up begins."
+					},
+					"1": {
+						"question": "Do permissions differ between admin, coach, and client?",
+						"answer": "Yes. Each role has a different access level. Admins have broader control, coaches manage clients, plans, and follow-up, while clients focus on workouts, nutrition, reports, and communication."
+					}
+				},
+				"training": {
+					"0": {
+						"question": "Can workout and nutrition plans be created and customized easily?",
+						"answer": "Yes. The system allows creating plans or reusing existing ones, then customizing and assigning them to clients while benefiting from the exercise library, recipe library, and available content."
+					}
+				},
+				"billing": {
+					"0": {
+						"question": "Does the system support billing, payments, and subscriptions?",
+						"answer": "Yes. The system includes a dedicated page for packages, subscriptions, payments, and financial records, helping admins monitor financial operations in an organized way."
+					}
+				},
+				"technical": {
+					"0": {
+						"question": "Can settings and appearance be customized inside the system?",
+						"answer": "Yes. The system provides pages and settings to manage basic data, usage preferences, and some customization elements related to the user or work environment."
+					}
+				}
+			},
+			"noResults": {
+				"title": "No matching results",
+				"description": "Try changing your search term or selecting a different category to view more questions."
+			},
+			"cta": {
+				"title": "Still have a question?",
+				"description": "You can contact us for more clarification about how the system works or which pages and permissions are available.",
+				"email": "Email us",
+				"call": "Call us"
+			}
+		},
+		"contact": {
+			"title": "Start with us",
+			"description": "Send your details to request a system demo or start an experience that fits your workflow, and we’ll help you choose the best way to use the platform.",
+			"form": {
+				"fields": {
+					"username": "Full name",
+					"email": "Email address",
+					"phone": "Phone number",
+					"teamSize": "Usage type"
+				},
+				"teamSize": {
+					"solo": "Solo use",
+					"soloDesc": "Suitable for solo coaches or small teams that want to organize clients, plans, and follow-up.",
+					"team": "Team or management",
+					"teamDesc": "Suitable for teams and admins who need user management, permissions, and broader day-to-day operations."
+				},
+				"submit": "Submit request",
+				"submitting": "Submitting...",
+				"successTitle": "Request sent successfully",
+				"successDesc": "We’ll contact you soon to help you get started and choose the right way to use the system."
+			},
+			"testimonials": {
+				"subtitle": "Experiences related to organization and follow-up",
+				"0": {
+					"text": "The system helped us organize client management, plans, and reports in one place, which saved a lot of time in daily follow-up.",
+					"author": "Mohammed",
+					"role": "Operations Manager",
+					"company": "Training Platform"
+				},
+				"1": {
+					"text": "Having workouts, nutrition, chats, and reports in one system made the client experience clearer and easier, and improved the quality of communication with the team.",
+					"author": "Reem",
+					"role": "Coach",
+					"company": "Follow-up Team"
+				},
+				"2": {
+					"text": "We now have more clarity in permissions, user management, and billing, with a more organized experience than using multiple separate tools.",
+					"author": "Khaled",
+					"role": "System Administration",
+					"company": "Operations and Management"
+				}
+			}
+		},
+		"footer": {
+			"brand": {
+				"description": "An integrated platform that helps manage clients, plans, reports, chats, and billing in one organized and clear experience.",
+				"location": "Available for remote work and multiple operating environments"
+			},
+			"stats": {
+				"users": {
+					"value": "3+",
+					"label": "Core roles inside the system"
+				},
+				"trainers": {
+					"value": "10+",
+					"label": "Essential management and operation pages"
+				},
+				"workouts": {
+					"value": "1",
+					"label": "Unified platform for plans and follow-up"
+				},
+				"success": {
+					"value": "24/7",
+					"label": "Continuous access and follow-up"
+				}
+			},
+			"links": {
+				"product": {
+					"title": "Product",
+					"features": "Features",
+					"pricing": "Pricing",
+					"faq": "FAQ",
+					"testimonials": "Testimonials"
+				},
+				"company": {
+					"title": "Company",
+					"about": "About us",
+					"careers": "Careers",
+					"blog": "Blog",
+					"press": "Press"
+				},
+				"resources": {
+					"title": "Resources",
+					"community": "Community",
+					"support": "Support",
+					"docs": "Docs",
+					"api": "Integrations"
+				},
+				"legal": {
+					"title": "Legal",
+					"privacy": "Privacy",
+					"terms": "Terms",
+					"cookies": "Cookies",
+					"licenses": "Licenses"
+				}
+			},
+			"social": {
+				"title": "Follow us"
+			},
+			"copyright": {
+				"text": "© 2026 All rights reserved.",
+				"made": "Designed with",
+				"by": "by"
+			},
+			"trust": {
+				"secure": "Secure and organized management",
+				"certified": "Professional operating experience",
+				"rated": "Unified and clear interface"
+			}
+		},
+		"navbar": {
+			"brand": {
+				"name": "So7baFit",
+				"tagline": "Professional client and plan management"
+			},
+			"nav": {
+				"home": "Home",
+				"about": "About",
+				"community": "Features",
+				"pricing": "Pricing",
+				"joinNow": "Get Started"
+			},
+			"langSwitch": {
+				"ariaToAr": "التبديل إلى العربية",
+				"ariaToEn": "Switch to English",
+				"switchingToAr": "جارٍ التبديل للعربية",
+				"switchingToEn": "Switching to English"
+			},
+			"roles": {
+				"client": "Client",
+				"coach": "Coach",
+				"admin": "Admin",
+				"super_admin": "Super Admin"
+			},
+			"status": {
+				"active": "Active",
+				"inactive": "Inactive"
+			},
+			"quickLinks": {
+				"sectionLabel": "Quick links",
+				"workspace": "Workspace",
+				"myCalendar": "Calendar",
+				"money": "Money Management",
+				"myExercise": "My Workouts"
+			},
+			"dropdown": {
+				"openMenu": "Open user menu",
+				"dashboard": "Dashboard",
+				"myProfile": "My Profile",
+				"signOut": "Sign Out",
+				"points": "Points",
+				"pts": "pts"
+			},
+			"mobile": {
+				"open": "Open menu",
+				"close": "Close menu",
+				"joinCta": "Start using the system",
+				"sectionNav": "Navigation"
+			}
+		}
+	},
+	"mobile": {
+		"exercise": {
+			"title": "Daily workout tracking",
+			"tabs": {
+				"exercises": "Exercises",
+				"reps": "Performance",
+				"cardio": "Cardio"
+			},
+			"exercise": {
+				"name": "Chest workout",
+				"target": "Chest · Triceps · Shoulders"
+			},
+			"start": "Start workout",
+			"table": {
+				"done": "Done",
+				"weight": "Weight",
+				"reps": "Reps"
+			},
+			"buttons": {
+				"addSet": "Add set",
+				"save": "Save"
+			}
+		}
+	}
 }

@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>منصة إدارة التدريب والتغذية</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script>
+tailwind.config={theme:{extend:{fontFamily:{cairo:['Cairo','sans-serif']},colors:{
+  b50:'#eff6ff',b100:'#dbeafe',b200:'#bfdbfe',b300:'#93c5fd',b400:'#60a5fa',
+  b500:'#3b82f6',b600:'#2563eb',b700:'#1d4ed8',b800:'#1e40af',b900:'#1e3a8a',
+  s50:'#f0f9ff',s100:'#e0f2fe',s200:'#bae6fd',s300:'#7dd3fc',s400:'#38bdf8',
+  s500:'#0ea5e9',s600:'#0284c7',s700:'#0369a1',s800:'#075985',s900:'#0c4a6e',
+}}}}
+</script>
+<style>
+/* ─── RESET ─────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-snap-type:y mandatory;overflow-y:scroll;scroll-behavior:smooth;height:100%}
+body{font-family:'Cairo',sans-serif;direction:rtl;background:#04080f;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+/* ─── SECTION / FULL SCREEN ─────────────────────── */
+.S{
+  scroll-snap-align:start;scroll-snap-stop:always;
+  width:100%;min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;padding:48px 20px;
+}
+.W{width:100%;max-width:1080px;margin:0 auto;position:relative;z-index:10}
+
+/* ─── BACKGROUNDS ────────────────────────────────── */
+.bg-void{background:radial-gradient(ellipse 90% 80% at 50% 0%,#0d1f45 0%,#04080f 60%)}
+.bg-deep{background:radial-gradient(ellipse 80% 70% at 80% 20%,#071830 0%,#04080f 70%)}
+.bg-navy{background:radial-gradient(ellipse 100% 60% at 20% 80%,#0c1e40 0%,#04080f 65%)}
+.bg-ink{background:radial-gradient(ellipse 70% 90% at 50% 50%,#091828 0%,#03070e 70%)}
+.bg-cover{background:linear-gradient(135deg,#03070e 0%,#0b1d3e 40%,#071630 70%,#03070e 100%)}
+.bg-close{background:linear-gradient(145deg,#030c28 0%,#0d2560 45%,#061430 100%)}
+
+/* ─── GRID TEXTURE ───────────────────────────────── */
+.grid-tex{
+  position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(59,130,246,.04) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(59,130,246,.04) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+.dot-tex{
+  position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(rgba(96,165,250,.15) 1px,transparent 1px);
+  background-size:32px 32px;
+}
+
+/* ─── ORB GLOWS ──────────────────────────────────── */
+.orb{position:absolute;border-radius:50%;pointer-events:none;filter:blur(1px)}
+
+/* ─── GRADIENT TEXT ──────────────────────────────── */
+.tg{background:linear-gradient(120deg,#60a5fa,#38bdf8,#93c5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.tg2{background:linear-gradient(120deg,#ffffff,#bfdbfe);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* ─── SECTION LABEL ──────────────────────────────── */
+.lbl{
+  display:inline-flex;align-items:center;gap:10px;
+  font-size:10.5px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#60a5fa;
+  margin-bottom:18px;
+}
+.lbl-line{display:block;width:24px;height:2px;background:linear-gradient(90deg,#2563eb,#38bdf8);border-radius:99px}
+
+/* ─── GLASS CARD ─────────────────────────────────── */
+.gc{
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:20px;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+}
+.gc-blue{
+  background:rgba(37,99,235,0.1);
+  border:1px solid rgba(96,165,250,0.18);
+  border-radius:20px;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+}
+.gc-sky{
+  background:rgba(14,165,233,0.09);
+  border:1px solid rgba(56,189,248,0.18);
+  border-radius:20px;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+}
+
+/* ─── CARD ACCENT BAR ────────────────────────────── */
+.bar::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:20px 20px 0 0;background:linear-gradient(90deg,#2563eb,#38bdf8)}
+.bar-sky::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:20px 20px 0 0;background:linear-gradient(90deg,#0ea5e9,#38bdf8)}
+.bar-left::before{content:'';position:absolute;top:0;bottom:0;right:0;width:2px;border-radius:0 20px 20px 0;background:linear-gradient(180deg,#2563eb,#38bdf8)}
+
+/* ─── DIVIDER ────────────────────────────────────── */
+.div-line{width:52px;height:3px;background:linear-gradient(90deg,#2563eb,#38bdf8);border-radius:99px;margin-bottom:28px}
+
+/* ─── ICON BOX ───────────────────────────────────── */
+.ib{
+  display:flex;align-items:center;justify-content:center;
+  width:52px;height:52px;border-radius:16px;font-size:22px;flex-shrink:0;
+  background:linear-gradient(135deg,rgba(37,99,235,0.28),rgba(14,165,233,0.18));
+  border:1px solid rgba(96,165,250,0.2);
+  box-shadow:0 4px 20px rgba(37,99,235,0.25);
+}
+.ib-lg{
+  display:flex;align-items:center;justify-content:center;
+  width:64px;height:64px;border-radius:20px;font-size:28px;flex-shrink:0;
+  background:linear-gradient(135deg,#1d4ed8,#0ea5e9);
+  box-shadow:0 8px 28px rgba(37,99,235,0.5);
+}
+.ib-sm{
+  display:flex;align-items:center;justify-content:center;
+  width:40px;height:40px;border-radius:13px;font-size:18px;flex-shrink:0;
+  background:linear-gradient(135deg,rgba(37,99,235,0.25),rgba(14,165,233,0.15));
+  border:1px solid rgba(96,165,250,0.18);
+}
+
+/* ─── STEP CIRCLE ────────────────────────────────── */
+.sn{
+  min-width:38px;height:38px;border-radius:50%;
+  background:linear-gradient(135deg,#1d4ed8,#0ea5e9);
+  color:#fff;font-size:14px;font-weight:900;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;box-shadow:0 4px 18px rgba(37,99,235,0.45);
+}
+
+/* ─── CHECK ITEM ─────────────────────────────────── */
+.ci{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;color:rgba(203,213,225,.85);font-weight:500;line-height:1.55}
+.cd{min-width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#0ea5e9);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;font-size:8px;color:#fff;font-weight:900}
+
+/* ─── TAG ────────────────────────────────────────── */
+.tag{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:5px 14px;border-radius:99px;
+  background:rgba(37,99,235,0.15);border:1px solid rgba(96,165,250,0.22);
+  font-size:11px;font-weight:700;color:#93c5fd;letter-spacing:.3px;
+}
+
+/* ─── HOVER LIFT ─────────────────────────────────── */
+.lift{transition:transform .25s,box-shadow .25s}
+.lift:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(37,99,235,0.2)}
+
+/* ─── NAV DOTS (fixed left) ──────────────────────── */
+#dots{
+  position:fixed;left:20px;top:50%;transform:translateY(-50%);
+  z-index:999;display:flex;flex-direction:column;gap:9px;
+}
+.nd{
+  width:8px;height:8px;border-radius:50%;
+  background:rgba(255,255,255,0.15);cursor:pointer;
+  transition:all .3s;border:none;outline:none;padding:0;
+}
+.nd.on{background:linear-gradient(135deg,#2563eb,#38bdf8);transform:scale(1.5);box-shadow:0 0 10px rgba(37,99,235,.7)}
+.nd:hover:not(.on){background:rgba(96,165,250,.5)}
+
+/* ─── PROGRESS BAR ───────────────────────────────── */
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#2563eb,#38bdf8,#93c5fd);z-index:999;transition:width .4s cubic-bezier(.4,0,.2,1);box-shadow:0 0 10px rgba(37,99,235,.5)}
+
+/* ─── SCROLL HINT ────────────────────────────────── */
+.hint{
+  position:absolute;bottom:28px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;z-index:20;
+  animation:bob 2.4s ease-in-out infinite;
+}
+@keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(9px)}}
+
+/* ─── RINGS ──────────────────────────────────────── */
+.ring{position:absolute;border-radius:50%;border:1px solid rgba(255,255,255,.05);top:50%;left:50%;transform:translate(-50%,-50%)}
+
+/* ─── WORKFLOW STEP ROW ──────────────────────────── */
+.wrow{
+  display:flex;align-items:flex-start;gap:16px;
+  padding:16px 20px;border-radius:16px;
+  background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);
+  transition:background .2s,border-color .2s;cursor:default;
+}
+.wrow:hover{background:rgba(37,99,235,.12);border-color:rgba(96,165,250,.22)}
+
+/* ─── FEATURE MINI CARD ──────────────────────────── */
+.mc{
+  border-radius:18px;padding:24px 20px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  position:relative;overflow:hidden;
+  transition:transform .25s,background .25s,border-color .25s;
+}
+.mc:hover{transform:translateY(-3px);background:rgba(37,99,235,.1);border-color:rgba(96,165,250,.2)}
+
+/* ─── BENEFIT CARD ───────────────────────────────── */
+.bc{
+  border-radius:20px;padding:28px 24px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  position:relative;overflow:hidden;
+  transition:transform .25s,border-color .25s;
+}
+.bc:hover{transform:translateY(-4px);border-color:rgba(96,165,250,.25)}
+
+/* ─── GLOW DOT ───────────────────────────────────── */
+.gd{width:6px;height:6px;border-radius:50%;background:#38bdf8;flex-shrink:0}
+
+@media print{
+  html{overflow:visible;scroll-snap-type:none}
+  body{background:#04080f}
+  .S{min-height:100vh;page-break-after:always;break-after:page}
+  #dots,#prog,.hint{display:none!important}
+}
+</style>
+</head>
+<body class="font-cairo">
+
+<div id="prog" style="width:10%"></div>
+<nav id="dots"></nav>
+
+
+<!-- ╔══════════════════════════════════════════════════╗
+     ║  S01 · COVER                                     ║
+     ╚══════════════════════════════════════════════════╝ -->
+<section class="S bg-cover" data-i="0">
+  <div class="dot-tex opacity-40"></div>
+
+  <!-- glow orbs -->
+  <div class="orb" style="width:700px;height:700px;top:-200px;right:-180px;background:radial-gradient(circle,rgba(37,99,235,.16) 0%,transparent 65%)"></div>
+  <div class="orb" style="width:500px;height:500px;bottom:-150px;left:-100px;background:radial-gradient(circle,rgba(14,165,233,.12) 0%,transparent 65%)"></div>
+
+  <div class="W" style="display:grid;grid-template-columns:1.1fr 1fr;gap:72px;align-items:center;min-height:80vh">
+
+    <!-- LEFT -->
+    <div>
+      <!-- Logo -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:44px">
+        <div style="width:46px;height:46px;border-radius:15px;background:linear-gradient(135deg,#1d4ed8,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;font-weight:900;box-shadow:0 8px 28px rgba(37,99,235,.5)">م</div>
+        <span style="font-size:11px;font-weight:700;color:rgba(148,163,184,.6);letter-spacing:3.5px;text-transform:uppercase">FitPlatform · 2025</span>
+      </div>
+
+      <!-- Label -->
+      <div class="tag" style="margin-bottom:26px"><span style="width:6px;height:6px;border-radius:50%;background:#38bdf8;display:block"></span>منصة SaaS متكاملة</div>
+
+      <!-- Headline -->
+      <h1 style="font-size:58px;font-weight:900;color:#fff;line-height:1.08;margin-bottom:22px">
+        كل ما تحتاجه<br>
+        <span class="tg">لإدارة عملك</span><br>
+        في مكان واحد
+      </h1>
+
+      <div class="div-line"></div>
+
+      <p style="font-size:15.5px;color:rgba(148,163,184,.75);line-height:1.85;max-width:420px;margin-bottom:44px">
+        منصة رقمية شاملة تجمع العملاء، البرامج التدريبية،<br>الخطط الغذائية والمتابعة في واجهة واحدة احترافية.
+      </p>
+
+      <!-- Stats -->
+      <div style="display:flex;gap:36px;align-items:center">
+        <div><div style="font-size:34px;font-weight:900" class="tg">+٢٠</div><div style="font-size:11px;color:rgba(148,163,184,.5);font-weight:600;margin-top:3px">صفحة احترافية</div></div>
+        <div style="width:1px;height:40px;background:rgba(255,255,255,.08)"></div>
+        <div><div style="font-size:34px;font-weight:900" class="tg">٣</div><div style="font-size:11px;color:rgba(148,163,184,.5);font-weight:600;margin-top:3px">أدوار متكاملة</div></div>
+        <div style="width:1px;height:40px;background:rgba(255,255,255,.08)"></div>
+        <div><div style="font-size:34px;font-weight:900" class="tg">١٠٠٪</div><div style="font-size:11px;color:rgba(148,163,184,.5);font-weight:600;margin-top:3px">تحكم كامل</div></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: feature cards -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="gc lift" style="padding:22px 24px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#2563eb,#38bdf8);border-radius:20px 20px 0 0"></div>
+        <div class="ib">🏋️</div>
+        <div style="flex:1">
+          <div style="font-size:14.5px;font-weight:700;color:#fff;margin-bottom:4px">إدارة التمارين والبرامج</div>
+          <div style="font-size:12px;color:rgba(148,163,184,.6)">مكتبة شاملة + خطط مخصصة لكل عميل</div>
+        </div>
+        <div style="width:30px;height:30px;border-radius:50%;background:rgba(37,99,235,.2);border:1px solid rgba(96,165,250,.25);display:flex;align-items:center;justify-content:center;color:#60a5fa;font-size:13px;flex-shrink:0">←</div>
+      </div>
+
+      <div class="gc lift" style="padding:22px 24px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#0ea5e9,#38bdf8);border-radius:20px 20px 0 0"></div>
+        <div class="ib" style="background:linear-gradient(135deg,rgba(3,105,161,.3),rgba(56,189,248,.15));border-color:rgba(56,189,248,.2)">🥗</div>
+        <div style="flex:1">
+          <div style="font-size:14.5px;font-weight:700;color:#fff;margin-bottom:4px">خطط التغذية والوصفات</div>
+          <div style="font-size:12px;color:rgba(148,163,184,.6)">قيم غذائية + بدائل + مكملات مدمجة</div>
+        </div>
+        <div style="width:30px;height:30px;border-radius:50%;background:rgba(14,165,233,.2);border:1px solid rgba(56,189,248,.25);display:flex;align-items:center;justify-content:center;color:#38bdf8;font-size:13px;flex-shrink:0">←</div>
+      </div>
+
+      <div class="gc lift" style="padding:22px 24px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#2563eb,#38bdf8);border-radius:20px 20px 0 0"></div>
+        <div class="ib">📊</div>
+        <div style="flex:1">
+          <div style="font-size:14.5px;font-weight:700;color:#fff;margin-bottom:4px">تقارير التقدم والمتابعة</div>
+          <div style="font-size:12px;color:rgba(148,163,184,.6)">تقارير أسبوعية + قياسات + صور التطور</div>
+        </div>
+        <div style="width:30px;height:30px;border-radius:50%;background:rgba(37,99,235,.2);border:1px solid rgba(96,165,250,.25);display:flex;align-items:center;justify-content:center;color:#60a5fa;font-size:13px;flex-shrink:0">←</div>
+      </div>
+
+      <div class="gc lift" style="padding:22px 24px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#0ea5e9,#38bdf8);border-radius:20px 20px 0 0"></div>
+        <div class="ib" style="background:linear-gradient(135deg,rgba(3,105,161,.3),rgba(56,189,248,.15));border-color:rgba(56,189,248,.2)">💬</div>
+        <div style="flex:1">
+          <div style="font-size:14.5px;font-weight:700;color:#fff;margin-bottom:4px">تواصل مدمج وإدارة مالية</div>
+          <div style="font-size:12px;color:rgba(148,163,184,.6)">محادثات + فواتير + اشتراكات</div>
+        </div>
+        <div style="width:30px;height:30px;border-radius:50%;background:rgba(14,165,233,.2);border:1px solid rgba(56,189,248,.25);display:flex;align-items:center;justify-content:center;color:#38bdf8;font-size:13px;flex-shrink:0">←</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hint">
+    <span style="font-size:10px;color:rgba(148,163,184,.4);font-weight:700;letter-spacing:3px">SCROLL</span>
+    <div style="width:1px;height:36px;background:linear-gradient(180deg,rgba(96,165,250,.5),transparent)"></div>
+  </div>
+</section>
+
+
+<!-- ╔══════════════════════════════════════════════════╗
+     ║  S02 · PLATFORM OVERVIEW                         ║
+     ╚══════════════════════════════════════════════════╝ -->
+<section class="S bg-deep" data-i="1">
+  <div class="grid-tex"></div>
+  <div class="orb" style="width:600px;height:600px;bottom:-200px;left:-100px;background:radial-gradient(circle,rgba(37,99,235,.15) 0%,transparent 65%)"></div>
+
+  <div class="W">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:60px">
+      <div class="lbl" style="justify-content:center"><span class="lbl-line"></span>نظرة عامة<span class="lbl-line"></span></div>
+      <h2 style="font-size:46px;font-weight:900;color:#fff;line-height:1.12;margin-bottom:18px">
+        منصة واحدة تستبدل<br><span class="tg">عشرات الأدوات المتفرقة</span>
+      </h2>
+      <p style="font-size:15px;color:rgba(148,163,184,.65);max-width:500px;margin:0 auto;line-height:1.85">
+        نظام رقمي متكامل يربط المدربين والعملاء والإدارة في بيئة عمل واحدة — منظمة، واضحة، وقابلة للتوسع.
+      </p>
+    </div>
+
+    <!-- 3 value cards -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:24px">
+
+      <div class="gc lift bar" style="padding:36px 28px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:-40px;right:-40px;width:120px;height:120px;border-radius:50%;background:rgba(37,99,235,.08)"></div>
+        <div class="ib-lg" style="margin-bottom:22px">⚡</div>
+        <div style="font-size:21px;font-weight:800;color:#fff;margin-bottom:10px">كفاءة أعلى</div>
+        <p style="font-size:13px;color:rgba(148,163,184,.65);line-height:1.8">إعداد الخطط في دقائق، متابعة تلقائية، وإدارة عملاء بسهولة تامة.</p>
+      </div>
+
+      <div class="gc-sky lift bar-sky" style="padding:36px 28px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:-40px;right:-40px;width:120px;height:120px;border-radius:50%;background:rgba(14,165,233,.08)"></div>
+        <div class="ib-lg" style="margin-bottom:22px;background:linear-gradient(135deg,#0369a1,#38bdf8);box-shadow:0 8px 28px rgba(14,165,233,.45)">🎯</div>
+        <div style="font-size:21px;font-weight:800;color:#fff;margin-bottom:10px">تخصيص كامل</div>
+        <p style="font-size:13px;color:rgba(148,163,184,.65);line-height:1.8">برامج مصممة لكل عميل بشكل فردي حسب أهدافه وبياناته الصحية.</p>
+      </div>
+
+      <div class="gc lift bar" style="padding:36px 28px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:-40px;right:-40px;width:120px;height:120px;border-radius:50%;background:rgba(37,99,235,.08)"></div>
+        <div class="ib-lg" style="margin-bottom:22px">📈</div>
+        <div style="font-size:21px;font-weight:800;color:#fff;margin-bottom:10px">نمو مستدام</div>
+        <p style="font-size:13px;color:rgba(148,163,184,.65);line-height:1.8">بنية تستوعب نمو قاعدة عملائك بسهولة دون أي تعقيد إضافي.</p>
+      </div>
+    </div>
+
+    <!-- Bottom banner -->
+    <div style="border-radius:20px;background:linear-gradient(135deg,rgba(37,99,235,.16),rgba(14,165,233,.1));border:1px solid rgba(96,165,250,.18);padding:22px 32px;display:flex;align-items:center;justify-content:space-between;gap:20px">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#60a5fa;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">المنصة مناسبة لـ</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <span class="tag">🏋️ صالات الجيم</span>
+          <span class="tag">🧑‍💼 المدربون المستقلون</span>
+          <span class="tag">🏥 مراكز الصحة</span>
+          <span class="tag">🥗 أخصائيو التغذية</span>
+        </div>
+      </div>
+      <div style="text-align:left;flex-shrink:0;border-right:1px solid rgba(255,255,255,.08);padding-right:32px">
+        <div style="font-size:22px;font-weight:900;color:#fff">إدارة أسهل</div>
+        <div style="font-size:16px;font-weight:700" class="tg">تواصل أفضل · نتائج أسرع</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ╔══════════════════════════════════════════════════╗
+     ║  S03 · USER ROLES                                ║
+     ╚══════════════════════════════════════════════════╝ -->
+<section class="S bg-navy" data-i="2">
+  <div class="grid-tex"></div>
+  <div class="orb" style="width:500px;height:500px;top:-100px;right:-100px;background:radial-gradient(circle,rgba(37,99,235,.14) 0%,transparent 65%)"></div>
+  <div class="orb" style="width:400px;height:400px;bottom:-100px;left:-80px;background:radial-gradient(circle,rgba(14,165,233,.1) 0%,transparent 65%)"></div>
+
+  <div class="W">
+    <div style="text-align:center;margin-bottom:52px">
+      <div class="lbl" style="justify-content:center"><span class="lbl-line"></span>أدوار المستخدمين<span class="lbl-line"></span></div>
+      <h2 style="font-size:46px;font-weight:900;color:#fff;line-height:1.12;margin-bottom:16px">
+        كل دور يرى <span class="tg">ما يحتاجه فقط</span>
+      </h2>
+      <p style="font-size:14.5px;color:rgba(148,163,184,.6);max-width:440px;margin:0 auto">
+        ثلاثة أدوار متكاملة — كل واحد يمتلك بيئة عمل مصممة خصيصاً لاحتياجاته وصلاحياته.
+      </p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:22px">
+
+      <!-- Admin -->
+      <div class="lift" style="border-radius:24px;padding:32px 26px;position:relative;overflow:hidden;background:linear-gradient(145deg,rgba(37,99,235,.13),rgba(37,99,235,.04));border:1px solid rgba(96,165,250,.2)">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#2563eb,#60a5fa);border-radius:24px 24px 0 0"></div>
+        <div style="position:absolute;bottom:-30px;left:-30px;width:100px;height:100px;border-radius:50%;background:rgba(37,99,235,.07)"></div>
+        <div class="ib-lg" style="margin-bottom:22px">🛡️</div>
+        <div style="font-size:23px;font-weight:900;color:#fff;margin-bottom:5px">المسؤول</div>
+        <div style="font-size:11.5px;color:rgba(96,165,250,.8);font-weight:700;letter-spacing:.5px;margin-bottom:20px">التحكم الكامل · الإدارة الشاملة</div>
+        <div style="height:1px;background:rgba(96,165,250,.12);margin-bottom:20px"></div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="ci"><div class="cd">✓</div>إدارة جميع المستخدمين</div>
+          <div class="ci"><div class="cd">✓</div>إنشاء الخطط وتخصيصها</div>
+          <div class="ci"><div class="cd">✓</div>مراجعة التقارير والإحصائيات</div>
+          <div class="ci"><div class="cd">✓</div>إدارة المدفوعات والاشتراكات</div>
+          <div class="ci"><div class="cd">✓</div>بناء مكتبة التمارين والوصفات</div>
+        </div>
+      </div>
+
+      <!-- Coach -->
+      <div class="lift" style="border-radius:24px;padding:32px 26px;position:relative;overflow:hidden;background:linear-gradient(145deg,rgba(14,165,233,.13),rgba(14,165,233,.04));border:1px solid rgba(56,189,248,.2)">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#0ea5e9,#38bdf8);border-radius:24px 24px 0 0"></div>
+        <div style="position:absolute;bottom:-30px;left:-30px;width:100px;height:100px;border-radius:50%;background:rgba(14,165,233,.07)"></div>
+        <div class="ib-lg" style="background:linear-gradient(135deg,#0369a1,#38bdf8);box-shadow:0 8px 28px rgba(14,165,233,.5);margin-bottom:22px">🏆</div>
+        <div style="font-size:23px;font-weight:900;color:#fff;margin-bottom:5px">المدرب</div>
+        <div style="font-size:11.5px;color:rgba(56,189,248,.8);font-weight:700;letter-spacing:.5px;margin-bottom:20px">متابعة العملاء · إعداد البرامج</div>
+        <div style="height:1px;background:rgba(56,189,248,.12);margin-bottom:20px"></div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="ci"><div class="cd" style="background:linear-gradient(135deg,#0369a1,#38bdf8)">✓</div>إدارة عملاء المدرب</div>
+          <div class="ci"><div class="cd" style="background:linear-gradient(135deg,#0369a1,#38bdf8)">✓</div>مراجعة التقارير الأسبوعية</div>
+          <div class="ci"><div class="cd" style="background:linear-gradient(135deg,#0369a1,#38bdf8)">✓</div>إنشاء خطط التمارين والتغذية</div>
+          <div class="ci"><div class="cd" style="background:linear-gradient(135deg,#0369a1,#38bdf8)">✓</div>التواصل المباشر مع العملاء</div>
+          <div class="ci"><div class="cd" style="background:linear-gradient(135deg,#0369a1,#38bdf8)">✓</div>متابعة التقدم والقياسات</div>
+        </div>
+      </div>
+
+      <!-- Client -->
+      <div class="lift" style="border-radius:24px;padding:32px 26px;position:relative;overflow:hidden;background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.09)">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#475569,#94a3b8);border-radius:24px 24px 0 0"></div>
+        <div style="position:absolute;bottom:-30px;left:-30px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.03)"></div>
+        <div class="ib-lg" style="background:linear-gradient(135deg,#334155,#64748b);box-shadow:0 8px 28px rgba(0,0,0,.4);margin-bottom:22px">🌟</div>
+        <div style="font-size:23px;font-weight:900;color:#fff;margin-bottom:5px">العميل</div>
+        <div style="font-size:11.5px;color:rgba(148,163,184,.7);font-weight:700;letter-spacing:.5px;margin-bottom:20px">تجربة مخصصة · متابعة يومية</div>
+        <div style="height:1px;background:rgba(255,255,255,.07);margin-bottom:20px"></div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="ci"><div class="cd" style="background:linear-gradient(135deg,#334155,#64748b)">✓</div>متابعة خطة التمارين اليومية</div>
+          <div class="ci"><div class="cd" style="background:linear-gradient(135deg,#334155,#64748b)">✓</div>عرض الخطة الغذائية بالتفصيل</div>
+          <div class="ci"><div class="cd" style="background:linear-gradient(135deg,#334155,#64748b)">✓</div>إرسال التقارير الأسبوعية</div>
+          <div class="ci"><div class="cd" style="background:linear-gradient(135deg,#334155,#64748b)">✓</div>التواصل مع المدرب مباشرة</div>
+          <div class="ci"><div class="cd" style="background:linear-gradient(135deg,#334155,#64748b)">✓</div>تتبع التقدم وإدارة البيانات</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:22px;border-radius:16px;background:rgba(37,99,235,.09);border:1px solid rgba(96,165,250,.15);padding:16px 24px;display:flex;align-items:center;gap:14px">
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#0ea5e9);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px">🔒</div>
+      <p style="font-size:13.5px;color:rgba(148,163,184,.85);font-weight:500">كل دور يصل إلى الأدوات المناسبة فقط حسب صلاحياته — مع مرونة تامة في ضبط مستويات الوصول لكل حساب.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ╔══════════════════════════════════════════════════╗
+     ║  S04 · ADMIN WORKFLOW                            ║
+     ╚══════════════════════════════════════════════════╝ -->
+<section class="S bg-void" data-i="3">
+  <div class="grid-tex"></div>
+  <div class="orb" style="width:600px;height:600px;top:-150px;right:-200px;background:radial-gradient(circle,rgba(37,99,235,.12) 0%,transparent 65%)"></div>
+
+  <div class="W">
+    <div style="display:grid;grid-template-columns:2fr 3fr;gap:64px;align-items:center">
+
+      <!-- LEFT: title block -->
+      <div>
+        <div class="lbl"><span class="lbl-line"></span>رحلة عمل المسؤول</div>
+        <h2 style="font-size:40px;font-weight:900;color:#fff;line-height:1.18;margin-bottom:20px">
+          من الاستبيان<br>حتى<br><span class="tg">المتابعة الكاملة</span>
+        </h2>
+        <div class="div-line"></div>
+        <p style="font-size:13.5px;color:rgba(148,163,184,.6);line-height:1.85;margin-bottom:36px">
+          رحلة عميل منظمة ومرتبة — من لحظة جمع البيانات الأولى حتى متابعة التقدم الأسبوعي.
+        </p>
+        <!-- Metrics -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="padding:20px;border-radius:16px;background:rgba(37,99,235,.12);border:1px solid rgba(96,165,250,.18);text-align:center">
+            <div style="font-size:32px;font-weight:900" class="tg">٨</div>
+            <div style="font-size:11px;color:rgba(148,163,184,.55);font-weight:600;margin-top:4px">خطوات منظمة</div>
+          </div>
+          <div style="padding:20px;border-radius:16px;background:rgba(14,165,233,.1);border:1px solid rgba(56,189,248,.16);text-align:center">
+            <div style="font-size:32px;font-weight:900" class="tg">١٠٠٪</div>
+            <div style="font-size:11px;color:rgba(148,163,184,.55);font-weight:600;margin-top:4px">تجربة موثقة</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: steps -->
+      <div style="display:flex;flex-direction:column;gap:10px">
+
+        <div class="wrow">
+          <div class="sn">١</div>
+          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:3px">إنشاء نموذج الاستبيان</div><div style="font-size:12.5px;color:rgba(148,163,184,.6)">تصميم نموذج لجمع البيانات الصحية وأهداف العميل قبل انضمامه.</div></div>
+        </div>
+        <div class="wrow">
+          <div class="sn">٢</div>
+          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:3px">مشاركة الرابط مع العميل</div><div style="font-size:12.5px;color:rgba(148,163,184,.6)">إرسال رابط النموذج ليملأه العميل ويرسله مباشرة للمنصة.</div></div>
+        </div>
+        <div class="wrow">
+          <div class="sn">٣</div>
+          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:3px">استلام ومراجعة الردود</div><div style="font-size:12.5px;color:rgba(148,163,184,.6)">مراجعة إجابات العميل والملفات المرفقة في صفحة منظمة وواضحة.</div></div>
+        </div>
+        <div class="wrow">
+          <div class="sn">٤</div>
+          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:3px">إنشاء الحساب وإسناد المدرب</div><div style="font-size:12.5px;color:rgba(148,163,184,.6)">تسجيل بيانات العميل وربطه بالمدرب المسؤول مباشرةً.</div></div>
+        </div>
+        <div class="wrow">
+          <div class="sn">٥</div>
+          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:3px">إعداد خطة التمارين والتغذية</div><div style="font-size:12.5px;color:rgba(148,163,184,.6)">اختيار أو بناء خطة مخصصة من مكتبة المحتوى الجاهزة.</div></div>
+        </div>
+        <div class="wrow">
+          <div class="sn">٦</div>
+          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:3px">إسناد الخطط للعميل</div><div style="font-size:12.5px;color:rgba(148,163,184,.6)">تخصيص البرامج وإرسال بيانات الحساب للعميل للبدء فوراً.</div></div>
+        </div>
+        <div class="wrow" style="background:rgba(37,99,235,.1);border-color:rgba(96,165,250,.2)">
+          <div class="sn" style="background:linear-gradient(135deg,#0369a1,#38bdf8)">٧</div>
+          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:3px">متابعة التقارير الأسبوعية</div><div style="font-size:12.5px;color:rgba(148,163,184,.6)">مراجعة تقارير العميل وإضافة توصيات ومتابعة التطور الفعلي.</div></div>
+        </div>
+        <div class="wrow" style="background:linear-gradient(135deg,rgba(37,99,235,.18),rgba(14,165,233,.14));border-color:rgba(96,165,250,.28)">
+          <div class="sn" style="background:#fff;color:#1d4ed8">٨</div>
+          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:3px">إدارة الاشتراكات والمدفوعات</div><div style="font-size:12.5px;color:rgba(148,163,184,.6)">تتبع الاشتراكات وضمان استمرارية الخدمة من لوحة مالية متكاملة.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ╔══════════════════════════════════════════════════╗
+     ║  S05 · ADMIN FEATURES                            ║
+     ╚══════════════════════════════════════════════════╝ -->
+<section class="S bg-ink" data-i="4">
+  <div class="dot-tex opacity-30"></div>
+  <div class="orb" style="width:500px;height:500px;top:-100px;left:10%;background:radial-gradient(circle,rgba(14,165,233,.12) 0%,transparent 65%)"></div>
+
+  <div class="W">
+    <div style="text-align:center;margin-bottom:52px">
+      <div class="lbl" style="justify-content:center"><span class="lbl-line"></span>ميزات لوحة الإدارة<span class="lbl-line"></span></div>
+      <h2 style="font-size:46px;font-weight:900;color:#fff;line-height:1.12;margin-bottom:14px">
+        كل أداة في مكانها<br><span class="tg">لإدارة احترافية متكاملة</span>
+      </h2>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px">
+      <div class="mc bar"><div style="font-size:26px;margin-bottom:14px">👥</div><div style="font-size:13.5px;font-weight:700;color:#fff;margin-bottom:6px">إدارة المستخدمين</div><p style="font-size:11.5px;color:rgba(148,163,184,.6);line-height:1.65">بحث وتصفية وإدارة كاملة لجميع الحسابات.</p></div>
+
+      <div class="mc bar-sky"><div style="font-size:26px;margin-bottom:14px">🧑‍💼</div><div style="font-size:13.5px;font-weight:700;color:#fff;margin-bottom:6px">الملف الشخصي</div><p style="font-size:11.5px;color:rgba(148,163,184,.6);line-height:1.65">رؤية متكاملة لرحلة كل عميل من الخطط والتقارير.</p></div>
+
+      <div class="mc bar"><div style="font-size:26px;margin-bottom:14px">🏋️</div><div style="font-size:13.5px;font-weight:700;color:#fff;margin-bottom:6px">مكتبة التمارين</div><p style="font-size:11.5px;color:rgba(148,163,184,.6);line-height:1.65">آلاف التمارين مع صور وفيديوهات وتعديل حر.</p></div>
+
+      <div class="mc bar-sky"><div style="font-size:26px;margin-bottom:14px">🍽️</div><div style="font-size:13.5px;font-weight:700;color:#fff;margin-bottom:6px">مكتبة الوصفات</div><p style="font-size:11.5px;color:rgba(148,163,184,.6);line-height:1.65">وصفات بالقيم الغذائية الكاملة وتصنيفات الوجبات.</p></div>
+
+      <div class="mc bar"><div style="font-size:26px;margin-bottom:14px">📁</div><div style="font-size:13.5px;font-weight:700;color:#fff;margin-bottom:6px">خطط التمارين</div><p style="font-size:11.5px;color:rgba(148,163,184,.6);line-height:1.65">إنشاء وتعديل وإسناد الخطط التدريبية بسهولة.</p></div>
+
+      <div class="mc bar-sky"><div style="font-size:26px;margin-bottom:14px">🥗</div><div style="font-size:13.5px;font-weight:700;color:#fff;margin-bottom:6px">خطط التغذية</div><p style="font-size:11.5px;color:rgba(148,163,184,.6);line-height:1.65">بناء خطط غذائية بالوجبات والبدائل والمكملات.</p></div>
+
+      <div class="mc bar"><div style="font-size:26px;margin-bottom:14px">📊</div><div style="font-size:13.5px;font-weight:700;color:#fff;margin-bottom:6px">التقارير الأسبوعية</div><p style="font-size:11.5px;color:rgba(148,163,184,.6);line-height:1.65">مراجعة تقارير العملاء وإضافة ملاحظات منظمة.</p></div>
+
+      <div class="mc bar-sky"><div style="font-size:26px;margin-bottom:14px">📋</div><div style="font-size:13.5px;font-weight:700;color:#fff;margin-bottom:6px">نماذج الاستبيان</div><p style="font-size:11.5px;color:rgba(148,163,184,.6);line-height:1.65">إنشاء نماذج مرنة لجمع بيانات العملاء.</p></div>
+
+      <div class="mc bar"><div style="font-size:26px;margin-bottom:14px">📬</div><div style="font-size:13.5px;font-weight:700;color:#fff;margin-bottom:6px">ردود النماذج</div><p style="font-size:11.5px;color:rgba(148,163,184,.6);line-height:1.65">مراجعة الردود والمرفقات الواردة من العملاء.</p></div>
+
+      <div class="mc bar-sky"><div style="font-size:26px;margin-bottom:14px">💳</div><div style="font-size:13.5px;font-weight:700;color:#fff;margin-bottom:6px">الفواتير والمدفوعات</div><p style="font-size:11.5px;color:rgba(148,163,184,.6);line-height:1.65">الاشتراكات والباقات والمعاملات المالية.</p></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ╔══════════════════════════════════════════════════╗
+     ║  S06 · COACH EXPERIENCE                          ║
+     ╚══════════════════════════════════════════════════╝ -->
+<section class="S bg-deep" data-i="5">
+  <div class="grid-tex"></div>
+  <div class="orb" style="width:600px;height:600px;bottom:-200px;right:-100px;background:radial-gradient(circle,rgba(14,165,233,.13) 0%,transparent 65%)"></div>
+
+  <div class="W">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center">
+
+      <!-- LEFT -->
+      <div>
+        <div class="lbl"><span class="lbl-line"></span>تجربة المدرب</div>
+        <h2 style="font-size:42px;font-weight:900;color:#fff;line-height:1.15;margin-bottom:22px">
+          أدوات احترافية<br><span class="tg">لمتابعة أكثر</span><br>بجهد أقل
+        </h2>
+        <div class="div-line" style="background:linear-gradient(90deg,#0ea5e9,#38bdf8)"></div>
+        <p style="font-size:14px;color:rgba(148,163,184,.65);line-height:1.85;margin-bottom:36px">
+          بيئة عمل كاملة تُمكّن المدرب من إدارة برامج عملائه باحترافية عالية دون أدوات خارجية.
+        </p>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="gc-sky" style="padding:20px 22px;display:flex;align-items:flex-start;gap:14px">
+            <div class="ib-sm" style="background:linear-gradient(135deg,rgba(3,105,161,.3),rgba(56,189,248,.15));border:1px solid rgba(56,189,248,.2)">👤</div>
+            <div><div style="font-size:14.5px;font-weight:700;color:#fff;margin-bottom:4px">ملفات العملاء الشاملة</div><div style="font-size:12.5px;color:rgba(148,163,184,.6)">قياسات، تمارين، تغذية، وتقارير في مكان واحد.</div></div>
+          </div>
+          <div class="gc-sky" style="padding:20px 22px;display:flex;align-items:flex-start;gap:14px">
+            <div class="ib-sm" style="background:linear-gradient(135deg,rgba(3,105,161,.3),rgba(56,189,248,.15));border:1px solid rgba(56,189,248,.2)">📅</div>
+            <div><div style="font-size:14.5px;font-weight:700;color:#fff;margin-bottom:4px">إنشاء وإدارة الخطط</div><div style="font-size:12.5px;color:rgba(148,163,184,.6)">بناء خطط من المكتبة أو من الصفر وإسنادها للعملاء.</div></div>
+          </div>
+          <div class="gc-sky" style="padding:20px 22px;display:flex;align-items:flex-start;gap:14px">
+            <div class="ib-sm" style="background:linear-gradient(135deg,rgba(3,105,161,.3),rgba(56,189,248,.15));border:1px solid rgba(56,189,248,.2)">📝</div>
+            <div><div style="font-size:14.5px;font-weight:700;color:#fff;margin-bottom:4px">مراجعة التقارير الأسبوعية</div><div style="font-size:12.5px;color:rgba(148,163,184,.6)">قراءة التقارير بالتفصيل وإضافة توصيات لكل عميل.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: shared tools -->
+      <div>
+        <div style="border-radius:22px;background:linear-gradient(145deg,rgba(14,165,233,.12),rgba(37,99,235,.08));border:1px solid rgba(56,189,248,.18);padding:30px 26px;margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;color:#38bdf8;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:22px">أدوات مشتركة مع المسؤول</div>
+          <div style="display:flex;flex-direction:column;gap:13px">
+            <div style="display:flex;align-items:center;gap:11px;font-size:13.5px;color:rgba(203,213,225,.8);font-weight:500"><div class="gd"></div>مكتبة التمارين الكاملة</div>
+            <div style="display:flex;align-items:center;gap:11px;font-size:13.5px;color:rgba(203,213,225,.8);font-weight:500"><div class="gd"></div>مكتبة الوصفات الغذائية</div>
+            <div style="display:flex;align-items:center;gap:11px;font-size:13.5px;color:rgba(203,213,225,.8);font-weight:500"><div class="gd"></div>خطط التمارين والتغذية</div>
+            <div style="display:flex;align-items:center;gap:11px;font-size:13.5px;color:rgba(203,213,225,.8);font-weight:500"><div class="gd"></div>التقارير الأسبوعية</div>
+            <div style="display:flex;align-items:center;gap:11px;font-size:13.5px;color:rgba(203,213,225,.8);font-weight:500"><div class="gd"></div>صفحة المحادثات</div>
+            <div style="display:flex;align-items:center;gap:11px;font-size:13.5px;color:rgba(203,213,225,.8);font-weight:500"><div class="gd"></div>حاسبة السعرات الحرارية</div>
+            <div style="display:flex;align-items:center;gap:11px;font-size:13.5px;color:rgba(203,213,225,.8);font-weight:500"><div class="gd"></div>التقويم ومساحة العمل</div>
+          </div>
+        </div>
+        <div style="border-radius:16px;background:linear-gradient(135deg,rgba(37,99,235,.18),rgba(14,165,233,.13));border:1px solid rgba(96,165,250,.22);padding:18px 22px">
+          <div style="font-size:10.5px;font-weight:700;color:#93c5fd;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">تنبيه</div>
+          <p style="font-size:12.5px;color:rgba(148,163,184,.7);line-height:1.7">المدرب يصل للأدوات المشتركة بصلاحيات متناسبة مع دوره — دون الوصول للإعدادات الإدارية والمالية.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ╔══════════════════════════════════════════════════╗
+     ║  S07 · CLIENT EXPERIENCE                         ║
+     ╚══════════════════════════════════════════════════╝ -->
+<section class="S bg-navy" data-i="6">
+  <div class="grid-tex"></div>
+  <div class="orb" style="width:500px;height:500px;top:-80px;left:5%;background:radial-gradient(circle,rgba(37,99,235,.13) 0%,transparent 65%)"></div>
+  <div class="orb" style="width:400px;height:400px;bottom:-80px;right:5%;background:radial-gradient(circle,rgba(14,165,233,.1) 0%,transparent 65%)"></div>
+
+  <div class="W">
+    <div style="text-align:center;margin-bottom:48px">
+      <div class="lbl" style="justify-content:center"><span class="lbl-line"></span>تجربة العميل<span class="lbl-line"></span></div>
+      <h2 style="font-size:46px;font-weight:900;color:#fff;line-height:1.12;margin-bottom:16px">
+        تجربة يومية سهلة<br><span class="tg">تُبقيه ملتزماً ومحفزاً</span>
+      </h2>
+    </div>
+
+    <div style="display:grid;grid-template-columns:5fr 2fr 2fr;grid-template-rows:1fr 1fr;gap:16px">
+
+      <!-- Hero dashboard -->
+      <div style="grid-row:span 2;border-radius:24px;background:linear-gradient(145deg,#1e3a8a,#1d4ed8,#075985);padding:38px 34px;position:relative;overflow:hidden;border:1px solid rgba(96,165,250,.2)">
+        <div style="position:absolute;top:-60px;right:-60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.06)"></div>
+        <div style="position:absolute;bottom:-80px;left:-40px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.04)"></div>
+        <div style="position:relative">
+          <div class="tag" style="margin-bottom:22px;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.2);color:#fff">لوحة تحكم العميل</div>
+          <div style="font-size:28px;font-weight:900;color:#fff;margin-bottom:16px;line-height:1.22">ملخص يومي شامل<br>عن نشاطه وتقدمه</div>
+          <p style="font-size:13px;color:rgba(219,234,254,.8);line-height:1.85;margin-bottom:28px">يستطيع العميل دخول منصته ورؤية كل شيء — تمارين اليوم، وجباته، وملاحظات مدربه — في لحظة واحدة.</p>
+          <div style="display:flex;flex-direction:column;gap:11px">
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(219,234,254,.85);font-weight:500"><div style="width:7px;height:7px;border-radius:50%;background:#38bdf8"></div>تمارين اليوم مع الفيديوهات</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(219,234,254,.85);font-weight:500"><div style="width:7px;height:7px;border-radius:50%;background:#38bdf8"></div>خطة الوجبات اليومية</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(219,234,254,.85);font-weight:500"><div style="width:7px;height:7px;border-radius:50%;background:#38bdf8"></div>ملاحظات وتعليقات المدرب</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(219,234,254,.85);font-weight:500"><div style="width:7px;height:7px;border-radius:50%;background:#38bdf8"></div>إشعارات وتذكيرات شخصية</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top: workouts -->
+      <div class="mc bar"><div style="font-size:24px;margin-bottom:12px">🏋️</div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:6px">تماريني</div><p style="font-size:12px;color:rgba(148,163,184,.6);line-height:1.65">خطة يومية مع فيديوهات وتسجيل الأداء.</p></div>
+
+      <!-- Top: nutrition -->
+      <div class="mc bar-sky" style="background:rgba(14,165,233,.07);border-color:rgba(56,189,248,.14)"><div style="font-size:24px;margin-bottom:12px">🥗</div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:6px">تغذيتي</div><p style="font-size:12px;color:rgba(148,163,184,.6);line-height:1.65">وجبات اليوم مع البدائل والسعرات.</p></div>
+
+      <!-- Bottom: report -->
+      <div class="mc bar"><div style="font-size:24px;margin-bottom:12px">📊</div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:6px">التقرير الأسبوعي</div><p style="font-size:12px;color:rgba(148,163,184,.6);line-height:1.65">إرسال القياسات وتلقي ردود المدرب.</p></div>
+
+      <!-- Bottom: reminders -->
+      <div class="mc bar-sky" style="background:rgba(14,165,233,.07);border-color:rgba(56,189,248,.14)"><div style="font-size:24px;margin-bottom:12px">🔔</div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:6px">التذكيرات</div><p style="font-size:12px;color:rgba(148,163,184,.6);line-height:1.65">تنبيهات مخصصة للوجبات والتمارين.</p></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ╔══════════════════════════════════════════════════╗
+     ║  S08 · SHARED TOOLS                              ║
+     ╚══════════════════════════════════════════════════╝ -->
+<section class="S bg-void" data-i="7">
+  <div class="grid-tex"></div>
+  <div class="orb" style="width:600px;height:600px;top:-100px;right:-150px;background:radial-gradient(circle,rgba(37,99,235,.13) 0%,transparent 65%)"></div>
+
+  <div class="W">
+    <div style="text-align:center;margin-bottom:56px">
+      <div class="lbl" style="justify-content:center"><span class="lbl-line"></span>الأدوات المشتركة<span class="lbl-line"></span></div>
+      <h2 style="font-size:46px;font-weight:900;color:#fff;line-height:1.12;margin-bottom:16px">
+        أدوات ذكية مشتركة<br><span class="tg">تُعزز التعاون بين الجميع</span>
+      </h2>
+      <p style="font-size:14.5px;color:rgba(148,163,184,.6);max-width:440px;margin:0 auto">
+        متاحة لجميع الأدوار بصلاحيات ملائمة — لأن الكفاءة تبدأ من التواصل الجيد.
+      </p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+      <div class="gc-blue lift bar" style="padding:32px 28px;position:relative;display:flex;gap:22px;align-items:flex-start;overflow:hidden">
+        <div style="position:absolute;bottom:-30px;left:-30px;width:120px;height:120px;border-radius:50%;background:rgba(37,99,235,.08)"></div>
+        <div class="ib-lg" style="flex-shrink:0">💬</div>
+        <div>
+          <div style="font-size:19px;font-weight:800;color:#fff;margin-bottom:7px">المحادثات المدمجة</div>
+          <div class="tag" style="margin-bottom:14px;font-size:10px">Admin · Coach · Client</div>
+          <p style="font-size:13px;color:rgba(148,163,184,.65);line-height:1.8">تواصل مباشر وسريع بين جميع الأطراف — رسائل، صور، وملفات — بدون أدوات خارجية.</p>
+        </div>
+      </div>
+
+      <div class="gc-sky lift bar-sky" style="padding:32px 28px;position:relative;display:flex;gap:22px;align-items:flex-start;overflow:hidden">
+        <div style="position:absolute;bottom:-30px;left:-30px;width:120px;height:120px;border-radius:50%;background:rgba(14,165,233,.08)"></div>
+        <div class="ib-lg" style="background:linear-gradient(135deg,#0369a1,#38bdf8);box-shadow:0 8px 28px rgba(14,165,233,.45);flex-shrink:0">📅</div>
+        <div>
+          <div style="font-size:19px;font-weight:800;color:#fff;margin-bottom:7px">التقويم ومساحة العمل</div>
+          <div class="tag" style="margin-bottom:14px;font-size:10px;background:rgba(14,165,233,.15);border-color:rgba(56,189,248,.25);color:#7dd3fc">Admin · Coach · Client</div>
+          <p style="font-size:13px;color:rgba(148,163,184,.65);line-height:1.8">تقويم المواعيد وقائمة المهام ولوحات العمل — كل أدوات الإنتاجية في مكان واحد.</p>
+        </div>
+      </div>
+
+      <div class="gc-blue lift bar" style="padding:32px 28px;position:relative;display:flex;gap:22px;align-items:flex-start;overflow:hidden">
+        <div style="position:absolute;bottom:-30px;left:-30px;width:120px;height:120px;border-radius:50%;background:rgba(37,99,235,.08)"></div>
+        <div class="ib-lg" style="flex-shrink:0">⚖️</div>
+        <div>
+          <div style="font-size:19px;font-weight:800;color:#fff;margin-bottom:7px">حاسبة السعرات الحرارية</div>
+          <div class="tag" style="margin-bottom:14px;font-size:10px">Admin · Coach · Client</div>
+          <p style="font-size:13px;color:rgba(148,163,184,.65);line-height:1.8">حساب الاحتياج الغذائي اليومي وبناء الوجبات بدقة بناءً على هدف العميل ونشاطه.</p>
+        </div>
+      </div>
+
+      <div class="gc-sky lift bar-sky" style="padding:32px 28px;position:relative;display:flex;gap:22px;align-items:flex-start;overflow:hidden">
+        <div style="position:absolute;bottom:-30px;left:-30px;width:120px;height:120px;border-radius:50%;background:rgba(14,165,233,.08)"></div>
+        <div class="ib-lg" style="background:linear-gradient(135deg,#0369a1,#38bdf8);box-shadow:0 8px 28px rgba(14,165,233,.45);flex-shrink:0">💰</div>
+        <div>
+          <div style="font-size:19px;font-weight:800;color:#fff;margin-bottom:7px">إدارة الأموال والميزانية</div>
+          <div class="tag" style="margin-bottom:14px;font-size:10px;background:rgba(14,165,233,.15);border-color:rgba(56,189,248,.25);color:#7dd3fc">Admin · Client</div>
+          <p style="font-size:13px;color:rgba(148,163,184,.65);line-height:1.8">متابعة الإيرادات والمصروفات والالتزامات مع رؤية واضحة للوضع المالي الحالي.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ╔══════════════════════════════════════════════════╗
+     ║  S09 · BENEFITS                                  ║
+     ╚══════════════════════════════════════════════════╝ -->
+<section class="S bg-ink" data-i="8">
+  <div class="dot-tex opacity-25"></div>
+  <div class="orb" style="width:500px;height:500px;top:5%;right:5%;background:radial-gradient(circle,rgba(14,165,233,.11) 0%,transparent 65%)"></div>
+  <div class="orb" style="width:400px;height:400px;bottom:0;left:5%;background:radial-gradient(circle,rgba(37,99,235,.1) 0%,transparent 65%)"></div>
+
+  <div class="W">
+    <!-- Top wide banner -->
+    <div style="border-radius:22px;background:linear-gradient(135deg,#1e3a8a,#1d4ed8,#075985);padding:32px 36px;margin-bottom:28px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.05)"></div>
+      <div style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#93c5fd;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:10px">لماذا هذه المنصة؟</div>
+          <h2 style="font-size:30px;font-weight:900;color:#fff;line-height:1.25">ليس مجرد نظام —<br><span style="color:#93c5fd">شريك استراتيجي لنمو عملك</span></h2>
+        </div>
+        <p style="font-size:13.5px;color:rgba(219,234,254,.7);max-width:320px;line-height:1.85;text-align:left">منصة مصممة لتحسين كل جانب من جوانب إدارة أعمال اللياقة البدنية والتغذية.</p>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px">
+
+      <div class="bc bar"><div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#1d4ed8,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(37,99,235,.4)">🗂️</div><div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px">إدارة مركزية</div><p style="font-size:12px;color:rgba(148,163,184,.6);line-height:1.7">جميع البيانات في منظومة واحدة بدلاً من أدوات متفرقة.</p></div>
+
+      <div class="bc bar-sky"><div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#0369a1,#38bdf8);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(14,165,233,.4)">✅</div><div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px">تسجيل منظم</div><p style="font-size:12px;color:rgba(148,163,184,.6);line-height:1.7">إدماج العملاء بسلاسة من الاستبيان حتى الخطة الأولى.</p></div>
+
+      <div class="bc bar"><div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#1d4ed8,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(37,99,235,.4)">💬</div><div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px">تواصل أفضل</div><p style="font-size:12px;color:rgba(148,163,184,.6);line-height:1.7">محادثات مدمجة تقلل الاعتماد على تطبيقات خارجية.</p></div>
+
+      <div class="bc bar-sky"><div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#0369a1,#38bdf8);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(14,165,233,.4)">⚡</div><div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px">متابعة أسرع</div><p style="font-size:12px;color:rgba(148,163,184,.6);line-height:1.7">التقارير الأسبوعية تلخّص تقدم كل عميل تلقائياً.</p></div>
+
+      <div class="bc bar"><div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#1d4ed8,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(37,99,235,.4)">🎯</div><div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px">التزام أعلى</div><p style="font-size:12px;color:rgba(148,163,184,.6);line-height:1.7">تجربة منظمة تُحسّن مستوى الالتزام وتقلل التسرب.</p></div>
+
+      <div class="bc bar-sky"><div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#0369a1,#38bdf8);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(14,165,233,.4)">📊</div><div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px">تقارير أوضح</div><p style="font-size:12px;color:rgba(148,163,184,.6);line-height:1.7">بيانات دقيقة تُمكّن من قرارات مبنية على الأدلة.</p></div>
+
+      <div class="bc bar"><div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#1d4ed8,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(37,99,235,.4)">🔄</div><div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px">قابل للتوسع</div><p style="font-size:12px;color:rgba(148,163,184,.6);line-height:1.7">بنية مرنة تنمو مع عملك دون تعقيد متزايد.</p></div>
+
+      <div class="bc bar-sky"><div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#0369a1,#38bdf8);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(14,165,233,.4)">🏆</div><div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px">جودة أعلى</div><p style="font-size:12px;color:rgba(148,163,184,.6);line-height:1.7">تجربة احترافية تعكس مستوى عملك وتُعزز سمعتك.</p></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ╔══════════════════════════════════════════════════╗
+     ║  S10 · CLOSING                                   ║
+     ╚══════════════════════════════════════════════════╝ -->
+<section class="S bg-close" data-i="9">
+  <div class="dot-tex opacity-50"></div>
+
+  <!-- Rings -->
+  <div class="ring" style="width:750px;height:750px"></div>
+  <div class="ring" style="width:540px;height:540px;border-color:rgba(96,165,250,.07)"></div>
+  <div class="ring" style="width:340px;height:340px;border-color:rgba(96,165,250,.09)"></div>
+
+  <!-- Center glow -->
+  <div class="orb" style="width:600px;height:600px;top:50%;left:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(37,99,235,.22) 0%,transparent 65%)"></div>
+
+  <!-- Logo -->
+  <div style="position:absolute;top:36px;right:52px;display:flex;align-items:center;gap:12px;z-index:20">
+    <div style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#2563eb,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:17px;color:#fff;font-weight:900">م</div>
+    <span style="font-size:11px;font-weight:700;color:rgba(148,163,184,.45);letter-spacing:3px;text-transform:uppercase">FitPlatform</span>
+  </div>
+
+  <div class="W" style="text-align:center">
+    <!-- Tag -->
+    <div class="tag" style="margin:0 auto 30px;display:inline-flex"><span style="width:6px;height:6px;border-radius:50%;background:#38bdf8;display:block"></span>ابدأ الآن · 2025</div>
+
+    <!-- Headline -->
+    <h1 style="font-size:68px;font-weight:900;color:#fff;line-height:1.06;margin-bottom:22px">
+      ابدأ اليوم.<br><span class="tg">النتائج تنتظرك.</span>
+    </h1>
+
+    <!-- Divider -->
+    <div style="width:64px;height:3px;background:linear-gradient(90deg,#2563eb,#38bdf8);border-radius:99px;margin:0 auto 26px"></div>
+
+    <p style="font-size:16px;color:rgba(148,163,184,.65);max-width:500px;margin:0 auto 52px;line-height:1.9">
+      منصة احترافية متكاملة تُحوّل طريقة عملك وتُقدّم<br>لعملائك تجربة لا تُنسى — من التسجيل حتى النتائج.
+    </p>
+
+    <!-- Stats -->
+    <div style="display:flex;justify-content:center;gap:52px;margin-bottom:52px;flex-wrap:wrap">
+      <div><div style="font-size:44px;font-weight:900" class="tg">+٢٠</div><div style="font-size:11px;color:rgba(148,163,184,.45);font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin-top:5px">صفحة احترافية</div></div>
+      <div style="width:1px;background:rgba(255,255,255,.07)"></div>
+      <div><div style="font-size:44px;font-weight:900" class="tg">٣</div><div style="font-size:11px;color:rgba(148,163,184,.45);font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin-top:5px">أدوار متكاملة</div></div>
+      <div style="width:1px;background:rgba(255,255,255,.07)"></div>
+      <div><div style="font-size:44px;font-weight:900" class="tg">١٠٠٪</div><div style="font-size:11px;color:rgba(148,163,184,.45);font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin-top:5px">تحكم كامل</div></div>
+      <div style="width:1px;background:rgba(255,255,255,.07)"></div>
+      <div><div style="font-size:44px;font-weight:900" class="tg">∞</div><div style="font-size:11px;color:rgba(148,163,184,.45);font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin-top:5px">إمكانيات النمو</div></div>
+    </div>
+
+    <!-- CTAs -->
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+      <button style="padding:17px 48px;border-radius:99px;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;font-size:15px;font-weight:700;font-family:'Cairo',sans-serif;border:none;cursor:pointer;box-shadow:0 8px 32px rgba(37,99,235,.5)">ابدأ الآن ←</button>
+      <button style="padding:17px 48px;border-radius:99px;background:rgba(255,255,255,.06);color:rgba(219,234,254,.9);font-size:15px;font-weight:700;font-family:'Cairo',sans-serif;border:1px solid rgba(96,165,250,.2);cursor:pointer">تواصل معنا</button>
+    </div>
+
+    <div style="margin-top:56px;font-size:10.5px;color:rgba(148,163,184,.25);letter-spacing:2.5px;font-weight:600;text-transform:uppercase">
+      منصة متكاملة لإدارة التدريب والتغذية · 2025
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════ JS ═══════ -->
+<script>
+(function(){
+  var secs = document.querySelectorAll('.S');
+  var n    = secs.length;
+  var cur  = 0;
+  var prog = document.getElementById('prog');
+  var nav  = document.getElementById('dots');
+
+  // Build dots
+  secs.forEach(function(s,i){
+    var b = document.createElement('button');
+    b.className = 'nd' + (i===0?' on':'');
+    b.title = 'القسم ' + (i+1);
+    b.addEventListener('click', function(){ s.scrollIntoView({behavior:'smooth'}); });
+    nav.appendChild(b);
+  });
+  var dots = document.querySelectorAll('.nd');
+
+  function setActive(i){
+    cur = i;
+    dots.forEach(function(d,j){ d.classList.toggle('on',j===i); });
+    prog.style.width = (((i+1)/n)*100).toFixed(1)+'%';
+  }
+
+  // IntersectionObserver
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting && e.intersectionRatio >= 0.55){
+        setActive(+e.target.dataset.i);
+      }
+    });
+  },{threshold:0.55});
+  secs.forEach(function(s){ io.observe(s); });
+
+  // Keyboard
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowDown'||e.key==='PageDown'||e.key===' '){
+      e.preventDefault();
+      var nx = Math.min(cur+1, n-1);
+      secs[nx].scrollIntoView({behavior:'smooth'});
+    }
+    if(e.key==='ArrowUp'||e.key==='PageUp'){
+      e.preventDefault();
+      var pv = Math.max(cur-1, 0);
+      secs[pv].scrollIntoView({behavior:'smooth'});
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

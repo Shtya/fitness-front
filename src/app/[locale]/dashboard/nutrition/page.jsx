@@ -55,6 +55,9 @@ import {
 	Select,
 } from '@/components/ui/select';
 import ActionButtons from '@/components/atoms/Actions';
+import DataTable from '@/components/atoms/Datatable';
+import { FaAudioDescription } from 'react-icons/fa6';
+import { FaRegFileAlt } from 'react-icons/fa';
 
 const hhmmRegex = /^$|^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -304,10 +307,9 @@ export default function NutritionManagementPage() {
 	const [detailsOpen, setDetailsOpen] = useState(false);
 
 	const [page, setPage] = useState(1);
-	const [totalPages, setTotalPages] = useState(1);
 	const [total, setTotal] = useState(0);
 	const [searchText, setSearchText] = useState('');
-	const [perPage, setPerPage] = useState(12);
+	const [perPage, setPerPage] = useState(6);
 	const [sortBy, setSortBy] = useState('created_at');
 	const [sortOrder, setSortOrder] = useState('DESC');
 
@@ -350,8 +352,11 @@ export default function NutritionManagementPage() {
 			});
 			setPlans(data.records || []);
 			setTotal(data.total || 0);
-			setTotalPages(Math.ceil((data.total || 0) / perPage));
-		} catch { setPlans([]); setTotal(0); setTotalPages(1); } finally { setListLoading(false); }
+		} catch {
+			setPlans([]);
+			setTotal(0);
+
+		} finally { setListLoading(false); }
 	}, [searchText, sortBy, sortOrder, page, perPage, user?.role, user?.adminId]);
 
 	useEffect(() => { (async () => { await Promise.all([fetchStats(), fetchPlans()]); })(); }, [fetchStats, fetchPlans]);
@@ -363,6 +368,10 @@ export default function NutritionManagementPage() {
 			if (plan) onViewDetails(plan, true);
 		}
 	}, [searchParams, plans]);
+
+	useEffect(() => {
+		setPage(1);
+	}, [searchText, sortBy, sortOrder]);
 
 	const onViewDetails = async (plan, isEdit = false) => {
 		if (isEdit) { setEditPlan(null); } else { setDetailsOpen(true); setSelectedPlan(null); }
@@ -456,6 +465,132 @@ export default function NutritionManagementPage() {
 		else if (plans.length) onViewDetails({ id: planId }, true);
 	}, [searchParams, plans]);
 
+
+	const tableRows = useMemo(() => {
+		return (plans || []).map((p) => ({
+			id: p.id,
+			name: p.name,
+			desc: p.desc || p.notes || '',
+			daysCount: Array.isArray(p.days) ? p.days.length : 0,
+			createdAt: p.created_at ? new Date(p.created_at).toISOString().slice(0, 10) : '—',
+			raw: p,
+		}));
+	}, [plans]);
+
+
+	const tableColumns = [
+		{
+			key: 'name',
+			header: t('table.name'),
+			cell: (row) => (
+				<div className="flex items-center gap-3 min-w-0">
+					<div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg theme-gradient-bg text-white shadow-sm">
+						<UtensilsCrossed className="h-5 w-5" />
+					</div>
+
+					<div className="min-w-0">
+						<MultiLangText className="truncate text-sm font-semibold text-slate-900">
+							{row.name}
+						</MultiLangText>
+						{row.desc ? (
+							<MultiLangText className="line-clamp-1 text-xs text-slate-500 mt-0.5">
+								{row.desc}
+							</MultiLangText>
+						) : (
+							<p className="text-xs text-slate-400 mt-0.5">{t('list.no_desc')}</p>
+						)}
+					</div>
+				</div>
+			),
+		},
+		{
+			key: 'description',
+			header: t('table.description'),
+			cell: (row) => (
+				<span dir='auto' className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold bg-[color:var(--color-primary-50)] text-[color:var(--color-primary-700)] border border-[color:var(--color-primary-200)]">
+					<FaRegFileAlt className="w-3 h-3" />
+					{row.desc?.length > 30 ? row.desc.slice(0, 30) + "..." : row.desc}
+				</span>
+			),
+		}, 
+		{
+			key: 'createdAt',
+			header: t('table.createdAt'),
+			cell: (row) => (
+				<span className="text-sm text-slate-500 whitespace-nowrap">
+					{row.createdAt}
+				</span>
+			),
+		},
+		{
+			key: 'actions',
+			header: t('table.actions'),
+			cell: (row) => (
+				<ActionButtons
+					row={row.raw}
+					actions={[
+						{
+							icon: <UsersIcon />,
+							tooltip: t('btn.assign'),
+							variant: 'blue',
+							onClick: r => setAssignPlanOpen(r),
+						},
+						{
+							icon: <Eye />,
+							tooltip: t('btn.preview'),
+							variant: 'slate',
+							onClick: r => onViewDetails(r),
+						},
+						{
+							icon: <Copy />,
+							tooltip: t('btn.duplicate'),
+							variant: 'purple',
+							onClick: r => onDuplicate(r),
+						},
+						{
+							icon: <PencilLine />,
+							tooltip: t('btn.edit'),
+							variant: 'amber',
+							hidden: row.raw?.adminId == null,
+							onClick: async r => {
+								try {
+									const { data } = await api.get(`/nutrition/meal-plans/${r.id}`);
+									setEditPlan(data);
+								} catch (e) {
+									Notification(e?.response?.data?.message || t('toast.load_failed'), 'error');
+								}
+							},
+						},
+						{
+							icon: <Trash2 />,
+							tooltip: t('btn.delete'),
+							variant: 'red',
+							hidden: row.raw?.adminId == null,
+							onClick: r => {
+								setDeletePlanId(r.id);
+								setDeleteOpen(true);
+							},
+						},
+					]}
+				/>
+			),
+		},
+	];
+
+
+	const tableActions = [
+		{
+			key: 'sort-created-at',
+			label: sortBy === 'created_at'
+				? (sortOrder === 'ASC' ? t('search.oldest_first') : t('search.newest_first'))
+				: t('search.sort_by_date'),
+			icon: sortOrder === 'ASC'
+				? <ChevronDown size={14} className="rotate-180" />
+				: <ChevronDown size={14} />,
+			onClick: () => toggleSort('created_at'),
+		},
+	];
+
 	return (
 		<div className="space-y-6">
 			<GradientStatsHeader
@@ -469,64 +604,37 @@ export default function NutritionManagementPage() {
 				<StatCard icon={TrendingUp} title={t('stats.my_plans')} value={stats?.totals?.myPlansCount} />
 			</GradientStatsHeader>
 
-			{/* Toolbar */}
-			<div className="flex items-center justify-between gap-3 flex-wrap">
-				<div className="relative flex-1 min-w-[220px] max-w-[320px]">
-					<Search className="absolute left-3 rtl:right-3 rtl:left-auto top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-					<input
-						value={searchText}
-						onChange={e => setSearchText(e.target.value)}
-						placeholder={t('search.placeholder')}
-						className="h-10 w-full pl-9 pr-8 rtl:pr-9 rtl:pl-8 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 shadow-xs placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)] focus:border-[color:var(--color-primary-400)] hover:border-slate-300"
-					/>
-					{!!searchText && (
-						<button
-							type="button"
-							onClick={() => setSearchText('')}
-							className="absolute right-2 rtl:left-2 rtl:right-auto top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
-						>
-							<X className="w-3.5 h-3.5" />
-						</button>
-					)}
-				</div>
 
-				<div className="flex items-center gap-2">
-					<CButton
-						onClick={() => toggleSort('created_at')}
-						icon={sortOrder === 'ASC' ? <ChevronDown size={14} className="rotate-180" /> : <ChevronDown size={14} />}
-						name={sortBy === 'created_at' ? (sortOrder === 'ASC' ? 'search.oldest_first' : 'search.newest_first') : 'search.sort_by_date'}
-						variant="neutral"
-						size="sm"
-						className="h-10"
-					/>
-				</div>
-			</div>
-
-			<PlanListView
-				loading={listLoading}
-				plans={plans}
-				onPreview={onViewDetails}
-				onEdit={async p => {
-					try {
-						const { data } = await api.get(`/nutrition/meal-plans/${p.id}`);
-						setEditPlan(data);
-					} catch (e) { Notification(e?.response?.data?.message || t('toast.load_failed'), 'error'); }
+			<DataTable
+				columns={tableColumns}
+				data={tableRows}
+				isLoading={listLoading}
+				searchValue={searchText}
+				onSearchChange={(value) => {
+					setSearchText(value);
+					setPage(1);
 				}}
-				onDuplicate={onDuplicate}
-				onAssign={setAssignPlanOpen}
-				onDelete={id => { setDeletePlanId(id); setDeleteOpen(true); }}
+				onSearch={() => setPage(1)}
+				actions={tableActions}
+				labels={{
+					searchPlaceholder: t('search.placeholder'),
+					emptyTitle: t('list.empty_title'),
+					emptySubtitle: t('list.empty_desc'),
+				}}
+				pagination={{
+					current_page: page,
+					per_page: perPage,
+					total_records: total,
+				}}
+				onPageChange={({ page: nextPage, per_page }) => {
+					setPage(Number(nextPage ?? 1));
+					setPerPage(Number(per_page ?? 10));
+				}}
+				perPageOptions={[10, 20, 30, 50]}
+				rowKey={(row) => row.id}
+				hoverable
 			/>
 
-			{totalPages > 1 && (
-				<PrettyPagination
-					page={page}
-					totalPages={totalPages}
-					onPageChange={setPage}
-					pageSize={perPage}
-					onPageSizeChange={newSize => { setPerPage(newSize); setPage(1); }}
-					pageSizeOptions={[8, 12, 20, 30]}
-				/>
-			)}
 
 			{/* Modals */}
 			<Modal open={addPlanOpen} maxH="h-fit" cn="!py-0" onClose={() => setAddPlanOpen(false)} title={t('modals.create_title')} scrollRef={scrollRef}>
@@ -1348,43 +1456,43 @@ export const PlanListView = memo(function PlanListView({ loading, plans = [], on
 						)}
 					</div>
 
-					 <ActionButtons
-	row={p}
-	actions={[
-		{
-			icon: <UsersIcon />,
-			tooltip: t('btn.assign'),
-			variant: 'blue',
-			onClick: row => onAssign?.(row),
-		},
-		{
-			icon: <Eye />,
-			tooltip: t('btn.preview'),
-			variant: 'slate',
-			onClick: row => onPreview?.(row),
-		},
-		{
-			icon: <Copy />,
-			tooltip: t('btn.duplicate'),
-			variant: 'purple',
-			onClick: row => onDuplicate?.(row),
-		},
-		{
-			icon: <PencilLine />,
-			tooltip: t('btn.edit'),
-			variant: 'amber',
-			hidden: p?.adminId == null,
-			onClick: row => onEdit?.(row),
-		},
-		{
-			icon: <Trash2 />,
-			tooltip: t('btn.delete'),
-			variant: 'red',
-			hidden: p?.adminId == null,
-			onClick: row => onDelete?.(row.id),
-		},
-	]}
-/>
+					<ActionButtons
+						row={p}
+						actions={[
+							{
+								icon: <UsersIcon />,
+								tooltip: t('btn.assign'),
+								variant: 'blue',
+								onClick: row => onAssign?.(row),
+							},
+							{
+								icon: <Eye />,
+								tooltip: t('btn.preview'),
+								variant: 'slate',
+								onClick: row => onPreview?.(row),
+							},
+							{
+								icon: <Copy />,
+								tooltip: t('btn.duplicate'),
+								variant: 'purple',
+								onClick: row => onDuplicate?.(row),
+							},
+							{
+								icon: <PencilLine />,
+								tooltip: t('btn.edit'),
+								variant: 'amber',
+								hidden: p?.adminId == null,
+								onClick: row => onEdit?.(row),
+							},
+							{
+								icon: <Trash2 />,
+								tooltip: t('btn.delete'),
+								variant: 'red',
+								hidden: p?.adminId == null,
+								onClick: row => onDelete?.(row.id),
+							},
+						]}
+					/>
 				</motion.div>
 			))}
 		</div>

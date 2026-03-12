@@ -4,6 +4,7 @@ import createMiddleware from 'next-intl/middleware';
 
 export const NAV_HREFS = {
   client: [ 
+    '/dashboard/my/stats',
     '/dashboard/my/workouts',
     '/dashboard/my/progress',
     '/dashboard/my/nutrition',
@@ -26,6 +27,7 @@ export const NAV_HREFS = {
 		'/dashboard/intake/responses',
   ],
   admin: [
+    '/dashboard',
     '/dashboard/users',
     '/dashboard/workouts',
     '/dashboard/workouts/plans',

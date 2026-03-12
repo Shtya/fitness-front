@@ -175,15 +175,15 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
 			<motion.div className="fixed inset-0 z-[200] flex items-center justify-center p-4"
 				initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
 				<div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
-				<motion.div className="relative z-10 bg-white rounded-2xl shadow-2xl p-5 w-full max-w-xs"
+				<motion.div className="relative z-10 bg-white rounded-lg shadow-2xl p-5 w-full max-w-xs"
 					initial={{ scale: .9, y: 10 }} animate={{ scale: 1, y: 0 }}>
 					<div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center mx-auto mb-3">
 						<AlertTriangle size={19} className="text-rose-500" />
 					</div>
 					<p className="text-center text-sm font-medium text-[var(--color-primary-700)] mb-4">{message}</p>
 					<div className="flex gap-2">
-						<button onClick={onCancel} className="flex-1 h-9 rounded-xl border border-[var(--color-primary-200)] text-[var(--color-primary-500)] text-sm font-semibold cursor-pointer hover:bg-[var(--color-primary-100)] transition-colors bg-transparent">Cancel</button>
-						<button onClick={onConfirm} className="flex-1 h-9 rounded-xl bg-rose-500 text-white text-sm font-semibold cursor-pointer hover:bg-rose-600 transition-colors border-none">Delete</button>
+						<button onClick={onCancel} className="flex-1 h-9 rounded-lg border border-[var(--color-primary-200)] text-[var(--color-primary-500)] text-sm font-semibold cursor-pointer hover:bg-[var(--color-primary-100)] transition-colors bg-transparent">Cancel</button>
+						<button onClick={onConfirm} className="flex-1 h-9 rounded-lg bg-rose-500 text-white text-sm font-semibold cursor-pointer hover:bg-rose-600 transition-colors border-none">Delete</button>
 					</div>
 				</motion.div>
 			</motion.div>
@@ -212,7 +212,7 @@ function ActionBtn({ icon: Icon, tooltip, onClick, color = 'gray', confirm, row 
 
 function TableActions({ row, onEdit, onDelete, editTooltip, deleteTooltip, deleteConfirm, hideEdit = false }) {
 	return (
-		<div className="flex items-center justify-end gap-0.5">
+		<div className="flex items-center justify-start gap-0.5">
 			{!hideEdit && <ActionBtn icon={Edit2} tooltip={editTooltip} color="blue" onClick={onEdit} row={row} />}
 			<ActionBtn icon={Trash2} tooltip={deleteTooltip} color="red" onClick={onDelete} row={row} confirm={{ message: deleteConfirm }} />
 		</div>
@@ -248,8 +248,8 @@ function Inp({ icon: Icon, label, className: cls, type, ...p }) {
 				{showIcon && <span className="absolute start-3 flex items-center pointer-events-none text-[var(--color-primary-400)]"><Icon size={14} /></span>}
 				<input {...p} type={type}
 					className={cn(
-						'w-full h-10 rounded-xl border border-[var(--color-primary-200)] bg-[var(--color-primary-100)]',
-						'text-[var(--color-primary-900)] placeholder-[var(--color-primary-300)] text-sm',
+						'w-full h-10 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-100)]',
+						'text-[var(--color-primary-900)] placeholder-[var(--color-primary-300)] text-base',
 						'focus:outline-none focus:border-[var(--color-primary-400)] focus:ring-2 focus:ring-[var(--color-primary-200)] transition-all duration-200',
 						showIcon ? 'ps-9 pe-3' : 'px-3', cls,
 					)} />
@@ -266,7 +266,7 @@ function Sel({ icon: Icon, label, options, value, onChange }) {
 				{Icon && <span className="absolute start-3 flex items-center pointer-events-none text-[var(--color-primary-400)]"><Icon size={14} /></span>}
 				<select value={value} onChange={e => onChange(e.target.value)}
 					className={cn(
-						'w-full h-10 rounded-xl border border-[var(--color-primary-200)] bg-[var(--color-primary-100)]',
+						'w-full h-10 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-100)]',
 						'text-[var(--color-primary-900)] text-sm appearance-none cursor-pointer pe-7',
 						'focus:outline-none focus:border-[var(--color-primary-400)] focus:ring-2 focus:ring-[var(--color-primary-200)] transition-all duration-200',
 						Icon ? 'ps-9' : 'ps-3',
@@ -290,7 +290,7 @@ function Toggle({ checked, onChange }) {
 
 // ─── Card primitives ──────────────────────────────────────────────────────────
 function Card({ children, className }) {
-	return <div className={cn('bg-white rounded-2xl overflow-hidden border border-[var(--color-primary-100)] shadow-sm', className)}>{children}</div>;
+	return <div className={cn('bg-white rounded-lg overflow-hidden border border-[var(--color-primary-100)] shadow-sm', className)}>{children}</div>;
 }
 
 function CardHeader({ title, icon: Icon, action }) {
@@ -308,7 +308,7 @@ function CardHeader({ title, icon: Icon, action }) {
 function Empty({ icon: Icon, title, subtitle }) {
 	return (
 		<div className="flex flex-col items-center justify-center py-12 px-5 text-center gap-2">
-			<div className="w-11 h-11 rounded-2xl bg-[var(--color-primary-100)] border border-[var(--color-primary-200)] flex items-center justify-center text-[var(--color-primary-300)]"><Icon size={19} /></div>
+			<div className="w-11 h-11 rounded-lg bg-[var(--color-primary-100)] border border-[var(--color-primary-200)] flex items-center justify-center text-[var(--color-primary-300)]"><Icon size={19} /></div>
 			<div className="text-sm font-semibold text-[var(--color-primary-400)]">{title}</div>
 			{subtitle && <div className="text-xs text-[var(--color-primary-300)] leading-relaxed max-w-[175px]">{subtitle}</div>}
 		</div>
@@ -316,7 +316,7 @@ function Empty({ icon: Icon, title, subtitle }) {
 }
 
 function Skeleton({ h = 70 }) {
-	return <div className="mn-shimmer rounded-2xl" style={{ height: h }} />;
+	return <div className="mn-shimmer rounded-lg" style={{ height: h }} />;
 }
 
 function Progress({ value, color = 'primary', h = 4 }) {
@@ -446,241 +446,241 @@ const Divider = () => (
 	<div style={{ height: 1, margin: "7px 0", background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.09),transparent)" }} />
 );
 
- 
+
 function CreditCardDisplay({
-  balance = 12450.8,
-  income = 5200,
-  expenses = 1870.5,
-  commitments = 950,
-  remaining = 2379.5,
-  currency = "SAR",
-  spendRate = 64,
-  balanceMode = "month",
-  cardName = "Ahmed Al-Rashid",
-  last4 = "4291",
-  network = "visa"
+	balance = 12450.8,
+	income = 5200,
+	expenses = 1870.5,
+	commitments = 950,
+	remaining = 2379.5,
+	currency = "SAR",
+	spendRate = 64,
+	balanceMode = "month",
+	cardName = "Ahmed Al-Rashid",
+	last4 = "4291",
+	network = "visa"
 }) {
-  const t = useTranslations("creditCard");
+	const t = useTranslations("creditCard");
 
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const [shine, setShine] = useState({ x: 50, y: 50 });
-  const [hovered, setHovered] = useState(false);
+	const [tilt, setTilt] = useState({ x: 0, y: 0 });
+	const [shine, setShine] = useState({ x: 50, y: 50 });
+	const [hovered, setHovered] = useState(false);
 
-  const handleMouseMove = (e) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width;
-    const y = (e.clientY - r.top) / r.height;
-    setTilt({ x: (y - 0.5) * 16, y: (x - 0.5) * -16 });
-    setShine({ x: x * 100, y: y * 100 });
-  };
+	const handleMouseMove = (e) => {
+		const r = e.currentTarget.getBoundingClientRect();
+		const x = (e.clientX - r.left) / r.width;
+		const y = (e.clientY - r.top) / r.height;
+		setTilt({ x: (y - 0.5) * 16, y: (x - 0.5) * -16 });
+		setShine({ x: x * 100, y: y * 100 });
+	};
 
-  const handleMouseLeave = () => {
-    setTilt({ x: 0, y: 0 });
-    setShine({ x: 50, y: 50 });
-    setHovered(false);
-  };
+	const handleMouseLeave = () => {
+		setTilt({ x: 0, y: 0 });
+		setShine({ x: 50, y: 50 });
+		setHovered(false);
+	};
 
-  const groups = ["••••", "••••", "••••", last4];
+	const groups = ["••••", "••••", "••••", last4];
 
-  return (
-    <div style={{ position: "relative", userSelect: "none", perspective: 1200 }}>
-      <div
-        onMouseMove={handleMouseMove}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={handleMouseLeave}
-        className="mn-card-bg"
-        style={{
-          position: "relative",
-          width: "100%",
-          borderRadius: 22,
-          overflow: "hidden",
-          minHeight: 290,
-          cursor: "default",
-          transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(${hovered ? 1.015 : 1})`,
-          transition: hovered
-            ? "transform 0.08s linear, box-shadow 0.3s ease"
-            : "transform 0.6s cubic-bezier(.4,0,.2,1), box-shadow 0.4s ease"
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-            zIndex: 8,
-            borderRadius: 22,
-            overflow: "hidden",
-            background: `
+	return (
+		<div style={{ position: "relative", userSelect: "none", perspective: 1200 }}>
+			<div
+				onMouseMove={handleMouseMove}
+				onMouseEnter={() => setHovered(true)}
+				onMouseLeave={handleMouseLeave}
+				className="mn-card-bg"
+				style={{
+					position: "relative",
+					width: "100%",
+					borderRadius: 22,
+					overflow: "hidden",
+					minHeight: 290,
+					cursor: "default",
+					transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(${hovered ? 1.015 : 1})`,
+					transition: hovered
+						? "transform 0.08s linear, box-shadow 0.3s ease"
+						: "transform 0.6s cubic-bezier(.4,0,.2,1), box-shadow 0.4s ease"
+				}}
+			>
+				<div
+					style={{
+						position: "absolute",
+						inset: 0,
+						pointerEvents: "none",
+						zIndex: 8,
+						borderRadius: 22,
+						overflow: "hidden",
+						background: `
               radial-gradient(ellipse 120% 80% at ${shine.x}% ${shine.y}%, rgba(255,255,255,0.18) 0%, transparent 55%),
               radial-gradient(ellipse 180% 80% at 20% 30%, rgba(255,255,255,0.08) 0%, transparent 55%),
               radial-gradient(ellipse 140% 100% at 80% 70%, rgba(255,255,255,0.06) 0%, transparent 55%)
             `,
-            mixBlendMode: "overlay",
-            opacity: hovered ? 1 : 0.7,
-            transition: "opacity 0.3s ease"
-          }}
-        />
+						mixBlendMode: "overlay",
+						opacity: hovered ? 1 : 0.7,
+						transition: "opacity 0.3s ease"
+					}}
+				/>
 
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-            zIndex: 9,
-            background: `linear-gradient(${105 + tilt.y * 2}deg, transparent 35%, rgba(255,255,255,0.04) 45%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.04) 55%, transparent 65%)`,
-            borderRadius: 22
-          }}
-        />
+				<div
+					style={{
+						position: "absolute",
+						inset: 0,
+						pointerEvents: "none",
+						zIndex: 9,
+						background: `linear-gradient(${105 + tilt.y * 2}deg, transparent 35%, rgba(255,255,255,0.04) 45%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.04) 55%, transparent 65%)`,
+						borderRadius: 22
+					}}
+				/>
 
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-            zIndex: 5,
-            backgroundImage: "radial-gradient(circle,rgba(255,255,255,0.035) 1px,transparent 1px)",
-            backgroundSize: "18px 18px"
-          }}
-        />
+				<div
+					style={{
+						position: "absolute",
+						inset: 0,
+						pointerEvents: "none",
+						zIndex: 5,
+						backgroundImage: "radial-gradient(circle,rgba(255,255,255,0.035) 1px,transparent 1px)",
+						backgroundSize: "18px 18px"
+					}}
+				/>
 
-        <div
-          style={{
-            position: "absolute",
-            top: -65,
-            right: -55,
-            width: 210,
-            height: 210,
-            borderRadius: "50%",
-            border: "1px solid rgba(255,255,255,0.055)",
-            pointerEvents: "none"
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            bottom: -55,
-            left: -35,
-            width: 170,
-            height: 170,
-            borderRadius: "50%",
-            background: "rgba(255,255,255,0.016)",
-            pointerEvents: "none"
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: -95,
-            right: -95,
-            width: 340,
-            height: 340,
-            borderRadius: "50%",
-            background: "radial-gradient(circle,rgba(99,102,241,0.08) 0%,transparent 65%)",
-            pointerEvents: "none"
-          }}
-        />
+				<div
+					style={{
+						position: "absolute",
+						top: -65,
+						right: -55,
+						width: 210,
+						height: 210,
+						borderRadius: "50%",
+						border: "1px solid rgba(255,255,255,0.055)",
+						pointerEvents: "none"
+					}}
+				/>
+				<div
+					style={{
+						position: "absolute",
+						bottom: -55,
+						left: -35,
+						width: 170,
+						height: 170,
+						borderRadius: "50%",
+						background: "rgba(255,255,255,0.016)",
+						pointerEvents: "none"
+					}}
+				/>
+				<div
+					style={{
+						position: "absolute",
+						top: -95,
+						right: -95,
+						width: 340,
+						height: 340,
+						borderRadius: "50%",
+						background: "radial-gradient(circle,rgba(99,102,241,0.08) 0%,transparent 65%)",
+						pointerEvents: "none"
+					}}
+				/>
 
-        <div style={{ position: "relative", zIndex: 20, padding: "18px 22px 16px", display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
-            <ChipSVG />
-            <div style={{ display: "flex", alignItems: "center", gap: 9, paddingTop: 2 }}>
-              <ContactlessIcon />
-              {network === "visa" && (
-                <span
-                  style={{
-                    fontFamily: "'Helvetica Neue',sans-serif",
-                    fontStyle: "italic",
-                    fontWeight: 900,
-                    fontSize: 20,
-                    color: "white",
-                    letterSpacing: "-0.02em",
-                    lineHeight: 1
-                  }}
-                >
-                  {t("network.visa")}
-                </span>
-              )}
-              {network === "mastercard" && <MastercardLogo />}
-              {network === "amex" && (
-                <span
-                  style={{
-                    fontFamily: "'Helvetica Neue',sans-serif",
-                    fontWeight: 900,
-                    fontSize: 11,
-                    color: "rgba(255,255,255,0.85)",
-                    letterSpacing: "0.06em"
-                  }}
-                >
-                  {t("network.amex")}
-                </span>
-              )}
-            </div>
-          </div>
+				<div style={{ position: "relative", zIndex: 20, padding: "18px 22px 16px", display: "flex", flexDirection: "column" }}>
+					<div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
+						<ChipSVG />
+						<div style={{ display: "flex", alignItems: "center", gap: 9, paddingTop: 2 }}>
+							<ContactlessIcon />
+							{network === "visa" && (
+								<span
+									style={{
+										fontFamily: "'Helvetica Neue',sans-serif",
+										fontStyle: "italic",
+										fontWeight: 900,
+										fontSize: 20,
+										color: "white",
+										letterSpacing: "-0.02em",
+										lineHeight: 1
+									}}
+								>
+									{t("network.visa")}
+								</span>
+							)}
+							{network === "mastercard" && <MastercardLogo />}
+							{network === "amex" && (
+								<span
+									style={{
+										fontFamily: "'Helvetica Neue',sans-serif",
+										fontWeight: 900,
+										fontSize: 11,
+										color: "rgba(255,255,255,0.85)",
+										letterSpacing: "0.06em"
+									}}
+								>
+									{t("network.amex")}
+								</span>
+							)}
+						</div>
+					</div>
 
-          <div style={{ marginBottom: 2 }}>
-            <div
-              style={{
-                fontSize: 7.5,
-                fontWeight: 800,
-                letterSpacing: "0.22em",
-                textTransform: "uppercase",
-                color: "rgba(255,255,255,0.26)",
-                marginBottom: 4
-              }}
-            >
-              {balanceMode === "month" ? t("labels.monthBalance") : t("labels.availableBalance")}
-            </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-              <span
-                style={{
-                  fontFamily: "'SF Pro Display','Helvetica Neue',sans-serif",
-                  fontSize: 34,
-                  fontWeight: 900,
-                  letterSpacing: "-2px",
-                  color: "white",
-                  textShadow: "0 2px 14px rgba(0,0,0,0.4)",
-                  lineHeight: 1
-                }}
-              >
-                {fmt(balance)}
-              </span>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)" }}>{currency}</span>
-            </div>
-          </div>
- 
-  
-          {spendRate > 0 && <SpendRateBar spendRate={spendRate} />}
+					<div style={{ marginBottom: 2 }}>
+						<div
+							style={{
+								fontSize: 7.5,
+								fontWeight: 800,
+								letterSpacing: "0.22em",
+								textTransform: "uppercase",
+								color: "rgba(255,255,255,0.26)",
+								marginBottom: 4
+							}}
+						>
+							{balanceMode === "month" ? t("labels.monthBalance") : t("labels.availableBalance")}
+						</div>
+						<div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+							<span
+								style={{
+									fontFamily: "'SF Pro Display','Helvetica Neue',sans-serif",
+									fontSize: 34,
+									fontWeight: 900,
+									letterSpacing: "-2px",
+									color: "white",
+									textShadow: "0 2px 14px rgba(0,0,0,0.4)",
+									lineHeight: 1
+								}}
+							>
+								{fmt(balance)}
+							</span>
+							<span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)" }}>{currency}</span>
+						</div>
+					</div>
 
-          <Divider />
 
-          <div>
-            <StatRow label={t("labels.income")} value={income} currency={currency} accent="#34d399" />
-            <StatRow label={t("labels.expenses")} value={expenses} currency={currency} accent="#f87171" />
-            <StatRow label={t("labels.commitments")} value={commitments} currency={currency} accent="#fbbf24" />
-            <div style={{ height: 1, margin: "5px 0", background: "rgba(255,255,255,0.06)" }} />
-            <StatRow label={t("labels.remaining")} value={remaining} currency={currency} accent="#a78bfa" />
-          </div>
-        </div>
-      </div>
+					{spendRate > 0 && <SpendRateBar spendRate={spendRate} />}
 
-      <div
-        style={{
-          position: "absolute",
-          bottom: -14,
-          left: 28,
-          right: 28,
-          height: 48,
-          borderRadius: "50%",
-          background: "radial-gradient(ellipse, var(--color-primary-600) 0%, transparent 70%)",
-          filter: "blur(22px)",
-          zIndex: -1,
-          pointerEvents: "none",
-          transition: "opacity 0.3s",
-          opacity: hovered ? 1 : 0.65
-        }}
-      />
-    </div>
-  );
+					<Divider />
+
+					<div>
+						<StatRow label={t("labels.income")} value={income} currency={currency} accent="#34d399" />
+						<StatRow label={t("labels.expenses")} value={expenses} currency={currency} accent="#f87171" />
+						<StatRow label={t("labels.commitments")} value={commitments} currency={currency} accent="#fbbf24" />
+						<div style={{ height: 1, margin: "5px 0", background: "rgba(255,255,255,0.06)" }} />
+						<StatRow label={t("labels.remaining")} value={remaining} currency={currency} accent="#a78bfa" />
+					</div>
+				</div>
+			</div>
+
+			<div
+				style={{
+					position: "absolute",
+					bottom: -14,
+					left: 28,
+					right: 28,
+					height: 48,
+					borderRadius: "50%",
+					background: "radial-gradient(ellipse, var(--color-primary-600) 0%, transparent 70%)",
+					filter: "blur(22px)",
+					zIndex: -1,
+					pointerEvents: "none",
+					transition: "opacity 0.3s",
+					opacity: hovered ? 1 : 0.65
+				}}
+			/>
+		</div>
+	);
 }
 
 
@@ -703,10 +703,10 @@ function DesktopPanel({ open, onClose, title, children, isRTL }) {
 						<div className="relative flex items-center justify-between px-4 py-3.5 flex-shrink-0 mn-hdr">
 							<div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
 							<div className="relative z-10 flex items-center gap-2">
-								<div className="w-7 h-7 rounded-xl bg-white/20 border border-white/25 flex items-center justify-center text-white"><Sparkles size={12} /></div>
+								<div className="w-7 h-7 rounded-lg bg-white/20 border border-white/25 flex items-center justify-center text-white"><Sparkles size={12} /></div>
 								<span className="mn-serif text-[17px] text-white">{title}</span>
 							</div>
-							<button onClick={onClose} className="relative z-10 w-7 h-7 rounded-xl bg-white/15 border border-white/20 text-white flex items-center justify-center cursor-pointer hover:bg-white/25 transition-colors"><X size={13} /></button>
+							<button onClick={onClose} className="relative z-10 w-7 h-7 rounded-lg bg-white/15 border border-white/20 text-white flex items-center justify-center cursor-pointer hover:bg-white/25 transition-colors"><X size={13} /></button>
 						</div>
 						<div className="flex-1 overflow-y-auto">{children}</div>
 					</motion.div>
@@ -787,7 +787,7 @@ function ForecastPanel({ open, onClose, income, expenses, commitments, expected,
 					<Inp label={t('forecast.from')} type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
 					<div>
 						<label className="block mb-1 text-[9.5px] font-bold uppercase tracking-widest text-[var(--color-primary-400)]">{t('forecast.to')}</label>
-						<div className="h-10 rounded-xl border border-[var(--color-primary-200)] bg-[var(--color-primary-100)] flex items-center px-3 text-sm font-semibold text-[var(--color-primary-700)]">{fmtD(toDate, locale)}</div>
+						<div className="h-10 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-100)] flex items-center px-3 text-sm font-semibold text-[var(--color-primary-700)]">{fmtD(toDate, locale)}</div>
 					</div>
 				</div>
 				<div className="flex gap-1.5 overflow-x-auto mn-hide-scroll">
@@ -800,7 +800,7 @@ function ForecastPanel({ open, onClose, income, expenses, commitments, expected,
 				</div>
 				<div className="grid grid-cols-2 gap-2">
 					{cards.map(c => (
-						<div key={c.l} className={cn('rounded-2xl border p-3 relative overflow-hidden', c.bg)}>
+						<div key={c.l} className={cn('rounded-lg border p-3 relative overflow-hidden', c.bg)}>
 							<div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent pointer-events-none" />
 							<div className={cn('w-7 h-7 rounded-lg flex items-center justify-center text-white mb-1.5 relative z-10', c.ib)}><c.I size={13} /></div>
 							<div className={cn('text-[8.5px] font-extrabold uppercase tracking-wider mb-0.5 opacity-60 relative z-10', c.cl)}>{c.l}</div>
@@ -853,7 +853,7 @@ function AddForm({ t, onSave, onClose, loading, initialData }) {
 							const on = f.type === v;
 							return (
 								<button key={v} type="button" onClick={() => set('type', v)}
-									className={cn('flex items-center gap-2 p-2.5 rounded-xl border-2 cursor-pointer transition-all duration-150 text-start active:scale-95', on ? cn(ab, abo) : 'bg-[var(--color-primary-100)] border-[var(--color-primary-200)] hover:border-[var(--color-primary-300)]')}>
+									className={cn('flex items-center gap-2 p-2.5 rounded-lg border-2 cursor-pointer transition-all duration-150 text-start active:scale-95', on ? cn(ab, abo) : 'bg-[var(--color-primary-100)] border-[var(--color-primary-200)] hover:border-[var(--color-primary-300)]')}>
 									<div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-white transition-all', on ? ion : 'bg-[var(--color-primary-200)]')}><I size={14} className={on ? 'text-white' : 'text-[var(--color-primary-400)]'} /></div>
 									<span className={cn('text-[11px] font-bold flex-1 leading-tight', on ? at : 'text-[var(--color-primary-500)]')}>{l}</span>
 									{on && <Check size={11} className={at} />}
@@ -866,7 +866,7 @@ function AddForm({ t, onSave, onClose, loading, initialData }) {
 					<div className="flex gap-1.5">
 						{ct.map(({ v, l }) => (
 							<button key={v} type="button" onClick={() => set('commitType', v)}
-								className={cn('flex-1 h-9 rounded-xl text-[11px] font-bold cursor-pointer transition-all border', f.commitType === v ? 'bg-[var(--color-primary-100)] border-[var(--color-primary-400)] text-[var(--color-primary-700)]' : 'bg-white border-[var(--color-primary-200)] text-[var(--color-primary-400)] hover:bg-[var(--color-primary-100)]')}>
+								className={cn('flex-1 h-9 rounded-lg text-[11px] font-bold cursor-pointer transition-all border', f.commitType === v ? 'bg-[var(--color-primary-100)] border-[var(--color-primary-400)] text-[var(--color-primary-700)]' : 'bg-white border-[var(--color-primary-200)] text-[var(--color-primary-400)] hover:bg-[var(--color-primary-100)]')}>
 								{l}
 							</button>
 						))}
@@ -883,7 +883,7 @@ function AddForm({ t, onSave, onClose, loading, initialData }) {
 				</div>
 				{f.type !== 'zakat' && (
 					<div className="flex flex-col gap-2">
-						<div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-[var(--color-primary-200)] bg-[var(--color-primary-100)]">
+						<div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-100)]">
 							<span className="text-sm font-medium text-[var(--color-primary-700)]">{t('form.recurringQuestion')}</span>
 							<Toggle checked={f.recurring} onChange={v => set('recurring', v)} />
 						</div>
@@ -906,9 +906,9 @@ function AddForm({ t, onSave, onClose, loading, initialData }) {
 				)}
 			</div>
 			<div className="flex gap-2 px-4 py-3 border-t border-[var(--color-primary-100)] flex-shrink-0 bg-white">
-				<button onClick={onClose} className="flex-1 h-10 rounded-xl border border-[var(--color-primary-200)] bg-transparent text-[var(--color-primary-500)] text-sm font-semibold cursor-pointer hover:bg-[var(--color-primary-100)] transition-colors">{t('common.cancel')}</button>
+				<button onClick={onClose} className="flex-1 h-10 rounded-lg border border-[var(--color-primary-200)] bg-transparent text-[var(--color-primary-500)] text-sm font-semibold cursor-pointer hover:bg-[var(--color-primary-100)] transition-colors">{t('common.cancel')}</button>
 				<button onClick={() => valid && onSave(f)} disabled={!valid || loading}
-					className="flex-[2] h-10 rounded-xl border-none text-white text-sm font-semibold cursor-pointer flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:-translate-y-0.5 mn-save-btn shadow-lg">
+					className="flex-[2] h-10 rounded-lg border-none text-white text-sm font-semibold cursor-pointer flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:-translate-y-0.5 mn-save-btn shadow-lg">
 					<Check size={13} />{loading ? t('common.saving') : t('common.save')}
 				</button>
 			</div>
@@ -931,9 +931,9 @@ function ExpectedForm({ t, onSave, onClose, loading, initialData }) {
 				<Inp icon={FileText} label="Notes" value={f.notes} onChange={e => set('notes', e.target.value)} placeholder="Optional" />
 			</div>
 			<div className="flex gap-2 px-4 py-3 border-t border-[var(--color-primary-100)] flex-shrink-0 bg-white">
-				<button onClick={onClose} className="flex-1 h-10 rounded-xl border border-[var(--color-primary-200)] bg-transparent text-[var(--color-primary-500)] text-sm font-semibold cursor-pointer hover:bg-[var(--color-primary-100)] transition-colors">Cancel</button>
+				<button onClick={onClose} className="flex-1 h-10 rounded-lg border border-[var(--color-primary-200)] bg-transparent text-[var(--color-primary-500)] text-sm font-semibold cursor-pointer hover:bg-[var(--color-primary-100)] transition-colors">Cancel</button>
 				<button onClick={() => valid && onSave(f)} disabled={!valid || loading}
-					className="flex-[2] h-10 rounded-xl border-none text-white text-sm font-semibold cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:-translate-y-0.5 bg-gradient-to-r from-amber-400 to-amber-500 shadow-lg shadow-amber-200 transition-all duration-200">
+					className="flex-[2] h-10 rounded-lg border-none text-white text-sm font-semibold cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:-translate-y-0.5 bg-gradient-to-r from-amber-400 to-amber-500 shadow-lg shadow-amber-200 transition-all duration-200">
 					<Check size={13} />{loading ? 'Saving…' : 'Save'}
 				</button>
 			</div>
@@ -957,7 +957,7 @@ function WalletForm({ onSave, onClose, loading, initialData }) {
 				</div>
 				<Inp icon={DollarSign} label="Balance" type="number" value={f.openingBalance} onChange={e => set('openingBalance', e.target.value)} placeholder="0" />
 				<Inp icon={FileText} label="Notes" value={f.notes} onChange={e => set('notes', e.target.value)} placeholder="Optional" />
-				<div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-[var(--color-primary-200)] bg-[var(--color-primary-100)]">
+				<div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-100)]">
 					<div>
 						<div className="text-sm font-medium text-[var(--color-primary-700)]">Default account</div>
 						<div className="text-[11px] text-[var(--color-primary-400)]">Main manual account</div>
@@ -966,9 +966,9 @@ function WalletForm({ onSave, onClose, loading, initialData }) {
 				</div>
 			</div>
 			<div className="flex gap-2 px-4 py-3 border-t border-[var(--color-primary-100)] flex-shrink-0 bg-white">
-				<button onClick={onClose} className="flex-1 h-10 rounded-xl border border-[var(--color-primary-200)] bg-transparent text-[var(--color-primary-500)] text-sm font-semibold cursor-pointer hover:bg-[var(--color-primary-100)] transition-colors">Cancel</button>
+				<button onClick={onClose} className="flex-1 h-10 rounded-lg border border-[var(--color-primary-200)] bg-transparent text-[var(--color-primary-500)] text-sm font-semibold cursor-pointer hover:bg-[var(--color-primary-100)] transition-colors">Cancel</button>
 				<button onClick={() => valid && onSave(f)} disabled={!valid || loading}
-					className="flex-[2] h-10 rounded-xl border-none text-white text-sm font-semibold cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:-translate-y-0.5 mn-save-btn shadow-lg transition-all duration-200">
+					className="flex-[2] h-10 rounded-lg border-none text-white text-sm font-semibold cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:-translate-y-0.5 mn-save-btn shadow-lg transition-all duration-200">
 					<Check size={13} />{loading ? 'Saving…' : 'Save'}
 				</button>
 			</div>
@@ -979,10 +979,10 @@ function WalletForm({ onSave, onClose, loading, initialData }) {
 // ─── Tab banners ──────────────────────────────────────────────────────────────
 function TotalBanner({ total, color, icon: Icon, label, currency }) {
 	return (
-		<div className={cn('rounded-2xl border p-3 relative overflow-hidden', color.border, color.bg)}>
+		<div className={cn('rounded-lg border p-3 relative overflow-hidden', color.border, color.bg)}>
 			<div className="absolute inset-0 bg-gradient-to-br from-white/60 to-transparent pointer-events-none" />
 			<div className="relative z-10 flex items-center gap-3">
-				<div className={cn('w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow', color.icon)}><Icon size={17} /></div>
+				<div className={cn('w-10 h-10 rounded-lg flex items-center justify-center text-white flex-shrink-0 shadow', color.icon)}><Icon size={17} /></div>
 				<div className="flex-1 min-w-0">
 					<div className={cn('text-[8.5px] font-extrabold uppercase tracking-widest mb-0.5 opacity-60', color.text)}>{label}</div>
 					<div className={cn('mn-serif text-[24px] leading-tight', color.text)}>{fmt(total)} <span className="text-xs opacity-50">{currency}</span></div>
@@ -1011,8 +1011,8 @@ function WalletsTab({ data, total, onEdit, onDelete }) {
 			<Card>
 				<CardHeader title="Manual Accounts" icon={CreditCard} action={<Badge color="amber">{data.length}</Badge>} />
 				<div className="overflow-x-auto">
-					<table className="mn-table">
-						<thead><tr><th>Name</th><th>Type</th><th>Balance</th><th>Def.</th><th className="text-end">Act.</th></tr></thead>
+					<table className="mn-table rtl:text-right ltr:text-left">
+						<thead><tr><th>Name</th><th>Type</th><th>Balance</th><th>Def.</th><th >Act.</th></tr></thead>
 						<tbody>
 							{data.map(item => {
 								const m = walletTypeMeta(item.type);
@@ -1055,8 +1055,8 @@ function IncomeTab({ data, locale, t, onEdit, onDelete }) {
 				color={{ bg: 'bg-gradient-to-br from-emerald-50 to-white', border: 'border-emerald-100', text: 'text-emerald-700', icon: 'bg-gradient-to-br from-emerald-500 to-emerald-600', arrow: ArrowUpRight, arrowColor: 'text-emerald-300' }} />
 			<Card>
 				<div className="overflow-x-auto">
-					<table className="mn-table">
-						<thead><tr><th>{t('table.source')}</th><th>{t('table.amount')}</th><th>{t('table.date')}</th><th>{t('table.type')}</th><th className="text-end">{t('table.actions')}</th></tr></thead>
+					<table className=" rtl:text-right ltr:text-left mn-table">
+						<thead><tr><th>{t('table.source')}</th><th>{t('table.amount')}</th><th>{t('table.date')}</th><th>{t('table.type')}</th><th >{t('table.actions')}</th></tr></thead>
 						<tbody>
 							{data.map(item => (
 								<tr key={item.id}>
@@ -1084,8 +1084,8 @@ function ExpensesTab({ data, locale, t, onEdit, onDelete }) {
 				color={{ bg: 'bg-gradient-to-br from-rose-50 to-white', border: 'border-rose-100', text: 'text-rose-700', icon: 'bg-gradient-to-br from-rose-500 to-rose-600', arrow: ArrowDownRight, arrowColor: 'text-rose-300' }} />
 			<Card>
 				<div className="overflow-x-auto">
-					<table className="mn-table">
-						<thead><tr><th>{t('table.description')}</th><th>{t('table.amount')}</th><th>{t('table.date')}</th><th>{t('table.type')}</th><th className="text-end">{t('table.actions')}</th></tr></thead>
+					<table className="mn-table rtl:text-right ltr:text-left">
+						<thead><tr><th>{t('table.description')}</th><th>{t('table.amount')}</th><th>{t('table.date')}</th><th>{t('table.type')}</th><th >{t('table.actions')}</th></tr></thead>
 						<tbody>
 							{data.map(item => (
 								<tr key={item.id}>
@@ -1114,16 +1114,16 @@ function CommitmentsTab({ data, locale, t, onToggle, togglingId, onEdit, onDelet
 	if (!data.length) return <Card><Empty icon={Lock} title={t('states.noCommitments')} subtitle={t('states.addFirst')} /></Card>;
 	return (
 		<div className="flex flex-col gap-3">
-			<div className="rounded-2xl border border-[var(--color-primary-200)] bg-gradient-to-br from-[var(--color-primary-100)] to-white p-3">
+			<div className="rounded-lg border border-[var(--color-primary-200)] bg-gradient-to-br from-[var(--color-primary-100)] to-white p-3">
 				<div className="flex items-center justify-between mb-2">
 					<div className="flex items-center gap-2.5">
-						<div className="w-9 h-9 rounded-xl mn-save-btn flex items-center justify-center text-white shadow"><Lock size={14} /></div>
+						<div className="w-9 h-9 rounded-lg mn-save-btn flex items-center justify-center text-white shadow"><Lock size={14} /></div>
 						<div>
 							<div className="text-[8.5px] font-extrabold uppercase tracking-widest text-[var(--color-primary-400)] mb-0.5">{t('commitments.title')}</div>
 							<div className="mn-serif text-[19px] text-[var(--color-primary-700)] leading-tight">{fmt(total)} <span className="text-xs opacity-55">{t('common.currency')}</span></div>
 						</div>
 					</div>
-					<div className="text-end">
+					<div >
 						<div className="text-[8px] font-bold uppercase tracking-widest text-[var(--color-primary-400)] mb-0.5">{t('commitments.paid')}</div>
 						<div className="text-lg font-black text-emerald-600 tabular-nums">{pct}%</div>
 					</div>
@@ -1141,8 +1141,8 @@ function CommitmentsTab({ data, locale, t, onToggle, togglingId, onEdit, onDelet
 			{fd.length ? (
 				<Card>
 					<div className="overflow-x-auto">
-						<table className="mn-table">
-							<thead><tr><th>{t('table.name')}</th><th>{t('table.amount')}</th><th>{t('table.dueDate')}</th><th>{t('table.status')}</th><th className="text-end">{t('table.actions')}</th></tr></thead>
+						<table className="mn-table rtl:text-right ltr:text-left">
+							<thead><tr><th>{t('table.name')}</th><th>{t('table.amount')}</th><th>{t('table.dueDate')}</th><th>{t('table.status')}</th><th >{t('table.actions')}</th></tr></thead>
 							<tbody>
 								{fd.map(item => {
 									const ip = item.status === 'paid';
@@ -1192,13 +1192,13 @@ function ZakatTab({ incTotal, expTotal, log, locale, t, onDelete }) {
 	const R = 36, C = 2 * Math.PI * R, off = C - (prog / 100) * C;
 	return (
 		<div className="flex flex-col gap-3">
-			<div className="relative rounded-2xl overflow-hidden text-white"
+			<div className="relative rounded-lg overflow-hidden text-white"
 				style={{ background: 'linear-gradient(135deg,#064e3b,#065f46 35%,#047857 65%,#059669)', boxShadow: '0 18px 38px -8px rgba(6,78,59,.42)' }}>
 				<div className="absolute top-0 end-0 w-52 h-52 rounded-full bg-emerald-400/10 blur-3xl pointer-events-none" />
 				<div className="relative z-10 p-4">
 					<div className="flex items-center justify-between mb-3.5">
 						<div className="flex items-center gap-2.5">
-							<div className="w-9 h-9 rounded-xl bg-white/12 border border-white/18 flex items-center justify-center"><Landmark size={16} /></div>
+							<div className="w-9 h-9 rounded-lg bg-white/12 border border-white/18 flex items-center justify-center"><Landmark size={16} /></div>
 							<div>
 								<div className="text-[14px] font-bold">{t('zakat.title')}</div>
 								<div className="text-[9.5px] text-white/40 mt-0.5">{t('zakat.subtitle')}</div>
@@ -1228,7 +1228,7 @@ function ZakatTab({ incTotal, expTotal, log, locale, t, onDelete }) {
 								{ l: t('zakat.paid'), v: paid, a: 'bg-emerald-400/20 border-emerald-300/25', d: 'bg-emerald-400' },
 								{ l: t('zakat.remaining'), v: rem, a: rem > 0 ? 'bg-amber-400/18 border-amber-300/22' : 'bg-emerald-400/15 border-emerald-300/20', d: rem > 0 ? 'bg-amber-400' : 'bg-emerald-400' },
 							].map(s => (
-								<div key={s.l} className={cn('flex items-center justify-between px-2.5 py-1.5 rounded-xl border', s.a)}>
+								<div key={s.l} className={cn('flex items-center justify-between px-2.5 py-1.5 rounded-lg border', s.a)}>
 									<div className="flex items-center gap-1.5">
 										<span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', s.d)} />
 										<span className="text-[9.5px] font-semibold text-white/50">{s.l}</span>
@@ -1248,7 +1248,7 @@ function ZakatTab({ incTotal, expTotal, log, locale, t, onDelete }) {
 							const on = mode === x.v;
 							return (
 								<button key={x.v} onClick={() => setMode(x.v)}
-									className={cn('rounded-xl border p-2 text-center cursor-pointer transition-all flex flex-col items-center gap-1', on ? 'bg-[var(--color-primary-100)] border-[var(--color-primary-300)]' : 'bg-[var(--color-primary-100)] border-[var(--color-primary-200)] hover:border-[var(--color-primary-300)]')}>
+									className={cn('rounded-lg border p-2 text-center cursor-pointer transition-all flex flex-col items-center gap-1', on ? 'bg-[var(--color-primary-100)] border-[var(--color-primary-300)]' : 'bg-[var(--color-primary-100)] border-[var(--color-primary-200)] hover:border-[var(--color-primary-300)]')}>
 									<div className={cn('w-2 h-2 rounded-full', on ? 'bg-[var(--color-primary-500)]' : 'bg-[var(--color-primary-300)]')} />
 									<div className={cn('text-[9px] font-bold', on ? 'text-[var(--color-primary-800)]' : 'text-[var(--color-primary-400)]')}>{x.l}</div>
 									<div className={cn('font-mono text-[10px] font-bold tabular-nums', on ? 'text-[var(--color-primary-600)]' : 'text-[var(--color-primary-300)]')}>
@@ -1259,12 +1259,12 @@ function ZakatTab({ incTotal, expTotal, log, locale, t, onDelete }) {
 						})}
 					</div>
 					{mode === 'custom' && <Inp icon={DollarSign} type="number" value={custom} onChange={e => setCst(e.target.value)} placeholder={t('zakat.customBasePlaceholder')} />}
-					<div className="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2.5">
+					<div className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2.5">
 						<div className="flex items-center justify-between mb-2">
 							<span className="text-[9.5px] font-bold uppercase tracking-widest text-emerald-700/55">{t('zakat.percentage')}</span>
 							<span className="font-mono text-[17px] font-black text-emerald-700">{pct}<span className="text-xs ml-0.5">%</span></span>
 						</div>
-						<input type="range" min="2" max="10" step="0.5" value={pct} onChange={e => setPct(Number(e.target.value))}
+						<input dir='ltr' type="range" min="2" max="10" step="0.5" value={pct} onChange={e => setPct(Number(e.target.value))}
 							className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
 							style={{ background: `linear-gradient(to right,#10b981 0%,#10b981 ${((pct - 2) / 8) * 100}%,#d1fae5 ${((pct - 2) / 8) * 100}%,#d1fae5 100%)` }} />
 					</div>
@@ -1275,8 +1275,8 @@ function ZakatTab({ incTotal, expTotal, log, locale, t, onDelete }) {
 					action={<span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">{log.length}</span>} />
 				{log.length > 0 ? (
 					<div className="overflow-x-auto">
-						<table className="mn-table">
-							<thead><tr><th>#</th><th>{t('table.description')}</th><th>{t('table.amount')}</th><th>{t('table.date')}</th><th className="text-end">{t('table.actions')}</th></tr></thead>
+						<table className="mn-table rtl:text-right ltr:text-left">
+							<thead><tr><th>#</th><th>{t('table.description')}</th><th>{t('table.amount')}</th><th>{t('table.date')}</th><th >{t('table.actions')}</th></tr></thead>
 							<tbody>
 								{log.map((item, idx) => (
 									<tr key={item.id}>
@@ -1305,8 +1305,8 @@ function ExpectedTab({ data, locale, t, onEdit, onDelete }) {
 			{data.length > 0 ? (
 				<Card>
 					<div className="overflow-x-auto">
-						<table className="mn-table">
-							<thead><tr><th>Description</th><th>{t('table.amount')}</th><th>Date</th><th>Notes</th><th className="text-end">{t('table.actions')}</th></tr></thead>
+						<table className="mn-table rtl:text-right ltr:text-left">
+							<thead><tr><th>Description</th><th>{t('table.amount')}</th><th>Date</th><th>Notes</th><th >{t('table.actions')}</th></tr></thead>
 							<tbody>
 								{data.map(item => (
 									<tr key={item.id}>
@@ -1468,13 +1468,13 @@ export default function MoneyPage() {
 						{/* <div className="mt-2"><BalanceModeSwitch value={balanceMode} onChange={setBalanceMode} /></div> */}
 					</div>
 					<div className="flex items-center gap-1 shrink-0">
-						<button onClick={() => setForecastOpen(true)} className="h-8 w-8 flex items-center justify-center rounded-xl cursor-pointer border border-white/20 bg-white/10 text-white/80 backdrop-blur-sm hover:bg-white/18 transition-all active:scale-95"><Target size={12} /></button>
-						<button onClick={() => setNotifOpen(true)} className="relative h-8 w-8 flex items-center justify-center rounded-xl cursor-pointer border border-white/20 bg-white/10 text-white/80 backdrop-blur-sm hover:bg-white/18 transition-all active:scale-95">
+						<button onClick={() => setForecastOpen(true)} className="h-8 w-8 flex items-center justify-center rounded-lg cursor-pointer border border-white/20 bg-white/10 text-white/80 backdrop-blur-sm hover:bg-white/18 transition-all active:scale-95"><Target size={12} /></button>
+						<button onClick={() => setNotifOpen(true)} className="relative h-8 w-8 flex items-center justify-center rounded-lg cursor-pointer border border-white/20 bg-white/10 text-white/80 backdrop-blur-sm hover:bg-white/18 transition-all active:scale-95">
 							<Bell size={12} />
 							{unread > 0 && <span className="mn-pulse absolute -top-1 -end-1 w-3.5 h-3.5 bg-rose-500 rounded-full text-[7px] font-black text-white flex items-center justify-center ring-[1.5px] ring-white/20">{unread}</span>}
 						</button>
 						<button onClick={() => { if (tab === 'wallets') setWalletAddOpen(true); else if (tab === 'expected') setExpAddOpen(true); else setAddOpen(true); }}
-							className="h-8 w-8 flex items-center justify-center rounded-xl cursor-pointer border-none transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95 bg-white/95 text-[var(--color-primary-700)] shadow-md">
+							className="h-8 w-8 flex items-center justify-center rounded-lg cursor-pointer border-none transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95 bg-white/95 text-[var(--color-primary-700)] shadow-md">
 							<Plus size={13} />
 						</button>
 					</div>
@@ -1482,7 +1482,7 @@ export default function MoneyPage() {
 
 				{/* card + pills */}
 				<div className="relative z-10 mb-1.5">
-					{loading ? <div className="rounded-2xl bg-[var(--color-primary-700)] h-[180px]" /> : (
+					{loading ? <div className="rounded-lg bg-[var(--color-primary-700)] h-[180px]" /> : (
 						<>
 							<CreditCardDisplay balance={visibleBalance} income={incT} expenses={expT} commitments={totalCom} remaining={totalRem} currency={t('common.currency')} spendRate={spendRate} t={t} balanceMode={balanceMode} />
 							{/* <SummaryPills currentMoneyBalance={currentMoneyBalance} monthlyBalance={monthlyBalance} realAccountsTotal={realAccountsTotal} mode={balanceMode} /> */}
@@ -1530,7 +1530,7 @@ export default function MoneyPage() {
 				<div className="flex flex-col gap-2 p-4">
 					{notifs.length ? notifs.map(item => {
 						const s = ({ warn: 'bg-amber-50 border-amber-200 text-amber-800', ok: 'bg-emerald-50 border-emerald-200 text-emerald-800', alert: 'bg-rose-50 border-rose-200 text-rose-800' })[item.type] || 'bg-amber-50 border-amber-200 text-amber-800';
-						return <button key={item.id} onClick={async () => { try { await moneyApi.markNotificationRead(item.id); setNotifs(p => p.map(i => i.id === item.id ? { ...i, isRead: true } : i)); } catch (e) { console.error(e); } }} className={cn('w-full text-start rounded-xl px-3 py-2.5 border cursor-pointer hover:opacity-90 transition-opacity', s, item.isRead && 'opacity-55')}><div className="text-sm font-semibold mb-0.5">{item.text}</div><div className="text-[10px] opacity-60">{item.timeLabel || t('notifications.new')}</div></button>;
+						return <button key={item.id} onClick={async () => { try { await moneyApi.markNotificationRead(item.id); setNotifs(p => p.map(i => i.id === item.id ? { ...i, isRead: true } : i)); } catch (e) { console.error(e); } }} className={cn('w-full text-start rounded-lg px-3 py-2.5 border cursor-pointer hover:opacity-90 transition-opacity', s, item.isRead && 'opacity-55')}><div className="text-sm font-semibold mb-0.5">{item.text}</div><div className="text-[10px] opacity-60">{item.timeLabel || t('notifications.new')}</div></button>;
 					}) : <Empty icon={Bell} title={t('notifications.empty')} />}
 				</div>
 			</Panel>

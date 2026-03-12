@@ -43,6 +43,7 @@ import { Link } from '@/i18n/navigation';
 import { NotesListInput } from '../../nutrition/page';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import ActionButtons from '@/components/atoms/Actions';
+import DataTable from '@/components/atoms/Datatable';
 
 const spring = { type: 'spring', stiffness: 360, damping: 30, mass: 0.7 };
 
@@ -129,7 +130,7 @@ export default function PlansPage() {
 	const [changePlans, setChangePlans] = useState(null);
 
 	const [page, setPage] = useState(1);
-	const [perPage, setPerPage] = useState(12);
+	const [perPage, setPerPage] = useState(6);
 	const [sortBy, setSortBy] = useState('created_at');
 	const [sortOrder, setSortOrder] = useState('DESC');
 	const [searchText, setSearchText] = useState('');
@@ -268,7 +269,6 @@ export default function PlansPage() {
 	};
 	const openAssign = plan => setAssignOpen(plan);
 
-	const totalPages = useMemo(() => Math.max(1, Math.ceil(total / Math.max(1, perPage))), [total, perPage]);
 	const sortLabel = sortBy === 'created_at'
 		? sortOrder === 'ASC' ? t('plans.filters.oldestFirst') : t('plans.filters.newestFirst')
 		: t('plans.filters.sortByDate');
@@ -326,6 +326,141 @@ export default function PlansPage() {
 		openedFromUrlRef.current = null;
 	}, [router, pathname, searchParams]);
 
+
+	const onPreview = openPreview;
+	const onEdit = openEdit;
+	const onDelete = askDelete;
+	const onAssign = openAssign;
+	const onDuplicate = handleDuplicate;
+
+	const planColumns = [
+		{
+			key: 'name',
+			header: t('plans.table.name'),
+			cell: (row) => (
+				<div className="flex items-center gap-3 min-w-0">
+					<div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg theme-gradient-bg text-white shadow-sm">
+						<Dumbbell className="h-5 w-5" />
+					</div>
+
+					<div className="min-w-0">
+						<MultiLangText className="truncate text-sm font-semibold text-slate-900">
+							{row.name}
+						</MultiLangText>
+					</div>
+				</div>
+			),
+		},
+		{
+			key: 'daysCount',
+			header: t('plans.table.days'),
+			cell: (row) => (
+				<span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+					<Calendar className="w-3 h-3" />
+					{row.daysCount}
+				</span>
+			),
+		},
+		{
+			key: 'status',
+			header: t('plans.table.status'),
+			cell: (row) => (
+				<span
+					className={[
+						'inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold border',
+						row.isActive
+							? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+							: 'bg-slate-100 text-slate-500 border-slate-200',
+					].join(' ')}
+				>
+					<Zap className="w-3 h-3" />
+					{row.isActive ? t('plans.table.active') : t('plans.table.inactive')}
+				</span>
+			),
+		},
+		{
+			key: 'createdAt',
+			header: t('plans.table.createdAt'),
+			cell: (row) => (
+				<span className="text-sm text-slate-500 whitespace-nowrap">
+					{row.createdAt}
+				</span>
+			),
+		},
+		{
+			key: 'actions',
+			header: t('plans.table.actions'),
+			cell: (row) => (
+				<ActionButtons
+					row={row.raw}
+					actions={[
+						{
+							icon: <UsersIcon />,
+							tooltip: t('actions.assign'),
+							variant: 'blue',
+							onClick: r => onAssign?.(r),
+						},
+						{
+							icon: <Share2 />,
+							tooltip: t('actions.share', { default: 'Share' }),
+							variant: 'emerald',
+							onClick: r => window.open(`/workouts/plans/${r.id}`, '_blank', 'noopener,noreferrer'),
+						},
+						{
+							icon: duplicatingIds?.has(row.id) ? <Loader2 className="animate-spin" /> : <Layers />,
+							tooltip: t('actions.duplicate', { default: 'Duplicate' }),
+							variant: 'purple',
+							disabled: duplicatingIds?.has(row.id),
+							onClick: r => onDuplicate?.(r),
+						},
+						{
+							icon: <Eye />,
+							tooltip: t('actions.preview'),
+							variant: 'slate',
+							onClick: r => onPreview?.(r),
+						},
+						{
+							icon: <PencilLine />,
+							tooltip: t('actions.edit'),
+							variant: 'amber',
+							hidden: row.raw?.adminId == null,
+							onClick: r => onEdit?.(r),
+						},
+						{
+							icon: <Trash2 />,
+							tooltip: t('actions.delete'),
+							variant: 'red',
+							hidden: row.raw?.adminId == null,
+							onClick: r => onDelete?.(r.id),
+						},
+					]}
+				/>
+			),
+		},
+	];
+	const tableRows = useMemo(() => {
+		return (items || []).map((p) => ({
+			id: p.id,
+			name: p.name,
+			daysCount: Array.isArray(p?.program?.days) ? p.program.days.length : 0,
+			isActive: !!p?.isActive,
+			createdAt: p?.created_at ? new Date(p.created_at).toISOString().slice(0, 10) : '—',
+			raw: p,
+		}));
+	}, [items]);
+
+	const tableActions = [
+		{
+			key: 'sort-created-at',
+			label: sortLabel,
+			icon: sortOrder === 'ASC'
+				? <ChevronUp size={15} className="text-slate-400" />
+				: <ChevronDown size={15} className="text-slate-400" />,
+			onClick: () => toggleSort('created_at'),
+		},
+	];
+
+
 	return (
 		<div className="space-y-6">
 			<GradientStatsHeader
@@ -342,53 +477,6 @@ export default function PlansPage() {
 					</>
 				)}
 			</GradientStatsHeader>
-
-			{/* ── Toolbar ── */}
-			<div className="flex items-center justify-between gap-3 flex-wrap">
-				{/* Search */}
-				<div className="relative flex-1 min-w-[220px] max-w-[320px]">
-					<Search className="absolute left-3 rtl:right-3 rtl:left-auto top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-					<input
-						value={searchText}
-						onChange={e => setSearchText(e.target.value)}
-						placeholder={t('placeholders.searchPlan')}
-						className="h-10 w-full pl-9 pr-8 rtl:pr-9 rtl:pl-8 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 shadow-xs placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)] focus:border-[color:var(--color-primary-400)] hover:border-slate-300"
-						aria-label={t('placeholders.searchPlan')}
-					/>
-					{!!searchText && (
-						<button
-							type="button"
-							onClick={() => setSearchText('')}
-							className="absolute right-2 rtl:left-2 rtl:right-auto top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
-						>
-							<X className="w-3.5 h-3.5" />
-						</button>
-					)}
-				</div>
-
-				{/* Right controls */}
-				<div className="flex items-center gap-2">
-					<div className="w-[76px]">
-						<Select
-							searchable={false}
-							clearable={false}
-							placeholder={t('plans.filters.perPage')}
-							options={[{ id: 8, label: 8 }, { id: 12, label: 12 }, { id: 20, label: 20 }, { id: 30, label: 30 }]}
-							value={perPage}
-							onChange={n => setPerPage(Number(n))}
-						/>
-					</div>
-
-					<button
-						onClick={() => toggleSort('created_at')}
-						className="inline-flex items-center gap-1.5 h-10 rounded-lg px-3 border border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 hover:border-slate-300 transition focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]"
-					>
-						{sortOrder === 'ASC' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
-						<span>{sortLabel}</span>
-					</button>
-				</div>
-			</div>
-
 			{err && (
 				<div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-700 border border-red-100 text-sm">
 					<span className="shrink-0 w-1.5 h-1.5 rounded-full bg-red-500 mt-px" />
@@ -396,18 +484,35 @@ export default function PlansPage() {
 				</div>
 			)}
 
-			<ListView
-				loading={loading}
-				items={items}
-				onPreview={openPreview}
-				onEdit={openEdit}
-				onDelete={askDelete}
-				onAssign={openAssign}
-				duplicatingIds={duplicatingIds}
-				onDuplicate={handleDuplicate}
+			<DataTable
+				columns={planColumns}
+				data={tableRows}
+				isLoading={loading}
+				searchValue={searchText}
+				onSearchChange={(value) => {
+					setSearchText(value);
+					setPage(1);
+				}}
+				onSearch={() => setPage(1)}
+				actions={tableActions}
+				labels={{
+					searchPlaceholder: t('placeholders.searchPlan'),
+					emptyTitle: t('plans.list.noPlansTitle'),
+					emptySubtitle: t('plans.list.noPlansDesc'),
+				}}
+				pagination={{
+					current_page: page,
+					per_page: perPage,
+					total_records: total,
+				}}
+				onPageChange={({ page: nextPage, per_page }) => {
+					setPage(Number(nextPage ?? 1));
+					setPerPage(Number(per_page ?? 6));
+				}}
+				perPageOptions={[6 ,12 , 24, 48]}
+				rowKey={(row) => row.id}
+				hoverable
 			/>
-
-			<PrettyPagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
 			{/* Modals */}
 			<Modal open={!!preview} onClose={() => setPreview(null)} title={preview?.name || t('plans.modals.previewTitle')} maxW="max-w-4xl">
@@ -512,196 +617,6 @@ const ConfirmDialog = memo(function ConfirmDialog({ open, onClose, loading, titl
 	);
 });
 
-/* ─────────────────── LIST VIEW ─────────────────── */
-export const ListView = memo(function ListView({ loading, items = [], onPreview, onEdit, onDelete, onAssign, onDuplicate, duplicatingIds }) {
-	const t = useTranslations('workoutPlans');
-	const user = useUser();
-
-	if (loading) {
-		return (
-			<div className="space-y-2">
-				{Array.from({ length: 5 }).map((_, i) => (
-					<div key={i} className="flex items-center gap-4 rounded-lg border border-slate-100 bg-white px-5 py-4">
-						<div className="h-10 w-10 rounded-lg bg-slate-100 shimmer shrink-0" />
-						<div className="flex-1 space-y-2">
-							<div className="h-3.5 w-44 rounded-full bg-slate-100 shimmer" />
-							<div className="h-2.5 w-24 rounded-full bg-slate-100 shimmer" />
-						</div>
-						<div className="h-8 w-32 rounded-lg bg-slate-100 shimmer" />
-					</div>
-				))}
-			</div>
-		);
-	}
-
-	if (!items.length) {
-		return (
-			<div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-slate-200 bg-slate-50/60 py-16">
-				<div className="flex h-16 w-16 items-center justify-center rounded-lg bg-slate-100">
-					<Dumbbell className="h-7 w-7 text-slate-400" />
-				</div>
-				<div className="text-center space-y-1">
-					<h3 className="text-base font-semibold text-slate-800">{t('plans.list.noPlansTitle')}</h3>
-					<p className="text-sm text-slate-500 max-w-xs">{t('plans.list.noPlansDesc')}</p>
-				</div>
-			</div>
-		);
-	}
-
-	return (
-		<div className="space-y-2">
-			{items.map((p, idx) => {
-				const dayCount = Array.isArray(p?.program?.days) ? p.program.days.length : 0;
-				const active = !!p?.isActive;
-
-				return (
-					<motion.div
-						key={p.id}
-						initial={{ opacity: 0, y: 6 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ delay: idx * 0.04, duration: 0.22 }}
-						className=" bg-card group relative flex items-center gap-4 rounded-lg border border-slate-100 bg-white px-5 py-3.5 shadow-xs hover:shadow-sm hover:border-slate-200 transition-all duration-200"
-					>
-						{/* Icon */}
-						<div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg theme-gradient-bg text-white shadow-sm">
-							<Dumbbell className="h-5 w-5" />
-						</div>
-
-						{/* Name + badge */}
-						<div className="min-w-0 flex-1">
-							<div className="flex flex-wrap items-center gap-2">
-								<MultiLangText className="truncate text-sm font-semibold text-slate-900 leading-snug">{p.name}</MultiLangText>
-								<span className={[
-									'inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset',
-									active ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-slate-100 text-slate-500 ring-slate-200',
-								].join(' ')}>
-									<Calendar className="w-3 h-3" />
-									{t('plans.list.dayCountLabel', { count: dayCount })}
-								</span>
-							</div>
-						</div>
-
-						{/* Actions */}
-<ActionButtons
-	row={p}
-	actions={[
-		{
-			icon: <UsersIcon />,
-			tooltip: t('actions.assign'),
-			variant: 'blue',
-			onClick: row => onAssign?.(row),
-		},
-		{
-			icon: <Share2 />,
-			tooltip: t('actions.share', { default: 'Share' }),
-			variant: 'emerald',
-			onClick: row => window.open(`/workouts/plans/${row.id}`, '_blank', 'noopener,noreferrer'),
-		},
-		{
-			icon: duplicatingIds?.has(p.id) ? <Loader2 className="animate-spin" /> : <Layers />,
-			tooltip: t('actions.duplicate', { default: 'Duplicate' }),
-			variant: 'purple',
-			disabled: duplicatingIds?.has(p.id),
-			onClick: row => onDuplicate?.(row),
-		},
-		{
-			icon: <Eye />,
-			tooltip: t('actions.preview'),
-			variant: 'slate',
-			onClick: row => onPreview?.(row),
-		},
-		{
-			icon: <PencilLine />,
-			tooltip: t('actions.edit'),
-			variant: 'amber',
-			hidden: p?.adminId == null,
-			onClick: row => onEdit?.(row),
-		},
-		{
-			icon: <Trash2 />,
-			tooltip: t('actions.delete'),
-			variant: 'red',
-			hidden: p?.adminId == null,
-			onClick: row => onDelete?.(row.id),
-		},
-	]}
-/>
-
-						{/* Actions */}
-						{/* <div className="flex items-center gap-1.5 shrink-0">
-							<button
-								type="button"
-								onClick={() => onAssign?.(p)}
-								className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
-								title={t('actions.assign')}
-							>
-								<UsersIcon className="h-3.5 w-3.5 text-slate-400" />
-								{t('actions.assign')}
-							</button>
-
-							<div className="w-px h-5 bg-slate-100 mx-0.5" />
-
-							<Link
-								href={`/workouts/plans/${p.id}`}
-								target="_blank"
-								rel="noopener noreferrer"
-								className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-600 hover:bg-emerald-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
-								title={t('actions.share', { default: 'Share' })}
-							>
-								<Share2 className="h-3.5 w-3.5" />
-							</Link>
-
-							<button
-								type="button"
-								title={t('actions.duplicate', { default: 'Duplicate' })}
-								onClick={() => !duplicatingIds?.has(p.id) && onDuplicate?.(p)}
-								disabled={duplicatingIds?.has(p.id)}
-								className={[
-									'inline-flex h-8 w-8 items-center justify-center rounded-lg border bg-white transition focus-visible:outline-none focus-visible:ring-2',
-									'border-[color:var(--color-secondary-200)] text-[color:var(--color-secondary-700)] hover:bg-[color:var(--color-secondary-50)] focus-visible:ring-[color:var(--color-secondary-300)]',
-									duplicatingIds?.has(p.id) ? 'opacity-50 pointer-events-none' : '',
-								].join(' ')}
-							>
-								{duplicatingIds?.has(p.id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Layers className="h-3.5 w-3.5" />}
-							</button>
-
-							<button
-								type="button"
-								title={t('actions.preview')}
-								onClick={() => onPreview?.(p)}
-								className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-							>
-								<Eye className="h-3.5 w-3.5" />
-							</button>
-
-							{p?.adminId != null && (
-								<button
-									type="button"
-									title={t('actions.edit')}
-									onClick={() => onEdit?.(p)}
-									className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--color-primary-200)] bg-white text-[color:var(--color-primary-600)] hover:bg-[color:var(--color-primary-50)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
-								>
-									<PencilLine className="h-3.5 w-3.5" />
-								</button>
-							)}
-
-							{p?.adminId != null && (
-								<button
-									type="button"
-									title={t('actions.delete')}
-									onClick={() => onDelete?.(p.id)}
-									className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-500 hover:bg-rose-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
-								>
-									<Trash2 className="h-3.5 w-3.5" />
-								</button>
-							)}
-						</div> */}
-					</motion.div>
-				);
-			})}
-		</div>
-	);
-});
 
 /* ─────────────────── PlanPreview ─────────────────── */
 const PlanPreview = memo(function PlanPreview({ plan }) {

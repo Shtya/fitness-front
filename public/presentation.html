@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>منصة إدارة التدريب والتغذية</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        p: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a' },
+        s: { 50:'#f0f9ff',100:'#e0f2fe',200:'#bae6fd',300:'#7dd3fc',400:'#38bdf8',500:'#0ea5e9',600:'#0284c7',700:'#0369a1',800:'#075985',900:'#0c4a6e' }
+      },
+      fontFamily: { cairo:['Cairo','sans-serif'], taj:['Tajawal','sans-serif'] }
+    }
+  }
+}
+</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-snap-type:y mandatory}
+body{font-family:'Cairo','Tajawal',sans-serif;background:#020817;direction:rtl;overflow-x:hidden}
+
+/* ─ Full-screen sections ─ */
+section{
+  width:100%;min-height:100vh;
+  scroll-snap-align:start;
+  scroll-snap-stop:always;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+
+/* ─ Center wrapper ─ */
+.wrap{width:100%;max-width:1100px;margin:0 auto;padding:60px 40px;position:relative;z-index:10}
+
+/* ─ Backgrounds ─ */
+.bg-deep { background:#020817 }
+.bg-navy { background:linear-gradient(160deg,#0c1445 0%,#0d1b4b 40%,#071b3e 100%) }
+.bg-mid  { background:linear-gradient(160deg,#050e2e 0%,#0a1638 60%,#040c28 100%) }
+.bg-light{ background:linear-gradient(160deg,#f0f7ff 0%,#dbeafe 50%,#e0f2fe 100%) }
+.bg-slate{ background:linear-gradient(160deg,#0f172a 0%,#1e293b 100%) }
+
+/* ─ Noise overlay ─ */
+.noise::after{
+  content:'';position:absolute;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:1;opacity:0.4
+}
+
+/* ─ Glow blobs ─ */
+.blob{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
+
+/* ─ Grid texture ─ */
+.grid-tex{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(59,130,246,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.04) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+
+/* ─ Gradient text ─ */
+.gt{background:linear-gradient(90deg,#60a5fa,#38bdf8,#93c5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.gt2{background:linear-gradient(90deg,#3b82f6,#0ea5e9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* ─ Typography ─ */
+.t-hero{font-family:'Tajawal',sans-serif;font-size:clamp(38px,5vw,72px);font-weight:900;line-height:1.05;letter-spacing:-0.5px}
+.t-section{font-family:'Tajawal',sans-serif;font-size:clamp(28px,3.5vw,48px);font-weight:900;line-height:1.1}
+.t-label{font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;letter-spacing:3px;color:#60a5fa;opacity:.7;text-transform:uppercase}
+.t-body{font-family:'Cairo',sans-serif;font-size:15px;font-weight:400;line-height:1.8;color:rgba(203,213,225,.75)}
+.t-sm{font-family:'Cairo',sans-serif;font-size:13px;font-weight:400;line-height:1.7}
+
+/* ─ Accent rule ─ */
+.rule{width:48px;height:3px;border-radius:2px;background:linear-gradient(90deg,#3b82f6,#0ea5e9);margin-top:12px}
+.rule-light{width:48px;height:3px;border-radius:2px;background:linear-gradient(90deg,#2563eb,#0369a1);margin-top:12px;opacity:.5}
+
+/* ─ Pill badge ─ */
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:100px;padding:5px 14px;font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);color:#93c5fd}
+.pill-d{display:inline-flex;align-items:center;gap:5px;border-radius:100px;padding:5px 14px;font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);color:#2563eb}
+
+/* ─ Glass card ─ */
+.glass{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;position:relative;overflow:hidden;transition:border-color .3s,transform .3s}
+.glass:hover{border-color:rgba(59,130,246,.35);transform:translateY(-2px)}
+.glass::before{content:'';position:absolute;top:0;right:0;width:80px;height:80px;background:radial-gradient(circle,rgba(59,130,246,.1),transparent 70%);transform:translate(30%,-30%);pointer-events:none}
+
+/* ─ White card ─ */
+.wcard{background:#fff;border:1px solid rgba(59,130,246,.1);border-radius:20px;box-shadow:0 1px 3px rgba(0,0,0,.04),0 4px 24px rgba(59,130,246,.06);position:relative;overflow:hidden;transition:box-shadow .3s,transform .3s}
+.wcard:hover{box-shadow:0 8px 40px rgba(59,130,246,.14);transform:translateY(-3px)}
+.wcard::after{content:'';position:absolute;top:0;right:0;width:3px;height:50px;background:linear-gradient(180deg,#3b82f6,#0ea5e9);border-radius:0 20px 0 0}
+
+/* ─ Timeline node ─ */
+.node{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#0ea5e9);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Tajawal',sans-serif;font-size:14px;font-weight:900;box-shadow:0 0 0 6px rgba(59,130,246,.12);flex-shrink:0}
+
+/* ─ Scroll indicator ─ */
+.scroll-hint{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;align-items:center;gap:6px;opacity:.6;pointer-events:none}
+.scroll-hint span{font-family:'Cairo',sans-serif;font-size:11px;font-weight:600;color:#60a5fa;letter-spacing:1px}
+.chevron{width:20px;height:20px;border-right:2px solid #3b82f6;border-bottom:2px solid #3b82f6;transform:rotate(45deg);animation:bounce 1.6s ease-in-out infinite}
+@keyframes bounce{0%,100%{transform:rotate(45deg) translateY(0)}50%{transform:rotate(45deg) translateY(5px)}}
+
+/* ─ Nav dots ─ */
+.nav-dots{position:fixed;left:20px;top:50%;transform:translateY(-50%);z-index:200;display:flex;flex-direction:column;gap:10px}
+.nav-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2);cursor:pointer;transition:all .3s;border:1px solid rgba(255,255,255,.15)}
+.nav-dot.active{background:#3b82f6;transform:scale(1.4);box-shadow:0 0 8px rgba(59,130,246,.6)}
+.nav-dot:hover{background:rgba(59,130,246,.6)}
+
+/* ─ Feature icon box ─ */
+.icon-box{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.ib-blue{background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(14,165,233,.1));border:1px solid rgba(59,130,246,.2)}
+.ib-white{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid rgba(59,130,246,.12)}
+
+/* ─ Section divider ─ */
+.s-divider{width:100%;height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,.25),rgba(14,165,233,.2),transparent)}
+
+/* ─ Number stat ─ */
+.stat-num{font-family:'Tajawal',sans-serif;font-size:clamp(36px,4vw,56px);font-weight:900;line-height:1;background:linear-gradient(90deg,#93c5fd,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* ─ Role card ─ */
+.role-card{border-radius:24px;padding:32px 28px;position:relative;overflow:hidden;border:1px solid transparent;transition:transform .3s,border-color .3s}
+.role-card:hover{transform:translateY(-4px)}
+.role-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.rc-admin{background:linear-gradient(160deg,rgba(30,58,138,.95),rgba(29,78,216,.7));border-color:rgba(147,197,253,.2)}
+.rc-admin::before{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+.rc-coach{background:linear-gradient(160deg,rgba(7,89,133,.95),rgba(3,105,161,.7));border-color:rgba(125,211,252,.2)}
+.rc-coach::before{background:linear-gradient(90deg,#0ea5e9,#38bdf8)}
+.rc-client{background:linear-gradient(160deg,rgba(15,23,42,.95),rgba(30,64,175,.5));border-color:rgba(96,165,250,.18)}
+.rc-client::before{background:linear-gradient(90deg,#60a5fa,#93c5fd)}
+
+/* ─ Benefit card ─ */
+.ben-card{border-radius:20px;padding:28px 24px;border:1px solid;transition:transform .3s}
+.ben-card:hover{transform:translateY(-3px)}
+
+/* ─ Closing gradient ─ */
+.bg-close{background:radial-gradient(ellipse 100% 120% at 50% 0%,#0d2068 0%,#050e2e 50%,#020817 100%)}
+
+/* ─ Progress bar (section indicator) ─ */
+.progress-bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#3b82f6,#0ea5e9);z-index:300;transition:width .4s ease}
+
+/* ─ Hover glow effect on glass ─ */
+.glow-hover:hover{box-shadow:0 0 0 1px rgba(59,130,246,.3),0 8px 40px rgba(59,130,246,.15)}
+
+/* ─ Stagger animation ─ */
+.fade-up{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.fade-up.visible{opacity:1;transform:translateY(0)}
+
+/* ─ Horizontal scroll section ─ */
+.hscroll-track{display:flex;gap:20px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory}
+.hscroll-track::-webkit-scrollbar{height:3px}
+.hscroll-track::-webkit-scrollbar-track{background:rgba(255,255,255,.05);border-radius:2px}
+.hscroll-track::-webkit-scrollbar-thumb{background:#3b82f6;border-radius:2px}
+.hscroll-item{scroll-snap-align:start;flex-shrink:0}
+
+</style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div class="progress-bar" id="progressBar" style="width:0%"></div>
+
+<!-- Nav dots -->
+<div class="nav-dots" id="navDots"></div>
+
+<!-- Scroll hint -->
+<div class="scroll-hint" id="scrollHint">
+  <span>تمرير للأسفل</span>
+  <div class="chevron"></div>
+</div>
+
+
+<!-- ██████████████████████████████████████████████████
+     §1  HERO / COVER
+██████████████████████████████████████████████████ -->
+<section class="bg-deep noise" id="s1">
+  <div class="blob" style="width:600px;height:600px;top:-100px;right:-150px;background:radial-gradient(circle,rgba(37,99,235,.18),transparent 70%)"></div>
+  <div class="blob" style="width:400px;height:400px;bottom:-80px;left:-100px;background:radial-gradient(circle,rgba(14,165,233,.12),transparent 70%)"></div>
+  <div class="grid-tex"></div>
+  <!-- Vertical accent line -->
+  <div style="position:absolute;top:10%;right:calc(50% + 460px);width:1px;height:80%;background:linear-gradient(180deg,transparent,rgba(96,165,250,.3) 30%,rgba(56,189,248,.3) 70%,transparent);z-index:5"></div>
+
+  <div class="wrap flex items-center gap-16">
+    <!-- Left: content -->
+    <div class="flex-1 fade-up">
+      <div class="pill mb-6">⚡ منصة SaaS · 2025</div>
+
+      <h1 class="t-hero text-white mb-5">
+        إدارة أعمالك<br>
+        <span class="gt">بمستوى آخر تمامًا</span>
+      </h1>
+
+      <p class="t-body mb-8" style="max-width:480px">
+        منصة احترافية تجمع الإدارة والمدربين والعملاء في نظام ذكي واحد — تدريب، تغذية، تواصل، وتقارير بلا فوضى
+      </p>
+
+      <div class="flex gap-3 flex-wrap mb-10">
+        <div class="pill">🎯 إدارة متكاملة</div>
+        <div class="pill">📊 متابعة لحظية</div>
+        <div class="pill">💬 تواصل فوري</div>
+        <div class="pill">📈 نتائج قابلة للقياس</div>
+      </div>
+
+      <!-- CTA -->
+      <div style="display:inline-flex;align-items:center;gap:12px;padding:14px 32px;background:linear-gradient(135deg,#2563eb,#0284c7);border-radius:100px;font-family:'Cairo',sans-serif;font-size:14px;font-weight:800;color:#fff;box-shadow:0 8px 32px rgba(37,99,235,.4);cursor:pointer">
+        🚀 اكتشف المنصة الآن
+      </div>
+    </div>
+
+    <!-- Right: stat cards -->
+    <div class="flex-shrink-0 flex flex-col gap-4 fade-up" style="width:200px">
+      <div class="glass p-6 text-center">
+        <div class="stat-num mb-1">٣</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:rgba(147,197,253,.7);font-weight:600">أدوار متكاملة</div>
+      </div>
+      <div class="glass p-6 text-center">
+        <div class="stat-num mb-1">٢٠+</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:rgba(147,197,253,.7);font-weight:600">شاشة متخصصة</div>
+      </div>
+      <div class="glass p-6 text-center">
+        <div class="stat-num mb-1">١</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:rgba(147,197,253,.7);font-weight:600">منصة شاملة</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ██████████████████████████████████████████████████
+     §2  PLATFORM OVERVIEW  —  light bg
+██████████████████████████████████████████████████ -->
+<section class="bg-light" id="s2">
+  <div class="arc-deco" style="width:500px;height:500px;top:-150px;left:-100px;background:radial-gradient(circle,rgba(59,130,246,.07),transparent 70%);position:absolute;border-radius:50%;pointer-events:none"></div>
+
+  <div class="wrap fade-up">
+    <!-- Header center -->
+    <div class="text-center mb-14">
+      <div class="t-label mb-3" style="color:#2563eb">02 — نظرة عامة</div>
+      <h2 class="t-section" style="color:#1e3a8a">لماذا هذه المنصة؟ <span class="gt2">وما الذي تغيّره؟</span></h2>
+      <div class="rule-light mx-auto mt-3"></div>
+    </div>
+
+    <!-- 3 problem/solution cards -->
+    <div class="grid grid-cols-3 gap-6 mb-12">
+      <div class="wcard p-8 text-center">
+        <div style="width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid rgba(59,130,246,.15);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 16px">🎯</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:16px;font-weight:800;color:#1e3a8a;margin-bottom:10px">المشكلة</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:13px;color:#475569;line-height:1.8">إدارة العملاء موزّعة على واتساب وجداول — فوضى يومية وخدمة غير منتظمة</div>
+      </div>
+      <div style="background:linear-gradient(145deg,#1e3a8a,#1d4ed8,#0369a1);border-radius:20px;padding:32px;text-align:center;box-shadow:0 16px 56px rgba(29,78,216,.3);position:relative;overflow:hidden">
+        <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1px);background-size:20px 20px;pointer-events:none"></div>
+        <div style="width:56px;height:56px;border-radius:18px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 16px;position:relative;z-index:2">💡</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:16px;font-weight:800;color:#fff;margin-bottom:10px;position:relative;z-index:2">الحل</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(219,234,254,.85);line-height:1.8;position:relative;z-index:2">منصة واحدة تجمع الإدارة والمدربين والعملاء في نظام ذكي لا فوضى فيه</div>
+      </div>
+      <div class="wcard p-8 text-center">
+        <div style="width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid rgba(59,130,246,.15);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 16px">📈</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:16px;font-weight:800;color:#1e3a8a;margin-bottom:10px">النتيجة</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:13px;color:#475569;line-height:1.8">قرارات أسرع، متابعة أدق، وعملاء أكثر التزامًا وولاءً للخدمة</div>
+      </div>
+    </div>
+
+    <!-- 5 value pillars -->
+    <div class="flex gap-4 justify-center flex-wrap">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:#fff;border:1px solid rgba(59,130,246,.1);border-radius:100px;box-shadow:0 2px 12px rgba(59,130,246,.06)">
+        <div style="width:8px;height:8px;border-radius:50%;background:#3b82f6"></div>
+        <span style="font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;color:#1e3a8a">إدارة مركزية</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:#fff;border:1px solid rgba(14,165,233,.1);border-radius:100px;box-shadow:0 2px 12px rgba(14,165,233,.06)">
+        <div style="width:8px;height:8px;border-radius:50%;background:#0ea5e9"></div>
+        <span style="font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;color:#0369a1">تجربة عميل احترافية</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:#fff;border:1px solid rgba(37,99,235,.1);border-radius:100px;box-shadow:0 2px 12px rgba(37,99,235,.06)">
+        <div style="width:8px;height:8px;border-radius:50%;background:#2563eb"></div>
+        <span style="font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;color:#1e40af">متابعة قابلة للقياس</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:#fff;border:1px solid rgba(59,130,246,.1);border-radius:100px;box-shadow:0 2px 12px rgba(59,130,246,.06)">
+        <div style="width:8px;height:8px;border-radius:50%;background:#60a5fa"></div>
+        <span style="font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;color:#1e3a8a">تواصل فوري</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 18px;background:#fff;border:1px solid rgba(56,189,248,.1);border-radius:100px;box-shadow:0 2px 12px rgba(56,189,248,.06)">
+        <div style="width:8px;height:8px;border-radius:50%;background:#38bdf8"></div>
+        <span style="font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;color:#0369a1">نمو قابل للتوسع</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ██████████████████████████████████████████████████
+     §3  USER ROLES  —  dark
+██████████████████████████████████████████████████ -->
+<section class="bg-navy noise" id="s3">
+  <div class="blob" style="width:500px;height:500px;bottom:-100px;right:-100px;background:radial-gradient(circle,rgba(14,165,233,.1),transparent 65%)"></div>
+  <div class="grid-tex"></div>
+
+  <div class="wrap fade-up">
+    <div class="text-center mb-14">
+      <div class="t-label mb-3">03 — أدوار المستخدمين</div>
+      <h2 class="t-section text-white">ثلاثة أدوار، <span class="gt">نظام واحد</span></h2>
+      <div class="rule mx-auto mt-3"></div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-6 mb-8">
+      <!-- Admin -->
+      <div class="role-card rc-admin">
+        <div style="font-size:36px;margin-bottom:16px">👑</div>
+        <div style="font-family:'Tajawal',sans-serif;font-size:22px;font-weight:900;color:#fff;margin-bottom:6px">المسؤول</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:rgba(147,197,253,.6);margin-bottom:20px">Admin</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
+          <div style="display:flex;align-items:flex-start;gap:10px"><div style="width:5px;height:5px;border-radius:50%;background:#60a5fa;margin-top:6px;flex-shrink:0"></div><span style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(219,234,254,.8)">تحكم كامل بجميع المستخدمين</span></div>
+          <div style="display:flex;align-items:flex-start;gap:10px"><div style="width:5px;height:5px;border-radius:50%;background:#60a5fa;margin-top:6px;flex-shrink:0"></div><span style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(219,234,254,.8)">إنشاء الخطط وإسنادها للعملاء</span></div>
+          <div style="display:flex;align-items:flex-start;gap:10px"><div style="width:5px;height:5px;border-radius:50%;background:#60a5fa;margin-top:6px;flex-shrink:0"></div><span style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(219,234,254,.8)">إدارة المدفوعات والاشتراكات</span></div>
+          <div style="display:flex;align-items:flex-start;gap:10px"><div style="width:5px;height:5px;border-radius:50%;background:#60a5fa;margin-top:6px;flex-shrink:0"></div><span style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(219,234,254,.8)">مراجعة التقارير والنماذج</span></div>
+        </div>
+        <div class="pill">صلاحيات كاملة</div>
+      </div>
+
+      <!-- Coach -->
+      <div class="role-card rc-coach">
+        <div style="font-size:36px;margin-bottom:16px">🏋️</div>
+        <div style="font-family:'Tajawal',sans-serif;font-size:22px;font-weight:900;color:#fff;margin-bottom:6px">المدرب</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:rgba(125,211,252,.6);margin-bottom:20px">Coach</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
+          <div style="display:flex;align-items:flex-start;gap:10px"><div style="width:5px;height:5px;border-radius:50%;background:#38bdf8;margin-top:6px;flex-shrink:0"></div><span style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(224,242,254,.8)">إنشاء خطط التمارين والتغذية</span></div>
+          <div style="display:flex;align-items:flex-start;gap:10px"><div style="width:5px;height:5px;border-radius:50%;background:#38bdf8;margin-top:6px;flex-shrink:0"></div><span style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(224,242,254,.8)">متابعة تقدم عملائه أسبوعيًا</span></div>
+          <div style="display:flex;align-items:flex-start;gap:10px"><div style="width:5px;height:5px;border-radius:50%;background:#38bdf8;margin-top:6px;flex-shrink:0"></div><span style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(224,242,254,.8)">مراجعة التقارير وإضافة ملاحظات</span></div>
+          <div style="display:flex;align-items:flex-start;gap:10px"><div style="width:5px;height:5px;border-radius:50%;background:#38bdf8;margin-top:6px;flex-shrink:0"></div><span style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(224,242,254,.8)">التواصل المباشر مع العملاء</span></div>
+        </div>
+        <div style="display:inline-flex;align-items:center;border-radius:100px;padding:5px 14px;font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;background:rgba(14,165,233,.2);border:1px solid rgba(14,165,233,.35);color:#7dd3fc">إدارة العملاء</div>
+      </div>
+
+      <!-- Client -->
+      <div class="role-card rc-client">
+        <div style="font-size:36px;margin-bottom:16px">💪</div>
+        <div style="font-family:'Tajawal',sans-serif;font-size:22px;font-weight:900;color:#fff;margin-bottom:6px">العميل</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:rgba(147,197,253,.6);margin-bottom:20px">Client</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
+          <div style="display:flex;align-items:flex-start;gap:10px"><div style="width:5px;height:5px;border-radius:50%;background:#93c5fd;margin-top:6px;flex-shrink:0"></div><span style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(219,234,254,.8)">متابعة التمارين والتغذية يوميًا</span></div>
+          <div style="display:flex;align-items:flex-start;gap:10px"><div style="width:5px;height:5px;border-radius:50%;background:#93c5fd;margin-top:6px;flex-shrink:0"></div><span style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(219,234,254,.8)">إرسال التقارير الأسبوعية</span></div>
+          <div style="display:flex;align-items:flex-start;gap:10px"><div style="width:5px;height:5px;border-radius:50%;background:#93c5fd;margin-top:6px;flex-shrink:0"></div><span style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(219,234,254,.8)">تلقي الملاحظات والتوجيهات</span></div>
+          <div style="display:flex;align-items:flex-start;gap:10px"><div style="width:5px;height:5px;border-radius:50%;background:#93c5fd;margin-top:6px;flex-shrink:0"></div><span style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(219,234,254,.8)">إدارة التذكيرات والملف الشخصي</span></div>
+        </div>
+        <div class="pill">تجربة شخصية</div>
+      </div>
+    </div>
+
+    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px 24px;text-align:center">
+      <span style="font-family:'Cairo',sans-serif;font-size:14px;font-weight:600;color:rgba(147,197,253,.8)">✦ كل دور يحصل على واجهة مخصصة وصلاحيات دقيقة — كل مستخدم يرى فقط ما يحتاجه</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- ██████████████████████████████████████████████████
+     §4  ADMIN WORKFLOW JOURNEY  —  deep dark
+██████████████████████████████████████████████████ -->
+<section class="bg-mid noise" id="s4">
+  <div class="blob" style="width:600px;height:400px;top:-80px;right:-100px;background:radial-gradient(ellipse,rgba(37,99,235,.12),transparent 70%)"></div>
+  <div class="blob" style="width:400px;height:400px;bottom:-60px;left:-80px;background:radial-gradient(circle,rgba(14,165,233,.1),transparent 65%)"></div>
+  <div class="grid-tex"></div>
+
+  <div class="wrap fade-up">
+    <div class="text-center mb-14">
+      <div class="t-label mb-3">04 — رحلة العمل</div>
+      <h2 class="t-section text-white">من أول لقاء <span class="gt">حتى تحقيق النتائج</span></h2>
+      <div class="rule mx-auto mt-3"></div>
+      <p class="t-body mt-4" style="max-width:560px;margin:16px auto 0">رحلة منظمة ومتكاملة — كل خطوة موثّقة ومتابعة داخل نظام واحد بدون انقطاع</p>
+    </div>
+
+    <!-- Two rows of 5 steps each -->
+    <div class="mb-6">
+      <!-- Row 1 -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px">
+        <div class="glass p-5 text-center glow-hover">
+          <div class="node mx-auto mb-3">١</div>
+          <div style="font-size:24px;margin-bottom:8px">📋</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;color:#fff;margin-bottom:4px">نموذج الاستبيان</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:11px;color:rgba(147,197,253,.65);line-height:1.6">إنشاء نموذج وإرساله للعميل</div>
+        </div>
+        <div class="glass p-5 text-center glow-hover">
+          <div class="node mx-auto mb-3">٢</div>
+          <div style="font-size:24px;margin-bottom:8px">📩</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;color:#fff;margin-bottom:4px">مراجعة الردود</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:11px;color:rgba(147,197,253,.65);line-height:1.6">قراءة بيانات العميل والمرفقات</div>
+        </div>
+        <div class="glass p-5 text-center glow-hover">
+          <div class="node mx-auto mb-3">٣</div>
+          <div style="font-size:24px;margin-bottom:8px">👤</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;color:#fff;margin-bottom:4px">إنشاء الحساب</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:11px;color:rgba(147,197,253,.65);line-height:1.6">إضافة العميل وربطه بالمدرب</div>
+        </div>
+        <div class="glass p-5 text-center glow-hover">
+          <div class="node mx-auto mb-3">٤</div>
+          <div style="font-size:24px;margin-bottom:8px">📅</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;color:#fff;margin-bottom:4px">خطة التمارين</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:11px;color:rgba(147,197,253,.65);line-height:1.6">اختيار أو بناء خطة تدريبية</div>
+        </div>
+        <div class="glass p-5 text-center glow-hover">
+          <div class="node mx-auto mb-3">٥</div>
+          <div style="font-size:24px;margin-bottom:8px">🥗</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;color:#fff;margin-bottom:4px">الخطة الغذائية</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:11px;color:rgba(147,197,253,.65);line-height:1.6">وجبات ومكملات وبدائل مخصصة</div>
+        </div>
+      </div>
+
+      <!-- Connector arrow -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:24px">
+        <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,.4))"></div>
+        <div style="padding:6px 16px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);border-radius:100px;font-family:'Cairo',sans-serif;font-size:11px;color:#93c5fd;font-weight:700">يستمر العمل ↓</div>
+        <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(14,165,233,.4),transparent)"></div>
+      </div>
+
+      <!-- Row 2 -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+        <div class="glass p-5 text-center glow-hover" style="border-color:rgba(14,165,233,.2)">
+          <div class="node mx-auto mb-3" style="background:linear-gradient(135deg,#0284c7,#0ea5e9)">٦</div>
+          <div style="font-size:24px;margin-bottom:8px">🔗</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;color:#fff;margin-bottom:4px">إسناد الخطط</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:11px;color:rgba(125,211,252,.65);line-height:1.6">ربط الخطط بحساب العميل</div>
+        </div>
+        <div class="glass p-5 text-center glow-hover" style="border-color:rgba(14,165,233,.2)">
+          <div class="node mx-auto mb-3" style="background:linear-gradient(135deg,#0284c7,#0ea5e9)">٧</div>
+          <div style="font-size:24px;margin-bottom:8px">🔑</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;color:#fff;margin-bottom:4px">بيانات الدخول</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:11px;color:rgba(125,211,252,.65);line-height:1.6">إرسال عبر واتساب أو البريد</div>
+        </div>
+        <div class="glass p-5 text-center glow-hover" style="border-color:rgba(14,165,233,.2)">
+          <div class="node mx-auto mb-3" style="background:linear-gradient(135deg,#0284c7,#0ea5e9)">٨</div>
+          <div style="font-size:24px;margin-bottom:8px">🏃</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;color:#fff;margin-bottom:4px">بدء التدريب</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:11px;color:rgba(125,211,252,.65);line-height:1.6">العميل يتابع خططه يوميًا</div>
+        </div>
+        <div class="glass p-5 text-center glow-hover" style="border-color:rgba(14,165,233,.2)">
+          <div class="node mx-auto mb-3" style="background:linear-gradient(135deg,#0284c7,#0ea5e9)">٩</div>
+          <div style="font-size:24px;margin-bottom:8px">📊</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;color:#fff;margin-bottom:4px">التقارير الأسبوعية</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:11px;color:rgba(125,211,252,.65);line-height:1.6">قياسات وصور وملاحظات</div>
+        </div>
+        <div class="glass p-5 text-center glow-hover" style="border-color:rgba(14,165,233,.2)">
+          <div class="node mx-auto mb-3" style="background:linear-gradient(135deg,#0284c7,#0ea5e9)">١٠</div>
+          <div style="font-size:24px;margin-bottom:8px">♻️</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;color:#fff;margin-bottom:4px">متابعة مستمرة</div>
+          <div style="font-family:'Cairo',sans-serif;font-size:11px;color:rgba(125,211,252,.65);line-height:1.6">محادثات وتعديل الخطط</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ██████████████████████████████████████████████████
+     §5  ADMIN FEATURES  —  light
+██████████████████████████████████████████████████ -->
+<section class="bg-light" id="s5">
+  <div class="wrap fade-up">
+    <div class="text-center mb-14">
+      <div class="t-label mb-3" style="color:#2563eb">05 — أدوات الإدارة</div>
+      <h2 class="t-section" style="color:#1e3a8a">كل أدوات الإدارة <span class="gt2">في مكان واحد</span></h2>
+      <div class="rule-light mx-auto mt-3"></div>
+    </div>
+
+    <!-- Hero wide card -->
+    <div style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8,#0369a1);border-radius:24px;padding:36px 40px;margin-bottom:20px;position:relative;overflow:hidden;display:flex;align-items:center;gap:40px">
+      <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1px);background-size:24px 24px;pointer-events:none"></div>
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#60a5fa,#38bdf8)"></div>
+      <div style="position:relative;z-index:2;flex:1">
+        <div style="font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;color:rgba(147,197,253,.7);letter-spacing:2px;margin-bottom:8px">DASHBOARD</div>
+        <div style="font-family:'Tajawal',sans-serif;font-size:28px;font-weight:900;color:#fff;margin-bottom:10px">لوحة التحكم الرئيسية</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:14px;color:rgba(219,234,254,.8);line-height:1.8;max-width:480px">نظرة شاملة على أداء المنصة — عدد العملاء، التقارير المعلقة، أكثر المحادثات نشاطًا، ومؤشرات الأداء كلها في شاشة واحدة</div>
+      </div>
+      <div style="position:relative;z-index:2;display:flex;flex-direction:column;gap:10px;flex-shrink:0">
+        <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.1);border-radius:12px;padding:10px 14px"><span style="font-size:18px">📊</span><span style="font-family:'Cairo',sans-serif;font-size:12px;color:rgba(219,234,254,.9);font-weight:600">مؤشرات الأداء</span></div>
+        <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.1);border-radius:12px;padding:10px 14px"><span style="font-size:18px">🔔</span><span style="font-family:'Cairo',sans-serif;font-size:12px;color:rgba(219,234,254,.9);font-weight:600">الحسابات المعلقة</span></div>
+        <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.1);border-radius:12px;padding:10px 14px"><span style="font-size:18px">💬</span><span style="font-family:'Cairo',sans-serif;font-size:12px;color:rgba(219,234,254,.9);font-weight:600">المحادثات النشطة</span></div>
+      </div>
+    </div>
+
+    <!-- 3-col cards -->
+    <div class="grid grid-cols-3 gap-5 mb-5">
+      <div class="wcard p-6">
+        <div class="ib-white icon-box mb-4">👥</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:15px;font-weight:800;color:#1e3a8a;margin-bottom:8px">إدارة المستخدمين</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#64748b;line-height:1.8;margin-bottom:12px">إضافة وتعديل الحسابات، مراجعة المعلقة، تخصيص الخطط والمدربين</div>
+        <div class="pill-d">بحث + تصفية + تصدير</div>
+      </div>
+      <div class="wcard p-6">
+        <div class="ib-white icon-box mb-4">👤</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:15px;font-weight:800;color:#1e3a8a;margin-bottom:8px">الملف الشخصي للعميل</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#64748b;line-height:1.8;margin-bottom:12px">صورة شاملة لكل عميل — قياسات، تقدم، خطط، وسجل التقارير</div>
+        <div class="pill-d">تبويبات متعددة</div>
+      </div>
+      <div class="wcard p-6">
+        <div class="ib-white icon-box mb-4">📝</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:15px;font-weight:800;color:#1e3a8a;margin-bottom:8px">نماذج الاستبيان</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#64748b;line-height:1.8;margin-bottom:12px">نماذج مخصصة لجمع بيانات العملاء — مشاركة الرابط وتلقي الردود</div>
+        <div class="pill-d">إنشاء + مشاركة + مراجعة</div>
+      </div>
+    </div>
+
+    <!-- 4-col bottom row -->
+    <div class="grid grid-cols-4 gap-4">
+      <div class="wcard p-5">
+        <div class="ib-white icon-box mb-3">🏋️</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:14px;font-weight:800;color:#1e3a8a;margin-bottom:6px">مكتبة التمارين</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#64748b;line-height:1.7">مكتبة مركزية مع صور وفيديوهات توضيحية</div>
+      </div>
+      <div class="wcard p-5">
+        <div class="ib-white icon-box mb-3">🍽️</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:14px;font-weight:800;color:#1e3a8a;margin-bottom:6px">مكتبة الوصفات</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#64748b;line-height:1.7">وصفات مصنفة مع القيم الغذائية الكاملة</div>
+      </div>
+      <div class="wcard p-5">
+        <div class="ib-white icon-box mb-3">💳</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:14px;font-weight:800;color:#1e3a8a;margin-bottom:6px">الفواتير والمدفوعات</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#64748b;line-height:1.7">اشتراكات وباقات ومدفوعات في مكان واحد</div>
+      </div>
+      <div class="wcard p-5">
+        <div class="ib-white icon-box mb-3">📊</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:14px;font-weight:800;color:#1e3a8a;margin-bottom:6px">التقارير الأسبوعية</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#64748b;line-height:1.7">مراجعة الأداء وإضافة ملاحظات المدرب</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ██████████████████████████████████████████████████
+     §6  PLANS — HORIZONTAL SCROLL SHOWCASE  dark
+██████████████████████████████████████████████████ -->
+<section class="bg-slate noise" id="s6">
+  <div class="blob" style="width:500px;height:300px;top:-60px;right:-60px;background:radial-gradient(ellipse,rgba(37,99,235,.15),transparent 65%)"></div>
+  <div class="grid-tex"></div>
+
+  <div class="wrap fade-up">
+    <div class="text-center mb-14">
+      <div class="t-label mb-3">06 — البرامج والخطط</div>
+      <h2 class="t-section text-white">أدوات قوية <span class="gt">لبناء البرامج</span></h2>
+      <div class="rule mx-auto mt-3"></div>
+    </div>
+
+    <!-- Side by side big feature cards -->
+    <div class="grid grid-cols-2 gap-6 mb-6">
+      <!-- Workout -->
+      <div style="background:linear-gradient(160deg,rgba(29,78,216,.3),rgba(30,58,138,.2));border:1px solid rgba(99,165,250,.18);border-radius:24px;padding:36px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#3b82f6,#60a5fa)"></div>
+        <div style="font-size:40px;margin-bottom:16px">📅</div>
+        <div style="font-family:'Tajawal',sans-serif;font-size:24px;font-weight:900;color:#fff;margin-bottom:10px">خطط التمارين</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(219,234,254,.75);line-height:1.8;margin-bottom:20px">إنشاء خطط تدريبية متكاملة من مكتبة التمارين — تحديد الأيام والتكرارات، مع إمكانية إعادة الاستخدام الفوري</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <div class="pill">إنشاء خطة</div>
+          <div class="pill">تكرار خطة</div>
+          <div class="pill">إسناد للعميل</div>
+          <div class="pill">معاينة تفصيلية</div>
+        </div>
+      </div>
+
+      <!-- Nutrition -->
+      <div style="background:linear-gradient(160deg,rgba(7,89,133,.3),rgba(3,105,161,.2));border:1px solid rgba(56,189,248,.18);border-radius:24px;padding:36px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#0ea5e9,#38bdf8)"></div>
+        <div style="font-size:40px;margin-bottom:16px">🥗</div>
+        <div style="font-family:'Tajawal',sans-serif;font-size:24px;font-weight:900;color:#fff;margin-bottom:10px">خطط التغذية</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(224,242,254,.75);line-height:1.8;margin-bottom:20px">بناء خطط وجبات مخصصة مع السعرات والقيم الغذائية — إضافة مكملات وبدائل، ثم إسناد الخطة للعميل مباشرة</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <div style="display:inline-flex;align-items:center;border-radius:100px;padding:5px 14px;font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;background:rgba(14,165,233,.15);border:1px solid rgba(14,165,233,.3);color:#7dd3fc">وجبات + مكملات</div>
+          <div style="display:inline-flex;align-items:center;border-radius:100px;padding:5px 14px;font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;background:rgba(14,165,233,.15);border:1px solid rgba(14,165,233,.3);color:#7dd3fc">بدائل غذائية</div>
+          <div style="display:inline-flex;align-items:center;border-radius:100px;padding:5px 14px;font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;background:rgba(14,165,233,.15);border:1px solid rgba(14,165,233,.3);color:#7dd3fc">إسناد للعميل</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coach note -->
+    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:24px 32px;display:flex;align-items:center;gap:20px">
+      <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(14,165,233,.1));border:1px solid rgba(59,130,246,.2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🏋️</div>
+      <div>
+        <div style="font-family:'Cairo',sans-serif;font-size:14px;font-weight:800;color:#fff;margin-bottom:4px">المدرب يصل لنفس الأدوات</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:rgba(147,197,253,.7);line-height:1.7">المدرب يبني ويعدّل الخطط لعملائه بصلاحيات مناسبة — يركّز على البرامج والمتابعة اليومية دون تعقيد</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ██████████████████████████████████████████████████
+     §7  CLIENT EXPERIENCE  —  light
+██████████████████████████████████████████████████ -->
+<section class="bg-light" id="s7">
+  <div class="wrap fade-up">
+    <div class="text-center mb-14">
+      <div class="t-label mb-3" style="color:#2563eb">07 — تجربة العميل</div>
+      <h2 class="t-section" style="color:#1e3a8a">تجربة شخصية <span class="gt2">مصممة للنتائج</span></h2>
+      <div class="rule-light mx-auto mt-3"></div>
+      <p style="font-family:'Cairo',sans-serif;font-size:14px;color:#64748b;margin-top:12px;max-width:500px;margin-inline:auto">كل ما يحتاجه العميل لمتابعة رحلته — من التمارين والتغذية إلى التقارير والتواصل</p>
+    </div>
+
+    <!-- 2 large + 4 small -->
+    <div class="grid grid-cols-3 gap-5 mb-5">
+      <!-- Big card: My workouts -->
+      <div style="background:linear-gradient(145deg,#1e3a8a,#1d4ed8,#0369a1);border-radius:24px;padding:32px;grid-row:span 2;display:flex;flex-direction:column;position:relative;overflow:hidden;box-shadow:0 16px 48px rgba(29,78,216,.25)">
+        <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:18px 18px;pointer-events:none"></div>
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#60a5fa,#38bdf8)"></div>
+        <div style="font-size:40px;margin-bottom:16px;position:relative;z-index:2">🏃</div>
+        <div style="font-family:'Tajawal',sans-serif;font-size:22px;font-weight:900;color:#fff;margin-bottom:10px;position:relative;z-index:2">تماريني</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(219,234,254,.8);line-height:1.8;margin-bottom:20px;flex:1;position:relative;z-index:2">خطة يومية مع فيديوهات توضيحية لكل تمرين، تسجيل الأوزان والتكرارات، ومؤقت ذكي للراحة والكارديو</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;position:relative;z-index:2">
+          <div class="pill">تسجيل الأداء</div>
+          <div class="pill">مؤقت ذكي</div>
+          <div class="pill">فيديوهات</div>
+        </div>
+      </div>
+
+      <!-- My Nutrition -->
+      <div class="wcard p-6">
+        <div class="ib-white icon-box mb-4">🥗</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:15px;font-weight:800;color:#1e3a8a;margin-bottom:8px">تغذيتي</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#64748b;line-height:1.8;margin-bottom:12px">وجبات يومية بالسعرات والقيم الغذائية، بدائل غذائية، ومتابعة المكملات</div>
+        <div class="pill-d">عرض يومي منظم</div>
+      </div>
+
+      <!-- Weekly Report -->
+      <div class="wcard p-6">
+        <div class="ib-white icon-box mb-4">📊</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:15px;font-weight:800;color:#1e3a8a;margin-bottom:8px">التقرير الأسبوعي</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#64748b;line-height:1.8;margin-bottom:12px">إرسال القياسات وصور التقدم — مع عرض ردود وملاحظات المدرب</div>
+        <div class="pill-d">موثّق ومنظم</div>
+      </div>
+
+      <!-- Reminders -->
+      <div class="wcard p-6">
+        <div class="ib-white icon-box mb-4">🔔</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:15px;font-weight:800;color:#1e3a8a;margin-bottom:8px">التذكيرات</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#64748b;line-height:1.8;margin-bottom:12px">تذكيرات يومية ومتكررة لدعم الالتزام بالعادات الصحية</div>
+        <div class="pill-d">تلقائية + مخصصة</div>
+      </div>
+
+      <!-- Profile -->
+      <div class="wcard p-6">
+        <div class="ib-white icon-box mb-4">⚙️</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:15px;font-weight:800;color:#1e3a8a;margin-bottom:8px">الملف الشخصي</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#64748b;line-height:1.8;margin-bottom:12px">تحديث البيانات الشخصية والقياسات وتفضيلات الإشعارات</div>
+        <div class="pill-d">سهل التعديل</div>
+      </div>
+    </div>
+
+    <!-- Recipes strip -->
+    <div style="background:#fff;border:1px solid rgba(59,130,246,.1);border-radius:20px;padding:24px 32px;display:flex;align-items:center;gap:24px;box-shadow:0 2px 16px rgba(59,130,246,.06)">
+      <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid rgba(59,130,246,.12);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📖</div>
+      <div class="flex-1">
+        <div style="font-family:'Cairo',sans-serif;font-size:15px;font-weight:800;color:#1e3a8a;margin-bottom:4px">مكتبة الوصفات</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#64748b;line-height:1.7">مئات الوصفات الغذائية مصنفة حسب نوع الوجبة — مع المكونات وطريقة التحضير والقيم الغذائية الكاملة</div>
+      </div>
+      <div class="pill-d" style="flex-shrink:0">بحث + تصفية</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ██████████████████████████████████████████████████
+     §8  SHARED TOOLS  —  dark
+██████████████████████████████████████████████████ -->
+<section class="bg-navy noise" id="s8">
+  <div class="blob" style="width:500px;height:400px;top:-80px;left:-80px;background:radial-gradient(ellipse,rgba(37,99,235,.12),transparent 65%)"></div>
+  <div class="grid-tex"></div>
+
+  <div class="wrap fade-up">
+    <div class="text-center mb-14">
+      <div class="t-label mb-3">08 — أدوات مشتركة</div>
+      <h2 class="t-section text-white">أدوات قوية <span class="gt">لكل المستخدمين</span></h2>
+      <div class="rule mx-auto mt-3"></div>
+    </div>
+
+    <!-- 2 dark hero rows -->
+    <div class="flex flex-col gap-5 mb-5">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <!-- Chat -->
+        <div style="background:linear-gradient(145deg,rgba(30,58,138,.9),rgba(29,78,216,.6));border:1px solid rgba(147,197,253,.18);border-radius:22px;padding:30px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#3b82f6,#60a5fa)"></div>
+          <div style="display:flex;align-items:flex-start;gap:16px">
+            <div style="width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">💬</div>
+            <div>
+              <div style="font-family:'Tajawal',sans-serif;font-size:20px;font-weight:900;color:#fff;margin-bottom:6px">المحادثات المباشرة</div>
+              <div style="font-family:'Cairo',sans-serif;font-size:12px;color:rgba(219,234,254,.75);line-height:1.8;margin-bottom:14px">تواصل فوري بين العملاء والمدربين والإدارة — رسائل نصية وصور وملفات في واجهة واحدة</div>
+              <div class="pill">Admin · Coach · Client</div>
+            </div>
+          </div>
+        </div>
+        <!-- Productivity -->
+        <div style="background:linear-gradient(145deg,rgba(7,89,133,.9),rgba(3,105,161,.6));border:1px solid rgba(125,211,252,.18);border-radius:22px;padding:30px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#0ea5e9,#38bdf8)"></div>
+          <div style="display:flex;align-items:flex-start;gap:16px">
+            <div style="width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">📅</div>
+            <div>
+              <div style="font-family:'Tajawal',sans-serif;font-size:20px;font-weight:900;color:#fff;margin-bottom:6px">لوحة الإنتاجية</div>
+              <div style="font-family:'Cairo',sans-serif;font-size:12px;color:rgba(224,242,254,.75);line-height:1.8;margin-bottom:14px">تقويم، مهام، ولوحات تنظيم العمل — إدارة المواعيد والمشاريع بكفاءة أعلى</div>
+              <div style="display:inline-flex;align-items:center;border-radius:100px;padding:5px 14px;font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;background:rgba(14,165,233,.2);border:1px solid rgba(14,165,233,.35);color:#7dd3fc">Admin · Coach · Client</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <!-- Calculator -->
+        <div class="glass p-7 glow-hover">
+          <div style="display:flex;align-items:flex-start;gap:16px">
+            <div class="ib-blue icon-box">🧮</div>
+            <div>
+              <div style="font-family:'Tajawal',sans-serif;font-size:18px;font-weight:900;color:#fff;margin-bottom:6px">حاسبة السعرات</div>
+              <div style="font-family:'Cairo',sans-serif;font-size:12px;color:rgba(147,197,253,.75);line-height:1.8;margin-bottom:12px">احسب الاحتياج اليومي بناءً على بيانات دقيقة — مع أداة لحساب قيم الوجبات فورًا</div>
+              <div class="pill">Admin · Coach · Client</div>
+            </div>
+          </div>
+        </div>
+        <!-- Money -->
+        <div class="glass p-7 glow-hover">
+          <div style="display:flex;align-items:flex-start;gap:16px">
+            <div class="ib-blue icon-box">💰</div>
+            <div>
+              <div style="font-family:'Tajawal',sans-serif;font-size:18px;font-weight:900;color:#fff;margin-bottom:6px">إدارة الميزانية</div>
+              <div style="font-family:'Cairo',sans-serif;font-size:12px;color:rgba(147,197,253,.75);line-height:1.8;margin-bottom:12px">متابعة الإيرادات والمصروفات — مؤشرات مالية وتوقعات لاتخاذ قرارات أذكى</div>
+              <div class="pill">Admin · Client</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ██████████████████████████████████████████████████
+     §9  BENEFITS  —  light  (bento grid)
+██████████████████████████████████████████████████ -->
+<section class="bg-light" id="s9">
+  <div class="wrap fade-up">
+    <div class="text-center mb-14">
+      <div class="t-label mb-3" style="color:#2563eb">09 — لماذا هذه المنصة؟</div>
+      <h2 class="t-section" style="color:#1e3a8a">فوائد حقيقية، <span class="gt2">نتائج ملموسة</span></h2>
+      <div class="rule-light mx-auto mt-3"></div>
+    </div>
+
+    <!-- Bento-style grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto;gap:16px">
+
+      <!-- Big left -->
+      <div style="grid-row:span 2;background:linear-gradient(145deg,#1e3a8a,#1d4ed8,#0369a1);border-radius:24px;padding:36px;display:flex;flex-direction:column;position:relative;overflow:hidden;box-shadow:0 12px 40px rgba(29,78,216,.25)">
+        <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:20px 20px;pointer-events:none"></div>
+        <div style="font-size:40px;margin-bottom:20px;position:relative;z-index:2">⚡</div>
+        <div style="font-family:'Tajawal',sans-serif;font-size:26px;font-weight:900;color:#fff;margin-bottom:12px;position:relative;z-index:2">توفير الوقت والجهد</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(219,234,254,.8);line-height:1.9;margin-bottom:24px;flex:1;position:relative;z-index:2">أضف عميلًا جديدًا في دقائق بدلاً من ساعات — أعد استخدام الخطط الجاهزة بنقرة واحدة — قلّل الأوراق والجداول اليدوية إلى الصفر</div>
+        <div style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:100px;position:relative;z-index:2">
+          <span style="font-family:'Cairo',sans-serif;font-size:12px;font-weight:700;color:#93c5fd">إنتاجية أعلى بكثير</span>
+        </div>
+      </div>
+
+      <!-- Top middle -->
+      <div style="background:#fff;border:1px solid rgba(59,130,246,.1);border-radius:20px;padding:28px;box-shadow:0 2px 16px rgba(59,130,246,.06)">
+        <div style="font-size:28px;margin-bottom:12px">🎯</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:16px;font-weight:800;color:#1e3a8a;margin-bottom:8px">دقة أعلى في الخدمة</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#64748b;line-height:1.8">خطط مخصصة لكل عميل وبيانات موثّقة — قرارات مبنية على أرقام حقيقية</div>
+      </div>
+
+      <!-- Top right -->
+      <div style="background:#fff;border:1px solid rgba(14,165,233,.1);border-radius:20px;padding:28px;box-shadow:0 2px 16px rgba(14,165,233,.06)">
+        <div style="font-size:28px;margin-bottom:12px">🤝</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:16px;font-weight:800;color:#1e3a8a;margin-bottom:8px">تجربة عميل احترافية</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#64748b;line-height:1.8">واجهة سهلة وجميلة تعكس احترافية عملك وترفع رضا العميل</div>
+      </div>
+
+      <!-- Bottom middle -->
+      <div style="background:#fff;border:1px solid rgba(37,99,235,.1);border-radius:20px;padding:28px;box-shadow:0 2px 16px rgba(37,99,235,.06)">
+        <div style="font-size:28px;margin-bottom:12px">💬</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:16px;font-weight:800;color:#1e3a8a;margin-bottom:8px">تواصل أفضل</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#64748b;line-height:1.8">محادثات فورية وتقارير منظمة — ملاحظات المدرب تصل للعميل لحظة الحفظ</div>
+      </div>
+
+      <!-- Bottom right -->
+      <div style="background:linear-gradient(145deg,#f0f9ff,#dbeafe);border:1px solid rgba(56,189,248,.15);border-radius:20px;padding:28px;box-shadow:0 2px 16px rgba(56,189,248,.08)">
+        <div style="font-size:28px;margin-bottom:12px">📈</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:16px;font-weight:800;color:#1e3a8a;margin-bottom:8px">نمو قابل للتوسع</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:12px;color:#0369a1;line-height:1.8">أدِر عملاء أكثر بنفس الفريق — النظام يكبر معك دون تعقيد</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ██████████████████████████████████████████████████
+     §10  CLOSING
+██████████████████████████████████████████████████ -->
+<section class="bg-close noise" id="s10" style="min-height:100vh">
+  <div class="blob" style="width:700px;height:500px;top:-100px;right:-150px;background:radial-gradient(ellipse,rgba(37,99,235,.2),transparent 65%)"></div>
+  <div class="blob" style="width:500px;height:400px;bottom:-80px;left:-80px;background:radial-gradient(ellipse,rgba(14,165,233,.15),transparent 65%)"></div>
+  <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(59,130,246,.05) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0"></div>
+  <!-- Top + bottom line -->
+  <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#3b82f6 30%,#0ea5e9 70%,transparent);z-index:5"></div>
+
+  <div class="wrap text-center fade-up" style="position:relative;z-index:10">
+    <div class="pill mx-auto mb-8" style="width:fit-content">✦ الخلاصة</div>
+
+    <h2 style="font-family:'Tajawal',sans-serif;font-size:clamp(36px,5vw,68px);font-weight:900;color:#fff;line-height:1.05;margin-bottom:20px">
+      الآن وقت التحوّل<br>
+      <span class="gt">نحو الاحترافية الحقيقية</span>
+    </h2>
+
+    <p class="t-body mx-auto mb-12" style="max-width:500px;font-size:16px">
+      منصة واحدة تحل كل تحديات إدارة التدريب والتغذية — وتمنح عملاءك تجربة لا يجدونها في أي مكان آخر
+    </p>
+
+    <!-- Stats -->
+    <div style="display:flex;justify-content:center;gap:60px;margin-bottom:48px">
+      <div class="text-center">
+        <div class="stat-num mb-2">٣</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(147,197,253,.65);font-weight:600">أدوار متكاملة</div>
+      </div>
+      <div style="width:1px;background:rgba(147,197,253,.15);align-self:stretch"></div>
+      <div class="text-center">
+        <div class="stat-num mb-2">٢٠+</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(147,197,253,.65);font-weight:600">شاشة متخصصة</div>
+      </div>
+      <div style="width:1px;background:rgba(147,197,253,.15);align-self:stretch"></div>
+      <div class="text-center">
+        <div class="stat-num mb-2">١٠٠٪</div>
+        <div style="font-family:'Cairo',sans-serif;font-size:13px;color:rgba(147,197,253,.65);font-weight:600">منصة متكاملة</div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div style="display:inline-flex;align-items:center;gap:12px;padding:16px 48px;background:linear-gradient(135deg,#2563eb,#0284c7);border-radius:100px;font-family:'Cairo',sans-serif;font-size:16px;font-weight:800;color:#fff;box-shadow:0 12px 40px rgba(37,99,235,.5);cursor:pointer;margin-bottom:40px">
+      🚀 ابدأ رحلتك مع المنصة اليوم
+    </div>
+
+    <div style="display:flex;justify-content:center;gap:10px">
+      <div style="width:8px;height:8px;border-radius:50%;background:#3b82f6;opacity:.5"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:#0ea5e9;opacity:.7"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:#93c5fd"></div>
+    </div>
+  </div>
+</section>
+
+
+<script>
+// ─ Section IDs ─
+var sections = ['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10'];
+var labels   = ['Cover','Overview','Roles','Journey','Features','Plans','Client','Tools','Benefits','Closing'];
+
+// ─ Build nav dots ─
+var navDots = document.getElementById('navDots');
+sections.forEach(function(id,i) {
+  var dot = document.createElement('div');
+  dot.className = 'nav-dot' + (i===0?' active':'');
+  dot.title = labels[i];
+  dot.addEventListener('click', function() {
+    document.getElementById(id).scrollIntoView({behavior:'smooth'});
+  });
+  navDots.appendChild(dot);
+});
+
+// ─ Active dot + progress + scroll hint ─
+var dots = document.querySelectorAll('.nav-dot');
+var bar  = document.getElementById('progressBar');
+var hint = document.getElementById('scrollHint');
+
+function onScroll() {
+  var scrolled = window.scrollY;
+  var total    = document.documentElement.scrollHeight - window.innerHeight;
+  bar.style.width = (total > 0 ? (scrolled/total)*100 : 0) + '%';
+
+  // Hide scroll hint after first scroll
+  if (scrolled > 80) hint.style.opacity = '0';
+  else hint.style.opacity = '.6';
+
+  // Active section
+  var current = 0;
+  sections.forEach(function(id,i) {
+    var el = document.getElementById(id);
+    if (el && el.getBoundingClientRect().top <= window.innerHeight*0.5) current = i;
+  });
+  dots.forEach(function(d,i) {
+    d.classList.toggle('active', i===current);
+  });
+
+  // Fade-up reveal
+  document.querySelectorAll('.fade-up').forEach(function(el) {
+    var rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight*0.88) el.classList.add('visible');
+  });
+}
+
+window.addEventListener('scroll', onScroll, {passive:true});
+onScroll(); // initial call
+
+// ─ Keyboard nav ─
+document.addEventListener('keydown', function(e) {
+  var dots = document.querySelectorAll('.nav-dot');
+  var active = Array.from(dots).findIndex(function(d){ return d.classList.contains('active') });
+  if (e.key==='ArrowDown' || e.key==='PageDown') {
+    var next = Math.min(active+1, sections.length-1);
+    document.getElementById(sections[next]).scrollIntoView({behavior:'smooth'});
+  }
+  if (e.key==='ArrowUp' || e.key==='PageUp') {
+    var prev = Math.max(active-1, 0);
+    document.getElementById(sections[prev]).scrollIntoView({behavior:'smooth'});
+  }
+});
+</script>
+</body>
+</html>

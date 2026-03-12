@@ -20,8 +20,8 @@ import { baseImg } from "@/utils/axios";
 import { useTranslations } from "next-intl";
 
 // ─── constants ────────────────────────────────────────────────────────────────
-const ACTION_KEYS   = new Set(["actions", "options"]);
-const PER_PAGE_OPTS = [6, 12, 24, 48];
+const ACTION_KEYS = new Set(["actions", "options"]);
+const PER_PAGE_OPTS = [10, 20, 30, 50];
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function toFullSrc(src) {
@@ -76,7 +76,7 @@ export function FilterField({ label, children, className }) {
 // ─── Search input ─────────────────────────────────────────────────────────────
 const SearchInput = memo(function SearchInput({ value, onChange, onKeyDown, placeholder }) {
 	const [focused, setFocused] = useState(false);
-	const ref    = useRef(null);
+	const ref = useRef(null);
 	const active = focused || (value && value.length > 0);
 
 	return (
@@ -157,15 +157,53 @@ export const TableToolbar = memo(function TableToolbar({
 	actions = [],
 }) {
 	return (
-		<div className="flex items-center justify-between gap-3 flex-wrap">
-			<SearchInput
-				value={searchValue}
-				onChange={onSearchChange}
-				onKeyDown={(e) => e.key === "Enter" && onSearch?.()}
-				placeholder={searchPlaceholder}
-			/>
+		<div className="flex items-center gap-3 flex-wrap">
+			<div className="flex-1 min-w-[240px]">
+				<SearchInput
+					value={searchValue}
+					onChange={onSearchChange}
+					onKeyDown={(e) => e.key === "Enter" && onSearch?.()}
+					placeholder={searchPlaceholder}
+				/>
+			</div>
 
-			<div className="flex items-center gap-2 flex-wrap">
+			<div className="flex items-center gap-2 flex-wrap ms-auto">
+				{actions.map((action) => (
+					<motion.button
+						key={action.key}
+						whileHover={{ scale: 1.02, y: -1 }}
+						whileTap={{ scale: 0.96 }}
+						onClick={action.onClick}
+						type="button"
+						disabled={action.disabled}
+						className="h-10 px-4 rounded-lg border text-sm font-semibold flex items-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+						style={
+							action.color === "primary"
+								? {
+									background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))",
+									borderColor: "transparent",
+									color: "white",
+									boxShadow: "0 4px 16px color-mix(in oklab, var(--color-primary-500) 30%, transparent)",
+								}
+								: action.color === "secondary"
+									? {
+										background: "linear-gradient(135deg, var(--color-secondary-500), var(--color-secondary-700))",
+										borderColor: "transparent",
+										color: "white",
+										boxShadow: "0 4px 16px color-mix(in oklab, var(--color-secondary-500) 30%, transparent)",
+									}
+									: action.color === "emerald"
+										? { background: "#059669", borderColor: "transparent", color: "white", boxShadow: "0 4px 12px rgba(5,150,105,0.3)" }
+										: action.color === "rose"
+											? { background: "#e11d48", borderColor: "transparent", color: "white", boxShadow: "0 4px 12px rgba(225,29,72,0.3)" }
+											: { background: "white", borderColor: "#e2e8f0", color: "#475569" }
+						}
+					>
+						{action.icon}
+						{action.label}
+					</motion.button>
+				))}
+
 				{onToggleFilters && (
 					<motion.button
 						whileHover={{ scale: 1.02, y: -1 }}
@@ -207,42 +245,6 @@ export const TableToolbar = memo(function TableToolbar({
 						</motion.span>
 					</motion.button>
 				)}
-
-				{actions.map((action) => (
-					<motion.button
-						key={action.key}
-						whileHover={{ scale: 1.02, y: -1 }}
-						whileTap={{ scale: 0.96 }}
-						onClick={action.onClick}
-						type="button"
-						disabled={action.disabled}
-						className="h-10 px-4 rounded-lg border text-sm font-semibold flex items-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-						style={
-							action.color === "primary"
-								? {
-									background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))",
-									borderColor: "transparent",
-									color: "white",
-									boxShadow: "0 4px 16px color-mix(in oklab, var(--color-primary-500) 30%, transparent)",
-								}
-								: action.color === "secondary"
-									? {
-										background: "linear-gradient(135deg, var(--color-secondary-500), var(--color-secondary-700))",
-										borderColor: "transparent",
-										color: "white",
-										boxShadow: "0 4px 16px color-mix(in oklab, var(--color-secondary-500) 30%, transparent)",
-									}
-									: action.color === "emerald"
-										? { background: "#059669", borderColor: "transparent", color: "white", boxShadow: "0 4px 12px rgba(5,150,105,0.3)" }
-										: action.color === "rose"
-											? { background: "#e11d48", borderColor: "transparent", color: "white", boxShadow: "0 4px 12px rgba(225,29,72,0.3)" }
-											: { background: "white", borderColor: "#e2e8f0", color: "#475569" }
-						}
-					>
-						{action.icon}
-						{action.label}
-					</motion.button>
-				))}
 			</div>
 		</div>
 	);
@@ -304,12 +306,12 @@ export const TablePagination = memo(function TablePagination({
 
 	const totalPages = useMemo(() => {
 		const total = Number(pagination?.total_records ?? 0);
-		const per   = Number(pagination?.per_page ?? 6);
+		const per = Number(pagination?.per_page ?? 10);
 		return Math.max(1, Math.ceil(total / per));
 	}, [pagination]);
 
 	const currentPage = Number(pagination?.current_page ?? 1);
-	const perPage     = Number(pagination?.per_page ?? 6);
+	const perPage = Number(pagination?.per_page ?? 10);
 
 	const pageItems = useMemo(() => {
 		const tot = totalPages;
@@ -317,7 +319,7 @@ export const TablePagination = memo(function TablePagination({
 		if (tot <= 7) return Array.from({ length: tot }, (_, i) => i + 1);
 		const items = [1];
 		const start = Math.max(2, cur - 2);
-		const end   = Math.min(tot - 1, cur + 2);
+		const end = Math.min(tot - 1, cur + 2);
 		if (start > 2) items.push("…");
 		for (let p = start; p <= end; p++) items.push(p);
 		if (end < tot - 1) items.push("…");
@@ -336,8 +338,8 @@ export const TablePagination = memo(function TablePagination({
 		onPageChange({ page: 1, per_page: lim, [pageParamName]: 1, [limitParamName]: lim });
 	};
 
-	const from  = pagination?.total_records ? (currentPage - 1) * perPage + 1 : 0;
-	const to    = Math.min(currentPage * perPage, pagination?.total_records ?? 0);
+	const from = pagination?.total_records ? (currentPage - 1) * perPage + 1 : 0;
+	const to = Math.min(currentPage * perPage, pagination?.total_records ?? 0);
 	const total = pagination?.total_records ?? 0;
 
 	const NavBtn = ({ onClick, disabled, children, title }) => (
@@ -353,14 +355,14 @@ export const TablePagination = memo(function TablePagination({
 			onMouseEnter={(e) => {
 				if (!disabled && !isLoading) {
 					e.currentTarget.style.borderColor = "var(--color-primary-300)";
-					e.currentTarget.style.color       = "var(--color-primary-600)";
-					e.currentTarget.style.background  = "var(--color-primary-50)";
+					e.currentTarget.style.color = "var(--color-primary-600)";
+					e.currentTarget.style.background = "var(--color-primary-50)";
 				}
 			}}
 			onMouseLeave={(e) => {
 				e.currentTarget.style.borderColor = "#e2e8f0";
-				e.currentTarget.style.color       = "#64748b";
-				e.currentTarget.style.background  = "white";
+				e.currentTarget.style.color = "#64748b";
+				e.currentTarget.style.background = "white";
 			}}
 		>
 			{children}
@@ -515,11 +517,11 @@ const ImgCell = memo(function ImgCell({ src, alt, onOpen }) {
 			style={{ border: "2px solid var(--color-primary-100)" }}
 			onMouseEnter={(e) => {
 				e.currentTarget.style.borderColor = "var(--color-primary-400)";
-				e.currentTarget.style.boxShadow   = "0 4px 12px color-mix(in oklab, var(--color-primary-400) 30%, transparent)";
+				e.currentTarget.style.boxShadow = "0 4px 12px color-mix(in oklab, var(--color-primary-400) 30%, transparent)";
 			}}
 			onMouseLeave={(e) => {
 				e.currentTarget.style.borderColor = "var(--color-primary-100)";
-				e.currentTarget.style.boxShadow   = "0 1px 3px rgba(0,0,0,0.06)";
+				e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
 			}}
 		>
 			<img src={full} alt={alt} className="w-full h-full object-cover" loading="lazy" />
@@ -662,14 +664,14 @@ export default function DataTable({
 }) {
 	const isRTL = useIsRTL();
 	const [filtersOpen, setFiltersOpen] = useState(false);
-	const [imgModal, setImgModal]       = useState({ open: false, src: "", alt: "" });
+	const [imgModal, setImgModal] = useState({ open: false, src: "", alt: "" });
 
-	const openImage  = useCallback((src, alt = "") => setImgModal({ open: true, src, alt }), []);
+	const openImage = useCallback((src, alt = "") => setImgModal({ open: true, src, alt }), []);
 	const closeImage = useCallback(() => setImgModal({ open: false, src: "", alt: "" }), []);
-	const helpers    = useMemo(() => ({ openImage }), [openImage]);
+	const helpers = useMemo(() => ({ openImage }), [openImage]);
 
-	const hasFilters   = Boolean(filters);
-	const stickyEnd    = isRTL ? "left-0" : "right-0";
+	const hasFilters = Boolean(filters);
+	const stickyEnd = isRTL ? "left-0" : "right-0";
 	const stickyShadow = isRTL
 		? "shadow-[8px_0_16px_-10px_rgba(99,102,241,0.14)]"
 		: "shadow-[-8px_0_16px_-10px_rgba(99,102,241,0.14)]";
@@ -695,32 +697,13 @@ export default function DataTable({
 					boxShadow: "0 1px 4px color-mix(in oklab, var(--color-primary-500) 6%, transparent), 0 8px 32px color-mix(in oklab, var(--color-primary-500) 8%, transparent)",
 				}}
 			>
-				{/* gradient top accent */}
-				<div
-					className="h-[3px]"
-					style={{ background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-via), var(--color-gradient-to))" }}
-				/>
 
 				{/* ── Header ──────────────────────────────────── */}
 				<div
 					className="px-5 pt-4 pb-4"
 					style={{ borderBottom: "1px solid var(--color-primary-50)" }}
 				>
-					{(title || subtitle || headerExtra) && (
-						<div className="flex items-center justify-between gap-3 mb-4">
-							<div>
-								{title && (
-									<h2 className="text-base font-bold text-slate-800">{title}</h2>
-								)}
-								{subtitle && (
-									<p className="text-xs mt-0.5" style={{ color: "var(--color-primary-400)" }}>
-										{subtitle}
-									</p>
-								)}
-							</div>
-							{headerExtra}
-						</div>
-					)}
+
 
 					<TableToolbar
 						searchValue={searchValue}
@@ -792,7 +775,7 @@ export default function DataTable({
 									<TableSkeleton
 										key="skel"
 										columns={allColumns}
-										rows={Number(pagination?.per_page ?? 6)}
+										rows={Number(pagination?.per_page ?? 10)}
 										compact={compact}
 									/>
 								) : data.length === 0 ? (

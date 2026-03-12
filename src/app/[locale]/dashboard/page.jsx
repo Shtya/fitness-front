@@ -1,521 +1,856 @@
-// app/(admin)/dashboard/AdminDashboard.jsx
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { useTranslations } from 'use-intl';
-import api from '@/utils/axios';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  BarChart, Bar, CartesianGrid, Legend,
-  PieChart, Pie, Cell,
-  RadialBarChart, RadialBar, PolarAngleAxis,
+  AreaChart, Area, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  LineChart, Line,
 } from 'recharts';
 import {
-  Calendar, Users, FileText, Bell, Image as ImageIcon, Dumbbell, Flag,
+  Users, UserPlus, Bell, FileText, Activity, Utensils,
+  MessageSquare, Clock, Award, Zap, BarChart2, RefreshCw,
+  AlertCircle, TrendingUp, Dumbbell, CheckCircle2, XCircle,
+  ChevronRight, Sparkles, Target, ArrowUpRight, Flame, Star, Shield,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 
-// ---------- preview toggle ----------
-const PREVIEW = true; // set to false to use real API
-
-// ---------- mock preview data (uses labelKey so we translate via t) ----------
-const MOCK_DATA = {
+/* ════════════════════════════════════════════════════════
+   PREVIEW DATA
+════════════════════════════════════════════════════════ */
+const PREVIEW_DATA = {
   kpis: {
-    totalClients: 1240,
-    activeClients: 892,
-    newClients: 86,
-    churnedThisRange: 14,
-    formsSubmissions: 212,
-    unreadNotifications: 7,
-    assetsUploaded: 156,
-    pendingExerciseVideos: 11,
+    totalClients: 38, activeClients: 38, newClients: 1,
+    churnedThisRange: 0, formsSubmissions: 4, unreadNotifications: 129,
+    assetsUploaded: 0, pendingExerciseVideos: 0,
   },
   series: {
     usersCreatedDaily: [
-      { date: '2025-10-26', value: 10 }, { date: '2025-10-27', value: 14 },
-      { date: '2025-10-28', value: 11 }, { date: '2025-10-29', value: 18 },
-      { date: '2025-10-30', value: 22 }, { date: '2025-10-31', value: 16 },
-      { date: '2025-11-01', value: 20 }, { date: '2025-11-02', value: 19 },
-      { date: '2025-11-03', value: 23 }, { date: '2025-11-04', value: 21 },
+      { date: '2026-02-28', value: 0 }, { date: '2026-03-01', value: 0 },
+      { date: '2026-03-02', value: 0 }, { date: '2026-03-03', value: 0 },
+      { date: '2026-03-04', value: 0 }, { date: '2026-03-05', value: 0 },
+      { date: '2026-03-06', value: 0 }, { date: '2026-03-07', value: 0 },
+      { date: '2026-03-08', value: 0 }, { date: '2026-03-09', value: 0 },
+      { date: '2026-03-10', value: 0 }, { date: '2026-03-11', value: 1 },
+      { date: '2026-03-12', value: 0 },
     ],
     exerciseVolumeDaily: [
-      { date: '2025-10-26', value: 120 }, { date: '2025-10-27', value: 160 },
-      { date: '2025-10-28', value: 150 }, { date: '2025-10-29', value: 180 },
-      { date: '2025-10-30', value: 210 }, { date: '2025-10-31', value: 200 },
-      { date: '2025-11-01', value: 230 }, { date: '2025-11-02', value: 220 },
-      { date: '2025-11-03', value: 260 }, { date: '2025-11-04', value: 240 },
+      { date: '2026-02-28', value: 2 }, { date: '2026-03-01', value: 5 },
+      { date: '2026-03-02', value: 8 }, { date: '2026-03-03', value: 4 },
+      { date: '2026-03-04', value: 11 }, { date: '2026-03-05', value: 7 },
+      { date: '2026-03-06', value: 9 }, { date: '2026-03-07', value: 14 },
+      { date: '2026-03-08', value: 6 }, { date: '2026-03-09', value: 10 },
+      { date: '2026-03-10', value: 8 }, { date: '2026-03-11', value: 16 },
+      { date: '2026-03-12', value: 5 },
     ],
     mealLogsDaily: [
-      { date: '2025-10-26', value: 85 }, { date: '2025-10-27', value: 92 },
-      { date: '2025-10-28', value: 88 }, { date: '2025-10-29', value: 110 },
-      { date: '2025-10-30', value: 120 }, { date: '2025-10-31', value: 98 },
-      { date: '2025-11-01', value: 130 }, { date: '2025-11-02', value: 121 },
-      { date: '2025-11-03', value: 136 }, { date: '2025-11-04', value: 129 },
+      { date: '2026-02-28', value: 0 }, { date: '2026-03-01', value: 1 },
+      { date: '2026-03-02', value: 0 }, { date: '2026-03-03', value: 5 },
+      { date: '2026-03-04', value: 7 }, { date: '2026-03-05', value: 1 },
+      { date: '2026-03-06', value: 1 }, { date: '2026-03-07', value: 3 },
+      { date: '2026-03-08', value: 0 }, { date: '2026-03-09', value: 0 },
+      { date: '2026-03-10', value: 3 }, { date: '2026-03-11', value: 4 },
+      { date: '2026-03-12', value: 0 },
     ],
   },
   breakdowns: {
     membershipCounts: [
-      { labelKey: 'membership.basic', value: 420 },
-      { labelKey: 'membership.pro', value: 560 },
-      { labelKey: 'membership.elite', value: 180 },
-      { labelKey: 'membership.trial', value: 80 },
-    ],
-    userStatusCounts: [
-      { labelKey: 'status.active', value: 892 },
-      { labelKey: 'status.idle', value: 210 },
-      { labelKey: 'status.suspended', value: 45 },
-      { labelKey: 'status.churned', value: 93 },
+      { label: 'basic', value: 34 },
+      { label: 'gold', value: 2 },
+      { label: 'platinum', value: 2 },
     ],
     messagesPerConversationTop5: [
-      { conversationId: 'c1', nameKey: 'conv.nutritionQA', messages: 128 },
-      { conversationId: 'c2', nameKey: 'conv.formSubmissions', messages: 96 },
-      { conversationId: 'c3', nameKey: 'conv.workoutReviews', messages: 83 },
-      { conversationId: 'c4', nameKey: 'conv.general', messages: 74 },
-      { conversationId: 'c5', nameKey: 'conv.support', messages: 52 },
+      { conversationId: '1', name: null, messages: 70 },
+      { conversationId: '2', name: null, messages: 29 },
+      { conversationId: '3', name: null, messages: 17 },
+      { conversationId: '4', name: null, messages: 7 },
+      { conversationId: '5', name: null, messages: 7 },
     ],
   },
-  reviewsQueue: {
-    weeklyReportsPending: 9,
-    videosPending: 11,
-    foodSuggestionsPending: 5,
-  },
+  reviewsQueue: { weeklyReportsPending: 1, videosPending: 0, foodSuggestionsPending: 0 },
 };
 
-// ---------- motion utils ----------
-const cn = (...c) => c.filter(Boolean).join(' ');
-const spring = { type: 'spring', stiffness: 120, damping: 16, mass: 0.8 };
-const fadeUp = (i = 0) => ({
-  hidden: { opacity: 0, y: 16, filter: 'blur(6px)' },
-  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { delay: 0.05 * i, ...spring } },
-});
+/* ════════════════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════════════════ */
+const n = (v) => Number(v) || 0;
 
-// ---------- colors ----------
-const INDIGO = '#6366f1';
-const EMERALD = '#10b981';
-const AMBER = '#f59e0b';
-const ROSE = '#ef4444';
-const TEAL = '#06b6d4';
-const VIOLET = '#8b5cf6';
-const LIME = '#84cc16';
-const PIE_COLORS = [INDIGO, EMERALD, AMBER, ROSE, VIOLET, TEAL, LIME];
+const fmtDate = (d, locale) =>
+  new Date(d).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-US', {
+    month: 'short', day: 'numeric',
+  });
 
-// ---------- UI ----------
-export function GlowCard({ children, className }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={spring}
-      className={cn(
-        'rounded-lg border border-slate-200 bg-white p-4 shadow-sm relative overflow-hidden',
-        'before:pointer-events-none before:absolute before:inset-0 before:rounded-lg before:opacity-0 hover:before:opacity-100',
-        'before:transition-opacity before:duration-300',
-        'before:[box-shadow:inset_0_0_0_1px_rgba(99,102,241,.10),inset_0_40px_120px_-60px_rgba(99,102,241,.25)]',
-        className
-      )}
-    >
-      {children}
-    </motion.div>
-  );
+/* ════════════════════════════════════════════════════════
+   HOOKS
+════════════════════════════════════════════════════════ */
+function useInView(threshold = 0.08) {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setInView(true); obs.disconnect(); } },
+      { threshold }
+    );
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return [ref, inView];
 }
 
-function KPI({ icon, label, value, i = 0 }) {
+function useCounter(target, duration = 1100, active = false) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!active || target === 0) { setVal(target === 0 ? 0 : val); return; }
+    let raf;
+    const start = performance.now();
+    const tick = (now) => {
+      const p = Math.min((now - start) / duration, 1);
+      const ease = p < 0.5 ? 2 * p * p : -1 + (4 - 2 * p) * p;
+      setVal(Math.floor(ease * target));
+      if (p < 1) raf = requestAnimationFrame(tick);
+      else setVal(target);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration, active]);
+  return val;
+}
+
+/* ════════════════════════════════════════════════════════
+   DESIGN TOKENS  (matches your CSS variables)
+════════════════════════════════════════════════════════ */
+const P500 = '#6366f1';   // primary-500
+const P600 = '#4f46e5';   // primary-600
+const P100 = '#e0e7ff';   // primary-100
+const P50  = '#eef2ff';   // primary-50
+const S500 = '#a855f7';   // secondary-500
+const S100 = '#f3e8ff';   // secondary-100
+const S50  = '#faf5ff';   // secondary-50
+
+/* ════════════════════════════════════════════════════════
+   TOOLTIP
+════════════════════════════════════════════════════════ */
+const ChartTooltip = ({ active, payload, label, locale }) => {
+  if (!active || !payload?.length) return null;
   return (
-    <GlowCard className="p-5">
-      <motion.div variants={fadeUp(i)} initial="hidden" animate="show" className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-slate-100 border border-slate-200 grid place-items-center">
-            {icon}
-          </div>
+    <div className="bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 shadow-xl shadow-slate-200/60 text-xs">
+      <p className="text-slate-400 font-medium mb-2 pb-1.5 border-b border-slate-100">
+        {fmtDate(label, locale)}
+      </p>
+      {payload.map((p, i) => (
+        <div key={i} className="flex items-center gap-2 mt-1">
+          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: p.color }} />
+          <span className="text-slate-500">{p.name}</span>
+          <span className="font-bold text-slate-800 ml-auto ps-3 tabular-nums">{p.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* ════════════════════════════════════════════════════════
+   CARD — base surface
+════════════════════════════════════════════════════════ */
+const Card = ({ children, className = '', style = {} }) => (
+  <div
+    className={`bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-300 ${className}`}
+    style={style}
+  >
+    {children}
+  </div>
+);
+
+/* ════════════════════════════════════════════════════════
+   CARD HEADER
+════════════════════════════════════════════════════════ */
+const CardHeader = ({ icon: Icon, title, subtitle, iconBg = 'bg-[var(--color-primary-50)]', iconColor = 'text-[var(--color-primary-500)]', right }) => (
+  <div className="flex items-start justify-between gap-3 mb-5">
+    <div className="flex items-center gap-3">
+      <div className={`p-2 rounded-xl ${iconBg} flex-shrink-0`}>
+        <Icon size={16} className={iconColor} />
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-slate-800 leading-tight">{title}</p>
+        {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+      </div>
+    </div>
+    {right && <div className="flex-shrink-0">{right}</div>}
+  </div>
+);
+
+/* ════════════════════════════════════════════════════════
+   STAT BADGE — small inline number badge
+════════════════════════════════════════════════════════ */
+const StatBadge = ({ value, label, color = P500 }) => (
+  <div className="text-center px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
+    <p className="text-base font-bold leading-none tabular-nums" style={{ color }}>{value}</p>
+    <p className="text-[10px] text-slate-400 mt-1 whitespace-nowrap font-medium">{label}</p>
+  </div>
+);
+
+/* ════════════════════════════════════════════════════════
+   METRIC ROW — used in KPI grid  
+════════════════════════════════════════════════════════ */
+const MetricCard = ({ icon: Icon, label, value, sub, accentColor, accentBg, delay = 0 }) => {
+  const [ref, inView] = useInView(0.1);
+  const count = useCounter(value, 900, inView);
+
+  return (
+    <div
+      ref={ref}
+      className={`
+        bg-white rounded-2xl border border-slate-200/80 p-5
+        hover:border-slate-300 hover:shadow-md
+        transition-all duration-500 cursor-default group
+        ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}
+      `}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className={`p-2 rounded-xl ${accentBg}`}>
+          <Icon size={15} style={{ color: accentColor }} />
+        </div>
+        <ArrowUpRight
+          size={13}
+          className="text-slate-200 group-hover:text-slate-300 transition-colors"
+        />
+      </div>
+      <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">{label}</p>
+      <p className="text-3xl font-bold tabular-nums leading-none text-slate-900">{count.toLocaleString()}</p>
+      {sub && <p className="text-[11px] text-slate-400 mt-2">{sub}</p>}
+    </div>
+  );
+};
+
+/* ════════════════════════════════════════════════════════
+   HERO BANNER — redesigned as a contained "command bar"
+   Senior designer choice: not full-bleed gradient,
+   instead a structured panel with real information density
+════════════════════════════════════════════════════════ */
+const HeroBanner = ({ kpis, t }) => {
+  const activeRate = Math.round((kpis.activeClients / kpis.totalClients) * 100);
+  const [filled, setFilled] = useState(false);
+  useEffect(() => { const id = setTimeout(() => setFilled(true), 500); return () => clearTimeout(id); }, []);
+
+  const pills = [
+    { icon: UserPlus, val: kpis.newClients,          label: t('kpi.newClients') },
+    { icon: Bell,     val: kpis.unreadNotifications,  label: t('kpi.notifications') },
+    { icon: FileText, val: kpis.formsSubmissions,     label: t('kpi.formSubmissions') },
+    { icon: XCircle,  val: kpis.churnedThisRange,     label: t('kpi.churned') },
+  ];
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{
+        background: 'linear-gradient(135deg, var(--color-gradient-from) 0%, var(--color-gradient-via) 55%, var(--color-gradient-to) 100%)',
+      }}
+    >
+      {/* subtle grid overlay */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 31px,rgba(255,255,255,1) 31px,rgba(255,255,255,1) 32px), repeating-linear-gradient(90deg,transparent,transparent 31px,rgba(255,255,255,1) 31px,rgba(255,255,255,1) 32px)',
+        }}
+      />
+
+      <div className="relative p-6 sm:p-8">
+        {/* Top row */}
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          {/* Left: Identity */}
           <div>
-            <div className="text-xs text-slate-500">{label}</div>
-            <div className="text-2xl font-semibold text-slate-900">{value}</div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-50" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+              </span>
+              <span className="text-white/60 text-[10px] font-semibold uppercase tracking-[0.2em]">
+                {t('liveLabel')}
+              </span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight tracking-tight">
+              {t('subtitle')}
+            </h1>
+            <p className="text-white/50 text-xs mt-2 flex items-center gap-1.5">
+              <Clock size={11} />
+              {t('allClients')}
+            </p>
+          </div>
+
+          {/* Right: Active rate ring */}
+          <div className="flex items-center gap-5">
+            
+
+            {/* Quick stats */}
+            <div className="grid grid-cols-2 gap-2">
+              {pills.map((p, i) => (
+                <div key={i}
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors border border-white/10 rounded-xl px-3 py-2 cursor-default">
+                  <p.icon size={12} className="text-white/60 flex-shrink-0" />
+                  <div>
+                    <p className="text-white text-sm font-bold leading-none">{p.val}</p>
+                    <p className="text-white/50 text-[10px] leading-tight mt-0.5">{p.label}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </motion.div>
-    </GlowCard>
+      </div>
+    </div>
   );
-}
+};
 
-// ---------- page ----------
-export default function AdminDashboard() {
-  const t = useTranslations("dashboard");
+/* ════════════════════════════════════════════════════════
+   ACTIVITY CHART
+════════════════════════════════════════════════════════ */
+const ActivityChart = ({ usersData, mealData, exerciseData, t, locale }) => {
+  const [ref, inView] = useInView(0.05);
+  const uKey = t('charts.newUsers');
+  const mKey = t('charts.mealLogs');
+  const eKey = t('charts.exerciseVolume');
 
-  const today = new Date();
-  const iso = (d) => d.toISOString().slice(0, 10);
+  const combined = usersData.map((d, i) => ({
+    date: d.date,
+    [uKey]: n(d.value),
+    [mKey]: n(mealData[i]?.value),
+    [eKey]: n(exerciseData[i]?.value),
+  }));
 
-  const [from, setFrom] = useState(iso(new Date(today.getFullYear(), today.getMonth(), 1)));
-  const [to, setTo] = useState(iso(today));
-  const [adminId, setAdminId] = useState('');
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState('');
+  const series = [
+    { key: uKey, color: P500, grad: 'gU' },
+    { key: mKey, color: S500, grad: 'gM' },
+    { key: eKey, color: '#10b981', grad: 'gE' },
+  ];
 
-  const fetchStats = async () => {
-    if (PREVIEW) {
-      setData(MOCK_DATA);
-      setErr('');
-      return;
-    }
-    setLoading(true);
-    setErr('');
-    try {
-      const params = { from, to };
-      if (adminId.trim()) params.adminId = adminId.trim();
-      const res = await api.get('/admin/stats', { params });
-      setData(res.data);
-    } catch (e) {
-      setData(MOCK_DATA);
-      setErr(t('error.previewFallback'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // merge two daily series for bars
-  const duoSeries = useMemo(() => {
-    const ex = data?.series?.exerciseVolumeDaily || [];
-    const meals = data?.series?.mealLogsDaily || [];
-    const map = new Map();
-    ex.forEach((p) => map.set(p.date, { date: p.date, exerciseVolume: p.value, mealLogs: 0 }));
-    meals.forEach((p) => {
-      const r = map.get(p.date) || { date: p.date, exerciseVolume: 0, mealLogs: 0 };
-      r.mealLogs = p.value;
-      map.set(p.date, r);
-    });
-    return Array.from(map.values()).sort((a, b) => (a.date > b.date ? 1 : -1));
-  }, [data]);
-
-  // pies from breakdowns -> build translated names
-  const membershipPie = useMemo(() => {
-    const raw = data?.breakdowns?.membershipCounts || [];
-    return raw.map((x, i) => ({
-      name: x.labelKey ? t(x.labelKey) : (x.label ?? ''),
-      value: x.value,
-      color: PIE_COLORS[i % PIE_COLORS.length],
-    }));
-  }, [data, t]);
-
-  const statusPie = useMemo(() => {
-    const raw = data?.breakdowns?.userStatusCounts || [];
-    return raw.map((x, i) => ({
-      name: x.labelKey ? t(x.labelKey) : (x.label ?? ''),
-      value: x.value,
-      color: PIE_COLORS[i % PIE_COLORS.length],
-    }));
-  }, [data, t]);
-
-  // radial gauge % active
-  const activePct = useMemo(() => {
-    const total = Number(data?.kpis?.totalClients || 0);
-    const active = Number(data?.kpis?.activeClients || 0);
-    return total ? Math.round((active / total) * 100) : 0;
-  }, [data]);
+  const totalMeals = mealData.reduce((s, d) => s + n(d.value), 0);
+  const totalEx = exerciseData.reduce((s, d) => s + n(d.value), 0);
+  const peakMeal = Math.max(...mealData.map(d => n(d.value)));
 
   return (
-    <div className="mx-auto max-w-7xl p-4 space-y-6">
-      {/* Filters */}
-      <GlowCard>
-        <motion.div variants={fadeUp(0)} initial="hidden" animate="show" className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">{t('filters.from')}</label>
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-              aria-label={t('filters.from')}
+    <div ref={ref}
+      className={`transition-all duration-700 lg:col-span-2 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+      <Card className="p-5 h-full">
+        <CardHeader
+          icon={TrendingUp}
+          title={t('charts.activityTrends')}
+          subtitle={t('charts.activityTrendsSub')}
+          right={
+            <div className="flex items-center gap-2">
+              <StatBadge value={totalMeals} label={t('charts.mealLogs')} color={S500} />
+              <StatBadge value={totalEx} label={t('charts.exerciseVolume')} color="#10b981" />
+              <StatBadge value={peakMeal} label={t('charts.peakDay')} color={P500} />
+            </div>
+          }
+        />
+        <ResponsiveContainer width="100%" height={230}>
+          <AreaChart data={combined} margin={{ top: 4, right: 2, bottom: 0, left: -22 }}>
+            <defs>
+              {series.map(s => (
+                <linearGradient key={s.grad} id={s.grad} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={s.color} stopOpacity={0.16} />
+                  <stop offset="100%" stopColor={s.color} stopOpacity={0} />
+                </linearGradient>
+              ))}
+            </defs>
+            <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
+            <XAxis dataKey="date" tickFormatter={(d) => fmtDate(d, locale)}
+              tick={{ fill: '#cbd5e1', fontSize: 10 }} axisLine={false} tickLine={false} interval={2} />
+            <YAxis tick={{ fill: '#cbd5e1', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <Tooltip content={<ChartTooltip locale={locale} />} />
+            <Legend
+              wrapperStyle={{ paddingTop: 12, fontSize: 11 }}
+              formatter={(v) => <span style={{ color: '#94a3b8', fontWeight: 500 }}>{v}</span>}
             />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">{t('filters.to')}</label>
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-              aria-label={t('filters.to')}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">{t('filters.adminOptional')}</label>
-            <input
-              type="text"
-              placeholder={t('filters.adminPlaceholder')}
-              value={adminId}
-              onChange={(e) => setAdminId(e.target.value)}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-64"
-              aria-label={t('filters.adminOptional')}
-            />
-          </div>
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={fetchStats}
-            className="ms-auto rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm font-semibold hover:bg-indigo-700"
-          >
-            {PREVIEW ? t('filters.reloadPreview') : t('filters.apply')}
-          </motion.button>
-        </motion.div>
-        <AnimatePresence>
-          {err ? (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              className="text-xs text-rose-600 mt-2"
-            >
-              {err}
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-      </GlowCard>
+            {series.map(s => (
+              <Area key={s.key} type="monotone" dataKey={s.key}
+                stroke={s.color} strokeWidth={2} fill={`url(#${s.grad})`}
+                dot={false} activeDot={{ r: 4, fill: s.color, stroke: '#fff', strokeWidth: 2 }} />
+            ))}
+          </AreaChart>
+        </ResponsiveContainer>
+      </Card>
+    </div>
+  );
+};
 
-      {/* KPIs */}
-      <motion.div initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <KPI i={0} icon={<Users className="h-5 w-5 text-slate-700" />} label={t('kpi.totalClients')} value={data?.kpis?.totalClients ?? '—'} />
-        <KPI i={1} icon={<Users className="h-5 w-5 text-emerald-600" />} label={t('kpi.activeClients')} value={data?.kpis?.activeClients ?? '—'} />
-        <KPI i={2} icon={<Calendar className="h-5 w-5 text-indigo-600" />} label={t('kpi.newInRange')} value={data?.kpis?.newClients ?? '—'} />
-        <KPI i={3} icon={<Flag className="h-5 w-5 text-rose-600" />} label={t('kpi.churned')} value={data?.kpis?.churnedThisRange ?? '—'} />
-        <KPI i={4} icon={<FileText className="h-5 w-5 text-slate-700" />} label={t('kpi.formSubmissions')} value={data?.kpis?.formsSubmissions ?? '—'} />
-        <KPI i={5} icon={<Bell className="h-5 w-5 text-amber-500" />} label={t('kpi.unreadNotices')} value={data?.kpis?.unreadNotifications ?? '—'} />
-        <KPI i={6} icon={<ImageIcon className="h-5 w-5 text-slate-700" />} label={t('kpi.assetsUploaded')} value={data?.kpis?.assetsUploaded ?? '—'} />
-        <KPI i={7} icon={<Dumbbell className="h-5 w-5 text-slate-700" />} label={t('kpi.pendingVideos')} value={data?.kpis?.pendingExerciseVideos ?? '—'} />
-      </motion.div>
+/* ════════════════════════════════════════════════════════
+   MEMBERSHIP CARD — redesigned with type-led layout
+════════════════════════════════════════════════════════ */
+const MembershipCard = ({ data, t }) => {
+  const [ref, inView] = useInView(0.1);
+  const total = data.reduce((s, d) => s + d.value, 0);
 
-      {/* Existing Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <GlowCard>
-          <motion.div variants={fadeUp(0)} initial="hidden" animate="show" className="mb-3 text-sm font-medium text-slate-800">
-            {t('charts.usersCreatedDaily.title')}
-          </motion.div>
-          <div className="h-56">
-            <ResponsiveContainer>
-              <AreaChart data={data?.series?.usersCreatedDaily ?? []}>
-                <defs>
-                  <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopOpacity={0.3} />
-                    <stop offset="95%" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <CartesianGrid strokeDasharray="3 3" />
-                <Tooltip />
-                <Area type="monotone" dataKey="value" stroke={INDIGO} fill="url(#g1)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </GlowCard>
+  const tiers = [
+    { key: 'basic',    color: P500,      bg: P50,      icon: Shield  },
+    { key: 'gold',     color: '#f59e0b', bg: '#fffbeb', icon: Star   },
+    { key: 'platinum', color: S500,      bg: S50,      icon: Sparkles },
+  ];
 
-        <GlowCard>
-          <motion.div variants={fadeUp(1)} initial="hidden" animate="show" className="mb-3 text-sm font-medium text-slate-800">
-            {t('charts.duo.title')}
-          </motion.div>
-          <div className="h-56">
-            <ResponsiveContainer>
-              <BarChart data={duoSeries}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="exerciseVolume" name={t('charts.duo.exerciseVolume')} radius={[8, 8, 0, 0]} fill={INDIGO} />
-                <Bar dataKey="mealLogs" name={t('charts.duo.mealLogs')} radius={[8, 8, 0, 0]} fill={EMERALD} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </GlowCard>
-      </div>
+  return (
+    <div ref={ref}
+      className={`transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+      <Card className="p-5 h-full">
+        <CardHeader
+          icon={Award} title={t('charts.membershipTiers')} subtitle={t('charts.membershipSub')}
+          right={
+            <div className="text-right">
+              <p className="text-2xl font-bold text-slate-800 tabular-nums leading-none">{total}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wider">{t('kpi.totalClients')}</p>
+            </div>
+          }
+        />
 
-      {/* CIRCULAR CHARTS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        {/* Donut: Memberships */}
-        <GlowCard>
-          <motion.div variants={fadeUp(0)} initial="hidden" animate="show" className="mb-2 text-sm font-medium text-slate-800">
-            {t('donuts.memberships.title')}
-          </motion.div>
-          <div className="h-56">
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie
-                  data={membershipPie}
-                  innerRadius={60}
-                  outerRadius={82}
-                  dataKey="value"
-                  nameKey="name"
-                  paddingAngle={6}
-                >
-                  {membershipPie.map((s, i) => (
-                    <Cell key={i} fill={s.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v, n) => [v, n]} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-2 space-y-1 text-xs">
-            {membershipPie.map((m, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ background: m.color }} />
-                  <span className="text-slate-600">{m.name}</span>
+        <div className="space-y-4">
+          {data.map((d, i) => {
+            const tier = tiers[i];
+            const pct = Math.round((d.value / total) * 100);
+            return (
+              <div key={i}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 rounded-md" style={{ background: tier.bg }}>
+                      <tier.icon size={11} style={{ color: tier.color }} />
+                    </div>
+                    <span className="text-sm text-slate-600 font-medium capitalize">
+                      {t(`membership.${d.label}`)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-slate-800 tabular-nums">{d.value}</span>
+                    <span
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md text-white tabular-nums"
+                      style={{ background: tier.color }}>
+                      {pct}%
+                    </span>
+                  </div>
                 </div>
-                <span className="font-medium">{m.value}</span>
-              </div>
-            ))}
-          </div>
-        </GlowCard>
-
-        {/* Donut: User Status */}
-        <GlowCard>
-          <motion.div variants={fadeUp(0)} initial="hidden" animate="show" className="mb-2 text-sm font-medium text-slate-800">
-            {t('donuts.status.title')}
-          </motion.div>
-          <div className="h-56">
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie
-                  data={statusPie}
-                  innerRadius={60}
-                  outerRadius={82}
-                  dataKey="value"
-                  nameKey="name"
-                  paddingAngle={6}
-                >
-                  {statusPie.map((s, i) => (
-                    <Cell key={i} fill={s.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v, n) => [v, n]} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-2 space-y-1 text-xs">
-            {statusPie.map((m, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ background: m.color }} />
-                  <span className="text-slate-600">{m.name}</span>
+                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-1000"
+                    style={{
+                      width: inView ? `${pct}%` : '0%',
+                      background: tier.color,
+                      transitionDelay: `${250 + i * 120}ms`,
+                    }}
+                  />
                 </div>
-                <span className="font-medium">{m.value}</span>
               </div>
-            ))}
-          </div>
-        </GlowCard>
+            );
+          })}
+        </div>
 
-        {/* Radial Gauge: Active Clients % */}
-        <GlowCard>
-          <motion.div variants={fadeUp(0)} initial="hidden" animate="show" className="mb-2 text-sm font-medium text-slate-800">
-            {t('gauge.activeRate.title')}
-          </motion.div>
-          <div className="h-56">
-            <ResponsiveContainer>
-              <RadialBarChart
-                innerRadius="68%"
-                outerRadius="100%"
-                data={[{ name: t('gauge.activeRate.tooltip'), value: activePct, fill: EMERALD }]}
-                startAngle={90}
-                endAngle={-270}
-              >
-                <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                <RadialBar dataKey="value" cornerRadius={8} />
-                <Tooltip formatter={(v) => [`${v}%`, t('gauge.activeRate.tooltip')]} />
-              </RadialBarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="text-center -mt-12">
-            <div className="text-2xl font-semibold text-slate-900">{activePct}%</div>
-            <div className="text-xs text-slate-500">{t('gauge.activeRate.caption')}</div>
-          </div>
-        </GlowCard>
-      </div>
+        <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+          {data.map((d, i) => {
+            const tier = tiers[i];
+            const pct = Math.round((d.value / total) * 100);
+            return (
+              <div key={i} className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: tier.color }} />
+                <span className="text-[11px] text-slate-400">{t(`membership.${d.label}`)} · {pct}%</span>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+    </div>
+  );
+};
 
-      {/* Text breakdowns */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <GlowCard>
-          <motion.div variants={fadeUp(0)} initial="hidden" animate="show" className="mb-2 text-sm font-medium text-slate-800">
-            {t('list.memberships.title')}
-          </motion.div>
-          <ul className="space-y-1">
-            {(data?.breakdowns?.membershipCounts ?? []).map((x, i) => (
-              <motion.li key={i} variants={fadeUp(i)} initial="hidden" animate="show" className="flex justify-between text-sm">
-                <span className="text-slate-700">{x.labelKey ? t(x.labelKey) : (x.label ?? '')}</span>
-                <span className="font-semibold text-slate-900">{x.value}</span>
-              </motion.li>
-            ))}
-          </ul>
-        </GlowCard>
+/* ════════════════════════════════════════════════════════
+   MEAL LOGS BAR CHART
+════════════════════════════════════════════════════════ */
+const MealLogsBar = ({ data, t, locale }) => {
+  const [ref, inView] = useInView(0.05);
+  const logsKey = t('charts.logs');
+  const formatted = data.map(d => ({ date: d.date, [logsKey]: n(d.value) }));
+  const total = data.reduce((s, d) => s + n(d.value), 0);
+  const avg = (total / data.length).toFixed(1);
+  const peak = Math.max(...data.map(d => n(d.value)));
 
-        <GlowCard>
-          <motion.div variants={fadeUp(0)} initial="hidden" animate="show" className="mb-2 text-sm font-medium text-slate-800">
-            {t('list.status.title')}
-          </motion.div>
-          <ul className="space-y-1">
-            {(data?.breakdowns?.userStatusCounts ?? []).map((x, i) => (
-              <motion.li key={i} variants={fadeUp(i)} initial="hidden" animate="show" className="flex justify-between text-sm">
-                <span className="text-slate-700">{x.labelKey ? t(x.labelKey) : (x.label ?? '')}</span>
-                <span className="font-semibold text-slate-900">{x.value}</span>
-              </motion.li>
-            ))}
-          </ul>
-        </GlowCard>
+  return (
+    <div ref={ref}
+      className={`transition-all duration-700 lg:col-span-2 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+      <Card className="p-5 h-full">
+        <CardHeader
+          icon={Utensils}
+          title={t('charts.mealLogsTitle')}
+          subtitle={t('charts.mealLogsSub')}
+          iconBg="bg-[var(--color-secondary-50)]"
+          iconColor="text-[var(--color-secondary-500)]"
+          right={
+            <div className="flex items-center gap-2">
+              <StatBadge value={total} label={t('charts.total')} color={S500} />
+              <StatBadge value={avg} label={t('charts.dailyAvg')} color={P500} />
+              <StatBadge value={peak} label={t('charts.peak')} color="#10b981" />
+            </div>
+          }
+        />
+        <ResponsiveContainer width="100%" height={190}>
+          <BarChart data={formatted} margin={{ top: 4, right: 2, bottom: 0, left: -22 }} barSize={18}>
+            <defs>
+              <linearGradient id="mlGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={S500} stopOpacity={1} />
+                <stop offset="100%" stopColor={P500} stopOpacity={0.8} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
+            <XAxis dataKey="date" tickFormatter={(d) => fmtDate(d, locale)}
+              tick={{ fill: '#cbd5e1', fontSize: 10 }} axisLine={false} tickLine={false} interval={2} />
+            <YAxis tick={{ fill: '#cbd5e1', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <Tooltip content={<ChartTooltip locale={locale} />} />
+            <Bar dataKey={logsKey} fill="url(#mlGrad)" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </Card>
+    </div>
+  );
+};
 
-        <GlowCard>
-          <motion.div variants={fadeUp(0)} initial="hidden" animate="show" className="mb-2 text-sm font-medium text-slate-800">
-            {t('list.topConversations.title')}
-          </motion.div>
-          <ul className="space-y-1">
-            {(data?.breakdowns?.messagesPerConversationTop5 ?? []).map((c, i) => (
-              <motion.li key={c.conversationId} variants={fadeUp(i)} initial="hidden" animate="show" className="flex justify-between text-sm">
-                <span className="text-slate-700 truncate">{c.nameKey ? t(c.nameKey) : (c.name ?? c.conversationId)}</span>
-                <span className="font-semibold text-slate-900">{c.messages}</span>
-              </motion.li>
-            ))}
-          </ul>
-        </GlowCard>
-      </div>
+/* ════════════════════════════════════════════════════════
+   EXERCISE HEATMAP + STATS
+════════════════════════════════════════════════════════ */
+const ExerciseCard = ({ data, t }) => {
+  const [ref, inView] = useInView(0.1);
+  const total = data.reduce((s, d) => s + n(d.value), 0);
+  const peak = Math.max(...data.map(d => n(d.value)));
+  const activeDays = data.filter(d => n(d.value) > 0).length;
+  const consistency = Math.round((activeDays / data.length) * 100);
 
-      {/* Review Queue */}
-      <GlowCard>
-        <motion.div variants={fadeUp(0)} initial="hidden" animate="show" className="text-sm font-medium text-slate-800 mb-2">
-          {t('review.title')}
-        </motion.div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+  // SVG ring animation
+  const [ringPct, setRingPct] = useState(0);
+  useEffect(() => {
+    if (!inView) return;
+    const id = setTimeout(() => setRingPct(consistency), 400);
+    return () => clearTimeout(id);
+  }, [inView, consistency]);
+
+  const R = 30;
+  const circ = 2 * Math.PI * R;
+
+  // Heatmap shades — using your primary color range
+  const heatShades = ['#f1f5f9', P100, '#a5b4fc', '#6366f1', '#4338ca'];
+
+  return (
+    <div ref={ref}
+      className={`transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+      <Card className="p-5 h-full">
+        <CardHeader
+          icon={Dumbbell}
+          title={t('charts.exerciseVolume')}
+          subtitle={t('charts.exerciseVolumeSub')}
+          iconBg="bg-emerald-50"
+          iconColor="text-emerald-600"
+        />
+
+        {/* 3-up stats row */}
+        <div className="grid grid-cols-3 gap-2 mb-5">
           {[
-            { label: t('review.weeklyReports'), value: data?.reviewsQueue?.weeklyReportsPending ?? '—' },
-            { label: t('review.videos'), value: data?.reviewsQueue?.videosPending ?? '—' },
-            { label: t('review.foodSuggestions'), value: data?.reviewsQueue?.foodSuggestionsPending ?? '—' },
-          ].map((q, i) => (
-            <motion.div key={q.label} variants={fadeUp(i)} initial="hidden" animate="show" className="rounded-lg border border-slate-200 p-3">
-              <div className="text-xs text-slate-500">{q.label}</div>
-              <div className="text-2xl font-semibold text-slate-900">{q.value}</div>
-            </motion.div>
+            { val: total, label: t('charts.totalSessions'), color: P500 },
+            { val: peak, label: t('charts.peakDay'), color: '#10b981' },
+            { val: `${consistency}%`, label: t('charts.consistency'), color: S500 },
+          ].map((s, i) => (
+            <div key={i} className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <p className="text-xl font-bold tabular-nums leading-none" style={{ color: s.color }}>{s.val}</p>
+              <p className="text-[10px] text-slate-400 mt-1.5 font-medium leading-tight">{s.label}</p>
+            </div>
           ))}
         </div>
-      </GlowCard>
 
-      {/* Overlay loader */}
-      <AnimatePresence>
-        {loading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-white/50 backdrop-blur grid place-items-center z-50"
-          >
-            <motion.div
-              className="h-6 w-6 border-2 border-slate-300 border-t-indigo-600 rounded-full"
-              animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, ease: 'linear', duration: 0.9 }}
-            />
-          </motion.div>
+        {/* Heatmap */}
+        <div>
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2.5">
+            {t('charts.last13Days')}
+          </p>
+          <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(13, 1fr)' }}>
+            {data.map((d, i) => {
+              const v = n(d.value);
+              const lvl = v === 0 ? 0 : v < 5 ? 1 : v < 10 ? 2 : v < 14 ? 3 : 4;
+              return (
+                <div
+                  key={i}
+                  title={`${d.date}: ${v}`}
+                  className="aspect-square rounded-sm cursor-default transition-transform hover:scale-110"
+                  style={{ background: heatShades[lvl] }}
+                />
+              );
+            })}
+          </div>
+          {/* legend */}
+          <div className="flex items-center justify-end gap-1 mt-2">
+            <span className="text-[10px] text-slate-300 me-0.5">↔</span>
+            {heatShades.map((c, i) => (
+              <div key={i} className="w-2.5 h-2.5 rounded-sm" style={{ background: c }} />
+            ))}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+/* ════════════════════════════════════════════════════════
+   REVIEW QUEUE
+════════════════════════════════════════════════════════ */
+const ReviewQueue = ({ data, t }) => {
+  const [ref, inView] = useInView(0.1);
+  const items = [
+    { label: t('charts.weeklyReports'),  val: data.weeklyReportsPending,   icon: FileText,  color: P500,      bg: P50     },
+    { label: t('charts.pendingVideos'),  val: data.videosPending,          icon: Activity,  color: S500,      bg: S50     },
+    { label: t('charts.foodSuggestions'),val: data.foodSuggestionsPending, icon: Utensils,  color: '#10b981', bg: '#ecfdf5' },
+  ];
+  const anyPending = items.some(i => i.val > 0);
+
+  return (
+    <div ref={ref}
+      className={`transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+      <Card className="p-5 h-full">
+        <CardHeader
+          icon={Clock}
+          title={t('charts.reviewQueue')}
+          subtitle={t('charts.reviewQueueSub')}
+          iconBg="bg-amber-50"
+          iconColor="text-amber-500"
+          right={
+            anyPending ? (
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+                <Flame size={10} />
+                {t('status.requiresAttention')}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                <CheckCircle2 size={10} />
+                {t('status.allClear')}
+              </span>
+            )
+          }
+        />
+        <div className="space-y-2">
+          {items.map((item, i) => (
+            <div key={i}
+              className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50/70 border border-transparent hover:border-slate-200 hover:bg-white transition-all group cursor-pointer">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg" style={{ background: item.bg }}>
+                  <item.icon size={13} style={{ color: item.color }} />
+                </div>
+                <span className="text-sm text-slate-600 font-medium">{item.label}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {item.val > 0
+                  ? <span className="text-xl font-bold tabular-nums" style={{ color: item.color }}>{item.val}</span>
+                  : <CheckCircle2 size={18} className="text-emerald-400" />
+                }
+                <ChevronRight size={13} className="text-slate-300 group-hover:translate-x-0.5 transition-transform" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+/* ════════════════════════════════════════════════════════
+   TOP CONVERSATIONS
+════════════════════════════════════════════════════════ */
+const TopConversations = ({ data, t }) => {
+  const [ref, inView] = useInView(0.1);
+  const max = Math.max(...data.map(d => d.messages));
+  const palette = [P500, '#7c3aed', S500, '#c084fc', '#ddd6fe'];
+  const totalMsgs = data.reduce((s, d) => s + d.messages, 0);
+
+  return (
+    <div ref={ref}
+      className={`transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+      <Card className="p-5 h-full">
+        <CardHeader
+          icon={MessageSquare}
+          title={t('charts.topConversations')}
+          subtitle={t('charts.topConversationsSub')}
+          right={
+            <div className="text-right">
+              <p className="text-2xl font-bold tabular-nums leading-none" style={{ color: P500 }}>{totalMsgs}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">{t('charts.totalMessages')}</p>
+            </div>
+          }
+        />
+        <div className="space-y-3.5">
+          {data.map((d, i) => (
+            <div key={i} className="cursor-default">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-4.5 h-4.5 w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+                    style={{ background: palette[i] }}>
+                    {i + 1}
+                  </span>
+                  <span className="text-sm text-slate-600 font-medium">
+                    {d.name || `${t('charts.conversation')} ${i + 1}`}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-bold tabular-nums" style={{ color: palette[i] }}>{d.messages}</span>
+                  <span className="text-[11px] text-slate-400">{t('charts.messages')}</span>
+                </div>
+              </div>
+              <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-700 ease-out"
+                  style={{
+                    width: inView ? `${(d.messages / max) * 100}%` : '0%',
+                    background: palette[i],
+                    transitionDelay: `${180 + i * 100}ms`,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+/* ════════════════════════════════════════════════════════
+   PAGE HEADER
+════════════════════════════════════════════════════════ */
+const PageHeader = ({ from, to, loading, onRefresh, PREVIEW, t }) => (
+  <div className="flex items-center justify-between gap-4">
+    <div>
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-[10px] font-semibold text-[var(--color-primary-500)] uppercase tracking-widest">
+          {t('period')}
+        </span>
+        <span className="text-slate-300 text-xs">·</span>
+        <span className="text-xs text-slate-500 font-medium">
+          {t('dateRange', { from, to })}
+        </span>
+      </div>
+      <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('title')}</h1>
+    </div>
+    <button
+      onClick={onRefresh}
+      disabled={loading || PREVIEW}
+      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-md shadow-[var(--color-primary-200)] transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:-translate-y-px hover:shadow-lg active:translate-y-0"
+      style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
+    >
+      <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+      {t('refresh')}
+    </button>
+  </div>
+);
+
+/* ════════════════════════════════════════════════════════
+   MAIN PAGE
+════════════════════════════════════════════════════════ */
+export default function DashboardPage({ PREVIEW = true, api: apiClient }) {
+  const t = useTranslations('dashboard');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
+  const [data, setData] = useState(PREVIEW ? PREVIEW_DATA : null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+  const [from] = useState('2026-02-28');
+  const [to] = useState('2026-03-12');
+
+  const fetchStats = useCallback(async () => {
+    if (PREVIEW) return;
+    setLoading(true); setErr('');
+    try {
+      const res = await apiClient.get('/admin/stats', { params: { from, to } });
+      setData(res.data);
+    } catch (e) {
+      setErr(e?.response?.data?.message || t('error.loadFailed'));
+      setData(null);
+    } finally { setLoading(false); }
+  }, [PREVIEW, apiClient, from, to, t]);
+
+  useEffect(() => { if (!PREVIEW) fetchStats(); }, []);
+
+  const { kpis, series, breakdowns, reviewsQueue } = data || {};
+
+  /* KPI grid definition */
+  const metricCards = kpis ? [
+    { icon: Users,    label: t('kpi.totalClients'),     value: kpis.totalClients,          sub: t('kpi.totalClientsSub'),    accentColor: P500,       accentBg: 'bg-[var(--color-primary-50)]',   delay: 0   },
+    { icon: Zap,      label: t('kpi.activeClients'),    value: kpis.activeClients,         sub: t('kpi.activeClientsSub'),   accentColor: '#10b981',  accentBg: 'bg-emerald-50',                  delay: 60  },
+    { icon: UserPlus, label: t('kpi.newClients'),       value: kpis.newClients,            sub: t('kpi.newClientsSub'),      accentColor: S500,       accentBg: 'bg-[var(--color-secondary-50)]', delay: 120 },
+    { icon: Bell,     label: t('kpi.notifications'),    value: kpis.unreadNotifications,   sub: t('kpi.notificationsSub'),   accentColor: '#f59e0b',  accentBg: 'bg-amber-50',                    delay: 180 },
+    { icon: FileText, label: t('kpi.formSubmissions'),  value: kpis.formsSubmissions,      sub: t('kpi.formSubmissionsSub'), accentColor: '#0ea5e9',  accentBg: 'bg-sky-50',                      delay: 240 },
+    { icon: XCircle,  label: t('kpi.churned'),          value: kpis.churnedThisRange,      sub: t('kpi.churnedSub'),         accentColor: '#ef4444',  accentBg: 'bg-rose-50',                     delay: 300 },
+    { icon: BarChart2, label: t('kpi.assetsUploaded'),  value: kpis.assetsUploaded,        sub: t('kpi.assetsUploadedSub'), accentColor: '#8b5cf6',  accentBg: 'bg-violet-50',                   delay: 360 },
+    { icon: Activity, label: t('kpi.pendingVideos'),    value: kpis.pendingExerciseVideos, sub: t('kpi.pendingVideosSub'),   accentColor: '#f97316',  accentBg: 'bg-orange-50',                   delay: 420 },
+  ] : [];
+
+  return (
+    <div className="min-h-screen ">
+ 
+      <div className="  space-y-5">
+ 
+        {err && (
+          <div className="flex items-center justify-between p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium">
+            <div className="flex items-center gap-2"><AlertCircle size={15} />{err}</div>
+            <button onClick={fetchStats} className="text-xs font-bold underline underline-offset-2">{t('error.retry')}</button>
+          </div>
         )}
-      </AnimatePresence>
+
+        {/* Hero banner */}
+        {kpis && <HeroBanner kpis={kpis} t={t} />}
+
+        {/* KPI grid — 4 cols on lg, 2 on sm */}
+        {kpis && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+            {metricCards.map((c, i) => (
+              <div key={i} className="lg:col-span-1 sm:col-span-1">
+                <MetricCard {...c} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Row 2: Activity chart (2/3) + Membership (1/3) */}
+        {series && breakdowns && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <ActivityChart
+              usersData={series.usersCreatedDaily}
+              mealData={series.mealLogsDaily}
+              exerciseData={series.exerciseVolumeDaily}
+              t={t} locale={locale}
+            />
+            <MembershipCard data={breakdowns.membershipCounts} t={t} />
+          </div>
+        )}
+
+        {/* Row 3: Meal bar (2/3) + Review queue (1/3) */}
+        {series && reviewsQueue && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <MealLogsBar data={series.mealLogsDaily} t={t} locale={locale} />
+            <ReviewQueue data={reviewsQueue} t={t} />
+          </div>
+        )}
+
+        {/* Row 4: Exercise heatmap + Conversations */}
+        {series && breakdowns && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <ExerciseCard data={series.exerciseVolumeDaily} t={t} />
+            <TopConversations data={breakdowns.messagesPerConversationTop5} t={t} />
+          </div>
+        )}
+
+        <div className="h-4" />
+      </div>
+
+      {/* Loading overlay */}
+      {loading && (
+        <div className="fixed inset-0 bg-white/75 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 flex flex-col items-center gap-4">
+            <div className="relative w-12 h-12">
+              <div className="absolute inset-0 rounded-full border-2 border-slate-100" />
+              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[var(--color-primary-500)] animate-spin" />
+              <div className="absolute inset-[5px] rounded-full border-2 border-transparent border-t-[var(--color-secondary-400)] animate-spin" style={{ animationDuration: '0.65s', animationDirection: 'reverse' }} />
+            </div>
+            <p className="text-slate-500 text-sm font-medium">{t('loading')}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -20,7 +20,9 @@ import {
 	FiX,
 	FiCopy,
 	FiSearch,
+	FiEye,
 } from 'react-icons/fi';
+
 
 import api from '@/utils/axios';
 import Button from '@/components/atoms/Button';
@@ -47,6 +49,7 @@ import {
 } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import ActionButtons from '@/components/atoms/Actions';
+import DataTable from '@/components/atoms/Datatable';
 
 // ─── Constants ───────────────────────────────────────────────
 const FIELD_TYPE_OPTIONS = [
@@ -503,7 +506,7 @@ function SkeletonRow() {
 export default function FormsManagementPage() {
 	const t = useTranslations('forms');
 	const user = useUser();
-
+	const [showDetailsModal, setShowDetailsModal] = useState(false);
 	const [forms, setForms] = useState([]);
 	const [query, setQuery] = useState('');
 	const [selectedForm, setSelectedForm] = useState(null);
@@ -524,7 +527,10 @@ export default function FormsManagementPage() {
 
 	const fieldsContainerRef = useRef(null);
 	const newFieldRef = useRef(null);
-
+	const openDetailsModal = useCallback((form) => {
+		setSelectedForm(form);
+		setShowDetailsModal(true);
+	}, []);
 	const typeOptions = useMemo(
 		() => FIELD_TYPE_OPTIONS.map(o => ({ id: o.id, label: t(`types_map.${o.id}`) })),
 		[t]
@@ -758,6 +764,128 @@ export default function FormsManagementPage() {
 	const canEdit = form => !form?.adminId || form?.adminId === user?.id;
 	const isCoachRole = user?.role === 'coach';
 
+
+	const tableRows = useMemo(() => {
+		return filtered.map((form) => ({
+			id: form.id,
+			title: form.title,
+			fieldsCount: form.fields?.length ?? 0,
+			ownerType: form.adminId === user?.id ? 'own' : 'shared',
+			raw: form,
+		}));
+	}, [filtered, user?.id]);
+
+	const tableColumns = [
+		{
+			key: 'title',
+			header: t('table.title'),
+			cell: (row) => {
+				const form = row.raw;
+
+				return (
+					<button
+						type="button"
+						onClick={() => openDetailsModal(form)}
+						className="w-full text-left"
+					>
+						<div className="flex items-center gap-3 min-w-0">
+							<div
+								className="h-9 w-9 flex-shrink-0 grid place-items-center rounded-lg"
+								style={{
+									background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+								}}
+							>
+								<FiFileText className="h-4 w-4 text-white" />
+							</div>
+
+							<div dir='auto' className="min-w-0  rtl:text-right ltr:text-left  flex-1">
+ 									{row.title}
+ 							</div>
+						</div>
+					</button>
+				);
+			},
+		},
+		{
+			key: 'fieldsCount',
+			header: t('table.fields'),
+			cell: (row) => (
+				<span
+					className="rounded-full px-2.5 py-1 text-xs font-bold"
+					style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-700)' }}
+				>
+					{row.fieldsCount}
+				</span>
+			),
+		},
+		{
+			key: 'ownerType',
+			header: t('table.owner'),
+			cell: (row) =>
+				row.ownerType === 'own' ? (
+					<Badge variant="success">{t('labels.own')}</Badge>
+				) : (
+					<Badge variant="warning">{t('labels.shared')}</Badge>
+				),
+		},
+		{
+			key: 'actions',
+			header: t('table.actions'),
+			cell: (row) => {
+				const form = row.raw;
+
+				return (
+					<ActionButtons
+						row={form}
+						gap="gap-1"
+						actions={[
+							{
+								icon: <FiEye />,
+								tooltip: t('actions.view'),
+								variant: 'slate',
+								size: 'sm',
+								onClick: r => openDetailsModal(r),
+							},
+							{
+								icon: <LinkIcon />,
+								tooltip: t('actions.copy_link'),
+								variant: 'blue',
+								size: 'sm',
+								onClick: r => copyLink(r.id),
+							},
+							{
+								icon: <Files />,
+								tooltip: t('actions.duplicate'),
+								variant: 'purple',
+								size: 'sm',
+								onClick: r => handleDuplicateForm(r),
+							},
+							{
+								icon: <PencilLine />,
+								tooltip: t('actions.edit'),
+								variant: 'amber',
+								size: 'sm',
+								hidden: !canEdit(form),
+								onClick: r => openEditFormModal(r, true),
+							},
+							{
+								icon: <LucideTrash2 />,
+								tooltip: t('actions.delete'),
+								variant: 'red',
+								size: 'sm',
+								hidden: !canEdit(form),
+								onClick: r => {
+									setDeletingId(r.id);
+									setShowDeleteModal(true);
+								},
+							},
+						]}
+					/>
+				);
+			},
+		},
+	];
+
 	// ─────────────────────────────────────────────────────────────────
 	return (
 		<div className="min-h-screen pb-20">
@@ -772,357 +900,23 @@ export default function FormsManagementPage() {
 			/>
 
 			<div className="mt-8">
-				{isLoading ? (
-					/* ── Skeleton ── */
-					<div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-						<div className="lg:col-span-4">
-							<Card className="p-4 space-y-3">
-								{Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
-							</Card>
-						</div>
-						<div className="lg:col-span-8">
-							<Card className="p-6 space-y-3">
-								<div className="h-10 w-2/3 animate-pulse rounded-lg bg-slate-100" />
-								{Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)}
-							</Card>
-						</div>
-					</div>
-				) : (
-					<div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-
-						{/* ══════════════════════════════════════════
-                LEFT SIDEBAR
-            ══════════════════════════════════════════ */}
-						<aside className="lg:col-span-4">
-							<div className="sticky top-6">
-								<Card glow accent>
-									{/* Sidebar header */}
-									<div className="border-b border-[color:var(--color-primary-100)] px-5 pb-4 pt-5">
-										<div className="mb-4 flex items-center justify-between">
-											<div className="flex items-center gap-3">
-												<IconBox active size="md">
-													<Database className="h-5 w-5" />
-												</IconBox>
-												<div>
-													<p className="text-sm font-bold leading-tight text-slate-900">{t('header.title')}</p>
-													<p className="mt-0.5 text-xs font-medium text-slate-400">
-														{forms.length} {t('labels.forms')}
-													</p>
-												</div>
-											</div>
-
-											{/* Count pill */}
-											<span
-												className="rounded-full px-2.5 py-1 text-xs font-bold"
-												style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-700)' }}
-											>
-												{filtered.length}/{forms.length}
-											</span>
-										</div>
-
-										{/* Search */}
-										<div className="relative">
-											<FiSearch
-												className="pointer-events-none absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 h-3.5 w-3.5"
-												style={{ color: 'var(--color-primary-400)' }}
-											/>
-											<input
-												type="text"
-												value={query}
-												onChange={e => setQuery(e.target.value)}
-												placeholder={t('labels.search', { default: 'Search forms…' })}
-												className="h-9 w-full rounded-lg border bg-white text-sm font-medium outline-none transition-all ltr:pl-9 rtl:pr-9 ltr:pr-3 rtl:pl-3 placeholder:text-slate-400 focus:ring-2 focus:ring-[color:var(--color-primary-200)]"
-												style={{ borderColor: 'var(--color-primary-200)', color: 'var(--color-primary-900)' }}
-											/>
-										</div>
-									</div>
-
-									{/* List */}
-									{filtered.length === 0 ? (
-										<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-5 py-14 text-center">
-											<IconBox size="lg" className="mx-auto mb-3">
-												<FiFileText className="h-6 w-6" style={{ color: 'var(--color-primary-400)' }} />
-											</IconBox>
-											<p className="text-sm font-semibold text-slate-700">{t('empty.title')}</p>
-											<p className="mt-1 text-xs text-slate-400">{t('empty.subtitle')}</p>
-										</motion.div>
-									) : (
-										<div className="max-h-[calc(100vh-280px)] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200">
-											<ul className="space-y-1.5 p-2.5">
-												<AnimatePresence mode="popLayout">
-													{filtered.map((form, index) => {
-														const isActive = selectedForm?.id === form.id;
-														return (
-															<motion.li
-																key={form.id}
-																initial={{ opacity: 0, x: -10 }}
-																animate={{ opacity: 1, x: 0 }}
-																exit={{ opacity: 0, x: 10 }}
-																transition={{ delay: index * 0.035 }}
-															>
-																<div
-																	className="overflow-hidden rounded-lg border transition-all group cursor-pointer"
-																	style={{
-																		borderColor: isActive ? 'var(--color-primary-300)' : 'transparent',
-																		background: isActive
-																			? 'linear-gradient(135deg, var(--color-primary-50), white)'
-																			: 'transparent',
-																	}}
-																>
-																	{/* Main row */}
-																	<motion.button
-																		type="button"
-																		onClick={() => setSelectedForm(form)}
-																		whileHover={{ x: 2 }}
-																		className="w-full px-3 py-3 text-left"
-																	>
-																		<div className="flex items-center gap-2.5">
-																			<div
-																				className="h-8 w-8 flex-shrink-0 grid place-items-center rounded-lg transition-colors"
-																				style={{
-																					background: isActive
-																						? 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))'
-																						: 'var(--color-primary-100)',
-																				}}
-																			>
-																				<FiFileText
-																					className="h-4 w-4"
-																					style={{ color: isActive ? 'white' : 'var(--color-primary-500)' }}
-																				/>
-																			</div>
-
-																			<div className="min-w-0 flex flex-col gap-2 flex-1">
-																				<MultiLangText
-																					className="block rtl:text-right ltr:text-left truncate text-sm font-semibold"
-																					style={{ color: isActive ? 'var(--color-primary-900)' : '#1e293b' }}
-																				>
-																					{form.title}
-																				</MultiLangText>
-
-																				<ActionButtons
-																					row={form}
-																					gap="gap-1"
-																					actions={[
-																						{
-																							icon: <LinkIcon />,
-																							tooltip: t('actions.copy_link'),
-																							variant: 'blue',
-																							size: 'sm',
-																							onClick: row => copyLink(row.id),
-																						},
-																						{
-																							icon: <Files />,
-																							tooltip: t('actions.duplicate'),
-																							variant: 'purple',
-																							size: 'sm',
-																							onClick: row => handleDuplicateForm(row),
-																						},
-																						{
-																							icon: <PencilLine />,
-																							tooltip: t('actions.edit'),
-																							variant: 'amber',
-																							size: 'sm',
-																							hidden: !canEdit(form),
-																							onClick: row => openEditFormModal(row, true),
-																						},
-																						{
-																							icon: <LucideTrash2 />,
-																							tooltip: t('actions.delete'),
-																							variant: 'red',
-																							size: 'sm',
-																							hidden: !canEdit(form),
-																							onClick: row => {
-																								setDeletingId(row.id);
-																								setShowDeleteModal(true);
-																							},
-																						},
-																					]}
-																				/>
-																			</div>
-																			<div className="mt-0.5 flex items-center gap-1.5">
-																				<span className="text-[11px] font-medium text-slate-400">
-																					{form.fields?.length ?? 0} {t('labels.fields')}
-																				</span>
-																				{form.adminId === user?.id
-																					? <Badge variant="success">own</Badge>
-																					: <Badge variant="warning">shared</Badge>}
-																			</div>
-																		</div>
-																	</motion.button>
-																</div>
-															</motion.li>
-														);
-													})}
-												</AnimatePresence>
-											</ul>
-										</div>
-									)}
-								</Card>
-							</div>
-						</aside>
-
-						{/* ══════════════════════════════════════════
-                RIGHT PANEL
-            ══════════════════════════════════════════ */}
-						<section className="lg:col-span-8">
-							<AnimatePresence mode="wait">
-								{!selectedForm ? (
-									/* ── Empty state ── */
-									<motion.div
-										key="empty"
-										initial={{ opacity: 0, scale: 0.98 }}
-										animate={{ opacity: 1, scale: 1 }}
-										exit={{ opacity: 0, scale: 0.98 }}
-									>
-										<Card className="min-h-[520px] flex items-center justify-center p-12 text-center">
-											<div>
-												<motion.div
-													animate={{ y: [0, -7, 0] }}
-													transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-													className="mx-auto mb-5 inline-block"
-												>
-													<IconBox active size="xl">
-														<Sparkles className="h-7 w-7" />
-													</IconBox>
-												</motion.div>
-												<p className="text-lg font-bold text-slate-800">{t('empty.select_hint')}</p>
-												<p className="mt-1.5 text-sm text-slate-400">{t('empty.select_hint_sub')}</p>
-											</div>
-										</Card>
-									</motion.div>
-								) : (
-									/* ── Form detail ── */
-									<motion.div
-										key={selectedForm.id}
-										initial={{ opacity: 0, y: 8 }}
-										animate={{ opacity: 1, y: 0 }}
-										exit={{ opacity: 0, y: -8 }}
-										transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-									>
-										<Card glow accent>
-											{/* Detail header */}
-											<div className="border-b border-[color:var(--color-primary-100)] px-6 py-5">
-												<div className="mb-4 flex items-start justify-between gap-4">
-													<div className="flex min-w-0 flex-1 items-start gap-4 pt-0.5">
-														<IconBox active size="lg">
-															<FiFileText className="h-5 w-5" />
-														</IconBox>
-														<div className="min-w-0 flex-1">
-															<MultiLangText
-																className="mb-2 block text-2xl font-bold tracking-tight rtl:text-right"
-																style={{
-																	background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-																	WebkitBackgroundClip: 'text',
-																	backgroundClip: 'text',
-																	WebkitTextFillColor: 'transparent',
-																}}
-															>
-																{selectedForm.title}
-															</MultiLangText>
-															<div className="flex flex-wrap items-center gap-2">
-																<Badge variant="primary" icon="📊">
-																	{selectedForm.fields?.length || 0} {t('labels.fields')}
-																</Badge>
-																{isCoachRole && selectedForm.adminId && selectedForm.adminId !== user?.id && (
-																	<Badge variant="warning" icon="👤">{t('labels.shared_form')}</Badge>
-																)}
-															</div>
-														</div>
-													</div>
-												</div>
-
-												{/* Action bar */}
-												<div className="flex flex-wrap gap-2">
-													<ActionBtn tooltip={t('actions.copy_link')} onClick={() => copyLink(selectedForm.id)} variant="ghost">
-														<LinkIcon className="h-4 w-4" />
-														<span className="hidden sm:inline">{t('actions.copy_link')}</span>
-													</ActionBtn>
-													<ActionBtn tooltip={t('actions.duplicate')} onClick={() => handleDuplicateForm(selectedForm)} variant="ghost">
-														<Files className="h-4 w-4" />
-														<span className="hidden sm:inline">{t('actions.duplicate')}</span>
-													</ActionBtn>
-													{canEdit(selectedForm) && (
-														<>
-															<ActionBtn tooltip={t('actions.edit')} onClick={() => openEditFormModal(selectedForm, true)} variant="primary">
-																<PencilLine className="h-4 w-4" />
-																<span className="hidden sm:inline">{t('actions.edit')}</span>
-															</ActionBtn>
-															<ActionBtn
-																tooltip={t('actions.delete')}
-																onClick={() => { setDeletingId(selectedForm.id); setShowDeleteModal(true); }}
-																variant="danger"
-															>
-																<LucideTrash2 className="h-4 w-4" />
-																<span className="hidden sm:inline">{t('actions.delete')}</span>
-															</ActionBtn>
-														</>
-													)}
-												</div>
-											</div>
-
-											{/* Fields preview */}
-											<div className="p-6">
-												{selectedFormFields.length ? (
-													<div className="max-h-[calc(100vh-380px)] space-y-2 overflow-y-auto pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200">
-														<AnimatePresence mode="popLayout">
-															{selectedFormFields.map(field => {
-																const fieldIcon = FIELD_TYPE_OPTIONS.find(o => o.id === field.type)?.icon || '📝';
-																return (
-																	<motion.div
-																		key={field.id}
-																		initial={{ opacity: 0, y: 6 }}
-																		animate={{ opacity: 1, y: 0 }}
-																		exit={{ opacity: 0, scale: 0.97 }}
-																		className="flex items-start gap-3 rounded-lg border p-3.5 transition-colors hover:border-[color:var(--color-primary-200)]"
-																		style={{ borderColor: 'var(--color-primary-100)', background: 'rgba(255,255,255,0.8)' }}
-																	>
-																		<div className="flex flex-shrink-0 items-center gap-2">
-																			<span
-																				className="grid h-5 w-5 place-items-center rounded-lg text-[10px] font-bold"
-																				style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-600)' }}
-																			>
-																				{field.order ?? 1}
-																			</span>
-																			<span className="text-base leading-none">{fieldIcon}</span>
-																		</div>
-
-																		<div className="flex-1 min-w-0">
-																			<MultiLangText className="mb-1.5 text-sm font-semibold text-slate-900">
-																				{field.label}
-																			</MultiLangText>
-																			<div className="flex flex-wrap gap-1.5">
-																				<Badge variant="primary">{t(`types_map.${field.type}`)}</Badge>
-																				{field.required && <Badge variant="warning">⚠ {t('labels.required')}</Badge>}
-																				{['select', 'radio', 'checklist'].includes(field.type) &&
-																					(field.options || []).map((opt, i) => <Badge key={i} variant="primary">{opt}</Badge>)}
-																			</div>
-																		</div>
-																	</motion.div>
-																);
-															})}
-														</AnimatePresence>
-													</div>
-												) : (
-													<motion.div
-														initial={{ opacity: 0 }}
-														animate={{ opacity: 1 }}
-														className="rounded-lg border border-dashed p-16 text-center"
-														style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}
-													>
-														<IconBox size="xl" className="mx-auto mb-3">
-															<Layers className="h-7 w-7" style={{ color: 'var(--color-primary-400)' }} />
-														</IconBox>
-														<p className="text-sm font-semibold text-slate-600">{t('empty.no_fields')}</p>
-													</motion.div>
-												)}
-											</div>
-										</Card>
-									</motion.div>
-								)}
-							</AnimatePresence>
-						</section>
-					</div>
-				)}
+				<DataTable
+					columns={tableColumns}
+					data={tableRows}
+					isLoading={isLoading}
+					searchValue={query}
+					onSearchChange={setQuery}
+					onSearch={() => { }}
+					rowKey={(row) => row.id}
+					labels={{
+						searchPlaceholder: t('labels.search', { default: 'Search forms…' }),
+						emptyTitle: t('empty.title'),
+						emptySubtitle: t('empty.subtitle'),
+					}}
+					hoverable
+					striped
+					className="w-full"
+				/>
 			</div>
 
 			{/* ═══════════════════════════════════════════════
@@ -1160,6 +954,83 @@ export default function FormsManagementPage() {
 						/>
 					</div>
 				</div>
+			</Modal>
+
+			<Modal
+				open={showDetailsModal}
+				onClose={() => setShowDetailsModal(false)}
+				title={selectedForm?.title || t('header.title')}
+				maxW="max-w-4xl"
+			>
+				{selectedForm ? (
+					<div className="space-y-5">
+						<div className="flex flex-wrap items-center gap-2">
+							<Badge variant="primary" icon="📊">
+								{selectedFormFields.length} {t('labels.fields')}
+							</Badge>
+
+							{isCoachRole && selectedForm.adminId && selectedForm.adminId !== user?.id && (
+								<Badge variant="warning" icon="👤">
+									{t('labels.shared_form')}
+								</Badge>
+							)}
+						</div>
+
+						<div className="max-h-[70vh] overflow-y-auto space-y-2 pr-1">
+							{selectedFormFields.length ? (
+								selectedFormFields.map((field) => {
+									const fieldIcon = FIELD_TYPE_OPTIONS.find(o => o.id === field.type)?.icon || '📝';
+
+									return (
+										<div
+											key={field.id}
+											className="flex items-start gap-3 rounded-lg border p-3.5"
+											style={{
+												borderColor: 'var(--color-primary-100)',
+												background: 'rgba(255,255,255,0.8)',
+											}}
+										>
+											<div className="flex flex-shrink-0 items-center gap-2">
+												<span
+													className="grid h-5 w-5 place-items-center rounded-lg text-[10px] font-bold"
+													style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-600)' }}
+												>
+													{field.order ?? 1}
+												</span>
+												<span className="text-base leading-none">{fieldIcon}</span>
+											</div>
+
+											<div className="flex-1 min-w-0">
+												<MultiLangText className="mb-1.5 text-sm font-semibold text-slate-900">
+													{field.label}
+												</MultiLangText>
+
+												<div className="flex flex-wrap gap-1.5">
+													<Badge variant="primary">{t(`types_map.${field.type}`)}</Badge>
+													{field.required && <Badge variant="warning">⚠ {t('labels.required')}</Badge>}
+													{['select', 'radio', 'checklist'].includes(field.type) &&
+														(field.options || []).map((opt, i) => (
+															<Badge key={i} variant="primary">{opt}</Badge>
+														))}
+												</div>
+											</div>
+										</div>
+									);
+								})
+							) : (
+								<div
+									className="rounded-lg border border-dashed p-12 text-center"
+									style={{ borderColor: 'var(--color-primary-200)', background: 'var(--color-primary-50)' }}
+								>
+									<IconBox size="xl" className="mx-auto mb-3">
+										<Layers className="h-7 w-7" style={{ color: 'var(--color-primary-400)' }} />
+									</IconBox>
+									<p className="text-sm font-semibold text-slate-600">{t('empty.no_fields')}</p>
+								</div>
+							)}
+						</div>
+					</div>
+				) : null}
 			</Modal>
 
 			{/* ═══════════════════════════════════════════════

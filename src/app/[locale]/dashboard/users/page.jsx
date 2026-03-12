@@ -17,7 +17,6 @@ import { yupResolver } from '@hookform/resolvers/yup';
 
 import { useLocale, useTranslations } from 'next-intl';
 
-import DataTable from '@/components/dashboard/ui/DataTable';
 import api from '@/utils/axios';
 import Select from '@/components/atoms/Select';
 import ActionsMenu from '@/components/molecules/ActionsMenu';
@@ -35,6 +34,7 @@ import PhoneField from '@/components/atoms/PhoneField';
 import CaloriesStep from '@/components/pages/dashboard/users/CaloriesStep';
 import { Modal, StatCard } from '@/components/dashboard/ui/UI';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
+import DataTable, { FilterField } from '@/components/atoms/Datatable';
 
 /* ---------- helpers ---------- */
 const toTitle = s => (s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s);
@@ -517,7 +517,7 @@ function EditUserModal({ open, onClose, user, onSaved, optionsCoach }) {
 								value={field.value || ''} onChange={field.onChange}
 								error={errors.password?.message ? t(errors.password.message) : undefined} />
 						)} />
-						<div className='absolute rtl:left-2 ltr:right-2 top-[31px flex items-center gap-1'>
+						<div className='absolute rtl:left-2 ltr:right-2 top-[31px] flex items-center gap-1'>
 							<Button color='neutral' className='!min-h-[30px] !px-2 !py-1 !text-xs rounded-lg' onClick={() => setShowPassword(v => !v)} name='' icon={showPassword ? <EyeOff className='w-4 h-4' /> : <EyeIcon className='w-4 h-4' />} />
 							<Button color='neutral' className='!min-h-[30px] !px-2 !py-1 !text-xs rounded-lg' onClick={generatePassword} name='' icon={<Sparkles className='w-4 h-4' />} />
 						</div>
@@ -1049,7 +1049,7 @@ export default function UsersList() {
 	const t_ = useTranslations('users.admin');
 
 	const [page, setPage] = useState(1);
-	const [limit] = useState(10);
+	const [limit, setLimit] = useState(10);
 	const [sortBy, setSortBy] = useState('created_at');
 	const [sortOrder, setSortOrder] = useState('DESC');
 	const [myRole, setMyRole] = useState('Client');
@@ -1196,7 +1196,9 @@ export default function UsersList() {
 	}
 
 	useEffect(() => { fetchMe(); fetchStats(); }, []);
-	useEffect(() => { fetchUsers(); }, [page, sortBy, sortOrder, debounced, roleFilter, hasPlanFilter]);
+	useEffect(() => {
+		fetchUsers();
+	}, [page, limit, sortBy, sortOrder, debounced, roleFilter, hasPlanFilter]);
 
 	const deleteUser = async row => {
 		if (!confirm(t('dialogs.deleteUserConfirm', { name: row.name }))) return;
@@ -1272,38 +1274,124 @@ export default function UsersList() {
 	};
 
 	const columns = [
-		{ header: t('table.name'), accessor: 'name', cell: r => <div className='flex items-center gap-2.5'><div className='w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold' style={{ background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-secondary-500))' }}>{r.name?.[0]?.toUpperCase() || '?'}</div><span className='font-semibold text-slate-800'>{r.name}</span></div>, className: 'font-number' },
-		{ header: t('table.email'), accessor: 'email', cell: r => <span className='text-slate-500 text-sm'>{r.email}</span>, className: 'font-number' },
-		{ header: t('table.role'), accessor: 'role', cell: r => <RolePill role={r.role} />, className: 'font-number' },
-		{ header: t('table.gender'), accessor: 'gender', cell: r => <StatusPill status={r.gender} />, className: 'font-number' },
-		{ header: t('table.membership'), accessor: 'membership', cell: r => <span className='text-sm font-medium text-slate-600 capitalize'>{r.membership}</span>, className: 'font-number' },
-		{ header: t('table.exercisePlan'), accessor: 'planName', cell: r => <span className={`text-sm ${r.planName === '-' ? 'text-slate-400' : 'text-slate-700 font-medium'}`}>{r.planName}</span> },
-		{ header: t('table.mealPlan'), accessor: 'planMealName', cell: r => <span className={`text-sm ${r.planMealName === '-' ? 'text-slate-400' : 'text-slate-700 font-medium'}`}>{r.planMealName}</span> },
 		{
-			header: t('table.coach'), accessor: 'coachName',
-			cell: r => r.coachName
-				? <Badge color='violet'><Shield className='w-3 h-3' /> {r.coachName}</Badge>
-				: <span className='text-slate-400 text-sm'>—</span>,
-			className: 'font-number'
+			key: 'name',
+			header: t('table.name'),
+			cell: (r) => (
+				<div className='flex items-center gap-2.5'>
+					<div
+						className='w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold'
+						style={{
+							background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-secondary-500))'
+						}}
+					>
+						{r.name?.[0]?.toUpperCase() || '?'}
+					</div>
+					<span className='font-semibold text-slate-800'>{r.name}</span>
+				</div>
+			),
+			className: 'font-number',
 		},
-		{ header: t('table.joinDate'), accessor: 'joinDate', cell: r => <span className='text-sm text-slate-500'>{r.joinDate}</span>, className: 'font-number text-nowrap' },
-		{ header: t('table.status'), accessor: 'status', cell: r => <StatusPill status={r.status} viewerRole={myRole} />, className: 'font-number' },
 		{
-			header: t('table.daysLeft'), accessor: 'daysLeft',
-			cell: r => {
-				if (!r.subscriptionStart || !r.subscriptionEnd || r.subscriptionEnd === '-') return <span className='text-slate-400 text-sm'>—</span>;
+			key: 'email',
+			header: t('table.email'),
+			cell: (r) => <span className='text-slate-500 text-sm'>{r.email}</span>,
+			className: 'font-number',
+		},
+		{
+			key: 'role',
+			header: t('table.role'),
+			cell: (r) => <RolePill role={r.role} />,
+			className: 'font-number',
+		},
+		{
+			key: 'gender',
+			header: t('table.gender'),
+			cell: (r) => <StatusPill status={r.gender} />,
+			className: 'font-number',
+		},
+		{
+			key: 'membership',
+			header: t('table.membership'),
+			cell: (r) => (
+				<span className='text-sm font-medium text-slate-600 capitalize'>{r.membership}</span>
+			),
+			className: 'font-number',
+		},
+		{
+			key: 'planName',
+			header: t('table.exercisePlan'),
+			cell: (r) => (
+				<span className={`text-sm ${r.planName === '-' ? 'text-slate-400' : 'text-slate-700 font-medium'}`}>
+					{r.planName}
+				</span>
+			),
+		},
+		{
+			key: 'planMealName',
+			header: t('table.mealPlan'),
+			cell: (r) => (
+				<span className={`text-sm ${r.planMealName === '-' ? 'text-slate-400' : 'text-slate-700 font-medium'}`}>
+					{r.planMealName}
+				</span>
+			),
+		},
+		{
+			key: 'coachName',
+			header: t('table.coach'),
+			cell: (r) =>
+				r.coachName ? (
+					<Badge color='violet'>
+						<Shield className='w-3 h-3' /> {r.coachName}
+					</Badge>
+				) : (
+					<span className='text-slate-400 text-sm'>—</span>
+				),
+			className: 'font-number',
+		},
+		{
+			key: 'joinDate',
+			header: t('table.joinDate'),
+			cell: (r) => <span className='text-sm text-slate-500'>{r.joinDate}</span>,
+			className: 'font-number text-nowrap',
+		},
+		{
+			key: 'status',
+			header: t('table.status'),
+			cell: (r) => <StatusPill status={r.status} viewerRole={myRole} />,
+			className: 'font-number',
+		},
+		{
+			key: 'daysLeft',
+			header: t('table.daysLeft'),
+			cell: (r) => {
+				if (!r.subscriptionStart || !r.subscriptionEnd || r.subscriptionEnd === '-') {
+					return <span className='text-slate-400 text-sm'>—</span>;
+				}
+
 				const today = new Date();
 				const end = new Date(r.subscriptionEnd);
 				const diff = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
-				if (diff < 0) return <span className='text-red-500 font-semibold text-sm'>{t('common.expired')}</span>;
+
+				if (diff < 0) {
+					return <span className='text-red-500 font-semibold text-sm'>{t('common.expired')}</span>;
+				}
+
 				return (
-					<span className={`font-semibold text-sm ${diff <= 3 ? 'text-red-500' : diff <= 7 ? 'text-orange-500' : 'text-emerald-600'}`}>
+					<span
+						className={`font-semibold text-sm ${diff <= 3 ? 'text-red-500' : diff <= 7 ? 'text-orange-500' : 'text-emerald-600'
+							}`}
+					>
 						{diff || '0'} {t('common.days')}
 					</span>
 				);
-			}
+			},
 		},
-		{ header: t('table.actions'), accessor: '_actions', cell: r => <ActionsMenu options={buildRowActions(r)} align='right' /> },
+		{
+			key: 'actions',
+			header: t('table.actions'),
+			cell: (r) => <ActionsMenu options={buildRowActions(r)} align='right' />,
+		},
 	];
 
 	const toggleSort = field => {
@@ -1335,6 +1423,38 @@ export default function UsersList() {
 
 	const viewerRole = String(user?.role || myRole || '').toLowerCase();
 
+	const FILTER_PLAN_OPTIONS = [
+		{ id: 'All', name: t('filters.allPlans') || 'All plans' },
+		{ id: 'With plan', name: t('filters.withPlan') || 'With plan' },
+		{ id: 'No plan', name: t('filters.noPlan') || 'No plan' },
+	];
+
+	const tableFilters = (
+		<>
+			<FilterField label={t('filters.role') || 'Role'}>
+				<Select
+					searchable={false}
+					clearable={false}
+					placeholder={t('filters.role')}
+					options={toSelectOptions(FILTER_ROLE_OPTIONS)}
+					value={roleFilter}
+					onChange={(id) => setRoleFilter(id)}
+				/>
+			</FilterField>
+
+			<FilterField label={t('filters.plan') || 'Plan'}>
+				<Select
+					searchable={false}
+					clearable={false}
+					placeholder={t('filters.plan') || 'Plan'}
+					options={toSelectOptions(FILTER_PLAN_OPTIONS)}
+					value={hasPlanFilter}
+					onChange={(id) => setHasPlanFilter(id)}
+				/>
+			</FilterField>
+		</>
+	);
+
 	return (
 		<div className='space-y-6'>
 
@@ -1356,64 +1476,7 @@ export default function UsersList() {
 				)}
 			</GradientStatsHeader>
 
-			{/* ===== FILTERS BAR ===== */}
-			<div className='flex items-center gap-2.5 mt-8 flex-wrap'>
-				{/* Search */}
-				<div className='flex-1'>
-					<div className='relative w-full md:w-64'>
-						<svg className='absolute ltr:left-3 rtl:right-3 z-10 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none' viewBox='0 0 24 24' fill='none'>
-							<path d='M21 21l-4.3-4.3M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' />
-						</svg>
-						<input
-							value={searchText}
-							onChange={e => { setSearchText(e.target.value); setPage(1); }}
-							placeholder={t('placeholders.search')}
-							className='h-[42px] w-full ltr:pl-9 rtl:pr-9 rounded-lg bg-white text-slate-800 border border-slate-200 font-medium text-sm shadow-sm focus:outline-none transition-all duration-200'
-							style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
-							onFocus={e => { e.target.style.borderColor = 'var(--color-primary-400)'; e.target.style.boxShadow = '0 0 0 3px color-mix(in srgb, var(--color-primary-500) 15%, transparent)'; }}
-							onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)'; }}
-						/>
-					</div>
-				</div>
 
-				{/* Role filter */}
-				<Select
-					searchable={false} clearable={false}
-					className='!max-w-[180px] !w-full'
-					placeholder={t('filters.role')}
-					options={toSelectOptions(FILTER_ROLE_OPTIONS)}
-					value={roleFilter}
-					onChange={id => { setRoleFilter(id); setPage(1); }}
-				/>
-
-				{/* Sort button */}
-				<button
-					onClick={() => toggleSort('created_at')}
-					className='bg-white inline-flex items-center h-[42px] gap-2 px-4 py-2 rounded-lg border border-slate-200 font-semibold text-sm text-slate-600 shadow-sm transition-all duration-200 hover:shadow-md'
-					style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
-					onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-primary-400)'; }}
-					onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; }}
-				>
-					<Clock size={15} className='text-slate-400' />
-					<span>{t('filters.newest')}</span>
-					{sortBy === 'created_at' ? (sortOrder === 'ASC' ? <ChevronUp className='w-4 h-4 text-slate-400' /> : <ChevronDown className='w-4 h-4 text-slate-400' />) : null}
-				</button>
-
-				{/* Pending review button (admin only) */}
-				{viewerRole === 'admin' && (
-					<button
-						type='button'
-						onClick={fetchPendingForReview}
-						className='inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 text-sm font-semibold shadow-sm hover:bg-amber-100 transition-colors'
-					>
-						<BadgeCheck className='w-4 h-4' />
-						<span>{t_('stats.pending') || 'Pending accounts'}</span>
-						<span className='inline-flex items-center justify-center rounded-full bg-white px-2 py-0.5 text-xs font-bold border border-amber-200'>
-							{stats.pendingUsers ?? 0}
-						</span>
-					</button>
-				)}
-			</div>
 
 			{/* ===== TABLE ===== */}
 			<div className='space-y-3'>
@@ -1424,9 +1487,43 @@ export default function UsersList() {
 				)}
 				<div className='overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm' style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
 					<DataTable
-						columns={columns} data={rows} loading={loading} itemsPerPage={limit}
-						pagination selectable={false} serverPagination page={page}
-						onPageChange={setPage} totalRows={total}
+						columns={columns}
+						data={rows}
+						isLoading={loading}
+						title={t('header.title')}
+						subtitle={t('header.subtitle')}
+						searchValue={searchText}
+						onSearchChange={(value) => {
+							setSearchText(value);
+							setPage(1);
+						}}
+						onSearch={() => setPage(1)}
+						filters={tableFilters}
+						hasActiveFilters={roleFilter !== 'All' || hasPlanFilter !== 'All'}
+						onApplyFilters={() => {
+							setPage(1);
+						}}
+						labels={{
+							searchPlaceholder: t('placeholders.search'),
+							filter: t('common.filters'),
+							apply: t('common.apply'),
+							emptyTitle: t('common.noResults'),
+							emptySubtitle: t('common.tryAdjusting'),
+							preview: t('common.preview'),
+						}}
+						pagination={{
+							current_page: page,
+							per_page: limit,
+							total_records: total,
+						}}
+						onPageChange={({ page: nextPage, per_page }) => {
+							const nextLimit = Number(per_page ?? limit);
+							setLimit(nextLimit);
+							setPage(Number(nextPage ?? 1));
+						}}
+						perPageOptions={[10, 20, 30, 50]}
+						striped
+						hoverable
 					/>
 				</div>
 			</div>
