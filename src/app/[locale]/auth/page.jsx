@@ -129,12 +129,12 @@ const PhoneInputField = React.memo(({
 								: {}
 					}
 					className={[
-						"w-full rounded-2xl border border-white/[0.09] bg-white/[0.045] py-4",
+						"w-full  rounded-2xl border border-white/[0.09] bg-white/[0.045] py-4",
 						"!text-base font-medium text-white outline-none",
 						"placeholder:text-white/20 transition-all duration-200",
 						"ltr:pl-[46px] rtl:pr-[46px] ltr:pr-4 rtl:pl-4",
 						"hover:border-white/[0.16] hover:bg-white/[0.07]",
-					].join(" ")}
+					].join(" ")}  
 				/>
 				{suffix && (
 					<span className="absolute inset-y-0 ltr:right-0 rtl:left-0 flex items-center ltr:pr-2 rtl:pl-2">
@@ -227,7 +227,7 @@ function PhoneLoginScreen({ onLoggedIn }) {
 	const ArrowIcon = isRtl ? ArrowLeft : ArrowRight;
 
 	return (
-		<div className="relative mx-auto flex-shrink-0" style={{ width: "360px" }}>
+		<div className="relative mx-auto flex-shrink-0 w-full md:w-[360px] "  >
 
 			{/* ── Glow halos beneath phone ── */}
 			<div
@@ -239,13 +239,13 @@ function PhoneLoginScreen({ onLoggedIn }) {
 				style={{ width: "200px", height: "36px", background: "var(--color-secondary-600)", opacity: 0.26 }}
 			/>
 
-			<div className="absolute ltr:-left-[3px] rtl:-right-[3px] rounded-l-sm bg-white/[0.12]" style={{ top: "108px", width: "3px", height: "34px" }} />
-			<div className="absolute ltr:-left-[3px] rtl:-right-[3px] rounded-l-sm bg-white/[0.12]" style={{ top: "150px", width: "3px", height: "34px" }} />
-			<div className="absolute ltr:-right-[3px] rtl:-left-[3px] rounded-r-sm bg-white/[0.12]" style={{ top: "126px", width: "3px", height: "58px" }} />
+			<div className="max-md:!hidden absolute ltr:-left-[3px] rtl:-right-[3px] rounded-l-sm bg-white/[0.12]" style={{ top: "108px", width: "3px", height: "34px" }} />
+			<div className="max-md:!hidden absolute ltr:-left-[3px] rtl:-right-[3px] rounded-l-sm bg-white/[0.12]" style={{ top: "150px", width: "3px", height: "34px" }} />
+			<div className="max-md:!hidden absolute ltr:-right-[3px] rtl:-left-[3px] rounded-r-sm bg-white/[0.12]" style={{ top: "126px", width: "3px", height: "58px" }} />
 
 			{/* ── Phone outer shell ── */}
 			<div
-				className="relative rounded-[48px] p-[3px]"
+				className="relative rounded-[48px] p-[3px] max-md:!shadow-none max-md:!bg-none"
 				style={{
 					background: [
 						"linear-gradient(145deg,",
@@ -263,11 +263,8 @@ function PhoneLoginScreen({ onLoggedIn }) {
 				}}
 			>
 				{/* ── Phone bezel ── */}
-				<div className="relative overflow-hidden rounded-[46px]" style={{ background: "#07050f" }}>
-
-					{/* ════════════════════════════════
-              HERO — gym photo
-          ════════════════════════════════ */}
+				<div className="relative overflow-hidden max-md:!bg-none md:rounded-[46px]" style={{ background: "#07050f" }}>
+ 
 					<div className="relative w-full overflow-hidden" style={{ height: "280px" }}>
 
 						{/* Photo */}
@@ -279,11 +276,10 @@ function PhoneLoginScreen({ onLoggedIn }) {
 						/>
 
 						{/* Overlay 1 — dark tint */}
-						<div className="absolute inset-0" style={{ background: "rgba(4,2,12,0.48)" }} />
-
-						{/* Overlay 2 — branded color wash top-left */}
+						<div className="absolute inset-0 " style={{ background: "rgba(4,2,12,0.48)" }} />
+ 
 						<div
-							className="absolute inset-0"
+							className="absolute max-md:!hidden inset-0"
 							style={{
 								background: "linear-gradient(150deg, color-mix(in srgb, var(--color-primary-900) 60%, transparent) 0%, transparent 55%)",
 							}}
@@ -291,7 +287,7 @@ function PhoneLoginScreen({ onLoggedIn }) {
 
 						{/* Overlay 3 — bottom fade into form */}
 						<div
-							className="absolute inset-x-0 bottom-0"
+							className="absolute max-md:!hidden inset-x-0 bottom-0"
 							style={{
 								height: "62%",
 								background: "linear-gradient(to top, #0d0b1a 0%, #0d0b1a 16%, rgba(13,11,26,0.82) 48%, transparent 100%)",
@@ -300,12 +296,12 @@ function PhoneLoginScreen({ onLoggedIn }) {
 
 						{/* Overlay 4 — radial vignette */}
 						<div
-							className="absolute inset-0"
+							className="max-md:!hidden absolute inset-0"
 							style={{ background: "radial-gradient(ellipse at center, transparent 38%, rgba(0,0,0,0.52) 100%)" }}
 						/>
 
 						{/* Status bar */}
-						<div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-7 pt-4">
+						<div className="max-md:!hidden absolute inset-x-0 top-0 z-20 flex items-center justify-between px-7 pt-4">
 							<span className="text-[13px] font-bold text-white/70">{time}</span>
 							<div className="flex h-7 w-28 items-center justify-center rounded-full" style={{ background: "#000" }}>
 								<div className="h-[9px] w-[9px] rounded-full" style={{ background: "#111", border: "1px solid rgba(255,255,255,0.1)" }} />
@@ -341,7 +337,7 @@ function PhoneLoginScreen({ onLoggedIn }) {
 
 						{/* Curved wave divider */}
 						<div className="absolute inset-x-0 bottom-0 z-10">
-							<svg viewBox="0 0 360 52" width="100%" height="52" preserveAspectRatio="none">
+							<svg className="max-md:!fill-transparent" viewBox="0 0 360 52" width="100%" height="52" preserveAspectRatio="none">
 								<path d="M0,52 L0,24 C60,5 120,0 180,15 C240,30 300,32 360,12 L360,52 Z" fill="#0d0b1a" />
 							</svg>
 						</div>
@@ -350,7 +346,7 @@ function PhoneLoginScreen({ onLoggedIn }) {
 					{/* ════════════════════════════════
               FORM PANEL
           ════════════════════════════════ */}
-					<div className="relative flex flex-col px-6 pb-8 pt-1" style={{ background: "#0d0b1a" }}>
+					<div className="relative flex flex-col px-6 pb-8 pt-1 max-md:!bg-transparent" style={{ background: "#0d0b1a" }}>
 
 						{/* Shimmer line */}
 						<div
@@ -575,7 +571,7 @@ export default function AuthPage() {
 						style={{ filter: "blur(2px) brightness(0.15) saturate(0.55)" }}
 					/>
 					<div
-						className="absolute inset-0"
+						className="max-md:!hidden absolute inset-0"
 						style={{
 							background: [
 								"radial-gradient(ellipse 70% 55% at 50% 0%, color-mix(in srgb, var(--color-primary-800) 48%, transparent) 0%, transparent 72%)",
@@ -585,7 +581,7 @@ export default function AuthPage() {
 						}}
 					/>
 					<div
-						className="absolute inset-0 opacity-[0.016]"
+						className="max-md:!hidden absolute inset-0 opacity-[0.016]"
 						style={{
 							backgroundImage: "radial-gradient(rgba(255,255,255,0.85) 1px, transparent 1px)",
 							backgroundSize: "22px 22px",

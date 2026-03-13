@@ -72,6 +72,7 @@ const PUBLIC_PREFIXES = [
   '/thank-you',
   '/workspace',
   '/money',
+  '/presentation',
   '/dashboard/recipes',
   '/dashboard/my/recipes',
   '/', 

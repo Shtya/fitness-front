@@ -405,7 +405,7 @@ export default function ClientMealPlanPage() {
 	};
 
 	return (
-		<div className="w-[calc(100%+14px)] rtl:mr-[-7px] ltr:ml-[-7px] mt-[-7px] min-h-screen flex  overflow-x-hidden flex-col ">
+		<div className="  min-h-screen flex  overflow-x-hidden flex-col ">
 
 
 			<div className="  rounded-lg relative overflow-hidden bg-gradient-to-br from-[var(--color-primary-800)] via-[var(--color-primary-700)] to-[var(--color-secondary-600)]">

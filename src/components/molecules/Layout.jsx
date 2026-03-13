@@ -162,6 +162,7 @@ export default function Layout({ children }) {
 		pathname.startsWith('/workouts/plans') ||
 		pathname.startsWith('/auth') ||
 		pathname.startsWith('/form') ||
+		pathname.startsWith('/presentation') ||
 		pathname.startsWith('/thank-you') ||
 		pathname.startsWith('/site') ||
 		pathname === '/';

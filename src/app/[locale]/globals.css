@@ -200,6 +200,12 @@ body {
 [dir='rtl'] body * {
   font-family: var(--font-arabic);
 }
+
+.presentation *{
+  font-family: var(--font-arabic) !important;
+}
+
+
 .font-ar {
   font-family: var(--font-arabic) !important;
 }

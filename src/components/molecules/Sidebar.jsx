@@ -69,6 +69,9 @@ function isPathActive(pathname, href, searchParams) {
 
 	const [hrefPath, hrefQuery] = href.split('?');
 
+
+	console.log(pathname , hrefPath);
+
 	if (pathname === hrefPath) {
 		if (!hrefQuery) return true;
 

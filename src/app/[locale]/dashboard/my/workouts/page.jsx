@@ -1434,7 +1434,7 @@ export default function MyWorkoutsPage() {
 	})();
 
 	return (
-		<div className=" w-[calc(100%+18px)] ltr:ml-[-9px] !mt-[-9px] rtl:mr-[-9px] space-y-2  bg-slate-50">
+		<div className="   space-y-2  bg-slate-50">
 			<audio ref={audioRef} src={DEFAULT_SOUNDS[2]} preload="auto" />
 			<NotesModal open={notesOpen} onClose={() => setNotesOpen(false)} title={plan?.name} notes={plan?.notes || []} t={t} />
 
@@ -1460,7 +1460,7 @@ export default function MyWorkoutsPage() {
 			/>
 
 			{/* ── MAIN CONTENT ── */}
-			<div className="lg:grid lg:grid-cols-[1fr_300px] lg:gap-6 lg:p-6 lg:items-start">
+			<div className="lg:grid lg:grid-cols-[1fr_300px] lg:gap-6 lg:pt-6 lg:items-start">
 
 				{/* ── LEFT / MAIN ── */}
 				<div className="space-y-0 lg:space-y-4">
@@ -1476,7 +1476,7 @@ export default function MyWorkoutsPage() {
 						<>
 							{/* Section tabs */}
 							{sectionTabs.length > 1 && (
-								<div className="px-4 pt-4 pb-0 lg:px-0 lg:pt-0">
+								<div className=" pt-4 pb-0 lg:px-0 lg:pt-0">
 									<SectionTabs tabs={sectionTabs} active={activeSection} onChange={setActiveSection} />
 								</div>
 							)}
@@ -1485,7 +1485,7 @@ export default function MyWorkoutsPage() {
 
 
 							{/* Media card */}
-							<div className="mx-3 lg:mx-0 pt-3 pb-1">
+							<div className="  pt-3 pb-1">
 								<div className="rounded-lg border border-[var(--color-primary-100)] bg-white overflow-hidden shadow-sm">
 									{/* Image / Video */}
 									<div className="relative aspect-video bg-slate-50">
@@ -1583,7 +1583,7 @@ export default function MyWorkoutsPage() {
 
 
 							{/* Rest timer / Cardio timer */}
-							<div className="px-3 lg:px-0">
+							<div className=" ">
 								{isCardio ? (
 									<CardioTimerCard durationSeconds={currentExercise?.durationSeconds} note={currentExercise?.note} />
 								) : (
@@ -1598,7 +1598,7 @@ export default function MyWorkoutsPage() {
 
 							{/* Sets table */}
 							{!isCardio && (
-								<div className="px-3 pb-6 lg:px-0 lg:pb-0">
+								<div className=" pb-6 lg:pb-0">
 									<SetsTable
 										currentSets={currentSets}
 										currentExercise={currentExercise}
