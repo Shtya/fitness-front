@@ -130,7 +130,7 @@ const PhoneInputField = React.memo(({
 					}
 					className={[
 						"w-full rounded-2xl border border-white/[0.09] bg-white/[0.045] py-4",
-						"text-[13px] font-medium text-white outline-none",
+						"!text-base font-medium text-white outline-none",
 						"placeholder:text-white/20 transition-all duration-200",
 						"ltr:pl-[46px] rtl:pr-[46px] ltr:pr-4 rtl:pl-4",
 						"hover:border-white/[0.16] hover:bg-white/[0.07]",
