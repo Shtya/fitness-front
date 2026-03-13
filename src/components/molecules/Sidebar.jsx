@@ -22,10 +22,11 @@ import {
 	ReceiptJapaneseYen,
 } from 'lucide-react';
 import {
-	usePathname as useNextPathname,
+
 	useSearchParams,
 	useRouter as useNextRouter
 } from 'next/navigation';
+import { usePathname as useNextPathname, } from "@/i18n/navigation"
 import { useUser } from '@/hooks/useUser';
 import { FaInbox, FaUsers, FaWpforms } from 'react-icons/fa';
 import { useTranslations } from 'next-intl';
@@ -158,7 +159,7 @@ export const NAV = [
 			{ nameKey: 'reports', href: '/dashboard/reports', icon: FileBarChart },
 		]
 	},
-	
+
 	{
 		role: 'admin',
 		sectionKey: 'sections.workspace',
@@ -265,7 +266,7 @@ export const NAV = [
 			{ nameKey: 'reports', href: '/dashboard/reports', icon: FileBarChart },
 		]
 	},
-	
+
 	{
 		role: 'coach',
 		sectionKey: 'sections.workspace',
@@ -318,16 +319,8 @@ export const NAV = [
 		role: 'super_admin',
 		sectionKey: 'sections.finance',
 		items: [
-			{
-				nameKey: 'billing',
-				icon: Wallet,
-				expand: false,
-				children: [
-					{ nameKey: 'analytics', href: '/dashboard/billing/analytics', icon: TrendingUp },
-					{ nameKey: 'withdrawalApprovals', href: '/dashboard/billing/withdrawal-approvals', icon: CreditCard },
-					{ nameKey: 'allWallets', href: '/dashboard/billing/all-wallets', icon: Users },
-				]
-			}
+			{ nameKey: 'billing', href: '/dashboard/billing', icon: Wallet },
+
 		]
 	},
 	{
@@ -337,7 +330,7 @@ export const NAV = [
 			{ nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo },
 			{ nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays },
 		]
-	}, 
+	},
 ]
 
 /* ─── useUnreadChats ─────────────────────────────────────────── */
@@ -1899,7 +1892,7 @@ export default function Sidebar({
 				<div style={{ flexShrink: 0, marginTop: 10 }}>
 					<UserProfileCard user={user} collapsed={collapsed} setCollapsed={setCollapsed} />
 				</div>
- 
+
 
 				<LayoutGroup id="sidebar-desktop">
 					<div style={{ flex: 1, overflow: 'hidden', padding: '4px 0' }}>

@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Trophy,
 } from "lucide-react";
+import SectionHeader from "./SectionHeader";
 
 const AVATAR_GRADIENTS = [
   "from-[var(--color-primary-500)] to-[var(--color-secondary-600)]",
@@ -118,31 +119,8 @@ export default function Testimonials() {
       </div>
 
       <div className="relative z-10 mx-auto max-w-[1440px] px-6 lg:px-16">
-        <motion.div
-          className="mb-14 text-center md:mb-20"
-          initial={{ opacity: 0, y: -20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <div
-            className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--color-primary-500)]/25
-            bg-[var(--color-primary-500)]/[0.08] px-5 py-2.5 backdrop-blur-sm"
-          >
-            <Heart className="h-4 w-4 animate-pulse text-red-400" />
-            <span className="font-body text-xs font-bold uppercase tracking-[0.14em] text-white/80">
-              {t("badge")}
-            </span>
-          </div>
-
-          <h2 className="font-display mb-5 px-4 text-5xl leading-tight md:text-6xl lg:text-7xl">
-            <span className="theme-gradient-text">{t("title")}</span>
-          </h2>
-
-          <p className="font-body mx-auto max-w-2xl px-4 text-base leading-relaxed text-white/50 md:text-lg">
-            {t("description")}
-          </p>
-        </motion.div>
+				<SectionHeader id="testimonials" badge={t("badge")} title={t("title")} subtitle={t("description")} />
+         
 
         <div className="mx-auto max-w-5xl">
           <div className="relative mb-8">
@@ -183,7 +161,7 @@ export default function Testimonials() {
                 }}
               >
                 <div
-                  className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-slate-800/50 p-8 shadow-[0_24px_56px_rgba(0,0,0,0.45)]
+                  className="relative  rounded-lg border border-white/[0.08] bg-slate-800/50 p-8 shadow-[0_24px_56px_rgba(0,0,0,0.45)]
                   backdrop-blur-xl sm:p-10 md:p-12"
                 >
                   <motion.div

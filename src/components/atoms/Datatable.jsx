@@ -770,7 +770,7 @@ export default function DataTable({
 						</TableHeader>
 
 						<TableBody>
-							<AnimatePresence mode="wait">
+							<AnimatePresence initial={false}>
 								{isLoading ? (
 									<TableSkeleton
 										key="skel"

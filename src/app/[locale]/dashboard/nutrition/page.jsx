@@ -44,7 +44,6 @@ import MultiLangText from '@/components/atoms/MultiLangText';
 import Button from '@/components/atoms/Button';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { PrettyPagination } from '@/components/dashboard/ui/Pagination';
 
 import {
 	Select as ShadcnSelect,
@@ -56,7 +55,6 @@ import {
 } from '@/components/ui/select';
 import ActionButtons from '@/components/atoms/Actions';
 import DataTable from '@/components/atoms/Datatable';
-import { FaAudioDescription } from 'react-icons/fa6';
 import { FaRegFileAlt } from 'react-icons/fa';
 
 const hhmmRegex = /^$|^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -296,6 +294,7 @@ export default function NutritionManagementPage() {
 	const [stats, setStats] = useState(null);
 	const [plans, setPlans] = useState([]);
 	const [listLoading, setListLoading] = useState(true);
+ 
 
 	const [addPlanOpen, setAddPlanOpen] = useState(false);
 	const [editPlan, setEditPlan] = useState(null);
@@ -349,10 +348,10 @@ export default function NutritionManagementPage() {
 		try {
 			const { data } = await api.get(user?.role == 'admin' ? '/nutrition/meal-plans' : `/nutrition/meal-plans?user_id=${user?.adminId}`, {
 				params: { search: searchText || undefined, sortBy, sortOrder, page, limit: perPage },
-			});
+			}); 
 			setPlans(data.records || []);
 			setTotal(data.total || 0);
-		} catch {
+		} catch {  
 			setPlans([]);
 			setTotal(0);
 
@@ -512,7 +511,7 @@ export default function NutritionManagementPage() {
 					{row.desc?.length > 30 ? row.desc.slice(0, 30) + "..." : row.desc}
 				</span>
 			),
-		}, 
+		},
 		{
 			key: 'createdAt',
 			header: t('table.createdAt'),

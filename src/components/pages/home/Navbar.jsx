@@ -121,9 +121,9 @@ export function LangSwitch() {
           position:relative; display:inline-flex; align-items:center;
           height:34px; border-radius:10px; padding:3px; cursor:pointer;
           background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.18);
-          transition:border-color 0.2s, box-shadow 0.2s; gap:0;
+          transition:border-color 0.2s, box-shadow 0.2s, transform 0.2s; gap:0;
         }
-        .ls-wrap:hover { border-color:rgba(99,102,241,0.4); box-shadow:0 0 14px rgba(99,102,241,0.15); }
+        .ls-wrap:hover { border-color:rgba(99,102,241,0.4); box-shadow:0 0 14px rgba(99,102,241,0.15); transform:translateY(-1px); }
         .ls-wrap:disabled { opacity:0.5; cursor:wait; }
         .ls-thumb {
           position:absolute; top:3px; bottom:3px; width:calc(50% - 3px); border-radius:7px;
@@ -139,7 +139,15 @@ export function LangSwitch() {
         .ls-spin { position:absolute; inset:0; border-radius:10px; display:flex; align-items:center; justify-content:center; z-index:10; background:rgba(8,8,20,0.55); }
         .ls-ring { width:14px; height:14px; border-radius:50%; border:2px solid rgba(99,102,241,0.25); border-top-color:var(--color-primary-400,#818cf8); animation:_sp 0.7s linear infinite; }
       `}</style>
-			<button onClick={toggle} disabled={isPending} className="ls-wrap" aria-label={isEN ? t("langSwitch.ariaToAr") : t("langSwitch.ariaToEn")}>
+			<button
+				onClick={toggle}
+				disabled={isPending}
+				className="ls-wrap"
+				aria-label={isEN ? t("langSwitch.ariaToAr") : t("langSwitch.ariaToEn")}
+				data-aos="zoom-in"
+				data-aos-delay="180"
+				data-aos-duration="650"
+			>
 				<span className="ls-thumb" style={{ left: isEN ? "3px" : "calc(50% + 0px)" }} />
 				<span className="ls-seg" style={{ color: isEN ? "#fff" : "rgba(255,255,255,0.35)" }}>
 					<span style={{ fontSize: "12px" }}>🇬🇧</span>EN
@@ -180,12 +188,26 @@ function UserDropdown({ user, onClose, isRTL }) {
 					backdropFilter: "blur(28px)",
 					boxShadow: "0 20px 60px rgba(0,0,0,0.65)",
 				}}
+				data-aos="fade-down"
+				data-aos-delay="60"
+				data-aos-duration="500"
 			>
 				{/* Accent bar */}
-				<div style={{ height: "2px", background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))" }} />
+				<div
+					style={{ height: "2px", background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))" }}
+					data-aos="slide-right"
+					data-aos-delay="90"
+					data-aos-duration="450"
+				/>
 
 				{/* User info */}
-				<div className="px-3.5 pt-3.5 pb-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+				<div
+					className="px-3.5 pt-3.5 pb-3"
+					style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+					data-aos="fade-up"
+					data-aos-delay="120"
+					data-aos-duration="500"
+				>
 					<div className="flex items-center gap-2.5">
 						<div className="relative shrink-0">
 							<div className="h-11 w-11 rounded-[11px] flex items-center justify-center text-[15px] font-black text-white"
@@ -205,8 +227,13 @@ function UserDropdown({ user, onClose, isRTL }) {
 					</div>
 
 					{user.points != null && (
-						<div className="mt-2.5 flex items-center justify-between rounded-lg px-3 py-2"
-							style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.14)" }}>
+						<div
+							className="mt-2.5 flex items-center justify-between rounded-lg px-3 py-2"
+							style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.14)" }}
+							data-aos="fade-up"
+							data-aos-delay="170"
+							data-aos-duration="500"
+						>
 							<div className="flex items-center gap-1.5">
 								<Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
 								<span className="text-[13px] font-black text-white">{user.points.toLocaleString()}</span>
@@ -224,13 +251,25 @@ function UserDropdown({ user, onClose, isRTL }) {
 
 				{/* Quick chips */}
 				{quickLinks.length > 0 && (
-					<div className="px-3 pt-2.5 pb-1">
+					<div
+						className="px-3 pt-2.5 pb-1"
+						data-aos="fade-up"
+						data-aos-delay="200"
+						data-aos-duration="500"
+					>
 						<p className="text-[9px] font-bold uppercase tracking-[0.13em] text-white/20 mb-2">{t("quickLinks.sectionLabel")}</p>
 						<div className="flex flex-wrap gap-1">
-							{quickLinks.map((l) => (
-								<Link key={l.href} href={l.href} onClick={onClose}
+							{quickLinks.map((l, index) => (
+								<Link
+									key={l.href}
+									href={l.href}
+									onClick={onClose}
 									className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] text-[10px] font-bold no-underline transition-all hover:-translate-y-px"
-									style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.18)", color: "var(--color-primary-400)" }}>
+									style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.18)", color: "var(--color-primary-400)" }}
+									data-aos="zoom-in"
+									data-aos-delay={240 + index * 50}
+									data-aos-duration="450"
+								>
 									{l.icon}{l.label}
 								</Link>
 							))}
@@ -244,9 +283,16 @@ function UserDropdown({ user, onClose, isRTL }) {
 					{[
 						{ href: getDashboardPath(user.role), icon: <LayoutDashboard className="h-[14px] w-[14px]" />, label: t("dropdown.dashboard"), accent: true },
 						{ href: "/profile", icon: <User className="h-[14px] w-[14px]" />, label: t("dropdown.myProfile"), accent: false },
-					].map((item) => (
-						<Link key={item.label} href={item.href} onClick={onClose}
-							className="ud-row group flex items-center gap-2.5 px-2.5 py-2 rounded-[10px] no-underline transition-colors hover:bg-white/[0.05]">
+					].map((item, index) => (
+						<Link
+							key={item.label}
+							href={item.href}
+							onClick={onClose}
+							className="ud-row group flex items-center gap-2.5 px-2.5 py-2 rounded-[10px] no-underline transition-colors hover:bg-white/[0.05]"
+							data-aos="fade-up"
+							data-aos-delay={280 + index * 60}
+							data-aos-duration="450"
+						>
 							<div className="h-7 w-7 rounded-[8px] flex items-center justify-center text-white shrink-0"
 								style={item.accent
 									? { background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }
@@ -264,7 +310,13 @@ function UserDropdown({ user, onClose, isRTL }) {
 				</div>
 
 				{/* Sign out */}
-				<div className="p-1.5" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+				<div
+					className="p-1.5"
+					style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}
+					data-aos="fade-up"
+					data-aos-delay="410"
+					data-aos-duration="450"
+				>
 					<button onClick={handleLogout}
 						className="group flex w-full items-center gap-2.5 px-2.5 py-2 rounded-[10px] transition-colors hover:bg-red-500/[0.09] cursor-pointer">
 						<div className="h-7 w-7 rounded-[8px] flex items-center justify-center text-red-400 group-hover:bg-red-500/18 transition-colors shrink-0"
@@ -299,7 +351,13 @@ function AvatarButton({ user, isRTL }) {
 	}, []);
 
 	return (
-		<div ref={ref} className="relative">
+		<div
+			ref={ref}
+			className="relative"
+			data-aos="zoom-in"
+			data-aos-delay="220"
+			data-aos-duration="650"
+		>
 			<button
 				onClick={() => setOpen((v) => !v)}
 				aria-label={t("dropdown.openMenu")}
@@ -349,8 +407,13 @@ function MobileDrawer({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
 
 			{/* Backdrop */}
 			{isOpen && (
-				<div onClick={onClose} className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-[3px]"
-					style={{ animation: "_bdin 0.25s ease" }} />
+				<div
+					onClick={onClose}
+					className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-[3px]"
+					style={{ animation: "_bdin 0.25s ease" }}
+					data-aos="fade-in"
+					data-aos-duration="300"
+				/>
 			)}
 
 			{/* Drawer — compact: 272px on mobile, 310px on sm+ */}
@@ -369,12 +432,26 @@ function MobileDrawer({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
 					border: isRTL ? "0 0 0 1px rgba(255,255,255,0.06)" : "0 1px 0 0 rgba(255,255,255,0.06)",
 					boxShadow: isRTL ? "-10px 0 48px rgba(0,0,0,0.7)" : "10px 0 48px rgba(0,0,0,0.7)",
 				}}
+				data-aos={isRTL ? "fade-left" : "fade-right"}
+				data-aos-duration="500"
 			>
 				{/* Top accent */}
-				<div className="h-[2px] shrink-0" style={{ background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-via), var(--color-gradient-to))" }} />
+				<div
+					className="h-[2px] shrink-0"
+					style={{ background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-via), var(--color-gradient-to))" }}
+					data-aos="slide-right"
+					data-aos-delay="50"
+					data-aos-duration="450"
+				/>
 
 				{/* Header */}
-				<div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+				<div
+					className="flex items-center justify-between px-4 py-3 shrink-0"
+					style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+					data-aos="fade-down"
+					data-aos-delay="80"
+					data-aos-duration="450"
+				>
 					<div className="flex items-center gap-2.5">
 						<div className="h-9 w-9 rounded-[10px] flex items-center justify-center shrink-0"
 							style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 4px 14px rgba(99,102,241,0.35)" }}>
@@ -394,7 +471,13 @@ function MobileDrawer({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
 
 				{/* User card */}
 				{user && (
-					<div className="px-3 py-2.5 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+					<div
+						className="px-3 py-2.5 shrink-0"
+						style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+						data-aos="fade-up"
+						data-aos-delay="120"
+						data-aos-duration="500"
+					>
 						<div className="rounded-[14px] overflow-hidden" style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.14)" }}>
 							<div className="h-[2px]" style={{ background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))" }} />
 							<div className="p-3 flex items-center gap-2.5">
@@ -427,15 +510,26 @@ function MobileDrawer({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
 
 				{/* Nav */}
 				<nav className="p-2.5 flex-1">
-
-
 					{user && (
 						<>
-							<p className="text-[8px] font-bold uppercase tracking-[0.16em] text-white/20 px-2 pb-2 pt-1">{t("mobile.sectionNav")}</p>
+							<p
+								className="text-[8px] font-bold uppercase tracking-[0.16em] text-white/20 px-2 pb-2 pt-1"
+								data-aos="fade-up"
+								data-aos-delay="150"
+								data-aos-duration="400"
+							>
+								{t("mobile.sectionNav")}
+							</p>
 							<div className="flex flex-col gap-0.5">
-								<Link href={getDashboardPath(user.role)} onClick={onClose}
+								<Link
+									href={getDashboardPath(user.role)}
+									onClick={onClose}
 									className="flex items-center gap-2.5 px-3 py-2.5 rounded-[11px] no-underline font-semibold text-[13px] transition-colors"
-									style={{ background: "rgba(99,102,241,0.09)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--color-primary-300)" }}>
+									style={{ background: "rgba(99,102,241,0.09)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--color-primary-300)" }}
+									data-aos="fade-up"
+									data-aos-delay="180"
+									data-aos-duration="450"
+								>
 									<div className="h-8 w-8 rounded-[9px] flex items-center justify-center text-white shrink-0"
 										style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
 										<LayoutDashboard className="h-[14px] w-[14px]" />
@@ -443,10 +537,17 @@ function MobileDrawer({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
 									{t("dropdown.dashboard")}
 								</Link>
 
-								{getRoleQuickLinks(user.role, t).map((link) => (
-									<Link key={link.href} href={link.href} onClick={onClose}
+								{getRoleQuickLinks(user.role, t).map((link, index) => (
+									<Link
+										key={link.href}
+										href={link.href}
+										onClick={onClose}
 										className="flex items-center gap-2.5 px-3 py-2.5 rounded-[11px] no-underline font-semibold text-[13px] transition-all hover:bg-white/[0.04]"
-										style={{ border: "1px solid rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)" }}>
+										style={{ border: "1px solid rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)" }}
+										data-aos="fade-up"
+										data-aos-delay={220 + index * 55}
+										data-aos-duration="450"
+									>
 										<div className="h-8 w-8 rounded-[9px] flex items-center justify-center shrink-0"
 											style={{ background: "rgba(99,102,241,0.08)", color: "var(--color-primary-400)" }}>
 											{link.icon}
@@ -455,11 +556,16 @@ function MobileDrawer({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
 									</Link>
 								))}
 
-								<button onClick={() => { onLogout(); onClose(); }}
+								<button
+									onClick={() => { onLogout(); onClose(); }}
 									className="flex items-center gap-2.5 px-3 py-2.5 rounded-[11px] w-full cursor-pointer font-semibold text-[13px] transition-colors"
 									style={{ border: "1px solid rgba(239,68,68,0.15)", background: "rgba(239,68,68,0.05)", color: "#f87171" }}
 									onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,0.1)"}
-									onMouseLeave={e => e.currentTarget.style.background = "rgba(239,68,68,0.05)"}>
+									onMouseLeave={e => e.currentTarget.style.background = "rgba(239,68,68,0.05)"}
+									data-aos="fade-up"
+									data-aos-delay="380"
+									data-aos-duration="450"
+								>
 									<div className="h-8 w-8 rounded-[9px] flex items-center justify-center shrink-0" style={{ background: "rgba(239,68,68,0.1)" }}>
 										<LogOut className="h-[14px] w-[14px]" />
 									</div>
@@ -471,7 +577,12 @@ function MobileDrawer({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
 				</nav>
 
 				{!user && (
-					<div className="p-3 shrink-0">
+					<div
+						className="p-3 shrink-0"
+						data-aos="fade-up"
+						data-aos-delay="180"
+						data-aos-duration="500"
+					>
 						<Link href="/auth" onClick={onClose}
 							className="flex items-center justify-center gap-2 py-3 rounded-[12px] text-white font-extrabold text-[13px] no-underline transition-all hover:-translate-y-0.5"
 							style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 4px 20px rgba(99,102,241,0.4)" }}>
@@ -522,10 +633,11 @@ export default function PowerfulNavbar() {
 	}, [mobileOpen]);
 
 	const navItems = [
-		{ label: t("nav.home"), href: "#home", icon: "🏠" },
-		{ label: t("nav.about"), href: "#about", icon: "ℹ️" },
-		{ label: t("nav.community"), href: "#community", icon: "👥" },
-		{ label: t("nav.pricing"), href: "#pricing", icon: "💰" },
+		{ label: t("nav.home"), href: "#hero", icon: "🏠" },
+		{ label: t("nav.about"), href: "#how-it-works-section", icon: "ℹ️" },
+		{ label: t("nav.community"), href: "#role-tabs-section", icon: "👥" },
+		{ label: t("nav.faqs"), href: "#faqs-section", icon: "💰" },
+		{ label: t("nav.contact"), href: "#contact-section", icon: "💰" },
 	];
 
 	const handleLogout = () => { localStorage.removeItem("user"); setUser(null); };
@@ -556,12 +668,21 @@ export default function PowerfulNavbar() {
 					backdropFilter: "blur(24px)",
 					boxShadow: scrolled ? "0 2px 30px rgba(0,0,0,0.5)" : "none",
 				}}
+				data-aos="fade-down"
+				data-aos-delay="40"
+				data-aos-duration="700"
 			>
 				<div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="flex h-[62px] sm:h-[68px] items-center justify-between gap-3">
 
 						{/* Logo */}
-						<Link href="/" className="flex items-center gap-2.5 no-underline shrink-0 group">
+						<Link
+							href="/"
+							className="flex items-center gap-2.5 no-underline shrink-0 group"
+							data-aos="fade-right"
+							data-aos-delay="80"
+							data-aos-duration="700"
+						>
 							<div className="relative">
 								<div className="logo-glow absolute inset-0 rounded-[12px] blur-[12px] pointer-events-none"
 									style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }} />
@@ -572,25 +693,41 @@ export default function PowerfulNavbar() {
 							</div>
 							<div>
 								<span className="text-[17px] sm:text-[19px] font-black text-white tracking-[-0.02em] leading-none">{t("brand.name")}</span>
-								<p className="text-[8px] font-bold uppercase tracking-[0.2em] mt-[3px]" style={{ color: "var(--color-primary-400)" }}>{t("brand.tagline")}</p>
+								{/* <p className="text-[8px] font-bold uppercase tracking-[0.2em] mt-[3px]" style={{ color: "var(--color-primary-400)" }}>{t("brand.tagline")}</p> */}
 							</div>
 						</Link>
 
 						{/* Desktop links */}
-						<div className="hidden lg:flex items-center gap-0.5">
+						<div
+							className="hidden lg:flex items-center gap-0.5"
+							data-aos="fade-down"
+							data-aos-delay="130"
+							data-aos-duration="700"
+						>
 							{navItems.map((item, i) => (
-								<a key={i} href={item.href}
+								<a
+									key={i}
+									href={item.href}
 									className="nav-lnk px-4 py-2 rounded-[10px] text-[13px] font-semibold no-underline transition-all duration-200 tracking-[0.01em]"
 									style={{ color: "rgba(255,255,255,0.5)" }}
 									onMouseEnter={e => { e.currentTarget.style.color = "rgba(255,255,255,0.9)"; e.currentTarget.style.background = "rgba(99,102,241,0.07)"; }}
-									onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; e.currentTarget.style.background = ""; }}>
+									onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; e.currentTarget.style.background = ""; }}
+									data-aos="fade-down"
+									data-aos-delay={170 + i * 70}
+									data-aos-duration="550"
+								>
 									{item.label}
 								</a>
 							))}
 						</div>
 
 						{/* Right side */}
-						<div className="flex items-center gap-2 shrink-0">
+						<div
+							className="flex items-center gap-2 shrink-0"
+							data-aos="fade-left"
+							data-aos-delay="140"
+							data-aos-duration="700"
+						>
 							<LangSwitch />
 
 							{user ? (
@@ -598,11 +735,16 @@ export default function PowerfulNavbar() {
 									<AvatarButton user={user} isRTL={isRTL} />
 								</div>
 							) : (
-								<Link href="/auth"
+								<Link
+									href="/auth"
 									className="hidden md:flex items-center gap-1.5 px-4 py-2 rounded-[11px] text-white font-bold text-[13px] no-underline transition-all duration-200 hover:-translate-y-px tracking-[0.01em]"
 									style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 2px 14px rgba(99,102,241,0.38), inset 0 1px 0 rgba(255,255,255,0.14)" }}
 									onMouseEnter={e => e.currentTarget.style.boxShadow = "0 6px 22px rgba(99,102,241,0.5), inset 0 1px 0 rgba(255,255,255,0.14)"}
-									onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 14px rgba(99,102,241,0.38), inset 0 1px 0 rgba(255,255,255,0.14)"}>
+									onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 14px rgba(99,102,241,0.38), inset 0 1px 0 rgba(255,255,255,0.14)"}
+									data-aos="zoom-in"
+									data-aos-delay="240"
+									data-aos-duration="650"
+								>
 									<Zap className="h-[13px] w-[13px] fill-white" />
 									{t("nav.joinNow")}
 								</Link>
@@ -618,6 +760,9 @@ export default function PowerfulNavbar() {
 									background: mobileOpen ? "rgba(99,102,241,0.1)" : "rgba(255,255,255,0.03)",
 									color: mobileOpen ? "var(--color-primary-300)" : "rgba(255,255,255,0.6)",
 								}}
+								data-aos="zoom-in"
+								data-aos-delay="260"
+								data-aos-duration="600"
 							>
 								<div className={`transition-transform duration-300 ${mobileOpen ? "rotate-90" : ""}`}>
 									{mobileOpen ? <X className="h-[15px] w-[15px]" strokeWidth={2.5} /> : <Menu className="h-[15px] w-[15px]" strokeWidth={2.5} />}
@@ -629,8 +774,12 @@ export default function PowerfulNavbar() {
 
 				{/* Bottom shimmer when scrolled */}
 				{scrolled && (
-					<div className="absolute bottom-0 left-0 right-0 h-px opacity-45 pointer-events-none"
-						style={{ background: "linear-gradient(90deg, transparent 0%, var(--color-gradient-from) 30%, var(--color-gradient-to) 70%, transparent 100%)" }} />
+					<div
+						className="absolute bottom-0 left-0 right-0 h-px opacity-45 pointer-events-none"
+						style={{ background: "linear-gradient(90deg, transparent 0%, var(--color-gradient-from) 30%, var(--color-gradient-to) 70%, transparent 100%)" }}
+						data-aos="fade-in"
+						data-aos-duration="350"
+					/>
 				)}
 			</nav>
 

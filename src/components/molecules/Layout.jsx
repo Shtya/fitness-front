@@ -248,6 +248,8 @@ export default function Layout({ children }) {
 	// }
 
 	// ── Main layout ─────────────────────────────────────────────────────────
+
+	console.log(pathname);
 	return (
 		<GlobalProvider>
 			<Providers>
@@ -255,30 +257,14 @@ export default function Layout({ children }) {
 					<div className="relative min-h-screen">
 						{/* Background layers */}
 						<div className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-white to-slate-50" />
-						<div
-							className="fixed inset-0 -z-10 opacity-[0.015]"
-							style={{
-								backgroundImage: `radial-gradient(circle at 2px 2px, var(--color-primary-500) 1px, transparent 0)`,
-								backgroundSize: '32px 32px',
-							}}
-						/>
-						<div
-							className="fixed top-0 right-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl"
-							style={{ background: `radial-gradient(circle, var(--color-primary-200), transparent 70%)` }}
-						/>
-						<div
-							className="fixed bottom-0 left-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl"
-							style={{ background: `radial-gradient(circle, var(--color-secondary-200), transparent 70%)` }}
-						/>
+						<div className="fixed inset-0 -z-10 opacity-[0.015]" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, var(--color-primary-500) 1px, transparent 0)`, backgroundSize: '32px 32px', }} /> 
+						<div className="fixed top-0 right-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl" style={{ background: `radial-gradient(circle, var(--color-primary-200), transparent 70%)` }} /> 
+						<div className="fixed bottom-0 left-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl" style={{ background: `radial-gradient(circle, var(--color-secondary-200), transparent 70%)` }} />
 
-						<div className="flex min-h-screen w-screen overflow-hidden">
+						<div className="flex w-screen overflow-hidden">
 							{!isAuthRoute && (
 								<div
-									className={`z-[100] duration-300 ${
-										focusMode
-											? `flex-none w-[0px] ${!sidebarOpen ? 'rtl:translate-x-[300px] ltr:translate-x-[-300px]' : 'rtl:translate-x-[84px] ltr:translate-x-[-84px]'}`
-											: ''
-									}`}
+									className={`z-[100] duration-300 `}
 								>
 									<Sidebar
 										open={sidebarOpen}
@@ -291,7 +277,7 @@ export default function Layout({ children }) {
 								</div>
 							)}
 
-							<div className="relative flex-1 min-w-0 overflow-x-hidden h-screen">
+							<div className="relative flex-1 min-w-0 overflow-x-hidden ">
 								<AnimatePresence mode="wait">
 									{!isAuthRoute && <div className="max-[1025px]:block hidden">
 										<Header onMenu={() => setSidebarOpen(!sidebarOpen)} />
@@ -301,13 +287,13 @@ export default function Layout({ children }) {
 										initial={{ opacity: 0, y: 8 }}
 										animate={{ opacity: 1, y: 0 }}
 										exit={{ opacity: 0, y: -8 }}
-										transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-										className="h-screen"
+										transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} style={{}}
+										 
 									>
 										{/* Add bottom padding when impersonating so content isn't hidden behind bar */}
 										<div
 											id="body"
-											className={`${!isAuthRoute && ` overflow-x-hidden overflow-auto p-3 md:p-4`} ${isImpersonating ? 'pb-8' : ''}`}
+											className={`${pathname !== "/" && "h-screen  "} ${!isAuthRoute && ` overflow-x-hidden overflow-auto p-3 md:p-4`} ${isImpersonating ? 'pb-8' : ''}`}
 										>
 											{children}
 										</div>

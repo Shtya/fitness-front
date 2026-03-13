@@ -365,46 +365,13 @@ function ChipSVG() {
 	);
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
-	 CONTACTLESS ICON
-──────────────────────────────────────────────────────────────────────────── */
-function ContactlessIcon() {
-	return (
-		<svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ color: "rgba(255,255,255,0.35)" }}>
-			<path d="M8.8 17.2 A6.5 6.5 0 0 1 8.8 6.8" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" opacity="0.6" />
-			<path d="M5.6 20.4 A9.6 9.6 0 0 1 5.6 3.6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" opacity="0.42" />
-			<path d="M12  14.5 A3.5 3.5 0 0 1 12  9.5" stroke="currentColor" strokeWidth="2.0" strokeLinecap="round" opacity="0.78" />
-			<circle cx="14.5" cy="12" r="1.8" fill="currentColor" opacity="0.82" />
-		</svg>
-	);
-}
 
-/* ────────────────────────────────────────────────────────────────────────────
-	 MASTERCARD LOGO
-──────────────────────────────────────────────────────────────────────────── */
-function MastercardLogo() {
-	return (
-		<div style={{ display: "flex", alignItems: "center", position: "relative", width: 46, height: 28 }}>
-			<div style={{ width: 28, height: 28, borderRadius: "50%", background: "#eb001b", opacity: 0.92, position: "absolute", left: 0 }} />
-			<div style={{ width: 28, height: 28, borderRadius: "50%", background: "#f79e1b", opacity: 0.85, position: "absolute", left: 18, mixBlendMode: "multiply" }} />
-		</div>
-	);
-}
-
-/* ────────────────────────────────────────────────────────────────────────────
-	 SPEND RATE BAR
-──────────────────────────────────────────────────────────────────────────── */
 function SpendRateBar({ spendRate }) {
 	const color = spendRate < 60 ? "#34d399" : spendRate < 80 ? "#fbbf24" : "#f87171";
 	const glow = spendRate < 60 ? "0 0 10px #34d39970" : spendRate < 80 ? "0 0 10px #fbbf2470" : "0 0 10px #f8717170";
 	return (
-		<div style={{ marginBottom: 4 }}>
-			<div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-				<span style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.22)" }}>
-					Spend Rate
-				</span>
-				<span style={{ fontSize: 10, fontWeight: 900, color, fontVariantNumeric: "tabular-nums" }}>{spendRate}%</span>
-			</div>
+		<div className='!my-[20px]'>
+
 			<div style={{ position: "relative", height: 3, width: "100%", borderRadius: 99, background: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
 				<div style={{
 					position: "absolute", inset: "0 auto 0 0",
@@ -417,35 +384,20 @@ function SpendRateBar({ spendRate }) {
 	);
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
-	 STAT ROW
-──────────────────────────────────────────────────────────────────────────── */
 function StatRow({ label, value, currency, accent }) {
 	return (
-		<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4.5px 0" }}>
+		<div className='flex-col ' style={{ display: "flex", justifyContent: "space-between", padding: "4.5px 0" }}>
 			<div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-				<span style={{
-					width: 5, height: 5, borderRadius: "50%", flexShrink: 0,
-					background: accent, boxShadow: `0 0 6px ${accent}`,
-					display: "inline-block"
-				}} />
+
 				<span style={{ fontSize: 9.5, fontWeight: 600, color: "rgba(255,255,255,0.42)", letterSpacing: "0.04em" }}>{label}</span>
 			</div>
-			<span style={{ fontSize: 12.5, fontWeight: 900, color: accent, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+			<span className='flex gap-1 items-end' style={{ fontSize: 12.5, fontWeight: 900, color: accent, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
 				{fmt(value)}
 				<span style={{ fontSize: 8, fontWeight: 600, opacity: 0.55, marginLeft: 2 }}>{currency}</span>
 			</span>
 		</div>
 	);
 }
-
-/* ────────────────────────────────────────────────────────────────────────────
-	 DIVIDER
-──────────────────────────────────────────────────────────────────────────── */
-const Divider = () => (
-	<div style={{ height: 1, margin: "7px 0", background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.09),transparent)" }} />
-);
-
 
 function CreditCardDisplay({
 	balance = 12450.8,
@@ -480,7 +432,6 @@ function CreditCardDisplay({
 		setHovered(false);
 	};
 
-	const groups = ["••••", "••••", "••••", last4];
 
 	return (
 		<div style={{ position: "relative", userSelect: "none", perspective: 1200 }}>
@@ -488,13 +439,12 @@ function CreditCardDisplay({
 				onMouseMove={handleMouseMove}
 				onMouseEnter={() => setHovered(true)}
 				onMouseLeave={handleMouseLeave}
-				className="mn-card-bg"
+				className="mn-card-bg shadow-2xl "
 				style={{
 					position: "relative",
 					width: "100%",
 					borderRadius: 22,
 					overflow: "hidden",
-					minHeight: 290,
 					cursor: "default",
 					transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(${hovered ? 1.015 : 1})`,
 					transition: hovered
@@ -581,83 +531,40 @@ function CreditCardDisplay({
 				/>
 
 				<div style={{ position: "relative", zIndex: 20, padding: "18px 22px 16px", display: "flex", flexDirection: "column" }}>
-					<div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
+					<div className='flex items-center gap-4' >
+
 						<ChipSVG />
-						<div style={{ display: "flex", alignItems: "center", gap: 9, paddingTop: 2 }}>
-							<ContactlessIcon />
-							{network === "visa" && (
+
+						<div >
+
+							<div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
 								<span
 									style={{
-										fontFamily: "'Helvetica Neue',sans-serif",
-										fontStyle: "italic",
+										fontFamily: "'SF Pro Display','Helvetica Neue',sans-serif",
+										fontSize: 34,
 										fontWeight: 900,
-										fontSize: 20,
+										letterSpacing: "-2px",
 										color: "white",
-										letterSpacing: "-0.02em",
+										textShadow: "0 2px 14px rgba(0,0,0,0.4)",
 										lineHeight: 1
 									}}
 								>
-									{t("network.visa")}
+									{fmt(balance)}
 								</span>
-							)}
-							{network === "mastercard" && <MastercardLogo />}
-							{network === "amex" && (
-								<span
-									style={{
-										fontFamily: "'Helvetica Neue',sans-serif",
-										fontWeight: 900,
-										fontSize: 11,
-										color: "rgba(255,255,255,0.85)",
-										letterSpacing: "0.06em"
-									}}
-								>
-									{t("network.amex")}
-								</span>
-							)}
+								<span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)" }}>{currency}</span>
+							</div>
 						</div>
-					</div>
 
-					<div style={{ marginBottom: 2 }}>
-						<div
-							style={{
-								fontSize: 7.5,
-								fontWeight: 800,
-								letterSpacing: "0.22em",
-								textTransform: "uppercase",
-								color: "rgba(255,255,255,0.26)",
-								marginBottom: 4
-							}}
-						>
-							{balanceMode === "month" ? t("labels.monthBalance") : t("labels.availableBalance")}
-						</div>
-						<div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-							<span
-								style={{
-									fontFamily: "'SF Pro Display','Helvetica Neue',sans-serif",
-									fontSize: 34,
-									fontWeight: 900,
-									letterSpacing: "-2px",
-									color: "white",
-									textShadow: "0 2px 14px rgba(0,0,0,0.4)",
-									lineHeight: 1
-								}}
-							>
-								{fmt(balance)}
-							</span>
-							<span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)" }}>{currency}</span>
-						</div>
 					</div>
 
 
 					{spendRate > 0 && <SpendRateBar spendRate={spendRate} />}
 
-					<Divider />
 
-					<div>
+					<div className='flex items-center gap-2 justify-between' >
 						<StatRow label={t("labels.income")} value={income} currency={currency} accent="#34d399" />
 						<StatRow label={t("labels.expenses")} value={expenses} currency={currency} accent="#f87171" />
 						<StatRow label={t("labels.commitments")} value={commitments} currency={currency} accent="#fbbf24" />
-						<div style={{ height: 1, margin: "5px 0", background: "rgba(255,255,255,0.06)" }} />
 						<StatRow label={t("labels.remaining")} value={remaining} currency={currency} accent="#a78bfa" />
 					</div>
 				</div>
@@ -1454,7 +1361,7 @@ export default function MoneyPage() {
 			<Styles />
 
 			{/* HERO */}
-			<div className="relative overflow-hidden rounded-md px-3 sm:px-5 pt-4 pb-0 mn-hero">
+			<div className="relative rounded-md px-3 sm:px-5 pt-4 pb-0 mn-hero">
 				<div className="absolute inset-0 bg-gradient-to-b from-white/8 to-transparent pointer-events-none" />
 				<div className="absolute w-64 h-64 rounded-full bg-white/[0.06] blur-[55px] -top-32 -start-16 pointer-events-none" />
 				<div className="absolute w-52 h-52 rounded-full bg-white/[0.04] blur-[45px] -bottom-16 -end-10 pointer-events-none" />

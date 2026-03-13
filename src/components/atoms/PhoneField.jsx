@@ -246,10 +246,10 @@ export default function PhoneField({
               ? { borderColor: '#e2e8f0', opacity: 0.6, cursor: 'not-allowed' }
               : { borderColor: '#cbd5e1' }
           }>
-          <PhoneIcon 
+          {!hasError && <PhoneIcon 
             className='absolute rtl:right-3 ltr:left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors' 
             style={{ color: hasError ? '#f43f5e' : '#94a3b8' }}
-          />
+          />}
           
           <input
             type='tel'

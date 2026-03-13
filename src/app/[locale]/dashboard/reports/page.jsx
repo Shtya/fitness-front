@@ -197,12 +197,25 @@ function StatBadge({ icon: Icon, value, secondary = false }) {
 /* ─────────────────────────────────────────────────────────────
 	 API  (unchanged)
 ───────────────────────────────────────────────────────────── */
-async function fetchReports({ page = 1, limit = 12, sortBy = 'created_at', sortOrder = 'DESC', filters = {} }) {
+async function fetchReports({
+	page = 1,
+	limit = 12,
+	sortBy = 'created_at',
+	sortOrder = 'DESC',
+	search = '',
+	filters = {},
+}) {
 	const { data } = await api.get('/weekly-reports', {
-		params: { page, limit, sortBy, sortOrder, filters },
+		params: { page, limit, sortBy, sortOrder, search, filters },
 		paramsSerializer: p => qs.stringify(p, { encode: true, arrayFormat: 'indices', skipNulls: true }),
 	});
-	return { items: data?.records || [], total: data?.total_records || 0, page: data?.current_page || page, limit: data?.per_page || limit };
+
+	return {
+		items: data?.records || [],
+		total: data?.total_records || 0,
+		page: data?.current_page || page,
+		limit: data?.per_page || limit,
+	};
 }
 
 async function fetchReportById(id) {
@@ -259,6 +272,14 @@ export default function ReportsUnifiedPage() {
 	const [sortOrder, setSortOrder] = useState('DESC');
 	const [reviewed, setReviewed] = useState('');
 
+
+	const [searchText, setSearchText] = useState('');
+	const [debouncedSearch, setDebouncedSearch] = useState('');
+	const [selectedUserId, setSelectedUserId] = useState('');
+	const [usersOptions, setUsersOptions] = useState([]);
+	const [usersLoading, setUsersLoading] = useState(false);
+
+
 	const [loading, setLoading] = useState(false);
 	const [err, setErr] = useState('');
 	const [reports, setReports] = useState([]);
@@ -285,36 +306,99 @@ export default function ReportsUnifiedPage() {
 
 	const normalizedFilters = useMemo(() => {
 		const f = {};
+
 		if (!user?.id) return f;
+
 		if (user?.role === 'admin') f.adminId = user.id;
-		else f.coachId = user.id;
-		if (tab === 'clients' && selectedClientId) f.userId = selectedClientId;
+		else if (user?.role === 'coach') f.coachId = user.id;
+
+		if (selectedUserId) f.userId = selectedUserId;
+
 		if (reviewed === 'false') f.isRead = false;
 		else if (reviewed === 'true') f.isRead = true;
+
 		return f;
-	}, [tab, user?.id, user?.role, selectedClientId, reviewed]);
+	}, [user?.id, user?.role, selectedUserId, reviewed]);
 
 	const loadReports = useCallback(async () => {
 		if (!isReady) return;
+
 		try {
 			setErr('');
 			setLoading(true);
-			if (tab === 'clients' && selectedClientId) {
-				const res = await fetchUserReports(selectedClientId, { page, limit, sortBy, sortOrder });
-				setReports(res.items);
-				setTotal(res.total);
-			} else {
-				const res = await fetchReports({ page, limit, sortBy, sortOrder, filters: normalizedFilters });
-				setReports(res.items);
-				setTotal(res.total);
-			}
+
+			const res = await fetchReports({
+				page,
+				limit,
+				sortBy,
+				sortOrder,
+				search: debouncedSearch,
+				filters: normalizedFilters,
+			});
+
+			setReports(res.items);
+			setTotal(res.total);
 		} catch {
 			setErr(t('reports.errors.load'));
 		} finally {
 			setLoading(false);
 		}
-	}, [isReady, tab, selectedClientId, page, limit, sortBy, sortOrder, normalizedFilters, t]);
+	}, [isReady, page, limit, sortBy, sortOrder, debouncedSearch, normalizedFilters, t]);
 
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearch(searchText.trim());
+		}, 350);
+
+		return () => clearTimeout(timer);
+	}, [searchText]);
+
+
+	const loadUsersOptions = useCallback(async () => {
+		if (!user?.id) return;
+
+		try {
+			setUsersLoading(true);
+
+			if (user.role === 'admin') {
+				const { data } = await api.get(`/auth/admin/${user.id}/clients`, {
+					params: { page: 1, limit: 200, search: '' },
+				});
+
+				const items = data?.items || [];
+				setUsersOptions(
+					items.map(item => ({
+						id: item.id,
+						label: item.name || item.email,
+					}))
+				);
+			} else if (user.role === 'coach') {
+				const { data } = await api.get(`/auth/coach/${user.id}/clients`, {
+					params: { page: 1, limit: 200, search: '' },
+				});
+
+				const items = data?.items || [];
+				setUsersOptions(
+					items.map(item => ({
+						id: item.id,
+						label: item.name || item.email,
+					}))
+				);
+			} else {
+				setUsersOptions([]);
+			}
+		} catch {
+			setUsersOptions([]);
+		} finally {
+			setUsersLoading(false);
+		}
+	}, [user?.id, user?.role]);
+
+
+	useEffect(() => {
+		if (!isReady) return;
+		loadUsersOptions();
+	}, [isReady, loadUsersOptions]);
 
 	useEffect(() => { loadReports(); }, [loadReports]);
 	useEffect(() => {
@@ -405,30 +489,33 @@ export default function ReportsUnifiedPage() {
 
 	const hasActiveFilters = useMemo(() => {
 		return (
+			!!debouncedSearch ||
 			reviewed !== '' ||
 			sortBy !== 'created_at' ||
 			sortOrder !== 'DESC' ||
-			(tab === 'clients' && !!selectedClientId)
+			!!selectedUserId
 		);
-	}, [reviewed, sortBy, sortOrder, tab, selectedClientId]);
+	}, [debouncedSearch, reviewed, sortBy, sortOrder, selectedUserId]);
 
 	const tableFilters = (
 		<>
-			{tab === 'clients' && (
-				<FilterField label={t('reports.clients.title')}>
-					<Select
-						searchable={false}
-						clearable={false}
-						placeholder={t('reports.clients.select.placeholder')}
-						value={selectedClientId || ''}
-						onChange={(val) => {
-							setSelectedClientId(val || null);
-							setPage(1);
-						}}
-						options={clientOptions}
-					/>
-				</FilterField>
-			)}
+			<FilterField label={t('reports.filters.user', { default: 'User' })}>
+				<Select
+					searchable
+					clearable
+					placeholder={t('reports.filters.userPlaceholder', { default: 'Select user' })}
+					value={selectedUserId}
+					onChange={(val) => {
+						setSelectedUserId(val || '');
+						setPage(1);
+					}}
+					options={[
+						{ id: '', label: t('reports.filters.allUsers', { default: 'All users' }) },
+						...usersOptions,
+					]}
+					loading={usersLoading}
+				/>
+			</FilterField>
 
 			<FilterField label={t('reports.filters.reviewed.label')}>
 				<Select
@@ -542,7 +629,7 @@ export default function ReportsUnifiedPage() {
 				const c = row?.training?.cardioAdherence;
 				return <StatBadge icon={Activity} value={c != null ? `${c} / 5` : '—'} secondary />;
 			},
-		}, 
+		},
 		{
 			header: t('reports.view'),
 			accessor: '__actions',
@@ -595,9 +682,15 @@ export default function ReportsUnifiedPage() {
 				data={reports}
 				isLoading={loading}
 				rowKey={(row) => row.id}
-				searchValue=""
-				onSearchChange={() => { }}
-				onSearch={() => { }}
+				searchValue={searchText}
+				onSearchChange={(value) => {
+					setSearchText(value);
+					setPage(1);
+				}}
+				onSearch={() => {
+					setPage(1);
+					loadReports();
+				}}
 				filters={tableFilters}
 				hasActiveFilters={hasActiveFilters}
 				onApplyFilters={() => {

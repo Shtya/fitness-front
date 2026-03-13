@@ -8,7 +8,8 @@ import {
 	Eye as EyeIcon, Sparkles, Dumbbell, Utensils, MessageCircle, Edit3,
 	KeyRound, Copy, User, Mail, Phone, Calendar, Crown, Award, Users,
 	ClipboardList, UserCheck, UserCog, UserCircle, ExternalLink, RefreshCw,
-	AlertCircle
+	AlertCircle,
+	RotateCcw
 } from 'lucide-react';
 
 import { useForm, Controller } from 'react-hook-form';
@@ -1047,7 +1048,7 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 export default function UsersList() {
 	const t = useTranslations('users');
 	const t_ = useTranslations('users.admin');
-
+	const [renewModal, setRenewModal] = useState({ open: false, user: null });
 	const [page, setPage] = useState(1);
 	const [limit, setLimit] = useState(10);
 	const [sortBy, setSortBy] = useState('created_at');
@@ -1236,6 +1237,12 @@ export default function UsersList() {
 
 		if (canManage) {
 			opts.push(
+				{
+					icon: I(RotateCcw, 'text-cyan-600'),
+					label: t('actions.renewSubscription'),
+					onClick: () => setRenewModal({ open: true, user: row }),
+					className: 'hover:text-cyan-700'
+				},
 				{ icon: I(Dumbbell, 'text-violet-600'), label: t('actions.assignWorkout'), onClick: () => setPickerWorkout({ open: true, user: row }), className: 'hover:text-violet-700' },
 				{ icon: I(Utensils, 'text-amber-600'), label: t('actions.assignMeal'), onClick: () => setPickerMeal({ open: true, user: row }), className: 'hover:text-amber-700' }
 			);
@@ -1586,6 +1593,18 @@ export default function UsersList() {
 			</Modal>
 
 
+			<RenewSubscriptionModal
+				open={renewModal.open}
+				onClose={() => setRenewModal({ open: false, user: null })}
+				user={renewModal.user}
+				onSaved={() => {
+					setRenewModal({ open: false, user: null });
+					fetchUsers();
+					fetchStats();
+				}}
+			/>
+
+
 			{viewerRole === 'admin' && (
 				<EnhancedPendingModal
 					open={pendingModal.open}
@@ -1896,3 +1915,112 @@ function EnhancedPendingModal({
 	);
 }
 
+
+
+
+function RenewSubscriptionModal({ open, onClose, user, onSaved }) {
+	const t = useTranslations('users');
+	const [saving, setSaving] = useState(false);
+
+	const { handleSubmit, setValue, watch, reset, formState: { errors } } = useForm({
+		defaultValues: {
+			subscriptionStart: user?.subscriptionStart && user.subscriptionStart !== '-' ? user.subscriptionStart : new Date().toISOString().slice(0, 10),
+			subscriptionEnd: user?.subscriptionEnd && user.subscriptionEnd !== '-' ? user.subscriptionEnd : new Date().toISOString().slice(0, 10),
+		},
+		resolver: yupResolver(
+			yup.object({
+				subscriptionStart: yup.string().required('errors.startRequired'),
+				subscriptionEnd: yup.string()
+					.required('errors.endRequired')
+					.test('end-after-start', 'errors.endAfterStart', function (end) {
+						const start = this.parent.subscriptionStart;
+						if (!start || !end) return true;
+						return new Date(end) >= new Date(start);
+					}),
+			})
+		),
+		mode: 'onBlur',
+	});
+
+	useEffect(() => {
+		if (open && user) {
+			reset({
+				subscriptionStart:
+					user?.subscriptionStart && user.subscriptionStart !== '-'
+						? user.subscriptionStart
+						: new Date().toISOString().slice(0, 10),
+				subscriptionEnd:
+					user?.subscriptionEnd && user.subscriptionEnd !== '-'
+						? user.subscriptionEnd
+						: new Date().toISOString().slice(0, 10),
+			});
+		}
+	}, [open, user, reset]);
+
+	const subscriptionStart = watch('subscriptionStart');
+	const subscriptionEnd = watch('subscriptionEnd');
+
+	const onSubmit = async data => {
+		if (!user?.id) return;
+
+		setSaving(true);
+		try {
+			await api.put(`/auth/user/${user.id}`, {
+				subscriptionStart: data.subscriptionStart,
+				subscriptionEnd: data.subscriptionEnd,
+			});
+
+			Notification(t('alerts.subscriptionRenewed'), 'success');
+			onSaved?.();
+			onClose?.();
+		} catch (e) {
+			Notification(e?.response?.data?.message || t('alerts.renewSubscriptionFailed'), 'error');
+		} finally {
+			setSaving(false);
+		}
+	};
+
+	return (
+		<Modal
+			open={open}
+			onClose={onClose}
+			title={`${t('actions.renewSubscription')}${user?.name ? ` • ${user.name}` : ''}`}
+		>
+			<form className='space-y-5' onSubmit={handleSubmit(onSubmit)}>
+				<div className='rounded-lg border border-slate-200 bg-slate-50 p-3'>
+					<div className='text-sm font-semibold text-slate-700'>{t('renewSubscription.currentData')}</div>
+					<div className='mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm'>
+						<div>
+							<div className='text-slate-500'>{t('fields.fullName')}</div>
+							<div className='font-medium text-slate-800'>{user?.name || '—'}</div>
+						</div>
+						<div>
+							<div className='text-slate-500'>{t('fields.email')}</div>
+							<div className='font-medium text-slate-800'>{user?.email || '—'}</div>
+						</div>
+					</div>
+				</div>
+
+				<SubscriptionPeriodPicker
+					startValue={subscriptionStart}
+					endValue={subscriptionEnd}
+					setValue={setValue}
+					errorStart={errors.subscriptionStart?.message ? t(errors.subscriptionStart.message) : undefined}
+					errorEnd={errors.subscriptionEnd?.message ? t(errors.subscriptionEnd.message) : undefined}
+				/>
+
+				<div className='flex justify-end gap-2.5 pt-4 border-t border-slate-100'>
+					<Button color='neutral' name={t('common.cancel')} onClick={onClose} />
+					<Button
+						color='primary'
+						type='submit'
+						name={t('actions.renewSubscription')}
+						loading={saving}
+						disabled={saving}
+						icon={<RotateCcw className='w-4 h-4' />}
+					/>
+				</div>
+			</form>
+		</Modal>
+	);
+}

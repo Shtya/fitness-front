@@ -556,6 +556,13 @@
 		"todos": "Todos"
 	},
 	"nav": {
+		"brand": {
+			"clientPortal": "Client",
+			"adminPortal": "Admin",
+			"coachPortal": "Coach",
+			"super_admin": "System Admin",
+			"superAdminPortal": "System Admin"
+		},
 		"sections": {
 			"dashboard": "Dashboard",
 			"content": "Content",
@@ -574,6 +581,7 @@
 			"clientIntake": "Client Intake"
 		},
 		"items": {
+			"forms": "Contact Requests",
 			"overview": "Overview",
 			"allUsers": "All Users",
 			"allExercises": "All Exercises",
@@ -600,7 +608,7 @@
 			"analytics": "Analytics",
 			"withdrawalApprovals": "Withdrawal Approvals",
 			"allWallets": "All Wallets",
-			"feedback": "Feedback"
+			"feedback": "Feedback & Reviews"
 		}
 	},
 	"themeSwitcher": {
@@ -617,62 +625,37 @@
 		"footer": "The change will be applied instantly across the entire dashboard"
 	},
 	"auth": {
-		"Incorrect email or password": "Incorrect email or password.",
-		"welcome": "Welcome back",
-		"signIn": "Sign In",
-		"subtitle": "Log in to access your account and continue your health journey",
+		"signIn": "Sign in",
+		"subtitle": "Welcome back. Please enter your details to continue.",
 		"email": "Email",
 		"enterEmail": "Enter your email",
 		"password": "Password",
-		"enterPassword": "Enter password",
-		"signInButton": "Sign In",
-		"invalidEmail": "Invalid email",
-		"passwordRequired": "Password is required",
-		"a11y": {
-			"showPassword": "Show password",
-			"hidePassword": "Hide password"
-		},
+		"enterPassword": "Enter your password",
+		"forgotPassword": "Forgot password?",
+		"signInButton": "Sign in",
+		"noAccount": "Don't have an account?",
+		"signUp": "Sign up",
+		"formAriaLabel": "Login form",
+		"pageAriaLabel": "Authentication page",
+		"invalidEmail": "Please enter a valid email address.",
+		"passwordRequired": "Password is required.",
 		"loading": {
 			"signingIn": "Signing in..."
 		},
 		"success": {
-			"signedIn": "Signed in successfully"
+			"signedIn": "Successfully signed in."
 		},
 		"errors": {
-			"loginFailed": "Login failed. Please try again",
-			"accountPending": "Your account is under review",
-			"accountSuspended": "Your account has been suspended. Please contact support",
-			"invalidCredentials": "Incorrect email or password"
+			"loginFailed": "Login failed. Please try again.",
+			"accountPending": "Your account is pending approval.",
+			"accountSuspended": "Your account has been suspended."
 		},
-		"hero": {
-			"badge": "Premium Fitness Platform",
-			"title": "Transform Your Body, Change Your Life",
-			"subtitle": "Join thousands of people who achieved their health goals with us",
-			"perkPersonalized": "Personalized Workouts",
-			"perkPersonalizedDetail": "Tailored specifically to your body",
-			"perkProgress": "Track Progress",
-			"perkProgressDetail": "Instant analytics for your performance",
-			"perkChat": "Expert Coaches",
-			"perkChatDetail": "Direct communication anytime",
-			"perkPrivacy": "Privacy First",
-			"perkPrivacyDetail": "Your data stays yours",
-			"secure": "SSL Enabled"
+		"a11y": {
+			"showPassword": "Show password",
+			"hidePassword": "Hide password"
 		},
-		"stats": {
-			"users": "Athletes",
-			"satisfaction": "Client Satisfaction",
-			"support": "Availability"
-		},
-		"trust": {
-			"secure": "Secure",
-			"encrypted": "Protected with SSL · data encrypted at rest",
-			"verified": "Verified"
-		},
-		"notes": {
-			"protected": "Your data is protected and encrypted"
-		}
+		"Incorrect email or password": "Incorrect email or password."
 	},
-	"Incorrect email or password": "Incorrect email or password.",
 	"myProfile": {
 		"header": {
 			"title": "Profile",
@@ -1363,7 +1346,7 @@
 	"users": {
 		"admin": {
 			"stats": {
-				"pending": "Pending accounts"
+				"pending": "Pending Accounts"
 			},
 			"common": {
 				"refresh": "Refresh",
@@ -1387,7 +1370,7 @@
 				"email": "Email",
 				"role": "Role",
 				"from": "From",
-				"created": "Created date",
+				"created": "Created Date",
 				"actions": "Actions"
 			},
 			"actions": {
@@ -1402,15 +1385,15 @@
 				"Admin": "Admin"
 			}
 		},
-		"editUser": "Edit user",
+		"editUser": "Edit User",
 		"header": {
-			"title": "User management",
+			"title": "User Management",
 			"subtitle": "Full control over clients and coaches and managing their data.",
-			"createNewUser": "Create new user"
+			"createNewUser": "Create New User"
 		},
 		"stats": {
-			"totalUsers": "Total users",
-			"active": "Active accounts",
+			"totalUsers": "Total Users",
+			"active": "Active Accounts",
 			"coaches": "Coaches",
 			"clients": "Clients"
 		},
@@ -1418,38 +1401,38 @@
 			"role": "Role",
 			"plan": "Plan",
 			"newest": "Newest",
-			"allRoles": "All roles",
-			"allPlans": "All plans",
-			"withPlan": "Has plan",
-			"noPlan": "No plan"
+			"allRoles": "All Roles",
+			"allPlans": "All Plans",
+			"withPlan": "With Plan",
+			"noPlan": "No Plan"
 		},
 		"table": {
 			"name": "Name",
 			"email": "Email",
 			"role": "Role",
 			"gender": "Gender",
-			"phone": "Phone number",
+			"phone": "Phone Number",
 			"membership": "Membership",
-			"exercisePlan": "Exercise plan",
-			"mealPlan": "Meal plan",
+			"exercisePlan": "Workout Plan",
+			"mealPlan": "Meal Plan",
 			"coach": "Coach",
-			"joinDate": "Join date",
+			"joinDate": "Join Date",
 			"status": "Status",
-			"daysLeft": "Days left",
+			"daysLeft": "Days Left",
 			"actions": "Actions"
 		},
 		"actions": {
-			"openProfile": "Open profile",
-			"editDetails": "Edit details",
-			"assignWorkout": "Assign workout plan",
-			"assignMeal": "Assign meal plan",
-			"approve": "Activate account",
+			"openProfile": "Open Profile",
+			"editDetails": "Edit Details",
+			"assignWorkout": "Assign Workout Plan",
+			"assignMeal": "Assign Meal Plan",
+			"approve": "Activate Account",
 			"suspend": "Suspend",
 			"activate": "Reactivate",
-			"whatsapp": "WhatsApp chat",
-			"directChat": "Direct chat",
-			"delete": "Delete user",
-			"shareCredsWhatsapp": "Send login credentials via WhatsApp"
+			"whatsapp": "WhatsApp Chat",
+			"directChat": "Direct Chat",
+			"delete": "Delete User",
+			"shareCredsWhatsapp": "Send Login Credentials via WhatsApp"
 		},
 		"status": {
 			"active": "Active",
@@ -1464,7 +1447,7 @@
 		"gender": {
 			"male": "Male",
 			"female": "Female",
-			"notSpecified": "Not specified"
+			"notSpecified": "Not Specified"
 		},
 		"membership": {
 			"basic": "Basic",
@@ -1472,37 +1455,37 @@
 			"platinum": "Platinum"
 		},
 		"fields": {
-			"fullName": "Full name",
+			"fullName": "Full Name",
 			"email": "Email",
-			"phone": "Phone number",
+			"phone": "Phone Number",
 			"password": "Password",
-			"passwordEdit": "Password (leave blank to keep it)",
+			"passwordEdit": "Password (leave empty to keep it unchanged)",
 			"gender": "Gender",
 			"membership": "Membership",
 			"role": "Role",
 			"coach": "Coach",
 			"status": "Status",
-			"phoneWhatsapp": "WhatsApp number"
+			"phoneWhatsapp": "WhatsApp Number"
 		},
 		"placeholders": {
 			"fullName": "Mohammed Ahmed",
 			"email": "example@domain.com",
 			"phone": "+966 5X XXX XXXX",
-			"coach": "Choose coach",
-			"role": "Choose role",
-			"status": "Choose status",
+			"coach": "Select coach",
+			"role": "Select role",
+			"status": "Select status",
 			"search": "Search by name or email...",
 			"whatsapp": "e.g. 9665XXXXXXXX",
 			"calories": "Calories"
 		},
 		"wizard": {
-			"newUser": "New user",
-			"createAccount": "Create account",
-			"chooseWorkout": "Choose workout plan (optional)",
-			"chooseMeal": "Choose meal plan (optional)",
-			"caloriesDetails": "Details and calories",
-			"credentialsAndForm": "Credentials ",
-			"createAndNext": "Create and continue",
+			"newUser": "New User",
+			"createAccount": "Create Account",
+			"chooseWorkout": "Choose Workout Plan (Optional)",
+			"chooseMeal": "Choose Meal Plan (Optional)",
+			"caloriesDetails": "Details & Calories",
+			"credentialsAndForm": "Login Credentials",
+			"createAndNext": "Create and Continue",
 			"credsReady": "Login credentials have been created. You can copy and send them via WhatsApp below.",
 			"passwordByEmail": "Sent via email"
 		},
@@ -1511,74 +1494,79 @@
 			"protein": "Protein",
 			"carbs": "Carbohydrates",
 			"fat": "Fat",
-			"activity": "Activity level",
+			"activity": "Activity Level",
 			"level": {
 				"sedentary": "Sedentary",
-				"light": "Light activity",
-				"moderate": "Moderate activity",
-				"active": "High activity",
+				"light": "Light Activity",
+				"moderate": "Moderate Activity",
+				"active": "Active",
 				"athlete": "Athlete"
 			},
 			"notes": "Notes",
 			"notesPh": "Additional details or dietary preferences...",
 			"errors": {
 				"integer": "Must be an integer",
-				"positive": "Must be a number greater than 0",
+				"positive": "Must be greater than 0",
 				"notNegative": "Must not be less than 0",
-				"activityRequired": "Please choose an activity level",
+				"activityRequired": "Please select an activity level",
 				"notesMax": "Notes are too long"
 			},
-			"smartDefaults": "Smart defaults",
-			"smartDefaultsDesc": "We automatically set values based on your data to make follow-up easier",
-			"autoFill": "Auto fill",
+			"smartDefaults": "Smart Defaults",
+			"smartDefaultsDesc": "We automatically set values based on your data to make tracking easier",
+			"autoFill": "Auto Fill",
 			"macros": "Macronutrients",
 			"fiber": "Fiber"
 		},
 		"forms": {
-			"title": "Coach form",
-			"select": "Choose form",
+			"title": "Coach Form",
+			"select": "Select Form",
 			"placeholder": "Choose a form to send",
-			"sendToClient": "Send to client",
+			"sendToClient": "Send to Client",
 			"noteLinkAnswers": "Form answers will be linked to this user's account."
 		},
 		"pickers": {
 			"selectOne": "Select one plan to assign",
-			"assignWorkout": "Assign workout plan",
-			"assignMeal": "Assign meal plan",
-			"createWorkout": "Create new workout plan",
-			"createMeal": "Create new meal plan"
+			"assignWorkout": "Assign Workout Plan",
+			"assignMeal": "Assign Meal Plan",
+			"createWorkout": "Create New Workout Plan",
+			"createMeal": "Create New Meal Plan"
 		},
 		"common": {
 			"assign": "Assign",
-			"seeMore": "See more",
+			"seeMore": "See More",
 			"cancel": "Cancel",
-			"saveChanges": "Save changes",
+			"saveChanges": "Save Changes",
 			"creating": "Creating...",
 			"expired": "Expired",
-			"days": "day",
+			"days": "Days",
 			"back": "Back",
-			"saveAndNext": "Save and continue",
+			"saveAndNext": "Save and Continue",
 			"sendWhatsapp": "Send via WhatsApp",
-			"noCoach": "No coach",
-			"refresh": "Refresh list"
+			"noCoach": "No Coach",
+			"refresh": "Refresh List",
+			"filters": "Filters",
+			"apply": "Apply",
+			"noResults": "No Results",
+			"tryAdjusting": "Try adjusting the search or filters",
+			"preview": "Image Preview"
 		},
 		"alerts": {
 			"credsSent": "Login credentials sent",
-			"sendFailed": "Failed to send login credentials",
+			"sendFailed": "Failed to send credentials",
 			"loadPlansFailed": "Failed to load plans",
 			"planAssigned": "Plan assigned successfully",
 			"assignFailed": "Failed to assign plan",
 			"loadCoachesFailed": "Failed to load coaches list",
 			"passwordGenerated": "Strong password generated",
-			"userUpdated": "User data updated successfully",
+			"userUpdated": "User updated successfully",
 			"updateFailed": "Update failed",
 			"accountCreated": "Account created successfully",
-			"createFailed": "Failed to create account",
+			"createFailed": "Account creation failed",
 			"assignWorkoutFailed": "Failed to assign workout plan",
 			"assignMealFailed": "Failed to assign meal plan",
 			"saveCaloriesFailed": "Failed to save calorie data",
 			"enterPhoneWhatsapp": "Please enter a phone number to send login credentials via WhatsApp",
-			"selectFormFirst": "Choose a form first before sending",
+			"selectFormFirst": "Select a form before sending",
 			"formSent": "Form sent successfully",
 			"formSendFailed": "Failed to send form",
 			"statusUpdated": "Status updated to {status}",
@@ -1588,18 +1576,18 @@
 			"noPhone": "No valid phone number for this user",
 			"loadWorkoutFailed": "Failed to load workout plans",
 			"loadMealFailed": "Failed to load meal plans",
-			"saveCaloriesSuccess": "Calorie information saved successfully"
+			"saveCaloriesSuccess": "Calories information saved successfully"
 		},
 		"errors": {
 			"nameMin": "Name must be at least 2 characters",
 			"nameRequired": "Full name is required",
-			"emailInvalid": "Invalid email",
+			"emailInvalid": "Invalid email address",
 			"emailRequired": "Email is required",
 			"roleRequired": "Role must be selected",
 			"membershipRequired": "Membership type must be selected",
 			"passwordRequired": "Password is required",
 			"passwordMin": "Password must be at least 8 characters",
-			"coachRequired": "A coach must be selected",
+			"coachRequired": "Coach must be selected",
 			"startRequired": "Start date is required",
 			"endRequired": "End date is required",
 			"endAfterStart": "End date must be after or equal to start date",
@@ -1609,8 +1597,8 @@
 			"phoneTooShort": "Phone number is too short",
 			"phoneTooLong": "Phone number is too long",
 			"phoneLeadingZero": "Do not add 0 after the country code",
-			"phoneDuplicateCountryCode": "Do not repeat the country code inside the phone number",
-			"phoneStartInvalid": "Invalid phone number prefix for this country"
+			"phoneDuplicateCountryCode": "Do not repeat the country code in the phone number",
+			"phoneStartInvalid": "Phone number prefix is invalid for this country"
 		},
 		"dialogs": {
 			"deleteUserConfirm": "Are you sure you want to delete {name}? This action cannot be undone.",
@@ -2556,7 +2544,7 @@
 		}
 	},
 	"reports": {
-		"statusReview" : "Status Review",
+		"statusReview": "Status Review",
 		"title": "Weekly reports",
 		"subtitle": "Review trainee progress and weekly reports easily",
 		"total": "Total",
@@ -2591,7 +2579,7 @@
 			"kg": "kg",
 			"cardio": "Cardio"
 		},
-		"searchPlaceholder": "Search is not available here", 
+		"searchPlaceholder": "Search is not available here",
 		"filters": {
 			"title": "Filters",
 			"apply": "Apply",
@@ -4629,19 +4617,17 @@
 	},
 	"home": {
 		"hero": {
-			"headline": {
-				"transform": "Manage",
-				"journey": "the client journey",
-				"withScience": "in one platform"
-			},
-			"description": "Manage clients, plans, reports, and communication inside one system that helps admins, coaches, and clients work with more clarity and efficiency.",
+			"badge": "All-in-one management platform",
+			"title": "One platform to manage clients and plans",
+			"description": "Organize the entire client journey inside one system that brings together client management, training and nutrition plans, weekly reports, and conversations between admins, coaches, and clients in a clear and professional experience.",
 			"cta": {
 				"getStarted": "Get Started",
 				"watchDemo": "Watch Demo"
 			},
 			"trust": {
 				"activeUsers": "A unified client management experience",
-				"rating": "Better organization for daily operations"
+				"rating": "Better organization for daily operations",
+				"community": "Active Now"
 			},
 			"stats": {
 				"coaches": {
@@ -5079,45 +5065,60 @@
 			}
 		},
 		"contact": {
-			"title": "Start with us",
-			"description": "Send your details to request a system demo or start an experience that fits your workflow, and we’ll help you choose the best way to use the platform.",
+			"title": "Contact Us",
+			"description": "Tell us a bit about yourself and your goals, and our team will get back to you as soon as possible.",
 			"form": {
+				"ariaLabel": "Contact form",
+				"submit": "Send Message",
+				"submitting": "Sending...",
+				"successTitle": "Message sent successfully",
+				"successDesc": "Thanks for reaching out. We’ll contact you soon.",
+				"errorGeneric": "Something went wrong. Please try again.",
 				"fields": {
-					"username": "Full name",
-					"email": "Email address",
-					"phone": "Phone number",
-					"teamSize": "Usage type"
+					"username": "Full Name",
+					"email": "Email Address",
+					"phone": "Phone Number",
+					"teamSize": "Who is this for?"
+				},
+				"placeholders": {
+					"username": "John Doe",
+					"email": "you@example.com"
+				},
+				"errors": {
+					"usernameTooShort": "Name must be at least 2 characters",
+					"usernameRequired": "Name is required",
+					"emailInvalid": "Enter a valid email address",
+					"emailRequired": "Email is required",
+					"phoneInvalid": "Enter a valid phone number",
+					"phoneRequired": "Phone number is required",
+					"teamSizeRequired": "Please select a team size"
 				},
 				"teamSize": {
-					"solo": "Solo use",
-					"soloDesc": "Suitable for solo coaches or small teams that want to organize clients, plans, and follow-up.",
-					"team": "Team or management",
-					"teamDesc": "Suitable for teams and admins who need user management, permissions, and broader day-to-day operations."
-				},
-				"submit": "Submit request",
-				"submitting": "Submitting...",
-				"successTitle": "Request sent successfully",
-				"successDesc": "We’ll contact you soon to help you get started and choose the right way to use the system."
+					"solo": "Just me",
+					"soloDesc": "I’m looking for a personal fitness solution.",
+					"team": "A team or group",
+					"teamDesc": "We’re interested in fitness services for multiple people."
+				}
 			},
 			"testimonials": {
-				"subtitle": "Experiences related to organization and follow-up",
+				"subtitle": "What our clients say",
 				"0": {
-					"text": "The system helped us organize client management, plans, and reports in one place, which saved a lot of time in daily follow-up.",
-					"author": "Mohammed",
-					"role": "Operations Manager",
-					"company": "Training Platform"
+					"text": "FitnessHub completely changed how I approach my training. The guidance was clear, motivating, and actually sustainable.",
+					"author": "Sarah Ahmed",
+					"role": "Marketing Manager",
+					"company": "Cairo Tech"
 				},
 				"1": {
-					"text": "Having workouts, nutrition, chats, and reports in one system made the client experience clearer and easier, and improved the quality of communication with the team.",
-					"author": "Reem",
-					"role": "Coach",
-					"company": "Follow-up Team"
+					"text": "I finally found a fitness program that fits my lifestyle. The team was supportive from day one and the results were real.",
+					"author": "Omar Khaled",
+					"role": "Entrepreneur",
+					"company": "FitStart"
 				},
 				"2": {
-					"text": "We now have more clarity in permissions, user management, and billing, with a more organized experience than using multiple separate tools.",
-					"author": "Khaled",
-					"role": "System Administration",
-					"company": "Operations and Management"
+					"text": "We signed up as a team and saw a noticeable difference in energy, consistency, and morale. Highly recommended.",
+					"author": "Mona Hassan",
+					"role": "HR Lead",
+					"company": "MoveWell"
 				}
 			}
 		},
@@ -5198,7 +5199,9 @@
 				"about": "About",
 				"community": "Features",
 				"pricing": "Pricing",
-				"joinNow": "Get Started"
+				"joinNow": "Get Started",
+				"faqs": "Faqs",
+				"contact": "Contact us"
 			},
 			"langSwitch": {
 				"ariaToAr": "التبديل إلى العربية",

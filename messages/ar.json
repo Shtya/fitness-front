@@ -559,8 +559,9 @@
 		"brand": {
 			"clientPortal": "متدرب",
 			"adminPortal": "مدير ",
-			"coachPortal": "مدرب" ,
-			"super_admin" :"مدير النظام"
+			"coachPortal": "مدرب",
+			"super_admin": "مدير النظام",
+			"superAdminPortal": "مدير النظام"
 		},
 		"sections": {
 			"dashboard": "لوحة التحكم",
@@ -580,7 +581,7 @@
 			"clientIntake": "استقبال العملاء"
 		},
 		"items": {
-			"forms" : "طلبات التواصل" ,
+			"forms": "طلبات التواصل",
 			"overview": "نظرة عامة",
 			"allUsers": "جميع المستخدمين",
 			"allExercises": "جميع التمارين",
@@ -624,62 +625,37 @@
 		"footer": "سيتم تطبيق التغيير فورًا على كامل لوحة التحكم"
 	},
 	"auth": {
-		"Incorrect email or password": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
-		"welcome": "مرحباً بعودتك",
 		"signIn": "تسجيل الدخول",
-		"subtitle": "سجل دخولك للوصول إلى حسابك ومتابعة رحلتك الصحية",
+		"subtitle": "مرحبًا بعودتك، الرجاء إدخال بياناتك للمتابعة.",
 		"email": "البريد الإلكتروني",
 		"enterEmail": "أدخل بريدك الإلكتروني",
 		"password": "كلمة المرور",
 		"enterPassword": "أدخل كلمة المرور",
+		"forgotPassword": "هل نسيت كلمة المرور؟",
 		"signInButton": "تسجيل الدخول",
-		"invalidEmail": "البريد الإلكتروني غير صالح",
-		"passwordRequired": "كلمة المرور مطلوبة",
-		"a11y": {
-			"showPassword": "إظهار كلمة المرور",
-			"hidePassword": "إخفاء كلمة المرور"
-		},
+		"noAccount": "ليس لديك حساب؟",
+		"signUp": "إنشاء حساب",
+		"formAriaLabel": "نموذج تسجيل الدخول",
+		"pageAriaLabel": "صفحة تسجيل الدخول",
+		"invalidEmail": "يرجى إدخال بريد إلكتروني صحيح.",
+		"passwordRequired": "كلمة المرور مطلوبة.",
 		"loading": {
 			"signingIn": "جارٍ تسجيل الدخول..."
 		},
 		"success": {
-			"signedIn": "تم تسجيل الدخول بنجاح"
+			"signedIn": "تم تسجيل الدخول بنجاح."
 		},
 		"errors": {
-			"loginFailed": "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى",
-			"accountPending": "حسابك قيد المراجعة",
-			"accountSuspended": "تم تعليق حسابك. يرجى التواصل مع الدعم",
-			"invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+			"loginFailed": "فشل تسجيل الدخول. حاول مرة أخرى.",
+			"accountPending": "حسابك قيد المراجعة.",
+			"accountSuspended": "تم إيقاف حسابك."
 		},
-		"hero": {
-			"badge": "منصة اللياقة البدنية المتميزة",
-			"title": "حوّل جسمك، غيّر حياتك",
-			"subtitle": "انضم إلى آلاف الأشخاص الذين حققوا أهدافهم الصحية معنا",
-			"perkPersonalized": "تمارين مخصصة لك",
-			"perkPersonalizedDetail": "مصممة خصيصاً لجسمك",
-			"perkProgress": "تتبع التقدم",
-			"perkProgressDetail": "تحليلات فورية لأدائك",
-			"perkChat": "مدربون خبراء",
-			"perkChatDetail": "تواصل مباشر في أي وقت",
-			"perkPrivacy": "الخصوصية أولاً",
-			"perkPrivacyDetail": "بياناتك تبقى ملكك",
-			"secure": "SSL مفعل"
+		"a11y": {
+			"showPassword": "إظهار كلمة المرور",
+			"hidePassword": "إخفاء كلمة المرور"
 		},
-		"stats": {
-			"users": "رياضيون",
-			"satisfaction": "رضا العملاء",
-			"support": "التوفر"
-		},
-		"trust": {
-			"secure": "آمن",
-			"encrypted": "مؤمن عبر SSL · البيانات مشفرة أثناء التخزين",
-			"verified": "موثق"
-		},
-		"notes": {
-			"protected": "بياناتك محمية ومشفرة"
-		}
+		"Incorrect email or password": "البريد الإلكتروني أو كلمة المرور غير صحيحة."
 	},
-	"Incorrect email or password": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
 	"myProfile": {
 		"header": {
 			"title": "الملف الشخصي",
@@ -745,7 +721,7 @@
 			"coach": "مدرب",
 			"user": "مستخدم",
 			"client": "متدرب",
-			"super_admin" :"مدير النظام"
+			"super_admin": "مدير النظام"
 		},
 		"subscription": {
 			"start": "بداية الاشتراك",
@@ -1402,7 +1378,15 @@
 				"approve": "قبول",
 				"approving": "جاري القبول...",
 				"reject": "رفض",
-				"rejecting": "جاري الرفض..."
+				"rejecting": "جاري الرفض...",
+				"renewSubscription": "تجديد الاشتراك"
+			},
+			"alerts": {
+				"subscriptionRenewed": "تم تجديد الاشتراك بنجاح",
+				"renewSubscriptionFailed": "فشل في تجديد الاشتراك"
+			},
+			"renewSubscription": {
+				"currentData": "البيانات الحالية"
 			},
 			"roles": {
 				"Client": "عميل",
@@ -1457,7 +1441,11 @@
 			"whatsapp": "محادثة واتساب",
 			"directChat": "دردشة مباشرة",
 			"delete": "حذف المستخدم",
-			"shareCredsWhatsapp": "إرسال بيانات الدخول عبر واتساب"
+			"shareCredsWhatsapp": "إرسال بيانات الدخول عبر واتساب",
+			"renewSubscription": "تجديد الاشتراك"
+		},
+		"renewSubscription": {
+			"currentData": "البيانات الحالية"
 		},
 		"status": {
 			"active": "نشط",
@@ -1601,7 +1589,9 @@
 			"noPhone": "لا يوجد رقم هاتف صالح لهذا المستخدم",
 			"loadWorkoutFailed": "فشل تحميل خطط التمارين",
 			"loadMealFailed": "فشل تحميل خطط الوجبات",
-			"saveCaloriesSuccess": "تم حفظ معلومات السعرات بنجاح"
+			"saveCaloriesSuccess": "تم حفظ معلومات السعرات بنجاح",
+			"subscriptionRenewed": "تم تجديد الاشتراك بنجاح",
+			"renewSubscriptionFailed": "فشل في تجديد الاشتراك"
 		},
 		"errors": {
 			"nameMin": "يجب ألا يقل الاسم عن حرفين",
@@ -2569,7 +2559,7 @@
 		}
 	},
 	"reports": {
-		"statusReview" : "حالة المراجعة",
+		"statusReview": "حالة المراجعة",
 		"title": "التقارير الأسبوعية",
 		"subtitle": "مراجعة تقدم المتدربين والتقارير الأسبوعية بسهولة",
 		"total": "الإجمالي",
@@ -2604,10 +2594,13 @@
 			"kg": "كجم",
 			"cardio": "الكارديو"
 		},
-		"searchPlaceholder": "البحث غير متاح هنا", 
+		"searchPlaceholder": "ابحث بالاسم أو البريد أو الهاتف أو الأسبوع",
 		"filters": {
 			"title": "الفلاتر",
 			"apply": "تطبيق",
+			"user": "المستخدم",
+      "userPlaceholder": "اختر المستخدم",
+      "allUsers": "كل المستخدمين",
 			"reviewed": {
 				"label": "حالة المراجعة",
 				"any": "الكل",
@@ -3420,247 +3413,6 @@
 			"load-failed": "فشل تحميل البث. حاول مرة أخرى.",
 			"stream-error": "حدث خطأ في البث. جرّب محطة أخرى.",
 			"streamErrorTryAnother": "حدث خطأ في البث. جرّب محطة أخرى."
-		}
-	},
-	"billing": {
-		"title": "إدارة الفواتير والمدفوعات",
-		"subtitle": "تتبع وإدارة محفظتك، الاشتراكات، والمدفوعات من مكان واحد",
-		"currency": "ج.م",
-		"tabs": {
-			"overview": "نظرة عامة",
-			"clients": "العملاء",
-			"packages": "إدارة الباقات",
-			"subscriptions": "الاشتراكات",
-			"clientPayments": "مدفوعات العملاء"
-		},
-		"tooltips": {
-			"pageInfo": "هنا يمكنك إدارة كل ما يتعلق بالمدفوعات والاشتراكات والفواتير الخاصة بك"
-		},
-		"kpi": {
-			"walletBalance": {
-				"title": "رصيد المحفظة",
-				"subtitle": "المتاح حالياً"
-			},
-			"totalEarned": {
-				"title": "إجمالي الأرباح",
-				"subtitle": "إجمالي ما تم كسبه"
-			},
-			"moneyInThisMonth": {
-				"title": "الإيرادات هذا الشهر",
-				"subtitle": "الإيرادات الشهرية"
-			}
-		},
-		"packages": {
-			"title": "إدارة الباقات",
-			"description": "قم بإنشاء وتعديل وإدارة باقات الاشتراك الخاصة بك",
-			"addNew": "إضافة باقة جديدة",
-			"edit": "تعديل الباقة",
-			"sendWhatsApp": "إرسال عبر واتساب",
-			"exportAll": "إرسال جميع الباقات",
-			"exportingPdf": "جاري تصدير ملف PDF للباقة:",
-			"exportSuccess": "تم إرسال الباقات بنجاح إلى {phone}",
-			"dialogDescription": "املأ التفاصيل أدناه لإنشاء أو تعديل الباقة",
-			"exportDialog": {
-				"title": "إرسال جميع الباقات",
-				"description": "سيتم إنشاء ملف PDF يحتوي على جميع الباقات وإرساله عبر واتساب",
-				"phoneLabel": "رقم الهاتف",
-				"info": "سيتم إنشاء ملف PDF شامل يحتوي على تفاصيل جميع الباقات المتاحة",
-				"send": "إرسال عبر واتساب",
-				"sending": "جاري الإرسال..."
-			},
-			"form": {
-				"nameAr": "اسم الباقة (عربي)",
-				"nameEn": "اسم الباقة (إنجليزي)",
-				"price": "السعر",
-				"duration": "المدة",
-				"features": "المميزات",
-				"feature": "ميزة",
-				"addFeature": "إضافة ميزة",
-				"monthly": "شهري",
-				"quarterly": "ربع سنوي",
-				"semiAnnual": "نصف سنوي",
-				"annual": "سنوي"
-			}
-		},
-		"clients": {
-			"title": "إدارة العملاء",
-			"description": "تتبع اشتراكات العملاء ومواعيد التجديد",
-			"search": "البحث عن عميل...",
-			"daysLeft": "الأيام المتبقية",
-			"days": "يوم",
-			"renewalDate": "تاريخ التجديد",
-			"sendReminder": "إرسال تذكير",
-			"noResults": "لا توجد نتائج",
-			"management": "إدارة العملاء",
-			"managementSubtitle": "عرض العملاء في جدول مع بحث وترقيم صفحات",
-			"contact": "التواصل",
-			"package": "الباقة",
-			"renewal": "التجديد",
-			"startDate": "تاريخ البداية",
-			"status": {
-				"active": "نشط",
-				"expiringSoon": "ينتهي قريباً",
-				"renewalDue": "يحتاج للتجديد",
-				"ended": "منتهي"
-			},
-			"stats": {
-				"total": "إجمالي العملاء",
-				"active": "نشط",
-				"renewSoon": "يحتاج تجديد قريبًا",
-				"renewUrgent": "تجديد عاجل",
-				"ended": "منتهي"
-			},
-			"statsSubtitle": {
-				"total": "الكل",
-				"active": "أكثر من 30 يوم",
-				"renewSoon": "من 8 إلى 30 يوم",
-				"renewUrgent": "خلال 7 أيام",
-				"ended": "انتهى بالفعل"
-			},
-			"statsHint": {
-				"total": "إجمالي قاعدة العملاء",
-				"active": "اشتراكات مستقرة",
-				"renewSoon": "تابع قبل الانتهاء",
-				"renewUrgent": "أرسل تذكير الآن",
-				"ended": "فرصة لإعادة الاشتراك"
-			}
-		},
-		"table": {
-			"client": "العميل",
-			"status": "الحالة",
-			"description": "الوصف",
-			"period": "الفترة",
-			"date": "التاريخ",
-			"amount": "المبلغ",
-			"actions": "الإجراءات",
-			"to": "إلى",
-			"view": "عرض"
-		},
-		"subscriptions": {
-			"stats": {
-				"active": "الاشتراكات النشطة",
-				"revenue": "الإيرادات الشهرية",
-				"renewal": "معدل التجديد"
-			}
-		},
-		"transactions": {
-			"recent": "آخر المعاملات",
-			"recentSubtitle": "عرض آخر المعاملات في جدول مع ترقيم صفحات",
-			"empty": "لا توجد معاملات حتى الآن",
-			"examples": {
-				"subscription": "دفع اشتراك شهري - الباقة المميزة",
-				"withdrawal": "طلب سحب إلى الحساب البنكي",
-				"refund": "استرداد - إلغاء الاشتراك",
-				"annual": "دفع اشتراك سنوي - باقة المؤسسات"
-			}
-		},
-		"transactionTypes": {
-			"subscription_payment": "دفع اشتراك",
-			"withdrawal": "سحب",
-			"refund": "استرداد",
-			"deposit": "إيداع",
-			"transfer": "تحويل"
-		},
-		"status": {
-			"completed": "مكتمل",
-			"pending": "قيد الانتظار",
-			"failed": "فشل",
-			"paid": "مدفوع",
-			"unpaid": "غير مدفوع",
-			"approved": "موافق عليه",
-			"rejected": "مرفوض"
-		},
-		"filters": {
-			"title": "تصفية وبحث",
-			"subtitle": "فلترة النتائج بسرعة ووضوح",
-			"client": "العميل",
-			"selectClient": "اختر عميل",
-			"allClients": "جميع العملاء",
-			"fromDate": "من تاريخ",
-			"toDate": "إلى تاريخ",
-			"selectDate": "اختر التاريخ",
-			"paidStatus": "حالة الدفع",
-			"all": "الكل",
-			"paid": "مدفوع",
-			"unpaid": "غير مدفوع",
-			"sort": "ترتيب حسب",
-			"newest": "الأحدث أولاً",
-			"oldest": "الأقدم أولاً",
-			"amountHigh": "المبلغ (الأعلى أولاً)",
-			"amountLow": "المبلغ (الأقل أولاً)",
-			"reset": "إعادة تعيين",
-			"show": "إظهار",
-			"hide": "إخفاء"
-		},
-		"payments": {
-			"history": "سجل المدفوعات",
-			"historyDescription": "سجل كامل بجميع المعاملات",
-			"total": "إجمالي: {count} معاملة",
-			"empty": "لا توجد مدفوعات مسجلة",
-			"emptyDescription": "لم يتم تسجيل أي مدفوعات حتى الآن",
-			"period": "الفترة",
-			"markAsPaid": "تعيين كمدفوع"
-		},
-		"form": {
-			"title": "تسجيل دفعة جديدة",
-			"description": "الوصف",
-			"client": "اختر العميل",
-			"selectClient": "اختر عميل من القائمة",
-			"amount": "المبلغ",
-			"descriptionPlaceholder": "أدخل وصفاً تفصيلياً للدفعة...",
-			"period": "فترة الاشتراك",
-			"optional": "اختياري",
-			"periodFrom": "من تاريخ",
-			"periodTo": "إلى تاريخ",
-			"submit": "تسجيل الدفعة",
-			"submitting": "جاري التسجيل...",
-			"success": "تم تسجيل الدفعة بنجاح!",
-			"errors": {
-				"clientRequired": "يجب اختيار العميل",
-				"amountRequired": "يجب إدخال مبلغ صحيح",
-				"descriptionRequired": "يجب إدخال وصف الدفعة",
-				"periodRequired": "يجب إدخال تاريخ البداية والنهاية معاً",
-				"submitFailed": "فشل في تسجيل الدفعة. حاول مرة أخرى"
-			}
-		},
-		"pagination": {
-			"prev": "السابق",
-			"next": "التالي"
-		},
-		"common": {
-			"viewAll": "عرض الكل",
-			"system": "النظام",
-			"adminUser": "المسؤول",
-			"superAdmin": "المدير العام",
-			"edit": "تعديل",
-			"delete": "حذف",
-			"cancel": "إلغاء",
-			"save": "حفظ",
-			"update": "تحديث",
-			"export": "تصدير",
-			"loading": "جاري التحميل...",
-			"noData": "لا توجد بيانات",
-			"yes": "نعم",
-			"no": "لا"
-		},
-		"withdrawals": {
-			"title": "طلبات السحب",
-			"pending": "قيد المراجعة",
-			"approved": "موافق عليه",
-			"rejected": "مرفوض",
-			"rejectionReason": "سبب الرفض",
-			"examples": {
-				"rejectionReason": "الرصيد غير كافٍ للسحب المطلوب"
-			},
-			"actions": {
-				"approve": "الموافقة",
-				"reject": "الرفض"
-			}
-		},
-		"subscription": {
-			"title": "حالة الاشتراك",
-			"endDate": "تاريخ الانتهاء",
-			"renewNow": "تجديد الآن"
 		}
 	},
 	"profile": {
@@ -4642,19 +4394,17 @@
 	},
 	"home": {
 		"hero": {
-			"headline": {
-				"transform": "نظّم",
-				"journey": "رحلة العميل",
-				"withScience": "في منصة واحدة"
-			},
-			"description": "إدارة العملاء، الخطط، التقارير، والمحادثات داخل نظام واحد يساعد الإدارة والمدربين والعملاء على العمل بوضوح وكفاءة.",
+			"badge": "منصة إدارة متكاملة",
+			"title": "منصة واحدة لإدارة العملاء والخطط",
+			"description": "نظّم رحلة العميل بالكامل داخل نظام واحد يجمع إدارة العملاء، الخطط التدريبية والغذائية، التقارير الأسبوعية، والمحادثات بين الإدارة والمدربين والعملاء في تجربة واضحة واحترافية.",
 			"cta": {
 				"getStarted": "ابدأ الآن",
 				"watchDemo": "شاهد العرض"
 			},
 			"trust": {
 				"activeUsers": "تجربة موحدة لإدارة العملاء",
-				"rating": "تنظيم أفضل للعمل اليومي"
+				"rating": "تنظيم أفضل للعمل اليومي",
+				"community": "نشط الان"
 			},
 			"stats": {
 				"coaches": {
@@ -5092,45 +4842,60 @@
 			}
 		},
 		"contact": {
-			"title": "ابدأ التواصل معنا",
-			"description": "أرسل بياناتك لطلب عرض للنظام أو بدء تجربة مناسبة لطريقة عملك، وسنساعدك على اختيار أفضل أسلوب لاستخدام المنصة.",
+			"title": "تواصل معنا",
+			"description": "أخبرنا قليلًا عنك وعن أهدافك، وسيقوم فريقنا بالتواصل معك في أقرب وقت ممكن.",
 			"form": {
+				"ariaLabel": "نموذج التواصل",
+				"submit": "إرسال الرسالة",
+				"submitting": "جارٍ الإرسال...",
+				"successTitle": "تم إرسال الرسالة بنجاح",
+				"successDesc": "شكرًا لتواصلك معنا. سنرد عليك قريبًا.",
+				"errorGeneric": "حدث خطأ ما. يُرجى المحاولة مرة أخرى.",
 				"fields": {
-					"username": "الاسم كامل",
+					"username": "الاسم الكامل",
 					"email": "البريد الإلكتروني",
 					"phone": "رقم الهاتف",
-					"teamSize": "نوع الاستخدام"
+					"teamSize": "هذه الخدمة لمن؟"
+				},
+				"placeholders": {
+					"username": "محمد أحمد",
+					"email": "you@example.com"
+				},
+				"errors": {
+					"usernameTooShort": "يجب أن يكون الاسم مكوّنًا من حرفين على الأقل",
+					"usernameRequired": "الاسم مطلوب",
+					"emailInvalid": "يرجى إدخال بريد إلكتروني صحيح",
+					"emailRequired": "البريد الإلكتروني مطلوب",
+					"phoneInvalid": "يرجى إدخال رقم هاتف صحيح",
+					"phoneRequired": "رقم الهاتف مطلوب",
+					"teamSizeRequired": "يرجى اختيار حجم الفريق"
 				},
 				"teamSize": {
-					"solo": "استخدام فردي",
-					"soloDesc": "مناسب للمدرب الفردي أو الجهة الصغيرة التي تريد تنظيم العملاء والخطط والمتابعة.",
-					"team": "فريق أو إدارة",
-					"teamDesc": "مناسب للفرق والإدارات التي تحتاج إلى إدارة مستخدمين وصلاحيات وتشغيل يومي أكثر اتساعًا."
-				},
-				"submit": "إرسال الطلب",
-				"submitting": "جارٍ الإرسال...",
-				"successTitle": "تم إرسال الطلب بنجاح",
-				"successDesc": "سيتم التواصل معك قريبًا لمساعدتك في البدء واختيار الطريقة المناسبة لاستخدام النظام."
+					"solo": "لي فقط",
+					"soloDesc": "أبحث عن حل لياقة شخصي.",
+					"team": "لفريق أو مجموعة",
+					"teamDesc": "نحن مهتمون بخدمات لياقة بدنية لأكثر من شخص."
+				}
 			},
 			"testimonials": {
-				"subtitle": "تجارب مرتبطة بتنظيم العمل والمتابعة",
+				"subtitle": "ماذا يقول عملاؤنا",
 				"0": {
-					"text": "ساعدنا النظام على تنظيم إدارة العملاء والخطط والتقارير في مكان واحد، وهذا اختصر الكثير من الوقت في المتابعة اليومية.",
-					"author": "محمد",
-					"role": "مدير تشغيل",
-					"company": "منصة تدريب"
+					"text": "غيّر FitnessHub طريقتي في التعامل مع التمارين بالكامل. كان التوجيه واضحًا ومحفزًا وقابلًا للاستمرار فعلًا.",
+					"author": "سارة أحمد",
+					"role": "مديرة تسويق",
+					"company": "كايرو تك"
 				},
 				"1": {
-					"text": "وجود التمارين والتغذية والمحادثات والتقارير داخل نظام واحد جعل تجربة العميل أوضح وأسهل، ورفع جودة التواصل مع الفريق.",
-					"author": "ريم",
-					"role": "مدربة",
-					"company": "فريق متابعة"
+					"text": "أخيرًا وجدت برنامجًا رياضيًا يناسب أسلوب حياتي. كان الفريق داعمًا منذ اليوم الأول وكانت النتائج حقيقية.",
+					"author": "عمر خالد",
+					"role": "رائد أعمال",
+					"company": "فيت ستارت"
 				},
 				"2": {
-					"text": "أصبح لدينا وضوح أكبر في الصلاحيات، إدارة المستخدمين، والفواتير، مع تجربة أكثر ترتيبًا من استخدام أدوات متعددة منفصلة.",
-					"author": "خالد",
-					"role": "إدارة النظام",
-					"company": "تشغيل وإدارة"
+					"text": "اشتركنا كفريق ولاحظنا فرقًا واضحًا في الطاقة والالتزام والروح المعنوية. أنصح بهم بشدة.",
+					"author": "منى حسن",
+					"role": "مسؤولة الموارد البشرية",
+					"company": "موف ويل"
 				}
 			}
 		},
@@ -5211,6 +4976,8 @@
 				"about": "عن النظام",
 				"community": "المزايا",
 				"pricing": "الباقات",
+				"faqs": "الاسئلة الشائعة",
+				"contact": "تواصل معنا",
 				"joinNow": "ابدأ الآن"
 			},
 			"langSwitch": {
@@ -5274,6 +5041,248 @@
 				"addSet": "إضافة مجموعة",
 				"save": "حفظ"
 			}
+		}
+	},
+	"billing": {
+		"title": "المالية والفواتير",
+		"subtitle": "إدارة شاملة للمدفوعات والاشتراكات والعملاء",
+		"currency": "ج.م",
+		"tabs": {
+			"overview": "نظرة عامة",
+			"clients": "العملاء",
+			"packages": "الحزم",
+			"subscriptions": "الاشتراكات",
+			"clientPayments": "مدفوعات العملاء"
+		},
+		"kpi": {
+			"walletBalance": {
+				"title": "رصيد المحفظة",
+				"subtitle": "الرصيد الحالي"
+			},
+			"totalEarned": {
+				"title": "إجمالي الأرباح",
+				"subtitle": "منذ البداية"
+			},
+			"moneyInThisMonth": {
+				"title": "إيرادات الشهر",
+				"subtitle": "هذا الشهر"
+			},
+			"pendingPayments": "مدفوعات معلقة",
+			"activeSubscriptions": "اشتراكات نشطة",
+			"monthlyRevenue": "إيرادات شهرية",
+			"renewalRate": "معدل التجديد",
+			"totalClients": "إجمالي العملاء",
+			"activeClients": "عملاء نشطون",
+			"urgentRenewal": "تجديد عاجل",
+			"soonRenewal": "تجديد قريب"
+		},
+		"status": {
+			"completed": "مكتمل",
+			"pending": "معلق",
+			"failed": "فشل",
+			"active": "نشط",
+			"expired": "منتهي",
+			"expiringSoon": "ينتهي قريباً"
+		},
+		"common": {
+			"export": "تصدير",
+			"viewAll": "عرض الكل",
+			"save": "حفظ",
+			"cancel": "إلغاء",
+			"update": "تحديث",
+			"delete": "حذف",
+			"edit": "تعديل",
+			"system": "النظام",
+			"loading": "جاري التحميل...",
+			"search": "بحث...",
+			"reset": "إعادة تعيين",
+			"apply": "تطبيق",
+			"send": "إرسال",
+			"download": "تنزيل",
+			"print": "طباعة",
+			"close": "إغلاق",
+			"confirm": "تأكيد",
+			"all": "الكل"
+		},
+		"table": {
+			"status": "الحالة",
+			"client": "العميل",
+			"description": "الوصف",
+			"date": "التاريخ",
+			"amount": "المبلغ",
+			"actions": "الإجراءات",
+			"period": "الفترة",
+			"to": "إلى",
+			"view": "عرض",
+			"noData": "لا توجد بيانات",
+			"noResults": "لا توجد نتائج تطابق البحث"
+		},
+		"transactions": {
+			"recent": "المعاملات الأخيرة",
+			"recentSubtitle": "آخر العمليات المالية في حسابك",
+			"empty": "لا توجد معاملات بعد",
+			"examples": {
+				"subscription": "دفعة اشتراك شهري",
+				"withdrawal": "طلب سحب رصيد",
+				"refund": "استرداد مبلغ",
+				"annual": "اشتراك سنوي"
+			}
+		},
+		"filters": {
+			"title": "تصفية النتائج",
+			"subtitle": "استخدم الفلاتر لتضييق نطاق البحث",
+			"status": "الحالة",
+			"type": "النوع",
+			"client": "العميل",
+			"package": "الحزمة",
+			"fromDate": "من تاريخ",
+			"toDate": "إلى تاريخ",
+			"sort": "الترتيب",
+			"selectClient": "اختر عميلاً",
+			"selectDate": "اختر تاريخاً",
+			"allClients": "جميع العملاء",
+			"reset": "إعادة تعيين",
+			"hide": "إخفاء الفلاتر",
+			"show": "إظهار الفلاتر",
+			"subscription": "اشتراك",
+			"withdrawal": "سحب",
+			"refund": "استرداد",
+			"newest": "الأحدث أولاً",
+			"oldest": "الأقدم أولاً",
+			"amountHigh": "المبلغ: الأعلى",
+			"amountLow": "المبلغ: الأقل",
+			"activeOnly": "النشطون فقط",
+			"expiringOnly": "المنتهون فقط"
+		},
+		"clients": {
+			"management": "إدارة العملاء",
+			"search": "ابحث بالاسم أو البريد أو الهاتف...",
+			"results": "نتيجة",
+			"contact": "بيانات التواصل",
+			"package": "الحزمة",
+			"renewal": "انتهاء الاشتراك",
+			"startDate": "تاريخ البدء",
+			"days": "يوم متبقي",
+			"expired": "منتهي",
+			"sendReminder": "إرسال تذكير",
+			"noResults": "لا يوجد عملاء مطابقون",
+			"stats": {
+				"total": "إجمالي العملاء",
+				"active": "عملاء نشطون",
+				"renewUrgent": "تجديد عاجل",
+				"renewSoon": "تجديد قريب",
+				"ended": "منتهية"
+			},
+			"status": {
+				"active": "نشط",
+				"expiringSoon": "ينتهي قريباً",
+				"renewalDue": "يحتاج تجديد",
+				"ended": "منتهي"
+			}
+		},
+		"packages": {
+			"title": "إدارة الحزم",
+			"description": "أنشئ وعدّل حزم الاشتراك الخاصة بك وأرسلها للعملاء",
+			"addNew": "إضافة حزمة جديدة",
+			"edit": "تعديل الحزمة",
+			"exportAll": "إرسال الكل للعميل",
+			"sendToClient": "إرسال للعميل",
+			"sendAllAsPdf": "إرسال جميع الحزم كـ PDF",
+			"sendSingleAsPdf": "إرسال هذه الحزمة",
+			"dialogDescription": "أدخل تفاصيل الحزمة الجديدة",
+			"exportSuccess": "تم إرسال الحزم بنجاح إلى {phone}",
+			"perMonth": "شهرياً",
+			"perYear": "سنوياً",
+			"features": "المميزات",
+			"mostPopular": "الأكثر شيوعاً",
+			"bestValue": "أفضل قيمة",
+			"starter": "مبتدئ",
+			"gold": "ذهبي",
+			"platinum": "بلاتيني",
+			"form": {
+				"nameAr": "اسم الحزمة (عربي)",
+				"nameEn": "اسم الحزمة (إنجليزي)",
+				"price": "السعر",
+				"duration": "الفترة",
+				"features": "المميزات",
+				"feature": "ميزة",
+				"addFeature": "إضافة ميزة",
+				"monthly": "شهري",
+				"quarterly": "ربع سنوي",
+				"semiAnnual": "نصف سنوي",
+				"annual": "سنوي"
+			},
+			"exportDialog": {
+				"title": "إرسال الحزم للعميل",
+				"description": "سيتم إرسال ملف PDF يحتوي على جميع الحزم المتاحة",
+				"phoneLabel": "رقم واتساب العميل",
+				"info": "سيتم فتح محادثة واتساب مع العميل وإرسال تفاصيل الحزمة",
+				"sending": "جاري الإرسال...",
+				"send": "إرسال الآن",
+				"selectClient": "اختر العميل",
+				"preview": "معاينة الرسالة",
+				"includesPlans": "تتضمن {count} حزمة"
+			}
+		},
+		"subscriptions": {
+			"stats": {
+				"active": "اشتراكات نشطة",
+				"revenue": "الإيرادات الشهرية",
+				"renewal": "معدل التجديد"
+			}
+		},
+		"payments": {
+			"history": "سجل الاشتراكات",
+			"historyDescription": "جميع مدفوعات الاشتراكات المسجلة",
+			"empty": "لا توجد مدفوعات مسجلة",
+			"emptyDescription": "لم يتم تسجيل أي مدفوعات حتى الآن",
+			"total": "{count} سجل"
+		},
+		"form": {
+			"title": "تسجيل دفعة جديدة",
+			"description": "وصف الدفعة",
+			"client": "العميل",
+			"selectClient": "ابحث أو اختر عميلاً...",
+			"amount": "المبلغ المدفوع",
+			"amountPlaceholder": "0.00",
+			"descriptionPlaceholder": "مثال: اشتراك شهري — يناير 2025",
+			"period": "فترة الاشتراك",
+			"periodFrom": "من",
+			"periodTo": "إلى",
+			"optional": "اختياري",
+			"paymentMethod": "طريقة الدفع",
+			"notes": "ملاحظات إضافية",
+			"notesPlaceholder": "أي ملاحظات أو تفاصيل إضافية...",
+			"submit": "تسجيل الدفعة",
+			"submitting": "جاري التسجيل...",
+			"success": "✓ تم تسجيل الدفعة بنجاح",
+			"methods": {
+				"cash": "نقدي",
+				"bank": "تحويل بنكي",
+				"card": "بطاقة ائتمان",
+				"wallet": "محفظة إلكترونية",
+				"whatsapp": "واتساب"
+			},
+			"errors": {
+				"clientRequired": "يرجى اختيار العميل",
+				"amountRequired": "يرجى إدخال مبلغ صحيح",
+				"descriptionRequired": "يرجى إدخال وصف للدفعة",
+				"periodRequired": "يرجى تحديد تاريخي البداية والنهاية معاً",
+				"submitFailed": "حدث خطأ أثناء التسجيل، يرجى المحاولة مرة أخرى"
+			}
+		},
+		"tooltips": {
+			"pageInfo": "هذه الصفحة تتيح لك إدارة جميع العمليات المالية بما في ذلك الاشتراكات والمدفوعات والحزم"
+		},
+		"pdf": {
+			"generatingPdf": "جاري إنشاء ملف PDF...",
+			"pdfReady": "ملف PDF جاهز",
+			"sendViaPdf": "إرسال كـ PDF",
+			"previewTitle": "معاينة PDF",
+			"allPackages": "جميع الحزم",
+			"generatedOn": "تم الإنشاء في",
+			"contactUs": "للتواصل والاستفسار",
+			"choosePlan": "اختر الخطة المناسبة لك"
 		}
 	}
 }

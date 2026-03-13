@@ -190,6 +190,7 @@
 
 body {
   color: black;
+	overflow-x: hidden;
 }
 
 [dir='ltr'] body * {
@@ -708,4 +709,17 @@ input[type='number'] {
     rgba(50, 50, 93, 0.06) 0px 8px 32px -4px,
     rgba(0, 0, 0, 0.03) 0px 16px 48px -8px,
     rgba(255, 255, 255, 0.9) 0px -1px 0px 0px inset !important;
+}
+
+
+ /* Remove browser autofill background */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px rgba(255,255,255,0.05) inset !important;
+  box-shadow: 0 0 0 1000px rgba(255,255,255,0.05) inset !important;
+  -webkit-text-fill-color: white !important;
+  caret-color: white;
+  transition: background-color 9999s ease-in-out 0s;
 }

@@ -46,7 +46,7 @@ export default function SectionHeader({
   return (
     <motion.div
       id={id}
-      className={`relative flex flex-col gap-5 max-md:gap-3 mb-16 ${alignClass} ${className}`}
+      className={`relative flex flex-col gap-5 max-md:gap-3 mb-16 max-md:!items-center max-md:!text-center ${alignClass} ${className}`}
       initial={{ opacity: 0, y: reduced ? 0 : -24 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-60px" }}
@@ -88,7 +88,7 @@ export default function SectionHeader({
  
       <motion.h2
         className="font-display m-0 w-full max-w-full px-1 leading-[1.05] tracking-tight text-white
-          text-[1rem] sm:text-[1.75rem] md:text-[2.5rem] lg:text-[3rem]"
+           text-[1.75rem] md:text-[2.5rem] lg:text-[3rem]"
         initial={{ opacity: 0, y: reduced ? 0 : 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -118,7 +118,7 @@ export default function SectionHeader({
       {/* ── Subtitle ──────────────────────────────────────────────────────── */}
       {subtitle && (
         <motion.p
-          className="font-body m-0 max-w-3xl px-1 leading-relaxed text-white/50  text-[.7rem] sm:text-[1rem] md:text-[1.5rem]"
+          className="font-body m-0 max-w-3xl px-1 leading-relaxed text-white/50  text-[1rem] md:text-[1.5rem]"
           initial={{ opacity: 0, y: reduced ? 0 : 14 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}

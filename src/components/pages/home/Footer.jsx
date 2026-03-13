@@ -92,28 +92,7 @@ export default function Footer() {
     ],
   };
 
-  const stats = [
-    {
-      icon: Users,
-      value: t("stats.users.value"),
-      label: t("stats.users.label"),
-    },
-    {
-      icon: Award,
-      value: t("stats.trainers.value"),
-      label: t("stats.trainers.label"),
-    },
-    {
-      icon: Target,
-      value: t("stats.workouts.value"),
-      label: t("stats.workouts.label"),
-    },
-    {
-      icon: TrendingUp,
-      value: t("stats.success.value"),
-      label: t("stats.success.label"),
-    },
-  ];
+  
 
   const contactItems = [
     { icon: Mail, text: "info@so7bafit.com", href: "mailto:info@so7bafit.com" },
@@ -153,33 +132,7 @@ export default function Footer() {
       </div>
 
       <div className="relative z-10 mx-auto max-w-[1440px] px-6 py-12 lg:px-16">
-        <div className="mb-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat, i) => {
-            const Icon = stat.icon;
-            return (
-              <motion.div
-                key={i}
-                className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-5 backdrop-blur-sm"
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.08 }}
-              >
-                <div className="mb-3 flex items-center gap-3">
-                  <div className="theme-gradient-bg flex h-11 w-11 items-center justify-center rounded-lg shadow-lg">
-                    <Icon className="h-5 w-5 text-white" />
-                  </div>
-                  <span className="font-display text-3xl leading-none theme-gradient-text">
-                    {stat.value}
-                  </span>
-                </div>
-                <p className="font-body text-sm font-semibold text-white/45">
-                  {stat.label}
-                </p>
-              </motion.div>
-            );
-          })}
-        </div>
+        
 
         <div className="mb-14 grid gap-12 lg:grid-cols-12">
           <motion.div

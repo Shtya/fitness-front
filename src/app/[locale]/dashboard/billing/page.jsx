@@ -1,1215 +1,2562 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/themes/material_blue.css";
+import toast from "react-hot-toast";
+import api from "@/utils/axios";
+
 import {
-  Wallet, TrendingUp, DollarSign, Calendar, Clock,
-  CheckCircle, XCircle, AlertCircle, Trash2, RefreshCw,
-  Download, ArrowUpRight, ArrowDownRight, User, Mail,
-  Phone, Filter, ChevronDown, Eye, Plus, Info, Edit,
-  Package, Send, Users, Activity, FileText, Receipt,
-  Crown, Sparkles, BarChart3, SlidersHorizontal, Check,
-  BookMarked, Heart, Tag,
+  Wallet,
+  TrendingUp,
+  DollarSign,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Trash2,
+  RefreshCw,
+  Download,
+  ArrowUpRight,
+  ArrowDownRight,
+  User,
+  Mail,
+  Phone,
+  Eye,
+  Plus,
+  Info,
+  Edit,
+  Package,
+  Send,
+  Users,
+  Activity,
+  FileText,
+  Receipt,
+  Crown,
+  BarChart3,
+  Check,
+  MessageCircle,
+  Zap,
+  Shield,
+  Award,
+  CreditCard,
+  Banknote,
+  Smartphone,
+  Hash,
+  FileDown,
+  X,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/molecules/PageHeader";
-
+import DataTable, { FilterField } from "@/components/atoms/Datatable";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
+/* ─────────────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────────────── */
 const cls = (...a) => a.filter(Boolean).join(" ");
 
-/* ─────────────────────────────────────────────────────────────
-   DESIGN TOKENS
-───────────────────────────────────────────────────────────── */
-const CSS_VARS = `
-  :root {
-    --color-gradient-from: #4f46e5;
-    --color-gradient-via:  #6366f1;
-    --color-gradient-to:   #7c3aed;
-    --color-primary-50:  #eef2ff;
-    --color-primary-100: #e0e7ff;
-    --color-primary-150: #c7d2fe;
-    --color-primary-200: #c7d2fe;
-    --color-primary-300: #a5b4fc;
-    --color-primary-400: #818cf8;
-    --color-primary-500: #6366f1;
-    --color-primary-600: #4f46e5;
-    --color-primary-700: #4338ca;
-    --color-primary-800: #3730a3;
-    --color-primary-900: #312e81;
+const PAYMENT_METHODS = [
+  {
+    key: "cash",
+    apiValue: "cash",
+    icon: Banknote,
+    label: "نقدي",
+    activeBg: "bg-green-600",
+    activeBorder: "border-green-600",
+    activeText: "text-green-600",
+    inactiveIconBg: "bg-slate-100",
+    inactiveIconText: "text-slate-600",
+    activeShadow: "shadow-[0_4px_16px_rgba(22,163,74,.3)]",
+  },
+  {
+    key: "bank",
+    apiValue: "bank_transfer",
+    icon: Hash,
+    label: "تحويل بنكي",
+    activeBg: "bg-blue-600",
+    activeBorder: "border-blue-600",
+    activeText: "text-blue-600",
+    inactiveIconBg: "bg-slate-100",
+    inactiveIconText: "text-slate-600",
+    activeShadow: "shadow-[0_4px_16px_rgba(37,99,235,.3)]",
+  },
+  {
+    key: "card",
+    apiValue: "card",
+    icon: CreditCard,
+    label: "بطاقة ائتمان",
+    activeBg: "bg-[var(--color-secondary-600)]",
+    activeBorder: "border-[var(--color-secondary-600)]",
+    activeText: "text-[var(--color-secondary-600)]",
+    inactiveIconBg: "bg-slate-100",
+    inactiveIconText: "text-slate-600",
+    activeShadow: "shadow-[0_4px_16px_rgba(147,51,234,.3)]",
+  },
+  {
+    key: "wallet",
+    apiValue: "wallet",
+    icon: Smartphone,
+    label: "محفظة إلكترونية",
+    activeBg: "bg-amber-600",
+    activeBorder: "border-amber-600",
+    activeText: "text-amber-600",
+    inactiveIconBg: "bg-slate-100",
+    inactiveIconText: "text-slate-600",
+    activeShadow: "shadow-[0_4px_16px_rgba(217,119,6,.3)]",
+  },
+];
+
+const QUICK_AMOUNTS = [500, 1000, 1200, 2500, 5000, 12000];
+
+function toYMD(value) {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  return value;
+}
+
+function money(v) {
+  return Number(v || 0);
+}
+
+function getInitials(name = "") {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).map((p) => p[0]).join("").toUpperCase() || "U";
+}
+
+function getPlanDurationLabel(interval, t) {
+  const map = {
+    monthly: t("packages.form.monthly") || "شهري",
+    quarterly: t("packages.form.quarterly") || "ربع سنوي",
+    yearly: t("packages.form.annual") || "سنوي",
+    one_time: t("packages.form.oneTime") || "مرة واحدة",
+  };
+  return map[interval] || interval || "—";
+}
+
+function getPlanIntervalFromDuration(duration) {
+  if (duration === "شهري") return "monthly";
+  if (duration === "ربع سنوي") return "quarterly";
+  if (duration === "سنوي") return "yearly";
+  return "monthly";
+}
+
+function mapPlanToUi(plan, t) {
+  return {
+    id: plan.id,
+    name: plan.name,
+    nameEn: plan.name,
+    price: money(plan.price),
+    duration: getPlanDurationLabel(plan.interval, t),
+    features: Array.isArray(plan.features) ? plan.features : [],
+    raw: plan,
+  };
+}
+
+function daysLeftFromEnd(endDate) {
+  if (!endDate) return null;
+  const end = new Date(endDate);
+  const now = new Date();
+  end.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+  return Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function getClientStatusByDays(daysLeft, t) {
+  if (daysLeft == null) {
+    return { key: "ended", icon: XCircle, label: t("clients.status.ended") || "منتهي" };
   }
-`;
+  if (daysLeft <= 0) {
+    return { key: "expiring", icon: XCircle, label: t("clients.status.ended") || "منتهي" };
+  }
+  if (daysLeft <= 7) {
+    return { key: "expiring", icon: AlertCircle, label: t("clients.status.expiringSoon") || "ينتهي قريبًا" };
+  }
+  if (daysLeft <= 30) {
+    return { key: "warn", icon: RefreshCw, label: t("clients.status.renewalDue") || "تجديد قريب" };
+  }
+  return { key: "active", icon: CheckCircle, label: t("clients.status.active") || "نشط" };
+}
 
-/* ─────────────────────────────────────────────────────────────
-   MICRO-COMPONENTS
-───────────────────────────────────────────────────────────── */
+function mapSubscriptionToClientRow(sub) {
+  const user = sub.user || {};
+  const plan = sub.plan || {};
+  const endDate = sub.endDate || sub.renewAt || null;
+  const daysLeft = daysLeftFromEnd(endDate);
+  return {
+    id: sub.id,
+    userId: sub.userId,
+    subscriptionId: sub.id,
+    name: user.name || "—",
+    email: user.email || "—",
+    phone: user.phone || "—",
+    package: plan.name || "—",
+    startDate: sub.startDate || "—",
+    endDate: endDate || "—",
+    daysLeft,
+    avatar: getInitials(user.name),
+    raw: sub,
+  };
+}
 
-/** Glassy card surface */
-function Surface({ children, className = "", accent = false, glow = false }) {
+function paymentStatusToUi(status, t) {
+  if (status === "succeeded") return { key: "completed", label: t("status.completed") || "مكتمل", icon: CheckCircle };
+  if (status === "failed") return { key: "failed", label: t("status.failed") || "فشل", icon: XCircle };
+  return { key: "pending", label: t("status.pending") || "معلق", icon: Clock };
+}
+
+function subscriptionStatusToUi(status, t) {
+  const map = {
+    active: { key: "active", label: t("clients.status.active") || "نشط", icon: CheckCircle },
+    canceled: { key: "ended", label: t("clients.status.ended") || "منتهي", icon: XCircle },
+    expired: { key: "ended", label: t("clients.status.ended") || "منتهي", icon: XCircle },
+    past_due: { key: "warn", label: t("status.pending") || "معلق", icon: AlertCircle },
+    pending: { key: "pending", label: t("status.pending") || "معلق", icon: Clock },
+    trialing: { key: "active", label: t("clients.status.active") || "نشط", icon: CheckCircle },
+  };
+  return map[status] || { key: "pending", label: status || "—", icon: Clock };
+}
+
+function buildQuery(obj = {}) {
+  const params = {};
+  Object.keys(obj).forEach((k) => {
+    const v = obj[k];
+    if (v === undefined || v === null || v === "" || v === "all") return;
+    params[k] = v;
+  });
+  return params;
+}
+
+/* ─────────────────────────────────────────────────
+   SURFACE — card wrapper
+───────────────────────────────────────────────── */
+function Surface({ children, className = "", accent = false, glow = false, id }) {
   return (
     <div
-      className={cls("relative overflow-hidden rounded-lg border bg-white/90 backdrop-blur-xl", className)}
-      style={{
-        borderColor: "var(--color-primary-100)",
-        boxShadow: glow
-          ? "0 0 0 1px var(--color-primary-100), 0 4px 6px -1px rgba(15,23,42,0.05), 0 20px 50px -10px rgba(15,23,42,0.10)"
-          : "0 1px 3px rgba(15,23,42,0.04), 0 10px 30px rgba(15,23,42,0.07)",
-      }}
-    >
-      {accent && (
-        <div className="absolute inset-x-0 top-0 h-[2px]"
-          style={{ background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))" }} />
+      id={id}
+      className={cls(
+        "relative overflow-hidden rounded-2xl border bg-white/90 backdrop-blur-xl",
+        "border-[var(--color-primary-100)]",
+        glow
+          ? "shadow-[0_0_0_1px_var(--color-primary-100),0_4px_6px_-1px_rgba(15,23,42,.05),0_20px_50px_-10px_rgba(15,23,42,.12)]"
+          : "shadow-[0_1px_3px_rgba(15,23,42,.04),0_10px_30px_rgba(15,23,42,.07)]",
+        className
       )}
+    >
       {children}
     </div>
   );
 }
 
-/** KPI stat card */
-function KpiCard({ icon: Icon, title, subtitle, value, trend, bgFrom, bgTo, iconColor, idx = 0 }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: idx * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      whileHover={{ y: -6, scale: 1.015 }}
-      className="group relative overflow-hidden rounded-lg border-2 border-white/60 shadow-lg hover:shadow-2xl transition-all duration-300"
-      style={{ background: `linear-gradient(135deg, ${bgFrom}, ${bgTo})` }}
-    >
-      <motion.div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none"
-        initial={{ x: "-100%" }} whileHover={{ x: "100%" }} transition={{ duration: 0.7 }} />
-      <div className="relative p-5 lg:p-6">
-        <div className="flex items-start justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3">
-            <motion.div whileHover={{ rotate: 15, scale: 1.1 }} transition={{ duration: 0.3 }}
-              className="h-12 w-12 rounded-lg bg-white/75 backdrop-blur border border-white/60 shadow flex items-center justify-center shrink-0">
-              <Icon className={cls("w-6 h-6", iconColor)} strokeWidth={2} />
-            </motion.div>
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-widest text-slate-600">{title}</p>
-              {subtitle && <p className="text-[11px] text-slate-500 mt-0.5 font-medium">{subtitle}</p>}
-            </div>
-          </div>
-          {trend && (
-            <span className={cls("shrink-0 inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-black",
-              trend.direction === "up" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700")}>
-              {trend.direction === "up" ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-              {trend.value}
-            </span>
-          )}
-        </div>
-        <p className="text-3xl lg:text-4xl font-black text-slate-900 leading-none tracking-tight">{value}</p>
-      </div>
-    </motion.div>
-  );
-}
-
-/** Status badge */
+/* ─────────────────────────────────────────────────
+   STATUS BADGE
+───────────────────────────────────────────────── */
 function StatusBadge({ status, label, icon: Icon }) {
-  const styles = {
+  const map = {
     completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    failed:    "border-rose-200   bg-rose-50   text-rose-700",
-    pending:   "border-amber-200  bg-amber-50  text-amber-700",
-    active:    "border-emerald-200 bg-emerald-50 text-emerald-700",
-    expiring:  "border-rose-200   bg-rose-50   text-rose-700",
-    warn:      "border-amber-200  bg-amber-50  text-amber-700",
-    ended:     "border-slate-200  bg-slate-50  text-slate-600",
+    failed: "border-rose-200 bg-rose-50 text-rose-700",
+    pending: "border-amber-200 bg-amber-50 text-amber-700",
+    active: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    expiring: "border-rose-200 bg-rose-50 text-rose-700",
+    warn: "border-amber-200 bg-amber-50 text-amber-700",
+    ended: "border-slate-200 bg-slate-50 text-slate-600",
   };
+
   return (
-    <span className={cls("inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-bold", styles[status] || styles.pending)}>
-      {Icon && <Icon className="w-3 h-3" />}
+    <span
+      className={cls(
+        "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-bold",
+        map[status] || map.pending
+      )}
+    >
+      {Icon && <Icon className="w-3 h-3" aria-hidden="true" />}
       {label}
     </span>
   );
 }
 
-/** Icon button with tooltip */
+/* ─────────────────────────────────────────────────
+   TOOLTIP ICON BUTTON
+───────────────────────────────────────────────── */
 function TipIconBtn({ tooltip, onClick, disabled, children, variant = "ghost" }) {
-  const variants = {
-    ghost:   { border: "var(--color-primary-150,#e0e7ff)", bg: "white", color: "var(--color-primary-600)" },
-    danger:  { border: "#fecaca", bg: "#fef2f2", color: "#dc2626" },
-    success: { border: "#bbf7d0", bg: "#f0fdf4", color: "#15803d" },
+  const vars = {
+    ghost:
+      "border-[var(--color-primary-100)] bg-white text-[var(--color-primary-600)] hover:bg-[var(--color-primary-50)]",
+    danger: "border-red-200 bg-red-50 text-red-600 hover:bg-red-100",
+    success: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+    whatsapp: "border-green-200 bg-green-50 text-green-700 hover:bg-green-100",
   };
-  const s = variants[variant] || variants.ghost;
+
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button type="button" onClick={onClick} disabled={disabled}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none hover:-translate-y-0.5 active:scale-95"
-            style={{ borderColor: s.border, background: s.bg, color: s.color, boxShadow: "0 1px 3px rgba(15,23,42,0.07)" }}>
+          <button
+            type="button"
+            onClick={onClick}
+            disabled={disabled}
+            aria-label={tooltip}
+            className={cls(
+              "inline-flex h-8 w-8 items-center justify-center rounded-lg border",
+              "transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)]",
+              "disabled:opacity-50 disabled:cursor-not-allowed",
+              "hover:-translate-y-0.5 active:scale-95",
+              "shadow-[0_1px_3px_rgba(15,23,42,.07)]",
+              vars[variant] || vars.ghost
+            )}
+          >
             {children}
           </button>
         </TooltipTrigger>
-        <TooltipContent><p className="text-xs font-semibold">{tooltip}</p></TooltipContent>
+        <TooltipContent>
+          <p className="text-xs font-semibold">{tooltip}</p>
+        </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
 }
 
+/* ─────────────────────────────────────────────────
+   ACTION PILL
+───────────────────────────────────────────────── */
 function ActionPill({ children }) {
   return (
-    <div className="inline-flex items-center gap-1 rounded-lg border border-[color:var(--color-primary-100)] bg-white p-1 shadow-sm">
+    <div className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-primary-100)] bg-white p-1 shadow-sm">
       {children}
     </div>
   );
 }
-function PillDivider() { return <div className="h-4 w-px bg-slate-100" />; }
 
-/* ─────────────────────────────────────────────────────────────
-   DATA TABLE
-───────────────────────────────────────────────────────────── */
-function PaginationBar({ page, totalPages, onPageChange }) {
-  const canPrev = page > 1, canNext = page < totalPages;
-  const pages = useMemo(() => {
-    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
-    const out = new Set([1, totalPages, page, page - 1, page + 1]);
-    const arr = [...out].filter(p => p >= 1 && p <= totalPages).sort((a, b) => a - b);
-    const withDots = [];
-    for (let i = 0; i < arr.length; i++) {
-      withDots.push(arr[i]);
-      if (i < arr.length - 1 && arr[i + 1] - arr[i] > 1) withDots.push("dots-" + i);
-    }
-    return withDots;
-  }, [page, totalPages]);
-
-  const btnBase = "inline-flex h-9 items-center gap-1.5 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-4 text-sm font-semibold text-[color:var(--color-primary-700)] shadow-sm transition-all hover:bg-[color:var(--color-primary-50)] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none";
-
-  return (
-    <div className="flex items-center justify-between mt-6 pt-5 border-t border-[color:var(--color-primary-100)]">
-      <button disabled={!canPrev} onClick={() => onPageChange(page - 1)} className={btnBase}>← السابق</button>
-      <div className="flex items-center gap-1.5">
-        {pages.map(p =>
-          typeof p === "string" ? (
-            <span key={p} className="px-1.5 text-slate-400 text-sm font-bold select-none">…</span>
-          ) : (
-            <motion.button key={p} onClick={() => onPageChange(p)} whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.94 }}
-              className={cls("relative h-9 w-9 rounded-lg text-sm font-bold transition-all focus:outline-none",
-                page === p ? "text-white shadow-md" : "border border-[color:var(--color-primary-200)] bg-white text-slate-700 hover:bg-[color:var(--color-primary-50)]")}>
-              {page === p && (
-                <motion.span layoutId="pgActive" className="absolute inset-0 rounded-lg"
-                  style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}
-                  transition={{ type: "spring", stiffness: 500, damping: 35 }} />
-              )}
-              <span className="relative z-10">{p}</span>
-            </motion.button>
-          )
-        )}
-      </div>
-      <button disabled={!canNext} onClick={() => onPageChange(page + 1)} className={btnBase}>التالي →</button>
-    </div>
-  );
+function PillDivider() {
+  return <div className="h-4 w-px bg-slate-100" aria-hidden="true" />;
 }
 
-function DataTable({ columns, rows, getRowKey, renderCell, emptyTitle, emptyIcon: EmptyIcon, emptyDescription, pageSize = 8, showPagination = true, headerRight, headerTitle, headerSubtitle }) {
-  const [page, setPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const pagedRows = useMemo(() => rows.slice((safePage - 1) * pageSize, safePage * pageSize), [rows, safePage, pageSize]);
-  React.useEffect(() => { if (page > totalPages) setPage(totalPages); }, [totalPages]);
-
+/* ─────────────────────────────────────────────────
+   TAB PANE
+───────────────────────────────────────────────── */
+function TabPane({ children, className = "", id }) {
   return (
-    <Surface glow>
-      {(headerTitle || headerRight) && (
-        <div className="flex items-start justify-between gap-4 border-b border-[color:var(--color-primary-50)] px-5 py-4">
-          <div>
-            {headerTitle && <h3 className="text-base font-black text-slate-900">{headerTitle}</h3>}
-            {headerSubtitle && <p className="mt-0.5 text-xs font-medium text-slate-500">{headerSubtitle}</p>}
-          </div>
-          {headerRight}
-        </div>
-      )}
-      <div className="p-4">
-        {rows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            {EmptyIcon && (
-              <div className="mb-4 grid h-16 w-16 place-items-center rounded-lg"
-                style={{ background: "linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))" }}>
-                <EmptyIcon className="h-7 w-7" style={{ color: "var(--color-primary-500)" }} />
-              </div>
-            )}
-            <p className="text-sm font-bold text-slate-800 mb-1">{emptyTitle || "لا توجد بيانات"}</p>
-            {emptyDescription && <p className="text-xs text-slate-500">{emptyDescription}</p>}
-          </div>
-        ) : (
-          <>
-            <div className="overflow-hidden rounded-lg border border-[color:var(--color-primary-100)]">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b border-[color:var(--color-primary-100)]"
-                    style={{ background: "linear-gradient(90deg, var(--color-primary-50), white)" }}>
-                    {columns.map(c => (
-                      <TableHead key={c.key}
-                        className={cls("py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 rtl:text-right ltr:text-left",
-                          c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : "")}>
-                        {c.label}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pagedRows.map((row, i) => (
-                    <motion.tr key={getRowKey(row)} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.03 }}
-                      className="group border-b border-[color:var(--color-primary-50)] transition-colors last:border-0 hover:bg-[color:var(--color-primary-50)]/40">
-                      {columns.map(c => (
-                        <TableCell key={c.key}
-                          className={cls("py-3.5", c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : "")}>
-                          {renderCell(row, c.key)}
-                        </TableCell>
-                      ))}
-                    </motion.tr>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            {showPagination && totalPages > 1 && (
-              <PaginationBar page={safePage} totalPages={totalPages} onPageChange={setPage} />
-            )}
-          </>
-        )}
-      </div>
-    </Surface>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   TAB WRAPPER
-───────────────────────────────────────────────────────────── */
-function TabPane({ children, className = "" }) {
-  return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className={cls("space-y-6 lg:space-y-8", className)}>
+    <section
+      id={id}
+      className={cls("mt-10 space-y-6 lg:space-y-8", className)}
+      data-aos="fade-up"
+      data-aos-duration="400"
+      data-aos-easing="ease-out-cubic"
+    >
       {children}
-    </motion.div>
+    </section>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────
    MAIN PAGE
-───────────────────────────────────────────────────────────── */
+───────────────────────────────────────────────── */
 export default function BillingPage() {
   const t = useTranslations("billing");
   const searchParams = useSearchParams();
   const router = useRouter();
-
   const activeTab = searchParams.get("tab") || "overview";
-  const [filterValues, setFilterValues] = useState({ status: "", type: "" });
 
-  const walletData = {
-    balance: 25000, totalEarned: 150000, totalWithdrawn: 125000,
-    moneyInThisMonth: 15000, moneyOutThisMonth: 8000,
-    pendingPayments: 5000, paidThisMonth: 12000,
-    growthRate: 12.5, transactionCount: 48, activeClients: 23,
-  };
+  const [overviewStats, setOverviewStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [clientRows, setClientRows] = useState([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
 
-  const handleTabChange = tabId => {
-    const params = new URLSearchParams(searchParams);
-    params.set("tab", tabId);
-    router.push(`?${params.toString()}`);
-  };
+  const loadOverviewStats = useCallback(async () => {
+    try {
+      setStatsLoading(true);
+      const { data } = await api.get("/billing/stats/overview");
+      setOverviewStats(data || null);
+    } catch (e) {
+      console.error(e);
+      toast.error(t("errors.loadStats") || "Failed to load billing stats");
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [t]);
 
-  /* ── PageHeader props ── */
-  const TABS = useMemo(() => [
-    { id: "overview",        label: t("tabs.overview"),       icon: Activity,  count: walletData.transactionCount },
-    { id: "clients",         label: t("tabs.clients"),        icon: Users,     count: walletData.activeClients },
-    { id: "packages",        label: t("tabs.packages"),       icon: Package },
-    { id: "subscriptions",   label: t("tabs.subscriptions"),  icon: Crown },
-    { id: "client-payments", label: t("tabs.clientPayments"), icon: Receipt },
-  ], [t]);
+  const loadClientsBase = useCallback(async () => {
+    try {
+      setClientsLoading(true);
+      const { data } = await api.get("/billing/subscriptions", {
+        params: { page: 1, limit: 200 },
+      });
+      const items = Array.isArray(data?.items) ? data.items : [];
+      setClientRows(items.map(mapSubscriptionToClientRow));
+    } catch (e) {
+      console.error(e);
+      toast.error(t("errors.loadClients") || "Failed to load clients");
+    } finally {
+      setClientsLoading(false);
+    }
+  }, [t]);
 
-  const STATS = useMemo(() => [
-    { label: t("kpi.walletBalance.title"),     value: `${walletData.balance.toLocaleString()} ${t("currency")}`,        icon: Wallet,      change: 12 },
-    { label: t("kpi.totalEarned.title"),       value: `${walletData.totalEarned.toLocaleString()} ${t("currency")}`,    icon: TrendingUp,  change: 8 },
-    { label: t("kpi.moneyInThisMonth.title"),  value: `${walletData.moneyInThisMonth.toLocaleString()} ${t("currency")}`, icon: ArrowDownRight, change: 5 },
-    { label: t("kpi.pendingPayments") || "مدفوعات معلقة", value: `${walletData.pendingPayments.toLocaleString()} ${t("currency")}`, icon: Clock },
-  ], [t, walletData]);
+  useEffect(() => {
+    loadOverviewStats();
+    loadClientsBase();
+  }, [loadOverviewStats, loadClientsBase]);
 
-  const FILTERS = [
-    {
-      key: "status", label: t("filters.status") || "الحالة", type: "toggle",
-      options: [
-        { value: "completed", label: t("status.completed") || "مكتمل" },
-        { value: "pending",   label: t("status.pending")   || "معلق" },
-        { value: "failed",    label: t("status.failed")    || "فشل" },
-      ],
+  const walletData = useMemo(() => {
+    const cards = overviewStats?.cards || {};
+    return {
+      balance: Number(cards.outstandingAmount || 0),
+      totalEarned: Number(cards.revenueCollected || 0),
+      totalWithdrawn: 0,
+      moneyInThisMonth: Number(cards.revenueCollected || 0),
+      pendingPayments: Number(cards.outstandingAmount || 0),
+      transactionCount: Number(cards.totalPayments || 0),
+      activeClients: Number(cards.activeSubscriptions || 0),
+    };
+  }, [overviewStats]);
+
+  const handleTabChange = useCallback(
+    (id) => {
+      const p = new URLSearchParams(searchParams);
+      p.set("tab", id);
+      router.push(`?${p.toString()}`);
     },
-    {
-      key: "type", label: t("filters.type") || "النوع", type: "toggle",
-      options: [
-        { value: "subscription", label: t("filters.subscription") || "اشتراك" },
-        { value: "withdrawal",   label: t("filters.withdrawal")   || "سحب" },
-        { value: "refund",       label: t("filters.refund")       || "استرداد" },
-      ],
-    },
-  ];
-
-  return (
-    <>
-      <style>{CSS_VARS}</style>
-
-      {/* Ambient background */}
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100/80" />
-        <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full opacity-[0.12] blur-3xl"
-          style={{ background: "radial-gradient(circle, var(--color-gradient-from), transparent)" }} />
-        <div className="absolute -bottom-32 -right-32 h-[400px] w-[400px] rounded-full opacity-[0.10] blur-3xl"
-          style={{ background: "radial-gradient(circle, var(--color-gradient-to), transparent)" }} />
-        <div className="absolute inset-0 opacity-[0.025]"
-          style={{ backgroundImage: "radial-gradient(var(--color-primary-400) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
-      </div>
-
-      <div className="relative min-h-screen pb-20">
-        {/* ── PAGE HEADER — shared component ── */}
-        <PageHeader
-          title={t("title")}
-          desc={t("subtitle")}
-          icon={Wallet}
-          stats={STATS}
-          tabs={TABS}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          filters={FILTERS}
-          filterValues={filterValues}
-          onFilterChange={(k, v) => setFilterValues(fv => ({ ...fv, [k]: v }))}
-          onFilterReset={() => setFilterValues({ status: "", type: "" })}
-          actions={
-            <div className="flex items-center gap-2">
-              {/* Tooltip info */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <motion.button whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg"
-                      style={{ background: "rgba(255,255,255,0.16)", backdropFilter: "blur(16px)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.3)" }}>
-                      <Info className="h-4 w-4 text-white" />
-                    </motion.button>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs text-xs">{t("tooltips.pageInfo")}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              {/* Export button */}
-              <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.95 }}
-                className="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-black text-white"
-                style={{ background: "rgba(255,255,255,0.22)", backdropFilter: "blur(16px)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.3),0 4px 16px rgba(0,0,0,0.1)" }}>
-                <Download className="h-4 w-4" />
-                {t("common.export")}
-              </motion.button>
-            </div>
-          }
-        />
-
-        {/* ── TAB CONTENT ── */}
-        <div className="container py-6 lg:py-8">
-          <AnimatePresence mode="wait">
-            {activeTab === "overview" && (
-              <OverviewTab key="overview" walletData={walletData} t={t}
-                onNavigateToSubscriptions={() => handleTabChange("subscriptions")} />
-            )}
-            {activeTab === "clients"         && <ClientsTab        key="clients"         t={t} />}
-            {activeTab === "packages"        && <PackagesTab       key="packages"        t={t} />}
-            {activeTab === "subscriptions"   && <SubscriptionsTab  key="subscriptions"   t={t} />}
-            {activeTab === "client-payments" && <ClientPaymentsTab key="client-payments" t={t} />}
-          </AnimatePresence>
-        </div>
-      </div>
-    </>
+    [searchParams, router]
   );
-}
 
-/* ─────────────────────────────────────────────────────────────
-   OVERVIEW TAB
-───────────────────────────────────────────────────────────── */
-function TxStatusBadge({ status, t }) {
-  const cfg = {
-    completed: { status: "completed", icon: CheckCircle },
-    failed:    { status: "failed",    icon: XCircle },
-    pending:   { status: "pending",   icon: Clock },
-  }[status] || { status: "pending", icon: Clock };
-  return <StatusBadge status={cfg.status} label={t(`status.${status}`)} icon={cfg.icon} />;
-}
+  const clientStats = useMemo(() => {
+    const total = clientRows.length;
+    const active = clientRows.filter((c) => (c.daysLeft || 0) > 30).length;
+    const r7 = clientRows.filter((c) => (c.daysLeft || 0) > 0 && (c.daysLeft || 0) <= 7).length;
+    const r30 = clientRows.filter((c) => (c.daysLeft || 0) > 7 && (c.daysLeft || 0) <= 30).length;
+    return { total, active, r7, r30 };
+  }, [clientRows]);
 
-function OverviewTab({ walletData, t, onNavigateToSubscriptions }) {
-  const walletStats = [
-    { title: t("kpi.walletBalance.title"),    subtitle: t("kpi.walletBalance.subtitle"),   value: `${walletData.balance.toLocaleString()} ${t("currency")}`,           icon: Wallet,         iconColor: "text-blue-600",   bgFrom: "#eff6ff", bgTo: "#eef2ff", trend: { value: "+12.5%", direction: "up" } },
-    { title: t("kpi.totalEarned.title"),      subtitle: t("kpi.totalEarned.subtitle"),     value: `${walletData.totalEarned.toLocaleString()} ${t("currency")}`,        icon: TrendingUp,     iconColor: "text-emerald-600", bgFrom: "#ecfdf5", bgTo: "#f0fdf4", trend: { value: "+8.2%", direction: "up" } },
-    { title: t("kpi.moneyInThisMonth.title"), subtitle: new Date().toLocaleDateString("ar-EG", { month: "long", year: "numeric" }), value: `${walletData.moneyInThisMonth.toLocaleString()} ${t("currency")}`, icon: ArrowDownRight, iconColor: "text-[color:var(--color-primary-600)]", bgFrom: "var(--color-primary-50)", bgTo: "#eef2ff", trend: { value: "+5.7%", direction: "up" } },
+  const STATS = useMemo(() => {
+    if (activeTab === "clients")
+      return [
+        { label: t("kpi.totalClients"), value: String(clientStats.total), icon: Users, change: null },
+        { label: t("kpi.activeClients"), value: String(clientStats.active), icon: CheckCircle, change: null },
+        { label: t("kpi.urgentRenewal"), value: String(clientStats.r7), icon: AlertCircle, change: null },
+        { label: t("kpi.soonRenewal"), value: String(clientStats.r30), icon: RefreshCw, change: null },
+      ];
+
+    if (activeTab === "subscriptions")
+      return [
+        {
+          label: t("kpi.activeSubscriptions"),
+          value: String(overviewStats?.cards?.activeSubscriptions || 0),
+          icon: Users,
+          change: null,
+        },
+        {
+          label: t("kpi.monthlyRevenue"),
+          value: `${money(overviewStats?.cards?.revenueCollected).toLocaleString()} ${t("currency")}`,
+          icon: DollarSign,
+          change: null,
+        },
+        {
+          label: t("kpi.renewalRate"),
+          value:
+            overviewStats?.cards?.totalSubscriptions
+              ? `${Math.round(
+                  (Number(overviewStats?.cards?.activeSubscriptions || 0) /
+                    Number(overviewStats?.cards?.totalSubscriptions || 1)) *
+                    100
+                )}%`
+              : "0%",
+          icon: RefreshCw,
+          change: null,
+        },
+      ];
+
+    return [
+      {
+        label: t("kpi.walletBalance.title"),
+        value: `${walletData.balance.toLocaleString()} ${t("currency")}`,
+        icon: Wallet,
+        change: null,
+      },
+      {
+        label: t("kpi.totalEarned.title"),
+        value: `${walletData.totalEarned.toLocaleString()} ${t("currency")}`,
+        icon: TrendingUp,
+        change: null,
+      },
+      {
+        label: t("kpi.moneyInThisMonth.title"),
+        value: `${walletData.moneyInThisMonth.toLocaleString()} ${t("currency")}`,
+        icon: ArrowDownRight,
+        change: null,
+      },
+      {
+        label: t("kpi.pendingPayments"),
+        value: `${walletData.pendingPayments.toLocaleString()} ${t("currency")}`,
+        icon: Clock,
+        change: null,
+      },
+    ];
+  }, [activeTab, clientStats, overviewStats, t, walletData]);
+
+  const TABS = useMemo(
+    () => [
+      { id: "overview", label: t("tabs.overview"), icon: Activity, count: walletData.transactionCount },
+      { id: "clients", label: t("tabs.clients"), icon: Users, count: clientRows.length },
+      { id: "packages", label: t("tabs.packages"), icon: Package },
+      {
+        id: "subscriptions",
+        label: t("tabs.subscriptions"),
+        icon: Crown,
+        count: Number(overviewStats?.cards?.activeSubscriptions || 0),
+      },
+      { id: "client-payments", label: t("tabs.clientPayments"), icon: Receipt },
+    ],
+    [t, walletData, clientRows.length, overviewStats]
+  );
+
+  const HEADER_FILTERS = [
+    {
+      key: "status",
+      label: t("filters.status"),
+      type: "toggle",
+      options: [
+        { value: "completed", label: t("status.completed") },
+        { value: "pending", label: t("status.pending") },
+        { value: "failed", label: t("status.failed") },
+      ],
+    },
+    {
+      key: "type",
+      label: t("filters.type"),
+      type: "toggle",
+      options: [
+        { value: "subscription", label: t("filters.subscription") },
+        { value: "withdrawal", label: t("filters.withdrawal") },
+        { value: "refund", label: t("filters.refund") },
+      ],
+    },
   ];
 
-  const recentTransactions = [
-    { id: 1, status: "completed", description: t("transactions.examples.subscription"), date: "2025-01-12", time: "14:32", amount: 2500,  client: "Sarah Johnson" },
-    { id: 2, status: "pending",   description: t("transactions.examples.withdrawal"),   date: "2025-01-11", time: "09:15", amount: -5000, client: t("common.system") },
-    { id: 3, status: "completed", description: t("transactions.examples.refund"),       date: "2025-01-10", time: "16:48", amount: -1000, client: "Michael Chen" },
-    { id: 4, status: "completed", description: t("transactions.examples.annual"),       date: "2025-01-09", time: "11:20", amount: 12000, client: "Emma Davis" },
-  ];
-
-  const txColumns = [
-    { key: "status",      label: t("table.status") },
-    { key: "client",      label: t("table.client") },
-    { key: "description", label: t("table.description") },
-    { key: "date",        label: t("table.date") },
-    { key: "amount",      label: t("table.amount"), align: "right" },
-  ];
+  const [headerFilters, setHeaderFilters] = useState({ status: "", type: "" });
 
   return (
-    <TabPane>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
-        {walletStats.map((s, i) => <KpiCard key={s.title} {...s} idx={i} />)}
-      </div>
-
-      <DataTable
-        headerTitle={t("transactions.recent")}
-        headerSubtitle={t("transactions.recentSubtitle") || t("transactions.recent")}
-        headerRight={
+    <div id="billing-page" className="relative">
+      <PageHeader
+        title={t("title")}
+        desc={t("subtitle")}
+        icon={Wallet}
+        stats={statsLoading ? [] : STATS}
+        tabs={TABS}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        filters={HEADER_FILTERS}
+        filterValues={headerFilters}
+        onFilterChange={(k, v) => setHeaderFilters((f) => ({ ...f, [k]: v }))}
+        onFilterReset={() => setHeaderFilters({ status: "", type: "" })}
+        actions={
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold"
-              style={{ borderColor: "var(--color-primary-200)", background: "var(--color-primary-50)", color: "var(--color-primary-700)" }}>
-              <BarChart3 className="h-3.5 w-3.5" />{t("payments.total", { count: recentTransactions.length })}
-            </span>
-            <button onClick={onNavigateToSubscriptions}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-3 text-xs font-bold text-[color:var(--color-primary-700)] shadow-sm transition-all hover:bg-[color:var(--color-primary-50)]">
-              {t("common.viewAll")}<ArrowUpRight className="h-3.5 w-3.5" />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={t("tooltips.pageInfo")}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/[.16] backdrop-blur-[16px] shadow-[inset_0_0_0_1px_rgba(255,255,255,.3)] transition-transform hover:scale-105 active:scale-95"
+                  >
+                    <Info className="h-4 w-4 text-white" aria-hidden="true" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs text-xs">
+                  {t("tooltips.pageInfo")}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <button
+              type="button"
+              onClick={() => {
+                loadOverviewStats();
+                loadClientsBase();
+              }}
+              className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-black text-white bg-white/[.22] backdrop-blur-[16px] shadow-[inset_0_0_0_1px_rgba(255,255,255,.3),0_4px_16px_rgba(0,0,0,.1)] transition-transform hover:scale-[1.04] active:scale-95"
+            >
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              {t("common.refresh") || "Refresh"}
             </button>
           </div>
         }
-        columns={txColumns} rows={recentTransactions} getRowKey={r => r.id} pageSize={6}
-        emptyTitle={t("transactions.empty")} emptyIcon={FileText}
-        renderCell={(tx, key) => {
-          if (key === "status")      return <TxStatusBadge status={tx.status} t={t} />;
-          if (key === "client")      return (
-            <div className="flex items-center gap-2.5">
-              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
-                style={{ background: "linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))" }}>
-                <User className="h-4 w-4" style={{ color: "var(--color-primary-600)" }} />
-              </div>
-              <span className="text-sm font-semibold text-slate-900">{tx.client}</span>
-            </div>
-          );
-          if (key === "description") return <span className="text-sm text-slate-600 font-medium">{tx.description}</span>;
-          if (key === "date")        return <div><p className="text-sm font-semibold text-slate-700">{tx.date}</p><p className="text-xs text-slate-400">{tx.time}</p></div>;
-          if (key === "amount")      return (
-            <div className="text-right">
-              <p className={cls("text-base font-black", tx.amount > 0 ? "text-emerald-700" : "text-rose-700")}>
-                {tx.amount > 0 ? "+" : ""}{tx.amount.toLocaleString()}
-              </p>
-              <p className="text-[10px] text-slate-400 font-semibold">{t("currency")}</p>
-            </div>
-          );
-          return null;
-        }}
       />
-    </TabPane>
+
+      <div id="billing-content" className="container py-6 lg:py-8">
+        {activeTab === "overview" && (
+          <OverviewTab key="overview" t={t} walletData={walletData} onNav={handleTabChange} />
+        )}
+        {activeTab === "clients" && (
+          <ClientsTab
+            key="clients"
+            t={t}
+            initialData={clientRows}
+            loading={clientsLoading}
+            onRefresh={loadClientsBase}
+          />
+        )}
+        {activeTab === "packages" && <PackagesTab key="packages" t={t} />}
+        {activeTab === "subscriptions" && <SubscriptionsTab key="subscriptions" t={t} />}
+        {activeTab === "client-payments" && (
+          <ClientPaymentsTab
+            key="client-payments"
+            t={t}
+            clients={clientRows}
+            onSuccessRefresh={() => {
+              loadOverviewStats();
+              loadClientsBase();
+            }}
+          />
+        )}
+      </div>
+    </div>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
-   CLIENTS TAB
-───────────────────────────────────────────────────────────── */
-function ClientsTab({ t }) {
-  const [searchTerm, setSearchTerm] = useState("");
+/* ══════════════════════════════════════════════════════════
+   OVERVIEW TAB
+══════════════════════════════════════════════════════════ */
+function OverviewTab({ t, walletData, onNav }) {
+  const [filters, setFilters] = useState({ status: "", search: "" });
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const clients = [
-    { id: 1, name: "أحمد محمد علي",  email: "ahmed@example.com",   phone: "01001234567", package: "الحزمة الذهبية",    startDate: "2024-10-15", endDate: "2025-02-15", daysLeft: 34,  avatar: "AM" },
-    { id: 2, name: "فاطمة حسن",      email: "fatima@example.com",  phone: "01112345678", package: "حزمة البداية",       startDate: "2024-12-01", endDate: "2025-01-20", daysLeft: 8,   avatar: "FH" },
-    { id: 3, name: "محمود السيد",    email: "mahmoud@example.com", phone: "01223456789", package: "الحزمة البلاتينية",  startDate: "2024-08-01", endDate: "2025-08-01", daysLeft: 201, avatar: "MS" },
-    { id: 4, name: "نور الدين",      email: "nour@example.com",    phone: "01334567890", package: "الحزمة الذهبية",    startDate: "2024-11-10", endDate: "2025-01-15", daysLeft: 3,   avatar: "ND" },
-    { id: 5, name: "ليلى يوسف",      email: "layla@example.com",   phone: "01445678901", package: "حزمة البداية",       startDate: "2024-09-20", endDate: "2025-03-20", daysLeft: 67,  avatar: "LY" },
-    { id: 6, name: "علي سامي",       email: "ali@example.com",     phone: "01555555555", package: "حزمة البداية",       startDate: "2024-10-01", endDate: "2025-01-05", daysLeft: -7,  avatar: "AS" },
-  ];
+  const loadTransactions = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get("/billing/payments", {
+        params: { page: 1, limit: 50 },
+      });
 
-  const norm = v => (v || "").toString().toLowerCase();
-  const filtered = useMemo(() => {
-    const q = norm(searchTerm);
-    return clients.filter(c => norm(c.name).includes(q) || norm(c.email).includes(q) || (c.phone || "").includes(searchTerm)).sort((a, b) => a.daysLeft - b.daysLeft);
-  }, [searchTerm]);
+      const items = Array.isArray(data?.items) ? data.items : [];
+      setTransactions(
+        items.map((p) => ({
+          id: p.id,
+          status: p.status,
+          description:
+            p.notes ||
+            p.invoice?.description ||
+            p.provider ||
+            (t("transactions.examples.subscription") || "Subscription payment"),
+          date: p.paidAt || p.created_at?.slice?.(0, 10) || "—",
+          time: p.created_at ? new Date(p.created_at).toLocaleTimeString() : "—",
+          amount: money(p.amount),
+          client: p.user?.name || t("common.system") || "System",
+          raw: p,
+        }))
+      );
+    } catch (e) {
+      console.error(e);
+      toast.error(t("errors.loadPayments") || "Failed to load payments");
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
 
-  const stats = useMemo(() => {
-    const total = clients.length;
-    const active = clients.filter(c => c.daysLeft > 30).length;
-    const r30 = clients.filter(c => c.daysLeft > 7 && c.daysLeft <= 30).length;
-    const r7 = clients.filter(c => c.daysLeft > 0 && c.daysLeft <= 7).length;
-    const ended = clients.filter(c => c.daysLeft <= 0).length;
-    const pct = n => (total ? Math.round((n / total) * 100) : 0);
-    return [
-      { key: "total",  label: t("clients.stats.total")       || "الإجمالي",   value: total,  icon: Users,       bgFrom: "#f8fafc", bgTo: "#f1f5f9", iconColor: "text-slate-600",   progress: 100,        chip: "100%" },
-      { key: "active", label: t("clients.stats.active")      || "نشط",        value: active, icon: CheckCircle, bgFrom: "#ecfdf5", bgTo: "#f0fdf4", iconColor: "text-emerald-600", progress: pct(active), chip: `${pct(active)}%` },
-      { key: "r7",     label: t("clients.stats.renewUrgent") || "تجديد عاجل", value: r7,     icon: AlertCircle, bgFrom: "#fff1f2", bgTo: "#fef2f2", iconColor: "text-rose-600",    progress: pct(r7),     chip: `${pct(r7)}%` },
-      { key: "r30",    label: t("clients.stats.renewSoon")   || "تجديد قريب", value: r30,    icon: RefreshCw,   bgFrom: "#fffbeb", bgTo: "#fefce8", iconColor: "text-amber-600",   progress: pct(r30),    chip: `${pct(r30)}%` },
-      { key: "ended",  label: t("clients.stats.ended")       || "منتهي",      value: ended,  icon: XCircle,     bgFrom: "#f8fafc", bgTo: "#f1f5f9", iconColor: "text-slate-500",   progress: pct(ended),  chip: `${pct(ended)}%` },
-    ];
-  }, []);
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
 
-  const getClientBadge = daysLeft => {
-    if (daysLeft <= 0)  return { status: "expiring", icon: XCircle,     label: t("clients.status.ended") || "منتهي" };
-    if (daysLeft <= 7)  return { status: "expiring", icon: AlertCircle, label: t("clients.status.expiringSoon") };
-    if (daysLeft <= 30) return { status: "warn",     icon: RefreshCw,   label: t("clients.status.renewalDue") || "تجديد قريب" };
-    return               { status: "active",  icon: CheckCircle, label: t("clients.status.active") };
-  };
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((row) => {
+      const q = String(filters.search || "").toLowerCase();
+      const matchQ =
+        !q ||
+        String(row.client || "").toLowerCase().includes(q) ||
+        String(row.description || "").toLowerCase().includes(q);
+      const matchStatus = !filters.status || filters.status === "all" || paymentStatusToUi(row.status, t).key === filters.status;
+      return matchQ && matchStatus;
+    });
+  }, [transactions, filters, t]);
 
-  const columns = [
-    { key: "client",  label: t("table.client") },
-    { key: "contact", label: t("clients.contact") || "التواصل" },
-    { key: "package", label: t("clients.package") || "الباقة" },
-    { key: "renewal", label: t("clients.renewal") || "التجديد" },
-    { key: "status",  label: t("table.status") },
-    { key: "actions", label: t("table.actions"), align: "center" },
+  const COLUMNS = [
+    { key: "status", header: t("table.status") },
+    { key: "client", header: t("table.client") },
+    { key: "description", header: t("table.description") },
+    { key: "date", header: t("table.date") },
+    { key: "amount", header: t("table.amount") },
   ];
 
   return (
-    <TabPane>
-      {/* Mini stat cards */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        {stats.map((s, i) => {
-          const Icon = s.icon;
-          return (
-            <motion.div key={s.key} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06, duration: 0.4 }} whileHover={{ y: -4, scale: 1.015 }}
-              className="group relative overflow-hidden rounded-lg border border-white/60 shadow transition-all duration-300 hover:shadow-lg"
-              style={{ background: `linear-gradient(135deg, ${s.bgFrom}, ${s.bgTo})` }}>
-              <div className="p-4">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/70 shadow-sm border border-white/60 transition-transform group-hover:scale-105">
-                    <Icon className={cls("h-4 w-4", s.iconColor)} strokeWidth={2} />
-                  </div>
-                  {s.chip && (
-                    <span className="rounded-lg border border-white/70 bg-white/60 px-1.5 py-0.5 text-[10px] font-black text-slate-600">{s.chip}</span>
-                  )}
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{s.label}</p>
-                <p className="mt-1 text-2xl font-black text-slate-900">{s.value}</p>
-                {typeof s.progress === "number" && (
-                  <div className="mt-2.5 h-1 w-full overflow-hidden rounded-full bg-white/50">
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(0, Math.min(100, s.progress))}%` }}
-                      transition={{ duration: 1, delay: i * 0.1, ease: "easeOut" }}
-                      className="h-full rounded-full"
-                      style={{ background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))" }} />
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Search */}
-      <div className="relative w-full max-w-sm">
-        <span className="pointer-events-none absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 text-slate-400">🔍</span>
-        <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-          placeholder={t("clients.search") || "بحث عن عميل…"}
-          className="h-10 w-full rounded-lg border border-[color:var(--color-primary-200)] bg-white pl-9 pr-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]" />
-      </div>
-
+    <TabPane id="tab-overview">
       <DataTable
-        headerTitle={t("clients.management") || "إدارة العملاء"}
-        headerSubtitle={`${filtered.length} ${t("clients.results") || "نتيجة"}`}
-        headerRight={
-          <span className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold"
-            style={{ borderColor: "var(--color-primary-200)", background: "var(--color-primary-50)", color: "var(--color-primary-700)" }}>
-            <Users className="h-3.5 w-3.5" />{t("payments.total", { count: filtered.length })}
+        title={t("transactions.recent")}
+        subtitle={t("transactions.recentSubtitle")}
+        data={filteredTransactions}
+        columns={COLUMNS}
+        rowKey={(r) => r.id}
+        isLoading={loading}
+        searchValue={filters.search || ""}
+        onSearchChange={(v) => setFilters((f) => ({ ...f, search: v }))}
+        labels={{
+          searchPlaceholder: t("common.search"),
+          filter: t("common.apply"),
+          emptyTitle: t("transactions.empty"),
+        }}
+        hasActiveFilters={!!filters.status}
+        isFiltersOpen={filtersOpen}
+        onToggleFilters={() => setFiltersOpen((v) => !v)}
+        filters={
+          <FilterField label={t("filters.status")}>
+            <Select value={filters.status || "all"} onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}>
+              <SelectTrigger className="h-9 rounded-lg text-xs border-[var(--color-primary-200)]">
+                <SelectValue placeholder={t("common.all")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("common.all")}</SelectItem>
+                <SelectItem value="completed">{t("status.completed")}</SelectItem>
+                <SelectItem value="pending">{t("status.pending")}</SelectItem>
+                <SelectItem value="failed">{t("status.failed")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </FilterField>
+        }
+        actions={[
+          {
+            key: "viewAll",
+            label: t("common.viewAll"),
+            color: "default",
+            icon: <ArrowUpRight size={14} aria-hidden="true" />,
+            onClick: () => onNav("subscriptions"),
+          },
+          {
+            key: "reload",
+            label: t("common.refresh") || "Refresh",
+            color: "default",
+            icon: <RefreshCw size={14} aria-hidden="true" />,
+            onClick: loadTransactions,
+          },
+        ]}
+        headerExtra={
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)] px-3 py-1.5 text-xs font-bold">
+            <BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("payments.total", { count: filteredTransactions.length })}
           </span>
         }
-        columns={columns} rows={filtered} getRowKey={c => c.id} pageSize={8}
-        emptyTitle={t("clients.noResults")} emptyIcon={Users}
-        renderCell={(c, key) => {
-          if (key === "client") return (
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 border-2 border-white shadow">
-                <AvatarFallback className="text-sm font-black text-white"
-                  style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
-                  {c.avatar}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-bold text-slate-900">{c.name}</p>
-                <p className="text-xs text-slate-400">{t("clients.startDate") || "بدأ"}: {c.startDate}</p>
+        pagination={null}
+      >
+        {(row, col) => {
+          if (col === "status") {
+            const s = paymentStatusToUi(row.status, t);
+            return <StatusBadge status={s.key} label={s.label} icon={s.icon} />;
+          }
+          if (col === "client")
+            return (
+              <div className="flex items-center gap-2.5">
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-primary-50)]">
+                  <User className="h-4 w-4 text-[var(--color-primary-600)]" aria-hidden="true" />
+                </div>
+                <span className="text-sm font-semibold text-slate-900">{row.client}</span>
               </div>
-            </div>
-          );
-          if (key === "contact") return (
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5 text-xs text-slate-600"><Mail className="h-3.5 w-3.5 text-slate-400" />{c.email}</div>
-              <div className="flex items-center gap-1.5 text-xs text-slate-600"><Phone className="h-3.5 w-3.5 text-slate-400" />{c.phone}</div>
-            </div>
-          );
-          if (key === "package") return (
-            <span className="inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-bold"
-              style={{ borderColor: "var(--color-primary-200)", background: "var(--color-primary-50)", color: "var(--color-primary-800)" }}>
-              {c.package}
-            </span>
-          );
-          if (key === "renewal") return (
-            <div>
-              <p className="text-xs font-semibold text-slate-700">{c.endDate}</p>
-              <p className={cls("text-xs font-bold mt-0.5", c.daysLeft <= 7 ? "text-rose-600" : c.daysLeft <= 30 ? "text-amber-600" : "text-slate-400")}>
-                {c.daysLeft > 0 ? `${c.daysLeft} ${t("clients.days") || "يوم"}` : t("clients.expired") || "منتهي"}
-              </p>
-            </div>
-          );
-          if (key === "status") { const b = getClientBadge(c.daysLeft); return <StatusBadge status={b.status} label={b.label} icon={b.icon} />; }
-          if (key === "actions") return (
-            <ActionPill><TipIconBtn tooltip={t("clients.sendReminder")} variant="success"><Send className="h-3.5 w-3.5" /></TipIconBtn></ActionPill>
-          );
+            );
+          if (col === "description")
+            return <span className="text-sm text-slate-600 font-medium">{row.description}</span>;
+          if (col === "date")
+            return (
+              <div>
+                <p className="text-sm font-semibold text-slate-700">{row.date}</p>
+                <p className="text-xs text-slate-400">{row.time}</p>
+              </div>
+            );
+          if (col === "amount")
+            return (
+              <span className={cls("text-base font-black", row.amount > 0 ? "text-emerald-700" : "text-rose-700")}>
+                {row.amount > 0 ? "+" : ""}
+                {row.amount.toLocaleString()} {t("currency")}
+              </span>
+            );
           return null;
         }}
-      />
+      </DataTable>
     </TabPane>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
-   PACKAGES TAB
-───────────────────────────────────────────────────────────── */
-function PackagesTab({ t }) {
-  const [packages, setPackages] = useState([
-    { id: 1, name: "حزمة البداية",     nameEn: "Starter Package",  price: 500,  duration: "شهري", features: ["3 جلسات تدريبية", "دعم عبر الواتساب", "خطة تمارين مخصصة"] },
-    { id: 2, name: "الحزمة الذهبية",   nameEn: "Gold Package",     price: 1200, duration: "شهري", features: ["8 جلسات تدريبية", "دعم 24/7", "خطة تمارين وتغذية", "متابعة أسبوعية"] },
-    { id: 3, name: "الحزمة البلاتينية", nameEn: "Platinum Package", price: 2500, duration: "شهري", features: ["جلسات غير محدودة", "دعم VIP", "خطة شاملة", "تحليل جسم شامل", "مكملات غذائية"] },
-  ]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-  const [exportingPackages, setExportingPackages] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [editingPackage, setEditingPackage] = useState(null);
-  const [formData, setFormData] = useState({ name: "", nameEn: "", price: "", duration: "شهري", features: [""] });
+/* ══════════════════════════════════════════════════════════
+   CLIENTS TAB
+══════════════════════════════════════════════════════════ */
+function ClientsTab({ t, initialData = [], loading = false, onRefresh }) {
+  const [filters, setFilters] = useState({ package: "all", status: "all" });
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
-  const handleAddFeature    = () => setFormData(p => ({ ...p, features: [...p.features, ""] }));
-  const handleRemoveFeature = i  => setFormData(p => ({ ...p, features: p.features.filter((_, j) => j !== i) }));
-  const handleFeatureChange = (i, v) => setFormData(p => { const f = [...p.features]; f[i] = v; return { ...p, features: f }; });
-  const handleSubmit = () => {
-    if (editingPackage) setPackages(ps => ps.map(p => p.id === editingPackage.id ? { ...p, ...formData } : p));
-    else setPackages(ps => [...ps, { id: Date.now(), ...formData }]);
-    setIsDialogOpen(false); setEditingPackage(null);
-    setFormData({ name: "", nameEn: "", price: "", duration: "شهري", features: [""] });
-  };
-  const handleEdit = pkg => {
-    setEditingPackage(pkg);
-    setFormData({ name: pkg.name, nameEn: pkg.nameEn, price: pkg.price, duration: pkg.duration, features: pkg.features });
-    setIsDialogOpen(true);
-  };
-  const handleExport = async () => {
-    if (!phoneNumber) return;
-    setExportingPackages(true);
-    await new Promise(r => setTimeout(r, 1800));
-    setExportingPackages(false); setIsExportDialogOpen(false); setPhoneNumber("");
-    alert(t("packages.exportSuccess", { phone: phoneNumber }));
-  };
+  const filteredData = useMemo(() => {
+    return initialData
+      .filter((c) => {
+        const q = search.toLowerCase();
+        const matchSearch =
+          !q ||
+          String(c.name).toLowerCase().includes(q) ||
+          String(c.email).toLowerCase().includes(q) ||
+          String(c.phone).toLowerCase().includes(q);
+        const matchPkg = filters.package === "all" || !filters.package || c.package === filters.package;
+        const { key } = getClientStatusByDays(c.daysLeft, t);
+        const matchStatus = filters.status === "all" || !filters.status || key === filters.status;
+        return matchSearch && matchPkg && matchStatus;
+      })
+      .sort((a, b) => (a.daysLeft ?? 999999) - (b.daysLeft ?? 999999));
+  }, [search, filters, initialData, t]);
 
-  const pkgPalettes = [
-    { from: "#eff6ff", to: "#e0e7ff", accent: "#3b82f6" },
-    { from: "#fffbeb", to: "#fef9c3", accent: "#f59e0b" },
-    { from: "#faf5ff", to: "#ede9fe", accent: "#8b5cf6" },
+  const uniquePackages = useMemo(
+    () => [...new Set(initialData.map((c) => c.package).filter(Boolean))],
+    [initialData]
+  );
+
+  const COLUMNS = [
+    { key: "client", header: t("table.client") },
+    { key: "contact", header: t("clients.contact") },
+    { key: "package", header: t("clients.package") },
+    { key: "renewal", header: t("clients.renewal") },
+    { key: "status", header: t("table.status") },
+    { key: "actions", header: t("table.actions") },
   ];
 
-  const inputCls = "h-11 w-full rounded-lg border border-[color:var(--color-primary-200)] bg-white px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]";
+  return (
+    <TabPane id="tab-clients">
+      <DataTable
+        title={t("clients.management")}
+        subtitle={`${filteredData.length} ${t("clients.results")}`}
+        data={filteredData}
+        columns={COLUMNS}
+        rowKey={(c) => c.id}
+        isLoading={loading}
+        searchValue={search}
+        onSearchChange={setSearch}
+        labels={{ searchPlaceholder: t("clients.search"), emptyTitle: t("clients.noResults") }}
+        hasActiveFilters={!!(filters.package !== "all" || filters.status !== "all")}
+        isFiltersOpen={filtersOpen}
+        onToggleFilters={() => setFiltersOpen((v) => !v)}
+        filters={
+          <>
+            <FilterField label={t("filters.package")}>
+              <Select value={filters.package} onValueChange={(v) => setFilters((f) => ({ ...f, package: v }))}>
+                <SelectTrigger className="h-9 rounded-lg text-xs border-[var(--color-primary-200)]">
+                  <SelectValue placeholder={t("common.all")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("common.all")}</SelectItem>
+                  {uniquePackages.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FilterField>
+
+            <FilterField label={t("filters.status")}>
+              <Select value={filters.status} onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}>
+                <SelectTrigger className="h-9 rounded-lg text-xs border-[var(--color-primary-200)]">
+                  <SelectValue placeholder={t("common.all")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("common.all")}</SelectItem>
+                  <SelectItem value="active">{t("clients.status.active")}</SelectItem>
+                  <SelectItem value="warn">{t("clients.status.renewalDue")}</SelectItem>
+                  <SelectItem value="expiring">{t("clients.status.expiringSoon")}</SelectItem>
+                  <SelectItem value="ended">{t("clients.status.ended") || "Ended"}</SelectItem>
+                </SelectContent>
+              </Select>
+            </FilterField>
+          </>
+        }
+        onApplyFilters={() => setFiltersOpen(false)}
+        headerExtra={
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)] px-3 py-1.5 text-xs font-bold">
+              <Users className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("payments.total", { count: filteredData.length })}
+            </span>
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--color-primary-200)] bg-white px-3 text-xs font-bold text-[var(--color-primary-700)]"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              {t("common.refresh") || "Refresh"}
+            </button>
+          </div>
+        }
+        pagination={null}
+      >
+        {(row, col) => {
+          if (col === "client")
+            return (
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
+                  <AvatarFallback className="text-sm font-black text-white bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]">
+                    {row.avatar}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-slate-900 truncate">{row.name}</p>
+                  <p className="text-xs text-slate-400">
+                    {t("clients.startDate")}: {row.startDate}
+                  </p>
+                </div>
+              </div>
+            );
+
+          if (col === "contact")
+            return (
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                  <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
+                  <span className="truncate max-w-[140px]">{row.email}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                  <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
+                  {row.phone}
+                </div>
+              </div>
+            );
+
+          if (col === "package")
+            return (
+              <span className="inline-flex items-center rounded-xl border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] text-[var(--color-primary-800)] px-3 py-1 text-xs font-bold">
+                {row.package}
+              </span>
+            );
+
+          if (col === "renewal")
+            return (
+              <div>
+                <p className="text-xs font-semibold text-slate-700">{row.endDate}</p>
+                <p
+                  className={cls(
+                    "text-xs font-bold mt-0.5",
+                    (row.daysLeft ?? 0) <= 7
+                      ? "text-rose-600"
+                      : (row.daysLeft ?? 0) <= 30
+                      ? "text-amber-600"
+                      : "text-slate-400"
+                  )}
+                >
+                  {row.daysLeft > 0
+                    ? `${row.daysLeft} ${t("clients.days")}`
+                    : t("clients.expired")}
+                </p>
+              </div>
+            );
+
+          if (col === "status") {
+            const s = getClientStatusByDays(row.daysLeft, t);
+            return <StatusBadge status={s.key} label={s.label} icon={s.icon} />;
+          }
+
+          if (col === "actions")
+            return (
+              <ActionPill>
+                <TipIconBtn
+                  tooltip={t("clients.sendReminder")}
+                  variant="success"
+                  onClick={() => toast.success(t("clients.reminderQueued") || "Reminder action ready")}
+                >
+                  <Send className="h-3.5 w-3.5" aria-hidden="true" />
+                </TipIconBtn>
+                <PillDivider />
+                <TipIconBtn
+                  tooltip="واتساب"
+                  variant="whatsapp"
+                  onClick={() => {
+                    const msg = `مرحباً ${row.name}\nنذكرك بأن اشتراكك (${row.package}) ${row.daysLeft > 0 ? `ينتهي بعد ${row.daysLeft} يوم` : "منتهي"}.\nللتجديد تواصل معنا.`;
+                    window.open(`https://wa.me/${String(row.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
+                  }}
+                >
+                  <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                </TipIconBtn>
+              </ActionPill>
+            );
+
+          return null;
+        }}
+      </DataTable>
+    </TabPane>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   PACKAGES TAB
+══════════════════════════════════════════════════════════ */
+function PkgCard({ pkg, idx, onEdit, onDelete, onSendWhatsApp, t }) {
+  const PALETTES = [
+    {
+      gradientFrom: "from-[#f0f4ff]",
+      gradientTo: "to-[#e8edff]",
+      border: "border-[#dde5ff]",
+      accentText: "text-[var(--color-primary-600)]",
+      accentBg: "bg-[var(--color-primary-600)]",
+      iconBg: "bg-[var(--color-primary-600)]",
+      priceBg: "bg-white/65",
+      badge: t("packages.starter"),
+      BadgeIcon: Zap,
+    },
+    {
+      gradientFrom: "from-[#fffdf0]",
+      gradientTo: "to-[#fff8dc]",
+      border: "border-amber-200",
+      accentText: "text-amber-600",
+      accentBg: "bg-amber-600",
+      iconBg: "bg-amber-600",
+      priceBg: "bg-white/65",
+      badge: t("packages.gold"),
+      BadgeIcon: Award,
+      popular: true,
+    },
+    {
+      gradientFrom: "from-[var(--color-secondary-50)]",
+      gradientTo: "to-[var(--color-secondary-100)]",
+      border: "border-[var(--color-secondary-200)]",
+      accentText: "text-[var(--color-secondary-600)]",
+      accentBg: "bg-[var(--color-secondary-600)]",
+      iconBg: "bg-[var(--color-secondary-600)]",
+      priceBg: "bg-white/65",
+      badge: t("packages.platinum"),
+      BadgeIcon: Shield,
+    },
+  ];
+  const pal = PALETTES[idx % PALETTES.length];
+  const BadgeIcon = pal.BadgeIcon;
 
   return (
-    <TabPane>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <article
+      className={cls(
+        "group relative flex flex-col rounded-3xl border-2 overflow-hidden",
+        "bg-gradient-to-b",
+        pal.gradientFrom,
+        pal.gradientTo,
+        pal.border,
+        "shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 hover:scale-[1.025]"
+      )}
+      data-aos="fade-up"
+      data-aos-delay={idx * 100}
+      data-aos-duration="500"
+      data-aos-easing="ease-out-cubic"
+      aria-label={pkg.name}
+    >
+      <div
+        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-900 ease-in-out"
+        aria-hidden="true"
+      />
+
+      <div className={cls("absolute inset-x-0 top-0 h-1.5 rounded-t-3xl", pal.accentBg)} aria-hidden="true" />
+
+      {pal.popular && (
+        <div
+          className={cls(
+            "absolute top-5 -end-8 rotate-45 px-10 py-1 text-[10px] font-black text-white",
+            pal.accentBg
+          )}
+          aria-label={t("packages.mostPopular")}
+        >
+          {t("packages.mostPopular")}
+        </div>
+      )}
+
+      <div className="relative flex flex-col flex-1 p-7 pt-8">
+        <div className="flex items-start justify-between mb-6 gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={cls("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-md", pal.iconBg)}>
+              <BadgeIcon className="h-5 w-5 text-white" strokeWidth={2.5} aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <span className={cls("block text-[11px] font-black uppercase tracking-widest", pal.accentText)}>
+                {pal.badge}
+              </span>
+              <h3 className="text-lg font-black text-slate-900 leading-tight truncate">{pkg.name}</h3>
+              <p className="text-[11px] text-slate-400 font-medium truncate">{pkg.nameEn}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shrink-0">
+            <TipIconBtn tooltip={t("common.edit")} onClick={onEdit}>
+              <Edit className="h-3.5 w-3.5" aria-hidden="true" />
+            </TipIconBtn>
+            <TipIconBtn tooltip={t("common.delete")} onClick={onDelete} variant="danger">
+              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+            </TipIconBtn>
+          </div>
+        </div>
+
+        <div className={cls("mb-7 rounded-2xl p-5 text-center border backdrop-blur-sm", pal.priceBg, pal.border)}>
+          <p className={cls("text-[11px] font-black uppercase tracking-widest mb-1", pal.accentText)}>
+            {pkg.duration}
+          </p>
+          <div className="flex items-baseline justify-center gap-1.5">
+            <span className={cls("text-5xl font-black leading-none", pal.accentText)}>
+              {pkg.price.toLocaleString()}
+            </span>
+            <span className="text-base font-bold text-slate-500">{t("currency")}</span>
+          </div>
+        </div>
+
+        <ul className="flex-1 space-y-3 mb-8" aria-label={t("packages.form.features")}>
+          {pkg.features.map((feat, fi) => (
+            <li
+              key={fi}
+              className="flex items-center gap-3"
+              data-aos="fade-right"
+              data-aos-delay={fi * 60 + idx * 80}
+              data-aos-duration="400"
+            >
+              <span className={cls("flex h-5 w-5 shrink-0 items-center justify-center rounded-full shadow-sm", pal.accentBg)}>
+                <Check className="h-3 w-3 text-white" strokeWidth={3} aria-hidden="true" />
+              </span>
+              <span className="text-sm font-medium text-slate-700">{feat}</span>
+            </li>
+          ))}
+        </ul>
+
+        <button
+          type="button"
+          onClick={onSendWhatsApp}
+          className="relative w-full overflow-hidden rounded-2xl py-3.5 text-sm font-black text-white bg-gradient-to-r from-green-600 to-green-700 shadow-[0_8px_24px_rgba(22,163,74,.4)] flex items-center justify-center gap-2.5 transition-all hover:scale-[1.03] hover:-translate-y-0.5 active:scale-[.97]"
+        >
+          <span
+            className="absolute inset-0 bg-white/20 -translate-x-full hover:translate-x-full transition-transform duration-600 ease-in-out"
+            aria-hidden="true"
+          />
+          <MessageCircle className="h-4 w-4 relative z-10" aria-hidden="true" />
+          <span className="relative z-10">{t("packages.sendToClient")}</span>
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function SendAllPDFDialog({ packages, t, open, onClose }) {
+  const [step, setStep] = useState(1);
+  const [phoneNumber, setPhone] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const TIER_COLORS = ["#4f46e5", "#d97706", "#7c3aed"];
+  const TIER_BG_CLS = ["bg-[#eff6ff]", "bg-[#fffbeb]", "bg-[var(--color-secondary-50)]"];
+  const TIER_BORDER = ["border-[#bfdbfe]", "border-amber-200", "border-[var(--color-secondary-200)]"];
+
+  const handleSend = async () => {
+    setSending(true);
+    await new Promise((r) => setTimeout(r, 800));
+    const intro = `مرحباً${clientName ? ` ${clientName}` : ""}! 👋\n\nإليك عرض حزمنا الحصري:\n\n`;
+    const body = packages
+      .map((pkg, i) => {
+        const tiers = [t("packages.starter"), t("packages.gold"), t("packages.platinum")];
+        return (
+          `${["🔵", "⭐", "💜"][i % 3]} *${pkg.name}* — ${tiers[i % 3]}\n` +
+          `💰 ${pkg.price.toLocaleString()} ${t("currency")} / ${pkg.duration}\n` +
+          `✅ ${pkg.features.join(" • ")}\n`
+        );
+      })
+      .join("\n");
+    const outro = `\nللاشتراك أو الاستفسار تواصل معنا في أي وقت! 🚀`;
+    const clean = phoneNumber.replace(/\D/g, "");
+    window.open(`https://wa.me/${clean}?text=${encodeURIComponent(intro + body + outro)}`, "_blank");
+    setSending(false);
+    setSent(true);
+    setTimeout(() => {
+      setSent(false);
+      onClose();
+      setStep(1);
+      setPhone("");
+      setClientName("");
+    }, 1500);
+  };
+
+  const inputBase =
+    "h-11 w-full rounded-xl border border-[var(--color-primary-200)] bg-white px-4 rtl:pr-9 ltr:pl-9 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]";
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) {
+          onClose();
+          setStep(1);
+          setPhone("");
+          setClientName("");
+        }
+      }}
+    >
+      <DialogContent className="max-w-2xl rounded-3xl p-0 overflow-hidden gap-0">
+        <div className="relative overflow-hidden p-6 pb-5 bg-gradient-to-r from-[var(--color-primary-600)] to-[var(--color-secondary-600)]">
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{ backgroundImage: "radial-gradient(white 1px,transparent 1px)", backgroundSize: "20px 20px" }}
+            aria-hidden="true"
+          />
+          <div className="relative flex items-center justify-between gap-3">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur">
+                <FileDown className="h-7 w-7 text-white" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-xl font-black text-white truncate">{t("packages.sendAllAsPdf")}</h2>
+                <p className="text-sm text-white/70 mt-0.5">
+                  {t("packages.exportDialog.includesPlans", { count: packages.length })}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                setStep(1);
+              }}
+              aria-label={t("common.cancel")}
+              className="shrink-0 flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 text-white hover:bg-white/30 transition-colors"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className="relative mt-5 flex items-center gap-2" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={2}>
+            {[1, 2].map((s) => (
+              <React.Fragment key={s}>
+                <div
+                  className={cls(
+                    "flex h-7 w-7 items-center justify-center rounded-full text-xs font-black transition-all",
+                    step >= s ? "bg-white text-[var(--color-primary-600)]" : "bg-white/20 text-white"
+                  )}
+                >
+                  {step > s ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : s}
+                </div>
+                {s < 2 && (
+                  <div className={cls("flex-1 h-0.5 rounded-full transition-colors duration-300", step > s ? "bg-white" : "bg-white/30")} />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {step === 1 && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+              <p className="text-sm font-semibold text-slate-600">{t("packages.exportDialog.selectClient")}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="mb-2 block text-xs font-black uppercase tracking-widest text-[var(--color-primary-500)]">
+                    اسم العميل
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute top-1/2 -translate-y-1/2 rtl:right-3 ltr:left-3 h-4 w-4 text-slate-400 pointer-events-none" aria-hidden="true" />
+                    <input
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                      placeholder="مثال: أحمد محمد"
+                      className={inputBase}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="mb-2 block text-xs font-black uppercase tracking-widest text-[var(--color-primary-500)]">
+                    {t("packages.exportDialog.phoneLabel")}
+                  </Label>
+                  <div className="relative">
+                    <Phone className="absolute top-1/2 -translate-y-1/2 rtl:right-3 ltr:left-3 h-4 w-4 text-slate-400 pointer-events-none" aria-hidden="true" />
+                    <input
+                      value={phoneNumber}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="201XXXXXXXXX"
+                      type="tel"
+                      className={inputBase}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[var(--color-primary-100)] bg-[var(--color-primary-50)] p-4">
+                <p className="text-xs font-black uppercase tracking-widest mb-3 text-[var(--color-primary-500)]">
+                  {t("pdf.allPackages")} ({packages.length})
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {packages.map((pkg, i) => (
+                    <div
+                      key={pkg.id}
+                      className={cls("rounded-xl p-3 text-center border-2", TIER_BG_CLS[i % TIER_BG_CLS.length], TIER_BORDER[i % TIER_BORDER.length])}
+                    >
+                      <p className="text-xs font-black text-slate-900 mb-1 truncate">{pkg.name}</p>
+                      <p className="text-lg font-black" style={{ color: TIER_COLORS[i % TIER_COLORS.length] }}>
+                        {pkg.price.toLocaleString()}
+                      </p>
+                      <p className="text-[10px] text-slate-400">{t("currency")}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="rounded-2xl border-2 border-emerald-200 overflow-hidden">
+                <div className="bg-green-50 px-4 py-3 flex items-center gap-3 border-b border-green-100">
+                  <MessageCircle className="h-5 w-5 text-green-600" aria-hidden="true" />
+                  <p className="text-sm font-black text-green-800">{t("packages.exportDialog.preview")}</p>
+                </div>
+                <div className="p-4 bg-white text-xs text-slate-700 leading-relaxed space-y-1 max-h-44 overflow-y-auto" dir="rtl">
+                  <p>مرحباً {clientName || "[اسم العميل]"}! 👋</p>
+                  <p>إليك عرض حزمنا الحصري:</p>
+                  <br />
+                  {packages.map((pkg, i) => (
+                    <div key={pkg.id} className="mb-2">
+                      <p className="font-bold">
+                        {["🔵", "⭐", "💜"][i % 3]} {pkg.name} — {[t("packages.starter"), t("packages.gold"), t("packages.platinum")][i % 3]}
+                      </p>
+                      <p>
+                        💰 {pkg.price.toLocaleString()} {t("currency")} / {pkg.duration}
+                      </p>
+                      <p>✅ {pkg.features.join(" • ")}</p>
+                    </div>
+                  ))}
+                  <br />
+                  <p>للاشتراك أو الاستفسار تواصل معنا في أي وقت! 🚀</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border border-slate-200 p-3.5 bg-slate-50">
+                <Phone className="h-4 w-4 text-slate-400 shrink-0" aria-hidden="true" />
+                <div>
+                  <p className="text-xs text-slate-400">سيُرسل إلى</p>
+                  <p className="text-sm font-black text-slate-800 ltr">{phoneNumber}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-2 border-t border-[var(--color-primary-50)]">
+            <button
+              type="button"
+              onClick={() => (step === 1 ? (onClose(), setStep(1)) : setStep(1))}
+              className="h-10 rounded-xl border border-slate-200 px-5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              {step === 1 ? t("common.cancel") : "← رجوع"}
+            </button>
+
+            {step === 1 ? (
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                disabled={!phoneNumber}
+                className="h-10 rounded-xl px-6 text-sm font-black text-white bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] shadow-[0_6px_20px_rgba(79,70,229,.4)] disabled:opacity-40 transition-transform hover:scale-[1.02] active:scale-[.97]"
+              >
+                معاينة الرسالة →
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={sending || sent}
+                className={cls(
+                  "h-10 rounded-xl px-6 text-sm font-black text-white disabled:opacity-60 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[.97]",
+                  sent ? "bg-green-600" : "bg-gradient-to-r from-green-600 to-green-700 shadow-[0_6px_20px_rgba(22,163,74,.4)]"
+                )}
+              >
+                {sent ? (
+                  <>
+                    <Check className="h-4 w-4" aria-hidden="true" /> تم الإرسال!
+                  </>
+                ) : sending ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" /> {t("packages.exportDialog.sending")}
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle className="h-4 w-4" aria-hidden="true" /> {t("packages.exportDialog.send")}
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SinglePkgWhatsAppDialog({ pkg, t, open, onClose }) {
+  const [phone, setPhone] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleSend = async () => {
+    if (!phone) return;
+    setSending(true);
+    await new Promise((r) => setTimeout(r, 700));
+    const msg =
+      `مرحباً! 👋\n\nإليك تفاصيل الحزمة:\n\n📦 *${pkg.name}* (${pkg.nameEn})\n` +
+      `💰 ${pkg.price.toLocaleString()} ${t("currency")} / ${pkg.duration}\n\n` +
+      `✅ المميزات:\n${pkg.features.map((f) => `• ${f}`).join("\n")}\n\n` +
+      `للاشتراك أو الاستفسار تواصل معنا! 🚀`;
+    window.open(`https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
+    setSending(false);
+    setSent(true);
+    setTimeout(() => {
+      setSent(false);
+      onClose();
+      setPhone("");
+    }, 1200);
+  };
+
+  if (!pkg) return null;
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) {
+          onClose();
+          setPhone("");
+        }
+      }}
+    >
+      <DialogContent className="max-w-sm rounded-3xl p-0 overflow-hidden gap-0">
+        <div className="h-1.5 w-full bg-gradient-to-r from-green-600 to-green-700" aria-hidden="true" />
+        <div className="p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-green-100">
+              <MessageCircle className="h-6 w-6 text-green-700" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-base font-black text-slate-900">{t("packages.sendToClient")}</h3>
+              <p className="text-xs text-slate-500 truncate">{pkg.name}</p>
+            </div>
+          </div>
+          <div className="rounded-xl bg-green-50 border border-green-200 p-3.5 space-y-1.5 text-xs text-green-800">
+            <p className="font-black">
+              📦 {pkg.name} — {pkg.price.toLocaleString()} {t("currency")} / {pkg.duration}
+            </p>
+            <p>
+              {pkg.features.slice(0, 3).join(" • ")}
+              {pkg.features.length > 3 ? ` +${pkg.features.length - 3}` : ""}
+            </p>
+          </div>
+          <div>
+            <Label className="mb-1.5 block text-xs font-black uppercase tracking-widest text-[var(--color-primary-500)]">
+              {t("packages.exportDialog.phoneLabel")}
+            </Label>
+            <div className="relative">
+              <Phone className="absolute top-1/2 -translate-y-1/2 rtl:right-3 ltr:left-3 h-4 w-4 text-slate-400 pointer-events-none" aria-hidden="true" />
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="201XXXXXXXXX"
+                type="tel"
+                className="h-11 w-full rounded-xl border border-[var(--color-primary-200)] bg-white rtl:pr-9 ltr:pl-9 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]"
+              />
+            </div>
+            <p className="mt-1 text-[11px] text-slate-400">{t("packages.exportDialog.info")}</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                setPhone("");
+              }}
+              className="h-10 flex-1 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              {t("common.cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={!phone || sending || sent}
+              className={cls(
+                "h-10 flex-[2] rounded-xl text-sm font-black text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:scale-[1.02] active:scale-[.97]",
+                sent ? "bg-green-600" : "bg-gradient-to-r from-green-600 to-green-700 shadow-[0_6px_20px_rgba(22,163,74,.4)]"
+              )}
+            >
+              {sent ? (
+                <>
+                  <Check className="h-4 w-4" aria-hidden="true" /> تم!
+                </>
+              ) : sending ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  {t("packages.exportDialog.sending")}
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                  {t("packages.exportDialog.send")}
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PackagesTab({ t }) {
+  const [packages, setPackages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [sendAllOpen, setSendAllOpen] = useState(false);
+  const [singlePkg, setSinglePkg] = useState(null);
+  const [editingPkg, setEditingPkg] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    nameEn: "",
+    price: "",
+    duration: "شهري",
+    features: [""],
+  });
+
+  const loadPlans = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get("/billing/plans", {
+        params: { page: 1, limit: 100 },
+      });
+      const items = Array.isArray(data?.items) ? data.items : [];
+      setPackages(items.map((p) => mapPlanToUi(p, t)));
+    } catch (e) {
+      console.error(e);
+      toast.error(t("errors.loadPlans") || "Failed to load packages");
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    loadPlans();
+  }, [loadPlans]);
+
+  const openAdd = () => {
+    setEditingPkg(null);
+    setFormData({ name: "", nameEn: "", price: "", duration: "شهري", features: [""] });
+    setDialogOpen(true);
+  };
+
+  const openEdit = (pkg) => {
+    setEditingPkg(pkg);
+    setFormData({
+      name: pkg.name || "",
+      nameEn: pkg.nameEn || pkg.name || "",
+      price: String(pkg.price || ""),
+      duration: pkg.duration || "شهري",
+      features: Array.isArray(pkg.features) && pkg.features.length ? [...pkg.features] : [""],
+    });
+    setDialogOpen(true);
+  };
+
+  const saveForm = async () => {
+    if (!formData.name || !formData.price) {
+      toast.error(t("errors.requiredFields") || "Please fill required fields");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const payload = {
+        name: formData.name,
+        description: formData.nameEn || formData.name,
+        interval: getPlanIntervalFromDuration(formData.duration),
+        intervalCount: 1,
+        price: String(formData.price),
+        currency: "EGP",
+        features: formData.features.filter(Boolean),
+        status: "active",
+      };
+
+      if (editingPkg?.id) {
+        await api.patch(`/billing/plans/${editingPkg.id}`, payload);
+        toast.success(t("common.updated") || "Updated successfully");
+      } else {
+        await api.post("/billing/plans", payload);
+        toast.success(t("common.saved") || "Saved successfully");
+      }
+
+      setDialogOpen(false);
+      await loadPlans();
+    } catch (e) {
+      console.error(e);
+      toast.error(e?.response?.data?.message || t("errors.savePlan") || "Failed to save plan");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const deletePlan = async (pkg) => {
+    try {
+      await api.delete(`/billing/plans/${pkg.id}`);
+      toast.success(t("common.deleted") || "Deleted successfully");
+      await loadPlans();
+    } catch (e) {
+      console.error(e);
+      toast.error(t("errors.deletePlan") || "Failed to delete plan");
+    }
+  };
+
+  const inputCls =
+    "h-11 w-full rounded-xl border border-[var(--color-primary-200)] bg-white px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]";
+
+  return (
+    <TabPane id="tab-packages">
+      <div className="flex flex-wrap items-center justify-between gap-4" data-aos="fade-down" data-aos-duration="350">
         <div>
-          <h2 className="text-2xl font-black tracking-tight"
-            style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          <h2 className="text-2xl font-black tracking-tight bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] bg-clip-text text-transparent">
             {t("packages.title")}
           </h2>
           <p className="mt-1 text-sm text-slate-500 font-medium">{t("packages.description")}</p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Export dialog */}
-          <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
-            <DialogTrigger asChild>
-              <button className="inline-flex h-10 items-center gap-2 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-4 text-sm font-bold text-[color:var(--color-primary-700)] shadow-sm transition-all hover:bg-[color:var(--color-primary-50)] focus:outline-none">
-                <Send className="h-4 w-4" />{t("packages.exportAll")}
-              </button>
-            </DialogTrigger>
-            <DialogContent className="rounded-lg">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-black">{t("packages.exportDialog.title")}</DialogTitle>
-                <DialogDescription>{t("packages.exportDialog.description")}</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-3">
-                <div>
-                  <Label className="text-sm font-bold mb-2 block">{t("packages.exportDialog.phoneLabel")}</Label>
-                  <div className="relative">
-                    <Phone className="pointer-events-none absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 h-4 w-4 text-slate-400" />
-                    <input value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} type="tel" placeholder="01XXXXXXXXX"
-                      className="h-11 w-full rounded-lg border border-[color:var(--color-primary-200)] bg-white ltr:pl-9 rtl:pr-9 px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]" />
-                  </div>
-                </div>
-                <div className="flex items-start gap-2.5 rounded-lg bg-blue-50 border border-blue-200 p-3">
-                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-                  <p className="text-xs font-medium text-blue-800">{t("packages.exportDialog.info")}</p>
-                </div>
-              </div>
-              <DialogFooter>
-                <button onClick={() => setIsExportDialogOpen(false)} className="h-9 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-4 text-sm font-bold hover:bg-[color:var(--color-primary-50)]">{t("common.cancel")}</button>
-                <button onClick={handleExport} disabled={!phoneNumber || exportingPackages}
-                  className="inline-flex h-9 items-center gap-2 rounded-lg bg-green-600 px-5 text-sm font-bold text-white transition-all hover:bg-green-700 disabled:opacity-50">
-                  {exportingPackages ? <><RefreshCw className="h-4 w-4 animate-spin" />{t("packages.exportDialog.sending")}</> : <><Send className="h-4 w-4" />{t("packages.exportDialog.send")}</>}
-                </button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Add/edit dialog */}
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <button onClick={() => { setEditingPackage(null); setFormData({ name: "", nameEn: "", price: "", duration: "شهري", features: [""] }); }}
-                className="inline-flex h-10 items-center gap-2 rounded-lg px-5 text-sm font-bold text-white shadow transition-all hover:opacity-90 active:scale-[.97] focus:outline-none"
-                style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 4px 14px -4px var(--color-primary-500)" }}>
-                <Plus className="h-4 w-4" />{t("packages.addNew")}
-              </button>
-            </DialogTrigger>
-            <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-lg">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-black">{editingPackage ? t("packages.edit") : t("packages.addNew")}</DialogTitle>
-                <DialogDescription>{t("packages.dialogDescription")}</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-5 py-3">
-                <div className="grid grid-cols-2 gap-3">
-                  {[["name", t("packages.form.nameAr")], ["nameEn", t("packages.form.nameEn")]].map(([field, label]) => (
-                    <div key={field}>
-                      <Label className="mb-1.5 block text-xs font-bold uppercase tracking-wide">{label}</Label>
-                      <input value={formData[field]} onChange={e => setFormData(p => ({ ...p, [field]: e.target.value }))} className={inputCls} />
-                    </div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="mb-1.5 block text-xs font-bold uppercase tracking-wide">{t("packages.form.price")}</Label>
-                    <input type="number" value={formData.price} onChange={e => setFormData(p => ({ ...p, price: e.target.value }))} className={inputCls} />
-                  </div>
-                  <div>
-                    <Label className="mb-1.5 block text-xs font-bold uppercase tracking-wide">{t("packages.form.duration")}</Label>
-                    <Select value={formData.duration} onValueChange={v => setFormData(p => ({ ...p, duration: v }))}>
-                      <SelectTrigger className="h-11 rounded-lg border-[color:var(--color-primary-200)]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {[["شهري","monthly"],["ربع سنوي","quarterly"],["نصف سنوي","semiAnnual"],["سنوي","annual"]].map(([v, k]) => (
-                          <SelectItem key={v} value={v}>{t(`packages.form.${k}`)}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-2 flex items-center justify-between">
-                    <Label className="text-xs font-bold uppercase tracking-wide">{t("packages.form.features")}</Label>
-                    <button type="button" onClick={handleAddFeature}
-                      className="inline-flex h-7 items-center gap-1 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-2.5 text-xs font-bold text-[color:var(--color-primary-700)] hover:bg-[color:var(--color-primary-50)]">
-                      <Plus className="h-3 w-3" />{t("packages.form.addFeature")}
-                    </button>
-                  </div>
-                  <div className="space-y-2">
-                    {formData.features.map((f, i) => (
-                      <div key={i} className="flex gap-2">
-                        <input value={f} onChange={e => handleFeatureChange(i, e.target.value)}
-                          placeholder={`${t("packages.form.feature")} ${i + 1}`} className={cls(inputCls, "flex-1")} />
-                        {formData.features.length > 1 && (
-                          <button type="button" onClick={() => handleRemoveFeature(i)}
-                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <button onClick={() => setIsDialogOpen(false)} className="h-9 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-4 text-sm font-bold hover:bg-[color:var(--color-primary-50)]">{t("common.cancel")}</button>
-                <button onClick={handleSubmit} className="h-9 rounded-lg px-5 text-sm font-bold text-white"
-                  style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
-                  {editingPackage ? t("common.update") : t("common.save")}
-                </button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setSendAllOpen(true)}
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--color-primary-200)] bg-white text-[var(--color-primary-700)] px-4 text-sm font-bold shadow-sm transition-all hover:scale-[1.03] hover:-translate-y-px active:scale-[.97]"
+          >
+            <FileDown className="h-4 w-4" aria-hidden="true" />
+            {t("packages.sendAllAsPdf")}
+          </button>
+          <button
+            type="button"
+            onClick={openAdd}
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white px-5 text-sm font-bold shadow-[0_6px_20px_rgba(79,70,229,.4)] transition-all hover:scale-[1.03] hover:-translate-y-px active:scale-[.97]"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            {t("packages.addNew")}
+          </button>
         </div>
       </div>
 
-      {/* Package cards */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-        {packages.map((pkg, i) => {
-          const pal = pkgPalettes[i % pkgPalettes.length];
-          return (
-            <motion.div key={pkg.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1, duration: 0.45 }} whileHover={{ y: -8, scale: 1.015 }}
-              className="group relative overflow-hidden rounded-lg border-2 border-white/70 shadow-lg hover:shadow-2xl transition-all duration-300"
-              style={{ background: `linear-gradient(135deg, ${pal.from}, ${pal.to})` }}>
-              <div className="absolute inset-x-0 top-0 h-1 rounded-t-2xl" style={{ background: pal.accent }} />
-              <motion.div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
-                initial={{ x: "-100%" }} whileHover={{ x: "100%" }} transition={{ duration: 0.65 }} />
-              <div className="relative p-6">
-                <div className="mb-5 flex items-start justify-between">
-                  <div>
-                    <h3 className="text-xl font-black text-slate-900">{pkg.name}</h3>
-                    <p className="text-xs font-semibold text-slate-500 mt-0.5">{pkg.nameEn}</p>
-                  </div>
-                  <div className="flex gap-1">
-                    <TipIconBtn tooltip={t("common.edit")} onClick={() => handleEdit(pkg)}><Edit className="h-3.5 w-3.5" /></TipIconBtn>
-                    <TipIconBtn tooltip={t("common.delete")} onClick={() => setPackages(ps => ps.filter(p => p.id !== pkg.id))} variant="danger"><Trash2 className="h-3.5 w-3.5" /></TipIconBtn>
-                  </div>
+      {loading ? (
+        <div className="grid grid-cols-1 gap-7 md:grid-cols-2 lg:grid-cols-3">
+          <Skeleton className="h-[420px] rounded-3xl" />
+          <Skeleton className="h-[420px] rounded-3xl" />
+          <Skeleton className="h-[420px] rounded-3xl" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-7 md:grid-cols-2 lg:grid-cols-3">
+          {packages.map((pkg, i) => (
+            <PkgCard
+              key={pkg.id}
+              pkg={pkg}
+              idx={i}
+              t={t}
+              onEdit={() => openEdit(pkg)}
+              onDelete={() => deletePlan(pkg)}
+              onSendWhatsApp={() => setSinglePkg(pkg)}
+            />
+          ))}
+        </div>
+      )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black">
+              {editingPkg ? t("packages.edit") : t("packages.addNew")}
+            </DialogTitle>
+            <DialogDescription>{t("packages.dialogDescription")}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 py-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                ["name", t("packages.form.nameAr")],
+                ["nameEn", t("packages.form.nameEn")],
+              ].map(([f, label]) => (
+                <div key={f}>
+                  <Label className="mb-1.5 block text-xs font-bold uppercase tracking-wide">
+                    {label}
+                  </Label>
+                  <input
+                    value={formData[f]}
+                    onChange={(e) => setFormData((p) => ({ ...p, [f]: e.target.value }))}
+                    className={inputCls}
+                  />
                 </div>
-                <div className="mb-5">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-4xl font-black text-slate-900">{pkg.price}</span>
-                    <span className="text-sm font-bold text-slate-500">{t("currency")}</span>
-                  </div>
-                  <p className="mt-0.5 text-xs font-semibold text-slate-500">{pkg.duration}</p>
-                </div>
-                <div className="space-y-2">
-                  {pkg.features.map((feat, fi) => (
-                    <motion.div key={fi} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: fi * 0.07 }}
-                      className="flex items-start gap-2">
-                      <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
-                        style={{ background: pal.accent + "22", color: pal.accent }}>
-                        <CheckCircle className="h-3.5 w-3.5" />
-                      </div>
-                      <span className="text-xs font-medium text-slate-700">{feat}</span>
-                    </motion.div>
-                  ))}
-                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label className="mb-1.5 block text-xs font-bold uppercase tracking-wide">
+                  {t("packages.form.price")}
+                </Label>
+                <input
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData((p) => ({ ...p, price: e.target.value }))}
+                  className={inputCls}
+                />
               </div>
-            </motion.div>
-          );
-        })}
-      </div>
+              <div>
+                <Label className="mb-1.5 block text-xs font-bold uppercase tracking-wide">
+                  {t("packages.form.duration")}
+                </Label>
+                <Select
+                  value={formData.duration}
+                  onValueChange={(v) => setFormData((p) => ({ ...p, duration: v }))}
+                >
+                  <SelectTrigger className="h-11 rounded-xl border-[var(--color-primary-200)]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      ["شهري", "monthly"],
+                      ["ربع سنوي", "quarterly"],
+                      ["سنوي", "annual"],
+                    ].map(([v, k]) => (
+                      <SelectItem key={v} value={v}>
+                        {t(`packages.form.${k}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <Label className="text-xs font-bold uppercase tracking-wide">
+                  {t("packages.form.features")}
+                </Label>
+                <button
+                  type="button"
+                  onClick={() => setFormData((p) => ({ ...p, features: [...p.features, ""] }))}
+                  className="inline-flex h-7 items-center gap-1 rounded-lg border border-[var(--color-primary-200)] bg-white text-[var(--color-primary-700)] px-2.5 text-xs font-bold hover:bg-[var(--color-primary-50)] transition-colors"
+                >
+                  <Plus className="h-3 w-3" aria-hidden="true" />
+                  {t("packages.form.addFeature")}
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {formData.features.map((f, i) => (
+                  <div key={i} className="flex gap-2">
+                    <input
+                      value={f}
+                      onChange={(e) => {
+                        const fs = [...formData.features];
+                        fs[i] = e.target.value;
+                        setFormData((p) => ({ ...p, features: fs }));
+                      }}
+                      placeholder={`${t("packages.form.feature")} ${i + 1}`}
+                      className={cls(inputCls, "flex-1")}
+                    />
+                    {formData.features.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((p) => ({
+                            ...p,
+                            features: p.features.filter((_, j) => j !== i),
+                          }))
+                        }
+                        className="flex h-11 w-11 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setDialogOpen(false)}
+              className="h-9 rounded-xl border border-[var(--color-primary-200)] bg-white px-4 text-sm font-bold hover:bg-[var(--color-primary-50)] transition-colors"
+            >
+              {t("common.cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={saveForm}
+              disabled={submitting}
+              className="h-9 rounded-xl bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] px-5 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-[.98] disabled:opacity-60"
+            >
+              {submitting ? t("common.loading") || "Saving..." : editingPkg ? t("common.update") : t("common.save")}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <SendAllPDFDialog packages={packages} t={t} open={sendAllOpen} onClose={() => setSendAllOpen(false)} />
+      <SinglePkgWhatsAppDialog pkg={singlePkg} t={t} open={!!singlePkg} onClose={() => setSinglePkg(null)} />
     </TabPane>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════════════════════
    SUBSCRIPTIONS TAB
-───────────────────────────────────────────────────────────── */
+══════════════════════════════════════════════════════════ */
 function SubscriptionsTab({ t }) {
-  const [filters, setFilters] = useState({ client: "", fromDate: null, toDate: null, sort: "newest" });
-  const [loading] = useState(false);
-  const [showFilters, setShowFilters] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({
+    client: "all",
+    fromDate: null,
+    toDate: null,
+    sort: "newest",
+  });
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [invoices, setInvoices] = useState([]);
 
-  const payments = [
-    { id: 1, clientName: "يسرا علام",    email: "yosra@example.com",  phone: "01002766903", description: "Monthly subscription - Premium tier",    amount: 2500,  date: "2025-01-12", time: "14:32", periodFrom: "2025-01-01", periodTo: "2025-01-31" },
-    { id: 2, clientName: "أحمد محمد",   email: "ahmed@example.com",  phone: "01112345678", description: "Quarterly payment - Business plan",       amount: 5000,  date: "2025-01-10", time: "11:20", periodFrom: "2025-01-01", periodTo: "2025-03-31" },
-    { id: 3, clientName: "Sarah Johnson",email: "sarah.j@example.com",phone: "+1234567890", description: "Annual subscription - Enterprise",        amount: 15000, date: "2025-01-08", time: "09:45", periodFrom: "2025-01-01", periodTo: "2025-12-31" },
-  ];
+  const loadInvoices = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get("/billing/invoices", {
+        params: { page: 1, limit: 200 },
+      });
+      const items = Array.isArray(data?.items) ? data.items : [];
+      setInvoices(
+        items.map((inv) => ({
+          id: inv.id,
+          clientName: inv.user?.name || "—",
+          email: inv.user?.email || "—",
+          phone: inv.user?.phone || "—",
+          description: inv.description || inv.plan?.name || "—",
+          amount: money(inv.total),
+          date: inv.issueDate || inv.created_at?.slice?.(0, 10) || "—",
+          time: inv.created_at ? new Date(inv.created_at).toLocaleTimeString() : "—",
+          periodFrom: inv.subscription?.startDate || "—",
+          periodTo: inv.subscription?.endDate || inv.subscription?.renewAt || "—",
+          status: inv.status,
+          raw: inv,
+        }))
+      );
+    } catch (e) {
+      console.error(e);
+      toast.error(t("errors.loadInvoices") || "Failed to load invoices");
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
 
-  const subStats = [
-    { label: t("subscriptions.stats.active"),  value: "23",     icon: Users,      bgFrom: "#eff6ff", bgTo: "#e0e7ff", iconColor: "text-blue-600" },
-    { label: t("subscriptions.stats.revenue"), value: "12,500", icon: DollarSign, bgFrom: "#ecfdf5", bgTo: "#d1fae5", iconColor: "text-emerald-600" },
-    { label: t("subscriptions.stats.renewal"), value: "94%",    icon: RefreshCw,  bgFrom: "#faf5ff", bgTo: "#ede9fe", iconColor: "text-violet-600" },
-  ];
+  useEffect(() => {
+    loadInvoices();
+  }, [loadInvoices]);
 
-  const filterChips = useMemo(() => {
-    const chips = [];
-    if (filters.client && filters.client !== "all") chips.push({ key: "client", label: `${t("filters.client")}: ${filters.client}` });
-    if (filters.fromDate) chips.push({ key: "fromDate", label: `${t("filters.fromDate")}: ${new Date(filters.fromDate).toLocaleDateString("ar-EG")}` });
-    if (filters.toDate)   chips.push({ key: "toDate",   label: `${t("filters.toDate")}: ${new Date(filters.toDate).toLocaleDateString("ar-EG")}` });
-    if (filters.sort)     chips.push({ key: "sort",     label: `${t("filters.sort")}: ${t(`filters.${filters.sort}`)}` });
-    return chips;
-  }, [filters, t]);
+  const filteredRows = useMemo(() => {
+    let rows = [...invoices];
 
-  const columns = [
-    { key: "client",      label: t("table.client") },
-    { key: "description", label: t("table.description") },
-    { key: "period",      label: t("table.period") },
-    { key: "date",        label: t("table.date") },
-    { key: "amount",      label: t("table.amount"), align: "right" },
-    { key: "actions",     label: t("table.actions"), align: "center" },
+    const q = search.toLowerCase();
+    if (q) {
+      rows = rows.filter(
+        (r) =>
+          String(r.clientName).toLowerCase().includes(q) ||
+          String(r.email).toLowerCase().includes(q) ||
+          String(r.description).toLowerCase().includes(q)
+      );
+    }
+
+    if (filters.client !== "all") {
+      rows = rows.filter((r) => r.clientName === filters.client);
+    }
+
+    if (filters.fromDate) {
+      const from = toYMD(filters.fromDate);
+      rows = rows.filter((r) => !r.date || r.date >= from);
+    }
+
+    if (filters.toDate) {
+      const to = toYMD(filters.toDate);
+      rows = rows.filter((r) => !r.date || r.date <= to);
+    }
+
+    if (filters.sort === "newest") rows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    if (filters.sort === "oldest") rows.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    if (filters.sort === "amountHigh") rows.sort((a, b) => b.amount - a.amount);
+    if (filters.sort === "amountLow") rows.sort((a, b) => a.amount - b.amount);
+
+    return rows;
+  }, [invoices, search, filters]);
+
+  const COLUMNS = [
+    { key: "client", header: t("table.client") },
+    { key: "description", header: t("table.description") },
+    { key: "period", header: t("table.period") },
+    { key: "date", header: t("table.date") },
+    { key: "amount", header: t("table.amount") },
+    { key: "actions", header: t("table.actions") },
   ];
 
   return (
-    <TabPane>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {subStats.map((s, i) => <KpiCard key={s.label} {...s} idx={i} />)}
-      </div>
-
-      {/* Filter card */}
-      <Surface>
-        <div className="p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-lg"
-                style={{ background: "linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50))" }}>
-                <Filter className="h-5 w-5" style={{ color: "var(--color-primary-600)" }} />
-              </div>
-              <div>
-                <p className="text-sm font-black text-slate-900">{t("filters.title")}</p>
-                <p className="text-xs text-slate-500">{t("filters.subtitle") || "فلترة النتائج"}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setFilters({ client: "", fromDate: null, toDate: null, sort: "newest" })}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-3 text-xs font-bold text-slate-600 hover:bg-[color:var(--color-primary-50)]">
-                <RefreshCw className="h-3.5 w-3.5" />{t("filters.reset")}
-              </button>
-              <button onClick={() => setShowFilters(s => !s)}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-3 text-xs font-bold text-slate-600 hover:bg-[color:var(--color-primary-50)]">
-                {showFilters ? t("filters.hide") : t("filters.show")}
-                <ChevronDown className={cls("h-3.5 w-3.5 transition-transform", showFilters ? "rotate-180" : "")} />
-              </button>
-            </div>
-          </div>
-
-          {filterChips.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {filterChips.map(c => (
-                <span key={c.key} className="inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-semibold"
-                  style={{ borderColor: "var(--color-primary-200)", background: "var(--color-primary-50)", color: "var(--color-primary-700)" }}>
-                  {c.label}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }}>
-                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <div>
-                    <Label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">{t("filters.client")}</Label>
-                    <Select value={filters.client} onValueChange={v => setFilters(f => ({ ...f, client: v }))}>
-                      <SelectTrigger className="h-10 rounded-lg border-[color:var(--color-primary-200)]">
-                        <SelectValue placeholder={t("filters.selectClient")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t("filters.allClients")}</SelectItem>
-                        <SelectItem value="client1">Client 1</SelectItem>
-                        <SelectItem value="client2">Client 2</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">{t("filters.fromDate")}</Label>
-                    <Flatpickr value={filters.fromDate} onChange={([d]) => setFilters(f => ({ ...f, fromDate: d }))}
-                      options={{ dateFormat: "Y-m-d" }}
-                      className="h-10 w-full rounded-lg border border-[color:var(--color-primary-200)] bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]"
-                      placeholder={t("filters.selectDate")} />
-                  </div>
-                  <div>
-                    <Label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">{t("filters.toDate")}</Label>
-                    <Flatpickr value={filters.toDate} onChange={([d]) => setFilters(f => ({ ...f, toDate: d }))}
-                      options={{ dateFormat: "Y-m-d" }}
-                      className="h-10 w-full rounded-lg border border-[color:var(--color-primary-200)] bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]"
-                      placeholder={t("filters.selectDate")} />
-                  </div>
-                  <div>
-                    <Label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">{t("filters.sort")}</Label>
-                    <Select value={filters.sort} onValueChange={v => setFilters(f => ({ ...f, sort: v }))}>
-                      <SelectTrigger className="h-10 rounded-lg border-[color:var(--color-primary-200)]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {[["newest","newest"],["oldest","oldest"],["amountHigh","amountHigh"],["amountLow","amountLow"]].map(([v, k]) => (
-                          <SelectItem key={v} value={v}>{t(`filters.${k}`)}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </Surface>
-
+    <TabPane id="tab-subscriptions">
       {loading ? (
-        <Surface><div className="space-y-3 p-5">{[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}</div></Surface>
+        <div className="space-y-3">
+          <Skeleton className="h-16 w-full rounded-2xl" />
+          <Skeleton className="h-16 w-full rounded-2xl" />
+        </div>
       ) : (
         <DataTable
-          headerTitle={t("payments.history")}
-          headerSubtitle={t("payments.historyDescription")}
-          headerRight={
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold"
-                style={{ borderColor: "var(--color-primary-200)", background: "var(--color-primary-50)", color: "var(--color-primary-700)" }}>
-                <Receipt className="h-3.5 w-3.5" />{t("payments.total", { count: payments.length })}
-              </span>
-              <button className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[color:var(--color-primary-200)] bg-white px-3 text-xs font-bold text-[color:var(--color-primary-700)] shadow-sm hover:bg-[color:var(--color-primary-50)]">
-                <Download className="h-3.5 w-3.5" />{t("common.export")}
-              </button>
-            </div>
+          title={t("payments.history")}
+          subtitle={t("payments.historyDescription")}
+          data={filteredRows}
+          columns={COLUMNS}
+          rowKey={(p) => p.id}
+          searchValue={search}
+          onSearchChange={setSearch}
+          labels={{
+            searchPlaceholder: t("common.search"),
+            emptyTitle: t("payments.empty"),
+            emptySubtitle: t("payments.emptyDescription"),
+          }}
+          hasActiveFilters={!!(filters.client !== "all" || filters.fromDate || filters.toDate)}
+          isFiltersOpen={filtersOpen}
+          onToggleFilters={() => setFiltersOpen((v) => !v)}
+          filters={
+            <>
+              <FilterField label={t("filters.client")}>
+                <Select value={filters.client} onValueChange={(v) => setFilters((f) => ({ ...f, client: v }))}>
+                  <SelectTrigger className="h-9 rounded-lg text-xs border-[var(--color-primary-200)]">
+                    <SelectValue placeholder={t("filters.allClients")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("filters.allClients")}</SelectItem>
+                    {[...new Set(invoices.map((p) => p.clientName))]
+                      .filter(Boolean)
+                      .map((name) => (
+                        <SelectItem key={name} value={name}>
+                          {name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </FilterField>
+
+              <FilterField label={t("filters.fromDate")}>
+                <Flatpickr
+                  value={filters.fromDate}
+                  onChange={([d]) => setFilters((f) => ({ ...f, fromDate: d }))}
+                  options={{ dateFormat: "Y-m-d" }}
+                  className="h-9 w-full rounded-lg border border-[var(--color-primary-200)] bg-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-200)]"
+                  placeholder={t("filters.selectDate")}
+                />
+              </FilterField>
+
+              <FilterField label={t("filters.toDate")}>
+                <Flatpickr
+                  value={filters.toDate}
+                  onChange={([d]) => setFilters((f) => ({ ...f, toDate: d }))}
+                  options={{ dateFormat: "Y-m-d" }}
+                  className="h-9 w-full rounded-lg border border-[var(--color-primary-200)] bg-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-200)]"
+                  placeholder={t("filters.selectDate")}
+                />
+              </FilterField>
+
+              <FilterField label={t("filters.sort")}>
+                <Select value={filters.sort} onValueChange={(v) => setFilters((f) => ({ ...f, sort: v }))}>
+                  <SelectTrigger className="h-9 rounded-lg text-xs border-[var(--color-primary-200)]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      ["newest", "filters.newest"],
+                      ["oldest", "filters.oldest"],
+                      ["amountHigh", "filters.amountHigh"],
+                      ["amountLow", "filters.amountLow"],
+                    ].map(([v, k]) => (
+                      <SelectItem key={v} value={v}>
+                        {t(k)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FilterField>
+            </>
           }
-          columns={columns} rows={payments} getRowKey={p => p.id} pageSize={7}
-          emptyTitle={t("payments.empty")} emptyIcon={Receipt} emptyDescription={t("payments.emptyDescription")}
-          renderCell={(p, key) => {
-            if (key === "client")      return <div><p className="text-sm font-bold text-slate-900">{p.clientName}</p><p className="text-xs text-slate-400">{p.email}</p>{p.phone && <p className="text-xs text-slate-400">{p.phone}</p>}</div>;
-            if (key === "description") return <p className="text-sm text-slate-600 font-medium">{p.description}</p>;
-            if (key === "period")      return <div><p className="text-xs font-semibold text-slate-700">{p.periodFrom}</p><p className="text-xs text-slate-400">{t("table.to")} {p.periodTo}</p></div>;
-            if (key === "date")        return <div><p className="text-xs font-semibold text-slate-700">{p.date}</p><p className="text-xs text-slate-400">{p.time}</p></div>;
-            if (key === "amount")      return <div className="text-right"><p className="text-base font-black text-slate-900">{p.amount.toLocaleString()}</p><p className="text-[10px] font-semibold text-slate-400">{t("currency")}</p></div>;
-            if (key === "actions")     return <ActionPill><TipIconBtn tooltip={t("table.view")}><Eye className="h-3.5 w-3.5" /></TipIconBtn><PillDivider /><TipIconBtn tooltip={t("common.delete")} variant="danger"><Trash2 className="h-3.5 w-3.5" /></TipIconBtn></ActionPill>;
+          onApplyFilters={() => setFiltersOpen(false)}
+          actions={[
+            {
+              key: "export",
+              label: t("common.export"),
+              icon: <Download size={13} aria-hidden="true" />,
+              color: "default",
+              onClick: () => toast.success(t("common.export") || "Export action"),
+            },
+            {
+              key: "reload",
+              label: t("common.refresh") || "Refresh",
+              icon: <RefreshCw size={13} aria-hidden="true" />,
+              color: "default",
+              onClick: loadInvoices,
+            },
+          ]}
+          headerExtra={
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)] px-3 py-1.5 text-xs font-bold">
+              <Receipt className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("payments.total", { count: filteredRows.length })}
+            </span>
+          }
+          pagination={null}
+        >
+          {(row, col) => {
+            if (col === "client")
+              return (
+                <div>
+                  <p className="text-sm font-bold text-slate-900">{row.clientName}</p>
+                  <p className="text-xs text-slate-400">{row.email}</p>
+                  <p className="text-xs text-slate-400">{row.phone}</p>
+                </div>
+              );
+
+            if (col === "description")
+              return <p className="text-sm text-slate-600 font-medium max-w-[200px] truncate">{row.description}</p>;
+
+            if (col === "period")
+              return (
+                <div>
+                  <p className="text-xs font-semibold text-slate-700">{row.periodFrom}</p>
+                  <p className="text-xs text-slate-400">
+                    {t("table.to")} {row.periodTo}
+                  </p>
+                </div>
+              );
+
+            if (col === "date")
+              return (
+                <div>
+                  <p className="text-xs font-semibold text-slate-700">{row.date}</p>
+                  <p className="text-xs text-slate-400">{row.time}</p>
+                </div>
+              );
+
+            if (col === "amount")
+              return (
+                <div className="text-end">
+                  <p className="text-base font-black text-slate-900">{row.amount.toLocaleString()}</p>
+                  <p className="text-[10px] font-semibold text-slate-400">{t("currency")}</p>
+                </div>
+              );
+
+            if (col === "actions")
+              return (
+                <ActionPill>
+                  <TipIconBtn
+                    tooltip={t("table.view")}
+                    onClick={() => toast.success(`${t("table.view")} #${row.id}`)}
+                  >
+                    <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                  </TipIconBtn>
+                  <PillDivider />
+                  <TipIconBtn
+                    tooltip={t("common.delete")}
+                    variant="danger"
+                    onClick={async () => {
+                      try {
+                        await api.patch(`/billing/invoices/${row.id}`, { status: "void" });
+                        toast.success(t("common.deleted") || "Invoice updated");
+                        loadInvoices();
+                      } catch (e) {
+                        toast.error(t("errors.deleteInvoice") || "Failed to update invoice");
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  </TipIconBtn>
+                </ActionPill>
+              );
+
             return null;
           }}
-        />
+        </DataTable>
       )}
     </TabPane>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════════════════════
    CLIENT PAYMENTS TAB
-───────────────────────────────────────────────────────────── */
+══════════════════════════════════════════════════════════ */
 function FieldError({ msg }) {
-  return msg ? (
-    <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-      className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-rose-600">
-      <AlertCircle className="h-3.5 w-3.5" />{msg}
-    </motion.p>
-  ) : null;
+  if (!msg) return null;
+  return (
+    <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-rose-600" role="alert">
+      <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      {msg}
+    </p>
+  );
 }
 
-function FormField({ label, required, error, children }) {
+function InputField({ label, required, error, icon: Icon, hint, children, htmlFor }) {
   return (
-    <div>
-      <Label className="mb-2 block text-sm font-bold text-slate-700">
-        {label}{required && <span className="ml-1 text-rose-500">*</span>}
-      </Label>
-      {children}
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <label htmlFor={htmlFor} className="text-sm font-bold text-slate-700">
+          {label}
+          {required && <span className="ms-1 text-rose-500" aria-hidden="true">*</span>}
+          {required && <span className="sr-only">(مطلوب)</span>}
+        </label>
+        {hint && <span className="text-[11px] text-slate-400">{hint}</span>}
+      </div>
+      <div className="relative">
+        {Icon && (
+          <div
+            className="pointer-events-none absolute top-1/2 -translate-y-1/2 rtl:right-3.5 ltr:left-3.5 flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary-50)]"
+            aria-hidden="true"
+          >
+            <Icon className="h-4 w-4 text-[var(--color-primary-500)]" />
+          </div>
+        )}
+        {children}
+      </div>
       <FieldError msg={error} />
     </div>
   );
 }
 
-function ClientPaymentsTab({ t }) {
-  const [formData, setFormData] = useState({ client: "", amount: "", description: "", periodFrom: null, periodTo: null });
-  const [errors, setErrors]     = useState({});
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess]   = useState(null);
-  const [error, setError]       = useState(null);
+function ClientPaymentsTab({ t, clients = [], onSuccessRefresh }) {
+  const [form, setForm] = useState({
+    client: "",
+    amount: "",
+    description: "",
+    method: "cash",
+    periodFrom: null,
+    periodTo: null,
+    notes: "",
+  });
+  const [errors, setErrors] = useState({});
+  const [submitting, setSub] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [apiError, setApiError] = useState(null);
 
-  const set = (k, v) => setFormData(p => ({ ...p, [k]: v }));
+  const set = useCallback((k, v) => setForm((p) => ({ ...p, [k]: v })), []);
 
   const validate = () => {
     const e = {};
-    if (!formData.client)                                    e.client      = t("form.errors.clientRequired");
-    if (!formData.amount || parseFloat(formData.amount) <= 0) e.amount     = t("form.errors.amountRequired");
-    if (!formData.description)                               e.description = t("form.errors.descriptionRequired");
-    if ((formData.periodFrom && !formData.periodTo) || (!formData.periodFrom && formData.periodTo)) e.period = t("form.errors.periodRequired");
+    if (!form.client) e.client = t("form.errors.clientRequired");
+    if (!form.amount || parseFloat(form.amount) <= 0) e.amount = t("form.errors.amountRequired");
+    if (!String(form.description || "").trim()) e.description = t("form.errors.descriptionRequired");
+    if ((form.periodFrom && !form.periodTo) || (!form.periodFrom && form.periodTo)) e.period = t("form.errors.periodRequired");
     setErrors(e);
-    return Object.keys(e).length === 0;
+    return !Object.keys(e).length;
   };
 
-  const handleSubmit = async ev => {
+  const handleSubmit = async (ev) => {
     ev.preventDefault();
     if (!validate()) return;
-    setSubmitting(true); setError(null); setSuccess(null);
+
+    const selectedClient = clients.find((c) => String(c.userId) === String(form.client));
+    if (!selectedClient?.userId) {
+      setApiError(t("form.errors.clientRequired"));
+      return;
+    }
+
+    setSub(true);
+    setApiError(null);
+
     try {
-      await new Promise(r => setTimeout(r, 1500));
-      setSuccess(t("form.success"));
-      setFormData({ client: "", amount: "", description: "", periodFrom: null, periodTo: null });
-      setTimeout(() => setSuccess(null), 5000);
-    } catch { setError(t("form.errors.submitFailed")); }
-    finally   { setSubmitting(false); }
+      const amount = String(form.amount);
+      const issueDate = toYMD(form.periodFrom) || toYMD(new Date());
+      const dueDate = toYMD(form.periodTo) || issueDate;
+
+      const invoicePayload = {
+        userId: selectedClient.userId,
+        planId: selectedClient.raw?.planId || undefined,
+        subscriptionId: selectedClient.subscriptionId || undefined,
+        subtotal: amount,
+        total: amount,
+        amountPaid: amount,
+        amountDue: "0",
+        currency: "EGP",
+        issueDate,
+        dueDate,
+        paidAt: toYMD(new Date()),
+        status: "paid",
+        description: form.description,
+        notes: form.notes || undefined,
+        items: [
+          {
+            title: selectedClient.package || "Subscription payment",
+            description: form.description,
+            qty: 1,
+            unitPrice: Number(form.amount),
+            total: Number(form.amount),
+          },
+        ],
+      };
+
+      const invoiceRes = await api.post("/billing/invoices", invoicePayload);
+      const invoiceId = invoiceRes?.data?.id;
+
+      const method = PAYMENT_METHODS.find((m) => m.key === form.method);
+
+      await api.post("/billing/payments", {
+        userId: selectedClient.userId,
+        invoiceId,
+        paymentMethod: method?.apiValue || "cash",
+        status: "succeeded",
+        amount,
+        currency: "EGP",
+        provider: method?.key || "manual",
+        paidAt: toYMD(new Date()),
+        notes: form.notes || form.description,
+      });
+
+      toast.success(t("form.success") || "Payment added successfully");
+      setSuccess(true);
+      setForm({
+        client: "",
+        amount: "",
+        description: "",
+        method: "cash",
+        periodFrom: null,
+        periodTo: null,
+        notes: "",
+      });
+      onSuccessRefresh?.();
+      setTimeout(() => setSuccess(false), 5000);
+    } catch (e) {
+      console.error(e);
+      setApiError(e?.response?.data?.message || t("form.errors.submitFailed"));
+      toast.error(e?.response?.data?.message || t("form.errors.submitFailed"));
+    } finally {
+      setSub(false);
+    }
   };
 
-  const inputCls = hasError => cls(
-    "h-12 w-full rounded-lg border bg-white px-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]",
-    hasError ? "border-rose-400 bg-rose-50/50" : "border-[color:var(--color-primary-200)]"
-  );
+  const inputBase = (hasErr) =>
+    cls(
+      "h-12 w-full rounded-xl border bg-white text-sm font-medium text-slate-800 placeholder:text-slate-400",
+      "transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]",
+      "rtl:pr-14 ltr:pl-14 px-4",
+      hasErr
+        ? "border-rose-400 bg-rose-50/40 focus:ring-rose-300"
+        : "border-[var(--color-primary-200)] hover:border-[var(--color-primary-300)]"
+    );
+
+  const selectedClient = form.client ? clients.find((c) => String(c.userId) === form.client) : null;
 
   return (
-    <TabPane className="max-w-3xl mx-auto">
-      <AnimatePresence>
-        {error && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <div className="mb-2 flex items-start gap-2.5 rounded-lg border border-rose-200 bg-rose-50 p-3.5">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
-              <p className="text-sm font-medium text-rose-800">{error}</p>
+    <TabPane id="tab-client-payments">
+      <div className="mx-auto max-w-5xl">
+        {apiError && (
+          <div
+            className="mb-4 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 animate-in fade-in slide-in-from-top-2 duration-300"
+            role="alert"
+          >
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-rose-100">
+              <AlertCircle className="h-4 w-4 text-rose-600" aria-hidden="true" />
             </div>
-          </motion.div>
-        )}
-        {success && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <div className="mb-2 flex items-start gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50 p-3.5">
-              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-              <p className="text-sm font-medium text-emerald-800">{success}</p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <Surface accent glow>
-        <div className="flex items-center gap-4 border-b border-[color:var(--color-primary-50)] p-5 sm:p-6">
-          <motion.div whileHover={{ rotate: 360, scale: 1.1 }} transition={{ duration: 0.6 }}
-            className="grid h-14 w-14 shrink-0 place-items-center rounded-lg shadow-lg"
-            style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 8px 24px -8px var(--color-primary-500)" }}>
-            <Plus className="h-7 w-7 text-white" />
-          </motion.div>
-          <div>
-            <h2 className="text-xl font-black text-slate-900">{t("form.title")}</h2>
-            <p className="mt-0.5 text-sm text-slate-500 font-medium">{t("form.description")}</p>
+            <p className="text-sm font-medium text-rose-800">{apiError}</p>
           </div>
-        </div>
+        )}
 
-        <form onSubmit={handleSubmit} className="space-y-6 p-5 sm:p-6">
-          <FormField label={t("form.client")} required error={errors.client}>
-            <Select value={formData.client} onValueChange={v => set("client", v)}>
-              <SelectTrigger className={cls("h-12 rounded-lg", errors.client ? "border-rose-400" : "border-[color:var(--color-primary-200)]")}>
-                <SelectValue placeholder={t("form.selectClient")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="client1">Client 1 - John Doe</SelectItem>
-                <SelectItem value="client2">Client 2 - Jane Smith</SelectItem>
-                <SelectItem value="client3">Client 3 - Bob Johnson</SelectItem>
-              </SelectContent>
-            </Select>
-          </FormField>
-
-          <FormField label={t("form.amount")} required error={errors.amount}>
-            <div className="relative">
-              <DollarSign className="pointer-events-none absolute top-1/2 -translate-y-1/2 ltr:left-3.5 rtl:right-3.5 h-4 w-4 text-slate-400" />
-              <input type="number" step="0.01" min="0" value={formData.amount}
-                onChange={e => set("amount", e.target.value)} placeholder="0.00"
-                className={cls(inputCls(errors.amount), "ltr:pl-10 rtl:pr-10")} />
+        {success && (
+          <div
+            className="mb-4 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 animate-in fade-in slide-in-from-top-2 duration-300"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-emerald-100">
+              <CheckCircle className="h-4 w-4 text-emerald-600" aria-hidden="true" />
             </div>
-          </FormField>
+            <p className="text-sm font-medium text-emerald-800">{t("form.success")}</p>
+          </div>
+        )}
 
-          <FormField label={t("form.description")} required error={errors.description}>
-            <textarea rows={4} value={formData.description} onChange={e => set("description", e.target.value)}
-              placeholder={t("form.descriptionPlaceholder")}
-              className={cls(
-                "w-full resize-none rounded-lg border bg-white p-3.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary-300)]",
-                errors.description ? "border-rose-400 bg-rose-50/50" : "border-[color:var(--color-primary-200)]"
-              )} />
-          </FormField>
+        <Surface accent glow id="payment-form-card" className="overflow-visible">
+          <div
+            className="relative overflow-hidden rounded-t-2xl px-7 py-6 bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]"
+            data-aos="fade-down"
+            data-aos-duration="400"
+          >
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[.15]"
+              style={{ backgroundImage: "radial-gradient(white 1px,transparent 1px)", backgroundSize: "18px 18px" }}
+              aria-hidden="true"
+            />
+            <div className="pointer-events-none absolute -top-8 -end-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" aria-hidden="true" />
+            <div className="pointer-events-none absolute -bottom-6 -start-6 h-24 w-24 rounded-full bg-white/10 blur-xl" aria-hidden="true" />
 
-          <div>
-            <p className="mb-2 text-sm font-bold text-slate-700">
-              {t("form.period")} <span className="font-normal text-slate-400">({t("form.optional")})</span>
-            </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {[["periodFrom", "form.periodFrom"], ["periodTo", "form.periodTo"]].map(([field, labelKey]) => (
-                <div key={field}>
-                  <Label className="mb-1.5 block text-xs font-semibold text-slate-400">{t(labelKey)}</Label>
-                  <Flatpickr value={formData[field]} onChange={([d]) => set(field, d)}
-                    options={{ dateFormat: "Y-m-d" }}
-                    className={cls(inputCls(errors.period))}
-                    placeholder={t("filters.selectDate")} />
+            <div className="relative flex flex-wrap items-center gap-5">
+              <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white/20 backdrop-blur-[12px] border border-white/35 shadow-xl transition-transform hover:rotate-12 hover:scale-110 duration-300">
+                <Receipt className="h-8 w-8 text-white" aria-hidden="true" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-2xl font-black text-white leading-tight">{t("form.title")}</h2>
+                <p className="mt-1 text-sm text-white/70 font-medium">{t("form.description")}</p>
+              </div>
+
+              {form.amount && (
+                <div className="shrink-0 rounded-2xl px-4 py-2 text-center bg-white/[.18] backdrop-blur-[8px] border border-white/30 animate-in fade-in zoom-in-75 duration-300">
+                  <p className="text-[11px] font-semibold text-white/70 mb-0.5">{t("table.amount")}</p>
+                  <p className="text-xl font-black text-white">{Number(form.amount || 0).toLocaleString()}</p>
+                  <p className="text-[11px] text-white/70">{t("currency")}</p>
                 </div>
+              )}
+            </div>
+
+            <div className="relative mt-5 flex flex-wrap items-center gap-1.5" role="list" aria-label="خطوات النموذج">
+              {["العميل", "المبلغ", "التفاصيل"].map((step, i) => {
+                const filled = (i === 0 && form.client) || (i === 1 && form.amount) || (i === 2 && form.description);
+                return (
+                  <div key={step} className="flex items-center gap-1.5" role="listitem">
+                    <div
+                      className={cls(
+                        "flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold transition-all duration-300",
+                        filled ? "bg-white text-[var(--color-primary-700)]" : "bg-white/20 text-white"
+                      )}
+                    >
+                      {filled ? <Check className="h-3 w-3" aria-hidden="true" /> : <span aria-hidden="true">{i + 1}</span>}
+                      {step}
+                    </div>
+                    {i < 2 && (
+                      <div className={cls("w-4 h-0.5 rounded-full transition-colors duration-300", filled ? "bg-white/80" : "bg-white/30")} aria-hidden="true" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4 p-5 sm:p-7" noValidate>
+            <div className="grid grid-cols-2 gap-2">
+              <InputField label={t("form.client")} required error={errors.client} icon={User} htmlFor="payment-client">
+                <Select value={form.client} onValueChange={(v) => set("client", v)}>
+                  <SelectTrigger
+                    id="payment-client"
+                    className={cls(
+                      "h-12 w-full rounded-xl rtl:pr-14",
+                      errors.client ? "border-rose-400" : "border-[var(--color-primary-200)] hover:border-[var(--color-primary-300)]"
+                    )}
+                  >
+                    <SelectValue placeholder={t("form.selectClient")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((c) => (
+                      <SelectItem key={c.userId} value={String(c.userId)}>
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-black text-white bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)]">
+                            {c.avatar}
+                          </span>
+                          <span className="font-semibold">{c.name}</span>
+                          <span className="text-slate-400 text-xs hidden sm:inline">— {c.package}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </InputField>
+
+              <InputField label={t("form.amount")} required error={errors.amount} icon={DollarSign} htmlFor="payment-amount">
+                <input
+                  id="payment-amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.amount}
+                  onChange={(e) => set("amount", e.target.value)}
+                  placeholder="0.00"
+                  className={inputBase(errors.amount)}
+                  aria-invalid={!!errors.amount}
+                />
+              </InputField>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {QUICK_AMOUNTS.map((amt) => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => set("amount", String(amt))}
+                  className={cls(
+                    "rounded-xl border px-3 py-2 text-xs font-bold transition-all",
+                    String(form.amount) === String(amt)
+                      ? "border-[var(--color-primary-500)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)]"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  )}
+                >
+                  {amt.toLocaleString()} {t("currency")}
+                </button>
               ))}
             </div>
-            <FieldError msg={errors.period} />
-          </div>
 
-          <motion.button type="submit" disabled={submitting}
-            whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-            className="relative w-full overflow-hidden rounded-lg py-3.5 text-base font-black text-white transition-all disabled:opacity-60 focus:outline-none"
-            style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 8px 24px -8px var(--color-primary-500)" }}>
-            <motion.div className="absolute inset-0 bg-white/20" initial={{ x: "-100%" }} whileHover={{ x: "100%" }} transition={{ duration: 0.5 }} />
-            <span className="relative flex items-center justify-center gap-2">
-              {submitting
-                ? <><RefreshCw className="h-5 w-5 animate-spin" />{t("form.submitting")}</>
-                : <><CheckCircle className="h-5 w-5" />{t("form.submit")}</>}
-            </span>
-          </motion.button>
-        </form>
-      </Surface>
+            <div className="space-y-2.5">
+              <label className="text-sm font-bold text-slate-700" id="payment-method-label">
+                {t("form.paymentMethod")}
+              </label>
+              <div className="grid mt-2 grid-cols-2 gap-2 sm:grid-cols-4" role="radiogroup" aria-labelledby="payment-method-label">
+                {PAYMENT_METHODS.map((m) => {
+                  const MIcon = m.icon;
+                  const active = form.method === m.key;
+                  return (
+                    <button
+                      key={m.key}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => set("method", m.key)}
+                      className={cls(
+                        "relative flex flex-col items-center gap-2 rounded-2xl border-2 p-3.5 transition-all duration-200 hover:-translate-y-0.5 active:scale-[.97]",
+                        active ? cls("border-[currentColor]", m.activeBorder, m.activeShadow) : "border-slate-200 bg-white"
+                      )}
+                    >
+                      {active && (
+                        <span className={cls("absolute top-2 end-2 flex h-5 w-5 items-center justify-center rounded-full text-white text-[10px]", m.activeBg)} aria-hidden="true">
+                          <Check className="h-3 w-3" />
+                        </span>
+                      )}
+                      <div className={cls("flex h-10 w-10 items-center justify-center rounded-xl", active ? m.activeBg : m.inactiveIconBg)}>
+                        <MIcon className={cls("h-5 w-5", active ? "text-white" : m.inactiveIconText)} aria-hidden="true" />
+                      </div>
+                      <span className={cls("text-xs font-bold", active ? m.activeText : "text-slate-600")}>
+                        {m.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <InputField label={t("form.description")} required error={errors.description} icon={FileText} htmlFor="payment-description">
+                <textarea
+                  id="payment-description"
+                  rows={3}
+                  value={form.description}
+                  onChange={(e) => set("description", e.target.value)}
+                  placeholder={t("form.descriptionPlaceholder")}
+                  aria-invalid={!!errors.description}
+                  className={cls(
+                    "w-full resize-none rounded-xl border bg-white rtl:pr-14 ltr:pl-14 px-4 pt-3 pb-3",
+                    "text-sm font-medium text-slate-800 placeholder:text-slate-400",
+                    "transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]",
+                    errors.description
+                      ? "border-rose-400 bg-rose-50/40"
+                      : "border-[var(--color-primary-200)] hover:border-[var(--color-primary-300)]"
+                  )}
+                />
+              </InputField>
+            </div>
+
+            <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  ["periodFrom", "form.periodFrom"],
+                  ["periodTo", "form.periodTo"],
+                ].map(([field, labelKey]) => (
+                  <div key={field}>
+                    <Label className="mb-1.5 text-sm font-bold text-slate-700" htmlFor={`payment-${field}`}>
+                      {t("form.period")} {t(labelKey)}
+                    </Label>
+                    <Flatpickr
+                      value={form[field]}
+                      onChange={([d]) => set(field, d)}
+                      options={{ dateFormat: "Y-m-d" }}
+                      className={cls(
+                        "h-11 w-full rounded-xl border bg-white px-3 text-sm font-medium focus:outline-none focus:ring-2",
+                        errors.period ? "border-rose-300 focus:ring-rose-200" : "border-[var(--color-primary-200)] focus:ring-[var(--color-primary-200)]"
+                      )}
+                      placeholder={t("filters.selectDate")}
+                    />
+                  </div>
+                ))}
+              </div>
+              <FieldError msg={errors.period} />
+            </div>
+
+            <div>
+              <InputField label={t("form.notes") || "Notes"} icon={FileText} htmlFor="payment-notes">
+                <textarea
+                  id="payment-notes"
+                  rows={2}
+                  value={form.notes}
+                  onChange={(e) => set("notes", e.target.value)}
+                  placeholder={t("form.notesPlaceholder") || "Optional notes"}
+                  className="w-full resize-none rounded-xl border border-[var(--color-primary-200)] bg-white rtl:pr-14 ltr:pl-14 px-4 pt-3 pb-3 text-sm font-medium text-slate-800 placeholder:text-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]"
+                />
+              </InputField>
+            </div>
+
+            {(form.client || form.amount) && (
+              <div
+                className="flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--color-primary-100)] bg-[var(--color-primary-50)] p-4 animate-in fade-in slide-in-from-bottom-2 duration-300"
+                aria-live="polite"
+                aria-label="ملخص الدفعة"
+              >
+                <div className="flex items-center gap-2 text-xs text-slate-600">
+                  <User className="h-3.5 w-3.5 text-[var(--color-primary-500)]" aria-hidden="true" />
+                  <span className="font-bold">{selectedClient?.name || "—"}</span>
+                </div>
+                <div className="h-3 w-px bg-slate-200" aria-hidden="true" />
+                <div className="flex items-center gap-2 text-xs text-slate-600">
+                  <DollarSign className="h-3.5 w-3.5 text-[var(--color-primary-500)]" aria-hidden="true" />
+                  <span className="font-black">
+                    {form.amount ? Number(form.amount).toLocaleString() : "—"} {t("currency")}
+                  </span>
+                </div>
+                <div className="h-3 w-px bg-slate-200" aria-hidden="true" />
+                <div className="flex items-center gap-2 text-xs text-slate-600">
+                  {(() => {
+                    const M = PAYMENT_METHODS.find((m) => m.key === form.method);
+                    const MIcon = M?.icon || CreditCard;
+                    return (
+                      <>
+                        <MIcon className={cls("h-3.5 w-3.5", M?.activeText)} aria-hidden="true" />
+                        <span className="font-bold">{M?.label}</span>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="relative w-full overflow-hidden rounded-2xl py-4 text-base font-black text-white bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] shadow-[0_10px_30px_-6px_rgba(79,70,229,.5)] transition-all disabled:opacity-60 hover:scale-[1.01] hover:-translate-y-0.5 active:scale-[.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-400)] focus-visible:ring-offset-2"
+            >
+              <span
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full hover:translate-x-full transition-transform duration-700 ease-in-out"
+                aria-hidden="true"
+              />
+              <span className="relative flex items-center justify-center gap-2.5">
+                {submitting ? (
+                  <>
+                    <RefreshCw className="h-5 w-5 animate-spin" aria-hidden="true" />
+                    {t("form.submitting")}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-5 w-5" aria-hidden="true" />
+                    {t("form.submit")}
+                  </>
+                )}
+              </span>
+            </button>
+          </form>
+        </Surface>
+      </div>
     </TabPane>
   );
 }

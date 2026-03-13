@@ -9,6 +9,7 @@ import "./theme-tokens.css";
 import React from 'react';
 import Layout from '../../components/molecules/Layout';
 import AddToHomeGuide from '@/components/atoms/AddToHomeGuide';
+import ConfigAos from '@/config/Aos';
 
 export const spaceGrotesk = Space_Grotesk({
   variable: '--font-space-grotesk',
@@ -104,6 +105,7 @@ export default async function RootLayout({ children, params }) {
             <div className='md:hidden'>
               <AddToHomeGuide />
             </div>
+						<ConfigAos />
           </Layout>
         </NextIntlClientProvider>
       </body>

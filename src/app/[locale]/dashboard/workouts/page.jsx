@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
 	Dumbbell, PencilLine, Eye, Trash2, Layers,
 	Settings, RefreshCcw, Clock, X, Tag, Search, Play,
