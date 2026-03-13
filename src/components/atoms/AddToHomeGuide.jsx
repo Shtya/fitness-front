@@ -220,7 +220,7 @@ export default function AddToHomeGuide({
 							whileHover={{ scale: 1.1, rotate: 90 }}
 							whileTap={{ scale: 0.9 }}
 							onClick={closeGuide}
-							className="absolute top-4 ltr:right-4 rtl:left-4 w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm border-2 border-white/30 grid place-content-center transition-colors hover:bg-white/30"
+							className="absolute top-4 ltr:left-4 rtl:left-4 w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm border-2 border-white/30 grid place-content-center transition-colors hover:bg-white/30"
 							aria-label="Close">
 							<X className="w-5 h-5" strokeWidth={2.5} />
 						</motion.button>
@@ -231,8 +231,8 @@ export default function AddToHomeGuide({
 								initial={{ scale: 0, rotate: -180 }}
 								animate={{ scale: 1, rotate: 0 }}
 								transition={{ delay: 0.2, ...spring }}
-								className="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-white/20 backdrop-blur-sm border-2 border-white/30 mb-4">
-								<Smartphone className="w-8 h-8" strokeWidth={2.5} />
+								className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm border-2 border-white/30 mb-4">
+								<Smartphone className="w-6 h-6" strokeWidth={2.5} />
 							</motion.div>
 
 							{/* Title */}
@@ -240,7 +240,7 @@ export default function AddToHomeGuide({
 								initial={{ opacity: 0, y: 10 }}
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ delay: 0.3 }}
-								className="text-2xl sm:text-3xl font-black">
+								className="text-base sm:text-3xl font-black">
 								{t('title')}
 							</motion.h3>
 
@@ -249,7 +249,7 @@ export default function AddToHomeGuide({
 								initial={{ opacity: 0, y: 10 }}
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ delay: 0.4 }}
-								className="text-white/90 text-base mt-2 leading-relaxed">
+								className="text-white/90 text-xs mt-2 leading-relaxed">
 								{t('subtitle')}
 							</motion.p>
 
@@ -320,16 +320,7 @@ export default function AddToHomeGuide({
 
 						{/* Steps */}
 						<div>
-							<h4 className="font-black text-slate-900 text-lg mb-4 flex items-center gap-2">
-								<span
-									className="w-8 h-8 rounded-lg grid place-content-center"
-									style={{
-										background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
-									}}>
-									<Chrome className="w-4 h-4 text-white" strokeWidth={2.5} />
-								</span>
-								{t('stepsTitle')}
-							</h4>
+							 
 
 							<ol className="space-y-3">
 								{steps.map((line, i) => (
