@@ -281,7 +281,7 @@ function FeedbackWidget({ collapsed }) {
 									{/* Email */}
 									<div className="space-y-2">
 										<Label htmlFor="email" className="text-sm font-semibold text-slate-700">
-											{t('emailLabel')}{' '}
+											{t('emailLabel')}
 											<span className="text-sm text-slate-500 font-normal">
 												({t('emailOptional')})
 											</span>

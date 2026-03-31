@@ -666,7 +666,7 @@ function FoodItemRow({ it, checked, onToggle, qtyLabel, t }) {
 									<span className="text-xs text-amber-700/80">
 										· {it.alternativeQuantity ?? '—'}
 										{it.alternativeUnit === 'count' ? ' ' + (t('count') || '') : 'g'}
-										{' '}· {it.alternativeCalories ?? '—'} kcal
+										· {it.alternativeCalories ?? '—'} kcal
 									</span>
 								)}
 							</div>

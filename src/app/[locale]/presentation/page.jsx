@@ -122,7 +122,7 @@ export const SectionHeader = ({ n, label, title, titleGrad, desc, dark = false }
 	<div className="mb-10 sm:mb-12 text-center" data-reveal>
 		<SecLabel n={n} text={label} />
 		<h2 className={`mt-4 font-tajawal text-2xl font-black sm:text-3xl lg:text-[clamp(25px,4.5vw,40px)] ${dark ? 'text-white' : 'text-blue-950'}`}>
-			{title}{' '}
+			{title}
 			{titleGrad && (
 				<span className={"text-center " + dark
 					? 'grad-text'

@@ -584,7 +584,7 @@ export function ExerciseForm({ initial, onSubmit, categories }) {
         {/* MuscleWiki tip */}
         <div className='sm:col-span-2 rounded-lg border border-dashed border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-4 py-3 text-[11px] leading-relaxed text-[var(--color-primary-600)]'>
           <strong className='font-semibold text-[var(--color-primary-700)]'>{t('notes.muscleWikiTipLabel')}</strong>
-          {' '}{t('notes.muscleWikiTipPrefix')}{' '}
+          {t('notes.muscleWikiTipPrefix')}
           <a
             href='https://musclewiki.com/'
             target='_blank'

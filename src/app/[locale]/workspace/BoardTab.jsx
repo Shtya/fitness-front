@@ -1226,7 +1226,7 @@ export default function BoardTab() {
 										</button>
 									</div>
 									<div className="text-sm text-gray-600 ltr:ml-7 rtl:mr-7">
-										{t('modal.inList')}{' '}
+										{t('modal.inList')}
 										<span className="font-semibold">{lists.find((l) => l.id === selectedCard.listId)?.title}</span>
 									</div>
 								</div>

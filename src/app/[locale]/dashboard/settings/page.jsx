@@ -920,7 +920,7 @@ export default function SettingsPage() {
 									<p className="font-bold">{t('ai.steps.title')}</p>
 									<ol className="list-decimal list-inside space-y-1.5 pl-2">
 										<li>
-											{t('ai.steps.step1')}{' '}
+											{t('ai.steps.step1')}
 											<a className="font-bold underline" style={{ color: 'var(--color-primary-700)' }} href="https://openrouter.ai/settings/keys" target="_blank">
 												{t('ai.form_here')}
 											</a>

@@ -249,8 +249,7 @@ export default function Layout({ children }) {
 	// }
 
 	// ── Main layout ─────────────────────────────────────────────────────────
-
-	console.log(pathname);
+ 
 	return (
 		<GlobalProvider>
 			<Providers>

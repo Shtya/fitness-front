@@ -1572,7 +1572,7 @@ export default function MyWorkoutsPage() {
 									{!isCardio && String(currentExercise?.note ?? '').trim() && (
 										<div className="px-3 pb-3">
 											<div className="rounded-lg bg-[var(--color-primary-50)] border border-[var(--color-primary-100)] px-3 py-2.5 text-xs text-slate-600">
-												<span className="font-semibold text-[var(--color-primary-700)]">{t('notes.note', { default: 'Note' })}:</span>{' '}
+												<span className="font-semibold text-[var(--color-primary-700)]">{t('notes.note', { default: 'Note' })}:</span>
 												{String(currentExercise.note).trim()}
 											</div>
 										</div>

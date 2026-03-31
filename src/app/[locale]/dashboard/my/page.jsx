@@ -409,7 +409,7 @@ export default function ClientDashboard() {
                   <div className="mt-2 text-sm text-slate-700">
                     {workoutSummary.apiStats ? (
                       <>
-                        <span className="font-semibold">{workoutSummary.apiStats.totalSessions || 0}</span> sessions •{' '}
+                        <span className="font-semibold">{workoutSummary.apiStats.totalSessions || 0}</span> sessions •
                         <span className="font-semibold">{workoutSummary.apiStats.totalVolume?.toLocaleString() || 0}</span> total volume
                       </>
                     ) : (
@@ -466,7 +466,7 @@ export default function ClientDashboard() {
                   <div className="mt-2 text-sm text-slate-700">
                     {nutri.apiStats ? (
                       <>
-                        <span className="font-semibold">{nutri.apiStats.totalMeals || 0}</span> meals •{' '}
+                        <span className="font-semibold">{nutri.apiStats.totalMeals || 0}</span> meals •
                         <span className="font-semibold">{nutri.apiStats.avgAdherence || 0}/5</span> avg adherence
                       </>
                     ) : (

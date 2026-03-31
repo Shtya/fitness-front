@@ -452,7 +452,7 @@ export default function CardioTimerCard({
                 color: 'var(--color-slate-700)',
               }}
             >
-              <span className='font-semibold text-slate-800'>{t('note')}:</span>{' '}
+              <span className='font-semibold text-slate-800'>{t('note')}:</span>
               <span className='text-slate-600'>{String(note)}</span>
             </div>
           </div>

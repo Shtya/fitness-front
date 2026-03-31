@@ -310,7 +310,7 @@ export default function ClientProgressPro({ userId: userIdProp, initialExercise 
           <KPI
             label={
               <>
-                Recent PRs{' '}
+                Recent PRs
                 <span className='inline-flex items-center align-middle'>
                   <Hint text='e1RM = Estimated 1-rep max (formula-based estimate of the heaviest weight for one rep).' />
                 </span>

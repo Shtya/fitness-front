@@ -119,7 +119,7 @@ export default function ProgressChart({ data, metric, metricName, unit }) {
         />
       </div>
       <div className="mt-4 text-sm text-gray-600">
-        Showing progress from {new Date(data[0].date).toLocaleDateString()} to{' '}
+        Showing progress from {new Date(data[0].date).toLocaleDateString()} to
         {new Date(data[data.length - 1].date).toLocaleDateString()}
       </div>
     </div>
