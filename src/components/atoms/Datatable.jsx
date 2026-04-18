@@ -992,24 +992,15 @@ export default function DataTable({
 													"group border-b relative transition-colors duration-150",
 													striped && i % 2 === 1 && "bg-[color-mix(in_oklab,var(--color-primary-50)_35%,white)]",
 												)}
-												style={{ borderColor: "var(--color-primary-50)" }}
+												style={{
+													borderColor: "var(--color-primary-50)",
+													boxShadow: hoverable && isHovered
+														? `inset ${isRTL ? "-3px" : "3px"} 0 0 0 var(--color-primary-500)`
+														: undefined,
+												}}
 												onMouseEnter={() => hoverable && setHoveredRow(key)}
 												onMouseLeave={() => hoverable && setHoveredRow(null)}
 											>
-												{/* row hover indicator bar */}
-												{hoverable && (
-													<td
-														className="absolute start-0 top-0 bottom-0 w-[3px] pointer-events-none transition-all duration-200"
-														style={{
-															background: isHovered
-																? "linear-gradient(180deg, var(--color-gradient-from), var(--color-gradient-to))"
-																: "transparent",
-															borderRadius: "0 2px 2px 0",
-															opacity: isHovered ? 1 : 0,
-														}}
-													/>
-												)}
-
 												{allColumns.map((col) => {
 													const cellStyle = isHovered && hoverable
 														? { background: "color-mix(in oklab, var(--color-primary-50) 45%, white)" }

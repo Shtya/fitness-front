@@ -113,4 +113,85 @@ bugs
 			- handle the history 
 			- check form the all assigns
 			- dublicated
-*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+exercise page 
+	- fix the problem of scroll in the exercise page 
+	- explain the tempo in exercise with add icon 
+
+
+recipes 
+	- add all recipe 
+
+ 
+
+ 
+notification 
+	- when client send new form 
+	- when client get his birthday 
+	- when client end his subscription 
+	- when client send the weekly report 
+	- check when update or create new plan it's correct or miss thing
+
+
+
+nutrition page 
+	- add how calc the 100 gram how معلقه  ( file )
+
+
+
+plans workout
+	- make the action in the modal is floating 
+	- make the drag and drop is smother 
+	- make the inputs of add sets, time with fixed width 
+	- make the button of warmup , exercise , cardio in bottom to click on it and add it when add at one in any type show his buttin in teh same boxes of the exercise in the end to tell him add more 
+	- make the inputs is rouned-[10px]
+	- add this plan use it how many one
+
+nutrition 
+	- col plan not have data 
+	- add the alt and reflect on teh web 
+	- add the 
+	- add this plan use it how many one
+	- check when update or create new plan it's correct or miss thing
+	- add ملي جرام beside the gram and the quantity 
+	- add alt item if he not have rice in his home add alt to tell him use instead it what 
+	- in create the plan of nutrition can choose as meal or items from the recipes 
+
+
+
+
+
+
+
+
+
+
+			*/
+
+
+
+
+
+
+
+
+
+
+

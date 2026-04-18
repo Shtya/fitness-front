@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useMemo, useState } from 'react';
+import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import {
 	CalendarDays, Plus, Users as UsersIcon, CheckCircle2, XCircle, Shield,
 	ChevronUp, ChevronDown, Eye, Clock, BadgeCheck, PencilLine, PauseCircle,
@@ -26,9 +26,10 @@ import Button from '@/components/atoms/Button';
 import { Notification } from '@/config/Notification';
 import {
 	Stepper, PlanPicker, MealPlanPicker, FieldRow, PasswordRow,
-	buildWhatsAppLink, SubscriptionPeriodPicker
+	buildWhatsAppLink, SubscriptionPeriodPicker, formatISO, parseISO
 } from '@/components/pages/dashboard/users/Atoms';
 import { motion, AnimatePresence } from 'framer-motion';
+import Flatpickr from 'react-flatpickr';
 import { useAdminCoaches } from '@/hooks/useHierarchy';
 import { useUser } from '@/hooks/useUser';
 import PhoneField from '@/components/atoms/PhoneField';
@@ -40,6 +41,34 @@ import DataTable, { FilterField } from '@/components/atoms/Datatable';
 /* ---------- helpers ---------- */
 const toTitle = s => (s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s);
 const normRole = r => (['ADMIN', 'COACH', 'CLIENT'].includes(String(r || '').toUpperCase()) ? toTitle(r) : 'Client');
+
+const ARABIC_TO_LATIN = {
+	ا: 'a', أ: 'a', إ: 'e', آ: 'aa', ب: 'b', ت: 't', ث: 'th', ج: 'j', ح: 'h', خ: 'kh',
+	د: 'd', ذ: 'th', ر: 'r', ز: 'z', س: 's', ش: 'sh', ص: 's', ض: 'd', ط: 't', ظ: 'z',
+	ع: 'a', غ: 'gh', ف: 'f', ق: 'q', ك: 'k', ل: 'l', م: 'm', ن: 'n', ه: 'h', و: 'w',
+	ي: 'y', ى: 'a', ة: 'h', ؤ: 'w', ئ: 'y',
+};
+
+function transliterateArabicToLatin(text = '') {
+	return String(text)
+		.split('')
+		.map((ch) => ARABIC_TO_LATIN[ch] ?? ch)
+		.join('')
+		.normalize('NFKD')
+		.replace(/[\u064B-\u065F]/g, '');
+}
+
+function buildEmailFromName(name = '') {
+	const latin = transliterateArabicToLatin(name);
+	const local = latin
+		.toLowerCase()
+		.replace(/[^a-z0-9\s_]/g, ' ')
+		.trim()
+		.replace(/\s+/g, '_')
+		.replace(/_+/g, '_');
+	const safeLocal = local || 'user';
+	return `${safeLocal}@example.com`;
+}
 
 /* ========================= THEME-AWARE BADGE ========================= */
 function Badge({ children, color = 'slate' }) {
@@ -150,6 +179,7 @@ const accountSchema = yup.object({
 			if (!start || !end) return true;
 			return new Date(end) >= new Date(start);
 		}),
+	birthDate: yup.string().nullable().optional(),
 });
 
 const editUserSchema = yup.object({
@@ -627,6 +657,8 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 	const [createdUser, setCreatedUser] = useState(null);
 	const [summaryPhone, setSummaryPhone] = useState('');
 	const [showPassword, setShowPassword] = useState(false);
+	const [emailAutoLocked, setEmailAutoLocked] = useState(false);
+	const lastAutoEmailRef = useRef('');
 	const [loadingWorkouts, setLoadingWorkouts] = useState(false);
 	const [loadingMeals, setLoadingMeals] = useState(false);
 
@@ -644,7 +676,7 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 	const { control, handleSubmit, setValue, getValues, reset, trigger, watch, formState: { errors, isSubmitting }, setError, clearErrors } = useForm({
 		defaultValues: {
 			name: '', email: '', phone: '', role: 'Client', gender: 'male',
-			membership: 'basic', password: '', coachId: null,
+			membership: 'basic', password: '', coachId: null, birthDate: '2000-01-01',
 			subscriptionStart: defaultStart, subscriptionEnd: defaultEnd,
 		},
 		resolver: yupResolver(accountSchema),
@@ -665,9 +697,22 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 		if (!open) {
 			setStepIndex(0); setCreatedUser(null); setSelectedWorkout(null);
 			setVisibleWorkouts(6); setVisibleMeals(6); setShowPassword(false);
+			setEmailAutoLocked(false);
+			lastAutoEmailRef.current = '';
 			reset();
 		}
 	}, [open, reset]);
+
+	const watchedName = watch('name');
+	useEffect(() => {
+		if (!open) return;
+		const nextEmail = buildEmailFromName(watchedName || '');
+		const currentEmail = String(getValues('email') || '').trim().toLowerCase();
+		const canAutofill = !emailAutoLocked || !currentEmail || currentEmail === lastAutoEmailRef.current;
+		if (!canAutofill) return;
+		setValue('email', nextEmail, { shouldValidate: true });
+		lastAutoEmailRef.current = nextEmail.toLowerCase();
+	}, [watchedName, open, emailAutoLocked, getValues, setValue]);
 
 	/* ---------- Fetch workout plans ---------- */
 	const fetchWorkoutPlans = async () => {
@@ -728,6 +773,7 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 				email: data.email,
 				phone: data.phone || undefined,
 				gender: data.gender || undefined,
+				birthDate: data.birthDate || undefined,
 				role: effectiveRole.toLowerCase(),
 				membership: isClient ? data.membership : undefined,
 				password: data.password || undefined,
@@ -820,7 +866,52 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 								error={errors?.phone?.message ? t(errors.phone.message) : ''} required={false}
 								name={field.name} setError={setError} clearErrors={clearErrors} t={t} />
 						)} />
-						<Controller name='email' control={control} render={({ field }) => <Input label={t('fields.email')} type='email' placeholder={t('placeholders.email')} error={t(errors?.email?.message)} {...field} />} />
+						<Controller
+							name='email'
+							control={control}
+							render={({ field }) => (
+								<Input
+									label={t('fields.email')}
+									type='email'
+									placeholder={t('placeholders.email')}
+									error={t(errors?.email?.message)}
+									{...field}
+									onChange={(e) => {
+										const v = String(e?.target?.value || '').trim().toLowerCase();
+										const lastAuto = String(lastAutoEmailRef.current || '').trim().toLowerCase();
+										if (!v) setEmailAutoLocked(false);
+										else if (lastAuto && v !== lastAuto) setEmailAutoLocked(true);
+										field.onChange(e);
+									}}
+								/>
+							)}
+						/>
+						<Controller
+							name='birthDate'
+							control={control}
+							render={({ field }) => (
+								<div>
+									<label className='text-sm font-[500] text-slate-700'>{t('fields.birthDate') || 'Birth date'}</label>
+									<div className='mt-1 bg-white rounded-lg'>
+										<Flatpickr
+											value={field.value ? parseISO(field.value) : null}
+											options={{
+												dateFormat: 'Y-m-d',
+												maxDate: 'today',
+												disableMobile: true,
+											}}
+											onChange={(dates) => {
+												const d = dates?.[0];
+												field.onChange(d ? formatISO(d, { representation: 'date' }) : '');
+											}}
+											className='w-full rounded-lg border px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 transition-shadow'
+											style={{ borderColor: '#cbd5e1', '--tw-ring-color': 'var(--color-primary-300)' }}
+											placeholder={t('fields.birthDate') || 'Birth date'}
+										/>
+									</div>
+								</div>
+							)}
+						/>
 
 						<div className='relative'>
 							<Controller name='password' control={control} render={({ field }) => (
@@ -1147,6 +1238,7 @@ export default function UsersList() {
 				id: u.id, name: u.name, email: u.email, role: normRole(u.role),
 				status: normStatus(u.status), phone: u.phone || '',
 				membership: u.membership || '-',
+				birthDate: u.birthDate || '-',
 				subscriptionStart: u.subscriptionStart || '-',
 				subscriptionEnd: u.subscriptionEnd || '-',
 				joinDate: u.created_at ? new Date(u.created_at).toISOString().slice(0, 10) : '',
@@ -1355,6 +1447,12 @@ export default function UsersList() {
 					<span className='text-slate-400 text-sm'>—</span>
 				),
 			className: 'font-number',
+		},
+		{
+			key: 'birthDate',
+			header: t('table.birthDate') || 'Birth date',
+			cell: (r) => <span className='text-sm text-slate-500'>{r.birthDate || '-'}</span>,
+			className: 'font-number text-nowrap',
 		},
 		{
 			key: 'joinDate',

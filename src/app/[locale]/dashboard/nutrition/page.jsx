@@ -18,6 +18,7 @@ import {
 	ChefHat,
 	UtensilsCrossed,
 	Sparkles,
+	UserPlus,
 	Search,
 	Check,
 	AlertTriangle,
@@ -90,7 +91,7 @@ export const MiniField = memo(function MiniField({
 				onChange={onChange}
 				onBlur={onBlur}
 				className={[
-					'h-8 w-full rounded-lg border px-2 text-xs bg-white outline-none transition placeholder:text-slate-400',
+					'h-9 w-full rounded-lg border px-2 text-xs bg-white outline-none transition placeholder:text-slate-400',
 					iconLeft ? 'pl-7' : '',
 					'focus:ring-2 focus:ring-[color:var(--color-primary-200)] focus:border-[color:var(--color-primary-400)]',
 					hasValue
@@ -112,7 +113,7 @@ const UnitSelect = memo(function UnitSelect({ value, onChange, error, disabled =
 	return (
 		<div className={`w-full relative ${className}`}>
 			<div className={[
-				'relative flex items-center rounded-lg border bg-white transition-all duration-200',
+				'relative h-9 flex items-center rounded-lg border bg-white transition-all duration-200',
 				error ? 'border-rose-400' : 'border-slate-200 hover:border-[color:var(--color-primary-300)]',
 				disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
 			].join(' ')}>
@@ -121,13 +122,14 @@ const UnitSelect = memo(function UnitSelect({ value, onChange, error, disabled =
 					onChange={e => onChange?.(e.target.value)}
 					disabled={disabled}
 					className={[
-						'custom-select h-8 w-full text-xs text-slate-900 outline-none bg-transparent',
+						'custom-select h-9 w-full text-xs text-slate-900 outline-none bg-transparent',
 						isRTL ? 'pr-3.5 pl-8' : 'pl-3 pr-8',
 					].join(' ')}
 					dir={isRTL ? 'rtl' : 'ltr'}
 					aria-invalid={!!error}
 				>
 					<option value="g">{t('unit.g')}</option>
+					<option value="mg">{t('unit.mg', { default: 'mg' })}</option>
 					<option value="count">{t('unit.count')}</option>
 				</select>
 				<span className="select-arrow rtl:!left-[8px] ltr:!right-[8px]">
@@ -232,15 +234,29 @@ function CheckBox({ id = 'custom', label, initialChecked = false, onChange = () 
 function buildSchemas(t) {
 	const mealItemSchema = yup.object().shape({
 		name: yup.string().trim().required(t('validation.required')),
-		unit: yup.string().oneOf(['g', 'count']).default('g'),
+		type: yup.string().oneOf(['food', 'recipe']).default('food'),
+		id: yup.string().nullable(),
+		unit: yup.string().oneOf(['g', 'mg', 'count']).default('g'),
 		quantity: yup.number().typeError(t('validation.number')).min(0, t('validation.min')).nullable(),
 		calories: yup.number().typeError(t('validation.number')).min(0, t('validation.min')).required(t('validation.required')),
 		alternative: yup.object().nullable().shape({
 			name: yup.string().trim().default(''),
-			unit: yup.string().oneOf(['g', 'count']).default('g'),
+			type: yup.string().oneOf(['food', 'recipe']).default('food'),
+			id: yup.string().nullable(),
+			unit: yup.string().oneOf(['g', 'mg', 'count']).default('g'),
 			quantity: yup.number().nullable(),
 			calories: yup.number().min(0).default(0),
 		}),
+		alternatives: yup.array().of(
+			yup.object().shape({
+				name: yup.string().trim().default(''),
+				type: yup.string().oneOf(['food', 'recipe']).default('food'),
+				id: yup.string().nullable(),
+				unit: yup.string().oneOf(['g', 'mg', 'count']).default('g'),
+				quantity: yup.number().nullable(),
+				calories: yup.number().min(0).nullable(),
+			}),
+		).default([]),
 	});
 
 	const supplementSchema = yup.object().shape({
@@ -304,6 +320,10 @@ export default function NutritionManagementPage() {
 	const [deleteLoading, setDeleteLoading] = useState(false);
 	const [selectedPlan, setSelectedPlan] = useState(null);
 	const [detailsOpen, setDetailsOpen] = useState(false);
+	const [planUsersOpen, setPlanUsersOpen] = useState(null);
+	const [planUsersLoading, setPlanUsersLoading] = useState(false);
+	const [planUsersList, setPlanUsersList] = useState([]);
+	const [planUsersErr, setPlanUsersErr] = useState(null);
 
 	const [page, setPage] = useState(1);
 	const [total, setTotal] = useState(0);
@@ -470,11 +490,28 @@ export default function NutritionManagementPage() {
 			id: p.id,
 			name: p.name,
 			desc: p.desc || p.notes || '',
+			clientsUsingCount: p.clientsUsingCount ?? 0,
 			daysCount: Array.isArray(p.days) ? p.days.length : 0,
 			createdAt: p.created_at ? new Date(p.created_at).toISOString().slice(0, 10) : '—',
 			raw: p,
 		}));
 	}, [plans]);
+
+	const openPlanUsers = async (plan) => {
+		if (!plan?.id) return;
+		setPlanUsersOpen(plan);
+		setPlanUsersLoading(true);
+		setPlanUsersErr(null);
+		try {
+			const res = await api.get(`/nutrition/meal-plans/${plan.id}/assignees`);
+			setPlanUsersList(Array.isArray(res.data) ? res.data : []);
+		} catch (e) {
+			setPlanUsersErr(e?.response?.data?.message || t('toast.load_failed'));
+			setPlanUsersList([]);
+		} finally {
+			setPlanUsersLoading(false);
+		}
+	};
 
 
 	const tableColumns = [
@@ -482,24 +519,38 @@ export default function NutritionManagementPage() {
 			key: 'name',
 			header: t('table.name'),
 			cell: (row) => (
-				<div className="flex items-center gap-3 min-w-0">
+				<button type="button" onClick={() => openPlanUsers(row.raw)} className="flex items-center gap-3 min-w-0 text-left">
 					<div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg theme-gradient-bg text-white shadow-sm">
 						<UtensilsCrossed className="h-5 w-5" />
 					</div>
 
-					<div className="min-w-0">
-						<MultiLangText className="truncate text-sm font-semibold text-slate-900">
+					<div className="min-w-0 flex flex-col text-right ">
+						<MultiLangText className=" truncate text-sm font-semibold text-slate-900">
 							{row.name}
 						</MultiLangText>
 						{row.desc ? (
-							<MultiLangText className="line-clamp-1 text-xs text-slate-500 mt-0.5">
+							<MultiLangText className="   line-clamp-1 text-xs text-slate-500 mt-0.5">
 								{row.desc}
 							</MultiLangText>
 						) : (
 							<p className="text-xs text-slate-400 mt-0.5">{t('list.no_desc')}</p>
 						)}
 					</div>
-				</div>
+				</button>
+			),
+		},
+		{
+			key: 'clientsUsingCount',
+			header: t('table.clientsUsing', { default: 'Clients' }),
+			cell: (row) => (
+				<button
+					type="button"
+					onClick={() => openPlanUsers(row.raw)}
+					className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-white transition"
+				>
+					<UsersIcon className="w-3 h-3" />
+					{Number(row.clientsUsingCount ?? 0)}
+				</button>
 			),
 		},
 		{
@@ -530,8 +581,14 @@ export default function NutritionManagementPage() {
 					actions={[
 						{
 							icon: <UsersIcon />,
-							tooltip: t('btn.assign'),
+							tooltip: t('btn.view_users', { default: 'View users' }),
 							variant: 'blue',
+							onClick: r => openPlanUsers(r),
+						},
+						{
+							icon: <UserPlus />,
+							tooltip: t('btn.assign'),
+							variant: 'slate',
 							onClick: r => setAssignPlanOpen(r),
 						},
 						{
@@ -629,7 +686,7 @@ export default function NutritionManagementPage() {
 					setPage(Number(nextPage ?? 1));
 					setPerPage(Number(per_page ?? 10));
 				}}
-				perPageOptions={[10, 20, 30, 50]}
+				perPageOptions={[6, 20, 30, 50]}
 				rowKey={(row) => row.id}
 				hoverable
 			/>
@@ -637,7 +694,7 @@ export default function NutritionManagementPage() {
 
 			{/* Modals */}
 			<Modal open={addPlanOpen} maxH="h-fit" cn="!py-0" onClose={() => setAddPlanOpen(false)} title={t('modals.create_title')} scrollRef={scrollRef}>
-				<MealPlanForm scrollRef={scrollRef} onSubmitPayload={onCreate} submitLabel="btn.create" />
+				<MealPlanForm scrollRef={scrollRef} onCancel={() => setAddPlanOpen(false)} onSubmitPayload={onCreate} submitLabel="btn.create" />
 			</Modal>
 
 			<Modal
@@ -649,6 +706,7 @@ export default function NutritionManagementPage() {
 				{editPlan && (
 					<MealPlanForm
 						scrollRef={scrollRef}
+						onCancel={() => { clearPlanIdFromUrl(); setEditPlan(null); }}
 						initialPlan={editPlan}
 						onSubmitPayload={async payload => {
 							if (editPlan?.id) await onUpdate(editPlan.id, payload);
@@ -670,6 +728,40 @@ export default function NutritionManagementPage() {
 				)}
 			</Modal>
 
+			<Modal
+				maxW="max-w-[560px]"
+				open={!!planUsersOpen}
+				onClose={() => { setPlanUsersOpen(null); setPlanUsersList([]); setPlanUsersErr(null); }}
+				title={t('modals.plan_users_title', { default: 'Plan users' })}
+			>
+				<div className="space-y-3">
+					<div className="text-sm font-semibold text-slate-800">{planUsersOpen?.name}</div>
+					{planUsersLoading ? (
+						<div className="text-sm text-slate-500">{t('common.loading')}</div>
+					) : planUsersErr ? (
+						<div className="text-sm text-rose-600">{planUsersErr}</div>
+					) : planUsersList.length ? (
+						<ul className="space-y-2">
+							{planUsersList.map(u => (
+								<li key={u.id} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
+									<div className="min-w-0">
+										<p className="text-sm font-semibold text-slate-900 truncate">{u.name}</p>
+										<p className="text-xs text-slate-400 truncate">{u.email}</p>
+									</div>
+									<span className={['text-[11px] font-semibold rounded-lg px-2 py-1 border', u.subscriptionActive ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'].join(' ')}>
+										{u.subscriptionActive ? t('modals.subscription_active', { default: 'Active' }) : t('modals.subscription_inactive', { default: 'Inactive' })}
+									</span>
+								</li>
+							))}
+						</ul>
+					) : (
+						<div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 py-8 text-center text-sm text-slate-500">
+							{t('modals.no_plan_users', { default: 'No users assigned to this plan yet.' })}
+						</div>
+					)}
+				</div>
+			</Modal>
+
 			<Modal open={detailsOpen} onClose={() => setDetailsOpen(false)} title={selectedPlan ? `${t('modals.details_title')}: ${selectedPlan.name}` : t('modals.details_title')}>
 				<div className="rounded-lg bg-slate-50/60 p-3 sm:p-4">
 					{selectedPlan && <PlanDetailsView plan={selectedPlan} />}
@@ -689,8 +781,7 @@ export default function NutritionManagementPage() {
 	);
 }
 
-/* ─────────────────── ReorderFieldArray ─────────────────── */
-export function ReorderFieldArray({ control, name, renderRow, className = 'space-y-2' }) {
+ export function ReorderFieldArray({ control, name, renderRow, className = 'space-y-2' }) {
 	const { fields, replace } = useFieldArray({ control, name });
 	if (!fields?.length) return null;
 
@@ -709,7 +800,7 @@ export function ReorderFieldArray({ control, name, renderRow, className = 'space
 }
 
 /* ─────────────────── MealPlanForm ─────────────────── */
-export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLabel = 'btn.save' }) {
+export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLabel = 'btn.save', onCancel }) {
 	const t = useTranslations('nutrition');
 	const { baseFormSchema } = buildSchemas(t);
 
@@ -803,7 +894,7 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 					name: String(it?.name || '').trim(),
 					quantity: it?.quantity === '' || it?.quantity === null || typeof it?.quantity === 'undefined' ? null : Number(it.quantity) || null,
 					calories: Number(it?.calories) || 0,
-					unit: it?.unit === 'count' ? 'count' : 'g',
+						unit: it?.unit === 'mg' ? 'mg' : it?.unit === 'count' ? 'count' : 'g',
 				})),
 				supplements: (m?.supplements || []).map(s => ({ name: String(s?.name || '').trim(), time: s?.time ? String(s.time) : '', bestWith: s?.bestWith ? String(s.bestWith) : '' })),
 			}));
@@ -825,6 +916,7 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 
 	return (
 		<form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+			<div className="space-y-5 pb-24">
 			<div className="grid grid-cols-2 max-md:grid-cols-1 gap-3">
 				<Controller name="name" control={control} render={({ field }) => <Input placeholder={t('form.plan_name')} name="name" value={field.value} onChange={field.onChange} required error={errors?.name?.message} />} />
 				<Controller name="description" control={control} render={({ field }) => <Input placeholder={t('form.description')} name="description" value={field.value} onChange={field.onChange} error={errors?.description?.message} />} />
@@ -863,7 +955,7 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 										control={control}
 										render={({ field }) => (
 											<Input
-												className="max-w-[240px]"
+												className="  max-w-[200px]"
 												placeholder={t('form.meal_name')}
 												value={field.value}
 												onChange={field.onChange}
@@ -885,7 +977,7 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 											/>
 										)}
 									/>
-									<div className="ml-auto">
+									<div className="ltr:ml-auto rtl:mr-auto ">
 										<DangerX onClick={() => removeMeal(mealIndex)} title={t('btn.remove_meal')} size="sm" />
 									</div>
 								</div>
@@ -940,11 +1032,17 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 					</motion.div>
 				)}
 			</AnimatePresence>
+			</div>
 
 			{/* Footer */}
-			<div className="flex items-center justify-between gap-2 pt-4 border-t border-slate-100">
-				<CButton type="button" onClick={() => setAiOpen(o => !o)} icon={<Sparkles size={14} />} name="btn.ai_assist" variant="outline" size="sm" />
-				<CButton name={submitLabel} type="submit" variant="primary" loading={isSubmitting} />
+			<div className="sticky bottom-0 z-10 -mx-1 px-1">
+				<div className="w-full flex items-center justify-between gap-2 pt-4 pb-3 border-t border-slate-100 bg-white/95 backdrop-blur shadow-[0_-10px_30px_-20px_rgba(15,23,42,0.35)]">
+					<CButton type="button" onClick={() => setAiOpen(o => !o)} icon={<Sparkles size={14} />} name="btn.ai_assist" variant="outline" size="sm" />
+					<div className="flex items-center gap-2">
+						<CButton type="button" name="btn.cancel" variant="outline" size="sm" onClick={() => onCancel?.()} />
+						<CButton name={submitLabel} type="submit" variant="primary" loading={isSubmitting} />
+					</div>
+				</div>
 			</div>
 		</form>
 	);
@@ -953,7 +1051,7 @@ export function MealPlanForm({ scrollRef, initialPlan, onSubmitPayload, submitLa
 function buildAiPrompt(userText) {
 	return `Return ONLY valid JSON matching exactly:
 {"name":"Plan Name","description":"Short description","notes":["bullet 1"],"meals":[{"title":"Meal 1","time":"08:00","items":[{"name":"Oats","quantity":80,"calories":320,"unit":"g"}],"supplements":[{"name":"Multivitamin","time":"08:30","bestWith":"water"}]}]}
-Rules: 24h HH:MM for time (or empty string). Items ONLY: name, quantity, calories, unit ("g"|"count"). Return VALID JSON without markdown fences.
+Rules: 24h HH:MM for time (or empty string). Items ONLY: name, quantity, calories, unit ("g"|"mg"|"count"). Return VALID JSON without markdown fences.
 User description: ${userText}`;
 }
 
@@ -978,6 +1076,27 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 	const { fields: itemFields, append: appendItem, remove: removeItem, move: moveItem } = useFieldArray({ control, name: `${basePath}.items` });
 	const { fields: supFields, append: appendSup, remove: removeSup, move: moveSup } = useFieldArray({ control, name: `${basePath}.supplements` });
 	const watchedItems = useWatch({ control, name: `${basePath}.items` });
+	const [recipesOpen, setRecipesOpen] = useState(false);
+	const [recipesLoading, setRecipesLoading] = useState(false);
+	const [recipeSearch, setRecipeSearch] = useState('');
+	const [recipes, setRecipes] = useState([]);
+
+	const fetchRecipes = useCallback(async (q = '') => {
+		setRecipesLoading(true);
+		try {
+			const res = await api.get('/recipes', { params: { search: q || undefined, limit: 30, page: 1 } });
+			setRecipes(res?.data?.items || []);
+		} catch {
+			setRecipes([]);
+		} finally {
+			setRecipesLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		if (!recipesOpen) return;
+		fetchRecipes(recipeSearch);
+	}, [recipesOpen, recipeSearch, fetchRecipes]);
 
 	return (
 		<div className="space-y-3">
@@ -991,7 +1110,7 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 								<div className="rounded-lg border border-slate-200 bg-white p-2.5 space-y-2 hover:border-slate-300 transition">
 									<div className="flex items-center gap-2">
 										<GripDots />
-										<div className="grid grid-cols-2 md:grid-cols-[1fr_110px_88px_110px] gap-2 flex-1">
+										<div className="flex items-center justify-between gap-2 flex-1">
 											<Controller name={`${basePath}.items.${idx}.name`} control={control} render={({ field }) => (
 												<MiniField
 													placeholder={t('form.item_name')}
@@ -1004,29 +1123,38 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 															setValue?.(`${basePath}.items.${idx}.unit`, 'count', { shouldDirty: true });
 														}
 													}}
-													onBlur={field.onBlur}
+													onBlur={field.onBlur} 
+													cnParent=" !w-[150px]"
 												/>
 											)} />
+											<div className="flex items-center gap-2">
+												{ex?.type === 'recipe' && (
+													<span className="inline-flex items-center h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-[10px] font-semibold px-2">
+														{t('recipes.label', { default: 'Recipe' })}
+													</span>
+												)}
 											<Controller name={`${basePath}.items.${idx}.quantity`} control={control} render={({ field }) => (
-												<MiniField placeholder={t('form.qty')} value={field.value == null ? '' : field.value} onChange={e => field.onChange(asNumber(e.target.value))} onBlur={field.onBlur} inputMode="decimal" />
+												<MiniField cnParent=" !w-[70px]" className="!h-9" placeholder={t('form.qty')} value={field.value == null ? '' : field.value} onChange={e => field.onChange(asNumber(e.target.value))} onBlur={field.onBlur} inputMode="decimal" />
 											)} />
 											<Controller name={`${basePath}.items.${idx}.unit`} control={control} render={({ field }) => (
-												<UnitSelect value={field.value || 'g'} onChange={v => field.onChange(v)} />
+												<UnitSelect className="h-9 !w-[70px]" value={field.value || 'g'} onChange={v => field.onChange(v)} />
 											)} />
 											<Controller name={`${basePath}.items.${idx}.calories`} control={control} render={({ field }) => (
-												<MiniField placeholder={t('form.calories')} value={field.value == 0 ? '' : field.value} onChange={e => field.onChange(asNumber(e.target.value))} onBlur={field.onBlur} inputMode="decimal" />
+												<MiniField cnParent=" !w-[70px]" className="!h-9" placeholder={t('form.calories')} value={field.value == 0 ? '' : field.value} onChange={e => field.onChange(asNumber(e.target.value))} onBlur={field.onBlur} inputMode="decimal" />
 											)} />
+											</div>
 										</div>
 										<div className="flex items-center gap-1 shrink-0">
 											<button
 												type="button"
 												title={t('form.add_alternative', { default: 'Add alternative' })}
-												onClick={() => setValue?.(`${basePath}.items.${idx}.alternative`, ex?.alternative ? null : blankAlternative(), { shouldDirty: true })}
+												onClick={() => {
+													const current = Array.isArray(ex?.alternatives) ? ex.alternatives : [];
+													setValue?.(`${basePath}.items.${idx}.alternatives`, [...current, blankAlternative()], { shouldDirty: true });
+												}}
 												className={[
 													'h-8 w-8 inline-flex items-center justify-center rounded-lg border transition',
-													ex?.alternative
-														? 'border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100'
-														: 'border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100',
+													'border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100',
 												].join(' ')}
 											>
 												<Replace className="w-3.5 h-3.5" />
@@ -1036,7 +1164,7 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 									</div>
 
 									{/* Alternative row */}
-									{ex?.alternative && (
+									{Array.isArray(ex?.alternatives) && ex.alternatives.length > 0 && (
 										<motion.div
 											initial={{ opacity: 0, height: 0 }}
 											animate={{ opacity: 1, height: 'auto' }}
@@ -1045,15 +1173,33 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 										>
 											<div className="flex items-center justify-between">
 												<span className="text-[10px] font-semibold text-amber-800 uppercase tracking-wide">{t('form.alternative_item', { default: 'Alternative' })}</span>
-												<button type="button" onClick={() => setValue?.(`${basePath}.items.${idx}.alternative`, null, { shouldDirty: true })} className="text-[10px] text-amber-600 hover:text-amber-900 underline transition">
-													{t('btn.remove_alternative', { default: 'Remove' })}
-												</button>
 											</div>
-											<div className="grid grid-cols-2 md:grid-cols-[1fr_110px_88px_110px] gap-2">
-												<Controller name={`${basePath}.items.${idx}.alternative.name`} control={control} render={({ field }) => <MiniField placeholder={t('form.item_name')} value={field.value} onChange={e => field.onChange(e.target.value)} onBlur={field.onBlur} />} />
-												<Controller name={`${basePath}.items.${idx}.alternative.quantity`} control={control} render={({ field }) => <MiniField placeholder={t('form.qty')} value={field.value == null ? '' : field.value} onChange={e => field.onChange(asNumber(e.target.value))} onBlur={field.onBlur} inputMode="decimal" />} />
-												<Controller name={`${basePath}.items.${idx}.alternative.unit`} control={control} render={({ field }) => <UnitSelect value={field.value || 'g'} onChange={v => field.onChange(v)} />} />
-												<Controller name={`${basePath}.items.${idx}.alternative.calories`} control={control} render={({ field }) => <MiniField placeholder={t('form.calories')} value={field.value == 0 ? '' : field.value} onChange={e => field.onChange(asNumber(e.target.value))} onBlur={field.onBlur} inputMode="decimal" />} />
+											<div className="space-y-2">
+												{ex.alternatives.map((_, altIdx) => (
+													<div key={altIdx} className="flex items-center justify-between gap-2">
+														<Controller name={`${basePath}.items.${idx}.alternatives.${altIdx}.name`} control={control} render={({ field }) => <MiniField  cnParent=" !w-[170px] flex-none" placeholder={t('form.item_name')} value={field.value} onChange={e => field.onChange(e.target.value)} onBlur={field.onBlur} />} />
+														<div className="flex items-center gap-2">
+															<Controller name={`${basePath}.items.${idx}.alternatives.${altIdx}.quantity`} control={control} render={({ field }) => <MiniField cnParent=" !w-[70px] flex-none"   placeholder={t('form.qty')} value={field.value == null ? '' : field.value} onChange={e => field.onChange(asNumber(e.target.value))} onBlur={field.onBlur} inputMode="decimal" />} />
+															<Controller name={`${basePath}.items.${idx}.alternatives.${altIdx}.unit`} control={control} render={({ field }) => <UnitSelect  className=" !w-[70px] flex-none" value={field.value || 'g'} onChange={v => field.onChange(v)} />} />
+															<Controller name={`${basePath}.items.${idx}.alternatives.${altIdx}.calories`} control={control} render={({ field }) => <MiniField cnParent=" !w-[70px] flex-none" placeholder={t('form.calories')} value={field.value == 0 ? '' : field.value} onChange={e => field.onChange(asNumber(e.target.value))} onBlur={field.onBlur} inputMode="decimal" />} />
+															<button
+																type="button"
+																onClick={() => {
+																	const current = Array.isArray(ex?.alternatives) ? ex.alternatives : [];
+																	const next = current.filter((__, i) => i !== altIdx);
+																	setValue?.(`${basePath}.items.${idx}.alternatives`, next, { shouldDirty: true });
+																}}
+																className="h-8 px-2 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-100 text-xs"
+															>
+																<Trash2
+																size={14}
+																className="text-amber-700 hover:text-amber-800"
+															/>
+															</button>
+
+														</div>
+													</div>
+												))}
 											</div>
 										</motion.div>
 									)}
@@ -1076,12 +1222,16 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 							<div className="rounded-lg border border-slate-200 bg-white p-2.5 hover:border-slate-300 transition">
 								<div className="flex items-center gap-2">
 									<GripDots />
-									<div className="grid grid-cols-1 md:grid-cols-3 gap-2 flex-1">
-										<Controller name={`${basePath}.supplements.${idx}.name`} control={control} render={({ field }) => <Input placeholder={t('form.supplement_name')} value={field.value} onChange={field.onChange} error={getErr(errors, `${basePath}.supplements.${idx}.name`)} />} />
-										<Controller name={`${basePath}.supplements.${idx}.time`} control={control} render={({ field }) => <TimeField showLabel={false} value={field.value || ''} onChange={field.onChange} error={getErr(errors, `${basePath}.supplements.${idx}.time`)} />} />
-										<Controller name={`${basePath}.supplements.${idx}.bestWith`} control={control} render={({ field }) => <Input placeholder={t('form.best_with')} value={field.value || ''} onChange={field.onChange} />} />
+									<div className="flex items-center justify-between gap-2 flex-1">
+										<Controller name={`${basePath}.supplements.${idx}.name`} control={control} render={({ field }) => <Input clearable={false} cnInputParent="!h-9 !w-[150px] flex-none" placeholder={t('form.supplement_name')} value={field.value} onChange={field.onChange} error={getErr(errors, `${basePath}.supplements.${idx}.name`)} />} />
+										
+										<div className="flex items-center  gap-2">
+										<Controller name={`${basePath}.supplements.${idx}.time`} control={control} render={({ field }) => <TimeField  className="!h-9 !w-[100px] flex-none" showLabel={false} value={field.value || ''} onChange={field.onChange} error={getErr(errors, `${basePath}.supplements.${idx}.time`)} />} />
+										<Controller name={`${basePath}.supplements.${idx}.bestWith`} control={control} render={({ field }) => <Input clearable={false} cnInputParent="!h-9 !w-[160px] flex-none" placeholder={t('form.best_with')} value={field.value || ''} onChange={field.onChange} />} />
+										<DangerX size="sm" onClick={() => removeSup(idx)} title={t('btn.delete')} />
+
+										</div>
 									</div>
-									<DangerX size="sm" onClick={() => removeSup(idx)} title={t('btn.delete')} />
 								</div>
 							</div>
 						</DraggableCard>
@@ -1091,8 +1241,46 @@ const MealBlocks = memo(function MealBlocks({ ctx }) {
 
 			<div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
 				<CButton name="btn.add_item" size="sm" icon={<Plus size={12} />} onClick={() => appendItem(blankItem())} variant="outline" />
+				<CButton name="btn.add_recipe" size="sm" icon={<ChefHat size={12} />} onClick={() => setRecipesOpen(true)} variant="outline" />
 				<CButton name="btn.add_supplement" size="sm" icon={<Pill size={12} />} onClick={() => appendSup(blankSupplement())} variant="outline" />
 			</div>
+
+			<Modal open={recipesOpen} onClose={() => setRecipesOpen(false)} title={t('recipes.pickerTitle', { default: 'Choose recipe' })} maxW="max-w-xl">
+				<div className="space-y-3">
+					<Input placeholder={t('recipes.searchPlaceholder', { default: 'Search recipes...' })} value={recipeSearch} onChange={setRecipeSearch} />
+					<div className="max-h-[360px] overflow-auto space-y-2">
+						{recipesLoading ? (
+							<p className="text-sm text-slate-500">{t('common.loading')}</p>
+						) : recipes.length ? recipes.map(r => (
+							<button
+								type="button"
+								key={r.id}
+								onClick={() => {
+									appendItem({
+										name: r.title,
+										type: 'recipe',
+										id: r.id,
+										sourceId: r.id,
+										quantity: null,
+										unit: 'count',
+										calories: Number(r?.nutrition?.calories || r?.calories || 0),
+										alternatives: [],
+									});
+									setRecipesOpen(false);
+								}}
+								className="w-full text-left rounded-lg border border-slate-200 bg-white px-3 py-2 hover:bg-slate-50 transition"
+							>
+								<div className="flex items-center justify-between gap-2">
+									<span className="text-sm font-semibold text-slate-800">{r.title}</span>
+									<span className="text-[11px] rounded-lg border border-blue-200 bg-blue-50 text-blue-700 px-2 py-0.5">{t('recipes.label', { default: 'Recipe' })}</span>
+								</div>
+							</button>
+						)) : (
+							<p className="text-sm text-slate-500">{t('recipes.empty', { default: 'No recipes found' })}</p>
+						)}
+					</div>
+				</div>
+			</Modal>
 		</div>
 	);
 });
@@ -1314,19 +1502,29 @@ export function PlanDetailsView({ plan }) {
 																		{m.items.map((it, ii) => (
 																			<React.Fragment key={ii}>
 																				<tr className="border-b border-slate-50">
-																					<td className="py-1.5 pr-3 text-slate-800 font-medium">{it.name}</td>
+																					<td className="py-1.5 pr-3 text-slate-800 font-medium">
+																						{it.name}
+																						{it.itemType === 'recipe' ? (
+																							<span className="ml-2 text-[10px] rounded px-1.5 py-0.5 border border-blue-200 bg-blue-50 text-blue-700">{t('recipes.label', { default: 'Recipe' })}</span>
+																						) : null}
+																					</td>
 																					<td className="py-1.5 pr-3 text-slate-600">{it.quantity ?? '—'}</td>
 																					<td className="py-1.5 pr-3 text-slate-500">{it.unit || 'g'}</td>
 																					<td className="py-1.5 text-slate-600 font-medium">{it.calories}</td>
 																				</tr>
-																				{it.alternativeName != null && String(it.alternativeName || '').trim() && (
-																					<tr className="border-b border-amber-50 bg-amber-50/40">
-																						<td className="py-1 pr-3 text-amber-700 text-[10px]">↳ {t('form.alternative_item', { default: 'Alt' })}: {it.alternativeName}</td>
-																						<td className="py-1 pr-3 text-amber-600 text-[10px]">{it.alternativeQuantity ?? '—'}</td>
-																						<td className="py-1 pr-3 text-amber-500 text-[10px]">{it.alternativeUnit || 'g'}</td>
-																						<td className="py-1 text-amber-600 text-[10px]">{it.alternativeCalories ?? '—'}</td>
+																				{(Array.isArray(it.alternatives) ? it.alternatives : [{
+																					name: it.alternativeName,
+																					quantity: it.alternativeQuantity,
+																					unit: it.alternativeUnit,
+																					calories: it.alternativeCalories,
+																				}]).filter(a => String(a?.name || '').trim()).map((alt, ai) => (
+																					<tr key={ai} className="border-b border-amber-50 bg-amber-50/40">
+																						<td className="py-1 pr-3 text-amber-700 text-[10px]">↳ {t('form.alternative_item', { default: 'Alt' })}: {alt.name}</td>
+																						<td className="py-1 pr-3 text-amber-600 text-[10px]">{alt.quantity ?? '—'}</td>
+																						<td className="py-1 pr-3 text-amber-500 text-[10px]">{alt.unit || 'g'}</td>
+																						<td className="py-1 text-amber-600 text-[10px]">{alt.calories ?? '—'}</td>
 																					</tr>
-																				)}
+																				))}
 																			</React.Fragment>
 																		))}
 																	</tbody>
@@ -1646,8 +1844,8 @@ function GripDots() {
 }
 
 /* ─────────────────── Helpers ─────────────────── */
-function blankItem() { return { name: '', quantity: null, unit: 'g', calories: 0, alternative: null }; }
-function blankAlternative() { return { name: '', quantity: null, unit: 'g', calories: 0 }; }
+function blankItem() { return { name: '', type: 'food', id: null, sourceId: null, quantity: null, unit: 'g', calories: 0, alternative: null, alternatives: [] }; }
+function blankAlternative() { return { name: '', type: 'food', id: null, quantity: null, unit: 'g', calories: 0 }; }
 function blankSupplement() { return { name: '', time: '', bestWith: '' }; }
 
 function mapFoodsToMeals(foods = []) {
@@ -1656,12 +1854,16 @@ function mapFoodsToMeals(foods = []) {
 		title: 'Meal', time: '',
 		items: foods.map(f => ({
 			name: f.name,
+			type: f.itemType === 'recipe' ? 'recipe' : 'food',
+			id: f.sourceId ?? null,
+			sourceId: f.sourceId ?? null,
 			quantity: coerceNum(f.quantity, null),
 			calories: coerceNum(f.calories),
-			unit: f.unit === 'count' ? 'count' : 'g',
+			unit: f.unit === 'mg' ? 'mg' : f.unit === 'count' ? 'count' : 'g',
 			alternative: (f.alternativeName != null && String(f.alternativeName || '').trim())
-				? { name: f.alternativeName, quantity: coerceNum(f.alternativeQuantity, null), unit: f.alternativeUnit === 'count' ? 'count' : 'g', calories: coerceNum(f.alternativeCalories) }
+				? { name: f.alternativeName, type: 'food', id: null, quantity: coerceNum(f.alternativeQuantity, null), unit: f.alternativeUnit === 'mg' ? 'mg' : f.alternativeUnit === 'count' ? 'count' : 'g', calories: coerceNum(f.alternativeCalories) }
 				: null,
+			alternatives: Array.isArray(f.alternatives) ? f.alternatives : [],
 		})),
 		supplements: [],
 	}];
@@ -1672,12 +1874,28 @@ function coerceNum(v, d = 0) { const n = Number(v); return Number.isFinite(n) ? 
 function sanitizeItem(it) {
 	const alt = it?.alternative;
 	const hasAlt = alt && String(alt?.name ?? '').trim();
+	const resolvedType = it?.type === 'recipe' || it?.itemType === 'recipe' ? 'recipe' : 'food';
+	// Prefer sourceId to avoid any collision with RHF/useFieldArray internal ids.
+	const resolvedId = it?.sourceId ?? it?.id ?? null;
 	return {
 		name: it?.name ?? '',
-		unit: it?.unit === 'count' ? 'count' : 'g',
+		type: resolvedType,
+		id: resolvedId,
+		sourceId: resolvedId,
+		unit: it?.unit === 'mg' ? 'mg' : it?.unit === 'count' ? 'count' : 'g',
 		quantity: it?.quantity == null || it?.quantity === '' ? null : coerceNum(it.quantity, null),
 		calories: coerceNum(it?.calories),
-		...(hasAlt ? { alternative: { name: String(alt.name).trim(), quantity: alt.quantity == null || alt.quantity === '' ? null : coerceNum(alt.quantity, null), unit: alt.unit === 'count' ? 'count' : 'g', calories: coerceNum(alt.calories) } } : {}),
+		...(hasAlt ? { alternative: { name: String(alt.name).trim(), type: alt?.type === 'recipe' ? 'recipe' : 'food', id: alt?.id ?? null, quantity: alt.quantity == null || alt.quantity === '' ? null : coerceNum(alt.quantity, null), unit: alt.unit === 'mg' ? 'mg' : alt.unit === 'count' ? 'count' : 'g', calories: coerceNum(alt.calories) } } : {}),
+		alternatives: Array.isArray(it?.alternatives)
+			? it.alternatives.map(a => ({
+					name: a?.name ?? '',
+					type: a?.type === 'recipe' || a?.itemType === 'recipe' ? 'recipe' : 'food',
+					id: a?.id ?? a?.sourceId ?? null,
+					quantity: a?.quantity == null || a?.quantity === '' ? null : coerceNum(a.quantity, null),
+					unit: a?.unit === 'mg' ? 'mg' : a?.unit === 'count' ? 'count' : 'g',
+					calories: a?.calories == null || a?.calories === '' ? null : coerceNum(a.calories, null),
+			  }))
+			: [],
 	};
 }
 
@@ -1690,8 +1908,8 @@ function cloneMealsStrict(meals = []) {
 			const base = sanitizeItem(it);
 			const alt = it?.alternative;
 			const hasAlt = alt && String(alt?.name ?? '').trim();
-			if (hasAlt) base.alternative = { name: String(alt.name).trim(), quantity: alt.quantity == null || alt.quantity === '' ? null : coerceNum(alt.quantity, null), unit: alt.unit === 'count' ? 'count' : 'g', calories: coerceNum(alt.calories) };
-			else base.alternative = null;
+			// sanitizeItem already maps alternative + alternatives (incl. unit: g|mg|count); only clear when absent
+			if (!hasAlt) base.alternative = null;
 			return base;
 		}),
 		supplements: (m?.supplements || []).map(sanitizeSupplement),

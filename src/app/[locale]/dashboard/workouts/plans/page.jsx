@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
-import { motion, Reorder } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { DndContext, DragOverlay, KeyboardSensor, MouseSensor, TouchSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
+import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { snapCenterToCursor } from '@dnd-kit/modifiers';
 import {
 	Dumbbell,
 	Plus,
@@ -10,6 +14,7 @@ import {
 	Trash2,
 	Clock,
 	Users as UsersIcon,
+	UserPlus,
 	X,
 	Layers,
 	Search,
@@ -111,6 +116,136 @@ function buildPayloadFromPlan(sourcePlan, { userId, nameSuffix = ' (copy)', isAc
 	};
 }
 
+/* --------------------------- Sortable Exercise Row -------------------------- */
+const SortableExerciseRow = memo(function SortableExerciseRow({
+	ex,
+	t,
+	isCardio,
+	onPreviewImg,
+	onRemove,
+	onSetField,
+	normalizeIntOrDefault,
+	normalizeTempoOrDefault,
+	normalizeMinutesOrEmpty,
+}) {
+	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: ex.exerciseId });
+	const style = { transform: CSS.Transform.toString(transform), transition };
+
+	return (
+		<div
+			ref={setNodeRef}
+			style={style}
+			className={[
+				'rounded-lg border border-slate-200 bg-white px-3 py-2.5 hover:border-slate-300 hover:shadow-xs transition-all cursor-default will-change-transform',
+				isDragging ? 'shadow-md border-[color:var(--color-primary-200)] bg-white' : '',
+			].join(' ')}
+		>
+			<div className="flex items-start gap-3">
+				<div className="flex items-center gap-2 min-w-0 flex-1 mt-0.5">
+					<button
+						type="button"
+						{...attributes}
+						{...listeners}
+						className="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:bg-slate-50 active:scale-[.98] transition"
+						style={{ touchAction: 'none' }}
+						aria-label={t('actions.drag', { default: 'Drag' })}
+					>
+						<GripVertical className="w-3.5 h-3.5" />
+					</button>
+					<div className="relative w-11 h-11 group shrink-0">
+						<Img src={ex?.img} showBlur={false} className="w-full h-full rounded-lg object-contain bg-slate-50 border border-slate-100" />
+						<button
+							type="button"
+							onClick={() => onPreviewImg?.(ex.img)}
+							className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition rounded-lg"
+						>
+							<Eye className="h-3.5 w-3.5 text-white" />
+						</button>
+					</div>
+					<div className="flex items-center gap-2 flex-wrap min-w-0">
+						<MultiLangText className="text-xs font-semibold text-slate-900 truncate">{ex.name}</MultiLangText>
+						{ex.category && (
+							<span className="inline-flex items-center gap-1 rounded-lg border border-[color:var(--color-primary-200)] bg-[color:var(--color-primary-50)] px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--color-primary-700)]">
+								<Tag size={9} />
+								<MultiLangText>{ex.category}</MultiLangText>
+							</span>
+						)}
+					</div>
+				</div>
+
+				<div className="shrink-0 w-[540px] max-w-full">
+					{!isCardio && (
+						<div className="flex items-center justify-end gap-2">
+							<div className="w-[320px] grid grid-cols-4 gap-1.5">
+								<MiniField inputMode="numeric" type="number" placeholder={t('preview.sets')} value={ex.targetSets ?? ''} onChange={e => onSetField(ex.exerciseId, { targetSets: e.target.value })} onBlur={() => { if (String(ex.targetSets ?? '').trim()) onSetField(ex.exerciseId, { targetSets: normalizeIntOrDefault(ex.targetSets, 3) }); }} />
+								<MiniField inputMode="numeric" placeholder={t('preview.reps')} value={ex.targetReps ?? ''} onChange={e => onSetField(ex.exerciseId, { targetReps: e.target.value })} onBlur={() => { if (String(ex.targetReps ?? '').trim()) onSetField(ex.exerciseId, { targetReps: normalizeIntOrDefault(ex.targetReps, 12) }); }} />
+								<MiniField placeholder={t('preview.tempo', { default: 'Tempo' })} value={ex.tempo ?? ''} onChange={e => onSetField(ex.exerciseId, { tempo: e.target.value })} onBlur={() => { if (String(ex.tempo ?? '').trim()) onSetField(ex.exerciseId, { tempo: normalizeTempoOrDefault(ex.tempo, '1/1/1') }); }} />
+								<MiniField inputMode="numeric" type="number" placeholder={t('builder.restTime')} value={ex.restSeconds ?? ''} onChange={e => onSetField(ex.exerciseId, { restSeconds: e.target.value })} onBlur={() => { if (String(ex.restSeconds ?? '').trim()) onSetField(ex.exerciseId, { restSeconds: normalizeIntOrDefault(ex.restSeconds, 90) }); }} />
+							</div>
+							<MiniTextArea className="mb-[-6px] w-[190px]" placeholder={t('builder.exerciseNote', { default: 'Note for this exercise...' })} value={ex.note ?? ''} onChange={val => onSetField(ex.exerciseId, { note: val })} />
+							<button
+								type="button"
+								onClick={() => onRemove(ex.exerciseId)}
+								className=" mb-[2px] shrink-0 h-9 w-9 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50 transition"
+								title={t('actions.delete')}
+							>
+								<Trash2 className="w-3.5 h-3.5" />
+							</button>
+						</div>
+					)}
+
+					{isCardio && (
+						<div className="flex items-start justify-end gap-2">
+							<div className="flex border border-slate-200 bg-white shrink-0 rounded-[10px] overflow-hidden">
+								<div className="flex">
+									{['min', 'sec'].map(unit => (
+										<button
+											key={unit}
+											type="button"
+											onClick={() => {
+												const prevVal = ex.durationValue;
+												const prevUnit = ex.durationUnit ?? 'min';
+												const secs = toSecondsFromValueAndUnit(prevVal, prevUnit);
+												const newVal = secs != null ? fromDurationSeconds(secs, unit) : '';
+												onSetField(ex.exerciseId, { durationUnit: unit, durationValue: newVal });
+											}}
+											className={[
+												'px-2.5 py-1.5 text-[11px] font-semibold transition border-r border-slate-200',
+												(ex.durationUnit ?? 'min') === unit
+													? 'bg-[color:var(--color-primary-500)] text-white'
+													: 'bg-white text-slate-500 hover:bg-slate-50',
+											].join(' ')}
+										>
+											{t(`builder.cardio.${unit}`, { default: unit })}
+										</button>
+									))}
+								</div>
+								<MiniField
+									inputMode="numeric"
+									type="number"
+									placeholder={ex.durationUnit === 'sec' ? t('builder.cardio.seconds') : t('builder.cardio.minutes', { default: 'Min' })}
+									value={ex.durationValue ?? ''}
+									onChange={e => onSetField(ex.exerciseId, { durationValue: e.target.value })}
+									onBlur={() => onSetField(ex.exerciseId, { durationValue: normalizeMinutesOrEmpty(ex.durationValue) })}
+									iconLeft={<Clock className="w-3 h-3 text-slate-400" />}
+									className="!max-w-[100px] !rounded-none !border-0 !h-[35px] w-28"
+								/>
+							</div>
+							<MiniTextArea
+								placeholder={t('builder.cardio.note')}
+								value={ex.note ?? ''}
+								onChange={val => onSetField(ex.exerciseId, { note: val })}
+								className="w-[280px]"
+								cnInput="!h-[38px]"
+							/>
+						</div>
+					)}
+				</div>
+			</div>
+		</div>
+	);
+});
+
 export default function PlansPage() {
 	const t = useTranslations('workoutPlans');
 	const user = useUser();
@@ -140,6 +275,10 @@ export default function PlansPage() {
 	const [addOpen, setAddOpen] = useState(false);
 	const [editRow, setEditRow] = useState(null);
 	const [assignOpen, setAssignOpen] = useState(null);
+	const [usersOpen, setUsersOpen] = useState(null); // plan
+	const [usersLoading, setUsersLoading] = useState(false);
+	const [usersErr, setUsersErr] = useState(null);
+	const [usersList, setUsersList] = useState([]);
 
 	const [stats, setStats] = useState(null);
 	const [loadingStats, setLoadingStats] = useState(true);
@@ -268,6 +407,21 @@ export default function PlansPage() {
 		try { setEditRow(await getOne(plan.id)); } catch { setEditRow(plan); }
 	};
 	const openAssign = plan => setAssignOpen(plan);
+	const openUsers = async plan => {
+		if (!plan?.id) return;
+		setUsersOpen(plan);
+		setUsersErr(null);
+		setUsersLoading(true);
+		try {
+			const res = await api.get(`/plans/${plan.id}/assignees`);
+			setUsersList(Array.isArray(res.data) ? res.data : []);
+		} catch (e) {
+			setUsersErr(e?.response?.data?.message || t('plans.usersModal.loadFailed', { default: 'Failed to load users' }));
+			setUsersList([]);
+		} finally {
+			setUsersLoading(false);
+		}
+	};
 
 	const sortLabel = sortBy === 'created_at'
 		? sortOrder === 'ASC' ? t('plans.filters.oldestFirst') : t('plans.filters.newestFirst')
@@ -331,6 +485,7 @@ export default function PlansPage() {
 	const onEdit = openEdit;
 	const onDelete = askDelete;
 	const onAssign = openAssign;
+	const onUsers = openUsers;
 	const onDuplicate = handleDuplicate;
 
 	const planColumns = [
@@ -338,7 +493,7 @@ export default function PlansPage() {
 			key: 'name',
 			header: t('plans.table.name'),
 			cell: (row) => (
-				<div className="flex items-center gap-3 min-w-0">
+				<button type="button" onClick={() => onUsers?.(row.raw)} className="flex items-center gap-3 min-w-0 text-left group">
 					<div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg theme-gradient-bg text-white shadow-sm">
 						<Dumbbell className="h-5 w-5" />
 					</div>
@@ -348,7 +503,7 @@ export default function PlansPage() {
 							{row.name}
 						</MultiLangText>
 					</div>
-				</div>
+				</button>
 			),
 		},
 		{
@@ -359,6 +514,20 @@ export default function PlansPage() {
 					<Calendar className="w-3 h-3" />
 					{row.daysCount}
 				</span>
+			),
+		},
+		{
+			key: 'clientsUsingCount',
+			header: t('plans.table.clientsUsing', { default: 'Clients' }),
+			cell: (row) => (
+				<button
+					type="button"
+					onClick={() => onUsers?.(row.raw)}
+					className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-white hover:border-slate-300 transition"
+				>
+					<UsersIcon className="w-3 h-3" />
+					{Number(row.clientsUsingCount ?? 0)}
+				</button>
 			),
 		},
 		{
@@ -396,8 +565,14 @@ export default function PlansPage() {
 					actions={[
 						{
 							icon: <UsersIcon />,
-							tooltip: t('actions.assign'),
+							tooltip: t('actions.viewUsers', { default: 'View users' }),
 							variant: 'blue',
+							onClick: r => onUsers?.(r),
+						},
+						{
+							icon: <UserPlus />,
+							tooltip: t('actions.assignUsers', { default: 'Assign' }),
+							variant: 'slate',
 							onClick: r => onAssign?.(r),
 						},
 						{
@@ -443,6 +618,7 @@ export default function PlansPage() {
 			id: p.id,
 			name: p.name,
 			daysCount: Array.isArray(p?.program?.days) ? p.program.days.length : 0,
+			clientsUsingCount: p?.clientsUsingCount ?? 0,
 			isActive: !!p?.isActive,
 			createdAt: p?.created_at ? new Date(p.created_at).toISOString().slice(0, 10) : '—',
 			raw: p,
@@ -580,6 +756,69 @@ export default function PlansPage() {
 						onAssigned={() => setAssignOpen(null)}
 					/>
 				)}
+			</Modal>
+
+			<Modal
+				open={!!usersOpen}
+				onClose={() => { setUsersOpen(null); setUsersList([]); setUsersErr(null); }}
+				title={t('plans.usersModal.title', { default: 'Plan users' })}
+				maxW="max-w-xl"
+			>
+				<div className="space-y-4">
+					<div className="flex items-center justify-between gap-3">
+						<div className="min-w-0">
+							<p className="text-sm font-semibold text-slate-900 truncate">{usersOpen?.name}</p>
+							<p className="text-xs text-slate-400">{t('plans.usersModal.count', { default: '{count} users', count: usersList?.length || 0 })}</p>
+						</div>
+						<button
+							type="button"
+							onClick={() => { setAssignOpen(usersOpen); }}
+							className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+						>
+							<UserPlus className="w-4 h-4 text-slate-500" />
+							{t('actions.assignUsers', { default: 'Assign' })}
+						</button>
+					</div>
+
+					{usersLoading && (
+						<div className="flex items-center gap-2 text-sm text-slate-500">
+							<Loader2 className="w-4 h-4 animate-spin" />
+							{t('plans.usersModal.loading', { default: 'Loading…' })}
+						</div>
+					)}
+
+					{usersErr && (
+						<div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">
+							{usersErr}
+						</div>
+					)}
+
+					{!usersLoading && !usersErr && (usersList?.length ? (
+						<ul className="space-y-2">
+							{usersList.map(u => (
+								<li key={u.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+									<div className="min-w-0">
+										<p className="text-sm font-semibold text-slate-900 truncate">{u.name}</p>
+										<p className="text-xs text-slate-400 truncate">{u.email}</p>
+									</div>
+									<span className={[
+										'inline-flex items-center rounded-lg border px-2 py-1 text-[11px] font-bold',
+										u.subscriptionActive
+											? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+											: 'bg-rose-50 text-rose-700 border-rose-100',
+									].join(' ')}>
+										{u.subscriptionActive ? t('plans.usersModal.subscriptionActive', { default: 'Active' }) : t('plans.usersModal.subscriptionInactive', { default: 'Inactive' })}
+									</span>
+								</li>
+							))}
+						</ul>
+					) : (
+						<div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center">
+							<p className="text-sm font-semibold text-slate-700">{t('plans.usersModal.emptyTitle', { default: 'No users' })}</p>
+							<p className="text-xs text-slate-400 mt-1">{t('plans.usersModal.emptyDesc', { default: 'No clients are using this plan yet.' })}</p>
+						</div>
+					))}
+				</div>
 			</Modal>
 
 			<ConfirmDialog
@@ -1009,43 +1248,47 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 	];
 
 	return (
-		<div className="space-y-5 py-1">
-			{/* Top bar */}
-			<div className="flex items-center justify-between gap-3 pb-4 border-b border-slate-100">
-				<Input className="max-w-[380px] w-full" placeholder={t('builder.namePlaceholder')} value={name} onChange={e => setName(e)} />
-				<button
-					type="button"
-					onClick={addDay}
-					className="inline-flex items-center gap-2 h-10 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 hover:border-slate-300 active:scale-[.97] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
-				>
-					<Plus className="w-4 h-4 text-slate-500" />
-					{t('actions.addDay')}
-				</button>
+		<div className="flex flex-col gap-5 py-1">
+			<div className="space-y-5 pb-24">
+				{/* Top bar */}
+				<div className="flex items-center justify-between gap-3 pb-4 border-b border-slate-100">
+					<Input className="max-w-[380px] w-full" placeholder={t('builder.namePlaceholder')} value={name} onChange={e => setName(e)} />
+					<button
+						type="button"
+						onClick={addDay}
+						className="inline-flex items-center gap-2 h-10 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 hover:border-slate-300 active:scale-[.97] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary-300)]"
+					>
+						<Plus className="w-4 h-4 text-slate-500" />
+						{t('actions.addDay')}
+					</button>
+				</div>
+
+				<NotesListInput value={notes} onChange={setNotes} />
+
+				<DaysListSection
+					days={days}
+					setDays={setDays}
+					openPicker={openPicker}
+					removeDay={removeDay}
+					duplicateDay={duplicateDay}
+					onReorderExercises={onReorderExercises}
+					DAY_OPTIONS={DAY_OPTIONS}
+					spring={spring}
+				/>
 			</div>
 
-			<NotesListInput value={notes} onChange={setNotes} />
-
-			<DaysListSection
-				days={days}
-				setDays={setDays}
-				openPicker={openPicker}
-				removeDay={removeDay}
-				duplicateDay={duplicateDay}
-				onReorderExercises={onReorderExercises}
-				DAY_OPTIONS={DAY_OPTIONS}
-				spring={spring}
-			/>
-
-			{/* Footer actions */}
-			<div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
-				<button
-					type="button"
-					onClick={onCancel}
-					className="inline-flex items-center justify-center h-10 px-5 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 active:scale-[.97] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-				>
-					{t('actions.cancel')}
-				</button>
-				<Button name={t('builder.savePlanBtn')} loading={loading} type="button" onClick={submit} className="!w-fit !h-10 text-sm" />
+			{/* Sticky footer actions */}
+			<div className="sticky bottom-0 z-10 -mx-1 px-1">
+				<div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-white/95 backdrop-blur px-0 pt-4 pb-3 shadow-[0_-10px_30px_-20px_rgba(15,23,42,0.35)]">
+					<button
+						type="button"
+						onClick={onCancel}
+						className="inline-flex items-center justify-center h-10 px-5 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 active:scale-[.97] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+					>
+						{t('actions.cancel')}
+					</button>
+					<Button name={t('builder.savePlanBtn')} loading={loading} type="button" onClick={submit} className="!w-fit !h-10 text-sm" />
+				</div>
 			</div>
 
 			<ExercisePicker
@@ -1063,6 +1306,15 @@ const NewPlanBuilder = memo(function NewPlanBuilder({ scrollRef, initial, onCanc
 export function DaysListSection({ duplicateDay, days, setDays, openPicker, removeDay, onReorderExercises, DAY_OPTIONS, spring }) {
 	const t = useTranslations('workoutPlans');
 	const [previewImg, setPreviewImg] = useState(null);
+	const [activeDrag, setActiveDrag] = useState(null);
+
+	const sensors = useSensors(
+		useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+		useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 6 } }),
+		useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+	);
+
+	// Sortable row is defined inside `renderBlock` to reuse closures.
 
 	const normalizeIntOrDefault = (v, def) => {
 		const s = String(v ?? '').trim();
@@ -1101,6 +1353,7 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 	};
 
 	const renderBlock = (day, block, list) => {
+		if (!list?.length) return null;
 		const key = block === 'warmup' ? 'warmupExercises' : block === 'cardio' ? 'cardioExercises' : 'exercises';
 		const title = block === 'warmup'
 			? t('builder.blocks.warmup', { default: 'Warmup' })
@@ -1134,125 +1387,83 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 					)}
 				</div>
 
-				{list?.length ? (
-					<Reorder.Group
-						axis="y"
-						values={list}
-						onReorder={newOrder => onReorderExercises(day.id, block, newOrder)}
-						className="space-y-2"
+				<DndContext
+					sensors={sensors}
+					collisionDetection={closestCenter}
+					onDragStart={(evt) => {
+						const id = evt?.active?.id;
+						if (!id) return;
+						const found = list.find(x => x.exerciseId === id);
+						setActiveDrag(found || null);
+					}}
+					onDragCancel={() => setActiveDrag(null)}
+					onDragEnd={(evt) => {
+						const { active, over } = evt;
+						setActiveDrag(null);
+						if (!active?.id || !over?.id) return;
+						if (active.id === over.id) return;
+						const oldIndex = list.findIndex(x => x.exerciseId === active.id);
+						const newIndex = list.findIndex(x => x.exerciseId === over.id);
+						if (oldIndex < 0 || newIndex < 0) return;
+						const next = arrayMove(list, oldIndex, newIndex);
+						onReorderExercises(day.id, block, next);
+					}}
+					measuring={{ droppable: { strategy: 'always' } }}
+				>
+					<SortableContext items={list.map(x => x.exerciseId)} strategy={verticalListSortingStrategy}>
+						<div className="space-y-2">
+							{list.map(ex => (
+								<SortableExerciseRow
+									key={ex.exerciseId}
+									ex={ex}
+									t={t}
+									isCardio={isCardio}
+									onPreviewImg={setPreviewImg}
+									onRemove={removeExercise}
+									onSetField={setExerciseField}
+									normalizeIntOrDefault={normalizeIntOrDefault}
+									normalizeTempoOrDefault={normalizeTempoOrDefault}
+									normalizeMinutesOrEmpty={normalizeMinutesOrEmpty}
+								/>
+							))}
+						</div>
+					</SortableContext>
+					<DragOverlay
+						modifiers={[snapCenterToCursor]}
+						dropAnimation={{ duration: 160, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}
 					>
-						{list.map(ex => (
-							<Reorder.Item
-								key={ex.exerciseId}
-								value={ex}
-								dragListener
-								dragConstraints={{ top: 0, bottom: 0 }}
-								className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 hover:border-slate-300 hover:shadow-xs transition-all cursor-default"
+						{activeDrag ? (
+							<div
+								style={{ width: 'fit-content', maxWidth: 'min(720px, 92vw)', pointerEvents: 'none' }}
+								className="rounded-lg border border-[color:var(--color-primary-200)] bg-white px-3 py-2.5 shadow-xl scale-[1.02] opacity-95"
 							>
-								<div className="flex items-center gap-3">
-									{/* Drag + image */}
-									<div className=" flex items-center gap-2 shrink-0 mt-0.5">
-										<GripVertical className="w-3.5 h-3.5 text-slate-300 cursor-grab hover:text-slate-400 transition shrink-0" />
-										<div className="relative w-11 h-11 group shrink-0">
-											<Img src={ex?.img} showBlur={false} className="w-full h-full rounded-lg object-contain bg-slate-50 border border-slate-100" />
-											<button
-												type="button"
-												onClick={() => setPreviewImg(ex.img)}
-												className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition rounded-lg"
-											>
-												<Eye className="h-3.5 w-3.5 text-white" />
-											</button>
-										</div>
-										<div className="flex items-center gap-2 flex-wrap min-w-0">
-											<MultiLangText className="text-xs font-semibold text-slate-900 truncate">{ex.name}</MultiLangText>
-											{ex.category && (
-												<span className="inline-flex items-center gap-1 rounded-lg border border-[color:var(--color-primary-200)] bg-[color:var(--color-primary-50)] px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--color-primary-700)]">
-													<Tag size={9} />
-													<MultiLangText>{ex.category}</MultiLangText>
-												</span>
-											)}
-										</div>
-									</div>
-
-									{/* Info + fields */}
-									<div className="flex-1 ">
-										{!isCardio && (
-											<div className=" justify-end flex items-center gap-2 flex-1">
-												<div className="max-w-[400px] w-full grid grid-cols-4 gap-1.5">
-													<MiniField inputMode="numeric" type="number" placeholder={t('preview.sets')} value={ex.targetSets ?? ''} onChange={e => setExerciseField(ex.exerciseId, { targetSets: e.target.value })} onBlur={() => { if (String(ex.targetSets ?? '').trim()) setExerciseField(ex.exerciseId, { targetSets: normalizeIntOrDefault(ex.targetSets, 3) }); }} />
-													<MiniField inputMode="numeric" placeholder={t('preview.reps')} value={ex.targetReps ?? ''} onChange={e => setExerciseField(ex.exerciseId, { targetReps: e.target.value })} onBlur={() => { if (String(ex.targetReps ?? '').trim()) setExerciseField(ex.exerciseId, { targetReps: normalizeIntOrDefault(ex.targetReps, 12) }); }} />
-													<MiniField placeholder={t('preview.tempo', { default: 'Tempo' })} value={ex.tempo ?? ''} onChange={e => setExerciseField(ex.exerciseId, { tempo: e.target.value })} onBlur={() => { if (String(ex.tempo ?? '').trim()) setExerciseField(ex.exerciseId, { tempo: normalizeTempoOrDefault(ex.tempo, '1/1/1') }); }} />
-													<MiniField inputMode="numeric" type="number" placeholder={t('builder.restTime')} value={ex.restSeconds ?? ''} onChange={e => setExerciseField(ex.exerciseId, { restSeconds: e.target.value })} onBlur={() => { if (String(ex.restSeconds ?? '').trim()) setExerciseField(ex.exerciseId, { restSeconds: normalizeIntOrDefault(ex.restSeconds, 90) }); }} />
-												</div>
-												<MiniTextArea className=" mb-[-6px] max-w-[200px] " placeholder={t('builder.exerciseNote', { default: 'Note for this exercise...' })} value={ex.note ?? ''} onChange={val => setExerciseField(ex.exerciseId, { note: val })} />
-												<button
-													type="button"
-													onClick={() => removeExercise(ex.exerciseId)}
-													className=" mb-[2px] shrink-0 h-9 w-9 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50 transition"
-													title={t('actions.delete')}
-												>
-													<Trash2 className="w-3.5 h-3.5" />
-												</button>
-											</div>
-										)}
-
-										{/* Cardio fields */}
-										{isCardio && (
-											<div className="flex items-start justify-end gap-2">
-												<div className="flex border border-slate-200  bg-white shrink-0">
-													{/* Unit toggle */}
-													<div className="flex">
-														{['min', 'sec'].map(unit => (
-															<button
-																key={unit}
-																type="button"
-																onClick={() => {
-																	const prevVal = ex.durationValue;
-																	const prevUnit = ex.durationUnit ?? 'min';
-																	const secs = toSecondsFromValueAndUnit(prevVal, prevUnit);
-																	const newVal = secs != null ? fromDurationSeconds(secs, unit) : '';
-																	setExerciseField(ex.exerciseId, { durationUnit: unit, durationValue: newVal });
-																}}
-																className={[
-																	'px-2.5 py-1.5 text-[11px] font-semibold transition border-r border-slate-200',
-																	(ex.durationUnit ?? 'min') === unit
-																		? 'bg-[color:var(--color-primary-500)] text-white'
-																		: 'bg-white text-slate-500 hover:bg-slate-50',
-																].join(' ')}
-															>
-																{t(`builder.cardio.${unit}`, { default: unit })}
-															</button>
-														))}
-													</div>
-													{/* Duration input */}
-													<MiniField
-														inputMode="numeric"
-														type="number"
-														placeholder={ex.durationUnit === 'sec' ? t('builder.cardio.seconds') : t('builder.cardio.minutes', { default: 'Min' })}
-														value={ex.durationValue ?? ''}
-														onChange={e => setExerciseField(ex.exerciseId, { durationValue: e.target.value })}
-														onBlur={() => setExerciseField(ex.exerciseId, { durationValue: normalizeMinutesOrEmpty(ex.durationValue) })}
-														iconLeft={<Clock className="w-3 h-3 text-slate-400" />}
-														className=" !max-w-[100px] !rounded-none !border-0 !h-[35px] w-28"
-													/>
-												</div>
-												<MiniTextArea
-													placeholder={t('builder.cardio.note')}
-													value={ex.note ?? ''}
-													onChange={val => setExerciseField(ex.exerciseId, { note: val })}
-													className="flex-1 max-w-[300px]"
-													cnInput=" !h-[38px] !rounded-none"
-												/>
-											</div>
-										)}
-									</div>
+								<div className="flex items-center gap-2">
+									<GripVertical className="w-3.5 h-3.5 text-slate-300" />
+									<MultiLangText className="text-xs font-semibold text-slate-900 truncate max-w-[420px]">{activeDrag.name}</MultiLangText>
 								</div>
-							</Reorder.Item>
-						))}
-					</Reorder.Group>
-				) : (
-					<div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 py-5 text-center">
-						<p className="text-xs text-slate-400">{t('builder.noExercisesHint')}</p>
+							</div>
+						) : null}
+					</DragOverlay>
+				</DndContext>
+
+				{/* Add more under existing items */}
+				{list?.length > 0 && (
+					<div className="mt-2">
+						<button
+							type="button"
+							onClick={() => openPicker(day.id, block)}
+							className={[
+								'inline-flex items-center gap-2 h-9 px-3 rounded-lg border bg-white text-xs font-semibold transition',
+								block === 'warmup'
+									? 'border-amber-200 text-amber-700 hover:bg-amber-50'
+									: block === 'cardio'
+										? 'border-blue-200 text-blue-700 hover:bg-blue-50'
+										: 'border-[color:var(--color-primary-200)] text-[color:var(--color-primary-700)] hover:bg-[color:var(--color-primary-50)]',
+							].join(' ')}
+						>
+							<Plus className="w-3.5 h-3.5" />
+							{t('builder.addMore', { default: 'Add more' })}
+						</button>
 					</div>
 				)}
 			</div>
@@ -1282,21 +1493,6 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 						/>
 
 						<div className="flex items-center gap-1.5 flex-wrap">
-							{[
-								{ key: 'warmup', label: t('builder.addWarmup', { default: '+ Warmup' }), colorClass: 'border-amber-200 text-amber-700 hover:bg-amber-50' },
-								{ key: 'main', label: t('builder.addWorkout', { default: '+ Workout' }), colorClass: 'border-[color:var(--color-primary-200)] text-[color:var(--color-primary-700)] hover:bg-[color:var(--color-primary-50)]' },
-								{ key: 'cardio', label: t('builder.addCardio', { default: '+ Cardio' }), colorClass: 'border-blue-200 text-blue-700 hover:bg-blue-50' },
-							].map(btn => (
-								<button
-									key={btn.key}
-									type="button"
-									onClick={() => openPicker(d.id, btn.key)}
-									className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border bg-white text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 ${btn.colorClass}`}
-								>
-									{btn.label}
-								</button>
-							))}
-
 							<button
 								type="button"
 								onClick={() => duplicateDay(d.id)}
@@ -1319,10 +1515,28 @@ export function DaysListSection({ duplicateDay, days, setDays, openPicker, remov
 					</div>
 
 					{/* Day body */}
-					<div className="px-4 pt-4 pb-3">
+					<div className="px-4 pt-4 pb-4">
 						{renderBlock(d, 'warmup', d.warmupExercises)}
 						{renderBlock(d, 'main', d.exercises)}
 						{renderBlock(d, 'cardio', d.cardioExercises)}
+
+						{/* Day footer actions */}
+						<div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-end gap-2">
+							{[
+								{ key: 'warmup', label: t('builder.addWarmup', { default: '+ Warmup' }), colorClass: 'border-amber-200 text-amber-700 hover:bg-amber-50', show: !(d.warmupExercises?.length) },
+								{ key: 'main', label: t('builder.addWorkout', { default: '+ Workout' }), colorClass: 'border-[color:var(--color-primary-200)] text-[color:var(--color-primary-700)] hover:bg-[color:var(--color-primary-50)]', show: !(d.exercises?.length) },
+								{ key: 'cardio', label: t('builder.addCardio', { default: '+ Cardio' }), colorClass: 'border-blue-200 text-blue-700 hover:bg-blue-50', show: !(d.cardioExercises?.length) },
+							].filter(btn => btn.show).map(btn => (
+								<button
+									key={btn.key}
+									type="button"
+									onClick={() => openPicker(d.id, btn.key)}
+									className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border bg-white text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 ${btn.colorClass}`}
+								>
+									{btn.label}
+								</button>
+							))}
+						</div>
 					</div>
 				</motion.div>
 			))}
@@ -1368,7 +1582,7 @@ export const MiniField = memo(function MiniField({ cnParent, value, placeholder,
 				onChange={onChange}
 				onBlur={onBlur}
 				className={[
-					'h-8 w-full h-[33px] border px-2 text-xs bg-white outline-none transition placeholder:text-slate-400',
+					'h-8 w-full h-[33px] border px-2 text-xs bg-white outline-none transition placeholder:text-slate-400 rounded-[10px]',
 					iconLeft ? 'pl-7' : '',
 					'focus:ring-2 focus:ring-[color:var(--color-primary-200)] focus:border-[color:var(--color-primary-400)]',
 					hasValue
@@ -1386,7 +1600,7 @@ export const MiniTextArea = memo(function MiniTextArea({ value, cnInput, placeho
 	const hasValue = String(value ?? '').trim().length > 0;
 
 	return (
-		<div className={`relative w-full !h-fit ${className}`}>
+		<div className={`relative !w-[180px] !h-fit ${className}`}>
 			{hasValue && (
 				<label className="absolute left-2 px-0.5 text-[9px] font-semibold -top-[7px] z-10 text-[color:var(--color-primary-600)] pointer-events-none"
 					style={{ background: 'linear-gradient(to bottom, #f8fafc 50%, #ffffff 50%)' }}>
@@ -1399,7 +1613,7 @@ export const MiniTextArea = memo(function MiniTextArea({ value, cnInput, placeho
 				placeholder={placeholder}
 				onChange={e => onChange?.(e.target.value)}
 				className={[
-					cnInput + '  w-full  h-[35px] border px-2.5 py-2 text-xs resize-none bg-white outline-none transition placeholder:text-slate-400',
+					cnInput + ' w-full h-[35px] border px-2.5 py-2 text-xs resize-none bg-white outline-none transition placeholder:text-slate-400 rounded-[10px]',
 					'focus:ring-2 focus:ring-[color:var(--color-primary-200)] focus:border-[color:var(--color-primary-400)]',
 					hasValue
 						? 'border-[color:var(--color-primary-300)] hover:border-[color:var(--color-primary-400)]'

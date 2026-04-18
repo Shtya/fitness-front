@@ -729,3 +729,8 @@ input:-webkit-autofill:active {
   caret-color: white;
   transition: background-color 9999s ease-in-out 0s;
 }
+
+
+.customize_sidebar {
+   transform: translate(-50%,-50%) !important;
+}

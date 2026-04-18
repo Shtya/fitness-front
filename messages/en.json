@@ -595,6 +595,7 @@
 			"todos": "Tasks",
 			"calendar": "Calendar",
 			"messages": "Messages",
+			"notifications": "Notifications",
 			"calorieCalculator": "Calorie Calculator",
 			"billing": "Billing",
 			"money": "Wallet",
@@ -613,7 +614,7 @@
 	},
 	"themeSwitcher": {
 		"ariaLabel": "Theme color picker",
-		"trigger": "Theme Colors",
+		"trigger": "Theme",
 		"title": "Choose Theme",
 		"subtitle": "Choose a color palette that suits your taste",
 		"current": "Current:",
@@ -743,7 +744,8 @@
 			"weight": "Weight",
 			"waist": "Waist",
 			"chest": "Chest",
-			"actions": "Actions"
+			"actions": "Actions",
+			"birthDate": "Birth Date"
 		},
 		"units": {
 			"kg": "kg",
@@ -1465,7 +1467,8 @@
 			"role": "Role",
 			"coach": "Coach",
 			"status": "Status",
-			"phoneWhatsapp": "WhatsApp Number"
+			"phoneWhatsapp": "WhatsApp Number",
+			"birthDate": "Birth Date"
 		},
 		"placeholders": {
 			"fullName": "Mohammed Ahmed",
@@ -3312,7 +3315,10 @@
 				"supplementUpdateFailed": "Failed to update supplement",
 				"inlineSaveFailed": "Failed to save edits"
 			},
-			"alternative": "Alternative"
+			"alternative": "Alternative",
+			"recipe": "Recipe",
+			"showRecipeDetails": "Show details",
+			"closeRecipeDetails": "Close recipe details"
 		}
 	},
 	"timeField": {
