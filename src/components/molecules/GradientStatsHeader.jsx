@@ -315,17 +315,12 @@ export function KpiCard({ icon: Icon, label, value, trend, trendValue, sub, load
 	);
 }
 
-export function GradientStatsHeader({
-	/* meta */
-	title, desc, icon: Icon, className = '', innerCn = '',
-	/* stats */
+export function GradientStatsHeader({ 
+	title, desc, icon: Icon, className = '', innerCn = '', 
 	stats = [], children, loadingStats, hiddenStats, statsCollapsible = false,
-	/* tabs */
-	tabs = [], activeTab, onTabChange,
-	/* filters */
-	filters = [], filterValues = {}, onFilterChange, onFilterReset,
-	/* actions */
-	actions, btnName, onClick, someThing,
+ 	tabs = [], activeTab, onTabChange,
+ 	filters = [], filterValues = {}, onFilterChange, onFilterReset,
+ 	actions, btnName, onClick, someThing,
 }) {
 	injectStyles();
 

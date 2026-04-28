@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   Camera, UploadCloud, CheckCircle2, Loader2, Info, X, Images,
@@ -21,6 +21,14 @@ import { Modal } from '@/components/dashboard/ui/UI';
 import api from '@/utils/axios';
 
 /* ─────────────────────────── API helpers ─────────────────────────── */
+async function getClientReportConfig() {
+  try {
+    const { data } = await api.get('/weekly-reports/client/report-config');
+    return data;
+  } catch {
+    return null;
+  }
+}
 async function getMeasurements(days = 180) {
   const { data } = await api.get('/profile/measurements', { params: { days } });
   return Array.isArray(data) ? data : [];
@@ -334,6 +342,103 @@ function ProgressRing({ pct, size = 48 }) {
   );
 }
 
+/* ─────────────────────────── Custom Field Renderer ─────────────────────────── */
+function CustomFieldInput({ field, value, onChange }) {
+  const { type, label, placeholder, options, required } = field;
+
+  const fieldLabel = (
+    <span className='block text-sm font-medium text-slate-700 mb-1.5'>
+      {label || 'سؤال'}
+      {required && <span className='text-rose-500 ml-1'>*</span>}
+    </span>
+  );
+
+  if (type === 'boolean') {
+    return (
+      <div className='flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-slate-50/80 border border-slate-100'>
+        <span className='text-sm font-medium text-slate-700'>{label}{required && <span className='text-rose-500 ml-1'>*</span>}</span>
+        <Switcher checked={!!value} onChange={v => onChange(v)} />
+      </div>
+    );
+  }
+
+  if (type === 'rating') {
+    return (
+      <div className='space-y-1'>
+        {fieldLabel}
+        <div className='flex items-center gap-1 p-3 rounded-xl bg-slate-50/80 border border-slate-100'>
+          {[1,2,3,4,5].map(n => (
+            <button key={n} type='button' onClick={() => onChange(n)}
+              className='focus:outline-none transition-transform hover:scale-110 active:scale-95'>
+              <svg viewBox='0 0 24 24' className='w-7 h-7'>
+                <path d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'
+                  className={n <= (value || 0) ? 'fill-amber-400 stroke-amber-400' : 'fill-slate-200 stroke-slate-200'} strokeWidth='0.5' />
+              </svg>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (type === 'textarea') {
+    return (
+      <div>
+        {fieldLabel}
+        <textarea value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder || ''}
+          rows={3} className='w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]/40' />
+      </div>
+    );
+  }
+
+  if (type === 'select' && options?.length) {
+    return (
+      <div>
+        {fieldLabel}
+        <select value={value || ''} onChange={e => onChange(e.target.value)}
+          className='w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]/40'>
+          <option value=''>{placeholder || 'اختر...'}</option>
+          {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        </select>
+      </div>
+    );
+  }
+
+  if (type === 'number') {
+    return (
+      <div>
+        {fieldLabel}
+        <input type='number' value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={placeholder || ''}
+          className='w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]/40' />
+      </div>
+    );
+  }
+
+  // default: text
+  return (
+    <div>
+      {fieldLabel}
+      <input type='text' value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder || ''}
+        className='w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]/40' />
+    </div>
+  );
+}
+
+/* ─────────────────────────── Custom Section ─────────────────────────── */
+function CustomGroupSection({ group, answers, onChange }) {
+  const fields = group.fields || [];
+  if (!group.enabled || !fields.length) return null;
+  return (
+    <Section icon={ClipboardList} title={group.label || 'قسم مخصص'}>
+      <div className='space-y-3'>
+        {fields.filter(f => f.enabled !== false).map(f => (
+          <CustomFieldInput key={f.id} field={f} value={answers[`grp_${group.id}_${f.id}`]} onChange={v => onChange(`grp_${group.id}_${f.id}`, v)} />
+        ))}
+      </div>
+    </Section>
+  );
+}
+
 /* ══════════════════════════ WeeklyReportPage ══════════════════════════ */
 export default function WeeklyReportPage() {
   const t = useTranslations();
@@ -369,6 +474,34 @@ export default function WeeklyReportPage() {
   const [submitting, setSubmitting] = useState(false);
   const [ok, setOk] = useState(false);
   const [serverError, setServerError] = useState('');
+
+  /* ── Report config (loaded from admin/coach) ── */
+  const [reportConfig, setReportConfig] = useState(null);
+  const [customAnswers, setCustomAnswers] = useState({});
+
+  /* ── Config helpers ── */
+  const isSecEnabled = useCallback((sectionKey) => {
+    return reportConfig?.sections?.[sectionKey]?.enabled ?? true;
+  }, [reportConfig]);
+
+  const isFieldEnabled = useCallback((sectionKey, fieldKey) => {
+    if (!isSecEnabled(sectionKey)) return false;
+    return reportConfig?.sections?.[sectionKey]?.fields?.[fieldKey]?.enabled ?? true;
+  }, [reportConfig, isSecEnabled]);
+
+  const isFieldRequired = useCallback((sectionKey, fieldKey) => {
+    return reportConfig?.sections?.[sectionKey]?.fields?.[fieldKey]?.required ?? false;
+  }, [reportConfig]);
+
+  const getCustomFields = useCallback((sectionKey) => {
+    return reportConfig?.sections?.[sectionKey]?.customFields ?? [];
+  }, [reportConfig]);
+
+  const customGroups = useMemo(() => reportConfig?.customGroups ?? [], [reportConfig]);
+
+  const setCustomAnswer = useCallback((key, value) => {
+    setCustomAnswers(prev => ({ ...prev, [key]: value }));
+  }, []);
 
   /* ── schema ── */
   const schema = useMemo(
@@ -435,6 +568,10 @@ export default function WeeklyReportPage() {
   const reqPct = Math.round((reqDone / reqTotal) * 100) || 0;
 
   /* ── effects ── */
+  useEffect(() => {
+    getClientReportConfig().then(cfg => { if (cfg) setReportConfig(cfg); });
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
@@ -613,6 +750,7 @@ export default function WeeklyReportPage() {
         } : null,
         photos: photosPayload,
         notifyCoach: true,
+        customAnswers: Object.keys(customAnswers).length ? customAnswers : null,
       });
 
       setOk(true);
@@ -703,21 +841,24 @@ export default function WeeklyReportPage() {
       </div>
 
       {/* ── Diet Section ── */}
+      {isSecEnabled('diet') && (
       <Section title={t('weekly.diet.title')} icon={Utensils}>
         <div className='space-y-2'>
-          <Controller name='diet.hungry' control={control} render={({ field }) => <SwitchRow label={t('weekly.diet.hungry')} value={field.value} onChange={field.onChange} />} />
-          <Controller name='diet.mentalComfort' control={control} render={({ field }) => <SwitchRow label={t('weekly.diet.comfort')} value={field.value} onChange={field.onChange} />} />
-          <Controller name='diet.foodTooMuch' control={control} render={({ field }) => <SwitchRow label={t('weekly.diet.tooMuch')} value={field.value} onChange={field.onChange} />} />
-          <Controller name='diet.dietDeviation.hasDeviation' control={control} render={({ field }) => <SwitchRow label={t('weekly.diet.deviation.title')} value={field.value} onChange={field.onChange} />} />
+          {isFieldEnabled('diet','hungry') && <Controller name='diet.hungry' control={control} render={({ field }) => <SwitchRow label={t('weekly.diet.hungry')} value={field.value} onChange={field.onChange} />} />}
+          {isFieldEnabled('diet','mentalComfort') && <Controller name='diet.mentalComfort' control={control} render={({ field }) => <SwitchRow label={t('weekly.diet.comfort')} value={field.value} onChange={field.onChange} />} />}
+          {isFieldEnabled('diet','foodTooMuch') && <Controller name='diet.foodTooMuch' control={control} render={({ field }) => <SwitchRow label={t('weekly.diet.tooMuch')} value={field.value} onChange={field.onChange} />} />}
+          {isFieldEnabled('diet','dietDeviation') && <Controller name='diet.dietDeviation.hasDeviation' control={control} render={({ field }) => <SwitchRow label={t('weekly.diet.deviation.title')} value={field.value} onChange={field.onChange} />} />}
         </div>
 
+        {isFieldEnabled('diet','wantSpecific') && (
         <div className='pt-1'>
           <Controller name='diet.wantSpecific' control={control} render={({ field }) => (
             <Input label={t('weekly.diet.wantSpecific.title')} value={field.value} onChange={field.onChange} placeholder={t('weekly.diet.wantSpecific.ph')} />
           )} />
         </div>
+        )}
 
-        {watch('diet.dietDeviation.hasDeviation') && (
+        {watch('diet.dietDeviation.hasDeviation') && isFieldEnabled('diet','dietDeviation') && (
           <div className='mt-2 p-4 rounded-xl bg-amber-50/60 border border-amber-100 space-y-3'>
             <div className='text-xs font-semibold text-amber-700 flex items-center gap-1.5'>
               <Info className='w-3.5 h-3.5' /> {t('weekly.diet.deviation.title')}
@@ -732,19 +873,26 @@ export default function WeeklyReportPage() {
             </div>
           </div>
         )}
+
+        {/* Custom fields for diet section */}
+        {getCustomFields('diet').filter(f => f.enabled !== false).map(f => (
+          <CustomFieldInput key={f.id} field={f} value={customAnswers[`diet_${f.id}`]} onChange={v => setCustomAnswer(`diet_${f.id}`, v)} />
+        ))}
       </Section>
+      )}
 
       {/* ── Training Section ── */}
+      {isSecEnabled('training') && (
       <Section title={t('weekly.training.title')} icon={Dumbbell}>
         <div className='space-y-2'>
-          <Controller name='training.intensityOk' control={control} render={({ field }) => <SwitchRow label={t('weekly.training.intensityOk')} value={field.value} onChange={field.onChange} />} />
-          <Controller name='training.daysDeviation.hasDeviation' control={control} render={({ field }) => <SwitchRow label={t('weekly.training.daysDeviation')} value={field.value} onChange={field.onChange} />} />
-          <Controller name='training.shapeChange' control={control} render={({ field }) => <SwitchRow label={t('weekly.training.shape')} value={field.value} onChange={field.onChange} />} />
-          <Controller name='training.fitnessChange' control={control} render={({ field }) => <SwitchRow label={t('weekly.training.fitness')} value={field.value} onChange={field.onChange} />} />
-          <Controller name='training.sleepEnough' control={control} render={({ field }) => <SwitchRow label={t('weekly.training.sleepEnough')} value={field.value} onChange={field.onChange} />} />
+          {isFieldEnabled('training','intensityOk') && <Controller name='training.intensityOk' control={control} render={({ field }) => <SwitchRow label={t('weekly.training.intensityOk')} value={field.value} onChange={field.onChange} />} />}
+          {isFieldEnabled('training','daysDeviation') && <Controller name='training.daysDeviation.hasDeviation' control={control} render={({ field }) => <SwitchRow label={t('weekly.training.daysDeviation')} value={field.value} onChange={field.onChange} />} />}
+          {isFieldEnabled('training','shapeChange') && <Controller name='training.shapeChange' control={control} render={({ field }) => <SwitchRow label={t('weekly.training.shape')} value={field.value} onChange={field.onChange} />} />}
+          {isFieldEnabled('training','fitnessChange') && <Controller name='training.fitnessChange' control={control} render={({ field }) => <SwitchRow label={t('weekly.training.fitness')} value={field.value} onChange={field.onChange} />} />}
+          {isFieldEnabled('training','sleepEnough') && <Controller name='training.sleepEnough' control={control} render={({ field }) => <SwitchRow label={t('weekly.training.sleepEnough')} value={field.value} onChange={field.onChange} />} />}
         </div>
 
-        {watch('training.daysDeviation.hasDeviation') && (
+        {watch('training.daysDeviation.hasDeviation') && isFieldEnabled('training','daysDeviation') && (
           <div className='mt-2 p-4 rounded-xl bg-rose-50/50 border border-rose-100 space-y-3'>
             <div className='text-xs font-semibold text-rose-700 flex items-center gap-1.5'>
               <Info className='w-3.5 h-3.5' /> {t('weekly.training.daysDeviation')}
@@ -761,16 +909,23 @@ export default function WeeklyReportPage() {
         )}
 
         <div className='mt-2 grid grid-cols-1 md:grid-cols-2 gap-3'>
-          <Controller name='training.sleepHours' control={control} render={({ field }) => (
+          {isFieldEnabled('training','sleepHours') && <Controller name='training.sleepHours' control={control} render={({ field }) => (
             <Input label={t('weekly.training.sleepHours')} type='number' inputMode='numeric' value={field.value} onChange={val => field.onChange(String(val))} />
-          )} />
-          <Controller name='training.programNotes' control={control} render={({ field }) => (
+          )} />}
+          {isFieldEnabled('training','programNotes') && <Controller name='training.programNotes' control={control} render={({ field }) => (
             <Input label={t('weekly.training.notes.title')} value={field.value} onChange={e => field.onChange(e.target.value)} placeholder={t('weekly.training.notes.ph')} />
-          )} />
+          )} />}
         </div>
+
+        {/* Custom fields for training section */}
+        {getCustomFields('training').filter(f => f.enabled !== false).map(f => (
+          <CustomFieldInput key={f.id} field={f} value={customAnswers[`training_${f.id}`]} onChange={v => setCustomAnswer(`training_${f.id}`, v)} />
+        ))}
       </Section>
+      )}
 
       {/* ── Measurements Section ── */}
+      {isSecEnabled('measurements') && (
       <Section
         title={t('weekly.measurements.title')}
         icon={Ruler}
@@ -842,8 +997,10 @@ export default function WeeklyReportPage() {
           </div>
         )}
       </Section>
+      )}
 
       {/* ── Photos Section ── */}
+      {isSecEnabled('photos') && (
       <Section
         title={t('weekly.photos.title')}
         icon={Camera}
@@ -936,6 +1093,12 @@ export default function WeeklyReportPage() {
           </div>
         )}
       </Section>
+      )}
+
+      {/* ── Custom Groups (from coach/admin config) ── */}
+      {customGroups.map(group => (
+        <CustomGroupSection key={group.id} group={group} answers={customAnswers} onChange={setCustomAnswer} />
+      ))}
 
       {/* ── Status messages ── */}
       {ok && (

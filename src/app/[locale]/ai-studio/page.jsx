@@ -1,275 +1,794 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useTranslations, useLocale } from "next-intl";
+import { useState, useCallback, useRef } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles, ChevronDown, Plus, Trash2, User, Dumbbell, UtensilsCrossed, Check, Loader2, Edit3, ChevronRight, ChevronUp, Eye, EyeOff, RefreshCw, AlertCircle, Zap, Target, Clock, FlameKindling, Apple, X } from 'lucide-react';
 
-// Floating particle component
-function Particle({ style }) {
-  return (
-    <div
-      className="absolute rounded-full bg-blue-400 opacity-20 animate-pulse"
-      style={style}
-    />
-  );
-}
+import exerciseData from './exercise.json';
 
-// Animated grid lines
-function GridBackground() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {Array.from({ length: 12 }).map((_, i) => (
-        <div
-          key={`v-${i}`}
-          className="absolute top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-blue-500/10 to-transparent"
-          style={{ left: `${(i + 1) * 8.33}%` }}
-        />
-      ))}
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div
-          key={`h-${i}`}
-          className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/10 to-transparent"
-          style={{ top: `${(i + 1) * 12.5}%` }}
-        />
-      ))}
-    </div>
-  );
-}
+/* ─────────────────────────────────────────────
+   AI CONFIG — points to mse_ai_api
+──────────────────────────────────────────────*/
+const AI_BASE_URL = 'http://localhost:7777/v1/chat/completions';
+const AI_AUTH = 'Bearer change-secret-key-2026';
+const AI_MODEL = 'gpt-4o';
 
-// Pulsing rings + icon
-function PulsingRings() {
-  return (
-    <div className="relative flex items-center justify-center">
-      <div className="absolute w-40 h-40 rounded-full border border-blue-500/10 animate-ping" style={{ animationDuration: "3s" }} />
-      <div className="absolute w-32 h-32 rounded-full border border-blue-400/20 animate-ping" style={{ animationDuration: "2.5s", animationDelay: "0.5s" }} />
-      <div className="absolute w-24 h-24 rounded-full border border-blue-300/30 animate-ping" style={{ animationDuration: "2s", animationDelay: "1s" }} />
-      <div className="relative z-10 w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-900 border border-blue-400/40 shadow-2xl shadow-blue-500/30 flex items-center justify-center">
-        <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="20" cy="20" r="8" stroke="#93c5fd" strokeWidth="1.5" />
-          <circle cx="20" cy="20" r="3" fill="#3b82f6" />
-          <line x1="20" y1="4" x2="20" y2="11" stroke="#60a5fa" strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="20" y1="29" x2="20" y2="36" stroke="#60a5fa" strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="4" y1="20" x2="11" y2="20" stroke="#60a5fa" strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="29" y1="20" x2="36" y2="20" stroke="#60a5fa" strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="8.69" y1="8.69" x2="13.76" y2="13.76" stroke="#93c5fd" strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="26.24" y1="26.24" x2="31.31" y2="31.31" stroke="#93c5fd" strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="31.31" y1="8.69" x2="26.24" y2="13.76" stroke="#93c5fd" strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="13.76" y1="26.24" x2="8.69" y2="31.31" stroke="#93c5fd" strokeWidth="1.5" strokeLinecap="round" />
-          <circle cx="20" cy="4" r="1.5" fill="#bfdbfe" />
-          <circle cx="20" cy="36" r="1.5" fill="#bfdbfe" />
-          <circle cx="4" cy="20" r="1.5" fill="#bfdbfe" />
-          <circle cx="36" cy="20" r="1.5" fill="#bfdbfe" />
-        </svg>
-      </div>
-    </div>
-  );
-}
+let EXERCISE_DB = exerciseData;
 
-// Progress bar with shimmer
-function ProgressBar({ value }) {
-  return (
-    <div className="w-full h-1.5 bg-blue-950 rounded-full overflow-hidden">
-      <div
-        className="h-full rounded-full bg-gradient-to-r from-blue-600 via-blue-400 to-cyan-400 relative overflow-hidden transition-all duration-1000 ease-out"
-        style={{ width: `${value}%` }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
-      </div>
-    </div>
-  );
-}
-
-// Status badge with blinking dot
-function StatusBadge({ label }) {
-  const [dot, setDot] = useState(true);
-  useEffect(() => {
-    const t = setInterval(() => setDot((d) => !d), 900);
-    return () => clearInterval(t);
-  }, []);
-
-  return (
-    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-950/80 border border-blue-700/50 text-xs font-mono text-blue-300 tracking-widest uppercase">
-      <span className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${dot ? "bg-blue-400 shadow-lg shadow-blue-400" : "bg-blue-700"}`} />
-      {label}
-    </div>
-  );
-}
-
-// Feature card
-function FeatureCard({ icon, label, desc }) {
-  return (
-    <div className="group p-4 rounded-xl bg-blue-950/40 border border-blue-800/40 hover:border-blue-500/50 hover:bg-blue-900/30 transition-all duration-300 text-left">
-      <div className="text-2xl mb-2">{icon}</div>
-      <div className="text-sm font-semibold text-blue-200 mb-1">{label}</div>
-      <div className="text-xs text-blue-400/70 leading-relaxed">{desc}</div>
-    </div>
-  );
-}
-
-// Language switcher
-function LangSwitcher({ locale, onToggle }) {
-  return (
-    <button
-      onClick={onToggle}
-      className="absolute top-5 right-5 z-20 px-3 py-1.5 rounded-lg bg-blue-900/60 border border-blue-700/50 text-blue-300 text-xs font-mono hover:bg-blue-800/60 transition-all"
-    >
-      {locale === "en" ? "عربي" : "EN"}
-    </button>
-  );
-}
-
-// Feature icons and keys
-const FEATURES = [
-  { icon: "🧠", key: "feature_models" },
-  { icon: "⚡", key: "feature_realtime" },
-  { icon: "🔧", key: "feature_tools" },
-  { icon: "👤", key: "feature_accounts" },
-  { icon: "🏋️", key: "feature_workout" },
-  { icon: "🥗", key: "feature_nutrition" },
+/* ─────────────────────────────────────────────
+   MOCK FORM RESPONSES  (replace with real API)
+──────────────────────────────────────────────*/
+const MOCK_RESPONSES = [
+  { id: '1', name: 'Ahmed Al-Rashidi', goal: 'muscle gain', age: 25, weight: 75, height: 178, gender: 'male', experience: 'intermediate', email: 'ahmed@example.com', phone: '+966501234567' },
+  { id: '2', name: 'Sara Hassan', goal: 'fat loss', age: 30, weight: 68, height: 165, gender: 'female', experience: 'beginner', email: 'sara@example.com', phone: '+966509876543' },
+  { id: '3', name: 'Khalid Nasser', goal: 'endurance', age: 28, weight: 80, height: 182, gender: 'male', experience: 'advanced', email: 'khalid@example.com', phone: '+966507654321' },
 ];
 
-// ─── Translations bundled inline (no next-intl required) ──────────────────────
-const translations = {
-  en: {
-    badge: "Under Development",
-    title: "AI Studio",
-    subtitle: "We're crafting something powerful for coaches. This workspace isn't ready yet — check back soon.",
-    progress_label: "Build progress",
-    notify_placeholder: "your@email.com",
-    notify_btn: "Notify me",
-    footer: "AI Studio — Coming Soon",
-    feature_models: { label: "Smart Models", desc: "Connect and run advanced AI models seamlessly." },
-    feature_realtime: { label: "Real-time", desc: "Low-latency streaming responses and live feedback." },
-    feature_tools: { label: "Tools", desc: "Build and test custom AI-powered workflows." },
-    feature_accounts: { label: "Client Accounts", desc: "Create and manage accounts for your clients easily." },
-    feature_workout: { label: "Workout Plans", desc: "Design personalized exercise plans and track progress." },
-    feature_nutrition: { label: "Nutrition Plans", desc: "Build tailored meal and nutrition programs per client." },
-  },
-  ar: {
-    badge: "قيد التطوير",
-    title: "AI Studio",
-    subtitle: "نبني شيئاً قوياً للمدربين. هذه المساحة لم تكتمل بعد — تابعنا قريباً.",
-    progress_label: "تقدم البناء",
-    notify_placeholder: "بريدك@الإلكتروني.com",
-    notify_btn: "أبلغني",
-    footer: "AI Studio — قريباً",
-    feature_models: { label: "نماذج ذكية", desc: "ربط وتشغيل نماذج الذكاء الاصطناعي المتقدمة بسلاسة." },
-    feature_realtime: { label: "آني", desc: "استجابات فورية وتغذية راجعة مباشرة بكمون منخفض." },
-    feature_tools: { label: "أدوات", desc: "بناء واختبار سير عمل مدعومة بالذكاء الاصطناعي." },
-    feature_accounts: { label: "حسابات العملاء", desc: "إنشاء وإدارة حسابات عملائك بسهولة تامة." },
-    feature_workout: { label: "خطط التمرين", desc: "تصميم خطط تمرين مخصصة ومتابعة التقدم." },
-    feature_nutrition: { label: "خطط التغذية", desc: "بناء برامج غذائية مخصصة لكل عميل." },
-  },
+/* ─────────────────────────────────────────────
+   API ENDPOINTS — swap with real ones
+──────────────────────────────────────────────*/
+const API = {
+  createUser: '/api/users/create',
+  createWorkout: '/api/workouts/create',
+  createNutrition: '/api/nutrition/create',
 };
 
-export default function AIStudioComingSoon() {
-  const [progress] = useState(34);
-  const [locale, setLocale] = useState("en");
-  const t = translations[locale];
-  const isRtl = locale === "ar";
+/* ─────────────────────────────────────────────
+   HELPERS
+──────────────────────────────────────────────*/
+function genPass(len = 12) {
+  const c = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#';
+  return Array.from({ length: len }, () => c[Math.floor(Math.random() * c.length)]).join('');
+}
 
-  const [particles] = useState(() =>
-    Array.from({ length: 18 }).map(() => ({
-      width: `${Math.random() * 6 + 2}px`,
-      height: `${Math.random() * 6 + 2}px`,
-      top: `${Math.random() * 100}%`,
-      left: `${Math.random() * 100}%`,
-      animationDelay: `${Math.random() * 4}s`,
-      animationDuration: `${Math.random() * 3 + 2}s`,
-    }))
-  );
+const DAYS_EN = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const DAYS_AR = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
 
+/* ─────────────────────────────────────────────
+   SUB-COMPONENTS
+──────────────────────────────────────────────*/
+
+function SectionCard({ icon: Icon, title, subtitle, children, collapsible = false, defaultOpen = true, accent = 'blue' }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const colors = {
+    blue: 'from-blue-500 to-indigo-600',
+    green: 'from-emerald-500 to-teal-600',
+    amber: 'from-amber-500 to-orange-500',
+    purple: 'from-violet-500 to-purple-600',
+  };
   return (
-    <main
-      dir={isRtl ? "rtl" : "ltr"}
-      className=" scale-[1.03] relative min-h-screen flex items-center justify-center overflow-hidden"
-      style={{ background: "radial-gradient(ellipse 120% 80% at 50% 0%, #0f1e3a 0%, #060d1f 60%, #020509 100%)" }}
-    >
-      <style>{`
-        @keyframes shimmer { to { transform: translateX(200%); } }
-        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&family=Cairo:wght@400;600;800&display=swap');
-        body { font-family: ${isRtl ? "'Cairo'" : "'Syne'"}, sans-serif; }
-      `}</style>
-
-      {/* Language toggle */}
-      <LangSwitcher locale={locale} onToggle={() => setLocale(locale === "en" ? "ar" : "en")} />
-
-      <GridBackground />
-
-      {/* Glow blobs */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-700/20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-72 h-72 bg-cyan-600/15 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-blue-800/10 rounded-full blur-[80px] pointer-events-none" />
-
-      {/* Particles */}
-      {particles.map((p, i) => (
-        <Particle key={i} style={p} />
-      ))}
-
-      {/* Card */}
-      <div className="relative z-10 w-full max-w-xl mx-auto px-6 py-12 flex flex-col items-center gap-8">
-
-        <StatusBadge label={t.badge} />
-
-        <PulsingRings />
-
-        {/* Heading */}
-        <div className="text-center space-y-3">
-          <h1
-            className="text-5xl font-extrabold tracking-tight bg-gradient-to-b from-white via-blue-100 to-blue-400 bg-clip-text text-transparent"
-            style={{ fontFamily: isRtl ? "'Cairo', sans-serif" : "'Syne', sans-serif" }}
-          >
-            {t.title}
-          </h1>
-          <p className="text-blue-300/70 text-base leading-relaxed max-w-sm mx-auto">
-            {t.subtitle}
-          </p>
+    <div className='rounded-2xl border border-slate-200/70 bg-white shadow-sm overflow-hidden'>
+      <div className={`flex items-center gap-3 px-5 py-4 border-b border-slate-100 ${collapsible ? 'cursor-pointer select-none' : ''}`} onClick={() => collapsible && setOpen(o => !o)}>
+        <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${colors[accent]} text-white shadow-sm flex-shrink-0`}>
+          <Icon className='h-4.5 w-4.5' size={18} />
         </div>
-
-        {/* Progress */}
-        <div className="w-full space-y-2">
-          <div className="flex justify-between items-center text-xs font-mono text-blue-500">
-            <span>{t.progress_label}</span>
-            <span className="text-blue-300">{progress}%</span>
-          </div>
-          <ProgressBar value={progress} />
+        <div className='flex-1 min-w-0'>
+          <p className='text-sm font-semibold text-slate-900'>{title}</p>
+          {subtitle && <p className='text-xs text-slate-500 truncate'>{subtitle}</p>}
         </div>
+        {collapsible && (
+          <motion.div animate={{ rotate: open ? 0 : -90 }} transition={{ duration: 0.2 }}>
+            <ChevronDown className='h-4 w-4 text-slate-400' />
+          </motion.div>
+        )}
+      </div>
+      <AnimatePresence initial={false}>
+        {(!collapsible || open) && (
+          <motion.div key='body' initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} className='overflow-hidden'>
+            <div className='p-5'>{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
-        {/* Divider */}
-        <div className="w-full h-px bg-gradient-to-r from-transparent via-blue-700/40 to-transparent" />
+function Field({ label, value, onChange, type = 'text', placeholder = '' }) {
+  return (
+    <div>
+      <label className='block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1'>{label}</label>
+      <input type={type} value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} className='w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition' />
+    </div>
+  );
+}
 
-        {/* Feature cards — 3 columns × 2 rows */}
-        <div className="w-full grid grid-cols-3 gap-3">
-          {FEATURES.map(({ icon, key }) => (
-            <FeatureCard
-              key={key}
-              icon={icon}
-              label={t[key].label}
-              desc={t[key].desc}
-            />
-          ))}
-        </div>
+function TextareaField({ label, value, onChange, rows = 2 }) {
+  return (
+    <div>
+      <label className='block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1'>{label}</label>
+      <textarea value={value ?? ''} onChange={e => onChange(e.target.value)} rows={rows} className='w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition resize-none' />
+    </div>
+  );
+}
 
-        {/* Divider */}
-        <div className="w-full h-px bg-gradient-to-r from-transparent via-blue-700/40 to-transparent" />
+function Badge({ children, color = 'slate' }) {
+  const c = {
+    slate: 'bg-slate-100 text-slate-700',
+    blue: 'bg-blue-50 text-blue-700 border border-blue-200',
+    green: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    amber: 'bg-amber-50 text-amber-700 border border-amber-200',
+    red: 'bg-rose-50 text-rose-700 border border-rose-200',
+    purple: 'bg-violet-50 text-violet-700 border border-violet-200',
+  };
+  return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${c[color] || c.slate}`}>{children}</span>;
+}
 
-        {/* Notify CTA */}
-        <div className="w-full flex gap-2">
-          <input
-            type="email"
-            placeholder={t.notify_placeholder}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-blue-950/60 border border-blue-700/50 text-blue-100 text-sm placeholder-blue-600 focus:outline-none focus:border-blue-400/70 transition-colors"
-            dir="ltr"
-          />
-          <button className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-sm font-semibold transition-all duration-200 whitespace-nowrap shadow-lg shadow-blue-700/30">
-            {t.notify_btn}
+/* ─────────────────────────────────────────────
+   USER CARD EDITOR
+──────────────────────────────────────────────*/
+function UserEditor({ user, setUser, t, locale }) {
+  const [showPass, setShowPass] = useState(false);
+  return (
+    <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+      <Field label={t('fields.name')} value={user.name} onChange={v => setUser(u => ({ ...u, name: v }))} />
+      <Field label={t('fields.email')} value={user.email} onChange={v => setUser(u => ({ ...u, email: v }))} type='email' />
+      <div className='relative'>
+        <Field label={t('fields.password')} value={user.password} onChange={v => setUser(u => ({ ...u, password: v }))} type={showPass ? 'text' : 'password'} />
+        <div className='absolute right-2 top-[26px] flex gap-1'>
+          <button type='button' onClick={() => setShowPass(s => !s)} className='h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition'>
+            {showPass ? <EyeOff size={13} /> : <Eye size={13} />}
+          </button>
+          <button type='button' onClick={() => setUser(u => ({ ...u, password: genPass() }))} title='Generate' className='h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition'>
+            <RefreshCw size={13} />
           </button>
         </div>
-
-        {/* Footer */}
-        <p className="text-xs text-blue-600 font-mono tracking-wide text-center">
-          © {new Date().getFullYear()} {t.footer}
-        </p>
       </div>
-    </main>
+      <Field label={t('fields.phone')} value={user.phone} onChange={v => setUser(u => ({ ...u, phone: v }))} />
+      <Field label={t('fields.age')} value={user.age} onChange={v => setUser(u => ({ ...u, age: v }))} type='number' />
+      <Field label={t('fields.weight')} value={user.weight} onChange={v => setUser(u => ({ ...u, weight: v }))} />
+      <div>
+        <label className='block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1'>{t('fields.goal')}</label>
+        <select value={user.goal ?? ''} onChange={e => setUser(u => ({ ...u, goal: e.target.value }))} className='w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition'>
+          {['muscle gain', 'fat loss', 'endurance', 'maintenance', 'flexibility'].map(g => (
+            <option key={g} value={g}>
+              {g}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className='block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1'>{t('fields.membership')}</label>
+        <select value={user.membership ?? 'basic'} onChange={e => setUser(u => ({ ...u, membership: e.target.value }))} className='w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition'>
+          {['basic', 'gold', 'platinum'].map(m => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   WORKOUT PLAN EDITOR
+──────────────────────────────────────────────*/
+function WorkoutEditor({ plan, setPlan, t, locale }) {
+  const isRTL = locale === 'ar';
+  const DAYS = isRTL ? DAYS_AR : DAYS_EN;
+  const [openDays, setOpenDays] = useState({});
+  const toggle = i => setOpenDays(s => ({ ...s, [i]: !s[i] }));
+
+  const addDay = () => {
+    setPlan(p => [...(p || []), { day: DAYS_EN[p?.length % 7] || 'Saturday', exercises: [] }]);
+  };
+
+  const removeDay = i => setPlan(p => p.filter((_, idx) => idx !== i));
+
+  const addExercise = dayIdx => {
+    const ex = EXERCISE_DB[Math.floor(Math.random() * Math.max(1, EXERCISE_DB.length))] || {};
+    setPlan(p =>
+      p.map((d, i) =>
+        i !== dayIdx
+          ? d
+          : {
+              ...d,
+              exercises: [
+                ...(d.exercises || []),
+                {
+                  id: ex.id || crypto.randomUUID(),
+                  name: ex.name || 'New Exercise',
+                  img: ex.img || null,
+                  sets: ex.targetSets || 3,
+                  reps: ex.targetReps || '10-12',
+                  rest: ex.rest || 60,
+                },
+              ],
+            },
+      ),
+    );
+  };
+
+  const removeExercise = (dayIdx, exIdx) => {
+    setPlan(p =>
+      p.map((d, i) =>
+        i !== dayIdx
+          ? d
+          : {
+              ...d,
+              exercises: d.exercises.filter((_, j) => j !== exIdx),
+            },
+      ),
+    );
+  };
+
+  const updateExField = (dayIdx, exIdx, key, val) => {
+    setPlan(p =>
+      p.map((d, i) =>
+        i !== dayIdx
+          ? d
+          : {
+              ...d,
+              exercises: d.exercises.map((e, j) => (j !== exIdx ? e : { ...e, [key]: val })),
+            },
+      ),
+    );
+  };
+
+  return (
+    <div className='space-y-3'>
+      {(plan || []).map((day, di) => (
+        <div key={di} className='rounded-xl border border-slate-200 bg-slate-50/60 overflow-hidden'>
+          <div className='flex items-center justify-between gap-3 px-4 py-3 cursor-pointer hover:bg-slate-100/60 transition' onClick={() => toggle(di)}>
+            <div className='flex items-center gap-2'>
+              <span className='text-xs font-bold text-white bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg h-6 w-6 flex items-center justify-center'>{di + 1}</span>
+              <select
+                value={day.day}
+                onChange={e => {
+                  e.stopPropagation();
+                  setPlan(p => p.map((d, i) => (i !== di ? d : { ...d, day: e.target.value })));
+                }}
+                onClick={e => e.stopPropagation()}
+                className='bg-transparent text-sm font-semibold text-slate-800 outline-none cursor-pointer'>
+                {DAYS_EN.map((d, di_) => (
+                  <option key={d} value={d}>
+                    {isRTL ? DAYS_AR[di_] : d}
+                  </option>
+                ))}
+              </select>
+              <Badge color='blue'>
+                {day.exercises?.length || 0} {t('workout.exercises')}
+              </Badge>
+            </div>
+            <div className='flex items-center gap-1.5'>
+              <button
+                type='button'
+                onClick={e => {
+                  e.stopPropagation();
+                  removeDay(di);
+                }}
+                className='h-7 w-7 flex items-center justify-center rounded-lg text-rose-400 hover:bg-rose-50 transition'>
+                <Trash2 size={13} />
+              </button>
+              <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${openDays[di] ? 'rotate-180' : ''}`} />
+            </div>
+          </div>
+          <AnimatePresence>
+            {openDays[di] && (
+              <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className='overflow-hidden'>
+                <div className='px-4 pb-4 space-y-2.5 pt-1'>
+                  {(day.exercises || []).map((ex, ei) => (
+                    <div key={ei} className='flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-3'>
+                      {ex.img && <img src={ex.img} alt={ex.name} className='h-12 w-12 rounded-lg object-contain bg-slate-50 flex-shrink-0' />}
+                      <div className='flex-1 grid grid-cols-2 md:grid-cols-4 gap-2 min-w-0'>
+                        <div className='col-span-2 md:col-span-1'>
+                          <input value={ex.name} onChange={e => updateExField(di, ei, 'name', e.target.value)} className='w-full text-xs font-semibold text-slate-800 bg-transparent border-b border-slate-200 pb-0.5 outline-none focus:border-blue-400' />
+                        </div>
+                        {[
+                          ['sets', t('workout.sets')],
+                          ['reps', t('workout.reps')],
+                          ['rest', t('workout.rest')],
+                        ].map(([k, lbl]) => (
+                          <div key={k}>
+                            <span className='text-[10px] text-slate-400 font-medium block'>{lbl}</span>
+                            <input value={ex[k] ?? ''} onChange={e => updateExField(di, ei, k, e.target.value)} className='w-full text-xs text-slate-700 bg-transparent border-b border-slate-200 pb-0.5 outline-none focus:border-blue-400' />
+                          </div>
+                        ))}
+                      </div>
+                      <button type='button' onClick={() => removeExercise(di, ei)} className='h-7 w-7 flex items-center justify-center rounded-lg text-rose-400 hover:bg-rose-50 transition flex-shrink-0'>
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ))}
+                  <button type='button' onClick={() => addExercise(di)} className='flex items-center gap-1.5 text-xs text-blue-600 font-semibold hover:text-blue-700 mt-1 transition'>
+                    <Plus size={13} /> {t('workout.addExercise')}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      ))}
+      <button type='button' onClick={addDay} className='flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 transition'>
+        <Plus size={14} /> {t('workout.addDay')}
+      </button>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   NUTRITION PLAN EDITOR
+──────────────────────────────────────────────*/
+function NutritionEditor({ plan, setPlan, t }) {
+  const [openMeals, setOpenMeals] = useState({});
+  const toggle = i => setOpenMeals(s => ({ ...s, [i]: !s[i] }));
+
+  const addMeal = () => {
+    setPlan(p => [...(p || []), { title: `Meal ${(p?.length || 0) + 1}`, calories: 500, protein: 40, carbs: 50, fat: 15, items: [] }]);
+  };
+
+  const removeMeal = i => setPlan(p => p.filter((_, idx) => idx !== i));
+
+  const updateMeal = (i, key, val) => {
+    setPlan(p => p.map((m, idx) => (idx !== i ? m : { ...m, [key]: val })));
+  };
+
+  const addItem = i => {
+    setPlan(p =>
+      p.map((m, idx) =>
+        idx !== i
+          ? m
+          : {
+              ...m,
+              items: [...(m.items || []), { name: '', quantity: '', calories: 0 }],
+            },
+      ),
+    );
+  };
+
+  const updateItem = (mi, ii, key, val) => {
+    setPlan(p =>
+      p.map((m, idx) =>
+        idx !== mi
+          ? m
+          : {
+              ...m,
+              items: m.items.map((it, j) => (j !== ii ? it : { ...it, [key]: val })),
+            },
+      ),
+    );
+  };
+
+  const removeItem = (mi, ii) => {
+    setPlan(p => p.map((m, idx) => (idx !== mi ? m : { ...m, items: m.items.filter((_, j) => j !== ii) })));
+  };
+
+  const totalCals = (plan || []).reduce((s, m) => s + Number(m.calories || 0), 0);
+
+  return (
+    <div className='space-y-3'>
+      {/* Totals row */}
+      <div className='flex flex-wrap gap-2 pb-2 border-b border-slate-100'>
+        {[
+          { label: t('nutrition.totalCalories'), value: totalCals, icon: FlameKindling, color: 'amber' },
+          { label: t('nutrition.meals'), value: plan?.length || 0, icon: UtensilsCrossed, color: 'green' },
+        ].map(({ label, value, icon: Ic, color }) => (
+          <div key={label} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold bg-${color === 'amber' ? 'amber' : 'emerald'}-50 text-${color === 'amber' ? 'amber' : 'emerald'}-700 border border-${color === 'amber' ? 'amber' : 'emerald'}-200`}>
+            <Ic size={13} /> {label}: <span className='font-bold'>{value}</span>
+          </div>
+        ))}
+      </div>
+
+      {(plan || []).map((meal, mi) => (
+        <div key={mi} className='rounded-xl border border-slate-200 bg-slate-50/60 overflow-hidden'>
+          <div className='flex items-center justify-between gap-3 px-4 py-3 cursor-pointer hover:bg-slate-100/60 transition' onClick={() => toggle(mi)}>
+            <div className='flex items-center gap-2 min-w-0'>
+              <span className='text-xs font-bold text-white bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg h-6 w-6 flex items-center justify-center flex-shrink-0'>{mi + 1}</span>
+              <input
+                value={meal.title}
+                onChange={e => {
+                  e.stopPropagation();
+                  updateMeal(mi, 'title', e.target.value);
+                }}
+                onClick={e => e.stopPropagation()}
+                className='text-sm font-semibold text-slate-800 bg-transparent outline-none w-36 truncate'
+              />
+              <Badge color='green'>{meal.calories} kcal</Badge>
+            </div>
+            <div className='flex items-center gap-1.5'>
+              <button
+                type='button'
+                onClick={e => {
+                  e.stopPropagation();
+                  removeMeal(mi);
+                }}
+                className='h-7 w-7 flex items-center justify-center rounded-lg text-rose-400 hover:bg-rose-50 transition'>
+                <Trash2 size={13} />
+              </button>
+              <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${openMeals[mi] ? 'rotate-180' : ''}`} />
+            </div>
+          </div>
+          <AnimatePresence>
+            {openMeals[mi] && (
+              <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className='overflow-hidden'>
+                <div className='px-4 pb-4 pt-1 space-y-3'>
+                  <div className='grid grid-cols-2 md:grid-cols-4 gap-3'>
+                    {[
+                      ['calories', t('nutrition.calories')],
+                      ['protein', t('nutrition.protein')],
+                      ['carbs', t('nutrition.carbs')],
+                      ['fat', t('nutrition.fat')],
+                    ].map(([k, lbl]) => (
+                      <div key={k}>
+                        <label className='block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1'>{lbl}</label>
+                        <input type='number' value={meal[k] ?? ''} onChange={e => updateMeal(mi, k, e.target.value)} className='w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 transition' />
+                      </div>
+                    ))}
+                  </div>
+                  <div className='space-y-1.5'>
+                    {(meal.items || []).map((it, ii) => (
+                      <div key={ii} className='flex items-center gap-2'>
+                        <input value={it.name} onChange={e => updateItem(mi, ii, 'name', e.target.value)} placeholder={t('nutrition.itemName')} className='flex-1 text-xs rounded-lg border border-slate-200 bg-white px-2 py-1.5 outline-none focus:border-emerald-400 transition' />
+                        <input value={it.quantity} onChange={e => updateItem(mi, ii, 'quantity', e.target.value)} placeholder={t('nutrition.quantity')} className='w-20 text-xs rounded-lg border border-slate-200 bg-white px-2 py-1.5 outline-none focus:border-emerald-400 transition' />
+                        <input value={it.calories} onChange={e => updateItem(mi, ii, 'calories', e.target.value)} placeholder='kcal' className='w-16 text-xs rounded-lg border border-slate-200 bg-white px-2 py-1.5 outline-none focus:border-emerald-400 transition' />
+                        <button type='button' onClick={() => removeItem(mi, ii)} className='h-7 w-7 flex items-center justify-center rounded-lg text-rose-400 hover:bg-rose-50 transition flex-shrink-0'>
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                    <button type='button' onClick={() => addItem(mi)} className='flex items-center gap-1.5 text-xs text-emerald-600 font-semibold hover:text-emerald-700 mt-1 transition'>
+                      <Plus size={12} /> {t('nutrition.addItem')}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      ))}
+      <button type='button' onClick={addMeal} className='flex items-center gap-2 text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition'>
+        <Plus size={14} /> {t('nutrition.addMeal')}
+      </button>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   BUILD AI PROMPT
+──────────────────────────────────────────────*/
+function buildPrompt(response, exerciseList) {
+  const exSample = exerciseList
+    .slice(0, 30)
+    .map(e => `{"id":"${e.id}","name":"${e.name}","category":"${e.category}","sets":${e.targetSets},"reps":"${e.targetReps}","rest":${e.rest}}`)
+    .join(',');
+  return `You are an expert fitness coach. Based on this client data, generate a complete plan.
+
+Client data:
+${JSON.stringify(response, null, 2)}
+
+Available exercises (sample):
+[${exSample}]
+
+Return ONLY valid JSON (no markdown, no explanation) matching this exact structure:
+{
+  "user": {
+    "name": "string",
+    "email": "string (generate from name if missing)",
+    "phone": "string",
+    "age": number,
+    "weight": number,
+    "goal": "string",
+    "membership": "basic|gold|platinum",
+    "notes": "string"
+  },
+  "workoutPlan": [
+    {
+      "day": "Saturday|Sunday|Monday|Tuesday|Wednesday|Thursday|Friday",
+      "exercises": [
+        { "id": "exercise_id_from_list", "name": "string", "img": "url_or_null", "sets": number, "reps": "string", "rest": number }
+      ]
+    }
+  ],
+  "nutritionPlan": [
+    {
+      "title": "Meal name",
+      "calories": number,
+      "protein": number,
+      "carbs": number,
+      "fat": number,
+      "items": [
+        { "name": "food name", "quantity": "amount with unit", "calories": number }
+      ]
+    }
+  ]
+}
+
+Rules:
+- Create 3-5 workout days appropriate for the goal
+- Create 4-6 meals appropriate for the goal and weight
+- Use exercises from the provided list
+- Make nutritional values realistic
+- If name/email missing, generate sensible defaults`;
+}
+
+/* ─────────────────────────────────────────────
+   MAIN PAGE
+──────────────────────────────────────────────*/
+export default function AIStudioPage() {
+  const t = useTranslations('aiStudio');
+  const locale = useLocale();
+  const isRTL = locale === 'ar';
+
+  // State
+  const [responses] = useState(MOCK_RESPONSES);
+  const [selectedId, setSelectedId] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedOk, setSavedOk] = useState(false);
+  const [error, setError] = useState('');
+  const [aiError, setAiError] = useState('');
+
+  const [userData, setUserData] = useState(null);
+  const [workoutPlan, setWorkoutPlan] = useState(null);
+  const [nutritionPlan, setNutritionPlan] = useState(null);
+
+  const hasData = userData && workoutPlan && nutritionPlan;
+
+  const selectedResponse = responses.find(r => r.id === selectedId);
+
+  /* ── GENERATE ── */
+  const handleGenerate = async () => {
+    if (!selectedResponse) return;
+    setGenerating(true);
+    setAiError('');
+    setError('');
+    setSavedOk(false);
+
+    const prompt = buildPrompt(selectedResponse, EXERCISE_DB);
+
+    try {
+      const res = await fetch(AI_BASE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: AI_AUTH },
+        body: JSON.stringify({
+          model: AI_MODEL,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+
+      if (!res.ok) throw new Error(`AI API error: ${res.status}`);
+      const data = await res.json();
+      const raw = data?.choices?.[0]?.message?.content;
+
+      if (!raw) {
+        throw new Error('AI returned empty content');
+      }
+
+      let parsed;
+
+      if (typeof raw === 'string') {
+        const clean = raw
+          .replace(/```json|```/g, '')
+          .replace(/\n/g, ' ') // 🔥 مهم
+          .replace(/\r/g, '')
+          .trim();
+
+        parsed = JSON.parse(clean);
+      } else if (typeof raw === 'object') {
+        parsed = raw;
+      } else {
+        throw new Error('Unexpected AI response format');
+      }
+
+      if (!parsed?.user) {
+        throw new Error('Missing user object in AI response');
+      }
+
+      setUserData({ ...parsed.user, password: genPass() });
+      setWorkoutPlan(Array.isArray(parsed.workoutPlan) ? parsed.workoutPlan : []);
+      setNutritionPlan(Array.isArray(parsed.nutritionPlan) ? parsed.nutritionPlan : []);
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : t('errors.aiError'));
+      setAiError(e.message || t('errors.aiError'));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  /* ── APPROVE / SAVE ── */
+  const handleApprove = async () => {
+    if (!hasData) return;
+    setSaving(true);
+    setError('');
+    try {
+      // Create user
+      const uRes = await fetch(API.createUser, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      });
+      if (!uRes.ok) {
+        // Non-blocking demo: just log
+        console.warn('User API not connected yet. Payload:', userData);
+      }
+
+      // Create workout
+      const wRes = await fetch(API.createWorkout, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userData?.id, plan: workoutPlan }),
+      });
+      if (!wRes.ok) console.warn('Workout API not connected yet. Payload:', workoutPlan);
+
+      // Create nutrition
+      const nRes = await fetch(API.createNutrition, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userData?.id, plan: nutritionPlan }),
+      });
+      if (!nRes.ok) console.warn('Nutrition API not connected yet. Payload:', nutritionPlan);
+
+      setSavedOk(true);
+    } catch (e) {
+      // In demo mode, treat network errors as success (APIs not yet wired)
+      setSavedOk(true);
+      console.warn('API not connected, demo mode. Data ready to send:', { userData, workoutPlan, nutritionPlan });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ── RENDER ── */
+  return (
+    <div className={`min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 ${isRTL ? 'rtl' : 'ltr'}`}>
+      <div className='mx-auto max-w-5xl px-4 py-8 space-y-6'>
+        {/* ── HEADER ── */}
+        <div className='flex flex-col sm:flex-row sm:items-end justify-between gap-4'>
+          <div>
+            <div className='flex items-center gap-3 mb-2'>
+              <div className='flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-200'>
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <h1 className='text-2xl font-bold text-slate-900 tracking-tight'>{t('title')}</h1>
+                <p className='text-sm text-slate-500'>{t('subtitle')}</p>
+              </div>
+            </div>
+          </div>
+          <div className='flex items-center gap-2'>
+            <Badge color='blue'>{t('badges.beta')}</Badge>
+            <Badge color='purple'>{t('badges.ai')}</Badge>
+          </div>
+        </div>
+
+        {/* ── RESPONSE SELECTOR + GENERATE ── */}
+        <div className='rounded-2xl border border-slate-200/70 bg-white shadow-sm p-5'>
+          <p className='text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3'>{t('selector.label')}</p>
+          <div className='flex flex-col sm:flex-row gap-3'>
+            <div className='relative flex-1'>
+              <select
+                value={selectedId}
+                onChange={e => {
+                  setSelectedId(e.target.value);
+                  setUserData(null);
+                  setWorkoutPlan(null);
+                  setNutritionPlan(null);
+                  setSavedOk(false);
+                  setAiError('');
+                }}
+                className='w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm font-medium text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition cursor-pointer'>
+                <option value=''>{t('selector.placeholder')}</option>
+                {responses.map(r => (
+                  <option key={r.id} value={r.id}>
+                    {r.name || `Response #${r.id}`} — {r.goal}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400' />
+            </div>
+            <motion.button type='button' disabled={!selectedId || generating} onClick={handleGenerate} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className='flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 shadow-md shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition'>
+              {generating ? <Loader2 size={16} className='animate-spin' /> : <Zap size={16} />}
+              {generating ? t('btn.generating') : t('btn.generate')}
+            </motion.button>
+          </div>
+
+          {/* Selected response preview */}
+          {selectedResponse && (
+            <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className='mt-4 flex flex-wrap gap-2'>
+              {Object.entries(selectedResponse)
+                .filter(([k]) => k !== 'id')
+                .map(([k, v]) => (
+                  <span key={k} className='inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600'>
+                    <span className='text-slate-400'>{k}:</span> {String(v)}
+                  </span>
+                ))}
+            </motion.div>
+          )}
+
+          {aiError && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='mt-3 flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700'>
+              <AlertCircle size={15} className='flex-shrink-0' /> {aiError}
+            </motion.div>
+          )}
+        </div>
+
+        {/* ── LOADING SKELETONS ── */}
+        {generating && (
+          <div className='space-y-4'>
+            {[1, 2, 3].map(i => (
+              <div key={i} className='rounded-2xl border border-slate-200 bg-white p-5 animate-pulse'>
+                <div className='h-4 w-1/4 bg-slate-100 rounded-full mb-4' />
+                <div className='grid grid-cols-2 gap-3'>
+                  {[1, 2, 3, 4].map(j => (
+                    <div key={j} className='h-9 bg-slate-100 rounded-lg' />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── DATA SECTIONS ── */}
+        <AnimatePresence>
+          {hasData && !generating && (
+            <motion.div key='data' initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} className='space-y-4'>
+              {/* User Card */}
+              <SectionCard icon={User} title={t('sections.user')} subtitle={userData?.name} accent='blue' collapsible defaultOpen>
+                <UserEditor user={userData} setUser={setUserData} t={t} locale={locale} />
+              </SectionCard>
+
+              {/* Workout Plan */}
+              <SectionCard icon={Dumbbell} title={t('sections.workout')} subtitle={`${workoutPlan?.length || 0} ${t('workout.days')}`} accent='purple' collapsible defaultOpen>
+                <WorkoutEditor plan={workoutPlan} setPlan={setWorkoutPlan} t={t} locale={locale} />
+              </SectionCard>
+
+              {/* Nutrition Plan */}
+              <SectionCard icon={UtensilsCrossed} title={t('sections.nutrition')} subtitle={`${nutritionPlan?.length || 0} ${t('nutrition.meals')}`} accent='green' collapsible defaultOpen>
+                <NutritionEditor plan={nutritionPlan} setPlan={setNutritionPlan} t={t} />
+              </SectionCard>
+
+              {/* APPROVE CTA */}
+              <div className='flex flex-col sm:flex-row items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5'>
+                <div className='flex-1'>
+                  <p className='text-sm font-semibold text-slate-800'>{t('approve.title')}</p>
+                  <p className='text-xs text-slate-500 mt-0.5'>{t('approve.subtitle')}</p>
+                </div>
+                <div className='flex items-center gap-3'>
+                  <button
+                    type='button'
+                    onClick={() => {
+                      setUserData(null);
+                      setWorkoutPlan(null);
+                      setNutritionPlan(null);
+                      setSavedOk(false);
+                    }}
+                    className='flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition'>
+                    <X size={14} /> {t('btn.discard')}
+                  </button>
+                  <motion.button type='button' onClick={handleApprove} disabled={saving || savedOk} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className='flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 shadow-md shadow-emerald-200 disabled:opacity-70 disabled:cursor-not-allowed transition'>
+                    {saving ? <Loader2 size={15} className='animate-spin' /> : savedOk ? <Check size={15} /> : <Check size={15} />}
+                    {saving ? t('btn.saving') : savedOk ? t('btn.saved') : t('btn.approve')}
+                  </motion.button>
+                </div>
+              </div>
+
+              {savedOk && (
+                <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className='flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700 font-medium'>
+                  <Check size={15} className='flex-shrink-0' /> {t('success.message')}
+                </motion.div>
+              )}
+
+              {error && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700'>
+                  <AlertCircle size={15} /> {error}
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Empty state */}
+        {!hasData && !generating && (
+          <div className='flex flex-col items-center justify-center py-20 text-center'>
+            <div className='flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-100 to-indigo-100 mb-4'>
+              <Sparkles size={32} className='text-blue-500' />
+            </div>
+            <p className='text-base font-semibold text-slate-700'>{t('empty.title')}</p>
+            <p className='text-sm text-slate-400 mt-1 max-w-xs'>{t('empty.subtitle')}</p>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

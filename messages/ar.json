@@ -5924,239 +5924,699 @@
 		}
 	},
 	"billing": {
-    "title": "الفواتير والمدفوعات",
-    "subtitle": "إدارة شاملة للعملاء والاشتراكات والمدفوعات والحزم والتواصل",
-    "currency": "ج.م",
-    "tabs": {
-      "overview": "نظرة عامة",
-      "clients": "العملاء",
-      "packages": "الحزم",
-      "subscriptions": "الاشتراكات",
-      "payments": "إضافة دفعة",
-      "communications": "التواصل"
-    },
-    "kpi": {
-      "walletBalance": {
-        "title": "رصيد المحفظة"
-      },
-      "totalEarned": {
-        "title": "إجمالي الأرباح"
-      },
-      "moneyInThisMonth": {
-        "title": "إيرادات هذا الشهر"
-      },
-      "pendingPayments": "مدفوعات معلقة",
-      "activeSubscriptions": "اشتراكات نشطة",
-      "monthlyRevenue": "الإيراد الشهري",
-      "renewalRate": "معدل التجديد",
-      "totalClients": "إجمالي العملاء",
-      "activeClients": "عملاء نشطون",
-      "urgentRenewal": "تجديد عاجل (أقل من 7 أيام)",
-      "soonRenewal": "تجديد قريب (أقل من 30 يوم)",
-      "totalPackages": "إجمالي الحزم",
-      "totalPayments": "إجمالي المدفوعات"
-    },
-    "status": {
-      "completed": "مكتمل",
-      "pending": "معلق",
-      "failed": "فشل",
-      "active": "نشط"
-    },
-    "filters": {
-      "status": "الحالة",
-      "type": "النوع",
-      "subscription": "اشتراك",
-      "withdrawal": "سحب",
-      "refund": "استرداد",
-      "package": "الحزمة",
-      "client": "العميل",
-      "allClients": "جميع العملاء",
-      "fromDate": "من تاريخ",
-      "toDate": "إلى تاريخ",
-      "selectDate": "اختر تاريخاً",
-      "sort": "الترتيب",
-      "newest": "الأحدث أولاً",
-      "oldest": "الأقدم أولاً",
-      "amountHigh": "الأعلى مبلغاً",
-      "amountLow": "الأقل مبلغاً"
-    },
-    "common": {
-      "all": "الكل",
-      "search": "بحث...",
-      "apply": "تطبيق",
-      "cancel": "إلغاء",
-      "save": "حفظ",
-      "update": "تحديث",
-      "delete": "حذف",
-      "edit": "تعديل",
-      "deleted": "تم الحذف",
-      "saved": "تم الحفظ",
-      "updated": "تم التحديث",
-      "refresh": "تحديث",
-      "export": "تصدير",
-      "viewAll": "عرض الكل",
-      "loading": "جاري التحميل...",
-      "system": "النظام",
-      "back": "رجوع",
-      "whatsapp": "واتساب"
-    },
-    "tooltips": {
-      "pageInfo": "هذه الصفحة تتيح لك إدارة الفواتير والمدفوعات والعملاء والحزم والاشتراكات بشكل شامل من مكان واحد."
-    },
-    "transactions": {
-      "recent": "آخر المعاملات",
-      "recentSubtitle": "جميع المعاملات المالية الأخيرة",
-      "empty": "لا توجد معاملات",
-      "examples": {
-        "subscription": "دفعة اشتراك"
-      }
-    },
-    "table": {
-      "status": "الحالة",
-      "client": "العميل",
-      "description": "الوصف",
-      "date": "التاريخ",
-      "amount": "المبلغ",
-      "actions": "إجراءات",
-      "period": "الفترة",
-      "to": "إلى",
-      "view": "عرض"
-    },
-    "payments": {
-      "history": "سجل الفواتير",
-      "historyDescription": "جميع الفواتير والاشتراكات المسجلة",
-      "empty": "لا توجد فواتير",
-      "emptyDescription": "لم يتم إنشاء أي فاتورة بعد",
-      "total": "الإجمالي: {count}"
-    },
-    "clients": {
-      "management": "إدارة العملاء",
-      "results": "نتيجة",
-      "contact": "التواصل",
-      "package": "الحزمة",
-      "renewal": "التجديد",
-      "search": "بحث عن عميل...",
-      "noResults": "لا يوجد عملاء",
-      "startDate": "تاريخ البداية",
-      "days": "يوم",
-      "expired": "منتهي",
-      "sendReminder": "إرسال تذكير",
-      "reminderQueued": "سيتم إرسال التذكير",
-      "status": {
-        "active": "نشط",
-        "expiringSoon": "ينتهي قريباً",
-        "renewalDue": "تجديد قريب",
-        "ended": "منتهي"
-      }
-    },
-    "packages": {
-      "title": "إدارة الحزم",
-      "description": "إنشاء وتعديل حزم الاشتراك المتاحة",
-      "addNew": "إضافة حزمة",
-      "edit": "تعديل الحزمة",
-      "sendToClient": "إرسال للعميل عبر واتساب",
-      "sendAllAsPdf": "إرسال الكل للعميل",
-      "dialogDescription": "أدخل تفاصيل الحزمة",
-      "mostPopular": "الأكثر شيوعاً",
-      "starter": "مبتدئ",
-      "gold": "ذهبي",
-      "platinum": "بلاتيني",
-      "packageDetails": "تفاصيل الحزمة",
-      "form": {
-        "nameAr": "الاسم بالعربية",
-        "nameEn": "الاسم بالإنجليزية",
-        "price": "السعر",
-        "duration": "المدة",
-        "monthly": "شهري",
-        "quarterly": "ربع سنوي",
-        "annual": "سنوي",
-        "oneTime": "مرة واحدة",
-        "features": "المميزات",
-        "addFeature": "إضافة ميزة",
-        "feature": "ميزة"
-      },
-      "exportDialog": {
-        "includesPlans": "يشمل {count} حزم",
-        "selectClient": "اختر العميل للإرسال",
-        "phoneLabel": "رقم الهاتف (واتساب)",
-        "preview": "معاينة الرسالة",
-        "send": "إرسال عبر واتساب",
-        "sending": "جاري الإرسال...",
-        "sent": "تم الإرسال!",
-        "info": "أدخل الرقم مع كود الدولة (مثال: 201XXXXXXXXX)",
-        "sendingTo": "سيُرسل إلى",
-        "offerIntro": "إليك عرض حزمنا الحصري",
-        "outro": "للاشتراك أو الاستفسار تواصل معنا في أي وقت"
-      }
-    },
-    "pdf": {
-      "allPackages": "جميع الحزم"
-    },
-    "form": {
-      "title": "إضافة دفعة عميل",
-      "description": "وصف الدفعة",
-      "client": "العميل",
-      "selectClient": "اختر العميل",
-      "clientName": "اسم العميل",
-      "clientNamePlaceholder": "مثال: أحمد محمد",
-      "amount": "المبلغ",
-      "paymentMethod": "طريقة الدفع",
-      "descriptionPlaceholder": "مثال: دفعة اشتراك شهر يناير",
-      "period": "فترة الاشتراك",
-      "periodFrom": "من",
-      "periodTo": "إلى",
-      "notes": "ملاحظات",
-      "notesPlaceholder": "ملاحظات إضافية (اختياري)",
-      "submit": "تسجيل الدفعة وإنشاء الفاتورة",
-      "submitting": "جاري التسجيل...",
-      "success": "تم تسجيل الدفعة وإنشاء الفاتورة بنجاح",
-      "methodCash": "نقدي",
-      "methodBank": "تحويل بنكي",
-      "methodCard": "بطاقة ائتمان",
-      "methodWallet": "محفظة إلكترونية",
-      "errors": {
-        "clientRequired": "يرجى اختيار العميل",
-        "amountRequired": "يرجى إدخال مبلغ صحيح",
-        "descriptionRequired": "يرجى إدخال وصف الدفعة",
-        "periodRequired": "يرجى إدخال تاريخ البداية والنهاية معاً",
-        "submitFailed": "فشل تسجيل الدفعة، يرجى المحاولة مرة أخرى"
-      }
-    },
-    "communications": {
-      "selectClient": "اختر العميل",
-      "chooseClient": "اختر عميلاً...",
-      "chooseClientFirst": "اختر عميلاً لعرض أو إرسال الرسائل",
-      "messageType": "نوع الرسالة",
-      "messagePreview": "معاينة الرسالة",
-      "customPlaceholder": "اكتب رسالتك المخصصة هنا...",
-      "sendWhatsapp": "إرسال عبر واتساب",
-      "logAndSend": "تسجيل وإرسال",
-      "log": "سجل التواصل",
-      "noLogs": "لا يوجد سجل تواصل لهذا العميل",
-      "sent": "تم إرسال الرسالة بنجاح",
-      "sendError": "فشل إرسال الرسالة",
-      "greeting": "مرحباً",
-      "contactUs": "للاستفسار أو التجديد تواصل معنا في أي وقت 🚀",
-      "reminderText": "نذكرك بأن اشتراكك ({package}) ينتهي بعد {days} يوم. ننصح بالتجديد مبكراً للاستمرار في الاستفادة من جميع المميزات.",
-      "renewalText": "اشتراكك في ({package}) على وشك الانتهاء. لا تفوّت الفرصة وجدّد اشتراكك الآن للاستمرار في رحلتك معنا.",
-      "welcomeText": "مرحباً بك في برنامج ({package})! نحن سعداء بانضمامك إلينا ونتطلع للعمل معك لتحقيق أهدافك.",
-      "types": {
-        "reminder": "تذكير بانتهاء الاشتراك",
-        "renewal": "طلب تجديد اشتراك",
-        "welcome": "رسالة ترحيب",
-        "custom": "رسالة مخصصة"
-      }
-    },
-    "errors": {
-      "loadStats": "فشل تحميل إحصائيات الفواتير",
-      "loadClients": "فشل تحميل بيانات العملاء",
-      "loadPayments": "فشل تحميل المدفوعات",
-      "loadPlans": "فشل تحميل الحزم",
-      "loadInvoices": "فشل تحميل الفواتير",
-      "savePlan": "فشل حفظ الحزمة",
-      "deletePlan": "فشل حذف الحزمة",
-      "deleteInvoice": "فشل تحديث الفاتورة",
-      "requiredFields": "يرجى تعبئة جميع الحقول المطلوبة"
-    }
-  }
+		"title": "الفواتير والمدفوعات",
+		"subtitle": "إدارة شاملة للعملاء والاشتراكات والمدفوعات والحزم والتواصل",
+		"currency": "ج.م",
+		"tabs": {
+			"overview": "نظرة عامة",
+			"clients": "العملاء",
+			"packages": "الحزم",
+			"subscriptions": "الاشتراكات",
+			"payments": "إضافة دفعة",
+			"communications": "التواصل"
+		},
+		"kpi": {
+			"walletBalance": {
+				"title": "رصيد المحفظة"
+			},
+			"totalEarned": {
+				"title": "إجمالي الأرباح"
+			},
+			"moneyInThisMonth": {
+				"title": "إيرادات هذا الشهر"
+			},
+			"pendingPayments": "مدفوعات معلقة",
+			"activeSubscriptions": "اشتراكات نشطة",
+			"monthlyRevenue": "الإيراد الشهري",
+			"renewalRate": "معدل التجديد",
+			"totalClients": "إجمالي العملاء",
+			"activeClients": "عملاء نشطون",
+			"urgentRenewal": "تجديد عاجل (أقل من 7 أيام)",
+			"soonRenewal": "تجديد قريب (أقل من 30 يوم)",
+			"totalPackages": "إجمالي الحزم",
+			"totalPayments": "إجمالي المدفوعات"
+		},
+		"status": {
+			"completed": "مكتمل",
+			"pending": "معلق",
+			"failed": "فشل",
+			"active": "نشط"
+		},
+		"filters": {
+			"status": "الحالة",
+			"type": "النوع",
+			"subscription": "اشتراك",
+			"withdrawal": "سحب",
+			"refund": "استرداد",
+			"package": "الحزمة",
+			"client": "العميل",
+			"allClients": "جميع العملاء",
+			"fromDate": "من تاريخ",
+			"toDate": "إلى تاريخ",
+			"selectDate": "اختر تاريخاً",
+			"sort": "الترتيب",
+			"newest": "الأحدث أولاً",
+			"oldest": "الأقدم أولاً",
+			"amountHigh": "الأعلى مبلغاً",
+			"amountLow": "الأقل مبلغاً"
+		},
+		"common": {
+			"all": "الكل",
+			"search": "بحث...",
+			"apply": "تطبيق",
+			"cancel": "إلغاء",
+			"save": "حفظ",
+			"update": "تحديث",
+			"delete": "حذف",
+			"edit": "تعديل",
+			"deleted": "تم الحذف",
+			"saved": "تم الحفظ",
+			"updated": "تم التحديث",
+			"refresh": "تحديث",
+			"export": "تصدير",
+			"viewAll": "عرض الكل",
+			"loading": "جاري التحميل...",
+			"system": "النظام",
+			"back": "رجوع",
+			"whatsapp": "واتساب"
+		},
+		"tooltips": {
+			"pageInfo": "هذه الصفحة تتيح لك إدارة الفواتير والمدفوعات والعملاء والحزم والاشتراكات بشكل شامل من مكان واحد."
+		},
+		"transactions": {
+			"recent": "آخر المعاملات",
+			"recentSubtitle": "جميع المعاملات المالية الأخيرة",
+			"empty": "لا توجد معاملات",
+			"examples": {
+				"subscription": "دفعة اشتراك"
+			}
+		},
+		"table": {
+			"status": "الحالة",
+			"client": "العميل",
+			"description": "الوصف",
+			"date": "التاريخ",
+			"amount": "المبلغ",
+			"actions": "إجراءات",
+			"period": "الفترة",
+			"to": "إلى",
+			"view": "عرض"
+		},
+		"payments": {
+			"history": "سجل الفواتير",
+			"historyDescription": "جميع الفواتير والاشتراكات المسجلة",
+			"empty": "لا توجد فواتير",
+			"emptyDescription": "لم يتم إنشاء أي فاتورة بعد",
+			"total": "الإجمالي: {count}"
+		},
+		"clients": {
+			"management": "إدارة العملاء",
+			"results": "نتيجة",
+			"contact": "التواصل",
+			"package": "الحزمة",
+			"renewal": "التجديد",
+			"search": "بحث عن عميل...",
+			"noResults": "لا يوجد عملاء",
+			"startDate": "تاريخ البداية",
+			"days": "يوم",
+			"expired": "منتهي",
+			"sendReminder": "إرسال تذكير",
+			"reminderQueued": "سيتم إرسال التذكير",
+			"status": {
+				"active": "نشط",
+				"expiringSoon": "ينتهي قريباً",
+				"renewalDue": "تجديد قريب",
+				"ended": "منتهي"
+			}
+		},
+		"packages": {
+			"title": "إدارة الحزم",
+			"description": "إنشاء وتعديل حزم الاشتراك المتاحة",
+			"addNew": "إضافة حزمة",
+			"edit": "تعديل الحزمة",
+			"sendToClient": "إرسال للعميل عبر واتساب",
+			"sendAllAsPdf": "إرسال الكل للعميل",
+			"dialogDescription": "أدخل تفاصيل الحزمة",
+			"mostPopular": "الأكثر شيوعاً",
+			"starter": "مبتدئ",
+			"gold": "ذهبي",
+			"platinum": "بلاتيني",
+			"packageDetails": "تفاصيل الحزمة",
+			"form": {
+				"nameAr": "الاسم بالعربية",
+				"nameEn": "الاسم بالإنجليزية",
+				"price": "السعر",
+				"duration": "المدة",
+				"monthly": "شهري",
+				"quarterly": "ربع سنوي",
+				"annual": "سنوي",
+				"oneTime": "مرة واحدة",
+				"features": "المميزات",
+				"addFeature": "إضافة ميزة",
+				"feature": "ميزة"
+			},
+			"exportDialog": {
+				"includesPlans": "يشمل {count} حزم",
+				"selectClient": "اختر العميل للإرسال",
+				"phoneLabel": "رقم الهاتف (واتساب)",
+				"preview": "معاينة الرسالة",
+				"send": "إرسال عبر واتساب",
+				"sending": "جاري الإرسال...",
+				"sent": "تم الإرسال!",
+				"info": "أدخل الرقم مع كود الدولة (مثال: 201XXXXXXXXX)",
+				"sendingTo": "سيُرسل إلى",
+				"offerIntro": "إليك عرض حزمنا الحصري",
+				"outro": "للاشتراك أو الاستفسار تواصل معنا في أي وقت"
+			}
+		},
+		"pdf": {
+			"allPackages": "جميع الحزم"
+		},
+		"form": {
+			"title": "إضافة دفعة عميل",
+			"description": "وصف الدفعة",
+			"client": "العميل",
+			"selectClient": "اختر العميل",
+			"clientName": "اسم العميل",
+			"clientNamePlaceholder": "مثال: أحمد محمد",
+			"amount": "المبلغ",
+			"paymentMethod": "طريقة الدفع",
+			"descriptionPlaceholder": "مثال: دفعة اشتراك شهر يناير",
+			"period": "فترة الاشتراك",
+			"periodFrom": "من",
+			"periodTo": "إلى",
+			"notes": "ملاحظات",
+			"notesPlaceholder": "ملاحظات إضافية (اختياري)",
+			"submit": "تسجيل الدفعة وإنشاء الفاتورة",
+			"submitting": "جاري التسجيل...",
+			"success": "تم تسجيل الدفعة وإنشاء الفاتورة بنجاح",
+			"methodCash": "نقدي",
+			"methodBank": "تحويل بنكي",
+			"methodCard": "بطاقة ائتمان",
+			"methodWallet": "محفظة إلكترونية",
+			"errors": {
+				"clientRequired": "يرجى اختيار العميل",
+				"amountRequired": "يرجى إدخال مبلغ صحيح",
+				"descriptionRequired": "يرجى إدخال وصف الدفعة",
+				"periodRequired": "يرجى إدخال تاريخ البداية والنهاية معاً",
+				"submitFailed": "فشل تسجيل الدفعة، يرجى المحاولة مرة أخرى"
+			}
+		},
+		"communications": {
+			"selectClient": "اختر العميل",
+			"chooseClient": "اختر عميلاً...",
+			"chooseClientFirst": "اختر عميلاً لعرض أو إرسال الرسائل",
+			"messageType": "نوع الرسالة",
+			"messagePreview": "معاينة الرسالة",
+			"customPlaceholder": "اكتب رسالتك المخصصة هنا...",
+			"sendWhatsapp": "إرسال عبر واتساب",
+			"logAndSend": "تسجيل وإرسال",
+			"log": "سجل التواصل",
+			"noLogs": "لا يوجد سجل تواصل لهذا العميل",
+			"sent": "تم إرسال الرسالة بنجاح",
+			"sendError": "فشل إرسال الرسالة",
+			"greeting": "مرحباً",
+			"contactUs": "للاستفسار أو التجديد تواصل معنا في أي وقت 🚀",
+			"reminderText": "نذكرك بأن اشتراكك ({package}) ينتهي بعد {days} يوم. ننصح بالتجديد مبكراً للاستمرار في الاستفادة من جميع المميزات.",
+			"renewalText": "اشتراكك في ({package}) على وشك الانتهاء. لا تفوّت الفرصة وجدّد اشتراكك الآن للاستمرار في رحلتك معنا.",
+			"welcomeText": "مرحباً بك في برنامج ({package})! نحن سعداء بانضمامك إلينا ونتطلع للعمل معك لتحقيق أهدافك.",
+			"types": {
+				"reminder": "تذكير بانتهاء الاشتراك",
+				"renewal": "طلب تجديد اشتراك",
+				"welcome": "رسالة ترحيب",
+				"custom": "رسالة مخصصة"
+			}
+		},
+		"errors": {
+			"loadStats": "فشل تحميل إحصائيات الفواتير",
+			"loadClients": "فشل تحميل بيانات العملاء",
+			"loadPayments": "فشل تحميل المدفوعات",
+			"loadPlans": "فشل تحميل الحزم",
+			"loadInvoices": "فشل تحميل الفواتير",
+			"savePlan": "فشل حفظ الحزمة",
+			"deletePlan": "فشل حذف الحزمة",
+			"deleteInvoice": "فشل تحديث الفاتورة",
+			"requiredFields": "يرجى تعبئة جميع الحقول المطلوبة"
+		}
+	},
+	"coachConfig": {
+		"title": "إعدادات التقرير الأسبوعي",
+		"subtitle": "تحكم في الحقول التي يراها العميل، جدول الإشعارات، والمتابعة",
+		"loading": "جارٍ التحميل...",
+		"save": "حفظ الإعدادات",
+		"saving": "جارٍ الحفظ...",
+		"saved": "تم الحفظ",
+		"activeBadge": "{{count}} حقل نشط",
+		"required": "إلزامي",
+		"toggleRequired": "تبديل الإلزامية",
+		"sectionSubtitle": "{{count}} / {{total}} حقل مفعّل",
+		"sectionDisabled": "هذا القسم معطّل — لن يظهر للعميل",
+		"enableSection": "تفعيل القسم",
+		"errors": {
+			"saveFailed": "فشل الحفظ، حاول مجدداً"
+		},
+		"tabs": {
+			"fields": "الحقول",
+			"custom": "حقول مخصصة",
+			"notifications": "الإشعارات",
+			"clients": "المتابعة"
+		},
+		"fieldTypes": {
+			"text": "نص قصير",
+			"number": "رقم",
+			"boolean": "نعم / لا",
+			"textarea": "نص طويل",
+			"rating": "تقييم بالنجوم",
+			"select": "اختيار من قائمة"
+		},
+		"customFields": {
+			"title": "الحقول المخصصة",
+			"subtitle": "أضف أسئلة إضافية تظهر للعميل في نهاية التقرير",
+			"add": "إضافة حقل جديد",
+			"unnamed": "حقل بدون اسم",
+			"label": "عنوان الحقل",
+			"labelPh": "مثال: كيف كان مزاجك هذا الأسبوع؟",
+			"type": "نوع الإدخال",
+			"placeholder": "نص التلميح",
+			"placeholderPh": "النص الظاهر قبل الإدخال",
+			"options": "الخيارات (للقائمة)",
+			"optionsPh": "مثال: ممتاز، جيد، متوسط",
+			"empty": "لا توجد حقول مخصصة بعد",
+			"emptyHint": "أضف أسئلة مخصصة تظهر للعملاء في تقاريرهم"
+		},
+		"notif": {
+			"title": "إعدادات الإشعارات",
+			"subtitle": "متى وكيف يتم تذكير العملاء بإرسال التقرير",
+			"disabled": "الإشعارات معطّلة حالياً",
+			"schedule": "جدول الإرسال",
+			"dayOfWeek": "يوم الأسبوع",
+			"intervalDays": "كل",
+			"days": "يوم",
+			"sendTime": "وقت الإرسال",
+			"reminders": "التذكيرات التلقائية",
+			"reminderAfterDays": "إرسال تذكير بعد",
+			"daysAfterRequest": "يوم من عدم الرد",
+			"maxReminders": "أقصى عدد تذكيرات",
+			"times": "مرات",
+			"messages": "نصوص الرسائل",
+			"initialMessage": "رسالة الطلب الأولى",
+			"initialMessagePh": "مثال: حان وقت تقريرك الأسبوعي! 💪 شاركنا تقدمك هذا الأسبوع.",
+			"reminderMessage": "رسالة التذكير",
+			"reminderMessagePh": "مثال: لم نتلق تقريرك بعد، لا تنسَ مشاركتنا تقدمك!",
+			"channels": "قنوات الإرسال",
+			"channel": {
+				"push": "إشعارات التطبيق (Push)",
+				"email": "البريد الإلكتروني",
+				"sms": "رسالة نصية (SMS)"
+			}
+		},
+		"days": {
+			"SU": "أحد",
+			"MO": "اثن",
+			"TU": "ثلا",
+			"WE": "أرب",
+			"TH": "خمي",
+			"FR": "جمع",
+			"SA": "سبت"
+		},
+		"clients": {
+			"title": "حالة العملاء",
+			"subtitle": "تتبع من أرسل تقريره ومن يحتاج تذكيراً",
+			"search": "بحث عن عميل...",
+			"selectAll": "تحديد الكل",
+			"deselectAll": "إلغاء التحديد",
+			"empty": "لا يوجد عملاء",
+			"noResults": "لا توجد نتائج",
+			"sendReminder": "إرسال تذكير",
+			"sendToSelected": "إرسال تذكير ({{count}})",
+			"reminderSent": "تم إرسال التذكير بنجاح",
+			"total": "إجمالي",
+			"submitted": "أرسل",
+			"pending": "في انتظار",
+			"late": "متأخر",
+			"noPhone": "لا يوجد رقم هاتف لهذا العميل",
+			"name": "العميل",
+			"lastReport": "آخر تقرير",
+			"status": "الحالة",
+			"statusAll": "الكل",
+			"statusSubmitted": "أرسل التقرير",
+			"statusPending": "في الانتظار",
+			"statusLate": "متأخر"
+		},
+		"savebar": {
+			"title": "إعدادات التقرير الأسبوعي",
+			"active": "{{count}} حقل نشط",
+			"sections": "{{count}} أقسام مفعّلة"
+		}
+	},
+	"aiStudio": {
+		"title": "استوديو الذكاء الاصطناعي",
+		"subtitle": "أنشئ حسابات المستخدمين وخطط التدريب والتغذية تلقائياً",
+		"badges": {
+			"beta": "تجريبي",
+			"ai": "ذكاء اصطناعي"
+		},
+		"selector": {
+			"label": "اختر استجابة العميل",
+			"placeholder": "— اختر استجابة —"
+		},
+		"btn": {
+			"generate": "توليد الخطة",
+			"generating": "جاري التوليد...",
+			"approve": "اعتماد وحفظ",
+			"saving": "جاري الحفظ...",
+			"saved": "تم الحفظ!",
+			"discard": "تجاهل"
+		},
+		"sections": {
+			"user": "بيانات المستخدم",
+			"workout": "خطة التدريب",
+			"nutrition": "خطة التغذية"
+		},
+		"fields": {
+			"name": "الاسم الكامل",
+			"email": "البريد الإلكتروني",
+			"password": "كلمة المرور",
+			"phone": "رقم الجوال",
+			"age": "العمر",
+			"weight": "الوزن (كجم)",
+			"goal": "الهدف",
+			"membership": "نوع العضوية"
+		},
+		"workout": {
+			"days": "أيام",
+			"exercises": "تمارين",
+			"addDay": "إضافة يوم",
+			"addExercise": "إضافة تمرين",
+			"sets": "المجموعات",
+			"reps": "التكرارات",
+			"rest": "الراحة (ث)"
+		},
+		"nutrition": {
+			"meals": "وجبات",
+			"totalCalories": "إجمالي السعرات",
+			"calories": "سعرات",
+			"protein": "بروتين (جم)",
+			"carbs": "كربوهيدرات (جم)",
+			"fat": "دهون (جم)",
+			"addMeal": "إضافة وجبة",
+			"addItem": "إضافة عنصر",
+			"itemName": "اسم الطعام",
+			"quantity": "الكمية"
+		},
+		"approve": {
+			"title": "مراجعة وتأكيد الخطة",
+			"subtitle": "تأكد من صحة البيانات قبل الحفظ النهائي"
+		},
+		"success": {
+			"message": "✅ تم حفظ جميع البيانات بنجاح — المستخدم، التدريب، والتغذية"
+		},
+		"empty": {
+			"title": "اختر استجابة عميل وابدأ التوليد",
+			"subtitle": "سيقوم الذكاء الاصطناعي بتحليل بيانات العميل وإنشاء خطة متكاملة"
+		},
+		"errors": {
+			"aiError": "فشل الاتصال بالذكاء الاصطناعي. تحقق من الإعدادات."
+		}
+	},
+	"aiCoach": {
+		"pageTitle": "منشئ خطة اللياقة بالذكاء الاصطناعي",
+		"pageSubtitle": "حلل بيانات العميل وأنشئ خطط تدريب وتغذية احترافية",
+		"step1": "اختر الاستمارة",
+		"step2": "اختر العميل",
+		"step3": "أنشئ الخطة",
+		"selectForm": "استمارة العميل",
+		"selectFormHint": "اختر الاستمارة التي يُريد العميل تحليلها",
+		"selectClient": "بيانات العميل",
+		"selectClientHint": "اختر الرد الذي سيتم تحليله",
+		"chooseForm": "اختر الاستمارة...",
+		"chooseClient": "اختر العميل...",
+		"loading": "جاري التحميل...",
+		"noForms": "لا توجد استمارات",
+		"noSubmissions": "لا توجد ردود لهذه الاستمارة",
+		"generatePlan": "أنشئ الخطة بالذكاء الاصطناعي",
+		"generating": "جاري الإنشاء",
+		"regenerate": "إعادة الإنشاء",
+		"clientSummary": "ملخص العميل",
+		"goal": "الهدف",
+		"level": "المستوى",
+		"calories": "السعرات",
+		"days": "الأيام",
+		"daysPerWeek": "أيام/أسبوع",
+		"trainingPlan": "خطة التدريب",
+		"nutritionPlan": "خطة التغذية",
+		"noExercises": "لا توجد تمارين في هذا اليوم",
+		"searchExercise": "ابحث عن تمرين بديل...",
+		"noResults": "لا توجد نتائج",
+		"showPreview": "عرض JSON",
+		"hidePreview": "إخفاء JSON",
+		"exportJSON": "تصدير JSON",
+		"actionHint": "يمكنك تعديل الخطة قبل الحفظ أو الإرسال",
+		"emptyTitle": "ابدأ بتحليل بيانات عميلك",
+		"emptyDesc": "اختر استمارة ورد العميل ثم دع الذكاء الاصطناعي ينشئ خطة مخصصة شاملة"
+	},
+	"reportConfig": {
+		"coachConfig": {
+			"title": "إعداد تقرير المتابعة",
+			"subtitle": "خصّص أسئلة التقرير الأسبوعي وجدول إرساله لعملائك",
+			"activeBadge": "{count} سؤال نشط",
+			"save": "حفظ التغييرات",
+			"loading": "جاري التحميل...",
+			"errors": {
+				"saveFailed": "حدث خطأ أثناء الحفظ، يرجى المحاولة مجدداً"
+			},
+			"tabs": {
+				"fields": "الأسئلة والمجموعات",
+				"notifications": "الإشعارات والجدولة",
+				"clients": "متابعة التقارير"
+			},
+			"groups": {
+				"addGroup": "إضافة مجموعة جديدة"
+			},
+			"fieldTypes": {
+				"boolean": "نعم / لا",
+				"text": "نص قصير",
+				"number": "رقم",
+				"textarea": "نص طويل",
+				"select": "قائمة اختيار",
+				"rating": "تقييم بالنجوم",
+				"image": "صورة"
+			},
+			"notif": {
+				"title": "إعدادات الإشعارات والجدولة",
+				"subtitle": "حدد متى وكيف يتلقى عملاؤك طلبات التقرير الأسبوعي",
+				"disabled": "الإشعارات معطّلة — لن يتلقى عملاؤك أي إشعارات",
+				"schedule": "جدول الإرسال والتذكيرات",
+				"dayOfWeek": "يوم الإرسال الأسبوعي",
+				"sendTime": "وقت الإرسال",
+				"reminders": "التذكيرات التلقائية",
+				"reminderAfterDays": "أرسل تذكيراً تلقائياً بعد",
+				"daysAfterRequest": "أيام من عدم الرد",
+				"maxReminders": "الحد الأقصى للتذكيرات",
+				"times": "مرة",
+				"messages": "نصوص الرسائل",
+				"initialMessage": "رسالة طلب التقرير",
+				"initialMessagePh": "اكتب الرسالة التي سيستلمها العميل عند بدء التقرير...",
+				"reminderMessage": "رسالة التذكير التلقائي",
+				"reminderMessagePh": "اكتب رسالة التذكير للعملاء الذين لم يرسلوا التقرير...",
+				"useDefault": "استعادة الرسالة الافتراضية"
+			},
+			"days": {
+				"SU": "أح",
+				"MO": "إث",
+				"TU": "ثل",
+				"WE": "أر",
+				"TH": "خم",
+				"FR": "جم",
+				"SA": "سب"
+			},
+			"clients": {
+				"status": "الحالة",
+			"statusAll": "الكل",
+			"statusSubmitted": "أرسل التقرير",
+			"statusPending": "في الانتظار",
+			"statusLate": "متأخر",
+				"name"  : "العميل",
+				"lastReport": "آخر تقرير",
+				"status": "الحالة",
+				"noPhone": "لا يوجد رقم هاتف لهذا العميل",
+				"title": "متابعة تقارير العملاء",
+				"subtitle": "تتبع حالة التقارير الأسبوعية وأرسل تذكيرات للمتأخرين",
+				"total": "إجمالي العملاء",
+				"submitted": "أرسلوا التقرير",
+				"pending": "بانتظار الإرسال",
+				"late": "متأخرون",
+				"filterAll": "جميع العملاء",
+				"filterSubmitted": "أرسلوا التقرير",
+				"filterPending": "بانتظار الإرسال",
+				"filterLate": "متأخرون",
+				"sendToSelected": "إرسال تذكير للمحددين ({count})",
+				"reminderSent": "تم إرسال التذكيرات بنجاح ✓",
+				"search": "ابحث باسم أو بريد العميل...",
+				"selectAll": "تحديد الكل",
+				"deselectAll": "إلغاء التحديد",
+				"noResults": "لا توجد نتائج مطابقة",
+				"empty": "لم يتم إضافة عملاء بعد",
+				"noPhone": "لا يوجد رقم هاتف لهذا العميل"
+			}
+		},
+		"reports": {
+			"title": "التقارير الأسبوعية",
+			"subtitle": "تتبع وراجع تقارير عملائك الأسبوعية",
+			"yes": "نعم",
+			"no": "لا",
+			"reviewed": "تمت المراجعة",
+			"awaitingReview": "بانتظار المراجعة",
+			"athlete": "متدرب",
+			"empty": "لا توجد تقارير",
+			"close": "إغلاق",
+			"createdAt": "تاريخ الأسبوع",
+			"statusReview": "حالة المراجعة",
+			"view": "عرض",
+			"searchPlaceholder": "ابحث في التقارير...",
+			"labels": {
+				"total": "إجمالي التقارير"
+			},
+			"card": {
+				"weight": "الوزن",
+				"kg": "كجم",
+				"cardio": "الكارديو"
+			},
+			"columns": {
+				"athlete": "المتدرب",
+				"weekOf": "أسبوع"
+			},
+			"filters": {
+				"title": "الفلاتر",
+				"apply": "تطبيق",
+				"user": "المستخدم",
+				"userPlaceholder": "اختر مستخدماً",
+				"allUsers": "جميع المستخدمين",
+				"sortBy": "ترتيب حسب",
+				"sortOrder": "اتجاه الترتيب",
+				"reviewed": {
+					"label": "حالة المراجعة",
+					"any": "الكل",
+					"yes": "تمت المراجعة",
+					"no": "لم تتم المراجعة"
+				}
+			},
+			"sort": {
+				"fields": {
+					"created_at": "تاريخ الإنشاء",
+					"updated_at": "تاريخ التحديث"
+				},
+				"orders": {
+					"desc": "الأحدث أولاً",
+					"asc": "الأقدم أولاً"
+				}
+			},
+			"messages": {
+				"saved": "تم الحفظ"
+			},
+			"errors": {
+				"load": "حدث خطأ أثناء تحميل التقارير",
+				"save": "حدث خطأ أثناء حفظ التغذية الراجعة",
+				"feedbackEmpty": "الرجاء كتابة تغذية راجعة أولاً"
+			},
+			"detail": {
+				"title": "تفاصيل التقرير",
+				"loading": "جاري تحميل التقرير...",
+				"feedback": "تغذية راجعة المدرب",
+				"feedbackPh": "اكتب تغذيتك الراجعة هنا...",
+				"photos": "الصور التقدمية",
+				"noPhoto": "لا توجد صورة",
+				"measurements": "القياسات الجسدية",
+				"training": "التدريب",
+				"diet": "النظام الغذائي",
+				"section": {
+					"photos": {
+						"front": "أمامي",
+						"back": "خلفي",
+						"left": "يسار",
+						"right": "يمين"
+					},
+					"measurements": {
+						"date": "التاريخ",
+						"weight": "الوزن",
+						"waist": "الخصر",
+						"chest": "الصدر",
+						"hips": "الأرداف",
+						"arms": "الذراع",
+						"thighs": "الفخذ"
+					},
+					"training": {
+						"cardioAdherence": "الالتزام بالكارديو",
+						"intensityOk": "شدة التدريب مناسبة",
+						"shape": "تقييم المظهر",
+						"fitness": "تقييم اللياقة",
+						"sleepEnough": "النوم كافٍ",
+						"sleepHours": "ساعات النوم",
+						"daysDeviation": "الانحراف عن أيام التدريب",
+						"notes": {
+							"title": "ملاحظات البرنامج"
+						},
+						"deviation": {
+							"count": "عدد الأيام الفائتة",
+							"reason": "السبب"
+						}
+					},
+					"diet": {
+						"hungry": "الشعور بالجوع",
+						"comfort": "الراحة النفسية",
+						"tooMuch": "الطعام كثير",
+						"wantSpecific": "اشتهاء طعام معين",
+						"deviation": {
+							"title": "الانحراف عن النظام الغذائي",
+							"times": "عدد مرات الانحراف",
+							"details": "التفاصيل"
+						}
+					}
+				}
+			}
+		},
+		"weekly": {
+			"cardioAdherence": "هل التزمت بتمارين الكارديو المحددة؟",
+			"diet": {
+				"title": "النظام الغذائي",
+				"hungry": "هل شعرت بالجوع خلال الأسبوع؟",
+				"comfort": "هل كنت مرتاحاً نفسياً مع النظام الغذائي؟",
+				"tooMuch": "هل شعرت أن كمية الطعام كثيرة؟",
+				"deviation": {
+					"title": "هل انحرفت عن النظام الغذائي هذا الأسبوع؟"
+				},
+				"wantSpecific": {
+					"title": "هل اشتهيت طعاماً معيناً بشكل مفرط؟"
+				}
+			},
+			"training": {
+				"title": "التدريب",
+				"intensityOk": "هل كانت شدة التدريب مناسبة لك؟",
+				"daysDeviation": "هل التزمت بأيام التدريب المحددة؟",
+				"shape": "كيف تقيّم مظهر جسمك هذا الأسبوع؟",
+				"fitness": "كيف تقيّم مستوى لياقتك البدنية هذا الأسبوع؟",
+				"sleepEnough": "هل حصلت على قسط كافٍ من النوم؟",
+				"sleepHours": "كم ساعة تنام في المتوسط يومياً؟",
+				"notes": {
+					"title": "ملاحظات وتعليقات على برنامج التدريب"
+				}
+			},
+			"measurements": {
+				"title": "القياسات الجسدية",
+				"weight": "الوزن (كجم)",
+				"waist": "محيط الخصر (سم)",
+				"chest": "محيط الصدر (سم)",
+				"hips": "محيط الأرداف (سم)",
+				"arms": "محيط الذراع (سم)",
+				"thighs": "محيط الفخذ (سم)"
+			},
+			"photos": {
+				"title": "الصور التقدمية",
+				"front": "صورة أمامية",
+				"back": "صورة خلفية",
+				"left": "صورة جانب أيسر",
+				"right": "صورة جانب أيمن"
+			}
+		}
+	}
 }
