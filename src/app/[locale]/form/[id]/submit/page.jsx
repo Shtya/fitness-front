@@ -13,7 +13,7 @@ import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/themes/light.css';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { createPortal } from 'react-dom';
-import { ChevronDown, X, Check, Search, Plus, Save, CircleX, AlertCircle, Phone as PhoneIcon, Upload, FileText as FileIcon } from 'lucide-react';
+import { ChevronDown, X, Check, Search, Plus, Save, CircleX, AlertCircle, Phone as PhoneIcon, Upload, FileText as FileIcon, Loader2 } from 'lucide-react';
 import { useTranslations } from 'use-intl';
 import CheckBox from '@/components/atoms/CheckBox';
 import MultiLangText from '@/components/atoms/MultiLangText';
@@ -70,7 +70,7 @@ function ErrorBlock({ message }) {
   return (
     <div className='mt-2 flex items-start gap-2 px-3 py-2 rounded-lg border-l-[3px] bg-rose-50' style={{ borderColor: '#f43f5e' }}>
       <AlertCircle className='w-3.5 h-3.5 text-rose-500 flex-shrink-0 mt-0.5' />
-      <p className='text-sm font-medium text-rose-600'>{message}</p>
+      <p className='text-base font-medium text-rose-600'>{message}</p>
     </div>
   );
 }
@@ -117,7 +117,7 @@ const Input = forwardRef(function Input({ label, placeholder = '', name, type = 
   return (
     <div className={`w-full relative ${className}`}>
       {label && (
-        <label className='mb-1.5 block text-sm font-semibold' style={{ color: colors.primary[700] }}>
+        <label className='mb-1.5 block text-base font-semibold' style={{ color: colors.primary[700] }}>
           {label}
           {required && <span className='text-rose-500 ml-0.5'>*</span>}
         </label>
@@ -143,7 +143,7 @@ const Input = forwardRef(function Input({ label, placeholder = '', name, type = 
           defaultValue={defaultValue}
           onChange={handleChange}
           onBlur={handleBlur}
-          className={`h-12 w-full rounded-lg  py-3 text-sm font-medium outline-none placeholder:text-slate-400 bg-transparent ${icon && 'rtl:!pr-[40px] ltr:!pl-[40px]'}`}
+          className={`h-12 w-full rounded-lg  py-3 text-base font-medium outline-none placeholder:text-slate-400 bg-transparent ${icon && 'rtl:!pr-[40px] ltr:!pl-[40px]'}`}
           style={{
             paddingLeft: icon ? '2.75rem' : '1rem',
             paddingRight: clearable && hasValue ? '2.5rem' : '1rem',
@@ -180,7 +180,7 @@ const Textarea = forwardRef(function Textarea({ label, placeholder = '', name, r
   return (
     <div className={`w-full ${className}`}>
       {label && (
-        <label className='mb-1.5 block text-sm font-semibold' style={{ color: colors.primary[700] }}>
+        <label className='mb-1.5 block text-base font-semibold' style={{ color: colors.primary[700] }}>
           {label}
           {required && <span className='text-rose-500 ml-0.5'>*</span>}
         </label>
@@ -200,7 +200,7 @@ const Textarea = forwardRef(function Textarea({ label, placeholder = '', name, r
           rows={rows}
           disabled={disabled}
           defaultValue={defaultValue}
-          className='p-4 w-full bg-transparent outline-none text-sm font-medium placeholder:text-slate-400 resize-none'
+          className='p-4 w-full bg-transparent outline-none text-base font-medium placeholder:text-slate-400 resize-none'
           style={{ color: colors.primary[900] }}
           onChange={e => {
             reg.onChange?.(e);
@@ -519,7 +519,7 @@ function PhoneField({ label, value, onChange, error, required, name, setError, c
     <div className={`w-full ${className}`}>
       {/* Label */}
       {label && (
-        <label className='mb-1.5 block text-sm font-semibold' style={{ color: colors.primary[700] }}>
+        <label className='mb-1.5 block text-base font-semibold' style={{ color: colors.primary[700] }}>
           {label}
           {required && <span className='text-rose-500 ltr:ml-0.5 rtl:mr-0.5'>*</span>}
         </label>
@@ -544,7 +544,7 @@ function PhoneField({ label, value, onChange, error, required, name, setError, c
           {/* Flag + code visible label */}
           <div className='flex items-center gap-1.5 pl-3 pr-1 pointer-events-none select-none'>
             <span className='text-base leading-none'>{currentCountry.flag}</span>
-            <span className='text-sm font-bold tabular-nums' style={{ color: colors.primary[800] }}>
+            <span className='text-base font-bold tabular-nums' style={{ color: colors.primary[800] }}>
               {countryCode}
             </span>
           </div>
@@ -572,7 +572,7 @@ function PhoneField({ label, value, onChange, error, required, name, setError, c
 			value={customCode}
 			onChange={handleCustomCodeChange}
 			disabled={disabled}
-			className="h-12 w-14 px-3 text-sm font-medium outline-none border-r bg-white"
+			className="h-12 w-14 px-3 text-base font-medium outline-none border-r bg-white"
 			style={{ color: colors.primary[900], borderColor: colors.primary[100] }}
 		/>
 	)}
@@ -584,7 +584,7 @@ function PhoneField({ label, value, onChange, error, required, name, setError, c
 		value={number}
 		onChange={handleNumberChange}
 		disabled={disabled}
-		className="h-12 w-full px-4 text-sm font-medium outline-none placeholder:text-slate-400 bg-transparent"
+		className="h-12 w-full px-4 text-base font-medium outline-none placeholder:text-slate-400 bg-transparent"
 		style={{ color: colors.primary[900] }}
 		aria-invalid={hasError}
 	/>
@@ -700,7 +700,7 @@ function Select({ options = [], value = null, onChange = () => {}, placeholder, 
   return (
     <div className={`relative ${className}`}>
       {label && (
-        <label className='mb-1.5 block text-sm font-semibold' style={{ color: colors.primary[700] }}>
+        <label className='mb-1.5 block text-base font-semibold' style={{ color: colors.primary[700] }}>
           {label}
           {required && <span className='text-rose-500 ml-0.5'>*</span>}
         </label>
@@ -710,7 +710,7 @@ function Select({ options = [], value = null, onChange = () => {}, placeholder, 
         ref={buttonRef}
         onClick={() => (open ? closeMenu() : openMenu())}
         disabled={disabled}
-        className='h-12 w-full inline-flex items-center justify-between rounded-lg border-2 bg-white px-4 text-sm font-medium cursor-pointer transition-colors duration-200 outline-none'
+        className='h-12 w-full inline-flex items-center justify-between rounded-lg border-2 bg-white px-4 text-base font-medium cursor-pointer transition-colors duration-200 outline-none'
         style={{
           borderColor: disabled ? colors.primary[200] : errorState ? '#f43f5e' : open ? colors.primary[400] : colors.primary[300],
           background: errorState ? '#fff8f8' : 'white',
@@ -738,7 +738,7 @@ function Select({ options = [], value = null, onChange = () => {}, placeholder, 
                   <div className='relative'>
                     <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5' style={{ color: colors.primary[400] }} />
                     <input
-                      className='w-full h-9 pl-9 pr-3 rounded-lg border text-sm outline-none font-medium'
+                      className='w-full h-9 pl-9 pr-3 rounded-lg border text-base outline-none font-medium'
                       style={{ borderColor: colors.primary[200], color: colors.primary[900] }}
                       placeholder={t('select.search_placeholder')}
                       value={query}
@@ -752,7 +752,7 @@ function Select({ options = [], value = null, onChange = () => {}, placeholder, 
                 </div>
               )}
               <ul className='py-1'>
-                {filtered.length === 0 && <li className='px-3 py-2 text-sm text-slate-400'>{t('select.no_results')}</li>}
+                {filtered.length === 0 && <li className='px-3 py-2 text-base text-slate-400'>{t('select.no_results')}</li>}
                 {filtered.map((item, idx) => {
                   const isSelected = selectedOption?.id === item.id;
                   const isActive = idx === activeIndex;
@@ -761,7 +761,7 @@ function Select({ options = [], value = null, onChange = () => {}, placeholder, 
                       key={item.id}
                       role='option'
                       aria-selected={isSelected}
-                      className='mx-1 my-0.5 rounded-lg px-3 py-2 text-sm flex items-center justify-between cursor-pointer transition-colors'
+                      className='mx-1 my-0.5 rounded-lg px-3 py-2 text-base flex items-center justify-between cursor-pointer transition-colors'
                       style={{
                         background: isActive || isSelected ? colors.primary[50] : 'transparent',
                         color: isSelected ? colors.primary[700] : colors.primary[900],
@@ -777,7 +777,7 @@ function Select({ options = [], value = null, onChange = () => {}, placeholder, 
               </ul>
               {allowCustom && !createMode && (
                 <div className='p-2 border-t sticky bottom-0 bg-white' style={{ borderColor: colors.primary[100] }}>
-                  <button type='button' onClick={() => setCreateMode(true)} className='w-full inline-flex items-center justify-center gap-2 rounded-lg h-9 text-sm border' style={{ borderColor: colors.primary[300] }}>
+                  <button type='button' onClick={() => setCreateMode(true)} className='w-full inline-flex items-center justify-center gap-2 rounded-lg h-9 text-base border' style={{ borderColor: colors.primary[300] }}>
                     <Plus className='w-3.5 h-3.5' />
                     {createHint || t('select.create_hint')}
                   </button>
@@ -802,7 +802,7 @@ function PrettyFileInput({ label, required, error, valueNames = [], onPickMany, 
   return (
     <div className='w-full'>
       {label && (
-        <label className='mb-1.5 block text-sm font-semibold' style={{ color: colors.primary[700] }}>
+        <label className='mb-1.5 block text-base font-semibold' style={{ color: colors.primary[700] }}>
           {label} {required && <span className='text-rose-500'>*</span>}
         </label>
       )}
@@ -821,7 +821,7 @@ function PrettyFileInput({ label, required, error, valueNames = [], onPickMany, 
             {valueNames.map((n, i) => (
               <div key={i} className='flex items-center gap-2.5 rounded-lg border px-3 py-2' style={{ borderColor: colors.primary[200], background: 'white' }}>
                 <FileIcon className='w-4 h-4 flex-shrink-0' style={{ color: colors.primary[500] }} />
-                <span className='text-sm font-medium truncate flex-1' style={{ color: colors.primary[900] }}>
+                <span className='text-base font-medium truncate flex-1' style={{ color: colors.primary[900] }}>
                   {n}
                 </span>
               </div>
@@ -849,7 +849,7 @@ function PrettyFileInput({ label, required, error, valueNames = [], onPickMany, 
               <Upload className='w-5 h-5' style={{ color: colors.primary[600] }} />
             </div>
             <div className='text-center'>
-              <p className='text-sm font-semibold' style={{ color: colors.primary[700] }}>
+              <p className='text-base font-semibold' style={{ color: colors.primary[700] }}>
                 {t('fileInput.choose_files')}
               </p>
               <p className='text-xs text-slate-400 mt-0.5'>{t('fileInput.no_files_selected')}</p>
@@ -889,6 +889,7 @@ export default function FormSubmissionPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileNames, setFileNames] = useState({});
   const [clientIp, setClientIp] = useState('');
+  const [uploadingFields, setUploadingFields] = useState({});
 
   const searchParams = useSearchParams();
   const reportTo = searchParams.get('report_to');
@@ -896,6 +897,13 @@ export default function FormSubmissionPage() {
   useEffect(() => {
     fetchForm();
   }, [params.id]);
+
+  const uploadFiles = async files => {
+    const fd = new FormData();
+    files.forEach(f => { if (f instanceof File) fd.append('files', f); });
+    const res = await api.post('/forms/upload-files', fd);
+    return (res?.data?.files || []).map(f => f.url);
+  };
 
   const fetchForm = async () => {
     try {
@@ -1022,7 +1030,10 @@ export default function FormSubmissionPage() {
     const sub = watch(values => {
       const clean = { ...values };
       dynamicFields.forEach(f => {
-        if (f.type === 'file') clean[f.key] = [];
+        if (f.type === 'file') {
+          // keep pre-uploaded URL strings; strip File objects (not serializable)
+          clean[f.key] = (clean[f.key] || []).filter(v => typeof v === 'string');
+        }
       });
       clean.__fileNames = fileNames;
       localStorage.setItem(key, JSON.stringify(clean));
@@ -1065,29 +1076,21 @@ export default function FormSubmissionPage() {
       });
       normalizedAnswers.clientIp = clientIp || undefined;
 
-      const fd = new FormData();
-      fd.append('email', data.email || '');
-      fd.append('phone', data.phone);
       const answersOnly = { ...normalizedAnswers };
       delete answersOnly.email;
       delete answersOnly.phone;
 
       (form?.fields || []).forEach(f => {
         if (f.type === 'file') {
-          const v = answersOnly[f.key];
-          if (Array.isArray(v) && v.length) {
-            v.forEach(file => {
-              if (file instanceof File) fd.append(f.key, file);
-            });
-            answersOnly[f.key] = [];
-          } else {
-            answersOnly[f.key] = [];
-          }
+          // values are pre-uploaded URL strings; ensure it's an array
+          if (!Array.isArray(answersOnly[f.key])) answersOnly[f.key] = [];
         }
       });
-      fd.append('answers', JSON.stringify(answersOnly));
 
-      await api.post(`/forms/${params.id}/submit?report_to=${encodeURIComponent(reportTo)}`, fd);
+      await api.post(
+        `/forms/${params.id}/submit?report_to=${encodeURIComponent(reportTo)}`,
+        { email: data.email || '', phone: data.phone, answers: answersOnly },
+      );
       if (form?.id) localStorage.removeItem(buildDraftKey(form.id));
       toast.success(t('messages.submit_success'));
 
@@ -1111,7 +1114,7 @@ export default function FormSubmissionPage() {
     const current = watch(field.key);
     return (
       <div className='space-y-2.5'>
-        <label className='block text-sm font-semibold' style={{ color: colors.primary[800] }}>
+        <label className='block text-base font-semibold' style={{ color: colors.primary[800] }}>
           <MultiLangText>{field.label}</MultiLangText>
           {field.required && <span className='text-rose-500 ml-0.5'>*</span>}
         </label>
@@ -1135,7 +1138,7 @@ export default function FormSubmissionPage() {
                   {active && <div className='absolute inset-0 m-auto w-1.5 h-1.5 rounded-full bg-white' />}
                 </div>
                 <input type='radio' value={opt} {...register(field.key)} className='sr-only' />
-                <MultiLangText className='text-sm font-medium' style={{ color: colors.primary[800] }}>
+                <MultiLangText className='text-base font-medium' style={{ color: colors.primary[800] }}>
                   {opt}
                 </MultiLangText>
                 {active && <Check className='ml-auto w-4 h-4 flex-shrink-0' style={{ color: colors.primary[600] }} />}
@@ -1161,7 +1164,7 @@ export default function FormSubmissionPage() {
 
     return (
       <div className='space-y-2.5'>
-        <label className='block text-sm font-semibold' style={{ color: colors.primary[800] }}>
+        <label className='block text-base font-semibold' style={{ color: colors.primary[800] }}>
           <MultiLangText>{field.label}</MultiLangText>
           {field.required && <span className='text-rose-500 ml-0.5'>*</span>}
         </label>
@@ -1173,7 +1176,7 @@ export default function FormSubmissionPage() {
                 type='button'
                 key={opt}
                 onClick={() => toggle(opt)}
-                className='px-4 py-2 rounded-full text-sm font-semibold border-2 transition-colors duration-200'
+                className='px-4 py-2 rounded-full text-base font-semibold border-2 transition-colors duration-200'
                 style={{
                   background: active ? `linear-gradient(to right, ${colors.gradient.from}, ${colors.gradient.to})` : 'white',
                   color: active ? 'white' : colors.primary[700],
@@ -1202,12 +1205,12 @@ export default function FormSubmissionPage() {
       case 'date':
         return (
           <div className='w-full'>
-            <label className='mb-1.5 block text-sm font-semibold' style={{ color: colors.primary[700] }}>
+            <label className='mb-1.5 block text-base font-semibold' style={{ color: colors.primary[700] }}>
               <MultiLangText>{field.label}</MultiLangText>
               {field.required && <span className='text-rose-500 ml-0.5'>*</span>}
             </label>
             <div className='relative rounded-lg border-2 bg-white overflow-hidden transition-colors' style={{ borderColor: error ? '#f43f5e' : colors.primary[300] }}>
-              <Flatpickr value={fieldValue} onChange={([date]) => setValue(field.key, date, { shouldValidate: true })} options={{ dateFormat: 'Y-m-d', allowInput: true }} className='w-full h-12 px-4 pr-11 text-sm font-medium outline-none bg-transparent' placeholder={field.placeholder || t('fields.date.placeholder')} style={{ color: colors.primary[900] }} />
+              <Flatpickr value={fieldValue} onChange={([date]) => setValue(field.key, date, { shouldValidate: true })} options={{ dateFormat: 'Y-m-d', allowInput: true }} className='w-full h-12 px-4 pr-11 text-base font-medium outline-none bg-transparent' placeholder={field.placeholder || t('fields.date.placeholder')} style={{ color: colors.primary[900] }} />
               <FiCalendar className='absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none w-4 h-4' style={{ color: error ? '#f43f5e' : colors.primary[400] }} />
             </div>
             {error && <ErrorBlock message={error.message} />}
@@ -1236,7 +1239,35 @@ export default function FormSubmissionPage() {
 
       case 'file': {
         const files = watch(field.key) || [];
-        return <PrettyFileInput label={<MultiLangText>{field.label}</MultiLangText>} required={field.required} error={error?.message} valueNames={(files || []).map(f => (f instanceof File ? f.name : String(f)))} accept='*/*' onPickMany={picked => setValue(field.key, picked, { shouldValidate: true, shouldDirty: true })} onClear={() => setValue(field.key, [], { shouldValidate: true, shouldDirty: true })} />;
+        const isFieldUploading = uploadingFields[field.key] || false;
+        return (
+          <PrettyFileInput
+            label={<MultiLangText>{field.label}</MultiLangText>}
+            required={field.required}
+            error={error?.message}
+            loading={isFieldUploading}
+            valueNames={(files || []).map(f => {
+              if (f instanceof File) return f.name;
+              if (typeof f === 'string') return f.split('/').pop() || f;
+              return String(f);
+            })}
+            accept='*/*'
+            onPickMany={async picked => {
+              if (!picked.length) return;
+              setUploadingFields(prev => ({ ...prev, [field.key]: true }));
+              try {
+                const urls = await uploadFiles(picked);
+                setValue(field.key, urls, { shouldValidate: true, shouldDirty: true });
+              } catch {
+                toast.error(t('messages.upload_failed'));
+                setValue(field.key, [], { shouldValidate: true, shouldDirty: true });
+              } finally {
+                setUploadingFields(prev => ({ ...prev, [field.key]: false }));
+              }
+            }}
+            onClear={() => setValue(field.key, [], { shouldValidate: true, shouldDirty: true })}
+          />
+        );
       }
 
       case 'phone':
@@ -1278,7 +1309,7 @@ export default function FormSubmissionPage() {
           <h3 className='text-xl font-bold mb-2' style={{ color: colors.primary[900] }}>
             {t('errors.not_found_title')}
           </h3>
-          <p className='text-sm' style={{ color: colors.primary[600] }}>
+          <p className='text-base' style={{ color: colors.primary[600] }}>
             {t('errors.not_found_subtitle')}
           </p>
         </div>
@@ -1287,9 +1318,21 @@ export default function FormSubmissionPage() {
   }
 
   const progressClamped = isNaN(progress) ? 0 : progress;
+  const isUploading = Object.values(uploadingFields).some(Boolean);
 
   return (
     <div className='min-h-screen pb-28' style={{ background: `linear-gradient(160deg, ${colors.primary[50]} 0%, white 50%, ${colors.primary[50]} 100%)` }}>
+      {/* ── Upload progress bar ── */}
+      {isUploading && (
+        <div className='fixed top-0 left-0 right-0 z-50 h-1 overflow-hidden'>
+          <motion.div
+            className='h-full w-1/2'
+            style={{ background: `linear-gradient(to right, ${colors.gradient.from}, ${colors.gradient.to})` }}
+            animate={{ x: ['-100%', '200%'] }}
+            transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        </div>
+      )}
       {/* ── Sticky header ── */}
       <div className='sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b' style={{ borderColor: colors.primary[150] || colors.primary[200] }}>
         <div className='max-w-3xl mx-auto px-4 sm:px-6 py-4'>
@@ -1368,14 +1411,14 @@ export default function FormSubmissionPage() {
         <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3, type: 'spring', stiffness: 120, damping: 20 }} className='fixed bottom-0 left-0 right-0 z-30 pointer-events-none'>
           <div className='pointer-events-auto border-t bg-white/95 backdrop-blur-md' style={{ borderColor: colors.primary[150] || colors.primary[200] }}>
             <div className='max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-4'>
-              <p className='flex-1 text-sm font-medium hidden sm:block' style={{ color: colors.primary[600] }}>
+              <p className='flex-1 text-base font-medium hidden sm:block' style={{ color: colors.primary[600] }}>
                 {t('footer.review_before_submit')}
               </p>
 
               <button
                 type='submit'
                 disabled={isSubmitting}
-                className='ml-auto flex max-md:!mx-auto items-center gap-2 h-11 px-7 rounded-lg text-white text-sm font-bold transition-opacity'
+                className='ml-auto flex max-md:!mx-auto items-center gap-2 h-11 px-7 rounded-lg text-white text-base font-bold transition-opacity'
                 style={{
                   background: `linear-gradient(to right, ${colors.gradient.from}, ${colors.gradient.via || colors.gradient.to}, ${colors.gradient.to})`,
                   boxShadow: `0 4px 16px ${colors.primary[200]}`,
