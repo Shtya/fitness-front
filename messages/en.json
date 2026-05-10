@@ -625,38 +625,47 @@
 		"defaultDescription": "An elegant, balanced color palette.",
 		"footer": "The change will be applied instantly across the entire dashboard"
 	},
-	"auth": {
-		"signIn": "Sign in",
-		"subtitle": "Welcome back. Please enter your details to continue.",
-		"email": "Email",
-		"enterEmail": "Enter your email",
-		"password": "Password",
-		"enterPassword": "Enter your password",
-		"forgotPassword": "Forgot password?",
-		"signInButton": "Sign in",
-		"noAccount": "Don't have an account?",
-		"signUp": "Sign up",
-		"formAriaLabel": "Login form",
-		"pageAriaLabel": "Authentication page",
-		"invalidEmail": "Please enter a valid email address.",
-		"passwordRequired": "Password is required.",
-		"loading": {
-			"signingIn": "Signing in..."
-		},
-		"success": {
-			"signedIn": "Successfully signed in."
-		},
-		"errors": {
-			"loginFailed": "Login failed. Please try again.",
-			"accountPending": "Your account is pending approval.",
-			"accountSuspended": "Your account has been suspended."
-		},
-		"a11y": {
-			"showPassword": "Show password",
-			"hidePassword": "Hide password"
-		},
-		"Incorrect email or password": "Incorrect email or password."
-	},
+	 "auth": {
+    "signIn": "Sign In",
+    "subtitle": "Welcome back! Please enter your details",
+    "email": "Email",
+    "enterEmail": "Enter your email",
+    "password": "Password",
+    "enterPassword": "Enter your password",
+    "signInButton": "Sign In",
+    "loading": {
+      "signingIn": "Signing in..."
+    },
+    "a11y": {
+      "hidePassword": "Hide password",
+      "showPassword": "Show password"
+    },
+    "language": "Language",
+    "success": {
+      "signedIn": "Successfully signed in"
+    },
+    "errors": {
+      "loginFailed": "Login failed. Please try again",
+      "accountPending": "Account is pending review. You'll be notified once approved",
+      "accountSuspended": "Account has been suspended. Please contact support"
+    },
+    "invalidEmail": "Invalid email address",
+    "passwordRequired": "Password is required",
+    "formAriaLabel": "Login form",
+    "pageAriaLabel": "Login page - So7baFit",
+    "hero": {
+      "tagline": "Smart Training Platform",
+      "titleLine1": "Turn your goal into",
+      "titleLine2": "Real Achievement",
+      "subtitle": "Join thousands of trainees who are transforming their bodies and lives with professional coaches and personalized plans",
+      "stat1Val": "2,500+",
+      "stat1Label": "Active Clients",
+      "stat2Val": "50+",
+      "stat2Label": "Pro Coaches",
+      "stat3Val": "98%",
+      "stat3Label": "Client Satisfaction"
+    }
+  },
 	"myProfile": {
 		"header": {
 			"title": "Profile",
@@ -1421,6 +1430,7 @@
 			"joinDate": "Join Date",
 			"status": "Status",
 			"daysLeft": "Days Left",
+			"workoutEdit": "Workout Edit",
 			"actions": "Actions"
 		},
 		"actions": {
@@ -1434,7 +1444,15 @@
 			"whatsapp": "WhatsApp Chat",
 			"directChat": "Direct Chat",
 			"delete": "Delete User",
-			"shareCredsWhatsapp": "Send Login Credentials via WhatsApp"
+			"shareCredsWhatsapp": "Send Login Credentials via WhatsApp",
+			"enableWorkoutEdit": "Enable Workout Editing",
+			"disableWorkoutEdit": "Disable Workout Editing"
+		},
+		"workoutEdit": {
+			"enabled": "Enabled",
+			"disabled": "Disabled",
+			"toggleSuccess": "Workout editing {status} for {name}",
+			"toggleFailed": "Failed to update workout edit permission"
 		},
 		"status": {
 			"active": "Active",
@@ -2096,7 +2114,30 @@
 			"upload": "Upload",
 			"chooseVideo": "Choose video",
 			"cancel": "Cancel",
-			"close": "Close"
+			"close": "Close",
+			"editPlan": "Edit Plan",
+			"exitEdit": "Done Editing",
+			"savePlan": "Save Changes",
+			"saving": "Saving...",
+			"addExercise": "Add Exercise",
+			"deleteExercise": "Delete Exercise",
+			"confirmDelete": "Remove this exercise from today's plan?",
+			"searchExercises": "Search exercises...",
+			"selectExercise": "Select an exercise",
+			"sets": "Sets",
+			"reps": "Reps",
+			"noExercisesFound": "No exercises found",
+			"allCategories": "All"
+		},
+		"pagination": {
+			"prev": "Prev",
+			"next": "Next"
+		},
+		"editPlan": {
+			"saved": "Plan updated successfully",
+			"saveFailed": "Failed to save plan changes",
+			"addSuccess": "Exercise added",
+			"deleteSuccess": "Exercise removed"
 		},
 		"progress": {
 			"setsDone": "{done}/{total}"

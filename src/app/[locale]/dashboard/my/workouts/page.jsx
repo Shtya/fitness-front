@@ -23,7 +23,12 @@ import {
 	StickyNote,
 	ChevronLeft,
 	ChevronRight,
+	PencilLine,
+	Save,
+	Trash2,
+	Search,
 } from 'lucide-react';
+import { Notification } from '@/config/Notification';
 import api from '@/utils/axios';
 import weeklyProgram from './exercises';
 import { createSessionFromDay } from '@/components/pages/workouts/helpers';
@@ -1010,6 +1015,346 @@ function LoadingSkeleton() {
 /* ─────────────────────────────────────────
 	 MAIN PAGE
 ───────────────────────────────────────── */
+/* ─────────────────────────────────────────
+	 ADD EXERCISE MODAL
+───────────────────────────────────────── */
+const PAGE_SIZE = 12;
+
+function AddExerciseModal({ open, section, onClose, onAdd, t }) {
+	const [query, setQuery] = useState('');
+	const [activeCategory, setActiveCategory] = useState('');
+	const [categories, setCategories] = useState([]);
+	const [results, setResults] = useState([]);
+	const [total, setTotal] = useState(0);
+	const [page, setPage] = useState(1);
+	const [loading, setLoading] = useState(false);
+	const [catLoading, setCatLoading] = useState(false);
+	const timerRef = useRef(null);
+	const listRef = useRef(null);
+
+	const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+	/* fetch categories once on open */
+	useEffect(() => {
+		if (!open) {
+			setQuery('');
+			setActiveCategory('');
+			setPage(1);
+			setResults([]);
+			setTotal(0);
+			return;
+		}
+		setCatLoading(true);
+		api.get('/plan-exercises/categories')
+			.then(r => setCategories(Array.isArray(r.data) ? r.data : []))
+			.catch(() => setCategories([]))
+			.finally(() => setCatLoading(false));
+	}, [open]);
+
+	/* fetch exercises whenever page / category / query change */
+	const fetchExercises = useCallback(async (q, cat, pg) => {
+		setLoading(true);
+		try {
+			const res = await api.get('/plan-exercises', {
+				params: { search: q || undefined, category: cat || undefined, page: pg, limit: PAGE_SIZE },
+			});
+			setResults(Array.isArray(res.data?.records) ? res.data.records : []);
+			setTotal(Number(res.data?.total_records) || 0);
+		} catch {
+			setResults([]);
+			setTotal(0);
+		} finally {
+			setLoading(false);
+		}
+	}, []);
+
+	/* run on mount and whenever page/category change (not search — search debounced below) */
+	useEffect(() => {
+		if (!open) return;
+		fetchExercises(query, activeCategory, page);
+		listRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+	}, [open, page, activeCategory]); // eslint-disable-line
+
+	/* debounce search */
+	const handleSearch = e => {
+		const q = e.target.value;
+		setQuery(q);
+		setPage(1);
+		clearTimeout(timerRef.current);
+		timerRef.current = setTimeout(() => fetchExercises(q, activeCategory, 1), 400);
+	};
+
+	const handleCategory = cat => {
+		setActiveCategory(cat);
+		setPage(1);
+	};
+
+	if (!open) return null;
+
+	return (
+		<AnimatePresence>
+			<motion.div
+				initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+				className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm"
+				onClick={onClose}
+			/>
+			<motion.div
+				initial={{ y: 40, opacity: 0, scale: 0.96 }}
+				animate={{ y: 0, opacity: 1, scale: 1 }}
+				exit={{ y: 24, opacity: 0, scale: 0.97 }}
+				transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+				className="fixed left-1/2 top-[4%] -translate-x-1/2 z-[205] w-[96%] max-w-2xl rounded-xl bg-white shadow-2xl border border-[var(--color-primary-100)] overflow-hidden flex flex-col"
+				style={{ maxHeight: '90vh' }}
+				onClick={e => e.stopPropagation()}
+			>
+				{/* ── Header ── */}
+				<div className="shrink-0 px-4 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between gap-3">
+					<div>
+						<h3 className="text-sm font-bold text-slate-800">{t('actions.selectExercise')}</h3>
+						{total > 0 && !loading && (
+							<p className="text-xs text-slate-400 mt-0.5">{total} {t('exercises')}</p>
+						)}
+					</div>
+					<button type="button" onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors shrink-0">
+						<X size={16} />
+					</button>
+				</div>
+
+				{/* ── Search ── */}
+				<div className="shrink-0 px-4 py-3 border-b border-slate-100">
+					<div className="relative">
+						<Search size={14} className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+						<input
+							autoFocus
+							value={query}
+							onChange={handleSearch}
+							placeholder={t('actions.searchExercises')}
+							className="w-full ltr:pl-9 rtl:pr-9 ltr:pr-3 rtl:pl-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)] transition-shadow bg-slate-50"
+						/>
+					</div>
+				</div>
+
+				{/* ── Category tabs ── */}
+				{(catLoading || categories.length > 0) && (
+					<div className="shrink-0 px-4 py-2 border-b border-slate-100 overflow-x-auto scrollbar-hide">
+						<div className="flex items-center gap-1.5 w-max">
+							<button
+								type="button"
+								onClick={() => handleCategory('')}
+								className={cx(
+									'px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all',
+									activeCategory === ''
+										? 'text-white shadow-sm'
+										: 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+								)}
+								style={activeCategory === '' ? { background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))' } : {}}
+							>
+								{t('actions.allCategories') || 'All'}
+							</button>
+							{catLoading
+								? Array.from({ length: 5 }).map((_, i) => (
+									<div key={i} className="h-6 w-16 rounded-full bg-slate-100 animate-pulse" />
+								))
+								: categories.map(cat => (
+									<button
+										key={cat}
+										type="button"
+										onClick={() => handleCategory(cat)}
+										className={cx(
+											'px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all',
+											activeCategory === cat
+												? 'text-white shadow-sm'
+												: 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+										)}
+										style={activeCategory === cat ? { background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))' } : {}}
+									>
+										{cat}
+									</button>
+								))
+							}
+						</div>
+					</div>
+				)}
+
+				{/* ── Exercise list ── */}
+				<div ref={listRef} className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
+					{loading ? (
+						<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+							{Array.from({ length: PAGE_SIZE }).map((_, i) => (
+								<div key={i} className="h-20 rounded-lg bg-slate-100 animate-pulse" />
+							))}
+						</div>
+					) : results.length === 0 ? (
+						<div className="flex flex-col items-center justify-center py-14 text-slate-400 gap-2">
+							<Dumbbell size={28} className="opacity-40" />
+							<span className="text-sm">{t('actions.noExercisesFound')}</span>
+						</div>
+					) : (
+						<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+							{results.map(ex => (
+								<button
+									key={ex.id}
+									type="button"
+									onClick={() => onAdd(section, ex)}
+									className="flex flex-col items-center gap-2 p-3 rounded-lg border border-slate-200 hover:border-[var(--color-primary-300)] hover:bg-[var(--color-primary-50)] transition-all text-center group active:scale-95"
+								>
+									<div className="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
+										{ex.img
+											? <img src={ex.img} alt="" className="w-full h-full object-contain" />
+											: <Dumbbell size={18} className="text-slate-300 group-hover:text-[var(--color-primary-400)] transition-colors" />
+										}
+									</div>
+									<div className="w-full min-w-0">
+										<p className="text-xs font-semibold text-slate-800 line-clamp-2 leading-tight">{ex.name}</p>
+										{ex.category && (
+											<p className="text-[10px] text-slate-400 mt-0.5 truncate">{ex.category}</p>
+										)}
+									</div>
+								</button>
+							))}
+						</div>
+					)}
+				</div>
+
+				{/* ── Pagination ── */}
+				{!loading && totalPages > 1 && (
+					<div className="shrink-0 px-4 py-3 border-t border-slate-100 flex items-center justify-between gap-3">
+						<button
+							type="button"
+							disabled={page <= 1}
+							onClick={() => setPage(p => p - 1)}
+							className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+						>
+							<ChevronLeft className='rtl:scale-x-[-1]' size={13} />
+							{t('pagination.prev') || 'Prev'}
+						</button>
+
+						<span className="text-xs text-slate-500 font-medium">
+							{page} / {totalPages}
+						</span>
+
+						<button
+							type="button"
+							disabled={page >= totalPages}
+							onClick={() => setPage(p => p + 1)}
+							className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+						>
+							{t('pagination.next') || 'Next'}
+							<ChevronRight className='rtl:scale-x-[-1]' size={13} />
+						</button>
+					</div>
+				)}
+			</motion.div>
+		</AnimatePresence>
+	);
+}
+
+/* ─────────────────────────────────────────
+	 EDIT PLAN PANEL
+───────────────────────────────────────── */
+function EditPlanPanel({ editDayExercises, onUpdate, onDelete, onAddClick, onSave, onExit, saving, t }) {
+	const sections = [
+		{ key: 'warmupExercises', label: t('sections.warmup') },
+		{ key: 'exercises', label: t('sections.workout') },
+		{ key: 'cardioExercises', label: t('sections.cardio') },
+	];
+
+	return (
+		<motion.div
+			initial={{ opacity: 0, y: 8 }}
+			animate={{ opacity: 1, y: 0 }}
+			exit={{ opacity: 0, y: 8 }}
+			className="rounded-xl border border-[var(--color-primary-200)] bg-white shadow-lg overflow-hidden"
+		>
+			{/* Toolbar */}
+			<div className="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-[var(--color-primary-50)] to-white border-b border-[var(--color-primary-100)]">
+				<div className="flex items-center gap-2">
+					<PencilLine size={15} className="text-[var(--color-primary-600)]" />
+					<span className="text-sm font-bold text-slate-800">{t('actions.editPlan')}</span>
+				</div>
+				<div className="flex items-center gap-2">
+					<button
+						type="button"
+						onClick={onExit}
+						disabled={saving}
+						className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors disabled:opacity-50"
+					>
+						{t('actions.exitEdit')}
+					</button>
+					<button
+						type="button"
+						onClick={onSave}
+						disabled={saving}
+						className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all disabled:opacity-50"
+						style={{ background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))' }}
+					>
+						{saving ? <RotateCcw size={12} className="animate-spin" /> : <Save size={12} />}
+						{saving ? t('actions.saving') : t('actions.savePlan')}
+					</button>
+				</div>
+			</div>
+
+			{/* Sections */}
+			<div className="divide-y divide-slate-100">
+				{sections.map(({ key, label }) => {
+					const exercises = editDayExercises[key] || [];
+					return (
+						<div key={key} className="px-4 py-3 space-y-2">
+							<div className="flex items-center justify-between">
+								<span className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</span>
+								<button
+									type="button"
+									onClick={() => onAddClick(key)}
+									className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-[var(--color-primary-700)] bg-[var(--color-primary-50)] hover:bg-[var(--color-primary-100)] transition-colors border border-[var(--color-primary-200)]"
+								>
+									<Plus size={11} /> {t('actions.addExercise')}
+								</button>
+							</div>
+							{exercises.length === 0 && (
+								<p className="text-xs text-slate-400 py-2">{t('noExercises')}</p>
+							)}
+							{exercises.map((ex, idx) => (
+								<div key={`${ex.id}-${idx}`} className="flex items-center gap-3 p-2 rounded-lg bg-slate-50 border border-slate-200">
+									<div className="w-8 h-8 rounded-lg bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+										{ex.img ? <img src={ex.img} alt="" className="w-full h-full object-contain" /> : <Dumbbell size={12} className="text-slate-400" />}
+									</div>
+									<div className="flex-1 min-w-0">
+										<p className="text-xs font-semibold text-slate-800 truncate">{ex.name}</p>
+										<div className="flex items-center gap-2 mt-1">
+											<label className="text-[10px] text-slate-500">{t('actions.sets')}</label>
+											<input
+												type="number" min="1" max="20"
+												value={ex.targetSets ?? 3}
+												onChange={e => onUpdate(key, ex.id, 'targetSets', Math.max(1, parseInt(e.target.value) || 1))}
+												className="w-12 text-center text-xs border border-slate-200 rounded-md px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-primary-300)]"
+											/>
+											<label className="text-[10px] text-slate-500">{t('actions.reps')}</label>
+											<input
+												type="text"
+												value={ex.targetReps ?? '10'}
+												onChange={e => onUpdate(key, ex.id, 'targetReps', e.target.value)}
+												className="w-16 text-center text-xs border border-slate-200 rounded-md px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-primary-300)]"
+											/>
+										</div>
+									</div>
+									<button
+										type="button"
+										onClick={() => onDelete(key, ex.id)}
+										className="w-7 h-7 rounded-lg flex items-center justify-center text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-colors shrink-0"
+										title={t('actions.deleteExercise')}
+									>
+										<Trash2 size={13} />
+									</button>
+								</div>
+							))}
+						</div>
+					);
+				})}
+			</div>
+		</motion.div>
+	);
+}
+
 export default function MyWorkoutsPage() {
 	const t = useTranslations('MyWorkouts');
 	const user = useUser();
@@ -1036,6 +1381,13 @@ export default function MyWorkoutsPage() {
 	const [inputBuffer, setInputBuffer] = useState({});
 	const [completedExercises, setCompletedExercises] = useState(new Set());
 	const lastSavedRef = useRef(new Map());
+
+	/* ── Edit mode ── */
+	const [canEditWorkout, setCanEditWorkout] = useState(!!user?.canEditWorkout);
+	const [editMode, setEditMode] = useState(false);
+	const [editDayExercises, setEditDayExercises] = useState({ warmupExercises: [], exercises: [], cardioExercises: [] });
+	const [addExModal, setAddExModal] = useState(null);
+	const [savingPlan, setSavingPlan] = useState(false);
 
 	useEffect(() => {
 		if (selectedDay) localStorage.setItem(LOCAL_KEY_SELECTED_DAY, selectedDay);
@@ -1179,9 +1531,20 @@ export default function MyWorkoutsPage() {
 		(async () => {
 			try {
 				setLoading(true);
-				const p = await fetchActivePlan(USER_ID);
+				const [p, meRes] = await Promise.all([
+					fetchActivePlan(USER_ID),
+					api.get('/auth/me').catch(() => null),
+				]);
 				if (!mounted) return;
 				setPlan(p);
+				if (meRes?.data) {
+					const freshUser = meRes.data;
+					setCanEditWorkout(!!freshUser.canEditWorkout);
+					try {
+						const stored = JSON.parse(localStorage.getItem('user') || '{}');
+						localStorage.setItem('user', JSON.stringify({ ...stored, canEditWorkout: !!freshUser.canEditWorkout }));
+					} catch { }
+				}
 				const serverDays = (Array.isArray(p?.program?.days) ? p.program.days : []).map(d => ({ ...d, _key: String(d.dayOfWeek ?? '').toLowerCase() }));
 				const byKey = Object.fromEntries(serverDays.map(d => [d._key, d]));
 				const allKeys = serverDays.map(d => d._key);
@@ -1375,6 +1738,78 @@ export default function MyWorkoutsPage() {
 		return () => window.removeEventListener('focus', onFocus);
 	}, [trySyncQueue]);
 
+	/* ── Edit plan helpers ── */
+	const enterEditMode = useCallback(() => {
+		const dayData = (plan?.program?.days || []).find(d => String(d.dayOfWeek ?? '').toLowerCase() === selectedDay) || {};
+		setEditDayExercises({
+			warmupExercises: [...(dayData.warmupExercises || [])],
+			exercises: [...(dayData.exercises || [])],
+			cardioExercises: [...(dayData.cardioExercises || [])],
+		});
+		setEditMode(true);
+	}, [plan, selectedDay]);
+
+	const exitEditMode = useCallback(() => {
+		setEditMode(false);
+		setEditDayExercises({ warmupExercises: [], exercises: [], cardioExercises: [] });
+		setAddExModal(null);
+	}, []);
+
+	const savePlanChanges = useCallback(async () => {
+		const planId = plan?.id;
+		if (!planId) return;
+		const dayData = (plan?.program?.days || []).find(d => String(d.dayOfWeek ?? '').toLowerCase() === selectedDay);
+		setSavingPlan(true);
+		try {
+			const toRef = arr => arr.map(ex => ({ id: ex.id, targetSets: Number(ex.targetSets) || 3, targetReps: String(ex.targetReps || '10') }));
+			await api.put(`/plans/${planId}`, {
+				program: {
+					days: [{
+						dayOfWeek: selectedDay,
+						name: dayData?.name || selectedDay,
+						warmupExercises: toRef(editDayExercises.warmupExercises),
+						exercises: toRef(editDayExercises.exercises),
+						cardioExercises: toRef(editDayExercises.cardioExercises),
+					}],
+				},
+			});
+			const freshPlan = await fetchActivePlan(USER_ID);
+			setPlan(freshPlan);
+			exitEditMode();
+			const byKey = Object.fromEntries((freshPlan?.program?.days || []).map(d => [String(d.dayOfWeek ?? '').toLowerCase(), d]));
+			const dayProgramRaw = byKey[selectedDay] || weeklyProgram[selectedDay] || { exercises: [] };
+			const dayProgramNorm = normalizeDayProgram(dayProgramRaw);
+			const session = createSessionFromDay(dayProgramNorm);
+			setWorkout(session);
+			const firstEx = session.exercises?.[0];
+			setCurrentExId(firstEx?.id != null ? String(firstEx.id) : undefined);
+			Notification(t('editPlan.saved'), 'success');
+		} catch (e) {
+			Notification(e?.response?.data?.message || t('editPlan.saveFailed'), 'error');
+		} finally {
+			setSavingPlan(false);
+		}
+	}, [plan, selectedDay, editDayExercises, exitEditMode, USER_ID, t]);
+
+	const deleteExerciseFromEdit = useCallback((section, exerciseId) => {
+		setEditDayExercises(prev => ({ ...prev, [section]: prev[section].filter(ex => ex.id !== exerciseId) }));
+	}, []);
+
+	const updateExerciseInEdit = useCallback((section, exerciseId, field, value) => {
+		setEditDayExercises(prev => ({
+			...prev,
+			[section]: prev[section].map(ex => ex.id === exerciseId ? { ...ex, [field]: value } : ex),
+		}));
+	}, []);
+
+	const addExerciseToEdit = useCallback((section, exercise) => {
+		setEditDayExercises(prev => ({
+			...prev,
+			[section]: [...prev[section], { id: exercise.id, name: exercise.name, targetSets: exercise.targetSets || 3, targetReps: exercise.targetReps || '10', img: exercise.img || null }],
+		}));
+		setAddExModal(null);
+	}, []);
+
 	/* ── Derived ── */
 	const exercisesBySection = useMemo(() => (workout?.exercises || []).filter(ex => (ex.group || 'workout') === activeSection), [workout?.exercises, activeSection]);
 
@@ -1438,6 +1873,15 @@ export default function MyWorkoutsPage() {
 			<audio ref={audioRef} src={DEFAULT_SOUNDS[2]} preload="auto" />
 			<NotesModal open={notesOpen} onClose={() => setNotesOpen(false)} title={plan?.name} notes={plan?.notes || []} t={t} />
 
+			{/* Add exercise modal */}
+			<AddExerciseModal
+				open={!!addExModal}
+				section={addExModal}
+				onClose={() => setAddExModal(null)}
+				onAdd={addExerciseToEdit}
+				t={t}
+			/>
+
 			{/* ── HEADER ── */}
 			<WorkoutHeader
 				title={t('title')}
@@ -1450,6 +1894,35 @@ export default function MyWorkoutsPage() {
 				onNotesClick={() => setNotesOpen(true)}
 				t={t}
 			/>
+
+			{/* Edit plan button — only shown if user has permission and not already editing */}
+			{canEditWorkout && !editMode && (
+				<div className="flex justify-end px-1">
+					<button
+						type="button"
+						onClick={enterEditMode}
+						className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-md transition-all hover:opacity-90 active:scale-95"
+						style={{ background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500))' }}
+					>
+						<PencilLine size={15} />
+						{t('actions.editPlan')}
+					</button>
+				</div>
+			)}
+
+			{/* Edit plan panel — shown when editing */}
+			{editMode && (
+				<EditPlanPanel
+					editDayExercises={editDayExercises}
+					onUpdate={updateExerciseInEdit}
+					onDelete={deleteExerciseFromEdit}
+					onAddClick={setAddExModal}
+					onSave={savePlanChanges}
+					onExit={exitEditMode}
+					saving={savingPlan}
+					t={t}
+				/>
+			)}
 
 			{/* Audio hub */}
 			<AudioHubInline

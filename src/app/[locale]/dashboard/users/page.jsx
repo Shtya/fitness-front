@@ -1248,6 +1248,7 @@ export default function UsersList() {
 				coachId: u.coachId ?? u.assignedCoachId ?? null,
 				coachName: u.coach?.name || u.coachName || u.assignedCoachName || null,
 				gender: u.gender || null,
+				canEditWorkout: u.canEditWorkout || null,
 			}));
 
 			setRows(mapped);
@@ -1317,6 +1318,20 @@ export default function UsersList() {
 		}
 	};
 
+	const toggleWorkoutEdit = async (row) => {
+		const next = !row.canEditWorkout;
+		try {
+			await api.put(`/auth/admin/users/${row.id}/workout-edit-toggle`, { canEditWorkout: next });
+			fetchUsers();
+			Notification(
+				t('workoutEdit.toggleSuccess', { status: next ? t('workoutEdit.enabled') : t('workoutEdit.disabled'), name: row.name }),
+				'success'
+			);
+		} catch (e) {
+			Notification(e?.response?.data?.message || t('workoutEdit.toggleFailed'), 'error');
+		}
+	};
+
 	const buildRowActions = row => {
 		const viewer = String(myRole || '').toLowerCase();
 		const isAdmin = viewer === 'admin';
@@ -1360,6 +1375,12 @@ export default function UsersList() {
 		if (isAdmin) {
 			opts.push(
 				{ icon: I(PencilLine, 'text-indigo-600'), label: t('actions.editDetails'), onClick: () => { setSelectedUser(row); setEditUserOpen(true); }, className: 'hover:text-indigo-700' },
+				{
+					icon: I(ListChecks, row.canEditWorkout ? 'text-emerald-600' : 'text-slate-400'),
+					label: row.canEditWorkout ? t('actions.disableWorkoutEdit') : t('actions.enableWorkoutEdit'),
+					onClick: () => toggleWorkoutEdit(row),
+					className: row.canEditWorkout ? 'hover:text-emerald-700' : 'hover:text-slate-600',
+				},
 				{ icon: I(Trash2, 'text-rose-600'), label: t('actions.delete'), onClick: () => deleteUser(row), className: 'text-rose-600 hover:text-rose-700' }
 			);
 		}
@@ -1491,6 +1512,19 @@ export default function UsersList() {
 					</span>
 				);
 			},
+		},
+		{
+			key: 'canEditWorkout',
+			header: t('table.workoutEdit'),
+			cell: (r) => r.canEditWorkout ? (
+				<Badge color='emerald'>
+					<CheckCircle2 className='w-3 h-3' /> {t('workoutEdit.enabled')}
+				</Badge>
+			) : (
+				<Badge color='slate'> 
+					<XCircle className='w-3 h-3' /> {t('workoutEdit.disabled')}
+				</Badge>
+			),
 		},
 		{
 			key: 'actions',
