@@ -772,7 +772,7 @@ function FoodItemRow({ it, checked, onToggle, qtyLabel, t }) {
         <div className='flex-1 min-w-0'>
           <div dir='rtl' className='flex items-center gap-2 flex-wrap'>
             {it.itemType === 'recipe' && <div className='shrink-0 h-8 w-8 rounded-md overflow-hidden border border-blue-100 bg-blue-50 flex items-center justify-center'>{recipeImage ? <img src={recipeImage} alt={it.name} className='h-full w-full object-cover' /> : <BookOpen size={13} className='text-blue-400' />}</div>}
-            <span className={['flex-1 truncate leading-none text-[13.5px] tracking-[-0.01em] transition-all duration-150', checked ? 'font-[650] text-[var(--color-primary-900)]' : 'font-medium text-slate-700'].join(' ')}>{it.name}</span>
+            <span className={['flex-1   leading-none text-[12px] tracking-[-0.01em] transition-all duration-150', checked ? 'font-[650] text-[var(--color-primary-900)]' : 'font-medium text-slate-700'].join(' ')}>{it.name}</span>
             {it.itemType === 'recipe' && <span className='text-[10px] font-bold rounded px-1.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-700'>{t('nutrition.recipe', { default: 'Recipe' })}</span>}
 
             {qtyLabel && <span className='text-xs text-slate-400 font-medium shrink-0 tracking-[0.02em]'>{qtyLabel}</span>}
