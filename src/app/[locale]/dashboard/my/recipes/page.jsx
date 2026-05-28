@@ -134,10 +134,10 @@ function StatPill({ label, value, icon: Icon, delay = 0, sub }) {
 			style={{ background: 'rgba(255,255,255,0.13)', backdropFilter: 'blur(12px)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)' }}
 		>
 			<div className="flex items-start justify-between gap-1 mb-1.5 sm:mb-2">
-				<p className="text-[7px] sm:text-[9px] font-black uppercase tracking-[0.12em] text-white/55 leading-tight">{label}</p>
+				<p className="text-[7px] sm:text-[9px] font-black uppercase tracking-[0.12em] text-white/55 md: leading-tight">{label}</p>
 				<Icon className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-white/35 shrink-0" />
 			</div>
-			<p className="text-xl sm:text-3xl font-black text-white leading-none tabular-nums">{value}</p>
+			<p className="text-xl sm:text-3xl font-black text-white md: leading-none tabular-nums">{value}</p>
 			{sub && <p className="text-[7px] text-white/40 font-semibold mt-0.5">{sub}</p>}
 		</motion.div>
 	);
@@ -244,7 +244,7 @@ const RecipeCard = memo(function RecipeCard({ recipe, idx, onOpen, t, tMt }) {
 
 			{/* body */}
 			<div className="flex flex-1 flex-col p-2.5 sm:p-3 gap-2">
-				<h3 className="text-[10.5px] sm:text-[11.5px] font-black leading-snug text-slate-800 line-clamp-2">
+				<h3 className="text-[10.5px] sm:text-[11.5px] font-black md: leading-snug text-slate-800 line-clamp-2">
 					{recipe.title}
 				</h3>
 
@@ -314,7 +314,7 @@ const FeaturedBanner = memo(function FeaturedBanner({ recipe, onOpen, t, tMt }) 
 					<div className="hidden sm:block absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-white/80" />
 					<div className="sm:hidden absolute inset-0 bg-gradient-to-t from-black/65 to-transparent" />
 					<div className="sm:hidden absolute bottom-3 start-3 end-3">
-						<h2 className="text-sm font-black text-white leading-tight line-clamp-2">{recipe.title}</h2>
+						<h2 className="text-sm font-black text-white md: leading-tight line-clamp-2">{recipe.title}</h2>
 					</div>
 				</div>
 
@@ -330,7 +330,7 @@ const FeaturedBanner = memo(function FeaturedBanner({ recipe, onOpen, t, tMt }) 
 						</span>
 					</div>
 
-					<h2 className="hidden sm:block rp-serif text-xl sm:text-2xl font-black leading-tight text-slate-800">
+					<h2 className="hidden sm:block rp-serif text-xl sm:text-2xl font-black md: leading-tight text-slate-800">
 						{recipe.title}
 					</h2>
 
@@ -424,7 +424,7 @@ function RecipeModal({ recipe, onClose, t, tMt }) {
 							</button>
 
 							<div className="absolute bottom-3 start-4 end-14">
-								<h2 className="rp-serif text-lg sm:text-2xl font-black text-white leading-tight">{recipe.title}</h2>
+								<h2 className="rp-serif text-lg sm:text-2xl font-black text-white md: leading-tight">{recipe.title}</h2>
 							</div>
 						</div>
 
@@ -436,7 +436,7 @@ function RecipeModal({ recipe, onClose, t, tMt }) {
 								<p className="text-[8px] font-black uppercase tracking-[0.16em] mb-3 text-[var(--color-primary-500)]">{t('card.nutrition')}</p>
 								<div className="flex items-end justify-between flex-wrap gap-3">
 									<div>
-										<p className="rp-serif text-4xl sm:text-5xl font-black leading-none tabular-nums text-[var(--color-primary-700)]">{recipe.calories}</p>
+										<p className="rp-serif text-4xl sm:text-5xl font-black md: leading-none tabular-nums text-[var(--color-primary-700)]">{recipe.calories}</p>
 										<p className="text-[9px] font-bold uppercase tracking-wide text-slate-400 mt-1">{t('card.calories')}</p>
 									</div>
 									<div className="flex gap-5 sm:gap-6">
@@ -521,7 +521,7 @@ function RecipeModal({ recipe, onClose, t, tMt }) {
 									<Lightbulb className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />
 									<ul className="space-y-1.5">
 										{recipe.tips.map((tip, i) => (
-											<li key={i} className="text-[11px] sm:text-xs text-amber-800 font-medium leading-relaxed">{tip}</li>
+											<li key={i} className="text-[11px] sm:text-xs text-amber-800 font-medium md: leading-relaxed">{tip}</li>
 										))}
 									</ul>
 								</div>
@@ -921,7 +921,7 @@ const hasFilter = !!(
 									<Utensils className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
 								</motion.div>
 								<div className="min-w-0">
-									<h1 className="rp-serif text-xl sm:text-2xl text-white leading-tight tracking-tight truncate">{t('page.title')}</h1>
+									<h1 className="rp-serif text-xl sm:text-2xl text-white md: leading-tight tracking-tight truncate">{t('page.title')}</h1>
 									<p className="text-[10px] sm:text-xs text-white/50 mt-0.5 font-medium">{t('page.desc')}</p>
 								</div>
 							</div>

@@ -123,7 +123,7 @@ function StatsBar() {
 									<div className="theme-gradient-bg flex h-11 w-11 items-center justify-center rounded-lg shadow-lg">
 										<Icon className="h-5 w-5 text-white" />
 									</div>
-									<span className="font-display text-3xl leading-none theme-gradient-text">
+									<span className="font-display text-3xl md: leading-none theme-gradient-text">
 										{stat.value}
 									</span>
 								</div>
@@ -372,7 +372,7 @@ function StepItem({ step, Icon, isActive, onEnter, onLeave }) {
       {/* Title */}
       <h3
         className={[
-          "mb-1 px-1 text-[13px] font-bold leading-tight transition-colors duration-200 sm:text-sm",
+          "mb-1 px-1 text-[13px] font-bold md: leading-tight transition-colors duration-200 sm:text-sm",
           isActive
             ? "bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] bg-clip-text text-transparent"
             : "text-white/60",
@@ -382,7 +382,7 @@ function StepItem({ step, Icon, isActive, onEnter, onLeave }) {
       </h3>
  
       {/* Description — desktop only */}
-      <p className="hidden px-1 text-[11px] leading-relaxed text-white/35 transition-colors duration-200 group-hover:text-white/50 lg:block">
+      <p className="hidden px-1 text-[11px] md: leading-relaxed text-white/35 transition-colors duration-200 group-hover:text-white/50 lg:block">
         {step.desc}
       </p>
     </div>
@@ -580,12 +580,12 @@ function PricingCard({ plan, cycle, index, t }) {
 							<Icon className="h-5 w-5 text-white sm:h-6 sm:w-6" aria-hidden="true" />
 						</div>
 						<div className="min-w-0">
-							<h3 className="text-lg font-black leading-tight text-white sm:text-xl">
+							<h3 className="text-lg font-black md: leading-tight text-white sm:text-xl">
 								{plan.name}
 							</h3>
 							<p
 								className={[
-									"mt-0.5 text-xs leading-snug",
+									"mt-0.5 text-xs md: leading-snug",
 									plan.popular ? "text-white/70" : "text-white/40",
 								].join(" ")}
 							>
@@ -599,7 +599,7 @@ function PricingCard({ plan, cycle, index, t }) {
 						<div className="flex flex-wrap items-baseline gap-1">
 							<span
 								className={[
-									"text-4xl font-black leading-none sm:text-5xl",
+									"text-4xl font-black md: leading-none sm:text-5xl",
 									plan.popular
 										? "text-white"
 										: "bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] bg-clip-text text-transparent",
@@ -670,7 +670,7 @@ function PricingCard({ plan, cycle, index, t }) {
 									</div>
 									<span
 										className={[
-											"text-sm leading-snug",
+											"text-sm md: leading-snug",
 											plan.popular ? "text-white/80" : "text-white/55",
 										].join(" ")}
 									>

@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>خطة التضخيم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { cairo: ['Cairo', 'sans-serif'] },
+      colors: {
+        bg:      '#080b12',
+        surface: '#0f1420',
+        card:    '#141929',
+        border:  '#1e2540',
+        amber:   { DEFAULT: '#f5a623', light: '#fbbf55', dark: '#c4821a' },
+        brand:   '#f5a623',
+      },
+      animation: {
+        'fade-up': 'fadeUp .4s ease both',
+        'pulse-slow': 'pulse 3s ease-in-out infinite',
+      },
+      keyframes: {
+        fadeUp: {
+          '0%':   { opacity: 0, transform: 'translateY(16px)' },
+          '100%': { opacity: 1, transform: 'translateY(0)' },
+        }
+      }
+    }
+  }
+}
+</script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Cairo',sans-serif; background:#080b12; color:#e4eaf5; min-height:100vh; direction:rtl; }
+
+  /* custom scrollbar */
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:#1e2540; border-radius:99px; }
+
+  /* tab bar no scrollbar */
+  .tabs-scroll::-webkit-scrollbar { display:none; }
+  .tabs-scroll { scrollbar-width:none; }
+
+  /* progress bar animation */
+  .prog-fill { transition: width 1s cubic-bezier(.4,0,.2,1); }
+
+  /* glow effect */
+  .glow-amber { box-shadow: 0 0 20px rgba(245,166,35,.18), 0 0 60px rgba(245,166,35,.06); }
+  .glow-blue  { box-shadow: 0 0 20px rgba(59,130,246,.18), 0 0 60px rgba(59,130,246,.06); }
+  .glow-green { box-shadow: 0 0 20px rgba(16,185,129,.18), 0 0 60px rgba(16,185,129,.06); }
+
+  /* gradient text */
+  .text-gradient { background: linear-gradient(135deg, #f5a623 0%, #e85d26 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+  /* card hover */
+  .card-hover { transition: transform .2s, border-color .2s; }
+  .card-hover:hover { transform: translateY(-2px); border-color:#2e3860; }
+
+  /* noise overlay */
+  .noise::before {
+    content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+    opacity:.4;
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position:  400px 0; }
+  }
+  .shimmer {
+    background: linear-gradient(90deg, transparent 0%, rgba(245,166,35,.07) 50%, transparent 100%);
+    background-size:800px 100%;
+    animation: shimmer 2.5s infinite;
+  }
+
+  /* stagger animations */
+  .stagger > *:nth-child(1) { animation-delay:.00s; }
+  .stagger > *:nth-child(2) { animation-delay:.06s; }
+  .stagger > *:nth-child(3) { animation-delay:.12s; }
+  .stagger > *:nth-child(4) { animation-delay:.18s; }
+  .stagger > *:nth-child(5) { animation-delay:.24s; }
+  .stagger > *:nth-child(6) { animation-delay:.30s; }
+
+  .panel { display:none; }
+  .panel.active { display:block; }
+
+  /* input styling */
+  input[type=number], select {
+    background:#0f1420; border:1px solid #1e2540; border-radius:12px; padding:10px 14px;
+    color:#e4eaf5; font-family:'Cairo',sans-serif; font-size:.85rem; outline:none; width:100%;
+    -webkit-appearance:none; appearance:none;
+  }
+  input:focus, select:focus { border-color:#f5a623; box-shadow:0 0 0 3px rgba(245,166,35,.1); }
+  select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23f5a623' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:left 12px center; padding-left:32px; }
+</style>
+</head>
+<body class="pb-24">
+
+<!-- ─── HERO HEADER ─── -->
+<header class="relative overflow-hidden bg-[#0c0f1a] border-b border-[#1e2540] px-4 pt-8 pb-5 text-center sticky top-0 z-50 backdrop-blur-xl">
+  <!-- decorative glow -->
+  <div class="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-20 bg-amber-500/10 blur-3xl rounded-full pointer-events-none"></div>
+  <div class="relative">
+ 
+    <h1 class="text-2xl font-black text-gradient leading-tight">خطة التضخيم 💪</h1>
+  </div>
+</header>
+
+ 
+<style>
+.tab { color:#6b7a9f; }
+.tab.active { background:linear-gradient(135deg,rgba(245,166,35,.18),rgba(232,93,38,.1)); color:#f5a623; border:1px solid rgba(245,166,35,.25); }
+.tab:hover:not(.active) { color:#b0bcdd; background:rgba(255,255,255,.04); }
+</style>
+
+<!-- ══════════════ OVERVIEW ══════════════ -->
+<div id="overview" class="panel active px-3 py-4 space-y-4 stagger">
+
+  <!-- Macro targets hero card -->
+  <div class="relative overflow-hidden rounded-2xl border border-[#1e2540] bg-[#141929] p-5 glow-amber card-hover">
+    <div class="shimmer absolute inset-0 rounded-2xl"></div>
+    <div class="relative">
+      <div class="flex items-center gap-2 mb-4">
+        <div class="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center text-base">🎯</div>
+        <span class="text-sm font-bold text-amber-400">هدف التضخيم اليومي</span>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-[#0f1420] rounded-xl p-3 border border-[#1e2540] text-center">
+          <div class="text-2xl font-black text-amber-400 leading-none">3,000</div>
+          <div class="text-[10px] text-slate-500 mt-1 font-semibold tracking-wide">– 3,400 kcal</div>
+        </div>
+        <div class="bg-[#0f1420] rounded-xl p-3 border border-[#1e2540] text-center">
+          <div class="text-2xl font-black text-blue-400 leading-none">120g</div>
+          <div class="text-[10px] text-slate-500 mt-1 font-semibold tracking-wide">– 165g بروتين</div>
+        </div>
+        <div class="bg-[#0f1420] rounded-xl p-3 border border-[#1e2540] text-center">
+          <div class="text-2xl font-black text-yellow-400 leading-none">350g</div>
+          <div class="text-[10px] text-slate-500 mt-1 font-semibold tracking-wide">– 450g كاربو</div>
+        </div>
+        <div class="bg-[#0f1420] rounded-xl p-3 border border-[#1e2540] text-center">
+          <div class="text-2xl font-black text-emerald-400 leading-none">70g</div>
+          <div class="text-[10px] text-slate-500 mt-1 font-semibold tracking-wide">– 100g دهون</div>
+        </div>
+      </div>
+      <div class="mt-3 text-center text-xs text-slate-500 bg-[#0f1420] rounded-xl p-2 border border-[#1e2540]">
+        📈 هدف زيادة الوزن: <span class="text-amber-400 font-bold">1.5–3 كجم / شهر</span> (الأمثل)
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress card -->
+  <div class="rounded-2xl border border-[#1e2540] bg-[#141929] p-5 card-hover animate-fade-up">
+    <div class="flex items-center gap-2 mb-5">
+      <div class="w-8 h-8 rounded-xl bg-blue-500/15 flex items-center justify-center text-base">📊</div>
+      <span class="text-sm font-bold text-blue-400">تغطية المشروبين + الوجبات</span>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <div class="flex justify-between text-xs mb-1.5">
+          <span class="font-bold text-slate-300">سعرات</span>
+          <span class="text-slate-500">~2900 / 3200 kcal</span>
+        </div>
+        <div class="h-2.5 bg-[#0f1420] rounded-full overflow-hidden border border-[#1e2540]">
+          <div class="prog-fill h-full rounded-full bg-gradient-to-r from-amber-600 to-amber-400" style="width:91%"></div>
+        </div>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs mb-1.5">
+          <span class="font-bold text-slate-300">بروتين</span>
+          <span class="text-slate-500">~130 / 145g</span>
+        </div>
+        <div class="h-2.5 bg-[#0f1420] rounded-full overflow-hidden border border-[#1e2540]">
+          <div class="prog-fill h-full rounded-full bg-gradient-to-r from-blue-700 to-blue-400" style="width:90%"></div>
+        </div>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs mb-1.5">
+          <span class="font-bold text-slate-300">كاربوهيدرات</span>
+          <span class="text-slate-500">~380 / 420g</span>
+        </div>
+        <div class="h-2.5 bg-[#0f1420] rounded-full overflow-hidden border border-[#1e2540]">
+          <div class="prog-fill h-full rounded-full bg-gradient-to-r from-yellow-700 to-yellow-400" style="width:88%"></div>
+        </div>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs mb-1.5">
+          <span class="font-bold text-slate-300">دهون</span>
+          <span class="text-slate-500">~90 / 95g</span>
+        </div>
+        <div class="h-2.5 bg-[#0f1420] rounded-full overflow-hidden border border-[#1e2540]">
+          <div class="prog-fill h-full rounded-full bg-gradient-to-r from-emerald-700 to-emerald-400" style="width:95%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick summary -->
+  <div class="rounded-2xl border border-[#1e2540] bg-[#141929] p-5 card-hover animate-fade-up">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="w-8 h-8 rounded-xl bg-purple-500/15 flex items-center justify-center text-base">⚡</div>
+      <span class="text-sm font-bold text-purple-400">ملخص سريع</span>
+    </div>
+    <div class="space-y-2.5">
+      <div class="flex items-start gap-3 bg-[#0f1420] rounded-xl p-3 border border-[#1e2540]">
+        <div class="w-2 h-2 rounded-full bg-amber-400 mt-1.5 flex-shrink-0"></div>
+        <span class="text-xs text-slate-300 leading-relaxed">احتياجك الأساسي بدون تمرين: <span class="text-amber-400 font-bold">2500–2700 kcal</span></span>
+      </div>
+      <div class="flex items-start gap-3 bg-[#0f1420] rounded-xl p-3 border border-[#1e2540]">
+        <div class="w-2 h-2 rounded-full bg-blue-400 mt-1.5 flex-shrink-0"></div>
+        <span class="text-xs text-slate-300 leading-relaxed">فائض التضخيم المطلوب: <span class="text-blue-400 font-bold">+300 إلى +600 kcal</span></span>
+      </div>
+      <div class="flex items-start gap-3 bg-[#0f1420] rounded-xl p-3 border border-[#1e2540]">
+        <div class="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0"></div>
+        <span class="text-xs text-slate-300 leading-relaxed">المشروبان يغطيان <span class="text-emerald-400 font-bold">~2600 kcal</span> من اليوم</span>
+      </div>
+      <div class="flex items-start gap-3 bg-[#0f1420] rounded-xl p-3 border border-[#1e2540]">
+        <div class="w-2 h-2 rounded-full bg-yellow-400 mt-1.5 flex-shrink-0"></div>
+        <span class="text-xs text-slate-300 leading-relaxed">الباقي من الوجبات: فطار + قبل التمرين</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ DRINK ══════════════ -->
+<div id="drink" class="panel px-3 py-4 space-y-4 stagger">
+
+  <!-- ingredients -->
+  <div class="rounded-2xl border border-[#1e2540] bg-[#141929] p-5 card-hover animate-fade-up">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="w-8 h-8 rounded-xl bg-teal-500/15 flex items-center justify-center text-base">🧪</div>
+      <span class="text-sm font-bold text-teal-400">مكونات خلطة المشروب</span>
+    </div>
+    <div class="space-y-1">
+      <div class="flex items-center justify-between py-2.5 border-b border-[#1e2540]">
+        <div>
+          <div class="text-sm font-bold text-slate-200">رز</div>
+          <div class="text-xs text-slate-500">2 كجم في الخلطة الكاملة</div>
+        </div>
+        <span class="text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">~3600 kcal/كجم</span>
+      </div>
+      <div class="flex items-center justify-between py-2.5 border-b border-[#1e2540]">
+        <div><div class="text-sm font-bold text-slate-200">بذور كتان</div><div class="text-xs text-slate-500">250 جم</div></div>
+        <span class="text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">~534 kcal/100g</span>
+      </div>
+      <div class="flex items-center justify-between py-2.5 border-b border-[#1e2540]">
+        <div><div class="text-sm font-bold text-slate-200">بذور شيا</div><div class="text-xs text-slate-500">200 جم</div></div>
+        <span class="text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">~486 kcal/100g</span>
+      </div>
+      <div class="flex items-center justify-between py-2.5 border-b border-[#1e2540]">
+        <div><div class="text-sm font-bold text-slate-200">كاكاو خام</div><div class="text-xs text-slate-500">250 جم</div></div>
+        <span class="text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">~228 kcal/100g</span>
+      </div>
+      <div class="flex items-center justify-between py-2.5 border-b border-[#1e2540]">
+        <div><div class="text-sm font-bold text-slate-200">لبن بودرة</div><div class="text-xs text-slate-500">250 جم</div></div>
+        <span class="text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">~496 kcal/100g</span>
+      </div>
+      <div class="flex items-center justify-between py-2.5">
+        <div><div class="text-sm font-bold text-slate-200">سيرلاك فواكه</div><div class="text-xs text-slate-500">500 جم</div></div>
+        <span class="text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">~386 kcal/100g</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- single dose -->
+  <div class="rounded-2xl border border-[#1e2540] bg-[#141929] p-5 card-hover animate-fade-up">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center text-base">🥄</div>
+      <span class="text-sm font-bold text-amber-400">جرعة واحدة (100جم + إضافات)</span>
+    </div>
+    <div class="space-y-2">
+      <div class="flex items-center justify-between bg-[#0f1420] rounded-xl px-4 py-2.5 border border-[#1e2540]">
+        <span class="text-xs font-semibold text-slate-300">100 جم خلطة أساسية</span>
+        <span class="text-xs font-black text-amber-400">390–450 kcal</span>
+      </div>
+      <div class="flex items-center justify-between bg-[#0f1420] rounded-xl px-4 py-2.5 border border-[#1e2540]">
+        <span class="text-xs font-semibold text-slate-300">50 جم زيت زيتون</span>
+        <span class="text-xs font-black text-amber-400">442 kcal</span>
+      </div>
+      <div class="flex items-center justify-between bg-[#0f1420] rounded-xl px-4 py-2.5 border border-[#1e2540]">
+        <span class="text-xs font-semibold text-slate-300">50 جم فول سوداني</span>
+        <span class="text-xs font-black text-amber-400">280–300 kcal</span>
+      </div>
+      <div class="flex items-center justify-between bg-[#0f1420] rounded-xl px-4 py-2.5 border border-[#1e2540]">
+        <span class="text-xs font-semibold text-slate-300">50 جم عسل</span>
+        <span class="text-xs font-black text-amber-400">150–160 kcal</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- totals -->
+  <div class="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-[#141929] p-5 glow-amber card-hover animate-fade-up">
+    <div class="shimmer absolute inset-0 rounded-2xl"></div>
+    <div class="relative">
+      <div class="flex items-center gap-2 mb-4">
+        <div class="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center text-base">📊</div>
+        <span class="text-sm font-bold text-amber-400">إجمالي جرعة واحدة</span>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-[#0f1420] rounded-xl p-3 border border-[#1e2540] text-center">
+          <div class="text-xl font-black text-amber-400">~1300</div>
+          <div class="text-[10px] text-slate-500 font-semibold mt-0.5">سعرات</div>
+        </div>
+        <div class="bg-[#0f1420] rounded-xl p-3 border border-[#1e2540] text-center">
+          <div class="text-xl font-black text-blue-400">24–29g</div>
+          <div class="text-[10px] text-slate-500 font-semibold mt-0.5">بروتين</div>
+        </div>
+        <div class="bg-[#0f1420] rounded-xl p-3 border border-[#1e2540] text-center">
+          <div class="text-xl font-black text-yellow-400">95–105g</div>
+          <div class="text-[10px] text-slate-500 font-semibold mt-0.5">كاربو</div>
+        </div>
+        <div class="bg-[#0f1420] rounded-xl p-3 border border-[#1e2540] text-center">
+          <div class="text-xl font-black text-emerald-400">88–95g</div>
+          <div class="text-[10px] text-slate-500 font-semibold mt-0.5">دهون</div>
+        </div>
+      </div>
+      <div class="mt-3 bg-amber-500/10 rounded-xl p-3 text-center border border-amber-500/20">
+        <span class="text-xs text-slate-400">× المشروبان في اليوم = </span>
+        <span class="text-lg font-black text-amber-400">~2600 kcal</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- warning -->
+  <div class="flex gap-3 bg-red-950/40 border border-red-900/50 rounded-2xl p-4 animate-fade-up">
+    <span class="text-xl flex-shrink-0 mt-0.5">⚠️</span>
+    <div class="text-xs text-slate-300 leading-relaxed">
+      <p class="text-red-400 font-bold mb-1">❌ لا تشرب المشروب الكامل قبل التمرين مباشرة</p>
+      هذا هو سبب الدوخة. المشروب الثاني بعد التمرين أو قبله بـ <span class="text-amber-400 font-bold">3 ساعات على الأقل</span>.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ TIMELINE ══════════════ -->
+<div id="timeline" class="panel px-3 py-4 animate-fade-up">
+  <div class="rounded-2xl border border-[#1e2540] bg-[#141929] p-5">
+    <div class="flex items-center gap-2 mb-6">
+      <div class="w-8 h-8 rounded-xl bg-blue-500/15 flex items-center justify-center text-base">📅</div>
+      <span class="text-sm font-bold text-blue-400">جدول اليوم الكامل</span>
+    </div>
+
+    <!-- timeline items -->
+    <div class="space-y-0">
+
+      <!-- item -->
+      <div class="flex gap-4">
+        <div class="flex flex-col items-center w-10 flex-shrink-0">
+          <div class="w-10 h-10 rounded-full bg-emerald-900/50 border-2 border-emerald-500/50 flex items-center justify-center text-lg">🍳</div>
+          <div class="w-0.5 flex-1 bg-gradient-to-b from-emerald-500/40 to-transparent min-h-[20px] mt-1"></div>
+        </div>
+        <div class="pb-6 pt-1 flex-1">
+          <div class="text-sm font-black text-emerald-400 mb-1.5">الفطار — الصباح</div>
+          <div class="bg-[#0f1420] rounded-xl p-3 border border-[#1e2540] text-xs text-slate-400 leading-relaxed space-y-1">
+            <p>🥚 <span class="text-slate-200 font-semibold">3 بيض</span> · 🍞 عيش بلدي · 🍎 فاكهة</p>
+            <p>💊 Multivitamin + Vitamin D3</p>
+            <p>🥤 <span class="text-amber-400 font-bold">المشروب الأول (1260–1350 kcal)</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-4">
+        <div class="flex flex-col items-center w-10 flex-shrink-0">
+          <div class="w-10 h-10 rounded-full bg-blue-900/50 border-2 border-blue-500/50 flex items-center justify-center text-lg">🍚</div>
+          <div class="w-0.5 flex-1 bg-gradient-to-b from-blue-500/40 to-transparent min-h-[20px] mt-1"></div>
+        </div>
+        <div class="pb-6 pt-1 flex-1">
+          <div class="text-sm font-black text-blue-400 mb-1.5">قبل التمرين بـ 2–3 ساعات</div>
+          <div class="bg-[#0f1420] rounded-xl p-3 border border-[#1e2540] text-xs text-slate-400 leading-relaxed">
+            <p>🍚 رز / عيش / شوفان</p>
+            <p>🍗 فراخ أو بيض</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-4">
+        <div class="flex flex-col items-center w-10 flex-shrink-0">
+          <div class="w-10 h-10 rounded-full bg-yellow-900/50 border-2 border-yellow-500/50 flex items-center justify-center text-lg">⏱</div>
+          <div class="w-0.5 flex-1 bg-gradient-to-b from-yellow-500/40 to-transparent min-h-[20px] mt-1"></div>
+        </div>
+        <div class="pb-6 pt-1 flex-1">
+          <div class="text-sm font-black text-yellow-400 mb-1.5">قبل التمرين بـ 60 دقيقة</div>
+          <div class="bg-[#0f1420] rounded-xl p-3 border border-[#1e2540] text-xs text-slate-400 leading-relaxed space-y-1">
+            <p>🍌 موز + زبادي</p>
+            <p>☕ قهوة خفيفة (اختياري)</p>
+            <p>💧 مياه + رشة ملح أو إلكتروليت</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-4">
+        <div class="flex flex-col items-center w-10 flex-shrink-0">
+          <div class="w-10 h-10 rounded-full bg-red-900/50 border-2 border-red-500/50 flex items-center justify-center text-lg">🏋️</div>
+          <div class="w-0.5 flex-1 bg-gradient-to-b from-red-500/40 to-transparent min-h-[20px] mt-1"></div>
+        </div>
+        <div class="pb-6 pt-1 flex-1">
+          <div class="text-sm font-black text-red-400 mb-1.5">أثناء التمرين</div>
+          <div class="bg-[#0f1420] rounded-xl p-3 border border-[#1e2540] text-xs text-slate-400 leading-relaxed space-y-1">
+            <p>💧 اشرب مياه باستمرار</p>
+            <p>🫁 زفير وقت المجهود · شهيق وقت الرجوع</p>
+            <p>⏱ راحة: <span class="text-slate-200 font-semibold">2–3 دقائق</span> ثقيل · <span class="text-slate-200 font-semibold">60–90 ث</span> عادي</p>
+            <p>🚶 امشِ 20–30 ثانية بعد كل مجموعة</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-4">
+        <div class="flex flex-col items-center w-10 flex-shrink-0">
+          <div class="w-10 h-10 rounded-full bg-purple-900/50 border-2 border-purple-500/50 flex items-center justify-center text-lg">🥤</div>
+          <div class="w-0.5 flex-1 bg-gradient-to-b from-purple-500/40 to-transparent min-h-[20px] mt-1"></div>
+        </div>
+        <div class="pb-6 pt-1 flex-1">
+          <div class="text-sm font-black text-purple-400 mb-1.5">بعد التمرين مباشرة</div>
+          <div class="bg-[#0f1420] rounded-xl p-3 border border-[#1e2540] text-xs text-slate-400 leading-relaxed space-y-1">
+            <p>🥛 <span class="text-slate-200 font-semibold">Whey Protein</span> — 1 Scoop</p>
+            <p>⚡ <span class="text-slate-200 font-semibold">Creatine</span> — 5g</p>
+            <p>🥤 <span class="text-amber-400 font-bold">المشروب الثاني (1260–1350 kcal)</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-4">
+        <div class="flex flex-col items-center w-10 flex-shrink-0">
+          <div class="w-10 h-10 rounded-full bg-sky-900/50 border-2 border-sky-500/50 flex items-center justify-center text-lg">😴</div>
+        </div>
+        <div class="pt-1 flex-1">
+          <div class="text-sm font-black text-sky-400 mb-1.5">قبل النوم</div>
+          <div class="bg-[#0f1420] rounded-xl p-3 border border-[#1e2540] text-xs text-slate-400">
+            <p>🪨 <span class="text-slate-200 font-semibold">Magnesium</span> — 200–400mg</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ SUPPLEMENTS ══════════════ -->
+<div id="supps" class="panel px-3 py-4 space-y-4 stagger">
+  <div class="rounded-2xl border border-[#1e2540] bg-[#141929] p-5 card-hover animate-fade-up">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="w-8 h-8 rounded-xl bg-pink-500/15 flex items-center justify-center text-base">💊</div>
+      <span class="text-sm font-bold text-pink-400">المكملات اليومية</span>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="bg-[#0f1420] border border-[#1e2540] rounded-xl p-3 text-center card-hover">
+        <div class="text-2xl mb-1">🌈</div>
+        <div class="text-xs font-bold text-slate-200">Multivitamin</div>
+        <div class="text-[10px] text-slate-500 mt-0.5">مرة يوميًا</div>
+        <div class="text-[10px] text-amber-400 font-bold mt-1">⏰ بعد الفطار</div>
+      </div>
+      <div class="bg-[#0f1420] border border-[#1e2540] rounded-xl p-3 text-center card-hover">
+        <div class="text-2xl mb-1">☀️</div>
+        <div class="text-xs font-bold text-slate-200">Vitamin D3</div>
+        <div class="text-[10px] text-slate-500 mt-0.5">1000–2000 IU</div>
+        <div class="text-[10px] text-amber-400 font-bold mt-1">⏰ بعد الفطار</div>
+      </div>
+      <div class="bg-[#0f1420] border border-[#1e2540] rounded-xl p-3 text-center card-hover">
+        <div class="text-2xl mb-1">🪨</div>
+        <div class="text-xs font-bold text-slate-200">Magnesium</div>
+        <div class="text-[10px] text-slate-500 mt-0.5">200–400 mg</div>
+        <div class="text-[10px] text-amber-400 font-bold mt-1">⏰ قبل النوم</div>
+      </div>
+      <div class="bg-[#0f1420] border border-[#1e2540] rounded-xl p-3 text-center card-hover">
+        <div class="text-2xl mb-1">⚡</div>
+        <div class="text-xs font-bold text-slate-200">Electrolytes</div>
+        <div class="text-[10px] text-slate-500 mt-0.5">حسب الحاجة</div>
+        <div class="text-[10px] text-amber-400 font-bold mt-1">⏰ قبل / أثناء التمرين</div>
+      </div>
+      <div class="bg-[#0f1420] border border-[#1e2540] rounded-xl p-3 text-center card-hover">
+        <div class="text-2xl mb-1">💥</div>
+        <div class="text-xs font-bold text-slate-200">Creatine</div>
+        <div class="text-[10px] text-slate-500 mt-0.5">5 جم يوميًا</div>
+        <div class="text-[10px] text-amber-400 font-bold mt-1">⏰ بعد التمرين</div>
+      </div>
+      <div class="bg-[#0f1420] border border-[#1e2540] rounded-xl p-3 text-center card-hover">
+        <div class="text-2xl mb-1">🥛</div>
+        <div class="text-xs font-bold text-slate-200">Whey Protein</div>
+        <div class="text-[10px] text-slate-500 mt-0.5">1 Scoop</div>
+        <div class="text-[10px] text-amber-400 font-bold mt-1">⏰ بعد التمرين</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rounded-2xl border border-[#1e2540] bg-[#141929] p-5 card-hover animate-fade-up">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center text-base">⚡</div>
+      <span class="text-sm font-bold text-amber-400">ملاحظات مهمة</span>
+    </div>
+    <div class="space-y-2">
+      <div class="flex items-start gap-3 bg-[#0f1420] rounded-xl p-3 border border-[#1e2540]">
+        <div class="w-2 h-2 rounded-full bg-yellow-400 mt-1.5 flex-shrink-0"></div>
+        <span class="text-xs text-slate-300 leading-relaxed">الكرياتين: أفضل وقت بعد التمرين أو أي وقت ثابت يوميًا</span>
+      </div>
+      <div class="flex items-start gap-3 bg-[#0f1420] rounded-xl p-3 border border-[#1e2540]">
+        <div class="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0"></div>
+        <span class="text-xs text-slate-300 leading-relaxed">المغنيسيوم يحسن النوم ويقلل التعب العضلي</span>
+      </div>
+      <div class="flex items-start gap-3 bg-[#0f1420] rounded-xl p-3 border border-[#1e2540]">
+        <div class="w-2 h-2 rounded-full bg-blue-400 mt-1.5 flex-shrink-0"></div>
+        <span class="text-xs text-slate-300 leading-relaxed">D3 مع وجبة دسمة لامتصاص أفضل</span>
+      </div>
+      <div class="flex items-start gap-3 bg-[#0f1420] rounded-xl p-3 border border-[#1e2540]">
+        <div class="w-2 h-2 rounded-full bg-purple-400 mt-1.5 flex-shrink-0"></div>
+        <span class="text-xs text-slate-300 leading-relaxed">Whey بعد التمرين لإصلاح العضلات</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ RULES ══════════════ -->
+<div id="rules" class="panel px-3 py-4 space-y-4 stagger">
+
+  <!-- breathing -->
+  <div class="rounded-2xl border border-[#1e2540] bg-[#141929] p-5 card-hover animate-fade-up">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="w-8 h-8 rounded-xl bg-sky-500/15 flex items-center justify-center text-base">🫁</div>
+      <span class="text-sm font-bold text-sky-400">التنفس أثناء التمرين</span>
+    </div>
+    <div class="space-y-3">
+      <div class="flex gap-3 bg-emerald-950/40 border border-emerald-900/50 rounded-xl p-3.5">
+        <div class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-sm flex-shrink-0">✅</div>
+        <div>
+          <div class="text-xs font-bold text-emerald-400 mb-1">الطريقة الصحيحة</div>
+          <div class="text-xs text-slate-400 leading-relaxed">زفير (إخراج الهواء) وقت المجهود<br>شهيق (إدخال الهواء) وقت الرجوع</div>
+        </div>
+      </div>
+      <div class="flex gap-3 bg-red-950/40 border border-red-900/50 rounded-xl p-3.5">
+        <div class="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center text-sm flex-shrink-0">❌</div>
+        <div>
+          <div class="text-xs font-bold text-red-400 mb-1">ممنوع</div>
+          <div class="text-xs text-slate-400 leading-relaxed">حبس النفس لفترات طويلة — يسبب الدوخة والإغماء</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- rest periods -->
+  <div class="rounded-2xl border border-[#1e2540] bg-[#141929] p-5 card-hover animate-fade-up">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="w-8 h-8 rounded-xl bg-blue-500/15 flex items-center justify-center text-base">⏱</div>
+      <span class="text-sm font-bold text-blue-400">الراحة بين المجموعات</span>
+    </div>
+    <div class="space-y-3">
+      <div class="bg-[#0f1420] border-r-4 border-r-blue-500 border-[#1e2540] border rounded-xl p-3.5" style="border-radius:12px; border-right-width:4px; border-right-color:#3b82f6;">
+        <div class="text-xs font-bold text-slate-200 mb-1">🏋️ تمارين ثقيلة (سكوات، ديدليفت...)</div>
+        <div class="text-xl font-black text-blue-400">2 – 3 دقائق</div>
+      </div>
+      <div class="bg-[#0f1420] border-r-4 border-r-purple-500 border-[#1e2540] border rounded-xl p-3.5" style="border-radius:12px; border-right-width:4px; border-right-color:#8b5cf6;">
+        <div class="text-xs font-bold text-slate-200 mb-1">💪 تمارين عادية</div>
+        <div class="text-xl font-black text-purple-400">60 – 90 ثانية</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- after set -->
+  <div class="rounded-2xl border border-[#1e2540] bg-[#141929] p-5 card-hover animate-fade-up">
+    <div class="flex items-center gap-2 mb-3">
+      <div class="w-8 h-8 rounded-xl bg-emerald-500/15 flex items-center justify-center text-base">🚶</div>
+      <span class="text-sm font-bold text-emerald-400">بعد كل مجموعة</span>
+    </div>
+    <div class="bg-emerald-950/40 border border-emerald-900/50 rounded-xl p-3.5 text-xs text-slate-300 leading-relaxed">
+      امشِ <span class="text-emerald-400 font-black">20–30 ثانية</span> بعد كل مجموعة — لا تقف أو تجلس فجأة، هذا يمنع تجمع الدم والدوخة
+    </div>
+  </div>
+
+  <!-- failure -->
+  <div class="rounded-2xl border border-[#1e2540] bg-[#141929] p-5 card-hover animate-fade-up">
+    <div class="flex items-center gap-2 mb-3">
+      <div class="w-8 h-8 rounded-xl bg-red-500/15 flex items-center justify-center text-base">❌</div>
+      <span class="text-sm font-bold text-red-400">الفشل العضلي</span>
+    </div>
+    <div class="bg-red-950/40 border border-red-900/50 rounded-xl p-3.5 text-xs text-slate-300 leading-relaxed">
+      <div class="text-red-400 font-bold mb-2">لا تصل للفشل الكامل كل مجموعة</div>
+      اترك 1–2 عدة في الاحتياط (RIR 1–2)
+      <div class="mt-2 inline-flex items-center gap-1 bg-red-900/40 text-red-400 text-[10px] font-bold px-2.5 py-1 rounded-full border border-red-800/50">
+        🛡️ يحمي المفاصل والجهاز العصبي
+      </div>
+    </div>
+  </div>
+
+  <!-- dizziness -->
+  <div class="rounded-2xl border border-[#1e2540] bg-[#141929] p-5 card-hover animate-fade-up">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center text-base">⚠️</div>
+      <span class="text-sm font-bold text-amber-400">سبب الدوخة — الملخص</span>
+    </div>
+    <div class="space-y-2">
+      <div class="flex items-center gap-3 bg-red-950/30 border border-red-900/40 rounded-xl px-3 py-2.5">
+        <span class="text-xs">❌</span>
+        <span class="text-xs text-slate-300">مشروب قبل التمرين ثقيل جدًا</span>
+      </div>
+      <div class="flex items-center gap-3 bg-red-950/30 border border-red-900/40 rounded-xl px-3 py-2.5">
+        <span class="text-xs">❌</span>
+        <span class="text-xs text-slate-300">إرهاق ذهني من الشغل</span>
+      </div>
+      <div class="flex items-center gap-3 bg-red-950/30 border border-red-900/40 rounded-xl px-3 py-2.5">
+        <span class="text-xs">❌</span>
+        <span class="text-xs text-slate-300">شدة تمرين عالية بدون تنظيم</span>
+      </div>
+      <div class="flex items-center gap-3 bg-emerald-950/40 border border-emerald-900/50 rounded-xl px-3 py-2.5">
+        <span class="text-xs">✅</span>
+        <span class="text-xs text-slate-300">الحل: المشروب بعد التمرين أو قبله بـ 3 ساعات</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ CALCULATOR ══════════════ -->
+<div id="calc" class="panel px-3 py-4 space-y-4 stagger">
+
+  <!-- TDEE -->
+  <div class="rounded-2xl border border-[#1e2540] bg-[#141929] p-5 card-hover animate-fade-up">
+    <div class="flex items-center gap-2 mb-5">
+      <div class="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center text-base">🧮</div>
+      <span class="text-sm font-bold text-amber-400">حاسبة TDEE والسعرات</span>
+    </div>
+
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs text-slate-500 font-bold mb-1.5">الوزن (كجم)</label>
+        <input type="number" id="weight" placeholder="مثال: 75" min="40" max="200">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 font-bold mb-1.5">الطول (سم)</label>
+        <input type="number" id="height" placeholder="مثال: 175" min="140" max="220">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 font-bold mb-1.5">العمر (سنة)</label>
+        <input type="number" id="age" placeholder="مثال: 25" min="15" max="70">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 font-bold mb-1.5">الجنس</label>
+        <select id="gender">
+          <option value="male">ذكر</option>
+          <option value="female">أنثى</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 font-bold mb-1.5">مستوى النشاط</label>
+        <select id="activity">
+          <option value="1.2">خامل (لا تمرين)</option>
+          <option value="1.375">خفيف (1–3 أيام/أسبوع)</option>
+          <option value="1.55" selected>معتدل (3–5 أيام/أسبوع)</option>
+          <option value="1.725">مرتفع (6–7 أيام/أسبوع)</option>
+          <option value="1.9">شديد جدًا</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 font-bold mb-1.5">الهدف</label>
+        <select id="goal">
+          <option value="bulk">تضخيم (+400 kcal)</option>
+          <option value="maintain">محافظة على الوزن</option>
+          <option value="cut">تقطيع (-500 kcal)</option>
+        </select>
+      </div>
+      <button onclick="calcTDEE()" class="w-full py-3 rounded-xl font-black text-sm text-black bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 active:scale-[.98] transition-all mt-1">احسب الآن 🚀</button>
+    </div>
+
+    <div id="tdeeResult" class="hidden mt-4 space-y-2">
+      <div class="flex items-center justify-between bg-[#0f1420] rounded-xl px-4 py-3 border border-[#1e2540]">
+        <span class="text-xs text-slate-500">BMR (الأساسي)</span>
+        <span id="r-bmr" class="text-sm font-black text-amber-400">—</span>
+      </div>
+      <div class="flex items-center justify-between bg-[#0f1420] rounded-xl px-4 py-3 border border-[#1e2540]">
+        <span class="text-xs text-slate-500">TDEE (مع نشاط)</span>
+        <span id="r-tdee" class="text-sm font-black text-amber-400">—</span>
+      </div>
+      <div class="flex items-center justify-between bg-amber-500/10 rounded-xl px-4 py-3 border border-amber-500/30">
+        <span class="text-xs font-bold text-amber-300">🎯 هدفك اليومي</span>
+        <span id="r-goal" class="text-base font-black text-amber-400">—</span>
+      </div>
+      <div class="flex items-center justify-between bg-[#0f1420] rounded-xl px-4 py-3 border border-[#1e2540]">
+        <span class="text-xs text-slate-500">بروتين (2g/كجم)</span>
+        <span id="r-protein" class="text-sm font-black text-blue-400">—</span>
+      </div>
+      <div class="flex items-center justify-between bg-[#0f1420] rounded-xl px-4 py-3 border border-[#1e2540]">
+        <span class="text-xs text-slate-500">كاربوهيدرات (40%)</span>
+        <span id="r-carbs" class="text-sm font-black text-yellow-400">—</span>
+      </div>
+      <div class="flex items-center justify-between bg-[#0f1420] rounded-xl px-4 py-3 border border-[#1e2540]">
+        <span class="text-xs text-slate-500">دهون (25%)</span>
+        <span id="r-fat" class="text-sm font-black text-emerald-400">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drink calc -->
+  <div class="rounded-2xl border border-[#1e2540] bg-[#141929] p-5 card-hover animate-fade-up">
+    <div class="flex items-center gap-2 mb-5">
+      <div class="w-8 h-8 rounded-xl bg-teal-500/15 flex items-center justify-center text-base">🥤</div>
+      <span class="text-sm font-bold text-teal-400">حاسبة المشروب المخصص</span>
+    </div>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs text-slate-500 font-bold mb-1.5">كمية الخلطة الأساسية (جم)</label>
+        <input type="number" id="dc-mix" value="100" min="50" max="300">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 font-bold mb-1.5">زيت زيتون (جم)</label>
+        <input type="number" id="dc-oil" value="50" min="0" max="100">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 font-bold mb-1.5">فول سوداني (جم)</label>
+        <input type="number" id="dc-pnut" value="50" min="0" max="150">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 font-bold mb-1.5">عسل (جم)</label>
+        <input type="number" id="dc-honey" value="50" min="0" max="100">
+      </div>
+      <button onclick="calcDrink()" class="w-full py-3 rounded-xl font-black text-sm text-black bg-gradient-to-r from-teal-400 to-emerald-500 hover:from-teal-300 hover:to-emerald-400 active:scale-[.98] transition-all mt-1">احسب المشروب 🧪</button>
+    </div>
+
+    <div id="drinkResult" class="hidden mt-4 space-y-2">
+      <div class="flex items-center justify-between bg-[#0f1420] rounded-xl px-4 py-3 border border-[#1e2540]">
+        <span class="text-xs text-slate-500">إجمالي السعرات</span>
+        <span id="dr-kcal" class="text-sm font-black text-amber-400">—</span>
+      </div>
+      <div class="flex items-center justify-between bg-[#0f1420] rounded-xl px-4 py-3 border border-[#1e2540]">
+        <span class="text-xs text-slate-500">بروتين تقريبي</span>
+        <span id="dr-pro" class="text-sm font-black text-blue-400">—</span>
+      </div>
+      <div class="flex items-center justify-between bg-[#0f1420] rounded-xl px-4 py-3 border border-[#1e2540]">
+        <span class="text-xs text-slate-500">كاربوهيدرات</span>
+        <span id="dr-carb" class="text-sm font-black text-yellow-400">—</span>
+      </div>
+      <div class="flex items-center justify-between bg-[#0f1420] rounded-xl px-4 py-3 border border-[#1e2540]">
+        <span class="text-xs text-slate-500">دهون</span>
+        <span id="dr-fat" class="text-sm font-black text-emerald-400">—</span>
+      </div>
+      <div class="flex items-center justify-between bg-amber-500/10 rounded-xl px-4 py-3 border border-amber-500/30">
+        <span class="text-xs font-bold text-amber-300">× مشروبان / يوم</span>
+        <span id="dr-x2" class="text-base font-black text-amber-400">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── BOTTOM NAV ─── -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 bg-[#0c0f1a]/95 backdrop-blur-xl border-t border-[#1e2540]">
+  <div class="flex justify-around items-center px-2 py-2" style="padding-bottom: max(8px, env(safe-area-inset-bottom))">
+    <button class="bn-btn flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all active" data-panel="overview">
+      <span class="text-xl leading-none">🏠</span>
+      <span class="text-[10px] font-black leading-none">رئيسي</span>
+    </button>
+    <button class="bn-btn flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all" data-panel="drink">
+      <span class="text-xl leading-none">🥤</span>
+      <span class="text-[10px] font-black leading-none">مشروب</span>
+    </button>
+    <button class="bn-btn flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all" data-panel="timeline">
+      <span class="text-xl leading-none">⏰</span>
+      <span class="text-[10px] font-black leading-none">جدول</span>
+    </button>
+    <button class="bn-btn flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all" data-panel="supps">
+      <span class="text-xl leading-none">💊</span>
+      <span class="text-[10px] font-black leading-none">مكملات</span>
+    </button>
+    <button class="bn-btn flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all" data-panel="rules">
+      <span class="text-xl leading-none">🏋️</span>
+      <span class="text-[10px] font-black leading-none">قواعد</span>
+    </button>
+    <button class="bn-btn flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all" data-panel="calc">
+      <span class="text-xl leading-none">🧮</span>
+      <span class="text-[10px] font-black leading-none">حاسبة</span>
+    </button>
+  </div>
+</nav>
+
+<style>
+.bn-btn { color:#4a5578; }
+.bn-btn.active { color:#f5a623; background:rgba(245,166,35,.1); }
+.bn-btn:hover:not(.active) { color:#8090b0; background:rgba(255,255,255,.04); }
+</style>
+
+<script>
+const panels = ['overview','drink','timeline','supps','rules','calc'];
+
+function show(id) {
+  panels.forEach(p => document.getElementById(p).classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.panel === id);
+  });
+  document.querySelectorAll('.bn-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.panel === id);
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.querySelectorAll('.tab, .bn-btn').forEach(el => {
+  el.addEventListener('click', () => show(el.dataset.panel));
+});
+
+function calcTDEE() {
+  const w = parseFloat(document.getElementById('weight').value);
+  const h = parseFloat(document.getElementById('height').value);
+  const a = parseFloat(document.getElementById('age').value);
+  const g = document.getElementById('gender').value;
+  const act = parseFloat(document.getElementById('activity').value);
+  const goal = document.getElementById('goal').value;
+
+  if (!w || !h || !a) { alert('أدخل الوزن والطول والعمر'); return; }
+
+  let bmr = g === 'male' ? 10*w + 6.25*h - 5*a + 5 : 10*w + 6.25*h - 5*a - 161;
+  const tdee = Math.round(bmr * act);
+  bmr = Math.round(bmr);
+
+  let goalKcal = tdee;
+  if (goal === 'bulk') goalKcal = tdee + 400;
+  if (goal === 'cut')  goalKcal = tdee - 500;
+
+  document.getElementById('r-bmr').textContent     = bmr + ' kcal';
+  document.getElementById('r-tdee').textContent    = tdee + ' kcal';
+  document.getElementById('r-goal').textContent    = goalKcal + ' kcal';
+  document.getElementById('r-protein').textContent = Math.round(w * 2) + 'g';
+  document.getElementById('r-carbs').textContent   = Math.round((goalKcal * 0.40) / 4) + 'g';
+  document.getElementById('r-fat').textContent     = Math.round((goalKcal * 0.25) / 9) + 'g';
+
+  document.getElementById('tdeeResult').classList.remove('hidden');
+}
+
+function calcDrink() {
+  const mix   = parseFloat(document.getElementById('dc-mix').value)  || 0;
+  const oil   = parseFloat(document.getElementById('dc-oil').value)   || 0;
+  const pnut  = parseFloat(document.getElementById('dc-pnut').value)  || 0;
+  const honey = parseFloat(document.getElementById('dc-honey').value) || 0;
+
+  const kcal = Math.round(mix*4.2 + oil*8.84 + pnut*5.7 + honey*3.04);
+  const pro  = Math.round(mix*0.14 + pnut*0.26 + honey*0.003);
+  const carb = Math.round(mix*0.5 + pnut*0.16 + honey*0.82);
+  const fat  = Math.round(mix*0.15 + oil*1 + pnut*0.5);
+
+  document.getElementById('dr-kcal').textContent = kcal + ' kcal';
+  document.getElementById('dr-pro').textContent  = pro + 'g';
+  document.getElementById('dr-carb').textContent = carb + 'g';
+  document.getElementById('dr-fat').textContent  = fat + 'g';
+  document.getElementById('dr-x2').textContent   = (kcal*2) + ' kcal';
+
+  document.getElementById('drinkResult').classList.remove('hidden');
+}
+</script>
+</body>
+</html>

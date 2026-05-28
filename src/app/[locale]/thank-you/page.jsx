@@ -86,7 +86,7 @@ export default function ThankYouPageAlternative() {
 
               {/* Main heading */}
               <motion.h1
-                className="text-7xl sm:text-8xl lg:text-9xl font-black leading-none mb-6 tracking-tighter"
+                className="text-7xl sm:text-8xl lg:text-9xl font-black md: leading-none mb-6 tracking-tighter"
                 style={{
                   color: colors.primary[50],
                   textShadow: `4px 4px 0 ${colors.primary[700]}`,
@@ -112,7 +112,7 @@ export default function ThankYouPageAlternative() {
 
               {/* Description */}
               <motion.p
-                className="text-xl sm:text-2xl font-medium leading-relaxed mb-10"
+                className="text-xl sm:text-2xl font-medium md: leading-relaxed mb-10"
                 style={{ color: colors.primary[200] }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

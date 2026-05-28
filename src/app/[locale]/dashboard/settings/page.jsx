@@ -137,7 +137,7 @@ const Row = ({ label, hint, children }) => (
 	<div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 border-b last:border-b-0" style={{ borderColor: 'var(--color-primary-100)' }}>
 		<div>
 			<div className="text-sm font-bold text-slate-800">{label}</div>
-			{hint ? <div className="text-xs text-slate-500 mt-1 leading-relaxed">{hint}</div> : null}
+			{hint ? <div className="text-xs text-slate-500 mt-1 md: leading-relaxed">{hint}</div> : null}
 		</div>
 		<div className="md:col-span-2">{children}</div>
 	</div>

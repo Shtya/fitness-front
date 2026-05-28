@@ -206,7 +206,7 @@ export default function Testimonials() {
                             ]
                           }`}
                         >
-                          <span className="font-display text-4xl leading-none text-white">
+                          <span className="font-display text-4xl md: leading-none text-white">
                             {item.name?.charAt(0)}
                           </span>
                         </div>
@@ -221,7 +221,7 @@ export default function Testimonials() {
                         </motion.div>
                       </motion.div>
 
-                      <h3 className="font-body mb-1 text-xl font-black leading-tight text-white">
+                      <h3 className="font-body mb-1 text-xl font-black md: leading-tight text-white">
                         {item.name}
                       </h3>
 
@@ -250,19 +250,19 @@ export default function Testimonials() {
                         bg-white/[0.06] px-3.5 py-1.5 backdrop-blur-sm"
                       >
                         <TrendingUp className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
-                        <span className="font-body text-[11px] font-bold leading-snug text-white/80">
+                        <span className="font-body text-[11px] font-bold md: leading-snug text-white/80">
                           {item.achievement}
                         </span>
                       </div>
                     </div>
 
                     <div>
-                      <div className="font-display -mb-6 select-none text-[80px] leading-none text-[var(--color-primary-500)]/20 ltr:ml-0 rtl:text-right">
+                      <div className="font-display -mb-6 select-none text-[80px] md: leading-none text-[var(--color-primary-500)]/20 ltr:ml-0 rtl:text-right">
                         "
                       </div>
 
                       <motion.p
-                        className="font-body text-lg italic leading-relaxed text-white/80 sm:text-xl md:text-2xl"
+                        className="font-body text-lg italic md: leading-relaxed text-white/80 sm:text-xl md:text-2xl"
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
@@ -270,7 +270,7 @@ export default function Testimonials() {
                         {item.text}
                       </motion.p>
 
-                      <div className="font-display mt-2 select-none text-[80px] leading-none text-[var(--color-primary-500)]/20 ltr:text-right rtl:text-left">
+                      <div className="font-display mt-2 select-none text-[80px] md: leading-none text-[var(--color-primary-500)]/20 ltr:text-right rtl:text-left">
                         "
                       </div>
 

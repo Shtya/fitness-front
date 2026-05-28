@@ -1471,7 +1471,7 @@ function CalendarView({ t, reminders, settings }) {
 			<div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
 				<div className='flex items-center justify-between gap-2 sm:gap-4'>
 					<button
-						className='inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 text-lg leading-none shadow-sm transition hover:border-slate-300 hover:bg-slate-50 active:scale-95'
+						className='inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 text-lg md: leading-none shadow-sm transition hover:border-slate-300 hover:bg-slate-50 active:scale-95'
 						onClick={() => setCursor(new Date(y, m - 1, 1))}
 					>
 						‹
@@ -1485,7 +1485,7 @@ function CalendarView({ t, reminders, settings }) {
 					</div>
 
 					<button
-						className='inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 text-lg leading-none shadow-sm transition hover:border-slate-300 hover:bg-slate-50 active:scale-95'
+						className='inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 text-lg md: leading-none shadow-sm transition hover:border-slate-300 hover:bg-slate-50 active:scale-95'
 						onClick={() => setCursor(new Date(y, m + 1, 1))}
 					>
 						›

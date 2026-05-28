@@ -523,7 +523,7 @@ function FaqItem({ q, a }) {
         </span>
       </button>
       <div className={`overflow-hidden transition-all duration-300 ${open ? "max-h-60 pb-5" : "max-h-0"}`}>
-        <p className="font-body text-stone-600 leading-relaxed text-sm md:text-base">{a}</p>
+        <p className="font-body text-stone-600 md: leading-relaxed text-sm md:text-base">{a}</p>
       </div>
     </div>
   );
@@ -722,13 +722,13 @@ export default function Page() {
             {t.hero.eyebrow}
           </p>
           <div className="overflow-hidden">
-            <h1 className="font-display text-[clamp(3rem,9vw,8rem)] leading-[0.92] tracking-tight text-white mb-8">
+            <h1 className="font-display text-[clamp(3rem,9vw,8rem)] md: leading-[0.92] tracking-tight text-white mb-8">
               {t.hero.headline.map((line, i) => (
                 <span key={i} className="hero-word block">{line}</span>
               ))}
             </h1>
           </div>
-          <p className="hero-sub font-body text-base md:text-xl text-stone-300 max-w-xl leading-relaxed mb-10">
+          <p className="hero-sub font-body text-base md:text-xl text-stone-300 max-w-xl md: leading-relaxed mb-10">
             {t.hero.sub}
           </p>
           <div className="hero-cta flex flex-wrap items-center gap-5">
@@ -784,7 +784,7 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-5 md:px-10 grid grid-cols-2 lg:grid-cols-4 gap-px bg-stone-700">
           {t.stats.map((stat, i) => (
             <div key={i} className="stat-item bg-stone-900 p-10 text-center">
-              <div className="font-display text-[clamp(2.5rem,5vw,4rem)] text-white leading-none tracking-tight mb-2">
+              <div className="font-display text-[clamp(2.5rem,5vw,4rem)] text-white md: leading-none tracking-tight mb-2">
                 {stat.value}
               </div>
               <p className="font-body text-xs text-stone-400 tracking-[0.15em] uppercase">{stat.label}</p>
@@ -800,12 +800,12 @@ export default function Page() {
             <div className="about-text">
               <SectionLabel>{t.about.eyebrow}</SectionLabel>
             </div>
-            <h2 className="about-text font-display text-[clamp(2.5rem,5vw,4rem)] leading-[1] tracking-tight text-stone-900 mb-2">
+            <h2 className="about-text font-display text-[clamp(2.5rem,5vw,4rem)] md: leading-[1] tracking-tight text-stone-900 mb-2">
               {t.about.name}
             </h2>
             <p className="about-text font-body text-sm text-orange-600 tracking-widest uppercase mb-8">{t.about.title}</p>
-            <p className="about-text font-body text-stone-700 leading-relaxed mb-5 text-base md:text-lg">{t.about.bio1}</p>
-            <p className="about-text font-body text-stone-600 leading-relaxed mb-8">{t.about.bio2}</p>
+            <p className="about-text font-body text-stone-700 md: leading-relaxed mb-5 text-base md:text-lg">{t.about.bio1}</p>
+            <p className="about-text font-body text-stone-600 md: leading-relaxed mb-8">{t.about.bio2}</p>
             <div className="about-text flex flex-wrap gap-2 mb-8">
               {t.about.badges.map((b) => (
                 <span key={b} className="font-body text-xs tracking-wide border border-stone-300 text-stone-600 px-3 py-1.5">
@@ -823,7 +823,7 @@ export default function Page() {
             </div>
             {/* Decorative frame */}
             <div className="absolute -bottom-4 -end-4 w-2/3 h-2/3 border border-orange-200 z-0" />
-            <div className="absolute -top-3 -start-3 font-display text-[8rem] leading-none text-stone-100 select-none z-0 pointer-events-none">
+            <div className="absolute -top-3 -start-3 font-display text-[8rem] md: leading-none text-stone-100 select-none z-0 pointer-events-none">
               K
             </div>
           </div>
@@ -840,11 +840,11 @@ export default function Page() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-px bg-stone-100">
             {t.why.items.map((item) => (
               <div key={item.num} className="why-item bg-white p-8 group hover:bg-stone-50 transition-colors duration-200">
-                <span className="font-display text-[3rem] leading-none text-stone-100 group-hover:text-orange-100 transition-colors duration-300 block mb-6">
+                <span className="font-display text-[3rem] md: leading-none text-stone-100 group-hover:text-orange-100 transition-colors duration-300 block mb-6">
                   {item.num}
                 </span>
-                <h3 className="font-display text-xl text-stone-900 mb-3 leading-tight">{item.title}</h3>
-                <p className="font-body text-sm text-stone-500 leading-relaxed">{item.body}</p>
+                <h3 className="font-display text-xl text-stone-900 mb-3 md: leading-tight">{item.title}</h3>
+                <p className="font-body text-sm text-stone-500 md: leading-relaxed">{item.body}</p>
               </div>
             ))}
           </div>
@@ -856,10 +856,10 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-5 md:px-10 grid md:grid-cols-2 gap-16 items-start">
           <div>
             <SectionLabel>{t.whoFor.eyebrow}</SectionLabel>
-            <h2 className="font-display text-[clamp(2rem,4vw,3.5rem)] text-white tracking-tight mb-6 leading-tight">
+            <h2 className="font-display text-[clamp(2rem,4vw,3.5rem)] text-white tracking-tight mb-6 md: leading-tight">
               {t.whoFor.headline}
             </h2>
-            <p className="font-body text-stone-400 leading-relaxed mb-8">{t.whoFor.body}</p>
+            <p className="font-body text-stone-400 md: leading-relaxed mb-8">{t.whoFor.body}</p>
             <p className="font-body text-xs text-stone-500 tracking-wide italic border-t border-stone-700 pt-6">{t.whoFor.notFor}</p>
           </div>
           <ul className="space-y-0 border border-stone-700">
@@ -870,7 +870,7 @@ export default function Page() {
                     <path d="M2 5l2 2.5 4-4.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
-                <span className="font-body text-stone-300 text-sm leading-relaxed">{profile}</span>
+                <span className="font-body text-stone-300 text-sm md: leading-relaxed">{profile}</span>
               </li>
             ))}
           </ul>
@@ -894,7 +894,7 @@ export default function Page() {
                 )}
                 <div className="font-display text-5xl text-orange-100 mb-8">{step.num}</div>
                 <h3 className="font-display text-lg text-stone-900 mb-3">{step.title}</h3>
-                <p className="font-body text-sm text-stone-500 leading-relaxed">{step.body}</p>
+                <p className="font-body text-sm text-stone-500 md: leading-relaxed">{step.body}</p>
               </div>
             ))}
           </div>
@@ -922,7 +922,7 @@ export default function Page() {
                   {service.tag}
                 </span>
                 <h3 className={`font-display text-2xl mb-3 ${i === 0 ? "text-white" : "text-stone-900"}`}>{service.name}</h3>
-                <p className={`font-body text-sm leading-relaxed mb-8 ${i === 0 ? "text-stone-400" : "text-stone-500"}`}>{service.desc}</p>
+                <p className={`font-body text-sm md: leading-relaxed mb-8 ${i === 0 ? "text-stone-400" : "text-stone-500"}`}>{service.desc}</p>
                 <ul className="space-y-2.5 mb-10 flex-1">
                   {service.features.map((f) => (
                     <li key={f} className="flex items-center gap-3 font-body text-sm">
@@ -967,8 +967,8 @@ export default function Page() {
               />
             </div>
             <div>
-              <div className="font-display text-[5rem] leading-none text-stone-700 mb-4">"</div>
-              <blockquote className="font-display text-xl md:text-2xl text-white leading-snug mb-8">
+              <div className="font-display text-[5rem] md: leading-none text-stone-700 mb-4">"</div>
+              <blockquote className="font-display text-xl md:text-2xl text-white md: leading-snug mb-8">
                 {t.featured.quote}
               </blockquote>
               <div className="flex items-center gap-2 mb-3">
@@ -1023,7 +1023,7 @@ export default function Page() {
                 <div className="flex gap-0.5">
                   {Array(item.stars).fill(0).map((_, j) => <StarIcon key={j} />)}
                 </div>
-                <p className="font-body text-sm text-stone-600 leading-relaxed flex-1">"{item.text}"</p>
+                <p className="font-body text-sm text-stone-600 md: leading-relaxed flex-1">"{item.text}"</p>
                 <div className="flex items-center gap-3 border-t border-stone-100 pt-5">
                   <img
                     src={images.testimonials[i]}
@@ -1059,7 +1059,7 @@ export default function Page() {
                   <div className="p-6">
                     <span className="font-body text-xs tracking-[0.2em] uppercase text-orange-600 mb-3 block">{res.tag}</span>
                     <h3 className="font-display text-lg text-stone-900 mb-2 group-hover:text-orange-600 transition-colors">{res.title}</h3>
-                    <p className="font-body text-sm text-stone-500 leading-relaxed">{res.desc}</p>
+                    <p className="font-body text-sm text-stone-500 md: leading-relaxed">{res.desc}</p>
                   </div>
                 </a>
               );
@@ -1112,10 +1112,10 @@ export default function Page() {
       {/* ── 17. FINAL CTA BAND ── */}
       <section ref={ctaRef} className="bg-orange-600 py-24 overflow-hidden relative">
         <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
-          <div className="font-display text-[20rem] leading-none text-white/5 absolute -top-10 -start-10 tracking-tighter">GO</div>
+          <div className="font-display text-[20rem] md: leading-none text-white/5 absolute -top-10 -start-10 tracking-tighter">GO</div>
         </div>
         <div className="cta-band-inner relative max-w-4xl mx-auto px-5 md:px-10 text-center">
-          <h2 className="font-display text-[clamp(2rem,5vw,4rem)] text-white leading-tight tracking-tight mb-6">
+          <h2 className="font-display text-[clamp(2rem,5vw,4rem)] text-white md: leading-tight tracking-tight mb-6">
             {t.finalCta.headline}
           </h2>
           <p className="font-body text-white/80 text-base md:text-lg mb-10 max-w-xl mx-auto">{t.finalCta.sub}</p>

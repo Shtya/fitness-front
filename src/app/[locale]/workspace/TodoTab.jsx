@@ -559,7 +559,7 @@ function SortableTaskItem({ task, onToggle, onSelect, onQuickDelete, onAddSubtas
         ) : (
           <MultiLangText
             onClick={(e) => { e.stopPropagation(); setEditingTitle(true); }}
-            className={cn('font-semibold text-sm leading-snug cursor-pointer hover:text-[var(--color-primary-600,#4f46e5)] transition-colors',
+            className={cn('font-semibold text-sm md: leading-snug cursor-pointer hover:text-[var(--color-primary-600,#4f46e5)] transition-colors',
               task.completed ? 'line-through text-gray-400' : 'text-gray-900')}>
             {task.title}
           </MultiLangText>
@@ -1585,7 +1585,7 @@ function TaskDetailSidebar({ task, onUpdate, onDelete, onClose, onToggleSubtask,
             style={{ fontSize: '18px' }} autoFocus />
         ) : (
           <h3 onClick={() => setEditingTitle(true)}
-            className="text-lg font-bold text-gray-900 cursor-pointer hover:text-[var(--color-primary-600,#4f46e5)] transition-colors leading-snug">
+            className="text-lg font-bold text-gray-900 cursor-pointer hover:text-[var(--color-primary-600,#4f46e5)] transition-colors md: leading-snug">
             {task.title}
           </h3>
         )}

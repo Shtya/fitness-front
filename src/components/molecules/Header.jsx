@@ -209,13 +209,13 @@ export default function Header({ onMenu }) {
 						{/* User Info (Desktop) */}
 						<div className="hidden sm:flex flex-col">
 							<span
-								className="text-sm font-bold leading-tight"
+								className="text-sm font-bold md: leading-tight"
 								style={{ color: 'var(--color-primary-900)' }}
 							>
 								{user?.name || user?.email }
 							</span>
 							<span
-								className="text-[10px] font-semibold leading-tight uppercase tracking-wide"
+								className="text-[10px] font-semibold md: leading-tight uppercase tracking-wide"
 								style={{ color: 'var(--color-primary-400)' }}
 							>
 								{t_myProfile(`myProfile.roles.${user?.role}`)}
@@ -332,7 +332,7 @@ export default function Header({ onMenu }) {
 													<h3 className="text-sm font-bold text-slate-900 mb-1">
 														{t('logout.confirmTitle') || 'تسجيل الخروج؟'}
 													</h3>
-													<p className="text-xs text-slate-600 leading-relaxed">
+													<p className="text-xs text-slate-600 md: leading-relaxed">
 														{t('logout.confirmMessage') || 'هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟'}
 													</p>
 												</div>

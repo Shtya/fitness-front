@@ -669,7 +669,7 @@ function PkgCard({ pkg, idx, onEdit, onDelete, onSendWhatsApp, t }) {
             </div>
             <div className="min-w-0">
               <span className={cls('block text-[11px] font-black uppercase tracking-widest', pal.accentText)}>{pal.badge}</span>
-              <h3 className="text-lg font-black text-slate-900 leading-tight truncate">{pkg.name}</h3>
+              <h3 className="text-lg font-black text-slate-900 md: leading-tight truncate">{pkg.name}</h3>
               <p className="text-[11px] text-slate-400 font-medium truncate">{pkg.nameEn}</p>
             </div>
           </div>
@@ -681,7 +681,7 @@ function PkgCard({ pkg, idx, onEdit, onDelete, onSendWhatsApp, t }) {
         <div className={cls('mb-7 rounded-2xl p-5 text-center border backdrop-blur-sm', pal.priceBg, pal.border)}>
           <p className={cls('text-[11px] font-black uppercase tracking-widest mb-1', pal.accentText)}>{pkg.duration}</p>
           <div className="flex items-baseline justify-center gap-1.5">
-            <span className={cls('text-5xl font-black leading-none', pal.accentText)}>{pkg.price.toLocaleString()}</span>
+            <span className={cls('text-5xl font-black md: leading-none', pal.accentText)}>{pkg.price.toLocaleString()}</span>
             <span className="text-base font-bold text-slate-500">{t('currency')}</span>
           </div>
         </div>
@@ -804,7 +804,7 @@ function SendAllWhatsAppDialog({ packages, t, open, onClose }) {
                   <MessageCircle className="h-5 w-5 text-green-600" aria-hidden="true" />
                   <p className="text-sm font-black text-green-800">{t('packages.exportDialog.preview')}</p>
                 </div>
-                <div className="p-4 bg-white text-xs text-slate-700 leading-relaxed space-y-1 max-h-44 overflow-y-auto" dir="rtl">
+                <div className="p-4 bg-white text-xs text-slate-700 md: leading-relaxed space-y-1 max-h-44 overflow-y-auto" dir="rtl">
                   <p>{t('communications.greeting')} {clientName || `[${t('form.clientName')}]`}! 👋</p>
                   <p>{t('packages.exportDialog.offerIntro')}</p>
                   <br />
@@ -1266,7 +1266,7 @@ function PaymentsTab({ t, clients = [], onSuccessRefresh }) {
                 <Receipt className="h-8 w-8 text-white" aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-2xl font-black text-white leading-tight">{t('form.title')}</h2>
+                <h2 className="text-2xl font-black text-white md: leading-tight">{t('form.title')}</h2>
                 <p className="mt-1 text-sm text-white/70 font-medium">{t('form.description')}</p>
               </div>
               {form.amount && (
@@ -1503,7 +1503,7 @@ function CommunicationsTab({ t, clients = [] }) {
                     <MessageCircle className="h-4 w-4 text-green-600" />
                     <p className="text-xs font-black text-green-800">WhatsApp</p>
                   </div>
-                  <div className="p-4 bg-white text-sm text-slate-700 leading-relaxed whitespace-pre-line min-h-[120px]" dir="rtl">
+                  <div className="p-4 bg-white text-sm text-slate-700 md: leading-relaxed whitespace-pre-line min-h-[120px]" dir="rtl">
                     {messageType === 'custom' ? (
                       <textarea value={customMessage} onChange={(e) => setCustomMessage(e.target.value)} placeholder={t('communications.customPlaceholder')} className="w-full h-32 bg-transparent resize-none focus:outline-none text-sm text-slate-700 placeholder:text-slate-400" />
                     ) : buildMessage()}

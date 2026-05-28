@@ -167,7 +167,7 @@ function SortableCard({ card, listId, onCardClick }) {
 					)}
 
 					<div className="flex items-start justify-between gap-2 mb-2">
-						<h4 className="font-semibold text-gray-900 flex-1 leading-snug text-sm">
+						<h4 className="font-semibold text-gray-900 flex-1 md: leading-snug text-sm">
 							{card.title}
 						</h4>
 						{card.isStarred && (

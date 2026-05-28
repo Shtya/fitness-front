@@ -311,7 +311,7 @@ function StatBadge({ label, value, unit }) {
   return (
     <div className='flex flex-col items-center px-4 py-3 rounded-xl bg-white border border-[var(--color-primary-100)] shadow-sm'>
       <span className='text-[11px] font-medium text-slate-400 uppercase tracking-wide'>{label}</span>
-      <span className='text-2xl font-black text-[var(--color-primary-700)] leading-tight'>{value}</span>
+      <span className='text-2xl font-black text-[var(--color-primary-700)] md: leading-tight'>{value}</span>
       {unit && <span className='text-[11px] text-slate-400'>{unit}</span>}
     </div>
   );
@@ -1254,7 +1254,7 @@ export default function WeeklyReportPage() {
                 {t('weekly.prevReports.createdAt')}: {activeReport.created_at ? new Date(activeReport.created_at).toLocaleString() : '—'}
               </div>
               <div className='text-sm font-semibold text-slate-700'>{t('weekly.prevReports.noteLabel')}</div>
-              <div className='rounded-xl border border-[var(--color-primary-100)] bg-gradient-to-br from-[var(--color-primary-50)] to-white p-4 text-sm text-slate-800 whitespace-pre-wrap leading-relaxed'>
+              <div className='rounded-xl border border-[var(--color-primary-100)] bg-gradient-to-br from-[var(--color-primary-50)] to-white p-4 text-sm text-slate-800 whitespace-pre-wrap md: leading-relaxed'>
                 {activeReport.coachFeedback || '—'}
               </div>
               {markingRead && (

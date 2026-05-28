@@ -331,7 +331,7 @@ const FeedbackPage = () => {
                     >
                       <div className='mb-4'>
                         <Label className='text-sm font-semibold text-slate-700 mb-2 block'>{t('description')}</Label>
-                        <p className='text-slate-600 text-sm leading-relaxed'>{feedback.description}</p>
+                        <p className='text-slate-600 text-sm md: leading-relaxed'>{feedback.description}</p>
                       </div>
 
                       {/* Actions */}

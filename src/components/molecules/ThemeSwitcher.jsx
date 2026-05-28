@@ -349,7 +349,7 @@ export default function ThemeSwitcher({ collapsed = false }) {
 											initial={{ opacity: 0, x: -20 }}
 											animate={{ opacity: 1, x: 0 }}
 											transition={{ delay: 0.1 }}
-											className="font-black text-xl text-slate-900 leading-tight">
+											className="font-black text-xl text-slate-900 md: leading-tight">
 											{t('title')}
 										</motion.h3>
 									</div>

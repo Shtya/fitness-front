@@ -192,7 +192,7 @@ export default function FAQs() {
 												<div className="relative flex items-center justify-between gap-4">
 													<h3
 														className={[
-															"font-body flex-1 max-md:text-[12px] text-base font-bold leading-snug transition-colors duration-200 ltr:pr-2 rtl:pl-2",
+															"font-body flex-1 max-md:text-[12px] text-base font-bold md: leading-snug transition-colors duration-200 ltr:pr-2 rtl:pl-2",
 															isOpen
 																? "text-[var(--color-primary-200)]"
 																: "text-white group-hover:text-[var(--color-primary-200)]",
@@ -230,7 +230,7 @@ export default function FAQs() {
 											>
 												<div className="px-5 pb-5 ltr:pl-5 rtl:pr-5 sm:px-6 sm:pb-6">
 													<div className="border-[var(--color-primary-500)]/30 ltr:border-l-2 ltr:pl-4 rtl:border-r-2 rtl:pr-4">
-														<p className="font-body text-sm leading-relaxed text-white/60">
+														<p className="font-body text-sm md: leading-relaxed text-white/60">
 															{faq.answer}
 														</p>
 													</div>
@@ -297,7 +297,7 @@ export default function FAQs() {
 									<MessageSquare className="h-4 w-4 text-white" />
 								</div>
 								<div>
-									<p className="font-body text-xs font-black leading-none text-white">
+									<p className="font-body text-xs font-black md: leading-none text-white">
 										{t("badge")}
 									</p>
 									<p className="mt-0.5 font-body text-[10px] text-white/40">24/7</p>
@@ -306,10 +306,10 @@ export default function FAQs() {
 
 							{/* Top counter — direction-aware */}
 							<div className="absolute top-6 flex items-center gap-2 rounded-xl border border-white/[0.08] bg-slate-900/80 px-3.5 py-2 shadow-xl backdrop-blur-sm ltr:right-6 rtl:left-6">
-								<span className="font-display text-xl leading-none text-[var(--color-primary-400)]">
+								<span className="font-display text-xl md: leading-none text-[var(--color-primary-400)]">
 									{faqs.length}+
 								</span>
-								<span className="max-w-[48px] font-body text-[10px] leading-tight text-white/40">
+								<span className="max-w-[48px] font-body text-[10px] md: leading-tight text-white/40">
 									{t("questionsCount")}
 								</span>
 							</div>
@@ -341,7 +341,7 @@ export default function FAQs() {
 												aria-hidden="true"
 												className={["h-5 w-5", isActive ? "text-white" : "text-[var(--color-primary-400)]"].join(" ")}
 											/>
-											<span className={["font-display text-xl leading-none", isActive ? "text-white" : "theme-gradient-text"].join(" ")}>
+											<span className={["font-display text-xl md: leading-none", isActive ? "text-white" : "theme-gradient-text"].join(" ")}>
 												{count}
 											</span>
 											<span className={["font-body text-[10px] font-bold uppercase tracking-wide", isActive ? "text-white/70" : "text-white/35"].join(" ")}>

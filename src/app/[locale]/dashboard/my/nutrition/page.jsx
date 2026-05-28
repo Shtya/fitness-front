@@ -232,7 +232,7 @@ function NutritionRecipeSheet({ recipe, onClose }) {
               </button>
 
               <div className='absolute bottom-3 start-4 end-14'>
-                <h2 className='text-lg sm:text-2xl font-black text-white leading-tight'>{recipe.title}</h2>
+                <h2 className='text-lg sm:text-2xl font-black text-white md: leading-tight'>{recipe.title}</h2>
               </div>
             </div>
 
@@ -241,7 +241,7 @@ function NutritionRecipeSheet({ recipe, onClose }) {
                 <p className='text-[8px] font-black uppercase tracking-[0.16em] mb-3 text-[var(--color-primary-500)]'>{t('card.nutrition')}</p>
                 <div className='flex items-end justify-between flex-wrap gap-3'>
                   <div>
-                    <p className='text-4xl sm:text-5xl font-black leading-none tabular-nums text-[var(--color-primary-700)]'>{recipe.calories}</p>
+                    <p className='text-4xl sm:text-5xl font-black md: leading-none tabular-nums text-[var(--color-primary-700)]'>{recipe.calories}</p>
                     <p className='text-[9px] font-bold uppercase tracking-wide text-slate-400 mt-1'>{t('card.calories')}</p>
                   </div>
                   <div className='flex gap-5 sm:gap-6'>
@@ -326,7 +326,7 @@ function NutritionRecipeSheet({ recipe, onClose }) {
                   <Lightbulb className='h-4 w-4 shrink-0 text-amber-500 mt-0.5' />
                   <ul className='space-y-1.5'>
                     {recipe.tips.map((tip, i) => (
-                      <li key={i} className='text-[11px] sm:text-xs text-amber-800 font-medium leading-relaxed'>
+                      <li key={i} className='text-[11px] sm:text-xs text-amber-800 font-medium md: leading-relaxed'>
                         {tip}
                       </li>
                     ))}
@@ -358,10 +358,10 @@ function HeaderStatPill({ label, value, icon: Icon, delay = 0 }) {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.38, ease: [0.16, 1, 0.3, 1] }} className='relative overflow-hidden rounded-lg sm:rounded-lg p-2 sm:p-4 bg-white/[0.13] backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'>
       <div className='flex items-start justify-between gap-1 mb-1 sm:mb-2'>
-        <p className='text-[7px] sm:text-[9px] font-black uppercase tracking-[0.1em] text-white/55 leading-tight'>{label}</p>
+        <p className='text-[7px] sm:text-[9px] font-black uppercase tracking-[0.1em] text-white/55 md: leading-tight'>{label}</p>
         {Icon && <Icon className='h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 text-white/35 shrink-0' />}
       </div>
-      <p className='text-base sm:text-2xl font-black text-white leading-none tabular-nums'>{value ?? 0}</p>
+      <p className='text-base sm:text-2xl font-black text-white md: leading-none tabular-nums'>{value ?? 0}</p>
     </motion.div>
   );
 }
@@ -642,7 +642,7 @@ export default function ClientMealPlanPage() {
                 <UtensilsCrossed className='h-4 w-4 sm:h-6 sm:w-6 text-white' />
               </motion.div>
               <div className='min-w-0 flex-1'>
-                <MultiLangText className='block text-base sm:text-2xl font-black text-white leading-tight tracking-tight truncate'>{plan?.name || t('nutrition.header.defaultTitle')}</MultiLangText>
+                <MultiLangText className='block text-base sm:text-2xl font-black text-white md: leading-tight tracking-tight truncate'>{plan?.name || t('nutrition.header.defaultTitle')}</MultiLangText>
                 <MultiLangText className='block text-[9px] sm:text-xs text-white/55 mt-0.5 font-medium line-clamp-1'>{plan?.desc || ''}</MultiLangText>
               </div>
             </div>
@@ -682,7 +682,7 @@ export default function ClientMealPlanPage() {
       <Modal open={notesOpen} onClose={() => setNotesOpen(false)} title={t('nutrition.notes.modalTitle')}>
         {hasNotes ? (
           <div className='rounded-lg border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4 shadow-inner'>
-            <MultiLangText className='whitespace-pre-wrap text-[13px] leading-6 text-slate-900'>{plan.notes}</MultiLangText>
+            <MultiLangText className='whitespace-pre-wrap text-[13px] md: leading-6 text-slate-900'>{plan.notes}</MultiLangText>
           </div>
         ) : (
           <div className='text-sm text-slate-600'>—</div>
@@ -772,7 +772,7 @@ function FoodItemRow({ it, checked, onToggle, qtyLabel, t }) {
         <div className='flex-1 min-w-0'>
           <div dir='rtl' className='flex items-center gap-2 flex-wrap'>
             {it.itemType === 'recipe' && <div className='shrink-0 h-8 w-8 rounded-md overflow-hidden border border-blue-100 bg-blue-50 flex items-center justify-center'>{recipeImage ? <img src={recipeImage} alt={it.name} className='h-full w-full object-cover' /> : <BookOpen size={13} className='text-blue-400' />}</div>}
-            <span className={['flex-1   leading-none text-[12px] tracking-[-0.01em] transition-all duration-150', checked ? 'font-[650] text-[var(--color-primary-900)]' : 'font-medium text-slate-700'].join(' ')}>{it.name}</span>
+            <span className={['flex-1   md: leading-none text-[12px] tracking-[-0.01em] transition-all duration-150', checked ? 'font-[650] text-[var(--color-primary-900)]' : 'font-medium text-slate-700'].join(' ')}>{it.name}</span>
             {it.itemType === 'recipe' && <span className='text-[10px] font-bold rounded px-1.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-700'>{t('nutrition.recipe', { default: 'Recipe' })}</span>}
 
             {qtyLabel && <span className='text-xs text-slate-400 font-medium shrink-0 tracking-[0.02em]'>{qtyLabel}</span>}
@@ -941,7 +941,7 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
 
                             {/* Title + badge */}
                             <div className='flex flex-col gap-1 min-w-0'>
-                              <span className='text-sm font-black text-slate-900 leading-tight truncate'>{t('nutrition.meal.title', { index: idx + 1 })}</span>
+                              <span className='text-sm font-black text-slate-900 md: leading-tight truncate'>{t('nutrition.meal.title', { index: idx + 1 })}</span>
                               <span className='inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-orange-50 to-amber-50 text-orange-600 border border-orange-100 w-fit'>
                                 <Flame size={10} className='text-orange-500 flex-none' />
                                 {mealCals} {t('nutrition.units.kcal')}
@@ -1036,7 +1036,7 @@ function DayPanel({ day, takenMap, itemTakenMap, suppTakenMap, setMealTaken, set
                                     <div className='flex items-center gap-2.5 min-w-0 flex-1'>
                                       <MiniCheck checked={taken} tone='emerald' />
                                       <div className='min-w-0 flex-1'>
-                                        <span className={`font-semibold truncate block text-xs leading-tight ${taken ? 'text-emerald-800' : 'text-slate-800'}`}>{s.name}</span>
+                                        <span className={`font-semibold truncate block text-xs md: leading-tight ${taken ? 'text-emerald-800' : 'text-slate-800'}`}>{s.name}</span>
                                         {(s.time || s.timing || s.bestWith) && <span className='text-[10px] text-slate-400 truncate block mt-0.5'>{[s.time && formatTime12(s.time), s.timing, s.bestWith && t('nutrition.supplements.bestWith', { value: s.bestWith })].filter(Boolean).join(' · ')}</span>}
                                       </div>
                                       {taken && <span className='inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-black text-emerald-700 uppercase tracking-wide flex-none'>{t('nutrition.supplements.takenTag')}</span>}

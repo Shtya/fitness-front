@@ -146,10 +146,10 @@ function Badge({ children, variant = 'primary', icon }) {
 	const s = styles[variant] || styles.primary;
 	return (
 		<span
-			className="inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[11px] font-semibold leading-tight"
+			className="inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[11px] font-semibold md: leading-tight"
 			style={{ background: s.bg, borderColor: s.border, color: s.text }}
 		>
-			{icon && <span className="text-[9px] leading-none">{icon}</span>}
+			{icon && <span className="text-[9px] md: leading-none">{icon}</span>}
 			{children}
 		</span>
 	);
@@ -379,7 +379,7 @@ const FieldRow = React.memo(function FieldRow({
 									{index + 1}
 								</span>
 
-								<span className="text-lg leading-none flex-shrink-0">{fieldIcon}</span>
+								<span className="text-lg md: leading-none flex-shrink-0">{fieldIcon}</span>
 
 								<div className="flex-1 min-w-0">
 									<div className="flex items-center gap-2 flex-wrap">
@@ -936,7 +936,7 @@ export default function FormsManagementPage() {
 						<IconBox variant="danger" size="md">
 							<AlertCircle className="h-5 w-5" />
 						</IconBox>
-						<p className="flex-1 text-sm leading-relaxed text-slate-700">{t('delete.message')}</p>
+						<p className="flex-1 text-sm md: leading-relaxed text-slate-700">{t('delete.message')}</p>
 					</div>
 
 					<div className="flex justify-end gap-2.5">
@@ -997,7 +997,7 @@ export default function FormsManagementPage() {
 												>
 													{field.order ?? 1}
 												</span>
-												<span className="text-base leading-none">{fieldIcon}</span>
+												<span className="text-base md: leading-none">{fieldIcon}</span>
 											</div>
 
 											<div className="flex-1 min-w-0">

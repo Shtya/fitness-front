@@ -112,7 +112,7 @@ const MiniTextArea = memo(function MiniTextArea({ value, placeholder, onChange, 
 				rows={rows}
 				onChange={e => onChange?.(e.target.value)}
 				className={[
-					'w-full rounded-lg border bg-white px-3 py-2.5 text-xs font-semibold leading-relaxed outline-none transition-all duration-150 placeholder:text-slate-300 resize-none focus:ring-2 focus:ring-[color:var(--color-primary-200)] focus:border-[color:var(--color-primary-400)]',
+					'w-full rounded-lg border bg-white px-3 py-2.5 text-xs font-semibold md: leading-relaxed outline-none transition-all duration-150 placeholder:text-slate-300 resize-none focus:ring-2 focus:ring-[color:var(--color-primary-200)] focus:border-[color:var(--color-primary-400)]',
 					has ? filled : unfilled,
 				].join(' ')}
 			/>
@@ -1013,7 +1013,7 @@ export default function RecipesPage() {
 				header: t('table.name'),
 				cell: row => (
 					<div className="flex flex-col gap-0.5">
-						<span className="text-sm font-bold text-slate-800 leading-tight">{row.title}</span>
+						<span className="text-sm font-bold text-slate-800 md: leading-tight">{row.title}</span>
 						{row.videoUrl && (
 							<a
 								href={row.videoUrl}

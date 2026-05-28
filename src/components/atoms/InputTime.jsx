@@ -161,7 +161,7 @@ export function TimeField({
                   <Clock className="h-4.5 w-4.5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white leading-tight">{t('timeField.choose')}</p>
+                  <p className="text-sm font-semibold text-white md: leading-tight">{t('timeField.choose')}</p>
                   <p className="text-[11px] text-white/70 mt-0.5">{t('timeField.selectTime')}</p>
                 </div>
               </div>

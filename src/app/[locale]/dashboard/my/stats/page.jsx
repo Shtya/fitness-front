@@ -174,7 +174,7 @@ const CardHeader = ({
         <Icon size={16} className={iconColor} />
       </div>
       <div>
-        <p className="text-sm font-semibold text-slate-800 leading-tight">{title}</p>
+        <p className="text-sm font-semibold text-slate-800 md: leading-tight">{title}</p>
         {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
       </div>
     </div>
@@ -184,7 +184,7 @@ const CardHeader = ({
 
 const StatBadge = ({ value, label, color = P500 }) => (
   <div className="text-center px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
-    <p className="text-base font-bold leading-none tabular-nums" style={{ color }}>{value}</p>
+    <p className="text-base font-bold md: leading-none tabular-nums" style={{ color }}>{value}</p>
     <p className="text-[10px] text-slate-400 mt-1 whitespace-nowrap font-medium">{label}</p>
   </div>
 );
@@ -210,7 +210,7 @@ const MetricCard = ({ icon: Icon, label, value, sub, accentColor, accentBg, dela
         <ArrowUpRight size={13} className="text-slate-200 group-hover:text-slate-300 transition-colors" />
       </div>
       <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">{label}</p>
-      <p className="text-3xl font-bold tabular-nums leading-none text-slate-900">{count.toLocaleString()}</p>
+      <p className="text-3xl font-bold tabular-nums md: leading-none text-slate-900">{count.toLocaleString()}</p>
       {sub && <p className="text-[11px] text-slate-400 mt-2">{sub}</p>}
     </div>
   );
@@ -280,7 +280,7 @@ const HeroBanner = ({ overview, t }) => {
                 {t('liveLabel')}
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-bold text-white md: leading-tight tracking-tight">
               {user.name}
             </h1>
             <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -315,8 +315,8 @@ const HeroBanner = ({ overview, t }) => {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-white text-lg font-bold leading-none">{pct}%</span>
-                <span className="text-white/50 text-[9px] mt-0.5 uppercase tracking-wide text-center leading-tight">
+                <span className="text-white text-lg font-bold md: leading-none">{pct}%</span>
+                <span className="text-white/50 text-[9px] mt-0.5 uppercase tracking-wide text-center md: leading-tight">
                   {t('hero.compliance')}
                 </span>
               </div>
@@ -328,8 +328,8 @@ const HeroBanner = ({ overview, t }) => {
                 >
                   <p.icon size={12} className="text-white/60 flex-shrink-0" />
                   <div>
-                    <p className="text-white text-sm font-bold leading-none">{p.val}</p>
-                    <p className="text-white/50 text-[10px] leading-tight mt-0.5">{p.label}</p>
+                    <p className="text-white text-sm font-bold md: leading-none">{p.val}</p>
+                    <p className="text-white/50 text-[10px] md: leading-tight mt-0.5">{p.label}</p>
                   </div>
                 </div>
               ))}
@@ -528,7 +528,7 @@ const NutritionCard = ({ nutrition, t }) => {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-sm font-bold" style={{ color: S500 }}>{adherencePct}%</span>
-              <span className="text-[9px] text-slate-400 text-center leading-tight px-1">{t('nutrition.adherence')}</span>
+              <span className="text-[9px] text-slate-400 text-center md: leading-tight px-1">{t('nutrition.adherence')}</span>
             </div>
           </div>
           <div className="flex-1 space-y-2.5">
@@ -640,8 +640,8 @@ const ExerciseHeatmap = ({ data, t }) => {
             { val: `${consistency}%`, label: t('charts.consistency'),   color: S500      },
           ].map((s, i) => (
             <div key={i} className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100">
-              <p className="text-xl font-bold tabular-nums leading-none" style={{ color: s.color }}>{s.val}</p>
-              <p className="text-[10px] text-slate-400 mt-1.5 font-medium leading-tight">{s.label}</p>
+              <p className="text-xl font-bold tabular-nums md: leading-none" style={{ color: s.color }}>{s.val}</p>
+              <p className="text-[10px] text-slate-400 mt-1.5 font-medium md: leading-tight">{s.label}</p>
             </div>
           ))}
         </div>
@@ -691,7 +691,7 @@ const RecentWorkouts = ({ data, t, locale }) => {
           subtitle={t('workout.recentSub')}
           right={
             <div className="text-right">
-              <p className="text-2xl font-bold tabular-nums leading-none" style={{ color: P500 }}>{prCount}</p>
+              <p className="text-2xl font-bold tabular-nums md: leading-none" style={{ color: P500 }}>{prCount}</p>
               <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wider">{t('workout.prs')}</p>
             </div>
           }
@@ -706,7 +706,7 @@ const RecentWorkouts = ({ data, t, locale }) => {
                     style={{ background: palette[i] }}
                   >{i + 1}</span>
                   <div className="min-w-0">
-                    <span className="text-sm text-slate-600 font-medium leading-tight block truncate">{d.exerciseName}</span>
+                    <span className="text-sm text-slate-600 font-medium md: leading-tight block truncate">{d.exerciseName}</span>
                     <span className="text-[10px] text-slate-400">{fmtDate(d.date, locale)}</span>
                   </div>
                 </div>

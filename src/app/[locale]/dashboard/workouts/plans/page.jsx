@@ -840,7 +840,7 @@ const ConfirmDialog = memo(function ConfirmDialog({ open, onClose, loading, titl
 	return (
 		<Modal open={open} onClose={onClose} title={title || t('confirm.titleDefault')} maxW="max-w-md">
 			<div className="space-y-5">
-				{message && <p className="text-sm text-slate-600 leading-relaxed">{message}</p>}
+				{message && <p className="text-sm text-slate-600 md: leading-relaxed">{message}</p>}
 				<div className="flex items-center justify-end gap-2">
 					<button
 						type="button"
@@ -907,7 +907,7 @@ const PlanPreview = memo(function PlanPreview({ plan }) {
 														<Img showBlur={false} src={ex.img} alt={ex.name} className="h-14 w-14 rounded-lg bg-white object-contain border border-slate-100" />
 													</div>
 													<div className="flex min-w-0 flex-1 flex-col gap-1">
-														<MultiLangText className="text-xs font-semibold text-slate-900 truncate leading-snug">{ex.name}</MultiLangText>
+														<MultiLangText className="text-xs font-semibold text-slate-900 truncate md: leading-snug">{ex.name}</MultiLangText>
 														{!isCardio && (ex.targetSets || ex.targetReps) && (
 															<div className="flex flex-wrap gap-1">
 																{ex.targetSets && (

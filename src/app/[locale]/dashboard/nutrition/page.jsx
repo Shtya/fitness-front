@@ -1424,7 +1424,7 @@ export function PlanDetailsView({ plan }) {
 			{!!plan?.notes && (
 				<div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
 					<p className="text-xs font-semibold text-amber-800 mb-1">{t('details.notes')}</p>
-					<pre className="whitespace-pre-wrap text-xs leading-6 text-amber-900">{plan.notes}</pre>
+					<pre className="whitespace-pre-wrap text-xs md: leading-6 text-amber-900">{plan.notes}</pre>
 				</div>
 			)}
 
@@ -1645,9 +1645,9 @@ export const PlanListView = memo(function PlanListView({ loading, plans = [], on
 
 					{/* Text */}
 					<div className="min-w-0 flex-1 pl-1">
-						<MultiLangText className="truncate text-sm font-semibold text-slate-900 leading-snug">{p.name}</MultiLangText>
+						<MultiLangText className="truncate text-sm font-semibold text-slate-900 md: leading-snug">{p.name}</MultiLangText>
 						{p.desc || p.notes ? (
-							<MultiLangText className="line-clamp-1 text-xs leading-5 text-slate-500 mt-0.5">{p.desc ?? p.notes}</MultiLangText>
+							<MultiLangText className="line-clamp-1 text-xs md: leading-5 text-slate-500 mt-0.5">{p.desc ?? p.notes}</MultiLangText>
 						) : (
 							<p className="text-xs text-slate-400 mt-0.5">{t('list.no_desc')}</p>
 						)}
@@ -1708,7 +1708,7 @@ function ConfirmDialog({ loading, open, onClose, title, message, confirmText, on
 				className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
 			>
 				<h3 className="text-base font-semibold text-slate-800 mb-2">{title}</h3>
-				<p className="text-sm text-slate-500 mb-5 leading-relaxed">{message}</p>
+				<p className="text-sm text-slate-500 mb-5 md: leading-relaxed">{message}</p>
 				<div className="flex items-center justify-end gap-2">
 					<button type="button" onClick={onClose} disabled={loading} className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
 						{t('btn.cancel')}

@@ -115,7 +115,7 @@ export default function HowItWorks() {
 									{/* Number + Icon row */}
 									<div className="mb-5 flex items-center justify-between">
 										<span
-											className="text-5xl font-black leading-none tabular-nums"
+											className="text-5xl font-black md: leading-none tabular-nums"
 											style={{
 												color: `${colors.primary[500]}30`,
 												fontVariantNumeric: "tabular-nums",
@@ -136,11 +136,11 @@ export default function HowItWorks() {
 									</div>
 
 									{/* Title + description */}
-									<h3 className="mb-2 text-base font-bold leading-snug text-white sm:text-[17px]">
+									<h3 className="mb-2 text-base font-bold md: leading-snug text-white sm:text-[17px]">
 										{step.title}
 									</h3>
 
-									<p className="mb-5 text-[13px] leading-relaxed text-white/45">
+									<p className="mb-5 text-[13px] md: leading-relaxed text-white/45">
 										{step.description}
 									</p>
 
@@ -175,7 +175,7 @@ export default function HowItWorks() {
 														/>
 													</span>
 
-													<span className="flex-1 text-[12px] font-medium leading-snug text-white/65">
+													<span className="flex-1 text-[12px] font-medium md: leading-snug text-white/65">
 														{feat.text}
 													</span>
 

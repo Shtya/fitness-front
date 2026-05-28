@@ -51,7 +51,7 @@ export default function CheckBox({ id = 'custom', label, initialChecked = false,
       </button>
 
       {label && (
-        <span className='text-slate-800 text-[15px] leading-none cursor-pointer select-none' onClick={toggle}>
+        <span className='text-slate-800 text-[15px] md: leading-none cursor-pointer select-none' onClick={toggle}>
           {label}
         </span>
       )}

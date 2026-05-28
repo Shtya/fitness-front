@@ -62,7 +62,7 @@ export default function TitleByTab({ activeTab, view }) {
   return (
     <motion.div key={`${activeTab}-${view}`} className='mb-6 text-center md:text-left'>
       <h1 className=' text-center mt-2 text-xl md:text-2xl font-extrabold tracking-tight text-gray-900 drop-shadow-sm'>{content.title}</h1>
-      {content.subtitle && <p className=' text-center mt-1 text-base text-gray-600 leading-relaxed'>{content.subtitle}</p>}
+      {content.subtitle && <p className=' text-center mt-1 text-base text-gray-600 md: leading-relaxed'>{content.subtitle}</p>}
     </motion.div>
   );
 }

@@ -689,7 +689,7 @@ export default function ChatPage() {
                               'transition-all duration-200',
                               avatarGradient
                             )}>
-                              <span className='text-sm font-bold leading-none select-none'>{initial}</span>
+                              <span className='text-sm font-bold md: leading-none select-none'>{initial}</span>
                             </div>
                             <div className='min-w-0 flex-1 flex flex-col'>
                               <MultiLangText className='text-sm font-semibold text-slate-900 truncate group-hover:text-[var(--color-primary-700)]'>
@@ -861,7 +861,7 @@ export default function ChatPage() {
                     'ring-2 shadow-md transition-all duration-200',
                     pickAvatarGradient(otherUser.id || otherUser.email, colors)
                   )}>
-                    <MultiLangText className='text-sm font-bold leading-none select-none'>
+                    <MultiLangText className='text-sm font-bold md: leading-none select-none'>
                       {getInitial(otherUser)}
                     </MultiLangText>
                   </div>
@@ -1326,7 +1326,7 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing, colors }) {
         const Content = () => {
           if (m.messageType === 'text' && !!m.content) {
             return (
-              <MultiLangText className='whitespace-pre-wrap text-[15px] leading-relaxed break-words'>
+              <MultiLangText className='whitespace-pre-wrap text-[15px] md: leading-relaxed break-words'>
                 {m.content}
               </MultiLangText>
             );

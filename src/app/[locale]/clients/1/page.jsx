@@ -990,7 +990,7 @@ function AccordionItem({ q, a, index }) {
         <span className="text-xs font-body text-stone-400 font-medium tracking-widest pt-0.5">
           {String(index + 1).padStart(2, "0")}
         </span>
-        <span className="flex-1 text-base font-display font-semibold text-stone-900 leading-snug">
+        <span className="flex-1 text-base font-display font-semibold text-stone-900 md: leading-snug">
           {q}
         </span>
         <span
@@ -1007,7 +1007,7 @@ function AccordionItem({ q, a, index }) {
         className="overflow-hidden transition-all duration-400 ease-in-out"
         style={{ maxHeight: open ? `${bodyRef.current?.scrollHeight}px` : "0px" }}
       >
-        <p className="pb-5 ps-7 font-body text-stone-600 leading-relaxed text-[15px]">{a}</p>
+        <p className="pb-5 ps-7 font-body text-stone-600 md: leading-relaxed text-[15px]">{a}</p>
       </div>
     </div>
   );
@@ -1326,7 +1326,7 @@ export default function CoachLandingPage() {
 
               {/* Headline */}
               <div ref={heroHeadRef} className="overflow-hidden">
-                <h1 className="font-display font-black leading-[0.92] tracking-tighter">
+                <h1 className="font-display font-black md: leading-[0.92] tracking-tighter">
                   <span className="hero-line block text-[clamp(52px,8vw,96px)] text-stone-900">
                     {t.hero.line1}
                   </span>
@@ -1343,7 +1343,7 @@ export default function CoachLandingPage() {
               {/* Sub */}
               <p
                 ref={heroSubRef}
-                className="mt-8 max-w-md text-[15px] font-body text-stone-600 leading-relaxed"
+                className="mt-8 max-w-md text-[15px] font-body text-stone-600 md: leading-relaxed"
               >
                 {t.hero.sub}
               </p>
@@ -1461,7 +1461,7 @@ export default function CoachLandingPage() {
                   i < 3 ? "border-e border-stone-200 rtl:border-e-0 rtl:border-s rtl:border-stone-200" : ""
                 } ${i >= 2 ? "border-t border-stone-200 lg:border-t-0" : ""}`}
               >
-                <div className="font-display font-black text-[clamp(48px,6vw,80px)] leading-none text-stone-900 tracking-tighter">
+                <div className="font-display font-black text-[clamp(48px,6vw,80px)] md: leading-none text-stone-900 tracking-tighter">
                   <span
                     className="stat-number"
                     data-target={s.number}
@@ -1470,7 +1470,7 @@ export default function CoachLandingPage() {
                   </span>
                   <span className="text-[#ea580c]">{s.suffix}</span>
                 </div>
-                <p className="text-[13px] font-body text-stone-500 leading-snug max-w-[160px]">
+                <p className="text-[13px] font-body text-stone-500 md: leading-snug max-w-[160px]">
                   {s.label}
                 </p>
               </div>
@@ -1497,7 +1497,7 @@ export default function CoachLandingPage() {
                 style={{ aspectRatio: "4/5", objectPosition: "center top" }}
               />
               <div className="absolute bottom-0 end-0 w-2/3 bg-stone-900 text-white p-6">
-                <blockquote className="font-display font-bold text-lg leading-snug">
+                <blockquote className="font-display font-bold text-lg md: leading-snug">
                   "{t.about.quote}"
                 </blockquote>
                 <cite className="block mt-3 text-[11px] font-body text-stone-400 tracking-widest uppercase not-italic">
@@ -1514,16 +1514,16 @@ export default function CoachLandingPage() {
                   {t.about.eyebrow}
                 </span>
               </div>
-              <h2 className="font-display font-black text-[clamp(36px,4.5vw,60px)] leading-tight tracking-tighter text-stone-900 mb-2">
+              <h2 className="font-display font-black text-[clamp(36px,4.5vw,60px)] md: leading-tight tracking-tighter text-stone-900 mb-2">
                 {t.about.name}
               </h2>
               <p className="text-sm font-body text-stone-500 mb-8 tracking-wide">
                 {t.about.title}
               </p>
-              <p className="text-[15px] font-body text-stone-700 leading-relaxed mb-5">
+              <p className="text-[15px] font-body text-stone-700 md: leading-relaxed mb-5">
                 {t.about.body1}
               </p>
-              <p className="text-[15px] font-body text-stone-700 leading-relaxed mb-10">
+              <p className="text-[15px] font-body text-stone-700 md: leading-relaxed mb-10">
                 {t.about.body2}
               </p>
               {/* Cert tags */}
@@ -1555,7 +1555,7 @@ export default function CoachLandingPage() {
               {t.why.eyebrow}
             </span>
           </div>
-          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] leading-tight tracking-tighter text-stone-900 mb-16 max-w-xl whitespace-pre-line">
+          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] md: leading-tight tracking-tighter text-stone-900 mb-16 max-w-xl whitespace-pre-line">
             {t.why.headline}
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-0 border border-stone-200">
@@ -1571,10 +1571,10 @@ export default function CoachLandingPage() {
                 <span className="text-xs font-body text-[#ea580c] font-bold tracking-widest mb-3 block">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <h3 className="font-display font-bold text-lg text-stone-900 mb-3 leading-snug">
+                <h3 className="font-display font-bold text-lg text-stone-900 mb-3 md: leading-snug">
                   {item.title}
                 </h3>
-                <p className="text-[14px] font-body text-stone-600 leading-relaxed">
+                <p className="text-[14px] font-body text-stone-600 md: leading-relaxed">
                   {item.body}
                 </p>
               </div>
@@ -1596,7 +1596,7 @@ export default function CoachLandingPage() {
                   {t.forWho.eyebrow}
                 </span>
               </div>
-              <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] leading-tight tracking-tighter mb-10 whitespace-pre-line">
+              <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] md: leading-tight tracking-tighter mb-10 whitespace-pre-line">
                 {t.forWho.headline}
               </h2>
               <a
@@ -1638,7 +1638,7 @@ export default function CoachLandingPage() {
               {t.method.eyebrow}
             </span>
           </div>
-          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] leading-tight tracking-tighter text-stone-900 mb-16">
+          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] md: leading-tight tracking-tighter text-stone-900 mb-16">
             {t.method.headline}
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-0">
@@ -1651,7 +1651,7 @@ export default function CoachLandingPage() {
                   i % 3 !== 2 ? "lg:border-e" : ""
                 } ${i % 2 === 0 && i % 3 !== 2 ? "sm:lg:border-e" : ""}`}
               >
-                <span className="font-display font-black text-[64px] leading-none text-stone-100 select-none absolute top-4 end-6">
+                <span className="font-display font-black text-[64px] md: leading-none text-stone-100 select-none absolute top-4 end-6">
                   {step.num}
                 </span>
                 <div className="relative z-10">
@@ -1661,7 +1661,7 @@ export default function CoachLandingPage() {
                   <h3 className="font-display font-bold text-xl text-stone-900 mb-3">
                     {step.title}
                   </h3>
-                  <p className="text-[14px] font-body text-stone-600 leading-relaxed">
+                  <p className="text-[14px] font-body text-stone-600 md: leading-relaxed">
                     {step.body}
                   </p>
                 </div>
@@ -1682,7 +1682,7 @@ export default function CoachLandingPage() {
               {t.services.eyebrow}
             </span>
           </div>
-          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] leading-tight tracking-tighter text-stone-900 mb-16">
+          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] md: leading-tight tracking-tighter text-stone-900 mb-16">
             {t.services.headline}
           </h2>
 
@@ -1711,7 +1711,7 @@ export default function CoachLandingPage() {
                 <h3 className="font-display font-black text-2xl text-stone-900 mb-3">
                   {t.services.items[0].title}
                 </h3>
-                <p className="text-[14px] font-body text-stone-600 mb-6 leading-relaxed">
+                <p className="text-[14px] font-body text-stone-600 mb-6 md: leading-relaxed">
                   {t.services.items[0].body}
                 </p>
                 <a
@@ -1752,7 +1752,7 @@ export default function CoachLandingPage() {
                     <h3 className="font-display font-bold text-lg text-stone-900 mb-2">
                       {svc.title}
                     </h3>
-                    <p className="text-[13px] font-body text-stone-600 mb-4 leading-relaxed flex-1">
+                    <p className="text-[13px] font-body text-stone-600 mb-4 md: leading-relaxed flex-1">
                       {svc.body}
                     </p>
                     <a
@@ -1798,7 +1798,7 @@ export default function CoachLandingPage() {
 
             {/* Story */}
             <div>
-              <h2 className="font-display font-black text-[clamp(28px,3.5vw,48px)] leading-tight tracking-tighter mb-2">
+              <h2 className="font-display font-black text-[clamp(28px,3.5vw,48px)] md: leading-tight tracking-tighter mb-2">
                 {t.featured.name}
               </h2>
               <div className="flex gap-4 mb-8">
@@ -1810,7 +1810,7 @@ export default function CoachLandingPage() {
                   {t.featured.duration}
                 </span>
               </div>
-              <p className="text-[15px] font-body text-stone-400 leading-relaxed mb-10">
+              <p className="text-[15px] font-body text-stone-400 md: leading-relaxed mb-10">
                 {t.featured.story}
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border border-stone-700">
@@ -1844,7 +1844,7 @@ export default function CoachLandingPage() {
               {t.gallery.eyebrow}
             </span>
           </div>
-          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] leading-tight tracking-tighter text-stone-900 mb-16">
+          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] md: leading-tight tracking-tighter text-stone-900 mb-16">
             {t.gallery.headline}
           </h2>
 
@@ -1900,7 +1900,7 @@ export default function CoachLandingPage() {
               {t.testimonials.eyebrow}
             </span>
           </div>
-          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] leading-tight tracking-tighter text-stone-900 mb-16">
+          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] md: leading-tight tracking-tighter text-stone-900 mb-16">
             {t.testimonials.headline}
           </h2>
 
@@ -1912,7 +1912,7 @@ export default function CoachLandingPage() {
                   i === 1 ? "sm:mt-10" : i === 3 ? "sm:mt-6" : ""
                 }`}
               >
-                <p className="text-[15px] font-body text-stone-700 leading-relaxed flex-1">
+                <p className="text-[15px] font-body text-stone-700 md: leading-relaxed flex-1">
                   "{item.text}"
                 </p>
                 <div className="flex items-center gap-3">
@@ -1943,7 +1943,7 @@ export default function CoachLandingPage() {
               {t.resources.eyebrow}
             </span>
           </div>
-          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] leading-tight tracking-tighter text-stone-900 mb-16">
+          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] md: leading-tight tracking-tighter text-stone-900 mb-16">
             {t.resources.headline}
           </h2>
 
@@ -1958,10 +1958,10 @@ export default function CoachLandingPage() {
                 } ${i === 2 ? "sm:border-t lg:border-t-0" : ""}`}
               >
                 <span className="text-2xl block mb-5 text-stone-400">{item.icon}</span>
-                <h3 className="font-display font-bold text-base text-stone-900 mb-3 leading-snug">
+                <h3 className="font-display font-bold text-base text-stone-900 mb-3 md: leading-snug">
                   {item.title}
                 </h3>
-                <p className="text-[13px] font-body text-stone-600 leading-relaxed">
+                <p className="text-[13px] font-body text-stone-600 md: leading-relaxed">
                   {item.body}
                 </p>
               </div>
@@ -1984,7 +1984,7 @@ export default function CoachLandingPage() {
               {t.pricing.eyebrow}
             </span>
           </div>
-          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] leading-tight tracking-tighter text-stone-900 mb-4">
+          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] md: leading-tight tracking-tighter text-stone-900 mb-4">
             {t.pricing.headline}
           </h2>
           <p className="text-[14px] font-body text-stone-500 mb-16 max-w-lg">
@@ -2016,7 +2016,7 @@ export default function CoachLandingPage() {
                       {pkg.name}
                     </h3>
                     <div className="flex items-baseline gap-1">
-                      <span className={`font-display font-black text-[48px] leading-none tracking-tighter ${pkg.featured ? "text-white" : "text-stone-900"}`}>
+                      <span className={`font-display font-black text-[48px] md: leading-none tracking-tighter ${pkg.featured ? "text-white" : "text-stone-900"}`}>
                         {pkg.price}
                       </span>
                       <span className={`font-body text-sm ${pkg.featured ? "text-stone-400" : "text-stone-500"}`}>
@@ -2029,7 +2029,7 @@ export default function CoachLandingPage() {
                     {pkg.features.map((f, fi) => (
                       <li key={fi} className="flex items-start gap-3">
                         <span className="text-[#ea580c] flex-shrink-0 mt-0.5">✓</span>
-                        <span className={`text-[13px] font-body leading-snug ${pkg.featured ? "text-stone-300" : "text-stone-600"}`}>
+                        <span className={`text-[13px] font-body md: leading-snug ${pkg.featured ? "text-stone-300" : "text-stone-600"}`}>
                           {f}
                         </span>
                       </li>
@@ -2067,7 +2067,7 @@ export default function CoachLandingPage() {
               {t.faq.eyebrow}
             </span>
           </div>
-          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] leading-tight tracking-tighter text-stone-900 mb-14">
+          <h2 className="font-display font-black text-[clamp(32px,4vw,56px)] md: leading-tight tracking-tighter text-stone-900 mb-14">
             {t.faq.headline}
           </h2>
           <div>
@@ -2090,10 +2090,10 @@ export default function CoachLandingPage() {
             </span>
             <span className="block w-6 h-px bg-[#ea580c]" />
           </div>
-          <h2 className="font-display font-black text-[clamp(48px,7vw,96px)] leading-[0.92] tracking-tighter mb-8 whitespace-pre-line">
+          <h2 className="font-display font-black text-[clamp(48px,7vw,96px)] md: leading-[0.92] tracking-tighter mb-8 whitespace-pre-line">
             {t.cta.headline}
           </h2>
-          <p className="text-[15px] font-body text-stone-400 mb-12 max-w-md mx-auto leading-relaxed">
+          <p className="text-[15px] font-body text-stone-400 mb-12 max-w-md mx-auto md: leading-relaxed">
             {t.cta.sub}
           </p>
           <a
@@ -2124,7 +2124,7 @@ export default function CoachLandingPage() {
                   {t.footer.logoSub}
                 </span>
               </a>
-              <p className="text-[13px] font-body leading-relaxed max-w-xs text-stone-500 mb-6">
+              <p className="text-[13px] font-body md: leading-relaxed max-w-xs text-stone-500 mb-6">
                 {t.footer.tagline}
               </p>
               <a

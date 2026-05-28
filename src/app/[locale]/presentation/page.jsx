@@ -175,13 +175,13 @@ function Hero() {
 							</Chip>
 						</div>
 
-						<h1 data-reveal className="d1 mb-5 font-tajawal text-[clamp(32px,8vw,62px)] font-black leading-tight tracking-tight text-white">
+						<h1 data-reveal className="d1 mb-5 font-tajawal text-[clamp(32px,8vw,62px)] font-black md: leading-tight tracking-tight text-white">
 							كل ما تحتاجه لإدارة
 							<br />
 							<span className="grad-text">أعمال التدريب واللياقة</span>
 						</h1>
 
-						<p data-reveal className="d2 mb-8 font-cairo text-sm leading-8 text-slate-300/80 sm:text-base lg:max-w-2xl">
+						<p data-reveal className="d2 mb-8 font-cairo text-sm md: leading-8 text-slate-300/80 sm:text-base lg:max-w-2xl">
 							منصة متكاملة تجمع الإدارة والمدربين والعملاء في نظام واحد — من إعداد الخطط ومتابعة التقدم، إلى التقارير الأسبوعية وتنظيم التواصل اليومي.
 						</p>
 
@@ -202,7 +202,7 @@ function Hero() {
 								s.accent ? "border border-blue-200/15 bg-blue-700/20" : "border border-white/10 bg-white/5",
 							].join(" ")}>
 								<div className="mb-2 flex justify-center">{s.icon}</div>
-								<div className="mb-1.5 text-white bg-gradient-to-r from-blue-300 to-sky-400 bg-clip-text font-tajawal text-4xl font-black leading-none text-transparent sm:text-5xl">
+								<div className="mb-1.5 text-white bg-gradient-to-r from-blue-300 to-sky-400 bg-clip-text font-tajawal text-4xl font-black md: leading-none text-transparent sm:text-5xl">
 									{s.n}
 								</div>
 								<div className="font-cairo text-xs font-semibold text-blue-200">{s.label}</div>
@@ -468,14 +468,14 @@ const StepCard = ({ s, sky = false, delay = 0 }) => (
 				</div>
 
 				{/* Title */}
-				<div className="flex-1 text-right font-cairo text-[10px] font-bold leading-tight text-white md:flex-none md:text-center md:text-[11px]">
+				<div className="flex-1 text-right font-cairo text-[10px] font-bold md: leading-tight text-white md:flex-none md:text-center md:text-[11px]">
 					{s.t}
 				</div>
 			</div>
 
 			{/* Description — desktop only */}
 			<div className={[
-				"mt-2   font-cairo text-[10px] leading-5 md:block md:text-center",
+				"mt-2   font-cairo text-[10px] md: leading-5 md:block md:text-center",
 				sky ? "text-sky-200/65" : "text-blue-100/65",
 			].join(" ")}>
 				{s.d}
@@ -650,7 +650,7 @@ function AdminFeatures() {
 							</div>
 
 							{/* Description */}
-							<div className="mt-1.5 font-cairo text-[10px] leading-6 text-slate-500 sm:mt-0 sm:text-[11px]">
+							<div className="mt-1.5 font-cairo text-[10px] md: leading-6 text-slate-500 sm:mt-0 sm:text-[11px]">
 								{c.d}
 							</div>
 						</div>
@@ -720,7 +720,7 @@ function Plans() {
 								{c.icon}
 							</div>
 							<div className="mb-3 font-tajawal text-2xl font-black text-white">{c.t}</div>
-							<div className="mb-5 font-cairo text-sm leading-8 text-blue-100/75">{c.d}</div>
+							<div className="mb-5 font-cairo text-sm md: leading-8 text-blue-100/75">{c.d}</div>
 							<div className="flex flex-wrap gap-2">
 								{c.tags.map((tag) => (
 									<span key={tag.t} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-cairo text-[11px] font-bold transition-opacity hover:opacity-80 ${c.tagClass}`}>
@@ -806,7 +806,7 @@ function ClientExperience() {
 								<Dumbbell size={28} className="text-blue-200" />
 							</div>
 							<div className="mb-3 font-tajawal text-2xl font-black text-white">تماريني</div>
-							<div className="mb-6 flex-1 font-cairo text-sm leading-8 text-blue-100/80">
+							<div className="mb-6 flex-1 font-cairo text-sm md: leading-8 text-blue-100/80">
 								خطة التمارين اليومية بشكل واضح — فيديوهات توضيحية، تسجيل الأوزان والتكرارات والمجموعات، ومؤقت لمتابعة الأداء أثناء التمرين.
 							</div>
 							<div className="flex flex-wrap gap-2">
@@ -1034,7 +1034,7 @@ function Benefits() {
 								<Zap size={30} className="text-blue-200" />
 							</div>
 							<div className="mb-4 font-tajawal text-2xl font-black text-white">توفير الوقت والجهد</div>
-							<div className="mb-7 flex-1 font-cairo text-sm leading-8 text-blue-100/80">
+							<div className="mb-7 flex-1 font-cairo text-sm md: leading-8 text-blue-100/80">
 								بدلاً من إدارة العملاء والخطط عبر واتساب وملفات متفرقة، تجمع المنصة كل خطوات العمل في مكان واحد — لاختصار الوقت وتقليل الأخطاء وإنجاز المزيد بكفاءة أعلى.
 							</div>
 							<div className="inline-flex items-center gap-2 self-start rounded-full border border-white/15 bg-white/10 px-5 py-2.5 transition-colors hover:bg-white/20">
@@ -1055,7 +1055,7 @@ function Benefits() {
 							<div className="absolute inset-x-0 top-0 h-0.5 origin-right scale-x-0 bg-gradient-to-r from-sky-400 to-blue-600 transition-transform duration-300 group-hover:scale-x-100" />
 							<div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-200/50 bg-gradient-to-br from-blue-50 to-blue-100 transition-transform duration-200 group-hover:scale-105">{c.icon}</div>
 							<div className="mb-2 font-cairo text-[14px] font-extrabold text-blue-900">{c.t}</div>
-							<div className={["font-cairo text-sm leading-7", c.light ? "text-sky-700" : "text-slate-500"].join(" ")}>{c.d}</div>
+							<div className={["font-cairo text-sm md: leading-7", c.light ? "text-sky-700" : "text-slate-500"].join(" ")}>{c.d}</div>
 						</div>
 					))}
 				</div>
@@ -1086,13 +1086,13 @@ function Closing() {
 						<Chip v="white"><Sparkles size={12} className="text-blue-400" />الخلاصة</Chip>
 					</div>
 
-					<h2 data-reveal className="mb-5 font-tajawal text-[clamp(34px,7vw,76px)] font-black leading-tight tracking-tight text-white">
+					<h2 data-reveal className="mb-5 font-tajawal text-[clamp(34px,7vw,76px)] font-black md: leading-tight tracking-tight text-white">
 						منصة واحدة
 						<br />
 						<span className="grad-text">لتنظيم العمل وتقديم خدمة احترافية</span>
 					</h2>
 
-					<p data-reveal className="mx-auto mb-10 max-w-2xl font-cairo text-sm leading-8 text-slate-300/80 sm:text-base">
+					<p data-reveal className="mx-auto mb-10 max-w-2xl font-cairo text-sm md: leading-8 text-slate-300/80 sm:text-base">
 						نظام متكامل يساعدك على إدارة العملاء، إعداد الخطط، متابعة التقدم، مراجعة التقارير، وتنظيم التواصل والجوانب المالية داخل تجربة واحدة واضحة وسهلة الاستخدام.
 					</p>
 
@@ -1103,7 +1103,7 @@ function Closing() {
 								{i > 0 && <div className="mx-6 my-2 hidden w-px self-stretch bg-blue-200/15 md:block xl:mx-10" />}
 								<div className="group min-w-32 rounded-2xl px-4 py-3 text-center transition-colors hover:bg-white/5">
 									<div className="mb-2 flex justify-center transition-transform duration-200 group-hover:scale-110">{s.icon}</div>
-									<div className="mb-1.5 bg-gradient-to-r from-blue-300 to-sky-400 bg-clip-text font-tajawal text-5xl font-black leading-none text-transparent sm:text-6xl">
+									<div className="mb-1.5 bg-gradient-to-r from-blue-300 to-sky-400 bg-clip-text font-tajawal text-5xl font-black md: leading-none text-transparent sm:text-6xl">
 										{s.n}
 									</div>
 									<div className="font-cairo text-[12px] font-semibold text-blue-200/75">{s.l}</div>

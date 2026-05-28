@@ -70,7 +70,7 @@ export function StatCard({ resPhone, cnParent, cn, icon: Icon, title, value }) {
         >
           <div className={`min-w-0 ${resPhone ? 'max-md:w-full' : ''}`}>
             <p
-              className={`text-[10px] font-black uppercase tracking-[0.14em] leading-tight ${
+              className={`text-[10px] font-black uppercase tracking-[0.14em] md: leading-tight ${
                 resPhone ? 'max-md:text-center' : ''
               }`}
               style={{ color: 'rgba(255,255,255,0.6)' }}
@@ -78,7 +78,7 @@ export function StatCard({ resPhone, cnParent, cn, icon: Icon, title, value }) {
               {title}
             </p>
 
-            <p className="mt-2.5 text-2xl font-black leading-none tracking-tight text-white">
+            <p className="mt-2.5 text-2xl font-black md: leading-none tracking-tight text-white">
               {value}
             </p>
           </div>
@@ -288,7 +288,7 @@ export function Modal({ scrollRef, cn, maxHBody, open, onClose, title, children,
 
             {/* Header */}
             <div className='flex items-center justify-between mb-5'>
-              <h3 className='text-base md:text-lg font-semibold theme-primary-text leading-snug'>{title}</h3>
+              <h3 className='text-base md:text-lg font-semibold theme-primary-text md: leading-snug'>{title}</h3>
               <button
                 ref={closeBtnRef}
                 onClick={onClose}
@@ -768,7 +768,7 @@ export function ConfirmDialog({ open, title = 'Are you sure?', desc, confirmText
       <div className='absolute inset-0 grid place-items-center p-4'>
         <div className='w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-xl'>
           <div className='text-base font-semibold theme-primary-text'>{title}</div>
-          {desc && <div className='mt-1.5 text-sm text-slate-500 leading-relaxed'>{desc}</div>}
+          {desc && <div className='mt-1.5 text-sm text-slate-500 md: leading-relaxed'>{desc}</div>}
           <div className='mt-5 flex items-center justify-end gap-2'>
             <button onClick={onClose} className='px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-50 transition-colors'>
               {cancelText}
@@ -1130,7 +1130,7 @@ export function NumberStepper({ value = 0, min = 0, step = 1, onChange }) {
       <button
         type='button'
         onClick={() => onChange?.(Math.max(min, value - step))}
-        className='px-3 py-2 text-slate-600 hover:bg-slate-50 border-r border-slate-200 transition-colors text-base leading-none'>
+        className='px-3 py-2 text-slate-600 hover:bg-slate-50 border-r border-slate-200 transition-colors text-base md: leading-none'>
         −
       </button>
       <input
@@ -1143,7 +1143,7 @@ export function NumberStepper({ value = 0, min = 0, step = 1, onChange }) {
       <button
         type='button'
         onClick={() => onChange?.(value + step)}
-        className='px-3 py-2 text-slate-600 hover:bg-slate-50 border-l border-slate-200 transition-colors text-base leading-none'>
+        className='px-3 py-2 text-slate-600 hover:bg-slate-50 border-l border-slate-200 transition-colors text-base md: leading-none'>
         +
       </button>
     </div>

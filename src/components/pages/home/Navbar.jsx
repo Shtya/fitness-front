@@ -217,7 +217,7 @@ function UserDropdown({ user, onClose, isRTL }) {
 							<span className={`ud-online absolute -bottom-0.5 ${isRTL ? "-left-0.5" : "-right-0.5"} h-3 w-3 rounded-full bg-emerald-400 border-2 border-[#09091a] block`} />
 						</div>
 						<div className="min-w-0 flex-1">
-							<p className="text-[13px] font-bold text-white truncate leading-tight">{user.name}</p>
+							<p className="text-[13px] font-bold text-white truncate md: leading-tight">{user.name}</p>
 							<p className="text-[10px] text-white/35 truncate mt-0.5">{user.email}</p>
 							<span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider text-white"
 								style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
@@ -458,7 +458,7 @@ function MobileDrawer({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
 							<Dumbbell className="h-[18px] w-[18px] text-white" strokeWidth={2.5} />
 						</div>
 						<div>
-							<p className="text-[14px] font-black text-white leading-none">{t("brand.name")}</p>
+							<p className="text-[14px] font-black text-white md: leading-none">{t("brand.name")}</p>
 							<p className="text-[8px] font-semibold uppercase tracking-[0.18em] mt-0.5" style={{ color: "var(--color-primary-400)" }}>{t("brand.tagline")}</p>
 						</div>
 					</div>
@@ -499,7 +499,7 @@ function MobileDrawer({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
 									<div className="flex flex-col items-center shrink-0 px-2 py-1.5 rounded-[9px]"
 										style={{ background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.18)" }}>
 										<Star className="h-[10px] w-[10px] fill-yellow-400 text-yellow-400" />
-										<span className="text-[11px] font-black text-white leading-none mt-0.5">{user.points}</span>
+										<span className="text-[11px] font-black text-white md: leading-none mt-0.5">{user.points}</span>
 										<span className="text-[7px] text-white/30 uppercase">{t("dropdown.pts")}</span>
 									</div>
 								)}
@@ -692,7 +692,7 @@ export default function PowerfulNavbar() {
 								</div>
 							</div>
 							<div>
-								<span className="text-[17px] sm:text-[19px] font-black text-white tracking-[-0.02em] leading-none">{t("brand.name")}</span>
+								<span className="text-[17px] sm:text-[19px] font-black text-white tracking-[-0.02em] md: leading-none">{t("brand.name")}</span>
 								{/* <p className="text-[8px] font-bold uppercase tracking-[0.2em] mt-[3px]" style={{ color: "var(--color-primary-400)" }}>{t("brand.tagline")}</p> */}
 							</div>
 						</Link>

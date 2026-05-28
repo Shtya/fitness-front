@@ -87,7 +87,7 @@ export default function SectionHeader({
       )}
  
       <motion.h2
-        className="font-display m-0 w-full max-w-full px-1 leading-[1.05] tracking-tight text-white
+        className="font-display m-0 w-full max-w-full px-1 md: leading-[1.05] tracking-tight text-white
            text-[1.75rem] md:text-[2.5rem] lg:text-[3rem]"
         initial={{ opacity: 0, y: reduced ? 0 : 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -118,7 +118,7 @@ export default function SectionHeader({
       {/* ── Subtitle ──────────────────────────────────────────────────────── */}
       {subtitle && (
         <motion.p
-          className="font-body m-0 max-w-3xl px-1 leading-relaxed text-white/50  text-[1rem] md:text-[1.5rem]"
+          className="font-body m-0 max-w-3xl px-1 md: leading-relaxed text-white/50  text-[1rem] md:text-[1.5rem]"
           initial={{ opacity: 0, y: reduced ? 0 : 14 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}

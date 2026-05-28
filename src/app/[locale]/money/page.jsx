@@ -310,7 +310,7 @@ function Empty({ icon: Icon, title, subtitle }) {
 		<div className="flex flex-col items-center justify-center py-12 px-5 text-center gap-2">
 			<div className="w-11 h-11 rounded-lg bg-[var(--color-primary-100)] border border-[var(--color-primary-200)] flex items-center justify-center text-[var(--color-primary-300)]"><Icon size={19} /></div>
 			<div className="text-sm font-semibold text-[var(--color-primary-400)]">{title}</div>
-			{subtitle && <div className="text-xs text-[var(--color-primary-300)] leading-relaxed max-w-[175px]">{subtitle}</div>}
+			{subtitle && <div className="text-xs text-[var(--color-primary-300)] md: leading-relaxed max-w-[175px]">{subtitle}</div>}
 		</div>
 	);
 }
@@ -711,7 +711,7 @@ function ForecastPanel({ open, onClose, income, expenses, commitments, expected,
 							<div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent pointer-events-none" />
 							<div className={cn('w-7 h-7 rounded-lg flex items-center justify-center text-white mb-1.5 relative z-10', c.ib)}><c.I size={13} /></div>
 							<div className={cn('text-[8.5px] font-extrabold uppercase tracking-wider mb-0.5 opacity-60 relative z-10', c.cl)}>{c.l}</div>
-							<div className={cn('mn-serif text-[18px] leading-tight relative z-10 tabular-nums', c.cl)}>{c.px}{fmt(Math.abs(c.v))}</div>
+							<div className={cn('mn-serif text-[18px] md: leading-tight relative z-10 tabular-nums', c.cl)}>{c.px}{fmt(Math.abs(c.v))}</div>
 						</div>
 					))}
 				</div>
@@ -762,7 +762,7 @@ function AddForm({ t, onSave, onClose, loading, initialData }) {
 								<button key={v} type="button" onClick={() => set('type', v)}
 									className={cn('flex items-center gap-2 p-2.5 rounded-lg border-2 cursor-pointer transition-all duration-150 text-start active:scale-95', on ? cn(ab, abo) : 'bg-[var(--color-primary-100)] border-[var(--color-primary-200)] hover:border-[var(--color-primary-300)]')}>
 									<div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-white transition-all', on ? ion : 'bg-[var(--color-primary-200)]')}><I size={14} className={on ? 'text-white' : 'text-[var(--color-primary-400)]'} /></div>
-									<span className={cn('text-[11px] font-bold flex-1 leading-tight', on ? at : 'text-[var(--color-primary-500)]')}>{l}</span>
+									<span className={cn('text-[11px] font-bold flex-1 md: leading-tight', on ? at : 'text-[var(--color-primary-500)]')}>{l}</span>
 									{on && <Check size={11} className={at} />}
 								</button>
 							);
@@ -892,7 +892,7 @@ function TotalBanner({ total, color, icon: Icon, label, currency }) {
 				<div className={cn('w-10 h-10 rounded-lg flex items-center justify-center text-white flex-shrink-0 shadow', color.icon)}><Icon size={17} /></div>
 				<div className="flex-1 min-w-0">
 					<div className={cn('text-[8.5px] font-extrabold uppercase tracking-widest mb-0.5 opacity-60', color.text)}>{label}</div>
-					<div className={cn('mn-serif text-[24px] leading-tight', color.text)}>{fmt(total)} <span className="text-xs opacity-50">{currency}</span></div>
+					<div className={cn('mn-serif text-[24px] md: leading-tight', color.text)}>{fmt(total)} <span className="text-xs opacity-50">{currency}</span></div>
 				</div>
 				{color.arrow && <color.arrow size={22} className={color.arrowColor} />}
 			</div>
@@ -1027,7 +1027,7 @@ function CommitmentsTab({ data, locale, t, onToggle, togglingId, onEdit, onDelet
 						<div className="w-9 h-9 rounded-lg mn-save-btn flex items-center justify-center text-white shadow"><Lock size={14} /></div>
 						<div>
 							<div className="text-[8.5px] font-extrabold uppercase tracking-widest text-[var(--color-primary-400)] mb-0.5">{t('commitments.title')}</div>
-							<div className="mn-serif text-[19px] text-[var(--color-primary-700)] leading-tight">{fmt(total)} <span className="text-xs opacity-55">{t('common.currency')}</span></div>
+							<div className="mn-serif text-[19px] text-[var(--color-primary-700)] md: leading-tight">{fmt(total)} <span className="text-xs opacity-55">{t('common.currency')}</span></div>
 						</div>
 					</div>
 					<div >
@@ -1125,7 +1125,7 @@ function ZakatTab({ incTotal, expTotal, log, locale, t, onDelete }) {
 									style={{ transition: 'stroke-dashoffset .9s cubic-bezier(0.16,1,0.3,1)', filter: 'drop-shadow(0 0 5px rgba(52,211,153,.7))' }} />
 							</svg>
 							<div className="absolute inset-0 flex flex-col items-center justify-center">
-								<div className="text-[19px] font-black leading-none tabular-nums">{prog}%</div>
+								<div className="text-[19px] font-black md: leading-none tabular-nums">{prog}%</div>
 								<div className="text-[7px] font-bold uppercase tracking-widest mt-0.5 text-white/35">{t('zakat.paid')}</div>
 							</div>
 						</div>
@@ -1370,7 +1370,7 @@ export default function MoneyPage() {
 				{/* top row */}
 				<div className="relative z-10 flex items-start justify-between gap-3 mb-3.5">
 					<div>
-						<div className="mn-serif text-[21px] text-white leading-tight tracking-[-0.01em]">{t('header.title')}</div>
+						<div className="mn-serif text-[21px] text-white md: leading-tight tracking-[-0.01em]">{t('header.title')}</div>
 						<div className="text-[10px] text-white/38 mt-0.5">{t('header.subtitle')}</div>
 						{/* <div className="mt-2"><BalanceModeSwitch value={balanceMode} onChange={setBalanceMode} /></div> */}
 					</div>

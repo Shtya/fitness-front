@@ -288,7 +288,7 @@ export function KpiCard({ icon: Icon, label, value, trend, trendValue, sub, load
 					<p className='mb-1.5 text-[9px] font-extrabold uppercase tracking-[.12em] text-white/[0.5]'>{label}</p>
 
 					<div className='flex items-baseline gap-2'>
-						<span className='text-[22px] font-black leading-none tracking-tight text-white'>{value}</span>
+						<span className='text-[22px] font-black md: leading-none tracking-tight text-white'>{value}</span>
 
 						{trend && trendValue && (
 							<span className='inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide'
@@ -409,7 +409,7 @@ export function GradientStatsHeader({
 						<div className='min-w-0 flex-1'>
 							<motion.h1
 								initial={{ opacity: 0, x: -18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.07, ...sm }}
-								className='mb-1.5 flex items-center gap-2.5 max-md:text-base text-[clamp(1.5rem,3vw,2.2rem)] font-black leading-tight tracking-tight text-white'
+								className='mb-1.5 flex items-center gap-2.5 max-md:text-base text-[clamp(1.5rem,3vw,2.2rem)] font-black md: leading-tight tracking-tight text-white'
 								style={{ textShadow: '0 1px 12px rgba(0,0,0,0.12)' }}>
 								{title}
 								<motion.span
@@ -423,7 +423,7 @@ export function GradientStatsHeader({
 							{desc && (
 								<motion.p
 									initial={{ opacity: 0, x: -18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.14, ...sm }}
-									className='max-w-[520px] text-[13px] leading-relaxed text-white/60'>
+									className='max-w-[520px] text-[13px] md: leading-relaxed text-white/60'>
 									{desc}
 								</motion.p>
 							)}
@@ -578,7 +578,7 @@ export function GradientStatsHeader({
 															<div className='relative px-4 py-4'>
 																<div className='flex items-start justify-between gap-2'>
 																	<p
-																		className='text-[9px] font-black uppercase leading-tight tracking-[0.14em]'
+																		className='text-[9px] font-black uppercase md: leading-tight tracking-[0.14em]'
 																		style={{ color: 'rgba(255,255,255,0.6)' }}
 																	>
 																		{s.label}
@@ -592,7 +592,7 @@ export function GradientStatsHeader({
 																	)}
 																</div>
 
-																<p className='mt-2.5 text-2xl font-black leading-none tracking-tight text-white'>
+																<p className='mt-2.5 text-2xl font-black md: leading-none tracking-tight text-white'>
 																	{s.value}
 																</p>
 

@@ -1036,7 +1036,7 @@ function FaqItem({ q, a }) {
         className="overflow-hidden transition-all duration-300 ease-in-out"
         style={{ maxHeight: open ? bodyRef.current?.scrollHeight + "px" : "0px" }}
       >
-        <p className="font-body text-stone-500 text-sm leading-relaxed pb-5">{a}</p>
+        <p className="font-body text-stone-500 text-sm md: leading-relaxed pb-5">{a}</p>
       </div>
     </div>
   );
@@ -1312,23 +1312,23 @@ export default function CoachLanding() {
             </div>
             <div ref={heroHeadRef} className="mb-8">
               <div className="overflow-hidden">
-                <h1 className="reveal-line font-display text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black leading-[0.92] tracking-tight text-stone-900 opacity-0">
+                <h1 className="reveal-line font-display text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black md: leading-[0.92] tracking-tight text-stone-900 opacity-0">
                   {t.hero.headline1}
                 </h1>
               </div>
               <div className="overflow-hidden">
-                <h1 className="reveal-line font-display text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black leading-[0.92] tracking-tight text-orange-600 opacity-0">
+                <h1 className="reveal-line font-display text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black md: leading-[0.92] tracking-tight text-orange-600 opacity-0">
                   {t.hero.headline2}
                 </h1>
               </div>
               <div className="overflow-hidden">
-                <h1 className="reveal-line font-display text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black leading-[0.92] tracking-tight text-stone-900 opacity-0">
+                <h1 className="reveal-line font-display text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black md: leading-[0.92] tracking-tight text-stone-900 opacity-0">
                   {t.hero.headline3}
                 </h1>
               </div>
             </div>
             <div ref={heroCtaRef} className="opacity-0">
-              <p className="font-body text-stone-500 text-base leading-relaxed max-w-sm mb-8">
+              <p className="font-body text-stone-500 text-base md: leading-relaxed max-w-sm mb-8">
                 {t.hero.sub}
               </p>
               <div className="flex flex-wrap gap-3">
@@ -1346,7 +1346,7 @@ export default function CoachLanding() {
             {/* Badge 1 */}
             <div ref={heroBadge1Ref} className="absolute -bottom-4 start-0 lg:bottom-auto lg:top-12 lg:-start-6 opacity-0 hidden lg:block">
               <div className="bg-white border border-stone-200 px-4 py-3 shadow-sm">
-                <p className="font-display text-2xl font-black text-stone-900 leading-none">{t.hero.badge1.split(" ")[0]}</p>
+                <p className="font-display text-2xl font-black text-stone-900 md: leading-none">{t.hero.badge1.split(" ")[0]}</p>
                 <p className="font-body text-xs text-stone-500 tracking-wide mt-0.5">{t.hero.badge1.split(" ").slice(1).join(" ")}</p>
               </div>
             </div>
@@ -1362,7 +1362,7 @@ export default function CoachLanding() {
             <div className="absolute inset-0 bg-gradient-to-s from-stone-100/60 via-transparent lg:bg-gradient-to-e lg:from-stone-100/80 lg:via-stone-100/20 lg:to-transparent" />
             {/* Badge 2 */}
             <div ref={heroBadge2Ref} className="absolute bottom-6 end-6 opacity-0 bg-orange-600 text-white px-4 py-3">
-              <p className="font-display text-2xl font-black leading-none">{t.hero.badge2.split(" ")[0]}</p>
+              <p className="font-display text-2xl font-black md: leading-none">{t.hero.badge2.split(" ")[0]}</p>
               <p className="font-body text-xs tracking-wide mt-0.5">{t.hero.badge2.split(" ").slice(1).join(" ")}</p>
             </div>
           </div>
@@ -1405,7 +1405,7 @@ export default function CoachLanding() {
               <div key={i} className="stat-card bg-stone-50 p-8 lg:p-12 opacity-0">
                 <p
                   ref={(el) => (statNumRefs.current[i] = el)}
-                  className="font-display font-black text-5xl lg:text-7xl text-stone-900 leading-none"
+                  className="font-display font-black text-5xl lg:text-7xl text-stone-900 md: leading-none"
                 >
                   0{s.suffix}
                 </p>
@@ -1424,17 +1424,17 @@ export default function CoachLanding() {
               <img src={images.coachAbout} alt={t.about.imageAlt} className="w-full h-full object-cover" />
             </div>
             <div className="absolute -bottom-6 -end-6 bg-orange-600 text-white p-6 hidden lg:block">
-              <p className="font-display font-black text-3xl leading-none">8+</p>
+              <p className="font-display font-black text-3xl md: leading-none">8+</p>
               <p className="font-body text-xs tracking-wide mt-1">Years</p>
             </div>
           </div>
           <div ref={aboutTextRef}>
             <p className="text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-600 mb-4">{t.about.label}</p>
-            <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 leading-tight mb-2">{t.about.name}</h2>
+            <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 md: leading-tight mb-2">{t.about.name}</h2>
             <p className="font-body text-sm text-stone-400 tracking-wide mb-8">{t.about.title}</p>
-            <p className="font-body text-stone-600 text-base leading-relaxed mb-8">{t.about.story}</p>
+            <p className="font-body text-stone-600 text-base md: leading-relaxed mb-8">{t.about.story}</p>
             <blockquote className="border-s-2 border-orange-600 ps-5 mb-8">
-              <p className="font-body text-stone-700 text-base italic leading-relaxed">{t.about.philosophy}</p>
+              <p className="font-body text-stone-700 text-base italic md: leading-relaxed">{t.about.philosophy}</p>
             </blockquote>
             <div className="flex flex-wrap gap-2">
               {t.about.tags.map((tag) => (
@@ -1453,14 +1453,14 @@ export default function CoachLanding() {
           <div className="grid lg:grid-cols-[1fr_2fr] gap-16 items-start">
             <div className="scroll-reveal opacity-0">
               <p className="text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-500 mb-4">{t.why.label}</p>
-              <h2 className="font-display font-black text-4xl lg:text-5xl leading-tight">{t.why.headline}</h2>
+              <h2 className="font-display font-black text-4xl lg:text-5xl md: leading-tight">{t.why.headline}</h2>
             </div>
             <div className="scroll-reveal-stagger grid sm:grid-cols-2 gap-px bg-stone-700">
               {t.why.items.map((item, i) => (
                 <div key={i} className="bg-stone-900 p-7">
                   <p className="text-xs font-body font-semibold tracking-[0.2em] uppercase text-stone-500 mb-3">0{i + 1}</p>
                   <h3 className="font-display font-bold text-lg text-white mb-2">{item.title}</h3>
-                  <p className="font-body text-sm text-stone-400 leading-relaxed">{item.desc}</p>
+                  <p className="font-body text-sm text-stone-400 md: leading-relaxed">{item.desc}</p>
                 </div>
               ))}
             </div>
@@ -1473,13 +1473,13 @@ export default function CoachLanding() {
         <div className="max-w-7xl mx-auto px-5 lg:px-10">
           <div className="mb-14 scroll-reveal opacity-0">
             <p className="text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-600 mb-4">{t.forWho.label}</p>
-            <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 leading-tight max-w-xl">{t.forWho.headline}</h2>
+            <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 md: leading-tight max-w-xl">{t.forWho.headline}</h2>
           </div>
           <div className="scroll-reveal-stagger grid grid-cols-2 sm:grid-cols-4 gap-px bg-stone-200">
             {t.forWho.items.map((item, i) => (
               <div key={i} className="bg-stone-50 p-6 hover:bg-white transition-colors duration-200 group">
                 <h3 className="font-display font-bold text-base text-stone-900 group-hover:text-orange-600 transition-colors mb-2">{item.title}</h3>
-                <p className="font-body text-xs text-stone-400 leading-relaxed">{item.desc}</p>
+                <p className="font-body text-xs text-stone-400 md: leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -1491,14 +1491,14 @@ export default function CoachLanding() {
         <div className="max-w-7xl mx-auto px-5 lg:px-10">
           <div className="mb-16 scroll-reveal opacity-0">
             <p className="text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-600 mb-4">{t.method.label}</p>
-            <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 leading-tight max-w-xl">{t.method.headline}</h2>
+            <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 md: leading-tight max-w-xl">{t.method.headline}</h2>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-stone-200 scroll-reveal-stagger">
             {t.method.steps.map((step) => (
               <div key={step.num} className="bg-white p-8 lg:p-10 group hover:bg-stone-50 transition-colors">
-                <p className="font-display font-black text-5xl text-stone-100 group-hover:text-orange-100 transition-colors mb-6 leading-none">{step.num}</p>
+                <p className="font-display font-black text-5xl text-stone-100 group-hover:text-orange-100 transition-colors mb-6 md: leading-none">{step.num}</p>
                 <h3 className="font-display font-bold text-lg text-stone-900 mb-3">{step.title}</h3>
-                <p className="font-body text-sm text-stone-500 leading-relaxed">{step.desc}</p>
+                <p className="font-body text-sm text-stone-500 md: leading-relaxed">{step.desc}</p>
               </div>
             ))}
           </div>
@@ -1510,7 +1510,7 @@ export default function CoachLanding() {
         <div className="max-w-7xl mx-auto px-5 lg:px-10">
           <div className="mb-16 scroll-reveal opacity-0">
             <p className="text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-600 mb-4">{t.services.label}</p>
-            <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 leading-tight">{t.services.headline}</h2>
+            <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 md: leading-tight">{t.services.headline}</h2>
           </div>
 
           {/* Bento-style offset layout */}
@@ -1523,7 +1523,7 @@ export default function CoachLanding() {
               <div className="p-8 flex-1 flex flex-col">
                 <p className="text-xs font-body font-semibold tracking-[0.2em] uppercase text-stone-400 mb-2">{t.services.items[0].num} — {t.services.items[0].sub}</p>
                 <h3 className="font-display font-black text-3xl mb-3">{t.services.items[0].title}</h3>
-                <p className="font-body text-sm text-stone-300 leading-relaxed flex-1">{t.services.items[0].desc}</p>
+                <p className="font-body text-sm text-stone-300 md: leading-relaxed flex-1">{t.services.items[0].desc}</p>
                 <a href="#pricing" className="mt-6 inline-flex items-center gap-2 text-sm font-body font-semibold text-orange-500 hover:text-orange-400 transition-colors">
                   {t.services.items[0].cta}
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="rtl:-scale-x-100">
@@ -1543,7 +1543,7 @@ export default function CoachLanding() {
                   <div className="p-6">
                     <p className="text-xs font-body font-semibold tracking-[0.2em] uppercase text-stone-400 mb-1">{t.services.items[idx].num} — {t.services.items[idx].sub}</p>
                     <h3 className="font-display font-bold text-xl text-stone-900 mb-2">{t.services.items[idx].title}</h3>
-                    <p className="font-body text-sm text-stone-500 leading-relaxed mb-4">{t.services.items[idx].desc}</p>
+                    <p className="font-body text-sm text-stone-500 md: leading-relaxed mb-4">{t.services.items[idx].desc}</p>
                     <a href="#pricing" className="inline-flex items-center gap-2 text-xs font-body font-semibold text-stone-900 hover:text-orange-600 transition-colors">
                       {t.services.items[idx].cta}
                       <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="rtl:-scale-x-100">
@@ -1563,7 +1563,7 @@ export default function CoachLanding() {
         <div className="max-w-7xl mx-auto px-5 lg:px-10">
           <div className="mb-12 scroll-reveal opacity-0">
             <p className="text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-600 mb-4">{t.featured.label}</p>
-            <h2 className="font-display font-black text-4xl lg:text-6xl text-stone-900 leading-tight max-w-2xl">{t.featured.headline}</h2>
+            <h2 className="font-display font-black text-4xl lg:text-6xl text-stone-900 md: leading-tight max-w-2xl">{t.featured.headline}</h2>
           </div>
           <div className="grid lg:grid-cols-[1.4fr_1fr] gap-10 lg:gap-16 items-start scroll-reveal opacity-0">
             {/* Slider */}
@@ -1580,11 +1580,11 @@ export default function CoachLanding() {
             {/* Story */}
             <div className="flex flex-col justify-center">
               <p className="font-display font-bold text-xl text-stone-900 mb-4">{t.featured.client}</p>
-              <p className="font-body text-stone-500 text-base leading-relaxed mb-10">{t.featured.story}</p>
+              <p className="font-body text-stone-500 text-base md: leading-relaxed mb-10">{t.featured.story}</p>
               <div className="grid grid-cols-2 gap-px bg-stone-200">
                 {t.featured.stats.map((s, i) => (
                   <div key={i} className="bg-white p-5">
-                    <p className="font-display font-black text-2xl text-orange-600 leading-none">{s.value}</p>
+                    <p className="font-display font-black text-2xl text-orange-600 md: leading-none">{s.value}</p>
                     <p className="font-body text-xs text-stone-400 tracking-wide mt-1">{s.label}</p>
                   </div>
                 ))}
@@ -1599,7 +1599,7 @@ export default function CoachLanding() {
         <div className="max-w-7xl mx-auto px-5 lg:px-10">
           <div className="mb-14 scroll-reveal opacity-0">
             <p className="text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-600 mb-4">{t.gallery.label}</p>
-            <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 leading-tight">{t.gallery.headline}</h2>
+            <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 md: leading-tight">{t.gallery.headline}</h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 scroll-reveal-stagger">
             {t.gallery.clients.map((client, i) => (
@@ -1639,7 +1639,7 @@ export default function CoachLanding() {
         <div className="max-w-7xl mx-auto px-5 lg:px-10">
           <div className="mb-14 scroll-reveal opacity-0">
             <p className="text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-600 mb-4">{t.testimonials.label}</p>
-            <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 leading-tight">{t.testimonials.headline}</h2>
+            <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 md: leading-tight">{t.testimonials.headline}</h2>
           </div>
 
           {/* Masonry-like layout */}
@@ -1653,7 +1653,7 @@ export default function CoachLanding() {
                     <p className="font-body text-xs text-stone-400">{item.detail}</p>
                   </div>
                 </div>
-                <p className="font-body text-stone-600 text-sm leading-relaxed">&ldquo;{item.text}&rdquo;</p>
+                <p className="font-body text-stone-600 text-sm md: leading-relaxed">&ldquo;{item.text}&rdquo;</p>
               </div>
             ))}
           </div>
@@ -1666,14 +1666,14 @@ export default function CoachLanding() {
           <div className="grid lg:grid-cols-[1fr_2fr] gap-16 items-start scroll-reveal opacity-0">
             <div>
               <p className="text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-600 mb-4">{t.resources.label}</p>
-              <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 leading-tight">{t.resources.headline}</h2>
+              <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 md: leading-tight">{t.resources.headline}</h2>
             </div>
             <div className="grid sm:grid-cols-2 gap-px bg-stone-200">
               {t.resources.items.map((item, i) => (
                 <div key={i} className="bg-stone-100 p-7 hover:bg-white transition-colors duration-200">
                   <span className="text-2xl mb-4 block" role="img">{item.icon}</span>
                   <h3 className="font-display font-bold text-base text-stone-900 mb-2">{item.title}</h3>
-                  <p className="font-body text-sm text-stone-500 leading-relaxed">{item.desc}</p>
+                  <p className="font-body text-sm text-stone-500 md: leading-relaxed">{item.desc}</p>
                 </div>
               ))}
             </div>
@@ -1686,7 +1686,7 @@ export default function CoachLanding() {
         <div className="max-w-7xl mx-auto px-5 lg:px-10">
           <div className="mb-14 scroll-reveal opacity-0">
             <p className="text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-600 mb-4">{t.pricing.label}</p>
-            <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 leading-tight">{t.pricing.headline}</h2>
+            <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 md: leading-tight">{t.pricing.headline}</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-5 scroll-reveal-stagger">
             {t.pricing.tiers.map((tier) => (
@@ -1700,7 +1700,7 @@ export default function CoachLanding() {
                 <p className={`font-display font-black text-xl mb-1 ${tier.featured ? "text-white" : "text-stone-900"}`}>{tier.name}</p>
                 <p className={`font-body text-sm mb-6 ${tier.featured ? "text-stone-400" : "text-stone-500"}`}>{tier.desc}</p>
                 <div className="flex items-end gap-1 mb-8">
-                  <span className="font-display font-black text-5xl leading-none">{tier.price}</span>
+                  <span className="font-display font-black text-5xl md: leading-none">{tier.price}</span>
                   <span className={`font-body text-sm pb-1 ${tier.featured ? "text-stone-400" : "text-stone-400"}`}>{tier.period}</span>
                 </div>
                 <ul className="flex flex-col gap-3 flex-1 mb-8">
@@ -1711,7 +1711,7 @@ export default function CoachLanding() {
                           <path d="M1 4l3.5 3.5L11 1" stroke={tier.featured ? "#ea580c" : "#111"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </span>
-                      <span className={`font-body text-sm leading-snug ${tier.featured ? "text-stone-300" : "text-stone-600"}`}>{f}</span>
+                      <span className={`font-body text-sm md: leading-snug ${tier.featured ? "text-stone-300" : "text-stone-600"}`}>{f}</span>
                     </li>
                   ))}
                 </ul>
@@ -1733,7 +1733,7 @@ export default function CoachLanding() {
           <div className="grid lg:grid-cols-[1fr_2fr] gap-16">
             <div className="scroll-reveal opacity-0">
               <p className="text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-600 mb-4">{t.faq.label}</p>
-              <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 leading-tight">{t.faq.headline}</h2>
+              <h2 className="font-display font-black text-4xl lg:text-5xl text-stone-900 md: leading-tight">{t.faq.headline}</h2>
             </div>
             <div className="scroll-reveal opacity-0">
               {t.faq.items.map((item) => (
@@ -1752,7 +1752,7 @@ export default function CoachLanding() {
         </div>
         <div className="relative max-w-3xl mx-auto px-5 scroll-reveal opacity-0">
           <p className="text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-500 mb-6">{t.cta.label}</p>
-          <h2 className="font-display font-black text-5xl lg:text-7xl leading-tight mb-8">{t.cta.headline}</h2>
+          <h2 className="font-display font-black text-5xl lg:text-7xl md: leading-tight mb-8">{t.cta.headline}</h2>
           <p className="font-body text-stone-400 text-base mb-10">{t.cta.sub}</p>
           <a href="#" className="inline-block bg-orange-600 text-white font-body font-semibold text-sm px-10 py-5 hover:bg-orange-700 transition-colors mb-5">
             {t.cta.button}

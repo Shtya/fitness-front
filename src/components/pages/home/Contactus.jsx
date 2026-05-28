@@ -423,7 +423,7 @@ export default function ContactUs() {
 																</span>
 															)}
 														</div>
-														<p className="mt-0.5 font-body text-xs leading-relaxed text-white/35">
+														<p className="mt-0.5 font-body text-xs md: leading-relaxed text-white/35">
 															{option.description}
 														</p>
 													</div>
@@ -486,7 +486,7 @@ export default function ContactUs() {
 										<Dumbbell aria-hidden="true" className="h-7 w-7 text-white" />
 									</div>
 									<div>
-										<h3 className="font-display text-2xl leading-none text-white">FitnessHub</h3>
+										<h3 className="font-display text-2xl md: leading-none text-white">FitnessHub</h3>
 										<p className="mt-1 font-body text-sm text-white/45">{t("testimonials.subtitle")}</p>
 									</div>
 								</div>
@@ -527,15 +527,15 @@ export default function ContactUs() {
 								aria-live="polite"
 								aria-atomic="true"
 							>
-								<div aria-hidden="true" className="-mb-3 select-none font-display text-5xl leading-none text-[var(--color-primary-500)]/25">"</div>
+								<div aria-hidden="true" className="-mb-3 select-none font-display text-5xl md: leading-none text-[var(--color-primary-500)]/25">"</div>
 
-								<p className="font-body text-base italic leading-relaxed text-white/80 md:text-lg">
+								<p className="font-body text-base italic md: leading-relaxed text-white/80 md:text-lg">
 									{item.text}
 								</p>
 
 								<div className="flex items-center justify-between border-t border-white/[0.07] pt-4">
 									<div>
-										<p className="font-body text-base font-black leading-tight text-white">{item.author}</p>
+										<p className="font-body text-base font-black md: leading-tight text-white">{item.author}</p>
 										<p className="mt-0.5 font-body text-xs text-white/40">{item.role}</p>
 									</div>
 									<div className="flex items-center gap-2">

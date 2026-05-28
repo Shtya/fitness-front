@@ -186,7 +186,7 @@ function SubmissionCard({ item, onStatusChange  }) {
               {expanded ? "Hide details" : "Show details"}
             </button>
             {expanded && (
-              <div className="rounded-xl bg-[var(--color-primary-50)] border border-[var(--color-primary-100)] p-3 text-xs text-slate-600 leading-relaxed whitespace-pre-wrap font-mono">
+              <div className="rounded-xl bg-[var(--color-primary-50)] border border-[var(--color-primary-100)] p-3 text-xs text-slate-600 md: leading-relaxed whitespace-pre-wrap font-mono">
                 {item.description}
               </div>
             )}
@@ -291,7 +291,7 @@ export default function ContactSubmissions() {
               </svg>
             </div>
             <div>
-              <h1 className="text-lg sm:text-xl font-bold text-slate-800 leading-tight">Contact Submissions</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-slate-800 md: leading-tight">Contact Submissions</h1>
               <p className="text-xs text-slate-400">Manage incoming contact form requests</p>
             </div>
           </div>

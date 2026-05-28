@@ -162,7 +162,7 @@ export default function Footer() {
               </span>
             </motion.div>
 
-            <p className="font-body mb-8 max-w-xs text-sm leading-relaxed text-white/55">
+            <p className="font-body mb-8 max-w-xs text-sm md: leading-relaxed text-white/55">
               {t("brand.description")}
             </p>
 

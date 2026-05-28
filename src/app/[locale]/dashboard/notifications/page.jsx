@@ -184,7 +184,7 @@ function Row({ n, onRead, selected, onToggle, t }) {
       {/* content: title on top, description below */}
       <div className='flex-1 min-w-0'>
         <div className='flex items-start justify-between gap-2'>
-          <p className={`text-[12.5px] leading-snug ${unread ? 'font-semibold text-slate-900' : 'font-medium text-slate-600'}`}>{n.title || t('row.defaultTitle')}</p>
+          <p className={`text-[12.5px] md: leading-snug ${unread ? 'font-semibold text-slate-900' : 'font-medium text-slate-600'}`}>{n.title || t('row.defaultTitle')}</p>
           {/* time + type badge */}
           <div className='flex items-center gap-1.5 flex-shrink-0 mt-0.5'>
             {/* action row */}
@@ -211,7 +211,7 @@ function Row({ n, onRead, selected, onToggle, t }) {
         </div>
 
         {/* description row */}
-        {n.message && <p className='text-[11.5px] mt-[-4px] text-slate-500 leading-relaxed line-clamp-1 '>{n.message}</p>}
+        {n.message && <p className='text-[11.5px] mt-[-4px] text-slate-500 md: leading-relaxed line-clamp-1 '>{n.message}</p>}
       </div>
     </motion.div>
   );
@@ -366,7 +366,7 @@ export default function NotificationsPage() {
               )}
             </div>
             <div>
-              <h1 className='text-[15px] font-black text-white leading-tight'>{tAll('header.title')}</h1>
+              <h1 className='text-[15px] font-black text-white md: leading-tight'>{tAll('header.title')}</h1>
               <p className='text-[10px] text-white/50 font-medium mt-0.5'>{tAll('header.subtitle', { total: items.length, unread })}</p>
             </div>
           </div>
@@ -379,8 +379,8 @@ export default function NotificationsPage() {
               { l: tAll('stats.read'), v: items.length - unread },
             ].map((s, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 + i * 0.04 }} className='rounded-lg px-2.5 py-1.5 bg-white/[0.10] border border-white/15 text-center min-w-[48px]'>
-                <p className='text-[8px] text-white/40 font-bold uppercase tracking-wider leading-none mb-0.5'>{s.l}</p>
-                <p className='text-[14px] font-black text-white tabular-nums leading-tight'>{s.v}</p>
+                <p className='text-[8px] text-white/40 font-bold uppercase tracking-wider md: leading-none mb-0.5'>{s.l}</p>
+                <p className='text-[14px] font-black text-white tabular-nums md: leading-tight'>{s.v}</p>
               </motion.div>
             ))}
           </div>

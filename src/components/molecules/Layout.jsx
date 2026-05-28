@@ -52,10 +52,10 @@ function ImpersonationBar({ onExit }) {
 					<Shield size={14} />
 				</div>
 				<div className="min-w-0">
-					<p className="text-[10px] font-semibold opacity-75 uppercase tracking-widest leading-none mb-0.5">
+					<p className="text-[10px] font-semibold opacity-75 uppercase tracking-widest md: leading-none mb-0.5">
 						Impersonating
 					</p>
-					<p className="text-sm font-black truncate leading-none">
+					<p className="text-sm font-black truncate md: leading-none">
 						{user.name}
 						<span className="font-normal opacity-70 ml-2 text-xs">({user.email})</span>
 					</p>
@@ -229,7 +229,7 @@ export default function Layout({ children }) {
 	// 							<h1 className="text-2xl font-black mb-3" style={{ color: 'var(--color-primary-900)' }}>
 	// 								{t('desktop_required_title')}
 	// 							</h1>
-	// 							<p className="text-slate-600 mb-6 text-sm leading-relaxed">
+	// 							<p className="text-slate-600 mb-6 text-sm md: leading-relaxed">
 	// 								{t('desktop_required_message')}
 	// 							</p>
 	// 							<Link

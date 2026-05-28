@@ -543,7 +543,7 @@ function PhoneField({ label, value, onChange, error, required, name, setError, c
           }}>
           {/* Flag + code visible label */}
           <div className='flex items-center gap-1.5 pl-3 pr-1 pointer-events-none select-none'>
-            <span className='text-base leading-none'>{currentCountry.flag}</span>
+            <span className='text-base md: leading-none'>{currentCountry.flag}</span>
             <span className='text-base font-bold tabular-nums' style={{ color: colors.primary[800] }}>
               {countryCode}
             </span>

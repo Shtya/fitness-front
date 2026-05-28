@@ -249,7 +249,7 @@ export default function AddToHomeGuide({
 								initial={{ opacity: 0, y: 10 }}
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ delay: 0.4 }}
-								className="text-white/90 text-xs mt-2 leading-relaxed">
+								className="text-white/90 text-xs mt-2 md: leading-relaxed">
 								{t('subtitle')}
 							</motion.p>
 
@@ -340,7 +340,7 @@ export default function AddToHomeGuide({
 										</span>
 
 										{/* Step text */}
-										<p className="text-sm text-slate-700 leading-relaxed font-medium pt-1">{line}</p>
+										<p className="text-sm text-slate-700 md: leading-relaxed font-medium pt-1">{line}</p>
 									</motion.li>
 								))}
 							</ol>

@@ -165,7 +165,7 @@ export const RestTimerCard = React.memo(function RestTimerCard({
           {/* time */}
           <span
             className={cx(
-              'text-sm font-black tabular-nums tracking-tight leading-none min-w-[2.6rem] text-center',
+              'text-sm font-black tabular-nums tracking-tight md: leading-none min-w-[2.6rem] text-center',
               isWarning ? 'text-orange-500 rt-blink' : running ? 'text-[var(--color-primary-700)]' : 'text-slate-700',
             )}
             aria-live="polite"

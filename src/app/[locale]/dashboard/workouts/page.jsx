@@ -457,7 +457,7 @@ const ConfirmDialog = memo(({ open, onClose, loading, title, message, onConfirm,
 	<Modal open={open} onClose={onClose} title={title} maxW='max-w-md'>
 		<div className='space-y-5'>
 			{message && (
-				<p className='text-sm leading-relaxed text-[var(--color-primary-600)]'>{message}</p>
+				<p className='text-sm md: leading-relaxed text-[var(--color-primary-600)]'>{message}</p>
 			)}
 			<div className='flex items-center justify-end gap-2'>
 				<Button
@@ -602,7 +602,7 @@ const ExerciseCard = memo(({ exercise: e, t, onView, onEdit, onDelete, onDuplica
 
 				{/* Name */}
 				<p
-					className='font-en truncate text-sm font-semibold leading-snug text-[var(--color-primary-900)]'
+					className='font-en truncate text-sm font-semibold md: leading-snug text-[var(--color-primary-900)]'
 					title={e.name}>
 					{e.name}
 				</p>
@@ -740,7 +740,7 @@ const ExercisePreview = memo(({ exercise, baseMedia = '', t }) => {
 				</div>
 
 				{exercise?.details && (
-					<p className='max-w-prose text-sm leading-6 text-[var(--color-primary-600)]'>
+					<p className='max-w-prose text-sm md: leading-6 text-[var(--color-primary-600)]'>
 						{exercise.details}
 					</p>
 				)}

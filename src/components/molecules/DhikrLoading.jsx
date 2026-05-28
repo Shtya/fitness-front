@@ -22,10 +22,10 @@ const DhikrLoading = () => {
 
       <motion.div className='relative z-10 flex h-svh max-w-xl flex-col mx-auto items-center justify-center gap-8 px-6 py-10' initial='hidden' animate='visible' variants={container} aria-live='polite'>
         <motion.div className='max-w-4xl text-center' dir='rtl' variants={item}>
-          <h1 className='text-3xl sm:text-4xl font-bold leading-tight text-slate-900'>
+          <h1 className='text-3xl sm:text-4xl font-bold md: leading-tight text-slate-900'>
             <span className='block duah-font drop-shadow-sm'>اذكر الله</span>
             <span className='mx-auto mt-3 block h-[3px] w-24 rounded-full  bg-gradient-to-r from-[#0e2043]/80 to-[#0e2043]/30 blur-[0.2px]' />
-            <span className='block quran-font text-lg sm:text-xl font-normal text-slate-700 mt-3 leading-relaxed'>فَقُلْتُ اسْتَغْفِرُوا رَبَّكُمْ إِنَّهُ كَانَ غَفَّارًا • يُرْسِلِ السَّمَاءَ عَلَيْكُم مِّدْرَارًا • وَيُمْدِدْكُم بِأَمْوَالٍ وَبَنِينَ • وَيَجْعَل لَّكُمْ جَنَّاتٍ • وَيَجْعَل لَّكُمْ أَنْهَارًا</span>
+            <span className='block quran-font text-lg sm:text-xl font-normal text-slate-700 mt-3 md: leading-relaxed'>فَقُلْتُ اسْتَغْفِرُوا رَبَّكُمْ إِنَّهُ كَانَ غَفَّارًا • يُرْسِلِ السَّمَاءَ عَلَيْكُم مِّدْرَارًا • وَيُمْدِدْكُم بِأَمْوَالٍ وَبَنِينَ • وَيَجْعَل لَّكُمْ جَنَّاتٍ • وَيَجْعَل لَّكُمْ أَنْهَارًا</span>
           </h1>
         </motion.div>
 

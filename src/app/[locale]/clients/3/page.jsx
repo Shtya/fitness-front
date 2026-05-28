@@ -637,7 +637,7 @@ function AccordionItem({ q, a, open, onToggle }) {
         </span>
       </button>
       <div ref={bodyRef} className="overflow-hidden transition-all duration-300 ease-in-out" style={{ maxHeight: 0, opacity: 0 }}>
-        <p className="font-body text-stone-500 text-sm pb-5 leading-relaxed">{a}</p>
+        <p className="font-body text-stone-500 text-sm pb-5 md: leading-relaxed">{a}</p>
       </div>
     </div>
   );
@@ -880,13 +880,13 @@ export default function Page() {
           <div className="flex flex-col justify-center pb-16 md:py-32 z-10">
             <div ref={heroHeadRef}>
               <p className="headline-line text-[10px] font-display font-bold tracking-[0.3em] uppercase text-orange-600 mb-6">{t.hero.eyebrow}</p>
-              <h1 className="font-display font-black leading-[0.92] tracking-tight">
+              <h1 className="font-display font-black md: leading-[0.92] tracking-tight">
                 <span className="headline-line block text-5xl md:text-7xl lg:text-8xl text-stone-900">{t.hero.headline1}</span>
                 <span className="headline-line block text-5xl md:text-7xl lg:text-8xl text-stone-900">{t.hero.headline2}</span>
                 <span className="headline-line block text-5xl md:text-7xl lg:text-8xl text-orange-600">{t.hero.headline3}</span>
               </h1>
             </div>
-            <p ref={heroSubRef} className="mt-6 md:mt-8 text-stone-500 text-base md:text-lg leading-relaxed max-w-md font-body">
+            <p ref={heroSubRef} className="mt-6 md:mt-8 text-stone-500 text-base md:text-lg md: leading-relaxed max-w-md font-body">
               {t.hero.sub}
             </p>
             <div ref={heroCTARef} className="flex flex-wrap items-center gap-3 mt-8">
@@ -957,7 +957,7 @@ export default function Page() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-0 divide-x divide-stone-200/80 rtl:divide-x-reverse border border-stone-200/80">
             {t.stats.map((s, i) => (
               <div key={i} className={`py-10 md:py-14 px-6 md:px-10 ${i % 2 === 0 ? "" : ""}`}>
-                <p className="font-display font-black text-4xl md:text-6xl lg:text-7xl text-stone-900 leading-none">
+                <p className="font-display font-black text-4xl md:text-6xl lg:text-7xl text-stone-900 md: leading-none">
                   <StatNum num={s.num} suffix={s.suffix} />
                 </p>
                 <p className="text-[10px] font-display font-bold tracking-[0.25em] uppercase text-stone-400 mt-3">{s.label}</p>
@@ -977,14 +977,14 @@ export default function Page() {
               </div>
               <div className="absolute bottom-6 end-0 translate-x-2 md:translate-x-6 bg-stone-900 p-5 max-w-[200px]">
                 <p className="text-[8px] font-display font-bold tracking-[0.25em] uppercase text-orange-400 mb-2">Philosophy</p>
-                <p className="text-white font-display font-black text-sm leading-tight">"{t.about.quote}"</p>
+                <p className="text-white font-display font-black text-sm md: leading-tight">"{t.about.quote}"</p>
               </div>
             </div>
             <div className="gsap-reveal order-1 md:order-2">
               <p className="text-[10px] font-display font-bold tracking-[0.3em] uppercase text-orange-600 mb-5">{t.about.eyebrow}</p>
-              <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 leading-tight mb-6">{t.about.headline}</h2>
-              <p className="text-stone-500 leading-relaxed mb-4">{t.about.body1}</p>
-              <p className="text-stone-500 leading-relaxed mb-8">{t.about.body2}</p>
+              <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 md: leading-tight mb-6">{t.about.headline}</h2>
+              <p className="text-stone-500 md: leading-relaxed mb-4">{t.about.body1}</p>
+              <p className="text-stone-500 md: leading-relaxed mb-8">{t.about.body2}</p>
               <div className="flex flex-wrap gap-2">
                 {t.about.certs.map((cert, i) => (
                   <span key={i} className="text-[9px] font-display font-bold tracking-widest uppercase border border-stone-300 px-3 py-1.5 text-stone-600">
@@ -1002,14 +1002,14 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="max-w-xl mb-14 gsap-reveal">
             <p className="text-[10px] font-display font-bold tracking-[0.3em] uppercase text-orange-600 mb-4">{t.why.eyebrow}</p>
-            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 leading-tight">{t.why.headline}</h2>
+            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 md: leading-tight">{t.why.headline}</h2>
           </div>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-0 border border-stone-200/80 divide-x divide-y divide-stone-200/80 rtl:divide-x-reverse">
             {t.why.items.map((item, i) => (
               <div key={i} className="p-7 md:p-9 bg-white gsap-reveal hover:bg-stone-50 transition-colors">
                 <span className="block text-[9px] font-display font-bold tracking-widest uppercase text-stone-300 mb-4">0{i + 1}</span>
                 <h3 className="font-display font-black text-base text-stone-900 mb-2">{item.title}</h3>
-                <p className="text-sm text-stone-500 leading-relaxed">{item.desc}</p>
+                <p className="text-sm text-stone-500 md: leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -1021,7 +1021,7 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="max-w-xl mb-14 gsap-reveal">
             <p className="text-[10px] font-display font-bold tracking-[0.3em] uppercase text-orange-500 mb-4">{t.forWho.eyebrow}</p>
-            <h2 className="font-display font-black text-3xl md:text-5xl text-white leading-tight">{t.forWho.headline}</h2>
+            <h2 className="font-display font-black text-3xl md:text-5xl text-white md: leading-tight">{t.forWho.headline}</h2>
           </div>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-px bg-stone-700/40">
             {t.forWho.items.map((item, i) => (
@@ -1030,7 +1030,7 @@ export default function Page() {
                   <div className="w-1 h-5 bg-orange-600 flex-shrink-0 mt-0.5" />
                   <h3 className="font-display font-black text-base text-white">{item.label}</h3>
                 </div>
-                <p className="text-sm text-stone-400 leading-relaxed ps-4">{item.desc}</p>
+                <p className="text-sm text-stone-400 md: leading-relaxed ps-4">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -1042,14 +1042,14 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="max-w-xl mb-14 gsap-reveal">
             <p className="text-[10px] font-display font-bold tracking-[0.3em] uppercase text-orange-600 mb-4">{t.method.eyebrow}</p>
-            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 leading-tight">{t.method.headline}</h2>
+            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 md: leading-tight">{t.method.headline}</h2>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-0 border-s border-t border-stone-200 rtl:border-s-0 rtl:border-e">
             {t.method.steps.map((step, i) => (
               <div key={i} className="border-e border-b border-stone-200 p-7 md:p-9 gsap-reveal rtl:border-e-0 rtl:border-s">
-                <p className="font-display font-black text-4xl text-stone-100 mb-4 leading-none">{step.num}</p>
+                <p className="font-display font-black text-4xl text-stone-100 mb-4 md: leading-none">{step.num}</p>
                 <h3 className="font-display font-bold text-base text-stone-900 mb-2">{step.title}</h3>
-                <p className="text-sm text-stone-500 leading-relaxed">{step.desc}</p>
+                <p className="text-sm text-stone-500 md: leading-relaxed">{step.desc}</p>
               </div>
             ))}
           </div>
@@ -1061,7 +1061,7 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="max-w-xl mb-14 gsap-reveal">
             <p className="text-[10px] font-display font-bold tracking-[0.3em] uppercase text-orange-600 mb-4">{t.services.eyebrow}</p>
-            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 leading-tight">{t.services.headline}</h2>
+            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 md: leading-tight">{t.services.headline}</h2>
           </div>
 
           {/* Bento layout */}
@@ -1074,7 +1074,7 @@ export default function Page() {
               <div className="p-7 md:p-8">
                 <p className="text-[9px] font-display font-bold tracking-widest uppercase text-orange-500 mb-3">{t.services.items[0].num} — {t.services.items[0].sub}</p>
                 <h3 className="font-display font-black text-2xl text-white mb-3">{t.services.items[0].title}</h3>
-                <p className="text-sm text-stone-400 leading-relaxed mb-5">{t.services.items[0].desc}</p>
+                <p className="text-sm text-stone-400 md: leading-relaxed mb-5">{t.services.items[0].desc}</p>
                 <button onClick={() => scrollToSection("pricing")} className="text-[10px] font-display font-bold tracking-widest uppercase text-orange-500 flex items-center gap-2 hover:gap-3 transition-all">
                   {t.services.items[0].cta} <span className="rtl:-scale-x-100">→</span>
                 </button>
@@ -1089,7 +1089,7 @@ export default function Page() {
               <div className="p-7">
                 <p className="text-[9px] font-display font-bold tracking-widest uppercase text-orange-600 mb-2">{t.services.items[1].num} — {t.services.items[1].sub}</p>
                 <h3 className="font-display font-black text-xl text-stone-900 mb-2">{t.services.items[1].title}</h3>
-                <p className="text-sm text-stone-500 leading-relaxed mb-4">{t.services.items[1].desc}</p>
+                <p className="text-sm text-stone-500 md: leading-relaxed mb-4">{t.services.items[1].desc}</p>
                 <button onClick={() => scrollToSection("pricing")} className="text-[10px] font-display font-bold tracking-widest uppercase text-orange-600 flex items-center gap-2">
                   {t.services.items[1].cta} <span className="rtl:-scale-x-100">→</span>
                 </button>
@@ -1104,7 +1104,7 @@ export default function Page() {
               <div className="p-7">
                 <p className="text-[9px] font-display font-bold tracking-widest uppercase text-white/70 mb-2">{t.services.items[2].num} — {t.services.items[2].sub}</p>
                 <h3 className="font-display font-black text-xl text-white mb-2">{t.services.items[2].title}</h3>
-                <p className="text-sm text-white/80 leading-relaxed mb-4">{t.services.items[2].desc}</p>
+                <p className="text-sm text-white/80 md: leading-relaxed mb-4">{t.services.items[2].desc}</p>
                 <button onClick={() => scrollToSection("pricing")} className="text-[10px] font-display font-bold tracking-widest uppercase text-white flex items-center gap-2">
                   {t.services.items[2].cta} <span className="rtl:-scale-x-100">→</span>
                 </button>
@@ -1119,7 +1119,7 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="max-w-xl mb-10 gsap-reveal">
             <p className="text-[10px] font-display font-bold tracking-[0.3em] uppercase text-orange-600 mb-4">{t.featured.eyebrow}</p>
-            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 leading-tight">{t.featured.headline}</h2>
+            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 md: leading-tight">{t.featured.headline}</h2>
           </div>
           <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
             {/* Slider */}
@@ -1133,7 +1133,7 @@ export default function Page() {
             </div>
             {/* Story */}
             <div className="flex flex-col justify-center gsap-reveal">
-              <p className="text-sm text-stone-500 leading-relaxed mb-8 max-w-md">{t.featured.story}</p>
+              <p className="text-sm text-stone-500 md: leading-relaxed mb-8 max-w-md">{t.featured.story}</p>
               <div className="grid grid-cols-2 gap-0 border border-stone-200 mb-8">
                 {t.featured.stats.map((s, i) => (
                   <div key={i} className={`p-5 ${i % 2 === 0 ? "border-e border-stone-200 rtl:border-e-0 rtl:border-s" : ""} ${i < 2 ? "border-b border-stone-200" : ""}`}>
@@ -1153,7 +1153,7 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="max-w-xl mb-14 gsap-reveal">
             <p className="text-[10px] font-display font-bold tracking-[0.3em] uppercase text-orange-600 mb-4">{t.transformations.eyebrow}</p>
-            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 leading-tight">{t.transformations.headline}</h2>
+            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 md: leading-tight">{t.transformations.headline}</h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {t.transformations.items.map((item, i) => {
@@ -1193,12 +1193,12 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="max-w-xl mb-14 gsap-reveal">
             <p className="text-[10px] font-display font-bold tracking-[0.3em] uppercase text-orange-600 mb-4">{t.testimonials.eyebrow}</p>
-            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 leading-tight">{t.testimonials.headline}</h2>
+            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 md: leading-tight">{t.testimonials.headline}</h2>
           </div>
           <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
             {t.testimonials.items.map((item, i) => (
               <div key={i} className={`break-inside-avoid gsap-reveal bg-stone-50 border border-stone-200/80 p-6 ${i === 1 || i === 4 ? "lg:mt-6" : ""}`}>
-                <p className="text-stone-600 text-sm leading-relaxed mb-5 font-body">"{item.quote}"</p>
+                <p className="text-stone-600 text-sm md: leading-relaxed mb-5 font-body">"{item.quote}"</p>
                 <div className="flex items-center gap-3">
                   <img src={item.img} alt={item.name} className="w-9 h-9 object-cover rounded-full grayscale" />
                   <div>
@@ -1217,14 +1217,14 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="max-w-xl mb-14 gsap-reveal">
             <p className="text-[10px] font-display font-bold tracking-[0.3em] uppercase text-orange-600 mb-4">{t.resources.eyebrow}</p>
-            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 leading-tight">{t.resources.headline}</h2>
+            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 md: leading-tight">{t.resources.headline}</h2>
           </div>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
             {t.resources.items.map((item, i) => (
               <div key={i} className="gsap-reveal bg-white border border-stone-200 p-7 group hover:border-orange-300 transition-colors duration-200">
                 <div className="w-8 h-px bg-orange-600 mb-5 group-hover:w-12 transition-all duration-300" />
                 <h3 className="font-display font-bold text-sm text-stone-900 mb-2">{item.title}</h3>
-                <p className="text-sm text-stone-500 leading-relaxed">{item.desc}</p>
+                <p className="text-sm text-stone-500 md: leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -1236,7 +1236,7 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="max-w-xl mb-14 gsap-reveal">
             <p className="text-[10px] font-display font-bold tracking-[0.3em] uppercase text-orange-600 mb-4">{t.pricing.eyebrow}</p>
-            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 leading-tight">{t.pricing.headline}</h2>
+            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 md: leading-tight">{t.pricing.headline}</h2>
             <p className="text-stone-400 text-sm mt-3">{t.pricing.note}</p>
           </div>
           <div className="grid md:grid-cols-3 gap-4 md:gap-6 items-stretch">
@@ -1297,7 +1297,7 @@ export default function Page() {
         <div className="max-w-4xl mx-auto px-5 md:px-8">
           <div className="max-w-xl mb-12 gsap-reveal">
             <p className="text-[10px] font-display font-bold tracking-[0.3em] uppercase text-orange-600 mb-4">{t.faq.eyebrow}</p>
-            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 leading-tight">{t.faq.headline}</h2>
+            <h2 className="font-display font-black text-3xl md:text-5xl text-stone-900 md: leading-tight">{t.faq.headline}</h2>
           </div>
           <div className="gsap-reveal">
             {t.faq.items.map((item, i) => (
@@ -1321,7 +1321,7 @@ export default function Page() {
         </div>
         <div className="relative max-w-5xl mx-auto px-5 md:px-8 text-center">
           <p className="text-[10px] font-display font-bold tracking-[0.3em] uppercase text-orange-500 mb-8 gsap-reveal">Let's Work</p>
-          <h2 className="font-display font-black text-4xl md:text-7xl lg:text-8xl text-white leading-[0.9] tracking-tight mb-8 gsap-reveal">
+          <h2 className="font-display font-black text-4xl md:text-7xl lg:text-8xl text-white md: leading-[0.9] tracking-tight mb-8 gsap-reveal">
             {t.cta.headline1}<br />
             <span className="text-orange-500">{t.cta.headline2}</span>
           </h2>

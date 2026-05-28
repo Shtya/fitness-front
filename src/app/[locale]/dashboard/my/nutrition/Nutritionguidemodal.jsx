@@ -123,15 +123,15 @@ function SectionCard({ section, data, isOpen, onToggle, index }) {
             className={`h-11 w-11 rounded-2xl bg-gradient-to-br ${section.gradient} flex items-center justify-center flex-shrink-0`}
             style={{ boxShadow: `0 4px 14px ${section.accent}40` }}
           >
-            <span className="text-xl leading-none">{section.emoji}</span>
+            <span className="text-xl md: leading-none">{section.emoji}</span>
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className={`font-black text-[13px] leading-tight ${isOpen ? section.text : 'text-slate-800'}`}>
+            <p className={`font-black text-[13px] md: leading-tight ${isOpen ? section.text : 'text-slate-800'}`}>
               {data.title}
             </p>
             {data.subtitle && (
-              <p className="text-[11px] text-slate-400 mt-0.5 font-medium leading-tight truncate">
+              <p className="text-[11px] text-slate-400 mt-0.5 font-medium md: leading-tight truncate">
                 {data.subtitle}
               </p>
             )}
@@ -192,7 +192,7 @@ function SectionCard({ section, data, isOpen, onToggle, index }) {
                   style={{ background: section.accentLight }}
                 >
                   <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" style={{ color: section.accent }} />
-                  <p className="text-[12px] font-medium leading-relaxed" style={{ color: section.accent }}>
+                  <p className="text-[12px] font-medium md: leading-relaxed" style={{ color: section.accent }}>
                     {data.note}
                   </p>
                 </motion.div>
@@ -219,10 +219,10 @@ function SectionCard({ section, data, isOpen, onToggle, index }) {
                         className="absolute -top-3 -end-3 w-10 h-10 rounded-full opacity-10"
                         style={{ background: section.accent }}
                       />
-                      <p className="text-[15px] font-black leading-none tabular-nums" style={{ color: section.accent }}>
+                      <p className="text-[15px] font-black md: leading-none tabular-nums" style={{ color: section.accent }}>
                         {c.value}
                       </p>
-                      <p className="text-[9px] text-slate-500 mt-1 font-semibold leading-tight">{c.label}</p>
+                      <p className="text-[9px] text-slate-500 mt-1 font-semibold md: leading-tight">{c.label}</p>
                     </div>
                   ))}
                 </motion.div>
@@ -262,13 +262,13 @@ function SectionCard({ section, data, isOpen, onToggle, index }) {
                         onMouseLeave={e => { e.currentTarget.style.background = 'white'; }}
                       >
                         <div
-                          className="h-6 w-6 rounded-lg flex items-center justify-center flex-shrink-0 text-sm leading-none"
+                          className="h-6 w-6 rounded-lg flex items-center justify-center flex-shrink-0 text-sm md: leading-none"
                           style={{ background: section.accentLight }}
                         >
                           {section.emoji}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <span className="text-[12px] font-black text-slate-800 leading-tight">{item.amount}</span>
+                          <span className="text-[12px] font-black text-slate-800 md: leading-tight">{item.amount}</span>
                           {item.name && item.name !== '—' && item.name !== '— ' && (
                             <span className="text-[11px] text-slate-500 font-medium"> · {item.name}</span>
                           )}
@@ -306,7 +306,7 @@ function SectionCard({ section, data, isOpen, onToggle, index }) {
                             </p>
                           </div>
                           {group.note && (
-                            <p className="text-[10px] text-slate-500 leading-relaxed font-medium">{group.note}</p>
+                            <p className="text-[10px] text-slate-500 md: leading-relaxed font-medium">{group.note}</p>
                           )}
                         </div>
                         {group.badge && (
@@ -538,7 +538,7 @@ export default function NutritionGuideModal({ open, onClose }) {
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.13 }}
-                      className="text-[17px] font-black text-white leading-tight tracking-tight"
+                      className="text-[17px] font-black text-white md: leading-tight tracking-tight"
                     >
                       {guide?.title}
                     </motion.h2>
@@ -587,9 +587,9 @@ export default function NutritionGuideModal({ open, onClose }) {
                     className="rounded-xl py-2 px-1 text-center bg-white/[0.10]"
                     style={{ backdropFilter: 'blur(4px)' }}
                   >
-                    <div className="text-[16px] leading-none mb-1">{s.emoji}</div>
-                    <div className="text-[11px] font-black text-white leading-none">{s.value}</div>
-                    <div className="text-[8px] font-semibold mt-1 leading-tight text-white/40">{s.label}</div>
+                    <div className="text-[16px] md: leading-none mb-1">{s.emoji}</div>
+                    <div className="text-[11px] font-black text-white md: leading-none">{s.value}</div>
+                    <div className="text-[8px] font-semibold mt-1 md: leading-tight text-white/40">{s.label}</div>
                   </motion.div>
                 ))}
               </motion.div>
@@ -630,7 +630,7 @@ export default function NutritionGuideModal({ open, onClose }) {
                               }
                         }
                       >
-                        <span className="text-sm leading-none">{s.emoji}</span>
+                        <span className="text-sm md: leading-none">{s.emoji}</span>
                         <span>{label}</span>
                       </motion.button>
                     );
@@ -685,7 +685,7 @@ export default function NutritionGuideModal({ open, onClose }) {
                     <p className="text-[10px] font-black text-amber-800 mb-1 uppercase tracking-widest">
                       {isRTL ? 'تنبيه مهم' : 'Important Note'}
                     </p>
-                    <p className="text-[11px] text-amber-700 leading-relaxed font-medium">
+                    <p className="text-[11px] text-amber-700 md: leading-relaxed font-medium">
                       {guide?.disclaimer}
                     </p>
                   </div>

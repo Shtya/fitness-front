@@ -99,8 +99,8 @@ export default function Button({
   const content = loading ? loadingContent : (
     <>
       {srcImg && <img src={srcImg} alt="icon" className="h-4 w-4 object-contain" />}
-      {icon && <span className="flex-shrink-0 leading-none">{icon}</span>}
-      {name && <span className="text-nowrap leading-none">{name}</span>}
+      {icon && <span className="flex-shrink-0 md: leading-none">{icon}</span>}
+      {name && <span className="text-nowrap md: leading-none">{name}</span>}
     </>
   );
 

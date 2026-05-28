@@ -223,7 +223,7 @@ function ConfirmPopover({ triggerRef, open, onConfirm, onCancel, message, confir
 									style={{ background: `${glow}`, border: `1px solid ${bg}25` }}>
 									<AlertTriangle size={13} style={{ color: bg }} />
 								</div>
-								<p className="text-[12px] font-semibold leading-snug text-slate-700">
+								<p className="text-[12px] font-semibold md: leading-snug text-slate-700">
 									{message ?? t("confirm.defaultMessage")}
 								</p>
 							</div>

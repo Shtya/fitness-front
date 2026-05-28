@@ -508,7 +508,7 @@ function AccordionItem({ q, a, index, open, onToggle }) {
     <div className='border-b border-stone-200'>
       <button className='w-full flex items-start justify-between gap-6 py-5 text-start' onClick={onToggle} aria-expanded={open}>
         <span className='text-xs font-body text-stone-400 font-medium tracking-widest pt-0.5'>{String(index + 1).padStart(2, '0')}</span>
-        <span className='flex-1 text-base  font-semibold text-stone-900 leading-snug'>{q}</span>
+        <span className='flex-1 text-base  font-semibold text-stone-900 md: leading-snug'>{q}</span>
         <span className={`mt-1 flex-shrink-0 w-5 h-5 border border-stone-400 rounded-full flex items-center justify-center transition-transform duration-300 ${open ? 'rotate-45 bg-orange-600 border-orange-600' : ''}`}>
           <svg width='10' height='10' viewBox='0 0 10 10' fill='none'>
             <line x1='5' y1='0' x2='5' y2='10' stroke={open ? 'white' : '#6b7280'} strokeWidth='1.5' />
@@ -517,7 +517,7 @@ function AccordionItem({ q, a, index, open, onToggle }) {
         </span>
       </button>
       <div className={`overflow-hidden transition-all duration-300 ease-in-out ${open ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
-        <p className='pb-5 ps-7 font-body text-stone-600 leading-relaxed text-[15px]'>{a}</p>
+        <p className='pb-5 ps-7 font-body text-stone-600 md: leading-relaxed text-[15px]'>{a}</p>
       </div>
     </div>
   );
@@ -648,7 +648,7 @@ export default function CoachLandingPage() {
               <span className='w-8 h-px bg-orange-500' />
               {t.hero.eyebrow}
             </p>
-            <h1 className=' font-[600] text-[clamp(3rem,9vw,8rem)] leading-[0.92] tracking-tight text-white mb-8'>
+            <h1 className=' font-[600] text-[clamp(3rem,9vw,8rem)] md: leading-[0.92] tracking-tight text-white mb-8'>
               {t.hero.headline.map((line, i) => (
                 <span key={i} className='headline-line block'>
                   {line}
@@ -657,7 +657,7 @@ export default function CoachLandingPage() {
             </h1>
           </div>
           <div ref={heroCtaRef}>
-            <p className='font-body text-base md:text-xl text-stone-300 max-w-xl leading-relaxed mb-10'>{t.hero.sub}</p>
+            <p className='font-body text-base md:text-xl text-stone-300 max-w-xl md: leading-relaxed mb-10'>{t.hero.sub}</p>
             <div className='flex flex-wrap items-center gap-5'>
               <a href='#pricing' className='inline-flex items-center gap-3 bg-orange-600 hover:bg-orange-700 text-white font-body text-sm tracking-wide px-8 py-4 transition-colors'>
                 {t.hero.cta}
@@ -715,12 +715,12 @@ export default function CoachLandingPage() {
           <div className='grid grid-cols-2 lg:grid-cols-4 gap-0 border border-stone-200'>
             {t.stats.map((s, i) => (
               <div key={i} className={`p-8 sm:p-12 flex flex-col gap-3 relative ${i < 3 ? 'border-e border-stone-200 rtl:border-e-0 rtl:border-s' : ''} ${i >= 2 ? 'border-t border-stone-200 lg:border-t-0' : ''}`}>
-                <div className=' font-[600] text-[clamp(44px,5.5vw,72px)] leading-none text-stone-900 tracking-tighter flex items-end gap-1'>
+                <div className=' font-[600] text-[clamp(44px,5.5vw,72px)] md: leading-none text-stone-900 tracking-tighter flex items-end gap-1'>
                   <span ref={el => (statNumRefs.current[i] = el)}>{s.decimal ? s.number.toFixed(1) : s.number}</span>
                   <span className='text-orange-600 text-3xl pb-1'>{s.suffix}</span>
                 </div>
-                <p className='text-[13px] font-body text-stone-500 leading-snug max-w-[160px]'>{s.label}</p>
-                <span className='absolute bottom-3 end-4  text-6xl text-stone-100 leading-none select-none pointer-events-none'>0{i + 1}</span>
+                <p className='text-[13px] font-body text-stone-500 md: leading-snug max-w-[160px]'>{s.label}</p>
+                <span className='absolute bottom-3 end-4  text-6xl text-stone-100 md: leading-none select-none pointer-events-none'>0{i + 1}</span>
               </div>
             ))}
           </div>
@@ -737,18 +737,18 @@ export default function CoachLandingPage() {
               <img src={images.about} alt={t.about.imageAlt} className='w-full h-full object-cover' />
             </div>
             <div className='absolute -bottom-6 -end-6 bg-orange-600 text-white p-6 hidden lg:block'>
-              <p className=' font-[600] text-3xl leading-none'>5+</p>
+              <p className=' font-[600] text-3xl md: leading-none'>5+</p>
               <p className='font-body text-xs tracking-wide mt-1'>{isAr ? 'سنوات' : 'Years'}</p>
             </div>
           </div>
           <div className='gsap-reveal'>
             <p className='text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-600 mb-4'>{t.about.eyebrow}</p>
-            <h2 className=' font-[600] text-4xl lg:text-5xl text-stone-900 leading-tight mb-2'>{t.about.name}</h2>
+            <h2 className=' font-[600] text-4xl lg:text-5xl text-stone-900 md: leading-tight mb-2'>{t.about.name}</h2>
             <p className='font-body text-sm text-stone-400 tracking-wide mb-8'>{t.about.title}</p>
-            <p className='font-body text-stone-600 text-base leading-relaxed mb-5'>{t.about.bio1}</p>
-            <p className='font-body text-stone-600 text-base leading-relaxed mb-8'>{t.about.bio2}</p>
+            <p className='font-body text-stone-600 text-base md: leading-relaxed mb-5'>{t.about.bio1}</p>
+            <p className='font-body text-stone-600 text-base md: leading-relaxed mb-8'>{t.about.bio2}</p>
             <blockquote className='border-s-2 border-orange-600 ps-5 mb-8'>
-              <p className='font-body text-stone-700 text-base italic leading-relaxed'>"{t.about.quote}"</p>
+              <p className='font-body text-stone-700 text-base italic md: leading-relaxed'>"{t.about.quote}"</p>
             </blockquote>
             <div className='flex flex-wrap gap-2'>
               {t.about.certs.map((tag, i) => (
@@ -769,14 +769,14 @@ export default function CoachLandingPage() {
           <div className='grid lg:grid-cols-[1fr_2fr] gap-16 items-start'>
             <div className='gsap-reveal'>
               <p className='text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-500 mb-4'>{t.why.label}</p>
-              <h2 className=' font-[600] text-4xl lg:text-5xl leading-tight'>{t.why.headline}</h2>
+              <h2 className=' font-[600] text-4xl lg:text-5xl md: leading-tight'>{t.why.headline}</h2>
             </div>
             <div className='gsap-stagger grid sm:grid-cols-2 gap-px bg-stone-700'>
               {t.why.items.map((item, i) => (
                 <div key={i} className='gsap-stagger-item bg-stone-900 p-7'>
                   <p className='text-xs font-body font-semibold tracking-[0.2em] uppercase text-stone-500 mb-3'>0{i + 1}</p>
                   <h3 className=' font-[600] text-lg text-white mb-2'>{item.title}</h3>
-                  <p className='font-body text-sm text-stone-400 leading-relaxed'>{item.desc}</p>
+                  <p className='font-body text-sm text-stone-400 md: leading-relaxed'>{item.desc}</p>
                 </div>
               ))}
             </div>
@@ -791,14 +791,14 @@ export default function CoachLandingPage() {
         <div className='max-w-7xl mx-auto px-5 md:px-10'>
           <div className='mb-14 gsap-reveal'>
             <p className='text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-600 mb-4'>{t.forWho.eyebrow}</p>
-            <h2 className=' font-[600] text-4xl lg:text-5xl text-stone-900 leading-tight max-w-xl'>{t.forWho.heading}</h2>
+            <h2 className=' font-[600] text-4xl lg:text-5xl text-stone-900 md: leading-tight max-w-xl'>{t.forWho.heading}</h2>
           </div>
           <div className='gsap-stagger grid grid-cols-2 sm:grid-cols-4 gap-0 border border-stone-200 bg-stone-200'>
             {t.forWho.items.map((item, i) => (
               <div key={i} className='gsap-stagger-item bg-stone-50 p-6 hover:bg-white transition-colors duration-200 group'>
                 <div className='w-8 h-px bg-orange-600 mb-4 group-hover:w-12 transition-all duration-300' />
                 <h3 className=' font-[600] text-base text-stone-900 group-hover:text-orange-600 transition-colors mb-2'>{item.label}</h3>
-                <p className='font-body text-xs text-stone-400 leading-relaxed'>{item.desc}</p>
+                <p className='font-body text-xs text-stone-400 md: leading-relaxed'>{item.desc}</p>
               </div>
             ))}
           </div>
@@ -812,16 +812,16 @@ export default function CoachLandingPage() {
         <div className='max-w-7xl mx-auto px-5 md:px-10'>
           <div className='mb-16 gsap-reveal'>
             <p className='text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-500 mb-4'>{t.method.eyebrow}</p>
-            <h2 className=' font-[600] text-4xl lg:text-5xl text-white leading-tight'>{t.method.headline}</h2>
+            <h2 className=' font-[600] text-4xl lg:text-5xl text-white md: leading-tight'>{t.method.headline}</h2>
           </div>
           <div className='gsap-stagger grid md:grid-cols-2 lg:grid-cols-3 gap-0'>
             {t.method.steps.map((step, i) => (
               <div key={i} className='gsap-stagger-item relative border-t border-stone-700 p-8 lg:p-10 group hover:bg-stone-800 transition-colors'>
-                <span className=' font-[600] text-[64px] leading-none text-stone-800 group-hover:text-orange-900/30 select-none absolute top-4 end-6 transition-colors'>{step.num}</span>
+                <span className=' font-[600] text-[64px] md: leading-none text-stone-800 group-hover:text-orange-900/30 select-none absolute top-4 end-6 transition-colors'>{step.num}</span>
                 <div className='relative z-10'>
                   <span className='text-xs font-body text-orange-500 font-[600] tracking-widest mb-3 block'>{step.num}</span>
                   <h3 className=' font-[600] text-xl text-white mb-3'>{step.title}</h3>
-                  <p className='text-[14px] font-body text-stone-400 leading-relaxed'>{step.body}</p>
+                  <p className='text-[14px] font-body text-stone-400 md: leading-relaxed'>{step.body}</p>
                 </div>
               </div>
             ))}
@@ -836,7 +836,7 @@ export default function CoachLandingPage() {
         <div className='max-w-7xl mx-auto px-5 md:px-10'>
           <div className='mb-16 gsap-reveal'>
             <p className='text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-600 mb-4'>{t.services.eyebrow}</p>
-            <h2 className=' font-[600] text-4xl lg:text-5xl text-stone-900 leading-tight'>{t.services.headline}</h2>
+            <h2 className=' font-[600] text-4xl lg:text-5xl text-stone-900 md: leading-tight'>{t.services.headline}</h2>
           </div>
 
           {/* Service bento */}
@@ -850,7 +850,7 @@ export default function CoachLandingPage() {
                   {t.services.items[0].num} — {t.services.items[0].sub}
                 </p>
                 <h3 className=' font-[600] text-3xl mb-3'>{t.services.items[0].title}</h3>
-                <p className='font-body text-sm text-stone-300 leading-relaxed flex-1'>{t.services.items[0].desc}</p>
+                <p className='font-body text-sm text-stone-300 md: leading-relaxed flex-1'>{t.services.items[0].desc}</p>
                 <a href='#pricing' className='mt-6 inline-flex items-center gap-2 text-sm font-body font-semibold text-orange-500 hover:text-orange-400 transition-colors'>
                   {t.services.items[0].cta}
                   <svg width='14' height='14' viewBox='0 0 14 14' fill='none' className='rtl:-scale-x-100'>
@@ -871,7 +871,7 @@ export default function CoachLandingPage() {
                       {t.services.items[idx].num} — {t.services.items[idx].sub}
                     </p>
                     <h3 className=' font-[600] text-xl text-stone-900 mb-2'>{t.services.items[idx].title}</h3>
-                    <p className='font-body text-sm text-stone-500 leading-relaxed mb-4'>{t.services.items[idx].desc}</p>
+                    <p className='font-body text-sm text-stone-500 md: leading-relaxed mb-4'>{t.services.items[idx].desc}</p>
                     <a href='#pricing' className='inline-flex items-center gap-2 text-xs font-body font-semibold text-stone-900 hover:text-orange-600 transition-colors'>
                       {t.services.items[idx].cta}
                       <svg width='12' height='12' viewBox='0 0 14 14' fill='none' className='rtl:-scale-x-100'>
@@ -896,7 +896,7 @@ export default function CoachLandingPage() {
                     <div>
                       <h3 className={` font-[600] text-lg mb-4 ${tier.highlight ? 'text-white' : 'text-stone-900'}`}>{tier.name}</h3>
                       <div className='flex items-baseline gap-1'>
-                        <span className={` font-[600] text-[48px] leading-none tracking-tighter ${tier.highlight ? 'text-white' : 'text-stone-900'}`}>{tier.price}</span>
+                        <span className={` font-[600] text-[48px] md: leading-none tracking-tighter ${tier.highlight ? 'text-white' : 'text-stone-900'}`}>{tier.price}</span>
                         <span className={`font-body text-sm ${tier.highlight ? 'text-stone-400' : 'text-stone-500'}`}>{tier.period}</span>
                       </div>
                     </div>
@@ -904,7 +904,7 @@ export default function CoachLandingPage() {
                       {tier.features.map((f, fi) => (
                         <li key={fi} className='flex items-start gap-3'>
                           <span className='text-orange-500 flex-shrink-0 mt-0.5'>✓</span>
-                          <span className={`text-[13px] font-body leading-snug ${tier.highlight ? 'text-stone-300' : 'text-stone-600'}`}>{f}</span>
+                          <span className={`text-[13px] font-body md: leading-snug ${tier.highlight ? 'text-stone-300' : 'text-stone-600'}`}>{f}</span>
                         </li>
                       ))}
                     </ul>
@@ -931,16 +931,16 @@ export default function CoachLandingPage() {
             </div>
             <div className='space-y-8 gsap-reveal'>
               <div>
-                <h2 className=' font-[600] text-4xl lg:text-5xl leading-none mb-1'>{t.featTransform.name}</h2>
+                <h2 className=' font-[600] text-4xl lg:text-5xl md: leading-none mb-1'>{t.featTransform.name}</h2>
                 <p className='text-stone-400 font-body text-sm tracking-wide'>
                   {t.featTransform.duration} · {t.featTransform.goal}
                 </p>
               </div>
-              <p className='font-body text-stone-300 leading-relaxed'>{t.featTransform.story}</p>
+              <p className='font-body text-stone-300 md: leading-relaxed'>{t.featTransform.story}</p>
               <div className='grid grid-cols-2 gap-0 border border-stone-700'>
                 {t.featTransform.stats.map((s, i) => (
                   <div key={i} className={`p-5 ${i < 3 ? 'border-e border-stone-700 rtl:border-e-0 rtl:border-s' : ''} ${i < 2 ? 'border-b border-stone-700' : ''}`}>
-                    <p className=' font-[600] text-2xl text-orange-500 leading-none'>{s.value}</p>
+                    <p className=' font-[600] text-2xl text-orange-500 md: leading-none'>{s.value}</p>
                     <p className='text-xs text-stone-500 font-body tracking-wide mt-1'>{s.label}</p>
                   </div>
                 ))}
@@ -960,7 +960,7 @@ export default function CoachLandingPage() {
         <div className='max-w-7xl mx-auto px-5 md:px-10'>
           <div className='mb-14 gsap-reveal'>
             <p className='text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-600 mb-4'>{t.gallery.label}</p>
-            <h2 className=' font-[600] text-4xl lg:text-5xl text-stone-900 leading-tight'>{t.gallery.headline}</h2>
+            <h2 className=' font-[600] text-4xl lg:text-5xl text-stone-900 md: leading-tight'>{t.gallery.headline}</h2>
           </div>
           <div className='gsap-stagger grid sm:grid-cols-2 lg:grid-cols-3 gap-5'>
             {t.gallery.clients.map((client, i) => (
@@ -999,7 +999,7 @@ export default function CoachLandingPage() {
         <div className='max-w-7xl mx-auto px-5 md:px-10'>
           <div className='mb-14 gsap-reveal'>
             <p className='text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-500 mb-4'>{t.testimonials.eyebrow}</p>
-            <h2 className=' font-[600] text-4xl lg:text-5xl text-white leading-tight'>{t.testimonials.headline}</h2>
+            <h2 className=' font-[600] text-4xl lg:text-5xl text-white md: leading-tight'>{t.testimonials.headline}</h2>
           </div>
           <div className='gsap-stagger grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-stone-700'>
             {t.testimonials.items.map((item, i) => (
@@ -1011,7 +1011,7 @@ export default function CoachLandingPage() {
                       <StarIcon key={j} />
                     ))}
                 </div>
-                <p className='font-body text-sm text-stone-300 leading-relaxed flex-1'>"{item.text}"</p>
+                <p className='font-body text-sm text-stone-300 md: leading-relaxed flex-1'>"{item.text}"</p>
                 <div className='flex items-center gap-3 border-t border-stone-800 pt-5'>
                   <img src={images[`testimonial${i + 1}`]} alt={item.name} className='w-10 h-10 object-cover rounded-full shrink-0 grayscale' />
                   <div>
@@ -1033,15 +1033,15 @@ export default function CoachLandingPage() {
           <div className='grid lg:grid-cols-[1fr_2fr] gap-16 items-start'>
             <div className='gsap-reveal'>
               <p className='text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-600 mb-4'>{t.resources.eyebrow}</p>
-              <h2 className=' font-[600] text-4xl lg:text-5xl text-stone-900 leading-tight mb-5'>{t.resources.heading}</h2>
-              <p className='font-body text-sm text-stone-500 leading-relaxed'>{t.resources.sub}</p>
+              <h2 className=' font-[600] text-4xl lg:text-5xl text-stone-900 md: leading-tight mb-5'>{t.resources.heading}</h2>
+              <p className='font-body text-sm text-stone-500 md: leading-relaxed'>{t.resources.sub}</p>
             </div>
             <div className='gsap-stagger grid sm:grid-cols-2 gap-px bg-stone-200'>
               {t.resources.items.map((item, i) => (
                 <div key={i} className='gsap-stagger-item bg-stone-50 p-7 hover:bg-white transition-colors duration-200 group'>
                   <div className='w-6 h-px bg-orange-600 mb-5 group-hover:w-10 transition-all duration-300' />
                   <h3 className=' font-[600] text-base text-stone-900 mb-2'>{item.title}</h3>
-                  <p className='font-body text-sm text-stone-500 leading-relaxed'>{item.desc}</p>
+                  <p className='font-body text-sm text-stone-500 md: leading-relaxed'>{item.desc}</p>
                 </div>
               ))}
             </div>
@@ -1056,14 +1056,14 @@ export default function CoachLandingPage() {
         <div className='max-w-4xl mx-auto px-5 md:px-10'>
           <div className='mb-14 gsap-reveal'>
             <p className='text-xs font-body font-semibold tracking-[0.2em] uppercase text-orange-500 mb-4'>{t.faq.eyebrow}</p>
-            <h2 className=' font-[600] text-4xl lg:text-5xl text-white leading-tight'>{t.faq.headline}</h2>
+            <h2 className=' font-[600] text-4xl lg:text-5xl text-white md: leading-tight'>{t.faq.headline}</h2>
           </div>
           <div className='gsap-reveal'>
             {t.faq.items.map((item, i) => (
               <div key={i} className='border-b border-stone-700'>
                 <button className='w-full flex items-start justify-between gap-6 py-5 text-start' onClick={() => setOpenFaq(openFaq === i ? null : i)} aria-expanded={openFaq === i}>
                   <span className='text-xs font-body text-stone-500 font-medium tracking-widest pt-0.5'>{String(i + 1).padStart(2, '0')}</span>
-                  <span className='flex-1 text-base  font-semibold text-white leading-snug'>{item.q}</span>
+                  <span className='flex-1 text-base  font-semibold text-white md: leading-snug'>{item.q}</span>
                   <span className={`mt-1 flex-shrink-0 w-5 h-5 border border-stone-600 rounded-full flex items-center justify-center transition-transform duration-300 ${openFaq === i ? 'rotate-45 bg-orange-600 border-orange-600' : ''}`}>
                     <svg width='10' height='10' viewBox='0 0 10 10' fill='none'>
                       <line x1='5' y1='0' x2='5' y2='10' stroke={openFaq === i ? 'white' : '#9ca3af'} strokeWidth='1.5' />
@@ -1072,7 +1072,7 @@ export default function CoachLandingPage() {
                   </span>
                 </button>
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out ${openFaq === i ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
-                  <p className='pb-5 ps-7 font-body text-stone-400 leading-relaxed text-[15px]'>{item.a}</p>
+                  <p className='pb-5 ps-7 font-body text-stone-400 md: leading-relaxed text-[15px]'>{item.a}</p>
                 </div>
               </div>
             ))}
@@ -1084,10 +1084,10 @@ export default function CoachLandingPage() {
           15 FINAL CTA (light)
       ══════════════════════════════════════ */}
       <section className='bg-stone-50 py-32 relative overflow-hidden border-b border-stone-200'>
-        <span className='absolute -start-16 top-1/2 -translate-y-1/2  text-[18rem] text-stone-100 leading-none select-none pointer-events-none'>GO</span>
+        <span className='absolute -start-16 top-1/2 -translate-y-1/2  text-[18rem] text-stone-100 md: leading-none select-none pointer-events-none'>GO</span>
         <div className='relative max-w-5xl mx-auto px-5 md:px-10 text-center gsap-reveal'>
           <p className='text-xs tracking-[0.3em] uppercase text-orange-600 font-body mb-8'>{t.cta.eyebrow}</p>
-          <h2 className=' font-[600] text-6xl md:text-8xl tracking-tighter leading-none mb-6 text-stone-900'>
+          <h2 className=' font-[600] text-6xl md:text-8xl tracking-tighter md: leading-none mb-6 text-stone-900'>
             {t.cta.heading1} <span className='text-orange-600'>{t.cta.headingAccent}</span>
              {t.cta.heading2}
           </h2>
@@ -1107,10 +1107,10 @@ export default function CoachLandingPage() {
           <div className='grid md:grid-cols-4 gap-10 pb-12 border-b border-stone-800'>
             <div className='md:col-span-1'>
               <div className='flex items-baseline gap-1 mb-3'>
-                <span className=' font-[600] text-2xl tracking-tighter leading-none text-white'>{t.footer.logo}</span>
+                <span className=' font-[600] text-2xl tracking-tighter md: leading-none text-white'>{t.footer.logo}</span>
                 <span className='text-orange-600  text-xs tracking-widest uppercase'>{t.footer.logoSub}</span>
               </div>
-              <p className='text-stone-500 text-sm font-body leading-relaxed mb-6'>{t.footer.tagline}</p>
+              <p className='text-stone-500 text-sm font-body md: leading-relaxed mb-6'>{t.footer.tagline}</p>
               <div className='flex gap-4'>
                 {['IG', 'YT', 'TW'].map(s => (
                   <a key={s} href='#' className='text-xs text-stone-600 hover:text-white transition-colors font-body tracking-widest'>

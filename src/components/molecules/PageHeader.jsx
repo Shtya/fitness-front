@@ -528,7 +528,7 @@ export function PageHeader({
 								initial={{ opacity: 0, y: 12 }}
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-								className="text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl lg:text-[2.25rem]"
+								className="text-2xl font-black md: leading-tight tracking-tight text-white sm:text-3xl lg:text-[2.25rem]"
 								style={{ textShadow: '0 1px 12px rgba(0,0,0,0.12)' }}
 							>
 								{title}
@@ -538,7 +538,7 @@ export function PageHeader({
 									initial={{ opacity: 0, y: 8 }}
 									animate={{ opacity: 1, y: 0 }}
 									transition={{ duration: 0.4, delay: 0.09 }}
-									className="mt-1.5 max-w-md text-sm font-medium leading-relaxed"
+									className="mt-1.5 max-w-md text-sm font-medium md: leading-relaxed"
 									style={{ color: 'rgba(255,255,255,0.68)' }}
 								>
 									{desc}
@@ -646,7 +646,7 @@ export function PageHeader({
 
 									<div className="relative px-4 py-4">
 										<div className="flex items-start justify-between gap-2">
-											<p className="text-[9px] font-black uppercase tracking-[0.14em] leading-tight" style={{ color: 'rgba(255,255,255,0.6)' }}>
+											<p className="text-[9px] font-black uppercase tracking-[0.14em] md: leading-tight" style={{ color: 'rgba(255,255,255,0.6)' }}>
 												{s.label}
 											</p>
 											{SIcon && (
@@ -656,7 +656,7 @@ export function PageHeader({
 												/>
 											)}
 										</div>
-										<p className="mt-2.5 text-2xl font-black leading-none tracking-tight text-white">
+										<p className="mt-2.5 text-2xl font-black md: leading-none tracking-tight text-white">
 											{s.value}
 										</p>
 										{s.sub && (

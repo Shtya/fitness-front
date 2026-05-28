@@ -54,7 +54,7 @@ export function StatsBar() {
 								</div>
 
 								{/* Value */}
-								<p className="mb-1 bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] bg-clip-text text-3xl font-black leading-none tracking-tight text-transparent sm:text-4xl xl:text-5xl">
+								<p className="mb-1 bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] bg-clip-text text-3xl font-black md: leading-none tracking-tight text-transparent sm:text-4xl xl:text-5xl">
 									{stat.value}
 								</p>
 

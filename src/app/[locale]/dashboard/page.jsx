@@ -169,7 +169,7 @@ const CardHeader = ({ icon: Icon, title, subtitle, iconBg = 'bg-[var(--color-pri
         <Icon size={16} className={iconColor} />
       </div>
       <div>
-        <p className="text-sm font-semibold text-slate-800 leading-tight">{title}</p>
+        <p className="text-sm font-semibold text-slate-800 md: leading-tight">{title}</p>
         {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
       </div>
     </div>
@@ -182,7 +182,7 @@ const CardHeader = ({ icon: Icon, title, subtitle, iconBg = 'bg-[var(--color-pri
 ════════════════════════════════════════════════════════ */
 const StatBadge = ({ value, label, color = P500 }) => (
   <div className="text-center px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
-    <p className="text-base font-bold leading-none tabular-nums" style={{ color }}>{value}</p>
+    <p className="text-base font-bold md: leading-none tabular-nums" style={{ color }}>{value}</p>
     <p className="text-[10px] text-slate-400 mt-1 whitespace-nowrap font-medium">{label}</p>
   </div>
 );
@@ -215,7 +215,7 @@ const MetricCard = ({ icon: Icon, label, value, sub, accentColor, accentBg, dela
         />
       </div>
       <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">{label}</p>
-      <p className="text-3xl font-bold tabular-nums leading-none text-slate-900">{count.toLocaleString()}</p>
+      <p className="text-3xl font-bold tabular-nums md: leading-none text-slate-900">{count.toLocaleString()}</p>
       {sub && <p className="text-[11px] text-slate-400 mt-2">{sub}</p>}
     </div>
   );
@@ -266,7 +266,7 @@ const HeroBanner = ({ kpis, t }) => {
                 {t('liveLabel')}
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-bold text-white md: leading-tight tracking-tight">
               {t('subtitle')}
             </h1>
             <p className="text-white/50 text-xs mt-2 flex items-center gap-1.5">
@@ -286,8 +286,8 @@ const HeroBanner = ({ kpis, t }) => {
                   className="flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors border border-white/10 rounded-xl px-3 py-2 cursor-default">
                   <p.icon size={12} className="text-white/60 flex-shrink-0" />
                   <div>
-                    <p className="text-white text-sm font-bold leading-none">{p.val}</p>
-                    <p className="text-white/50 text-[10px] leading-tight mt-0.5">{p.label}</p>
+                    <p className="text-white text-sm font-bold md: leading-none">{p.val}</p>
+                    <p className="text-white/50 text-[10px] md: leading-tight mt-0.5">{p.label}</p>
                   </div>
                 </div>
               ))}
@@ -393,7 +393,7 @@ const MembershipCard = ({ data, t }) => {
           icon={Award} title={t('charts.membershipTiers')} subtitle={t('charts.membershipSub')}
           right={
             <div className="text-right">
-              <p className="text-2xl font-bold text-slate-800 tabular-nums leading-none">{total}</p>
+              <p className="text-2xl font-bold text-slate-800 tabular-nums md: leading-none">{total}</p>
               <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wider">{t('kpi.totalClients')}</p>
             </div>
           }
@@ -549,8 +549,8 @@ const ExerciseCard = ({ data, t }) => {
             { val: `${consistency}%`, label: t('charts.consistency'), color: S500 },
           ].map((s, i) => (
             <div key={i} className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100">
-              <p className="text-xl font-bold tabular-nums leading-none" style={{ color: s.color }}>{s.val}</p>
-              <p className="text-[10px] text-slate-400 mt-1.5 font-medium leading-tight">{s.label}</p>
+              <p className="text-xl font-bold tabular-nums md: leading-none" style={{ color: s.color }}>{s.val}</p>
+              <p className="text-[10px] text-slate-400 mt-1.5 font-medium md: leading-tight">{s.label}</p>
             </div>
           ))}
         </div>
@@ -667,7 +667,7 @@ const TopConversations = ({ data, t }) => {
           subtitle={t('charts.topConversationsSub')}
           right={
             <div className="text-right">
-              <p className="text-2xl font-bold tabular-nums leading-none" style={{ color: P500 }}>{totalMsgs}</p>
+              <p className="text-2xl font-bold tabular-nums md: leading-none" style={{ color: P500 }}>{totalMsgs}</p>
               <p className="text-[10px] text-slate-400 mt-0.5">{t('charts.totalMessages')}</p>
             </div>
           }

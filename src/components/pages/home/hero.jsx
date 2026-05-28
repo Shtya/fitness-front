@@ -292,7 +292,7 @@ function ExerciseCard({ locale }) {
 					data-aos-delay="340"
 					data-aos-duration="650"
 				>
-					<p className="text-[14px] font-extrabold leading-tight tracking-tight text-[#1a1a1a]">
+					<p className="text-[14px] font-extrabold md: leading-tight tracking-tight text-[#1a1a1a]">
 						{t("exercise.name")}
 					</p>
 					<p className="text-[11px] font-semibold text-[var(--color-primary-500)]">
@@ -543,7 +543,7 @@ export function TrustStrip({ t }) {
               data-aos-duration="600"
             >
               <div className="flex items-baseline gap-1.5">
-                <p className="text-2xl font-black leading-none tracking-tight text-white sm:text-3xl">
+                <p className="text-2xl font-black md: leading-none tracking-tight text-white sm:text-3xl">
                   150
                 </p>
                 <span className="text-sm font-black text-[var(--color-primary-400)]">+</span>
@@ -569,7 +569,7 @@ export function TrustStrip({ t }) {
               data-aos-duration="600"
             >
               <div className="flex items-baseline gap-2">
-                <p className="text-2xl font-black leading-none tracking-tight text-white sm:text-3xl">
+                <p className="text-2xl font-black md: leading-none tracking-tight text-white sm:text-3xl">
                   4.9
                 </p>
                 <div className="flex -mt-0.5 gap-0.5">

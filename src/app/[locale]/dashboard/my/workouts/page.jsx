@@ -299,7 +299,7 @@ function NotesModal({ open, onClose, title, notes = [], t }) {
 							<span className="shrink-0 w-5 h-5 rounded-lg bg-gradient-to-br from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] text-white text-[10px] font-bold flex items-center justify-center mt-0.5">
 								{idx + 1}
 							</span>
-							<span className="text-sm text-slate-700 leading-relaxed">{String(n)}</span>
+							<span className="text-sm text-slate-700 md: leading-relaxed">{String(n)}</span>
 						</div>
 					)) : (
 						<div className="text-center py-8 text-sm text-slate-400">{t('notes.empty')}</div>
@@ -562,7 +562,7 @@ export function ExerciseList({ workout, exercisesOverride, currentExId, onPick, 
 								{/* Text */}
 								<div className="flex-1 min-w-0">
 									<p className={cx(
-										'text-sm font-semibold truncate leading-tight',
+										'text-sm font-semibold truncate md: leading-tight',
 										isCompleted ? 'text-emerald-700' : isActive ? 'text-[var(--color-primary-700)]' : 'text-slate-800',
 									)}>
 										{idx + 1}. {ex?.name ?? 'Exercise'}
@@ -648,7 +648,7 @@ function StatChip({ icon: Icon, label, value, accent = false }) {
 			</div>
 			<div className="min-w-0">
 				<p className={cx('text-[10px] font-medium uppercase tracking-wide truncate', accent ? 'text-white/70' : 'text-slate-400')}>{label}</p>
-				<p className={cx('text-sm font-bold truncate leading-tight', accent ? 'text-white' : 'text-slate-800')}>{value || '—'}</p>
+				<p className={cx('text-sm font-bold truncate md: leading-tight', accent ? 'text-white' : 'text-slate-800')}>{value || '—'}</p>
 			</div>
 		</div>
 	);
@@ -1205,7 +1205,7 @@ function AddExerciseModal({ open, section, onClose, onAdd, t }) {
 										}
 									</div>
 									<div className="w-full min-w-0">
-										<p className="text-xs font-semibold text-slate-800 line-clamp-2 leading-tight">{ex.name}</p>
+										<p className="text-xs font-semibold text-slate-800 line-clamp-2 md: leading-tight">{ex.name}</p>
 										{ex.category && (
 											<p className="text-[10px] text-slate-400 mt-0.5 truncate">{ex.category}</p>
 										)}
@@ -1978,7 +1978,7 @@ export default function MyWorkoutsPage() {
 										{/* Exercise name overlay */}
 										{currentExercise?.name && (
 											<div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-3 pt-6 pb-2">
-												<h2 className="text-white font-bold text-sm leading-tight">{currentExercise.name}</h2>
+												<h2 className="text-white font-bold text-sm md: leading-tight">{currentExercise.name}</h2>
 											</div>
 										)}
 
@@ -2370,7 +2370,7 @@ export function WorkoutHeader({
 				{/* Top row: title + actions */}
 				<div className="flex items-start justify-between gap-3 px-4 pt-4 pb-2">
 					<div className="min-w-0">
-						<h1 className="text-xl md:text-3xl font-black text-white leading-tight truncate">
+						<h1 className="text-xl md:text-3xl font-black text-white md: leading-tight truncate">
 							{title}
 						</h1>
 						{/* Subtitle — desktop only */}

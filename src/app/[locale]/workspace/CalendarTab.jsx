@@ -164,11 +164,9 @@ const DESIGN_STYLES = `
   .cal-mob-dot { width:4px; height:4px; border-radius:50%; flex-shrink:0; }
 
   /* ── Sidebar ── */
-  .cal-sidebar { width:340px; background:var(--cal-surface); border-left:1px solid var(--cal-border); display:flex; flex-direction:column; overflow:hidden; flex-shrink:0; }
-  .cal-sidebar-head { padding:22px 20px 16px; background:var(--cal-grad); position:relative; overflow:hidden; }
-  .cal-sidebar-head::before { content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(255,255,255,.1) 0%,transparent 100%); pointer-events:none; }
-  .cal-sidebar-head::after { content:''; position:absolute; top:-60px; right:-60px; width:200px; height:200px; background:radial-gradient(circle,rgba(255,255,255,.1) 0%,transparent 70%); pointer-events:none; }
-  .cal-sidebar-date-row { position:relative; z-index:1; display:flex; align-items:flex-end; gap:14px; margin-bottom:14px; }
+  .cal-sidebar { width:340px; background:var(--cal-surface);  display:flex; flex-direction:column; overflow:hidden; flex-shrink:0; }
+  .cal-sidebar-head { padding:22px 20px 16px; background:#467fe8; position:relative; overflow:hidden; }
+   .cal-sidebar-date-row { position:relative; z-index:1; display:flex; align-items:flex-end; gap:14px; margin-bottom:14px; }
   .cal-sidebar-day-num { font-family:var(--cal-font-d); font-size:60px; font-weight:400; line-height:.9; letter-spacing:-3px; color:#fff; text-shadow:0 2px 16px rgba(0,0,0,.15); }
   .cal-sidebar-day-name { font-family:var(--cal-font-d); font-size:18px; font-weight:400; color:#fff; line-height:1.2; font-style:italic; }
   .cal-sidebar-my { font-size:11px; color:rgba(255,255,255,.65); font-weight:500; margin-top:2px; letter-spacing:.03em; }
@@ -549,7 +547,7 @@ function ItemCard({ item, date, dateStr, eventTypes, completions, onToggle, onEd
         }
       </button>
 
-      <div className="cal-item-body">
+      <div className=" cal-item-body">
         <div className={cn("cal-item-title", done && "done")}>{item.title}</div>
         {item.note && <div className="cal-item-note">{item.note}</div>}
         <div className="cal-item-meta">
@@ -666,7 +664,7 @@ function ItemFormContent({ t, isRTL, editingItem, itemForm, setItemForm, handleS
                   onClick={() => setItemForm(p => {
                     const days = p.recurrenceDays.includes(idx) ? p.recurrenceDays.filter(d => d!==idx) : [...p.recurrenceDays, idx];
                     return { ...p, recurrenceDays:days };
-                  })}>{day.slice(0,2)}</button>
+                  })}>{day}</button>
               ))}
             </div>
           </div>
@@ -697,7 +695,7 @@ function MobileDayPanel({ selectedDate, items, completions, eventTypes, selected
 
   const title = (
     <div className="flex items-center gap-3 flex-1">
-      <div className="font-[var(--cal-font-d)] text-[32px] font-normal leading-none text-[var(--cal-text)]">
+      <div className="font-[var(--cal-font-d)] text-[32px] font-normal md: leading-none text-[var(--cal-text)]">
         {selectedDate.getDate()}
       </div>
       <div>
@@ -886,9 +884,24 @@ export default function CalendarPage() {
         if (!mounted) return;
         if (Array.isArray(state?.items))              setItems(state.items);
         if (Array.isArray(state?.eventTypes))         setEventTypes(state.eventTypes);
-        if (state?.completions)                       setCompletions(state.completions);
-        if (state?.settings)                          setSettings(state.settings);
-        if (typeof state?.soundEnabled === "boolean") setSoundEnabled(state.soundEnabled);
+        if (state?.completions) {
+          setCompletions(state.completions);
+        } else {
+          const sc = localStorage.getItem("completions");
+          if (sc) setCompletions(JSON.parse(sc));
+        }
+        if (state?.settings) {
+          setSettings(state.settings);
+        } else {
+          const ss = localStorage.getItem("calendarSettings");
+          if (ss) setSettings(JSON.parse(ss));
+        }
+        if (typeof state?.soundEnabled === "boolean") {
+          setSoundEnabled(state.soundEnabled);
+        } else {
+          const sd = localStorage.getItem("soundEnabled");
+          if (sd) setSoundEnabled(JSON.parse(sd));
+        }
       } catch {
         try {
           const [ir,tr,cr,sr,dr] = await Promise.allSettled([
@@ -898,9 +911,24 @@ export default function CalendarPage() {
           if (!mounted) return;
           if (ir.status==="fulfilled") setItems(ir.value?.items||ir.value||[]);
           if (tr.status==="fulfilled") setEventTypes(tr.value?.eventTypes||tr.value||DEFAULT_TYPES);
-          if (cr.status==="fulfilled") setCompletions(cr.value?.completions||cr.value||{});
-          if (sr.status==="fulfilled") setSettings(sr.value?.settings||sr.value||settings);
-          if (dr.status==="fulfilled" && typeof dr.value?.soundEnabled==="boolean") setSoundEnabled(dr.value.soundEnabled);
+          if (cr.status==="fulfilled") {
+            setCompletions(cr.value?.completions||cr.value||{});
+          } else {
+            const sc = localStorage.getItem("completions");
+            if (sc) setCompletions(JSON.parse(sc));
+          }
+          if (sr.status==="fulfilled") {
+            setSettings(sr.value?.settings||sr.value||settings);
+          } else {
+            const ss = localStorage.getItem("calendarSettings");
+            if (ss) setSettings(JSON.parse(ss));
+          }
+          if (dr.status==="fulfilled" && typeof dr.value?.soundEnabled==="boolean") {
+            setSoundEnabled(dr.value.soundEnabled);
+          } else {
+            const sd = localStorage.getItem("soundEnabled");
+            if (sd) setSoundEnabled(JSON.parse(sd));
+          }
           if ([ir,tr,cr,sr,dr].every(r => r.status==="rejected")) loadLocal();
         } catch { loadLocal(); }
       }
@@ -911,7 +939,11 @@ export default function CalendarPage() {
 
   const playSound = () => {
     if (!soundEnabled) return;
-    try { new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBCuBzvLZiTUIGmm98OScTgwOUKjk8bllHAU2kdny0HssBS16yPLaizsKEl+16+uoVRQKRp/h8r5sIQQrgc/y2Yk1CBppvfDknE4MDlCo5PG5ZRwFN5HZ8tB7LAUtesjy2os7ChJftevrqFUUCkaf4fK+bCEEK4HP8tmJNQgaaL3w5JxODA5QqOTxuWUcBTeR2fLQeywFLXrI8tqLOwoSX7Xr66hVFApGn+HyvmwhBCuBz/LZiTUIGmi98OScTgwOUKjk8bllHAU3kdny0HssBS16yPLaizsK").play().catch(()=>{}); } catch{}
+    try { 
+      const audio = new Audio("/sounds/check2.mp3");
+      audio.volume = 0.5;
+      audio.play().catch(() => {});
+    } catch{}
   };
 
   const monthNames = useMemo(() => [
@@ -925,7 +957,12 @@ export default function CalendarPage() {
     return Array.from({length:7}, (_,i) => dayNames[(i+settings.startOfWeek)%7]);
   }, [dayNames, settings.startOfWeek]);
 
-  const getDateString  = (d) => d.toISOString().split("T")[0];
+  const getDateString  = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
   const todayStr       = useMemo(() => getDateString(new Date()), []);
   const formatTime     = (s) => {
     if (!s) return "";
@@ -949,8 +986,9 @@ export default function CalendarPage() {
     const ds = getDateString(date);
     return items.filter(item => {
       if (item.recurrence==="none") return item.startDate===ds;
-      const sd = new Date(item.startDate);
-      if (date<sd) return false;
+      const sdParts = item.startDate.split('-');
+      const sd = new Date(parseInt(sdParts[0]), parseInt(sdParts[1])-1, parseInt(sdParts[2]));
+      if (date.getFullYear()===sd.getFullYear() && date.getMonth()===sd.getMonth() && date.getDate()<sd.getDate()) return false;
       const diff = Math.floor((+date-+sd)/86400000);
       switch (item.recurrence) {
         case "daily":       return diff%(item.recurrenceInterval||1)===0;
@@ -1101,8 +1139,7 @@ export default function CalendarPage() {
             const orig=(idx+settings.startOfWeek)%7;
             return (
               <div key={idx} className={cn("cal-day-header",(orig===0||orig===6)&&"weekend")}>
-                <span className="hidden sm:inline">{day}</span>
-                <span className="sm:hidden">{day.slice(0,1)}</span>
+                {day}
               </div>
             );
           })}
@@ -1186,7 +1223,7 @@ export default function CalendarPage() {
             const orig=(idx+settings.startOfWeek)%7;
             return (
               <div key={idx} className={cn("cal-mob-dh-cell",(orig===0||orig===6)&&"wknd")}>
-                {day.slice(0,1)}
+                {day}
               </div>
             );
           })}
@@ -1247,7 +1284,7 @@ export default function CalendarPage() {
       )}
 
       {/* ═══ HERO ════════════════════════════════════════════════ */}
-      <div className="cal-hero !rounded-lg">
+      <div className="cal-hero !rounded-[20px_20px_20px_0]">
         <div className="cal-hero-orb1"/><div className="cal-hero-orb2"/>
         <div className="cal-hero-noise"/><div className="cal-hero-dots"/><div className="cal-hero-hl"/>
         <svg className="absolute right-[-40px] top-0 h-full w-auto opacity-[0.04] pointer-events-none"
@@ -1400,13 +1437,24 @@ export default function CalendarPage() {
                       <div className="cal-empty-sub">{t("noTasksDesc")}</div>
                     </div>
                   );
-                  return fil.map(item=>(
-                    <ItemCard key={item.id} item={item} date={selectedDate} dateStr={ds}
-                      eventTypes={eventTypes} completions={completions}
-                      onToggle={toggleCompletion} onEdit={openEditPanel} onDelete={handleDeleteItem}
-                      getTypeLabel={getTypeLabel} renderIcon={renderIcon} formatTime={formatTime}
-                      t={t} dayNames={dayNames} isRTL={isRTL} source="sidebar"/>
-                  ));
+                  const sorted = fil.slice().sort((a,b) => {
+                    const aDone = isItemCompleted(a.id, selectedDate);
+                    const bDone = isItemCompleted(b.id, selectedDate);
+                    return aDone === bDone ? 0 : aDone ? 1 : -1;
+                  });
+                  return (
+                    <AnimatePresence initial={false}>
+                      {sorted.map(item => (
+                        <motion.div key={item.id} layout initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, marginBottom: 0 }} transition={{ duration: 0.25 }} style={{ overflow: 'hidden' }}>
+                          <ItemCard item={item} date={selectedDate} dateStr={ds}
+                            eventTypes={eventTypes} completions={completions}
+                            onToggle={toggleCompletion} onEdit={openEditPanel} onDelete={handleDeleteItem}
+                            getTypeLabel={getTypeLabel} renderIcon={renderIcon} formatTime={formatTime}
+                            t={t} dayNames={dayNames} isRTL={isRTL} source="sidebar"/>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  );
                 })()}
               </div>
             </>
@@ -1560,7 +1608,7 @@ export default function CalendarPage() {
           <DialogHeader>
             <DialogTitle className="font-[var(--cal-font-d)] text-lg font-normal">{t("confirmDelete")}</DialogTitle>
           </DialogHeader>
-          <p className="text-[13px] text-[var(--cal-text2)] leading-relaxed">
+          <p className="text-[13px] text-[var(--cal-text2)] md: leading-relaxed">
             {t("areYouSureDelete")} "<span className="font-semibold text-[var(--cal-text)]">{itemToDelete?.title}</span>"?
           </p>
           <DialogFooter className="flex items-center justify-between w-full flex-row gap-2">
@@ -1579,7 +1627,7 @@ export default function CalendarPage() {
           <DialogHeader>
             <DialogTitle className="font-[var(--cal-font-d)] text-lg font-normal">{t("confirmDeleteType")}</DialogTitle>
           </DialogHeader>
-          <p className="text-[13px] text-[var(--cal-text2)] leading-relaxed">
+          <p className="text-[13px] text-[var(--cal-text2)] md: leading-relaxed">
             {t("areYouSureDeleteType")} "<span className="font-semibold">{typeToDelete?.name}</span>"?
             <span className="block text-red-400 text-[11px] mt-1.5">{t("deleteTypeWarning")}</span>
           </p>

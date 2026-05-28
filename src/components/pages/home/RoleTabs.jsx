@@ -385,10 +385,10 @@ function FeatureCard({ feature, index, t }) {
 
 					{/* Text */}
 					<div className="flex flex-1 flex-col gap-1.5">
-						<h3 className="font-body text-base font-black leading-snug text-white transition-colors duration-200 group-hover:text-[var(--color-primary-200)] md:text-lg">
+						<h3 className="font-body text-base font-black md: leading-snug text-white transition-colors duration-200 group-hover:text-[var(--color-primary-200)] md:text-lg">
 							{feature.title}
 						</h3>
-						<p className="font-body text-xs leading-relaxed text-white/40 transition-colors duration-200 group-hover:text-white/60 md:text-sm">
+						<p className="font-body text-xs md: leading-relaxed text-white/40 transition-colors duration-200 group-hover:text-white/60 md:text-sm">
 							{feature.description}
 						</p>
 					</div>
