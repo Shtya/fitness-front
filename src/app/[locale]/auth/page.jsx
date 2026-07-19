@@ -276,11 +276,21 @@ export default function AuthPage() {
     if (!token) return;
     (async () => {
       try {
+        if (typeof window !== "undefined") {
+          const cleanUrl = new URL(window.location.href);
+          cleanUrl.searchParams.delete("accessToken");
+          window.history.replaceState({}, "", `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+        }
         if (typeof window !== "undefined") localStorage.setItem("accessToken", token);
         const { data: user } = await axiosInstance.get("/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (typeof window !== "undefined") localStorage.setItem("user", JSON.stringify(user || {}));
+        await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accessToken: token }),
+        });
         toast.success(t("success.signedIn"));
         router.push(getPostLoginPath(user?.role) || redirectUrl);
       } catch (e) {
