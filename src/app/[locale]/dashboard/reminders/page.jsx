@@ -308,7 +308,12 @@ export default function RemindersPage() {
 		})();
 
 		// SW registration (separate)
-		if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window) {
+		if (
+			process.env.NODE_ENV !== 'development' &&
+			typeof window !== 'undefined' &&
+			'serviceWorker' in navigator &&
+			'PushManager' in window
+		) {
 			(async () => {
 				try {
 					const registration = await navigator.serviceWorker.register('/sw.js', {

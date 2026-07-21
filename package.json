@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:whatsapp": "node --experimental-default-type=module --test \"src/app/[locale]/dashboard/whatsapp/whatsapp-utils.test.mjs\"",
+    "test:whatsapp": "node --experimental-default-type=module --test \"src/app/[locale]/dashboard/whatsapp/whatsapp-utils.test.mjs\" \"src/app/[locale]/dashboard/whatsapp/demo/demo-read-model.test.mjs\"",
     "android": "expo start --android",
     "web": "expo start --web"
   },

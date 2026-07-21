@@ -13,6 +13,7 @@ import {
   AlertCircle, TrendingUp, Dumbbell, CheckCircle2, XCircle,
   ChevronRight, Sparkles, Target, ArrowUpRight, Flame, Star, Shield,
 } from 'lucide-react';
+import { PageHeader } from '@/components/molecules/PageHeader';
 
 /* ════════════════════════════════════════════════════════
    PREVIEW DATA
@@ -217,84 +218,6 @@ const MetricCard = ({ icon: Icon, label, value, sub, accentColor, accentBg, dela
       <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">{label}</p>
       <p className="text-3xl font-bold tabular-nums md: leading-none text-slate-900">{count.toLocaleString()}</p>
       {sub && <p className="text-[11px] text-slate-400 mt-2">{sub}</p>}
-    </div>
-  );
-};
-
-/* ════════════════════════════════════════════════════════
-   HERO BANNER — redesigned as a contained "command bar"
-   Senior designer choice: not full-bleed gradient,
-   instead a structured panel with real information density
-════════════════════════════════════════════════════════ */
-const HeroBanner = ({ kpis, t }) => {
-  const activeRate = Math.round((kpis.activeClients / kpis.totalClients) * 100);
-  const [filled, setFilled] = useState(false);
-  useEffect(() => { const id = setTimeout(() => setFilled(true), 500); return () => clearTimeout(id); }, []);
-
-  const pills = [
-    { icon: UserPlus, val: kpis.newClients,          label: t('kpi.newClients') },
-    { icon: Bell,     val: kpis.unreadNotifications,  label: t('kpi.notifications') },
-    { icon: FileText, val: kpis.formsSubmissions,     label: t('kpi.formSubmissions') },
-    { icon: XCircle,  val: kpis.churnedThisRange,     label: t('kpi.churned') },
-  ];
-
-  return (
-    <div
-      className="rounded-2xl overflow-hidden"
-      style={{
-        background: 'linear-gradient(135deg, var(--color-gradient-from) 0%, var(--color-gradient-via) 55%, var(--color-gradient-to) 100%)',
-      }}
-    >
-      {/* subtle grid overlay */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
-        style={{
-          backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 31px,rgba(255,255,255,1) 31px,rgba(255,255,255,1) 32px), repeating-linear-gradient(90deg,transparent,transparent 31px,rgba(255,255,255,1) 31px,rgba(255,255,255,1) 32px)',
-        }}
-      />
-
-      <div className="relative p-6 sm:p-8">
-        {/* Top row */}
-        <div className="flex flex-wrap items-start justify-between gap-6">
-          {/* Left: Identity */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-50" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
-              </span>
-              <span className="text-white/60 text-[10px] font-semibold uppercase tracking-[0.2em]">
-                {t('liveLabel')}
-              </span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-white md: leading-tight tracking-tight">
-              {t('subtitle')}
-            </h1>
-            <p className="text-white/50 text-xs mt-2 flex items-center gap-1.5">
-              <Clock size={11} />
-              {t('allClients')}
-            </p>
-          </div>
-
-          {/* Right: Active rate ring */}
-          <div className="flex items-center gap-5">
-            
-
-            {/* Quick stats */}
-            <div className="grid grid-cols-2 gap-2">
-              {pills.map((p, i) => (
-                <div key={i}
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors border border-white/10 rounded-xl px-3 py-2 cursor-default">
-                  <p.icon size={12} className="text-white/60 flex-shrink-0" />
-                  <div>
-                    <p className="text-white text-sm font-bold md: leading-none">{p.val}</p>
-                    <p className="text-white/50 text-[10px] md: leading-tight mt-0.5">{p.label}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
@@ -710,35 +633,6 @@ const TopConversations = ({ data, t }) => {
 };
 
 /* ════════════════════════════════════════════════════════
-   PAGE HEADER
-════════════════════════════════════════════════════════ */
-const PageHeader = ({ from, to, loading, onRefresh, PREVIEW, t }) => (
-  <div className="flex items-center justify-between gap-4">
-    <div>
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-[10px] font-semibold text-[var(--color-primary-500)] uppercase tracking-widest">
-          {t('period')}
-        </span>
-        <span className="text-slate-300 text-xs">·</span>
-        <span className="text-xs text-slate-500 font-medium">
-          {t('dateRange', { from, to })}
-        </span>
-      </div>
-      <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('title')}</h1>
-    </div>
-    <button
-      onClick={onRefresh}
-      disabled={loading || PREVIEW}
-      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-md shadow-[var(--color-primary-200)] transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:-translate-y-px hover:shadow-lg active:translate-y-0"
-      style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
-    >
-      <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-      {t('refresh')}
-    </button>
-  </div>
-);
-
-/* ════════════════════════════════════════════════════════
    MAIN PAGE
 ════════════════════════════════════════════════════════ */
 export default function DashboardPage({ PREVIEW = true, api: apiClient }) {
@@ -792,8 +686,35 @@ export default function DashboardPage({ PREVIEW = true, api: apiClient }) {
           </div>
         )}
 
-        {/* Hero banner */}
-        {kpis && <HeroBanner kpis={kpis} t={t} />}
+        {/* Page header — same PageHeader used across dashboard pages */}
+        {kpis && (
+          <PageHeader
+            title={t('title')}
+            desc={t('subtitle')}
+            icon={Activity}
+            stats={[
+              { label: t('kpi.newClients'), value: kpis.newClients, icon: UserPlus },
+              { label: t('kpi.notifications'), value: kpis.unreadNotifications, icon: Bell },
+              { label: t('kpi.formSubmissions'), value: kpis.formsSubmissions, icon: FileText },
+              { label: t('kpi.churned'), value: kpis.churnedThisRange, icon: XCircle },
+            ]}
+            actions={
+              <button
+                onClick={fetchStats}
+                disabled={loading || PREVIEW}
+                className="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-black text-white transition-all hover:scale-[1.03] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                style={{
+                  background: 'rgba(255,255,255,0.22)',
+                  backdropFilter: 'blur(16px)',
+                  boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.3),0 4px 16px rgba(0,0,0,0.1)',
+                }}
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                {t('refresh')}
+              </button>
+            }
+          />
+        )}
 
         {/* KPI grid — 4 cols on lg, 2 on sm */}
         {kpis && (

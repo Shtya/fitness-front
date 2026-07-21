@@ -14,10 +14,11 @@ import {
 	Search, Download, ChevronDown,
 	ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
 	Image as ImageIcon, X, Maximize2, SlidersHorizontal,
-	Package, Filter, ArrowUpDown, ZoomIn, ZoomOut,
+	Package, Filter, ArrowUpDown, ZoomIn, ZoomOut, Check,
 } from "lucide-react";
 import { baseImg } from "@/utils/axios";
 import { useTranslations } from "next-intl";
+import { ActionButton } from "./Actions";
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const ACTION_KEYS = new Set(["actions", "options"]);
@@ -794,6 +795,38 @@ function RowIndexBadge({ index }) {
 	);
 }
 
+// ─── Row / header checkbox ────────────────────────────────────────────────────
+const RowCheckbox = memo(function RowCheckbox({ checked, indeterminate = false, onChange }) {
+	const ref = useRef(null);
+	useEffect(() => { if (ref.current) ref.current.indeterminate = indeterminate; }, [indeterminate]);
+
+	return (
+		<label
+			className="relative inline-flex items-center justify-center w-5 h-5 cursor-pointer"
+			onClick={(e) => e.stopPropagation()}
+		>
+			<input ref={ref} type="checkbox" checked={checked} onChange={onChange} className="peer sr-only" />
+			<span
+				className={cn(
+					"w-[18px] h-[18px] rounded-md border-2 flex items-center justify-center transition-all duration-150",
+					(checked || indeterminate) ? "border-transparent" : "border-slate-300 bg-white hover:border-[var(--color-primary-400)]",
+				)}
+				style={
+					(checked || indeterminate)
+						? {
+							background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))",
+							boxShadow: "0 2px 6px color-mix(in oklab, var(--color-primary-500) 35%, transparent)",
+						}
+						: {}
+				}
+			>
+				{checked && <Check size={11} strokeWidth={3} className="text-white" />}
+				{indeterminate && !checked && <span className="w-2 h-0.5 rounded-full bg-white" />}
+			</span>
+		</label>
+	);
+});
+
 // ─── Column header with sort animation ───────────────────────────────────────
 const ColumnHeader = memo(function ColumnHeader({ col, idx }) {
 	return (
@@ -829,15 +862,48 @@ export default function DataTable({
 	perPageOptions = PER_PAGE_OPTS, className = "",
 	title, subtitle, headerExtra,
 	showRowIndex = false,
+	selectable = false, bulkActions = [], onSelectionChange,
 }) {
 	const isRTL = useIsRTL();
 	const [filtersOpen, setFiltersOpen] = useState(false);
 	const [imgModal, setImgModal] = useState({ open: false, src: "", alt: "" });
 	const [hoveredRow, setHoveredRow] = useState(null);
+	const [selected, setSelected] = useState(() => new Set());
 
 	const openImage = useCallback((src, alt = "") => setImgModal({ open: true, src, alt }), []);
 	const closeImage = useCallback(() => setImgModal({ open: false, src: "", alt: "" }), []);
-	const helpers = useMemo(() => ({ openImage }), [openImage]);
+
+	// clear selection whenever the underlying dataset changes (new page, search, filter, refetch…)
+	useEffect(() => { setSelected(new Set()); }, [data]);
+
+	const toggleRow = useCallback((key) => {
+		setSelected((prev) => {
+			const next = new Set(prev);
+			next.has(key) ? next.delete(key) : next.add(key);
+			onSelectionChange?.(Array.from(next));
+			return next;
+		});
+	}, [onSelectionChange]);
+
+	const pageKeys = useMemo(() => data.map((row, i) => rowKey(row, i)), [data, rowKey]);
+	const allSelectedOnPage = pageKeys.length > 0 && pageKeys.every((k) => selected.has(k));
+	const someSelectedOnPage = !allSelectedOnPage && pageKeys.some((k) => selected.has(k));
+
+	const toggleAll = useCallback(() => {
+		setSelected((prev) => {
+			const allSelected = pageKeys.length > 0 && pageKeys.every((k) => prev.has(k));
+			const next = allSelected ? new Set() : new Set(pageKeys);
+			onSelectionChange?.(Array.from(next));
+			return next;
+		});
+	}, [pageKeys, onSelectionChange]);
+
+	const clearSelection = useCallback(() => {
+		setSelected(new Set());
+		onSelectionChange?.([]);
+	}, [onSelectionChange]);
+
+	const helpers = useMemo(() => ({ openImage, isSelected: (key) => selected.has(key), toggleRow }), [openImage, selected, toggleRow]);
 
 	const hasFilters = Boolean(filters);
 	const stickyEnd = isRTL ? "left-0" : "right-0";
@@ -846,12 +912,29 @@ export default function DataTable({
 		: "shadow-[-8px_0_16px_-10px_rgba(99,102,241,0.14)]";
 
 	const allColumns = useMemo(() => {
-		if (!showRowIndex) return columns;
-		return [
-			{ key: "__idx__", header: "#", headClassName: "w-10", cell: (_, i) => <RowIndexBadge index={i + 1} /> },
-			...columns,
-		];
-	}, [columns, showRowIndex]);
+		let cols = columns;
+		if (showRowIndex) {
+			cols = [
+				{ key: "__idx__", header: "#", headClassName: "w-10", cell: (_, i) => <RowIndexBadge index={i + 1} /> },
+				...cols,
+			];
+		}
+		if (selectable) {
+			cols = [
+				{
+					key: "__select__",
+					header: <RowCheckbox checked={allSelectedOnPage} indeterminate={someSelectedOnPage} onChange={toggleAll} />,
+					headClassName: "w-10",
+					cell: (row, i, h) => {
+						const key = rowKey(row, i);
+						return <RowCheckbox checked={h.isSelected(key)} onChange={() => h.toggleRow(key)} />;
+					},
+				},
+				...cols,
+			];
+		}
+		return cols;
+	}, [columns, showRowIndex, selectable, allSelectedOnPage, someSelectedOnPage, toggleAll, rowKey]);
 
 	return (
 		<div className={cn("w-full ", className)}>
@@ -877,6 +960,67 @@ export default function DataTable({
 					className="px-5 pt-4 pb-4"
 					style={{ borderBottom: "1px solid var(--color-primary-50)" }}
 				>
+					<AnimatePresence initial={false}>
+						{selectable && selected.size > 0 && (
+							<motion.div
+								initial={{ height: 0, opacity: 0 }}
+								animate={{ height: "auto", opacity: 1 }}
+								exit={{ height: 0, opacity: 0 }}
+								transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+								className="overflow-hidden"
+							>
+								<div
+									className="flex items-center gap-3 flex-wrap mb-3 px-4 py-2.5 rounded-xl"
+									style={{
+										background: "color-mix(in oklab, var(--color-primary-50) 70%, white)",
+										border: "1.5px solid var(--color-primary-200)",
+									}}
+								>
+									<span className="text-sm font-bold" style={{ color: "var(--color-primary-700)" }}>
+										{(labels.selectedCount ?? "{count} selected").replace("{count}", selected.size)}
+									</span>
+									<button
+										type="button"
+										onClick={clearSelection}
+										className="text-xs font-semibold underline underline-offset-2 hover:opacity-70 transition-opacity"
+										style={{ color: "var(--color-primary-500)" }}
+									>
+										{labels.clearSelection ?? "Clear"}
+									</button>
+									{bulkActions.length > 0 && (
+										<div className="flex items-center gap-2 ms-auto">
+											{bulkActions.map((action) => (
+												<ActionButton
+													key={action.key}
+													icon={action.icon}
+													label={action.label}
+													variant={action.variant || "red"}
+													disabled={action.disabled}
+													loading={action.loading}
+													confirm={
+														action.confirm
+															? {
+																...action.confirm,
+																message: typeof action.confirm.message === "function"
+																	? action.confirm.message(selected.size)
+																	: action.confirm.message,
+															}
+															: undefined
+													}
+													onClick={() => {
+														const keys = Array.from(selected);
+														const rows = data.filter((row, i) => selected.has(rowKey(row, i)));
+														action.onClick?.(keys, rows);
+													}}
+												/>
+											))}
+										</div>
+									)}
+								</div>
+							</motion.div>
+						)}
+					</AnimatePresence>
+
 					<TableToolbar
 						searchValue={searchValue}
 						onSearchChange={onSearchChange}
@@ -981,6 +1125,7 @@ export default function DataTable({
 									data.map((row, i) => {
 										const key = rowKey(row, i);
 										const isHovered = hoveredRow === key;
+										const isSelected = selectable && selected.has(key);
 										return (
 											<motion.tr
 												key={key}
@@ -991,10 +1136,11 @@ export default function DataTable({
 												className={cn(
 													"group border-b relative transition-colors duration-150",
 													striped && i % 2 === 1 && "bg-[color-mix(in_oklab,var(--color-primary-50)_35%,white)]",
+													isSelected && "!bg-[color-mix(in_oklab,var(--color-primary-100)_50%,white)]",
 												)}
 												style={{
 													borderColor: "var(--color-primary-50)",
-													boxShadow: hoverable && isHovered
+													boxShadow: (hoverable && isHovered) || isSelected
 														? `inset ${isRTL ? "-3px" : "3px"} 0 0 0 var(--color-primary-500)`
 														: undefined,
 												}}
@@ -1002,7 +1148,7 @@ export default function DataTable({
 												onMouseLeave={() => hoverable && setHoveredRow(null)}
 											>
 												{allColumns.map((col) => {
-													const cellStyle = isHovered && hoverable
+													const cellStyle = (isHovered && hoverable) || isSelected
 														? { background: "color-mix(in oklab, var(--color-primary-50) 45%, white)" }
 														: {};
 

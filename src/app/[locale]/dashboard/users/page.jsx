@@ -35,7 +35,7 @@ import { useUser } from '@/hooks/useUser';
 import PhoneField from '@/components/atoms/PhoneField';
 import CaloriesStep from '@/components/pages/dashboard/users/CaloriesStep';
 import { Modal, StatCard } from '@/components/dashboard/ui/UI';
-import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import DataTable, { FilterField } from '@/components/atoms/Datatable';
 
 /* ---------- helpers ---------- */
@@ -1305,6 +1305,24 @@ export default function UsersList() {
 		}
 	};
 
+	const [bulkDeleting, setBulkDeleting] = useState(false);
+	const deleteSelectedUsers = async (ids) => {
+		if (!ids?.length) return;
+		setBulkDeleting(true);
+		try {
+			const results = await Promise.allSettled(ids.map(id => api.delete(`/auth/user/${id}`)));
+			const failed = results.filter(r => r.status === 'rejected').length;
+			fetchUsers(); fetchStats();
+			if (failed === 0) {
+				Notification(t('alerts.usersDeleted', { count: ids.length }), 'success');
+			} else {
+				Notification(t('alerts.deleteFailed'), 'error');
+			}
+		} finally {
+			setBulkDeleting(false);
+		}
+	};
+
 	const I = (Icon, cls = '') => <Icon className={`h-4 w-4 ${cls}`} />;
 
 	const updateUserStatus = async (row, status) => {
@@ -1598,12 +1616,28 @@ export default function UsersList() {
 		<div className='space-y-6'>
 
 			{/* ===== STATS HEADER ===== */}
-			<GradientStatsHeader
-				onClick={() => setWizardOpen(true)}
-				btnName={['admin', 'coach'].includes(viewerRole) ? t('header.createNewUser') : null}
+			<PageHeader
 				title={t('header.title')}
 				desc={t('header.subtitle')}
-				loadingStats={loading}
+				icon={Users}
+				actions={
+					['admin', 'coach'].includes(viewerRole) && (
+						<motion.button
+							whileHover={{ scale: 1.04 }}
+							whileTap={{ scale: 0.95 }}
+							onClick={() => setWizardOpen(true)}
+							className="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-black text-white"
+							style={{
+								background: 'rgba(255,255,255,0.22)',
+								backdropFilter: 'blur(16px)',
+								boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.3),0 4px 16px rgba(0,0,0,0.1)',
+							}}
+						>
+							<Plus className="h-4 w-4" />
+							{t('header.createNewUser')}
+						</motion.button>
+					)
+				}
 			>
 				{String(myRole || '').toLowerCase() === 'admin' && (
 					<>
@@ -1613,7 +1647,7 @@ export default function UsersList() {
 						<StatCard icon={UserCircle} title={t('stats.clients')} value={stats.clients} />
 					</>
 				)}
-			</GradientStatsHeader>
+			</PageHeader>
 
 
 
@@ -1649,6 +1683,8 @@ export default function UsersList() {
 							emptyTitle: t('common.noResults'),
 							emptySubtitle: t('common.tryAdjusting'),
 							preview: t('common.preview'),
+							selectedCount: t('common.selectedCount'),
+							clearSelection: t('common.clearSelection'),
 						}}
 						pagination={{
 							current_page: page,
@@ -1663,6 +1699,18 @@ export default function UsersList() {
 						perPageOptions={[10, 20, 30, 50]}
 						striped
 						hoverable
+						selectable={viewerRole === 'admin'}
+						bulkActions={viewerRole === 'admin' ? [
+							{
+								key: 'delete',
+								label: t('actions.deleteSelected'),
+								icon: <Trash2 />,
+								variant: 'red',
+								loading: bulkDeleting,
+								confirm: { message: (count) => t('dialogs.deleteMultipleUsersConfirm', { count }) },
+								onClick: (ids) => deleteSelectedUsers(ids),
+							},
+						] : []}
 					/>
 				</div>
 			</div>

@@ -2,7 +2,7 @@ import { Toaster } from 'react-hot-toast';
 import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { notFound } from 'next/navigation';
 import { routing } from '../../i18n/routing';
-import { Cairo, Inter, Open_Sans, Roboto_Mono, Space_Grotesk } from 'next/font/google';
+import { Inter, Open_Sans, Roboto_Mono, Space_Grotesk, Tajawal } from 'next/font/google';
 import './globals.css';
 import "./theme-tokens.css";
 
@@ -39,10 +39,10 @@ const openSans = Open_Sans({
   display: 'swap',
 });
 
-const arabicFont = Cairo({
+const arabicFont = Tajawal({
   variable: '--font-arabic',
   subsets: ['arabic'],
-  weight: ['300', '400', '500', '600', '700', '800'],
+  weight: ['300', '400', '500', '700', '800'],
   display: 'swap',
 });
 

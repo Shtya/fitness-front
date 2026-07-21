@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import api from '@/utils/axios';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, PanelLeftClose, PanelLeftOpen, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Zap, TrendingUp, BookOpen, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Zap, TrendingUp, BookOpen, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines } from 'lucide-react';
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
@@ -21,8 +21,13 @@ import { useRouter as useI18nRouter } from '@/i18n/navigation';
 /* ─── Constants ─────────────────────────────────────────────── */
 const SIDEBAR_W = 272;
 const SIDEBAR_W_COLLAPSED = 72;
+const SIDEBAR_MARGIN = 16;
+const SIDEBAR_MARGIN_BOTTOM = 15;
+const SIDEBAR_RADIUS = 22;
+const SIDEBAR_FONT_LTR = "var(--font-inter), 'Segoe UI', system-ui, -apple-system, sans-serif";
 const LS_COLLAPSED = 'sidebar:collapsed';
 const LS_HIDDEN = 'sidebar:hidden-items';
+const LS_MARKETPLACE = 'sidebar:marketplace-installed';
 const LS_PALETTE = 'sidebar:palette';
 
 /* ─── Motion configs ────────────────────────────────────────── */
@@ -194,17 +199,6 @@ function useSidebarPalette() {
 
 /* ─── NAV CONFIG ─────────────────────────────────────────────── */
 export const ITEM_META = {
-  aiStudio: {
-    id: 'aiStudio',
-    nameKey: 'aiStudio',
-    href: '/ai-studio',
-    icon: BrainCircuit,
-    descKey: 'descriptions.aiStudio',
-    group: 'ai',
-    defaultVisible: true,
-    required: true,
-    highlightVariant: 'premium',
-  },
   overview_admin: { id: 'overview_admin', nameKey: 'overview', href: '/dashboard', icon: LayoutDashboard, descKey: 'descriptions.overview_admin', group: 'main', defaultVisible: true, required: true },
   overview_client: { id: 'overview_client', nameKey: 'overview', href: '/dashboard/my/stats', icon: Activity, descKey: 'descriptions.overview_client', group: 'main', defaultVisible: true, required: true },
   overview_superadmin: { id: 'overview_superadmin', nameKey: 'overview', href: '/dashboard', icon: ShieldCheck, descKey: 'descriptions.overview_superadmin', group: 'main', defaultVisible: true, required: true },
@@ -225,14 +219,15 @@ export const ITEM_META = {
   recipes: { id: 'recipes', nameKey: 'recipes', href: '/dashboard/my/recipes', icon: Coffee, descKey: 'descriptions.recipes', group: 'workspace', defaultVisible: true, required: false },
   weeklyStrength: { id: 'weeklyStrength', nameKey: 'weeklyStrength', href: '/dashboard/my/report', icon: TrendingUp, descKey: 'descriptions.weeklyStrength', group: 'workspace', defaultVisible: true, required: false },
   myReminders: { id: 'myReminders', nameKey: 'myReminders', href: '/dashboard/reminders', icon: Bell, descKey: 'descriptions.myReminders', group: 'workspace', defaultVisible: true, required: false },
-  todos: { id: 'todos', nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo, descKey: 'descriptions.todos', group: 'workspace', defaultVisible: true, required: false },
-  calendar: { id: 'calendar', nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays, descKey: 'descriptions.calendar', group: 'workspace', defaultVisible: true, required: false },
+  todos: { id: 'todos', nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo, descKey: 'descriptions.todos', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
+  calendar: { id: 'calendar', nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays, descKey: 'descriptions.calendar', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
   messages: { id: 'messages', nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare, descKey: 'descriptions.messages', group: 'communication', defaultVisible: true, required: false },
   whatsapp: { id: 'whatsapp', nameKey: 'whatsapp', href: '/dashboard/whatsapp', icon: MessageCircle, descKey: 'descriptions.whatsapp', group: 'communication', defaultVisible: true, required: false },
+  transcript: { id: 'transcript', nameKey: 'transcript', href: '/dashboard/transcript', icon: AudioLines, descKey: 'descriptions.transcript', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
   calorieCalculator: { id: 'calorieCalculator', nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator, descKey: 'descriptions.calorieCalculator', group: 'tools', defaultVisible: true, required: false },
   notifications: { id: 'notifications', nameKey: 'notifications', href: '/dashboard/notifications', icon: Bell, descKey: 'descriptions.notifications', group: 'workspace', defaultVisible: true, required: false },
-  billing: { id: 'billing', nameKey: 'billing', href: '/dashboard/billing', icon: CreditCard, descKey: 'descriptions.billing', group: 'finance', defaultVisible: true, required: false },
-  money: { id: 'money', nameKey: 'money', href: '/money', icon: Wallet, descKey: 'descriptions.money', group: 'finance', defaultVisible: true, required: false },
+  billing: { id: 'billing', nameKey: 'billing', href: '/dashboard/billing', icon: CreditCard, descKey: 'descriptions.billing', group: 'finance', defaultVisible: false, required: false, marketplace: true },
+  money: { id: 'money', nameKey: 'money', href: '/money', icon: Wallet, descKey: 'descriptions.money', group: 'finance', defaultVisible: false, required: false, marketplace: true },
   profile_admin: { id: 'profile_admin', nameKey: 'profile', href: '/dashboard/my-account', icon: UserIcon, descKey: 'descriptions.profile_admin', group: 'account', defaultVisible: true, required: true },
   profile_client: { id: 'profile_client', nameKey: 'profile', href: '/dashboard/my/profile', icon: UserIcon, descKey: 'descriptions.profile_client', group: 'account', defaultVisible: true, required: true },
 };
@@ -256,7 +251,7 @@ export const NAV = [
   {
     role: 'admin',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.messages }, { ...ITEM_META.whatsapp }, { ...ITEM_META.notifications }, { ...ITEM_META.calorieCalculator }],
+    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.whatsapp }, { ...ITEM_META.notifications }, { ...ITEM_META.calorieCalculator }],
   },
   {
     role: 'admin',
@@ -281,7 +276,7 @@ export const NAV = [
   {
     role: 'client',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.calendar }, { ...ITEM_META.messages }, { ...ITEM_META.calorieCalculator }, { ...ITEM_META.money }, { ...ITEM_META.profile_client }],
+    items: [{ ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.calorieCalculator }, { ...ITEM_META.money }, { ...ITEM_META.profile_client }],
   },
   {
     role: 'coach',
@@ -296,7 +291,7 @@ export const NAV = [
   {
     role: 'coach',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.messages }, { ...ITEM_META.whatsapp }, { ...ITEM_META.notifications }, { ...ITEM_META.calorieCalculator }],
+    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.whatsapp }, { ...ITEM_META.notifications }, { ...ITEM_META.calorieCalculator }],
   },
   {
     role: 'coach',
@@ -316,7 +311,7 @@ export const NAV = [
   {
     role: 'super_admin',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.whatsapp }],
+    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.whatsapp }],
   },
   {
     role: 'super_admin',
@@ -388,6 +383,18 @@ function useHiddenItems() {
   );
   const resetAll = useCallback(() => setHidden([]), [setHidden]);
   return { hidden, isHidden, toggle, resetAll };
+}
+
+function useMarketplaceItems() {
+  const [installed, setInstalled] = useLocalStorageState(LS_MARKETPLACE, []);
+  const isInstalled = useCallback(id => installed.includes(id), [installed]);
+  const toggle = useCallback(
+    id => {
+      setInstalled(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+    },
+    [setInstalled],
+  );
+  return { installed, isInstalled, toggle };
 }
 
 export function useUnreadChats(pollMs = 300000) {
@@ -603,13 +610,13 @@ function ScrollShadow({ children, P }) {
 /* ─── SectionLabel ───────────────────────────────────────────── */
 function SectionLabel({ label, P }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 2px', marginBottom: 4, marginTop: 20 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 3px', marginBottom: 6, marginTop: 14 }}>
       <span
         style={{
-          fontSize: 9,
+          fontSize: 10,
           fontWeight: 800,
           textTransform: 'uppercase',
-          letterSpacing: '0.22em',
+          letterSpacing: '0.14em',
           color: P?.sectionLabel || '#94a3b8',
           whiteSpace: 'nowrap',
           flexShrink: 0,
@@ -618,146 +625,6 @@ function SectionLabel({ label, P }) {
       </span>
       <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, ${P?.border || 'rgba(0,0,0,0.07)'}, transparent)` }} />
     </div>
-  );
-}
-
-/* ─── AI Studio Item ─────────────────────────────────────────── */
-function AIStudioItem({ collapsed, pathname, searchParams, onNavigate, P }) {
-  const [hover, setHover] = useState(false);
-  const liRef = useRef(null);
-  const active = isPathActive(pathname, '/ai-studio', searchParams);
-  const t = useTranslations('nav');
-
-  if (collapsed) {
-    return (
-      <div ref={liRef} style={{ display: 'flex', justifyContent: 'center', padding: '2px 0', marginBottom: 10 }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
-        <Link href='/ai-studio' onClick={onNavigate}>
-          <motion.div
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.93 }}
-            style={{
-              position: 'relative',
-              width: 42,
-              height: 42,
-              borderRadius: 13,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-              boxShadow: hover ? '0 8px 24px color-mix(in srgb, var(--color-primary-500) 48%, transparent)' : '0 4px 14px color-mix(in srgb, var(--color-primary-500) 30%, transparent)',
-              color: '#fff',
-              overflow: 'hidden',
-              transition: 'box-shadow .2s',
-            }}>
-            <BrainCircuit style={{ width: 17, height: 17, position: 'relative', zIndex: 1 }} strokeWidth={2} />
-            <motion.div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} animate={{ x: ['-100%', '200%'] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'linear', repeatDelay: 3 }}>
-              <div style={{ width: '60%', height: '100%', background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.25) 50%, transparent 70%)' }} />
-            </motion.div>
-          </motion.div>
-        </Link>
-        <AnimatePresence>{hover && <CollapsedTooltip label={t('aiStudioCard.tooltip')} anchorRef={liRef} />}</AnimatePresence>
-      </div>
-    );
-  }
-
-  return (
-    <Link href='/ai-studio' onClick={onNavigate} style={{ display: 'block' }}>
-      <motion.div
-        whileTap={{ scale: 0.985 }}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-        style={{
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 11,
-          borderRadius: 14,
-          padding: '11px 13px',
-          overflow: 'hidden',
-          cursor: 'pointer',
-          background: active ? 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' : hover ? 'linear-gradient(135deg, color-mix(in srgb, var(--color-gradient-from) 94%, white), color-mix(in srgb, var(--color-gradient-to) 94%, white))' : 'linear-gradient(135deg, color-mix(in srgb, var(--color-gradient-from) 10%, white), color-mix(in srgb, var(--color-gradient-to) 10%, white))',
-          border: `1.5px solid color-mix(in srgb, var(--color-primary-400) ${active ? '0%' : '18%'}, transparent)`,
-          boxShadow: active ? '0 8px 28px color-mix(in srgb, var(--color-primary-500) 38%, transparent)' : hover ? '0 6px 22px color-mix(in srgb, var(--color-primary-500) 20%, transparent)' : '0 2px 10px color-mix(in srgb, var(--color-primary-500) 10%, transparent)',
-          transition: 'all .22s ease',
-        }}>
-        {/* Background orbs */}
-        <div
-          style={{
-            position: 'absolute',
-            top: -14,
-            right: -10,
-            width: 60,
-            height: 60,
-            borderRadius: '50%',
-            background: active ? 'rgba(255,255,255,0.09)' : 'color-mix(in srgb, var(--color-primary-400) 9%, transparent)',
-            filter: 'blur(14px)',
-            pointerEvents: 'none',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            bottom: -10,
-            left: 24,
-            width: 44,
-            height: 44,
-            borderRadius: '50%',
-            background: active ? 'rgba(255,255,255,0.05)' : 'color-mix(in srgb, var(--color-primary-300) 7%, transparent)',
-            filter: 'blur(12px)',
-            pointerEvents: 'none',
-          }}
-        />
-        {/* Icon */}
-        <div
-          style={{
-            position: 'relative',
-            zIndex: 1,
-            flexShrink: 0,
-            display: 'grid',
-            placeContent: 'center',
-            width: 34,
-            height: 34,
-            borderRadius: 10,
-            background: active ? 'rgba(255,255,255,0.22)' : 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-            color: '#fff',
-            boxShadow: active ? 'none' : '0 3px 10px color-mix(in srgb, var(--color-primary-500) 35%, transparent)',
-          }}>
-          <BrainCircuit style={{ width: 15, height: 15 }} strokeWidth={2} />
-          {/* Shimmer */}
-          <motion.div style={{ position: 'absolute', inset: 0, borderRadius: 10, pointerEvents: 'none', overflow: 'hidden' }} animate={{ x: ['-100%', '200%'] }} transition={{ duration: 2.8, repeat: Infinity, ease: 'linear', repeatDelay: 2.5 }}>
-            <div style={{ width: '70%', height: '100%', background: 'linear-gradient(105deg, transparent 25%, rgba(255,255,255,0.3) 50%, transparent 75%)' }} />
-          </motion.div>
-        </div>
-        {/* Label */}
-        <div style={{ position: 'relative', zIndex: 1, flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span
-              style={{
-                fontSize: 12.5,
-                fontWeight: 700,
-                color: active || hover ? '#fff' : 'var(--color-primary-700)',
-                letterSpacing: '-0.01em',
-              }}>
-              {t('aiStudioCard.title')}
-            </span>
-          </div>
-          <p
-            style={{
-              fontSize: 10.5,
-              fontWeight: 400,
-              marginTop: 1.5,
-              color: active || hover ? 'rgba(255,255,255,0.72)' : 'var(--color-primary-500)',
-              letterSpacing: '0.01em',
-            }}>
-            {t('aiStudioCard.subtitle')}
-          </p>
-        </div>
-        {/* Animated sparkle */}
-        <motion.div animate={{ rotate: [0, 15, -10, 0], scale: [1, 1.15, 0.95, 1] }} transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }} style={{ position: 'relative', zIndex: 1, flexShrink: 0 }}>
-          <Sparkles style={{ width: 14, height: 14, color: active || hover ? 'rgba(255,255,255,0.8)' : 'var(--color-primary-400)' }} strokeWidth={2} />
-        </motion.div>
-      </motion.div>
-    </Link>
   );
 }
 
@@ -788,8 +655,9 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
         {href ? (
           <Link href={href} onClick={onNavigate}>
             <motion.div
-              whileHover={{ scale: 1.06 }}
+              whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.93 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 28 }}
               style={{
                 position: 'relative',
                 display: 'flex',
@@ -797,7 +665,7 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
                 justifyContent: 'center',
                 width: 42,
                 height: 42,
-                borderRadius: 12,
+                borderRadius: 13,
                 transition: 'all .18s',
                 ...(active
                   ? {
@@ -805,33 +673,40 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
                       boxShadow: '0 4px 14px color-mix(in srgb, var(--color-primary-500) 32%, transparent)',
                       color: '#fff',
                     }
+                  : hover
+                  ? {
+                      background: 'color-mix(in srgb, var(--color-primary-500) 16%, transparent)',
+                      boxShadow: '0 4px 10px color-mix(in srgb, var(--color-primary-500) 16%, transparent)',
+                      color: 'var(--color-primary-600)',
+                    }
                   : {
-                      background: hover ? P?.bgHover || '#fff' : 'transparent',
-                      boxShadow: hover ? P?.shadow?.sm || '0 1px 3px rgba(0,0,0,0.06)' : 'none',
-                      color: hover ? 'var(--color-primary-600)' : P?.textMuted || '#64748b',
+                      background: 'color-mix(in srgb, var(--color-primary-500) 8%, transparent)',
+                      boxShadow: 'none',
+                      color: 'color-mix(in srgb, var(--color-primary-500) 60%, ' + (P?.textLight || '#94a3b8') + ')',
                     }),
               }}>
-              <Icon style={{ width: 16, height: 16 }} strokeWidth={active ? 2.5 : 2} />
+              <Icon style={{ width: 18, height: 18 }} strokeWidth={active ? 2.3 : 1.9} />
             </motion.div>
           </Link>
         ) : (
           <motion.div
-            whileHover={{ scale: 1.06 }}
+            whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.93 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 28 }}
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               width: 42,
               height: 42,
-              borderRadius: 12,
+              borderRadius: 13,
               cursor: 'pointer',
               transition: 'all .18s',
-              background: hover ? P?.bgHover || '#fff' : 'transparent',
-              boxShadow: hover ? P?.shadow?.sm : 'none',
-              color: hover ? 'var(--color-primary-600)' : P?.textMuted || '#64748b',
+              background: hover ? 'color-mix(in srgb, var(--color-primary-500) 16%, transparent)' : 'color-mix(in srgb, var(--color-primary-500) 8%, transparent)',
+              boxShadow: hover ? '0 4px 10px color-mix(in srgb, var(--color-primary-500) 16%, transparent)' : 'none',
+              color: hover ? 'var(--color-primary-600)' : 'color-mix(in srgb, var(--color-primary-500) 60%, ' + (P?.textLight || '#94a3b8') + ')',
             }}>
-            <Icon style={{ width: 16, height: 16 }} strokeWidth={2} />
+            <Icon style={{ width: 18, height: 18 }} strokeWidth={1.9} />
           </motion.div>
         )}
         <AnimatePresence>{hover && !hasChildren && <CollapsedTooltip label={label} anchorRef={liRef} />}</AnimatePresence>
@@ -893,29 +768,39 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
     return (
       <Link href={item.href} onClick={onNavigate} style={{ display: 'block' }}>
         <motion.div
+          whileHover={{ x: isRTL ? -2 : 2 }}
           whileTap={{ scale: 0.986 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 32 }}
           onMouseEnter={() => setHover(true)}
           onMouseLeave={() => setHover(false)}
           style={{
             position: 'relative',
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
+            gap: 11,
             borderRadius: 12,
-            padding: '7px 10px',
-            marginBottom: 1,
-            transition: 'all .18s',
+            padding: '8px 10px',
+            marginBottom: 2,
+            transition: 'background .18s, box-shadow .18s, border-color .18s',
             cursor: 'pointer',
             overflow: 'hidden',
+            border: '1px solid transparent',
             ...(active
               ? {
                   background: P?.bgActive || '#ffffff',
                   boxShadow: P?.shadow?.md || '0 4px 16px rgba(0,0,0,0.07)',
                   color: 'var(--color-primary-800)',
                 }
+              : hover
+              ? {
+                  background: `color-mix(in srgb, var(--color-primary-500) 5%, ${P?.bgCard || '#fff'})`,
+                  borderColor: 'color-mix(in srgb, var(--color-primary-400) 14%, transparent)',
+                  boxShadow: P?.shadow?.sm,
+                  color: P?.textMuted || '#64748b',
+                }
               : {
-                  background: hover ? P?.bgHover || 'rgba(255,255,255,0.9)' : 'transparent',
-                  boxShadow: hover ? P?.shadow?.sm : 'none',
+                  background: 'transparent',
+                  boxShadow: 'none',
                   color: P?.textMuted || '#64748b',
                 }),
           }}
@@ -944,24 +829,29 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
               flexShrink: 0,
               display: 'grid',
               placeContent: 'center',
-              width: 30,
-              height: 30,
-              borderRadius: 9,
-              transition: 'all .18s',
+              width: 34,
+              height: 34,
+              borderRadius: 11,
+              transition: 'all .2s cubic-bezier(.34,1.56,.64,1)',
+              transform: hover && !active ? 'scale(1.08)' : 'scale(1)',
               ...(active
                 ? {
                     background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
                     color: '#fff',
-                    boxShadow: '0 3px 10px color-mix(in srgb, var(--color-primary-500) 32%, transparent)',
+                    boxShadow: '0 4px 12px color-mix(in srgb, var(--color-primary-500) 38%, transparent)',
+                  }
+                : hover
+                ? {
+                    background: 'color-mix(in srgb, var(--color-primary-500) 16%, transparent)',
+                    color: 'var(--color-primary-600)',
+                    boxShadow: '0 4px 10px color-mix(in srgb, var(--color-primary-500) 16%, transparent)',
                   }
                 : {
-                    background: P?.iconBg || '#ffffff',
-                    color: hover ? 'var(--color-primary-500)' : P?.textLight || '#94a3b8',
-                    border: `1px solid ${P?.iconBorder || 'rgba(0,0,0,0.07)'}`,
-                    boxShadow: P?.shadow?.sm || '0 1px 3px rgba(0,0,0,0.06)',
+                    background: 'color-mix(in srgb, var(--color-primary-500) 8%, transparent)',
+                    color: 'color-mix(in srgb, var(--color-primary-500) 60%, ' + (P?.textLight || '#94a3b8') + ')',
                   }),
             }}>
-            <Icon style={{ width: 13, height: 13 }} strokeWidth={active ? 2.5 : 2} />
+            <Icon style={{ width: 16.5, height: 16.5 }} strokeWidth={active ? 2.3 : 1.9} />
           </span>
           {/* Label */}
           <span
@@ -972,11 +862,11 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              fontSize: 13,
-              fontWeight: active ? 650 : 460,
-              letterSpacing: '0.005em',
+              fontSize: 13.5,
+              fontWeight: active ? 700 : hover ? 600 : 530,
+              letterSpacing: '-0.006em',
               color: active ? 'var(--color-primary-800)' : hover ? P?.text || '#0f172a' : P?.textMuted || '#64748b',
-              transition: 'color .18s',
+              transition: 'color .18s, font-weight .18s',
             }}>
             {label}
           </span>
@@ -1002,7 +892,9 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
       <motion.button
         type='button'
         onClick={() => setOpen(v => !v)}
+        whileHover={{ x: isRTL ? -2 : 2 }}
         whileTap={{ scale: 0.986 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 32 }}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         style={{
@@ -1010,14 +902,15 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
           width: '100%',
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
+          gap: 11,
           borderRadius: 12,
-          padding: '7px 10px',
+          padding: '8px 10px',
           textAlign: isRTL ? 'right' : 'left',
-          border: 'none',
+          border: '1px solid transparent',
           cursor: 'pointer',
-          transition: 'all .18s',
-          background: open ? P?.bgActive || '#ffffff' : hover ? P?.bgHover || 'rgba(255,255,255,0.9)' : 'transparent',
+          transition: 'background .18s, box-shadow .18s, border-color .18s',
+          background: open ? P?.bgActive || '#ffffff' : hover ? `color-mix(in srgb, var(--color-primary-500) 5%, ${P?.bgCard || '#fff'})` : 'transparent',
+          borderColor: !open && hover ? 'color-mix(in srgb, var(--color-primary-400) 14%, transparent)' : 'transparent',
           boxShadow: open ? P?.shadow?.md : hover ? P?.shadow?.sm : 'none',
           color: open ? 'var(--color-primary-700)' : P?.textMuted || '#64748b',
         }}
@@ -1027,26 +920,30 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
             flexShrink: 0,
             display: 'grid',
             placeContent: 'center',
-            width: 30,
-            height: 30,
-            borderRadius: 9,
-            transition: 'all .18s',
+            width: 34,
+            height: 34,
+            borderRadius: 11,
+            transition: 'all .2s cubic-bezier(.34,1.56,.64,1)',
+            transform: hover && !open ? 'scale(1.08)' : 'scale(1)',
             ...(open
               ? {
-                  background: 'color-mix(in srgb, var(--color-primary-500) 10%, transparent)',
+                  background: 'color-mix(in srgb, var(--color-primary-500) 14%, transparent)',
                   color: 'var(--color-primary-600)',
-                  border: '1px solid color-mix(in srgb, var(--color-primary-400) 18%, transparent)',
+                }
+              : hover
+              ? {
+                  background: 'color-mix(in srgb, var(--color-primary-500) 16%, transparent)',
+                  color: 'var(--color-primary-600)',
+                  boxShadow: '0 4px 10px color-mix(in srgb, var(--color-primary-500) 16%, transparent)',
                 }
               : {
-                  background: P?.iconBg || '#ffffff',
-                  color: hover ? 'var(--color-primary-500)' : P?.textLight || '#94a3b8',
-                  border: `1px solid ${P?.iconBorder || 'rgba(0,0,0,0.07)'}`,
-                  boxShadow: P?.shadow?.sm || '0 1px 3px rgba(0,0,0,0.06)',
+                  background: 'color-mix(in srgb, var(--color-primary-500) 8%, transparent)',
+                  color: 'color-mix(in srgb, var(--color-primary-500) 60%, ' + (P?.textLight || '#94a3b8') + ')',
                 }),
           }}>
-          <Icon style={{ width: 13, height: 13 }} strokeWidth={2} />
+          <Icon style={{ width: 16.5, height: 16.5 }} strokeWidth={1.9} />
         </span>
-        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13, fontWeight: open ? 650 : 460, letterSpacing: '0.005em' }}>{label}</span>
+        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13.5, fontWeight: open ? 700 : hover ? 600 : 530, letterSpacing: '-0.006em' }}>{label}</span>
         {!open && groupActive && <span style={{ width: 5, height: 5, borderRadius: '50%', flexShrink: 0, background: 'var(--color-primary-400)' }} />}
         <motion.span animate={{ rotate: open ? 90 : 0 }} transition={{ duration: 0.2 }} style={{ color: open ? 'var(--color-primary-500)' : P?.textXLight || '#cbd5e1', flexShrink: 0 }}>
           <ChevronRight className='rtl:scale-x-[-1]' style={{ width: 12, height: 12 }} strokeWidth={2.5} />
@@ -1088,15 +985,16 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
   );
 }
 
-function NavSection({ sectionKey, items, pathname, searchParams, onNavigate, collapsed = false, t, totalUnread = 0, unreadNotifications = 0, isHidden, P }) {
+function NavSection({ sectionKey, items, pathname, searchParams, onNavigate, collapsed = false, t, totalUnread = 0, unreadNotifications = 0, isHidden, isInstalled, P, first = false }) {
   const t_nav = useTranslations('nav');
   const label = t_nav(sectionKey, { defaultValue: '' });
-  const visibleItems = items.filter(item => !isHidden(item.id));
+  const visibleItems = items.filter(item => !isHidden(item.id) && (!item.marketplace || isInstalled?.(item.id)));
   if (!visibleItems.length) return null;
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
-      {!collapsed && label && <SectionLabel label={label} P={P} />}
-      {collapsed && <div style={{ height: 6 }} />}
+      {!collapsed && label && !first && <SectionLabel label={label} P={P} />}
+      {!collapsed && first && <div style={{ height: 4 }} />}
+      {collapsed && <div style={{ height: first ? 2 : 6 }} />}
       {visibleItems.map(item => (
         <NavItem key={item.id || item.href || item.nameKey} item={item} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} P={P} />
       ))}
@@ -1150,7 +1048,7 @@ function Avatar({ user, size = 'md' }) {
 }
 
 /* ─── SidebarHeader ──────────────────────────────────────────── */
-function SidebarHeader({ user, collapsed, setCollapsed, P }) {
+function SidebarHeader({ user, collapsed, P }) {
   const t_r = useTranslations('');
   return (
     <div
@@ -1162,27 +1060,8 @@ function SidebarHeader({ user, collapsed, setCollapsed, P }) {
         backdropFilter: 'blur(12px)',
       }}>
       {collapsed ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
           <Avatar user={user} size='sm' />
-          <motion.button
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.93 }}
-            onClick={() => setCollapsed(v => !v)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 32,
-              height: 32,
-              borderRadius: 9,
-              border: `1px solid ${P?.border || 'rgba(0,0,0,0.07)'}`,
-              background: P?.bgCard || '#fff',
-              color: P?.textMuted || '#64748b',
-              cursor: 'pointer',
-              boxShadow: P?.shadow?.sm || '0 1px 3px rgba(0,0,0,0.06)',
-            }}>
-            <PanelLeftOpen style={{ width: 13, height: 13 }} strokeWidth={2} />
-          </motion.button>
         </div>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1204,26 +1083,6 @@ function SidebarHeader({ user, collapsed, setCollapsed, P }) {
             </MultiLangText>
             <p style={{ fontSize: 10, marginTop: 3, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--color-primary-400)' }}>{t_r(`myProfile.roles.${user?.role}`)}</p>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.93 }}
-            onClick={() => setCollapsed(v => !v)}
-            style={{
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 30,
-              height: 30,
-              borderRadius: 9,
-              border: `1px solid ${P?.border || 'rgba(0,0,0,0.07)'}`,
-              background: P?.bgCard || '#fff',
-              color: P?.textMuted || '#64748b',
-              cursor: 'pointer',
-              boxShadow: P?.shadow?.sm || '0 1px 3px rgba(0,0,0,0.06)',
-            }}>
-            <PanelLeftClose style={{ width: 13, height: 13 }} strokeWidth={2} />
-          </motion.button>
         </div>
       )}
     </div>
@@ -1300,30 +1159,30 @@ function SidebarLanguageToggle({ collapsed, P }) {
       <motion.button
         type='button'
         onClick={toggle}
-        whileHover={{ scale: 1.06 }}
+        whileHover={{ scale: 1.06, y: -1 }}
         whileTap={{ scale: 0.95 }}
         title={isEN ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
         style={{
-          width: 42,
-          height: 32,
-          borderRadius: 9,
+          width: 40,
+          height: 40,
+          borderRadius: 12,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
           ...btnBase,
           flexDirection: 'column',
-          gap: 1,
+          gap: 2,
           position: 'relative',
           overflow: 'hidden',
         }}>
-        <Globe style={{ width: 12, height: 12, color: P?.textMuted || '#64748b' }} strokeWidth={2} />
+        <Globe style={{ width: 14, height: 14, color: 'var(--color-primary-500)' }} strokeWidth={2.2} />
         <span
           style={{
-            fontSize: 7,
+            fontSize: 8,
             fontWeight: 800,
             letterSpacing: '0.08em',
-            color: 'var(--color-primary-500)',
+            color: P?.textMuted || '#64748b',
           }}>
           {locale.toUpperCase()}
         </span>
@@ -1336,7 +1195,7 @@ function SidebarLanguageToggle({ collapsed, P }) {
               background: P?.bgCard || '#fff',
               display: 'grid',
               placeItems: 'center',
-              borderRadius: 9,
+              borderRadius: 12,
             }}>
             <motion.div
               animate={{ rotate: 360 }}
@@ -1364,18 +1223,19 @@ function SidebarLanguageToggle({ collapsed, P }) {
     <motion.button
       type='button'
       onClick={toggle}
-      whileHover={{ scale: 1.005 }}
+      whileHover={{ scale: 1.005, y: -1 }}
       whileTap={{ scale: 0.995 }}
       dir='ltr'
       style={{
         position: 'relative',
         width: '100%',
-        height: 36,
-        borderRadius: 10,
+        height: 44,
+        borderRadius: 12,
         display: 'flex',
         alignItems: 'center',
         overflow: 'hidden',
         cursor: 'pointer',
+        transition: 'box-shadow .18s',
         ...btnBase,
       }}>
       <motion.span
@@ -1383,13 +1243,13 @@ function SidebarLanguageToggle({ collapsed, P }) {
         transition={snap}
         style={{
           position: 'absolute',
-          top: 3,
-          left: 3,
-          width: 'calc(50% - 3px)',
-          height: 'calc(100% - 6px)',
-          borderRadius: 8,
+          top: 4,
+          left: 4,
+          width: 'calc(50% - 4px)',
+          height: 'calc(100% - 8px)',
+          borderRadius: 9,
           background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-          boxShadow: '0 2px 6px color-mix(in srgb, var(--color-primary-500) 30%, transparent)',
+          boxShadow: '0 2px 8px color-mix(in srgb, var(--color-primary-500) 34%, transparent)',
           zIndex: 0,
         }}
       />
@@ -1407,22 +1267,22 @@ function SidebarLanguageToggle({ collapsed, P }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 4,
+              gap: 5,
             }}>
             <Globe
               style={{
-                width: 10,
-                height: 10,
+                width: 11,
+                height: 11,
                 color: isActive ? '#fff' : P?.textMuted || 'var(--color-primary-500)',
               }}
               strokeWidth={2.5}
             />
             <span
               style={{
-                fontSize: 10.5,
+                fontSize: 11.5,
                 fontWeight: 700,
                 color: isActive ? '#fff' : P?.textMuted || 'var(--color-primary-500)',
-                letterSpacing: '0.01em',
+                letterSpacing: '0.005em',
               }}>
               {label}
             </span>
@@ -1441,7 +1301,7 @@ function SidebarLanguageToggle({ collapsed, P }) {
               inset: 0,
               zIndex: 20,
               background: `${P?.bgCard || '#fff'}cc`,
-              borderRadius: 9,
+              borderRadius: 12,
               display: 'grid',
               placeItems: 'center',
             }}>
@@ -1521,33 +1381,45 @@ function SidebarThemeSwitcher({ collapsed, P }) {
         ref={triggerRef}
         type='button'
         onClick={() => setOpen(v => !v)}
-        whileHover={{ scale: collapsed ? 1.06 : 1.005 }}
+        whileHover={{ scale: collapsed ? 1.06 : 1.005, y: -1 }}
         whileTap={{ scale: collapsed ? 0.95 : 0.995 }}
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 8,
+          gap: 10,
           cursor: 'pointer',
           transition: 'all .18s',
-          ...(collapsed ? { width: 42, height: 32, borderRadius: 9, justifyContent: 'center' } : { width: '100%', height: 32, borderRadius: 9, padding: '0 10px' }),
+          ...(collapsed ? { width: 40, height: 40, borderRadius: 12, justifyContent: 'center' } : { width: '100%', height: 44, borderRadius: 12, padding: '0 10px' }),
           ...(open
             ? {
                 background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
                 color: '#fff',
                 border: '1px solid transparent',
-                boxShadow: '0 4px 12px color-mix(in srgb, var(--color-primary-500) 28%, transparent)',
+                boxShadow: '0 4px 14px color-mix(in srgb, var(--color-primary-500) 30%, transparent)',
               }
-            : { ...btnBase, color: P?.textMuted || '#64748b' }),
+            : { ...btnBase }),
         }}>
-        <Palette style={{ width: 12, height: 12, flexShrink: 0 }} strokeWidth={2} />
+        <span
+          style={{
+            flexShrink: 0,
+            display: 'grid',
+            placeContent: 'center',
+            width: collapsed ? 'auto' : 26,
+            height: collapsed ? 'auto' : 26,
+            borderRadius: 8,
+            background: open ? 'rgba(255,255,255,0.2)' : 'color-mix(in srgb, var(--color-primary-500) 12%, transparent)',
+            color: open ? '#fff' : 'var(--color-primary-600)',
+          }}>
+          <Palette style={{ width: collapsed ? 15 : 13, height: collapsed ? 15 : 13 }} strokeWidth={2.2} />
+        </span>
         {!collapsed && (
           <>
-            <span className='rtl:text-right ltr:text-left' style={{ fontSize: 11.5, fontWeight: 600, flex: 1, color: open ? '#fff' : P?.textMuted || '#64748b' }}>
+            <span className='rtl:text-right ltr:text-left' style={{ fontSize: 12.5, fontWeight: 650, flex: 1, letterSpacing: '-0.005em', color: open ? '#fff' : P?.text || '#334155' }}>
               {tTheme('trigger')}
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>{currentPalette && [currentPalette.primary[500], currentPalette.secondary[500], currentPalette.primary[300]].map((c, i) => <span key={i} style={{ width: 7, height: 7, borderRadius: 3, background: open ? 'rgba(255,255,255,0.6)' : c }} />)}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3.5, flexShrink: 0 }}>{currentPalette && [currentPalette.primary[500], currentPalette.secondary[500], currentPalette.primary[300]].map((c, i) => <span key={i} style={{ width: 8, height: 8, borderRadius: 3, background: open ? 'rgba(255,255,255,0.6)' : c }} />)}</div>
             <motion.span animate={{ rotate: open ? 180 : 0 }} transition={snap}>
-              <ChevronDown style={{ width: 11, height: 11, flexShrink: 0, color: open ? '#fff' : P?.textXLight || '#cbd5e1' }} strokeWidth={2.5} />
+              <ChevronDown style={{ width: 12, height: 12, flexShrink: 0, color: open ? '#fff' : P?.textXLight || '#cbd5e1' }} strokeWidth={2.5} />
             </motion.span>
           </>
         )}
@@ -1656,6 +1528,7 @@ function Toggle({ checked, onChange }) {
   return (
     <motion.button
       type='button'
+      dir='ltr'
       onClick={onChange}
       whileTap={{ scale: 0.93 }}
       style={{
@@ -1670,7 +1543,7 @@ function Toggle({ checked, onChange }) {
         boxShadow: checked ? '0 2px 8px color-mix(in srgb, var(--color-primary-500) 30%, transparent)' : 'none',
         transition: 'background .2s, box-shadow .2s',
       }}>
-      <motion.span animate={{ x: checked ? 18 : 2 }} transition={snap} style={{ position: 'absolute', top: 2, width: 16, height: 16, borderRadius: '50%', background: '#ffffff', boxShadow: '0 1px 4px rgba(0,0,0,0.18)' }} />
+      <motion.span animate={{ x: checked ? 18 : 2 }} transition={snap} style={{ position: 'absolute', top: 2, left: 0, width: 16, height: 16, borderRadius: '50%', background: '#ffffff', boxShadow: '0 1px 4px rgba(0,0,0,0.18)' }} />
     </motion.button>
   );
 }
@@ -1753,8 +1626,9 @@ const GROUP_CONFIG = {
 };
 
 /* ─── CustomizeSidebarModal ──────────────────────────────────── */
-function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden, resetAll, paletteKey, setPaletteKey, t }) {
+function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden, resetAll, isInstalled, toggleInstalled, paletteKey, setPaletteKey, t }) {
   const [search, setSearch] = useState('');
+  const [tab, setTab] = useState('nav');
   const searchRef = useRef(null);
 
   const allItems = useMemo(() => {
@@ -1779,15 +1653,28 @@ function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden
     return result;
   }, [sections]);
 
+  const navItems = useMemo(() => allItems.filter(i => !i.marketplace), [allItems]);
+  const marketplaceItems = useMemo(() => allItems.filter(i => i.marketplace), [allItems]);
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return allItems;
+    if (!search.trim()) return navItems;
     const q = search.toLowerCase();
-    return allItems.filter(item => {
+    return navItems.filter(item => {
       const label = item.nameKey?.toLowerCase() || '';
       const desc = (item.descKey || '').toLowerCase();
       return label.includes(q) || desc.includes(q);
     });
-  }, [allItems, search]);
+  }, [navItems, search]);
+
+  const filteredMarketplace = useMemo(() => {
+    if (!search.trim()) return marketplaceItems;
+    const q = search.toLowerCase();
+    return marketplaceItems.filter(item => {
+      const label = item.nameKey?.toLowerCase() || '';
+      const desc = (item.descKey || '').toLowerCase();
+      return label.includes(q) || desc.includes(q);
+    });
+  }, [marketplaceItems, search]);
 
   const grouped = useMemo(() => {
     const groups = {};
@@ -1811,8 +1698,10 @@ function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden
     return () => document.removeEventListener('keydown', fn);
   }, [open, onClose]);
 
-  const hiddenCount = allItems.filter(item => isHidden(item.id) && !item.required).length;
-  const visibleCount = allItems.filter(i => !isHidden(i.id)).length;
+  const hiddenCount = navItems.filter(item => isHidden(item.id) && !item.required).length;
+  const visibleCount = navItems.filter(i => !isHidden(i.id)).length;
+  const installedCount = marketplaceItems.filter(i => isInstalled?.(i.id)).length;
+  const marketplaceNewCount = marketplaceItems.length - installedCount;
 
   if (!open) return null;
 
@@ -1934,10 +1823,64 @@ function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden
                   </motion.button>
                 )}
               </div>
+              {/* Tabs */}
+              <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+                {[
+                  { key: 'nav', label: t('customize.tabs.navigation'), icon: LayoutGrid, badge: 0 },
+                  { key: 'market', label: t('customize.tabs.marketplace'), icon: Sparkles, badge: marketplaceNewCount },
+                ].map(tabItem => {
+                  const TabIcon = tabItem.icon;
+                  const isActive = tab === tabItem.key;
+                  return (
+                    <button
+                      key={tabItem.key}
+                      type='button'
+                      onClick={() => setTab(tabItem.key)}
+                      style={{
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '8px 13px',
+                        borderRadius: 10,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: isActive ? '1px solid transparent' : '1px solid rgba(0,0,0,0.07)',
+                        background: isActive ? 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' : '#fff',
+                        color: isActive ? '#fff' : '#64748b',
+                        boxShadow: isActive ? '0 4px 12px color-mix(in srgb, var(--color-primary-500) 28%, transparent)' : '0 1px 3px rgba(0,0,0,0.05)',
+                        transition: 'all .18s',
+                      }}>
+                      <TabIcon style={{ width: 12.5, height: 12.5 }} strokeWidth={2.2} />
+                      {tabItem.label}
+                      {tabItem.badge > 0 && (
+                        <span
+                          style={{
+                            display: 'grid',
+                            placeContent: 'center',
+                            minWidth: 16,
+                            height: 16,
+                            padding: '0 4px',
+                            borderRadius: 99,
+                            fontSize: 9,
+                            fontWeight: 800,
+                            background: isActive ? 'rgba(255,255,255,0.28)' : 'linear-gradient(135deg, #f59e0b, #ea580c)',
+                            color: '#fff',
+                          }}>
+                          {tabItem.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Modal Body */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px 20px' }}>
+              {tab === 'nav' ? (
+              <>
               {/* Palette Picker — always visible when not searching */}
               {!search.trim() && (
                 <div style={{ marginBottom: 24 }}>
@@ -2078,6 +2021,125 @@ function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden
                   );
                 })
               )}
+              </>
+              ) : (
+                <>
+                  <div style={{ marginBottom: 16 }}>
+                    <p style={{ fontSize: 12.5, color: '#64748b', lineHeight: 1.55 }}>{t('customize.marketplace.subtitle')}</p>
+                  </div>
+                  {filteredMarketplace.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8' }}>
+                      {marketplaceItems.length === 0 ? (
+                        <>
+                          <Sparkles style={{ width: 28, height: 28, margin: '0 auto 10px', opacity: 0.3 }} strokeWidth={1.5} />
+                          <p style={{ fontSize: 13, fontWeight: 500 }}>{t('customize.marketplace.emptyTitle')}</p>
+                        </>
+                      ) : (
+                        <>
+                          <Search style={{ width: 28, height: 28, margin: '0 auto 10px', opacity: 0.3 }} strokeWidth={1.5} />
+                          <p style={{ fontSize: 13, fontWeight: 500 }}>{t('customize.noResults')}</p>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      {filteredMarketplace.map((item, idx) => {
+                        const Icon = item.icon || LayoutDashboard;
+                        const installed = isInstalled?.(item.id);
+                        return (
+                          <motion.div
+                            key={item.id}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.03 }}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 10,
+                              padding: 14,
+                              borderRadius: 16,
+                              background: installed ? 'color-mix(in srgb, var(--color-primary-500) 5%, white)' : '#f8fafd',
+                              border: `1.5px solid ${installed ? 'color-mix(in srgb, var(--color-primary-400) 30%, transparent)' : 'rgba(0,0,0,0.06)'}`,
+                              transition: 'all .2s',
+                            }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                              <div
+                                style={{
+                                  width: 38,
+                                  height: 38,
+                                  borderRadius: 11,
+                                  display: 'grid',
+                                  placeContent: 'center',
+                                  background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+                                  color: '#fff',
+                                  boxShadow: '0 3px 10px color-mix(in srgb, var(--color-primary-500) 30%, transparent)',
+                                }}>
+                                <Icon style={{ width: 16, height: 16 }} strokeWidth={2} />
+                              </div>
+                              {installed && (
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 3,
+                                    fontSize: 9,
+                                    fontWeight: 800,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.06em',
+                                    color: '#16a34a',
+                                    background: 'rgba(34,197,94,0.1)',
+                                    padding: '3px 7px',
+                                    borderRadius: 99,
+                                  }}>
+                                  <Check style={{ width: 9, height: 9 }} strokeWidth={3} />
+                                  {t('customize.marketplace.addedBadge')}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <p style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em', marginBottom: 3 }}>{t(`items.${item.nameKey}`)}</p>
+                              {item.descKey && <p style={{ fontSize: 11, color: '#64748b', lineHeight: 1.45 }}>{t(item.descKey)}</p>}
+                            </div>
+                            <motion.button
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.97 }}
+                              onClick={() => toggleInstalled?.(item.id)}
+                              style={{
+                                marginTop: 'auto',
+                                height: 34,
+                                borderRadius: 9,
+                                fontSize: 11.5,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                border: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 5,
+                                ...(installed
+                                  ? { background: 'rgba(0,0,0,0.05)', color: '#64748b' }
+                                  : {
+                                      background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+                                      color: '#fff',
+                                      boxShadow: '0 3px 10px color-mix(in srgb, var(--color-primary-500) 28%, transparent)',
+                                    }),
+                              }}>
+                              {installed ? (
+                                <>
+                                  <X style={{ width: 11, height: 11 }} strokeWidth={2.5} />
+                                  {t('customize.marketplace.removeButton')}
+                                </>
+                              ) : (
+                                <>+ {t('customize.marketplace.addButton')}</>
+                              )}
+                            </motion.button>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Modal Footer */}
@@ -2093,9 +2155,12 @@ function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden
                 gap: 12,
               }}>
               <span style={{ fontSize: 12, color: '#64748b' }}>
-                {visibleCount} {t('customize.ofLabel')} {allItems.length} {t('customize.visibleLabel')}
+                {tab === 'nav'
+                  ? `${visibleCount} ${t('customize.ofLabel')} ${navItems.length} ${t('customize.visibleLabel')}`
+                  : `${installedCount} ${t('customize.ofLabel')} ${marketplaceItems.length} ${t('customize.marketplace.installedLabel')}`}
               </span>
               <div style={{ display: 'flex', gap: 8 }}>
+                {tab === 'nav' && (
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
@@ -2113,6 +2178,7 @@ function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden
                   }}>
                   {t('customize.resetButton')}
                 </motion.button>
+                )}
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
@@ -2141,7 +2207,7 @@ function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden
 }
 
 /* ─── SidebarFooter ──────────────────────────────────────────── */
-function SidebarFooter({ collapsed, onLogout, logoutLabel, sections, isHidden, toggleHidden, resetAll, paletteKey, setPaletteKey, t, P }) {
+function SidebarFooter({ collapsed, onLogout, logoutLabel, sections, isHidden, toggleHidden, resetAll, isInstalled, toggleInstalled, paletteKey, setPaletteKey, t, P }) {
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const isRTL = getDir() === 'rtl';
   const btnBase = {
@@ -2149,6 +2215,19 @@ function SidebarFooter({ collapsed, onLogout, logoutLabel, sections, isHidden, t
     background: P?.bgCard || '#ffffff',
     boxShadow: P?.shadow?.sm || '0 1px 3px rgba(0,0,0,0.06)',
   };
+  const marketplaceAvailable = useMemo(() => {
+    const seen = new Set();
+    let count = 0;
+    sections?.forEach(section =>
+      section.items.forEach(item => {
+        if (item.marketplace && !seen.has(item.id)) {
+          seen.add(item.id);
+          if (!isInstalled?.(item.id)) count++;
+        }
+      }),
+    );
+    return count;
+  }, [sections, isInstalled]);
 
   return (
     <>
@@ -2158,78 +2237,151 @@ function SidebarFooter({ collapsed, onLogout, logoutLabel, sections, isHidden, t
           borderTop: `1px solid ${P?.border || 'rgba(0,0,0,0.07)'}`,
           background: P?.footerBg || 'rgba(248,249,251,0.9)',
           backdropFilter: 'blur(12px)',
-          padding: '10px 12px 12px',
+          padding: '12px 12px 14px',
         }}>
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 5,
+            gap: 8,
             alignItems: collapsed ? 'center' : 'stretch',
-            marginBottom: 8,
+            marginBottom: 12,
           }}>
           <SidebarLanguageToggle collapsed={collapsed} P={P} />
           <SidebarThemeSwitcher collapsed={collapsed} P={P} />
-
-          {/* Customize Sidebar */}
-          <div style={{ display: collapsed ? 'flex' : 'block', justifyContent: collapsed ? 'center' : undefined }}>
-            <motion.button
-              whileHover={{ scale: collapsed ? 1.06 : 1.005 }}
-              whileTap={{ scale: collapsed ? 0.95 : 0.995 }}
-              onClick={() => setCustomizeOpen(true)}
-              title={t('customize.triggerLabel')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                cursor: 'pointer',
-                transition: 'all .18s',
-                ...(collapsed ? { width: 42, height: 32, borderRadius: 9, justifyContent: 'center' } : { width: '100%', height: 32, borderRadius: 9, padding: '0 10px' }),
-                ...btnBase,
-                color: P?.textMuted || '#64748b',
-              }}>
-              <Settings2 style={{ width: 12, height: 12, flexShrink: 0 }} strokeWidth={2} />
-              {!collapsed && (
-                <span className='w-ful rtl:text-right ltr:text-left' style={{ fontSize: 11.5, fontWeight: 600, flex: 1, color: P?.textMuted || '#64748b' }}>
-                  {t('customize.triggerLabel')}
-                </span>
-              )}
-            </motion.button>
-          </div>
         </div>
 
-        {/* Logout */}
-        <motion.button
-          whileHover={{ scale: 1.015 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={onLogout}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.13)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.07)')}
+        {/* Divider */}
+        <div style={{ height: 1, background: P?.border || 'rgba(0,0,0,0.07)', margin: collapsed ? '0 auto 10px' : '0 2px 10px', width: collapsed ? 32 : 'auto' }} />
+
+        {/* Customize + Sign out */}
+        <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'flex-start',
+            display: collapsed ? 'flex' : 'grid',
+            flexDirection: collapsed ? 'column' : undefined,
+            gridTemplateColumns: collapsed ? undefined : '1fr 1fr',
             gap: 8,
-            borderRadius: 9,
-            fontWeight: 600,
-            fontSize: 12,
-            cursor: 'pointer',
-            border: '1px solid rgba(239,68,68,0.18)',
-            width: collapsed ? 42 : '100%',
-            height: 32,
-            padding: collapsed ? 0 : '0 12px',
-            background: 'rgba(239,68,68,0.07)',
-            color: '#dc2626',
-            marginLeft: collapsed ? 'auto' : 0,
-            marginRight: collapsed ? 'auto' : 0,
-            transition: 'background .18s',
+            alignItems: collapsed ? 'center' : 'stretch',
           }}>
-          <LogOut style={{ width: 12, height: 12, transform: isRTL ? 'scaleX(-1)' : 'none', flexShrink: 0 }} strokeWidth={2} />
-          {!collapsed && <span>{logoutLabel}</span>}
-        </motion.button>
+          {/* Customize Sidebar */}
+          <motion.button
+            whileHover={{ scale: collapsed ? 1.08 : 1.02, y: -2 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={() => setCustomizeOpen(true)}
+            title={t('customize.triggerLabel')}
+            onMouseEnter={e => (e.currentTarget.style.background = `color-mix(in srgb, var(--color-primary-500) 8%, ${P?.bgCard || '#fff'})`)}
+            onMouseLeave={e => (e.currentTarget.style.background = P?.bgCard || '#ffffff')}
+            style={{
+              display: 'flex',
+              flexDirection: collapsed ? 'row' : 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: collapsed ? 0 : 7,
+              cursor: 'pointer',
+              overflow: 'visible',
+              transition: 'background .18s, box-shadow .18s',
+              ...(collapsed ? { width: 40, height: 40, borderRadius: 12 } : { minHeight: 76, borderRadius: 14, padding: '12px 8px' }),
+              ...btnBase,
+            }}>
+            <span
+              style={{
+                position: 'relative',
+                flexShrink: 0,
+                display: 'grid',
+                placeContent: 'center',
+                width: collapsed ? 'auto' : 28,
+                height: collapsed ? 'auto' : 28,
+                borderRadius: 9,
+                background: 'color-mix(in srgb, var(--color-primary-500) 12%, transparent)',
+                color: 'var(--color-primary-600)',
+              }}>
+              <Settings2 style={{ width: collapsed ? 15 : 14.5, height: collapsed ? 15 : 14.5 }} strokeWidth={2.2} />
+              {marketplaceAvailable > 0 && (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  style={{
+                    position: 'absolute',
+                    top: -3,
+                    [isRTL ? 'left' : 'right']: -3,
+                    minWidth: 14,
+                    height: 14,
+                    padding: '0 3px',
+                    borderRadius: 99,
+                    background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
+                    color: '#fff',
+                    fontSize: 8.5,
+                    fontWeight: 800,
+                    display: 'grid',
+                    placeContent: 'center',
+                    boxShadow: '0 2px 6px rgba(234,88,12,0.4)',
+                  }}>
+                  {marketplaceAvailable}
+                </motion.span>
+              )}
+            </span>
+            {!collapsed && (
+              <span
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 650,
+                  lineHeight: 1.3,
+                  letterSpacing: '-0.005em',
+                  color: P?.text || '#334155',
+                  whiteSpace: 'normal',
+                  overflow: 'visible',
+                  wordBreak: 'break-word',
+                  textAlign: 'center',
+                  maxWidth: '100%',
+                }}>
+                {t('customize.triggerLabel')}
+              </span>
+            )}
+          </motion.button>
+
+          {/* Sign out */}
+          <motion.button
+            whileHover={{ scale: collapsed ? 1.08 : 1.02, y: -2 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={onLogout}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.12)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.06)')}
+            style={{
+              display: 'flex',
+              flexDirection: collapsed ? 'row' : 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: collapsed ? 0 : 7,
+              fontWeight: 700,
+              letterSpacing: '-0.005em',
+              cursor: 'pointer',
+              overflow: 'visible',
+              border: '1px solid rgba(239,68,68,0.16)',
+              background: 'rgba(239,68,68,0.06)',
+              color: '#dc2626',
+              transition: 'background .18s, box-shadow .18s',
+              ...(collapsed ? { width: 40, height: 40, borderRadius: 12 } : { minHeight: 76, borderRadius: 14, padding: '12px 8px' }),
+            }}>
+            <span
+              style={{
+                flexShrink: 0,
+                display: 'grid',
+                placeContent: 'center',
+                width: collapsed ? 'auto' : 28,
+                height: collapsed ? 'auto' : 28,
+                borderRadius: 9,
+                background: collapsed ? 'transparent' : 'rgba(239,68,68,0.12)',
+              }}>
+              <LogOut style={{ width: collapsed ? 15 : 14.5, height: collapsed ? 15 : 14.5, transform: isRTL ? 'scaleX(-1)' : 'none' }} strokeWidth={2.2} />
+            </span>
+            {!collapsed && (
+              <span style={{ fontSize: 10.5, lineHeight: 1.3, whiteSpace: 'normal', overflow: 'visible', wordBreak: 'break-word', textAlign: 'center', maxWidth: '100%' }}>{logoutLabel}</span>
+            )}
+          </motion.button>
+        </div>
       </div>
 
-      <CustomizeSidebarModal open={customizeOpen} onClose={() => setCustomizeOpen(false)} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} />
+      <CustomizeSidebarModal open={customizeOpen} onClose={() => setCustomizeOpen(false)} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} isInstalled={isInstalled} toggleInstalled={toggleInstalled} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} />
     </>
   );
 }
@@ -2253,7 +2405,9 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
   const setCollapsed = typeof setCollapsedProp === 'function' ? setCollapsedProp : setCollapsedLS;
 
   const { isHidden, toggle: toggleHidden, resetAll } = useHiddenItems();
+  const { isInstalled, toggle: toggleInstalled } = useMarketplaceItems();
   const { paletteKey, setPaletteKey, palette: P } = useSidebarPalette();
+  const isRTL = getDir() === 'rtl';
 
   const sections = useMemo(() => {
     if (!role) return null;
@@ -2275,19 +2429,56 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
   };
 
   /* ── Desktop Sidebar ── */
+  const sidebarEdge = SIDEBAR_MARGIN + (collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W);
   const DesktopSidebar = (
-    <aside
-      className='hidden lg:flex flex-col shrink-0 rtl:border-l ltr:border-r'
+    <>
+      <motion.button
+        onClick={() => setCollapsed(v => !v)}
+        whileHover={{ scale: 1.12 }}
+        whileTap={{ scale: 0.9 }}
+        className='hidden lg:flex'
+        style={{
+          position: 'fixed',
+          top: SIDEBAR_MARGIN + 34,
+          [isRTL ? 'right' : 'left']: sidebarEdge - 13,
+          transform: 'translateY(-50%)',
+          zIndex: 1001,
+          width: 26,
+          height: 26,
+          borderRadius: '50%',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: P.bgCard,
+          border: `1.5px solid ${P.border}`,
+          color: 'var(--color-primary-600)',
+          cursor: 'pointer',
+          boxShadow: '0 6px 16px rgba(15,23,42,0.14), 0 2px 6px rgba(15,23,42,0.07)',
+          transition: `${isRTL ? 'right' : 'left'} .28s cubic-bezier(0.22,1,0.36,1)`,
+        }}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+        {collapsed ? (
+          <ChevronRight className='rtl:scale-x-[-1]' style={{ width: 13, height: 13 }} strokeWidth={2.5} />
+        ) : (
+          <ChevronLeft className='rtl:scale-x-[-1]' style={{ width: 13, height: 13 }} strokeWidth={2.5} />
+        )}
+      </motion.button>
+      <aside
+      className='sidebar-shell hidden lg:flex flex-col shrink-0 ltr:ml-[16px] rtl:mr-[16px]'
       style={{
         width: collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W,
-        height: '100vh',
+        height: `calc(100vh - ${SIDEBAR_MARGIN + SIDEBAR_MARGIN_BOTTOM}px)`,
+        marginTop: SIDEBAR_MARGIN,
+        marginBottom: SIDEBAR_MARGIN_BOTTOM,
         position: 'relative',
         zIndex: 1000,
         overflow: 'hidden',
+        borderRadius: SIDEBAR_RADIUS,
         background: P.bg,
-        borderColor: P.border,
-        boxShadow: '1px 0 0 0 rgba(0,0,0,0.05), 6px 0 28px rgba(15,23,42,0.04)',
+        border: `1px solid ${P.border}`,
+        boxShadow: '0 12px 36px rgba(15,23,42,0.09), 0 2px 10px rgba(15,23,42,0.05)',
         transition: 'width .28s cubic-bezier(0.22,1,0.36,1)',
+        fontFamily: isRTL ? undefined : SIDEBAR_FONT_LTR,
       }}>
       {/* Texture */}
       <div
@@ -2316,25 +2507,24 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
       />
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <SidebarHeader user={user} collapsed={collapsed} setCollapsed={setCollapsed} P={P} />
+        <SidebarHeader user={user} collapsed={collapsed} P={P} />
 
         <LayoutGroup id='sidebar-desktop'>
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <ScrollShadow P={P}>
-              <nav style={{ padding: collapsed ? '8px 10px' : '8px 10px 10px', display: 'flex', flexDirection: 'column' }}>
-                {role === 'admin' && <AIStudioItem collapsed={collapsed} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} P={P} />}
-
-                {sections?.map(section => (
-                  <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} isHidden={isHidden} P={P} />
+              <nav style={{ padding: collapsed ? '4px 10px' : '4px 10px 10px', display: 'flex', flexDirection: 'column' }}>
+                {sections?.map((section, idx) => (
+                  <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} isHidden={isHidden} isInstalled={isInstalled} P={P} first={idx === 0} />
                 ))}
               </nav>
             </ScrollShadow>
           </div>
         </LayoutGroup>
 
-        <SidebarFooter collapsed={collapsed} onLogout={handleLogout} logoutLabel={logoutLabel} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} P={P} />
+        <SidebarFooter collapsed={collapsed} onLogout={handleLogout} logoutLabel={logoutLabel} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} isInstalled={isInstalled} toggleInstalled={toggleInstalled} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} P={P} />
       </div>
-    </aside>
+      </aside>
+    </>
   );
 
   /* ── Mobile Drawer ── */
@@ -2349,12 +2539,13 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
             animate={{ x: 0 }}
             exit={{ x: -290 }}
             transition={slide}
-            className='fixed z-50 top-0 left-0 h-dvh flex flex-col lg:hidden'
+            className='sidebar-shell fixed z-50 top-0 left-0 h-dvh flex flex-col lg:hidden'
             style={{
               width: 278,
               background: P.bg,
               borderRight: `1px solid ${P.border}`,
               boxShadow: '20px 0 60px rgba(15,23,42,0.12)',
+              fontFamily: isRTL ? undefined : SIDEBAR_FONT_LTR,
             }}>
             {/* Texture */}
             <div
@@ -2438,11 +2629,9 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
             <LayoutGroup id='sidebar-mobile'>
               <div style={{ flex: 1, overflow: 'hidden', position: 'relative', zIndex: 1 }}>
                 <ScrollShadow P={P}>
-                  <nav style={{ padding: '8px 10px 10px', display: 'flex', flexDirection: 'column' }}>
-                    {role === 'admin' && <AIStudioItem collapsed={false} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} P={P} />}
-                    <div style={{ height: 1, background: `linear-gradient(to right, transparent, ${P.border}, transparent)`, margin: '2px 4px 6px' }} />
-                    {sections?.map(section => (
-                      <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} isHidden={isHidden} P={P} />
+                  <nav style={{ padding: '4px 10px 10px', display: 'flex', flexDirection: 'column' }}>
+                    {sections?.map((section, idx) => (
+                      <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} isHidden={isHidden} isInstalled={isInstalled} P={P} first={idx === 0} />
                     ))}
                   </nav>
                 </ScrollShadow>
@@ -2450,7 +2639,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
             </LayoutGroup>
 
             <div style={{ position: 'relative', zIndex: 1 }}>
-              <SidebarFooter collapsed={false} onLogout={handleLogout} logoutLabel={logoutLabel} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} P={P} />
+              <SidebarFooter collapsed={false} onLogout={handleLogout} logoutLabel={logoutLabel} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} isInstalled={isInstalled} toggleInstalled={toggleInstalled} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} P={P} />
             </div>
           </motion.aside>
         </>

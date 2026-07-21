@@ -300,7 +300,12 @@ export async function subscribePushOnServer(subscription) {
 }
 
 export async function ensureServiceWorker() {
-	if (!('serviceWorker' in navigator)) return null;
+	if (
+		process.env.NODE_ENV === 'development' ||
+		!('serviceWorker' in navigator)
+	) {
+		return null;
+	}
 	const swExists = await fetch('/sw.js')
 		.then(r => r.ok)
 		.catch(() => false);

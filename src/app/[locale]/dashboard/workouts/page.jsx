@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import {
 	Dumbbell, PencilLine, Eye, Trash2, Layers,
 	Settings, RefreshCcw, Clock, X, Tag, Search, Play,
-	Image as ImageIcon, PlayCircle, TagIcon, ChevronUp, ChevronDown, Copy
+	Image as ImageIcon, PlayCircle, TagIcon, ChevronUp, ChevronDown, Copy, Plus
 } from 'lucide-react';
 
 import api, { baseImg } from '@/utils/axios';
@@ -15,7 +15,7 @@ import Button from '@/components/atoms/Button';
 import Select from '@/components/atoms/Select';
 import { Notification } from '@/config/Notification';
 import { ExerciseForm } from '@/components/pages/dashboard/workouts/ExerciseForm';
-import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { PrettyPagination } from '@/components/dashboard/ui/Pagination';
 import { useLocale, useTranslations } from 'next-intl';
 import MultiLangText from '@/components/atoms/MultiLangText';
@@ -298,13 +298,26 @@ export default function ExercisesPage() {
 		<div className='space-y-7'>
 
 			{/* ── Header / Stats ── */}
-			<GradientStatsHeader
-				onClick={() => { setDuplicateInitial(null); setAddOpen(true); }}
-				btnName={t('actions.addExercise')}
+			<PageHeader
 				title={t('descriptions.exercises')}
 				desc={t('descriptions.manageLibrary')}
-				loadingStats={loadingStats}
-			// stats={stats}
+				icon={Dumbbell}
+				actions={
+					<motion.button
+						whileHover={{ scale: 1.04 }}
+						whileTap={{ scale: 0.95 }}
+						onClick={() => { setDuplicateInitial(null); setAddOpen(true); }}
+						className="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-black text-white"
+						style={{
+							background: 'rgba(255,255,255,0.22)',
+							backdropFilter: 'blur(16px)',
+							boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.3),0 4px 16px rgba(0,0,0,0.1)',
+						}}
+					>
+						<Plus className="h-4 w-4" />
+						{t('actions.addExercise')}
+					</motion.button>
+				}
 			>
 				<>
 					<StatCard icon={Layers} title={t('stats.totalGlobalExercise')} value={stats?.totals?.totalGlobalExercise - stats?.totals?.totalPersonalExercise ?? 0} />
@@ -314,7 +327,7 @@ export default function ExercisesPage() {
 					<StatCard icon={Settings} title={t('stats.withVideo')} value={stats?.totals?.withVideo || 0} />
 					<StatCard icon={RefreshCcw} title={t('stats.withImage')} value={stats?.totals?.withImage || 0} />
 				</>
-			</GradientStatsHeader>
+			</PageHeader>
 
 			{/* ── Toolbar: Search + Controls ── */}
 			<div className='flex items-center justify-between gap-3 flex-wrap'>

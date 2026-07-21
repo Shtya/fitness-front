@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations, useLocale } from "next-intl";
+import { motion, AnimatePresence } from "framer-motion";
 import {
 	Dumbbell, Menu, X, Zap, LogOut, LayoutDashboard,
 	User, Crown, Shield, Star, ChevronDown,
@@ -166,115 +167,95 @@ export function LangSwitch() {
 function UserDropdown({ user, onClose, isRTL }) {
 	const t = useTranslations("home.navbar");
 	const quickLinks = getRoleQuickLinks(user.role, t);
+	const lastIsOdd = quickLinks.length % 2 === 1;
 
 	const handleLogout = () => { localStorage.removeItem("user"); window.location.href = "/"; };
 
 	return (
 		<>
 			<style>{`
-        @keyframes _udin { from{opacity:0;transform:translateY(-6px) scale(0.975)} to{opacity:1;transform:translateY(0) scale(1)} }
-        .ud-wrap { animation:_udin 0.2s cubic-bezier(0.34,1.56,0.64,1) both; }
         @keyframes _onl { 0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0.5)} 50%{box-shadow:0 0 0 4px rgba(16,185,129,0)} }
         .ud-online { animation:_onl 2.4s ease infinite; }
         .ud-row:hover .ud-arr { opacity:1; transform:translateX(${isRTL ? "-2px" : "2px"}); }
+        .ud-qlink { transition:transform 0.18s ease, background 0.18s ease, border-color 0.18s ease; }
+        .ud-qlink:hover { transform:translateY(-2px); background:rgba(99,102,241,0.14) !important; border-color:rgba(99,102,241,0.4) !important; }
       `}</style>
-			<div
-				className="ud-wrap absolute top-[calc(100%+12px)] z-50 w-[280px] rounded-lg overflow-hidden"
+			<motion.div
+				role="menu"
+				aria-label={t("dropdown.openMenu")}
+				initial={{ opacity: 0, y: -10, scale: 0.95 }}
+				animate={{ opacity: 1, y: 0, scale: 1 }}
+				exit={{ opacity: 0, y: -8, scale: 0.96, transition: { duration: 0.14 } }}
+				transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.7 }}
+				className="absolute top-[calc(100%+14px)] z-50 w-[290px] rounded-[16px] overflow-hidden"
 				style={{
 					[isRTL ? "left" : "right"]: 0,
 					direction: isRTL ? "rtl" : "ltr",
-					background: "rgba(9,9,20,0.98)",
-					border: "1px solid rgba(255,255,255,0.07)",
+					transformOrigin: isRTL ? "top left" : "top right",
+					background: "rgba(10,10,22,0.98)",
+					border: "1px solid rgba(255,255,255,0.08)",
 					backdropFilter: "blur(28px)",
-					boxShadow: "0 20px 60px rgba(0,0,0,0.65)",
+					boxShadow: "0 24px 70px rgba(0,0,0,0.7), 0 0 0 1px rgba(99,102,241,0.06)",
 				}}
-				data-aos="fade-down"
-				data-aos-delay="60"
-				data-aos-duration="500"
 			>
-				{/* Accent bar */}
-				<div
-					style={{ height: "2px", background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))" }}
-					data-aos="slide-right"
-					data-aos-delay="90"
-					data-aos-duration="450"
+				{/* Caret pointing to the avatar trigger */}
+				<span
+					aria-hidden="true"
+					className="absolute -top-[6px] h-3 w-3 rotate-45"
+					style={{
+						[isRTL ? "left" : "right"]: 18,
+						background: "rgba(10,10,22,0.98)",
+						borderTop: "1px solid rgba(255,255,255,0.08)",
+						[isRTL ? "borderLeft" : "borderRight"]: "1px solid rgba(255,255,255,0.08)",
+					}}
 				/>
 
+				{/* Accent bar */}
+				<div style={{ height: "2.5px", background: "linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))" }} />
+
 				{/* User info */}
-				<div
-					className="px-3.5 pt-3.5 pb-3"
-					style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-					data-aos="fade-up"
-					data-aos-delay="120"
-					data-aos-duration="500"
-				>
-					<div className="flex items-center gap-2.5">
+				<div className="px-4 pt-4 pb-3.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+					<div className="flex items-center gap-3">
 						<div className="relative shrink-0">
-							<div className="h-11 w-11 rounded-[11px] flex items-center justify-center text-[15px] font-black text-white"
-								style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 4px 14px rgba(99,102,241,0.35)" }}>
+							<div className="h-12 w-12 rounded-[13px] flex items-center justify-center text-[16px] font-black text-white"
+								style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 6px 18px rgba(99,102,241,0.4)" }}>
 								{getInitials(user.name)}
 							</div>
-							<span className={`ud-online absolute -bottom-0.5 ${isRTL ? "-left-0.5" : "-right-0.5"} h-3 w-3 rounded-full bg-emerald-400 border-2 border-[#09091a] block`} />
+							<span className={`ud-online absolute -bottom-0.5 ${isRTL ? "-left-0.5" : "-right-0.5"} h-3.5 w-3.5 rounded-full bg-emerald-400 border-[2.5px] border-[#0a0a16] block`} />
 						</div>
 						<div className="min-w-0 flex-1">
-							<p className="text-[13px] font-bold text-white truncate md: leading-tight">{user.name}</p>
-							<p className="text-[10px] text-white/35 truncate mt-0.5">{user.email}</p>
-							<span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider text-white"
+							<p className="text-[14px] font-bold text-white truncate md: leading-tight">{user.name}</p>
+							<p className="text-[11px] text-white/40 truncate mt-0.5">{user.email}</p>
+							<span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider text-white"
 								style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
 								{getRoleIcon(user.role)}{getRoleLabel(user.role, t)}
 							</span>
 						</div>
-					</div>
-
-					{user.points != null && (
-						<div
-							className="mt-2.5 flex items-center justify-between rounded-lg px-3 py-2"
-							style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.14)" }}
-							data-aos="fade-up"
-							data-aos-delay="170"
-							data-aos-duration="500"
-						>
-							<div className="flex items-center gap-1.5">
-								<Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-								<span className="text-[13px] font-black text-white">{user.points.toLocaleString()}</span>
-								<span className="text-[10px] text-white/35">{t("dropdown.points")}</span>
-							</div>
-							<div className="flex items-center gap-1.5">
-								<span className={`h-1.5 w-1.5 rounded-full ${user.status === "active" ? "bg-emerald-400" : "bg-white/20"}`} />
-								<span className={`text-[10px] font-semibold ${user.status === "active" ? "text-emerald-400" : "text-white/35"}`}>
-									{t(`status.${user.status}`)}
-								</span>
-							</div>
-						</div>
-					)}
+					</div> 
 				</div>
 
-				{/* Quick chips */}
+				{/* Quick links */}
 				{quickLinks.length > 0 && (
-					<div
-						className="px-3 pt-2.5 pb-1"
-						data-aos="fade-up"
-						data-aos-delay="200"
-						data-aos-duration="500"
-					>
-						<p className="text-[9px] font-bold uppercase tracking-[0.13em] text-white/20 mb-2">{t("quickLinks.sectionLabel")}</p>
-						<div className="flex flex-wrap gap-1">
+					<div className="px-3 pt-3 pb-1">
+						<p className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/25 mb-2 px-1">{t("quickLinks.sectionLabel")}</p>
+						<div className="grid grid-cols-2 gap-1.5">
 							{quickLinks.map((l, index) => (
 								<Link
 									key={l.href}
 									href={l.href}
 									onClick={onClose}
-									className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] text-[10px] font-bold no-underline transition-all hover:-translate-y-px"
-									style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.18)", color: "var(--color-primary-400)" }}
-									data-aos="zoom-in"
-									data-aos-delay={240 + index * 50}
-									data-aos-duration="450"
+									role="menuitem"
+									className={`ud-qlink flex items-center gap-2 px-2.5 py-2.5 rounded-[11px] text-[11px] font-bold no-underline ${lastIsOdd && index === quickLinks.length - 1 ? "col-span-2" : ""}`}
+									style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.75)" }}
 								>
-									{l.icon}{l.label}
+									<span className="h-6 w-6 rounded-[7px] flex items-center justify-center shrink-0" style={{ background: "rgba(99,102,241,0.14)", color: "var(--color-primary-400)" }}>
+										{l.icon}
+									</span>
+									<span className="truncate">{l.label}</span>
 								</Link>
 							))}
 						</div>
-						<div className="mt-2.5 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
+						<div className="mt-3 h-px" style={{ background: "rgba(255,255,255,0.05)" }} />
 					</div>
 				)}
 
@@ -283,24 +264,22 @@ function UserDropdown({ user, onClose, isRTL }) {
 					{[
 						{ href: getDashboardPath(user.role), icon: <LayoutDashboard className="h-[14px] w-[14px]" />, label: t("dropdown.dashboard"), accent: true },
 						{ href: "/profile", icon: <User className="h-[14px] w-[14px]" />, label: t("dropdown.myProfile"), accent: false },
-					].map((item, index) => (
+					].map((item) => (
 						<Link
 							key={item.label}
 							href={item.href}
 							onClick={onClose}
-							className="ud-row group flex items-center gap-2.5 px-2.5 py-2 rounded-[10px] no-underline transition-colors hover:bg-white/[0.05]"
-							data-aos="fade-up"
-							data-aos-delay={280 + index * 60}
-							data-aos-duration="450"
+							role="menuitem"
+							className="ud-row group flex items-center gap-2.5 px-2.5 py-2.5 rounded-[11px] no-underline transition-colors duration-150 hover:bg-white/[0.055]"
 						>
-							<div className="h-7 w-7 rounded-[8px] flex items-center justify-center text-white shrink-0"
+							<div className="h-8 w-8 rounded-[9px] flex items-center justify-center text-white shrink-0 transition-transform duration-200 group-hover:scale-105"
 								style={item.accent
 									? { background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }
 									: { background: "rgba(255,255,255,0.06)" }
 								}>
 								{item.icon}
 							</div>
-							<span className="flex-1 text-[12px] font-semibold text-white/60 group-hover:text-white transition-colors">{item.label}</span>
+							<span className="flex-1 text-[12.5px] font-semibold text-white/65 group-hover:text-white transition-colors">{item.label}</span>
 							<svg className="ud-arr h-3 w-3 text-white/25 opacity-0 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor"
 								style={isRTL ? { transform: "scaleX(-1)" } : {}}>
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -310,23 +289,17 @@ function UserDropdown({ user, onClose, isRTL }) {
 				</div>
 
 				{/* Sign out */}
-				<div
-					className="p-1.5"
-					style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}
-					data-aos="fade-up"
-					data-aos-delay="410"
-					data-aos-duration="450"
-				>
-					<button onClick={handleLogout}
-						className="group flex w-full items-center gap-2.5 px-2.5 py-2 rounded-[10px] transition-colors hover:bg-red-500/[0.09] cursor-pointer">
-						<div className="h-7 w-7 rounded-[8px] flex items-center justify-center text-red-400 group-hover:bg-red-500/18 transition-colors shrink-0"
-							style={{ background: "rgba(239,68,68,0.1)" }}>
+				<div className="p-1.5" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+					<button onClick={handleLogout} role="menuitem"
+						className="group flex w-full items-center gap-2.5 px-2.5 py-2.5 rounded-[11px] transition-colors duration-150 hover:bg-red-500/[0.1] cursor-pointer">
+						<div className="h-8 w-8 rounded-[9px] flex items-center justify-center text-red-400 transition-colors shrink-0"
+							style={{ background: "rgba(239,68,68,0.12)" }}>
 							<LogOut className="h-[13px] w-[13px]" />
 						</div>
-						<span className="text-[12px] font-semibold text-red-400 group-hover:text-red-300 transition-colors">{t("dropdown.signOut")}</span>
+						<span className="text-[12.5px] font-semibold text-red-400 group-hover:text-red-300 transition-colors">{t("dropdown.signOut")}</span>
 					</button>
 				</div>
-			</div>
+			</motion.div>
 		</>
 	);
 }
@@ -358,33 +331,40 @@ function AvatarButton({ user, isRTL }) {
 			data-aos-delay="220"
 			data-aos-duration="650"
 		>
-			<button
+			<motion.button
 				onClick={() => setOpen((v) => !v)}
 				aria-label={t("dropdown.openMenu")}
+				aria-haspopup="menu"
 				aria-expanded={open}
-				className="flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-[12px] cursor-pointer outline-none transition-all duration-200"
+				whileTap={{ scale: 0.96 }}
+				className="flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-[12px] cursor-pointer outline-none transition-[background,border-color,box-shadow] duration-200"
 				style={{
 					border: open
-						? "1px solid rgba(99,102,241,0.4)"
+						? "1px solid rgba(99,102,241,0.45)"
 						: "1px solid rgba(255,255,255,0.08)",
 					background: open
-						? "rgba(99,102,241,0.1)"
+						? "rgba(99,102,241,0.12)"
 						: "rgba(255,255,255,0.03)",
-					boxShadow: open ? "0 0 0 3px rgba(99,102,241,0.1)" : "none",
+					boxShadow: open ? "0 0 0 3px rgba(99,102,241,0.12)" : "none",
 				}}
 			>
 				<div className="relative shrink-0">
-					<div className="h-[28px] w-[28px] rounded-[9px] flex items-center justify-center text-[12px] font-black text-white"
-						style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
+					<div className="h-[28px] w-[28px] rounded-[9px] flex items-center justify-center text-[12px] font-black text-white transition-transform duration-200"
+						style={{
+							background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))",
+							boxShadow: open ? "0 0 0 2px rgba(99,102,241,0.35)" : "none",
+						}}>
 						{getInitials(user.name)}
 					</div>
 					<span className="absolute -bottom-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-[2px] border-[#08081a] block"
 						style={isRTL ? { left: "-2px" } : { right: "-2px" }} />
 				</div>
 				<span className="hidden sm:block text-[12px] font-bold text-white max-w-[72px] truncate">{firstName}</span>
-				<ChevronDown className={`h-[13px] w-[13px] text-white/30 shrink-0 transition-transform duration-250 ${open ? "rotate-180" : ""}`} />
-			</button>
-			{open && <UserDropdown user={user} onClose={() => setOpen(false)} isRTL={isRTL} />}
+				<ChevronDown className={`h-[13px] w-[13px] shrink-0 transition-transform duration-250 ${open ? "rotate-180 text-white/60" : "text-white/30"}`} />
+			</motion.button>
+			<AnimatePresence>
+				{open && <UserDropdown user={user} onClose={() => setOpen(false)} isRTL={isRTL} />}
+			</AnimatePresence>
 		</div>
 	);
 }
@@ -494,15 +474,7 @@ function MobileDrawer({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
 										style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }}>
 										{getRoleIcon(user.role)}{getRoleLabel(user.role, t)}
 									</span>
-								</div>
-								{user.points != null && (
-									<div className="flex flex-col items-center shrink-0 px-2 py-1.5 rounded-[9px]"
-										style={{ background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.18)" }}>
-										<Star className="h-[10px] w-[10px] fill-yellow-400 text-yellow-400" />
-										<span className="text-[11px] font-black text-white md: leading-none mt-0.5">{user.points}</span>
-										<span className="text-[7px] text-white/30 uppercase">{t("dropdown.pts")}</span>
-									</div>
-								)}
+								</div> 
 							</div>
 						</div>
 					</div>
@@ -578,7 +550,7 @@ function MobileDrawer({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
 
 				{!user && (
 					<div
-						className="p-3 shrink-0"
+						className="p-3 mb-8 shrink-0"
 						data-aos="fade-up"
 						data-aos-delay="180"
 						data-aos-duration="500"

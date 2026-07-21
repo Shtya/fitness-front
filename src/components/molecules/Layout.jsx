@@ -138,6 +138,44 @@ export default function Layout({ children }) {
 		return () => window.removeEventListener('resize', update);
 	}, []);
 
+	useEffect(() => {
+		if (
+			process.env.NODE_ENV !== 'development' ||
+			!('serviceWorker' in navigator)
+		) {
+			return;
+		}
+
+		// Never let a production Workbox worker control the Next.js dev server.
+		const wasControlled = Boolean(navigator.serviceWorker.controller);
+		void navigator.serviceWorker
+			.getRegistrations()
+			.then(registrations =>
+				Promise.all(registrations.map(registration => registration.unregister())),
+			)
+			.then(() => {
+				const cleanupKey = 'pwa:development-worker-cleaned';
+				if (wasControlled && !window.sessionStorage.getItem(cleanupKey)) {
+					window.sessionStorage.setItem(cleanupKey, '1');
+					window.location.reload();
+				}
+			})
+			.catch(() => undefined);
+
+		if ('caches' in window) {
+			void caches
+				.keys()
+				.then(keys =>
+					Promise.all(
+						keys
+							.filter(key => key.startsWith('workbox-') || key.includes('next-pwa'))
+							.map(key => caches.delete(key)),
+					),
+				)
+				.catch(() => undefined);
+		}
+	}, []);
+
 	const user = useUser();
 	useEffect(() => {
 		if (user) {
@@ -167,6 +205,7 @@ export default function Layout({ children }) {
 		pathname.startsWith('/thank-you') ||
 		pathname.startsWith('/site') ||
 		pathname === '/';
+	const isWhatsAppRoute = pathname.includes('/dashboard/whatsapp');
 
 	const [sidebarOpen, setSidebarOpen]         = useState(false);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -279,10 +318,10 @@ export default function Layout({ children }) {
 							)}
 
 							<div className="relative flex-1 min-w-0 overflow-x-hidden ">
+								{!isAuthRoute && <div className={`max-[1025px]:block hidden ${isWhatsAppRoute ? 'wa-dashboard-header' : ''}`}>
+									<Header onMenu={() => setSidebarOpen(!sidebarOpen)} />
+								</div>}
 								<AnimatePresence mode="wait">
-									{!isAuthRoute && <div className="max-[1025px]:block hidden">
-										<Header onMenu={() => setSidebarOpen(!sidebarOpen)} />
-									</div>}
 									<motion.main
 										key={pathname}
 										initial={{ opacity: 0, y: 8 }}
@@ -294,7 +333,7 @@ export default function Layout({ children }) {
 										{/* Add bottom padding when impersonating so content isn't hidden behind bar */}
 										<div
 											id="body"
-											className={`${pathname !== "/" && "h-screen  "} ${!isAuthRoute && ` overflow-x-hidden overflow-auto p-3 md:p-4`} ${isImpersonating ? 'pb-8' : ''}`}
+											className={`${pathname !== "/" && "h-screen  "} ${!isAuthRoute && ` overflow-x-hidden overflow-auto ${isWhatsAppRoute ? 'p-0 lg:p-4' : 'p-3 md:p-4'}`} ${isImpersonating ? 'pb-8' : ''}`}
 										>
 											{children}
 										</div>

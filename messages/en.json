@@ -578,7 +578,8 @@
 			"system": "System",
 			"billing": "Billing",
 			"timeManagement": "Time Management",
-			"clientIntake": "Client Intake"
+			"clientIntake": "Client Intake",
+			"main": "Main"
 		},
 		"items": {
 			"forms": "Contact Requests",
@@ -596,6 +597,7 @@
 			"calendar": "Calendar",
 			"messages": "Messages",
 			"whatsapp": "WhatsApp",
+			"transcript": "Transcript",
 			"notifications": "Notifications",
 			"calorieCalculator": "Calorie Calculator",
 			"billing": "Billing",
@@ -638,12 +640,60 @@
 			"calendar": "Schedule view with upcoming sessions and events",
 			"messages": "Direct messages and client communication",
 			"whatsapp": "Manage WhatsApp accounts, conversations, groups and reports",
+			"transcript": "Upload or record audio and convert it into editable text",
 			"notifications": "System alerts and the latest updates",
 			"calorieCalculator": "Calculate your daily calorie and nutrient needs",
 			"billing": "Manage subscriptions, invoices and payments",
 			"money": "Track earnings, revenue and financial summaries",
 			"profile_admin": "Your account settings, preferences and security",
 			"profile_client": "Your profile and account settings"
+		},
+		"groups": {
+			"ai": "AI Tools",
+			"main": "Main",
+			"management": "Management",
+			"content": "Content",
+			"workspace": "Workspace",
+			"communication": "Communication",
+			"tools": "Tools",
+			"finance": "Finance",
+			"account": "Account"
+		},
+		"palettes": {
+			"pearl": "Pearl",
+			"silver": "Silver",
+			"ivory": "Ivory",
+			"slate": "Slate",
+			"frost": "Frost",
+			"lavender": "Lavender"
+		},
+		"customize": {
+			"triggerLabel": "Customize Sidebar",
+			"appearanceTitle": "Sidebar Color",
+			"title": "Customize Sidebar",
+			"subtitle": "Show, hide and reorder your navigation",
+			"searchPlaceholder": "Search menu items…",
+			"navItemsTitle": "Navigation Items",
+			"noResults": "No matching items found",
+			"hiddenBadge": "hidden",
+			"requiredLabel": "Required",
+			"premiumLabel": "Premium",
+			"resetButton": "Reset",
+			"doneButton": "Done",
+			"ofLabel": "of",
+			"visibleLabel": "visible",
+			"tabs": {
+				"navigation": "Navigation",
+				"marketplace": "Marketplace"
+			},
+			"marketplace": {
+				"subtitle": "Add extra pages to your sidebar. They stay hidden until you add them.",
+				"addButton": "Add to Sidebar",
+				"removeButton": "Remove",
+				"addedBadge": "Added",
+				"installedLabel": "added",
+				"emptyTitle": "No apps available for your role"
+			}
 		}
 	},
 	"themeSwitcher": {
@@ -1480,7 +1530,8 @@
 			"delete": "Delete User",
 			"shareCredsWhatsapp": "Send Login Credentials via WhatsApp",
 			"enableWorkoutEdit": "Enable Workout Editing",
-			"disableWorkoutEdit": "Disable Workout Editing"
+			"disableWorkoutEdit": "Disable Workout Editing",
+			"deleteSelected": "Delete Selected"
 		},
 		"workoutEdit": {
 			"enabled": "Enabled",
@@ -1603,7 +1654,9 @@
 			"apply": "Apply",
 			"noResults": "No Results",
 			"tryAdjusting": "Try adjusting the search or filters",
-			"preview": "Image Preview"
+			"preview": "Image Preview",
+			"selectedCount": "{count} selected",
+			"clearSelection": "Clear"
 		},
 		"alerts": {
 			"credsSent": "Login credentials sent",
@@ -1631,7 +1684,8 @@
 			"noPhone": "No valid phone number for this user",
 			"loadWorkoutFailed": "Failed to load workout plans",
 			"loadMealFailed": "Failed to load meal plans",
-			"saveCaloriesSuccess": "Calories information saved successfully"
+			"saveCaloriesSuccess": "Calories information saved successfully",
+			"usersDeleted": "{count} users deleted successfully"
 		},
 		"errors": {
 			"nameMin": "Name must be at least 2 characters",
@@ -1657,7 +1711,8 @@
 		},
 		"dialogs": {
 			"deleteUserConfirm": "Are you sure you want to delete {name}? This action cannot be undone.",
-			"resetPasswordAndSendConfirm": "The password for {name} will be reset and new login credentials will be sent via WhatsApp. Do you want to continue?"
+			"resetPasswordAndSendConfirm": "The password for {name} will be reset and new login credentials will be sent via WhatsApp. Do you want to continue?",
+			"deleteMultipleUsersConfirm": "Are you sure you want to delete {count} selected users? This action cannot be undone."
 		}
 	},
 	"date": {
@@ -5344,6 +5399,278 @@
 			"buttons": {
 				"addSet": "Add set",
 				"save": "Save"
+			}
+		}
+	},
+	"reportConfig": {
+		"coachConfig": {
+			"title": "Weekly Report Setup",
+			"subtitle": "Customize the weekly report questions and delivery schedule for your clients",
+			"activeBadge": "{count} active questions",
+			"save": "Save Changes",
+			"loading": "Loading...",
+			"unsavedChanges": "You have unsaved changes",
+			"savedSuccess": "✓ Saved successfully",
+			"errors": {
+				"saveFailed": "An error occurred while saving, please try again"
+			},
+			"tabs": {
+				"fields": "Questions & Groups",
+				"notifications": "Notifications & Schedule",
+				"clients": "Report Tracking"
+			},
+			"groups": {
+				"addGroup": "Add New Group",
+				"untitled": "Untitled",
+				"addField": "Add Question",
+				"disabledMessage": "This group is currently disabled",
+				"enableGroup": "Enable Group",
+				"addFirstField": "Add First Question",
+				"newGroupDefaultLabel": "New Group",
+				"activeQuestionsSuffix": "active questions"
+			},
+			"fields": {
+				"required": "Required",
+				"active": "Active",
+				"inactive": "Inactive",
+				"questionPlaceholder": "Type the question text...",
+				"noQuestionText": "No question text — click to edit",
+				"helperText": "Helper text",
+				"helperPlaceholder": "e.g. Enter the value here...",
+				"options": "Options (comma-separated)",
+				"optionsPlaceholder": "Excellent, Good, Average, Poor"
+			},
+			"fieldTypes": {
+				"boolean": "Yes / No",
+				"text": "Short Text",
+				"number": "Number",
+				"textarea": "Long Text",
+				"select": "Select List",
+				"rating": "Star Rating",
+				"image": "Image"
+			},
+			"notif": {
+				"title": "Notification & Schedule Settings",
+				"subtitle": "Set when and how your clients receive weekly report requests",
+				"disabled": "Notifications are disabled — your clients won't receive any notifications",
+				"schedule": "Send Schedule & Reminders",
+				"dayOfWeek": "Weekly Send Day",
+				"sendTime": "Send Time",
+				"reminders": "Automatic Reminders",
+				"reminderAfterDays": "Send an automatic reminder after",
+				"daysAfterRequest": "days without a response",
+				"maxReminders": "Maximum reminders",
+				"times": "time(s)",
+				"messages": "Message Text",
+				"initialMessage": "Report request message",
+				"initialMessagePh": "Write the message the client receives when the report opens...",
+				"reminderMessage": "Automatic reminder message",
+				"reminderMessagePh": "Write the reminder message for clients who haven't submitted a report...",
+				"useDefault": "Restore default message",
+				"defaultInitialMessage": "Hello 👋 It's time to send your weekly follow-up report. Please fill out the report to keep track of your progress and let us know how you're doing. 💪",
+				"defaultReminderMessage": "Reminder 🔔 We haven't received your weekly follow-up report yet. Please complete it as soon as possible to stay on track with your coach. 🏋️"
+			},
+			"days": {
+				"SU": "Sun",
+				"MO": "Mon",
+				"TU": "Tue",
+				"WE": "Wed",
+				"TH": "Thu",
+				"FR": "Fri",
+				"SA": "Sat"
+			},
+			"clients": {
+				"status": "Status",
+				"statusAll": "All",
+				"statusSubmitted": "Submitted",
+				"statusPending": "Pending",
+				"statusLate": "Late",
+				"name": "Client",
+				"lastReport": "Last Report",
+				"lastReportPrefix": "Last report: ",
+				"noPhone": "This client has no phone number",
+				"title": "Client Report Tracking",
+				"subtitle": "Track weekly report status and send reminders to late clients",
+				"total": "Total Clients",
+				"submitted": "Submitted",
+				"pending": "Pending",
+				"late": "Late",
+				"filterAll": "All Clients",
+				"filterSubmitted": "Submitted",
+				"filterPending": "Pending",
+				"filterLate": "Late",
+				"sendToSelected": "Send reminder to {count} selected",
+				"sendReminder": "Send Reminder",
+				"reminderSent": "Reminders sent successfully ✓",
+				"search": "Search by client name or email...",
+				"selectAll": "Select All",
+				"deselectAll": "Deselect All",
+				"noResults": "No matching results",
+				"empty": "No clients added yet",
+				"requestReport": "Request Report",
+				"reminder": "Reminder",
+				"whatsapp": "WhatsApp",
+				"call": "Call",
+				"chat": "Chat",
+				"profile": "Profile"
+			}
+		},
+		"reports": {
+			"title": "Weekly Reports",
+			"subtitle": "Track and review your clients' weekly reports",
+			"yes": "Yes",
+			"no": "No",
+			"reviewed": "Reviewed",
+			"awaitingReview": "Awaiting Review",
+			"athlete": "Trainee",
+			"empty": "No reports",
+			"close": "Close",
+			"createdAt": "Week Date",
+			"statusReview": "Review Status",
+			"view": "View",
+			"searchPlaceholder": "Search reports...",
+			"labels": {
+				"total": "Total Reports"
+			},
+			"card": {
+				"weight": "Weight",
+				"kg": "kg",
+				"cardio": "Cardio"
+			},
+			"columns": {
+				"athlete": "Trainee",
+				"weekOf": "Week"
+			},
+			"filters": {
+				"title": "Filters",
+				"apply": "Apply",
+				"user": "User",
+				"userPlaceholder": "Select a user",
+				"allUsers": "All users",
+				"sortBy": "Sort by",
+				"sortOrder": "Sort order",
+				"reviewed": {
+					"label": "Review Status",
+					"any": "All",
+					"yes": "Reviewed",
+					"no": "Not reviewed"
+				}
+			},
+			"sort": {
+				"fields": {
+					"created_at": "Created Date",
+					"updated_at": "Updated Date"
+				},
+				"orders": {
+					"desc": "Newest first",
+					"asc": "Oldest first"
+				}
+			},
+			"messages": {
+				"saved": "Saved"
+			},
+			"errors": {
+				"load": "An error occurred while loading reports",
+				"save": "An error occurred while saving feedback",
+				"feedbackEmpty": "Please write feedback first"
+			},
+			"detail": {
+				"title": "Report Details",
+				"loading": "Loading report...",
+				"feedback": "Coach Feedback",
+				"feedbackPh": "Write your feedback here...",
+				"photos": "Progress Photos",
+				"noPhoto": "No photo",
+				"measurements": "Body Measurements",
+				"training": "Training",
+				"diet": "Diet",
+				"section": {
+					"photos": {
+						"front": "Front",
+						"back": "Back",
+						"left": "Left",
+						"right": "Right"
+					},
+					"measurements": {
+						"date": "Date",
+						"weight": "Weight",
+						"waist": "Waist",
+						"chest": "Chest",
+						"hips": "Hips",
+						"arms": "Arms",
+						"thighs": "Thighs"
+					},
+					"training": {
+						"cardioAdherence": "Cardio Adherence",
+						"intensityOk": "Training intensity appropriate",
+						"shape": "Physique rating",
+						"fitness": "Fitness rating",
+						"sleepEnough": "Sleep sufficient",
+						"sleepHours": "Hours of sleep",
+						"daysDeviation": "Deviation from training days",
+						"notes": {
+							"title": "Program Notes"
+						},
+						"deviation": {
+							"count": "Days missed",
+							"reason": "Reason"
+						}
+					},
+					"diet": {
+						"hungry": "Felt hungry",
+						"comfort": "Emotional comfort",
+						"tooMuch": "Food too much",
+						"wantSpecific": "Craving specific food",
+						"deviation": {
+							"title": "Diet Deviation",
+							"times": "Number of times",
+							"details": "Details"
+						}
+					}
+				}
+			}
+		},
+		"weekly": {
+			"cardioAdherence": "Did you stick to your assigned cardio?",
+			"diet": {
+				"title": "Diet",
+				"hungry": "Did you feel hungry during the week?",
+				"comfort": "Were you emotionally comfortable with the diet?",
+				"tooMuch": "Did you feel the food amount was too much?",
+				"deviation": {
+					"title": "Did you deviate from the diet this week?"
+				},
+				"wantSpecific": {
+					"title": "Did you crave a specific food excessively?"
+				}
+			},
+			"training": {
+				"title": "Training",
+				"intensityOk": "Was the training intensity right for you?",
+				"daysDeviation": "Did you stick to the assigned training days?",
+				"shape": "How would you rate your physique this week?",
+				"fitness": "How would you rate your fitness level this week?",
+				"sleepEnough": "Did you get enough sleep?",
+				"sleepHours": "How many hours do you sleep on average per day?",
+				"notes": {
+					"title": "Notes and comments on the training program"
+				}
+			},
+			"measurements": {
+				"title": "Body Measurements",
+				"weight": "Weight (kg)",
+				"waist": "Waist circumference (cm)",
+				"chest": "Chest circumference (cm)",
+				"hips": "Hip circumference (cm)",
+				"arms": "Arm circumference (cm)",
+				"thighs": "Thigh circumference (cm)"
+			},
+			"photos": {
+				"title": "Progress Photos",
+				"front": "Front photo",
+				"back": "Back photo",
+				"left": "Left side photo",
+				"right": "Right side photo"
 			}
 		}
 	}

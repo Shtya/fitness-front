@@ -2,10 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
 	Filter, X, ChevronDown, SlidersHorizontal, Check,
-	RefreshCw, Sparkles, ChevronRight,
+	RefreshCw, Sparkles, ChevronRight, PanelTopClose, PanelTopOpen,
 } from 'lucide-react';
 
 const cx = (...c) => c.filter(Boolean).join(' ');
@@ -416,16 +417,107 @@ export function PageHeader({
 	onFilterReset,
 	actions,
 	children,
+	collapsible = true,
+	collapseStorageKey,
+	collapseLabel = 'Collapse header',
+	expandLabel = 'Expand header',
 }) {
+	const pathname = usePathname();
 	const [filterOpen, setFilterOpen] = useState(false);
+	const [headerOpen, setHeaderOpen] = useState(true);
 	const filterBtnRef = useRef(null);
+	const resolvedStorageKey = collapseStorageKey || `page-header:${pathname}`;
+
+	useEffect(() => {
+		if (!collapsible) return;
+		try {
+			const saved = window.localStorage.getItem(resolvedStorageKey);
+			setHeaderOpen(saved !== 'closed');
+		} catch {}
+	}, [collapsible, resolvedStorageKey]);
+
+	const setHeaderVisibility = useCallback((open) => {
+		setHeaderOpen(open);
+		try {
+			window.localStorage.setItem(resolvedStorageKey, open ? 'open' : 'closed');
+		} catch {}
+	}, [resolvedStorageKey]);
 
 	const activeFilterCount = Object.values(filterValues).filter(v =>
 		v !== '' && v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0)
 	).length;
 
+	if (collapsible && !headerOpen) {
+		return (
+			<motion.div
+				layout
+				initial={{ opacity: 0, y: -8 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ layout: { duration: 0.38, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.22 }, y: { duration: 0.32, ease: [0.22, 1, 0.36, 1] } }}
+				className="relative overflow-hidden rounded-[10px_10px_0_0]"
+			>
+				<div
+					className="absolute inset-0"
+					style={{ background: 'linear-gradient(145deg, var(--color-gradient-from) 0%, var(--color-gradient-via, var(--color-gradient-from)) 50%, var(--color-gradient-to) 100%)' }}
+				/>
+				{tabs.length > 0 && (
+					<div className="relative flex gap-1 overflow-x-auto pe-14 pt-2" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+							{tabs.map((tab) => {
+								const TIcon = tab.icon;
+								const isActive = activeTab === tab.id;
+								return (
+									<button
+										key={tab.id}
+										type="button"
+										onClick={() => onTabChange?.(tab.id)}
+										className="relative flex shrink-0 items-center gap-2 rounded-[14px_14px_0_0] px-5 py-3 text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+										style={{ color: isActive ? 'var(--color-primary-700)' : 'rgba(255,255,255,0.78)', background: isActive ? 'white' : 'transparent' }}
+									>
+										{TIcon && <TIcon className="h-4 w-4" strokeWidth={2.5} />}
+										<span>{tab.label}</span>
+									</button>
+								);
+							})}
+					</div>
+				)}
+				{tabs.length === 0 && (
+					<div className="relative flex min-h-16 flex-wrap items-center gap-3 px-4 py-3 pe-16 sm:flex-nowrap sm:px-5 sm:pe-16">
+						{Icon && (
+							<div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-white/[0.16] text-white shadow-sm ring-1 ring-inset ring-white/25 backdrop-blur-md">
+								<Icon className="h-5 w-5" strokeWidth={2.4} />
+							</div>
+						)}
+						<div className="min-w-0 flex-1">
+							<h1 className="truncate text-base font-black text-white sm:text-lg">{title}</h1>
+							{desc && <p className="truncate text-xs font-medium text-white/65">{desc}</p>}
+						</div>
+						{actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+					</div>
+				)}
+				<button
+					type="button"
+					onClick={() => setHeaderVisibility(true)}
+					aria-label={expandLabel}
+					title={expandLabel}
+					className={cx(
+						`absolute ${tabs.length === 0 ? "end-3.5 top-3.5" : "end-2 top-2"} z-20 grid h-10 w-10 place-items-center rounded-lg transition-all hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2`,
+						'bg-white/95 text-[var(--color-primary-700)] shadow-lg hover:bg-white focus-visible:ring-white'
+					)}
+				>
+					<PanelTopOpen className="h-5 w-5" strokeWidth={2.3} />
+				</button>
+			</motion.div>
+		);
+	}
+
 	return (
-		<div className="relative overflow-hidden rounded-[10px_10px_0_0]" >
+		<motion.div
+			layout
+			initial={{ opacity: 0, y: -8 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ layout: { duration: 0.42, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.28 }, y: { duration: 0.36, ease: [0.22, 1, 0.36, 1] } }}
+			className="relative overflow-hidden rounded-[10px_10px_0_0]"
+		>
 
 			{/* ── Base gradient ── */}
 			<div
@@ -604,6 +696,20 @@ export function PageHeader({
 								</FilterPortal>
 							</div>
 						)}
+
+						{collapsible && (
+							<motion.button
+								type="button"
+								whileHover={{ scale: 1.04, y: -1 }}
+								whileTap={{ scale: 0.96 }}
+								onClick={() => setHeaderVisibility(false)}
+								aria-label={collapseLabel}
+								title={collapseLabel}
+								className="grid h-10 w-10 place-items-center rounded-lg bg-white/[0.16] text-white shadow-sm ring-1 ring-inset ring-white/25 backdrop-blur-md transition-colors hover:bg-white/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+							>
+								<PanelTopClose className="h-5 w-5" strokeWidth={2.3} />
+							</motion.button>
+						)}
 					</div>
 				</div>
 
@@ -754,6 +860,6 @@ export function PageHeader({
 
 				{tabs.length === 0 && <div className="pb-7" />}
 			</div>
-		</div>
+		</motion.div>
 	);
 }

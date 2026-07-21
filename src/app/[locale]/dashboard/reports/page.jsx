@@ -13,7 +13,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import qs from 'qs';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Bell, BellOff, Check, CheckCircle2, ChevronDown, ChevronUp, Clock, AlertCircle, Eye, EyeOff, GripVertical, Loader2, MessageSquare, Plus, Save, Send, Settings2, Sparkles, Star, Trash2, Users, X, Hash, Type, AlignLeft, List, ToggleRight, Dumbbell, Utensils, Camera, Ruler, FileText, CalendarClock, MessagesSquare, BellRing, Phone, MessageCircle, FolderPlus, Edit3, RotateCcw, UserCheck, Repeat, Image, Shield, User2, CalendarDays, HeartPulse, Activity, ClipboardList, MessageSquareText, XCircle } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
@@ -281,27 +281,27 @@ function FieldTypeChip({ type, onChange, t }) {
   );
 }
 
-function RequiredCheck({ checked, onChange }) {
+function RequiredCheck({ checked, onChange, t }) {
   return (
     <button type='button' onClick={() => onChange(!checked)} className='flex items-center gap-1.5 group cursor-pointer select-none'>
       <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all duration-150 ${checked ? 'bg-[var(--color-primary-600)] border-[var(--color-primary-600)] shadow-sm' : 'bg-white border-slate-300 group-hover:border-[var(--color-primary-400)]'}`}>{checked && <Check size={9} className='text-white' strokeWidth={3} />}</div>
-      <span className={`text-[11px] font-semibold transition-colors ${checked ? 'text-[var(--color-primary-700)]' : 'text-slate-500 group-hover:text-slate-700'}`}>مطلوب</span>
+      <span className={`text-[11px] font-semibold transition-colors ${checked ? 'text-[var(--color-primary-700)]' : 'text-slate-500 group-hover:text-slate-700'}`}>{t('coachConfig.fields.required')}</span>
     </button>
   );
 }
 
-function ActiveToggle({ enabled, onChange }) {
+function ActiveToggle({ enabled, onChange, t }) {
   return (
     <button type='button' onClick={() => onChange(!enabled)} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all ${enabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>
       {enabled ? (
         <>
           <Check size={10} strokeWidth={3} />
-          نشط
+          {t('coachConfig.fields.active')}
         </>
       ) : (
         <>
           <X size={10} />
-          معطل
+          {t('coachConfig.fields.inactive')}
         </>
       )}
     </button>
@@ -330,11 +330,11 @@ function SortableFieldRow({ id, isBuiltin, fieldKey, fieldConfig, label, customF
         <button type='button' className='cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-400 shrink-0 touch-none' {...attributes} {...listeners}>
           <GripVertical size={14} />
         </button>
-        <div className='flex-1 min-w-0'>{!isBuiltin && expandCustom ? <input value={customField?.label || ''} onChange={e => patch({ label: e.target.value })} placeholder='اكتب نص السؤال...' className='w-full text-sm font-medium text-slate-700 bg-transparent border-b border-[var(--color-primary-300)] focus:outline-none pb-0.5' /> : <span className={`text-sm font-medium truncate block ${enabled ? 'text-slate-700' : 'text-slate-400'}`}>{isBuiltin ? label : customField?.label || <em className='text-slate-400 text-xs not-italic'>سؤال بدون نص — انقر تحرير</em>}</span>}</div>
+        <div className='flex-1 min-w-0'>{!isBuiltin && expandCustom ? <input value={customField?.label || ''} onChange={e => patch({ label: e.target.value })} placeholder={t('coachConfig.fields.questionPlaceholder')} className='w-full text-sm font-medium text-slate-700 bg-transparent border-b border-[var(--color-primary-300)] focus:outline-none pb-0.5' /> : <span className={`text-sm font-medium truncate block ${enabled ? 'text-slate-700' : 'text-slate-400'}`}>{isBuiltin ? label : customField?.label || <em className='text-slate-400 text-xs not-italic'>{t('coachConfig.fields.noQuestionText')}</em>}</span>}</div>
         <div className='flex items-center gap-2 shrink-0 flex-wrap justify-end'>
           <FieldTypeChip type={type} onChange={v => patch(isBuiltin ? { enabled, required, type: v } : { type: v })} t={t} />
-          <ActiveToggle enabled={enabled} onChange={v => patch(isBuiltin ? { enabled: v, required: v ? required : false, type } : { enabled: v })} />
-          <RequiredCheck checked={required} onChange={v => patch(isBuiltin ? { enabled, required: v, type } : { required: v })} />
+          <ActiveToggle enabled={enabled} onChange={v => patch(isBuiltin ? { enabled: v, required: v ? required : false, type } : { enabled: v })} t={t} />
+          <RequiredCheck checked={required} onChange={v => patch(isBuiltin ? { enabled, required: v, type } : { required: v })} t={t} />
           {!isBuiltin && (
             <button type='button' onClick={() => setExpandCustom(o => !o)} className='w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors'>
               <Edit3 size={11} />
@@ -348,12 +348,12 @@ function SortableFieldRow({ id, isBuiltin, fieldKey, fieldConfig, label, customF
       {!isBuiltin && expandCustom && (
         <div className='border-t border-[var(--color-primary-100)] p-3 grid grid-cols-1 md:grid-cols-2 gap-2.5 bg-white/70'>
           <div className='space-y-1'>
-            <label className='text-[10px] font-semibold text-slate-500 uppercase tracking-wide'>نص توضيحي</label>
-            <input value={customField?.placeholder || ''} onChange={e => patch({ placeholder: e.target.value })} placeholder='مثال: أدخل القيمة هنا...' className='w-full h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]/40' />
+            <label className='text-[10px] font-semibold text-slate-500 uppercase tracking-wide'>{t('coachConfig.fields.helperText')}</label>
+            <input value={customField?.placeholder || ''} onChange={e => patch({ placeholder: e.target.value })} placeholder={t('coachConfig.fields.helperPlaceholder')} className='w-full h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]/40' />
           </div>
           {customField?.type === 'select' && (
             <div className='space-y-1 md:col-span-2'>
-              <label className='text-[10px] font-semibold text-slate-500 uppercase tracking-wide'>الخيارات (مفصولة بفاصلة)</label>
+              <label className='text-[10px] font-semibold text-slate-500 uppercase tracking-wide'>{t('coachConfig.fields.options')}</label>
               <input
                 value={(customField.options || []).join(', ')}
                 onChange={e =>
@@ -364,7 +364,7 @@ function SortableFieldRow({ id, isBuiltin, fieldKey, fieldConfig, label, customF
                       .filter(Boolean),
                   })
                 }
-                placeholder='ممتاز, جيد, متوسط, ضعيف'
+                placeholder={t('coachConfig.fields.optionsPlaceholder')}
                 className='w-full h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-300)]/40'
               />
             </div>
@@ -438,7 +438,7 @@ function SortableGroupCard({ id, groupKey, groupData, fieldDefs, onToggleEnabled
             </div>
           ) : (
             <div className='flex items-center gap-1.5'>
-              <span className='text-sm font-bold text-slate-800 truncate'>{groupData?.label || 'بدون عنوان'}</span>
+              <span className='text-sm font-bold text-slate-800 truncate'>{groupData?.label || t('coachConfig.groups.untitled')}</span>
               <button
                 onClick={() => {
                   setNameVal(groupData?.label || '');
@@ -450,14 +450,14 @@ function SortableGroupCard({ id, groupKey, groupData, fieldDefs, onToggleEnabled
             </div>
           )}
           <span className='text-[11px] text-slate-400'>
-            {activeCount}/{allItems.length} سؤال نشط
+            {activeCount}/{allItems.length} {t('coachConfig.groups.activeQuestionsSuffix')}
           </span>
         </div>
         <div className='flex items-center gap-1.5 shrink-0'>
           <button type='button' onClick={onAddField} className='flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-dashed border-[var(--color-primary-300)] text-[var(--color-primary-600)] text-[11px] font-semibold hover:bg-[var(--color-primary-50)] transition-colors whitespace-nowrap'>
-            <Plus size={11} /> إضافة سؤال
+            <Plus size={11} /> {t('coachConfig.groups.addField')}
           </button>
-          <ActiveToggle enabled={groupData?.enabled ?? true} onChange={onToggleEnabled} />
+          <ActiveToggle enabled={groupData?.enabled ?? true} onChange={onToggleEnabled} t={t} />
           <button type='button' onClick={onDeleteGroup} className='w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 flex items-center justify-center text-rose-500 transition-colors'>
             <Trash2 size={13} />
           </button>
@@ -472,15 +472,15 @@ function SortableGroupCard({ id, groupKey, groupData, fieldDefs, onToggleEnabled
           {!(groupData?.enabled ?? true) ? (
             <div className='flex flex-col items-center py-8 gap-2 text-slate-400'>
               <EyeOff size={22} className='opacity-40' />
-              <p className='text-xs'>هذه المجموعة معطّلة حالياً</p>
+              <p className='text-xs'>{t('coachConfig.groups.disabledMessage')}</p>
               <button type='button' onClick={() => onToggleEnabled(true)} className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50'>
-                <Eye size={12} /> تفعيل المجموعة
+                <Eye size={12} /> {t('coachConfig.groups.enableGroup')}
               </button>
             </div>
           ) : allItems.length === 0 ? (
             <button type='button' onClick={onAddField} className='w-full flex flex-col items-center justify-center gap-1.5 py-8 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-[var(--color-primary-200)] hover:text-[var(--color-primary-500)] transition-colors'>
               <Plus size={18} />
-              <span className='text-xs font-medium'>إضافة أول سؤال</span>
+              <span className='text-xs font-medium'>{t('coachConfig.groups.addFirstField')}</span>
             </button>
           ) : (
             <DndContext sensors={fieldSensors} collisionDetection={closestCenter} onDragEnd={handleFieldDragEnd}>
@@ -498,7 +498,7 @@ function SortableGroupCard({ id, groupKey, groupData, fieldDefs, onToggleEnabled
 }
 
 /* ─── Client Row ─── */
-function ClientRow({ client, selected, onToggle, onSendReminder, t }) {
+function ClientRow({ client, selected, onToggle, onSendReminder, t, locale }) {
   const statusColor = client.status === 'submitted' ? 'green' : client.status === 'late' ? 'red' : 'amber';
   const initials = (client.name || '?')
     .split(' ')
@@ -514,7 +514,7 @@ function ClientRow({ client, selected, onToggle, onSendReminder, t }) {
   const sendRptWA = () => {
     const p = String(client.phone || '').replace(/\D/g, '');
     if (!p) return alert(t('coachConfig.clients.noPhone'));
-    window.open(`https://wa.me/${p}?text=${encodeURIComponent(DEFAULT_INITIAL_MSG)}`, '_blank');
+    window.open(`https://wa.me/${p}?text=${encodeURIComponent(t('coachConfig.notif.defaultInitialMessage'))}`, '_blank');
   };
 
   return (
@@ -526,39 +526,39 @@ function ClientRow({ client, selected, onToggle, onSendReminder, t }) {
           <span className='text-sm font-semibold text-slate-800'>{client.name}</span>
           <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border ${statusColor === 'green' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : statusColor === 'red' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
             {statusColor !== 'green' && <span className='w-1.5 h-1.5 rounded-full bg-current animate-pulse' />}
-            {client.status === 'submitted' ? 'أرسل التقرير' : client.status === 'late' ? 'متأخر' : 'بانتظار الإرسال'}
+            {client.status === 'submitted' ? t('coachConfig.clients.statusSubmitted') : client.status === 'late' ? t('coachConfig.clients.statusLate') : t('coachConfig.clients.statusPending')}
           </span>
         </div>
         <div className='flex items-center gap-3 mt-0.5'>
           <span className='text-xs text-slate-400 truncate'>{client.email}</span>
-          {client.lastReportAt && <span className='text-xs text-slate-400 hidden sm:inline'>آخر تقرير: {new Date(client.lastReportAt).toLocaleDateString('ar')}</span>}
+          {client.lastReportAt && <span className='text-xs text-slate-400 hidden sm:inline'>{t('coachConfig.clients.lastReportPrefix')}{new Date(client.lastReportAt).toLocaleDateString(locale === 'ar' ? 'ar' : 'en-US')}</span>}
         </div>
       </div>
       <div className='flex items-center gap-1.5 shrink-0 flex-wrap justify-end'>
         {client.status !== 'submitted' && (
           <>
-            <button onClick={sendRptWA} title='طلب التقرير' className='flex items-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold hover:bg-emerald-100 transition-all'>
+            <button onClick={sendRptWA} title={t('coachConfig.clients.requestReport')} className='flex items-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold hover:bg-emerald-100 transition-all'>
               <MessageCircle size={12} />
-              <span className='hidden md:inline'>طلب التقرير</span>
+              <span className='hidden md:inline'>{t('coachConfig.clients.requestReport')}</span>
             </button>
-            <button onClick={() => onSendReminder([client.id])} title='إرسال تذكير' className='flex items-center gap-1 px-2 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold hover:bg-amber-100 transition-all'>
+            <button onClick={() => onSendReminder([client.id])} title={t('coachConfig.clients.sendReminder')} className='flex items-center gap-1 px-2 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold hover:bg-amber-100 transition-all'>
               <BellRing size={12} />
-              <span className='hidden md:inline'>تذكير</span>
+              <span className='hidden md:inline'>{t('coachConfig.clients.reminder')}</span>
             </button>
           </>
         )}
-        <button onClick={openWA} title='واتساب' className='w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center hover:bg-emerald-100 transition-all'>
+        <button onClick={openWA} title={t('coachConfig.clients.whatsapp')} className='w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center hover:bg-emerald-100 transition-all'>
           <MessageCircle size={13} />
         </button>
         {client.phone && (
-          <button onClick={() => window.open(`tel:${client.phone}`, '_self')} title='اتصال' className='w-8 h-8 rounded-lg bg-sky-50 text-sky-700 border border-sky-200 flex items-center justify-center hover:bg-sky-100 transition-all'>
+          <button onClick={() => window.open(`tel:${client.phone}`, '_self')} title={t('coachConfig.clients.call')} className='w-8 h-8 rounded-lg bg-sky-50 text-sky-700 border border-sky-200 flex items-center justify-center hover:bg-sky-100 transition-all'>
             <Phone size={13} />
           </button>
         )}
-        <button onClick={() => window.open(`/dashboard/chat?userId=${client.id}`, '_blank')} title='محادثة' className='w-8 h-8 rounded-lg bg-violet-50 text-violet-700 border border-violet-200 flex items-center justify-center hover:bg-violet-100 transition-all'>
+        <button onClick={() => window.open(`/dashboard/chat?userId=${client.id}`, '_blank')} title={t('coachConfig.clients.chat')} className='w-8 h-8 rounded-lg bg-violet-50 text-violet-700 border border-violet-200 flex items-center justify-center hover:bg-violet-100 transition-all'>
           <MessageSquare size={13} />
         </button>
-        <button onClick={() => window.open(`/dashboard/users/${client.id}`, '_blank')} title='الملف الشخصي' className='w-8 h-8 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-all'>
+        <button onClick={() => window.open(`/dashboard/users/${client.id}`, '_blank')} title={t('coachConfig.clients.profile')} className='w-8 h-8 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-all'>
           <Eye size={13} />
         </button>
       </div>
@@ -747,6 +747,7 @@ function ReportDetailModal({ open, onClose, active, detailLoading, saving, saveE
 ═══════════════════════════════════════════════════════ */
 export default function CoachReportConfigPage() {
   const t = useTranslations('reportConfig');
+  const locale = useLocale();
   const user = useUser();
 
   /* ── Config state ── */
@@ -1062,9 +1063,9 @@ export default function CoachReportConfigPage() {
   }, []);
   const addCustomGroup = useCallback(() => {
     const id = `grp_${Date.now()}`;
-    setConfig(c => ({ ...c, customGroups: [...(c.customGroups || []), { id, label: 'مجموعة جديدة', enabled: true, fields: [] }], groupOrder: [...(c.groupOrder || BUILTIN_SECTIONS), id] }));
+    setConfig(c => ({ ...c, customGroups: [...(c.customGroups || []), { id, label: t('coachConfig.groups.newGroupDefaultLabel'), enabled: true, fields: [] }], groupOrder: [...(c.groupOrder || BUILTIN_SECTIONS), id] }));
     setTimeout(() => groupElRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 160);
-  }, []);
+  }, [t]);
   const deleteGroup = useCallback(id => {
     if (BUILTIN_SECTIONS.includes(id)) {
       setConfig(c => ({ ...c, groupOrder: (c.groupOrder || BUILTIN_SECTIONS).filter(k => k !== id) }));
@@ -1246,7 +1247,7 @@ export default function CoachReportConfigPage() {
       {
         header: t('coachConfig.clients.lastReport', { default: 'Last Report' }),
         accessor: '__lastReport',
-        cell: row => <span className='text-xs text-slate-500'>{row.lastReportAt ? new Date(row.lastReportAt).toLocaleDateString('ar') : '—'}</span>,
+        cell: row => <span className='text-xs text-slate-500'>{row.lastReportAt ? new Date(row.lastReportAt).toLocaleDateString(locale === 'ar' ? 'ar' : 'en-US') : '—'}</span>,
       },
       {
         header: t('reports.view', { default: 'Actions' }),
@@ -1254,7 +1255,7 @@ export default function CoachReportConfigPage() {
         cell: row => (
           <div className='flex items-center gap-1.5'>
             {row.status !== 'submitted' && (
-              <button onClick={() => handleSendReminder([row.id])} title='تذكير' className='flex items-center gap-1 px-2 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold hover:bg-amber-100 transition-all'>
+              <button onClick={() => handleSendReminder([row.id])} title={t('coachConfig.clients.reminder')} className='flex items-center gap-1 px-2 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold hover:bg-amber-100 transition-all'>
                 <BellRing className='h-3 w-3' />
               </button>
             )}
@@ -1264,19 +1265,19 @@ export default function CoachReportConfigPage() {
                   const p = String(row.phone || '').replace(/\D/g, '');
                   if (p) window.open(`https://wa.me/${p}`, '_blank');
                 }}
-                title='واتساب'
+                title={t('coachConfig.clients.whatsapp')}
                 className='w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center hover:bg-emerald-100 transition-all'>
                 <MessageCircle className='h-3 w-3' />
               </button>
             )}
-            <button onClick={() => window.open(`/dashboard/users/${row.id}`, '_blank')} title='الملف' className='w-7 h-7 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-all'>
+            <button onClick={() => window.open(`/dashboard/users/${row.id}`, '_blank')} title={t('coachConfig.clients.profile')} className='w-7 h-7 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-all'>
               <Eye className='h-3 w-3' />
             </button>
           </div>
         ),
       },
     ],
-    [t, handleSendReminder],
+    [t, handleSendReminder, locale],
   );
 
   const cliTableFilters = (
@@ -1485,7 +1486,7 @@ export default function CoachReportConfigPage() {
                 <p className='text-xs text-slate-400'>{t('coachConfig.notif.subtitle')}</p>
               </div>
             </div>
-            <ActiveToggle enabled={config.notifications?.enabled ?? true} onChange={v => setNotif({ enabled: v })} />
+            <ActiveToggle enabled={config.notifications?.enabled ?? true} onChange={v => setNotif({ enabled: v })} t={t} />
           </div>
 
           {!config.notifications?.enabled ? (
@@ -1545,8 +1546,8 @@ export default function CoachReportConfigPage() {
                   <span className='text-sm font-bold text-slate-800'>{t('coachConfig.notif.messages')}</span>
                 </div>
                 {[
-                  { key: 'initialMessage', label: t('coachConfig.notif.initialMessage'), ph: t('coachConfig.notif.initialMessagePh'), def: DEFAULT_INITIAL_MSG },
-                  { key: 'reminderMessage', label: t('coachConfig.notif.reminderMessage'), ph: t('coachConfig.notif.reminderMessagePh'), def: DEFAULT_REMINDER_MSG },
+                  { key: 'initialMessage', label: t('coachConfig.notif.initialMessage'), ph: t('coachConfig.notif.initialMessagePh'), def: t('coachConfig.notif.defaultInitialMessage') },
+                  { key: 'reminderMessage', label: t('coachConfig.notif.reminderMessage'), ph: t('coachConfig.notif.reminderMessagePh'), def: t('coachConfig.notif.defaultReminderMessage') },
                 ].map(msg => (
                   <div key={msg.key} className='space-y-1.5'>
                     <div className='flex items-center justify-between'>
@@ -1672,9 +1673,9 @@ export default function CoachReportConfigPage() {
       {isDirty && (activeTab === 'fields' || activeTab === 'notifications') && (
         <div className='fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-5 py-3.5 rounded-2xl bg-slate-900/95 text-white shadow-2xl shadow-black/40 backdrop-blur-sm border border-white/10' style={{ minWidth: 320, animation: 'cfgSlideUp .22s cubic-bezier(.34,1.56,.64,1) both' }}>
           <div className='flex-1'>
-            <p className='text-sm font-bold'>لديك تغييرات غير محفوظة</p>
+            <p className='text-sm font-bold'>{t('coachConfig.unsavedChanges')}</p>
             {saveErr && <p className='text-xs text-rose-400 mt-0.5'>{saveErr}</p>}
-            {saveOk && <p className='text-xs text-emerald-400 mt-0.5'>✓ تم الحفظ بنجاح</p>}
+            {saveOk && <p className='text-xs text-emerald-400 mt-0.5'>{t('coachConfig.savedSuccess')}</p>}
           </div>
           <button type='button' onClick={handleSave} disabled={saving} className='flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] text-white text-sm font-bold shadow-md hover:opacity-90 disabled:opacity-50 active:scale-[.97] transition-all'>
             {saving ? <Loader2 size={15} className='animate-spin' /> : <Save size={15} />}

@@ -35,7 +35,7 @@ import { Modal, StatCard } from '@/components/dashboard/ui/UI';
 import Button from '@/components/atoms/Button';
 import Select from '@/components/atoms/Select';
 import { Notification } from '@/config/Notification';
-import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { PrettyPagination } from '@/components/dashboard/ui/Pagination';
 import Input from '@/components/atoms/Input';
 import { ExercisePicker } from '@/components/pages/dashboard/plans/ExercisePicker';
@@ -639,12 +639,26 @@ export default function PlansPage() {
 
 	return (
 		<div className="space-y-6">
-			<GradientStatsHeader
-				onClick={() => setAddOpen(true)}
-				btnName={t('plans.header.newPlanButton')}
+			<PageHeader
 				title={t('plans.header.title')}
 				desc={t('plans.header.desc')}
-				loadingStats={loadingStats}
+				icon={Layers}
+				actions={
+					<motion.button
+						whileHover={{ scale: 1.04 }}
+						whileTap={{ scale: 0.95 }}
+						onClick={() => setAddOpen(true)}
+						className="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-black text-white"
+						style={{
+							background: 'rgba(255,255,255,0.22)',
+							backdropFilter: 'blur(16px)',
+							boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.3),0 4px 16px rgba(0,0,0,0.1)',
+						}}
+					>
+						<Plus className="h-4 w-4" />
+						{t('plans.header.newPlanButton')}
+					</motion.button>
+				}
 			>
 				{user?.role == 'admin' && (
 					<>
@@ -652,7 +666,7 @@ export default function PlansPage() {
 						<StatCard icon={Layers} title={t('plans.stats.personalPlans')} value={stats?.plans?.totalPlansPersonal || 0} />
 					</>
 				)}
-			</GradientStatsHeader>
+			</PageHeader>
 			{err && (
 				<div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-700 border border-red-100 text-sm">
 					<span className="shrink-0 w-1.5 h-1.5 rounded-full bg-red-500 mt-px" />

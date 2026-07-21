@@ -884,6 +884,7 @@
 			"calendar": "التقويم",
 			"messages": "الرسائل",
 			"whatsapp": "واتساب",
+			"transcript": "تحويل الصوت إلى نص",
 			"notifications": "الإشعارات",
 			"calorieCalculator": "حاسبة السعرات",
 			"billing": "الفواتير",
@@ -916,6 +917,7 @@
 			"calendar": "عرض الجدول مع الجلسات والأحداث القادمة",
 			"messages": "الرسائل المباشرة والتواصل مع العملاء",
 			"whatsapp": "إدارة حسابات واتساب والمحادثات والمجموعات والتقارير",
+			"transcript": "رفع أو تسجيل الصوت وتحويله إلى نص قابل للتعديل",
 			"notifications": "تنبيهات النظام وآخر التحديثات",
 			"calorieCalculator": "احسب احتياجاتك اليومية من السعرات الحرارية والمغذيات",
 			"billing": "إدارة الاشتراكات والفواتير والمدفوعات",
@@ -937,7 +939,19 @@
 			"ofLabel": "من",
 			"visibleLabel": "عناصر ظاهرة",
 			"appearanceTitle": "مظهر الشريط الجانبي",
-			"navItemsTitle": "عناصر التنقل"
+			"navItemsTitle": "عناصر التنقل",
+			"tabs": {
+				"navigation": "التنقل",
+				"marketplace": "المتجر"
+			},
+			"marketplace": {
+				"subtitle": "أضف صفحات إضافية إلى الشريط الجانبي. تبقى مخفية حتى تقوم بإضافتها.",
+				"addButton": "إضافة إلى الشريط",
+				"removeButton": "إزالة",
+				"addedBadge": "تمت الإضافة",
+				"installedLabel": "مضافة",
+				"emptyTitle": "لا توجد تطبيقات متاحة لدورك"
+			}
 		},
 		"palettes": {
 			"pearl": "اللؤلؤ الناعم",
@@ -1792,7 +1806,8 @@
 			"shareCredsWhatsapp": "إرسال بيانات الدخول عبر واتساب",
 			"renewSubscription": "تجديد الاشتراك",
 			"enableWorkoutEdit": "تفعيل تعديل الخطة",
-			"disableWorkoutEdit": "إيقاف تعديل الخطة"
+			"disableWorkoutEdit": "إيقاف تعديل الخطة",
+			"deleteSelected": "حذف المحدد"
 		},
 		"workoutEdit": {
 			"enabled": "مفعّل",
@@ -1918,7 +1933,9 @@
 			"apply": "تطبيق",
 			"noResults": "لا توجد نتائج",
 			"tryAdjusting": "جرّب تعديل البحث أو الفلاتر",
-			"preview": "معاينة الصورة"
+			"preview": "معاينة الصورة",
+			"selectedCount": "{count} محدد",
+			"clearSelection": "إلغاء التحديد"
 		},
 		"alerts": {
 			"credsSent": "تم إرسال بيانات الدخول",
@@ -1948,7 +1965,8 @@
 			"loadMealFailed": "فشل تحميل خطط الوجبات",
 			"saveCaloriesSuccess": "تم حفظ معلومات السعرات بنجاح",
 			"subscriptionRenewed": "تم تجديد الاشتراك بنجاح",
-			"renewSubscriptionFailed": "فشل في تجديد الاشتراك"
+			"renewSubscriptionFailed": "فشل في تجديد الاشتراك",
+			"usersDeleted": "تم حذف {count} مستخدمين بنجاح"
 		},
 		"errors": {
 			"nameMin": "يجب ألا يقل الاسم عن حرفين",
@@ -1974,7 +1992,8 @@
 		},
 		"dialogs": {
 			"deleteUserConfirm": "هل أنت متأكد أنك تريد حذف {name}؟ لا يمكن التراجع عن هذا الإجراء.",
-			"resetPasswordAndSendConfirm": "سيتم إعادة تعيين كلمة مرور {name} وإرسال بيانات دخول جديدة عبر واتساب. هل تريد المتابعة؟"
+			"resetPasswordAndSendConfirm": "سيتم إعادة تعيين كلمة مرور {name} وإرسال بيانات دخول جديدة عبر واتساب. هل تريد المتابعة؟",
+			"deleteMultipleUsersConfirm": "هل أنت متأكد أنك تريد حذف {count} مستخدمين محددين؟ لا يمكن التراجع عن هذا الإجراء."
 		}
 	},
 	"date": {
@@ -6473,6 +6492,8 @@
 			"activeBadge": "{count} سؤال نشط",
 			"save": "حفظ التغييرات",
 			"loading": "جاري التحميل...",
+			"unsavedChanges": "لديك تغييرات غير محفوظة",
+			"savedSuccess": "✓ تم الحفظ بنجاح",
 			"errors": {
 				"saveFailed": "حدث خطأ أثناء الحفظ، يرجى المحاولة مجدداً"
 			},
@@ -6482,7 +6503,25 @@
 				"clients": "متابعة التقارير"
 			},
 			"groups": {
-				"addGroup": "إضافة مجموعة جديدة"
+				"addGroup": "إضافة مجموعة جديدة",
+				"untitled": "بدون عنوان",
+				"addField": "إضافة سؤال",
+				"disabledMessage": "هذه المجموعة معطّلة حالياً",
+				"enableGroup": "تفعيل المجموعة",
+				"addFirstField": "إضافة أول سؤال",
+				"newGroupDefaultLabel": "مجموعة جديدة",
+				"activeQuestionsSuffix": "سؤال نشط"
+			},
+			"fields": {
+				"required": "مطلوب",
+				"active": "نشط",
+				"inactive": "معطل",
+				"questionPlaceholder": "اكتب نص السؤال...",
+				"noQuestionText": "سؤال بدون نص — انقر تحرير",
+				"helperText": "نص توضيحي",
+				"helperPlaceholder": "مثال: أدخل القيمة هنا...",
+				"options": "الخيارات (مفصولة بفاصلة)",
+				"optionsPlaceholder": "ممتاز, جيد, متوسط, ضعيف"
 			},
 			"fieldTypes": {
 				"boolean": "نعم / لا",
@@ -6510,7 +6549,9 @@
 				"initialMessagePh": "اكتب الرسالة التي سيستلمها العميل عند بدء التقرير...",
 				"reminderMessage": "رسالة التذكير التلقائي",
 				"reminderMessagePh": "اكتب رسالة التذكير للعملاء الذين لم يرسلوا التقرير...",
-				"useDefault": "استعادة الرسالة الافتراضية"
+				"useDefault": "استعادة الرسالة الافتراضية",
+				"defaultInitialMessage": "مرحباً 👋 حان وقت إرسال تقرير المتابعة الأسبوعي الخاص بك. يرجى ملء التقرير للحفاظ على تقدمك وإطلاعنا على حالتك. 💪",
+				"defaultReminderMessage": "تذكير 🔔 لم نستلم تقرير المتابعة الأسبوعي منك بعد. يرجى إكماله في أقرب وقت للحفاظ على متابعتك مع مدربك. 🏋️"
 			},
 			"days": {
 				"SU": "أح",
@@ -6548,7 +6589,15 @@
 				"deselectAll": "إلغاء التحديد",
 				"noResults": "لا توجد نتائج مطابقة",
 				"empty": "لم يتم إضافة عملاء بعد",
-				"noPhone": "لا يوجد رقم هاتف لهذا العميل"
+				"noPhone": "لا يوجد رقم هاتف لهذا العميل",
+				"lastReportPrefix": "آخر تقرير: ",
+				"sendReminder": "إرسال تذكير",
+				"requestReport": "طلب التقرير",
+				"reminder": "تذكير",
+				"whatsapp": "واتساب",
+				"call": "اتصال",
+				"chat": "محادثة",
+				"profile": "الملف الشخصي"
 			}
 		},
 		"reports": {

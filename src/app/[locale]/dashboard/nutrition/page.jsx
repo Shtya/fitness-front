@@ -37,7 +37,7 @@ import { useUser } from '@/hooks/useUser';
 import { useLocale, useTranslations } from 'next-intl';
 import { Modal, StatCard } from '@/components/dashboard/ui/UI';
 import { Notification } from '@/config/Notification';
-import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
+import { PageHeader } from '@/components/molecules/PageHeader';
 import { TimeField } from '@/components/atoms/InputTime';
 import Input from '@/components/atoms/Input';
 import { useAdminClients } from '@/hooks/useHierarchy';
@@ -649,16 +649,30 @@ export default function NutritionManagementPage() {
 
 	return (
 		<div className="space-y-6">
-			<GradientStatsHeader
-				onClick={() => setAddPlanOpen(true)}
-				btnName={t('btn.new_plan')}
+			<PageHeader
 				title={t('ui.title')}
 				desc={t('ui.subtitle')}
-				loadingStats={loadingStats}
+				icon={UtensilsCrossed}
+				actions={
+					<motion.button
+						whileHover={{ scale: 1.04 }}
+						whileTap={{ scale: 0.95 }}
+						onClick={() => setAddPlanOpen(true)}
+						className="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-black text-white"
+						style={{
+							background: 'rgba(255,255,255,0.22)',
+							backdropFilter: 'blur(16px)',
+							boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.3),0 4px 16px rgba(0,0,0,0.1)',
+						}}
+					>
+						<Plus className="h-4 w-4" />
+						{t('btn.new_plan')}
+					</motion.button>
+				}
 			>
 				<StatCard icon={Target} title={t('stats.global_plans')} value={stats?.totals?.globalPlansCount} />
 				<StatCard icon={TrendingUp} title={t('stats.my_plans')} value={stats?.totals?.myPlansCount} />
-			</GradientStatsHeader>
+			</PageHeader>
 
 
 			<DataTable
