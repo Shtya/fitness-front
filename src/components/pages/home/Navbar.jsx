@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
 	Dumbbell, Menu, X, Zap, LogOut, LayoutDashboard,
 	User, Crown, Shield, Star, ChevronDown,
-	Building2, Wallet, CalendarDays,
+	Building2, Wallet, CalendarDays, MessageCircle,
 } from "lucide-react";
 import { useState, useEffect, useRef, useTransition, useMemo } from "react";
 import { Link } from "@/i18n/navigation";
@@ -79,6 +79,7 @@ function getRoleQuickLinks(role, t) {
 	const isAdmin = ["admin", "super_admin", "coach"].includes(role);
 	const common = [
 		{ href: "/workspace?tab=calendar", icon: <CalendarDays className="h-3.5 w-3.5" />, label: t("quickLinks.myCalendar") },
+		{ href: "/dashboard/whatsapp", icon: <MessageCircle className="h-3.5 w-3.5" />, label: t("quickLinks.whatsapp") },
 		{ href: "/money", icon: <Wallet className="h-3.5 w-3.5" />, label: t("quickLinks.money") },
 	];
 	if (isAdmin) return [{ href: "/dashboard/workspace", icon: <Building2 className="h-3.5 w-3.5" />, label: t("quickLinks.workspace") }, ...common];

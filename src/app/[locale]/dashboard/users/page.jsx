@@ -1139,6 +1139,7 @@ function CreateClientWizard({ open, onClose, onDone, optionsCoach }) {
 export default function UsersList() {
 	const t = useTranslations('users');
 	const t_ = useTranslations('users.admin');
+	const user = useUser();
 	const [renewModal, setRenewModal] = useState({ open: false, user: null });
 	const [page, setPage] = useState(1);
 	const [limit, setLimit] = useState(10);
@@ -1220,6 +1221,12 @@ export default function UsersList() {
 	}
 
 	async function fetchUsers() {
+		if (user === undefined) return; // wait for client hydration of localStorage
+		if (!user?.id) {
+			setLoading(false);
+			setErr(t('alerts.loadUsersFailed'));
+			return;
+		}
 		setLoading(true);
 		setErr(null);
 		try {
@@ -1229,12 +1236,21 @@ export default function UsersList() {
 			if (hasPlanFilter === 'With plan') params.hasPlan = true;
 			else if (hasPlanFilter === 'No plan') params.hasPlan = false;
 
-			const res = user.role == 'admin'
+			const role = String(user.role || myRole || '').toLowerCase();
+			const isAdmin = role === 'admin' || role === 'super_admin';
+			const res = isAdmin
 				? await api.get('/auth/users', { params })
 				: await api.get(`/auth/coaches/${user.id}/clients`, { params });
 			const data = res.data || {};
+			const list = Array.isArray(data.users)
+				? data.users
+				: Array.isArray(data.clients)
+					? data.clients
+					: Array.isArray(data)
+						? data
+						: [];
 
-			const mapped = data?.users.map(u => ({
+			const mapped = list.map(u => ({
 				id: u.id, name: u.name, email: u.email, role: normRole(u.role),
 				status: normStatus(u.status), phone: u.phone || '',
 				membership: u.membership || '-',
@@ -1252,7 +1268,7 @@ export default function UsersList() {
 			}));
 
 			setRows(mapped);
-			setTotal(data?.total);
+			setTotal(Number(data?.total ?? mapped.length) || 0);
 		} catch (e) {
 			setErr(e?.response?.data?.message || t('alerts.loadUsersFailed'));
 		} finally {
@@ -1292,7 +1308,7 @@ export default function UsersList() {
 	useEffect(() => { fetchMe(); fetchStats(); }, []);
 	useEffect(() => {
 		fetchUsers();
-	}, [page, limit, sortBy, sortOrder, debounced, roleFilter, hasPlanFilter]);
+	}, [page, limit, sortBy, sortOrder, debounced, roleFilter, hasPlanFilter, user, myRole]);
 
 	const deleteUser = async row => {
 		if (!confirm(t('dialogs.deleteUserConfirm', { name: row.name }))) return;
@@ -1564,7 +1580,6 @@ export default function UsersList() {
 
 	const toSelectOptions = arr => arr.map(o => ({ id: o.id, label: o.name }));
 
-	const user = useUser();
 	const coaches = useAdminCoaches(user?.id, { page: 1, limit: 100, search: '' });
 
 	const optionsCoach = useMemo(() => {

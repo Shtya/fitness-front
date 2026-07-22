@@ -11,15 +11,26 @@ function readStoredUser() {
   }
 }
 
+/**
+ * Returns:
+ * - `undefined` while hydrating (SSR + first client paint)
+ * - `null` when no stored user
+ * - user object after client mount
+ *
+ * Callers must not read `user.field` until `user` is defined.
+ */
 export const useUser = () => {
-  // Keep the server render and the first browser render identical.
   const [user, setUser] = useState(undefined);
 
   useEffect(() => {
     const update = () => setUser(readStoredUser());
     update();
     window.addEventListener('storage', update);
-    return () => window.removeEventListener('storage', update);
+    window.addEventListener('sobha-user-updated', update);
+    return () => {
+      window.removeEventListener('storage', update);
+      window.removeEventListener('sobha-user-updated', update);
+    };
   }, []);
 
   return user;

@@ -147,6 +147,11 @@ export default function ExercisesPage() {
 	}, []);
 
 	const fetchList = useCallback(async () => {
+		if (user === undefined) return; // wait for client hydration of localStorage
+		if (!user?.id) {
+			setLoading(false);
+			return;
+		}
 		if (abortControllerRef.current) abortControllerRef.current.abort();
 		abortControllerRef.current = new AbortController();
 		setErr(null);
@@ -157,7 +162,12 @@ export default function ExercisesPage() {
 			if (debounced) params.search = debounced;
 			if (activeCat && activeCat !== 'all') params.category = activeCat;
 
-			const res = await api.get(user.role == 'admin' ? '/plan-exercises' : `/plan-exercises?user_id=${user.adminId}`, {
+			const role = String(user.role || '').toLowerCase();
+			const path =
+				role === 'admin' || role === 'super_admin'
+					? '/plan-exercises'
+					: `/plan-exercises?user_id=${user.adminId || user.id}`;
+			const res = await api.get(path, {
 				params, signal: abortControllerRef.current.signal,
 			});
 			const data = res.data || {};
@@ -186,7 +196,7 @@ export default function ExercisesPage() {
 		} finally {
 			if (myId === reqId.current) setLoading(false);
 		}
-	}, [page, debounced, sortBy, sortOrder, perPage, activeCat, t, user.adminId, user.role]);
+	}, [page, debounced, sortBy, sortOrder, perPage, activeCat, t, user]);
 
 	const fetchStats = useCallback(async () => {
 		setLoadingStats(true);
