@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertCircle, RefreshCw, Sparkles, Power } from 'lucide-react';
 
 const COPY = {
 	en: {
@@ -9,6 +9,12 @@ const COPY = {
 		retry: 'Retry',
 		hint: 'Select a suggestion to edit it before sending.',
 		prompt: 'Prompt',
+		enableTitle: 'AI suggestions are off',
+		enableHint: 'Turn on FitCoach reply ideas for this WhatsApp account.',
+		enable: 'Enable AI suggestions',
+		empty: 'No suggestions yet. Tap regenerate.',
+		hidden: 'AI suggestions are hidden',
+		show: 'Show',
 	},
 	ar: {
 		title: 'اقتراحات الرد بالذكاء الاصطناعي',
@@ -16,25 +22,38 @@ const COPY = {
 		retry: 'إعادة المحاولة',
 		hint: 'اختر اقتراحًا لتعديله قبل الإرسال.',
 		prompt: 'التعليمات',
+		enableTitle: 'اقتراحات الذكاء الاصطناعي متوقفة',
+		enableHint: 'فعّل اقتراحات FitCoach لهذا حساب واتساب.',
+		enable: 'تفعيل الاقتراحات',
+		empty: 'لا توجد اقتراحات بعد. اضغط تحديث.',
+		hidden: 'اقتراحات الذكاء الاصطناعي مخفية',
+		show: 'إظهار',
 	},
 };
 
 export default function AiReplySuggestions({
 	locale = 'en',
-	enabled,
-	loading,
+	visible = true,
+	settingsEnabled = false,
+	loading = false,
+	enabling = false,
 	error,
-	suggestions,
+	suggestions = [],
 	prompts = [],
 	activePromptId,
 	promptSaving,
 	onSelect,
 	onRegenerate,
 	onPromptChange,
+	onEnable,
+	onShow,
 	repliesOnly = false,
 }) {
-	if (!enabled) return null;
+	if (!visible) return null;
 	const text = COPY[String(locale).toLowerCase().startsWith('ar') ? 'ar' : 'en'];
+	const items = Array.isArray(suggestions)
+		? suggestions.filter(item => typeof item === 'string' && item.trim())
+		: [];
 
 	return (
 		<section
@@ -43,84 +62,124 @@ export default function AiReplySuggestions({
 				repliesOnly ? 'wa-ai-suggestions--replies-only' : ''
 			}`}
 		>
-			{!repliesOnly && (
-				<div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+			{!settingsEnabled ? (
+				<div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-violet-50/80 px-3 py-2.5 dark:border-violet-900 dark:bg-violet-950/30">
 					<div className="min-w-0">
 						<div className="flex items-center gap-1.5 text-xs font-black text-violet-700 dark:text-violet-300">
 							<Sparkles size={14} aria-hidden="true" />
-							<span>{text.title}</span>
+							<span>{text.enableTitle}</span>
 						</div>
-						<p className="mt-0.5 truncate text-[10px] text-slate-400">{text.hint}</p>
+						<p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
+							{text.enableHint}
+						</p>
 					</div>
-					<div className="flex min-w-0 items-center gap-2">
-						{prompts.length > 0 && (
-							<label className="flex min-w-0 items-center gap-1.5 text-[10px] font-bold text-slate-500">
-								<span className="shrink-0">{text.prompt}</span>
-								<select
-									value={activePromptId || prompts[0]?.id || ''}
-									onChange={event => onPromptChange(event.target.value)}
-									disabled={promptSaving}
-									className="h-8 min-w-0 max-w-44 rounded-lg border border-violet-200 bg-white px-2 text-xs font-bold text-slate-700 outline-none focus:border-violet-500 disabled:opacity-50 dark:border-violet-900 dark:bg-slate-900 dark:text-slate-200"
-								>
-									{prompts.map(prompt => (
-										<option key={prompt.id} value={prompt.id}>
-											{prompt.name}
-										</option>
-									))}
-								</select>
-							</label>
-						)}
-						<button
-							type="button"
-							onClick={onRegenerate}
-							disabled={loading}
-							aria-label={text.regenerate}
-							title={text.regenerate}
-							className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-violet-600 transition hover:bg-violet-50 disabled:cursor-wait disabled:opacity-50 dark:text-violet-300 dark:hover:bg-violet-950/40"
-						>
-							<RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-						</button>
-					</div>
-				</div>
-			)}
-
-			{loading ? (
-				<div className="flex gap-2 overflow-hidden" aria-busy="true">
-					{[72, 96, 80].map(width => (
-						<div
-							key={width}
-							className="h-9 shrink-0 animate-pulse rounded-full bg-slate-100 dark:bg-slate-800"
-							style={{ width: `${width * 1.5}px` }}
-						/>
-					))}
-				</div>
-			) : error ? (
-				<div className="flex items-start justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
-					<span className="flex min-w-0 items-start gap-2">
-						<AlertCircle size={14} className="mt-0.5 shrink-0" />
-						<span className="break-words leading-5">{error}</span>
-					</span>
 					<button
 						type="button"
-						onClick={onRegenerate}
-						className="shrink-0 font-black underline underline-offset-2"
+						onClick={onEnable}
+						disabled={enabling || !onEnable}
+						className="inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-50"
 					>
-						{text.retry}
+						{enabling ? (
+							<RefreshCw size={13} className="animate-spin" />
+						) : (
+							<Power size={13} />
+						)}
+						{text.enable}
 					</button>
 				</div>
 			) : (
-				<div className="nice-scroll flex max-w-full gap-2 overflow-x-auto pb-1">
-					{suggestions.map((suggestion, index) => (
-						<button
-							key={`${index}-${suggestion}`}
-							type="button"
-							onClick={() => onSelect(suggestion)}
-							className="max-w-[min(32rem,82vw)] shrink-0 whitespace-normal rounded-2xl border border-violet-200 bg-violet-50/70 px-3.5 py-2 text-start text-xs font-semibold leading-5 text-slate-700 transition hover:border-violet-400 hover:bg-violet-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:border-violet-900 dark:bg-violet-950/30 dark:text-slate-200 dark:hover:border-violet-700"
-						>
-							{suggestion}
-						</button>
-					))}
-				</div>
+				<>
+					<div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+						<div className="min-w-0">
+							<div className="flex items-center gap-1.5 text-xs font-black text-violet-700 dark:text-violet-300">
+								<Sparkles size={14} aria-hidden="true" />
+								<span>{text.title}</span>
+							</div>
+							{!repliesOnly ? (
+								<p className="mt-0.5 truncate text-[10px] text-slate-400">{text.hint}</p>
+							) : null}
+						</div>
+						<div className="flex min-w-0 items-center gap-2">
+							{prompts.length > 0 && (
+								<label className="flex min-w-0 items-center gap-1.5 text-[10px] font-bold text-slate-500">
+									<span className="shrink-0">{text.prompt}</span>
+									<select
+										value={activePromptId || prompts[0]?.id || ''}
+										onChange={event => onPromptChange?.(event.target.value)}
+										disabled={promptSaving}
+										className="h-8 min-w-0 max-w-44 rounded-lg border border-violet-200 bg-white px-2 text-xs font-bold text-slate-700 outline-none focus:border-violet-500 disabled:opacity-50 dark:border-violet-900 dark:bg-slate-900 dark:text-slate-200"
+									>
+										{prompts.map(prompt => (
+											<option key={prompt.id} value={prompt.id}>
+												{prompt.name}
+											</option>
+										))}
+									</select>
+								</label>
+							)}
+							<button
+								type="button"
+								onClick={onRegenerate}
+								disabled={loading}
+								aria-label={text.regenerate}
+								title={text.regenerate}
+								className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-violet-600 transition hover:bg-violet-50 disabled:cursor-wait disabled:opacity-50 dark:text-violet-300 dark:hover:bg-violet-950/40"
+							>
+								<RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+							</button>
+						</div>
+					</div>
+
+					{loading ? (
+						<div className="flex gap-2 overflow-hidden" aria-busy="true">
+							{[72, 96, 80].map(width => (
+								<div
+									key={width}
+									className="h-9 shrink-0 animate-pulse rounded-full bg-slate-100 dark:bg-slate-800"
+									style={{ width: `${width * 1.5}px` }}
+								/>
+							))}
+						</div>
+					) : error ? (
+						<div className="flex items-start justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+							<span className="flex min-w-0 items-start gap-2">
+								<AlertCircle size={14} className="mt-0.5 shrink-0" />
+								<span className="break-words leading-5">{error}</span>
+							</span>
+							<button
+								type="button"
+								onClick={onRegenerate}
+								className="shrink-0 font-black underline underline-offset-2"
+							>
+								{text.retry}
+							</button>
+						</div>
+					) : items.length ? (
+						<div className="nice-scroll flex max-w-full gap-2 overflow-x-auto pb-1">
+							{items.map((suggestion, index) => (
+								<button
+									key={`${index}-${suggestion}`}
+									type="button"
+									onClick={() => onSelect?.(suggestion)}
+									className="max-w-[min(32rem,82vw)] shrink-0 whitespace-normal rounded-2xl border border-violet-200 bg-violet-50/70 px-3.5 py-2 text-start text-xs font-semibold leading-5 text-slate-700 transition hover:border-violet-400 hover:bg-violet-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:border-violet-900 dark:bg-violet-950/30 dark:text-slate-200 dark:hover:border-violet-700"
+								>
+									{suggestion}
+								</button>
+							))}
+						</div>
+					) : (
+						<div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-violet-200 px-3 py-2 text-xs text-slate-500 dark:border-violet-900">
+							<span>{text.empty}</span>
+							<button
+								type="button"
+								onClick={onRegenerate}
+								className="font-bold text-violet-600 underline underline-offset-2 dark:text-violet-300"
+							>
+								{text.regenerate}
+							</button>
+						</div>
+					)}
+				</>
 			)}
 		</section>
 	);

@@ -6,8 +6,10 @@ import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import {
 	Activity,
+	AlertCircle,
 	AlertTriangle,
 	ArrowDownLeft,
 	ArrowUpRight,
@@ -82,6 +84,7 @@ import {
 	messageTextSegments,
 	relativeTime,
 	seekRatio,
+	updateConversationPreview,
 } from './whatsapp-utils';
 import { DemoModeProvider, useDemoMode } from './demo/DemoModeProvider';
 import DemoModeSettings from './demo/components/DemoModeSettings';
@@ -141,6 +144,17 @@ const translations = {
 			'Old synchronized data was deleted and a clean synchronization was started.',
 		scanQr: 'Scan this QR code from WhatsApp',
 		scanQrHint: 'Open WhatsApp on your phone → Linked devices → Link a device',
+		linkViaQr: 'QR code',
+		linkViaPhone: 'Phone number',
+		phoneNumberPlaceholder: 'e.g. +201234567890',
+		getPairingCode: 'Get pairing code',
+		pairingCodeTitle: 'Enter this code on your phone',
+		pairingCodeHint:
+			'Open WhatsApp on your phone → Linked devices → Link with phone number instead → enter this code',
+		pairingCodeReady: 'Enter this code on your phone',
+		pairingCodeCopied: 'Code copied',
+		phoneNumberRequired: 'Enter a phone number first',
+		phoneNumberInvalid: 'Enter a valid phone number with country code',
 		noAccounts: 'No WhatsApp accounts yet',
 		noAccountsHint: 'Create your first account to start connecting WhatsApp',
 		noConversations: 'No conversations yet',
@@ -231,6 +245,9 @@ const translations = {
 		connectStarted: 'WhatsApp session started',
 		connectStillSyncing: 'Session started — still syncing with your phone',
 		sessionLinkedHint: 'Your phone shows this device as linked. Restoring session…',
+		restartConnection: 'Restart connection',
+		restartConnectionHint:
+			'Connection looks stuck. Click Restart to close the old session and try again.',
 		qrPending: 'Waiting for scan',
 		errorStatus: 'Connection error',
 		provider: 'Provider',
@@ -322,6 +339,17 @@ const translations = {
 			'تم حذف البيانات القديمة وبدأت مزامنة نظيفة من الهاتف.',
 		scanQr: 'امسح رمز QR من تطبيق واتساب',
 		scanQrHint: 'افتح واتساب على هاتفك ← الأجهزة المرتبطة ← ربط جهاز',
+		linkViaQr: 'رمز QR',
+		linkViaPhone: 'رقم الهاتف',
+		phoneNumberPlaceholder: 'مثال: ‎+201234567890',
+		getPairingCode: 'الحصول على رمز الربط',
+		pairingCodeTitle: 'أدخل هذا الرمز على هاتفك',
+		pairingCodeHint:
+			'افتح واتساب على هاتفك ← الأجهزة المرتبطة ← ربط برقم الهاتف بدلاً من ذلك ← أدخل هذا الرمز',
+		pairingCodeReady: 'أدخل هذا الرمز على هاتفك',
+		pairingCodeCopied: 'تم نسخ الرمز',
+		phoneNumberRequired: 'أدخل رقم الهاتف أولاً',
+		phoneNumberInvalid: 'أدخل رقم هاتف صحيح مع رمز الدولة',
 		noAccounts: 'لا توجد حسابات واتساب',
 		noAccountsHint: 'أنشئ أول حساب لبدء ربط واتساب',
 		noConversations: 'لا توجد محادثات بعد',
@@ -412,6 +440,9 @@ const translations = {
 		connectStarted: 'تم بدء جلسة واتساب',
 		connectStillSyncing: 'بدأت الجلسة — ما زالت المزامنة مع الهاتف جارية',
 		sessionLinkedHint: 'هاتفك يعرض الجهاز كمربوط. جارٍ استعادة الجلسة…',
+		restartConnection: 'إعادة تشغيل الاتصال',
+		restartConnectionHint:
+			'يبدو أن الاتصال عالق. اضغط إعادة التشغيل لإغلاق الجلسة القديمة والمحاولة من جديد.',
 		qrPending: 'بانتظار المسح',
 		errorStatus: 'خطأ في الاتصال',
 		provider: 'المزود',
@@ -478,6 +509,7 @@ const tabs = [
 
 const GRADIENT = 'linear-gradient(135deg, #1DAB61 0%, #1DAB61 100%)';
 const GLOW = '0 10px 24px -10px var(--color-primary-400)';
+const BRAND_GRADIENT = 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-secondary-500) 100%)';
 const CONVERSATIONS_CACHE_TTL = 30_000;
 const MESSAGES_CACHE_TTL = 30_000;
 const STATUSES_CACHE_TTL = 60_000;
@@ -1845,6 +1877,8 @@ function MobileAttachmentSheet({
 	onPromptChange,
 	suggestionsLoading = false,
 	onRegenerateSuggestions,
+	settingsEnabled = false,
+	onEnableAi,
 }) {
 	if (!open) return null;
 	const ar = String(locale).toLowerCase().startsWith('ar');
@@ -1873,38 +1907,53 @@ function MobileAttachmentSheet({
 						<p className="shrink-0 text-xs font-black text-violet-800">
 							{ar ? 'ردود الذكاء الاصطناعي' : 'AI replies'}
 						</p>
-						{prompts.length > 0 && (
-							<select
-								value={activePromptId || prompts[0]?.id || ''}
-								onChange={event => onPromptChange?.(event.target.value)}
-								disabled={promptSaving}
-								className="h-8 min-w-0 flex-1 rounded-full border border-violet-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-violet-500 disabled:opacity-50"
+						{!settingsEnabled ? (
+							<button
+								type="button"
+								onClick={() => {
+									void onEnableAi?.();
+									onClose?.();
+								}}
+								className="ms-auto shrink-0 rounded-full bg-violet-600 px-3 py-1.5 text-[11px] font-bold text-white"
 							>
-								{prompts.map(prompt => (
-									<option key={prompt.id} value={prompt.id}>
-										{prompt.name}
-									</option>
-								))}
-							</select>
+								{ar ? 'تفعيل' : 'Enable'}
+							</button>
+						) : (
+							<>
+								{prompts.length > 0 && (
+									<select
+										value={activePromptId || prompts[0]?.id || ''}
+										onChange={event => onPromptChange?.(event.target.value)}
+										disabled={promptSaving}
+										className="h-8 min-w-0 flex-1 rounded-full border border-violet-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-violet-500 disabled:opacity-50"
+									>
+										{prompts.map(prompt => (
+											<option key={prompt.id} value={prompt.id}>
+												{prompt.name}
+											</option>
+										))}
+									</select>
+								)}
+								<button
+									type="button"
+									onClick={onToggleAiVisible}
+									className="shrink-0 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-[11px] font-bold text-violet-700"
+								>
+									{aiVisible
+										? ar ? 'إخفاء' : 'Hide'
+										: ar ? 'إظهار' : 'Show'}
+								</button>
+								<button
+									type="button"
+									onClick={onRegenerateSuggestions}
+									disabled={suggestionsLoading || !aiVisible}
+									aria-label={ar ? 'تحديث الاقتراحات' : 'Regenerate suggestions'}
+									className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-violet-200 bg-white text-violet-700 disabled:opacity-40"
+								>
+									<RefreshCw size={14} className={suggestionsLoading ? 'animate-spin' : ''} />
+								</button>
+							</>
 						)}
-						<button
-							type="button"
-							onClick={onToggleAiVisible}
-							className="shrink-0 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-[11px] font-bold text-violet-700"
-						>
-							{aiVisible
-								? ar ? 'إخفاء' : 'Hide'
-								: ar ? 'إظهار' : 'Show'}
-						</button>
-						<button
-							type="button"
-							onClick={onRegenerateSuggestions}
-							disabled={suggestionsLoading || !aiVisible}
-							aria-label={ar ? 'تحديث الاقتراحات' : 'Regenerate suggestions'}
-							className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-violet-200 bg-white text-violet-700 disabled:opacity-40"
-						>
-							<RefreshCw size={14} className={suggestionsLoading ? 'animate-spin' : ''} />
-						</button>
 					</div>
 				)}
 
@@ -2480,6 +2529,22 @@ function WhatsAppWorkspaceContent() {
 	const [pushPermission, setPushPermission] = useState('checking');
 	const [enablingPush, setEnablingPush] = useState(false);
 	const [qr, setQr] = useState(null);
+	const [pairingCode, setPairingCode] = useState(null);
+	const [linkMode, setLinkMode] = useState('qr'); // 'qr' | 'phone'
+	const [linkPhoneNumber, setLinkPhoneNumber] = useState('');
+	const parsedLinkPhone = useMemo(() => {
+		const trimmed = linkPhoneNumber.trim();
+		if (!trimmed) return null;
+		try {
+			const withPlus = trimmed.startsWith('+') ? trimmed : `+${trimmed}`;
+			const parsed = parsePhoneNumberFromString(withPlus);
+			return parsed?.isValid() ? parsed : null;
+		} catch {
+			return null;
+		}
+	}, [linkPhoneNumber]);
+	const linkPhoneTouched = linkPhoneNumber.trim().length > 3;
+	const linkPhoneValid = Boolean(parsedLinkPhone);
 	const [bootStatus, setBootStatus] = useState('loading');
 	const [bootError, setBootError] = useState('');
 	const [isAdmin, setIsAdmin] = useState(false);
@@ -2994,6 +3059,7 @@ function WhatsAppWorkspaceContent() {
 		const activeAccount = list.find(item => item.id === nextAccountId);
 		if (activeAccount?.status === 'connected') {
 			setQr(null);
+			setPairingCode(null);
 		}
 		if (requestedAccount) setActiveTab('chats');
 		return list;
@@ -3243,6 +3309,26 @@ function WhatsAppWorkspaceContent() {
 			const cached = currentAccountId
 				? conversationsCacheRef.current.get(currentAccountId)
 				: null;
+			if (currentAccountId && cached) {
+				conversationsCacheRef.current.set(currentAccountId, {
+					...cached,
+					items: next,
+					cachedAt: Date.now(),
+				});
+			}
+			return next;
+		});
+	}, []);
+
+	// Patches a single conversation's preview/unread count in place instead of
+	// refetching the whole list — avoids the flicker/scroll-jump of a full reload
+	// for the common case of "a new message arrived somewhere in this account".
+	const applyConversationPreview = useCallback(payload => {
+		setConversations(current => {
+			const next = updateConversationPreview(current, payload);
+			if (next === current) return current;
+			const currentAccountId = accountIdRef.current;
+			const cached = currentAccountId ? conversationsCacheRef.current.get(currentAccountId) : null;
 			if (currentAccountId && cached) {
 				conversationsCacheRef.current.set(currentAccountId, {
 					...cached,
@@ -3729,12 +3815,25 @@ function WhatsAppWorkspaceContent() {
 			transports: ['websocket', 'polling'],
 		});
 		socketRef.current = socket;
+		let hasConnectedOnce = false;
 		const rewatchRooms = () => {
+			// Any events missed while disconnected (WiFi blip, laptop sleep, server
+			// restart) are gone for good — rejoining rooms alone does not replay them.
+			const isReconnect = hasConnectedOnce;
+			hasConnectedOnce = true;
 			if (accountId) socket.emit('whatsapp:account:watch', accountId);
 			const activeConversationId = conversationIdRef.current;
 			if (activeConversationId && !isDemoId(activeConversationId)) {
 				watchedConversationRef.current = activeConversationId;
 				socket.emit('whatsapp:conversation:watch', activeConversationId);
+			}
+			if (isReconnect) {
+				if (accountId) {
+					loadConversations(accountId, 1, false, { force: true }).catch(() => { });
+				}
+				if (activeConversationId && !isDemoId(activeConversationId)) {
+					loadMessages(activeConversationId, false).catch(() => { });
+				}
 			}
 		};
 		rewatchRooms();
@@ -3793,10 +3892,16 @@ function WhatsAppWorkspaceContent() {
 					message => ({ ...message, ...(event.payload.changes || {}) }),
 				);
 			}
-			if (
+			if (event.event === 'conversation_updated' && event.payload?.preview && accountId) {
+				// Common case: a message arrived somewhere in this account — patch
+				// just that conversation's preview/unread count in place.
+				applyConversationPreview(event.payload);
+			} else if (
 				['conversation_updated', 'conversation_assignment'].includes(event.event) &&
 				accountId
 			) {
+				// Structural change (assignment, reconciliation with no specific
+				// preview) — fall back to a full reload.
 				scheduleReloadConversations(accountId);
 			}
 			if (event.event === 'conversation_read') {
@@ -3836,6 +3941,7 @@ function WhatsAppWorkspaceContent() {
 				const status = event.payload?.status || event.payload?.event?.status;
 				if (status === 'connected') {
 					setQr(null);
+					setPairingCode(null);
 				}
 				loadAccounts().catch(() => { });
 				if (status === 'connected' && accountId) {
@@ -3851,8 +3957,10 @@ function WhatsAppWorkspaceContent() {
 		};
 	}, [
 		accountId,
+		applyConversationPreview,
 		loadAccounts,
 		loadConversations,
+		loadMessages,
 		scheduleReloadConversations,
 		setConversationUnreadCount,
 		updateCachedMessage,
@@ -3866,6 +3974,7 @@ function WhatsAppWorkspaceContent() {
 			try {
 				const { data } = await api.get(`/whatsapp/accounts/${selectedAccount.id}/qr`);
 				setQr(data.qr || null);
+				setPairingCode(data.pairingCode || null);
 				await loadAccounts();
 			} catch { }
 		}, 2500);
@@ -3891,20 +4000,50 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
-	const connectAccount = async () => {
+	const connectAccount = async (phoneNumber, options = {}) => {
 		if (!accountId) return;
-		if (['connecting', 'qr_pending', 'connected'].includes(selectedAccount?.status)) {
-			if (selectedAccount?.status === 'connected') return;
+		const force = Boolean(options.force);
+		const switchingMode = Boolean(phoneNumber);
+		const status = selectedAccount?.status;
+		const updatedAt = selectedAccount?.updatedAt || selectedAccount?.updated_at;
+		const statusAgeMs = updatedAt
+			? Date.now() - new Date(updatedAt).getTime()
+			: Number.POSITIVE_INFINITY;
+		const stuckConnecting =
+			['connecting', 'qr_pending'].includes(status) && statusAgeMs > 90_000;
+
+		if (
+			!force &&
+			!switchingMode &&
+			!stuckConnecting &&
+			['connecting', 'qr_pending', 'connected'].includes(status)
+		) {
+			if (status === 'connected') return;
 			toast.success(t.sessionLinkedHint);
 			return;
 		}
+
 		setAccountBusy(true);
+		setQr(null);
+		setPairingCode(null);
 		try {
-			const { data } = await api.post(`/whatsapp/accounts/${accountId}/connect`);
+			// Clear a stuck in-memory session before starting a fresh connect.
+			if (force || stuckConnecting || status === 'error') {
+				await api
+					.post(`/whatsapp/accounts/${accountId}/disconnect`)
+					.catch(() => undefined);
+			}
+			const { data } = await api.post(
+				`/whatsapp/accounts/${accountId}/connect`,
+				phoneNumber ? { phoneNumber } : {},
+			);
 			setQr(data.qr || null);
+			setPairingCode(data.pairingCode || null);
 			await loadAccounts();
 			if (data.status === 'connected') {
 				toast.success(t.connectStarted);
+			} else if (data.pairingCode) {
+				toast.success(t.pairingCodeReady || 'Enter this code on your phone');
 			} else if (data.qr) {
 				toast.success(t.qrPending || 'Scan the QR code');
 			} else {
@@ -3912,8 +4051,8 @@ function WhatsAppWorkspaceContent() {
 			}
 		} catch (error) {
 			toast.error(
-				error.code === 'ECONNABORTED'
-					? t.syncingPhone
+				Array.isArray(error.response?.data?.message)
+					? error.response.data.message.join(', ')
 					: error.response?.data?.message || 'Could not start WhatsApp provider',
 			);
 			await loadAccounts().catch(() => { });
@@ -3928,6 +4067,7 @@ function WhatsAppWorkspaceContent() {
 		try {
 			await api.post(`/whatsapp/accounts/${accountId}/${logout ? 'logout' : 'disconnect'}`);
 			setQr(null);
+			setPairingCode(null);
 			await loadAccounts();
 		} catch (error) {
 			toast.error(
@@ -3971,6 +4111,7 @@ function WhatsAppWorkspaceContent() {
 			}
 			setStatusMediaUrl(null);
 			setQr(null);
+			setPairingCode(null);
 			setSyncProgress(35);
 			await api.post(`/whatsapp/accounts/${targetAccountId}/sync/chats`);
 			setSyncProgress(90);
@@ -4018,6 +4159,7 @@ function WhatsAppWorkspaceContent() {
 			setSelectedStatus(null);
 			setStatusMediaUrl(null);
 			setQr(null);
+			setPairingCode(null);
 			await loadAccounts();
 			toast.success(t.accountDeleted);
 		} catch (error) {
@@ -5395,11 +5537,7 @@ function WhatsAppWorkspaceContent() {
 				onClose={() => setAttachmentSheetOpen(false)}
 				onAction={handleAttachmentAction}
 				locale={locale}
-				aiEnabled={
-					Boolean(whatsappAi.settings?.enabled) &&
-					!demo.settings.enabled &&
-					canUseWhatsApp
-				}
+				aiEnabled={!demo.settings.enabled && canUseWhatsApp}
 				aiVisible={aiSuggestionsVisible}
 				onToggleAiVisible={() => setAiSuggestionsVisible(current => !current)}
 				prompts={
@@ -5412,6 +5550,13 @@ function WhatsAppWorkspaceContent() {
 				onPromptChange={whatsappAi.selectPrompt}
 				suggestionsLoading={whatsappAi.suggestionsLoading}
 				onRegenerateSuggestions={whatsappAi.regenerateSuggestions}
+				settingsEnabled={Boolean(whatsappAi.settings?.enabled)}
+				onEnableAi={() =>
+					whatsappAi.saveSettings({
+						enabled: true,
+						provider: 'ai-free',
+					})
+				}
 			/>
 			<MobileStickerPanel open={stickerPanelOpen} onClose={() => setStickerPanelOpen(false)} onInsert={emoji => setDraft(current => `${current}${emoji}`)} />
 			{/* Unified header: brand + account switcher + tabs, same PageHeader used across dashboard pages */}
@@ -5620,16 +5765,22 @@ function WhatsAppWorkspaceContent() {
 													</>
 												) : (
 													<button
-														onClick={connectAccount}
-														disabled={
-															accountBusy ||
-															['connecting', 'qr_pending'].includes(
-																selectedAccount.status,
-															)
+														onClick={() =>
+															connectAccount(undefined, {
+																force: ['connecting', 'qr_pending', 'error'].includes(
+																	selectedAccount.status,
+																),
+															})
 														}
+														disabled={accountBusy}
 														className="flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-sm font-bold text-emerald-600 shadow-md transition-transform hover:-translate-y-px disabled:opacity-50"
 													>
-														<Wifi size={15} /> {t.connect}
+														<Wifi size={15} />{' '}
+														{['connecting', 'qr_pending', 'error'].includes(
+															selectedAccount.status,
+														)
+															? t.restartConnection
+															: t.connect}
 													</button>
 												))}
 												{isAdmin && canManageWhatsApp && (
@@ -5665,6 +5816,13 @@ function WhatsAppWorkspaceContent() {
 													: t.syncingPhone}
 											</p>
 										)}
+										{['connecting', 'qr_pending', 'error'].includes(
+											selectedAccount.status,
+										) && (
+											<p className="mt-2 text-sm text-amber-100/95">
+												{selectedAccount.lastError || t.restartConnectionHint}
+											</p>
+										)}
 									</div>
 									<div className="space-y-5 p-5">
 										{accountBusy && (
@@ -5673,7 +5831,85 @@ function WhatsAppWorkspaceContent() {
 												{t.loading}
 											</div>
 										)}
-										{qr && canManageWhatsApp && (
+										{canManageWhatsApp && selectedAccount.status !== 'connected' && (
+											<div className="mx-auto max-w-sm">
+												<div className="mb-4 flex justify-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+													<button
+														type="button"
+														onClick={() => setLinkMode('qr')}
+														className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+															linkMode === 'qr'
+																? 'bg-white text-slate-900 shadow dark:bg-slate-700 dark:text-white'
+																: 'text-slate-500'
+														}`}
+													>
+														{t.linkViaQr}
+													</button>
+													<button
+														type="button"
+														onClick={() => setLinkMode('phone')}
+														className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+															linkMode === 'phone'
+																? 'bg-white text-slate-900 shadow dark:bg-slate-700 dark:text-white'
+																: 'text-slate-500'
+														}`}
+													>
+														{t.linkViaPhone}
+													</button>
+												</div>
+
+												{linkMode === 'phone' && (
+													<form
+														onSubmit={event => {
+															event.preventDefault();
+															if (!linkPhoneNumber.trim()) {
+																toast.error(t.phoneNumberRequired);
+																return;
+															}
+															if (!parsedLinkPhone) {
+																toast.error(t.phoneNumberInvalid);
+																return;
+															}
+															connectAccount(parsedLinkPhone.number);
+														}}
+													>
+														<div className="flex gap-2">
+															<input
+																type="tel"
+																value={linkPhoneNumber}
+																onChange={event => setLinkPhoneNumber(event.target.value)}
+																placeholder={t.phoneNumberPlaceholder}
+																dir="ltr"
+																aria-invalid={linkPhoneTouched && !linkPhoneValid}
+																className={`flex-1 rounded-xl border bg-white px-3 py-2 text-sm outline-none transition-colors dark:bg-slate-800 ${
+																	linkPhoneTouched && !linkPhoneValid
+																		? 'border-rose-400 focus:border-rose-500'
+																		: 'border-slate-200 focus:border-[var(--color-primary-400)] dark:border-slate-700'
+																}`}
+															/>
+															<button
+																type="submit"
+																disabled={
+																	accountBusy ||
+																	selectedAccount.status === 'connected' ||
+																	!linkPhoneValid
+																}
+																className="shrink-0 rounded-xl bg-[var(--color-primary-500)] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--color-primary-600)] disabled:cursor-not-allowed disabled:opacity-50"
+															>
+																{t.getPairingCode}
+															</button>
+														</div>
+														{linkPhoneTouched && !linkPhoneValid && (
+															<p className="mt-1.5 flex items-center gap-1.5 text-xs text-rose-600">
+																<AlertCircle size={13} className="shrink-0" />
+																{t.phoneNumberInvalid}
+															</p>
+														)}
+													</form>
+												)}
+											</div>
+										)}
+										{linkMode === 'qr' && qr && canManageWhatsApp && (
 											<div className="mx-auto max-w-sm text-center">
 												<div className="mb-4 flex items-center justify-center gap-2">
 													<span className="relative flex h-2 w-2">
@@ -5694,6 +5930,28 @@ function WhatsAppWorkspaceContent() {
 													)}
 												</div>
 												<p className="mx-auto mt-4 max-w-xs text-xs text-slate-500">{t.scanQrHint}</p>
+											</div>
+										)}
+										{linkMode === 'phone' && pairingCode && canManageWhatsApp && (
+											<div className="mx-auto max-w-sm text-center">
+												<div className="mb-4 flex items-center justify-center gap-2">
+													<span className="relative flex h-2 w-2">
+														<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+														<span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+													</span>
+													<p className="text-sm font-black">{t.pairingCodeTitle}</p>
+												</div>
+												<button
+													type="button"
+													onClick={() => {
+														navigator.clipboard?.writeText(pairingCode);
+														toast.success(t.pairingCodeCopied);
+													}}
+													className="mx-auto flex items-center gap-3 rounded-2xl bg-white px-6 py-4 font-mono text-2xl font-black tracking-[0.3em] shadow-[0_20px_50px_-15px_rgba(37,211,102,0.35)] transition-transform hover:-translate-y-px dark:bg-slate-800 dark:text-white"
+												>
+													{pairingCode}
+												</button>
+												<p className="mx-auto mt-4 max-w-xs text-xs text-slate-500">{t.pairingCodeHint}</p>
 											</div>
 										)}
 										<div className="grid gap-3 sm:grid-cols-3">
@@ -6271,7 +6529,7 @@ function WhatsAppWorkspaceContent() {
 											if (!loadingMessages && event.currentTarget.scrollTop < 50) loadOlder();
 										}}
 										className={`wa-message-wallpaper min-h-0 flex-1 space-y-2 overflow-y-auto bg-[#0B141A] p-4 nice-scroll ${
-											Boolean(whatsappAi.settings?.enabled) &&
+											Boolean(conversationId) &&
 											aiSuggestionsVisible &&
 											!demo.settings.enabled &&
 											canUseWhatsApp
@@ -6531,10 +6789,10 @@ function WhatsAppWorkspaceContent() {
 									</div>
 									<div
 										className={`wa-composer-stack ${
-											Boolean(whatsappAi.settings?.enabled) &&
-											aiSuggestionsVisible &&
 											!demo.settings.enabled &&
-											canUseWhatsApp
+											canUseWhatsApp &&
+											aiSuggestionsVisible &&
+											Boolean(conversationId)
 												? 'wa-composer-stack--ai'
 												: ''
 										}`}
@@ -6542,16 +6800,32 @@ function WhatsAppWorkspaceContent() {
 									<AiReplySuggestions
 										locale={locale}
 										repliesOnly
-										enabled={
-											Boolean(whatsappAi.settings?.enabled) &&
-											aiSuggestionsVisible &&
+										visible={
+											Boolean(conversationId) &&
 											!demo.settings.enabled &&
-											canUseWhatsApp
+											canUseWhatsApp &&
+											aiSuggestionsVisible
 										}
+										settingsEnabled={Boolean(whatsappAi.settings?.enabled)}
+										enabling={whatsappAi.settingsSaving}
 										loading={whatsappAi.suggestionsLoading}
 										error={whatsappAi.suggestionsError}
 										suggestions={whatsappAi.suggestions}
+										prompts={
+											canManageWhatsApp || isAdmin
+												? whatsappAi.settings?.promptPresets || []
+												: []
+										}
+										activePromptId={whatsappAi.settings?.activePromptId}
+										promptSaving={whatsappAi.settingsSaving}
+										onPromptChange={whatsappAi.selectPrompt}
 										onRegenerate={whatsappAi.regenerateSuggestions}
+										onEnable={() =>
+											whatsappAi.saveSettings({
+												enabled: true,
+												provider: 'ai-free',
+											})
+										}
 										onSelect={suggestion => setDraft(suggestion)}
 									/>
 									{canComposeInConversation ? (
@@ -7265,9 +7539,10 @@ function WhatsAppWorkspaceContent() {
 											role="tab"
 											aria-selected={selected}
 											onClick={() => setSettingsSection(item.id)}
+											style={selected ? { background: BRAND_GRADIENT, boxShadow: '0 8px 18px -8px var(--color-primary-400)' } : undefined}
 											className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-xl px-3.5 text-xs font-black transition-colors ${
 												selected
-													? 'bg-violet-600 text-white shadow-sm'
+													? 'text-white'
 													: 'text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
 											}`}
 										>

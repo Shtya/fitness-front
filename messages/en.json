@@ -600,9 +600,11 @@
 			"transcript": "Transcript",
 			"notifications": "Notifications",
 			"calorieCalculator": "Calorie Calculator",
+			"aiFree": "FitCoach",
 			"billing": "Billing",
 			"money": "Wallet",
 			"profile": "Profile",
+			"branding": "Branding",
 			"systemSettings": "System Settings",
 			"myWorkouts": "My Workouts",
 			"myNutrition": "My Nutrition",
@@ -643,10 +645,12 @@
 			"transcript": "Upload or record audio and convert it into editable text",
 			"notifications": "System alerts and the latest updates",
 			"calorieCalculator": "Calculate your daily calorie and nutrient needs",
+			"aiFree": "Your coaching assistant for workouts, nutrition, and client replies",
 			"billing": "Manage subscriptions, invoices and payments",
 			"money": "Track earnings, revenue and financial summaries",
 			"profile_admin": "Your account settings, preferences and security",
-			"profile_client": "Your profile and account settings"
+			"profile_client": "Your profile and account settings",
+			"branding": "Customize app name, logos and brand colors"
 		},
 		"groups": {
 			"ai": "AI Tools",
@@ -788,10 +792,31 @@
 				"title": "Subscription",
 				"subtitle": "Current subscription period information (read-only)."
 			},
+			"license": {
+				"title": "Organization license",
+				"subtitle": "Share this code so new users can find your organization."
+			},
 			"compare": "Compare",
 			"measurements": "Measurements",
 			"uploadBodyPhotos": "Upload Body Photos",
 			"timeline": "Timeline"
+		},
+		"license": {
+			"title": "Organization license",
+			"subtitle": "Copy this code and send it to new users so they can join your organization from the app.",
+			"hint": "New users enter this license on the organization screen (email or license) before signing in.",
+			"keyLabel": "License code",
+			"org": "Organization",
+			"copy": "Copy",
+			"copied": "License copied",
+			"copiedShort": "Copied",
+			"copyFailed": "Could not copy license",
+			"show": "Show",
+			"hide": "Hide",
+			"rotate": "Regenerate",
+			"rotateConfirm": "Regenerate license? The old code will stop working for new users.",
+			"rotated": "New license generated",
+			"rotateFailed": "Could not regenerate license"
 		},
 		"fields": {
 			"name": "Name",
@@ -810,11 +835,12 @@
 			"male": "Male",
 			"female": "Female"
 		},
-		"roles": {
+			"roles": {
 			"admin": "Admin",
 			"coach": "Coach",
 			"user": "User",
-			"client": "Trainee"
+			"client": "Trainee",
+			"super_admin": "Super Admin"
 		},
 		"subscription": {
 			"start": "Subscription Start",
@@ -1184,13 +1210,18 @@
 			"disabled": "Choose a conversation to start chatting",
 			"remove": "Remove attachment",
 			"send": "Send",
-			"hint": "Shift+Enter for new line • Ctrl/Cmd+Enter to send"
+			"hint": "Shift+Enter for new line • Ctrl/Cmd+Enter to send",
+			"voice": "Voice message",
+			"sendVoice": "Send voice",
+			"recording": "Recording…",
+			"cancel": "Cancel"
 		},
 		"list": {
 			"group": "Group Chat",
 			"direct": "Direct Message",
 			"photo": "📷 Photo",
 			"video": "🎥 Video",
+			"voice": "🎤 Voice message",
 			"file": "📎 File",
 			"empty": "No conversations yet",
 			"title": "Conversations",

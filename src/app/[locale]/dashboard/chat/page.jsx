@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import io from 'socket.io-client';
-import { Paperclip, Image as ImageIcon, Send, Search, Phone, UserCircle2, ChevronLeft, Loader2, Check, CheckCheck, Video, File as FileIcon, X, Inbox, Menu, ChevronRight, Bell, Sparkles } from 'lucide-react';
+import { Paperclip, Image as ImageIcon, Send, Search, Phone, ChevronLeft, Loader2, Check, CheckCheck, Video, File as FileIcon, X, Inbox, Menu, ChevronRight, Bell, Mic, Play, Pause } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import api from '@/utils/axios';
@@ -16,6 +16,18 @@ import { useTheme } from '@/app/[locale]/theme';
 
 const API_URL = process.env.NEXT_PUBLIC_BASE_URL;
 const cls = (...a) => a.filter(Boolean).join(' ');
+
+function detectMessageType(mime = '') {
+  if (/^image\//.test(mime)) return 'image';
+  if (/^video\//.test(mime)) return 'video';
+  if (/^audio\//.test(mime)) return 'voice';
+  return 'file';
+}
+
+function formatDuration(sec = 0) {
+  const s = Math.max(0, Math.floor(Number(sec) || 0));
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
 
 /* --------- Design tokens with theme support --------- */
 const ui = {
@@ -77,6 +89,89 @@ async function uploadChatFile(file) {
   return data;
 }
 
+function VoiceBubble({ url, duration = 0, mine = false }) {
+  const audioRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [dur, setDur] = useState(duration || 0);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onTime = () => {
+      const d = audio.duration || dur || 0;
+      setProgress(d ? audio.currentTime / d : 0);
+    };
+    const onMeta = () => {
+      if (Number.isFinite(audio.duration)) setDur(audio.duration);
+    };
+    const onEnded = () => {
+      setPlaying(false);
+      setProgress(0);
+    };
+    audio.addEventListener('timeupdate', onTime);
+    audio.addEventListener('loadedmetadata', onMeta);
+    audio.addEventListener('ended', onEnded);
+    return () => {
+      audio.removeEventListener('timeupdate', onTime);
+      audio.removeEventListener('loadedmetadata', onMeta);
+      audio.removeEventListener('ended', onEnded);
+    };
+  }, [dur, url]);
+
+  async function toggle() {
+    const audio = audioRef.current;
+    if (!audio || !url) return;
+    if (playing) {
+      audio.pause();
+      setPlaying(false);
+      return;
+    }
+    try {
+      await audio.play();
+      setPlaying(true);
+    } catch (e) {
+      console.error('Voice playback failed:', e);
+      setPlaying(false);
+    }
+  }
+
+  return (
+    <div className={cls('flex items-center gap-2.5 min-w-[180px] max-w-[260px]', mine ? 'text-white' : 'text-slate-700')}>
+      <button
+        type='button'
+        onClick={toggle}
+        className={cls(
+          'h-9 w-9 rounded-full grid place-items-center shrink-0 transition-transform active:scale-95',
+          mine ? 'bg-white/20 hover:bg-white/30' : 'bg-[var(--color-primary-500)] text-white hover:opacity-90',
+        )}
+        aria-label={playing ? 'Pause' : 'Play'}
+      >
+        {playing ? <Pause className='w-4 h-4' /> : <Play className='w-4 h-4 ltr:ml-0.5' />}
+      </button>
+      <div className='flex-1 min-w-0'>
+        <div className='flex items-end gap-[2px] h-5'>
+          {Array.from({ length: 22 }).map((_, i) => {
+            const barH = 4 + Math.abs(Math.sin(i * 0.75) * 10) + Math.abs(Math.cos(i * 1.2) * 4);
+            const filled = i / 22 <= progress;
+            return (
+              <span
+                key={i}
+                className={cls('w-[3px] rounded-full', mine ? (filled ? 'bg-white' : 'bg-white/35') : filled ? 'bg-[var(--color-primary-500)]' : 'bg-slate-300')}
+                style={{ height: `${Math.max(4, barH)}px` }}
+              />
+            );
+          })}
+        </div>
+        <div className={cls('mt-1 text-[10px] tabular-nums font-medium', mine ? 'text-white/80' : 'text-slate-500')}>
+          {formatDuration(playing ? progress * (dur || duration || 0) : dur || duration || 0)}
+        </div>
+      </div>
+      <audio ref={audioRef} src={url} preload='metadata' />
+    </div>
+  );
+}
+
 /* --------------------------- Small UI helpers -------------------------- */
 function timeHHMM(dateStr) {
   try {
@@ -119,23 +214,59 @@ function ReadTicks({ meId, msg }) {
 
 const getInitial = u => {
   const s = (u?.name || u?.email || '').trim();
-  return s ? s[0].toUpperCase() : '?';
+  if (!s) return '?';
+  const parts = s.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return s.slice(0, 2).toUpperCase();
 };
 
 const pickAvatarGradient = (seed, colors) => {
   const gradients = [
-    `from-[${colors.primary[100]}] to-[${colors.primary[200]}] text-[${colors.primary[700]}]`,
-    `from-[${colors.secondary[100]}] to-[${colors.secondary[200]}] text-[${colors.secondary[700]}]`,
-    `from-rose-100 to-pink-100 text-rose-700`,
-    `from-emerald-100 to-teal-100 text-emerald-700`,
-    `from-amber-100 to-yellow-100 text-amber-700`,
-    `from-cyan-100 to-sky-100 text-cyan-700`,
+    'from-[var(--color-primary-400)] to-[var(--color-primary-600)] text-white',
+    'from-[var(--color-secondary-400)] to-[var(--color-secondary-600)] text-white',
+    'from-rose-400 to-pink-600 text-white',
+    'from-emerald-400 to-teal-600 text-white',
+    'from-amber-400 to-orange-600 text-white',
+    'from-cyan-400 to-sky-600 text-white',
+    'from-violet-400 to-indigo-600 text-white',
+    'from-fuchsia-400 to-purple-600 text-white',
   ];
   const str = String(seed || '');
   let h = 0;
   for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
   return gradients[h % gradients.length];
 };
+
+function UserAvatar({ user, size = 40, hasUnread = false, online = false, className = '' }) {
+  const avatarSrc = user?.avatar || user?.image || user?.profileImage || null;
+  const initial = getInitial(user);
+  const grad = pickAvatarGradient(user?.id || user?.email, null);
+  const px = typeof size === 'number' ? size : 40;
+
+  return (
+    <div className={cls('relative shrink-0', className)} style={{ width: px, height: px }}>
+      <div
+        className={cls(
+          'w-full h-full rounded-full overflow-hidden grid place-items-center font-bold select-none',
+          'shadow-sm ring-2',
+          hasUnread ? 'ring-[var(--color-primary-300)]' : 'ring-white',
+          !avatarSrc && `bg-gradient-to-br ${grad}`,
+          avatarSrc && 'bg-slate-200',
+        )}
+        style={{ fontSize: Math.max(11, Math.round(px * 0.34)) }}
+      >
+        {avatarSrc ? (
+          <Img src={avatarSrc} alt={user?.name || user?.email || 'avatar'} className='w-full h-full object-cover' showBlur={false} />
+        ) : (
+          <span className='font-en leading-none tracking-wide'>{initial}</span>
+        )}
+      </div>
+      {online && (
+        <span className='absolute bottom-0 ltr:right-0 rtl:left-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white' />
+      )}
+    </div>
+  );
+}
 
 /* ------------------------------- The Page ------------------------------ */
 export default function ChatPage() {
@@ -163,6 +294,8 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const [text, setText] = useState('');
   const [attaches, setAttaches] = useState([]);
+  const [recording, setRecording] = useState(false);
+  const [recordSecs, setRecordSecs] = useState(0);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [typing, setTyping] = useState(false);
@@ -170,12 +303,37 @@ export default function ChatPage() {
 
   const listRef = useRef(null);
   const endRef = useRef(null);
+  const messagesScrollRef = useRef(null);
+  const textAreaRef = useRef(null);
+  const shouldStickToBottomRef = useRef(true);
   const searchTimerRef = useRef(null);
   const typingTimerRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const recordChunksRef = useRef([]);
+  const recordTimerRef = useRef(null);
+  const recordStreamRef = useRef(null);
+  const recordSecsRef = useRef(0);
 
   const hasAttaches = Array.isArray(attaches) && attaches.length > 0;
   const isRTL = locale === 'ar';
   const user = useUser();
+
+  const scrollToBottom = useCallback((smooth = false) => {
+    const el = messagesScrollRef.current;
+    if (!el) {
+      if (!smooth) endRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+      return;
+    }
+    if (smooth) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    } else {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, []);
+
+  const stickToBottomIfNeeded = useCallback(() => {
+    if (shouldStickToBottomRef.current) scrollToBottom(false);
+  }, [scrollToBottom]);
 
   /* -------------------------- Bootstrap data -------------------------- */
   useEffect(() => {
@@ -223,17 +381,27 @@ export default function ChatPage() {
     if (!socket) return;
 
     function onNewMessage(message) {
-      setMsgs(prev => {
-        if (message?.conversation?.id !== activeId) return prev;
-        const exists = prev.some(m => m.id === message.id || (message.tempId && m.tempId === message.tempId));
-        if (exists) return prev;
-        return [...prev, message];
-      });
+      const convId = message?.conversation?.id;
+      if (convId === activeId) {
+        setMsgs(prev => {
+          const tempIdx = message.tempId ? prev.findIndex(m => m.tempId === message.tempId) : -1;
+          if (tempIdx >= 0) {
+            const next = [...prev];
+            next[tempIdx] = { ...message, pending: false };
+            return next;
+          }
+          if (prev.some(m => m.id === message.id)) return prev;
+          return [...prev, { ...message, pending: false }];
+        });
+        if (shouldStickToBottomRef.current || message?.sender?.id === me?.id) {
+          scrollToBottom(false);
+        }
+      }
 
       setConvos(prev =>
         prev
           .map(c => {
-            if (c.id !== message.conversation.id) return c;
+            if (c.id !== convId) return c;
             const isMine = message.sender?.id === me?.id;
             const isActive = c.id === activeId;
             let newUnreadCount = c.unreadCount || 0;
@@ -249,10 +417,9 @@ export default function ChatPage() {
           .sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0)),
       );
 
-      if (message?.conversation?.id === activeId && message?.sender?.id !== me?.id) {
+      if (convId === activeId && message?.sender?.id !== me?.id) {
         markActiveAsRead();
       }
-      scrollToBottom();
     }
 
     function onMessagesRead({ conversationId, userId }) {
@@ -316,26 +483,22 @@ export default function ChatPage() {
     setDrawerOpen(false);
     setLoadingMsgs(true);
     setTyping(false);
+    setMsgs([]);
+    shouldStickToBottomRef.current = true;
     try {
       const data = await getMessages(conversationId, 1, 200);
-      setMsgs(data);
+      setMsgs(Array.isArray(data) ? data : []);
       socket?.emit('join_conversation', conversationId);
       setConvos(prev => prev.map(c => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
-      const index = convos?.find(c => c.id === conversationId);
       setConversationId(conversationId);
-      if (index?.unreadCount > 0) {
-      }
       markActiveAsRead(conversationId);
-      setTimeout(scrollToBottom, 80);
     } finally {
       setLoadingMsgs(false);
+      requestAnimationFrame(() => {
+        scrollToBottom(false);
+        requestAnimationFrame(() => scrollToBottom(false));
+      });
     }
-  }
-
-  function scrollToBottom() {
-    setTimeout(() => {
-      endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }, 60);
   }
 
   function markActiveAsRead(cid = activeId) {
@@ -416,15 +579,56 @@ export default function ChatPage() {
   async function send() {
     if (!activeId || sending) return;
     const trimmedText = (text || '').trim();
-    const hasAtt = Array.isArray(attaches) && attaches.length > 0;
+    const pendingAttaches = Array.isArray(attaches) ? [...attaches] : [];
+    const hasAtt = pendingAttaches.length > 0;
     if (!trimmedText && !hasAtt) return;
 
-    setSending(true);
+    const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const localPreviews = hasAtt
+      ? pendingAttaches.map(a => ({
+          name: a?.name || 'file',
+          type: a?.type || 'application/octet-stream',
+          size: a?.size ?? 0,
+          url: a?.url || '',
+          local: true,
+        }))
+      : [];
+
+    let messageType = 'text';
+    if (localPreviews.length > 0) {
+      messageType = detectMessageType(localPreviews[0].type || '');
+    }
+
+    const optimistic = {
+      id: tempId,
+      tempId,
+      conversation: { id: activeId },
+      sender: me,
+      content: trimmedText || null,
+      messageType,
+      attachments: localPreviews.length ? localPreviews : null,
+      isEdited: false,
+      isDeleted: false,
+      created_at: new Date().toISOString(),
+      readBy: null,
+      pending: true,
+    };
+
+    // Show instantly, clear composer immediately (don't wait for network)
+    setMsgs(prev => [...prev, optimistic]);
+    setText('');
+    setAttaches([]);
+    shouldStickToBottomRef.current = true;
+    scrollToBottom(false);
+    socket?.emit('typing_stop', activeId);
+    if (textAreaRef.current) textAreaRef.current.style.height = 'auto';
+
+    if (hasAtt) setSending(true);
     try {
       let uploaded = [];
       if (hasAtt) {
         uploaded = await Promise.all(
-          attaches.map(async a => {
+          pendingAttaches.map(async a => {
             try {
               const up = await uploadChatFile(a.file);
               return {
@@ -440,32 +644,18 @@ export default function ChatPage() {
           }),
         );
         uploaded = uploaded.filter(Boolean);
+
+        if (uploaded.length) {
+          messageType = detectMessageType(uploaded[0].type || '');
+          setMsgs(prev =>
+            prev.map(m =>
+              m.tempId === tempId
+                ? { ...m, messageType, attachments: uploaded }
+                : m,
+            ),
+          );
+        }
       }
-
-      let messageType = 'text';
-      if (uploaded.length > 0) {
-        const t = uploaded[0].type || '';
-        messageType = /^image\//.test(t) ? 'image' : /^video\//.test(t) ? 'video' : 'file';
-      }
-
-      const tempId = `tmp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const optimistic = {
-        id: tempId,
-        tempId,
-        conversation: { id: activeId },
-        sender: me,
-        content: trimmedText || null,
-        messageType,
-        attachments: uploaded.length ? uploaded : null,
-        isEdited: false,
-        isDeleted: false,
-        created_at: new Date().toISOString(),
-        readBy: null,
-      };
-
-      setMsgs(prev => [...prev, optimistic]);
-      scrollToBottom();
-      socket?.emit('typing_stop', activeId);
 
       socket?.emit('send_message', {
         conversationId: activeId,
@@ -475,15 +665,166 @@ export default function ChatPage() {
         tempId,
       });
 
-      setText('');
-      if (hasAtt) {
-        setAttaches(prev => {
-          (prev || []).forEach(a => a?.url && URL.revokeObjectURL(a.url));
-          return [];
-        });
-      }
+      pendingAttaches.forEach(a => a?.url && URL.revokeObjectURL(a.url));
     } catch (err) {
       console.error('Error sending message:', err);
+      setMsgs(prev => prev.filter(m => m.tempId !== tempId));
+    } finally {
+      if (hasAtt) setSending(false);
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+      const recorder = mediaRecorderRef.current;
+      if (recorder) {
+        recorder.ondataavailable = null;
+        recorder.onstop = null;
+        try {
+          if (recorder.state === 'recording') recorder.stop();
+        } catch {}
+      }
+      recordStreamRef.current?.getTracks?.().forEach(t => t.stop());
+    };
+  }, []);
+
+  useEffect(() => {
+    if (recording) cancelVoiceRecording();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId]);
+
+  async function startVoiceRecording() {
+    if (!activeId || recording || sending) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordStreamRef.current = stream;
+      recordChunksRef.current = [];
+      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : '';
+      const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      mediaRecorderRef.current = recorder;
+      recorder.ondataavailable = e => {
+        if (e.data && e.data.size > 0) recordChunksRef.current.push(e.data);
+      };
+      recorder.onstop = async () => {
+        const chunks = recordChunksRef.current;
+        const type = recorder.mimeType || 'audio/webm';
+        const blob = new Blob(chunks, { type });
+        const secs = recordSecsRef.current;
+        setRecording(false);
+        setRecordSecs(0);
+        recordSecsRef.current = 0;
+        recordStreamRef.current?.getTracks?.().forEach(t => t.stop());
+        recordStreamRef.current = null;
+        if (blob.size > 0) await sendVoiceMessage(blob, secs);
+      };
+      recorder.start(200);
+      setRecording(true);
+      setRecordSecs(0);
+      recordSecsRef.current = 0;
+      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+      recordTimerRef.current = setInterval(() => {
+        recordSecsRef.current += 1;
+        setRecordSecs(recordSecsRef.current);
+      }, 1000);
+    } catch (e) {
+      console.error('Mic permission / record failed:', e);
+      alert('Microphone permission is required to send voice messages');
+    }
+  }
+
+  function stopVoiceRecording() {
+    if (recordTimerRef.current) {
+      clearInterval(recordTimerRef.current);
+      recordTimerRef.current = null;
+    }
+    try {
+      if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop();
+    } catch (e) {
+      console.error('Stop recording failed:', e);
+      setRecording(false);
+    }
+  }
+
+  function cancelVoiceRecording() {
+    if (recordTimerRef.current) {
+      clearInterval(recordTimerRef.current);
+      recordTimerRef.current = null;
+    }
+    const recorder = mediaRecorderRef.current;
+    if (recorder) {
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      try {
+        if (recorder.state === 'recording') recorder.stop();
+      } catch {}
+    }
+    recordChunksRef.current = [];
+    recordStreamRef.current?.getTracks?.().forEach(t => t.stop());
+    recordStreamRef.current = null;
+    setRecording(false);
+    setRecordSecs(0);
+    recordSecsRef.current = 0;
+  }
+
+  async function sendVoiceMessage(blob, durationSec = 0) {
+    if (!activeId || !blob) return;
+    const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const localUrl = URL.createObjectURL(blob);
+    const ext = (blob.type || '').includes('ogg') ? 'ogg' : 'webm';
+    const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: blob.type || 'audio/webm' });
+
+    const optimistic = {
+      id: tempId,
+      tempId,
+      conversation: { id: activeId },
+      sender: me,
+      content: null,
+      messageType: 'voice',
+      attachments: [{ name: file.name, type: file.type, size: file.size, url: localUrl, duration: durationSec, local: true }],
+      voiceUri: localUrl,
+      voiceDuration: durationSec,
+      created_at: new Date().toISOString(),
+      readBy: null,
+      pending: true,
+    };
+
+    setMsgs(prev => [...prev, optimistic]);
+    shouldStickToBottomRef.current = true;
+    scrollToBottom(false);
+    setSending(true);
+
+    try {
+      const up = await uploadChatFile(file);
+      const attachment = {
+        name: up?.originalname || file.name,
+        type: up?.mimetype || file.type,
+        size: up?.size ?? file.size,
+        url: up?.url || '',
+        duration: durationSec,
+      };
+      setMsgs(prev =>
+        prev.map(m =>
+          m.tempId === tempId
+            ? { ...m, attachments: [attachment], voiceUri: attachment.url, voiceDuration: durationSec }
+            : m,
+        ),
+      );
+      socket?.emit('send_message', {
+        conversationId: activeId,
+        content: null,
+        messageType: 'voice',
+        attachments: [attachment],
+        tempId,
+      });
+    } catch (e) {
+      console.error('Voice send failed:', e);
+      setMsgs(prev => prev.filter(m => m.tempId !== tempId));
+      URL.revokeObjectURL(localUrl);
     } finally {
       setSending(false);
     }
@@ -512,286 +853,263 @@ export default function ChatPage() {
     return others[0] || null;
   }, [activeConversation, me]);
 
+  const unreadTotal = useMemo(
+    () => convos.reduce((sum, c) => sum + (Number(c.unreadCount) || 0), 0),
+    [convos],
+  );
+
   return (
     <div 
       className={cls(
-        'max-md:w-[calc(100%+20px)] max-md:ltr:ml-[-10px] max-md:rtl:mr-[-10px]',
-        'h-[calc(100vh-95px)] md:h-[calc(100vh-150px)] flex flex-col',
+        'w-full flex flex-col',
+        'h-[calc(100dvh-4rem)] min-[1026px]:h-full',
         'md:border border-slate-200/60',
-        ui.radius.xl,
+        'rounded-none lg:rounded-xl',
         'overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-100/50',
-        'shadow-xl shadow-slate-200/50'
+        'shadow-none lg:shadow-xl lg:shadow-slate-200/50'
       )}
     >
-      {/* Desktop App bar - Enhanced with gradient */}
-      <div className={cls(
-        'hidden md:flex items-center justify-between h-16 px-4',
-        'border-b border-slate-200/60',
-        'bg-gradient-to-r from-white/95 via-white/90 to-white/95 backdrop-blur-xl'
-      )}>
-        <div className='flex items-center gap-3'>
-          <div className='inline-flex items-center gap-2 px-4 h-10 rounded-full bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] text-white text-sm font-bold shadow-lg shadow-[var(--color-primary-500)]/20'>
-            <Sparkles className='w-4 h-4' />
-            <span>{t('appbar.title')}</span>
-          </div>
-        </div>
-
-        <div className='flex items-center gap-3'>
-          <div className='inline-flex items-center rounded-lg border border-slate-200 bg-white/80 p-1 shadow-sm'>
-            <button 
-              onClick={() => setFilterTab('all')} 
-              className={cls(
-                'px-4 h-9 rounded-lg text-sm font-medium transition-all duration-200',
-                ui.ringFocus,
-                filterTab === 'all' 
-                  ? 'bg-gradient-to-r from-[var(--color-primary-500)] to-[var(--color-primary-600)] text-white shadow-md shadow-[var(--color-primary-500)]/20' 
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              )}
-            >
-              {t('tabs.all')}
-            </button>
-            <button 
-              onClick={() => setFilterTab('unread')} 
-              className={cls(
-                'px-4 h-9 rounded-lg text-sm font-medium transition-all duration-200',
-                ui.ringFocus,
-                filterTab === 'unread' 
-                  ? 'bg-gradient-to-r from-[var(--color-primary-500)] to-[var(--color-primary-600)] text-white shadow-md shadow-[var(--color-primary-500)]/20' 
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              )}
-            >
-              {t('tabs.unread')}
-            </button>
-          </div>
-
-          {user.role === 'client' && (
-            <div className='gap-2 flex items-center'>
-              <button 
-                type='button' 
-                onClick={contactCoach} 
-                className={cls(
-                  'h-10 rounded-lg border border-slate-200/60 bg-white text-slate-700 text-sm font-medium',
-                  'inline-flex items-center justify-center px-4 gap-2',
-                  'hover:bg-gradient-to-r hover:from-[var(--color-primary-50)] hover:to-[var(--color-secondary-50)]',
-                  'active:scale-[.98] transition-all duration-200',
-                  'shadow-sm hover:shadow-md',
-                  ui.ringFocus
-                )}
-              >
-                <Phone size={16} />
-                {t('quick.coach')}
-              </button>
-              {me?.adminId && (
-                <button 
-                  type='button' 
-                  onClick={contactAdmin} 
-                  className={cls(
-                    'h-10 rounded-lg border border-slate-200/60 bg-white text-slate-700 text-sm font-medium',
-                    'inline-flex items-center justify-center px-4 gap-2',
-                    'hover:bg-gradient-to-r hover:from-[var(--color-primary-50)] hover:to-[var(--color-secondary-50)]',
-                    'active:scale-[.98] transition-all duration-200',
-                    'shadow-sm hover:shadow-md',
-                    ui.ringFocus
-                  )}
-                >
-                  <Phone size={16} />
-                  {t('quick.admin')}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Content grid */}
-      <div className='flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[380px_minmax(0,1fr)]'>
-        {/* Desktop sidebar - Enhanced design */}
+      <div className='flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[320px_minmax(0,1fr)]'>
+        {/* Desktop sidebar */}
         <aside className={cls(
           'hidden md:flex min-h-0 rtl:border-l ltr:border-r border-slate-200/60',
-          'bg-gradient-to-b from-white/80 to-slate-50/80 backdrop-blur-sm',
+          'bg-white/90 backdrop-blur-sm',
           'flex-col'
         )}>
-          {/* Search (sticky) - Enhanced */}
-          <div className='border-b border-slate-200/60 z-10 px-4 py-3 bg-white/60 backdrop-blur-sm'>
-            <div className='relative group'>
-              <Search className='absolute ltr:left-4 rtl:right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[var(--color-primary-500)] transition-all duration-200' />
-              <input 
-                value={search} 
-                onChange={e => setSearch(e.target.value)} 
-                placeholder={t('search.placeholder')} 
-                aria-label={t('search.placeholder')} 
-                className={cls(
-                  'h-12 w-full ltr:pl-12 rtl:pr-12 ltr:pr-12 rtl:pl-12',
-                  'rounded-lg border-2 border-slate-200/60',
-                  'bg-white/80 text-slate-900 placeholder:text-slate-400',
-                  'transition-all duration-200',
-                  'hover:border-slate-300',
-                  'focus:border-[var(--color-primary-400)] focus:bg-white focus:shadow-lg focus:shadow-[var(--color-primary-500)]/10',
-                  ui.ringFocus
+          {/* Search + filters */}
+          <div className='border-b border-slate-200/60 z-10 px-2.5 pt-2.5 pb-2 bg-white/90 shrink-0 space-y-2'>
+            <div className='flex items-center gap-1.5'>
+              <div className='relative group flex-1 min-w-0'>
+                <Search className='absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[var(--color-primary-500)] transition-colors' />
+                <input 
+                  value={search} 
+                  onChange={e => setSearch(e.target.value)} 
+                  placeholder={t('search.placeholder')} 
+                  aria-label={t('search.placeholder')} 
+                  className={cls(
+                    'h-9 w-full ltr:pl-9 rtl:pr-9 ltr:pr-8 rtl:pl-8',
+                    'rounded-xl border border-slate-200/80',
+                    'bg-slate-50 text-slate-900 placeholder:text-slate-400 text-sm',
+                    'transition-all duration-150',
+                    'hover:border-slate-300',
+                    'focus:border-[var(--color-primary-400)] focus:bg-white focus:shadow-sm',
+                    ui.ringFocus
+                  )}
+                />
+                {searching && <Loader2 className='absolute ltr:right-2.5 rtl:left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-[var(--color-primary-500)]' />}
+                {!!search && !searching && (
+                  <button 
+                    type='button' 
+                    onClick={() => setSearch('')} 
+                    aria-label={t('search.clear', { defaultValue: 'Clear search' })} 
+                    className='absolute ltr:right-1.5 rtl:left-1.5 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-6 h-6 rounded-lg hover:bg-slate-100 active:scale-95 transition-all'
+                  >
+                    <X className='w-3.5 h-3.5 text-slate-400' />
+                  </button>
                 )}
-              />
-              {searching && <Loader2 className='absolute ltr:right-4 rtl:left-4 top-1/2 -translate-y-1/2 w-5 h-5 animate-spin text-[var(--color-primary-500)]' />}
-              {!!search && !searching && (
-                <button 
-                  type='button' 
-                  onClick={() => setSearch('')} 
-                  aria-label={t('search.clear', { defaultValue: 'Clear search' })} 
-                  className='absolute ltr:right-3 rtl:left-3 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-7 h-7 rounded-lg hover:bg-slate-100 active:scale-95 transition-all duration-200'
-                >
-                  <X className='w-4 h-4 text-slate-400' />
-                </button>
+              </div>
+
+              {user?.role === 'client' && (
+                <div className='flex items-center gap-1 shrink-0'>
+                  <button
+                    type='button'
+                    onClick={contactCoach}
+                    title={t('quick.coach')}
+                    aria-label={t('quick.coach')}
+                    className={cls(
+                      'h-9 w-9 rounded-xl border border-slate-200 bg-white text-slate-600',
+                      'grid place-items-center hover:bg-[var(--color-primary-50)] hover:text-[var(--color-primary-700)] hover:border-[var(--color-primary-200)]',
+                      'active:scale-95 transition-all',
+                      ui.ringFocus,
+                    )}
+                  >
+                    <Phone size={15} />
+                  </button>
+                  {me?.adminId && (
+                    <button
+                      type='button'
+                      onClick={contactAdmin}
+                      title={t('quick.admin')}
+                      aria-label={t('quick.admin')}
+                      className={cls(
+                        'h-9 w-9 rounded-xl border border-slate-200 bg-white text-slate-600',
+                        'grid place-items-center hover:bg-[var(--color-primary-50)] hover:text-[var(--color-primary-700)] hover:border-[var(--color-primary-200)]',
+                        'active:scale-95 transition-all',
+                        ui.ringFocus,
+                      )}
+                    >
+                      <Bell size={15} />
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
-            {/* Results - Enhanced */}
+            {/* All / Unread segmented filter */}
+            <div
+              role='tablist'
+              aria-label={t('tabs.all')}
+              className='relative grid grid-cols-2 p-1 rounded-xl bg-slate-100/90 border border-slate-200/70'
+            >
+              <button
+                type='button'
+                role='tab'
+                aria-selected={filterTab === 'all'}
+                onClick={() => setFilterTab('all')}
+                className={cls(
+                  'relative z-10 h-8 rounded-lg text-xs font-semibold transition-all duration-200',
+                  ui.ringFocus,
+                  filterTab === 'all'
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80'
+                    : 'text-slate-500 hover:text-slate-700',
+                )}
+              >
+                {t('tabs.all')}
+              </button>
+              <button
+                type='button'
+                role='tab'
+                aria-selected={filterTab === 'unread'}
+                onClick={() => setFilterTab('unread')}
+                className={cls(
+                  'relative z-10 h-8 rounded-lg text-xs font-semibold transition-all duration-200 inline-flex items-center justify-center gap-1.5',
+                  ui.ringFocus,
+                  filterTab === 'unread'
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80'
+                    : 'text-slate-500 hover:text-slate-700',
+                )}
+              >
+                {t('tabs.unread')}
+                {unreadTotal > 0 && (
+                  <span
+                    className={cls(
+                      'min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold grid place-items-center',
+                      filterTab === 'unread'
+                        ? 'bg-gradient-to-r from-[var(--color-primary-500)] to-[var(--color-primary-600)] text-white'
+                        : 'bg-slate-200 text-slate-600',
+                    )}
+                  >
+                    {unreadTotal > 99 ? '99+' : unreadTotal}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Results */}
             {searching ? null : search && results.length === 0 ? (
               <motion.div 
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className='mt-3 rounded-lg border border-slate-200/60 bg-white/90 backdrop-blur-sm p-8 text-center shadow-sm'
+                className='rounded-xl border border-slate-200/60 bg-white/90 p-6 text-center'
               >
-                <div className='mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-slate-100 to-slate-200/60'>
-                  <Inbox className='w-7 h-7 text-slate-400' />
+                <div className='mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100'>
+                  <Inbox className='w-5 h-5 text-slate-400' />
                 </div>
                 <div className='text-sm font-semibold text-slate-700'>{t('search.noResultsTitle', { defaultValue: 'No matches found' })}</div>
-                <div className='text-xs text-slate-500 mt-2'>{t('search.noResultsHint', { defaultValue: 'Try a different name or email' })}</div>
+                <div className='text-xs text-slate-500 mt-1'>{t('search.noResultsHint', { defaultValue: 'Try a different name or email' })}</div>
               </motion.div>
             ) : (
               !!results.length && (
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className='mt-3 rounded-lg border border-slate-200/60 overflow-hidden bg-white/95 backdrop-blur-sm shadow-sm'
+                  className='rounded-xl border border-slate-200/60 overflow-hidden bg-white shadow-sm'
                 >
-                  <div className='px-4 py-2.5 text-xs font-semibold text-slate-600 bg-gradient-to-r from-slate-50 to-slate-100/50 border-b border-slate-200/60'>
+                  <div className='px-3 py-2 text-[11px] font-semibold text-slate-500 bg-slate-50 border-b border-slate-100'>
                     {t('search.results')}
                   </div>
-                  <ul className='max-h-72 overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
-                    {results.map(u => {
-                      const initial = getInitial(u);
-                      const avatarGradient = pickAvatarGradient(u.id || u.email, colors);
-                      return (
+                  <ul className='max-h-56 overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
+                    {results.map(u => (
                         <li key={u.id} className='border-t border-slate-100/60 first:border-t-0'>
                           <button 
                             onClick={() => openDirectWith(u.id)} 
                             className={cls(
-                              'w-full px-4 py-3 text-left',
-                              'hover:bg-gradient-to-r hover:from-[var(--color-primary-50)]/50 hover:to-white',
-                              'active:bg-[var(--color-primary-50)]',
-                              'flex items-center gap-3 transition-all duration-200 group',
+                              'w-full px-2.5 py-2 text-left',
+                              'hover:bg-slate-50',
+                              'flex items-center gap-2.5 transition-all duration-150 group',
                               ui.ringFocus
                             )}
                           >
-                            <div className={cls(
-                              'h-10 w-10 rounded-lg bg-gradient-to-br grid place-items-center overflow-hidden',
-                              'ring-2 ring-slate-200/60 shadow-sm',
-                              'group-hover:ring-[var(--color-primary-300)] group-hover:shadow-md group-hover:shadow-[var(--color-primary-500)]/10',
-                              'transition-all duration-200',
-                              avatarGradient
-                            )}>
-                              <span className='text-sm font-bold md: leading-none select-none'>{initial}</span>
-                            </div>
+                            <UserAvatar user={u} size={36} />
                             <div className='min-w-0 flex-1 flex flex-col'>
-                              <MultiLangText className='text-sm font-semibold text-slate-900 truncate group-hover:text-[var(--color-primary-700)]'>
+                              <MultiLangText className='text-[13px] font-semibold text-slate-900 truncate group-hover:text-[var(--color-primary-700)]'>
                                 {u.name || u.email}
                               </MultiLangText>
-                              <MultiLangText className='text-xs text-slate-500 truncate'>{u.email}</MultiLangText>
+                              <MultiLangText className='text-[11px] text-slate-500 truncate'>{u.email}</MultiLangText>
                             </div>
-                            <ChevronRight className='w-5 h-5 text-slate-300 rtl:rotate-180 group-hover:text-[var(--color-primary-500)] group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-all duration-200' />
+                            <ChevronRight className='w-4 h-4 text-slate-300 rtl:rotate-180' />
                           </button>
                         </li>
-                      );
-                    })}
+                      ))}
                   </ul>
                 </motion.div>
               )
             )}
           </div>
 
-          {/* Conversation list - Enhanced */}
-          <div ref={listRef} className='flex-1 overflow-auto p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
+          {/* Conversation list */}
+          <div ref={listRef} className='flex-1 overflow-auto px-1.5 py-1.5 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
             {loadingConvos ? (
-              <div className='space-y-3'>
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className='h-20 rounded-lg bg-gradient-to-r from-slate-100/80 to-slate-200/40 animate-pulse' />
+              <div className='space-y-1'>
+                {[...Array(10)].map((_, i) => (
+                  <div key={i} className='h-14 rounded-lg bg-slate-100/80 animate-pulse' />
                 ))}
               </div>
             ) : filteredConvos.length ? (
-              <ul className='space-y-2'>
+              <ul className='space-y-0.5'>
                 {filteredConvos.map(c => {
                   const others = (c.chatParticipants || []).map(p => p.user).filter(u => me && u?.id !== me.id);
-                  const title = c.isGroup ? c.name || t('list.group') : others[0]?.name || others[0]?.email || t('list.direct');
+                  const peer = others[0] || null;
+                  const title = c.isGroup ? c.name || t('list.group') : peer?.name || peer?.email || t('list.direct');
                   const last = c.lastMessage;
-                  const preview = last?.messageType === 'text' ? last?.content : last?.messageType === 'image' ? t('list.photo') : last?.messageType === 'video' ? t('list.video') : last?.messageType === 'file' ? t('list.file') : '';
+                  const preview = last?.messageType === 'text' ? last?.content : last?.messageType === 'image' ? t('list.photo') : last?.messageType === 'video' ? t('list.video') : last?.messageType === 'voice' ? t('list.voice') : last?.messageType === 'file' ? t('list.file') : '';
 
                   const isActive = activeId === c.id;
                   const hasUnread = Number(c.unreadCount) > 0;
 
                   return (
-                    <motion.li 
-                      key={c.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
+                    <li key={c.id}>
                       <button 
                         onClick={() => onSelectConversation(c.id)} 
                         className={cls(
-                          'w-full px-4 py-4 text-left rounded-lg transition-all duration-200',
+                          'w-full px-2.5 py-2 text-left rounded-xl transition-all duration-150',
                           ui.ringFocus,
                           isActive 
-                            ? 'bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] shadow-md ring-2 ring-[var(--color-primary-200)] border border-[var(--color-primary-200)]' 
-                            : 'bg-white/70 hover:bg-white hover:shadow-md border border-slate-200/60 hover:border-slate-300'
+                            ? 'bg-[var(--color-primary-50)] border border-[var(--color-primary-200)]' 
+                            : 'hover:bg-slate-50 border border-transparent'
                         )}
                       >
-                        <div className='flex items-center gap-3'>
-                          <div className='relative group/avatar'>
-                            <div className={cls(
-                              'h-12 w-12 rounded-lg grid place-items-center overflow-hidden',
-                              'transition-all duration-300 ease-out transform',
-                              'shadow-sm',
-                              hasUnread 
-                                ? 'bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] ring-2 ring-[var(--color-primary-300)] shadow-lg shadow-[var(--color-primary-500)]/20 group-hover/avatar:shadow-xl group-hover/avatar:shadow-[var(--color-primary-500)]/30' 
-                                : 'bg-gradient-to-br from-slate-200 to-slate-100 ring-2 ring-slate-200/60 group-hover/avatar:shadow-md',
-                              'group-hover/avatar:-translate-y-0.5 group-hover/avatar:scale-105'
-                            )}>
-                              <UserCircle2 className={cls(
-                                'w-7 h-7 drop-shadow-sm transition-colors duration-300',
-                                hasUnread ? 'text-white' : 'text-slate-600'
-                              )} />
-                            </div>
-
-                            {others?.[0]?.email && (
-                              <div className='pointer-events-none absolute top-0 mt-2 px-3 py-2 rounded-lg bg-slate-900/95 text-white text-xs whitespace-nowrap shadow-xl opacity-0 scale-95 translate-y-1 transition-all duration-200 origin-top group-hover/avatar:opacity-100 group-hover/avatar:scale-100 group-hover/avatar:translate-y-0 ltr:left-[56px] rtl:right-[56px] z-10'>
-                                {others[0].email}
-                                <div className='absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-slate-900/95 rotate-45 ltr:-left-1 rtl:-right-1' />
-                              </div>
-                            )}
-                          </div>
+                        <div className='flex items-center gap-2.5'>
+                          <UserAvatar user={peer} size={42} hasUnread={hasUnread} online={!!peer?.online} />
 
                           <div className='min-w-0 flex-1'>
-                            <div className='flex items-center justify-between gap-2 mb-1'>
+                            <div className='flex items-center justify-between gap-2'>
                               <MultiLangText className={cls(
-                                'rtl:text-right ltr:text-left text-sm font-bold truncate',
-                                isActive ? 'text-[var(--color-primary-700)]' : 'text-slate-900'
+                                'rtl:text-right ltr:text-left text-[13px] truncate',
+                                hasUnread || isActive ? 'font-bold text-slate-900' : 'font-semibold text-slate-800',
+                                isActive && 'text-[var(--color-primary-700)]'
                               )}>
                                 {title}
                               </MultiLangText>
-                              <UnreadBadge count={c.unreadCount} />
-                            </div>
-
-                            <div className='flex items-center justify-between gap-2'>
-                              <MultiLangText className='text-xs text-slate-500 truncate flex-1 rtl:text-right'>
-                                {preview}
-                              </MultiLangText>
-                              <div className='font-en text-[11px] text-slate-400 shrink-0 tabular-nums font-medium'>
+                              <div className='font-en text-[10px] text-slate-400 shrink-0 tabular-nums'>
                                 {last?.created_at ? timeHHMM(last.created_at) : ''}
                               </div>
+                            </div>
+
+                            <div className='flex items-center justify-between gap-2 mt-0.5'>
+                              <MultiLangText className={cls(
+                                'text-[12px] truncate flex-1 rtl:text-right',
+                                hasUnread ? 'text-slate-700 font-medium' : 'text-slate-500'
+                              )}>
+                                {preview}
+                              </MultiLangText>
+                              <UnreadBadge count={c.unreadCount} />
                             </div>
                           </div>
                         </div>
                       </button>
-                    </motion.li>
+                    </li>
                   );
                 })}
               </ul>
@@ -814,13 +1132,13 @@ export default function ChatPage() {
             'md:hidden h-16 border-b border-slate-200/60 px-4 flex items-center justify-between',
             'bg-gradient-to-r from-white/95 via-white/90 to-white/95 backdrop-blur-xl'
           )}>
-            <div className='flex items-center gap-3'>
+            <div className='flex items-center gap-2.5 min-w-0'>
               <button 
                 onClick={() => setDrawerOpen(true)} 
                 className={cls(
-                  'flex-none inline-flex h-11 w-11 items-center justify-center',
-                  'rounded-lg border border-slate-200/60 bg-white hover:bg-slate-50',
-                  'active:scale-95 transition-all duration-200 shadow-sm',
+                  'flex-none inline-flex h-10 w-10 items-center justify-center',
+                  'rounded-xl border border-slate-200/60 bg-white hover:bg-slate-50',
+                  'active:scale-95 transition-all shadow-sm',
                   ui.ringFocus
                 )} 
                 title={t('actions.openList')} 
@@ -828,57 +1146,53 @@ export default function ChatPage() {
               >
                 <Menu className='w-5 h-5 text-slate-600' />
               </button>
-              <div className='text-sm font-bold bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] bg-clip-text text-transparent'>
-                {t('appbar.title')}
-              </div>
+              {otherUser ? (
+                <div className='flex items-center gap-2 min-w-0'>
+                  <UserAvatar user={otherUser} size={34} online={!!otherUser?.online} />
+                  <MultiLangText className='text-sm font-bold text-slate-900 truncate'>
+                    {otherUser.name || otherUser.email}
+                  </MultiLangText>
+                </div>
+              ) : (
+                <div className='text-sm font-semibold text-slate-700 truncate'>
+                  {t('list.title', { defaultValue: 'Conversations' })}
+                </div>
+              )}
             </div>
 
             <button 
               onClick={() => setDrawerOpen(true)} 
               className={cls(
-                'h-11 w-11 rounded-lg border border-slate-200/60 bg-white',
-                'grid place-items-center shadow-sm hover:shadow-md',
-                'transition-all duration-200',
+                'h-10 w-10 rounded-xl border border-slate-200/60 bg-white',
+                'grid place-items-center shadow-sm',
+                'transition-all',
                 ui.ringFocus
               )} 
               aria-label={t('actions.openList')} 
               title={t('actions.openList')}
             >
-              <Search className='w-5 h-5 text-slate-600' />
+              <Search className='w-4 h-4 text-slate-600' />
             </button>
           </div>
 
-          {/* Chat header - Enhanced */}
+          {/* Chat header */}
           <div className={cls(
-            'hidden md:flex h-16 border-b border-slate-200/60 px-5 items-center gap-4',
-            'bg-gradient-to-r from-white/95 via-white/90 to-white/95 backdrop-blur-xl'
+            'hidden md:flex h-12 border-b border-slate-200/60 px-4 items-center gap-3 shrink-0',
+            'bg-white/95 backdrop-blur-xl'
           )}>
             {otherUser ? (
               <>
-                <div className='relative'>
-                  <div className={cls(
-                    'h-11 w-11 rounded-lg bg-gradient-to-br grid place-items-center overflow-hidden',
-                    'ring-2 shadow-md transition-all duration-200',
-                    pickAvatarGradient(otherUser.id || otherUser.email, colors)
-                  )}>
-                    <MultiLangText className='text-sm font-bold md: leading-none select-none'>
-                      {getInitial(otherUser)}
-                    </MultiLangText>
-                  </div>
-                  {otherUser?.online && (
-                    <span className='absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-white shadow-sm' />
-                  )}
-                </div>
+                <UserAvatar user={otherUser} size={36} online={!!otherUser?.online} />
                 <div className='min-w-0'>
-                  <MultiLangText className='text-base font-bold text-slate-900 truncate'>
+                  <MultiLangText className='text-sm font-bold text-slate-900 truncate'>
                     {otherUser.name || otherUser.email}
                   </MultiLangText>
-                  <div className='text-xs text-slate-500 font-medium'>
+                  <div className='text-[11px] text-slate-500 font-medium'>
                     {typing ? (
                       <span className='text-[var(--color-primary-600)] flex items-center gap-1'>
-                        <span className='inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-primary-600)] animate-bounce' style={{ animationDelay: '0ms' }} />
-                        <span className='inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-primary-600)] animate-bounce' style={{ animationDelay: '150ms' }} />
-                        <span className='inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-primary-600)] animate-bounce' style={{ animationDelay: '300ms' }} />
+                        <span className='inline-block w-1 h-1 rounded-full bg-[var(--color-primary-600)] animate-bounce' style={{ animationDelay: '0ms' }} />
+                        <span className='inline-block w-1 h-1 rounded-full bg-[var(--color-primary-600)] animate-bounce' style={{ animationDelay: '150ms' }} />
+                        <span className='inline-block w-1 h-1 rounded-full bg-[var(--color-primary-600)] animate-bounce' style={{ animationDelay: '300ms' }} />
                         <span className='ml-1'>{t('header.typing')}</span>
                       </span>
                     ) : (
@@ -894,178 +1208,243 @@ export default function ChatPage() {
             )}
           </div>
 
-          {/* Messages area - Enhanced with better background */}
-          <div className='max-md:max-h-[calc(100%-120px)] space-y-3 flex-1 min-h-0 overflow-y-auto px-4 py-5 bg-gradient-to-b from-slate-50/80 via-white/50 to-slate-100/60 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
+          {/* Messages area */}
+          <div
+            ref={messagesScrollRef}
+            onScroll={e => {
+              const el = e.currentTarget;
+              const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+              shouldStickToBottomRef.current = distanceFromBottom < 80;
+            }}
+            className='flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-3 bg-slate-50/70 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'
+          >
             {!activeId ? (
               <div className='h-full grid place-items-center text-slate-500'>
-                <div className='text-center'>
-                  <div className='mx-auto mb-5 inline-flex h-20 w-20 items-center justify-center rounded-lg bg-gradient-to-br from-slate-100 to-slate-200/60 shadow-lg'>
-                    <Inbox className='w-10 h-10 text-slate-400' />
+                <div className='text-center px-4'>
+                  <div className='mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 border border-slate-200/80 shadow-sm'>
+                    <Inbox className='w-8 h-8 text-slate-400' />
                   </div>
                   <div className='text-base font-semibold text-slate-700'>{t('empty.pick')}</div>
-                  <div className='text-sm text-slate-400 mt-2'>{t('empty.hint', { defaultValue: 'Select a conversation from the list' })}</div>
+                  <div className='text-sm text-slate-400 mt-1.5'>{t('empty.hint', { defaultValue: 'Select a conversation from the list' })}</div>
                 </div>
               </div>
             ) : loadingMsgs ? (
               <MessageSkeleton />
             ) : (
-              <MessageList msgs={msgs} me={me} API_URL={API_URL} endRef={endRef} t={t} typing={typing} colors={colors} />
+              <MessageList
+                msgs={msgs}
+                me={me}
+                API_URL={API_URL}
+                endRef={endRef}
+                t={t}
+                typing={typing}
+                colors={colors}
+                onContentReady={stickToBottomIfNeeded}
+              />
             )}
           </div>
 
-          {/* Composer - Enhanced */}
-          <div 
+          {/* Composer */}
+          <div
             className={cls(
-              'border-t border-slate-200/60 p-4',
-              'bg-gradient-to-r from-white/95 via-white/90 to-white/95 backdrop-blur-xl'
-            )} 
-            style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+              'border-t border-slate-200/60 p-3 sm:px-4 sm:py-3',
+              'bg-white/95 backdrop-blur-xl',
+            )}
+            style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
           >
             {!activeId ? (
-              <div className='text-center text-sm text-slate-500 py-6 font-medium'>
+              <div className='text-center text-sm text-slate-500 py-3 font-medium'>
                 {t('composer.disabled')}
+              </div>
+            ) : recording ? (
+              <div className='relative flex items-center gap-2 h-12 rounded-[28px] bg-red-50 border border-red-200/80 px-2 shadow-sm'>
+                <button
+                  type='button'
+                  onClick={cancelVoiceRecording}
+                  className={cls(
+                    'h-9 w-9 rounded-full grid place-items-center shrink-0',
+                    'text-slate-500 hover:bg-white/80 hover:text-slate-700 transition-all',
+                    ui.ringFocus,
+                  )}
+                  aria-label={t('composer.cancel', { defaultValue: 'Cancel' })}
+                >
+                  <X className='w-4 h-4' />
+                </button>
+                <div className='flex-1 flex items-center justify-center gap-2 text-red-600 font-semibold min-w-0'>
+                  <span className='h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0' />
+                  <span className='tabular-nums text-sm'>{formatDuration(recordSecs)}</span>
+                  <span className='text-xs font-medium truncate opacity-80'>
+                    {t('composer.recording', { defaultValue: 'Recording…' })}
+                  </span>
+                </div>
+                <button
+                  type='button'
+                  onClick={stopVoiceRecording}
+                  className={cls(
+                    'h-9 w-9 rounded-full shrink-0 bg-red-500 text-white grid place-items-center',
+                    'hover:bg-red-600 active:scale-95 transition-all shadow-md shadow-red-500/30',
+                    ui.ringFocus,
+                  )}
+                  title={t('composer.sendVoice', { defaultValue: 'Send voice' })}
+                  aria-label={t('composer.sendVoice', { defaultValue: 'Send voice' })}
+                >
+                  <Send className='w-4 h-4 ltr:translate-x-px' />
+                </button>
               </div>
             ) : (
               <>
                 {!!attaches.length && (
-                  <div className='px-1 pb-3 flex gap-2 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
+                  <div className='px-0.5 pb-3 flex gap-2 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
                     {attaches.map((a, idx) => (
-                      <motion.div 
-                        key={idx} 
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className='relative shrink-0 group'
-                      >
+                      <div key={idx} className='relative shrink-0'>
                         {/^\s*image\//.test(a.type) ? (
-                          <img 
-                            src={a.url} 
-                            alt={a.name} 
-                            className='h-20 w-20 object-cover rounded-lg border-2 border-slate-200 shadow-md hover:shadow-lg transition-shadow duration-200' 
+                          <img
+                            src={a.url}
+                            alt={a.name}
+                            className='h-16 w-16 object-cover rounded-xl border border-slate-200 shadow-sm'
                           />
                         ) : /^\s*video\//.test(a.type) ? (
-                          <div className='h-20 w-28 rounded-lg border-2 border-slate-200 grid place-items-center bg-slate-50 shadow-md hover:shadow-lg transition-shadow duration-200'>
-                            <Video className='w-6 h-6 text-slate-600' />
+                          <div className='h-16 w-24 rounded-xl border border-slate-200 grid place-items-center bg-slate-50'>
+                            <Video className='w-5 h-5 text-slate-600' />
+                          </div>
+                        ) : /^\s*audio\//.test(a.type) ? (
+                          <div className='h-16 w-24 rounded-xl border border-slate-200 grid place-items-center bg-slate-50'>
+                            <Mic className='w-5 h-5 text-slate-600' />
                           </div>
                         ) : (
-                          <div className='h-20 w-28 rounded-lg border-2 border-slate-200 grid place-items-center bg-slate-50 shadow-md hover:shadow-lg transition-shadow duration-200'>
-                            <FileIcon className='w-6 h-6 text-slate-600' />
+                          <div className='h-16 w-24 rounded-xl border border-slate-200 grid place-items-center bg-slate-50'>
+                            <FileIcon className='w-5 h-5 text-slate-600' />
                           </div>
                         )}
-                        <div className='absolute bottom-1 ltr:left-1 ltr:right-9 rtl:right-1 rtl:left-9 truncate text-[10px] px-1.5 py-0.5 rounded-lg bg-black/70 text-white font-medium'>
-                          {a.name}
-                        </div>
-                        <button 
-                          onClick={() => removeAttach(idx)} 
+                        <button
+                          onClick={() => removeAttach(idx)}
                           className={cls(
-                            'absolute -top-2 ltr:-right-2 rtl:-left-2 h-7 w-7 rounded-full',
-                            'bg-gradient-to-br from-red-500 to-red-600 text-white',
-                            'grid place-items-center',
-                            'hover:from-red-600 hover:to-red-700',
-                            'shadow-lg hover:shadow-xl',
-                            'transition-all duration-200',
-                            'active:scale-95',
-                            ui.ringFocus
-                          )} 
-                          title={t('composer.remove')} 
+                            'absolute -top-1.5 ltr:-right-1.5 rtl:-left-1.5 h-6 w-6 rounded-full',
+                            'bg-slate-900 text-white grid place-items-center',
+                            'hover:bg-red-600 shadow-md active:scale-95 transition-colors',
+                            ui.ringFocus,
+                          )}
+                          title={t('composer.remove')}
                           aria-label={t('composer.remove')}
                         >
-                          <X size={14} />
+                          <X size={12} />
                         </button>
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                 )}
 
-                <div className='flex items-end gap-2'>
-                  <div className='relative flex-1'>
-                    <textarea
-                      value={text}
-                      onChange={e => {
-                        setText(e.target.value);
-                        handleTyping();
-                        const el = e.target;
-                        el.style.height = 'auto';
-                        el.style.height = Math.min(el.scrollHeight, 160) + 'px';
-                      }}
-                      onKeyDown={e => {
-                        const isSend = (e.key === 'Enter' && !e.shiftKey) || (e.key === 'Enter' && (e.metaKey || e.ctrlKey));
-                        if (isSend) {
-                          e.preventDefault();
-                          send();
-                        }
-                      }}
-                      onBlur={() => {
-                        if (activeId) socket?.emit('typing_stop', activeId);
-                        if (typingTimeout) clearTimeout(typingTimeout);
-                      }}
-                      rows={1}
-                      placeholder={t('composer.placeholder')}
+                <div
+                  className={cls(
+                    'relative flex items-end gap-1 rounded-[28px]',
+                    'bg-slate-100/90 border border-slate-200/80',
+                    'focus-within:bg-white focus-within:border-[var(--color-primary-300)]',
+                    'focus-within:shadow-[0_0_0_3px_rgba(59,130,246,0.12)]',
+                    'transition-all duration-200',
+                    'pl-1.5 pr-1.5 py-1.5',
+                    isRTL && 'flex-row-reverse',
+                  )}
+                >
+                  <div className='flex items-center gap-0.5 shrink-0 pb-0.5'>
+                    <label
                       className={cls(
-                        'h-auto min-h-[52px] max-h-[160px] w-full rounded-lg',
-                        'bg-white text-slate-900 placeholder:text-slate-400',
-                        'border-2 border-slate-200',
-                        'hover:border-slate-300',
-                        'focus:border-[var(--color-primary-400)] focus:shadow-lg focus:shadow-[var(--color-primary-500)]/10',
-                        'transition-all duration-200',
-                        'px-4 py-3 text-base resize-none',
-                        'ltr:pr-[180px] rtl:pl-[180px]',
-                        ui.ringFocus
+                        'h-9 w-9 grid place-items-center rounded-full',
+                        'text-slate-500 cursor-pointer',
+                        'hover:bg-white hover:text-slate-700 hover:shadow-sm',
+                        'active:scale-95 transition-all',
+                        ui.ringFocus,
                       )}
-                    />
+                      title={t('composer.attach', { defaultValue: 'Attach' })}
+                    >
+                      <Paperclip className='w-4 h-4' />
+                      <input type='file' className='hidden' multiple onChange={e => onPickFiles(e.target.files)} />
+                    </label>
+                    <label
+                      className={cls(
+                        'h-9 w-9 grid place-items-center rounded-full',
+                        'text-slate-500 cursor-pointer',
+                        'hover:bg-white hover:text-slate-700 hover:shadow-sm',
+                        'active:scale-95 transition-all',
+                        ui.ringFocus,
+                      )}
+                      title={t('composer.image', { defaultValue: 'Image' })}
+                    >
+                      <ImageIcon className='w-4 h-4' />
+                      <input type='file' className='hidden' accept='image/*' multiple onChange={e => onPickFiles(e.target.files)} />
+                    </label>
+                  </div>
 
-                    {/* Action buttons cluster */}
-                    <div className='pointer-events-auto absolute inset-y-0 ltr:right-2 rtl:left-2 flex gap-1.5 items-center'>
-                      <button 
-                        onClick={send} 
-                        disabled={sending || (!text.trim() && !hasAttaches)} 
+                  <textarea
+                    ref={textAreaRef}
+                    value={text}
+                    onChange={e => {
+                      setText(e.target.value);
+                      handleTyping();
+                      const el = e.target;
+                      el.style.height = 'auto';
+                      el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+                    }}
+                    onKeyDown={e => {
+                      const isSend = (e.key === 'Enter' && !e.shiftKey) || (e.key === 'Enter' && (e.metaKey || e.ctrlKey));
+                      if (isSend) {
+                        e.preventDefault();
+                        send();
+                      }
+                    }}
+                    onBlur={() => {
+                      if (activeId) socket?.emit('typing_stop', activeId);
+                      if (typingTimeout) clearTimeout(typingTimeout);
+                    }}
+                    rows={1}
+                    placeholder={t('composer.placeholder')}
+                    className={cls(
+                      'flex-1 min-w-0 h-auto min-h-[36px] max-h-[120px]',
+                      'bg-transparent text-slate-900 placeholder:text-slate-400',
+                      'border-0 outline-none focus:outline-none focus:ring-0 shadow-none',
+                      'px-1.5 py-2 text-[15px] leading-5 resize-none',
+                    )}
+                  />
+
+                  <div className='shrink-0 pb-0.5'>
+                    {text.trim() || hasAttaches ? (
+                      <button
+                        type='button'
+                        onClick={send}
+                        disabled={sending}
                         className={cls(
-                          'h-10 w-10 rounded-lg',
-                          'bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]',
-                          'text-white grid place-items-center',
-                          'disabled:opacity-50 disabled:cursor-not-allowed',
-                          'hover:shadow-lg hover:shadow-[var(--color-primary-500)]/30',
-                          'active:scale-95 transition-all duration-200',
-                          ui.ringFocus
-                        )} 
-                        title={t('composer.send')} 
+                          'h-9 w-9 rounded-full grid place-items-center',
+                          'bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]',
+                          'text-white shadow-md shadow-[var(--color-primary-500)]/25',
+                          'hover:shadow-lg hover:shadow-[var(--color-primary-500)]/35 hover:scale-105',
+                          'disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:scale-100',
+                          'active:scale-95 transition-all duration-150',
+                          ui.ringFocus,
+                        )}
+                        title={t('composer.send')}
                         aria-label={t('composer.send')}
                       >
-                        {sending ? <Loader2 className='animate-spin w-5 h-5' /> : <Send className='w-5 h-5' />}
+                        {sending ? <Loader2 className='animate-spin w-4 h-4' /> : <Send className='w-4 h-4 ltr:translate-x-px rtl:-translate-x-px' />}
                       </button>
-
-                      <label className={cls(
-                        'h-10 w-10 grid place-items-center rounded-lg',
-                        'border-2 border-slate-200 bg-white cursor-pointer',
-                        'hover:bg-slate-50 hover:border-slate-300',
-                        'active:scale-95 transition-all duration-200',
-                        ui.ringFocus
-                      )}>
-                        <ImageIcon className='w-5 h-5 text-slate-600' />
-                        <input type='file' className='hidden' accept='image/*' multiple onChange={e => onPickFiles(e.target.files)} />
-                      </label>
-
-                      <label className={cls(
-                        'h-10 w-10 grid place-items-center rounded-lg',
-                        'border-2 border-slate-200 bg-white cursor-pointer',
-                        'hover:bg-slate-50 hover:border-slate-300',
-                        'active:scale-95 transition-all duration-200',
-                        ui.ringFocus
-                      )}>
-                        <Video className='w-5 h-5 text-slate-600' />
-                        <input type='file' className='hidden' accept='video/*' multiple onChange={e => onPickFiles(e.target.files)} />
-                      </label>
-
-                      <label className={cls(
-                        'h-10 w-10 grid place-items-center rounded-lg',
-                        'border-2 border-slate-200 bg-white cursor-pointer',
-                        'hover:bg-slate-50 hover:border-slate-300',
-                        'active:scale-95 transition-all duration-200',
-                        ui.ringFocus
-                      )}>
-                        <Paperclip className='w-5 h-5 text-slate-600' />
-                        <input type='file' className='hidden' multiple onChange={e => onPickFiles(e.target.files)} />
-                      </label>
-                    </div>
+                    ) : (
+                      <button
+                        type='button'
+                        onClick={startVoiceRecording}
+                        disabled={sending}
+                        className={cls(
+                          'h-9 w-9 rounded-full grid place-items-center',
+                          'bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)]',
+                          'text-white shadow-md shadow-[var(--color-primary-500)]/25',
+                          'hover:shadow-lg hover:shadow-[var(--color-primary-500)]/35 hover:scale-105',
+                          'disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:scale-100',
+                          'active:scale-95 transition-all duration-150',
+                          ui.ringFocus,
+                        )}
+                        title={t('composer.voice', { defaultValue: 'Voice message' })}
+                        aria-label={t('composer.voice', { defaultValue: 'Voice message' })}
+                      >
+                        <Mic className='w-4 h-4' />
+                      </button>
+                    )}
                   </div>
                 </div>
               </>
@@ -1086,69 +1465,107 @@ export default function ChatPage() {
             dir={isRTL ? 'rtl' : 'ltr'}
           >
             <div className={cls(
-              'h-16 border-b border-slate-200/60 px-4 flex items-center justify-between',
-              'bg-gradient-to-r from-white/95 via-white/90 to-white/95 backdrop-blur-xl'
+              'h-14 border-b border-slate-200/60 px-3 flex items-center justify-between',
+              'bg-white'
             )}>
-              <div className='text-base font-bold bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)] bg-clip-text text-transparent'>
-                {t('appbar.title')}
-              </div>
+              <div className='text-sm font-semibold text-slate-800'>{t('list.title', { defaultValue: 'Conversations' })}</div>
               <button 
                 onClick={() => setDrawerOpen(false)} 
                 className={cls(
-                  'inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg',
-                  'border-2 border-slate-200',
-                  'bg-white hover:bg-slate-50 active:bg-slate-100',
-                  'transition-all duration-200',
-                  'text-slate-700 font-semibold text-sm',
+                  'inline-flex items-center justify-center h-9 w-9 rounded-xl',
+                  'border border-slate-200 bg-white hover:bg-slate-50',
+                  'transition-all text-slate-600',
                   ui.ringFocus
                 )}
+                aria-label={t('actions.close')}
               >
                 <X className='w-4 h-4' />
-                <span>{t('actions.close')}</span>
               </button>
             </div>
 
-            <div className='p-4 border-b border-slate-200/60 bg-white/60 backdrop-blur-sm'>
+            <div className='p-3 border-b border-slate-200/60 bg-white space-y-2'>
               <div className='relative'>
                 <Search className={cls(
-                  'absolute top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400',
-                  isRTL ? 'right-4' : 'left-4'
+                  'absolute top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400',
+                  isRTL ? 'right-3' : 'left-3'
                 )} />
                 <input 
                   value={search} 
                   onChange={e => setSearch(e.target.value)} 
                   placeholder={t('search.placeholder')} 
                   className={cls(
-                    'w-full h-12 rounded-lg border-2 border-slate-200',
-                    'bg-white/90 focus:bg-white',
-                    'focus:border-[var(--color-primary-400)] focus:shadow-lg focus:shadow-[var(--color-primary-500)]/10',
-                    'transition-all duration-200',
+                    'w-full h-10 rounded-xl border border-slate-200',
+                    'bg-slate-50 focus:bg-white',
+                    'focus:border-[var(--color-primary-400)] focus:shadow-sm',
+                    'transition-all duration-150 text-sm',
                     ui.ringFocus,
-                    isRTL ? 'pr-12 pl-4' : 'pl-12 pr-4'
+                    isRTL ? 'pr-10 pl-3' : 'pl-10 pr-3'
                   )} 
                 />
                 {searching && (
                   <Loader2 className={cls(
-                    'absolute top-1/2 -translate-y-1/2 w-5 h-5 animate-spin text-[var(--color-primary-500)]',
-                    isRTL ? 'left-4' : 'right-4'
+                    'absolute top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-[var(--color-primary-500)]',
+                    isRTL ? 'left-3' : 'right-3'
                   )} />
                 )}
               </div>
 
-              {user.role === 'client' && (
-                <div className='gap-2 flex items-center mt-3'>
+              <div role='tablist' className='grid grid-cols-2 p-1 rounded-xl bg-slate-100/90 border border-slate-200/70'>
+                <button
+                  type='button'
+                  role='tab'
+                  aria-selected={filterTab === 'all'}
+                  onClick={() => setFilterTab('all')}
+                  className={cls(
+                    'h-8 rounded-lg text-xs font-semibold transition-all',
+                    ui.ringFocus,
+                    filterTab === 'all'
+                      ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80'
+                      : 'text-slate-500',
+                  )}
+                >
+                  {t('tabs.all')}
+                </button>
+                <button
+                  type='button'
+                  role='tab'
+                  aria-selected={filterTab === 'unread'}
+                  onClick={() => setFilterTab('unread')}
+                  className={cls(
+                    'h-8 rounded-lg text-xs font-semibold transition-all inline-flex items-center justify-center gap-1.5',
+                    ui.ringFocus,
+                    filterTab === 'unread'
+                      ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80'
+                      : 'text-slate-500',
+                  )}
+                >
+                  {t('tabs.unread')}
+                  {unreadTotal > 0 && (
+                    <span className={cls(
+                      'min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold grid place-items-center',
+                      filterTab === 'unread'
+                        ? 'bg-[var(--color-primary-500)] text-white'
+                        : 'bg-slate-200 text-slate-600',
+                    )}>
+                      {unreadTotal > 99 ? '99+' : unreadTotal}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {user?.role === 'client' && (
+                <div className='gap-2 flex items-center'>
                   <button 
                     type='button' 
                     onClick={contactCoach} 
                     className={cls(
-                      'flex-1 h-11 rounded-lg border-2 border-slate-200 bg-white text-slate-700 text-sm font-semibold',
+                      'flex-1 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold',
                       'inline-flex items-center justify-center gap-2',
-                      'hover:bg-slate-50 active:scale-[.98] transition-all duration-200',
-                      'shadow-sm',
+                      'hover:bg-slate-50 active:scale-[.98] transition-all',
                       ui.ringFocus
                     )}
                   >
-                    <Phone size={16} />
+                    <Phone size={15} />
                     {t('quick.coach')}
                   </button>
                   {me?.adminId && (
@@ -1156,14 +1573,13 @@ export default function ChatPage() {
                       type='button' 
                       onClick={contactAdmin} 
                       className={cls(
-                        'flex-1 h-11 rounded-lg border-2 border-slate-200 bg-white text-slate-700 text-sm font-semibold',
+                        'flex-1 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold',
                         'inline-flex items-center justify-center gap-2',
-                        'hover:bg-slate-50 active:scale-[.98] transition-all duration-200',
-                        'shadow-sm',
+                        'hover:bg-slate-50 active:scale-[.98] transition-all',
                         ui.ringFocus
                       )}
                     >
-                      <Phone size={16} />
+                      <Phone size={15} />
                       {t('quick.admin')}
                     </button>
                   )}
@@ -1171,29 +1587,27 @@ export default function ChatPage() {
               )}
 
               {!!results.length && (
-                <div className='mt-3 rounded-lg border border-slate-200/60 overflow-hidden bg-white shadow-sm'>
-                  <div className='px-4 py-2.5 text-xs font-semibold text-slate-600 bg-slate-50'>
+                <div className='rounded-xl border border-slate-200/60 overflow-hidden bg-white shadow-sm'>
+                  <div className='px-3 py-2 text-[11px] font-semibold text-slate-500 bg-slate-50'>
                     {t('search.results')}
                   </div>
-                  <ul className='max-h-64 overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
+                  <ul className='max-h-48 overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
                     {results.map(u => (
                       <li key={u.id} className='border-t border-slate-100/60 first:border-t-0'>
                         <button 
                           onClick={() => openDirectWith(u.id)} 
                           className={cls(
-                            'w-full px-4 py-3 hover:bg-slate-50 flex items-center gap-3',
-                            'transition-all duration-200',
+                            'w-full px-2.5 py-2 hover:bg-slate-50 flex items-center gap-2.5',
+                            'transition-all',
                             ui.ringFocus,
-                            isRTL ? 'text-right justify-end' : 'text-left'
                           )}
                         >
-                          {!isRTL && <UserCircle2 className='w-7 h-7 text-slate-500' />}
+                          <UserAvatar user={u} size={34} />
                           <div className='min-w-0 flex-1'>
-                            <MultiLangText className='text-sm font-semibold text-slate-900 truncate'>
+                            <MultiLangText className='text-[13px] font-semibold text-slate-900 truncate'>
                               {u.name || u.email}
                             </MultiLangText>
                           </div>
-                          {isRTL && <UserCircle2 className='w-7 h-7 text-slate-500' />}
                         </button>
                       </li>
                     ))}
@@ -1202,59 +1616,46 @@ export default function ChatPage() {
               )}
             </div>
 
-            <div className='p-3 h-[calc(100%-180px)] overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
+            <div className='p-2 flex-1 min-h-0 h-[calc(100%-160px)] overflow-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300'>
               {filteredConvos.length ? (
-                <ul className='space-y-2'>
+                <ul className='space-y-0.5'>
                   {filteredConvos.map(c => {
                     const others = (c.chatParticipants || []).map(p => p.user).filter(u => me && u?.id !== me.id);
-                    const title = c.isGroup ? c.name || t('list.group') : others[0]?.name || others[0]?.email || t('list.direct');
+                    const peer = others[0] || null;
+                    const title = c.isGroup ? c.name || t('list.group') : peer?.name || peer?.email || t('list.direct');
                     const last = c.lastMessage;
-                    const preview = last?.messageType === 'text' ? last?.content : last?.messageType === 'image' ? t('list.photo') : last?.messageType === 'video' ? t('list.video') : last?.messageType === 'file' ? t('list.file') : '';
+                    const preview = last?.messageType === 'text' ? last?.content : last?.messageType === 'image' ? t('list.photo') : last?.messageType === 'video' ? t('list.video') : last?.messageType === 'voice' ? t('list.voice') : last?.messageType === 'file' ? t('list.file') : '';
+                    const hasUnread = Number(c.unreadCount) > 0;
 
                     return (
                       <li key={c.id}>
                         <button 
                           onClick={() => onSelectConversation(c.id)} 
                           className={cls(
-                            'w-full px-4 py-4 rounded-lg transition-all duration-200',
-                            'border-2',
+                            'w-full px-2.5 py-2 rounded-xl transition-all duration-150',
                             ui.ringFocus,
                             activeId === c.id 
-                              ? 'bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] shadow-md border-[var(--color-primary-200)]' 
-                              : 'border-slate-200 hover:bg-white/80 bg-white/60 hover:shadow-md'
+                              ? 'bg-[var(--color-primary-50)] border border-[var(--color-primary-200)]' 
+                              : 'border border-transparent hover:bg-slate-50'
                           )}
                         >
-                          <div className={cls(
-                            'flex items-center gap-3',
-                            isRTL ? 'flex-row-reverse' : ''
-                          )}>
+                          <div className='flex items-center gap-2.5'>
+                            <UserAvatar user={peer} size={42} hasUnread={hasUnread} online={!!peer?.online} />
                             <div className='min-w-0 flex-1'>
-                              <div className={cls(
-                                'flex items-center justify-between gap-2 mb-1',
-                                isRTL ? 'flex-row-reverse' : ''
-                              )}>
-                                <div className='font-en text-xs text-slate-400 shrink-0 font-medium'>
-                                  {last?.created_at ? timeHHMM(last.created_at) : ''}
-                                </div>
-                                <MultiLangText className='text-sm font-bold text-slate-900 truncate'>
+                              <div className='flex items-center justify-between gap-2'>
+                                <MultiLangText className={cls('text-[13px] truncate', hasUnread ? 'font-bold text-slate-900' : 'font-semibold text-slate-800')}>
                                   {title}
                                 </MultiLangText>
+                                <div className='font-en text-[10px] text-slate-400 shrink-0'>
+                                  {last?.created_at ? timeHHMM(last.created_at) : ''}
+                                </div>
                               </div>
-                              <div className={cls(
-                                'flex items-center justify-between gap-2',
-                                isRTL ? 'flex-row-reverse' : ''
-                              )}>
-                                <UnreadBadge count={c.unreadCount} />
-                                <MultiLangText className='text-xs text-slate-500 truncate flex-1 rtl:text-left ltr:text-right'>
+                              <div className='flex items-center justify-between gap-2 mt-0.5'>
+                                <MultiLangText className='text-[12px] text-slate-500 truncate flex-1'>
                                   {preview}
                                 </MultiLangText>
+                                <UnreadBadge count={c.unreadCount} />
                               </div>
-                            </div>
-                            <div className={cls(
-                              'h-12 w-12 rounded-lg bg-gradient-to-br grid place-items-center overflow-hidden shadow-sm',
-                              'from-[var(--color-primary-100)] to-[var(--color-secondary-100)]'
-                            )}>
-                              <UserCircle2 className='w-7 h-7 text-[var(--color-primary-600)]' />
                             </div>
                           </div>
                         </button>
@@ -1264,8 +1665,8 @@ export default function ChatPage() {
                 </ul>
               ) : (
                 <div className='p-10 text-center text-slate-500'>
-                  <div className='mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-slate-100 to-slate-200/60 shadow-lg'>
-                    <Inbox className='w-8 h-8 text-slate-400' />
+                  <div className='mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 border border-slate-200'>
+                    <Inbox className='w-7 h-7 text-slate-400' />
                   </div>
                   <div className='text-sm font-semibold text-slate-700'>{t('list.empty')}</div>
                 </div>
@@ -1278,8 +1679,8 @@ export default function ChatPage() {
   );
 }
 
-/* --------------------------- MessageList - Enhanced --------------------------- */
-function MessageList({ msgs, me, API_URL, endRef, t, typing, colors }) {
+/* --------------------------- MessageList --------------------------- */
+function MessageList({ msgs, me, API_URL, endRef, t, typing, colors, onContentReady }) {
   const groups = [];
   let lastDate = '';
 
@@ -1292,29 +1693,30 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing, colors }) {
     groups.push({ type: 'msg', data: m });
   });
 
-  useEffect(() => {
-    const id = setTimeout(() => {
-      endRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 80);
-    return () => clearTimeout(id);
-  }, [msgs, typing, endRef]);
+  useLayoutEffect(() => {
+    onContentReady?.();
+  }, [msgs.length, typing, onContentReady]);
+
+  const resolveUrl = url => {
+    if (!url) return '';
+    if (url.startsWith('blob:') || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+      return url;
+    }
+    const base = String(API_URL || '').replace(/\/+$/, '');
+    const path = String(url).startsWith('/') ? url : `/${url}`;
+    return `${base}${path}`;
+  };
 
   return (
-    <>
-      {groups.map((item, index) => {
+    <div className='min-h-full flex flex-col justify-end gap-2.5'>
+      {groups.map(item => {
         if (item.type === 'sep') {
           return (
-            <motion.div 
-              key={item.id} 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.02 }}
-              className='sticky top-2 z-10'
-            >
-              <MultiLangText className='mx-auto block w-fit text-xs px-4 py-2 rounded-full bg-white/95 backdrop-blur-sm border-2 border-slate-200 text-slate-600 font-semibold shadow-sm'>
+            <div key={item.id} className='sticky top-1 z-10 py-1'>
+              <MultiLangText className='mx-auto block w-fit text-[11px] px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm border border-slate-200/80 text-slate-500 font-semibold shadow-sm'>
                 {item.label}
               </MultiLangText>
-            </motion.div>
+            </div>
           );
         }
 
@@ -1322,34 +1724,37 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing, colors }) {
         const mine = (m?.sender?.id ?? m?.senderId) === me?.id;
         const other = m?.sender || m?.from || m?.user || {};
         const time = timeHHMM(m.created_at);
+        const pending = !!m.pending;
 
         const Content = () => {
           if (m.messageType === 'text' && !!m.content) {
             return (
-              <MultiLangText className='whitespace-pre-wrap text-[15px] md: leading-relaxed break-words'>
+              <MultiLangText className='whitespace-pre-wrap text-[15px] leading-relaxed break-words'>
                 {m.content}
               </MultiLangText>
             );
           }
           if (m.messageType === 'image' && Array.isArray(m.attachments)) {
             return (
-              <div className='grid grid-cols-2 gap-2'>
-                {m.attachments.map((a, i) => (
-                  <a 
-                    key={i} 
-                    href={`${API_URL}${a.url}`} 
-                    target='_blank' 
-                    rel='noreferrer' 
-                    className='block overflow-hidden rounded-lg hover:opacity-90 transition-opacity duration-200 shadow-md hover:shadow-lg'
-                  >
-                    <Img 
-                      src={`${a.url}`} 
-                      alt={a.name} 
-                      className='w-full h-40 object-cover' 
-                      showBlur={false} 
-                    />
-                  </a>
-                ))}
+              <div className={cls('grid gap-1.5', m.attachments.length > 1 ? 'grid-cols-2' : 'grid-cols-1')}>
+                {m.attachments.map((a, i) => {
+                  const href = resolveUrl(a.url);
+                  return (
+                    <a
+                      key={i}
+                      href={href}
+                      target='_blank'
+                      rel='noreferrer'
+                      className='block overflow-hidden rounded-xl hover:opacity-95 transition-opacity'
+                    >
+                      {a.local || String(a.url || '').startsWith('blob:') ? (
+                        <img src={a.url} alt={a.name} className='w-full h-40 object-cover' />
+                      ) : (
+                        <Img src={a.url} alt={a.name} className='w-full h-40 object-cover' showBlur={false} />
+                      )}
+                    </a>
+                  );
+                })}
               </div>
             );
           }
@@ -1357,39 +1762,43 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing, colors }) {
             return (
               <div className='space-y-2'>
                 {m.attachments.map((a, i) => (
-                  <video 
-                    key={i} 
-                    src={`${API_URL}${a.url}`} 
-                    controls 
-                    className='w-full rounded-lg overflow-hidden max-h-64 border-2 border-slate-200 shadow-md' 
+                  <video
+                    key={i}
+                    src={resolveUrl(a.url)}
+                    controls
+                    className='w-full rounded-xl overflow-hidden max-h-64 border border-white/20'
                   />
                 ))}
               </div>
             );
           }
+          if (m.messageType === 'voice' || (m.messageType === 'file' && /^audio\//.test(m.attachments?.[0]?.type || m.attachments?.[0]?.mimeType || ''))) {
+            const att = Array.isArray(m.attachments) ? m.attachments[0] : null;
+            const voiceUrl = resolveUrl(m.voiceUri || att?.url || '');
+            const voiceDur = m.voiceDuration || att?.duration || 0;
+            if (!voiceUrl) return null;
+            return <VoiceBubble url={voiceUrl} duration={voiceDur} mine={mine} />;
+          }
           if (m.messageType === 'file' && Array.isArray(m.attachments)) {
             return (
               <div className='space-y-2'>
                 {m.attachments.map((a, i) => (
-                  <a 
-                    key={i} 
-                    href={`${API_URL}${a.url}`} 
-                    target='_blank' 
-                    rel='noreferrer' 
+                  <a
+                    key={i}
+                    href={resolveUrl(a.url)}
+                    target='_blank'
+                    rel='noreferrer'
                     className={cls(
-                      'flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 border-2',
-                      mine 
-                        ? 'bg-white/10 hover:bg-white/20 border-white/20 text-white shadow-md hover:shadow-lg' 
-                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm hover:shadow-md'
+                      'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors border',
+                      mine
+                        ? 'bg-white/10 hover:bg-white/15 border-white/20 text-white'
+                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700',
                     )}
                   >
-                    <FileIcon className={cls('w-5 h-5', mine ? 'text-white' : 'text-slate-600')} />
+                    <FileIcon className={cls('w-4 h-4 shrink-0', mine ? 'text-white' : 'text-slate-600')} />
                     <span className='text-sm truncate flex-1 font-medium'>{a.name}</span>
-                    <span className={cls(
-                      'text-xs tabular-nums font-medium',
-                      mine ? 'text-white/90' : 'text-slate-500'
-                    )}>
-                      {a.size ? `(${Math.round(a.size / 1024)} KB)` : ''}
+                    <span className={cls('text-[10px] tabular-nums', mine ? 'text-white/80' : 'text-slate-500')}>
+                      {a.size ? `${Math.round(a.size / 1024)} KB` : ''}
                     </span>
                   </a>
                 ))}
@@ -1400,88 +1809,72 @@ function MessageList({ msgs, me, API_URL, endRef, t, typing, colors }) {
         };
 
         return (
-          <motion.div 
-            key={m.id || m.tempId} 
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ delay: index * 0.02, duration: 0.2 }}
-            className={cls('pt-2 flex items-end gap-2.5', mine ? 'justify-end' : 'justify-start')}
-          >
-            {!mine && (
-              <div 
-                className={cls(
-                  'h-9 w-9 rounded-full bg-gradient-to-br grid place-items-center',
-                  'ring-2 shadow-md shrink-0 select-none',
-                  pickAvatarGradient(other?.id || other?.email, colors)
-                )} 
-                title={other?.name || other?.email}
-              >
-                <span className='text-xs font-bold font-en'>{getInitial(other)}</span>
-              </div>
+          <div
+            key={m.id || m.tempId}
+            className={cls(
+              'flex items-end gap-2',
+              mine ? 'justify-end' : 'justify-start',
+              pending && 'opacity-70',
             )}
+          >
+            {!mine && <UserAvatar user={other} size={28} />}
 
-            <div className={cls(
-              'relative max-w-[min(400px,75%)] rounded-lg px-4 py-3',
-              'shadow-md hover:shadow-lg transition-shadow duration-200',
-              mine 
-                ? 'bg-gradient-to-r from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] text-white rtl:rounded-bl-sm ltr:rounded-br-sm' 
-                : 'bg-white text-slate-800 rtl:rounded-br-sm ltr:rounded-bl-sm border-2 border-slate-200'
-            )}>
+            <div
+              className={cls(
+                'relative max-w-[min(420px,78%)] px-3.5 py-2.5',
+                'shadow-sm',
+                mine
+                  ? 'bg-gradient-to-br from-[var(--color-gradient-from)] via-[var(--color-gradient-via)] to-[var(--color-gradient-to)] text-white rounded-2xl rtl:rounded-bl-md ltr:rounded-br-md'
+                  : 'bg-white text-slate-800 rounded-2xl rtl:rounded-br-md ltr:rounded-bl-md border border-slate-200/80',
+              )}
+            >
               <Content />
-              <div className={cls(
-                'mt-2 text-xs flex items-center gap-1.5 tabular-nums font-medium',
-                mine ? 'text-white/90 justify-end' : 'text-slate-500'
-              )}>
+              <div
+                className={cls(
+                  'mt-1.5 text-[10px] flex items-center gap-1 tabular-nums font-medium',
+                  mine ? 'text-white/85 justify-end' : 'text-slate-400',
+                )}
+              >
+                {pending && <Loader2 className='w-3 h-3 animate-spin opacity-80' />}
                 <MultiLangText>{time}</MultiLangText>
-                <ReadTicks meId={me?.id} msg={m} />
+                {!pending && <ReadTicks meId={me?.id} msg={m} />}
               </div>
             </div>
-          </motion.div>
+          </div>
         );
       })}
 
-      {/* Typing indicator - Enhanced */}
       {typing && (
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className='flex justify-start items-end gap-2.5'
-        >
-          <div className={cls(
-            'h-9 w-9 rounded-full bg-gradient-to-br grid place-items-center',
-            'ring-2 shadow-md select-none',
-            'from-[var(--color-primary-100)] to-[var(--color-secondary-100)] ring-[var(--color-primary-200)]'
-          )}>
-            <span className='text-xs font-bold'>…</span>
-          </div>
-          <div className='relative max-w-[78%] rounded-lg px-5 py-4 shadow-md bg-white border-2 border-slate-200 rtl:rounded-br-sm ltr:rounded-bl-sm'>
-            <div className='flex gap-1.5 items-center'>
-              <div className='w-2 h-2 bg-[var(--color-primary-500)] rounded-full animate-bounce' style={{ animationDelay: '0ms' }} />
-              <div className='w-2 h-2 bg-[var(--color-primary-500)] rounded-full animate-bounce' style={{ animationDelay: '150ms' }} />
-              <div className='w-2 h-2 bg-[var(--color-primary-500)] rounded-full animate-bounce' style={{ animationDelay: '300ms' }} />
+        <div className='flex justify-start items-end gap-2'>
+          <div className='h-7 w-7 rounded-full bg-slate-200 grid place-items-center text-slate-500 text-xs font-bold'>…</div>
+          <div className='rounded-2xl px-4 py-3 shadow-sm bg-white border border-slate-200/80 rtl:rounded-br-md ltr:rounded-bl-md'>
+            <div className='flex gap-1 items-center h-3'>
+              <div className='w-1.5 h-1.5 bg-[var(--color-primary-500)] rounded-full animate-bounce' style={{ animationDelay: '0ms' }} />
+              <div className='w-1.5 h-1.5 bg-[var(--color-primary-500)] rounded-full animate-bounce' style={{ animationDelay: '150ms' }} />
+              <div className='w-1.5 h-1.5 bg-[var(--color-primary-500)] rounded-full animate-bounce' style={{ animationDelay: '300ms' }} />
             </div>
           </div>
-        </motion.div>
+        </div>
       )}
 
-      <div ref={endRef} />
-    </>
+      <div ref={endRef} className='h-px w-full shrink-0' />
+    </div>
   );
 }
 
 const MessageSkeleton = () => (
-  <div className='space-y-4'>
+  <div className='min-h-full flex flex-col justify-end gap-3'>
     {[...Array(6)].map((_, i) => {
       const mine = i % 2 === 1;
       return (
-        <div key={i} className={cls('flex items-end gap-2.5', mine ? 'justify-end' : 'justify-start')}>
-          {!mine && <div className='h-9 w-9 rounded-full bg-slate-200/80 shadow-sm' />}
-          <div className={cls(
-            'rounded-lg h-16 animate-pulse shadow-md',
-            mine 
-              ? 'bg-gradient-to-r from-slate-200/60 to-slate-300/40 w-52' 
-              : 'bg-slate-200/80 w-60 border-2 border-slate-200'
-          )} />
+        <div key={i} className={cls('flex items-end gap-2', mine ? 'justify-end' : 'justify-start')}>
+          {!mine && <div className='h-8 w-8 rounded-full bg-slate-200/80' />}
+          <div
+            className={cls(
+              'rounded-2xl h-14 animate-pulse',
+              mine ? 'bg-slate-200/70 w-48' : 'bg-slate-200/80 w-56 border border-slate-100',
+            )}
+          />
         </div>
       );
     })}

@@ -13,6 +13,9 @@ import { AlertCircle, Eye, EyeOff, Lock, Mail, Dumbbell, ChevronRight, ChevronLe
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { loginPersist } from "@/app/role-access";
+import { useTenantTheme } from "@/lib/tenant/TenantThemeProvider";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 
 /* ─────────────────────────────────────────────────────────────────────────
    AXIOS INSTANCE
@@ -121,21 +124,38 @@ function LoginCard({ onLoggedIn }) {
   const t = useTranslations("auth");
   const locale = useLocale();
   const isRtl = locale === "ar";
+  const searchParams = useSearchParams();
+  const prefillEmail = searchParams?.get("email") || "";
   const auth = useContext(AuthContext);
   if (!auth) throw new Error("AuthContext missing");
   const { setLoading, setError, loading } = auth;
   const [showPwd, setShowPwd] = useState(false);
 
-  const { register, handleSubmit, formState: { errors }, setError: setRHError } = useForm({
+  const { register, handleSubmit, formState: { errors }, setError: setRHError, setValue } = useForm({
     resolver: yupResolver(loginSchema),
     mode: "onTouched",
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: prefillEmail, password: "" },
   });
+
+  useEffect(() => {
+    if (prefillEmail) setValue("email", prefillEmail);
+  }, [prefillEmail, setValue]);
 
   const onSubmit = useCallback(async (data) => {
     setLoading(true); setError(null);
     try {
-      const res = await axiosInstance.post("/auth/login", data);
+      let discoveryToken = null;
+      let tenantId = null;
+      try {
+        const cached = JSON.parse(localStorage.getItem("so7bafit_tenant_branding_v1") || "null");
+        discoveryToken = cached?.discoveryToken || null;
+        tenantId = cached?.tenant?.id || null;
+      } catch {}
+      const res = await axiosInstance.post("/auth/login", {
+        ...data,
+        ...(discoveryToken ? { discoveryToken } : {}),
+        ...(tenantId ? { tenantId } : {}),
+      });
       const { accessToken, refreshToken, user } = res.data || {};
       if (!accessToken || !refreshToken) throw new Error("Missing tokens");
       if (typeof window !== "undefined") {
@@ -266,6 +286,9 @@ export default function AuthPage() {
   const t = useTranslations("auth");
   const locale = useLocale();
   const isRtl = locale === "ar";
+  const { appName, assets, branding, clearTenant, colors } = useTenantTheme();
+  const params = useParams();
+  const localeParam = params?.locale || locale;
 
   const token = searchParams?.get("accessToken");
   const redirectUrl = searchParams?.get("redirect") || "/dashboard/my/workouts";
@@ -778,18 +801,23 @@ export default function AuthPage() {
             {/* brand */}
             <div className="sf-hero-content">
               <div className="sf-brand">
-                <div className="sf-brand-icon">
-                  <Dumbbell size={20} strokeWidth={2} />
+                <div className="sf-brand-icon" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}>
+                  {assets?.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={assets.logo} alt={appName} style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6 }} />
+                  ) : (
+                    <Dumbbell size={20} strokeWidth={2} />
+                  )}
                 </div>
-                <span className="sf-brand-name">So7baFit</span>
+                <span className="sf-brand-name">{appName}</span>
               </div>
             </div>
 
             {/* main copy */}
             <div className="sf-hero-main">
               <div className="sf-hero-tag">
-                <div className="sf-hero-tag-dot" />
-                <span className="sf-hero-tag-text">{t("hero.tagline")}</span>
+                <div className="sf-hero-tag-dot" style={{ background: colors.primary }} />
+                <span className="sf-hero-tag-text">{branding?.tagline || t("hero.tagline")}</span>
               </div>
               <h2 className="sf-hero-title">
                 {t("hero.titleLine1")}<br />
@@ -817,13 +845,28 @@ export default function AuthPage() {
           <div className="sf-form-panel">
             {/* mobile brand */}
             <div className="sf-mobile-brand">
-              <div className="sf-mobile-brand-icon">
-                <Dumbbell size={16} strokeWidth={2} />
+              <div className="sf-mobile-brand-icon" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}>
+                {assets?.logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={assets.logo} alt={appName} style={{ width: 22, height: 22, objectFit: 'contain' }} />
+                ) : (
+                  <Dumbbell size={16} strokeWidth={2} />
+                )}
               </div>
-              <span className="sf-mobile-brand-name">So7baFit</span>
+              <span className="sf-mobile-brand-name">{appName}</span>
             </div>
 
             <LoginCard onLoggedIn={handleLoggedIn} />
+
+            <div style={{ marginTop: 16, textAlign: 'center' }}>
+              <Link
+                href={`/${localeParam}/auth/discover`}
+                onClick={() => clearTenant()}
+                style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, textDecoration: 'underline' }}
+              >
+                {isRtl ? 'تغيير المؤسسة' : 'Change organization'}
+              </Link>
+            </div>
           </div>
 
         </div>

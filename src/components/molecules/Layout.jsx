@@ -11,6 +11,7 @@ import { useTranslations } from 'next-intl';
 import Providers from '@/context/ReactQuery';
 import Link from 'next/link';
 import { ThemeProvider } from '@/app/[locale]/theme';
+import { TenantThemeProvider } from '@/lib/tenant/TenantThemeProvider';
 import { useInitialRoleRedirect } from '@/hooks/useInitialRoleRedirect';
 import Header from './Header';
 import { useRouter, useParams } from 'next/navigation';
@@ -206,6 +207,9 @@ export default function Layout({ children }) {
 		pathname.startsWith('/site') ||
 		pathname === '/';
 	const isWhatsAppRoute = pathname.includes('/dashboard/whatsapp');
+	const isChatRoute = pathname.includes('/dashboard/chat');
+	const isAiFreeRoute = pathname.includes('/dashboard/ai-free');
+	const isImmersiveRoute = isWhatsAppRoute || isChatRoute || isAiFreeRoute;
 
 	const [sidebarOpen, setSidebarOpen]         = useState(false);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -293,6 +297,7 @@ export default function Layout({ children }) {
 	return (
 		<GlobalProvider>
 			<Providers>
+				<TenantThemeProvider>
 				<ThemeProvider>
 					<div className="relative min-h-screen">
 						{/* Background layers */}
@@ -333,7 +338,7 @@ export default function Layout({ children }) {
 										{/* Add bottom padding when impersonating so content isn't hidden behind bar */}
 										<div
 											id="body"
-											className={`${pathname !== "/" && "h-screen  "} ${!isAuthRoute && ` overflow-x-hidden overflow-auto ${isWhatsAppRoute ? 'p-0 lg:p-4' : 'p-3 md:p-4'}`} ${isImpersonating ? 'pb-8' : ''}`}
+											className={`${pathname !== "/" && "h-screen  "} ${!isAuthRoute && ` overflow-x-hidden ${isImmersiveRoute ? 'p-0 lg:p-3 overflow-hidden' : 'overflow-auto p-3 md:p-4'}`} ${isImpersonating ? 'pb-8' : ''}`}
 										>
 											{children}
 										</div>
@@ -353,6 +358,7 @@ export default function Layout({ children }) {
 						)}
 					</AnimatePresence>
 				</ThemeProvider>
+				</TenantThemeProvider>
 			</Providers>
 		</GlobalProvider>
 	);

@@ -9,6 +9,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
+import DemoSelect from './DemoSelect';
 
 export default function FakeContactDialog({
 	open,
@@ -102,17 +103,17 @@ export default function FakeContactDialog({
 					<div className="grid gap-3 sm:grid-cols-2">
 						<label className="block space-y-1 text-sm font-bold">
 							<span>{labels.presence}</span>
-							<select
+							<DemoSelect
 								value={form.presenceStatus}
-								onChange={event =>
-									setForm(current => ({ ...current, presenceStatus: event.target.value }))
+								onValueChange={value =>
+									setForm(current => ({ ...current, presenceStatus: value }))
 								}
-								className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 font-normal dark:border-slate-700 dark:bg-slate-900"
-							>
-								{['offline', 'online', 'away', 'typing', 'recording'].map(status => (
-									<option key={status} value={status}>{labels[status] || status}</option>
-								))}
-							</select>
+								options={['offline', 'online', 'away', 'typing', 'recording'].map(status => ({
+									value: status,
+									label: labels[status] || status,
+								}))}
+								className="h-10"
+							/>
 						</label>
 						<label className="block space-y-1 text-sm font-bold">
 							<span>{labels.lastSeen}</span>

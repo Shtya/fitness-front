@@ -8,8 +8,8 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Mail, Lock, Save, Eye, EyeOff,
-  Shield, Crown, Calendar, Info, Sparkles,
-  RefreshCw,
+  Shield, Crown, Calendar, Info, KeyRound,
+  RefreshCw, Copy, Check, RotateCcw,
 } from 'lucide-react';
 
 import api from '@/utils/axios';
@@ -18,7 +18,8 @@ import Input from '@/components/atoms/Input';
 import Button from '@/components/atoms/Button';
 import PhoneField from '@/components/atoms/PhoneField';
 import { ToggleGroup } from '@/app/[locale]/dashboard/users/page';
-import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
+import { PageHeader } from '@/components/molecules/PageHeader';
+import { StatCard } from '@/components/dashboard/ui/UI';
 
 /* ─── Validation ─────────────────────────────────────────── */
 const profileSchema = yup.object({
@@ -85,6 +86,48 @@ function SectionHead({ icon: Icon, title, subtitle, right }) {
   );
 }
 
+/** Identity avatar — gradient circle with initials */
+function Avatar({ name, size = 56 }) {
+  const initials = (name || '?')
+    .trim()
+    .split(/\s+/)
+    .map(w => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+  return (
+    <div
+      className="grid shrink-0 place-items-center rounded-full font-black text-white"
+      style={{
+        width: size,
+        height: size,
+        fontSize: size * 0.36,
+        background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+        boxShadow: '0 6px 18px -4px color-mix(in srgb, var(--color-primary-500) 45%, transparent)',
+      }}
+    >
+      {initials}
+    </div>
+  );
+}
+
+/** Avatar + name/email + role/membership pills, used atop the profile form */
+function IdentityStrip({ name, email, role, membership }) {
+  return (
+    <div className="flex flex-wrap items-center gap-4">
+      <Avatar name={name} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-base font-black text-slate-900">{name || '—'}</p>
+        <p className="truncate text-xs font-medium text-slate-500">{email || '—'}</p>
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        {role && <Pill icon={Shield} label="" value={role} />}
+        {membership && <Pill icon={Crown} label="" value={membership} tone="amber" />}
+      </div>
+    </div>
+  );
+}
+
 /** Semantic pill / badge */
 function Pill({ icon: Icon, label, value, tone = 'primary' }) {
   const tones = {
@@ -98,28 +141,9 @@ function Pill({ icon: Icon, label, value, tone = 'primary' }) {
       style={{ borderColor: s.border, background: s.bg, color: s.text }}
     >
       {Icon && <Icon className="h-3.5 w-3.5" />}
-      <span className="opacity-70 font-semibold">{label}:</span>
+      {label && <span className="opacity-70 font-semibold">{label}:</span>}
       <span>{value}</span>
     </span>
-  );
-}
-
-/** Read-only display field */
-function ReadOnlyField({ label, value, icon: Icon }) {
-  return (
-    <div
-      className="rounded-lg border p-3"
-      style={{
-        borderColor: 'var(--color-primary-100)',
-        background: 'linear-gradient(135deg, #ffffff, var(--color-primary-50))',
-      }}
-    >
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
-      <div className="mt-1.5 flex items-center gap-2">
-        {Icon && <Icon className="h-4 w-4 shrink-0 text-slate-400" />}
-        <p className="text-sm truncate font-semibold text-slate-900 break-words">{value ?? '—'}</p>
-      </div>
-    </div>
   );
 }
 
@@ -206,6 +230,12 @@ export default function ProfilePage() {
   const [showNew, setShowNew]               = useState(false);
   const [showConfirm, setShowConfirm]       = useState(false);
 
+  const [license, setLicense]               = useState(null);
+  const [licenseLoading, setLicenseLoading] = useState(false);
+  const [licenseRotating, setLicenseRotating] = useState(false);
+  const [copied, setCopied]                 = useState(false);
+  const [showLicense, setShowLicense]       = useState(true);
+
   /* Profile form */
   const {
     control: pCtrl,
@@ -226,6 +256,22 @@ export default function ProfilePage() {
 
   useEffect(() => { fetchProfile(); }, []);
 
+  const isAdmin = String(user?.role || '').toLowerCase() === 'admin'
+    || String(user?.role || '').toLowerCase() === 'super_admin';
+
+  const fetchLicense = async () => {
+    setLicenseLoading(true);
+    try {
+      const { data } = await api.get('/tenant/license');
+      setLicense(data);
+    } catch (e) {
+      // Non-admins / tenants without org — ignore quietly
+      setLicense(null);
+    } finally {
+      setLicenseLoading(false);
+    }
+  };
+
   const fetchProfile = async () => {
     setLoading(true);
     try {
@@ -233,10 +279,43 @@ export default function ProfilePage() {
       const { data }       = await api.get(`/auth/profile/${me.id}`);
       setUser(data);
       resetProfile({ name: data.name || '', phone: data.phone || '', gender: data.gender || null });
+      const role = String(data?.role || '').toLowerCase();
+      if (role === 'admin' || role === 'super_admin') {
+        fetchLicense();
+      } else {
+        setLicense(null);
+      }
     } catch (e) {
       Notification(e?.response?.data?.message || t('alerts.loadFailed'), 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const copyLicense = async () => {
+    if (!license?.licenseKey) return;
+    try {
+      await navigator.clipboard.writeText(license.licenseKey);
+      setCopied(true);
+      Notification(t('license.copied'), 'success');
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      Notification(t('license.copyFailed'), 'error');
+    }
+  };
+
+  const rotateLicense = async () => {
+    if (!confirm(t('license.rotateConfirm'))) return;
+    setLicenseRotating(true);
+    try {
+      const { data } = await api.post('/tenant/license/rotate');
+      setLicense(data);
+      setShowLicense(true);
+      Notification(t('license.rotated'), 'success');
+    } catch (e) {
+      Notification(e?.response?.data?.message || t('license.rotateFailed'), 'error');
+    } finally {
+      setLicenseRotating(false);
     }
   };
 
@@ -269,40 +348,129 @@ export default function ProfilePage() {
   const headerStats = useMemo(() => ({
     role:       user?.role       ? t(`roles.${user.role}`) : '—',
     membership: user?.membership || '—',
-  }), [user?.role, user?.membership, t]);
+    email:      user?.email || '—',
+  }), [user?.role, user?.membership, user?.email, t]);
 
   if (loading) return <LoadingScreen t={t} />;
 
   return (
     <div className="space-y-6 pb-10">
 
-      {/* ── Header ── */}
-      <GradientStatsHeader
+      {/* ── Header (same pattern as users page) ── */}
+      <PageHeader
         title={t('header.title')}
         desc={t('header.desc')}
-        icon={Sparkles}
-        btnName={t('buttons.refresh')}
-        onClick={fetchProfile}
+        icon={User}
+        actions={
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={fetchProfile}
+            className="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-black text-white"
+            style={{
+              background: 'rgba(255,255,255,0.22)',
+              backdropFilter: 'blur(16px)',
+              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.3),0 4px 16px rgba(0,0,0,0.1)',
+            }}
+          >
+            <RefreshCw className="h-4 w-4" />
+            {t('buttons.refresh')}
+          </motion.button>
+        }
       >
-        {/* Name / email mini card */}
-        <div className="rounded-lg border border-white/25 bg-white/10 p-4 backdrop-blur">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">{t('header.name')}</p>
-          <p className="mt-1 truncate text-base font-black text-white">{user?.name || '—'}</p>
-          <p className="mt-0.5 truncate text-xs text-white/70">{user?.email || '—'}</p>
-        </div>
+        <StatCard icon={User} title={t('header.name')} value={user?.name || '—'} />
+        <StatCard icon={Shield} title={t('header.role')} value={headerStats.role} />
+        <StatCard icon={Crown} title={t('header.membership')} value={headerStats.membership} />
+        <StatCard icon={Mail} title={t('fields.email')} value={headerStats.email} />
+      </PageHeader>
 
-        {/* Role */}
-        <div className="rounded-lg border border-white/25 bg-white/10 p-4 backdrop-blur">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">{t('header.role')}</p>
-          <p className="mt-1 text-base font-black text-white">{headerStats.role}</p>
-        </div>
+      {/* ── Admin org license (share with new users) ── */}
+      {isAdmin && (
+        <Card accent>
+          <div className="p-5 sm:p-6">
+            <SectionHead
+              icon={KeyRound}
+              title={t('license.title')}
+              subtitle={t('license.subtitle')}
+              right={
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={fetchLicense}
+                    disabled={licenseLoading}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                    style={{ borderColor: 'var(--color-primary-100)' }}
+                  >
+                    <RefreshCw className={cx('h-3.5 w-3.5', licenseLoading && 'animate-spin')} />
+                    {t('buttons.refresh')}
+                  </button>
+                </div>
+              }
+            />
 
-        {/* Membership */}
-        <div className="hidden rounded-lg border border-white/25 bg-white/10 p-4 backdrop-blur md:block">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">{t('header.membership')}</p>
-          <p className="mt-1 text-base font-black text-white">{headerStats.membership}</p>
-        </div>
-      </GradientStatsHeader>
+            <div className="mt-4">
+              <HintBox text={t('license.hint')} />
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                {t('license.keyLabel')}
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div
+                  className="flex min-h-11 flex-1 items-center rounded-lg border px-3 font-mono text-sm font-semibold tracking-wide text-slate-900"
+                  style={{
+                    borderColor: 'var(--color-primary-100)',
+                    background: 'linear-gradient(135deg, #ffffff, var(--color-primary-50))',
+                  }}
+                >
+                  {licenseLoading
+                    ? '…'
+                    : showLicense
+                      ? (license?.licenseKey || '—')
+                      : '••••••••••••••••••••'}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowLicense(v => !v)}
+                    className="inline-flex h-11 items-center gap-1.5 rounded-lg border px-3 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                    style={{ borderColor: 'var(--color-primary-100)' }}
+                  >
+                    {showLicense ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    {showLicense ? t('license.hide') : t('license.show')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={copyLicense}
+                    disabled={!license?.licenseKey}
+                    className="inline-flex h-11 items-center gap-1.5 rounded-lg px-3 text-xs font-bold text-white transition disabled:opacity-50"
+                    style={{ background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))' }}
+                  >
+                    {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copied ? t('license.copiedShort') : t('license.copy')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={rotateLicense}
+                    disabled={licenseRotating}
+                    className="inline-flex h-11 items-center gap-1.5 rounded-lg border px-3 text-xs font-bold text-amber-800 transition hover:bg-amber-50 disabled:opacity-50"
+                    style={{ borderColor: '#fde68a', background: '#fffbeb' }}
+                  >
+                    <RotateCcw className={cx('h-3.5 w-3.5', licenseRotating && 'animate-spin')} />
+                    {t('license.rotate')}
+                  </button>
+                </div>
+              </div>
+              {license?.tenantName && (
+                <p className="text-xs font-medium text-slate-500">
+                  {t('license.org')}: <span className="font-bold text-slate-700">{license.tenantName}</span>
+                </p>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* ── Two-column: Profile + Security ── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -314,19 +482,22 @@ export default function ProfilePage() {
               icon={User}
               title={t('sections.personalInfo.title')}
               subtitle={t('sections.personalInfo.subtitle')}
-              right={
-                <div className="hidden items-center gap-2 sm:flex">
-                  <Pill icon={Shield} label={t('header.role')}       value={headerStats.role} />
-                  <Pill icon={Crown}  label={t('header.membership')} value={headerStats.membership} tone="amber" />
-                </div>
-              }
             />
 
-            {/* Read-only fields */}
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <ReadOnlyField label={t('fields.email')}      value={user?.email}              icon={Mail} />
-              <ReadOnlyField label={t('header.membership')} value={user?.membership || '—'}  icon={Crown} />
+            <div className="mt-5">
+              <IdentityStrip
+                name={user?.name}
+                email={user?.email}
+                role={user?.role ? headerStats.role : ''}
+                membership={user?.membership || ''}
+              />
             </div>
+
+            {/* Divider */}
+            <div
+              className="mt-5 h-px"
+              style={{ background: 'linear-gradient(90deg, transparent, var(--color-primary-100), transparent)' }}
+            />
 
             {/* Editable form */}
             <form onSubmit={handleProfile(onProfileSubmit)} className="mt-5 space-y-4">

@@ -1,18 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import DemoSelect from './DemoSelect';
 
 export default function DemoEventQueue({
 	events,
 	conversations,
 	labels,
+	defaultConversationId,
 	onCreate,
 	onDelete,
 }) {
 	const [form, setForm] = useState({
-		conversationId: '',
+		conversationId: defaultConversationId ? String(defaultConversationId) : '',
 		eventType: 'typing',
 		delayMs: 1000,
 		durationMs: 3000,
@@ -27,6 +29,15 @@ export default function DemoEventQueue({
 		typingBefore: false,
 	});
 	const [saving, setSaving] = useState(false);
+
+	useEffect(() => {
+		if (!defaultConversationId) return;
+		setForm(current =>
+			current.conversationId
+				? current
+				: { ...current, conversationId: String(defaultConversationId) },
+		);
+	}, [defaultConversationId]);
 
 	const submit = async event => {
 		event.preventDefault();
@@ -70,33 +81,34 @@ export default function DemoEventQueue({
 		}
 	};
 
+	const conversationOptions = conversations.map(conversation => ({
+		value: String(conversation.id),
+		label: conversation.contactName || conversation.name || String(conversation.id),
+	}));
+
 	return (
 		<div className="space-y-3">
 			<form onSubmit={submit} className="space-y-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
 				<div className="grid gap-2 sm:grid-cols-3">
-					<select
+					<DemoSelect
 						value={form.conversationId}
-						onChange={event =>
-							setForm(current => ({ ...current, conversationId: event.target.value }))
+						onValueChange={value =>
+							setForm(current => ({ ...current, conversationId: value }))
 						}
-						className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-					>
-						<option value="">{labels.selectConversation}</option>
-						{conversations.map(conversation => (
-							<option key={conversation.id} value={conversation.id}>
-								{conversation.contactName || conversation.name || conversation.id}
-							</option>
-						))}
-					</select>
-					<select
+						options={conversationOptions}
+						placeholder={labels.selectConversation}
+						allowEmpty
+						emptyLabel={labels.selectConversation}
+					/>
+					<DemoSelect
 						value={form.eventType}
-						onChange={event => setForm(current => ({ ...current, eventType: event.target.value }))}
-						className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-					>
-						<option value="typing">{labels.typing}</option>
-						<option value="recording">{labels.recording}</option>
-						<option value="incoming_message">{labels.incomingMessage}</option>
-					</select>
+						onValueChange={value => setForm(current => ({ ...current, eventType: value }))}
+						options={[
+							{ value: 'typing', label: labels.typing },
+							{ value: 'recording', label: labels.recording },
+							{ value: 'incoming_message', label: labels.incomingMessage },
+						]}
+					/>
 					<label className="flex items-center gap-2 rounded-lg border border-slate-200 px-2 text-xs dark:border-slate-700">
 						<Clock size={14} />
 						<input

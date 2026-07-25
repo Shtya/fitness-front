@@ -5,7 +5,7 @@ import { whatsappAiApi } from './whatsapp-ai-api';
 
 const DEFAULT_SETTINGS = {
 	enabled: false,
-	provider: 'dragify-free',
+	provider: 'ai-free',
 	model: 'auto',
 	systemPrompt:
 		'You are a helpful customer support assistant. Suggest replies only and never claim that a message was sent.',
@@ -34,7 +34,7 @@ function uuidOrUndefined(value) {
 function settingsPayload(settings) {
 	return {
 		enabled: Boolean(settings.enabled),
-		provider: settings.provider || 'dragify-free',
+		provider: settings.provider || 'ai-free',
 		model: String(settings.model || 'auto'),
 		systemPrompt: settings.systemPrompt || undefined,
 		promptPresets: Array.isArray(settings.promptPresets)

@@ -43,6 +43,7 @@ export const NAV_HREFS = {
     '/dashboard/calculator',
     '/dashboard/reports',
     '/dashboard/settings',
+    '/dashboard/settings/branding',
     '/dashboard/billing',
     '/dashboard/billing/transactions',
     '/dashboard/billing/subscriptions',

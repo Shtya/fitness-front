@@ -225,10 +225,12 @@ export const ITEM_META = {
   whatsapp: { id: 'whatsapp', nameKey: 'whatsapp', href: '/dashboard/whatsapp', icon: MessageCircle, descKey: 'descriptions.whatsapp', group: 'communication', defaultVisible: true, required: false },
   transcript: { id: 'transcript', nameKey: 'transcript', href: '/dashboard/transcript', icon: AudioLines, descKey: 'descriptions.transcript', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
   calorieCalculator: { id: 'calorieCalculator', nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator, descKey: 'descriptions.calorieCalculator', group: 'tools', defaultVisible: true, required: false },
+  aiFree: { id: 'aiFree', nameKey: 'aiFree', href: '/dashboard/ai-free', icon: BrainCircuit, descKey: 'descriptions.aiFree', group: 'tools', defaultVisible: true, required: false },
   notifications: { id: 'notifications', nameKey: 'notifications', href: '/dashboard/notifications', icon: Bell, descKey: 'descriptions.notifications', group: 'workspace', defaultVisible: true, required: false },
   billing: { id: 'billing', nameKey: 'billing', href: '/dashboard/billing', icon: CreditCard, descKey: 'descriptions.billing', group: 'finance', defaultVisible: false, required: false, marketplace: true },
   money: { id: 'money', nameKey: 'money', href: '/money', icon: Wallet, descKey: 'descriptions.money', group: 'finance', defaultVisible: false, required: false, marketplace: true },
   profile_admin: { id: 'profile_admin', nameKey: 'profile', href: '/dashboard/my-account', icon: UserIcon, descKey: 'descriptions.profile_admin', group: 'account', defaultVisible: true, required: true },
+  branding: { id: 'branding', nameKey: 'branding', href: '/dashboard/settings/branding', icon: Paintbrush, descKey: 'descriptions.branding', group: 'management', defaultVisible: true, required: true },
   profile_client: { id: 'profile_client', nameKey: 'profile', href: '/dashboard/my/profile', icon: UserIcon, descKey: 'descriptions.profile_client', group: 'account', defaultVisible: true, required: true },
 };
 
@@ -241,7 +243,7 @@ export const NAV = [
   {
     role: 'admin',
     sectionKey: 'sections.management',
-    items: [{ ...ITEM_META.allUsers }, { ...ITEM_META.clientIntake, expand: false, children: [{ ...ITEM_META.manageForms }, { ...ITEM_META.responses }] }],
+    items: [{ ...ITEM_META.allUsers }, { ...ITEM_META.branding }, { ...ITEM_META.clientIntake, expand: false, children: [{ ...ITEM_META.manageForms }, { ...ITEM_META.responses }] }],
   },
   {
     role: 'admin',
@@ -251,7 +253,7 @@ export const NAV = [
   {
     role: 'admin',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.whatsapp }, { ...ITEM_META.notifications }, { ...ITEM_META.calorieCalculator }],
+    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.whatsapp }, { ...ITEM_META.notifications }, { ...ITEM_META.calorieCalculator }, { ...ITEM_META.aiFree }],
   },
   {
     role: 'admin',
@@ -276,7 +278,7 @@ export const NAV = [
   {
     role: 'client',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.calorieCalculator }, { ...ITEM_META.money }, { ...ITEM_META.profile_client }],
+    items: [{ ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.calorieCalculator }, { ...ITEM_META.aiFree }, { ...ITEM_META.money }, { ...ITEM_META.profile_client }],
   },
   {
     role: 'coach',
@@ -291,7 +293,7 @@ export const NAV = [
   {
     role: 'coach',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.whatsapp }, { ...ITEM_META.notifications }, { ...ITEM_META.calorieCalculator }],
+    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.whatsapp }, { ...ITEM_META.notifications }, { ...ITEM_META.calorieCalculator }, { ...ITEM_META.aiFree }],
   },
   {
     role: 'coach',
@@ -311,7 +313,7 @@ export const NAV = [
   {
     role: 'super_admin',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.whatsapp }],
+    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.whatsapp }, { ...ITEM_META.aiFree }],
   },
   {
     role: 'super_admin',
@@ -784,7 +786,9 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
             transition: 'background .18s, box-shadow .18s, border-color .18s',
             cursor: 'pointer',
             overflow: 'hidden',
-            border: '1px solid transparent',
+            borderWidth: 1,
+            borderStyle: 'solid',
+            borderColor: !active && hover ? 'color-mix(in srgb, var(--color-primary-400) 14%, transparent)' : 'transparent',
             ...(active
               ? {
                   background: P?.bgActive || '#ffffff',
@@ -794,7 +798,6 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
               : hover
               ? {
                   background: `color-mix(in srgb, var(--color-primary-500) 5%, ${P?.bgCard || '#fff'})`,
-                  borderColor: 'color-mix(in srgb, var(--color-primary-400) 14%, transparent)',
                   boxShadow: P?.shadow?.sm,
                   color: P?.textMuted || '#64748b',
                 }
@@ -906,11 +909,12 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
           borderRadius: 12,
           padding: '8px 10px',
           textAlign: isRTL ? 'right' : 'left',
-          border: '1px solid transparent',
+          borderWidth: 1,
+          borderStyle: 'solid',
+          borderColor: !open && hover ? 'color-mix(in srgb, var(--color-primary-400) 14%, transparent)' : 'transparent',
           cursor: 'pointer',
           transition: 'background .18s, box-shadow .18s, border-color .18s',
           background: open ? P?.bgActive || '#ffffff' : hover ? `color-mix(in srgb, var(--color-primary-500) 5%, ${P?.bgCard || '#fff'})` : 'transparent',
-          borderColor: !open && hover ? 'color-mix(in srgb, var(--color-primary-400) 14%, transparent)' : 'transparent',
           boxShadow: open ? P?.shadow?.md : hover ? P?.shadow?.sm : 'none',
           color: open ? 'var(--color-primary-700)' : P?.textMuted || '#64748b',
         }}
@@ -988,7 +992,9 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
 function NavSection({ sectionKey, items, pathname, searchParams, onNavigate, collapsed = false, t, totalUnread = 0, unreadNotifications = 0, isHidden, isInstalled, P, first = false }) {
   const t_nav = useTranslations('nav');
   const label = t_nav(sectionKey, { defaultValue: '' });
-  const visibleItems = items.filter(item => !isHidden(item.id) && (!item.marketplace || isInstalled?.(item.id)));
+  const visibleItems = items.filter(
+    item => (item.required || !isHidden(item.id)) && (!item.marketplace || isInstalled?.(item.id)),
+  );
   if (!visibleItems.length) return null;
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -2434,14 +2440,15 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
     <>
       <motion.button
         onClick={() => setCollapsed(v => !v)}
-        whileHover={{ scale: 1.12 }}
-        whileTap={{ scale: 0.9 }}
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.94 }}
         className='hidden lg:flex'
         style={{
           position: 'fixed',
-          top: SIDEBAR_MARGIN + 34,
+          // Center without CSS translateY — Framer Motion overrides transform on hover
+          // and was dropping the button downward when translateY(-50%) got replaced.
+          top: SIDEBAR_MARGIN + 34 - 13,
           [isRTL ? 'right' : 'left']: sidebarEdge - 13,
-          transform: 'translateY(-50%)',
           zIndex: 1001,
           width: 26,
           height: 26,
@@ -2454,6 +2461,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
           cursor: 'pointer',
           boxShadow: '0 6px 16px rgba(15,23,42,0.14), 0 2px 6px rgba(15,23,42,0.07)',
           transition: `${isRTL ? 'right' : 'left'} .28s cubic-bezier(0.22,1,0.36,1)`,
+          transformOrigin: 'center center',
         }}
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>

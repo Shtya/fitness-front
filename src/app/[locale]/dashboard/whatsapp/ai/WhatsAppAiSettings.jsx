@@ -9,6 +9,11 @@ const COPY = {
 		description:
 			'Generate editable reply ideas from recent messages. AI never sends WhatsApp messages.',
 		enabled: 'Enable AI suggestions',
+		enabledHint: 'Turn on to see suggested replies while chatting.',
+		sectionProvider: 'Provider & language',
+		sectionBehavior: 'Suggestion behavior',
+		sectionFallback: 'Fallback prompt',
+		fallbackHint: 'Used automatically when no saved prompt below is marked default.',
 		prompt: 'Fallback system prompt',
 		promptLibrary: 'Saved prompts',
 		promptLibraryHint: 'Save multiple instructions and choose the default used in chats.',
@@ -32,6 +37,11 @@ const COPY = {
 		description:
 			'إنشاء ردود قابلة للتعديل من أحدث الرسائل. الذكاء الاصطناعي لا يرسل أي رسالة واتساب.',
 		enabled: 'تفعيل اقتراحات الذكاء الاصطناعي',
+		enabledHint: 'فعّل الخيار لرؤية الردود المقترحة أثناء المحادثة.',
+		sectionProvider: 'المزود واللغة',
+		sectionBehavior: 'سلوك الاقتراحات',
+		sectionFallback: 'التعليمات الاحتياطية',
+		fallbackHint: 'تُستخدم تلقائيًا عند عدم وجود تعليمات محفوظة محددة كافتراضية.',
 		prompt: 'التعليمات الاحتياطية',
 		promptLibrary: 'التعليمات المحفوظة',
 		promptLibraryHint: 'احفظ أكثر من تعليمات واختر الافتراضية المستخدمة في المحادثات.',
@@ -52,8 +62,14 @@ const COPY = {
 	},
 };
 
+const GRADIENT = 'linear-gradient(135deg, #1DAB61 0%, #1DAB61 100%)';
+const GLOW = '0 10px 24px -10px var(--color-primary-400)';
+
 const fieldClass =
-	'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100 dark:border-slate-700 dark:bg-slate-900 dark:focus:ring-violet-950';
+	'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--color-primary-400)] focus:ring-2 focus:ring-[var(--color-primary-100)] dark:border-slate-700 dark:bg-slate-900 dark:focus:ring-[var(--color-primary-950)]';
+
+const sectionLabelClass =
+	'text-[11px] font-bold uppercase tracking-wider text-slate-400';
 
 function promptId() {
 	if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
@@ -62,6 +78,27 @@ function promptId() {
 	bytes[8] = (bytes[8] & 0x3f) | 0x80;
 	const hex = [...bytes].map(value => value.toString(16).padStart(2, '0')).join('');
 	return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function Switch({ checked, onChange, label }) {
+	return (
+		<button
+			type="button"
+			role="switch"
+			aria-checked={checked}
+			aria-label={label}
+			onClick={() => onChange(!checked)}
+			className={`relative h-6 w-11 shrink-0 overflow-hidden rounded-full transition-colors ${
+				checked ? 'bg-[var(--color-primary-500)]' : 'bg-slate-200 dark:bg-slate-700'
+			}`}
+		>
+			<span
+				className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-all duration-200 ${
+					checked ? 'start-[22px]' : 'start-0.5'
+				}`}
+			/>
+		</button>
+	);
 }
 
 export default function WhatsAppAiSettings({
@@ -81,7 +118,7 @@ export default function WhatsAppAiSettings({
 	if (loading && !draft) {
 		return (
 			<div className="grid min-h-32 place-items-center rounded-2xl border border-slate-200 dark:border-slate-700">
-				<Loader2 className="animate-spin text-violet-500" />
+				<Loader2 className="animate-spin text-[var(--color-primary-500)]" />
 			</div>
 		);
 	}
@@ -142,10 +179,10 @@ export default function WhatsAppAiSettings({
 	return (
 		<form
 			onSubmit={submit}
-			className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/70"
+			className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-900"
 		>
 			<div className="mb-4 flex items-start gap-3">
-				<div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300">
+				<div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--color-primary-50)] text-[var(--color-primary-500)] dark:bg-[var(--color-primary-950)]/40">
 					<Bot size={20} />
 				</div>
 				<div>
@@ -154,25 +191,32 @@ export default function WhatsAppAiSettings({
 				</div>
 			</div>
 
-			<label className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-slate-200 px-3 py-3 dark:border-slate-700">
-				<span className="text-sm font-bold">{text.enabled}</span>
-				<input
-					type="checkbox"
+			<div className="mb-4 flex items-center justify-between gap-4 rounded-2xl border border-slate-200 p-3.5 dark:border-slate-700">
+				<div>
+					<p className="text-sm font-bold text-slate-800 dark:text-slate-100">{text.enabled}</p>
+					<p className="mt-0.5 text-xs text-slate-400">{text.enabledHint}</p>
+				</div>
+				<Switch
+					label={text.enabled}
 					checked={Boolean(draft.enabled)}
-					onChange={event => update('enabled', event.target.checked)}
-					className="h-5 w-5 accent-violet-600"
+					onChange={value => update('enabled', value)}
 				/>
-			</label>
+			</div>
 
+			<p className={`mb-2 ${sectionLabelClass}`}>{text.sectionProvider}</p>
 			<div className="grid gap-3 md:grid-cols-2">
 				<label className="space-y-1 text-xs font-bold">
 					<span>{text.provider}</span>
 					<select
-						value={draft.provider || 'dragify-free'}
+						value={draft.provider || 'ai-free'}
 						onChange={event => update('provider', event.target.value)}
 						className={fieldClass}
 					>
-						<option value="dragify-free">Dragify Free (ChatGPT Web)</option>
+						<option value="ai-free">FitCoach Free (auto fallback)</option>
+						<option value="llm7-free">LLM7 Free</option>
+						<option value="pollinations-free">Pollinations Free</option>
+						<option value="browser-chatgpt">Browser ChatGPT</option>
+						<option value="dragify-free">Legacy Free (same as FitCoach)</option>
 					</select>
 				</label>
 				<label className="space-y-1 text-xs font-bold">
@@ -211,6 +255,10 @@ export default function WhatsAppAiSettings({
 						<option value="concise">Concise</option>
 					</select>
 				</label>
+			</div>
+
+			<p className={`mb-2 mt-4 ${sectionLabelClass}`}>{text.sectionBehavior}</p>
+			<div className="grid gap-3 md:grid-cols-2">
 				<label className="space-y-1 text-xs font-bold">
 					<span>{text.count}</span>
 					<input
@@ -245,10 +293,10 @@ export default function WhatsAppAiSettings({
 				/>
 			</label>
 
-			<div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50/40 p-3 dark:border-violet-900 dark:bg-violet-950/20">
+			<div className="mt-4 rounded-2xl border border-[var(--color-secondary-200)] bg-[var(--color-secondary-50)]/40 p-3 dark:border-[var(--color-secondary-900)] dark:bg-[var(--color-secondary-950)]/20">
 				<div className="mb-3 flex items-start justify-between gap-3">
 					<div>
-						<p className="text-sm font-black text-violet-900 dark:text-violet-200">
+						<p className="text-sm font-black text-[var(--color-secondary-900)] dark:text-[var(--color-secondary-200)]">
 							{text.promptLibrary}
 						</p>
 						<p className="mt-0.5 text-xs leading-5 text-slate-500">
@@ -259,7 +307,8 @@ export default function WhatsAppAiSettings({
 						type="button"
 						onClick={addPrompt}
 						disabled={(draft.promptPresets || []).length >= 20}
-						className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-violet-600 px-3 text-xs font-black text-white hover:bg-violet-700 disabled:opacity-50"
+						style={{ background: GRADIENT }}
+						className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-black text-white disabled:opacity-50"
 					>
 						<Plus size={14} />
 						{text.addPrompt}
@@ -279,7 +328,7 @@ export default function WhatsAppAiSettings({
 										name="active-ai-prompt"
 										checked={draft.activePromptId === preset.id}
 										onChange={() => update('activePromptId', preset.id)}
-										className="accent-violet-600"
+										className="accent-[var(--color-primary-600)]"
 									/>
 									<span>{text.defaultPrompt}</span>
 								</label>
@@ -323,23 +372,26 @@ export default function WhatsAppAiSettings({
 				</div>
 			</div>
 
-			<label className="mt-3 block space-y-1 text-xs font-bold">
-				<span>{text.prompt}</span>
+			<div className="mt-4 rounded-2xl border border-slate-200 p-3.5 dark:border-slate-700">
+				<p className="text-sm font-black text-slate-800 dark:text-slate-100">{text.sectionFallback}</p>
+				<p className="mt-0.5 text-xs text-slate-400">{text.fallbackHint}</p>
 				<textarea
 					value={draft.systemPrompt || ''}
 					onChange={event => update('systemPrompt', event.target.value)}
 					rows={5}
 					maxLength={4000}
-					className={`${fieldClass} resize-y`}
+					aria-label={text.prompt}
+					className={`${fieldClass} mt-3 resize-y`}
 				/>
-			</label>
+			</div>
 
 			{error && <p className="mt-3 text-xs font-semibold text-rose-600">{error}</p>}
 			{saved && !error && <p className="mt-3 text-xs font-semibold text-emerald-600">{text.saved}</p>}
 			<button
 				type="submit"
 				disabled={saving}
-				className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-black text-white transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-60"
+				style={{ background: GRADIENT, boxShadow: GLOW }}
+				className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-black text-white transition disabled:cursor-wait disabled:opacity-60"
 			>
 				{saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
 				{text.save}
@@ -347,4 +399,3 @@ export default function WhatsAppAiSettings({
 		</form>
 	);
 }
-

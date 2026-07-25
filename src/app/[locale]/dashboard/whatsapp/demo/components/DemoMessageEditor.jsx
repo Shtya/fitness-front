@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import DemoSelect from './DemoSelect';
 
 function localDateTime(value) {
 	const date = value ? new Date(value) : new Date();
@@ -108,32 +109,40 @@ export default function DemoMessageEditor({
 		}
 	};
 
+	const typeOptions = ['text', 'image', 'video', 'audio', 'document', 'location'].map(type => ({
+		value: type,
+		label: labels[type] || type,
+	}));
+	const replyOptions = messages
+		.filter(item => String(item.id) !== String(message?.id))
+		.map(item => ({
+			value: String(item.id),
+			label: String(item.text || item.type || '').slice(0, 50) || String(item.id),
+		}));
+	const statusOptions = ['pending', 'sent', 'delivered', 'read', 'failed', 'played'].map(
+		status => ({
+			value: status,
+			label: labels.statuses[status] || status,
+		}),
+	);
+
 	return (
 		<form onSubmit={submit} className="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
 			<div className="grid gap-2 sm:grid-cols-2">
-				<select
+				<DemoSelect
 					value={form.type}
-					onChange={event => setForm(current => ({ ...current, type: event.target.value }))}
-					className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-				>
-					{['text', 'image', 'video', 'audio', 'document', 'location'].map(type => (
-						<option key={type} value={type}>{labels[type] || type}</option>
-					))}
-				</select>
-				<select
+					onValueChange={value => setForm(current => ({ ...current, type: value }))}
+					options={typeOptions}
+					placeholder={labels.text}
+				/>
+				<DemoSelect
 					value={form.replyToId}
-					onChange={event => setForm(current => ({ ...current, replyToId: event.target.value }))}
-					className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-				>
-					<option value="">{labels.noReply}</option>
-					{messages
-						.filter(item => String(item.id) !== String(message?.id))
-						.map(item => (
-							<option key={item.id} value={item.id}>
-								{String(item.text || item.type || '').slice(0, 50)}
-							</option>
-						))}
-				</select>
+					onValueChange={value => setForm(current => ({ ...current, replyToId: value }))}
+					options={replyOptions}
+					placeholder={labels.noReply}
+					allowEmpty
+					emptyLabel={labels.noReply}
+				/>
 			</div>
 			<textarea
 				value={form.text}
@@ -189,27 +198,19 @@ export default function DemoMessageEditor({
 				</div>
 			)}
 			<div className="grid gap-2 sm:grid-cols-3">
-				<select
+				<DemoSelect
 					value={form.direction}
-					onChange={event =>
-						setForm(current => ({ ...current, direction: event.target.value }))
-					}
-					className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-				>
-					<option value="inbound">{labels.inbound}</option>
-					<option value="outbound">{labels.outbound}</option>
-				</select>
-				<select
+					onValueChange={value => setForm(current => ({ ...current, direction: value }))}
+					options={[
+						{ value: 'inbound', label: labels.inbound },
+						{ value: 'outbound', label: labels.outbound },
+					]}
+				/>
+				<DemoSelect
 					value={form.status}
-					onChange={event => setForm(current => ({ ...current, status: event.target.value }))}
-					className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-				>
-					{['pending', 'sent', 'delivered', 'read', 'failed', 'played'].map(status => (
-						<option key={status} value={status}>
-							{labels.statuses[status] || status}
-						</option>
-					))}
-				</select>
+					onValueChange={value => setForm(current => ({ ...current, status: value }))}
+					options={statusOptions}
+				/>
 				<input
 					type="datetime-local"
 					value={form.timestamp}
@@ -219,43 +220,52 @@ export default function DemoMessageEditor({
 					className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-900"
 				/>
 			</div>
-			<label className="flex items-center gap-2 text-xs font-bold">
-				<input
-					type="checkbox"
-					checked={form.showReadReceipt}
-					onChange={event =>
-						setForm(current => ({ ...current, showReadReceipt: event.target.checked }))
-					}
-				/>
-				{labels.showReadReceipt}
-			</label>
-			<div className="grid gap-2 sm:grid-cols-3">
-				<label className="flex items-center gap-2 text-xs font-bold">
-					<input
-						type="checkbox"
-						checked={form.forwarded}
-						onChange={event =>
-							setForm(current => ({ ...current, forwarded: event.target.checked }))
-						}
-					/>
-					{labels.forwarded}
-				</label>
-				<select
-					value={form.deletedMode}
-					onChange={event => setForm(current => ({ ...current, deletedMode: event.target.value }))}
-					className="h-9 rounded-lg border px-2 text-xs"
-				>
-					<option value="none">{labels.notDeleted}</option>
-					<option value="for_me">{labels.deletedForMe}</option>
-					<option value="for_everyone">{labels.deletedForEveryone}</option>
-				</select>
-				<input
-					value={form.reactions}
-					onChange={event => setForm(current => ({ ...current, reactions: event.target.value }))}
-					placeholder={labels.reactions}
-					className="h-9 rounded-lg border px-2 text-sm"
-				/>
-			</div>
+			<details className="group rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700">
+				<summary className="cursor-pointer text-xs font-bold text-slate-500 marker:content-none">
+					{labels.advancedOptions}
+				</summary>
+				<div className="mt-3 space-y-3">
+					<label className="flex items-center gap-2 text-xs font-bold">
+						<input
+							type="checkbox"
+							checked={form.showReadReceipt}
+							onChange={event =>
+								setForm(current => ({ ...current, showReadReceipt: event.target.checked }))
+							}
+						/>
+						{labels.showReadReceipt}
+					</label>
+					<div className="grid gap-2 sm:grid-cols-3">
+						<label className="flex items-center gap-2 text-xs font-bold">
+							<input
+								type="checkbox"
+								checked={form.forwarded}
+								onChange={event =>
+									setForm(current => ({ ...current, forwarded: event.target.checked }))
+								}
+							/>
+							{labels.forwarded}
+						</label>
+						<DemoSelect
+							value={form.deletedMode}
+							onValueChange={value =>
+								setForm(current => ({ ...current, deletedMode: value }))
+							}
+							options={[
+								{ value: 'none', label: labels.notDeleted },
+								{ value: 'for_me', label: labels.deletedForMe },
+								{ value: 'for_everyone', label: labels.deletedForEveryone },
+							]}
+						/>
+						<input
+							value={form.reactions}
+							onChange={event => setForm(current => ({ ...current, reactions: event.target.value }))}
+							placeholder={labels.reactions}
+							className="h-9 rounded-lg border px-2 text-sm"
+						/>
+					</div>
+				</div>
+			</details>
 			<div className="flex justify-end gap-2">
 				{message && (
 					<Button type="button" variant="outline" size="sm" onClick={onCancel}>

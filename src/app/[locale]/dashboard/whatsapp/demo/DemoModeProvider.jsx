@@ -490,6 +490,171 @@ export function DemoModeProvider({ children }) {
 		}));
 	}, []);
 
+	const importProfileData = useCallback(
+		async payload => {
+			const profileId = activeProfileIdRef.current;
+			if (!profileId) throw new Error('Select a demo profile first.');
+			const contactsInput = Array.isArray(payload)
+				? payload
+				: Array.isArray(payload?.contacts)
+					? payload.contacts
+					: null;
+			if (!contactsInput) {
+				const error = new Error('EMPTY_JSON_LIST');
+				error.code = 'EMPTY_JSON_LIST';
+				throw error;
+			}
+			const summary = { contacts: 0, messages: 0, events: 0, errors: [] };
+			setSaving(true);
+			setError('');
+			try {
+				for (const [index, contactInput] of contactsInput.entries()) {
+					const label = contactInput?.name?.trim?.() || `#${index + 1}`;
+					try {
+						if (!contactInput?.name?.trim?.()) throw new Error('Missing "name".');
+						const contact = entity(
+							await demoApi.createContact(profileId, {
+								name: contactInput.name.trim(),
+								phone: contactInput.phone || null,
+								about: contactInput.about || null,
+								avatarColor: contactInput.avatarColor || null,
+								verified: Boolean(contactInput.verified),
+								presenceStatus: contactInput.presenceStatus || 'offline',
+								lastSeenAt: contactInput.lastSeenAt
+									? new Date(contactInput.lastSeenAt).toISOString()
+									: null,
+							}),
+						);
+						summary.contacts += 1;
+
+						const existingConversations = asList(
+							await demoApi.listConversations(profileId),
+						);
+						let conversation = existingConversations.find(
+							item =>
+								String(item.contactId || item.contact_id) === String(contact.id),
+						);
+						if (!conversation) {
+							conversation = entity(
+								await demoApi.createConversation(profileId, {
+									contactId: contact.id,
+									sourceType: 'fake',
+								}),
+							);
+						}
+
+						if (contactInput.conversation) {
+							const conversationInput = contactInput.conversation;
+							await demoApi.updateConversation(profileId, conversation.id, {
+								pinned: Boolean(conversationInput.pinned),
+								archived: Boolean(conversationInput.archived),
+								unreadCount: Math.max(0, Number(conversationInput.unreadCount) || 0),
+								mutedUntil: conversationInput.mutedUntil
+									? new Date(conversationInput.mutedUntil).toISOString()
+									: null,
+							});
+						}
+
+						const createdMessageIds = [];
+						for (const [messageIndex, messageInput] of (
+							contactInput.messages || []
+						).entries()) {
+							try {
+								const replyToId =
+									Number.isInteger(messageInput.replyToIndex) &&
+									messageInput.replyToIndex >= 0 &&
+									messageInput.replyToIndex < createdMessageIds.length
+										? createdMessageIds[messageInput.replyToIndex] || null
+										: null;
+								const direction =
+									messageInput.direction === 'outbound' ? 'outbound' : 'inbound';
+								const created = entity(
+									await demoApi.createMessage(conversation.id, {
+										type: messageInput.type || 'text',
+										text: messageInput.text ?? null,
+										direction,
+										status:
+											messageInput.status ||
+											(direction === 'outbound' ? 'sent' : 'delivered'),
+										timestamp: messageInput.timestamp
+											? new Date(messageInput.timestamp).toISOString()
+											: new Date().toISOString(),
+										showReadReceipt: messageInput.showReadReceipt ?? true,
+										forwarded: Boolean(messageInput.forwarded),
+										deletedMode: messageInput.deletedMode || 'none',
+										replyToId,
+										reactions: Array.isArray(messageInput.reactions)
+											? messageInput.reactions.map(emoji => ({
+													emoji,
+													actorKey: 'contact',
+												}))
+											: [],
+										location: messageInput.location || null,
+									}),
+								);
+								createdMessageIds.push(created.id);
+								summary.messages += 1;
+							} catch (messageError) {
+								createdMessageIds.push(null);
+								summary.errors.push(
+									`${label} → message ${messageIndex + 1}: ${
+										messageError?.response?.data?.message || messageError.message
+									}`,
+								);
+							}
+						}
+
+						for (const [eventIndex, eventInput] of (contactInput.events || []).entries()) {
+							try {
+								await demoApi.createEvent(profileId, {
+									conversationId: conversation.id,
+									eventType: eventInput.eventType || 'typing',
+									delayMs: Math.max(0, Number(eventInput.delayMs) || 0),
+									durationMs: eventInput.infinite
+										? null
+										: Math.max(0, Number(eventInput.durationMs) || 0),
+									scheduledAt: eventInput.scheduledAt
+										? new Date(eventInput.scheduledAt).toISOString()
+										: null,
+									infinite: Boolean(eventInput.infinite),
+									randomize: Boolean(eventInput.randomize),
+									enabled: eventInput.enabled !== false,
+									payload:
+										eventInput.eventType === 'incoming_message'
+											? {
+													text: eventInput.text || '',
+													status: eventInput.status || 'delivered',
+													unreadCount: Math.max(0, Number(eventInput.unreadCount) || 0),
+													notification: Boolean(eventInput.notification),
+													moveToTop: eventInput.moveToTop !== false,
+													typingBefore: Boolean(eventInput.typingBefore),
+												}
+											: { active: eventInput.active !== false },
+								});
+								summary.events += 1;
+							} catch (eventError) {
+								summary.errors.push(
+									`${label} → event ${eventIndex + 1}: ${
+										eventError?.response?.data?.message || eventError.message
+									}`,
+								);
+							}
+						}
+					} catch (contactError) {
+						summary.errors.push(
+							`${label}: ${contactError?.response?.data?.message || contactError.message}`,
+						);
+					}
+				}
+				await refreshActiveProfile();
+				return summary;
+			} finally {
+				setSaving(false);
+			}
+		},
+		[refreshActiveProfile],
+	);
+
 	const createEvent = useCallback(async payload => {
 		const profileId = activeProfileIdRef.current;
 		if (!profileId) throw new Error('Select a demo profile first.');
@@ -671,6 +836,7 @@ export function DemoModeProvider({ children }) {
 			deleteMessage,
 			createEvent,
 			deleteEvent,
+			importProfileData,
 			applyRuntimeEvent,
 			markRuntimeRead,
 		}),
@@ -690,6 +856,7 @@ export function DemoModeProvider({ children }) {
 			deleteMessage,
 			deleteProfile,
 			error,
+			importProfileData,
 			loading,
 			markRuntimeRead,
 			profiles,

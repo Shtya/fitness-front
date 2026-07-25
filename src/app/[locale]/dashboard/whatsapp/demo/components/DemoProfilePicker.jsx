@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Copy, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import DemoInfoTip from './DemoInfoTip';
+import DemoSelect from './DemoSelect';
 
 export default function DemoProfilePicker({
 	profiles,
@@ -25,49 +27,56 @@ export default function DemoProfilePicker({
 		setCreating(false);
 	};
 
+	const options = profiles.map(profile => ({
+		value: String(profile.id),
+		label: profile.name || profile.label,
+	}));
+
 	return (
 		<div className="space-y-2">
 			<div className="flex flex-col gap-2 sm:flex-row">
-				<select
-					aria-label={labels.profile}
-					value={activeProfileId || ''}
-					onChange={event => onActivate(event.target.value)}
+				<DemoSelect
+					ariaLabel={labels.profile}
+					value={activeProfileId ? String(activeProfileId) : ''}
+					onValueChange={value => {
+						if (value) onActivate(value);
+					}}
 					disabled={disabled || profiles.length === 0}
-					className="h-10 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
-				>
-					<option value="">{labels.selectProfile}</option>
-					{profiles.map(profile => (
-						<option key={profile.id} value={profile.id}>
-							{profile.name || profile.label}
-						</option>
-					))}
-				</select>
+					placeholder={labels.selectProfile}
+					allowEmpty
+					emptyLabel={labels.selectProfile}
+					options={options}
+					className="h-10 flex-1"
+				/>
 				<Button type="button" variant="outline" onClick={() => setCreating(value => !value)}>
 					<Plus />
 					{labels.createProfile}
 				</Button>
-				<Button
-					type="button"
-					variant="outline"
-					size="icon"
-					disabled={disabled || !activeProfileId}
-					onClick={() => onClone(activeProfileId)}
-					aria-label={labels.cloneProfile}
-				>
-					<Copy />
-				</Button>
-				<Button
-					type="button"
-					variant="outline"
-					size="icon"
-					disabled={disabled || !activeProfileId}
-					onClick={() => {
-						if (window.confirm(labels.confirmDeleteProfile)) onDelete(activeProfileId);
-					}}
-					aria-label={labels.delete}
-				>
-					<Trash2 />
-				</Button>
+				<div className="flex items-center gap-1">
+					<Button
+						type="button"
+						variant="outline"
+						size="icon"
+						disabled={disabled || !activeProfileId}
+						onClick={() => onClone(activeProfileId)}
+						aria-label={labels.cloneProfile}
+					>
+						<Copy />
+					</Button>
+					<DemoInfoTip text={labels.cloneProfileHint} />
+					<Button
+						type="button"
+						variant="outline"
+						size="icon"
+						disabled={disabled || !activeProfileId}
+						onClick={() => {
+							if (window.confirm(labels.confirmDeleteProfile)) onDelete(activeProfileId);
+						}}
+						aria-label={labels.delete}
+					>
+						<Trash2 />
+					</Button>
+				</div>
 			</div>
 			{creating && (
 				<form onSubmit={submit} className="flex gap-2">
