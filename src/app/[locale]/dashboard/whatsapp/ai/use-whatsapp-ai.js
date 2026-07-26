@@ -58,6 +58,7 @@ export function useWhatsAppAi({
 	conversationId,
 	messages = [],
 	allowSuggestions = true,
+	messagesReady = true,
 }) {
 	const [settings, setSettings] = useState(DEFAULT_SETTINGS);
 	const [settingsLoading, setSettingsLoading] = useState(false);
@@ -144,7 +145,7 @@ export function useWhatsAppAi({
 	const loadSuggestions = useCallback(async () => {
 		const requestId = ++suggestionRequestRef.current;
 		suggestionAbortRef.current?.abort();
-		if (!conversationId || !allowSuggestions || !settings.enabled) {
+		if (!conversationId || !allowSuggestions || !settings.enabled || !messagesReady) {
 			setSuggestions([]);
 			setSuggestionsError('');
 			setSuggestionsLoading(false);
@@ -183,11 +184,19 @@ export function useWhatsAppAi({
 		allowSuggestions,
 		contextThroughMessageId,
 		conversationId,
+		messagesReady,
 		settings.activePromptId,
 		settings.enabled,
 	]);
 
 	useEffect(() => {
+		if (!messagesReady) {
+			suggestionAbortRef.current?.abort();
+			setSuggestions([]);
+			setSuggestionsError('');
+			setSuggestionsLoading(false);
+			return undefined;
+		}
 		const timer = window.setTimeout(() => {
 			void loadSuggestions();
 		}, 250);
@@ -195,7 +204,7 @@ export function useWhatsAppAi({
 			window.clearTimeout(timer);
 			suggestionAbortRef.current?.abort();
 		};
-	}, [loadSuggestions]);
+	}, [loadSuggestions, messagesReady]);
 
 	return {
 		settings,

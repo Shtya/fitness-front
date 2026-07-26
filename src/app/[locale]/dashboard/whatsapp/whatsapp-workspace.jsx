@@ -1,6 +1,6 @@
 'use client';
 
-import { cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { cloneElement, isValidElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -90,6 +90,13 @@ import { DemoModeProvider, useDemoMode } from './demo/DemoModeProvider';
 import DemoModeSettings from './demo/components/DemoModeSettings';
 import { demoApi } from './demo/demo-api';
 import {
+	fetchConversations,
+	fetchMessages,
+	useWhatsAppQueryCache,
+	WHATSAPP_STALE_TIME,
+	whatsappKeys,
+} from './hooks/useWhatsAppQueries';
+import {
 	buildEffectiveConversations,
 	buildEffectiveMessages,
 	isDemoId,
@@ -100,9 +107,76 @@ import {
 	canRouteDemoWrite,
 	routeMessageCommand,
 } from './demo/demo-command-adapter';
-import AiReplySuggestions from './ai/AiReplySuggestions';
+import AiReplySuggestions, { PromptInstructionsDropdown } from './ai/AiReplySuggestions';
 import WhatsAppAiSettings from './ai/WhatsAppAiSettings';
 import { useWhatsAppAi } from './ai/use-whatsapp-ai';
+
+const WHATSAPP_SELECTED_ACCOUNT_KEY = 'wa-selected-account-id';
+
+function readStoredWhatsAppAccountId(userId) {
+	if (typeof window === 'undefined') return null;
+	try {
+		const scopedKey = userId
+			? `${WHATSAPP_SELECTED_ACCOUNT_KEY}:${userId}`
+			: WHATSAPP_SELECTED_ACCOUNT_KEY;
+		return (
+			window.localStorage.getItem(scopedKey) ||
+			window.localStorage.getItem(WHATSAPP_SELECTED_ACCOUNT_KEY) ||
+			null
+		);
+	} catch {
+		return null;
+	}
+}
+
+function writeStoredWhatsAppAccountId(accountId, userId) {
+	if (typeof window === 'undefined' || !accountId) return;
+	try {
+		const scopedKey = userId
+			? `${WHATSAPP_SELECTED_ACCOUNT_KEY}:${userId}`
+			: WHATSAPP_SELECTED_ACCOUNT_KEY;
+		window.localStorage.setItem(scopedKey, accountId);
+		window.localStorage.setItem(WHATSAPP_SELECTED_ACCOUNT_KEY, accountId);
+	} catch {
+		// Ignore quota / private-mode failures.
+	}
+}
+
+function clearStoredWhatsAppAccountId(accountId, userId) {
+	if (typeof window === 'undefined') return;
+	try {
+		const scopedKey = userId
+			? `${WHATSAPP_SELECTED_ACCOUNT_KEY}:${userId}`
+			: WHATSAPP_SELECTED_ACCOUNT_KEY;
+		const current =
+			window.localStorage.getItem(scopedKey) ||
+			window.localStorage.getItem(WHATSAPP_SELECTED_ACCOUNT_KEY);
+		if (!accountId || current === accountId) {
+			window.localStorage.removeItem(scopedKey);
+			window.localStorage.removeItem(WHATSAPP_SELECTED_ACCOUNT_KEY);
+		}
+	} catch {
+		// Ignore storage failures.
+	}
+}
+
+function isRequestCancelled(error) {
+	if (!error) return false;
+	const name = String(error.name || '');
+	const code = String(error.code || '');
+	const message = String(error.message || '').toLowerCase();
+	return (
+		error.silent === true ||
+		name === 'CancelledError' ||
+		name === 'CanceledError' ||
+		name === 'AbortError' ||
+		code === 'ERR_CANCELED' ||
+		code === 'ERR_CANCELLED' ||
+		message.includes('cancelled') ||
+		message.includes('canceled') ||
+		message.includes('aborted')
+	);
+}
 
 const translations = {
 	en: {
@@ -510,8 +584,8 @@ const tabs = [
 const GRADIENT = 'linear-gradient(135deg, #1DAB61 0%, #1DAB61 100%)';
 const GLOW = '0 10px 24px -10px var(--color-primary-400)';
 const BRAND_GRADIENT = 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-secondary-500) 100%)';
-const CONVERSATIONS_CACHE_TTL = 30_000;
-const MESSAGES_CACHE_TTL = 30_000;
+const CONVERSATIONS_CACHE_TTL = WHATSAPP_STALE_TIME;
+const MESSAGES_CACHE_TTL = WHATSAPP_STALE_TIME;
 const STATUSES_CACHE_TTL = 60_000;
 const MESSAGE_PAGE_SIZE = 30;
 
@@ -522,9 +596,21 @@ function newClientMessageId() {
 	return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function statusMeta(status, t) {
+function statusMeta(status, t, account) {
 	if (status === 'connected') return { dot: 'bg-emerald-500', text: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-950/30', label: t.online };
-	if (['connecting', 'qr_pending'].includes(status)) return { dot: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/30', label: status === 'qr_pending' ? t.qrPending : t.connecting };
+	if (['connecting', 'qr_pending'].includes(status)) {
+		const restoring = Boolean(account?.lastConnectedAt);
+		return {
+			dot: 'bg-amber-500',
+			text: 'text-amber-600',
+			bg: 'bg-amber-50 dark:bg-amber-950/30',
+			label: restoring
+				? t.sessionLinkedHint || t.connecting
+				: status === 'qr_pending'
+					? t.qrPending
+					: t.connecting,
+		};
+	}
 	if (status === 'error') return { dot: 'bg-rose-500', text: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-950/30', label: t.errorStatus };
 	return { dot: 'bg-slate-400', text: 'text-slate-500', bg: 'bg-slate-100 dark:bg-slate-800', label: t.offline };
 }
@@ -1921,18 +2007,14 @@ function MobileAttachmentSheet({
 						) : (
 							<>
 								{prompts.length > 0 && (
-									<select
+									<PromptInstructionsDropdown
+										prompts={prompts}
 										value={activePromptId || prompts[0]?.id || ''}
-										onChange={event => onPromptChange?.(event.target.value)}
+										onChange={onPromptChange}
+										label={ar ? 'التعليمات' : 'Instructions'}
 										disabled={promptSaving}
-										className="h-8 min-w-0 flex-1 rounded-full border border-violet-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-violet-500 disabled:opacity-50"
-									>
-										{prompts.map(prompt => (
-											<option key={prompt.id} value={prompt.id}>
-												{prompt.name}
-											</option>
-										))}
-									</select>
+										emptyLabel={ar ? 'لا توجد تعليمات' : 'No instructions'}
+									/>
 								)}
 								<button
 									type="button"
@@ -2404,7 +2486,7 @@ function ConversationFilterDropdown({ value, onChange, labels }) {
 			setPosition({
 				top: rect.bottom + 6,
 				left: rect.left,
-				width: rect.width,
+				width: Math.max(rect.width, 180),
 			});
 		};
 		updatePosition();
@@ -2484,11 +2566,164 @@ function ConversationFilterDropdown({ value, onChange, labels }) {
 	);
 }
 
+function AccountSwitcherDropdown({
+	accounts = [],
+	value,
+	onChange,
+	labels,
+	statusLabels,
+}) {
+	const [open, setOpen] = useState(false);
+	const [position, setPosition] = useState(null);
+	const rootRef = useRef(null);
+	const buttonRef = useRef(null);
+	const menuRef = useRef(null);
+	const selected = accounts.find(account => account.id === value) || accounts[0] || null;
+	const selectedStatus = selected ? statusMeta(selected.status, statusLabels, selected) : null;
+
+	useEffect(() => {
+		if (!open) return undefined;
+		const updatePosition = () => {
+			const rect = buttonRef.current?.getBoundingClientRect();
+			if (!rect) return;
+			const width = Math.max(rect.width, 260);
+			const left = Math.min(
+				Math.max(8, rect.left),
+				Math.max(8, window.innerWidth - width - 8),
+			);
+			setPosition({
+				top: rect.bottom + 8,
+				left,
+				width,
+			});
+		};
+		updatePosition();
+		const closeOnOutsideClick = event => {
+			if (
+				!rootRef.current?.contains(event.target) &&
+				!menuRef.current?.contains(event.target)
+			) {
+				setOpen(false);
+			}
+		};
+		const closeOnEscape = event => {
+			if (event.key === 'Escape') setOpen(false);
+		};
+		document.addEventListener('pointerdown', closeOnOutsideClick);
+		document.addEventListener('keydown', closeOnEscape);
+		window.addEventListener('resize', updatePosition);
+		window.addEventListener('scroll', updatePosition, true);
+		return () => {
+			document.removeEventListener('pointerdown', closeOnOutsideClick);
+			document.removeEventListener('keydown', closeOnEscape);
+			window.removeEventListener('resize', updatePosition);
+			window.removeEventListener('scroll', updatePosition, true);
+		};
+	}, [open]);
+
+	if (!accounts.length) return null;
+
+	return (
+		<div ref={rootRef} className="relative min-w-[200px] max-w-[280px]">
+			<button
+				ref={buttonRef}
+				type="button"
+				aria-label={labels.accounts}
+				aria-haspopup="listbox"
+				aria-expanded={open}
+				onClick={() => setOpen(current => !current)}
+				className="flex h-10 w-full items-center gap-2.5 rounded-[14px] border-0 bg-white/[0.16] px-3 text-sm font-bold text-white outline-none backdrop-blur-md transition-all hover:bg-white/25 focus:bg-white/25"
+				style={{
+					boxShadow:
+						'0 2px 8px -2px rgba(0,0,0,0.12), 0 0 0 1px rgba(255,255,255,0.2) inset',
+				}}
+			>
+				<Avatar label={selected?.label || '?'} size={7} className="shrink-0 ring-2 ring-white/25" />
+				<span className="min-w-0 flex-1 truncate text-start">
+					{selected?.label || labels.accounts}
+				</span>
+				{selectedStatus && (
+					<span className={`h-2 w-2 shrink-0 rounded-full ${selectedStatus.dot}`} />
+				)}
+				<ChevronDown
+					size={15}
+					className={`shrink-0 opacity-90 transition-transform ${open ? 'rotate-180' : ''}`}
+				/>
+			</button>
+			{open &&
+				position &&
+				typeof document !== 'undefined' &&
+				createPortal(
+					<div
+						ref={menuRef}
+						role="listbox"
+						aria-label={labels.accounts}
+						className="fixed z-500 max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+						style={position}
+					>
+						{accounts.map(account => {
+							const meta = statusMeta(account.status, statusLabels, account);
+							const active = account.id === value;
+							return (
+								<button
+									key={account.id}
+									type="button"
+									role="option"
+									aria-selected={active}
+									onClick={() => {
+										onChange(account.id);
+										setOpen(false);
+									}}
+									className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-start transition-colors ${
+										active
+											? 'bg-[var(--color-primary-50)] text-[var(--color-primary-700)] dark:bg-slate-800 dark:text-[var(--color-primary-300)]'
+											: 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800'
+									}`}
+								>
+									<Avatar label={account.label} size={9} className="shrink-0" />
+									<div className="min-w-0 flex-1">
+										<p className="truncate text-sm font-bold">{account.label}</p>
+										<p className="truncate text-[11px] opacity-70">
+											{account.phoneNumber || account.providerName}
+										</p>
+									</div>
+									<span
+										className={`flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${meta.bg} ${meta.text}`}
+									>
+										<span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+										{meta.label}
+									</span>
+									{active ? (
+										<Check size={14} className="shrink-0 text-[var(--color-primary-600)]" />
+									) : (
+										<span className="w-3.5 shrink-0" />
+									)}
+								</button>
+							);
+						})}
+					</div>,
+					document.body,
+				)}
+		</div>
+	);
+}
+
 function WhatsAppWorkspaceContent() {
 	const locale = useLocale();
 	const router = useRouter();
 	const t = translations[locale] || translations.en;
 	const demo = useDemoMode();
+	const {
+		queryClient,
+		invalidateConversations,
+		resetConversationsCache,
+		conversationsCacheAdapter,
+		messagesCacheAdapter,
+	} = useWhatsAppQueryCache();
+	const conversationsCacheRef = useRef(conversationsCacheAdapter);
+	const messagesCacheRef = useRef(messagesCacheAdapter);
+	conversationsCacheRef.current = conversationsCacheAdapter;
+	messagesCacheRef.current = messagesCacheAdapter;
 	const [activeTab, setActiveTab] = useState('accounts');
 	const [settingsSection, setSettingsSection] = useState('ai');
 	const [accounts, setAccounts] = useState([]);
@@ -2518,6 +2753,7 @@ function WhatsAppWorkspaceContent() {
 	const storyStartRef = useRef(0);
 	const storyElapsedRef = useRef(0);
 	const storyProgressBarRef = useRef(null);
+	const storyVideoRef = useRef(null);
 	const [logs, setLogs] = useState([]);
 	const [report, setReport] = useState(null);
 	const [staff, setStaff] = useState([]);
@@ -2604,6 +2840,7 @@ function WhatsAppWorkspaceContent() {
 		conversationId,
 		messages,
 		allowSuggestions: !demo.settings.enabled,
+		messagesReady: Boolean(conversationId) && !loadingMessages,
 	});
 	const fileRef = useRef(null);
 	const messageBoxRef = useRef(null);
@@ -2616,8 +2853,6 @@ function WhatsAppWorkspaceContent() {
 	const chatSearchRef = useRef('');
 	const conversationFilterRef = useRef('all');
 	const assignmentFilterRef = useRef('');
-	const conversationsCacheRef = useRef(new Map());
-	const messagesCacheRef = useRef(new Map());
 	const messageSyncInFlightRef = useRef(new Map());
 	const previewBackfillAttemptedRef = useRef(new Set());
 	const statusesCacheRef = useRef(new Map());
@@ -2629,6 +2864,8 @@ function WhatsAppWorkspaceContent() {
 	const socketRef = useRef(null);
 	const accountIdRef = useRef(null);
 	const accountsRef = useRef([]);
+	const conversationsRef = useRef([]);
+	const syncingInboxRef = useRef(false);
 	const previousAccountIdRef = useRef(null);
 	const conversationIdRef = useRef(null);
 	const watchedConversationRef = useRef(null);
@@ -2639,6 +2876,7 @@ function WhatsAppWorkspaceContent() {
 	const recordingSecondsRef = useRef(0);
 	const discardRecordingRef = useRef(false);
 	const statusMediaUrlRef = useRef(null);
+	const autoConnectAttemptedRef = useRef(null);
 
 	const scrollMessagesToBottom = useCallback((behavior = 'auto') => {
 		const scroll = () => {
@@ -3049,12 +3287,26 @@ function WhatsAppWorkspaceContent() {
 				? new URLSearchParams(window.location.search).get('accountId')
 				: null;
 		const requestedAccount = list.find(item => item.id === requestedAccountId);
+		const storedAccountId = readStoredWhatsAppAccountId(currentUserId);
+		const storedAccount = list.find(item => item.id === storedAccountId);
 		setAccounts(list);
 		const currentAccount = list.find(item => item.id === accountIdRef.current);
-		const nextAccountId = requestedAccount?.id || currentAccount?.id || list[0]?.id || null;
+		const nextAccountId =
+			requestedAccount?.id ||
+			currentAccount?.id ||
+			storedAccount?.id ||
+			list[0]?.id ||
+			null;
 		setAccountId(current => {
 			const stillExists = list.some(item => item.id === current);
-			return requestedAccount?.id || (stillExists ? current : null) || list[0]?.id || null;
+			const resolved =
+				requestedAccount?.id ||
+				(stillExists ? current : null) ||
+				storedAccount?.id ||
+				list[0]?.id ||
+				null;
+			if (resolved) writeStoredWhatsAppAccountId(resolved, currentUserId);
+			return resolved;
 		});
 		const activeAccount = list.find(item => item.id === nextAccountId);
 		if (activeAccount?.status === 'connected') {
@@ -3063,7 +3315,16 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (requestedAccount) setActiveTab('chats');
 		return list;
-	}, []);
+	}, [currentUserId]);
+
+	const selectWhatsAppAccount = useCallback(
+		nextAccountId => {
+			if (!nextAccountId) return;
+			setAccountId(nextAccountId);
+			writeStoredWhatsAppAccountId(nextAccountId, currentUserId);
+		},
+		[currentUserId],
+	);
 
 	const loadStaff = useCallback(async () => {
 		try {
@@ -3091,7 +3352,7 @@ function WhatsAppWorkspaceContent() {
 	}, [loadAccounts, loadStaff, t.workspaceLoadFailed]);
 
 	const loadConversations = useCallback(async (id, page = 1, append = false, options = {}) => {
-		if (!id) return;
+		if (!id) return { items: [], total: 0, page: 1, scope: 'all' };
 		const requestId = ++conversationsRequestId.current;
 		const search = String(options.search || '').trim();
 		const filter = options.filter || conversationFilterRef.current || 'all';
@@ -3109,37 +3370,70 @@ function WhatsAppWorkspaceContent() {
 		}
 		const cached = useCache ? conversationsCacheRef.current.get(id) : null;
 		const isFirstPage = page === 1 && !append;
-		if (isFirstPage && cached && accountIdRef.current === id) {
-			setConversations(cached.items);
+		// Never paint stale cache on a forced reload — empty pre-sync cache was
+		// wiping the post-sync list before the network response arrived.
+		if (isFirstPage && cached && !options.force && accountIdRef.current === id) {
+			setConversations(cached.items || []);
 			const requestedConversationId =
 				typeof window !== 'undefined'
 					? new URLSearchParams(window.location.search).get('conversationId')
 					: null;
-			if (cached.items.some(item => item.id === requestedConversationId)) {
+			if ((cached.items || []).some(item => item.id === requestedConversationId)) {
 				setConversationId(requestedConversationId);
 				setActiveTab('chats');
 			}
 			setConversationPage(cached.page);
 			setConversationTotal(cached.total);
 			setConversationScope(cached.scope);
-			if (!options.force && Date.now() - cached.cachedAt < CONVERSATIONS_CACHE_TTL) {
+			if (Date.now() - cached.cachedAt < CONVERSATIONS_CACHE_TTL) {
 				return cached;
 			}
 		}
-		const { data } = await api.get(`/whatsapp/accounts/${id}/conversations`, {
-			params: {
-				page,
-				limit: 50,
-				search: search || undefined,
-				filter: filter === 'all' ? undefined : filter,
-				assignedUserId: assignedUserId || undefined,
-			},
+		if (options.force) {
+			await resetConversationsCache(id);
+		}
+		const queryKey = whatsappKeys.conversations(id, {
+			page,
+			search,
+			filter,
+			assignedUserId,
 		});
-		const items = data?.items || [];
+		let data;
+		try {
+			data = await queryClient.fetchQuery({
+				queryKey,
+				queryFn: () =>
+					fetchConversations(id, {
+						page,
+						limit: 50,
+						search,
+						filter,
+						assignedUserId,
+					}),
+				staleTime: options.force ? 0 : CONVERSATIONS_CACHE_TTL,
+			});
+		} catch (error) {
+			// Cancelled by a newer force reload / account switch — ignore, do not clear UI.
+			if (isRequestCancelled(error)) {
+				const fallbackItems =
+					conversationsCacheRef.current.get(id)?.items ||
+					(accountIdRef.current === id ? conversationsRef.current : null) ||
+					[];
+				return {
+					items: fallbackItems,
+					total: fallbackItems.length,
+					page,
+					scope: 'all',
+					cancelled: true,
+				};
+			}
+			throw error;
+		}
+		const items = Array.isArray(data?.items) ? data.items : [];
 		const previousItems = append
-			? useCache
-				? conversationsCacheRef.current.get(id)?.items || []
-				: []
+			? (conversationsCacheRef.current.get(id)?.items ||
+				(accountIdRef.current === id ? conversationsRef.current : []) ||
+				[])
 			: [];
 		const nextItems = append
 			? [...new Map([...previousItems, ...items].map(item => [item.id, item])).values()]
@@ -3147,15 +3441,18 @@ function WhatsAppWorkspaceContent() {
 		const next = {
 			items: nextItems,
 			page: data?.page || page,
-			total: data?.total || nextItems.length,
+			total: typeof data?.total === 'number' ? data.total : nextItems.length,
 			scope: data?.scope || 'all',
 			cachedAt: Date.now(),
 		};
-		if (useCache) conversationsCacheRef.current.set(id, next);
-		if (
-			accountIdRef.current !== id ||
-			conversationsRequestId.current !== requestId
-		) {
+		const isCurrent =
+			accountIdRef.current === id && conversationsRequestId.current === requestId;
+		// Only the latest request may write cache — superseded empty responses
+		// were poisoning TanStack and later hydrating the UI to [].
+		if (useCache && isCurrent) {
+			conversationsCacheRef.current.set(id, next);
+		}
+		if (!isCurrent) {
 			return next;
 		}
 		setConversations(nextItems);
@@ -3171,7 +3468,7 @@ function WhatsAppWorkspaceContent() {
 		setConversationTotal(next.total);
 		setConversationScope(next.scope);
 		return next;
-	}, []);
+	}, [queryClient, resetConversationsCache]);
 
 	const loadMoreConversations = async () => {
 		if (!accountId || loadingMoreConversations || conversations.length >= conversationTotal) return;
@@ -3194,8 +3491,10 @@ function WhatsAppWorkspaceContent() {
 			if (!id) return;
 			const account = accountsRef.current.find(item => item.id === id);
 			if (account && account.status !== 'connected') return;
+			if (syncingInboxRef.current) return;
 			if (reloadConversationsTimer.current) clearTimeout(reloadConversationsTimer.current);
 			reloadConversationsTimer.current = setTimeout(() => {
+				if (syncingInboxRef.current) return;
 				loadConversations(id, 1, false, {
 					force: true,
 					search: chatSearchRef.current,
@@ -3213,7 +3512,22 @@ function WhatsAppWorkspaceContent() {
 		assignmentFilterRef.current = assignmentFilter;
 		if (!accountId || !isAccountConnected) return undefined;
 		const searchRequestId = ++conversationSearchRequestId.current;
+		const hasActiveSearch =
+			Boolean(chatSearchRef.current) ||
+			conversationFilter !== 'all' ||
+			Boolean(assignmentFilter);
 		const timer = window.setTimeout(async () => {
+			// Account switching already reloads via the accountId effect. Forcing a
+			// second cancel+refetch here races and surfaces "Could not search conversations".
+			if (!hasActiveSearch) {
+				if (
+					accountIdRef.current === accountId &&
+					conversationSearchRequestId.current === searchRequestId
+				) {
+					setSearchingConversations(false);
+				}
+				return;
+			}
 			setSearchingConversations(true);
 			try {
 				await loadConversations(accountId, 1, false, {
@@ -3223,6 +3537,9 @@ function WhatsAppWorkspaceContent() {
 					assignedUserId: assignmentFilterRef.current,
 				});
 			} catch (error) {
+				if (isRequestCancelled(error)) return;
+				if (accountIdRef.current !== accountId) return;
+				if (conversationSearchRequestId.current !== searchRequestId) return;
 				toast.error(error.response?.data?.message || 'Could not search conversations');
 			} finally {
 				if (
@@ -3472,28 +3789,48 @@ function WhatsAppWorkspaceContent() {
 			messagesRequestId.current === requestId &&
 			conversationIdRef.current === id;
 		const cached = messagesCacheRef.current.get(id);
+		const cacheIsFresh =
+			Boolean(cached?.items?.length) &&
+			Date.now() - cached.cachedAt < MESSAGES_CACHE_TTL;
 		if (cached?.items?.length) {
 			setMessages(cached.items);
 			setHasMoreMessages(cached.hasMore);
 			setLoadingMessages(false);
 			scrollMessagesToBottom();
+			// Read-only users can rely on a fresh full TanStack page. Users with sync
+			// permission must still await sync/latest so phone-side messages are not
+			// hidden until the cache TTL expires.
+			if (cacheIsFresh && cached.items.length >= MESSAGE_PAGE_SIZE && !canSync) {
+				return;
+			}
 		} else {
 			setLoadingMessages(true);
 			setMessages([]);
 			setHasMoreMessages(true);
 		}
 		try {
-			const { data } = await api.get(`/whatsapp/conversations/${id}/messages`, {
-				params: { limit: MESSAGE_PAGE_SIZE },
+			const storedItems = await queryClient.fetchQuery({
+				queryKey: whatsappKeys.messages(id),
+				queryFn: async () => {
+					const items = await fetchMessages(id, { limit: MESSAGE_PAGE_SIZE });
+					return {
+						items,
+						hasMore: items.length >= MESSAGE_PAGE_SIZE,
+						cachedAt: Date.now(),
+					};
+				},
+				staleTime: cacheIsFresh ? MESSAGES_CACHE_TTL : 0,
 			});
 			if (!isCurrentRequest()) return;
-			const storedItems = Array.isArray(data) ? data : [];
+			const pageItems = Array.isArray(storedItems)
+				? storedItems
+				: storedItems?.items || [];
 			const currentCache = messagesCacheRef.current.get(id);
-			let items = mergeMessages(currentCache?.items || cached?.items || [], storedItems);
-			const storedPageIsFull =
-				storedItems.length >= MESSAGE_PAGE_SIZE;
+			let items = mergeMessages(currentCache?.items || cached?.items || [], pageItems);
+			const storedPageIsFull = pageItems.length >= MESSAGE_PAGE_SIZE;
 			const initialHasMore =
-				Boolean(currentCache?.hasMore ?? cached?.hasMore) || storedPageIsFull;
+				Boolean(currentCache?.hasMore ?? cached?.hasMore ?? storedItems?.hasMore) ||
+				storedPageIsFull;
 			setHasMoreMessages(initialHasMore);
 			messagesCacheRef.current.set(id, {
 				items,
@@ -3501,10 +3838,6 @@ function WhatsAppWorkspaceContent() {
 				cachedAt: Date.now(),
 			});
 			setMessages(current => mergeMessages(current, items));
-			// Stored messages should be visible immediately. Provider history can
-			// be much slower and must never keep the conversation behind a loader.
-			setLoadingMessages(false);
-			scrollMessagesToBottom();
 			if (canSync) {
 				api
 					.post(`/whatsapp/conversations/${id}/read`)
@@ -3530,12 +3863,16 @@ function WhatsAppWorkspaceContent() {
 				scrollMessagesToBottom();
 			};
 
-			const cacheIsFresh =
-				cached?.items?.length &&
-				Date.now() - cached.cachedAt < MESSAGES_CACHE_TTL;
-			const needsProviderBackfill =
-				canSync && (items.length < MESSAGE_PAGE_SIZE || !cacheIsFresh);
+			const needsProviderBackfill = canSync;
 			if (needsProviderBackfill) {
+				// Keep the loader until the first backfill finishes when local history
+				// is still short of a full page.
+				if (items.length < MESSAGE_PAGE_SIZE && isCurrentRequest()) {
+					setLoadingMessages(true);
+				} else if (isCurrentRequest()) {
+					setLoadingMessages(false);
+					scrollMessagesToBottom();
+				}
 				let syncPromise = messageSyncInFlightRef.current.get(id);
 				if (!syncPromise) {
 					syncPromise = api
@@ -3551,18 +3888,19 @@ function WhatsAppWorkspaceContent() {
 						});
 					messageSyncInFlightRef.current.set(id, syncPromise);
 				}
-				syncPromise
-					.then(synced => applySynced(synced))
-					.catch(error => {
-						if (
-							messagesRequestId.current === requestId &&
-							items.length === 0
-						) {
-							toast.error(
-								error.response?.data?.message || 'Could not synchronize message history',
-							);
-						}
-					});
+				try {
+					const synced = await syncPromise;
+					applySynced(synced);
+				} catch (error) {
+					if (isCurrentRequest()) {
+						toast.error(
+							error.response?.data?.message || 'Could not synchronize message history',
+						);
+					}
+				}
+			} else if (isCurrentRequest()) {
+				setLoadingMessages(false);
+				scrollMessagesToBottom();
 			}
 		} catch (error) {
 			if (!isCurrentRequest()) return;
@@ -3573,7 +3911,7 @@ function WhatsAppWorkspaceContent() {
 		} finally {
 			if (isCurrentRequest()) setLoadingMessages(false);
 		}
-	}, [scrollMessagesToBottom, setConversationUnreadCount]);
+	}, [queryClient, scrollMessagesToBottom, setConversationUnreadCount]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -3633,11 +3971,20 @@ function WhatsAppWorkspaceContent() {
 	}, [accounts]);
 
 	useEffect(() => {
+		conversationsRef.current = conversations;
+	}, [conversations]);
+
+	useEffect(() => {
+		syncingInboxRef.current = syncingInbox;
+	}, [syncingInbox]);
+
+	useEffect(() => {
 		if (!accountId) return;
 		const accountChanged = previousAccountIdRef.current !== accountId;
 		previousAccountIdRef.current = accountId;
 		if (accountChanged) {
 			conversationsRequestId.current += 1;
+			conversationSearchRequestId.current += 1;
 			tabRequestId.current += 1;
 			storyRequestId.current += 1;
 			groupRequestId.current += 1;
@@ -3928,12 +4275,24 @@ function WhatsAppWorkspaceContent() {
 				);
 			}
 			if (['sync_completed', 'sync_failed'].includes(event.event)) {
-				setSyncingInbox(false);
-				setSyncProgress(event.event === 'sync_completed' ? 100 : 0);
-				if (accountId) {
-					loadConversations(accountId, 1, false, { force: true }).catch(() => { });
+				const isManualSync = event.payload?.stage === 'manual';
+				// Manual sync UI state is owned by syncAccount(); clearing here races
+				// auto-resync when the list is still empty mid-reload.
+				if (!isManualSync) {
+					setSyncingInbox(false);
+					setSyncProgress(event.event === 'sync_completed' ? 100 : 0);
+				} else if (event.event === 'sync_completed') {
+					setSyncProgress(100);
 				}
-				if (event.event === 'sync_failed') {
+				// Manual sync already force-reloads inside syncAccount(). A second
+				// force reload here cancels that in-flight GET and can leave the
+				// list empty (or toast "no chats") even when sync succeeded.
+				if (accountId && !isManualSync && event.event === 'sync_completed') {
+					void loadConversations(accountId, 1, false, { force: true }).catch(
+						() => { },
+					);
+				}
+				if (event.event === 'sync_failed' && !isManualSync) {
 					toast.error(event.payload?.message || 'WhatsApp sync failed');
 				}
 			}
@@ -3991,7 +4350,7 @@ function WhatsAppWorkspaceContent() {
 			});
 			setNewAccountName('');
 			await loadAccounts();
-			setAccountId(data.id);
+			selectWhatsAppAccount(data.id);
 			toast.success('WhatsApp account created');
 		} catch (error) {
 			toast.error(error.response?.data?.message || 'Could not create account');
@@ -4012,13 +4371,9 @@ function WhatsAppWorkspaceContent() {
 		const stuckConnecting =
 			['connecting', 'qr_pending'].includes(status) && statusAgeMs > 90_000;
 
-		if (
-			!force &&
-			!switchingMode &&
-			!stuckConnecting &&
-			['connecting', 'qr_pending', 'connected'].includes(status)
-		) {
-			if (status === 'connected') return;
+		// Only skip when already connected. Allow qr_pending/connecting so refresh
+		// can reuse the in-flight provider / restore the session on the backend.
+		if (!force && !switchingMode && status === 'connected') {
 			toast.success(t.sessionLinkedHint);
 			return;
 		}
@@ -4061,6 +4416,24 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
+	// After refresh, qr_pending/connecting accounts need one connect call so the
+	// backend can bootstrap/reuse the provider instead of staying stuck on QR UI.
+	useEffect(() => {
+		if (!selectedAccount) return;
+		const { id, status } = selectedAccount;
+		if (!['connecting', 'qr_pending'].includes(status)) {
+			if (autoConnectAttemptedRef.current === id) {
+				autoConnectAttemptedRef.current = null;
+			}
+			return;
+		}
+		if (autoConnectAttemptedRef.current === id) return;
+		autoConnectAttemptedRef.current = id;
+		void connectAccount(undefined, { force: false });
+		// Intentionally only re-run when the selected account/status changes.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [selectedAccount?.id, selectedAccount?.status]);
+
 	const disconnectAccount = async logout => {
 		if (!accountId) return;
 		setAccountBusy(true);
@@ -4091,6 +4464,7 @@ function WhatsAppWorkspaceContent() {
 		setSyncProgress(10);
 		try {
 			await api.post(`/whatsapp/accounts/${targetAccountId}/reset-data`);
+			await invalidateConversations(targetAccountId);
 			conversationsCacheRef.current.delete(targetAccountId);
 			statusesCacheRef.current.delete(targetAccountId);
 			messagesCacheRef.current.clear();
@@ -4152,6 +4526,7 @@ function WhatsAppWorkspaceContent() {
 			}
 			accountIdRef.current = null;
 			setAccountId(null);
+			clearStoredWhatsAppAccountId(targetAccountId, currentUserId);
 			setConversationId(null);
 			setConversations([]);
 			setMessages([]);
@@ -4177,15 +4552,28 @@ function WhatsAppWorkspaceContent() {
 		try {
 			// Chats first — this is what fixes inbox order. Contacts are optional/heavy.
 			setSyncProgress(35);
-			await api.post(`/whatsapp/accounts/${accountId}/sync/chats`);
+			const { data: syncResult } = await api.post(
+				`/whatsapp/accounts/${accountId}/sync/chats`,
+			);
 			setSyncProgress(90);
-			await loadConversations(accountId, 1, false, { force: true });
+			await resetConversationsCache(accountId);
+			const listed = await loadConversations(accountId, 1, false, { force: true });
 			setSyncProgress(100);
 			void api.post(`/whatsapp/accounts/${accountId}/sync/contacts`).catch(() => null);
-			if (!silent) toast.success('WhatsApp data synchronized');
+			const syncCount = Number(syncResult?.count) || 0;
+			const listedCount = listed?.cancelled
+				? conversationsRef.current.length
+				: listed?.items?.length || listed?.total || 0;
+			if (!listed?.cancelled && syncCount === 0 && listedCount === 0) {
+				toast.error(
+					'WhatsApp returned no chats. The session may still be syncing — try Sync again shortly.',
+				);
+			} else if (!silent) {
+				toast.success('WhatsApp data synchronized');
+			}
 		} catch (error) {
 			setSyncProgress(0);
-			if (!silent) toast.error(error.response?.data?.message || 'Synchronization failed');
+			toast.error(error.response?.data?.message || 'Synchronization failed');
 			await loadAccounts().catch(() => { });
 		} finally {
 			setSyncingInbox(false);
@@ -5308,22 +5696,55 @@ function WhatsAppWorkspaceContent() {
 		if (!selectedStatus || loadingStory) {
 			storyElapsedRef.current = 0;
 			setStoryProgress(0);
+			if (storyProgressBarRef.current) {
+				storyProgressBarRef.current.style.width = '0%';
+			}
 			return undefined;
 		}
 		if (storyPaused) return undefined;
 		storyStartRef.current = Date.now() - storyElapsedRef.current;
-		const id = setInterval(() => {
+		let frameId = 0;
+		const tick = () => {
 			const elapsed = Date.now() - storyStartRef.current;
 			storyElapsedRef.current = elapsed;
 			const pct = Math.min(100, (elapsed / storyDurationMs) * 100);
 			if (storyProgressBarRef.current) {
 				storyProgressBarRef.current.style.width = `${pct}%`;
 			}
-			if (pct >= 100) goStory(1);
-		}, 50);
-		return () => clearInterval(id);
+			if (pct >= 100) {
+				goStory(1);
+				return;
+			}
+			frameId = window.requestAnimationFrame(tick);
+		};
+		frameId = window.requestAnimationFrame(tick);
+		return () => window.cancelAnimationFrame(frameId);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [selectedStatus?.id, loadingStory, storyDurationMs, storyPaused]);
+
+	useLayoutEffect(() => {
+		const el = storyProgressBarRef.current;
+		if (!el) return;
+		if (!selectedStatus || loadingStory) {
+			el.style.width = '0%';
+			return;
+		}
+		const pct = Math.min(
+			100,
+			(storyElapsedRef.current / Math.max(storyDurationMs, 1)) * 100,
+		);
+		el.style.width = `${pct}%`;
+	}, [selectedStatus?.id, storyIndex, loadingStory, storyPaused, storyDurationMs]);
+
+	useEffect(() => {
+		const video = storyVideoRef.current;
+		if (!video) return;
+		if (storyPaused) {
+			video.pause();
+		} else {
+			video.play().catch(() => undefined);
+		}
+	}, [storyPaused, selectedStatus?.id, statusMediaUrl]);
 
 	const openGroupDetails = async group => {
 		if (!accountId || !group?.id) return;
@@ -5455,7 +5876,7 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
-	const accStatus = selectedAccount ? statusMeta(selectedAccount.status, t) : null;
+	const accStatus = selectedAccount ? statusMeta(selectedAccount.status, t, selectedAccount) : null;
 
 	const reportTotals = report?.totals || {};
 	const reportEntries = Object.entries(reportTotals);
@@ -5470,7 +5891,9 @@ function WhatsAppWorkspaceContent() {
 
 	return (
 		<div
-			className="wa-mobile-shell relative mx-auto flex h-dvh max-w-[1800px] flex-col overflow-hidden bg-[#0b141a] text-slate-900 min-[769px]:h-[calc(100vh-2rem)] min-[769px]:gap-4 min-[769px]:overflow-visible min-[769px]:bg-transparent dark:text-slate-100"
+			className={`wa-mobile-shell relative mx-auto flex h-dvh max-w-[1800px] flex-col overflow-hidden bg-[#0b141a] text-slate-900 min-[769px]:h-[calc(100vh-2rem)] min-[769px]:gap-4 min-[769px]:overflow-visible min-[769px]:bg-transparent dark:text-slate-100 ${locale === 'ar' ? 'font-ar' : ''}`}
+			lang={locale}
+			dir={locale === 'ar' ? 'rtl' : 'ltr'}
 			style={{
 				// Scope this page to WhatsApp's real brand palette — every
 				// var(--color-primary-*) / var(--color-secondary-*) /
@@ -5580,19 +6003,13 @@ function WhatsAppWorkspaceContent() {
 								</span>
 							)}
 							{accounts.length > 0 && (
-								<select
-									aria-label={t.accounts}
-									value={accountId || ''}
-									onChange={event => setAccountId(event.target.value)}
-									className="h-10 rounded-[14px] border-0 bg-white/[0.16] px-3.5 text-sm font-bold text-white outline-none backdrop-blur-md transition-all focus:bg-white/25"
-									style={{ boxShadow: '0 2px 8px -2px rgba(0,0,0,0.12), 0 0 0 1px rgba(255,255,255,0.2) inset' }}
-								>
-									{accounts.map(account => (
-										<option key={account.id} value={account.id} className="text-slate-900">
-											{account.label} · {account.status}
-										</option>
-									))}
-								</select>
+								<AccountSwitcherDropdown
+									accounts={accounts}
+									value={accountId}
+									onChange={selectWhatsAppAccount}
+									labels={t}
+									statusLabels={t}
+								/>
 							)}
 							{selectedAccount && accStatus && (
 								<span
@@ -5684,12 +6101,12 @@ function WhatsAppWorkspaceContent() {
 							)}
 							<div className="mt-5 space-y-2">
 								{accounts.map(account => {
-									const meta = statusMeta(account.status, t);
+									const meta = statusMeta(account.status, t, account);
 									const active = account.id === accountId;
 									return (
 										<button
 											key={account.id}
-											onClick={() => setAccountId(account.id)}
+											onClick={() => selectWhatsAppAccount(account.id)}
 											className={`flex w-full items-center gap-3 rounded-xl border p-3 text-start transition-all ${active
 												? 'border-[var(--color-primary-300)] bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] dark:border-[var(--color-primary-700)] dark:from-slate-800 dark:to-slate-800'
 												: 'border-slate-200 hover:border-slate-300 dark:border-slate-700'
@@ -6050,7 +6467,7 @@ function WhatsAppWorkspaceContent() {
 										</div>
 
 										<div className="flex items-center gap-7 mt-1 mb-3">
-											<svg className='ml-[20px]' width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+											<svg className='ms-[20px]' width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 												<path fillRule="evenodd" clipRule="evenodd" d="M4.09998 6.2C4.09998 5.26112 4.86109 4.5 5.79998 4.5H18.8C19.7389 4.5 20.5 5.26112 20.5 6.2V7.2C20.5 7.88933 20.0897 8.48283 19.5 8.74964V18.2C19.5 19.1389 18.7389 19.9 17.8 19.9H6.80001C5.86112 19.9 5.10001 19.1389 5.10001 18.2V8.74967C4.51028 8.48287 4.09998 7.88935 4.09998 7.2V6.2ZM6.50001 8.9H18.1V18.2C18.1 18.3657 17.9657 18.5 17.8 18.5H6.80001C6.63432 18.5 6.50001 18.3657 6.50001 18.2V8.9ZM5.79998 5.9C5.63429 5.9 5.49998 6.03431 5.49998 6.2V7.2C5.49998 7.36569 5.63429 7.5 5.79998 7.5H18.8C18.9657 7.5 19.1 7.36569 19.1 7.2V6.2C19.1 6.03431 18.9657 5.9 18.8 5.9H5.79998ZM9.20002 10.5001C8.70297 10.5001 8.30002 10.903 8.30002 11.4001C8.30002 11.8972 8.70297 12.3001 9.20002 12.3001H15.4C15.8971 12.3001 16.3 11.8972 16.3 11.4001C16.3 10.903 15.8971 10.5001 15.4 10.5001H9.20002Z" fill="#767779" />
 											</svg>
 											<h1 className=' border-transparent py-2 flex-1 !border-b-[#00000020] border-[.33px] title-whatsapp !text-[18px] !font-[600] flex justify-between '> <span>Archived</span> <span className="text-xs opacity-60" >56</span> </h1>
@@ -6064,7 +6481,7 @@ function WhatsAppWorkspaceContent() {
 											</div>
 											<div className="wa-sync-progress-track relative mt-7 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800">
 												<div
-													className="h-full rounded-full transition-all duration-500"
+													className="absolute inset-y-0 start-0 h-full rounded-full transition-all duration-500"
 													style={{
 														width: `${Math.max(1, Math.min(100, Number(syncProgress) || 1))}%`,
 														background: GRADIENT,
@@ -6073,7 +6490,7 @@ function WhatsAppWorkspaceContent() {
 												<span
 													className="wa-sync-progress-badge"
 													style={{
-														left: `${Math.max(6, Math.min(94, Number(syncProgress) || 1))}%`,
+														insetInlineStart: `${Math.max(6, Math.min(94, Number(syncProgress) || 1))}%`,
 													}}
 												>
 													{Math.max(1, Math.min(100, Number(syncProgress) || 1))}%
@@ -6133,7 +6550,7 @@ function WhatsAppWorkspaceContent() {
 									) : (
 										<>
 
-											<img src='/meta.png' className="md:hidden w-[60px] fixed bottom-[90px] z-[100] right-[10px]" />
+											<img src='/meta.png' className="md:hidden w-[60px] fixed bottom-[90px] z-[100] end-[10px]" />
 
 											{filteredConversations.map(conversation => {
 												const title = conversationTitle(conversation);
@@ -6344,9 +6761,9 @@ function WhatsAppWorkspaceContent() {
 									<header className="wa-chat-toolbar flex items-center justify-between border-b border-slate-100 p-3 dark:border-slate-800">
 										<div className="flex min-w-0 items-center gap-2.5">
 											<button type="button" aria-label="Back to chats" onClick={() => setConversationId(null)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white min-[769px]:hidden">
-												<ChevronLeft size={27} />
+												{locale === 'ar' ? <ChevronRight size={27} /> : <ChevronLeft size={27} />}
 											</button>
-											<span className=" mr-[15px] wa-chat-back-count hidden min-[769px]:hidden">10</span>
+											<span className=" me-[15px] wa-chat-back-count hidden min-[769px]:hidden">10</span>
 											<div className="wa-chat-avatar-ring shrink-0">
 												<Avatar
 													label={conversationTitle(selectedConversation)}
@@ -6807,6 +7224,7 @@ function WhatsAppWorkspaceContent() {
 											aiSuggestionsVisible
 										}
 										settingsEnabled={Boolean(whatsappAi.settings?.enabled)}
+										messagesReady={!loadingMessages}
 										enabling={whatsappAi.settingsSaving}
 										loading={whatsappAi.suggestionsLoading}
 										error={whatsappAi.suggestionsError}
@@ -7192,7 +7610,7 @@ function WhatsAppWorkspaceContent() {
 									}
 								/>
 							) : (
-								<div className="grid grid-cols-[repeat(auto-fill,minmax(84px,1fr))] gap-x-3 gap-y-5">
+								<div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-x-4 gap-y-6">
 									{groupedStatuses.map(story => {
 										const name =
 											story.latest.contactName ||
@@ -7200,25 +7618,24 @@ function WhatsAppWorkspaceContent() {
 												? selectedAccount?.label || t.accounts
 												: String(story.senderWaId).replace(/@.*$/, ''));
 										const viewed = story.isViewed;
-										const readCount = story.items.length - story.unviewedCount;
 										return (
 											<button
 												type="button"
 												key={story.senderWaId}
 												onClick={() => openStoryGroup(story)}
-												className="group text-center transition-transform hover:-translate-y-0.5"
+												className="group cursor-pointer text-center transition-transform hover:-translate-y-0.5"
 											>
-												<div className="relative mx-auto h-20 w-20 transition-transform duration-200 group-hover:scale-105">
+												<div className="relative mx-auto h-24 w-24 transition-transform duration-200 group-hover:scale-105">
 													<StoryRing
-														size={80}
-														strokeWidth={3}
+														size={96}
+														strokeWidth={3.5}
 														segmentsViewed={story.items.map(item => viewedStatusIds.has(item.id))}
 														idSuffix={String(story.senderWaId).replace(/[^a-zA-Z0-9_-]/g, '_')}
 													/>
-													<div className="absolute inset-[6px] grid place-items-center overflow-hidden rounded-full border-2 border-white bg-white shadow-md dark:border-slate-900 dark:bg-slate-900">
+													<div className="absolute inset-[7px] grid place-items-center overflow-hidden rounded-full border-2 border-white bg-white shadow-md dark:border-slate-900 dark:bg-slate-900">
 														<StoryThumbnail
 															label={name}
-															size={16}
+															size={20}
 															viewed={viewed}
 															thumbUrl={storyThumbs[story.latest.id]?.url}
 															thumbType={storyThumbs[story.latest.id]?.type}
@@ -7229,15 +7646,6 @@ function WhatsAppWorkspaceContent() {
 													{name}
 												</p>
 												<p className="text-[10px] text-slate-400">{relativeTime(story.latest.publishedAt, relativeTimeNow, locale)}</p>
-												<span
-													className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${viewed
-														? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-														: 'text-white'
-														}`}
-													style={viewed ? undefined : { background: GRADIENT }}
-												>
-													{readCount}/{story.items.length}
-												</span>
 											</button>
 										);
 									})}
@@ -7250,37 +7658,35 @@ function WhatsAppWorkspaceContent() {
 								role="dialog"
 								aria-modal="true"
 								aria-label={t.storyFrom}
-								className="fixed inset-0 z-50 grid place-items-center bg-slate-950/85 p-4 backdrop-blur-sm"
+								className="fixed inset-0 z-50 grid cursor-default place-items-center bg-slate-950/85 p-3 backdrop-blur-sm sm:p-5"
 								onClick={closeStory}
 								onKeyDown={event => {
 									if (event.key === 'Escape') closeStory();
 								}}
 							>
 								<div
-									className="relative flex h-[min(760px,92vh)] w-full max-w-md flex-col overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl"
+									className="relative flex h-[min(920px,96vh)] w-full max-w-xl cursor-default flex-col overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl"
 									onClick={event => event.stopPropagation()}
-									onMouseEnter={() => setStoryPaused(true)}
-									onMouseLeave={() => setStoryPaused(false)}
 								>
-									<div className="absolute inset-x-3 top-3 z-10 flex gap-1">
+									<div className="absolute inset-x-3 top-3 z-10 flex gap-1.5">
 										{(storyQueue.length ? storyQueue : [selectedStatus]).map((item, index) => (
-											<div key={item.id || index} className="h-1 flex-1 overflow-hidden rounded-full bg-white/25">
+											<div key={item.id || index} className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/25">
 												<div
 													ref={index === storyIndex ? storyProgressBarRef : undefined}
-													className="h-full bg-white"
+													className="h-full bg-white will-change-[width]"
 													style={{
 														width:
 															index < storyIndex
 																? '100%'
-																: index === storyIndex
-																	? `${storyProgress}%`
-																	: '0%',
+																: index > storyIndex
+																	? '0%'
+																	: undefined,
 													}}
 												/>
 											</div>
 										))}
 									</div>
-									<div className="absolute inset-x-0 top-5 z-40 flex items-center gap-3 px-4 py-3 pointer-events-none">
+									<div className="absolute inset-x-0 top-5 z-40 flex items-center gap-2 px-4 py-3 pointer-events-none sm:gap-3">
 										<div className="pointer-events-auto flex min-w-0 flex-1 items-center gap-3">
 											<Avatar label={selectedStatus.contactName || selectedStatus.senderWaId} size={10} />
 											<div className="min-w-0 flex-1">
@@ -7295,10 +7701,34 @@ function WhatsAppWorkspaceContent() {
 											onClick={event => {
 												event.preventDefault();
 												event.stopPropagation();
+												setStoryPaused(current => !current);
+											}}
+											className="pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full bg-black/40 transition-colors hover:bg-black/60"
+											aria-label={
+												storyPaused
+													? locale === 'ar'
+														? 'تشغيل القصة'
+														: 'Play story'
+													: locale === 'ar'
+														? 'إيقاف القصة'
+														: 'Pause story'
+											}
+										>
+											{storyPaused ? (
+												<Play size={18} className="ms-0.5" fill="currentColor" />
+											) : (
+												<Pause size={18} fill="currentColor" />
+											)}
+										</button>
+										<button
+											type="button"
+											onClick={event => {
+												event.preventDefault();
+												event.stopPropagation();
 												closeStory();
 											}}
-											className="pointer-events-auto relative z-50 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/40 transition-colors hover:bg-black/60"
-											aria-label="Close story"
+											className="pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full bg-black/40 transition-colors hover:bg-black/60"
+											aria-label={locale === 'ar' ? 'إغلاق القصة' : 'Close story'}
 										>
 											<X size={19} />
 										</button>
@@ -7307,11 +7737,11 @@ function WhatsAppWorkspaceContent() {
 										type="button"
 										aria-label="Previous story"
 										onClick={() => goStory(-1)}
-										className="absolute bottom-0 left-0 top-24 z-20 flex w-1/3 cursor-w-resize items-center justify-start bg-transparent p-3"
+										className="absolute bottom-0 start-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-start bg-transparent p-3"
 									>
 										{storyQueue.length > 1 && storyIndex > 0 && (
-											<span className="grid h-9 w-9 place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50">
-												<ChevronLeft size={20} />
+											<span className="grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50">
+												{locale === 'ar' ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
 											</span>
 										)}
 									</button>
@@ -7319,11 +7749,11 @@ function WhatsAppWorkspaceContent() {
 										type="button"
 										aria-label="Next story"
 										onClick={() => goStory(1)}
-										className="absolute bottom-0 right-0 top-24 z-20 flex w-1/3 cursor-e-resize items-center justify-end bg-transparent p-3"
+										className="absolute bottom-0 end-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-end bg-transparent p-3"
 									>
 										{storyQueue.length > 1 && storyIndex < storyQueue.length - 1 && (
-											<span className="grid h-9 w-9 place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50">
-												<ChevronRight size={20} />
+											<span className="grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50">
+												{locale === 'ar' ? <ChevronLeft size={22} /> : <ChevronRight size={22} />}
 											</span>
 										)}
 									</button>
@@ -7332,9 +7762,11 @@ function WhatsAppWorkspaceContent() {
 											<Loader2 size={32} className="animate-spin" />
 										) : String(selectedStatus.type).toLowerCase().includes('video') && statusMediaUrl ? (
 											<video
+												ref={storyVideoRef}
 												src={statusMediaUrl}
-												controls
+												controls={false}
 												autoPlay
+												playsInline
 												onLoadedMetadata={event => {
 													if (event.target.duration) setStoryDurationMs(event.target.duration * 1000);
 												}}
@@ -7342,7 +7774,7 @@ function WhatsAppWorkspaceContent() {
 													setStatusMediaUrl(null);
 													toast.error(t.mediaUnavailable);
 												}}
-												className="pointer-events-auto max-h-full w-full object-contain"
+												className="max-h-full w-full object-contain"
 											/>
 										) : statusMediaUrl ? (
 											<img
@@ -7356,7 +7788,7 @@ function WhatsAppWorkspaceContent() {
 											/>
 										) : (
 											<div className={`grid h-full w-full place-items-center bg-gradient-to-br ${gradientFor(selectedStatus.providerStatusId)}`}>
-												<p className="max-w-sm whitespace-pre-wrap px-8 text-center text-2xl font-black leading-relaxed">
+												<p className="max-w-md whitespace-pre-wrap px-8 text-center text-3xl font-black leading-relaxed">
 													{selectedStatus.caption || t.mediaUnavailable}
 												</p>
 											</div>

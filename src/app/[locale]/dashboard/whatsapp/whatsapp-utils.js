@@ -106,7 +106,7 @@ export function messageTextPresentation(text) {
 	const hasLatin = /[A-Za-z]/.test(value);
 	const arabicStyle = {
 		fontFamily:
-			'var(--font-arabic), "Tajawal", "Noto Sans Arabic", Tahoma, Arial, sans-serif',
+			'var(--font-arabic), "Tajawal", "Cairo", "Noto Sans Arabic", Tahoma, Arial, sans-serif',
 		fontWeight: 500,
 		fontFeatureSettings: '"kern" 1, "liga" 1',
 		lineHeight: 1.85,
@@ -122,13 +122,13 @@ export function messageTextPresentation(text) {
 		return {
 			dir: 'rtl',
 			lang: 'ar',
-			style: { ...arabicStyle, textAlign: 'right' },
+			style: { ...arabicStyle, textAlign: 'start' },
 		};
 	}
 	return {
 		dir: 'ltr',
 		lang: 'en',
-		style: { textAlign: 'left' },
+		style: { textAlign: 'start' },
 	};
 }
 
