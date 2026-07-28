@@ -236,6 +236,8 @@ const translations = {
 		connectToSeeChats: 'Connect this account to view conversations',
 		connectToSeeStories: 'Connect this account to view stories',
 		syncingChats: 'Syncing chats from WhatsApp…',
+		syncingChatsFetching:
+			'Loading chat list from your phone — keep WhatsApp open. This step can take 1–2 minutes.',
 		syncProgress: 'Sync progress',
 		selectConversation: 'Select a conversation to start',
 		noMessagesYet: 'No messages in this conversation yet',
@@ -323,6 +325,7 @@ const translations = {
 		restartConnectionHint:
 			'Connection looks stuck. Click Restart to close the old session and try again.',
 		qrPending: 'Waiting for scan',
+		generatingQr: 'Generating QR code…',
 		errorStatus: 'Connection error',
 		provider: 'Provider',
 		status: 'Status',
@@ -431,6 +434,8 @@ const translations = {
 		connectToSeeChats: 'اتصل بالحساب لعرض المحادثات',
 		connectToSeeStories: 'اتصل بالحساب لعرض الحالات',
 		syncingChats: 'جارِ مزامنة المحادثات من واتساب…',
+		syncingChatsFetching:
+			'جارِ تحميل قائمة المحادثات من هاتفك — أبقِ واتساب مفتوحاً. قد تستغرق هذه الخطوة 1–2 دقيقة.',
 		syncProgress: 'تقدم المزامنة',
 		selectConversation: 'اختر محادثة للبدء',
 		noMessagesYet: 'لا توجد رسائل في هذه المحادثة بعد',
@@ -518,6 +523,7 @@ const translations = {
 		restartConnectionHint:
 			'يبدو أن الاتصال عالق. اضغط إعادة التشغيل لإغلاق الجلسة القديمة والمحاولة من جديد.',
 		qrPending: 'بانتظار المسح',
+		generatingQr: 'جارِ إنشاء رمز QR…',
 		errorStatus: 'خطأ في الاتصال',
 		provider: 'المزود',
 		status: 'الحالة',
@@ -2735,6 +2741,7 @@ function WhatsAppWorkspaceContent() {
 	const [conversationScope, setConversationScope] = useState('all');
 	const [syncingInbox, setSyncingInbox] = useState(false);
 	const [syncProgress, setSyncProgress] = useState(0);
+	const [syncStage, setSyncStage] = useState('');
 	const [conversationId, setConversationId] = useState(null);
 	const [messages, setMessages] = useState([]);
 	const [groups, setGroups] = useState([]);
@@ -2877,6 +2884,7 @@ function WhatsAppWorkspaceContent() {
 	const discardRecordingRef = useRef(false);
 	const statusMediaUrlRef = useRef(null);
 	const autoConnectAttemptedRef = useRef(null);
+	const syncCooldownUntilRef = useRef(0);
 
 	const scrollMessagesToBottom = useCallback((behavior = 'auto') => {
 		const scroll = () => {
@@ -3765,7 +3773,7 @@ function WhatsAppWorkspaceContent() {
 					const providerRefreshRequired =
 						force || !Array.isArray(data?.items) || data.items.length === 0;
 					void refreshStatusesFromProvider(targetAccountId, {
-						silent: !providerRefreshRequired && silent,
+						silent: true,
 						force: providerRefreshRequired,
 					});
 				}
@@ -4266,10 +4274,16 @@ function WhatsAppWorkspaceContent() {
 			if (event.event === 'qr') setQr(event.payload.qr);
 			if (event.event === 'sync_started') {
 				setSyncingInbox(true);
-				setSyncProgress(Number(event.payload?.progress) || 10);
+				setSyncStage(String(event.payload?.stage || 'starting'));
+				setSyncProgress(prev =>
+					Math.max(prev, Number(event.payload?.progress) || 10),
+				);
 			}
 			if (event.event === 'sync_progress') {
 				setSyncingInbox(true);
+				if (event.payload?.stage) {
+					setSyncStage(String(event.payload.stage));
+				}
 				setSyncProgress(prev =>
 					Math.max(prev, Number(event.payload?.progress) || prev || 20),
 				);
@@ -4281,8 +4295,10 @@ function WhatsAppWorkspaceContent() {
 				if (!isManualSync) {
 					setSyncingInbox(false);
 					setSyncProgress(event.event === 'sync_completed' ? 100 : 0);
+					setSyncStage('');
 				} else if (event.event === 'sync_completed') {
 					setSyncProgress(100);
+					setSyncStage('');
 				}
 				// Manual sync already force-reloads inside syncAccount(). A second
 				// force reload here cancels that in-flight GET and can leave the
@@ -4293,7 +4309,12 @@ function WhatsAppWorkspaceContent() {
 					);
 				}
 				if (event.event === 'sync_failed' && !isManualSync) {
-					toast.error(event.payload?.message || 'WhatsApp sync failed');
+					const message = String(event.payload?.message || '');
+					if (
+						!/not ready|not connected|listChats|syncing|chat store/i.test(message)
+					) {
+						toast.error(message || 'WhatsApp sync failed');
+					}
 				}
 			}
 			if (['connection', 'connection_error'].includes(event.event)) {
@@ -4370,6 +4391,7 @@ function WhatsAppWorkspaceContent() {
 			: Number.POSITIVE_INFINITY;
 		const stuckConnecting =
 			['connecting', 'qr_pending'].includes(status) && statusAgeMs > 90_000;
+		const willResetSession = force || stuckConnecting || status === 'error';
 
 		// Only skip when already connected. Allow qr_pending/connecting so refresh
 		// can reuse the in-flight provider / restore the session on the backend.
@@ -4379,11 +4401,13 @@ function WhatsAppWorkspaceContent() {
 		}
 
 		setAccountBusy(true);
-		setQr(null);
-		setPairingCode(null);
+		if (willResetSession || switchingMode) {
+			setQr(null);
+			setPairingCode(null);
+		}
 		try {
 			// Clear a stuck in-memory session before starting a fresh connect.
-			if (force || stuckConnecting || status === 'error') {
+			if (willResetSession) {
 				await api
 					.post(`/whatsapp/accounts/${accountId}/disconnect`)
 					.catch(() => undefined);
@@ -4392,8 +4416,8 @@ function WhatsAppWorkspaceContent() {
 				`/whatsapp/accounts/${accountId}/connect`,
 				phoneNumber ? { phoneNumber } : {},
 			);
-			setQr(data.qr || null);
-			setPairingCode(data.pairingCode || null);
+			if (data.qr) setQr(data.qr);
+			if (data.pairingCode) setPairingCode(data.pairingCode);
 			await loadAccounts();
 			if (data.status === 'connected') {
 				toast.success(t.connectStarted);
@@ -4401,7 +4425,7 @@ function WhatsAppWorkspaceContent() {
 				toast.success(t.pairingCodeReady || 'Enter this code on your phone');
 			} else if (data.qr) {
 				toast.success(t.qrPending || 'Scan the QR code');
-			} else {
+			} else if (willResetSession || switchingMode) {
 				toast.success(t.connectStillSyncing || t.syncingPhone);
 			}
 		} catch (error) {
@@ -4416,8 +4440,8 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
-	// After refresh, qr_pending/connecting accounts need one connect call so the
-	// backend can bootstrap/reuse the provider instead of staying stuck on QR UI.
+	// After refresh, qr_pending/connecting accounts need the backend session
+	// bootstrapped without wiping an already-visible QR code.
 	useEffect(() => {
 		if (!selectedAccount) return;
 		const { id, status } = selectedAccount;
@@ -4429,7 +4453,25 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (autoConnectAttemptedRef.current === id) return;
 		autoConnectAttemptedRef.current = id;
-		void connectAccount(undefined, { force: false });
+
+		const bootstrapSession = async () => {
+			try {
+				const { data: qrData } = await api.get(`/whatsapp/accounts/${id}/qr`);
+				if (qrData.qr) setQr(qrData.qr);
+				if (qrData.pairingCode) setPairingCode(qrData.pairingCode);
+				if (qrData.qr || qrData.pairingCode) {
+					await loadAccounts();
+					return;
+				}
+				const { data } = await api.post(`/whatsapp/accounts/${id}/connect`, {});
+				if (data.qr) setQr(data.qr);
+				if (data.pairingCode) setPairingCode(data.pairingCode);
+				await loadAccounts();
+			} catch {
+				await loadAccounts().catch(() => { });
+			}
+		};
+		void bootstrapSession();
 		// Intentionally only re-run when the selected account/status changes.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [selectedAccount?.id, selectedAccount?.status]);
@@ -4548,14 +4590,16 @@ function WhatsAppWorkspaceContent() {
 		if (!accountId) return;
 		if (!silent) setAccountBusy(true);
 		setSyncingInbox(true);
+		setSyncStage('manual');
 		setSyncProgress(15);
 		try {
 			// Chats first — this is what fixes inbox order. Contacts are optional/heavy.
-			setSyncProgress(35);
+			setSyncProgress(20);
 			const { data: syncResult } = await api.post(
 				`/whatsapp/accounts/${accountId}/sync/chats`,
 			);
 			setSyncProgress(90);
+			setSyncStage('saving');
 			await resetConversationsCache(accountId);
 			const listed = await loadConversations(accountId, 1, false, { force: true });
 			setSyncProgress(100);
@@ -4573,10 +4617,13 @@ function WhatsAppWorkspaceContent() {
 			}
 		} catch (error) {
 			setSyncProgress(0);
+			setSyncStage('');
+			syncCooldownUntilRef.current = Date.now() + 60_000;
 			toast.error(error.response?.data?.message || 'Synchronization failed');
 			await loadAccounts().catch(() => { });
 		} finally {
 			setSyncingInbox(false);
+			setSyncStage('');
 			if (!silent) setAccountBusy(false);
 		}
 	};
@@ -4586,6 +4633,7 @@ function WhatsAppWorkspaceContent() {
 		if (selectedAccount.status !== 'connected') return;
 		if (!canUseWhatsApp) return;
 		if (conversations.length > 0 || syncingInbox || accountBusy) return;
+		if (Date.now() < syncCooldownUntilRef.current) return;
 		syncAccount(true).catch(() => { });
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [activeTab, accountId, selectedAccount?.status, conversations.length, canUseWhatsApp]);
@@ -5486,7 +5534,10 @@ function WhatsAppWorkspaceContent() {
 			accountIdRef.current === targetAccountId &&
 			tabRequestId.current === requestId;
 		if (tab === 'statuses') {
-			if (!force) return;
+			if (!force) {
+				void loadStatuses(targetAccountId, { silent: true });
+				return;
+			}
 			setTabLoading(true);
 			setTabError('');
 			try {
@@ -6326,6 +6377,15 @@ function WhatsAppWorkspaceContent() {
 												)}
 											</div>
 										)}
+										{linkMode === 'qr' &&
+											!qr &&
+											canManageWhatsApp &&
+											['connecting', 'qr_pending'].includes(selectedAccount.status) && (
+												<div className="mx-auto flex max-w-sm items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800">
+													<Loader2 size={16} className="animate-spin text-[var(--color-primary-500)]" />
+													{t.generatingQr}
+												</div>
+											)}
 										{linkMode === 'qr' && qr && canManageWhatsApp && (
 											<div className="mx-auto max-w-sm text-center">
 												<div className="mb-4 flex items-center justify-center gap-2">
@@ -6540,8 +6600,11 @@ function WhatsAppWorkspaceContent() {
 											title={
 												!isAccountConnected && !demo.settings.enabled
 													? t.connectToSeeChats
-													: syncingInbox
-														? t.syncingChats
+												: syncingInbox
+													? syncStage === 'fetching_chats' ||
+														(syncProgress >= 25 && syncProgress <= 45)
+														? t.syncingChatsFetching
+														: t.syncingChats
 														: conversationScope === 'assigned'
 															? t.noAssignedConversations
 															: t.noConversations
