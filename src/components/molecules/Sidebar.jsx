@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import api from '@/utils/axios';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Zap, TrendingUp, BookOpen, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Zap, TrendingUp, BookOpen, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar } from 'lucide-react';
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
@@ -226,6 +226,9 @@ export const ITEM_META = {
   transcript: { id: 'transcript', nameKey: 'transcript', href: '/dashboard/transcript', icon: AudioLines, descKey: 'descriptions.transcript', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
   calorieCalculator: { id: 'calorieCalculator', nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator, descKey: 'descriptions.calorieCalculator', group: 'tools', defaultVisible: true, required: false },
   aiFree: { id: 'aiFree', nameKey: 'aiFree', href: '/dashboard/ai-free', icon: BrainCircuit, descKey: 'descriptions.aiFree', group: 'tools', defaultVisible: true, required: false },
+  phoneCheck: { id: 'phoneCheck', nameKey: 'phoneCheck', href: '/dashboard/phone-check', icon: ShieldAlert, descKey: 'descriptions.phoneCheck', group: 'tools', defaultVisible: true, required: false },
+  fitnessLeads: { id: 'fitnessLeads', nameKey: 'fitnessLeads', href: '/dashboard/fitness-leads', icon: Radar, descKey: 'descriptions.fitnessLeads', group: 'tools', defaultVisible: true, required: false },
+  metaWhatsApp: { id: 'metaWhatsApp', nameKey: 'metaWhatsApp', href: '/dashboard/meta-whatsapp', icon: MessageCircle, descKey: 'descriptions.metaWhatsApp', group: 'tools', defaultVisible: true, required: false },
   notifications: { id: 'notifications', nameKey: 'notifications', href: '/dashboard/notifications', icon: Bell, descKey: 'descriptions.notifications', group: 'workspace', defaultVisible: true, required: false },
   billing: { id: 'billing', nameKey: 'billing', href: '/dashboard/billing', icon: CreditCard, descKey: 'descriptions.billing', group: 'finance', defaultVisible: false, required: false, marketplace: true },
   money: { id: 'money', nameKey: 'money', href: '/money', icon: Wallet, descKey: 'descriptions.money', group: 'finance', defaultVisible: false, required: false, marketplace: true },
@@ -253,7 +256,7 @@ export const NAV = [
   {
     role: 'admin',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.whatsapp }, { ...ITEM_META.notifications }, { ...ITEM_META.calorieCalculator }, { ...ITEM_META.aiFree }],
+    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.whatsapp }, { ...ITEM_META.notifications }, { ...ITEM_META.calorieCalculator }, { ...ITEM_META.aiFree }, { ...ITEM_META.phoneCheck }, { ...ITEM_META.fitnessLeads }, { ...ITEM_META.metaWhatsApp }],
   },
   {
     role: 'admin',
@@ -278,7 +281,7 @@ export const NAV = [
   {
     role: 'client',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.calorieCalculator }, { ...ITEM_META.aiFree }, { ...ITEM_META.money }, { ...ITEM_META.profile_client }],
+    items: [{ ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.calorieCalculator }, { ...ITEM_META.aiFree }, { ...ITEM_META.phoneCheck }, { ...ITEM_META.money }, { ...ITEM_META.profile_client }],
   },
   {
     role: 'coach',
@@ -293,7 +296,7 @@ export const NAV = [
   {
     role: 'coach',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.whatsapp }, { ...ITEM_META.notifications }, { ...ITEM_META.calorieCalculator }, { ...ITEM_META.aiFree }],
+    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.whatsapp }, { ...ITEM_META.notifications }, { ...ITEM_META.calorieCalculator }, { ...ITEM_META.aiFree }, { ...ITEM_META.phoneCheck }, { ...ITEM_META.fitnessLeads }, { ...ITEM_META.metaWhatsApp }],
   },
   {
     role: 'coach',
@@ -313,7 +316,7 @@ export const NAV = [
   {
     role: 'super_admin',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.whatsapp }, { ...ITEM_META.aiFree }],
+    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.whatsapp }, { ...ITEM_META.aiFree }, { ...ITEM_META.phoneCheck }, { ...ITEM_META.fitnessLeads }, { ...ITEM_META.metaWhatsApp }],
   },
   {
     role: 'super_admin',
@@ -2472,7 +2475,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
         )}
       </motion.button>
       <aside
-      className='sidebar-shell hidden lg:flex flex-col shrink-0 ltr:ml-[16px] rtl:mr-[16px]'
+      className='sidebar-shell hidden lg:flex flex-col shrink-0 ltr:ml-4 rtl:mr-4 ltr:mr-6 rtl:ml-6'
       style={{
         width: collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W,
         height: `calc(100vh - ${SIDEBAR_MARGIN + SIDEBAR_MARGIN_BOTTOM}px)`,
@@ -2483,8 +2486,10 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
         overflow: 'hidden',
         borderRadius: SIDEBAR_RADIUS,
         background: P.bg,
-        border: `1px solid ${P.border}`,
-        boxShadow: '0 12px 36px rgba(15,23,42,0.09), 0 2px 10px rgba(15,23,42,0.05)',
+        border: '1px solid #D1D7DB',
+        boxShadow:
+          '0 1px 2px rgba(11, 20, 26, 0.06), 0 8px 24px rgba(11, 20, 26, 0.10), 0 24px 48px rgba(11, 20, 26, 0.08)',
+        outline: '1px solid rgba(0,0,0,0.04)',
         transition: 'width .28s cubic-bezier(0.22,1,0.36,1)',
         fontFamily: isRTL ? undefined : SIDEBAR_FONT_LTR,
       }}>

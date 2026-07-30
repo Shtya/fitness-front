@@ -1,20 +1,76 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { useLocale } from 'next-intl';
 import {
 	ChevronLeft, ChevronRight, LayoutDashboard, LogIn, Dumbbell,
-	Utensils, User, BookOpen, Calculator, CalendarDays, Sparkles
+	Utensils, User, BookOpen, Calculator, CalendarDays
 } from 'lucide-react';
-import { SectionHeader } from './page';
+
+function SliderHeader({ n, label, title, titleGrad, desc, dark = false }) {
+	return (
+		<div className="mb-10 sm:mb-12 text-center" data-reveal>
+			<p className="text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'var(--color-primary-700, #1d4ed8)' }}>
+				{n} — {label}
+			</p>
+			<h2 className="mt-3 font-[family-name:var(--font-arabic)] text-2xl font-extrabold text-slate-900 sm:text-3xl">
+				{title}{' '}
+				<span
+					style={{
+						background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+						WebkitBackgroundClip: 'text',
+						backgroundClip: 'text',
+						color: 'transparent',
+					}}
+				>
+					{titleGrad}
+				</span>
+			</h2>
+			{desc && <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-600">{desc}</p>}
+		</div>
+	);
+}
 
 const SCREENS = [
-	{ id: 3, src: '/screens/mobile/workouts.png', label: 'التمارين', labelEn: 'Workouts', desc: 'خطط تدريبية يومية مع مؤقت ذكي وتسجيل الأداء', icon: Dumbbell, tag: 'Client' },
-	{ id: 1, src: '/screens/mobile/dashboard.png', label: 'لوحة التحكم', labelEn: 'Dashboard', desc: 'نظرة شاملة على أداء المنصة والمؤشرات الرئيسية', icon: LayoutDashboard, tag: 'Admin' },
-	{ id: 4, src: '/screens/mobile/nutrition.png', label: 'التغذية', labelEn: 'Nutrition', desc: 'وجبات يومية بالسعرات والقيم الغذائية الكاملة', icon: Utensils, tag: 'Client' },
-	{ id: 5, src: '/screens/mobile/profile.png', label: 'الملف الشخصي', labelEn: 'Profile', desc: 'بيانات المستخدم والقياسات ومتابعة التقدم', icon: User, tag: 'Client' },
-	{ id: 6, src: '/screens/mobile/recipes.png', label: 'الوصفات', labelEn: 'Recipes', desc: 'مكتبة وصفات غذائية مصنفة مع طريقة التحضير', icon: BookOpen, tag: 'Client' },
-	{ id: 7, src: '/screens/mobile/calculator.png', label: 'الحاسبة', labelEn: 'Calculator', desc: 'حاسبة السعرات والاحتياج اليومي بدقة عالية', icon: Calculator, tag: 'Tools' },
-	{ id: 8, src: '/screens/mobile/calendar.png', label: 'التقويم', labelEn: 'Calendar', desc: 'جدول المواعيد والمهام اليومية المنظمة', icon: CalendarDays, tag: 'Tools' },
-	{ id: 2, src: '/screens/mobile/login.png', label: 'تسجيل الدخول', labelEn: 'Login', desc: 'واجهة دخول احترافية وآمنة لجميع المستخدمين', icon: LogIn, tag: 'Auth' },
+	{
+		id: 3, src: '/screens/mobile/workouts.png', icon: Dumbbell, tag: 'Client',
+		ar: { label: 'تماريني', labelEn: 'Workouts', desc: 'خطة يومية مع تسجيل أداء ومؤقت راحة' },
+		en: { label: 'My Workouts', labelEn: 'Workouts', desc: 'Daily plan with logging and rest timer' },
+	},
+	{
+		id: 1, src: '/screens/mobile/dashboard.png', icon: LayoutDashboard, tag: 'Client',
+		ar: { label: 'إحصائياتي', labelEn: 'My Stats', desc: 'نظرة العميل على الالتزام والتقدم' },
+		en: { label: 'My Stats', labelEn: 'Stats', desc: 'Client view of adherence and progress' },
+	},
+	{
+		id: 4, src: '/screens/mobile/nutrition.png', icon: Utensils, tag: 'Client',
+		ar: { label: 'تغذيتي', labelEn: 'Nutrition', desc: 'وجبات يومية وماكروز وتسجيل التزام' },
+		en: { label: 'My Nutrition', labelEn: 'Nutrition', desc: 'Daily meals, macros, and adherence logging' },
+	},
+	{
+		id: 5, src: '/screens/mobile/profile.png', icon: User, tag: 'Client',
+		ar: { label: 'ملفي', labelEn: 'Profile', desc: 'بيانات وقياسات واشتراك المدرب' },
+		en: { label: 'My Profile', labelEn: 'Profile', desc: 'Details, measurements, and coach subscription' },
+	},
+	{
+		id: 6, src: '/screens/mobile/recipes.png', icon: BookOpen, tag: 'Client',
+		ar: { label: 'الوصفات', labelEn: 'Recipes', desc: 'تصفح ووصفات مفضلة تناسب الخطة' },
+		en: { label: 'Recipes', labelEn: 'Recipes', desc: 'Browse favorites that fit the plan' },
+	},
+	{
+		id: 7, src: '/screens/mobile/calculator.png', icon: Calculator, tag: 'Tools',
+		ar: { label: 'الحاسبة', labelEn: 'Calculator', desc: 'احتياج يومي وماكروز ووجبات' },
+		en: { label: 'Calculator', labelEn: 'Calculator', desc: 'Daily needs, macros, and meals' },
+	},
+	{
+		id: 8, src: '/screens/mobile/calendar.png', icon: CalendarDays, tag: 'Tools',
+		ar: { label: 'التقويم', labelEn: 'Calendar', desc: 'عادات ومواعيد ومؤقت التزام' },
+		en: { label: 'Calendar', labelEn: 'Calendar', desc: 'Habits, events, and commitment timer' },
+	},
+	{
+		id: 2, src: '/screens/mobile/login.png', icon: LogIn, tag: 'Auth',
+		ar: { label: 'تسجيل الدخول', labelEn: 'Login', desc: 'اكتشاف المؤسسة ثم الدخول بهويتها' },
+		en: { label: 'Login', labelEn: 'Login', desc: 'Discover the org, then sign in with branding' },
+	},
 ];
 
 const CSS = `
@@ -22,7 +78,7 @@ const CSS = `
 
 .msl-root {
   direction:rtl;  
-  background:#020817; min-height:100vh;
+  background:color-mix(in srgb, var(--color-primary-50, #eff6ff) 70%, #ffffff); min-height:100vh;
   position:relative; overflow:hidden;
   display:flex; align-items:center; justify-content:center;
   padding:60px 20px;
@@ -30,8 +86,8 @@ const CSS = `
 .msl-root::before {
   content:''; position:absolute; inset:0; pointer-events:none;
   background-image:
-    linear-gradient(rgba(59,130,246,.04) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(59,130,246,.04) 1px,transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--color-primary-200, #bfdbfe) 40%, transparent) 1px,transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-primary-200, #bfdbfe) 40%, transparent) 1px,transparent 1px);
   background-size:56px 56px;
 }
 .msl-orb { position:absolute; border-radius:50%; filter:blur(70px); pointer-events:none; }
@@ -43,7 +99,7 @@ const CSS = `
 .msl-ring-b { animation:mslSpinR 18s linear infinite; }
 @keyframes mslGrad { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
 .msl-grad {
-  background:linear-gradient(270deg,#60a5fa,#38bdf8,#93c5fd,#3b82f6);
+  background:linear-gradient(270deg,var(--color-primary-500, var(--color-primary-500, #3b82f6)),#38bdf8,#93c5fd,var(--color-primary-500, #3b82f6));
   background-size:300% 300%; animation:mslGrad 5s ease infinite;
   -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
 }
@@ -59,7 +115,7 @@ const CSS = `
   position:relative; border-radius:48px;
   background:linear-gradient(145deg,#0d1b3e,#091228);
   box-shadow:
-    0 0 0 1px rgba(255,255,255,.07),
+    0 0 0 1px rgba(15,23,42,.08),
     0 0 0 7px #050e1e,
     0 0 0 8px rgba(255,255,255,.04),
     0 50px 120px rgba(0,0,0,.85),
@@ -87,7 +143,7 @@ const CSS = `
   display:flex; align-items:center; justify-content:center; gap:6px;
   box-shadow:0 0 0 1px rgba(255,255,255,.05);
 }
-.di-cam { width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#1a3a5c,#050e1e);border:1px solid rgba(255,255,255,.07); }
+.di-cam { width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#1a3a5c,#050e1e);border:1px solid rgba(15,23,42,.08); }
 .di-spk { width:36px;height:5px;background:#050e1e;border-radius:3px; }
 
 /* Status bar overlay */
@@ -132,7 +188,7 @@ const CSS = `
 @keyframes mslInfoUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
 .msl-info-anim { animation:mslInfoUp .45s cubic-bezier(.22,1,.36,1) both; }
 .msl-chip { display:inline-flex;align-items:center;gap:6px;border-radius:100px;padding:5px 14px; font-size:11px;font-weight:700; }
-.msl-prog-track { height:2px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden; }
+.msl-prog-track { height:2px;background:rgba(15,23,42,.08);border-radius:2px;overflow:hidden; }
 .msl-prog-fill  { height:100%;border-radius:2px;transition:width .5s cubic-bezier(.22,1,.36,1); }
 
 /* Right panel */
@@ -151,10 +207,14 @@ const CSS = `
 `;
 
 export default function ScreensSlider() {
+	const locale = useLocale();
+	const isAr = locale !== 'en';
+	const pick = (ar, en) => (isAr ? ar : en);
 	const [active, setActive] = useState(0);
 	const [imgState, setImgState] = useState('visible');
 	const [touchStart, setTouchStart] = useState(null);
-	const cur = SCREENS[active];
+	const raw = SCREENS[active];
+	const cur = { ...raw, ...(raw[isAr ? 'ar' : 'en'] || {}) };
 	const IconComp = cur.icon;
 
 	const goTo = useCallback((idx) => {
@@ -198,11 +258,11 @@ export default function ScreensSlider() {
 	return (
 		<>
 			<style dangerouslySetInnerHTML={{ __html: CSS }} />
-			<div className="msl-root" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+			<div className="msl-root" dir={isAr ? 'rtl' : 'ltr'} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
 
 				{/* Hero-style orbs */}
-				<div className="msl-orb msl-float" style={{ width: 700, height: 700, top: -128, right: -160, background: 'radial-gradient(circle,rgba(37,99,235,.18),transparent 60%)' }} />
-				<div className="msl-orb" style={{ width: 500, height: 500, bottom: -80, left: -128, background: 'radial-gradient(circle,rgba(14,165,233,.12),transparent 65%)' }} />
+				<div className="msl-orb msl-float" style={{ width: 700, height: 700, top: -128, right: -160, background: 'radial-gradient(circle,color-mix(in srgb, var(--color-primary-300, #93c5fd) 40%, transparent),transparent 60%)' }} />
+				<div className="msl-orb" style={{ width: 500, height: 500, bottom: -80, left: -128, background: 'radial-gradient(circle,color-mix(in srgb, var(--color-secondary-300, #7dd3fc) 35%, transparent),transparent 65%)' }} />
 
 				{/* Spinning rings */}
 				<div className="msl-ring-a" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 780, height: 780, borderRadius: '50%', border: '1px solid rgba(59,130,246,.06)', pointerEvents: 'none' }} />
@@ -211,12 +271,12 @@ export default function ScreensSlider() {
 				<div style={{ width: '100%', maxWidth: 1300, position: 'relative', zIndex: 10 }}>
 
 
-					<SectionHeader
-						n="03"
-						label="استعراض التطبيق"
-						title="شاهد التطبيق"
-						titleGrad="بنفسك"
-						desc="واجهات مصممة لتجربة استثنائية على الجوال"
+					<SliderHeader
+						n="08"
+						label={pick('تطبيق العميل', 'Client app')}
+						title={pick('الجوال كما يراه', 'Mobile the way')}
+						titleGrad={pick('عميلك', 'your client sees it')}
+						desc={pick('تجربة Expo للتمارين والتغذية والمحادثات والتقويم — مخصصة للعميل', 'Expo experience for workouts, nutrition, chat, and calendar — built for clients')}
 						dark
 					/>
 
@@ -227,23 +287,23 @@ export default function ScreensSlider() {
 						<div className="msl-lpanel" style={{ width: 240, flexShrink: 0 }}>
 							<div key={active} className="msl-info-anim">
 								<div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start', marginBottom: 26 }}>
-									<span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.2)', letterSpacing: 1.5 }}>
+									<span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: 1.5 }}>
 										{String(active + 1).padStart(2, '0')} / {String(SCREENS.length).padStart(2, '0')}
 									</span>
-									<div style={{ width: 64, height: 1, background: 'linear-gradient(90deg,transparent,#3b82f6)' }} />
+									<div style={{ width: 64, height: 1, background: 'linear-gradient(90deg,transparent,var(--color-primary-500, #3b82f6))' }} />
 								</div>
 								<div style={{ width: 58, height: 58, borderRadius: 18, background: 'linear-gradient(135deg,rgba(59,130,246,.2),rgba(14,165,233,.1))', border: '1px solid rgba(59,130,246,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 'auto', marginBottom: 20, boxShadow: '0 0 28px rgba(59,130,246,.25)' }}>
-									<IconComp size={26} color="#60a5fa" />
+									<IconComp size={26} color="var(--color-primary-500, var(--color-primary-500, #3b82f6))" />
 								</div> 
-								<h3 style={{ fontWeight: 900, fontSize: 28, color: '#fff', marginBottom: 5 }}>{cur.label}</h3>
- 								<p style={{ fontSize: 12.5, color: 'rgba(148,163,184,.75)', lineHeight: 1.85, marginBottom: 28 }}>{cur.desc}</p>
+								<h3 style={{ fontWeight: 900, fontSize: 28, color: '#0f172a', marginBottom: 5 }}>{cur.label}</h3>
+ 								<p style={{ fontSize: 12.5, color: '#64748b', lineHeight: 1.85, marginBottom: 28 }}>{cur.desc}</p>
 								<div>
 									<div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-										<span style={{ fontSize: 10, color: 'rgba(255,255,255,.25)', fontWeight: 600 }}>التقدم</span>
-										<span style={{ fontSize: 10, color: '#60a5fa', fontWeight: 700 }}>{Math.round(((active + 1) / SCREENS.length) * 100)}%</span>
+										<span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{pick('التقدم', 'Progress')}</span>
+										<span style={{ fontSize: 10, color: 'var(--color-primary-500, var(--color-primary-500, #3b82f6))', fontWeight: 700 }}>{Math.round(((active + 1) / SCREENS.length) * 100)}%</span>
 									</div>
 									<div className="msl-prog-track">
-										<div className="msl-prog-fill" style={{ width: `${((active + 1) / SCREENS.length) * 100}%`, background: 'linear-gradient(90deg,#2563eb,#0ea5e9)' }} />
+										<div className="msl-prog-fill" style={{ width: `${((active + 1) / SCREENS.length) * 100}%`, background: 'linear-gradient(90deg,var(--color-primary-600, #2563eb),#0ea5e9)' }} />
 									</div>
 								</div>
 							</div>
@@ -302,7 +362,7 @@ export default function ScreensSlider() {
 											{/* Fallback */}
 											<div style={{ display: 'none', position: 'absolute', inset: 0, background: 'linear-gradient(160deg,#0d1b4b,rgba(37,99,235,.18))', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
 												<div style={{ width: 64, height: 64, borderRadius: 20, background: 'rgba(59,130,246,.2)', border: '1px solid rgba(59,130,246,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-													<IconComp size={30} color="#60a5fa" />
+													<IconComp size={30} color="var(--color-primary-500, var(--color-primary-500, #3b82f6))" />
 												</div>
 												<span style={{ fontSize: 13, color: 'rgba(147,197,253,.6)', textAlign: 'center' }}>{cur.label}</span>
 											</div>
@@ -319,18 +379,18 @@ export default function ScreensSlider() {
 
 							{/* Dots + Arrows */}
 							<div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-								<button className="msl-arrow" onClick={prev} aria-label="السابق"><ChevronRight size={20} /></button>
+								<button className="msl-arrow" onClick={prev} aria-label={pick('السابق', 'Previous')}><ChevronRight size={20} /></button>
 								<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
 									{SCREENS.map((s, i) => (
 										<button key={s.id}
 											className={`msl-dot ${i === active ? 'on' : ''}`}
-											style={i === active ? { background: '#3b82f6', borderColor: 'rgba(59,130,246,.5)' } : {}}
+											style={i === active ? { background: 'var(--color-primary-500, #3b82f6)', borderColor: 'rgba(59,130,246,.5)' } : {}}
 											onClick={() => goTo(i)}
-											aria-label={s.label}
+											aria-label={(s[isAr ? 'ar' : 'en'] || s).label}
 										/>
 									))}
 								</div>
-								<button className="msl-arrow" onClick={next} aria-label="التالي"><ChevronLeft size={20} /></button>
+								<button className="msl-arrow" onClick={next} aria-label={pick('التالي', 'Next')}><ChevronLeft size={20} /></button>
 							</div>
 
 						</div>
@@ -341,15 +401,15 @@ export default function ScreensSlider() {
 								const TI = s.icon; const on = i === active;
 								return (
 									<button key={s.id} className="msl-rthumb"
-										style={{ background: on ? 'rgba(29,78,216,.18)' : 'rgba(255,255,255,.03)', border: `1px solid ${on ? 'rgba(147,197,253,.15)' : 'rgba(255,255,255,.07)'}` }}
+										style={{ background: on ? 'color-mix(in srgb, var(--color-primary-100, #dbeafe) 85%, #fff)' : '#ffffff', border: `1px solid ${on ? 'rgba(147,197,253,.15)' : 'rgba(15,23,42,.08)'}` }}
 										onClick={() => goTo(i)}>
-										{on && <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: 3, background: 'linear-gradient(180deg,#3b82f6,#0ea5e9)', borderRadius: '0 3px 3px 0' }} />}
-										<div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: on ? 'linear-gradient(135deg,rgba(59,130,246,.2),rgba(14,165,233,.1))' : 'rgba(255,255,255,.05)', border: `1px solid ${on ? 'rgba(59,130,246,.25)' : 'rgba(255,255,255,.08)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .3s' }}>
-											<TI size={15} color={on ? '#60a5fa' : 'rgba(255,255,255,.3)'} />
+										{on && <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: 3, background: 'linear-gradient(180deg,var(--color-primary-500, #3b82f6),#0ea5e9)', borderRadius: '0 3px 3px 0' }} />}
+										<div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: on ? 'linear-gradient(135deg,rgba(59,130,246,.2),rgba(14,165,233,.1))' : 'rgba(255,255,255,.05)', border: `1px solid ${on ? 'rgba(59,130,246,.25)' : 'rgba(15,23,42,.08)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .3s' }}>
+											<TI size={15} color={on ? 'var(--color-primary-500, var(--color-primary-500, #3b82f6))' : 'rgba(255,255,255,.3)'} />
 										</div>
 										<div style={{ textAlign: 'right', flex: 1, minWidth: 0 }}>
-											<div style={{ fontSize: 12, fontWeight: 700, color: on ? '#fff' : 'rgba(255,255,255,.4)', marginBottom: 2, transition: 'color .3s' }}>{s.label}</div>
-											<div style={{ fontSize: 10, color: on ? '#60a5fa' : 'rgba(255,255,255,.2)', fontWeight: 600, letterSpacing: .5, direction: 'ltr', textAlign: 'right', transition: 'color .3s' }}>{s.labelEn}</div>
+											<div style={{ fontSize: 12, fontWeight: 700, color: on ? '#0f172a' : '#64748b', marginBottom: 2, transition: 'color .3s' }}>{(s[isAr ? 'ar' : 'en'] || s).label}</div>
+											<div style={{ fontSize: 10, color: on ? 'var(--color-primary-600)' : '#94a3b8', fontWeight: 600, letterSpacing: .5, direction: 'ltr', textAlign: 'right', transition: 'color .3s' }}>{(s[isAr ? 'ar' : 'en'] || s).labelEn || ''}</div>
 										</div>
 									</button>
 								);

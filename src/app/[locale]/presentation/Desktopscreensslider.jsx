@@ -1,27 +1,116 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { useLocale } from 'next-intl';
 import {
-	ChevronLeft, ChevronRight, LayoutDashboard, LogIn, Dumbbell,
+	ChevronLeft, ChevronRight, LayoutDashboard, Dumbbell,
 	Utensils, User, BookOpen, Calculator, CalendarDays,
 	MessageCircle, Users, FileText, ClipboardList, BarChart3,
-	RefreshCw, Lock, Star, Globe, ChevronDown, Sparkles
+	Star, Globe, ChevronDown
 } from 'lucide-react';
-import { SectionHeader } from './page';
+
+function SliderHeader({ n, label, title, titleGrad, desc }) {
+	return (
+		<div className="mb-10 sm:mb-12 text-center" data-reveal>
+			<p className="text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'var(--color-primary-700, #1d4ed8)' }}>
+				{n} — {label}
+			</p>
+			<h2 className="mt-3 font-[family-name:var(--font-arabic)] text-2xl font-extrabold text-slate-900 sm:text-3xl">
+				{title}{' '}
+				<span
+					style={{
+						background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
+						WebkitBackgroundClip: 'text',
+						backgroundClip: 'text',
+						color: 'transparent',
+					}}
+				>
+					{titleGrad}
+				</span>
+			</h2>
+			{desc && <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-600">{desc}</p>}
+		</div>
+	);
+}
 
 const SCREENS = [
-	{ id: 1, src: '/screens/web/dashboard.png', label: 'لوحة التحكم', labelEn: 'Dashboard', url: 'https://so7bafit.com/dashboard', desc: 'نظرة شاملة على جميع المؤشرات الرئيسية والإحصائيات اليومية', icon: LayoutDashboard, tag: 'Admin', features: ['مؤشرات الأداء', 'الحسابات المعلقة', 'المحادثات النشطة'] },
-	{ id: 3, src: '/screens/web/workouts-plans.png', label: 'خطط التمارين', labelEn: 'Workout Plans', url: 'https://so7bafit.com/workouts-plans', desc: 'بناء وإدارة خطط التمارين التفصيلية مع مكتبة تمارين متكاملة', icon: Dumbbell, tag: 'Coach', features: ['مكتبة التمارين', 'بناء الخطط', 'تكرار خطة'] },
-	{ id: 4, src: '/screens/web/nutrition-plans.png', label: 'خطط التغذية', labelEn: 'Nutrition Plans', url: 'https://so7bafit.com/nutrition-plans', desc: 'خطط وجبات مفصّلة بالسعرات الحرارية والقيم الغذائية الكاملة', icon: Utensils, tag: 'Coach', features: ['السعرات الحرارية', 'القيم الغذائية', 'البدائل الغذائية'] },
-	{ id: 13, src: '/screens/web/exercies.png', label: 'مكتبة التمارين', labelEn: 'Exercises', url: 'https://so7bafit.com/exercises', desc: 'مكتبة مركزية من التمارين مع صور وفيديوهات توضيحية', icon: ClipboardList, tag: 'Admin', features: ['صور توضيحية', 'فيديوهات', 'تصنيف حسب العضلة'] },
-	{ id: 7, src: '/screens/web/recipes.png', label: 'الوصفات', labelEn: 'Recipes', url: 'https://so7bafit.com/recipes', desc: 'مكتبة وصفات غذائية ضخمة مصنفة مع طريقة التحضير والقيم', icon: BookOpen, tag: 'Client', features: ['بحث ذكي', 'تصفية متقدمة', 'حفظ المفضلة'] },
-	{ id: 5, src: '/screens/web/users.png', label: 'المستخدمين', labelEn: 'Users', url: 'https://so7bafit.com/users', desc: 'إدارة جميع المستخدمين مع البحث والتصفية والتصدير', icon: Users, tag: 'Admin', features: ['بحث + تصفية', 'تخصيص المدربين', 'إدارة الباقات'] },
-	{ id: 6, src: '/screens/web/profile.png', label: 'الملف الشخصي', labelEn: 'Profile', url: 'https://so7bafit.com/profile', desc: 'بيانات المستخدم الشاملة والقياسات وتتبع التقدم عبر الزمن', icon: User, tag: 'Client', features: ['القياسات', 'سجل التقدم', 'الإحصائيات'] },
-	{ id: 8, src: '/screens/web/calculator.png', label: 'الحاسبة', labelEn: 'Calculator', url: 'https://so7bafit.com/calculator', desc: 'حاسبة السعرات والاحتياج اليومي من البروتين والكربوهيدرات', icon: Calculator, tag: 'Tools', features: ['BMI', 'TDEE', 'الاحتياج اليومي'] },
-	{ id: 9, src: '/screens/web/calendar.png', label: 'التقويم', labelEn: 'Calendar', url: 'https://so7bafit.com/calendar', desc: 'جدول المواعيد والمهام والتذكيرات اليومية المنظمة', icon: CalendarDays, tag: 'Tools', features: ['المواعيد', 'المهام', 'التذكيرات'] },
-	{ id: 10, src: '/screens/web/chats.png', label: 'المحادثات', labelEn: 'Chats', url: 'https://so7bafit.com/chats', desc: 'تواصل فوري بين العملاء والمدربين والإدارة في واجهة واحدة', icon: MessageCircle, tag: 'All', features: ['رسائل فورية', 'مشاركة الملفات', 'محادثات جماعية'] },
-	{ id: 11, src: '/screens/web/forms.png', label: 'نماذج الاستبيان', labelEn: 'Forms', url: 'https://so7bafit.com/forms', desc: 'إنشاء ومشاركة النماذج واستقبال الردود وتنظيم البيانات', icon: FileText, tag: 'Admin', features: ['إنشاء نماذج', 'مشاركة الرابط', 'مراجعة الردود'] },
-	{ id: 12, src: '/screens/web/weekly-reports.png', label: 'التقارير الأسبوعية', labelEn: 'Weekly Reports', url: 'https://so7bafit.com/weekly-reports', desc: 'مراجعة تقارير العملاء الأسبوعية وإضافة ملاحظات المدرب', icon: BarChart3, tag: 'Coach', features: ['القياسات', 'صور التقدم', 'ملاحظات المدرب'] },
-	{ id: 14, src: '/screens/web/billing.png', label: 'الفواتير', labelEn: 'Billing', url: 'https://so7bafit.com/billing', desc: 'إدارة الاشتراكات والفواتير والمدفوعات في مكان واحد', icon: FileText, tag: 'Admin', features: ['الاشتراكات', 'تتبع المدفوعات', 'الفواتير'] },
+	{
+		id: 1, src: '/screens/web/dashboard.png', icon: LayoutDashboard, tag: 'Admin',
+		url: { ar: 'so7bafit.com/ar/dashboard', en: 'so7bafit.com/en/dashboard' },
+		ar: { label: 'لوحة التحكم', desc: 'مؤشرات الأداء والحالات المعلقة والمحادثات النشطة', features: ['مؤشرات الأداء', 'الحسابات المعلقة', 'المحادثات النشطة'] },
+		en: { label: 'Dashboard', desc: 'KPIs, pending cases, and active conversations', features: ['KPIs', 'Pending accounts', 'Active chats'] },
+	},
+	{
+		id: 3, src: '/screens/web/workouts-plans.png', icon: Dumbbell, tag: 'Coach',
+		url: { ar: 'so7bafit.com/ar/dashboard/workouts/plans', en: 'so7bafit.com/en/dashboard/workouts/plans' },
+		ar: { label: 'خطط التمارين', desc: 'بناء وإسناد خطط تمارين أسبوعية مع مكتبة متكاملة', features: ['مكتبة التمارين', 'بناء الخطط', 'إسناد للعميل'] },
+		en: { label: 'Workout Plans', desc: 'Build and assign weekly workout plans with a full library', features: ['Exercise library', 'Plan builder', 'Client assign'] },
+	},
+	{
+		id: 4, src: '/screens/web/nutrition-plans.png', icon: Utensils, tag: 'Coach',
+		url: { ar: 'so7bafit.com/ar/dashboard/nutrition', en: 'so7bafit.com/en/dashboard/nutrition' },
+		ar: { label: 'خطط التغذية', desc: 'وجبات وماكروز وبدائل ومكملات لكل عميل', features: ['السعرات', 'البدائل', 'المكملات'] },
+		en: { label: 'Nutrition Plans', desc: 'Meals, macros, alternatives, and supplements per client', features: ['Calories', 'Alternatives', 'Supplements'] },
+	},
+	{
+		id: 13, src: '/screens/web/exercies.png', icon: ClipboardList, tag: 'Admin',
+		url: { ar: 'so7bafit.com/ar/dashboard/workouts', en: 'so7bafit.com/en/dashboard/workouts' },
+		ar: { label: 'مكتبة التمارين', desc: 'تمارين بصور وفيديوهات وتصنيفات عضلية', features: ['صور', 'فيديوهات', 'تصنيف'] },
+		en: { label: 'Exercises', desc: 'Exercises with images, videos, and muscle categories', features: ['Images', 'Videos', 'Categories'] },
+	},
+	{
+		id: 7, src: '/screens/web/recipes.png', icon: BookOpen, tag: 'Client',
+		url: { ar: 'so7bafit.com/ar/dashboard/recipes', en: 'so7bafit.com/en/dashboard/recipes' },
+		ar: { label: 'الوصفات', desc: 'مكتبة وصفات مع القيم الغذائية والمفضلة', features: ['بحث', 'تصفية', 'مفضلة'] },
+		en: { label: 'Recipes', desc: 'Recipe library with macros and favorites', features: ['Search', 'Filters', 'Favorites'] },
+	},
+	{
+		id: 5, src: '/screens/web/users.png', icon: Users, tag: 'Admin',
+		url: { ar: 'so7bafit.com/ar/dashboard/users', en: 'so7bafit.com/en/dashboard/users' },
+		ar: { label: 'المستخدمين', desc: 'إدارة الحسابات والأدوار وربط المدربين', features: ['أدوار', 'تخصيص مدرب', 'بحث'] },
+		en: { label: 'Users', desc: 'Manage accounts, roles, and coach assignment', features: ['Roles', 'Coach assign', 'Search'] },
+	},
+	{
+		id: 6, src: '/screens/web/profile.png', icon: User, tag: 'Client',
+		url: { ar: 'so7bafit.com/ar/dashboard/users', en: 'so7bafit.com/en/dashboard/users' },
+		ar: { label: 'ملف العميل', desc: 'قياسات وتقدم وخطط مرتبطة بالعميل', features: ['قياسات', 'تقدم', 'خطط'] },
+		en: { label: 'Client profile', desc: 'Measurements, progress, and linked plans', features: ['Measurements', 'Progress', 'Plans'] },
+	},
+	{
+		id: 8, src: '/screens/web/calculator.png', icon: Calculator, tag: 'Tools',
+		url: { ar: 'so7bafit.com/ar/dashboard/calculator', en: 'so7bafit.com/en/dashboard/calculator' },
+		ar: { label: 'الحاسبة', desc: 'احتياج يومي وماكروز ووجبات', features: ['TDEE', 'ماكروز', 'وجبات'] },
+		en: { label: 'Calculator', desc: 'Daily needs, macros, and meal builder', features: ['TDEE', 'Macros', 'Meals'] },
+	},
+	{
+		id: 9, src: '/screens/web/calendar.png', icon: CalendarDays, tag: 'Tools',
+		url: { ar: 'so7bafit.com/ar/workspace', en: 'so7bafit.com/en/workspace' },
+		ar: { label: 'التقويم', desc: 'عادات ومواعيد ومؤقت التزام', features: ['عادات', 'مواعيد', 'التزام'] },
+		en: { label: 'Calendar', desc: 'Habits, events, and commitment timer', features: ['Habits', 'Events', 'Commitment'] },
+	},
+	{
+		id: 10, src: '/screens/web/chats.png', icon: MessageCircle, tag: 'All',
+		url: { ar: 'so7bafit.com/ar/dashboard/chat', en: 'so7bafit.com/en/dashboard/chat' },
+		ar: { label: 'المحادثات', desc: 'تواصل فوري داخل المنصة بين الأدوار', features: ['رسائل فورية', 'وسائط', 'محادثات جماعية'] },
+		en: { label: 'Chats', desc: 'Real-time messaging across roles', features: ['Instant messages', 'Media', 'Group chats'] },
+	},
+	{
+		id: 11, src: '/screens/web/forms.png', icon: FileText, tag: 'Admin',
+		url: { ar: 'so7bafit.com/ar/dashboard/intake/forms', en: 'so7bafit.com/en/dashboard/intake/forms' },
+		ar: { label: 'نماذج الاستبيان', desc: 'إنشاء نماذج ومشاركة الروابط ومراجعة الردود', features: ['إنشاء', 'مشاركة', 'ردود'] },
+		en: { label: 'Intake forms', desc: 'Create forms, share links, and review replies', features: ['Create', 'Share', 'Responses'] },
+	},
+	{
+		id: 12, src: '/screens/web/weekly-reports.png', icon: BarChart3, tag: 'Coach',
+		url: { ar: 'so7bafit.com/ar/dashboard/reports', en: 'so7bafit.com/en/dashboard/reports' },
+		ar: { label: 'التقارير الأسبوعية', desc: 'قياسات وصور تقدم وملاحظات المدرب', features: ['قياسات', 'صور', 'ملاحظات'] },
+		en: { label: 'Weekly Reports', desc: 'Measurements, progress photos, and coach notes', features: ['Measurements', 'Photos', 'Notes'] },
+	},
+	{
+		id: 14, src: '/screens/web/billing.png', icon: FileText, tag: 'Admin',
+		url: { ar: 'so7bafit.com/ar/dashboard/billing', en: 'so7bafit.com/en/dashboard/billing' },
+		ar: { label: 'الفواتير', desc: 'اشتراكات وفواتير ومدفوعات يدوية منظمة', features: ['اشتراكات', 'فواتير', 'مدفوعات'] },
+		en: { label: 'Billing', desc: 'Subscriptions, invoices, and structured manual payments', features: ['Subscriptions', 'Invoices', 'Payments'] },
+	},
 ];
 
 const CSS = `
@@ -29,7 +118,7 @@ const CSS = `
 
 .dsl-root {
   direction:rtl; 
-  background:linear-gradient(160deg,#f0f7ff 0%,#dbeafe 55%,#e0f2fe 100%);
+  background:color-mix(in srgb, var(--color-primary-50, #eff6ff) 80%, #ffffff);
   min-height:100vh; position:relative; overflow:hidden;
   display:flex; align-items:center; justify-content:center;
   padding:60px 20px;
@@ -169,11 +258,15 @@ const CSS = `
 const SCREEN_H = 420;
 
 export default function DesktopScreensSlider() {
+	const locale = useLocale();
+	const isAr = locale !== 'en';
+	const pick = (ar, en) => (isAr ? ar : en);
 	const [active, setActive] = useState(0);
 	const [imgState, setImgState] = useState('visible');
 	const [imgNatH, setImgNatH] = useState(0);
 	const [touchStart, setTouchStart] = useState(null);
-	const cur = SCREENS[active];
+	const raw = SCREENS[active];
+	const cur = { ...raw, ...(raw[isAr ? 'ar' : 'en'] || {}), url: (raw.url && (raw.url[isAr ? 'ar' : 'en'])) || raw.url };
 	const IconComp = cur.icon;
 
 	const isTall = imgNatH > SCREEN_H * 1.4;
@@ -212,7 +305,7 @@ export default function DesktopScreensSlider() {
 	return (
 		<>
 			<style dangerouslySetInnerHTML={{ __html: CSS }} />
-			<div className="dsl-root" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+			<div className="dsl-root" dir={isAr ? 'rtl' : 'ltr'} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
 
 				<div className="dsl-orb" style={{ width: 600, height: 600, top: -150, right: -100, background: 'radial-gradient(circle,rgba(59,130,246,.09),transparent 70%)' }} />
 				<div className="dsl-orb" style={{ width: 500, height: 500, bottom: -100, left: -80, background: 'radial-gradient(circle,rgba(14,165,233,.07),transparent 70%)' }} />
@@ -221,12 +314,12 @@ export default function DesktopScreensSlider() {
 				<div style={{ width: '100%', maxWidth: 1300, position: 'relative', zIndex: 10 }}>
 
 					{/* ── Header ── */}
-					<SectionHeader
-						n="04"
-						label="معاينة الشاشات"
-						title="شاهد المنصة"
-						titleGrad="بنفسك"
-						desc="واجهات سطح المكتب المصممة بعناية لأفضل تجربة مستخدم"
+					<SliderHeader
+						n="09"
+						label={pick('لوحة الويب', 'Web dashboard')}
+						title={pick('لوحة التحكم', 'The dashboard')}
+						titleGrad={pick('كما يستخدمها فريقك', 'your team actually uses')}
+						desc={pick('واجهات الويب للإدارة والمدرب — من الخطط والفواتير حتى التقارير والمحادثات', 'Admin and coach web screens — plans, billing, reports, and chat')}
 					/>
 
 					{/* ── 3-col ── */}
@@ -257,7 +350,7 @@ export default function DesktopScreensSlider() {
 								{/* Progress */}
 								<div>
 									<div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-										<span style={{ fontSize: 10, color: 'rgba(30,58,138,.4)', fontWeight: 600 }}>التقدم</span>
+										<span style={{ fontSize: 10, color: 'rgba(30,58,138,.4)', fontWeight: 600 }}>{pick('التقدم', 'Progress')}</span>
 										<span style={{ fontSize: 10, color: '#2563eb', fontWeight: 700 }}>{Math.round(((active + 1) / SCREENS.length) * 100)}%</span>
 									</div>
 									<div className="dsl-prog-track">
@@ -307,7 +400,7 @@ export default function DesktopScreensSlider() {
 													<div className="dsl-scroll-hint">
 														<div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,.9)', border: '1px solid rgba(59,130,246,.15)', borderRadius: 100, padding: '3px 12px', backdropFilter: 'blur(6px)' }}>
 															<ChevronDown size={11} color="#3b82f6" />
-															<span style={{ fontSize: 10, fontWeight: 600, color: '#2563eb' }}>مرر للمعاينة</span>
+															<span style={{ fontSize: 10, fontWeight: 600, color: '#2563eb' }}>{pick('مرر للمعاينة', 'Hover to preview')}</span>
 														</div>
 													</div>
 													<div className="dsl-shine" />
@@ -337,15 +430,15 @@ export default function DesktopScreensSlider() {
 
 							{/* Nav */}
 							<div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 28 }}>
-								<button className="dsl-arrow" onClick={prev} aria-label="السابق"><ChevronRight size={20} /></button>
+								<button className="dsl-arrow" onClick={prev} aria-label={pick('السابق', 'Previous')}><ChevronRight size={20} /></button>
 								<div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
 									{SCREENS.map((s, i) => (
 										<button key={s.id} className={`dsl-dot ${i === active ? 'on' : ''}`}
 											style={i === active ? { background: '#2563eb', borderColor: 'rgba(37,99,235,.5)' } : {}}
-											onClick={() => goTo(i)} aria-label={s.label} />
+											onClick={() => goTo(i)} aria-label={(s[isAr ? 'ar' : 'en'] || s).label} />
 									))}
 								</div>
-								<button className="dsl-arrow" onClick={next} aria-label="التالي"><ChevronLeft size={20} /></button>
+								<button className="dsl-arrow" onClick={next} aria-label={pick('التالي', 'Next')}><ChevronLeft size={20} /></button>
 							</div>
 
 
@@ -364,7 +457,7 @@ export default function DesktopScreensSlider() {
 											<TI size={12} color={on ? '#2563eb' : '#93c5fd'} />
 										</div>
 										<div style={{ textAlign: 'right', flex: 1, minWidth: 0 }}>
-											<div style={{ fontSize: 10, fontWeight: 700, color: on ? '#1e3a8a' : '#64748b', transition: 'color .3s' }}>{s.label}</div>
+											<div style={{ fontSize: 10, fontWeight: 700, color: on ? '#1e3a8a' : '#64748b', transition: 'color .3s' }}>{(s[isAr ? 'ar' : 'en'] || s).label}</div>
  										</div>
 									</button>
 								);

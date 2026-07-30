@@ -206,10 +206,12 @@ export default function Layout({ children }) {
 		pathname.startsWith('/thank-you') ||
 		pathname.startsWith('/site') ||
 		pathname === '/';
+	const isPresentationRoute = pathname.startsWith('/presentation');
 	const isWhatsAppRoute = pathname.includes('/dashboard/whatsapp');
+	const isMetaWhatsAppRoute = pathname.includes('/dashboard/meta-whatsapp');
 	const isChatRoute = pathname.includes('/dashboard/chat');
 	const isAiFreeRoute = pathname.includes('/dashboard/ai-free');
-	const isImmersiveRoute = isWhatsAppRoute || isChatRoute || isAiFreeRoute;
+	const isImmersiveRoute = isWhatsAppRoute || isMetaWhatsAppRoute || isChatRoute || isAiFreeRoute;
 
 	const [sidebarOpen, setSidebarOpen]         = useState(false);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -338,7 +340,7 @@ export default function Layout({ children }) {
 										{/* Add bottom padding when impersonating so content isn't hidden behind bar */}
 										<div
 											id="body"
-											className={`${pathname !== "/" && "h-screen  "} ${!isAuthRoute && ` overflow-x-hidden ${isImmersiveRoute ? 'p-0 lg:p-3 overflow-hidden' : 'overflow-auto p-3 md:p-4'}`} ${isImpersonating ? 'pb-8' : ''}`}
+											className={`${pathname !== '/' && !isPresentationRoute ? 'h-screen' : ''} ${isPresentationRoute ? 'min-h-screen overflow-x-hidden overflow-y-auto' : ''} ${!isAuthRoute && ` overflow-x-hidden ${isMetaWhatsAppRoute ? 'p-0 overflow-hidden' : isImmersiveRoute ? 'p-0 lg:py-4 lg:pe-4 lg:ps-2 overflow-hidden' : 'overflow-auto p-3 md:p-4'}`} ${isImpersonating ? 'pb-8' : ''}`}
 										>
 											{children}
 										</div>
