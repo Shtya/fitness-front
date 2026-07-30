@@ -21,6 +21,7 @@ import {
   Shield,
   CheckCircle2,
 } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 
 const PARTICLES = Array.from({ length: 15 }, (_, i) => ({
   left: `${(i * 43 + 11) % 100}%`,
@@ -85,10 +86,8 @@ export default function Footer() {
       { label: t("links.resources.api"), href: "#api" },
     ],
     legal: [
-      { label: t("links.legal.privacy"), href: "#privacy" },
-      { label: t("links.legal.terms"), href: "#terms" },
-      { label: t("links.legal.cookies"), href: "#cookies" },
-      { label: t("links.legal.licenses"), href: "#licenses" },
+      { label: t("links.legal.privacy"), href: "/privacy" },
+      { label: t("links.legal.terms"), href: "/policy" },
     ],
   };
 
@@ -226,18 +225,33 @@ export default function Footer() {
                       viewport={{ once: true }}
                       transition={{ delay: colIdx * 0.09 + idx * 0.04 }}
                     >
-                      <a
-                        href={link.href}
-                        className="group flex items-center gap-2 font-body text-sm text-white/45 transition-colors duration-200 hover:text-white"
-                      >
-                        <span
-                          className="theme-gradient-bg h-1 w-1 shrink-0 rounded-full opacity-0 transition-opacity duration-200
-                          group-hover:opacity-100"
-                        />
-                        <span className="transition-transform duration-200 group-hover:ltr:translate-x-1 group-hover:rtl:-translate-x-1">
-                          {link.label}
-                        </span>
-                      </a>
+                      {link.href.startsWith('/') ? (
+                        <Link
+                          href={link.href}
+                          className="group flex items-center gap-2 font-body text-sm text-white/45 transition-colors duration-200 hover:text-white"
+                        >
+                          <span
+                            className="theme-gradient-bg h-1 w-1 shrink-0 rounded-full opacity-0 transition-opacity duration-200
+                            group-hover:opacity-100"
+                          />
+                          <span className="transition-transform duration-200 group-hover:ltr:translate-x-1 group-hover:rtl:-translate-x-1">
+                            {link.label}
+                          </span>
+                        </Link>
+                      ) : (
+                        <a
+                          href={link.href}
+                          className="group flex items-center gap-2 font-body text-sm text-white/45 transition-colors duration-200 hover:text-white"
+                        >
+                          <span
+                            className="theme-gradient-bg h-1 w-1 shrink-0 rounded-full opacity-0 transition-opacity duration-200
+                            group-hover:opacity-100"
+                          />
+                          <span className="transition-transform duration-200 group-hover:ltr:translate-x-1 group-hover:rtl:-translate-x-1">
+                            {link.label}
+                          </span>
+                        </a>
+                      )}
                     </motion.li>
                   ))}
                 </ul>
