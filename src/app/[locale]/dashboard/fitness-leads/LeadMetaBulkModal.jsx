@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
 	AlertTriangle,
 	BadgeCheck,
@@ -162,10 +162,39 @@ export default function LeadMetaBulkModal({
 	const delaySec = Math.max(1, Math.round(60 / Math.max(Number(rateLimit) || 5, 1)));
 	const running = Boolean(job && ['queued', 'running'].includes(job.status));
 	const done = Boolean(job && ['done', 'cancelled', 'failed'].includes(job.status));
-	const processedCount = job
-		? Number(job.sentCount || 0) + Number(job.failedCount || 0) + Number(job.skippedCount || 0)
-		: 0;
-	const hasSendingItem = Boolean((job?.items || []).some(i => i.status === 'sending'));
+
+	/** Prefer live item rows over possibly-stale job counters */
+	const liveCounts = useMemo(() => {
+		const items = job?.items || [];
+		const fromItems = {
+			sent: items.filter(i => i.status === 'sent').length,
+			failed: items.filter(i => i.status === 'failed').length,
+			skipped: items.filter(i => i.status === 'skipped').length,
+			sending: items.filter(i => i.status === 'sending').length,
+			queued: items.filter(i => i.status === 'queued').length,
+		};
+		const ic = job?.itemCounts;
+		if (ic && typeof ic === 'object') {
+			return {
+				sent: Number(ic.sent ?? fromItems.sent),
+				failed: Number(ic.failed ?? fromItems.failed),
+				skipped: Number(ic.skipped ?? fromItems.skipped),
+				sending: Number(ic.sending ?? fromItems.sending),
+				queued: Number(ic.queued ?? fromItems.queued),
+			};
+		}
+		if (items.length) return fromItems;
+		return {
+			sent: Number(job?.sentCount || 0),
+			failed: Number(job?.failedCount || 0),
+			skipped: Number(job?.skippedCount || 0),
+			sending: 0,
+			queued: 0,
+		};
+	}, [job?.items, job?.itemCounts, job?.sentCount, job?.failedCount, job?.skippedCount]);
+
+	const processedCount = liveCounts.sent + liveCounts.failed + liveCounts.skipped;
+	const hasSendingItem = liveCounts.sending > 0;
 	const workerActive = Boolean(
 		job?.workerRunning ||
 			job?.status === 'running' ||
@@ -212,19 +241,24 @@ export default function LeadMetaBulkModal({
 	const clockSkew =
 		job?.serverNow != null ? Number(job.serverNow) - Number(job._fetchedAt || Date.now()) : 0;
 	const delayMs = Number(job?.delayMs || delaySec * 1000);
+
 	const pacePhase = (() => {
-		if (job?.pacePhase === 'waiting' || job?.pacePhase === 'sending') return job.pacePhase;
-		if (hasSendingItem) return 'sending';
-		if (displayStatus === 'running') return 'sending';
+		if (job?.pacePhase === 'waiting') return 'waiting';
+		if (job?.pacePhase === 'sending' || hasSendingItem) return 'sending';
+		if (job?.nextSendAt && Number(job.nextSendAt) > Date.now() + clockSkew - 500) {
+			return 'waiting';
+		}
+		if (displayStatus === 'running') return 'waiting';
 		return 'idle';
 	})();
+
 	const nextSendAt = job?.nextSendAt != null ? Number(job.nextSendAt) : null;
 	const waitStartedAt = job?.waitStartedAt != null ? Number(job.waitStartedAt) : null;
 	const waitRemainingMs =
 		pacePhase === 'waiting' && nextSendAt != null
 			? Math.max(0, nextSendAt - (nowMs + clockSkew))
 			: pacePhase === 'waiting'
-				? delayMs
+				? Math.max(0, delayMs)
 				: 0;
 	const waitTotalMs = (() => {
 		if (waitStartedAt != null && nextSendAt != null) {
@@ -232,13 +266,14 @@ export default function LeadMetaBulkModal({
 		}
 		return Math.max(1000, delayMs);
 	})();
-	/** Remaining rest bar: full at start of cooldown → empty when next send fires */
 	const waitLeftPct =
 		pacePhase === 'waiting'
 			? Math.min(100, Math.max(0, (waitRemainingMs / waitTotalMs) * 100))
 			: pacePhase === 'sending'
-				? 0
-				: 100;
+				? 100
+				: 0;
+
+	const pollGenRef = useRef(0);
 
 	const selectedTemplate = useMemo(() => {
 		if (!templateKey) return null;
@@ -355,18 +390,42 @@ export default function LeadMetaBulkModal({
 	}, [selectedTemplate?.name, selectedTemplate?.language]);
 
 	useEffect(() => {
-		if (!job?.id || !running) return;
-		const timer = setInterval(() => {
-			metaWhatsAppApi
-				.getBulk(job.id)
-				.then(next => setJob({ ...next, _fetchedAt: Date.now() }))
-				.catch(() => {});
-		}, 800);
-		return () => clearInterval(timer);
+		if (!job?.id || !running) return undefined;
+		const jobId = job.id;
+		let cancelled = false;
+		const tick = async () => {
+			const gen = ++pollGenRef.current;
+			try {
+				const next = await metaWhatsAppApi.getBulk(jobId);
+				if (cancelled || gen !== pollGenRef.current) return;
+				setJob(prev => {
+					const merged = {
+						...next,
+						_fetchedAt: Date.now(),
+					};
+					// Never drop items if a partial response arrives
+					if (!Array.isArray(merged.items) || merged.items.length === 0) {
+						if (Array.isArray(prev?.items) && prev.items.length) {
+							merged.items = prev.items;
+						}
+					}
+					return merged;
+				});
+				setNowMs(Date.now());
+			} catch {
+				/* keep last known state */
+			}
+		};
+		void tick();
+		const timer = setInterval(() => void tick(), 700);
+		return () => {
+			cancelled = true;
+			clearInterval(timer);
+		};
 	}, [job?.id, running]);
 
 	useEffect(() => {
-		if (!running) return;
+		if (!running) return undefined;
 		const tick = setInterval(() => setNowMs(Date.now()), 200);
 		return () => clearInterval(tick);
 	}, [running]);
@@ -747,7 +806,7 @@ export default function LeadMetaBulkModal({
 																(job.currentDisplayName ||
 																	job.lastDisplayName ||
 																	'…')
-															: `${processedCount}/${job.totalCount} · ${job.sentCount} ${
+															: `${processedCount}/${job.totalCount} · ${liveCounts.sent} ${
 																	isAr ? 'تم' : 'sent'
 																}`}
 												</p>
@@ -756,14 +815,22 @@ export default function LeadMetaBulkModal({
 												<span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-emerald-800">
 													{processedCount}/{job.totalCount}
 												</span>
-												{Number(job.sentCount) > 0 && (
-													<span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-slate-600">
-														{job.sentCount} {isAr ? 'تم' : 'sent'}
+												<span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-slate-600">
+													{liveCounts.sent} {isAr ? 'تم' : 'sent'}
+												</span>
+												{liveCounts.sending > 0 && (
+													<span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-amber-800">
+														{liveCounts.sending} {isAr ? 'الآن' : 'now'}
 													</span>
 												)}
-												{Number(job.skippedCount) > 0 && (
+												{liveCounts.skipped > 0 && (
 													<span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-sky-800">
-														{job.skippedCount} {isAr ? 'تخطّي' : 'skip'}
+														{liveCounts.skipped} {isAr ? 'تخطّي' : 'skip'}
+													</span>
+												)}
+												{liveCounts.failed > 0 && (
+													<span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-rose-700">
+														{liveCounts.failed} {isAr ? 'فشل' : 'fail'}
 													</span>
 												)}
 												{running ? (
@@ -790,7 +857,7 @@ export default function LeadMetaBulkModal({
 											</p>
 										) : null}
 
-										{/* Inter-message rest progress (replaces overall %) */}
+										{/* Inter-message rest progress */}
 										{(running || displayStatus === 'running') && (
 											<div className="mt-2.5">
 												<div className="mb-1 flex items-center justify-between gap-2 text-[10px] font-semibold">
@@ -804,35 +871,37 @@ export default function LeadMetaBulkModal({
 																? 'الفاصل بين الرسائل'
 																: 'Wait between messages'}
 													</span>
-													<span className="tabular-nums text-emerald-700">
+													<span
+														className="tabular-nums text-emerald-700"
+														dir="ltr"
+													>
 														{pacePhase === 'waiting'
 															? formatWait(waitRemainingMs)
 															: pacePhase === 'sending'
 																? isAr
-																	? 'الآن'
-																	: 'now'
+																	? '…'
+																	: '…'
 																: formatWait(delayMs)}
 														<span className="font-medium text-slate-400">
-															{' '}
-															/ {formatWait(waitTotalMs || delayMs)}
+															{' / '}
+															{formatWait(waitTotalMs || delayMs)}
 														</span>
 													</span>
 												</div>
 												<div className="relative h-2.5 overflow-hidden rounded-full bg-slate-100">
-													{/* Remaining rest (shrinks) */}
 													<div
-														className={`absolute inset-y-0 start-0 rounded-full transition-all duration-200 ease-linear ${
+														className={`absolute inset-y-0 left-0 rounded-full transition-all duration-200 ease-linear ${
 															pacePhase === 'sending'
-																? 'bg-amber-400'
+																? 'animate-pulse bg-amber-400'
 																: 'bg-gradient-to-r from-emerald-500 to-teal-400'
 														}`}
 														style={{
 															width: `${
 																pacePhase === 'waiting'
-																	? waitLeftPct
+																	? Math.max(waitLeftPct, 2)
 																	: pacePhase === 'sending'
-																		? 8
-																		: 100
+																		? 100
+																		: 0
 															}%`,
 														}}
 													/>
@@ -843,11 +912,16 @@ export default function LeadMetaBulkModal({
 															? (isAr ? 'متبقي ' : '') +
 																formatWaitLabel(waitRemainingMs, isAr) +
 																(isAr ? '' : ' remaining')
-															: isAr
-																? 'يتم الإرسال'
-																: 'Dispatching'}
+															: pacePhase === 'sending'
+																? (isAr ? 'يرسل: ' : 'Sending: ') +
+																	(job.currentDisplayName ||
+																		job.lastDisplayName ||
+																		'…')
+																: isAr
+																	? 'جاهز'
+																	: 'Ready'}
 													</span>
-													<span>
+													<span dir="ltr">
 														{isAr ? 'كل ' : 'every '}
 														{formatWaitLabel(delayMs, isAr)}
 													</span>
@@ -866,7 +940,7 @@ export default function LeadMetaBulkModal({
 												const already = isAlreadySentItem(item);
 												return (
 													<div
-														key={item.id}
+														key={`${item.id}-${item.status}-${item.updatedAt || ''}`}
 														className={`flex items-center justify-between gap-2 rounded-md border px-2 py-1 text-[11px] ${
 															item.status === 'sending'
 																? 'border-amber-200 bg-amber-50/80'

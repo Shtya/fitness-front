@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
 import {
+	ArrowLeft,
 	BookOpen,
 	Check,
 	CheckCheck,
@@ -32,6 +33,7 @@ import {
 	Trash2,
 	Video,
 	X,
+	Zap,
 	ChartColumn,
 } from 'lucide-react';
 import { metaWhatsAppApi } from './meta-whatsapp-api';
@@ -141,6 +143,7 @@ const COPY = {
 		sync: 'Sync from DB',
 		syncHint:
 			'Meta Cloud API cannot import WhatsApp history from before the webhook. Sync reloads messages stored in this system for this number.',
+		closeChat: 'Close chat',
 		openPhone: 'Open by phone',
 		phonePlaceholder: 'e.g. 2010xxxxxxx or +20 10…',
 		phoneHint: 'Include country code. Egypt local 01… is converted to 20…',
@@ -159,6 +162,17 @@ const COPY = {
 		windowOpen: '24h window open',
 		windowClosed: 'Template required',
 		typeMessage: 'Type a message',
+		fastReplies: 'Fast replies',
+		fastRepliesHint: 'Saved snippets — click to insert into the message box',
+		fastReplySave: 'Save reply',
+		fastReplyTitle: 'Title',
+		fastReplyBody: 'Reply text',
+		fastReplyAdd: 'Add new reply',
+		fastReplyDelete: 'Delete',
+		fastReplySaved: 'Fast reply saved',
+		fastReplyDeleted: 'Fast reply deleted',
+		fastReplyEmpty: 'No saved replies yet',
+		openPhoneFromChat: 'Opening chat…',
 		unsupportedMessage: 'This message type isn’t supported here',
 		stickerUnavailable: 'Sticker unavailable',
 		mediaUnavailable: 'Media unavailable',
@@ -372,6 +386,7 @@ const COPY = {
 		sync: 'مزامنة من النظام',
 		syncHint:
 			'Meta Cloud API لا تستورد سجل واتساب قبل ربط الـ Webhook. المزامنة تجلب الرسائل المحفوظة في النظام لهذا الرقم.',
+		closeChat: 'إغلاق المحادثة',
 		openPhone: 'فتح برقم',
 		phonePlaceholder: 'مثال: 2010xxxxxxx أو +20 10…',
 		phoneHint: 'أدخل الرقم مع كود الدولة. الرقم المحلي المصري 01… يتحول تلقائيًا إلى 20…',
@@ -389,6 +404,17 @@ const COPY = {
 		windowOpen: 'نافذة 24 ساعة مفتوحة',
 		windowClosed: 'يلزم قالب',
 		typeMessage: 'اكتب رسالة',
+		fastReplies: 'ردود سريعة',
+		fastRepliesHint: 'مقاطع محفوظة — اضغط لإدراجها في خانة الرسالة',
+		fastReplySave: 'حفظ الرد',
+		fastReplyTitle: 'العنوان',
+		fastReplyBody: 'نص الرد',
+		fastReplyAdd: 'إضافة رد جديد',
+		fastReplyDelete: 'حذف',
+		fastReplySaved: 'تم حفظ الرد السريع',
+		fastReplyDeleted: 'تم حذف الرد السريع',
+		fastReplyEmpty: 'لا توجد ردود محفوظة بعد',
+		openPhoneFromChat: 'فتح المحادثة…',
 		unsupportedMessage: 'نوع الرسالة ده غير مدعوم هنا',
 		stickerUnavailable: 'الستيكر غير متاح',
 		mediaUnavailable: 'الوسائط غير متاحة',
@@ -893,47 +919,97 @@ function resolveTemplateButtons(defComponents, sendComponents) {
 const URL_IN_TEXT_RE =
 	/((?:https?:\/\/|www\.)[^\s<]+[^\s<.,:;!?"')\]\}])/gi;
 
-function splitTextWithLinks(text) {
+/** Candidate phone-like spans (normalized later). */
+const PHONE_IN_TEXT_RE = /(?:\+?\d[\d\s\-().]{6,22}\d)/g;
+
+function splitTextWithRichParts(text) {
 	const raw = String(text || '');
 	if (!raw) return [];
-	const parts = [];
-	let last = 0;
+
+	const hits = [];
+
+	const urlRe = new RegExp(URL_IN_TEXT_RE.source, 'gi');
 	let match;
-	const re = new RegExp(URL_IN_TEXT_RE.source, 'gi');
-	while ((match = re.exec(raw)) !== null) {
-		if (match.index > last) {
-			parts.push({ type: 'text', value: raw.slice(last, match.index) });
-		}
+	while ((match = urlRe.exec(raw)) !== null) {
 		const value = match[0];
 		const href = /^www\./i.test(value) ? `https://${value}` : value;
-		parts.push({ type: 'link', value, href });
-		last = match.index + value.length;
+		hits.push({ type: 'link', value, href, start: match.index, end: match.index + value.length });
+	}
+
+	const phoneRe = new RegExp(PHONE_IN_TEXT_RE.source, 'g');
+	while ((match = phoneRe.exec(raw)) !== null) {
+		const value = match[0];
+		const waId = normalizeWaPhone(value);
+		if (!waId) continue;
+		hits.push({
+			type: 'phone',
+			value,
+			waId,
+			start: match.index,
+			end: match.index + value.length,
+		});
+	}
+
+	hits.sort((a, b) => a.start - b.start || b.end - a.start - (a.end - a.start));
+	const picked = [];
+	let cursor = 0;
+	for (const hit of hits) {
+		if (hit.start < cursor) continue;
+		picked.push(hit);
+		cursor = hit.end;
+	}
+
+	const parts = [];
+	let last = 0;
+	for (const hit of picked) {
+		if (hit.start > last) parts.push({ type: 'text', value: raw.slice(last, hit.start) });
+		parts.push(hit);
+		last = hit.end;
 	}
 	if (last < raw.length) parts.push({ type: 'text', value: raw.slice(last) });
 	return parts.length ? parts : [{ type: 'text', value: raw }];
 }
 
-function RichMessageText({ text, className = '' }) {
-	const parts = splitTextWithLinks(text);
+function RichMessageText({ text, className = '', onPhoneClick }) {
+	const parts = splitTextWithRichParts(text);
 	return (
 		<span className={className}>
-			{parts.map((p, i) =>
-				p.type === 'link' ? (
-					<a
-						key={`l-${i}`}
-						href={p.href}
-						target="_blank"
-						rel="noopener noreferrer"
-						className="break-all font-semibold underline underline-offset-2"
-						style={{ color: '#027EB5' }}
-						onClick={e => e.stopPropagation()}
-					>
-						{p.value}
-					</a>
-				) : (
-					<span key={`t-${i}`}>{p.value}</span>
-				),
-			)}
+			{parts.map((p, i) => {
+				if (p.type === 'link') {
+					return (
+						<a
+							key={`l-${i}`}
+							href={p.href}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="break-all font-semibold underline underline-offset-2"
+							style={{ color: '#027EB5' }}
+							onClick={e => e.stopPropagation()}
+						>
+							{p.value}
+						</a>
+					);
+				}
+				if (p.type === 'phone') {
+					return (
+						<button
+							key={`p-${i}`}
+							type="button"
+							className="inline break-all font-semibold underline underline-offset-2"
+							style={{ color: '#027EB5' }}
+							title={p.waId}
+							onClick={e => {
+								e.preventDefault();
+								e.stopPropagation();
+								onPhoneClick?.(p.waId, p.value);
+							}}
+						>
+							{p.value}
+						</button>
+					);
+				}
+				return <span key={`t-${i}`}>{p.value}</span>;
+			})}
 		</span>
 	);
 }
@@ -1951,6 +2027,14 @@ export default function MetaWhatsAppWorkspace() {
 	const [active, setActive] = useState(null);
 	const [messages, setMessages] = useState([]);
 	const [draft, setDraft] = useState('');
+	const [quickRepliesOpen, setQuickRepliesOpen] = useState(false);
+	const [quickReplies, setQuickReplies] = useState([]);
+	const [quickRepliesLoading, setQuickRepliesLoading] = useState(false);
+	const [quickReplySaving, setQuickReplySaving] = useState(false);
+	const [quickReplyFormOpen, setQuickReplyFormOpen] = useState(false);
+	const [quickReplyTitle, setQuickReplyTitle] = useState('');
+	const [quickReplyBody, setQuickReplyBody] = useState('');
+	const [openingChatPhone, setOpeningChatPhone] = useState(false);
 	const [templateName, setTemplateName] = useState('');
 	const [templateLang, setTemplateLang] = useState(isAr ? 'ar' : 'en');
 	const [templates, setTemplates] = useState([]);
@@ -1995,6 +2079,7 @@ export default function MetaWhatsAppWorkspace() {
 	const [mediaLightbox, setMediaLightbox] = useState(null); // { url, kind }
 	const [initialConversation, setInitialConversation] = useState(null);
 	const bottomRef = useRef(null);
+	const messagesScrollRef = useRef(null);
 	const fileRef = useRef(null);
 	const imageRef = useRef(null);
 	const mediaRecorderRef = useRef(null);
@@ -2072,9 +2157,27 @@ export default function MetaWhatsAppWorkspace() {
 		void loadMessages(initialConversation);
 	}, [initialConversation, loadMessages]);
 
+	const scrollChatToBottom = useCallback((instant = true) => {
+		const el = messagesScrollRef.current;
+		const jump = () => {
+			if (el) {
+				el.scrollTop = el.scrollHeight;
+			} else {
+				bottomRef.current?.scrollIntoView({ behavior: instant ? 'auto' : 'smooth', block: 'end' });
+			}
+		};
+		// Wait for bubbles to layout before jumping (avoids top→bottom animation)
+		requestAnimationFrame(() => {
+			jump();
+			requestAnimationFrame(jump);
+		});
+	}, []);
+
 	useEffect(() => {
-		bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-	}, [messages, activeId]);
+		if (!activeId) return;
+		// Open / update chat: jump to bottom instantly (no top→bottom smooth scroll)
+		scrollChatToBottom(true);
+	}, [messages, activeId, scrollChatToBottom]);
 
 	// Live poll: always refresh chat list; also pull open-thread messages (webhook inbound)
 	useEffect(() => {
@@ -2407,6 +2510,80 @@ export default function MetaWhatsAppWorkspace() {
 			setPhoneError(typeof msg === 'string' ? msg : Array.isArray(msg) ? msg.join(', ') : t.phoneInvalid);
 		} finally {
 			setOpeningPhone(false);
+		}
+	}
+
+	async function openChatFromPhoneNumber(waId, displayHint) {
+		if (!waId || openingChatPhone) return;
+		setOpeningChatPhone(true);
+		setFlash(t.openPhoneFromChat);
+		try {
+			const conv = await metaWhatsAppApi.openPhone(waId, displayHint || undefined);
+			setFlash(null);
+			await loadConversations();
+			await selectConversation(conv.id);
+		} catch (err) {
+			setFlash(err?.response?.data?.message || t.phoneInvalid);
+		} finally {
+			setOpeningChatPhone(false);
+		}
+	}
+
+	async function loadQuickReplies() {
+		setQuickRepliesLoading(true);
+		try {
+			const rows = await metaWhatsAppApi.listQuickReplies();
+			setQuickReplies(Array.isArray(rows) ? rows : []);
+		} catch {
+			setQuickReplies([]);
+		} finally {
+			setQuickRepliesLoading(false);
+		}
+	}
+
+	async function openQuickReplies() {
+		setQuickRepliesOpen(true);
+		setQuickReplyFormOpen(false);
+		await loadQuickReplies();
+	}
+
+	function useQuickReply(reply) {
+		if (!reply?.body) return;
+		setDraft(String(reply.body));
+		setQuickRepliesOpen(false);
+	}
+
+	async function saveQuickReply(e) {
+		e?.preventDefault?.();
+		const title = quickReplyTitle.trim();
+		const body = quickReplyBody.trim() || draft.trim();
+		if (!title || !body) {
+			setFlash(isAr ? 'العنوان والنص مطلوبان' : 'Title and reply text are required');
+			return;
+		}
+		setQuickReplySaving(true);
+		try {
+			await metaWhatsAppApi.createQuickReply({ title, body });
+			setQuickReplyTitle('');
+			setQuickReplyBody('');
+			setQuickReplyFormOpen(false);
+			setFlash(t.fastReplySaved);
+			await loadQuickReplies();
+		} catch (err) {
+			setFlash(err?.response?.data?.message || t.loadError);
+		} finally {
+			setQuickReplySaving(false);
+		}
+	}
+
+	async function deleteQuickReply(id) {
+		if (!id) return;
+		try {
+			await metaWhatsAppApi.deleteQuickReply(id);
+			setFlash(t.fastReplyDeleted);
+			await loadQuickReplies();
+		} catch (err) {
+			setFlash(err?.response?.data?.message || t.loadError);
 		}
 	}
 
@@ -3884,13 +4061,31 @@ export default function MetaWhatsAppWorkspace() {
 								<span className="hidden rounded-md px-2 py-1 text-[11px] font-medium sm:inline" style={{ background: active.withinCustomerCareWindow ? WA.greenSoft : WA.dateChip, color: active.withinCustomerCareWindow ? WA.greenText : WA.muted }}>
 									{active.withinCustomerCareWindow ? t.windowOpen : t.windowClosed}
 								</span>
-								<button type="button" onClick={() => void onSync()} className="rounded-md p-1" style={{ color: WA.icon }} title={t.syncHint}>
-									<RefreshCw className="h-6 w-6" strokeWidth={1.75} />
+								<button
+									type="button"
+									onClick={() => {
+										setActiveId(null);
+										setActive(null);
+										setMessages([]);
+										setDraft('');
+									}}
+									className="rounded-md p-1 transition hover:bg-black/5"
+									style={{ color: WA.icon }}
+									title={t.closeChat}
+								>
+									<ArrowLeft
+										className={`h-6 w-6 ${isAr ? 'rotate-180' : ''}`}
+										strokeWidth={1.75}
+									/>
 								</button>
 							</div>
 						</header>
 
-						<div className="relative z-0 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-3" style={chatWallpaperStyle}>
+						<div
+							ref={messagesScrollRef}
+							className="relative z-0 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-3"
+							style={chatWallpaperStyle}
+						>
 							<div className="mx-auto rounded-lg px-3.5 py-1.5 text-center text-[10px] shadow-[0_1px_0_rgba(0,0,0,0.08)]" style={{ background: WA.dateChip, color: WA.dateText }}>{t.encryption}</div>
 							<div className="mx-auto max-w-[360px] rounded-lg px-3.5 py-1.5 text-center text-[10px] shadow-[0_1px_0_rgba(0,0,0,0.08)]" style={{ background: WA.chipMeta, color: WA.metaNote }}>{t.metaNote}</div>
 							{buildChatRows(messages).map(row => {
@@ -3977,12 +4172,18 @@ export default function MetaWhatsAppWorkspace() {
 														) : null}
 														{templateParts?.header ? (
 															<div className="whitespace-pre-wrap break-words font-bold">
-																<RichMessageText text={templateParts.header} />
+																<RichMessageText
+																	text={templateParts.header}
+																	onPhoneClick={openChatFromPhoneNumber}
+																/>
 															</div>
 														) : null}
 														{templateParts?.body ? (
 															<div className="whitespace-pre-wrap break-words">
-																<RichMessageText text={templateParts.body} />
+																<RichMessageText
+																	text={templateParts.body}
+																	onPhoneClick={openChatFromPhoneNumber}
+																/>
 															</div>
 														) : null}
 														{templateParts?.footer ? (
@@ -3990,7 +4191,10 @@ export default function MetaWhatsAppWorkspace() {
 																className="whitespace-pre-wrap break-words text-[11px]"
 																style={{ color: WA.muted }}
 															>
-																<RichMessageText text={templateParts.footer} />
+																<RichMessageText
+																	text={templateParts.footer}
+																	onPhoneClick={openChatFromPhoneNumber}
+																/>
 															</div>
 														) : null}
 													</div>
@@ -4013,7 +4217,10 @@ export default function MetaWhatsAppWorkspace() {
 													<div
 														className={`whitespace-pre-wrap break-words ${m.hasMedia ? 'mt-1' : ''}`}
 													>
-														<RichMessageText text={caption} />
+														<RichMessageText
+															text={caption}
+															onPhoneClick={openChatFromPhoneNumber}
+														/>
 													</div>
 												) : null}
 												{type === 'text' &&
@@ -4021,7 +4228,10 @@ export default function MetaWhatsAppWorkspace() {
 												m.body &&
 												!isMediaPlaceholderBody(m.body) ? (
 													<div className="whitespace-pre-wrap break-words">
-														<RichMessageText text={m.body} />
+														<RichMessageText
+															text={m.body}
+															onPhoneClick={openChatFromPhoneNumber}
+														/>
 													</div>
 												) : null}
 												<div
@@ -4165,6 +4375,16 @@ export default function MetaWhatsAppWorkspace() {
 												title={t.sendTemplate}
 											>
 												<LayoutTemplate className="h-5 w-5" strokeWidth={1.8} />
+											</button>
+											<button
+												type="button"
+												disabled={sending || openingChatPhone}
+												onClick={() => void openQuickReplies()}
+												className="grid h-9 w-9 place-items-center rounded-xl transition hover:bg-black/5 disabled:opacity-40"
+												style={{ color: WA.icon }}
+												title={t.fastReplies}
+											>
+												<Zap className="h-5 w-5" strokeWidth={1.8} />
 											</button>
 										</div>
 										<div
@@ -4766,6 +4986,181 @@ export default function MetaWhatsAppWorkspace() {
 							</button>
 						</div>
 					</form>
+				</div>
+			)}
+
+			{quickRepliesOpen && (
+				<div
+					className="absolute inset-0 z-40 grid place-items-end bg-[rgba(11,20,26,0.35)] p-3 sm:place-items-center sm:p-4"
+					onClick={() => setQuickRepliesOpen(false)}
+				>
+					<div
+						className="flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.25)]"
+						style={{ background: WA.panel }}
+						onClick={e => e.stopPropagation()}
+					>
+						<header
+							className="flex items-start justify-between gap-3 border-b px-4 py-3"
+							style={{ borderColor: WA.border }}
+						>
+							<div className="min-w-0">
+								<div className="flex items-center gap-2">
+									<span
+										className="grid h-8 w-8 place-items-center rounded-xl"
+										style={{ background: WA.greenSoft, color: WA.greenText }}
+									>
+										<Zap className="h-4 w-4" />
+									</span>
+									<div>
+										<h3 className="text-[15px] font-bold" style={{ color: WA.text }}>
+											{t.fastReplies}
+										</h3>
+										<p className="text-[11px]" style={{ color: WA.muted }}>
+											{t.fastRepliesHint}
+										</p>
+									</div>
+								</div>
+							</div>
+							<button
+								type="button"
+								onClick={() => setQuickRepliesOpen(false)}
+								className="rounded-lg p-1.5 transition hover:bg-black/5"
+								style={{ color: WA.icon }}
+							>
+								<X className="h-4 w-4" />
+							</button>
+						</header>
+
+						<div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 py-3">
+							{quickRepliesLoading ? (
+								<div className="flex items-center justify-center gap-2 py-10 text-[12px]" style={{ color: WA.muted }}>
+									<LoaderCircle className="h-4 w-4 animate-spin" />
+									…
+								</div>
+							) : quickReplies.length === 0 ? (
+								<p className="py-8 text-center text-[12px]" style={{ color: WA.muted }}>
+									{t.fastReplyEmpty}
+								</p>
+							) : (
+								quickReplies.map(reply => (
+									<div
+										key={reply.id}
+										className="group flex items-start gap-2 rounded-xl border px-3 py-2.5 transition hover:bg-black/[0.02]"
+										style={{ borderColor: WA.border }}
+									>
+										<button
+											type="button"
+											className="min-w-0 flex-1 text-start"
+											onClick={() => useQuickReply(reply)}
+										>
+											<div className="flex items-center gap-1.5">
+												<span className="text-[13px] font-semibold" style={{ color: WA.text }}>
+													{reply.title}
+												</span>
+												{reply.isDefault ? (
+													<span
+														className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase"
+														style={{ background: WA.greenSoft, color: WA.greenText }}
+													>
+														default
+													</span>
+												) : null}
+											</div>
+											<p
+												className="mt-0.5 line-clamp-3 whitespace-pre-wrap text-[11px] leading-snug"
+												style={{ color: WA.muted }}
+											>
+												{reply.body}
+											</p>
+										</button>
+										{!reply.isDefault ? (
+											<button
+												type="button"
+												title={t.fastReplyDelete}
+												onClick={() => void deleteQuickReply(reply.id)}
+												className="shrink-0 rounded-lg p-1.5 opacity-60 transition hover:bg-rose-50 hover:opacity-100"
+												style={{ color: '#E53935' }}
+											>
+												<Trash2 className="h-3.5 w-3.5" />
+											</button>
+										) : null}
+									</div>
+								))
+							)}
+						</div>
+
+						<div className="border-t px-3 py-3" style={{ borderColor: WA.border }}>
+							{quickReplyFormOpen ? (
+								<form onSubmit={e => void saveQuickReply(e)} className="space-y-2">
+									<input
+										value={quickReplyTitle}
+										onChange={e => setQuickReplyTitle(e.target.value)}
+										placeholder={t.fastReplyTitle}
+										className="w-full rounded-xl border px-3 py-2 text-[13px] outline-none"
+										style={{ borderColor: WA.border, color: WA.text }}
+										required
+									/>
+									<textarea
+										value={quickReplyBody}
+										onChange={e => setQuickReplyBody(e.target.value)}
+										placeholder={t.fastReplyBody}
+										rows={4}
+										className="w-full resize-none rounded-xl border px-3 py-2 text-[13px] outline-none"
+										style={{ borderColor: WA.border, color: WA.text }}
+										required
+									/>
+									<div className="flex justify-end gap-2">
+										<button
+											type="button"
+											onClick={() => setQuickReplyFormOpen(false)}
+											className="rounded-xl px-3 py-2 text-[12px] font-semibold"
+											style={{ color: WA.muted }}
+										>
+											{t.cancel}
+										</button>
+										<button
+											type="submit"
+											disabled={quickReplySaving}
+											className="rounded-xl px-3 py-2 text-[12px] font-semibold text-white disabled:opacity-50"
+											style={{ background: WA.green }}
+										>
+											{quickReplySaving ? '…' : t.fastReplySave}
+										</button>
+									</div>
+								</form>
+							) : (
+								<div className="flex gap-2">
+									{draft.trim() ? (
+										<button
+											type="button"
+											onClick={() => {
+												setQuickReplyBody(draft.trim());
+												setQuickReplyTitle('');
+												setQuickReplyFormOpen(true);
+											}}
+											className="flex-1 rounded-xl border px-3 py-2 text-[12px] font-semibold transition hover:bg-black/[0.02]"
+											style={{ borderColor: WA.border, color: WA.text }}
+										>
+											{isAr ? 'حفظ المسودة كرد' : 'Save draft as reply'}
+										</button>
+									) : null}
+									<button
+										type="button"
+										onClick={() => {
+											setQuickReplyTitle('');
+											setQuickReplyBody('');
+											setQuickReplyFormOpen(true);
+										}}
+										className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-semibold text-white"
+										style={{ background: WA.green }}
+									>
+										<Plus className="h-3.5 w-3.5" />
+										{t.fastReplyAdd}
+									</button>
+								</div>
+							)}
+						</div>
+					</div>
 				</div>
 			)}
 

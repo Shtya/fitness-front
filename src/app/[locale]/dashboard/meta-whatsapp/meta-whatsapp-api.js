@@ -153,9 +153,27 @@ export const metaWhatsAppApi = {
 		return api.get('/meta-whatsapp/bulk', { signal }).then(r => r.data);
 	},
 	getBulk(id, signal) {
-		return api.get(`/meta-whatsapp/bulk/${id}`, { signal }).then(r => r.data);
+		return api
+			.get(`/meta-whatsapp/bulk/${id}`, {
+				signal,
+				params: { _ts: Date.now() },
+				headers: { 'Cache-Control': 'no-cache' },
+			})
+			.then(r => r.data);
 	},
 	cancelBulk(id, signal) {
 		return api.post(`/meta-whatsapp/bulk/${id}/cancel`, {}, { signal }).then(r => r.data);
+	},
+	listQuickReplies(signal) {
+		return api.get('/meta-whatsapp/quick-replies', { signal }).then(r => r.data);
+	},
+	createQuickReply(payload, signal) {
+		return api.post('/meta-whatsapp/quick-replies', payload, { signal }).then(r => r.data);
+	},
+	updateQuickReply(id, payload, signal) {
+		return api.put(`/meta-whatsapp/quick-replies/${id}`, payload, { signal }).then(r => r.data);
+	},
+	deleteQuickReply(id, signal) {
+		return api.delete(`/meta-whatsapp/quick-replies/${id}`, { signal }).then(r => r.data);
 	},
 };
