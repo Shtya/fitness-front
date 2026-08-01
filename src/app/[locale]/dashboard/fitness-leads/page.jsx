@@ -64,6 +64,11 @@ const COPY = {
 		downloadCsv: 'Download CSV',
 		copied: 'Copied',
 		error: 'Something went wrong',
+		partialOk: 'Search finished with some website enrich skips — your leads were still saved.',
+		finalizePartial: 'Save partial results',
+		finalizePartialOk: 'Partial results saved as complete',
+		stuckEnrich:
+			'Enrichment is stuck or very slow. You can save the leads collected so far and finish.',
 		keysTitle: 'Lead Scout API keys',
 		keysSubtitle: 'Google Places is required. Hunter / Apollo / Clearbit are optional.',
 		keysClose: 'Close',
@@ -116,6 +121,15 @@ const COPY = {
 		historyEmpty: 'Past searches will show up here.',
 		historyOpen: 'View',
 		historyDownload: 'CSV',
+		historyDelete: 'Delete',
+		historyFavorite: 'Favorite',
+		historyUnfavorite: 'Remove favorite',
+		historyDeleteConfirm: 'Delete this search and its leads? This cannot be undone.',
+		historyColSearch: 'Search',
+		historyColCities: 'Cities',
+		historyColWhen: 'When',
+		historyColStatus: 'Status',
+		historyColActions: 'Actions',
 		leadsLabel: 'leads',
 		loadingHistory: 'Loading…',
 		waSelected: '{n} selected',
@@ -160,9 +174,18 @@ const COPY = {
 		waLegend: 'Amber ×1 · Violet ×2 · Rose ×3+ (shared across sheets)',
 		metaWhatsApp: 'Meta WhatsApp',
 		metaBulk: 'Meta template',
+		metaBulkSheet: 'Meta → whole sheet',
 		metaBulkTitle: 'Meta template bulk send',
-		metaBulkHint: 'Approved templates only — respects Meta policy',
+		metaBulkHint: 'Approved templates only — selected rows',
+		metaBulkSheetHint: 'All phones in this Lead Scout sheet via an approved template',
 		metaBulkStart: 'Start send',
+		metaBulkCancel: 'Stop',
+		metaBulkPaceHint: 'Approx. delay between each message',
+		metaBulkBanHint:
+			'Meta can restrict the number for poor quality / no opt-in — start slow (5–10/min).',
+		metaTemplate: 'Template',
+		metaLang: 'Language',
+		metaRate: 'Msgs / minute',
 		metaTemplate: 'Template',
 		metaLang: 'Language',
 		metaRate: 'Per minute',
@@ -195,6 +218,11 @@ const COPY = {
 		downloadCsv: 'تنزيل CSV',
 		copied: 'تم النسخ',
 		error: 'حدث خطأ',
+		partialOk: 'اكتمل البحث مع تخطي بعض مواقع الإثراء — النتائج محفوظة.',
+		finalizePartial: 'حفظ النتائج الجزئية',
+		finalizePartialOk: 'تم حفظ النتائج الجزئية كمكتملة',
+		stuckEnrich:
+			'الإثراء متوقف أو بطيء جدًا. يمكنك حفظ النتائج الحالية وإنهاء البحث.',
 		keysTitle: 'مفاتيح كشّاف العملاء',
 		keysSubtitle: 'Google Places مطلوب. Hunter / Apollo / Clearbit اختيارية.',
 		keysClose: 'إغلاق',
@@ -247,6 +275,15 @@ const COPY = {
 		historyEmpty: 'ستظهر عمليات البحث السابقة هنا.',
 		historyOpen: 'عرض',
 		historyDownload: 'CSV',
+		historyDelete: 'حذف',
+		historyFavorite: 'مفضلة',
+		historyUnfavorite: 'إزالة من المفضلة',
+		historyDeleteConfirm: 'حذف هذا البحث ونتائجه؟ لا يمكن التراجع.',
+		historyColSearch: 'البحث',
+		historyColCities: 'المدن',
+		historyColWhen: 'الوقت',
+		historyColStatus: 'الحالة',
+		historyColActions: 'إجراءات',
 		leadsLabel: 'نتيجة',
 		loadingHistory: 'جاري التحميل…',
 		waSelected: '{n} محدد',
@@ -291,9 +328,18 @@ const COPY = {
 		waLegend: 'أصفر ×1 · بنفسجي ×2 · وردي ×3+ (مشترك بين كل الشيتات)',
 		metaWhatsApp: 'ميتا واتساب',
 		metaBulk: 'قالب ميتا',
+		metaBulkSheet: 'ميتا ← الشيت كامل',
 		metaBulkTitle: 'إرسال قالب ميتا جماعي',
-		metaBulkHint: 'قوالب معتمدة فقط — احترام سياسة Meta',
+		metaBulkHint: 'قوالب معتمدة فقط — الصفوف المحددة',
+		metaBulkSheetHint: 'كل أرقام الشيت الحالي من Lead Scout عبر قالب معتمد',
 		metaBulkStart: 'بدء الإرسال',
+		metaBulkCancel: 'إيقاف',
+		metaBulkPaceHint: 'فاصل زمني تقريبي بين كل رسالة',
+		metaBulkBanHint:
+			'Meta ممكن تقيّد الرقم لو الجودة ضعيفة أو بدون موافقة المستلم — ابدأ ببطء (5–10/دقيقة).',
+		metaTemplate: 'القالب',
+		metaLang: 'اللغة',
+		metaRate: 'رسائل / دقيقة',
 		metaTemplate: 'القالب',
 		metaLang: 'اللغة',
 		metaRate: 'حد/دقيقة',
@@ -578,6 +624,7 @@ export default function FitnessLeadsPage() {
 	const [keysOpen, setKeysOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
+	const [warning, setWarning] = useState('');
 	const [job, setJob] = useState(null);
 	const [copied, setCopied] = useState(false);
 	const [selectedLead, setSelectedLead] = useState(null);
@@ -585,6 +632,7 @@ export default function FitnessLeadsPage() {
 	const [waComposeOpen, setWaComposeOpen] = useState(false);
 	const [composeChannel, setComposeChannel] = useState('whatsapp');
 	const [metaBulkOpen, setMetaBulkOpen] = useState(false);
+	const [metaBulkScope, setMetaBulkScope] = useState('selected'); // selected | sheet
 	const [waSendCounts, setWaSendCounts] = useState({});
 	const [aiIntent, setAiIntent] = useState('');
 	const [aiLoading, setAiLoading] = useState(false);
@@ -595,6 +643,8 @@ export default function FitnessLeadsPage() {
 	const [historyOpen, setHistoryOpen] = useState(false);
 	const [openingJobId, setOpeningJobId] = useState('');
 	const [downloadingJobId, setDownloadingJobId] = useState('');
+	const [favoritingJobId, setFavoritingJobId] = useState('');
+	const [deletingJobId, setDeletingJobId] = useState('');
 
 	const countryOptions = options?.countries || [];
 	const selectedCountry = countryOptions.find(c => c.key === countryKey);
@@ -709,6 +759,7 @@ export default function FitnessLeadsPage() {
 		if (!cities.length || !categories.length) return;
 		setLoading(true);
 		setError('');
+		setWarning('');
 		setJob(null);
 		setSelectedLead(null);
 		setCheckedIds([]);
@@ -723,12 +774,17 @@ export default function FitnessLeadsPage() {
 			});
 			setJob(started);
 			const startedAt = Date.now();
-			while (Date.now() - startedAt < 10 * 60 * 1000) {
+			const pollMs = Math.min(Math.max(10, maxPlaces) * 12_000, 45 * 60 * 1000);
+			while (Date.now() - startedAt < pollMs) {
 				await new Promise(r => setTimeout(r, 1600));
 				const next = await fitnessLeadsApi.getJob(started.jobId);
 				setJob(next);
 				if (next.status === 'done' || next.status === 'failed') {
-					if (next.status === 'failed') setError(next.errorMessage || t.error);
+					if (next.status === 'failed') {
+						setError(next.errorMessage || t.error);
+					} else if (next.errorMessage) {
+						setWarning(next.errorMessage || t.partialOk);
+					}
 					break;
 				}
 			}
@@ -740,9 +796,27 @@ export default function FitnessLeadsPage() {
 		}
 	};
 
+	const finalizePartialJob = async () => {
+		if (!job?.jobId) return;
+		setLoading(true);
+		setError('');
+		setWarning('');
+		try {
+			const next = await fitnessLeadsApi.finalizeJob(job.jobId);
+			setJob(next);
+			setWarning(next.errorMessage || t.finalizePartialOk);
+			void loadHistory();
+		} catch (err) {
+			setError(err?.response?.data?.message || t.error);
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	const openHistoryJob = async jobId => {
 		setOpeningJobId(jobId);
 		setError('');
+		setWarning('');
 		setSelectedLead(null);
 		try {
 			const next = await fitnessLeadsApi.getJob(jobId);
@@ -771,6 +845,48 @@ export default function FitnessLeadsPage() {
 			setError(err?.response?.data?.message || t.error);
 		} finally {
 			setDownloadingJobId('');
+		}
+	};
+
+	const toggleHistoryFavorite = async item => {
+		setFavoritingJobId(item.jobId);
+		setError('');
+		try {
+			const next = !item.isFavorite;
+			await fitnessLeadsApi.setJobFavorite(item.jobId, next);
+			setHistory(rows =>
+				[...rows]
+					.map(r => (r.jobId === item.jobId ? { ...r, isFavorite: next } : r))
+					.sort((a, b) => {
+						if (Boolean(a.isFavorite) !== Boolean(b.isFavorite)) {
+							return a.isFavorite ? -1 : 1;
+						}
+						return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+					}),
+			);
+		} catch (err) {
+			setError(err?.response?.data?.message || t.error);
+		} finally {
+			setFavoritingJobId('');
+		}
+	};
+
+	const deleteHistoryJob = async item => {
+		if (!window.confirm(t.historyDeleteConfirm)) return;
+		setDeletingJobId(item.jobId);
+		setError('');
+		try {
+			await fitnessLeadsApi.deleteJob(item.jobId);
+			setHistory(rows => rows.filter(r => r.jobId !== item.jobId));
+			if (job?.jobId === item.jobId) {
+				setJob(null);
+				setCheckedIds([]);
+				setSelectedLead(null);
+			}
+		} catch (err) {
+			setError(err?.response?.data?.message || t.error);
+		} finally {
+			setDeletingJobId('');
 		}
 	};
 
@@ -912,7 +1028,7 @@ export default function FitnessLeadsPage() {
 								<input
 									type="number"
 									min={5}
-									max={120}
+									max={1000}
 									value={maxPlaces}
 									onChange={e => setMaxPlaces(Number(e.target.value) || 30)}
 									className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
@@ -1032,6 +1148,38 @@ export default function FitnessLeadsPage() {
 				{error && (
 					<div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
 						{error}
+						{(job?.status === 'failed' || job?.status === 'running') &&
+						(job?.leadsCount || leads.length) > 0 ? (
+							<button
+								type="button"
+								onClick={() => void finalizePartialJob()}
+								disabled={loading}
+								className="ms-3 inline-flex rounded-md bg-rose-700 px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50"
+							>
+								{t.finalizePartial}
+							</button>
+						) : null}
+					</div>
+				)}
+				{!error &&
+					job?.status === 'running' &&
+					job?.currentStep === 'enrich_websites' &&
+					(job?.leadsCount || leads.length) > 0 && (
+						<div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+							<span>{t.stuckEnrich}</span>
+							<button
+								type="button"
+								onClick={() => void finalizePartialJob()}
+								disabled={loading}
+								className="inline-flex rounded-md bg-amber-700 px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50"
+							>
+								{t.finalizePartial}
+							</button>
+						</div>
+					)}
+				{warning && !error && (
+					<div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+						{warning}
 					</div>
 				)}
 
@@ -1051,7 +1199,14 @@ export default function FitnessLeadsPage() {
 					onComposeWhatsApp={() => openCompose('whatsapp')}
 					onComposeMessenger={() => openCompose('messenger')}
 					onComposeInstagram={() => openCompose('instagram')}
-					onMetaBulk={() => setMetaBulkOpen(true)}
+					onMetaBulk={() => {
+						setMetaBulkScope('selected');
+						setMetaBulkOpen(true);
+					}}
+					onMetaBulkSheet={() => {
+						setMetaBulkScope('sheet');
+						setMetaBulkOpen(true);
+					}}
 					waSendCounts={waSendCounts}
 					onSelectFilter={applySelectFilter}
 				/>
@@ -1070,7 +1225,9 @@ export default function FitnessLeadsPage() {
 			<LeadMetaBulkModal
 				open={metaBulkOpen}
 				onClose={() => setMetaBulkOpen(false)}
-				leads={checkedLeads}
+				leads={metaBulkScope === 'sheet' ? leads : checkedLeads}
+				jobId={job?.jobId || null}
+				scope={metaBulkScope}
 				t={t}
 				isAr={isAr}
 			/>
@@ -1083,8 +1240,12 @@ export default function FitnessLeadsPage() {
 				activeJobId={job?.jobId}
 				openingJobId={openingJobId}
 				downloadingJobId={downloadingJobId}
+				favoritingJobId={favoritingJobId}
+				deletingJobId={deletingJobId}
 				onOpen={openHistoryJob}
 				onDownload={downloadHistoryJob}
+				onToggleFavorite={toggleHistoryFavorite}
+				onDelete={deleteHistoryJob}
 				t={t}
 				isAr={isAr}
 			/>

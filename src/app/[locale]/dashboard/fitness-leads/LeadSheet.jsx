@@ -92,6 +92,7 @@ export default function LeadSheet({
 	onComposeMessenger,
 	onComposeInstagram,
 	onMetaBulk,
+	onMetaBulkSheet,
 	waSendCounts = {},
 	onSelectFilter,
 }) {
@@ -104,6 +105,7 @@ export default function LeadSheet({
 	const selectedWa = selectedLeads.filter(hasPhone).length;
 	const selectedMsg = selectedLeads.filter(l => buildMessengerUrl(l)).length;
 	const selectedIg = selectedLeads.filter(l => buildInstagramUrl(l)).length;
+	const sheetPhoneCount = selectableLeads.length;
 
 	const toggleOne = (lead, e) => {
 		e.stopPropagation();
@@ -149,6 +151,17 @@ export default function LeadSheet({
 					)}
 					{leads.length > 0 && (
 						<>
+							{sheetPhoneCount > 0 && onMetaBulkSheet ? (
+								<button
+									type="button"
+									onClick={onMetaBulkSheet}
+									className="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-800 px-3 py-1.5 text-xs font-semibold text-white"
+									title={t.metaBulkSheetHint}
+								>
+									{t.metaBulkSheet}
+									<span className="opacity-80">({sheetPhoneCount})</span>
+								</button>
+							) : null}
 							<button
 								type="button"
 								onClick={onCopyCsv}

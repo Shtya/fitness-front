@@ -5658,8 +5658,71 @@ function WhatsAppWorkspaceContent() {
 			setLoadingStory(false);
 			return;
 		}
+		const loadMedia = async statusRef => {
+			const ids = [statusRef?.id, statusRef?.providerStatusId].filter(Boolean);
+			let lastError = null;
+			for (const mediaId of ids) {
+				try {
+					return await fetchStatusMediaBlob(targetAccountId, mediaId);
+				} catch (error) {
+					lastError = error;
+					const message =
+						typeof error?.message === 'string' ? error.message : String(error || '');
+					if (!/whatsapp status not found/i.test(message)) throw error;
+				}
+			}
+			throw lastError || new Error(t.mediaUnavailable);
+		};
 		try {
-			const data = await fetchStatusMediaBlob(targetAccountId, status.id);
+			let data;
+			try {
+				data = await loadMedia(status);
+			} catch (firstError) {
+				const firstMessage =
+					typeof firstError?.message === 'string'
+						? firstError.message
+						: String(firstError || '');
+				// Stale UUID after refresh/delete races: resync and rematch by provider id.
+				if (!/whatsapp status not found/i.test(firstMessage)) throw firstError;
+				let refreshedItems =
+					statusesCacheRef.current.get(targetAccountId)?.items || [];
+				try {
+					const { data: refreshed } = await api.get(
+						`/whatsapp/accounts/${targetAccountId}/statuses`,
+						{ params: { refresh: true }, timeout: 40000 },
+					);
+					applyStatuses(targetAccountId, refreshed);
+					refreshedItems = Array.isArray(refreshed)
+						? refreshed
+						: refreshed?.items || [];
+				} catch {
+					/* keep cached list for rematch attempt */
+				}
+				if (
+					requestId !== storyRequestId.current ||
+					accountIdRef.current !== targetAccountId
+				) {
+					return;
+				}
+				const statusKey = value => {
+					const text = String(value || '');
+					const broadcast = text.match(/status@broadcast_([^_]+)/i)?.[1];
+					if (broadcast) return broadcast.toLowerCase();
+					const hex = text.match(/_([0-9A-Fa-f]{10,}|3A[0-9A-Fa-f]+)(?:_|$)/)?.[1];
+					if (hex) return hex.toLowerCase();
+					return text.toLowerCase();
+				};
+				const wanted = statusKey(status.providerStatusId || status.id);
+				const rematched =
+					refreshedItems.find(item => item.id === status.id) ||
+					refreshedItems.find(
+						item => statusKey(item.providerStatusId || item.id) === wanted,
+					) ||
+					null;
+				if (!rematched) throw firstError;
+				setSelectedStatus(rematched);
+				data = await loadMedia(rematched);
+			}
 			if (
 				requestId !== storyRequestId.current ||
 				accountIdRef.current !== targetAccountId
@@ -5671,7 +5734,10 @@ function WhatsAppWorkspaceContent() {
 			setStatusMediaUrl(objectUrl);
 			if (String(data.type || '').includes('video')) {
 				setSelectedStatus(current =>
-					current?.id === status.id ? { ...current, type: 'video' } : current,
+					current?.id === status.id ||
+					current?.providerStatusId === status.providerStatusId
+						? { ...current, type: 'video' }
+						: current,
 				);
 			}
 		} catch (error) {
@@ -5681,23 +5747,6 @@ function WhatsAppWorkspaceContent() {
 					error.response?.data?.message ||
 					(typeof error?.message === 'string' ? error.message : null) ||
 					t.mediaUnavailable;
-				if (/not found|could not be downloaded|unavailable/i.test(String(message))) {
-					setStatuses(current => current.filter(item => item.id !== status.id));
-					statusesCacheRef.current.set(targetAccountId, {
-						items: (statusesCacheRef.current.get(targetAccountId)?.items || []).filter(
-							item => item.id !== status.id,
-						),
-						cachedAt: Date.now(),
-					});
-					const remaining = playlist.filter(item => item.id !== status.id);
-					if (!remaining.length) {
-						closeStory();
-					} else {
-						const nextIndex = Math.min(index, remaining.length - 1);
-						openStory(remaining[nextIndex], remaining, nextIndex);
-						return;
-					}
-				}
 				toast.error(message);
 			}
 		} finally {

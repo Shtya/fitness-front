@@ -571,6 +571,7 @@
 			"myWorkspace": "My Workspace",
 			"workspace": "Workspace",
 			"communication": "Communication",
+			"outreach": "Outreach",
 			"tools": "Tools",
 			"finance": "Finance",
 			"account": "Account",
@@ -665,6 +666,7 @@
 			"content": "Content",
 			"workspace": "Workspace",
 			"communication": "Communication",
+			"outreach": "Outreach",
 			"tools": "Tools",
 			"finance": "Finance",
 			"account": "Account"
@@ -697,12 +699,16 @@
 				"marketplace": "Marketplace"
 			},
 			"marketplace": {
-				"subtitle": "Add extra pages to your sidebar. They stay hidden until you add them.",
+				"subtitle": "Store extra apps here and add them back anytime. Rename outreach tools with the pencil icon.",
 				"addButton": "Add to Sidebar",
 				"removeButton": "Remove",
 				"addedBadge": "Added",
 				"installedLabel": "added",
-				"emptyTitle": "No apps available for your role"
+				"emptyTitle": "No apps available for your role",
+				"renameButton": "Rename",
+				"renamePlaceholder": "Custom name…",
+				"resetNamesButton": "Reset names",
+				"optInBadge": "Add from marketplace"
 			}
 		}
 	},

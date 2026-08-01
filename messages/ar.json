@@ -848,6 +848,7 @@
 			"finance": "المالية",
 			"account": "الحساب",
 			"communication": "التواصل",
+			"outreach": "التواصل والتسويق",
 			"tools": "الأدوات"
 		},
 		"groups": {
@@ -857,6 +858,7 @@
 			"content": "المحتوى",
 			"workspace": "مساحة العمل",
 			"communication": "التواصل",
+			"outreach": "التواصل والتسويق",
 			"tools": "الأدوات",
 			"finance": "المالية",
 			"account": "الحساب"
@@ -955,12 +957,16 @@
 				"marketplace": "المتجر"
 			},
 			"marketplace": {
-				"subtitle": "أضف صفحات إضافية إلى الشريط الجانبي. تبقى مخفية حتى تقوم بإضافتها.",
+				"subtitle": "خزّن التطبيقات هنا وأعد إضافتها وقت ما تحب. سمّ أدوات التواصل بأيقونة القلم.",
 				"addButton": "إضافة إلى الشريط",
 				"removeButton": "إزالة",
 				"addedBadge": "تمت الإضافة",
 				"installedLabel": "مضافة",
-				"emptyTitle": "لا توجد تطبيقات متاحة لدورك"
+				"emptyTitle": "لا توجد تطبيقات متاحة لدورك",
+				"renameButton": "إعادة تسمية",
+				"renamePlaceholder": "اسم مخصص…",
+				"resetNamesButton": "إعادة ضبط الأسماء",
+				"optInBadge": "أضف من المتجر"
 			}
 		},
 		"palettes": {

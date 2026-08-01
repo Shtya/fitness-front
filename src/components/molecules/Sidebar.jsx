@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import api from '@/utils/axios';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Zap, TrendingUp, BookOpen, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Zap, TrendingUp, BookOpen, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil } from 'lucide-react';
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
@@ -28,7 +28,25 @@ const SIDEBAR_FONT_LTR = "var(--font-inter), 'Segoe UI', system-ui, -apple-syste
 const LS_COLLAPSED = 'sidebar:collapsed';
 const LS_HIDDEN = 'sidebar:hidden-items';
 const LS_MARKETPLACE = 'sidebar:marketplace-installed';
+const LS_MARKETPLACE_OUTREACH_MIGRATE = 'sidebar:marketplace-outreach-v1';
+const LS_MARKETPLACE_OPT_IN_MIGRATE = 'sidebar:marketplace-opt-in-v2';
+const LS_CUSTOM_LABELS = 'sidebar:custom-labels';
 const LS_PALETTE = 'sidebar:palette';
+
+/** Chat apps that stay installed by default after moving into Marketplace. */
+const OUTREACH_DEFAULT_INSTALLED = ['messages', 'whatsapp', 'metaWhatsApp'];
+
+/** Must be added from Marketplace — never shown on the sidebar until installed. */
+const OPT_IN_MARKETPLACE_IDS = ['phoneCheck', 'fitnessLeads', 'branding'];
+
+/** Outreach apps live in Marketplace so they can be stored and re-added later. */
+const OUTREACH_MARKETPLACE_IDS = [
+	'messages',
+	'whatsapp',
+	'metaWhatsApp',
+	'phoneCheck',
+	'fitnessLeads',
+];
 
 /* ─── Motion configs ────────────────────────────────────────── */
 const snap = { type: 'spring', stiffness: 500, damping: 36, mass: 0.65 };
@@ -221,19 +239,19 @@ export const ITEM_META = {
   myReminders: { id: 'myReminders', nameKey: 'myReminders', href: '/dashboard/reminders', icon: Bell, descKey: 'descriptions.myReminders', group: 'workspace', defaultVisible: true, required: false },
   todos: { id: 'todos', nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo, descKey: 'descriptions.todos', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
   calendar: { id: 'calendar', nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays, descKey: 'descriptions.calendar', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
-  messages: { id: 'messages', nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare, descKey: 'descriptions.messages', group: 'communication', defaultVisible: true, required: false },
-  whatsapp: { id: 'whatsapp', nameKey: 'whatsapp', href: '/dashboard/whatsapp', icon: MessageCircle, descKey: 'descriptions.whatsapp', group: 'communication', defaultVisible: true, required: false },
+  messages: { id: 'messages', nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare, descKey: 'descriptions.messages', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
+  whatsapp: { id: 'whatsapp', nameKey: 'whatsapp', href: '/dashboard/whatsapp', icon: MessageCircle, descKey: 'descriptions.whatsapp', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
   transcript: { id: 'transcript', nameKey: 'transcript', href: '/dashboard/transcript', icon: AudioLines, descKey: 'descriptions.transcript', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
   calorieCalculator: { id: 'calorieCalculator', nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator, descKey: 'descriptions.calorieCalculator', group: 'tools', defaultVisible: true, required: false },
   aiFree: { id: 'aiFree', nameKey: 'aiFree', href: '/dashboard/ai-free', icon: BrainCircuit, descKey: 'descriptions.aiFree', group: 'tools', defaultVisible: true, required: false },
-  phoneCheck: { id: 'phoneCheck', nameKey: 'phoneCheck', href: '/dashboard/phone-check', icon: ShieldAlert, descKey: 'descriptions.phoneCheck', group: 'tools', defaultVisible: true, required: false },
-  fitnessLeads: { id: 'fitnessLeads', nameKey: 'fitnessLeads', href: '/dashboard/fitness-leads', icon: Radar, descKey: 'descriptions.fitnessLeads', group: 'tools', defaultVisible: true, required: false },
-  metaWhatsApp: { id: 'metaWhatsApp', nameKey: 'metaWhatsApp', href: '/dashboard/meta-whatsapp', icon: MessageCircle, descKey: 'descriptions.metaWhatsApp', group: 'tools', defaultVisible: true, required: false },
+  phoneCheck: { id: 'phoneCheck', nameKey: 'phoneCheck', href: '/dashboard/phone-check', icon: ShieldAlert, descKey: 'descriptions.phoneCheck', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
+  fitnessLeads: { id: 'fitnessLeads', nameKey: 'fitnessLeads', href: '/dashboard/fitness-leads', icon: Radar, descKey: 'descriptions.fitnessLeads', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
+  metaWhatsApp: { id: 'metaWhatsApp', nameKey: 'metaWhatsApp', href: '/dashboard/meta-whatsapp', icon: MessageCircle, descKey: 'descriptions.metaWhatsApp', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
   notifications: { id: 'notifications', nameKey: 'notifications', href: '/dashboard/notifications', icon: Bell, descKey: 'descriptions.notifications', group: 'workspace', defaultVisible: true, required: false },
   billing: { id: 'billing', nameKey: 'billing', href: '/dashboard/billing', icon: CreditCard, descKey: 'descriptions.billing', group: 'finance', defaultVisible: false, required: false, marketplace: true },
   money: { id: 'money', nameKey: 'money', href: '/money', icon: Wallet, descKey: 'descriptions.money', group: 'finance', defaultVisible: false, required: false, marketplace: true },
   profile_admin: { id: 'profile_admin', nameKey: 'profile', href: '/dashboard/my-account', icon: UserIcon, descKey: 'descriptions.profile_admin', group: 'account', defaultVisible: true, required: true },
-  branding: { id: 'branding', nameKey: 'branding', href: '/dashboard/settings/branding', icon: Paintbrush, descKey: 'descriptions.branding', group: 'management', defaultVisible: true, required: true },
+  branding: { id: 'branding', nameKey: 'branding', href: '/dashboard/settings/branding', icon: Paintbrush, descKey: 'descriptions.branding', group: 'management', defaultVisible: false, required: false, marketplace: true },
   profile_client: { id: 'profile_client', nameKey: 'profile', href: '/dashboard/my/profile', icon: UserIcon, descKey: 'descriptions.profile_client', group: 'account', defaultVisible: true, required: true },
 };
 
@@ -255,8 +273,26 @@ export const NAV = [
   },
   {
     role: 'admin',
+    sectionKey: 'sections.outreach',
+    items: [
+      { ...ITEM_META.messages },
+      { ...ITEM_META.whatsapp },
+      { ...ITEM_META.metaWhatsApp },
+      { ...ITEM_META.phoneCheck },
+      { ...ITEM_META.fitnessLeads },
+    ],
+  },
+  {
+    role: 'admin',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.whatsapp }, { ...ITEM_META.notifications }, { ...ITEM_META.calorieCalculator }, { ...ITEM_META.aiFree }, { ...ITEM_META.phoneCheck }, { ...ITEM_META.fitnessLeads }, { ...ITEM_META.metaWhatsApp }],
+    items: [
+      { ...ITEM_META.todos },
+      { ...ITEM_META.calendar },
+      { ...ITEM_META.transcript },
+      { ...ITEM_META.notifications },
+      { ...ITEM_META.calorieCalculator },
+      { ...ITEM_META.aiFree },
+    ],
   },
   {
     role: 'admin',
@@ -280,8 +316,20 @@ export const NAV = [
   },
   {
     role: 'client',
+    sectionKey: 'sections.outreach',
+    items: [{ ...ITEM_META.messages }, { ...ITEM_META.phoneCheck }],
+  },
+  {
+    role: 'client',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.calorieCalculator }, { ...ITEM_META.aiFree }, { ...ITEM_META.phoneCheck }, { ...ITEM_META.money }, { ...ITEM_META.profile_client }],
+    items: [
+      { ...ITEM_META.calendar },
+      { ...ITEM_META.transcript },
+      { ...ITEM_META.calorieCalculator },
+      { ...ITEM_META.aiFree },
+      { ...ITEM_META.money },
+      { ...ITEM_META.profile_client },
+    ],
   },
   {
     role: 'coach',
@@ -295,8 +343,26 @@ export const NAV = [
   },
   {
     role: 'coach',
+    sectionKey: 'sections.outreach',
+    items: [
+      { ...ITEM_META.messages },
+      { ...ITEM_META.whatsapp },
+      { ...ITEM_META.metaWhatsApp },
+      { ...ITEM_META.phoneCheck },
+      { ...ITEM_META.fitnessLeads },
+    ],
+  },
+  {
+    role: 'coach',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.messages }, { ...ITEM_META.whatsapp }, { ...ITEM_META.notifications }, { ...ITEM_META.calorieCalculator }, { ...ITEM_META.aiFree }, { ...ITEM_META.phoneCheck }, { ...ITEM_META.fitnessLeads }, { ...ITEM_META.metaWhatsApp }],
+    items: [
+      { ...ITEM_META.todos },
+      { ...ITEM_META.calendar },
+      { ...ITEM_META.transcript },
+      { ...ITEM_META.notifications },
+      { ...ITEM_META.calorieCalculator },
+      { ...ITEM_META.aiFree },
+    ],
   },
   {
     role: 'coach',
@@ -315,8 +381,18 @@ export const NAV = [
   },
   {
     role: 'super_admin',
+    sectionKey: 'sections.outreach',
+    items: [
+      { ...ITEM_META.whatsapp },
+      { ...ITEM_META.metaWhatsApp },
+      { ...ITEM_META.phoneCheck },
+      { ...ITEM_META.fitnessLeads },
+    ],
+  },
+  {
+    role: 'super_admin',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.whatsapp }, { ...ITEM_META.aiFree }, { ...ITEM_META.phoneCheck }, { ...ITEM_META.fitnessLeads }, { ...ITEM_META.metaWhatsApp }],
+    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.aiFree }],
   },
   {
     role: 'super_admin',
@@ -392,6 +468,33 @@ function useHiddenItems() {
 
 function useMarketplaceItems() {
   const [installed, setInstalled] = useLocalStorageState(LS_MARKETPLACE, []);
+
+  // One-time: keep previously always-visible chat apps installed, but leave
+  // Phone Check / Lead Scout / Branding as marketplace opt-in only.
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      if (localStorage.getItem(LS_MARKETPLACE_OUTREACH_MIGRATE) !== '1') {
+        setInstalled(prev => {
+          const next = new Set(Array.isArray(prev) ? prev : []);
+          for (const id of OUTREACH_DEFAULT_INSTALLED) next.add(id);
+          for (const id of OPT_IN_MARKETPLACE_IDS) next.delete(id);
+          return [...next];
+        });
+        localStorage.setItem(LS_MARKETPLACE_OUTREACH_MIGRATE, '1');
+      }
+      if (localStorage.getItem(LS_MARKETPLACE_OPT_IN_MIGRATE) !== '1') {
+        // Undo v1 auto-install for opt-in apps so they hide until added from Marketplace.
+        setInstalled(prev =>
+          (Array.isArray(prev) ? prev : []).filter(id => !OPT_IN_MARKETPLACE_IDS.includes(id)),
+        );
+        localStorage.setItem(LS_MARKETPLACE_OPT_IN_MIGRATE, '1');
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [setInstalled]);
+
   const isInstalled = useCallback(id => installed.includes(id), [installed]);
   const toggle = useCallback(
     id => {
@@ -400,6 +503,32 @@ function useMarketplaceItems() {
     [setInstalled],
   );
   return { installed, isInstalled, toggle };
+}
+
+function useCustomLabels() {
+  const [labels, setLabels] = useLocalStorageState(LS_CUSTOM_LABELS, {});
+  const getLabel = useCallback(
+    (item, t) => {
+      const custom = labels?.[item?.id];
+      if (custom && String(custom).trim()) return String(custom).trim();
+      return t(`items.${item.nameKey}`);
+    },
+    [labels],
+  );
+  const setLabel = useCallback(
+    (id, value) => {
+      setLabels(prev => {
+        const next = { ...(prev || {}) };
+        const trimmed = String(value || '').trim();
+        if (!trimmed) delete next[id];
+        else next[id] = trimmed.slice(0, 48);
+        return next;
+      });
+    },
+    [setLabels],
+  );
+  const resetLabels = useCallback(() => setLabels({}), [setLabels]);
+  return { labels, getLabel, setLabel, resetLabels };
 }
 
 export function useUnreadChats(pollMs = 300000) {
@@ -634,10 +763,10 @@ function SectionLabel({ label, P }) {
 }
 
 /* ─── NavItem ────────────────────────────────────────────────── */
-function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapsed = false, t, totalUnread, unreadNotifications = 0, P }) {
+function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapsed = false, t, totalUnread, unreadNotifications = 0, P, getLabel }) {
   const Icon = item.icon || LayoutDashboard;
   const hasChildren = Array.isArray(item.children) && item.children.length > 0;
-  const label = t(`items.${item.nameKey}`);
+  const label = typeof getLabel === 'function' ? getLabel(item, t) : t(`items.${item.nameKey}`);
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState(false);
   const liRef = useRef(null);
@@ -752,7 +881,7 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
                           }}>
                           <A style={{ width: 12, height: 12 }} strokeWidth={ca ? 2.5 : 2} />
                         </span>
-                        <span style={{ fontSize: 13, fontWeight: ca ? 600 : 500 }}>{t(`items.${child.nameKey}`)}</span>
+                        <span style={{ fontSize: 13, fontWeight: ca ? 600 : 500 }}>{typeof getLabel === 'function' ? getLabel(child, t) : t(`items.${child.nameKey}`)}</span>
                       </Link>
                     );
                   })}
@@ -980,7 +1109,7 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
               <ul style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: 14, margin: 0, listStyle: 'none' }}>
                 {item.children.map(child => (
                   <li key={child.href || child.nameKey}>
-                    <NavItem item={child} pathname={pathname} searchParams={searchParams} depth={depth + 1} onNavigate={onNavigate} t={t} totalUnread={totalUnread} P={P} />
+                    <NavItem item={child} pathname={pathname} searchParams={searchParams} depth={depth + 1} onNavigate={onNavigate} t={t} totalUnread={totalUnread} P={P} getLabel={getLabel} />
                   </li>
                 ))}
               </ul>
@@ -992,7 +1121,7 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
   );
 }
 
-function NavSection({ sectionKey, items, pathname, searchParams, onNavigate, collapsed = false, t, totalUnread = 0, unreadNotifications = 0, isHidden, isInstalled, P, first = false }) {
+function NavSection({ sectionKey, items, pathname, searchParams, onNavigate, collapsed = false, t, totalUnread = 0, unreadNotifications = 0, isHidden, isInstalled, P, first = false, getLabel }) {
   const t_nav = useTranslations('nav');
   const label = t_nav(sectionKey, { defaultValue: '' });
   const visibleItems = items.filter(
@@ -1005,7 +1134,7 @@ function NavSection({ sectionKey, items, pathname, searchParams, onNavigate, col
       {!collapsed && first && <div style={{ height: 4 }} />}
       {collapsed && <div style={{ height: first ? 2 : 6 }} />}
       {visibleItems.map(item => (
-        <NavItem key={item.id || item.href || item.nameKey} item={item} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} P={P} />
+        <NavItem key={item.id || item.href || item.nameKey} item={item} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} P={P} getLabel={getLabel} />
       ))}
     </div>
   );
@@ -1629,15 +1758,17 @@ const GROUP_CONFIG = {
   content: { icon: BookOpen, color: '#f59e0b' },
   workspace: { icon: GanttChart, color: '#3b82f6' },
   communication: { icon: MessageSquare, color: '#8b5cf6' },
+  outreach: { icon: Radar, color: '#ea580c' },
   tools: { icon: Calculator, color: '#14b8a6' },
   finance: { icon: Wallet, color: '#22c55e' },
   account: { icon: UserIcon, color: '#64748b' },
 };
 
 /* ─── CustomizeSidebarModal ──────────────────────────────────── */
-function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden, resetAll, isInstalled, toggleInstalled, paletteKey, setPaletteKey, t }) {
+function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden, resetAll, isInstalled, toggleInstalled, paletteKey, setPaletteKey, t, getLabel, setLabel, labels, resetLabels }) {
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState('nav');
+  const [renamingId, setRenamingId] = useState(null);
   const searchRef = useRef(null);
 
   const allItems = useMemo(() => {
@@ -1663,7 +1794,17 @@ function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden
   }, [sections]);
 
   const navItems = useMemo(() => allItems.filter(i => !i.marketplace), [allItems]);
-  const marketplaceItems = useMemo(() => allItems.filter(i => i.marketplace), [allItems]);
+  const marketplaceItems = useMemo(() => {
+    const items = allItems.filter(i => i.marketplace);
+    const rank = id => {
+      const optIn = OPT_IN_MARKETPLACE_IDS.indexOf(id);
+      if (optIn >= 0) return optIn;
+      const outreach = OUTREACH_MARKETPLACE_IDS.indexOf(id);
+      if (outreach >= 0) return 10 + outreach;
+      return 100 + items.findIndex(item => item.id === id);
+    };
+    return [...items].sort((a, b) => rank(a.id) - rank(b.id));
+  }, [allItems]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return navItems;
@@ -1679,11 +1820,17 @@ function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden
     if (!search.trim()) return marketplaceItems;
     const q = search.toLowerCase();
     return marketplaceItems.filter(item => {
-      const label = item.nameKey?.toLowerCase() || '';
+      const defaultName = t(`items.${item.nameKey}`).toLowerCase();
+      const custom = String(labels?.[item.id] || '').toLowerCase();
       const desc = (item.descKey || '').toLowerCase();
-      return label.includes(q) || desc.includes(q);
+      return (
+        defaultName.includes(q) ||
+        custom.includes(q) ||
+        item.nameKey?.toLowerCase().includes(q) ||
+        desc.includes(q)
+      );
     });
-  }, [marketplaceItems, search]);
+  }, [marketplaceItems, search, t, labels]);
 
   const grouped = useMemo(() => {
     const groups = {};
@@ -2106,8 +2253,70 @@ function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden
                               )}
                             </div>
                             <div style={{ flex: 1 }}>
-                              <p style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em', marginBottom: 3 }}>{t(`items.${item.nameKey}`)}</p>
+                              {renamingId === item.id ? (
+                                <input
+                                  autoFocus
+                                  defaultValue={labels?.[item.id] || t(`items.${item.nameKey}`)}
+                                  maxLength={48}
+                                  onBlur={e => {
+                                    setLabel?.(item.id, e.target.value);
+                                    setRenamingId(null);
+                                  }}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                      setLabel?.(item.id, e.currentTarget.value);
+                                      setRenamingId(null);
+                                    }
+                                    if (e.key === 'Escape') setRenamingId(null);
+                                  }}
+                                  placeholder={t('customize.marketplace.renamePlaceholder')}
+                                  style={{
+                                    width: '100%',
+                                    marginBottom: 6,
+                                    padding: '7px 9px',
+                                    borderRadius: 8,
+                                    border: '1.5px solid color-mix(in srgb, var(--color-primary-400) 45%, transparent)',
+                                    fontSize: 13,
+                                    fontWeight: 650,
+                                    color: '#0f172a',
+                                    outline: 'none',
+                                    background: '#fff',
+                                  }}
+                                />
+                              ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                                  <p style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em', margin: 0, flex: 1, minWidth: 0 }}>
+                                    {typeof getLabel === 'function' ? getLabel(item, t) : t(`items.${item.nameKey}`)}
+                                  </p>
+                                  <button
+                                    type="button"
+                                    title={t('customize.marketplace.renameButton')}
+                                    onClick={() => setRenamingId(item.id)}
+                                    style={{
+                                      border: 'none',
+                                      background: 'rgba(0,0,0,0.04)',
+                                      borderRadius: 7,
+                                      width: 26,
+                                      height: 26,
+                                      display: 'grid',
+                                      placeContent: 'center',
+                                      cursor: 'pointer',
+                                      color: '#64748b',
+                                      flexShrink: 0,
+                                    }}>
+                                    <Pencil style={{ width: 12, height: 12 }} strokeWidth={2.2} />
+                                  </button>
+                                </div>
+                              )}
                               {item.descKey && <p style={{ fontSize: 11, color: '#64748b', lineHeight: 1.45 }}>{t(item.descKey)}</p>}
+                              {(OUTREACH_MARKETPLACE_IDS.includes(item.id) ||
+                                OPT_IN_MARKETPLACE_IDS.includes(item.id)) && (
+                                <p style={{ fontSize: 10, fontWeight: 700, color: '#ea580c', marginTop: 6, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                  {OPT_IN_MARKETPLACE_IDS.includes(item.id)
+                                    ? t('customize.marketplace.optInBadge')
+                                    : t('groups.outreach')}
+                                </p>
+                              )}
                             </div>
                             <motion.button
                               whileHover={{ scale: 1.02 }}
@@ -2188,6 +2397,25 @@ function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden
                   {t('customize.resetButton')}
                 </motion.button>
                 )}
+                {tab === 'market' && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => resetLabels?.()}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: 9,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    border: '1px solid rgba(0,0,0,0.07)',
+                    background: '#fff',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                  }}>
+                  {t('customize.marketplace.resetNamesButton')}
+                </motion.button>
+                )}
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
@@ -2216,7 +2444,7 @@ function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden
 }
 
 /* ─── SidebarFooter ──────────────────────────────────────────── */
-function SidebarFooter({ collapsed, onLogout, logoutLabel, sections, isHidden, toggleHidden, resetAll, isInstalled, toggleInstalled, paletteKey, setPaletteKey, t, P }) {
+function SidebarFooter({ collapsed, onLogout, logoutLabel, sections, isHidden, toggleHidden, resetAll, isInstalled, toggleInstalled, paletteKey, setPaletteKey, t, P, getLabel, setLabel, labels, resetLabels }) {
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const isRTL = getDir() === 'rtl';
   const btnBase = {
@@ -2390,7 +2618,7 @@ function SidebarFooter({ collapsed, onLogout, logoutLabel, sections, isHidden, t
         </div>
       </div>
 
-      <CustomizeSidebarModal open={customizeOpen} onClose={() => setCustomizeOpen(false)} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} isInstalled={isInstalled} toggleInstalled={toggleInstalled} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} />
+      <CustomizeSidebarModal open={customizeOpen} onClose={() => setCustomizeOpen(false)} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} isInstalled={isInstalled} toggleInstalled={toggleInstalled} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} getLabel={getLabel} setLabel={setLabel} labels={labels} resetLabels={resetLabels} />
     </>
   );
 }
@@ -2415,6 +2643,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 
   const { isHidden, toggle: toggleHidden, resetAll } = useHiddenItems();
   const { isInstalled, toggle: toggleInstalled } = useMarketplaceItems();
+  const { labels, getLabel, setLabel, resetLabels } = useCustomLabels();
   const { paletteKey, setPaletteKey, palette: P } = useSidebarPalette();
   const isRTL = getDir() === 'rtl';
 
@@ -2527,14 +2756,14 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
             <ScrollShadow P={P}>
               <nav style={{ padding: collapsed ? '4px 10px' : '4px 10px 10px', display: 'flex', flexDirection: 'column' }}>
                 {sections?.map((section, idx) => (
-                  <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} isHidden={isHidden} isInstalled={isInstalled} P={P} first={idx === 0} />
+                  <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} isHidden={isHidden} isInstalled={isInstalled} P={P} first={idx === 0} getLabel={getLabel} />
                 ))}
               </nav>
             </ScrollShadow>
           </div>
         </LayoutGroup>
 
-        <SidebarFooter collapsed={collapsed} onLogout={handleLogout} logoutLabel={logoutLabel} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} isInstalled={isInstalled} toggleInstalled={toggleInstalled} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} P={P} />
+        <SidebarFooter collapsed={collapsed} onLogout={handleLogout} logoutLabel={logoutLabel} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} isInstalled={isInstalled} toggleInstalled={toggleInstalled} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} P={P} getLabel={getLabel} setLabel={setLabel} labels={labels} resetLabels={resetLabels} />
       </div>
       </aside>
     </>
@@ -2644,7 +2873,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
                 <ScrollShadow P={P}>
                   <nav style={{ padding: '4px 10px 10px', display: 'flex', flexDirection: 'column' }}>
                     {sections?.map((section, idx) => (
-                      <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} isHidden={isHidden} isInstalled={isInstalled} P={P} first={idx === 0} />
+                      <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} isHidden={isHidden} isInstalled={isInstalled} P={P} first={idx === 0} getLabel={getLabel} />
                     ))}
                   </nav>
                 </ScrollShadow>
@@ -2652,7 +2881,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
             </LayoutGroup>
 
             <div style={{ position: 'relative', zIndex: 1 }}>
-              <SidebarFooter collapsed={false} onLogout={handleLogout} logoutLabel={logoutLabel} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} isInstalled={isInstalled} toggleInstalled={toggleInstalled} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} P={P} />
+              <SidebarFooter collapsed={false} onLogout={handleLogout} logoutLabel={logoutLabel} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} isInstalled={isInstalled} toggleInstalled={toggleInstalled} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} P={P} getLabel={getLabel} setLabel={setLabel} labels={labels} resetLabels={resetLabels} />
             </div>
           </motion.aside>
         </>

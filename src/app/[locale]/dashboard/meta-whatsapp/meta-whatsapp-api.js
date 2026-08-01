@@ -21,6 +21,45 @@ export const metaWhatsAppApi = {
 	createTemplate(payload, signal) {
 		return api.post('/meta-whatsapp/templates', payload, { signal }).then(r => r.data);
 	},
+	updateTemplate(templateId, payload, signal) {
+		return api
+			.put(`/meta-whatsapp/templates/${encodeURIComponent(templateId)}`, payload, { signal })
+			.then(r => r.data);
+	},
+	deleteTemplate({ name, hsmId } = {}, signal) {
+		return api
+			.delete('/meta-whatsapp/templates', {
+				signal,
+				params: {
+					...(name ? { name } : {}),
+					...(hsmId ? { hsmId } : {}),
+				},
+			})
+			.then(r => r.data);
+	},
+	seedTemplates(signal) {
+		return api.get('/meta-whatsapp/templates/seed', { signal }).then(r => r.data);
+	},
+	submitSeedTemplates(payload = {}, signal) {
+		return api
+			.post('/meta-whatsapp/templates/seed', payload, { signal, timeout: 120000 })
+			.then(r => r.data);
+	},
+	cloneTemplates(payload = {}, signal) {
+		return api
+			.post('/meta-whatsapp/templates/clone', payload, { signal, timeout: 120000 })
+			.then(r => r.data);
+	},
+	templateLibrary(params = {}, signal) {
+		return api
+			.get('/meta-whatsapp/templates/library', { params, signal })
+			.then(r => r.data);
+	},
+	createFromLibrary(payload, signal) {
+		return api
+			.post('/meta-whatsapp/templates/from-library', payload, { signal, timeout: 120000 })
+			.then(r => r.data);
+	},
 	uploadTemplateHeader(file, signal) {
 		const form = new FormData();
 		form.append('file', file);
@@ -36,6 +75,11 @@ export const metaWhatsAppApi = {
 	activity(limit = 50, signal) {
 		return api
 			.get('/meta-whatsapp/activity', { params: { limit }, signal })
+			.then(r => r.data);
+	},
+	usageBilling(signal) {
+		return api
+			.get('/meta-whatsapp/usage-billing', { signal, timeout: 120000 })
 			.then(r => r.data);
 	},
 	conversations(params = {}, signal) {
@@ -99,6 +143,11 @@ export const metaWhatsAppApi = {
 	},
 	startBulk(payload, signal) {
 		return api.post('/meta-whatsapp/bulk', payload, { signal }).then(r => r.data);
+	},
+	checkBulkPhones(phones, signal) {
+		return api
+			.post('/meta-whatsapp/bulk/check-phones', { phones }, { signal })
+			.then(r => r.data);
 	},
 	listBulk(signal) {
 		return api.get('/meta-whatsapp/bulk', { signal }).then(r => r.data);

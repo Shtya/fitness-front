@@ -4,17 +4,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
 import {
+	BookOpen,
 	Check,
 	CheckCheck,
 	Copy,
+	Eye,
 	FileText,
 	Image as ImageIcon,
 	Link2,
 	LoaderCircle,
 	MessageCircle,
 	Mic,
+	MoreHorizontal,
 	Paperclip,
+	Pause,
+	Pencil,
 	Phone,
+	Play,
 	Plus,
 	Radar,
 	RefreshCw,
@@ -22,11 +28,11 @@ import {
 	Send,
 	Settings2,
 	ShieldCheck,
-	Square,
 	LayoutTemplate,
 	Trash2,
 	Video,
 	X,
+	ChartColumn,
 } from 'lucide-react';
 import { metaWhatsAppApi } from './meta-whatsapp-api';
 
@@ -88,6 +94,48 @@ const COPY = {
 		leads: 'Leads',
 		settings: 'Meta config',
 		activity: 'Activity',
+		usageBilling: 'Usage & Billing',
+		usageBillingTitle: 'WhatsApp Usage & Billing',
+		usageBillingHint:
+			'Live consumption from your DB + Meta Analytics. Estimated cost is not the final Meta invoice.',
+		usageRefresh: 'Refresh',
+		usageSent: 'Sent',
+		usageDelivered: 'Delivered',
+		usageRead: 'Read',
+		usageFailed: 'Failed',
+		usageEstimated: 'Estimated cost (this month)',
+		usageVsPrev: 'vs previous month',
+		usageByCategory: 'By category',
+		usageByCountry: 'By country',
+		usageDaily: 'Daily volume & cost',
+		usageTemplates: 'Templates',
+		usageDisclaimer:
+			'Estimated Meta cost — final amount may differ from the Meta invoice.',
+		usageInvoiceNote: 'WhatsApp Manager → Billing is the source of truth for the amount due.',
+		usageEmpty: 'No outbound messages this month yet.',
+		usageLoadError: 'Could not load usage & billing',
+		usageMetaCost: 'Meta pricing analytics cost',
+		usageSources: 'Data sources',
+		usageFxRate: 'FX rate',
+		usageThisMonth: 'This month',
+		usageBillable: 'Billable delivered',
+		usageInbound: 'Inbound',
+		usageCostUsd: 'USD',
+		usageCostEgp: 'EGP',
+		usageCountryRates: 'Template rates by country',
+		usageSelectCountry: 'Country',
+		usagePerMessage: 'Per delivered template message',
+		usageRateMarketing: 'Marketing',
+		usageRateUtility: 'Utility',
+		usageRateAuth: 'Authentication',
+		usageRateService: 'Service',
+		usageRatePerMsg: '1 msg',
+		usageRatePer100: '100 templates',
+		usageByCategoryHint: 'Delivered billable messages this month, grouped by template type. Bar = share of total.',
+		usageCatMsgs: 'msgs',
+		usageCatCost: 'est. cost',
+		usageTplType: 'Type',
+		usageTplCost: 'Cost',
 		backLeads: 'Lead Scout',
 		refresh: 'Refresh inbox',
 		sync: 'Sync from DB',
@@ -111,6 +159,9 @@ const COPY = {
 		windowOpen: '24h window open',
 		windowClosed: 'Template required',
 		typeMessage: 'Type a message',
+		unsupportedMessage: 'This message type isn’t supported here',
+		stickerUnavailable: 'Sticker unavailable',
+		mediaUnavailable: 'Media unavailable',
 		templateName: 'Template name',
 		templateLang: 'Language',
 		sendTemplate: 'Send template',
@@ -118,6 +169,16 @@ const COPY = {
 		templatesHint: 'Approved Meta templates only can be sent. New templates need Meta review.',
 		createTemplate: 'Create template',
 		addNewTemplate: 'Add new',
+		seedTemplates: 'So7ba outreach seeds',
+		seedTemplatesHint: 'Preview So7baFit presentation templates, then submit to Meta for review.',
+		seedSubmitSelected: 'Submit selected to Meta',
+		seedSubmitAll: 'Submit all to Meta',
+		seedLoad: 'Load seed preview',
+		seedSubmitted: 'Seed templates submitted to Meta',
+		cloneAsUtility: 'Clone outreach as UTILITY',
+		cloneAsUtilityHint:
+			'Creates so7ba_fitness_util_ar / so7ba_fitness_util_en from the existing MARKETING outreach templates and submits them to Meta.',
+		cloneAsUtilityOk: 'UTILITY clones submitted to Meta',
 		backToTemplates: 'Back to templates',
 		templateBody: 'Body text',
 		templateHeader: 'Header (optional)',
@@ -128,8 +189,20 @@ const COPY = {
 		templatePick: 'Choose a template',
 		templateApprovedOnly: 'Only APPROVED templates can be sent',
 		templateCreateOk: 'Template submitted to Meta for review',
+		templateEditOk: 'Template update submitted to Meta for review',
+		editTemplate: 'Edit template',
+		saveTemplate: 'Save changes',
+		templateEditLocked: 'Name and language cannot be changed after create',
+		templateCategoryLocked: 'Category cannot be changed after Meta approval',
+		templateCannotEdit: 'Only APPROVED, REJECTED, or PAUSED templates can be edited',
+		keepExistingSample: 'Keeping current media sample — upload to replace',
 		templateLoadError: 'Could not load templates from Meta',
 		templateVarRequired: 'Fill all template variables',
+		templateUrlParamInvalid:
+			'URL button value is invalid. Use only Latin letters, numbers, and URL-safe characters (e.g. demo or user/123) — no spaces or Arabic text.',
+		templateUrlParamHint:
+			'This fills the end of the button link. Example: demo or account/abc123 — not a full URL, and not Arabic/emoji.',
+		templateUrlParamPlaceholder: 'e.g. demo or user/123',
 		refreshTemplates: 'Refresh templates',
 		templatePreview: 'Message preview',
 		templateMetaDetails: 'Meta requirements',
@@ -172,13 +245,50 @@ const COPY = {
 		errorDismiss: 'Dismiss',
 		metaErrorTitle: 'Meta API error',
 		metaInvalidParamHint:
-			'Common causes: use {{1}}/{{2}} (not {{name}}); URL buttons need https://; footer cannot have variables; TEXT header allows only one {{1}}.',
-		recording: 'Recording… tap stop to send',
+			'Common causes: use {{1}}/{{2}} (not {{name}}); URL buttons need https://; URL button variables must be Latin/URL-safe (not Arabic); footer cannot have variables; TEXT header allows only one {{1}}.',
+		helloWorldTestOnlyHint:
+			'hello_world only works from Meta Public Test Numbers. On a live business number, send your own APPROVED template for verification instead.',
+		metaLibrary: 'Meta library',
+		metaLibraryHint: 'Browse Meta ready-made templates, add one to your account, then verify by sending.',
+		metaLibrarySearch: 'Search templates…',
+		metaLibraryEmpty: 'No library templates found. Try another search.',
+		metaLibraryLoadError: 'Could not load Meta template library',
+		addFromLibrary: 'Add to my templates',
+		verifySend: 'Verify & send',
+		verifySendTitle: 'Send verification template',
+		verifySendHint:
+			'Like Meta API Setup: pick a recipient phone and send the template to verify delivery.',
+		verifySendOk: 'Verification template sent',
+		libraryAdded: 'Library template submitted to Meta for review',
+		verificationTemplates: 'Verification / sample',
+		templateColName: 'Name',
+		templateColLanguage: 'Language',
+		templateColCategory: 'Category',
+		templateColStatus: 'Status',
+		templateColHeader: 'Header',
+		templateColActions: 'Actions',
+		templateShow: 'Show',
+		templateUse: 'Use',
+		templateEdit: 'Edit',
+		templateDelete: 'Delete',
+		templateCopyName: 'Copy name',
+		templateCopied: 'Template name copied',
+		templateDeleteConfirm: 'Delete this template from Meta? This cannot be undone.',
+		templateDeleted: 'Template deleted from Meta',
+		templatePreviewTitle: 'Template preview',
+		recording: 'Recording',
+		recordingHint: 'Tap send when done · trash to cancel',
+		recordingCancel: 'Cancel',
+		recordingSend: 'Send voice',
 		configTitle: 'Meta WhatsApp configuration',
 		configSubtitle: 'Connect Cloud API credentials. Copy webhook + verify token into Meta Developer Console.',
 		accessToken: 'Permanent Access Token',
+		accessTokenHint:
+			'System User permanent token for THIS app, with the So7bahfit WABA assigned. Needs whatsapp_business_management + whatsapp_business_messaging.',
 		phoneNumberId: 'Phone Number ID',
 		wabaId: 'WABA ID',
+		wabaHint:
+			'WhatsApp Business Account ID from Meta → WhatsApp → API Setup. Not the same as Phone Number ID.',
 		verifyToken: 'Verify Token',
 		appSecret: 'App Secret',
 		webhook: 'Webhook callback URL',
@@ -216,6 +326,47 @@ const COPY = {
 		leads: 'عملاء',
 		settings: 'إعدادات ميتا',
 		activity: 'السجل',
+		usageBilling: 'الاستهلاك والفوترة',
+		usageBillingTitle: 'استهلاك وفوترة واتساب',
+		usageBillingHint:
+			'استهلاك حي من قاعدة البيانات + تحليلات ميتا. التكلفة تقديرية وليست الفاتورة النهائية.',
+		usageRefresh: 'تحديث',
+		usageSent: 'مُرسل',
+		usageDelivered: 'واصل',
+		usageRead: 'مقروء',
+		usageFailed: 'فشل',
+		usageEstimated: 'تكلفة تقديرية (هذا الشهر)',
+		usageVsPrev: 'مقارنة بالشهر السابق',
+		usageByCategory: 'حسب التصنيف',
+		usageByCountry: 'حسب الدولة',
+		usageDaily: 'يومي: عدد الرسائل والتكلفة',
+		usageTemplates: 'القوالب',
+		usageDisclaimer: 'تكلفة ميتا تقديرية — المبلغ النهائي قد يختلف عن فاتورة ميتا.',
+		usageInvoiceNote: 'WhatsApp Manager ← Billing هو المرجع المالي النهائي.',
+		usageEmpty: 'لا توجد رسائل صادرة هذا الشهر بعد.',
+		usageLoadError: 'تعذر تحميل الاستهلاك والفوترة',
+		usageMetaCost: 'تكلفة تحليلات التسعير من ميتا',
+		usageSources: 'مصادر البيانات',
+		usageFxRate: 'سعر التحويل',
+		usageThisMonth: 'هذا الشهر',
+		usageBillable: 'مفوتر (واصل)',
+		usageInbound: 'وارد',
+		usageCostUsd: 'دولار',
+		usageCostEgp: 'جنيه',
+		usageCountryRates: 'أسعار القوالب حسب الدولة',
+		usageSelectCountry: 'الدولة',
+		usagePerMessage: 'لكل رسالة قالب واصلة',
+		usageRateMarketing: 'تسويق',
+		usageRateUtility: 'خدمي',
+		usageRateAuth: 'مصادقة',
+		usageRateService: 'خدمة',
+		usageRatePerMsg: 'رسالة واحدة',
+		usageRatePer100: '100 قالب',
+		usageByCategoryHint: 'رسائل واصلة مفوترة هذا الشهر حسب نوع القالب. الشريط = نسبة من الإجمالي.',
+		usageCatMsgs: 'رسالة',
+		usageCatCost: 'تكلفة تقديرية',
+		usageTplType: 'النوع',
+		usageTplCost: 'التكلفة',
 		backLeads: 'كشّاف العملاء',
 		refresh: 'تحديث الوارد',
 		sync: 'مزامنة من النظام',
@@ -238,6 +389,9 @@ const COPY = {
 		windowOpen: 'نافذة 24 ساعة مفتوحة',
 		windowClosed: 'يلزم قالب',
 		typeMessage: 'اكتب رسالة',
+		unsupportedMessage: 'نوع الرسالة ده غير مدعوم هنا',
+		stickerUnavailable: 'الستيكر غير متاح',
+		mediaUnavailable: 'الوسائط غير متاحة',
 		templateName: 'اسم القالب',
 		templateLang: 'اللغة',
 		sendTemplate: 'إرسال قالب',
@@ -245,6 +399,16 @@ const COPY = {
 		templatesHint: 'يُرسل فقط القوالب المعتمدة من ميتا. القوالب الجديدة تحتاج مراجعة ميتا.',
 		createTemplate: 'إنشاء قالب',
 		addNewTemplate: 'إضافة جديد',
+		seedTemplates: 'قوالب تواصل So7ba',
+		seedTemplatesHint: 'معاينة قوالب عرض So7baFit ثم إرسالها لمراجعة ميتا.',
+		seedSubmitSelected: 'إرسال المحدد إلى ميتا',
+		seedSubmitAll: 'إرسال الكل إلى ميتا',
+		seedLoad: 'تحميل معاينة القوالب',
+		seedSubmitted: 'تم إرسال القوالب إلى ميتا',
+		cloneAsUtility: 'استنساخ Outreach كـ UTILITY',
+		cloneAsUtilityHint:
+			'ينشئ so7ba_fitness_util_ar / so7ba_fitness_util_en من قوالب Outreach الحالية (MARKETING) ويرسلها لميتا.',
+		cloneAsUtilityOk: 'تم إرسال نسخ UTILITY إلى ميتا',
 		backToTemplates: 'العودة للقوالب',
 		templateBody: 'نص الجسم',
 		templateHeader: 'العنوان (اختياري)',
@@ -255,8 +419,20 @@ const COPY = {
 		templatePick: 'اختر قالبًا',
 		templateApprovedOnly: 'يُرسل فقط القوالب بحالة APPROVED',
 		templateCreateOk: 'تم إرسال القالب لمراجعة ميتا',
+		templateEditOk: 'تم إرسال تعديل القالب لمراجعة ميتا',
+		editTemplate: 'تعديل القالب',
+		saveTemplate: 'حفظ التعديلات',
+		templateEditLocked: 'لا يمكن تغيير الاسم واللغة بعد الإنشاء',
+		templateCategoryLocked: 'لا يمكن تغيير التصنيف بعد موافقة ميتا',
+		templateCannotEdit: 'يُعدَّل فقط القوالب بحالة APPROVED أو REJECTED أو PAUSED',
+		keepExistingSample: 'الإبقاء على عينة الوسائط الحالية — ارفع ملفًا للاستبدال',
 		templateLoadError: 'تعذر تحميل القوالب من ميتا',
 		templateVarRequired: 'املأ كل متغيرات القالب',
+		templateUrlParamInvalid:
+			'قيمة زر الرابط غير صالحة. استخدم حروف إنجليزية وأرقام ورموز الرابط فقط (مثل demo أو user/123) — بدون مسافات أو نص عربي.',
+		templateUrlParamHint:
+			'هذه القيمة تُكمل نهاية رابط الزر. مثال: demo أو account/abc123 — ليست رابطًا كاملًا، وليست عربي أو إيموجي.',
+		templateUrlParamPlaceholder: 'مثال: demo أو user/123',
 		refreshTemplates: 'تحديث القوالب',
 		templatePreview: 'معاينة الرسالة',
 		templateMetaDetails: 'متطلبات ميتا',
@@ -299,13 +475,50 @@ const COPY = {
 		errorDismiss: 'إغلاق',
 		metaErrorTitle: 'خطأ من واجهة ميتا',
 		metaInvalidParamHint:
-			'الأسباب الشائعة: استخدم {{1}} و {{2}} (وليس {{name}})؛ أزرار الرابط يجب أن تبدأ بـ https://؛ التذييل بدون متغيرات؛ عنوان TEXT يسمح بـ {{1}} فقط.',
-		recording: 'جاري التسجيل… اضغط إيقاف للإرسال',
+			'الأسباب الشائعة: استخدم {{1}} و {{2}} (وليس {{name}})؛ أزرار الرابط يجب أن تبدأ بـ https://؛ متغير زر الرابط يجب أن يكون إنجليزي/آمن للرابط (وليس عربي)؛ التذييل بدون متغيرات؛ عنوان TEXT يسمح بـ {{1}} فقط.',
+		helloWorldTestOnlyHint:
+			'قالب hello_world يعمل فقط من أرقام الاختبار العامة في ميتا. على رقم الأعمال الحقيقي استخدم قالب APPROVED خاص بك للتحقق.',
+		metaLibrary: 'مكتبة ميتا',
+		metaLibraryHint: 'تصفح قوالب ميتا الجاهزة، أضفها لحسابك، ثم أرسل رسالة تحقق لتبدأ استخدامها.',
+		metaLibrarySearch: 'ابحث عن قالب…',
+		metaLibraryEmpty: 'لا قوالب في المكتبة. جرّب بحثًا آخر.',
+		metaLibraryLoadError: 'تعذر تحميل مكتبة قوالب ميتا',
+		addFromLibrary: 'أضف لقوالبي',
+		verifySend: 'تحقق وأرسل',
+		verifySendTitle: 'إرسال قالب للتحقق',
+		verifySendHint:
+			'مثل إعدادات ميتا: اختر رقم المستلم وأرسل القالب للتحقق من التسليم.',
+		verifySendOk: 'تم إرسال قالب التحقق',
+		libraryAdded: 'تم إرسال قالب المكتبة لمراجعة ميتا',
+		verificationTemplates: 'التحقق / نماذج',
+		templateColName: 'الاسم',
+		templateColLanguage: 'اللغة',
+		templateColCategory: 'التصنيف',
+		templateColStatus: 'الحالة',
+		templateColHeader: 'العنوان',
+		templateColActions: 'إجراءات',
+		templateShow: 'عرض',
+		templateUse: 'استخدام',
+		templateEdit: 'تعديل',
+		templateDelete: 'حذف',
+		templateCopyName: 'نسخ الاسم',
+		templateCopied: 'تم نسخ اسم القالب',
+		templateDeleteConfirm: 'حذف هذا القالب من ميتا؟ لا يمكن التراجع.',
+		templateDeleted: 'تم حذف القالب من ميتا',
+		templatePreviewTitle: 'معاينة القالب',
+		recording: 'جاري التسجيل',
+		recordingHint: 'اضغط إرسال عند الانتهاء · سلة للإلغاء',
+		recordingCancel: 'إلغاء',
+		recordingSend: 'إرسال الصوت',
 		configTitle: 'إعدادات ميتا واتساب',
 		configSubtitle: 'اربط بيانات Cloud API. انسخ الـ Webhook ورمز التحقق إلى Meta Developer.',
 		accessToken: 'رمز الوصول الدائم',
+		accessTokenHint:
+			'رمز دائم من System User لهذا التطبيق، مع تعيين WABA So7bahfit. يحتاج صلاحيات whatsapp_business_management و whatsapp_business_messaging.',
 		phoneNumberId: 'معرّف رقم الهاتف',
 		wabaId: 'معرّف WABA',
+		wabaHint:
+			'معرّف حساب واتساب للأعمال من Meta ← WhatsApp ← API Setup. ليس نفس معرّف رقم الهاتف.',
 		verifyToken: 'رمز التحقق',
 		appSecret: 'سر التطبيق',
 		webhook: 'رابط الـ Webhook',
@@ -425,6 +638,7 @@ function extractTemplatePlaceholders(components = []) {
 						...v,
 						component: 'BUTTON',
 						buttonIndex: index,
+						urlTemplate: String(btn.url || ''),
 						id: `BUTTON:${index}:${v.key}`,
 						label: `Button ${index + 1} URL · {{${v.key}}}`,
 					});
@@ -433,6 +647,40 @@ function extractTemplatePlaceholders(components = []) {
 		}
 	}
 	return out;
+}
+
+/** Meta #132018: dynamic URL button suffix must form a valid https URL. */
+const URL_BUTTON_PARAM_SAFE = /^[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]+$/;
+
+function isValidUrlButtonParam(value, urlTemplate = '') {
+	const param = String(value || '').trim();
+	if (!param) return false;
+	if (/\s/.test(param)) return false;
+	if (/[^\x00-\x7F]/.test(param)) return false; // no Arabic / emoji / non-ASCII
+	if (!URL_BUTTON_PARAM_SAFE.test(param)) return false;
+	if (!urlTemplate) return true;
+	const filled = String(urlTemplate).replace(/\{\{\s*[\w]+\s*\}\}/g, () => param);
+	try {
+		const u = new URL(filled);
+		return /^https?:$/i.test(u.protocol);
+	} catch {
+		return false;
+	}
+}
+
+function validateTemplateSendValues(placeholders, values, t) {
+	const fieldErrors = {};
+	for (const p of placeholders || []) {
+		const text = String(values[p.id] || '').trim();
+		if (!text) {
+			fieldErrors[p.id] = t.templateVarRequired;
+			continue;
+		}
+		if (p.component === 'BUTTON' && !isValidUrlButtonParam(text, p.urlTemplate)) {
+			fieldErrors[p.id] = t.templateUrlParamInvalid;
+		}
+	}
+	return fieldErrors;
 }
 
 function buildTemplateSendComponents(placeholders, values) {
@@ -520,6 +768,38 @@ function templateButtons(components = []) {
 	return Array.isArray(block?.buttons) ? block.buttons : [];
 }
 
+function templateHeaderComponent(components = []) {
+	return (components || []).find(c => String(c.type || '').toUpperCase() === 'HEADER') || null;
+}
+
+function canEditMetaTemplate(tpl) {
+	const status = String(tpl?.status || '').toUpperCase();
+	return ['APPROVED', 'REJECTED', 'PAUSED'].includes(status) && Boolean(tpl?.id);
+}
+
+function formFromMetaTemplate(tpl, isAr) {
+	const headerFormat = templateHeaderFormat(tpl?.components) || 'NONE';
+	const buttons = templateButtons(tpl?.components).map(b => ({
+		id: nextButtonId(),
+		type: String(b.type || 'QUICK_REPLY').toUpperCase(),
+		text: String(b.text || ''),
+		url: String(b.url || ''),
+		phone_number: String(b.phone_number || ''),
+	}));
+	return {
+		name: String(tpl?.name || ''),
+		language: String(tpl?.language || (isAr ? 'ar' : 'en_US')),
+		category: String(tpl?.category || 'UTILITY').toUpperCase(),
+		headerFormat: ['NONE', 'TEXT', 'IMAGE', 'VIDEO', 'DOCUMENT'].includes(headerFormat)
+			? headerFormat
+			: 'NONE',
+		headerText: templateHeaderText(tpl?.components),
+		bodyText: templatePreviewText(tpl?.components),
+		footerText: templateFooterText(tpl?.components),
+		buttons,
+	};
+}
+
 function emptyCreateTemplateForm(isAr) {
 	return {
 		name: '',
@@ -558,7 +838,8 @@ function assertNumberedVars(text, fieldKey, errors, t) {
 
 function fillTemplatePlaceholders(text, sendComponents, componentType = 'body') {
 	if (!text) return '';
-	const send = (sendComponents || []).find(
+	const list = unwrapTemplateSendComponents(sendComponents);
+	const send = list.find(
 		c => String(c.type || '').toLowerCase() === componentType.toLowerCase(),
 	);
 	const params = send?.parameters || [];
@@ -573,12 +854,94 @@ function fillTemplatePlaceholders(text, sendComponents, componentType = 'body') 
 		});
 }
 
-function renderTemplateMessageDisplay(message, templates = []) {
-	if (!message) return '';
-	if (message.messageType !== 'template') return message.body || '';
-	const raw = String(message.body || '');
-	if (raw && !raw.startsWith('[template:')) return raw;
+function unwrapTemplateSendComponents(stored) {
+	if (Array.isArray(stored)) return stored;
+	if (stored && Array.isArray(stored.send)) return stored.send;
+	if (stored && Array.isArray(stored.parameters)) return stored.parameters;
+	return [];
+}
 
+function unwrapStoredTemplateButtons(stored) {
+	if (stored && Array.isArray(stored.buttons)) return stored.buttons;
+	return [];
+}
+
+function resolveTemplateButtons(defComponents, sendComponents) {
+	const buttons = templateButtons(defComponents);
+	if (!buttons.length) return [];
+	const send = unwrapTemplateSendComponents(sendComponents);
+	const urlSends = send.filter(
+		c =>
+			String(c?.type || '').toLowerCase() === 'button' &&
+			String(c?.sub_type || '').toLowerCase() === 'url',
+	);
+	return buttons.map((btn, index) => {
+		const type = String(btn?.type || 'QUICK_REPLY').toUpperCase();
+		const text = String(btn?.text || '').trim();
+		let url = String(btn?.url || '').trim();
+		const phone_number = String(btn?.phone_number || '').trim();
+		if (type === 'URL' && url.includes('{{')) {
+			const sendBtn =
+				urlSends.find(s => Number(s.index ?? -1) === index) || urlSends[0];
+			const param = String(sendBtn?.parameters?.[0]?.text || '').trim();
+			if (param) url = url.replace(/\{\{\s*[\w]+\s*\}\}/g, () => param);
+		}
+		return { type, text, url, phone_number };
+	});
+}
+
+const URL_IN_TEXT_RE =
+	/((?:https?:\/\/|www\.)[^\s<]+[^\s<.,:;!?"')\]\}])/gi;
+
+function splitTextWithLinks(text) {
+	const raw = String(text || '');
+	if (!raw) return [];
+	const parts = [];
+	let last = 0;
+	let match;
+	const re = new RegExp(URL_IN_TEXT_RE.source, 'gi');
+	while ((match = re.exec(raw)) !== null) {
+		if (match.index > last) {
+			parts.push({ type: 'text', value: raw.slice(last, match.index) });
+		}
+		const value = match[0];
+		const href = /^www\./i.test(value) ? `https://${value}` : value;
+		parts.push({ type: 'link', value, href });
+		last = match.index + value.length;
+	}
+	if (last < raw.length) parts.push({ type: 'text', value: raw.slice(last) });
+	return parts.length ? parts : [{ type: 'text', value: raw }];
+}
+
+function RichMessageText({ text, className = '' }) {
+	const parts = splitTextWithLinks(text);
+	return (
+		<span className={className}>
+			{parts.map((p, i) =>
+				p.type === 'link' ? (
+					<a
+						key={`l-${i}`}
+						href={p.href}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="break-all font-semibold underline underline-offset-2"
+						style={{ color: '#027EB5' }}
+						onClick={e => e.stopPropagation()}
+					>
+						{p.value}
+					</a>
+				) : (
+					<span key={`t-${i}`}>{p.value}</span>
+				),
+			)}
+		</span>
+	);
+}
+
+function resolveTemplateMessageParts(message, templates = []) {
+	if (!message) return { header: '', body: '', footer: '', buttons: [] };
+	const send = unwrapTemplateSendComponents(message.templateComponents);
+	const storedButtons = unwrapStoredTemplateButtons(message.templateComponents);
 	const tpl =
 		templates.find(
 			t =>
@@ -586,21 +949,105 @@ function renderTemplateMessageDisplay(message, templates = []) {
 				(!message.templateLanguage || t.language === message.templateLanguage),
 		) || templates.find(t => t.name === message.templateName);
 
+	let header = '';
+	let body = '';
+	let footer = '';
 	if (tpl?.components?.length) {
-		const header = fillTemplatePlaceholders(
+		header = fillTemplatePlaceholders(
 			templateHeaderText(tpl.components),
-			message.templateComponents,
+			send,
 			'header',
 		);
-		const body = fillTemplatePlaceholders(
-			templatePreviewText(tpl.components),
-			message.templateComponents,
-			'body',
-		);
-		const footer = templateFooterText(tpl.components);
-		return [header, body, footer].filter(Boolean).join('\n') || message.templateName || raw;
+		body = fillTemplatePlaceholders(templatePreviewText(tpl.components), send, 'body');
+		footer = templateFooterText(tpl.components);
 	}
-	return message.templateName || raw.replace(/^\[template:(.*)\]$/, '$1');
+
+	const raw = String(message.body || '');
+	if (!body) {
+		if (raw && !raw.startsWith('[template:')) body = raw;
+		else body = message.templateName || raw.replace(/^\[template:(.*)\]$/, '$1');
+	} else if (!header && !footer && raw && !raw.startsWith('[template:') && raw !== body) {
+		// Prefer structured body; keep raw only when structure missing
+	}
+
+	const buttons = storedButtons.length
+		? storedButtons
+		: resolveTemplateButtons(tpl?.components, send);
+
+	return { header, body, footer, buttons };
+}
+
+function renderTemplateMessageDisplay(message, templates = []) {
+	if (!message) return '';
+	if (message.messageType !== 'template') return message.body || '';
+	const parts = resolveTemplateMessageParts(message, templates);
+	return [parts.header, parts.body, parts.footer].filter(Boolean).join('\n');
+}
+
+function TemplateActionButtons({ buttons }) {
+	const list = Array.isArray(buttons) ? buttons.filter(b => b?.text) : [];
+	if (!list.length) return null;
+	return (
+		<div className="mt-1 overflow-hidden rounded-b-[10px] border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
+			{list.map((btn, i) => {
+				const type = String(btn.type || '').toUpperCase();
+				const text = String(btn.text || 'Button');
+				const url = String(btn.url || '').trim();
+				const phone = String(btn.phone_number || '').trim();
+				const className =
+					'flex w-full items-center justify-center gap-1.5 border-t px-3 py-2.5 text-[13px] font-semibold transition hover:bg-black/[0.03]';
+				const style = {
+					borderColor: i === 0 ? 'transparent' : 'rgba(0,0,0,0.06)',
+					color: '#027EB5',
+				};
+				const icon =
+					type === 'URL' ? (
+						<Link2 className="h-3.5 w-3.5 shrink-0" />
+					) : type === 'PHONE_NUMBER' ? (
+						<Phone className="h-3.5 w-3.5 shrink-0" />
+					) : type === 'QUICK_REPLY' ? (
+						<MessageCircle className="h-3.5 w-3.5 shrink-0" />
+					) : null;
+
+				if (type === 'URL' && url) {
+					return (
+						<a
+							key={`${text}-${i}`}
+							href={url}
+							target="_blank"
+							rel="noopener noreferrer"
+							className={className}
+							style={style}
+							onClick={e => e.stopPropagation()}
+						>
+							{icon}
+							<span className="truncate">{text}</span>
+						</a>
+					);
+				}
+				if (type === 'PHONE_NUMBER' && phone) {
+					return (
+						<a
+							key={`${text}-${i}`}
+							href={`tel:${phone.replace(/\s+/g, '')}`}
+							className={className}
+							style={style}
+							onClick={e => e.stopPropagation()}
+						>
+							{icon}
+							<span className="truncate">{text}</span>
+						</a>
+					);
+				}
+				return (
+					<div key={`${text}-${i}`} className={className} style={style}>
+						{icon}
+						<span className="truncate">{text}</span>
+					</div>
+				);
+			})}
+		</div>
+	);
 }
 
 function exampleParamsFromText(text) {
@@ -795,21 +1242,33 @@ function parseFlashMessage(message) {
 	return { title: text, detail: '', full: text };
 }
 
-function AlertBanner({ message, tone = 'error', onClose, hint, t }) {
+function AlertBanner({ message, tone = 'error', onClose, hint, t, floating = false }) {
 	const parsed = parseFlashMessage(message);
 	if (!parsed) return null;
 	const isError = tone === 'error';
 	const showHint =
 		hint ||
-		(isError && /invalid parameter/i.test(parsed.full) ? t?.metaInvalidParamHint : null);
+		(isError &&
+		/invalid parameter/i.test(parsed.full) &&
+		!/button input|library buttons|hsm_id requires name/i.test(parsed.full)
+			? t?.metaInvalidParamHint
+			: null) ||
+		(isError && /131058|hello world templates can only be sent/i.test(parsed.full)
+			? t?.helloWorldTestOnlyHint
+			: null);
 
 	return (
 		<div
-			className="flex items-start gap-3 rounded-xl px-3.5 py-3 text-[13px] shadow-[0_1px_0_rgba(0,0,0,0.06)]"
+			className={`flex items-start gap-3 rounded-xl px-3.5 py-3 text-[13px] ${
+				floating ? 'shadow-[0_8px_24px_rgba(11,20,26,0.18)]' : 'shadow-[0_1px_0_rgba(0,0,0,0.06)]'
+			}`}
 			style={{
 				background: isError ? '#FDECEC' : '#E1FFD4',
 				color: isError ? '#9B1C1C' : '#1FA755',
 				border: `1px solid ${isError ? '#F5C2C2' : '#B7EFC5'}`,
+				borderTop: floating
+					? `3px solid ${isError ? '#E11D48' : '#24D366'}`
+					: undefined,
 			}}
 			role="alert"
 		>
@@ -852,7 +1311,76 @@ function AlertBanner({ message, tone = 'error', onClose, hint, t }) {
 }
 
 function isSuccessFlash(flash, t) {
-	return flash === t.saveOk || flash === t.validateOk || flash === t.templateCreateOk;
+	return (
+		flash === t.saveOk ||
+		flash === t.validateOk ||
+		flash === t.templateCreateOk ||
+		flash === t.templateEditOk ||
+		flash === t.verifySendOk ||
+		flash === t.libraryAdded ||
+		flash === t.templateDeleted ||
+		flash === t.templateCopied ||
+		(typeof flash === 'string' && flash.startsWith(t.seedSubmitted))
+	);
+}
+
+/** WhatsApp-style bubble preview for Meta library / verification templates */
+function LibraryWaBubble({ item }) {
+	const buttons = Array.isArray(item?.buttons)
+		? item.buttons
+		: Array.isArray(item?.raw?.buttons)
+			? item.raw.buttons
+			: [];
+	const header = item?.header || item?.raw?.header || item?.raw?.header_text || '';
+	const body = item?.body || item?.note || item?.raw?.body || item?.raw?.body_text || '—';
+	const footer = item?.footer || item?.raw?.footer || item?.raw?.footer_text || '';
+
+	return (
+		<div className="flex justify-end">
+			<div
+				className="w-full max-w-[280px] overflow-hidden text-[13px] shadow-[0_1px_0_rgba(0,0,0,0.08)]"
+				style={{ background: WA.bubbleOut, color: WA.text, borderRadius: 12 }}
+			>
+				{header ? (
+					<div className="border-b px-3 py-2 text-[12px] font-bold" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+						{header}
+					</div>
+				) : null}
+				<div className="whitespace-pre-wrap break-words px-3 py-2 leading-[1.35]">
+					<RichMessageText text={body} />
+				</div>
+				{footer ? (
+					<div className="px-3 pb-2 text-[11px]" style={{ color: WA.muted }}>{footer}</div>
+				) : null}
+				<div className="flex items-center justify-end gap-1 px-2.5 pb-1.5 text-[10px]" style={{ color: 'rgba(0,0,0,0.45)' }}>
+					<span>WA</span>
+					<CheckCheck className="h-3.5 w-3.5" style={{ color: '#53BDEB' }} />
+				</div>
+				{buttons.length ? (
+					<div className="border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
+						{buttons.map((btn, i) => {
+							const text = typeof btn === 'string' ? btn : btn?.text || btn?.title || 'Button';
+							const type = String(btn?.type || '').toUpperCase();
+							return (
+								<div
+									key={`${text}-${i}`}
+									className="flex items-center justify-center gap-1.5 border-t px-3 py-2 text-[13px] font-semibold"
+									style={{
+										borderColor: i === 0 ? 'transparent' : 'rgba(0,0,0,0.06)',
+										color: '#027EB5',
+									}}
+								>
+									{type === 'URL' ? <Link2 className="h-3.5 w-3.5" /> : null}
+									{type === 'PHONE_NUMBER' ? <Phone className="h-3.5 w-3.5" /> : null}
+									{text}
+								</div>
+							);
+						})}
+					</div>
+				) : null}
+			</div>
+		</div>
+	);
 }
 
 function RailBtn({ active, onClick, title, children, badge }) {
@@ -965,9 +1493,156 @@ function ConfigField({
 	);
 }
 
-function MediaBubble({ message }) {
+function isMediaPlaceholderBody(body) {
+	return /^\[(image|video|audio|voice|sticker|document|unsupported)\]$/i.test(
+		String(body || '').trim(),
+	);
+}
+
+function messageCaption(message) {
+	const body = String(message?.body || '').trim();
+	if (!body || isMediaPlaceholderBody(body)) return '';
+	return body;
+}
+
+function buildChatRows(messages = []) {
+	const rows = [];
+	let i = 0;
+	while (i < messages.length) {
+		const m = messages[i];
+		if (m?.messageType === 'image' && m.hasMedia) {
+			const group = [m];
+			let j = i + 1;
+			while (j < messages.length) {
+				const n = messages[j];
+				if (n?.messageType === 'image' && n.hasMedia && n.direction === m.direction) {
+					group.push(n);
+					j += 1;
+				} else break;
+			}
+			if (group.length >= 2) {
+				rows.push({
+					kind: 'image_grid',
+					key: `grid_${group.map(x => x.id).join('_')}`,
+					messages: group,
+					direction: m.direction,
+				});
+				i = j;
+				continue;
+			}
+		}
+		rows.push({ kind: 'single', key: m.id, message: m });
+		i += 1;
+	}
+	return rows;
+}
+
+function formatAudioClock(sec) {
+	if (!Number.isFinite(sec) || sec < 0) return '0:00';
+	const s = Math.floor(sec);
+	const m = Math.floor(s / 60);
+	const r = s % 60;
+	return `${m}:${String(r).padStart(2, '0')}`;
+}
+
+function VoiceNotePlayer({ src, mine }) {
+	const audioRef = useRef(null);
+	const [playing, setPlaying] = useState(false);
+	const [progress, setProgress] = useState(0);
+	const [duration, setDuration] = useState(0);
+
+	useEffect(() => {
+		const el = audioRef.current;
+		if (!el) return undefined;
+		const onTime = () => setProgress(el.currentTime || 0);
+		const onMeta = () => setDuration(el.duration || 0);
+		const onEnded = () => {
+			setPlaying(false);
+			setProgress(0);
+		};
+		el.addEventListener('timeupdate', onTime);
+		el.addEventListener('loadedmetadata', onMeta);
+		el.addEventListener('ended', onEnded);
+		return () => {
+			el.removeEventListener('timeupdate', onTime);
+			el.removeEventListener('loadedmetadata', onMeta);
+			el.removeEventListener('ended', onEnded);
+		};
+	}, [src]);
+
+	async function toggle() {
+		const el = audioRef.current;
+		if (!el) return;
+		if (playing) {
+			el.pause();
+			setPlaying(false);
+			return;
+		}
+		try {
+			await el.play();
+			setPlaying(true);
+		} catch {
+			setPlaying(false);
+		}
+	}
+
+	const pct = duration > 0 ? Math.min(100, (progress / duration) * 100) : 0;
+	const bars = [4, 10, 6, 14, 8, 12, 5, 16, 9, 11, 7, 13, 6, 15, 8, 10, 5, 12, 7, 14];
+
+	return (
+		<div className="flex min-w-[220px] max-w-[280px] items-center gap-2.5 py-0.5">
+			<audio ref={audioRef} src={src} preload="metadata" className="hidden" />
+			<button
+				type="button"
+				onClick={() => void toggle()}
+				className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-white shadow-sm"
+				style={{ background: mine ? '#1FA755' : '#00A884' }}
+			>
+				{playing ? <Pause className="h-4 w-4 fill-current" /> : <Play className="ms-0.5 h-4 w-4 fill-current" />}
+			</button>
+			<div className="min-w-0 flex-1">
+				<button
+					type="button"
+					className="flex w-full items-end gap-[2px]"
+					onClick={e => {
+						const el = audioRef.current;
+						const rect = e.currentTarget.getBoundingClientRect();
+						const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+						if (el && duration) {
+							el.currentTime = ratio * duration;
+							setProgress(el.currentTime);
+						}
+					}}
+				>
+					{bars.map((h, idx) => (
+						<span
+							key={idx}
+							className="w-[3px] rounded-full"
+							style={{
+								height: h,
+								background:
+									(idx / bars.length) * 100 <= pct
+										? mine
+											? '#1FA755'
+											: '#00A884'
+										: 'rgba(0,0,0,0.22)',
+							}}
+						/>
+					))}
+				</button>
+				<div className="mt-1 flex items-center justify-between text-[11px]" style={{ color: 'rgba(0,0,0,0.45)' }}>
+					<span>{formatAudioClock(playing || progress ? progress : duration)}</span>
+					<Mic className="h-3 w-3 opacity-50" />
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function MediaBubble({ message, mine, onOpenMedia, labels }) {
 	const [url, setUrl] = useState(null);
 	const [failed, setFailed] = useState(false);
+	const type = String(message.messageType || '').toLowerCase();
 
 	useEffect(() => {
 		let revoked = false;
@@ -990,8 +1665,13 @@ function MediaBubble({ message }) {
 		};
 	}, [message.id, message.mediaUrl, message.hasMedia]);
 
-	const type = message.messageType;
-	if (failed) return <div className="text-[12px] opacity-70">Media unavailable</div>;
+	if (failed) {
+		return (
+			<div className="text-[12px] opacity-70">
+				{labels?.mediaUnavailable || 'Media unavailable'}
+			</div>
+		);
+	}
 	if (!url) {
 		return (
 			<div className="flex h-24 w-40 items-center justify-center rounded-lg bg-black/5">
@@ -999,20 +1679,49 @@ function MediaBubble({ message }) {
 			</div>
 		);
 	}
-	if (type === 'image') {
+
+	if (type === 'sticker') {
 		return (
-			<a href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg">
+			<button type="button" onClick={() => onOpenMedia?.(url, 'sticker')} className="block">
 				{/* eslint-disable-next-line @next/next/no-img-element */}
-				<img src={url} alt={message.body || 'image'} className="max-h-72 max-w-full object-contain" />
-			</a>
+				<img src={url} alt="sticker" className="h-36 w-36 object-contain drop-shadow-sm" />
+			</button>
 		);
 	}
+
+	if (type === 'image') {
+		return (
+			<button
+				type="button"
+				onClick={() => onOpenMedia?.(url, 'image')}
+				className="block overflow-hidden rounded-lg"
+			>
+				{/* eslint-disable-next-line @next/next/no-img-element */}
+				<img
+					src={url}
+					alt={messageCaption(message) || 'image'}
+					className="max-h-72 max-w-full object-cover transition hover:brightness-95"
+				/>
+			</button>
+		);
+	}
+
 	if (type === 'audio' || type === 'voice') {
-		return <audio controls preload="metadata" src={url} className="max-w-full" />;
+		return <VoiceNotePlayer src={url} mine={mine} />;
 	}
+
 	if (type === 'video') {
-		return <video controls preload="metadata" src={url} className="max-h-72 max-w-full rounded-lg" />;
+		return (
+			<video
+				controls
+				playsInline
+				preload="metadata"
+				src={url}
+				className="max-h-72 w-full max-w-[300px] rounded-lg bg-black"
+			/>
+		);
 	}
+
 	return (
 		<a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 underline">
 			<FileText className="h-4 w-4" />
@@ -1020,6 +1729,192 @@ function MediaBubble({ message }) {
 		</a>
 	);
 }
+
+function ImageGridBubble({ messages, mine, onOpenMedia, locale }) {
+	const [urls, setUrls] = useState({});
+	const count = messages.length;
+	const show = messages.slice(0, 4);
+	const extra = Math.max(0, count - 4);
+
+	useEffect(() => {
+		let cancelled = false;
+		const created = [];
+		Promise.all(
+			show.map(async m => {
+				if (!m.mediaUrl) return [m.id, null];
+				try {
+					const u = await metaWhatsAppApi.mediaBlobUrl(m.mediaUrl);
+					created.push(u);
+					return [m.id, u];
+				} catch {
+					return [m.id, null];
+				}
+			}),
+		).then(entries => {
+			if (cancelled) {
+				created.forEach(u => URL.revokeObjectURL(u));
+				return;
+			}
+			setUrls(Object.fromEntries(entries));
+		});
+		return () => {
+			cancelled = true;
+			created.forEach(u => URL.revokeObjectURL(u));
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [messages.map(m => m.id).join('|')]);
+
+	const last = messages[messages.length - 1];
+	const gridClass =
+		count === 2
+			? 'grid-cols-2'
+			: count === 3
+				? 'grid-cols-2'
+				: 'grid-cols-2';
+
+	return (
+		<div
+			className={`relative max-w-[300px] overflow-hidden rounded-xl p-0.5 shadow-[0_1px_0_rgba(0,0,0,0.08)] ${mine ? '' : ''}`}
+			style={{ background: mine ? WA.bubbleOut : WA.bubbleIn }}
+		>
+			<div className={`grid gap-0.5 ${gridClass}`}>
+				{show.map((m, idx) => {
+					const url = urls[m.id];
+					const tall =
+						count === 3 && idx === 0 ? 'row-span-2 min-h-[200px]' : 'min-h-[110px]';
+					const isLast = idx === show.length - 1 && extra > 0;
+					return (
+						<button
+							key={m.id}
+							type="button"
+							onClick={() => url && onOpenMedia?.(url, 'image')}
+							className={`relative overflow-hidden bg-black/10 ${tall} ${
+								count === 3 && idx === 0 ? 'col-span-1' : ''
+							}`}
+						>
+							{url ? (
+								// eslint-disable-next-line @next/next/no-img-element
+								<img src={url} alt="" className="h-full w-full object-cover" />
+							) : (
+								<div className="grid h-full place-items-center">
+									<LoaderCircle className="h-5 w-5 animate-spin opacity-50" />
+								</div>
+							)}
+							{isLast ? (
+								<div className="absolute inset-0 grid place-items-center bg-black/45 text-2xl font-semibold text-white">
+									+{extra}
+								</div>
+							) : null}
+						</button>
+					);
+				})}
+			</div>
+			<div className="flex items-center justify-end gap-1 px-2 py-1 text-[11px] font-medium" style={{ color: 'rgba(0,0,0,0.50)' }}>
+				<span>{formatTime(last?.createdAt || last?.providerTimestamp, locale)}</span>
+				{mine ? <StatusTicks status={last?.status} /> : null}
+			</div>
+		</div>
+	);
+}
+
+function MediaLightbox({ url, kind, onClose }) {
+	useEffect(() => {
+		if (!url) return undefined;
+		const onKey = e => {
+			if (e.key === 'Escape') onClose?.();
+		};
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	}, [url, onClose]);
+
+	if (!url) return null;
+	return (
+		<div
+			className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 p-4"
+			onClick={onClose}
+		>
+			<button
+				type="button"
+				onClick={onClose}
+				className="absolute end-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+			>
+				<X className="h-6 w-6" />
+			</button>
+			{/* eslint-disable-next-line @next/next/no-img-element */}
+			<img
+				src={url}
+				alt=""
+				className={`max-h-[92vh] max-w-[96vw] object-contain ${kind === 'sticker' ? 'drop-shadow-2xl' : ''}`}
+				onClick={e => e.stopPropagation()}
+			/>
+		</div>
+	);
+}
+
+function formatMoneyUsd(value) {
+	const n = Number(value || 0);
+	return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatMoneyEgp(value) {
+	const n = Number(value || 0);
+	return `${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EGP`;
+}
+
+/** Per-message rate card amounts (need more precision than invoice totals). */
+function formatRateUsd(value) {
+	const n = Number(value || 0);
+	return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+}
+
+function formatRateEgp(value) {
+	const n = Number(value || 0);
+	return `${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} EGP`;
+}
+
+function MoneyDuo({ usd, egp, size = 'md', align = 'end' }) {
+	const usdText = formatMoneyUsd(usd);
+	const egpText = formatMoneyEgp(egp);
+	const alignCls = align === 'start' ? 'items-start text-start' : align === 'center' ? 'items-center text-center' : 'items-end text-end';
+	if (size === 'xl') {
+		return (
+			<div className={`flex flex-col ${alignCls}`}>
+				<span className="text-[22px] font-bold tabular-nums tracking-tight text-white">{usdText}</span>
+				<span className="text-[12px] font-semibold tabular-nums text-white/85">{egpText}</span>
+			</div>
+		);
+	}
+	if (size === 'lg') {
+		return (
+			<div className={`flex flex-col ${alignCls}`}>
+				<span className="text-[16px] font-bold tabular-nums" style={{ color: WA.text }}>{usdText}</span>
+				<span className="text-[11px] font-medium tabular-nums" style={{ color: WA.muted }}>{egpText}</span>
+			</div>
+		);
+	}
+	if (size === 'inline') {
+		return (
+			<span className="inline-flex items-baseline gap-1.5 tabular-nums whitespace-nowrap">
+				<span className="text-[11px] font-bold" style={{ color: WA.text }}>{usdText}</span>
+				<span className="text-[10px]" style={{ color: WA.muted }}>{egpText}</span>
+			</span>
+		);
+	}
+	return (
+		<span className="inline-flex flex-col leading-tight tabular-nums" style={{ textAlign: align === 'start' ? 'start' : 'end' }}>
+			<span className="text-[12px] font-bold" style={{ color: WA.text }}>{usdText}</span>
+			<span className="text-[10px]" style={{ color: WA.muted }}>{egpText}</span>
+		</span>
+	);
+}
+
+const USAGE_CAT_STYLE = {
+	MARKETING: { bg: '#FFF1E8', bar: '#F97316', text: '#C2410C' },
+	UTILITY: { bg: '#E8F8F2', bar: '#14B8A6', text: '#0F766E' },
+	AUTHENTICATION: { bg: '#EEF4FF', bar: '#3B82F6', text: '#1D4ED8' },
+	SERVICE: { bg: '#ECFDF3', bar: '#22C55E', text: '#15803D' },
+	UNKNOWN: { bg: '#F4F4F5', bar: '#A1A1AA', text: '#52525B' },
+};
 
 export default function MetaWhatsAppWorkspace() {
 	const locale = useLocale();
@@ -1032,6 +1927,10 @@ export default function MetaWhatsAppWorkspace() {
 	const [error, setError] = useState(null);
 	const [configOpen, setConfigOpen] = useState(false);
 	const [activityOpen, setActivityOpen] = useState(false);
+	const [usageOpen, setUsageOpen] = useState(false);
+	const [usageData, setUsageData] = useState(null);
+	const [usageLoading, setUsageLoading] = useState(false);
+	const [usageMarket, setUsageMarket] = useState('EGYPT');
 	const [phoneOpen, setPhoneOpen] = useState(false);
 	const [phoneInput, setPhoneInput] = useState('');
 	const [phoneName, setPhoneName] = useState('');
@@ -1058,25 +1957,53 @@ export default function MetaWhatsAppWorkspace() {
 	const [templatesLoading, setTemplatesLoading] = useState(false);
 	const [templatesError, setTemplatesError] = useState(null);
 	const [sidebarView, setSidebarView] = useState('chats'); // chats | templates
-	const [templatesMode, setTemplatesMode] = useState('list'); // list | create
+	const [templatesMode, setTemplatesMode] = useState('list'); // list | create | seed | library
+	const [seedTemplates, setSeedTemplates] = useState([]);
+	const [seedNote, setSeedNote] = useState('');
+	const [seedSelected, setSeedSelected] = useState({});
+	const [seedLoading, setSeedLoading] = useState(false);
+	const [seedSubmitting, setSeedSubmitting] = useState(false);
+	const [libraryItems, setLibraryItems] = useState([]);
+	const [libraryVerification, setLibraryVerification] = useState([]);
+	const [libraryLoading, setLibraryLoading] = useState(false);
+	const [librarySearch, setLibrarySearch] = useState('');
+	const [libraryCreatingKey, setLibraryCreatingKey] = useState('');
+	const [libraryOpen, setLibraryOpen] = useState(false);
+	const [verifyOpen, setVerifyOpen] = useState(false);
+	const [verifyPhone, setVerifyPhone] = useState('');
+	const [verifyTemplate, setVerifyTemplate] = useState(null); // { name, language, components?, body? }
+	const [previewTemplate, setPreviewTemplate] = useState(null);
+	const [deletingTemplateKey, setDeletingTemplateKey] = useState('');
+	const [actionsMenuKey, setActionsMenuKey] = useState('');
 	const [createFormErrors, setCreateFormErrors] = useState({});
 	const [sendTemplateOpen, setSendTemplateOpen] = useState(false);
 	const [selectedTemplateKey, setSelectedTemplateKey] = useState('');
 	const [templateVarValues, setTemplateVarValues] = useState({});
+	const [templateVarErrors, setTemplateVarErrors] = useState({});
 	const [creatingTemplate, setCreatingTemplate] = useState(false);
 	const [createForm, setCreateForm] = useState(() => emptyCreateTemplateForm(isAr));
+	const [editingTemplateId, setEditingTemplateId] = useState('');
+	const [existingHeaderComponent, setExistingHeaderComponent] = useState(null);
 	const [headerSampleFile, setHeaderSampleFile] = useState(null);
 	const [headerSamplePreview, setHeaderSamplePreview] = useState('');
 	const headerSampleRef = useRef(null);
 	const [activity, setActivity] = useState([]);
 	const [sending, setSending] = useState(false);
 	const [recording, setRecording] = useState(false);
+	const [recordingSeconds, setRecordingSeconds] = useState(0);
+	const [recordingLevel, setRecordingLevel] = useState(0.2);
+	const [mediaLightbox, setMediaLightbox] = useState(null); // { url, kind }
 	const [initialConversation, setInitialConversation] = useState(null);
 	const bottomRef = useRef(null);
 	const fileRef = useRef(null);
 	const imageRef = useRef(null);
 	const mediaRecorderRef = useRef(null);
 	const chunksRef = useRef([]);
+	const recordingDiscardRef = useRef(false);
+	const recordingStartedAtRef = useRef(0);
+	const recordingAnalyserRef = useRef(null);
+	const recordingRafRef = useRef(0);
+	const recordingAudioCtxRef = useRef(null);
 	const searchTimer = useRef(null);
 
 	const webhookUrl = useMemo(() => resolveWebhookUrl(status), [status]);
@@ -1194,6 +2121,24 @@ export default function MetaWhatsAppWorkspace() {
 		if (!activityOpen) return;
 		metaWhatsAppApi.activity(40).then(rows => setActivity(Array.isArray(rows) ? rows : [])).catch(() => setActivity([]));
 	}, [activityOpen]);
+
+	const loadUsageBilling = useCallback(async () => {
+		setUsageLoading(true);
+		try {
+			const data = await metaWhatsAppApi.usageBilling();
+			setUsageData(data);
+		} catch (err) {
+			setFlash(apiErrorMessage(err, t.usageLoadError));
+			setUsageData(null);
+		} finally {
+			setUsageLoading(false);
+		}
+	}, [t.usageLoadError]);
+
+	useEffect(() => {
+		if (!usageOpen) return;
+		void loadUsageBilling();
+	}, [usageOpen, loadUsageBilling]);
 
 	const loadTemplates = useCallback(async () => {
 		setTemplatesLoading(true);
@@ -1372,8 +2317,21 @@ export default function MetaWhatsAppWorkspace() {
 				return;
 			}
 			const data = await metaWhatsAppApi.validate();
-			setStatus(data.status || data);
-			setFlash(t.validateOk);
+			const nextStatus = data.status || data;
+			setStatus(nextStatus);
+			if (nextStatus?.wabaId || data.wabaId) {
+				const resolvedWaba = nextStatus?.wabaId || data.wabaId;
+				setForm(f => {
+					const next = { ...f, wabaId: resolvedWaba };
+					writeConfigDraft(next);
+					return next;
+				});
+			}
+			setFlash(
+				data.wabaAutoResolved
+					? `${t.validateOk} — WABA auto-fixed`
+					: t.validateOk,
+			);
 		} catch (err) {
 			setFlash(apiErrorMessage(err));
 			await loadStatus().catch(() => {});
@@ -1471,11 +2429,15 @@ export default function MetaWhatsAppWorkspace() {
 	async function onSendTemplate(e) {
 		e?.preventDefault?.();
 		if (!activeId || !selectedTemplate) return;
-		for (const p of selectedPlaceholders) {
-			if (!String(templateVarValues[p.id] || '').trim()) {
-				setFlash(t.templateVarRequired);
-				return;
-			}
+		const fieldErrors = validateTemplateSendValues(
+			selectedPlaceholders,
+			templateVarValues,
+			t,
+		);
+		setTemplateVarErrors(fieldErrors);
+		if (Object.keys(fieldErrors).length) {
+			setFlash(Object.values(fieldErrors)[0]);
+			return;
 		}
 		setSending(true);
 		setFlash(null);
@@ -1493,6 +2455,7 @@ export default function MetaWhatsAppWorkspace() {
 			setSendTemplateOpen(false);
 			setSelectedTemplateKey('');
 			setTemplateVarValues({});
+			setTemplateVarErrors({});
 			setTemplateName('');
 			await loadMessages(activeId);
 			await loadConversations();
@@ -1505,8 +2468,16 @@ export default function MetaWhatsAppWorkspace() {
 
 	async function onCreateTemplate(e) {
 		e.preventDefault();
+		const isEditing = Boolean(editingTemplateId);
+		const keepExistingMedia =
+			isEditing &&
+			['IMAGE', 'VIDEO', 'DOCUMENT'].includes(String(createForm.headerFormat || '').toUpperCase()) &&
+			Boolean(existingHeaderComponent) &&
+			!headerSampleFile;
 		const errors = validateCreateTemplateForm(createForm, t, {
-			hasHeaderSample: Boolean(headerSampleFile || createForm.headerHandle),
+			hasHeaderSample: Boolean(
+				headerSampleFile || createForm.headerHandle || keepExistingMedia,
+			),
 		});
 		setCreateFormErrors(errors);
 		if (Object.keys(errors).length) {
@@ -1524,16 +2495,15 @@ export default function MetaWhatsAppWorkspace() {
 				headerHandle = uploaded?.headerHandle;
 				if (!headerHandle) throw new Error(t.headerSampleRequired);
 			}
-			await metaWhatsAppApi.createTemplate({
-				name: safeName,
-				language: createForm.language.trim() || 'en_US',
-				category: createForm.category,
+			const payload = {
 				headerFormat,
 				headerText:
 					headerFormat === 'TEXT' ? createForm.headerText.trim() || undefined : undefined,
 				headerHandle: ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(headerFormat)
 					? headerHandle
 					: undefined,
+				existingHeaderComponent:
+					keepExistingMedia && !headerHandle ? existingHeaderComponent : undefined,
 				bodyText: createForm.bodyText.trim(),
 				footerText: createForm.footerText.trim() || undefined,
 				buttons: (createForm.buttons || [])
@@ -1547,13 +2517,22 @@ export default function MetaWhatsAppWorkspace() {
 				exampleBodyParams: exampleParamsFromText(createForm.bodyText),
 				exampleHeaderParams:
 					headerFormat === 'TEXT' ? exampleParamsFromText(createForm.headerText) : undefined,
-			});
-			setFlash(t.templateCreateOk);
-			setCreateForm(emptyCreateTemplateForm(isAr));
-			setHeaderSampleFile(null);
-			if (headerSamplePreview) URL.revokeObjectURL(headerSamplePreview);
-			setHeaderSamplePreview('');
-			setCreateFormErrors({});
+			};
+			if (isEditing) {
+				// Meta rejects category changes on APPROVED templates (#100).
+				await metaWhatsAppApi.updateTemplate(editingTemplateId, payload);
+				setFlash(t.templateEditOk);
+			} else {
+				const { existingHeaderComponent: _keep, ...createPayload } = payload;
+				await metaWhatsAppApi.createTemplate({
+					...createPayload,
+					category: createForm.category,
+					name: safeName,
+					language: createForm.language.trim() || 'en_US',
+				});
+				setFlash(t.templateCreateOk);
+			}
+			resetCreateTemplate();
 			setTemplatesMode('list');
 			await loadTemplates();
 		} catch (err) {
@@ -1565,6 +2544,8 @@ export default function MetaWhatsAppWorkspace() {
 
 	function resetCreateTemplate() {
 		setCreateForm(emptyCreateTemplateForm(isAr));
+		setEditingTemplateId('');
+		setExistingHeaderComponent(null);
 		setHeaderSampleFile(null);
 		if (headerSamplePreview) URL.revokeObjectURL(headerSamplePreview);
 		setHeaderSamplePreview('');
@@ -1572,9 +2553,33 @@ export default function MetaWhatsAppWorkspace() {
 		setFlash(null);
 	}
 
+	function openEditTemplate(tpl) {
+		if (!canEditMetaTemplate(tpl)) {
+			setFlash(t.templateCannotEdit);
+			return;
+		}
+		const headerFormat = templateHeaderFormat(tpl.components) || 'NONE';
+		setCreateForm(formFromMetaTemplate(tpl, isAr));
+		setEditingTemplateId(String(tpl.id));
+		setExistingHeaderComponent(
+			['IMAGE', 'VIDEO', 'DOCUMENT'].includes(headerFormat)
+				? templateHeaderComponent(tpl.components)
+				: null,
+		);
+		setHeaderSampleFile(null);
+		if (headerSamplePreview) URL.revokeObjectURL(headerSamplePreview);
+		setHeaderSamplePreview('');
+		setCreateFormErrors({});
+		setActionsMenuKey('');
+		setPreviewTemplate(null);
+		setTemplatesMode('create');
+		setFlash(null);
+	}
+
 	function onHeaderSamplePick(file) {
 		if (!file) return;
 		setHeaderSampleFile(file);
+		setExistingHeaderComponent(null);
 		if (headerSamplePreview) URL.revokeObjectURL(headerSamplePreview);
 		if (String(file.type || '').startsWith('image/')) {
 			setHeaderSamplePreview(URL.createObjectURL(file));
@@ -1606,8 +2611,239 @@ export default function MetaWhatsAppWorkspace() {
 		});
 	}
 
+	async function loadSeedTemplates() {
+		setSeedLoading(true);
+		setTemplatesError(null);
+		try {
+			const data = await metaWhatsAppApi.seedTemplates();
+			const rows = Array.isArray(data?.templates) ? data.templates : [];
+			setSeedTemplates(rows);
+			setSeedNote(data?.note || '');
+			const next = {};
+			rows.forEach(row => {
+				next[row.key] = true;
+			});
+			setSeedSelected(next);
+			setTemplatesMode('seed');
+		} catch (err) {
+			setTemplatesError(apiErrorMessage(err, t.templateLoadError));
+		} finally {
+			setSeedLoading(false);
+		}
+	}
+
+	async function submitSeedTemplates(all = false) {
+		const keys = all
+			? seedTemplates.map(s => s.key)
+			: Object.keys(seedSelected).filter(k => seedSelected[k]);
+		if (!keys.length) {
+			setFlash(t.templatePick);
+			return;
+		}
+		setSeedSubmitting(true);
+		setFlash(null);
+		setTemplatesError(null);
+		try {
+			const data = await metaWhatsAppApi.submitSeedTemplates({ keys });
+			const failed = data?.results?.filter(r => !r.ok) || [];
+			if (failed.length) {
+				setFlash(
+					failed.map(f => `${f.name}: ${f.error || 'failed'}`).join(' | ') ||
+						t.sendError,
+				);
+			} else {
+				setFlash(
+					`${t.seedSubmitted} (${data?.submitted || keys.length}) — pending Meta review`,
+				);
+			}
+			await loadTemplates();
+		} catch (err) {
+			setFlash(apiErrorMessage(err, t.sendError));
+		} finally {
+			setSeedSubmitting(false);
+		}
+	}
+
+	async function cloneOutreachAsUtility() {
+		setSeedSubmitting(true);
+		setFlash(null);
+		setTemplatesError(null);
+		try {
+			const data = await metaWhatsAppApi.cloneTemplates({
+				names: ['so7ba_fitness_outreach_ar', 'so7ba_fitness_outreach_en'],
+				category: 'UTILITY',
+				nameMap: {
+					so7ba_fitness_outreach_ar: 'so7ba_fitness_util_ar',
+					so7ba_fitness_outreach_en: 'so7ba_fitness_util_en',
+				},
+			});
+			const failed = data?.results?.filter(r => !r.ok) || [];
+			if (failed.length) {
+				setFlash(
+					failed
+						.map(f => `${f.sourceName}: ${f.error || 'failed'}`)
+						.join(' | ') || t.sendError,
+				);
+			} else {
+				const names = (data?.results || [])
+					.filter(r => r.ok)
+					.map(r => r.newName)
+					.join(', ');
+				setFlash(
+					`${t.cloneAsUtilityOk}${names ? `: ${names}` : ''} — pending Meta review`,
+				);
+			}
+			await loadTemplates();
+		} catch (err) {
+			setFlash(apiErrorMessage(err, t.sendError));
+		} finally {
+			setSeedSubmitting(false);
+		}
+	}
+
+	async function loadMetaLibrary(search = librarySearch) {
+		setLibraryOpen(true);
+		setLibraryLoading(true);
+		setFlash(null);
+		setTemplatesError(null);
+		try {
+			const data = await metaWhatsAppApi.templateLibrary({
+				search: search?.trim() || undefined,
+				language: isAr ? 'ar' : undefined,
+			});
+			setLibraryVerification(Array.isArray(data?.verification) ? data.verification : []);
+			setLibraryItems(Array.isArray(data?.templates) ? data.templates : []);
+		} catch (err) {
+			setFlash(apiErrorMessage(err, t.metaLibraryLoadError));
+		} finally {
+			setLibraryLoading(false);
+		}
+	}
+
+	function openVerifySend(tpl) {
+		if (!tpl?.name) return;
+		setFlash(null);
+		setActionsMenuKey('');
+		setVerifyTemplate({
+			name: tpl.name,
+			language: tpl.language || 'en_US',
+			components: tpl.components || null,
+			body: tpl.body || templatePreviewText(tpl.components) || '',
+			isVerification: Boolean(tpl.isVerification),
+		});
+		setVerifyPhone(active?.waId || '');
+		setTemplateVarValues({});
+		setVerifyOpen(true);
+	}
+
+	async function copyTemplateName(name) {
+		try {
+			await navigator.clipboard.writeText(String(name || ''));
+			setFlash(t.templateCopied);
+		} catch {
+			setFlash(t.sendError);
+		}
+		setActionsMenuKey('');
+	}
+
+	async function onDeleteTemplate(tpl) {
+		if (!tpl?.name) return;
+		const key = `${tpl.id || tpl.name}::${tpl.language || ''}`;
+		if (!window.confirm(t.templateDeleteConfirm)) return;
+		setDeletingTemplateKey(key);
+		setFlash(null);
+		setActionsMenuKey('');
+		try {
+			await metaWhatsAppApi.deleteTemplate({
+				name: tpl.name,
+				...(tpl.id ? { hsmId: tpl.id } : {}),
+			});
+			setFlash(t.templateDeleted);
+			if (previewTemplate?.name === tpl.name) setPreviewTemplate(null);
+			await loadTemplates();
+		} catch (err) {
+			setFlash(apiErrorMessage(err, t.sendError));
+		} finally {
+			setDeletingTemplateKey('');
+		}
+	}
+
+	async function onAddFromLibrary(item) {
+		const libraryName = item?.libraryTemplateName || item?.name;
+		if (!libraryName) return;
+		const key = `${libraryName}::${item.language || 'en_US'}`;
+		setLibraryCreatingKey(key);
+		setFlash(null);
+		try {
+			const slug = String(libraryName)
+				.toLowerCase()
+				.replace(/[^a-z0-9_]+/g, '_')
+				.slice(0, 40);
+			const buttons = item.buttons || item.raw?.buttons || [];
+			await metaWhatsAppApi.createFromLibrary({
+				name: `${slug}_${Date.now().toString(36).slice(-4)}`,
+				language: item.language || (isAr ? 'ar' : 'en_US'),
+				category: item.category || 'UTILITY',
+				libraryTemplateName: libraryName,
+				buttons,
+				buttonUrl: isAr ? 'https://so7bafit.com/ar/presentation' : 'https://so7bafit.com/en/presentation',
+				buttonPhone: status?.displayPhoneNumber || undefined,
+			});
+			setFlash(t.libraryAdded);
+			await loadTemplates();
+		} catch (err) {
+			setFlash(apiErrorMessage(err, t.sendError));
+		} finally {
+			setLibraryCreatingKey('');
+		}
+	}
+
+	async function onVerifySend(e) {
+		e?.preventDefault?.();
+		if (!verifyTemplate?.name) return;
+		const raw = String(verifyPhone || '').trim();
+		if (!raw) {
+			setFlash(t.phoneRequired);
+			return;
+		}
+		const waId = normalizeWaPhone(raw);
+		if (!waId) {
+			setFlash(t.phoneInvalid);
+			return;
+		}
+		const placeholders = extractTemplatePlaceholders(verifyTemplate.components);
+		const fieldErrors = validateTemplateSendValues(placeholders, templateVarValues, t);
+		setTemplateVarErrors(fieldErrors);
+		if (Object.keys(fieldErrors).length) {
+			setFlash(Object.values(fieldErrors)[0]);
+			return;
+		}
+		setSending(true);
+		setFlash(null);
+		try {
+			const components = buildTemplateSendComponents(placeholders, templateVarValues);
+			await metaWhatsAppApi.sendTemplate({
+				phone: waId,
+				templateName: verifyTemplate.name,
+				language: verifyTemplate.language || 'en_US',
+				components,
+			});
+			setVerifyOpen(false);
+			setVerifyTemplate(null);
+			setTemplateVarErrors({});
+			setFlash(t.verifySendOk);
+			await loadConversations();
+			if (activeId) await loadMessages(activeId);
+		} catch (err) {
+			setFlash(apiErrorMessage(err, t.sendError));
+		} finally {
+			setSending(false);
+		}
+	}
+
 	function openSendTemplate() {
 		setFlash(null);
+		setTemplateVarErrors({});
 		setSendTemplateOpen(true);
 		void loadTemplates();
 	}
@@ -1632,35 +2868,169 @@ export default function MetaWhatsAppWorkspace() {
 		}
 	}
 
+	function cleanupRecordingMeters() {
+		if (recordingRafRef.current) {
+			cancelAnimationFrame(recordingRafRef.current);
+			recordingRafRef.current = 0;
+		}
+		try {
+			recordingAudioCtxRef.current?.close?.();
+		} catch {
+			/* ignore */
+		}
+		recordingAudioCtxRef.current = null;
+		recordingAnalyserRef.current = null;
+		setRecordingLevel(0.2);
+		setRecordingSeconds(0);
+	}
+
 	async function startRecording() {
 		if (!active?.canSendFreeform) {
 			setFlash(t.windowClosed);
 			return;
 		}
+		if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+			setFlash(isAr ? 'المتصفح لا يدعم تسجيل الصوت' : 'Browser does not support voice recording');
+			return;
+		}
 		try {
-			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-			const recorder = new MediaRecorder(stream);
+			const stream = await navigator.mediaDevices.getUserMedia({
+				audio: {
+					echoCancellation: true,
+					noiseSuppression: true,
+					channelCount: 1,
+				},
+			});
+			const preferred = [
+				'audio/ogg;codecs=opus',
+				'audio/webm;codecs=opus',
+				'audio/webm',
+				'audio/mp4',
+			];
+			const mimeType =
+				preferred.find(tp => {
+					try {
+						return MediaRecorder.isTypeSupported(tp);
+					} catch {
+						return false;
+					}
+				}) || '';
+			const recorder = mimeType
+				? new MediaRecorder(stream, { mimeType })
+				: new MediaRecorder(stream);
 			chunksRef.current = [];
+			recordingDiscardRef.current = false;
 			recorder.ondataavailable = ev => {
 				if (ev.data?.size) chunksRef.current.push(ev.data);
 			};
+			recorder.onerror = () => {
+				stream.getTracks().forEach(tr => tr.stop());
+				cleanupRecordingMeters();
+				setRecording(false);
+				setFlash(isAr ? 'فشل تسجيل الصوت' : 'Voice recording failed');
+			};
 			recorder.onstop = async () => {
 				stream.getTracks().forEach(tr => tr.stop());
-				const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
-				const file = new File([blob], `voice-${Date.now()}.webm`, { type: blob.type });
-				await uploadFile(file, { asVoice: true });
+				cleanupRecordingMeters();
+				const discarded = recordingDiscardRef.current;
+				recordingDiscardRef.current = false;
+				if (discarded) return;
+				const type = recorder.mimeType || mimeType || 'audio/webm';
+				const blob = new Blob(chunksRef.current, { type });
+				if (!blob.size) {
+					setFlash(isAr ? 'التسجيل فاضي — جرب تاني' : 'Empty recording — try again');
+					return;
+				}
+				const ext = type.includes('ogg') ? 'ogg' : type.includes('mp4') ? 'm4a' : 'webm';
+				const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: blob.type || type });
+				try {
+					await uploadFile(file, { asVoice: true });
+				} catch {
+					/* uploadFile already flashes */
+				}
 			};
 			mediaRecorderRef.current = recorder;
-			recorder.start();
+			recorder.start(250);
+
+			// Live timer + mic level meter (WhatsApp-like feedback)
+			recordingStartedAtRef.current = Date.now();
+			setRecordingSeconds(0);
+			try {
+				const Ctx = window.AudioContext || window.webkitAudioContext;
+				if (Ctx) {
+					const ctx = new Ctx();
+					const source = ctx.createMediaStreamSource(stream);
+					const analyser = ctx.createAnalyser();
+					analyser.fftSize = 256;
+					source.connect(analyser);
+					recordingAudioCtxRef.current = ctx;
+					recordingAnalyserRef.current = analyser;
+					const data = new Uint8Array(analyser.frequencyBinCount);
+					const tick = () => {
+						const elapsed = Math.floor((Date.now() - recordingStartedAtRef.current) / 1000);
+						setRecordingSeconds(elapsed);
+						analyser.getByteFrequencyData(data);
+						let sum = 0;
+						for (let i = 0; i < data.length; i += 1) sum += data[i];
+						const avg = sum / (data.length || 1) / 255;
+						setRecordingLevel(Math.max(0.12, Math.min(1, avg * 1.8)));
+						recordingRafRef.current = requestAnimationFrame(tick);
+					};
+					recordingRafRef.current = requestAnimationFrame(tick);
+				} else {
+					recordingRafRef.current = requestAnimationFrame(function tick() {
+						setRecordingSeconds(Math.floor((Date.now() - recordingStartedAtRef.current) / 1000));
+						setRecordingLevel(0.25 + Math.random() * 0.55);
+						recordingRafRef.current = requestAnimationFrame(tick);
+					});
+				}
+			} catch {
+				recordingRafRef.current = requestAnimationFrame(function tick() {
+					setRecordingSeconds(Math.floor((Date.now() - recordingStartedAtRef.current) / 1000));
+					setRecordingLevel(0.25 + Math.random() * 0.55);
+					recordingRafRef.current = requestAnimationFrame(tick);
+				});
+			}
+
 			setRecording(true);
-		} catch {
-			setFlash(isAr ? 'لا يمكن الوصول للميكروفون' : 'Microphone permission denied');
+			setFlash(null);
+		} catch (err) {
+			const name = String(err?.name || '');
+			setFlash(
+				name === 'NotAllowedError' || name === 'PermissionDeniedError'
+					? isAr
+						? 'اسمح بالوصول للميكروفون من إعدادات المتصفح'
+						: 'Allow microphone access in browser settings'
+					: isAr
+						? 'لا يمكن الوصول للميكروفون'
+						: 'Microphone permission denied',
+			);
 		}
 	}
 
 	function stopRecording() {
 		const recorder = mediaRecorderRef.current;
-		if (recorder && recorder.state !== 'inactive') recorder.stop();
+		recordingDiscardRef.current = false;
+		if (recorder && recorder.state !== 'inactive') {
+			try {
+				recorder.requestData?.();
+			} catch {
+				/* ignore */
+			}
+			recorder.stop();
+		}
+		cleanupRecordingMeters();
+		setRecording(false);
+	}
+
+	function cancelRecording() {
+		const recorder = mediaRecorderRef.current;
+		recordingDiscardRef.current = true;
+		chunksRef.current = [];
+		if (recorder && recorder.state !== 'inactive') {
+			recorder.stop();
+		}
+		cleanupRecordingMeters();
 		setRecording(false);
 	}
 
@@ -1688,6 +3058,29 @@ export default function MetaWhatsAppWorkspace() {
 				boxShadow: WA.shadow,
 			}}
 		>
+			{/* Floating Meta-style error/success toast */}
+			{(flash || error || templatesError) && (
+				<div className="pointer-events-none absolute inset-x-0 top-3 z-[70] flex justify-center px-4">
+					<div className="pointer-events-auto w-full max-w-2xl">
+						<AlertBanner
+							floating
+							message={templatesError || flash || error}
+							tone={
+								templatesError || error || !isSuccessFlash(flash, t)
+									? 'error'
+									: 'success'
+							}
+							onClose={() => {
+								setFlash(null);
+								setError(null);
+								setTemplatesError(null);
+							}}
+							t={t}
+						/>
+					</div>
+				</div>
+			)}
+
 			{/* Left rail — WhatsApp Desktop */}
 			<aside
 				className="relative hidden w-[68px] shrink-0 flex-col items-center justify-between px-2.5 pb-2.5 pt-11 md:flex"
@@ -1729,6 +3122,9 @@ export default function MetaWhatsAppWorkspace() {
 					</RailBtn>
 					<RailBtn active={activityOpen} onClick={() => setActivityOpen(true)} title={t.activity}>
 						<ShieldCheck className="h-6 w-6" strokeWidth={1.75} />
+					</RailBtn>
+					<RailBtn active={usageOpen} onClick={() => setUsageOpen(true)} title={t.usageBilling}>
+						<ChartColumn className="h-6 w-6" strokeWidth={1.75} />
 					</RailBtn>
 				</div>
 				<Link href={`/${locale}/dashboard/fitness-leads`} title={t.backLeads} className="flex h-12 w-12 items-center justify-center rounded-md" style={{ color: WA.icon }}>
@@ -1795,19 +3191,6 @@ export default function MetaWhatsAppWorkspace() {
 						</header>
 
 						<div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2.5 pb-5">
-							{(flash || error) && (
-								<div className="mb-2">
-									<AlertBanner
-										message={error || flash}
-										tone={error || !isSuccessFlash(flash, t) ? 'error' : 'success'}
-										onClose={() => {
-											setFlash(null);
-											setError(null);
-										}}
-										t={t}
-									/>
-								</div>
-							)}
 							<div className="min-h-0 flex-1 overflow-y-auto">
 								{!filtered.length ? (
 									<div className="px-4 py-16 text-center">
@@ -1873,45 +3256,39 @@ export default function MetaWhatsAppWorkspace() {
 						<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 							<header className="flex items-center justify-between gap-2 px-5 py-3" style={{ background: WA.header, borderBottom: '0.5px solid rgba(0,0,0,0.12)' }}>
 								<div>
-									<div className="text-[14px] font-bold" style={{ color: WA.text }}>{t.createTemplate}</div>
-									<div className="text-[12px]" style={{ color: WA.muted }}>{t.templateMetaDetails}</div>
+									<div className="text-[14px] font-bold" style={{ color: WA.text }}>
+										{editingTemplateId ? t.editTemplate : t.createTemplate}
+									</div>
+									<div className="text-[12px]" style={{ color: WA.muted }}>
+										{editingTemplateId ? t.templateEditLocked : t.templateMetaDetails}
+									</div>
 								</div>
 								<button
 									type="button"
 									onClick={() => {
+										resetCreateTemplate();
 										setTemplatesMode('list');
-										setCreateFormErrors({});
 									}}
-									className="rounded-md px-3 py-1.5 text-[12px] font-semibold"
-									style={{ color: WA.icon }}
+									className="inline-flex h-9 items-center rounded-xl border px-3.5 text-[12px] font-semibold transition hover:bg-white"
+									style={{ borderColor: WA.border, background: WA.panel, color: WA.text }}
 								>
 									{t.backToTemplates}
 								</button>
 							</header>
 							<div className="grid min-h-0 flex-1 gap-0 overflow-hidden lg:grid-cols-2">
 								<form onSubmit={onCreateTemplate} className="min-h-0 space-y-3 overflow-y-auto border-b p-4 lg:border-b-0 lg:border-e" style={{ borderColor: WA.border }}>
-									{(flash || Object.keys(createFormErrors).length > 0) && (
-										<AlertBanner
-											message={Object.values(createFormErrors)[0] || flash}
-											tone={flash === t.templateCreateOk ? 'success' : 'error'}
-											onClose={() => {
-												setFlash(null);
-												setCreateFormErrors({});
-											}}
-											t={t}
-										/>
-									)}
 									<label className="block space-y-1">
 										<span className="text-[12px] font-medium" style={{ color: WA.muted }}>{t.templateName} *</span>
 										<input
 											value={createForm.name}
+											disabled={Boolean(editingTemplateId)}
 											onChange={e => {
 												const name = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_');
 												setCreateForm(f => ({ ...f, name }));
 												setCreateFormErrors(err => ({ ...err, name: undefined }));
 											}}
 											placeholder="hello_world"
-											className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+											className="w-full rounded-lg border px-3 py-2 text-sm outline-none disabled:opacity-60"
 											style={{ borderColor: createFormErrors.name ? '#F87171' : WA.border, background: WA.field }}
 										/>
 										{createFormErrors.name ? <p className="text-[11px] text-rose-600">{createFormErrors.name}</p> : null}
@@ -1921,11 +3298,12 @@ export default function MetaWhatsAppWorkspace() {
 											<span className="text-[12px] font-medium" style={{ color: WA.muted }}>{t.templateLang} *</span>
 											<select
 												value={createForm.language}
+												disabled={Boolean(editingTemplateId)}
 												onChange={e => {
 													setCreateForm(f => ({ ...f, language: e.target.value }));
 													setCreateFormErrors(err => ({ ...err, language: undefined }));
 												}}
-												className="w-full rounded-lg border px-2 py-2 text-sm outline-none"
+												className="w-full rounded-lg border px-2 py-2 text-sm outline-none disabled:opacity-60"
 												style={{ borderColor: createFormErrors.language ? '#F87171' : WA.border, background: WA.field }}
 											>
 												{META_TEMPLATE_LANGUAGES.map(code => (
@@ -1937,14 +3315,18 @@ export default function MetaWhatsAppWorkspace() {
 											<span className="text-[12px] font-medium" style={{ color: WA.muted }}>{t.templateCategory} *</span>
 											<select
 												value={createForm.category}
+												disabled={Boolean(editingTemplateId)}
 												onChange={e => setCreateForm(f => ({ ...f, category: e.target.value }))}
-												className="w-full rounded-lg border px-2 py-2 text-sm outline-none"
+												className="w-full rounded-lg border px-2 py-2 text-sm outline-none disabled:opacity-60"
 												style={{ borderColor: WA.border, background: WA.field }}
 											>
 												<option value="UTILITY">UTILITY</option>
 												<option value="MARKETING">MARKETING</option>
 												<option value="AUTHENTICATION">AUTHENTICATION</option>
 											</select>
+											{editingTemplateId ? (
+												<p className="text-[11px]" style={{ color: WA.muted }}>{t.templateCategoryLocked}</p>
+											) : null}
 										</label>
 									</div>
 
@@ -1963,6 +3345,9 @@ export default function MetaWhatsAppWorkspace() {
 													type="button"
 													onClick={() => {
 														setCreateForm(f => ({ ...f, headerFormat: opt.id }));
+														if (!['IMAGE', 'VIDEO', 'DOCUMENT'].includes(opt.id)) {
+															setExistingHeaderComponent(null);
+														}
 														setCreateFormErrors(err => ({ ...err, headerSample: undefined, headerText: undefined }));
 													}}
 													className="rounded-full px-3 py-1 text-[12px] font-medium"
@@ -2016,6 +3401,9 @@ export default function MetaWhatsAppWorkspace() {
 													{createForm.headerFormat === 'IMAGE' ? <ImageIcon className="h-4 w-4" /> : createForm.headerFormat === 'VIDEO' ? <Video className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
 													{headerSampleFile ? t.changeSample : t.uploadSample}
 												</button>
+												{!headerSampleFile && existingHeaderComponent && editingTemplateId ? (
+													<p className="text-[11px]" style={{ color: WA.muted }}>{t.keepExistingSample}</p>
+												) : null}
 												{headerSampleFile ? (
 													<p className="truncate text-[11px]" style={{ color: WA.muted }}>{headerSampleFile.name}</p>
 												) : (
@@ -2153,7 +3541,7 @@ export default function MetaWhatsAppWorkspace() {
 										className="w-full rounded-2xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
 										style={{ background: WA.green }}
 									>
-										{creatingTemplate ? '…' : t.createTemplate}
+										{creatingTemplate ? '…' : editingTemplateId ? t.saveTemplate : t.createTemplate}
 									</button>
 								</form>
 
@@ -2232,9 +3620,36 @@ export default function MetaWhatsAppWorkspace() {
 									<div className="text-[14px] font-bold" style={{ color: WA.text }}>{t.templates}</div>
 									<div className="text-[12px]" style={{ color: WA.muted }}>{templates.length} · Meta Cloud API · {t.templatesHint}</div>
 								</div>
-								<div className="flex items-center gap-2">
-									<button type="button" onClick={() => void loadTemplates()} title={t.refreshTemplates} className="rounded-md p-1.5" style={{ color: WA.icon }}>
-										{templatesLoading ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" strokeWidth={1.75} />}
+								<div className="flex flex-wrap items-center gap-2">
+									{/* <button
+										type="button"
+										onClick={() => void cloneOutreachAsUtility()}
+										disabled={seedSubmitting || templatesLoading}
+										title={t.cloneAsUtilityHint}
+										className="inline-flex h-9 items-center gap-1.5 rounded-xl border px-3.5 text-[12px] font-semibold transition hover:bg-white disabled:opacity-50"
+										style={{ borderColor: WA.border, background: WA.panel, color: WA.text }}
+									>
+										{seedSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" strokeWidth={2} />}
+										{t.cloneAsUtility}
+									</button> */}
+									<button
+										type="button"
+										onClick={() => void loadTemplates()}
+										title={t.refreshTemplates}
+										className="inline-flex h-9 w-9 items-center justify-center rounded-xl border transition hover:bg-white"
+										style={{ borderColor: WA.border, color: WA.icon, background: WA.panel }}
+									>
+										{templatesLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" strokeWidth={2} />}
+									</button>
+									<button
+										type="button"
+										onClick={() => void loadMetaLibrary()}
+										disabled={libraryLoading}
+										className="inline-flex h-9 items-center gap-1.5 rounded-xl border px-3.5 text-[12px] font-semibold transition hover:bg-white disabled:opacity-50"
+										style={{ borderColor: WA.border, background: WA.panel, color: WA.text }}
+									>
+										{libraryLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" strokeWidth={2} />}
+										{t.metaLibrary}
 									</button>
 									<button
 										type="button"
@@ -2242,109 +3657,203 @@ export default function MetaWhatsAppWorkspace() {
 											resetCreateTemplate();
 											setTemplatesMode('create');
 										}}
-										className="inline-flex items-center gap-1 rounded-2xl px-3 py-1.5 text-[12px] font-semibold text-white"
+										className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-[12px] font-semibold text-white shadow-sm transition hover:opacity-95"
 										style={{ background: WA.green }}
 									>
-										<Plus className="h-3.5 w-3.5" />
+										<Plus className="h-4 w-4" strokeWidth={2.25} />
 										{t.addNewTemplate}
 									</button>
 								</div>
 							</header>
-							{(templatesError || flash) && (
-								<div className="mx-4 mt-3">
-									<AlertBanner
-										message={templatesError || flash}
-										tone={templatesError || !isSuccessFlash(flash, t) ? 'error' : 'success'}
-										onClose={() => {
-											setFlash(null);
-											setTemplatesError(null);
-										}}
-										t={t}
-									/>
-								</div>
-							)}
-							<div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4" style={chatWallpaperStyle}>
+							<div className="min-h-0 flex-1 overflow-y-auto p-4" style={{ background: WA.panel }}>
 								{templatesLoading && !templates.length ? (
 									<p className="py-16 text-center text-[13px]" style={{ color: WA.muted }}>…</p>
 								) : !templates.length ? (
 									<p className="py-16 text-center text-[13px]" style={{ color: WA.muted }}>{t.templateEmptyList}</p>
 								) : (
-									templates.map(tpl => {
-										const hdrFmt = templateHeaderFormat(tpl.components);
-										const btns = templateButtons(tpl.components);
-										return (
-											<div key={`${tpl.id || tpl.name}-${tpl.language}`} className="mx-auto w-full max-w-[520px]">
-												<div className="mb-2 flex items-center justify-between gap-2 px-1">
-													<div className="min-w-0">
-														<div className="truncate text-[13px] font-bold" style={{ color: WA.text }}>{tpl.name}</div>
-														<div className="text-[11px]" style={{ color: WA.muted }}>
-															{tpl.language} · {tpl.category || '—'}
-															{hdrFmt ? ` · ${hdrFmt}` : ''}
-															{btns.length ? ` · ${btns.length} btn` : ''}
-														</div>
-													</div>
-													<span
-														className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-														style={{
-															background: String(tpl.status).toUpperCase() === 'APPROVED' ? WA.greenSoft : '#FFF3C7',
-															color: String(tpl.status).toUpperCase() === 'APPROVED' ? WA.greenText : WA.muted,
-														}}
-													>
-														{tpl.status || '—'}
-													</span>
-												</div>
-												<div className="flex justify-start">
-													<div
-														className="max-w-[360px] min-w-[160px] overflow-hidden text-[13px] shadow-[0_1px_0_rgba(0,0,0,0.06)]"
-														style={{ background: WA.bubbleIn, color: WA.text, borderRadius: 12 }}
-													>
-														{hdrFmt === 'IMAGE' ? (
-															<div className="flex h-28 items-center justify-center" style={{ background: '#D1D7DB' }}>
-																<ImageIcon className="h-7 w-7" style={{ color: WA.muted }} />
-															</div>
-														) : null}
-														{hdrFmt === 'VIDEO' ? (
-															<div className="flex h-28 items-center justify-center" style={{ background: '#D1D7DB' }}>
-																<Video className="h-7 w-7" style={{ color: WA.muted }} />
-															</div>
-														) : null}
-														{hdrFmt === 'DOCUMENT' ? (
-															<div className="flex items-center gap-2 px-3 pt-2.5">
-																<FileText className="h-5 w-5" style={{ color: WA.muted }} />
-																<span className="text-[12px]" style={{ color: WA.muted }}>Document</span>
-															</div>
-														) : null}
-														<div className="px-3 py-2">
-															{templateHeaderText(tpl.components) ? (
-																<div className="mb-1 text-[12px] font-bold">{templateHeaderText(tpl.components)}</div>
-															) : null}
-															<div className="whitespace-pre-wrap break-words">
-																{templatePreviewText(tpl.components) || '—'}
-															</div>
-															{templateFooterText(tpl.components) ? (
-																<div className="mt-1 text-[11px]" style={{ color: WA.muted }}>{templateFooterText(tpl.components)}</div>
-															) : null}
-														</div>
-														{btns.length ? (
-															<div className="border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
-																{btns.map((btn, i) => (
-																	<div
-																		key={`${btn.text}-${i}`}
-																		className="flex items-center justify-center gap-1.5 border-t px-3 py-2 text-[13px] font-semibold"
-																		style={{ borderColor: i === 0 ? 'transparent' : 'rgba(0,0,0,0.06)', color: '#027EB5' }}
+									<div className="overflow-x-auto rounded-xl border" style={{ borderColor: WA.border }}>
+										<table className="min-w-full border-collapse text-start text-[13px]">
+											<thead>
+												<tr style={{ background: WA.header, color: WA.muted }}>
+													<th className="px-3 py-2.5 font-semibold">{t.templateColName}</th>
+													<th className="px-3 py-2.5 font-semibold">{t.templateColLanguage}</th>
+													<th className="px-3 py-2.5 font-semibold">{t.templateColCategory}</th>
+													<th className="px-3 py-2.5 font-semibold">{t.templateColHeader}</th>
+													<th className="px-3 py-2.5 font-semibold">{t.templateColStatus}</th>
+													<th className="px-3 py-2.5 font-semibold">{t.templateColActions}</th>
+												</tr>
+											</thead>
+											<tbody>
+												{templates.map(tpl => {
+													const rowKey = `${tpl.id || tpl.name}::${tpl.language || ''}`;
+													const hdrFmt = templateHeaderFormat(tpl.components);
+													const btns = templateButtons(tpl.components);
+													const status = String(tpl.status || '').toUpperCase();
+													const approved = status === 'APPROVED';
+													const deleting = deletingTemplateKey === rowKey;
+													const menuOpen = actionsMenuKey === rowKey;
+													return (
+														<tr
+															key={rowKey}
+															className="border-t align-middle"
+															style={{ borderColor: WA.border, background: WA.panel }}
+														>
+															<td className="max-w-[220px] px-3 py-3">
+																<div className="truncate font-semibold" style={{ color: WA.text }} title={tpl.name}>
+																	{tpl.name}
+																</div>
+																<div className="text-[11px]" style={{ color: WA.muted }}>
+																	{btns.length ? `${btns.length} btn` : '—'}
+																	{tpl.id ? ` · ${String(tpl.id).slice(-6)}` : ''}
+																</div>
+															</td>
+															<td className="whitespace-nowrap px-3 py-3" style={{ color: WA.text }}>
+																{tpl.language || '—'}
+															</td>
+															<td className="whitespace-nowrap px-3 py-3" style={{ color: WA.text }}>
+																{tpl.category || '—'}
+															</td>
+															<td className="whitespace-nowrap px-3 py-3" style={{ color: WA.muted }}>
+																{hdrFmt || t.headerNone}
+															</td>
+															<td className="px-3 py-3">
+																<span
+																	className="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+																	style={{
+																		background: approved
+																			? WA.greenSoft
+																			: status === 'REJECTED'
+																				? '#FDECEC'
+																				: '#FFF3C7',
+																		color: approved
+																			? WA.greenText
+																			: status === 'REJECTED'
+																				? '#9B1C1C'
+																				: WA.muted,
+																	}}
+																>
+																	{tpl.status || '—'}
+																</span>
+															</td>
+															<td className="px-3 py-3">
+																<div className="relative flex flex-wrap items-center gap-1.5">
+																	<button
+																		type="button"
+																		title={t.templateShow}
+																		onClick={() => {
+																			setPreviewTemplate(tpl);
+																			setActionsMenuKey('');
+																		}}
+																		className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold"
+																		style={{ background: WA.field, color: WA.text }}
 																	>
-																		{String(btn.type).toUpperCase() === 'URL' ? <Link2 className="h-3.5 w-3.5" /> : null}
-																		{String(btn.type).toUpperCase() === 'PHONE_NUMBER' ? <Phone className="h-3.5 w-3.5" /> : null}
-																		{btn.text}
-																	</div>
-																))}
-															</div>
-														) : null}
-													</div>
-												</div>
-											</div>
-										);
-									})
+																		<Eye className="h-3.5 w-3.5" />
+																		{t.templateShow}
+																	</button>
+																	<button
+																		type="button"
+																		title={t.templateUse}
+																		disabled={!approved}
+																		onClick={() => openVerifySend(tpl)}
+																		className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold text-white disabled:opacity-40"
+																		style={{ background: WA.green }}
+																	>
+																		<Send className="h-3.5 w-3.5" />
+																		{t.templateUse}
+																	</button>
+																	<button
+																		type="button"
+																		title={t.templateEdit}
+																		disabled={!canEditMetaTemplate(tpl)}
+																		onClick={() => openEditTemplate(tpl)}
+																		className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold disabled:opacity-40"
+																		style={{ background: WA.field, color: WA.text }}
+																	>
+																		<Pencil className="h-3.5 w-3.5" />
+																		{t.templateEdit}
+																	</button>
+																	<button
+																		type="button"
+																		title={t.templateDelete}
+																		disabled={deleting}
+																		onClick={() => void onDeleteTemplate(tpl)}
+																		className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold disabled:opacity-40"
+																		style={{ background: '#FDECEC', color: '#9B1C1C' }}
+																	>
+																		{deleting ? (
+																			<LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+																		) : (
+																			<Trash2 className="h-3.5 w-3.5" />
+																		)}
+																		{t.templateDelete}
+																	</button>
+																	<button
+																		type="button"
+																		title={t.templateColActions}
+																		onClick={() => setActionsMenuKey(menuOpen ? '' : rowKey)}
+																		className="rounded-lg p-1.5"
+																		style={{ color: WA.icon }}
+																	>
+																		<MoreHorizontal className="h-4 w-4" />
+																	</button>
+																	{menuOpen ? (
+																		<div
+																			className="absolute end-0 top-full z-20 mt-1 min-w-[160px] overflow-hidden rounded-xl border py-1 shadow-lg"
+																			style={{ background: WA.panel, borderColor: WA.border }}
+																		>
+																			<button
+																				type="button"
+																				className="flex w-full items-center gap-2 px-3 py-2 text-start text-[12px] hover:bg-[#F0F2F5]"
+																				style={{ color: WA.text }}
+																				onClick={() => void copyTemplateName(tpl.name)}
+																			>
+																				<Copy className="h-3.5 w-3.5" />
+																				{t.templateCopyName}
+																			</button>
+																			<button
+																				type="button"
+																				className="flex w-full items-center gap-2 px-3 py-2 text-start text-[12px] hover:bg-[#F0F2F5]"
+																				style={{ color: WA.text }}
+																				onClick={() => {
+																					setPreviewTemplate(tpl);
+																					setActionsMenuKey('');
+																				}}
+																			>
+																				<Eye className="h-3.5 w-3.5" />
+																				{t.templateShow}
+																			</button>
+																			{approved ? (
+																				<button
+																					type="button"
+																					className="flex w-full items-center gap-2 px-3 py-2 text-start text-[12px] hover:bg-[#F0F2F5]"
+																					style={{ color: WA.text }}
+																					onClick={() => openVerifySend(tpl)}
+																				>
+																					<Send className="h-3.5 w-3.5" />
+																					{t.verifySend}
+																				</button>
+																			) : null}
+																			{canEditMetaTemplate(tpl) ? (
+																				<button
+																					type="button"
+																					className="flex w-full items-center gap-2 px-3 py-2 text-start text-[12px] hover:bg-[#F0F2F5]"
+																					style={{ color: WA.text }}
+																					onClick={() => openEditTemplate(tpl)}
+																				>
+																					<Pencil className="h-3.5 w-3.5" />
+																					{t.templateEdit}
+																				</button>
+																			) : null}
+																		</div>
+																	) : null}
+																</div>
+															</td>
+														</tr>
+													);
+												})}
+											</tbody>
+										</table>
+									</div>
 								)}
 							</div>
 						</div>
@@ -2384,43 +3893,159 @@ export default function MetaWhatsAppWorkspace() {
 						<div className="relative z-0 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-3" style={chatWallpaperStyle}>
 							<div className="mx-auto rounded-lg px-3.5 py-1.5 text-center text-[10px] shadow-[0_1px_0_rgba(0,0,0,0.08)]" style={{ background: WA.dateChip, color: WA.dateText }}>{t.encryption}</div>
 							<div className="mx-auto max-w-[360px] rounded-lg px-3.5 py-1.5 text-center text-[10px] shadow-[0_1px_0_rgba(0,0,0,0.08)]" style={{ background: WA.chipMeta, color: WA.metaNote }}>{t.metaNote}</div>
-							{messages.map(m => {
+							{buildChatRows(messages).map(row => {
+								if (row.kind === 'image_grid') {
+									const mine = row.direction === 'outbound';
+									return (
+										<div key={row.key} className={`flex px-1 ${mine ? 'justify-end' : 'justify-start'}`}>
+											<ImageGridBubble
+												messages={row.messages}
+												mine={mine}
+												locale={locale}
+												onOpenMedia={(url, kind) => setMediaLightbox({ url, kind })}
+											/>
+										</div>
+									);
+								}
+
+								const m = row.message;
 								const mine = m.direction === 'outbound';
+								const type = String(m.messageType || '').toLowerCase();
+								const isSticker = type === 'sticker';
+								const isTemplate = type === 'template';
+								const isButtonReply =
+									type === 'button' ||
+									type === 'interactive' ||
+									/^\[button\]/i.test(String(m.body || ''));
+								const caption = messageCaption(m);
+								const showUnsupported =
+									type === 'unsupported' ||
+									/^\[unsupported\]$/i.test(String(m.body || '').trim());
+								const templateParts = isTemplate
+									? resolveTemplateMessageParts(m, templates)
+									: null;
+
 								return (
 									<div key={m.id} className={`flex px-1 ${mine ? 'justify-end' : 'justify-start'}`}>
 										<div
-											className="relative max-w-[360px] min-w-[84px] px-2.5 pb-2 pt-1.5 text-[13px] font-medium leading-[1.35] shadow-[0_1px_0_rgba(0,0,0,0.08)]"
+											className={`relative max-w-[360px] text-[13px] font-medium leading-[1.35] ${
+												isSticker
+													? 'bg-transparent p-0 shadow-none'
+													: 'min-w-[84px] overflow-hidden shadow-[0_1px_0_rgba(0,0,0,0.08)]'
+											}`}
 											style={{
-												background: mine ? WA.bubbleOut : WA.bubbleIn,
+												background: isSticker
+													? 'transparent'
+													: mine
+														? WA.bubbleOut
+														: WA.bubbleIn,
 												color: WA.text,
 												borderRadius: 12,
 											}}
 										>
-											{m.messageType === 'template' && (
-												<div className="mb-0.5 text-[11px]" style={{ color: WA.muted }}>
-													{m.templateName}
-												</div>
-											)}
-											{m.hasMedia && <MediaBubble message={m} />}
-											{(() => {
-												const text = renderTemplateMessageDisplay(m, templates);
-												if (!text) return null;
-												if (m.messageType === 'image' || m.messageType === 'audio' || m.messageType === 'voice') {
-													return null;
-												}
-												return <div className="whitespace-pre-wrap break-words">{text}</div>;
-											})()}
-											{(m.messageType === 'image' || m.messageType === 'document') &&
+											<div className={isSticker ? '' : 'px-2.5 pb-1.5 pt-1.5'}>
+												{m.hasMedia ? (
+													<MediaBubble
+														message={m}
+														mine={mine}
+														labels={t}
+														onOpenMedia={(url, kind) => setMediaLightbox({ url, kind })}
+													/>
+												) : null}
+												{type === 'sticker' && !m.hasMedia ? (
+													<div
+														className="rounded-xl px-3 py-2 text-[12px]"
+														style={{ background: WA.bubbleIn, color: WA.muted }}
+													>
+														{t.stickerUnavailable}
+													</div>
+												) : null}
+												{showUnsupported ? (
+													<div className="text-[12px]" style={{ color: WA.muted }}>
+														{t.unsupportedMessage}
+													</div>
+												) : null}
+												{isTemplate ? (
+													<div className="space-y-1">
+														{m.templateName ? (
+															<div
+																className="text-[11px] font-semibold"
+																style={{ color: WA.muted }}
+															>
+																{m.templateName}
+															</div>
+														) : null}
+														{templateParts?.header ? (
+															<div className="whitespace-pre-wrap break-words font-bold">
+																<RichMessageText text={templateParts.header} />
+															</div>
+														) : null}
+														{templateParts?.body ? (
+															<div className="whitespace-pre-wrap break-words">
+																<RichMessageText text={templateParts.body} />
+															</div>
+														) : null}
+														{templateParts?.footer ? (
+															<div
+																className="whitespace-pre-wrap break-words text-[11px]"
+																style={{ color: WA.muted }}
+															>
+																<RichMessageText text={templateParts.footer} />
+															</div>
+														) : null}
+													</div>
+												) : null}
+												{isButtonReply && !isTemplate && !showUnsupported ? (
+													<div
+														className="mb-1 inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
+														style={{ background: 'rgba(2,126,181,0.10)', color: '#027EB5' }}
+													>
+														<MessageCircle className="h-3.5 w-3.5 shrink-0" />
+														<span className="truncate">
+															{caption || m.body || (isAr ? 'رد زر' : 'Button reply')}
+														</span>
+													</div>
+												) : null}
+												{caption &&
+												!isTemplate &&
+												!isButtonReply &&
+												!showUnsupported ? (
+													<div
+														className={`whitespace-pre-wrap break-words ${m.hasMedia ? 'mt-1' : ''}`}
+													>
+														<RichMessageText text={caption} />
+													</div>
+												) : null}
+												{type === 'text' &&
+												!caption &&
 												m.body &&
-												!String(m.body).startsWith('[') &&
-												m.messageType !== 'template' && (
-													<div className="whitespace-pre-wrap break-words">{m.body}</div>
-												)}
-											<div className="mt-1 flex items-center justify-end gap-1 text-[11px] font-medium" style={{ color: 'rgba(0,0,0,0.50)' }}>
-												<span>{formatTime(m.createdAt || m.providerTimestamp, locale)}</span>
-												{mine && <StatusTicks status={m.status} />}
+												!isMediaPlaceholderBody(m.body) ? (
+													<div className="whitespace-pre-wrap break-words">
+														<RichMessageText text={m.body} />
+													</div>
+												) : null}
+												<div
+													className={`mt-1 flex items-center justify-end gap-1 text-[11px] font-medium ${
+														isSticker
+															? 'rounded-full bg-black/25 px-2 py-0.5 text-white'
+															: ''
+													}`}
+													style={isSticker ? undefined : { color: 'rgba(0,0,0,0.50)' }}
+												>
+													<span>
+														{formatTime(m.createdAt || m.providerTimestamp, locale)}
+													</span>
+													{mine && <StatusTicks status={m.status} />}
+												</div>
+												{m.errorMessage ? (
+													<div className="mt-1 text-[11px] text-rose-600">
+														{m.errorMessage}
+													</div>
+												) : null}
 											</div>
-											{m.errorMessage && <div className="mt-1 text-[11px] text-rose-600">{m.errorMessage}</div>}
+											{isTemplate ? (
+												<TemplateActionButtons buttons={templateParts?.buttons} />
+											) : null}
 										</div>
 									</div>
 								);
@@ -2428,49 +4053,154 @@ export default function MetaWhatsAppWorkspace() {
 							<div ref={bottomRef} />
 						</div>
 
-						<footer className="z-10 flex items-end gap-2 px-2.5 py-2.5" style={{ background: WA.composeBar }}>
+						<footer className="z-10 px-2.5 py-2" style={{ background: WA.composeBar }}>
 							{active.canSendFreeform ? (
 								recording ? (
-									<div className="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-2" style={{ background: WA.input }}>
-										<span className="text-sm text-rose-600">{t.recording}</span>
-										<button type="button" onClick={stopRecording} className="grid h-8 w-8 place-items-center rounded-full bg-rose-500 text-white">
-											<Square className="h-4 w-4" />
+									<div className="flex w-full items-center gap-2">
+										<button
+											type="button"
+											onClick={cancelRecording}
+											className="grid h-11 w-11 shrink-0 place-items-center rounded-full transition hover:bg-rose-50"
+											style={{ color: '#E53935' }}
+											title={t.recordingCancel}
+										>
+											<Trash2 className="h-5 w-5" strokeWidth={2} />
+										</button>
+										<div
+											className="relative flex min-h-[52px] flex-1 items-center gap-3 overflow-hidden rounded-3xl px-4 py-2 shadow-md"
+											style={{
+												background: '#FFFFFF',
+												outline: '2px solid rgba(229,57,53,0.35)',
+												outlineOffset: -2,
+											}}
+										>
+											<span className="relative flex h-3 w-3 shrink-0">
+												<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-75" />
+												<span className="relative inline-flex h-3 w-3 rounded-full bg-rose-600" />
+											</span>
+											<div className="min-w-0 flex-1">
+												<div className="flex items-center gap-2">
+													<span className="text-[13px] font-bold tracking-wide text-rose-600">
+														{t.recording}
+													</span>
+													<span
+														className="rounded-md px-1.5 py-0.5 font-mono text-[13px] font-semibold tabular-nums"
+														style={{ background: 'rgba(229,57,53,0.1)', color: '#C62828' }}
+													>
+														{formatAudioClock(recordingSeconds)}
+													</span>
+												</div>
+												<div className="mt-1.5 flex h-5 items-end gap-[2px]">
+													{Array.from({ length: 28 }).map((_, i) => {
+														const wave =
+															0.25 +
+															Math.abs(Math.sin(i * 0.55 + recordingSeconds * 4)) *
+																recordingLevel *
+																0.9;
+														return (
+															<span
+																key={i}
+																className="w-[3px] rounded-full transition-[height] duration-75"
+																style={{
+																	height: `${Math.max(3, Math.round(wave * 18))}px`,
+																	background: i % 3 === 0 ? '#E53935' : '#EF9A9A',
+																}}
+															/>
+														);
+													})}
+												</div>
+												<p className="mt-0.5 truncate text-[10px]" style={{ color: WA.muted }}>
+													{t.recordingHint}
+												</p>
+											</div>
+										</div>
+										<button
+											type="button"
+											onClick={stopRecording}
+											className="grid h-12 w-12 shrink-0 place-items-center rounded-full text-white shadow-lg transition hover:scale-105 active:scale-95"
+											style={{ background: WA.green }}
+											title={t.recordingSend}
+										>
+											<Send className="h-5 w-5" strokeWidth={2.25} />
 										</button>
 									</div>
 								) : (
 									<form onSubmit={onSendText} className="flex w-full items-end gap-2">
-										<input ref={imageRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void uploadFile(f); }} />
+										<input ref={imageRef} type="file" accept="image/*" multiple className="hidden" onChange={e => {
+											const files = [...(e.target.files || [])];
+											e.target.value = '';
+											files.forEach(f => void uploadFile(f));
+										}} />
 										<input ref={fileRef} type="file" accept="image/*,audio/*,video/*,.pdf,.doc,.docx" className="hidden" onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void uploadFile(f); }} />
-										<button type="button" disabled={sending} onClick={() => imageRef.current?.click()} className="rounded-2xl p-1" style={{ color: WA.icon }} title="Image">
-											<ImageIcon className="h-6 w-6" strokeWidth={1.75} />
-										</button>
-										<button type="button" disabled={sending} onClick={() => fileRef.current?.click()} className="rounded-2xl p-1" style={{ color: WA.icon }} title="Attach">
-											<Paperclip className="h-6 w-6" strokeWidth={1.75} />
-										</button>
-										<button type="button" disabled={sending} onClick={openSendTemplate} className="rounded-2xl p-1" style={{ color: WA.icon }} title={t.sendTemplate}>
-											<LayoutTemplate className="h-6 w-6" strokeWidth={1.75} />
-										</button>
 										<div
-											className="relative flex min-h-[36px] flex-1 items-end rounded-2xl px-3 py-1.5"
-											style={{ background: WA.input, outline: `0.5px solid ${WA.composeBorder}`, outlineOffset: -0.5 }}
+											className="flex items-center gap-0.5 rounded-2xl px-1 py-1"
+											style={{ background: 'rgba(255,255,255,0.7)', outline: `1px solid ${WA.composeBorder}` }}
+										>
+											<button
+												type="button"
+												disabled={sending}
+												onClick={() => imageRef.current?.click()}
+												className="grid h-9 w-9 place-items-center rounded-xl transition hover:bg-black/5 disabled:opacity-40"
+												style={{ color: WA.icon }}
+												title="Image"
+											>
+												<ImageIcon className="h-5 w-5" strokeWidth={1.8} />
+											</button>
+											<button
+												type="button"
+												disabled={sending}
+												onClick={() => fileRef.current?.click()}
+												className="grid h-9 w-9 place-items-center rounded-xl transition hover:bg-black/5 disabled:opacity-40"
+												style={{ color: WA.icon }}
+												title="Attach"
+											>
+												<Paperclip className="h-5 w-5" strokeWidth={1.8} />
+											</button>
+											<button
+												type="button"
+												disabled={sending}
+												onClick={openSendTemplate}
+												className="grid h-9 w-9 place-items-center rounded-xl transition hover:bg-black/5 disabled:opacity-40"
+												style={{ color: WA.icon }}
+												title={t.sendTemplate}
+											>
+												<LayoutTemplate className="h-5 w-5" strokeWidth={1.8} />
+											</button>
+										</div>
+										<div
+											className="relative flex min-h-[44px] flex-1 items-center rounded-3xl pe-11 ps-3.5 shadow-sm"
+											style={{ background: WA.input, outline: `1px solid ${WA.composeBorder}`, outlineOffset: -1 }}
 										>
 											<input
 												value={draft}
 												onChange={e => setDraft(e.target.value)}
 												placeholder={t.typeMessage}
-												className="w-full bg-transparent py-1 text-[13px] font-medium outline-none placeholder:text-black/40"
-												style={{ color: WA.text, lineHeight: '16.6px' }}
+												className="w-full bg-transparent py-2.5 text-[14px] font-medium outline-none placeholder:text-black/35"
+												style={{ color: WA.text, lineHeight: '20px' }}
 											/>
+											{draft.trim() ? (
+												<button
+													type="submit"
+													disabled={sending}
+													className="absolute end-1.5 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full text-white shadow-sm disabled:opacity-50"
+													style={{ background: WA.green }}
+													title={t.typeMessage}
+												>
+													<Send className="h-4 w-4" strokeWidth={2.2} />
+												</button>
+											) : (
+												<button
+													type="button"
+													disabled={sending}
+													onClick={() => void startRecording()}
+													className="absolute end-1.5 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full transition hover:bg-black/5 disabled:opacity-40"
+													style={{ color: WA.icon }}
+													title="Voice"
+												>
+													<Mic className="h-5 w-5" strokeWidth={1.9} />
+												</button>
+											)}
 										</div>
-										{draft.trim() ? (
-											<button type="submit" disabled={sending} className="rounded-2xl p-1 disabled:opacity-50" style={{ color: WA.green }}>
-												<Send className="h-6 w-6" strokeWidth={1.75} />
-											</button>
-										) : (
-											<button type="button" disabled={sending} onClick={() => void startRecording()} className="rounded-2xl p-1" style={{ color: WA.icon }} title="Voice">
-												<Mic className="h-6 w-6" strokeWidth={1.75} />
-											</button>
-										)}
 									</form>
 								)
 							) : (
@@ -2485,6 +4215,192 @@ export default function MetaWhatsAppWorkspace() {
 					</>
 				)}
 			</section>
+
+			{libraryOpen && (
+				<div
+					className="absolute inset-0 z-50 grid place-items-center bg-[rgba(11,20,26,0.45)] p-3 sm:p-6"
+					onClick={() => setLibraryOpen(false)}
+				>
+					<div
+						className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl shadow-[0_20px_60px_rgba(11,20,26,0.28)]"
+						style={{ background: WA.panel }}
+						onClick={e => e.stopPropagation()}
+					>
+						<header
+							className="flex items-start justify-between gap-3 border-b px-5 py-4"
+							style={{ borderColor: WA.border, background: '#F7F8FA' }}
+						>
+							<div className="min-w-0">
+								<div className="flex items-center gap-2">
+									<span
+										className="grid h-9 w-9 place-items-center rounded-xl"
+										style={{ background: WA.greenSoft, color: WA.greenText }}
+									>
+										<BookOpen className="h-4 w-4" />
+									</span>
+									<div>
+										<h3 className="text-[17px] font-bold" style={{ color: WA.text }}>{t.metaLibrary}</h3>
+										<p className="text-[12px]" style={{ color: WA.muted }}>{t.metaLibraryHint}</p>
+									</div>
+								</div>
+							</div>
+							<button
+								type="button"
+								onClick={() => setLibraryOpen(false)}
+								className="rounded-lg p-1.5 hover:bg-black/5"
+								style={{ color: WA.icon }}
+							>
+								<X className="h-5 w-5" />
+							</button>
+						</header>
+
+						<div className="flex items-center gap-2 border-b px-5 py-3" style={{ borderColor: WA.border }}>
+							<div
+								className="flex flex-1 items-center gap-2 rounded-xl px-3 py-2.5"
+								style={{ background: WA.field, outline: `1px solid ${WA.searchBorder}`, outlineOffset: -1 }}
+							>
+								<Search className="h-4 w-4 shrink-0" style={{ color: WA.muted }} />
+								<input
+									value={librarySearch}
+									onChange={e => setLibrarySearch(e.target.value)}
+									onKeyDown={e => {
+										if (e.key === 'Enter') void loadMetaLibrary(librarySearch);
+									}}
+									placeholder={t.metaLibrarySearch}
+									className="w-full bg-transparent text-[13px] font-medium outline-none placeholder:text-black/45"
+									style={{ color: WA.text }}
+								/>
+							</div>
+							<button
+								type="button"
+								onClick={() => void loadMetaLibrary(librarySearch)}
+								disabled={libraryLoading}
+								className="inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-[12px] font-semibold text-white disabled:opacity-50"
+								style={{ background: WA.green }}
+							>
+								{libraryLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+								{t.search}
+							</button>
+						</div>
+
+						<div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5" style={chatWallpaperStyle}>
+							{libraryLoading ? (
+								<div className="grid place-items-center py-20">
+									<LoaderCircle className="h-7 w-7 animate-spin" style={{ color: WA.green }} />
+								</div>
+							) : (
+								<>
+									{(libraryVerification.length > 0 || templates.some(tpl => tpl.name === 'hello_world')) && (
+										<section className="mb-5">
+											<div className="mb-3 text-[11px] font-bold uppercase tracking-wide" style={{ color: WA.muted }}>
+												{t.verificationTemplates}
+											</div>
+											<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+												{(libraryVerification.length
+													? libraryVerification
+													: [{ name: 'hello_world', language: 'en_US', category: 'UTILITY', body: 'Hello World sample', isVerification: true }]
+												).map(item => {
+													const accountTpl =
+														templates.find(
+															tpl =>
+																tpl.name === item.name &&
+																String(tpl.language) === String(item.language || 'en_US'),
+														) || templates.find(tpl => tpl.name === item.name);
+													return (
+														<div
+															key={`verify-${item.name}-${item.language}`}
+															className="flex flex-col overflow-hidden rounded-2xl border"
+															style={{ background: 'rgba(255,255,255,0.72)', borderColor: 'rgba(0,0,0,0.08)' }}
+														>
+															<div className="flex items-center justify-between gap-2 border-b px-3 py-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+																<div className="min-w-0">
+																	<div className="truncate text-[12px] font-bold" style={{ color: WA.text }}>{item.name}</div>
+																	<div className="truncate text-[10px]" style={{ color: WA.muted }}>
+																		{item.language} · {item.category}
+																		{accountTpl ? ` · ${accountTpl.status}` : ''}
+																	</div>
+																</div>
+																<button
+																	type="button"
+																	onClick={() =>
+																		openVerifySend({
+																			...item,
+																			components: accountTpl?.components || null,
+																		})
+																	}
+																	className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-white"
+																	style={{ background: WA.green }}
+																>
+																	{t.verifySend}
+																</button>
+															</div>
+															<div className="flex-1 p-3" style={chatWallpaperStyle}>
+																<LibraryWaBubble item={item} />
+															</div>
+														</div>
+													);
+												})}
+											</div>
+										</section>
+									)}
+
+									<section>
+										<div className="mb-3 text-[11px] font-bold uppercase tracking-wide" style={{ color: WA.muted }}>
+											{t.metaLibrary}
+										</div>
+										{!libraryItems.length ? (
+											<p
+												className="rounded-2xl border border-dashed px-4 py-12 text-center text-[13px]"
+												style={{ color: WA.muted, borderColor: 'rgba(0,0,0,0.12)', background: 'rgba(255,255,255,0.65)' }}
+											>
+												{t.metaLibraryEmpty}
+											</p>
+										) : (
+											<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+												{libraryItems.map(item => {
+													const key = `${item.libraryTemplateName || item.name}::${item.language || ''}`;
+													const creating = libraryCreatingKey === key;
+													return (
+														<div
+															key={key}
+															className="flex flex-col overflow-hidden rounded-2xl border"
+															style={{ background: 'rgba(255,255,255,0.72)', borderColor: 'rgba(0,0,0,0.08)' }}
+														>
+															<div className="flex items-center justify-between gap-2 border-b px-3 py-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+																<div className="min-w-0">
+																	<div className="truncate text-[12px] font-bold" style={{ color: WA.text }}>
+																		{item.libraryTemplateName || item.name}
+																	</div>
+																	<div className="truncate text-[10px]" style={{ color: WA.muted }}>
+																		{item.language} · {item.category}
+																		{item.topic ? ` · ${item.topic}` : ''}
+																	</div>
+																</div>
+																<button
+																	type="button"
+																	disabled={creating}
+																	onClick={() => void onAddFromLibrary(item)}
+																	className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+																	style={{ background: WA.green }}
+																>
+																	{creating ? '…' : t.addFromLibrary}
+																</button>
+															</div>
+															<div className="flex-1 p-3" style={chatWallpaperStyle}>
+																<LibraryWaBubble item={item} />
+															</div>
+														</div>
+													);
+												})}
+											</div>
+										)}
+									</section>
+								</>
+							)}
+						</div>
+					</div>
+				</div>
+			)}
 
 			{sendTemplateOpen && (
 				<div className="absolute inset-0 z-40 grid place-items-center bg-[rgba(11,20,26,0.35)] p-4" onClick={() => setSendTemplateOpen(false)}>
@@ -2516,6 +4432,7 @@ export default function MetaWhatsAppWorkspace() {
 									onChange={e => {
 										setSelectedTemplateKey(e.target.value);
 										setTemplateVarValues({});
+										setTemplateVarErrors({});
 									}}
 									required
 									className="w-full rounded-lg border border-[#D1D7DB] bg-[#F0F2F5] px-3 py-2 text-sm outline-none"
@@ -2543,34 +4460,42 @@ export default function MetaWhatsAppWorkspace() {
 						{selectedPlaceholders.length > 0 ? (
 							<div className="space-y-2">
 								<div className="text-[13px] font-semibold">{t.templateVarsTitle}</div>
-								{selectedPlaceholders.map(p => (
-									<label key={p.id} className="block space-y-1">
-										<span className="text-[12px] text-[#667781]">{p.label}</span>
-										<input
-											value={templateVarValues[p.id] || ''}
-											onChange={e =>
-												setTemplateVarValues(v => ({ ...v, [p.id]: e.target.value }))
-											}
-											required
-											className="w-full rounded-lg border border-[#D1D7DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#00A884]"
-										/>
-									</label>
-								))}
-							</div>
-						) : null}
-
-						{flash && sendTemplateOpen ? (
-							<div className="mb-1">
-								<AlertBanner
-									message={flash}
-									tone={
-										flash === t.templateVarRequired || flash === t.sendError || /invalid|fail|error/i.test(flash)
-											? 'error'
-											: 'success'
-									}
-									onClose={() => setFlash(null)}
-									t={t}
-								/>
+								{selectedPlaceholders.map(p => {
+									const isUrlBtn = p.component === 'BUTTON';
+									const err = templateVarErrors[p.id];
+									return (
+										<label key={p.id} className="block space-y-1">
+											<span className="text-[12px] text-[#667781]">{p.label}</span>
+											<input
+												dir="ltr"
+												value={templateVarValues[p.id] || ''}
+												onChange={e => {
+													const next = e.target.value;
+													setTemplateVarValues(v => ({ ...v, [p.id]: next }));
+													setTemplateVarErrors(errs => {
+														if (!errs[p.id]) return errs;
+														const copy = { ...errs };
+														delete copy[p.id];
+														return copy;
+													});
+												}}
+												required
+												placeholder={isUrlBtn ? t.templateUrlParamPlaceholder : undefined}
+												className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none ${
+													err
+														? 'border-[#EA4335] focus:border-[#EA4335]'
+														: 'border-[#D1D7DB] focus:border-[#00A884]'
+												}`}
+											/>
+											{isUrlBtn ? (
+												<p className="text-[11px] text-[#667781]">{t.templateUrlParamHint}</p>
+											) : null}
+											{err ? (
+												<p className="text-[11px] font-medium text-[#EA4335]">{err}</p>
+											) : null}
+										</label>
+									);
+								})}
 							</div>
 						) : null}
 
@@ -2584,6 +4509,260 @@ export default function MetaWhatsAppWorkspace() {
 								className="rounded-lg bg-[#00A884] px-4 py-2 text-sm font-semibold text-[#111B21] disabled:opacity-50"
 							>
 								{sending ? '…' : t.sendTemplate}
+							</button>
+						</div>
+					</form>
+				</div>
+			)}
+
+			{previewTemplate && (
+				<div
+					className="absolute inset-0 z-50 grid place-items-center bg-[rgba(11,20,26,0.35)] p-4"
+					onClick={() => setPreviewTemplate(null)}
+				>
+					<div
+						className="max-h-[90vh] w-full max-w-lg space-y-3 overflow-y-auto rounded-2xl p-5"
+						style={{ background: WA.panel }}
+						onClick={e => e.stopPropagation()}
+					>
+						<div className="flex items-start justify-between gap-3">
+							<div>
+								<h3 className="text-lg font-semibold">{t.templatePreviewTitle}</h3>
+								<p className="mt-1 text-[12px] text-[#667781]">
+									{previewTemplate.name} · {previewTemplate.language} · {previewTemplate.category || '—'} ·{' '}
+									{previewTemplate.status || '—'}
+								</p>
+							</div>
+							<button type="button" onClick={() => setPreviewTemplate(null)} className="p-1 text-[#54656F]">
+								<X className="h-4 w-4" />
+							</button>
+						</div>
+
+						<div className="flex justify-start rounded-xl p-4" style={{ ...chatWallpaperStyle, minHeight: 120 }}>
+							<div
+								className="max-w-[360px] min-w-[160px] overflow-hidden text-[13px] shadow-[0_1px_0_rgba(0,0,0,0.06)]"
+								style={{ background: WA.bubbleIn, color: WA.text, borderRadius: 12 }}
+							>
+								{templateHeaderFormat(previewTemplate.components) === 'IMAGE' ? (
+									<div className="flex h-28 items-center justify-center" style={{ background: '#D1D7DB' }}>
+										<ImageIcon className="h-7 w-7" style={{ color: WA.muted }} />
+									</div>
+								) : null}
+								{templateHeaderFormat(previewTemplate.components) === 'VIDEO' ? (
+									<div className="flex h-28 items-center justify-center" style={{ background: '#D1D7DB' }}>
+										<Video className="h-7 w-7" style={{ color: WA.muted }} />
+									</div>
+								) : null}
+								{templateHeaderFormat(previewTemplate.components) === 'DOCUMENT' ? (
+									<div className="flex items-center gap-2 px-3 pt-2.5">
+										<FileText className="h-5 w-5" style={{ color: WA.muted }} />
+										<span className="text-[12px]" style={{ color: WA.muted }}>Document</span>
+									</div>
+								) : null}
+								<div className="px-3 py-2">
+									{templateHeaderText(previewTemplate.components) ? (
+										<div className="mb-1 text-[12px] font-bold">{templateHeaderText(previewTemplate.components)}</div>
+									) : null}
+									<div className="whitespace-pre-wrap break-words">
+										{templatePreviewText(previewTemplate.components) || '—'}
+									</div>
+									{templateFooterText(previewTemplate.components) ? (
+										<div className="mt-1 text-[11px]" style={{ color: WA.muted }}>
+											{templateFooterText(previewTemplate.components)}
+										</div>
+									) : null}
+								</div>
+								{templateButtons(previewTemplate.components).length ? (
+									<div className="border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
+										{templateButtons(previewTemplate.components).map((btn, i) => (
+											<div
+												key={`${btn.text}-${i}`}
+												className="flex items-center justify-center gap-1.5 border-t px-3 py-2 text-[13px] font-semibold"
+												style={{
+													borderColor: i === 0 ? 'transparent' : 'rgba(0,0,0,0.06)',
+													color: '#027EB5',
+												}}
+											>
+												{String(btn.type).toUpperCase() === 'URL' ? <Link2 className="h-3.5 w-3.5" /> : null}
+												{String(btn.type).toUpperCase() === 'PHONE_NUMBER' ? <Phone className="h-3.5 w-3.5" /> : null}
+												{btn.text}
+											</div>
+										))}
+									</div>
+								) : null}
+							</div>
+						</div>
+
+						<div className="flex flex-wrap justify-end gap-2 pt-1">
+							<button
+								type="button"
+								onClick={() => void copyTemplateName(previewTemplate.name)}
+								className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm"
+								style={{ background: WA.field, color: WA.text }}
+							>
+								<Copy className="h-3.5 w-3.5" />
+								{t.templateCopyName}
+							</button>
+							{canEditMetaTemplate(previewTemplate) ? (
+								<button
+									type="button"
+									onClick={() => openEditTemplate(previewTemplate)}
+									className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold"
+									style={{ background: WA.field, color: WA.text }}
+								>
+									<Pencil className="h-3.5 w-3.5" />
+									{t.templateEdit}
+								</button>
+							) : null}
+							{String(previewTemplate.status).toUpperCase() === 'APPROVED' ? (
+								<button
+									type="button"
+									onClick={() => {
+										const tpl = previewTemplate;
+										setPreviewTemplate(null);
+										openVerifySend(tpl);
+									}}
+									className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold text-white"
+									style={{ background: WA.green }}
+								>
+									<Send className="h-3.5 w-3.5" />
+									{t.templateUse}
+								</button>
+							) : null}
+							<button
+								type="button"
+								onClick={() => {
+									const tpl = previewTemplate;
+									setPreviewTemplate(null);
+									void onDeleteTemplate(tpl);
+								}}
+								className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold"
+								style={{ background: '#FDECEC', color: '#9B1C1C' }}
+							>
+								<Trash2 className="h-3.5 w-3.5" />
+								{t.templateDelete}
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{verifyOpen && verifyTemplate && (
+				<div
+					className="absolute inset-0 z-50 grid place-items-center bg-[rgba(11,20,26,0.35)] p-4"
+					onClick={() => {
+						setVerifyOpen(false);
+						setVerifyTemplate(null);
+					}}
+				>
+					<form
+						onSubmit={onVerifySend}
+						className="max-h-[90vh] w-full max-w-md space-y-3 overflow-y-auto rounded-2xl p-5"
+						style={{ background: WA.panel }}
+						onClick={e => e.stopPropagation()}
+					>
+						<div className="flex items-start justify-between gap-3">
+							<div>
+								<h3 className="text-lg font-semibold">{t.verifySendTitle}</h3>
+								<p className="mt-1 text-[12px] text-[#667781]">{t.verifySendHint}</p>
+							</div>
+							<button
+								type="button"
+								onClick={() => {
+									setVerifyOpen(false);
+									setVerifyTemplate(null);
+								}}
+								className="p-1 text-[#54656F]"
+							>
+								<X className="h-4 w-4" />
+							</button>
+						</div>
+
+						<div className="rounded-lg bg-[#F0F2F5] px-3 py-2 text-[12px] text-[#54656F]">
+							<div className="font-semibold text-[#111B21]">
+								{verifyTemplate.name} · {verifyTemplate.language}
+							</div>
+							{verifyTemplate.body ? (
+								<p className="mt-1 whitespace-pre-wrap">{verifyTemplate.body}</p>
+							) : null}
+						</div>
+
+						<label className="block space-y-1.5">
+							<span className="text-[12px] font-medium text-[#667781]">{t.openPhone}</span>
+							<input
+								type="tel"
+								inputMode="tel"
+								dir="ltr"
+								required
+								value={verifyPhone}
+								onChange={e => setVerifyPhone(e.target.value)}
+								placeholder={t.phonePlaceholder}
+								className="w-full rounded-lg border border-[#D1D7DB] bg-white px-3 py-2 text-sm outline-none focus:border-[#00A884]"
+							/>
+							<p className="text-[11px] text-[#667781]">{t.phoneHint}</p>
+						</label>
+
+						{extractTemplatePlaceholders(verifyTemplate.components).length > 0 ? (
+							<div className="space-y-2">
+								<div className="text-[13px] font-semibold">{t.templateVarsTitle}</div>
+								{extractTemplatePlaceholders(verifyTemplate.components).map(p => {
+									const isUrlBtn = p.component === 'BUTTON';
+									const err = templateVarErrors[p.id];
+									return (
+										<label key={p.id} className="block space-y-1">
+											<span className="text-[12px] text-[#667781]">{p.label}</span>
+											<input
+												dir="ltr"
+												value={templateVarValues[p.id] || ''}
+												onChange={e => {
+													const next = e.target.value;
+													setTemplateVarValues(v => ({ ...v, [p.id]: next }));
+													setTemplateVarErrors(errs => {
+														if (!errs[p.id]) return errs;
+														const copy = { ...errs };
+														delete copy[p.id];
+														return copy;
+													});
+												}}
+												required
+												placeholder={isUrlBtn ? t.templateUrlParamPlaceholder : undefined}
+												className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none ${
+													err
+														? 'border-[#EA4335] focus:border-[#EA4335]'
+														: 'border-[#D1D7DB] focus:border-[#00A884]'
+												}`}
+											/>
+											{isUrlBtn ? (
+												<p className="text-[11px] text-[#667781]">{t.templateUrlParamHint}</p>
+											) : null}
+											{err ? (
+												<p className="text-[11px] font-medium text-[#EA4335]">{err}</p>
+											) : null}
+										</label>
+									);
+								})}
+							</div>
+						) : (
+							<p className="text-[12px] text-[#008069]">{t.templateNoVars}</p>
+						)}
+
+						<div className="flex justify-end gap-2 pt-1">
+							<button
+								type="button"
+								onClick={() => {
+									setVerifyOpen(false);
+									setVerifyTemplate(null);
+								}}
+								className="px-3 py-2 text-sm text-[#667781]"
+							>
+								{t.cancel}
+							</button>
+							<button
+								type="submit"
+								disabled={sending}
+								className="rounded-lg bg-[#00A884] px-4 py-2 text-sm font-semibold text-[#111B21] disabled:opacity-50"
+							>
+								{sending ? '…' : t.verifySend}
 							</button>
 						</div>
 					</form>
@@ -2700,6 +4879,7 @@ export default function MetaWhatsAppWorkspace() {
 									t={t}
 									mono
 									required
+									hint={t.wabaHint}
 								/>
 								<ConfigField
 									label={t.verifyToken}
@@ -2718,6 +4898,7 @@ export default function MetaWhatsAppWorkspace() {
 									t={t}
 									type="password"
 									required
+									hint={t.accessTokenHint}
 									saved={Boolean(status?.hasAccessToken)}
 									placeholder={
 										status?.hasAccessToken
@@ -2747,16 +4928,6 @@ export default function MetaWhatsAppWorkspace() {
 									mono
 								/>
 
-								{flash && (
-									<div className="mb-1">
-										<AlertBanner
-											message={flash}
-											tone={isSuccessFlash(flash, t) ? 'success' : 'error'}
-											onClose={() => setFlash(null)}
-											t={t}
-										/>
-									</div>
-								)}
 								{status?.lastError && <p className="text-[12px] text-rose-600">{status.lastError}</p>}
 
 								<div className="flex flex-wrap gap-2 pt-1">
@@ -2799,6 +4970,302 @@ export default function MetaWhatsAppWorkspace() {
 					</aside>
 				</div>
 			)}
+
+
+			{usageOpen && (
+				<div
+					className="absolute inset-0 z-40 flex items-center justify-center bg-[rgba(11,20,26,0.45)] p-3 sm:p-4"
+					onClick={() => setUsageOpen(false)}
+				>
+					<div
+						className="flex max-h-[88vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl shadow-[0_16px_48px_rgba(11,20,26,0.28)]"
+						style={{ background: '#FFFFFF' }}
+						onClick={e => e.stopPropagation()}
+					>
+						{usageLoading && !usageData ? (
+							<div className="grid min-h-[220px] place-items-center">
+								<LoaderCircle className="h-6 w-6 animate-spin" style={{ color: WA.green }} />
+							</div>
+						) : !usageData ? (
+							<div className="flex flex-col items-center gap-2 px-5 py-12">
+								<p className="text-[12px]" style={{ color: WA.muted }}>{t.usageEmpty}</p>
+								<button type="button" onClick={() => setUsageOpen(false)} className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white" style={{ background: WA.green }}>OK</button>
+							</div>
+						) : (() => {
+								const s = usageData.summary || {};
+								const fx = Number(usageData.fx?.usdToEgp || 50.7);
+								const cats = Object.entries(s.byCategory || {});
+								const maxCat = Math.max(1, ...cats.map(([, c]) => Number(c) || 0));
+								const daily = usageData.daily || [];
+								const maxSent = Math.max(1, ...daily.map(d => Number(d.sent) || 0));
+								const vs = Number(s.vsPreviousMonthPct || 0);
+								const rateCard = [...(usageData.rateCardSample || [])].sort((a, b) => {
+									const prefer = ['EGYPT', 'SAUDI', 'UAE', 'QATAR', 'KUWAIT', 'BAHRAIN', 'OMAN'];
+									const ai = prefer.indexOf(a.market);
+									const bi = prefer.indexOf(b.market);
+									if (ai !== -1 || bi !== -1) {
+										if (ai === -1) return 1;
+										if (bi === -1) return -1;
+										return ai - bi;
+									}
+									return String(a.label || '').localeCompare(String(b.label || ''));
+								});
+								const selectedRate =
+									rateCard.find(r => r.market === usageMarket) ||
+									rateCard.find(r => r.market === 'EGYPT') ||
+									rateCard[0] ||
+									null;
+								const rateRows = selectedRate
+									? [
+											{ key: 'marketing', label: t.usageRateMarketing, usd: selectedRate.marketing, color: '#C2410C', soft: '#FFF1E8' },
+											{ key: 'utility', label: t.usageRateUtility, usd: selectedRate.utility, color: '#0F766E', soft: '#E8F8F2' },
+											{ key: 'authentication', label: t.usageRateAuth, usd: selectedRate.authentication, color: '#1D4ED8', soft: '#EEF4FF' },
+											{ key: 'service', label: t.usageRateService, usd: selectedRate.service, color: '#15803D', soft: '#ECFDF3' },
+										]
+									: [];
+
+								return (
+									<>
+										<header
+											className="flex shrink-0 items-center justify-between gap-2 border-b px-3.5 py-2.5"
+											style={{ borderColor: 'rgba(0,0,0,0.06)', background: '#F8FAF9' }}
+										>
+											<div className="min-w-0">
+												<div className="flex items-center gap-1.5">
+													<ChartColumn className="h-3.5 w-3.5 shrink-0" style={{ color: WA.green }} />
+													<h3 className="truncate text-[14px] font-bold" style={{ color: WA.text }}>{t.usageBillingTitle}</h3>
+												</div>
+												<p className="mt-0.5 text-[10px]" style={{ color: WA.muted }}>{t.usageThisMonth} · 1 USD ≈ {fx.toFixed(1)} EGP</p>
+											</div>
+											<div className="flex shrink-0 items-center gap-1">
+												<button type="button" disabled={usageLoading} onClick={() => void loadUsageBilling()} className="grid h-7 w-7 place-items-center rounded-lg hover:bg-black/5 disabled:opacity-50" title={t.usageRefresh}>
+													{usageLoading ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" style={{ color: WA.muted }} />}
+												</button>
+												<button type="button" onClick={() => setUsageOpen(false)} className="grid h-7 w-7 place-items-center rounded-lg hover:bg-black/5">
+													<X className="h-3.5 w-3.5" style={{ color: WA.muted }} />
+												</button>
+											</div>
+										</header>
+
+										<div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto p-3">
+											<div className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: 'linear-gradient(135deg, #0B3D2E, #1FA755)' }}>
+												<div>
+													<div className="text-[10px] font-semibold uppercase tracking-wide text-white/70">{t.usageEstimated}</div>
+													<div className="mt-0.5 text-[18px] font-bold tabular-nums text-white">{formatMoneyUsd(s.estimatedCostUsd || 0)}</div>
+													<div className="text-[11px] font-medium text-white/85">{formatMoneyEgp(s.estimatedCostEgp ?? Number(((s.estimatedCostUsd || 0) * fx).toFixed(2)))}</div>
+												</div>
+												<div className="text-end">
+													<div className="text-[10px] text-white/70">{t.usageBillable}</div>
+													<div className="text-[15px] font-bold tabular-nums text-white">{s.billableDelivered ?? 0}</div>
+													<div className="mt-0.5 text-[10px] font-semibold text-white/80">
+														{vs >= 0 ? '▲' : '▼'} {Math.abs(vs).toFixed(0)}% {t.usageVsPrev}
+													</div>
+												</div>
+											</div>
+
+											<div className="grid grid-cols-2 gap-1.5">
+												{[
+													{ label: t.usageSent, value: s.sent },
+													{ label: t.usageDelivered, value: s.delivered },
+													{ label: t.usageRead, value: s.read },
+													{ label: t.usageFailed, value: s.failed },
+												].map(card => (
+													<div
+														key={card.label}
+														className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-2"
+														style={{ background: '#F4F6F5' }}
+													>
+														<span className="text-[11px] font-semibold" style={{ color: WA.muted }}>{card.label}</span>
+														<span className="text-[15px] font-bold tabular-nums" style={{ color: WA.text }}>{card.value ?? 0}</span>
+													</div>
+												))}
+											</div>
+
+											<section className="rounded-xl border px-2.5 py-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+												<div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+													<div>
+														<div className="text-[11px] font-bold" style={{ color: WA.text }}>{t.usageCountryRates}</div>
+														<div className="text-[9px]" style={{ color: WA.muted }}>{t.usagePerMessage}</div>
+													</div>
+													<label className="flex items-center gap-1.5 text-[10px] font-semibold" style={{ color: WA.muted }}>
+														{t.usageSelectCountry}
+														<select
+															value={usageMarket}
+															onChange={e => setUsageMarket(e.target.value)}
+															className="rounded-md border px-2 py-1 text-[11px] font-semibold outline-none"
+															style={{ borderColor: 'rgba(0,0,0,0.12)', color: WA.text, background: '#fff' }}
+														>
+															{rateCard.map(r => (
+																<option key={r.market} value={r.market}>{r.label}</option>
+															))}
+														</select>
+													</label>
+												</div>
+												<div className="space-y-1.5">
+													{rateRows.map(row => {
+														const per100Egp = Number((Number(row.usd || 0) * fx * 100).toFixed(2));
+														return (
+															<div key={row.key} className="rounded-lg px-2.5 py-1.5" style={{ background: row.soft }}>
+																<div className="flex items-center justify-between gap-2">
+																	<span className="text-[11px] font-bold" style={{ color: row.color }}>{row.label}</span>
+																	<span className="text-[12px] font-bold tabular-nums" style={{ color: WA.text }}>
+																		{formatRateUsd(row.usd)}
+																		<span className="ms-1 text-[9px] font-semibold" style={{ color: WA.muted }}>/ {t.usageRatePerMsg}</span>
+																	</span>
+																</div>
+																<div className="mt-0.5 flex items-center justify-between gap-2">
+																	<span className="text-[9px] font-semibold" style={{ color: WA.muted }}>{t.usageRatePer100}</span>
+																	<span className="text-[11px] font-bold tabular-nums" style={{ color: WA.text }}>
+																		{formatMoneyEgp(per100Egp)}
+																	</span>
+																</div>
+															</div>
+														);
+													})}
+												</div>
+											</section>
+
+											<div className="grid gap-2 sm:grid-cols-2">
+												<section className="rounded-xl border px-2.5 py-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+													<h4 className="text-[11px] font-bold" style={{ color: WA.text }}>{t.usageByCategory}</h4>
+													<p className="mb-2 text-[9px] leading-snug" style={{ color: WA.muted }}>{t.usageByCategoryHint}</p>
+													<div className="mb-1 flex items-center justify-between gap-2 px-0.5 text-[9px] font-semibold" style={{ color: WA.muted }}>
+														<span>{t.usageTplType}</span>
+														<span className="flex gap-3">
+															<span>{t.usageCatMsgs}</span>
+															<span>{t.usageCatCost}</span>
+														</span>
+													</div>
+													<div className="space-y-2">
+														{cats.length ? cats.map(([cat, count]) => {
+															const style = USAGE_CAT_STYLE[cat] || USAGE_CAT_STYLE.UNKNOWN;
+															const costUsd = Number(usageData.byCategoryCost?.[cat] || 0);
+															const costEgp = Number(usageData.byCategoryCostEgp?.[cat]) || Number((costUsd * fx).toFixed(2));
+															const pct = Math.round((Number(count) / maxCat) * 100);
+															return (
+																<div key={cat}>
+																	<div className="flex items-center justify-between gap-2">
+																		<span className="rounded px-1.5 py-0.5 text-[9px] font-bold" style={{ background: style.bg, color: style.text }}>{cat}</span>
+																		<div className="flex items-center gap-3">
+																			<span className="min-w-[2rem] text-end text-[11px] font-bold tabular-nums" style={{ color: WA.text }}>{count}</span>
+																			<MoneyDuo size="inline" usd={costUsd} egp={costEgp} />
+																		</div>
+																	</div>
+																	<div className="mt-1 flex items-center gap-1.5">
+																		<div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/5">
+																			<div className="h-full rounded-full" style={{ width: `${pct}%`, background: style.bar }} />
+																		</div>
+																		<span className="w-7 text-end text-[9px] font-semibold tabular-nums" style={{ color: WA.muted }}>{pct}%</span>
+																	</div>
+																</div>
+															);
+														}) : <p className="text-[10px]" style={{ color: WA.muted }}>—</p>}
+													</div>
+												</section>
+
+												<section className="rounded-xl border px-2.5 py-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+													<h4 className="mb-1.5 text-[11px] font-bold" style={{ color: WA.text }}>{t.usageByCountry}</h4>
+													<div className="max-h-36 space-y-1 overflow-y-auto">
+														{(usageData.byCountry || []).length ? (usageData.byCountry || []).map(row => (
+															<div key={row.country} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1" style={{ background: '#F4F6F5' }}>
+																<div className="min-w-0">
+																	<div className="truncate text-[11px] font-semibold" style={{ color: WA.text }}>{row.label || row.country}</div>
+																	<div className="text-[9px]" style={{ color: WA.muted }}>{row.count} msgs</div>
+																</div>
+																<MoneyDuo size="inline" usd={row.estimatedCostUsd} egp={row.estimatedCostEgp ?? Number((Number(row.estimatedCostUsd || 0) * fx).toFixed(2))} />
+															</div>
+														)) : <p className="text-[10px]" style={{ color: WA.muted }}>—</p>}
+													</div>
+												</section>
+											</div>
+
+											<section className="rounded-xl border px-2.5 py-2" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+												<h4 className="mb-1.5 text-[11px] font-bold" style={{ color: WA.text }}>{t.usageDaily}</h4>
+												{!daily.length ? (
+													<p className="text-[10px]" style={{ color: WA.muted }}>{t.usageEmpty}</p>
+												) : (
+													<div className="flex h-20 items-end gap-0.5 overflow-x-auto">
+														{daily.map(day => {
+															const h = Math.max(4, Math.round((Number(day.sent) / maxSent) * 56));
+															const egp = day.estimatedCostEgp ?? Number((Number(day.estimatedCostUsd || 0) * fx).toFixed(2));
+															return (
+																<div key={day.date} className="group relative flex w-5 shrink-0 flex-col items-center gap-0.5" title={`${day.date}: ${day.sent} · ${formatMoneyUsd(day.estimatedCostUsd)} / ${formatMoneyEgp(egp)}`}>
+																	<div className="w-full rounded-t" style={{ height: h, background: '#1FA755' }} />
+																	<span className="text-[7px] tabular-nums" style={{ color: WA.muted }}>{String(day.date).slice(8)}</span>
+																</div>
+															);
+														})}
+													</div>
+												)}
+											</section>
+
+											<section className="overflow-hidden rounded-xl border" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+												<div className="border-b px-2.5 py-1.5" style={{ borderColor: 'rgba(0,0,0,0.06)', background: '#F8FAF9' }}>
+													<h4 className="text-[11px] font-bold" style={{ color: WA.text }}>{t.usageTemplates}</h4>
+												</div>
+												<div className="max-h-44 overflow-auto">
+													<table className="min-w-full text-start text-[10px]">
+														<thead style={{ color: WA.muted }}>
+															<tr>
+																<th className="px-2.5 py-1.5 text-start font-semibold">Name</th>
+																<th className="px-1.5 py-1.5 text-start font-semibold">{t.usageTplType}</th>
+																<th className="px-1.5 py-1.5 text-start font-semibold">{t.usageSent}</th>
+																<th className="px-1.5 py-1.5 text-start font-semibold">{t.usageDelivered}</th>
+																<th className="px-2.5 py-1.5 text-start font-semibold">{t.usageTplCost}</th>
+															</tr>
+														</thead>
+														<tbody>
+															{(usageData.templates || []).map(tpl => {
+																const style = USAGE_CAT_STYLE[tpl.category] || USAGE_CAT_STYLE.UNKNOWN;
+																return (
+																	<tr key={tpl.name} style={{ borderTop: '1px solid rgba(0,0,0,0.04)' }}>
+																		<td className="px-2.5 py-1.5 text-start font-semibold" style={{ color: WA.text }}>{tpl.name}</td>
+																		<td className="px-1.5 py-1.5 text-start">
+																			<span className="rounded px-1.5 py-0.5 text-[9px] font-bold" style={{ background: style.bg, color: style.text }}>
+																				{tpl.category}
+																			</span>
+																		</td>
+																		<td className="px-1.5 py-1.5 text-start tabular-nums font-semibold">{tpl.sent}</td>
+																		<td className="px-1.5 py-1.5 text-start tabular-nums">{tpl.delivered}</td>
+																		<td className="px-2.5 py-1.5 text-start">
+																			<MoneyDuo
+																				size="inline"
+																				usd={tpl.estimatedCostUsd}
+																				egp={tpl.estimatedCostEgp ?? Number((Number(tpl.estimatedCostUsd || 0) * fx).toFixed(2))}
+																			/>
+																		</td>
+																	</tr>
+																);
+															})}
+															{!(usageData.templates || []).length ? (
+																<tr><td colSpan={5} className="px-2.5 py-6 text-center" style={{ color: WA.muted }}>—</td></tr>
+															) : null}
+														</tbody>
+													</table>
+												</div>
+											</section>
+
+											<p className="text-[9px] leading-relaxed" style={{ color: WA.muted }}>
+												{usageData.disclaimer || t.usageDisclaimer}
+												{usageData.invoiceNote ? ` · ${usageData.invoiceNote}` : ''}
+											</p>
+										</div>
+									</>
+								);
+							})()}
+						</div>
+					</div>
+			)}
+
+
+
+			{mediaLightbox?.url ? (
+				<MediaLightbox
+					url={mediaLightbox.url}
+					kind={mediaLightbox.kind}
+					onClose={() => setMediaLightbox(null)}
+				/>
+			) : null}
 		</div>
 	);
 }

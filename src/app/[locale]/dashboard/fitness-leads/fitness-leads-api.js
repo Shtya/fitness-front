@@ -20,6 +20,19 @@ export const fitnessLeadsApi = {
 	listJobs(signal) {
 		return api.get('/fitness-leads/jobs', { signal }).then(r => r.data);
 	},
+	setJobFavorite(jobId, isFavorite, signal) {
+		return api
+			.put(`/fitness-leads/jobs/${jobId}/favorite`, { isFavorite }, { signal })
+			.then(r => r.data);
+	},
+	deleteJob(jobId, signal) {
+		return api.delete(`/fitness-leads/jobs/${jobId}`, { signal }).then(r => r.data);
+	},
+	finalizeJob(jobId, signal) {
+		return api
+			.post(`/fitness-leads/jobs/${jobId}/finalize`, {}, { signal, timeout: 30000 })
+			.then(r => r.data);
+	},
 	startJob(payload, signal) {
 		return api.post('/fitness-leads/jobs', payload, { signal, timeout: 30000 }).then(r => r.data);
 	},
