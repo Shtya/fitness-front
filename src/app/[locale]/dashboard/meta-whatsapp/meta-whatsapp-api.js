@@ -176,4 +176,13 @@ export const metaWhatsAppApi = {
 	deleteQuickReply(id, signal) {
 		return api.delete(`/meta-whatsapp/quick-replies/${id}`, { signal }).then(r => r.data);
 	},
+	translate(text, targetLang, signal) {
+		return api
+			.post(
+				'/meta-whatsapp/translate',
+				{ text, ...(targetLang ? { targetLang } : {}) },
+				{ signal, timeout: 30000 },
+			)
+			.then(r => r.data);
+	},
 };

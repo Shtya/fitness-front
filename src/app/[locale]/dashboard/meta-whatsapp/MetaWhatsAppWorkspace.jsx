@@ -35,6 +35,7 @@ import {
 	X,
 	Zap,
 	ChartColumn,
+	Languages,
 } from 'lucide-react';
 import { metaWhatsAppApi } from './meta-whatsapp-api';
 
@@ -173,6 +174,12 @@ const COPY = {
 		fastReplyDeleted: 'Fast reply deleted',
 		fastReplyEmpty: 'No saved replies yet',
 		openPhoneFromChat: 'Opening chat…',
+		translate: 'Translate',
+		translateToEn: 'Translate to English',
+		translateToAr: 'Translate to Arabic',
+		translateHide: 'Hide translation',
+		translateFailed: 'Translation failed',
+		translatedLabel: 'Translation',
 		unsupportedMessage: 'This message type isn’t supported here',
 		stickerUnavailable: 'Sticker unavailable',
 		mediaUnavailable: 'Media unavailable',
@@ -415,6 +422,12 @@ const COPY = {
 		fastReplyDeleted: 'تم حذف الرد السريع',
 		fastReplyEmpty: 'لا توجد ردود محفوظة بعد',
 		openPhoneFromChat: 'فتح المحادثة…',
+		translate: 'ترجمة',
+		translateToEn: 'ترجمة إلى الإنجليزية',
+		translateToAr: 'ترجمة إلى العربية',
+		translateHide: 'إخفاء الترجمة',
+		translateFailed: 'فشلت الترجمة',
+		translatedLabel: 'الترجمة',
 		unsupportedMessage: 'نوع الرسالة ده غير مدعوم هنا',
 		stickerUnavailable: 'الستيكر غير متاح',
 		mediaUnavailable: 'الوسائط غير متاحة',
@@ -1581,6 +1594,29 @@ function messageCaption(message) {
 	return body;
 }
 
+function getMessageTranslateText(message, templates = []) {
+	if (!message) return '';
+	const type = String(message.messageType || '').toLowerCase();
+	if (type === 'template') {
+		return String(renderTemplateMessageDisplay(message, templates) || '').trim();
+	}
+	if (type === 'button' || type === 'interactive') {
+		return String(messageCaption(message) || message.body || '')
+			.replace(/^\[button\]\s*/i, '')
+			.trim();
+	}
+	const caption = messageCaption(message);
+	if (caption) return caption;
+	if (type === 'text' && message.body && !isMediaPlaceholderBody(message.body)) {
+		return String(message.body).trim();
+	}
+	return '';
+}
+
+function detectTranslateTarget(text) {
+	return /[\u0600-\u06FF]/.test(String(text || '')) ? 'en' : 'ar';
+}
+
 function buildChatRows(messages = []) {
 	const rows = [];
 	let i = 0;
@@ -2035,6 +2071,8 @@ export default function MetaWhatsAppWorkspace() {
 	const [quickReplyTitle, setQuickReplyTitle] = useState('');
 	const [quickReplyBody, setQuickReplyBody] = useState('');
 	const [openingChatPhone, setOpeningChatPhone] = useState(false);
+	/** messageId -> { open, loading, text, sourceLang, targetLang, error } */
+	const [messageTranslations, setMessageTranslations] = useState({});
 	const [templateName, setTemplateName] = useState('');
 	const [templateLang, setTemplateLang] = useState(isAr ? 'ar' : 'en');
 	const [templates, setTemplates] = useState([]);
@@ -2464,6 +2502,7 @@ export default function MetaWhatsAppWorkspace() {
 
 	async function selectConversation(id) {
 		setActiveId(id);
+		setMessageTranslations({});
 		await loadMessages(id);
 	}
 
@@ -2526,6 +2565,67 @@ export default function MetaWhatsAppWorkspace() {
 			setFlash(err?.response?.data?.message || t.phoneInvalid);
 		} finally {
 			setOpeningChatPhone(false);
+		}
+	}
+
+	async function toggleMessageTranslation(message) {
+		const id = message?.id;
+		if (!id) return;
+		const existing = messageTranslations[id];
+		if (existing?.open && existing.text) {
+			setMessageTranslations(prev => ({
+				...prev,
+				[id]: { ...prev[id], open: false },
+			}));
+			return;
+		}
+		if (existing?.text && !existing.error) {
+			setMessageTranslations(prev => ({
+				...prev,
+				[id]: { ...prev[id], open: true, error: null },
+			}));
+			return;
+		}
+
+		const text = getMessageTranslateText(message, templates);
+		if (!text) return;
+		const targetLang = detectTranslateTarget(text);
+
+		setMessageTranslations(prev => ({
+			...prev,
+			[id]: {
+				...(prev[id] || {}),
+				open: true,
+				loading: true,
+				error: null,
+				targetLang,
+			},
+		}));
+
+		try {
+			const result = await metaWhatsAppApi.translate(text, targetLang);
+			setMessageTranslations(prev => ({
+				...prev,
+				[id]: {
+					open: true,
+					loading: false,
+					text: String(result?.translatedText || '').trim(),
+					sourceLang: result?.sourceLang || (targetLang === 'ar' ? 'en' : 'ar'),
+					targetLang: result?.targetLang || targetLang,
+					error: null,
+				},
+			}));
+		} catch (err) {
+			const msg = err?.response?.data?.message;
+			setMessageTranslations(prev => ({
+				...prev,
+				[id]: {
+					...(prev[id] || {}),
+					open: true,
+					loading: false,
+					error: typeof msg === 'string' ? msg : t.translateFailed,
+				},
+			}));
 		}
 	}
 
@@ -4068,6 +4168,7 @@ export default function MetaWhatsAppWorkspace() {
 										setActive(null);
 										setMessages([]);
 										setDraft('');
+										setMessageTranslations({});
 									}}
 									className="rounded-md p-1 transition hover:bg-black/5"
 									style={{ color: WA.icon }}
@@ -4119,144 +4220,208 @@ export default function MetaWhatsAppWorkspace() {
 								const templateParts = isTemplate
 									? resolveTemplateMessageParts(m, templates)
 									: null;
+								const translateText = getMessageTranslateText(m, templates);
+								const canTranslate = Boolean(translateText) && !isSticker && !showUnsupported;
+								const translation = messageTranslations[m.id];
+								const translateTarget = detectTranslateTarget(translateText);
+								const translateTitle =
+									translation?.open && translation?.text
+										? t.translateHide
+										: translateTarget === 'en'
+											? t.translateToEn
+											: t.translateToAr;
+
+								const translateBtn = canTranslate ? (
+									<button
+										type="button"
+										onClick={() => toggleMessageTranslation(m)}
+										disabled={translation?.loading}
+										title={translateTitle}
+										aria-label={translateTitle}
+										className="mb-1 grid h-7 w-7 shrink-0 place-items-center rounded-full transition hover:bg-black/5 disabled:opacity-50"
+										style={{ color: WA.icon }}
+									>
+										{translation?.loading ? (
+											<LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+										) : (
+											<Languages className="h-3.5 w-3.5" strokeWidth={2} />
+										)}
+									</button>
+								) : null;
 
 								return (
-									<div key={m.id} className={`flex px-1 ${mine ? 'justify-end' : 'justify-start'}`}>
-										<div
-											className={`relative max-w-[360px] text-[13px] font-medium leading-[1.35] ${
-												isSticker
-													? 'bg-transparent p-0 shadow-none'
-													: 'min-w-[84px] overflow-hidden shadow-[0_1px_0_rgba(0,0,0,0.08)]'
-											}`}
-											style={{
-												background: isSticker
-													? 'transparent'
-													: mine
-														? WA.bubbleOut
-														: WA.bubbleIn,
-												color: WA.text,
-												borderRadius: 12,
-											}}
-										>
-											<div className={isSticker ? '' : 'px-2.5 pb-1.5 pt-1.5'}>
-												{m.hasMedia ? (
-													<MediaBubble
-														message={m}
-														mine={mine}
-														labels={t}
-														onOpenMedia={(url, kind) => setMediaLightbox({ url, kind })}
-													/>
-												) : null}
-												{type === 'sticker' && !m.hasMedia ? (
+									<div key={m.id} className={`flex flex-col gap-1 px-1 ${mine ? 'items-end' : 'items-start'}`}>
+										<div className={`flex max-w-full items-end gap-1 ${mine ? 'flex-row-reverse' : 'flex-row'}`}>
+											<div
+												className={`relative max-w-[360px] text-[13px] font-medium leading-[1.35] ${
+													isSticker
+														? 'bg-transparent p-0 shadow-none'
+														: 'min-w-[84px] overflow-hidden shadow-[0_1px_0_rgba(0,0,0,0.08)]'
+												}`}
+												style={{
+													background: isSticker
+														? 'transparent'
+														: mine
+															? WA.bubbleOut
+															: WA.bubbleIn,
+													color: WA.text,
+													borderRadius: 12,
+												}}
+											>
+												<div className={isSticker ? '' : 'px-2.5 pb-1.5 pt-1.5'}>
+													{m.hasMedia ? (
+														<MediaBubble
+															message={m}
+															mine={mine}
+															labels={t}
+															onOpenMedia={(url, kind) => setMediaLightbox({ url, kind })}
+														/>
+													) : null}
+													{type === 'sticker' && !m.hasMedia ? (
+														<div
+															className="rounded-xl px-3 py-2 text-[12px]"
+															style={{ background: WA.bubbleIn, color: WA.muted }}
+														>
+															{t.stickerUnavailable}
+														</div>
+													) : null}
+													{showUnsupported ? (
+														<div className="text-[12px]" style={{ color: WA.muted }}>
+															{t.unsupportedMessage}
+														</div>
+													) : null}
+													{isTemplate ? (
+														<div className="space-y-1">
+															{m.templateName ? (
+																<div
+																	className="text-[11px] font-semibold"
+																	style={{ color: WA.muted }}
+																>
+																	{m.templateName}
+																</div>
+															) : null}
+															{templateParts?.header ? (
+																<div className="whitespace-pre-wrap break-words font-bold">
+																	<RichMessageText
+																		text={templateParts.header}
+																		onPhoneClick={openChatFromPhoneNumber}
+																	/>
+																</div>
+															) : null}
+															{templateParts?.body ? (
+																<div className="whitespace-pre-wrap break-words">
+																	<RichMessageText
+																		text={templateParts.body}
+																		onPhoneClick={openChatFromPhoneNumber}
+																	/>
+																</div>
+															) : null}
+															{templateParts?.footer ? (
+																<div
+																	className="whitespace-pre-wrap break-words text-[11px]"
+																	style={{ color: WA.muted }}
+																>
+																	<RichMessageText
+																		text={templateParts.footer}
+																		onPhoneClick={openChatFromPhoneNumber}
+																	/>
+																</div>
+															) : null}
+														</div>
+													) : null}
+													{isButtonReply && !isTemplate && !showUnsupported ? (
+														<div
+															className="mb-1 inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
+															style={{ background: 'rgba(2,126,181,0.10)', color: '#027EB5' }}
+														>
+															<MessageCircle className="h-3.5 w-3.5 shrink-0" />
+															<span className="truncate">
+																{caption || m.body || (isAr ? 'رد زر' : 'Button reply')}
+															</span>
+														</div>
+													) : null}
+													{caption &&
+													!isTemplate &&
+													!isButtonReply &&
+													!showUnsupported ? (
+														<div
+															className={`whitespace-pre-wrap break-words ${m.hasMedia ? 'mt-1' : ''}`}
+														>
+															<RichMessageText
+																text={caption}
+																onPhoneClick={openChatFromPhoneNumber}
+															/>
+														</div>
+													) : null}
+													{type === 'text' &&
+													!caption &&
+													m.body &&
+													!isMediaPlaceholderBody(m.body) ? (
+														<div className="whitespace-pre-wrap break-words">
+															<RichMessageText
+																text={m.body}
+																onPhoneClick={openChatFromPhoneNumber}
+															/>
+														</div>
+													) : null}
 													<div
-														className="rounded-xl px-3 py-2 text-[12px]"
-														style={{ background: WA.bubbleIn, color: WA.muted }}
+														className={`mt-1 flex items-center justify-end gap-1 text-[11px] font-medium ${
+															isSticker
+																? 'rounded-full bg-black/25 px-2 py-0.5 text-white'
+																: ''
+														}`}
+														style={isSticker ? undefined : { color: 'rgba(0,0,0,0.50)' }}
 													>
-														{t.stickerUnavailable}
-													</div>
-												) : null}
-												{showUnsupported ? (
-													<div className="text-[12px]" style={{ color: WA.muted }}>
-														{t.unsupportedMessage}
-													</div>
-												) : null}
-												{isTemplate ? (
-													<div className="space-y-1">
-														{m.templateName ? (
-															<div
-																className="text-[11px] font-semibold"
-																style={{ color: WA.muted }}
-															>
-																{m.templateName}
-															</div>
-														) : null}
-														{templateParts?.header ? (
-															<div className="whitespace-pre-wrap break-words font-bold">
-																<RichMessageText
-																	text={templateParts.header}
-																	onPhoneClick={openChatFromPhoneNumber}
-																/>
-															</div>
-														) : null}
-														{templateParts?.body ? (
-															<div className="whitespace-pre-wrap break-words">
-																<RichMessageText
-																	text={templateParts.body}
-																	onPhoneClick={openChatFromPhoneNumber}
-																/>
-															</div>
-														) : null}
-														{templateParts?.footer ? (
-															<div
-																className="whitespace-pre-wrap break-words text-[11px]"
-																style={{ color: WA.muted }}
-															>
-																<RichMessageText
-																	text={templateParts.footer}
-																	onPhoneClick={openChatFromPhoneNumber}
-																/>
-															</div>
-														) : null}
-													</div>
-												) : null}
-												{isButtonReply && !isTemplate && !showUnsupported ? (
-													<div
-														className="mb-1 inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
-														style={{ background: 'rgba(2,126,181,0.10)', color: '#027EB5' }}
-													>
-														<MessageCircle className="h-3.5 w-3.5 shrink-0" />
-														<span className="truncate">
-															{caption || m.body || (isAr ? 'رد زر' : 'Button reply')}
+														<span>
+															{formatTime(m.createdAt || m.providerTimestamp, locale)}
 														</span>
+														{mine && <StatusTicks status={m.status} />}
 													</div>
-												) : null}
-												{caption &&
-												!isTemplate &&
-												!isButtonReply &&
-												!showUnsupported ? (
-													<div
-														className={`whitespace-pre-wrap break-words ${m.hasMedia ? 'mt-1' : ''}`}
-													>
-														<RichMessageText
-															text={caption}
-															onPhoneClick={openChatFromPhoneNumber}
-														/>
-													</div>
-												) : null}
-												{type === 'text' &&
-												!caption &&
-												m.body &&
-												!isMediaPlaceholderBody(m.body) ? (
-													<div className="whitespace-pre-wrap break-words">
-														<RichMessageText
-															text={m.body}
-															onPhoneClick={openChatFromPhoneNumber}
-														/>
-													</div>
-												) : null}
-												<div
-													className={`mt-1 flex items-center justify-end gap-1 text-[11px] font-medium ${
-														isSticker
-															? 'rounded-full bg-black/25 px-2 py-0.5 text-white'
-															: ''
-													}`}
-													style={isSticker ? undefined : { color: 'rgba(0,0,0,0.50)' }}
-												>
-													<span>
-														{formatTime(m.createdAt || m.providerTimestamp, locale)}
-													</span>
-													{mine && <StatusTicks status={m.status} />}
+													{m.errorMessage ? (
+														<div className="mt-1 text-[11px] text-rose-600">
+															{m.errorMessage}
+														</div>
+													) : null}
 												</div>
-												{m.errorMessage ? (
-													<div className="mt-1 text-[11px] text-rose-600">
-														{m.errorMessage}
-													</div>
+												{isTemplate ? (
+													<TemplateActionButtons buttons={templateParts?.buttons} />
 												) : null}
 											</div>
-											{isTemplate ? (
-												<TemplateActionButtons buttons={templateParts?.buttons} />
-											) : null}
+											{translateBtn}
 										</div>
+										{translation?.open ? (
+											<div
+												className="max-w-[360px] rounded-xl px-2.5 py-1.5 text-[12px] leading-[1.35] shadow-[0_1px_0_rgba(0,0,0,0.06)]"
+												style={{
+													background: 'rgba(255,255,255,0.92)',
+													color: WA.text,
+													border: `1px solid ${WA.border}`,
+												}}
+												dir={translation?.targetLang === 'ar' ? 'rtl' : 'ltr'}
+											>
+												<div
+													className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide"
+													style={{ color: WA.muted }}
+												>
+													{t.translatedLabel}
+													{translation?.sourceLang && translation?.targetLang
+														? ` · ${String(translation.sourceLang).toUpperCase()} → ${String(translation.targetLang).toUpperCase()}`
+														: ''}
+												</div>
+												{translation.loading ? (
+													<div className="flex items-center gap-1.5" style={{ color: WA.muted }}>
+														<LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+														<span>…</span>
+													</div>
+												) : translation.error ? (
+													<div className="text-rose-600">{translation.error}</div>
+												) : (
+													<div className="whitespace-pre-wrap break-words">
+														{translation.text}
+													</div>
+												)}
+											</div>
+										) : null}
 									</div>
 								);
 							})}
