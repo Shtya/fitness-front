@@ -87,6 +87,9 @@ export const metaWhatsAppApi = {
 			.get('/meta-whatsapp/conversations', { params, signal })
 			.then(r => r.data);
 	},
+	conversationFilterCounts(signal) {
+		return api.get('/meta-whatsapp/conversations/counts', { signal }).then(r => r.data);
+	},
 	conversation(id, signal) {
 		return api.get(`/meta-whatsapp/conversations/${id}`, { signal }).then(r => r.data);
 	},
@@ -103,6 +106,15 @@ export const metaWhatsAppApi = {
 	syncConversation(id, signal) {
 		return api
 			.post(`/meta-whatsapp/conversations/${id}/sync`, {}, { signal })
+			.then(r => r.data);
+	},
+	setConversationFavorite(id, isFavorite, signal) {
+		return api
+			.put(
+				`/meta-whatsapp/conversations/${id}/favorite`,
+				{ isFavorite: Boolean(isFavorite) },
+				{ signal },
+			)
 			.then(r => r.data);
 	},
 	openPhone(phone, displayName, signal) {

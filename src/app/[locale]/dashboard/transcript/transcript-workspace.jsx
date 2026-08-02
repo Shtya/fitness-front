@@ -46,9 +46,18 @@ const copy = {
 		upload: 'Upload audio',
 		microphone: 'Microphone',
 		meeting: 'Meeting / tab',
-		dropTitle: 'Drop an audio file here',
-		dropHint: 'MP3, WAV, M4A, WEBM, OGG or MP4 — up to 500 MB',
+		dropTitle: 'Drop audio files here',
+		dropHint: 'MP3, WAV, M4A, WEBM, OGG or MP4 — up to 500 MB each. Select multiple files to transcribe in one go.',
 		browse: 'Browse files',
+		selectedFiles: 'Selected files',
+		clearFiles: 'Clear all',
+		removeFile: 'Remove',
+		batchProgress: 'File {current} of {total}',
+		batchDone: 'Transcribed {count} files',
+		batchPartial: 'Transcribed {done} of {total} files. Some failed.',
+		fileSkipped: 'Skipped {name}',
+		audioLabel: 'audio {n}',
+		batchFileName: '{count} audio files',
 		meetingHint: 'Records your microphone and the audio from the browser tab you share.',
 		micHint: 'Record directly from your microphone.',
 		start: 'Start recording',
@@ -107,7 +116,7 @@ const copy = {
 		deleteConfirm: 'Delete this transcription?',
 		recording: 'Recording',
 		paused: 'Paused',
-		fileRequired: 'Choose or record an audio file first.',
+		fileRequired: 'Choose or record audio files first.',
 		unsupported: 'Unsupported file format.',
 		tooLarge: 'The maximum file size is 500 MB.',
 		groqTooLarge: 'Groq free tier accepts files up to 25 MB.',
@@ -123,9 +132,18 @@ const copy = {
 		upload: 'رفع ملف صوتي',
 		microphone: 'الميكروفون',
 		meeting: 'اجتماع / تبويب',
-		dropTitle: 'اسحب الملف الصوتي هنا',
-		dropHint: 'MP3 أو WAV أو M4A أو WEBM أو OGG أو MP4 — حتى 500 ميجابايت',
-		browse: 'اختيار ملف',
+		dropTitle: 'اسحب الملفات الصوتية هنا',
+		dropHint: 'MP3 أو WAV أو M4A أو WEBM أو OGG أو MP4 — حتى 500 ميجابايت لكل ملف. يمكنك اختيار عدة ملفات وتحويلها دفعة واحدة.',
+		browse: 'اختيار ملفات',
+		selectedFiles: 'الملفات المحددة',
+		clearFiles: 'مسح الكل',
+		removeFile: 'إزالة',
+		batchProgress: 'الملف {current} من {total}',
+		batchDone: 'تم تحويل {count} ملفات',
+		batchPartial: 'تم تحويل {done} من {total} ملفات. فشل بعضها.',
+		fileSkipped: 'تم تخطي {name}',
+		audioLabel: 'صوت {n}',
+		batchFileName: '{count} ملفات صوتية',
 		meetingHint: 'يسجل الميكروفون مع صوت تبويب المتصفح الذي تقوم بمشاركته.',
 		micHint: 'سجل مباشرة من الميكروفون.',
 		start: 'بدء التسجيل',
@@ -184,7 +202,7 @@ const copy = {
 		deleteConfirm: 'هل تريد حذف هذا النص؟',
 		recording: 'جارٍ التسجيل',
 		paused: 'متوقف مؤقتًا',
-		fileRequired: 'اختر أو سجل ملفًا صوتيًا أولًا.',
+		fileRequired: 'اختر أو سجل ملفات صوتية أولًا.',
 		unsupported: 'صيغة الملف غير مدعومة.',
 		tooLarge: 'الحد الأقصى لحجم الملف هو 500 ميجابايت.',
 		groqTooLarge: 'خطة Groq المجانية تقبل ملفات حتى 25 ميجابايت.',
@@ -207,6 +225,22 @@ function formatTime(seconds = 0) {
 		.join(':');
 }
 
+function fileKey(file) {
+	return `${file.name}:${file.size}:${file.lastModified}`;
+}
+
+function buildCombinedTranscript(items, audioLabelTemplate, { forceLabels = false } = {}) {
+	if (!items.length) return '';
+	if (items.length === 1 && !forceLabels) return String(items[0]?.text || '').trim();
+	return items
+		.map((item, index) => {
+			const label = audioLabelTemplate.replace('{n}', String(index + 1));
+			const text = String(item?.text || '').trim();
+			return `${label} :\n${text}`;
+		})
+		.join('\n\n');
+}
+
 function getRecorderMimeType() {
 	const options = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/webm'];
 	return options.find(type => window.MediaRecorder?.isTypeSupported(type)) || '';
@@ -219,8 +253,8 @@ export default function TranscriptWorkspace() {
 	const currentUser = useUser();
 	const canManageProviderKey = ['admin', 'super_admin'].includes(currentUser?.role);
 	const [mode, setMode] = useState('upload');
-	const [file, setFile] = useState(null);
-	const [audioUrl, setAudioUrl] = useState('');
+	const [files, setFiles] = useState([]);
+	const [previewUrls, setPreviewUrls] = useState([]);
 	const [provider, setProvider] = useState('local');
 	const [language, setLanguage] = useState('auto');
 	const [customVocabulary, setCustomVocabulary] = useState('');
@@ -228,6 +262,8 @@ export default function TranscriptWorkspace() {
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
 	const [status, setStatus] = useState('idle');
 	const [progress, setProgress] = useState(0);
+	const [batchIndex, setBatchIndex] = useState(0);
+	const [batchTotal, setBatchTotal] = useState(0);
 	const [processingElapsed, setProcessingElapsed] = useState(0);
 	const [result, setResult] = useState(null);
 	const [transcriptText, setTranscriptText] = useState('');
@@ -274,14 +310,10 @@ export default function TranscriptWorkspace() {
 	}, [releaseMedia]);
 
 	useEffect(() => {
-		if (!file) {
-			setAudioUrl('');
-			return;
-		}
-		const nextUrl = URL.createObjectURL(file);
-		setAudioUrl(nextUrl);
-		return () => URL.revokeObjectURL(nextUrl);
-	}, [file]);
+		const nextUrls = files.map(item => URL.createObjectURL(item));
+		setPreviewUrls(nextUrls);
+		return () => nextUrls.forEach(url => URL.revokeObjectURL(url));
+	}, [files]);
 
 	const loadHistory = useCallback(async () => {
 		try {
@@ -338,26 +370,61 @@ export default function TranscriptWorkspace() {
 		return () => window.clearInterval(interval);
 	}, [status]);
 
-	const selectFile = useCallback(
-		selected => {
-			if (!selected) return;
-			const extension = selected.name.split('.').pop()?.toLowerCase();
-			if (!ACCEPTED_EXTENSIONS.includes(extension)) {
-				toast.error(t.unsupported);
-				return;
+	const selectFiles = useCallback(
+		(incoming, { replace = false } = {}) => {
+			const list = Array.from(incoming || []).filter(Boolean);
+			if (!list.length) return;
+
+			const accepted = [];
+			for (const selected of list) {
+				const extension = selected.name.split('.').pop()?.toLowerCase();
+				if (!ACCEPTED_EXTENSIONS.includes(extension)) {
+					toast.error(`${t.fileSkipped.replace('{name}', selected.name)}: ${t.unsupported}`);
+					continue;
+				}
+				if (selected.size > MAX_FILE_SIZE) {
+					toast.error(`${t.fileSkipped.replace('{name}', selected.name)}: ${t.tooLarge}`);
+					continue;
+				}
+				accepted.push(selected);
 			}
-			if (selected.size > MAX_FILE_SIZE) {
-				toast.error(t.tooLarge);
-				return;
-			}
-			setFile(selected);
+			if (!accepted.length) return;
+
+			setFiles(current => {
+				if (replace) return accepted;
+				const existing = new Set(current.map(fileKey));
+				const merged = [...current];
+				for (const item of accepted) {
+					if (!existing.has(fileKey(item))) merged.push(item);
+				}
+				return merged;
+			});
 			setResult(null);
 			setTranscriptText('');
 			setStatus('idle');
 			setProgress(0);
+			setBatchIndex(0);
+			setBatchTotal(0);
 		},
 		[t],
 	);
+
+	const removeFile = useCallback(index => {
+		setFiles(current => current.filter((_, i) => i !== index));
+		setStatus('idle');
+		setProgress(0);
+	}, []);
+
+	const clearFiles = useCallback(() => {
+		setFiles([]);
+		setResult(null);
+		setTranscriptText('');
+		setStatus('idle');
+		setProgress(0);
+		setBatchIndex(0);
+		setBatchTotal(0);
+		if (fileInputRef.current) fileInputRef.current.value = '';
+	}, []);
 
 	const startTimer = useCallback(() => {
 		if (timerRef.current) window.clearInterval(timerRef.current);
@@ -374,7 +441,7 @@ export default function TranscriptWorkspace() {
 		cancelledRef.current = false;
 		chunksRef.current = [];
 		setRecordingSeconds(0);
-		setFile(null);
+		setFiles([]);
 		setResult(null);
 
 		try {
@@ -421,7 +488,7 @@ export default function TranscriptWorkspace() {
 				if (!cancelledRef.current && chunksRef.current.length) {
 					const type = recorder.mimeType || 'audio/webm';
 					const blob = new Blob(chunksRef.current, { type });
-					selectFile(new File([blob], `recording-${Date.now()}.webm`, { type }));
+					selectFiles([new File([blob], `recording-${Date.now()}.webm`, { type })], { replace: true });
 				}
 				setRecordingState('idle');
 				releaseMedia();
@@ -466,37 +533,133 @@ export default function TranscriptWorkspace() {
 	};
 
 	const transcribe = async () => {
-		if (!file) {
+		if (!files.length) {
 			toast.error(t.fileRequired);
 			return;
 		}
-		if (provider === 'groq' && file.size > GROQ_FREE_MAX_FILE_SIZE) {
-			toast.error(t.groqTooLarge);
-			return;
+		if (provider === 'groq') {
+			const oversized = files.find(item => item.size > GROQ_FREE_MAX_FILE_SIZE);
+			if (oversized) {
+				toast.error(`${oversized.name}: ${t.groqTooLarge}`);
+				return;
+			}
 		}
-		setStatus('uploading');
-		setProgress(0);
-		setProcessingElapsed(0);
-		try {
-			const data = await createTranscription({
-				file,
-				provider,
-				language,
-				customVocabulary,
-				onUploadProgress: event => {
-					if (!event.total) return;
-					const next = Math.min(100, Math.round((event.loaded * 100) / event.total));
-					setProgress(next);
-					if (next >= 100) setStatus('processing');
-				},
-			});
-			setResult(data);
-			setTranscriptText(data.text || '');
+
+		const queue = [...files];
+		setBatchTotal(queue.length);
+		setBatchIndex(0);
+		const created = [];
+		let lastError = null;
+
+		for (let index = 0; index < queue.length; index += 1) {
+			const currentFile = queue[index];
+			setBatchIndex(index + 1);
+			setStatus('uploading');
+			setProgress(0);
+			setProcessingElapsed(0);
+			try {
+				const data = await createTranscription({
+					file: currentFile,
+					provider,
+					language,
+					customVocabulary,
+					onUploadProgress: event => {
+						if (!event.total) return;
+						const next = Math.min(100, Math.round((event.loaded * 100) / event.total));
+						setProgress(next);
+						if (next >= 100) setStatus('processing');
+					},
+				});
+				created.push(data);
+				const combinedText = buildCombinedTranscript(created, t.audioLabel, {
+					forceLabels: queue.length > 1,
+				});
+				setTranscriptText(combinedText);
+				setResult({
+					...data,
+					id: created[0].id,
+					text: combinedText,
+					originalFileName:
+						created.length > 1 || queue.length > 1
+							? t.batchFileName.replace('{count}', String(Math.max(created.length, queue.length)))
+							: data.originalFileName,
+					durationSeconds: created.reduce((sum, item) => sum + (Number(item.durationSeconds) || 0), 0),
+					processingTimeSeconds: created.reduce(
+						(sum, item) => sum + (Number(item.processingTimeSeconds) || 0),
+						0,
+					),
+					detectedLanguage: created[0].detectedLanguage,
+					provider: created[0].provider,
+					batchIds: created.map(item => item.id),
+				});
+				setHistory(current => {
+					const withoutBatch = current.filter(item => !created.some(entry => entry.id === item.id));
+					const primary = {
+						...created[0],
+						text: combinedText,
+						originalFileName:
+							queue.length > 1
+								? t.batchFileName.replace('{count}', String(queue.length))
+								: created[0].originalFileName,
+						durationSeconds: created.reduce((sum, item) => sum + (Number(item.durationSeconds) || 0), 0),
+						processingTimeSeconds: created.reduce(
+							(sum, item) => sum + (Number(item.processingTimeSeconds) || 0),
+							0,
+						),
+					};
+					return [primary, ...withoutBatch];
+				});
+			} catch (error) {
+				lastError = error;
+				toast.error(`${currentFile.name}: ${error.response?.data?.message || t.failed}`);
+			}
+		}
+
+		if (created.length > 1) {
+			try {
+				const combinedText = buildCombinedTranscript(created, t.audioLabel, { forceLabels: true });
+				const { data } = await api.patch(`/transcriptions/${created[0].id}`, { text: combinedText });
+				const extras = created.slice(1);
+				await Promise.allSettled(extras.map(item => api.delete(`/transcriptions/${item.id}`)));
+				const merged = {
+					...data,
+					originalFileName: t.batchFileName.replace('{count}', String(created.length)),
+					durationSeconds: created.reduce((sum, item) => sum + (Number(item.durationSeconds) || 0), 0),
+					processingTimeSeconds: created.reduce(
+						(sum, item) => sum + (Number(item.processingTimeSeconds) || 0),
+						0,
+					),
+					batchIds: [data.id],
+				};
+				setResult(merged);
+				setTranscriptText(combinedText);
+				setHistory(current => {
+					const extraIds = new Set(extras.map(item => item.id));
+					return [
+						merged,
+						...current.filter(item => item.id !== data.id && !extraIds.has(item.id)),
+					];
+				});
+			} catch {
+				// Keep the local combined transcript even if merge persistence fails.
+			}
+		}
+
+		if (created.length === queue.length) {
 			setStatus('done');
-			setHistory(current => [data, ...current.filter(item => item.id !== data.id)]);
-		} catch (error) {
+			if (queue.length > 1) {
+				toast.success(t.batchDone.replace('{count}', String(created.length)));
+			}
+		} else if (created.length > 0) {
+			setStatus('done');
+			toast.error(
+				t.batchPartial
+					.replace('{done}', String(created.length))
+					.replace('{total}', String(queue.length)),
+			);
+		} else {
 			setStatus('error');
-			toast.error(error.response?.data?.message || t.failed);
+			if (!lastError) toast.error(t.failed);
 		}
 	};
 
@@ -656,7 +819,7 @@ export default function TranscriptWorkspace() {
 									onDrop={event => {
 										event.preventDefault();
 										setDragging(false);
-										selectFile(event.dataTransfer.files?.[0]);
+										selectFiles(event.dataTransfer.files);
 									}}
 									className={`flex min-h-56 flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition ${
 										dragging ? 'border-[var(--color-primary-500)] bg-[var(--color-primary-50)]' : 'border-slate-200 bg-slate-50/70'
@@ -674,8 +837,12 @@ export default function TranscriptWorkspace() {
 										ref={fileInputRef}
 										type="file"
 										accept={ACCEPT}
+										multiple
 										className="hidden"
-										onChange={event => selectFile(event.target.files?.[0])}
+										onChange={event => {
+											selectFiles(event.target.files);
+											event.target.value = '';
+										}}
 									/>
 								</div>
 							) : (
@@ -706,21 +873,53 @@ export default function TranscriptWorkspace() {
 							)}
 						</div>
 
-						{file && !recording && (
-							<div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
-								<div className="flex items-start justify-between gap-3">
-									<div className="flex min-w-0 items-center gap-3">
-										<FileAudio className="size-6 shrink-0 text-emerald-600" />
-										<div className="min-w-0">
-											<p className="truncate text-sm font-bold text-slate-800">{file.name}</p>
-											<p className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-										</div>
-									</div>
-									<button type="button" onClick={() => setFile(null)} className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-red-600">
-										<X className="size-4" />
+						{files.length > 0 && !recording && (
+							<div className="mt-4 space-y-3">
+								<div className="flex items-center justify-between gap-3">
+									<p className="text-sm font-bold text-slate-700">
+										{t.selectedFiles} · {files.length}
+									</p>
+									<button
+										type="button"
+										onClick={clearFiles}
+										disabled={busy}
+										className="text-xs font-bold text-slate-500 hover:text-red-600 disabled:opacity-50"
+									>
+										{t.clearFiles}
 									</button>
 								</div>
-								{audioUrl && <audio className="mt-3 h-10 w-full" controls src={audioUrl} />}
+								{files.map((item, index) => (
+									<div
+										key={`${fileKey(item)}-${index}`}
+										className={`rounded-xl border p-4 ${
+											busy && batchIndex === index + 1
+												? 'border-blue-300 bg-blue-50/70'
+												: 'border-emerald-200 bg-emerald-50/60'
+										}`}
+									>
+										<div className="flex items-start justify-between gap-3">
+											<div className="flex min-w-0 items-center gap-3">
+												<FileAudio className="size-6 shrink-0 text-emerald-600" />
+												<div className="min-w-0">
+													<p className="truncate text-sm font-bold text-slate-800">{item.name}</p>
+													<p className="text-xs text-slate-500">{(item.size / 1024 / 1024).toFixed(2)} MB</p>
+												</div>
+											</div>
+											<button
+												type="button"
+												onClick={() => removeFile(index)}
+												disabled={busy}
+												className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-red-600 disabled:opacity-50"
+												aria-label={t.removeFile}
+											>
+												<X className="size-4" />
+											</button>
+										</div>
+										{previewUrls[index] && (
+											<audio className="mt-3 h-10 w-full" controls src={previewUrls[index]} />
+										)}
+									</div>
+								))}
 							</div>
 						)}
 
@@ -771,6 +970,14 @@ export default function TranscriptWorkspace() {
 											: `${t.elapsed}: ${formatTime(processingElapsed)}`}
 									</span>
 								</div>
+								{batchTotal > 1 && (
+									<p className="mt-2 text-xs font-bold text-blue-700">
+										{t.batchProgress
+											.replace('{current}', String(batchIndex))
+											.replace('{total}', String(batchTotal))}
+										{files[batchIndex - 1] ? ` · ${files[batchIndex - 1].name}` : ''}
+									</p>
+								)}
 								<div className="mt-3 h-2 overflow-hidden rounded-full bg-blue-100">
 									<div
 										className={`h-full rounded-full bg-[var(--color-primary-600)] transition-all ${status === 'processing' ? 'w-full animate-pulse' : ''}`}
@@ -780,9 +987,10 @@ export default function TranscriptWorkspace() {
 							</div>
 						)}
 
-						<Button size="lg" className="mt-5 w-full" disabled={!file || busy || recording} onClick={transcribe}>
+						<Button size="lg" className="mt-5 w-full" disabled={!files.length || busy || recording} onClick={transcribe}>
 							{busy ? <LoaderCircle className="animate-spin" /> : <AudioLines />}
 							{t.transcribe}
+							{files.length > 1 ? ` (${files.length})` : ''}
 						</Button>
 					</section>
 

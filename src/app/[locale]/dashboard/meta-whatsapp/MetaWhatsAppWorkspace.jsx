@@ -8,6 +8,7 @@ import {
 	BookOpen,
 	Check,
 	CheckCheck,
+	ChevronLeft,
 	Copy,
 	Eye,
 	FileText,
@@ -29,6 +30,7 @@ import {
 	Send,
 	Settings2,
 	ShieldCheck,
+	Star,
 	LayoutTemplate,
 	Trash2,
 	Video,
@@ -95,6 +97,18 @@ const COPY = {
 		all: 'All',
 		unread: 'Unread',
 		leads: 'Leads',
+		fav: 'Fav',
+		replied: 'Replied',
+		window24h: '24h',
+		addFavorite: 'Add to favorites',
+		removeFavorite: 'Remove from favorites',
+		favoriteUpdated: 'Favorite updated',
+		favoriteFailed: 'Could not update favorite',
+		backToChats: 'Back to chats',
+		noRepliedHint: 'People who reply after you send them a Meta template appear here.',
+		noWindowHint: 'People still inside the 24-hour customer care window appear here.',
+		repliedTitle: 'Sent a template and they replied',
+		window24hTitle: '24h customer care window still open',
 		settings: 'Meta config',
 		activity: 'Activity',
 		usageBilling: 'Usage & Billing',
@@ -345,6 +359,18 @@ const COPY = {
 		all: 'الكل',
 		unread: 'غير مقروء',
 		leads: 'عملاء',
+		fav: 'المفضلة',
+		replied: 'ردوا',
+		window24h: '24س',
+		addFavorite: 'إضافة إلى المفضلة',
+		removeFavorite: 'إزالة من المفضلة',
+		favoriteUpdated: 'تم تحديث المفضلة',
+		favoriteFailed: 'تعذر تحديث المفضلة',
+		backToChats: 'العودة للمحادثات',
+		noRepliedHint: 'يظهر هنا من يرد بعد إرسال قالب ميتا لهم.',
+		noWindowHint: 'يظهر هنا من ما زالت نافذة الـ 24 ساعة مفتوحة لديهم.',
+		repliedTitle: 'أُرسل لهم قالب وردّوا',
+		window24hTitle: 'نافذة الـ 24 ساعة ما زالت مفتوحة',
 		settings: 'إعدادات ميتا',
 		activity: 'السجل',
 		usageBilling: 'الاستهلاك والفوترة',
@@ -1348,38 +1374,56 @@ function AlertBanner({ message, tone = 'error', onClose, hint, t, floating = fal
 
 	return (
 		<div
-			className={`flex items-start gap-3 rounded-xl px-3.5 py-3 text-[13px] ${
-				floating ? 'shadow-[0_8px_24px_rgba(11,20,26,0.18)]' : 'shadow-[0_1px_0_rgba(0,0,0,0.06)]'
+			className={`inline-flex max-w-[min(92vw,26rem)] items-start gap-2.5 rounded-2xl px-3.5 py-2.5 text-[13px] backdrop-blur-md transition-all duration-300 ${
+				floating
+					? 'animate-in fade-in slide-in-from-top-2 zoom-in-95 shadow-[0_12px_40px_rgba(11,20,26,0.16)]'
+					: 'shadow-[0_1px_0_rgba(0,0,0,0.06)]'
 			}`}
 			style={{
-				background: isError ? '#FDECEC' : '#E1FFD4',
-				color: isError ? '#9B1C1C' : '#1FA755',
-				border: `1px solid ${isError ? '#F5C2C2' : '#B7EFC5'}`,
-				borderTop: floating
-					? `3px solid ${isError ? '#E11D48' : '#24D366'}`
+				width: 'fit-content',
+				background: isError
+					? 'linear-gradient(180deg, rgba(255,247,247,0.97) 0%, rgba(254,226,226,0.95) 100%)'
+					: 'linear-gradient(180deg, rgba(240,253,244,0.97) 0%, rgba(220,252,231,0.95) 100%)',
+				color: isError ? '#9F1239' : '#166534',
+				border: `1px solid ${isError ? 'rgba(244,63,94,0.22)' : 'rgba(34,197,94,0.28)'}`,
+				boxShadow: floating
+					? isError
+						? '0 10px 30px rgba(225,29,72,0.12), 0 2px 8px rgba(11,20,26,0.08)'
+						: '0 10px 30px rgba(34,197,94,0.12), 0 2px 8px rgba(11,20,26,0.08)'
 					: undefined,
 			}}
 			role="alert"
 		>
 			<div
-				className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-[12px] font-bold text-white"
-				style={{ background: isError ? '#E11D48' : '#24D366' }}
+				className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full"
+				style={{
+					background: isError
+						? 'linear-gradient(145deg, #FB7185, #E11D48)'
+						: 'linear-gradient(145deg, #4ADE80, #16A34A)',
+					boxShadow: isError
+						? '0 4px 10px rgba(225,29,72,0.28)'
+						: '0 4px 10px rgba(22,163,74,0.28)',
+				}}
 			>
-				{isError ? '!' : '✓'}
+				{isError ? (
+					<span className="text-[13px] font-black leading-none text-white">!</span>
+				) : (
+					<Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+				)}
 			</div>
-			<div className="min-w-0 flex-1">
-				<div className="font-semibold leading-snug">
+			<div className="min-w-0 pe-1">
+				<div className="font-semibold leading-snug tracking-tight">
 					{isError && /invalid parameter/i.test(parsed.title)
 						? `${t?.metaErrorTitle || 'Meta API error'}: ${parsed.title}`
 						: parsed.title}
 				</div>
 				{parsed.detail ? (
-					<p className="mt-1 whitespace-pre-wrap break-words text-[12px] leading-relaxed opacity-95">
+					<p className="mt-1 max-w-[22rem] whitespace-pre-wrap break-words text-[12px] leading-relaxed opacity-90">
 						{parsed.detail}
 					</p>
 				) : null}
 				{showHint ? (
-					<p className="mt-1.5 whitespace-pre-wrap break-words text-[11px] leading-relaxed opacity-80">
+					<p className="mt-1.5 max-w-[22rem] whitespace-pre-wrap break-words text-[11px] leading-relaxed opacity-75">
 						{showHint}
 					</p>
 				) : null}
@@ -1389,10 +1433,10 @@ function AlertBanner({ message, tone = 'error', onClose, hint, t, floating = fal
 					type="button"
 					onClick={onClose}
 					title={t?.errorDismiss || 'Dismiss'}
-					className="shrink-0 rounded-md p-1 opacity-70 hover:opacity-100"
+					className="shrink-0 rounded-full p-1.5 opacity-60 transition hover:bg-black/5 hover:opacity-100"
 					style={{ color: 'inherit' }}
 				>
-					<X className="h-4 w-4" />
+					<X className="h-3.5 w-3.5" />
 				</button>
 			) : null}
 		</div>
@@ -1409,6 +1453,9 @@ function isSuccessFlash(flash, t) {
 		flash === t.libraryAdded ||
 		flash === t.templateDeleted ||
 		flash === t.templateCopied ||
+		flash === t.favoriteUpdated ||
+		flash === t.fastReplySaved ||
+		flash === t.fastReplyDeleted ||
 		(typeof flash === 'string' && flash.startsWith(t.seedSubmitted))
 	);
 }
@@ -2058,6 +2105,8 @@ export default function MetaWhatsAppWorkspace() {
 
 	const [q, setQ] = useState('');
 	const [filter, setFilter] = useState('all');
+	const [filterCounts, setFilterCounts] = useState({ replied: 0, window24h: 0 });
+	const [listLoading, setListLoading] = useState(false);
 	const [conversations, setConversations] = useState([]);
 	const [activeId, setActiveId] = useState(null);
 	const [active, setActive] = useState(null);
@@ -2128,6 +2177,10 @@ export default function MetaWhatsAppWorkspace() {
 	const recordingRafRef = useRef(0);
 	const recordingAudioCtxRef = useRef(null);
 	const searchTimer = useRef(null);
+	const qRef = useRef(q);
+	const filterRef = useRef(filter);
+	qRef.current = q;
+	filterRef.current = filter;
 
 	const webhookUrl = useMemo(() => resolveWebhookUrl(status), [status]);
 
@@ -2156,10 +2209,33 @@ export default function MetaWhatsAppWorkspace() {
 		return data;
 	}, []);
 
-	const loadConversations = useCallback(async (query = q) => {
-		const rows = await metaWhatsAppApi.conversations({ q: query || undefined, limit: 100 });
-		setConversations(Array.isArray(rows) ? rows : []);
-	}, [q]);
+	const loadConversations = useCallback(async (query, nextFilter, { silent = true } = {}) => {
+		const qValue = query !== undefined ? query : qRef.current;
+		const filterValue = nextFilter !== undefined ? nextFilter : filterRef.current;
+		const serverFilter = ['unread', 'leads', 'fav', 'replied', 'window24h'].includes(filterValue)
+			? filterValue
+			: undefined;
+		if (!silent) setListLoading(true);
+		try {
+			const [rows, counts] = await Promise.all([
+				metaWhatsAppApi.conversations({
+					q: qValue || undefined,
+					limit: filterValue === 'replied' || filterValue === 'window24h' ? 5000 : 500,
+					...(serverFilter ? { filter: serverFilter } : {}),
+				}),
+				metaWhatsAppApi.conversationFilterCounts().catch(() => null),
+			]);
+			setConversations(Array.isArray(rows) ? rows : []);
+			if (counts && typeof counts === 'object') {
+				setFilterCounts({
+					replied: Number(counts.replied) || 0,
+					window24h: Number(counts.window24h) || 0,
+				});
+			}
+		} finally {
+			if (!silent) setListLoading(false);
+		}
+	}, []);
 
 	const loadMessages = useCallback(async conversationId => {
 		if (!conversationId) return;
@@ -2177,7 +2253,7 @@ export default function MetaWhatsAppWorkspace() {
 		setError(null);
 		try {
 			await loadStatus();
-			await loadConversations('');
+			await loadConversations('', 'all', { silent: true });
 		} catch (e) {
 			setError(e?.response?.data?.message || t.loadError);
 		} finally {
@@ -2187,7 +2263,19 @@ export default function MetaWhatsAppWorkspace() {
 
 	useEffect(() => {
 		void bootstrap();
-	}, [bootstrap]);
+		// Mount once — switching filters must not remount/hide the workspace.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	useEffect(() => {
+		if (!flash && !error && !templatesError) return undefined;
+		const timer = window.setTimeout(() => {
+			setFlash(null);
+			setError(null);
+			setTemplatesError(null);
+		}, 5000);
+		return () => window.clearTimeout(timer);
+	}, [flash, error, templatesError]);
 
 	useEffect(() => {
 		if (!initialConversation) return;
@@ -2305,12 +2393,7 @@ export default function MetaWhatsAppWorkspace() {
 		if (sidebarView === 'templates') void loadTemplates();
 	}, [sidebarView, loadTemplates]);
 
-	const filtered = useMemo(() => {
-		let rows = conversations;
-		if (filter === 'unread') rows = rows.filter(c => (c.unreadCount || 0) > 0);
-		if (filter === 'leads') rows = rows.filter(c => c.leadId);
-		return rows;
-	}, [conversations, filter]);
+	const filtered = useMemo(() => conversations, [conversations]);
 
 	const approvedTemplates = useMemo(
 		() =>
@@ -2343,8 +2426,14 @@ export default function MetaWhatsAppWorkspace() {
 		setQ(value);
 		clearTimeout(searchTimer.current);
 		searchTimer.current = setTimeout(() => {
-			void loadConversations(value);
+			void loadConversations(value, filterRef.current, { silent: false });
 		}, 300);
+	}
+
+	function onFilterChange(nextFilter) {
+		if (nextFilter === filter) return;
+		setFilter(nextFilter);
+		void loadConversations(qRef.current, nextFilter, { silent: false });
 	}
 
 	function missingConnectionFields(nextStatus = status, nextForm = form) {
@@ -2504,6 +2593,43 @@ export default function MetaWhatsAppWorkspace() {
 		setActiveId(id);
 		setMessageTranslations({});
 		await loadMessages(id);
+	}
+
+	function closeActiveChat() {
+		setActiveId(null);
+		setActive(null);
+		setMessages([]);
+		setDraft('');
+		setMessageTranslations({});
+	}
+
+	async function toggleFavorite(conversation) {
+		if (!conversation?.id) return;
+		const next = !conversation.isFavorite;
+		setConversations(current =>
+			current.map(item => (item.id === conversation.id ? { ...item, isFavorite: next } : item)),
+		);
+		if (active?.id === conversation.id) {
+			setActive(current => (current ? { ...current, isFavorite: next } : current));
+		}
+		try {
+			const data = await metaWhatsAppApi.setConversationFavorite(conversation.id, next);
+			setConversations(current =>
+				current.map(item => (item.id === conversation.id ? { ...item, ...data } : item)),
+			);
+			if (active?.id === conversation.id) setActive(data);
+			setFlash(t.favoriteUpdated);
+		} catch (err) {
+			setConversations(current =>
+				current.map(item =>
+					item.id === conversation.id ? { ...item, isFavorite: !next } : item,
+				),
+			);
+			if (active?.id === conversation.id) {
+				setActive(current => (current ? { ...current, isFavorite: !next } : current));
+			}
+			setFlash(apiErrorMessage(err, t.favoriteFailed));
+		}
 	}
 
 	async function onSync() {
@@ -3338,7 +3464,7 @@ export default function MetaWhatsAppWorkspace() {
 			{/* Floating Meta-style error/success toast */}
 			{(flash || error || templatesError) && (
 				<div className="pointer-events-none absolute inset-x-0 top-3 z-[70] flex justify-center px-4">
-					<div className="pointer-events-auto w-full max-w-2xl">
+					<div className="pointer-events-auto w-fit max-w-full">
 						<AlertBanner
 							floating
 							message={templatesError || flash || error}
@@ -3445,34 +3571,68 @@ export default function MetaWhatsAppWorkspace() {
 									style={{ color: WA.text }}
 								/>
 							</div>
-							<div className="flex items-center gap-2 px-1">
+							<div className="flex flex-wrap items-center gap-2 px-1">
 								{[
 									{ id: 'all', label: t.all },
 									{ id: 'unread', label: t.unread },
 									{ id: 'leads', label: t.leads },
+									{ id: 'fav', label: t.fav },
+									{
+										id: 'replied',
+										label: t.replied,
+										title: t.repliedTitle,
+										count: filterCounts.replied,
+									},
+									{
+										id: 'window24h',
+										label: t.window24h,
+										title: t.window24hTitle,
+										count: filterCounts.window24h,
+									},
 								].map(chip => (
 									<button
 										key={chip.id}
 										type="button"
-										onClick={() => setFilter(chip.id)}
-										className="rounded-full px-3 py-1 text-[12px] font-medium"
+										onClick={() => onFilterChange(chip.id)}
+										title={chip.title || chip.label}
+										className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-medium"
 										style={{
 											background: filter === chip.id ? WA.greenSoft : WA.field,
 											color: filter === chip.id ? WA.greenText : WA.muted,
 										}}
 									>
-										{chip.label}
+										<span>{chip.label}</span>
+										{typeof chip.count === 'number' ? (
+											<span
+												className="grid min-h-[17px] min-w-[17px] place-items-center rounded-full px-1 text-[10px] font-bold text-white"
+												style={{
+													background: filter === chip.id ? WA.green : '#A1A1AA',
+												}}
+											>
+												{chip.count > 999 ? '999+' : chip.count}
+											</span>
+										) : null}
 									</button>
 								))}
 							</div>
 						</header>
 
 						<div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2.5 pb-5">
-							<div className="min-h-0 flex-1 overflow-y-auto">
-								{!filtered.length ? (
+							<div className="relative min-h-0 flex-1 overflow-y-auto">
+								{listLoading ? (
+									<div className="grid min-h-40 place-items-center py-10">
+										<LoaderCircle className="h-6 w-6 animate-spin" style={{ color: WA.green }} />
+									</div>
+								) : !filtered.length ? (
 									<div className="px-4 py-16 text-center">
 										<p className="text-[14px] font-semibold" style={{ color: WA.text }}>{t.noConversations}</p>
-										<p className="mt-2 text-[13px]" style={{ color: WA.muted }}>{t.noConversationsHint}</p>
+										<p className="mt-2 text-[13px]" style={{ color: WA.muted }}>
+											{filter === 'replied'
+												? t.noRepliedHint
+												: filter === 'window24h'
+													? t.noWindowHint
+													: t.noConversationsHint}
+										</p>
 									</div>
 								) : (
 									filtered.map(c => {
@@ -3500,11 +3660,16 @@ export default function MetaWhatsAppWorkspace() {
 														<span className="text-[13px]" style={{ color: c.unreadCount ? WA.greenText : WA.muted }}>
 															{formatTime(c.lastMessageAt, locale)}
 														</span>
-														{c.unreadCount > 0 && (
-															<span className="grid min-h-[17px] min-w-[17px] place-items-center rounded-full px-1 text-[13px] text-white" style={{ background: WA.green }}>
-																{c.unreadCount}
-															</span>
-														)}
+														<div className="flex items-center gap-1">
+															{c.isFavorite ? (
+																<Star className="h-3.5 w-3.5 fill-current" style={{ color: '#F5C518' }} />
+															) : null}
+															{c.unreadCount > 0 && (
+																<span className="grid min-h-[17px] min-w-[17px] place-items-center rounded-full px-1 text-[13px] text-white" style={{ background: WA.green }}>
+																	{c.unreadCount}
+																</span>
+															)}
+														</div>
 													</div>
 												</div>
 											</button>
@@ -4150,7 +4315,19 @@ export default function MetaWhatsAppWorkspace() {
 							style={{ background: WA.header, borderBottom: '0.5px solid rgba(0,0,0,0.20)' }}
 						>
 							<div className="flex min-w-0 flex-1 items-center gap-2">
-								<button type="button" className="md:hidden" style={{ color: WA.icon }} onClick={() => setActiveId(null)}>{isAr ? '›' : '‹'}</button>
+								<button
+									type="button"
+									className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-black/5 md:hidden"
+									style={{ color: WA.icon }}
+									onClick={closeActiveChat}
+									title={t.backToChats}
+									aria-label={t.backToChats}
+								>
+									<ChevronLeft
+										className={`h-6 w-6 ${isAr ? 'rotate-180' : ''}`}
+										strokeWidth={2.25}
+									/>
+								</button>
 								<Avatar name={active.displayName || active.businessName || active.waId} size={36} />
 								<div className="min-w-0">
 									<div className="truncate text-[14px] font-bold" style={{ color: WA.text }}>{active.displayName || active.businessName || active.waId}</div>
@@ -4163,20 +4340,29 @@ export default function MetaWhatsAppWorkspace() {
 								</span>
 								<button
 									type="button"
-									onClick={() => {
-										setActiveId(null);
-										setActive(null);
-										setMessages([]);
-										setDraft('');
-										setMessageTranslations({});
-									}}
-									className="rounded-md p-1 transition hover:bg-black/5"
+									onClick={() => void toggleFavorite(active)}
+									className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-black/5"
+									style={{ color: active.isFavorite ? '#F5C518' : WA.icon }}
+									title={active.isFavorite ? t.removeFavorite : t.addFavorite}
+									aria-label={active.isFavorite ? t.removeFavorite : t.addFavorite}
+									aria-pressed={Boolean(active.isFavorite)}
+								>
+									<Star
+										className={`h-5 w-5 ${active.isFavorite ? 'fill-current' : ''}`}
+										strokeWidth={1.9}
+									/>
+								</button>
+								<button
+									type="button"
+									onClick={closeActiveChat}
+									className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-black/5"
 									style={{ color: WA.icon }}
 									title={t.closeChat}
+									aria-label={t.closeChat}
 								>
 									<ArrowLeft
-										className={`h-6 w-6 ${isAr ? 'rotate-180' : ''}`}
-										strokeWidth={1.75}
+										className={`h-5 w-5 ${isAr ? 'rotate-180' : ''}`}
+										strokeWidth={2.25}
 									/>
 								</button>
 							</div>
