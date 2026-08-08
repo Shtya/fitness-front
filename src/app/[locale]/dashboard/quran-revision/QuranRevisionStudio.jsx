@@ -36,6 +36,7 @@ import {
 	Minimize2,
 	Info,
 	BookOpenText,
+	CircleAlert,
 } from 'lucide-react';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 import Select from '@/components/atoms/Select';
@@ -55,6 +56,28 @@ const LS_PREFS = 'so7ba:quran-revision:prefs:v2';
 const LS_FAVS = 'so7ba:quran-revision:yt-favs:v1';
 const LS_FOLDERS = 'so7ba:quran-revision:yt-folders:v1';
 const LS_HISTORY = 'so7ba:quran-revision:history:v1';
+const LS_WORD_ERRORS = 'so7ba:quran-revision:word-errors:v1';
+const EMPTY_WORD_MARKS = Object.freeze({});
+
+function wordErrorKey(surahId, ayahNumber, wordIdx) {
+	return `${surahId}:${ayahNumber}:${wordIdx}`;
+}
+
+function normalizeWordErrors(raw) {
+	if (!raw || typeof raw !== 'object') return {};
+	const out = {};
+	Object.entries(raw).forEach(([key, type]) => {
+		if (type !== 'tashkeel' && type !== 'forgot') return;
+		const parts = String(key).split(':');
+		if (parts.length !== 3) return;
+		const surahId = Number(parts[0]);
+		const ayahNumber = Number(parts[1]);
+		const wordIdx = Number(parts[2]);
+		if (![surahId, ayahNumber, wordIdx].every(Number.isInteger)) return;
+		out[wordErrorKey(surahId, ayahNumber, wordIdx)] = type;
+	});
+	return out;
+}
 const HISTORY_MAX = 40;
 const FOLDER_FILTER_ALL = 'all';
 const REPEAT_OPTIONS = [1, 2, 3, 4, 5, 7, 10, 15];
@@ -73,7 +96,7 @@ const DEFAULT_PREFS = {
 	selectedReciterId: 'minshawi',
 	selectedFavId: null,
 	followAlong: true,
-	showTajweed: true,
+	showTajweed: false,
 	isMemorizationMode: false,
 	hideParts: ['middle'], // multi: start | middle | end
 	volume: 0.85,
@@ -186,7 +209,7 @@ const COPY = {
 		expandMushaf: 'ملء الشاشة',
 		collapseMushaf: 'تصغير',
 		tajweed: 'تجويد',
-		tajweedHint: 'مرّر أو اضغط على الكلمة الملونة… هتشوف يعني إيه الحكم وليه ظاهر هنا',
+		tajweedHint: 'شغّل «تجويد» عشان لما تمرّر أو تضغط على كلمة ملونة يظهر شرح الحكم',
 		tajweedLegend: 'دليل ألوان التجويد',
 		tajweedGuide: 'الدليل',
 		tajweedLegendClose: 'إغلاق',
@@ -196,8 +219,17 @@ const COPY = {
 		tajweedExample: 'مثال',
 		tajweedIntro: 'الألوان مش للزينة… كل لون بيحكي حكم. تحت هتلاقي الشرح ببساطة ولُطف.',
 		tajweedHowTitle: 'إزاي تستخدم الدليل؟',
-		tajweedHowBody: 'شغّل «تجويد»، وبعدين لما تشوف لون على كلمة افتح الدليل أو مرّر على الكلمة. اقرأ: يعني إيه؟ ليه؟ وخدها كده.',
+		tajweedHowBody: 'ألوان التجويد ظاهرة دايمًا. شغّل «تجويد» عشان يظهر شرح الحكم لما تمرّر على الكلمة، أو افتح الدليل للقراءة.',
 		tajweedFooter: 'كل ما تقرأ وتتفرّج على الألوان… الأحكام هتتثبت لوحدها من غير حفظ ناشف.',
+		errorMode: 'أخطاء',
+		errorModeHint: 'فعّل المود، وبعدين اسحب أو اضغط على الكلمة/الكلمات اللي غلطت فيها',
+		errorPickTitle: 'نوع الخطأ؟',
+		errorTashkeel: 'تشكيل غلط',
+		errorForgot: 'مش فاكرها',
+		errorRemove: 'إزالة العلامة',
+		errorCancel: 'إلغاء',
+		errorCountOne: 'غلطة',
+		errorCountMany: 'غلطات',
 		hidePartsLabel: 'اخفِ جزء من الآية',
 		unitsExpand: 'فتح قائمة الأرباع',
 		unitsCollapse: 'إغلاق قائمة الأرباع',
@@ -302,7 +334,7 @@ const COPY = {
 		expandMushaf: 'Full screen',
 		collapseMushaf: 'Exit full screen',
 		tajweed: 'Tajweed',
-		tajweedHint: 'Hover or tap a colored word to see what the rule means and why it applies',
+		tajweedHint: 'Turn on Tajweed to show rule explanations when you hover or tap a colored word',
 		tajweedLegend: 'Tajweed color guide',
 		tajweedGuide: 'Guide',
 		tajweedLegendClose: 'Close',
@@ -312,8 +344,17 @@ const COPY = {
 		tajweedExample: 'Example',
 		tajweedIntro: 'Colors aren’t decoration — each one teaches a rule. Below is a simple, friendly guide.',
 		tajweedHowTitle: 'How to use this guide?',
-		tajweedHowBody: 'Turn on Tajweed, then open the guide or hover a colored word. Read: meaning, why, and a friendly tip.',
+		tajweedHowBody: 'Tajweed colors stay on. Turn on Tajweed for hover explanations, or open the guide to read the rules.',
 		tajweedFooter: 'The more you read with colors on, the more the rules stick — without dry memorizing.',
+		errorMode: 'Mistakes',
+		errorModeHint: 'Turn on, then click or drag across the word(s) you missed',
+		errorPickTitle: 'What kind of mistake?',
+		errorTashkeel: 'Wrong tashkeel',
+		errorForgot: "Don't remember",
+		errorRemove: 'Remove mark',
+		errorCancel: 'Cancel',
+		errorCountOne: 'mistake',
+		errorCountMany: 'mistakes',
 		hidePartsLabel: 'Hide part of the ayah',
 		unitsExpand: 'Show units list',
 		unitsCollapse: 'Hide units list',
@@ -556,6 +597,9 @@ export default function QuranRevisionStudio({
 	const [followAlong, setFollowAlong] = useState(true);
 	const [showTajweed, setShowTajweed] = useState(DEFAULT_PREFS.showTajweed);
 	const [tajweedLegendOpen, setTajweedLegendOpen] = useState(false);
+	const [errorMode, setErrorMode] = useState(false);
+	/** `${ayahIdx}:${wordIdx}` -> 'tashkeel' | 'forgot' */
+	const [wordErrors, setWordErrors] = useState({});
 	const [isMemorizationMode, setIsMemorizationMode] = useState(false);
 	const [hideParts, setHideParts] = useState(DEFAULT_PREFS.hideParts);
 	const [mushafExpanded, setMushafExpanded] = useState(false);
@@ -632,13 +676,14 @@ export default function QuranRevisionStudio({
 		setSourceTab(fav?.videoId ? 'youtube' : 'builtin');
 		setSelectedReciterId(prefs.selectedReciterId);
 		setFollowAlong(prefs.followAlong);
-		setShowTajweed(prefs.showTajweed !== false);
+		setShowTajweed(prefs.showTajweed === true);
 		setIsMemorizationMode(prefs.isMemorizationMode);
 		setHideParts(normalizeHideParts(prefs.hideParts, prefs.hideMode ?? prefs.memoLevel));
 		setVolume(prefs.volume);
 		setSpeed(prefs.speed);
 		setYtPlayMode(prefs.ytPlayMode === 'video' ? 'video' : 'audio');
 		setHistory(loadJson(LS_HISTORY, []));
+		setWordErrors(normalizeWordErrors(loadJson(LS_WORD_ERRORS, {})));
 		prevSurahModeRef.current = { surahId, mode: nextMode };
 		setHydrated(true);
 		setPortalReady(true);
@@ -675,6 +720,11 @@ export default function QuranRevisionStudio({
 		if (!hydrated) return;
 		saveJson(LS_HISTORY, history);
 	}, [hydrated, history]);
+
+	useEffect(() => {
+		if (!hydrated) return;
+		saveJson(LS_WORD_ERRORS, wordErrors);
+	}, [hydrated, wordErrors]);
 
 	const selectedSurah = useMemo(
 		() => SURAHS.find(s => s.id === selectedSurahId) || SURAHS[0],
@@ -1121,6 +1171,7 @@ export default function QuranRevisionStudio({
 		setAudioDuration(0);
 		setFinalStats(null);
 		setAudioError('');
+		setErrorMode(false);
 		stopElapsed();
 		elapsedRef.current = setInterval(() => setElapsedSec(s => s + 1), 1000);
 
@@ -1130,6 +1181,59 @@ export default function QuranRevisionStudio({
 		}
 		playCurrentAyah(0, 1, 0);
 	};
+
+	const errorLabels = useMemo(() => ({
+		title: t.errorPickTitle,
+		tashkeel: t.errorTashkeel,
+		forgot: t.errorForgot,
+		remove: t.errorRemove,
+		cancel: t.errorCancel,
+	}), [t.errorPickTitle, t.errorTashkeel, t.errorForgot, t.errorRemove, t.errorCancel]);
+
+	const marksByAyahNumber = useMemo(() => {
+		const map = {};
+		const prefix = `${selectedSurahId}:`;
+		Object.entries(wordErrors).forEach(([key, type]) => {
+			if (!key.startsWith(prefix)) return;
+			const rest = key.slice(prefix.length);
+			const sep = rest.indexOf(':');
+			if (sep < 0) return;
+			const ayahNumber = Number(rest.slice(0, sep));
+			const wordIdx = Number(rest.slice(sep + 1));
+			if (!Number.isInteger(ayahNumber) || !Number.isInteger(wordIdx)) return;
+			if (!map[ayahNumber]) map[ayahNumber] = {};
+			map[ayahNumber][wordIdx] = type;
+		});
+		return map;
+	}, [wordErrors, selectedSurahId]);
+
+	const errorCountInView = useMemo(() => {
+		if (!verses.length) return 0;
+		const ayahNums = new Set(verses.map(v => v.n));
+		const prefix = `${selectedSurahId}:`;
+		let count = 0;
+		Object.keys(wordErrors).forEach((key) => {
+			if (!key.startsWith(prefix)) return;
+			const rest = key.slice(prefix.length);
+			const sep = rest.indexOf(':');
+			if (sep < 0) return;
+			const ayahNumber = Number(rest.slice(0, sep));
+			if (ayahNums.has(ayahNumber)) count += 1;
+		});
+		return count;
+	}, [wordErrors, verses, selectedSurahId]);
+
+	const setMarksForAyah = useCallback((ayahNumber, wordIndexes, type) => {
+		setWordErrors((prev) => {
+			const next = { ...prev };
+			wordIndexes.forEach((wordIdx) => {
+				const key = wordErrorKey(selectedSurahId, ayahNumber, wordIdx);
+				if (type) next[key] = type;
+				else delete next[key];
+			});
+			return next;
+		});
+	}, [selectedSurahId]);
 
 	// Apply surah / mode / units / reciter changes while session is running
 	useEffect(() => {
@@ -1234,6 +1338,7 @@ export default function QuranRevisionStudio({
 		setVerseProgress(0);
 		setFinalStats(null);
 		setAudioError('');
+		setErrorMode(false);
 	};
 
 	const openMushafExpanded = useCallback(() => {
@@ -2359,6 +2464,12 @@ export default function QuranRevisionStudio({
 									<p className="qr-tools-title">{surahName}</p>
 									<p className="qr-tools-sub">
 										{t.readingFrom} {d(ayahFrom)} {t.readingTo} {d(ayahTo)}
+										{errorCountInView > 0 ? (
+											<span className="qr-tools-errors">
+												{' '}({d(errorCountInView)}{' '}
+												{errorCountInView === 1 ? t.errorCountOne : t.errorCountMany})
+											</span>
+										) : null}
 										{currentVerse ? ` · ${t.ayah} ${d(currentVerse.n)}` : ''}
 									</p>
 								</div>
@@ -2379,7 +2490,7 @@ export default function QuranRevisionStudio({
 
 									<span className="qr-tools-sep" aria-hidden />
 
-									<label className={cx('qr-tool', showTajweed && 'is-on')}>
+									<label className={cx('qr-tool', showTajweed && 'is-on')} title={t.tajweedHint}>
 										<BookOpenText size={13} strokeWidth={2.25} aria-hidden />
 										<span>{t.tajweed}</span>
 										<button
@@ -2387,15 +2498,14 @@ export default function QuranRevisionStudio({
 											className={cx('qr-switch', showTajweed && 'is-on')}
 											onClick={() => setShowTajweed(v => !v)}
 											aria-label={t.tajweed}
+											aria-pressed={showTajweed}
+											title={t.tajweedHint}
 										/>
 									</label>
 									<button
 										type="button"
 										className={cx('qr-tool-link', tajweedLegendOpen && 'is-on')}
-										onClick={() => {
-											setShowTajweed(true);
-											setTajweedLegendOpen(true);
-										}}
+										onClick={() => setTajweedLegendOpen(true)}
 										title={t.tajweedLegend}
 										aria-label={t.tajweedLegend}
 										aria-haspopup="dialog"
@@ -2414,6 +2524,21 @@ export default function QuranRevisionStudio({
 											className={cx('qr-switch', followAlong && 'is-on')}
 											onClick={() => setFollowAlong(v => !v)}
 											aria-label={t.follow}
+										/>
+									</label>
+
+									<span className="qr-tools-sep" aria-hidden />
+
+									<label className={cx('qr-tool', errorMode && 'is-on')} title={t.errorModeHint}>
+										<CircleAlert size={13} strokeWidth={2.25} aria-hidden />
+										<span>{t.errorMode}</span>
+										<button
+											type="button"
+											className={cx('qr-switch', errorMode && 'is-on')}
+											onClick={() => setErrorMode(v => !v)}
+											aria-label={t.errorMode}
+											aria-pressed={errorMode}
+											title={t.errorModeHint}
 										/>
 									</label>
 
@@ -2455,7 +2580,7 @@ export default function QuranRevisionStudio({
 
 							<div className="qr-mushaf-scroll" ref={mushafScrollRef}>
 								<div
-									className={cx('qr-mushaf', showTajweed && 'has-tajweed')}
+									className={cx('qr-mushaf', 'has-tajweed', errorMode && 'is-error-mode')}
 									dir="rtl"
 									lang="ar"
 									style={{ fontFamily: quranFontFamily }}
@@ -2475,19 +2600,18 @@ export default function QuranRevisionStudio({
 													!followAlong && 'is-on',
 												)}
 											>
-												{showTajweed ? (
-													<TajweedText
-														tajweed={verse.tajweed}
-														plain={verse.text}
-														hideParts={hide}
-														enabled
-														isAr={isAr}
-													/>
-												) : (
-													<span className="qr-ayah-text">
-														{hide.length ? maskText(verse.text, hide) : verse.text}
-													</span>
-												)}
+												<TajweedText
+													tajweed={verse.tajweed}
+													plain={verse.text}
+													hideParts={hide}
+													enabled
+													interactive={showTajweed && !errorMode}
+													errorMode={errorMode}
+													marks={marksByAyahNumber[verse.n] || EMPTY_WORD_MARKS}
+													onSetMarks={(wordIndexes, type) => setMarksForAyah(verse.n, wordIndexes, type)}
+													errorLabels={errorLabels}
+													isAr={isAr}
+												/>
 												<span className="qr-ayah-num" aria-hidden="true">
 													<span className="qr-ayah-num-ring" />
 													<span className="qr-ayah-num-val">{d(verse.n)}</span>

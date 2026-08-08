@@ -1,5 +1,7 @@
+import { Suspense } from 'react';
 import localFont from 'next/font/local';
 import QuranRevisionStudio from './QuranRevisionStudio';
+import QuranRevisionLocaleGate from './QuranRevisionLocaleGate';
 
 /**
  * Self-hosted mushaf faces (next/font/local) so RTL global UI fonts
@@ -33,6 +35,9 @@ export const metadata = {
 export default function QuranRevisionPage() {
 	return (
 		<div className={`${uthmani.variable} ${amiriQuran.variable} ${uthmani.className}`}>
+			<Suspense fallback={null}>
+				<QuranRevisionLocaleGate />
+			</Suspense>
 			<style>{`
 				/* Beat [dir=rtl] body * { font-family: var(--font-arabic) } */
 				[dir='rtl'] body .qr-studio .qr-mushaf,
