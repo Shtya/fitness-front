@@ -50,6 +50,12 @@ import {
 import YoutubeResumePlayer from './YoutubeResumePlayer';
 import TajweedText from './TajweedText';
 import TajweedGuideModal from './TajweedGuideModal';
+import {
+	cloudStateIsEmpty,
+	createDebouncedPutter,
+	fetchQuranRevisionState,
+	importQuranRevisionState,
+} from './quran-revision-api';
 import './quran-revision.css';
 
 const LS_PREFS = 'so7ba:quran-revision:prefs:v2';
@@ -676,6 +682,8 @@ export default function QuranRevisionStudio({
 	const pendingSessionRestore = useRef(null);
 	const sessionRestoreDone = useRef(false);
 	const sessionPersistRef = useRef({});
+	const cloudReadyRef = useRef(false);
+	const cloudPutRef = useRef(createDebouncedPutter(750));
 	const speedRef = useRef(speed);
 	const prevSurahModeRef = useRef({ surahId: null, mode: null });
 	const unitSelectionsRef = useRef(unitSelections);
@@ -683,79 +691,126 @@ export default function QuranRevisionStudio({
 	speedRef.current = speed;
 
 	useEffect(() => {
-		const prefs = { ...DEFAULT_PREFS, ...loadJson(LS_PREFS, {}) };
-		const surahId = prefs.selectedSurahId;
-		const nextMode = prefs.mode;
-		setSelectedSurahId(surahId);
-		setMode(nextMode);
-		const map = prefs.unitSelections && typeof prefs.unitSelections === 'object'
-			? prefs.unitSelections
-			: {};
-		const key = unitSelectionKey(surahId, nextMode);
-		const fromMap = Array.isArray(map[key]) ? map[key] : null;
-		const legacySelected = Array.isArray(prefs.selectedUnitIds) ? prefs.selectedUnitIds : [];
-		// Prefer per-surah map; never fall back to hard-coded "first unit" here
-		const migratedIds = fromMap?.length
-			? fromMap
-			: (legacySelected.length
-				? legacySelected
-				: (prefs.rangeFrom != null || prefs.rangeTo != null
-					? idsFromRange(prefs.rangeFrom || 1, prefs.rangeTo || 1)
-					: []));
-		setUnitSelections(map);
-		setSelectedUnitIds(normalizeUnitIds(migratedIds));
-		setRepeatCount(prefs.repeatCount);
-		setRepeatScope(prefs.repeatScope === 'selection' ? 'selection' : 'ayah');
-		const favs = loadJson(LS_FAVS, []);
-		const folders = loadJson(LS_FOLDERS, []);
-		const fav = favs.find(f => f.id === prefs.selectedFavId);
-		setFavorites(Array.isArray(favs) ? favs.map(f => ({
-			...f,
-			folderId: f.folderId || null,
-		})) : []);
-		setYtFolders(Array.isArray(folders) ? folders : []);
-		setSelectedFavId(fav?.id || null);
-		setSourceTab(fav?.videoId ? 'youtube' : 'builtin');
-		setSelectedReciterId(prefs.selectedReciterId);
-		setFollowAlong(prefs.followAlong);
-		setShowTajweed(prefs.showTajweed === true);
-		setIsMemorizationMode(prefs.isMemorizationMode);
-		setHideParts(normalizeHideParts(prefs.hideParts, prefs.hideMode ?? prefs.memoLevel));
-		setVolume(prefs.volume);
-		setSpeed(prefs.speed);
-		setYtPlayMode(prefs.ytPlayMode === 'video' ? 'video' : 'audio');
-		setHistory(loadJson(LS_HISTORY, []));
-		setWordErrors(normalizeWordErrors(loadJson(LS_WORD_ERRORS, {})));
+		let cancelled = false;
 
-		const savedSession = normalizeSavedSession(loadJson(LS_SESSION, null));
-		if (savedSession) {
-			skipRangeReset.current = true;
-			setSelectedSurahId(savedSession.selectedSurahId);
-			setMode(savedSession.mode);
-			setSelectedUnitIds(savedSession.selectedUnitIds);
-			setRepeatCount(savedSession.repeatCount);
-			setRepeatScope(savedSession.repeatScope);
-			setSourceTab(savedSession.sourceTab);
-			setSelectedReciterId(savedSession.selectedReciterId);
-			setSelectedFavId(
-				savedSession.sourceTab === 'youtube' ? savedSession.selectedFavId : null,
-			);
-			setMuted(savedSession.muted);
-			prevSurahModeRef.current = {
-				surahId: savedSession.selectedSurahId,
-				mode: savedSession.mode,
-			};
-			pendingSessionRestore.current = savedSession;
-		} else {
-			prevSurahModeRef.current = { surahId, mode: nextMode };
-		}
-
-		setHydrated(true);
-		setPortalReady(true);
-		// Keep skip true until first units clamp / session restore settles
-		if (!savedSession) {
+		const applySessionRestore = (savedSession, fallbackSurahId, fallbackMode) => {
+			if (savedSession) {
+				skipRangeReset.current = true;
+				setSelectedSurahId(savedSession.selectedSurahId);
+				setMode(savedSession.mode);
+				setSelectedUnitIds(savedSession.selectedUnitIds);
+				setRepeatCount(savedSession.repeatCount);
+				setRepeatScope(savedSession.repeatScope);
+				setSourceTab(savedSession.sourceTab);
+				setSelectedReciterId(savedSession.selectedReciterId);
+				setSelectedFavId(
+					savedSession.sourceTab === 'youtube' ? savedSession.selectedFavId : null,
+				);
+				setMuted(savedSession.muted);
+				prevSurahModeRef.current = {
+					surahId: savedSession.selectedSurahId,
+					mode: savedSession.mode,
+				};
+				pendingSessionRestore.current = savedSession;
+				return;
+			}
+			prevSurahModeRef.current = { surahId: fallbackSurahId, mode: fallbackMode };
 			window.setTimeout(() => { skipRangeReset.current = false; }, 0);
-		}
+		};
+
+		(async () => {
+			const prefs = { ...DEFAULT_PREFS, ...loadJson(LS_PREFS, {}) };
+			const surahId = prefs.selectedSurahId;
+			const nextMode = prefs.mode;
+			setSelectedSurahId(surahId);
+			setMode(nextMode);
+			const map = prefs.unitSelections && typeof prefs.unitSelections === 'object'
+				? prefs.unitSelections
+				: {};
+			const key = unitSelectionKey(surahId, nextMode);
+			const fromMap = Array.isArray(map[key]) ? map[key] : null;
+			const legacySelected = Array.isArray(prefs.selectedUnitIds) ? prefs.selectedUnitIds : [];
+			const migratedIds = fromMap?.length
+				? fromMap
+				: (legacySelected.length
+					? legacySelected
+					: (prefs.rangeFrom != null || prefs.rangeTo != null
+						? idsFromRange(prefs.rangeFrom || 1, prefs.rangeTo || 1)
+						: []));
+			setUnitSelections(map);
+			setSelectedUnitIds(normalizeUnitIds(migratedIds));
+			setRepeatCount(prefs.repeatCount);
+			setRepeatScope(prefs.repeatScope === 'selection' ? 'selection' : 'ayah');
+			setSelectedReciterId(prefs.selectedReciterId);
+			setFollowAlong(prefs.followAlong);
+			setShowTajweed(prefs.showTajweed === true);
+			setIsMemorizationMode(prefs.isMemorizationMode);
+			setHideParts(normalizeHideParts(prefs.hideParts, prefs.hideMode ?? prefs.memoLevel));
+			setVolume(prefs.volume);
+			setSpeed(prefs.speed);
+			setYtPlayMode(prefs.ytPlayMode === 'video' ? 'video' : 'audio');
+
+			const lsFavs = loadJson(LS_FAVS, []);
+			const lsFolders = loadJson(LS_FOLDERS, []);
+			const lsHistory = loadJson(LS_HISTORY, []);
+			const lsErrors = normalizeWordErrors(loadJson(LS_WORD_ERRORS, {}));
+			const lsSession = normalizeSavedSession(loadJson(LS_SESSION, null));
+			const localBundle = {
+				folders: Array.isArray(lsFolders) ? lsFolders : [],
+				favorites: Array.isArray(lsFavs) ? lsFavs.map(f => ({
+					...f,
+					folderId: f.folderId || null,
+				})) : [],
+				history: Array.isArray(lsHistory) ? lsHistory : [],
+				wordErrors: lsErrors,
+				activeSession: lsSession,
+			};
+
+			// Offline-first paint from local cache
+			setFavorites(localBundle.favorites);
+			setYtFolders(localBundle.folders);
+			setHistory(localBundle.history);
+			setWordErrors(localBundle.wordErrors);
+			const prefFav = localBundle.favorites.find(f => f.id === prefs.selectedFavId);
+			setSelectedFavId(prefFav?.id || null);
+			setSourceTab(prefFav?.videoId ? 'youtube' : 'builtin');
+
+			let cloudSession = null;
+			try {
+				let cloud = await fetchQuranRevisionState();
+				if (cancelled) return;
+				if (cloudStateIsEmpty(cloud) && !cloudStateIsEmpty(localBundle)) {
+					cloud = await importQuranRevisionState(localBundle);
+				}
+				if (cancelled) return;
+				setFavorites(Array.isArray(cloud.favorites) ? cloud.favorites.map(f => ({
+					...f,
+					folderId: f.folderId || null,
+				})) : []);
+				setYtFolders(Array.isArray(cloud.folders) ? cloud.folders : []);
+				setHistory(Array.isArray(cloud.history) ? cloud.history : []);
+				setWordErrors(normalizeWordErrors(cloud.wordErrors));
+				saveJson(LS_FAVS, cloud.favorites || []);
+				saveJson(LS_FOLDERS, cloud.folders || []);
+				saveJson(LS_HISTORY, cloud.history || []);
+				saveJson(LS_WORD_ERRORS, cloud.wordErrors || {});
+				cloudSession = normalizeSavedSession(cloud.activeSession);
+				if (cloudSession) saveJson(LS_SESSION, cloudSession);
+			} catch {
+				/* keep local cache when API unavailable */
+			}
+
+			if (cancelled) return;
+			cloudReadyRef.current = true;
+			applySessionRestore(cloudSession || lsSession, surahId, nextMode);
+			setHydrated(true);
+			setPortalReady(true);
+		})();
+
+		return () => {
+			cancelled = true;
+			cloudPutRef.current.flush();
+		};
 	}, []);
 
 	useEffect(() => {
@@ -776,21 +831,29 @@ export default function QuranRevisionStudio({
 	useEffect(() => {
 		if (!hydrated) return;
 		saveJson(LS_FAVS, favorites);
+		if (!cloudReadyRef.current) return;
+		cloudPutRef.current.schedule('favorites', () => ({ favorites }));
 	}, [hydrated, favorites]);
 
 	useEffect(() => {
 		if (!hydrated) return;
 		saveJson(LS_FOLDERS, ytFolders);
+		if (!cloudReadyRef.current) return;
+		cloudPutRef.current.schedule('folders', () => ({ folders: ytFolders }));
 	}, [hydrated, ytFolders]);
 
 	useEffect(() => {
 		if (!hydrated) return;
 		saveJson(LS_HISTORY, history);
+		if (!cloudReadyRef.current) return;
+		cloudPutRef.current.schedule('history', () => ({ history }));
 	}, [hydrated, history]);
 
 	useEffect(() => {
 		if (!hydrated) return;
 		saveJson(LS_WORD_ERRORS, wordErrors);
+		if (!cloudReadyRef.current) return;
+		cloudPutRef.current.schedule('wordErrors', () => ({ wordErrors }));
 	}, [hydrated, wordErrors]);
 
 	const selectedSurah = useMemo(
@@ -898,6 +961,11 @@ export default function QuranRevisionStudio({
 		if (!host) return undefined;
 
 		const update = () => {
+			/* Phone: CSS centers the dock full-bleed — skip measured box (avoids RTL scrollbar offset) */
+			if (window.matchMedia('(max-width: 640px)').matches) {
+				setDockBox({ left: null, width: null });
+				return;
+			}
 			const r = host.getBoundingClientRect();
 			const pad = 12;
 			const width = Math.min(760, Math.max(280, r.width - pad * 2));
@@ -918,6 +986,11 @@ export default function QuranRevisionStudio({
 			window.removeEventListener('orientationchange', update);
 		};
 	}, [sessionPhase, portalReady]);
+
+	/* Clear any leftover reading-lock from older builds */
+	useEffect(() => {
+		delete document.documentElement.dataset.qrReading;
+	}, []);
 
 	// Load real ayah text + hizbQuarter + page from Mushaf API
 	useEffect(() => {
@@ -1350,7 +1423,7 @@ export default function QuranRevisionStudio({
 			progress = (el.currentTime / el.duration) * 100;
 		}
 
-		saveJson(LS_SESSION, {
+		const blob = {
 			v: 1,
 			updatedAt: Date.now(),
 			sessionPhase,
@@ -1370,7 +1443,11 @@ export default function QuranRevisionStudio({
 			verseProgress: progress,
 			muted,
 			finalStats: sessionPhase === 'completed' ? finalStats : null,
-		});
+		};
+		saveJson(LS_SESSION, blob);
+		if (cloudReadyRef.current) {
+			cloudPutRef.current.schedule('activeSession', () => ({ activeSession: blob }));
+		}
 	}, [
 		hydrated, sessionPhase, selectedSurahId, mode, selectedUnitIds,
 		repeatCount, repeatScope, sourceTab, selectedReciterId, selectedFavId,
@@ -1388,7 +1465,7 @@ export default function QuranRevisionStudio({
 			if (s.sessionPhase === 'active' && el?.duration > 0) {
 				progress = (el.currentTime / el.duration) * 100;
 			}
-			saveJson(LS_SESSION, {
+			const blob = {
 				v: 1,
 				updatedAt: Date.now(),
 				sessionPhase: s.sessionPhase,
@@ -1408,7 +1485,10 @@ export default function QuranRevisionStudio({
 				verseProgress: progress,
 				muted: s.muted,
 				finalStats: s.sessionPhase === 'completed' ? s.finalStats : null,
-			});
+			};
+			saveJson(LS_SESSION, blob);
+			cloudPutRef.current.schedule('activeSession', () => ({ activeSession: blob }));
+			cloudPutRef.current.flush();
 		};
 		window.addEventListener('pagehide', flush);
 		window.addEventListener('beforeunload', flush);
@@ -1565,6 +1645,9 @@ export default function QuranRevisionStudio({
 		clearSavedSession();
 		pendingSessionRestore.current = null;
 		sessionRestoreDone.current = true;
+		if (cloudReadyRef.current) {
+			cloudPutRef.current.schedule('activeSession', () => ({ activeSession: null }));
+		}
 		setSessionPhase('setup');
 		setIsPlaying(false);
 		setMushafExpanded(false);
@@ -1624,7 +1707,7 @@ export default function QuranRevisionStudio({
 		};
 	}, [mushafExpanded, closeMushafExpanded]);
 
-	/* Follow-along: keep the active ayah centered inside the mushaf scroll box */
+	/* Follow-along: keep the active ayah in view (page/#body scroll) */
 	useEffect(() => {
 		if (!followAlong || sessionPhase !== 'active') return;
 		const root = mushafScrollRef.current;
@@ -1633,11 +1716,11 @@ export default function QuranRevisionStudio({
 		if (!ayah) return;
 		const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		const id = window.requestAnimationFrame(() => {
-			const rootRect = root.getBoundingClientRect();
-			const ayahRect = ayah.getBoundingClientRect();
-			const delta = (ayahRect.top - rootRect.top) - (root.clientHeight / 2 - ayahRect.height / 2);
-			const top = Math.max(0, root.scrollTop + delta);
-			root.scrollTo({ top, behavior: reduce ? 'auto' : 'smooth' });
+			ayah.scrollIntoView({
+				block: 'center',
+				inline: 'nearest',
+				behavior: reduce ? 'auto' : 'smooth',
+			});
 		});
 		return () => window.cancelAnimationFrame(id);
 	}, [currentVerseIndex, followAlong, sessionPhase, mushafExpanded, verses.length]);
@@ -1839,6 +1922,9 @@ export default function QuranRevisionStudio({
 		clearSavedSession();
 		pendingSessionRestore.current = null;
 		sessionRestoreDone.current = true;
+		if (cloudReadyRef.current) {
+			cloudPutRef.current.schedule('activeSession', () => ({ activeSession: null }));
+		}
 		skipRangeReset.current = true;
 		setSelectedSurahId(item.surahId);
 		setMode(item.mode || 'quarter');
@@ -1887,6 +1973,9 @@ export default function QuranRevisionStudio({
 		clearSavedSession();
 		pendingSessionRestore.current = null;
 		sessionRestoreDone.current = true;
+		if (cloudReadyRef.current) {
+			cloudPutRef.current.schedule('activeSession', () => ({ activeSession: null }));
+		}
 		setSelectedFavId(item.id);
 		if (item.session) {
 			skipRangeReset.current = true;
@@ -2601,18 +2690,26 @@ export default function QuranRevisionStudio({
 	);
 
 	return (
-		<div className="qr-studio mx-auto w-full max-w-[920px] space-y-3 pb-8" dir={isAr ? 'rtl' : 'ltr'}>
+		<div
+			className={cx(
+				'qr-studio mx-auto w-full max-w-[920px]',
+				sessionPhase === 'active' ? 'is-session-active' : 'space-y-3 pb-8',
+			)}
+			dir={isAr ? 'rtl' : 'ltr'}
+		>
 			<audio ref={audioRef} preload="none" />
 
-			<GradientStatsHeader
-				hiddenStats
-				icon={BookMarked}
-				title={t.title}
-				desc={t.desc}
-				actions={headerActions}
-				btnName={sessionPhase !== 'setup' ? t.newSession : undefined}
-				onClick={sessionPhase !== 'setup' ? resetSetup : undefined}
-			/>
+			<div className={cx('qr-studio-head', sessionPhase === 'active' && 'is-compact')}>
+				<GradientStatsHeader
+					hiddenStats
+					icon={BookMarked}
+					title={t.title}
+					desc={sessionPhase === 'active' ? undefined : t.desc}
+					actions={headerActions}
+					btnName={sessionPhase !== 'setup' ? t.newSession : undefined}
+					onClick={sessionPhase !== 'setup' ? resetSetup : undefined}
+				/>
+			</div>
 
 			{drawers}
 
@@ -2640,18 +2737,31 @@ export default function QuranRevisionStudio({
 			{sessionPhase === 'active' ? (
 				<div className="qr-active has-dock">
 					<section className="qr-panel qr-live-settings">
-						<button
-							type="button"
-							className="qr-live-settings-toggle"
-							onClick={() => setSessionSettingsOpen(v => !v)}
-							aria-expanded={sessionSettingsOpen}
-						>
-							<span className="inline-flex items-center gap-1.5">
-								<Settings2 size={14} />
-								{t.sessionSettings}
-							</span>
-							<ChevronDown size={14} className={cx('qr-chevron', sessionSettingsOpen && 'is-open')} />
-						</button>
+						<div className="qr-live-settings-row">
+							<button
+								type="button"
+								className="qr-live-settings-toggle"
+								onClick={() => setSessionSettingsOpen(v => !v)}
+								aria-expanded={sessionSettingsOpen}
+							>
+								<span className="inline-flex items-center gap-1.5">
+									<Settings2 size={14} />
+									{t.sessionSettings}
+								</span>
+								<ChevronDown size={14} className={cx('qr-chevron', sessionSettingsOpen && 'is-open')} />
+							</button>
+							<div className="qr-session-chrome" aria-label={t.title}>
+								<button type="button" className="qr-chrome-btn" onClick={openHistory} aria-label={t.history} title={t.history}>
+									<History size={14} />
+								</button>
+								<button type="button" className="qr-chrome-btn" onClick={openFavs} aria-label={t.favorites} title={t.favorites}>
+									<Youtube size={15} />
+								</button>
+								<button type="button" className="qr-chrome-new" onClick={resetSetup}>
+									{t.newSession}
+								</button>
+							</div>
+						</div>
 						{sessionSettingsOpen ? (
 							<div className="qr-live-settings-body">
 								<p className="mb-2 text-[10px] font-semibold text-slate-400">{t.changeWhilePlaying}</p>
@@ -2885,42 +2995,24 @@ export default function QuranRevisionStudio({
 							? (dockBox.left != null ? { left: dockBox.left, width: dockBox.width } : undefined)
 							: undefined}
 					>
-						<div className="qr-dock-main">
-							<div className="qr-dock-meta">
-								<div className={cx('qr-dock-art', isPlaying && 'is-playing')}>
-									<BookMarked size={16} />
+						<div className="qr-dock-main is-compact-row">
+							{!usingYoutube ? (
+								<div className="qr-dock-reciter" dir={isAr ? 'rtl' : 'ltr'}>
+									<Select
+										options={BUILTIN_RECITERS.map(r => ({
+											id: r.id,
+											label: isAr ? r.nameAr : r.nameEn,
+										}))}
+										value={selectedReciterId}
+										onChange={changeReciterLive}
+										searchable={false}
+										clearable={false}
+										cnInputParent="!h-8 !rounded-lg !text-[11px] !font-bold !bg-white/90 !border-slate-200"
+									/>
 								</div>
-								<div className="qr-dock-meta-text" dir={isAr ? 'rtl' : 'ltr'}>
-									{!usingYoutube ? (
-										<div className="qr-dock-reciter">
-											<Select
-												options={BUILTIN_RECITERS.map(r => ({
-													id: r.id,
-													label: isAr ? r.nameAr : r.nameEn,
-												}))}
-												value={selectedReciterId}
-												onChange={changeReciterLive}
-												searchable
-												clearable={false}
-												cnInputParent="!h-8 !rounded-lg !text-[11px] !font-bold !bg-white/90 !border-slate-200"
-											/>
-										</div>
-									) : (
-										<p className="qr-dock-title">{displayReciter}</p>
-									)}
-									<p className="qr-dock-sub">
-										{surahName}
-										<span className="qr-dock-dot">·</span>
-										{d(ayahFrom)}–{d(ayahTo)}
-										{currentVerse ? (
-											<>
-												<span className="qr-dock-dot">·</span>
-												{t.ayah} {d(currentVerse.n)}
-											</>
-										) : null}
-									</p>
-								</div>
-							</div>
+							) : (
+								<p className="qr-dock-title qr-dock-yt-label">{displayReciter}</p>
+							)}
 
 							<div className="qr-dock-center">
 								{!usingYoutube ? (

@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useLocale } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { ArrowLeft, ArrowRight, Shield } from 'lucide-react';
+import { BRAND_LOGO_SRC } from '@/lib/brand';
 
 export default function LegalShell({ content }) {
 	const locale = useLocale();
@@ -34,7 +35,7 @@ export default function LegalShell({ content }) {
 				<div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-5 py-3.5">
 					<Link href="/" className="flex items-center gap-2.5">
 						<Image
-							src="/logo.png"
+							src={BRAND_LOGO_SRC}
 							alt="So7baFit"
 							width={36}
 							height={36}

@@ -10,6 +10,7 @@ import {
 import { useState, useEffect, useRef, useTransition, useMemo } from "react";
 import { Link } from "@/i18n/navigation";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { BRAND_LOGO_SRC } from "@/lib/brand";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -434,10 +435,12 @@ function MobileDrawer({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
 					data-aos-duration="450"
 				>
 					<div className="flex items-center gap-2.5">
-						<div className="h-9 w-9 rounded-[10px] flex items-center justify-center shrink-0"
-							style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 4px 14px rgba(99,102,241,0.35)" }}>
-							<Dumbbell className="h-[18px] w-[18px] text-white" strokeWidth={2.5} />
-						</div>
+						{/* eslint-disable-next-line @next/next/no-img-element */}
+						<img
+							src={BRAND_LOGO_SRC}
+							alt={t("brand.name")}
+							className="h-9 w-9 rounded-[10px] object-contain shrink-0"
+						/>
 						<div>
 							<p className="text-[14px] font-black text-white md: leading-none">{t("brand.name")}</p>
 							<p className="text-[8px] font-semibold uppercase tracking-[0.18em] mt-0.5" style={{ color: "var(--color-primary-400)" }}>{t("brand.tagline")}</p>
@@ -656,14 +659,12 @@ export default function PowerfulNavbar() {
 							data-aos-delay="80"
 							data-aos-duration="700"
 						>
-							<div className="relative">
-								<div className="logo-glow absolute inset-0 rounded-[12px] blur-[12px] pointer-events-none"
-									style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))" }} />
-								<div className="relative h-[40px] w-[40px] sm:h-[42px] sm:w-[42px] rounded-[12px] flex items-center justify-center transition-transform duration-200 group-hover:scale-[1.05]"
-									style={{ background: "linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))", boxShadow: "0 4px 16px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.18)" }}>
-									<Dumbbell className="h-[20px] w-[20px] sm:h-[22px] sm:w-[22px] text-white" strokeWidth={2.5} />
-								</div>
-							</div>
+							{/* eslint-disable-next-line @next/next/no-img-element */}
+							<img
+								src={BRAND_LOGO_SRC}
+								alt={t("brand.name")}
+								className="relative h-[40px] w-[40px] sm:h-[42px] sm:w-[42px] rounded-[12px] object-contain transition-transform duration-200 group-hover:scale-[1.05]"
+							/>
 							<div>
 								<span className="text-[17px] sm:text-[19px] font-black text-white tracking-[-0.02em] md: leading-none">{t("brand.name")}</span>
 								{/* <p className="text-[8px] font-bold uppercase tracking-[0.2em] mt-[3px]" style={{ color: "var(--color-primary-400)" }}>{t("brand.tagline")}</p> */}

@@ -1,0 +1,228 @@
+/* Sidebar glass shell — tenant theme tokens */
+
+:root {
+	/* Single source: drawer width == body push offset */
+	--sidebar-drawer-w: min(280px, 82vw);
+}
+
+.sidebar-shell.sidebar-glass {
+	--sg-from: var(--color-gradient-from, var(--color-primary-500, #3b82f6));
+	--sg-to: var(--color-gradient-to, var(--color-secondary-500, #6366f1));
+	--sg-ink: var(--color-primary-900, #0f172a);
+	--sg-ink-dim: color-mix(in srgb, var(--color-primary-700, #334155) 72%, transparent);
+	--sg-danger: var(--tenant-danger, #ef4444);
+	position: relative;
+	isolation: isolate;
+	-webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+	backdrop-filter: blur(24px) saturate(160%) !important;
+	background:
+		linear-gradient(
+			160deg,
+			color-mix(in srgb, #fff 92%, var(--sg-from) 8%),
+			color-mix(in srgb, #fff 78%, var(--sg-from) 6%) 46%,
+			color-mix(in srgb, #fff 88%, var(--sg-to) 12%)
+		) !important;
+	border: 1px solid color-mix(in srgb, var(--color-primary-200, #bfdbfe) 55%, #fff) !important;
+	outline: none !important;
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.78),
+		inset 0 -16px 30px -18px color-mix(in srgb, var(--sg-from) 12%, transparent),
+		0 28px 56px -24px rgba(15, 23, 42, 0.22),
+		0 10px 24px -12px color-mix(in srgb, var(--sg-from) 28%, transparent) !important;
+	overflow: hidden;
+}
+
+.sidebar-shell.sidebar-glass::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0) 28%);
+	pointer-events: none;
+	z-index: 3;
+	mix-blend-mode: soft-light;
+}
+
+.sidebar-shell.sidebar-glass > .sidebar-glass-texture {
+	opacity: 0.35 !important;
+	background-image:
+		radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--sg-from) 18%, transparent), transparent 42%),
+		radial-gradient(circle at 86% 88%, color-mix(in srgb, var(--sg-to) 16%, transparent), transparent 46%) !important;
+	background-size: auto !important;
+}
+
+.sidebar-shell.sidebar-glass > .sidebar-glass-accent {
+	height: 2.5px !important;
+	background: linear-gradient(90deg, var(--sg-from), var(--sg-to), var(--sg-from)) !important;
+	background-size: 200% 100% !important;
+	opacity: 0.95;
+}
+
+/* Mobile edge drawer — pushes body by the same --sidebar-drawer-w */
+.sidebar-shell.sidebar-glass.is-mobile-drawer {
+	top: 0 !important;
+	bottom: 0 !important;
+	height: 100dvh !important;
+	max-height: 100dvh !important;
+	width: var(--sidebar-drawer-w) !important;
+	border-radius: 0 !important;
+	left: 0 !important;
+	right: auto !important;
+	display: flex !important;
+	flex-direction: column !important;
+	min-height: 0 !important;
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.7),
+		4px 0 24px -8px rgba(15, 23, 42, 0.18) !important;
+}
+
+/* Body push offset = exact drawer width */
+@media (max-width: 1023.98px) {
+	[data-dashboard-content] {
+		transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+		will-change: transform;
+	}
+
+	html[data-sidebar-open='1']:not([dir='rtl']) [data-dashboard-content] {
+		transform: translateX(var(--sidebar-drawer-w));
+	}
+
+	html[data-sidebar-open='1'][dir='rtl'] [data-dashboard-content] {
+		transform: translateX(calc(-1 * var(--sidebar-drawer-w)));
+	}
+}
+
+html[dir='ltr'] .sidebar-shell.sidebar-glass.is-mobile-drawer {
+	border-start-end-radius: 1rem !important;
+	border-end-end-radius: 1rem !important;
+}
+
+.sidebar-shell.sidebar-glass .sidebar-scroll-root,
+.sidebar-shell.sidebar-glass .sidebar-scroll-viewport {
+	min-height: 0;
+}
+
+.sidebar-shell.sidebar-glass .sidebar-scroll-viewport::-webkit-scrollbar {
+	width: 4px;
+}
+
+.sidebar-shell.sidebar-glass .sidebar-scroll-viewport::-webkit-scrollbar-thumb {
+	background: color-mix(in srgb, var(--color-primary-300, #93c5fd) 55%, transparent);
+	border-radius: 99px;
+}
+
+html[dir='rtl'] .sidebar-shell.sidebar-glass.is-mobile-drawer {
+	left: auto !important;
+	right: 0 !important;
+	border-radius: 0 !important;
+	border-start-start-radius: 1rem !important;
+	border-end-start-radius: 1rem !important;
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.7),
+		-4px 0 24px -8px rgba(15, 23, 42, 0.18) !important;
+}
+
+.sidebar-glass-header {
+	position: relative;
+	z-index: 1;
+	flex-shrink: 0;
+	min-height: 3.6rem;
+	padding: 0.85rem 0.9rem 0.7rem;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.65rem;
+	border-bottom: 1px solid color-mix(in srgb, var(--color-primary-200, #bfdbfe) 40%, transparent) !important;
+	background: transparent !important;
+	backdrop-filter: none !important;
+}
+
+.sidebar-glass-title {
+	display: flex;
+	align-items: center;
+	gap: 0.55rem;
+	min-width: 0;
+	font-size: 0.84rem;
+	font-weight: 800;
+	letter-spacing: -0.01em;
+	color: var(--sg-ink);
+}
+
+.sidebar-glass-close {
+	appearance: none;
+	border: none;
+	cursor: pointer;
+	width: 2.15rem;
+	height: 2.15rem;
+	border-radius: 0.7rem;
+	display: inline-grid;
+	place-items: center;
+	color: var(--sg-ink-dim);
+	background: linear-gradient(155deg, rgba(255, 255, 255, 0.8), color-mix(in srgb, var(--color-primary-50, #eff6ff) 55%, transparent));
+	border: 1px solid color-mix(in srgb, var(--color-primary-200, #bfdbfe) 55%, #fff);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.7),
+		0 6px 14px -6px rgba(15, 23, 42, 0.16);
+	transition: transform 0.12s ease, color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.sidebar-glass-close:hover {
+	color: #fff;
+	background: linear-gradient(
+		155deg,
+		color-mix(in srgb, var(--sg-danger) 78%, #fff),
+		color-mix(in srgb, var(--sg-danger) 42%, transparent)
+	);
+	border-color: color-mix(in srgb, var(--sg-danger) 45%, #fff);
+	transform: translateY(-1px);
+}
+
+/* Active nav — themed glass gem */
+.sidebar-shell.sidebar-glass [aria-current='page'] {
+	background:
+		linear-gradient(
+			155deg,
+			color-mix(in srgb, var(--sg-from) 26%, #fff),
+			color-mix(in srgb, var(--sg-to) 16%, #fff)
+		) !important;
+	border-color: color-mix(in srgb, var(--sg-from) 28%, transparent) !important;
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.55),
+		0 8px 18px -8px color-mix(in srgb, var(--sg-from) 40%, transparent) !important;
+	color: var(--color-primary-900, #0f172a) !important;
+}
+
+.sidebar-shell.sidebar-glass [aria-current='page'] > span:nth-child(2),
+.sidebar-shell.sidebar-glass [aria-current='page'] > span.grid {
+	/* icon chip when active — prefer gradient fill via existing inline; boost glow */
+	box-shadow: 0 4px 12px color-mix(in srgb, var(--sg-from) 35%, transparent);
+}
+
+/* Section labels */
+.sidebar-shell.sidebar-glass .sidebar-section-label {
+	color: color-mix(in srgb, var(--color-primary-500, #64748b) 55%, transparent) !important;
+	letter-spacing: 0.04em;
+	font-weight: 750 !important;
+}
+
+/* Footer glass strip */
+.sidebar-shell.sidebar-glass .sidebar-glass-footer,
+.sidebar-shell.sidebar-glass [data-sidebar-footer] {
+	border-top: 1px solid color-mix(in srgb, var(--color-primary-200, #bfdbfe) 42%, transparent) !important;
+	background: color-mix(in srgb, #fff 42%, transparent) !important;
+	backdrop-filter: blur(14px) saturate(140%);
+	-webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+
+/* Dim only — no heavy blur (blur made the body look pinched) */
+.sidebar-glass-overlay {
+	background: rgba(15, 23, 42, 0.28) !important;
+	backdrop-filter: none !important;
+	-webkit-backdrop-filter: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.sidebar-shell.sidebar-glass {
+		transition: none !important;
+	}
+}

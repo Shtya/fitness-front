@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
+import { BRAND_LOGO_SRC } from '@/lib/brand';
 import {
 	ArrowRight,
 	ArrowUpRight,
@@ -185,7 +186,7 @@ function PresentationNav({ pick, isAr }) {
 		>
 			<Wrap className="flex h-14 items-center justify-between gap-4 sm:h-16">
 				<a href="#top" className="flex items-center gap-2.5">
-					<Image src="/logo.png" alt="So7baFit" width={32} height={32} className="h-8 w-8 object-contain" />
+					<Image src={BRAND_LOGO_SRC} alt="So7baFit" width={32} height={32} className="h-8 w-8 object-contain" />
 					<span className="text-base font-black tracking-tight text-slate-900">So7baFit</span>
 				</a>
 				<nav className="hidden items-center gap-1 lg:flex">

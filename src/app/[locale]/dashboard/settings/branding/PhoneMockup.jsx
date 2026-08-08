@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Dumbbell, MessageCircle, CalendarDays, UtensilsCrossed, Menu, Headphones, StickyNote, Check, Minus, Plus, Play } from 'lucide-react';
+import { BRAND_LOGO_SRC } from '@/lib/brand';
 
 function hexToRgb(hex) {
   const m = String(hex || '').replace('#', '').match(/.{1,2}/g);
@@ -130,12 +131,12 @@ export default function PhoneMockup({ form, logoUrl, isAr = false }) {
             <StatusBar />
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 9, padding: '2px 14px 12px' }}>
               <GlassIcon size={32}>
-                {logoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={logoUrl} alt="" style={{ width: '70%', height: '70%', objectFit: 'contain', borderRadius: 6 }} />
-                ) : (
-                  <Dumbbell size={15} color="#fff" strokeWidth={2.2} />
-                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={logoUrl || BRAND_LOGO_SRC}
+                  alt=""
+                  style={{ width: '70%', height: '70%', objectFit: 'contain', borderRadius: 6 }}
+                />
               </GlassIcon>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>{t('My Workouts', 'تمارينـي')}</div>

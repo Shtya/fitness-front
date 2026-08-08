@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, LogOut, AlertCircle, Bell, CheckCheck } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { useRouter } from '@/i18n/navigation';
 import LanguageToggle from '../atoms/LanguageToggle';
 import { useTranslations } from 'next-intl';
-import { useTheme } from '@/app/[locale]/theme';
 import api from '@/utils/axios';
+import './header-glass.css';
 
 function initialsFrom(name, email) {
 	const src = (name && name.trim()) || (email && email.split('@')[0]) || 'G';
@@ -20,7 +21,7 @@ function initialsFrom(name, email) {
 function SkeletonBox({ width, height, className = '', style = {} }) {
 	return (
 		<div
-			className={`animate-pulse rounded-lg bg-slate-200 ${className}`}
+			className={`animate-pulse rounded-lg bg-slate-200/80 ${className}`}
 			style={{ width, height, ...style }}
 		/>
 	);
@@ -28,37 +29,28 @@ function SkeletonBox({ width, height, className = '', style = {} }) {
 
 function HeaderSkeleton({ onMenu }) {
 	return (
-		<header
-			className="sticky px-2 top-0 z-40 w-full"
-			style={{ boxShadow: '2px 0 16px rgba(15,23,42,0.04)', background: '#eef0f4', border: '1px solid #ccc' }}
-		>
-			<div className="relative px-4 sm:px-2">
-				<div className="flex h-16 items-center justify-between gap-4">
-					{/* LEFT */}
-					<div className="flex items-center gap-3">
-						<button
-							onClick={onMenu}
-							className="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg"
-							style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary-700)' }}
-						>
-							<Menu className="w-4.5 h-4.5" strokeWidth={2.5} />
-						</button>
-
-						{/* Avatar skeleton */}
-						<SkeletonBox width={36} height={36} />
-
-						{/* Name + role skeletons */}
-						<div className="hidden sm:flex flex-col gap-1.5">
-							<SkeletonBox width={120} height={13} style={{ borderRadius: 4 }} />
-							<SkeletonBox width={72} height={10} style={{ borderRadius: 4 }} />
-						</div>
+		<header className="dash-header">
+			<div className="dash-header-bar">
+				<div className="dash-header-side">
+					<button
+						type="button"
+						onClick={onMenu}
+						className="dash-header-btn lg:hidden"
+						aria-label="Menu"
+					>
+						<Menu className="w-[18px] h-[18px]" strokeWidth={2.5} />
+					</button>
+					<SkeletonBox width={38} height={38} style={{ borderRadius: 12 }} />
+					<div className="dash-header-meta gap-1.5">
+						<SkeletonBox width={110} height={12} style={{ borderRadius: 4 }} />
+						<SkeletonBox width={64} height={9} style={{ borderRadius: 4 }} />
 					</div>
-
-					{/* RIGHT */}
-					<div className="flex items-center gap-2">
-						<SkeletonBox width={50} height={36} />
-						<SkeletonBox width={36} height={36} />
-					</div>
+				</div>
+				<div className="dash-header-spacer" />
+				<div className="dash-header-side is-end">
+					<SkeletonBox width={38} height={38} style={{ borderRadius: 12 }} />
+					<SkeletonBox width={42} height={38} style={{ borderRadius: 12 }} />
+					<SkeletonBox width={38} height={38} style={{ borderRadius: 12 }} />
 				</div>
 			</div>
 		</header>
@@ -70,15 +62,18 @@ export default function Header({ onMenu }) {
 	const t_myProfile = useTranslations('');
 	const user = useUser?.();
 	const router = useRouter();
-	const { colors } = useTheme();
 	const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 	const [notifOpen, setNotifOpen] = useState(false);
 	const [notifItems, setNotifItems] = useState([]);
 	const [notifUnread, setNotifUnread] = useState(0);
 	const logoutRef = useRef(null);
+	const logoutBtnRef = useRef(null);
 	const notifRef = useRef(null);
-
-	const isLoading = user === undefined;
+	const notifBtnRef = useRef(null);
+	const notifPanelRef = useRef(null);
+	const logoutPanelRef = useRef(null);
+	const [notifPos, setNotifPos] = useState(null);
+	const [logoutPos, setLogoutPos] = useState(null);
 
 	const handleLogout = async () => {
 		try {
@@ -93,16 +88,60 @@ export default function Header({ onMenu }) {
 		}
 	};
 
+	/** Keep popovers fully inside the viewport (esp. phone + RTL). */
+	const placeFromBtn = useCallback((btn, preferredWidth) => {
+		if (!btn || typeof window === 'undefined') return null;
+		const vv = window.visualViewport;
+		const vw = Math.round(vv?.width || document.documentElement.clientWidth || window.innerWidth);
+		const vh = Math.round(vv?.height || window.innerHeight);
+		const ox = vv?.offsetLeft || 0;
+		const oy = vv?.offsetTop || 0;
+		const pad = 8;
+		const r = btn.getBoundingClientRect();
+		const narrow = vw < 640;
+
+		// Phones: edge-to-edge sheet so RTL never clips the title
+		const width = narrow
+			? Math.max(240, vw - pad * 2)
+			: Math.min(preferredWidth, vw - pad * 2);
+
+		const spaceBelow = vh - (r.bottom - oy) - pad;
+		const spaceAbove = (r.top - oy) - pad;
+		const preferBelow = spaceBelow >= 200 || spaceBelow >= spaceAbove;
+		const maxHeight = Math.max(160, Math.min(narrow ? 420 : 360, preferBelow ? spaceBelow : spaceAbove));
+		const top = preferBelow
+			? Math.min(r.bottom + 6, oy + vh - Math.min(maxHeight, 180) - pad)
+			: Math.max(oy + pad, r.top - maxHeight - 6);
+
+		let left;
+		if (narrow) {
+			left = ox + pad;
+		} else {
+			left = r.left + r.width / 2 - width / 2;
+			left = Math.max(ox + pad, Math.min(left, ox + vw - width - pad));
+		}
+
+		return { top, left, width, maxHeight };
+	}, []);
+
 	useEffect(() => {
 		if (!showLogoutConfirm) return;
+		const sync = () => setLogoutPos(placeFromBtn(logoutBtnRef.current, 300));
+		sync();
 		const handler = (e) => {
-			if (logoutRef.current && !logoutRef.current.contains(e.target)) {
-				setShowLogoutConfirm(false);
-			}
+			const inBtn = logoutRef.current?.contains(e.target);
+			const inPanel = logoutPanelRef.current?.contains(e.target);
+			if (!inBtn && !inPanel) setShowLogoutConfirm(false);
 		};
+		window.addEventListener('resize', sync);
+		window.addEventListener('scroll', sync, true);
 		document.addEventListener('mousedown', handler);
-		return () => document.removeEventListener('mousedown', handler);
-	}, [showLogoutConfirm]);
+		return () => {
+			window.removeEventListener('resize', sync);
+			window.removeEventListener('scroll', sync, true);
+			document.removeEventListener('mousedown', handler);
+		};
+	}, [showLogoutConfirm, placeFromBtn]);
 
 	useEffect(() => {
 		const load = async () => {
@@ -114,26 +153,36 @@ export default function Header({ onMenu }) {
 				const list = Array.isArray(listRes?.items) ? listRes.items : Array.isArray(listRes) ? listRes : [];
 				setNotifItems(list);
 				setNotifUnread(Number(unreadRes?.count || 0));
-			} catch {}
+			} catch { /* ignore */ }
 		};
 		load();
 	}, []);
 
 	useEffect(() => {
 		if (!notifOpen) return;
+		const sync = () => setNotifPos(placeFromBtn(notifBtnRef.current, 340));
+		sync();
 		const handler = (e) => {
-			if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false);
+			const inBtn = notifRef.current?.contains(e.target);
+			const inPanel = notifPanelRef.current?.contains(e.target);
+			if (!inBtn && !inPanel) setNotifOpen(false);
 		};
+		window.addEventListener('resize', sync);
+		window.addEventListener('scroll', sync, true);
 		document.addEventListener('mousedown', handler);
-		return () => document.removeEventListener('mousedown', handler);
-	}, [notifOpen]);
+		return () => {
+			window.removeEventListener('resize', sync);
+			window.removeEventListener('scroll', sync, true);
+			document.removeEventListener('mousedown', handler);
+		};
+	}, [notifOpen, placeFromBtn]);
 
 	const markAllRead = async () => {
 		try {
 			await api.patch('/notifications/read-all');
 			setNotifItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
 			setNotifUnread(0);
-		} catch {}
+		} catch { /* ignore */ }
 	};
 
 	if (!user) return <HeaderSkeleton onMenu={onMenu} />;
@@ -142,237 +191,210 @@ export default function Header({ onMenu }) {
 	const isActive = (user?.status || '').toLowerCase() === 'active';
 
 	return (
-		<header className="sticky px-2 top-0 z-40 w-full" style={{ boxShadow: '2px 0 16px rgba(15,23,42,0.04)', background: '#eef0f4', border: '1px solid #ccc' }}>
-			<div className="relative px-4 sm:px-2">
-				<div className="flex h-16 items-center justify-between gap-4">
-					{/* LEFT SECTION */}
-					<div className="flex items-center gap-3">
-						{/* Mobile Menu */}
-						<motion.button
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							onClick={onMenu}
-							className="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200"
-							style={{
-								background: 'var(--color-primary-50)',
-								color: 'var(--color-primary-700)',
-							}}
-							aria-label={t('actions.openMenu')}
-						>
-							<Menu className="w-4.5 h-4.5" strokeWidth={2.5} />
-						</motion.button>
+		<header className="dash-header">
+			<div className="dash-header-bar">
+				<div className="dash-header-side">
+					<button
+						type="button"
+						onClick={onMenu}
+						className="dash-header-btn lg:hidden"
+						aria-label={t('actions.openMenu')}
+					>
+						<Menu className="w-[18px] h-[18px]" strokeWidth={2.5} />
+					</button>
 
-						{/* User Avatar */}
-						<div className="relative">
-							<motion.div whileHover={{ scale: 1.05 }} className="relative">
-								<div
-									className="w-9 h-9 rounded-lg grid place-items-center text-white text-xs font-black shadow-md relative overflow-hidden"
-									style={{
-										background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
-										boxShadow: `0 2px 8px -1px var(--color-primary-400)`,
-									}}
-								>
-									{avatarText}
-									<motion.div
-										className="absolute inset-0"
-										animate={{
-											background: [
-												'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%)',
-												'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%)',
-											],
-											backgroundPosition: ['-100% -100%', '200% 200%'],
-										}}
-										transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-										style={{ backgroundSize: '200% 200%' }}
-									/>
-								</div>
-
-								{/* Status Indicator */}
-								<motion.span
-									initial={{ scale: 0 }}
-									animate={{ scale: 1 }}
-									className="absolute -right-0.5 -bottom-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white"
-									style={{ background: isActive ? '#10b981' : '#94a3b8' }}
-								>
-									{isActive && (
-										<motion.span
-											className="absolute inset-0 rounded-full"
-											animate={{ scale: [1, 1.5, 1], opacity: [0.7, 0, 0.7] }}
-											transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-											style={{ background: '#10b981' }}
-										/>
-									)}
-								</motion.span>
-							</motion.div>
-						</div>
-
-						{/* User Info (Desktop) */}
-						<div className="hidden sm:flex flex-col">
-							<span
-								className="text-sm font-bold md: leading-tight"
-								style={{ color: 'var(--color-primary-900)' }}
-							>
-								{user?.name || user?.email }
-							</span>
-							<span
-								className="text-[10px] font-semibold md: leading-tight uppercase tracking-wide"
-								style={{ color: 'var(--color-primary-400)' }}
-							>
-								{t_myProfile(`myProfile.roles.${user?.role}`)}
-							</span>
-						</div>
+					<div className="dash-header-avatar" aria-hidden>
+						{avatarText}
+						<span className={isActive ? 'dash-header-status' : 'dash-header-status is-off'} />
 					</div>
 
-					{/* RIGHT SECTION */}
-					<div className="flex items-center gap-2">
-						<div className="relative" ref={notifRef}>
-							<motion.button
-								whileHover={{ scale: 1.05 }}
-								whileTap={{ scale: 0.95 }}
-								onClick={() => setNotifOpen((v) => !v)}
-								className="inline-flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 relative"
-								style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary-700)' }}
-							>
-								<Bell className="w-4 h-4" strokeWidth={2.4} />
-								{notifUnread > 0 && (
-									<span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-rose-500 text-white text-[10px] grid place-items-center">
-										{notifUnread > 99 ? '99+' : notifUnread}
-									</span>
-								)}
-							</motion.button>
-							<AnimatePresence>
-								{notifOpen && (
-									<motion.div
-										initial={{ opacity: 0, y: -10, scale: 0.97 }}
-										animate={{ opacity: 1, y: 0, scale: 1 }}
-										exit={{ opacity: 0, y: -10, scale: 0.97 }}
-										className="absolute rtl:left-0 ltr:right-0 top-[calc(100%+8px)] w-80 rounded-xl overflow-hidden bg-white border border-slate-200 shadow-2xl z-50"
-									>
-										<div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
-											<span className="text-sm font-semibold text-slate-700">Notifications</span>
-											<button onClick={markAllRead} className="text-xs text-indigo-600 inline-flex items-center gap-1">
-												<CheckCheck className="w-3.5 h-3.5" /> Mark all
-											</button>
-										</div>
-										<div className="max-h-80 overflow-auto divide-y divide-slate-100">
-											{notifItems.length ? notifItems.map((n) => (
-												<div key={n.id} className={`px-3 py-2.5 ${n.isRead ? 'bg-white' : 'bg-indigo-50/30'}`}>
-													<div className="text-xs font-semibold text-slate-800 line-clamp-1">{n.title || 'Notification'}</div>
-													<div className="text-[11px] text-slate-500 line-clamp-2">{n.message || ''}</div>
-												</div>
-											)) : <div className="px-3 py-5 text-xs text-slate-500 text-center">No notifications</div>}
-										</div>
-										<div className="px-3 py-2 border-t border-slate-100">
-											<button
-												onClick={() => { setNotifOpen(false); router.push('/dashboard/notifications'); }}
-												className="w-full h-8 rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
-											>
-												Show more
-											</button>
-										</div>
-									</motion.div>
-								)}
-							</AnimatePresence>
-						</div>
+					<div className="dash-header-meta">
+						<span className="dash-header-name">{user?.name || user?.email}</span>
+						<span className="dash-header-role">
+							{t_myProfile(`myProfile.roles.${user?.role}`)}
+						</span>
+					</div>
+				</div>
 
-						{/* Language Toggle */}
-						<div className="flex-none w-[50px]">
-							<LanguageToggle collapsed={true} cn={' !h-9 '} />
-						</div>
+				<div className="dash-header-spacer" />
+				<div className="dash-header-divider" aria-hidden />
 
-						{/* Logout Button */}
-						<div className="relative" ref={logoutRef}>
-							<motion.button
-								whileHover={{ scale: 1.05 }}
-								whileTap={{ scale: 0.95 }}
-								onClick={() => setShowLogoutConfirm(true)}
-								className="inline-flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 relative overflow-hidden group"
-								style={{
-									background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-									boxShadow: '0 2px 8px -1px rgba(239, 68, 68, 0.4)',
-								}}
-								aria-label={t('actions.signOut')}
-							>
-								<LogOut className="w-4 h-4 text-white relative z-10 rtl:scale-x-[-1]" strokeWidth={2.5} />
-								<motion.div
-									className="absolute inset-0 opacity-0 group-hover:opacity-100"
-									animate={{ backgroundPosition: ['-100% -100%', '200% 200%'] }}
-									transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
-									style={{
-										background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%)',
-										backgroundSize: '200% 200%',
-									}}
-								/>
-							</motion.button>
+				<div className="dash-header-side is-end">
+					<div className="relative dash-header-bell" ref={notifRef}>
+						<button
+							ref={notifBtnRef}
+							type="button"
+							onClick={() => setNotifOpen((v) => !v)}
+							className="dash-header-btn"
+							aria-label="Notifications"
+						>
+							<Bell className="w-4 h-4" strokeWidth={2.4} />
+						</button>
+						{notifUnread > 0 ? (
+							<span className="dash-header-badge">
+								{notifUnread > 99 ? '99+' : notifUnread}
+							</span>
+						) : null}
+					</div>
 
-							{/* Logout Confirmation */}
-							<AnimatePresence>
-								{showLogoutConfirm && (
-									<motion.div
-										initial={{ opacity: 0, y: -10, scale: 0.95 }}
-										animate={{ opacity: 1, y: 0, scale: 1 }}
-										exit={{ opacity: 0, y: -10, scale: 0.95 }}
-										transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-										className="absolute rtl:left-0 ltr:right-0 top-[calc(100%+8px)] w-72 rounded-lg overflow-hidden shadow-2xl"
-										style={{
-											background: 'rgba(255, 255, 255, 0.98)',
-											backdropFilter: 'blur(20px)',
-											border: '1px solid rgba(239, 68, 68, 0.2)',
-										}}
-									>
-										<div className="p-5">
-											<div className="flex items-start gap-3 mb-4">
-												<div
-													className="w-11 h-11 rounded-lg grid place-items-center text-white flex-shrink-0"
-													style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)' }}
-												>
-													<AlertCircle className="w-5 h-5" strokeWidth={2.5} />
-												</div>
-												<div className="flex-1 min-w-0">
-													<h3 className="text-sm font-bold text-slate-900 mb-1">
-														{t('logout.confirmTitle') || 'تسجيل الخروج؟'}
-													</h3>
-													<p className="text-xs text-slate-600 md: leading-relaxed">
-														{t('logout.confirmMessage') || 'هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟'}
-													</p>
-												</div>
-											</div>
+					{/* Signature glass gem — language, themed by tenant colors */}
+					<div className="dash-header-lang">
+						<LanguageToggle collapsed cn="!h-[2.45rem]" />
+					</div>
 
-											<div className="flex gap-2">
-												<motion.button
-													whileHover={{ scale: 1.02 }}
-													whileTap={{ scale: 0.98 }}
-													onClick={() => setShowLogoutConfirm(false)}
-													className="flex-1 h-10 rounded-lg font-semibold text-sm transition-all"
-													style={{
-														border: '2px solid var(--color-primary-200)',
-														color: 'var(--color-primary-700)',
-														background: 'var(--color-primary-50)',
-													}}
-												>
-													{t('logout.cancel') || 'إلغاء'}
-												</motion.button>
-												<motion.button
-													whileHover={{ scale: 1.02 }}
-													whileTap={{ scale: 0.98 }}
-													onClick={handleLogout}
-													className="flex-1 h-10 rounded-lg font-semibold text-sm text-white"
-													style={{
-														background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-														boxShadow: '0 4px 12px -2px rgba(239, 68, 68, 0.5)',
-													}}
-												>
-													{t('logout.confirm') || 'تأكيد'}
-												</motion.button>
-											</div>
-										</div>
-									</motion.div>
-								)}
-							</AnimatePresence>
-						</div>
+					<div className="relative" ref={logoutRef}>
+						<button
+							ref={logoutBtnRef}
+							type="button"
+							onClick={() => setShowLogoutConfirm(true)}
+							className="dash-header-btn is-danger-solid"
+							aria-label={t('actions.signOut')}
+						>
+							<LogOut className="w-4 h-4 rtl:scale-x-[-1]" strokeWidth={2.5} />
+						</button>
 					</div>
 				</div>
 			</div>
+
+			{typeof document !== 'undefined' && createPortal(
+				<AnimatePresence>
+					{notifOpen && notifPos ? (
+						<motion.div
+							key="notif-panel"
+							ref={notifPanelRef}
+							initial={{ opacity: 0, y: -8 }}
+							animate={{ opacity: 1, y: 0 }}
+							exit={{ opacity: 0, y: -8 }}
+							className="dash-notif-panel fixed"
+							dir={typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr'}
+							style={{
+								top: notifPos.top,
+								left: notifPos.left,
+								width: notifPos.width,
+								maxHeight: notifPos.maxHeight,
+								zIndex: 130000,
+								borderRadius: '0.9rem',
+							}}
+						>
+							<div className="dash-notif-head">
+								<span className="dash-notif-title">Notifications</span>
+								<button
+									type="button"
+									onClick={markAllRead}
+									className="dash-notif-mark text-xs inline-flex items-center gap-1 font-semibold"
+									style={{ color: 'var(--color-primary-600)' }}
+								>
+									<CheckCheck className="w-3.5 h-3.5" /> Mark all
+								</button>
+							</div>
+							<div
+								className="overflow-y-auto overscroll-contain divide-y divide-slate-100 min-h-0"
+								style={{ maxHeight: `calc(${notifPos.maxHeight}px - 6.5rem)` }}
+							>
+								{notifItems.length ? notifItems.map((n) => (
+									<div
+										key={n.id}
+										className="px-3 py-2.5"
+										style={n.isRead ? undefined : {
+											background: 'color-mix(in srgb, var(--color-primary-50) 55%, #fff)',
+										}}
+									>
+										<div className="text-xs font-semibold text-slate-800 line-clamp-1">{n.title || 'Notification'}</div>
+										<div className="text-[11px] text-slate-500 line-clamp-2">{n.message || ''}</div>
+									</div>
+								)) : (
+									<div className="px-3 py-5 text-xs text-slate-500 text-center">No notifications</div>
+								)}
+							</div>
+							<div className="px-3 py-2 border-t border-slate-100 shrink-0">
+								<button
+									type="button"
+									onClick={() => { setNotifOpen(false); router.push('/dashboard/notifications'); }}
+									className="w-full h-8 text-xs font-semibold"
+									style={{
+										borderRadius: 'var(--tenant-radius-button, 12px)',
+										color: 'var(--color-primary-700)',
+										background: 'var(--color-primary-50)',
+									}}
+								>
+									Show more
+								</button>
+							</div>
+						</motion.div>
+					) : null}
+
+					{showLogoutConfirm && logoutPos ? (
+						<motion.div
+							key="logout-panel"
+							ref={logoutPanelRef}
+							initial={{ opacity: 0, y: -8 }}
+							animate={{ opacity: 1, y: 0 }}
+							exit={{ opacity: 0, y: -8 }}
+							className="fixed overflow-hidden bg-white"
+							style={{
+								top: logoutPos.top,
+								left: logoutPos.left,
+								width: logoutPos.width,
+								zIndex: 130000,
+								borderRadius: 'var(--tenant-radius-card, 14px)',
+								border: '1px solid color-mix(in srgb, var(--tenant-danger, #ef4444) 22%, #e2e8f0)',
+								boxShadow: '0 8px 28px rgba(15, 23, 42, 0.12)',
+							}}
+						>
+							<div className="p-5">
+								<div className="flex items-start gap-3 mb-4">
+									<div
+										className="w-11 h-11 grid place-items-center text-white flex-shrink-0"
+										style={{
+											borderRadius: 'var(--tenant-radius-button, 12px)',
+											background: 'linear-gradient(135deg, color-mix(in srgb, var(--tenant-danger, #ef4444) 85%, #fff), var(--tenant-danger, #ef4444))',
+										}}
+									>
+										<AlertCircle className="w-5 h-5" strokeWidth={2.5} />
+									</div>
+									<div className="flex-1 min-w-0">
+										<h3 className="text-sm font-bold text-slate-900 mb-1">
+											{t('logout.confirmTitle') || 'تسجيل الخروج؟'}
+										</h3>
+										<p className="text-xs text-slate-600 leading-relaxed">
+											{t('logout.confirmMessage') || 'هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟'}
+										</p>
+									</div>
+								</div>
+
+								<div className="flex gap-2">
+									<button
+										type="button"
+										onClick={() => setShowLogoutConfirm(false)}
+										className="flex-1 h-10 font-semibold text-sm transition-all"
+										style={{
+											borderRadius: 'var(--tenant-radius-button, 12px)',
+											border: '1px solid var(--color-primary-200)',
+											color: 'var(--color-primary-700)',
+											background: 'var(--color-primary-50)',
+										}}
+									>
+										{t('logout.cancel') || 'إلغاء'}
+									</button>
+									<button
+										type="button"
+										onClick={handleLogout}
+										className="flex-1 h-10 font-semibold text-sm text-white"
+										style={{
+											borderRadius: 'var(--tenant-radius-button, 12px)',
+											background: 'linear-gradient(135deg, color-mix(in srgb, var(--tenant-danger, #ef4444) 85%, #fff), var(--tenant-danger, #ef4444))',
+											boxShadow: '0 4px 12px -2px color-mix(in srgb, var(--tenant-danger, #ef4444) 45%, transparent)',
+										}}
+									>
+										{t('logout.confirm') || 'تأكيد'}
+									</button>
+								</div>
+							</div>
+						</motion.div>
+					) : null}
+				</AnimatePresence>,
+				document.body,
+			)}
 		</header>
 	);
 }

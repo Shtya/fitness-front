@@ -193,6 +193,9 @@
 	max-height: 14rem;
 	overflow: auto;
 	padding: 0.1rem;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
+	touch-action: pan-y;
 }
 
 .qr-studio .qr-unit {
@@ -513,7 +516,9 @@
 }
 
 .qr-studio .qr-active.has-dock {
-	padding-bottom: 6.25rem;
+	/* Clearance for fixed floating player — keep last ayah above the dock */
+	padding-bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
+	margin-bottom: 0.5rem;
 	display: flex;
 	flex-direction: column;
 	gap: 0.65rem;
@@ -523,11 +528,19 @@
 	padding: 0.45rem 0.65rem 0.55rem;
 }
 
+.qr-studio .qr-live-settings-row {
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+	min-width: 0;
+}
+
 .qr-studio .qr-live-settings-toggle {
 	appearance: none;
 	border: none;
 	background: transparent;
-	width: 100%;
+	flex: 1 1 auto;
+	min-width: 0;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -537,6 +550,42 @@
 	font-size: 0.78rem;
 	font-weight: 900;
 	color: var(--color-primary-800);
+}
+
+/* Phone-only chrome (history / favs / new session) — GSH is hidden while reading */
+.qr-studio .qr-session-chrome {
+	display: none;
+	flex-shrink: 0;
+	align-items: center;
+	gap: 0.3rem;
+}
+
+.qr-studio .qr-chrome-btn {
+	appearance: none;
+	border: 1px solid #e2e8f0;
+	background: #fff;
+	width: 1.9rem;
+	height: 1.9rem;
+	border-radius: 0.55rem;
+	display: grid;
+	place-items: center;
+	color: #475569;
+	cursor: pointer;
+	padding: 0;
+}
+
+.qr-studio .qr-chrome-new {
+	appearance: none;
+	border: none;
+	height: 1.9rem;
+	padding: 0 0.55rem;
+	border-radius: 0.55rem;
+	font-size: 0.62rem;
+	font-weight: 900;
+	color: #fff;
+	cursor: pointer;
+	background: linear-gradient(135deg, var(--color-gradient-from, #3b82f6), var(--color-gradient-to, #2563eb));
+	white-space: nowrap;
 }
 
 .qr-studio .qr-chevron {
@@ -656,12 +705,16 @@
 	margin: 0;
 	width: 100%;
 	max-width: none;
+	height: 100vh;
+	height: 100svh;
 	height: 100dvh;
+	max-height: -webkit-fill-available;
 	border-radius: 0;
 	border: none;
 	box-shadow: none;
 	display: flex;
 	flex-direction: column;
+	overscroll-behavior: none;
 	padding:
 		max(0.85rem, env(safe-area-inset-top, 0px))
 		max(1rem, env(safe-area-inset-right, 0px))
@@ -946,9 +999,20 @@
 	.qr-studio .qr-preview-tools {
 		flex-direction: column;
 		align-items: stretch;
+		align-content: flex-start;
+		justify-content: flex-start;
+		gap: 0.4rem;
+	}
+
+	/* Title must not flex-grow in column mode (that created the huge empty gap) */
+	.qr-studio .qr-tools-meta {
+		flex: 0 0 auto;
+		width: 100%;
 	}
 
 	.qr-studio .qr-tools-bar {
+		flex: 0 0 auto;
+		width: 100%;
 		border-radius: 0.85rem;
 		justify-content: flex-start;
 	}
@@ -980,6 +1044,9 @@
 .qr-studio .qr-verse-scroll {
 	max-height: min(42vh, 280px);
 	overflow-y: auto;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
+	touch-action: pan-y;
 }
 
 .qr-studio .qr-mushaf-scroll {
@@ -991,6 +1058,9 @@
 	scrollbar-width: none; /* Firefox */
 	-ms-overflow-style: none; /* IE/legacy */
 	scroll-behavior: smooth;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
+	touch-action: pan-y;
 }
 
 .qr-studio .qr-mushaf-scroll::-webkit-scrollbar {
@@ -1048,7 +1118,8 @@
 .qr-dock {
 	--qr-dock-accent: var(--color-primary-600, #2563eb);
 	position: fixed;
-	z-index: 99950;
+	/* Below sidebar/menu overlays (sidebar wrapper raises to 120000 when open) */
+	z-index: 40;
 	left: 50%;
 	bottom: max(0.9rem, env(safe-area-inset-bottom, 0px));
 	transform: translate3d(-50%, 0, 0);
@@ -1090,6 +1161,34 @@
 	align-items: center;
 	gap: 0.75rem;
 	min-height: 3.1rem;
+}
+
+.qr-dock-main.is-compact-row {
+	grid-template-columns: minmax(6.5rem, 11rem) auto minmax(0, 1fr);
+	gap: 0.5rem 0.65rem;
+}
+
+.qr-dock-main.is-compact-row .qr-dock-reciter {
+	max-width: none;
+	width: 100%;
+}
+
+.qr-dock-main.is-compact-row .qr-dock-center {
+	justify-self: center;
+}
+
+.qr-dock-main.is-compact-row .qr-dock-right {
+	justify-self: end;
+}
+
+.qr-dock-yt-label {
+	margin: 0;
+	font-size: 0.78rem;
+	font-weight: 800;
+	color: #0f172a;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .qr-dock-meta {
@@ -1506,22 +1605,23 @@
 @media (max-width: 860px) {
 	.qr-dock {
 		bottom: 0.65rem;
-		padding: 0.6rem 0.7rem 0.5rem;
-		border-radius: 1.15rem;
+		padding: 0.55rem 0.65rem 0.45rem;
+		border-radius: var(--tenant-radius-card, 1.15rem);
 	}
 
-	.qr-dock-main {
-		grid-template-columns: minmax(0, 1fr) auto;
-		gap: 0.5rem 0.65rem;
+	.qr-dock-main,
+	.qr-dock-main.is-compact-row {
+		grid-template-columns: minmax(6rem, 1fr) auto auto;
+		gap: 0.4rem 0.5rem;
 	}
 
 	.qr-dock-center {
-		justify-self: end;
+		justify-self: center;
 	}
 
 	.qr-dock-right {
-		grid-column: 1 / -1;
-		justify-content: space-between;
+		grid-column: auto;
+		justify-content: flex-end;
 	}
 
 	.qr-dock-chip em {
@@ -2933,4 +3033,233 @@
 	place-items: center;
 	color: #334155;
 	cursor: pointer;
+}
+
+/* ── Mobile polish: page (#body) scrolls; dock cleared with bottom space ─ */
+@media (max-width: 640px) {
+	.qr-studio {
+		padding-inline: 0;
+		overflow-x: clip;
+	}
+
+	.qr-studio .qr-panel {
+		padding: 0.7rem 0.75rem;
+		border-radius: 0.8rem;
+	}
+
+	.qr-studio .qr-row {
+		gap: 0.65rem;
+	}
+
+	.qr-studio .qr-units {
+		grid-template-columns: 1fr;
+		max-height: min(48vh, 22rem);
+		gap: 0.4rem;
+	}
+
+	.qr-studio .qr-unit {
+		min-height: 2.65rem;
+		padding-block: 0.55rem;
+		font-size: 0.82rem;
+	}
+
+	.qr-studio.is-session-active {
+		display: block;
+		height: auto;
+		max-height: none;
+		overflow: visible;
+		gap: 0.35rem;
+		/* Extra page end space so the fixed dock never covers ayahs */
+		padding-bottom: calc(8.25rem + env(safe-area-inset-bottom, 0px));
+	}
+
+	/* Title already lives in mushaf tools — free vertical space */
+	.qr-studio.is-session-active .qr-studio-head {
+		display: none !important;
+	}
+
+	.qr-studio.is-session-active .qr-session-chrome {
+		display: inline-flex;
+	}
+
+	.qr-studio .qr-active.has-dock {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		overflow: visible;
+		padding-bottom: 0;
+		margin-bottom: 0;
+	}
+
+	.qr-studio .qr-active.has-dock > .qr-live-settings {
+		flex-shrink: 0;
+		padding: 0.3rem 0.5rem;
+	}
+
+	.qr-studio .qr-active.has-dock > .qr-preview-mushaf {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		justify-content: flex-start;
+		overflow: visible;
+		margin: 0;
+		padding: 0.5rem 0.55rem 0.4rem;
+		box-shadow: none;
+		border-radius: 0.85rem;
+		/* Hug content — don't stretch into a tall empty card */
+		height: auto;
+		min-height: 0;
+		flex: 0 0 auto;
+	}
+
+	.qr-studio .qr-active.has-dock .qr-preview-tools {
+		flex: 0 0 auto;
+		flex-direction: column;
+		align-items: stretch;
+		justify-content: flex-start;
+		gap: 0.35rem;
+		margin-bottom: 0.35rem;
+	}
+
+	.qr-studio .qr-active.has-dock .qr-tools-meta {
+		flex: 0 0 auto;
+		width: 100%;
+	}
+
+	.qr-studio .qr-active.has-dock .qr-tools-bar {
+		width: 100%;
+		max-width: 100%;
+		justify-content: flex-start;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		overscroll-behavior-x: contain;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: none;
+		padding: 0.28rem 0.35rem;
+		border-radius: 0.85rem;
+	}
+
+	.qr-studio .qr-active.has-dock .qr-tools-bar::-webkit-scrollbar {
+		display: none;
+	}
+
+	.qr-studio .qr-active.has-dock .qr-tools-sep {
+		display: none;
+	}
+
+	/* Let #body own vertical scroll — no nested mushaf scroller on phone */
+	.qr-studio .qr-active.has-dock .qr-mushaf-scroll {
+		max-height: none !important;
+		overflow: visible !important;
+		padding: 0.15rem 0.05rem 0.4rem;
+		margin: 0;
+		-webkit-overflow-scrolling: auto;
+	}
+
+	.qr-studio .qr-mushaf {
+		font-size: clamp(1.28rem, 5.2vw, 1.55rem);
+		line-height: 2.45;
+	}
+
+	.qr-studio .qr-tools-title {
+		font-size: 0.95rem;
+	}
+
+	.qr-studio .qr-tools-sub {
+		white-space: normal;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+
+	/* Dock: full width, stacked — beat inline left/width from JS */
+	.qr-dock,
+	.qr-dock.is-centered {
+		left: 50% !important;
+		width: calc(100vw - 0.65rem) !important;
+		max-width: calc(100vw - 0.65rem) !important;
+		transform: translate3d(-50%, 0, 0) !important;
+		bottom: max(0.5rem, env(safe-area-inset-bottom, 0px)) !important;
+		padding: 0.4rem 0.5rem 0.35rem;
+		border-radius: 1rem;
+		gap: 0.35rem;
+	}
+
+	.qr-dock-main,
+	.qr-dock-main.is-compact-row {
+		display: grid;
+		grid-template-columns: minmax(5.5rem, 1fr) auto auto;
+		grid-template-areas: none;
+		align-items: center;
+		gap: 0.3rem 0.4rem;
+		min-height: 0;
+	}
+
+	.qr-dock-main.is-compact-row .qr-dock-reciter {
+		width: 100%;
+		min-width: 0;
+	}
+
+	.qr-dock-center {
+		justify-content: center;
+		gap: 0.3rem;
+	}
+
+	.qr-dock-right {
+		justify-content: flex-end;
+		gap: 0.2rem;
+	}
+
+	.qr-dock-vol-range {
+		display: none;
+	}
+
+	.qr-dock-vol {
+		width: auto;
+	}
+
+	.qr-dock-sub {
+		font-size: 0.6rem;
+	}
+
+	.qr-dock-btn {
+		width: 2rem;
+		height: 2rem;
+	}
+
+	.qr-dock-btn.is-main {
+		width: 2.55rem;
+		height: 2.55rem;
+	}
+
+	.qr-dock-speed {
+		gap: 0.15rem;
+	}
+
+	.qr-dock-speed-btn {
+		min-width: 2.1rem;
+		padding: 0.2rem 0.35rem;
+		font-size: 0.62rem;
+	}
+
+	.qr-dock-seek {
+		gap: 0.35rem;
+	}
+
+	.qr-dock-seek span {
+		font-size: 0.58rem;
+	}
+}
+
+.qr-drawer {
+	overscroll-behavior: contain;
+}
+
+.qr-drawer-body,
+.qr-drawer .qr-drawer-body {
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
+	touch-action: pan-y;
 }

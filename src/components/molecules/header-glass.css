@@ -1,0 +1,275 @@
+/* Mobile dashboard header — same card language as .qr-panel / system surfaces */
+
+.dash-header {
+	--dh-ink: var(--color-primary-900, #0f172a);
+	--dh-ink-dim: color-mix(in srgb, var(--color-primary-700, #334155) 72%, transparent);
+	--dh-accent-from: var(--color-gradient-from, var(--color-primary-500, #3b82f6));
+	--dh-accent-to: var(--color-gradient-to, var(--color-secondary-500, #6366f1));
+	--dh-danger: var(--tenant-danger, #ef4444);
+	--dh-online: var(--tenant-success, #10b981);
+	/* Match Quran / system cards: ~0.9rem radius, 1px line, tight shadow */
+	--dh-radius: 0.9rem;
+	--dh-radius-btn: var(--tenant-radius-button, 0.65rem);
+	--dh-border: rgba(15, 23, 42, 0.08);
+	--dh-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+	position: relative;
+	z-index: 40;
+	width: 100%;
+	flex-shrink: 0;
+	padding: 0.35rem 0.45rem 0.3rem;
+	background: transparent;
+	overflow: visible;
+}
+
+.dash-header-bar {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	min-height: 3.15rem;
+	padding: 0.4rem 0.5rem;
+	border-radius: var(--dh-radius);
+	background: #fff;
+	border: 1px solid var(--dh-border);
+	box-shadow: var(--dh-shadow);
+	overflow: visible;
+	/* Kill any leftover glass / glow */
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+	filter: none;
+}
+
+.dash-header-side {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	min-width: 0;
+	position: relative;
+	z-index: 1;
+	overflow: visible;
+}
+
+.dash-header-side.is-end {
+	margin-inline-start: auto;
+	flex-shrink: 0;
+}
+
+.dash-header-spacer {
+	flex: 1 1 auto;
+	min-width: 0.25rem;
+}
+
+.dash-header-divider {
+	width: 1px;
+	height: 1.35rem;
+	flex-shrink: 0;
+	background: var(--dh-border);
+	margin-inline: 0.05rem;
+}
+
+.dash-header-btn {
+	appearance: none;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.35rem;
+	height: 2.35rem;
+	border-radius: var(--dh-radius-btn);
+	color: var(--dh-ink-dim);
+	background: #fff;
+	border: 1px solid var(--dh-border);
+	box-shadow: none;
+	transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+	position: relative;
+	overflow: visible;
+}
+
+.dash-header-btn:hover {
+	color: var(--dh-ink);
+	background: color-mix(in srgb, var(--color-primary-50, #eff6ff) 70%, #fff);
+	border-color: color-mix(in srgb, var(--color-primary-200, #bfdbfe) 55%, var(--dh-border));
+}
+
+.dash-header-btn:active {
+	transform: scale(0.97);
+}
+
+.dash-header-btn:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--dh-accent-from) 28%, transparent);
+}
+
+.dash-header-btn.is-danger-solid {
+	color: #fff;
+	background: linear-gradient(
+		135deg,
+		color-mix(in srgb, var(--dh-danger) 88%, #fff),
+		var(--dh-danger)
+	);
+	border-color: color-mix(in srgb, var(--dh-danger) 35%, #fff);
+}
+
+.dash-header-btn.is-danger-solid:hover {
+	color: #fff;
+	filter: brightness(1.04);
+}
+
+.dash-header-lang {
+	width: auto;
+	flex: 0 0 auto;
+}
+
+.dash-header-lang > button {
+	height: 2.35rem !important;
+	width: auto !important;
+	min-width: 2.5rem;
+	padding: 0 0.65rem !important;
+	border-radius: var(--dh-radius-btn) !important;
+	border-width: 1px !important;
+	border-style: solid !important;
+	border-color: color-mix(in srgb, var(--dh-accent-from) 35%, #e2e8f0) !important;
+	box-shadow: none !important;
+	backdrop-filter: none !important;
+	-webkit-backdrop-filter: none !important;
+}
+
+.dash-header-avatar {
+	position: relative;
+	width: 2.35rem;
+	height: 2.35rem;
+	border-radius: var(--dh-radius-btn);
+	display: grid;
+	place-items: center;
+	flex-shrink: 0;
+	color: #fff;
+	font-weight: 800;
+	font-size: 0.72rem;
+	letter-spacing: 0.03em;
+	background: linear-gradient(135deg, var(--dh-accent-from), var(--dh-accent-to));
+	border: 1px solid color-mix(in srgb, var(--dh-accent-from) 30%, #fff);
+	box-shadow: none;
+	overflow: visible;
+}
+
+.dash-header-status {
+	position: absolute;
+	bottom: -2px;
+	inset-inline-end: -2px;
+	width: 0.65rem;
+	height: 0.65rem;
+	border-radius: 999px;
+	background: var(--dh-online);
+	border: 2px solid #fff;
+	z-index: 2;
+}
+
+.dash-header-status.is-off {
+	background: #94a3b8;
+}
+
+.dash-header-meta {
+	display: none;
+	flex-direction: column;
+	min-width: 0;
+}
+
+@media (min-width: 640px) {
+	.dash-header-meta {
+		display: flex;
+	}
+}
+
+.dash-header-name {
+	font-size: 0.82rem;
+	font-weight: 800;
+	line-height: 1.15;
+	color: var(--dh-ink);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 10rem;
+}
+
+.dash-header-role {
+	font-size: 0.58rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--dh-ink-dim);
+	line-height: 1.2;
+}
+
+.dash-header-bell {
+	position: relative;
+	overflow: visible;
+}
+
+.dash-header-badge {
+	position: absolute;
+	top: -3px;
+	inset-inline-end: -3px;
+	min-width: 1.05rem;
+	height: 1.05rem;
+	padding: 0 0.25rem;
+	border-radius: 999px;
+	background: var(--dh-danger);
+	color: #fff;
+	font-size: 0.55rem;
+	font-weight: 800;
+	line-height: 1.05rem;
+	text-align: center;
+	border: 1.5px solid #fff;
+	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+	z-index: 3;
+	pointer-events: none;
+}
+
+/* Portaled notification sheet — always viewport-safe */
+.dash-notif-panel {
+	box-sizing: border-box;
+	background: #fff;
+	border: 1px solid rgba(15, 23, 42, 0.08);
+	box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	max-width: calc(100vw - 1rem);
+	max-width: calc(100dvw - 1rem);
+}
+
+.dash-notif-panel .dash-notif-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.65rem 0.75rem;
+	border-bottom: 1px solid #f1f5f9;
+	flex-shrink: 0;
+	min-width: 0;
+}
+
+.dash-notif-panel .dash-notif-title {
+	font-size: 0.875rem;
+	font-weight: 700;
+	color: #334155;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dash-notif-panel .dash-notif-mark {
+	flex-shrink: 0;
+	white-space: nowrap;
+}
+
+@media (max-width: 639px) {
+	.dash-notif-panel {
+		/* Reinforced on phone; JS also sets left/width */
+		left: 8px !important;
+		right: 8px !important;
+		width: auto !important;
+		max-width: none;
+	}
+}

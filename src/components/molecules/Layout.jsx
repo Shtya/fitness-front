@@ -17,6 +17,7 @@ import Header from './Header';
 import { useRouter, useParams } from 'next/navigation';
 import { LogIn, LogOut, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
+import './sidebar-glass.css';
 
 const Sidebar = dynamic(() => import('./Sidebar'), { ssr: false });
 
@@ -212,17 +213,78 @@ export default function Layout({ children }) {
 	const isChatRoute = pathname.includes('/dashboard/chat');
 	const isAiFreeRoute = pathname.includes('/dashboard/ai-free');
 	const isImmersiveRoute = isWhatsAppRoute || isMetaWhatsAppRoute || isChatRoute || isAiFreeRoute;
+	/** Dashboard shell (sidebar/header): lock viewport to one scroll surface */
+	const isAppShell = !isAuthRoute;
 
 	const [sidebarOpen, setSidebarOpen]         = useState(false);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+	/** Mobile top header: hide on scroll down, reveal on scroll up */
+	const [headerCollapsed, setHeaderCollapsed] = useState(false);
 
 	useEffect(() => { setSidebarOpen(false); }, [pathname]);
+	useEffect(() => { setHeaderCollapsed(false); }, [pathname]);
+	useEffect(() => {
+		if (sidebarOpen) setHeaderCollapsed(false);
+	}, [sidebarOpen]);
+	/* Sync body push with drawer width via --sidebar-drawer-w */
+	useEffect(() => {
+		const root = document.documentElement;
+		if (sidebarOpen) root.setAttribute('data-sidebar-open', '1');
+		else root.removeAttribute('data-sidebar-open');
+		return () => root.removeAttribute('data-sidebar-open');
+	}, [sidebarOpen]);
 
 	useEffect(() => {
-		if (sidebarOpen) document.body.style.overflow = 'hidden';
-		else document.body.style.overflow = '';
-		return () => (document.body.style.overflow = '');
-	}, [sidebarOpen]);
+		if (!isAppShell) return undefined;
+		let lastY = 0;
+		let lastTarget = null;
+		const THRESH = 10;
+
+		const onScroll = (e) => {
+			const t = e.target;
+			if (!(t instanceof Element)) return;
+			/* Ignore nested menus / dialogs / the sidebar itself */
+			if (t.closest?.('.sidebar-shell, [role="dialog"], .qr-drawer, .qr-tw-modal')) return;
+
+			const y = t.scrollTop || 0;
+			if (lastTarget !== t) {
+				lastTarget = t;
+				lastY = y;
+				return;
+			}
+			const dy = y - lastY;
+			if (y <= 16) {
+				setHeaderCollapsed(false);
+				lastY = y;
+				return;
+			}
+			if (Math.abs(dy) < THRESH) return;
+			if (dy > 0) setHeaderCollapsed(true);
+			else setHeaderCollapsed(false);
+			lastY = y;
+		};
+
+		document.addEventListener('scroll', onScroll, true);
+		return () => document.removeEventListener('scroll', onScroll, true);
+	}, [isAppShell]);
+
+	/* One document lock: app shell / presentation / open mobile drawer */
+	useEffect(() => {
+		const lock = isAppShell || isPresentationRoute || sidebarOpen;
+		const prevHtml = document.documentElement.style.overflow;
+		const prevBody = document.body.style.overflow;
+		if (lock) {
+			document.documentElement.style.overflow = 'hidden';
+			document.body.style.overflow = 'hidden';
+		} else {
+			document.documentElement.style.overflow = '';
+			document.body.style.overflow = '';
+		}
+		return () => {
+			document.documentElement.style.overflow = prevHtml;
+			document.body.style.overflow = prevBody;
+		};
+	}, [isAppShell, isPresentationRoute, sidebarOpen]);
 
 	useEffect(() => {
 		try {
@@ -301,17 +363,17 @@ export default function Layout({ children }) {
 			<Providers>
 				<TenantThemeProvider>
 				<ThemeProvider>
-					<div className="relative min-h-screen">
+					<div className={isAppShell || isPresentationRoute ? 'relative h-dvh overflow-hidden' : 'relative min-h-screen'}>
 						{/* Background layers */}
 						<div className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-white to-slate-50" />
 						<div className="fixed inset-0 -z-10 opacity-[0.015]" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, var(--color-primary-500) 1px, transparent 0)`, backgroundSize: '32px 32px', }} /> 
 						<div className="fixed top-0 right-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl" style={{ background: `radial-gradient(circle, var(--color-primary-200), transparent 70%)` }} /> 
 						<div className="fixed bottom-0 left-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl" style={{ background: `radial-gradient(circle, var(--color-secondary-200), transparent 70%)` }} />
 
-						<div className="flex w-screen overflow-hidden">
+						<div className={`flex w-full max-w-[100vw] overflow-hidden ${isAppShell || isPresentationRoute ? 'h-full' : ''}`}>
 							{!isAuthRoute && (
 								<div
-									className={`z-[100] duration-300 `}
+									className={`duration-300 ${sidebarOpen ? 'relative z-[120000]' : 'relative z-[100]'}`}
 								>
 									<Sidebar
 										open={sidebarOpen}
@@ -324,23 +386,60 @@ export default function Layout({ children }) {
 								</div>
 							)}
 
-							<div className="relative flex-1 min-w-0 overflow-x-hidden" data-dashboard-content>
-								{!isAuthRoute && <div className={`max-[1025px]:block hidden ${isWhatsAppRoute ? 'wa-dashboard-header' : ''}`}>
-									<Header onMenu={() => setSidebarOpen(!sidebarOpen)} />
-								</div>}
+							{/*
+							  Mobile had two scrolls: sticky Header outside #body + #body h-screen/overflow-auto.
+							  App shell is now one column: header (fixed height) + single scrollable #body.
+							*/}
+							<div
+								className={[
+									'relative flex-1 min-w-0',
+									isAppShell ? 'flex h-full min-h-0 flex-col overflow-hidden' : 'overflow-x-hidden',
+								].filter(Boolean).join(' ')}
+								data-dashboard-content
+							>
+								{!isAuthRoute && (
+									<div
+										className={[
+											'max-[1025px]:block hidden shrink-0',
+											'transition-[max-height,opacity,transform] duration-300 ease-out will-change-[max-height,opacity]',
+											headerCollapsed
+												? 'max-h-0 opacity-0 -translate-y-2 pointer-events-none overflow-hidden'
+												: 'max-h-[5.5rem] opacity-100 translate-y-0 overflow-visible',
+											isWhatsAppRoute ? 'wa-dashboard-header' : '',
+										].filter(Boolean).join(' ')}
+										aria-hidden={headerCollapsed || undefined}
+									>
+										<Header onMenu={() => setSidebarOpen(!sidebarOpen)} />
+									</div>
+								)}
 								<AnimatePresence mode="wait">
 									<motion.main
 										key={pathname}
 										initial={{ opacity: 0, y: 8 }}
 										animate={{ opacity: 1, y: 0 }}
 										exit={{ opacity: 0, y: -8 }}
-										transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} style={{}}
-										 
+										transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+										className={isAppShell ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : undefined}
 									>
 										{/* Add bottom padding when impersonating so content isn't hidden behind bar */}
 										<div
 											id="body"
-											className={`${pathname !== '/' && !isPresentationRoute ? 'h-screen' : ''} ${isPresentationRoute ? 'min-h-screen overflow-x-hidden overflow-y-auto' : ''} ${!isAuthRoute && ` overflow-x-hidden ${isMetaWhatsAppRoute ? 'p-0 overflow-hidden' : isImmersiveRoute ? 'p-0 lg:py-4 lg:pe-4 lg:ps-2 overflow-hidden' : 'overflow-auto p-3 md:p-4'}`} ${isImpersonating ? 'pb-8' : ''}`}
+											className={[
+												isPresentationRoute ? 'min-h-0 flex-1 overflow-x-hidden overflow-y-auto' : '',
+												isAppShell
+													? [
+														'min-h-0 flex-1 overflow-x-hidden overscroll-y-contain',
+														isMetaWhatsAppRoute
+															? 'overflow-hidden p-0'
+															: isImmersiveRoute
+																? 'overflow-hidden p-0 lg:py-4 lg:pe-4 lg:ps-2'
+																: 'overflow-y-auto p-3 md:p-4',
+													].join(' ')
+													: pathname !== '/' && !isPresentationRoute
+														? 'min-h-screen'
+														: '',
+												isImpersonating ? 'pb-8' : '',
+											].filter(Boolean).join(' ')}
 										>
 											{children}
 										</div>

@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import api from '@/utils/axios';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil, Download, MonitorDown } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil } from 'lucide-react';
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
@@ -17,6 +17,7 @@ import { useLocale } from 'next-intl';
 import { useTransition } from 'react';
 import MultiLangText from '../atoms/MultiLangText';
 import { useRouter as useI18nRouter } from '@/i18n/navigation';
+import './sidebar-glass.css';
 
 /* ─── Constants ─────────────────────────────────────────────── */
 const SIDEBAR_W = 272;
@@ -59,27 +60,28 @@ export const SIDEBAR_PALETTES = {
   pearl: {
     nameKey: 'palettes.pearl',
     preview: ['#ffffff', '#f8f9fb', '#e2e8f0'],
-    bg: 'linear-gradient(180deg, #ffffff 0%, #fafbfc 50%, #f4f6f8 100%)',
-    bgCard: '#ffffff',
-    bgHover: 'rgba(255,255,255,0.95)',
-    bgActive: '#ffffff',
-    border: 'rgba(0,0,0,0.07)',
-    borderStrong: 'rgba(0,0,0,0.11)',
+    /* Glass defaults — tinted by tenant --color-gradient-* at paint time */
+    bg: 'linear-gradient(160deg, color-mix(in srgb, #fff 92%, var(--color-primary-100)) 0%, color-mix(in srgb, #fff 80%, var(--color-primary-50)) 48%, color-mix(in srgb, #fff 88%, var(--color-secondary-100, var(--color-primary-100))) 100%)',
+    bgCard: 'color-mix(in srgb, #fff 88%, transparent)',
+    bgHover: 'color-mix(in srgb, var(--color-primary-50) 55%, #fff)',
+    bgActive: 'linear-gradient(155deg, color-mix(in srgb, var(--color-gradient-from) 22%, #fff), color-mix(in srgb, var(--color-gradient-to) 14%, #fff))',
+    border: 'color-mix(in srgb, var(--color-primary-200) 50%, #fff)',
+    borderStrong: 'color-mix(in srgb, var(--color-primary-300) 55%, #fff)',
     text: '#0f172a',
     textMuted: '#64748b',
     textLight: '#94a3b8',
     textXLight: '#cbd5e1',
-    sectionLabel: '#94a3b8',
-    iconBg: '#ffffff',
-    iconBorder: 'rgba(0,0,0,0.08)',
+    sectionLabel: 'color-mix(in srgb, var(--color-primary-500) 45%, #94a3b8)',
+    iconBg: 'color-mix(in srgb, #fff 90%, transparent)',
+    iconBorder: 'color-mix(in srgb, var(--color-primary-200) 45%, #fff)',
     shadow: {
-      sm: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
-      md: '0 4px 16px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04)',
+      sm: '0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04)',
+      md: '0 8px 18px -8px color-mix(in srgb, var(--color-primary-500) 28%, transparent), 0 2px 6px rgba(15,23,42,0.06)',
     },
-    headerBg: 'rgba(255,255,255,0.8)',
-    footerBg: 'rgba(248,249,251,0.9)',
-    texture: 'radial-gradient(circle, rgba(0,0,0,0.04) 1px, transparent 1px)',
-    textureSize: '20px 20px',
+    headerBg: 'transparent',
+    footerBg: 'color-mix(in srgb, #fff 48%, transparent)',
+    texture: 'radial-gradient(circle at 20% 10%, color-mix(in srgb, var(--color-primary-300) 22%, transparent), transparent 42%)',
+    textureSize: 'auto',
   },
   silver: {
     nameKey: 'palettes.silver',
@@ -731,12 +733,29 @@ function ScrollShadow({ children, P }) {
     if (!el) return;
     onScroll();
     el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
-  }, [onScroll]);
-  const fadeColor = P?.bg?.includes('#f') ? '#f8f9fb' : 'rgba(248,249,251,0)';
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(onScroll) : null;
+    ro?.observe(el);
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      ro?.disconnect();
+    };
+  }, [onScroll, children]);
   return (
-    <div style={{ position: 'relative', height: '100%' }}>
-      <div ref={ref} style={{ height: '100%', overflowY: 'auto', scrollbarWidth: 'none' }}>
+    <div className='sidebar-scroll-root' style={{ position: 'relative', height: '100%', minHeight: 0, flex: '1 1 auto' }}>
+      <div
+        ref={ref}
+        className='sidebar-scroll-viewport'
+        style={{
+          height: '100%',
+          minHeight: 0,
+          overflowX: 'hidden',
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y',
+          scrollbarWidth: 'thin',
+        }}
+      >
         {children}
       </div>
       <div style={{ pointerEvents: 'none', position: 'absolute', inset: '0 0 auto 0', height: 44, opacity: atTop ? 0 : 1, transition: 'opacity .25s', background: `linear-gradient(to bottom, ${P?.headerBg || '#fff'}, transparent)` }} />
@@ -748,8 +767,9 @@ function ScrollShadow({ children, P }) {
 /* ─── SectionLabel ───────────────────────────────────────────── */
 function SectionLabel({ label, P }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 3px', marginBottom: 6, marginTop: 14 }}>
+    <div className='sidebar-section-label' style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 3px', marginBottom: 6, marginTop: 14 }}>
       <span
+        className='sidebar-section-label'
         style={{
           fontSize: 10,
           fontWeight: 800,
@@ -1498,16 +1518,40 @@ function SidebarThemeSwitcher({ collapsed, P }) {
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    const panelW = 316;
-    const pad = 8;
-    let left = isRTL ? rect.left - panelW - pad : rect.right + pad;
-    if (!isRTL && left + panelW > window.innerWidth - pad) left = rect.left - panelW - pad;
-    if (isRTL && left < pad) left = rect.right + pad;
-    const approxH = 460;
-    let bottom = window.innerHeight - rect.bottom;
-    if (rect.bottom - approxH < pad) bottom = window.innerHeight - rect.top - approxH;
-    setPanelPos({ left, bottom: Math.max(pad, bottom) });
+    const place = () => {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const pad = 8;
+      const narrow = vw < 1025;
+      const panelW = Math.min(316, vw - pad * 2);
+      const approxH = Math.min(460, vh * 0.72);
+
+      let left;
+      if (narrow) {
+        /* Keep fully on-screen above the drawer (not beside it) */
+        left = Math.max(pad, Math.min((vw - panelW) / 2, vw - panelW - pad));
+      } else {
+        left = isRTL ? rect.left - panelW - pad : rect.right + pad;
+        if (!isRTL && left + panelW > vw - pad) left = rect.left - panelW - pad;
+        if (isRTL && left < pad) left = rect.right + pad;
+        left = Math.max(pad, Math.min(left, vw - panelW - pad));
+      }
+
+      /* Prefer sitting just above the Theme button */
+      let bottom = vh - rect.top + 6;
+      if (bottom + approxH > vh - pad) {
+        bottom = Math.max(pad, vh - approxH - pad);
+      }
+      setPanelPos({ left, bottom, width: panelW, maxHeight: approxH });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
   }, [open, isRTL]);
 
   const xFrom = isRTL ? 8 : -8;
@@ -1594,21 +1638,22 @@ const ThemePanel = React.forwardRef(function ThemePanel({ themeEntries, currentT
     <AnimatePresence>
       <motion.div
         ref={ref}
-        initial={{ opacity: 0, x: xFrom, scale: 0.96 }}
-        animate={{ opacity: 1, x: 0, scale: 1 }}
-        exit={{ opacity: 0, x: xFrom, scale: 0.96 }}
+        initial={{ opacity: 0, y: 8, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 8, scale: 0.97 }}
         transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-        className='rtl:right-[10px] ltr:left-[10px]'
         style={{
           position: 'fixed',
+          left: pos?.left ?? 8,
           bottom: pos?.bottom ?? 16,
-          zIndex: 9999,
-          width: 316,
+          zIndex: 130000,
+          width: pos?.width ?? Math.min(316, typeof window !== 'undefined' ? window.innerWidth - 16 : 316),
+          maxWidth: 'calc(100vw - 16px)',
           borderRadius: 18,
           overflow: 'hidden',
           background: '#fff',
           border: '1px solid rgba(0,0,0,0.07)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.1), 0 8px 24px rgba(0,0,0,0.06)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.14), 0 8px 24px rgba(0,0,0,0.08)',
         }}>
         <div style={{ padding: '14px 16px 12px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, display: 'grid', placeContent: 'center', color: '#fff', flexShrink: 0, background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))', boxShadow: '0 3px 10px color-mix(in srgb, var(--color-primary-500) 30%, transparent)' }}>
@@ -1619,7 +1664,7 @@ const ThemePanel = React.forwardRef(function ThemePanel({ themeEntries, currentT
             <p style={{ fontSize: 10, fontWeight: 600, color: '#64748b', marginTop: 2 }}>{tTheme?.('subtitle') || `${themeEntries.length} palettes available`}</p>
           </div>
         </div>
-        <div style={{ padding: 10, maxHeight: 380, overflowY: 'auto', scrollbarWidth: 'thin' }}>
+        <div style={{ padding: 10, maxHeight: pos?.maxHeight ?? 380, overflowY: 'auto', scrollbarWidth: 'thin' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {themeEntries.map(([key, palette], idx) => {
               const isActive = currentTheme === key;
@@ -2447,415 +2492,8 @@ function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden
   );
 }
 
-function detectDesktopBrowser() {
-  if (typeof navigator === 'undefined') return 'other';
-  const ua = navigator.userAgent.toLowerCase();
-  if (ua.includes('edg/')) return 'edge';
-  if (ua.includes('firefox/')) return 'firefox';
-  if (ua.includes('chrome/') && !ua.includes('edg/')) return 'chrome';
-  if (ua.includes('safari/') && !ua.includes('chrome/') && !ua.includes('crios')) return 'safari';
-  if (ua.includes('opr/') || ua.includes('opera')) return 'opera';
-  return 'other';
-}
-
-function getDesktopInstallGuide(browser, isAr) {
-  const guides = {
-    chrome: {
-      name: 'Google Chrome',
-      stepsAr: [
-        'افتح قائمة Chrome (⋮) أعلى يمين النافذة.',
-        'اختَر «حفظ ومشاركة» أو ابحث عن «تثبيت so7bafit…» / Install so7bafit.',
-        'اضغط «تثبيت» ثم أكّد من النافذة اللي هتظهر.',
-        'التطبيق هيفتح لوحده ويظهر في قائمة ابدأ / شريط المهام.',
-      ],
-      stepsEn: [
-        'Open the Chrome menu (⋮) at the top-right.',
-        'Choose “Cast, save and share” or look for “Install so7bafit…”.',
-        'Click Install, then confirm in the dialog.',
-        'The app opens standalone and can be pinned to the taskbar.',
-      ],
-    },
-    edge: {
-      name: 'Microsoft Edge',
-      stepsAr: [
-        'افتح قائمة Edge (⋯) أعلى يمين النافذة.',
-        'اختَر «تطبيقات» ثم «تثبيت هذا الموقع كتطبيق».',
-        'اضغط «تثبيت» في النافذة.',
-        'تقدر تثبّته في شريط المهام أو قائمة ابدأ.',
-      ],
-      stepsEn: [
-        'Open the Edge menu (⋯) at the top-right.',
-        'Go to Apps → Install this site as an app.',
-        'Click Install in the dialog.',
-        'Pin it to the taskbar or Start menu if you like.',
-      ],
-    },
-    firefox: {
-      name: 'Mozilla Firefox',
-      stepsAr: [
-        'Firefox على الكمبيوتر مش بيدعم تثبيت PWA بنفس سهولة Chrome/Edge.',
-        'الأفضل: افتح الموقع من Chrome أو Edge واتبع خطوات التثبيت هناك.',
-        'أو من قائمة Firefox (☰) اعمل Bookmark للصفحة للوصول السريع.',
-      ],
-      stepsEn: [
-        'Desktop Firefox has limited PWA install support.',
-        'Best option: open this site in Chrome or Edge and install from there.',
-        'Or use Firefox menu (☰) → Bookmark for quick access.',
-      ],
-    },
-    safari: {
-      name: 'Safari',
-      stepsAr: [
-        'من شريط القائمة اختَر File → Add to Dock (macOS Sonoma+)،',
-        'أو Share → Add to Dock إذا ظهر الخيار.',
-        'لو مش ظاهر: Safari → Settings → enable related options، أو استخدم Chrome.',
-        'بعد الإضافة هتلاقي الأيقونة في الـ Dock.',
-      ],
-      stepsEn: [
-        'From the menu bar choose File → Add to Dock (macOS Sonoma+),',
-        'or Share → Add to Dock when available.',
-        'If missing, update Safari or install via Chrome instead.',
-        'After adding, the icon appears in the Dock.',
-      ],
-    },
-    opera: {
-      name: 'Opera',
-      stepsAr: [
-        'افتح قائمة Opera أعلى يسار/يمين.',
-        'اختَر «الصفحة» / Page ثم «تثبيت…» أو Install so7bafit.',
-        'أكّد التثبيت من النافذة.',
-      ],
-      stepsEn: [
-        'Open the Opera menu.',
-        'Choose Page → Install… / Install so7bafit.',
-        'Confirm in the install dialog.',
-      ],
-    },
-    other: {
-      name: isAr ? 'المتصفح' : 'Browser',
-      stepsAr: [
-        'افتح قائمة المتصفح (⋮ أو ☰).',
-        'ابحث عن «تثبيت التطبيق» / Install app / Install this site as an app.',
-        'أكّد التثبيت.',
-        'لو الخيار مش موجود، جرّب Google Chrome أو Microsoft Edge.',
-      ],
-      stepsEn: [
-        'Open your browser menu (⋮ or ☰).',
-        'Look for Install app / Install this site as an app.',
-        'Confirm the install.',
-        'If the option is missing, try Google Chrome or Microsoft Edge.',
-      ],
-    },
-  };
-  const g = guides[browser] || guides.other;
-  return {
-    name: g.name,
-    steps: isAr ? g.stepsAr : g.stepsEn,
-  };
-}
-
-/* ─── Install desktop PWA (desktop web only) ─────────────────── */
-function SidebarInstallApp({ collapsed, P }) {
-  const locale = useLocale();
-  const isAr = locale === 'ar';
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [installed, setInstalled] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [browser, setBrowser] = useState('other');
-  const [installing, setInstalling] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-
-    const mq = window.matchMedia('(min-width: 768px)');
-    const syncDesktop = () => setIsDesktop(mq.matches);
-    syncDesktop();
-    setBrowser(detectDesktopBrowser());
-    mq.addEventListener?.('change', syncDesktop);
-    mq.addListener?.(syncDesktop);
-
-    const standalone =
-      window.matchMedia('(display-mode: standalone)').matches
-      || window.navigator.standalone === true;
-    if (standalone) setInstalled(true);
-
-    const onBIP = e => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    const onInstalled = () => {
-      setInstalled(true);
-      setDeferredPrompt(null);
-      setOpen(false);
-    };
-    window.addEventListener('beforeinstallprompt', onBIP);
-    window.addEventListener('appinstalled', onInstalled);
-    return () => {
-      mq.removeEventListener?.('change', syncDesktop);
-      mq.removeListener?.(syncDesktop);
-      window.removeEventListener('beforeinstallprompt', onBIP);
-      window.removeEventListener('appinstalled', onInstalled);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = e => { if (e.key === 'Escape') setOpen(false); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open]);
-
-  if (!isDesktop || installed) return null;
-
-  const label = isAr ? 'تثبيت على الكمبيوتر' : 'Install on desktop';
-  const guide = getDesktopInstallGuide(browser, isAr);
-  const title = isAr ? 'ازاي تثبّت التطبيق على جهازك' : 'How to install on your computer';
-  const detected = isAr ? `المتصفح المكتشف: ${guide.name}` : `Detected browser: ${guide.name}`;
-  const closeLbl = isAr ? 'حسناً' : 'Got it';
-  const oneTapLbl = isAr ? "تثبيت بنقرة واحدة" : "Install now";
-
-  const onClick = () => setOpen(true);
-
-  const runNativeInstall = async () => {
-    if (!deferredPrompt) return;
-    setInstalling(true);
-    try {
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-      setDeferredPrompt(null);
-    } catch {
-      /* ignore */
-    } finally {
-      setInstalling(false);
-    }
-  };
-
-  const popup = open && typeof document !== 'undefined'
-    ? createPortal(
-      <AnimatePresence>
-        <motion.div
-          key="install-layer"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 100050,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 16,
-          }}
-        >
-          <button
-            type="button"
-            aria-label="close"
-            onClick={() => setOpen(false)}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              border: 0,
-              background: 'rgba(15, 23, 42, 0.45)',
-              backdropFilter: 'blur(4px)',
-              cursor: 'pointer',
-            }}
-          />
-          <motion.div
-            key="install-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label={title}
-            dir={isAr ? 'rtl' : 'ltr'}
-            initial={{ opacity: 0, y: 16, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.98 }}
-            transition={{ duration: 0.18 }}
-            onClick={e => e.stopPropagation()}
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              width: 'min(420px, calc(100vw - 32px))',
-              maxHeight: 'min(80vh, 560px)',
-              overflow: 'auto',
-              borderRadius: 18,
-              background: '#fff',
-              boxShadow: '0 24px 60px rgba(15, 23, 42, 0.22)',
-              border: '1px solid rgba(226, 232, 240, 0.95)',
-              padding: '18px 18px 16px',
-            }}
-          >
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-              <span
-                style={{
-                  display: 'grid',
-                  placeContent: 'center',
-                  width: 36,
-                  height: 36,
-                  borderRadius: 11,
-                  background: 'color-mix(in srgb, var(--color-primary-500) 12%, transparent)',
-                  color: 'var(--color-primary-600)',
-                  flexShrink: 0,
-                }}
-              >
-                <MonitorDown style={{ width: 18, height: 18 }} strokeWidth={2.2} />
-              </span>
-              <div style={{ minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>{title}</p>
-                <p style={{ margin: '3px 0 0', fontSize: 11.5, fontWeight: 700, color: '#64748b' }}>{detected}</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              aria-label="close"
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 10,
-                border: '1px solid #e2e8f0',
-                background: '#fff',
-                display: 'grid',
-                placeContent: 'center',
-                cursor: 'pointer',
-                color: '#64748b',
-                flexShrink: 0,
-              }}
-            >
-              <X style={{ width: 15, height: 15 }} />
-            </button>
-          </div>
-
-          <ol
-            style={{
-              margin: '8px 0 0',
-              padding: isAr ? '0 1.15rem 0 0' : '0 0 0 1.15rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-            }}
-          >
-            {guide.steps.map((step, i) => (
-              <li
-                key={`${browser}-${i}`}
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: '#334155',
-                  lineHeight: 1.55,
-                }}
-              >
-                {step}
-              </li>
-            ))}
-          </ol>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
-            {deferredPrompt ? (
-              <button
-                type="button"
-                onClick={runNativeInstall}
-                disabled={installing}
-                style={{
-                  flex: '1 1 140px',
-                  height: 40,
-                  borderRadius: 12,
-                  border: 0,
-                  background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700))',
-                  color: '#fff',
-                  fontSize: 12.5,
-                  fontWeight: 800,
-                  cursor: installing ? 'wait' : 'pointer',
-                  opacity: installing ? 0.75 : 1,
-                }}
-              >
-                {installing ? (isAr ? "جاري التثبيت…" : "Installing…") : oneTapLbl}
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              style={{
-                flex: '1 1 100px',
-                height: 40,
-                borderRadius: 12,
-                border: '1px solid #e2e8f0',
-                background: '#f8fafc',
-                color: '#0f172a',
-                fontSize: 12.5,
-                fontWeight: 800,
-                cursor: 'pointer',
-              }}
-            >
-              {closeLbl}
-            </button>
-          </div>
-          </motion.div>
-        </motion.div>
-      </AnimatePresence>,
-      document.body,
-    )
-    : null;
-
-  return (
-    <>
-      <div
-        className="hidden md:block"
-        style={{ width: collapsed ? 'auto' : '100%', marginBottom: 8 }}
-      >
-        <motion.button
-          type="button"
-          whileHover={{ scale: collapsed ? 1.06 : 1.01, y: -1 }}
-          whileTap={{ scale: 0.96 }}
-          onClick={onClick}
-          title={label}
-          style={{
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            gap: collapsed ? 0 : 10,
-            width: collapsed ? 40 : '100%',
-            height: collapsed ? 40 : 44,
-            borderRadius: 12,
-            border: `1px solid ${P?.border || 'rgba(0,0,0,0.07)'}`,
-            background: P?.bgCard || '#ffffff',
-            boxShadow: P?.shadow?.sm || '0 1px 3px rgba(0,0,0,0.06)',
-            cursor: 'pointer',
-            padding: collapsed ? 0 : '0 12px',
-            color: 'var(--color-primary-700)',
-          }}
-        >
-          <span
-            style={{
-              display: 'grid',
-              placeContent: 'center',
-              width: collapsed ? 'auto' : 28,
-              height: collapsed ? 'auto' : 28,
-              borderRadius: 9,
-              background: 'color-mix(in srgb, var(--color-primary-500) 12%, transparent)',
-              color: 'var(--color-primary-600)',
-              flexShrink: 0,
-            }}
-          >
-            {collapsed ? <Download style={{ width: 15, height: 15 }} strokeWidth={2.2} /> : <MonitorDown style={{ width: 15, height: 15 }} strokeWidth={2.2} />}
-          </span>
-          {!collapsed && (
-            <span style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: '-0.01em', color: '#0f172a' }}>
-              {label}
-            </span>
-          )}
-        </motion.button>
-      </div>
-      {popup}
-    </>
-  );
-}
-
 /* ─── SidebarFooter ──────────────────────────────────────────── */
-function SidebarFooter({ collapsed, onLogout, logoutLabel, sections, isHidden, toggleHidden, resetAll, isInstalled, toggleInstalled, paletteKey, setPaletteKey, t, P, getLabel, setLabel, labels, resetLabels }) {
+function SidebarFooter({ collapsed, onLogout, logoutLabel, sections, isHidden, toggleHidden, resetAll, isInstalled, toggleInstalled, paletteKey, setPaletteKey, t, P, getLabel, setLabel, labels, resetLabels, mobileCompact = false }) {
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const isRTL = getDir() === 'rtl';
   const btnBase = {
@@ -2877,157 +2515,172 @@ function SidebarFooter({ collapsed, onLogout, logoutLabel, sections, isHidden, t
     return count;
   }, [sections, isInstalled]);
 
+  const customizeBtn = (
+    <motion.button
+      whileHover={{ scale: collapsed ? 1.08 : 1.02, y: -2 }}
+      whileTap={{ scale: 0.96 }}
+      onClick={() => setCustomizeOpen(true)}
+      title={t('customize.triggerLabel')}
+      onMouseEnter={e => (e.currentTarget.style.background = `color-mix(in srgb, var(--color-primary-500) 8%, ${P?.bgCard || '#fff'})`)}
+      onMouseLeave={e => (e.currentTarget.style.background = P?.bgCard || '#ffffff')}
+      style={{
+        display: 'flex',
+        flexDirection: collapsed ? 'row' : mobileCompact ? 'row' : 'column',
+        alignItems: 'center',
+        justifyContent: mobileCompact ? 'flex-start' : 'center',
+        gap: collapsed ? 0 : mobileCompact ? 10 : 7,
+        cursor: 'pointer',
+        overflow: 'visible',
+        transition: 'background .18s, box-shadow .18s',
+        width: collapsed ? 40 : mobileCompact ? '100%' : undefined,
+        ...(collapsed
+          ? { height: 40, borderRadius: 12 }
+          : mobileCompact
+            ? { height: 44, borderRadius: 12, padding: '0 10px' }
+            : { minHeight: 76, borderRadius: 14, padding: '12px 8px' }),
+        ...btnBase,
+      }}>
+      <span
+        style={{
+          position: 'relative',
+          flexShrink: 0,
+          display: 'grid',
+          placeContent: 'center',
+          width: collapsed ? 'auto' : mobileCompact ? 26 : 28,
+          height: collapsed ? 'auto' : mobileCompact ? 26 : 28,
+          borderRadius: mobileCompact ? 8 : 9,
+          background: 'color-mix(in srgb, var(--color-primary-500) 12%, transparent)',
+          color: 'var(--color-primary-600)',
+        }}>
+        <Settings2 style={{ width: collapsed ? 15 : mobileCompact ? 13 : 14.5, height: collapsed ? 15 : mobileCompact ? 13 : 14.5 }} strokeWidth={2.2} />
+        {marketplaceAvailable > 0 && (
+          <motion.span
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            style={{
+              position: 'absolute',
+              top: -3,
+              [isRTL ? 'left' : 'right']: -3,
+              minWidth: 14,
+              height: 14,
+              padding: '0 3px',
+              borderRadius: 99,
+              background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
+              color: '#fff',
+              fontSize: 8.5,
+              fontWeight: 800,
+              display: 'grid',
+              placeContent: 'center',
+              boxShadow: '0 2px 6px rgba(234,88,12,0.4)',
+            }}>
+            {marketplaceAvailable}
+          </motion.span>
+        )}
+      </span>
+      {!collapsed && (
+        <span
+          style={{
+            fontSize: mobileCompact ? 12.5 : 10.5,
+            fontWeight: 650,
+            lineHeight: 1.3,
+            letterSpacing: '-0.005em',
+            color: P?.text || '#334155',
+            whiteSpace: 'normal',
+            overflow: 'visible',
+            wordBreak: 'break-word',
+            textAlign: mobileCompact ? 'start' : 'center',
+            flex: mobileCompact ? 1 : undefined,
+            maxWidth: '100%',
+          }}>
+          {t('customize.triggerLabel')}
+        </span>
+      )}
+    </motion.button>
+  );
+
   return (
     <>
       <div
+        data-sidebar-footer
+        className='sidebar-glass-footer'
         style={{
           flexShrink: 0,
           borderTop: `1px solid ${P?.border || 'rgba(0,0,0,0.07)'}`,
           background: P?.footerBg || 'rgba(248,249,251,0.9)',
           backdropFilter: 'blur(12px)',
-          padding: '12px 12px 14px',
+          padding: mobileCompact ? '10px 10px 12px' : '12px 12px 14px',
         }}>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-            alignItems: collapsed ? 'center' : 'stretch',
-            marginBottom: 12,
-          }}>
-          <SidebarInstallApp collapsed={collapsed} P={P} />
-          <SidebarLanguageToggle collapsed={collapsed} P={P} />
-          <SidebarThemeSwitcher collapsed={collapsed} P={P} />
-        </div>
-
-        {/* Divider */}
-        <div style={{ height: 1, background: P?.border || 'rgba(0,0,0,0.07)', margin: collapsed ? '0 auto 10px' : '0 2px 10px', width: collapsed ? 32 : 'auto' }} />
-
-        {/* Customize + Sign out */}
-        <div
-          style={{
-            display: collapsed ? 'flex' : 'grid',
-            flexDirection: collapsed ? 'column' : undefined,
-            gridTemplateColumns: collapsed ? undefined : '1fr 1fr',
-            gap: 8,
-            alignItems: collapsed ? 'center' : 'stretch',
-          }}>
-          {/* Customize Sidebar */}
-          <motion.button
-            whileHover={{ scale: collapsed ? 1.08 : 1.02, y: -2 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={() => setCustomizeOpen(true)}
-            title={t('customize.triggerLabel')}
-            onMouseEnter={e => (e.currentTarget.style.background = `color-mix(in srgb, var(--color-primary-500) 8%, ${P?.bgCard || '#fff'})`)}
-            onMouseLeave={e => (e.currentTarget.style.background = P?.bgCard || '#ffffff')}
-            style={{
-              display: 'flex',
-              flexDirection: collapsed ? 'row' : 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: collapsed ? 0 : 7,
-              cursor: 'pointer',
-              overflow: 'visible',
-              transition: 'background .18s, box-shadow .18s',
-              ...(collapsed ? { width: 40, height: 40, borderRadius: 12 } : { minHeight: 76, borderRadius: 14, padding: '12px 8px' }),
-              ...btnBase,
-            }}>
-            <span
+        {mobileCompact ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch' }}>
+            <SidebarThemeSwitcher collapsed={collapsed} P={P} />
+            {customizeBtn}
+          </div>
+        ) : (
+          <>
+            <div
               style={{
-                position: 'relative',
-                flexShrink: 0,
-                display: 'grid',
-                placeContent: 'center',
-                width: collapsed ? 'auto' : 28,
-                height: collapsed ? 'auto' : 28,
-                borderRadius: 9,
-                background: 'color-mix(in srgb, var(--color-primary-500) 12%, transparent)',
-                color: 'var(--color-primary-600)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                alignItems: collapsed ? 'center' : 'stretch',
+                marginBottom: 12,
               }}>
-              <Settings2 style={{ width: collapsed ? 15 : 14.5, height: collapsed ? 15 : 14.5 }} strokeWidth={2.2} />
-              {marketplaceAvailable > 0 && (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
+              <SidebarLanguageToggle collapsed={collapsed} P={P} />
+              <SidebarThemeSwitcher collapsed={collapsed} P={P} />
+            </div>
+
+            <div style={{ height: 1, background: P?.border || 'rgba(0,0,0,0.07)', margin: collapsed ? '0 auto 10px' : '0 2px 10px', width: collapsed ? 32 : 'auto' }} />
+
+            <div
+              style={{
+                display: collapsed ? 'flex' : 'grid',
+                flexDirection: collapsed ? 'column' : undefined,
+                gridTemplateColumns: collapsed ? undefined : '1fr 1fr',
+                gap: 8,
+                alignItems: collapsed ? 'center' : 'stretch',
+              }}>
+              {customizeBtn}
+              <motion.button
+                whileHover={{ scale: collapsed ? 1.08 : 1.02, y: -2 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={onLogout}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.12)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.06)')}
+                style={{
+                  display: 'flex',
+                  flexDirection: collapsed ? 'row' : 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: collapsed ? 0 : 7,
+                  fontWeight: 700,
+                  letterSpacing: '-0.005em',
+                  cursor: 'pointer',
+                  overflow: 'visible',
+                  border: '1px solid rgba(239,68,68,0.16)',
+                  background: 'rgba(239,68,68,0.06)',
+                  color: '#dc2626',
+                  transition: 'background .18s, box-shadow .18s',
+                  ...(collapsed ? { width: 40, height: 40, borderRadius: 12 } : { minHeight: 76, borderRadius: 14, padding: '12px 8px' }),
+                }}>
+                <span
                   style={{
-                    position: 'absolute',
-                    top: -3,
-                    [isRTL ? 'left' : 'right']: -3,
-                    minWidth: 14,
-                    height: 14,
-                    padding: '0 3px',
-                    borderRadius: 99,
-                    background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
-                    color: '#fff',
-                    fontSize: 8.5,
-                    fontWeight: 800,
+                    flexShrink: 0,
                     display: 'grid',
                     placeContent: 'center',
-                    boxShadow: '0 2px 6px rgba(234,88,12,0.4)',
+                    width: collapsed ? 'auto' : 28,
+                    height: collapsed ? 'auto' : 28,
+                    borderRadius: 9,
+                    background: collapsed ? 'transparent' : 'rgba(239,68,68,0.12)',
                   }}>
-                  {marketplaceAvailable}
-                </motion.span>
-              )}
-            </span>
-            {!collapsed && (
-              <span
-                style={{
-                  fontSize: 10.5,
-                  fontWeight: 650,
-                  lineHeight: 1.3,
-                  letterSpacing: '-0.005em',
-                  color: P?.text || '#334155',
-                  whiteSpace: 'normal',
-                  overflow: 'visible',
-                  wordBreak: 'break-word',
-                  textAlign: 'center',
-                  maxWidth: '100%',
-                }}>
-                {t('customize.triggerLabel')}
-              </span>
-            )}
-          </motion.button>
-
-          {/* Sign out */}
-          <motion.button
-            whileHover={{ scale: collapsed ? 1.08 : 1.02, y: -2 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={onLogout}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.12)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.06)')}
-            style={{
-              display: 'flex',
-              flexDirection: collapsed ? 'row' : 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: collapsed ? 0 : 7,
-              fontWeight: 700,
-              letterSpacing: '-0.005em',
-              cursor: 'pointer',
-              overflow: 'visible',
-              border: '1px solid rgba(239,68,68,0.16)',
-              background: 'rgba(239,68,68,0.06)',
-              color: '#dc2626',
-              transition: 'background .18s, box-shadow .18s',
-              ...(collapsed ? { width: 40, height: 40, borderRadius: 12 } : { minHeight: 76, borderRadius: 14, padding: '12px 8px' }),
-            }}>
-            <span
-              style={{
-                flexShrink: 0,
-                display: 'grid',
-                placeContent: 'center',
-                width: collapsed ? 'auto' : 28,
-                height: collapsed ? 'auto' : 28,
-                borderRadius: 9,
-                background: collapsed ? 'transparent' : 'rgba(239,68,68,0.12)',
-              }}>
-              <LogOut style={{ width: collapsed ? 15 : 14.5, height: collapsed ? 15 : 14.5, transform: isRTL ? 'scaleX(-1)' : 'none' }} strokeWidth={2.2} />
-            </span>
-            {!collapsed && (
-              <span style={{ fontSize: 10.5, lineHeight: 1.3, whiteSpace: 'normal', overflow: 'visible', wordBreak: 'break-word', textAlign: 'center', maxWidth: '100%' }}>{logoutLabel}</span>
-            )}
-          </motion.button>
-        </div>
+                  <LogOut style={{ width: collapsed ? 15 : 14.5, height: collapsed ? 15 : 14.5, transform: isRTL ? 'scaleX(-1)' : 'none' }} strokeWidth={2.2} />
+                </span>
+                {!collapsed && (
+                  <span style={{ fontSize: 10.5, lineHeight: 1.3, whiteSpace: 'normal', overflow: 'visible', wordBreak: 'break-word', textAlign: 'center', maxWidth: '100%' }}>{logoutLabel}</span>
+                )}
+              </motion.button>
+            </div>
+          </>
+        )}
       </div>
 
       <CustomizeSidebarModal open={customizeOpen} onClose={() => setCustomizeOpen(false)} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} isInstalled={isInstalled} toggleInstalled={toggleInstalled} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} getLabel={getLabel} setLabel={setLabel} labels={labels} resetLabels={resetLabels} />
@@ -3116,7 +2769,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
         )}
       </motion.button>
       <aside
-      className='sidebar-shell hidden lg:flex flex-col shrink-0 ltr:ml-4 rtl:mr-4 ltr:mr-6 rtl:ml-6'
+      className='sidebar-shell sidebar-glass hidden lg:flex flex-col shrink-0 ltr:ml-4 rtl:mr-4 ltr:mr-6 rtl:ml-6'
       style={{
         width: collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W,
         height: `calc(100vh - ${SIDEBAR_MARGIN + SIDEBAR_MARGIN_BOTTOM}px)`,
@@ -3125,17 +2778,14 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
         position: 'relative',
         zIndex: 1000,
         overflow: 'hidden',
-        borderRadius: SIDEBAR_RADIUS,
+        borderRadius: 'var(--tenant-radius-card, 16px)',
         background: P.bg,
-        border: '1px solid #D1D7DB',
-        boxShadow:
-          '0 1px 2px rgba(11, 20, 26, 0.06), 0 8px 24px rgba(11, 20, 26, 0.10), 0 24px 48px rgba(11, 20, 26, 0.08)',
-        outline: '1px solid rgba(0,0,0,0.04)',
         transition: 'width .28s cubic-bezier(0.22,1,0.36,1)',
         fontFamily: isRTL ? undefined : SIDEBAR_FONT_LTR,
       }}>
-      {/* Texture */}
+      {/* Ambient glass wash */}
       <div
+        className='sidebar-glass-texture'
         style={{
           position: 'absolute',
           inset: 0,
@@ -3148,6 +2798,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
       />
       {/* Top accent bar */}
       <div
+        className='sidebar-glass-accent'
         style={{
           position: 'absolute',
           top: 0,
@@ -3160,11 +2811,11 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
         }}
       />
 
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
         <SidebarHeader user={user} collapsed={collapsed} P={P} />
 
         <LayoutGroup id='sidebar-desktop'>
-          <div style={{ flex: 1, overflow: 'hidden' }}>
+          <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <ScrollShadow P={P}>
               <nav style={{ padding: collapsed ? '4px 10px' : '4px 10px 10px', display: 'flex', flexDirection: 'column' }}>
                 {sections?.map((section, idx) => (
@@ -3181,28 +2832,47 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
     </>
   );
 
-  /* ── Mobile Drawer ── */
+  /* ── Mobile Drawer (edge panel; body push uses same --sidebar-drawer-w) ── */
+  const drawerW = (() => {
+    if (typeof window === 'undefined') return 280;
+    const raw = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-drawer-w').trim();
+    if (raw) {
+      const probe = document.createElement('div');
+      probe.style.cssText = `position:absolute;visibility:hidden;width:${raw}`;
+      document.body.appendChild(probe);
+      const w = probe.getBoundingClientRect().width;
+      probe.remove();
+      if (w > 0) return Math.round(w);
+    }
+    return Math.min(280, Math.round(window.innerWidth * 0.82));
+  })();
+  const drawerOffset = isRTL ? drawerW : -drawerW;
   const MobileDrawer = (
     <AnimatePresence>
       {open && (
         <>
-          <motion.div key='overlay' initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }} onClick={() => setOpen && setOpen(false)} className='fixed inset-0 z-40 lg:hidden' style={{ background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(8px)' }} />
+          <motion.div
+            key='overlay'
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            onClick={() => setOpen && setOpen(false)}
+            className='sidebar-glass-overlay fixed inset-0 z-[110000] lg:hidden'
+          />
           <motion.aside
             key='drawer'
-            initial={{ x: -290 }}
+            initial={{ x: drawerOffset }}
             animate={{ x: 0 }}
-            exit={{ x: -290 }}
-            transition={slide}
-            className='sidebar-shell fixed z-50 top-0 left-0 h-dvh flex flex-col lg:hidden'
+            exit={{ x: drawerOffset }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className='sidebar-shell sidebar-glass is-mobile-drawer fixed z-[110001] flex flex-col lg:hidden'
             style={{
-              width: 278,
               background: P.bg,
-              borderRight: `1px solid ${P.border}`,
-              boxShadow: '20px 0 60px rgba(15,23,42,0.12)',
               fontFamily: isRTL ? undefined : SIDEBAR_FONT_LTR,
             }}>
-            {/* Texture */}
             <div
+              className='sidebar-glass-texture'
               style={{
                 position: 'absolute',
                 inset: 0,
@@ -3212,8 +2882,8 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
                 backgroundSize: P.textureSize,
               }}
             />
-            {/* Top accent */}
             <div
+              className='sidebar-glass-accent'
               style={{
                 position: 'absolute',
                 top: 0,
@@ -3224,64 +2894,50 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
                 background: 'linear-gradient(90deg, var(--color-gradient-from), var(--color-gradient-to))',
               }}
             />
-            {/* Mobile header */}
-            <div
-              style={{
-                position: 'relative',
-                zIndex: 1,
-                flexShrink: 0,
-                height: 58,
-                padding: '0 14px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderBottom: `1px solid ${P.border}`,
-                background: P.headerBg,
-                backdropFilter: 'blur(12px)',
-              }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                <div
+
+            <div className='sidebar-glass-header'>
+              <div className='sidebar-glass-title'>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo/logo1.png"
+                  alt="So7baFit"
                   style={{
                     width: 30,
                     height: 30,
                     borderRadius: 9,
-                    display: 'grid',
-                    placeContent: 'center',
-                    color: '#fff',
-                    background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))',
-                    boxShadow: '0 2px 8px color-mix(in srgb, var(--color-primary-500) 30%, transparent)',
-                  }}>
-                  <LayoutDashboard style={{ width: 13, height: 13 }} strokeWidth={2.5} />
-                </div>
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: P.text, letterSpacing: '-0.01em' }}>
+                    objectFit: 'contain',
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {role === 'super_admin' && t('brand.superAdminPortal')}
                   {role === 'admin' && t('brand.adminPortal')}
                   {role === 'coach' && t('brand.coachPortal')}
                   {role === 'client' && t('brand.clientPortal')}
                 </span>
               </div>
-              <motion.button
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.93 }}
+              <button
+                type='button'
+                className='sidebar-glass-close'
                 onClick={() => setOpen(false)}
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 9,
-                  border: `1px solid ${P.border}`,
-                  background: P.bgCard,
-                  color: P.textMuted,
-                  display: 'grid',
-                  placeContent: 'center',
-                  cursor: 'pointer',
-                  boxShadow: P.shadow?.sm,
-                }}>
-                <X style={{ width: 13, height: 13 }} strokeWidth={2.5} />
-              </motion.button>
+                aria-label='Close menu'
+              >
+                <X style={{ width: 14, height: 14 }} strokeWidth={2.5} />
+              </button>
             </div>
 
             <LayoutGroup id='sidebar-mobile'>
-              <div style={{ flex: 1, overflow: 'hidden', position: 'relative', zIndex: 1 }}>
+              <div
+                style={{
+                  flex: '1 1 auto',
+                  minHeight: 0,
+                  overflow: 'hidden',
+                  position: 'relative',
+                  zIndex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
                 <ScrollShadow P={P}>
                   <nav style={{ padding: '4px 10px 10px', display: 'flex', flexDirection: 'column' }}>
                     {sections?.map((section, idx) => (
@@ -3292,8 +2948,27 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
               </div>
             </LayoutGroup>
 
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              <SidebarFooter collapsed={false} onLogout={handleLogout} logoutLabel={logoutLabel} sections={sections} isHidden={isHidden} toggleHidden={toggleHidden} resetAll={resetAll} isInstalled={isInstalled} toggleInstalled={toggleInstalled} paletteKey={paletteKey} setPaletteKey={setPaletteKey} t={t} P={P} getLabel={getLabel} setLabel={setLabel} labels={labels} resetLabels={resetLabels} />
+            <div style={{ position: 'relative', zIndex: 1, flexShrink: 0 }}>
+              <SidebarFooter
+                collapsed={false}
+                mobileCompact
+                onLogout={handleLogout}
+                logoutLabel={logoutLabel}
+                sections={sections}
+                isHidden={isHidden}
+                toggleHidden={toggleHidden}
+                resetAll={resetAll}
+                isInstalled={isInstalled}
+                toggleInstalled={toggleInstalled}
+                paletteKey={paletteKey}
+                setPaletteKey={setPaletteKey}
+                t={t}
+                P={P}
+                getLabel={getLabel}
+                setLabel={setLabel}
+                labels={labels}
+                resetLabels={resetLabels}
+              />
             </div>
           </motion.aside>
         </>

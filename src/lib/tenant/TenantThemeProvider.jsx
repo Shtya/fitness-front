@@ -2,6 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import api from '@/utils/axios';
+import { BRAND_LOGO_SRC } from '@/lib/brand';
 
 export const DEFAULT_TENANT_THEME = {
   tenant: { id: null, name: 'So7baFit', slug: 'so7bafit', status: 'active' },
@@ -11,10 +12,10 @@ export const DEFAULT_TENANT_THEME = {
     tagline: 'Train smarter. Live stronger.',
     companyName: 'So7baFit',
     supportEmail: null,
-    logoLightUrl: '/logo/logo1.png',
-    logoDarkUrl: '/logo/logo1.png',
-    iconUrl: '/logo/logo1.png',
-    splashLogoUrl: '/logo/logo1.png',
+    logoLightUrl: BRAND_LOGO_SRC,
+    logoDarkUrl: BRAND_LOGO_SRC,
+    iconUrl: BRAND_LOGO_SRC,
+    splashLogoUrl: BRAND_LOGO_SRC,
     loginBackgroundUrl: null,
     colors: {
       primary: '#2563eb',

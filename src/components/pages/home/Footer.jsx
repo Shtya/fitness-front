@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
+import { BRAND_LOGO_SRC } from "@/lib/brand";
 import {
   Dumbbell,
   Mail,
@@ -146,16 +147,12 @@ export default function Footer() {
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
             >
-              <div className="relative">
-                <motion.div
-                  className="theme-gradient-bg absolute inset-0 rounded-lg blur-lg"
-                  animate={{ opacity: [0.45, 0.75, 0.45], scale: [1, 1.12, 1] }}
-                  transition={{ duration: 2.5, repeat: Infinity }}
-                />
-                <div className="theme-gradient-bg relative flex h-14 w-14 items-center justify-center rounded-lg shadow-2xl">
-                  <Dumbbell className="h-7 w-7 text-white" strokeWidth={2.5} />
-                </div>
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={BRAND_LOGO_SRC}
+                alt="So7baFit"
+                className="relative h-14 w-14 rounded-lg object-contain shadow-2xl"
+              />
               <span className="font-display text-3xl tracking-tight text-white">
                 So7baFit
               </span>

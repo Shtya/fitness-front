@@ -25,6 +25,7 @@ import api from '@/utils/axios';
 import { useTenantTheme } from '@/lib/tenant/TenantThemeProvider';
 import { useUser } from '@/hooks/useUser';
 import PhoneMockup from './PhoneMockup';
+import { BRAND_LOGO_SRC } from '@/lib/brand';
 
 const BRAND_FIELDS = [
   ['appName', 'App name', 'اسم التطبيق', Sparkles],
@@ -414,12 +415,12 @@ export default function BrandingSettingsPage() {
               <span className="text-xs font-semibold text-slate-500">{isAr ? 'الشعار' : 'Logo'}</span>
               <label className="mt-1.5 flex items-center gap-4 rounded-2xl border-2 border-dashed border-slate-200 p-4 cursor-pointer transition-colors hover:border-slate-300 hover:bg-slate-50/60">
                 <div className="w-14 h-14 shrink-0 rounded-2xl border border-slate-200 bg-white grid place-items-center overflow-hidden">
-                  {logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={logoUrl} alt="logo" className="w-full h-full object-contain" />
-                  ) : (
-                    <ImageIcon size={18} className="text-slate-300" />
-                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={logoUrl || BRAND_LOGO_SRC}
+                    alt="logo"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5">

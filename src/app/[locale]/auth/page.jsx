@@ -9,7 +9,8 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import axios from "axios";
 import { useTranslations, useLocale } from "next-intl";
-import { AlertCircle, Eye, EyeOff, Lock, Mail, Dumbbell, ChevronRight, ChevronLeft } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Lock, Mail, ChevronRight, ChevronLeft } from "lucide-react";
+import { BRAND_LOGO_SRC } from "@/lib/brand";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { loginPersist } from "@/app/role-access";
@@ -196,8 +197,9 @@ function LoginCard({ onLoggedIn }) {
 
       {/* header */}
       <div className="sf-card-header">
-        <div className="sf-logo-mark">
-          <Dumbbell size={20} strokeWidth={2} />
+        <div className="sf-logo-mark" style={{ background: "transparent", overflow: "hidden" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={BRAND_LOGO_SRC} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
         </div>
         <div>
           <h1 className="sf-heading">{t("signIn")}</h1>
@@ -802,12 +804,13 @@ export default function AuthPage() {
             <div className="sf-hero-content">
               <div className="sf-brand">
                 <div className="sf-brand-icon" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}>
-                  {assets?.logo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={assets.logo} alt={appName} style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6 }} />
-                  ) : (
-                    <Dumbbell size={20} strokeWidth={2} />
-                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    className="scale-[1.6]"
+                    src={assets?.logo || BRAND_LOGO_SRC}
+                    alt={appName}
+                    style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: 6 }}
+                  />
                 </div>
                 <span className="sf-brand-name">{appName}</span>
               </div>
@@ -846,12 +849,13 @@ export default function AuthPage() {
             {/* mobile brand */}
             <div className="sf-mobile-brand">
               <div className="sf-mobile-brand-icon" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}>
-                {assets?.logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={assets.logo} alt={appName} style={{ width: 22, height: 22, objectFit: 'contain' }} />
-                ) : (
-                  <Dumbbell size={16} strokeWidth={2} />
-                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  className="scale-[1.6]"
+                  src={assets?.logo || BRAND_LOGO_SRC}
+                  alt={appName}
+                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                />
               </div>
               <span className="sf-mobile-brand-name">{appName}</span>
             </div>
