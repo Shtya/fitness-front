@@ -123,6 +123,8 @@ export default function YoutubeResumePlayer({
 	videoId,
 	playing = false,
 	lowQuality = false,
+	volume = 0.85,
+	muted = false,
 	title = 'YouTube',
 	className = '',
 	onProgress,
@@ -131,10 +133,25 @@ export default function YoutubeResumePlayer({
 	const mountRef = useRef(null);
 	const playerRef = useRef(null);
 	const playingRef = useRef(playing);
+	const volumeRef = useRef({ volume, muted });
 	const onProgressRef = useRef(onProgress);
 	const [lqScale, setLqScale] = useState(1);
 	playingRef.current = playing;
+	volumeRef.current = { volume, muted };
 	onProgressRef.current = onProgress;
+
+	const applyVolume = player => {
+		if (!player?.setVolume) return;
+		try {
+			const { volume: vol, muted: isMuted } = volumeRef.current;
+			const pct = Math.round(Math.max(0, Math.min(1, vol)) * 100);
+			player.setVolume(pct);
+			if (isMuted || pct === 0) player.mute?.();
+			else player.unMute?.();
+		} catch {
+			/* ignore */
+		}
+	};
 
 	useEffect(() => {
 		if (!lowQuality) return undefined;
@@ -221,6 +238,7 @@ export default function YoutubeResumePlayer({
 					onReady: e => {
 						if (cancelled) return;
 						lockTiny(e.target);
+						applyVolume(e.target);
 						if (resumeAt > 0) {
 							try { e.target.seekTo(resumeAt, true); } catch { /* ignore */ }
 						}
@@ -273,6 +291,10 @@ export default function YoutubeResumePlayer({
 			/* ignore */
 		}
 	}, [playing]);
+
+	useEffect(() => {
+		applyVolume(playerRef.current);
+	}, [volume, muted]);
 
 	return (
 		<div

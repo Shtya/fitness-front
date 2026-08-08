@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import api from '@/utils/axios';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil, Download, MonitorDown } from 'lucide-react';
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
@@ -2447,6 +2447,413 @@ function CustomizeSidebarModal({ open, onClose, sections, isHidden, toggleHidden
   );
 }
 
+function detectDesktopBrowser() {
+  if (typeof navigator === 'undefined') return 'other';
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes('edg/')) return 'edge';
+  if (ua.includes('firefox/')) return 'firefox';
+  if (ua.includes('chrome/') && !ua.includes('edg/')) return 'chrome';
+  if (ua.includes('safari/') && !ua.includes('chrome/') && !ua.includes('crios')) return 'safari';
+  if (ua.includes('opr/') || ua.includes('opera')) return 'opera';
+  return 'other';
+}
+
+function getDesktopInstallGuide(browser, isAr) {
+  const guides = {
+    chrome: {
+      name: 'Google Chrome',
+      stepsAr: [
+        'افتح قائمة Chrome (⋮) أعلى يمين النافذة.',
+        'اختَر «حفظ ومشاركة» أو ابحث عن «تثبيت so7bafit…» / Install so7bafit.',
+        'اضغط «تثبيت» ثم أكّد من النافذة اللي هتظهر.',
+        'التطبيق هيفتح لوحده ويظهر في قائمة ابدأ / شريط المهام.',
+      ],
+      stepsEn: [
+        'Open the Chrome menu (⋮) at the top-right.',
+        'Choose “Cast, save and share” or look for “Install so7bafit…”.',
+        'Click Install, then confirm in the dialog.',
+        'The app opens standalone and can be pinned to the taskbar.',
+      ],
+    },
+    edge: {
+      name: 'Microsoft Edge',
+      stepsAr: [
+        'افتح قائمة Edge (⋯) أعلى يمين النافذة.',
+        'اختَر «تطبيقات» ثم «تثبيت هذا الموقع كتطبيق».',
+        'اضغط «تثبيت» في النافذة.',
+        'تقدر تثبّته في شريط المهام أو قائمة ابدأ.',
+      ],
+      stepsEn: [
+        'Open the Edge menu (⋯) at the top-right.',
+        'Go to Apps → Install this site as an app.',
+        'Click Install in the dialog.',
+        'Pin it to the taskbar or Start menu if you like.',
+      ],
+    },
+    firefox: {
+      name: 'Mozilla Firefox',
+      stepsAr: [
+        'Firefox على الكمبيوتر مش بيدعم تثبيت PWA بنفس سهولة Chrome/Edge.',
+        'الأفضل: افتح الموقع من Chrome أو Edge واتبع خطوات التثبيت هناك.',
+        'أو من قائمة Firefox (☰) اعمل Bookmark للصفحة للوصول السريع.',
+      ],
+      stepsEn: [
+        'Desktop Firefox has limited PWA install support.',
+        'Best option: open this site in Chrome or Edge and install from there.',
+        'Or use Firefox menu (☰) → Bookmark for quick access.',
+      ],
+    },
+    safari: {
+      name: 'Safari',
+      stepsAr: [
+        'من شريط القائمة اختَر File → Add to Dock (macOS Sonoma+)،',
+        'أو Share → Add to Dock إذا ظهر الخيار.',
+        'لو مش ظاهر: Safari → Settings → enable related options، أو استخدم Chrome.',
+        'بعد الإضافة هتلاقي الأيقونة في الـ Dock.',
+      ],
+      stepsEn: [
+        'From the menu bar choose File → Add to Dock (macOS Sonoma+),',
+        'or Share → Add to Dock when available.',
+        'If missing, update Safari or install via Chrome instead.',
+        'After adding, the icon appears in the Dock.',
+      ],
+    },
+    opera: {
+      name: 'Opera',
+      stepsAr: [
+        'افتح قائمة Opera أعلى يسار/يمين.',
+        'اختَر «الصفحة» / Page ثم «تثبيت…» أو Install so7bafit.',
+        'أكّد التثبيت من النافذة.',
+      ],
+      stepsEn: [
+        'Open the Opera menu.',
+        'Choose Page → Install… / Install so7bafit.',
+        'Confirm in the install dialog.',
+      ],
+    },
+    other: {
+      name: isAr ? 'المتصفح' : 'Browser',
+      stepsAr: [
+        'افتح قائمة المتصفح (⋮ أو ☰).',
+        'ابحث عن «تثبيت التطبيق» / Install app / Install this site as an app.',
+        'أكّد التثبيت.',
+        'لو الخيار مش موجود، جرّب Google Chrome أو Microsoft Edge.',
+      ],
+      stepsEn: [
+        'Open your browser menu (⋮ or ☰).',
+        'Look for Install app / Install this site as an app.',
+        'Confirm the install.',
+        'If the option is missing, try Google Chrome or Microsoft Edge.',
+      ],
+    },
+  };
+  const g = guides[browser] || guides.other;
+  return {
+    name: g.name,
+    steps: isAr ? g.stepsAr : g.stepsEn,
+  };
+}
+
+/* ─── Install desktop PWA (desktop web only) ─────────────────── */
+function SidebarInstallApp({ collapsed, P }) {
+  const locale = useLocale();
+  const isAr = locale === 'ar';
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [installed, setInstalled] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [browser, setBrowser] = useState('other');
+  const [installing, setInstalling] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const mq = window.matchMedia('(min-width: 768px)');
+    const syncDesktop = () => setIsDesktop(mq.matches);
+    syncDesktop();
+    setBrowser(detectDesktopBrowser());
+    mq.addEventListener?.('change', syncDesktop);
+    mq.addListener?.(syncDesktop);
+
+    const standalone =
+      window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+    if (standalone) setInstalled(true);
+
+    const onBIP = e => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    const onInstalled = () => {
+      setInstalled(true);
+      setDeferredPrompt(null);
+      setOpen(false);
+    };
+    window.addEventListener('beforeinstallprompt', onBIP);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      mq.removeEventListener?.('change', syncDesktop);
+      mq.removeListener?.(syncDesktop);
+      window.removeEventListener('beforeinstallprompt', onBIP);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = e => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  if (!isDesktop || installed) return null;
+
+  const label = isAr ? 'تثبيت على الكمبيوتر' : 'Install on desktop';
+  const guide = getDesktopInstallGuide(browser, isAr);
+  const title = isAr ? 'ازاي تثبّت التطبيق على جهازك' : 'How to install on your computer';
+  const detected = isAr ? `المتصفح المكتشف: ${guide.name}` : `Detected browser: ${guide.name}`;
+  const closeLbl = isAr ? 'حسناً' : 'Got it';
+  const oneTapLbl = isAr ? "تثبيت بنقرة واحدة" : "Install now";
+
+  const onClick = () => setOpen(true);
+
+  const runNativeInstall = async () => {
+    if (!deferredPrompt) return;
+    setInstalling(true);
+    try {
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      setDeferredPrompt(null);
+    } catch {
+      /* ignore */
+    } finally {
+      setInstalling(false);
+    }
+  };
+
+  const popup = open && typeof document !== 'undefined'
+    ? createPortal(
+      <AnimatePresence>
+        <motion.div
+          key="install-layer"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100050,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <button
+            type="button"
+            aria-label="close"
+            onClick={() => setOpen(false)}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              border: 0,
+              background: 'rgba(15, 23, 42, 0.45)',
+              backdropFilter: 'blur(4px)',
+              cursor: 'pointer',
+            }}
+          />
+          <motion.div
+            key="install-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            dir={isAr ? 'rtl' : 'ltr'}
+            initial={{ opacity: 0, y: 16, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+            transition={{ duration: 0.18 }}
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              width: 'min(420px, calc(100vw - 32px))',
+              maxHeight: 'min(80vh, 560px)',
+              overflow: 'auto',
+              borderRadius: 18,
+              background: '#fff',
+              boxShadow: '0 24px 60px rgba(15, 23, 42, 0.22)',
+              border: '1px solid rgba(226, 232, 240, 0.95)',
+              padding: '18px 18px 16px',
+            }}
+          >
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+              <span
+                style={{
+                  display: 'grid',
+                  placeContent: 'center',
+                  width: 36,
+                  height: 36,
+                  borderRadius: 11,
+                  background: 'color-mix(in srgb, var(--color-primary-500) 12%, transparent)',
+                  color: 'var(--color-primary-600)',
+                  flexShrink: 0,
+                }}
+              >
+                <MonitorDown style={{ width: 18, height: 18 }} strokeWidth={2.2} />
+              </span>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>{title}</p>
+                <p style={{ margin: '3px 0 0', fontSize: 11.5, fontWeight: 700, color: '#64748b' }}>{detected}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="close"
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 10,
+                border: '1px solid #e2e8f0',
+                background: '#fff',
+                display: 'grid',
+                placeContent: 'center',
+                cursor: 'pointer',
+                color: '#64748b',
+                flexShrink: 0,
+              }}
+            >
+              <X style={{ width: 15, height: 15 }} />
+            </button>
+          </div>
+
+          <ol
+            style={{
+              margin: '8px 0 0',
+              padding: isAr ? '0 1.15rem 0 0' : '0 0 0 1.15rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+            }}
+          >
+            {guide.steps.map((step, i) => (
+              <li
+                key={`${browser}-${i}`}
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#334155',
+                  lineHeight: 1.55,
+                }}
+              >
+                {step}
+              </li>
+            ))}
+          </ol>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+            {deferredPrompt ? (
+              <button
+                type="button"
+                onClick={runNativeInstall}
+                disabled={installing}
+                style={{
+                  flex: '1 1 140px',
+                  height: 40,
+                  borderRadius: 12,
+                  border: 0,
+                  background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700))',
+                  color: '#fff',
+                  fontSize: 12.5,
+                  fontWeight: 800,
+                  cursor: installing ? 'wait' : 'pointer',
+                  opacity: installing ? 0.75 : 1,
+                }}
+              >
+                {installing ? (isAr ? "جاري التثبيت…" : "Installing…") : oneTapLbl}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              style={{
+                flex: '1 1 100px',
+                height: 40,
+                borderRadius: 12,
+                border: '1px solid #e2e8f0',
+                background: '#f8fafc',
+                color: '#0f172a',
+                fontSize: 12.5,
+                fontWeight: 800,
+                cursor: 'pointer',
+              }}
+            >
+              {closeLbl}
+            </button>
+          </div>
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>,
+      document.body,
+    )
+    : null;
+
+  return (
+    <>
+      <div
+        className="hidden md:block"
+        style={{ width: collapsed ? 'auto' : '100%', marginBottom: 8 }}
+      >
+        <motion.button
+          type="button"
+          whileHover={{ scale: collapsed ? 1.06 : 1.01, y: -1 }}
+          whileTap={{ scale: 0.96 }}
+          onClick={onClick}
+          title={label}
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: collapsed ? 0 : 10,
+            width: collapsed ? 40 : '100%',
+            height: collapsed ? 40 : 44,
+            borderRadius: 12,
+            border: `1px solid ${P?.border || 'rgba(0,0,0,0.07)'}`,
+            background: P?.bgCard || '#ffffff',
+            boxShadow: P?.shadow?.sm || '0 1px 3px rgba(0,0,0,0.06)',
+            cursor: 'pointer',
+            padding: collapsed ? 0 : '0 12px',
+            color: 'var(--color-primary-700)',
+          }}
+        >
+          <span
+            style={{
+              display: 'grid',
+              placeContent: 'center',
+              width: collapsed ? 'auto' : 28,
+              height: collapsed ? 'auto' : 28,
+              borderRadius: 9,
+              background: 'color-mix(in srgb, var(--color-primary-500) 12%, transparent)',
+              color: 'var(--color-primary-600)',
+              flexShrink: 0,
+            }}
+          >
+            {collapsed ? <Download style={{ width: 15, height: 15 }} strokeWidth={2.2} /> : <MonitorDown style={{ width: 15, height: 15 }} strokeWidth={2.2} />}
+          </span>
+          {!collapsed && (
+            <span style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: '-0.01em', color: '#0f172a' }}>
+              {label}
+            </span>
+          )}
+        </motion.button>
+      </div>
+      {popup}
+    </>
+  );
+}
+
 /* ─── SidebarFooter ──────────────────────────────────────────── */
 function SidebarFooter({ collapsed, onLogout, logoutLabel, sections, isHidden, toggleHidden, resetAll, isInstalled, toggleInstalled, paletteKey, setPaletteKey, t, P, getLabel, setLabel, labels, resetLabels }) {
   const [customizeOpen, setCustomizeOpen] = useState(false);
@@ -2488,6 +2895,7 @@ function SidebarFooter({ collapsed, onLogout, logoutLabel, sections, isHidden, t
             alignItems: collapsed ? 'center' : 'stretch',
             marginBottom: 12,
           }}>
+          <SidebarInstallApp collapsed={collapsed} P={P} />
           <SidebarLanguageToggle collapsed={collapsed} P={P} />
           <SidebarThemeSwitcher collapsed={collapsed} P={P} />
         </div>

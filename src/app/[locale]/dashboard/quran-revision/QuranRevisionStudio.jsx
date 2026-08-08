@@ -17,7 +17,6 @@ import {
 	RotateCcw,
 	Brain,
 	LoaderCircle,
-	Heart,
 	Trash2,
 	Plus,
 	ExternalLink,
@@ -32,6 +31,11 @@ import {
 	Folder,
 	FolderOpen,
 	Pencil,
+	Youtube,
+	Maximize2,
+	Minimize2,
+	Info,
+	BookOpenText,
 } from 'lucide-react';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 import Select from '@/components/atoms/Select';
@@ -42,11 +46,9 @@ import {
 	extractYoutubeId,
 	fetchYoutubeTitle,
 } from './quran-data';
-import YoutubeResumePlayer, {
-	clearYtProgress,
-	formatResumeLabel,
-	getYtResumeSeconds,
-} from './YoutubeResumePlayer';
+import YoutubeResumePlayer from './YoutubeResumePlayer';
+import TajweedText from './TajweedText';
+import TajweedGuideModal from './TajweedGuideModal';
 import './quran-revision.css';
 
 const LS_PREFS = 'so7ba:quran-revision:prefs:v2';
@@ -62,7 +64,7 @@ const QR_SELECT_CN = '!h-[2.2rem] !rounded-[0.65rem] !text-[0.75rem] !font-bold 
 const DEFAULT_PREFS = {
 	selectedSurahId: 2,
 	mode: 'quarter',
-	selectedUnitIds: [1],
+	selectedUnitIds: [],
 	/** Persist quarter/page picks per surah+mode: { "2:quarter": [1,2] } */
 	unitSelections: {},
 	repeatCount: 3,
@@ -71,8 +73,9 @@ const DEFAULT_PREFS = {
 	selectedReciterId: 'minshawi',
 	selectedFavId: null,
 	followAlong: true,
+	showTajweed: true,
 	isMemorizationMode: false,
-	hideMode: 'middle', // start | middle | end
+	hideParts: ['middle'], // multi: start | middle | end
 	volume: 0.85,
 	speed: 1,
 	ytPlayMode: 'audio', // audio = data-saver (lowest quality) | video = normal
@@ -113,7 +116,7 @@ const COPY = {
 		reciter: 'القارئ',
 		builtin: 'قراء',
 		youtube: 'YouTube',
-		favorites: 'مفضلتي',
+		favorites: 'يوتيوب',
 		search: 'بحث',
 		searching: '…',
 		noYt: 'ابحث أو احفظ رابطًا',
@@ -129,9 +132,10 @@ const COPY = {
 		progress: 'التقدم',
 		follow: 'تتبع',
 		memo: 'إخفاء',
-		hideStart: 'أول الآية',
-		hideMiddle: 'وسط الآية',
-		hideEnd: 'آخر الآية',
+		hideStart: 'أولها',
+		hideMiddle: 'وسطها',
+		hideEnd: 'آخرها',
+		hidePartsHint: 'ممكن تختار أكتر من جزء',
 		saveReading: 'حفظ للمفضلة',
 		sessionSettings: 'إعدادات الجلسة',
 		changeWhilePlaying: 'غيّر السورة أو الربع أو القارئ أثناء التشغيل',
@@ -162,7 +166,7 @@ const COPY = {
 		historyMins: 'د',
 		historyHours: 'س',
 		historyDays: 'ي',
-		favPanelTitle: 'مفضلتي',
+		favPanelTitle: 'مفضلة يوتيوب',
 		favFromSession: 'حفظ من الجلسة',
 		favAddYoutube: 'إضافة من YouTube',
 		useFav: 'استخدام',
@@ -171,8 +175,6 @@ const COPY = {
 		ytModeHint: 'يوتيوب مفيهوش صوت فقط رسميًا · توفير الداتا = أقل جودة (١٤٤p)',
 		ytAskMode: 'جودة التشغيل؟',
 		ytClear: 'إلغاء اليوتيوب',
-		ytResumeAt: 'يكمل من',
-		ytResumeReset: 'من البداية',
 		folderAll: 'الكل',
 		folderPick: 'الفولدر',
 		folderNamePh: 'اسم الفولدر…',
@@ -181,6 +183,24 @@ const COPY = {
 		folderEmpty: 'مفيش فيديوهات في الفولدر ده',
 		folderDelete: 'حذف الفولدر',
 		folderRename: 'تعديل الاسم',
+		expandMushaf: 'ملء الشاشة',
+		collapseMushaf: 'تصغير',
+		tajweed: 'تجويد',
+		tajweedHint: 'مرّر أو اضغط على الكلمة الملونة… هتشوف يعني إيه الحكم وليه ظاهر هنا',
+		tajweedLegend: 'دليل ألوان التجويد',
+		tajweedGuide: 'الدليل',
+		tajweedLegendClose: 'إغلاق',
+		tajweedMeaning: 'يعني إيه؟',
+		tajweedWhy: 'إزاي تطبّقه؟',
+		tajweedTip: 'خدها كده',
+		tajweedExample: 'مثال',
+		tajweedIntro: 'الألوان مش للزينة… كل لون بيحكي حكم. تحت هتلاقي الشرح ببساطة ولُطف.',
+		tajweedHowTitle: 'إزاي تستخدم الدليل؟',
+		tajweedHowBody: 'شغّل «تجويد»، وبعدين لما تشوف لون على كلمة افتح الدليل أو مرّر على الكلمة. اقرأ: يعني إيه؟ ليه؟ وخدها كده.',
+		tajweedFooter: 'كل ما تقرأ وتتفرّج على الألوان… الأحكام هتتثبت لوحدها من غير حفظ ناشف.',
+		hidePartsLabel: 'اخفِ جزء من الآية',
+		unitsExpand: 'فتح قائمة الأرباع',
+		unitsCollapse: 'إغلاق قائمة الأرباع',
 	},
 	en: {
 		title: 'Quran Revision',
@@ -212,7 +232,7 @@ const COPY = {
 		reciter: 'Reciter',
 		builtin: 'Reciters',
 		youtube: 'YouTube',
-		favorites: 'Favorites',
+		favorites: 'YouTube',
 		search: 'Search',
 		searching: '…',
 		noYt: 'Search or save a link',
@@ -231,6 +251,7 @@ const COPY = {
 		hideStart: 'Start',
 		hideMiddle: 'Middle',
 		hideEnd: 'End',
+		hidePartsHint: 'Pick one or more parts',
 		saveReading: 'Save to favorites',
 		sessionSettings: 'Session settings',
 		changeWhilePlaying: 'Change surah, range, or reciter while playing',
@@ -261,7 +282,7 @@ const COPY = {
 		historyMins: 'm',
 		historyHours: 'h',
 		historyDays: 'd',
-		favPanelTitle: 'My favorites',
+		favPanelTitle: 'YouTube favorites',
 		favFromSession: 'Save from session',
 		favAddYoutube: 'Add from YouTube',
 		useFav: 'Use',
@@ -270,8 +291,6 @@ const COPY = {
 		ytModeHint: 'No official audio-only embed · Data saver uses lowest quality (144p)',
 		ytAskMode: 'Playback quality?',
 		ytClear: 'Clear YouTube',
-		ytResumeAt: 'Resume at',
-		ytResumeReset: 'From start',
 		folderAll: 'All',
 		folderPick: 'Folder',
 		folderNamePh: 'Folder name…',
@@ -280,6 +299,24 @@ const COPY = {
 		folderEmpty: 'No videos in this folder',
 		folderDelete: 'Delete folder',
 		folderRename: 'Rename',
+		expandMushaf: 'Full screen',
+		collapseMushaf: 'Exit full screen',
+		tajweed: 'Tajweed',
+		tajweedHint: 'Hover or tap a colored word to see what the rule means and why it applies',
+		tajweedLegend: 'Tajweed color guide',
+		tajweedGuide: 'Guide',
+		tajweedLegendClose: 'Close',
+		tajweedMeaning: 'What does it mean?',
+		tajweedWhy: 'How do I apply it?',
+		tajweedTip: 'Remember it like this',
+		tajweedExample: 'Example',
+		tajweedIntro: 'Colors aren’t decoration — each one teaches a rule. Below is a simple, friendly guide.',
+		tajweedHowTitle: 'How to use this guide?',
+		tajweedHowBody: 'Turn on Tajweed, then open the guide or hover a colored word. Read: meaning, why, and a friendly tip.',
+		tajweedFooter: 'The more you read with colors on, the more the rules stick — without dry memorizing.',
+		hidePartsLabel: 'Hide part of the ayah',
+		unitsExpand: 'Show units list',
+		unitsCollapse: 'Hide units list',
 	},
 };
 
@@ -422,37 +459,61 @@ function buildUnits(ayahBank, mode, t, isAr) {
 		});
 }
 
-/** Hide start / middle / end third of ayah words for memorization. */
-function maskText(text, hideMode) {
+/** Hide selected thirds of ayah words for memorization (multi-select). */
+function maskText(text, hideParts) {
+	const parts = new Set(Array.isArray(hideParts) ? hideParts : hideParts ? [hideParts] : []);
+	if (!parts.size) return text;
 	const words = String(text || '').trim().split(/\s+/).filter(Boolean);
 	if (!words.length) return text;
-	if (words.length === 1) return '••••';
-	const hideCount = Math.max(1, Math.ceil(words.length / 3));
-	if (hideMode === 'start') {
-		return words.map((w, i) => (i < hideCount ? '••••' : w)).join(' ');
+	if (words.length === 1) return parts.size ? '••••' : text;
+	const n = words.length;
+	return words.map((w, i) => {
+		const bucket = Math.min(2, Math.floor((i * 3) / n));
+		const zone = bucket === 0 ? 'start' : bucket === 1 ? 'middle' : 'end';
+		return parts.has(zone) ? '••••' : w;
+	}).join(' ');
+}
+
+function normalizeHideParts(raw, legacyHideMode) {
+	if (Array.isArray(raw) && raw.length) {
+		return raw.filter(p => p === 'start' || p === 'middle' || p === 'end');
 	}
-	if (hideMode === 'end') {
-		return words.map((w, i) => (i >= words.length - hideCount ? '••••' : w)).join(' ');
+	if (['start', 'middle', 'end'].includes(legacyHideMode)) return [legacyHideMode];
+	if (typeof legacyHideMode === 'number') {
+		return legacyHideMode >= 3 ? ['end'] : legacyHideMode === 2 ? ['middle'] : ['start'];
 	}
-	const start = Math.floor((words.length - hideCount) / 2);
-	return words.map((w, i) => (i >= start && i < start + hideCount ? '••••' : w)).join(' ');
+	return ['middle'];
 }
 
 async function fetchSurahAyahs(surahId) {
-	const res = await fetch(`https://api.alquran.cloud/v1/surah/${surahId}`);
+	const res = await fetch(
+		`https://api.alquran.cloud/v1/surah/${surahId}/editions/quran-uthmani,quran-tajweed`,
+	);
 	if (!res.ok) throw new Error('fetch failed');
 	const json = await res.json();
-	const ayahs = json?.data?.ayahs || [];
-	return ayahs.map(a => ({
+	const editions = Array.isArray(json?.data) ? json.data : [];
+	const uthmani = editions.find(e => e?.edition?.identifier === 'quran-uthmani') || editions[0];
+	const tajweedEd = editions.find(e => e?.edition?.identifier === 'quran-tajweed');
+	const ayahs = uthmani?.ayahs || [];
+	const tajweedAyahs = tajweedEd?.ayahs || [];
+	return ayahs.map((a, i) => ({
 		n: a.numberInSurah,
-		text: a.text,
+		text: String(a.text || '').replace(/^\uFEFF/, ''),
+		tajweed: String(tajweedAyahs[i]?.text || '').replace(/^\uFEFF/, ''),
 		hizbQuarter: a.hizbQuarter,
 		page: a.page,
 		juz: a.juz,
 	}));
 }
 
-export default function QuranRevisionStudio() {
+function ytThumb(videoId) {
+	if (!videoId) return null;
+	return `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+}
+
+export default function QuranRevisionStudio({
+	quranFontFamily = 'var(--font-qr-uthmani), var(--font-qr-amiri), serif',
+} = {}) {
 	const locale = useLocale();
 	const isAr = locale === 'ar';
 	const t = COPY[isAr ? 'ar' : 'en'];
@@ -461,7 +522,7 @@ export default function QuranRevisionStudio() {
 	const [hydrated, setHydrated] = useState(false);
 	const [selectedSurahId, setSelectedSurahId] = useState(DEFAULT_PREFS.selectedSurahId);
 	const [mode, setMode] = useState(DEFAULT_PREFS.mode);
-	const [selectedUnitIds, setSelectedUnitIds] = useState(DEFAULT_PREFS.selectedUnitIds);
+	const [selectedUnitIds, setSelectedUnitIds] = useState([]);
 	const [unitSelections, setUnitSelections] = useState(DEFAULT_PREFS.unitSelections);
 	const [repeatCount, setRepeatCount] = useState(DEFAULT_PREFS.repeatCount);
 	const [repeatScope, setRepeatScope] = useState(DEFAULT_PREFS.repeatScope);
@@ -485,17 +546,21 @@ export default function QuranRevisionStudio() {
 	const [resolvedFavTitle, setResolvedFavTitle] = useState('');
 	const [favTitleLoading, setFavTitleLoading] = useState(false);
 	const [favFlash, setFavFlash] = useState('');
-	const [ytResumeTick, setYtResumeTick] = useState(0); // bump only to remount player (e.g. reset)
-	const [ytResumeSec, setYtResumeSec] = useState(0);
 	const [history, setHistory] = useState([]);
 	const [historyOpen, setHistoryOpen] = useState(false);
 	const [favsOpen, setFavsOpen] = useState(false);
 	const [portalReady, setPortalReady] = useState(false);
 	const [sessionSettingsOpen, setSessionSettingsOpen] = useState(true);
+	const [unitsOpen, setUnitsOpen] = useState(false);
 
 	const [followAlong, setFollowAlong] = useState(true);
+	const [showTajweed, setShowTajweed] = useState(DEFAULT_PREFS.showTajweed);
+	const [tajweedLegendOpen, setTajweedLegendOpen] = useState(false);
 	const [isMemorizationMode, setIsMemorizationMode] = useState(false);
-	const [hideMode, setHideMode] = useState(DEFAULT_PREFS.hideMode);
+	const [hideParts, setHideParts] = useState(DEFAULT_PREFS.hideParts);
+	const [mushafExpanded, setMushafExpanded] = useState(false);
+	const [mushafCollapsing, setMushafCollapsing] = useState(false);
+	const mushafPanelRef = useRef(null);
 
 	const [ayahBank, setAyahBank] = useState([]);
 	const [ayahLoading, setAyahLoading] = useState(false);
@@ -523,9 +588,12 @@ export default function QuranRevisionStudio() {
 	const sessionRef = useRef({});
 	const sessionPhaseRef = useRef('setup');
 	const pendingLiveRestart = useRef(false);
+	const pendingReciterSwap = useRef(false);
+	const speedRef = useRef(speed);
 	const prevSurahModeRef = useRef({ surahId: null, mode: null });
 	const unitSelectionsRef = useRef(unitSelections);
 	unitSelectionsRef.current = unitSelections;
+	speedRef.current = speed;
 
 	useEffect(() => {
 		const prefs = { ...DEFAULT_PREFS, ...loadJson(LS_PREFS, {}) };
@@ -538,11 +606,15 @@ export default function QuranRevisionStudio() {
 			: {};
 		const key = unitSelectionKey(surahId, nextMode);
 		const fromMap = Array.isArray(map[key]) ? map[key] : null;
+		const legacySelected = Array.isArray(prefs.selectedUnitIds) ? prefs.selectedUnitIds : [];
+		// Prefer per-surah map; never fall back to hard-coded "first unit" here
 		const migratedIds = fromMap?.length
 			? fromMap
-			: (prefs.selectedUnitIds?.length
-				? prefs.selectedUnitIds
-				: idsFromRange(prefs.rangeFrom || 1, prefs.rangeTo || 1));
+			: (legacySelected.length
+				? legacySelected
+				: (prefs.rangeFrom != null || prefs.rangeTo != null
+					? idsFromRange(prefs.rangeFrom || 1, prefs.rangeTo || 1)
+					: []));
 		setUnitSelections(map);
 		setSelectedUnitIds(normalizeUnitIds(migratedIds));
 		setRepeatCount(prefs.repeatCount);
@@ -559,11 +631,9 @@ export default function QuranRevisionStudio() {
 		setSourceTab(fav?.videoId ? 'youtube' : 'builtin');
 		setSelectedReciterId(prefs.selectedReciterId);
 		setFollowAlong(prefs.followAlong);
+		setShowTajweed(prefs.showTajweed !== false);
 		setIsMemorizationMode(prefs.isMemorizationMode);
-		const migratedHide = ['start', 'middle', 'end'].includes(prefs.hideMode)
-			? prefs.hideMode
-			: (prefs.memoLevel >= 3 ? 'end' : prefs.memoLevel === 2 ? 'middle' : 'start');
-		setHideMode(migratedHide);
+		setHideParts(normalizeHideParts(prefs.hideParts, prefs.hideMode ?? prefs.memoLevel));
 		setVolume(prefs.volume);
 		setSpeed(prefs.speed);
 		setYtPlayMode(prefs.ytPlayMode === 'video' ? 'video' : 'audio');
@@ -580,14 +650,14 @@ export default function QuranRevisionStudio() {
 		saveJson(LS_PREFS, {
 			selectedSurahId, mode, selectedUnitIds, unitSelections,
 			repeatCount, repeatScope, sourceTab,
-			selectedReciterId, selectedFavId, followAlong, isMemorizationMode,
-			hideMode, volume, speed, ytPlayMode,
+			selectedReciterId, selectedFavId, followAlong, showTajweed, isMemorizationMode,
+			hideParts, volume, speed, ytPlayMode,
 		});
 	}, [
 		hydrated, selectedSurahId, mode, selectedUnitIds, unitSelections,
 		repeatCount, repeatScope, sourceTab,
-		selectedReciterId, selectedFavId, followAlong, isMemorizationMode,
-		hideMode, volume, speed, ytPlayMode,
+		selectedReciterId, selectedFavId, followAlong, showTajweed, isMemorizationMode,
+		hideParts, volume, speed, ytPlayMode,
 	]);
 
 	useEffect(() => {
@@ -644,38 +714,45 @@ export default function QuranRevisionStudio() {
 		? folderById.get(addFolderId)
 		: null;
 
-	// Clamp / restore unit picks when surah or mode changes — never wipe on first load
+	// Clamp / restore unit picks when surah or mode changes — wait for hydrate
+	// so the default [1] never races ahead of the user's saved selection.
 	useEffect(() => {
-		if (!units.length) return;
+		if (!hydrated || !units.length) return;
 		const maxId = units[units.length - 1].id;
+		const key = unitSelectionKey(selectedSurahId, mode);
 		const prev = prevSurahModeRef.current;
 		const surahOrModeChanged = prev.surahId != null
 			&& (prev.surahId !== selectedSurahId || prev.mode !== mode);
 		prevSurahModeRef.current = { surahId: selectedSurahId, mode };
 
 		if (surahOrModeChanged && !skipRangeReset.current) {
-			const key = unitSelectionKey(selectedSurahId, mode);
 			const saved = unitSelectionsRef.current[key];
-			const next = normalizeUnitIds(saved?.length ? saved : [1], maxId);
+			const next = normalizeUnitIds(saved, maxId);
+			// Default to first unit only when this surah/mode has no saved pick
 			setSelectedUnitIds(next.length ? next : [1]);
 			return;
 		}
 
 		setSelectedUnitIds(prevIds => {
 			const next = normalizeUnitIds(prevIds, maxId);
-			return next.length ? next : [1];
+			if (next.length) return next;
+			const saved = normalizeUnitIds(unitSelectionsRef.current[key], maxId);
+			if (saved.length) return saved;
+			// First visit / nothing chosen → default first unit
+			return [1];
 		});
-	}, [selectedSurahId, mode, units.length]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [hydrated, selectedSurahId, mode, units.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// Persist current multi-select under surah+mode key
 	useEffect(() => {
-		if (!hydrated || !selectedUnitIds.length) return;
+		if (!hydrated) return;
 		const key = unitSelectionKey(selectedSurahId, mode);
 		setUnitSelections(prev => {
 			const same = Array.isArray(prev[key])
 				&& prev[key].length === selectedUnitIds.length
 				&& prev[key].every((id, i) => id === selectedUnitIds[i]);
 			if (same) return prev;
+			// Allow persisting [] so a cleared selection isn't revived as [1] via stale map
 			return { ...prev, [key]: selectedUnitIds };
 		});
 	}, [hydrated, selectedSurahId, mode, selectedUnitIds]);
@@ -737,6 +814,7 @@ export default function QuranRevisionStudio() {
 						Array.from({ length: selectedSurah.versesCount }, (_, i) => ({
 							n: i + 1,
 							text: isAr ? `﴿ آية ${i + 1} ﴾` : `[Ayah ${i + 1}]`,
+							tajweed: '',
 							hizbQuarter: null,
 							page: null,
 						})),
@@ -774,7 +852,6 @@ export default function QuranRevisionStudio() {
 	}, [ayahBank, selectedUnits, isAr]);
 
 	const targetRepeats = verses.length * repeatCount;
-	const progressPct = targetRepeats ? Math.min(100, Math.round((completedRepeats / targetRepeats) * 100)) : 0;
 
 	const displayReciter = useMemo(() => {
 		if (sourceTab === 'youtube' && selectedFav) return selectedFav.title;
@@ -848,6 +925,8 @@ export default function QuranRevisionStudio() {
 	const finishSession = useCallback((totalRepeats) => {
 		stopAudio();
 		setIsPlaying(false);
+		setMushafExpanded(false);
+		setMushafCollapsing(false);
 		setSessionPhase('completed');
 		const duration = elapsedSecRef.current;
 		const reciter = BUILTIN_RECITERS.find(r => r.id === selectedReciterId);
@@ -901,7 +980,7 @@ export default function QuranRevisionStudio() {
 		usingYoutube,
 	};
 
-	const playCurrentAyah = useCallback((verseIndex, verseRepeat, repeatsDone) => {
+	const playCurrentAyah = useCallback((verseIndex, verseRepeat, repeatsDone, opts = {}) => {
 		const {
 			verses: vs,
 			selectedSurahId: sid,
@@ -917,14 +996,27 @@ export default function QuranRevisionStudio() {
 		const el = audioRef.current;
 		if (!el) return;
 
+		const seekRatio = typeof opts.seekRatio === 'number' ? opts.seekRatio : 0;
+		const shouldPlay = opts.autoplay !== false;
+
 		setAudioError('');
 		el.pause();
 		el.src = url;
-		el.playbackRate = speed;
 		el.volume = muted ? 0 : volume;
 		el.load();
 
-		el.onloadedmetadata = () => setAudioDuration(el.duration || 0);
+		const applyRate = () => {
+			try { el.playbackRate = speedRef.current; } catch { /* ignore */ }
+		};
+
+		el.onloadedmetadata = () => {
+			applyRate();
+			setAudioDuration(el.duration || 0);
+			if (seekRatio > 0.02 && seekRatio < 0.98 && el.duration) {
+				try { el.currentTime = el.duration * seekRatio; } catch { /* ignore */ }
+			}
+		};
+		el.oncanplay = () => applyRate();
 		el.ontimeupdate = () => {
 			if (!el.duration) return;
 			setVerseProgress((el.currentTime / el.duration) * 100);
@@ -981,16 +1073,21 @@ export default function QuranRevisionStudio() {
 			sessionRef.current.finishSession(nextRepeats);
 		};
 
-		const p = el.play();
-		if (p?.catch) p.catch(() => setAudioError(t.audioError));
-		setIsPlaying(true);
-	}, [speed, muted, volume, t.audioError]);
+		applyRate();
+		if (shouldPlay) {
+			const p = el.play();
+			if (p?.catch) p.catch(() => setAudioError(t.audioError));
+			setIsPlaying(true);
+		} else {
+			setIsPlaying(false);
+		}
+	}, [muted, volume, t.audioError]);
 
 	useEffect(() => {
 		const el = audioRef.current;
 		if (!el) return;
 		el.volume = muted ? 0 : volume;
-		el.playbackRate = speed;
+		try { el.playbackRate = speed; } catch { /* ignore */ }
 	}, [volume, muted, speed]);
 
 	useEffect(() => () => stopAudio(), [stopAudio]);
@@ -1012,6 +1109,9 @@ export default function QuranRevisionStudio() {
 		pendingLiveRestart.current = false;
 		stopAudio();
 		setSessionPhase('active');
+		/* Collapse quarter list + session settings so reading stays in focus */
+		setUnitsOpen(false);
+		setSessionSettingsOpen(false);
 		setCurrentVerseIndex(0);
 		setCurrentVerseRepeat(1);
 		setCompletedVerses(0);
@@ -1079,8 +1179,40 @@ export default function QuranRevisionStudio() {
 			setSelectedFavId(null);
 			setSourceTab('builtin');
 		}
-		requestLiveRestart();
+		// Keep current ayah / progress — do not restart the rub'
+		if (sessionPhaseRef.current === 'active') {
+			pendingReciterSwap.current = true;
+		}
 	};
+
+	const toggleHidePart = part => {
+		setHideParts(prev => (
+			prev.includes(part) ? prev.filter(p => p !== part) : [...prev, part]
+		));
+	};
+
+	// Soft-swap reciter audio at the same verse (+ approximate timestamp)
+	useEffect(() => {
+		if (!pendingReciterSwap.current) return;
+		if (sessionPhase !== 'active' || usingYoutube) {
+			pendingReciterSwap.current = false;
+			return;
+		}
+		pendingReciterSwap.current = false;
+		const el = audioRef.current;
+		const ratio = el?.duration > 0
+			? el.currentTime / el.duration
+			: (verseProgress / 100);
+		const wasPlaying = Boolean(isPlaying);
+		playCurrentAyah(currentVerseIndex, currentVerseRepeat, completedRepeats, {
+			seekRatio: ratio,
+			autoplay: wasPlaying,
+		});
+	}, [
+		selectedReciterId, sessionPhase, usingYoutube,
+		currentVerseIndex, currentVerseRepeat, completedRepeats,
+		verseProgress, isPlaying, playCurrentAyah,
+	]);
 
 	const changeRepeatScope = scope => {
 		if (scope !== 'ayah' && scope !== 'selection') return;
@@ -1092,6 +1224,8 @@ export default function QuranRevisionStudio() {
 		stopAudio();
 		setSessionPhase('setup');
 		setIsPlaying(false);
+		setMushafExpanded(false);
+		setMushafCollapsing(false);
 		setCurrentVerseIndex(0);
 		setCurrentVerseRepeat(1);
 		setCompletedVerses(0);
@@ -1101,6 +1235,50 @@ export default function QuranRevisionStudio() {
 		setFinalStats(null);
 		setAudioError('');
 	};
+
+	const openMushafExpanded = useCallback(() => {
+		setMushafCollapsing(false);
+		setMushafExpanded(true);
+	}, []);
+
+	const closeMushafExpanded = useCallback((immediate = false) => {
+		if (!mushafExpanded) {
+			setMushafCollapsing(false);
+			return;
+		}
+		if (immediate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			setMushafExpanded(false);
+			setMushafCollapsing(false);
+			return;
+		}
+		setMushafCollapsing(true);
+	}, [mushafExpanded]);
+
+	const toggleMushafExpanded = useCallback(() => {
+		if (mushafExpanded && !mushafCollapsing) closeMushafExpanded();
+		else if (!mushafExpanded) openMushafExpanded();
+	}, [mushafExpanded, mushafCollapsing, closeMushafExpanded, openMushafExpanded]);
+
+	const onMushafExpandAnimEnd = useCallback((e) => {
+		if (e.target !== mushafPanelRef.current) return;
+		if (e.animationName !== 'qrMushafExpandOut') return;
+		setMushafExpanded(false);
+		setMushafCollapsing(false);
+	}, []);
+
+	useEffect(() => {
+		if (!mushafExpanded) return undefined;
+		const prev = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+		const onKey = (e) => {
+			if (e.key === 'Escape') closeMushafExpanded();
+		};
+		window.addEventListener('keydown', onKey);
+		return () => {
+			document.body.style.overflow = prev;
+			window.removeEventListener('keydown', onKey);
+		};
+	}, [mushafExpanded, closeMushafExpanded]);
 
 	const togglePlay = () => {
 		if (usingYoutube) {
@@ -1244,16 +1422,6 @@ export default function QuranRevisionStudio() {
 		if (!favorites.some(f => f.id === selectedFavId)) setSelectedFavId(null);
 	}, [favorites, selectedFavId]);
 
-	const resetYtResume = videoId => {
-		clearYtProgress(videoId);
-		setYtResumeSec(0);
-		setYtResumeTick(n => n + 1);
-	};
-
-	useEffect(() => {
-		setYtResumeSec(selectedFav?.videoId ? getYtResumeSeconds(selectedFav.videoId) : 0);
-	}, [selectedFav?.videoId, ytResumeTick, favsOpen]);
-
 	const addFavorite = async (url, title) => {
 		const videoId = extractYoutubeId(url);
 		if (!videoId) return false;
@@ -1375,6 +1543,13 @@ export default function QuranRevisionStudio() {
 	const clearYoutubeSource = () => {
 		setSelectedFavId(null);
 		setSourceTab('builtin');
+	};
+
+	/** Stop YouTube session so user can switch to a reciter / other source */
+	const dismissYoutubeSession = () => {
+		setIsPlaying(false);
+		clearYoutubeSource();
+		resetSetup();
 	};
 
 	const saveSessionAsFavorite = async (item, { openPanel = true } = {}) => {
@@ -1521,7 +1696,7 @@ export default function QuranRevisionStudio() {
 												{t.historyLoad}
 											</button>
 											<button type="button" className="qr-btn !min-h-7 !px-2 !text-[10px]" onClick={() => saveSessionAsFavorite(item)}>
-												<Heart size={11} />
+												<Youtube size={11} />
 												{t.favFromSession}
 											</button>
 											<button type="button" className="qr-btn !min-h-7 !px-2 !text-[10px] !text-rose-600" onClick={() => removeHistoryItem(item.id)}>
@@ -1536,7 +1711,7 @@ export default function QuranRevisionStudio() {
 				) : null}
 
 				{favsOpen ? (
-					<aside className="qr-drawer" role="dialog" aria-modal="true" aria-label={t.favPanelTitle} dir={isAr ? 'rtl' : 'ltr'}>
+					<aside className="qr-drawer qr-drawer-yt" role="dialog" aria-modal="true" aria-label={t.favPanelTitle} dir={isAr ? 'rtl' : 'ltr'}>
 						<div className="qr-drawer-head">
 							<div>
 								<p className="qr-drawer-title">{t.favPanelTitle}</p>
@@ -1753,20 +1928,26 @@ export default function QuranRevisionStudio() {
 								<p className="py-8 text-center text-xs font-semibold text-slate-400">{t.folderEmpty}</p>
 							) : (
 								filteredFavorites.map(item => {
-									const resumeSec = item.videoId ? getYtResumeSeconds(item.videoId) : 0;
 									const folderName = item.folderId ? folderById.get(item.folderId)?.name : null;
+									const thumb = ytThumb(item.videoId);
 									return (
 										<article key={item.id} className={cx('qr-fav-card', selectedFavId === item.id && 'is-active')}>
+											{thumb ? (
+												<button
+													type="button"
+													className="qr-fav-thumb"
+													onClick={() => useFavorite(item)}
+													title={t.useFav}
+													aria-label={t.useFav}
+												>
+													{/* eslint-disable-next-line @next/next/no-img-element */}
+													<img src={thumb} alt="" loading="lazy" />
+													<span className="qr-fav-thumb-play"><Play size={14} /></span>
+												</button>
+											) : null}
 											<div className="qr-fav-card-top">
-												<div className="qr-fav-card-text min-w-0 flex-1">
 													<p className="qr-fav-card-title">{item.title}</p>
-													{folderName ? (
-														<p className="qr-fav-card-folder">
-															<Folder size={11} />
-															{folderName}
-														</p>
-													) : null}
-												</div>
+												 
 												<div className="qr-fav-actions">
 													<button
 														type="button"
@@ -1777,17 +1958,6 @@ export default function QuranRevisionStudio() {
 													>
 														{selectedFavId === item.id ? <Check size={14} /> : <Play size={14} />}
 													</button>
-													{item.videoId && resumeSec > 0 ? (
-														<button
-															type="button"
-															className="qr-fav-act"
-															onClick={() => resetYtResume(item.videoId)}
-															title={t.ytResumeReset}
-															aria-label={t.ytResumeReset}
-														>
-															<RotateCcw size={14} />
-														</button>
-													) : null}
 													{item.url ? (
 														<a
 															className="qr-fav-act"
@@ -1811,11 +1981,6 @@ export default function QuranRevisionStudio() {
 													</button>
 												</div>
 											</div>
-											{resumeSec > 0 ? (
-												<p className="qr-fav-card-resume">
-													{t.ytResumeAt} {formatResumeLabel(resumeSec, isAr)}
-												</p>
-											) : null}
 										</article>
 									);
 								})
@@ -1832,72 +1997,96 @@ export default function QuranRevisionStudio() {
 		<>
 			<div className="mb-1.5 flex items-center justify-between gap-2">
 				<span className="qr-lbl !mb-0">{t.pick} {unitWord}</span>
-				{selectedUnits.length > 0 ? (
-					<span className="text-[10px] font-bold text-[var(--color-primary-700)]">
-						{d(selectedUnits.length)} {t.selectedCount}
-					</span>
-				) : null}
+				<span className="qr-units-toggle-wrap">
+					{selectedUnits.length > 0 ? (
+						<span className="qr-units-count">
+							{d(selectedUnits.length)} {t.selectedCount}
+						</span>
+					) : null}
+					<button
+						type="button"
+						className={cx('qr-units-toggle', unitsOpen && 'is-open')}
+						onClick={() => setUnitsOpen(v => !v)}
+						aria-expanded={unitsOpen}
+						title={unitsOpen ? t.unitsCollapse : t.unitsExpand}
+						aria-label={unitsOpen ? t.unitsCollapse : t.unitsExpand}
+					>
+						<ChevronDown size={14} strokeWidth={2.4} />
+					</button>
+				</span>
 			</div>
-			<p className="mb-1.5 text-[10px] font-semibold text-slate-400">{t.pickUnits}</p>
-			{ayahLoading && !units.length ? (
-				<p className="py-3 text-center text-xs font-semibold text-slate-400">{t.unitsLoading}</p>
-			) : (
-				<div className="qr-units">
-					{units.map(unit => {
-						const order = selectedUnitIds.indexOf(unit.id);
-						const on = order >= 0;
-						const firstAyah = ayahBank.find(a => a.n === unit.from);
-						const preview = firstAyah?.text
-							? firstAyah.text.replace(/^\uFEFF/, '').trim()
-							: '';
-						const hizbBit = mode === 'quarter'
-							? `${t.hizb} ${d(unit.hizb)}`
-							: (isAr ? unit.labelAr : unit.labelEn);
-						const partBit = mode === 'quarter'
-							? rubPartLabel(unit.rubPos, t)
-							: '';
-						return (
-							<button
-								key={`${mode}-${unit.id}-${unit.hizbQuarter || unit.page || unit.from}`}
-								type="button"
-								className={cx('qr-unit', on && 'is-on')}
-								onClick={() => toggleUnit(unit.id)}
-								title={firstAyah?.text || undefined}
-								aria-pressed={on}
-							>
-								{on ? (
-									<span className="qr-unit-ord" aria-hidden="true">{d(order + 1)}</span>
-								) : null}
-								<div className="qr-unit-line">
-									<strong>{hizbBit}</strong>
-									{partBit ? <span className="qr-unit-dot">·</span> : null}
-									{partBit ? <span className="qr-unit-part">{partBit}</span> : null}
-									{preview ? <span className="qr-unit-dot">·</span> : null}
-									{preview ? <em className="qr-unit-ayah quran-font" dir="rtl">{preview}</em> : null}
-								</div>
-								{on ? (
-									<span
-										role="button"
-										tabIndex={0}
-										className="qr-unit-x"
-										title={t.deselectUnit}
-										aria-label={t.deselectUnit}
-										onClick={e => removeUnit(e, unit.id)}
-										onKeyDown={e => {
-											if (e.key === 'Enter' || e.key === ' ') {
-												e.preventDefault();
-												removeUnit(e, unit.id);
-											}
-										}}
+			{unitsOpen ? (
+				<>
+					<p className="mb-1.5 text-[10px] font-semibold text-slate-400">{t.pickUnits}</p>
+					{ayahLoading && !units.length ? (
+						<p className="py-3 text-center text-xs font-semibold text-slate-400">{t.unitsLoading}</p>
+					) : (
+						<div className="qr-units">
+							{units.map(unit => {
+								const order = selectedUnitIds.indexOf(unit.id);
+								const on = order >= 0;
+								const firstAyah = ayahBank.find(a => a.n === unit.from);
+								const preview = firstAyah?.text
+									? firstAyah.text.replace(/^\uFEFF/, '').trim()
+									: '';
+								const hizbBit = mode === 'quarter'
+									? `${t.hizb} ${d(unit.hizb)}`
+									: (isAr ? unit.labelAr : unit.labelEn);
+								const partBit = mode === 'quarter'
+									? rubPartLabel(unit.rubPos, t)
+									: '';
+								return (
+									<button
+										key={`${mode}-${unit.id}-${unit.hizbQuarter || unit.page || unit.from}`}
+										type="button"
+										className={cx('qr-unit', on && 'is-on')}
+										onClick={() => toggleUnit(unit.id)}
+										title={firstAyah?.text || undefined}
+										aria-pressed={on}
 									>
-										<X size={11} />
-									</span>
-								) : null}
-							</button>
-						);
-					})}
-				</div>
-			)}
+										{on ? (
+											<span className="qr-unit-ord" aria-hidden="true">{d(order + 1)}</span>
+										) : null}
+										<div className="qr-unit-line">
+											<strong>{hizbBit}</strong>
+											{partBit ? <span className="qr-unit-dot">·</span> : null}
+											{partBit ? <span className="qr-unit-part">{partBit}</span> : null}
+											{preview ? <span className="qr-unit-dot">·</span> : null}
+											{preview ? (
+												<em
+													className="qr-unit-ayah"
+													dir="rtl"
+													style={{ fontFamily: quranFontFamily }}
+												>
+													{preview}
+												</em>
+											) : null}
+										</div>
+										{on ? (
+											<span
+												role="button"
+												tabIndex={0}
+												className="qr-unit-x"
+												title={t.deselectUnit}
+												aria-label={t.deselectUnit}
+												onClick={e => removeUnit(e, unit.id)}
+												onKeyDown={e => {
+													if (e.key === 'Enter' || e.key === ' ') {
+														e.preventDefault();
+														removeUnit(e, unit.id);
+													}
+												}}
+											>
+												<X size={11} />
+											</span>
+										) : null}
+									</button>
+								);
+							})}
+						</div>
+					)}
+				</>
+			) : null}
 		</>
 	);
 
@@ -2033,7 +2222,7 @@ export default function QuranRevisionStudio() {
 				aria-label={t.favorites}
 				title={t.favorites}
 			>
-				<Heart size={16} />
+				<Youtube size={17} />
 				{favorites.length > 0 ? (
 					<span className="absolute -end-1 -top-1 grid min-w-[1.05rem] place-items-center rounded-full bg-white px-1 text-[9px] font-black text-[var(--color-primary-700)]">
 						{d(Math.min(favorites.length, 99))}
@@ -2072,7 +2261,7 @@ export default function QuranRevisionStudio() {
 					</div>
 					<div className="mt-4 flex flex-wrap justify-center gap-2">
 						<button type="button" className="qr-cta" onClick={startSession}><RotateCcw size={14} />{t.restart}</button>
-						<button type="button" className="qr-btn" onClick={() => { setIsMemorizationMode(true); setHideMode('middle'); startSession(); }}>
+						<button type="button" className="qr-btn" onClick={() => { setIsMemorizationMode(true); setHideParts(['middle']); startSession(); }}>
 							<Brain size={14} />{t.testMemo}
 						</button>
 						<button type="button" className="qr-btn" onClick={resetSetup}>{t.newSession}</button>
@@ -2115,15 +2304,6 @@ export default function QuranRevisionStudio() {
 									<Film size={12} />{t.ytVideo}
 								</button>
 							</div>
-							{ytResumeSec > 0 ? (
-								<div className="qr-yt-resume-bar">
-									<span>{t.ytResumeAt} {formatResumeLabel(ytResumeSec, isAr)}</span>
-									<button type="button" onClick={() => resetYtResume(selectedFav.videoId)}>
-										<RotateCcw size={11} />
-										{t.ytResumeReset}
-									</button>
-								</div>
-							) : null}
 							{ytPlayMode === 'audio' ? (
 								<p className="qr-yt-quality-hint">
 									<SignalLow size={12} />
@@ -2132,74 +2312,171 @@ export default function QuranRevisionStudio() {
 							) : null}
 							<div className="overflow-hidden rounded-lg border border-slate-200 bg-black">
 								<YoutubeResumePlayer
-									key={`${selectedFav.videoId}:${ytPlayMode}:${ytResumeTick}`}
+									key={`${selectedFav.videoId}:${ytPlayMode}`}
 									videoId={selectedFav.videoId}
 									playing={isPlaying}
 									lowQuality={ytPlayMode === 'audio'}
+									volume={volume}
+									muted={muted}
 									title={selectedFav.title}
 									className="aspect-video w-full"
-									onProgress={sec => setYtResumeSec(sec)}
 								/>
 							</div>
 						</section>
 					) : null}
 
 					{!usingYoutube ? (
-						<section className="qr-preview qr-preview-sm">
+						<section
+							ref={mushafPanelRef}
+							className={cx(
+								'qr-preview qr-preview-mushaf',
+								mushafExpanded && 'is-expanded',
+								mushafExpanded && !mushafCollapsing && 'is-expanding',
+								mushafCollapsing && 'is-collapsing',
+							)}
+							onAnimationEnd={onMushafExpandAnimEnd}
+						>
 							<div className="qr-preview-tools">
-								<div className="min-w-0 flex-1">
-									<p className="truncate text-[12px] font-black text-slate-800">{surahName}</p>
-									<p className="truncate text-[10px] font-bold text-slate-500">
+								<div className="qr-tools-meta min-w-0">
+									<p className="qr-tools-title">{surahName}</p>
+									<p className="qr-tools-sub">
 										{t.readingFrom} {d(ayahFrom)} {t.readingTo} {d(ayahTo)}
 										{currentVerse ? ` · ${t.ayah} ${d(currentVerse.n)}` : ''}
 									</p>
 								</div>
-								<button type="button" className="qr-icon-btn" onClick={saveCurrentReading} title={t.saveReading} aria-label={t.saveReading}>
-									<Heart size={14} />
-								</button>
-								<span className="qr-mini">{t.follow}<button type="button" className={cx('qr-switch', followAlong && 'is-on')} onClick={() => setFollowAlong(v => !v)} /></span>
-								<span className="qr-mini">{t.memo}<button type="button" className={cx('qr-switch', isMemorizationMode && 'is-on')} onClick={() => setIsMemorizationMode(v => !v)} /></span>
-							</div>
 
-							{isMemorizationMode ? (
-								<div className="qr-seg qr-seg-hide">
-									<button type="button" className={cx(hideMode === 'start' && 'is-on')} onClick={() => setHideMode('start')}>{t.hideStart}</button>
-									<button type="button" className={cx(hideMode === 'middle' && 'is-on')} onClick={() => setHideMode('middle')}>{t.hideMiddle}</button>
-									<button type="button" className={cx(hideMode === 'end' && 'is-on')} onClick={() => setHideMode('end')}>{t.hideEnd}</button>
+								<div className="qr-tools-bar" dir={isAr ? 'rtl' : 'ltr'}>
+									<button
+										type="button"
+										className={cx('qr-tool-icon', mushafExpanded && !mushafCollapsing && 'is-on')}
+										onClick={toggleMushafExpanded}
+										title={mushafExpanded && !mushafCollapsing ? t.collapseMushaf : t.expandMushaf}
+										aria-label={mushafExpanded && !mushafCollapsing ? t.collapseMushaf : t.expandMushaf}
+										aria-pressed={mushafExpanded && !mushafCollapsing}
+									>
+										{mushafExpanded && !mushafCollapsing
+											? <Minimize2 size={15} strokeWidth={2.25} />
+											: <Maximize2 size={15} strokeWidth={2.25} />}
+									</button>
+
+									<span className="qr-tools-sep" aria-hidden />
+
+									<label className={cx('qr-tool', showTajweed && 'is-on')}>
+										<BookOpenText size={13} strokeWidth={2.25} aria-hidden />
+										<span>{t.tajweed}</span>
+										<button
+											type="button"
+											className={cx('qr-switch', showTajweed && 'is-on')}
+											onClick={() => setShowTajweed(v => !v)}
+											aria-label={t.tajweed}
+										/>
+									</label>
+									<button
+										type="button"
+										className={cx('qr-tool-link', tajweedLegendOpen && 'is-on')}
+										onClick={() => {
+											setShowTajweed(true);
+											setTajweedLegendOpen(true);
+										}}
+										title={t.tajweedLegend}
+										aria-label={t.tajweedLegend}
+										aria-haspopup="dialog"
+										aria-expanded={tajweedLegendOpen}
+									>
+										<Info size={12} strokeWidth={2.4} />
+										{t.tajweedGuide}
+									</button>
+
+									<span className="qr-tools-sep" aria-hidden />
+
+									<label className={cx('qr-tool', followAlong && 'is-on')}>
+										<span>{t.follow}</span>
+										<button
+											type="button"
+											className={cx('qr-switch', followAlong && 'is-on')}
+											onClick={() => setFollowAlong(v => !v)}
+											aria-label={t.follow}
+										/>
+									</label>
+
+									<span className="qr-tools-sep" aria-hidden />
+
+									<label className={cx('qr-tool', isMemorizationMode && 'is-on')}>
+										<span>{t.memo}</span>
+										<button
+											type="button"
+											className={cx('qr-switch', isMemorizationMode && 'is-on')}
+											onClick={() => setIsMemorizationMode(v => !v)}
+											aria-label={t.memo}
+										/>
+									</label>
+
+									{isMemorizationMode ? (
+										<div className="qr-hide-pills" role="group" aria-label={t.hidePartsLabel} title={t.hidePartsHint}>
+											{[
+												{ id: 'start', label: t.hideStart },
+												{ id: 'middle', label: t.hideMiddle },
+												{ id: 'end', label: t.hideEnd },
+											].map(opt => (
+												<button
+													key={opt.id}
+													type="button"
+													className={cx('qr-hide-pill', hideParts.includes(opt.id) && 'is-on')}
+													aria-pressed={hideParts.includes(opt.id)}
+													onClick={() => toggleHidePart(opt.id)}
+												>
+													{opt.label}
+												</button>
+											))}
+										</div>
+									) : null}
 								</div>
-							) : null}
+							</div>
 
 							{favFlash ? <p className="text-[10px] font-bold text-emerald-600">{favFlash}</p> : null}
 
-							<div className="qr-verse-scroll">
-								{verses.map((verse, index) => {
-									const isOn = index === currentVerseIndex;
-									const shown = isMemorizationMode ? maskText(verse.text, hideMode) : verse.text;
-									return (
-										<div
-											key={`${verse.n}-${index}`}
-											className={cx(
-												'qr-verse',
-												followAlong && isOn && 'is-on',
-												followAlong && index < currentVerseIndex && 'is-past',
-												followAlong && index === currentVerseIndex + 1 && 'is-next',
-												!followAlong && 'is-on',
-											)}
-										>
-											<p className="qr-verse-text">
-												<span className="qr-verse-num">{d(verse.n)}</span>
-												{shown}
-											</p>
-										</div>
-									);
-								})}
-							</div>
-
-							<div className="qr-active-stats">
-								<span>{d(Math.min(completedVerses + 1, verses.length))}/{d(verses.length)} {t.reviewed}</span>
-								<span>{d(completedRepeats)}/{d(targetRepeats)} {t.repeat}</span>
-								<span dir="ltr">{formatTime(elapsedSec)}</span>
-								<span className="qr-active-bar"><i style={{ width: `${progressPct}%` }} /></span>
+							<div className="qr-mushaf-scroll">
+								<div
+									className={cx('qr-mushaf', showTajweed && 'has-tajweed')}
+									dir="rtl"
+									lang="ar"
+									style={{ fontFamily: quranFontFamily }}
+								>
+									{verses.map((verse, index) => {
+										const isOn = index === currentVerseIndex;
+										const hide = isMemorizationMode ? hideParts : [];
+										return (
+											<span
+												key={`${verse.n}-${index}`}
+												className={cx(
+													'qr-ayah',
+													followAlong && isOn && 'is-on',
+													followAlong && index < currentVerseIndex && 'is-past',
+													followAlong && index === currentVerseIndex + 1 && 'is-next',
+													!followAlong && 'is-on',
+												)}
+											>
+												{showTajweed ? (
+													<TajweedText
+														tajweed={verse.tajweed}
+														plain={verse.text}
+														hideParts={hide}
+														enabled
+														isAr={isAr}
+													/>
+												) : (
+													<span className="qr-ayah-text">
+														{hide.length ? maskText(verse.text, hide) : verse.text}
+													</span>
+												)}
+												<span className="qr-ayah-num" aria-hidden="true">
+													<span className="qr-ayah-num-ring" />
+													<span className="qr-ayah-num-val">{d(verse.n)}</span>
+												</span>
+											</span>
+										);
+									})}
+								</div>
 							</div>
 						</section>
 					) : null}
@@ -2210,12 +2487,15 @@ export default function QuranRevisionStudio() {
 			{portalReady && sessionPhase === 'active'
 				? createPortal(
 					<div
-						className={cx('qr-dock', isPlaying && 'is-playing')}
+						className={cx(
+							'qr-dock',
+							isPlaying && 'is-playing',
+							mushafExpanded && !mushafCollapsing && 'is-centered',
+						)}
 						dir="ltr"
-						style={dockBox.left != null ? {
-							left: dockBox.left,
-							width: dockBox.width,
-						} : undefined}
+						style={!mushafExpanded || mushafCollapsing
+							? (dockBox.left != null ? { left: dockBox.left, width: dockBox.width } : undefined)
+							: undefined}
 					>
 						<div className="qr-dock-main">
 							<div className="qr-dock-meta">
@@ -2223,7 +2503,23 @@ export default function QuranRevisionStudio() {
 									<BookMarked size={16} />
 								</div>
 								<div className="qr-dock-meta-text" dir={isAr ? 'rtl' : 'ltr'}>
-									<p className="qr-dock-title">{displayReciter}</p>
+									{!usingYoutube ? (
+										<div className="qr-dock-reciter">
+											<Select
+												options={BUILTIN_RECITERS.map(r => ({
+													id: r.id,
+													label: isAr ? r.nameAr : r.nameEn,
+												}))}
+												value={selectedReciterId}
+												onChange={changeReciterLive}
+												searchable
+												clearable={false}
+												cnInputParent="!h-8 !rounded-lg !text-[11px] !font-bold !bg-white/90 !border-slate-200"
+											/>
+										</div>
+									) : (
+										<p className="qr-dock-title">{displayReciter}</p>
+									)}
 									<p className="qr-dock-sub">
 										{surahName}
 										<span className="qr-dock-dot">·</span>
@@ -2255,24 +2551,22 @@ export default function QuranRevisionStudio() {
 							</div>
 
 							<div className="qr-dock-right">
-								{!usingYoutube ? (
-									<div className="qr-dock-vol" title="Volume">
-										<button type="button" className="qr-dock-btn is-ghost" onClick={() => setMuted(m => !m)} aria-label="mute">
-											{muted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
-										</button>
-										<input
-											type="range"
-											className="qr-dock-range qr-dock-vol-range"
-											min={0}
-											max={1}
-											step={0.01}
-											value={muted ? 0 : volume}
-											onChange={e => { const v = Number(e.target.value); setVolume(v); setMuted(v === 0); }}
-											style={{ '--qr-fill': `${(muted ? 0 : volume) * 100}%` }}
-											dir="ltr"
-										/>
-									</div>
-								) : null}
+								<div className="qr-dock-vol" title="Volume">
+									<button type="button" className="qr-dock-btn is-ghost" onClick={() => setMuted(m => !m)} aria-label="mute">
+										{muted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+									</button>
+									<input
+										type="range"
+										className="qr-dock-range qr-dock-vol-range"
+										min={0}
+										max={1}
+										step={0.01}
+										value={muted ? 0 : volume}
+										onChange={e => { const v = Number(e.target.value); setVolume(v); setMuted(v === 0); }}
+										style={{ '--qr-fill': `${(muted ? 0 : volume) * 100}%` }}
+										dir="ltr"
+									/>
+								</div>
 								{!usingYoutube ? (
 									<div className="qr-dock-speed" role="group" aria-label="speed">
 										{SPEED_OPTIONS.map(s => (
@@ -2286,7 +2580,17 @@ export default function QuranRevisionStudio() {
 											</button>
 										))}
 									</div>
-								) : null}
+								) : (
+									<button
+										type="button"
+										className="qr-dock-btn is-ghost qr-dock-close"
+										onClick={dismissYoutubeSession}
+										aria-label={t.ytClear}
+										title={t.ytClear}
+									>
+										<X size={16} />
+									</button>
+								)}
 							</div>
 						</div>
 
@@ -2362,6 +2666,24 @@ export default function QuranRevisionStudio() {
 					</div>
 				</section>
 			) : null}
+
+			<TajweedGuideModal
+				open={tajweedLegendOpen}
+				onClose={() => setTajweedLegendOpen(false)}
+				isAr={isAr}
+				labels={{
+					title: t.tajweedLegend,
+					intro: t.tajweedIntro,
+					howTitle: t.tajweedHowTitle,
+					howBody: t.tajweedHowBody,
+					meaning: t.tajweedMeaning,
+					why: t.tajweedWhy,
+					tip: t.tajweedTip,
+					example: t.tajweedExample,
+					footer: t.tajweedFooter,
+					close: t.tajweedLegendClose,
+				}}
+			/>
 		</div>
 	);
 }

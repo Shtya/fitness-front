@@ -70,21 +70,14 @@ export const metadata = {
   },
 
   icons: {
-    icon: [{ url: '/favicon.ico' }],
-    shortcut: ['/logo.png'],
-    apple: [{ url: '/logo.png', sizes: '180x180', type: 'image/png' }],
-    other: [
-      {
-        rel: 'apple-touch-startup-image',
-        url: '/logo.png',
-        media: '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)',
-      },
-      {
-        rel: 'apple-touch-startup-image',
-        url: '/logo.png',
-        media: '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)',
-      },
+    icon: [
+      { url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/favicon-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
+    shortcut: ['/icons/icon-192.png'],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
 };
 
@@ -96,6 +89,8 @@ export default async function RootLayout({ children, params }) {
     <html translate='no' lang={locale} dir={locale == 'en' ? 'ltr' : 'rtl'} suppressHydrationWarning>
       <head>
         <link rel='manifest' href='/manifest.json' />
+        <link rel='icon' href='/icons/favicon-32.png' sizes='32x32' type='image/png' />
+        <link rel='apple-touch-icon' href='/icons/apple-touch-icon.png' sizes='180x180' />
       </head>
 
       <body className={`bg-[#fff] scroll ${arabicFont.variable} ${openSans.variable} ${spaceGrotesk.variable} ${robotoMono.variable} ${inter.variable}`}>

@@ -1,7 +1,5 @@
 @import url('https://fonts.googleapis.com/css?family=Cairo:200,300,regular,500,600,700,800,900');
-@import url('https://fonts.googleapis.com/css2?family=Amiri+Quran&display=swap');
-
-@import url('https://fonts.googleapis.com/css2?family=Scheherazade+New&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Scheherazade+New:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Lateef&display=swap');
 
 @import 'tailwindcss';
@@ -100,10 +98,19 @@
   @apply bg-gradient-to-br from-indigo-600 via-indigo-500/90 to-blue-600;
 }
 .duah-font {
-  font-family: 'Scheherazade New', serif !important;
+  font-family: 'UthmanicHafs', 'Amiri Quran', 'Scheherazade New', serif !important;
 }
 .quran-font {
-  font-family: 'Amiri Quran', serif !important;
+  font-family: 'UthmanicHafs', 'Amiri Quran', 'Scheherazade New', serif !important;
+  font-synthesis: none;
+}
+
+@font-face {
+  font-family: 'UthmanicHafs';
+  src: url('/fonts/quran/UthmanicHafs1Ver18.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
 :root {
@@ -277,6 +284,19 @@ body {
 
 [dir='rtl'] body * {
   font-family: var(--font-arabic);
+}
+
+/* Quran mushaf / tajweed: keep Madani face (do not inherit UI Arabic/Cairo) */
+[dir='rtl'] body .qr-studio .qr-mushaf,
+[dir='rtl'] body .qr-studio .qr-mushaf .qr-ayah,
+[dir='rtl'] body .qr-studio .qr-mushaf .qr-ayah-text,
+[dir='rtl'] body .qr-studio .qr-mushaf .qr-tw-text,
+[dir='rtl'] body .qr-studio .qr-mushaf .qr-tw-word,
+[dir='rtl'] body .qr-studio .qr-mushaf .qr-tw-mark,
+[dir='rtl'] body .qr-studio .qr-unit-ayah {
+  font-family: var(--font-qr-uthmani), var(--font-qr-amiri), 'UthmanicHafs', 'Amiri Quran', serif !important;
+  font-weight: 400 !important;
+  font-synthesis: none !important;
 }
 
 [dir='ltr'] .sidebar-shell,
