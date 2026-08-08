@@ -57,6 +57,7 @@ const LS_FAVS = 'so7ba:quran-revision:yt-favs:v1';
 const LS_FOLDERS = 'so7ba:quran-revision:yt-folders:v1';
 const LS_HISTORY = 'so7ba:quran-revision:history:v1';
 const LS_WORD_ERRORS = 'so7ba:quran-revision:word-errors:v1';
+const LS_SESSION = 'so7ba:quran-revision:active-session:v1';
 const EMPTY_WORD_MARKS = Object.freeze({});
 
 function wordErrorKey(surahId, ayahNumber, wordIdx) {
@@ -77,6 +78,44 @@ function normalizeWordErrors(raw) {
 		out[wordErrorKey(surahId, ayahNumber, wordIdx)] = type;
 	});
 	return out;
+}
+
+function clearSavedSession() {
+	try {
+		localStorage.removeItem(LS_SESSION);
+	} catch {
+		/* ignore */
+	}
+}
+
+function normalizeSavedSession(raw) {
+	if (!raw || typeof raw !== 'object') return null;
+	if (raw.sessionPhase !== 'active' && raw.sessionPhase !== 'completed') return null;
+	const surahId = Number(raw.selectedSurahId);
+	if (!Number.isInteger(surahId) || surahId < 1) return null;
+	const mode = raw.mode === 'page' ? 'page' : 'quarter';
+	const selectedUnitIds = normalizeUnitIds(raw.selectedUnitIds);
+	if (!selectedUnitIds.length) return null;
+	return {
+		v: 1,
+		sessionPhase: raw.sessionPhase,
+		selectedSurahId: surahId,
+		mode,
+		selectedUnitIds,
+		repeatCount: Math.max(1, Number(raw.repeatCount) || 3),
+		repeatScope: raw.repeatScope === 'selection' ? 'selection' : 'ayah',
+		sourceTab: raw.sourceTab === 'youtube' || raw.sourceTab === 'favorites' ? 'youtube' : 'builtin',
+		selectedReciterId: raw.selectedReciterId || 'minshawi',
+		selectedFavId: raw.selectedFavId || null,
+		currentVerseIndex: Math.max(0, Number(raw.currentVerseIndex) || 0),
+		currentVerseRepeat: Math.max(1, Number(raw.currentVerseRepeat) || 1),
+		completedVerses: Math.max(0, Number(raw.completedVerses) || 0),
+		completedRepeats: Math.max(0, Number(raw.completedRepeats) || 0),
+		elapsedSec: Math.max(0, Number(raw.elapsedSec) || 0),
+		verseProgress: Math.min(100, Math.max(0, Number(raw.verseProgress) || 0)),
+		muted: raw.muted === true,
+		finalStats: raw.finalStats && typeof raw.finalStats === 'object' ? raw.finalStats : null,
+	};
 }
 const HISTORY_MAX = 40;
 const FOLDER_FILTER_ALL = 'all';
@@ -634,6 +673,9 @@ export default function QuranRevisionStudio({
 	const sessionPhaseRef = useRef('setup');
 	const pendingLiveRestart = useRef(false);
 	const pendingReciterSwap = useRef(false);
+	const pendingSessionRestore = useRef(null);
+	const sessionRestoreDone = useRef(false);
+	const sessionPersistRef = useRef({});
 	const speedRef = useRef(speed);
 	const prevSurahModeRef = useRef({ surahId: null, mode: null });
 	const unitSelectionsRef = useRef(unitSelections);
@@ -684,11 +726,36 @@ export default function QuranRevisionStudio({
 		setYtPlayMode(prefs.ytPlayMode === 'video' ? 'video' : 'audio');
 		setHistory(loadJson(LS_HISTORY, []));
 		setWordErrors(normalizeWordErrors(loadJson(LS_WORD_ERRORS, {})));
-		prevSurahModeRef.current = { surahId, mode: nextMode };
+
+		const savedSession = normalizeSavedSession(loadJson(LS_SESSION, null));
+		if (savedSession) {
+			skipRangeReset.current = true;
+			setSelectedSurahId(savedSession.selectedSurahId);
+			setMode(savedSession.mode);
+			setSelectedUnitIds(savedSession.selectedUnitIds);
+			setRepeatCount(savedSession.repeatCount);
+			setRepeatScope(savedSession.repeatScope);
+			setSourceTab(savedSession.sourceTab);
+			setSelectedReciterId(savedSession.selectedReciterId);
+			setSelectedFavId(
+				savedSession.sourceTab === 'youtube' ? savedSession.selectedFavId : null,
+			);
+			setMuted(savedSession.muted);
+			prevSurahModeRef.current = {
+				surahId: savedSession.selectedSurahId,
+				mode: savedSession.mode,
+			};
+			pendingSessionRestore.current = savedSession;
+		} else {
+			prevSurahModeRef.current = { surahId, mode: nextMode };
+		}
+
 		setHydrated(true);
 		setPortalReady(true);
-		// Keep skip true until first units clamp after hydrate
-		window.setTimeout(() => { skipRangeReset.current = false; }, 0);
+		// Keep skip true until first units clamp / session restore settles
+		if (!savedSession) {
+			window.setTimeout(() => { skipRangeReset.current = false; }, 0);
+		}
 	}, []);
 
 	useEffect(() => {
@@ -1182,6 +1249,175 @@ export default function QuranRevisionStudio({
 		playCurrentAyah(0, 1, 0);
 	};
 
+	// Resume a saved session after refresh / leaving the page (not on New Session)
+	useEffect(() => {
+		if (!hydrated || sessionRestoreDone.current) return;
+		const saved = pendingSessionRestore.current;
+		if (!saved) {
+			sessionRestoreDone.current = true;
+			return;
+		}
+		if (ayahLoading || !units.length) return;
+
+		if (!canStart || !verses.length) {
+			pendingSessionRestore.current = null;
+			sessionRestoreDone.current = true;
+			clearSavedSession();
+			skipRangeReset.current = false;
+			return;
+		}
+
+		pendingSessionRestore.current = null;
+		sessionRestoreDone.current = true;
+		pendingLiveRestart.current = false;
+		pendingReciterSwap.current = false;
+
+		const maxIdx = Math.max(0, verses.length - 1);
+		const idx = Math.min(Math.max(0, saved.currentVerseIndex), maxIdx);
+		const verseRepeat = saved.currentVerseRepeat;
+		const doneRepeats = saved.completedRepeats;
+		const progress = saved.verseProgress;
+		const elapsed = saved.elapsedSec;
+
+		setCurrentVerseIndex(idx);
+		setCurrentVerseRepeat(verseRepeat);
+		setCompletedVerses(Math.min(saved.completedVerses, verses.length));
+		setCompletedRepeats(doneRepeats);
+		setVerseProgress(progress);
+		setElapsedSec(elapsed);
+		setAudioError('');
+		setErrorMode(false);
+		setIsPlaying(false);
+		setSessionSettingsOpen(false);
+		setMushafExpanded(false);
+		setMushafCollapsing(false);
+
+		if (saved.sessionPhase === 'completed') {
+			setFinalStats(saved.finalStats);
+			setSessionPhase('completed');
+			skipRangeReset.current = false;
+			return;
+		}
+
+		setFinalStats(null);
+		setSessionPhase('active');
+		stopAudio();
+		setElapsedSec(elapsed);
+		elapsedRef.current = setInterval(() => setElapsedSec(s => s + 1), 1000);
+
+		if (!usingYoutube) {
+			playCurrentAyah(idx, verseRepeat, doneRepeats, {
+				seekRatio: progress / 100,
+				autoplay: false,
+			});
+		}
+
+		requestAnimationFrame(() => { skipRangeReset.current = false; });
+	}, [
+		hydrated, ayahLoading, units.length, canStart, verses, usingYoutube,
+		playCurrentAyah, stopAudio,
+	]);
+
+	// Keep active/completed session snapshot so refresh restores progress
+	sessionPersistRef.current = {
+		sessionPhase,
+		selectedSurahId,
+		mode,
+		selectedUnitIds,
+		repeatCount,
+		repeatScope,
+		sourceTab,
+		selectedReciterId,
+		selectedFavId,
+		currentVerseIndex,
+		currentVerseRepeat,
+		completedVerses,
+		completedRepeats,
+		elapsedSec,
+		verseProgress,
+		muted,
+		finalStats,
+		audioRef,
+	};
+
+	useEffect(() => {
+		if (!hydrated || !sessionRestoreDone.current) return;
+		if (sessionPhase !== 'active' && sessionPhase !== 'completed') return;
+
+		const el = audioRef.current;
+		let progress = verseProgress;
+		if (sessionPhase === 'active' && el?.duration > 0) {
+			progress = (el.currentTime / el.duration) * 100;
+		}
+
+		saveJson(LS_SESSION, {
+			v: 1,
+			updatedAt: Date.now(),
+			sessionPhase,
+			selectedSurahId,
+			mode,
+			selectedUnitIds,
+			repeatCount,
+			repeatScope,
+			sourceTab,
+			selectedReciterId,
+			selectedFavId,
+			currentVerseIndex,
+			currentVerseRepeat,
+			completedVerses,
+			completedRepeats,
+			elapsedSec,
+			verseProgress: progress,
+			muted,
+			finalStats: sessionPhase === 'completed' ? finalStats : null,
+		});
+	}, [
+		hydrated, sessionPhase, selectedSurahId, mode, selectedUnitIds,
+		repeatCount, repeatScope, sourceTab, selectedReciterId, selectedFavId,
+		currentVerseIndex, currentVerseRepeat, completedVerses, completedRepeats,
+		elapsedSec, verseProgress, muted, finalStats,
+	]);
+
+	useEffect(() => {
+		const flush = () => {
+			if (!sessionRestoreDone.current) return;
+			const s = sessionPersistRef.current;
+			if (s.sessionPhase !== 'active' && s.sessionPhase !== 'completed') return;
+			const el = s.audioRef?.current;
+			let progress = s.verseProgress;
+			if (s.sessionPhase === 'active' && el?.duration > 0) {
+				progress = (el.currentTime / el.duration) * 100;
+			}
+			saveJson(LS_SESSION, {
+				v: 1,
+				updatedAt: Date.now(),
+				sessionPhase: s.sessionPhase,
+				selectedSurahId: s.selectedSurahId,
+				mode: s.mode,
+				selectedUnitIds: s.selectedUnitIds,
+				repeatCount: s.repeatCount,
+				repeatScope: s.repeatScope,
+				sourceTab: s.sourceTab,
+				selectedReciterId: s.selectedReciterId,
+				selectedFavId: s.selectedFavId,
+				currentVerseIndex: s.currentVerseIndex,
+				currentVerseRepeat: s.currentVerseRepeat,
+				completedVerses: s.completedVerses,
+				completedRepeats: s.completedRepeats,
+				elapsedSec: s.elapsedSec,
+				verseProgress: progress,
+				muted: s.muted,
+				finalStats: s.sessionPhase === 'completed' ? s.finalStats : null,
+			});
+		};
+		window.addEventListener('pagehide', flush);
+		window.addEventListener('beforeunload', flush);
+		return () => {
+			window.removeEventListener('pagehide', flush);
+			window.removeEventListener('beforeunload', flush);
+		};
+	}, []);
+
 	const errorLabels = useMemo(() => ({
 		title: t.errorPickTitle,
 		tashkeel: t.errorTashkeel,
@@ -1326,6 +1562,9 @@ export default function QuranRevisionStudio({
 
 	const resetSetup = () => {
 		stopAudio();
+		clearSavedSession();
+		pendingSessionRestore.current = null;
+		sessionRestoreDone.current = true;
 		setSessionPhase('setup');
 		setIsPlaying(false);
 		setMushafExpanded(false);
@@ -1597,6 +1836,9 @@ export default function QuranRevisionStudio({
 	};
 
 	const loadHistorySession = (item, andStart = false) => {
+		clearSavedSession();
+		pendingSessionRestore.current = null;
+		sessionRestoreDone.current = true;
 		skipRangeReset.current = true;
 		setSelectedSurahId(item.surahId);
 		setMode(item.mode || 'quarter');
@@ -1642,6 +1884,9 @@ export default function QuranRevisionStudio({
 	};
 
 	const useFavorite = item => {
+		clearSavedSession();
+		pendingSessionRestore.current = null;
+		sessionRestoreDone.current = true;
 		setSelectedFavId(item.id);
 		if (item.session) {
 			skipRangeReset.current = true;
