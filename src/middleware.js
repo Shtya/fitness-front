@@ -13,6 +13,7 @@ export const NAV_HREFS = {
     '/dashboard/calculator',
     '/dashboard/chat',
     '/dashboard/transcript',
+    '/dashboard/quran-revision',
     '/dashboard/my/profile',
   ],
   coach: [
@@ -32,6 +33,7 @@ export const NAV_HREFS = {
 		'/dashboard/phone-check',
 		'/dashboard/fitness-leads',
 		'/dashboard/ai-free',
+		'/dashboard/quran-revision',
   ],
   admin: [
     '/dashboard',
@@ -59,6 +61,7 @@ export const NAV_HREFS = {
     '/dashboard/phone-check',
     '/dashboard/fitness-leads',
     '/dashboard/ai-free',
+    '/dashboard/quran-revision',
   ],
   super_admin: [
     '/dashboard',
@@ -73,6 +76,7 @@ export const NAV_HREFS = {
     '/dashboard/phone-check',
     '/dashboard/fitness-leads',
     '/dashboard/ai-free',
+    '/dashboard/quran-revision',
   ],
 };
 

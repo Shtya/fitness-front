@@ -324,7 +324,7 @@ export default function Layout({ children }) {
 								</div>
 							)}
 
-							<div className="relative flex-1 min-w-0 overflow-x-hidden ">
+							<div className="relative flex-1 min-w-0 overflow-x-hidden" data-dashboard-content>
 								{!isAuthRoute && <div className={`max-[1025px]:block hidden ${isWhatsAppRoute ? 'wa-dashboard-header' : ''}`}>
 									<Header onMenu={() => setSidebarOpen(!sidebarOpen)} />
 								</div>}

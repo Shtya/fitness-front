@@ -1087,10 +1087,16 @@ export default function FormSubmissionPage() {
         }
       });
 
-      await api.post(
-        `/forms/${params.id}/submit?report_to=${encodeURIComponent(reportTo)}`,
-        { email: data.email || '', phone: data.phone, answers: answersOnly },
-      );
+      const submitUrl =
+        reportTo && reportTo !== 'null' && reportTo !== 'undefined'
+          ? `/forms/${params.id}/submit?report_to=${encodeURIComponent(reportTo)}`
+          : `/forms/${params.id}/submit`;
+
+      await api.post(submitUrl, {
+        email: data.email || '',
+        phone: data.phone,
+        answers: answersOnly,
+      });
       if (form?.id) localStorage.removeItem(buildDraftKey(form.id));
       toast.success(t('messages.submit_success'));
 

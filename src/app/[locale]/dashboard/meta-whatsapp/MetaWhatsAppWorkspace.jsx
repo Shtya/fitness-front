@@ -99,6 +99,7 @@ const COPY = {
 		leads: 'Leads',
 		fav: 'Fav',
 		replied: 'Replied',
+		unreplied: 'Unreplied',
 		window24h: '24h',
 		addFavorite: 'Add to favorites',
 		removeFavorite: 'Remove from favorites',
@@ -106,8 +107,10 @@ const COPY = {
 		favoriteFailed: 'Could not update favorite',
 		backToChats: 'Back to chats',
 		noRepliedHint: 'People who reply after you send them a Meta template appear here.',
+		noUnrepliedHint: 'Chats where the last message is from the customer and you have not replied yet.',
 		noWindowHint: 'People still inside the 24-hour customer care window appear here.',
 		repliedTitle: 'Sent a template and they replied',
+		unrepliedTitle: 'Waiting for your reply',
 		window24hTitle: '24h customer care window still open',
 		settings: 'Meta config',
 		activity: 'Activity',
@@ -361,6 +364,7 @@ const COPY = {
 		leads: 'عملاء',
 		fav: 'المفضلة',
 		replied: 'ردوا',
+		unreplied: 'بانتظار ردك',
 		window24h: '24س',
 		addFavorite: 'إضافة إلى المفضلة',
 		removeFavorite: 'إزالة من المفضلة',
@@ -368,8 +372,10 @@ const COPY = {
 		favoriteFailed: 'تعذر تحديث المفضلة',
 		backToChats: 'العودة للمحادثات',
 		noRepliedHint: 'يظهر هنا من يرد بعد إرسال قالب ميتا لهم.',
+		noUnrepliedHint: 'محادثات آخر رسالة فيها من العميل ولم ترد عليها بعد.',
 		noWindowHint: 'يظهر هنا من ما زالت نافذة الـ 24 ساعة مفتوحة لديهم.',
 		repliedTitle: 'أُرسل لهم قالب وردّوا',
+		unrepliedTitle: 'بانتظار ردّك',
 		window24hTitle: 'نافذة الـ 24 ساعة ما زالت مفتوحة',
 		settings: 'إعدادات ميتا',
 		activity: 'السجل',
@@ -631,6 +637,81 @@ function formatTime(value, locale) {
 	} catch {
 		return '';
 	}
+}
+
+const CUSTOMER_CARE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/** Newest sane message timestamp in ms. Handles unix-seconds mistakes. */
+function bestMessageTimestampMs(...values) {
+	let best = 0;
+	for (const value of values) {
+		if (value == null || value === '') continue;
+		let ms = new Date(value).getTime();
+		if (!Number.isFinite(ms)) continue;
+		if (ms > 0 && ms < 1e11) ms *= 1000;
+		if (ms < 1e12) continue;
+		if (ms > best) best = ms;
+	}
+	return best;
+}
+
+function isOutboundMessage(m) {
+	return String(m?.direction || '').toLowerCase() === 'outbound';
+}
+
+/**
+ * 24h window = time since the customer's latest message (not ours).
+ * Matches left-side bubbles: anything that is not outbound counts as client-side.
+ */
+function hasOpenCustomerCareWindow(messages, active) {
+	if (active?.canSendFreeform === true || active?.withinCustomerCareWindow === true) return true;
+
+	const now = Date.now();
+	let latestClientTs = bestMessageTimestampMs(active?.lastInboundAt);
+
+	for (const m of messages || []) {
+		if (isOutboundMessage(m)) continue;
+		const ts = bestMessageTimestampMs(m.createdAt, m.providerTimestamp);
+		if (ts > latestClientTs) latestClientTs = ts;
+	}
+
+	return Boolean(latestClientTs && now - latestClientTs <= CUSTOMER_CARE_WINDOW_MS);
+}
+
+function normalizeMessagesPayload(raw) {
+	if (Array.isArray(raw)) {
+		return { messages: raw, care: null };
+	}
+	if (raw && typeof raw === 'object') {
+		const messages = Array.isArray(raw.messages) ? raw.messages : [];
+		return {
+			messages,
+			care: {
+				canSendFreeform: Boolean(raw.canSendFreeform ?? raw.withinCustomerCareWindow),
+				withinCustomerCareWindow: Boolean(raw.withinCustomerCareWindow ?? raw.canSendFreeform),
+				requiresTemplate: Boolean(raw.requiresTemplate ?? !(raw.canSendFreeform ?? raw.withinCustomerCareWindow)),
+				lastInboundAt: raw.lastInboundAt || null,
+				customerCareRemainingMs: Number(raw.customerCareRemainingMs) || 0,
+			},
+		};
+	}
+	return { messages: [], care: null };
+}
+
+function mergeConversationCare(conv, care, messages) {
+	const open =
+		care?.canSendFreeform === true ||
+		hasOpenCustomerCareWindow(messages, conv);
+	if (!conv) return conv;
+	return {
+		...conv,
+		...(care?.lastInboundAt ? { lastInboundAt: care.lastInboundAt } : {}),
+		canSendFreeform: open,
+		withinCustomerCareWindow: open,
+		requiresTemplate: !open,
+		customerCareRemainingMs:
+			care?.customerCareRemainingMs ?? conv.customerCareRemainingMs,
+	};
 }
 
 function randomVerifyToken() {
@@ -2105,7 +2186,15 @@ export default function MetaWhatsAppWorkspace() {
 
 	const [q, setQ] = useState('');
 	const [filter, setFilter] = useState('all');
-	const [filterCounts, setFilterCounts] = useState({ replied: 0, window24h: 0 });
+	const [filterCounts, setFilterCounts] = useState({
+		all: 0,
+		unread: 0,
+		leads: 0,
+		fav: 0,
+		replied: 0,
+		unreplied: 0,
+		window24h: 0,
+	});
 	const [listLoading, setListLoading] = useState(false);
 	const [conversations, setConversations] = useState([]);
 	const [activeId, setActiveId] = useState(null);
@@ -2212,7 +2301,9 @@ export default function MetaWhatsAppWorkspace() {
 	const loadConversations = useCallback(async (query, nextFilter, { silent = true } = {}) => {
 		const qValue = query !== undefined ? query : qRef.current;
 		const filterValue = nextFilter !== undefined ? nextFilter : filterRef.current;
-		const serverFilter = ['unread', 'leads', 'fav', 'replied', 'window24h'].includes(filterValue)
+		const serverFilter = ['unread', 'leads', 'fav', 'replied', 'unreplied', 'window24h'].includes(
+			filterValue,
+		)
 			? filterValue
 			: undefined;
 		if (!silent) setListLoading(true);
@@ -2220,7 +2311,12 @@ export default function MetaWhatsAppWorkspace() {
 			const [rows, counts] = await Promise.all([
 				metaWhatsAppApi.conversations({
 					q: qValue || undefined,
-					limit: filterValue === 'replied' || filterValue === 'window24h' ? 5000 : 500,
+					limit:
+						filterValue === 'replied' ||
+						filterValue === 'window24h' ||
+						filterValue === 'unreplied'
+							? 5000
+							: 500,
 					...(serverFilter ? { filter: serverFilter } : {}),
 				}),
 				metaWhatsAppApi.conversationFilterCounts().catch(() => null),
@@ -2228,7 +2324,12 @@ export default function MetaWhatsAppWorkspace() {
 			setConversations(Array.isArray(rows) ? rows : []);
 			if (counts && typeof counts === 'object') {
 				setFilterCounts({
+					all: Number(counts.all) || 0,
+					unread: Number(counts.unread) || 0,
+					leads: Number(counts.leads) || 0,
+					fav: Number(counts.fav) || 0,
 					replied: Number(counts.replied) || 0,
+					unreplied: Number(counts.unreplied) || 0,
 					window24h: Number(counts.window24h) || 0,
 				});
 			}
@@ -2239,12 +2340,14 @@ export default function MetaWhatsAppWorkspace() {
 
 	const loadMessages = useCallback(async conversationId => {
 		if (!conversationId) return;
-		const [conv, msgs] = await Promise.all([
+		const [conv, rawMsgs] = await Promise.all([
 			metaWhatsAppApi.conversation(conversationId),
 			metaWhatsAppApi.messages(conversationId, { limit: 200 }),
 		]);
-		setActive(conv);
-		setMessages(Array.isArray(msgs) ? msgs : []);
+		const { messages: list, care } = normalizeMessagesPayload(rawMsgs);
+		const nextActive = mergeConversationCare(conv, care, list);
+		setActive(nextActive);
+		setMessages(list);
 		void metaWhatsAppApi.markRead(conversationId).then(() => loadConversations()).catch(() => {});
 	}, [loadConversations]);
 
@@ -2312,19 +2415,20 @@ export default function MetaWhatsAppWorkspace() {
 			try {
 				await loadConversations();
 				if (cancelled || !activeId) return;
-				const [conv, msgs] = await Promise.all([
+				const [conv, rawMsgs] = await Promise.all([
 					metaWhatsAppApi.conversation(activeId),
 					metaWhatsAppApi.messages(activeId, { limit: 200 }),
 				]);
 				if (cancelled) return;
-				if (conv) setActive(conv);
-				if (Array.isArray(msgs)) {
-					setMessages(prev => {
-						const prevKey = prev.map(m => `${m.id}:${m.status}`).join('|');
-						const nextKey = msgs.map(m => `${m.id}:${m.status}`).join('|');
-						return prevKey === nextKey ? prev : msgs;
-					});
+				const { messages: list, care } = normalizeMessagesPayload(rawMsgs);
+				if (conv || care) {
+					setActive(prev => mergeConversationCare(conv || prev, care, list));
 				}
+				setMessages(prev => {
+					const prevKey = prev.map(m => `${m.id}:${m.status}`).join('|');
+					const nextKey = list.map(m => `${m.id}:${m.status}`).join('|');
+					return prevKey === nextKey ? prev : list;
+				});
 			} catch {
 				/* ignore transient poll errors */
 			}
@@ -2394,6 +2498,8 @@ export default function MetaWhatsAppWorkspace() {
 	}, [sidebarView, loadTemplates]);
 
 	const filtered = useMemo(() => conversations, [conversations]);
+
+	const canSendFreeform = hasOpenCustomerCareWindow(messages, active);
 
 	const approvedTemplates = useMemo(
 		() =>
@@ -2637,8 +2743,9 @@ export default function MetaWhatsAppWorkspace() {
 		setFlash(null);
 		try {
 			const data = await metaWhatsAppApi.syncConversation(activeId);
-			setActive(data.conversation);
-			setMessages(Array.isArray(data.messages) ? data.messages : []);
+			const list = Array.isArray(data.messages) ? data.messages : [];
+			setActive(mergeConversationCare(data.conversation, null, list));
+			setMessages(list);
 			setFlash(data.metaHistoryNote || t.syncHint);
 			await loadConversations();
 		} catch (err) {
@@ -3288,7 +3395,7 @@ export default function MetaWhatsAppWorkspace() {
 	}
 
 	async function startRecording() {
-		if (!active?.canSendFreeform) {
+		if (!canSendFreeform) {
 			setFlash(t.windowClosed);
 			return;
 		}
@@ -3573,15 +3680,21 @@ export default function MetaWhatsAppWorkspace() {
 							</div>
 							<div className="flex flex-wrap items-center gap-2 px-1">
 								{[
-									{ id: 'all', label: t.all },
-									{ id: 'unread', label: t.unread },
-									{ id: 'leads', label: t.leads },
-									{ id: 'fav', label: t.fav },
+									{ id: 'all', label: t.all, count: filterCounts.all },
+									{ id: 'unread', label: t.unread, count: filterCounts.unread },
+									{ id: 'leads', label: t.leads, count: filterCounts.leads },
+									{ id: 'fav', label: t.fav, count: filterCounts.fav },
 									{
 										id: 'replied',
 										label: t.replied,
 										title: t.repliedTitle,
 										count: filterCounts.replied,
+									},
+									{
+										id: 'unreplied',
+										label: t.unreplied,
+										title: t.unrepliedTitle,
+										count: filterCounts.unreplied,
 									},
 									{
 										id: 'window24h',
@@ -3629,9 +3742,11 @@ export default function MetaWhatsAppWorkspace() {
 										<p className="mt-2 text-[13px]" style={{ color: WA.muted }}>
 											{filter === 'replied'
 												? t.noRepliedHint
-												: filter === 'window24h'
-													? t.noWindowHint
-													: t.noConversationsHint}
+												: filter === 'unreplied'
+													? t.noUnrepliedHint
+													: filter === 'window24h'
+														? t.noWindowHint
+														: t.noConversationsHint}
 										</p>
 									</div>
 								) : (
@@ -4335,8 +4450,8 @@ export default function MetaWhatsAppWorkspace() {
 								</div>
 							</div>
 							<div className="flex items-center gap-1">
-								<span className="hidden rounded-md px-2 py-1 text-[11px] font-medium sm:inline" style={{ background: active.withinCustomerCareWindow ? WA.greenSoft : WA.dateChip, color: active.withinCustomerCareWindow ? WA.greenText : WA.muted }}>
-									{active.withinCustomerCareWindow ? t.windowOpen : t.windowClosed}
+								<span className="hidden rounded-md px-2 py-1 text-[11px] font-medium sm:inline" style={{ background: canSendFreeform ? WA.greenSoft : WA.dateChip, color: canSendFreeform ? WA.greenText : WA.muted }}>
+									{canSendFreeform ? t.windowOpen : t.windowClosed}
 								</span>
 								<button
 									type="button"
@@ -4615,7 +4730,7 @@ export default function MetaWhatsAppWorkspace() {
 						</div>
 
 						<footer className="z-10 px-2.5 py-2" style={{ background: WA.composeBar }}>
-							{active.canSendFreeform ? (
+							{canSendFreeform ? (
 								recording ? (
 									<div className="flex w-full items-center gap-2">
 										<button
