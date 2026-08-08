@@ -11,6 +11,7 @@ import { useState, useEffect, useRef, useTransition, useMemo } from "react";
 import { Link } from "@/i18n/navigation";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { BRAND_LOGO_SRC } from "@/lib/brand";
+import { resolvePostLoginPath } from "@/lib/nav-access";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -58,10 +59,9 @@ function getInitials(name) {
 	return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
-function getDashboardPath(role) {
-	if (role === "admin" || role === "coach") return "/dashboard/users";
-	if (role === "super_admin") return "/dashboard/super-admin/users";
-	return "/dashboard/my/workouts";
+function getDashboardPath(userOrRole) {
+	if (userOrRole && typeof userOrRole === "object") return resolvePostLoginPath(userOrRole);
+	return resolvePostLoginPath({ role: userOrRole });
 }
 
 function getRoleIcon(role) {
@@ -264,7 +264,7 @@ function UserDropdown({ user, onClose, isRTL }) {
 				{/* Actions */}
 				<div className="p-1.5 space-y-px">
 					{[
-						{ href: getDashboardPath(user.role), icon: <LayoutDashboard className="h-[14px] w-[14px]" />, label: t("dropdown.dashboard"), accent: true },
+						{ href: getDashboardPath(user), icon: <LayoutDashboard className="h-[14px] w-[14px]" />, label: t("dropdown.dashboard"), accent: true },
 						{ href: "/profile", icon: <User className="h-[14px] w-[14px]" />, label: t("dropdown.myProfile"), accent: false },
 					].map((item) => (
 						<Link
@@ -498,7 +498,7 @@ function MobileDrawer({ isOpen, onClose, navItems, user, onLogout, isRTL }) {
 							</p>
 							<div className="flex flex-col gap-0.5">
 								<Link
-									href={getDashboardPath(user.role)}
+									href={getDashboardPath(user)}
 									onClick={onClose}
 									className="flex items-center gap-2.5 px-3 py-2.5 rounded-[11px] no-underline font-semibold text-[13px] transition-colors"
 									style={{ background: "rgba(99,102,241,0.09)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--color-primary-300)" }}

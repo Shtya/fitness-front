@@ -407,6 +407,40 @@ export const NAV = [
   },
 ];
 
+/** Flatten role nav into selectable page rows (parents + children). */
+export function getNavPagesForRole(role) {
+  const r = String(role || '').toLowerCase();
+  const sections = NAV.filter(s => s.role === r);
+  const out = [];
+  for (const section of sections) {
+    for (const item of section.items || []) {
+      out.push({
+        id: item.id,
+        nameKey: item.nameKey,
+        href: item.href,
+        icon: item.icon || null,
+        group: item.group || section.sectionKey,
+        required: !!item.required,
+        marketplace: !!item.marketplace,
+        parentId: null,
+      });
+      for (const child of item.children || []) {
+        out.push({
+          id: child.id,
+          nameKey: child.nameKey,
+          href: child.href,
+          icon: child.icon || null,
+          group: child.group || item.group || section.sectionKey,
+          required: !!child.required,
+          marketplace: !!child.marketplace,
+          parentId: item.id,
+        });
+      }
+    }
+  }
+  return out;
+}
+
 /* ─── Helpers ───────────────────────────────────────────────── */
 function initialsFrom(name, email) {
   const src = (name && name.trim()) || (email && email.split('@')[0]) || 'G';
@@ -1145,12 +1179,30 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
   );
 }
 
-function NavSection({ sectionKey, items, pathname, searchParams, onNavigate, collapsed = false, t, totalUnread = 0, unreadNotifications = 0, isHidden, isInstalled, P, first = false, getLabel }) {
+function NavSection({ sectionKey, items, pathname, searchParams, onNavigate, collapsed = false, t, totalUnread = 0, unreadNotifications = 0, isHidden, isInstalled, allowedPages, P, first = false, getLabel }) {
   const t_nav = useTranslations('nav');
   const label = t_nav(sectionKey, { defaultValue: '' });
-  const visibleItems = items.filter(
-    item => (item.required || !isHidden(item.id)) && (!item.marketplace || isInstalled?.(item.id)),
-  );
+  const restricted = Array.isArray(allowedPages) && allowedPages.length > 0;
+  const allowSet = restricted ? new Set(allowedPages) : null;
+
+  const visibleItems = items
+    .map(item => {
+      if (!restricted) return item;
+      const selfOk = allowSet.has(item.id);
+      const kids = (item.children || []).filter(c => allowSet.has(c.id));
+      if (!selfOk && !kids.length) return null;
+      if (item.children) {
+        // Parent selected alone → keep all children; else only allowed children
+        return { ...item, children: selfOk && !kids.length ? item.children : kids.length ? kids : item.children };
+      }
+      return item;
+    })
+    .filter(Boolean)
+    .filter(item => {
+      if (restricted) return true; // admin allowlist wins over local hide / marketplace
+      return (item.required || !isHidden(item.id)) && (!item.marketplace || isInstalled?.(item.id));
+    });
+
   if (!visibleItems.length) return null;
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -2697,6 +2749,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
   const router = useI18nRouter();
   const user = useUser();
   const role = user?.role ?? null;
+  const allowedPages = user?.allowedPages ?? null;
   const t = useTranslations('nav');
   const t_header = useTranslations('header');
   const { totalUnread } = useUnreadChats();
@@ -2819,7 +2872,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
             <ScrollShadow P={P}>
               <nav style={{ padding: collapsed ? '4px 10px' : '4px 10px 10px', display: 'flex', flexDirection: 'column' }}>
                 {sections?.map((section, idx) => (
-                  <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} isHidden={isHidden} isInstalled={isInstalled} P={P} first={idx === 0} getLabel={getLabel} />
+                  <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} isHidden={isHidden} isInstalled={isInstalled} allowedPages={allowedPages} P={P} first={idx === 0} getLabel={getLabel} />
                 ))}
               </nav>
             </ScrollShadow>
@@ -2941,7 +2994,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
                 <ScrollShadow P={P}>
                   <nav style={{ padding: '4px 10px 10px', display: 'flex', flexDirection: 'column' }}>
                     {sections?.map((section, idx) => (
-                      <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} isHidden={isHidden} isInstalled={isInstalled} P={P} first={idx === 0} getLabel={getLabel} />
+                      <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} isHidden={isHidden} isInstalled={isInstalled} allowedPages={allowedPages} P={P} first={idx === 0} getLabel={getLabel} />
                     ))}
                   </nav>
                 </ScrollShadow>

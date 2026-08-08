@@ -1,84 +1,9 @@
 // /middleware.js
 import { NextResponse } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
+import { NAV_HREFS, getEffectiveNavHrefs } from './lib/nav-access';
 
-export const NAV_HREFS = {
-  client: [ 
-    '/dashboard/my/stats',
-    '/dashboard/my/workouts',
-    '/dashboard/my/progress',
-    '/dashboard/my/nutrition',
-    '/dashboard/reminders',
-    '/dashboard/my/report',
-    '/dashboard/calculator',
-    '/dashboard/chat',
-    '/dashboard/transcript',
-    '/dashboard/quran-revision',
-    '/dashboard/my/profile',
-  ],
-  coach: [
-    '/dashboard/users',
-    '/dashboard/workouts',
-    '/dashboard/workouts/plans',
-    '/dashboard/nutrition',
-    '/dashboard/reports',
-    '/dashboard/chat',
-    '/dashboard/whatsapp',
-    '/dashboard/meta-whatsapp',
-    '/dashboard/transcript',
-    '/dashboard/calculator',
-		'/dashboard/my-account',
-		'/dashboard/intake/forms',
-		'/dashboard/intake/responses',
-		'/dashboard/phone-check',
-		'/dashboard/fitness-leads',
-		'/dashboard/ai-free',
-		'/dashboard/quran-revision',
-  ],
-  admin: [
-    '/dashboard',
-    '/dashboard/users',
-    '/dashboard/workouts',
-    '/dashboard/workouts/plans',
-    '/dashboard/nutrition',
-    '/dashboard/intake/forms',
-    '/dashboard/intake/responses',
-    '/dashboard/chat',
-    '/dashboard/whatsapp',
-    '/dashboard/meta-whatsapp',
-    '/dashboard/transcript',
-    '/dashboard/calculator',
-    '/dashboard/reports',
-    '/dashboard/settings',
-    '/dashboard/settings/branding',
-    '/dashboard/billing',
-    '/dashboard/billing/transactions',
-    '/dashboard/billing/subscriptions',
-    '/dashboard/billing/withdraw',
-    '/dashboard/billing/client-payments',
-    '/dashboard/templates',
-    '/dashboard/my-account',
-    '/dashboard/phone-check',
-    '/dashboard/fitness-leads',
-    '/dashboard/ai-free',
-    '/dashboard/quran-revision',
-  ],
-  super_admin: [
-    '/dashboard',
-    '/dashboard/super-admin/users',
-    '/dashboard/workouts',
-    '/dashboard/whatsapp',
-    '/dashboard/meta-whatsapp',
-    '/dashboard/transcript',
-    '/dashboard/billing/analytics',
-    '/dashboard/billing/withdrawal-approvals',
-    '/dashboard/billing/all-wallets',
-    '/dashboard/phone-check',
-    '/dashboard/fitness-leads',
-    '/dashboard/ai-free',
-    '/dashboard/quran-revision',
-  ],
-};
+export { NAV_HREFS };
 
 const intlMiddleware = createMiddleware({
   locales: ['en', 'ar'],
@@ -171,11 +96,15 @@ export default function middleware(req) {
 
   if (!role) {
     const to = new URL(withLocale(UNAUTH_REDIRECT, currentLocale), req.url);
-    to.searchParams.set('next', pathNoLocale);
+    // Preserve deep-link (path + query) so auth can return here after login
+    const returnTo = `${pathNoLocale}${nextUrl.search || ''}`;
+    if (returnTo && returnTo !== '/' && !returnTo.startsWith('/auth')) {
+      to.searchParams.set('next', returnTo);
+    }
     return NextResponse.redirect(to);
   }
 
-  const allowed = NAV_HREFS[role] || [];
+  const allowed = getEffectiveNavHrefs(role, user?.allowedPages);
   if (!allowed.length) {
     return NextResponse.redirect(new URL(withLocale(NO_ACCESS_REDIRECT, currentLocale), req.url));
   }

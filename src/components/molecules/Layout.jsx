@@ -17,6 +17,7 @@ import Header from './Header';
 import { useRouter, useParams } from 'next/navigation';
 import { LogIn, LogOut, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { IMPERSONATION_EVENT, notifyImpersonationChanged } from '@/lib/impersonation';
 import './sidebar-glass.css';
 
 const Sidebar = dynamic(() => import('./Sidebar'), { ssr: false });
@@ -26,54 +27,67 @@ const LS_KEY = 'sidebar:collapsed';
 // ─────────────────────────────────────────────────────────────────────────────
 // ImpersonationBar
 // ─────────────────────────────────────────────────────────────────────────────
+
 function ImpersonationBar({ onExit }) {
 	const [user, setUser] = useState(null);
 
 	useEffect(() => {
-		try {
-			setUser(JSON.parse(localStorage.getItem('impersonated_user') || 'null'));
-		} catch {}
+		const read = () => {
+			try {
+				setUser(JSON.parse(localStorage.getItem('impersonated_user') || 'null'));
+			} catch {
+				setUser(null);
+			}
+		};
+		read();
+		window.addEventListener(IMPERSONATION_EVENT, read);
+		window.addEventListener('storage', read);
+		return () => {
+			window.removeEventListener(IMPERSONATION_EVENT, read);
+			window.removeEventListener('storage', read);
+		};
 	}, []);
 
 	if (!user) return null;
 
 	return (
 		<motion.div
-			initial={{ y: 100, opacity: 0 }}
+			initial={{ y: -40, opacity: 0 }}
 			animate={{ y: 0, opacity: 1 }}
-			exit={{ y: 100, opacity: 0 }}
-			transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-			className="fixed bottom-0 inset-x-0 z-[999] flex items-center justify-between gap-4 px-5 py-3 text-white shadow-2xl"
+			exit={{ y: -40, opacity: 0 }}
+			transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+			className="fixed top-0 inset-x-0 z-[200000] flex items-center justify-between gap-3 px-3 sm:px-5 py-2.5 text-white shadow-lg"
 			style={{
 				background: 'linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-via, var(--color-gradient-from)), var(--color-gradient-to))',
+				paddingTop: 'max(0.55rem, env(safe-area-inset-top))',
 			}}
+			role="status"
+			aria-live="polite"
 		>
-			{/* Left — info */}
-			<div className="flex items-center gap-3 min-w-0">
+			<div className="flex items-center gap-2.5 min-w-0">
 				<div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm shrink-0">
 					<Shield size={14} />
 				</div>
 				<div className="min-w-0">
-					<p className="text-[10px] font-semibold opacity-75 uppercase tracking-widest md: leading-none mb-0.5">
-						Impersonating
+					<p className="text-[10px] font-bold opacity-80 uppercase tracking-widest leading-none mb-0.5">
+						Viewing as
 					</p>
-					<p className="text-sm font-black truncate md: leading-none">
+					<p className="text-sm font-black truncate leading-tight">
 						{user.name}
-						<span className="font-normal opacity-70 ml-2 text-xs">({user.email})</span>
+						<span className="font-normal opacity-75 ms-1.5 text-xs hidden sm:inline">({user.email})</span>
 					</p>
 				</div>
 			</div>
 
-			{/* Right — exit */}
-			<motion.button
-				whileHover={{ scale: 1.04 }}
-				whileTap={{ scale: 0.96 }}
+			<button
+				type="button"
 				onClick={onExit}
-				className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-sm font-bold border border-white/30 transition-all backdrop-blur-sm"
+				className="shrink-0 inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-white text-slate-900 text-xs sm:text-sm font-bold shadow-md hover:bg-white/95 transition-colors"
 			>
 				<LogOut size={13} />
-				Return to Super Admin
-			</motion.button>
+				<span className="hidden xs:inline sm:inline">Return to Super Admin</span>
+				<span className="sm:hidden">Exit</span>
+			</button>
 		</motion.div>
 	);
 }
@@ -95,13 +109,17 @@ export default function Layout({ children }) {
 	const [isMobile, setIsMobile] = useState(false);
 	const [isImpersonating, setIsImpersonating] = useState(false);
 
-	// Detect impersonation session on mount + storage changes
+	// Detect impersonation (same-tab nav won't fire `storage` — listen to custom event + route)
 	useEffect(() => {
 		const check = () => setIsImpersonating(!!localStorage.getItem('super_admin_prev_session'));
 		check();
 		window.addEventListener('storage', check);
-		return () => window.removeEventListener('storage', check);
-	}, []);
+		window.addEventListener(IMPERSONATION_EVENT, check);
+		return () => {
+			window.removeEventListener('storage', check);
+			window.removeEventListener(IMPERSONATION_EVENT, check);
+		};
+	}, [pathname]);
 
 	// ── Exit impersonation ──────────────────────────────────────────────────
 	const handleExitImpersonation = useCallback(async () => {
@@ -114,6 +132,7 @@ export default function Layout({ children }) {
 			localStorage.setItem('user',         prev.user);
 			localStorage.removeItem('impersonated_user');
 			localStorage.removeItem('super_admin_prev_session');
+			notifyImpersonationChanged();
 
 			await fetch('/api/auth/login', {
 				method:  'POST',
@@ -128,6 +147,7 @@ export default function Layout({ children }) {
 			toast.success('Returned to super admin');
 			setIsImpersonating(false);
 			router.push(`/${locale}/dashboard/super-admin/users`);
+			router.refresh?.();
 		} catch {
 			toast.error('Failed to restore session');
 		}
@@ -438,7 +458,7 @@ export default function Layout({ children }) {
 													: pathname !== '/' && !isPresentationRoute
 														? 'min-h-screen'
 														: '',
-												isImpersonating ? 'pb-8' : '',
+												isImpersonating ? 'pt-14' : '',
 											].filter(Boolean).join(' ')}
 										>
 											{children}
@@ -452,7 +472,7 @@ export default function Layout({ children }) {
 					<ConfigAos />
 					<Toaster position="top-center" />
 
-					{/* ── Impersonation Bar ── */}
+					{/* ── Impersonation Bar (top) ── */}
 					<AnimatePresence>
 						{isImpersonating && (
 							<ImpersonationBar onExit={handleExitImpersonation} />

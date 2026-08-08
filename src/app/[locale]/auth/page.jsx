@@ -15,6 +15,7 @@ import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { loginPersist } from "@/app/role-access";
 import { useTenantTheme } from "@/lib/tenant/TenantThemeProvider";
+import { resolvePostLoginPath } from "@/lib/nav-access";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
@@ -71,11 +72,16 @@ const loginSchema = yup.object({
   password: yup.string().min(1, "passwordRequired").required("passwordRequired"),
 });
 
-function getPostLoginPath(role) {
-  const r = (role || "").toString().toLowerCase();
-  if (r === "admin" || r === "coach") return "/dashboard/users";
-  if (r === "client") return "/dashboard/my/workouts";
-  return "/dashboard/users";
+function getPostLoginPath(userOrRole, intendedPath) {
+  if (userOrRole && typeof userOrRole === "object") {
+    return resolvePostLoginPath(userOrRole, intendedPath);
+  }
+  return resolvePostLoginPath({ role: userOrRole }, intendedPath);
+}
+
+/** Prefer ?next= (middleware deep-link) then ?redirect= */
+function readIntendedReturnPath(searchParams) {
+  return searchParams?.get("next") || searchParams?.get("redirect") || null;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -293,7 +299,7 @@ export default function AuthPage() {
   const localeParam = params?.locale || locale;
 
   const token = searchParams?.get("accessToken");
-  const redirectUrl = searchParams?.get("redirect") || "/dashboard/my/workouts";
+  const intendedReturn = readIntendedReturnPath(searchParams);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -317,17 +323,18 @@ export default function AuthPage() {
           body: JSON.stringify({ accessToken: token }),
         });
         toast.success(t("success.signedIn"));
-        router.push(getPostLoginPath(user?.role) || redirectUrl);
+        router.push(getPostLoginPath(user, intendedReturn));
       } catch (e) {
         console.error("OAuth login failed", e);
         toast.error(t("errors.loginFailed"));
       }
     })();
-  }, [token, redirectUrl, router, t]);
+  }, [token, intendedReturn, router, t]);
 
   const handleLoggedIn = useCallback((user) => {
-    router.push(getPostLoginPath(user?.role) || "/dashboard/users");
-  }, [router]);
+    // Deep-link (?next=) wins over configured landing page when allowed
+    router.push(getPostLoginPath(user, intendedReturn));
+  }, [router, intendedReturn]);
 
   const ctxVal = useMemo(() => ({ loading, setLoading, error, setError }), [loading, error]);
 
