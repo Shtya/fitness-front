@@ -985,6 +985,7 @@
 	margin-top: 0.1rem;
 	scrollbar-width: none; /* Firefox */
 	-ms-overflow-style: none; /* IE/legacy */
+	scroll-behavior: smooth;
 }
 
 .qr-studio .qr-mushaf-scroll::-webkit-scrollbar {
@@ -1566,6 +1567,7 @@
 	-webkit-box-decoration-break: clone;
 	line-height: inherit;
 	overflow: visible;
+	scroll-margin-block: 1.25rem;
 }
 
 .qr-studio .qr-ayah.is-past { opacity: 0.32; }

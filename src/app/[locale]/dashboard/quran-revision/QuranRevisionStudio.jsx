@@ -551,7 +551,7 @@ export default function QuranRevisionStudio({
 	const [favsOpen, setFavsOpen] = useState(false);
 	const [portalReady, setPortalReady] = useState(false);
 	const [sessionSettingsOpen, setSessionSettingsOpen] = useState(true);
-	const [unitsOpen, setUnitsOpen] = useState(false);
+	const [unitsOpen, setUnitsOpen] = useState(true);
 
 	const [followAlong, setFollowAlong] = useState(true);
 	const [showTajweed, setShowTajweed] = useState(DEFAULT_PREFS.showTajweed);
@@ -561,6 +561,7 @@ export default function QuranRevisionStudio({
 	const [mushafExpanded, setMushafExpanded] = useState(false);
 	const [mushafCollapsing, setMushafCollapsing] = useState(false);
 	const mushafPanelRef = useRef(null);
+	const mushafScrollRef = useRef(null);
 
 	const [ayahBank, setAyahBank] = useState([]);
 	const [ayahLoading, setAyahLoading] = useState(false);
@@ -1109,8 +1110,7 @@ export default function QuranRevisionStudio({
 		pendingLiveRestart.current = false;
 		stopAudio();
 		setSessionPhase('active');
-		/* Collapse quarter list + session settings so reading stays in focus */
-		setUnitsOpen(false);
+		/* Collapse session settings so reading stays in focus */
 		setSessionSettingsOpen(false);
 		setCurrentVerseIndex(0);
 		setCurrentVerseRepeat(1);
@@ -1279,6 +1279,24 @@ export default function QuranRevisionStudio({
 			window.removeEventListener('keydown', onKey);
 		};
 	}, [mushafExpanded, closeMushafExpanded]);
+
+	/* Follow-along: keep the active ayah centered inside the mushaf scroll box */
+	useEffect(() => {
+		if (!followAlong || sessionPhase !== 'active') return;
+		const root = mushafScrollRef.current;
+		if (!root) return;
+		const ayah = root.querySelector(`[data-ayah-idx="${currentVerseIndex}"]`);
+		if (!ayah) return;
+		const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		const id = window.requestAnimationFrame(() => {
+			const rootRect = root.getBoundingClientRect();
+			const ayahRect = ayah.getBoundingClientRect();
+			const delta = (ayahRect.top - rootRect.top) - (root.clientHeight / 2 - ayahRect.height / 2);
+			const top = Math.max(0, root.scrollTop + delta);
+			root.scrollTo({ top, behavior: reduce ? 'auto' : 'smooth' });
+		});
+		return () => window.cancelAnimationFrame(id);
+	}, [currentVerseIndex, followAlong, sessionPhase, mushafExpanded, verses.length]);
 
 	const togglePlay = () => {
 		if (usingYoutube) {
@@ -2435,7 +2453,7 @@ export default function QuranRevisionStudio({
 
 							{favFlash ? <p className="text-[10px] font-bold text-emerald-600">{favFlash}</p> : null}
 
-							<div className="qr-mushaf-scroll">
+							<div className="qr-mushaf-scroll" ref={mushafScrollRef}>
 								<div
 									className={cx('qr-mushaf', showTajweed && 'has-tajweed')}
 									dir="rtl"
@@ -2448,6 +2466,7 @@ export default function QuranRevisionStudio({
 										return (
 											<span
 												key={`${verse.n}-${index}`}
+												data-ayah-idx={index}
 												className={cx(
 													'qr-ayah',
 													followAlong && isOn && 'is-on',
