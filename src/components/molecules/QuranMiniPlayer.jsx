@@ -39,7 +39,7 @@ export default function QuranMiniPlayer() {
 		!snap.hidden;
 
 	useEffect(() => {
-		if (!show) setReciterOpen(false);
+		if (!show) setReciterOpen(open => (open ? false : open));
 	}, [show]);
 
 	if (snap.active && !snap.studioMounted && !onQuranPage && snap.hidden) {

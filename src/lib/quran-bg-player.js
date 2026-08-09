@@ -30,8 +30,22 @@ const state = {
 let audioEl = null;
 let lastHandoffAt = 0;
 
+/** Cached for useSyncExternalStore — must return the same reference until state changes. */
+let cachedSnapshot = null;
+
+function rebuildSnapshot() {
+	const rec = getReciter();
+	cachedSnapshot = {
+		...state,
+		reciterNameAr: rec?.nameAr || '',
+		reciterNameEn: rec?.nameEn || '',
+		reciters: BUILTIN_RECITERS,
+	};
+	return cachedSnapshot;
+}
+
 function notify() {
-	const snap = getSnapshot();
+	const snap = rebuildSnapshot();
 	listeners.forEach(fn => {
 		try { fn(snap); } catch { /* ignore */ }
 	});
@@ -134,13 +148,10 @@ function advanceAfterEnded() {
 }
 
 export function getSnapshot() {
-	const rec = getReciter();
-	return {
-		...state,
-		reciterNameAr: rec?.nameAr || '',
-		reciterNameEn: rec?.nameEn || '',
-		reciters: BUILTIN_RECITERS,
-	};
+	// Returning a fresh object every call makes React think the store changed on
+	// every render → infinite loop → minified React error #185.
+	if (!cachedSnapshot) rebuildSnapshot();
+	return cachedSnapshot;
 }
 
 export function subscribe(fn) {
