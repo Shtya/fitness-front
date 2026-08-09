@@ -77,6 +77,7 @@ import { createTranscriptionFile } from '../transcript/transcription-client';
 import {
 	conversationTitle,
 	firstMessageLink,
+	getStoryMediaEmbed,
 	groupConsecutiveImageMessages,
 	isRenderableWhatsAppMessage,
 	mergeMessages,
@@ -250,6 +251,8 @@ const translations = {
 		openFile: 'Open',
 		downloadFile: 'Download',
 		openLink: 'Open link',
+		viewLinkInStory: 'Watch inside story',
+		openLinkExternally: 'Open in browser',
 		transcribe: 'Transcribe',
 		recordVoice: 'Record voice message',
 		recordingVoice: 'Recording voice message',
@@ -455,6 +458,8 @@ const translations = {
 		openFile: 'فتح',
 		downloadFile: 'تنزيل',
 		openLink: 'فتح الرابط',
+		viewLinkInStory: 'مشاهدة داخل الحالة',
+		openLinkExternally: 'فتح في المتصفح',
 		transcribe: 'تحويل إلى نص',
 		recordVoice: 'تسجيل رسالة صوتية',
 		recordingVoice: 'جارِ تسجيل رسالة صوتية',
@@ -2820,6 +2825,7 @@ function WhatsAppWorkspaceContent() {
 	const [storyReplayKey, setStoryReplayKey] = useState(0);
 	const [storyReplyDraft, setStoryReplyDraft] = useState('');
 	const [sendingStoryReply, setSendingStoryReply] = useState(false);
+	const [storyViewerEmbed, setStoryViewerEmbed] = useState(null);
 	const storyLoopRef = useRef(false);
 	const [statusMediaUrl, setStatusMediaUrl] = useState(null);
 	const [loadingStory, setLoadingStory] = useState(false);
@@ -5765,8 +5771,12 @@ function WhatsAppWorkspaceContent() {
 		markStatusesViewed(status.id);
 		const statusType = String(status.type || '').toLowerCase();
 		const isTextStory = statusType === 'text' || statusType === 'chat';
+		const textLink = firstMessageLink(status.caption || '');
+		const autoEmbed =
+			isTextStory && textLink ? getStoryMediaEmbed(textLink.href) : null;
+		setStoryViewerEmbed(autoEmbed);
 		setLoadingStory(!isTextStory);
-		setStoryPaused(false);
+		setStoryPaused(Boolean(autoEmbed));
 		storyElapsedRef.current = 0;
 		setStoryProgress(0);
 		setStoryReplayKey(key => key + 1);
@@ -5932,12 +5942,47 @@ function WhatsAppWorkspaceContent() {
 		setStoryIndex(0);
 		setStoryReplyDraft('');
 		setSendingStoryReply(false);
+		setStoryViewerEmbed(null);
 		setStatusMediaUrl(null);
 		if (statusMediaUrlRef.current) {
 			URL.revokeObjectURL(statusMediaUrlRef.current);
 			statusMediaUrlRef.current = null;
 		}
 	};
+
+	const openStoryLink = (href, { embedPreferred = true } = {}) => {
+		const embed = embedPreferred ? getStoryMediaEmbed(href) : null;
+		if (embed) {
+			setStoryViewerEmbed(embed);
+			setStoryPaused(true);
+			return;
+		}
+		window.open(href, '_blank', 'noopener,noreferrer');
+	};
+
+	const renderStoryLinkedText = (text, className = '') => (
+		<p className={className}>
+			{messageTextSegments(text).map((segment, index) =>
+				segment.type === 'link' ? (
+					<button
+						key={`${segment.href}-${index}`}
+						type="button"
+						dir="ltr"
+						onClick={event => {
+							event.preventDefault();
+							event.stopPropagation();
+							openStoryLink(segment.href);
+						}}
+						className="break-all font-semibold text-sky-200 underline decoration-sky-200/50 underline-offset-2 transition-colors hover:text-white hover:decoration-white"
+					>
+						{segment.text}
+					</button>
+				) : (
+					<span key={`text-${index}`}>{segment.text}</span>
+				),
+			)}
+		</p>
+	);
 
 	const replyToCurrentStory = async event => {
 		event?.preventDefault?.();
@@ -7952,7 +7997,7 @@ function WhatsAppWorkspaceContent() {
 									}
 								/>
 							) : (
-								<div className="grid grid-cols-[repeat(auto-fill,minmax(148px,1fr))] gap-x-5 gap-y-7">
+								<div className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-x-4 gap-y-5">
 									{groupedStatuses.map((story, storyIndex) => {
 										const name =
 											story.latest.contactName ||
@@ -7968,17 +8013,17 @@ function WhatsAppWorkspaceContent() {
 												onClick={() => openStoryGroup(story)}
 												className="group cursor-pointer text-center transition-transform hover:-translate-y-0.5"
 											>
-												<div className="relative mx-auto h-[140px] w-[140px] transition-transform duration-200 group-hover:scale-[1.03]">
+												<div className="relative mx-auto h-[96px] w-[96px] transition-transform duration-200 group-hover:scale-[1.03]">
 													<StoryRing
-														size={140}
-														strokeWidth={4.5}
+														size={96}
+														strokeWidth={3.25}
 														segmentsViewed={story.items.map(item => viewedStatusIds.has(item.id))}
 														idSuffix={String(story.senderWaId).replace(/[^a-zA-Z0-9_-]/g, '_')}
 													/>
-													<div className="absolute inset-[9px] overflow-hidden rounded-full border-[3px] border-white bg-white shadow-md dark:border-slate-900 dark:bg-slate-900">
+													<div className="absolute inset-[6px] overflow-hidden rounded-full border-[2.5px] border-white bg-white shadow-md dark:border-slate-900 dark:bg-slate-900">
 														<StoryThumbnail
 															label={name}
-															size={30}
+															size={20}
 															viewed={viewed}
 															priority={storyIndex < 12}
 															thumbUrl={thumb?.url}
@@ -7986,10 +8031,10 @@ function WhatsAppWorkspaceContent() {
 														/>
 													</div>
 												</div>
-												<p className={`mt-2.5 truncate text-sm ${viewed ? 'font-semibold text-slate-500' : 'font-bold'}`}>
+												<p className={`mt-2 truncate text-xs ${viewed ? 'font-semibold text-slate-500' : 'font-bold'}`}>
 													{name}
 												</p>
-												<p className="text-[11px] text-slate-400">{relativeTime(story.latest.publishedAt, relativeTimeNow, locale)}</p>
+												<p className="text-[10px] text-slate-400">{relativeTime(story.latest.publishedAt, relativeTimeNow, locale)}</p>
 											</button>
 										);
 									})}
@@ -8031,8 +8076,8 @@ function WhatsAppWorkspaceContent() {
 										))}
 									</div>
 									<div className="absolute inset-x-0 top-5 z-40 flex items-center gap-2 px-4 py-3 pointer-events-none sm:gap-3">
-										<div className="pointer-events-auto flex min-w-0 flex-1 items-center gap-3">
-											<Avatar label={selectedStatus.contactName || selectedStatus.senderWaId} size={10} />
+										<div className="pointer-events-auto flex min-w-0 flex-1 items-center gap-2.5">
+											<Avatar label={selectedStatus.contactName || selectedStatus.senderWaId} size={8} />
 											<div className="min-w-0 flex-1">
 												<p className="truncate text-sm font-black">
 													{selectedStatus.contactName || (selectedStatus.isOwn ? selectedAccount?.label : String(selectedStatus.senderWaId).replace(/@.*$/, ''))}
@@ -8095,33 +8140,72 @@ function WhatsAppWorkspaceContent() {
 											<X size={19} />
 										</button>
 									</div>
-									<button
-										type="button"
-										aria-label="Previous story"
-										onClick={() => goStory(-1)}
-										className="absolute bottom-24 start-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-start bg-transparent p-3"
-									>
-										{storyQueue.length > 1 && storyIndex > 0 && (
-											<span className="grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50">
-												{locale === 'ar' ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
-											</span>
-										)}
-									</button>
-									<button
-										type="button"
-										aria-label="Next story"
-										onClick={() => goStory(1)}
-										className="absolute bottom-24 end-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-end bg-transparent p-3"
-									>
-										{(storyLoop || storyIndex < storyQueue.length - 1) && storyQueue.length > 1 && (
-											<span className="grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50">
-												{locale === 'ar' ? <ChevronLeft size={22} /> : <ChevronRight size={22} />}
-											</span>
-										)}
-									</button>
-									<div className="relative z-10 flex min-h-0 flex-1 items-center justify-center pt-20 pointer-events-none">
+									{!storyViewerEmbed && (
+										<>
+											<button
+												type="button"
+												aria-label="Previous story"
+												onClick={() => goStory(-1)}
+												className="absolute bottom-24 start-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-start bg-transparent p-3"
+											>
+												{storyQueue.length > 1 && storyIndex > 0 && (
+													<span className="grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50">
+														{locale === 'ar' ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
+													</span>
+												)}
+											</button>
+											<button
+												type="button"
+												aria-label="Next story"
+												onClick={() => goStory(1)}
+												className="absolute bottom-24 end-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-end bg-transparent p-3"
+											>
+												{(storyLoop || storyIndex < storyQueue.length - 1) && storyQueue.length > 1 && (
+													<span className="grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50">
+														{locale === 'ar' ? <ChevronLeft size={22} /> : <ChevronRight size={22} />}
+													</span>
+												)}
+											</button>
+										</>
+									)}
+									<div className="relative z-10 flex min-h-0 flex-1 items-center justify-center pt-20">
 										{loadingStory ? (
 											<Loader2 size={32} className="animate-spin" />
+										) : storyViewerEmbed ? (
+											<div className="relative z-30 flex h-full w-full flex-col gap-2 px-3 pb-3 pt-2">
+												<div className="flex items-center justify-between gap-2">
+													<button
+														type="button"
+														onClick={() => {
+															setStoryViewerEmbed(null);
+															setStoryPaused(false);
+														}}
+														className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90 hover:bg-white/20"
+													>
+														{locale === 'ar' ? 'رجوع للحالة' : 'Back to story'}
+													</button>
+													<a
+														href={storyViewerEmbed.openUrl}
+														target="_blank"
+														rel="noreferrer"
+														onClick={event => event.stopPropagation()}
+														className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90 hover:bg-white/20"
+													>
+														<ExternalLink size={13} />
+														{t.openLinkExternally}
+													</a>
+												</div>
+												<div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl bg-black">
+													<iframe
+														title={t.viewLinkInStory}
+														src={storyViewerEmbed.embedUrl}
+														className="absolute inset-0 h-full w-full border-0"
+														allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+														allowFullScreen
+														referrerPolicy="strict-origin-when-cross-origin"
+													/>
+												</div>
+											</div>
 										) : String(selectedStatus.type).toLowerCase().includes('video') && statusMediaUrl ? (
 											<video
 												ref={storyVideoRef}
@@ -8136,13 +8220,13 @@ function WhatsAppWorkspaceContent() {
 													setStatusMediaUrl(null);
 													toast.error(t.mediaUnavailable);
 												}}
-												className="max-h-full w-full object-contain"
+												className="pointer-events-none max-h-full w-full object-contain"
 											/>
 										) : statusMediaUrl ? (
 											<img
 												src={statusMediaUrl}
 												alt={selectedStatus.caption || 'WhatsApp story'}
-												className="max-h-full w-full object-contain"
+												className="pointer-events-none max-h-full w-full object-contain"
 												onError={() => {
 													setStatusMediaUrl(null);
 													toast.error(t.mediaUnavailable);
@@ -8150,14 +8234,40 @@ function WhatsAppWorkspaceContent() {
 											/>
 										) : (
 											<div className={`grid h-full w-full place-items-center bg-gradient-to-br ${gradientFor(selectedStatus.providerStatusId)}`}>
-												<p className="max-w-md whitespace-pre-wrap px-8 text-center text-3xl font-black leading-relaxed">
-													{selectedStatus.caption || t.mediaUnavailable}
-												</p>
+												{selectedStatus.caption
+													? renderStoryLinkedText(
+															selectedStatus.caption,
+															'max-w-md whitespace-pre-wrap px-8 text-center text-2xl font-black leading-relaxed sm:text-3xl',
+														)
+													: (
+														<p className="max-w-md px-8 text-center text-3xl font-black leading-relaxed">
+															{t.mediaUnavailable}
+														</p>
+													)}
+												{firstMessageLink(selectedStatus.caption || '') &&
+													getStoryMediaEmbed(
+														firstMessageLink(selectedStatus.caption || '').href,
+													) && (
+														<button
+															type="button"
+															onClick={() =>
+																openStoryLink(
+																	firstMessageLink(selectedStatus.caption || '').href,
+																)
+															}
+															className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-bold text-white backdrop-blur hover:bg-white/25"
+														>
+															<Play size={15} fill="currentColor" />
+															{t.viewLinkInStory}
+														</button>
+													)}
 											</div>
 										)}
 									</div>
-									{selectedStatus.caption && statusMediaUrl && (
-										<p className="relative z-30 bg-black/35 px-5 py-3 text-center text-sm">{selectedStatus.caption}</p>
+									{selectedStatus.caption && statusMediaUrl && !storyViewerEmbed && (
+										<div className="relative z-30 bg-black/35 px-5 py-3 text-center text-sm">
+											{renderStoryLinkedText(selectedStatus.caption)}
+										</div>
 									)}
 									{!selectedStatus.isOwn && canUseWhatsApp && !demo.settings.enabled && (
 										<form

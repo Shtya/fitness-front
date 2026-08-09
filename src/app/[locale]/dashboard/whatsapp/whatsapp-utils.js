@@ -159,8 +159,17 @@ export function parseWhatsAppBold(text) {
 	return parts.length ? parts : [{ text: value, bold: false }];
 }
 
-const MESSAGE_URL_PATTERN = /(?:https?:\/\/|www\.)[^\s<>"']+/gi;
+const MESSAGE_URL_PATTERN =
+	/(?:https?:\/\/|www\.)[^\s<>"']+|(?:(?:m\.|www\.)?(?:facebook|instagram|youtube|tiktok|twitter|x)\.com|fb\.watch|youtu\.be)\/[^\s<>"']+/gi;
 const TRAILING_URL_PUNCTUATION = /[),.!?;:\]}]+$/;
+
+export function normalizeHttpUrl(value) {
+	const trimmed = String(value || '').trim();
+	if (!trimmed) return '';
+	if (/^https?:\/\//i.test(trimmed)) return trimmed;
+	if (trimmed.startsWith('//')) return `https:${trimmed}`;
+	return `https://${trimmed.replace(/^\/+/, '')}`;
+}
 
 export function messageTextSegments(text) {
 	const value = String(text || '');
@@ -180,7 +189,7 @@ export function messageTextSegments(text) {
 			segments.push({
 				type: 'link',
 				text: linkText,
-				href: linkText.startsWith('www.') ? `https://${linkText}` : linkText,
+				href: normalizeHttpUrl(linkText),
 			});
 		}
 		if (trailing) segments.push({ type: 'text', text: trailing });
@@ -205,6 +214,89 @@ export function firstMessageLink(text) {
 	} catch {
 		return null;
 	}
+}
+
+/** Build an in-app iframe embed for Facebook/IG/YouTube/TikTok links when possible. */
+export function getStoryMediaEmbed(rawUrl) {
+	const href = normalizeHttpUrl(rawUrl);
+	if (!href) return null;
+	let parsed;
+	try {
+		parsed = new URL(href);
+	} catch {
+		return null;
+	}
+	const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+	const path = parsed.pathname || '';
+	const search = parsed.searchParams;
+	const encoded = encodeURIComponent(href);
+
+	if (host === 'youtu.be') {
+		const id = path.replace(/^\//, '').split('/')[0];
+		if (!id) return null;
+		return {
+			kind: 'youtube',
+			openUrl: href,
+			embedUrl: `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`,
+		};
+	}
+	if (host === 'youtube.com' || host === 'm.youtube.com') {
+		const id =
+			search.get('v') || path.match(/\/(?:embed|shorts|live)\/([^/?#]+)/)?.[1];
+		if (!id) return null;
+		return {
+			kind: 'youtube',
+			openUrl: href,
+			embedUrl: `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`,
+		};
+	}
+
+	if (
+		host === 'facebook.com' ||
+		host === 'm.facebook.com' ||
+		host === 'fb.com' ||
+		host === 'fb.watch'
+	) {
+		const haystack = `${path}${parsed.search}`;
+		const isVideoLike =
+			host === 'fb.watch' ||
+			/\/(share\/[vr]|reel\/?|reels\/|watch|videos\/|video\.php)/i.test(haystack);
+		if (isVideoLike || /\/share\//i.test(path)) {
+			return {
+				kind: 'facebook-video',
+				openUrl: href,
+				embedUrl: `https://www.facebook.com/plugins/video.php?href=${encoded}&show_text=false&width=476&height=720&allowfullscreen=true`,
+			};
+		}
+		return {
+			kind: 'facebook-post',
+			openUrl: href,
+			embedUrl: `https://www.facebook.com/plugins/post.php?href=${encoded}&show_text=true&width=500`,
+		};
+	}
+
+	if (host === 'instagram.com') {
+		const match = path.match(/\/(p|reel|reels|tv)\/([^/?#]+)/i);
+		if (!match) return null;
+		const kind = match[1].toLowerCase() === 'reels' ? 'reel' : match[1].toLowerCase();
+		return {
+			kind: 'instagram',
+			openUrl: href,
+			embedUrl: `https://www.instagram.com/${kind}/${match[2]}/embed`,
+		};
+	}
+
+	if (host === 'tiktok.com' || host.endsWith('.tiktok.com')) {
+		const match = path.match(/\/video\/(\d+)/);
+		if (!match) return null;
+		return {
+			kind: 'tiktok',
+			openUrl: href,
+			embedUrl: `https://www.tiktok.com/embed/v2/${match[1]}`,
+		};
+	}
+
+	return null;
 }
 
 const DISPLAYABLE_MEDIA_TYPES = new Set([
