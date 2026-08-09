@@ -79,14 +79,18 @@ export function useWhatsAppAi({
 		return undefined;
 	}, [messages]);
 
+	const settingsAbortRef = useRef(null);
+
 	const loadSettings = useCallback(async () => {
 		const requestId = ++settingsRequestRef.current;
+		settingsAbortRef.current?.abort();
 		if (!accountId) {
 			setSettings(DEFAULT_SETTINGS);
 			setSettingsLoading(false);
 			return DEFAULT_SETTINGS;
 		}
 		const controller = new AbortController();
+		settingsAbortRef.current = controller;
 		setSettingsLoading(true);
 		setSettingsError('');
 		try {
@@ -111,6 +115,7 @@ export function useWhatsAppAi({
 		void loadSettings();
 		return () => {
 			settingsRequestRef.current += 1;
+			settingsAbortRef.current?.abort();
 		};
 	}, [loadSettings]);
 

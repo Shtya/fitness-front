@@ -21,6 +21,7 @@ import { IMPERSONATION_EVENT, notifyImpersonationChanged } from '@/lib/impersona
 import './sidebar-glass.css';
 
 const Sidebar = dynamic(() => import('./Sidebar'), { ssr: false });
+const QuranMiniPlayer = dynamic(() => import('./QuranMiniPlayer'), { ssr: false });
 
 const LS_KEY = 'sidebar:collapsed';
 
@@ -478,6 +479,9 @@ export default function Layout({ children }) {
 							<ImpersonationBar onExit={handleExitImpersonation} />
 						)}
 					</AnimatePresence>
+
+					{/* Quran audio continues after leaving /quran-revision */}
+					<QuranMiniPlayer />
 				</ThemeProvider>
 				</TenantThemeProvider>
 			</Providers>

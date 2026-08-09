@@ -39,6 +39,7 @@ import {
 	ChartColumn,
 	Languages,
 } from 'lucide-react';
+import { notifyMetaWhatsAppUnreadChanged } from '@/lib/outreach-unread';
 import { metaWhatsAppApi } from './meta-whatsapp-api';
 
 const WA = {
@@ -2348,7 +2349,13 @@ export default function MetaWhatsAppWorkspace() {
 		const nextActive = mergeConversationCare(conv, care, list);
 		setActive(nextActive);
 		setMessages(list);
-		void metaWhatsAppApi.markRead(conversationId).then(() => loadConversations()).catch(() => {});
+		void metaWhatsAppApi
+			.markRead(conversationId)
+			.then(() => {
+				notifyMetaWhatsAppUnreadChanged();
+				return loadConversations();
+			})
+			.catch(() => {});
 	}, [loadConversations]);
 
 	const bootstrap = useCallback(async () => {

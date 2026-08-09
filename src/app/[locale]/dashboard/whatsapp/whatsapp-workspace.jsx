@@ -69,6 +69,7 @@ import {
 	Zap,
 } from 'lucide-react';
 import api from '@/utils/axios';
+import { notifyWhatsAppUnreadChanged } from '@/lib/outreach-unread';
 import { PageHeader } from '@/components/molecules/PageHeader';
 import TranscriptionDialog from '../transcript/transcription-dialog';
 import { createTranscriptionFile } from '../transcript/transcription-client';
@@ -1215,7 +1216,11 @@ function VoiceMessage({
 		const audio = audioRef.current;
 		if (!audio || !duration) return;
 		const rect = event.currentTarget.getBoundingClientRect();
-		const ratio = seekRatio(event.clientX, rect.left, rect.width, false);
+		const isRtl =
+			typeof document !== 'undefined' &&
+			(document.documentElement.dir === 'rtl' ||
+				document.documentElement.getAttribute('lang') === 'ar');
+		const ratio = seekRatio(event.clientX, rect.left, rect.width, isRtl);
 		audio.currentTime = ratio * duration;
 		setCurrentTime(audio.currentTime);
 	};
@@ -2846,7 +2851,7 @@ function WhatsAppWorkspaceContent() {
 		accountId,
 		conversationId,
 		messages,
-		allowSuggestions: !demo.settings.enabled,
+		allowSuggestions: !demo.settings.enabled && aiSuggestionsVisible,
 		messagesReady: Boolean(conversationId) && !loadingMessages,
 	});
 	const fileRef = useRef(null);
@@ -3849,7 +3854,10 @@ function WhatsAppWorkspaceContent() {
 			if (canSync) {
 				api
 					.post(`/whatsapp/conversations/${id}/read`)
-					.then(() => setConversationUnreadCount(id, 0))
+					.then(() => {
+						setConversationUnreadCount(id, 0);
+						notifyWhatsAppUnreadChanged();
+					})
 					.catch(() => { });
 			}
 
@@ -4187,6 +4195,8 @@ function WhatsAppWorkspaceContent() {
 					loadConversations(accountId, 1, false, { force: true }).catch(() => { });
 				}
 				if (activeConversationId && !isDemoId(activeConversationId)) {
+					// Force network refresh after reconnect — skip stale cache early-return
+					messagesCacheRef.current.delete(activeConversationId);
 					loadMessages(activeConversationId, false).catch(() => { });
 				}
 			}
@@ -4213,8 +4223,12 @@ function WhatsAppWorkspaceContent() {
 				event.conversationId === activeConversationId
 			) {
 				setMessages(current => {
+					const pid = event.payload?.messageId || event.payload?.providerMessageId || event.payload?.clientMessageId;
 					const next = current.map(message =>
-						message.id === event.payload.messageId
+						message.id === pid ||
+						message.providerMessageId === pid ||
+						message.clientMessageId === pid ||
+						message.id === event.payload?.messageId
 							? { ...message, status: event.payload.status }
 							: message,
 					);
@@ -4251,6 +4265,7 @@ function WhatsAppWorkspaceContent() {
 				// Common case: a message arrived somewhere in this account — patch
 				// just that conversation's preview/unread count in place.
 				applyConversationPreview(event.payload);
+				notifyWhatsAppUnreadChanged();
 			} else if (
 				['conversation_updated', 'conversation_assignment'].includes(event.event) &&
 				accountId
@@ -4258,12 +4273,14 @@ function WhatsAppWorkspaceContent() {
 				// Structural change (assignment, reconciliation with no specific
 				// preview) — fall back to a full reload.
 				scheduleReloadConversations(accountId);
+				notifyWhatsAppUnreadChanged();
 			}
 			if (event.event === 'conversation_read') {
 				setConversationUnreadCount(
 					event.conversationId || event.payload?.conversationId,
 					0,
 				);
+				notifyWhatsAppUnreadChanged();
 			}
 			if (event.event === 'statuses_updated' && accountId) {
 				void refreshStatusesFromProviderRef.current?.(accountId, {
@@ -4505,7 +4522,9 @@ function WhatsAppWorkspaceContent() {
 		setSyncingInbox(true);
 		setSyncProgress(10);
 		try {
-			await api.post(`/whatsapp/accounts/${targetAccountId}/reset-data`);
+			const { data: resetResult } = await api.post(
+				`/whatsapp/accounts/${targetAccountId}/reset-data`,
+			);
 			await invalidateConversations(targetAccountId);
 			conversationsCacheRef.current.delete(targetAccountId);
 			statusesCacheRef.current.delete(targetAccountId);
@@ -4529,6 +4548,34 @@ function WhatsAppWorkspaceContent() {
 			setQr(null);
 			setPairingCode(null);
 			setSyncProgress(35);
+
+			const readyToSync =
+				Boolean(resetResult?.readyToSync) || resetResult?.status === 'connected';
+			if (!readyToSync) {
+				// Backend already cleared CRM data and attempted reconnect. One more
+				// connect covers cases where the first attempt raced a zombie browser.
+				const { data: connectData } = await api
+					.post(`/whatsapp/accounts/${targetAccountId}/connect`, {})
+					.catch(error => {
+						const message =
+							error.response?.data?.message ||
+							resetResult?.reconnectError ||
+							error.message;
+						throw Object.assign(new Error(
+							Array.isArray(message) ? message.join(', ') : message,
+						), { response: error.response });
+					});
+				if (connectData?.qr) setQr(connectData.qr);
+				if (connectData?.pairingCode) setPairingCode(connectData.pairingCode);
+				if (connectData?.status !== 'connected') {
+					setSyncProgress(100);
+					await loadAccounts();
+					toast.success(t.connectStillSyncing || t.sessionResetStarted);
+					return;
+				}
+			}
+
+			setSyncProgress(55);
 			await api.post(`/whatsapp/accounts/${targetAccountId}/sync/chats`);
 			setSyncProgress(90);
 			await loadConversations(targetAccountId, 1, false, { force: true });
@@ -5970,6 +6017,8 @@ function WhatsAppWorkspaceContent() {
 				null,
 				{ params: { manual: true } },
 			);
+			setConversationUnreadCount(conversationId, 0);
+			notifyWhatsAppUnreadChanged();
 			if (data?.providerReceiptSent) toast.success(t.markedRead);
 		} catch (error) {
 			toast.error(error.response?.data?.message || 'Could not send read receipt');
@@ -6662,7 +6711,6 @@ function WhatsAppWorkspaceContent() {
 									) : (
 										<>
 
-											<img src='/meta.png' className="md:hidden w-[60px] fixed bottom-[90px] z-[100] end-[10px]" />
 
 											{filteredConversations.map(conversation => {
 												const title = conversationTitle(conversation);
@@ -6875,7 +6923,11 @@ function WhatsAppWorkspaceContent() {
 											<button type="button" aria-label="Back to chats" onClick={() => setConversationId(null)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white min-[769px]:hidden">
 												{locale === 'ar' ? <ChevronRight size={27} /> : <ChevronLeft size={27} />}
 											</button>
-											<span className=" me-[15px] wa-chat-back-count hidden min-[769px]:hidden">10</span>
+											{unreadConversationCount > 0 ? (
+												<span className="me-[15px] wa-chat-back-count min-[769px]:hidden">
+													{unreadConversationCount > 99 ? '99+' : unreadConversationCount}
+												</span>
+											) : null}
 											<div className="wa-chat-avatar-ring shrink-0">
 												<Avatar
 													label={conversationTitle(selectedConversation)}
@@ -7492,7 +7544,7 @@ function WhatsAppWorkspaceContent() {
 													>
 														{/* <Mic size={19} /> */}
 														<svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-															<path fillRule="evenodd" fill='red' clipRule="evenodd" d="M11.6996 8.3C11.6996 5.92518 13.6248 4 15.9996 4C18.3744 4 20.2996 5.92518 20.2996 8.3V15.8C20.2996 18.1748 18.3744 20.1 15.9996 20.1C13.6248 20.1 11.6996 18.1748 11.6996 15.8V8.3ZM15.9996 5.6C14.5084 5.6 13.2996 6.80883 13.2996 8.3V15.8C13.2996 17.2912 14.5084 18.5 15.9996 18.5C17.4908 18.5 18.6996 17.2912 18.6996 15.8V8.3C18.6996 6.80883 17.4908 5.6 15.9996 5.6ZM8.99958 15C9.44141 15 9.79959 15.3582 9.79958 15.8C9.79958 16.6142 9.95995 17.4204 10.2715 18.1726C10.5831 18.9249 11.0398 19.6083 11.6155 20.1841C12.1912 20.7598 12.8747 21.2165 13.6269 21.5281C14.3792 21.8396 15.1854 22 15.9996 22C16.8138 22 17.62 21.8396 18.3722 21.5281C19.1244 21.2165 19.8079 20.7598 20.3836 20.1841C20.9594 19.6083 21.4161 18.9249 21.7276 18.1726C22.0392 17.4204 22.1996 16.6142 22.1996 15.8C22.1996 15.3582 22.5578 15 22.9996 15C23.4414 15 23.7996 15.3582 23.7996 15.8C23.7996 16.8243 23.5978 17.8386 23.2058 18.7849C22.8139 19.7313 22.2393 20.5911 21.515 21.3154C20.7907 22.0397 19.9309 22.6143 18.9845 23.0063C18.2856 23.2958 17.5496 23.4815 16.7999 23.5588V26C16.7999 26.4418 16.4418 26.8 15.9999 26.8C15.5581 26.8 15.1999 26.4418 15.1999 26V23.5589C14.45 23.4816 13.7138 23.2958 13.0147 23.0063C12.0683 22.6143 11.2084 22.0397 10.4842 21.3154C9.75985 20.5911 9.18531 19.7313 8.79332 18.7849C8.40134 17.8386 8.19958 16.8243 8.19958 15.8C8.19958 15.3582 8.55776 15 8.99958 15Z" fill="#fff" />
+															<path fillRule="evenodd" fill='currentColor' clipRule="evenodd" d="M11.6996 8.3C11.6996 5.92518 13.6248 4 15.9996 4C18.3744 4 20.2996 5.92518 20.2996 8.3V15.8C20.2996 18.1748 18.3744 20.1 15.9996 20.1C13.6248 20.1 11.6996 18.1748 11.6996 15.8V8.3ZM15.9996 5.6C14.5084 5.6 13.2996 6.80883 13.2996 8.3V15.8C13.2996 17.2912 14.5084 18.5 15.9996 18.5C17.4908 18.5 18.6996 17.2912 18.6996 15.8V8.3C18.6996 6.80883 17.4908 5.6 15.9996 5.6ZM8.99958 15C9.44141 15 9.79959 15.3582 9.79958 15.8C9.79958 16.6142 9.95995 17.4204 10.2715 18.1726C10.5831 18.9249 11.0398 19.6083 11.6155 20.1841C12.1912 20.7598 12.8747 21.2165 13.6269 21.5281C14.3792 21.8396 15.1854 22 15.9996 22C16.8138 22 17.62 21.8396 18.3722 21.5281C19.1244 21.2165 19.8079 20.7598 20.3836 20.1841C20.9594 19.6083 21.4161 18.9249 21.7276 18.1726C22.0392 17.4204 22.1996 16.6142 22.1996 15.8C22.1996 15.3582 22.5578 15 22.9996 15C23.4414 15 23.7996 15.3582 23.7996 15.8C23.7996 16.8243 23.5978 17.8386 23.2058 18.7849C22.8139 19.7313 22.2393 20.5911 21.515 21.3154C20.7907 22.0397 19.9309 22.6143 18.9845 23.0063C18.2856 23.2958 17.5496 23.4815 16.7999 23.5588V26C16.7999 26.4418 16.4418 26.8 15.9999 26.8C15.5581 26.8 15.1999 26.4418 15.1999 26V23.5589C14.45 23.4816 13.7138 23.2958 13.0147 23.0063C12.0683 22.6143 11.2084 22.0397 10.4842 21.3154C9.75985 20.5911 9.18531 19.7313 8.79332 18.7849C8.40134 17.8386 8.19958 16.8243 8.19958 15.8C8.19958 15.3582 8.55776 15 8.99958 15Z" fill="#fff" />
 														</svg>
 
 													</button>

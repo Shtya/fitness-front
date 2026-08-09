@@ -47,6 +47,12 @@ import {
 	extractYoutubeId,
 	fetchYoutubeTitle,
 } from './quran-data';
+import {
+	setStudioMounted as setQuranStudioMounted,
+	handoffFromStudio as handoffQuranBg,
+	stop as stopQuranBg,
+	reclaimIfStale as reclaimQuranBg,
+} from '@/lib/quran-bg-player';
 import YoutubeResumePlayer from './YoutubeResumePlayer';
 import TajweedText from './TajweedText';
 import TajweedGuideModal from './TajweedGuideModal';
@@ -1113,6 +1119,7 @@ export default function QuranRevisionStudio({
 			el.removeAttribute('src');
 			try { el.load(); } catch { /* */ }
 		}
+		stopQuranBg();
 		stopElapsed();
 	}, [stopElapsed]);
 
@@ -1168,7 +1175,7 @@ export default function QuranRevisionStudio({
 		selectedFavId, favorites, isAr,
 	]);
 
-	// Keep session ref fresh for audio callbacks
+	// Keep session ref fresh for audio callbacks + bg handoff
 	sessionRef.current = {
 		verses,
 		repeatCount,
@@ -1178,8 +1185,11 @@ export default function QuranRevisionStudio({
 		completedRepeats,
 		finishSession,
 		selectedSurahId,
+		selectedSurah,
 		selectedReciter,
 		usingYoutube,
+		volume,
+		muted,
 	};
 
 	const playCurrentAyah = useCallback((verseIndex, verseRepeat, repeatsDone, opts = {}) => {
@@ -1292,7 +1302,42 @@ export default function QuranRevisionStudio({
 		try { el.playbackRate = speed; } catch { /* ignore */ }
 	}, [volume, muted, speed]);
 
-	useEffect(() => () => stopAudio(), [stopAudio]);
+	// Mounted on revision page → hide mini bar. On leave, hand off builtin audio to bg player.
+	useEffect(() => {
+		setQuranStudioMounted(true);
+		reclaimQuranBg();
+		return () => {
+			setQuranStudioMounted(false);
+			const el = audioRef.current;
+			const sess = sessionRef.current || {};
+			const shouldHandoff =
+				sessionPhaseRef.current === 'active' &&
+				!sess.usingYoutube &&
+				el &&
+				el.src &&
+				!el.paused;
+			if (shouldHandoff) {
+				handoffQuranBg(el, {
+					surahId: sess.selectedSurahId,
+					surahNameAr: sess.selectedSurah?.nameAr,
+					surahNameEn: sess.selectedSurah?.nameEn,
+					verses: sess.verses || [],
+					verseIndex: sess.currentVerseIndex ?? 0,
+					verseRepeat: sess.currentVerseRepeat ?? 1,
+					completedRepeats: sess.completedRepeats ?? 0,
+					repeatCount: sess.repeatCount,
+					repeatScope: sess.repeatScope,
+					reciterId: sess.selectedReciter?.id,
+					volume: sess.volume,
+					muted: sess.muted,
+					ayahN: (sess.verses || [])[sess.currentVerseIndex ?? 0]?.n,
+				});
+				return;
+			}
+			stopAudio();
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- handoff only on unmount
+	}, []);
 
 	useEffect(() => {
 		if (!historyOpen && !favsOpen) return undefined;

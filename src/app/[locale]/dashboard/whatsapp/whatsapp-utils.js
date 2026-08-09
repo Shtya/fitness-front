@@ -1,8 +1,14 @@
 export function mergeMessages(current = [], incoming = []) {
 	const map = new Map();
-	for (const item of [...current, ...incoming]) {
-		map.set(item.providerMessageId || item.id, item);
-	}
+	[...current, ...incoming].forEach((item, index) => {
+		const key =
+			item?.providerMessageId ||
+			item?.id ||
+			item?.clientMessageId ||
+			`anon:${index}:${item?.providerTimestamp || item?.created_at || ''}:${item?.text || item?.type || ''}`;
+		const prev = map.get(key);
+		map.set(key, prev ? { ...prev, ...item } : item);
+	});
 	return [...map.values()].sort(
 		(a, b) =>
 			new Date(a.providerTimestamp || a.created_at) -
@@ -97,7 +103,7 @@ export function relativeTime(dateStr, nowOrLocale = Date.now(), locale = 'en') {
 	const month = Math.floor(day / 30);
 	if (month < 12) return language === 'ar' ? `${month} ش` : `${month} mo`;
 	const year = Math.floor(day / 365);
-	return language === 'ar' ? `${year} س` : `${year}y`;
+	return language === 'ar' ? `${year} سنة` : `${year}y`;
 }
 
 export function messageTextPresentation(text) {
@@ -135,7 +141,8 @@ export function messageTextPresentation(text) {
 export function parseWhatsAppBold(text) {
 	const value = String(text || '');
 	const parts = [];
-	const pattern = /\*\*(?=\S)([\s\S]*?\S)\*\*/g;
+	// WhatsApp uses *bold*; also accept **bold**
+	const pattern = /\*{1,2}(?=\S)([\s\S]*?\S)\*{1,2}/g;
 	let cursor = 0;
 	let match;
 

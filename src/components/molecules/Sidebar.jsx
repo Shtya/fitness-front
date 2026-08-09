@@ -17,6 +17,10 @@ import { useLocale } from 'next-intl';
 import { useTransition } from 'react';
 import MultiLangText from '../atoms/MultiLangText';
 import { useRouter as useI18nRouter } from '@/i18n/navigation';
+import {
+	WHATSAPP_UNREAD_EVENT,
+	META_WHATSAPP_UNREAD_EVENT,
+} from '@/lib/outreach-unread';
 import './sidebar-glass.css';
 
 /* ─── Constants ─────────────────────────────────────────────── */
@@ -604,6 +608,66 @@ export function useUnreadNotifications(pollMs = 120000) {
   return { unreadNotifications: count, reloadUnreadNotifications: load };
 }
 
+export function useUnreadWhatsApp(pollMs = 120000) {
+  const [total, setTotal] = useState(0);
+  async function load() {
+    try {
+      const res = await api.get('/whatsapp/unread');
+      setTotal(Number(res?.data?.totalUnread || 0));
+    } catch {
+      setTotal(0);
+    }
+  }
+  useEffect(() => {
+    load();
+    const id = setInterval(load, pollMs);
+    const onChanged = () => load();
+    if (typeof window !== 'undefined') {
+      window.addEventListener(WHATSAPP_UNREAD_EVENT, onChanged);
+      window.addEventListener('focus', onChanged);
+    }
+    return () => {
+      clearInterval(id);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(WHATSAPP_UNREAD_EVENT, onChanged);
+        window.removeEventListener('focus', onChanged);
+      }
+    };
+  }, [pollMs]);
+  return { unreadWhatsApp: total, reloadUnreadWhatsApp: load };
+}
+
+export function useUnreadMetaWhatsApp(pollMs = 120000) {
+  const [total, setTotal] = useState(0);
+  async function load() {
+    try {
+      const res = await api.get('/meta-whatsapp/conversations/counts');
+      const data = res?.data || {};
+      const messages = Number(data.unreadMessages);
+      setTotal(Number.isFinite(messages) && messages > 0 ? messages : Number(data.unread || 0));
+    } catch {
+      setTotal(0);
+    }
+  }
+  useEffect(() => {
+    load();
+    const id = setInterval(load, pollMs);
+    const onChanged = () => load();
+    if (typeof window !== 'undefined') {
+      window.addEventListener(META_WHATSAPP_UNREAD_EVENT, onChanged);
+      window.addEventListener('focus', onChanged);
+    }
+    return () => {
+      clearInterval(id);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(META_WHATSAPP_UNREAD_EVENT, onChanged);
+        window.removeEventListener('focus', onChanged);
+      }
+    };
+  }, [pollMs]);
+  return { unreadMetaWhatsApp: total, reloadUnreadMetaWhatsApp: load };
+}
+
 /* ─── Badge ──────────────────────────────────────────────────── */
 function Badge({ value, small }) {
   return (
@@ -821,7 +885,21 @@ function SectionLabel({ label, P }) {
 }
 
 /* ─── NavItem ────────────────────────────────────────────────── */
-function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapsed = false, t, totalUnread, unreadNotifications = 0, P, getLabel }) {
+function NavItem({
+  item,
+  pathname,
+  searchParams,
+  depth = 0,
+  onNavigate,
+  collapsed = false,
+  t,
+  totalUnread,
+  unreadNotifications = 0,
+  unreadWhatsApp = 0,
+  unreadMetaWhatsApp = 0,
+  P,
+  getLabel,
+}) {
   const Icon = item.icon || LayoutDashboard;
   const hasChildren = Array.isArray(item.children) && item.children.length > 0;
   const label = typeof getLabel === 'function' ? getLabel(item, t) : t(`items.${item.nameKey}`);
@@ -829,6 +907,16 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
   const [hover, setHover] = useState(false);
   const liRef = useRef(null);
   const isRTL = getDir() === 'rtl';
+  const isMessages = item.nameKey === 'messages';
+  const isNotifications = item.nameKey === 'notifications';
+  const isWhatsApp = item.nameKey === 'whatsapp' || item.id === 'whatsapp';
+  const isMetaWhatsApp = item.nameKey === 'metaWhatsApp' || item.id === 'metaWhatsApp';
+  const itemBadge =
+    (isMessages && totalUnread > 0 && totalUnread) ||
+    (isNotifications && unreadNotifications > 0 && unreadNotifications) ||
+    (isWhatsApp && unreadWhatsApp > 0 && unreadWhatsApp) ||
+    (isMetaWhatsApp && unreadMetaWhatsApp > 0 && unreadMetaWhatsApp) ||
+    0;
 
   useEffect(() => {
     if (collapsed) return;
@@ -878,6 +966,11 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
                     }),
               }}>
               <Icon style={{ width: 18, height: 18 }} strokeWidth={active ? 2.3 : 1.9} />
+              {itemBadge > 0 && (
+                <span style={{ position: 'absolute', top: -3, [isRTL ? 'left' : 'right']: -3, zIndex: 2 }}>
+                  <Badge value={itemBadge} small />
+                </span>
+              )}
             </motion.div>
           </Link>
         ) : (
@@ -886,6 +979,7 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
             whileTap={{ scale: 0.93 }}
             transition={{ type: 'spring', stiffness: 500, damping: 28 }}
             style={{
+              position: 'relative',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -899,6 +993,11 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
               color: hover ? 'var(--color-primary-600)' : 'color-mix(in srgb, var(--color-primary-500) 60%, ' + (P?.textLight || '#94a3b8') + ')',
             }}>
             <Icon style={{ width: 18, height: 18 }} strokeWidth={1.9} />
+            {itemBadge > 0 && (
+              <span style={{ position: 'absolute', top: -3, [isRTL ? 'left' : 'right']: -3, zIndex: 2 }}>
+                <Badge value={itemBadge} small />
+              </span>
+            )}
           </motion.div>
         )}
         <AnimatePresence>{hover && !hasChildren && <CollapsedTooltip label={label} anchorRef={liRef} />}</AnimatePresence>
@@ -955,8 +1054,6 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
   /* ── Leaf item ── */
   if (!hasChildren) {
     const active = isPathActive(pathname, item.href, searchParams);
-    const isMessages = item.nameKey === 'messages';
-    const isNotifications = item.nameKey === 'notifications';
     return (
       <Link href={item.href} onClick={onNavigate} style={{ display: 'block' }}>
         <motion.div
@@ -1063,14 +1160,9 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
             }}>
             {label}
           </span>
-          {isMessages && totalUnread > 0 && (
+          {itemBadge > 0 && (
             <span style={{ position: 'relative', zIndex: 1 }}>
-              <Badge value={totalUnread} />
-            </span>
-          )}
-          {isNotifications && unreadNotifications > 0 && (
-            <span style={{ position: 'relative', zIndex: 1 }}>
-              <Badge value={unreadNotifications} />
+              <Badge value={itemBadge} />
             </span>
           )}
         </motion.div>
@@ -1167,7 +1259,20 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
               <ul style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: 14, margin: 0, listStyle: 'none' }}>
                 {item.children.map(child => (
                   <li key={child.href || child.nameKey}>
-                    <NavItem item={child} pathname={pathname} searchParams={searchParams} depth={depth + 1} onNavigate={onNavigate} t={t} totalUnread={totalUnread} P={P} getLabel={getLabel} />
+                    <NavItem
+                      item={child}
+                      pathname={pathname}
+                      searchParams={searchParams}
+                      depth={depth + 1}
+                      onNavigate={onNavigate}
+                      t={t}
+                      totalUnread={totalUnread}
+                      unreadNotifications={unreadNotifications}
+                      unreadWhatsApp={unreadWhatsApp}
+                      unreadMetaWhatsApp={unreadMetaWhatsApp}
+                      P={P}
+                      getLabel={getLabel}
+                    />
                   </li>
                 ))}
               </ul>
@@ -1179,7 +1284,25 @@ function NavItem({ item, pathname, searchParams, depth = 0, onNavigate, collapse
   );
 }
 
-function NavSection({ sectionKey, items, pathname, searchParams, onNavigate, collapsed = false, t, totalUnread = 0, unreadNotifications = 0, isHidden, isInstalled, allowedPages, P, first = false, getLabel }) {
+function NavSection({
+  sectionKey,
+  items,
+  pathname,
+  searchParams,
+  onNavigate,
+  collapsed = false,
+  t,
+  totalUnread = 0,
+  unreadNotifications = 0,
+  unreadWhatsApp = 0,
+  unreadMetaWhatsApp = 0,
+  isHidden,
+  isInstalled,
+  allowedPages,
+  P,
+  first = false,
+  getLabel,
+}) {
   const t_nav = useTranslations('nav');
   const label = t_nav(sectionKey, { defaultValue: '' });
   const restricted = Array.isArray(allowedPages) && allowedPages.length > 0;
@@ -1210,7 +1333,21 @@ function NavSection({ sectionKey, items, pathname, searchParams, onNavigate, col
       {!collapsed && first && <div style={{ height: 4 }} />}
       {collapsed && <div style={{ height: first ? 2 : 6 }} />}
       {visibleItems.map(item => (
-        <NavItem key={item.id || item.href || item.nameKey} item={item} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} P={P} getLabel={getLabel} />
+        <NavItem
+          key={item.id || item.href || item.nameKey}
+          item={item}
+          pathname={pathname}
+          searchParams={searchParams}
+          onNavigate={onNavigate}
+          collapsed={collapsed}
+          t={t}
+          totalUnread={totalUnread}
+          unreadNotifications={unreadNotifications}
+          unreadWhatsApp={unreadWhatsApp}
+          unreadMetaWhatsApp={unreadMetaWhatsApp}
+          P={P}
+          getLabel={getLabel}
+        />
       ))}
     </div>
   );
@@ -2754,6 +2891,8 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
   const t_header = useTranslations('header');
   const { totalUnread } = useUnreadChats();
   const { unreadNotifications } = useUnreadNotifications();
+  const { unreadWhatsApp } = useUnreadWhatsApp();
+  const { unreadMetaWhatsApp } = useUnreadMetaWhatsApp();
 
   const [collapsedLS, setCollapsedLS] = useLocalStorageState(LS_COLLAPSED, false);
   const collapsed = typeof collapsedProp === 'boolean' ? collapsedProp : collapsedLS;
@@ -2872,7 +3011,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
             <ScrollShadow P={P}>
               <nav style={{ padding: collapsed ? '4px 10px' : '4px 10px 10px', display: 'flex', flexDirection: 'column' }}>
                 {sections?.map((section, idx) => (
-                  <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} isHidden={isHidden} isInstalled={isInstalled} allowedPages={allowedPages} P={P} first={idx === 0} getLabel={getLabel} />
+                  <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} collapsed={collapsed} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} unreadWhatsApp={unreadWhatsApp} unreadMetaWhatsApp={unreadMetaWhatsApp} isHidden={isHidden} isInstalled={isInstalled} allowedPages={allowedPages} P={P} first={idx === 0} getLabel={getLabel} />
                 ))}
               </nav>
             </ScrollShadow>
@@ -2994,7 +3133,7 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
                 <ScrollShadow P={P}>
                   <nav style={{ padding: '4px 10px 10px', display: 'flex', flexDirection: 'column' }}>
                     {sections?.map((section, idx) => (
-                      <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} isHidden={isHidden} isInstalled={isInstalled} allowedPages={allowedPages} P={P} first={idx === 0} getLabel={getLabel} />
+                      <NavSection key={section.sectionKey || section.items[0]?.nameKey} sectionKey={section.sectionKey} items={section.items} pathname={pathname} searchParams={searchParams} onNavigate={onNavigate} t={t} totalUnread={totalUnread} unreadNotifications={unreadNotifications} unreadWhatsApp={unreadWhatsApp} unreadMetaWhatsApp={unreadMetaWhatsApp} isHidden={isHidden} isInstalled={isInstalled} allowedPages={allowedPages} P={P} first={idx === 0} getLabel={getLabel} />
                     ))}
                   </nav>
                 </ScrollShadow>
