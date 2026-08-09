@@ -44,6 +44,7 @@ import {
 	Plus,
 	Phone,
 	RefreshCw,
+	Repeat,
 	Reply,
 	Search,
 	Send,
@@ -271,6 +272,13 @@ const translations = {
 		statusUpdate: "What's on your mind?",
 		publishStatus: 'Publish story',
 		statusPublished: 'Story published',
+		replyToStory: 'Reply',
+		replyToStoryPlaceholder: 'Reply to this story…',
+		storyReplySent: 'Reply sent',
+		storyReplyUnavailable: 'Cannot reply to this story',
+		loopStory: 'Loop',
+		loopStoryOn: 'Loop on — will replay after finish',
+		loopStoryOff: 'Loop off',
 		syncingStatuses: 'Syncing new stories…',
 		saveAccess: 'Save access',
 		privacySettings: 'Privacy & read receipts',
@@ -469,6 +477,13 @@ const translations = {
 		statusUpdate: 'بماذا تفكر؟',
 		publishStatus: 'نشر حالة',
 		statusPublished: 'تم نشر الحالة',
+		replyToStory: 'رد',
+		replyToStoryPlaceholder: 'اكتب ردًا على هذه الحالة…',
+		storyReplySent: 'تم إرسال الرد',
+		storyReplyUnavailable: 'تعذر الرد على هذه الحالة',
+		loopStory: 'تكرار',
+		loopStoryOn: 'التكرار مفعّل — سيعاد التشغيل بعد الانتهاء',
+		loopStoryOff: 'التكرار متوقف',
 		syncingStatuses: 'جارِ مزامنة الحالات الجديدة…',
 		saveAccess: 'حفظ الصلاحيات',
 		privacySettings: 'الخصوصية وإيصالات القراءة',
@@ -775,10 +790,30 @@ async function readBlobErrorMessage(blob) {
 	}
 }
 
+async function mapPool(items, concurrency, worker) {
+	const list = Array.isArray(items) ? items : [];
+	if (!list.length) return [];
+	const limit = Math.max(1, Math.min(Number(concurrency) || 1, list.length));
+	let cursor = 0;
+	const runners = Array.from({ length: limit }, async () => {
+		while (cursor < list.length) {
+			const index = cursor;
+			cursor += 1;
+			await worker(list[index], index);
+		}
+	});
+	await Promise.all(runners);
+}
+
 async function fetchStatusMediaBlob(accountId, statusId) {
 	const response = await api.get(
 		`/whatsapp/accounts/${accountId}/statuses/${statusId}/content`,
-		{ responseType: 'blob', validateStatus: () => true },
+		{
+			responseType: 'blob',
+			validateStatus: () => true,
+			// Story grid previews should fail fast and move on instead of blocking the queue.
+			timeout: 45_000,
+		},
 	);
 	const blob = response.data;
 	if (!blob || response.status >= 400) {
@@ -812,14 +847,28 @@ async function fetchStatusMediaBlob(accountId, statusId) {
 	return typed;
 }
 
-function StoryThumbnail({ label, size = 16, viewed = false, thumbUrl = '', thumbType = '' }) {
+function StoryThumbnail({
+	label,
+	size = 16,
+	viewed = false,
+	thumbUrl = '',
+	thumbType = '',
+	priority = false,
+}) {
 	// Thumbnails are fetched via the content endpoint only (never the /view
 	// endpoint), so this never registers a WhatsApp "seen" receipt — that only
 	// happens when a story is explicitly opened, see openStory().
 	const isVideo = thumbType === 'video';
 	return (
-		<div className={viewed ? 'opacity-80' : undefined}>
-			<Avatar label={label} size={size} src={!isVideo ? thumbUrl : ''} videoSrc={isVideo ? thumbUrl : ''} />
+		<div className={`h-full w-full ${viewed ? 'opacity-80' : ''}`}>
+			<Avatar
+				label={label}
+				size={size}
+				src={!isVideo ? thumbUrl : ''}
+				videoSrc={isVideo ? thumbUrl : ''}
+				priority={priority}
+				className="!h-full !w-full !ring-0"
+			/>
 		</div>
 	);
 }
@@ -2340,7 +2389,15 @@ function MessageLinkPreview({ text, labels }) {
 	);
 }
 
-function Avatar({ label = '?', size = 10, className = '', isGroup = false, src = '', videoSrc = '' }) {
+function Avatar({
+	label = '?',
+	size = 10,
+	className = '',
+	isGroup = false,
+	src = '',
+	videoSrc = '',
+	priority = false,
+}) {
 	const placeholderStyle = avatarPlaceholderStyle(label);
 	return (
 		<div
@@ -2366,7 +2423,9 @@ function Avatar({ label = '?', size = 10, className = '', isGroup = false, src =
 				<img
 					src={src}
 					alt=""
-					loading="lazy"
+					loading={priority ? 'eager' : 'lazy'}
+					decoding={priority ? 'sync' : 'async'}
+					fetchPriority={priority ? 'high' : 'auto'}
 					referrerPolicy="no-referrer"
 					onError={event => {
 						event.currentTarget.style.display = 'none';
@@ -2376,7 +2435,7 @@ function Avatar({ label = '?', size = 10, className = '', isGroup = false, src =
 			)}
 			{videoSrc && (
 				<video
-					src={videoSrc}
+					src={`${videoSrc}#t=0.001`}
 					muted
 					playsInline
 					preload="metadata"
@@ -2757,6 +2816,11 @@ function WhatsAppWorkspaceContent() {
 	const [selectedStatus, setSelectedStatus] = useState(null);
 	const [storyQueue, setStoryQueue] = useState([]);
 	const [storyIndex, setStoryIndex] = useState(0);
+	const [storyLoop, setStoryLoop] = useState(false);
+	const [storyReplayKey, setStoryReplayKey] = useState(0);
+	const [storyReplyDraft, setStoryReplyDraft] = useState('');
+	const [sendingStoryReply, setSendingStoryReply] = useState(false);
+	const storyLoopRef = useRef(false);
 	const [statusMediaUrl, setStatusMediaUrl] = useState(null);
 	const [loadingStory, setLoadingStory] = useState(false);
 	const [storyProgress, setStoryProgress] = useState(0);
@@ -3168,38 +3232,50 @@ function WhatsAppWorkspaceContent() {
 	// endpoint) for each sender's latest story so the grid shows a real
 	// preview instead of just initials. See StoryThumbnail for the rationale.
 	const storyThumbCacheRef = useRef(new Map());
+	const storyThumbInFlightRef = useRef(new Set());
 	const [storyThumbs, setStoryThumbs] = useState({});
 
 	useEffect(() => {
 		if (activeTab !== 'statuses' || !accountId) return undefined;
 		let cancelled = false;
-		const targets = groupedStatuses
+		// Prefer unviewed + own stories first so the visible top of the grid fills sooner.
+		const targets = [...groupedStatuses]
+			.sort((a, b) => {
+				if (a.isOwn !== b.isOwn) return a.isOwn ? -1 : 1;
+				if (a.isViewed !== b.isViewed) return a.isViewed ? 1 : -1;
+				return 0;
+			})
 			.map(story => story.latest)
 			.filter(
 				item =>
 					item &&
-					['image', 'video'].includes(String(item.type || '').toLowerCase()) &&
-					!storyThumbCacheRef.current.has(item.id),
+					['image', 'video', 'gif', 'sticker'].includes(
+						String(item.type || '').toLowerCase(),
+					) &&
+					!storyThumbCacheRef.current.has(item.id) &&
+					!storyThumbInFlightRef.current.has(item.id),
 			);
 		if (!targets.length) return undefined;
 
-		(async () => {
-			for (const item of targets) {
-				if (cancelled || accountIdRef.current !== accountId) break;
-				if (storyThumbCacheRef.current.has(item.id)) continue;
-				storyThumbCacheRef.current.set(item.id, null);
-				try {
-					const blob = await fetchStatusMediaBlob(accountId, item.id);
-					if (cancelled || accountIdRef.current !== accountId) return;
-					const url = URL.createObjectURL(blob);
-					const type = String(blob.type || '').startsWith('video/') ? 'video' : 'image';
-					storyThumbCacheRef.current.set(item.id, { url, type });
-					setStoryThumbs(prev => ({ ...prev, [item.id]: { url, type } }));
-				} catch {
-					storyThumbCacheRef.current.delete(item.id);
-				}
+		for (const item of targets) storyThumbInFlightRef.current.add(item.id);
+
+		void mapPool(targets, 6, async item => {
+			if (cancelled || accountIdRef.current !== accountId) return;
+			try {
+				const blob = await fetchStatusMediaBlob(accountId, item.id);
+				if (cancelled || accountIdRef.current !== accountId) return;
+				const url = URL.createObjectURL(blob);
+				const type = String(blob.type || '').startsWith('video/') ? 'video' : 'image';
+				storyThumbCacheRef.current.set(item.id, { url, type });
+				setStoryThumbs(prev =>
+					prev[item.id]?.url === url ? prev : { ...prev, [item.id]: { url, type } },
+				);
+			} catch {
+				storyThumbCacheRef.current.delete(item.id);
+			} finally {
+				storyThumbInFlightRef.current.delete(item.id);
 			}
-		})();
+		});
 
 		return () => {
 			cancelled = true;
@@ -5685,6 +5761,7 @@ function WhatsAppWorkspaceContent() {
 		setStoryQueue(playlist);
 		setStoryIndex(index);
 		setSelectedStatus(status);
+		setStoryReplyDraft('');
 		markStatusesViewed(status.id);
 		const statusType = String(status.type || '').toLowerCase();
 		const isTextStory = statusType === 'text' || statusType === 'chat';
@@ -5692,6 +5769,7 @@ function WhatsAppWorkspaceContent() {
 		setStoryPaused(false);
 		storyElapsedRef.current = 0;
 		setStoryProgress(0);
+		setStoryReplayKey(key => key + 1);
 		setStoryDurationMs(statusType.includes('video') ? 15000 : 5000);
 		if (statusMediaUrlRef.current) {
 			URL.revokeObjectURL(statusMediaUrlRef.current);
@@ -5818,21 +5896,115 @@ function WhatsAppWorkspaceContent() {
 		if (!storyQueue.length) return;
 		const next = storyIndex + delta;
 		if (next < 0 || next >= storyQueue.length) {
+			if (storyLoopRef.current && storyQueue.length) {
+				openStory(storyQueue[0], storyQueue, 0);
+				return;
+			}
 			closeStory();
 			return;
 		}
 		openStory(storyQueue[next], storyQueue, next);
 	};
 
+	const replayCurrentStory = useCallback(() => {
+		storyElapsedRef.current = 0;
+		setStoryProgress(0);
+		if (storyProgressBarRef.current) {
+			storyProgressBarRef.current.style.width = '0%';
+		}
+		const video = storyVideoRef.current;
+		if (video) {
+			try {
+				video.currentTime = 0;
+			} catch {
+				/* ignore seek errors */
+			}
+			video.play().catch(() => undefined);
+		}
+		setStoryPaused(false);
+		setStoryReplayKey(key => key + 1);
+	}, []);
+
 	const closeStory = () => {
 		storyRequestId.current += 1;
 		setSelectedStatus(null);
 		setStoryQueue([]);
 		setStoryIndex(0);
+		setStoryReplyDraft('');
+		setSendingStoryReply(false);
 		setStatusMediaUrl(null);
 		if (statusMediaUrlRef.current) {
 			URL.revokeObjectURL(statusMediaUrlRef.current);
 			statusMediaUrlRef.current = null;
+		}
+	};
+
+	const replyToCurrentStory = async event => {
+		event?.preventDefault?.();
+		if (!accountId || !selectedStatus || sendingStoryReply) return;
+		if (selectedStatus.isOwn) {
+			toast.error(t.storyReplyUnavailable);
+			return;
+		}
+		const text = storyReplyDraft.trim();
+		if (!text) return;
+		if (!canUseWhatsApp || demo.settings.enabled) {
+			toast.error(t.storyReplyUnavailable);
+			return;
+		}
+		const senderWaId = String(selectedStatus.senderWaId || '').trim();
+		if (!senderWaId) {
+			toast.error(t.storyReplyUnavailable);
+			return;
+		}
+		setSendingStoryReply(true);
+		setStoryPaused(true);
+		try {
+			let targetConversation =
+				effectiveConversations.find(conversation => {
+					const identities = [
+						conversation?.providerChatId,
+						conversation?.contact?.waId,
+						conversation?.contact?.phoneNumber,
+					];
+					return identities.some(
+						identity =>
+							normalizeWhatsAppIdentity(identity) ===
+							normalizeWhatsAppIdentity(senderWaId),
+					);
+				}) || null;
+			if (!targetConversation) {
+				const { data } = await api.post(
+					`/whatsapp/accounts/${accountId}/conversations/open`,
+					{
+						chatId: senderWaId,
+						title: selectedStatus.contactName || undefined,
+					},
+				);
+				targetConversation = data;
+				if (data?.id) {
+					setConversations(current => {
+						if (current.some(item => item.id === data.id)) return current;
+						return [data, ...current];
+					});
+				}
+			}
+			if (!targetConversation?.id) throw new Error(t.storyReplyUnavailable);
+			await api.post(`/whatsapp/conversations/${targetConversation.id}/messages`, {
+				type: 'text',
+				text,
+			});
+			setStoryReplyDraft('');
+			toast.success(t.storyReplySent);
+			setStoryPaused(false);
+		} catch (error) {
+			toast.error(
+				error.response?.data?.message ||
+					error.message ||
+					t.storyReplyUnavailable,
+			);
+		} finally {
+			setSendingStoryReply(false);
 		}
 	};
 
@@ -5845,6 +6017,10 @@ function WhatsAppWorkspaceContent() {
 		return () => window.removeEventListener('keydown', onKeyDown);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [selectedStatus?.id]);
+
+	useEffect(() => {
+		storyLoopRef.current = storyLoop;
+	}, [storyLoop]);
 
 	useEffect(() => {
 		if (!selectedStatus || loadingStory) {
@@ -5866,6 +6042,10 @@ function WhatsAppWorkspaceContent() {
 				storyProgressBarRef.current.style.width = `${pct}%`;
 			}
 			if (pct >= 100) {
+				if (storyLoopRef.current) {
+					replayCurrentStory();
+					return;
+				}
 				goStory(1);
 				return;
 			}
@@ -5874,7 +6054,7 @@ function WhatsAppWorkspaceContent() {
 		frameId = window.requestAnimationFrame(tick);
 		return () => window.cancelAnimationFrame(frameId);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [selectedStatus?.id, loadingStory, storyDurationMs, storyPaused]);
+	}, [selectedStatus?.id, loadingStory, storyDurationMs, storyPaused, storyReplayKey]);
 
 	useLayoutEffect(() => {
 		const el = storyProgressBarRef.current;
@@ -6166,15 +6346,6 @@ function WhatsAppWorkspaceContent() {
 									labels={t}
 									statusLabels={t}
 								/>
-							)}
-							{selectedAccount && accStatus && (
-								<span
-									className={`flex items-center gap-1.5 rounded-[14px] px-3.5 py-2.5 text-xs font-bold ${accStatus.bg} ${accStatus.text}`}
-									style={{ boxShadow: '0 2px 8px -2px rgba(0,0,0,0.12)' }}
-								>
-									<span className={`h-2 w-2 rounded-full ${accStatus.dot}`} />
-									{accStatus.label}
-								</span>
 							)}
 						</div>
 					}
@@ -7781,14 +7952,15 @@ function WhatsAppWorkspaceContent() {
 									}
 								/>
 							) : (
-								<div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-x-4 gap-y-6">
-									{groupedStatuses.map(story => {
+								<div className="grid grid-cols-[repeat(auto-fill,minmax(148px,1fr))] gap-x-5 gap-y-7">
+									{groupedStatuses.map((story, storyIndex) => {
 										const name =
 											story.latest.contactName ||
 											(story.latest.isOwn
 												? selectedAccount?.label || t.accounts
 												: String(story.senderWaId).replace(/@.*$/, ''));
 										const viewed = story.isViewed;
+										const thumb = storyThumbs[story.latest.id];
 										return (
 											<button
 												type="button"
@@ -7796,27 +7968,28 @@ function WhatsAppWorkspaceContent() {
 												onClick={() => openStoryGroup(story)}
 												className="group cursor-pointer text-center transition-transform hover:-translate-y-0.5"
 											>
-												<div className="relative mx-auto h-24 w-24 transition-transform duration-200 group-hover:scale-105">
+												<div className="relative mx-auto h-[140px] w-[140px] transition-transform duration-200 group-hover:scale-[1.03]">
 													<StoryRing
-														size={96}
-														strokeWidth={3.5}
+														size={140}
+														strokeWidth={4.5}
 														segmentsViewed={story.items.map(item => viewedStatusIds.has(item.id))}
 														idSuffix={String(story.senderWaId).replace(/[^a-zA-Z0-9_-]/g, '_')}
 													/>
-													<div className="absolute inset-[7px] grid place-items-center overflow-hidden rounded-full border-2 border-white bg-white shadow-md dark:border-slate-900 dark:bg-slate-900">
+													<div className="absolute inset-[9px] overflow-hidden rounded-full border-[3px] border-white bg-white shadow-md dark:border-slate-900 dark:bg-slate-900">
 														<StoryThumbnail
 															label={name}
-															size={20}
+															size={30}
 															viewed={viewed}
-															thumbUrl={storyThumbs[story.latest.id]?.url}
-															thumbType={storyThumbs[story.latest.id]?.type}
+															priority={storyIndex < 12}
+															thumbUrl={thumb?.url}
+															thumbType={thumb?.type}
 														/>
 													</div>
 												</div>
-												<p className={`mt-2 truncate text-xs ${viewed ? 'font-semibold text-slate-500' : 'font-bold'}`}>
+												<p className={`mt-2.5 truncate text-sm ${viewed ? 'font-semibold text-slate-500' : 'font-bold'}`}>
 													{name}
 												</p>
-												<p className="text-[10px] text-slate-400">{relativeTime(story.latest.publishedAt, relativeTimeNow, locale)}</p>
+												<p className="text-[11px] text-slate-400">{relativeTime(story.latest.publishedAt, relativeTimeNow, locale)}</p>
 											</button>
 										);
 									})}
@@ -7872,6 +8045,24 @@ function WhatsAppWorkspaceContent() {
 											onClick={event => {
 												event.preventDefault();
 												event.stopPropagation();
+												setStoryLoop(current => !current);
+											}}
+											title={storyLoop ? t.loopStoryOn : t.loopStoryOff}
+											className={`pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full transition-colors ${
+												storyLoop
+													? 'bg-emerald-500 text-white hover:bg-emerald-400'
+													: 'bg-black/40 hover:bg-black/60'
+											}`}
+											aria-label={t.loopStory}
+											aria-pressed={storyLoop}
+										>
+											<Repeat size={17} />
+										</button>
+										<button
+											type="button"
+											onClick={event => {
+												event.preventDefault();
+												event.stopPropagation();
 												setStoryPaused(current => !current);
 											}}
 											className="pointer-events-auto relative z-50 grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full bg-black/40 transition-colors hover:bg-black/60"
@@ -7908,7 +8099,7 @@ function WhatsAppWorkspaceContent() {
 										type="button"
 										aria-label="Previous story"
 										onClick={() => goStory(-1)}
-										className="absolute bottom-0 start-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-start bg-transparent p-3"
+										className="absolute bottom-24 start-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-start bg-transparent p-3"
 									>
 										{storyQueue.length > 1 && storyIndex > 0 && (
 											<span className="grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50">
@@ -7920,9 +8111,9 @@ function WhatsAppWorkspaceContent() {
 										type="button"
 										aria-label="Next story"
 										onClick={() => goStory(1)}
-										className="absolute bottom-0 end-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-end bg-transparent p-3"
+										className="absolute bottom-24 end-0 top-24 z-20 flex w-1/3 cursor-default items-center justify-end bg-transparent p-3"
 									>
-										{storyQueue.length > 1 && storyIndex < storyQueue.length - 1 && (
+										{(storyLoop || storyIndex < storyQueue.length - 1) && storyQueue.length > 1 && (
 											<span className="grid h-11 w-11 cursor-pointer place-items-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50">
 												{locale === 'ar' ? <ChevronLeft size={22} /> : <ChevronRight size={22} />}
 											</span>
@@ -7966,7 +8157,40 @@ function WhatsAppWorkspaceContent() {
 										)}
 									</div>
 									{selectedStatus.caption && statusMediaUrl && (
-										<p className="relative z-30 bg-black/35 px-5 py-4 text-center text-sm">{selectedStatus.caption}</p>
+										<p className="relative z-30 bg-black/35 px-5 py-3 text-center text-sm">{selectedStatus.caption}</p>
+									)}
+									{!selectedStatus.isOwn && canUseWhatsApp && !demo.settings.enabled && (
+										<form
+											onSubmit={replyToCurrentStory}
+											className="relative z-40 flex items-center gap-2 border-t border-white/10 bg-black/45 px-3 py-3 backdrop-blur-md"
+											onClick={event => event.stopPropagation()}
+										>
+											<Reply size={16} className="shrink-0 text-white/70" />
+											<input
+												type="text"
+												value={storyReplyDraft}
+												onChange={event => setStoryReplyDraft(event.target.value)}
+												onFocus={() => setStoryPaused(true)}
+												placeholder={t.replyToStoryPlaceholder}
+												maxLength={1000}
+												disabled={sendingStoryReply}
+												className="h-11 min-w-0 flex-1 rounded-full border border-white/15 bg-white/10 px-4 text-sm text-white outline-none placeholder:text-white/45 focus:border-emerald-400/70"
+											/>
+											<button
+												type="submit"
+												disabled={sendingStoryReply || !storyReplyDraft.trim()}
+												className="inline-flex h-11 items-center gap-1.5 rounded-full bg-emerald-500 px-4 text-sm font-bold text-white transition-colors hover:bg-emerald-400 disabled:opacity-45"
+											>
+												{sendingStoryReply ? (
+													<Loader2 size={15} className="animate-spin" />
+												) : (
+													<>
+														<Send size={14} />
+														{t.replyToStory}
+													</>
+												)}
+											</button>
+										</form>
 									)}
 								</div>
 							</div>
