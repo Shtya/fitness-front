@@ -610,14 +610,15 @@ export function useUnreadNotifications(pollMs = 120000) {
 
 export function useUnreadWhatsApp(pollMs = 120000) {
   const [total, setTotal] = useState(0);
-  async function load() {
+  const load = useCallback(async () => {
     try {
-      const res = await api.get('/whatsapp/unread');
-      setTotal(Number(res?.data?.totalUnread || 0));
+      const res = await api.get('/whatsapp/unread', { skipAuthRedirect: true });
+      const next = Number(res?.data?.totalUnread || 0);
+      setTotal(prev => (prev === next ? prev : next));
     } catch {
-      setTotal(0);
+      /* keep last known count — badge polls must never force logout/re-render storms */
     }
-  }
+  }, []);
   useEffect(() => {
     load();
     const id = setInterval(load, pollMs);
@@ -633,22 +634,26 @@ export function useUnreadWhatsApp(pollMs = 120000) {
         window.removeEventListener('focus', onChanged);
       }
     };
-  }, [pollMs]);
+  }, [pollMs, load]);
   return { unreadWhatsApp: total, reloadUnreadWhatsApp: load };
 }
 
 export function useUnreadMetaWhatsApp(pollMs = 120000) {
   const [total, setTotal] = useState(0);
-  async function load() {
+  const load = useCallback(async () => {
     try {
-      const res = await api.get('/meta-whatsapp/conversations/counts');
+      const res = await api.get('/meta-whatsapp/conversations/counts', {
+        skipAuthRedirect: true,
+      });
       const data = res?.data || {};
       const messages = Number(data.unreadMessages);
-      setTotal(Number.isFinite(messages) && messages > 0 ? messages : Number(data.unread || 0));
+      const next =
+        Number.isFinite(messages) && messages > 0 ? messages : Number(data.unread || 0) || 0;
+      setTotal(prev => (prev === next ? prev : next));
     } catch {
-      setTotal(0);
+      /* keep last known count */
     }
-  }
+  }, []);
   useEffect(() => {
     load();
     const id = setInterval(load, pollMs);
@@ -664,7 +669,7 @@ export function useUnreadMetaWhatsApp(pollMs = 120000) {
         window.removeEventListener('focus', onChanged);
       }
     };
-  }, [pollMs]);
+  }, [pollMs, load]);
   return { unreadMetaWhatsApp: total, reloadUnreadMetaWhatsApp: load };
 }
 
@@ -837,7 +842,9 @@ function ScrollShadow({ children, P }) {
       el.removeEventListener('scroll', onScroll);
       ro?.disconnect();
     };
-  }, [onScroll, children]);
+    // Do not depend on `children` — a new element every parent render would
+    // re-bind observers and can contribute to update-depth crashes.
+  }, [onScroll]);
   return (
     <div className='sidebar-scroll-root' style={{ position: 'relative', height: '100%', minHeight: 0, flex: '1 1 auto' }}>
       <div
@@ -1432,7 +1439,11 @@ function SidebarHeader({ user, collapsed, P }) {
               }}>
               {user?.name}
             </MultiLangText>
-            <p style={{ fontSize: 10, marginTop: 3, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--color-primary-400)' }}>{t_r(`myProfile.roles.${user?.role}`)}</p>
+            {user?.role ? (
+              <p style={{ fontSize: 10, marginTop: 3, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--color-primary-400)' }}>
+                {t_r(`myProfile.roles.${user.role}`)}
+              </p>
+            ) : null}
           </div>
         </div>
       )}

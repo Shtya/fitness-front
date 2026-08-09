@@ -4029,20 +4029,23 @@ function WhatsAppWorkspaceContent() {
 		}
 		if (!isAccountConnected) {
 			conversationsCacheRef.current.delete(accountId);
-			setConversations([]);
-			setConversationPage(1);
-			setConversationTotal(0);
-			setSyncingInbox(false);
-			setSyncProgress(0);
-			setStatuses([]);
-			setStatusFetchHint(null);
-			setSelectedStatus(null);
 			statusesCacheRef.current.delete(accountId);
+			// Only clear UI state when it still has content — setConversations([]) /
+			// setStatuses([]) with a fresh [] always re-renders and can stack with
+			// other effects into React error #185 (max update depth).
+			setConversations(current => (current.length ? [] : current));
+			setConversationPage(current => (current === 1 ? current : 1));
+			setConversationTotal(current => (current === 0 ? current : 0));
+			setSyncingInbox(current => (current ? false : current));
+			setSyncProgress(current => (current === 0 ? current : 0));
+			setStatuses(current => (current.length ? [] : current));
+			setStatusFetchHint(current => (current == null ? current : null));
+			setSelectedStatus(current => (current == null ? current : null));
 			if (statusMediaUrlRef.current) {
 				URL.revokeObjectURL(statusMediaUrlRef.current);
 				statusMediaUrlRef.current = null;
+				setStatusMediaUrl(null);
 			}
-			setStatusMediaUrl(null);
 			return;
 		}
 		loadConversations(accountId).catch(() => { });
@@ -4055,34 +4058,37 @@ function WhatsAppWorkspaceContent() {
 		[],
 	);
 
+	const markRuntimeReadRef = useRef(demo.markRuntimeRead);
+	markRuntimeReadRef.current = demo.markRuntimeRead;
+
 	useEffect(() => {
 		messagesRequestId.current += 1;
 		olderRequestId.current += 1;
 		loadingOlderRef.current = false;
 		setLoadingOlder(false);
 		if (!conversationId) {
-			setMessages([]);
+			setMessages(current => (current.length ? [] : current));
 			setLoadingMessages(false);
 			setHasMoreMessages(true);
-			setNotes([]);
-			setNoteDraft('');
-			setShowNotes(false);
+			setNotes(current => (current.length ? [] : current));
+			setNoteDraft(current => (current ? '' : current));
+			setShowNotes(current => (current ? false : current));
 			return;
 		}
 		if (isDemoId(conversationId)) {
-			setMessages([]);
+			setMessages(current => (current.length ? [] : current));
 			setLoadingMessages(false);
 			setHasMoreMessages(false);
-			setNotes([]);
-			setShowNotes(false);
-			demo.markRuntimeRead(selectedDemoRuntimeId);
+			setNotes(current => (current.length ? [] : current));
+			setShowNotes(current => (current ? false : current));
+			markRuntimeReadRef.current?.(selectedDemoRuntimeId);
 			return;
 		}
 		setHasMoreMessages(true);
 		loadMessages(conversationId, canUseWhatsApp && !demo.settings.enabled).catch(() => { });
 		if (selectedConversationSource === 'real_overlay') {
-			demo.markRuntimeRead(selectedDemoRuntimeId);
-			demo.markRuntimeRead(conversationId);
+			markRuntimeReadRef.current?.(selectedDemoRuntimeId);
+			markRuntimeReadRef.current?.(conversationId);
 		}
 	}, [
 		conversationId,
@@ -4091,7 +4097,6 @@ function WhatsAppWorkspaceContent() {
 		loadMessages,
 		selectedDemoRuntimeId,
 		selectedConversationSource,
-		demo.markRuntimeRead,
 	]);
 
 	useEffect(() => {
@@ -4364,19 +4369,21 @@ function WhatsAppWorkspaceContent() {
 	]);
 
 	useEffect(() => {
-		if (!selectedAccount || !['connecting', 'qr_pending'].includes(selectedAccount.status)) {
-			return;
+		const id = selectedAccount?.id;
+		const status = selectedAccount?.status;
+		if (!id || !['connecting', 'qr_pending'].includes(status)) {
+			return undefined;
 		}
 		const poll = setInterval(async () => {
 			try {
-				const { data } = await api.get(`/whatsapp/accounts/${selectedAccount.id}/qr`);
+				const { data } = await api.get(`/whatsapp/accounts/${id}/qr`);
 				setQr(data.qr || null);
 				setPairingCode(data.pairingCode || null);
 				await loadAccounts();
-			} catch { }
+			} catch { /* ignore transient QR poll errors */ }
 		}, 2500);
 		return () => clearInterval(poll);
-	}, [selectedAccount, loadAccounts]);
+	}, [selectedAccount?.id, selectedAccount?.status, loadAccounts]);
 
 	const createAccount = async event => {
 		event.preventDefault();

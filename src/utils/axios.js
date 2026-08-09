@@ -41,7 +41,8 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   response => response,
   error => {
-    if (error.response?.status === 401) {
+    // Background badge/polls can opt out so a single 401 does not hard-logout the session.
+    if (error.response?.status === 401 && !error.config?.skipAuthRedirect) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
       window.location.href = '/auth';

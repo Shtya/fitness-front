@@ -210,9 +210,11 @@ export default function Header({ onMenu }) {
 
 					<div className="dash-header-meta">
 						<span className="dash-header-name">{user?.name || user?.email}</span>
-						<span className="dash-header-role">
-							{t_myProfile(`myProfile.roles.${user?.role}`)}
-						</span>
+						{user?.role ? (
+							<span className="dash-header-role">
+								{t_myProfile(`myProfile.roles.${user.role}`)}
+							</span>
+						) : null}
 					</div>
 				</div>
 
