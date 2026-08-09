@@ -206,7 +206,9 @@ const COPY = {
 		hidePartsHint: 'ممكن تختار أكتر من جزء',
 		saveReading: 'حفظ للمفضلة',
 		sessionSettings: 'إعدادات الجلسة',
-		changeWhilePlaying: 'غيّر السورة أو الربع أو القارئ أثناء التشغيل',
+		changeWhilePlaying: 'عدّل السورة أو الربع أو التكرار، ثم اضغط تطبيق للبدء',
+		applySettings: 'تطبيق وبدء',
+		settingsPending: 'في تغييرات غير مطبّقة',
 		ayah: 'آية',
 		readingFrom: 'من آية',
 		readingTo: 'إلى',
@@ -331,7 +333,9 @@ const COPY = {
 		hidePartsHint: 'Pick one or more parts',
 		saveReading: 'Save to favorites',
 		sessionSettings: 'Session settings',
-		changeWhilePlaying: 'Change surah, range, or reciter while playing',
+		changeWhilePlaying: 'Change surah, range, or repeats — then press Apply to start',
+		applySettings: 'Apply & start',
+		settingsPending: 'Unapplied changes',
 		ayah: 'Ayah',
 		readingFrom: 'From ayah',
 		readingTo: 'to',
@@ -677,7 +681,7 @@ export default function QuranRevisionStudio({
 	const skipRangeReset = useRef(true);
 	const sessionRef = useRef({});
 	const sessionPhaseRef = useRef('setup');
-	const pendingLiveRestart = useRef(false);
+	const [settingsPendingApply, setSettingsPendingApply] = useState(false);
 	const pendingReciterSwap = useRef(false);
 	const pendingSessionRestore = useRef(null);
 	const sessionRestoreDone = useRef(false);
@@ -1065,9 +1069,16 @@ export default function QuranRevisionStudio({
 
 	sessionPhaseRef.current = sessionPhase;
 
-	const requestLiveRestart = () => {
-		if (sessionPhaseRef.current === 'active') pendingLiveRestart.current = true;
-	};
+	/** Mark live settings dirty — do NOT auto-restart until Apply/Start. */
+	const markSettingsDirty = useCallback(() => {
+		if (sessionPhaseRef.current !== 'active') return;
+		setSettingsPendingApply(true);
+		const el = audioRef.current;
+		if (el) {
+			try { el.pause(); } catch { /* */ }
+		}
+		setIsPlaying(false);
+	}, []);
 
 	const toggleUnit = id => {
 		setSelectedUnitIds(prev => {
@@ -1077,13 +1088,13 @@ export default function QuranRevisionStudio({
 			}
 			return normalizeUnitIds([...prev, id]);
 		});
-		requestLiveRestart();
+		markSettingsDirty();
 	};
 
 	const removeUnit = (e, id) => {
 		e.stopPropagation();
 		setSelectedUnitIds(prev => prev.filter(x => x !== id));
-		requestLiveRestart();
+		markSettingsDirty();
 	};
 
 	const stopElapsed = useCallback(() => {
@@ -1297,7 +1308,7 @@ export default function QuranRevisionStudio({
 
 	const startSession = () => {
 		if (!canStart) return;
-		pendingLiveRestart.current = false;
+		setSettingsPendingApply(false);
 		stopAudio();
 		setSessionPhase('active');
 		/* Collapse session settings so reading stays in focus */
@@ -1315,6 +1326,28 @@ export default function QuranRevisionStudio({
 		stopElapsed();
 		elapsedRef.current = setInterval(() => setElapsedSec(s => s + 1), 1000);
 
+		if (usingYoutube) {
+			setIsPlaying(true);
+			return;
+		}
+		playCurrentAyah(0, 1, 0);
+	};
+
+	/** Apply edited live settings and (re)start playback — only on explicit click. */
+	const applyLiveSettings = () => {
+		if (!canStart || !verses.length) return;
+		if (ayahLoading) return;
+		setSettingsPendingApply(false);
+		stopAudio();
+		setCurrentVerseIndex(0);
+		setCurrentVerseRepeat(1);
+		setCompletedVerses(0);
+		setCompletedRepeats(0);
+		setVerseProgress(0);
+		setAudioError('');
+		if (!elapsedRef.current) {
+			elapsedRef.current = setInterval(() => setElapsedSec(s => s + 1), 1000);
+		}
 		if (usingYoutube) {
 			setIsPlaying(true);
 			return;
@@ -1342,7 +1375,7 @@ export default function QuranRevisionStudio({
 
 		pendingSessionRestore.current = null;
 		sessionRestoreDone.current = true;
-		pendingLiveRestart.current = false;
+		setSettingsPendingApply(false);
 		pendingReciterSwap.current = false;
 
 		const maxIdx = Math.max(0, verses.length - 1);
@@ -1551,45 +1584,16 @@ export default function QuranRevisionStudio({
 		});
 	}, [selectedSurahId]);
 
-	// Apply surah / mode / units / reciter changes while session is running
-	useEffect(() => {
-		if (sessionPhase !== 'active' || !pendingLiveRestart.current) return;
-		if (ayahLoading) return;
-		if (!canStart || !verses.length) {
-			stopAudio();
-			setIsPlaying(false);
-			if (!canStart) pendingLiveRestart.current = false;
-			return;
-		}
-		pendingLiveRestart.current = false;
-		stopAudio();
-		setCurrentVerseIndex(0);
-		setCurrentVerseRepeat(1);
-		setCompletedVerses(0);
-		setCompletedRepeats(0);
-		setVerseProgress(0);
-		setAudioError('');
-		if (usingYoutube) {
-			setIsPlaying(true);
-			return;
-		}
-		playCurrentAyah(0, 1, 0);
-	}, [
-		sessionPhase, ayahLoading, canStart, verses, usingYoutube,
-		selectedSurahId, mode, selectedUnitIds, selectedReciterId,
-		stopAudio, playCurrentAyah,
-	]);
-
 	const changeSurahLive = id => {
 		if (id == null) return;
 		setSelectedSurahId(Number(id));
-		requestLiveRestart();
+		markSettingsDirty();
 	};
 
 	const changeModeLive = id => {
 		if (id == null) return;
 		setMode(id);
-		requestLiveRestart();
+		markSettingsDirty();
 	};
 
 	const changeReciterLive = id => {
@@ -1637,7 +1641,7 @@ export default function QuranRevisionStudio({
 	const changeRepeatScope = scope => {
 		if (scope !== 'ayah' && scope !== 'selection') return;
 		setRepeatScope(scope);
-		requestLiveRestart();
+		markSettingsDirty();
 	};
 
 	const resetSetup = () => {
@@ -1645,6 +1649,7 @@ export default function QuranRevisionStudio({
 		clearSavedSession();
 		pendingSessionRestore.current = null;
 		sessionRestoreDone.current = true;
+		setSettingsPendingApply(false);
 		if (cloudReadyRef.current) {
 			cloudPutRef.current.schedule('activeSession', () => ({ activeSession: null }));
 		}
@@ -2625,6 +2630,7 @@ export default function QuranRevisionStudio({
 									onClick={() => {
 										setRepeatCount(n);
 										setRepeatMenuOpen(false);
+										markSettingsDirty();
 									}}
 								>
 									{d(n)}{t.times}
@@ -2768,6 +2774,20 @@ export default function QuranRevisionStudio({
 								{topSelects(true)}
 								<div className="qr-divider" />
 								{unitsPicker}
+								{settingsPendingApply ? (
+									<div className="qr-live-apply">
+										<p className="qr-live-apply-hint">{t.settingsPending}</p>
+										<button
+											type="button"
+											className="qr-cta"
+											disabled={!canStart || ayahLoading}
+											onClick={applyLiveSettings}
+										>
+											<Play size={14} />
+											{t.applySettings}
+										</button>
+									</div>
+								) : null}
 							</div>
 						) : null}
 					</section>
