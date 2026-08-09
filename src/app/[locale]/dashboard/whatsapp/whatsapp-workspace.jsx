@@ -3675,25 +3675,49 @@ function WhatsAppWorkspaceContent() {
 						`${accountId}:${conversation.id}`,
 					),
 			)
-			.slice(0, 8);
+			.slice(0, 4);
 		if (!missingPreviews.length) return undefined;
 
-		for (const conversation of missingPreviews) {
-			previewBackfillAttemptedRef.current.add(`${accountId}:${conversation.id}`);
-		}
 		let cancelled = false;
-		void Promise.allSettled(
-			missingPreviews.map(conversation =>
-				api.post(`/whatsapp/conversations/${conversation.id}/sync/latest`, null, {
-					params: { limit: 1 },
-					timeout: 45000,
-				}),
-			),
-		).then(results => {
-			if (cancelled || !results.some(result => result.status === 'fulfilled')) return;
-			conversationsCacheRef.current.delete(accountId);
-			void loadConversations(accountId, 1, false, { force: true });
-		});
+		void (async () => {
+			let refreshed = false;
+			for (const conversation of missingPreviews) {
+				if (cancelled) return;
+				const key = `${accountId}:${conversation.id}`;
+				previewBackfillAttemptedRef.current.add(key);
+				try {
+					const { data } = await api.post(
+						`/whatsapp/conversations/${conversation.id}/sync/latest`,
+						null,
+						{
+							params: { limit: 1 },
+							timeout: 15000,
+						},
+					);
+					if (data?.syncSkipped || data?.syncError) {
+						// WA store is unhealthy — stop the storm; retry later.
+						for (const rest of missingPreviews) {
+							previewBackfillAttemptedRef.current.delete(
+								`${accountId}:${rest.id}`,
+							);
+						}
+						return;
+					}
+					refreshed = true;
+				} catch {
+					for (const rest of missingPreviews) {
+						previewBackfillAttemptedRef.current.delete(
+							`${accountId}:${rest.id}`,
+						);
+					}
+					return;
+				}
+			}
+			if (!cancelled && refreshed) {
+				conversationsCacheRef.current.delete(accountId);
+				void loadConversations(accountId, 1, false, { force: true });
+			}
+		})();
 
 		return () => {
 			cancelled = true;
