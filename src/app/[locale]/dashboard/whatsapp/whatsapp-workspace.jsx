@@ -3702,12 +3702,11 @@ function WhatsAppWorkspaceContent() {
 						},
 					);
 					if (data?.syncSkipped || data?.syncError) {
-						const cooldown = Math.min(
-							30_000,
-							Number(data?.cooldownMs) || 20_000,
-						);
-						providerHistorySyncBlockedUntilRef.current =
-							Date.now() + Math.max(10_000, cooldown);
+						const cooldown = Number(data?.cooldownMs) || 0;
+						if (cooldown > 0) {
+							providerHistorySyncBlockedUntilRef.current =
+								Date.now() + Math.min(30_000, Math.max(10_000, cooldown));
+						}
 						return;
 					}
 					refreshed = true;
@@ -4021,12 +4020,11 @@ function WhatsAppWorkspaceContent() {
 				try {
 					const synced = await syncPromise;
 					if (synced?.syncSkipped || synced?.syncError) {
-						const cooldown = Math.min(
-							30_000,
-							Number(synced?.cooldownMs) || 20_000,
-						);
-						providerHistorySyncBlockedUntilRef.current =
-							Date.now() + Math.max(10_000, cooldown);
+						const cooldown = Number(synced?.cooldownMs) || 0;
+						if (cooldown > 0) {
+							providerHistorySyncBlockedUntilRef.current =
+								Date.now() + Math.min(30_000, Math.max(10_000, cooldown));
+						}
 						// Still show whatever DB returned in the sync payload.
 						if (Array.isArray(synced?.items) && synced.items.length) {
 							applySynced(synced);
