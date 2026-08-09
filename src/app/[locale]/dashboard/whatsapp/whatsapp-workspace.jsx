@@ -2937,6 +2937,8 @@ function WhatsAppWorkspaceContent() {
 	const assignmentFilterRef = useRef('');
 	const messageSyncInFlightRef = useRef(new Map());
 	const previewBackfillAttemptedRef = useRef(new Set());
+	/** Skip provider history sync while WA Store is known unhealthy. */
+	const providerHistorySyncBlockedUntilRef = useRef(0);
 	const statusesCacheRef = useRef(new Map());
 	const refreshStatusesFromProviderRef = useRef(null);
 	const reloadConversationsTimer = useRef(null);
@@ -3666,6 +3668,10 @@ function WhatsAppWorkspaceContent() {
 			return undefined;
 		}
 
+		if (Date.now() < providerHistorySyncBlockedUntilRef.current) {
+			return undefined;
+		}
+
 		const missingPreviews = conversations
 			.filter(
 				conversation =>
@@ -3675,7 +3681,7 @@ function WhatsAppWorkspaceContent() {
 						`${accountId}:${conversation.id}`,
 					),
 			)
-			.slice(0, 4);
+			.slice(0, 3);
 		if (!missingPreviews.length) return undefined;
 
 		let cancelled = false;
@@ -3683,6 +3689,7 @@ function WhatsAppWorkspaceContent() {
 			let refreshed = false;
 			for (const conversation of missingPreviews) {
 				if (cancelled) return;
+				if (Date.now() < providerHistorySyncBlockedUntilRef.current) return;
 				const key = `${accountId}:${conversation.id}`;
 				previewBackfillAttemptedRef.current.add(key);
 				try {
@@ -3695,21 +3702,14 @@ function WhatsAppWorkspaceContent() {
 						},
 					);
 					if (data?.syncSkipped || data?.syncError) {
-						// WA store is unhealthy — stop the storm; retry later.
-						for (const rest of missingPreviews) {
-							previewBackfillAttemptedRef.current.delete(
-								`${accountId}:${rest.id}`,
-							);
-						}
+						const cooldown = Number(data?.cooldownMs) || 60_000;
+						providerHistorySyncBlockedUntilRef.current =
+							Date.now() + Math.max(15_000, cooldown);
 						return;
 					}
 					refreshed = true;
 				} catch {
-					for (const rest of missingPreviews) {
-						previewBackfillAttemptedRef.current.delete(
-							`${accountId}:${rest.id}`,
-						);
-					}
+					providerHistorySyncBlockedUntilRef.current = Date.now() + 60_000;
 					return;
 				}
 			}
@@ -3985,7 +3985,9 @@ function WhatsAppWorkspaceContent() {
 				scrollMessagesToBottom();
 			};
 
-			const needsProviderBackfill = canSync;
+			const historySyncBlocked =
+				Date.now() < providerHistorySyncBlockedUntilRef.current;
+			const needsProviderBackfill = canSync && !historySyncBlocked;
 			if (needsProviderBackfill) {
 				// Keep the loader until the first backfill finishes when local history
 				// is still short of a full page.
@@ -4012,9 +4014,16 @@ function WhatsAppWorkspaceContent() {
 				}
 				try {
 					const synced = await syncPromise;
-					applySynced(synced);
+					if (synced?.syncSkipped || synced?.syncError) {
+						const cooldown = Number(synced?.cooldownMs) || 60_000;
+						providerHistorySyncBlockedUntilRef.current =
+							Date.now() + Math.max(15_000, cooldown);
+					} else {
+						applySynced(synced);
+					}
 				} catch (error) {
-					if (isCurrentRequest()) {
+					providerHistorySyncBlockedUntilRef.current = Date.now() + 60_000;
+					if (isCurrentRequest() && !items.length) {
 						toast.error(
 							error.response?.data?.message || 'Could not synchronize message history',
 						);
