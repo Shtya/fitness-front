@@ -1643,14 +1643,29 @@ export default function QuranRevisionStudio({
 
 	const changeReciterLive = id => {
 		if (id == null) return;
+		const nextReciter = BUILTIN_RECITERS.find(r => r.id === id) || BUILTIN_RECITERS[0];
 		setSelectedReciterId(id);
+		// Update sessionRef immediately so goNext/goPrev/play use the new folder
+		// before React re-renders (setState is async).
+		sessionRef.current.selectedReciter = nextReciter;
 		if (sourceTab !== 'builtin') {
 			setSelectedFavId(null);
 			setSourceTab('builtin');
 		}
-		// Keep current ayah / progress — do not restart the rub'
-		if (sessionPhaseRef.current === 'active') {
-			pendingReciterSwap.current = true;
+		// Soft-swap now at the same ayah (+ approximate timestamp). Do not defer
+		// via an effect that also depends on verse index — that races with Next.
+		pendingReciterSwap.current = false;
+		if (sessionPhaseRef.current === 'active' && !sessionRef.current.usingYoutube) {
+			const el = audioRef.current;
+			const ratio = el?.duration > 0 ? el.currentTime / el.duration : 0;
+			const wasPlaying = el ? !el.paused : false;
+			const sess = sessionRef.current;
+			playCurrentAyah(
+				sess.currentVerseIndex ?? currentVerseIndex,
+				sess.currentVerseRepeat ?? currentVerseRepeat,
+				sess.completedRepeats ?? completedRepeats,
+				{ seekRatio: ratio, autoplay: wasPlaying },
+			);
 		}
 	};
 
@@ -1659,29 +1674,6 @@ export default function QuranRevisionStudio({
 			prev.includes(part) ? prev.filter(p => p !== part) : [...prev, part]
 		));
 	};
-
-	// Soft-swap reciter audio at the same verse (+ approximate timestamp)
-	useEffect(() => {
-		if (!pendingReciterSwap.current) return;
-		if (sessionPhase !== 'active' || usingYoutube) {
-			pendingReciterSwap.current = false;
-			return;
-		}
-		pendingReciterSwap.current = false;
-		const el = audioRef.current;
-		const ratio = el?.duration > 0
-			? el.currentTime / el.duration
-			: (verseProgress / 100);
-		const wasPlaying = Boolean(isPlaying);
-		playCurrentAyah(currentVerseIndex, currentVerseRepeat, completedRepeats, {
-			seekRatio: ratio,
-			autoplay: wasPlaying,
-		});
-	}, [
-		selectedReciterId, sessionPhase, usingYoutube,
-		currentVerseIndex, currentVerseRepeat, completedRepeats,
-		verseProgress, isPlaying, playCurrentAyah,
-	]);
 
 	const changeRepeatScope = scope => {
 		if (scope !== 'ayah' && scope !== 'selection') return;
@@ -1781,7 +1773,16 @@ export default function QuranRevisionStudio({
 			return;
 		}
 		const el = audioRef.current;
-		if (!el?.src) {
+		const sess = sessionRef.current;
+		const ayah = sess.verses?.[currentVerseIndex];
+		const expectedUrl = ayah && sess.selectedReciter
+			? ayahAudioUrl(sess.selectedReciter.folder, sess.selectedSurahId, ayah.n)
+			: '';
+		const srcMatches = Boolean(
+			el?.src && expectedUrl && el.src.includes(expectedUrl.split('/').pop()),
+		);
+		// Rebuild from current reciter when src is missing or still on a previous folder.
+		if (!el?.src || !srcMatches) {
 			playCurrentAyah(currentVerseIndex, currentVerseRepeat, completedRepeats);
 			return;
 		}
@@ -1796,6 +1797,7 @@ export default function QuranRevisionStudio({
 
 	const goPrev = () => {
 		if (usingYoutube) return;
+		pendingReciterSwap.current = false;
 		const idx = Math.max(0, currentVerseIndex - 1);
 		const pass = repeatScope === 'selection' ? currentVerseRepeat : 1;
 		setCurrentVerseIndex(idx);
@@ -1806,6 +1808,7 @@ export default function QuranRevisionStudio({
 
 	const goNext = () => {
 		if (usingYoutube) return;
+		pendingReciterSwap.current = false;
 		if (currentVerseIndex >= verses.length - 1) {
 			if (repeatScope === 'selection' && currentVerseRepeat < repeatCount) {
 				const nextPass = currentVerseRepeat + 1;

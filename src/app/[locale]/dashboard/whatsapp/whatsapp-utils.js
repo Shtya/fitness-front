@@ -106,35 +106,66 @@ export function relativeTime(dateStr, nowOrLocale = Date.now(), locale = 'en') {
 	return language === 'ar' ? `${year} سنة` : `${year}y`;
 }
 
+const ARABIC_SCRIPT_RE = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]/g;
+const LATIN_SCRIPT_RE = /[A-Za-z]/g;
+
+export function isMostlyArabicText(text) {
+	const value = String(text || '');
+	if (!value.trim()) return false;
+	const arabic = (value.match(ARABIC_SCRIPT_RE) || []).length;
+	if (!arabic) return false;
+	const latin = (value.match(LATIN_SCRIPT_RE) || []).length;
+	return arabic >= latin;
+}
+
 export function messageTextPresentation(text) {
 	const value = String(text || '');
-	const hasArabic = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff]/.test(value);
-	const hasLatin = /[A-Za-z]/.test(value);
+	const hasArabic = ARABIC_SCRIPT_RE.test(value);
+	ARABIC_SCRIPT_RE.lastIndex = 0;
+	const hasLatin = LATIN_SCRIPT_RE.test(value);
+	LATIN_SCRIPT_RE.lastIndex = 0;
+	const mostlyArabic = isMostlyArabicText(value);
 	const arabicStyle = {
 		fontFamily:
 			'var(--font-arabic), "Tajawal", "Cairo", "Noto Sans Arabic", Tahoma, Arial, sans-serif',
 		fontWeight: 500,
 		fontFeatureSettings: '"kern" 1, "liga" 1',
 		lineHeight: 1.85,
+		direction: 'rtl',
+		unicodeBidi: 'plaintext',
+		textAlign: 'start',
 	};
+	if (mostlyArabic || (hasArabic && !hasLatin)) {
+		return {
+			dir: 'rtl',
+			lang: 'ar',
+			isArabic: true,
+			className: 'wa-message-text--ar',
+			style: arabicStyle,
+		};
+	}
 	if (hasArabic && hasLatin) {
 		return {
 			dir: 'auto',
 			lang: 'ar',
-			style: { ...arabicStyle, textAlign: 'start' },
-		};
-	}
-	if (hasArabic) {
-		return {
-			dir: 'rtl',
-			lang: 'ar',
-			style: { ...arabicStyle, textAlign: 'start' },
+			isArabic: true,
+			className: 'wa-message-text--ar',
+			style: {
+				...arabicStyle,
+				direction: 'auto',
+			},
 		};
 	}
 	return {
 		dir: 'ltr',
 		lang: 'en',
-		style: { textAlign: 'start' },
+		isArabic: false,
+		className: 'wa-message-text--en',
+		style: {
+			direction: 'ltr',
+			textAlign: 'start',
+			unicodeBidi: 'plaintext',
+		},
 	};
 }
 

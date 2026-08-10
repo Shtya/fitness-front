@@ -888,7 +888,7 @@ div[data-rht-toaster] {
 
 /* WhatsApp workspace design tokens shared by phone and web chat surfaces. */
 body .wa-mobile-shell,
-body .wa-mobile-shell * {
+body .wa-mobile-shell *:not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path) {
   font-variant-emoji: emoji;
   font-family:
     'SF Pro Display',
@@ -900,7 +900,7 @@ body .wa-mobile-shell * {
 
 /* Arabic locale: prefer a proper Arabic UI font instead of SF Pro. */
 [dir='rtl'] body .wa-mobile-shell,
-[dir='rtl'] body .wa-mobile-shell *:not(.wa-message-reaction-emoji):not(svg):not(path) {
+[dir='rtl'] body .wa-mobile-shell *:not(.wa-message-reaction-emoji):not(.wa-message-text):not(.wa-message-text *):not(.wa-composer-input):not(svg):not(path) {
   font-family:
     var(--font-arabic),
     'Tajawal',
@@ -915,13 +915,39 @@ body .wa-mobile-shell * {
 
 [dir='rtl'] body .wa-mobile-shell .font-number,
 [dir='rtl'] body .wa-mobile-shell .font-number *,
-[dir='rtl'] body .wa-mobile-shell [dir='ltr']:not(.wa-message-text),
-[dir='rtl'] body .wa-mobile-shell [dir='ltr']:not(.wa-message-text) * {
+[dir='rtl'] body .wa-mobile-shell [dir='ltr']:not(.wa-message-text):not(.wa-composer-input),
+[dir='rtl'] body .wa-mobile-shell [dir='ltr']:not(.wa-message-text):not(.wa-composer-input) * {
   font-family:
     var(--font-inter),
     'SF Pro Display',
     system-ui,
     sans-serif !important;
+}
+
+/* Per-message script: Arabic bubbles always use Arabic typeface + RTL, even on EN UI. */
+body .wa-mobile-shell .wa-message-text.wa-message-text--ar,
+body .wa-mobile-shell .wa-message-text.wa-message-text--ar *,
+body .wa-mobile-shell .wa-composer-input.wa-message-text--ar {
+  font-family:
+    var(--font-arabic),
+    'Tajawal',
+    'Cairo',
+    'Noto Sans Arabic',
+    Tahoma,
+    Arial,
+    sans-serif !important;
+  font-weight: 500 !important;
+  line-height: 1.85 !important;
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+body .wa-mobile-shell .wa-message-text.wa-message-text--en,
+body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
+  direction: ltr;
+  unicode-bidi: plaintext;
+  text-align: start;
 }
 
 .wa-mobile-shell {
@@ -1027,23 +1053,248 @@ body .wa-mobile-shell * {
 	align-items: center;
 	gap: 8px;
 	direction: ltr;
+	box-sizing: border-box;
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+}
+
+.wa-voice-message {
+	box-sizing: border-box;
+	width: min(280px, 100%);
+	min-width: min(220px, 100%);
+	max-width: 100%;
+}
+
+.wa-voice-track {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 2px;
+	min-width: 0;
+	flex: 1 1 auto;
+	overflow: hidden;
 }
 
 .wa-voice-waveform {
 	display: flex;
 	align-items: center;
 	gap: 2px;
+	height: 26px;
+	position: relative;
+	width: 100%;
+	min-width: 110px;
+	max-width: 100%;
+	overflow: hidden;
 }
 
-.wa-voice-waveform > span:not(.wa-voice-thumb) {
-	width: 2px;
-	min-width: 2px;
+.wa-voice-waveform > .wa-voice-bar {
+	display: block;
+	flex: 0 0 2.5px;
+	width: 2.5px;
+	min-width: 2.5px;
+	max-width: 2.5px;
 	border-radius: 999px;
+	background: rgba(17, 27, 33, 0.28);
+}
+
+.wa-voice-waveform .is-played-outgoing {
+	background: #ffffff;
+}
+
+.wa-voice-waveform .is-played-incoming {
+	background: #00a884;
+}
+
+.wa-voice-waveform .is-unplayed {
+	background: rgba(17, 27, 33, 0.22);
+}
+
+.wa-voice-message.is-incoming .wa-voice-waveform .is-unplayed {
+	background: rgba(0, 168, 132, 0.28);
+}
+
+.wa-voice-thumb {
+	position: absolute;
+	top: 50%;
+	width: 12px;
+	height: 12px;
+	border-radius: 999px;
+	transform: translateY(-50%);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+.wa-voice-thumb.is-outgoing {
+	background: #fff;
+}
+
+.wa-voice-thumb.is-incoming {
+	background: #00a884;
+}
+
+.wa-voice-duration {
+	font-size: 11px;
+	font-weight: 600;
+	color: #667781;
+	font-variant-numeric: tabular-nums;
+}
+
+.wa-voice-play {
+	width: 36px;
+	height: 36px;
+	border: 0;
+	border-radius: 999px;
+	background: #00a884;
+	color: #fff;
+	display: grid;
+	place-items: center;
+	flex: 0 0 auto;
+	overflow: hidden;
+	position: relative;
+	isolation: isolate;
+}
+
+.wa-voice-play-icon {
+	display: block;
+	width: 14px;
+	height: 14px;
+	flex: 0 0 auto;
+	pointer-events: none;
+}
+
+.wa-voice-play-spin {
+	animation: wa-voice-spin 0.8s linear infinite;
+}
+
+@keyframes wa-voice-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.wa-voice-message.is-incoming .wa-voice-play {
+	background: #00a884;
+	color: #fff;
+}
+
+.wa-voice-message.is-outgoing .wa-voice-play {
+	background: rgba(17, 27, 33, 0.35);
+	color: #fff;
+}
+
+.wa-voice-message.is-outgoing .wa-voice-waveform .is-unplayed {
+	background: rgba(17, 27, 33, 0.28);
+}
+
+.wa-voice-message.is-outgoing .wa-voice-waveform .is-played-outgoing {
+	background: #1fa855;
 }
 
 .wa-voice-avatar-wrap {
 	position: relative;
 	flex: 0 0 auto;
+}
+
+.wa-voice-avatar {
+	width: 40px !important;
+	height: 40px !important;
+}
+
+.wa-voice-mic-badge {
+	position: absolute;
+	inset-inline-end: -2px;
+	bottom: -2px;
+	width: 16px;
+	height: 16px;
+	border-radius: 999px;
+	background: #00a884;
+	color: #fff;
+	display: grid;
+	place-items: center;
+	border: 2px solid #fff;
+}
+
+.wa-voice-rate {
+	min-width: 34px;
+	height: 24px;
+	border-radius: 999px;
+	background: rgba(0, 0, 0, 0.08);
+	color: #111b21;
+	font-size: 11px;
+	font-weight: 700;
+}
+
+.wa-composer {
+	padding-inline-end: 12px;
+}
+
+@media (min-width: 769px) {
+	/* Dashboard WhatsApp shell: force clear inset from viewport edges.
+	   Previous pe/ps utilities fought with `p-0` and RTL logical sides. */
+	#body:has(.wa-mobile-shell) {
+		padding: 1rem 1.25rem !important;
+		box-sizing: border-box;
+	}
+
+	.wa-mobile-shell {
+		width: 100%;
+		max-width: 100%;
+		box-sizing: border-box;
+	}
+
+	.wa-chat-card {
+		padding-inline-end: 4px;
+		min-width: 0;
+	}
+
+	.wa-chat-card > section {
+		min-width: 0;
+		overflow: hidden;
+	}
+
+	.wa-split-pane {
+		min-width: 0;
+		min-height: 0;
+	}
+
+	.wa-message-wallpaper {
+		padding-inline: 18px 24px !important;
+		overflow-x: hidden !important;
+	}
+
+	.wa-message-row,
+	.wa-message-line {
+		max-width: 100%;
+		min-width: 0;
+	}
+
+	.wa-message-bubble:has(.wa-voice-message) {
+		width: fit-content;
+		max-width: min(70%, calc(100% - 12px)) !important;
+		box-sizing: border-box;
+	}
+
+	.wa-composer {
+		padding: 12px 16px 14px !important;
+		gap: 8px;
+	}
+
+	/* Solid mic glyph (not Lucide stroke) */
+	.wa-mic-button svg {
+		color: currentColor;
+		fill: currentColor;
+	}
+
+	.wa-attachment-popover {
+		position: fixed;
+		z-index: 500;
+		width: min(340px, calc(100vw - 24px));
+		border-radius: 16px;
+		overflow: hidden;
+		box-shadow:
+			0 12px 40px rgba(11, 20, 26, 0.18),
+			0 2px 8px rgba(11, 20, 26, 0.08);
+	}
 }
 
 .wa-voice-play,
@@ -1406,10 +1657,13 @@ body .wa-mobile-shell * {
 		unicode-bidi: plaintext;
 	}
 
-	.wa-message-text[lang='ar'] {
-		font-family: var(--font-arabic), 'Tajawal', 'Noto Sans Arabic', Tahoma, Arial, sans-serif !important;
+	.wa-message-text[lang='ar'],
+	.wa-message-text.wa-message-text--ar {
+		font-family: var(--font-arabic), 'Tajawal', 'Cairo', 'Noto Sans Arabic', Tahoma, Arial, sans-serif !important;
 		font-weight: 500 !important;
 		line-height: 1.85 !important;
+		direction: rtl !important;
+		text-align: start;
 	}
 
 	.wa-message-meta {
@@ -1787,8 +2041,10 @@ body .wa-mobile-shell * {
 	}
 
 	.wa-mic-button svg {
-		width: 26px;
-		height: 26px;
+		width: 22px;
+		height: 22px;
+		fill: currentColor !important;
+		stroke: none !important;
 	}
 
 	.wa-send-button svg {
@@ -1796,10 +2052,10 @@ body .wa-mobile-shell * {
 		height: 23px;
   }
 
-  .wa-voice-message {
+	.wa-voice-message {
 		box-sizing: border-box;
-		width: 100%;
-		min-width: 0;
+		width: min(280px, 100%);
+		min-width: min(220px, 100%);
 		max-width: 100%;
 		font-family: var(--font-sf-pro-display);
   }
@@ -1826,13 +2082,10 @@ body .wa-mobile-shell * {
 	}
 
 	.wa-message-bubble:has(.wa-voice-message) {
-		width: min(100%, 358px);
+		width: fit-content;
 		max-width: calc(100% - 24px) !important;
-	}
-
-	.wa-message-bubble:has(.wa-voice-message) {
 		border-radius: 18px !important;
-		padding: 12px 14px !important;
+		padding: 10px 12px 8px !important;
 	}
 
 	.wa-message-mine:has(.wa-voice-message) {
@@ -1865,7 +2118,7 @@ body .wa-mobile-shell * {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		min-height: 52px;
+		min-height: 48px;
 		direction: ltr;
 	}
 
@@ -1879,37 +2132,58 @@ body .wa-mobile-shell * {
 
 	.wa-voice-play {
 		width: 34px;
-		height: 44px;
+		height: 34px;
 		border: 0;
-		border-radius: 0;
-		background: transparent;
-		color: #4D5F4E;
+		border-radius: 50%;
+		background: #00a884;
+		color: #ffffff;
+		overflow: hidden;
 		transition: transform 180ms ease, opacity 180ms ease;
 	}
 
+	.wa-voice-message.is-outgoing .wa-voice-play {
+		background: rgba(17, 27, 33, 0.35);
+		color: #ffffff;
+	}
+
 	.wa-voice-message.is-incoming .wa-voice-play {
-		color: #555555;
+		background: #00a884;
+		color: #ffffff;
+	}
+
+	.wa-voice-message.is-outgoing .wa-voice-waveform .is-unplayed {
+		background: rgba(17, 27, 33, 0.28);
+	}
+
+	.wa-voice-message.is-outgoing .wa-voice-waveform .is-played-outgoing {
+		background: #1fa855;
 	}
 
 	.wa-voice-track {
-		display: grid;
-		grid-template-rows: 30px 17px;
-		align-items: center;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 2px;
+		min-width: 0;
 	}
 
 	.wa-voice-waveform {
 		display: flex;
-		min-width: 0;
+		align-items: center;
+		min-width: 110px;
 		max-width: 100%;
 		overflow: hidden;
-		height: 30px;
+		height: 26px;
 		gap: 2px;
 		direction: ltr;
 	}
 
-	.wa-voice-waveform > span:not(.wa-voice-thumb) {
-		width: 2px;
-		min-width: 2px;
+	.wa-voice-waveform > .wa-voice-bar {
+		display: block;
+		flex: 0 0 2.5px;
+		width: 2.5px;
+		min-width: 2.5px;
+		max-width: 2.5px;
 		border-radius: 999px;
 		transition: height 180ms ease, background-color 100ms linear;
 	}
@@ -1950,9 +2224,9 @@ body .wa-mobile-shell * {
 	}
 
 	.wa-voice-duration {
-		align-self: end;
-		font-size: 15px;
-		font-weight: 500;
+		align-self: start;
+		font-size: 11px;
+		font-weight: 600;
 		line-height: 1;
 		color: #4D5F4E;
 		font-variant-numeric: tabular-nums;

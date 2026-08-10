@@ -24,6 +24,7 @@ const Sidebar = dynamic(() => import('./Sidebar'), { ssr: false });
 const QuranMiniPlayer = dynamic(() => import('./QuranMiniPlayer'), { ssr: false });
 
 const LS_KEY = 'sidebar:collapsed';
+const LS_OFFSET_KEY = 'sidebar:offset';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ImpersonationBar
@@ -320,6 +321,20 @@ export default function Layout({ children }) {
 		} catch {}
 	}, [sidebarCollapsed]);
 
+	useEffect(() => {
+		try {
+			const raw = localStorage.getItem(LS_OFFSET_KEY);
+			if (raw == null) return;
+			setFocusMode(JSON.parse(raw) === true);
+		} catch {}
+	}, []);
+
+	useEffect(() => {
+		try {
+			localStorage.setItem(LS_OFFSET_KEY, JSON.stringify(!!focusMode));
+		} catch {}
+	}, [focusMode]);
+
 	// ── Mobile block screen ─────────────────────────────────────────────────
 	// if (blockFormOnMobile) {
 	// 	return (
@@ -394,7 +409,7 @@ export default function Layout({ children }) {
 						<div className={`flex w-full max-w-[100vw] overflow-hidden ${isAppShell || isPresentationRoute ? 'h-full' : ''}`}>
 							{!isAuthRoute && (
 								<div
-									className={`duration-300 ${sidebarOpen ? 'relative z-[120000]' : 'relative z-[100]'}`}
+									className={`duration-300 ${sidebarOpen ? 'relative z-[120000]' : 'relative z-[100]'} ${focusMode ? 'w-0 overflow-visible' : ''}`}
 								>
 									<Sidebar
 										open={sidebarOpen}
@@ -417,6 +432,7 @@ export default function Layout({ children }) {
 									isAppShell ? 'flex h-full min-h-0 flex-col overflow-hidden' : 'overflow-x-hidden',
 								].filter(Boolean).join(' ')}
 								data-dashboard-content
+								data-sidebar-offset={focusMode ? 'true' : undefined}
 							>
 								{!isAuthRoute && (
 									<div
@@ -453,7 +469,9 @@ export default function Layout({ children }) {
 														isMetaWhatsAppRoute
 															? 'overflow-hidden p-0'
 															: isImmersiveRoute
-																? 'overflow-hidden p-0 lg:py-4 lg:pe-4 lg:ps-2'
+																// Avoid `p-0` + pe/ps conflict (shorthand can wipe end padding).
+																// Symmetric inset so LTR/RTL both keep clear edge breathing room.
+																? 'overflow-hidden max-[768px]:p-0 min-[769px]:p-4'
 																: 'overflow-y-auto p-3 md:p-4',
 													].join(' ')
 													: pathname !== '/' && !isPresentationRoute

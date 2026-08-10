@@ -24,6 +24,7 @@ import {
 	ChevronUp,
 	Clock,
 	Camera,
+	Columns2,
 	Download,
 	EyeOff,
 	ExternalLink,
@@ -37,7 +38,6 @@ import {
 	MoreHorizontal,
 	MessageCircle,
 	Mic,
-	Paperclip,
 	Pause,
 	Pin,
 	Play,
@@ -92,6 +92,7 @@ import {
 import { DemoModeProvider, useDemoMode } from './demo/DemoModeProvider';
 import DemoModeSettings from './demo/components/DemoModeSettings';
 import { demoApi } from './demo/demo-api';
+import WhatsAppSplitPane from './WhatsAppSplitPane';
 import {
 	fetchConversations,
 	fetchMessages,
@@ -115,6 +116,17 @@ import WhatsAppAiSettings from './ai/WhatsAppAiSettings';
 import { useWhatsAppAi } from './ai/use-whatsapp-ai';
 
 const WHATSAPP_SELECTED_ACCOUNT_KEY = 'wa-selected-account-id';
+const WHATSAPP_ACTIVE_TAB_KEY = 'wa-active-tab';
+const WHATSAPP_PERSISTED_TABS = new Set([
+	'accounts',
+	'chats',
+	'calls',
+	'groups',
+	'statuses',
+	'notifications',
+	'reports',
+	'settings',
+]);
 
 function readStoredWhatsAppAccountId(userId) {
 	if (typeof window === 'undefined') return null;
@@ -161,6 +173,42 @@ function clearStoredWhatsAppAccountId(accountId, userId) {
 	} catch {
 		// Ignore storage failures.
 	}
+}
+
+function readStoredWhatsAppActiveTab(userId) {
+	if (typeof window === 'undefined') return null;
+	try {
+		const scopedKey = userId
+			? `${WHATSAPP_ACTIVE_TAB_KEY}:${userId}`
+			: WHATSAPP_ACTIVE_TAB_KEY;
+		const value =
+			window.localStorage.getItem(scopedKey) ||
+			window.localStorage.getItem(WHATSAPP_ACTIVE_TAB_KEY) ||
+			null;
+		return WHATSAPP_PERSISTED_TABS.has(value) ? value : null;
+	} catch {
+		return null;
+	}
+}
+
+function writeStoredWhatsAppActiveTab(tab, userId) {
+	if (typeof window === 'undefined' || !WHATSAPP_PERSISTED_TABS.has(tab)) return;
+	try {
+		const scopedKey = userId
+			? `${WHATSAPP_ACTIVE_TAB_KEY}:${userId}`
+			: WHATSAPP_ACTIVE_TAB_KEY;
+		window.localStorage.setItem(scopedKey, tab);
+		window.localStorage.setItem(WHATSAPP_ACTIVE_TAB_KEY, tab);
+	} catch {
+		// Ignore quota / private-mode failures.
+	}
+}
+
+function defaultWhatsAppActiveTab() {
+	if (typeof window === 'undefined') return 'accounts';
+	const stored = readStoredWhatsAppActiveTab(null);
+	if (stored) return stored;
+	return window.matchMedia('(max-width: 768px)').matches ? 'chats' : 'accounts';
 }
 
 function isRequestCancelled(error) {
@@ -245,6 +293,8 @@ const translations = {
 		selectConversation: 'Select a conversation to start',
 		noMessagesYet: 'No messages in this conversation yet',
 		loadingMessages: 'Loading messages…',
+		messagesStillSyncing:
+			'WhatsApp is still syncing with the phone. Retrying automatically…',
 		mediaUnavailable: 'Media unavailable',
 		loadingMedia: 'Loading media…',
 		fileAttachment: 'File attachment',
@@ -310,6 +360,10 @@ const translations = {
 		pushUnsupported: 'Push notifications are not supported on this device',
 		pushEnableFailed: 'Could not enable push notifications',
 		notes: 'Internal notes',
+		openSplitChat: 'Open second chat',
+		splitPickHint: 'Pick another chat from the list to open beside this one',
+		closeSplitChat: 'Close second chat',
+		splitChat: 'Split chat',
 		notesHint: 'Visible to staff only — never sent on WhatsApp',
 		addNote: 'Add note',
 		notePlaceholder: 'Add an internal note…',
@@ -452,6 +506,8 @@ const translations = {
 		selectConversation: 'اختر محادثة للبدء',
 		noMessagesYet: 'لا توجد رسائل في هذه المحادثة بعد',
 		loadingMessages: 'جارِ تحميل الرسائل…',
+		messagesStillSyncing:
+			'واتساب ما زال يزامن مع الهاتف. جارٍ إعادة المحاولة تلقائياً…',
 		mediaUnavailable: 'تعذر عرض الوسائط',
 		loadingMedia: 'جارِ تحميل الوسائط…',
 		fileAttachment: 'ملف مرفق',
@@ -517,6 +573,10 @@ const translations = {
 		pushUnsupported: 'هذا الجهاز لا يدعم إشعارات الويب',
 		pushEnableFailed: 'تعذر تفعيل الإشعارات',
 		notes: 'ملاحظات داخلية',
+		openSplitChat: 'فتح شات ثاني',
+		splitPickHint: 'اختر شات آخر من القائمة لفتحه بجانب الحالي',
+		closeSplitChat: 'إغلاق الشات الثاني',
+		splitChat: 'شات مقسوم',
 		notesHint: 'ظاهرة للموظفين فقط — لا تُرسل على واتساب',
 		addNote: 'إضافة ملاحظة',
 		notePlaceholder: 'أضف ملاحظة داخلية…',
@@ -953,7 +1013,7 @@ function seededWaveform(seed = '', count = 32) {
 	return bars;
 }
 
-function waveformPeaksFromAudioBuffer(audioBuffer, count = 36) {
+function waveformPeaksFromAudioBuffer(audioBuffer, count = 28) {
 	const channel = audioBuffer?.getChannelData?.(0);
 	if (!channel?.length) return [];
 	const blockSize = Math.max(1, Math.floor(channel.length / count));
@@ -1044,7 +1104,12 @@ async function prepareVoicePlaybackFromBlob(blob, mimeType) {
 		if (AudioCtx) {
 			const ctx = new AudioCtx();
 			try {
-				const decoded = await ctx.decodeAudioData(buffer.slice(0));
+				const decoded = await Promise.race([
+					ctx.decodeAudioData(buffer.slice(0)),
+					new Promise((_, reject) => {
+						window.setTimeout(() => reject(new Error('decode timeout')), 5000);
+					}),
+				]);
 				duration = decoded.duration || 0;
 				waveform = waveformPeaksFromAudioBuffer(decoded);
 			} finally {
@@ -1052,7 +1117,7 @@ async function prepareVoicePlaybackFromBlob(blob, mimeType) {
 			}
 		}
 	} catch {
-		/* decodeAudioData can fail for some ogg/opus variants */
+		/* decodeAudioData can fail / hang for some ogg/opus variants */
 	}
 	if (!(Number.isFinite(duration) && duration > 0)) {
 		duration = await probeAudioDuration(objectUrl);
@@ -1067,23 +1132,74 @@ async function prepareVoicePlayback(sourceUrl, mimeType) {
 	return prepareVoicePlaybackFromBlob(blob, mimeType || blob.type);
 }
 
-function VoicePlaybackButton({ playing, loading, downloaded, onClick }) {
-	const label = loading ? 'Loading voice message' : downloaded ? (playing ? 'Pause voice message' : 'Play voice message') : 'Download voice message';
+function VoicePlayIcon() {
 	return (
-		<button type="button" onClick={onClick} disabled={loading} aria-label={label} className="wa-voice-play grid shrink-0 place-items-center transition-transform duration-180 active:scale-[0.96] disabled:opacity-70">
-			{loading ? <Loader2 size={25} className="animate-spin" /> : !downloaded ? <Download size={25} /> : playing ? <Pause size={25} fill="currentColor" /> : <Play size={27} className="ms-0.5" fill="currentColor" />}
+		<svg className="wa-voice-play-icon" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+			<path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86a1 1 0 0 0-1.5.86Z" />
+		</svg>
+	);
+}
+
+function VoicePauseIcon() {
+	return (
+		<svg className="wa-voice-play-icon" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+			<path fill="currentColor" d="M7 5h3a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm7 0h3a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+		</svg>
+	);
+}
+
+function VoiceLoadingIcon() {
+	return (
+		<svg className="wa-voice-play-icon wa-voice-play-spin" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+			<path fill="currentColor" d="M12 2a10 10 0 1 0 10 10h-2.2A7.8 7.8 0 1 1 12 4.2V2Z" opacity="0.35" />
+			<path fill="currentColor" d="M12 2a10 10 0 0 1 10 10h-2.2A7.8 7.8 0 0 0 12 4.2V2Z" />
+		</svg>
+	);
+}
+
+function VoicePlaybackButton({ playing, loading, onClick }) {
+	const label = loading
+		? 'Loading voice message'
+		: playing
+			? 'Pause voice message'
+			: 'Play voice message';
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			aria-label={label}
+			className="wa-voice-play grid shrink-0 place-items-center"
+		>
+			{loading ? <VoiceLoadingIcon /> : playing ? <VoicePauseIcon /> : <VoicePlayIcon />}
 		</button>
 	);
 }
 
 function VoiceWaveform({ peaks, progress, mine, loading, onSeek }) {
 	return (
-		<button type="button" onClick={onSeek} disabled={loading} aria-label="Seek voice message" className="wa-voice-waveform relative flex min-w-0 flex-1 items-center disabled:opacity-60">
+		<button
+			type="button"
+			onClick={onSeek}
+			disabled={loading}
+			aria-label="Seek voice message"
+			className="wa-voice-waveform relative flex min-w-0 flex-1 items-center disabled:opacity-60"
+		>
 			{peaks.map((height, index) => {
 				const played = peaks.length > 0 && index / peaks.length <= progress;
-				return <span key={index} className={played ? (mine ? 'is-played-outgoing' : 'is-played-incoming') : 'is-unplayed'} style={{ height: `${Math.round(4 + height * 22)}px` }} />;
+				return (
+					<span
+						key={index}
+						className={`wa-voice-bar ${played ? (mine ? 'is-played-outgoing' : 'is-played-incoming') : 'is-unplayed'}`}
+						style={{ height: `${Math.round(6 + height * 18)}px` }}
+					/>
+				);
 			})}
-			<span className={`wa-voice-thumb ${mine ? 'is-outgoing' : 'is-incoming'}`} style={{ left: `calc(${Math.max(0, Math.min(1, progress)) * 100}% - 6px)` }} />
+			{progress > 0.01 ? (
+				<span
+					className={`wa-voice-thumb ${mine ? 'is-outgoing' : 'is-incoming'}`}
+					style={{ left: `calc(${Math.max(0, Math.min(1, progress)) * 100}% - 6px)` }}
+				/>
+			) : null}
 		</button>
 	);
 }
@@ -1092,22 +1208,44 @@ function VoiceAvatar({ label, src, mine }) {
 	return (
 		<div className={`wa-voice-avatar-wrap relative shrink-0 ${mine ? 'is-outgoing' : 'is-incoming'}`}>
 			<Avatar label={label} size={9} src={src} className="wa-voice-avatar ring-0" />
-			<span className="wa-voice-mic-badge absolute grid place-items-center rounded-full"><Mic size={9} strokeWidth={3} /></span>
+			<span className="wa-voice-mic-badge absolute grid place-items-center rounded-full">
+				<svg width="9" height="9" viewBox="0 0 24 24" aria-hidden="true">
+					<path
+						fill="currentColor"
+						d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"
+					/>
+				</svg>
+			</span>
 		</div>
 	);
 }
 
 function VoicePlaybackRate({ value, onChange }) {
-	return <button type="button" onClick={onChange} className="wa-voice-rate shrink-0 transition-transform duration-180 active:scale-[0.96]">{value}x</button>;
+	return (
+		<button type="button" onClick={onChange} className="wa-voice-rate shrink-0">
+			{value}x
+		</button>
+	);
 }
 
 function VoiceReplyPreview({ reply }) {
 	if (!reply) return null;
-	return <div className="wa-voice-reply"><strong>{reply.sender}</strong><span><Mic size={13} /> {formatClock(reply.duration)}</span></div>;
+	return (
+		<div className="wa-voice-reply">
+			<strong>{reply.sender}</strong>
+			<span>
+				<Mic size={13} /> {formatClock(reply.duration)}
+			</span>
+		</div>
+	);
 }
 
 function VoiceTranscribeButton({ label, disabled, onClick }) {
-	return <button type="button" onClick={onClick} disabled={disabled} className="wa-transcribe disabled:opacity-60">{label}</button>;
+	return (
+		<button type="button" onClick={onClick} disabled={disabled} className="wa-transcribe disabled:opacity-60">
+			{label}
+		</button>
+	);
 }
 
 function VoiceMessageOutgoing({ children }) {
@@ -1116,6 +1254,22 @@ function VoiceMessageOutgoing({ children }) {
 
 function VoiceMessageIncoming({ children }) {
 	return <div className="wa-voice-layout is-incoming">{children}</div>;
+}
+
+function isPersistedAttachmentId(value) {
+	const id = String(value || '');
+	if (!id || id.startsWith('live:') || id.startsWith('live-att:')) return false;
+	return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+}
+
+function assertAudioBlob(blob) {
+	if (!blob) throw new Error('Empty audio');
+	const type = String(blob.type || '').toLowerCase();
+	if (type.includes('application/json') || type.includes('text/')) {
+		throw new Error('Attachment response was not audio');
+	}
+	if (blob.size < 32) throw new Error('Audio too small');
+	return blob;
 }
 
 function VoiceMessage({
@@ -1134,12 +1288,14 @@ function VoiceMessage({
 	const audioRef = useRef(null);
 	const objectUrlRef = useRef(null);
 	const voiceBlobRef = useRef(null);
+	const loadPromiseRef = useRef(null);
 	const [playing, setPlaying] = useState(false);
-	const [loadingPlayback, setLoadingPlayback] = useState(true);
+	const [loadingPlayback, setLoadingPlayback] = useState(false);
+	const [loadFailed, setLoadFailed] = useState(false);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [playbackUrl, setPlaybackUrl] = useState(null);
 	const [playbackRate, setPlaybackRate] = useState(1);
-	const fallbackBars = useMemo(() => seededWaveform(seed, 36), [seed]);
+	const fallbackBars = useMemo(() => seededWaveform(seed, 32), [seed]);
 	const [bars, setBars] = useState(fallbackBars);
 	const [transcriptionOpen, setTranscriptionOpen] = useState(false);
 	const [transcript, setTranscript] = useState('');
@@ -1147,6 +1303,7 @@ function VoiceMessage({
 		Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : 0,
 	);
 	const Layout = mine ? VoiceMessageOutgoing : VoiceMessageIncoming;
+	const canFetchAttachment = demoAttachment || isPersistedAttachmentId(attachmentId);
 
 	useEffect(() => {
 		if (Number.isFinite(fallbackDuration) && fallbackDuration > 0) {
@@ -1155,63 +1312,84 @@ function VoiceMessage({
 	}, [fallbackDuration]);
 
 	useEffect(() => {
-		let cancelled = false;
-		voiceBlobRef.current = null;
+		setBars(fallbackBars);
 		setPlaybackUrl(null);
 		setCurrentTime(0);
 		setPlaying(false);
-		setLoadingPlayback(true);
-		setBars(fallbackBars);
-
-		const load = async () => {
-			if (attachmentId) {
-				const data = demoAttachment
-					? await demoApi.getMedia(rawDemoId(attachmentId))
-					: (
-						await api.get(`/whatsapp/attachments/${attachmentId}/content`, {
-							responseType: 'blob',
-						})
-					).data;
-				voiceBlobRef.current = data;
-				return prepareVoicePlaybackFromBlob(data, mimeType);
-			}
-			return prepareVoicePlayback(url, mimeType);
-		};
-
-		load()
-			.then(({ objectUrl, duration: probed, waveform }) => {
-				if (cancelled) {
-					URL.revokeObjectURL(objectUrl);
-					return;
-				}
-				if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-				objectUrlRef.current = objectUrl;
-				setPlaybackUrl(objectUrl);
-				if (waveform?.length) setBars(waveform);
-				if (probed > 0) setDuration(current => (current > 0 ? current : probed));
-			})
-			.catch(() => {
-				if (!cancelled && url) setPlaybackUrl(url);
-			})
-			.finally(() => {
-				if (!cancelled) setLoadingPlayback(false);
-			});
-
-		return () => {
-			cancelled = true;
-			if (objectUrlRef.current) {
-				URL.revokeObjectURL(objectUrlRef.current);
-				objectUrlRef.current = null;
-			}
-		};
+		setLoadFailed(false);
+		setLoadingPlayback(false);
+		voiceBlobRef.current = null;
+		loadPromiseRef.current = null;
+		if (objectUrlRef.current) {
+			URL.revokeObjectURL(objectUrlRef.current);
+			objectUrlRef.current = null;
+		}
 	}, [url, attachmentId, demoAttachment, mimeType, fallbackBars]);
+
+	const ensurePlaybackReady = useCallback(async () => {
+		if (playbackUrl) return playbackUrl;
+		if (loadPromiseRef.current) return loadPromiseRef.current;
+
+		const run = (async () => {
+			setLoadingPlayback(true);
+			setLoadFailed(false);
+			try {
+				let blob = null;
+				if (canFetchAttachment) {
+					blob = demoAttachment
+						? await demoApi.getMedia(rawDemoId(attachmentId))
+						: (
+								await api.get(`/whatsapp/attachments/${attachmentId}/content`, {
+									responseType: 'blob',
+									timeout: 20000,
+								})
+							).data;
+					assertAudioBlob(blob);
+				} else if (url) {
+					const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+					if (!response.ok) throw new Error(`Media fetch failed (${response.status})`);
+					blob = assertAudioBlob(await response.blob());
+				} else {
+					throw new Error('Voice message unavailable');
+				}
+
+				voiceBlobRef.current = blob;
+				const prepared = await prepareVoicePlaybackFromBlob(blob, mimeType || blob.type);
+				if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+				objectUrlRef.current = prepared.objectUrl;
+				setPlaybackUrl(prepared.objectUrl);
+				if (prepared.waveform?.length) setBars(prepared.waveform);
+				if (prepared.duration > 0) {
+					setDuration(current => (current > 0 ? current : prepared.duration));
+				}
+				return prepared.objectUrl;
+			} catch (error) {
+				setLoadFailed(true);
+				throw error;
+			} finally {
+				setLoadingPlayback(false);
+				loadPromiseRef.current = null;
+			}
+		})();
+
+		loadPromiseRef.current = run;
+		return run;
+	}, [attachmentId, canFetchAttachment, demoAttachment, mimeType, playbackUrl, url]);
+
+	useEffect(() => {
+		if (!canFetchAttachment && !url) return undefined;
+		const timer = window.setTimeout(() => {
+			void ensurePlaybackReady().catch(() => {});
+		}, 120);
+		return () => window.clearTimeout(timer);
+	}, [canFetchAttachment, ensurePlaybackReady, url]);
 
 	useEffect(() => {
 		const audio = audioRef.current;
 		if (!audio || !playbackUrl) return undefined;
 
 		const applyDuration = value => {
-			if (Number.isFinite(value) && value > 0) {
+			if (Number.isFinite(value) && value > 0 && value !== Infinity) {
 				setDuration(current => (current > 0 ? current : value));
 			}
 		};
@@ -1230,33 +1408,54 @@ function VoiceMessage({
 			setCurrentTime(0);
 		};
 		const onMeta = () => applyDuration(audio.duration);
+		const onError = () => {
+			setLoadFailed(true);
+			setPlaying(false);
+		};
 
 		audio.addEventListener('loadedmetadata', onMeta);
 		audio.addEventListener('durationchange', onMeta);
 		audio.addEventListener('timeupdate', onTime);
 		audio.addEventListener('ended', onEnd);
+		audio.addEventListener('error', onError);
 		if (audio.readyState >= 1) onMeta();
 		return () => {
 			audio.removeEventListener('loadedmetadata', onMeta);
 			audio.removeEventListener('durationchange', onMeta);
 			audio.removeEventListener('timeupdate', onTime);
 			audio.removeEventListener('ended', onEnd);
+			audio.removeEventListener('error', onError);
 		};
 	}, [playbackUrl]);
 
+	useEffect(
+		() => () => {
+			if (objectUrlRef.current) {
+				URL.revokeObjectURL(objectUrlRef.current);
+				objectUrlRef.current = null;
+			}
+		},
+		[],
+	);
+
 	const toggle = async () => {
-		const audio = audioRef.current;
-		if (!audio) return;
 		if (playing) {
-			audio.pause();
+			audioRef.current?.pause();
 			setPlaying(false);
 			return;
 		}
 		try {
+			const readyUrl = await ensurePlaybackReady();
+			const audio = audioRef.current;
+			if (!audio || !readyUrl) return;
+			if (audio.src !== readyUrl) audio.src = readyUrl;
+			audio.playbackRate = playbackRate;
 			await audio.play();
 			setPlaying(true);
+			setLoadFailed(false);
 		} catch {
 			setPlaying(false);
+			setLoadFailed(true);
 		}
 	};
 
@@ -1268,7 +1467,7 @@ function VoiceMessage({
 
 	const seekTo = event => {
 		const audio = audioRef.current;
-		if (!audio || !duration) return;
+		if (!audio || !duration || !playbackUrl) return;
 		const rect = event.currentTarget.getBoundingClientRect();
 		const isRtl =
 			typeof document !== 'undefined' &&
@@ -1281,24 +1480,19 @@ function VoiceMessage({
 
 	const loadTranscriptionFile = useCallback(async () => {
 		let blob = voiceBlobRef.current;
-		if (!blob && attachmentId) {
-			blob = demoAttachment
-				? await demoApi.getMedia(rawDemoId(attachmentId))
-				: (
-					await api.get(`/whatsapp/attachments/${attachmentId}/content`, {
-						responseType: 'blob',
-					})
-				).data;
-			voiceBlobRef.current = blob;
-		} else if (!blob && url) {
+		if (!blob) {
+			await ensurePlaybackReady();
+			blob = voiceBlobRef.current;
+		}
+		if (!blob && url) {
 			const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
 			if (!response.ok) throw new Error(`Media fetch failed (${response.status})`);
-			blob = await response.blob();
+			blob = assertAudioBlob(await response.blob());
 			voiceBlobRef.current = blob;
 		}
 		if (!blob) throw new Error('Voice message is unavailable');
 		return createTranscriptionFile(blob, fileName, attachmentId, mimeType);
-	}, [attachmentId, demoAttachment, fileName, mimeType, url]);
+	}, [attachmentId, ensurePlaybackReady, fileName, mimeType, url]);
 
 	const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
 
@@ -1307,15 +1501,37 @@ function VoiceMessage({
 			<audio ref={audioRef} preload="metadata" src={playbackUrl || undefined} className="hidden" />
 			<Layout>
 				<VoiceAvatar label={avatarLabel} src={avatarSrc} mine={mine} />
-				<VoicePlaybackButton playing={playing} loading={loadingPlayback} downloaded={Boolean(playbackUrl)} onClick={toggle} />
+				<VoicePlaybackButton
+					playing={playing}
+					loading={loadingPlayback}
+					onClick={() => void toggle()}
+				/>
 				<div className="wa-voice-track min-w-0 flex-1">
-					<VoiceWaveform peaks={bars} progress={progress} mine={mine} loading={loadingPlayback} onSeek={seekTo} />
-					<span className="wa-voice-duration">{formatClock(currentTime || duration)}</span>
+					<VoiceWaveform
+						peaks={bars}
+						progress={progress}
+						mine={mine}
+						loading={loadingPlayback}
+						onSeek={seekTo}
+					/>
+					<span className="wa-voice-duration">
+						{loadFailed && !playbackUrl
+							? 'Failed'
+							: formatClock(currentTime > 0 ? currentTime : duration)}
+					</span>
 				</div>
-				{playing && <VoicePlaybackRate value={playbackRate} onChange={cyclePlaybackRate} />}
+				{playing ? <VoicePlaybackRate value={playbackRate} onChange={cyclePlaybackRate} /> : null}
 			</Layout>
-			{!mine && !transcript && <VoiceTranscribeButton label={transcribeLabel} disabled={!attachmentId && !url} onClick={() => setTranscriptionOpen(true)} />}
-			{transcript && <p className="wa-transcript mt-1.5 whitespace-pre-wrap text-[13px] leading-relaxed">{transcript}</p>}
+			{!mine && !transcript && (
+				<VoiceTranscribeButton
+					label={transcribeLabel}
+					disabled={!playbackUrl && !canFetchAttachment && !url}
+					onClick={() => setTranscriptionOpen(true)}
+				/>
+			)}
+			{transcript && (
+				<p className="wa-transcript mt-1.5 whitespace-pre-wrap text-[13px] leading-relaxed">{transcript}</p>
+			)}
 			<TranscriptionDialog
 				open={transcriptionOpen}
 				onOpenChange={setTranscriptionOpen}
@@ -1391,12 +1607,19 @@ export function MediaAttachment({
 			setLoading(false);
 			return undefined;
 		}
+		const attachmentId = String(attachment?.id || '');
+		if (attachmentId.startsWith('live:') || attachmentId.startsWith('live-att:')) {
+			setLoading(false);
+			setFailed(true);
+			return undefined;
+		}
 		if (!attachment?.id && !attachment?.url) {
 			setLoading(false);
 			setFailed(true);
 			return undefined;
 		}
 		setLoading(true);
+		setFailed(false);
 		loadAttachmentBlob()
 			.then(blob => {
 				if (cancelled) return;
@@ -1535,16 +1758,38 @@ export function MediaAttachment({
 	}
 	if (failed || !url) {
 		return (
-			<div className={`mb-2 flex items-center gap-2 rounded-lg px-2 py-2 text-xs bg-black/5`}>
+			<button
+				type="button"
+				onClick={() => {
+					setFailed(false);
+					setLoading(true);
+					loadAttachmentBlob()
+						.then(blob => {
+							const objectUrl = URL.createObjectURL(blob);
+							setUrl(objectUrl);
+							setFailed(false);
+						})
+						.catch(() => setFailed(true))
+						.finally(() => setLoading(false));
+				}}
+				className="wa-media-unavailable mb-2 flex max-w-[260px] items-center gap-2.5 rounded-xl border border-black/5 bg-black/[0.04] px-3 py-2.5 text-start text-xs text-slate-600"
+			>
 				{type === 'audio' || type === 'ptt' ? (
-					<Mic size={14} />
-				) : type === 'image' ? (
-					<ImageIcon size={14} />
+					<Mic size={16} className="shrink-0" />
+				) : type === 'image' || type === 'sticker' ? (
+					<ImageIcon size={16} className="shrink-0" />
+				) : type === 'video' ? (
+					<Video size={16} className="shrink-0" />
 				) : (
-					<FileText size={14} />
+					<FileText size={16} className="shrink-0" />
 				)}
-				<span>{labels.mediaUnavailable}</span>
-			</div>
+				<span className="min-w-0">
+					<span className="block font-semibold">{labels.mediaUnavailable}</span>
+					<span className="mt-0.5 block text-[10px] text-slate-400">
+						{labels.loadingMedia?.replace('…', '') || 'Tap to retry'}
+					</span>
+				</span>
+			</button>
 		);
 	}
 	if (type === 'image' || type === 'sticker') {
@@ -1814,6 +2059,11 @@ function ConversationActionMenu({
 			: Math.max(16, Math.min(anchorRect?.top || 80, window.innerHeight - 420));
 	const actions = [
 		{
+			id: 'openBeside',
+			label: ar ? 'فتح بجانب الشات الحالي' : 'Open beside current chat',
+			icon: Columns2,
+		},
+		{
 			id: 'pin',
 			label: conversation.isPinned ? (ar ? 'إلغاء تثبيت المحادثة' : 'Unpin conversation') : ar ? 'تثبيت المحادثة' : 'Pin conversation',
 			icon: Pin,
@@ -2019,6 +2269,7 @@ function MobileAttachmentSheet({
 	onClose,
 	onAction,
 	locale = 'en',
+	anchorRef = null,
 	aiEnabled = false,
 	aiVisible = true,
 	onToggleAiVisible,
@@ -2030,47 +2281,125 @@ function MobileAttachmentSheet({
 	onRegenerateSuggestions,
 	settingsEnabled = false,
 	onEnableAi,
+	onDisableAi,
 }) {
+	const [placement, setPlacement] = useState(null);
+
+	useLayoutEffect(() => {
+		if (!open) {
+			setPlacement(null);
+			return undefined;
+		}
+
+		const update = () => {
+			const desktop =
+				typeof window !== 'undefined' &&
+				window.matchMedia('(min-width: 769px)').matches;
+			const rect = anchorRef?.current?.getBoundingClientRect?.();
+			if (!desktop || !rect) {
+				setPlacement({ mode: 'sheet' });
+				return;
+			}
+			const width = Math.min(340, window.innerWidth - 24);
+			let left = rect.left;
+			if (left + width > window.innerWidth - 12) {
+				left = window.innerWidth - width - 12;
+			}
+			left = Math.max(12, left);
+			setPlacement({
+				mode: 'popover',
+				bottom: Math.max(12, window.innerHeight - rect.top + 10),
+				left,
+				width,
+			});
+		};
+
+		update();
+		window.addEventListener('resize', update);
+		window.addEventListener('scroll', update, true);
+		return () => {
+			window.removeEventListener('resize', update);
+			window.removeEventListener('scroll', update, true);
+		};
+	}, [open, anchorRef]);
+
 	if (!open) return null;
+	if (!placement) return null;
 	const ar = String(locale).toLowerCase().startsWith('ar');
+	const isDesktop = placement.mode === 'popover';
 	const actions = [
-		['photos', ImageIcon, ar ? 'الصور' : 'Photos', '#7C5CFC'],
-		['camera', Camera, ar ? 'الكاميرا' : 'Camera', '#FF4F78'],
+		['photos', ImageIcon, ar ? 'الصور والوسائط' : 'Photos & media', '#7C5CFC'],
+		...(!isDesktop
+			? [['camera', Camera, ar ? 'الكاميرا' : 'Camera', '#FF4F78']]
+			: []),
 		['document', FileText, ar ? 'مستند' : 'Document', '#4B88FF'],
 		['location', MapPin, ar ? 'الموقع' : 'Location', '#20B86B'],
 	];
 	return createPortal(
 		<div className="wa-composer-overlay fixed inset-0 z-500" role="presentation">
-			<button type="button" aria-label={ar ? 'إغلاق الإجراءات' : 'Close attachment actions'} onClick={onClose} className="absolute inset-0 bg-black/30" />
+			<button type="button" aria-label={ar ? 'إغلاق الإجراءات' : 'Close attachment actions'} onClick={onClose} className="absolute inset-0 bg-black/20" />
 			<section
 				role="dialog"
 				aria-modal="true"
-				aria-label={ar ? 'إجراءات المرفقات' : 'Attachment actions'}
-				className="wa-attachment-sheet absolute inset-x-0 bottom-0 mx-auto max-w-[430px] rounded-t-[22px] bg-white px-4 pb-[max(24px,env(safe-area-inset-bottom))] pt-3 shadow-2xl"
+				aria-label={ar ? 'المزيد من الخيارات' : 'More options'}
+				className={
+					isDesktop
+						? 'wa-attachment-popover bg-white px-3 py-3'
+						: 'wa-attachment-sheet absolute inset-x-0 bottom-0 mx-auto max-w-[430px] rounded-t-[22px] bg-white px-4 pb-[max(24px,env(safe-area-inset-bottom))] pt-3 shadow-2xl'
+				}
+				style={
+					isDesktop
+						? {
+								bottom: placement.bottom,
+								left: placement.left,
+								width: placement.width,
+							}
+						: undefined
+				}
 			>
-				<div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-slate-300" />
+				{!isDesktop && <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-slate-300" />}
 
 				{aiEnabled && (
-					<div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-violet-100 bg-violet-50/70 px-3 py-2.5">
-						<span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-violet-600 text-white">
-							<Sparkles size={15} />
-						</span>
-						<p className="shrink-0 text-xs font-black text-violet-800">
-							{ar ? 'ردود الذكاء الاصطناعي' : 'AI replies'}
-						</p>
-						{!settingsEnabled ? (
-							<button
-								type="button"
-								onClick={() => {
-									void onEnableAi?.();
-									onClose?.();
+					<div className="mb-3 space-y-2 rounded-2xl border border-violet-100 bg-violet-50/70 px-3 py-3">
+						<div className="flex items-center gap-3">
+							<span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-violet-600 text-white">
+								<Sparkles size={15} />
+							</span>
+							<div className="min-w-0 flex-1">
+								<p className="text-sm font-black text-violet-900">
+									{ar ? 'اقتراحات الذكاء الاصطناعي' : 'AI suggestions'}
+								</p>
+								<p className="text-[11px] text-violet-700/80">
+									{ar
+										? 'فعّل الردود المقترحة أثناء المحادثة'
+										: 'Suggest replies while you chat'}
+								</p>
+							</div>
+							<Toggle
+								checked={Boolean(settingsEnabled)}
+								label={ar ? 'تفعيل الذكاء الاصطناعي' : 'Enable AI suggestions'}
+								onChange={next => {
+									if (next) {
+										void Promise.resolve(onEnableAi?.()).catch(() => {});
+										if (!aiVisible) onToggleAiVisible?.();
+									} else {
+										void Promise.resolve(onDisableAi?.()).catch(() => {});
+									}
 								}}
-								className="ms-auto shrink-0 rounded-full bg-violet-600 px-3 py-1.5 text-[11px] font-bold text-white"
-							>
-								{ar ? 'تفعيل' : 'Enable'}
-							</button>
-						) : (
-							<>
+							/>
+						</div>
+						{settingsEnabled ? (
+							<div className="flex flex-wrap items-center gap-2 border-t border-violet-100 pt-2">
+								<div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+									<span className="text-[11px] font-bold text-violet-800">
+										{ar ? 'إظهار الشريط' : 'Show suggestion bar'}
+									</span>
+									<Toggle
+										checked={Boolean(aiVisible)}
+										label={ar ? 'إظهار اقتراحات الذكاء الاصطناعي' : 'Show AI suggestion bar'}
+										onChange={() => onToggleAiVisible?.()}
+									/>
+								</div>
 								{prompts.length > 0 && (
 									<PromptInstructionsDropdown
 										prompts={prompts}
@@ -2083,15 +2412,6 @@ function MobileAttachmentSheet({
 								)}
 								<button
 									type="button"
-									onClick={onToggleAiVisible}
-									className="shrink-0 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-[11px] font-bold text-violet-700"
-								>
-									{aiVisible
-										? ar ? 'إخفاء' : 'Hide'
-										: ar ? 'إظهار' : 'Show'}
-								</button>
-								<button
-									type="button"
 									onClick={onRegenerateSuggestions}
 									disabled={suggestionsLoading || !aiVisible}
 									aria-label={ar ? 'تحديث الاقتراحات' : 'Regenerate suggestions'}
@@ -2099,8 +2419,8 @@ function MobileAttachmentSheet({
 								>
 									<RefreshCw size={14} className={suggestionsLoading ? 'animate-spin' : ''} />
 								</button>
-							</>
-						)}
+							</div>
+						) : null}
 					</div>
 				)}
 
@@ -2110,15 +2430,15 @@ function MobileAttachmentSheet({
 							key={id}
 							type="button"
 							onClick={() => onAction(id)}
-							className="flex min-h-14 w-full items-center gap-3 border-b border-black/5 px-1 py-3 text-start last:border-0 active:bg-black/[0.03]"
+							className="flex min-h-12 w-full items-center gap-3 border-b border-black/5 px-1 py-2.5 text-start last:border-0 hover:bg-black/[0.03] active:bg-black/[0.03]"
 						>
 							<span
-								className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white"
+								className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-white"
 								style={{ background: color }}
 							>
-								<Icon size={21} strokeWidth={2.2} />
+								<Icon size={19} strokeWidth={2.2} />
 							</span>
-							<span className="text-[16px] font-semibold text-[#111b21]">{label}</span>
+							<span className="text-[15px] font-semibold text-[#111b21]">{label}</span>
 						</button>
 					))}
 				</div>
@@ -2132,17 +2452,51 @@ function MobileStickerPanel({ open, onClose, onInsert }) {
 	const [tab, setTab] = useState('emoji');
 	if (!open) return null;
 	const tabs = [['emoji', Smile, 'Emoji'], ['gif', ImageIcon, 'GIF'], ['sticker', Sticker, 'Stickers']];
-	const emojis = ['😀', '😂', '🥰', '😍', '😊', '😭', '😎', '🤔', '👍', '👏', '🙏', '❤️', '🔥', '🎉', '💪', '✅', '👀', '✨'];
+	const emojis = ['😀', '😂', '🥰', '😍', '😊', '😭', '😎', '🤔', '👍', '👏', '🙏', '❤️', '🔥', '🎉', '💪', '✅', '👀', '✨', '😅', '🙌', '🤝', '💯', '🫡', '🌹'];
 	return createPortal(
-		<section role="dialog" aria-label="Emoji, GIF and stickers" className="wa-sticker-panel fixed inset-x-0 bottom-[88px] z-400 mx-auto flex h-[48dvh] max-w-[430px] flex-col border-t border-slate-200 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.12)] min-[769px]:hidden">
+		<section
+			role="dialog"
+			aria-label="Emoji, GIF and stickers"
+			className="wa-sticker-panel fixed inset-x-0 bottom-[88px] z-400 mx-auto flex h-[48dvh] max-w-[430px] flex-col border border-slate-200 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.12)] min-[769px]:bottom-24 min-[769px]:end-8 min-[769px]:inset-x-auto min-[769px]:h-[360px] min-[769px]:w-[360px] min-[769px]:max-w-none min-[769px]:rounded-2xl"
+		>
 			<div className="flex h-12 shrink-0 items-center border-b border-slate-100 px-2">
-				{tabs.map(([id, Icon, label]) => <button key={id} type="button" aria-label={label} aria-pressed={tab === id} onClick={() => setTab(id)} className={`grid h-11 flex-1 place-items-center border-b-2 ${tab === id ? 'border-[#16B96B] text-[#16B96B]' : 'border-transparent text-[#667781]'}`}><Icon size={22} /></button>)}
-				<button type="button" aria-label="Close sticker panel" onClick={onClose} className="grid h-11 w-11 place-items-center text-[#667781]"><X size={21} /></button>
+				{tabs.map(([id, Icon, label]) => (
+					<button
+						key={id}
+						type="button"
+						aria-label={label}
+						aria-pressed={tab === id}
+						onClick={() => setTab(id)}
+						className={`grid h-11 flex-1 place-items-center border-b-2 ${tab === id ? 'border-[#16B96B] text-[#16B96B]' : 'border-transparent text-[#667781]'}`}
+					>
+						<Icon size={22} />
+					</button>
+				))}
+				<button type="button" aria-label="Close sticker panel" onClick={onClose} className="grid h-11 w-11 place-items-center text-[#667781]">
+					<X size={21} />
+				</button>
 			</div>
 			{tab === 'emoji' ? (
-				<div className="grid flex-1 grid-cols-6 content-start gap-3 overflow-y-auto p-4">{emojis.map(emoji => <button key={emoji} type="button" onClick={() => onInsert(emoji)} className="grid aspect-square place-items-center text-3xl transition-transform active:scale-90">{emoji}</button>)}</div>
+				<div className="grid flex-1 grid-cols-6 content-start gap-2 overflow-y-auto p-3 sm:grid-cols-7">
+					{emojis.map(emoji => (
+						<button
+							key={emoji}
+							type="button"
+							onClick={() => onInsert(emoji)}
+							className="grid aspect-square place-items-center rounded-xl text-2xl transition-transform hover:bg-slate-50 active:scale-90"
+						>
+							{emoji}
+						</button>
+					))}
+				</div>
 			) : (
-				<div className="flex flex-1 flex-col items-center justify-center gap-2 text-[#667781]"><Sticker size={30} /><p className="text-sm">{tab === 'gif' ? 'Search and send GIFs' : 'Your stickers'}</p></div>
+				<div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center text-[#667781]">
+					<Sticker size={30} />
+					<p className="text-sm font-semibold">
+						{tab === 'gif' ? 'GIFs coming soon' : 'Stickers coming soon'}
+					</p>
+					<p className="text-xs">Use the Emoji tab to insert reactions into your message.</p>
+				</div>
 			)}
 		</section>,
 		document.body,
@@ -2799,7 +3153,7 @@ function WhatsAppWorkspaceContent() {
 	const messagesCacheRef = useRef(messagesCacheAdapter);
 	conversationsCacheRef.current = conversationsCacheAdapter;
 	messagesCacheRef.current = messagesCacheAdapter;
-	const [activeTab, setActiveTab] = useState('accounts');
+	const [activeTab, setActiveTab] = useState(defaultWhatsAppActiveTab);
 	const [settingsSection, setSettingsSection] = useState('ai');
 	const [accounts, setAccounts] = useState([]);
 	const [accountId, setAccountId] = useState(null);
@@ -2812,6 +3166,8 @@ function WhatsAppWorkspaceContent() {
 	const [syncProgress, setSyncProgress] = useState(0);
 	const [syncStage, setSyncStage] = useState('');
 	const [conversationId, setConversationId] = useState(null);
+	const [secondaryConversationId, setSecondaryConversationId] = useState(null);
+	const [splitPickMode, setSplitPickMode] = useState(false);
 	const [messages, setMessages] = useState([]);
 	const [groups, setGroups] = useState([]);
 	const [selectedGroup, setSelectedGroup] = useState(null);
@@ -2874,6 +3230,7 @@ function WhatsAppWorkspaceContent() {
 	const [loadingOlder, setLoadingOlder] = useState(false);
 	const [hasMoreMessages, setHasMoreMessages] = useState(true);
 	const [loadingMessages, setLoadingMessages] = useState(false);
+	const [messagesSyncHint, setMessagesSyncHint] = useState('');
 	const [recordingVoice, setRecordingVoice] = useState(false);
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
 	const [draft, setDraft] = useState('');
@@ -2915,6 +3272,7 @@ function WhatsAppWorkspaceContent() {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const [mobileHeaderScrolled, setMobileHeaderScrolled] = useState(false);
 	const [attachmentSheetOpen, setAttachmentSheetOpen] = useState(false);
+	const attachButtonRef = useRef(null);
 	const [aiSuggestionsVisible, setAiSuggestionsVisible] = useState(true);
 	const [stickerPanelOpen, setStickerPanelOpen] = useState(false);
 	const whatsappAi = useWhatsAppAi({
@@ -2939,6 +3297,7 @@ function WhatsAppWorkspaceContent() {
 	const previewBackfillAttemptedRef = useRef(new Set());
 	/** Skip provider history sync while WA Store is known unhealthy. */
 	const providerHistorySyncBlockedUntilRef = useRef(0);
+	const messageHistoryRetryRef = useRef({ conversationId: null, attempts: 0, timer: null });
 	const statusesCacheRef = useRef(new Map());
 	const refreshStatusesFromProviderRef = useRef(null);
 	const reloadConversationsTimer = useRef(null);
@@ -3001,6 +3360,11 @@ function WhatsAppWorkspaceContent() {
 	const selectedConversation = useMemo(
 		() => effectiveConversations.find(item => item.id === conversationId) || null,
 		[effectiveConversations, conversationId],
+	);
+	const selectedSecondaryConversation = useMemo(
+		() =>
+			effectiveConversations.find(item => item.id === secondaryConversationId) || null,
+		[effectiveConversations, secondaryConversationId],
 	);
 	const effectiveMessages = useMemo(
 		() =>
@@ -3072,6 +3436,24 @@ function WhatsAppWorkspaceContent() {
 	}, [conversationId]);
 
 	useEffect(() => {
+		if (!conversationId) {
+			setSecondaryConversationId(null);
+			setSplitPickMode(false);
+			setShowNotes(false);
+		}
+	}, [conversationId]);
+
+	useEffect(() => {
+		if (
+			secondaryConversationId &&
+			conversationId &&
+			secondaryConversationId === conversationId
+		) {
+			setSecondaryConversationId(null);
+		}
+	}, [conversationId, secondaryConversationId]);
+
+	useEffect(() => {
 		if (!reactionPickerMessageId) return undefined;
 		const closePickerOutside = event => {
 			if (
@@ -3086,6 +3468,16 @@ function WhatsAppWorkspaceContent() {
 		document.addEventListener('pointerdown', closePickerOutside);
 		return () => document.removeEventListener('pointerdown', closePickerOutside);
 	}, [reactionPickerMessageId]);
+
+	useEffect(() => {
+		if (!showNotes) return undefined;
+		const closeNotesOutside = event => {
+			if (event.target.closest('[data-wa-notes-popover]')) return;
+			setShowNotes(false);
+		};
+		document.addEventListener('pointerdown', closeNotesOutside);
+		return () => document.removeEventListener('pointerdown', closeNotesOutside);
+	}, [showNotes]);
 
 	useEffect(() => {
 		try {
@@ -3104,6 +3496,10 @@ function WhatsAppWorkspaceContent() {
 		const id = window.setInterval(() => setRelativeTimeNow(Date.now()), 60_000);
 		return () => window.clearInterval(id);
 	}, []);
+
+	useEffect(() => {
+		writeStoredWhatsAppActiveTab(activeTab, currentUserId);
+	}, [activeTab, currentUserId]);
 
 	const subscribeToWhatsAppPush = useCallback(
 		async requestPermission => {
@@ -3926,7 +4322,8 @@ function WhatsAppWorkspaceContent() {
 			}
 		} else {
 			setLoadingMessages(true);
-			setMessages([]);
+			// Keep any already-rendered messages for this conversation to avoid a blank flash.
+			setMessages(current => (conversationIdRef.current === id && current.length ? current : []));
 			setHasMoreMessages(true);
 		}
 		try {
@@ -3994,51 +4391,106 @@ function WhatsAppWorkspaceContent() {
 			const needsProviderBackfill =
 				canSync && (!historySyncBlocked || items.length === 0);
 			if (needsProviderBackfill) {
-				// Keep the loader until the first backfill finishes when local history
-				// is still short of a full page.
-				if (items.length < MESSAGE_PAGE_SIZE && isCurrentRequest()) {
-					setLoadingMessages(true);
-				} else if (isCurrentRequest()) {
+				// Show whatever we already have in DB immediately. Only keep the
+				// full-pane spinner on the first empty-chat attempt — retries use
+				// the softer "still syncing" hint so the pane does not look stuck.
+				const retryingEmpty =
+					messageHistoryRetryRef.current.conversationId === id &&
+					messageHistoryRetryRef.current.attempts > 0;
+				if (items.length > 0 && isCurrentRequest()) {
 					setLoadingMessages(false);
+					setMessagesSyncHint('');
 					scrollMessagesToBottom();
+				} else if (isCurrentRequest()) {
+					if (retryingEmpty) {
+						setLoadingMessages(false);
+						setMessagesSyncHint('still_syncing');
+					} else {
+						setLoadingMessages(true);
+					}
 				}
-				let syncPromise = messageSyncInFlightRef.current.get(id);
-				if (!syncPromise) {
-					syncPromise = api
-						.post(`/whatsapp/conversations/${id}/sync/latest`, null, {
-							params: { limit: MESSAGE_PAGE_SIZE },
-							timeout: 90000,
-						})
-						.then(response => response.data)
-						.finally(() => {
-							if (messageSyncInFlightRef.current.get(id) === syncPromise) {
-								messageSyncInFlightRef.current.delete(id);
-							}
-						});
-					messageSyncInFlightRef.current.set(id, syncPromise);
-				}
+				const runSyncOnce = () => {
+					let syncPromise = messageSyncInFlightRef.current.get(id);
+					if (!syncPromise) {
+						syncPromise = api
+							.post(`/whatsapp/conversations/${id}/sync/latest`, null, {
+								params: { limit: MESSAGE_PAGE_SIZE },
+								timeout: 90000,
+							})
+							.then(response => response.data)
+							.finally(() => {
+								if (messageSyncInFlightRef.current.get(id) === syncPromise) {
+									messageSyncInFlightRef.current.delete(id);
+								}
+							});
+						messageSyncInFlightRef.current.set(id, syncPromise);
+					}
+					return syncPromise;
+				};
+				const scheduleBackgroundRetry = cooldownMs => {
+					const retryState = messageHistoryRetryRef.current;
+					if (retryState.timer) {
+						clearTimeout(retryState.timer);
+						retryState.timer = null;
+					}
+					if (retryState.conversationId !== id) {
+						retryState.conversationId = id;
+						retryState.attempts = 0;
+					}
+					if (retryState.attempts >= 6) return;
+					retryState.attempts += 1;
+					const waitMs = Math.min(
+						15_000,
+						Math.max(3_000, Number(cooldownMs) || 4_000) +
+							(retryState.attempts - 1) * 1_500,
+					);
+					providerHistorySyncBlockedUntilRef.current = Date.now() + waitMs;
+					retryState.timer = setTimeout(() => {
+						retryState.timer = null;
+						if (conversationIdRef.current !== id) return;
+						providerHistorySyncBlockedUntilRef.current = 0;
+						loadMessagesRef.current?.(id, true)?.catch?.(() => { });
+					}, waitMs);
+				};
 				try {
-					const synced = await syncPromise;
+					const synced = await runSyncOnce();
 					if (synced?.syncSkipped || synced?.syncError) {
 						const cooldown = Number(synced?.cooldownMs) || 0;
 						if (cooldown > 0) {
 							providerHistorySyncBlockedUntilRef.current =
-								Date.now() + Math.min(30_000, Math.max(10_000, cooldown));
+								Date.now() + Math.min(30_000, Math.max(3_000, cooldown));
 						}
-						// Still show whatever DB returned in the sync payload.
 						if (Array.isArray(synced?.items) && synced.items.length) {
 							applySynced(synced);
+							setMessagesSyncHint('');
+							messageHistoryRetryRef.current.attempts = 0;
+						} else if (items.length === 0 && isCurrentRequest()) {
+							setMessagesSyncHint(
+								synced?.message ||
+									(synced?.syncError === 'main_not_ready' ||
+									synced?.syncError === 'provider_unavailable'
+										? 'still_syncing'
+										: ''),
+							);
+							scheduleBackgroundRetry(cooldown || 4_000);
 						}
 					} else {
 						providerHistorySyncBlockedUntilRef.current = 0;
+						messageHistoryRetryRef.current.attempts = 0;
+						setMessagesSyncHint('');
 						applySynced(synced);
 					}
 				} catch (error) {
-					providerHistorySyncBlockedUntilRef.current = Date.now() + 20_000;
+					providerHistorySyncBlockedUntilRef.current = Date.now() + 8_000;
 					if (isCurrentRequest() && !items.length) {
-						toast.error(
-							error.response?.data?.message || 'Could not synchronize message history',
-						);
+						setMessagesSyncHint('still_syncing');
+						const firstFailure = messageHistoryRetryRef.current.attempts === 0;
+						scheduleBackgroundRetry(8_000);
+						if (firstFailure) {
+							toast.error(
+								error.response?.data?.message || 'Could not synchronize message history',
+							);
+						}
 					}
 				}
 			} else if (isCurrentRequest()) {
@@ -4055,6 +4507,9 @@ function WhatsAppWorkspaceContent() {
 			if (isCurrentRequest()) setLoadingMessages(false);
 		}
 	}, [queryClient, scrollMessagesToBottom, setConversationUnreadCount]);
+
+	const loadMessagesRef = useRef(loadMessages);
+	loadMessagesRef.current = loadMessages;
 
 	useEffect(() => {
 		let cancelled = false;
@@ -4193,6 +4648,13 @@ function WhatsAppWorkspaceContent() {
 		olderRequestId.current += 1;
 		loadingOlderRef.current = false;
 		setLoadingOlder(false);
+		setMessagesSyncHint('');
+		if (messageHistoryRetryRef.current.timer) {
+			clearTimeout(messageHistoryRetryRef.current.timer);
+			messageHistoryRetryRef.current.timer = null;
+		}
+		messageHistoryRetryRef.current.conversationId = conversationId || null;
+		messageHistoryRetryRef.current.attempts = 0;
 		if (!conversationId) {
 			setMessages(current => (current.length ? [] : current));
 			setLoadingMessages(false);
@@ -4472,6 +4934,19 @@ function WhatsAppWorkspaceContent() {
 					setQr(null);
 					setPairingCode(null);
 					providerHistorySyncBlockedUntilRef.current = 0;
+					const activeConversationId = conversationIdRef.current;
+					if (
+						activeConversationId &&
+						!isDemoId(activeConversationId) &&
+						messageHistoryRetryRef.current.attempts > 0
+					) {
+						messageHistoryRetryRef.current.attempts = 0;
+						if (messageHistoryRetryRef.current.timer) {
+							clearTimeout(messageHistoryRetryRef.current.timer);
+							messageHistoryRetryRef.current.timer = null;
+						}
+						loadMessagesRef.current?.(activeConversationId, true)?.catch?.(() => { });
+					}
 				}
 				loadAccounts().catch(() => { });
 				if (status === 'connected' && accountId) {
@@ -5676,6 +6151,30 @@ function WhatsAppWorkspaceContent() {
 		const conversation = conversationActionTarget;
 		if (!conversation) return;
 		closeConversationActions();
+		if (action === 'openBeside') {
+			if (!conversationId) {
+				toast.error(
+					locale === 'ar'
+						? 'افتح شات أولاً ثم اختر شات ثاني بجانبه'
+						: 'Open a chat first, then open another beside it',
+				);
+				return;
+			}
+			if (conversation.id === conversationId) {
+				toast.error(
+					locale === 'ar'
+						? 'اختر شات مختلف عن الحالي'
+						: 'Pick a different chat than the current one',
+				);
+				return;
+			}
+			setSecondaryConversationId(conversation.id);
+			setSplitPickMode(false);
+			toast.success(
+				locale === 'ar' ? 'تم فتح الشات الجانبي' : 'Second chat opened',
+			);
+			return;
+		}
 		if (action === 'pin') {
 			void toggleConversationPinned(conversation);
 		} else if (action === 'favorite') {
@@ -5792,7 +6291,9 @@ function WhatsAppWorkspaceContent() {
 
 	useEffect(() => {
 		if (window.matchMedia('(max-width: 768px)').matches) {
-			void loadTabData('chats');
+			const stored = readStoredWhatsAppActiveTab(currentUserId);
+			// Mobile defaults to chats only when the user has no saved tab yet.
+			if (!stored) void loadTabData('chats');
 		}
 		// The mobile workspace opens on the familiar WhatsApp chats screen.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -6314,6 +6815,7 @@ function WhatsAppWorkspaceContent() {
 	const reportEntries = Object.entries(reportTotals);
 	const inboundTotal = reportTotals.inbound || 0;
 	const outboundTotal = reportTotals.outbound || 0;
+	const draftPresentation = messageTextPresentation(draft);
 	const failedTotal = reportTotals.failed || 0;
 	const messagesTotal = reportTotals.messages ?? inboundTotal + outboundTotal;
 	const deliveryTotal = inboundTotal + outboundTotal + failedTotal || 1;
@@ -6392,6 +6894,7 @@ function WhatsAppWorkspaceContent() {
 				onClose={() => setAttachmentSheetOpen(false)}
 				onAction={handleAttachmentAction}
 				locale={locale}
+				anchorRef={attachButtonRef}
 				aiEnabled={!demo.settings.enabled && canUseWhatsApp}
 				aiVisible={aiSuggestionsVisible}
 				onToggleAiVisible={() => setAiSuggestionsVisible(current => !current)}
@@ -6407,10 +6910,31 @@ function WhatsAppWorkspaceContent() {
 				onRegenerateSuggestions={whatsappAi.regenerateSuggestions}
 				settingsEnabled={Boolean(whatsappAi.settings?.enabled)}
 				onEnableAi={() =>
-					whatsappAi.saveSettings({
-						enabled: true,
-						provider: 'ai-free',
-					})
+					whatsappAi
+						.saveSettings({
+							enabled: true,
+							provider: 'ai-free',
+						})
+						.catch(() => {
+							toast.error(
+								locale === 'ar'
+									? 'تعذر تفعيل اقتراحات الذكاء الاصطناعي'
+									: 'Could not enable AI suggestions',
+							);
+						})
+				}
+				onDisableAi={() =>
+					whatsappAi
+						.saveSettings({
+							enabled: false,
+						})
+						.catch(() => {
+							toast.error(
+								locale === 'ar'
+									? 'تعذر إيقاف اقتراحات الذكاء الاصطناعي'
+									: 'Could not disable AI suggestions',
+							);
+						})
 				}
 			/>
 			<MobileStickerPanel open={stickerPanelOpen} onClose={() => setStickerPanelOpen(false)} onInsert={emoji => setDraft(current => `${current}${emoji}`)} />
@@ -6816,13 +7340,29 @@ function WhatsAppWorkspaceContent() {
 				)}
 
 				{activeTab === 'chats' && (
-					<Card className="wa-chat-card grid h-full min-h-[600px] overflow-hidden max-[768px]:min-h-0 max-[768px]:rounded-none max-[768px]:border-0 min-[769px]:grid-cols-[330px_1fr]">
+					<Card className={`wa-chat-card grid h-full min-h-[600px] overflow-hidden max-[768px]:min-h-0 max-[768px]:rounded-none max-[768px]:border-0 ${
+						secondaryConversationId
+							? 'min-[769px]:grid-cols-[280px_minmax(0,1fr)_minmax(0,1fr)]'
+							: 'min-[769px]:grid-cols-[330px_1fr]'
+					}`}>
 						<aside className={`wa-chat-list ${conversationId ? 'hidden min-[769px]:flex' : 'flex'} min-h-0 flex-col border-e border-slate-200 dark:border-slate-700`}>
 							<div
 								className="wa-chat-list-scroll min-h-0 flex-1 min-[769px]:contents"
 								onScroll={event => setMobileHeaderScrolled(event.currentTarget.scrollTop > 0)}
 							>
 								<div className="wa-chat-list-header border-b border-slate-100 p-3 dark:border-slate-800">
+									{splitPickMode && (
+										<div className="mb-2 rounded-xl border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] px-3 py-2 text-[11px] font-semibold text-[var(--color-primary-800)]">
+											{t.splitPickHint}
+											<button
+												type="button"
+												className="ms-2 underline"
+												onClick={() => setSplitPickMode(false)}
+											>
+												{locale === 'ar' ? 'إلغاء' : 'Cancel'}
+											</button>
+										</div>
+									)}
 									<div className="wa-desktop-chat-list-tools flex items-center justify-between">
 										<h2 className="font-black">{t.chats}</h2>
 										<div className="flex items-center gap-1">
@@ -6988,7 +7528,11 @@ function WhatsAppWorkspaceContent() {
 
 											{filteredConversations.map(conversation => {
 												const title = conversationTitle(conversation);
-												const active = conversation.id === conversationId;
+												const active =
+													conversation.id === conversationId ||
+													conversation.id === secondaryConversationId;
+												const isSplitSecondary =
+													conversation.id === secondaryConversationId;
 												const isGroup = conversation.type === 'group';
 												const story = !isGroup ? storyForConversation(conversation) : null;
 												const unreadCount = Math.max(
@@ -7011,6 +7555,24 @@ function WhatsAppWorkspaceContent() {
 																suppressConversationClickRef.current = false;
 																return;
 															}
+															if (splitPickMode) {
+																if (conversation.id === conversationId) {
+																	toast.error(
+																		locale === 'ar'
+																			? 'اختر شات مختلف عن الحالي'
+																			: 'Pick a different chat than the current one',
+																	);
+																	return;
+																}
+																setSecondaryConversationId(conversation.id);
+																setSplitPickMode(false);
+																toast.success(
+																	locale === 'ar'
+																		? 'تم فتح الشات الجانبي'
+																		: 'Second chat opened',
+																);
+																return;
+															}
 															setConversationId(conversation.id);
 														}}
 														onPointerDown={event => startConversationLongPress(event, conversation)}
@@ -7027,11 +7589,26 @@ function WhatsAppWorkspaceContent() {
 														onKeyDown={event => {
 															if (event.key === 'Enter' || event.key === ' ') {
 																event.preventDefault();
+																if (splitPickMode) {
+																	if (conversation.id === conversationId) {
+																		toast.error(
+																			locale === 'ar'
+																				? 'اختر شات مختلف عن الحالي'
+																				: 'Pick a different chat than the current one',
+																		);
+																		return;
+																	}
+																	setSecondaryConversationId(conversation.id);
+																	setSplitPickMode(false);
+																	return;
+																}
 																setConversationId(conversation.id);
 															}
 														}}
 														className={`wa-conversation-row relative mb-1 flex w-full items-start gap-3 rounded-xl p-3 text-start transition-colors ${active
-															? 'bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] dark:from-slate-800 dark:to-slate-800'
+															? isSplitSecondary
+																? 'bg-[var(--color-primary-50)] ring-1 ring-inset ring-[var(--color-primary-200)] dark:bg-slate-800'
+																: 'bg-gradient-to-r from-[var(--color-primary-50)] to-[var(--color-secondary-50)] dark:from-slate-800 dark:to-slate-800'
 															: 'hover:bg-slate-50 dark:hover:bg-slate-800'
 															}`}
 													>
@@ -7187,7 +7764,7 @@ function WhatsAppWorkspaceContent() {
 								</div>
 							</div>
 						</aside>
-						<section className={`${!conversationId ? 'hidden min-[769px]:flex' : 'flex'} min-h-0 flex-col`}>
+						<section className={`${!conversationId ? 'hidden min-[769px]:flex' : 'flex'} min-h-0 min-w-0 flex-col overflow-hidden`}>
 							{!selectedConversation ? (
 								<Empty title={!isAccountConnected && !demo.settings.enabled ? t.connectToSeeChats : t.selectConversation} />
 							) : (
@@ -7224,7 +7801,7 @@ function WhatsAppWorkspaceContent() {
 												</p>
 											</div>
 										</div>
-										<div className="hidden items-center gap-2 min-[769px]:flex">
+										<div className="hidden items-center gap-1.5 min-[769px]:flex">
 											<button
 												type="button"
 												disabled={demo.settings.enabled || pendingPreferenceActions.has(
@@ -7280,18 +7857,136 @@ function WhatsAppWorkspaceContent() {
 											<button
 												type="button"
 												disabled={demo.settings.enabled}
-												onClick={() => setShowNotes(current => !current)}
-												className={`h-9 rounded-lg border px-3 text-xs font-bold transition-colors ${showNotes
-													? 'border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)] dark:border-slate-600 dark:bg-slate-800'
-													: 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'
-													}`}
-												title={t.notes}
+												onClick={() => {
+													if (secondaryConversationId) {
+														setSecondaryConversationId(null);
+														setSplitPickMode(false);
+														return;
+													}
+													setSplitPickMode(true);
+													toast(t.splitPickHint, { icon: '▦' });
+												}}
+												className={`hidden h-9 w-9 place-items-center rounded-lg border transition-colors disabled:opacity-50 min-[769px]:grid ${
+													secondaryConversationId || splitPickMode
+														? 'border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)]'
+														: 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700'
+												}`}
+												title={
+													secondaryConversationId
+														? t.closeSplitChat
+														: t.openSplitChat
+												}
+												aria-label={
+													secondaryConversationId
+														? t.closeSplitChat
+														: t.openSplitChat
+												}
 											>
-												<span className="inline-flex items-center gap-1.5">
-													<StickyNote size={14} />
-													{t.notes}
-												</span>
+												<Columns2 size={16} />
 											</button>
+											<div className="relative" data-wa-notes-popover>
+												<button
+													type="button"
+													disabled={demo.settings.enabled}
+													onClick={() => setShowNotes(current => !current)}
+													className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-bold transition-colors ${showNotes
+														? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200'
+														: 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'
+														}`}
+													title={t.notes}
+													aria-expanded={showNotes}
+												>
+													<StickyNote size={14} />
+													<span className="hidden xl:inline">{t.notes}</span>
+													{notes.length > 0 ? (
+														<span className="grid h-4 min-w-4 place-items-center rounded-full bg-amber-500 px-1 text-[9px] font-black text-white">
+															{notes.length > 9 ? '9+' : notes.length}
+														</span>
+													) : null}
+												</button>
+												{showNotes ? (
+													<div className="absolute end-0 top-[calc(100%+8px)] z-40 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-amber-200/90 bg-white shadow-xl shadow-amber-900/10 dark:border-amber-900/50 dark:bg-slate-900">
+														<div className="flex items-start justify-between gap-2 border-b border-amber-100 bg-amber-50/80 px-3 py-2.5 dark:border-amber-900/40 dark:bg-amber-950/30">
+															<div className="min-w-0">
+																<p className="text-xs font-black text-amber-950 dark:text-amber-100">
+																	{t.notes}
+																</p>
+																<p className="text-[11px] leading-snug text-amber-800/80 dark:text-amber-200/70">
+																	{t.notesHint}
+																</p>
+															</div>
+															<button
+																type="button"
+																onClick={() => setShowNotes(false)}
+																className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-amber-800/70 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-950/50"
+																aria-label={locale === 'ar' ? 'إغلاق' : 'Close'}
+															>
+																<X size={14} />
+															</button>
+														</div>
+														<div className="max-h-48 space-y-2 overflow-y-auto px-3 py-2.5 nice-scroll">
+															{loadingNotes ? (
+																<div className="flex justify-center py-4 text-amber-700">
+																	<Loader2 size={16} className="animate-spin" />
+																</div>
+															) : notes.length === 0 ? (
+																<p className="py-3 text-center text-xs text-slate-500">
+																	{t.noNotes}
+																</p>
+															) : (
+																notes.map(note => (
+																	<div
+																		key={note.id}
+																		className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2 text-xs dark:border-slate-800 dark:bg-slate-800/60"
+																	>
+																		<div className="mb-1 flex items-center justify-between gap-2">
+																			<span className="font-bold text-slate-700 dark:text-slate-200">
+																				{note.author?.name ||
+																					note.author?.fullName ||
+																					'Staff'}
+																			</span>
+																			<span className="shrink-0 text-[10px] text-slate-400">
+																				{relativeTime(
+																					note.created_at || note.createdAt,
+																					relativeTimeNow,
+																					locale,
+																				)}
+																			</span>
+																		</div>
+																		<p className="whitespace-pre-wrap text-slate-600 dark:text-slate-300">
+																			{note.text}
+																		</p>
+																	</div>
+																))
+															)}
+														</div>
+														<form
+															onSubmit={saveNote}
+															className="flex gap-2 border-t border-slate-100 px-3 py-2.5 dark:border-slate-800"
+														>
+															<input
+																value={noteDraft}
+																onChange={event => setNoteDraft(event.target.value)}
+																placeholder={t.notePlaceholder}
+																maxLength={2000}
+																className="h-9 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-xs outline-none focus:border-amber-300 dark:border-slate-700 dark:bg-slate-950"
+															/>
+															<button
+																type="submit"
+																disabled={savingNote || !noteDraft.trim()}
+																className="h-9 shrink-0 rounded-lg px-3 text-xs font-bold text-white disabled:opacity-50"
+																style={{ background: GRADIENT }}
+															>
+																{savingNote ? (
+																	<Loader2 size={13} className="animate-spin" />
+																) : (
+																	t.addNote
+																)}
+															</button>
+														</form>
+													</div>
+												) : null}
+											</div>
 											{!demo.settings.enabled && canUseWhatsApp &&
 												selectedAccount?.privacySettings?.readReceiptMode === 'manual' && (
 													<button
@@ -7302,18 +7997,38 @@ function WhatsAppWorkspaceContent() {
 														{t.markRead}
 													</button>
 												)}
-											{!demo.settings.enabled && canAssignWhatsApp && <select
-												value={selectedConversation.assignedUserId || ''}
-												onChange={event => assignConversation(event.target.value)}
-												className="h-9 max-w-40 rounded-lg border border-slate-200 bg-transparent px-2 text-xs outline-none dark:border-slate-700"
-											>
-												<option value="">{t.unassign}</option>
-												{staff.map(user => (
-													<option key={user.id} value={user.id}>
-														{user.name}
-													</option>
-												))}
-											</select>}
+											{!demo.settings.enabled && canAssignWhatsApp && (
+												<label
+													className={`relative inline-flex h-9 max-w-[13rem] items-center gap-1.5 rounded-lg border px-2 text-xs font-semibold transition-colors ${
+														selectedConversation.assignedUserId
+															? 'border-[var(--color-primary-200)] bg-[var(--color-primary-50)] text-[var(--color-primary-800)] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100'
+															: 'border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'
+													}`}
+													title={t.assignedTo}
+												>
+													<span className="pointer-events-none absolute -top-2 start-2 rounded bg-white px-1 text-[9px] font-black uppercase tracking-wide text-slate-400 dark:bg-slate-900">
+														{t.assignedTo}
+													</span>
+													<User size={13} className="shrink-0 opacity-60" />
+													<select
+														value={selectedConversation.assignedUserId || ''}
+														onChange={event => assignConversation(event.target.value)}
+														className="h-full min-w-0 flex-1 appearance-none bg-transparent pe-4 outline-none"
+														aria-label={t.assignedTo}
+													>
+														<option value="">{t.unassign}</option>
+														{staff.map(user => (
+															<option key={user.id} value={user.id}>
+																{user.name}
+															</option>
+														))}
+													</select>
+													<ChevronDown
+														size={13}
+														className="pointer-events-none absolute end-1.5 opacity-50"
+													/>
+												</label>
+											)}
 											<button type="button" aria-label="Close conversation" onClick={() => setConversationId(null)} className="rounded-lg p-2 hover:bg-slate-100 min-[769px]:hidden dark:hover:bg-slate-800">
 												<X size={18} />
 											</button>
@@ -7328,62 +8043,12 @@ function WhatsAppWorkspaceContent() {
 
 										</div>
 									</header>
-									{showNotes && (
-										<div className="border-b border-slate-100 bg-amber-50/60 px-3 py-3 dark:border-slate-800 dark:bg-amber-950/20">
-											<div className="mb-2 flex items-center justify-between gap-2">
-												<div>
-													<p className="text-xs font-black text-amber-900 dark:text-amber-200">{t.notes}</p>
-													<p className="text-[11px] text-amber-800/80 dark:text-amber-200/70">{t.notesHint}</p>
-												</div>
-												{loadingNotes && <Loader2 size={14} className="animate-spin text-amber-700" />}
-											</div>
-											<div className="mb-2 max-h-36 space-y-2 overflow-y-auto nice-scroll">
-												{notes.length === 0 && !loadingNotes ? (
-													<p className="text-xs text-amber-800/70 dark:text-amber-200/60">{t.noNotes}</p>
-												) : (
-													notes.map(note => (
-														<div
-															key={note.id}
-															className="rounded-xl border border-amber-200/80 bg-white/80 px-3 py-2 text-xs dark:border-amber-900/50 dark:bg-slate-900/50"
-														>
-															<div className="mb-1 flex items-center justify-between gap-2">
-																<span className="font-bold text-slate-700 dark:text-slate-200">
-																	{note.author?.name || note.author?.fullName || 'Staff'}
-																</span>
-																<span className="text-[10px] text-slate-400">
-																	{relativeTime(note.created_at || note.createdAt, relativeTimeNow, locale)}
-																</span>
-															</div>
-															<p className="whitespace-pre-wrap text-slate-600 dark:text-slate-300">{note.text}</p>
-														</div>
-													))
-												)}
-											</div>
-											<form onSubmit={saveNote} className="flex gap-2">
-												<input
-													value={noteDraft}
-													onChange={event => setNoteDraft(event.target.value)}
-													placeholder={t.notePlaceholder}
-													maxLength={2000}
-													className="h-9 flex-1 rounded-lg border border-amber-200 bg-white px-3 text-xs outline-none dark:border-amber-900/60 dark:bg-slate-900"
-												/>
-												<button
-													type="submit"
-													disabled={savingNote || !noteDraft.trim()}
-													className="h-9 rounded-lg px-3 text-xs font-bold text-white disabled:opacity-50"
-													style={{ background: GRADIENT }}
-												>
-													{savingNote ? <Loader2 size={13} className="animate-spin" /> : t.addNote}
-												</button>
-											</form>
-										</div>
-									)}
 									<div
 										ref={messageBoxRef}
 										onScroll={event => {
 											if (!loadingMessages && event.currentTarget.scrollTop < 50) loadOlder();
 										}}
-										className={`wa-message-wallpaper min-h-0 flex-1 space-y-2 overflow-y-auto bg-[#0B141A] p-4 nice-scroll ${
+										className={`wa-message-wallpaper min-h-0 min-w-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto bg-[#0B141A] p-4 nice-scroll ${
 											Boolean(conversationId) &&
 											aiSuggestionsVisible &&
 											!demo.settings.enabled &&
@@ -7397,22 +8062,31 @@ function WhatsAppWorkspaceContent() {
 											backgroundSize: 'auto, 360px 360px',
 										}}
 									>
-										{loadingMessages ? (
+										{effectiveMessages.length === 0 ? (
 											<div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 text-center">
 												<div className="rounded-2xl bg-white/90 p-4 shadow-sm dark:bg-slate-800/90">
-													<Loader2 size={28} className="animate-spin text-[var(--color-primary-500)]" />
+													{loadingMessages || messagesSyncHint ? (
+														<Loader2 size={28} className="animate-spin text-[var(--color-primary-500)]" />
+													) : (
+														<MessageCircle size={24} className="text-[var(--color-primary-400)]" />
+													)}
 												</div>
-												<p className="text-sm font-semibold text-slate-500">{t.loadingMessages}</p>
-											</div>
-										) : effectiveMessages.length === 0 ? (
-											<div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 text-center">
-												<div className="rounded-2xl bg-white/80 p-4 shadow-sm dark:bg-slate-800/80">
-													<MessageCircle size={24} className="text-[var(--color-primary-400)]" />
-												</div>
-												<p className="text-sm font-semibold text-slate-400">{t.noMessagesYet}</p>
+												<p className="text-sm font-semibold text-slate-500">
+													{loadingMessages || messagesSyncHint
+														? (messagesSyncHint ? t.messagesStillSyncing : t.loadingMessages)
+														: t.noMessagesYet}
+												</p>
 											</div>
 										) : (
 											<>
+												{(loadingMessages || messagesSyncHint) && (
+													<div className="sticky top-0 z-10 mx-auto mb-2 w-fit rounded-full bg-white/95 px-3 py-1 text-[11px] font-semibold text-slate-500 shadow-sm dark:bg-slate-800/95">
+														<span className="inline-flex items-center gap-1.5">
+															<Loader2 size={12} className="animate-spin" />
+															{t.loadingMessages}
+														</span>
+													</div>
+												)}
 												{hasMoreMessages && (
 													<button
 														onClick={loadOlder}
@@ -7450,14 +8124,14 @@ function WhatsAppWorkspaceContent() {
 													const isStickerMessage = !message.text && attachmentTypes.length > 0 && attachmentTypes.every(type => type === 'sticker');
 													const isVisualMediaMessage = !message.text && attachmentTypes.length > 0 && attachmentTypes.every(type => ['image', 'sticker', 'video'].includes(type));
 													return (
-														<div key={row.key} className="wa-message-row">
+														<div key={row.key} className="wa-message-row min-w-0 max-w-full overflow-x-clip">
 															{dayLabel && dayLabel !== previousDayLabel && (
 																<div className="wa-date-separator mx-auto mb-3 mt-4 w-fit rounded-lg border border-black/5 bg-white/90 px-3.5 py-1 text-center text-xs font-semibold text-[#54656F] shadow-sm">
 																	{dayLabel}
 																</div>
 															)}
-																	<div className={`wa-message-line flex ${mine ? 'justify-end' : 'justify-start'} ${message.optimistic ? 'opacity-70' : ''}`}>
-																<div className={`group flex items-start gap-1 ${mine ? 'flex-row-reverse' : ''}`}>
+																	<div className={`wa-message-line flex min-w-0 max-w-full ${mine ? 'justify-end' : 'justify-start'} ${message.optimistic ? 'opacity-70' : ''}`}>
+																<div className={`group flex min-w-0 max-w-full items-start gap-1 ${mine ? 'flex-row-reverse' : ''}`}>
 																<div
 																	onPointerDown={event => startMessageLongPress(event, message)}
 																	onPointerMove={cancelMessageLongPress}
@@ -7535,7 +8209,7 @@ function WhatsAppWorkspaceContent() {
 																				dir={textPresentation.dir}
 																				lang={textPresentation.lang}
 																				style={textPresentation.style}
-																				className="wa-message-text whitespace-pre-wrap wrap-break-word leading-relaxed"
+																				className={`wa-message-text whitespace-pre-wrap wrap-break-word leading-relaxed ${textPresentation.className || ''}`}
 																			>
 																				<WhatsAppFormattedText text={message.text} />
 																			</p>
@@ -7659,10 +8333,11 @@ function WhatsAppWorkspaceContent() {
 											Boolean(conversationId) &&
 											!demo.settings.enabled &&
 											canUseWhatsApp &&
-											aiSuggestionsVisible
+											aiSuggestionsVisible &&
+											Boolean(whatsappAi.settings?.enabled)
 										}
 										settingsEnabled={Boolean(whatsappAi.settings?.enabled)}
-										messagesReady={!loadingMessages}
+										messagesReady={!loadingMessages || effectiveMessages.length > 0}
 										enabling={whatsappAi.settingsSaving}
 										loading={whatsappAi.suggestionsLoading}
 										error={whatsappAi.suggestionsError}
@@ -7718,22 +8393,18 @@ function WhatsAppWorkspaceContent() {
 												</div>
 											)}
 											<button
+												ref={attachButtonRef}
 												type="button"
-												aria-label="Attach file"
-										disabled={sending || recordingVoice}
-										onClick={() => {
-											setStickerPanelOpen(false);
-											setAttachmentSheetOpen(true);
-										}}
-										title="Attachment actions"
-												className="wa-attach-button grid h-11 w-11 shrink-0 place-items-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800"
+												aria-label={locale === 'ar' ? 'المزيد من الخيارات' : 'More options'}
+												disabled={sending || recordingVoice}
+												onClick={() => {
+													setStickerPanelOpen(false);
+													setAttachmentSheetOpen(true);
+												}}
+												title={locale === 'ar' ? 'المزيد من الخيارات' : 'More options'}
+												className="wa-attach-button grid h-11 w-11 shrink-0 place-items-center rounded-full text-[#54656F] transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800"
 											>
-												{/* <Plus size={27}  /> */}
-												<svg className="min-[769px]:hidden" width="25" height="25" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-													<path fillRule="evenodd" clipRule="evenodd" d="M16.9 7.0001C16.9 6.50304 16.4971 6.1001 16 6.1001C15.5029 6.1001 15.1 6.50304 15.1 7.0001V15.1001H7C6.50294 15.1001 6.1 15.503 6.1 16.0001C6.1 16.4972 6.50294 16.9001 7 16.9001H15.1V25.0001C15.1 25.4972 15.5029 25.9001 16 25.9001C16.4971 25.9001 16.9 25.4972 16.9 25.0001V16.9001H25C25.4971 16.9001 25.9 16.4972 25.9 16.0001C25.9 15.503 25.4971 15.1001 25 15.1001H16.9V7.0001Z" fill="#0A0A0A" />
-												</svg>
-
-												<Paperclip size={19} className="hidden min-[769px]:block" />
+												<Plus size={26} strokeWidth={2.25} />
 											</button>
 											{recordingVoice ? (
 												<>
@@ -7790,9 +8461,11 @@ function WhatsAppWorkspaceContent() {
 																}
 															}}
 													rows={1}
-													dir={messageTextPresentation(draft).dir}
+													dir={draftPresentation.dir}
+													lang={draftPresentation.lang}
+													style={draftPresentation.style}
 													placeholder={t.message}
-															className="max-h-28 min-h-11 min-w-0 flex-1 resize-none bg-transparent px-3.5 py-2.5 outline-none"
+															className={`wa-composer-input max-h-28 min-h-11 min-w-0 flex-1 resize-none bg-transparent px-3.5 py-2.5 outline-none ${draftPresentation.className || ''}`}
 														/>
 												<button type="button" aria-label="Stickers" title="Emoji, GIF and stickers" onClick={() => { setAttachmentSheetOpen(false); setStickerPanelOpen(current => !current); }} className="wa-sticker-button wa-input-action grid h-[40px] w-9 shrink-0 place-items-center text-[#8696A0]">
 															<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -7802,9 +8475,9 @@ function WhatsAppWorkspaceContent() {
 														</button>
 
 													</div>
-											<button type="button" aria-label="Camera" title="Camera or photo picker" onClick={() => openComposerFilePicker({ accept: 'image/*', capture: 'environment' })} className="wa-camera-button wa-input-action grid h-11 w-9 shrink-0 place-items-center text-[#8696A0]">
+											<button type="button" aria-label="Camera" title="Camera or photo picker" onClick={() => openComposerFilePicker({ accept: 'image/*', capture: 'environment' })} className="wa-camera-button wa-input-action grid h-11 w-9 shrink-0 place-items-center text-[#8696A0] min-[769px]:hidden">
 														<svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-															<path fillRule="evenodd" clipRule="evenodd" d="M12.3302 7.08112C12.8052 6.52227 13.5016 6.2002 14.235 6.2002H17.762C18.4954 6.2002 19.1918 6.52228 19.6668 7.08112L20.3484 7.88312C20.5193 8.08427 20.77 8.2002 21.034 8.2002H24.7499C26.4344 8.2002 27.7999 9.56573 27.7999 11.2502V21.2502C27.7999 22.9347 26.4344 24.3002 24.75 24.3002H7.24995C5.56548 24.3002 4.19995 22.9347 4.19995 21.2502V11.2502C4.19995 9.56573 5.56548 8.2002 7.24995 8.2002H10.963C11.227 8.2002 11.4777 8.08427 11.6486 7.88312L12.3302 7.08112ZM14.235 7.8002C13.971 7.8002 13.7203 7.91612 13.5494 8.11727L12.8678 8.91927C12.3928 9.47812 11.6964 9.8002 10.963 9.8002H7.24995C6.44914 9.8002 5.79995 10.4494 5.79995 11.2502V21.2502C5.79995 22.051 6.44914 22.7002 7.24995 22.7002H24.75C25.5508 22.7002 26.2 22.051 26.2 21.2502V11.2502C26.2 10.4494 25.5508 9.8002 24.7499 9.8002H21.034C20.3006 9.8002 19.6041 9.47812 19.1292 8.91927L18.4476 8.11727C18.2766 7.91612 18.026 7.8002 17.762 7.8002H14.235ZM15.9984 12.8002C14.0934 12.8002 12.549 14.3445 12.549 16.2496C12.549 18.1546 14.0934 19.6989 15.9984 19.6989C17.9034 19.6989 19.4478 18.1546 19.4478 16.2496C19.4478 14.3445 17.9034 12.8002 15.9984 12.8002ZM10.949 16.2496C10.949 13.4609 13.2097 11.2002 15.9984 11.2002C18.7871 11.2002 21.0478 13.4609 21.0478 16.2496C21.0478 19.0382 18.7871 21.2989 15.9984 21.2989C13.2097 21.2989 10.949 19.0382 10.949 16.2496ZM22.65 13.8002C23.3404 13.8002 23.9 13.2405 23.9 12.5502C23.9 11.8598 23.3404 11.3002 22.65 11.3002C21.9597 11.3002 21.4 11.8598 21.4 12.5502C21.4 13.2405 21.9597 13.8002 22.65 13.8002Z" fill="#0A0A0A" />
+															<path fillRule="evenodd" clipRule="evenodd" d="M12.3302 7.08112C12.8052 6.52227 13.5016 6.2002 14.235 6.2002H17.762C18.4954 6.2002 19.1918 6.52228 19.6668 7.08112L20.3484 7.88312C20.5193 8.08427 20.77 8.2002 21.034 8.2002H24.7499C26.4344 8.2002 27.7999 9.56573 27.7999 11.2502V21.2502C27.7999 22.9347 26.4344 24.3002 24.75 24.3002H7.24995C5.56548 24.3002 4.19995 22.9347 4.19995 21.2502V11.2502C4.19995 9.56573 5.56548 8.2002 7.24995 8.2002H10.963C11.227 8.2002 11.4777 8.08427 11.6486 7.88312L12.3302 7.08112ZM14.235 7.8002C13.971 7.8002 13.7203 7.91612 13.5494 8.11727L12.8678 8.91927C12.3928 9.47812 11.6964 9.8002 10.963 9.8002H7.24995C6.44914 9.8002 5.79995 10.4494 5.79995 11.2502V21.2502C5.79995 22.051 6.44914 22.7002 7.24995 22.7002H24.75C25.5508 22.7002 26.2 22.051 26.2 21.2502V11.2502C26.2 10.4494 25.5508 9.8002 24.7499 9.8002H21.034C20.3006 9.8002 19.6041 9.47812 19.1292 8.91927L18.4476 8.11727C18.2766 7.91612 18.026 7.8002 17.762 7.8002H14.235ZM15.9984 12.8002C14.0934 12.8002 12.549 14.3445 12.549 16.2496C12.549 18.1546 14.0934 19.6989 15.9984 19.6989C17.9034 19.6989 19.4478 18.1546 19.4478 16.2496C19.4478 14.3445 17.9034 12.8002 15.9984 12.8002ZM10.949 16.2496C10.949 13.4609 13.2097 11.2002 15.9984 11.2002C18.7871 11.2002 21.0478 13.4609 21.0478 16.2496C21.0478 19.0382 18.7871 21.2989 15.9984 21.2989C13.2097 21.2989 10.949 19.0382 10.949 16.2496ZM22.65 13.8002C23.3404 13.8002 23.9 13.2405 23.9 12.5502C23.9 11.8598 23.3404 11.3002 22.65 11.3002C21.9597 11.3002 21.4 11.8598 21.4 12.5502C21.4 13.2405 21.9597 13.8002 22.65 13.8002Z" fill="currentColor" />
 														</svg>
 
 													</button>
@@ -7814,13 +8487,14 @@ function WhatsAppWorkspaceContent() {
 														title={t.recordVoice}
 														aria-label={t.recordVoice}
 														onClick={startVoiceRecording}
-														className={`wa-mic-button grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:border-[var(--color-primary-300)] hover:bg-[var(--color-primary-50)] hover:text-[var(--color-primary-500)] disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-800 ${draft.trim() ? 'max-[768px]:hidden' : ''}`}
+														className={`wa-mic-button grid h-11 w-11 shrink-0 place-items-center rounded-full border border-slate-200 bg-white text-[#54656F] shadow-sm transition-colors hover:border-[var(--color-primary-300)] hover:bg-[var(--color-primary-50)] hover:text-[var(--color-primary-600)] disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800 ${draft.trim() ? 'max-[768px]:hidden' : ''}`}
 													>
-														{/* <Mic size={19} /> */}
-														<svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-															<path fillRule="evenodd" fill='currentColor' clipRule="evenodd" d="M11.6996 8.3C11.6996 5.92518 13.6248 4 15.9996 4C18.3744 4 20.2996 5.92518 20.2996 8.3V15.8C20.2996 18.1748 18.3744 20.1 15.9996 20.1C13.6248 20.1 11.6996 18.1748 11.6996 15.8V8.3ZM15.9996 5.6C14.5084 5.6 13.2996 6.80883 13.2996 8.3V15.8C13.2996 17.2912 14.5084 18.5 15.9996 18.5C17.4908 18.5 18.6996 17.2912 18.6996 15.8V8.3C18.6996 6.80883 17.4908 5.6 15.9996 5.6ZM8.99958 15C9.44141 15 9.79959 15.3582 9.79958 15.8C9.79958 16.6142 9.95995 17.4204 10.2715 18.1726C10.5831 18.9249 11.0398 19.6083 11.6155 20.1841C12.1912 20.7598 12.8747 21.2165 13.6269 21.5281C14.3792 21.8396 15.1854 22 15.9996 22C16.8138 22 17.62 21.8396 18.3722 21.5281C19.1244 21.2165 19.8079 20.7598 20.3836 20.1841C20.9594 19.6083 21.4161 18.9249 21.7276 18.1726C22.0392 17.4204 22.1996 16.6142 22.1996 15.8C22.1996 15.3582 22.5578 15 22.9996 15C23.4414 15 23.7996 15.3582 23.7996 15.8C23.7996 16.8243 23.5978 17.8386 23.2058 18.7849C22.8139 19.7313 22.2393 20.5911 21.515 21.3154C20.7907 22.0397 19.9309 22.6143 18.9845 23.0063C18.2856 23.2958 17.5496 23.4815 16.7999 23.5588V26C16.7999 26.4418 16.4418 26.8 15.9999 26.8C15.5581 26.8 15.1999 26.4418 15.1999 26V23.5589C14.45 23.4816 13.7138 23.2958 13.0147 23.0063C12.0683 22.6143 11.2084 22.0397 10.4842 21.3154C9.75985 20.5911 9.18531 19.7313 8.79332 18.7849C8.40134 17.8386 8.19958 16.8243 8.19958 15.8C8.19958 15.3582 8.55776 15 8.99958 15Z" fill="#fff" />
+														<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+															<path
+																fill="currentColor"
+																d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"
+															/>
 														</svg>
-
 													</button>
 													<button
 														type="submit"
@@ -7843,6 +8517,19 @@ function WhatsAppWorkspaceContent() {
 								</>
 							)}
 						</section>
+						{selectedSecondaryConversation ? (
+							<WhatsAppSplitPane
+								conversation={selectedSecondaryConversation}
+								accountId={accountId}
+								locale={locale}
+								labels={t}
+								canCompose={canUseWhatsApp && !demo.settings.enabled}
+								onClose={() => {
+									setSecondaryConversationId(null);
+									setSplitPickMode(false);
+								}}
+							/>
+						) : null}
 					</Card>
 				)}
 

@@ -92,6 +92,34 @@
 	}
 }
 
+/* Desktop focus/offset: small inset so edge dock never covers content.
+   No top padding — full-width mode should stay flush with the top. */
+@media (min-width: 1024px) {
+	:root {
+		--sidebar-offset-pad-inline: 44px;
+		--sidebar-offset-pad-top: 0px;
+	}
+
+	[data-dashboard-content] #body {
+		transition:
+			padding 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+			padding-inline-start 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+			padding-block-start 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	[data-sidebar-offset='true'] #body {
+		padding-inline-start: max(0.75rem, var(--sidebar-offset-pad-inline)) !important;
+		padding-block-start: 0 !important;
+	}
+
+	[data-sidebar-offset='true'] #body:has(.wa-mobile-shell) {
+		padding-inline-start: max(0.75rem, var(--sidebar-offset-pad-inline)) !important;
+		padding-block-start: 0 !important;
+		padding-inline-end: 1rem !important;
+		padding-block-end: 1rem !important;
+	}
+}
+
 html[dir='ltr'] .sidebar-shell.sidebar-glass.is-mobile-drawer {
 	border-start-end-radius: 1rem !important;
 	border-end-end-radius: 1rem !important;
@@ -102,13 +130,19 @@ html[dir='ltr'] .sidebar-shell.sidebar-glass.is-mobile-drawer {
 	min-height: 0;
 }
 
+.sidebar-shell.sidebar-glass .sidebar-scroll-viewport {
+	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none; /* IE/Edge legacy */
+}
+
 .sidebar-shell.sidebar-glass .sidebar-scroll-viewport::-webkit-scrollbar {
-	width: 4px;
+	width: 0;
+	height: 0;
+	display: none;
 }
 
 .sidebar-shell.sidebar-glass .sidebar-scroll-viewport::-webkit-scrollbar-thumb {
-	background: color-mix(in srgb, var(--color-primary-300, #93c5fd) 55%, transparent);
-	border-radius: 99px;
+	background: transparent;
 }
 
 html[dir='rtl'] .sidebar-shell.sidebar-glass.is-mobile-drawer {
@@ -226,3 +260,91 @@ html[dir='rtl'] .sidebar-shell.sidebar-glass.is-mobile-drawer {
 		transition: none !important;
 	}
 }
+
+/* ── Desktop edge controls (collapse + offset dock) ── */
+.sidebar-edge-dock {
+	flex-direction: column;
+	align-items: center;
+	padding: 5px;
+	border-radius: 999px;
+	background: color-mix(in srgb, #fff 58%, transparent);
+	border: 1px solid color-mix(in srgb, var(--color-primary-200, #bfdbfe) 38%, transparent);
+	box-shadow:
+		0 8px 24px -12px rgba(15, 23, 42, 0.2),
+		inset 0 1px 0 rgba(255, 255, 255, 0.55);
+	-webkit-backdrop-filter: blur(18px) saturate(165%);
+	backdrop-filter: blur(18px) saturate(165%);
+}
+
+.sidebar-edge-dock.is-offset {
+	background: color-mix(in srgb, #fff 52%, var(--color-primary-100, #dbeafe) 18%);
+	border-color: color-mix(in srgb, var(--color-primary-300, #93c5fd) 42%, transparent);
+}
+
+.sidebar-edge-btn {
+	width: 30px;
+	height: 30px;
+	border: none;
+	border-radius: 999px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: color-mix(in srgb, #fff 35%, transparent);
+	color: var(--color-primary-700, #1d4ed8);
+	cursor: pointer;
+	outline: none;
+	box-shadow: none;
+	transition:
+		background 0.18s ease,
+		color 0.18s ease,
+		transform 0.15s ease;
+}
+
+.sidebar-edge-btn:hover {
+	background: color-mix(in srgb, var(--color-primary-500, #3b82f6) 18%, rgba(255, 255, 255, 0.72));
+	color: var(--color-primary-800, #1e40af);
+}
+
+.sidebar-edge-btn:active {
+	transform: scale(0.94);
+}
+
+.sidebar-edge-btn:focus {
+	outline: none;
+	box-shadow: none;
+}
+
+.sidebar-edge-btn:focus-visible {
+	outline: 2px solid color-mix(in srgb, var(--color-primary-400, #60a5fa) 85%, transparent);
+	outline-offset: 2px;
+}
+
+.sidebar-edge-btn.is-active {
+	background: linear-gradient(
+		135deg,
+		var(--color-gradient-from, var(--color-primary-600)),
+		var(--color-gradient-to, var(--color-primary-500))
+	);
+	color: #fff;
+	box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--color-primary-600) 55%, transparent);
+}
+
+.sidebar-edge-btn.is-active:hover {
+	background: linear-gradient(
+		135deg,
+		var(--color-gradient-from, var(--color-primary-600)),
+		var(--color-gradient-to, var(--color-primary-500))
+	);
+	color: #fff;
+	filter: brightness(1.05);
+}
+
+.sidebar-edge-divider {
+	width: 18px;
+	height: 1px;
+	margin: 3px 0;
+	background: color-mix(in srgb, var(--color-primary-300, #93c5fd) 45%, transparent);
+	border-radius: 99px;
+	flex-shrink: 0;
+}
+

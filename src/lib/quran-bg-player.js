@@ -210,7 +210,9 @@ export function syncSession({
 		const ayah = state.verses[verseIndex];
 		if (ayah && state.surahId) {
 			const url = ayahAudioUrl(rec.folder, state.surahId, ayah.n);
-			const same = el.src && el.src.includes(`${String(state.surahId).padStart(3, '0')}${String(ayah.n).padStart(3, '0')}`);
+			// Must include folder — same ayah digits with a different reciter is not "same".
+			const same = Boolean(el.src && url && el.src.includes(`/${rec.folder}/`)
+				&& el.src.includes(`${String(state.surahId).padStart(3, '0')}${String(ayah.n).padStart(3, '0')}`));
 			if (!same || el.paused) {
 				if (playing) playAt(verseIndex, verseRepeat, completedRepeats, { autoplay: true });
 				else {

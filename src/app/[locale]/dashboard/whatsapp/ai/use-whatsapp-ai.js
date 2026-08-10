@@ -122,12 +122,21 @@ export function useWhatsAppAi({
 	const saveSettings = useCallback(
 		async patch => {
 			if (!accountId) return null;
+			const previous = settings;
+			const optimistic = { ...settings, ...patch };
+			// Flip the switch immediately; roll back if the API fails.
+			setSettings(optimistic);
 			setSettingsSaving(true);
 			setSettingsError('');
+			if (!optimistic.enabled) {
+				suggestionAbortRef.current?.abort();
+				setSuggestions([]);
+				setSuggestionsError('');
+			}
 			try {
 				const saved = await whatsappAiApi.updateSettings(
 					accountId,
-					settingsPayload({ ...settings, ...patch }),
+					settingsPayload(optimistic),
 				);
 				const normalized = { ...DEFAULT_SETTINGS, ...(saved || {}) };
 				setSettings(normalized);
@@ -138,6 +147,13 @@ export function useWhatsAppAi({
 				}
 				return normalized;
 			} catch (error) {
+				setSettings(previous);
+				if (previous.enabled) {
+					// Keep prior suggestions when rollback restores enabled=true.
+				} else {
+					suggestionAbortRef.current?.abort();
+					setSuggestions([]);
+				}
 				setSettingsError(errorMessage(error, 'Could not save AI settings.'));
 				throw error;
 			} finally {

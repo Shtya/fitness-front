@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import api from '@/utils/axios';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil, GraduationCap, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
@@ -28,9 +28,14 @@ const SIDEBAR_W = 272;
 const SIDEBAR_W_COLLAPSED = 72;
 const SIDEBAR_MARGIN = 16;
 const SIDEBAR_MARGIN_BOTTOM = 15;
+/** Space reserved on the page edge when sidebar is offset (focus mode) — clears the edge dock */
+export const SIDEBAR_OFFSET_PAD_INLINE = 72;
+export const SIDEBAR_OFFSET_PAD_TOP = 40;
+const EDGE_DOCK_TOP = SIDEBAR_MARGIN + 30;
 const SIDEBAR_RADIUS = 22;
 const SIDEBAR_FONT_LTR = "var(--font-inter), 'Segoe UI', system-ui, -apple-system, sans-serif";
 const LS_COLLAPSED = 'sidebar:collapsed';
+const LS_OFFSET = 'sidebar:offset';
 const LS_HIDDEN = 'sidebar:hidden-items';
 const LS_MARKETPLACE = 'sidebar:marketplace-installed';
 const LS_MARKETPLACE_OUTREACH_MIGRATE = 'sidebar:marketplace-outreach-v1';
@@ -250,6 +255,7 @@ export const ITEM_META = {
   transcript: { id: 'transcript', nameKey: 'transcript', href: '/dashboard/transcript', icon: AudioLines, descKey: 'descriptions.transcript', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
   calorieCalculator: { id: 'calorieCalculator', nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator, descKey: 'descriptions.calorieCalculator', group: 'tools', defaultVisible: true, required: false },
   aiFree: { id: 'aiFree', nameKey: 'aiFree', href: '/dashboard/ai-free', icon: BrainCircuit, descKey: 'descriptions.aiFree', group: 'tools', defaultVisible: true, required: false },
+  learning: { id: 'learning', nameKey: 'learning', href: '/dashboard/learning', icon: GraduationCap, descKey: 'descriptions.learning', group: 'tools', defaultVisible: true, required: false },
   quranRevision: { id: 'quranRevision', nameKey: 'quranRevision', href: '/dashboard/quran-revision', icon: BookMarked, descKey: 'descriptions.quranRevision', group: 'tools', defaultVisible: true, required: false },
   phoneCheck: { id: 'phoneCheck', nameKey: 'phoneCheck', href: '/dashboard/phone-check', icon: ShieldAlert, descKey: 'descriptions.phoneCheck', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
   fitnessLeads: { id: 'fitnessLeads', nameKey: 'fitnessLeads', href: '/dashboard/fitness-leads', icon: Radar, descKey: 'descriptions.fitnessLeads', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
@@ -299,6 +305,7 @@ export const NAV = [
       { ...ITEM_META.notifications },
       { ...ITEM_META.calorieCalculator },
       { ...ITEM_META.aiFree },
+      { ...ITEM_META.learning },
       { ...ITEM_META.quranRevision },
     ],
   },
@@ -335,6 +342,7 @@ export const NAV = [
       { ...ITEM_META.transcript },
       { ...ITEM_META.calorieCalculator },
       { ...ITEM_META.aiFree },
+      { ...ITEM_META.learning },
       { ...ITEM_META.quranRevision },
       { ...ITEM_META.money },
       { ...ITEM_META.profile_client },
@@ -371,6 +379,7 @@ export const NAV = [
       { ...ITEM_META.notifications },
       { ...ITEM_META.calorieCalculator },
       { ...ITEM_META.aiFree },
+      { ...ITEM_META.learning },
       { ...ITEM_META.quranRevision },
     ],
   },
@@ -402,7 +411,7 @@ export const NAV = [
   {
     role: 'super_admin',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.aiFree }, { ...ITEM_META.quranRevision }],
+    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.aiFree }, { ...ITEM_META.learning }, { ...ITEM_META.quranRevision }],
   },
   {
     role: 'super_admin',
@@ -858,7 +867,8 @@ function ScrollShadow({ children, P }) {
           overscrollBehavior: 'contain',
           WebkitOverflowScrolling: 'touch',
           touchAction: 'pan-y',
-          scrollbarWidth: 'thin',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
         }}
       >
         {children}
@@ -2888,10 +2898,101 @@ function SidebarFooter({ collapsed, onLogout, logoutLabel, sections, isHidden, t
   );
 }
 
+const EDGE_COPY = {
+  en: {
+    collapse: 'Collapse sidebar',
+    expand: 'Expand sidebar',
+    hide: 'Hide sidebar for full width',
+    show: 'Show sidebar',
+  },
+  ar: {
+    collapse: 'طي الشريط الجانبي',
+    expand: 'توسيع الشريط الجانبي',
+    hide: 'إخفاء الشريط لمساحة أكبر',
+    show: 'إظهار الشريط الجانبي',
+  },
+};
+
+function blurControl(event) {
+  event.currentTarget.blur();
+}
+
+function SidebarEdgeControls({ collapsed, focusMode, setCollapsed, setFocusMode, edgeInset, isRTL, locale }) {
+  const edge = EDGE_COPY[locale?.startsWith('ar') ? 'ar' : 'en'];
+  const collapseLabel = focusMode
+    ? edge.show
+    : collapsed
+      ? edge.expand
+      : edge.collapse;
+  const offsetLabel = focusMode ? edge.show : edge.hide;
+
+  const handleCollapseClick = event => {
+    if (focusMode) {
+      setFocusMode(false);
+      if (collapsed) setCollapsed(false);
+      else setCollapsed(true);
+    } else {
+      setCollapsed(v => !v);
+    }
+    blurControl(event);
+  };
+
+  return (
+    <div
+      className={`sidebar-edge-dock hidden lg:flex ${focusMode ? 'is-offset' : ''}`}
+      style={{
+        position: 'fixed',
+        top: EDGE_DOCK_TOP,
+        [isRTL ? 'right' : 'left']: edgeInset,
+        zIndex: 1001,
+        transition: `${isRTL ? 'right' : 'left'} .28s cubic-bezier(0.22,1,0.36,1)`,
+      }}
+    >
+      <motion.button
+        type="button"
+        className="sidebar-edge-btn"
+        onClick={handleCollapseClick}
+        whileHover={{ scale: 1.06 }}
+        whileTap={{ scale: 0.92 }}
+        aria-label={collapseLabel}
+        title={collapseLabel}
+      >
+        {collapsed ? (
+          <ChevronRight className="rtl:scale-x-[-1]" style={{ width: 14, height: 14 }} strokeWidth={2.5} />
+        ) : (
+          <ChevronLeft className="rtl:scale-x-[-1]" style={{ width: 14, height: 14 }} strokeWidth={2.5} />
+        )}
+      </motion.button>
+
+      <span className="sidebar-edge-divider" aria-hidden="true" />
+
+      <motion.button
+        type="button"
+        className={`sidebar-edge-btn ${focusMode ? 'is-active' : ''}`}
+        onClick={event => {
+          setFocusMode(v => !v);
+          blurControl(event);
+        }}
+        whileHover={{ scale: 1.06 }}
+        whileTap={{ scale: 0.92 }}
+        aria-label={offsetLabel}
+        title={offsetLabel}
+        aria-pressed={focusMode}
+      >
+        {focusMode ? (
+          <PanelLeftOpen className="rtl:scale-x-[-1]" style={{ width: 14, height: 14 }} strokeWidth={2.5} />
+        ) : (
+          <PanelLeftClose className="rtl:scale-x-[-1]" style={{ width: 14, height: 14 }} strokeWidth={2.5} />
+        )}
+      </motion.button>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════════
    MAIN EXPORT
 ═══════════════════════════════════════════════════════════════ */
-export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCollapsed: setCollapsedProp }) {
+export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCollapsed: setCollapsedProp, focusMode: focusModeProp, setFocusMode: setFocusModeProp }) {
   const pathname = useNextPathname();
   const searchParams = useSearchParams();
   const router = useI18nRouter();
@@ -2909,10 +3010,15 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
   const collapsed = typeof collapsedProp === 'boolean' ? collapsedProp : collapsedLS;
   const setCollapsed = typeof setCollapsedProp === 'function' ? setCollapsedProp : setCollapsedLS;
 
+  const [focusModeLS, setFocusModeLS] = useLocalStorageState(LS_OFFSET, false);
+  const focusMode = typeof focusModeProp === 'boolean' ? focusModeProp : focusModeLS;
+  const setFocusMode = typeof setFocusModeProp === 'function' ? setFocusModeProp : setFocusModeLS;
+
   const { isHidden, toggle: toggleHidden, resetAll } = useHiddenItems();
   const { isInstalled, toggle: toggleInstalled } = useMarketplaceItems();
   const { labels, getLabel, setLabel, resetLabels } = useCustomLabels();
   const { paletteKey, setPaletteKey, palette: P } = useSidebarPalette();
+  const locale = useLocale();
   const isRTL = getDir() === 'rtl';
 
   const sections = useMemo(() => {
@@ -2936,54 +3042,37 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 
   /* ── Desktop Sidebar ── */
   const sidebarEdge = SIDEBAR_MARGIN + (collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W);
+  // ~40px dock — sit on the sidebar edge, slightly inset (not floating outside)
+  const edgeInset = focusMode ? 10 : sidebarEdge - 30;
   const DesktopSidebar = (
     <>
-      <motion.button
-        onClick={() => setCollapsed(v => !v)}
-        whileHover={{ scale: 1.08 }}
-        whileTap={{ scale: 0.94 }}
-        className='hidden lg:flex'
-        style={{
-          position: 'fixed',
-          // Center without CSS translateY — Framer Motion overrides transform on hover
-          // and was dropping the button downward when translateY(-50%) got replaced.
-          top: SIDEBAR_MARGIN + 34 - 13,
-          [isRTL ? 'right' : 'left']: sidebarEdge - 13,
-          zIndex: 1001,
-          width: 26,
-          height: 26,
-          borderRadius: '50%',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: P.bgCard,
-          border: `1.5px solid ${P.border}`,
-          color: 'var(--color-primary-600)',
-          cursor: 'pointer',
-          boxShadow: '0 6px 16px rgba(15,23,42,0.14), 0 2px 6px rgba(15,23,42,0.07)',
-          transition: `${isRTL ? 'right' : 'left'} .28s cubic-bezier(0.22,1,0.36,1)`,
-          transformOrigin: 'center center',
-        }}
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-        {collapsed ? (
-          <ChevronRight className='rtl:scale-x-[-1]' style={{ width: 13, height: 13 }} strokeWidth={2.5} />
-        ) : (
-          <ChevronLeft className='rtl:scale-x-[-1]' style={{ width: 13, height: 13 }} strokeWidth={2.5} />
-        )}
-      </motion.button>
+      <SidebarEdgeControls
+        collapsed={collapsed}
+        focusMode={focusMode}
+        setCollapsed={setCollapsed}
+        setFocusMode={setFocusMode}
+        edgeInset={edgeInset}
+        isRTL={isRTL}
+        locale={locale}
+      />
       <aside
-      className='sidebar-shell sidebar-glass hidden lg:flex flex-col shrink-0 ltr:ml-4 rtl:mr-4 ltr:mr-6 rtl:ml-6'
+      className={`sidebar-shell sidebar-glass hidden lg:flex flex-col shrink-0 ${focusMode ? '' : 'ltr:ml-4 rtl:mr-4 ltr:mr-6 rtl:ml-6'}`}
       style={{
-        width: collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W,
+        width: focusMode ? 0 : collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W,
         height: `calc(100vh - ${SIDEBAR_MARGIN + SIDEBAR_MARGIN_BOTTOM}px)`,
-        marginTop: SIDEBAR_MARGIN,
-        marginBottom: SIDEBAR_MARGIN_BOTTOM,
+        marginTop: focusMode ? 0 : SIDEBAR_MARGIN,
+        marginBottom: focusMode ? 0 : SIDEBAR_MARGIN_BOTTOM,
+        marginLeft: focusMode ? 0 : undefined,
+        marginRight: focusMode ? 0 : undefined,
         position: 'relative',
         zIndex: 1000,
         overflow: 'hidden',
         borderRadius: 'var(--tenant-radius-card, 16px)',
         background: P.bg,
-        transition: 'width .28s cubic-bezier(0.22,1,0.36,1)',
+        opacity: focusMode ? 0 : 1,
+        pointerEvents: focusMode ? 'none' : 'auto',
+        transform: focusMode ? `translateX(${isRTL ? '120%' : '-120%'})` : 'translateX(0)',
+        transition: 'width .28s cubic-bezier(0.22,1,0.36,1), opacity .22s ease, transform .28s cubic-bezier(0.22,1,0.36,1), margin .28s cubic-bezier(0.22,1,0.36,1)',
         fontFamily: isRTL ? undefined : SIDEBAR_FONT_LTR,
       }}>
       {/* Ambient glass wash */}
