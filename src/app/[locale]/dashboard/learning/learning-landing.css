@@ -2086,20 +2086,37 @@
 	min-width: 210px;
 	padding: 6px;
 	border-radius: 14px;
-	border: 1px solid color-mix(in srgb, var(--learn-ink) 10%, transparent);
-	background: var(--learn-card);
-	box-shadow: 0 18px 40px -24px color-mix(in srgb, var(--learn-ink) 45%, transparent);
+	border: 1px solid color-mix(in srgb, var(--learn-ink, #171b3d) 10%, transparent);
+	background: var(--learn-card, #ffffff);
+	box-shadow: 0 18px 40px -24px color-mix(in srgb, var(--learn-ink, #171b3d) 45%, transparent);
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
 }
 
-/* Rendered via portal on document.body — escapes header overflow:hidden */
+/* Rendered via portal on document.body — escapes header overflow:hidden.
+   Must use solid fallbacks: .learning-landing CSS vars are out of scope on body. */
 .learning-path-menu__panel--portal {
 	position: fixed;
 	top: auto;
 	inset-inline-end: auto;
 	z-index: 99999;
+	isolation: isolate;
+	background: #ffffff;
+	color: #171b3d;
+	border: 1px solid rgba(23, 27, 61, 0.12);
+	box-shadow:
+		0 22px 48px -18px rgba(15, 23, 42, 0.38),
+		0 8px 18px -10px rgba(15, 23, 42, 0.16);
+}
+
+.dark .learning-path-menu__panel--portal {
+	background: #1e293b;
+	color: #eef1fb;
+	border-color: rgba(148, 163, 184, 0.22);
+	box-shadow:
+		0 22px 48px -18px rgba(0, 0, 0, 0.55),
+		0 8px 18px -10px rgba(0, 0, 0, 0.35);
 }
 
 .learning-path-menu__panel button {
@@ -2111,16 +2128,20 @@
 	padding: 10px 12px;
 	font-size: 13px;
 	font-weight: 600;
-	color: var(--learn-ink);
+	color: inherit;
 	cursor: pointer;
 }
 
 .learning-path-menu__panel button:hover {
-	background: color-mix(in srgb, var(--learn-ink) 6%, transparent);
+	background: color-mix(in srgb, currentColor 8%, transparent);
 }
 
 .learning-path-menu__panel button.is-danger {
 	color: #b42318;
+}
+
+.dark .learning-path-menu__panel button.is-danger {
+	color: #f97066;
 }
 
 .learning-path-tree {
@@ -4385,6 +4406,68 @@ button.learning-roadmap-node:hover {
 .learning-video-action:disabled {
 	opacity: 0.55;
 	cursor: wait;
+}
+
+.learning-video-summary {
+	border: 1px solid color-mix(in srgb, var(--learn-h-teal) 28%, transparent);
+	border-radius: 16px;
+	background: color-mix(in srgb, var(--color-primary-50) 55%, var(--learn-card));
+	padding: 14px 16px;
+}
+
+.learning-video-summary__head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+	color: var(--learn-ink);
+}
+
+.learning-video-summary__head strong {
+	font-size: 13px;
+	font-weight: 750;
+}
+
+.learning-video-summary__head span {
+	font-size: 11px;
+	font-weight: 650;
+	color: var(--learn-ink-soft);
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--learn-ink) 6%, transparent);
+}
+
+.learning-video-summary__tldr {
+	margin: 0;
+	font-size: 13.5px;
+	font-weight: 600;
+	line-height: 1.5;
+	color: var(--learn-ink);
+}
+
+.learning-video-summary__list,
+.learning-topic-summary-list {
+	margin: 10px 0 0;
+	padding-inline-start: 18px;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	color: var(--learn-ink-soft);
+	font-size: 12.5px;
+	line-height: 1.45;
+}
+
+.learning-video-summary__list.is-takeaways,
+.learning-topic-summary-list.is-takeaways {
+	color: var(--learn-ink);
+	font-weight: 550;
+}
+
+.learning-topic-study-summary-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
 }
 
 .learning-video-transcript {

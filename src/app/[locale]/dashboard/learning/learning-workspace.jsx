@@ -113,6 +113,8 @@ function LearningPathIndex({
 	const [editing, setEditing] = useState(null);
 	const [collapsedSections, setCollapsedSections] = useState(() => new Set());
 	const activeTopicRef = useRef(null);
+	const sectionsRef = useRef(path.sections);
+	sectionsRef.current = path.sections;
 
 	const clearPending = () => setPendingDelete(null);
 
@@ -130,9 +132,11 @@ function LearningPathIndex({
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [collapseNonce]);
 
+	// Only react to topic selection — not to checkbox/progress updates on path.sections,
+	// otherwise the index jumps back to the active topic while you're scrolled elsewhere.
 	useEffect(() => {
 		if (!topicId) return;
-		const section = (path.sections || []).find(item =>
+		const section = (sectionsRef.current || []).find(item =>
 			(item.topics || []).some(topic => topic.id === topicId),
 		);
 		if (section?.id) {
@@ -147,7 +151,7 @@ function LearningPathIndex({
 			activeTopicRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 		});
 		return () => window.cancelAnimationFrame(frame);
-	}, [topicId, path.sections]);
+	}, [topicId]);
 
 	const toggleSection = sectionId => {
 		setCollapsedSections(current => {
@@ -718,7 +722,8 @@ function TopicContentBlock({ topic, t, locale = 'en', onPatch, readOnly = false,
 }
 
 function TopicSummaryBlock({ topic, t, readOnly = false, embedded = false }) {
-	if (!topic.summary?.tldr) {
+	const summary = topic.summary;
+	if (!summary?.tldr) {
 		if (readOnly) return null;
 		return (
 			<TopicBlock title={t.summary} icon={Sparkles} embedded={embedded}>
@@ -726,15 +731,36 @@ function TopicSummaryBlock({ topic, t, readOnly = false, embedded = false }) {
 			</TopicBlock>
 		);
 	}
+
+	const body = (
+		<>
+			<p className={readOnly ? 'learning-topic-study-summary' : 'mt-2 text-sm font-semibold text-[var(--learn-ink)]'}>
+				{summary.tldr}
+			</p>
+			{Array.isArray(summary.keyConcepts) && summary.keyConcepts.length ? (
+				<ul className="learning-topic-summary-list">
+					{summary.keyConcepts.slice(0, 8).map((item, index) => (
+						<li key={`sum-concept-${index}`}>{item}</li>
+					))}
+				</ul>
+			) : null}
+			{Array.isArray(summary.takeaways) && summary.takeaways.length ? (
+				<ul className="learning-topic-summary-list is-takeaways">
+					{summary.takeaways.slice(0, 6).map((item, index) => (
+						<li key={`sum-takeaway-${index}`}>{item}</li>
+					))}
+				</ul>
+			) : null}
+		</>
+	);
+
 	if (readOnly) {
-		return (
-			<p className="learning-topic-study-summary">{topic.summary.tldr}</p>
-		);
+		return <div className="learning-topic-study-summary-wrap">{body}</div>;
 	}
 	return (
 		<div className="learning-neu-inset p-4">
 			<p className="text-xs font-bold uppercase text-[var(--learn-ink-faint)]">{t.summary}</p>
-			<p className="mt-2 text-sm font-semibold text-[var(--learn-ink)]">{topic.summary.tldr}</p>
+			{body}
 		</div>
 	);
 }

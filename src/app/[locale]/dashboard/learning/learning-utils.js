@@ -106,6 +106,20 @@ export function resolveTopicLayoutBlocks(topic) {
 	return blocks;
 }
 
+/** Ensure a layout block type exists on the topic (e.g. summary after video summarize). */
+export function ensureLayoutBlockType(topic, type) {
+	const base = Array.isArray(topic?.layoutBlocks)
+		? sortLayoutBlocks(topic.layoutBlocks)
+		: resolveTopicLayoutBlocks(topic);
+	if (base.some(block => block.type === type)) {
+		return base.map((block, index) => ({ ...block, order: index }));
+	}
+	return [...base, createLayoutBlock(type, base.length)].map((block, index) => ({
+		...block,
+		order: index,
+	}));
+}
+
 /** Ensure study/build can show scraped notes inside the topic file. */
 export function ensureLayoutBlocksForScrape(topic) {
 	const base = Array.isArray(topic?.layoutBlocks)
