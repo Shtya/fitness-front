@@ -93,11 +93,11 @@
 }
 
 /* Desktop focus/offset: small inset so edge dock never covers content.
-   No top padding — full-width mode should stay flush with the top. */
+   Light top padding keeps content from sitting flush against the viewport. */
 @media (min-width: 1024px) {
 	:root {
 		--sidebar-offset-pad-inline: 44px;
-		--sidebar-offset-pad-top: 0px;
+		--sidebar-offset-pad-top: 10px;
 	}
 
 	[data-dashboard-content] #body {
@@ -109,12 +109,12 @@
 
 	[data-sidebar-offset='true'] #body {
 		padding-inline-start: max(0.75rem, var(--sidebar-offset-pad-inline)) !important;
-		padding-block-start: 0 !important;
+		padding-block-start: var(--sidebar-offset-pad-top) !important;
 	}
 
 	[data-sidebar-offset='true'] #body:has(.wa-mobile-shell) {
 		padding-inline-start: max(0.75rem, var(--sidebar-offset-pad-inline)) !important;
-		padding-block-start: 0 !important;
+		padding-block-start: var(--sidebar-offset-pad-top) !important;
 		padding-inline-end: 1rem !important;
 		padding-block-end: 1rem !important;
 	}
