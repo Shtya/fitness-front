@@ -3221,8 +3221,9 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
 
             <LayoutGroup id='sidebar-mobile'>
               <div
+                className='sidebar-mobile-nav'
                 style={{
-                  flex: '1 1 auto',
+                  flex: '1 1 0%',
                   minHeight: 0,
                   overflow: 'hidden',
                   position: 'relative',
