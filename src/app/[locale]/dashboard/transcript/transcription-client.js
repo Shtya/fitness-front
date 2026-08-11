@@ -96,3 +96,17 @@ export async function createTranscription({
 	});
 	return data;
 }
+
+export async function enhanceTranscription(id, payload = {}) {
+	const { data } = await api.post(`/transcriptions/${id}/enhance`, payload, {
+		timeout: 0,
+	});
+	return data;
+}
+
+export async function memorizeTranscription(id, payload = {}) {
+	const { data } = await api.post(`/transcriptions/${id}/memorize`, payload, {
+		timeout: 0,
+	});
+	return data;
+}

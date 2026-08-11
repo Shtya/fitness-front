@@ -18,6 +18,7 @@ import {
 	Play,
 	RotateCcw,
 	Save,
+	Sparkles,
 	Square,
 	Trash2,
 	UploadCloud,
@@ -27,6 +28,12 @@ import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/hooks/useUser';
+import {
+	LearningHeaderCard,
+	LearningHeaderStat,
+} from '../learning/learning-ui';
+import '../learning/learning-landing.css';
+import TranscriptionAiPanel from './transcription-ai-panel';
 import {
 	ACCEPTED_TRANSCRIPTION_EXTENSIONS as ACCEPTED_EXTENSIONS,
 	CLOUD_TRANSCRIPTION_PROVIDER_IDS as CLOUD_PROVIDER_IDS,
@@ -42,7 +49,12 @@ import {
 const copy = {
 	en: {
 		title: 'Transcript',
-		subtitle: 'Turn uploads, microphone recordings, or meeting audio into editable text using the processing method you choose.',
+		subtitle: 'Turn uploads, microphone recordings, or meeting audio into editable text — then enhance unclear speech with AI and memorize the details.',
+		heroTitleBefore: 'Speak once.',
+		heroTitleEm: 'Read clearly',
+		heroSubtitle1: 'Upload or record',
+		heroSubtitle2: 'AI cleanup',
+		heroSubtitle3: 'Memorize details',
 		upload: 'Upload audio',
 		microphone: 'Microphone',
 		meeting: 'Meeting / tab',
@@ -128,7 +140,12 @@ const copy = {
 	},
 	ar: {
 		title: 'تحويل الصوت إلى نص',
-		subtitle: 'حوّل الملفات أو تسجيل الميكروفون أو صوت الاجتماع إلى نص قابل للتعديل باستخدام طريقة المعالجة التي تختارها.',
+		subtitle: 'حوّل الملفات أو التسجيل إلى نص قابل للتعديل — ثم حسّن الكلام غير الواضح بالذكاء الاصطناعي وثبّته بتفاصيل أكثر.',
+		heroTitleBefore: 'سجّل مرة.',
+		heroTitleEm: 'واقرأ بوضوح',
+		heroSubtitle1: 'رفع أو تسجيل',
+		heroSubtitle2: 'تنظيف بالذكاء',
+		heroSubtitle3: 'تثبيت التفاصيل',
 		upload: 'رفع ملف صوتي',
 		microphone: 'الميكروفون',
 		meeting: 'اجتماع / تبويب',
@@ -744,17 +761,28 @@ export default function TranscriptWorkspace() {
 	const recording = recordingState !== 'idle';
 
 	return (
-		<div className="mx-auto w-full max-w-[1500px] space-y-5 pb-10" dir={isArabic ? 'rtl' : 'ltr'}>
-			<header className="overflow-hidden rounded-2xl border border-[var(--color-primary-200)] bg-white/90 p-5 shadow-sm md:p-7">
-				<div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-					<div>
-						<h1 className="text-2xl font-black text-slate-900 md:text-3xl">{t.title}</h1>
-						<div className="mt-2 inline-flex items-center gap-2 rounded-full bg-[var(--color-primary-50)] px-3 py-1 text-xs font-bold text-[var(--color-primary-700)]">
-							<AudioLines className="size-4" />
-							{providerMeta.name} · {providerMeta.score}%
+		<div className="learning-landing mx-auto w-full max-w-[1500px] space-y-5 pb-10" dir={isArabic ? 'rtl' : 'ltr'}>
+			<div className="learning-landing__page !max-w-none">
+			<LearningHeaderCard>
+				<div className="learning-header-card__top">
+					<div className="learning-header-card__title-row">
+						<div className="learning-header-card__title-icon">
+							<AudioLines size={22} strokeWidth={1.6} />
+						</div>
+						<div className="learning-header-card__title-block">
+							<h1 className="learning-header-card__title">
+								{t.heroTitleBefore} <em>{t.heroTitleEm}</em>.
+							</h1>
+							<p className="learning-header-card__subtitle">
+								<span className="is-hl">{t.heroSubtitle1}</span>
+								<span className="learning-header-card__subtitle-dot" aria-hidden />
+								<span>{t.heroSubtitle2}</span>
+								<span className="learning-header-card__subtitle-dot" aria-hidden />
+								<span>{t.heroSubtitle3}</span>
+							</p>
 						</div>
 					</div>
-					<div className="flex items-center gap-2">
+					<div className="learning-header-card__actions">
 						<label className="sr-only" htmlFor="header-transcription-provider">{t.method}</label>
 						<select
 							id="header-transcription-provider"
@@ -762,10 +790,10 @@ export default function TranscriptWorkspace() {
 							onChange={event => selectProvider(event.target.value)}
 							disabled={busy}
 							title={t.qualityEstimate}
-							className="h-11 rounded-xl border bg-slate-50 px-4 text-sm font-bold text-slate-700 outline-none focus:border-[var(--color-primary-400)]"
+							className="h-11 rounded-full border-0 bg-white/15 px-4 text-sm font-bold text-white outline-none backdrop-blur"
 						>
 							{PROVIDERS.map(item => (
-								<option key={item.id} value={item.id}>
+								<option key={item.id} value={item.id} className="text-slate-900">
 									{item.name} · {item.score}%
 								</option>
 							))}
@@ -774,7 +802,7 @@ export default function TranscriptWorkspace() {
 							<button
 								type="button"
 								onClick={() => setShowCredentialModal(true)}
-								className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border bg-slate-50 px-3 text-xs font-bold text-slate-600 transition hover:border-amber-400 hover:bg-amber-50 hover:text-amber-800"
+								className="learning-pill-btn--light"
 								aria-label={t.providerSettings}
 								title={t.providerSettings}
 							>
@@ -784,11 +812,29 @@ export default function TranscriptWorkspace() {
 						)}
 					</div>
 				</div>
-			</header>
+				<div className="learning-header-stats">
+					<LearningHeaderStat
+						label={t.method}
+						value={`${providerMeta.score}%`}
+						icon={<Sparkles size={16} style={{ color: 'var(--learn-h-gold)' }} />}
+					/>
+					<LearningHeaderStat
+						label={t.history}
+						value={history.length}
+						icon={<History size={16} />}
+					/>
+					<LearningHeaderStat
+						label={t.words}
+						value={result ? liveCounts.words : '—'}
+						icon={<Check size={16} />}
+					/>
+				</div>
+				<p className="mt-4 max-w-3xl text-sm text-white/75">{t.subtitle}</p>
+			</LearningHeaderCard>
 
 			<div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(310px,.65fr)]">
 				<div className="space-y-5">
-					<section className="rounded-2xl border bg-white p-4 shadow-sm md:p-6">
+					<section className="learning-neu p-4 md:p-6">
 						<div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-100 p-1.5">
 							{[
 								['upload', UploadCloud, t.upload],
@@ -995,7 +1041,7 @@ export default function TranscriptWorkspace() {
 					</section>
 
 					{result && (
-						<section className="rounded-2xl border bg-white p-4 shadow-sm md:p-6">
+						<section className="learning-neu p-4 md:p-6">
 							<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 								<h2 className="flex items-center gap-2 text-lg font-black text-slate-900">
 									<Check className="size-5 text-emerald-600" />
@@ -1020,7 +1066,7 @@ export default function TranscriptWorkspace() {
 									[t.processingTime, formatTime(result.processingTimeSeconds)],
 									[t.detected, result.detectedLanguage?.toUpperCase() || '—'],
 								].map(([label, value]) => (
-									<div key={label} className="rounded-xl border bg-slate-50 p-3">
+									<div key={label} className="learning-neu-inset p-3">
 										<p className="text-[11px] font-bold text-slate-500">{label}</p>
 										<p className="mt-1 text-lg font-black text-slate-900">{value}</p>
 									</div>
@@ -1030,7 +1076,7 @@ export default function TranscriptWorkspace() {
 							<textarea
 								value={transcriptText}
 								onChange={event => setTranscriptText(event.target.value)}
-								className="mt-4 min-h-72 w-full resize-y rounded-xl border border-slate-200 bg-slate-50/50 p-4 text-sm leading-7 text-slate-800 outline-none focus:border-[var(--color-primary-400)] focus:bg-white"
+								className="mt-4 min-h-72 w-full resize-y rounded-[18px] border border-slate-200 bg-slate-50/50 p-4 text-sm leading-7 text-slate-800 outline-none focus:border-[var(--color-primary-400)] focus:bg-white"
 							/>
 							<div className="mt-3 flex justify-end">
 								<Button onClick={saveTranscript} disabled={saving || transcriptText === result.text}>
@@ -1038,12 +1084,42 @@ export default function TranscriptWorkspace() {
 									{t.save}
 								</Button>
 							</div>
+
+							<TranscriptionAiPanel
+								key={result.id}
+								locale={locale}
+								transcriptionId={result.id}
+								transcriptText={transcriptText}
+								onApplyText={text => {
+									setTranscriptText(text);
+								}}
+								onResultUpdated={updated => {
+									if (!updated) return;
+									setResult(updated);
+									if (typeof updated.text === 'string') {
+										setTranscriptText(updated.text);
+									}
+									setHistory(current =>
+										current.map(item => (item.id === updated.id ? updated : item)),
+									);
+								}}
+								initialCompare={
+									result.originalText && result.enhancedText
+										? {
+												originalText: result.originalText,
+												enhancedText: result.enhancedText,
+												changesSummary: result.enhancementMeta?.changesSummary || [],
+											}
+										: null
+								}
+								initialMemorize={result.memorizePayload || null}
+							/>
 						</section>
 					)}
 				</div>
 
 				<aside className="min-w-0">
-					<section className="rounded-2xl border bg-white p-4 shadow-sm xl:sticky xl:top-4">
+					<section className="learning-neu p-4 xl:sticky xl:top-4">
 						<h2 className="flex items-center gap-2 text-lg font-black text-slate-900">
 							<History className="size-5 text-[var(--color-primary-600)]" />
 							{t.history}
@@ -1076,13 +1152,23 @@ export default function TranscriptWorkspace() {
 											</span>
 										</div>
 										<p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{item.text || '—'}</p>
-										<div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
+										<div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
 											<span className="flex items-center gap-1"><Clock3 className="size-3" />{formatTime(item.durationSeconds)}</span>
 											<span className="flex items-center gap-1" title={t.processingTime}>
 												<LoaderCircle className="size-3" />
 												{t.processingTime}: {formatTime(item.processingTimeSeconds)}
 											</span>
 											<span>{new Date(item.createdAt).toLocaleDateString(locale)}</span>
+											{item.enhancedText ? (
+												<span className="rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-emerald-700">
+													AI
+												</span>
+											) : null}
+											{item.memorizePayload ? (
+												<span className="rounded-full bg-amber-100 px-2 py-0.5 font-bold text-amber-800">
+													Memo
+												</span>
+											) : null}
 										</div>
 									</button>
 									<div className="mt-2 flex justify-end">
@@ -1104,6 +1190,7 @@ export default function TranscriptWorkspace() {
 						</button>
 					</section>
 				</aside>
+			</div>
 			</div>
 
 			{showCredentialModal && canManageProviderKey && providerMeta.keyUrl && (

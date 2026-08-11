@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocale } from 'next-intl';
+import toast from 'react-hot-toast';
 import {
 	BookMarked,
 	Play,
@@ -37,6 +38,11 @@ import {
 	Info,
 	BookOpenText,
 	CircleAlert,
+	Lightbulb,
+	ChevronRight,
+	ChevronLeft,
+	Eye,
+	EyeOff,
 } from 'lucide-react';
 import { GradientStatsHeader } from '@/components/molecules/GradientStatsHeader';
 import Select from '@/components/atoms/Select';
@@ -56,6 +62,7 @@ import {
 import YoutubeResumePlayer from './YoutubeResumePlayer';
 import TajweedText from './TajweedText';
 import TajweedGuideModal from './TajweedGuideModal';
+import QrSlideSwitch from './QrSlideSwitch';
 import {
 	cloudStateIsEmpty,
 	createDebouncedPutter,
@@ -148,6 +155,7 @@ const DEFAULT_PREFS = {
 	selectedFavId: null,
 	followAlong: true,
 	showTajweed: false,
+	showTafsir: false,
 	isMemorizationMode: false,
 	hideParts: ['middle'], // multi: start | middle | end
 	volume: 0.85,
@@ -200,6 +208,8 @@ const COPY = {
 		newSession: 'جلسة جديدة',
 		completed: 'اكتملت المراجعة',
 		restart: 'إعادة',
+		restartFromStart: 'من البداية',
+		restartFromStartHint: 'ارجع لأول آية في نطاق المراجعة وابدأ من جديد',
 		testMemo: 'اختبار حفظ',
 		reviewed: 'تمت',
 		duration: 'المدة',
@@ -265,6 +275,15 @@ const COPY = {
 		tajweedHint: 'شغّل «تجويد» عشان لما تمرّر أو تضغط على كلمة ملونة يظهر شرح الحكم',
 		tajweedLegend: 'دليل ألوان التجويد',
 		tajweedGuide: 'الدليل',
+		tafsir: 'تفسير',
+		tafsirHint: 'شغّل «تفسير» واضغط على أي آية عشان يظهر لك معناها ببساطة',
+		tafsirToast: 'اضغط على أي آية عايز تفسّرها',
+		tafsirTitle: 'تفسير الآية',
+		tafsirSource: 'التفسير الميسّر',
+		tafsirEmpty: 'مفيش تفسير متاح للآية دي دلوقتي.',
+		tafsirClose: 'إغلاق',
+		tafsirPrev: 'الآية السابقة',
+		tafsirNext: 'الآية التالية',
 		tajweedLegendClose: 'إغلاق',
 		tajweedMeaning: 'يعني إيه؟',
 		tajweedWhy: 'إزاي تطبّقه؟',
@@ -327,6 +346,8 @@ const COPY = {
 		newSession: 'New session',
 		completed: 'Session complete',
 		restart: 'Restart',
+		restartFromStart: 'From start',
+		restartFromStartHint: 'Jump back to the first ayah in this revision range and play again',
 		testMemo: 'Memo test',
 		reviewed: 'Done',
 		duration: 'Time',
@@ -392,6 +413,15 @@ const COPY = {
 		tajweedHint: 'Turn on Tajweed to show rule explanations when you hover or tap a colored word',
 		tajweedLegend: 'Tajweed color guide',
 		tajweedGuide: 'Guide',
+		tafsir: 'Tafsir',
+		tafsirHint: 'Turn on Tafsir, then tap any ayah to read its meaning in plain words',
+		tafsirToast: 'Tap any ayah you want explained',
+		tafsirTitle: 'Ayah tafsir',
+		tafsirSource: 'Al-Tafsir Al-Muyassar',
+		tafsirEmpty: 'No tafsir is available for this ayah right now.',
+		tafsirClose: 'Close',
+		tafsirPrev: 'Previous ayah',
+		tafsirNext: 'Next ayah',
 		tajweedLegendClose: 'Close',
 		tajweedMeaning: 'What does it mean?',
 		tajweedWhy: 'How do I apply it?',
@@ -581,21 +611,27 @@ function normalizeHideParts(raw, legacyHideMode) {
 	return ['middle'];
 }
 
+/** Plain-Arabic tafsir; rides along with the mushaf request instead of its own. */
+const TAFSIR_EDITION = 'ar.muyassar';
+
 async function fetchSurahAyahs(surahId) {
 	const res = await fetch(
-		`https://api.alquran.cloud/v1/surah/${surahId}/editions/quran-uthmani,quran-tajweed`,
+		`https://api.alquran.cloud/v1/surah/${surahId}/editions/quran-uthmani,quran-tajweed,${TAFSIR_EDITION}`,
 	);
 	if (!res.ok) throw new Error('fetch failed');
 	const json = await res.json();
 	const editions = Array.isArray(json?.data) ? json.data : [];
 	const uthmani = editions.find(e => e?.edition?.identifier === 'quran-uthmani') || editions[0];
 	const tajweedEd = editions.find(e => e?.edition?.identifier === 'quran-tajweed');
+	const tafsirEd = editions.find(e => e?.edition?.identifier === TAFSIR_EDITION);
 	const ayahs = uthmani?.ayahs || [];
 	const tajweedAyahs = tajweedEd?.ayahs || [];
+	const tafsirAyahs = tafsirEd?.ayahs || [];
 	return ayahs.map((a, i) => ({
 		n: a.numberInSurah,
 		text: String(a.text || '').replace(/^\uFEFF/, ''),
 		tajweed: String(tajweedAyahs[i]?.text || '').replace(/^\uFEFF/, ''),
+		tafsir: String(tafsirAyahs[i]?.text || '').replace(/^\uFEFF/, ''),
 		hizbQuarter: a.hizbQuarter,
 		page: a.page,
 		juz: a.juz,
@@ -647,11 +683,15 @@ export default function QuranRevisionStudio({
 	const [favsOpen, setFavsOpen] = useState(false);
 	const [portalReady, setPortalReady] = useState(false);
 	const [sessionSettingsOpen, setSessionSettingsOpen] = useState(true);
-	const [unitsOpen, setUnitsOpen] = useState(true);
+	const [unitsOpen, setUnitsOpen] = useState(false);
 
 	const [followAlong, setFollowAlong] = useState(true);
 	const [showTajweed, setShowTajweed] = useState(DEFAULT_PREFS.showTajweed);
 	const [tajweedLegendOpen, setTajweedLegendOpen] = useState(false);
+	const [showTafsir, setShowTafsir] = useState(DEFAULT_PREFS.showTafsir);
+	/** Ayah number whose tafsir sheet is open, or null. */
+	const [tafsirAyah, setTafsirAyah] = useState(null);
+	const [tafsirAnchor, setTafsirAnchor] = useState(null);
 	const [errorMode, setErrorMode] = useState(false);
 	/** `${ayahIdx}:${wordIdx}` -> 'tashkeel' | 'forgot' */
 	const [wordErrors, setWordErrors] = useState({});
@@ -676,6 +716,7 @@ export default function QuranRevisionStudio({
 	const [audioDuration, setAudioDuration] = useState(0);
 	const [volume, setVolume] = useState(0.85);
 	const [muted, setMuted] = useState(false);
+	const [volumeOpen, setVolumeOpen] = useState(false);
 	const [speed, setSpeed] = useState(1);
 	const [ytPlayMode, setYtPlayMode] = useState('audio');
 	const [audioError, setAudioError] = useState('');
@@ -754,6 +795,7 @@ export default function QuranRevisionStudio({
 			setSelectedReciterId(prefs.selectedReciterId);
 			setFollowAlong(prefs.followAlong);
 			setShowTajweed(prefs.showTajweed === true);
+			setShowTafsir(prefs.showTafsir === true);
 			setIsMemorizationMode(prefs.isMemorizationMode);
 			setHideParts(normalizeHideParts(prefs.hideParts, prefs.hideMode ?? prefs.memoLevel));
 			setVolume(prefs.volume);
@@ -828,13 +870,15 @@ export default function QuranRevisionStudio({
 		saveJson(LS_PREFS, {
 			selectedSurahId, mode, selectedUnitIds, unitSelections,
 			repeatCount, repeatScope, sourceTab,
-			selectedReciterId, selectedFavId, followAlong, showTajweed, isMemorizationMode,
+			selectedReciterId, selectedFavId, followAlong, showTajweed, showTafsir,
+			isMemorizationMode,
 			hideParts, volume, speed, ytPlayMode,
 		});
 	}, [
 		hydrated, selectedSurahId, mode, selectedUnitIds, unitSelections,
 		repeatCount, repeatScope, sourceTab,
-		selectedReciterId, selectedFavId, followAlong, showTajweed, isMemorizationMode,
+		selectedReciterId, selectedFavId, followAlong, showTajweed, showTafsir,
+		isMemorizationMode,
 		hideParts, volume, speed, ytPlayMode,
 	]);
 
@@ -1086,21 +1130,38 @@ export default function QuranRevisionStudio({
 		setIsPlaying(false);
 	}, []);
 
+	/** Keep #body where it is while the user edits setup / live settings. */
+	const withPreservedScroll = useCallback(fn => {
+		const root = typeof document !== 'undefined' ? document.getElementById('body') : null;
+		const y = root ? root.scrollTop : 0;
+		fn();
+		const restore = () => {
+			if (root) root.scrollTop = y;
+		};
+		restore();
+		requestAnimationFrame(restore);
+		setTimeout(restore, 0);
+	}, []);
+
 	const toggleUnit = id => {
-		setSelectedUnitIds(prev => {
-			if (prev.includes(id)) {
-				const next = prev.filter(x => x !== id);
-				return next.length ? normalizeUnitIds(next) : [];
-			}
-			return normalizeUnitIds([...prev, id]);
+		withPreservedScroll(() => {
+			setSelectedUnitIds(prev => {
+				if (prev.includes(id)) {
+					const next = prev.filter(x => x !== id);
+					return next.length ? normalizeUnitIds(next) : [];
+				}
+				return normalizeUnitIds([...prev, id]);
+			});
+			markSettingsDirty();
 		});
-		markSettingsDirty();
 	};
 
 	const removeUnit = (e, id) => {
 		e.stopPropagation();
-		setSelectedUnitIds(prev => prev.filter(x => x !== id));
-		markSettingsDirty();
+		withPreservedScroll(() => {
+			setSelectedUnitIds(prev => prev.filter(x => x !== id));
+			markSettingsDirty();
+		});
 	};
 
 	const stopElapsed = useCallback(() => {
@@ -1340,6 +1401,16 @@ export default function QuranRevisionStudio({
 	}, []);
 
 	useEffect(() => {
+		if (!volumeOpen) return undefined;
+		const onDoc = e => {
+			if (e.target?.closest?.('.qr-dock-vol')) return;
+			setVolumeOpen(false);
+		};
+		document.addEventListener('pointerdown', onDoc);
+		return () => document.removeEventListener('pointerdown', onDoc);
+	}, [volumeOpen]);
+
+	useEffect(() => {
 		if (!historyOpen && !favsOpen) return undefined;
 		const onKey = e => {
 			if (e.key === 'Escape') {
@@ -1379,10 +1450,130 @@ export default function QuranRevisionStudio({
 	};
 
 	/** Apply edited live settings and (re)start playback — only on explicit click. */
+	const openTafsir = useCallback(number => {
+		setTafsirAyah(prev => (prev === number ? null : number));
+	}, []);
+	const closeTafsir = useCallback(() => setTafsirAyah(null), []);
+
+	const toggleTafsirMode = useCallback(() => {
+		setShowTafsir(prev => {
+			const next = !prev;
+			if (!next) setTafsirAyah(null);
+			else {
+				toast(t.tafsirToast, {
+					duration: 4500,
+					icon: '💡',
+					id: 'qr-tafsir-hint',
+				});
+			}
+			return next;
+		});
+	}, [t.tafsirToast]);
+
+	/** The ayah the sheet is showing, plus its neighbours for the prev/next arrows. */
+	const tafsirView = useMemo(() => {
+		if (tafsirAyah == null) return null;
+		const index = verses.findIndex(verse => verse.n === tafsirAyah);
+		if (index < 0) return null;
+		return {
+			verse: verses[index],
+			prev: verses[index - 1]?.n ?? null,
+			next: verses[index + 1]?.n ?? null,
+			position: index + 1,
+		};
+	}, [tafsirAyah, verses]);
+
+	/* A tafsir sheet pinned to an ayah that is no longer in the range is stale. */
+	useEffect(() => {
+		if (tafsirAyah != null && !tafsirView) setTafsirAyah(null);
+	}, [tafsirAyah, tafsirView]);
+
+	/* Keep the open tafsir ayah (+ popover) in view when jumping prev/next. */
+	useEffect(() => {
+		if (tafsirAyah == null) return undefined;
+		const reduce = typeof window !== 'undefined'
+			&& window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		let cancelled = false;
+		const id = window.requestAnimationFrame(() => {
+			if (cancelled) return;
+			const el = document.querySelector('.qr-ayah.is-tafsir-open');
+			if (!el) return;
+			el.scrollIntoView({
+				block: 'center',
+				inline: 'nearest',
+				behavior: reduce ? 'auto' : 'smooth',
+			});
+		});
+		return () => {
+			cancelled = true;
+			window.cancelAnimationFrame(id);
+		};
+	}, [tafsirAyah, mushafExpanded]);
+
+	/* Keep the popover parked above the active ayah. */
+	useEffect(() => {
+		if (!tafsirView) {
+			setTafsirAnchor(null);
+			return undefined;
+		}
+		const update = () => {
+			const el = document.querySelector('.qr-ayah.is-tafsir-open');
+			if (!el) {
+				setTafsirAnchor(null);
+				return;
+			}
+			const rect = el.getBoundingClientRect();
+			const width = Math.min(320, window.innerWidth - 20);
+			let left = rect.left + rect.width / 2 - width / 2;
+			left = Math.max(10, Math.min(left, window.innerWidth - width - 10));
+			const preferAbove = rect.top > 160;
+			const top = preferAbove ? rect.top - 10 : rect.bottom + 10;
+			setTafsirAnchor({
+				left,
+				top,
+				width,
+				placement: preferAbove ? 'above' : 'below',
+				caretLeft: Math.min(
+					width - 18,
+					Math.max(18, rect.left + rect.width / 2 - left),
+				),
+			});
+		};
+		update();
+		const raf = requestAnimationFrame(update);
+		window.addEventListener('resize', update);
+		document.addEventListener('scroll', update, true);
+		return () => {
+			cancelAnimationFrame(raf);
+			window.removeEventListener('resize', update);
+			document.removeEventListener('scroll', update, true);
+		};
+	}, [tafsirView, mushafExpanded, currentVerseIndex]);
+
+	useEffect(() => {
+		if (!tafsirView) return undefined;
+		const onKey = event => {
+			if (event.key === 'Escape') closeTafsir();
+		};
+		const onDoc = event => {
+			if (event.target?.closest?.('.qr-tafsir-pop, .qr-ayah.is-tafsir-open, .qr-ayah-num.is-tappable')) {
+				return;
+			}
+			closeTafsir();
+		};
+		window.addEventListener('keydown', onKey);
+		document.addEventListener('pointerdown', onDoc);
+		return () => {
+			window.removeEventListener('keydown', onKey);
+			document.removeEventListener('pointerdown', onDoc);
+		};
+	}, [tafsirView, closeTafsir]);
+
 	const applyLiveSettings = () => {
 		if (!canStart || !verses.length) return;
 		if (ayahLoading) return;
 		setSettingsPendingApply(false);
+		setSessionSettingsOpen(false);
 		stopAudio();
 		setCurrentVerseIndex(0);
 		setCurrentVerseRepeat(1);
@@ -1631,14 +1822,18 @@ export default function QuranRevisionStudio({
 
 	const changeSurahLive = id => {
 		if (id == null) return;
-		setSelectedSurahId(Number(id));
-		markSettingsDirty();
+		withPreservedScroll(() => {
+			setSelectedSurahId(Number(id));
+			markSettingsDirty();
+		});
 	};
 
 	const changeModeLive = id => {
 		if (id == null) return;
-		setMode(id);
-		markSettingsDirty();
+		withPreservedScroll(() => {
+			setMode(id);
+			markSettingsDirty();
+		});
 	};
 
 	const changeReciterLive = id => {
@@ -1752,6 +1947,10 @@ export default function QuranRevisionStudio({
 	/* Follow-along: keep the active ayah in view (page/#body scroll) */
 	useEffect(() => {
 		if (!followAlong || sessionPhase !== 'active') return;
+		// While the settings panel is open the user is picking options, not
+		// following the recitation — changing surah/range must not drag the page
+		// down to the mushaf before they press apply.
+		if (sessionSettingsOpen) return;
 		const root = mushafScrollRef.current;
 		if (!root) return;
 		const ayah = root.querySelector(`[data-ayah-idx="${currentVerseIndex}"]`);
@@ -1765,7 +1964,14 @@ export default function QuranRevisionStudio({
 			});
 		});
 		return () => window.cancelAnimationFrame(id);
-	}, [currentVerseIndex, followAlong, sessionPhase, mushafExpanded, verses.length]);
+	}, [
+		currentVerseIndex,
+		followAlong,
+		sessionPhase,
+		sessionSettingsOpen,
+		mushafExpanded,
+		verses.length,
+	]);
 
 	const togglePlay = () => {
 		if (usingYoutube) {
@@ -1830,6 +2036,26 @@ export default function QuranRevisionStudio({
 		setVerseProgress(0);
 		playCurrentAyah(idx, pass, completedRepeats);
 	};
+
+	/** Replay from the first ayah of the chosen revision range (not a brand-new setup). */
+	const restartFromStart = useCallback(() => {
+		if (sessionPhaseRef.current !== 'active') return;
+		if (!verses.length) return;
+		pendingReciterSwap.current = false;
+		setFinalStats(null);
+		setCurrentVerseIndex(0);
+		setCurrentVerseRepeat(1);
+		setCompletedVerses(0);
+		setCompletedRepeats(0);
+		setVerseProgress(0);
+		setAudioError('');
+		setTafsirAyah(null);
+		if (usingYoutube) {
+			setIsPlaying(true);
+			return;
+		}
+		playCurrentAyah(0, 1, 0);
+	}, [playCurrentAyah, usingYoutube, verses.length]);
 
 	// Auto-resolve YouTube title when URL is pasted
 	useEffect(() => {
@@ -2516,7 +2742,7 @@ export default function QuranRevisionStudio({
 					<button
 						type="button"
 						className={cx('qr-units-toggle', unitsOpen && 'is-open')}
-						onClick={() => setUnitsOpen(v => !v)}
+						onClick={() => withPreservedScroll(() => setUnitsOpen(v => !v))}
 						aria-expanded={unitsOpen}
 						title={unitsOpen ? t.unitsCollapse : t.unitsExpand}
 						aria-label={unitsOpen ? t.unitsCollapse : t.unitsExpand}
@@ -2596,7 +2822,18 @@ export default function QuranRevisionStudio({
 						</div>
 					)}
 				</>
-			) : null}
+			) : (
+				<button
+					type="button"
+					className="qr-units-collapsed"
+					onClick={() => withPreservedScroll(() => setUnitsOpen(true))}
+				>
+					{t.unitsExpand}
+					{selectedUnits.length > 0
+						? ` · ${d(selectedUnits.length)} ${t.selectedCount}`
+						: ''}
+				</button>
+			)}
 		</>
 	);
 
@@ -2609,7 +2846,12 @@ export default function QuranRevisionStudio({
 					label={t.surah}
 					options={surahOptions}
 					value={selectedSurahId}
-					onChange={live ? changeSurahLive : (id => id != null && setSelectedSurahId(Number(id)))}
+					onChange={live
+						? changeSurahLive
+						: (id => {
+							if (id == null) return;
+							withPreservedScroll(() => setSelectedSurahId(Number(id)));
+						})}
 					searchable
 					clearable={false}
 					placeholder={t.surah}
@@ -2625,7 +2867,12 @@ export default function QuranRevisionStudio({
 						{ id: 'page', label: t.page },
 					]}
 					value={mode}
-					onChange={live ? changeModeLive : (id => id != null && setMode(id))}
+					onChange={live
+						? changeModeLive
+						: (id => {
+							if (id == null) return;
+							withPreservedScroll(() => setMode(id));
+						})}
 					searchable={false}
 					clearable={false}
 					cnLabel="qr-lbl !mb-1 !normal-case !tracking-normal"
@@ -2740,6 +2987,18 @@ export default function QuranRevisionStudio({
 					</span>
 				) : null}
 			</button>
+			<button
+				type="button"
+				onClick={() => setTajweedLegendOpen(true)}
+				className="gsh-btn relative inline-flex h-10 items-center gap-1.5 rounded-[14px] border border-white/[0.24] bg-white/[0.14] px-3 text-white backdrop-blur-xl"
+				aria-label={t.tajweedLegend}
+				title={t.tajweedLegend}
+				aria-haspopup="dialog"
+				aria-expanded={tajweedLegendOpen}
+			>
+				<Info size={15} strokeWidth={2.4} />
+				<span className="text-[12px] font-bold whitespace-nowrap">{t.tajweedGuide}</span>
+			</button>
 		</div>
 	);
 
@@ -2795,7 +3054,7 @@ export default function QuranRevisionStudio({
 							<button
 								type="button"
 								className="qr-live-settings-toggle"
-								onClick={() => setSessionSettingsOpen(v => !v)}
+								onClick={() => withPreservedScroll(() => setSessionSettingsOpen(v => !v))}
 								aria-expanded={sessionSettingsOpen}
 							>
 								<span className="inline-flex items-center gap-1.5">
@@ -2810,6 +3069,18 @@ export default function QuranRevisionStudio({
 								</button>
 								<button type="button" className="qr-chrome-btn" onClick={openFavs} aria-label={t.favorites} title={t.favorites}>
 									<Youtube size={15} />
+								</button>
+								<button
+									type="button"
+									className={cx('qr-chrome-guide', tajweedLegendOpen && 'is-on')}
+									onClick={() => setTajweedLegendOpen(true)}
+									title={t.tajweedLegend}
+									aria-label={t.tajweedLegend}
+									aria-haspopup="dialog"
+									aria-expanded={tajweedLegendOpen}
+								>
+									<Info size={13} strokeWidth={2.4} />
+									<span>{t.tajweedGuide}</span>
 								</button>
 								<button type="button" className="qr-chrome-new" onClick={resetSetup}>
 									{t.newSession}
@@ -2913,69 +3184,51 @@ export default function QuranRevisionStudio({
 
 									<span className="qr-tools-sep" aria-hidden />
 
-									<label className={cx('qr-tool', showTajweed && 'is-on')} title={t.tajweedHint}>
-										<BookOpenText size={13} strokeWidth={2.25} aria-hidden />
-										<span>{t.tajweed}</span>
-										<button
-											type="button"
-											className={cx('qr-switch', showTajweed && 'is-on')}
-											onClick={() => setShowTajweed(v => !v)}
-											aria-label={t.tajweed}
-											aria-pressed={showTajweed}
-											title={t.tajweedHint}
-										/>
-									</label>
-									<button
-										type="button"
-										className={cx('qr-tool-link', tajweedLegendOpen && 'is-on')}
-										onClick={() => setTajweedLegendOpen(true)}
-										title={t.tajweedLegend}
-										aria-label={t.tajweedLegend}
-										aria-haspopup="dialog"
-										aria-expanded={tajweedLegendOpen}
-									>
-										<Info size={12} strokeWidth={2.4} />
-										{t.tajweedGuide}
-									</button>
+									<QrSlideSwitch
+										on={showTajweed}
+										onChange={setShowTajweed}
+										label={t.tajweed}
+										icon={BookOpenText}
+										title={t.tajweedHint}
+									/>
 
 									<span className="qr-tools-sep" aria-hidden />
 
-									<label className={cx('qr-tool', followAlong && 'is-on')}>
-										<span>{t.follow}</span>
-										<button
-											type="button"
-											className={cx('qr-switch', followAlong && 'is-on')}
-											onClick={() => setFollowAlong(v => !v)}
-											aria-label={t.follow}
-										/>
-									</label>
+									<QrSlideSwitch
+										on={showTafsir}
+										onChange={() => toggleTafsirMode()}
+										label={t.tafsir}
+										icon={Lightbulb}
+										title={t.tafsirHint}
+									/>
 
 									<span className="qr-tools-sep" aria-hidden />
 
-									<label className={cx('qr-tool', errorMode && 'is-on')} title={t.errorModeHint}>
-										<CircleAlert size={13} strokeWidth={2.25} aria-hidden />
-										<span>{t.errorMode}</span>
-										<button
-											type="button"
-											className={cx('qr-switch', errorMode && 'is-on')}
-											onClick={() => setErrorMode(v => !v)}
-											aria-label={t.errorMode}
-											aria-pressed={errorMode}
-											title={t.errorModeHint}
-										/>
-									</label>
+									<QrSlideSwitch
+										on={followAlong}
+										onChange={setFollowAlong}
+										label={t.follow}
+										icon={Eye}
+									/>
 
 									<span className="qr-tools-sep" aria-hidden />
 
-									<label className={cx('qr-tool', isMemorizationMode && 'is-on')}>
-										<span>{t.memo}</span>
-										<button
-											type="button"
-											className={cx('qr-switch', isMemorizationMode && 'is-on')}
-											onClick={() => setIsMemorizationMode(v => !v)}
-											aria-label={t.memo}
-										/>
-									</label>
+									<QrSlideSwitch
+										on={errorMode}
+										onChange={setErrorMode}
+										label={t.errorMode}
+										icon={CircleAlert}
+										title={t.errorModeHint}
+									/>
+
+									<span className="qr-tools-sep" aria-hidden />
+
+									<QrSlideSwitch
+										on={isMemorizationMode}
+										onChange={setIsMemorizationMode}
+										label={t.memo}
+										icon={EyeOff}
+									/>
 
 									{isMemorizationMode ? (
 										<div className="qr-hide-pills" role="group" aria-label={t.hidePartsLabel} title={t.hidePartsHint}>
@@ -3011,6 +3264,10 @@ export default function QuranRevisionStudio({
 									{verses.map((verse, index) => {
 										const isOn = index === currentVerseIndex;
 										const hide = isMemorizationMode ? hideParts : [];
+										// Tajweed tooltips and error marking own the individual words,
+										// so the whole ayah only becomes a tafsir target when both are
+										// off. The ayah number stays tappable either way.
+										const ayahOpensTafsir = showTafsir && !errorMode;
 										return (
 											<span
 												key={`${verse.n}-${index}`}
@@ -3021,7 +3278,17 @@ export default function QuranRevisionStudio({
 													followAlong && index < currentVerseIndex && 'is-past',
 													followAlong && index === currentVerseIndex + 1 && 'is-next',
 													!followAlong && 'is-on',
+													showTafsir && 'is-tafsir-target',
+													showTafsir && tafsirAyah === verse.n && 'is-tafsir-open',
 												)}
+												role={ayahOpensTafsir ? 'button' : undefined}
+												tabIndex={ayahOpensTafsir ? 0 : undefined}
+												onClick={ayahOpensTafsir ? () => openTafsir(verse.n) : undefined}
+												onKeyDown={ayahOpensTafsir ? event => {
+													if (event.key !== 'Enter' && event.key !== ' ') return;
+													event.preventDefault();
+													openTafsir(verse.n);
+												} : undefined}
 											>
 												<TajweedText
 													tajweed={verse.tajweed}
@@ -3035,10 +3302,25 @@ export default function QuranRevisionStudio({
 													errorLabels={errorLabels}
 													isAr={isAr}
 												/>
-												<span className="qr-ayah-num" aria-hidden="true">
-													<span className="qr-ayah-num-ring" />
-													<span className="qr-ayah-num-val">{d(verse.n)}</span>
-												</span>
+												{showTafsir ? (
+													<button
+														type="button"
+														className="qr-ayah-num is-tappable"
+														onClick={event => {
+															event.stopPropagation();
+															openTafsir(verse.n);
+														}}
+														aria-label={`${t.tafsirTitle} ${verse.n}`}
+													>
+														<span className="qr-ayah-num-ring" />
+														<span className="qr-ayah-num-val">{d(verse.n)}</span>
+													</button>
+												) : (
+													<span className="qr-ayah-num" aria-hidden="true">
+														<span className="qr-ayah-num-ring" />
+														<span className="qr-ayah-num-val">{d(verse.n)}</span>
+													</span>
+												)}
 											</span>
 										);
 									})}
@@ -3059,62 +3341,109 @@ export default function QuranRevisionStudio({
 							mushafExpanded && !mushafCollapsing && 'is-centered',
 						)}
 						dir="ltr"
-						style={!mushafExpanded || mushafCollapsing
-							? (dockBox.left != null ? { left: dockBox.left, width: dockBox.width } : undefined)
-							: undefined}
+						style={{
+							...((!mushafExpanded || mushafCollapsing) && dockBox.left != null
+								? { left: dockBox.left, width: dockBox.width }
+								: null),
+							...(mushafExpanded && !mushafCollapsing
+								? { zIndex: 200000 }
+								: null),
+						}}
 					>
 						<div className="qr-dock-main is-compact-row">
-							{!usingYoutube ? (
-								<div className="qr-dock-reciter" dir={isAr ? 'rtl' : 'ltr'}>
-									<Select
-										options={BUILTIN_RECITERS.map(r => ({
-											id: r.id,
-											label: isAr ? r.nameAr : r.nameEn,
-										}))}
-										value={selectedReciterId}
-										onChange={changeReciterLive}
-										searchable={false}
-										clearable={false}
-										cnInputParent="!h-8 !rounded-lg !text-[11px] !font-bold !bg-white/90 !border-slate-200"
-									/>
-								</div>
-							) : (
-								<p className="qr-dock-title qr-dock-yt-label">{displayReciter}</p>
-							)}
+							<div className="qr-dock-left">
+								{!usingYoutube ? (
+									<div className="qr-dock-reciter" dir={isAr ? 'rtl' : 'ltr'}>
+										<Select
+											options={BUILTIN_RECITERS.map(r => ({
+												id: r.id,
+												label: isAr ? r.nameAr : r.nameEn,
+											}))}
+											value={selectedReciterId}
+											onChange={changeReciterLive}
+											searchable={false}
+											clearable={false}
+											cnInputParent="!h-8 !min-h-8 !rounded-lg !text-[10px] !font-bold !bg-white/90 !border-slate-200 !px-2"
+										/>
+									</div>
+								) : (
+									<p className="qr-dock-title qr-dock-yt-label">{displayReciter}</p>
+								)}
+							</div>
 
-							<div className="qr-dock-center">
+							<div className="qr-dock-center" role="group" aria-label={t.playing}>
 								{!usingYoutube ? (
 									<button type="button" className="qr-dock-btn" onClick={goPrev} aria-label="previous" title="Previous">
-										<SkipBack size={16} />
+										<SkipBack size={15} />
 									</button>
 								) : null}
+								<button
+									type="button"
+									className="qr-dock-btn"
+									onClick={restartFromStart}
+									aria-label={t.restartFromStart}
+									title={t.restartFromStartHint}
+								>
+									<RotateCcw size={14} />
+								</button>
 								<button type="button" className="qr-dock-btn is-main" onClick={togglePlay} aria-label="play">
 									{isPlaying ? <Pause size={17} /> : <Play size={17} className="ms-0.5" />}
 								</button>
 								{!usingYoutube ? (
 									<button type="button" className="qr-dock-btn" onClick={goNext} aria-label="next" title="Next">
-										<SkipForward size={16} />
+										<SkipForward size={15} />
 									</button>
 								) : null}
 							</div>
 
 							<div className="qr-dock-right">
-								<div className="qr-dock-vol" title="Volume">
-									<button type="button" className="qr-dock-btn is-ghost" onClick={() => setMuted(m => !m)} aria-label="mute">
-										{muted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
-									</button>
-									<input
-										type="range"
-										className="qr-dock-range qr-dock-vol-range"
-										min={0}
-										max={1}
-										step={0.01}
-										value={muted ? 0 : volume}
-										onChange={e => { const v = Number(e.target.value); setVolume(v); setMuted(v === 0); }}
-										style={{ '--qr-fill': `${(muted ? 0 : volume) * 100}%` }}
-										dir="ltr"
-									/>
-								</div>
+								{!usingYoutube ? (
+									<div
+										className={cx('qr-dock-vol', volumeOpen && 'is-open')}
+										title="Volume"
+										onMouseEnter={() => setVolumeOpen(true)}
+										onMouseLeave={() => setVolumeOpen(false)}
+									>
+										<button
+											type="button"
+											className="qr-dock-btn is-ghost"
+											onClick={() => {
+												const coarse = typeof window !== 'undefined'
+													&& window.matchMedia('(hover: none)').matches;
+												if (coarse && !volumeOpen) {
+													setVolumeOpen(true);
+													return;
+												}
+												setMuted(m => !m);
+											}}
+											aria-label="mute"
+											aria-expanded={volumeOpen}
+											aria-haspopup="true"
+										>
+											{muted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+										</button>
+										<div className="qr-dock-vol-pop" role="group" aria-label="Volume">
+											<input
+												type="range"
+												className="qr-dock-range qr-dock-vol-range"
+												min={0}
+												max={1}
+												step={0.01}
+												value={muted ? 0 : volume}
+												onChange={e => {
+													const v = Number(e.target.value);
+													setVolume(v);
+													setMuted(v === 0);
+												}}
+												style={{ '--qr-fill': `${(muted ? 0 : volume) * 100}%` }}
+												dir="ltr"
+												aria-valuemin={0}
+												aria-valuemax={100}
+												aria-valuenow={Math.round((muted ? 0 : volume) * 100)}
+											/>
+										</div>
+									</div>
+								) : null}
 								{!usingYoutube ? (
 									<div className="qr-dock-speed" role="group" aria-label="speed">
 										{SPEED_OPTIONS.map(s => (
@@ -3214,6 +3543,78 @@ export default function QuranRevisionStudio({
 					</div>
 				</section>
 			) : null}
+
+			{portalReady && tafsirView && tafsirAnchor
+				? createPortal(
+					<div
+						className={cx(
+							'qr-tafsir-pop',
+							tafsirAnchor.placement === 'above' ? 'is-above' : 'is-below',
+						)}
+						role="dialog"
+						aria-label={t.tafsirTitle}
+						dir={isAr ? 'rtl' : 'ltr'}
+						style={{
+							left: tafsirAnchor.left,
+							top: tafsirAnchor.top,
+							width: tafsirAnchor.width,
+							transform: tafsirAnchor.placement === 'above'
+								? 'translateY(-100%)'
+								: 'none',
+							'--qr-tafsir-caret': `${tafsirAnchor.caretLeft}px`,
+						}}
+					>
+						<div className="qr-tafsir-pop-head">
+							<span className="qr-tafsir-pop-source">
+								<Lightbulb size={12} strokeWidth={2.4} />
+								{t.tafsirSource}
+								<span className="qr-tafsir-pop-ayah">{d(tafsirView.verse.n)}</span>
+							</span>
+							<button
+								type="button"
+								className="qr-tafsir-pop-close"
+								onClick={closeTafsir}
+								aria-label={t.tafsirClose}
+							>
+								<X size={14} />
+							</button>
+						</div>
+						<div className="qr-tafsir-pop-body">
+							{tafsirView.verse.tafsir ? (
+								<p className="qr-tafsir-pop-copy">{tafsirView.verse.tafsir}</p>
+							) : (
+								<p className="qr-tafsir-pop-empty">{t.tafsirEmpty}</p>
+							)}
+						</div>
+						<div className="qr-tafsir-pop-nav">
+							<button
+								type="button"
+								className="qr-tafsir-pop-arrow"
+								disabled={tafsirView.prev == null}
+								onClick={() => {
+									if (tafsirView.prev != null) setTafsirAyah(tafsirView.prev);
+								}}
+								aria-label={t.tafsirPrev}
+							>
+								{isAr ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+							</button>
+							<button
+								type="button"
+								className="qr-tafsir-pop-arrow"
+								disabled={tafsirView.next == null}
+								onClick={() => {
+									if (tafsirView.next != null) setTafsirAyah(tafsirView.next);
+								}}
+								aria-label={t.tafsirNext}
+							>
+								{isAr ? <ChevronLeft size={15} /> : <ChevronRight size={15} />}
+							</button>
+						</div>
+						<span className="qr-tafsir-pop-caret" aria-hidden />
+					</div>,
+					document.body,
+				)
+				: null}
 
 			<TajweedGuideModal
 				open={tajweedLegendOpen}

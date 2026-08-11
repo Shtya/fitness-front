@@ -1,26 +1,43 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
+import { usePathname } from '@/i18n/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, X, Check, Smartphone, Chrome, Globe } from 'lucide-react';
+import { Download, X, Smartphone } from 'lucide-react';
 import Select from './Select';
 import CheckBox from './CheckBox';
 import MultiLangText from './MultiLangText';
 
-const spring = { type: 'spring', stiffness: 400, damping: 30 };
+const spring = { type: 'spring', stiffness: 420, damping: 32 };
+
+function isBlockedRoute(pathname) {
+	if (!pathname) return false;
+	return (
+		pathname.startsWith('/auth') ||
+		pathname.startsWith('/open') ||
+		pathname.startsWith('/thank-you') ||
+		pathname.startsWith('/form') ||
+		pathname === '/'
+	);
+}
 
 export default function AddToHomeGuide({
 	storageKey = 'a2hs_guide_dismissed_v1',
 	autoShowDelayMs = 1200,
 }) {
 	const t = useTranslations('AddToHomeGuide');
+	const pathname = usePathname();
+	const blocked = isBlockedRoute(pathname);
+
 	const [visible, setVisible] = useState(false);
 	const [dontShowAgain, setDontShowAgain] = useState(false);
 	const [browserKey, setBrowserKey] = useState('auto');
 	const [deferredPrompt, setDeferredPrompt] = useState(null);
 	const [installing, setInstalling] = useState(false);
 	const [installed, setInstalled] = useState(false);
+	const [portalReady, setPortalReady] = useState(false);
 
 	const [browserInfo, setBrowserInfo] = useState({
 		isAndroid: false,
@@ -37,7 +54,25 @@ export default function AddToHomeGuide({
 		typeof window !== 'undefined' &&
 		(window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator?.standalone === true);
 
-	// Detect browser info only on the client
+	useEffect(() => {
+		setPortalReady(true);
+	}, []);
+
+	useEffect(() => {
+		if (blocked) setVisible(false);
+	}, [blocked]);
+
+	useEffect(() => {
+		if (typeof window === 'undefined') return undefined;
+		const mq = window.matchMedia('(max-width: 767px)');
+		const apply = () => {
+			if (!mq.matches) setVisible(false);
+		};
+		apply();
+		mq.addEventListener?.('change', apply);
+		return () => mq.removeEventListener?.('change', apply);
+	}, []);
+
 	useEffect(() => {
 		if (typeof navigator === 'undefined' || typeof window === 'undefined') return;
 
@@ -77,19 +112,19 @@ export default function AddToHomeGuide({
 
 	const effectiveKey = browserKey === 'auto' ? autoKey : browserKey;
 
-	// Handle visibility timing
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
+		if (blocked) return;
 		if (isStandalone()) return;
+		if (!window.matchMedia('(max-width: 767px)').matches) return;
 
 		const saved = localStorage.getItem(storageKey);
 		if (saved === '1') return;
 
 		const timer = setTimeout(() => setVisible(true), autoShowDelayMs);
 		return () => clearTimeout(timer);
-	}, [storageKey, autoShowDelayMs]);
+	}, [storageKey, autoShowDelayMs, blocked, pathname]);
 
-	// Handle PWA install events
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
 		const onBIP = (e) => {
@@ -126,274 +161,151 @@ export default function AddToHomeGuide({
 		if (dontShowAgain) localStorage.setItem(storageKey, '1');
 	};
 
-	if (!visible || installed) return null;
+	if (!portalReady || blocked || !visible || installed) return null;
 
 	const steps = t.raw(`steps.${effectiveKey}`);
+	const browserOptions = Object.entries(t.raw('browserOptions')).map(([key, label]) => ({
+		label: <MultiLangText>{label}</MultiLangText>,
+		id: key,
+	}));
 
-	return (
+	return createPortal(
 		<AnimatePresence>
-			<div dir="rtl" className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-				{/* Backdrop */}
-				<motion.div
-					initial={{ opacity: 0 }}
-					animate={{ opacity: 1 }}
-					exit={{ opacity: 0 }}
-					className="absolute inset-0 bg-black/50 backdrop-blur-md"
-					onClick={closeGuide}
-				/>
+			{visible ? (
+				<div
+					dir="rtl"
+					className="fixed inset-0 z-[250000] flex items-center justify-center p-4"
+					role="dialog"
+					aria-modal="true"
+					aria-label={t('title')}
+				>
+					<motion.div
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						className="absolute inset-0 bg-black/40"
+						onClick={closeGuide}
+						onPointerDown={closeGuide}
+					/>
 
-				{/* Modal */}
-				<motion.div
-					initial={{ opacity: 0, scale: 0.95, y: 20 }}
-					animate={{ opacity: 1, scale: 1, y: 0 }}
-					exit={{ opacity: 0, scale: 0.95, y: 20 }}
-					transition={spring}
-					className="relative w-full max-w-lg rounded-lg border-2 shadow-2xl overflow-hidden"
-					style={{
-						borderColor: 'var(--color-primary-200)',
-						boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.3)',
-					}}>
-					{/* Floating particles background */}
-					<div className="absolute inset-0 overflow-hidden pointer-events-none">
-						<motion.div
-							className="absolute w-32 h-32 rounded-full blur-3xl opacity-30"
-							style={{
-								background: 'var(--color-gradient-from)',
-								top: '-10%',
-								right: '10%',
-							}}
-							animate={{
-								scale: [1, 1.2, 1],
-								opacity: [0.3, 0.5, 0.3],
-							}}
-							transition={{
-								duration: 4,
-								repeat: Infinity,
-								ease: 'easeInOut',
-							}}
-						/>
-						<motion.div
-							className="absolute w-32 h-32 rounded-full blur-3xl opacity-30"
-							style={{
-								background: 'var(--color-gradient-to)',
-								bottom: '-10%',
-								left: '10%',
-							}}
-							animate={{
-								scale: [1, 1.2, 1],
-								opacity: [0.3, 0.5, 0.3],
-							}}
-							transition={{
-								duration: 4,
-								repeat: Infinity,
-								ease: 'easeInOut',
-								delay: 2,
-							}}
-						/>
-					</div>
-
-					{/* Header */}
-					<div
-						className="relative p-6 sm:p-8 text-white overflow-hidden"
+					<motion.div
+						initial={{ opacity: 0, scale: 0.96 }}
+						animate={{ opacity: 1, scale: 1 }}
+						exit={{ opacity: 0, scale: 0.96 }}
+						transition={spring}
+						className="relative z-10 w-full max-w-[20rem] rounded-2xl border shadow-2xl overflow-hidden max-h-[min(78dvh,32rem)] flex flex-col bg-white"
 						style={{
-							background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-via), var(--color-gradient-to))`,
-						}}>
-						{/* Shimmer effect */}
-						<motion.div
-							className="absolute inset-0 opacity-30"
-							animate={{
-								backgroundPosition: ['-200% 0', '200% 0'],
-							}}
-							transition={{
-								duration: 3,
-								repeat: Infinity,
-								ease: 'linear',
-							}}
+							borderColor: 'var(--color-primary-200)',
+							boxShadow: '0 18px 48px -12px rgba(15, 23, 42, 0.35)',
+						}}
+						onClick={(e) => e.stopPropagation()}
+						onPointerDown={(e) => e.stopPropagation()}
+					>
+						{/* Compact header row — no absolute X overlapping content */}
+						<div
+							className="shrink-0 flex items-center gap-2.5 px-3 py-2.5 text-white"
 							style={{
-								background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)',
-								backgroundSize: '200% 100%',
+								background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-via), var(--color-gradient-to))`,
 							}}
-						/>
-
-						{/* Close button */}
-						<motion.button
-							whileHover={{ scale: 1.1, rotate: 90 }}
-							whileTap={{ scale: 0.9 }}
-							onClick={closeGuide}
-							className="absolute top-4 ltr:left-4 rtl:left-4 w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm border-2 border-white/30 grid place-content-center transition-colors hover:bg-white/30"
-							aria-label="Close">
-							<X className="w-5 h-5" strokeWidth={2.5} />
-						</motion.button>
-
-						<div className="relative z-10">
-							{/* Icon */}
-							<motion.div
-								initial={{ scale: 0, rotate: -180 }}
-								animate={{ scale: 1, rotate: 0 }}
-								transition={{ delay: 0.2, ...spring }}
-								className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm border-2 border-white/30 mb-4">
-								<Smartphone className="w-6 h-6" strokeWidth={2.5} />
-							</motion.div>
-
-							{/* Title */}
-							<motion.h3
-								initial={{ opacity: 0, y: 10 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ delay: 0.3 }}
-								className="text-base sm:text-3xl font-black">
-								{t('title')}
-							</motion.h3>
-
-							{/* Subtitle */}
-							<motion.p
-								initial={{ opacity: 0, y: 10 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ delay: 0.4 }}
-								className="text-white/90 text-xs mt-2 md: leading-relaxed">
-								{t('subtitle')}
-							</motion.p>
-
-							{/* Browser selector */}
-							<motion.div
-								initial={{ opacity: 0, y: 10 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ delay: 0.5 }}
-								className="mt-4">
-								<Select
-									className="bg-white/10 backdrop-blur-sm border-2 border-white/20 text-white rounded-lg"
-									options={Object.entries(t.raw('browserOptions')).map(([key, label]) => ({
-										label: <MultiLangText>{label}</MultiLangText>,
-										id: key,
-									}))}
-									value={browserKey}
-									onChange={(val) => setBrowserKey(val)}
-								/>
-							</motion.div>
+						>
+							<span className="inline-flex shrink-0 items-center justify-center w-8 h-8 rounded-lg bg-white/20 border border-white/25">
+								<Smartphone className="w-4 h-4" strokeWidth={2.4} />
+							</span>
+							<div className="min-w-0 flex-1">
+								<h3 className="text-[0.84rem] font-black leading-snug tracking-tight">
+									{t('title')}
+								</h3>
+								<p className="text-white/85 text-[0.65rem] leading-snug mt-0.5 line-clamp-2">
+									{t('subtitle')}
+								</p>
+							</div>
+							<button
+								type="button"
+								onClick={closeGuide}
+								onPointerDown={(e) => {
+									e.stopPropagation();
+									closeGuide();
+								}}
+								className="shrink-0 w-8 h-8 rounded-lg bg-white/20 border border-white/25 grid place-content-center"
+								aria-label="Close"
+							>
+								<X className="w-4 h-4 pointer-events-none" strokeWidth={2.5} />
+							</button>
 						</div>
-					</div>
 
-					{/* Content */}
-					<div className="relative bg-white/95 backdrop-blur-xl px-6 sm:px-8 py-6 space-y-6">
-						{/* Install button for Android */}
-						{browserInfo.isAndroid && deferredPrompt && (
-							<motion.button
-								initial={{ opacity: 0, y: 10 }}
-								animate={{ opacity: 1, y: 0 }}
-								whileHover={{ scale: 1.02 }}
-								whileTap={{ scale: 0.98 }}
-								onClick={triggerInstall}
-								disabled={installing}
-								className="w-full rounded-lg py-3.5 font-bold text-white shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
-								style={{
-									background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
-									boxShadow: '0 8px 24px -8px var(--color-primary-500)',
-								}}>
-								{installing && (
-									<motion.div
-										className="absolute inset-0"
-										animate={{
-											backgroundPosition: ['-200% 0', '200% 0'],
-										}}
-										transition={{
-											duration: 2,
-											repeat: Infinity,
-											ease: 'linear',
-										}}
-										style={{
-											background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
-											backgroundSize: '200% 100%',
-										}}
-									/>
-								)}
-								<span className="relative z-10 flex items-center justify-center gap-2">
-									{installing ? (
-										<motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-											<Download className="w-5 h-5" />
-										</motion.div>
-									) : (
-										<Download className="w-5 h-5" />
-									)}
-									{installing ? t('installing') : t('installButton')}
-								</span>
-							</motion.button>
-						)}
+						<div className="relative bg-white px-3 py-2.5 space-y-2.5 overflow-y-auto overscroll-contain">
+							<Select
+								searchable={false}
+								clearable={false}
+								cnInputParent="!h-8 !min-h-8 !rounded-lg !text-[0.72rem] !font-semibold !bg-slate-50 !border-slate-200 !px-2.5"
+								options={browserOptions}
+								value={browserKey}
+								onChange={(val) => setBrowserKey(val)}
+							/>
 
-						{/* Steps */}
-						<div>
-							 
+							{browserInfo.isAndroid && deferredPrompt ? (
+								<button
+									type="button"
+									onClick={triggerInstall}
+									disabled={installing}
+									className="w-full rounded-xl py-2 text-[0.78rem] font-bold text-white shadow-md disabled:opacity-50"
+									style={{
+										background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
+									}}
+								>
+									<span className="inline-flex items-center justify-center gap-1.5">
+										<Download className="w-3.5 h-3.5" />
+										{installing ? t('installing') : t('installButton')}
+									</span>
+								</button>
+							) : null}
 
-							<ol className="space-y-3">
-								{steps.map((line, i) => (
-									<motion.li
-										key={i}
-										initial={{ opacity: 0, x: -20 }}
-										animate={{ opacity: 1, x: 0 }}
-										transition={{ delay: 0.6 + i * 0.1 }}
-										className="flex gap-3 items-start group">
-										{/* Step number */}
+							<ol className="space-y-1.5">
+								{(Array.isArray(steps) ? steps : []).map((line, i) => (
+									<li key={i} className="flex gap-2 items-start">
 										<span
-											className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white text-sm font-black shadow-lg transition-all duration-200 group-hover:scale-110"
+											className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white text-[0.65rem] font-black"
 											style={{
 												background: `linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to))`,
-											}}>
+											}}
+										>
 											{i + 1}
 										</span>
-
-										{/* Step text */}
-										<p className="text-sm text-slate-700 md: leading-relaxed font-medium pt-1">{line}</p>
-									</motion.li>
+										<p className="text-[0.74rem] text-slate-700 leading-snug font-medium pt-0.5">
+											{line}
+										</p>
+									</li>
 								))}
 							</ol>
-						</div>
 
-						{/* Footer */}
-						<motion.div
-							initial={{ opacity: 0, y: 10 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ delay: 0.8 }}
-							className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-4 border-t-2"
-							style={{ borderColor: 'var(--color-primary-100)' }}>
-							{/* Checkbox */}
-							<div className="flex-1">
+							<div
+								className="flex flex-col gap-2 pt-2 border-t"
+								style={{ borderColor: 'var(--color-primary-100)' }}
+							>
 								<CheckBox
 									label={t('dontShowAgain')}
 									initialChecked={dontShowAgain}
 									onChange={(checked) => setDontShowAgain(checked)}
 								/>
-							</div>
 
-							{/* Close button */}
-							<motion.button
-								whileHover={{ scale: 1.02 }}
-								whileTap={{ scale: 0.98 }}
-								onClick={closeGuide}
-								className="rounded-lg px-6 py-2.5 font-bold border-2 transition-all duration-200"
-								style={{
-									borderColor: 'var(--color-primary-200)',
-									backgroundColor: 'var(--color-primary-50)',
-									color: 'var(--color-primary-700)',
-								}}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.backgroundColor = 'var(--color-primary-100)';
-									e.currentTarget.style.borderColor = 'var(--color-primary-300)';
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
-									e.currentTarget.style.borderColor = 'var(--color-primary-200)';
-								}}>
-								{t('close')}
-							</motion.button>
-						</motion.div>
-					</div>
-				</motion.div>
-			</div>
-		</AnimatePresence>
+								<button
+									type="button"
+									onClick={closeGuide}
+									className="w-full rounded-xl px-4 py-2 text-[0.78rem] font-bold border"
+									style={{
+										borderColor: 'var(--color-primary-200)',
+										backgroundColor: 'var(--color-primary-50)',
+										color: 'var(--color-primary-700)',
+									}}
+								>
+									{t('close')}
+								</button>
+							</div>
+						</div>
+					</motion.div>
+				</div>
+			) : null}
+		</AnimatePresence>,
+		document.body,
 	);
 }
-
-
-
-
-
-
-

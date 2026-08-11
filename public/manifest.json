@@ -6,7 +6,7 @@
   "background_color": "#ffffff",
   "theme_color": "#1e293b",
   "orientation": "any",
-  "start_url": "/ar/",
+  "start_url": "/ar/open",
   "scope": "/",
   "icons": [
     {

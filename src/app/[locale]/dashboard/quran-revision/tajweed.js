@@ -334,12 +334,20 @@ const LEADING_MARKS_RE = /^(\p{M}+)/u;
 /**
  * Tajweed API sometimes uses rare alef forms missing from web fonts,
  * which then fall back to a dotted-circle placeholder.
+ *
+ * Silent-alif markers (صفر): U+06DF in quran-tajweed, U+06E0 in quran-uthmani.
+ * When the face lacks the glyph, browsers paint a solid black blob inside a
+ * dashed ◌ circle — remap to combining ring-above that Amiri/Uthmani ship.
  */
-function normalizeTajweedGlyphs(text) {
+export function normalizeTajweedGlyphs(text) {
 	return String(text || '')
 		.replace(/\u0672/g, '\u0627') // ALEF WITH WAVY HAMZA ABOVE → ALEF
 		.replace(/\u0673/g, '\u0627') // ALEF WITH WAVY HAMZA BELOW → ALEF
-		.replace(/\u0675/g, '\u0627'); // ALEF WITH HAMZA BELOW → ALEF
+		.replace(/\u0675/g, '\u0627') // ALEF WITH HAMZA BELOW → ALEF
+		.replace(/\u25CC/g, '') // dotted-circle fallback base (◌)
+		// Silent-alif markers: tajweed edition uses U+06DF, uthmani uses U+06E0.
+		// Missing glyphs paint as a solid black blob inside a dashed ◌ circle.
+		.replace(/[\u06DF\u06E0]/g, '\u030A');
 }
 
 /**

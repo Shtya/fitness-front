@@ -60,6 +60,9 @@ export async function fetchMessages(conversationId, params = {}) {
 		params: {
 			limit: params.limit || 30,
 			before: params.before || undefined,
+			// Default off: open-chat uses sync/latest for provider history. Preview
+			// backfill must never stampede getMessages across the inbox.
+			live: params.live === true || params.live === 1 || params.live === '1' ? 1 : 0,
 		},
 	});
 	return Array.isArray(data) ? data : [];

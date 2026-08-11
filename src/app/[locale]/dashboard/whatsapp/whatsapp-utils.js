@@ -1,19 +1,132 @@
-export function mergeMessages(current = [], incoming = []) {
-	const map = new Map();
-	[...current, ...incoming].forEach((item, index) => {
-		const key =
-			item?.providerMessageId ||
-			item?.id ||
-			item?.clientMessageId ||
-			`anon:${index}:${item?.providerTimestamp || item?.created_at || ''}:${item?.text || item?.type || ''}`;
-		const prev = map.get(key);
-		map.set(key, prev ? { ...prev, ...item } : item);
-	});
-	return [...map.values()].sort(
-		(a, b) =>
-			new Date(a.providerTimestamp || a.created_at) -
-			new Date(b.providerTimestamp || b.created_at),
+/** Drops anything that belongs to a different chat. Messages carry their own
+ *  conversationId, so a slow response for a previously opened chat can never
+ *  paint into the chat the user is looking at now. */
+export function scopeMessagesToConversation(items = [], conversationId = null) {
+	if (!conversationId) return Array.isArray(items) ? items : [];
+	return (Array.isArray(items) ? items : []).filter(
+		item => !item?.conversationId || item.conversationId === conversationId,
 	);
+}
+
+function messageSortTime(message) {
+	const time = new Date(message?.providerTimestamp || message?.created_at || 0).getTime();
+	return Number.isFinite(time) ? time : 0;
+}
+
+/**
+ * Idempotent merge for API pages, socket events, and optimistic sends.
+ * Collapses pending:* rows into the confirmed provider/DB message when the
+ * same clientMessageId or providerMessageId arrives later.
+ */
+export function mergeMessages(current = [], incoming = [], conversationId = null) {
+	const byProvider = new Map();
+	const byClient = new Map();
+	const byStableId = new Map();
+	const orphans = [];
+
+	const forget = message => {
+		if (!message) return;
+		if (message.providerMessageId && byProvider.get(message.providerMessageId) === message) {
+			byProvider.delete(message.providerMessageId);
+		}
+		if (message.clientMessageId && byClient.get(message.clientMessageId) === message) {
+			byClient.delete(message.clientMessageId);
+		}
+		const id = String(message.id || '');
+		if (id && !id.startsWith('pending:') && !id.startsWith('live:') && byStableId.get(id) === message) {
+			byStableId.delete(id);
+		}
+	};
+
+	const remember = message => {
+		if (message.providerMessageId) byProvider.set(message.providerMessageId, message);
+		if (message.clientMessageId) byClient.set(message.clientMessageId, message);
+		const id = String(message.id || '');
+		if (id && !id.startsWith('pending:') && !id.startsWith('live:')) {
+			byStableId.set(id, message);
+		}
+	};
+
+	[
+		...scopeMessagesToConversation(current, conversationId),
+		...scopeMessagesToConversation(incoming, conversationId),
+	].forEach((item, index) => {
+		let existing =
+			(item?.providerMessageId && byProvider.get(item.providerMessageId)) ||
+			(item?.clientMessageId && byClient.get(item.clientMessageId)) ||
+			null;
+		const stableId = String(item?.id || '');
+		if (
+			!existing &&
+			stableId &&
+			!stableId.startsWith('pending:') &&
+			!stableId.startsWith('live:')
+		) {
+			existing = byStableId.get(stableId) || null;
+		}
+
+		if (existing) {
+			forget(existing);
+			const merged = {
+				...existing,
+				...item,
+				optimistic: Boolean(item.optimistic) && !item.providerMessageId,
+				attachments: item.attachments?.length ? item.attachments : existing.attachments,
+				reactions: item.reactions?.length ? item.reactions : existing.reactions,
+			};
+			remember(merged);
+			return;
+		}
+
+		const hasIdentity =
+			item?.providerMessageId ||
+			item?.clientMessageId ||
+			(stableId && !stableId.startsWith('pending:') && !stableId.startsWith('live:'));
+		if (hasIdentity) {
+			remember(item);
+			return;
+		}
+
+		orphans.push({
+			...item,
+			__anonKey: `anon:${index}:${item?.providerTimestamp || item?.created_at || ''}:${item?.text || item?.type || ''}`,
+		});
+	});
+
+	const deduped = new Set();
+	const merged = [];
+	for (const message of [
+		...byProvider.values(),
+		...byClient.values(),
+		...byStableId.values(),
+	]) {
+		if (deduped.has(message)) continue;
+		deduped.add(message);
+		merged.push(message);
+	}
+	for (const orphan of orphans) {
+		const { __anonKey, ...rest } = orphan;
+		merged.push(rest);
+	}
+
+	return merged.sort((a, b) => {
+		const difference = messageSortTime(a) - messageSortTime(b);
+		if (difference) return difference;
+		return String(a?.id || a?.providerMessageId || '').localeCompare(
+			String(b?.id || b?.providerMessageId || ''),
+		);
+	});
+}
+
+/** WhatsApp-style delivery ticks: pending → sent → delivered → read/played. */
+export function messageDeliveryState(message) {
+	if (!message) return 'hidden';
+	if (message.showReadReceipt === false) return 'hidden';
+	if (message.optimistic || message.status === 'pending') return 'pending';
+	if (message.status === 'failed') return 'failed';
+	if (['read', 'played'].includes(message.status)) return 'read';
+	if (message.status === 'delivered') return 'delivered';
+	return 'sent';
 }
 
 export function conversationTitle(conversation) {
@@ -35,6 +148,27 @@ export function normalizeWhatsAppIdentity(value) {
 		.replace(/@(c\.us|s\.whatsapp\.net|g\.us|lid)$/i, '');
 }
 
+function conversationSortTime(conversation) {
+	return new Date(
+		conversation?.lastMessage?.providerTimestamp ||
+			conversation?.lastMessageAt ||
+			conversation?.created_at ||
+			0,
+	).getTime();
+}
+
+/** WhatsApp keeps pinned chats on top and orders the rest by newest activity.
+ *  Realtime preview patches must re-apply that order, otherwise an incoming
+ *  message updates the row in place without bubbling the chat up. */
+export function sortConversationsByActivity(conversations = []) {
+	return [...conversations].sort((a, b) => {
+		if (Boolean(a?.isPinned) !== Boolean(b?.isPinned)) return a?.isPinned ? -1 : 1;
+		const difference = conversationSortTime(b) - conversationSortTime(a);
+		if (difference) return difference;
+		return String(a?.id).localeCompare(String(b?.id));
+	});
+}
+
 export function updateConversationPreview(conversations = [], payload = {}) {
 	const conversationId = payload?.conversationId;
 	const preview = payload?.preview;
@@ -42,6 +176,7 @@ export function updateConversationPreview(conversations = [], payload = {}) {
 	const hasRenderablePreview = isRenderableWhatsAppMessage(preview);
 
 	let changed = false;
+	let reorder = false;
 	const next = conversations.map(conversation => {
 		if (conversation.id !== conversationId) return conversation;
 
@@ -60,6 +195,7 @@ export function updateConversationPreview(conversations = [], payload = {}) {
 				: Math.max(0, Number(payload.unreadCount) || 0);
 
 		changed = true;
+		if (isLatest && hasRenderablePreview) reorder = true;
 		return {
 			...conversation,
 			unreadCount,
@@ -77,7 +213,8 @@ export function updateConversationPreview(conversations = [], payload = {}) {
 		};
 	});
 
-	return changed ? next : conversations;
+	if (!changed) return conversations;
+	return reorder ? sortConversationsByActivity(next) : next;
 }
 
 export function seekRatio(clientX, left, width, isRtl = false) {

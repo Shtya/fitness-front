@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import {
 	Check,
 	CheckCheck,
+	Clock,
 	Columns2,
 	FileText,
 	Image as ImageIcon,
@@ -15,7 +16,14 @@ import {
 	X,
 } from 'lucide-react';
 import api from '@/utils/axios';
-import { conversationTitle, mergeMessages, messageTextPresentation } from './whatsapp-utils';
+import {
+	conversationTitle,
+	mergeMessages,
+	messageDeliveryState,
+	messageTextPresentation,
+} from './whatsapp-utils';
+
+const MESSAGE_PAGE_SIZE = 50;
 
 function newClientMessageId() {
 	if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -29,6 +37,15 @@ function formatRecordingDuration(seconds) {
 	const minutes = Math.floor(value / 60);
 	const remainingSeconds = value % 60;
 	return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+}
+
+function DeliveryTicks({ message }) {
+	const state = messageDeliveryState(message);
+	if (state === 'hidden') return null;
+	if (state === 'pending') return <Clock size={12} className="animate-pulse" />;
+	if (state === 'read') return <CheckCheck size={12} className="text-[#53BDEB]" />;
+	if (state === 'delivered') return <CheckCheck size={12} className="text-[#8696A0]" />;
+	return <Check size={12} />;
 }
 
 function SplitAvatar({ label = '?', src = '', size = 36 }) {
@@ -181,27 +198,64 @@ export default function WhatsAppSplitPane({
 	const title = conversation ? conversationTitle(conversation) : '';
 	const [messages, setMessages] = useState([]);
 	const [loading, setLoading] = useState(false);
+	const [loadingOlder, setLoadingOlder] = useState(false);
+	const [hasMore, setHasMore] = useState(true);
 	const [draft, setDraft] = useState('');
 	const [sending, setSending] = useState(false);
 	const [recordingVoice, setRecordingVoice] = useState(false);
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
 	const scrollRef = useRef(null);
+	const loadingOlderRef = useRef(false);
 	const mediaRecorderRef = useRef(null);
 	const recordingStreamRef = useRef(null);
 	const recordingChunksRef = useRef([]);
 	const recordingTimerRef = useRef(null);
 	const recordingSecondsRef = useRef(0);
 	const discardRecordingRef = useRef(false);
+	const stickToBottomRef = useRef(true);
 
 	const loadMessages = useCallback(async () => {
 		if (!conversationId) return;
 		setLoading(true);
+		setHasMore(true);
 		try {
 			const { data } = await api.get(`/whatsapp/conversations/${conversationId}/messages`, {
-				params: { limit: 40 },
+				params: { limit: MESSAGE_PAGE_SIZE, live: 0 },
 			});
-			const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
-			setMessages(items);
+			const local = Array.isArray(data?.items)
+				? data.items
+				: Array.isArray(data)
+					? data
+					: [];
+			let next = local;
+			let providerHasMore;
+			// Only hit WhatsApp Web when local history is empty — same model as WA Web
+			// (IndexedDB first; network history only when the thread was never hydrated).
+			if (accountId && canCompose && local.length === 0) {
+				try {
+					const synced = await api.post(
+						`/whatsapp/conversations/${conversationId}/sync/latest`,
+						null,
+						{
+							params: { limit: MESSAGE_PAGE_SIZE },
+							timeout: 90000,
+						},
+					);
+					const syncedItems = Array.isArray(synced?.data?.items)
+						? synced.data.items
+						: [];
+					next = mergeMessages(local, syncedItems);
+					providerHasMore = synced?.data?.hasMore;
+				} catch {
+					/* keep DB/local result */
+				}
+			}
+			setMessages(next);
+			setHasMore(
+				typeof providerHasMore === 'boolean'
+					? providerHasMore
+					: local.length >= MESSAGE_PAGE_SIZE,
+			);
 		} catch (error) {
 			toast.error(
 				error.response?.data?.message ||
@@ -211,7 +265,66 @@ export default function WhatsAppSplitPane({
 		} finally {
 			setLoading(false);
 		}
-	}, [ar, conversationId]);
+	}, [accountId, ar, canCompose, conversationId]);
+
+	const loadOlder = useCallback(async () => {
+		if (!conversationId || loadingOlderRef.current || !hasMore || !messages.length) return;
+		loadingOlderRef.current = true;
+		setLoadingOlder(true);
+		const box = scrollRef.current;
+		const previousHeight = box?.scrollHeight || 0;
+		const oldest = messages[0];
+		try {
+			const { data } = await api.get(`/whatsapp/conversations/${conversationId}/messages`, {
+				params: { before: oldest?.id, limit: MESSAGE_PAGE_SIZE, live: 0 },
+			});
+			let local = Array.isArray(data)
+				? data
+				: Array.isArray(data?.items)
+					? data.items
+					: [];
+			let synced = [];
+			let providerHasMore;
+			if (accountId && canCompose && local.length < MESSAGE_PAGE_SIZE) {
+				try {
+					const response = await api.post(
+						`/whatsapp/conversations/${conversationId}/sync/older`,
+						null,
+						{ params: { limit: MESSAGE_PAGE_SIZE } },
+					);
+					synced = Array.isArray(response?.data?.items) ? response.data.items : [];
+					providerHasMore = response?.data?.hasMore;
+				} catch {
+					/* keep DB page */
+				}
+			}
+			const incoming = [...local, ...synced];
+			if (!incoming.length) {
+				setHasMore(false);
+				return;
+			}
+			setHasMore(
+				typeof providerHasMore === 'boolean'
+					? providerHasMore
+					: local.length >= MESSAGE_PAGE_SIZE,
+			);
+			setMessages(current => mergeMessages(incoming, current));
+			requestAnimationFrame(() => {
+				const currentBox = scrollRef.current;
+				if (currentBox) {
+					currentBox.scrollTop += currentBox.scrollHeight - previousHeight;
+				}
+			});
+		} catch (error) {
+			toast.error(
+				error.response?.data?.message ||
+					(ar ? 'تعذر تحميل رسائل أقدم' : 'Could not load older messages'),
+			);
+		} finally {
+			loadingOlderRef.current = false;
+			setLoadingOlder(false);
+		}
+	}, [accountId, ar, canCompose, conversationId, hasMore, messages]);
 
 	useEffect(() => {
 		setDraft('');
@@ -221,7 +334,7 @@ export default function WhatsAppSplitPane({
 
 	useEffect(() => {
 		const node = scrollRef.current;
-		if (!node) return;
+		if (!node || !stickToBottomRef.current) return;
 		node.scrollTop = node.scrollHeight;
 	}, [messages.length, conversationId]);
 
@@ -258,6 +371,7 @@ export default function WhatsAppSplitPane({
 		};
 		setDraft('');
 		setSending(true);
+		stickToBottomRef.current = true;
 		setMessages(current => mergeMessages(current, [optimistic]));
 		try {
 			const { data } = await api.post(`/whatsapp/conversations/${conversationId}/messages`, {
@@ -294,6 +408,7 @@ export default function WhatsAppSplitPane({
 				fileId: uploaded.fileId,
 				clientMessageId: newClientMessageId(),
 			});
+			stickToBottomRef.current = true;
 			setMessages(current => mergeMessages(current, [data.message]));
 		} catch (error) {
 			toast.error(
@@ -414,7 +529,20 @@ export default function WhatsAppSplitPane({
 					backgroundRepeat: 'repeat',
 					backgroundSize: 'auto, 360px 360px',
 				}}
+				onScroll={event => {
+					const node = event.currentTarget;
+					stickToBottomRef.current =
+						node.scrollHeight - node.scrollTop - node.clientHeight < 80;
+					if (!loading && !loadingOlder && hasMore && node.scrollTop < 50) {
+						void loadOlder();
+					}
+				}}
 			>
+				{loadingOlder ? (
+					<div className="flex justify-center py-2 text-slate-500">
+						<Loader2 size={16} className="animate-spin" />
+					</div>
+				) : null}
 				{loading && messages.length === 0 ? (
 					<div className="flex h-40 items-center justify-center text-slate-500">
 						<Loader2 size={22} className="animate-spin" />
@@ -428,7 +556,6 @@ export default function WhatsAppSplitPane({
 						const mine = message.direction === 'outbound';
 						const presentation = messageTextPresentation(message.text);
 						const attachments = message.attachments || [];
-						const isRead = ['read', 'played'].includes(message.status);
 						return (
 							<div
 								key={message.id}
@@ -464,13 +591,7 @@ export default function WhatsAppSplitPane({
 											hour: '2-digit',
 											minute: '2-digit',
 										})}
-										{mine ? (
-											isRead ? (
-												<CheckCheck size={12} className="text-[#53BDEB]" />
-											) : (
-												<Check size={12} />
-											)
-										) : null}
+										{mine ? <DeliveryTicks message={message} /> : null}
 									</div>
 								</div>
 							</div>

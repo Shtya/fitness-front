@@ -14,6 +14,7 @@ import { ThemeProvider } from '@/app/[locale]/theme';
 import { TenantThemeProvider } from '@/lib/tenant/TenantThemeProvider';
 import { useInitialRoleRedirect } from '@/hooks/useInitialRoleRedirect';
 import Header from './Header';
+import LastRouteTracker from './LastRouteTracker';
 import { useRouter, useParams } from 'next/navigation';
 import { LogIn, LogOut, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -212,6 +213,7 @@ export default function Layout({ children }) {
 		pathname.startsWith('/auth') ||
 		pathname.startsWith('/thank-you') ||
 		pathname.startsWith('/form') ||
+		pathname.startsWith('/open') ||
 		pathname === '/' ||
 		pathname === '/money' ||
 		pathname.startsWith('/workspace') ||
@@ -228,8 +230,10 @@ export default function Layout({ children }) {
 		pathname.startsWith('/presentation') ||
 		pathname.startsWith('/thank-you') ||
 		pathname.startsWith('/site') ||
+		pathname.startsWith('/open') ||
 		pathname === '/';
 	const isPresentationRoute = pathname.startsWith('/presentation');
+	const isOpenRoute = pathname.startsWith('/open');
 	const isWhatsAppRoute = pathname.includes('/dashboard/whatsapp');
 	const isMetaWhatsAppRoute = pathname.includes('/dashboard/meta-whatsapp');
 	const isChatRoute = pathname.includes('/dashboard/chat');
@@ -240,14 +244,8 @@ export default function Layout({ children }) {
 
 	const [sidebarOpen, setSidebarOpen]         = useState(false);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-	/** Mobile top header: hide on scroll down, reveal on scroll up */
-	const [headerCollapsed, setHeaderCollapsed] = useState(false);
 
 	useEffect(() => { setSidebarOpen(false); }, [pathname]);
-	useEffect(() => { setHeaderCollapsed(false); }, [pathname]);
-	useEffect(() => {
-		if (sidebarOpen) setHeaderCollapsed(false);
-	}, [sidebarOpen]);
 	/* Sync body push with drawer width via --sidebar-drawer-w */
 	useEffect(() => {
 		const root = document.documentElement;
@@ -255,40 +253,6 @@ export default function Layout({ children }) {
 		else root.removeAttribute('data-sidebar-open');
 		return () => root.removeAttribute('data-sidebar-open');
 	}, [sidebarOpen]);
-
-	useEffect(() => {
-		if (!isAppShell) return undefined;
-		let lastY = 0;
-		let lastTarget = null;
-		const THRESH = 10;
-
-		const onScroll = (e) => {
-			const t = e.target;
-			if (!(t instanceof Element)) return;
-			/* Ignore nested menus / dialogs / the sidebar itself */
-			if (t.closest?.('.sidebar-shell, [role="dialog"], .qr-drawer, .qr-tw-modal')) return;
-
-			const y = t.scrollTop || 0;
-			if (lastTarget !== t) {
-				lastTarget = t;
-				lastY = y;
-				return;
-			}
-			const dy = y - lastY;
-			if (y <= 16) {
-				setHeaderCollapsed(false);
-				lastY = y;
-				return;
-			}
-			if (Math.abs(dy) < THRESH) return;
-			if (dy > 0) setHeaderCollapsed(true);
-			else setHeaderCollapsed(false);
-			lastY = y;
-		};
-
-		document.addEventListener('scroll', onScroll, true);
-		return () => document.removeEventListener('scroll', onScroll, true);
-	}, [isAppShell]);
 
 	/* One document lock: app shell / presentation / open mobile drawer */
 	useEffect(() => {
@@ -438,17 +402,19 @@ export default function Layout({ children }) {
 									<div
 										className={[
 											'max-[1025px]:block hidden shrink-0',
-											'transition-[max-height,opacity,transform] duration-300 ease-out will-change-[max-height,opacity]',
-											headerCollapsed
-												? 'max-h-0 opacity-0 -translate-y-2 pointer-events-none overflow-hidden'
-												: 'max-h-[5.5rem] opacity-100 translate-y-0 overflow-visible',
 											isWhatsAppRoute ? 'wa-dashboard-header' : '',
 										].filter(Boolean).join(' ')}
-										aria-hidden={headerCollapsed || undefined}
 									>
 										<Header onMenu={() => setSidebarOpen(!sidebarOpen)} />
 									</div>
 								)}
+								{isOpenRoute ? (
+									<main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+										<div id="body" className="min-h-0 flex-1 overflow-hidden p-0">
+											{children}
+										</div>
+									</main>
+								) : (
 								<AnimatePresence mode="wait">
 									<motion.main
 										key={pathname}
@@ -484,6 +450,7 @@ export default function Layout({ children }) {
 										</div>
 									</motion.main>
 								</AnimatePresence>
+								)}
 							</div>
 						</div>
 					</div>
@@ -499,7 +466,8 @@ export default function Layout({ children }) {
 					</AnimatePresence>
 
 					{/* Quran audio continues after leaving /quran-revision */}
-					<QuranMiniPlayer />
+					{!isOpenRoute ? <QuranMiniPlayer /> : null}
+					{!isOpenRoute ? <LastRouteTracker /> : null}
 				</ThemeProvider>
 				</TenantThemeProvider>
 			</Providers>

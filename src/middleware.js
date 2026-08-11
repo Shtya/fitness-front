@@ -23,6 +23,7 @@ const PUBLIC_PREFIXES = [
   '/money',
   '/presentation',
   '/gym',
+  '/open',
   '/dashboard/recipes',
   '/dashboard/my/recipes',
   '/', 

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import {
 	TAJWEED_RULES,
 	maskTajweedWords,
+	normalizeTajweedGlyphs,
 	parseTajweedToWords,
 } from './tajweed';
 
@@ -179,7 +180,7 @@ export default function TajweedText({
 
 	const words = useMemo(() => {
 		if (!enabled || !tajweed) {
-			const text = plain || '';
+			const text = normalizeTajweedGlyphs(plain || '');
 			if (!hideParts?.length) {
 				return text.trim() ? [{ parts: [{ text }], rules: [] }] : [];
 			}
@@ -396,10 +397,12 @@ export default function TajweedText({
 								beginDrag(index, e);
 							} : undefined}
 							onClick={tipOn ? (e) => {
+								e.stopPropagation();
 								if (active?.index === index) clear();
 								else showFor(index, e.currentTarget, word.rules);
 							} : errorMode ? (e) => {
 								e.preventDefault();
+								e.stopPropagation();
 							} : undefined}
 						>
 							{word.parts.map((p, pi) => (

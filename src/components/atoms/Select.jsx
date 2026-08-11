@@ -142,8 +142,26 @@ export default function Select({
   }, [open, closeMenu]);
 
   useEffect(() => {
-    if (createMode) setTimeout(() => createInputRef.current?.focus(), 0);
+    if (createMode) setTimeout(() => createInputRef.current?.focus({ preventScroll: true }), 0);
   }, [createMode]);
+
+  // Returning focus to the trigger is needed for keyboard users, but a plain
+  // focus() also scrolls it into view — which yanks the page down every time an
+  // option is picked in a long form.
+  const refocusTrigger = () => buttonRef.current?.focus({ preventScroll: true });
+
+  const preservePageScroll = fn => {
+    const root = typeof document !== 'undefined' ? document.getElementById('body') : null;
+    const y = root ? root.scrollTop : (typeof window !== 'undefined' ? window.scrollY : 0);
+    fn();
+    const restore = () => {
+      if (root) root.scrollTop = y;
+      else if (typeof window !== 'undefined') window.scrollTo(0, y);
+    };
+    restore();
+    requestAnimationFrame(restore);
+    setTimeout(restore, 0);
+  };
 
   const scrollIntoView = index => {
     const list = listRef.current;
@@ -170,7 +188,7 @@ export default function Select({
       if (e.key === 'Escape') { e.preventDefault(); setCreateMode(false); setCreateText(''); }
       return;
     }
-    if (e.key === 'Escape') { e.preventDefault(); closeMenu(); buttonRef.current?.focus(); }
+    if (e.key === 'Escape') { e.preventDefault(); closeMenu(); refocusTrigger(); }
     else if (e.key === 'ArrowDown') {
       e.preventDefault();
       setActiveIndex(i => { const next = Math.min((i < 0 ? -1 : i) + 1, filtered.length - 1); scrollIntoView(next); return next; });
@@ -180,18 +198,39 @@ export default function Select({
     } else if (e.key === 'Enter') {
       e.preventDefault();
       const item = filtered[activeIndex];
-      if (item) { onChange(item.id); closeMenu(); buttonRef.current?.focus(); }
+      if (item) {
+        preservePageScroll(() => {
+          onChange(item.id);
+          closeMenu();
+          refocusTrigger();
+        });
+      }
     } else if (e.key === 'Tab') closeMenu();
   };
 
-  const pick = item => { onChange(item.id); closeMenu(); buttonRef.current?.focus(); };
-  const clear = e => { e.stopPropagation(); onChange(null); setQuery(''); setActiveIndex(-1); };
+  const pick = item => {
+    preservePageScroll(() => {
+      onChange(item.id);
+      closeMenu();
+      refocusTrigger();
+    });
+  };
+  const clear = e => {
+    e.stopPropagation();
+    preservePageScroll(() => {
+      onChange(null);
+      setQuery('');
+      setActiveIndex(-1);
+    });
+  };
   const createFromText = text => {
     const tValue = (text ?? '').trim();
     if (!tValue) return;
-    onChange(tValue);
-    closeMenu();
-    buttonRef.current?.focus();
+    preservePageScroll(() => {
+      onChange(tValue);
+      closeMenu();
+      refocusTrigger();
+    });
   };
 
   // --- THEME STYLES (inline to use CSS vars) ---

@@ -11,7 +11,9 @@ import {
 	normalizeWhatsAppIdentity,
 	parseWhatsAppBold,
 	relativeTime,
+	scopeMessagesToConversation,
 	seekRatio,
+	sortConversationsByActivity,
 	updateConversationPreview,
 } from './whatsapp-utils.js';
 
@@ -44,6 +46,104 @@ test('mergeMessages deduplicates provider messages and sorts chronologically', (
 		['provider-1', 'provider-2'],
 	);
 	assert.equal(result[1].text, 'new');
+});
+
+test('mergeMessages collapses optimistic sends into confirmed provider rows', () => {
+	const result = mergeMessages(
+		[
+			{
+				id: 'pending:client-1',
+				clientMessageId: 'client-1',
+				optimistic: true,
+				text: 'Hello',
+				providerTimestamp: '2026-01-02T00:00:00.000Z',
+			},
+		],
+		[
+			{
+				id: 'db-1',
+				clientMessageId: 'client-1',
+				providerMessageId: 'provider-1',
+				text: 'Hello',
+				providerTimestamp: '2026-01-02T00:00:00.000Z',
+			},
+		],
+	);
+	assert.equal(result.length, 1);
+	assert.equal(result[0].id, 'db-1');
+	assert.equal(result[0].providerMessageId, 'provider-1');
+	assert.equal(result[0].optimistic, false);
+});
+
+test('mergeMessages refuses to keep messages from another conversation', () => {
+	const result = mergeMessages(
+		[
+			{
+				id: 'from-previous-chat',
+				conversationId: 'chat-a',
+				providerTimestamp: '2026-01-01T00:00:00.000Z',
+			},
+		],
+		[
+			{
+				id: 'from-open-chat',
+				conversationId: 'chat-b',
+				providerTimestamp: '2026-01-02T00:00:00.000Z',
+			},
+		],
+		'chat-b',
+	);
+	assert.deepEqual(
+		result.map(item => item.id),
+		['from-open-chat'],
+	);
+});
+
+test('scopeMessagesToConversation keeps items that carry no conversation id', () => {
+	const items = [
+		{ id: 'optimistic' },
+		{ id: 'same', conversationId: 'chat-a' },
+		{ id: 'other', conversationId: 'chat-b' },
+	];
+	assert.deepEqual(
+		scopeMessagesToConversation(items, 'chat-a').map(item => item.id),
+		['optimistic', 'same'],
+	);
+	assert.deepEqual(scopeMessagesToConversation(items, null), items);
+});
+
+test('an incoming message bubbles its conversation to the top of the list', () => {
+	const conversations = [
+		{ id: 'busy', lastMessageAt: '2026-03-01T10:00:00.000Z' },
+		{ id: 'quiet', lastMessageAt: '2026-02-01T10:00:00.000Z' },
+	];
+	const result = updateConversationPreview(conversations, {
+		conversationId: 'quiet',
+		lastMessageAt: '2026-03-02T10:00:00.000Z',
+		preview: {
+			id: 'message-1',
+			text: 'Hello',
+			type: 'text',
+			direction: 'inbound',
+			providerTimestamp: '2026-03-02T10:00:00.000Z',
+		},
+	});
+	assert.deepEqual(
+		result.map(item => item.id),
+		['quiet', 'busy'],
+	);
+});
+
+test('pinned conversations stay above newer activity', () => {
+	const result = sortConversationsByActivity([
+		{ id: 'new', lastMessageAt: '2026-03-01T00:00:00.000Z' },
+		{ id: 'pinned', isPinned: true, lastMessageAt: '2025-01-01T00:00:00.000Z' },
+		{ id: 'old', lastMessageAt: '2026-01-01T00:00:00.000Z' },
+	]);
+	assert.deepEqual(
+		result.map(item => item.id),
+		['pinned', 'new', 'old'],
+	);
 });
 
 test('conversationTitle follows group/contact/provider precedence', () => {

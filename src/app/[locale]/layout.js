@@ -97,9 +97,7 @@ export default async function RootLayout({ children, params }) {
         <NextIntlClientProvider locale={locale}>
           <Layout>
             {children}
-            <div className='md:hidden'>
-              <AddToHomeGuide />
-            </div>
+            <AddToHomeGuide />
 						<ConfigAos />
           </Layout>
         </NextIntlClientProvider>
