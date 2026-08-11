@@ -511,7 +511,7 @@ export default function AuthPage() {
         }
         @media (min-width: 900px) {
           .sf-feature-orbit {
-            width: min(72%, 380px);
+            width: min(82%, 500px);
             aspect-ratio: 4 / 5;
             max-height: min(48vh, 440px);
           }

@@ -5,8 +5,29 @@
 	--qr-muted: #64748b;
 	--qr-ink: #0f172a;
 	--qr-soft: #f8fafc;
-	--qr-mushaf-font: var(--font-qr-uthmani), var(--font-qr-amiri), 'UthmanicHafs', 'Amiri Quran', serif;
+	/*
+	 * Safari: do NOT put a comma-separated font list inside one custom property
+	 * and then `font-family: var(--that)`. Use the stack directly (see .qr-mushaf).
+	 */
 	color: var(--qr-ink);
+}
+
+/* Shared mushaf face — explicit stack (Brave + Safari) */
+.qr-studio .qr-mushaf,
+.qr-studio .qr-mushaf .qr-ayah,
+.qr-studio .qr-mushaf .qr-ayah-text,
+.qr-studio .qr-mushaf .qr-tw-text,
+.qr-studio .qr-mushaf .qr-tw-word,
+.qr-studio .qr-mushaf .qr-tw-mark,
+.qr-studio .qr-unit-ayah,
+.qr-studio .qr-tw-modal-example em {
+	font-family:
+		var(--font-qr-uthmani),
+		var(--font-qr-amiri),
+		'UthmanicHafs',
+		'Amiri Quran',
+		'Scheherazade New',
+		serif !important;
 }
 
 .qr-studio .qr-panel {
@@ -328,8 +349,12 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-family: var(--qr-mushaf-font) !important;
-	font-size: 0.88rem;
+	font-family:
+		var(--font-qr-uthmani),
+		var(--font-qr-amiri),
+		'UthmanicHafs',
+		'Amiri Quran',
+		serif !important;
 	font-weight: 400;
 	font-style: normal;
 	line-height: 1.45;
@@ -542,12 +567,93 @@
 }
 
 .qr-studio .qr-active.has-dock {
-	/* Clearance for fixed floating player â€” keep last ayah above the dock */
-	padding-bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
-	margin-bottom: 0.5rem;
+	/* Clearance for fixed floating player — keep last ayah above the dock */
+	padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+	margin-bottom: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 0.85rem;
+	gap: 0.55rem;
+	flex: 1 1 0;
+	min-height: 0;
+	overflow: hidden;
+}
+
+/* Active session: mushaf fills leftover viewport down to the floating dock.
+   Opening إعدادات الجلسة shrinks the mushaf (flex) instead of sliding under the dock. */
+#body:has(.qr-studio.is-session-active) {
+	overflow: hidden !important;
+	display: flex;
+	flex-direction: column;
+}
+
+#body:has(.qr-studio.is-session-active) > div {
+	flex: 1 1 0;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.qr-studio.is-session-active {
+	--qr-dock-clearance: calc(5.4rem + env(safe-area-inset-bottom, 0px));
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 0;
+	min-height: 0;
+	overflow: hidden;
+	gap: 0.4rem;
+	padding-bottom: var(--qr-dock-clearance);
+	box-sizing: border-box;
+}
+
+.qr-studio.is-session-active .qr-studio-head {
+	flex-shrink: 0;
+	margin-bottom: 0;
+}
+
+.qr-studio.is-session-active .qr-active.has-dock {
+	flex: 1 1 0;
+	min-height: 0;
+	overflow: hidden;
+	padding-bottom: 0;
+	margin-bottom: 0;
+	gap: 0.4rem;
+}
+
+.qr-studio.is-session-active .qr-active.has-dock > .qr-live-settings {
+	flex: 0 1 auto;
+	min-height: 0;
+	max-height: min(52vh, 26rem);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	overscroll-behavior: contain;
+}
+
+.qr-studio.is-session-active .qr-active.has-dock > .qr-preview-mushaf {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: flex-start;
+	flex: 1 1 0;
+	min-height: 0;
+	height: auto;
+	max-height: none;
+	overflow: hidden;
+}
+
+.qr-studio.is-session-active .qr-active.has-dock .qr-preview-tools {
+	flex: 0 0 auto;
+}
+
+.qr-studio.is-session-active .qr-active.has-dock .qr-mushaf-scroll {
+	flex: 1 1 0;
+	min-height: 0;
+	max-height: none !important;
+	overflow-x: hidden !important;
+	overflow-y: auto !important;
+	-webkit-overflow-scrolling: touch;
+	overscroll-behavior: contain;
 }
 
 .qr-studio .qr-studio-head {
@@ -586,6 +692,7 @@
 	align-items: center;
 	gap: 0.45rem;
 	min-width: 0;
+	flex-shrink: 0;
 }
 
 .qr-studio .qr-live-settings-toggle {
@@ -665,7 +772,7 @@
 }
 
 .qr-studio .qr-chevron {
-	transition: transform 0.18s ease;
+	transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 	color: #94a3b8;
 }
 
@@ -673,12 +780,79 @@
 	transform: rotate(180deg);
 }
 
+.qr-studio .qr-live-settings-collapse {
+	display: grid;
+	grid-template-rows: 0fr;
+	transition: grid-template-rows 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+	min-height: 0;
+}
+
+.qr-studio .qr-live-settings-collapse.is-open {
+	grid-template-rows: 1fr;
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.qr-studio .qr-live-settings-collapse-inner {
+	overflow: hidden;
+	min-height: 0;
+}
+
+.qr-studio .qr-live-settings-collapse.is-open .qr-live-settings-collapse-inner {
+	overflow: hidden;
+	min-height: 0;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
 .qr-studio .qr-live-settings-body {
 	padding-top: 0.35rem;
+	padding-bottom: 0.25rem;
+	opacity: 0;
+	transform: translateY(-0.35rem);
+	transition:
+		opacity 0.28s ease,
+		transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+	pointer-events: none;
+}
+
+.qr-studio .qr-live-settings-collapse.is-open .qr-live-settings-body {
+	opacity: 1;
+	transform: translateY(0);
+	pointer-events: auto;
+	transition-delay: 0.04s;
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: hidden;
+}
+
+/* Dropdowns / labels stay put — only quarters list scrolls */
+.qr-studio .qr-live-units-block {
+	flex: 1 1 auto;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.qr-studio .qr-live-units-block > :not(.qr-units) {
+	flex-shrink: 0;
 }
 
 .qr-studio .qr-live-settings .qr-units {
-	max-height: calc(var(--qr-unit-row, 3.2rem) * 5);
+	flex: 1 1 auto;
+	min-height: 5.5rem;
+	max-height: none;
+	overflow-x: hidden;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
+	touch-action: pan-y;
+	scrollbar-gutter: stable;
 }
 
 .qr-studio .qr-art {
@@ -965,6 +1139,15 @@
 	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
+.qr-studio .qr-tools-actions {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.4rem;
+	min-width: 0;
+	max-width: 100%;
+}
+
 .qr-studio .qr-tools-sep {
 	width: 1px;
 	height: 1.1rem;
@@ -975,22 +1158,37 @@
 
 .qr-studio .qr-tool-icon {
 	appearance: none;
-	border: none;
-	background: transparent;
-	width: 1.75rem;
-	height: 1.75rem;
-	border-radius: 999px;
+	box-sizing: border-box;
+	border: 1px solid #e2e8f0;
+	background: #fff;
+	flex: 0 0 2rem;
+	width: 2rem;
+	min-width: 2rem;
+	max-width: 2rem;
+	height: 2rem;
+	min-height: 2rem;
+	aspect-ratio: 1;
+	border-radius: 0.55rem;
 	display: grid;
 	place-items: center;
 	color: #64748b;
 	cursor: pointer;
 	padding: 0;
+	line-height: 0;
+	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+	transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .qr-studio .qr-tool-icon:hover,
 .qr-studio .qr-tool-icon.is-on {
 	color: var(--color-primary-700);
-	background: color-mix(in srgb, var(--color-primary-50) 85%, #fff);
+	border-color: color-mix(in srgb, var(--color-primary-300) 70%, #e2e8f0);
+	background: color-mix(in srgb, var(--color-primary-50) 90%, #fff);
+	box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.qr-studio .qr-tool-icon:active {
+	transform: scale(0.96);
 }
 
 .qr-studio .qr-tool {
@@ -1088,9 +1286,17 @@
 
 	.qr-studio .qr-tools-bar {
 		flex: 0 0 auto;
-		width: 100%;
+		width: max-content;
+		max-width: 100%;
+		align-self: flex-start;
 		border-radius: 0.85rem;
 		justify-content: flex-start;
+	}
+
+	.qr-studio .qr-tools-actions {
+		width: 100%;
+		max-width: 100%;
+		flex-wrap: nowrap;
 	}
 
 	.qr-studio .qr-tools-sep {
@@ -1155,12 +1361,26 @@
 	color: #0f172a;
 	letter-spacing: 0;
 	overflow: visible;
-	-webkit-font-smoothing: antialiased;
-	-moz-osx-font-smoothing: grayscale;
+	/* `antialiased` makes Quran glyphs look thin/broken on Safari iOS */
+	-webkit-font-smoothing: auto;
+	-moz-osx-font-smoothing: auto;
 	font-synthesis: none;
-	font-variant-ligatures: common-ligatures contextual;
-	font-feature-settings: 'liga' 1, 'calt' 1, 'locl' 1;
-	text-rendering: optimizeLegibility;
+	font-variant-ligatures: normal;
+	font-feature-settings: normal;
+	text-rendering: geometricPrecision;
+}
+
+/* iOS Safari: keep mushaf face sharp and avoid UI-Arabic fallback */
+@supports (-webkit-touch-callout: none) {
+	.qr-studio .qr-mushaf,
+	.qr-studio .qr-mushaf .qr-ayah,
+	.qr-studio .qr-mushaf .qr-ayah-text,
+	.qr-studio .qr-mushaf .qr-tw-text,
+	.qr-studio .qr-mushaf .qr-tw-word,
+	.qr-studio .qr-mushaf .qr-tw-mark {
+		-webkit-font-smoothing: auto;
+		font-kerning: normal;
+	}
 }
 
 /*
@@ -1173,7 +1393,13 @@
 .qr-studio .qr-mushaf .qr-tw-text,
 .qr-studio .qr-mushaf .qr-tw-word,
 .qr-studio .qr-mushaf .qr-tw-mark {
-	font-family: var(--qr-mushaf-font) !important;
+	font-family:
+		var(--font-qr-uthmani),
+		var(--font-qr-amiri),
+		'UthmanicHafs',
+		'Amiri Quran',
+		'Scheherazade New',
+		serif !important;
 	font-weight: 400 !important;
 	font-style: normal !important;
 	font-synthesis: none !important;
@@ -1193,15 +1419,18 @@
 /* Floating dock â€” portaled; left/width from content area (excludes sidebar) */
 .qr-dock {
 	--qr-dock-accent: var(--color-primary-600, #2563eb);
-	position: fixed;
-	/* Below sidebar/menu overlays (sidebar wrapper raises to 120000 when open) */
-	z-index: 40;
+	position: fixed !important;
+	/* Above app shell / header / sidebar (100–120000); below expanded mushaf needs is-centered */
+	z-index: 190000;
 	left: 50%;
 	bottom: max(0.9rem, calc(env(safe-area-inset-bottom, 0px) + 0.55rem));
 	transform: translate3d(-50%, 0, 0);
 	width: min(760px, calc(100vw - 1.5rem));
 	max-width: calc(100vw - 1rem);
 	box-sizing: border-box;
+	pointer-events: auto;
+	visibility: visible;
+	opacity: 1;
 	transition:
 		left 0.38s cubic-bezier(0.22, 1, 0.36, 1),
 		width 0.38s cubic-bezier(0.22, 1, 0.36, 1),
@@ -1217,10 +1446,18 @@
 		0 20px 48px rgba(15, 23, 42, 0.14),
 		0 0 0 1px rgba(255, 255, 255, 0.75) inset;
 	padding: 0.7rem 0.9rem 0.6rem;
+	overflow: hidden;
 	display: flex;
 	flex-direction: column;
 	gap: 0.55rem;
 	direction: ltr;
+}
+
+/* Keep volume pop usable while seek stays clipped to the rounded box */
+.qr-dock:has(.qr-dock-vol.is-open),
+.qr-dock:has(.qr-dock-vol:hover),
+.qr-dock:has(.qr-dock-vol:focus-within) {
+	overflow: visible;
 }
 
 /* Full-screen mushaf: center dock on the viewport (not the sidebar content column) */
@@ -1680,63 +1917,108 @@
 .qr-dock-seek span {
 	display: none !important;
 }
+
 .qr-dock-seek {
 	position: absolute;
-	/* background: red; */
-	width: 89%;
-	left: 50%;
-	top: -2px;
-	transform: translateX(-50%);
-
-
+	left: 2px;
+	right: 2px;
+	width: auto;
+	top: 2px;
+	transform: none;
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
+	gap: 0;
+	padding: 0;
+	margin: 0;
 	font-size: 0.6rem;
 	font-weight: 800;
 	color: #94a3b8;
 	direction: ltr;
 	unicode-bidi: isolate;
 	font-variant-numeric: tabular-nums;
+	z-index: 2;
+	pointer-events: none;
 }
 
 .qr-dock-range {
 	--qr-fill: 0%;
+	--qr-thumb: 0.4rem;
 	appearance: none;
+	-webkit-appearance: none;
 	width: 100%;
-	height: 5px;
+	height: 0.22rem;
+	margin: 0;
+	padding: 0;
+	border: none;
 	border-radius: 999px;
 	background: linear-gradient(
 		to right,
 		var(--color-primary-500, #3b82f6) 0%,
 		var(--color-primary-500, #3b82f6) var(--qr-fill),
-		#e2e8f0 var(--qr-fill),
-		#e2e8f0 100%
+		rgba(226, 232, 240, 0.95) var(--qr-fill),
+		rgba(226, 232, 240, 0.95) 100%
 	);
 	outline: none;
 	cursor: pointer;
 	direction: ltr !important;
 	unicode-bidi: isolate;
 	accent-color: var(--color-primary-600, #2563eb);
+	pointer-events: auto;
+	transition: background 0.12s linear;
+}
+
+.qr-dock-range:active {
+	cursor: grabbing;
+}
+
+.qr-dock-range::-webkit-slider-runnable-track {
+	appearance: none;
+	height: 0.22rem;
+	border-radius: 999px;
+	background: transparent;
+	border: none;
+}
+
+.qr-dock-range::-moz-range-track {
+	height: 0.22rem;
+	border-radius: 999px;
+	background: transparent;
+	border: none;
 }
 
 .qr-dock-range::-webkit-slider-thumb {
 	appearance: none;
-	width: 13px;
-	height: 13px;
+	-webkit-appearance: none;
+	width: var(--qr-thumb);
+	height: var(--qr-thumb);
+	margin-top: calc((0.22rem - var(--qr-thumb)) / 2);
 	border-radius: 50%;
 	background: #fff;
-	border: 3px solid var(--color-primary-600, #2563eb);
-	box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
+	border: 1.5px solid var(--color-primary-600, #2563eb);
+	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9), 0 1px 2px rgba(15, 23, 42, 0.14);
+	transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.qr-dock-range:active::-webkit-slider-thumb,
+.qr-dock-range:focus-visible::-webkit-slider-thumb {
+	transform: scale(1.2);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-400, #60a5fa) 35%, transparent);
 }
 
 .qr-dock-range::-moz-range-thumb {
-	width: 13px;
-	height: 13px;
+	width: var(--qr-thumb);
+	height: var(--qr-thumb);
 	border-radius: 50%;
 	background: #fff;
-	border: 3px solid var(--color-primary-600, #2563eb);
-	box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
+	border: 1.5px solid var(--color-primary-600, #2563eb);
+	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9), 0 1px 2px rgba(15, 23, 42, 0.14);
+	transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.qr-dock-range:active::-moz-range-thumb,
+.qr-dock-range:focus-visible::-moz-range-thumb {
+	transform: scale(1.2);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-400, #60a5fa) 35%, transparent);
 }
 
 .qr-dock-error {
@@ -1756,6 +2038,9 @@
 		border-radius: 1rem;
 		width: min(760px, calc(100vw - 1rem));
 		max-width: calc(100vw - 0.75rem);
+		z-index: 190000;
+		left: 50%;
+		transform: translate3d(-50%, 0, 0);
 	}
 
 	.qr-dock-main,
@@ -1835,17 +2120,36 @@
 	}
 
 	.qr-dock-seek {
-		width: 92%;
-		top: -1px;
-		gap: 0.3rem;
+		left: 2px;
+		right: 2px;
+		width: auto;
+		top: 2px;
+		transform: none;
+		gap: 0;
 	}
 
 	.qr-dock-range {
-		height: 0.22rem;
+		height: 0.2rem;
+		border-radius: 999px;
+		--qr-thumb: 0.38rem;
 	}
 
-	.qr-studio .qr-active.has-dock {
-		padding-bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px));
+	.qr-dock-range::-webkit-slider-runnable-track {
+		height: 0.2rem;
+		border-radius: 999px;
+	}
+
+	.qr-dock-range::-moz-range-track {
+		height: 0.2rem;
+		border-radius: 999px;
+	}
+
+	.qr-dock-range::-webkit-slider-thumb {
+		margin-top: calc((0.2rem - var(--qr-thumb)) / 2);
+	}
+
+	.qr-studio:not(.is-session-active) .qr-active.has-dock {
+		padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
 	}
 
 	.qr-studio .qr-preview-mushaf.is-expanded {
@@ -1897,7 +2201,7 @@
 
 .qr-studio .qr-ayah-text {
 	display: inline;
-	font-family: var(--qr-mushaf-font) !important;
+	font-family: var(--font-qr-uthmani), var(--font-qr-amiri), 'UthmanicHafs', 'Amiri Quran', 'Scheherazade New', serif !important;
 	line-height: inherit;
 	padding-block: 0.08em 0.2em;
 }
@@ -2199,7 +2503,7 @@
 	font-weight: 700;
 	color: #0f172a;
 	line-height: 1.7;
-	font-family: var(--qr-mushaf-font);
+	font-family: var(--font-qr-uthmani), var(--font-qr-amiri), 'UthmanicHafs', 'Amiri Quran', 'Scheherazade New', serif;
 }
 
 .qr-tw-modal-foot {
@@ -2253,7 +2557,7 @@
 .qr-studio .qr-tw-text,
 .qr-studio .qr-tw-word,
 .qr-studio .qr-tw-mark {
-	font-family: var(--qr-mushaf-font) !important;
+	font-family: var(--font-qr-uthmani), var(--font-qr-amiri), 'UthmanicHafs', 'Amiri Quran', 'Scheherazade New', serif !important;
 	font-weight: 400 !important;
 }
 
@@ -2470,7 +2774,7 @@
 }
 
 .qr-studio .qr-verse-text {
-	font-family: var(--qr-mushaf-font) !important;
+	font-family: var(--font-qr-uthmani), var(--font-qr-amiri), 'UthmanicHafs', 'Amiri Quran', 'Scheherazade New', serif !important;
 	font-size: clamp(1.05rem, 1.8vw, 1.3rem);
 	line-height: 2.4;
 	text-align: start;
@@ -3445,7 +3749,11 @@
 	.qr-studio .qr-units {
 		--qr-unit-row: 3.05rem; /* 1-col card + gap */
 		grid-template-columns: 1fr;
-		max-height: calc(var(--qr-unit-row) * 5);
+		max-height: min(42vh, 16rem);
+		overflow-x: hidden;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+		touch-action: pan-y;
 		gap: 0.4rem;
 	}
 
@@ -3456,18 +3764,18 @@
 	}
 
 	.qr-studio .qr-live-settings .qr-units {
-		max-height: calc(var(--qr-unit-row) * 5);
+		max-height: none;
+		min-height: 6rem;
+		overflow-x: hidden;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+		touch-action: pan-y;
 	}
 
 	.qr-studio.is-session-active {
-		display: flex;
-		flex-direction: column;
-		flex: 1 1 auto;
-		min-height: 0;
-		overflow: hidden;
 		gap: 0.35rem;
-		/* Reserve space above the fixed floating dock */
-		padding-bottom: calc(7.1rem + env(safe-area-inset-bottom, 0px));
+		--qr-dock-clearance: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+		padding-bottom: var(--qr-dock-clearance);
 	}
 
 	/* Fill leftover viewport above the dock (lock #body scroll while reading) */
@@ -3478,7 +3786,7 @@
 	}
 
 	#body:has(.qr-studio.is-session-active) > div {
-		flex: 1 1 auto;
+		flex: 1 1 0;
 		min-height: 0;
 		display: flex;
 		flex-direction: column;
@@ -3486,7 +3794,7 @@
 	}
 
 	#body:has(.qr-studio.is-session-active) .qr-studio.is-session-active {
-		flex: 1 1 auto;
+		flex: 1 1 0;
 		min-height: 0;
 	}
 
@@ -3500,22 +3808,31 @@
 	}
 
 	.qr-studio .qr-active.has-dock {
-		display: flex;
-		flex-direction: column;
-		flex: 1 1 auto;
-		min-height: 0;
 		gap: 0.35rem;
-		overflow: hidden;
 		padding-bottom: 0;
 		margin-bottom: 0;
 	}
 
 	.qr-studio .qr-active.has-dock > .qr-live-settings {
-		flex-shrink: 0;
+		flex: 0 1 auto;
 		padding: 0.3rem 0.5rem;
-		max-height: min(42vh, 18rem);
-		overflow: auto;
+		max-height: min(48vh, 22rem);
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
 		overscroll-behavior: contain;
+	}
+
+	.qr-studio .qr-live-settings .qr-units,
+	.qr-studio .qr-active.has-dock .qr-live-settings .qr-units {
+		--qr-unit-row: 3.05rem;
+		max-height: none;
+		min-height: 6rem;
+		flex: 1 1 auto;
+		overflow-x: hidden;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+		touch-action: pan-y;
 	}
 
 	.qr-studio .qr-active.has-dock > .qr-preview-mushaf {
@@ -3535,7 +3852,7 @@
 		background:
 			radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--color-primary-50) 65%, #fff) 0%, #fff 58%);
 		/* Take all leftover height down to the floating dock */
-		flex: 1 1 auto;
+		flex: 1 1 0;
 		height: auto;
 		max-height: none;
 		min-height: 0;
@@ -3599,8 +3916,11 @@
 	}
 
 	.qr-studio .qr-active.has-dock .qr-tools-bar {
-		width: 100%;
+		flex: 1 1 auto;
+		width: auto;
+		min-width: 0;
 		max-width: 100%;
+		align-self: stretch;
 		justify-content: flex-start;
 		flex-wrap: nowrap;
 		overflow-x: auto;
@@ -3609,6 +3929,13 @@
 		scrollbar-width: none;
 		padding: 0.28rem 0.35rem;
 		border-radius: 0.85rem;
+	}
+
+	.qr-studio .qr-active.has-dock .qr-tools-actions {
+		width: 100%;
+		max-width: 100%;
+		flex-wrap: nowrap;
+		align-items: center;
 	}
 
 	.qr-studio .qr-active.has-dock .qr-tools-bar::-webkit-scrollbar {
@@ -3621,7 +3948,7 @@
 
 	/* Fixed mushaf viewport with internal scroll */
 	.qr-studio .qr-active.has-dock .qr-mushaf-scroll {
-		flex: 1 1 auto;
+		flex: 1 1 0;
 		min-height: 0;
 		max-height: none !important;
 		overflow-x: hidden !important;
@@ -3655,10 +3982,15 @@
 		width: calc(100vw - 0.65rem) !important;
 		max-width: calc(100vw - 0.65rem) !important;
 		transform: translate3d(-50%, 0, 0) !important;
-		bottom: max(0.5rem, env(safe-area-inset-bottom, 0px)) !important;
+		bottom: calc(env(safe-area-inset-bottom, 0px) + 0.85rem) !important;
+		z-index: 190000 !important;
 		padding: 0.4rem 0.5rem 0.35rem;
 		border-radius: 1rem;
 		gap: 0.35rem;
+		display: flex !important;
+		visibility: visible !important;
+		opacity: 1 !important;
+		pointer-events: auto !important;
 	}
 
 	.qr-dock-main,

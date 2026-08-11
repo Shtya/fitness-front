@@ -23,15 +23,30 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
 	event.notification.close();
-	const targetUrl = new URL(
-		event.notification.data?.url || '/dashboard/whatsapp',
-		self.location.origin,
-	).href;
+	const rawUrl = event.notification.data?.url || '/dashboard/whatsapp';
 
 	event.waitUntil(
 		self.clients
 			.matchAll({ type: 'window', includeUncontrolled: true })
 			.then(async clients => {
+				let locale = 'en';
+				for (const client of clients) {
+					try {
+						const path = new URL(client.url).pathname || '';
+						const match = path.match(/^\/(ar|en)(\/|$)/i);
+						if (match) {
+							locale = match[1].toLowerCase();
+							break;
+						}
+					} catch {
+						/* ignore */
+					}
+				}
+				const withLocale = rawUrl.startsWith('/ar/') || rawUrl.startsWith('/en/')
+					? rawUrl
+					: `/${locale}${rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`}`;
+				const targetUrl = new URL(withLocale, self.location.origin).href;
+
 				for (const client of clients) {
 					if (new URL(client.url).origin !== self.location.origin) continue;
 					if ('navigate' in client) await client.navigate(targetUrl);

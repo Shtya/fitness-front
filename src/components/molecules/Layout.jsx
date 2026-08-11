@@ -263,8 +263,10 @@ export default function Layout({ children }) {
 		const prevHtml = document.documentElement.style.overflow;
 		const prevBody = document.body.style.overflow;
 		if (lock) {
+			/* Lock scroll on the documentElement only — body overflow:hidden
+			   clips position:fixed portals (Quran dock) on iOS Safari/PWA. */
 			document.documentElement.style.overflow = 'hidden';
-			document.body.style.overflow = 'hidden';
+			document.body.style.overflow = '';
 		} else {
 			document.documentElement.style.overflow = '';
 			document.body.style.overflow = '';
@@ -462,6 +464,9 @@ export default function Layout({ children }) {
 
 					<ConfigAos />
 					<Toaster position="top-center" />
+
+					{/* Fixed portals (Quran dock, etc.) — outside overflow:hidden shell */}
+					<div id="so7ba-portal-root" />
 
 					{/* ── Impersonation Bar (top) ── */}
 					<AnimatePresence>

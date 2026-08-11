@@ -1015,8 +1015,8 @@ export default function QuranRevisionStudio({
 		if (!host) return undefined;
 
 		const update = () => {
-			/* Phone: CSS centers the dock full-bleed — skip measured box (avoids RTL scrollbar offset) */
-			if (window.matchMedia('(max-width: 640px)').matches) {
+			/* Phone / tablet portrait: CSS centers the dock full-bleed */
+			if (window.matchMedia('(max-width: 860px)').matches) {
 				setDockBox({ left: null, width: null });
 				return;
 			}
@@ -3087,28 +3087,36 @@ export default function QuranRevisionStudio({
 								</button>
 							</div>
 						</div>
-						{sessionSettingsOpen ? (
-							<div className="qr-live-settings-body">
-								<p className="mb-2 text-[10px] font-semibold text-slate-400">{t.changeWhilePlaying}</p>
-								{topSelects(true)}
-								<div className="qr-divider" />
-								{unitsPicker}
-								{settingsPendingApply ? (
-									<div className="qr-live-apply">
-										<p className="qr-live-apply-hint">{t.settingsPending}</p>
-										<button
-											type="button"
-											className="qr-cta"
-											disabled={!canStart || ayahLoading}
-											onClick={applyLiveSettings}
-										>
-											<Play size={14} />
-											{t.applySettings}
-										</button>
+						<div
+							className={cx('qr-live-settings-collapse', sessionSettingsOpen && 'is-open')}
+							aria-hidden={!sessionSettingsOpen}
+							inert={!sessionSettingsOpen ? true : undefined}
+						>
+							<div className="qr-live-settings-collapse-inner">
+								<div className="qr-live-settings-body">
+									<p className="mb-2 shrink-0 text-[10px] font-semibold text-slate-400">{t.changeWhilePlaying}</p>
+									<div className="shrink-0">{topSelects(true)}</div>
+									<div className="qr-divider shrink-0" />
+									<div className="qr-live-units-block">
+										{unitsPicker}
 									</div>
-								) : null}
+									{settingsPendingApply ? (
+										<div className="qr-live-apply shrink-0">
+											<p className="qr-live-apply-hint">{t.settingsPending}</p>
+											<button
+												type="button"
+												className="qr-cta"
+												disabled={!canStart || ayahLoading}
+												onClick={applyLiveSettings}
+											>
+												<Play size={14} />
+												{t.applySettings}
+											</button>
+										</div>
+									) : null}
+								</div>
 							</div>
-						) : null}
+						</div>
 					</section>
 
 					{usingYoutube && selectedFav ? (
@@ -3168,7 +3176,7 @@ export default function QuranRevisionStudio({
 									</p>
 								</div>
 
-								<div className="qr-tools-bar" dir={isAr ? 'rtl' : 'ltr'}>
+								<div className="qr-tools-actions" dir={isAr ? 'rtl' : 'ltr'}>
 									<button
 										type="button"
 										className={cx('qr-tool-icon', mushafExpanded && !mushafCollapsing && 'is-on')}
@@ -3178,12 +3186,11 @@ export default function QuranRevisionStudio({
 										aria-pressed={mushafExpanded && !mushafCollapsing}
 									>
 										{mushafExpanded && !mushafCollapsing
-											? <Minimize2 size={15} strokeWidth={2.25} />
-											: <Maximize2 size={15} strokeWidth={2.25} />}
+											? <Minimize2 size={16} strokeWidth={2.25} />
+											: <Maximize2 size={16} strokeWidth={2.25} />}
 									</button>
 
-									<span className="qr-tools-sep" aria-hidden />
-
+									<div className="qr-tools-bar">
 									<QrSlideSwitch
 										on={showTajweed}
 										onChange={setShowTajweed}
@@ -3249,6 +3256,7 @@ export default function QuranRevisionStudio({
 											))}
 										</div>
 									) : null}
+								</div>
 								</div>
 							</div>
 
@@ -3347,7 +3355,7 @@ export default function QuranRevisionStudio({
 								: null),
 							...(mushafExpanded && !mushafCollapsing
 								? { zIndex: 200000 }
-								: null),
+								: { zIndex: 190000 }),
 						}}
 					>
 						<div className="qr-dock-main is-compact-row">
@@ -3495,7 +3503,7 @@ export default function QuranRevisionStudio({
 
 						{audioError ? <p className="qr-dock-error">{audioError}</p> : null}
 					</div>,
-					document.body,
+					document.getElementById('so7ba-portal-root') || document.body,
 				)
 				: null}
 

@@ -509,7 +509,36 @@ function imageAttachmentsForMessage(message) {
 		images.length > 0 &&
 		images.length === attachments.length &&
 		!String(message?.text || '').trim();
-	return imageOnly ? images : [];
+	if (!imageOnly) return [];
+	const previewFromRaw = mediaPreviewFromRaw(message?.raw);
+	return images.map(attachment => ({
+		...attachment,
+		previewDataUrl: attachment.previewDataUrl || previewFromRaw || null,
+	}));
+}
+
+function mediaPreviewFromRaw(raw) {
+	if (!raw || typeof raw !== 'object') return null;
+	const message = raw.message || null;
+	if (!message) return null;
+	const content =
+		message.ephemeralMessage?.message ||
+		message.viewOnceMessage?.message ||
+		message.viewOnceMessageV2?.message ||
+		message.viewOnceMessageV2Extension?.message ||
+		message;
+	const node =
+		content?.imageMessage ||
+		content?.videoMessage ||
+		content?.stickerMessage ||
+		content?.documentMessage ||
+		null;
+	const thumb = node?.jpegThumbnail;
+	if (!thumb) return null;
+	if (typeof thumb === 'string' && thumb.length) {
+		return thumb.startsWith('data:') ? thumb : `data:image/jpeg;base64,${thumb}`;
+	}
+	return null;
 }
 
 export function groupConsecutiveImageMessages(messages = []) {

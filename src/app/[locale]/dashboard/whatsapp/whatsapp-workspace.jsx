@@ -300,6 +300,7 @@ const translations = {
 			'WhatsApp is still syncing with the phone. Retrying automatically…',
 		mediaUnavailable: 'Media unavailable',
 		loadingMedia: 'Loading media…',
+		tapToRetry: 'Tap to retry',
 		fileAttachment: 'File attachment',
 		openFile: 'Open',
 		downloadFile: 'Download',
@@ -538,6 +539,7 @@ const translations = {
 			'واتساب ما زال يزامن مع الهاتف. جارٍ إعادة المحاولة تلقائياً…',
 		mediaUnavailable: 'تعذر عرض الوسائط',
 		loadingMedia: 'جارِ تحميل الوسائط…',
+		tapToRetry: 'اضغط لإعادة المحاولة',
 		fileAttachment: 'ملف مرفق',
 		openFile: 'فتح',
 		downloadFile: 'تنزيل',
@@ -961,26 +963,42 @@ function avatarPlaceholderStyle(seed = '') {
 
 function ImageMessage({ url, alt, onOpen, className = '' }) {
 	const [loaded, setLoaded] = useState(false);
+	const [broken, setBroken] = useState(false);
 
 	return (
 		<button
 			type="button"
 			aria-label={alt || 'Open image preview'}
-			onClick={onOpen}
+			onClick={broken ? undefined : onOpen}
+			disabled={broken}
 			className={`group relative block h-full min-h-36 w-full overflow-hidden bg-slate-100 dark:bg-slate-800 ${className}`}
 		>
-			{!loaded && <div className="absolute inset-0 animate-pulse bg-linear-to-br from-slate-200 to-slate-100 dark:from-slate-700 dark:to-slate-800" />}
-			<img
-				src={url}
-				alt={alt}
-				onLoad={() => setLoaded(true)}
-				className={`h-full max-h-72 w-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
-			/>
-			<div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-200 group-hover:bg-black/25 group-hover:opacity-100">
-				<span className="rounded-full bg-black/50 p-2 text-white">
-					<Maximize2 size={16} />
-				</span>
-			</div>
+			{!loaded && !broken && (
+				<div className="absolute inset-0 animate-pulse bg-linear-to-br from-slate-200 to-slate-100 dark:from-slate-700 dark:to-slate-800" />
+			)}
+			{broken ? (
+				<div className="absolute inset-0 grid place-items-center bg-black/10 text-xs font-semibold text-slate-600">
+					Media unavailable
+				</div>
+			) : (
+				<img
+					src={url}
+					alt={alt}
+					onLoad={() => setLoaded(true)}
+					onError={() => {
+						setBroken(true);
+						setLoaded(false);
+					}}
+					className={`h-full max-h-72 w-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+				/>
+			)}
+			{!broken && (
+				<div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-200 group-hover:bg-black/25 group-hover:opacity-100">
+					<span className="rounded-full bg-black/50 p-2 text-white">
+						<Maximize2 size={16} />
+					</span>
+				</div>
+			)}
 		</button>
 	);
 }
@@ -1633,6 +1651,48 @@ function isPersistedAttachmentId(value) {
 	return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 }
 
+/** OS notification while the WhatsApp tab is open but not focused (PWA / browser). */
+function showWhatsAppDesktopNotification({
+	title,
+	body,
+	conversationId,
+	accountId,
+	locale,
+}) {
+	if (typeof window === 'undefined' || !('Notification' in window)) return;
+	if (Notification.permission !== 'granted') return;
+	const pageHidden =
+		typeof document !== 'undefined' &&
+		(document.hidden || document.visibilityState === 'hidden');
+	const unfocused = typeof document !== 'undefined' && !document.hasFocus?.();
+	if (!pageHidden && !unfocused) return;
+	try {
+		const pathLocale = locale || 'en';
+		const url = `/${pathLocale}/dashboard/whatsapp?accountId=${encodeURIComponent(
+			String(accountId || ''),
+		)}&conversationId=${encodeURIComponent(String(conversationId || ''))}`;
+		const notification = new Notification(String(title || 'WhatsApp').slice(0, 80), {
+			body: String(body || 'New message').slice(0, 160),
+			icon: '/logo/logo1.png',
+			badge: '/logo/logo1.png',
+			tag: `whatsapp-${conversationId || 'inbox'}`,
+			renotify: true,
+			data: { url },
+		});
+		notification.onclick = () => {
+			try {
+				window.focus();
+				if (url) window.location.assign(url);
+			} catch {
+				/* ignore */
+			}
+			notification.close();
+		};
+	} catch {
+		/* Notification constructor can throw if permission revoked mid-session */
+	}
+}
+
 function assertAudioBlob(blob) {
 	if (!blob) throw new Error('Empty audio');
 	const type = String(blob.type || '').toLowerCase();
@@ -1715,6 +1775,14 @@ function VoiceMessage({
 								timeout: 45_000,
 								priority,
 							});
+					if (
+						blob &&
+						(!blob.type ||
+							String(blob.type).includes('octet-stream') ||
+							String(blob.type).includes('application/ogg'))
+					) {
+						blob = blob.slice(0, blob.size, mimeType || 'audio/ogg; codecs=opus');
+					}
 					assertAudioBlob(blob);
 				} else if (url) {
 					const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
@@ -1944,17 +2012,24 @@ export function MediaAttachment({
 	className = '',
 	voiceAvatarLabel,
 	voiceAvatarSrc,
+	layout = 'inline',
+	sessionReady = true,
 }) {
 	const [url, setUrl] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [failed, setFailed] = useState(false);
 	const [fileAction, setFileAction] = useState('');
+	const [retryNonce, setRetryNonce] = useState(0);
 	const containerRef = useRef(null);
+	const wasSessionReadyRef = useRef(sessionReady);
+	const autoRetryCountRef = useRef(0);
 	const isNearViewport = useNearViewport(containerRef);
 	const type = String(attachment?.type || '').toLowerCase();
 	const isVoice = type === 'audio' || type === 'ptt' || type === 'voice';
 	const isDocument = !['image', 'sticker', 'video', 'audio', 'ptt', 'voice'].includes(type);
 	const demoAttachment = Boolean(attachment?.demoAttachment || isDemoId(attachment?.id));
+	const previewDataUrl = attachment?.previewDataUrl || null;
+	const isGallery = layout === 'gallery';
 
 	const loadAttachmentBlob = useCallback(async () => {
 		if (attachment?.id) {
@@ -1983,6 +2058,33 @@ export function MediaAttachment({
 	}, [attachment?.id, attachment?.url, demoAttachment]);
 
 	useEffect(() => {
+		autoRetryCountRef.current = 0;
+		setUrl(null);
+		setFailed(false);
+		setLoading(true);
+	}, [attachment?.id]);
+
+	useEffect(() => {
+		if (sessionReady && !wasSessionReadyRef.current) {
+			autoRetryCountRef.current = 0;
+			setFailed(false);
+			setRetryNonce(value => value + 1);
+		}
+		wasSessionReadyRef.current = sessionReady;
+	}, [sessionReady]);
+
+	useEffect(() => {
+		if (!failed || !sessionReady || !isNearViewport) return undefined;
+		if (autoRetryCountRef.current >= 2) return undefined;
+		const timer = window.setTimeout(() => {
+			autoRetryCountRef.current += 1;
+			setFailed(false);
+			setRetryNonce(value => value + 1);
+		}, 3200);
+		return () => window.clearTimeout(timer);
+	}, [failed, sessionReady, isNearViewport]);
+
+	useEffect(() => {
 		let cancelled = false;
 		let objectUrl = null;
 		if (isVoice || isDocument) {
@@ -2006,7 +2108,21 @@ export function MediaAttachment({
 		loadAttachmentBlob()
 			.then(blob => {
 				if (cancelled) return;
-				objectUrl = URL.createObjectURL(blob);
+				const kind = String(attachment?.type || '').toLowerCase();
+				const mime = String(attachment?.mimeType || blob?.type || '').toLowerCase();
+				let nextBlob = blob;
+				if (
+					(kind === 'image' || kind === 'sticker') &&
+					(!mime || mime.includes('octet-stream'))
+				) {
+					nextBlob = blob.slice(0, blob.size, 'image/jpeg');
+				} else if (
+					['audio', 'ptt', 'voice'].includes(kind) &&
+					(!mime || mime.includes('octet-stream'))
+				) {
+					nextBlob = blob.slice(0, blob.size, 'audio/ogg');
+				}
+				objectUrl = URL.createObjectURL(nextBlob);
 				setUrl(objectUrl);
 				setFailed(false);
 			})
@@ -2028,6 +2144,7 @@ export function MediaAttachment({
 		isVoice,
 		loadAttachmentBlob,
 		onImageReady,
+		retryNonce,
 		type,
 	]);
 
@@ -2144,9 +2261,22 @@ export function MediaAttachment({
 			return (
 				<div
 					ref={containerRef}
-					className={`wa-media-skeleton mb-2 h-40 max-w-[260px] animate-pulse rounded-xl bg-black/10 dark:bg-white/10 ${className}`}
+					className={
+						isGallery
+							? `wa-media-skeleton absolute inset-0 animate-pulse overflow-hidden bg-black/10 dark:bg-white/10 ${className}`
+							: `wa-media-skeleton mb-2 h-40 max-w-[260px] animate-pulse overflow-hidden rounded-xl bg-black/10 dark:bg-white/10 ${className}`
+					}
 					aria-label={labels.loadingMedia}
-				/>
+				>
+					{previewDataUrl ? (
+						<img
+							src={previewDataUrl}
+							alt=""
+							aria-hidden="true"
+							className="h-full w-full scale-110 object-cover opacity-50 blur-[2px]"
+						/>
+					) : null}
+				</div>
 			);
 		}
 		return (
@@ -2160,37 +2290,57 @@ export function MediaAttachment({
 		);
 	}
 	if (failed || !url) {
+		const retry = () => {
+			autoRetryCountRef.current = 0;
+			setFailed(false);
+			setRetryNonce(value => value + 1);
+		};
 		return (
 			<button
 				ref={containerRef}
 				type="button"
-				onClick={() => {
-					setFailed(false);
-					setLoading(true);
-					loadAttachmentBlob()
-						.then(blob => {
-							const objectUrl = URL.createObjectURL(blob);
-							setUrl(objectUrl);
-							setFailed(false);
-						})
-						.catch(() => setFailed(true))
-						.finally(() => setLoading(false));
-				}}
-				className="wa-media-unavailable mb-2 flex max-w-[260px] items-center gap-2.5 rounded-xl border border-black/5 bg-black/[0.04] px-3 py-2.5 text-start text-xs text-slate-600"
+				onClick={retry}
+				className={
+					isGallery
+						? `wa-media-unavailable absolute inset-0 flex h-full w-full flex-col items-center justify-center gap-1.5 overflow-hidden px-3 text-center text-xs ${mine ? 'text-emerald-950/80' : 'text-slate-600'} ${className}`
+						: 'wa-media-unavailable mb-2 flex max-w-[260px] items-center gap-2.5 overflow-hidden rounded-xl border border-black/5 bg-black/[0.04] px-3 py-2.5 text-start text-xs text-slate-600'
+				}
 			>
-				{type === 'audio' || type === 'ptt' ? (
-					<Mic size={16} className="shrink-0" />
-				) : type === 'image' || type === 'sticker' ? (
-					<ImageIcon size={16} className="shrink-0" />
-				) : type === 'video' ? (
-					<Video size={16} className="shrink-0" />
-				) : (
-					<FileText size={16} className="shrink-0" />
-				)}
-				<span className="min-w-0">
-					<span className="block font-semibold">{labels.mediaUnavailable}</span>
-					<span className="mt-0.5 block text-[10px] text-slate-400">
-						{labels.loadingMedia?.replace('…', '') || 'Tap to retry'}
+				{previewDataUrl ? (
+					<img
+						src={previewDataUrl}
+						alt=""
+						aria-hidden="true"
+						className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-[1.5px]"
+					/>
+				) : null}
+				<span
+					className={`relative z-[1] grid place-items-center rounded-full ${
+						isGallery
+							? 'h-11 w-11 bg-black/35 text-white shadow-sm'
+							: 'h-9 w-9 bg-black/10 text-slate-600'
+					}`}
+				>
+					{type === 'audio' || type === 'ptt' ? (
+						<Mic size={isGallery ? 18 : 16} className="shrink-0" />
+					) : type === 'image' || type === 'sticker' ? (
+						<ImageIcon size={isGallery ? 18 : 16} className="shrink-0" />
+					) : type === 'video' ? (
+						<Video size={isGallery ? 18 : 16} className="shrink-0" />
+					) : (
+						<FileText size={isGallery ? 18 : 16} className="shrink-0" />
+					)}
+				</span>
+				<span className="relative z-[1] min-w-0">
+					<span className={`block font-semibold ${isGallery ? 'text-white drop-shadow' : ''}`}>
+						{labels.mediaUnavailable}
+					</span>
+					<span
+						className={`mt-0.5 block text-[10px] ${
+							isGallery ? 'text-white/85 drop-shadow' : 'text-slate-400'
+						}`}
+					>
+						{labels.tapToRetry || 'Tap to retry'}
 					</span>
 				</span>
 			</button>
@@ -2234,6 +2384,7 @@ function MessageAttachments({
 	onOpenImage,
 	voiceAvatarLabel,
 	voiceAvatarSrc,
+	sessionReady = true,
 }) {
 	const images = attachments.filter(attachment =>
 		['image', 'sticker'].includes(String(attachment.type || '').toLowerCase()),
@@ -2263,17 +2414,19 @@ function MessageAttachments({
 			{images.length > 0 && (
 				<div className={`wa-media-gallery ${mine ? 'wa-media-gallery-mine' : 'wa-media-gallery-other'} ${visibleImages.length === 1 ? 'wa-media-gallery-single' : ''} mb-1 grid overflow-hidden rounded-xl ${gridClass} gap-0.5`}>
 					{visibleImages.map((attachment, index) => (
-						<div key={attachment.id} className={`relative overflow-hidden ${tileClass(index)}`}>
+						<div key={attachment.id} className={`relative overflow-hidden bg-black/10 ${tileClass(index)}`}>
 							<MediaAttachment
 								attachment={attachment}
 								mine={mine}
 								labels={labels}
 								onImageReady={onImageReady}
 								onOpenImage={onOpenImage}
+								layout="gallery"
+								sessionReady={sessionReady}
 								className="rounded-none"
 							/>
 							{index === 3 && images.length > 4 && (
-								<div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/55 text-2xl font-semibold text-white">
+								<div className="pointer-events-none absolute inset-0 z-[2] grid place-items-center bg-black/55 text-2xl font-semibold text-white">
 									+{images.length - 4}
 								</div>
 							)}
@@ -2287,6 +2440,7 @@ function MessageAttachments({
 								labels={labels}
 								onImageReady={onImageReady}
 								onOpenImage={onOpenImage}
+								sessionReady={sessionReady}
 							/>
 						</div>
 					))}
@@ -2302,6 +2456,7 @@ function MessageAttachments({
 					onOpenImage={onOpenImage}
 					voiceAvatarLabel={voiceAvatarLabel}
 					voiceAvatarSrc={voiceAvatarSrc}
+					sessionReady={sessionReady}
 				/>
 			))}
 		</>
@@ -4027,16 +4182,12 @@ function WhatsAppWorkspaceContent() {
 
 	const subscribeToWhatsAppPush = useCallback(
 		async requestPermission => {
-			if (
-				process.env.NODE_ENV === 'development' ||
-				typeof window === 'undefined' ||
-				!('Notification' in window) ||
-				!('serviceWorker' in navigator) ||
-				!('PushManager' in window)
-			) {
+			if (typeof window === 'undefined' || !('Notification' in window)) {
 				setPushPermission('unsupported');
 				return false;
 			}
+			const canUseServiceWorker =
+				'serviceWorker' in navigator && 'PushManager' in window;
 			setEnablingPush(true);
 			try {
 				let permission = Notification.permission;
@@ -4045,6 +4196,21 @@ function WhatsAppWorkspaceContent() {
 				}
 				setPushPermission(permission);
 				if (permission !== 'granted') return false;
+
+				// Local Notification API works even in development.
+				// Full background PWA push needs a service worker (production build).
+				if (!canUseServiceWorker || process.env.NODE_ENV === 'development') {
+					if (requestPermission) {
+						toast.success(
+							process.env.NODE_ENV === 'development'
+								? locale === 'ar'
+									? 'تم تفعيل إشعارات المتصفح. إشعارات PWA الكاملة تحتاج نسخة الإنتاج.'
+									: 'Browser notifications enabled. Full PWA push needs a production build.'
+								: t.pushEnabled,
+						);
+					}
+					return true;
+				}
 
 				await navigator.serviceWorker.register('/sw.js');
 				const registration = await navigator.serviceWorker.ready;
@@ -4078,7 +4244,7 @@ function WhatsAppWorkspaceContent() {
 				setEnablingPush(false);
 			}
 		},
-		[t],
+		[t, locale],
 	);
 
 	const groupedStatuses = useMemo(() => {
@@ -4221,12 +4387,7 @@ function WhatsAppWorkspaceContent() {
 	}, [accountId]);
 
 	useEffect(() => {
-		if (
-			typeof window === 'undefined' ||
-			!('Notification' in window) ||
-			!('serviceWorker' in navigator) ||
-			!('PushManager' in window)
-		) {
+		if (typeof window === 'undefined' || !('Notification' in window)) {
 			setPushPermission('unsupported');
 			return;
 		}
@@ -5378,6 +5539,38 @@ function WhatsAppWorkspaceContent() {
 					writeConversationMessages(targetConversationId, current =>
 						mergeMessages(current, [event.payload], targetConversationId),
 					);
+				}
+				const inbound =
+					event.payload?.direction === 'inbound' ||
+					event.payload?.fromMe === false;
+				if (inbound) {
+					const peer = conversationsRef.current.find(
+						item => item.id === targetConversationId,
+					);
+					const title =
+						conversationTitle(peer) ||
+						event.payload?.contactName ||
+						(locale === 'ar' ? 'رسالة واتساب' : 'WhatsApp');
+					const body =
+						String(event.payload?.text || '').trim() ||
+						(event.payload?.type === 'image'
+							? locale === 'ar'
+								? 'صورة'
+								: 'Photo'
+							: event.payload?.type === 'ptt' || event.payload?.type === 'audio'
+								? locale === 'ar'
+									? 'رسالة صوتية'
+									: 'Voice message'
+								: locale === 'ar'
+									? 'رسالة جديدة'
+									: 'New message');
+					showWhatsAppDesktopNotification({
+						title,
+						body,
+						conversationId: targetConversationId,
+						accountId,
+						locale,
+					});
 				}
 			}
 			if (
@@ -8173,6 +8366,37 @@ function WhatsAppWorkspaceContent() {
 											</button>
 										</div>
 									)}
+									{pushPermission !== 'granted' &&
+										pushPermission !== 'unsupported' &&
+										pushPermission !== 'checking' && (
+										<div className="mb-2 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/40 dark:bg-amber-950/30">
+											<Bell size={15} className="mt-0.5 shrink-0 text-amber-700 dark:text-amber-300" />
+											<div className="min-w-0 flex-1">
+												<p className="text-[11px] font-bold text-amber-950 dark:text-amber-100">
+													{t.pushNotifications}
+												</p>
+												<p className="mt-0.5 text-[10px] leading-snug text-amber-800/80 dark:text-amber-200/70">
+													{pushPermission === 'denied'
+														? t.pushDenied
+														: t.pushNotificationsHint}
+												</p>
+											</div>
+											{pushPermission !== 'denied' && (
+												<button
+													type="button"
+													disabled={enablingPush}
+													onClick={() => subscribeToWhatsAppPush(true)}
+													className="shrink-0 rounded-lg bg-amber-600 px-2.5 py-1.5 text-[10px] font-bold text-white disabled:opacity-60"
+												>
+													{enablingPush ? (
+														<Loader2 size={12} className="animate-spin" />
+													) : (
+														t.enablePush
+													)}
+												</button>
+											)}
+										</div>
+									)}
 									<div className="wa-desktop-chat-list-tools flex items-center justify-between">
 										<h2 className="font-black">{t.chats}</h2>
 										<div className="flex items-center gap-1">
@@ -8692,8 +8916,8 @@ function WhatsAppWorkspaceContent() {
 								<>
 									<header className="wa-chat-toolbar flex items-center justify-between border-b border-slate-100 p-3 dark:border-slate-800">
 										<div className="flex min-w-0 items-center gap-2.5">
-											<button type="button" aria-label="Back to chats" onClick={() => setConversationId(null)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white min-[769px]:hidden">
-												{locale === 'ar' ? <ChevronRight size={27} /> : <ChevronLeft size={27} />}
+											<button type="button" aria-label="Back to chats" onClick={() => setConversationId(null)} className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#0A0A0A] min-[769px]:hidden">
+												{locale === 'ar' ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
 											</button>
 											{unreadConversationCount > 0 ? (
 												<span className="me-[15px] wa-chat-back-count min-[769px]:hidden">
@@ -8739,7 +8963,7 @@ function WhatsAppWorkspaceContent() {
 												</p>
 											</div>
 										</div>
-										<div className="flex items-center gap-1.5 min-[769px]:hidden">
+										<div className="flex items-center gap-0.5 min-[769px]:hidden">
 											<button
 												type="button"
 												disabled={demo.settings.enabled}
@@ -8757,14 +8981,16 @@ function WhatsAppWorkspaceContent() {
 													setMediaSelectMode(true);
 												}}
 												aria-label={mediaSelectMode ? t.cancelSelectMedia : t.selectMedia}
-												className={`grid h-9 w-9 place-items-center rounded-full ${
-													mediaSelectMode ? 'bg-white/20 text-white' : 'text-white/90'
+												className={`grid h-8 w-8 place-items-center rounded-full ${
+													mediaSelectMode
+														? 'bg-black/5 text-[#0A0A0A]'
+														: 'text-[#0A0A0A]'
 												}`}
 											>
 												{mediaSelectMode ? (
-													<X size={18} strokeWidth={2.25} aria-hidden="true" />
+													<X size={16} strokeWidth={2.25} aria-hidden="true" />
 												) : (
-													<Images size={18} strokeWidth={2.25} aria-hidden="true" />
+													<Images size={16} strokeWidth={2.25} aria-hidden="true" />
 												)}
 											</button>
 										</div>
@@ -9185,6 +9411,7 @@ function WhatsAppWorkspaceContent() {
 																				onOpenImage={setActiveChatImageId}
 																				voiceAvatarLabel={mine ? selectedAccount?.label : conversationTitle(selectedConversation)}
 																				voiceAvatarSrc={mine ? '' : selectedConversation.contact?.avatarUrl}
+																				sessionReady={isAccountConnected}
 																			/>
 																		)
 																		: !isDeleted && ['image', 'audio', 'ptt', 'video', 'document', 'sticker'].includes(
@@ -9423,9 +9650,9 @@ function WhatsAppWorkspaceContent() {
 													setAttachmentSheetOpen(true);
 												}}
 												title={locale === 'ar' ? 'المزيد من الخيارات' : 'More options'}
-												className="wa-attach-button grid h-11 w-11 shrink-0 place-items-center rounded-full text-[#54656F] transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800"
+												className="wa-attach-button grid h-9 w-9 shrink-0 place-items-center rounded-full text-[#54656F] transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800"
 											>
-												<Plus size={26} strokeWidth={2.25} />
+												<Plus size={22} strokeWidth={2.25} />
 											</button>
 											{recordingVoice ? (
 												<>
@@ -9486,9 +9713,9 @@ function WhatsAppWorkspaceContent() {
 													lang={draftPresentation.lang}
 													style={draftPresentation.style}
 													placeholder={t.message}
-															className={`wa-composer-input max-h-28 min-h-11 min-w-0 flex-1 resize-none bg-transparent px-3.5 py-2.5 outline-none ${draftPresentation.className || ''}`}
+															className={`wa-composer-input max-h-28 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-3.5 py-2 outline-none ${draftPresentation.className || ''}`}
 														/>
-												<button type="button" aria-label="Stickers" title="Emoji, GIF and stickers" onClick={() => { setAttachmentSheetOpen(false); setStickerPanelOpen(current => !current); }} className="wa-sticker-button wa-input-action grid h-[40px] w-9 shrink-0 place-items-center text-[#8696A0]">
+												<button type="button" aria-label="Stickers" title="Emoji, GIF and stickers" onClick={() => { setAttachmentSheetOpen(false); setStickerPanelOpen(current => !current); }} className="wa-sticker-button wa-input-action grid h-9 w-8 shrink-0 place-items-center text-[#8696A0]">
 															<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 																<path fillRule="evenodd" clipRule="evenodd" d="M11.6154 2.89991L13.9358 2.89991C14.4593 2.8999 14.7592 2.8999 15.0178 2.92026C18.2543 3.17497 20.8249 5.7456 21.0797 8.98208C21.1 9.24075 21.1 9.54062 21.1 10.0641V10.1375C21.1 10.9379 21.1 11.377 21.0704 11.7531C20.6999 16.4607 16.9608 20.1998 12.2532 20.5703C11.8771 20.5999 11.438 20.5999 10.6376 20.5999H10.2524C9.55427 20.5999 9.15433 20.5999 8.81011 20.5638C5.71094 20.238 3.26189 17.789 2.93616 14.6898C2.89998 14.3456 2.89999 13.9457 2.9 13.2477L2.9 11.6154C2.8999 9.64928 2.89984 8.52143 3.1842 7.58403C3.82407 5.47466 5.47475 3.82397 7.58412 3.1841C8.52152 2.89975 9.64937 2.89981 11.6154 2.89991ZM11.75 4.09991C9.61283 4.09991 8.67748 4.10643 7.93247 4.33243C6.20662 4.85596 4.85605 6.20653 4.33252 7.93237C4.10653 8.67739 4.1 9.61273 4.1 11.7499V13.1999C4.1 13.9582 4.10083 14.2908 4.12958 14.5644C4.3961 17.1001 6.39986 19.1038 8.93555 19.3703C9.2091 19.3991 9.54174 19.3999 10.3 19.3999H10.6C11.4472 19.3999 11.836 19.3994 12.1591 19.374C12.2949 19.3633 12.3998 19.2475 12.3994 19.1065C12.3993 19.073 12.3992 19.0395 12.3991 19.0059C12.3968 18.2485 12.3944 17.4838 12.4565 16.7239C12.514 16.0197 12.6331 15.438 12.9014 14.9115C13.3424 14.046 14.0461 13.3423 14.9116 12.9013C15.4381 12.633 16.0198 12.5139 16.7239 12.4564C17.5478 12.3891 18.376 12.3928 19.1977 12.3973C19.4427 12.3987 19.5331 12.3969 19.6099 12.361C19.6767 12.3297 19.7451 12.2681 19.7831 12.2049C19.827 12.132 19.8371 12.0506 19.8592 11.8267C19.8647 11.771 19.8697 11.7151 19.8741 11.659C19.8995 11.3359 19.9 10.9471 19.9 10.0999C19.9 9.53129 19.8995 9.28181 19.8834 9.07623C19.6749 6.4282 17.5717 4.32496 14.9237 4.11656C14.7181 4.10038 14.4686 4.09991 13.9 4.09991H11.75ZM18.9751 13.5977C18.2535 13.5944 17.5348 13.5941 16.8217 13.6524C16.1917 13.7039 15.7856 13.8028 15.4564 13.9705C14.8167 14.2965 14.2965 14.8166 13.9706 15.4563C13.8029 15.7855 13.704 16.1917 13.6525 16.8216C13.6128 17.3078 13.6031 17.8966 13.6007 18.6525C13.6004 18.7573 13.6003 18.8287 13.6054 18.8834C13.6103 18.9368 13.6195 18.9631 13.6308 18.981C13.6562 19.0214 13.7033 19.0559 13.7494 19.068C13.7706 19.0735 13.7977 19.0743 13.8468 19.0639C13.8977 19.0531 13.9619 19.0328 14.0567 19.0025C16.4656 18.234 18.3983 16.4129 19.3177 14.0764C19.3562 13.9785 19.3823 13.9119 19.3971 13.8589C19.4116 13.8076 19.4123 13.7794 19.4077 13.7575C19.3975 13.7092 19.3639 13.6596 19.3227 13.6322C19.3049 13.6203 19.2775 13.6103 19.2206 13.6045C19.1626 13.5986 19.0863 13.5982 18.9751 13.5977Z" fill="#0A0A0A" />
 															</svg>
@@ -9496,19 +9723,30 @@ function WhatsAppWorkspaceContent() {
 														</button>
 
 													</div>
-											<button type="button" aria-label="Camera" title="Camera or photo picker" onClick={() => openComposerFilePicker({ accept: 'image/*', capture: 'environment' })} className="wa-camera-button wa-input-action grid h-11 w-9 shrink-0 place-items-center text-[#8696A0] min-[769px]:hidden">
+											<button type="button" aria-label="Camera" title="Camera or photo picker" onClick={() => openComposerFilePicker({ accept: 'image/*', capture: 'environment' })} className="wa-camera-button wa-input-action grid h-10 w-8 shrink-0 place-items-center text-[#8696A0] min-[769px]:hidden">
 														<svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
 															<path fillRule="evenodd" clipRule="evenodd" d="M12.3302 7.08112C12.8052 6.52227 13.5016 6.2002 14.235 6.2002H17.762C18.4954 6.2002 19.1918 6.52228 19.6668 7.08112L20.3484 7.88312C20.5193 8.08427 20.77 8.2002 21.034 8.2002H24.7499C26.4344 8.2002 27.7999 9.56573 27.7999 11.2502V21.2502C27.7999 22.9347 26.4344 24.3002 24.75 24.3002H7.24995C5.56548 24.3002 4.19995 22.9347 4.19995 21.2502V11.2502C4.19995 9.56573 5.56548 8.2002 7.24995 8.2002H10.963C11.227 8.2002 11.4777 8.08427 11.6486 7.88312L12.3302 7.08112ZM14.235 7.8002C13.971 7.8002 13.7203 7.91612 13.5494 8.11727L12.8678 8.91927C12.3928 9.47812 11.6964 9.8002 10.963 9.8002H7.24995C6.44914 9.8002 5.79995 10.4494 5.79995 11.2502V21.2502C5.79995 22.051 6.44914 22.7002 7.24995 22.7002H24.75C25.5508 22.7002 26.2 22.051 26.2 21.2502V11.2502C26.2 10.4494 25.5508 9.8002 24.7499 9.8002H21.034C20.3006 9.8002 19.6041 9.47812 19.1292 8.91927L18.4476 8.11727C18.2766 7.91612 18.026 7.8002 17.762 7.8002H14.235ZM15.9984 12.8002C14.0934 12.8002 12.549 14.3445 12.549 16.2496C12.549 18.1546 14.0934 19.6989 15.9984 19.6989C17.9034 19.6989 19.4478 18.1546 19.4478 16.2496C19.4478 14.3445 17.9034 12.8002 15.9984 12.8002ZM10.949 16.2496C10.949 13.4609 13.2097 11.2002 15.9984 11.2002C18.7871 11.2002 21.0478 13.4609 21.0478 16.2496C21.0478 19.0382 18.7871 21.2989 15.9984 21.2989C13.2097 21.2989 10.949 19.0382 10.949 16.2496ZM22.65 13.8002C23.3404 13.8002 23.9 13.2405 23.9 12.5502C23.9 11.8598 23.3404 11.3002 22.65 11.3002C21.9597 11.3002 21.4 11.8598 21.4 12.5502C21.4 13.2405 21.9597 13.8002 22.65 13.8002Z" fill="currentColor" />
 														</svg>
 
 													</button>
+													{draft.trim() ? (
+													<button
+														type="submit"
+														aria-label={t.send}
+														disabled={sending}
+														className="wa-send-button grid h-10 w-10 shrink-0 place-items-center rounded-full text-white transition-transform hover:-translate-y-px disabled:translate-y-0 disabled:opacity-40"
+														style={{ background: GRADIENT, boxShadow: GLOW }}
+													>
+														{sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+													</button>
+													) : (
 													<button
 														type="button"
 														disabled={sending}
 														title={t.recordVoice}
 														aria-label={t.recordVoice}
 														onClick={startVoiceRecording}
-														className={`wa-mic-button grid h-11 w-11 shrink-0 place-items-center rounded-full border border-slate-200 bg-white text-[#54656F] shadow-sm transition-colors hover:border-[var(--color-primary-300)] hover:bg-[var(--color-primary-50)] hover:text-[var(--color-primary-600)] disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800 ${draft.trim() ? 'max-[768px]:hidden' : ''}`}
+														className="wa-mic-button grid h-10 w-10 shrink-0 place-items-center rounded-full border border-slate-200 bg-white text-[#54656F] shadow-sm transition-colors hover:border-[var(--color-primary-300)] hover:bg-[var(--color-primary-50)] hover:text-[var(--color-primary-600)] disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
 													>
 														<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
 															<path
@@ -9517,15 +9755,7 @@ function WhatsAppWorkspaceContent() {
 															/>
 														</svg>
 													</button>
-													<button
-														type="submit"
-														aria-label={t.send}
-														disabled={sending || !draft.trim()}
-														className={`wa-send-button grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white transition-transform hover:-translate-y-px disabled:translate-y-0 disabled:opacity-40 ${!draft.trim() ? 'max-[768px]:hidden' : ''}`}
-														style={{ background: GRADIENT, boxShadow: GLOW }}
-													>
-														{sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-													</button>
+													)}
 												</div>
 											)}
 										</form>
