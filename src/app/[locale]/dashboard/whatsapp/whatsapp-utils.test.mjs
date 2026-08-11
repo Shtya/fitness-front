@@ -150,6 +150,13 @@ test('conversationTitle follows group/contact/provider precedence', () => {
 	assert.equal(conversationTitle({ group: { subject: 'Support' } }), 'Support');
 	assert.equal(conversationTitle({ contact: { name: 'Ahmed' } }), 'Ahmed');
 	assert.equal(conversationTitle({ providerChatId: '201000000000@c.us' }), '201000000000');
+	assert.equal(
+		conversationTitle({
+			providerChatId: '26934293586114@lid',
+			contact: { name: '26934293586114', phoneNumber: '201090998111' },
+		}),
+		'201090998111',
+	);
 	assert.equal(conversationTitle(null), 'Chat');
 });
 

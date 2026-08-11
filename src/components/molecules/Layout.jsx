@@ -234,7 +234,9 @@ export default function Layout({ children }) {
 		pathname.startsWith('/open') ||
 		pathname === '/';
 	const isPresentationRoute = pathname.startsWith('/presentation');
-	const isOpenRoute = pathname.startsWith('/open');
+	/** Login / discover / open: full-bleed viewport, no dashboard chrome */
+	const isBareViewport =
+		pathname.startsWith('/auth') || pathname.startsWith('/open');
 	const isWhatsAppRoute = pathname.includes('/dashboard/whatsapp');
 	const isMetaWhatsAppRoute = pathname.includes('/dashboard/meta-whatsapp');
 	const isChatRoute = pathname.includes('/dashboard/chat');
@@ -247,7 +249,7 @@ export default function Layout({ children }) {
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
 	useEffect(() => { setSidebarOpen(false); }, [pathname]);
-	/* Sync body push with drawer width via --sidebar-drawer-w */
+	/* Track mobile drawer open state (overlay mode — page does not slide) */
 	useEffect(() => {
 		const root = document.documentElement;
 		if (sidebarOpen) root.setAttribute('data-sidebar-open', '1');
@@ -255,9 +257,9 @@ export default function Layout({ children }) {
 		return () => root.removeAttribute('data-sidebar-open');
 	}, [sidebarOpen]);
 
-	/* One document lock: app shell / presentation / open mobile drawer */
+	/* One document lock: app shell / bare auth / presentation / open drawer */
 	useEffect(() => {
-		const lock = isAppShell || isPresentationRoute || sidebarOpen;
+		const lock = isAppShell || isBareViewport || isPresentationRoute || sidebarOpen;
 		const prevHtml = document.documentElement.style.overflow;
 		const prevBody = document.body.style.overflow;
 		if (lock) {
@@ -271,7 +273,7 @@ export default function Layout({ children }) {
 			document.documentElement.style.overflow = prevHtml;
 			document.body.style.overflow = prevBody;
 		};
-	}, [isAppShell, isPresentationRoute, sidebarOpen]);
+	}, [isAppShell, isBareViewport, isPresentationRoute, sidebarOpen]);
 
 	useEffect(() => {
 		try {
@@ -364,6 +366,11 @@ export default function Layout({ children }) {
 			<Providers>
 				<TenantThemeProvider>
 				<ThemeProvider>
+					{isBareViewport ? (
+					<div className="relative h-dvh w-full overflow-hidden bg-[#0b1220]">
+						{children}
+					</div>
+					) : (
 					<div className={isAppShell || isPresentationRoute ? 'relative h-dvh overflow-hidden' : 'relative min-h-screen'}>
 						{/* Background layers */}
 						<div className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-white to-slate-50" />
@@ -409,20 +416,17 @@ export default function Layout({ children }) {
 										<Header onMenu={() => setSidebarOpen(!sidebarOpen)} />
 									</div>
 								)}
-								{isOpenRoute ? (
-									<main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-										<div id="body" className="min-h-0 flex-1 overflow-hidden p-0">
-											{children}
-										</div>
-									</main>
-								) : (
-								<AnimatePresence mode="wait">
+								{/*
+								  Never start/exit at opacity 0 — iOS standalone PWAs can stick on a
+								  blank white #body while the header (outside this tree) still paints.
+								*/}
+								<AnimatePresence initial={false}>
 									<motion.main
 										key={pathname}
-										initial={{ opacity: 0, y: 8 }}
+										initial={{ opacity: 1, y: 8 }}
 										animate={{ opacity: 1, y: 0 }}
-										exit={{ opacity: 0, y: -8 }}
-										transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+										exit={{ opacity: 1, y: -4 }}
+										transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
 										className={isAppShell ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : undefined}
 									>
 										{/* Add bottom padding when impersonating so content isn't hidden behind bar */}
@@ -451,10 +455,10 @@ export default function Layout({ children }) {
 										</div>
 									</motion.main>
 								</AnimatePresence>
-								)}
 							</div>
 						</div>
 					</div>
+					)}
 
 					<ConfigAos />
 					<Toaster position="top-center" />
@@ -467,9 +471,9 @@ export default function Layout({ children }) {
 					</AnimatePresence>
 
 					{/* Quran audio continues after leaving /quran-revision */}
-					{!isOpenRoute ? <QuranMiniPlayer /> : null}
-					{!isOpenRoute ? <LastRouteTracker /> : null}
-					{!isOpenRoute ? <LastRouteRestorer /> : null}
+					{!isBareViewport ? <QuranMiniPlayer /> : null}
+					{!isBareViewport ? <LastRouteTracker /> : null}
+					{!isBareViewport ? <LastRouteRestorer /> : null}
 				</ThemeProvider>
 				</TenantThemeProvider>
 			</Providers>

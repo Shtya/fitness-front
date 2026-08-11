@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useParams } from 'next/navigation';
 import { usePathname, useRouter } from '@/i18n/navigation';
 import {
-	buildLastRouteHref,
 	consumeRestoreTicket,
 	isColdStartEntryPath,
 	isRestorablePath,
@@ -20,8 +18,6 @@ import {
 export default function LastRouteRestorer() {
 	const pathname = usePathname();
 	const router = useRouter();
-	const params = useParams();
-	const locale = params?.locale === 'en' ? 'en' : 'ar';
 	const ran = useRef(false);
 
 	useEffect(() => {
@@ -38,12 +34,9 @@ export default function LastRouteRestorer() {
 		if (!saved || !isRestorablePath(saved.path)) return;
 		if (saved.path === current) return;
 
-		const href = buildLastRouteHref(locale);
-		if (!href) return;
-
-		// next-intl router expects locale-less path
+		// next-intl router expects locale-less path (+ optional search)
 		router.replace(`${saved.path}${saved.search || ''}`);
-	}, [pathname, locale, router]);
+	}, [pathname, router]);
 
 	return null;
 }

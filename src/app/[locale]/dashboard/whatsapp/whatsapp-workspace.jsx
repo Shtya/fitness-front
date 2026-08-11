@@ -31,6 +31,7 @@ import {
 	FileText,
 	Globe2,
 	Image as ImageIcon,
+	Images,
 	Loader2,
 	LogOut,
 	MapPin,
@@ -57,7 +58,6 @@ import {
 	Square,
 	Star,
 	Sticker,
-	StickyNote,
 	Trash2,
 	TrendingUp,
 	User,
@@ -399,6 +399,16 @@ const translations = {
 		connecting: 'Connecting',
 		restoring: 'Restoring…',
 		syncingPhone: 'Syncing with phone… keep WhatsApp open on your phone',
+		keepPhoneOpenTitle: 'Keep WhatsApp open on your phone',
+		keepPhoneOpenBody:
+			'We are syncing chats and messages from your phone. Leave this page open and do not close WhatsApp on your phone until sync finishes.',
+		keepPhoneOpenDoNotClose: 'Do not close this tab or the WhatsApp app',
+		keepPhoneOpenStage: 'Syncing data…',
+		phoneClosedTitle: 'Please open WhatsApp on your phone',
+		phoneClosedBody:
+			'Sync paused because the phone connection dropped. Open WhatsApp, keep it in the foreground, then continue.',
+		phoneClosedRetry: 'I opened WhatsApp — continue',
+		phoneClosedDismiss: 'Close',
 		connectStarted: 'WhatsApp session started',
 		connectStillSyncing: 'Session started — still syncing with your phone',
 		sessionLinkedHint: 'Your phone shows this device as linked. Restoring session…',
@@ -627,6 +637,16 @@ const translations = {
 		connecting: 'جارِ الاتصال',
 		restoring: 'جارٍ الاستعادة…',
 		syncingPhone: 'جارٍ المزامنة مع الهاتف… أبقِ واتساب مفتوحاً على هاتفك',
+		keepPhoneOpenTitle: 'أبقِ واتساب مفتوحاً على هاتفك',
+		keepPhoneOpenBody:
+			'نقوم الآن بمزامنة المحادثات والرسائل من هاتفك. اترك هذه الصفحة مفتوحة ولا تغلق واتساب على الهاتف حتى تنتهي المزامنة.',
+		keepPhoneOpenDoNotClose: 'لا تغلق هذا التبويب ولا تطبيق واتساب',
+		keepPhoneOpenStage: 'جارٍ مزامنة البيانات…',
+		phoneClosedTitle: 'من فضلك افتح واتساب على هاتفك',
+		phoneClosedBody:
+			'توقفت المزامنة لأن الاتصال بالهاتف انقطع. افتح واتساب واتركه في الواجهة ثم أكمل.',
+		phoneClosedRetry: 'فتحت واتساب — متابعة',
+		phoneClosedDismiss: 'إغلاق',
 		connectStarted: 'تم بدء جلسة واتساب',
 		connectStillSyncing: 'بدأت الجلسة — ما زالت المزامنة مع الهاتف جارية',
 		sessionLinkedHint: 'هاتفك يعرض الجهاز كمربوط. جارٍ استعادة الجلسة…',
@@ -736,18 +756,22 @@ function newClientMessageId() {
 
 function statusMeta(status, t, account) {
 	if (status === 'connected') return { dot: 'bg-emerald-500', text: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-950/30', label: t.online };
-	if (['connecting', 'qr_pending'].includes(status)) {
+	if (status === 'qr_pending') {
+		return {
+			dot: 'bg-amber-500',
+			text: 'text-amber-600',
+			bg: 'bg-amber-50 dark:bg-amber-950/30',
+			label: t.qrPending,
+			hint: t.scanQrHint,
+		};
+	}
+	if (status === 'connecting') {
 		const restoring = Boolean(account?.lastConnectedAt);
 		return {
 			dot: 'bg-amber-500',
 			text: 'text-amber-600',
 			bg: 'bg-amber-50 dark:bg-amber-950/30',
-			// Compact pill label only — long sessionLinkedHint belongs in detail copy.
-			label: restoring
-				? t.restoring || t.connecting
-				: status === 'qr_pending'
-					? t.qrPending
-					: t.connecting,
+			label: restoring ? t.restoring || t.connecting : t.connecting,
 			hint: restoring ? t.sessionLinkedHint : t.syncingPhone,
 		};
 	}
@@ -760,6 +784,141 @@ function statusGradient(status) {
 	if (['connecting', 'qr_pending'].includes(status)) return 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
 	if (status === 'error') return 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)';
 	return 'linear-gradient(135deg, #64748b 0%, #475569 100%)';
+}
+
+/** Full-screen gate while WhatsApp history syncs — keeps the user from leaving mid-sync. */
+function PhoneSyncGate({
+	open,
+	progress = 0,
+	stage = '',
+	phoneClosed = false,
+	labels,
+	locale = 'en',
+	onRetry,
+	onDismiss,
+}) {
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => {
+		setMounted(true);
+	}, []);
+
+	useEffect(() => {
+		if (!open) return undefined;
+		const onBeforeUnload = event => {
+			event.preventDefault();
+			event.returnValue = '';
+		};
+		window.addEventListener('beforeunload', onBeforeUnload);
+		const prevOverflow = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+		return () => {
+			window.removeEventListener('beforeunload', onBeforeUnload);
+			document.body.style.overflow = prevOverflow;
+		};
+	}, [open]);
+
+	if (!open || !mounted) return null;
+
+	const pct = Math.max(1, Math.min(100, Number(progress) || 1));
+	const stageHint =
+		stage === 'prefetch_history'
+			? locale === 'ar'
+				? 'جاري تجهيز أحدث الرسائل…'
+				: 'Warming recent message history…'
+			: stage === 'phone_wait'
+				? locale === 'ar'
+					? 'أبقِ واتساب مفتوحاً — جارٍ إعادة الاتصال…'
+					: 'Keep WhatsApp open — reconnecting…'
+			: stage === 'fetching_chats' || stage === 'chats' || (pct >= 25 && pct <= 45)
+				? labels.syncingChatsFetching || labels.syncingChats
+				: labels.keepPhoneOpenStage || labels.syncingChats;
+
+	return createPortal(
+		<div
+			className={`wa-phone-sync-gate${phoneClosed ? ' is-phone-closed' : ''}`}
+			role="alertdialog"
+			aria-modal="true"
+			aria-labelledby="wa-phone-sync-title"
+			aria-describedby="wa-phone-sync-desc"
+		>
+			<div className="wa-phone-sync-gate__backdrop" />
+			<div className="wa-phone-sync-gate__card">
+				<div className="wa-phone-sync-gate__phone" aria-hidden="true">
+					<div className="wa-phone-sync-gate__phone-bezel">
+						<div className="wa-phone-sync-gate__phone-notch" />
+						<div className="wa-phone-sync-gate__phone-screen">
+							<div className="wa-phone-sync-gate__wa-mark">
+								<svg viewBox="0 0 24 24" width="36" height="36" fill="none" aria-hidden="true">
+									<path
+										d="M12 2.2C6.6 2.2 2.2 6.5 2.2 11.8c0 1.9.5 3.7 1.5 5.3L2 22l5.1-1.6c1.5.8 3.2 1.3 4.9 1.3 5.4 0 9.8-4.3 9.8-9.7S17.4 2.2 12 2.2Z"
+										fill="#25D366"
+									/>
+									<path
+										d="M16.6 14.3c-.2-.1-1.3-.6-1.5-.7-.2-.1-.4-.1-.5.1-.2.2-.6.7-.7.8-.1.1-.3.2-.5.1-.2-.1-.9-.3-1.7-1.1-.6-.6-1.1-1.3-1.2-1.5-.1-.2 0-.4.1-.5l.4-.4c.1-.1.2-.3.2-.4 0-.1 0-.3-.1-.4-.1-.1-.5-1.3-.7-1.8-.2-.5-.4-.4-.5-.4h-.4c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.3c.1.2 1.6 2.4 3.8 3.4 2.2.9 2.2.6 2.6.6.4 0 1.3-.5 1.4-1 .2-.5.2-.9.1-1Z"
+										fill="#fff"
+									/>
+								</svg>
+							</div>
+							{!phoneClosed && (
+								<div className="wa-phone-sync-gate__pulse-rings">
+									<span />
+									<span />
+									<span />
+								</div>
+							)}
+							{phoneClosed && (
+								<div className="wa-phone-sync-gate__closed-badge">!</div>
+							)}
+						</div>
+					</div>
+					<div className="wa-phone-sync-gate__signal">
+						<span />
+						<span />
+						<span />
+					</div>
+				</div>
+
+				<h2 id="wa-phone-sync-title" className="wa-phone-sync-gate__title">
+					{phoneClosed ? labels.phoneClosedTitle : labels.keepPhoneOpenTitle}
+				</h2>
+				<p id="wa-phone-sync-desc" className="wa-phone-sync-gate__body">
+					{phoneClosed ? labels.phoneClosedBody : labels.keepPhoneOpenBody}
+				</p>
+
+				{!phoneClosed && (
+					<div className="wa-phone-sync-gate__warn">
+						<Smartphone size={16} className="shrink-0" />
+						<span>{labels.keepPhoneOpenDoNotClose}</span>
+					</div>
+				)}
+
+				{!phoneClosed ? (
+					<div className="wa-phone-sync-gate__progress-wrap">
+						<div className="mb-2 flex items-center justify-between gap-2 text-[11px] font-bold text-slate-500">
+							<span className="inline-flex items-center gap-1.5">
+								<Loader2 size={12} className="animate-spin text-[#00A884]" />
+								{stageHint}
+							</span>
+							<span className="tabular-nums text-slate-700 dark:text-slate-200">{pct}%</span>
+						</div>
+						<div className="wa-phone-sync-gate__track">
+							<div className="wa-phone-sync-gate__fill" style={{ width: `${pct}%` }} />
+						</div>
+					</div>
+				) : (
+					<div className="wa-phone-sync-gate__actions">
+						<button type="button" className="wa-phone-sync-gate__btn-primary" onClick={onRetry}>
+							{labels.phoneClosedRetry}
+						</button>
+						<button type="button" className="wa-phone-sync-gate__btn-ghost" onClick={onDismiss}>
+							{labels.phoneClosedDismiss}
+						</button>
+					</div>
+				)}
+			</div>
+		</div>,
+		document.body,
+	);
 }
 
 const AVATAR_GRADIENTS = [
@@ -3460,6 +3619,7 @@ function WhatsAppWorkspaceContent() {
 	const [conversationScope, setConversationScope] = useState('all');
 	const [syncingInbox, setSyncingInbox] = useState(false);
 	const [syncProgress, setSyncProgress] = useState(0);
+	const [syncPhoneClosed, setSyncPhoneClosed] = useState(false);
 	const [syncStage, setSyncStage] = useState('');
 	const [conversationId, setConversationId] = useState(null);
 	const [secondaryConversationId, setSecondaryConversationId] = useState(null);
@@ -5329,6 +5489,7 @@ function WhatsAppWorkspaceContent() {
 			}
 			if (event.event === 'qr') setQr(event.payload.qr);
 			if (event.event === 'sync_started') {
+				setSyncPhoneClosed(false);
 				setSyncingInbox(true);
 				setSyncStage(String(event.payload?.stage || 'starting'));
 				setSyncProgress(prev =>
@@ -5336,6 +5497,7 @@ function WhatsAppWorkspaceContent() {
 				);
 			}
 			if (event.event === 'sync_progress') {
+				setSyncPhoneClosed(false);
 				setSyncingInbox(true);
 				if (event.payload?.stage) {
 					setSyncStage(String(event.payload.stage));
@@ -5346,13 +5508,27 @@ function WhatsAppWorkspaceContent() {
 			}
 			if (['sync_completed', 'sync_failed'].includes(event.event)) {
 				const isManualSync = event.payload?.stage === 'manual';
+				const phoneClosedFail =
+					event.event === 'sync_failed' &&
+					(event.payload?.reason === 'phone_closed' ||
+						/open WhatsApp|phone|هاتف|واتساب/i.test(
+							String(event.payload?.message || ''),
+						));
 				// Manual sync UI state is owned by syncAccount(); clearing here races
 				// auto-resync when the list is still empty mid-reload.
 				if (!isManualSync) {
-					setSyncingInbox(false);
-					setSyncProgress(event.event === 'sync_completed' ? 100 : 0);
-					setSyncStage('');
+					if (phoneClosedFail) {
+						setSyncPhoneClosed(true);
+						setSyncingInbox(true);
+						setSyncProgress(0);
+					} else {
+						setSyncPhoneClosed(false);
+						setSyncingInbox(false);
+						setSyncProgress(event.event === 'sync_completed' ? 100 : 0);
+						setSyncStage('');
+					}
 				} else if (event.event === 'sync_completed') {
+					setSyncPhoneClosed(false);
 					setSyncProgress(100);
 					setSyncStage('');
 				}
@@ -5363,8 +5539,13 @@ function WhatsAppWorkspaceContent() {
 					void loadConversations(accountId, 1, false, { force: true }).catch(
 						() => { },
 					);
+					const openId = conversationIdRef.current;
+					if (openId && !isDemoId(openId)) {
+						messagesCacheRef.current.delete(openId);
+						void loadMessagesRef.current?.(openId, false)?.catch?.(() => { });
+					}
 				}
-				if (event.event === 'sync_failed' && !isManualSync) {
+				if (event.event === 'sync_failed' && !isManualSync && !phoneClosedFail) {
 					const message = String(event.payload?.message || '');
 					if (
 						!/not ready|not connected|listChats|syncing|chat store|linked session|waiting for|cooling down|timed out|retry automatically/i.test(
@@ -5387,7 +5568,20 @@ function WhatsAppWorkspaceContent() {
 			}
 			if (['connection', 'connection_error'].includes(event.event)) {
 				const status = event.payload?.status || event.payload?.event?.status;
+				const reason = String(event.payload?.reason || '');
+				if (
+					syncingInboxRef.current &&
+					status &&
+					status !== 'connected' &&
+					(reason === 'phone_closed' ||
+						['disconnected', 'error', 'qr_pending'].includes(status))
+				) {
+					setSyncPhoneClosed(true);
+					setSyncingInbox(true);
+					setSyncProgress(0);
+				}
 				if (status === 'connected') {
+					setSyncPhoneClosed(false);
 					setQr(null);
 					setPairingCode(null);
 					providerHistorySyncBlockedUntilRef.current = 0;
@@ -5637,91 +5831,6 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
-	const resetAccountData = async () => {
-		if (!accountId || !selectedAccount || accountBusy) return;
-		const targetAccountId = accountId;
-		const confirmed = window.confirm(
-			t.resetSessionConfirm.replace('{name}', selectedAccount.label || t.accounts),
-		);
-		if (!confirmed) return;
-		setAccountBusy(true);
-		setSyncingInbox(true);
-		setSyncProgress(10);
-		try {
-			const { data: resetResult } = await api.post(
-				`/whatsapp/accounts/${targetAccountId}/reset-data`,
-			);
-			await invalidateConversations(targetAccountId);
-			conversationsCacheRef.current.delete(targetAccountId);
-			statusesCacheRef.current.delete(targetAccountId);
-			messagesCacheRef.current.clear();
-			setConversationId(null);
-			setConversations([]);
-			setConversationPage(1);
-			setConversationTotal(0);
-			clearConversationMessages(null);
-			setStatuses([]);
-			setSelectedStatus(null);
-			setGroups([]);
-			setSelectedGroup(null);
-			setLogs([]);
-			setReport(null);
-			if (statusMediaUrlRef.current) {
-				URL.revokeObjectURL(statusMediaUrlRef.current);
-				statusMediaUrlRef.current = null;
-			}
-			setStatusMediaUrl(null);
-			setQr(null);
-			setPairingCode(null);
-			setSyncProgress(35);
-
-			const readyToSync =
-				Boolean(resetResult?.readyToSync) || resetResult?.status === 'connected';
-			if (!readyToSync) {
-				// Backend already cleared CRM data and attempted reconnect. One more
-				// connect covers cases where the first attempt raced a zombie browser.
-				const { data: connectData } = await api
-					.post(`/whatsapp/accounts/${targetAccountId}/connect`, {})
-					.catch(error => {
-						const message =
-							error.response?.data?.message ||
-							resetResult?.reconnectError ||
-							error.message;
-						throw Object.assign(new Error(
-							Array.isArray(message) ? message.join(', ') : message,
-						), { response: error.response });
-					});
-				if (connectData?.qr) setQr(connectData.qr);
-				if (connectData?.pairingCode) setPairingCode(connectData.pairingCode);
-				if (connectData?.status !== 'connected') {
-					setSyncProgress(100);
-					await loadAccounts();
-					toast.success(t.connectStillSyncing || t.sessionResetStarted);
-					return;
-				}
-			}
-
-			setSyncProgress(55);
-			await api.post(`/whatsapp/accounts/${targetAccountId}/sync/chats`);
-			setSyncProgress(90);
-			await loadConversations(targetAccountId, 1, false, { force: true });
-			setSyncProgress(100);
-			void api
-				.post(`/whatsapp/accounts/${targetAccountId}/sync/contacts`)
-				.catch(() => null);
-			void loadStatuses(targetAccountId, { force: true, silent: true });
-			await loadAccounts();
-			toast.success(t.sessionResetStarted);
-		} catch (error) {
-			setSyncProgress(0);
-			toast.error(error.response?.data?.message || 'Could not reset and resync WhatsApp data');
-			await loadAccounts().catch(() => { });
-		} finally {
-			setSyncingInbox(false);
-			setAccountBusy(false);
-		}
-	};
-
 	const deleteAccount = async () => {
 		if (!accountId || !selectedAccount || accountBusy) return;
 		const targetAccountId = accountId;
@@ -5786,14 +5895,18 @@ function WhatsAppWorkspaceContent() {
 	const syncAccount = async (silent = false) => {
 		if (!accountId) return;
 		if (!silent) setAccountBusy(true);
+		setSyncPhoneClosed(false);
 		setSyncingInbox(true);
 		setSyncStage('manual');
 		setSyncProgress(15);
+		let keepPhoneGate = false;
 		try {
 			// Chats first — this is what fixes inbox order. Contacts are optional/heavy.
 			setSyncProgress(20);
 			const { data: syncResult } = await api.post(
 				`/whatsapp/accounts/${accountId}/sync/chats`,
+				null,
+				{ timeout: 300000 },
 			);
 			setSyncProgress(90);
 			setSyncStage('saving');
@@ -5823,18 +5936,28 @@ function WhatsAppWorkspaceContent() {
 			const message =
 				error.response?.data?.message || error?.message || 'Synchronization failed';
 			const softFailure =
-				/not ready|waiting for the linked|linked session|still syncing|chat store|listChats|cooling down|timed out/i.test(
+				/not ready|waiting for the linked|linked session|still syncing|chat store|listChats|cooling down|timed out|timeout of/i.test(
 					String(message),
 				);
+			const phoneHint =
+				/timeout of|timed out|phone|open WhatsApp|هاتف|واتساب/i.test(String(message));
+			if (phoneHint) {
+				keepPhoneGate = true;
+				setSyncPhoneClosed(true);
+				setSyncingInbox(true);
+			}
 			syncCooldownUntilRef.current = Date.now() + (softFailure ? 15_000 : 60_000);
 			// Silent auto-sync must not spam toasts while WA Web ChatStore hydrates.
-			if (!silent || !softFailure) {
+			if ((!silent || !softFailure) && !phoneHint) {
 				toast.error(Array.isArray(message) ? message.join(', ') : message);
 			}
 			await loadAccounts().catch(() => { });
 		} finally {
-			setSyncingInbox(false);
-			setSyncStage('');
+			if (!keepPhoneGate) {
+				setSyncingInbox(false);
+				setSyncStage('');
+				setSyncPhoneClosed(false);
+			}
 			if (!silent) setAccountBusy(false);
 		}
 	};
@@ -5890,13 +6013,14 @@ function WhatsAppWorkspaceContent() {
 
 	// Clear a stuck sync bar if backend never finishes.
 	useEffect(() => {
-		if (!syncingInbox) return undefined;
+		if (!syncingInbox || syncPhoneClosed) return undefined;
 		const timer = setTimeout(() => {
 			setSyncingInbox(false);
 			setSyncProgress(0);
-		}, 120000);
+			setSyncPhoneClosed(false);
+		}, 300000);
 		return () => clearTimeout(timer);
-	}, [syncingInbox]);
+	}, [syncingInbox, syncPhoneClosed]);
 
 	const sendMessage = async event => {
 		event.preventDefault();
@@ -7593,6 +7717,29 @@ function WhatsAppWorkspaceContent() {
 				}
 			/>
 			<MobileStickerPanel open={stickerPanelOpen} onClose={() => setStickerPanelOpen(false)} onInsert={emoji => setDraft(current => `${current}${emoji}`)} />
+			<PhoneSyncGate
+				open={syncingInbox || syncPhoneClosed}
+				progress={syncProgress}
+				stage={syncStage}
+				phoneClosed={syncPhoneClosed}
+				labels={t}
+				locale={locale}
+				onDismiss={() => {
+					setSyncPhoneClosed(false);
+					setSyncingInbox(false);
+					setSyncProgress(0);
+					setSyncStage('');
+				}}
+				onRetry={() => {
+					setSyncPhoneClosed(false);
+					void connectAccount(undefined, { force: true })
+						.then(() => syncAccount(false))
+						.catch(() => {
+							setSyncPhoneClosed(true);
+							setSyncingInbox(true);
+						});
+				}}
+			/>
 			{/* Desktop nav lives in the left rail — no top PageHeader on web. */}
 			<div className="wa-web-workspace min-h-0 flex-1 max-[768px]:contents min-[769px]:flex min-[769px]:overflow-hidden">
 				<WhatsAppDesktopRail
@@ -7777,7 +7924,7 @@ function WhatsAppWorkspaceContent() {
 												</div>
 											</div>
 											<div className="flex flex-wrap gap-2">
-												{canUseWhatsApp && (
+												{canUseWhatsApp && selectedAccount.status === 'connected' && (
 													<button
 														onClick={() => syncAccount()}
 														className="flex items-center gap-1.5 rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm font-bold text-white backdrop-blur transition-colors hover:bg-white/20"
@@ -7806,7 +7953,11 @@ function WhatsAppWorkspaceContent() {
 														disabled={accountBusy}
 														className="flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-sm font-bold text-emerald-600 shadow-md transition-transform hover:-translate-y-px disabled:opacity-50"
 													>
-														<Wifi size={15} />{' '}
+														{accountBusy ? (
+															<Loader2 size={15} className="animate-spin" />
+														) : (
+															<Wifi size={15} />
+														)}{' '}
 														{['connecting', 'qr_pending', 'error'].includes(
 															selectedAccount.status,
 														)
@@ -7815,48 +7966,35 @@ function WhatsAppWorkspaceContent() {
 													</button>
 												))}
 												{isAdmin && canManageWhatsApp && (
-													<>
-														<button
-															type="button"
-															onClick={resetAccountData}
-															disabled={accountBusy}
-															aria-label={t.resetSession}
-															title={t.resetSession}
-															className="flex items-center gap-1.5 rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-sm font-bold text-white backdrop-blur transition-colors hover:bg-white/20 disabled:opacity-50"
-														>
-															<RefreshCw size={15} /> {t.resetSession}
-														</button>
-														<button
-															type="button"
-															onClick={deleteAccount}
-															disabled={accountBusy}
-															aria-label={t.deleteAccount}
-															title={t.deleteAccount}
-															className="flex items-center gap-1.5 rounded-xl bg-rose-600 px-3 py-2 text-sm font-bold text-white shadow-md transition-colors hover:bg-rose-700 disabled:opacity-50"
-														>
-															<Trash2 size={15} /> {t.deleteAccount}
-														</button>
-													</>
+													<button
+														type="button"
+														onClick={deleteAccount}
+														disabled={accountBusy}
+														aria-label={t.deleteAccount}
+														title={t.deleteAccount}
+														className="flex items-center gap-1.5 rounded-xl bg-rose-600 px-3 py-2 text-sm font-bold text-white shadow-md transition-colors hover:bg-rose-700 disabled:opacity-50"
+													>
+														<Trash2 size={15} /> {t.deleteAccount}
+													</button>
 												)}
 											</div>
 										</div>
-										{['connecting', 'qr_pending'].includes(selectedAccount.status) && (
-											<p className="mt-3 text-sm text-white/80">
-												{selectedAccount.lastConnectedAt
-													? t.sessionLinkedHint
-													: t.syncingPhone}
+										{selectedAccount.status === 'error' && (
+											<p className="mt-3 text-sm text-amber-100/95">
+												{selectedAccount.lastError || t.restartConnectionHint}
 											</p>
 										)}
-										{['connecting', 'qr_pending', 'error'].includes(
-											selectedAccount.status,
-										) && (
-											<p className="mt-2 text-sm text-amber-100/95">
-												{selectedAccount.lastError || t.restartConnectionHint}
+										{selectedAccount.status === 'connecting' && !qr && !pairingCode && (
+											<p className="mt-3 text-sm text-white/80">
+												{accStatus?.hint || t.syncingPhone}
 											</p>
 										)}
 									</div>
 									<div className="space-y-5 p-5">
-										{accountBusy && (
+										{accountBusy &&
+											!qr &&
+											!pairingCode &&
+											selectedAccount.status !== 'connected' && (
 											<div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800">
 												<Loader2 size={16} className="animate-spin text-[var(--color-primary-500)]" />
 												{t.loading}
@@ -7942,6 +8080,7 @@ function WhatsAppWorkspaceContent() {
 										)}
 										{linkMode === 'qr' &&
 											!qr &&
+											!accountBusy &&
 											canManageWhatsApp &&
 											['connecting', 'qr_pending', 'disconnected', 'error'].includes(
 												selectedAccount.status,
@@ -7996,11 +8135,13 @@ function WhatsAppWorkspaceContent() {
 												<p className="mx-auto mt-4 max-w-xs text-xs text-slate-500">{t.pairingCodeHint}</p>
 											</div>
 										)}
-										<div className="grid gap-3 sm:grid-cols-3">
-											<StatTile icon={ShieldCheck} label={t.provider} value={selectedAccount.providerName} bg="bg-[var(--color-primary-50)]" color="var(--color-primary-500)" />
-											<StatTile icon={accStatus?.dot === 'bg-emerald-500' ? CheckCircle2 : AlertTriangle} label={t.status} value={accStatus?.label} bg={accStatus?.bg} color={accStatus?.dot === 'bg-emerald-500' ? '#10b981' : accStatus?.dot === 'bg-rose-500' ? '#f43f5e' : '#f59e0b'} />
-											<StatTile icon={Clock} label={t.lastConnected} value={selectedAccount.lastConnectedAt ? new Date(selectedAccount.lastConnectedAt).toLocaleString() : '—'} bg="bg-[var(--color-secondary-50)]" color="var(--color-secondary-500)" />
-										</div>
+										{selectedAccount.status === 'connected' && (
+											<div className="grid gap-3 sm:grid-cols-3">
+												<StatTile icon={ShieldCheck} label={t.provider} value={selectedAccount.providerName} bg="bg-[var(--color-primary-50)]" color="var(--color-primary-500)" />
+												<StatTile icon={accStatus?.dot === 'bg-emerald-500' ? CheckCircle2 : AlertTriangle} label={t.status} value={accStatus?.label} bg={accStatus?.bg} color={accStatus?.dot === 'bg-emerald-500' ? '#10b981' : accStatus?.dot === 'bg-rose-500' ? '#f43f5e' : '#f59e0b'} />
+												<StatTile icon={Clock} label={t.lastConnected} value={selectedAccount.lastConnectedAt ? new Date(selectedAccount.lastConnectedAt).toLocaleString() : '—'} bg="bg-[var(--color-secondary-50)]" color="var(--color-secondary-500)" />
+											</div>
+										)}
 									</div>
 								</div>
 							)}
@@ -8620,7 +8761,11 @@ function WhatsAppWorkspaceContent() {
 													mediaSelectMode ? 'bg-white/20 text-white' : 'text-white/90'
 												}`}
 											>
-												{mediaSelectMode ? <X size={18} /> : <Download size={18} />}
+												{mediaSelectMode ? (
+													<X size={18} strokeWidth={2.25} aria-hidden="true" />
+												) : (
+													<Images size={18} strokeWidth={2.25} aria-hidden="true" />
+												)}
 											</button>
 										</div>
 										<div className="hidden items-center gap-1.5 min-[769px]:flex">
@@ -8642,13 +8787,17 @@ function WhatsAppWorkspaceContent() {
 												}}
 												aria-label={mediaSelectMode ? t.cancelSelectMedia : t.selectMedia}
 												title={mediaSelectMode ? t.cancelSelectMedia : t.selectMedia}
-												className={`grid h-9 w-9 place-items-center rounded-lg border transition-colors disabled:opacity-50 ${
+												className={`wa-toolbar-icon-btn grid h-9 w-9 place-items-center rounded-lg border transition-colors disabled:opacity-50 ${
 													mediaSelectMode
-														? 'border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)]'
-														: 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700'
+														? 'is-active border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)]'
+														: 'border-slate-200 bg-white text-[#54656f] hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
 												}`}
 											>
-												{mediaSelectMode ? <X size={16} /> : <Download size={16} />}
+												{mediaSelectMode ? (
+													<X size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
+												) : (
+													<Images size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
+												)}
 											</button>
 											<button
 												type="button"
@@ -8664,13 +8813,16 @@ function WhatsAppWorkspaceContent() {
 												title={
 													selectedConversation.isPinned ? t.unpinChat : t.pinChat
 												}
-												className={`grid h-9 w-9 place-items-center rounded-lg border transition-colors disabled:opacity-50 ${selectedConversation.isPinned
-													? 'border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-500)] dark:bg-slate-800'
-													: 'border-slate-200 text-slate-400 hover:text-[var(--color-primary-500)] dark:border-slate-700'
+												className={`wa-toolbar-icon-btn grid h-9 w-9 place-items-center rounded-lg border transition-colors disabled:opacity-50 ${selectedConversation.isPinned
+													? 'is-active border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-500)] dark:bg-slate-800'
+													: 'border-slate-200 bg-white text-[#54656f] hover:text-[var(--color-primary-500)] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
 													}`}
 											>
 												<Pin
 													size={16}
+													strokeWidth={2.25}
+													className="shrink-0"
+													aria-hidden="true"
 													fill={
 														selectedConversation.isPinned
 															? 'currentColor'
@@ -8688,13 +8840,16 @@ function WhatsAppWorkspaceContent() {
 												}
 												aria-label={t.favoriteChats}
 												title={t.favoriteChats}
-												className={`grid h-9 w-9 place-items-center rounded-lg border transition-colors disabled:opacity-50 ${selectedConversation.isFavorite
-													? 'border-amber-300 bg-amber-50 text-amber-500 dark:bg-amber-950/30'
-													: 'border-slate-200 text-slate-400 hover:text-amber-500 dark:border-slate-700'
+												className={`wa-toolbar-icon-btn grid h-9 w-9 place-items-center rounded-lg border transition-colors disabled:opacity-50 ${selectedConversation.isFavorite
+													? 'is-active border-amber-300 bg-amber-50 text-amber-500 dark:bg-amber-950/30'
+													: 'border-slate-200 bg-white text-[#54656f] hover:text-amber-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
 													}`}
 											>
 												<Star
 													size={16}
+													strokeWidth={2.25}
+													className="shrink-0"
+													aria-hidden="true"
 													fill={
 														selectedConversation.isFavorite
 															? 'currentColor'
@@ -8714,10 +8869,10 @@ function WhatsAppWorkspaceContent() {
 													setSplitPickMode(true);
 													toast(t.splitPickHint, { icon: '▦' });
 												}}
-												className={`hidden h-9 w-9 place-items-center rounded-lg border transition-colors disabled:opacity-50 min-[769px]:grid ${
+												className={`wa-toolbar-icon-btn hidden h-9 w-9 place-items-center rounded-lg border transition-colors disabled:opacity-50 min-[769px]:grid ${
 													secondaryConversationId || splitPickMode
-														? 'border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)]'
-														: 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700'
+														? 'is-active border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)]'
+														: 'border-slate-200 bg-white text-[#54656f] hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
 												}`}
 												title={
 													secondaryConversationId
@@ -8730,117 +8885,14 @@ function WhatsAppWorkspaceContent() {
 														: t.openSplitChat
 												}
 											>
-												<Columns2 size={16} />
+												<Columns2 size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
 											</button>
-											<div className="relative" data-wa-notes-popover>
-												<button
-													type="button"
-													disabled={demo.settings.enabled}
-													onClick={() => setShowNotes(current => !current)}
-													className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-bold transition-colors ${showNotes
-														? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200'
-														: 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'
-														}`}
-													title={t.notes}
-													aria-expanded={showNotes}
-												>
-													<StickyNote size={14} />
-													<span className="hidden xl:inline">{t.notes}</span>
-													{notes.length > 0 ? (
-														<span className="grid h-4 min-w-4 place-items-center rounded-full bg-amber-500 px-1 text-[9px] font-black text-white">
-															{notes.length > 9 ? '9+' : notes.length}
-														</span>
-													) : null}
-												</button>
-												{showNotes ? (
-													<div className="absolute end-0 top-[calc(100%+8px)] z-40 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-amber-200/90 bg-white shadow-xl shadow-amber-900/10 dark:border-amber-900/50 dark:bg-slate-900">
-														<div className="flex items-start justify-between gap-2 border-b border-amber-100 bg-amber-50/80 px-3 py-2.5 dark:border-amber-900/40 dark:bg-amber-950/30">
-															<div className="min-w-0">
-																<p className="text-xs font-black text-amber-950 dark:text-amber-100">
-																	{t.notes}
-																</p>
-																<p className="text-[11px] leading-snug text-amber-800/80 dark:text-amber-200/70">
-																	{t.notesHint}
-																</p>
-															</div>
-															<button
-																type="button"
-																onClick={() => setShowNotes(false)}
-																className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-amber-800/70 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-950/50"
-																aria-label={locale === 'ar' ? 'إغلاق' : 'Close'}
-															>
-																<X size={14} />
-															</button>
-														</div>
-														<div className="max-h-48 space-y-2 overflow-y-auto px-3 py-2.5 nice-scroll">
-															{loadingNotes ? (
-																<div className="flex justify-center py-4 text-amber-700">
-																	<Loader2 size={16} className="animate-spin" />
-																</div>
-															) : notes.length === 0 ? (
-																<p className="py-3 text-center text-xs text-slate-500">
-																	{t.noNotes}
-																</p>
-															) : (
-																notes.map(note => (
-																	<div
-																		key={note.id}
-																		className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2 text-xs dark:border-slate-800 dark:bg-slate-800/60"
-																	>
-																		<div className="mb-1 flex items-center justify-between gap-2">
-																			<span className="font-bold text-slate-700 dark:text-slate-200">
-																				{note.author?.name ||
-																					note.author?.fullName ||
-																					'Staff'}
-																			</span>
-																			<span className="shrink-0 text-[10px] text-slate-400">
-																				{relativeTime(
-																					note.created_at || note.createdAt,
-																					relativeTimeNow,
-																					locale,
-																				)}
-																			</span>
-																		</div>
-																		<p className="whitespace-pre-wrap text-slate-600 dark:text-slate-300">
-																			{note.text}
-																		</p>
-																	</div>
-																))
-															)}
-														</div>
-														<form
-															onSubmit={saveNote}
-															className="flex gap-2 border-t border-slate-100 px-3 py-2.5 dark:border-slate-800"
-														>
-															<input
-																value={noteDraft}
-																onChange={event => setNoteDraft(event.target.value)}
-																placeholder={t.notePlaceholder}
-																maxLength={2000}
-																className="h-9 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-xs outline-none focus:border-amber-300 dark:border-slate-700 dark:bg-slate-950"
-															/>
-															<button
-																type="submit"
-																disabled={savingNote || !noteDraft.trim()}
-																className="h-9 shrink-0 rounded-lg px-3 text-xs font-bold text-white disabled:opacity-50"
-																style={{ background: GRADIENT }}
-															>
-																{savingNote ? (
-																	<Loader2 size={13} className="animate-spin" />
-																) : (
-																	t.addNote
-																)}
-															</button>
-														</form>
-													</div>
-												) : null}
-											</div>
 											{!demo.settings.enabled && canUseWhatsApp &&
 												selectedAccount?.privacySettings?.readReceiptMode === 'manual' && (
 													<button
 														type="button"
 														onClick={markConversationReadManually}
-														className="h-9 rounded-lg border border-slate-200 px-3 text-xs font-bold transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+														className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
 													>
 														{t.markRead}
 													</button>
@@ -9231,10 +9283,10 @@ function WhatsAppWorkspaceContent() {
 																			}}
 																			aria-label={locale === 'ar' ? 'إجراءات الرسالة' : 'Message actions'}
 																			aria-expanded={actionMessageId === message.id}
-																			className={`wa-message-actions-trigger hidden h-8 w-8 place-items-center rounded-full border border-[#e9edef] bg-white text-[#54656f] shadow-sm transition hover:bg-[#f0f2f5] hover:text-[#111b21] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-300)] min-[769px]:grid ${
+																			className={`wa-message-actions-trigger grid h-8 w-8 place-items-center rounded-full border border-[#e9edef] bg-white text-[#54656f] shadow-sm transition hover:bg-[#f0f2f5] hover:text-[#111b21] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-300)] ${
 																				actionMessageId === message.id
 																					? 'opacity-100'
-																					: 'opacity-70 group-hover:opacity-100'
+																					: 'opacity-100'
 																			}`}
 																		>
 																			<MoreHorizontal size={16} />

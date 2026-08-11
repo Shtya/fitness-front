@@ -3124,9 +3124,9 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
     </>
   );
 
-  /* ── Mobile Drawer (edge panel; body push uses same --sidebar-drawer-w) ── */
+  /* ── Mobile floating drawer (overlays page; no body push) ── */
   const drawerW = (() => {
-    if (typeof window === 'undefined') return 280;
+    if (typeof window === 'undefined') return 288;
     const raw = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-drawer-w').trim();
     if (raw) {
       const probe = document.createElement('div');
@@ -3136,9 +3136,10 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
       probe.remove();
       if (w > 0) return Math.round(w);
     }
-    return Math.min(280, Math.round(window.innerWidth * 0.82));
+    return Math.min(288, Math.round(window.innerWidth - 22));
   })();
-  const drawerOffset = isRTL ? drawerW : -drawerW;
+  const drawerOffset = isRTL ? drawerW + 24 : -(drawerW + 24);
+  const drawerMotion = { duration: 0.22, ease: [0.22, 1, 0.36, 1] };
   const MobileDrawer = (
     <AnimatePresence>
       {open && (
@@ -3148,16 +3149,16 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
             onClick={() => setOpen && setOpen(false)}
             className='sidebar-glass-overlay fixed inset-0 z-[110000] lg:hidden'
           />
           <motion.aside
             key='drawer'
-            initial={{ x: drawerOffset }}
-            animate={{ x: 0 }}
-            exit={{ x: drawerOffset }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ x: drawerOffset, opacity: 0.96 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: drawerOffset, opacity: 0.96 }}
+            transition={drawerMotion}
             className='sidebar-shell sidebar-glass is-mobile-drawer fixed z-[110001] flex flex-col lg:hidden'
             style={{
               background: P.bg,

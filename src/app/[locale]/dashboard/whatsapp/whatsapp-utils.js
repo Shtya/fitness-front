@@ -130,14 +130,25 @@ export function messageDeliveryState(message) {
 }
 
 export function conversationTitle(conversation) {
+	const chatId = String(conversation?.providerChatId || '');
+	const phone = String(conversation?.contact?.phoneNumber || '').trim();
+	const contactName = String(conversation?.contact?.name || '').trim();
+	const groupSubject = String(conversation?.group?.subject || '').trim();
+	const lidUser = chatId.includes('@') ? chatId.split('@')[0] : '';
+	const nameLooksLikeId =
+		!contactName ||
+		contactName === phone ||
+		(lidUser && contactName === lidUser) ||
+		/^\d{8,20}$/.test(contactName);
 	const raw =
-		conversation?.group?.subject ||
-		conversation?.contact?.name ||
-		conversation?.contact?.phoneNumber ||
-		conversation?.providerChatId ||
+		groupSubject ||
+		(!nameLooksLikeId ? contactName : '') ||
+		phone ||
+		contactName ||
+		chatId ||
 		'';
 	return String(raw)
-		.replace(/@(c\.us|s\.whatsapp\.net|g\.us|lid)$/i, '')
+		.replace(/@(c\.us|s\.whatsapp\.net|g\.us|lid|hosted\.lid)$/i, '')
 		.trim() || 'Chat';
 }
 
