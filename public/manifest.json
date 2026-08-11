@@ -6,7 +6,8 @@
   "background_color": "#ffffff",
   "theme_color": "#1e293b",
   "orientation": "any",
-  "start_url": "/ar/open",
+  "start_url": "/ar/open?source=pwa",
+  "id": "/ar/open",
   "scope": "/",
   "icons": [
     {

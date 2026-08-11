@@ -15,6 +15,7 @@ import { TenantThemeProvider } from '@/lib/tenant/TenantThemeProvider';
 import { useInitialRoleRedirect } from '@/hooks/useInitialRoleRedirect';
 import Header from './Header';
 import LastRouteTracker from './LastRouteTracker';
+import LastRouteRestorer from './LastRouteRestorer';
 import { useRouter, useParams } from 'next/navigation';
 import { LogIn, LogOut, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -468,6 +469,7 @@ export default function Layout({ children }) {
 					{/* Quran audio continues after leaving /quran-revision */}
 					{!isOpenRoute ? <QuranMiniPlayer /> : null}
 					{!isOpenRoute ? <LastRouteTracker /> : null}
+					{!isOpenRoute ? <LastRouteRestorer /> : null}
 				</ThemeProvider>
 				</TenantThemeProvider>
 			</Providers>

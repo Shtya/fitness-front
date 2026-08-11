@@ -16,6 +16,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { loginPersist } from "@/app/role-access";
 import { useTenantTheme } from "@/lib/tenant/TenantThemeProvider";
 import { resolvePostLoginPath } from "@/lib/nav-access";
+import { readLastRoute } from "@/lib/last-route";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
@@ -79,9 +80,17 @@ function getPostLoginPath(userOrRole, intendedPath) {
   return resolvePostLoginPath({ role: userOrRole }, intendedPath);
 }
 
-/** Prefer ?next= (middleware deep-link) then ?redirect= */
+/** Prefer ?next= (middleware deep-link) then ?redirect= then last saved app route */
 function readIntendedReturnPath(searchParams) {
-  return searchParams?.get("next") || searchParams?.get("redirect") || null;
+  const fromQuery = searchParams?.get("next") || searchParams?.get("redirect") || null;
+  if (fromQuery) return fromQuery;
+  try {
+    const saved = readLastRoute();
+    if (saved?.path) return `${saved.path}${saved.search || ""}`;
+  } catch {
+    /* ignore */
+  }
+  return null;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

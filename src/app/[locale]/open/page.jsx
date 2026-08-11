@@ -3,14 +3,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
+	buildLastRouteHref,
 	consumeRestoreTicket,
 	isRestorablePath,
 	readLastRoute,
 } from '@/lib/last-route';
 
 /**
- * Lightweight PWA entry: show a short preload, then jump to the last
- * dashboard page (or /dashboard). Avoids booting the heavy marketing home.
+ * Lightweight PWA / site entry: short preload, then jump to the last
+ * dashboard page once per session (sessionStorage ticket).
  */
 export default function OpenAppPage() {
 	const router = useRouter();
@@ -22,11 +23,11 @@ export default function OpenAppPage() {
 	const fallback = useMemo(() => `/${locale}/dashboard`, [locale]);
 
 	useEffect(() => {
-		consumeRestoreTicket();
-		const saved = readLastRoute();
+		const canRestore = consumeRestoreTicket();
+		const saved = canRestore ? readLastRoute() : null;
 		const target =
 			saved && isRestorablePath(saved.path)
-				? `/${saved.locale || locale}${saved.path}`
+				? buildLastRouteHref(locale) || fallback
 				: fallback;
 
 		setLabel(
@@ -41,7 +42,7 @@ export default function OpenAppPage() {
 
 		const timer = window.setTimeout(() => {
 			router.replace(target);
-		}, 420);
+		}, 380);
 
 		return () => window.clearTimeout(timer);
 	}, [fallback, isAr, locale, router]);
