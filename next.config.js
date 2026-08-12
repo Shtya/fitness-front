@@ -57,6 +57,24 @@ const nextConfig = {
       { protocol: 'https', hostname: 'avatars.githubusercontent.com' },
     ],
   },
+  // particle-playground API routes use fs under public/. NFT then tries to
+  // ship the whole public/ tree (~276MB, mostly uploads videos) into the
+  // serverless function and blows past Vercel's 250MB uncompressed limit.
+  outputFileTracingExcludes: {
+    '/api/particle-playground/**/*': [
+      './public/uploads/**/*',
+      './public/sounds/**/*',
+      './public/screens/**/*',
+      './public/transform/**/*',
+      './public/sf-pro-display/**/*',
+      './public/logo/**/*',
+      './public/images/**/*',
+      './public/fonts/**/*',
+      './public/icons/**/*',
+      './public/templates/**/*',
+      './public/**/*.{mp4,webm,mov,mp3,wav,ogg}',
+    ],
+  },
 };
 
 module.exports = withPWA(withNextIntl(nextConfig));

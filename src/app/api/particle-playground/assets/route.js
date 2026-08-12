@@ -133,8 +133,11 @@ export async function DELETE(request) {
 		if (!isSafeAssetUrl(url)) {
 			return NextResponse.json({ error: 'Invalid asset url' }, { status: 400 });
 		}
-		const rel = url.replace(/^\//, '');
-		const abs = path.join(process.cwd(), 'public', ...rel.split('/'));
+		// Keep path rooted at particle-assets so file tracing does not pull
+		// the entire public/ tree (uploads videos, sounds, etc.) into the
+		// Vercel function bundle.
+		const rel = url.replace(/^\/particle-assets\//, '');
+		const abs = path.join(ROOT, ...rel.split('/').filter(Boolean));
 		const normalizedRoot = path.normalize(ROOT);
 		const normalizedAbs = path.normalize(abs);
 		if (!normalizedAbs.startsWith(normalizedRoot)) {
