@@ -1,4 +1,5 @@
 const RASTER_SIZE = 420;
+const RASTER_SIZE_CRISP = 1920;
 
 function mulberry32(seed) {
 	let t = seed >>> 0;
@@ -99,26 +100,97 @@ export function normalizeCloud(sample) {
 	return sample;
 }
 
-export function sampleImageDeterministic(imageData, count, seed = 1, alphaThreshold = 10) {
-	const positions = new Float32Array(count * 3);
-	const colors = new Float32Array(count * 3);
-	const shades = new Float32Array(count);
+export function sampleImageDeterministic(
+	imageData,
+	count,
+	seed = 1,
+	alphaThreshold = 10,
+	opts = {},
+) {
 	const rand = mulberry32(seed);
+	const crisp = !!opts.crispText;
+	const jitter = crisp ? 0 : Math.max(0, Math.min(1, opts.sampleJitter ?? 1));
+	const zSpread = crisp ? 0.0015 : 0.02;
 
+	const w = imageData.width;
+	const h = imageData.height;
 	const pixels = [];
+
+	for (let y = 0; y < h; y++) {
+		for (let x = 0; x < w; x++) {
+			const i = y * w + x;
+			if (imageData.data[i * 4 + 3] < alphaThreshold) continue;
+			pixels.push(i);
+		}
+	}
+
+	if (pixels.length === 0) {
+		return {
+			positions: new Float32Array(count * 3),
+			colors: new Float32Array(count * 3),
+			shades: new Float32Array(count),
+		};
+	}
+
+	let target = Math.max(16, Math.round(count));
+	if (crisp) {
+		const dense = Math.min(pixels.length, 110000);
+		target = Math.min(
+			110000,
+			Math.max(target, Math.min(dense, Math.max(64000, Math.floor(pixels.length * 0.85)))),
+		);
+	}
+
+	const positions = new Float32Array(target * 3);
+	const colors = new Float32Array(target * 3);
+	const shades = new Float32Array(target);
+	const longest = Math.max(w, h);
+	const n = pixels.length;
+
+	const writeParticle = (slot, pIndex, ox = 0, oy = 0) => {
+		const p = pixels[pIndex];
+		const px = p % w;
+		const py = Math.floor(p / w);
+		positions[slot * 3] = (px + 0.5 + ox - w / 2) / longest;
+		positions[slot * 3 + 1] = -(py + 0.5 + oy - h / 2) / longest;
+		positions[slot * 3 + 2] = (rand() - 0.5) * zSpread;
+		colors[slot * 3] = imageData.data[p * 4] / 255;
+		colors[slot * 3 + 1] = imageData.data[p * 4 + 1] / 255;
+		colors[slot * 3 + 2] = imageData.data[p * 4 + 2] / 255;
+		shades[slot] = 1;
+	};
+
+	if (crisp) {
+		if (target <= n) {
+			const step = n / target;
+			for (let i = 0; i < target; i++) {
+				writeParticle(i, Math.min(n - 1, Math.floor(i * step)));
+			}
+		} else {
+			for (let i = 0; i < n; i++) writeParticle(i, i);
+			for (let i = n; i < target; i++) {
+				const pIndex = (i * 2654435761) % n;
+				writeParticle(
+					i,
+					pIndex,
+					((i * 0.37) % 1) * 0.35 - 0.175,
+					((i * 0.71) % 1) * 0.35 - 0.175,
+				);
+			}
+		}
+		return normalizeCloud({ positions, colors, shades });
+	}
+
 	const weights = [];
 	let totalWeight = 0;
-	for (let i = 0; i < imageData.width * imageData.height; i++) {
-		const alpha = imageData.data[i * 4 + 3];
-		if (alpha < alphaThreshold) continue;
+	for (let k = 0; k < n; k++) {
+		const p = pixels[k];
+		const alpha = imageData.data[p * 4 + 3];
 		totalWeight += alpha;
-		pixels.push(i);
 		weights.push(totalWeight);
 	}
-	if (pixels.length === 0) return { positions, colors, shades };
 
-	const longest = Math.max(imageData.width, imageData.height);
-	for (let i = 0; i < count; i++) {
+	for (let i = 0; i < target; i++) {
 		const pick = rand() * totalWeight;
 		let lo = 0;
 		let hi = weights.length - 1;
@@ -127,16 +199,9 @@ export function sampleImageDeterministic(imageData, count, seed = 1, alphaThresh
 			if (weights[mid] < pick) lo = mid + 1;
 			else hi = mid;
 		}
-		const p = pixels[lo];
-		const px = p % imageData.width;
-		const py = Math.floor(p / imageData.width);
-		positions[i * 3] = (px + rand() - imageData.width / 2) / longest;
-		positions[i * 3 + 1] = -(py + rand() - imageData.height / 2) / longest;
-		positions[i * 3 + 2] = (rand() - 0.5) * 0.02;
-		colors[i * 3] = imageData.data[p * 4] / 255;
-		colors[i * 3 + 1] = imageData.data[p * 4 + 1] / 255;
-		colors[i * 3 + 2] = imageData.data[p * 4 + 2] / 255;
-		shades[i] = 1;
+		const jx = jitter > 0 ? (rand() - 0.5) * jitter : 0;
+		const jy = jitter > 0 ? (rand() - 0.5) * jitter : 0;
+		writeParticle(i, lo, jx, jy);
 	}
 
 	return normalizeCloud({ positions, colors, shades });
@@ -214,13 +279,20 @@ export async function fetchAndRasterize(url, rasterSize = RASTER_SIZE) {
 
 export async function sampleAssetFromUrl(url, count, processOpts = {}) {
 	try {
-		const raw = await fetchAndRasterize(url);
+		const rasterSize = processOpts.crispText
+			? Math.max(processOpts.rasterSize || RASTER_SIZE_CRISP, RASTER_SIZE_CRISP)
+			: processOpts.rasterSize || RASTER_SIZE;
+		const raw = await fetchAndRasterize(url, rasterSize);
 		const processed = preprocessImageData(raw, processOpts);
 		return sampleImageDeterministic(
 			processed,
 			Math.max(Math.round(count), 16),
 			1,
 			processOpts.alphaThreshold ?? 10,
+			{
+				sampleJitter: processOpts.crispText ? 0 : (processOpts.sampleJitter ?? 1),
+				crispText: !!processOpts.crispText,
+			},
 		);
 	} catch (error) {
 		const cors =

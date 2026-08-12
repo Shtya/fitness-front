@@ -1,10 +1,57 @@
 import { DEFAULT_PARTICLE_CONFIG } from './particle-config';
 
+/** Settings tuned so letters/icons stay readable as particles. */
+export const READABLE_TEXT_CONFIG = {
+	crispText: true,
+	rasterSize: 1920,
+	sampleJitter: 0,
+	pointSoftness: 0,
+	count: 90000,
+	size: 1.15,
+	sizeVariance: 0.02,
+	radius: 120,
+	strength: 1.15,
+	swirl: 0.45,
+	spring: 1.45,
+	damping: 0.42,
+	drift: 0.12,
+	floatIntensity: 0.35,
+	rotationIntensity: 0.12,
+	floatSpeed: 0.9,
+	orbit: false,
+	zoom: false,
+	autoRotate: false,
+	cursorEnabled: true,
+	interactionMode: 'push',
+	useOriginalColors: true,
+	color: '',
+	initialFormation: true,
+	formationDuration: 0.85,
+	formationStrength: 0.65,
+	alphaThreshold: 36,
+	brightness: 10,
+	contrast: 42,
+	imageScale: 1.15,
+	center: true,
+	invertAlpha: false,
+	scale: 3.5,
+	cameraDistance: 3.1,
+	fov: 48,
+};
+
 export const BUILTIN_PRESETS = [
 	{
 		id: 'default',
 		name: 'Default',
 		config: { ...DEFAULT_PARTICLE_CONFIG },
+	},
+	{
+		id: 'readable-text',
+		name: 'Readable Text',
+		config: {
+			...DEFAULT_PARTICLE_CONFIG,
+			...READABLE_TEXT_CONFIG,
+		},
 	},
 	{
 		id: 'soft',

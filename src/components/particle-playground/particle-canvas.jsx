@@ -63,6 +63,15 @@ export function ParticleCanvas({
 			initialFormation: !!config.initialFormation,
 			formationDuration: config.formationDuration,
 			formationStrength: config.formationStrength,
+			crispText: !!config.crispText,
+			rasterSize: config.rasterSize,
+			alphaThreshold: config.alphaThreshold,
+			brightness: config.brightness,
+			contrast: config.contrast,
+			imageScale: config.imageScale,
+			invertAlpha: !!config.invertAlpha,
+			sampleJitter: config.sampleJitter,
+			pointSoftness: config.pointSoftness,
 			onFrame: ({ fps: nextFps, particles: nextParticles }) => {
 				setFps(nextFps);
 				setParticles(nextParticles);
@@ -91,7 +100,14 @@ export function ParticleCanvas({
 			instanceRef.current = null;
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [src, config.count, config.initialFormation, rebuildKey]);
+	}, [
+		src,
+		config.count,
+		config.initialFormation,
+		config.crispText,
+		config.rasterSize,
+		rebuildKey,
+	]);
 
 	useEffect(() => {
 		instanceRef.current?.setOptions(particleOptions);

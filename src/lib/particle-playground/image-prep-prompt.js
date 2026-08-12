@@ -52,10 +52,30 @@ GEOMETRY & COMPOSITION FOR PARTICLE MORPHING
 - Maximize contrast between filled logo pixels and transparent empty space.
 
 ========================
+TEXT & ICONS (CRITICAL FOR READABILITY)
+========================
+Many particle scenes fail because text/icons are too thin, soft, or glowing.
+If the image contains ANY letters, numbers, logos-with-type, or small icons:
+
+1. Redraw text as BOLD, solid, high-contrast glyphs — not thin UI fonts.
+2. Prefer filled letterforms (like a strong wordmark) over hairline strokes.
+3. Minimum effective stroke weight: thick enough that every letter/icon is still
+   readable after being sampled into particles (think poster type, not caption type).
+4. Slightly increase letter spacing if characters are cramped or touching.
+5. Icons must be solid silhouettes / simple filled marks — not tiny line icons.
+6. REMOVE soft glow, bloom, outer light haze, motion blur, and photographic DOF
+   from text/icons. Particles already create glow; source glow destroys sharpness.
+7. Flatten gradients on small text when they hurt legibility; keep solid fills.
+8. Do NOT raster-blur then "sharpen" — redraw crisp edges.
+9. If a word is unreadable at particle scale, thicken it until it IS readable,
+   while keeping the same word and brand identity.
+10. Multi-logo diagrams (hub + labels): make EVERY label and node icon bold and clear.
+
+========================
 QUALITY / EXPORT
 ========================
 - Output ONE PNG with transparency.
-- High resolution: longest side at least 2048px if possible (minimum 1536px).
+- High resolution: longest side at least 2048px if possible (minimum 1536px). Prefer 3072px when the scene has lots of text/icons.
 - Crisp, clean, production-ready.
 - Preserve original brand colors unless I explicitly ask to change them.
 - No added text, watermarks, borders, glow frames, drop shadows, fake 3D, or mockup devices.
@@ -68,6 +88,8 @@ NEGATIVE / FORBIDDEN
 - Cropped/incomplete logo left as-is
 - Soft mushy edges
 - Halo / fringe around the mark
+- Glow / bloom / neon haze baked into the PNG
+- Thin unreadable text or micro line-icons
 - Low-res upscale with blur only
 - Extra decorations
 - Busy photographic backgrounds
@@ -81,6 +103,8 @@ Ask yourself:
 2) Is the background fully transparent with clean edges?
 3) Is it sharp and high-res enough for particle sampling?
 4) Would this silhouette look beautiful as particles and morph cleanly?
+5) Can every letter and icon still be recognized if viewed as glowing particles?
+6) Did I remove source glow/bloom that would blur text in the particle tool?
 
 If any answer is no, fix it again, then return the improved PNG only.`;
 
@@ -106,6 +130,44 @@ export const IMAGE_PREP_STEPS = [
 /** Optional prompt add-ons the user can toggle before copying */
 export const IMAGE_PREP_OPTIONS = [
 	{
+		id: 'textSharp',
+		label: 'Text & Icons',
+		hint: 'كتابة وأيقونات واضحة',
+		text: `
+========================
+OPTIONAL MODE: TEXT & ICONS SHARPNESS PASS (ENABLED)
+========================
+This image will be converted into particles. Thin text and soft icons become unreadable.
+
+Do a dedicated TEXT/ICON pass before export:
+
+A) TEXT
+- Rebuild every word/letter bold, solid, and high-contrast.
+- No thin fonts, no caption-size type, no soft anti-alias mush.
+- Increase stroke weight and slightly open letter-spacing so particles can resolve each glyph.
+- Keep the same words/brands — just make them particle-readable.
+- If a label is tiny in a diagram, enlarge it enough to stay legible as particles.
+
+B) ICONS / LOGOS
+- Convert delicate line icons into filled, simple silhouettes.
+- Protect distinctive brand marks, but thicken weak details that would vanish.
+- Avoid micro details smaller than ~2–3% of canvas width.
+
+C) ANTI-GLOW
+- Strip bloom, neon glow, light bleed, and haze from the source.
+- Sharp opaque pixels on transparent background only.
+- Particles will add their own glow later — do NOT bake glow into the PNG.
+
+D) SELF-QA (must pass)
+1. Zoom out mentally to particle scale: can I still read every label?
+2. Are icons recognizable as filled shapes?
+3. Is there zero baked glow around letters?
+4. Longest side ≥ 2048px (prefer 3072px for dense diagrams).
+
+If any check fails, fix and re-export.
+Return ONE transparent high-res PNG only.`,
+	},
+	{
 		id: 'redesign',
 		label: 'Redesign',
 		hint: 'شكل جديد related',
@@ -122,6 +184,7 @@ Do this:
 4. Keep it simple, iconic, and highly readable as a particle silhouette.
 5. Improve geometry, balance, spacing, and uniqueness.
 6. It should feel like a better regenerated version of the same idea — not a random unrelated logo.
+7. If the design includes text/icons, keep them bold and particle-readable (no thin type, no baked glow).
 
 Still return ONE transparent high-res PNG only.`,
 	},
@@ -139,6 +202,7 @@ Keep the same logo identity, but upgrade it heavily:
 - Stronger contrast and silhouette clarity
 - Slight premium polish (as if redrawn by a senior brand designer)
 - Fix weak proportions without changing the recognizable concept
+- Especially thicken/clarify any text or icons so they survive particle sampling
 
 Do NOT turn it into a totally different logo.
 Return ONE improved transparent high-res PNG only.`,
@@ -156,6 +220,7 @@ Based on the attached image, generate an alternate logo variation in the same fa
 - Different composition or symbol treatment
 - Still suitable for particle morphing (clear filled shapes, strong silhouette)
 - Modern, distinctive, and production-ready
+- Text/icons must stay bold and readable as particles
 
 Treat this like exploring a second strong direction related to the original.
 Return ONE transparent high-res PNG only.`,
@@ -173,6 +238,7 @@ Simplify the mark for particle morphing:
 - Prefer bold filled shapes over delicate hairlines
 - Keep recognizability
 - Maximize silhouette clarity
+- Merge/omit micro text that cannot be made readable; keep only bold essential labels
 
 Return ONE transparent high-res PNG only.`,
 	},
@@ -187,6 +253,7 @@ OPTIONAL MODE: STRONG MONO MARK (ENABLED)
 Produce a strong single-color (or dual-tone max) version optimized for particle readability.
 Keep transparency around the mark.
 Prefer solid filled forms over gradients/textures.
+Text and icons must remain bold and sharp with no glow.
 Return ONE transparent high-res PNG only.`,
 	},
 	{
@@ -197,7 +264,7 @@ Return ONE transparent high-res PNG only.`,
 ========================
 OPTIONAL MODE: ONE-COLOR TONAL GRADIENTS (ENABLED)
 ========================
-Recolor the entire logo into ONE color family only, using tonal gradients/shades of that same color.
+Recolor the entire logo into ONE color family only, using tonal gradients/shades of the same color.
 
 Examples of what I mean:
 - Black logo with soft gradients from deep black → charcoal → soft gray (still one family)
@@ -212,6 +279,7 @@ Rules:
 5. Prefer elegant soft tonal depth over flat flat-fill, but do not add textures, noise, glow frames, or fake 3D.
 6. If the source has many colors, convert them into tonal values of the chosen single color.
 7. Default to rich black tonal gradients unless the logo clearly needs white/light tonal treatment.
+8. On small text/icons, prefer solid fills over soft gradients so glyphs stay readable as particles.
 
 Return ONE transparent high-res PNG only.`,
 	},
@@ -224,7 +292,7 @@ Return ONE transparent high-res PNG only.`,
 OPTIONAL MODE: SQUARE MASTER (ENABLED)
 ========================
 Compose the final asset on a perfect 1:1 square canvas, centered, with clean transparent padding (~8%).
-Longest side at least 2048px.
+Longest side at least 2048px (3072px if the scene has dense text/icons).
 Return ONE transparent high-res PNG only.`,
 	},
 ];

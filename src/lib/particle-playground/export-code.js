@@ -207,3 +207,101 @@ NOTES
 export function generateConfigJson(scene) {
 	return JSON.stringify(scene, null, 2);
 }
+
+export function generateInstallReadme(config, src) {
+	const assetPath = src || '/particle-assets/images/your-logo.png';
+	return `# Particle Animation Package
+Exported from So7baFit Particle Studio.
+
+## Folder contents (all files in one folder)
+- \`ParticleObject.jsx\` — particle engine
+- \`MyParticleHero.jsx\` — hero with your studio settings
+- \`INSTALL.md\` — this file
+- \`particle-scene.json\` — full scene snapshot
+
+## Install
+\`\`\`bash
+npm install three
+\`\`\`
+
+## Asset
+Put your image/SVG at:
+\`public${assetPath}\`
+
+(Or change the \`src\` prop in \`MyParticleHero.jsx\`.)
+
+## Use
+Copy this whole folder into your project (e.g. \`src/components/particle-animation/\`), then:
+
+\`\`\`jsx
+import MyParticleHero from "./MyParticleHero";
+
+export default function Page() {
+  return <MyParticleHero />;
+}
+\`\`\`
+
+## Edit freely
+All motion / color / cursor / camera values live as props on \`<ParticleObject />\`
+inside \`MyParticleHero.jsx\`. Change them there — no locked third-party embed.
+`;
+}
+
+/**
+ * Hero component for the flat download folder (imports ./ParticleObject).
+ */
+export function generatePortableHero(config, src, componentName = 'MyParticleHero') {
+	const props = collectProps(config, src, { includeAll: true });
+	return `"use client";
+
+import ParticleObject from "./ParticleObject";
+
+export default function ${componentName}() {
+  return (
+    <section className="relative h-screen w-full overflow-hidden bg-black">
+      <ParticleObject
+${propsToJsx(props, '        ')}
+      />
+    </section>
+  );
+}
+`;
+}
+
+/**
+ * Ready-to-drop file set — flat folder (no nested src/ paths).
+ * @param {string} engineSource full ParticleObject.jsx source
+ */
+export function generatePortableFiles(config, src, scene, engineSource) {
+	const files = [
+		{
+			name: 'INSTALL.md',
+			content: generateInstallReadme(config, src),
+		},
+		{
+			name: 'ParticleObject.jsx',
+			content:
+				engineSource ||
+				'/* Missing engine — re-open Code modal while the Studio is running */\n',
+		},
+		{
+			name: 'MyParticleHero.jsx',
+			content: generatePortableHero(config, src),
+		},
+		{
+			name: 'particle-scene.json',
+			content: generateConfigJson(scene),
+		},
+	];
+	return files;
+}
+
+/** One clipboard-friendly blob: all package files separated clearly. */
+export function generatePortableClipboard(files) {
+	return files
+		.map(
+			(f) =>
+				`${'='.repeat(64)}\nFILE: ${f.name}\n${'='.repeat(64)}\n\n${f.content}\n`,
+		)
+		.join('\n');
+}

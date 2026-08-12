@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-	Code2,
+	Download,
 	Images,
+	Redo2,
 	RotateCcw,
 	Sparkles,
+	Undo2,
 	Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -45,6 +47,11 @@ import {
 	loadPreferredSettings,
 	savePreferredSettings,
 } from '@/lib/particle-playground/settings-storage';
+import {
+	cloneAssetsForHistory,
+	createUndoStack,
+	stripMorphSamples,
+} from '@/lib/particle-playground/undo-history';
 
 function assetSrc(asset) {
 	if (!asset) return '';
@@ -103,6 +110,88 @@ export default function ParticlePlayground() {
 	const saveTimerRef = useRef(0);
 	const settingsTimerRef = useRef(0);
 	const skipAutosaveRef = useRef(true);
+	const undoStackRef = useRef(createUndoStack({ limit: 50 }));
+	const undoTimerRef = useRef(0);
+	const needsMorphRestoreRef = useRef(false);
+	const rebuildMorphRef = useRef(null);
+	const [historyUi, setHistoryUi] = useState({ canUndo: false, canRedo: false });
+
+	const syncHistoryUi = useCallback(() => {
+		const stack = undoStackRef.current;
+		setHistoryUi({ canUndo: stack.canUndo(), canRedo: stack.canRedo() });
+	}, []);
+
+	const takeSnapshot = useCallback(
+		() => ({
+			config: { ...config },
+			assets: cloneAssetsForHistory(assets),
+			morphTargets: stripMorphSamples(morphTargets),
+			selectedId,
+			currentIndex,
+			playing: false,
+			progress: 0,
+		}),
+		[config, assets, morphTargets, selectedId, currentIndex],
+	);
+
+	const applySnapshot = useCallback(
+		(snap) => {
+			if (!snap) return;
+			const stack = undoStackRef.current;
+			stack.setApplying(true);
+			needsMorphRestoreRef.current = Array.isArray(snap.morphTargets) && snap.morphTargets.length > 0;
+			setConfig({ ...DEFAULT_PARTICLE_CONFIG, ...(snap.config || {}) });
+			setAssets(Array.isArray(snap.assets) ? snap.assets.map((a) => ({ ...a })) : []);
+			setMorphTargets(
+				Array.isArray(snap.morphTargets)
+					? snap.morphTargets.map((t) => ({ ...t }))
+					: [],
+			);
+			setSelectedId(snap.selectedId || null);
+			setCurrentIndex(snap.currentIndex || 0);
+			setProgress(0);
+			progressRef.current = 0;
+			setPlaying(false);
+			setMorphCloud(null);
+			setRebuildKey((k) => k + 1);
+			setStatus('History restored');
+			window.setTimeout(() => {
+				stack.setApplying(false);
+				syncHistoryUi();
+				if (needsMorphRestoreRef.current) {
+					needsMorphRestoreRef.current = false;
+					rebuildMorphRef.current?.();
+				}
+			}, 80);
+		},
+		[syncHistoryUi],
+	);
+
+	const pushUndoSnapshot = useCallback(
+		(opts = {}) => {
+			const stack = undoStackRef.current;
+			if (stack.applying) return;
+			const pushed = stack.push(takeSnapshot(), opts);
+			if (pushed) syncHistoryUi();
+		},
+		[takeSnapshot, syncHistoryUi],
+	);
+
+	const undo = useCallback(() => {
+		const stack = undoStackRef.current;
+		const prev = stack.undo();
+		if (!prev) return;
+		applySnapshot(prev);
+		syncHistoryUi();
+	}, [applySnapshot, syncHistoryUi]);
+
+	const redo = useCallback(() => {
+		const stack = undoStackRef.current;
+		const next = stack.redo();
+		if (!next) return;
+		applySnapshot(next);
+		syncHistoryUi();
+	}, [applySnapshot, syncHistoryUi]);
 
 	const selectedAsset = useMemo(
 		() => assets.find((a) => a.id === selectedId) || null,
@@ -232,6 +321,8 @@ export default function ParticlePlayground() {
 
 	const applySession = useCallback((session) => {
 		skipAutosaveRef.current = true;
+		undoStackRef.current.clear();
+		syncHistoryUi();
 		setSessionMeta({
 			id: session.id,
 			name: session.name || 'Untitled Session',
@@ -255,8 +346,9 @@ export default function ParticlePlayground() {
 		}
 		setTimeout(() => {
 			skipAutosaveRef.current = false;
+			pushUndoSnapshot({ force: true });
 		}, 800);
-	}, []);
+	}, [syncHistoryUi, pushUndoSnapshot]);
 
 	const loadSession = useCallback(
 		async (item) => {
@@ -583,7 +675,7 @@ export default function ParticlePlayground() {
 					method: 'DELETE',
 				});
 			}
-			if (asset.objectUrl) URL.revokeObjectURL(asset.objectUrl);
+			// Keep objectUrl alive so Undo can restore a deleted local asset.
 			setAssets((prev) => {
 				const next = prev.filter((a) => a.id !== id);
 				if (selectedId === id) setSelectedId(next[0]?.id || null);
@@ -605,6 +697,9 @@ export default function ParticlePlayground() {
 				contrast: config.contrast,
 				invertAlpha: config.invertAlpha,
 				imageScale: config.imageScale,
+				crispText: !!config.crispText,
+				rasterSize: config.rasterSize,
+				sampleJitter: config.sampleJitter,
 			});
 		},
 		[config],
@@ -657,6 +752,8 @@ export default function ParticlePlayground() {
 		setRebuildKey((k) => k + 1);
 		setStatus('Particles rebuilt');
 	}, [morphTargets, assets, ensureMorphSample]);
+
+	rebuildMorphRef.current = rebuildMorphSamples;
 
 	useEffect(() => {
 		morphRef.current.setTargets(morphTargets);
@@ -836,9 +933,32 @@ export default function ParticlePlayground() {
 	}, [uploadFiles]);
 
 	useEffect(() => {
+		if (!hydrated) return undefined;
+		if (undoStackRef.current.applying) return undefined;
+		window.clearTimeout(undoTimerRef.current);
+		undoTimerRef.current = window.setTimeout(() => {
+			pushUndoSnapshot();
+		}, 400);
+		return () => window.clearTimeout(undoTimerRef.current);
+	}, [config, assets, morphTargets, selectedId, currentIndex, hydrated, pushUndoSnapshot]);
+
+	useEffect(() => {
 		const onKey = (e) => {
 			const tag = e.target?.tagName;
 			if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
+
+			const mod = e.ctrlKey || e.metaKey;
+			if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+				e.preventDefault();
+				undo();
+				return;
+			}
+			if (mod && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
+				e.preventDefault();
+				redo();
+				return;
+			}
+
 			if (e.code === 'Space') {
 				e.preventDefault();
 				setPlaying((p) => !p);
@@ -859,7 +979,7 @@ export default function ParticlePlayground() {
 		};
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
-	}, [saveSession, selectedId, deleteAsset, goIndex, currentIndex]);
+	}, [saveSession, selectedId, deleteAsset, goIndex, currentIndex, undo, redo]);
 
 	const libraryProps = {
 		assets,
@@ -927,6 +1047,30 @@ export default function ParticlePlayground() {
 					</div>
 				</div>
 				<div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+					<div className="mr-1 flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-950/80 p-0.5">
+						<Button
+							type="button"
+							size="sm"
+							variant="ghost"
+							className="h-7 w-8 px-0 text-zinc-300 hover:bg-zinc-900 hover:text-white disabled:opacity-35"
+							onClick={undo}
+							disabled={!historyUi.canUndo}
+							title="Undo (Ctrl+Z)"
+						>
+							<Undo2 className="h-3.5 w-3.5" />
+						</Button>
+						<Button
+							type="button"
+							size="sm"
+							variant="ghost"
+							className="h-7 w-8 px-0 text-zinc-300 hover:bg-zinc-900 hover:text-white disabled:opacity-35"
+							onClick={redo}
+							disabled={!historyUi.canRedo}
+							title="Redo (Ctrl+Y)"
+						>
+							<Redo2 className="h-3.5 w-3.5" />
+						</Button>
+					</div>
 					<SessionManager
 						session={sessionMeta}
 						sessions={sessions}
@@ -961,12 +1105,12 @@ export default function ParticlePlayground() {
 						type="button"
 						size="sm"
 						variant="outline"
-						className="h-8 border-zinc-700 text-xs text-zinc-100 hover:bg-zinc-900 hover:text-white"
+						className="h-8 border-emerald-500/40 bg-emerald-500/10 text-xs text-emerald-100 hover:bg-emerald-500/20 hover:text-white"
 						onClick={() => setCodeOpen(true)}
-						title="Code (E)"
+						title="Copy / Download animation package (E)"
 					>
-						<Code2 className="mr-1.5 h-3.5 w-3.5" />
-						Code
+						<Download className="mr-1.5 h-3.5 w-3.5" />
+						Export
 					</Button>
 					<Button
 						type="button"
@@ -1022,6 +1166,7 @@ export default function ParticlePlayground() {
 							if (preset.raw?.assets) setAssets(preset.raw.assets);
 							if (preset.raw?.morphTargets) setMorphTargets(preset.raw.morphTargets);
 							logAction('preset', `Applied preset: ${preset.name}`);
+							setRebuildKey((k) => k + 1);
 						}}
 						onSavePreset={saveScene}
 						onDeletePreset={async () => {

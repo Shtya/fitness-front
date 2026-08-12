@@ -38,11 +38,15 @@ export const DEFAULT_PARTICLE_CONFIG = {
 	imageScale: 1,
 	center: true,
 	invertAlpha: false,
+	crispText: false,
+	rasterSize: 420,
+	sampleJitter: 1,
+	pointSoftness: 1,
 };
 
 export const CONTROL_RANGES = {
-	count: { min: 1000, max: 50000, step: 500 },
-	size: { min: 0.2, max: 8, step: 0.1 },
+	count: { min: 1000, max: 120000, step: 1000 },
+	size: { min: 0.2, max: 8, step: 0.05 },
 	sizeVariance: { min: 0, max: 1, step: 0.01 },
 	radius: { min: 20, max: 300, step: 1 },
 	strength: { min: 0, max: 5, step: 0.05 },

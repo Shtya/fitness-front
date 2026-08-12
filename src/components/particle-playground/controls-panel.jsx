@@ -1,5 +1,6 @@
 'use client';
 
+import { Type } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +17,7 @@ import { CameraControls } from './camera-controls';
 import { AppearanceControls } from './appearance-controls';
 import { ControlRow, LabelWithHelp, Section } from './control-row';
 import { CONTROL_RANGES } from '@/lib/particle-playground/particle-config';
+import { READABLE_TEXT_CONFIG } from '@/lib/particle-playground/particle-presets';
 import { easeFunctions } from '@/lib/particle-playground/morph-engine';
 import { helpFor } from '@/lib/particle-playground/control-help-ar';
 
@@ -28,9 +30,31 @@ export function ControlsPanel({
 	onSavePreset,
 	onDeletePreset,
 }) {
+	const optimizeReadableText = () => {
+		onChange?.({ ...READABLE_TEXT_CONFIG });
+		window.setTimeout(() => onRebuild?.(), 40);
+	};
+
 	return (
 		<div className="flex h-full flex-col">
 			<div className="flex-1 space-y-1 overflow-y-auto px-3 pb-4 pt-2">
+				<div className="mb-2 rounded-xl border border-emerald-400/25 bg-emerald-400/5 p-2.5">
+					<p className="mb-1.5 text-[10px] leading-snug text-emerald-100/90">
+						وضوح قوي (1920 + تغطية منتظمة) مع hover تفاعلي شغال. اضغط تاني عشان
+						تطبّق الإعدادات المحدّثة.
+					</p>
+					<Button
+						type="button"
+						size="sm"
+						className="h-8 w-full gap-1.5 bg-emerald-400 text-xs font-semibold text-zinc-950 hover:bg-emerald-300"
+						onClick={optimizeReadableText}
+						title="Rebuild with crisp high-res sampling for readable text/icons"
+					>
+						<Type className="h-3.5 w-3.5" />
+						Optimize Text & Icons
+					</Button>
+				</div>
+
 				<ParticleControls config={config} onChange={onChange} />
 				<InteractionControls config={config} onChange={onChange} />
 				<MotionControls config={config} onChange={onChange} />
@@ -82,17 +106,47 @@ export function ControlsPanel({
 				</Section>
 
 				<Section title="Image Processing" defaultOpen={false}>
-					<ControlRow label="Alpha Threshold" value={config.alphaThreshold} {...CONTROL_RANGES.alphaThreshold} help={helpFor('alphaThreshold')} onChange={(alphaThreshold) => onChange({ alphaThreshold })} />
-					<ControlRow label="Brightness" value={config.brightness} {...CONTROL_RANGES.brightness} help={helpFor('brightness')} onChange={(brightness) => onChange({ brightness })} />
-					<ControlRow label="Contrast" value={config.contrast} {...CONTROL_RANGES.contrast} help={helpFor('contrast')} onChange={(contrast) => onChange({ contrast })} />
-					<ControlRow label="Scale" value={config.imageScale} {...CONTROL_RANGES.imageScale} help={helpFor('imageScale')} onChange={(imageScale) => onChange({ imageScale })} />
+					<ControlRow
+						label="Alpha Threshold"
+						value={config.alphaThreshold}
+						{...CONTROL_RANGES.alphaThreshold}
+						help={helpFor('alphaThreshold')}
+						onChange={(alphaThreshold) => onChange({ alphaThreshold })}
+					/>
+					<ControlRow
+						label="Brightness"
+						value={config.brightness}
+						{...CONTROL_RANGES.brightness}
+						help={helpFor('brightness')}
+						onChange={(brightness) => onChange({ brightness })}
+					/>
+					<ControlRow
+						label="Contrast"
+						value={config.contrast}
+						{...CONTROL_RANGES.contrast}
+						help={helpFor('contrast')}
+						onChange={(contrast) => onChange({ contrast })}
+					/>
+					<ControlRow
+						label="Scale"
+						value={config.imageScale}
+						{...CONTROL_RANGES.imageScale}
+						help={helpFor('imageScale')}
+						onChange={(imageScale) => onChange({ imageScale })}
+					/>
 					<div className="flex items-center justify-between gap-3">
 						<LabelWithHelp help={helpFor('center')}>Center</LabelWithHelp>
-						<Switch checked={config.center !== false} onCheckedChange={(center) => onChange({ center })} />
+						<Switch
+							checked={config.center !== false}
+							onCheckedChange={(center) => onChange({ center })}
+						/>
 					</div>
 					<div className="flex items-center justify-between gap-3">
 						<LabelWithHelp help={helpFor('invertAlpha')}>Invert Alpha</LabelWithHelp>
-						<Switch checked={!!config.invertAlpha} onCheckedChange={(invertAlpha) => onChange({ invertAlpha })} />
+						<Switch
+							checked={!!config.invertAlpha}
+							onCheckedChange={(invertAlpha) => onChange({ invertAlpha })}
+						/>
 					</div>
 					<Button
 						type="button"
@@ -112,7 +166,11 @@ export function ControlsPanel({
 								type="button"
 								size="sm"
 								variant="outline"
-								className="h-7 border-zinc-800 px-2 text-[10px] text-zinc-300 hover:bg-zinc-900"
+								className={
+									preset.id === 'readable-text'
+										? 'h-7 border-emerald-500/40 bg-emerald-500/10 px-2 text-[10px] text-emerald-100 hover:bg-emerald-500/20'
+										: 'h-7 border-zinc-800 px-2 text-[10px] text-zinc-300 hover:bg-zinc-900'
+								}
 								onClick={() => onApplyPreset?.(preset)}
 							>
 								{preset.name}

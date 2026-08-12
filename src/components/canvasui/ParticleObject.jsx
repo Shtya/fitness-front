@@ -41,11 +41,24 @@ const DEFAULTS = {
   formationDuration: 1.5,
   formationStrength: 1,
   onFrame: null,
+  /** Higher raster + sharper points for readable text/icons */
+  crispText: false,
+  rasterSize: 420,
+  alphaThreshold: 10,
+  brightness: 0,
+  contrast: 0,
+  imageScale: 1,
+  invertAlpha: false,
+  /** 0 = snap to pixel centers (sharper glyphs) */
+  sampleJitter: 1,
+  /** 0 = hard discs, 1 = soft glow dots */
+  pointSoftness: 1,
 };
 
 const CAMERA_DIR = new THREE.Vector3(0, -1, 4).normalize();
 const MODEL_LIFT = 0.3;
 const RASTER_SIZE = 420;
+const RASTER_SIZE_CRISP = 1920;
 const ALBEDO_SIZE = 128;
 
 const VERT = `
@@ -81,12 +94,21 @@ void main() {
 const FRAG = `
 precision highp float;
 in vec3 vColor;
+uniform float uSoftness;
 out vec4 outColor;
 
 void main() {
   vec2 c = gl_PointCoord - 0.5;
   float r2 = dot(c, c);
-  float alpha = 1.0 - smoothstep(0.16, 0.25, r2);
+  // Softness 1 = glow dots; 0 = hard discs (better for text edges)
+  float soft = clamp(uSoftness, 0.0, 1.0);
+  float inner = mix(0.22, 0.16, soft);
+  float outer = mix(0.245, 0.25, soft);
+  float alpha = 1.0 - smoothstep(inner, outer, r2);
+  if (soft < 0.15) {
+    // Slightly larger hard disc so dense text coverage looks solid, not sandy
+    alpha = step(r2, 0.30);
+  }
   if (alpha < 0.08) discard;
   outColor = vec4(vColor, alpha);
 }`;
@@ -299,25 +321,161 @@ function sampleMesh(scene, count) {
   return { positions, colors, shades };
 }
 
-function sampleImage(data, count) {
-  const positions = new Float32Array(count * 3);
-  const colors = new Float32Array(count * 3);
-  const shades = new Float32Array(count);
+function preprocessImageData(imageData, opts = {}) {
+  const {
+    alphaThreshold = 10,
+    brightness = 0,
+    contrast = 0,
+    invertAlpha = false,
+    imageScale = 1,
+  } = opts;
 
+  const src = imageData;
+  const scale = Math.max(0.2, Math.min(imageScale || 1, 2));
+  let width = src.width;
+  let height = src.height;
+  let data = new Uint8ClampedArray(src.data);
+
+  if (Math.abs(scale - 1) > 0.01) {
+    const canvas = document.createElement("canvas");
+    const tw = Math.max(1, Math.round(src.width * scale));
+    const th = Math.max(1, Math.round(src.height * scale));
+    canvas.width = tw;
+    canvas.height = th;
+    const ctx = canvas.getContext("2d");
+    const tmp = document.createElement("canvas");
+    tmp.width = src.width;
+    tmp.height = src.height;
+    tmp.getContext("2d").putImageData(src, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(tmp, 0, 0, tw, th);
+    const scaled = ctx.getImageData(0, 0, tw, th);
+    data = new Uint8ClampedArray(scaled.data);
+    width = tw;
+    height = th;
+  }
+
+  const b = brightness / 100;
+  const c = contrast / 100;
+  const factor = (1 + c) / (1.0001 - c);
+
+  for (let i = 0; i < data.length; i += 4) {
+    let r = data[i] / 255;
+    let g = data[i + 1] / 255;
+    let bl = data[i + 2] / 255;
+    let a = data[i + 3];
+
+    r = (r - 0.5) * factor + 0.5 + b;
+    g = (g - 0.5) * factor + 0.5 + b;
+    bl = (bl - 0.5) * factor + 0.5 + b;
+
+    data[i] = Math.max(0, Math.min(255, Math.round(r * 255)));
+    data[i + 1] = Math.max(0, Math.min(255, Math.round(g * 255)));
+    data[i + 2] = Math.max(0, Math.min(255, Math.round(bl * 255)));
+
+    if (invertAlpha) a = 255 - a;
+    if (a < alphaThreshold) a = 0;
+    data[i + 3] = a;
+  }
+
+  return new ImageData(data, width, height);
+}
+
+function sampleImage(data, count, opts = {}) {
+  const alphaThreshold = opts.alphaThreshold ?? 10;
+  const crisp = !!opts.crispText;
+  const jitter = crisp ? 0 : Math.max(0, Math.min(1, opts.sampleJitter ?? 1));
+  const zSpread = crisp ? 0.0015 : 0.02;
+
+  const w = data.width;
+  const h = data.height;
   const pixels = [];
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      const alpha = data.data[i * 4 + 3];
+      if (alpha < alphaThreshold) continue;
+      pixels.push(i);
+    }
+  }
+
+  if (pixels.length === 0) {
+    return {
+      positions: new Float32Array(count * 3),
+      colors: new Float32Array(count * 3),
+      shades: new Float32Array(count),
+    };
+  }
+
+  // Crisp mode: even coverage (no random holes in letters). Prefer filling
+  // as many opaque pixels as the budget allows so text looks solid.
+  let target = Math.max(16, Math.round(count));
+  if (crisp) {
+    const dense = Math.min(pixels.length, 110000);
+    target = Math.min(110000, Math.max(target, Math.min(dense, Math.max(64000, Math.floor(pixels.length * 0.85)))));
+  }
+
+  const positions = new Float32Array(target * 3);
+  const colors = new Float32Array(target * 3);
+  const shades = new Float32Array(target);
+  const longest = Math.max(w, h);
+  const n = pixels.length;
+
+  const writeParticle = (slot, pIndex, ox = 0, oy = 0) => {
+    const p = pixels[pIndex];
+    const px = p % w;
+    const py = Math.floor(p / w);
+    positions[slot * 3] = (px + 0.5 + ox - w / 2) / longest;
+    positions[slot * 3 + 1] = -(py + 0.5 + oy - h / 2) / longest;
+    positions[slot * 3 + 2] = (Math.random() - 0.5) * zSpread;
+    colors[slot * 3] = data.data[p * 4] / 255;
+    colors[slot * 3 + 1] = data.data[p * 4 + 1] / 255;
+    colors[slot * 3 + 2] = data.data[p * 4 + 2] / 255;
+    shades[slot] = 1;
+  };
+
+  if (crisp) {
+    if (target <= n) {
+      // Even stride across silhouette — keeps letter interiors filled
+      const step = n / target;
+      for (let i = 0; i < target; i++) {
+        writeParticle(i, Math.min(n - 1, Math.floor(i * step)));
+      }
+    } else {
+      for (let i = 0; i < n; i++) writeParticle(i, i);
+      for (let i = n; i < target; i++) {
+        const pIndex = (i * 2654435761) % n;
+        const ox = ((i * 0.37) % 1) * 0.35 - 0.175;
+        const oy = ((i * 0.71) % 1) * 0.35 - 0.175;
+        writeParticle(i, pIndex, ox, oy);
+      }
+    }
+    return { positions, colors, shades };
+  }
+
+  // Soft / artistic mode: weighted random (original feel)
   const weights = [];
   let totalWeight = 0;
-  for (let i = 0; i < data.width * data.height; i++) {
-    const alpha = data.data[i * 4 + 3];
-    if (alpha < 10) continue;
-    totalWeight += alpha;
-    pixels.push(i);
+  const alphaAt = (x, y) => {
+    if (x < 0 || y < 0 || x >= w || y >= h) return 0;
+    return data.data[(y * w + x) * 4 + 3];
+  };
+  for (let k = 0; k < n; k++) {
+    const p = pixels[k];
+    const px = p % w;
+    const py = Math.floor(p / w);
+    const alpha = data.data[p * 4 + 3];
+    const edge =
+      Math.abs(alpha - alphaAt(px - 1, py)) +
+      Math.abs(alpha - alphaAt(px + 1, py)) +
+      Math.abs(alpha - alphaAt(px, py - 1)) +
+      Math.abs(alpha - alphaAt(px, py + 1));
+    totalWeight += alpha * (1 + 0.35 * (edge / 1020));
     weights.push(totalWeight);
   }
-  if (pixels.length === 0) return { positions, colors, shades };
 
-  const longest = Math.max(data.width, data.height);
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < target; i++) {
     const pick = Math.random() * totalWeight;
     let lo = 0;
     let hi = weights.length - 1;
@@ -326,16 +484,9 @@ function sampleImage(data, count) {
       if (weights[mid] < pick) lo = mid + 1;
       else hi = mid;
     }
-    const p = pixels[lo];
-    const px = p % data.width;
-    const py = Math.floor(p / data.width);
-    positions[i * 3] = (px + Math.random() - data.width / 2) / longest;
-    positions[i * 3 + 1] = -(py + Math.random() - data.height / 2) / longest;
-    positions[i * 3 + 2] = (Math.random() - 0.5) * 0.02;
-    colors[i * 3] = data.data[p * 4] / 255;
-    colors[i * 3 + 1] = data.data[p * 4 + 1] / 255;
-    colors[i * 3 + 2] = data.data[p * 4 + 2] / 255;
-    shades[i] = 1;
+    const jx = jitter > 0 ? (Math.random() - 0.5) * jitter : 0;
+    const jy = jitter > 0 ? (Math.random() - 0.5) * jitter : 0;
+    writeParticle(i, lo, jx, jy);
   }
 
   return { positions, colors, shades };
@@ -398,7 +549,7 @@ function sniffKind(bytes) {
   return null;
 }
 
-function rasterizeImage(blob) {
+function rasterizeImage(blob, rasterSize = RASTER_SIZE) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(blob);
     const image = new Image();
@@ -406,7 +557,8 @@ function rasterizeImage(blob) {
       URL.revokeObjectURL(url);
       const width = image.naturalWidth || 1024;
       const height = image.naturalHeight || 1024;
-      const ratio = Math.min(1, RASTER_SIZE / Math.max(width, height));
+      const target = Math.max(256, Math.min(rasterSize || RASTER_SIZE, 2048));
+      const ratio = Math.min(1, target / Math.max(width, height));
       const canvas = document.createElement("canvas");
       canvas.width = Math.max(1, Math.round(width * ratio));
       canvas.height = Math.max(1, Math.round(height * ratio));
@@ -415,6 +567,8 @@ function rasterizeImage(blob) {
         reject(new Error("2d context unavailable"));
         return;
       }
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
       ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
       resolve(ctx.getImageData(0, 0, canvas.width, canvas.height));
     };
@@ -471,6 +625,7 @@ export function createParticleObject(elements, options = {}) {
       uRefDist: { value: config.cameraDistance },
       uTint: { value: new THREE.Color(1, 1, 1) },
       uUseTint: { value: 0 },
+      uSoftness: { value: config.crispText ? 0 : config.pointSoftness ?? 1 },
     },
   });
 
@@ -512,16 +667,23 @@ export function createParticleObject(elements, options = {}) {
 
   function buildCloud() {
     if (!assetSource) return;
-    const count = Math.max(Math.round(config.count), 16);
-    if (count === builtCount && points) return;
-    builtCount = count;
+    const requested = Math.max(Math.round(config.count), 16);
     clearPoints();
 
     const sample =
       assetSource.kind === "mesh"
-        ? sampleMesh(assetSource.scene, count)
-        : sampleImage(assetSource.data, count);
+        ? sampleMesh(assetSource.scene, requested)
+        : sampleImage(assetSource.data, requested, {
+            alphaThreshold: config.alphaThreshold ?? 10,
+            sampleJitter: config.crispText
+              ? 0
+              : (config.sampleJitter ?? 1),
+            crispText: !!config.crispText,
+          });
     normalizeCloud(sample);
+
+    const count = Math.max(16, Math.floor(sample.positions.length / 3));
+    builtCount = count;
 
     const seeds = new Float32Array(count);
     for (let i = 0; i < count; i++) seeds[i] = Math.random();
@@ -588,8 +750,18 @@ export function createParticleObject(elements, options = {}) {
         const blob = new Blob([buffer], {
           type: kind === "svg" ? "image/svg+xml" : "",
         });
-        const data = await rasterizeImage(blob);
+        const rasterSize = config.crispText
+          ? Math.max(config.rasterSize || RASTER_SIZE_CRISP, RASTER_SIZE_CRISP)
+          : config.rasterSize || RASTER_SIZE;
+        const raw = await rasterizeImage(blob, rasterSize);
         if (disposed || token !== loadToken) return;
+        const data = preprocessImageData(raw, {
+          alphaThreshold: config.alphaThreshold ?? 10,
+          brightness: config.brightness ?? 0,
+          contrast: config.contrast ?? 0,
+          invertAlpha: !!config.invertAlpha,
+          imageScale: config.imageScale ?? 1,
+        });
         clearAsset();
         assetSource = { kind: "image", data };
       }
@@ -626,9 +798,15 @@ export function createParticleObject(elements, options = {}) {
     material.uniforms.uDrift.value = reducedMotion
       ? 0
       : Math.max(config.drift, 0);
-    material.uniforms.uSize.value = Math.max(config.size, 0.1);
+    material.uniforms.uSize.value = Math.max(
+      config.crispText ? Math.max(config.size, 1.05) : config.size,
+      0.1,
+    );
     material.uniforms.uVariance.value = Math.min(Math.max(config.sizeVariance, 0), 1);
     material.uniforms.uRefDist.value = config.cameraDistance;
+    material.uniforms.uSoftness.value = config.crispText
+      ? 0
+      : Math.min(Math.max(config.pointSoftness ?? 1, 0), 1);
     if (config.color) {
       tint.set(config.color);
       (material.uniforms.uTint.value).copy(tint);
@@ -923,13 +1101,35 @@ export function createParticleObject(elements, options = {}) {
 
       const previousDistance = config.cameraDistance;
       const previousCount = config.count;
+      const samplingKeys = [
+        "crispText",
+        "rasterSize",
+        "alphaThreshold",
+        "brightness",
+        "contrast",
+        "imageScale",
+        "invertAlpha",
+        "sampleJitter",
+        "pointSoftness",
+      ];
+      const samplingChanged = samplingKeys.some(
+        (key) => next[key] !== undefined && next[key] !== config[key],
+      );
+
       Object.assign(config, next);
       if (config.cameraDistance !== previousDistance) {
         camera.position.copy(CAMERA_DIR).multiplyScalar(config.cameraDistance);
       }
       applyOptions();
-      if (config.count !== previousCount) buildCloud();
-      loadAsset();
+      if (samplingChanged && config.src) {
+        // Force re-rasterize + rebuild with crisp/preprocess settings
+        loadedSrc = "";
+        builtCount = -1;
+        loadAsset();
+      } else {
+        if (config.count !== previousCount) buildCloud();
+        loadAsset();
+      }
       startLoop();
     },
     setHomes(positions, colors) {

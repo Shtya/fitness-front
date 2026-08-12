@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 
 export function ImagePrepGuide() {
 	const [copied, setCopied] = useState(false);
-	const [selected, setSelected] = useState(['enhance']);
+	const [selected, setSelected] = useState(['enhance', 'textSharp']);
 
 	const finalPrompt = useMemo(
 		() => buildImagePrepPrompt(IMAGE_PREP_PROMPT, selected),
@@ -52,7 +52,10 @@ export function ImagePrepGuide() {
 				</Button>
 			</div>
 
-			<p className="mb-1.5 text-[10px] text-zinc-500">Extras — فعّل اللي محتاجه</p>
+			<p className="mb-1.5 text-[10px] text-zinc-500">
+				Extras — للكتابة والأيقونات فعّل{' '}
+				<span className="text-emerald-300">Text & Icons</span>
+			</p>
 			<div className="mb-2 grid grid-cols-2 gap-1.5">
 				{IMAGE_PREP_OPTIONS.map((opt) => {
 					const active = selected.includes(opt.id);
