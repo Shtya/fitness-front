@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Copy, Download, FolderDown, Package } from 'lucide-react';
+import { Check, Copy, Download, FolderDown, Package, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
 	Dialog,
@@ -19,6 +19,10 @@ import {
 	generatePortableFiles,
 	generatePortableClipboard,
 } from '@/lib/particle-playground/export-code';
+import {
+	generateScrollMorphFiles,
+	SCROLL_MORPH_FOLDER_NAME,
+} from '@/lib/particle-playground/scroll-morph-export';
 import {
 	downloadPackageFolder,
 	PACKAGE_FOLDER_NAME,
@@ -126,6 +130,28 @@ export function CodePreview({ open, onOpenChange, config, src, scene }) {
 		}
 	};
 
+	/** NL3: same colored particles + scroll dissolve/reassemble */
+	const downloadScrollMorph = async () => {
+		if (!engineSource) {
+			setEngineError('Engine not loaded yet — wait a moment and try again.');
+			return;
+		}
+		setBusy(true);
+		setSaveNote('');
+		setEngineError('');
+		try {
+			const files = await generateScrollMorphFiles(config, src, engineSource);
+			downloadPackageFolder(files, SCROLL_MORPH_FOLDER_NAME);
+			setSaveNote(
+				`اتحمّل ${SCROLL_MORPH_FOLDER_NAME}.zip — فيه ScrollMorphHero + progress 0..1 (hold → explode → reassemble) بنفس ألوان الـ Studio. انسخ assets/form-a.* إلى public.`,
+			);
+		} catch (err) {
+			setEngineError(err?.message || 'Could not download scroll-morph package');
+		} finally {
+			setBusy(false);
+		}
+	};
+
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-h-[90vh] max-w-3xl overflow-hidden border-zinc-700 bg-[#0d0d10] text-zinc-100">
@@ -162,10 +188,21 @@ export function CodePreview({ open, onOpenChange, config, src, scene }) {
 						className="gap-1.5 bg-sky-400 text-zinc-950 hover:bg-sky-300"
 						onClick={downloadFolder}
 						disabled={busy || !engineSource}
-						title="Download particle-animation folder with all files inside"
+						title="Download static Studio hero folder"
 					>
 						<FolderDown className="h-3.5 w-3.5" />
 						{busy ? 'Preparing…' : 'Download Folder'}
+					</Button>
+					<Button
+						type="button"
+						size="sm"
+						className="gap-1.5 bg-violet-400 text-zinc-950 hover:bg-violet-300"
+						onClick={downloadScrollMorph}
+						disabled={busy || !engineSource}
+						title="NL3 scroll morph: hold → dissolve → reassemble with Studio colors"
+					>
+						<Sparkles className="h-3.5 w-3.5" />
+						{busy ? 'Preparing…' : 'Download NL3 Scroll Morph'}
 					</Button>
 					<Button
 						type="button"
@@ -183,9 +220,15 @@ export function CodePreview({ open, onOpenChange, config, src, scene }) {
 						<p className="w-full text-[11px] text-zinc-500">Loading engine file…</p>
 					) : (
 						<p className="w-full text-[11px] text-emerald-200/80">
-							<strong className="font-semibold text-sky-200">Download Folder</strong> ينزّل
-							فولدر <code className="text-sky-100">{PACKAGE_FOLDER_NAME}</code> فيه
-							README.md (شرح التثبيت 1:1 مع الـ Studio) + ParticleObject + Hero + JSON.
+							<strong className="font-semibold text-sky-200">Download Folder</strong> = hero
+							ثابت.{' '}
+							<strong className="font-semibold text-violet-200">
+								Download NL3 Scroll Morph
+							</strong>{' '}
+							= نفس الـ particles الملونة +{' '}
+							<code className="text-violet-100">progress 0..1</code> (تنفجر وتتجمع مع
+							السكروول). فولدر:{' '}
+							<code className="text-violet-100">{SCROLL_MORPH_FOLDER_NAME}</code>.
 						</p>
 					)}
 					{saveNote ? (
@@ -209,9 +252,8 @@ export function CodePreview({ open, onOpenChange, config, src, scene }) {
 						<TabsContent key={tab.key} value={tab.key} className="space-y-3">
 							{tab.key === 'package' ? (
 								<p className="rounded-lg border border-zinc-700 bg-zinc-950/60 px-3 py-2 text-[11px] leading-relaxed text-zinc-400">
-									معاينة الحزمة. اضغط{' '}
-									<span className="text-sky-300">Download Folder</span> عشان ينزّل
-									الفولدر بكل الملفات اللي بتستخدمها الأنيميشن.
+									معاينة الحزمة الثابتة. للـ scroll explode استخدم{' '}
+									<span className="text-violet-300">Download NL3 Scroll Morph</span>.
 								</p>
 							) : null}
 							<pre className="max-h-[40vh] overflow-auto rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-[11px] leading-relaxed text-zinc-100">
@@ -232,17 +274,30 @@ export function CodePreview({ open, onOpenChange, config, src, scene }) {
 									Copy Code
 								</Button>
 								{tab.key === 'package' ? (
-									<Button
-										type="button"
-										size="sm"
-										variant="outline"
-										className="gap-1.5 border-zinc-600 bg-transparent text-zinc-100 hover:bg-zinc-900 hover:text-white"
-										onClick={downloadFolder}
-										disabled={busy || !engineSource}
-									>
-										<FolderDown className="h-3.5 w-3.5" />
-										Download Folder
-									</Button>
+									<>
+										<Button
+											type="button"
+											size="sm"
+											variant="outline"
+											className="gap-1.5 border-zinc-600 bg-transparent text-zinc-100 hover:bg-zinc-900 hover:text-white"
+											onClick={downloadFolder}
+											disabled={busy || !engineSource}
+										>
+											<FolderDown className="h-3.5 w-3.5" />
+											Download Folder
+										</Button>
+										<Button
+											type="button"
+											size="sm"
+											variant="outline"
+											className="gap-1.5 border-violet-500/50 bg-transparent text-violet-100 hover:bg-violet-950 hover:text-white"
+											onClick={downloadScrollMorph}
+											disabled={busy || !engineSource}
+										>
+											<Sparkles className="h-3.5 w-3.5" />
+											NL3 Scroll Morph
+										</Button>
+									</>
 								) : (
 									<Button
 										type="button"

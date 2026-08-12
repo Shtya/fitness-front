@@ -42,7 +42,7 @@ function encodeUtf8(str) {
 }
 
 /**
- * @param {{ name: string, content: string }[]} files
+ * @param {{ name: string, content: string | Uint8Array | ArrayBuffer }[]} files
  * @returns {Blob}
  */
 export function buildStoreZip(files) {
@@ -52,7 +52,7 @@ export function buildStoreZip(files) {
 
 	for (const file of files) {
 		const nameBytes = encodeUtf8(file.name.replace(/\\/g, '/'));
-		const data = encodeUtf8(file.content);
+		const data = toBytes(file.content);
 		const crc = crc32(data);
 		const size = data.length;
 
@@ -114,4 +114,10 @@ export function buildStoreZip(files) {
 	return new Blob([concat([localBlob, centralBlob, end])], {
 		type: 'application/zip',
 	});
+}
+
+function toBytes(content) {
+	if (content instanceof Uint8Array) return content;
+	if (content instanceof ArrayBuffer) return new Uint8Array(content);
+	return encodeUtf8(content == null ? '' : String(content));
 }

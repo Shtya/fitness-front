@@ -583,6 +583,8 @@ function rasterizeImage(blob, rasterSize = RASTER_SIZE) {
 export function createParticleObject(elements, options = {}) {
   const { canvas } = elements;
   const config = { ...DEFAULTS, ...options };
+  /** Filled before return; safe for async onLoad. */
+  const api = {};
 
   let renderer;
   try {
@@ -766,7 +768,8 @@ export function createParticleObject(elements, options = {}) {
         assetSource = { kind: "image", data };
       }
       buildCloud();
-      config.onLoad?.();
+      // api is filled before createParticleObject returns; load is async so this runs after.
+      config.onLoad?.(api);
     } catch (error) {
       if (disposed || token !== loadToken) return;
       config.onError?.(error);
@@ -1084,7 +1087,7 @@ export function createParticleObject(elements, options = {}) {
 
   startLoop();
 
-  return {
+  Object.assign(api, {
     setOptions(next) {
       let changed = false;
       for (const [key, value] of Object.entries(next)) {
@@ -1147,6 +1150,10 @@ export function createParticleObject(elements, options = {}) {
     getHomes() {
       return homes ? homes.slice() : null;
     },
+    getColors() {
+      const attr = points?.geometry?.getAttribute("aColor");
+      return attr?.array ? Float32Array.from(attr.array) : null;
+    },
     getParticleCount() {
       return particleCount;
     },
@@ -1167,7 +1174,9 @@ export function createParticleObject(elements, options = {}) {
       draco.dispose();
       renderer.dispose();
     },
-  };
+  });
+
+  return api;
 }
 
 export function ParticleObject({

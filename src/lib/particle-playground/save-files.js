@@ -1,38 +1,35 @@
 /**
- * Download the animation package as one flat folder.
- * Browsers ship folders via zip — unzip gives:
+ * Download the animation package as one folder (via zip).
  *
- * particle-animation/
- *   INSTALL.md
- *   ParticleObject.jsx
- *   MyParticleHero.jsx
- *   particle-scene.json
+ * particle-animation/          — static Studio hero
+ * particle-scroll-morph/       — scroll dissolve/reassemble package
  */
 
 import { buildStoreZip } from './zip-store';
 
 export const PACKAGE_FOLDER_NAME = 'particle-animation';
-
-function basename(path) {
-	const parts = String(path).replace(/\\/g, '/').split('/');
-	return parts[parts.length - 1] || 'file.txt';
-}
+export { SCROLL_MORPH_FOLDER_NAME } from './scroll-morph-export';
 
 /**
- * Put every file directly under one root folder (no nested dirs).
- * @param {{ name: string, content: string }[]} files
+ * Put every file under one root folder. Preserves nested paths (assets/...).
+ * @param {{ name: string, content: string | Uint8Array }[]} files
  * @param {string} [folderName]
  */
 export function nestFilesInFolder(files, folderName = PACKAGE_FOLDER_NAME) {
 	const root = String(folderName || PACKAGE_FOLDER_NAME).replace(/\/+$/, '');
-	return files.map((file) => ({
-		name: `${root}/${basename(file.name)}`,
-		content: file.content,
-	}));
+	return files.map((file) => {
+		const rel = String(file.name || 'file.txt')
+			.replace(/\\/g, '/')
+			.replace(/^\/+/, '');
+		return {
+			name: `${root}/${rel}`,
+			content: file.content,
+		};
+	});
 }
 
 /**
- * @param {{ name: string, content: string }[]} files
+ * @param {{ name: string, content: string | Uint8Array }[]} files
  */
 export function downloadPackageFolder(files, folderName = PACKAGE_FOLDER_NAME) {
 	if (!files?.length) throw new Error('No files to download');

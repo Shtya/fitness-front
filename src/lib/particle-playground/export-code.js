@@ -483,6 +483,10 @@ These values are also applied as JSX props in \`MyParticleHero.jsx\`.
 
 - Multi-logo **morph timeline** playback (Studio-only for now). Export is the live single-formation hero.
 - Lenis / scroll-story pages (different product).
+
+For **scroll dissolve/reassemble with the same colored particles** (NL3),
+use **Download NL3 Scroll Morph** in the Export dialog instead —
+that ships \`ScrollMorphHero\` + \`progress={0..1}\`.
 - Server APIs from Particle Studio.
 
 To change the look later: tweak in Particle Studio → Export → Download Folder again.
