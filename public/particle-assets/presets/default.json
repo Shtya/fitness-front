@@ -1,0 +1,19 @@
+{
+  "name": "Default",
+  "asset": "",
+  "count": 14000,
+  "size": 2.4,
+  "sizeVariance": 0.6,
+  "radius": 110,
+  "strength": 1,
+  "swirl": 0.6,
+  "spring": 1,
+  "damping": 0.35,
+  "drift": 0.6,
+  "floatIntensity": 2,
+  "rotationIntensity": 1,
+  "floatSpeed": 2,
+  "orbit": false,
+  "zoom": false,
+  "autoRotate": false
+}

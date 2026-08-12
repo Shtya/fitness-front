@@ -1,0 +1,18 @@
+{
+  "name": "Strong Interaction",
+  "count": 16000,
+  "size": 2.2,
+  "sizeVariance": 0.7,
+  "radius": 180,
+  "strength": 2.4,
+  "swirl": 1.1,
+  "spring": 1.6,
+  "damping": 0.22,
+  "drift": 0.5,
+  "floatIntensity": 1.5,
+  "rotationIntensity": 0.8,
+  "floatSpeed": 2,
+  "orbit": false,
+  "zoom": false,
+  "autoRotate": false
+}

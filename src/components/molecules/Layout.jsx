@@ -232,11 +232,14 @@ export default function Layout({ children }) {
 		pathname.startsWith('/thank-you') ||
 		pathname.startsWith('/site') ||
 		pathname.startsWith('/open') ||
+		pathname.startsWith('/particle-playground') ||
 		pathname === '/';
 	const isPresentationRoute = pathname.startsWith('/presentation');
-	/** Login / discover / open: full-bleed viewport, no dashboard chrome */
+	/** Login / discover / open / particle studio: full-bleed viewport, no dashboard chrome */
 	const isBareViewport =
-		pathname.startsWith('/auth') || pathname.startsWith('/open');
+		pathname.startsWith('/auth') ||
+		pathname.startsWith('/open') ||
+		pathname.startsWith('/particle-playground');
 	const isWhatsAppRoute = pathname.includes('/dashboard/whatsapp');
 	const isMetaWhatsAppRoute = pathname.includes('/dashboard/meta-whatsapp');
 	const isChatRoute = pathname.includes('/dashboard/chat');

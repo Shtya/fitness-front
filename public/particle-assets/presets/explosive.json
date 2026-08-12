@@ -1,0 +1,19 @@
+{
+  "name": "Explosive",
+  "count": 22000,
+  "size": 1.6,
+  "sizeVariance": 0.9,
+  "radius": 220,
+  "strength": 3.5,
+  "swirl": 1.6,
+  "spring": 0.9,
+  "damping": 0.18,
+  "drift": 0.9,
+  "floatIntensity": 2.4,
+  "rotationIntensity": 1.4,
+  "floatSpeed": 2.2,
+  "orbit": false,
+  "zoom": false,
+  "autoRotate": false,
+  "interactionMode": "explode"
+}

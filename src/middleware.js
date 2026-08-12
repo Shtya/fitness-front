@@ -24,6 +24,7 @@ const PUBLIC_PREFIXES = [
   '/presentation',
   '/gym',
   '/open',
+  '/particle-playground',
   '/dashboard/recipes',
   '/dashboard/my/recipes',
   '/', 

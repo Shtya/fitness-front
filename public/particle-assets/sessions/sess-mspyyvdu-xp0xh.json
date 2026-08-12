@@ -1,0 +1,129 @@
+{
+  "id": "sess-mspyyvdu-xp0xh",
+  "name": "Session 8/12/2026, 1:51:43 PM",
+  "createdAt": "2026-08-12T10:51:43.842Z",
+  "updatedAt": "2026-08-12T11:06:00.492Z",
+  "selectedId": "asset-1786532756101-vmnks",
+  "assets": [
+    {
+      "id": "asset-1786532756101-vmnks",
+      "name": "pasted-1786532756100",
+      "filename": "pasted-1786532756100-mspzh584-l31g.png",
+      "url": "/particle-assets/images/pasted-1786532756100-mspzh584-l31g.png",
+      "type": "image",
+      "count": 50000
+    },
+    {
+      "id": "asset-1786532753484-h925a",
+      "name": "pasted-1786532753484",
+      "filename": "pasted-1786532753484-mspzh37s-958s.png",
+      "url": "/particle-assets/images/pasted-1786532753484-mspzh37s-958s.png",
+      "type": "image",
+      "count": 50000
+    },
+    {
+      "id": "asset-1786532740546-6jzft",
+      "name": "pasted-1786532740545",
+      "filename": "pasted-1786532740545-mspzgt8c-spu8.png",
+      "url": "/particle-assets/images/pasted-1786532740545-mspzgt8c-spu8.png",
+      "type": "image",
+      "count": 50000
+    },
+    {
+      "id": "asset-1786532343869-5dsnj",
+      "name": "pasted-1786532343868",
+      "filename": "pasted-1786532343868-mspz8b6b-e3um.png",
+      "url": "/particle-assets/images/pasted-1786532343868-mspz8b6b-e3um.png",
+      "type": "image",
+      "count": 50000
+    },
+    {
+      "id": "asset-1786531915095-bpk7a",
+      "name": "pasted-1786531915094",
+      "filename": "pasted-1786531915094-mspyz4b6-af5j.png",
+      "url": "/particle-assets/images/pasted-1786531915094-mspyz4b6-af5j.png",
+      "type": "image",
+      "count": 14000
+    }
+  ],
+  "config": {
+    "count": 50000,
+    "size": 0.2,
+    "sizeVariance": 0.1,
+    "color": "",
+    "radius": 27,
+    "strength": 1.55,
+    "swirl": 0.6,
+    "spring": 1,
+    "damping": 0.35,
+    "drift": 0.6,
+    "background": "#000000",
+    "scale": 2.8,
+    "xOffset": 0.1,
+    "yOffset": -0.2,
+    "floatIntensity": 2,
+    "rotationIntensity": 1,
+    "floatSpeed": 2,
+    "orbit": true,
+    "zoom": true,
+    "autoRotate": false,
+    "autoRotateSpeed": 2,
+    "fov": 65,
+    "cameraDistance": 4.2,
+    "cursorEnabled": true,
+    "interactionMode": "swirl",
+    "useOriginalColors": true,
+    "initialFormation": true,
+    "formationDuration": 1.5,
+    "formationStrength": 1,
+    "formationEasing": "power2.out",
+    "morphDuration": 2,
+    "morphEasing": "power2.inOut",
+    "morphDelay": 0.3,
+    "alphaThreshold": 10,
+    "brightness": 0,
+    "contrast": 0,
+    "imageScale": 1,
+    "center": true,
+    "invertAlpha": false,
+    "savedAt": "2026-08-12T10:51:30.745Z"
+  },
+  "morphTargets": [],
+  "timeline": {
+    "playing": false,
+    "currentIndex": 0,
+    "progress": 0
+  },
+  "history": [
+    {
+      "at": "2026-08-12T10:51:43.842Z",
+      "type": "created",
+      "message": "Session created"
+    },
+    {
+      "at": "2026-08-12T10:51:55.419Z",
+      "type": "upload",
+      "message": "Uploaded pasted-1786531915094-mspyz4b6-af5j.png"
+    },
+    {
+      "at": "2026-08-12T10:59:04.220Z",
+      "type": "upload",
+      "message": "Uploaded pasted-1786532343868-mspz8b6b-e3um.png"
+    },
+    {
+      "at": "2026-08-12T11:05:40.868Z",
+      "type": "upload",
+      "message": "Uploaded pasted-1786532740545-mspzgt8c-spu8.png"
+    },
+    {
+      "at": "2026-08-12T11:05:53.807Z",
+      "type": "upload",
+      "message": "Uploaded pasted-1786532753484-mspzh37s-958s.png"
+    },
+    {
+      "at": "2026-08-12T11:05:56.412Z",
+      "type": "upload",
+      "message": "Uploaded pasted-1786532756100-mspzh584-l31g.png"
+    }
+  ]
+}
