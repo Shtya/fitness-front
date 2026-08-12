@@ -117,7 +117,7 @@ export function CodePreview({ open, onOpenChange, config, src, scene }) {
 		try {
 			downloadPackageFolder(portableFiles, PACKAGE_FOLDER_NAME);
 			setSaveNote(
-				`اتحمّل ${PACKAGE_FOLDER_NAME}.zip — فكّه وهتلاقي فولدر فيه كل الملفات (المحرك + الهيرو + INSTALL + JSON).`,
+				`اتحمّل ${PACKAGE_FOLDER_NAME}.zip — فكّه: فولدر فيه README + الملفات. اتبع README عشان يطلع بنفس شكل الـ Studio.`,
 			);
 		} catch (err) {
 			setEngineError(err?.message || 'Could not download folder');
@@ -184,9 +184,8 @@ export function CodePreview({ open, onOpenChange, config, src, scene }) {
 					) : (
 						<p className="w-full text-[11px] text-emerald-200/80">
 							<strong className="font-semibold text-sky-200">Download Folder</strong> ينزّل
-							فولدر <code className="text-sky-100">{PACKAGE_FOLDER_NAME}</code> وجواه
-							الملفات مباشرة (من غير فولدرات جوّه بعض): ParticleObject.jsx ·
-							MyParticleHero.jsx · INSTALL.md · particle-scene.json
+							فولدر <code className="text-sky-100">{PACKAGE_FOLDER_NAME}</code> فيه
+							README.md (شرح التثبيت 1:1 مع الـ Studio) + ParticleObject + Hero + JSON.
 						</p>
 					)}
 					{saveNote ? (

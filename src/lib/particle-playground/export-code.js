@@ -2,6 +2,7 @@ import { DEFAULT_PARTICLE_CONFIG } from './particle-config';
 
 const ALWAYS_INCLUDE = new Set(['src', 'count']);
 
+/** Every studio prop that affects look / hover / sampling must be exportable. */
 const EXPORTABLE_KEYS = [
 	'src',
 	'count',
@@ -27,6 +28,20 @@ const EXPORTABLE_KEYS = [
 	'autoRotateSpeed',
 	'fov',
 	'cameraDistance',
+	'cursorEnabled',
+	'interactionMode',
+	'initialFormation',
+	'formationDuration',
+	'formationStrength',
+	'crispText',
+	'rasterSize',
+	'sampleJitter',
+	'pointSoftness',
+	'alphaThreshold',
+	'brightness',
+	'contrast',
+	'imageScale',
+	'invertAlpha',
 ];
 
 function shouldInclude(key, value) {
@@ -48,7 +63,9 @@ function collectProps(config, src, { includeAll = false } = {}) {
 	const props = [];
 	for (const key of EXPORTABLE_KEYS) {
 		const value = key === 'src' ? src : merged[key];
-		if (key === 'color' && merged.useOriginalColors && !includeAll) continue;
+		if (key === 'color' && merged.useOriginalColors !== false && !merged.color && !includeAll) {
+			continue;
+		}
 		if (!includeAll && !shouldInclude(key, value) && key !== 'src' && key !== 'count') continue;
 		if (includeAll || key === 'src' || key === 'count' || shouldInclude(key, value)) {
 			props.push([key, value ?? (key === 'src' ? '' : DEFAULT_PARTICLE_CONFIG[key])]);
@@ -56,6 +73,11 @@ function collectProps(config, src, { includeAll = false } = {}) {
 	}
 	if (!props.find(([k]) => k === 'src')) props.unshift(['src', src || '']);
 	if (!props.find(([k]) => k === 'count')) props.splice(1, 0, ['count', merged.count]);
+	// Match Studio: empty color = original image colors
+	if (merged.useOriginalColors !== false && !merged.color) {
+		const colorIdx = props.findIndex(([k]) => k === 'color');
+		if (colorIdx >= 0) props.splice(colorIdx, 1);
+	}
 	return props;
 }
 
@@ -208,58 +230,317 @@ export function generateConfigJson(scene) {
 	return JSON.stringify(scene, null, 2);
 }
 
+function snapshotLines(config = {}, src = '') {
+	const merged = { ...DEFAULT_PARTICLE_CONFIG, ...config, src };
+	const keys = [
+		'src',
+		'count',
+		'size',
+		'crispText',
+		'rasterSize',
+		'cursorEnabled',
+		'interactionMode',
+		'radius',
+		'strength',
+		'swirl',
+		'spring',
+		'damping',
+		'drift',
+		'scale',
+		'cameraDistance',
+		'fov',
+		'floatIntensity',
+		'rotationIntensity',
+		'background',
+		'alphaThreshold',
+		'contrast',
+		'brightness',
+		'pointSoftness',
+		'sampleJitter',
+	];
+	return keys
+		.map((k) => `- \`${k}\`: \`${formatValue(merged[k])}\``)
+		.join('\n');
+}
+
+/**
+ * Full install guide so the website matches Particle Studio 1:1.
+ */
 export function generateInstallReadme(config, src) {
 	const assetPath = src || '/particle-assets/images/your-logo.png';
-	return `# Particle Animation Package
-Exported from So7baFit Particle Studio.
+	const assetFile = String(assetPath).split('/').pop() || 'your-logo.png';
+	const merged = { ...DEFAULT_PARTICLE_CONFIG, ...config };
 
-## Folder contents (all files in one folder)
-- \`ParticleObject.jsx\` — particle engine
-- \`MyParticleHero.jsx\` — hero with your studio settings
-- \`INSTALL.md\` — this file
-- \`particle-scene.json\` — full scene snapshot
+	return `# Particle Animation — README
 
-## Install
+Exported from **So7baFit Particle Studio**.
+This package is meant to look **exactly** like the Studio preview:
+same density, same crisp text/icons, same hover push, same camera, same colors.
+
+If it looked different on your website before, you almost always missed one of:
+container height, \`three\` version, image path, or studio props (especially \`crispText\` / hover).
+
+---
+
+## 1) What’s in this folder
+
+| File | Role |
+|------|------|
+| \`ParticleObject.jsx\` | The engine (WebGL + sampling + hover physics). **Do not rewrite.** |
+| \`MyParticleHero.jsx\` | Your Studio settings baked as props. This is what you mount. |
+| \`particle-scene.json\` | Full scene snapshot (debug / re-import). |
+| \`README.md\` | This guide. |
+
+All files sit **in one flat folder** (no nested \`src/...\` paths).
+
+---
+
+## 2) Install dependency (required)
+
 \`\`\`bash
-npm install three
+npm install three@^0.185.1
 \`\`\`
 
-## Asset
-Put your image/SVG at:
-\`public${assetPath}\`
+Use a modern \`three\` (r160+). Old versions break \`three/addons/...\` imports inside \`ParticleObject.jsx\`.
 
-(Or change the \`src\` prop in \`MyParticleHero.jsx\`.)
+React + ReactDOM are assumed (Next.js App Router, Pages Router, Vite, CRA).
 
-## Use
-Copy this whole folder into your project (e.g. \`src/components/particle-animation/\`), then:
+---
+
+## 3) Copy the folder into your project
+
+Example:
+
+\`\`\`text
+your-site/
+  public/
+    particle-assets/
+      images/
+        ${assetFile}          ← put THE SAME image you used in Studio
+  src/
+    components/
+      particle-animation/     ← paste THIS whole folder here
+        ParticleObject.jsx
+        MyParticleHero.jsx
+        particle-scene.json
+        README.md
+\`\`\`
+
+Keep \`ParticleObject.jsx\` and \`MyParticleHero.jsx\` **next to each other**
+(the hero imports \`./ParticleObject\`).
+
+---
+
+## 4) Put the image in \`public/\`
+
+Studio \`src\` was:
+
+\`\`\`text
+${assetPath}
+\`\`\`
+
+So the file must exist at:
+
+\`\`\`text
+public${assetPath}
+\`\`\`
+
+Rules for a 1:1 match:
+1. Use the **exact same PNG** you previewed in Studio (same crop, same glow removal, same resolution).
+2. Path in \`MyParticleHero.jsx\` (\`src={...}\`) must match the public URL.
+3. Prefer transparent PNG. Soft bloom baked into the image will look mushy as particles.
+
+If you move the image, update the \`src\` prop only.
+
+---
+
+## 5) Mount it on a page
+
+### Next.js App Router (\`app/...\`)
+
+\`MyParticleHero.jsx\` already has \`"use client"\`.
 
 \`\`\`jsx
-import MyParticleHero from "./MyParticleHero";
+import MyParticleHero from "@/components/particle-animation/MyParticleHero";
 
 export default function Page() {
   return <MyParticleHero />;
 }
 \`\`\`
 
-## Edit freely
-All motion / color / cursor / camera values live as props on \`<ParticleObject />\`
-inside \`MyParticleHero.jsx\`. Change them there — no locked third-party embed.
+### Next.js Pages Router (\`pages/...\`)
+
+\`"use client"\` is ignored (harmless). Import normally:
+
+\`\`\`jsx
+import MyParticleHero from "../components/particle-animation/MyParticleHero";
+
+export default function Home() {
+  return <MyParticleHero />;
+}
+\`\`\`
+
+### Vite / CRA
+
+Same import. Ensure the file extension resolves (\`.jsx\`).
+
+---
+
+## 6) CRITICAL: container size (most common “looks different” bug)
+
+\`ParticleObject\` draws on a \`<canvas>\` with \`position: absolute; inset: 0\`.
+If the parent has **no height**, the canvas collapses and the scene looks tiny / cropped / wrong.
+
+\`MyParticleHero.jsx\` forces a full-viewport box with **inline styles** (works even without Tailwind):
+
+- width: 100%
+- height: 100vh
+- overflow: hidden
+- dark background like Studio (\`#050506\`)
+- ParticleObject stretched with \`position: absolute; inset: 0; width/height: 100%\`
+
+Do **not** wrap it in a zero-height div, a collapsed grid cell, or a card without \`min-height\`.
+
+Good:
+
+\`\`\`jsx
+<div style={{ height: "100vh" }}>
+  <MyParticleHero />
+</div>
+\`\`\`
+
+Bad:
+
+\`\`\`jsx
+<div> {/* no height */}
+  <MyParticleHero />
+</div>
+\`\`\`
+
+---
+
+## 7) Hover / interaction (must match Studio)
+
+These props are baked into \`MyParticleHero.jsx\` from your Studio session:
+
+- \`cursorEnabled={${merged.cursorEnabled !== false}}\`
+- \`interactionMode="${merged.interactionMode || 'push'}"\`
+- \`radius\`, \`strength\`, \`swirl\`, \`spring\`, \`damping\`
+
+Checklist if hover does nothing:
+1. \`cursorEnabled\` must be \`true\`
+2. \`strength\` must be \`> 0\`
+3. Pointer must be over the **canvas** (not covered by another transparent overlay / nav)
+4. OS “reduce motion” can soften interaction — test with it off
+5. Don’t remount the component every frame (that resets physics)
+
+---
+
+## 8) Crisp text / icons (must match Studio Optimize)
+
+If you used **Optimize Text & Icons** in Studio, export includes:
+
+- \`crispText={true}\`
+- high \`rasterSize\` (e.g. 1920)
+- denser \`count\`
+- hard points (\`pointSoftness={0}\`, \`sampleJitter={0}\`)
+
+If you omit these (or use an old export), the site will look sandy / blurry even with the same PNG.
+
+---
+
+## 9) Background & colors
+
+- Studio often uses transparent WebGL clear (\`background=""\`) over a dark page.
+- Hero section background is set to \`#050506\` to match Studio chrome.
+- Empty / omitted \`color\` = use **original image colors** (same as Studio “Use Original Image Colors”).
+- If you force a hex \`color\`, the whole cloud tints — that alone can look “totally different”.
+
+---
+
+## 10) Your exported settings snapshot
+
+${snapshotLines(config, src)}
+
+These values are also applied as JSX props in \`MyParticleHero.jsx\`.
+**Do not delete props** if you want a Studio match — change them only when you intend to.
+
+---
+
+## 11) Quick verify checklist (1:1 with Studio)
+
+1. \`npm ls three\` → modern version installed  
+2. Image exists at \`public${assetPath}\`  
+3. Hero section is full viewport height  
+4. Open page → particle count / density feels like Studio  
+5. Hover pushes particles  
+6. Text/icons stay readable if you exported with crisp mode  
+7. No extra CSS filters / mix-blend / transforms on the wrapper  
+
+---
+
+## 12) What this package does NOT include
+
+- Multi-logo **morph timeline** playback (Studio-only for now). Export is the live single-formation hero.
+- Lenis / scroll-story pages (different product).
+- Server APIs from Particle Studio.
+
+To change the look later: tweak in Particle Studio → Export → Download Folder again.
+
+---
+
+## 13) Minimal mental model
+
+\`\`\`text
+PNG in /public
+   → ParticleObject samples pixels into points
+   → props control size / hover / camera / crisp sampling
+   → parent must give the canvas real width + height
+\`\`\`
+
+That’s the whole install. Keep the folder together, install \`three\`, mount \`MyParticleHero\`, match the image path — and it should match Studio.
 `;
 }
 
 /**
  * Hero component for the flat download folder (imports ./ParticleObject).
+ * Inline styles so it matches Studio even without Tailwind.
  */
 export function generatePortableHero(config, src, componentName = 'MyParticleHero') {
 	const props = collectProps(config, src, { includeAll: true });
+	const bg =
+		config?.background && String(config.background).trim()
+			? String(config.background)
+			: '#050506';
+
 	return `"use client";
 
 import ParticleObject from "./ParticleObject";
 
+/**
+ * Drop-in hero exported from Particle Studio.
+ * Keep this file next to ParticleObject.jsx.
+ * Parent must not collapse height — this section is 100vh by default.
+ */
 export default function ${componentName}() {
   return (
-    <section className="relative h-screen w-full overflow-hidden bg-black">
+    <section
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100vh",
+        minHeight: "100vh",
+        overflow: "hidden",
+        background: "${bg}",
+      }}
+    >
       <ParticleObject
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+        }}
 ${propsToJsx(props, '        ')}
       />
     </section>
@@ -273,10 +554,15 @@ ${propsToJsx(props, '        ')}
  * @param {string} engineSource full ParticleObject.jsx source
  */
 export function generatePortableFiles(config, src, scene, engineSource) {
+	const readme = generateInstallReadme(config, src);
 	const files = [
 		{
+			name: 'README.md',
+			content: readme,
+		},
+		{
 			name: 'INSTALL.md',
-			content: generateInstallReadme(config, src),
+			content: readme,
 		},
 		{
 			name: 'ParticleObject.jsx',
