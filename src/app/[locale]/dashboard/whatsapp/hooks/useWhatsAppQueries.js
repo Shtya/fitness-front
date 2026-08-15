@@ -58,7 +58,7 @@ export async function fetchConversations(accountId, params = {}) {
 export async function fetchMessages(conversationId, params = {}) {
 	const { data } = await api.get(`/whatsapp/conversations/${conversationId}/messages`, {
 		params: {
-			limit: params.limit || 30,
+			limit: params.limit || 100,
 			before: params.before || undefined,
 			// Default off: open-chat uses sync/latest for provider history. Preview
 			// backfill must never stampede getMessages across the inbox.

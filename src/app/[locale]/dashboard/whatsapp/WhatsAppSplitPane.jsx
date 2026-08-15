@@ -18,12 +18,13 @@ import {
 import api from '@/utils/axios';
 import {
 	conversationTitle,
+	conversationAvatarUrl,
 	mergeMessages,
 	messageDeliveryState,
 	messageTextPresentation,
 } from './whatsapp-utils';
 
-const MESSAGE_PAGE_SIZE = 50;
+const MESSAGE_PAGE_SIZE = 100;
 
 function newClientMessageId() {
 	if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -229,9 +230,9 @@ export default function WhatsAppSplitPane({
 					: [];
 			let next = local;
 			let providerHasMore;
-			// Only hit WhatsApp Web when local history is empty — same model as WA Web
-			// (IndexedDB first; network history only when the thread was never hydrated).
-			if (accountId && canCompose && local.length === 0) {
+			// Prefer Postgres page. Ask WhatsApp for older history when the local
+			// page is still short, not only when it is completely empty.
+			if (accountId && canCompose && local.length < MESSAGE_PAGE_SIZE) {
 				try {
 					const synced = await api.post(
 						`/whatsapp/conversations/${conversationId}/sync/latest`,
@@ -502,7 +503,7 @@ export default function WhatsAppSplitPane({
 					<span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[var(--color-primary-50)] text-[var(--color-primary-600)]">
 						<Columns2 size={14} />
 					</span>
-					<SplitAvatar label={title} src={conversation.contact?.avatarUrl} size={36} />
+					<SplitAvatar label={title} src={conversationAvatarUrl(conversation)} size={36} />
 					<div className="min-w-0">
 						<p className="truncate text-sm font-black text-slate-800 dark:text-slate-100">{title}</p>
 						<p className="truncate text-[11px] text-slate-500">

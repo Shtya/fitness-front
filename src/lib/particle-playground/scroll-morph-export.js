@@ -67,8 +67,8 @@ function collectScrollProps(config, src) {
 	return props;
 }
 
-function propsToJsx(props, indent = '        ') {
-	return props.map(([key, value]) => `${indent}${key}={${formatValue(value)}}`).join('\n');
+function propsToObjectLiteral(props, indent = '        ') {
+	return props.map(([key, value]) => `${indent}${key}: ${formatValue(value)},`).join('\n');
 }
 
 function sniffExt(bytes, fallback = 'png') {
@@ -249,7 +249,7 @@ export function generateScrollMorphHeroSource(config, src) {
 	const publicSrc = publicSrcFromStudio(src);
 	const props = collectScrollProps(config, publicSrc);
 	// src is applied dynamically; strip static src from baked props
-	const propLines = propsToJsx(props.filter(([k]) => k !== 'src'));
+	const propLines = propsToObjectLiteral(props.filter(([k]) => k !== 'src'));
 
 	return `"use client";
 

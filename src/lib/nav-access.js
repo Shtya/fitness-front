@@ -30,6 +30,8 @@ export const PAGE_HREFS_BY_ID = {
 	transcript: ['/dashboard/transcript'],
 	calorieCalculator: ['/dashboard/calculator'],
 	aiFree: ['/dashboard/ai-free'],
+	aiContentStudio: ['/dashboard/ai-content-studio'],
+	emailMemo: ['/dashboard/email-memo'],
 	quranRevision: ['/dashboard/quran-revision'],
 	phoneCheck: ['/dashboard/phone-check'],
 	fitnessLeads: ['/dashboard/fitness-leads'],
@@ -67,6 +69,8 @@ export const NAV_HREFS = {
 		'/dashboard/my/profile',
 		'/dashboard/phone-check',
 		'/dashboard/ai-free',
+		'/dashboard/ai-content-studio',
+		'/dashboard/email-memo',
 		'/money',
 		'/workspace',
 	],
@@ -87,6 +91,8 @@ export const NAV_HREFS = {
 		'/dashboard/phone-check',
 		'/dashboard/fitness-leads',
 		'/dashboard/ai-free',
+		'/dashboard/ai-content-studio',
+		'/dashboard/email-memo',
 		'/dashboard/quran-revision',
 		'/dashboard/recipes',
 		'/dashboard/notifications',
@@ -118,6 +124,8 @@ export const NAV_HREFS = {
 		'/dashboard/phone-check',
 		'/dashboard/fitness-leads',
 		'/dashboard/ai-free',
+		'/dashboard/ai-content-studio',
+		'/dashboard/email-memo',
 		'/dashboard/quran-revision',
 		'/dashboard/recipes',
 		'/dashboard/notifications',
@@ -140,6 +148,8 @@ export const NAV_HREFS = {
 		'/dashboard/phone-check',
 		'/dashboard/fitness-leads',
 		'/dashboard/ai-free',
+		'/dashboard/ai-content-studio',
+		'/dashboard/email-memo',
 		'/dashboard/quran-revision',
 		'/workspace',
 	],
@@ -246,4 +256,25 @@ export function resolvePostLoginPath(user, intendedPath) {
 	const fallback = getDefaultPostLoginPath(role);
 	if (allowed.some((h) => fallback === h || fallback.startsWith(h + '/'))) return fallback;
 	return allowed[0] || fallback;
+}
+
+/** When custom page access has fewer than this many pages, use top header nav instead of sidebar. */
+export const COMPACT_NAV_PAGE_THRESHOLD = 5;
+
+/**
+ * Restricted accounts with a small page set get a compact top navigation (no sidebar).
+ * - null / empty allowedPages → full role access → sidebar
+ * - length >= threshold → sidebar
+ * - 1..threshold-1 → compact top nav
+ */
+export function shouldUseCompactTopNav(allowedPages) {
+	return (
+		Array.isArray(allowedPages) &&
+		allowedPages.length > 0 &&
+		allowedPages.length < COMPACT_NAV_PAGE_THRESHOLD
+	);
+}
+
+export function getAllowedPagesCount(allowedPages) {
+	return Array.isArray(allowedPages) ? allowedPages.length : 0;
 }

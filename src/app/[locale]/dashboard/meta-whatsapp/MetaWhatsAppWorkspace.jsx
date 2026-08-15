@@ -14,6 +14,7 @@ import {
 	FileText,
 	Image as ImageIcon,
 	Link2,
+	Info,
 	LoaderCircle,
 	MessageCircle,
 	Mic,
@@ -320,18 +321,36 @@ const COPY = {
 		recordingCancel: 'Cancel',
 		recordingSend: 'Send voice',
 		configTitle: 'Meta WhatsApp configuration',
-		configSubtitle: 'Connect Cloud API credentials. Copy webhook + verify token into Meta Developer Console.',
+		configSubtitle: 'Paste credentials from your own Meta app. Nothing is filled for you.',
+		configHelpAria: 'How to get these values from Meta',
+		configHelpTitle: 'Get these values from Meta — not from another So7baFit account',
+		configHelpIntro:
+			'Each gym uses its own WhatsApp Cloud API. Open Meta Developer Console and copy the values below.',
+		configHelpOpenConsole: 'Open Meta Developer Console',
+		configHelpSteps: [
+			'Create (or open) your app at developers.facebook.com/apps → add the WhatsApp product.',
+			'WhatsApp → API Setup: copy Phone number ID and WhatsApp Business Account ID (WABA ID). They are different numbers.',
+			'Meta Business Suite → Business settings → Users → System users: generate a permanent token with whatsapp_business_management + whatsapp_business_messaging, and assign YOUR WABA.',
+			'App settings → Basic: show and copy App secret.',
+			'Generate or type a Verify token HERE, then paste the SAME string into Meta → WhatsApp → Configuration → Verify token.',
+			'Copy the webhook URL from this screen into Meta → WhatsApp → Configuration → Callback URL, then subscribe to the messages field.',
+			'Save here, then Verify connection, then Enable.',
+		],
 		accessToken: 'Permanent Access Token',
 		accessTokenHint:
-			'System User permanent token for THIS app, with the So7bahfit WABA assigned. Needs whatsapp_business_management + whatsapp_business_messaging.',
+			'From Meta Business Suite → System users → Generate token (permanent). Assign your WABA. Needs whatsapp_business_management + whatsapp_business_messaging.',
 		phoneNumberId: 'Phone Number ID',
+		phoneIdHint: 'From Meta Developer → WhatsApp → API Setup → Phone number ID. Copy it from Meta, do not invent it.',
 		wabaId: 'WABA ID',
 		wabaHint:
-			'WhatsApp Business Account ID from Meta → WhatsApp → API Setup. Not the same as Phone Number ID.',
+			'From the same API Setup page: WhatsApp Business Account ID. Not the Phone number ID.',
 		verifyToken: 'Verify Token',
+		verifyTokenHint:
+			'You create this (or tap Generate). Then paste the same value into Meta webhook configuration. Meta does not give you this token.',
 		appSecret: 'App Secret',
+		appSecretHint: 'From Meta Developer → App settings → Basic → App secret → Show.',
 		webhook: 'Webhook callback URL',
-		webhookHint: 'Meta Developer → WhatsApp → Configuration. Subscribe to messages.',
+		webhookHint: 'Copy this URL into Meta → WhatsApp → Configuration → Callback URL, then subscribe to messages.',
 		copy: 'Copy',
 		copied: 'Copied',
 		generateToken: 'Generate',
@@ -583,18 +602,36 @@ const COPY = {
 		recordingCancel: 'إلغاء',
 		recordingSend: 'إرسال الصوت',
 		configTitle: 'إعدادات ميتا واتساب',
-		configSubtitle: 'اربط بيانات Cloud API. انسخ الـ Webhook ورمز التحقق إلى Meta Developer.',
+		configSubtitle: 'الصق بيانات تطبيقك من ميتا. لا نعبّئ الحقول نيابة عنك.',
+		configHelpAria: 'كيف تحصل على هذه القيم من ميتا',
+		configHelpTitle: 'احصل على هذه القيم من ميتا — وليست من حساب So7baFit آخر',
+		configHelpIntro:
+			'كل جيم يستخدم واتساب كلاود الخاص به. افتح Meta Developer Console وانسخ القيم أدناه.',
+		configHelpOpenConsole: 'فتح Meta Developer Console',
+		configHelpSteps: [
+			'أنشئ أو افتح تطبيقك من developers.facebook.com/apps ثم أضف منتج WhatsApp.',
+			'WhatsApp ← API Setup: انسخ Phone number ID و WhatsApp Business Account ID (WABA). رقمان مختلفان.',
+			'Meta Business Suite ← إعدادات النشاط ← المستخدمون ← مستخدمو النظام: أنشئ توكن دائمًا بصلاحيات whatsapp_business_management و whatsapp_business_messaging، وعيّن WABA الخاص بك.',
+			'إعدادات التطبيق ← Basic: أظهر وانسخ App secret.',
+			'أنشئ Verify token هنا (أو اضغط توليد)، ثم الصق نفس القيمة في ميتا ← WhatsApp ← Configuration ← Verify token.',
+			'انسخ رابط الـ Webhook من هذه الشاشة إلى ميتا ← Callback URL، ثم اشترك في حقل messages.',
+			'احفظ هنا، ثم تحقق من الاتصال، ثم فعّل التكامل.',
+		],
 		accessToken: 'رمز الوصول الدائم',
 		accessTokenHint:
-			'رمز دائم من System User لهذا التطبيق، مع تعيين WABA So7bahfit. يحتاج صلاحيات whatsapp_business_management و whatsapp_business_messaging.',
+			'من Meta Business Suite ← مستخدمو النظام ← Generate token (دائم). عيّن WABA الخاص بك. يحتاج whatsapp_business_management و whatsapp_business_messaging.',
 		phoneNumberId: 'معرّف رقم الهاتف',
+		phoneIdHint: 'من Meta Developer ← WhatsApp ← API Setup ← Phone number ID. انسخه من ميتا ولا تخترعه.',
 		wabaId: 'معرّف WABA',
 		wabaHint:
-			'معرّف حساب واتساب للأعمال من Meta ← WhatsApp ← API Setup. ليس نفس معرّف رقم الهاتف.',
+			'من نفس صفحة API Setup: WhatsApp Business Account ID. ليس معرّف رقم الهاتف.',
 		verifyToken: 'رمز التحقق',
+		verifyTokenHint:
+			'أنت تنشئه هنا (أو توليد). ثم تلصق نفس القيمة في إعداد Webhook داخل ميتا. ميتا لا تعطيك هذا الرمز.',
 		appSecret: 'سر التطبيق',
+		appSecretHint: 'من Meta Developer ← App settings ← Basic ← App secret ← Show.',
 		webhook: 'رابط الـ Webhook',
-		webhookHint: 'Meta Developer ← WhatsApp ← Configuration. اشترك في messages.',
+		webhookHint: 'انسخ هذا الرابط إلى ميتا ← WhatsApp ← Configuration ← Callback URL ثم اشترك في messages.',
 		copy: 'نسخ',
 		copied: 'تم النسخ',
 		generateToken: 'توليد',
@@ -1341,8 +1378,6 @@ function resolveWebhookUrl(status) {
 	return fromApi;
 }
 
-const META_WA_CONFIG_DRAFT_KEY = 'so7ba.meta-whatsapp.config.draft';
-
 function emptyConfigForm() {
 	return {
 		accessToken: '',
@@ -1353,60 +1388,45 @@ function emptyConfigForm() {
 	};
 }
 
-function readConfigDraft() {
-	if (typeof window === 'undefined') return null;
-	try {
-		const raw = window.localStorage.getItem(META_WA_CONFIG_DRAFT_KEY);
-		if (!raw) return null;
-		const parsed = JSON.parse(raw);
-		if (!parsed || typeof parsed !== 'object') return null;
-		return {
-			accessToken: parsed.accessToken || '',
-			phoneNumberId: parsed.phoneNumberId || '',
-			wabaId: parsed.wabaId || '',
-			verifyToken: parsed.verifyToken || '',
-			appSecret: parsed.appSecret || '',
-		};
-	} catch {
-		return null;
-	}
-}
-
-function writeConfigDraft(form) {
-	if (typeof window === 'undefined') return;
-	try {
-		window.localStorage.setItem(
-			META_WA_CONFIG_DRAFT_KEY,
-			JSON.stringify({
-				accessToken: form.accessToken || '',
-				phoneNumberId: form.phoneNumberId || '',
-				wabaId: form.wabaId || '',
-				verifyToken: form.verifyToken || '',
-				appSecret: form.appSecret || '',
-				updatedAt: Date.now(),
-			}),
-		);
-	} catch {
-		/* ignore quota / private mode */
-	}
-}
-
-function mergeConfigForm(server, draft) {
-	const base = {
+function formFromServerStatus(server) {
+	return {
 		accessToken: server?.accessToken || '',
 		appSecret: server?.appSecret || '',
 		phoneNumberId: server?.phoneNumberId || '',
 		wabaId: server?.wabaId || '',
 		verifyToken: server?.verifyToken || '',
 	};
-	if (!draft) return base;
-	return {
-		accessToken: draft.accessToken || base.accessToken,
-		appSecret: draft.appSecret || base.appSecret,
-		phoneNumberId: draft.phoneNumberId || base.phoneNumberId,
-		wabaId: draft.wabaId || base.wabaId,
-		verifyToken: draft.verifyToken || base.verifyToken,
-	};
+}
+
+function ConfigSetupGuide({ t }) {
+	const steps = Array.isArray(t.configHelpSteps) ? t.configHelpSteps : [];
+	return (
+		<div
+			className="rounded-xl border px-3.5 py-3 text-[12px] leading-relaxed"
+			style={{ borderColor: WA.border, background: '#F7FBF8' }}
+		>
+			<p className="font-semibold" style={{ color: WA.text }}>
+				{t.configHelpTitle}
+			</p>
+			<p className="mt-1" style={{ color: WA.muted }}>
+				{t.configHelpIntro}
+			</p>
+			<ol className="mt-2 list-decimal space-y-1.5 ps-4" style={{ color: WA.text }}>
+				{steps.map(step => (
+					<li key={step}>{step}</li>
+				))}
+			</ol>
+			<a
+				href="https://developers.facebook.com/apps/"
+				target="_blank"
+				rel="noreferrer"
+				className="mt-3 inline-flex text-[12px] font-semibold underline-offset-2 hover:underline"
+				style={{ color: WA.greenText }}
+			>
+				{t.configHelpOpenConsole}
+			</a>
+		</div>
+	);
 }
 
 function Avatar({ name, size = 48 }) {
@@ -2182,8 +2202,7 @@ export default function MetaWhatsAppWorkspace() {
 	const [validating, setValidating] = useState(false);
 
 	const [form, setForm] = useState(emptyConfigForm);
-	const configDraftReady = useRef(false);
-	const configDraftTimer = useRef(null);
+	const [configHelpOpen, setConfigHelpOpen] = useState(true);
 
 	const [q, setQ] = useState('');
 	const [filter, setFilter] = useState('all');
@@ -2282,19 +2301,17 @@ export default function MetaWhatsAppWorkspace() {
 		if (params.get('tab') === 'settings') setConfigOpen(true);
 	}, []);
 
-	useEffect(() => {
-		if (!configDraftReady.current) return undefined;
-		clearTimeout(configDraftTimer.current);
-		configDraftTimer.current = setTimeout(() => writeConfigDraft(form), 200);
-		return () => clearTimeout(configDraftTimer.current);
-	}, [form]);
-
 	const loadStatus = useCallback(async () => {
 		const data = await metaWhatsAppApi.status();
 		setStatus(data);
-		const localDraft = readConfigDraft();
-		setForm(mergeConfigForm(data, localDraft));
-		configDraftReady.current = true;
+		setForm(formFromServerStatus(data));
+		if (typeof window !== 'undefined') {
+			try {
+				window.localStorage.removeItem('so7ba.meta-whatsapp.config.draft');
+			} catch {
+				/* ignore */
+			}
+		}
 		if (!data.hasAccessToken || !data.enabled) setConfigOpen(true);
 		return data;
 	}, []);
@@ -2622,7 +2639,6 @@ export default function MetaWhatsAppWorkspace() {
 			verifyToken: data.verifyToken || form.verifyToken || '',
 		};
 		setForm(next);
-		writeConfigDraft(next);
 		return data;
 	}
 
@@ -2664,11 +2680,7 @@ export default function MetaWhatsAppWorkspace() {
 			setStatus(nextStatus);
 			if (nextStatus?.wabaId || data.wabaId) {
 				const resolvedWaba = nextStatus?.wabaId || data.wabaId;
-				setForm(f => {
-					const next = { ...f, wabaId: resolvedWaba };
-					writeConfigDraft(next);
-					return next;
-				});
+				setForm(f => ({ ...f, wabaId: resolvedWaba }));
 			}
 			setFlash(
 				data.wabaAutoResolved
@@ -5711,13 +5723,28 @@ export default function MetaWhatsAppWorkspace() {
 				<div className="absolute inset-0 z-30 flex justify-end bg-[rgba(11,20,26,0.35)]" onClick={() => setConfigOpen(false)}>
 					<aside className="flex h-full w-full max-w-md flex-col overflow-y-auto border-s" style={{ background: WA.panel, borderColor: WA.border }} onClick={e => e.stopPropagation()}>
 						<header className="flex items-start justify-between gap-3 border-b px-5 py-4" style={{ borderColor: WA.border, background: WA.header }}>
-							<div>
-								<h2 className="text-lg font-semibold">{t.configTitle}</h2>
+							<div className="min-w-0 flex-1">
+								<div className="flex items-center gap-1.5">
+									<h2 className="text-lg font-semibold">{t.configTitle}</h2>
+									<button
+										type="button"
+										onClick={() => setConfigHelpOpen(open => !open)}
+										aria-expanded={configHelpOpen}
+										aria-label={t.configHelpAria}
+										title={t.configHelpAria}
+										className={`grid h-8 w-8 shrink-0 place-items-center rounded-full transition ${
+											configHelpOpen ? 'bg-[#D9FDD3] text-[#008069]' : 'text-[#54656F] hover:bg-black/[0.06]'
+										}`}
+									>
+										<Info className="h-4 w-4" />
+									</button>
+								</div>
 								<p className="mt-1 text-[12px] text-[#667781]">{t.configSubtitle}</p>
 							</div>
 							<button type="button" onClick={() => setConfigOpen(false)} className="p-2 text-[#54656F]"><X className="h-4 w-4" /></button>
 						</header>
 						<div className="space-y-4 p-5">
+							{configHelpOpen ? <ConfigSetupGuide t={t} /> : null}
 							<span className="inline-flex rounded-full px-3 py-1 text-[11px] font-semibold" style={{ background: status?.enabled ? WA.greenSoft : '#FFF3C7', color: status?.enabled ? '#008069' : '#54656F' }}>
 								{status?.enabled ? t.enabled : t.disabled} · {connectionLabel}
 								{status?.displayPhoneNumber ? ` · ${status.displayPhoneNumber}` : ''}
@@ -5739,6 +5766,7 @@ export default function MetaWhatsAppWorkspace() {
 									t={t}
 									mono
 									required
+									hint={t.phoneIdHint}
 								/>
 								<ConfigField
 									label={t.wabaId}
@@ -5757,6 +5785,7 @@ export default function MetaWhatsAppWorkspace() {
 									mono
 									required
 									saved={Boolean(status?.hasVerifyToken || status?.verifyToken)}
+									hint={t.verifyTokenHint}
 									onGenerate={() => setForm(f => ({ ...f, verifyToken: randomVerifyToken() }))}
 								/>
 								<ConfigField
@@ -5781,6 +5810,7 @@ export default function MetaWhatsAppWorkspace() {
 									t={t}
 									type="password"
 									required
+									hint={t.appSecretHint}
 									saved={Boolean(status?.hasAppSecret)}
 									placeholder={
 										status?.hasAppSecret

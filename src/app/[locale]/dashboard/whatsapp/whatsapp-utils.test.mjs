@@ -146,16 +146,27 @@ test('pinned conversations stay above newer activity', () => {
 	);
 });
 
-test('conversationTitle follows group/contact/provider precedence', () => {
+test('conversationTitle prefers alias names and formats the phone otherwise', () => {
 	assert.equal(conversationTitle({ group: { subject: 'Support' } }), 'Support');
 	assert.equal(conversationTitle({ contact: { name: 'Ahmed' } }), 'Ahmed');
-	assert.equal(conversationTitle({ providerChatId: '201000000000@c.us' }), '201000000000');
+	assert.equal(
+		conversationTitle({ providerChatId: '201000000000@c.us' }),
+		'+201000000000',
+	);
 	assert.equal(
 		conversationTitle({
 			providerChatId: '26934293586114@lid',
 			contact: { name: '26934293586114', phoneNumber: '201090998111' },
 		}),
-		'201090998111',
+		'+201090998111',
+	);
+	assert.equal(
+		conversationTitle({
+			type: 'group',
+			providerChatId: '120363163799333272@g.us',
+			group: { subject: '120363163799333272' },
+		}),
+		'Group',
 	);
 	assert.equal(conversationTitle(null), 'Chat');
 });

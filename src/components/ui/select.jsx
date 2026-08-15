@@ -69,7 +69,7 @@ function SelectTrigger({ className, size = "default", children, ...props }) {
 		>
 			{/* subtle inner glow */}
 			<span className="pointer-events-none absolute inset-0 rounded-lg bg-gradient-to-b from-white/30 to-transparent opacity-0 transition-opacity duration-200 dark:from-white/10 group-hover:opacity-100" />
-			<span className="relative  z-10 flex min-w-0   items-center">{children}</span>
+			<span className="relative z-10 flex min-w-0 flex-1 items-center">{children}</span>
 
 			<SelectPrimitive.Icon asChild>
 				<ChevronDownIcon className="relative z-10 size-4 opacity-70 transition-transform duration-200 data-[state=open]:rotate-180" />
@@ -179,7 +179,7 @@ function SelectItem({
 			data-slot="select-item"
 			className={cn(
 				[
-					"group relative rtl:flex-row-reverse flex w-full cursor-default select-none items-center gap-2 rounded-lg px-3 py-2 text-sm outline-none",
+					"group relative rtl:flex-row-reverse flex w-full cursor-default select-none items-center gap-2 rounded-lg py-2 pe-8 ps-3 text-sm outline-none",
 					"transition-colors",
 					"focus:bg-accent focus:text-accent-foreground",
 					"data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
@@ -189,6 +189,9 @@ function SelectItem({
 			{...props}
 		>
 
+			<SelectPrimitive.ItemIndicator className="absolute end-2 flex size-4 items-center justify-center">
+				<CheckIcon className="size-3.5 text-primary" />
+			</SelectPrimitive.ItemIndicator>
 			<SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
 
 			{/* subtle hover highlight */}

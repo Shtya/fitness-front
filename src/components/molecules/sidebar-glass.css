@@ -369,3 +369,206 @@ html[dir='rtl'] .sidebar-shell.sidebar-glass.is-mobile-drawer {
 	flex-shrink: 0;
 }
 
+/* ── Compact top nav (< 5 allowed pages) ─────────────────────── */
+.compact-dash-nav {
+	margin: 0.55rem 0.65rem 0;
+	border-radius: 1.15rem !important;
+	overflow: hidden;
+}
+
+.compact-dash-nav__bar {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	padding: 0.55rem 0.7rem;
+	min-height: 3.4rem;
+}
+
+.compact-dash-nav__brand {
+	display: flex;
+	align-items: center;
+	gap: 0.55rem;
+	min-width: 0;
+	flex-shrink: 0;
+	padding-inline-end: 0.35rem;
+}
+
+.compact-dash-nav__logo {
+	height: 2.15rem;
+	width: auto;
+	max-width: 7.5rem;
+	object-fit: contain;
+}
+
+.compact-dash-nav__avatar {
+	display: grid;
+	place-items: center;
+	width: 2.15rem;
+	height: 2.15rem;
+	border-radius: 0.7rem;
+	font-size: 0.7rem;
+	font-weight: 800;
+	color: #fff;
+	letter-spacing: 0.03em;
+	background: linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to));
+	box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--color-primary-500) 45%, transparent);
+}
+
+.compact-dash-nav__app {
+	font-size: 0.78rem;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	color: var(--color-primary-900, #0f172a);
+	line-height: 1.15;
+}
+
+.compact-dash-nav__user {
+	font-size: 0.62rem;
+	font-weight: 600;
+	color: color-mix(in srgb, var(--color-primary-700) 70%, transparent);
+	max-width: 7rem;
+}
+
+.compact-dash-nav__items {
+	display: flex;
+	align-items: center;
+	gap: 0.3rem;
+	flex: 1;
+	min-width: 0;
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+	padding-block: 0.15rem;
+}
+
+.compact-dash-nav__items::-webkit-scrollbar {
+	display: none;
+}
+
+.compact-dash-nav__link {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	flex-shrink: 0;
+	border-radius: 0.75rem;
+	padding: 0.4rem 0.65rem;
+	font-size: 0.75rem;
+	font-weight: 650;
+	color: color-mix(in srgb, var(--color-primary-700) 72%, #64748b);
+	border: 1px solid transparent;
+	transition: background 0.16s, box-shadow 0.16s, color 0.16s, border-color 0.16s;
+	white-space: nowrap;
+}
+
+.compact-dash-nav__link:hover {
+	background: color-mix(in srgb, var(--color-primary-500) 6%, #fff);
+	border-color: color-mix(in srgb, var(--color-primary-300) 35%, transparent);
+	color: var(--color-primary-800);
+}
+
+.compact-dash-nav__link.is-active {
+	background: #fff;
+	color: var(--color-primary-800);
+	border-color: color-mix(in srgb, var(--color-primary-200) 70%, transparent);
+	box-shadow: 0 4px 14px -6px color-mix(in srgb, var(--color-primary-500) 28%, transparent);
+}
+
+.compact-dash-nav__icon {
+	display: grid;
+	place-items: center;
+	width: 1.7rem;
+	height: 1.7rem;
+	border-radius: 0.55rem;
+	flex-shrink: 0;
+	background: color-mix(in srgb, var(--color-primary-500) 8%, transparent);
+	color: var(--color-primary-500);
+}
+
+.compact-dash-nav__icon.is-active {
+	background: linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to));
+	color: #fff;
+	box-shadow: 0 3px 10px -3px color-mix(in srgb, var(--color-primary-500) 45%, transparent);
+}
+
+.compact-dash-nav__label {
+	line-height: 1.1;
+}
+
+.compact-dash-nav__actions {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	flex-shrink: 0;
+	padding-inline-start: 0.25rem;
+	border-inline-start: 1px solid color-mix(in srgb, var(--color-primary-200) 55%, transparent);
+	margin-inline-start: 0.15rem;
+	padding-inline-start: 0.55rem;
+}
+
+.compact-dash-nav__role {
+	font-size: 0.58rem;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--color-primary-400);
+	max-width: 5.5rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.compact-dash-nav__lang {
+	display: flex;
+	align-items: center;
+}
+
+.compact-dash-nav__logout {
+	display: grid;
+	place-items: center;
+	width: 2.35rem;
+	height: 2.35rem;
+	border-radius: 0.75rem;
+	color: #fff;
+	background: linear-gradient(
+		135deg,
+		color-mix(in srgb, var(--tenant-danger, #ef4444) 88%, #fff),
+		var(--tenant-danger, #ef4444)
+	);
+	box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--tenant-danger, #ef4444) 45%, transparent);
+	transition: filter 0.15s, transform 0.15s;
+}
+
+.compact-dash-nav__logout:hover {
+	filter: brightness(1.05);
+}
+
+.compact-dash-nav__logout:active {
+	transform: scale(0.96);
+}
+
+@media (max-width: 640px) {
+	.compact-dash-nav {
+		margin: 0.4rem 0.45rem 0;
+		border-radius: 1rem !important;
+	}
+
+	.compact-dash-nav__bar {
+		gap: 0.4rem;
+		padding: 0.45rem 0.5rem;
+	}
+
+	.compact-dash-nav__user,
+	.compact-dash-nav__label {
+		display: none;
+	}
+
+	.compact-dash-nav__link {
+		padding: 0.35rem;
+	}
+
+	.compact-dash-nav__brand {
+		max-width: 7.5rem;
+	}
+}
+

@@ -75,6 +75,7 @@ import TranscriptionDialog from '../transcript/transcription-dialog';
 import { createTranscriptionFile } from '../transcript/transcription-client';
 import {
 	conversationTitle,
+	conversationAvatarUrl,
 	firstMessageLink,
 	getStoryMediaEmbed,
 	groupConsecutiveImageMessages,
@@ -729,7 +730,7 @@ const CONVERSATIONS_CACHE_TTL = WHATSAPP_STALE_TIME;
 // deliver live rows. Re-fetch DB quietly when TTL expires.
 const MESSAGES_CACHE_TTL = 5 * 60_000;
 const STATUSES_CACHE_TTL = 60_000;
-const MESSAGE_PAGE_SIZE = 50;
+const MESSAGE_PAGE_SIZE = 100;
 
 function DeliveryTicks({ message, size = 13, className = '' }) {
 	const state = messageDeliveryState(message);
@@ -961,9 +962,16 @@ function avatarPlaceholderStyle(seed = '') {
 	return AVATAR_PLACEHOLDER_STYLES[hash % AVATAR_PLACEHOLDER_STYLES.length];
 }
 
-function ImageMessage({ url, alt, onOpen, className = '' }) {
+function ImageMessage({ url, alt, onOpen, className = '', previewUrl = null, loading = false }) {
 	const [loaded, setLoaded] = useState(false);
 	const [broken, setBroken] = useState(false);
+
+	useEffect(() => {
+		setLoaded(false);
+		setBroken(false);
+	}, [url]);
+
+	const placeholder = previewUrl && previewUrl !== url ? previewUrl : null;
 
 	return (
 		<button
@@ -973,7 +981,15 @@ function ImageMessage({ url, alt, onOpen, className = '' }) {
 			disabled={broken}
 			className={`group relative block h-full min-h-36 w-full overflow-hidden bg-slate-100 dark:bg-slate-800 ${className}`}
 		>
-			{!loaded && !broken && (
+			{placeholder ? (
+				<img
+					src={placeholder}
+					alt=""
+					aria-hidden="true"
+					className="absolute inset-0 h-full w-full object-cover"
+				/>
+			) : null}
+			{!loaded && !broken && !placeholder && (
 				<div className="absolute inset-0 animate-pulse bg-linear-to-br from-slate-200 to-slate-100 dark:from-slate-700 dark:to-slate-800" />
 			)}
 			{broken ? (
@@ -986,14 +1002,19 @@ function ImageMessage({ url, alt, onOpen, className = '' }) {
 					alt={alt}
 					onLoad={() => setLoaded(true)}
 					onError={() => {
-						setBroken(true);
+						setBroken(!placeholder);
 						setLoaded(false);
 					}}
-					className={`h-full max-h-72 w-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+					className={`relative z-[1] h-full max-h-72 w-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
 				/>
 			)}
+			{loading && !loaded && (
+				<span className="absolute end-2 top-2 z-[2] grid h-6 w-6 place-items-center rounded-full bg-black/45 text-white">
+					<Loader2 size={14} className="animate-spin" />
+				</span>
+			)}
 			{!broken && (
-				<div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-200 group-hover:bg-black/25 group-hover:opacity-100">
+				<div className="absolute inset-0 z-[2] flex items-center justify-center bg-black/0 opacity-0 transition-all duration-200 group-hover:bg-black/25 group-hover:opacity-100">
 					<span className="rounded-full bg-black/50 p-2 text-white">
 						<Maximize2 size={16} />
 					</span>
@@ -1131,7 +1152,7 @@ async function fetchAttachmentContentBlob(attachmentId, { timeout = 60_000 } = {
 // request at once, which saturated the browser connection pool and made each
 // one time out. Requests are therefore deduped per attachment and drained a few
 // at a time, with playback/open actions jumping ahead of background prefetches.
-const ATTACHMENT_FETCH_CONCURRENCY = 3;
+const ATTACHMENT_FETCH_CONCURRENCY = 6;
 const ATTACHMENT_BLOB_CACHE_LIMIT = 80;
 const attachmentBlobCache = new Map();
 const attachmentBlobRequests = new Map();
@@ -2103,7 +2124,7 @@ export function MediaAttachment({
 			return undefined;
 		}
 		if (!isNearViewport) return undefined;
-		setLoading(true);
+		if (!url) setLoading(true);
 		setFailed(false);
 		loadAttachmentBlob()
 			.then(blob => {
@@ -2134,8 +2155,10 @@ export function MediaAttachment({
 			});
 		return () => {
 			cancelled = true;
-			if (type === 'image' || type === 'sticker') onImageReady?.(attachment.id, null);
-			if (objectUrl) URL.revokeObjectURL(objectUrl);
+			if (objectUrl) {
+				const stale = objectUrl;
+				window.setTimeout(() => URL.revokeObjectURL(stale), 8_000);
+			}
 		};
 	}, [
 		attachment?.id,
@@ -2256,33 +2279,41 @@ export function MediaAttachment({
 		);
 	}
 
-	if (loading) {
-		if (type === 'image' || type === 'sticker') {
-			return (
-				<div
-					ref={containerRef}
-					className={
-						isGallery
-							? `wa-media-skeleton absolute inset-0 animate-pulse overflow-hidden bg-black/10 dark:bg-white/10 ${className}`
-							: `wa-media-skeleton mb-2 h-40 max-w-[260px] animate-pulse overflow-hidden rounded-xl bg-black/10 dark:bg-white/10 ${className}`
-					}
-					aria-label={labels.loadingMedia}
-				>
-					{previewDataUrl ? (
-						<img
-							src={previewDataUrl}
-							alt=""
-							aria-hidden="true"
-							className="h-full w-full scale-110 object-cover opacity-50 blur-[2px]"
-						/>
-					) : null}
-				</div>
-			);
-		}
+	if ((type === 'image' || type === 'sticker') && (url || previewDataUrl)) {
 		return (
 			<div
 				ref={containerRef}
-				className={`mb-2 flex items-center gap-2 rounded-lg px-2 py-2 text-xs bg-black/5`}
+				className={
+					isGallery
+						? `absolute inset-0 overflow-hidden ${className}`
+						: `relative mb-2 max-w-[260px] overflow-hidden rounded-xl ${className}`
+				}
+			>
+				<ImageMessage
+					url={url || previewDataUrl}
+					previewUrl={url ? previewDataUrl : null}
+					loading={Boolean(loading && !url)}
+					alt={attachment.fileName || 'image'}
+					onOpen={() => {
+						if (url) {
+							onOpenImage?.(attachment.id);
+							return;
+						}
+						autoRetryCountRef.current = 0;
+						setFailed(false);
+						setRetryNonce(value => value + 1);
+					}}
+					className={`${type === 'sticker' ? 'wa-sticker-asset' : 'wa-photo-asset'}`}
+				/>
+			</div>
+		);
+	}
+
+	if (loading) {
+		return (
+			<div
+				ref={containerRef}
+				className={`mb-2 flex items-center gap-2 rounded-lg px-2 py-2 text-xs bg-black/5 ${className}`}
 			>
 				<Loader2 size={14} className="animate-spin" />
 				<span>{labels.loadingMedia}</span>
@@ -2306,14 +2337,6 @@ export function MediaAttachment({
 						: 'wa-media-unavailable mb-2 flex max-w-[260px] items-center gap-2.5 overflow-hidden rounded-xl border border-black/5 bg-black/[0.04] px-3 py-2.5 text-start text-xs text-slate-600'
 				}
 			>
-				{previewDataUrl ? (
-					<img
-						src={previewDataUrl}
-						alt=""
-						aria-hidden="true"
-						className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-[1.5px]"
-					/>
-				) : null}
 				<span
 					className={`relative z-[1] grid place-items-center rounded-full ${
 						isGallery
@@ -2323,8 +2346,6 @@ export function MediaAttachment({
 				>
 					{type === 'audio' || type === 'ptt' ? (
 						<Mic size={isGallery ? 18 : 16} className="shrink-0" />
-					) : type === 'image' || type === 'sticker' ? (
-						<ImageIcon size={isGallery ? 18 : 16} className="shrink-0" />
 					) : type === 'video' ? (
 						<Video size={isGallery ? 18 : 16} className="shrink-0" />
 					) : (
@@ -2350,6 +2371,7 @@ export function MediaAttachment({
 		return (
 			<ImageMessage
 				url={url}
+				previewUrl={previewDataUrl}
 				alt={attachment.fileName || 'image'}
 				onOpen={() => onOpenImage?.(attachment.id)}
 				className={`${className} ${type === 'sticker' ? 'wa-sticker-asset' : 'wa-photo-asset'}`}
@@ -2695,7 +2717,7 @@ function ConversationActionMenu({
 					<Avatar
 						label={conversationTitle(conversation)}
 						size={12}
-						src={conversation.contact?.avatarUrl}
+						src={conversationAvatarUrl(conversation)}
 						isGroup={conversation.type === 'group'}
 					/>
 					<div className="min-w-0 flex-1">
@@ -4817,8 +4839,13 @@ function WhatsAppWorkspaceContent() {
 	// refetching the whole list — avoids the flicker/scroll-jump of a full reload
 	// for the common case of "a new message arrived somewhere in this account".
 	const applyConversationPreview = useCallback(payload => {
+		const openId = conversationIdRef.current;
+		const nextPayload =
+			openId && payload?.conversationId === openId
+				? { ...payload, unreadCount: 0 }
+				: payload;
 		setConversations(current => {
-			const next = updateConversationPreview(current, payload);
+			const next = updateConversationPreview(current, nextPayload);
 			if (next === current) return current;
 			const currentAccountId = accountIdRef.current;
 			const cached = currentAccountId ? conversationsCacheRef.current.get(currentAccountId) : null;
@@ -4985,7 +5012,7 @@ function WhatsAppWorkspaceContent() {
 			// WhatsApp Web model: warm in-memory thread opens instantly.
 			// Provider history sync is NOT re-run on every open — live rows
 			// arrive via socket; Postgres is the durable cache.
-			if (cacheIsFresh && !forceProvider) {
+			if (cacheIsFresh && !forceProvider && cached.items.length >= MESSAGE_PAGE_SIZE) {
 				if (canSync) {
 					api
 						.post(`/whatsapp/conversations/${id}/read`)
@@ -5036,11 +5063,7 @@ function WhatsAppWorkspaceContent() {
 				items,
 				hasMore: initialHasMore,
 				cachedAt: Date.now(),
-				// Local DB rows mean the thread is hydrated — no WA Web pull needed.
-				providerHydratedAt:
-					items.length > 0
-						? Date.now()
-						: currentCache?.providerHydratedAt || cached?.providerHydratedAt || 0,
+				providerHydratedAt: currentCache?.providerHydratedAt || cached?.providerHydratedAt || 0,
 			});
 			writeConversationMessages(id, current => mergeMessages(current, items, id));
 			if (items.length > 0 && isCurrentRequest()) {
@@ -5081,11 +5104,12 @@ function WhatsAppWorkspaceContent() {
 
 			const historySyncBlocked =
 				Date.now() < providerHistorySyncBlockedUntilRef.current;
-			// WA Web model: Postgres + memory are the source of truth for history.
-			// Provider sync only for never-hydrated (empty) threads — never when we
-			// already have local rows. Live messages arrive via socket onMessage.
+			// Pull WhatsApp history whenever this thread is still short. A single
+			// leftover DB row used to skip sync and leave the chat looking empty.
 			const needsProviderBackfill =
-				canSync && items.length === 0 && (!historySyncBlocked || forceProvider);
+				canSync &&
+				items.length < MESSAGE_PAGE_SIZE &&
+				(!historySyncBlocked || forceProvider);
 			if (needsProviderBackfill) {
 				// Show whatever we already have in DB immediately. Only keep the
 				// full-pane spinner on the first empty-chat attempt — retries use
@@ -5385,6 +5409,10 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		setHasMoreMessages(true);
+		if (!isDemoId(conversationId)) {
+			setConversationUnreadCount(conversationId, 0);
+			notifyWhatsAppUnreadChanged();
+		}
 		loadMessages(conversationId, canUseWhatsApp && !demo.settings.enabled).catch(() => { });
 		if (selectedConversationSource === 'real_overlay') {
 			markRuntimeReadRef.current?.(selectedDemoRuntimeId);
@@ -5398,6 +5426,7 @@ function WhatsAppWorkspaceContent() {
 		loadMessages,
 		selectedDemoRuntimeId,
 		selectedConversationSource,
+		setConversationUnreadCount,
 	]);
 
 	useEffect(() => {
@@ -5512,11 +5541,20 @@ function WhatsAppWorkspaceContent() {
 		socket.on('connect', rewatchRooms);
 		socket.on('whatsapp:event', event => {
 			// Defense in depth: conversation events now carry accountId too.
-			if (event.accountId && event.accountId !== accountId) return;
+			const watchedAccountId = accountIdRef.current || accountId;
+			if (event.accountId && watchedAccountId && event.accountId !== watchedAccountId) return;
 			const activeConversationId = conversationIdRef.current;
-			if (event.event === 'message' && event.conversationId) {
-				const targetConversationId = event.conversationId;
+			const eventConversationId = event.conversationId || event.payload?.conversationId;
+			if (event.event === 'message' && eventConversationId) {
+				const targetConversationId = eventConversationId;
 				const previous = messagesCacheRef.current.get(targetConversationId);
+				const incomingId = String(event.payload?.id || '');
+				const incomingProviderId = String(event.payload?.providerMessageId || '');
+				const alreadyKnown = (previous?.items || []).some(
+					item =>
+						(incomingId && item.id === incomingId) ||
+						(incomingProviderId && item.providerMessageId === incomingProviderId),
+				);
 				// Keep the cache warm even for chats that are not open, so
 				// reopening them shows the new message without a round trip.
 				const nextCached = mergeMessages(
@@ -5540,10 +5578,17 @@ function WhatsAppWorkspaceContent() {
 						mergeMessages(current, [event.payload], targetConversationId),
 					);
 				}
+				if (targetConversationId === activeConversationId) {
+					setConversationUnreadCount(targetConversationId, 0);
+					api
+						.post(`/whatsapp/conversations/${targetConversationId}/read`)
+						.then(() => notifyWhatsAppUnreadChanged())
+						.catch(() => { });
+				}
 				const inbound =
 					event.payload?.direction === 'inbound' ||
 					event.payload?.fromMe === false;
-				if (inbound) {
+				if (inbound && !alreadyKnown && targetConversationId !== activeConversationId) {
 					const peer = conversationsRef.current.find(
 						item => item.id === targetConversationId,
 					);
@@ -5575,7 +5620,7 @@ function WhatsAppWorkspaceContent() {
 			}
 			if (
 				event.event === 'message_status' &&
-				event.conversationId === activeConversationId
+				eventConversationId === activeConversationId
 			) {
 				writeConversationMessages(activeConversationId, current => {
 					const pid = event.payload?.messageId || event.payload?.providerMessageId || event.payload?.clientMessageId;
@@ -5598,7 +5643,7 @@ function WhatsAppWorkspaceContent() {
 			}
 			if (
 				event.event === 'message_reactions' &&
-				event.conversationId === activeConversationId
+				eventConversationId === activeConversationId
 			) {
 				updateCachedMessage(
 					activeConversationId,
@@ -5608,7 +5653,7 @@ function WhatsAppWorkspaceContent() {
 			}
 			if (
 				event.event === 'message_updated' &&
-				event.conversationId === activeConversationId
+				eventConversationId === activeConversationId
 			) {
 				updateCachedMessage(
 					activeConversationId,
@@ -5641,14 +5686,13 @@ function WhatsAppWorkspaceContent() {
 			}
 			if (event.event === 'conversation_read') {
 				setConversationUnreadCount(
-					event.conversationId || event.payload?.conversationId,
+					eventConversationId || event.payload?.conversationId,
 					0,
 				);
 				notifyWhatsAppUnreadChanged();
 			}
 			if (event.event === 'presence') {
-				const targetId =
-					event.conversationId || event.payload?.conversationId || null;
+				const targetId = eventConversationId || null;
 				if (!targetId) return;
 				const typing = Boolean(
 					event.payload?.typing ||
@@ -8778,7 +8822,7 @@ function WhatsAppWorkspaceContent() {
 																			label={title}
 																			size={12}
 																			isGroup={isGroup}
-																			src={conversation.contact?.avatarUrl}
+																			src={conversationAvatarUrl(conversation)}
 																			className="!ring-0"
 																		/>
 																	</button>
@@ -8788,7 +8832,7 @@ function WhatsAppWorkspaceContent() {
 																	label={title}
 																	size={14}
 																	isGroup={isGroup}
-																	src={conversation.contact?.avatarUrl}
+																	src={conversationAvatarUrl(conversation)}
 																/>
 															)}
 														</div>
@@ -8929,7 +8973,7 @@ function WhatsAppWorkspaceContent() {
 													label={conversationTitle(selectedConversation)}
 													size={6}
 													isGroup={selectedConversation.type === 'group'}
-													src={selectedConversation.contact?.avatarUrl}
+													src={conversationAvatarUrl(selectedConversation)}
 												/>
 											</div>
 											<div className="wa-chat-contact min-w-0">
@@ -9410,7 +9454,7 @@ function WhatsAppWorkspaceContent() {
 																				onImageReady={registerChatImage}
 																				onOpenImage={setActiveChatImageId}
 																				voiceAvatarLabel={mine ? selectedAccount?.label : conversationTitle(selectedConversation)}
-																				voiceAvatarSrc={mine ? '' : selectedConversation.contact?.avatarUrl}
+																				voiceAvatarSrc={mine ? '' : conversationAvatarUrl(selectedConversation)}
 																				sessionReady={isAccountConnected}
 																			/>
 																		)
@@ -10816,7 +10860,7 @@ function WhatsAppWorkspaceContent() {
 							<button type="button" onClick={() => setConversationInfoTarget(null)} className="rounded-full p-2 hover:bg-slate-100"><X size={18} /></button>
 						</div>
 						<div className="mt-4 flex flex-col items-center text-center">
-							<Avatar label={conversationTitle(conversationInfoTarget)} size={20} src={conversationInfoTarget.contact?.avatarUrl} isGroup={conversationInfoTarget.type === 'group'} />
+							<Avatar label={conversationTitle(conversationInfoTarget)} size={20} src={conversationAvatarUrl(conversationInfoTarget)} isGroup={conversationInfoTarget.type === 'group'} />
 							<h4 className="mt-3 text-xl font-bold">{conversationTitle(conversationInfoTarget)}</h4>
 							<p className="text-sm text-[#667781]">
 								{conversationInfoTarget.contact?.phoneNumber ||
@@ -10860,7 +10904,7 @@ function WhatsAppWorkspaceContent() {
 										disabled={pendingMessageActions.has(forwardingMessage.id)}
 										className="flex w-full items-center gap-3 rounded-xl p-3 text-start hover:bg-slate-100 disabled:opacity-50"
 									>
-										<Avatar label={conversationTitle(item)} size={10} src={item.contact?.avatarUrl} isGroup={item.type === 'group'} />
+										<Avatar label={conversationTitle(item)} size={10} src={conversationAvatarUrl(item)} isGroup={item.type === 'group'} />
 										<span className="min-w-0 flex-1 truncate font-semibold">{conversationTitle(item)}</span>
 										<Send size={18} className="text-[#00a884]" />
 									</button>

@@ -129,27 +129,57 @@ export function messageDeliveryState(message) {
 	return 'sent';
 }
 
+function isWeakConversationLabel(value, chatId, phone) {
+	const n = String(value || '').trim();
+	if (!n) return true;
+	const stripped = n.replace(/@(c\.us|s\.whatsapp\.net|g\.us|lid|hosted\.lid)$/i, '');
+	const lidUser = String(chatId || '').includes('@')
+		? String(chatId).split('@')[0]
+		: '';
+	const phoneDigits = String(phone || '').replace(/\D/g, '');
+	if (phoneDigits && stripped.replace(/\D/g, '') === phoneDigits) return true;
+	if (lidUser && (n === lidUser || stripped === lidUser)) return true;
+	if (/^\+?\d[\d\s-]{6,32}$/.test(stripped) && !/[A-Za-z\u0600-\u06ff]/.test(stripped)) {
+		return true;
+	}
+	return false;
+}
+
+export function formatWhatsAppPhone(phone) {
+	const digits = String(phone || '').replace(/\D/g, '');
+	if (!digits) return '';
+	if (digits.startsWith('00')) return `+${digits.slice(2)}`;
+	return `+${digits}`;
+}
+
+export function conversationAvatarUrl(conversation) {
+	return String(
+		conversation?.contact?.avatarUrl || conversation?.group?.avatarUrl || '',
+	).trim();
+}
+
 export function conversationTitle(conversation) {
 	const chatId = String(conversation?.providerChatId || '');
+	const isGroup =
+		conversation?.type === 'group' || chatId.endsWith('@g.us');
 	const phone = String(conversation?.contact?.phoneNumber || '').trim();
 	const contactName = String(conversation?.contact?.name || '').trim();
 	const groupSubject = String(conversation?.group?.subject || '').trim();
-	const lidUser = chatId.includes('@') ? chatId.split('@')[0] : '';
-	const nameLooksLikeId =
-		!contactName ||
-		contactName === phone ||
-		(lidUser && contactName === lidUser) ||
-		/^\d{8,20}$/.test(contactName);
-	const raw =
-		groupSubject ||
-		(!nameLooksLikeId ? contactName : '') ||
-		phone ||
-		contactName ||
-		chatId ||
-		'';
-	return String(raw)
-		.replace(/@(c\.us|s\.whatsapp\.net|g\.us|lid|hosted\.lid)$/i, '')
-		.trim() || 'Chat';
+
+	if (groupSubject && !isWeakConversationLabel(groupSubject, chatId, phone)) {
+		return groupSubject;
+	}
+	if (contactName && !isWeakConversationLabel(contactName, chatId, phone)) {
+		return contactName;
+	}
+	if (isGroup) return 'Group';
+
+	const phoneFromChat = chatId.match(/^(\d{8,15})@(c\.us|s\.whatsapp\.net)$/i);
+	return (
+		formatWhatsAppPhone(phone) ||
+		formatWhatsAppPhone(phoneFromChat?.[1]) ||
+		'Chat'
+	);
 }
 
 export function normalizeWhatsAppIdentity(value) {

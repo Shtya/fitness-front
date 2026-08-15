@@ -20,9 +20,11 @@ import { useRouter, useParams } from 'next/navigation';
 import { LogIn, LogOut, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { IMPERSONATION_EVENT, notifyImpersonationChanged } from '@/lib/impersonation';
+import { shouldUseCompactTopNav } from '@/lib/nav-access';
 import './sidebar-glass.css';
 
 const Sidebar = dynamic(() => import('./Sidebar'), { ssr: false });
+const CompactDashboardNav = dynamic(() => import('./CompactDashboardNav'), { ssr: false });
 const QuranMiniPlayer = dynamic(() => import('./QuranMiniPlayer'), { ssr: false });
 
 const LS_KEY = 'sidebar:collapsed';
@@ -209,6 +211,8 @@ export default function Layout({ children }) {
 		}
 	}, [user]);
 
+	const useCompactNav = Boolean(user && shouldUseCompactTopNav(user.allowedPages));
+
 	const isAdminOrCoach = role === 'admin' || role === 'coach';
 	const isFormRoute = (
 		pathname.startsWith('/auth') ||
@@ -244,7 +248,8 @@ export default function Layout({ children }) {
 	const isMetaWhatsAppRoute = pathname.includes('/dashboard/meta-whatsapp');
 	const isChatRoute = pathname.includes('/dashboard/chat');
 	const isAiFreeRoute = pathname.includes('/dashboard/ai-free');
-	const isImmersiveRoute = isWhatsAppRoute || isMetaWhatsAppRoute || isChatRoute || isAiFreeRoute;
+	const isAiContentStudioRoute = pathname.includes('/dashboard/ai-content-studio');
+	const isImmersiveRoute = isWhatsAppRoute || isMetaWhatsAppRoute || isChatRoute || isAiFreeRoute || isAiContentStudioRoute;
 	/** Dashboard shell (sidebar/header): lock viewport to one scroll surface */
 	const isAppShell = !isAuthRoute;
 
@@ -384,7 +389,7 @@ export default function Layout({ children }) {
 						<div className="fixed bottom-0 left-0 w-[600px] h-[600px] -z-10 opacity-20 blur-3xl" style={{ background: `radial-gradient(circle, var(--color-secondary-200), transparent 70%)` }} />
 
 						<div className={`flex w-full max-w-[100vw] overflow-hidden ${isAppShell || isPresentationRoute ? 'h-full' : ''}`}>
-							{!isAuthRoute && (
+							{!isAuthRoute && !useCompactNav && (
 								<div
 									className={`duration-300 ${sidebarOpen ? 'relative z-[120000]' : 'relative z-[100]'} ${focusMode ? 'w-0 overflow-visible' : ''}`}
 								>
@@ -409,9 +414,15 @@ export default function Layout({ children }) {
 									isAppShell ? 'flex h-full min-h-0 flex-col overflow-hidden' : 'overflow-x-hidden',
 								].filter(Boolean).join(' ')}
 								data-dashboard-content
-								data-sidebar-offset={focusMode ? 'true' : undefined}
+								data-sidebar-offset={focusMode && !useCompactNav ? 'true' : undefined}
+								data-compact-nav={useCompactNav ? 'true' : undefined}
 							>
-								{!isAuthRoute && (
+								{!isAuthRoute && useCompactNav && (
+									<div className="shrink-0">
+										<CompactDashboardNav />
+									</div>
+								)}
+								{!isAuthRoute && !useCompactNav && (
 									<div
 										className={[
 											'max-[1025px]:block hidden shrink-0',
