@@ -10,6 +10,7 @@ import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import {
 	Activity,
 	AlertCircle,
+	AudioLines,
 	AlertTriangle,
 	ArrowDownLeft,
 	ArrowUpRight,
@@ -962,7 +963,15 @@ function avatarPlaceholderStyle(seed = '') {
 	return AVATAR_PLACEHOLDER_STYLES[hash % AVATAR_PLACEHOLDER_STYLES.length];
 }
 
-function ImageMessage({ url, alt, onOpen, className = '', previewUrl = null, loading = false }) {
+function ImageMessage({
+	url,
+	alt,
+	onOpen,
+	className = '',
+	previewUrl = null,
+	loading = false,
+	cover = true,
+}) {
 	const [loaded, setLoaded] = useState(false);
 	const [broken, setBroken] = useState(false);
 
@@ -972,6 +981,7 @@ function ImageMessage({ url, alt, onOpen, className = '', previewUrl = null, loa
 	}, [url]);
 
 	const placeholder = previewUrl && previewUrl !== url ? previewUrl : null;
+	const fitClass = cover ? 'h-full w-full object-cover' : 'h-auto max-h-[280px] w-full object-contain';
 
 	return (
 		<button
@@ -979,21 +989,21 @@ function ImageMessage({ url, alt, onOpen, className = '', previewUrl = null, loa
 			aria-label={alt || 'Open image preview'}
 			onClick={broken ? undefined : onOpen}
 			disabled={broken}
-			className={`group relative block h-full min-h-36 w-full overflow-hidden bg-slate-100 dark:bg-slate-800 ${className}`}
+			className={`group relative block w-full overflow-hidden bg-black/5 ${cover ? 'h-full min-h-0' : 'h-auto'} ${className}`}
 		>
 			{placeholder ? (
 				<img
 					src={placeholder}
 					alt=""
 					aria-hidden="true"
-					className="absolute inset-0 h-full w-full object-cover"
+					className={`absolute inset-0 ${fitClass}`}
 				/>
 			) : null}
 			{!loaded && !broken && !placeholder && (
-				<div className="absolute inset-0 animate-pulse bg-linear-to-br from-slate-200 to-slate-100 dark:from-slate-700 dark:to-slate-800" />
+				<div className={`animate-pulse bg-linear-to-br from-slate-200 to-slate-100 dark:from-slate-700 dark:to-slate-800 ${cover ? 'absolute inset-0' : 'h-40 w-full'}`} />
 			)}
 			{broken ? (
-				<div className="absolute inset-0 grid place-items-center bg-black/10 text-xs font-semibold text-slate-600">
+				<div className={`grid place-items-center bg-black/10 text-xs font-semibold text-slate-600 ${cover ? 'absolute inset-0' : 'h-40 w-full'}`}>
 					Media unavailable
 				</div>
 			) : (
@@ -1005,7 +1015,7 @@ function ImageMessage({ url, alt, onOpen, className = '', previewUrl = null, loa
 						setBroken(!placeholder);
 						setLoaded(false);
 					}}
-					className={`relative z-[1] h-full max-h-72 w-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+					className={`relative z-[1] transition-opacity duration-300 ${fitClass} ${loaded ? 'opacity-100' : 'opacity-0'}`}
 				/>
 			)}
 			{loading && !loaded && (
@@ -1423,7 +1433,7 @@ function seededWaveform(seed = '', count = 32) {
 	return bars;
 }
 
-function waveformPeaksFromAudioBuffer(audioBuffer, count = 28) {
+function waveformPeaksFromAudioBuffer(audioBuffer, count = 40) {
 	const channel = audioBuffer?.getChannelData?.(0);
 	if (!channel?.length) return [];
 	const blockSize = Math.max(1, Math.floor(channel.length / count));
@@ -1592,7 +1602,7 @@ function VoiceWaveform({ peaks, progress, mine, loading, onSeek }) {
 			onClick={onSeek}
 			disabled={loading}
 			aria-label="Seek voice message"
-			className="wa-voice-waveform relative flex min-w-0 flex-1 items-center disabled:opacity-60"
+			className={`wa-voice-waveform relative flex min-w-0 flex-1 items-center disabled:opacity-60`}
 		>
 			{peaks.map((height, index) => {
 				const played = peaks.length > 0 && index / peaks.length <= progress;
@@ -1650,11 +1660,30 @@ function VoiceReplyPreview({ reply }) {
 	);
 }
 
-function VoiceTranscribeButton({ label, disabled, onClick }) {
+function VoiceTranscribePanel({
+	label,
+	disabled,
+	expanded,
+	transcript,
+	onToggle,
+}) {
 	return (
-		<button type="button" onClick={onClick} disabled={disabled} className="wa-transcribe disabled:opacity-60">
-			{label}
-		</button>
+		<div className="wa-voice-transcribe">
+			<button
+				type="button"
+				onClick={onToggle}
+				disabled={disabled}
+				aria-expanded={expanded}
+				className="wa-voice-transcribe-toggle disabled:opacity-60"
+			>
+				<AudioLines size={13} strokeWidth={2.25} />
+				<span>{label}</span>
+				{expanded ? <ChevronUp size={13} strokeWidth={2.4} /> : <ChevronDown size={13} strokeWidth={2.4} />}
+			</button>
+			{expanded && transcript ? (
+				<p className="wa-voice-transcript-body whitespace-pre-wrap">{transcript}</p>
+			) : null}
+		</div>
 	);
 }
 
@@ -1748,9 +1777,10 @@ function VoiceMessage({
 	const [currentTime, setCurrentTime] = useState(0);
 	const [playbackUrl, setPlaybackUrl] = useState(null);
 	const [playbackRate, setPlaybackRate] = useState(1);
-	const fallbackBars = useMemo(() => seededWaveform(seed, 32), [seed]);
+	const fallbackBars = useMemo(() => seededWaveform(seed, 40), [seed]);
 	const [bars, setBars] = useState(fallbackBars);
 	const [transcriptionOpen, setTranscriptionOpen] = useState(false);
+	const [transcriptExpanded, setTranscriptExpanded] = useState(false);
 	const [transcript, setTranscript] = useState('');
 	const [duration, setDuration] = useState(
 		Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : 0,
@@ -1960,7 +1990,7 @@ function VoiceMessage({
 	return (
 		<div
 			ref={containerRef}
-			className={`wa-voice-message mb-1 ${mine ? 'is-outgoing' : 'is-incoming'}`}
+			className={`wa-voice-message ${mine ? 'is-outgoing' : 'is-incoming'}`}
 		>
 			<audio ref={audioRef} preload="metadata" src={playbackUrl || undefined} className="hidden" />
 			<Layout>
@@ -1970,37 +2000,42 @@ function VoiceMessage({
 					loading={loadingPlayback}
 					onClick={() => void toggle()}
 				/>
-				<div className="wa-voice-track min-w-0 flex-1">
-					<VoiceWaveform
-						peaks={bars}
-						progress={progress}
-						mine={mine}
-						loading={loadingPlayback}
-						onSeek={seekTo}
-					/>
-					<span className="wa-voice-duration">
-						{loadFailed && !playbackUrl
-							? 'Failed'
-							: formatClock(currentTime > 0 ? currentTime : duration)}
-					</span>
-				</div>
+				<VoiceWaveform
+					peaks={bars}
+					progress={progress}
+					mine={mine}
+					loading={loadingPlayback}
+					onSeek={seekTo}
+				/>
+				<span className="wa-voice-duration">
+					{loadFailed && !playbackUrl
+						? 'Failed'
+						: formatClock(currentTime > 0 ? currentTime : duration)}
+				</span>
 				{playing ? <VoicePlaybackRate value={playbackRate} onChange={cyclePlaybackRate} /> : null}
 			</Layout>
-			{!mine && !transcript && (
-				<VoiceTranscribeButton
-					label={transcribeLabel}
-					disabled={!playbackUrl && !canFetchAttachment && !url}
-					onClick={() => setTranscriptionOpen(true)}
-				/>
-			)}
-			{transcript && (
-				<p className="wa-transcript mt-1.5 whitespace-pre-wrap text-[13px] leading-relaxed">{transcript}</p>
-			)}
+			<VoiceTranscribePanel
+				label={transcribeLabel}
+				disabled={!playbackUrl && !canFetchAttachment && !url}
+				expanded={transcriptExpanded}
+				transcript={transcript}
+				onToggle={() => {
+					if (!transcript) {
+						setTranscriptExpanded(true);
+						setTranscriptionOpen(true);
+						return;
+					}
+					setTranscriptExpanded(current => !current);
+				}}
+			/>
 			<TranscriptionDialog
 				open={transcriptionOpen}
 				onOpenChange={setTranscriptionOpen}
 				loadFile={loadTranscriptionFile}
-				onCompleted={text => setTranscript(String(text || '').trim())}
+				onCompleted={text => {
+					setTranscript(String(text || '').trim());
+					setTranscriptExpanded(true);
+				}}
 			/>
 		</div>
 	);
@@ -2286,7 +2321,7 @@ export function MediaAttachment({
 				className={
 					isGallery
 						? `absolute inset-0 overflow-hidden ${className}`
-						: `relative mb-2 max-w-[260px] overflow-hidden rounded-xl ${className}`
+						: `relative max-w-[240px] overflow-hidden ${className}`
 				}
 			>
 				<ImageMessage
@@ -2294,6 +2329,7 @@ export function MediaAttachment({
 					previewUrl={url ? previewDataUrl : null}
 					loading={Boolean(loading && !url)}
 					alt={attachment.fileName || 'image'}
+					cover={isGallery}
 					onOpen={() => {
 						if (url) {
 							onOpenImage?.(attachment.id);
@@ -2417,12 +2453,12 @@ function MessageAttachments({
 	const visibleImages = images.slice(0, 4);
 
 	const tileClass = index => {
-		if (visibleImages.length === 1) return 'aspect-[4/3] min-h-44 rounded-xl sm:min-h-56';
-		if (visibleImages.length === 2) return 'aspect-square min-h-32 sm:min-h-40';
+		if (visibleImages.length === 1) return 'wa-photo-tile-single';
+		if (visibleImages.length === 2) return 'aspect-square min-h-28 sm:min-h-32';
 		if (visibleImages.length === 3 && index === 0) {
-			return 'row-span-2 min-h-64 sm:min-h-72';
+			return 'row-span-2 min-h-48 sm:min-h-56';
 		}
-		return ' aspect-square min-h-28 sm:min-h-36';
+		return 'aspect-square min-h-24 sm:min-h-28';
 	};
 	const gridClass =
 		visibleImages.length === 1
@@ -2434,18 +2470,18 @@ function MessageAttachments({
 	return (
 		<>
 			{images.length > 0 && (
-				<div className={`wa-media-gallery ${mine ? 'wa-media-gallery-mine' : 'wa-media-gallery-other'} ${visibleImages.length === 1 ? 'wa-media-gallery-single' : ''} mb-1 grid overflow-hidden rounded-xl ${gridClass} gap-0.5`}>
+				<div className={`wa-media-gallery ${mine ? 'wa-media-gallery-mine' : 'wa-media-gallery-other'} ${visibleImages.length === 1 ? 'wa-media-gallery-single' : ''} grid overflow-hidden rounded-[9px] ${gridClass} gap-px`}>
 					{visibleImages.map((attachment, index) => (
-						<div key={attachment.id} className={`relative overflow-hidden bg-black/10 ${tileClass(index)}`}>
+						<div key={attachment.id} className={`relative overflow-hidden ${tileClass(index)}`}>
 							<MediaAttachment
 								attachment={attachment}
 								mine={mine}
 								labels={labels}
 								onImageReady={onImageReady}
 								onOpenImage={onOpenImage}
-								layout="gallery"
+								layout={visibleImages.length === 1 ? 'inline' : 'gallery'}
 								sessionReady={sessionReady}
-								className="rounded-none"
+								className={visibleImages.length === 1 ? '' : 'rounded-none'}
 							/>
 							{index === 3 && images.length > 4 && (
 								<div className="pointer-events-none absolute inset-0 z-[2] grid place-items-center bg-black/55 text-2xl font-semibold text-white">
@@ -2482,6 +2518,47 @@ function MessageAttachments({
 				/>
 			))}
 		</>
+	);
+}
+
+function MessageHoverActions({
+	mine,
+	locale,
+	open,
+	onEmoji,
+	onReply,
+	onMore,
+}) {
+	const ar = locale === 'ar';
+	return (
+		<div className={`wa-message-hover-actions ${mine ? 'is-outgoing' : 'is-incoming'} ${open ? 'is-open' : ''}`}>
+			<button
+				type="button"
+				onClick={onEmoji}
+				aria-label={ar ? 'تفاعل الرموز' : 'React'}
+				className="wa-message-hover-btn"
+			>
+				<Smile size={15} strokeWidth={2.1} />
+			</button>
+			<button
+				type="button"
+				onClick={onReply}
+				aria-label={ar ? 'رد' : 'Reply'}
+				className="wa-message-hover-btn"
+			>
+				<Reply size={15} strokeWidth={2.1} />
+			</button>
+			<button
+				type="button"
+				data-message-actions-trigger
+				onClick={onMore}
+				aria-label={ar ? 'إجراءات الرسالة' : 'Message actions'}
+				aria-expanded={open}
+				className="wa-message-hover-btn"
+			>
+				<MoreHorizontal size={15} strokeWidth={2.1} />
+			</button>
+		</div>
 	);
 }
 
@@ -9354,6 +9431,10 @@ function WhatsAppWorkspaceContent() {
 													const attachmentTypes = (attachments || []).map(attachment => String(attachment.type || '').toLowerCase());
 													const isStickerMessage = !message.text && attachmentTypes.length > 0 && attachmentTypes.every(type => type === 'sticker');
 													const isVisualMediaMessage = !message.text && attachmentTypes.length > 0 && attachmentTypes.every(type => ['image', 'sticker', 'video'].includes(type));
+													const isVoiceMessage =
+														!groupedImages &&
+														(attachmentTypes.some(type => ['audio', 'ptt', 'voice'].includes(type)) ||
+															['audio', 'ptt', 'voice'].includes(String(message.type || '').toLowerCase()));
 													const downloadableAttachments = collectDownloadableAttachments([
 														groupedImages
 															? { ...message, attachments: attachments || [] }
@@ -9367,7 +9448,7 @@ function WhatsAppWorkspaceContent() {
 															selectedMediaIds.has(item.id),
 														);
 													return (
-														<div key={row.key} className="wa-message-row min-w-0 max-w-full overflow-x-clip">
+														<div key={row.key} className="wa-message-row min-w-0 max-w-full">
 															{dayLabel && dayLabel !== previousDayLabel && (
 																<div className="wa-date-separator mx-auto mb-3 mt-4 w-fit rounded-lg border border-black/5 bg-white/90 px-3.5 py-1 text-center text-xs font-semibold text-[#54656F] shadow-sm">
 																	{dayLabel}
@@ -9430,9 +9511,9 @@ function WhatsAppWorkspaceContent() {
 																			setActionMessageId(message.id);
 																		}
 																	}}
-															className={`wa-message-bubble relative ${mine ? 'wa-message-mine' : 'wa-message-other'} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} max-w-[88%] rounded-2xl text-sm shadow-sm sm:max-w-[76%] min-[769px]:max-w-[70%] ${groupedImages ? 'p-1.5' : 'px-3.5 py-2.5'} ${mine
+															className={`wa-message-bubble relative w-fit ${mine ? 'wa-message-mine' : 'wa-message-other'} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${mine
 																		? 'bg-[#d9fdd3] text-slate-900 dark:bg-[#005c4b] dark:text-white'
-																		: 'border border-slate-100 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white'
+																		: 'bg-white text-slate-900 dark:bg-slate-800 dark:text-white'
 																		} ${allSelected ? 'ring-2 ring-[var(--color-primary-400)]' : ''}`}
 																>
 																	{(message.forwarded || message.isForwarded) && (
@@ -9501,7 +9582,7 @@ function WhatsAppWorkspaceContent() {
 																			</p>
 																		</>
 																	) : null}
-															<div className={`wa-message-meta mt-1 flex items-center justify-end gap-1 px-0.5 text-[10px] ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
+															<div className={`wa-message-meta flex items-center justify-end gap-0.5 ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
 																		{message.isStarred && <Star size={11} fill="currentColor" />}
 																		{message.isPinned && <Pin size={11} fill="currentColor" />}
 																		{new Date(message.providerTimestamp || message.timestamp || message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -9537,11 +9618,31 @@ function WhatsAppWorkspaceContent() {
 																	)}
 																</div>
 																{!message.optimistic && (
-																	<div className="relative mt-0.5 shrink-0 self-start">
-																		<button
-																			type="button"
-																			data-message-actions-trigger
-																			onClick={event => {
+																	<div className="wa-message-hover-wrap">
+																		<MessageHoverActions
+																			mine={mine}
+																			locale={locale}
+																			open={
+																				actionMessageId === message.id ||
+																				reactionPickerMessageId === message.id
+																			}
+																			onEmoji={event => {
+																				event.preventDefault();
+																				event.stopPropagation();
+																				setActionMessageId(null);
+																				setActionMessageAnchor(
+																					event.currentTarget.getBoundingClientRect(),
+																				);
+																				setReactionPickerMessageId(current =>
+																					current === message.id ? null : message.id,
+																				);
+																			}}
+																			onReply={event => {
+																				event.preventDefault();
+																				event.stopPropagation();
+																				void handleMessageAction(message, 'reply');
+																			}}
+																			onMore={event => {
 																				event.preventDefault();
 																				event.stopPropagation();
 																				const rect =
@@ -9552,16 +9653,7 @@ function WhatsAppWorkspaceContent() {
 																					current === message.id ? null : message.id,
 																				);
 																			}}
-																			aria-label={locale === 'ar' ? 'إجراءات الرسالة' : 'Message actions'}
-																			aria-expanded={actionMessageId === message.id}
-																			className={`wa-message-actions-trigger grid h-8 w-8 place-items-center rounded-full border border-[#e9edef] bg-white text-[#54656f] shadow-sm transition hover:bg-[#f0f2f5] hover:text-[#111b21] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary-300)] ${
-																				actionMessageId === message.id
-																					? 'opacity-100'
-																					: 'opacity-100'
-																			}`}
-																		>
-																			<MoreHorizontal size={16} />
-																		</button>
+																		/>
 																		{reactionPickerMessageId === message.id && (
 																			<div data-message-reaction-picker className={`absolute top-8 z-30 flex gap-1 rounded-full border border-black/10 bg-white p-1.5 shadow-xl ${mine ? 'end-0' : 'start-0'}`}>
 																				{['👍', '❤️', '😂', '😮', '😢', '🙏'].map(emoji => (
@@ -9581,7 +9673,7 @@ function WhatsAppWorkspaceContent() {
 																			open={actionMessageId === message.id}
 																			message={message}
 																			locale={locale}
-																			isVoice={(attachments || []).some(attachment => ['audio', 'ptt', 'voice'].includes(String(attachment.type || message.type || '').toLowerCase()))}
+																			isVoice={isVoiceMessage}
 																			anchorRect={actionMessageAnchor}
 																			previewImageUrl={(attachments || [])
 																				.map(attachment => registeredChatImages[attachment.id]?.url)

@@ -29,9 +29,9 @@ export const PRIVACY_CONTENT = {
 	en: {
 		eyebrow: 'Legal',
 		title: 'Privacy Policy',
-		updated: 'Last updated: July 30, 2026',
+		updated: 'Last updated: August 15, 2026',
 		intro:
-			'So7baFit (“we”, “us”, “our”) operates a fitness coaching platform for gyms, coaches, and clients. This Privacy Policy explains what data we collect, why we collect it, and how we protect it when you use so7bafit.com and related services (including WhatsApp integrations).',
+			'So7baFit (“we”, “us”, “our”) operates a fitness coaching platform for gyms, coaches, and clients. This Privacy Policy explains what data we collect, why we collect it, and how we protect it when you use so7bafit.com and related services (including WhatsApp integrations and optional Gmail / Email Memo).',
 		sections: [
 			{
 				heading: '1. Who we are',
@@ -47,6 +47,7 @@ export const PRIVACY_CONTENT = {
 					'Business data: gym/brand settings, client lists, workout and nutrition plans, messages, forms, payments/subscription metadata, and usage logs.',
 					'Technical data: IP address, device/browser info, cookies or similar identifiers, and approximate location derived from IP when needed for security.',
 					'Communications: support emails, demo requests, and messages sent through integrated channels you connect (e.g. WhatsApp).',
+					'Gmail (optional Email Memo): if you connect Gmail, we receive your Gmail address, OAuth tokens, and read-only access to email messages you receive, so we can generate memos and send WhatsApp summaries you enable. We do not send, delete, or modify Gmail messages.',
 				],
 			},
 			{
@@ -60,11 +61,13 @@ export const PRIVACY_CONTENT = {
 				],
 			},
 			{
-				heading: '4. WhatsApp & third-party services',
+				heading: '4. WhatsApp, Gmail & third-party services',
 				body: [
 					'If you connect Meta WhatsApp or similar providers, message content and phone numbers are processed according to that provider’s terms and your configuration.',
+					'Email Memo uses Google OAuth with the Gmail readonly scope. We read connected inbox messages only to summarize them with AI and, if you enabled it, forward a short memo to your WhatsApp. You can disconnect Gmail at any time in the Email Memo page; that stops new reads and we stop using that mailbox. You may also revoke access in your Google Account permissions.',
+					'Gmail message content is used only to operate Email Memo. We do not sell it, use it for ads, or access Gmail accounts you did not connect.',
 					'We do not sell your client message content. We process it to deliver the features you enable.',
-					'Payment processors, hosting, email, and analytics providers may process limited data as processors under their own policies.',
+					'Payment processors, hosting, email, Google, and analytics providers may process limited data as processors under their own policies.',
 				],
 			},
 			{
@@ -118,9 +121,9 @@ export const PRIVACY_CONTENT = {
 	ar: {
 		eyebrow: 'قانوني',
 		title: 'سياسة الخصوصية',
-		updated: 'آخر تحديث: 30 يوليو 2026',
+		updated: 'آخر تحديث: 15 أغسطس 2026',
 		intro:
-			'تشغّل So7baFit («نحن») منصة تدريب وتغذية للصالات والمدربين والعملاء. توضّح سياسة الخصوصية هذه البيانات التي نجمعها ولماذا وكيف نحميها عند استخدامك لـ so7bafit.com والخدمات المرتبطة (بما فيها تكاملات واتساب).',
+			'تشغّل So7baFit («نحن») منصة تدريب وتغذية للصالات والمدربين والعملاء. توضّح سياسة الخصوصية هذه البيانات التي نجمعها ولماذا وكيف نحميها عند استخدامك لـ so7bafit.com والخدمات المرتبطة (بما فيها تكاملات واتساب وميزة مذكرة البريد / Gmail الاختيارية).',
 		sections: [
 			{
 				heading: '1. من نحن',
@@ -136,6 +139,7 @@ export const PRIVACY_CONTENT = {
 					'بيانات الأعمال: إعدادات الصالة/العلامة، قوائم العملاء، خطط التمارين والتغذية، الرسائل، النماذج، بيانات الاشتراك/الدفع، وسجلات الاستخدام.',
 					'بيانات تقنية: عنوان IP، معلومات الجهاز/المتصفح، ملفات تعريف الارتباط أو معرّفات مشابهة، وموقع تقريبي عند الحاجة للأمان.',
 					'التواصل: رسائل الدعم وطلبات العرض التجريبي والرسائل عبر القنوات التي تربطها (مثل واتساب).',
+					'Gmail (مذكرة البريد اختيارية): إذا ربطت Gmail نستلم عنوان بريدك ورموز OAuth وصلاحية قراءة الرسائل الواردة فقط، لإنشاء مذكرات وإرسال ملخص واتساب إذا فعّلت ذلك. لا نرسل ولا نحذف ولا نعدّل رسائل Gmail.',
 				],
 			},
 			{
@@ -149,11 +153,13 @@ export const PRIVACY_CONTENT = {
 				],
 			},
 			{
-				heading: '4. واتساب وخدمات الطرف الثالث',
+				heading: '4. واتساب وGmail وخدمات الطرف الثالث',
 				body: [
 					'عند ربط Meta WhatsApp أو مزوّدين مشابهين، تُعالَج محتوى الرسائل وأرقام الهواتف وفق شروط المزوّد وإعداداتك.',
+					'مذكرة البريد تستخدم Google OAuth بنطاق قراءة Gmail فقط. نقرأ الرسائل في الصندوق المرتبط لتلخيصها بالذكاء الاصطناعي، وإذا فعّلت ذلك نرسل مذكرة قصيرة إلى واتساب. يمكنك فصل Gmail في أي وقت من صفحة مذكرة البريد؛ يتوقف حينها القراءة الجديدة. يمكنك أيضاً إلغاء الصلاحية من أذونات حساب Google.',
+					'محتوى رسائل Gmail يُستخدم لتشغيل مذكرة البريد فقط. لا نبيعه ولا نستخدمه للإعلانات ولا نصل إلى حسابات Gmail التي لم تربطها.',
 					'لا نبيع محتوى رسائل عملائك. نعالجه لتقديم الميزات التي تفعّلها.',
-					'قد يعالج مزوّدو الدفع والاستضافة والبريد والتحليلات بيانات محدودة كمعالجين وفق سياساتهم.',
+					'قد يعالج مزوّدو الدفع والاستضافة والبريد وGoogle والتحليلات بيانات محدودة كمعالجين وفق سياساتهم.',
 				],
 			},
 			{
@@ -262,7 +268,7 @@ export const POLICY_CONTENT = {
 			{
 				heading: '7. Third-party services',
 				body: [
-					'Integrations (WhatsApp/Meta, payment gateways, etc.) are subject to those providers’ terms. Outages or policy changes by them are outside our full control.',
+					'Integrations (WhatsApp/Meta, Google Gmail OAuth, payment gateways, etc.) are subject to those providers’ terms. Outages or policy changes by them are outside our full control.',
 					'You are responsible for configuring tokens, webhooks, and template compliance correctly.',
 				],
 			},
@@ -350,7 +356,7 @@ export const POLICY_CONTENT = {
 			{
 				heading: '7. خدمات الطرف الثالث',
 				body: [
-					'التكاملات (واتساب/Meta، بوابات الدفع، وغيرها) تخضع لشروط هؤلاء المزوّدين. انقطاعاتهم أو تغيير سياساتهم خارج سيطرتنا الكاملة.',
+					'التكاملات (واتساب/Meta، Google Gmail OAuth، بوابات الدفع، وغيرها) تخضع لشروط هؤلاء المزوّدين. انقطاعاتهم أو تغيير سياساتهم خارج سيطرتنا الكاملة.',
 					'أنت مسؤول عن ضبط الرموز والـ Webhooks والامتثال للقوالب بشكل صحيح.',
 				],
 			},

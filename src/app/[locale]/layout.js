@@ -59,6 +59,9 @@ export const metadata = {
   title: 'so7bafit - Transform Your Body, Transform Your Life',
   description: 'Professional fitness coaching platform with personalized workout plans, nutrition tracking, and progress analytics. Join thousands achieving their fitness goals.',
   keywords: 'fitness, workout, nutrition, personal trainer, exercise, health, wellness, body transformation, muscle building, weight loss',
+  verification: {
+    google: 'google62432cad2b17f9f3.html',
+  },
 
   openGraph: {
     title: 'so7bafit - Your Personal Fitness Revolution',

@@ -220,8 +220,17 @@ export default function EmailMemoWorkspace() {
 	const gmailOk = gmailAccounts.some((item) => item.connected) || Boolean(overview.gmail?.connected);
 	const waOk = Boolean(overview.whatsapp?.connected);
 	const oauth = overview.googleOAuth || {};
+	const envOAuthReady = Boolean(
+		oauth.easyConnect ||
+			oauth.source === 'env' ||
+			overview.googleOAuthEasy ||
+			(oauth.configured && oauth.source !== 'user'),
+	);
 	const oauthReady = Boolean(
-		oauth.readyToConnect || oauth.easyConnect || oauth.verified || overview.googleOAuthVerified || overview.googleOAuthEasy,
+		envOAuthReady ||
+			oauth.readyToConnect ||
+			oauth.verified ||
+			overview.googleOAuthVerified,
 	);
 
 	async function run(key, fn, okMessage) {
@@ -249,11 +258,6 @@ export default function EmailMemoWorkspace() {
 		}, t('testOk'));
 
 	const connectGmail = (connectionId) => {
-		if (!oauthReady) {
-			setAdvancedOpen(true);
-			toast.error(t('gmailEasyNeedKeys'));
-			return;
-		}
 		run('gmail', async () => {
 			const res = await emailMemoApi.gmailAuthUrl(locale, connectionId);
 			const url = res.data?.url;
@@ -444,6 +448,8 @@ export default function EmailMemoWorkspace() {
 							<p className="mt-2 text-[11px] text-[#6B7280]">{t('maxGmail')}</p>
 						) : null}
 
+						{!envOAuthReady ? (
+							<>
 						<button
 							type="button"
 							onClick={() => {
@@ -540,8 +546,7 @@ export default function EmailMemoWorkspace() {
 								</div>
 							</div>
 						) : null}
-						{!canAddGmail && gmailOk ? (
-							<p className="mt-2 text-[11px] text-[#6B7280]">{t('maxGmail')}</p>
+							</>
 						) : null}
 					</article>
 

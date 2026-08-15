@@ -974,10 +974,98 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 
 .wa-message-bubble {
   position: relative;
-  max-width: 75% !important;
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: min(85%, 28rem) !important;
   border: 0 !important;
-  border-radius: 16px !important;
+  border-radius: 12px !important;
+  padding: 6px 9px 5px !important;
   color: var(--wa-text) !important;
+  box-shadow: 0 1px 1.5px rgba(11, 20, 26, 0.08);
+}
+
+.wa-message-bubble.wa-message-voice {
+  min-width: min(232px, calc(100% - 16px));
+  max-width: min(78%, 300px) !important;
+  padding: 8px 10px 6px !important;
+}
+
+.wa-message-bubble.wa-message-media,
+.wa-message-bubble.wa-message-sticker {
+  max-width: min(72%, 248px) !important;
+  padding: 3px 3px 4px !important;
+}
+
+.wa-message-bubble.wa-message-sticker {
+  max-width: 220px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.wa-message-hover-wrap {
+  position: relative;
+  align-self: center;
+  width: 0;
+  height: 28px;
+  overflow: visible;
+}
+
+.wa-message-hover-actions {
+  position: absolute;
+  top: 50%;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px;
+  border: 1px solid rgba(11, 20, 26, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 1px 6px rgba(11, 20, 26, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 120ms ease;
+}
+
+.wa-message-hover-actions.is-incoming {
+  inset-inline-start: 8px;
+}
+
+.wa-message-hover-actions.is-outgoing {
+  inset-inline-end: 8px;
+}
+
+.group:hover .wa-message-hover-actions,
+.group:focus-within .wa-message-hover-actions,
+.wa-message-hover-actions.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.wa-message-hover-btn {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #54656f;
+  cursor: pointer;
+}
+
+.wa-message-hover-btn:hover,
+.wa-message-hover-btn[aria-expanded='true'] {
+  background: #f0f2f5;
+  color: #111b21;
+}
+
+@media (hover: none) {
+  .wa-message-hover-actions:not(.is-open) {
+    display: none;
+  }
 }
 
 .wa-message-bubble:has(.wa-message-reactions) {
@@ -1052,6 +1140,112 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
   color: var(--wa-secondary) !important;
 }
 
+.wa-message-text {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  unicode-bidi: plaintext;
+}
+
+.wa-message-meta {
+  width: fit-content;
+  max-width: 100%;
+  margin-inline-start: auto;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.wa-message-bubble:not(.wa-message-media):not(.wa-message-voice) .wa-message-meta {
+  float: inline-end;
+  clear: none;
+  margin-inline-start: 8px;
+  margin-top: 4px;
+}
+
+.wa-message-bubble:not(.wa-message-media)::after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
+.wa-message-bubble.wa-message-media .wa-message-meta {
+  position: absolute;
+  z-index: 3;
+  inset-inline-end: 8px;
+  bottom: 6px;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.wa-photo-tile-single {
+  width: min(72vw, 240px);
+  max-width: 100%;
+}
+
+.wa-photo-tile-single .wa-photo-asset,
+.wa-photo-tile-single img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 280px;
+  object-fit: contain;
+  border-radius: 9px;
+}
+
+.wa-voice-transcribe {
+  margin-top: 4px;
+  padding-top: 3px;
+  border-top: 1px solid rgba(17, 27, 33, 0.08);
+}
+
+.wa-voice-transcribe-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 0;
+  border: 0;
+  background: transparent;
+  color: #006c4c;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.wa-voice-transcribe-toggle span {
+  flex: 1 1 auto;
+  text-align: start;
+}
+
+.wa-voice-transcribe-toggle svg:last-child {
+  color: #667781;
+  margin-inline-start: auto;
+}
+
+.wa-voice-transcript-body {
+  max-height: 72px;
+  margin: 4px 0 0;
+  overflow: auto;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: rgba(17, 27, 33, 0.78);
+  unicode-bidi: plaintext;
+}
+
+.wa-message-mine .wa-voice-transcript-body {
+  color: rgba(17, 27, 33, 0.72);
+}
+
 .wa-voice-layout {
 	display: flex;
 	align-items: center;
@@ -1065,9 +1259,14 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 
 .wa-voice-message {
 	box-sizing: border-box;
-	width: min(280px, 100%);
-	min-width: min(220px, 100%);
+	width: 100%;
+	min-width: 0;
 	max-width: 100%;
+}
+
+.wa-photo-asset {
+	position: relative;
+	display: block;
 }
 
 .wa-voice-track {
@@ -1083,23 +1282,35 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 .wa-voice-waveform {
 	display: flex;
 	align-items: center;
-	gap: 2px;
+	gap: 1.5px;
 	height: 26px;
 	position: relative;
-	width: 100%;
-	min-width: 110px;
+	flex: 1 1 auto;
+	width: auto;
+	min-width: 88px;
 	max-width: 100%;
 	overflow: hidden;
 }
 
 .wa-voice-waveform > .wa-voice-bar {
 	display: block;
-	flex: 0 0 2.5px;
-	width: 2.5px;
-	min-width: 2.5px;
-	max-width: 2.5px;
+	flex: 0 0 2px;
+	width: 2px;
+	min-width: 2px;
+	max-width: 2px;
 	border-radius: 999px;
 	background: rgba(17, 27, 33, 0.28);
+}
+
+.wa-voice-duration {
+	align-self: center;
+	flex-shrink: 0;
+	min-width: 2.15em;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1;
+	text-align: end;
+	font-variant-numeric: tabular-nums;
 }
 
 .wa-voice-waveform .is-played-outgoing {
@@ -1782,8 +1993,8 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 	}
 
 	.wa-web-desktop .wa-message-bubble {
-		border-radius: 7.5px !important;
-		box-shadow: 0px 1px 0.5px rgba(11, 20, 26, 0.13) !important;
+		border-radius: 12px !important;
+		box-shadow: 0 1px 1.5px rgba(11, 20, 26, 0.08) !important;
 		font-size: 14.2px !important;
 		line-height: 19px !important;
 		color: #111b21 !important;
@@ -1791,18 +2002,12 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 
 	.wa-web-desktop .wa-message-mine {
 		background: #d9fdd3 !important;
-		border-start-start-radius: 7.5px !important;
-		border-start-end-radius: 0 !important;
-		border-end-end-radius: 7.5px !important;
-		border-end-start-radius: 7.5px !important;
+		border-radius: 12px !important;
 	}
 
 	.wa-web-desktop .wa-message-other {
 		background: #ffffff !important;
-		border-start-start-radius: 0 !important;
-		border-start-end-radius: 7.5px !important;
-		border-end-end-radius: 7.5px !important;
-		border-end-start-radius: 7.5px !important;
+		border-radius: 12px !important;
 	}
 
 	.wa-web-desktop .wa-message-meta {
@@ -2223,11 +2428,20 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 		min-width: 0;
 		width: fit-content;
 		max-width: min(84%, calc(100% - 24px)) !important;
-		border-radius: 17px !important;
+		border-radius: 12px !important;
 		color: var(--wa-text) !important;
-		padding: 10px 12px 7px !important;
-		box-shadow: 0 1px 1px rgba(0, 0, 0, 0.10);
+		padding: 6px 9px 5px !important;
+		box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.08);
   }
+
+	.wa-message-bubble.wa-message-voice {
+		padding: 8px 10px 6px !important;
+		border-radius: 12px !important;
+	}
+
+	.wa-message-bubble.wa-message-media {
+		padding: 3px 3px 4px !important;
+	}
 
 	.wa-message-text {
 		width: 100%;
@@ -2272,12 +2486,12 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 	}
 
   .wa-message-mine {
-		border-start-end-radius: 6px !important;
+		border-radius: 12px !important;
 		background: #D5FDD3 !important;
   }
 
   .wa-message-other {
-		border-start-start-radius: 6px !important;
+		border-radius: 12px !important;
 		background: #FFFFFF !important;
   }
 
@@ -2285,15 +2499,28 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 	.wa-message-sticker {
 		display: flex;
 		flex-direction: column;
-		max-width: 76% !important;
-		border: 0 !important;
-		background: transparent !important;
-		padding: 0 !important;
-		box-shadow: none !important;
+		max-width: min(72%, 248px) !important;
+	}
+
+	.wa-message-media {
+		padding: 3px 3px 4px !important;
+		box-shadow: 0 1px 1.5px rgba(11, 20, 26, 0.08) !important;
+	}
+
+	.wa-message-media.wa-message-mine {
+		background: #d9fdd3 !important;
+	}
+
+	.wa-message-media.wa-message-other {
+		background: #ffffff !important;
 	}
 
 	.wa-message-sticker {
 		max-width: 220px !important;
+		padding: 0 !important;
+		border: 0 !important;
+		background: transparent !important;
+		box-shadow: none !important;
 	}
 
 	.wa-message-media.wa-message-mine,
@@ -2337,9 +2564,9 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 	}
 
 	.wa-photo-asset {
-		max-width: min(72vw, 310px);
-		border-radius: 13px !important;
-		background: #E7E2DC !important;
+		max-width: min(72vw, 240px);
+		border-radius: 9px !important;
+		background: transparent !important;
 	}
 
 	.wa-media-gallery {
@@ -2348,7 +2575,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 	}
 
 	.wa-media-gallery-single {
-		width: min(72vw, 310px);
+		width: min(72vw, 240px);
 	}
 
 	.wa-media-gallery-mine {
@@ -2377,14 +2604,21 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 		background: rgba(7, 94, 84, 0.22);
 	}
 
-	.wa-media-gallery .wa-photo-asset,
-	.wa-media-gallery .wa-sticker-asset,
-	.wa-media-gallery .wa-media-skeleton,
-	.wa-media-gallery .wa-media-unavailable {
+	.wa-media-gallery:not(.wa-media-gallery-single) .wa-photo-asset,
+	.wa-media-gallery:not(.wa-media-gallery-single) .wa-sticker-asset,
+	.wa-media-gallery:not(.wa-media-gallery-single) .wa-media-skeleton,
+	.wa-media-gallery:not(.wa-media-gallery-single) .wa-media-unavailable {
 		margin-bottom: 0 !important;
 		max-width: none !important;
 		height: 100% !important;
 		width: 100% !important;
+	}
+
+	.wa-media-gallery-single .wa-photo-asset,
+	.wa-media-gallery-single img {
+		height: auto !important;
+		max-height: 280px !important;
+		object-fit: contain !important;
 	}
 
 	.wa-photo-asset::after {
@@ -2393,19 +2627,20 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 		z-index: 1;
 		inset-inline: 0;
 		bottom: 0;
-		height: 60px;
-		background: linear-gradient(to top, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0));
+		height: 36px;
+		background: linear-gradient(to top, rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0));
 		pointer-events: none;
+		border-radius: 0 0 9px 9px;
 	}
 
 	.wa-message-media .wa-message-meta,
 	.wa-message-sticker .wa-message-meta {
 		width: fit-content;
-		margin-left: auto;
-		margin-right: 0;
-		border-radius: 999px;
-		background: rgba(213, 253, 211, 0.94);
-		padding: 4px 7px;
+		margin: 0 !important;
+		padding: 0 !important;
+		border-radius: 0 !important;
+		background: transparent !important;
+		color: rgba(255, 255, 255, 0.95) !important;
 	}
 
 	.wa-composer-stack {
@@ -2674,31 +2909,14 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 
 	.wa-message-bubble:has(.wa-voice-message) {
 		width: fit-content;
-		max-width: calc(100% - 24px) !important;
-		border-radius: 18px !important;
-		padding: 10px 12px 8px !important;
+		max-width: min(78%, 300px) !important;
+		border-radius: 12px !important;
+		padding: 8px 10px 6px !important;
 	}
 
-	.wa-message-mine:has(.wa-voice-message) {
-		border-end-end-radius: 6px !important;
-	}
-
-	.wa-message-mine:has(.wa-voice-message)::after {
-		content: '';
-		position: absolute;
-		inset-inline-end: -7px;
-		bottom: 0;
-		width: 13px;
-		height: 15px;
-		background: #D5FDD3;
-		clip-path: polygon(0 0, 0 100%, 100% 100%);
-		border-end-end-radius: 5px;
-		filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.06));
-		pointer-events: none;
-	}
-
+	.wa-message-mine:has(.wa-voice-message)::after,
 	[dir='rtl'] .wa-message-mine:has(.wa-voice-message)::after {
-		clip-path: polygon(100% 0, 0 100%, 100% 100%);
+		content: none;
 	}
 
 	.wa-message-other:has(.wa-voice-message) {
@@ -2709,16 +2927,13 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		min-height: 48px;
+		min-height: 40px;
 		direction: ltr;
 	}
 
-	.wa-voice-layout.is-incoming .wa-voice-avatar-wrap {
-		order: 4;
-	}
-
+	.wa-voice-layout.is-incoming .wa-voice-avatar-wrap,
 	.wa-voice-layout.is-incoming .wa-voice-rate {
-		order: 3;
+		order: 0;
 	}
 
 	.wa-voice-play {
@@ -2761,11 +2976,12 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 	.wa-voice-waveform {
 		display: flex;
 		align-items: center;
-		min-width: 110px;
+		flex: 1 1 auto;
+		min-width: 88px;
 		max-width: 100%;
 		overflow: hidden;
 		height: 26px;
-		gap: 2px;
+		gap: 1.5px;
 		direction: ltr;
 	}
 
@@ -2815,12 +3031,15 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
 	}
 
 	.wa-voice-duration {
-		align-self: start;
+		align-self: center;
+		flex-shrink: 0;
+		min-width: 2.15em;
 		font-size: 11px;
 		font-weight: 600;
 		line-height: 1;
 		color: #4D5F4E;
 		font-variant-numeric: tabular-nums;
+		text-align: end;
 	}
 
 	.wa-voice-message.is-incoming .wa-voice-duration {
@@ -2915,12 +3134,13 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en {
     box-shadow: none !important;
   }
 
-  .wa-transcribe {
-		display: inline-flex;
-		margin-top: 5px;
+  .wa-transcribe,
+  .wa-voice-transcribe-toggle {
+		display: flex;
+		margin-top: 0;
 		color: #006C4C !important;
-		font-size: 13px !important;
-		font-weight: 500 !important;
+		font-size: 11.5px !important;
+		font-weight: 600 !important;
 		line-height: 1.2;
 		transition: opacity 180ms ease, transform 180ms ease;
 	}

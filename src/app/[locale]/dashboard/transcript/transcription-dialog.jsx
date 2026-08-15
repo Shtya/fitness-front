@@ -24,16 +24,11 @@ import {
 const labels = {
 	en: {
 		title: 'Transcribe voice message',
-		description: 'Use the Transcript tool settings to convert this WhatsApp voice message into editable text.',
+		description: 'Convert this voice note into editable text.',
 		loadingFile: 'Loading voice message…',
 		fileError: 'Could not load this voice message.',
+		voiceFile: 'Voice message',
 		method: 'Transcription method',
-		language: 'Language',
-		auto: 'Auto detect',
-		arabic: 'Arabic',
-		english: 'English',
-		vocabulary: 'Custom vocabulary',
-		vocabularyHint: 'Names or specialist terms, separated by commas',
 		transcribe: 'Transcribe',
 		uploading: 'Uploading',
 		processing: 'Transcribing audio…',
@@ -47,16 +42,11 @@ const labels = {
 	},
 	ar: {
 		title: 'تحويل الرسالة الصوتية إلى نص',
-		description: 'استخدم إعدادات أداة تحويل الصوت لتحويل رسالة واتساب إلى نص قابل للتعديل.',
+		description: 'حوّل الرسالة الصوتية إلى نص يمكن تعديله.',
 		loadingFile: 'جارٍ تحميل الرسالة الصوتية…',
 		fileError: 'تعذر تحميل الرسالة الصوتية.',
+		voiceFile: 'رسالة صوتية',
 		method: 'طريقة التحويل',
-		language: 'اللغة',
-		auto: 'اكتشاف تلقائي',
-		arabic: 'العربية',
-		english: 'الإنجليزية',
-		vocabulary: 'مصطلحات مخصصة',
-		vocabularyHint: 'أسماء أو مصطلحات متخصصة مفصولة بفواصل',
 		transcribe: 'تحويل إلى نص',
 		uploading: 'جارٍ الرفع',
 		processing: 'جارٍ تحويل الصوت إلى نص…',
@@ -70,6 +60,20 @@ const labels = {
 	},
 };
 
+function formatFileSize(bytes) {
+	const size = Number(bytes);
+	if (!Number.isFinite(size) || size <= 0) return '';
+	if (size < 1024) return `${size} B`;
+	if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+	return `${(size / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function displayFileName(fileName, fallback) {
+	const name = String(fileName || '');
+	if (!name || /^whatsapp-voice-/i.test(name)) return fallback;
+	return name;
+}
+
 export default function TranscriptionDialog({
 	open,
 	onOpenChange,
@@ -81,8 +85,6 @@ export default function TranscriptionDialog({
 	const [file, setFile] = useState(null);
 	const [fileError, setFileError] = useState('');
 	const [provider, setProvider] = useState('local');
-	const [language, setLanguage] = useState('auto');
-	const [customVocabulary, setCustomVocabulary] = useState('');
 	const [status, setStatus] = useState('idle');
 	const [progress, setProgress] = useState(0);
 	const [elapsed, setElapsed] = useState(0);
@@ -95,8 +97,6 @@ export default function TranscriptionDialog({
 		if (!open) return undefined;
 		let cancelled = false;
 		setProvider(getStoredTranscriptionProvider());
-		setLanguage('auto');
-		setCustomVocabulary('');
 		setFile(null);
 		setFileError('');
 		setResult(null);
@@ -154,8 +154,8 @@ export default function TranscriptionDialog({
 			const data = await createTranscription({
 				file,
 				provider,
-				language,
-				customVocabulary,
+				language: 'auto',
+				customVocabulary: '',
 				onUploadProgress: event => {
 					if (!event.total) return;
 					const next = Math.min(100, Math.round((event.loaded * 100) / event.total));
@@ -200,7 +200,7 @@ export default function TranscriptionDialog({
 		>
 			<DialogContent
 				dir={locale === 'ar' ? 'rtl' : 'ltr'}
-				className="max-h-[92vh] overflow-y-auto sm:max-w-2xl"
+				className="gap-3 overflow-y-auto rounded-2xl p-4 sm:max-w-md"
 				onEscapeKeyDown={event => {
 					if (busy) event.preventDefault();
 				}}
@@ -208,94 +208,96 @@ export default function TranscriptionDialog({
 					if (busy) event.preventDefault();
 				}}
 			>
-				<DialogHeader className="pe-12">
-					<DialogTitle className="flex items-center gap-2 text-xl">
-						<AudioLines className="size-5 text-[var(--color-primary-600)]" />
+				<DialogHeader className="pe-10 text-start">
+					<DialogTitle className="flex items-center gap-2 text-[17px] font-semibold text-slate-900">
+						<span className="grid size-8 place-items-center rounded-full bg-[#d9fdd3] text-[#128c7e]">
+							<AudioLines className="size-4" />
+						</span>
 						{t.title}
 					</DialogTitle>
-					<DialogDescription>{t.description}</DialogDescription>
+					<DialogDescription className="text-[13px] leading-5 text-slate-500">
+						{t.description}
+					</DialogDescription>
 				</DialogHeader>
 
 				{status === 'loading' ? (
-					<div className="grid min-h-32 place-items-center text-sm text-slate-500">
-						<span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" />{t.loadingFile}</span>
+					<div className="grid min-h-24 place-items-center text-sm text-slate-500">
+						<span className="flex items-center gap-2">
+							<Loader2 className="size-4 animate-spin" />
+							{t.loadingFile}
+						</span>
 					</div>
 				) : fileError ? (
-					<div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{fileError}</div>
+					<div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-medium text-red-700">
+						{fileError}
+					</div>
 				) : file ? (
 					<>
-						<div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
-							<div className="flex items-center gap-2">
-								<FileAudio className="size-5 shrink-0 text-emerald-600" />
-								<span className="min-w-0 flex-1 truncate text-sm font-bold text-slate-800">{file.name}</span>
-								<span className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+						<div className="overflow-hidden rounded-xl border border-black/6 bg-[#f7f8fa] p-2.5">
+							<div className="mb-2 flex items-center gap-2 px-0.5">
+								<span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white text-[#128c7e] shadow-sm">
+									<FileAudio className="size-4" />
+								</span>
+								<span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-slate-800">
+									{displayFileName(file.name, t.voiceFile)}
+								</span>
+								<span className="shrink-0 text-[11px] font-medium tabular-nums text-slate-500">
+									{formatFileSize(file.size)}
+								</span>
 							</div>
-							{audioUrl && <audio controls src={audioUrl} className="mt-3 h-10 w-full" />}
+							{audioUrl ? (
+								<audio controls src={audioUrl} className="h-9 w-full" />
+							) : null}
 						</div>
 
-						<div className="grid gap-3 sm:grid-cols-2">
-							<label className="grid gap-1.5 text-sm font-bold text-slate-700">
-								{t.method}
-								<select
-									value={provider}
-									onChange={event => selectProvider(event.target.value)}
-									disabled={busy}
-									className="h-11 rounded-xl border bg-white px-3 text-sm outline-none focus:border-[var(--color-primary-400)]"
-								>
-									{TRANSCRIPTION_PROVIDERS.map(item => (
-										<option key={item.id} value={item.id}>{item.name} · {item.score}%</option>
-									))}
-								</select>
-							</label>
-							<label className="grid gap-1.5 text-sm font-bold text-slate-700">
-								{t.language}
-								<select
-									value={language}
-									onChange={event => setLanguage(event.target.value)}
-									disabled={busy}
-									className="h-11 rounded-xl border bg-white px-3 text-sm outline-none focus:border-[var(--color-primary-400)]"
-								>
-									<option value="auto">{t.auto}</option>
-									<option value="ar">{t.arabic}</option>
-									<option value="en">{t.english}</option>
-								</select>
-							</label>
-						</div>
-
-						<label className="grid gap-1.5 text-sm font-bold text-slate-700">
-							{t.vocabulary}
-							<textarea
-								value={customVocabulary}
-								onChange={event => setCustomVocabulary(event.target.value)}
+						<label className="grid gap-1.5 text-[13px] font-semibold text-slate-700">
+							{t.method}
+							<select
+								value={provider}
+								onChange={event => selectProvider(event.target.value)}
 								disabled={busy}
-								maxLength={4000}
-								rows={2}
-								placeholder={t.vocabularyHint}
-								className="resize-y rounded-xl border bg-white p-3 text-sm font-normal outline-none focus:border-[var(--color-primary-400)]"
-							/>
+								className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-[13px] outline-none focus:border-[var(--color-primary-400)]"
+							>
+								{TRANSCRIPTION_PROVIDERS.map(item => (
+									<option key={item.id} value={item.id}>
+										{item.name} · {item.score}%
+									</option>
+								))}
+							</select>
 						</label>
 
 						{['uploading', 'processing'].includes(status) && (
-							<div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
-								<div className="flex items-center justify-between text-sm font-bold text-blue-800">
-									<span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" />{status === 'uploading' ? t.uploading : t.processing}</span>
-									<span>{status === 'uploading' ? `${progress}%` : `${elapsed}s`}</span>
+							<div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+								<div className="flex items-center justify-between text-[13px] font-semibold text-slate-700">
+									<span className="flex items-center gap-2">
+										<Loader2 className="size-4 animate-spin text-[var(--color-primary-600)]" />
+										{status === 'uploading' ? t.uploading : t.processing}
+									</span>
+									<span className="tabular-nums text-slate-500">
+										{status === 'uploading' ? `${progress}%` : `${elapsed}s`}
+									</span>
 								</div>
-								<div className="mt-2 h-2 overflow-hidden rounded-full bg-blue-100">
-									<div className={`h-full rounded-full bg-[var(--color-primary-600)] ${status === 'processing' ? 'w-full animate-pulse' : ''}`} style={status === 'uploading' ? { width: `${progress}%` } : undefined} />
+								<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+									<div
+										className={`h-full rounded-full bg-[var(--color-primary-600)] ${status === 'processing' ? 'w-full animate-pulse' : ''}`}
+										style={status === 'uploading' ? { width: `${progress}%` } : undefined}
+									/>
 								</div>
 							</div>
 						)}
 
-						<Button onClick={transcribe} disabled={busy} className="w-full">
+						<Button onClick={transcribe} disabled={busy} className="h-10 w-full rounded-xl">
 							{busy ? <Loader2 className="animate-spin" /> : <AudioLines />}
 							{t.transcribe}
 						</Button>
 
 						{result && (
-							<div className="rounded-xl border bg-slate-50 p-3">
+							<div className="rounded-xl border border-slate-200 bg-white p-2.5">
 								<div className="mb-2 flex items-center justify-between gap-2">
-									<h3 className="flex items-center gap-2 font-black text-slate-800"><Check className="size-4 text-emerald-600" />{t.result}</h3>
+									<h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-800">
+										<Check className="size-4 text-emerald-600" />
+										{t.result}
+									</h3>
 									<Button
 										size="sm"
 										variant="outline"
@@ -304,18 +306,20 @@ export default function TranscriptionDialog({
 											toast.success(t.copied);
 										}}
 									>
-										<Clipboard />{t.copy}
+										<Clipboard />
+										{t.copy}
 									</Button>
 								</div>
 								<textarea
 									dir="auto"
 									value={text}
 									onChange={event => setText(event.target.value)}
-									className="min-h-40 w-full resize-y rounded-xl border bg-white p-3 text-sm leading-7 outline-none focus:border-[var(--color-primary-400)]"
+									className="min-h-28 w-full resize-y rounded-xl border border-slate-200 bg-[#f7f8fa] p-3 text-[13px] leading-6 outline-none focus:border-[var(--color-primary-400)]"
 								/>
 								<div className="mt-2 flex justify-end">
 									<Button size="sm" onClick={save} disabled={saving || text === result.text}>
-										{saving ? <Loader2 className="animate-spin" /> : <Save />}{t.save}
+										{saving ? <Loader2 className="animate-spin" /> : <Save />}
+										{t.save}
 									</Button>
 								</div>
 							</div>
