@@ -7,7 +7,14 @@ export const emailMemoApi = {
 		return api.get(`${BASE}/overview`, { signal });
 	},
 	gmailAuthUrl(locale, connectionId, signal) {
-		return api.get(`${BASE}/gmail/auth-url`, { params: { locale, connectionId }, signal });
+		return api.get(`${BASE}/gmail/auth-url`, {
+			params: {
+				locale,
+				connectionId,
+				returnOrigin: typeof window !== 'undefined' ? window.location.origin : undefined,
+			},
+			signal,
+		});
 	},
 	disconnectGmail(connectionId, signal) {
 		return api.post(
