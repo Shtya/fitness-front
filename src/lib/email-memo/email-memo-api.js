@@ -12,6 +12,7 @@ export const emailMemoApi = {
 				locale,
 				connectionId,
 				returnOrigin: typeof window !== 'undefined' ? window.location.origin : undefined,
+				popup: '1',
 			},
 			signal,
 		});
@@ -36,6 +37,9 @@ export const emailMemoApi = {
 	saveGmailCredentials(body, signal) {
 		return api.put(`${BASE}/gmail/credentials`, body, { signal });
 	},
+	importInbox(body = {}, signal) {
+		return api.post(`${BASE}/gmail/import`, body, { signal, timeout: 120000 });
+	},
 	senders(signal) {
 		return api.get(`${BASE}/senders`, { signal });
 	},
@@ -45,8 +49,8 @@ export const emailMemoApi = {
 	includeSender(email, signal) {
 		return api.post(`${BASE}/senders/include`, { email }, { signal });
 	},
-	connectWhatsApp(signal) {
-		return api.post(`${BASE}/whatsapp/connect`, {}, { signal, timeout: 60000 });
+	connectWhatsApp(body = {}, signal) {
+		return api.post(`${BASE}/whatsapp/connect`, body, { signal, timeout: 60000 });
 	},
 	whatsappQr(signal) {
 		return api.get(`${BASE}/whatsapp/qr`, { signal });
@@ -54,20 +58,26 @@ export const emailMemoApi = {
 	whatsappChats(signal) {
 		return api.get(`${BASE}/whatsapp/chats`, { signal });
 	},
-	disconnectWhatsApp(signal) {
-		return api.post(`${BASE}/whatsapp/disconnect`, {}, { signal });
+	disconnectWhatsApp(accountId, signal) {
+		return api.post(`${BASE}/whatsapp/disconnect`, accountId ? { accountId } : {}, { signal });
+	},
+	useWhatsApp(accountId, signal) {
+		return api.post(`${BASE}/whatsapp/use`, { accountId }, { signal });
 	},
 	testWhatsApp(signal) {
 		return api.post(`${BASE}/whatsapp/test`, {}, { signal, timeout: 30000 });
 	},
-	messages(limit = 40, signal) {
-		return api.get(`${BASE}/messages`, { params: { limit }, signal });
+	messages(limit = 80, filters = {}, signal) {
+		return api.get(`${BASE}/messages`, { params: { limit, ...filters }, signal });
 	},
 	message(id, signal) {
 		return api.get(`${BASE}/messages/${id}`, { signal });
 	},
 	retry(id, signal) {
 		return api.post(`${BASE}/messages/${id}/retry`, {}, { signal, timeout: 60000 });
+	},
+	sendNow(body = {}, signal) {
+		return api.post(`${BASE}/send-now`, body, { signal, timeout: 300000 });
 	},
 	settings(signal) {
 		return api.get(`${BASE}/settings`, { signal });

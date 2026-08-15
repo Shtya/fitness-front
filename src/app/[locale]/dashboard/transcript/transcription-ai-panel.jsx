@@ -5,13 +5,18 @@ import {
 	ArrowLeftRight,
 	BookMarked,
 	Check,
+	ListChecks,
 	LoaderCircle,
 	Sparkles,
 	Wand2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
-import { enhanceTranscription, memorizeTranscription } from './transcription-client';
+import {
+	enhanceTranscription,
+	memorizeTranscription,
+	summarizeTranscription,
+} from './transcription-client';
 
 const labels = {
 	en: {
@@ -39,6 +44,14 @@ const labels = {
 		questions: 'Open questions',
 		enhanceFailed: 'Could not enhance this transcript.',
 		memorizeFailed: 'Could not build memorize notes.',
+		summarize: 'Summarize request',
+		summarizing: 'Summarizing…',
+		summarizeFailed: 'Could not summarize this transcript.',
+		summarizedBadge: 'Summary',
+		request: 'What they asked for',
+		context: 'Context',
+		asks: 'Asks',
+		nextSteps: 'Next steps',
 		needText: 'Add transcript text first.',
 		enhancedBadge: 'Enhanced',
 		memorizedBadge: 'Memorized',
@@ -68,6 +81,14 @@ const labels = {
 		questions: 'أسئلة مفتوحة',
 		enhanceFailed: 'تعذر تحسين النص.',
 		memorizeFailed: 'تعذر إنشاء ملاحظات الحفظ.',
+		summarize: 'تلخيص الطلب',
+		summarizing: 'جارٍ التلخيص…',
+		summarizeFailed: 'تعذر تلخيص النص.',
+		summarizedBadge: 'ملخص',
+		request: 'هو طالب إيه',
+		context: 'السياق',
+		asks: 'الطلبات',
+		nextSteps: 'خطوات تالية',
 		needText: 'أضف نص التحويل أولاً.',
 		enhancedBadge: 'محسّن',
 		memorizedBadge: 'مثبّت',
@@ -82,13 +103,20 @@ export default function TranscriptionAiPanel({
 	onResultUpdated,
 	initialCompare = null,
 	initialMemorize = null,
+	initialSummary = null,
+	variant = 'page',
 }) {
 	const t = labels[locale?.startsWith?.('ar') ? 'ar' : 'en'] || labels.en;
+	const compact = variant === 'compact';
 	const [enhancing, setEnhancing] = useState(false);
 	const [memorizing, setMemorizing] = useState(false);
+	const [summarizing, setSummarizing] = useState(false);
 	const [compare, setCompare] = useState(initialCompare);
 	const [memorize, setMemorize] = useState(initialMemorize);
-	const [view, setView] = useState(initialCompare ? 'compare' : 'editor');
+	const [summary, setSummary] = useState(initialSummary);
+	const [view, setView] = useState(
+		initialCompare ? 'compare' : initialSummary ? 'summary' : 'editor',
+	);
 
 	const changes = useMemo(
 		() =>
@@ -157,6 +185,30 @@ export default function TranscriptionAiPanel({
 		}
 	};
 
+	const runSummarize = async () => {
+		if (!transcriptionId) return;
+		const text = String(compare?.enhancedText || transcriptText || '').trim();
+		if (!text) {
+			toast.error(t.needText);
+			return;
+		}
+		setSummarizing(true);
+		try {
+			const data = await summarizeTranscription(transcriptionId, {
+				text,
+				locale: locale?.startsWith?.('ar') ? 'ar' : 'en',
+			});
+			setSummary(data.summary || null);
+			setView('summary');
+			onResultUpdated?.(data.transcription || null);
+			toast.success(t.summarizedBadge);
+		} catch (error) {
+			toast.error(error?.response?.data?.message || t.summarizeFailed);
+		} finally {
+			setSummarizing(false);
+		}
+	};
+
 	const applyEnhanced = () => {
 		if (!compare?.enhancedText) return;
 		onApplyText?.(compare.enhancedText);
@@ -168,26 +220,51 @@ export default function TranscriptionAiPanel({
 		onApplyText?.(compare.originalText);
 	};
 
+	const shellClass = compact
+		? 'mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white p-3'
+		: 'learning-neu mt-5 overflow-hidden p-4 md:p-5';
+	const ghostBtn = compact
+		? 'inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-700'
+		: 'learning-pill-btn--light !px-3 !py-2 !text-xs';
+	const primaryBtn = compact
+		? 'inline-flex h-9 items-center gap-1.5 rounded-xl bg-[var(--color-primary-600)] px-3 text-[12px] font-semibold text-white disabled:opacity-50'
+		: 'learning-pill-btn !px-4 !py-2.5';
+	const lightBtn = compact
+		? 'inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-[#f7f8fa] px-3 text-[12px] font-semibold text-slate-700 disabled:opacity-50'
+		: 'learning-pill-btn--light !px-4 !py-2.5';
+
+	const card = compact
+		? 'rounded-xl border border-slate-200 bg-[#f7f8fa] p-3'
+		: 'learning-neu-inset p-4';
+
 	return (
-		<section className="learning-neu mt-5 overflow-hidden p-4 md:p-5">
+		<section className={shellClass}>
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 				<div>
 					<h3 className="flex items-center gap-2 text-sm font-black text-slate-900">
 						<span className="grid size-8 place-items-center rounded-xl bg-[var(--color-primary-50)] text-[var(--color-primary-600)]">
 							<Sparkles size={16} />
 						</span>
-						{t.aiTools}
+						{compact ? (locale?.startsWith?.('ar') ? 'أدوات الذكاء الاصطناعي' : 'AI tools') : t.aiTools}
 					</h3>
-					<p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">{t.aiHint}</p>
+					{compact ? (
+						<p className="mt-1 text-[12px] leading-5 text-slate-500">
+							{locale?.startsWith?.('ar')
+								? 'حسّن الكلمات غير الواضحة، أو خلّي الذكاء الاصطناعي يفهم السياق ويلخّص الطلب.'
+								: 'Fix unclear extracted words, or let AI read the context and summarize the request.'}
+						</p>
+					) : (
+						<p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">{t.aiHint}</p>
+					)}
 				</div>
 				<div className="flex flex-wrap gap-2">
-					{(compare || memorize) && (
+					{(compare || memorize || summary) && (
 						<>
 							{compare ? (
 								<button
 									type="button"
 									onClick={() => setView('compare')}
-									className={`learning-pill-btn--light !px-3 !py-2 !text-xs ${
+									className={`${ghostBtn} ${
 										view === 'compare' ? 'ring-2 ring-[var(--color-primary-400)]' : ''
 									}`}
 								>
@@ -195,11 +272,23 @@ export default function TranscriptionAiPanel({
 									{t.compare}
 								</button>
 							) : null}
-							{memorize ? (
+							{summary ? (
+								<button
+									type="button"
+									onClick={() => setView('summary')}
+									className={`${ghostBtn} ${
+										view === 'summary' ? 'ring-2 ring-sky-400' : ''
+									}`}
+								>
+									<ListChecks size={14} />
+									{t.summarizedBadge}
+								</button>
+							) : null}
+							{!compact && memorize ? (
 								<button
 									type="button"
 									onClick={() => setView('memorize')}
-									className={`learning-pill-btn--light !px-3 !py-2 !text-xs ${
+									className={`${ghostBtn} ${
 										view === 'memorize' ? 'ring-2 ring-amber-400' : ''
 									}`}
 								>
@@ -213,7 +302,7 @@ export default function TranscriptionAiPanel({
 						type="button"
 						disabled={enhancing || !transcriptionId}
 						onClick={runEnhance}
-						className="learning-pill-btn !px-4 !py-2.5"
+						className={primaryBtn}
 					>
 						{enhancing ? (
 							<LoaderCircle size={15} className="animate-spin" />
@@ -224,24 +313,39 @@ export default function TranscriptionAiPanel({
 					</button>
 					<button
 						type="button"
-						disabled={memorizing || !transcriptionId}
-						onClick={runMemorize}
-						className="learning-pill-btn--light !px-4 !py-2.5"
+						disabled={summarizing || !transcriptionId}
+						onClick={runSummarize}
+						className={lightBtn}
 					>
-						{memorizing ? (
+						{summarizing ? (
 							<LoaderCircle size={15} className="animate-spin" />
 						) : (
-							<BookMarked size={15} />
+							<ListChecks size={15} />
 						)}
-						{memorizing ? t.memorizing : t.memorize}
+						{summarizing ? t.summarizing : t.summarize}
 					</button>
+					{compact ? null : (
+						<button
+							type="button"
+							disabled={memorizing || !transcriptionId}
+							onClick={runMemorize}
+							className={lightBtn}
+						>
+							{memorizing ? (
+								<LoaderCircle size={15} className="animate-spin" />
+							) : (
+								<BookMarked size={15} />
+							)}
+							{memorizing ? t.memorizing : t.memorize}
+						</button>
+					)}
 				</div>
 			</div>
 
 			{view === 'compare' && compare ? (
 				<div className="mt-4 space-y-4">
 					<div className="grid gap-3 lg:grid-cols-2">
-						<div className="learning-neu-inset p-4">
+						<div className={card}>
 							<div className="mb-2 flex items-center justify-between gap-2">
 								<p className="text-xs font-black uppercase tracking-wide text-slate-500">
 									{t.before}
@@ -254,7 +358,7 @@ export default function TranscriptionAiPanel({
 								{compare.originalText}
 							</pre>
 						</div>
-						<div className="learning-neu-inset border-[var(--color-primary-200)] bg-[var(--color-primary-50)]/40 p-4">
+						<div className={`${card} border-[var(--color-primary-200)] bg-[var(--color-primary-50)]/40`}>
 							<div className="mb-2 flex items-center justify-between gap-2">
 								<p className="text-xs font-black uppercase tracking-wide text-[var(--color-primary-700)]">
 									{t.after}
@@ -269,7 +373,7 @@ export default function TranscriptionAiPanel({
 						</div>
 					</div>
 
-					<div className="learning-neu-inset p-4">
+					<div className={card}>
 						<p className="text-xs font-black uppercase tracking-wide text-slate-500">
 							{t.changes}
 						</p>
@@ -295,6 +399,62 @@ export default function TranscriptionAiPanel({
 							</Button>
 						</div>
 					</div>
+				</div>
+			) : null}
+
+			{view === 'summary' && summary ? (
+				<div className="mt-4 space-y-3">
+					{summary.tldr ? (
+						<div className={card}>
+							<p className="text-xs font-black uppercase tracking-wide text-sky-700">
+								{t.tldr}
+							</p>
+							<p className="mt-2 text-sm leading-7 text-slate-800">{summary.tldr}</p>
+						</div>
+					) : null}
+					{summary.request ? (
+						<div className={card}>
+							<p className="text-xs font-black uppercase tracking-wide text-slate-500">
+								{t.request}
+							</p>
+							<p className="mt-2 text-sm leading-7 text-slate-800">{summary.request}</p>
+						</div>
+					) : null}
+					{summary.context ? (
+						<div className={card}>
+							<p className="text-xs font-black uppercase tracking-wide text-slate-500">
+								{t.context}
+							</p>
+							<p className="mt-2 text-sm leading-7 text-slate-800">{summary.context}</p>
+						</div>
+					) : null}
+					{Array.isArray(summary.asks) && summary.asks.length > 0 ? (
+						<div className={card}>
+							<p className="text-xs font-black uppercase tracking-wide text-slate-500">
+								{t.asks}
+							</p>
+							<ul className="mt-2 space-y-1.5 text-sm text-slate-700">
+								{summary.asks.map(item => (
+									<li key={item} className="flex gap-2">
+										<span className="mt-2 size-1.5 shrink-0 rounded-full bg-sky-500" />
+										<span>{item}</span>
+									</li>
+								))}
+							</ul>
+						</div>
+					) : null}
+					{Array.isArray(summary.nextSteps) && summary.nextSteps.length > 0 ? (
+						<div className={card}>
+							<p className="text-xs font-black uppercase tracking-wide text-slate-500">
+								{t.nextSteps}
+							</p>
+							<ol className="mt-2 list-decimal space-y-1.5 ps-5 text-sm text-slate-700">
+								{summary.nextSteps.map(item => (
+									<li key={item}>{item}</li>
+								))}
+							</ol>
+						</div>
+					) : null}
 				</div>
 			) : null}
 

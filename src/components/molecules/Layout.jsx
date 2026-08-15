@@ -249,7 +249,8 @@ export default function Layout({ children }) {
 	const isChatRoute = pathname.includes('/dashboard/chat');
 	const isAiFreeRoute = pathname.includes('/dashboard/ai-free');
 	const isAiContentStudioRoute = pathname.includes('/dashboard/ai-content-studio');
-	const isImmersiveRoute = isWhatsAppRoute || isMetaWhatsAppRoute || isChatRoute || isAiFreeRoute || isAiContentStudioRoute;
+	const isGoldIntelligenceRoute = pathname.includes('/dashboard/gold-intelligence');
+	const isImmersiveRoute = isWhatsAppRoute || isMetaWhatsAppRoute || isChatRoute || isAiFreeRoute || isAiContentStudioRoute || isGoldIntelligenceRoute;
 	/** Dashboard shell (sidebar/header): lock viewport to one scroll surface */
 	const isAppShell = !isAuthRoute;
 

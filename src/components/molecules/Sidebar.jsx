@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import api from '@/utils/axios';
 import Link from 'next/link';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil, GraduationCap, PanelLeftClose, PanelLeftOpen, Mails } from 'lucide-react';
+import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, MessageCircle, Calculator, BarChart3, ChefHat, ChevronDown, ChevronLeft, X, Bell, Wallet, User, ListTodo, CalendarDays, LogOut, Globe, Palette, Paintbrush, Check, Languages, Receipt, ChevronRight, Sparkles, Settings2, Lock, Search, BrainCircuit, LayoutGrid, GanttChart, FileText, Inbox, Layers, Zap, TrendingUp, BookOpen, BookMarked, Target, Coffee, ShieldCheck, CreditCard, Activity, Star, Hash, Sliders, AudioLines, ShieldAlert, Radar, Pencil, GraduationCap, PanelLeftClose, PanelLeftOpen, Mails, Coins } from 'lucide-react';
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
@@ -257,6 +257,7 @@ export const ITEM_META = {
   aiFree: { id: 'aiFree', nameKey: 'aiFree', href: '/dashboard/ai-free', icon: BrainCircuit, descKey: 'descriptions.aiFree', group: 'tools', defaultVisible: true, required: false },
   aiContentStudio: { id: 'aiContentStudio', nameKey: 'aiContentStudio', href: '/dashboard/ai-content-studio', icon: Sparkles, descKey: 'descriptions.aiContentStudio', group: 'tools', defaultVisible: true, required: false },
   emailMemo: { id: 'emailMemo', nameKey: 'emailMemo', href: '/dashboard/email-memo', icon: Mails, descKey: 'descriptions.emailMemo', group: 'tools', defaultVisible: true, required: false },
+  goldIntelligence: { id: 'goldIntelligence', nameKey: 'goldIntelligence', href: '/dashboard/gold-intelligence', icon: Coins, descKey: 'descriptions.goldIntelligence', group: 'tools', defaultVisible: true, required: false },
   learning: { id: 'learning', nameKey: 'learning', href: '/dashboard/learning', icon: GraduationCap, descKey: 'descriptions.learning', group: 'tools', defaultVisible: true, required: false },
   quranRevision: { id: 'quranRevision', nameKey: 'quranRevision', href: '/dashboard/quran-revision', icon: BookMarked, descKey: 'descriptions.quranRevision', group: 'tools', defaultVisible: true, required: false },
   phoneCheck: { id: 'phoneCheck', nameKey: 'phoneCheck', href: '/dashboard/phone-check', icon: ShieldAlert, descKey: 'descriptions.phoneCheck', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
@@ -309,6 +310,7 @@ export const NAV = [
       { ...ITEM_META.aiFree },
       { ...ITEM_META.aiContentStudio },
       { ...ITEM_META.emailMemo },
+      { ...ITEM_META.goldIntelligence },
       { ...ITEM_META.learning },
       { ...ITEM_META.quranRevision },
     ],
@@ -348,6 +350,7 @@ export const NAV = [
       { ...ITEM_META.aiFree },
       { ...ITEM_META.aiContentStudio },
       { ...ITEM_META.emailMemo },
+      { ...ITEM_META.goldIntelligence },
       { ...ITEM_META.learning },
       { ...ITEM_META.quranRevision },
       { ...ITEM_META.money },
@@ -387,6 +390,7 @@ export const NAV = [
       { ...ITEM_META.aiFree },
       { ...ITEM_META.aiContentStudio },
       { ...ITEM_META.emailMemo },
+      { ...ITEM_META.goldIntelligence },
       { ...ITEM_META.learning },
       { ...ITEM_META.quranRevision },
     ],
@@ -419,7 +423,7 @@ export const NAV = [
   {
     role: 'super_admin',
     sectionKey: 'sections.workspace',
-    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.aiFree }, { ...ITEM_META.aiContentStudio }, { ...ITEM_META.emailMemo }, { ...ITEM_META.learning }, { ...ITEM_META.quranRevision }],
+    items: [{ ...ITEM_META.todos }, { ...ITEM_META.calendar }, { ...ITEM_META.transcript }, { ...ITEM_META.aiFree }, { ...ITEM_META.aiContentStudio }, { ...ITEM_META.emailMemo }, { ...ITEM_META.goldIntelligence }, { ...ITEM_META.learning }, { ...ITEM_META.quranRevision }],
   },
   {
     role: 'super_admin',

@@ -15,6 +15,7 @@ import {
 	seekRatio,
 	sortConversationsByActivity,
 	updateConversationPreview,
+	conversationUnreadCount,
 } from './whatsapp-utils.js';
 
 test('mergeMessages deduplicates provider messages and sorts chronologically', () => {
@@ -361,6 +362,7 @@ test('parseWhatsAppBold converts double-asterisk sections into bold text', () =>
 test('isRenderableWhatsAppMessage removes empty provider placeholders', () => {
 	assert.equal(isRenderableWhatsAppMessage({ id: 'empty', type: 'chat', text: '' }), false);
 	assert.equal(isRenderableWhatsAppMessage({ id: 'spaces', text: '   ' }), false);
+	assert.equal(isRenderableWhatsAppMessage({ id: 'zwsp', type: 'text', text: '\u200e\u200b' }), false);
 	assert.equal(isRenderableWhatsAppMessage({ id: 'text', text: 'Hello' }), true);
 	assert.equal(
 		isRenderableWhatsAppMessage({
@@ -370,4 +372,58 @@ test('isRenderableWhatsAppMessage removes empty provider placeholders', () => {
 		true,
 	);
 	assert.equal(isRenderableWhatsAppMessage({ id: 'voice', type: 'ptt' }), true);
+	assert.equal(
+		isRenderableWhatsAppMessage({
+			id: 'live-voice',
+			type: 'ptt',
+			attachments: [{ type: 'ptt', key: 'live-att:1', providerMediaId: 'abc' }],
+		}),
+		true,
+	);
+});
+
+test('conversationUnreadCount hides the badge after an outbound phone reply', () => {
+	assert.equal(
+		conversationUnreadCount({
+			unreadCount: 4,
+			lastMessage: { direction: 'outbound', text: 'من الموبايل' },
+		}),
+		0,
+	);
+	assert.equal(
+		conversationUnreadCount({
+			unreadCount: 2,
+			lastMessage: { direction: 'inbound', text: 'أهلاً' },
+		}),
+		2,
+	);
+});
+
+test('updateConversationPreview clears unread when the latest message is from us', () => {
+	const conversations = [
+		{
+			id: 'conversation-1',
+			lastMessageAt: '2026-07-21T18:15:00.000Z',
+			lastMessage: {
+				text: 'Unread inbound',
+				direction: 'inbound',
+				providerTimestamp: '2026-07-21T18:15:00.000Z',
+			},
+			unreadCount: 3,
+		},
+	];
+	const result = updateConversationPreview(conversations, {
+		conversationId: 'conversation-1',
+		lastMessageAt: '2026-07-21T18:16:00.000Z',
+		unreadCount: 3,
+		preview: {
+			id: 'phone-reply',
+			text: 'Replied from phone',
+			type: 'text',
+			direction: 'outbound',
+			providerTimestamp: '2026-07-21T18:16:00.000Z',
+		},
+	});
+	assert.equal(result[0].unreadCount, 0);
+	assert.equal(result[0].lastMessage.direction, 'outbound');
 });

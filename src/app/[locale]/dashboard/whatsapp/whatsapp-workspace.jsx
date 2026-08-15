@@ -33,6 +33,7 @@ import {
 	Globe2,
 	Image as ImageIcon,
 	Images,
+	ListChecks,
 	Loader2,
 	LogOut,
 	MapPin,
@@ -73,10 +74,16 @@ import {
 import api from '@/utils/axios';
 import { notifyWhatsAppUnreadChanged } from '@/lib/outreach-unread';
 import TranscriptionDialog from '../transcript/transcription-dialog';
-import { createTranscriptionFile } from '../transcript/transcription-client';
+import {
+	createTranscriptionFile,
+	isSelectableTranscriptMessage,
+	MAX_TRANSCRIPT_BUNDLE_ITEMS,
+	toTranscriptSource,
+} from '../transcript/transcription-client';
 import {
 	conversationTitle,
 	conversationAvatarUrl,
+	conversationUnreadCount,
 	firstMessageLink,
 	getStoryMediaEmbed,
 	groupConsecutiveImageMessages,
@@ -92,12 +99,14 @@ import {
 	seekRatio,
 	sortConversationsByActivity,
 	updateConversationPreview,
+	visibleMessageText,
 } from './whatsapp-utils';
 import { DemoModeProvider, useDemoMode } from './demo/DemoModeProvider';
 import DemoModeSettings from './demo/components/DemoModeSettings';
 import { demoApi } from './demo/demo-api';
 import WhatsAppSplitPane from './WhatsAppSplitPane';
 import WhatsAppDesktopRail from './WhatsAppDesktopRail';
+import { WaCustomSelect } from './WaCustomSelect';
 import {
 	fetchConversations,
 	fetchMessages,
@@ -314,6 +323,15 @@ const translations = {
 		downloadingSelectedMedia: 'Downloading selected files…',
 		selectedMediaDownloaded: 'Downloaded {count} files',
 		selectedMediaPartialFail: 'Downloaded {ok} files, {failed} failed',
+		selectMessages: 'Select messages',
+		cancelSelectMessages: 'Cancel',
+		selectAllMessages: 'Select all',
+		noMessagesToSelect: 'No voices or tickets to select in this chat',
+		transcribeSelected: 'Transcribe selected',
+		selectedMessagesCount: '{count} selected',
+		needVoiceOrTicket: 'Select at least one voice or text message',
+		tooManySelected: 'Select up to {count} messages at a time',
+		selectMessageAction: 'Select',
 		reconnectAccount: 'Reconnect WhatsApp',
 		autoConnecting: 'Restoring WhatsApp session…',
 		defaultAccountLabel: 'WhatsApp',
@@ -553,6 +571,15 @@ const translations = {
 		downloadingSelectedMedia: 'جارِ تنزيل الملفات المحددة…',
 		selectedMediaDownloaded: 'تم تنزيل {count} ملف',
 		selectedMediaPartialFail: 'تم تنزيل {ok} ملف، وفشل {failed}',
+		selectMessages: 'تحديد رسائل',
+		cancelSelectMessages: 'إلغاء',
+		selectAllMessages: 'تحديد الكل',
+		noMessagesToSelect: 'لا توجد أصوات أو تذاكر للتحديد في هذه المحادثة',
+		transcribeSelected: 'تحويل المحدد',
+		selectedMessagesCount: '{count} محدد',
+		needVoiceOrTicket: 'حدّد رسالة صوتية أو نصية واحدة على الأقل',
+		tooManySelected: 'يمكنك تحديد حتى {count} رسالة في المرة',
+		selectMessageAction: 'تحديد',
 		reconnectAccount: 'إعادة ربط واتساب',
 		autoConnecting: 'جارِ استعادة جلسة واتساب…',
 		defaultAccountLabel: 'واتساب',
@@ -2608,6 +2635,7 @@ function MessageActionMenu({
 	const ar = locale === 'ar';
 	const actions = [
 		isVoice && { id: 'transcribe', label: ar ? 'تحويل إلى نص' : 'Transcribe', icon: Mic },
+		isSelectableTranscriptMessage(message) && { id: 'select', label: ar ? 'تحديد' : 'Select', icon: ListChecks },
 		{ id: 'reply', label: ar ? 'رد' : 'Reply', icon: Reply },
 		{ id: 'forward', label: ar ? 'إعادة توجيه' : 'Forward', icon: Send },
 		{ id: 'info', label: ar ? 'معلومات' : 'Info', icon: MessageCircle },
@@ -3464,7 +3492,7 @@ function Avatar({
 	const placeholderStyle = avatarPlaceholderStyle(label);
 	return (
 		<div
-			className={`relative grid shrink-0 place-items-center overflow-hidden rounded-full shadow-sm ring-2 ring-white dark:ring-slate-900 ${className}`}
+			className={`wa-avatar-3d relative grid shrink-0 place-items-center overflow-hidden rounded-full ring-2 ring-white dark:ring-slate-900 ${className}`}
 			style={{
 				width: `${size * 4}px`,
 				height: `${size * 4}px`,
@@ -3659,7 +3687,7 @@ function ConversationFilterDropdown({ value, onChange, labels }) {
 				aria-haspopup="listbox"
 				aria-expanded={open}
 				onClick={() => setOpen(current => !current)}
-				className="flex h-10 w-full items-center justify-between gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-bold text-[#111b21] outline-none transition-colors hover:border-[var(--color-primary-300)] focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+				className="wa-btn-3d flex h-10 w-full items-center justify-between gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-bold text-[#111b21] outline-none transition-colors hover:border-[var(--color-primary-300)] focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
 			>
 				<span className="truncate">{selected.label}</span>
 				<ChevronDown
@@ -3770,10 +3798,7 @@ function AccountSwitcherDropdown({
 				aria-haspopup="listbox"
 				aria-expanded={open}
 				onClick={() => setOpen(current => !current)}
-				className="wa-account-switcher flex h-10 w-full items-center gap-2.5 rounded-[14px] border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none transition-all hover:border-[var(--color-primary-300)] hover:bg-slate-50 focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-				style={{
-					boxShadow: '0 1px 2px rgba(15,23,42,0.06)',
-				}}
+				className="wa-account-switcher wa-btn-3d flex h-10 w-full items-center gap-2.5 rounded-[14px] border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none transition-all hover:border-[var(--color-primary-300)] hover:bg-slate-50 focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
 			>
 				<Avatar label={selected?.label || '?'} size={7} className="shrink-0" />
 				<span className="min-w-0 flex-1 truncate text-start text-slate-800 dark:text-slate-100">
@@ -3857,11 +3882,15 @@ function WhatsAppWorkspaceContent() {
 		resetConversationsCache,
 		conversationsCacheAdapter,
 		messagesCacheAdapter,
+		prefetchMessages,
 	} = useWhatsAppQueryCache();
 	const conversationsCacheRef = useRef(conversationsCacheAdapter);
 	const messagesCacheRef = useRef(messagesCacheAdapter);
 	conversationsCacheRef.current = conversationsCacheAdapter;
 	messagesCacheRef.current = messagesCacheAdapter;
+	const hoverPrefetchTimerRef = useRef(null);
+	const prefetchInFlightRef = useRef(0);
+	const listScrollPrefetchBlockedUntilRef = useRef(0);
 	const [activeTab, setActiveTab] = useState(defaultWhatsAppActiveTab);
 	const [settingsSection, setSettingsSection] = useState('ai');
 	const [accounts, setAccounts] = useState([]);
@@ -3960,7 +3989,7 @@ function WhatsAppWorkspaceContent() {
 	const [messageInfo, setMessageInfo] = useState(null);
 	const [loadingMessageInfo, setLoadingMessageInfo] = useState(false);
 	const [deleteMessageTarget, setDeleteMessageTarget] = useState(null);
-	const [transcriptionMessage, setTranscriptionMessage] = useState(null);
+	const [transcriptionSources, setTranscriptionSources] = useState(null);
 	const [conversationActionTarget, setConversationActionTarget] = useState(null);
 	const [conversationActionAnchor, setConversationActionAnchor] = useState(null);
 	const [conversationAssignTarget, setConversationAssignTarget] = useState(null);
@@ -3989,6 +4018,8 @@ function WhatsAppWorkspaceContent() {
 	const [mediaSelectMode, setMediaSelectMode] = useState(false);
 	const [selectedMediaIds, setSelectedMediaIds] = useState(() => new Set());
 	const [downloadingSelectedMedia, setDownloadingSelectedMedia] = useState(false);
+	const [ticketSelectMode, setTicketSelectMode] = useState(false);
+	const [selectedMessageIds, setSelectedMessageIds] = useState(() => new Set());
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const [mobileHeaderScrolled, setMobileHeaderScrolled] = useState(false);
 	const [attachmentSheetOpen, setAttachmentSheetOpen] = useState(false);
@@ -4010,6 +4041,7 @@ function WhatsAppWorkspaceContent() {
 	const conversationLongPressOriginRef = useRef(null);
 	const suppressConversationClickRef = useRef(false);
 	const lastAutoScrolledMessageRef = useRef(null);
+	const pinThreadToBottomRef = useRef(false);
 	const chatSearchRef = useRef('');
 	const conversationFilterRef = useRef('all');
 	const assignmentFilterRef = useRef('');
@@ -4110,6 +4142,10 @@ function WhatsAppWorkspaceContent() {
 		() => effectiveConversations.find(item => item.id === conversationId) || null,
 		[effectiveConversations, conversationId],
 	);
+	const selectedChatTitle = selectedConversation
+		? conversationTitle(selectedConversation)
+		: '';
+	const selectedChatTitlePresentation = messageTextPresentation(selectedChatTitle);
 	const selectedSecondaryConversation = useMemo(
 		() =>
 			effectiveConversations.find(item => item.id === secondaryConversationId) || null,
@@ -4148,7 +4184,11 @@ function WhatsAppWorkspaceContent() {
 		[canManageWhatsApp, isAdmin],
 	);
 	const unreadConversationCount = useMemo(
-		() => effectiveConversations.reduce((total, conversation) => total + Math.max(0, Number(conversation.unreadCount) || 0), 0),
+		() =>
+			effectiveConversations.reduce(
+				(total, conversation) => total + conversationUnreadCount(conversation),
+				0,
+			),
 		[effectiveConversations],
 	);
 	const chatImages = useMemo(
@@ -4187,7 +4227,7 @@ function WhatsAppWorkspaceContent() {
 		setForwardingMessage(null);
 		setDeleteMessageTarget(null);
 		setMessageInfo(null);
-		setTranscriptionMessage(null);
+		setTranscriptionSources(null);
 	}, [conversationId]);
 
 	useEffect(() => {
@@ -5076,6 +5116,14 @@ function WhatsAppWorkspaceContent() {
 		const isCurrentRequest = () =>
 			messagesRequestId.current === requestId &&
 			conversationIdRef.current === id;
+		if (hoverPrefetchTimerRef.current) {
+			window.clearTimeout(hoverPrefetchTimerRef.current);
+			hoverPrefetchTimerRef.current = null;
+		}
+		void queryClient.cancelQueries({
+			queryKey: ['whatsapp', 'messages'],
+			predicate: query => String(query.queryKey[2] || '') !== String(id),
+		});
 		const cached = messagesCacheRef.current.get(id);
 		const cacheIsFresh =
 			Boolean(cached?.items?.length) &&
@@ -5106,13 +5154,13 @@ function WhatsAppWorkspaceContent() {
 			// Keeps this chat's already-rendered messages (no blank flash) while
 			// dropping anything that belonged to the chat the user just left.
 			writeConversationMessages(id, current => current);
-			setHasMoreMessages(true);
+			setHasMoreMessages(false);
 		}
 		try {
 			const storedItems = await queryClient.fetchQuery({
 				queryKey: whatsappKeys.messages(id),
-				queryFn: async () => {
-					const items = await fetchMessages(id, { limit: MESSAGE_PAGE_SIZE });
+				queryFn: async ({ signal }) => {
+					const items = await fetchMessages(id, { limit: MESSAGE_PAGE_SIZE, signal });
 					return {
 						items,
 						hasMore: items.length >= MESSAGE_PAGE_SIZE,
@@ -5143,10 +5191,23 @@ function WhatsAppWorkspaceContent() {
 				providerHydratedAt: currentCache?.providerHydratedAt || cached?.providerHydratedAt || 0,
 			});
 			writeConversationMessages(id, current => mergeMessages(current, items, id));
-			if (items.length > 0 && isCurrentRequest()) {
+			if (!items.length && isCurrentRequest()) {
+				const preview = conversationsRef.current.find(item => item.id === id)?.lastMessage;
+				if (preview && isRenderableWhatsAppMessage(preview)) {
+					items = [
+						{
+							...preview,
+							id: preview.id || `inbox-preview-${id}`,
+							conversationId: preview.conversationId || id,
+						},
+					];
+					writeConversationMessages(id, () => items);
+				}
+			}
+			if (isCurrentRequest()) {
 				setLoadingMessages(false);
 				setMessagesSyncHint('');
-				scrollMessagesToBottom();
+				if (items.length > 0) scrollMessagesToBottom();
 			}
 			if (canSync) {
 				api
@@ -5188,25 +5249,10 @@ function WhatsAppWorkspaceContent() {
 				items.length < MESSAGE_PAGE_SIZE &&
 				(!historySyncBlocked || forceProvider);
 			if (needsProviderBackfill) {
-				// Show whatever we already have in DB immediately. Only keep the
-				// full-pane spinner on the first empty-chat attempt — retries use
-				// the softer "still syncing" hint so the pane does not look stuck.
-				const retryingEmpty =
-					messageHistoryRetryRef.current.conversationId === id &&
-					messageHistoryRetryRef.current.attempts > 0;
-				// Never keep the full-pane spinner locked on provider sync — WA Web
-				// getMessages often soft-fails for seconds (@lid → @c.us). Show DB
-				// immediately and use a soft hint while history backfills.
 				if (isCurrentRequest()) {
 					setLoadingMessages(false);
-					if (items.length > 0) {
-						setMessagesSyncHint('');
-						scrollMessagesToBottom();
-					} else if (retryingEmpty) {
-						setMessagesSyncHint('still_syncing');
-					} else {
-						setMessagesSyncHint('still_syncing');
-					}
+					setMessagesSyncHint('');
+					if (items.length > 0) scrollMessagesToBottom();
 				}
 				const runSyncOnce = () => {
 					let syncPromise = messageSyncInFlightRef.current.get(id);
@@ -5214,7 +5260,7 @@ function WhatsAppWorkspaceContent() {
 						syncPromise = api
 							.post(`/whatsapp/conversations/${id}/sync/latest`, null, {
 								params: { limit: MESSAGE_PAGE_SIZE },
-								timeout: 90000,
+								timeout: 12000,
 							})
 							.then(response => response.data)
 							.finally(() => {
@@ -5272,13 +5318,8 @@ function WhatsAppWorkspaceContent() {
 							setMessagesSyncHint('');
 							messageHistoryRetryRef.current.attempts = 0;
 						} else if (items.length === 0 && isCurrentRequest()) {
-							setMessagesSyncHint(
-								synced?.message ||
-									(synced?.syncError === 'main_not_ready' ||
-									synced?.syncError === 'provider_unavailable'
-										? 'still_syncing'
-										: ''),
-							);
+							setMessagesSyncHint('');
+							setLoadingMessages(false);
 							scheduleBackgroundRetry(cooldown || 4_000);
 						}
 					} else {
@@ -5290,7 +5331,8 @@ function WhatsAppWorkspaceContent() {
 				} catch (error) {
 					providerHistorySyncBlockedUntilRef.current = Date.now() + 8_000;
 					if (isCurrentRequest() && !items.length) {
-						setMessagesSyncHint('still_syncing');
+						setMessagesSyncHint('');
+						setLoadingMessages(false);
 						const firstFailure = messageHistoryRetryRef.current.attempts === 0;
 						scheduleBackgroundRetry(8_000);
 						if (firstFailure) {
@@ -5307,6 +5349,11 @@ function WhatsAppWorkspaceContent() {
 			}
 		} catch (error) {
 			if (!isCurrentRequest()) return;
+			const cancelled =
+				error?.name === 'CancelledError' ||
+				error?.code === 'ERR_CANCELED' ||
+				error?.message === 'canceled';
+			if (cancelled) return;
 			if (!cached?.items?.length) {
 				clearConversationMessages(id);
 				toast.error(error.response?.data?.message || 'Could not load messages');
@@ -5324,6 +5371,44 @@ function WhatsAppWorkspaceContent() {
 
 	const loadMessagesRef = useRef(loadMessages);
 	loadMessagesRef.current = loadMessages;
+
+	const cancelIdleMessagePrefetch = useCallback((keepConversationId = null) => {
+		if (hoverPrefetchTimerRef.current) {
+			window.clearTimeout(hoverPrefetchTimerRef.current);
+			hoverPrefetchTimerRef.current = null;
+		}
+		void queryClient.cancelQueries({
+			queryKey: ['whatsapp', 'messages'],
+			predicate: query =>
+				String(query.queryKey[2] || '') !== String(keepConversationId || ''),
+		});
+	}, [queryClient]);
+
+	const scheduleConversationPrefetch = useCallback((id) => {
+		if (!id || id === conversationIdRef.current) return;
+		if (Date.now() < listScrollPrefetchBlockedUntilRef.current) return;
+		const cached = messagesCacheRef.current.get(id);
+		if (cached?.items?.length) return;
+		if (hoverPrefetchTimerRef.current) window.clearTimeout(hoverPrefetchTimerRef.current);
+		hoverPrefetchTimerRef.current = window.setTimeout(() => {
+			hoverPrefetchTimerRef.current = null;
+			if (id === conversationIdRef.current) return;
+			if (prefetchInFlightRef.current >= 2) return;
+			prefetchInFlightRef.current += 1;
+			prefetchMessages(id, 40).finally(() => {
+				prefetchInFlightRef.current = Math.max(0, prefetchInFlightRef.current - 1);
+			});
+		}, 220);
+	}, [prefetchMessages]);
+
+	useEffect(() => {
+		return () => {
+			if (hoverPrefetchTimerRef.current) {
+				window.clearTimeout(hoverPrefetchTimerRef.current);
+				hoverPrefetchTimerRef.current = null;
+			}
+		};
+	}, []);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -5455,6 +5540,8 @@ function WhatsAppWorkspaceContent() {
 			clearConversationMessages(conversationId);
 			setHasMoreMessages(true);
 			setLoadingMessages(Boolean(conversationId));
+			lastAutoScrolledMessageRef.current = null;
+			pinThreadToBottomRef.current = true;
 		}
 		messagesRequestId.current += 1;
 		olderRequestId.current += 1;
@@ -5506,27 +5593,24 @@ function WhatsAppWorkspaceContent() {
 		setConversationUnreadCount,
 	]);
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		const latest = effectiveMessages[effectiveMessages.length - 1];
-		if (!latest?.id || latest.id === lastAutoScrolledMessageRef.current) return;
-		lastAutoScrolledMessageRef.current = latest.id;
+		if (!latest?.id) return;
 		const box = messageBoxRef.current;
 		if (!box || loadingOlder) return;
-		const distanceFromBottom =
-			box.scrollHeight - box.clientHeight - box.scrollTop;
-		const shouldFollowMessage =
-			latest.direction === 'outbound' || distanceFromBottom < 180;
-		if (!shouldFollowMessage) return;
-		requestAnimationFrame(() => {
-			const currentBox = messageBoxRef.current;
-			if (currentBox) {
-				currentBox.scrollTo({
-					top: currentBox.scrollHeight,
-					behavior: 'smooth',
-				});
-			}
-		});
-	}, [effectiveMessages, loadingOlder]);
+		const pinOpen = pinThreadToBottomRef.current;
+		const isNewLatest = latest.id !== lastAutoScrolledMessageRef.current;
+		const nearBottom =
+			box.scrollHeight - box.clientHeight - box.scrollTop < 180;
+		if (pinOpen) {
+			lastAutoScrolledMessageRef.current = latest.id;
+			box.scrollTop = box.scrollHeight;
+			return;
+		}
+		if (!isNewLatest || !(nearBottom || latest.direction === 'outbound')) return;
+		lastAutoScrolledMessageRef.current = latest.id;
+		box.scrollTop = box.scrollHeight;
+	}, [effectiveMessages, loadingOlder, conversationId]);
 
 	const loadNotes = useCallback(async id => {
 		if (!id) return;
@@ -6611,7 +6695,42 @@ function WhatsAppWorkspaceContent() {
 		setMediaSelectMode(false);
 		setSelectedMediaIds(new Set());
 		setDownloadingSelectedMedia(false);
+		setTicketSelectMode(false);
+		setSelectedMessageIds(new Set());
 	}, [conversationId]);
+
+	const selectableTranscriptMessages = useMemo(
+		() => (effectiveMessages || []).filter(isSelectableTranscriptMessage),
+		[effectiveMessages],
+	);
+
+	const toggleTicketSelectMode = () => {
+		if (ticketSelectMode) {
+			setTicketSelectMode(false);
+			setSelectedMessageIds(new Set());
+			return;
+		}
+		if (!selectableTranscriptMessages.length) {
+			toast.error(t.noMessagesToSelect);
+			return;
+		}
+		setMediaSelectMode(false);
+		setSelectedMediaIds(new Set());
+		setTicketSelectMode(true);
+	};
+
+	const openSelectedTranscriptBundle = () => {
+		const selected = selectableTranscriptMessages.filter(item => selectedMessageIds.has(item.id));
+		if (!selected.length) {
+			toast.error(t.needVoiceOrTicket);
+			return;
+		}
+		if (selected.length > MAX_TRANSCRIPT_BUNDLE_ITEMS) {
+			toast.error(t.tooManySelected.replace('{count}', String(MAX_TRANSCRIPT_BUNDLE_ITEMS)));
+			return;
+		}
+		setTranscriptionSources(selected.map(toTranscriptSource));
+	};
 
 	const reactToMessage = async (message, emoji) => {
 		if (
@@ -6702,7 +6821,24 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		if (action === 'transcribe') {
-			setTranscriptionMessage(message);
+			setTranscriptionSources([toTranscriptSource(message)]);
+			return;
+		}
+		if (action === 'select') {
+			if (!isSelectableTranscriptMessage(message)) return;
+			setMediaSelectMode(false);
+			setSelectedMediaIds(new Set());
+			setTicketSelectMode(true);
+			setSelectedMessageIds(current => {
+				if (current.has(message.id)) return current;
+				if (current.size >= MAX_TRANSCRIPT_BUNDLE_ITEMS) {
+					toast.error(
+						t.tooManySelected.replace('{count}', String(MAX_TRANSCRIPT_BUNDLE_ITEMS)),
+					);
+					return current;
+				}
+				return new Set(current).add(message.id);
+			});
 			return;
 		}
 		if (demo.settings.enabled) {
@@ -6790,26 +6926,21 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
-	const loadSelectedTranscriptionFile = useCallback(async () => {
-		const attachment = transcriptionMessage?.attachments?.find(item =>
-			['audio', 'ptt', 'voice'].includes(String(item.type || transcriptionMessage?.type || '').toLowerCase()),
-		);
-		if (!attachment) throw new Error('Voice message is unavailable');
+	const loadTranscriptionSourceFile = useCallback(async source => {
+		const attachment = source?.attachment;
+		if (!attachment?.id) throw new Error('Voice message is unavailable');
 		const demoAttachment = Boolean(attachment.demoAttachment || isDemoId(attachment.id));
 		const blob = demoAttachment
 			? await demoApi.getMedia(rawDemoId(attachment.id))
-			: (
-					await api.get(`/whatsapp/attachments/${attachment.id}/content`, {
-						responseType: 'blob',
-					})
-				).data;
+			: await requestAttachmentBlob(attachment.id, { timeout: 90_000, priority: true });
+		if (!blob || blob.size < 8) throw new Error('Voice message is unavailable');
 		return createTranscriptionFile(
 			blob,
 			attachment.fileName,
 			attachment.id,
 			attachment.mimeType,
 		);
-	}, [transcriptionMessage]);
+	}, []);
 
 	const startMessageLongPress = (event, message) => {
 		if (typeof window === 'undefined' || window.innerWidth > 768) return;
@@ -6997,12 +7128,15 @@ function WhatsAppWorkspaceContent() {
 	}, [conversationId]);
 
 	const loadOlder = async () => {
+		const oldest = conversationMessages[0];
 		if (
 			!conversationId ||
 			isDemoId(conversationId) ||
 			loadingOlderRef.current ||
 			loadingOlder ||
-			!hasMoreMessages
+			loadingMessages ||
+			!hasMoreMessages ||
+			!oldest?.id
 		) {
 			return;
 		}
@@ -7012,7 +7146,6 @@ function WhatsAppWorkspaceContent() {
 		const previousHeight = box?.scrollHeight || 0;
 		loadingOlderRef.current = true;
 		setLoadingOlder(true);
-		const oldest = conversationMessages[0];
 		try {
 			const { data } = await api.get(
 				`/whatsapp/conversations/${targetConversationId}/messages`,
@@ -8520,7 +8653,7 @@ function WhatsAppWorkspaceContent() {
 									)}
 									<div className="wa-desktop-chat-list-tools flex items-center justify-between">
 										<h2 className="font-black">{t.chats}</h2>
-										<div className="flex items-center gap-1">
+										<div className="flex items-center gap-1.5">
 											{searchOpen ? (
 												<button
 													type="button"
@@ -8529,7 +8662,7 @@ function WhatsAppWorkspaceContent() {
 														setChatSearch('');
 													}}
 													aria-label="Close search"
-													className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+													className="wa-btn-3d rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
 												>
 													<X size={17} />
 												</button>
@@ -8539,7 +8672,7 @@ function WhatsAppWorkspaceContent() {
 														type="button"
 														onClick={() => setSearchOpen(true)}
 														aria-label={t.search}
-														className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+														className="wa-btn-3d rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
 													>
 														<Search size={17} />
 													</button>
@@ -8548,7 +8681,7 @@ function WhatsAppWorkspaceContent() {
 															type="button"
 															onClick={() => syncAccount()}
 															aria-label={t.sync}
-															className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+															className="wa-btn-3d rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
 														>
 															<RefreshCw size={17} />
 														</button>
@@ -8652,7 +8785,7 @@ function WhatsAppWorkspaceContent() {
 																? 'ابحث أو ابدأ محادثة جديدة'
 																: 'Search or start a new chat'
 														}
-														className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 ps-9 pe-8 text-sm text-slate-800 outline-none transition-colors focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+														className="wa-input-3d h-10 w-full rounded-xl border border-slate-200 bg-white ps-9 pe-8 text-sm text-slate-800 outline-none transition-colors focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
 													/>
 													{searchingConversations && (
 														<Loader2 size={14} className="absolute end-2.5 top-3 animate-spin text-slate-400" />
@@ -8674,6 +8807,11 @@ function WhatsAppWorkspaceContent() {
 								<div
 									className="wa-conversation-list min-h-0 flex-1 overflow-y-auto p-2 nice-scroll"
 									onScroll={event => {
+										listScrollPrefetchBlockedUntilRef.current = Date.now() + 280;
+										if (hoverPrefetchTimerRef.current) {
+											window.clearTimeout(hoverPrefetchTimerRef.current);
+											hoverPrefetchTimerRef.current = null;
+										}
 										const node = event.currentTarget;
 										if (
 											!accountId ||
@@ -8785,6 +8923,20 @@ function WhatsAppWorkspaceContent() {
 
 											{filteredConversations.map(conversation => {
 												const title = conversationTitle(conversation);
+												const titlePresentation = messageTextPresentation(title);
+												const previewText = conversationPreview(conversation);
+												const typing = Boolean(
+													conversation.isTyping ||
+													conversation.typing ||
+													conversation.presence?.typing,
+												);
+												const previewPresentation = messageTextPresentation(
+													typing
+														? locale === 'ar'
+															? 'يكتب الآن…'
+															: 'typing…'
+														: previewText,
+												);
 												const active =
 													conversation.id === conversationId ||
 													conversation.id === secondaryConversationId;
@@ -8792,16 +8944,8 @@ function WhatsAppWorkspaceContent() {
 													conversation.id === secondaryConversationId;
 												const isGroup = conversation.type === 'group';
 												const story = !isGroup ? storyForConversation(conversation) : null;
-												const unreadCount = Math.max(
-													0,
-													Number(conversation.unreadCount) || 0,
-												);
+												const unreadCount = conversationUnreadCount(conversation);
 												const unread = unreadCount > 0;
-												const typing = Boolean(
-													conversation.isTyping ||
-													conversation.typing ||
-													conversation.presence?.typing,
-												);
 												return (
 													<div
 														key={conversation.id}
@@ -8830,7 +8974,11 @@ function WhatsAppWorkspaceContent() {
 																);
 																return;
 															}
+															cancelIdleMessagePrefetch(conversation.id);
 															setConversationId(conversation.id);
+														}}
+														onPointerEnter={() => {
+															scheduleConversationPrefetch(conversation.id);
 														}}
 														onPointerDown={event => startConversationLongPress(event, conversation)}
 														onPointerMove={cancelConversationLongPress}
@@ -8915,7 +9063,13 @@ function WhatsAppWorkspaceContent() {
 														</div>
 														<div className="min-w-0 flex-1">
 															<div className="flex items-center justify-between gap-2">
-																<p className={`title-chat truncate ${unread ? '!font-black' : ''}`}>{title}</p>
+																<p
+																	className={`title-chat truncate ${unread ? '!font-black' : ''} ${titlePresentation.className}`}
+																	dir={titlePresentation.dir}
+																	lang={titlePresentation.lang}
+																>
+																	{title}
+																</p>
 																<div className="flex shrink-0 items-center gap-1">
 																	<button
 																		type="button"
@@ -8988,10 +9142,14 @@ function WhatsAppWorkspaceContent() {
 																			type={conversation.lastMessage?.type}
 																		/>
 																	)}
-																	<span className="truncate">
+																	<span
+																		className={`truncate ${previewPresentation.className}`}
+																		dir={previewPresentation.dir}
+																		lang={previewPresentation.lang}
+																	>
 																		{typing
 																			? locale === 'ar' ? 'يكتب الآن…' : 'typing…'
-																			: conversationPreview(conversation)}
+																			: previewText}
 																	</span>
 																</p>
 																{unread && (
@@ -9054,8 +9212,12 @@ function WhatsAppWorkspaceContent() {
 												/>
 											</div>
 											<div className="wa-chat-contact min-w-0">
-												<h3 className="truncate font-black">
-													{conversationTitle(selectedConversation)}
+												<h3
+													className={`truncate font-black ${selectedChatTitlePresentation.className}`}
+													dir={selectedChatTitlePresentation.dir}
+													lang={selectedChatTitlePresentation.lang}
+												>
+													{selectedChatTitle}
 												</h3>
 												<p className="wa-chat-assignee text-xs text-slate-500">
 													{selectedConversation.isTyping ||
@@ -9099,6 +9261,8 @@ function WhatsAppWorkspaceContent() {
 														setSelectedMediaIds(new Set());
 														return;
 													}
+													setTicketSelectMode(false);
+													setSelectedMessageIds(new Set());
 													setMediaSelectMode(true);
 												}}
 												aria-label={mediaSelectMode ? t.cancelSelectMedia : t.selectMedia}
@@ -9112,6 +9276,22 @@ function WhatsAppWorkspaceContent() {
 													<X size={16} strokeWidth={2.25} aria-hidden="true" />
 												) : (
 													<Images size={16} strokeWidth={2.25} aria-hidden="true" />
+												)}
+											</button>
+											<button
+												type="button"
+												onClick={toggleTicketSelectMode}
+												aria-label={ticketSelectMode ? t.cancelSelectMessages : t.selectMessages}
+												className={`grid h-8 w-8 place-items-center rounded-full ${
+													ticketSelectMode
+														? 'bg-black/5 text-[#0A0A0A]'
+														: 'text-[#0A0A0A]'
+												}`}
+											>
+												{ticketSelectMode ? (
+													<X size={16} strokeWidth={2.25} aria-hidden="true" />
+												) : (
+													<ListChecks size={16} strokeWidth={2.25} aria-hidden="true" />
 												)}
 											</button>
 										</div>
@@ -9130,6 +9310,8 @@ function WhatsAppWorkspaceContent() {
 														setSelectedMediaIds(new Set());
 														return;
 													}
+													setTicketSelectMode(false);
+													setSelectedMessageIds(new Set());
 													setMediaSelectMode(true);
 												}}
 												aria-label={mediaSelectMode ? t.cancelSelectMedia : t.selectMedia}
@@ -9144,6 +9326,23 @@ function WhatsAppWorkspaceContent() {
 													<X size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
 												) : (
 													<Images size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
+												)}
+											</button>
+											<button
+												type="button"
+												onClick={toggleTicketSelectMode}
+												aria-label={ticketSelectMode ? t.cancelSelectMessages : t.selectMessages}
+												title={ticketSelectMode ? t.cancelSelectMessages : t.selectMessages}
+												className={`wa-toolbar-icon-btn grid h-9 w-9 place-items-center rounded-lg border transition-colors disabled:opacity-50 ${
+													ticketSelectMode
+														? 'is-active border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)]'
+														: 'border-slate-200 bg-white text-[#54656f] hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+												}`}
+											>
+												{ticketSelectMode ? (
+													<X size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
+												) : (
+													<ListChecks size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
 												)}
 											</button>
 											<button
@@ -9245,36 +9444,25 @@ function WhatsAppWorkspaceContent() {
 													</button>
 												)}
 											{!demo.settings.enabled && canAssignWhatsApp && (
-												<label
-													className={`relative inline-flex h-9 max-w-[13rem] items-center gap-1.5 rounded-lg border px-2 text-xs font-semibold transition-colors ${
-														selectedConversation.assignedUserId
-															? 'border-[var(--color-primary-200)] bg-[var(--color-primary-50)] text-[var(--color-primary-800)] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100'
-															: 'border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'
-													}`}
-													title={t.assignedTo}
-												>
-													<span className="pointer-events-none absolute -top-2 start-2 rounded bg-white px-1 text-[9px] font-black uppercase tracking-wide text-slate-400 dark:bg-slate-900">
+												<div className="relative inline-flex max-w-[13rem] items-center">
+													<span className="pointer-events-none absolute -top-2 start-2 z-1 rounded bg-white px-1 text-[9px] font-black uppercase tracking-wide text-slate-400 dark:bg-slate-900">
 														{t.assignedTo}
 													</span>
-													<User size={13} className="shrink-0 opacity-60" />
-													<select
+													<WaCustomSelect
+														ariaLabel={t.assignedTo}
 														value={selectedConversation.assignedUserId || ''}
-														onChange={event => assignConversation(event.target.value)}
-														className="h-full min-w-0 flex-1 appearance-none bg-transparent pe-4 outline-none"
-														aria-label={t.assignedTo}
-													>
-														<option value="">{t.unassign}</option>
-														{staff.map(user => (
-															<option key={user.id} value={user.id}>
-																{user.name}
-															</option>
-														))}
-													</select>
-													<ChevronDown
-														size={13}
-														className="pointer-events-none absolute end-1.5 opacity-50"
+														onChange={assignConversation}
+														className="w-[13rem]"
+														buttonClassName="h-9 text-[#111b21]"
+														options={[
+															{ value: '', label: t.unassign },
+															...staff.map(user => ({
+																value: user.id,
+																label: user.name,
+															})),
+														]}
 													/>
-												</label>
+												</div>
 											)}
 											<button type="button" aria-label="Close conversation" onClick={() => setConversationId(null)} className="rounded-lg p-2 hover:bg-slate-100 min-[769px]:hidden dark:hover:bg-slate-800">
 												<X size={18} />
@@ -9308,9 +9496,23 @@ function WhatsAppWorkspaceContent() {
 									<div
 										ref={messageBoxRef}
 										onScroll={event => {
-											if (!loadingMessages && event.currentTarget.scrollTop < 50) loadOlder();
+											const box = event.currentTarget;
+											const distanceFromBottom =
+												box.scrollHeight - box.clientHeight - box.scrollTop;
+											if (distanceFromBottom > 180) {
+												pinThreadToBottomRef.current = false;
+											} else {
+												pinThreadToBottomRef.current = true;
+											}
+											if (
+												!loadingMessages &&
+												box.scrollHeight > box.clientHeight + 8 &&
+												box.scrollTop < 50
+											) {
+												loadOlder();
+											}
 										}}
-										className={`wa-message-wallpaper min-h-0 min-w-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto bg-[#0B141A] p-4 nice-scroll ${
+										className={`wa-message-wallpaper min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-[#0B141A] p-4 nice-scroll ${
 											Boolean(conversationId) &&
 											aiSuggestionsVisible &&
 											!demo.settings.enabled &&
@@ -9325,7 +9527,7 @@ function WhatsAppWorkspaceContent() {
 										}}
 									>
 										{effectiveMessages.length === 0 ? (
-											<div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 text-center">
+											<div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center">
 												<div className="rounded-2xl bg-white/90 p-4 shadow-sm dark:bg-slate-800/90">
 													{loadingMessages || messagesSyncHint ? (
 														<Loader2 size={28} className="animate-spin text-[var(--color-primary-500)]" />
@@ -9340,7 +9542,7 @@ function WhatsAppWorkspaceContent() {
 												</p>
 											</div>
 										) : (
-											<>
+											<div className="wa-message-thread">
 												{loadingOlder && (
 													<div className="sticky top-0 z-10 mx-auto mb-2 w-fit rounded-full bg-white/95 px-3 py-1 text-[11px] font-semibold text-slate-500 shadow-sm dark:bg-slate-800/95">
 														<span className="inline-flex items-center gap-1.5">
@@ -9396,6 +9598,51 @@ function WhatsAppWorkspaceContent() {
 														</button>
 													</div>
 												)}
+												{ticketSelectMode && (
+													<div className="sticky top-0 z-20 mx-auto mb-2 flex w-fit max-w-full flex-wrap items-center justify-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm dark:bg-slate-800/95">
+														<button
+															type="button"
+															className="rounded-full px-2 py-0.5 hover:bg-slate-100 dark:hover:bg-slate-700"
+															onClick={() => {
+																const ids = selectableTranscriptMessages
+																	.slice(0, MAX_TRANSCRIPT_BUNDLE_ITEMS)
+																	.map(item => item.id);
+																setSelectedMessageIds(new Set(ids));
+																if (selectableTranscriptMessages.length > MAX_TRANSCRIPT_BUNDLE_ITEMS) {
+																	toast.error(
+																		t.tooManySelected.replace(
+																			'{count}',
+																			String(MAX_TRANSCRIPT_BUNDLE_ITEMS),
+																		),
+																	);
+																}
+															}}
+														>
+															{t.selectAllMessages}
+														</button>
+														<span className="opacity-50">·</span>
+														<span>{t.selectedMessagesCount.replace('{count}', String(selectedMessageIds.size))}</span>
+														<button
+															type="button"
+															disabled={!selectedMessageIds.size}
+															onClick={openSelectedTranscriptBundle}
+															className="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary-500)] px-2.5 py-0.5 text-white disabled:opacity-50"
+														>
+															<AudioLines size={12} />
+															{t.transcribeSelected}
+														</button>
+														<button
+															type="button"
+															onClick={() => {
+																setTicketSelectMode(false);
+																setSelectedMessageIds(new Set());
+															}}
+															className="rounded-full px-2 py-0.5 hover:bg-slate-100 dark:hover:bg-slate-700"
+														>
+															{t.cancelSelectMessages}
+														</button>
+													</div>
+												)}
 												{hasMoreMessages && !loadingOlder && (
 													<button
 														onClick={loadOlder}
@@ -9426,6 +9673,7 @@ function WhatsAppWorkspaceContent() {
 														: message.attachments;
 													const mine = message.direction === 'outbound';
 													const textPresentation = messageTextPresentation(message.text);
+													const visibleText = visibleMessageText(message.text);
 													const isDeleted =
 														message.deletedMode && message.deletedMode !== 'none';
 													const attachmentTypes = (attachments || []).map(attachment => String(attachment.type || '').toLowerCase());
@@ -9442,11 +9690,19 @@ function WhatsAppWorkspaceContent() {
 													]);
 													const selectableInMediaMode =
 														mediaSelectMode && downloadableAttachments.length > 0;
+													const selectableInTicketMode =
+														ticketSelectMode &&
+														!groupedImages &&
+														isSelectableTranscriptMessage(message);
 													const allSelected =
 														selectableInMediaMode &&
 														downloadableAttachments.every(item =>
 															selectedMediaIds.has(item.id),
 														);
+													const messageSelected =
+														selectableInTicketMode && selectedMessageIds.has(message.id);
+													const showSelectCheck = selectableInMediaMode || selectableInTicketMode;
+													const isChecked = allSelected || messageSelected;
 													return (
 														<div key={row.key} className="wa-message-row min-w-0 max-w-full">
 															{dayLabel && dayLabel !== previousDayLabel && (
@@ -9456,12 +9712,33 @@ function WhatsAppWorkspaceContent() {
 															)}
 																	<div className={`wa-message-line flex min-w-0 max-w-full ${mine ? 'justify-end' : 'justify-start'} ${message.optimistic ? 'opacity-70' : ''}`}>
 																<div className={`group flex min-w-0 max-w-full items-start gap-1 ${mine ? 'flex-row-reverse' : ''}`}>
-																{selectableInMediaMode && (
+																{showSelectCheck && (
 																	<button
 																		type="button"
-																		aria-pressed={allSelected}
-																		aria-label={t.selectMedia}
+																		aria-pressed={isChecked}
+																		aria-label={ticketSelectMode ? t.selectMessages : t.selectMedia}
 																		onClick={() => {
+																			if (selectableInTicketMode) {
+																				setSelectedMessageIds(current => {
+																					const next = new Set(current);
+																					if (messageSelected) {
+																						next.delete(message.id);
+																						return next;
+																					}
+																					if (current.size >= MAX_TRANSCRIPT_BUNDLE_ITEMS) {
+																						toast.error(
+																							t.tooManySelected.replace(
+																								'{count}',
+																								String(MAX_TRANSCRIPT_BUNDLE_ITEMS),
+																							),
+																						);
+																						return current;
+																					}
+																					next.add(message.id);
+																					return next;
+																				});
+																				return;
+																			}
 																			setSelectedMediaIds(current => {
 																				const next = new Set(current);
 																				for (const item of downloadableAttachments) {
@@ -9472,7 +9749,7 @@ function WhatsAppWorkspaceContent() {
 																			});
 																		}}
 																		className={`mt-2 grid h-6 w-6 shrink-0 place-items-center rounded-full border ${
-																			allSelected
+																			isChecked
 																				? 'border-[var(--color-primary-500)] bg-[var(--color-primary-500)] text-white'
 																				: 'border-slate-300 bg-white text-transparent'
 																		}`}
@@ -9482,13 +9759,34 @@ function WhatsAppWorkspaceContent() {
 																)}
 																<div
 																	onPointerDown={event => {
-																		if (mediaSelectMode) return;
+																		if (mediaSelectMode || ticketSelectMode) return;
 																		startMessageLongPress(event, message);
 																	}}
 																	onPointerMove={cancelMessageLongPress}
 																	onPointerUp={cancelMessageLongPress}
 																	onPointerCancel={cancelMessageLongPress}
 																	onClick={() => {
+																		if (selectableInTicketMode) {
+																			setSelectedMessageIds(current => {
+																				const next = new Set(current);
+																				if (messageSelected) {
+																					next.delete(message.id);
+																					return next;
+																				}
+																				if (current.size >= MAX_TRANSCRIPT_BUNDLE_ITEMS) {
+																					toast.error(
+																						t.tooManySelected.replace(
+																							'{count}',
+																							String(MAX_TRANSCRIPT_BUNDLE_ITEMS),
+																						),
+																					);
+																					return current;
+																				}
+																				next.add(message.id);
+																				return next;
+																			});
+																			return;
+																		}
 																		if (!selectableInMediaMode) return;
 																		setSelectedMediaIds(current => {
 																			const next = new Set(current);
@@ -9500,7 +9798,7 @@ function WhatsAppWorkspaceContent() {
 																		});
 																	}}
 																	onContextMenu={event => {
-																		if (mediaSelectMode) {
+																		if (mediaSelectMode || ticketSelectMode) {
 																			event.preventDefault();
 																			return;
 																		}
@@ -9514,7 +9812,7 @@ function WhatsAppWorkspaceContent() {
 															className={`wa-message-bubble relative w-fit ${mine ? 'wa-message-mine' : 'wa-message-other'} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${mine
 																		? 'bg-[#d9fdd3] text-slate-900 dark:bg-[#005c4b] dark:text-white'
 																		: 'bg-white text-slate-900 dark:bg-slate-800 dark:text-white'
-																		} ${allSelected ? 'ring-2 ring-[var(--color-primary-400)]' : ''}`}
+																		} ${isChecked ? 'ring-2 ring-[var(--color-primary-400)]' : ''}`}
 																>
 																	{(message.forwarded || message.isForwarded) && (
 																		<p className="mb-1 text-[10px] italic opacity-60">
@@ -9539,7 +9837,7 @@ function WhatsAppWorkspaceContent() {
 																				sessionReady={isAccountConnected}
 																			/>
 																		)
-																		: !isDeleted && ['image', 'audio', 'ptt', 'video', 'document', 'sticker'].includes(
+																		: !isDeleted && ['image', 'audio', 'ptt', 'voice', 'video', 'document', 'sticker'].includes(
 																			String(message.type || '').toLowerCase(),
 																		) && (
 																			<div className={`mb-2 flex items-center gap-2 rounded-lg px-2 py-2 text-xs bg-black/5`}>
@@ -9569,16 +9867,16 @@ function WhatsAppWorkspaceContent() {
 																			{message.location.name ||
 																				`${message.location.latitude}, ${message.location.longitude}`}
 																		</a>
-																	) : message.text ? (
+																	) : visibleText ? (
 																		<>
-																			<MessageLinkPreview text={message.text} labels={t} />
+																			<MessageLinkPreview text={visibleText} labels={t} />
 																			<p
 																				dir={textPresentation.dir}
 																				lang={textPresentation.lang}
 																				style={textPresentation.style}
 																				className={`wa-message-text whitespace-pre-wrap wrap-break-word leading-relaxed ${textPresentation.className || ''}`}
 																			>
-																				<WhatsAppFormattedText text={message.text} />
+																				<WhatsAppFormattedText text={visibleText} />
 																			</p>
 																		</>
 																	) : null}
@@ -9697,7 +9995,7 @@ function WhatsAppWorkspaceContent() {
 														</div>
 													);
 												})}
-											</>
+											</div>
 										)}
 									</div>
 									<div
@@ -10732,22 +11030,23 @@ function WhatsAppWorkspaceContent() {
 											</div>
 											<p className="text-xs text-slate-500">{t.readReceiptModeHint}</p>
 										</div>
-										<select
-											aria-label={t.readReceiptMode}
+										<WaCustomSelect
+											ariaLabel={t.readReceiptMode}
 											value={privacySettings.readReceiptMode}
-											onChange={event =>
+											onChange={value =>
 												setPrivacySettings(current => ({
 													...current,
-													readReceiptMode: event.target.value,
+													readReceiptMode: value,
 												}))
 											}
-											className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold outline-none transition-colors focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-800"
-										>
-											<option value="on_open">{t.readOnOpen}</option>
-											<option value="on_reply">{t.readOnReply}</option>
-											<option value="manual">{t.readManual}</option>
-											<option value="never">{t.readNever}</option>
-										</select>
+											buttonClassName="h-11 text-sm"
+											options={[
+												{ value: 'on_open', label: t.readOnOpen },
+												{ value: 'on_reply', label: t.readOnReply },
+												{ value: 'manual', label: t.readManual },
+												{ value: 'never', label: t.readNever },
+											]}
+										/>
 									</div>
 								</div>
 								</Card>
@@ -10766,7 +11065,7 @@ function WhatsAppWorkspaceContent() {
 											value={staffSearch}
 											onChange={event => setStaffSearch(event.target.value)}
 											placeholder={t.searchStaff}
-											className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 ps-9 pe-3 text-sm outline-none transition-colors focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-800"
+											className="wa-input-3d h-10 w-full rounded-xl border border-slate-200 bg-white ps-9 pe-3 text-sm outline-none transition-colors focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-800"
 										/>
 									</div>
 									<div className="max-h-[440px] space-y-1.5 overflow-y-auto nice-scroll">
@@ -11056,11 +11355,12 @@ function WhatsAppWorkspaceContent() {
 				</div>
 			)}
 			<TranscriptionDialog
-				open={Boolean(transcriptionMessage)}
+				open={Boolean(transcriptionSources?.length)}
 				onOpenChange={open => {
-					if (!open) setTranscriptionMessage(null);
+					if (!open) setTranscriptionSources(null);
 				}}
-				loadFile={loadSelectedTranscriptionFile}
+				items={transcriptionSources}
+				loadVoiceFile={loadTranscriptionSourceFile}
 			/>
 			<ChatImageViewer
 				images={chatImages}

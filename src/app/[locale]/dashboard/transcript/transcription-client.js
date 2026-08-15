@@ -110,3 +110,103 @@ export async function memorizeTranscription(id, payload = {}) {
 	});
 	return data;
 }
+
+export async function summarizeTranscription(id, payload = {}) {
+	const { data } = await api.post(`/transcriptions/${id}/summarize`, payload, {
+		timeout: 0,
+	});
+	return data;
+}
+
+export async function createTextTranscription({
+	text,
+	originalFileName = 'whatsapp-selection.txt',
+	language = 'auto',
+} = {}) {
+	const { data } = await api.post(
+		'/transcriptions/from-text',
+		{ text, originalFileName, language },
+		{ timeout: 0 },
+	);
+	return data;
+}
+
+export const MAX_TRANSCRIPT_BUNDLE_ITEMS = 25;
+export const VOICE_ATTACHMENT_TYPES = ['audio', 'ptt', 'voice'];
+
+export function isVoiceLikeType(type) {
+	return VOICE_ATTACHMENT_TYPES.includes(String(type || '').toLowerCase());
+}
+
+export function timestampMs(value) {
+	if (value == null || value === '') return 0;
+	if (typeof value === 'number' && Number.isFinite(value)) {
+		return value < 1e12 ? Math.round(value * 1000) : Math.round(value);
+	}
+	const parsed = Date.parse(value);
+	return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function formatTimestampWithMs(value) {
+	const ms = timestampMs(value);
+	if (!ms) return '';
+	const date = new Date(ms);
+	const hh = String(date.getHours()).padStart(2, '0');
+	const mm = String(date.getMinutes()).padStart(2, '0');
+	const ss = String(date.getSeconds()).padStart(2, '0');
+	const milli = String(date.getMilliseconds()).padStart(3, '0');
+	return `${hh}:${mm}:${ss}.${milli}`;
+}
+
+export function findVoiceAttachment(message) {
+	const attachments = Array.isArray(message?.attachments) ? message.attachments : [];
+	return (
+		attachments.find(item => isVoiceLikeType(item?.type || message?.type)) ||
+		null
+	);
+}
+
+export function isVoiceMessage(message) {
+	if (findVoiceAttachment(message)) return true;
+	return isVoiceLikeType(message?.type);
+}
+
+export function isSelectableTranscriptMessage(message) {
+	if (!message || message.optimistic) return false;
+	if (message.deletedMode && message.deletedMode !== 'none') return false;
+	if (isVoiceMessage(message)) return true;
+	return Boolean(String(message.text || '').trim());
+}
+
+export function toTranscriptSource(message) {
+	const voice = findVoiceAttachment(message);
+	const voiceMessage = Boolean(voice) || isVoiceLikeType(message?.type);
+	return {
+		id: String(message?.id || ''),
+		kind: voiceMessage ? 'voice' : 'text',
+		timestamp: message?.providerTimestamp || message?.timestamp || message?.created_at,
+		text: String(message?.text || '').trim(),
+		attachment: voice,
+		fileName: voice?.fileName || '',
+		size: Number(voice?.sizeBytes || voice?.size || voice?.fileSize || 0),
+	};
+}
+
+export function buildTimelineTranscript(items, labels = {}) {
+	const audioLabel = labels.audioLabel || 'Audio {n}';
+	const messageLabel = labels.messageLabel || 'Message';
+	const missingVoice = labels.missingVoice || '';
+	return (items || [])
+		.map(item => {
+			const time = formatTimestampWithMs(item.timestamp);
+			const heading =
+				item.kind === 'voice'
+					? audioLabel.replace('{n}', String(item.audioIndex || 1))
+					: messageLabel;
+			const body =
+				String(item.text || '').trim() ||
+				(item.kind === 'voice' ? missingVoice : '');
+			return [time ? `[${time}] ${heading}` : heading, body].filter(Boolean).join('\n');
+		})
+		.join('\n\n');
+}

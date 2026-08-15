@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale } from 'next-intl';
-import { AudioLines, Check, Clipboard, FileAudio, Loader2, Save } from 'lucide-react';
+import { AudioLines, Check, Clipboard, FileAudio, Loader2, MessageSquareText, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import { Button } from '@/components/ui/button';
@@ -13,18 +13,27 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
+import { WaCustomSelect } from '../whatsapp/WaCustomSelect';
+import TranscriptionAiPanel from './transcription-ai-panel';
 import {
+	buildTimelineTranscript,
+	createTextTranscription,
 	createTranscription,
+	formatTimestampWithMs,
 	getStoredTranscriptionProvider,
 	GROQ_FREE_MAX_FILE_SIZE,
 	storeTranscriptionProvider,
+	timestampMs,
 	TRANSCRIPTION_PROVIDERS,
 } from './transcription-client';
 
 const labels = {
 	en: {
 		title: 'Transcribe voice message',
+		bundleTitle: 'Transcribe selected messages',
 		description: 'Convert this voice note into editable text.',
+		bundleDescription:
+			'Voices are converted to text. Selected tickets stay as they are. Everything is merged in time order.',
 		loadingFile: 'Loading voice message…',
 		fileError: 'Could not load this voice message.',
 		voiceFile: 'Voice message',
@@ -39,10 +48,23 @@ const labels = {
 		copied: 'Transcript copied',
 		save: 'Save changes',
 		saved: 'Changes saved',
+		audioLabel: 'Audio {n}',
+		messageLabel: 'Message',
+		missingVoice: '(Could not transcribe this voice note.)',
+		selectedCount: '{count} selected',
+		voiceCount: '{count} voices',
+		ticketCount: '{count} messages',
+		batchProgress: 'Audio {current} of {total}',
+		batchDone: 'Transcribed {count} voices',
+		batchPartial: 'Transcribed {done} of {total} voices. Some failed.',
+		noItems: 'Select at least one voice or message.',
 	},
 	ar: {
 		title: 'تحويل الرسالة الصوتية إلى نص',
+		bundleTitle: 'تحويل الرسائل المحددة إلى نص',
 		description: 'حوّل الرسالة الصوتية إلى نص يمكن تعديله.',
+		bundleDescription:
+			'الأصوات تتحول لنص. التيكتات المحددة تفضل زي ما هي. كله يترتب حسب الوقت.',
 		loadingFile: 'جارٍ تحميل الرسالة الصوتية…',
 		fileError: 'تعذر تحميل الرسالة الصوتية.',
 		voiceFile: 'رسالة صوتية',
@@ -57,6 +79,16 @@ const labels = {
 		copied: 'تم نسخ النص',
 		save: 'حفظ التعديلات',
 		saved: 'تم حفظ التعديلات',
+		audioLabel: 'صوت {n}',
+		messageLabel: 'رسالة',
+		missingVoice: '(تعذر تحويل هذه الرسالة الصوتية.)',
+		selectedCount: '{count} محدد',
+		voiceCount: '{count} صوت',
+		ticketCount: '{count} رسالة',
+		batchProgress: 'صوت {current} من {total}',
+		batchDone: 'تم تحويل {count} صوت',
+		batchPartial: 'تم تحويل {done} من {total}. بعضها فشل.',
+		noItems: 'حدّد صوتًا أو رسالة واحدة على الأقل.',
 	},
 };
 
@@ -74,24 +106,66 @@ function displayFileName(fileName, fallback) {
 	return name;
 }
 
+function sortSources(sources) {
+	return [...sources].sort((a, b) => {
+		const delta = timestampMs(a.timestamp) - timestampMs(b.timestamp);
+		if (delta !== 0) return delta;
+		return String(a.id || '').localeCompare(String(b.id || ''));
+	});
+}
+
+function withAudioIndexes(sources) {
+	let audioIndex = 0;
+	return sortSources(sources).map(item => {
+		if (item.kind !== 'voice') return item;
+		audioIndex += 1;
+		return { ...item, audioIndex };
+	});
+}
+
 export default function TranscriptionDialog({
 	open,
 	onOpenChange,
 	loadFile,
+	loadVoiceFile,
+	items,
 	onCompleted,
 }) {
 	const locale = useLocale();
 	const t = labels[locale] || labels.en;
+	const sources = useMemo(
+		() => {
+			const provided = Array.isArray(items) ? items.filter(Boolean) : [];
+			return withAudioIndexes(
+				provided.length
+					? provided
+					: loadFile
+						? [{ id: 'single', kind: 'voice', audioIndex: 1, loadFile, timestamp: Date.now() }]
+						: [],
+			);
+		},
+		[items, loadFile],
+	);
+	const isBundle = sources.length > 1 || sources.some(item => item.kind === 'text');
+	const voiceSources = sources.filter(item => item.kind === 'voice');
+	const ticketCount = sources.filter(item => item.kind === 'text').length;
 	const [file, setFile] = useState(null);
 	const [fileError, setFileError] = useState('');
 	const [provider, setProvider] = useState('local');
 	const [status, setStatus] = useState('idle');
 	const [progress, setProgress] = useState(0);
 	const [elapsed, setElapsed] = useState(0);
+	const [batchIndex, setBatchIndex] = useState(0);
 	const [result, setResult] = useState(null);
 	const [text, setText] = useState('');
 	const [saving, setSaving] = useState(false);
 	const busy = ['loading', 'uploading', 'processing'].includes(status);
+	const singleVoice = !isBundle && sources[0]?.kind === 'voice';
+
+	const sourceKey = useMemo(
+		() => sources.map(item => `${item.kind}:${item.id}`).join('|'),
+		[sources],
+	);
 
 	useEffect(() => {
 		if (!open) return undefined;
@@ -103,8 +177,24 @@ export default function TranscriptionDialog({
 		setText('');
 		setProgress(0);
 		setElapsed(0);
+		setBatchIndex(0);
+		if (!sources.length) {
+			setStatus('idle');
+			return undefined;
+		}
+		if (!singleVoice) {
+			setStatus('idle');
+			return undefined;
+		}
 		setStatus('loading');
-		Promise.resolve(loadFile())
+		const source = sources[0];
+		const loader = source.loadFile || loadFile || (loadVoiceFile ? () => loadVoiceFile(source) : null);
+		if (!loader) {
+			setFileError(t.fileError);
+			setStatus('error');
+			return undefined;
+		}
+		Promise.resolve(loader())
 			.then(nextFile => {
 				if (cancelled) return;
 				setFile(nextFile);
@@ -118,7 +208,7 @@ export default function TranscriptionDialog({
 		return () => {
 			cancelled = true;
 		};
-	}, [loadFile, open, t.fileError]);
+	}, [loadFile, loadVoiceFile, open, singleVoice, sourceKey, t.fileError]);
 
 	useEffect(() => {
 		if (status !== 'processing') return undefined;
@@ -141,36 +231,165 @@ export default function TranscriptionDialog({
 		storeTranscriptionProvider(value);
 	};
 
+	const resolveVoiceLoader = source => {
+		if (typeof source?.loadFile === 'function') return source.loadFile;
+		if (typeof loadFile === 'function' && sources.length === 1) return loadFile;
+		if (typeof loadVoiceFile === 'function') return () => loadVoiceFile(source);
+		return null;
+	};
+
+	const persistCombined = async ({ created, combinedText, fallbackName }) => {
+		if (created?.id) {
+			try {
+				const { data } = await api.patch(`/transcriptions/${created.id}`, { text: combinedText });
+				return data;
+			} catch {
+				return { ...created, text: combinedText };
+			}
+		}
+		return createTextTranscription({
+			text: combinedText,
+			originalFileName: fallbackName,
+			language: 'auto',
+		});
+	};
+
 	const transcribe = async () => {
-		if (!file || busy) return;
-		if (provider === 'groq' && file.size > GROQ_FREE_MAX_FILE_SIZE) {
-			toast.error(t.groqTooLarge);
+		if (busy) return;
+		if (!sources.length) {
+			toast.error(t.noItems);
 			return;
 		}
+
+		if (singleVoice) {
+			if (!file) return;
+			if (provider === 'groq' && file.size > GROQ_FREE_MAX_FILE_SIZE) {
+				toast.error(t.groqTooLarge);
+				return;
+			}
+			setStatus('uploading');
+			setProgress(0);
+			setElapsed(0);
+			try {
+				const data = await createTranscription({
+					file,
+					provider,
+					language: 'auto',
+					customVocabulary: '',
+					onUploadProgress: event => {
+						if (!event.total) return;
+						const next = Math.min(100, Math.round((event.loaded * 100) / event.total));
+						setProgress(next);
+						if (next >= 100) setStatus('processing');
+					},
+				});
+				const nextText = String(data?.text || '').trim();
+				setResult(data);
+				setText(nextText);
+				setStatus('done');
+				onCompleted?.(nextText, data);
+			} catch (error) {
+				setStatus('error');
+				toast.error(error.response?.data?.message || t.failed);
+			}
+			return;
+		}
+
 		setStatus('uploading');
 		setProgress(0);
 		setElapsed(0);
+		const createdRecords = [];
+		let failedVoices = 0;
+		const timeline = [];
+
+		for (const source of sources) {
+			if (source.kind === 'text') {
+				timeline.push({
+					kind: 'text',
+					timestamp: source.timestamp,
+					text: source.text,
+				});
+				continue;
+			}
+
+			setBatchIndex(source.audioIndex || createdRecords.length + 1);
+			setStatus('uploading');
+			setProgress(0);
+			const loader = resolveVoiceLoader(source);
+			try {
+				if (!loader) throw new Error(t.fileError);
+				const nextFile = await loader();
+				if (provider === 'groq' && nextFile.size > GROQ_FREE_MAX_FILE_SIZE) {
+					throw new Error(t.groqTooLarge);
+				}
+				const data = await createTranscription({
+					file: nextFile,
+					provider,
+					language: 'auto',
+					customVocabulary: '',
+					onUploadProgress: event => {
+						if (!event.total) return;
+						const next = Math.min(100, Math.round((event.loaded * 100) / event.total));
+						setProgress(next);
+						if (next >= 100) setStatus('processing');
+					},
+				});
+				createdRecords.push(data);
+				timeline.push({
+					kind: 'voice',
+					timestamp: source.timestamp,
+					audioIndex: source.audioIndex,
+					text: String(data?.text || '').trim(),
+				});
+			} catch (error) {
+				failedVoices += 1;
+				timeline.push({
+					kind: 'voice',
+					timestamp: source.timestamp,
+					audioIndex: source.audioIndex,
+					text: t.missingVoice,
+				});
+				toast.error(error?.response?.data?.message || error?.message || t.failed);
+			}
+		}
+
+		const combinedText = buildTimelineTranscript(timeline, {
+			audioLabel: t.audioLabel,
+			messageLabel: t.messageLabel,
+			missingVoice: t.missingVoice,
+		});
+		if (!combinedText.trim() && !ticketCount) {
+			setStatus('error');
+			toast.error(t.failed);
+			return;
+		}
+
 		try {
-			const data = await createTranscription({
-				file,
-				provider,
-				language: 'auto',
-				customVocabulary: '',
-				onUploadProgress: event => {
-					if (!event.total) return;
-					const next = Math.min(100, Math.round((event.loaded * 100) / event.total));
-					setProgress(next);
-					if (next >= 100) setStatus('processing');
-				},
+			const extras = createdRecords.slice(1);
+			const merged = await persistCombined({
+				created: createdRecords[0],
+				combinedText,
+				fallbackName: `whatsapp-selection-${sources.length}.txt`,
 			});
-			const nextText = String(data?.text || '').trim();
-			setResult(data);
-			setText(nextText);
+			if (extras.length) {
+				await Promise.allSettled(extras.map(item => api.delete(`/transcriptions/${item.id}`)));
+			}
+			setResult(merged);
+			setText(combinedText);
 			setStatus('done');
-			onCompleted?.(nextText, data);
+			onCompleted?.(combinedText, merged);
+			if (voiceSources.length && failedVoices === 0) {
+				toast.success(t.batchDone.replace('{count}', String(voiceSources.length)));
+			} else if (voiceSources.length && failedVoices > 0 && createdRecords.length > 0) {
+				toast.error(
+					t.batchPartial
+						.replace('{done}', String(createdRecords.length))
+						.replace('{total}', String(voiceSources.length)),
+				);
+			}
 		} catch (error) {
 			setStatus('error');
-			toast.error(error.response?.data?.message || t.failed);
+			toast.error(error?.response?.data?.message || t.failed);
 		}
 	};
 
@@ -190,6 +409,11 @@ export default function TranscriptionDialog({
 		}
 	};
 
+	const providerOptions = TRANSCRIPTION_PROVIDERS.map(item => ({
+		value: item.id,
+		label: `${item.name} · ${item.score}%`,
+	}));
+
 	return (
 		<Dialog
 			open={open}
@@ -200,12 +424,27 @@ export default function TranscriptionDialog({
 		>
 			<DialogContent
 				dir={locale === 'ar' ? 'rtl' : 'ltr'}
-				className="gap-3 overflow-y-auto rounded-2xl p-4 sm:max-w-md"
+				className={`gap-3 overflow-y-auto rounded-2xl p-4 ${isBundle ? 'sm:max-w-xl' : 'sm:max-w-md'}`}
 				onEscapeKeyDown={event => {
 					if (busy) event.preventDefault();
 				}}
 				onPointerDownOutside={event => {
-					if (busy) event.preventDefault();
+					const target = event.target;
+					if (
+						busy ||
+						(target instanceof Element && target.closest('[role="listbox"]'))
+					) {
+						event.preventDefault();
+					}
+				}}
+				onFocusOutside={event => {
+					const target = event.target;
+					if (
+						busy ||
+						(target instanceof Element && target.closest('[role="listbox"]'))
+					) {
+						event.preventDefault();
+					}
 				}}
 			>
 				<DialogHeader className="pe-10 text-start">
@@ -213,10 +452,10 @@ export default function TranscriptionDialog({
 						<span className="grid size-8 place-items-center rounded-full bg-[#d9fdd3] text-[#128c7e]">
 							<AudioLines className="size-4" />
 						</span>
-						{t.title}
+						{isBundle ? t.bundleTitle : t.title}
 					</DialogTitle>
 					<DialogDescription className="text-[13px] leading-5 text-slate-500">
-						{t.description}
+						{isBundle ? t.bundleDescription : t.description}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -231,39 +470,77 @@ export default function TranscriptionDialog({
 					<div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-medium text-red-700">
 						{fileError}
 					</div>
-				) : file ? (
+				) : sources.length ? (
 					<>
-						<div className="overflow-hidden rounded-xl border border-black/6 bg-[#f7f8fa] p-2.5">
-							<div className="mb-2 flex items-center gap-2 px-0.5">
-								<span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white text-[#128c7e] shadow-sm">
-									<FileAudio className="size-4" />
-								</span>
-								<span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-slate-800">
-									{displayFileName(file.name, t.voiceFile)}
-								</span>
-								<span className="shrink-0 text-[11px] font-medium tabular-nums text-slate-500">
-									{formatFileSize(file.size)}
-								</span>
+						{singleVoice && file ? (
+							<div className="overflow-hidden rounded-xl border border-black/6 bg-[#f7f8fa] p-2.5">
+								<div className="mb-2 flex items-center gap-2 px-0.5">
+									<span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white text-[#128c7e] shadow-sm">
+										<FileAudio className="size-4" />
+									</span>
+									<span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-slate-800">
+										{displayFileName(file.name, t.voiceFile)}
+									</span>
+									<span className="shrink-0 text-[11px] font-medium tabular-nums text-slate-500">
+										{formatFileSize(file.size)}
+									</span>
+								</div>
+								{audioUrl ? (
+									<audio controls src={audioUrl} className="h-9 w-full" />
+								) : null}
 							</div>
-							{audioUrl ? (
-								<audio controls src={audioUrl} className="h-9 w-full" />
-							) : null}
-						</div>
+						) : null}
+
+						{isBundle ? (
+							<div className="max-h-44 overflow-y-auto rounded-xl border border-black/6 bg-[#f7f8fa] p-2">
+								<p className="mb-1.5 px-1 text-[11px] font-semibold text-slate-500">
+									{t.selectedCount.replace('{count}', String(sources.length))}
+									{voiceSources.length
+										? ` · ${t.voiceCount.replace('{count}', String(voiceSources.length))}`
+										: ''}
+									{ticketCount
+										? ` · ${t.ticketCount.replace('{count}', String(ticketCount))}`
+										: ''}
+								</p>
+								<div className="space-y-1">
+									{sources.map(item => (
+										<div
+											key={`${item.kind}-${item.id}`}
+											className="flex items-start gap-2 rounded-lg bg-white px-2 py-1.5"
+										>
+											<span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-md bg-[#d9fdd3] text-[#128c7e]">
+												{item.kind === 'voice' ? (
+													<FileAudio className="size-3.5" />
+												) : (
+													<MessageSquareText className="size-3.5" />
+												)}
+											</span>
+											<div className="min-w-0 flex-1">
+												<p className="truncate text-[12px] font-semibold text-slate-800">
+													{item.kind === 'voice'
+														? t.audioLabel.replace('{n}', String(item.audioIndex || 1))
+														: t.messageLabel}
+												</p>
+												<p className="truncate text-[11px] text-slate-500">
+													{formatTimestampWithMs(item.timestamp) || '—'}
+													{item.kind === 'text' && item.text ? ` · ${item.text}` : ''}
+												</p>
+											</div>
+										</div>
+									))}
+								</div>
+							</div>
+						) : null}
 
 						<label className="grid gap-1.5 text-[13px] font-semibold text-slate-700">
 							{t.method}
-							<select
+							<WaCustomSelect
 								value={provider}
-								onChange={event => selectProvider(event.target.value)}
+								onChange={selectProvider}
 								disabled={busy}
-								className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-[13px] outline-none focus:border-[var(--color-primary-400)]"
-							>
-								{TRANSCRIPTION_PROVIDERS.map(item => (
-									<option key={item.id} value={item.id}>
-										{item.name} · {item.score}%
-									</option>
-								))}
-							</select>
+								ariaLabel={t.method}
+								options={providerOptions}
+							/>
 						</label>
 
 						{['uploading', 'processing'].includes(status) && (
@@ -271,7 +548,13 @@ export default function TranscriptionDialog({
 								<div className="flex items-center justify-between text-[13px] font-semibold text-slate-700">
 									<span className="flex items-center gap-2">
 										<Loader2 className="size-4 animate-spin text-[var(--color-primary-600)]" />
-										{status === 'uploading' ? t.uploading : t.processing}
+										{isBundle && voiceSources.length
+											? t.batchProgress
+												.replace('{current}', String(batchIndex || 1))
+												.replace('{total}', String(voiceSources.length))
+											: status === 'uploading'
+												? t.uploading
+												: t.processing}
 									</span>
 									<span className="tabular-nums text-slate-500">
 										{status === 'uploading' ? `${progress}%` : `${elapsed}s`}
@@ -322,6 +605,29 @@ export default function TranscriptionDialog({
 										{t.save}
 									</Button>
 								</div>
+								<TranscriptionAiPanel
+									key={result.id}
+									variant="compact"
+									locale={locale}
+									transcriptionId={result.id}
+									transcriptText={text}
+									onApplyText={nextText => setText(nextText)}
+									onResultUpdated={updated => {
+										if (!updated) return;
+										setResult(updated);
+										if (typeof updated.text === 'string') setText(updated.text);
+									}}
+									initialCompare={
+										result.originalText && result.enhancedText
+											? {
+													originalText: result.originalText,
+													enhancedText: result.enhancedText,
+													changesSummary: result.enhancementMeta?.changesSummary || [],
+												}
+											: null
+									}
+									initialSummary={result.summaryPayload || null}
+								/>
 							</div>
 						)}
 					</>

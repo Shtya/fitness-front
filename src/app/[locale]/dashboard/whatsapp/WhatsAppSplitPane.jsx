@@ -524,7 +524,7 @@ export default function WhatsAppSplitPane({
 
 			<div
 				ref={scrollRef}
-				className="wa-message-wallpaper min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto bg-[#0B141A] p-3 nice-scroll"
+				className="wa-message-wallpaper min-h-0 flex-1 overflow-x-hidden overflow-y-auto bg-[#0B141A] p-3 nice-scroll"
 				style={{
 					backgroundImage: "url('/bg-whatsapp.svg')",
 					backgroundRepeat: 'repeat',
@@ -534,7 +534,7 @@ export default function WhatsAppSplitPane({
 					const node = event.currentTarget;
 					stickToBottomRef.current =
 						node.scrollHeight - node.scrollTop - node.clientHeight < 80;
-					if (!loading && !loadingOlder && hasMore && node.scrollTop < 50) {
+					if (!loading && !loadingOlder && hasMore && node.scrollHeight > node.clientHeight + 8 && node.scrollTop < 50) {
 						void loadOlder();
 					}
 				}}
@@ -553,7 +553,8 @@ export default function WhatsAppSplitPane({
 						{ar ? 'لا توجد رسائل بعد' : 'No messages yet'}
 					</p>
 				) : (
-					messages.map(message => {
+					<div className="wa-message-thread">
+					{messages.map(message => {
 						const mine = message.direction === 'outbound';
 						const presentation = messageTextPresentation(message.text);
 						const attachments = message.attachments || [];
@@ -597,7 +598,8 @@ export default function WhatsAppSplitPane({
 								</div>
 							</div>
 						);
-					})
+					})}
+					</div>
 				)}
 			</div>
 

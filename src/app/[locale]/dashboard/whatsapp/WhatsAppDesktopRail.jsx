@@ -93,7 +93,7 @@ export default function WhatsAppDesktopRail({
 			>
 				<span className="wa-desktop-rail__icon-wrap">
 					<span className="wa-desktop-rail__icon">
-						<Icon size={18} strokeWidth={active ? 2.4 : 2} />
+						<Icon size={20} strokeWidth={active ? 2.4 : 2} />
 					</span>
 					{badge ? <span className="wa-desktop-rail__badge">{badge}</span> : null}
 				</span>
@@ -125,7 +125,7 @@ export default function WhatsAppDesktopRail({
 					>
 						<span className="wa-desktop-rail__icon-wrap">
 							<span className="wa-desktop-rail__icon">
-								<Settings size={18} strokeWidth={activeTab === 'settings' ? 2.4 : 2} />
+								<Settings size={20} strokeWidth={activeTab === 'settings' ? 2.4 : 2} />
 							</span>
 						</span>
 						<span className="wa-desktop-rail__label">

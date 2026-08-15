@@ -64,6 +64,7 @@ export async function fetchMessages(conversationId, params = {}) {
 			// backfill must never stampede getMessages across the inbox.
 			live: params.live === true || params.live === 1 || params.live === '1' ? 1 : 0,
 		},
+		signal: params.signal,
 	});
 	return Array.isArray(data) ? data : [];
 }
@@ -164,10 +165,12 @@ export function useWhatsAppQueryCache() {
 	const prefetchMessages = useCallback(
 		async (conversationId, limit = 30) => {
 			if (!conversationId) return;
+			const existing = queryClient.getQueryData(whatsappKeys.messages(conversationId));
+			if (existing?.items?.length) return;
 			await queryClient.prefetchQuery({
 				queryKey: whatsappKeys.messages(conversationId),
-				queryFn: async () => {
-					const items = await fetchMessages(conversationId, { limit });
+				queryFn: async ({ signal }) => {
+					const items = await fetchMessages(conversationId, { limit, signal });
 					return {
 						items,
 						hasMore: items.length >= limit,

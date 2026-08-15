@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Bot, Loader2, Plus, Save, Trash2 } from 'lucide-react';
+import { WaCustomSelect } from '../WaCustomSelect';
 
 const COPY = {
 	en: {
@@ -66,7 +67,7 @@ const GRADIENT = 'linear-gradient(135deg, #1DAB61 0%, #1DAB61 100%)';
 const GLOW = '0 10px 24px -10px var(--color-primary-400)';
 
 const fieldClass =
-	'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--color-primary-400)] focus:ring-2 focus:ring-[var(--color-primary-100)] dark:border-slate-700 dark:bg-slate-900 dark:focus:ring-[var(--color-primary-950)]';
+	'wa-input-3d w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-900';
 
 const sectionLabelClass =
 	'text-[11px] font-bold uppercase tracking-wider text-slate-400';
@@ -207,17 +208,18 @@ export default function WhatsAppAiSettings({
 			<div className="grid gap-3 md:grid-cols-2">
 				<label className="space-y-1 text-xs font-bold">
 					<span>{text.provider}</span>
-					<select
+					<WaCustomSelect
+						ariaLabel={text.provider}
 						value={draft.provider || 'ai-free'}
-						onChange={event => update('provider', event.target.value)}
-						className={fieldClass}
-					>
-						<option value="ai-free">FitCoach Free (auto fallback)</option>
-						<option value="llm7-free">LLM7 Free</option>
-						<option value="pollinations-free">Pollinations Free</option>
-						<option value="browser-chatgpt">Browser ChatGPT</option>
-						<option value="dragify-free">Legacy Free (same as FitCoach)</option>
-					</select>
+						onChange={value => update('provider', value)}
+						options={[
+							{ value: 'ai-free', label: 'FitCoach Free (auto fallback)' },
+							{ value: 'llm7-free', label: 'LLM7 Free' },
+							{ value: 'pollinations-free', label: 'Pollinations Free' },
+							{ value: 'browser-chatgpt', label: 'Browser ChatGPT' },
+							{ value: 'dragify-free', label: 'Legacy Free (same as FitCoach)' },
+						]}
+					/>
 				</label>
 				<label className="space-y-1 text-xs font-bold">
 					<span>{text.model}</span>
@@ -230,30 +232,32 @@ export default function WhatsAppAiSettings({
 				</label>
 				<label className="space-y-1 text-xs font-bold">
 					<span>{text.language}</span>
-					<select
+					<WaCustomSelect
+						ariaLabel={text.language}
 						value={draft.language || 'auto'}
-						onChange={event => update('language', event.target.value)}
-						className={fieldClass}
-					>
-						<option value="auto">Auto</option>
-						<option value="ar">العربية</option>
-						<option value="en">English</option>
-					</select>
+						onChange={value => update('language', value)}
+						options={[
+							{ value: 'auto', label: 'Auto' },
+							{ value: 'ar', label: 'العربية' },
+							{ value: 'en', label: 'English' },
+						]}
+					/>
 				</label>
 				<label className="space-y-1 text-xs font-bold">
 					<span>{text.tone}</span>
-					<select
+					<WaCustomSelect
+						ariaLabel={text.tone}
 						value={draft.tone || 'professional'}
-						onChange={event => update('tone', event.target.value)}
-						className={fieldClass}
-					>
-						<option value="professional">Professional</option>
-						<option value="friendly">Friendly</option>
-						<option value="egyptian">مصري عامي</option>
-						<option value="sales">Sales</option>
-						<option value="support">Technical support</option>
-						<option value="concise">Concise</option>
-					</select>
+						onChange={value => update('tone', value)}
+						options={[
+							{ value: 'professional', label: 'Professional' },
+							{ value: 'friendly', label: 'Friendly' },
+							{ value: 'egyptian', label: 'مصري عامي' },
+							{ value: 'sales', label: 'Sales' },
+							{ value: 'support', label: 'Technical support' },
+							{ value: 'concise', label: 'Concise' },
+						]}
+					/>
 				</label>
 			</div>
 

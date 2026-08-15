@@ -231,9 +231,11 @@ export function updateConversationPreview(conversations = [], payload = {}) {
 			!currentTimestamp ||
 			(Number.isFinite(nextTime) && nextTime >= currentTime);
 		const unreadCount =
-			payload.unreadCount == null
-				? conversation.unreadCount
-				: Math.max(0, Number(payload.unreadCount) || 0);
+			isLatest && String(preview.direction || '').toLowerCase() === 'outbound'
+				? 0
+				: payload.unreadCount == null
+					? conversation.unreadCount
+					: Math.max(0, Number(payload.unreadCount) || 0);
 
 		changed = true;
 		if (isLatest && hasRenderablePreview) reorder = true;
@@ -256,6 +258,13 @@ export function updateConversationPreview(conversations = [], payload = {}) {
 
 	if (!changed) return conversations;
 	return reorder ? sortConversationsByActivity(next) : next;
+}
+
+export function conversationUnreadCount(conversation) {
+	if (String(conversation?.lastMessage?.direction || '').toLowerCase() === 'outbound') {
+		return 0;
+	}
+	return Math.max(0, Number(conversation?.unreadCount) || 0);
 }
 
 export function seekRatio(clientX, left, width, isRtl = false) {
@@ -518,12 +527,32 @@ const DISPLAYABLE_MEDIA_TYPES = new Set([
 	'document',
 ]);
 
+const INVISIBLE_MESSAGE_CHARS_RE = /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF\u00AD]/g;
+
+export function visibleMessageText(value) {
+	return String(value || '').replace(INVISIBLE_MESSAGE_CHARS_RE, '').trim();
+}
+
+function hasRenderableAttachment(attachment) {
+	if (!attachment || typeof attachment !== 'object') return false;
+	return Boolean(
+		attachment.id ||
+			attachment.url ||
+			attachment.key ||
+			attachment.providerMediaId ||
+			attachment.previewDataUrl,
+	);
+}
+
 export function isRenderableWhatsAppMessage(message) {
 	if (!message) return false;
-	if (String(message.text || '').trim()) return true;
+	const deleted = message.deletedMode && message.deletedMode !== 'none';
+	if (deleted) return true;
+	if (visibleMessageText(message.text)) return true;
+	if (message.location?.latitude != null && message.location?.longitude != null) return true;
 	if (
 		Array.isArray(message.attachments) &&
-		message.attachments.some(attachment => attachment?.id || attachment?.url)
+		message.attachments.some(hasRenderableAttachment)
 	) {
 		return true;
 	}

@@ -1113,6 +1113,7 @@ export default function TranscriptWorkspace() {
 										: null
 								}
 								initialMemorize={result.memorizePayload || null}
+								initialSummary={result.summaryPayload || null}
 							/>
 						</section>
 					)}
