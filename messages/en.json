@@ -6192,6 +6192,7 @@
 		"processing": "Processing",
 		"open": "Open",
 		"retry": "Retry",
+		"retryOk": "Memo sent to WhatsApp",
 		"syncNow": "Check new emails",
 		"sendTest": "Send test memo",
 		"detailTitle": "Email details",

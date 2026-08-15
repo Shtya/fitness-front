@@ -74,7 +74,7 @@ export const emailMemoApi = {
 		return api.get(`${BASE}/messages/${id}`, { signal });
 	},
 	retry(id, signal) {
-		return api.post(`${BASE}/messages/${id}/retry`, {}, { signal, timeout: 60000 });
+		return api.post(`${BASE}/messages/${id}/retry`, {}, { signal, timeout: 180000 });
 	},
 	sendNow(body = {}, signal) {
 		return api.post(`${BASE}/send-now`, body, { signal, timeout: 300000 });

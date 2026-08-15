@@ -5700,6 +5700,14 @@ function WhatsAppWorkspaceContent() {
 		};
 		rewatchRooms();
 		socket.on('connect', rewatchRooms);
+		let accountsRefreshTimer;
+		const refreshAccountsSoon = () => {
+			if (accountsRefreshTimer) return;
+			accountsRefreshTimer = setTimeout(() => {
+				accountsRefreshTimer = null;
+				loadAccounts().catch(() => { });
+			}, 800);
+		};
 		socket.on('whatsapp:event', event => {
 			// Defense in depth: conversation events now carry accountId too.
 			const watchedAccountId = accountIdRef.current || accountId;
@@ -5907,11 +5915,7 @@ function WhatsAppWorkspaceContent() {
 			if (['sync_completed', 'sync_failed'].includes(event.event)) {
 				const isManualSync = event.payload?.stage === 'manual';
 				const phoneClosedFail =
-					event.event === 'sync_failed' &&
-					(event.payload?.reason === 'phone_closed' ||
-						/open WhatsApp|phone|هاتف|واتساب/i.test(
-							String(event.payload?.message || ''),
-						));
+					event.event === 'sync_failed' && event.payload?.reason === 'phone_closed';
 				// Manual sync UI state is owned by syncAccount(); clearing here races
 				// auto-resync when the list is still empty mid-reload.
 				if (!isManualSync) {
@@ -5967,16 +5971,12 @@ function WhatsAppWorkspaceContent() {
 			if (['connection', 'connection_error'].includes(event.event)) {
 				const status = event.payload?.status || event.payload?.event?.status;
 				const reason = String(event.payload?.reason || '');
-				if (
-					syncingInboxRef.current &&
-					status &&
-					status !== 'connected' &&
-					(reason === 'phone_closed' ||
-						['disconnected', 'error', 'qr_pending'].includes(status))
-				) {
-					setSyncPhoneClosed(true);
-					setSyncingInbox(true);
-					setSyncProgress(0);
+				if (syncingInboxRef.current && status && status !== 'connected') {
+					if (reason === 'phone_closed') {
+						setSyncPhoneClosed(true);
+						setSyncingInbox(true);
+						setSyncProgress(0);
+					}
 				}
 				if (status === 'connected') {
 					setSyncPhoneClosed(false);
@@ -5999,7 +5999,7 @@ function WhatsAppWorkspaceContent() {
 						})?.catch?.(() => { });
 					}
 				}
-				loadAccounts().catch(() => { });
+				refreshAccountsSoon();
 				if (status === 'connected' && accountId) {
 					loadConversations(accountId, 1, false, { force: true }).catch(() => { });
 					const activeConversationId = conversationIdRef.current;
@@ -6011,6 +6011,7 @@ function WhatsAppWorkspaceContent() {
 			}
 		});
 		return () => {
+			if (accountsRefreshTimer) clearTimeout(accountsRefreshTimer);
 			if (reloadConversationsTimer.current) clearTimeout(reloadConversationsTimer.current);
 			socketRef.current = null;
 			watchedConversationRef.current = null;
@@ -6080,10 +6081,16 @@ function WhatsAppWorkspaceContent() {
 			['connecting', 'qr_pending'].includes(status) && statusAgeMs > 90_000;
 		const willResetSession = force || stuckConnecting || status === 'error';
 
-		// Only skip when already connected. Allow qr_pending/connecting so refresh
-		// can reuse the in-flight provider / restore the session on the backend.
 		if (!force && !switchingMode && status === 'connected') {
 			toast.success(t.sessionLinkedHint);
+			return;
+		}
+		if (
+			!force &&
+			!switchingMode &&
+			!stuckConnecting &&
+			['connecting', 'qr_pending'].includes(status)
+		) {
 			return;
 		}
 
@@ -6132,12 +6139,7 @@ function WhatsAppWorkspaceContent() {
 	useEffect(() => {
 		if (!selectedAccount || !canManageWhatsApp) return;
 		const { id, status } = selectedAccount;
-		if (status === 'connected') {
-			if (autoConnectAttemptedRef.current === id) {
-				autoConnectAttemptedRef.current = null;
-			}
-			return;
-		}
+		if (status === 'connected') return;
 		if (
 			![
 				'connecting',
@@ -6147,6 +6149,9 @@ function WhatsAppWorkspaceContent() {
 			].includes(status)
 		) {
 			return;
+		}
+		if (autoConnectAttemptedRef.current && autoConnectAttemptedRef.current !== id) {
+			autoConnectAttemptedRef.current = null;
 		}
 		if (autoConnectAttemptedRef.current === id) return;
 		autoConnectAttemptedRef.current = id;
@@ -6162,6 +6167,9 @@ function WhatsAppWorkspaceContent() {
 				}
 				if (qrData.qr || qrData.pairingCode) {
 					await loadAccounts();
+					return;
+				}
+				if (['connecting', 'qr_pending'].includes(status)) {
 					return;
 				}
 				const { data } = await api.post(`/whatsapp/accounts/${id}/connect`, {});
@@ -8179,7 +8187,7 @@ function WhatsAppWorkspaceContent() {
 				}}
 				onRetry={() => {
 					setSyncPhoneClosed(false);
-					void connectAccount(undefined, { force: true })
+					void connectAccount(undefined)
 						.then(() => syncAccount(false))
 						.catch(() => {
 							setSyncPhoneClosed(true);

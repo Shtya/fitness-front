@@ -533,7 +533,15 @@ export default function EmailMemoWorkspace() {
 			await load();
 			if (okMessage) toast.success(okMessage);
 		} catch (error) {
-			toast.error(error.response?.data?.message || error.message);
+			const payload = error?.response?.data;
+			const raw = payload?.message || payload?.error || error.message;
+			const msg = Array.isArray(raw) ? raw[0] : raw;
+			toast.error(String(msg || 'Request failed'));
+			try {
+				await load();
+			} catch {
+				/* keep original error visible */
+			}
 		} finally {
 			setBusy('');
 		}
@@ -1660,12 +1668,25 @@ export default function EmailMemoWorkspace() {
 														{row.status === 'FAILED' ? (
 															<button
 																type="button"
-																onClick={() => run(`retry-${row.id}`, () => emailMemoApi.retry(row.id))}
-																className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+																onClick={(e) => {
+																	e.preventDefault();
+																	e.stopPropagation();
+																	run(
+																		`retry-${row.id}`,
+																		() => emailMemoApi.retry(row.id),
+																		t('retryOk'),
+																	);
+																}}
+																disabled={Boolean(busy)}
+																className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-50"
 																aria-label={t('retry')}
 																title={t('retry')}
 															>
-																<RotateCcw size={13} />
+																{busy === `retry-${row.id}` ? (
+																	<Loader2 size={13} className="animate-spin" />
+																) : (
+																	<RotateCcw size={13} />
+																)}
 															</button>
 														) : null}
 														{row.senderEmail && !excluded ? (
