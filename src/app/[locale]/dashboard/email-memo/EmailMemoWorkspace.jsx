@@ -9,7 +9,6 @@ import { io } from 'socket.io-client';
 import {
 	ArrowDown,
 	Ban,
-	Bot,
 	Check,
 	ChevronDown,
 	ChevronUp,
@@ -81,6 +80,16 @@ function timeAgo(value, locale) {
 	const hours = Math.round(mins / 60);
 	if (hours < 24) return locale === 'ar' ? `${hours} س` : `${hours}h ago`;
 	return date.toLocaleString(locale === 'ar' ? 'ar' : 'en');
+}
+
+function clockTime(value, locale) {
+	if (!value) return '';
+	return new Date(value).toLocaleTimeString(locale === 'ar' ? 'ar-EG' : 'en-GB', {
+		timeZone: 'Africa/Cairo',
+		hour: 'numeric',
+		minute: '2-digit',
+		hour12: true,
+	});
 }
 
 const GMAIL_OAUTH_SOURCE = 'so7ba-email-memo-gmail';
@@ -312,6 +321,7 @@ export default function EmailMemoWorkspace() {
 	const [gmailOpen, setGmailOpen] = useState(false);
 	const [waOpen, setWaOpen] = useState(false);
 	const [aiOpen, setAiOpen] = useState(false);
+	const [sendersListOpen, setSendersListOpen] = useState(true);
 	const [activityQ, setActivityQ] = useState('');
 	const [activityInbox, setActivityInbox] = useState('');
 	const [activitySender, setActivitySender] = useState('');
@@ -677,7 +687,7 @@ export default function EmailMemoWorkspace() {
 		setBusy('send-now');
 		(async () => {
 			try {
-				const res = await emailMemoApi.sendNow({ limit: 30 });
+				const res = await emailMemoApi.sendNow({ limit: 100 });
 				const sent = Number(res.data?.sent || 0);
 				const processed = Number(res.data?.processed || 0);
 				const total = Number(res.data?.total || 0);
@@ -901,16 +911,9 @@ export default function EmailMemoWorkspace() {
 				</div>
 			) : null}
 
-			<div className="relative z-10 mx-auto w-full max-w-6xl space-y-5 px-5 py-5 pb-16 sm:px-7">
-				<div className="flex flex-wrap items-center justify-center gap-3 rounded-[20px] border border-[#E5E7EB] bg-white/90 px-4 py-4" style={cardShadow}>
-					<FlowNode ok={gmailOk} label={t('gmail')} icon={Mails} />
-					<ArrowDown className="hidden rotate-[-90deg] text-slate-400 md:block" size={18} />
-					<FlowNode ok label={t('aiFree')} icon={Bot} />
-					<ArrowDown className="hidden rotate-[-90deg] text-slate-400 md:block" size={18} />
-					<FlowNode ok={waOk} label={t('whatsapp')} icon={MessageCircle} />
-				</div>
-
-				<section className="grid items-start gap-10 overflow-visible lg:grid-cols-3">
+			<div className="relative z-10 mx-auto w-full max-w-6xl space-y-10 px-5 py-5 pb-16 sm:px-7">
+				<section className="mb-4 flex flex-col items-stretch gap-6 overflow-visible pb-8 lg:flex-row lg:items-start lg:gap-3">
+					<div className="min-w-0 flex-1 order-1">
 					<CollapsibleCard
 						open={gmailOpen}
 						onToggle={() => setGmailOpen((v) => !v)}
@@ -1099,7 +1102,11 @@ export default function EmailMemoWorkspace() {
 							</>
 						) : null}
 					</CollapsibleCard>
+					</div>
 
+					<FlowArrow isRtl={isRtl} className="order-2" />
+
+					<div className="min-w-0 flex-1 order-5">
 					<CollapsibleCard
 						open={waOpen}
 						onToggle={() => setWaOpen((v) => !v)}
@@ -1298,7 +1305,11 @@ export default function EmailMemoWorkspace() {
 
 						<p className="mt-4 text-[12px] leading-relaxed text-[#6B7280]">{t('waSendHint')}</p>
 					</CollapsibleCard>
+					</div>
 
+					<FlowArrow isRtl={isRtl} className="order-4" />
+
+					<div className="min-w-0 flex-1 order-3">
 					<CollapsibleCard
 						open={aiOpen}
 						onToggle={() => setAiOpen((v) => !v)}
@@ -1331,8 +1342,6 @@ export default function EmailMemoWorkspace() {
 							</span>
 						</div>
 						<p className="text-sm font-bold">{overview.ai.label || t('aiFree')}</p>
-						<p className="mt-1 text-xs leading-relaxed text-[#6B7280]">{t('aiMemoHint')}</p>
-						<p className="mt-2 text-[11px] text-[#6B7280]">{t('aiFreeHint')}</p>
 						<div className="mt-3 flex flex-wrap gap-1.5">
 							{(overview.ai.providers || [{ id: 'ai-free', label: t('aiFree') }]).map((provider) => (
 								<button
@@ -1359,7 +1368,7 @@ export default function EmailMemoWorkspace() {
 										onChange={(hours) => setSettings({ ...settings, pollIntervalHours: Number(hours) })}
 										options={POLL_HOURS.map((hours) => ({ value: String(hours), label: t('everyHours', { h: hours }) }))}
 									/>
-									<p className="mt-1 text-[11px] text-[#6B7280]">{t('pollIntervalHint')}</p>
+									{/* <p className="mt-1 text-[11px] text-[#6B7280]">{t('pollIntervalHint')}</p> */}
 								</label>
 								<p className="text-[11px] font-semibold uppercase tracking-wide text-[#71717a]">{t('memoLength')}</p>
 								<div className="flex flex-wrap gap-1.5">
@@ -1408,21 +1417,32 @@ export default function EmailMemoWorkspace() {
 								{overview.ai.preview || t('aiPreviewEmpty')}
 							</pre>
 						</div>
-						<div className="mt-4 grid grid-cols-3 gap-2 text-center">
+						{/* <div className="mt-4 grid grid-cols-3 gap-2 text-center">
 							<UsageStat label={t('emailsToday')} value={overview.usage?.emailsProcessedToday || 0} />
 							<UsageStat label={t('aiToday')} value={overview.usage?.aiRequestsToday || 0} />
 							<UsageStat label={t('waToday')} value={overview.usage?.whatsappSentToday || 0} />
-						</div>
+						</div> */}
 					</CollapsibleCard>
+					</div>
 				</section>
 
-				<section className={card} style={cardShadow}>
-					<div className="mb-1 flex items-center justify-between gap-2">
+				<section className={`relative ${card}`} style={cardShadow}>
+					<button
+						type="button"
+						aria-expanded={sendersListOpen}
+						aria-label={sendersListOpen ? t('collapse') : t('expand')}
+						onClick={() => setSendersListOpen((v) => !v)}
+						className="absolute right-5 top-5 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E7EB] bg-white text-[#6366F1] hover:bg-slate-50"
+						style={{ boxShadow: STUDIO.shadow3d }}
+					>
+						{sendersListOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+					</button>
+					<div className="mb-1 flex items-center pe-10">
 						<h2 className="text-lg font-bold text-[#111827] dark:text-white">{t('senders')}</h2>
 					</div>
 					<p className="mb-3 text-[12px] leading-snug text-[#6B7280]">{t('sendersHint')}</p>
 					<form
-						className="mb-4 flex flex-wrap gap-2"
+						className="relative mb-4"
 						onSubmit={(e) => {
 							e.preventDefault();
 							const email = excludeDraft.trim();
@@ -1436,23 +1456,30 @@ export default function EmailMemoWorkspace() {
 					>
 						<input
 							dir="ltr"
-							className={`max-w-xs ${FOCUS}`}
+							className={`${FOCUS} w-full pr-[9.25rem]`}
 							value={excludeDraft}
 							onChange={(e) => setExcludeDraft(e.target.value)}
 							placeholder={t('excludePlaceholder')}
 						/>
-						<StudioButton type="submit" disabled={busy === 'exclude' || !excludeDraft.trim()}>
-							<Ban size={13} /> {t('addExclude')}
-						</StudioButton>
+						<button
+							type="submit"
+							disabled={busy === 'exclude' || !excludeDraft.trim()}
+							className="absolute right-1.5 top-1/2 inline-flex h-8 -translate-y-1/2 items-center gap-1 rounded-[10px] px-2.5 text-[11px] font-semibold text-white disabled:opacity-50"
+							style={{ background: STUDIO.gradient, boxShadow: STUDIO.shadow3dPrimary, borderRadius: STUDIO.btnRadius }}
+						>
+							{busy === 'exclude' ? <Loader2 className="animate-spin" size={12} /> : <Ban size={12} />}
+							{t('addExclude')}
+						</button>
 					</form>
-					{senders.length === 0 ? (
+					{sendersListOpen ? (
+					senders.length === 0 ? (
 						<p className="text-sm text-[#6B7280]">{t('noSenders')}</p>
 					) : (
-						<div className="flex max-h-64 flex-wrap gap-2.5 overflow-auto pb-1">
+						<div className="flex max-h-52 flex-wrap gap-1.5 overflow-auto pb-1">
 							{senders.map((sender) => (
 								<div
 									key={sender.email}
-									className={`inline-flex max-w-full items-center gap-2.5 rounded-full border px-3 py-2 ${
+									className={`inline-flex max-w-full items-center gap-1.5 rounded-full border px-2 py-1 ${
 										sender.excluded
 											? 'border-rose-200 bg-rose-50/80'
 											: 'border-[#E5E7EB] bg-white shadow-[0_8px_16px_-10px_rgba(15,23,42,0.45)] dark:border-slate-700 dark:bg-slate-900'
@@ -1460,44 +1487,45 @@ export default function EmailMemoWorkspace() {
 									title={`${sender.name || sender.email} · ${sender.email}`}
 								>
 									<span
-										className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-black text-white"
+										className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-black text-white"
 										style={{ background: senderAvatarColor(sender.email) }}
 									>
 										{senderInitials(sender.name || sender.email)}
 									</span>
-									<span className="min-w-0 truncate text-sm font-semibold text-[#111827] dark:text-white">
+									<span className="min-w-0 max-w-[9rem] truncate text-[11px] font-semibold text-[#111827] dark:text-white">
 										{sender.name || sender.email}
 									</span>
-									<span className="shrink-0 text-[13px] font-bold text-[#9CA3AF]">{sender.count}</span>
+									<span className="shrink-0 text-[10px] font-bold text-[#9CA3AF]">{sender.count}</span>
 									{sender.excluded ? (
 										<button
 											type="button"
-											className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[#6366F1] hover:bg-white"
+											className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[#6366F1] hover:bg-white"
 											aria-label={t('includeBack')}
 											onClick={() => run(`inc-${sender.email}`, async () => {
 												const res = await emailMemoApi.includeSender(sender.email);
 												setSenders(res.data?.items || []);
 											})}
 										>
-											<Undo2 size={13} />
+											<Undo2 size={11} />
 										</button>
 									) : (
 										<button
 											type="button"
-											className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-rose-500 hover:bg-rose-100"
+											className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-rose-500 hover:bg-rose-100"
 											aria-label={t('exclude')}
 											onClick={() => run(`exc-${sender.email}`, async () => {
 												const res = await emailMemoApi.excludeSender(sender.email);
 												setSenders(res.data?.items || []);
 											})}
 										>
-											<Ban size={13} />
+											<Ban size={11} />
 										</button>
 									)}
 								</div>
 							))}
 						</div>
-					)}
+					)
+					) : null}
 				</section>
 
 				<section className={card} style={cardShadow}>
@@ -1608,6 +1636,7 @@ export default function EmailMemoWorkspace() {
 										const picked = pickExclude.has(String(row.senderEmail || '').toLowerCase());
 										const excluded = excludedSet.has(senderKey);
 										const waSent = row.whatsappStatus === 'sent';
+										const receivedClock = clockTime(row.receivedAt, locale);
 										return (
 											<tr key={row.id} className="border-t border-slate-100 transition-colors hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-900/60">
 												<td className="px-2.5 py-1.5">
@@ -1651,9 +1680,15 @@ export default function EmailMemoWorkspace() {
 												</td>
 												<td className="px-2 py-1.5">
 													{waSent ? (
-														<span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+														<span
+															className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700"
+															title={row.receivedAt ? new Date(row.receivedAt).toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-GB', { timeZone: 'Africa/Cairo' }) : ''}
+														>
 															<Check size={11} />
 															<MessageCircle size={11} />
+															{receivedClock ? (
+																<span className="font-semibold tabular-nums">{receivedClock}</span>
+															) : null}
 														</span>
 													) : (
 														<span className="text-[11px] font-medium text-[#D1D5DB]">—</span>
@@ -1991,12 +2026,15 @@ function CollapsibleCard({ open, onToggle, collapsed, children, expandLabel = 'E
 	);
 }
 
-function FlowNode({ ok, label, icon: Icon }) {
+function FlowArrow({ isRtl, className = '' }) {
 	return (
-		<div className="flex min-w-[120px] items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-3 py-2">
-			{ok ? <ReadyCheck size={14} /> : <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />}
-			<Icon size={16} className="text-[#6366F1]" />
-			<span className="text-sm font-semibold">{label}</span>
+		<div className={`flex shrink-0 items-center justify-center py-0 lg:self-center ${className}`} aria-hidden>
+			<span
+				className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E7EB] bg-white text-[#6366F1]"
+				style={{ boxShadow: STUDIO.shadow3d }}
+			>
+				<ArrowDown size={16} className={isRtl ? 'lg:rotate-90' : 'lg:-rotate-90'} />
+			</span>
 		</div>
 	);
 }

@@ -41,7 +41,7 @@ export async function readVoiceChangerError(error, locale = 'en') {
 			? 'Cartesia أوقفت Voice Changer. استخدم ElevenLabs أو تغيير الدرجة المجاني.'
 			: 'Cartesia discontinued Voice Changer. Use ElevenLabs or the free pitch changer.';
 	}
-	if (isElevenLabsClonePermissionError(message)) {
+	if (isElevenLabsClonePermissionError(message) && /elevenlabs/i.test(message)) {
 		return locale === 'ar'
 			? 'مفتاح ElevenLabs الحالي مش مسموح له يعمل Instant Voice Cloning. Restricted في الإعدادات غير صلاحية Voices على المفتاح نفسه: elevenlabs.io → Settings → API Keys → افتح المفتاح ده، طفّي Restricted، وفعّل Voices / Instant Voice Cloning. محتاج Starter على الأقل. تقدر كمان تستنسخ من موقع ElevenLabs وبعدين تختاره هنا.'
 			: 'This ElevenLabs key cannot clone voices. Restricted is separate from Voices permission on the key itself: elevenlabs.io → Settings → API Keys → open THIS key, turn Restricted off, and enable Voices / Instant Voice Cloning. Starter or higher is required. You can also clone on the ElevenLabs website, then pick it here.';
@@ -50,6 +50,21 @@ export async function readVoiceChangerError(error, locale = 'en') {
 		return locale === 'ar'
 			? 'استنساخ ElevenLabs محتاج حوالي 60 ثانية كلام واضح. ارفع عيّنات أكتر أو سجّل أطول وبعدين جرّب تاني. النافذة هتفضل مفتوحة.'
 			: 'ElevenLabs Instant Voice Cloning needs about 60 seconds of clean speech. Add more clips or record longer samples, then try again.';
+	}
+	if (/MiniMax cloning needs at least 10 seconds/i.test(message)) {
+		return locale === 'ar'
+			? 'استنساخ MiniMax محتاج 10 ثواني كلام واضح على الأقل. ارفع عيّنة أطول وبعدين جرّب تاني.'
+			: message;
+	}
+	if (/Fish Audio cloning needs at least 8 seconds/i.test(message)) {
+		return locale === 'ar'
+			? 'استنساخ Fish Audio محتاج 8 ثواني كلام واضح على الأقل. ارفع عيّنة أطول وبعدين جرّب تاني.'
+			: message;
+	}
+	if (/Save a free Groq key first|clone the voice then respeak/i.test(message)) {
+		return locale === 'ar'
+			? 'Fish Audio و MiniMax بيستنسخوا الصوت وبعدين ينطقوا الكلام. احفظ مفتاح Groq المجاني أولاً عشان الرسالة تتتفرغ.'
+			: 'Fish Audio and MiniMax clone the voice then respeak the words. Save a free Groq key first so the WhatsApp note can be transcribed.';
 	}
 	if (isElevenLabsPaidVoiceError(message)) {
 		return locale === 'ar'
@@ -81,10 +96,11 @@ export async function removeVoiceChangerCredential(provider) {
 	return data;
 }
 
-export async function cloneVoiceFromSamples({ name, files, consent }) {
+export async function cloneVoiceFromSamples({ name, files, consent, cloneProvider }) {
 	const form = new FormData();
 	form.append('name', String(name || '').trim());
 	form.append('consent', consent ? 'true' : 'false');
+	if (cloneProvider) form.append('cloneProvider', String(cloneProvider));
 	for (const file of files || []) form.append('files', file);
 	const { data } = await api.post('/whatsapp/voice-changer/clone', form, {
 		timeout: 120000,

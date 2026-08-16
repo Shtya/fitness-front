@@ -6,6 +6,7 @@ import {
 	AudioLines,
 	Check,
 	ChevronDown,
+	Copy,
 	ExternalLink,
 	KeyRound,
 	Loader2,
@@ -56,10 +57,10 @@ const RECORD_SECONDS = 4;
 const CLONE_SAMPLE_SECONDS = 30;
 
 const PROVIDER_ICONS = {
-	off: Mic,
 	ffmpeg: Wand2,
 	elevenlabs: AudioLines,
-	clone: UserRound,
+	fishaudio: Waves,
+	minimax: Sparkles,
 	groq: Zap,
 	openai: Sparkles,
 	huggingface: Waves,
@@ -69,9 +70,10 @@ const PROVIDER_ICONS = {
 const copy = {
 	en: {
 		title: 'Voice note',
-		subtitle: 'Saved until you change it from the waves icon.',
+		subtitle: 'Check one model to use it. Leave all unchecked to send your real voice.',
 		disclaimer: 'Only use a voice you have permission to change.',
 		free: 'Free',
+		cloneBadge: 'Clone',
 		needsKey: 'Key',
 		keyAdded: 'Added',
 		preset: 'Effect',
@@ -102,17 +104,18 @@ const copy = {
 		pasteKeyHint: 'Paste the API key to use this model. You can open the card, but conversion stays locked until the key is saved.',
 		micDenied: 'Microphone permission was denied',
 		previewFailed: 'Could not convert the sample',
-		offHint: 'Mic recordings will be sent as your real voice. No processing.',
+		noneSelected: 'No model checked. Mic recordings are sent as your real voice.',
+		useModel: 'Use this model',
 		tryHint: 'Record a sample, then tap play to hear it. Changing a voice never autoplays.',
 		sampleReady: 'Sample ready. Tap play to listen. Change the option, then tap play again.',
 		fallbackKeyHint:
 			'This key is reused from Transcript or AI Studio. Changing it here updates the same saved key.',
 		cloneName: 'Voice name',
 		cloneNamePh: 'Coach Ahmed',
-		cloneHint:
-			'Upload 3–10 clean clips totaling about 60 seconds. Instant Voice Cloning needs a Starter (or higher) ElevenLabs key with Voices enabled. Restricted keys cannot create clones.',
-		clonePermissionHint:
-			'If cloning fails, keep this panel open. Check elevenlabs.io → Settings → API Keys → this key: Restricted off, Voices / Instant Voice Cloning on. Short clips also fail — add more samples.',
+		cloneHintFish:
+			'Upload about 10–30 seconds of clean speech. Playback transcribes the note (Groq) then speaks it in this cloned voice.',
+		cloneHintMiniMax:
+			'About 10 seconds of clean speech. Playback transcribes the note (Groq) then speaks it in this cloned voice.',
 		cloneUpload: 'Upload samples',
 		cloneRecord: 'Record 30s',
 		cloneConsent: 'I have permission to clone this voice.',
@@ -126,9 +129,10 @@ const copy = {
 	},
 	ar: {
 		title: 'الرسالة الصوتية',
-		subtitle: 'الإعداد محفوظ لحد ما تغيّره من أيقونة الموجات.',
+		subtitle: 'شيك على موديل عشان تستخدمه. لو ولا واحدة متعلّمة، الرسالة هتتبعت بصوتك الحقيقي.',
 		disclaimer: 'غيّر صوتك أنت أو صوت مصرّح لك به.',
 		free: 'مجاني',
+		cloneBadge: 'استنساخ',
 		needsKey: 'مفتاح',
 		keyAdded: 'مضاف',
 		preset: 'التأثير',
@@ -159,17 +163,18 @@ const copy = {
 		pasteKeyHint: 'الصق مفتاح الـ API عشان تستخدم الموديل. تقدر تفتح الكارت، والتحويل مقفول لحد ما تحفظ المفتاح.',
 		micDenied: 'الإذن للمايك مرفوض',
 		previewFailed: 'تحويل العينة فشل',
-		offHint: 'التسجيل هيتبعت بصوتك الحقيقي من غير أي معالجة.',
+		noneSelected: 'مفيش موديل متعلم. التسجيل هيتبعت بصوتك الحقيقي.',
+		useModel: 'استخدم الموديل ده',
 		tryHint: 'سجّل عينة، وبعدين اضغط تشغيل عشان تسمع. تغيير الصوت مش بيشغّل لوحده.',
 		sampleReady: 'العينة جاهزة. اضغط تشغيل عشان تسمع. لو غيّرت الخيار، اضغط تشغيل تاني.',
 		fallbackKeyHint:
 			'المفتاح ده مستخدم من التفريغ أو استوديو الذكاء. تغييره هنا هيحدّث نفس المفتاح المحفوظ.',
 		cloneName: 'اسم الصوت',
 		cloneNamePh: 'الكوتش أحمد',
-		cloneHint:
-			'ارفع من 3 إلى 10 تسجيلات واضحة مجموعها حوالي 60 ثانية. Instant Voice Cloning يحتاج خطة Starter أو أعلى مع تفعيل Voices. المفتاح المحدود مش بينشئ استنساخاً.',
-		clonePermissionHint:
-			'لو الاستنساخ فشل، سيّب النافذة مفتوحة. راجع elevenlabs.io → Settings → API Keys → المفتاح ده: Restricted مقفول، وVoices / Instant Voice Cloning شغال. العيّنات القصيرة كمان بتفشل — ضيف تسجيلات أطول.',
+		cloneHintFish:
+			'ارفع حوالي 10–30 ثانية كلام واضح. التشغيل بيفرغ الرسالة (Groq) وبعدين ينطقها بالصوت المستنسخ.',
+		cloneHintMiniMax:
+			'حوالي 10 ثواني كلام واضح. التشغيل بيفرغ الرسالة (Groq) وبعدين ينطقها بالصوت المستنسخ.',
 		cloneUpload: 'رفع عيّنات',
 		cloneRecord: 'سجّل 30 ثانية',
 		cloneConsent: 'أنا مصرّح لي باستنساخ الصوت ده.',
@@ -196,6 +201,7 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 	const [saving, setSaving] = useState(false);
 	const [settings, setSettings] = useState(null);
 	const [provider, setProvider] = useState('off');
+	const [expandedId, setExpandedId] = useState(null);
 	const [preset, setPreset] = useState('deeper');
 	const [pitchSemitones, setPitchSemitones] = useState(-6);
 	const [voiceId, setVoiceId] = useState('');
@@ -230,9 +236,8 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 	const cloneCaptureRef = useRef(false);
 	const snapshotRef = useRef({});
 
-	const catalog = settings?.catalog || [];
-	const selected = catalog.find(item => item.id === provider) || catalog[0];
-	const credential = settings?.credentials?.[provider];
+	const catalog = (settings?.catalog || []).filter(item => item.id !== 'off' && item.id !== 'clone');
+	const selected = catalog.find(item => item.id === provider) || null;
 	const providerKeySaved = (id = provider) => Boolean(settings?.credentials?.[id]?.configured);
 	const busy = cloning || converting || recording || saving || savingKey;
 	const previewSignature = () =>
@@ -253,7 +258,9 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 			.then(data => {
 				if (cancelled) return;
 				setSettings(data);
-				setProvider(data.provider || 'off');
+				const nextProvider = data.provider === 'clone' ? 'off' : data.provider || 'off';
+				setProvider(nextProvider);
+				setExpandedId(nextProvider !== 'off' ? nextProvider : null);
 				setPreset(data.preset || 'deeper');
 				setPitchSemitones(Number(data.pitchSemitones) || -6);
 				const providerVoices = data.catalog?.find(item => item.id === data.provider)?.voices || [];
@@ -302,10 +309,12 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 
 	useEffect(() => {
 		if (!open || loading) return undefined;
-		const card = listRef.current?.querySelector(`[data-provider="${provider}"]`);
+		const targetId = expandedId || provider;
+		if (!targetId || targetId === 'off') return undefined;
+		const card = listRef.current?.querySelector(`[data-provider="${targetId}"]`);
 		card?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 		return undefined;
-	}, [loading, open, provider]);
+	}, [loading, open, provider, expandedId]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -323,7 +332,7 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 	useEffect(() => {
 		if (!open || !hasSample || !sourceFileRef.current) return undefined;
 		if (selected?.needsKey && !providerKeySaved() && !apiKeyDraft.trim()) return undefined;
-		if (provider === 'clone' && !(selected?.voices || []).length) return undefined;
+		if ((provider === 'fishaudio' || provider === 'minimax') && !(selected?.voices || []).length) return undefined;
 		if (selected?.needsKey) return undefined;
 		const timer = setTimeout(() => {
 			void convertPreview({ playAfter: false });
@@ -355,7 +364,9 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 			if (playAfter) toast.error(t.needKey);
 			return false;
 		}
-		if (options.provider === 'clone' && !(item?.voices || []).length) return false;
+		if ((options.provider === 'fishaudio' || options.provider === 'minimax') && !(item?.voices || []).length) {
+			return false;
+		}
 		const seq = ++convertSeqRef.current;
 		setConverting(true);
 		audioRef.current?.pause();
@@ -379,10 +390,15 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 		}
 	};
 
-	const applySettings = data => {
+	const applySettings = (data, { syncProvider = false } = {}) => {
 		setSettings(data);
-		setProvider(data.provider || provider);
-		const providerVoices = data.catalog?.find(item => item.id === (data.provider || provider))?.voices || [];
+		const nextProvider = data.provider === 'clone' ? 'off' : data.provider || provider;
+		if (syncProvider) {
+			setProvider(nextProvider);
+			if (nextProvider && nextProvider !== 'off') setExpandedId(nextProvider);
+		}
+		const voiceProvider = syncProvider ? nextProvider : provider;
+		const providerVoices = data.catalog?.find(item => item.id === voiceProvider)?.voices || [];
 		const nextVoice = data.voiceId || voiceId;
 		setVoiceId(
 			(nextVoice && providerVoices.some(voice => voice.id === nextVoice) && nextVoice) ||
@@ -399,10 +415,36 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 		convertedSigRef.current = '';
 		setPreviewUrl('');
 		setProvider(item.id);
+		setExpandedId(item.id);
 		setVoiceId(item.voices?.[0]?.id || '');
 		setApiKeyDraft('');
 		setEditingKey(false);
 		setCloneError('');
+	};
+
+	const togglePanel = item => {
+		if (expandedId === item.id) {
+			setExpandedId(null);
+			return;
+		}
+		selectProvider(item);
+	};
+
+	const toggleUseProvider = item => {
+		if (provider === item.id) {
+			audioRef.current?.pause();
+			setPlaying(false);
+			playWhenReadyRef.current = false;
+			convertedSigRef.current = '';
+			setPreviewUrl('');
+			setProvider('off');
+			setExpandedId(current => (current === item.id ? null : current));
+			setApiKeyDraft('');
+			setEditingKey(false);
+			setCloneError('');
+			return;
+		}
+		selectProvider(item);
 	};
 
 	const stopPreviewRecording = () => {
@@ -491,11 +533,12 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 		el.currentTime = (ar ? 1 - ratio : ratio) * duration;
 	};
 
-	const saveKey = async () => {
-		if (!selected?.needsKey || !apiKeyDraft.trim()) return;
+	const saveKey = async providerId => {
+		const id = providerId || expandedId || provider;
+		if (!id || id === 'off' || !apiKeyDraft.trim()) return;
 		setSavingKey(true);
 		try {
-			const data = await saveVoiceChangerCredential(provider, apiKeyDraft.trim());
+			const data = await saveVoiceChangerCredential(id, apiKeyDraft.trim());
 			applySettings(data);
 			setApiKeyDraft('');
 			setEditingKey(false);
@@ -507,11 +550,12 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 		}
 	};
 
-	const removeKey = async () => {
-		if (!selected?.needsKey) return;
+	const removeKey = async providerId => {
+		const id = providerId || expandedId || provider;
+		if (!id || id === 'off') return;
 		setSavingKey(true);
 		try {
-			const data = await removeVoiceChangerCredential(provider);
+			const data = await removeVoiceChangerCredential(id);
 			applySettings(data);
 			toast.success(t.removeKey);
 		} catch (error) {
@@ -521,7 +565,11 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 		}
 	};
 
-	const submitClone = async () => {
+	const submitClone = async cloneProvider => {
+		if (cloneProvider !== 'fishaudio' && cloneProvider !== 'minimax') {
+			toast.error(ar ? 'استنساخ Fish Audio أو MiniMax فقط.' : 'Clone with Fish Audio or MiniMax only.');
+			return;
+		}
 		if (!cloneName.trim()) {
 			toast.error(t.cloneName);
 			return;
@@ -541,8 +589,9 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 				name: cloneName.trim(),
 				files: cloneSamples,
 				consent: true,
+				cloneProvider,
 			});
-			applySettings(data);
+			applySettings(data, { syncProvider: true });
 			if (data.voiceId) setVoiceId(data.voiceId);
 			setCloneSamples([]);
 			setCloneConsent(false);
@@ -559,11 +608,11 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 	};
 
 	const save = async () => {
-		if (selected?.needsKey && !providerKeySaved() && !apiKeyDraft.trim()) {
+		if (provider !== 'off' && selected?.needsKey && !providerKeySaved() && !apiKeyDraft.trim()) {
 			toast.error(t.needKey);
 			return;
 		}
-		if (provider === 'clone' && !(selected?.voices || []).length && !voiceId) {
+		if ((provider === 'fishaudio' || provider === 'minimax') && !(selected?.voices || []).length && !voiceId) {
 			toast.error(t.cloneNeedSamples);
 			return;
 		}
@@ -667,6 +716,7 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 	);
 
 	const renderFields = item => {
+		const credential = settings?.credentials?.[item.id];
 		const tryButton = (
 			<button
 				type="button"
@@ -694,18 +744,6 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 			</a>
 		) : null;
 
-		if (item.id === 'off') {
-			return (
-				<div className="space-y-2">
-					<div className="flex items-center gap-1.5">
-						<p className="min-w-0 flex-1 text-[11px] leading-4 text-slate-500">{t.offHint}</p>
-						{tryButton}
-					</div>
-					{recording || hasSample || previewUrl ? renderPlayer() : null}
-				</div>
-			);
-		}
-
 		const showKeyForm = item.needsKey && (!credential?.configured || editingKey);
 
 		if (item.needsKey && !providerKeySaved(item.id)) {
@@ -723,14 +761,14 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 							autoComplete="off"
 							value={apiKeyDraft}
 							onChange={event => setApiKeyDraft(event.target.value)}
-							placeholder={item.id === 'huggingface' ? 'hf_...' : item.id === 'clone' || item.id === 'elevenlabs' ? 'sk_...' : 'sk-...'}
+							placeholder={item.id === 'huggingface' ? 'hf_...' : item.id === 'elevenlabs' ? 'sk_...' : 'sk-...'}
 							className={fieldClass}
 						/>
 						<Button
 							type="button"
 							size="sm"
 							className="h-8 shrink-0 px-2 text-[11px]"
-							onClick={saveKey}
+							onClick={() => saveKey(item.id)}
 							disabled={savingKey || !apiKeyDraft.trim()}
 						>
 							{savingKey ? <Loader2 size={12} className="animate-spin" /> : t.saveKey}
@@ -741,7 +779,8 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 			);
 		}
 
-		if (item.id === 'clone') {
+		if (item.id === 'fishaudio' || item.id === 'minimax') {
+			const cloneHintText = item.id === 'fishaudio' ? t.cloneHintFish : t.cloneHintMiniMax;
 			return (
 				<div className="space-y-2">
 					{showKeyForm ? (
@@ -758,7 +797,7 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 								type="button"
 								size="sm"
 								className="h-8 shrink-0 px-2 text-[11px]"
-								onClick={saveKey}
+								onClick={() => saveKey(item.id)}
 								disabled={savingKey || !apiKeyDraft.trim()}
 							>
 								{savingKey ? <Loader2 size={12} className="animate-spin" /> : t.saveKey}
@@ -787,7 +826,7 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 									className={`${ghostBtn} text-rose-600 hover:text-rose-700`}
 									title={t.removeKey}
 									disabled={savingKey}
-									onClick={removeKey}
+									onClick={() => removeKey(item.id)}
 								>
 									{savingKey ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
 								</button>
@@ -803,8 +842,8 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 						aria-label={t.cloneName}
 						className={fieldClass}
 					/>
-					<p className="text-[10px] leading-4 text-slate-500">{t.cloneHint}</p>
-					<p className="text-[10px] leading-4 text-amber-700 dark:text-amber-300">{t.clonePermissionHint}</p>
+					<p className="text-[10px] leading-4 text-slate-500">{cloneHintText}</p>
+					<p className="text-[10px] leading-4 text-slate-500">{ar ? item.keyHintAr : item.keyHint}</p>
 					<div className="flex items-center gap-1.5">
 						<button
 							type="button"
@@ -871,15 +910,15 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 					</label>
 					<button
 						type="button"
-						onClick={submitClone}
-						disabled={cloning || !(providerKeySaved('elevenlabs') || providerKeySaved('clone'))}
+						onClick={() => submitClone(item.id)}
+						disabled={cloning || !providerKeySaved(item.id)}
 						className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-[11px] font-bold text-white disabled:opacity-50"
 					>
 						{cloning ? <Loader2 size={13} className="animate-spin" /> : <UserRound size={13} />}
 						{cloning ? t.cloneCreating : t.cloneCreate}
 					</button>
 					{cloneError ? (
-						<p className="rounded-lg bg-amber-50 px-2 py-1.5 text-[10px] leading-4 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+						<p className="rounded-lg bg-rose-50 px-2 py-1.5 text-[10px] leading-4 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
 							{t.cloneErrorKeepOpen} {cloneError}
 						</p>
 					) : null}
@@ -975,7 +1014,7 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 							type="button"
 							size="sm"
 							className="h-8 shrink-0 px-2 text-[11px]"
-							onClick={saveKey}
+							onClick={() => saveKey(item.id)}
 							disabled={savingKey || !apiKeyDraft.trim()}
 						>
 							{savingKey ? <Loader2 size={12} className="animate-spin" /> : t.saveKey}
@@ -1010,7 +1049,7 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 								className={`${ghostBtn} text-rose-600 hover:text-rose-700`}
 								title={t.removeKey}
 								disabled={savingKey}
-								onClick={removeKey}
+								onClick={() => removeKey(item.id)}
 							>
 								{savingKey ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
 							</button>
@@ -1068,6 +1107,9 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 					</DialogTitle>
 					<DialogDescription className="text-[11px] leading-4 text-slate-500">{t.subtitle}</DialogDescription>
 					<p className="text-[10px] leading-4 text-amber-700/90 dark:text-amber-300/80">{t.disclaimer}</p>
+					{provider === 'off' ? (
+						<p className="text-[10px] font-semibold leading-4 text-emerald-700 dark:text-emerald-300">{t.noneSelected}</p>
+					) : null}
 				</DialogHeader>
 
 				{loading ? (
@@ -1078,65 +1120,85 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 					<div ref={listRef} className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-2">
 						{catalog.map(item => {
 							const active = provider === item.id;
+							const expanded = expandedId === item.id;
 							const Icon = PROVIDER_ICONS[item.id] || AudioLines;
 							const keyReady = Boolean(item.needsKey && providerKeySaved(item.id));
+							const cloneModel = Boolean(item.isClone || item.id === 'fishaudio' || item.id === 'minimax');
 							return (
 								<div
 									key={item.id}
 									data-provider={item.id}
 									className={`overflow-hidden rounded-xl border transition ${
-										active
+										active || expanded
 											? 'border-emerald-400 bg-emerald-50/70 dark:border-emerald-500/60 dark:bg-emerald-950/30'
 											: 'border-transparent hover:border-slate-200 hover:bg-slate-50 dark:hover:border-slate-700 dark:hover:bg-slate-900'
 									}`}
 								>
-									<button
-										type="button"
-										title={ar ? item.descriptionAr : item.description}
-										onClick={() => selectProvider(item)}
-										className="flex w-full items-center gap-2 px-2.5 py-2 text-start leading-none"
-									>
-										<span
-											className={`grid h-6 w-6 shrink-0 place-items-center rounded-md ${
-												active
-													? 'bg-emerald-600 text-white'
-													: 'bg-slate-100 text-slate-500 dark:bg-slate-800'
-											}`}
-										>
-											{active ? <Check size={12} strokeWidth={2.8} /> : <Icon size={12} />}
-										</span>
-										<span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-none text-slate-800 dark:text-slate-100">
-											{ar ? item.labelAr : item.label}
-										</span>
-										<span
-											title={
-												keyReady
-													? ar
-														? 'المفتاح محفوظ'
-														: 'API key saved'
-													: item.needsKey
-														? ar
-															? 'يحتاج مفتاح API'
-															: 'API key required'
-														: undefined
-											}
-											className={`inline-flex shrink-0 items-center gap-0.5 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase leading-none tracking-wide ${
-												keyReady
-													? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
-													: item.needsKey
-														? 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300'
-														: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
-											}`}
-										>
-											{keyReady ? <Check size={9} strokeWidth={2.8} /> : null}
-											{item.needsKey ? (keyReady ? t.keyAdded : t.needsKey) : t.free}
-										</span>
-										<ChevronDown
-											size={14}
-											className={`shrink-0 text-slate-400 transition-transform ${active ? 'rotate-180 text-emerald-600' : ''}`}
+									<div className="flex items-center gap-2 px-2.5 py-2">
+										<input
+											type="checkbox"
+											checked={active}
+											onChange={() => toggleUseProvider(item)}
+											aria-label={t.useModel}
+											className="h-4 w-4 shrink-0 cursor-pointer accent-emerald-600"
 										/>
-									</button>
-									{active ? (
+										<button
+											type="button"
+											title={ar ? item.descriptionAr : item.description}
+											onClick={() => togglePanel(item)}
+											className="flex min-w-0 flex-1 items-center gap-2 text-start leading-none"
+										>
+											<span
+												className={`grid h-6 w-6 shrink-0 place-items-center rounded-md ${
+													active
+														? 'bg-emerald-600 text-white'
+														: 'bg-slate-100 text-slate-500 dark:bg-slate-800'
+												}`}
+											>
+												<Icon size={12} />
+											</span>
+											<span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-none text-slate-800 dark:text-slate-100">
+												{ar ? item.labelAr : item.label}
+											</span>
+											{cloneModel ? (
+												<span
+													title={ar ? 'موديل استنساخ صوت' : 'Voice clone model'}
+													className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-black uppercase leading-none tracking-wide text-violet-800 ring-1 ring-violet-300 dark:bg-violet-950/70 dark:text-violet-200 dark:ring-violet-700"
+												>
+													<Copy size={9} strokeWidth={2.6} />
+													{t.cloneBadge}
+												</span>
+											) : null}
+											<span
+												title={
+													keyReady
+														? ar
+															? 'المفتاح محفوظ'
+															: 'API key saved'
+														: item.needsKey
+															? ar
+																? 'يحتاج مفتاح API'
+																: 'API key required'
+															: undefined
+												}
+												className={`inline-flex shrink-0 items-center gap-0.5 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase leading-none tracking-wide ${
+													keyReady
+														? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+														: item.needsKey
+															? 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300'
+															: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+												}`}
+											>
+												{keyReady ? <Check size={9} strokeWidth={2.8} /> : null}
+												{item.needsKey ? (keyReady ? t.keyAdded : t.needsKey) : t.free}
+											</span>
+											<ChevronDown
+												size={14}
+												className={`shrink-0 text-slate-400 transition-transform ${expanded ? 'rotate-180 text-emerald-600' : ''}`}
+											/>
+										</button>
+									</div>
+									{expanded ? (
 										<div className="border-t border-emerald-100/80 px-2.5 pb-2 pt-1.5 dark:border-emerald-900/40">
 											{renderFields(item)}
 										</div>

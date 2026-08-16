@@ -1899,6 +1899,7 @@ function VoicePlaybackButton({ playing, loading, onClick }) {
 }
 
 function VoiceWaveform({ peaks, progress, mine, loading, onSeek }) {
+	const items = peaks.length > 0 ? peaks : seededWaveform('', 40);
 	return (
 		<button
 			type="button"
@@ -1907,17 +1908,19 @@ function VoiceWaveform({ peaks, progress, mine, loading, onSeek }) {
 			aria-label="Seek voice message"
 			className={`wa-voice-waveform relative flex min-w-0 flex-1 items-center disabled:opacity-60`}
 		>
-			{peaks.map((height, index) => {
-				const played =
-					peaks.length > 0 && (index + 0.5) / peaks.length <= progress;
-				return (
-					<span
-						key={index}
-						className={`wa-voice-bar ${played ? (mine ? 'is-played-outgoing' : 'is-played-incoming') : 'is-unplayed'}`}
-						style={{ height: `${Math.round(8 + height * 20)}px` }}
-					/>
-				);
-			})}
+			<span className="wa-voice-waveform-bars" aria-hidden="true">
+				{items.map((height, index) => {
+					const played =
+						items.length > 0 && (index + 0.5) / items.length <= progress;
+					return (
+						<span
+							key={index}
+							className={`wa-voice-bar ${played ? (mine ? 'is-played-outgoing' : 'is-played-incoming') : 'is-unplayed'}`}
+							style={{ height: `${Math.round(8 + height * 20)}px` }}
+						/>
+					);
+				})}
+			</span>
 			{progress > 0.01 ? (
 				<span
 					className={`wa-voice-thumb ${mine ? 'is-outgoing' : 'is-incoming'}`}
@@ -9745,16 +9748,6 @@ function WhatsAppWorkspaceContent() {
 										</div>
 									)}
 								</div>
-								<button
-									type="button"
-									className="wa-chat-list-collapsed-mark"
-									onClick={() => setChatListCollapsed(false)}
-									aria-label={t.expandChatList}
-									title={t.expandChatList}
-									tabIndex={chatListCollapsed ? 0 : -1}
-								>
-									<MessageCircle size={42} strokeWidth={1.15} aria-hidden="true" />
-								</button>
 								<div
 									className="wa-conversation-list min-h-0 flex-1 overflow-y-auto p-2 nice-scroll"
 									onScroll={event => {
