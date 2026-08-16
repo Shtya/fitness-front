@@ -8,6 +8,7 @@ import {
 	ChevronDown,
 	Copy,
 	ExternalLink,
+	HelpCircle,
 	KeyRound,
 	Loader2,
 	Mic,
@@ -55,6 +56,119 @@ const FFMPEG_PRESETS = [
 
 const RECORD_SECONDS = 4;
 const CLONE_SAMPLE_SECONDS = 30;
+
+const CLONE_CLEANUP_LINKS = [
+	{
+		href: 'https://auphonic.com/engine/upload',
+		en: 'Auphonic',
+		ar: 'Auphonic',
+		hintEn: 'Free monthly hours. Best for denoise + loudness. Keep Adaptive Leveler on, light noise reduction.',
+		hintAr: 'ساعات مجانية كل شهر. الأفضل: تنضيف ضوضاء + توحيد مستوى الصوت. خلّي Adaptive Leveler ونسبة الضوضاء خفيفة.',
+	},
+	{
+		href: 'https://podcast.adobe.com/enhance',
+		en: 'Adobe Enhance Speech',
+		ar: 'Adobe Enhance Speech',
+		hintEn: 'Free Adobe account, about 1 hour/day. Use only if the clip is noisy. Skip if the voice is already clean — it can change timbre.',
+		hintAr: 'حساب Adobe مجاني، حوالي ساعة يوميًا. استخدمه لو فيه ضوضاء. لو الصوت نضيف أصلًا متستخدمهوش لأنه ممكن يغيّر نبرة الصوت.',
+	},
+	{
+		href: 'https://audiomass.co/',
+		en: 'AudioMass',
+		ar: 'AudioMass',
+		hintEn: 'Free in-browser editor. Trim silence and export WAV/MP3. No install.',
+		hintAr: 'محرّر مجاني في المتصفح. قص الصمت وصدّر WAV أو MP3 من غير تثبيت.',
+	},
+	{
+		href: 'https://vocalremover.org/noise-reduction',
+		en: 'Vocalremover noise reduction',
+		ar: 'Vocalremover',
+		hintEn: 'Browser noise reduction. No account. Download WAV after preview.',
+		hintAr: 'تنضيف ضوضاء من المتصفح من غير حساب. نزّل WAV بعد المعاينة.',
+	},
+	{
+		href: 'https://www.audacityteam.org/download/',
+		en: 'Audacity (desktop)',
+		ar: 'Audacity (برنامج)',
+		hintEn: 'Free desktop app. Effect → Noise Reduction, then Normalize. Export WAV 16-bit.',
+		hintAr: 'برنامج مجاني للكمبيوتر. Effect ثم Noise Reduction وبعدين Normalize. صدّر WAV 16-bit.',
+	},
+];
+
+const CLONE_GUIDE = {
+	en: {
+		intro: 'Fish Audio and MiniMax clone the tone of a reference voice. Playback is transcribe-then-speak, not a copy of the original timing.',
+		sections: [
+			{
+				title: 'Why a cloned note can sound garbled',
+				items: [
+					'The clone does not keep the original WhatsApp timing or breaths. It transcribes the note (usually Groq Whisper) then speaks that text in the cloned voice.',
+					'Wrong or chewed words are usually a bad transcript, not a bad clone timbre.',
+					'Cleaner clone samples still help: the TTS stays closer to the real speaker, but they cannot fix a bad transcript.',
+				],
+			},
+			{
+				title: 'Best samples to upload',
+				items: [
+					'Use 3–5 clips, about 12–25 seconds each (Fish Audio likes 10–30s of clean speech; MiniMax about 10s+).',
+					'One speaker only. Same person you want. No overlap, no music, no TV, no echo.',
+					'Quiet room. Phone about 15–20 cm from the mouth. Speak at a normal WhatsApp volume.',
+					'Natural full sentences in the language you will actually send (Arabic if you send Arabic).',
+					'Prefer WAV, MP3, or M4A from the phone Voice Memos / recorder. Avoid WhatsApp .ogg — compression hurts the clone.',
+					'Do not upload AI speech, already-cloned audio, or a re-TTS of the same person. Quality collapses.',
+					'Trim long silence, keep a tiny natural pause. Do not add reverb, robot FX, or background music.',
+				],
+			},
+			{
+				title: 'Clean the clips before cloning',
+				items: [
+					'Light denoise + loudness normalize is enough. Do not over-process.',
+					'If the recording is already clean, skip heavy “studio enhance” tools — they can change the voice color.',
+					'After cleanup, listen once: it should still sound like the same person, only clearer.',
+					'Then upload the cleaned files here and create the clone.',
+				],
+			},
+		],
+		linksTitle: 'Free cleanup websites',
+		linksHint: 'Upload the raw clips, download WAV/MP3, then clone in this popup. These are public tools; use only voices you have permission to process.',
+	},
+	ar: {
+		intro: 'Fish Audio و MiniMax بياخدوا نبرة صوت مرجعي. التشغيل مش نسخ لتوقيت رسالة واتساب: الرسالة تتفّرغ نص وبعدين تتنطق بالصوت المستنسخ.',
+		sections: [
+			{
+				title: 'ليه الرسالة المستنسخة ممكن تطلع مكسّرة',
+				items: [
+					'الاستنساخ مش بيحافظ على توقيت الرسالة الأصلية ولا النفس. بيفرغ الرسالة (غالبًا Groq Whisper) وبعدين ينطق النص بالصوت المستنسخ.',
+					'الكلام الغلط أو المتلعثم غالبًا من التفريغ، مش من نبرة الاستنساخ نفسها.',
+					'العيّنات النظيفة بتخلّي النبرة أقرب لصاحب الصوت، لكنها مش هتصلح تفريغ وحش.',
+				],
+			},
+			{
+				title: 'أحسن عيّنات ترفعها',
+				items: [
+					'من 3 إلى 5 مقاطع، كل مقطع حوالي 12–25 ثانية (Fish Audio: 10–30 ثانية كلام نضيف. MiniMax: حوالي 10 ثواني أو أكتر).',
+					'متكلم واحد بس. نفس الشخص اللي عايز صوته. من غير تداخل ولا موسيقى ولا تلفاز ولا صدى.',
+					'أوضة هادية. الموبايل حوالي 15–20 سم من البق. اتكلم بصوت واتساب طبيعي.',
+					'جمل كاملة طبيعية باللغة اللي هتبعتها فعلًا (عربي لو هتبعت عربي).',
+					'فضّل WAV أو MP3 أو M4A من مسجّل الموبايل. تجنّب ملف واتساب .ogg — الضغط بيضعف الاستنساخ.',
+					'مترفعش صوت AI ولا صوت مستنسخ قبل كده ولا TTS معاد. الجودة بتقع.',
+					'قص الصمت الطويل وسيب نفس قصير طبيعي. متزودش صدى ولا تأثير روبوت ولا موسيقى خلفية.',
+				],
+			},
+			{
+				title: 'نضّف الملفات قبل الاستنساخ',
+				items: [
+					'تنضيف ضوضاء خفيف + توحيد مستوى الصوت يكفي. متبالغش في المعالجة.',
+					'لو التسجيل نضيف أصلًا، متستخدمش أدوات “استوديو” الثقيلة — ممكن تغيّر لون الصوت.',
+					'بعد التنضيف اسمع مرة: المفروض يفضل نفس الشخص، أوضح بس.',
+					'بعد كده ارفع الملفات المنظّفة هنا واعمل الاستنساخ.',
+				],
+			},
+		],
+		linksTitle: 'مواقع مجانية لتنضيف الصوت',
+		linksHint: 'ارفع العيّنات الخام هناك، نزّل WAV أو MP3، وبعدين ارجع استنسخ من البوباب. دي أدوات عامة؛ استخدم صوت مصرّح لك بمعالجته فقط.',
+	},
+};
 
 const PROVIDER_ICONS = {
 	ffmpeg: Wand2,
@@ -126,6 +240,10 @@ const copy = {
 		cloneNeedConsent: 'Confirm permission before cloning.',
 		cloneErrorKeepOpen: 'Clone failed. This panel stays open so you can fix the samples or key.',
 		cloneSaved: 'Reference voice cloned',
+		guideButton: 'Clone tips',
+		guideHover: 'How to record and clean samples so the AI can clone the voice clearly.',
+		guideHide: 'Hide tips',
+		guideOpenInClone: 'Open full clone instructions',
 	},
 	ar: {
 		title: 'الرسالة الصوتية',
@@ -185,6 +303,10 @@ const copy = {
 		cloneNeedConsent: 'أكّد التصريح قبل الاستنساخ.',
 		cloneErrorKeepOpen: 'الاستنساخ فشل. النافذة هتفضل مفتوحة عشان تعدّل العيّنات أو المفتاح.',
 		cloneSaved: 'تم استنساخ الصوت المرجعي',
+		guideButton: 'تعليمات الاستنساخ',
+		guideHover: 'ازاي تسجّل وتنضّف العيّنات عشان الذكاء الاصطناعي يفهم الصوت ويستنسخه كويس.',
+		guideHide: 'إخفاء التعليمات',
+		guideOpenInClone: 'فتح كل تعليمات الاستنساخ',
 	},
 };
 
@@ -192,6 +314,50 @@ function formatClock(seconds) {
 	const value = Math.max(0, Math.floor(Number(seconds) || 0));
 	if (!Number.isFinite(value)) return '0:00';
 	return `0:${String(value).padStart(2, '0')}`;
+}
+
+function VoiceCloneGuide({ ar }) {
+	const guide = ar ? CLONE_GUIDE.ar : CLONE_GUIDE.en;
+	return (
+		<div className="space-y-2.5 rounded-xl border border-violet-200 bg-violet-50/80 p-2.5 dark:border-violet-800 dark:bg-violet-950/30">
+			<p className="text-[11px] leading-4 text-slate-600 dark:text-slate-300">{guide.intro}</p>
+			{guide.sections.map(section => (
+				<div key={section.title}>
+					<p className="mb-1 text-[11px] font-bold text-violet-900 dark:text-violet-200">{section.title}</p>
+					<ul className="space-y-1 ps-3.5">
+						{section.items.map(item => (
+							<li key={item} className="list-disc text-[10px] leading-4 text-slate-600 dark:text-slate-300">
+								{item}
+							</li>
+						))}
+					</ul>
+				</div>
+			))}
+			<div>
+				<p className="text-[11px] font-bold text-violet-900 dark:text-violet-200">{guide.linksTitle}</p>
+				<p className="mt-0.5 text-[10px] leading-4 text-slate-500">{guide.linksHint}</p>
+				<div className="mt-1.5 space-y-1.5">
+					{CLONE_CLEANUP_LINKS.map(link => (
+						<a
+							key={link.href}
+							href={link.href}
+							target="_blank"
+							rel="noreferrer"
+							className="flex items-start gap-2 rounded-lg border border-violet-200 bg-white px-2 py-1.5 text-start transition hover:border-violet-400 hover:bg-violet-50 dark:border-violet-800 dark:bg-slate-950 dark:hover:bg-violet-950/40"
+						>
+							<ExternalLink size={12} className="mt-0.5 shrink-0 text-violet-700 dark:text-violet-300" />
+							<span className="min-w-0">
+								<span className="block text-[11px] font-bold text-slate-800 dark:text-slate-100">
+									{ar ? link.ar : link.en}
+								</span>
+								<span className="block text-[10px] leading-4 text-slate-500">{ar ? link.hintAr : link.hintEn}</span>
+							</span>
+						</a>
+					))}
+				</div>
+			</div>
+		</div>
+	);
 }
 
 export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', onSaved }) {
@@ -213,6 +379,7 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 	const [cloneConsent, setCloneConsent] = useState(false);
 	const [cloneError, setCloneError] = useState('');
 	const [cloning, setCloning] = useState(false);
+	const [guideOpen, setGuideOpen] = useState(false);
 	const [recording, setRecording] = useState(false);
 	const [recordLeft, setRecordLeft] = useState(RECORD_SECONDS);
 	const [converting, setConverting] = useState(false);
@@ -234,6 +401,7 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 	const recordTimerRef = useRef(null);
 	const cloneFileRef = useRef(null);
 	const cloneCaptureRef = useRef(false);
+	const guideRef = useRef(null);
 	const snapshotRef = useRef({});
 
 	const catalog = (settings?.catalog || []).filter(item => item.id !== 'off' && item.id !== 'clone');
@@ -298,6 +466,7 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 		setPlayTime(0);
 		setDuration(0);
 		setPreviewUrl('');
+		setGuideOpen(false);
 		return undefined;
 	}, [open]);
 
@@ -420,6 +589,14 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 		setApiKeyDraft('');
 		setEditingKey(false);
 		setCloneError('');
+	};
+
+	const revealGuide = (nextOpen = true) => {
+		setGuideOpen(nextOpen);
+		if (!nextOpen) return;
+		window.setTimeout(() => {
+			guideRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+		}, 40);
 	};
 
 	const togglePanel = item => {
@@ -843,6 +1020,14 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 						className={fieldClass}
 					/>
 					<p className="text-[10px] leading-4 text-slate-500">{cloneHintText}</p>
+					<button
+						type="button"
+						onClick={() => revealGuide(true)}
+						className="inline-flex h-7 items-center gap-1 rounded-lg border border-violet-200 bg-white px-2 text-[10px] font-bold text-violet-800 hover:bg-violet-50 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-200"
+					>
+						<HelpCircle size={12} />
+						{t.guideOpenInClone}
+					</button>
 					<p className="text-[10px] leading-4 text-slate-500">{ar ? item.keyHintAr : item.keyHint}</p>
 					<div className="flex items-center gap-1.5">
 						<button
@@ -1105,7 +1290,23 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 						</span>
 						{t.title}
 					</DialogTitle>
-					<DialogDescription className="text-[11px] leading-4 text-slate-500">{t.subtitle}</DialogDescription>
+					<div className="flex items-start justify-between gap-2">
+						<DialogDescription className="min-w-0 flex-1 text-[11px] leading-4 text-slate-500">{t.subtitle}</DialogDescription>
+						<button
+							type="button"
+							title={t.guideHover}
+							aria-expanded={guideOpen}
+							onClick={() => revealGuide(!guideOpen)}
+							className={`inline-flex h-7 shrink-0 items-center gap-1 rounded-lg px-2 text-[10px] font-bold leading-none ${
+								guideOpen
+									? 'bg-violet-600 text-white'
+									: 'bg-violet-50 text-violet-800 ring-1 ring-violet-200 hover:bg-violet-100 dark:bg-violet-950/50 dark:text-violet-200 dark:ring-violet-800'
+							}`}
+						>
+							<HelpCircle size={13} />
+							{guideOpen ? t.guideHide : t.guideButton}
+						</button>
+					</div>
 					<p className="text-[10px] leading-4 text-amber-700/90 dark:text-amber-300/80">{t.disclaimer}</p>
 					{provider === 'off' ? (
 						<p className="text-[10px] font-semibold leading-4 text-emerald-700 dark:text-emerald-300">{t.noneSelected}</p>
@@ -1118,6 +1319,11 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 					</div>
 				) : (
 					<div ref={listRef} className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-2">
+						{guideOpen ? (
+							<div ref={guideRef} data-voice-clone-guide="">
+								<VoiceCloneGuide ar={ar} />
+							</div>
+						) : null}
 						{catalog.map(item => {
 							const active = provider === item.id;
 							const expanded = expandedId === item.id;

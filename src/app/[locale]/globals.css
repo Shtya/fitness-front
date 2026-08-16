@@ -5994,3 +5994,60 @@ html.wa-privacy-on.wa-privacy-persist .is-privacy-revealed img {
 	user-select: auto;
 }
 
+.transcript-voice-player {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: 56px;
+	padding: 8px 10px;
+	border-radius: 18px;
+	background: linear-gradient(180deg, #e8f8e4 0%, #d9fdd3 100%);
+	border: 1px solid rgba(18, 140, 126, 0.12);
+}
+
+.transcript-voice-player audio {
+	display: none;
+}
+
+.transcript-voice-player .wa-voice-play {
+	width: 36px;
+	height: 36px;
+	background: #ffffff;
+	color: #00a884;
+	box-shadow: 0 1px 4px rgba(17, 27, 33, 0.12);
+}
+
+.transcript-voice-player .wa-voice-waveform {
+	height: 34px;
+}
+
+.transcript-voice-player .wa-voice-duration {
+	display: block;
+	min-width: 4.75ch;
+	color: #54656f;
+}
+
+.transcript-voice-player .wa-voice-bar.is-shake {
+	transform-origin: center bottom;
+	animation: transcript-voice-shake 0.72s ease-in-out infinite;
+}
+
+@keyframes transcript-voice-shake {
+	0%,
+	100% {
+		transform: scaleY(1);
+	}
+	35% {
+		transform: scaleY(1.42);
+	}
+	70% {
+		transform: scaleY(0.58);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.transcript-voice-player .wa-voice-bar.is-shake {
+		animation: none;
+	}
+}
+

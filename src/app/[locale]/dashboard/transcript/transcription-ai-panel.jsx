@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import {
 	ArrowLeftRight,
 	BookMarked,
@@ -95,17 +95,18 @@ const labels = {
 	},
 };
 
-export default function TranscriptionAiPanel({
+const TranscriptionAiPanel = forwardRef(function TranscriptionAiPanel({
 	locale = 'en',
 	transcriptionId,
 	transcriptText,
 	onApplyText,
 	onResultUpdated,
+	onBusyChange,
 	initialCompare = null,
 	initialMemorize = null,
 	initialSummary = null,
 	variant = 'page',
-}) {
+}, ref) {
 	const t = labels[locale?.startsWith?.('ar') ? 'ar' : 'en'] || labels.en;
 	const compact = variant === 'compact';
 	const [enhancing, setEnhancing] = useState(false);
@@ -137,7 +138,7 @@ export default function TranscriptionAiPanel({
 		try {
 			const data = await enhanceTranscription(transcriptionId, {
 				text,
-				locale: locale?.startsWith?.('ar') ? 'ar' : 'en',
+				locale: 'auto',
 				mode: 'full',
 				apply: false,
 			});
@@ -196,7 +197,7 @@ export default function TranscriptionAiPanel({
 		try {
 			const data = await summarizeTranscription(transcriptionId, {
 				text,
-				locale: locale?.startsWith?.('ar') ? 'ar' : 'en',
+				locale: 'auto',
 			});
 			setSummary(data.summary || null);
 			setView('summary');
@@ -220,6 +221,15 @@ export default function TranscriptionAiPanel({
 		onApplyText?.(compare.originalText);
 	};
 
+	useImperativeHandle(ref, () => ({
+		enhance: runEnhance,
+		summarize: runSummarize,
+	}));
+
+	useEffect(() => {
+		onBusyChange?.({ enhancing, summarizing });
+	}, [enhancing, summarizing, onBusyChange]);
+
 	const shellClass = compact
 		? 'mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white p-3'
 		: 'learning-neu mt-5 overflow-hidden p-4 md:p-5';
@@ -234,28 +244,48 @@ export default function TranscriptionAiPanel({
 		: 'learning-pill-btn--light !px-4 !py-2.5';
 
 	const card = compact
-		? 'rounded-xl border border-slate-200 bg-[#f7f8fa] p-3'
+		? 'rounded-xl border border-slate-200 bg-[#f7f8fa] p-2.5'
 		: 'learning-neu-inset p-4';
 
+	if (compact && !compare && !summary) {
+		return <div className="hidden" aria-hidden="true" />;
+	}
+
 	return (
-		<section className={shellClass}>
+		<section className={compact ? 'mt-3' : shellClass}>
+			{compact ? (
+				<div className="mb-2 flex flex-wrap gap-1.5">
+					{compare ? (
+						<button
+							type="button"
+							onClick={() => setView('compare')}
+							className={`${ghostBtn} ${view === 'compare' ? 'ring-2 ring-[var(--color-primary-400)]' : ''}`}
+						>
+							<ArrowLeftRight size={14} />
+							{t.compare}
+						</button>
+					) : null}
+					{summary ? (
+						<button
+							type="button"
+							onClick={() => setView('summary')}
+							className={`${ghostBtn} ${view === 'summary' ? 'ring-2 ring-sky-400' : ''}`}
+						>
+							<ListChecks size={14} />
+							{t.summarizedBadge}
+						</button>
+					) : null}
+				</div>
+			) : (
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 				<div>
 					<h3 className="flex items-center gap-2 text-sm font-black text-slate-900">
 						<span className="grid size-8 place-items-center rounded-xl bg-[var(--color-primary-50)] text-[var(--color-primary-600)]">
 							<Sparkles size={16} />
 						</span>
-						{compact ? (locale?.startsWith?.('ar') ? 'أدوات الذكاء الاصطناعي' : 'AI tools') : t.aiTools}
+						{t.aiTools}
 					</h3>
-					{compact ? (
-						<p className="mt-1 text-[12px] leading-5 text-slate-500">
-							{locale?.startsWith?.('ar')
-								? 'حسّن الكلمات غير الواضحة، أو خلّي الذكاء الاصطناعي يفهم السياق ويلخّص الطلب.'
-								: 'Fix unclear extracted words, or let AI read the context and summarize the request.'}
-						</p>
-					) : (
-						<p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">{t.aiHint}</p>
-					)}
+					<p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">{t.aiHint}</p>
 				</div>
 				<div className="flex flex-wrap gap-2">
 					{(compare || memorize || summary) && (
@@ -284,7 +314,7 @@ export default function TranscriptionAiPanel({
 									{t.summarizedBadge}
 								</button>
 							) : null}
-							{!compact && memorize ? (
+							{memorize ? (
 								<button
 									type="button"
 									onClick={() => setView('memorize')}
@@ -324,72 +354,110 @@ export default function TranscriptionAiPanel({
 						)}
 						{summarizing ? t.summarizing : t.summarize}
 					</button>
-					{compact ? null : (
-						<button
-							type="button"
-							disabled={memorizing || !transcriptionId}
-							onClick={runMemorize}
-							className={lightBtn}
-						>
-							{memorizing ? (
-								<LoaderCircle size={15} className="animate-spin" />
-							) : (
-								<BookMarked size={15} />
-							)}
-							{memorizing ? t.memorizing : t.memorize}
-						</button>
-					)}
+					<button
+						type="button"
+						disabled={memorizing || !transcriptionId}
+						onClick={runMemorize}
+						className={lightBtn}
+					>
+						{memorizing ? (
+							<LoaderCircle size={15} className="animate-spin" />
+						) : (
+							<BookMarked size={15} />
+						)}
+						{memorizing ? t.memorizing : t.memorize}
+					</button>
 				</div>
 			</div>
+			)}
 
 			{view === 'compare' && compare ? (
-				<div className="mt-4 space-y-4">
-					<div className="grid gap-3 lg:grid-cols-2">
-						<div className={card}>
-							<div className="mb-2 flex items-center justify-between gap-2">
-								<p className="text-xs font-black uppercase tracking-wide text-slate-500">
-									{t.before}
-								</p>
-								<span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-600">
-									ASR
-								</span>
+				<div className={compact ? 'space-y-2' : 'mt-4 space-y-4'}>
+					{compact ? (
+						<div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+							<div className="flex min-h-[132px] max-h-[180px]">
+								<div className="flex min-w-0 flex-1 flex-col border-e border-slate-200">
+									<div className="flex items-center justify-between gap-1 border-b border-slate-100 px-2 py-1">
+										<p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+											{t.before}
+										</p>
+										<span className="rounded-full bg-slate-200/80 px-1.5 py-px text-[9px] font-bold text-slate-600">
+											ASR
+										</span>
+									</div>
+									<pre
+										dir="auto"
+										className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap break-words p-2 font-sans text-[11px] leading-5 text-slate-700"
+									>
+										{compare.originalText}
+									</pre>
+								</div>
+								<div className="flex min-w-0 flex-1 flex-col bg-[var(--color-primary-50)]/50">
+									<div className="flex items-center justify-between gap-1 border-b border-[var(--color-primary-100)] px-2 py-1">
+										<p className="text-[10px] font-black uppercase tracking-wide text-[var(--color-primary-700)]">
+											{t.after}
+										</p>
+										<span className="rounded-full bg-[var(--color-primary-500)] px-1.5 py-px text-[9px] font-bold text-white">
+											{t.enhancedBadge}
+										</span>
+									</div>
+									<pre
+										dir="auto"
+										className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap break-words p-2 font-sans text-[11px] leading-5 text-slate-800"
+									>
+										{compare.enhancedText}
+									</pre>
+								</div>
 							</div>
-							<pre className="max-h-72 overflow-y-auto whitespace-pre-wrap break-words font-sans text-sm leading-7 text-slate-700">
-								{compare.originalText}
-							</pre>
 						</div>
-						<div className={`${card} border-[var(--color-primary-200)] bg-[var(--color-primary-50)]/40`}>
-							<div className="mb-2 flex items-center justify-between gap-2">
-								<p className="text-xs font-black uppercase tracking-wide text-[var(--color-primary-700)]">
-									{t.after}
-								</p>
-								<span className="rounded-full bg-[var(--color-primary-500)] px-2 py-0.5 text-[10px] font-bold text-white">
-									{t.enhancedBadge}
-								</span>
+					) : (
+						<div className="grid gap-3 lg:grid-cols-2">
+							<div className={card}>
+								<div className="mb-2 flex items-center justify-between gap-2">
+									<p className="text-xs font-black uppercase tracking-wide text-slate-500">
+										{t.before}
+									</p>
+									<span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+										ASR
+									</span>
+								</div>
+								<pre className="max-h-72 overflow-y-auto whitespace-pre-wrap break-words font-sans text-sm leading-7 text-slate-700">
+									{compare.originalText}
+								</pre>
 							</div>
-							<pre className="max-h-72 overflow-y-auto whitespace-pre-wrap break-words font-sans text-sm leading-7 text-slate-800">
-								{compare.enhancedText}
-							</pre>
+							<div className={`${card} border-[var(--color-primary-200)] bg-[var(--color-primary-50)]/40`}>
+								<div className="mb-2 flex items-center justify-between gap-2">
+									<p className="text-xs font-black uppercase tracking-wide text-[var(--color-primary-700)]">
+										{t.after}
+									</p>
+									<span className="rounded-full bg-[var(--color-primary-500)] px-2 py-0.5 text-[10px] font-bold text-white">
+										{t.enhancedBadge}
+									</span>
+								</div>
+								<pre className="max-h-72 overflow-y-auto whitespace-pre-wrap break-words font-sans text-sm leading-7 text-slate-800">
+									{compare.enhancedText}
+								</pre>
+							</div>
 						</div>
-					</div>
+					)}
 
-					<div className={card}>
-						<p className="text-xs font-black uppercase tracking-wide text-slate-500">
+					<div className={compact ? 'rounded-xl border border-slate-200 bg-[#f7f8fa] px-2.5 py-2' : card}>
+						<p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
 							{t.changes}
 						</p>
 						{changes.length ? (
-							<ul className="mt-2 space-y-1.5 text-sm text-slate-700">
+							<ul className={`mt-1.5 space-y-1 ${compact ? 'text-[11px] leading-5' : 'text-sm'} text-slate-700`}>
 								{changes.map(item => (
 									<li key={item} className="flex gap-2">
-										<Check size={14} className="mt-1 shrink-0 text-emerald-600" />
+										<Check size={compact ? 12 : 14} className="mt-0.5 shrink-0 text-emerald-600" />
 										<span>{item}</span>
 									</li>
 								))}
 							</ul>
 						) : (
-							<p className="mt-2 text-sm text-slate-500">{t.noChanges}</p>
+							<p className={`mt-1.5 ${compact ? 'text-[11px]' : 'text-sm'} text-slate-500`}>{t.noChanges}</p>
 						)}
-						<div className="mt-4 flex flex-wrap gap-2">
+						<div className="mt-2 flex flex-wrap gap-2">
 							<Button size="sm" onClick={applyEnhanced}>
 								<Check />
 								{t.apply}
@@ -565,4 +633,8 @@ export default function TranscriptionAiPanel({
 			) : null}
 		</section>
 	);
-}
+});
+
+TranscriptionAiPanel.displayName = 'TranscriptionAiPanel';
+
+export default TranscriptionAiPanel;

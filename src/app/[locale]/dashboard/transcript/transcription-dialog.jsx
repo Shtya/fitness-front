@@ -1,8 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale } from 'next-intl';
-import { AudioLines, Check, Clipboard, FileAudio, Loader2, MessageSquareText, Save } from 'lucide-react';
+import {
+	AudioLines,
+	Check,
+	Clipboard,
+	FileAudio,
+	Loader2,
+	ListChecks,
+	MessageSquareText,
+	Save,
+	Wand2,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/utils/axios';
 import { Button } from '@/components/ui/button';
@@ -15,6 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import { WaCustomSelect } from '../whatsapp/WaCustomSelect';
 import TranscriptionAiPanel from './transcription-ai-panel';
+import TranscriptVoicePlayer from './transcript-voice-player';
 import {
 	buildTimelineTranscript,
 	createTextTranscription,
@@ -48,6 +59,10 @@ const labels = {
 		copied: 'Transcript copied',
 		save: 'Save changes',
 		saved: 'Changes saved',
+		enhance: 'Enhance with AI',
+		enhancing: 'Enhancing…',
+		summarize: 'Summarize',
+		summarizing: 'Summarizing…',
 		audioLabel: 'Audio {n}',
 		messageLabel: 'Message',
 		missingVoice: '(Could not transcribe this voice note.)',
@@ -79,6 +94,10 @@ const labels = {
 		copied: 'تم نسخ النص',
 		save: 'حفظ التعديلات',
 		saved: 'تم حفظ التعديلات',
+		enhance: 'تحسين بالذكاء الاصطناعي',
+		enhancing: 'جاري التحسين…',
+		summarize: 'تلخيص',
+		summarizing: 'جارٍ التلخيص…',
 		audioLabel: 'صوت {n}',
 		messageLabel: 'رسالة',
 		missingVoice: '(تعذر تحويل هذه الرسالة الصوتية.)',
@@ -159,6 +178,14 @@ export default function TranscriptionDialog({
 	const [result, setResult] = useState(null);
 	const [text, setText] = useState('');
 	const [saving, setSaving] = useState(false);
+	const [aiBusy, setAiBusy] = useState({ enhancing: false, summarizing: false });
+	const aiPanelRef = useRef(null);
+	const onAiBusyChange = useCallback(next => {
+		setAiBusy({
+			enhancing: Boolean(next?.enhancing),
+			summarizing: Boolean(next?.summarizing),
+		});
+	}, []);
 	const busy = ['loading', 'uploading', 'processing'].includes(status);
 	const singleVoice = !isBundle && sources[0]?.kind === 'voice';
 
@@ -424,7 +451,9 @@ export default function TranscriptionDialog({
 		>
 			<DialogContent
 				dir={locale === 'ar' ? 'rtl' : 'ltr'}
-				className={`gap-3 overflow-y-auto rounded-2xl p-4 ${isBundle ? 'sm:max-w-xl' : 'sm:max-w-md'}`}
+				className={`!flex max-h-[min(92dvh,calc(100dvh-1.25rem))] min-h-0 w-full flex-col gap-0 overflow-hidden rounded-2xl p-0 ${
+					isBundle ? 'sm:max-w-xl' : 'sm:max-w-lg'
+				}`}
 				onEscapeKeyDown={event => {
 					if (busy) event.preventDefault();
 				}}
@@ -447,18 +476,19 @@ export default function TranscriptionDialog({
 					}
 				}}
 			>
-				<DialogHeader className="pe-10 text-start">
-					<DialogTitle className="flex items-center gap-2 text-[17px] font-semibold text-slate-900">
+				<DialogHeader className="shrink-0 px-4 pb-2 pe-14 pt-4 text-start">
+					<DialogTitle className="flex items-center gap-2 text-[16px] font-semibold text-slate-900">
 						<span className="grid size-8 place-items-center rounded-full bg-[#d9fdd3] text-[#128c7e]">
 							<AudioLines className="size-4" />
 						</span>
 						{isBundle ? t.bundleTitle : t.title}
 					</DialogTitle>
-					<DialogDescription className="text-[13px] leading-5 text-slate-500">
+					<DialogDescription className="text-[12px] leading-5 text-slate-500">
 						{isBundle ? t.bundleDescription : t.description}
 					</DialogDescription>
 				</DialogHeader>
 
+				<div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 pb-3">
 				{status === 'loading' ? (
 					<div className="grid min-h-24 place-items-center text-sm text-slate-500">
 						<span className="flex items-center gap-2">
@@ -485,9 +515,7 @@ export default function TranscriptionDialog({
 										{formatFileSize(file.size)}
 									</span>
 								</div>
-								{audioUrl ? (
-									<audio controls src={audioUrl} className="h-9 w-full" />
-								) : null}
+								{audioUrl ? <TranscriptVoicePlayer src={audioUrl} seed={file.name} /> : null}
 							</div>
 						) : null}
 
@@ -597,21 +625,17 @@ export default function TranscriptionDialog({
 									dir="auto"
 									value={text}
 									onChange={event => setText(event.target.value)}
-									className="min-h-28 w-full resize-y rounded-xl border border-slate-200 bg-[#f7f8fa] p-3 text-[13px] leading-6 outline-none focus:border-[var(--color-primary-400)]"
+									className="min-h-24 w-full resize-y rounded-xl border border-slate-200 bg-[#f7f8fa] p-2.5 text-[12px] leading-5 outline-none focus:border-[var(--color-primary-400)]"
 								/>
-								<div className="mt-2 flex justify-end">
-									<Button size="sm" onClick={save} disabled={saving || text === result.text}>
-										{saving ? <Loader2 className="animate-spin" /> : <Save />}
-										{t.save}
-									</Button>
-								</div>
 								<TranscriptionAiPanel
+									ref={aiPanelRef}
 									key={result.id}
 									variant="compact"
 									locale={locale}
 									transcriptionId={result.id}
 									transcriptText={text}
 									onApplyText={nextText => setText(nextText)}
+									onBusyChange={onAiBusyChange}
 									onResultUpdated={updated => {
 										if (!updated) return;
 										setResult(updated);
@@ -631,6 +655,39 @@ export default function TranscriptionDialog({
 							</div>
 						)}
 					</>
+				) : null}
+				</div>
+
+				{result ? (
+					<div className="shrink-0 border-t border-slate-200 bg-white/95 px-3 py-3 shadow-[0_-10px_24px_rgba(15,23,42,0.08)] backdrop-blur">
+						<div className="grid grid-cols-3 gap-2">
+							<Button
+								onClick={save}
+								disabled={saving || text === result.text}
+								className="h-12 min-w-0 rounded-xl px-2 text-[11px] font-semibold sm:text-[13px]"
+							>
+								{saving ? <Loader2 className="animate-spin" /> : <Save />}
+								<span className="truncate">{t.save}</span>
+							</Button>
+							<Button
+								onClick={() => aiPanelRef.current?.enhance?.()}
+								disabled={aiBusy.enhancing || !result.id || !text.trim()}
+								className="h-12 min-w-0 rounded-xl px-2 text-[11px] font-semibold sm:text-[13px]"
+							>
+								{aiBusy.enhancing ? <Loader2 className="animate-spin" /> : <Wand2 />}
+								<span className="truncate">{aiBusy.enhancing ? t.enhancing : t.enhance}</span>
+							</Button>
+							<Button
+								variant="outline"
+								onClick={() => aiPanelRef.current?.summarize?.()}
+								disabled={aiBusy.summarizing || !result.id || !text.trim()}
+								className="h-12 min-w-0 rounded-xl px-2 text-[11px] font-semibold sm:text-[13px]"
+							>
+								{aiBusy.summarizing ? <Loader2 className="animate-spin" /> : <ListChecks />}
+								<span className="truncate">{aiBusy.summarizing ? t.summarizing : t.summarize}</span>
+							</Button>
+						</div>
+					</div>
 				) : null}
 			</DialogContent>
 		</Dialog>
