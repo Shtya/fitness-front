@@ -26,9 +26,19 @@ export function VoiceRecordingBar({
 	const send = onSend || onStop;
 
 	return (
-		<>
-			<div className={`wa-recording-panel${paused ? ' is-paused' : ''}`} role="status" aria-live="polite">
-				<p className="sr-only">{labels.recordingVoice}</p>
+		<div className={`wa-recording-bar${paused ? ' is-paused' : ''}`} role="status" aria-live="polite">
+			<p className="sr-only">{labels.recordingVoice}</p>
+			<button
+				type="button"
+				className="wa-recording-cancel"
+				title={labels.cancelRecording}
+				aria-label={labels.cancelRecording}
+				onClick={onCancel}
+			>
+				<X size={15} strokeWidth={2.4} aria-hidden="true" />
+				<span>{labels.recordingCancel}</span>
+			</button>
+			<div className={`wa-recording-panel${paused ? ' is-paused' : ''}`}>
 				<div className="wa-recording-mic" aria-hidden="true">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 						<rect x="8" y="3" width="8" height="12" rx="4" />
@@ -51,37 +61,25 @@ export function VoiceRecordingBar({
 				</div>
 				<div className="wa-recording-timer">{formatTimer(seconds)}</div>
 			</div>
-			<div className="wa-recording-actions">
-				<button
-					type="button"
-					className="wa-recording-cancel"
-					title={labels.cancelRecording}
-					aria-label={labels.cancelRecording}
-					onClick={onCancel}
-				>
-					<X size={15} strokeWidth={2.4} aria-hidden="true" />
-					<span>{labels.recordingCancel}</span>
-				</button>
-				<button
-					type="button"
-					className="wa-recording-pause"
-					title={paused ? labels.recordingResume : labels.recordingPause}
-					aria-label={paused ? labels.recordingResume : labels.recordingPause}
-					onClick={paused ? onResume : onPause}
-				>
-					{paused ? <Play size={13} fill="currentColor" /> : <Pause size={13} fill="currentColor" />}
-					<span>{paused ? labels.recordingResume : labels.recordingPause}</span>
-				</button>
-				<button
-					type="button"
-					className="wa-recording-send"
-					title={labels.sendRecording || labels.send}
-					aria-label={labels.sendRecording || labels.send}
-					onClick={send}
-				>
-					<Send size={15} />
-				</button>
-			</div>
-		</>
+			<button
+				type="button"
+				className="wa-recording-pause"
+				title={paused ? labels.recordingResume : labels.recordingPause}
+				aria-label={paused ? labels.recordingResume : labels.recordingPause}
+				onClick={paused ? onResume : onPause}
+			>
+				{paused ? <Play size={13} fill="currentColor" /> : <Pause size={13} fill="currentColor" />}
+				<span>{paused ? labels.recordingResume : labels.recordingPause}</span>
+			</button>
+			<button
+				type="button"
+				className="wa-recording-send"
+				title={labels.sendRecording || labels.send}
+				aria-label={labels.sendRecording || labels.send}
+				onClick={send}
+			>
+				<Send size={15} />
+			</button>
+		</div>
 	);
 }

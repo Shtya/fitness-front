@@ -8,60 +8,94 @@ const COPY = {
 	en: {
 		title: 'AI reply suggestions',
 		description:
-			'Generate editable reply ideas from recent messages. AI never sends WhatsApp messages.',
+			'Generate editable reply ideas from recent messages. Replies match the customer language. AI never sends WhatsApp messages.',
 		enabled: 'Enable AI suggestions',
 		enabledHint: 'Turn on to see suggested replies while chatting.',
-		sectionProvider: 'Provider & language',
-		sectionBehavior: 'Suggestion behavior',
-		sectionFallback: 'Fallback prompt',
-		fallbackHint: 'Used automatically when no saved prompt below is marked default.',
-		prompt: 'Fallback system prompt',
+		sectionProvider: 'Provider & model',
 		promptLibrary: 'Saved prompts',
-		promptLibraryHint: 'Save multiple instructions and choose the default used in chats.',
+		promptLibraryHint:
+			'These instructions are sent to the model. Mark one as default for chats.',
 		promptName: 'Prompt name',
 		promptContent: 'Prompt instructions',
 		addPrompt: 'Add prompt',
+		emptyPrompts: 'No saved prompts yet. Use Add prompt next to Save.',
 		defaultPrompt: 'Use by default',
 		deletePrompt: 'Delete prompt',
-		persona: 'Reply personality',
-		language: 'Reply language',
 		tone: 'Tone',
 		count: 'Number of suggestions',
 		context: 'Messages used as context',
 		provider: 'AI provider',
 		model: 'Model',
-		save: 'Save AI settings',
+		save: 'Save',
 		saved: 'Settings saved',
 	},
 	ar: {
 		title: 'اقتراحات الرد بالذكاء الاصطناعي',
 		description:
-			'إنشاء ردود قابلة للتعديل من أحدث الرسائل. الذكاء الاصطناعي لا يرسل أي رسالة واتساب.',
+			'إنشاء ردود قابلة للتعديل من أحدث الرسائل. الرد يتبع لغة العميل تلقائيًا. الذكاء الاصطناعي لا يرسل أي رسالة واتساب.',
 		enabled: 'تفعيل اقتراحات الذكاء الاصطناعي',
 		enabledHint: 'فعّل الخيار لرؤية الردود المقترحة أثناء المحادثة.',
-		sectionProvider: 'المزود واللغة',
-		sectionBehavior: 'سلوك الاقتراحات',
-		sectionFallback: 'التعليمات الاحتياطية',
-		fallbackHint: 'تُستخدم تلقائيًا عند عدم وجود تعليمات محفوظة محددة كافتراضية.',
-		prompt: 'التعليمات الاحتياطية',
+		sectionProvider: 'المزود والنموذج',
 		promptLibrary: 'التعليمات المحفوظة',
-		promptLibraryHint: 'احفظ أكثر من تعليمات واختر الافتراضية المستخدمة في المحادثات.',
+		promptLibraryHint: 'هذه هي التعليمات المرسلة للنموذج. اختر واحدة كافتراضية للمحادثات.',
 		promptName: 'اسم التعليمات',
 		promptContent: 'نص التعليمات',
 		addPrompt: 'إضافة تعليمات',
+		emptyPrompts: 'لا توجد تعليمات محفوظة. استخدم إضافة تعليمات بجانب الحفظ.',
 		defaultPrompt: 'استخدام افتراضي',
 		deletePrompt: 'حذف التعليمات',
-		persona: 'شخصية الرد',
-		language: 'لغة الرد',
 		tone: 'أسلوب الرد',
 		count: 'عدد الاقتراحات',
 		context: 'عدد رسائل السياق',
 		provider: 'مزود الذكاء الاصطناعي',
 		model: 'النموذج',
-		save: 'حفظ إعدادات الذكاء الاصطناعي',
+		save: 'حفظ',
 		saved: 'تم حفظ الإعدادات',
 	},
 };
+
+const PROVIDERS = [
+	{ value: 'ai-free', label: 'FitCoach Free (auto fallback)' },
+	{ value: 'llm7-free', label: 'LLM7 Free' },
+	{ value: 'pollinations-free', label: 'Pollinations Free' },
+	{ value: 'browser-chatgpt', label: 'Browser ChatGPT' },
+	{ value: 'dragify-free', label: 'Legacy Free (same as FitCoach)' },
+];
+
+const CHAIN_MODELS = [
+	{ value: 'auto', label: 'Auto' },
+	{ value: 'gpt-oss:20b', label: 'GPT-OSS 20B' },
+	{ value: 'gpt-4o-mini', label: 'GPT-4o mini' },
+	{ value: 'llama-3.3-70b-instruct', label: 'Llama 3.3 70B' },
+	{ value: 'mistral-small-3.1-24b-instruct', label: 'Mistral Small' },
+	{ value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+];
+
+const MODELS_BY_PROVIDER = {
+	'ai-free': CHAIN_MODELS,
+	'dragify-free': CHAIN_MODELS,
+	'llm7-free': CHAIN_MODELS,
+	'pollinations-free': [
+		{ value: 'auto', label: 'Auto' },
+		{ value: 'openai', label: 'OpenAI' },
+		{ value: 'openai-fast', label: 'OpenAI Fast' },
+		{ value: 'openai-large', label: 'OpenAI Large' },
+	],
+	'browser-chatgpt': [
+		{ value: 'auto', label: 'Auto (ChatGPT)' },
+		{ value: 'gpt-4o', label: 'GPT-4o' },
+		{ value: 'gpt-4o-mini', label: 'GPT-4o mini' },
+	],
+};
+
+const TONE_OPTIONS = [
+	{ value: 'professional', label: 'Professional' },
+	{ value: 'friendly', label: 'Friendly' },
+	{ value: 'egyptian', label: 'مصري عامي' },
+	{ value: 'sales', label: 'Sales' },
+	{ value: 'support', label: 'Technical support' },
+	{ value: 'concise', label: 'Concise' },
+];
 
 const GRADIENT = 'linear-gradient(135deg, #1DAB61 0%, #1DAB61 100%)';
 const GLOW = '0 10px 24px -10px var(--color-primary-400)';
@@ -71,6 +105,15 @@ const fieldClass =
 
 const sectionLabelClass =
 	'text-[11px] font-bold uppercase tracking-wider text-slate-400';
+
+function modelsForProvider(provider, currentModel) {
+	const list = MODELS_BY_PROVIDER[provider] || CHAIN_MODELS;
+	const current = String(currentModel || 'auto').trim() || 'auto';
+	if (!list.some(option => option.value === current)) {
+		return [...list, { value: current, label: current }];
+	}
+	return list;
+}
 
 function promptId() {
 	if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
@@ -139,43 +182,67 @@ export default function WhatsAppAiSettings({
 		);
 	};
 
+	const changeProvider = provider => {
+		setSaved(false);
+		setDraft(current => {
+			const known = MODELS_BY_PROVIDER[provider] || CHAIN_MODELS;
+			const model = known.some(option => option.value === current.model)
+				? current.model
+				: known[0]?.value || 'auto';
+			return { ...current, provider, model };
+		});
+	};
+
 	const addPrompt = () => {
 		if ((draft.promptPresets || []).length >= 20) return;
 		const id = promptId();
-		const promptPresets = [
-			...(draft.promptPresets || []),
-			{ id, name: '', prompt: '' },
-		];
 		setSaved(false);
-		setDraft(current => ({
-			...current,
-			promptPresets,
-			activePromptId: current.activePromptId || id,
-		}));
+		setDraft(current => {
+			const promptPresets = [
+				...(current.promptPresets || []),
+				{ id, name: '', prompt: '' },
+			];
+			return {
+				...current,
+				promptPresets,
+				activePromptId: current.activePromptId || id,
+			};
+		});
 	};
 
 	const removePrompt = id => {
-		const promptPresets = (draft.promptPresets || []).filter(preset => preset.id !== id);
 		setSaved(false);
-		setDraft(current => ({
-			...current,
-			promptPresets,
-			activePromptId:
-				current.activePromptId === id
-					? promptPresets[0]?.id || null
-					: current.activePromptId,
-		}));
+		setDraft(current => {
+			const promptPresets = (current.promptPresets || []).filter(
+				preset => preset.id !== id,
+			);
+			return {
+				...current,
+				promptPresets,
+				activePromptId:
+					current.activePromptId === id
+						? promptPresets[0]?.id || null
+						: current.activePromptId,
+			};
+		});
 	};
 
 	const submit = async event => {
 		event.preventDefault();
 		try {
-			await onSave(draft);
+			await onSave({
+				...draft,
+				language: 'auto',
+				persona: '',
+			});
 			setSaved(true);
 		} catch {
 			setSaved(false);
 		}
 	};
+
+	const modelOptions = modelsForProvider(draft.provider || 'ai-free', draft.model);
+	const prompts = draft.promptPresets || [];
 
 	return (
 		<form
@@ -205,42 +272,23 @@ export default function WhatsAppAiSettings({
 			</div>
 
 			<p className={`mb-2 ${sectionLabelClass}`}>{text.sectionProvider}</p>
-			<div className="grid gap-3 md:grid-cols-2">
+			<div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
 				<label className="space-y-1 text-xs font-bold">
 					<span>{text.provider}</span>
 					<WaCustomSelect
 						ariaLabel={text.provider}
 						value={draft.provider || 'ai-free'}
-						onChange={value => update('provider', value)}
-						options={[
-							{ value: 'ai-free', label: 'FitCoach Free (auto fallback)' },
-							{ value: 'llm7-free', label: 'LLM7 Free' },
-							{ value: 'pollinations-free', label: 'Pollinations Free' },
-							{ value: 'browser-chatgpt', label: 'Browser ChatGPT' },
-							{ value: 'dragify-free', label: 'Legacy Free (same as FitCoach)' },
-						]}
+						onChange={changeProvider}
+						options={PROVIDERS}
 					/>
 				</label>
 				<label className="space-y-1 text-xs font-bold">
 					<span>{text.model}</span>
-					<input
-						value={draft.model || 'auto'}
-						onChange={event => update('model', event.target.value)}
-						maxLength={80}
-						className={fieldClass}
-					/>
-				</label>
-				<label className="space-y-1 text-xs font-bold">
-					<span>{text.language}</span>
 					<WaCustomSelect
-						ariaLabel={text.language}
-						value={draft.language || 'auto'}
-						onChange={value => update('language', value)}
-						options={[
-							{ value: 'auto', label: 'Auto' },
-							{ value: 'ar', label: 'العربية' },
-							{ value: 'en', label: 'English' },
-						]}
+						ariaLabel={text.model}
+						value={draft.model || 'auto'}
+						onChange={value => update('model', value)}
+						options={modelOptions}
 					/>
 				</label>
 				<label className="space-y-1 text-xs font-bold">
@@ -249,20 +297,9 @@ export default function WhatsAppAiSettings({
 						ariaLabel={text.tone}
 						value={draft.tone || 'professional'}
 						onChange={value => update('tone', value)}
-						options={[
-							{ value: 'professional', label: 'Professional' },
-							{ value: 'friendly', label: 'Friendly' },
-							{ value: 'egyptian', label: 'مصري عامي' },
-							{ value: 'sales', label: 'Sales' },
-							{ value: 'support', label: 'Technical support' },
-							{ value: 'concise', label: 'Concise' },
-						]}
+						options={TONE_OPTIONS}
 					/>
 				</label>
-			</div>
-
-			<p className={`mb-2 mt-4 ${sectionLabelClass}`}>{text.sectionBehavior}</p>
-			<div className="grid gap-3 md:grid-cols-2">
 				<label className="space-y-1 text-xs font-bold">
 					<span>{text.count}</span>
 					<input
@@ -287,119 +324,101 @@ export default function WhatsAppAiSettings({
 				</label>
 			</div>
 
-			<label className="mt-3 block space-y-1 text-xs font-bold">
-				<span>{text.persona}</span>
-				<input
-					value={draft.persona || ''}
-					onChange={event => update('persona', event.target.value)}
-					maxLength={500}
-					className={fieldClass}
-				/>
-			</label>
-
 			<div className="mt-4 rounded-2xl border border-[var(--color-secondary-200)] bg-[var(--color-secondary-50)]/40 p-3 dark:border-[var(--color-secondary-900)] dark:bg-[var(--color-secondary-950)]/20">
-				<div className="mb-3 flex items-start justify-between gap-3">
-					<div>
-						<p className="text-sm font-black text-[var(--color-secondary-900)] dark:text-[var(--color-secondary-200)]">
-							{text.promptLibrary}
-						</p>
-						<p className="mt-0.5 text-xs leading-5 text-slate-500">
-							{text.promptLibraryHint}
-						</p>
-					</div>
-					<button
-						type="button"
-						onClick={addPrompt}
-						disabled={(draft.promptPresets || []).length >= 20}
-						style={{ background: GRADIENT }}
-						className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-black text-white disabled:opacity-50"
-					>
-						<Plus size={14} />
-						{text.addPrompt}
-					</button>
+				<div className="mb-3">
+					<p className="text-sm font-black text-[var(--color-secondary-900)] dark:text-[var(--color-secondary-200)]">
+						{text.promptLibrary}
+					</p>
+					<p className="mt-0.5 text-xs leading-5 text-slate-500">
+						{text.promptLibraryHint}
+					</p>
 				</div>
 
-				<div className="space-y-3">
-					{(draft.promptPresets || []).map((preset, index) => (
-						<div
-							key={preset.id}
-							className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900"
-						>
-							<div className="mb-2 flex items-center gap-2">
-								<label className="flex min-w-0 flex-1 items-center gap-2 text-xs font-bold">
+				{prompts.length === 0 ? (
+					<p className="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-xs text-slate-500 dark:border-slate-600">
+						{text.emptyPrompts}
+					</p>
+				) : (
+					<div className="grid gap-3 md:grid-cols-3">
+						{prompts.map((preset, index) => (
+							<div
+								key={preset.id}
+								className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900"
+							>
+								<div className="mb-2 flex items-center gap-2">
+									<label className="flex min-w-0 flex-1 items-center gap-2 text-xs font-bold">
+										<input
+											type="radio"
+											name="active-ai-prompt"
+											checked={draft.activePromptId === preset.id}
+											onChange={() => update('activePromptId', preset.id)}
+											className="accent-[var(--color-primary-600)]"
+										/>
+										<span>{text.defaultPrompt}</span>
+									</label>
+									<button
+										type="button"
+										onClick={() => removePrompt(preset.id)}
+										aria-label={text.deletePrompt}
+										title={text.deletePrompt}
+										className="grid h-8 w-8 place-items-center rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+									>
+										<Trash2 size={15} />
+									</button>
+								</div>
+								<div className="grid gap-2">
 									<input
-										type="radio"
-										name="active-ai-prompt"
-										checked={draft.activePromptId === preset.id}
-										onChange={() => update('activePromptId', preset.id)}
-										className="accent-[var(--color-primary-600)]"
+										required
+										value={preset.name}
+										onChange={event =>
+											updatePrompt(preset.id, 'name', event.target.value)
+										}
+										maxLength={80}
+										placeholder={`${text.promptName} ${index + 1}`}
+										aria-label={text.promptName}
+										className={fieldClass}
 									/>
-									<span>{text.defaultPrompt}</span>
-								</label>
-								<button
-									type="button"
-									onClick={() => removePrompt(preset.id)}
-									aria-label={text.deletePrompt}
-									title={text.deletePrompt}
-									className="grid h-8 w-8 place-items-center rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-								>
-									<Trash2 size={15} />
-								</button>
+									<textarea
+										required
+										value={preset.prompt}
+										onChange={event =>
+											updatePrompt(preset.id, 'prompt', event.target.value)
+										}
+										rows={4}
+										maxLength={4000}
+										placeholder={text.promptContent}
+										aria-label={text.promptContent}
+										className={`${fieldClass} resize-y`}
+									/>
+								</div>
 							</div>
-							<div className="grid gap-2">
-								<input
-									required
-									value={preset.name}
-									onChange={event =>
-										updatePrompt(preset.id, 'name', event.target.value)
-									}
-									maxLength={80}
-									placeholder={`${text.promptName} ${index + 1}`}
-									aria-label={text.promptName}
-									className={fieldClass}
-								/>
-								<textarea
-									required
-									value={preset.prompt}
-									onChange={event =>
-										updatePrompt(preset.id, 'prompt', event.target.value)
-									}
-									rows={4}
-									maxLength={4000}
-									placeholder={text.promptContent}
-									aria-label={text.promptContent}
-									className={`${fieldClass} resize-y`}
-								/>
-							</div>
-						</div>
-					))}
-				</div>
-			</div>
-
-			<div className="mt-4 rounded-2xl border border-slate-200 p-3.5 dark:border-slate-700">
-				<p className="text-sm font-black text-slate-800 dark:text-slate-100">{text.sectionFallback}</p>
-				<p className="mt-0.5 text-xs text-slate-400">{text.fallbackHint}</p>
-				<textarea
-					value={draft.systemPrompt || ''}
-					onChange={event => update('systemPrompt', event.target.value)}
-					rows={5}
-					maxLength={4000}
-					aria-label={text.prompt}
-					className={`${fieldClass} mt-3 resize-y`}
-				/>
+						))}
+					</div>
+				)}
 			</div>
 
 			{error && <p className="mt-3 text-xs font-semibold text-rose-600">{error}</p>}
 			{saved && !error && <p className="mt-3 text-xs font-semibold text-emerald-600">{text.saved}</p>}
-			<button
-				type="submit"
-				disabled={saving}
-				style={{ background: GRADIENT, boxShadow: GLOW }}
-				className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-black text-white transition disabled:cursor-wait disabled:opacity-60"
-			>
-				{saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-				{text.save}
-			</button>
+			<div className="mt-4 flex flex-wrap items-center gap-2">
+				<button
+					type="submit"
+					disabled={saving}
+					style={{ background: GRADIENT, boxShadow: GLOW }}
+					className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-black text-white transition disabled:cursor-wait disabled:opacity-60"
+				>
+					{saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+					{text.save}
+				</button>
+				<button
+					type="button"
+					onClick={addPrompt}
+					disabled={prompts.length >= 20}
+					className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+				>
+					<Plus size={16} />
+					{text.addPrompt}
+				</button>
+			</div>
 		</form>
 	);
 }

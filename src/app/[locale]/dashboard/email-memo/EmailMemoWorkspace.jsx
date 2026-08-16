@@ -576,6 +576,14 @@ export default function EmailMemoWorkspace() {
 
 	const connectWhatsApp = (body = {}) =>
 		run('wa', async () => {
+			setOverview((prev) => ({
+				...prev,
+				whatsapp: {
+					...prev.whatsapp,
+					status: 'connecting',
+					connected: false,
+				},
+			}));
 			const res = await emailMemoApi.connectWhatsApp(body);
 			setOverview((prev) => ({
 				...prev,

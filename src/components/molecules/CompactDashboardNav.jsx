@@ -3,7 +3,7 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, LayoutDashboard, AlertCircle } from 'lucide-react';
+import { LogOut, AlertCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { usePathname as useI18nPathname, Link, useRouter } from '@/i18n/navigation';
 import { useSearchParams } from 'next/navigation';
@@ -11,7 +11,6 @@ import { useUser } from '@/hooks/useUser';
 import { useTenantTheme } from '@/lib/tenant/TenantThemeProvider';
 import { getNavPagesForRole } from './Sidebar';
 import LanguageToggle from '../atoms/LanguageToggle';
-import './sidebar-glass.css';
 import './header-glass.css';
 
 function isPathActive(pathname, href, searchParams) {
@@ -40,7 +39,7 @@ function initialsFrom(name, email) {
 
 /**
  * Top navigation for accounts locked to fewer than 5 pages.
- * Matches sidebar glass tokens / active item language.
+ * Uses the same white card language as Header.
  */
 export default function CompactDashboardNav() {
 	const user = useUser();
@@ -112,35 +111,31 @@ export default function CompactDashboardNav() {
 	const logoSrc = tenant?.assets?.logo;
 	const appName = tenant?.appName || 'So7baFit';
 	const avatar = initialsFrom(user?.name, user?.email);
+	const displayName = (user?.name && user.name.trim()) || user?.email?.split('@')[0] || appName;
+	const roleLabel = user?.role ? tProfile(`myProfile.roles.${user.role}`) : '';
 
 	return (
-		<header className="compact-dash-nav sidebar-shell sidebar-glass shrink-0">
-			<div className="sidebar-glass-accent" aria-hidden />
-			<div className="sidebar-glass-texture pointer-events-none absolute inset-0" aria-hidden />
-
-			<div className="compact-dash-nav__bar relative z-[1]">
-				{/* Brand */}
-				<div className="compact-dash-nav__brand">
-					{logoSrc ? (
-						// eslint-disable-next-line @next/next/no-img-element
-						<img src={logoSrc} alt={appName} className="compact-dash-nav__logo" />
-					) : (
-						<span className="compact-dash-nav__avatar" aria-hidden>
-							{avatar}
-						</span>
-					)}
-					<div className="min-w-0">
-						<p className="compact-dash-nav__app">{appName}</p>
-						{user?.name ? (
-							<p className="compact-dash-nav__user truncate">{user.name}</p>
-						) : null}
+		<header className="dash-header compact-dash-nav shrink-0">
+			<div className="dash-header-bar compact-dash-nav__bar">
+				<div className="compact-dash-nav__cluster">
+					<span className="compact-dash-nav__media">
+						{logoSrc ? (
+							// eslint-disable-next-line @next/next/no-img-element
+							<img src={logoSrc} alt={appName} className="compact-dash-nav__logo" />
+						) : (
+							<span className="compact-dash-nav__avatar" aria-hidden>
+								{avatar}
+							</span>
+						)}
+					</span>
+					<div className="compact-dash-nav__identity">
+						<p className="compact-dash-nav__name truncate">{displayName}</p>
+						{roleLabel ? <p className="compact-dash-nav__role truncate">{roleLabel}</p> : null}
 					</div>
 				</div>
 
-				{/* Nav items */}
 				<nav className="compact-dash-nav__items" aria-label="Pages">
 					{items.map((item) => {
-						const Icon = item.icon || LayoutDashboard;
 						const active = isPathActive(pathname, item.href, searchParams);
 						const label = tNav(`items.${item.nameKey}`);
 						return (
@@ -150,30 +145,21 @@ export default function CompactDashboardNav() {
 								aria-current={active ? 'page' : undefined}
 								className={`compact-dash-nav__link ${active ? 'is-active' : ''}`}
 							>
-								<span className={`compact-dash-nav__icon ${active ? 'is-active' : ''}`}>
-									<Icon size={15} strokeWidth={active ? 2.4 : 2} />
-								</span>
-								<span className="compact-dash-nav__label">{label}</span>
+								{label}
 							</Link>
 						);
 					})}
 				</nav>
 
-				{/* Actions */}
 				<div className="compact-dash-nav__actions">
-					{user?.role ? (
-						<span className="compact-dash-nav__role hidden sm:inline">
-							{tProfile(`myProfile.roles.${user.role}`)}
-						</span>
-					) : null}
 					<div className="compact-dash-nav__lang">
-						<LanguageToggle collapsed cn="!h-10 !min-h-10" />
+						<LanguageToggle collapsed cn="compact-dash-nav__lang-btn" />
 					</div>
 					<button
 						ref={logoutBtnRef}
 						type="button"
 						onClick={() => setLogoutOpen(true)}
-						className="compact-dash-nav__logout"
+						className="dash-header-btn is-danger-solid compact-dash-nav__logout"
 						aria-label={tHeader('actions.signOut')}
 					>
 						<LogOut size={15} className="rtl:scale-x-[-1]" strokeWidth={2.4} />

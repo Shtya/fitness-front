@@ -148,6 +148,9 @@ export default function WhatsAppDesktopRail({
 						)}
 						{connected ? <span className="wa-desktop-rail__online-dot" /> : null}
 					</span>
+					<span className="wa-desktop-rail__label">
+						{ar ? 'الشخصية' : labels.profile || 'Profile'}
+					</span>
 				</button>
 			</div>
 		</aside>

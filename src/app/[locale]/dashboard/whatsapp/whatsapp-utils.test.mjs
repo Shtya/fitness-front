@@ -8,6 +8,10 @@ import {
 	isRenderableWhatsAppMessage,
 	mergeMessages,
 	buildOptimisticMediaMessage,
+	messageDeliveryState,
+	preferWhatsAppAckStatus,
+	isSelfChatConversation,
+	messageMatchesAckTarget,
 	messageTextSegments,
 	messageTextPresentation,
 	normalizeWhatsAppIdentity,
@@ -76,6 +80,99 @@ test('mergeMessages collapses optimistic sends into confirmed provider rows', ()
 	assert.equal(result[0].id, 'db-1');
 	assert.equal(result[0].providerMessageId, 'provider-1');
 	assert.equal(result[0].optimistic, false);
+});
+
+test('mergeMessages updates a lone pending voice in place when the confirmed row has no client id', () => {
+	const result = mergeMessages(
+		[
+			{
+				id: 'pending:voice-1',
+				clientMessageId: 'voice-1',
+				optimistic: true,
+				direction: 'outbound',
+				type: 'voice',
+				status: 'pending',
+				providerTimestamp: '2026-01-02T00:00:00.000Z',
+				attachments: [{ id: 'pending-att:voice-1', url: 'blob:local' }],
+			},
+		],
+		[
+			{
+				id: 'db-voice',
+				providerMessageId: 'provider-voice',
+				direction: 'outbound',
+				type: 'ptt',
+				status: 'sent',
+				providerTimestamp: '2026-01-02T00:00:05.000Z',
+				attachments: [{ id: 'att-1', type: 'ptt' }],
+			},
+		],
+	);
+	assert.equal(result.length, 1);
+	assert.equal(result[0].id, 'db-voice');
+	assert.equal(result[0].clientMessageId, 'voice-1');
+	assert.equal(result[0].status, 'sent');
+	assert.equal(result[0].attachments[0].url, 'blob:local');
+	assert.equal(result[0].providerTimestamp, '2026-01-02T00:00:00.000Z');
+});
+
+test('mergeMessages does not re-add an optimistic voice after the confirmed row already exists', () => {
+	const result = mergeMessages(
+		[
+			{
+				id: 'db-voice',
+				providerMessageId: 'provider-voice',
+				direction: 'outbound',
+				type: 'ptt',
+				status: 'sent',
+				providerTimestamp: '2026-01-02T00:00:05.000Z',
+				attachments: [{ id: 'att-1', type: 'ptt' }],
+			},
+		],
+		[
+			{
+				id: 'pending:voice-1',
+				clientMessageId: 'voice-1',
+				optimistic: true,
+				direction: 'outbound',
+				type: 'voice',
+				status: 'pending',
+				providerTimestamp: '2026-01-02T00:00:00.000Z',
+				attachments: [{ id: 'pending-att:voice-1', url: 'blob:local' }],
+			},
+		],
+	);
+	assert.equal(result.length, 1);
+	assert.equal(result[0].id, 'db-voice');
+	assert.equal(result[0].clientMessageId, 'voice-1');
+	assert.equal(result[0].optimistic, false);
+	assert.equal(result[0].attachments[0].url, 'blob:local');
+});
+
+test('preferWhatsAppAckStatus never goes backwards, and self-chat ticks stay grey', () => {
+	assert.equal(preferWhatsAppAckStatus('delivered', 'sent'), 'delivered');
+	assert.equal(preferWhatsAppAckStatus('sent', 'read'), 'read');
+	assert.equal(messageDeliveryState({ status: 'read' }, { selfChat: true }), 'delivered');
+	assert.equal(messageDeliveryState({ status: 'read' }), 'read');
+	assert.equal(messageDeliveryState({ status: 'sent' }), 'sent');
+	assert.equal(
+		isSelfChatConversation({ contact: { name: 'You' } }),
+		true,
+	);
+	assert.equal(
+		isSelfChatConversation(
+			{ providerChatId: '201041422849@s.whatsapp.net' },
+			{ phoneNumber: '+201041422849' },
+		),
+		true,
+	);
+	assert.equal(
+		messageMatchesAckTarget(
+			{ id: 'pending:1', clientMessageId: 'client-1' },
+			{ messageId: 'db-1', clientMessageId: 'client-1' },
+		),
+		true,
+	);
 });
 
 test('mergeMessages refuses to keep messages from another conversation', () => {
@@ -205,6 +302,19 @@ test('conversationTitle prefers alias names and formats the phone otherwise', ()
 		'Group',
 	);
 	assert.equal(conversationTitle(null), 'Chat');
+	assert.equal(
+		conversationTitle({
+			providerChatId: '120363163799333272@newsletter',
+			contact: { name: 'أسعار العملات اليوم' },
+		}),
+		'أسعار العملات اليوم',
+	);
+	assert.equal(
+		conversationTitle({
+			providerChatId: '120363163799333272@newsletter',
+		}),
+		'Channel',
+	);
 });
 
 test('normalizeWhatsAppIdentity matches contact, chat and status identifiers', () => {
@@ -243,6 +353,36 @@ test('updateConversationPreview replaces an outbound preview with the latest inb
 	assert.equal(result[0].lastMessage.text, 'Latest reply');
 	assert.equal(result[0].lastMessage.direction, 'inbound');
 	assert.equal(result[0].unreadCount, 1);
+});
+
+test('updateConversationPreview does not copy previous read ticks onto a new outbound voice', () => {
+	const conversations = [
+		{
+			id: 'conversation-1',
+			lastMessageAt: '2026-07-21T18:15:00.000Z',
+			lastMessage: {
+				id: 'old-1',
+				text: 'Older voice',
+				type: 'ptt',
+				direction: 'outbound',
+				status: 'read',
+				providerTimestamp: '2026-07-21T18:15:00.000Z',
+			},
+		},
+	];
+	const result = updateConversationPreview(conversations, {
+		conversationId: 'conversation-1',
+		lastMessageAt: '2026-07-21T18:16:00.000Z',
+		preview: {
+			id: 'voice-2',
+			type: 'ptt',
+			direction: 'outbound',
+			status: 'sent',
+			providerTimestamp: '2026-07-21T18:16:00.000Z',
+		},
+	});
+	assert.equal(result[0].lastMessage.id, 'voice-2');
+	assert.equal(result[0].lastMessage.status, 'sent');
 });
 
 test('updateConversationPreview does not let an older event replace a newer message', () => {

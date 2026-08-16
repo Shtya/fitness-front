@@ -121,6 +121,7 @@ export default function StickersPanel({
 	const [promptCardId, setPromptCardId] = useState('concept');
 	const panelRef = useRef(null);
 	const fileRef = useRef(null);
+	const autoHealRef = useRef('');
 	const actionBtnClass =
 		'inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-lg px-2.5 text-[11px] font-bold leading-none disabled:opacity-50';
 	const tabs = [
@@ -128,6 +129,10 @@ export default function StickersPanel({
 		['gif', ImageIcon, 'GIF'],
 		['sticker', Sticker, ar ? 'ستيكرز' : 'Stickers'],
 	];
+
+	useEffect(() => {
+		autoHealRef.current = '';
+	}, [accountId]);
 
 	useEffect(() => {
 		if (!open) {
@@ -169,15 +174,32 @@ export default function StickersPanel({
 	useEffect(() => {
 		if (!open || tab !== 'sticker' || !accountId) return undefined;
 		let cancelled = false;
-		setLoading(true);
-		api.get(`/whatsapp/accounts/${accountId}/stickers`)
-			.then(async ({ data }) => {
+		const loadStickers = async () => {
+			setLoading(true);
+			try {
+				const { data } = await api.get(`/whatsapp/accounts/${accountId}/stickers`);
 				if (cancelled) return;
-				const items = data?.items || [];
+				let items = data?.items || [];
+				const missing = items.filter(item => item.available === false);
+				const healKey = `${accountId}:${items.length}:${missing.length}`;
+				if (missing.length && autoHealRef.current !== healKey) {
+					autoHealRef.current = healKey;
+					setSyncing(true);
+					try {
+						const synced = await api.post(`/whatsapp/accounts/${accountId}/stickers/sync`);
+						if (cancelled) return;
+						items = synced.data?.items || items;
+					} catch {
+						/* keep listed stickers even if heal-sync fails */
+					} finally {
+						if (!cancelled) setSyncing(false);
+					}
+				}
 				setStickers(items);
 				const next = {};
 				await Promise.all(
 					items.map(async item => {
+						if (item.available === false) return;
 						try {
 							const file = await fetchStickerBlob(accountId, item.id);
 							if (cancelled) return;
@@ -187,17 +209,19 @@ export default function StickersPanel({
 						}
 					}),
 				);
-				if (!cancelled) setPreviews(current => {
-					Object.values(current).forEach(url => URL.revokeObjectURL(url));
-					return next;
-				});
-			})
-			.catch(() => {
+				if (!cancelled) {
+					setPreviews(current => {
+						Object.values(current).forEach(url => URL.revokeObjectURL(url));
+						return next;
+					});
+				}
+			} catch {
 				if (!cancelled) toast.error(ar ? 'تعذر تحميل الستيكرز' : 'Could not load stickers');
-			})
-			.finally(() => {
+			} finally {
 				if (!cancelled) setLoading(false);
-			});
+			}
+		};
+		void loadStickers();
 		return () => {
 			cancelled = true;
 		};
@@ -214,6 +238,7 @@ export default function StickersPanel({
 		const next = {};
 		await Promise.all(
 			items.map(async item => {
+				if (item.available === false) return;
 				try {
 					const file = await fetchStickerBlob(accountId, item.id);
 					next[item.id] = URL.createObjectURL(file);
@@ -279,10 +304,14 @@ export default function StickersPanel({
 				ar
 					? data?.imported
 						? `تمت إضافة ${data.imported} ستيكر جديد من واتساب`
-						: `المكتبة محدّثة (${(data?.items || []).length} ستيكر)`
+						: data?.repaired
+							? `تم إصلاح ${data.repaired} ستيكر على هذا الجهاز`
+							: `المكتبة محدّثة (${(data?.items || []).length} ستيكر)`
 					: data?.imported
 						? `Synced ${data.imported} new stickers from WhatsApp`
-						: `Sticker library is up to date (${(data?.items || []).length})`,
+						: data?.repaired
+							? `Restored ${data.repaired} stickers on this machine`
+							: `Sticker library is up to date (${(data?.items || []).length})`,
 			);
 		} catch (error) {
 			toast.error(error.response?.data?.message || (ar ? 'فشلت المزامنة' : 'Sync failed'));
@@ -526,7 +555,10 @@ export default function StickersPanel({
 											{previews[item.id] ? (
 												<img src={previews[item.id]} alt="" className="h-full w-full object-contain" />
 											) : (
-												<Sticker className="mx-auto mt-4 text-slate-300" size={22} />
+												<span className="grid h-full place-items-center px-1 text-center text-[9px] font-semibold leading-3 text-slate-400">
+													<Sticker className="mb-1 text-slate-300" size={18} />
+													{ar ? 'غير متوفر هنا' : 'Missing on this machine'}
+												</span>
 											)}
 										</button>
 										<button

@@ -29,8 +29,10 @@ import {
 	buildOptimisticMediaMessage,
 	mergeMessages,
 	messageDeliveryState,
+	isSelfChatConversation,
 	messageTextPresentation,
 } from './whatsapp-utils';
+import ExpandableMessageText from './ExpandableMessageText';
 
 const MESSAGE_PAGE_SIZE = 100;
 
@@ -41,8 +43,8 @@ function newClientMessageId() {
 	return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function DeliveryTicks({ message }) {
-	const state = messageDeliveryState(message);
+function DeliveryTicks({ message, selfChat = false }) {
+	const state = messageDeliveryState(message, { selfChat });
 	if (state === 'hidden') return null;
 	if (state === 'pending') return <Clock size={12} className="animate-pulse" />;
 	if (state === 'read') return <CheckCheck size={12} className="text-[#53BDEB]" />;
@@ -53,7 +55,7 @@ function DeliveryTicks({ message }) {
 function SplitAvatar({ label = '?', src = '', size = 36 }) {
 	return (
 		<div
-			className="relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-[#dfe5e7] text-[#54656f] shadow-sm"
+			className="wa-avatar-3d relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-[#dfe5e7] text-[#54656f] shadow-sm"
 			style={{ width: size, height: size }}
 			title={label}
 		>
@@ -393,7 +395,7 @@ export default function WhatsAppSplitPane({
 		setDraft('');
 		setSending(true);
 		stickToBottomRef.current = true;
-		setMessages(current => mergeMessages(current, [optimistic]));
+		setMessages(current => mergeMessages(current, [optimistic], conversationId));
 		try {
 			const { data } = await api.post(`/whatsapp/conversations/${conversationId}/messages`, {
 				type: 'text',
@@ -401,10 +403,7 @@ export default function WhatsAppSplitPane({
 				clientMessageId,
 			});
 			setMessages(current =>
-				mergeMessages(
-					current.filter(item => item.id !== optimistic.id),
-					[data.message],
-				),
+				mergeMessages(current, [{ ...data.message, clientMessageId }], conversationId),
 			);
 		} catch (error) {
 			setMessages(current => current.filter(item => item.id !== optimistic.id));
@@ -433,7 +432,7 @@ export default function WhatsAppSplitPane({
 			previewUrl,
 		});
 		stickToBottomRef.current = true;
-		setMessages(current => mergeMessages(current, [optimistic]));
+		setMessages(current => mergeMessages(current, [optimistic], conversationId));
 		setSending(true);
 		try {
 			const form = new FormData();
@@ -448,10 +447,7 @@ export default function WhatsAppSplitPane({
 				clientMessageId,
 			});
 			setMessages(current =>
-				mergeMessages(
-					current.filter(item => item.id !== optimistic.id),
-					[data.message],
-				),
+				mergeMessages(current, [{ ...data.message, clientMessageId }], conversationId),
 			);
 		} catch (error) {
 			setMessages(current => current.filter(item => item.id !== optimistic.id));
@@ -588,7 +584,7 @@ export default function WhatsAppSplitPane({
 					</span>
 					<SplitAvatar label={title} src={conversationAvatarUrl(conversation)} size={36} />
 					<div className="min-w-0">
-						<p className="truncate text-sm font-black text-slate-800 dark:text-slate-100">{title}</p>
+						<p className="wa-privacy-identity truncate text-sm font-black text-slate-800 dark:text-slate-100" title={title}>{title}</p>
 						<p className="truncate text-[11px] text-slate-500">
 							{ar ? 'شات جانبي' : 'Split chat'}
 							{conversation.assignedUser?.name ? ` · ${conversation.assignedUser.name}` : ''}
@@ -662,21 +658,26 @@ export default function WhatsAppSplitPane({
 										/>
 									))}
 									{message.text ? (
-										<p
+										<ExpandableMessageText
+											text={message.text}
 											dir={presentation.dir}
 											lang={presentation.lang}
 											style={presentation.style}
 											className={`wa-message-text whitespace-pre-wrap wrap-break-word ${presentation.className || ''}`}
-										>
-											{message.text}
-										</p>
+											readMoreLabel={labels.readMore || (ar ? 'اقرأ المزيد' : 'Read more')}
+										/>
 									) : null}
 									<div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-500">
 										{new Date(message.providerTimestamp || message.created_at).toLocaleTimeString([], {
 											hour: '2-digit',
 											minute: '2-digit',
 										})}
-										{mine ? <DeliveryTicks message={message} /> : null}
+										{mine ? (
+											<DeliveryTicks
+												message={message}
+												selfChat={isSelfChatConversation(conversation)}
+											/>
+										) : null}
 									</div>
 								</div>
 							</div>
@@ -689,18 +690,20 @@ export default function WhatsAppSplitPane({
 			{canCompose ? (
 				<form
 					onSubmit={sendText}
-					className={`flex shrink-0 items-end gap-2 border-t border-slate-100 p-2.5 dark:border-slate-800 wa-composer ${recordingVoice ? 'is-recording' : ''}`}
+					className={`flex shrink-0 items-center gap-2 border-t border-slate-100 p-2.5 dark:border-slate-800 wa-composer ${recordingVoice ? 'is-recording' : ''}`}
 				>
 					{recordingVoice ? (
-						<VoiceRecordingBar
-							seconds={recordingSeconds}
-							paused={recordingPaused}
-							labels={labels}
-							onCancel={() => stopVoiceRecording(false)}
-							onPause={pauseVoiceRecording}
-							onResume={resumeVoiceRecording}
-							onSend={() => stopVoiceRecording(true)}
-						/>
+						<div dir="ltr" className="wa-input-pill wa-recording-pill flex min-h-10 min-w-0 flex-1 items-center rounded-full px-1 py-1">
+							<VoiceRecordingBar
+								seconds={recordingSeconds}
+								paused={recordingPaused}
+								labels={labels}
+								onCancel={() => stopVoiceRecording(false)}
+								onPause={pauseVoiceRecording}
+								onResume={resumeVoiceRecording}
+								onSend={() => stopVoiceRecording(true)}
+							/>
+						</div>
 					) : (
 						<>
 							<textarea

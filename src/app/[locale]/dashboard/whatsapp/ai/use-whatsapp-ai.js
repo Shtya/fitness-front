@@ -45,8 +45,8 @@ function settingsPayload(settings) {
 			}))
 			: [],
 		activePromptId: settings.activePromptId ?? null,
-		persona: settings.persona || undefined,
-		language: settings.language || 'auto',
+		persona: undefined,
+		language: 'auto',
 		tone: settings.tone || 'professional',
 		suggestionCount: Number(settings.suggestionCount) || 3,
 		contextMessageLimit: Number(settings.contextMessageLimit) || 20,

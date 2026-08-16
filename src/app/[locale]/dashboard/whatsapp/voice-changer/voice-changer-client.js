@@ -3,8 +3,11 @@ import api from '@/utils/axios';
 function normalizeVoiceChangerErrorText(value) {
 	if (value == null) return '';
 	if (typeof value === 'string') return value;
+	if (Array.isArray(value)) return value.filter(Boolean).join(' ');
 	if (typeof value === 'object') {
-		return value.message || value.error || value.detail?.message || '';
+		const nested = value.message || value.error || value.detail?.message || '';
+		if (Array.isArray(nested)) return nested.filter(Boolean).join(' ');
+		return nested;
 	}
 	return String(value);
 }
@@ -13,6 +16,10 @@ export function isElevenLabsPaidVoiceError(text) {
 	return /paid_plan_required|payment_required|library voices|cannot use Voice Library/i.test(
 		String(text || ''),
 	);
+}
+
+export function isElevenLabsClonePermissionError(text) {
+	return /create_instant_voice_clone|instant voice cloning|cannot clone voices/i.test(String(text || ''));
 }
 
 export async function readVoiceChangerError(error, locale = 'en') {
@@ -28,6 +35,21 @@ export async function readVoiceChangerError(error, locale = 'en') {
 		}
 	} else {
 		message = normalizeVoiceChangerErrorText(data) || error?.message || '';
+	}
+	if (/Cartesia Voice Changer was discontinued|discontinued on 20 Aug 2026/i.test(message)) {
+		return locale === 'ar'
+			? 'Cartesia أوقفت Voice Changer. استخدم ElevenLabs أو تغيير الدرجة المجاني.'
+			: 'Cartesia discontinued Voice Changer. Use ElevenLabs or the free pitch changer.';
+	}
+	if (isElevenLabsClonePermissionError(message)) {
+		return locale === 'ar'
+			? 'مفتاح ElevenLabs الحالي مش مسموح له يعمل Instant Voice Cloning. Restricted في الإعدادات غير صلاحية Voices على المفتاح نفسه: elevenlabs.io → Settings → API Keys → افتح المفتاح ده، طفّي Restricted، وفعّل Voices / Instant Voice Cloning. محتاج Starter على الأقل. تقدر كمان تستنسخ من موقع ElevenLabs وبعدين تختاره هنا.'
+			: 'This ElevenLabs key cannot clone voices. Restricted is separate from Voices permission on the key itself: elevenlabs.io → Settings → API Keys → open THIS key, turn Restricted off, and enable Voices / Instant Voice Cloning. Starter or higher is required. You can also clone on the ElevenLabs website, then pick it here.';
+	}
+	if (/too_short|too short|at least (1 minute|60 seconds)|minimum of 60|not enough audio|needs about 60 seconds/i.test(message)) {
+		return locale === 'ar'
+			? 'استنساخ ElevenLabs محتاج حوالي 60 ثانية كلام واضح. ارفع عيّنات أكتر أو سجّل أطول وبعدين جرّب تاني. النافذة هتفضل مفتوحة.'
+			: 'ElevenLabs Instant Voice Cloning needs about 60 seconds of clean speech. Add more clips or record longer samples, then try again.';
 	}
 	if (isElevenLabsPaidVoiceError(message)) {
 		return locale === 'ar'
@@ -66,6 +88,7 @@ export async function cloneVoiceFromSamples({ name, files, consent }) {
 	for (const file of files || []) form.append('files', file);
 	const { data } = await api.post('/whatsapp/voice-changer/clone', form, {
 		timeout: 120000,
+		skipAuthRedirect: true,
 	});
 	return data;
 }

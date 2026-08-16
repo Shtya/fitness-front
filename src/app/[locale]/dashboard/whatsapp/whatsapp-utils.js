@@ -13,6 +13,101 @@ function messageSortTime(message) {
 	return Number.isFinite(time) ? time : 0;
 }
 
+const WHATSAPP_ACK_RANK = {
+	pending: 0,
+	sent: 1,
+	delivered: 2,
+	read: 3,
+	played: 4,
+};
+
+export function preferWhatsAppAckStatus(current, incoming) {
+	const next = String(incoming || '').toLowerCase();
+	const prev = String(current || '').toLowerCase();
+	if (next === 'failed') return 'failed';
+	if (!next) return prev || 'sent';
+	if (prev === 'failed') return next;
+	const prevRank = WHATSAPP_ACK_RANK[prev] ?? -1;
+	const nextRank = WHATSAPP_ACK_RANK[next] ?? -1;
+	if (nextRank < 0) return prev || next;
+	return nextRank >= prevRank ? next : prev;
+}
+
+function sameMediaFamily(left, right) {
+	const normalize = value => {
+		const type = String(value || '').toLowerCase();
+		if (['audio', 'ptt', 'voice'].includes(type)) return 'voice';
+		return type;
+	};
+	return normalize(left) === normalize(right);
+}
+
+function mergeAttachments(existing = [], incoming = []) {
+	if (!incoming?.length) return existing;
+	if (!existing?.length) return incoming;
+	return incoming.map((attachment, index) => {
+		const previous = existing[index] || {};
+		return {
+			...previous,
+			...attachment,
+			url: attachment?.url || previous.url || null,
+			previewDataUrl: attachment?.previewDataUrl || previous.previewDataUrl || null,
+		};
+	});
+}
+
+function isOutbound(message) {
+	return String(message?.direction || 'outbound').toLowerCase() === 'outbound';
+}
+
+function uniqueSingle(matches) {
+	const unique = [...new Set(matches)];
+	return unique.length === 1 ? unique[0] : null;
+}
+
+function findOptimisticTwin(pending, item) {
+	if (!item || item.optimistic) return null;
+	if (!isOutbound(item)) return null;
+	return uniqueSingle(
+		pending.filter(
+			message =>
+				message?.optimistic &&
+				!message.providerMessageId &&
+				isOutbound(message) &&
+				sameMediaFamily(message.type, item.type) &&
+				(!item.clientMessageId ||
+					!message.clientMessageId ||
+					message.clientMessageId === item.clientMessageId),
+		),
+	);
+}
+
+function findConfirmedTwinForOptimistic(pending, item) {
+	if (!item?.optimistic || item.providerMessageId) return null;
+	if (!isOutbound(item)) return null;
+	const itemTime = messageSortTime(item);
+	return uniqueSingle(
+		pending.filter(message => {
+			if (
+				!message ||
+				message.optimistic ||
+				!isOutbound(message) ||
+				!sameMediaFamily(message.type, item.type)
+			) {
+				return false;
+			}
+			if (
+				message.clientMessageId &&
+				item.clientMessageId &&
+				message.clientMessageId !== item.clientMessageId
+			) {
+				return false;
+			}
+			return Math.abs(messageSortTime(message) - itemTime) < 20_000;
+		}),
+	);
+}
+
 /**
  * Idempotent merge for API pages, socket events, and optimistic sends.
  * Collapses pending:* rows into the confirmed provider/DB message when the
@@ -70,9 +165,58 @@ export function mergeMessages(current = [], incoming = [], conversationId = null
 			const merged = {
 				...existing,
 				...item,
+				clientMessageId: item.clientMessageId || existing.clientMessageId,
 				optimistic: Boolean(item.optimistic) && !item.providerMessageId,
-				attachments: item.attachments?.length ? item.attachments : existing.attachments,
+				status: preferWhatsAppAckStatus(existing.status, item.status),
+				providerTimestamp: existing.optimistic
+					? existing.providerTimestamp || item.providerTimestamp
+					: item.providerTimestamp || existing.providerTimestamp,
+				created_at: existing.created_at || item.created_at,
+				attachments: mergeAttachments(existing.attachments, item.attachments),
 				reactions: item.reactions?.length ? item.reactions : existing.reactions,
+				replyTo: item.replyTo || existing.replyTo,
+			};
+			remember(merged);
+			return;
+		}
+
+		const pool = [...byProvider.values(), ...byClient.values(), ...byStableId.values(), ...orphans];
+		const optimisticTwin = findOptimisticTwin(pool, item);
+		if (optimisticTwin) {
+			forget(optimisticTwin);
+			const merged = {
+				...optimisticTwin,
+				...item,
+				id: item.id || optimisticTwin.id,
+				clientMessageId: item.clientMessageId || optimisticTwin.clientMessageId,
+				optimistic: false,
+				status: preferWhatsAppAckStatus(optimisticTwin.status, item.status),
+				providerTimestamp: optimisticTwin.providerTimestamp || item.providerTimestamp,
+				created_at: optimisticTwin.created_at || item.created_at,
+				attachments: mergeAttachments(optimisticTwin.attachments, item.attachments),
+				reactions: item.reactions?.length ? item.reactions : optimisticTwin.reactions,
+				replyTo: item.replyTo || optimisticTwin.replyTo,
+			};
+			remember(merged);
+			return;
+		}
+
+		const confirmedTwin = findConfirmedTwinForOptimistic(pool, item);
+		if (confirmedTwin) {
+			forget(confirmedTwin);
+			const merged = {
+				...confirmedTwin,
+				...item,
+				id: confirmedTwin.id,
+				providerMessageId: confirmedTwin.providerMessageId || item.providerMessageId,
+				clientMessageId: item.clientMessageId || confirmedTwin.clientMessageId,
+				optimistic: false,
+				status: preferWhatsAppAckStatus(confirmedTwin.status, item.status),
+				providerTimestamp: item.providerTimestamp || confirmedTwin.providerTimestamp,
+				created_at: item.created_at || confirmedTwin.created_at,
+				attachments: mergeAttachments(item.attachments, confirmedTwin.attachments),
+				reactions: confirmedTwin.reactions?.length ? confirmedTwin.reactions : item.reactions,
+				replyTo: confirmedTwin.replyTo || item.replyTo,
 			};
 			remember(merged);
 			return;
@@ -119,20 +263,66 @@ export function mergeMessages(current = [], incoming = [], conversationId = null
 }
 
 /** WhatsApp-style delivery ticks: pending → sent → delivered → read/played. */
-export function messageDeliveryState(message) {
+export function messageDeliveryState(message, options = {}) {
 	if (!message) return 'hidden';
 	if (message.showReadReceipt === false) return 'hidden';
 	if (message.optimistic || message.status === 'pending') return 'pending';
 	if (message.status === 'failed') return 'failed';
-	if (['read', 'played'].includes(message.status)) return 'read';
+	if (['read', 'played'].includes(message.status)) {
+		if (options.selfChat) return 'delivered';
+		return 'read';
+	}
 	if (message.status === 'delivered') return 'delivered';
 	return 'sent';
+}
+
+export function isSelfChatConversation(conversation, account) {
+	if (!conversation) return false;
+	const title = String(conversationTitle(conversation) || '').trim();
+	if (/^(you|me|أنت|انت|أنا|انا)$/i.test(title)) return true;
+	const ownDigits = String(account?.phoneNumber || account?.wid || '').replace(/\D/g, '');
+	if (ownDigits.length < 7) return false;
+	const chatDigits = String(conversation.providerChatId || '')
+		.split('@')[0]
+		.split(':')[0]
+		.replace(/\D/g, '');
+	const phoneDigits = String(conversation.contact?.phoneNumber || '').replace(/\D/g, '');
+	const samePhone = (left, right) =>
+		left.length >= 7 &&
+		right.length >= 7 &&
+		(left === right || left.endsWith(right) || right.endsWith(left));
+	return samePhone(ownDigits, chatDigits) || samePhone(ownDigits, phoneDigits);
+}
+
+export function messageMatchesAckTarget(message, payload = {}) {
+	if (!message) return false;
+	const ids = [
+		payload.messageId,
+		payload.providerMessageId,
+		payload.clientMessageId,
+		payload.id,
+	]
+		.map(value => String(value || '').trim())
+		.filter(Boolean);
+	if (!ids.length) return false;
+	const own = [
+		message.id,
+		message.providerMessageId,
+		message.clientMessageId,
+	]
+		.map(value => String(value || '').trim())
+		.filter(Boolean);
+	return own.some(id => ids.includes(id));
 }
 
 function isWeakConversationLabel(value, chatId, phone) {
 	const n = String(value || '').trim();
 	if (!n) return true;
-	const stripped = n.replace(/@(c\.us|s\.whatsapp\.net|g\.us|lid|hosted\.lid)$/i, '');
+	if (/^you$/i.test(n)) return false;
+	const stripped = n.replace(
+		/@(c\.us|s\.whatsapp\.net|g\.us|lid|hosted\.lid|newsletter)$/i,
+		'',
+	);
 	const lidUser = String(chatId || '').includes('@')
 		? String(chatId).split('@')[0]
 		: '';
@@ -162,6 +352,7 @@ export function conversationTitle(conversation) {
 	const chatId = String(conversation?.providerChatId || '');
 	const isGroup =
 		conversation?.type === 'group' || chatId.endsWith('@g.us');
+	const isChannel = chatId.endsWith('@newsletter');
 	const phone = String(conversation?.contact?.phoneNumber || '').trim();
 	const contactName = String(conversation?.contact?.name || '').trim();
 	const groupSubject = String(conversation?.group?.subject || '').trim();
@@ -173,6 +364,7 @@ export function conversationTitle(conversation) {
 		return contactName;
 	}
 	if (isGroup) return 'Group';
+	if (isChannel) return 'Channel';
 
 	const phoneFromChat = chatId.match(/^(\d{8,15})@(c\.us|s\.whatsapp\.net)$/i);
 	return (
@@ -239,20 +431,48 @@ export function updateConversationPreview(conversations = [], payload = {}) {
 
 		changed = true;
 		if (isLatest && hasRenderablePreview) reorder = true;
+		const sameLastMessage = Boolean(
+			(preview.id && conversation.lastMessage?.id === preview.id) ||
+				(preview.providerMessageId &&
+					conversation.lastMessage?.providerMessageId === preview.providerMessageId) ||
+				(preview.clientMessageId &&
+					conversation.lastMessage?.clientMessageId === preview.clientMessageId),
+		);
+		const lastMessage =
+			isLatest && hasRenderablePreview
+				? sameLastMessage
+					? {
+							...conversation.lastMessage,
+							...preview,
+							status: preferWhatsAppAckStatus(
+								conversation.lastMessage?.status,
+								preview.status,
+							),
+							providerTimestamp:
+								nextTimestamp || conversation.lastMessage?.providerTimestamp,
+						}
+					: {
+							...preview,
+							providerTimestamp:
+								nextTimestamp || preview.providerTimestamp,
+						}
+				: sameLastMessage && conversation.lastMessage
+					? {
+							...conversation.lastMessage,
+							status: preferWhatsAppAckStatus(conversation.lastMessage.status, preview.status),
+						}
+					: conversation.lastMessage;
 		return {
 			...conversation,
 			unreadCount,
 			...(isLatest && hasRenderablePreview
 				? {
 						lastMessageAt: nextTimestamp || conversation.lastMessageAt,
-						lastMessage: {
-							...conversation.lastMessage,
-							...preview,
-							providerTimestamp:
-								nextTimestamp || conversation.lastMessage?.providerTimestamp,
-						},
+						lastMessage,
 					}
-				: {}),
+				: lastMessage !== conversation.lastMessage
+					? { lastMessage }
+					: {}),
 		};
 	});
 
@@ -686,7 +906,11 @@ export function groupConsecutiveImageMessages(messages = []) {
 				attachments: [...images],
 			});
 		} else {
-			rows.push({ kind: 'message', key: message.id, message });
+			rows.push({
+				kind: 'message',
+				key: message.clientMessageId || message.id,
+				message,
+			});
 		}
 	}
 	return rows;
