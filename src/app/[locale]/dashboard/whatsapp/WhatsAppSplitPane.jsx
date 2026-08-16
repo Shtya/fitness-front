@@ -12,13 +12,14 @@ import {
 	Loader2,
 	Mic,
 	Send,
-	Square,
 	X,
 } from 'lucide-react';
 import api from '@/utils/axios';
+import { VoiceRecordingBar } from './VoiceRecordingBar';
 import {
 	conversationTitle,
 	conversationAvatarUrl,
+	buildOptimisticMediaMessage,
 	mergeMessages,
 	messageDeliveryState,
 	messageTextPresentation,
@@ -31,13 +32,6 @@ function newClientMessageId() {
 		return crypto.randomUUID();
 	}
 	return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
-function formatRecordingDuration(seconds) {
-	const value = Math.max(0, Number(seconds) || 0);
-	const minutes = Math.floor(value / 60);
-	const remainingSeconds = value % 60;
-	return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
 function DeliveryTicks({ message }) {
@@ -86,7 +80,17 @@ function SplitAttachment({ attachment, labels, ar }) {
 	const [playing, setPlaying] = useState(false);
 
 	const load = useCallback(async () => {
-		if (!attachment?.id || String(attachment.id).startsWith('live')) return;
+		if (attachment?.url) {
+			setUrl(attachment.url);
+			return attachment.url;
+		}
+		if (
+			!attachment?.id ||
+			String(attachment.id).startsWith('live') ||
+			String(attachment.id).startsWith('pending-att:')
+		) {
+			return null;
+		}
 		setLoading(true);
 		try {
 			const { data } = await api.get(`/whatsapp/attachments/${attachment.id}/content`, {
@@ -102,13 +106,17 @@ function SplitAttachment({ attachment, labels, ar }) {
 		} finally {
 			setLoading(false);
 		}
-	}, [ar, attachment?.id]);
+	}, [ar, attachment?.id, attachment?.url]);
+
+	useEffect(() => {
+		if (attachment?.url) setUrl(attachment.url);
+	}, [attachment?.url]);
 
 	useEffect(
 		() => () => {
-			if (url) URL.revokeObjectURL(url);
+			if (url && url !== attachment?.url) URL.revokeObjectURL(url);
 		},
-		[url],
+		[attachment?.url, url],
 	);
 
 	if (['audio', 'ptt', 'voice'].includes(type)) {
@@ -356,6 +364,10 @@ export default function WhatsAppSplitPane({
 
 	const sendText = async event => {
 		event?.preventDefault?.();
+		if (recordingVoice) {
+			stopVoiceRecording(true);
+			return;
+		}
 		if (!conversationId || !draft.trim() || sending) return;
 		const text = draft.trim();
 		const clientMessageId = newClientMessageId();
@@ -399,6 +411,21 @@ export default function WhatsAppSplitPane({
 
 	const sendVoiceFile = async file => {
 		if (!file || !conversationId || !accountId || sending) return;
+		if (file.size > 25 * 1024 * 1024) {
+			toast.error(ar ? 'حجم الملف يجب ألا يتجاوز 25 ميجابايت' : 'File size must not exceed 25 MB');
+			return;
+		}
+		const clientMessageId = newClientMessageId();
+		const previewUrl = URL.createObjectURL(file);
+		const optimistic = buildOptimisticMediaMessage({
+			conversationId,
+			clientMessageId,
+			type: 'voice',
+			file,
+			previewUrl,
+		});
+		stickToBottomRef.current = true;
+		setMessages(current => mergeMessages(current, [optimistic]));
 		setSending(true);
 		try {
 			const form = new FormData();
@@ -407,16 +434,22 @@ export default function WhatsAppSplitPane({
 			const { data } = await api.post(`/whatsapp/conversations/${conversationId}/messages`, {
 				type: 'voice',
 				fileId: uploaded.fileId,
-				clientMessageId: newClientMessageId(),
+				clientMessageId,
 			});
-			stickToBottomRef.current = true;
-			setMessages(current => mergeMessages(current, [data.message]));
+			setMessages(current =>
+				mergeMessages(
+					current.filter(item => item.id !== optimistic.id),
+					[data.message],
+				),
+			);
 		} catch (error) {
+			setMessages(current => current.filter(item => item.id !== optimistic.id));
 			toast.error(
 				error.response?.data?.message ||
 					(ar ? 'تعذر إرسال الرسالة الصوتية' : 'Could not send voice message'),
 			);
 		} finally {
+			window.setTimeout(() => URL.revokeObjectURL(previewUrl), 8000);
 			setSending(false);
 		}
 	};
@@ -493,6 +526,24 @@ export default function WhatsAppSplitPane({
 			toast.error(ar ? 'تعذر الوصول للميكروفون' : 'Microphone access failed');
 		}
 	};
+
+	useEffect(() => {
+		if (!recordingVoice) return undefined;
+		const onKeyDown = event => {
+			if (event.key !== 'Enter' || event.shiftKey || event.altKey || event.metaKey || event.ctrlKey) return;
+			if (event.repeat || event.isComposing || event.keyCode === 229) return;
+			const target = event.target;
+			if (target instanceof HTMLElement) {
+				const tag = target.tagName;
+				if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) return;
+				if (target.closest('[role="dialog"]')) return;
+			}
+			event.preventDefault();
+			stopVoiceRecording(true);
+		};
+		window.addEventListener('keydown', onKeyDown);
+		return () => window.removeEventListener('keydown', onKeyDown);
+	}, [recordingVoice]);
 
 	if (!conversation) return null;
 
@@ -606,34 +657,15 @@ export default function WhatsAppSplitPane({
 			{canCompose ? (
 				<form
 					onSubmit={sendText}
-					className="flex shrink-0 items-end gap-2 border-t border-slate-100 p-2.5 dark:border-slate-800"
+					className={`flex shrink-0 items-end gap-2 border-t border-slate-100 p-2.5 dark:border-slate-800 wa-composer ${recordingVoice ? 'is-recording' : ''}`}
 				>
 					{recordingVoice ? (
-						<>
-							<div className="flex min-h-10 flex-1 items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 text-sm font-bold text-rose-600">
-								<span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
-								{ar ? 'جاري التسجيل…' : 'Recording…'}
-								<span className="ms-auto font-mono tabular-nums">
-									{formatRecordingDuration(recordingSeconds)}
-								</span>
-							</div>
-							<button
-								type="button"
-								onClick={() => stopVoiceRecording(false)}
-								className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-500"
-								aria-label={ar ? 'إلغاء' : 'Cancel'}
-							>
-								<X size={16} />
-							</button>
-							<button
-								type="button"
-								onClick={() => stopVoiceRecording(true)}
-								className="grid h-10 w-10 place-items-center rounded-full bg-rose-500 text-white"
-								aria-label={ar ? 'إرسال التسجيل' : 'Send recording'}
-							>
-								<Square size={14} fill="currentColor" />
-							</button>
-						</>
+						<VoiceRecordingBar
+							seconds={recordingSeconds}
+							labels={labels}
+							onCancel={() => stopVoiceRecording(false)}
+							onStop={() => stopVoiceRecording(true)}
+						/>
 					) : (
 						<>
 							<textarea

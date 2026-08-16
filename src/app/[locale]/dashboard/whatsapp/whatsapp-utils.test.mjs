@@ -3,9 +3,11 @@ import test from 'node:test';
 import {
 	conversationTitle,
 	firstMessageLink,
+	textWithoutFirstLink,
 	groupConsecutiveImageMessages,
 	isRenderableWhatsAppMessage,
 	mergeMessages,
+	buildOptimisticMediaMessage,
 	messageTextSegments,
 	messageTextPresentation,
 	normalizeWhatsAppIdentity,
@@ -98,6 +100,39 @@ test('mergeMessages refuses to keep messages from another conversation', () => {
 		result.map(item => item.id),
 		['from-open-chat'],
 	);
+});
+
+test('buildOptimisticMediaMessage creates a pending voice bubble that merge can confirm', () => {
+	const pending = buildOptimisticMediaMessage({
+		conversationId: 'chat-1',
+		clientMessageId: 'client-9',
+		type: 'voice',
+		file: { type: 'audio/webm', name: 'voice-4s.webm', size: 1200 },
+		previewUrl: 'blob:http://local/voice',
+	});
+	assert.equal(pending.id, 'pending:client-9');
+	assert.equal(pending.optimistic, true);
+	assert.equal(pending.type, 'voice');
+	assert.equal(pending.attachments[0].url, 'blob:http://local/voice');
+	const confirmed = mergeMessages(
+		[pending],
+		[
+			{
+				id: 'db-voice',
+				conversationId: 'chat-1',
+				clientMessageId: 'client-9',
+				providerMessageId: 'provider-voice',
+				type: 'voice',
+				direction: 'outbound',
+				providerTimestamp: pending.providerTimestamp,
+				attachments: [{ id: 'att-1', type: 'voice' }],
+			},
+		],
+		'chat-1',
+	);
+	assert.equal(confirmed.length, 1);
+	assert.equal(confirmed[0].id, 'db-voice');
+	assert.equal(confirmed[0].optimistic, false);
 });
 
 test('scopeMessagesToConversation keeps items that carry no conversation id', () => {
@@ -344,6 +379,11 @@ test('message links are segmented and normalized for safe previews', () => {
 		displayUrl: 'claude.ai/share/example',
 	});
 	assert.equal(firstMessageLink('javascript:alert(1)'), null);
+	assert.equal(textWithoutFirstLink('https://www.awesomescreenshot.com/video/1'), '');
+	assert.equal(
+		textWithoutFirstLink('Check this https://example.com/path now'),
+		'Check this now',
+	);
 });
 
 test('parseWhatsAppBold converts double-asterisk sections into bold text', () => {
@@ -382,13 +422,13 @@ test('isRenderableWhatsAppMessage removes empty provider placeholders', () => {
 	);
 });
 
-test('conversationUnreadCount hides the badge after an outbound phone reply', () => {
+test('conversationUnreadCount follows CRM unreadCount, not last-message direction', () => {
 	assert.equal(
 		conversationUnreadCount({
 			unreadCount: 4,
 			lastMessage: { direction: 'outbound', text: 'من الموبايل' },
 		}),
-		0,
+		4,
 	);
 	assert.equal(
 		conversationUnreadCount({

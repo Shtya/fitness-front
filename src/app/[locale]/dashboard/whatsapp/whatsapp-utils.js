@@ -261,9 +261,6 @@ export function updateConversationPreview(conversations = [], payload = {}) {
 }
 
 export function conversationUnreadCount(conversation) {
-	if (String(conversation?.lastMessage?.direction || '').toLowerCase() === 'outbound') {
-		return 0;
-	}
 	return Math.max(0, Number(conversation?.unreadCount) || 0);
 }
 
@@ -434,6 +431,24 @@ export function firstMessageLink(text) {
 	}
 }
 
+export function textWithoutFirstLink(text) {
+	const segments = messageTextSegments(text);
+	let skipped = false;
+	return segments
+		.map(segment => {
+			if (!skipped && segment.type === 'link') {
+				skipped = true;
+				return '';
+			}
+			return segment.text || '';
+		})
+		.join('')
+		.replace(/[ \t]{2,}/g, ' ')
+		.replace(/[ \t]+\n/g, '\n')
+		.replace(/\n{3,}/g, '\n\n')
+		.trim();
+}
+
 /** Build an in-app iframe embed for Facebook/IG/YouTube/TikTok links when possible. */
 export function getStoryMediaEmbed(rawUrl) {
 	const href = normalizeHttpUrl(rawUrl);
@@ -559,6 +574,44 @@ export function isRenderableWhatsAppMessage(message) {
 	return DISPLAYABLE_MEDIA_TYPES.has(String(message.type || '').toLowerCase());
 }
 
+/** Local pending bubble shown instantly while media upload/send runs. */
+export function buildOptimisticMediaMessage({
+	conversationId = null,
+	clientMessageId,
+	type,
+	file,
+	previewUrl = null,
+	caption = '',
+	replySnapshot = null,
+} = {}) {
+	const now = new Date().toISOString();
+	const mediaType = String(type || 'document').toLowerCase();
+	return {
+		id: `pending:${clientMessageId}`,
+		conversationId,
+		clientMessageId,
+		type: mediaType,
+		text: caption || '',
+		direction: 'outbound',
+		status: 'pending',
+		providerTimestamp: now,
+		created_at: now,
+		optimistic: true,
+		quotedProviderMessageId: replySnapshot?.providerMessageId || null,
+		replyTo: replySnapshot || null,
+		attachments: [
+			{
+				id: `pending-att:${clientMessageId}`,
+				type: mediaType,
+				mimeType: file?.type || '',
+				fileName: file?.name || 'voice.webm',
+				sizeBytes: file?.size || 0,
+				url: previewUrl || null,
+			},
+		],
+	};
+}
+
 function imageAttachmentsForMessage(message) {
 	const attachments = Array.isArray(message?.attachments) ? message.attachments : [];
 	const images = attachments.filter(attachment =>
@@ -633,3 +686,61 @@ export function groupConsecutiveImageMessages(messages = []) {
 	}
 	return rows;
 }
+
+const COMPOSER_IMAGE_TYPES = new Set([
+	'image/jpeg',
+	'image/jpg',
+	'image/png',
+	'image/webp',
+	'image/gif',
+]);
+
+function extensionForImageType(type) {
+	if (type === 'image/jpeg' || type === 'image/jpg') return 'jpg';
+	if (type === 'image/webp') return 'webp';
+	if (type === 'image/gif') return 'gif';
+	return 'png';
+}
+
+export function isComposerImageFile(file) {
+	const type = String(file?.type || '').toLowerCase();
+	if (COMPOSER_IMAGE_TYPES.has(type)) return true;
+	return /\.(jpe?g|png|webp|gif)$/i.test(String(file?.name || ''));
+}
+
+export function clipboardImageFiles(event) {
+	const data = event?.clipboardData;
+	if (!data) return [];
+	const files = [];
+	const seen = new Set();
+	const add = (blob, fallbackType = '') => {
+		if (!blob) return;
+		const type = String(blob.type || fallbackType || 'image/png').toLowerCase();
+		const key = `${Number(blob.size || 0)}:${type}`;
+		if (seen.has(key)) return;
+		const named =
+			blob instanceof File
+				? blob
+				: new File([blob], `pasted-image.${extensionForImageType(type)}`, {
+						type: type.startsWith('image/') ? type : 'image/png',
+					});
+		if (!isComposerImageFile(named)) return;
+		seen.add(key);
+		files.push(named);
+	};
+
+	let addedFromItems = false;
+	if (data.items?.length) {
+		for (const item of data.items) {
+			if (item.kind === 'file' && String(item.type || '').startsWith('image/')) {
+				add(item.getAsFile(), item.type);
+				addedFromItems = true;
+			}
+		}
+	}
+	if (!addedFromItems && data.files?.length) {
+		for (const file of data.files) add(file);
+	}
+	return files;
+}
+

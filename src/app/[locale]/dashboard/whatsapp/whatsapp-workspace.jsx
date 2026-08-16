@@ -16,6 +16,7 @@ import {
 	ArrowUpRight,
 	BarChart3,
 	Bell,
+	Copy,
 	Check,
 	CheckCheck,
 	CheckCircle2,
@@ -38,9 +39,9 @@ import {
 	LogOut,
 	MapPin,
 	Maximize2,
-	MoreHorizontal,
 	MessageCircle,
 	Mic,
+	MoreHorizontal,
 	Pause,
 	Pin,
 	Play,
@@ -57,9 +58,7 @@ import {
 	Smartphone,
 	SmilePlus,
 	Sparkles,
-	Square,
 	Star,
-	Sticker,
 	Trash2,
 	TrendingUp,
 	User,
@@ -74,6 +73,13 @@ import {
 import api from '@/utils/axios';
 import { notifyWhatsAppUnreadChanged } from '@/lib/outreach-unread';
 import TranscriptionDialog from '../transcript/transcription-dialog';
+import VoiceChangerDialog from './voice-changer/VoiceChangerDialog';
+import StickersPanel from './stickers/StickersPanel';
+import {
+	fetchVoiceChangerSettings,
+	readVoiceChangerError,
+	transformVoiceNote,
+} from './voice-changer/voice-changer-client';
 import {
 	createTranscriptionFile,
 	isSelectableTranscriptMessage,
@@ -85,10 +91,12 @@ import {
 	conversationAvatarUrl,
 	conversationUnreadCount,
 	firstMessageLink,
+	textWithoutFirstLink,
 	getStoryMediaEmbed,
 	groupConsecutiveImageMessages,
 	isRenderableWhatsAppMessage,
 	mergeMessages,
+	buildOptimisticMediaMessage,
 	messageDeliveryState,
 	messageTextPresentation,
 	normalizeWhatsAppIdentity,
@@ -100,11 +108,13 @@ import {
 	sortConversationsByActivity,
 	updateConversationPreview,
 	visibleMessageText,
+	clipboardImageFiles,
 } from './whatsapp-utils';
 import { DemoModeProvider, useDemoMode } from './demo/DemoModeProvider';
 import DemoModeSettings from './demo/components/DemoModeSettings';
 import { demoApi } from './demo/demo-api';
 import WhatsAppSplitPane from './WhatsAppSplitPane';
+import { VoiceRecordingBar } from './VoiceRecordingBar';
 import WhatsAppDesktopRail from './WhatsAppDesktopRail';
 import { WaCustomSelect } from './WaCustomSelect';
 import {
@@ -215,11 +225,25 @@ function writeStoredWhatsAppActiveTab(tab, userId) {
 	}
 }
 
+function resolveStoredWhatsAppUserId() {
+	if (typeof window === 'undefined') return null;
+	try {
+		const user = JSON.parse(window.localStorage.getItem('user') || 'null');
+		const id = String(user?.id || '').trim();
+		return id || null;
+	} catch {
+		return null;
+	}
+}
+
 function defaultWhatsAppActiveTab() {
-	if (typeof window === 'undefined') return 'accounts';
-	const stored = readStoredWhatsAppActiveTab(null);
+	if (typeof window === 'undefined') return 'chats';
+	const userId = resolveStoredWhatsAppUserId();
+	const stored =
+		readStoredWhatsAppActiveTab(userId) ||
+		readStoredWhatsAppActiveTab(null);
 	if (stored) return stored;
-	return window.matchMedia('(max-width: 768px)').matches ? 'chats' : 'accounts';
+	return 'chats';
 }
 
 function isRequestCancelled(error) {
@@ -336,18 +360,25 @@ const translations = {
 		autoConnecting: 'Restoring WhatsApp session…',
 		defaultAccountLabel: 'WhatsApp',
 		openLink: 'Open link',
+		copyLink: 'Copy link',
+		linkCopied: 'Link copied',
 		viewLinkInStory: 'Watch inside story',
 		openLinkExternally: 'Open in browser',
 		transcribe: 'Transcribe',
 		recordVoice: 'Record voice message',
-		recordingVoice: 'Recording voice message',
+		recordingVoice: 'Recording voice message...',
+		recordingLive: 'LIVE',
+		recordingCancel: 'Cancel',
 		cancelRecording: 'Cancel recording',
+		stopRecording: 'Stop recording',
 		sendRecording: 'Stop and send',
 		microphoneDenied: 'Microphone permission was denied',
 		microphoneUnavailable: 'No microphone is available',
 		recordingUnsupported: 'Voice recording is not supported in this browser',
 		recordingFailed: 'Voice recording failed',
 		recordingStartFailed: 'Could not start voice recording',
+		voiceChanger: 'Voice changer settings',
+		voiceChanging: 'Changing voice…',
 		message: 'Write a message',
 		send: 'Send',
 		sync: 'Sync',
@@ -584,18 +615,25 @@ const translations = {
 		autoConnecting: 'جارِ استعادة جلسة واتساب…',
 		defaultAccountLabel: 'واتساب',
 		openLink: 'فتح الرابط',
+		copyLink: 'نسخ الرابط',
+		linkCopied: 'تم نسخ الرابط',
 		viewLinkInStory: 'مشاهدة داخل الحالة',
 		openLinkExternally: 'فتح في المتصفح',
 		transcribe: 'تحويل إلى نص',
 		recordVoice: 'تسجيل رسالة صوتية',
-		recordingVoice: 'جارِ تسجيل رسالة صوتية',
+		recordingVoice: 'جارِ تسجيل رسالة صوتية...',
+		recordingLive: 'مباشر',
+		recordingCancel: 'إلغاء',
 		cancelRecording: 'إلغاء التسجيل',
+		stopRecording: 'إيقاف التسجيل',
 		sendRecording: 'إيقاف وإرسال',
 		microphoneDenied: 'تم رفض إذن استخدام الميكروفون',
 		microphoneUnavailable: 'لا يوجد ميكروفون متاح',
 		recordingUnsupported: 'تسجيل الصوت غير مدعوم في هذا المتصفح',
 		recordingFailed: 'فشل تسجيل الرسالة الصوتية',
 		recordingStartFailed: 'تعذر بدء تسجيل الرسالة الصوتية',
+		voiceChanger: 'إعدادات تغيير الصوت',
+		voiceChanging: 'جارِ تغيير الصوت…',
 		message: 'اكتب رسالة',
 		send: 'إرسال',
 		sync: 'مزامنة',
@@ -783,6 +821,39 @@ function newClientMessageId() {
 		return crypto.randomUUID();
 	}
 	return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function releaseBlobUrl(url) {
+	if (typeof url !== 'string' || !url.startsWith('blob:')) return;
+	window.setTimeout(() => {
+		try {
+			URL.revokeObjectURL(url);
+		} catch {
+			/* ignore revoked or already-detached blob URLs */
+		}
+	}, 8000);
+}
+
+function releaseOptimisticMediaPreview(message) {
+	for (const attachment of message?.attachments || []) {
+		releaseBlobUrl(attachment?.url);
+	}
+}
+
+function outgoingMediaType(file, forcedType) {
+	if (forcedType) return forcedType;
+	if (file?.type?.startsWith('image/')) return 'image';
+	if (file?.type?.startsWith('video/')) return 'video';
+	if (file?.type?.startsWith('audio/')) return 'audio';
+	return 'document';
+}
+
+function isOptimisticVoiceType(type) {
+	return ['voice', 'audio', 'ptt'].includes(String(type || '').toLowerCase());
+}
+
+function isMultiSelectClick(event) {
+	return Boolean(event?.ctrlKey || event?.metaKey);
 }
 
 function statusMeta(status, t, account) {
@@ -1008,7 +1079,9 @@ function ImageMessage({
 	}, [url]);
 
 	const placeholder = previewUrl && previewUrl !== url ? previewUrl : null;
-	const fitClass = cover ? 'h-full w-full object-cover' : 'h-auto max-h-[280px] w-full object-contain';
+	const fitClass = cover
+		? 'absolute inset-0 z-[1] h-full w-full object-cover'
+		: 'relative z-[1] h-auto max-h-[420px] w-full object-contain';
 
 	return (
 		<button
@@ -1016,14 +1089,14 @@ function ImageMessage({
 			aria-label={alt || 'Open image preview'}
 			onClick={broken ? undefined : onOpen}
 			disabled={broken}
-			className={`group relative block w-full overflow-hidden bg-black/5 ${cover ? 'h-full min-h-0' : 'h-auto'} ${className}`}
+			className={`wa-photo-open relative block w-full overflow-hidden bg-black/5 ${cover ? 'h-full min-h-0' : 'h-auto'} ${className}`}
 		>
 			{placeholder ? (
 				<img
 					src={placeholder}
 					alt=""
 					aria-hidden="true"
-					className={`absolute inset-0 ${fitClass}`}
+					className="absolute inset-0 h-full w-full object-cover"
 				/>
 			) : null}
 			{!loaded && !broken && !placeholder && (
@@ -1042,7 +1115,7 @@ function ImageMessage({
 						setBroken(!placeholder);
 						setLoaded(false);
 					}}
-					className={`relative z-[1] transition-opacity duration-300 ${fitClass} ${loaded ? 'opacity-100' : 'opacity-0'}`}
+					className={`${fitClass} transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
 				/>
 			)}
 			{loading && !loaded && (
@@ -1051,11 +1124,9 @@ function ImageMessage({
 				</span>
 			)}
 			{!broken && (
-				<div className="absolute inset-0 z-[2] flex items-center justify-center bg-black/0 opacity-0 transition-all duration-200 group-hover:bg-black/25 group-hover:opacity-100">
-					<span className="rounded-full bg-black/50 p-2 text-white">
-						<Maximize2 size={16} />
-					</span>
-				</div>
+				<span className="wa-photo-open-hint" aria-hidden="true">
+					<Maximize2 size={22} strokeWidth={2.4} />
+				</span>
 			)}
 		</button>
 	);
@@ -1269,7 +1340,7 @@ function useNearViewport(elementRef, { rootMargin = '600px' } = {}) {
 	return isNear;
 }
 
-function computeAnchoredMenuPosition(anchorRect, menuSize = { width: 280, height: 420 }) {
+function computeAnchoredMenuPosition(anchorRect, menuSize = { width: 220, height: 420 }) {
 	const gap = 8;
 	const margin = 12;
 	const viewportW =
@@ -1300,6 +1371,46 @@ function computeAnchoredMenuPosition(anchorRect, menuSize = { width: 280, height
 		maxHeight: height,
 		placement: openUp ? 'top' : 'bottom',
 	};
+}
+
+const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+const MORE_REACTIONS = [
+	'🔥', '👏', '🥰', '😍', '💯', '🎉', '😭', '💪',
+	'🫡', '👀', '✨', '🤝', '🌹', '💔', '😅', '🤩',
+];
+
+function computeReactionPickerPosition(anchorRect, options = {}) {
+	const gap = 4;
+	const margin = 10;
+	const width = options.width || 156;
+	const height = options.height || 24;
+	const mine = Boolean(options.mine);
+	const viewportW =
+		typeof window === 'undefined' ? 1280 : window.innerWidth || 1280;
+	const viewportH =
+		typeof window === 'undefined' ? 720 : window.innerHeight || 720;
+	const rect = anchorRect || {
+		top: margin,
+		bottom: margin + 32,
+		left: viewportW - width - margin,
+		right: viewportW - margin,
+		width: 32,
+		height: 32,
+	};
+	const clampedWidth = Math.min(width, viewportW - margin * 2);
+	const clampedHeight = Math.min(height, viewportH - margin * 2);
+	const spaceBelow = viewportH - rect.bottom - margin;
+	const spaceAbove = rect.top - margin;
+	const openUp = spaceBelow < clampedHeight && spaceAbove > spaceBelow;
+	let top = openUp ? rect.top - gap - clampedHeight : rect.bottom + gap;
+	top = Math.max(margin, Math.min(top, viewportH - clampedHeight - margin));
+	let left = mine ? rect.right - clampedWidth : rect.left;
+	left = Math.max(margin, Math.min(left, viewportW - clampedWidth - margin));
+	return { top, left, width: clampedWidth, placement: openUp ? 'top' : 'bottom' };
+}
+
+function ownReactionEmoji(message) {
+	return (message?.reactions || []).find(reaction => reaction.actorKey === 'me')?.emoji || '';
 }
 
 async function mapPool(items, concurrency, worker) {
@@ -1581,7 +1692,7 @@ async function prepareVoicePlayback(sourceUrl, mimeType) {
 
 function VoicePlayIcon() {
 	return (
-		<svg className="wa-voice-play-icon" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+		<svg className="wa-voice-play-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
 			<path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86a1 1 0 0 0-1.5.86Z" />
 		</svg>
 	);
@@ -1589,7 +1700,7 @@ function VoicePlayIcon() {
 
 function VoicePauseIcon() {
 	return (
-		<svg className="wa-voice-play-icon" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+		<svg className="wa-voice-play-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
 			<path fill="currentColor" d="M7 5h3a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm7 0h3a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
 		</svg>
 	);
@@ -1615,7 +1726,7 @@ function VoicePlaybackButton({ playing, loading, onClick }) {
 			type="button"
 			onClick={onClick}
 			aria-label={label}
-			className="wa-voice-play grid shrink-0 place-items-center"
+			className={`wa-voice-play grid shrink-0 place-items-center ${playing ? 'is-playing' : ''} ${loading ? 'is-loading' : ''}`}
 		>
 			{loading ? <VoiceLoadingIcon /> : playing ? <VoicePauseIcon /> : <VoicePlayIcon />}
 		</button>
@@ -1637,7 +1748,7 @@ function VoiceWaveform({ peaks, progress, mine, loading, onSeek }) {
 					<span
 						key={index}
 						className={`wa-voice-bar ${played ? (mine ? 'is-played-outgoing' : 'is-played-incoming') : 'is-unplayed'}`}
-						style={{ height: `${Math.round(6 + height * 18)}px` }}
+						style={{ height: `${Math.round(8 + height * 20)}px` }}
 					/>
 				);
 			})}
@@ -1683,33 +1794,6 @@ function VoiceReplyPreview({ reply }) {
 			<span>
 				<Mic size={13} /> {formatClock(reply.duration)}
 			</span>
-		</div>
-	);
-}
-
-function VoiceTranscribePanel({
-	label,
-	disabled,
-	expanded,
-	transcript,
-	onToggle,
-}) {
-	return (
-		<div className="wa-voice-transcribe">
-			<button
-				type="button"
-				onClick={onToggle}
-				disabled={disabled}
-				aria-expanded={expanded}
-				className="wa-voice-transcribe-toggle disabled:opacity-60"
-			>
-				<AudioLines size={13} strokeWidth={2.25} />
-				<span>{label}</span>
-				{expanded ? <ChevronUp size={13} strokeWidth={2.4} /> : <ChevronDown size={13} strokeWidth={2.4} />}
-			</button>
-			{expanded && transcript ? (
-				<p className="wa-voice-transcript-body whitespace-pre-wrap">{transcript}</p>
-			) : null}
 		</div>
 	);
 }
@@ -1791,7 +1875,6 @@ function VoiceMessage({
 	fallbackDuration = 0,
 	avatarLabel,
 	avatarSrc,
-	transcribeLabel,
 }) {
 	const audioRef = useRef(null);
 	const containerRef = useRef(null);
@@ -1806,9 +1889,6 @@ function VoiceMessage({
 	const [playbackRate, setPlaybackRate] = useState(1);
 	const fallbackBars = useMemo(() => seededWaveform(seed, 40), [seed]);
 	const [bars, setBars] = useState(fallbackBars);
-	const [transcriptionOpen, setTranscriptionOpen] = useState(false);
-	const [transcriptExpanded, setTranscriptExpanded] = useState(false);
-	const [transcript, setTranscript] = useState('');
 	const [duration, setDuration] = useState(
 		Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : 0,
 	);
@@ -1863,7 +1943,9 @@ function VoiceMessage({
 					}
 					assertAudioBlob(blob);
 				} else if (url) {
-					const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+					const response = url.startsWith('blob:')
+						? await fetch(url)
+						: await fetch(url, { mode: 'cors', credentials: 'omit' });
 					if (!response.ok) throw new Error(`Media fetch failed (${response.status})`);
 					blob = assertAudioBlob(await response.blob());
 				} else {
@@ -1996,22 +2078,6 @@ function VoiceMessage({
 		setCurrentTime(audio.currentTime);
 	};
 
-	const loadTranscriptionFile = useCallback(async () => {
-		let blob = voiceBlobRef.current;
-		if (!blob) {
-			await ensurePlaybackReady({ priority: true });
-			blob = voiceBlobRef.current;
-		}
-		if (!blob && url) {
-			const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
-			if (!response.ok) throw new Error(`Media fetch failed (${response.status})`);
-			blob = assertAudioBlob(await response.blob());
-			voiceBlobRef.current = blob;
-		}
-		if (!blob) throw new Error('Voice message is unavailable');
-		return createTranscriptionFile(blob, fileName, attachmentId, mimeType);
-	}, [attachmentId, ensurePlaybackReady, fileName, mimeType, url]);
-
 	const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
 
 	return (
@@ -2022,48 +2088,31 @@ function VoiceMessage({
 			<audio ref={audioRef} preload="metadata" src={playbackUrl || undefined} className="hidden" />
 			<Layout>
 				<VoiceAvatar label={avatarLabel} src={avatarSrc} mine={mine} />
-				<VoicePlaybackButton
-					playing={playing}
-					loading={loadingPlayback}
-					onClick={() => void toggle()}
-				/>
-				<VoiceWaveform
-					peaks={bars}
-					progress={progress}
-					mine={mine}
-					loading={loadingPlayback}
-					onSeek={seekTo}
-				/>
-				<span className="wa-voice-duration">
-					{loadFailed && !playbackUrl
-						? 'Failed'
-						: formatClock(currentTime > 0 ? currentTime : duration)}
-				</span>
-				{playing ? <VoicePlaybackRate value={playbackRate} onChange={cyclePlaybackRate} /> : null}
+				<div className="wa-voice-track">
+					<div className="wa-voice-track-row">
+						<VoicePlaybackButton
+							playing={playing}
+							loading={loadingPlayback}
+							onClick={() => void toggle()}
+						/>
+						<VoiceWaveform
+							peaks={bars}
+							progress={progress}
+							mine={mine}
+							loading={loadingPlayback}
+							onSeek={seekTo}
+						/>
+					</div>
+					<div className="wa-voice-track-meta">
+						<span className="wa-voice-duration">
+							{loadFailed && !playbackUrl
+								? 'Failed'
+								: formatClock(currentTime > 0 ? currentTime : duration)}
+						</span>
+						{playing ? <VoicePlaybackRate value={playbackRate} onChange={cyclePlaybackRate} /> : null}
+					</div>
+				</div>
 			</Layout>
-			<VoiceTranscribePanel
-				label={transcribeLabel}
-				disabled={!playbackUrl && !canFetchAttachment && !url}
-				expanded={transcriptExpanded}
-				transcript={transcript}
-				onToggle={() => {
-					if (!transcript) {
-						setTranscriptExpanded(true);
-						setTranscriptionOpen(true);
-						return;
-					}
-					setTranscriptExpanded(current => !current);
-				}}
-			/>
-			<TranscriptionDialog
-				open={transcriptionOpen}
-				onOpenChange={setTranscriptionOpen}
-				loadFile={loadTranscriptionFile}
-				onCompleted={text => {
-					setTranscript(String(text || '').trim());
-					setTranscriptExpanded(true);
-				}}
-			/>
 		</div>
 	);
 }
@@ -2255,7 +2304,6 @@ export function MediaAttachment({
 				fallbackDuration={durationFromFileName(attachment.fileName)}
 				avatarLabel={voiceAvatarLabel}
 				avatarSrc={voiceAvatarSrc}
-				transcribeLabel={labels.transcribe}
 			/>
 		);
 	}
@@ -2348,7 +2396,7 @@ export function MediaAttachment({
 				className={
 					isGallery
 						? `absolute inset-0 overflow-hidden ${className}`
-						: `relative max-w-[240px] overflow-hidden ${className}`
+						: `relative max-w-[360px] overflow-hidden ${className}`
 				}
 			>
 				<ImageMessage
@@ -2481,11 +2529,8 @@ function MessageAttachments({
 
 	const tileClass = index => {
 		if (visibleImages.length === 1) return 'wa-photo-tile-single';
-		if (visibleImages.length === 2) return 'aspect-square min-h-28 sm:min-h-32';
-		if (visibleImages.length === 3 && index === 0) {
-			return 'row-span-2 min-h-48 sm:min-h-56';
-		}
-		return 'aspect-square min-h-24 sm:min-h-28';
+		if (visibleImages.length === 3 && index === 0) return 'row-span-2';
+		return '';
 	};
 	const gridClass =
 		visibleImages.length === 1
@@ -2493,13 +2538,19 @@ function MessageAttachments({
 			: visibleImages.length === 3
 				? 'grid-cols-2 grid-rows-2'
 				: 'grid-cols-2';
+	const galleryCountClass =
+		visibleImages.length === 2
+			? 'wa-media-gallery-2'
+			: visibleImages.length > 2
+				? 'wa-media-gallery-quad'
+				: '';
 
 	return (
 		<>
 			{images.length > 0 && (
-				<div className={`wa-media-gallery ${mine ? 'wa-media-gallery-mine' : 'wa-media-gallery-other'} ${visibleImages.length === 1 ? 'wa-media-gallery-single' : ''} grid overflow-hidden rounded-[9px] ${gridClass} gap-px`}>
+				<div className={`wa-media-gallery ${mine ? 'wa-media-gallery-mine' : 'wa-media-gallery-other'} ${visibleImages.length === 1 ? 'wa-media-gallery-single' : ''} ${galleryCountClass} grid overflow-hidden rounded-[10px] ${gridClass} gap-[2px]`}>
 					{visibleImages.map((attachment, index) => (
-						<div key={attachment.id} className={`relative overflow-hidden ${tileClass(index)}`}>
+						<div key={attachment.id} className={`wa-photo-tile relative min-h-0 min-w-0 overflow-hidden ${tileClass(index)}`}>
 							<MediaAttachment
 								attachment={attachment}
 								mine={mine}
@@ -2511,7 +2562,7 @@ function MessageAttachments({
 								className={visibleImages.length === 1 ? '' : 'rounded-none'}
 							/>
 							{index === 3 && images.length > 4 && (
-								<div className="pointer-events-none absolute inset-0 z-[2] grid place-items-center bg-black/55 text-2xl font-semibold text-white">
+								<div className="pointer-events-none absolute inset-0 z-[5] grid place-items-center bg-black/55 text-[2rem] font-semibold tracking-wide text-white">
 									+{images.length - 4}
 								</div>
 							)}
@@ -2552,8 +2603,11 @@ function MessageHoverActions({
 	mine,
 	locale,
 	open,
+	emojiOpen,
+	showTranscribe = false,
 	onEmoji,
 	onReply,
+	onTranscribe,
 	onMore,
 }) {
 	const ar = locale === 'ar';
@@ -2561,11 +2615,14 @@ function MessageHoverActions({
 		<div className={`wa-message-hover-actions ${mine ? 'is-outgoing' : 'is-incoming'} ${open ? 'is-open' : ''}`}>
 			<button
 				type="button"
+				data-message-reaction-trigger
+				onPointerDown={event => event.stopPropagation()}
 				onClick={onEmoji}
 				aria-label={ar ? 'تفاعل الرموز' : 'React'}
+				aria-expanded={Boolean(emojiOpen)}
 				className="wa-message-hover-btn"
 			>
-				<Smile size={15} strokeWidth={2.1} />
+				<Smile size={13} strokeWidth={2.2} />
 			</button>
 			<button
 				type="button"
@@ -2573,19 +2630,155 @@ function MessageHoverActions({
 				aria-label={ar ? 'رد' : 'Reply'}
 				className="wa-message-hover-btn"
 			>
-				<Reply size={15} strokeWidth={2.1} />
+				<Reply size={13} strokeWidth={2.2} />
 			</button>
+			{showTranscribe ? (
+				<button
+					type="button"
+					onClick={onTranscribe}
+					aria-label={ar ? 'تحويل إلى نص' : 'Transcribe'}
+					className="wa-message-hover-btn is-transcribe"
+				>
+					<AudioLines size={13} strokeWidth={2.2} />
+				</button>
+			) : null}
 			<button
 				type="button"
 				data-message-actions-trigger
 				onClick={onMore}
 				aria-label={ar ? 'إجراءات الرسالة' : 'Message actions'}
-				aria-expanded={open}
+				aria-expanded={open && !emojiOpen}
 				className="wa-message-hover-btn"
 			>
-				<MoreHorizontal size={15} strokeWidth={2.1} />
+				<MoreHorizontal size={13} strokeWidth={2.2} />
 			</button>
 		</div>
+	);
+}
+
+function MessageReactionPicker({
+	open,
+	locale,
+	mine,
+	busy,
+	anchorRect,
+	activeEmoji,
+	onReact,
+	onClose,
+}) {
+	const [mounted, setMounted] = useState(false);
+	const [expanded, setExpanded] = useState(false);
+	const [pos, setPos] = useState(() => computeReactionPickerPosition(anchorRect, { mine }));
+	const pickerRef = useRef(null);
+
+	useEffect(() => setMounted(true), []);
+	useEffect(() => {
+		if (!open) setExpanded(false);
+	}, [open]);
+
+	useLayoutEffect(() => {
+		if (!open) return undefined;
+		const update = () => {
+			const measured = pickerRef.current?.getBoundingClientRect();
+			setPos(
+				computeReactionPickerPosition(anchorRect, {
+					mine,
+					width: measured?.width || (expanded ? 176 : 156),
+					height: measured?.height || (expanded ? 136 : 24),
+				}),
+			);
+		};
+		update();
+		const raf = window.requestAnimationFrame(update);
+		window.addEventListener('resize', update);
+		window.addEventListener('scroll', update, true);
+		return () => {
+			window.cancelAnimationFrame(raf);
+			window.removeEventListener('resize', update);
+			window.removeEventListener('scroll', update, true);
+		};
+	}, [open, anchorRect, mine, expanded]);
+
+	useEffect(() => {
+		if (!open) return undefined;
+		const onKey = event => {
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				onClose();
+			}
+		};
+		document.addEventListener('keydown', onKey);
+		return () => document.removeEventListener('keydown', onKey);
+	}, [open, onClose]);
+
+	if (!open) return null;
+	if (!mounted || typeof document === 'undefined') return null;
+	const ar = locale === 'ar';
+
+	return createPortal(
+		<>
+			<button
+				type="button"
+				tabIndex={-1}
+				aria-label={ar ? 'إغلاق التفاعل' : 'Close reactions'}
+				onPointerDown={event => {
+					event.preventDefault();
+					event.stopPropagation();
+					onClose();
+				}}
+				className="wa-reaction-picker-backdrop"
+			/>
+			<div
+			ref={pickerRef}
+			data-message-reaction-picker
+			role="dialog"
+			aria-label={ar ? 'تفاعل مع الرسالة' : 'React to message'}
+			className={`wa-reaction-picker ${expanded ? 'is-expanded' : ''} ${mine ? 'is-outgoing' : 'is-incoming'}`}
+			style={{ top: pos.top, left: pos.left }}
+			onPointerDown={event => event.stopPropagation()}
+		>
+			<div className="wa-reaction-picker-row">
+				{QUICK_REACTIONS.map(emoji => (
+					<button
+						key={emoji}
+						type="button"
+						disabled={busy}
+						aria-pressed={activeEmoji === emoji}
+						onClick={() => onReact(emoji)}
+						className={`wa-reaction-picker-btn ${activeEmoji === emoji ? 'is-active' : ''}`}
+					>
+						<span className="wa-reaction-picker-emoji">{emoji}</span>
+					</button>
+				))}
+				<button
+					type="button"
+					aria-label={ar ? 'المزيد من التفاعلات' : 'More reactions'}
+					aria-expanded={expanded}
+					onClick={() => setExpanded(current => !current)}
+					className={`wa-reaction-picker-more ${expanded ? 'is-open' : ''}`}
+				>
+					{expanded ? <X size={10} strokeWidth={2.6} /> : <Plus size={11} strokeWidth={2.6} />}
+				</button>
+			</div>
+			{expanded && (
+				<div className="wa-reaction-picker-grid">
+					{MORE_REACTIONS.map(emoji => (
+						<button
+							key={emoji}
+							type="button"
+							disabled={busy}
+							aria-pressed={activeEmoji === emoji}
+							onClick={() => onReact(emoji)}
+							className={`wa-reaction-picker-btn ${activeEmoji === emoji ? 'is-active' : ''}`}
+						>
+							<span className="wa-reaction-picker-emoji">{emoji}</span>
+						</button>
+					))}
+				</div>
+			)}
+		</div>
+		</>,
+		document.body,
 	);
 }
 
@@ -2615,7 +2808,7 @@ function MessageActionMenu({
 			const measured = menuRef.current?.getBoundingClientRect();
 			setDesktopPos(
 				computeAnchoredMenuPosition(anchorRect, {
-					width: measured?.width || 280,
+					width: measured?.width || 220,
 					height: measured?.height || 420,
 				}),
 			);
@@ -2655,32 +2848,39 @@ function MessageActionMenu({
 		<>
 			{actions.map(action => {
 				const Icon = action.icon;
+				const filled = action.id === 'star'
+					? Boolean(message.isStarred)
+					: action.id === 'pin'
+						? Boolean(message.isPinned)
+						: false;
 				return (
 					<button
 						key={action.id}
 						type="button"
 						disabled={busy}
 						onClick={() => onAction(action.id)}
-						className={`flex min-h-11 w-full items-center justify-between gap-8 border-b border-black/8 px-4 py-2.5 text-start text-[15px] font-semibold last:border-0 hover:bg-black/[0.04] disabled:opacity-50 ${
-							action.destructive ? 'text-[#d70040]' : 'text-[#111b21]'
-						}`}
+						className={`wa-message-action-item ${action.destructive ? 'is-destructive' : ''}`}
 					>
 						<span>{action.label}</span>
-						<Icon size={20} strokeWidth={2} />
+						<Icon
+							size={16}
+							strokeWidth={2.1}
+							fill={filled ? 'currentColor' : 'none'}
+						/>
 					</button>
 				);
 			})}
 		</>
 	);
 	const reactions = (
-		<div className="flex items-center justify-center gap-1.5 px-2.5 py-2">
-			{['👍', '❤️', '😂', '😮', '😢', '🙏'].map(emoji => (
+		<div className="wa-message-action-reactions">
+			{QUICK_REACTIONS.map(emoji => (
 				<button
 					key={emoji}
 					type="button"
 					disabled={busy}
 					onClick={() => onReact(emoji)}
-					className="grid h-9 w-9 place-items-center rounded-full text-xl hover:bg-black/5 disabled:opacity-50"
+					className="wa-message-action-react"
 				>
 					{emoji}
 				</button>
@@ -2688,10 +2888,10 @@ function MessageActionMenu({
 			<button
 				type="button"
 				onClick={() => onAction('react')}
-				className="grid h-9 w-9 place-items-center rounded-full bg-[#eef0f2] text-[#54656f]"
+				className="wa-message-action-react-more"
 				aria-label={ar ? 'المزيد من التفاعلات' : 'More reactions'}
 			>
-				<Plus size={22} />
+				<Plus size={16} strokeWidth={2.3} />
 			</button>
 		</div>
 	);
@@ -2718,16 +2918,15 @@ function MessageActionMenu({
 			<div
 				ref={menuRef}
 				data-message-action-menu
-				className="fixed z-[130] hidden w-[280px] overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_12px_40px_rgba(11,20,26,0.18)] min-[769px]:block"
+				className="wa-message-action-menu hidden min-[769px]:block"
 				style={{
 					top: desktopPos.top,
 					left: desktopPos.left,
 					width: desktopPos.width,
-					maxHeight: desktopPos.maxHeight,
 				}}
 			>
 				{reactions}
-				<div className="max-h-[min(360px,calc(100vh-120px))] overflow-y-auto border-t border-black/10 nice-scroll">
+				<div className="wa-message-action-list">
 					{menuItems}
 				</div>
 			</div>
@@ -2763,8 +2962,12 @@ function MessageActionMenu({
 							</p>
 						</div>
 					</div>
-					<div className="mx-auto mb-3 w-fit rounded-full bg-white shadow-xl">{reactions}</div>
-					<div className="overflow-hidden rounded-2xl bg-white shadow-2xl">{menuItems}</div>
+					<div className="mx-auto mb-2.5 w-fit overflow-hidden rounded-full bg-white shadow-xl">
+						{reactions}
+					</div>
+					<div className="wa-message-action-sheet overflow-hidden">
+						{menuItems}
+					</div>
 				</div>
 			</div>
 		</>,
@@ -3032,7 +3235,7 @@ function MobileAttachmentSheet({
 				setPlacement({ mode: 'sheet' });
 				return;
 			}
-			const width = Math.min(340, window.innerWidth - 24);
+			const width = Math.min(248, window.innerWidth - 24);
 			let left = rect.left;
 			if (left + width > window.innerWidth - 12) {
 				left = window.innerWidth - width - 12;
@@ -3040,7 +3243,7 @@ function MobileAttachmentSheet({
 			left = Math.max(12, left);
 			setPlacement({
 				mode: 'popover',
-				bottom: Math.max(12, window.innerHeight - rect.top + 10),
+				bottom: Math.max(12, window.innerHeight - rect.top + 8),
 				left,
 				width,
 			});
@@ -3069,15 +3272,15 @@ function MobileAttachmentSheet({
 	];
 	return createPortal(
 		<div className="wa-composer-overlay fixed inset-0 z-500" role="presentation">
-			<button type="button" aria-label={ar ? 'إغلاق الإجراءات' : 'Close attachment actions'} onClick={onClose} className="absolute inset-0 bg-black/20" />
+			<button type="button" aria-label={ar ? 'إغلاق الإجراءات' : 'Close attachment actions'} onClick={onClose} className={`absolute inset-0 ${isDesktop ? 'bg-transparent' : 'bg-black/20'}`} />
 			<section
 				role="dialog"
 				aria-modal="true"
 				aria-label={ar ? 'المزيد من الخيارات' : 'More options'}
 				className={
 					isDesktop
-						? 'wa-attachment-popover bg-white px-3 py-3'
-						: 'wa-attachment-sheet absolute inset-x-0 bottom-0 mx-auto max-w-[430px] rounded-t-[22px] bg-white px-4 pb-[max(24px,env(safe-area-inset-bottom))] pt-3 shadow-2xl'
+						? 'wa-attachment-popover bg-white px-1.5 py-1.5'
+						: 'wa-attachment-sheet absolute inset-x-0 bottom-0 mx-auto max-w-[430px] rounded-t-[20px] bg-white px-3 pb-[max(18px,env(safe-area-inset-bottom))] pt-2.5 shadow-2xl'
 				}
 				style={
 					isDesktop
@@ -3089,25 +3292,26 @@ function MobileAttachmentSheet({
 						: undefined
 				}
 			>
-				{!isDesktop && <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-slate-300" />}
+				{!isDesktop && <div className="mx-auto mb-2.5 h-1 w-8 rounded-full bg-slate-300" />}
 
 				{aiEnabled && (
-					<div className="mb-3 space-y-2 rounded-2xl border border-violet-100 bg-violet-50/70 px-3 py-3">
-						<div className="flex items-center gap-3">
-							<span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-violet-600 text-white">
-								<Sparkles size={15} />
+					<div className="mb-1 rounded-xl border border-violet-100 bg-violet-50/80 px-2 py-1.5">
+						<div className="flex items-center gap-2">
+							<span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-violet-600 text-white">
+								<Sparkles size={12} />
 							</span>
 							<div className="min-w-0 flex-1">
-								<p className="text-sm font-black text-violet-900">
-									{ar ? 'اقتراحات الذكاء الاصطناعي' : 'AI suggestions'}
+								<p className="text-[12px] font-bold leading-4 text-violet-900">
+									{ar ? 'اقتراحات الذكاء' : 'AI suggestions'}
 								</p>
-								<p className="text-[11px] text-violet-700/80">
-									{ar
-										? 'فعّل الردود المقترحة أثناء المحادثة'
-										: 'Suggest replies while you chat'}
-								</p>
+								{!isDesktop ? (
+									<p className="text-[10px] leading-3 text-violet-700/80">
+										{ar ? 'ردود مقترحة أثناء الشات' : 'Suggest replies while you chat'}
+									</p>
+								) : null}
 							</div>
 							<Toggle
+								size="sm"
 								checked={Boolean(settingsEnabled)}
 								label={ar ? 'تفعيل الذكاء الاصطناعي' : 'Enable AI suggestions'}
 								onChange={next => {
@@ -3121,18 +3325,17 @@ function MobileAttachmentSheet({
 							/>
 						</div>
 						{settingsEnabled ? (
-							<div className="flex flex-wrap items-center gap-2 border-t border-violet-100 pt-2">
-								<div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-									<span className="text-[11px] font-bold text-violet-800">
-										{ar ? 'إظهار الشريط' : 'Show suggestion bar'}
-									</span>
-									<Toggle
-										checked={Boolean(aiVisible)}
-										label={ar ? 'إظهار اقتراحات الذكاء الاصطناعي' : 'Show AI suggestion bar'}
-										onChange={() => onToggleAiVisible?.()}
-									/>
-								</div>
-								{prompts.length > 0 && (
+							<div className="mt-1.5 flex items-center gap-1.5 border-t border-violet-100 pt-1.5">
+								<Toggle
+									size="sm"
+									checked={Boolean(aiVisible)}
+									label={ar ? 'إظهار الشريط' : 'Show suggestion bar'}
+									onChange={() => onToggleAiVisible?.()}
+								/>
+								<span className="min-w-0 flex-1 truncate text-[10px] font-semibold text-violet-800">
+									{ar ? 'إظهار الشريط' : 'Show bar'}
+								</span>
+								{prompts.length > 0 && !isDesktop ? (
 									<PromptInstructionsDropdown
 										prompts={prompts}
 										value={activePromptId || prompts[0]?.id || ''}
@@ -3141,15 +3344,15 @@ function MobileAttachmentSheet({
 										disabled={promptSaving}
 										emptyLabel={ar ? 'لا توجد تعليمات' : 'No instructions'}
 									/>
-								)}
+								) : null}
 								<button
 									type="button"
 									onClick={onRegenerateSuggestions}
 									disabled={suggestionsLoading || !aiVisible}
 									aria-label={ar ? 'تحديث الاقتراحات' : 'Regenerate suggestions'}
-									className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-violet-200 bg-white text-violet-700 disabled:opacity-40"
+									className="grid h-6 w-6 shrink-0 place-items-center rounded-md border border-violet-200 bg-white text-violet-700 disabled:opacity-40"
 								>
-									<RefreshCw size={14} className={suggestionsLoading ? 'animate-spin' : ''} />
+									<RefreshCw size={11} className={suggestionsLoading ? 'animate-spin' : ''} />
 								</button>
 							</div>
 						) : null}
@@ -3162,75 +3365,28 @@ function MobileAttachmentSheet({
 							key={id}
 							type="button"
 							onClick={() => onAction(id)}
-							className="flex min-h-12 w-full items-center gap-3 border-b border-black/5 px-1 py-2.5 text-start last:border-0 hover:bg-black/[0.03] active:bg-black/[0.03]"
+							className={`flex w-full items-center text-start last:border-0 hover:bg-black/[0.04] active:bg-black/[0.05] ${
+								isDesktop
+									? 'min-h-9 gap-2 rounded-lg px-1.5 py-1'
+									: 'min-h-11 gap-2.5 border-b border-black/5 px-0.5 py-2'
+							}`}
 						>
 							<span
-								className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-white"
+								className={`grid shrink-0 place-items-center rounded-full text-white ${
+									isDesktop ? 'h-7 w-7' : 'h-9 w-9'
+								}`}
 								style={{ background: color }}
 							>
-								<Icon size={19} strokeWidth={2.2} />
+								<Icon size={isDesktop ? 13 : 17} strokeWidth={2.2} />
 							</span>
-							<span className="text-[15px] font-semibold text-[#111b21]">{label}</span>
+							<span className={`font-semibold text-[#111b21] ${isDesktop ? 'text-[12px]' : 'text-[14px]'}`}>
+								{label}
+							</span>
 						</button>
 					))}
 				</div>
 			</section>
 		</div>,
-		document.body,
-	);
-}
-
-function MobileStickerPanel({ open, onClose, onInsert }) {
-	const [tab, setTab] = useState('emoji');
-	if (!open) return null;
-	const tabs = [['emoji', Smile, 'Emoji'], ['gif', ImageIcon, 'GIF'], ['sticker', Sticker, 'Stickers']];
-	const emojis = ['😀', '😂', '🥰', '😍', '😊', '😭', '😎', '🤔', '👍', '👏', '🙏', '❤️', '🔥', '🎉', '💪', '✅', '👀', '✨', '😅', '🙌', '🤝', '💯', '🫡', '🌹'];
-	return createPortal(
-		<section
-			role="dialog"
-			aria-label="Emoji, GIF and stickers"
-			className="wa-sticker-panel fixed inset-x-0 bottom-[88px] z-400 mx-auto flex h-[48dvh] max-w-[430px] flex-col border border-slate-200 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.12)] min-[769px]:bottom-24 min-[769px]:end-8 min-[769px]:inset-x-auto min-[769px]:h-[360px] min-[769px]:w-[360px] min-[769px]:max-w-none min-[769px]:rounded-2xl"
-		>
-			<div className="flex h-12 shrink-0 items-center border-b border-slate-100 px-2">
-				{tabs.map(([id, Icon, label]) => (
-					<button
-						key={id}
-						type="button"
-						aria-label={label}
-						aria-pressed={tab === id}
-						onClick={() => setTab(id)}
-						className={`grid h-11 flex-1 place-items-center border-b-2 ${tab === id ? 'border-[#16B96B] text-[#16B96B]' : 'border-transparent text-[#667781]'}`}
-					>
-						<Icon size={22} />
-					</button>
-				))}
-				<button type="button" aria-label="Close sticker panel" onClick={onClose} className="grid h-11 w-11 place-items-center text-[#667781]">
-					<X size={21} />
-				</button>
-			</div>
-			{tab === 'emoji' ? (
-				<div className="grid flex-1 grid-cols-6 content-start gap-2 overflow-y-auto p-3 sm:grid-cols-7">
-					{emojis.map(emoji => (
-						<button
-							key={emoji}
-							type="button"
-							onClick={() => onInsert(emoji)}
-							className="grid aspect-square place-items-center rounded-xl text-2xl transition-transform hover:bg-slate-50 active:scale-90"
-						>
-							{emoji}
-						</button>
-					))}
-				</div>
-			) : (
-				<div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center text-[#667781]">
-					<Sticker size={30} />
-					<p className="text-sm font-semibold">
-						{tab === 'gif' ? 'GIFs coming soon' : 'Stickers coming soon'}
-					</p>
-					<p className="text-xs">Use the Emoji tab to insert reactions into your message.</p>
-				</div>
-			)}
-		</section>,
 		document.body,
 	);
 }
@@ -3284,13 +3440,6 @@ function MobileCallsView({ logs, labels, locale, loading }) {
 			)}
 		</section>
 	);
-}
-
-function formatRecordingDuration(seconds) {
-	const value = Math.max(0, Number(seconds) || 0);
-	const minutes = Math.floor(value / 60);
-	const remainingSeconds = value % 60;
-	return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
 function titleCaseKey(key = '') {
@@ -3456,27 +3605,59 @@ function WhatsAppFormattedText({ text }) {
 function MessageLinkPreview({ text, labels }) {
 	const link = firstMessageLink(text);
 	if (!link) return null;
+	const copyLink = async event => {
+		event.preventDefault();
+		event.stopPropagation();
+		try {
+			await navigator.clipboard.writeText(link.href);
+			toast.success(labels.linkCopied || 'Link copied');
+		} catch {
+			toast.error(labels.copyLinkFailed || 'Could not copy link');
+		}
+	};
 	return (
-		<a
-			href={link.href}
-			target="_blank"
-			rel="noreferrer"
-			onClick={event => event.stopPropagation()}
-			className="mb-2 flex min-w-0 items-center gap-3 rounded-xl border border-black/5 bg-black/[0.045] p-3 no-underline transition-colors hover:bg-black/[0.075] dark:border-white/10 dark:bg-white/[0.07] dark:hover:bg-white/10"
-		>
-			<span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#027EB5] shadow-sm dark:bg-slate-700 dark:text-[#53BDEB]">
-				<Globe2 size={20} />
-			</span>
-			<span className="min-w-0 flex-1">
-				<span className="block truncate text-sm font-bold">{link.hostname}</span>
-				<span dir="ltr" className="block truncate text-[11px] opacity-60">
-					{link.displayUrl}
+		<div className="mb-1 flex min-w-0 items-center gap-2 rounded-xl border border-black/5 bg-black/[0.045] p-2.5 dark:border-white/10 dark:bg-white/[0.07]">
+			<a
+				href={link.href}
+				target="_blank"
+				rel="noreferrer"
+				onClick={event => event.stopPropagation()}
+				className="flex min-w-0 flex-1 items-center gap-3 no-underline transition-colors"
+			>
+				<span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#027EB5] shadow-sm dark:bg-slate-700 dark:text-[#53BDEB]">
+					<Globe2 size={20} />
 				</span>
-			</span>
-			<span className="shrink-0 text-[#027EB5] dark:text-[#53BDEB]" title={labels.openLink}>
-				<ExternalLink size={17} />
-			</span>
-		</a>
+				<span className="min-w-0 flex-1">
+					<span className="block truncate text-sm font-bold">{link.hostname}</span>
+					<span dir="ltr" className="block truncate text-[11px] opacity-60">
+						{link.displayUrl}
+					</span>
+				</span>
+			</a>
+			<div className="flex shrink-0 items-center gap-0.5">
+				<button
+					type="button"
+					onPointerDown={event => event.stopPropagation()}
+					onClick={copyLink}
+					title={labels.copyLink}
+					aria-label={labels.copyLink}
+					className="grid h-8 w-8 place-items-center rounded-full text-[#027EB5] transition-colors hover:bg-black/8 dark:text-[#53BDEB]"
+				>
+					<Copy size={15} strokeWidth={2.2} />
+				</button>
+				<a
+					href={link.href}
+					target="_blank"
+					rel="noreferrer"
+					onClick={event => event.stopPropagation()}
+					title={labels.openLink}
+					aria-label={labels.openLink}
+					className="grid h-8 w-8 place-items-center rounded-full text-[#027EB5] no-underline transition-colors hover:bg-black/8 dark:text-[#53BDEB]"
+				>
+					<ExternalLink size={16} />
+				</a>
+			</div>
+		</div>
 	);
 }
 
@@ -3612,7 +3793,8 @@ function TabLoading({ label = 'Loading…' }) {
 	);
 }
 
-function Toggle({ checked, onChange, label }) {
+function Toggle({ checked, onChange, label, size = 'md' }) {
+	const compact = size === 'sm';
 	return (
 		<button
 			type="button"
@@ -3620,12 +3802,16 @@ function Toggle({ checked, onChange, label }) {
 			aria-checked={checked}
 			aria-label={label}
 			onClick={() => onChange(!checked)}
-			className={`relative h-6 w-11 shrink-0 overflow-hidden rounded-full transition-colors ${checked ? 'bg-[var(--color-primary-500)]' : 'bg-slate-200 dark:bg-slate-700'
-				}`}
+			className={`relative shrink-0 overflow-hidden rounded-full transition-colors ${
+				compact ? 'h-5 w-9' : 'h-6 w-11'
+			} ${checked ? 'bg-[var(--color-primary-500)]' : 'bg-slate-200 dark:bg-slate-700'}`}
 		>
 			<span
-				className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-all duration-200 ${checked ? 'start-[22px]' : 'start-0.5'
-					}`}
+				className={`absolute rounded-full bg-white shadow-md transition-all duration-200 ${
+					compact
+						? `top-0.5 h-4 w-4 ${checked ? 'start-[18px]' : 'start-0.5'}`
+						: `top-0.5 h-5 w-5 ${checked ? 'start-[22px]' : 'start-0.5'}`
+				}`}
 			/>
 		</button>
 	);
@@ -3892,6 +4078,7 @@ function WhatsAppWorkspaceContent() {
 	const prefetchInFlightRef = useRef(0);
 	const listScrollPrefetchBlockedUntilRef = useRef(0);
 	const [activeTab, setActiveTab] = useState(defaultWhatsAppActiveTab);
+	const restoredTabRef = useRef(false);
 	const [settingsSection, setSettingsSection] = useState('ai');
 	const [accounts, setAccounts] = useState([]);
 	const [accountId, setAccountId] = useState(null);
@@ -3978,9 +4165,28 @@ function WhatsAppWorkspaceContent() {
 	const [messagesSyncHint, setMessagesSyncHint] = useState('');
 	const [recordingVoice, setRecordingVoice] = useState(false);
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
+	const [voiceChangerOpen, setVoiceChangerOpen] = useState(false);
+	const [voiceChanging, setVoiceChanging] = useState(false);
+	const [voiceChangerSettings, setVoiceChangerSettings] = useState(null);
+	const voiceChangerSettingsRef = useRef({ configured: true, enabled: false, provider: 'off' });
 	const [draft, setDraft] = useState('');
+	const [composerImages, setComposerImages] = useState([]);
+	const composerImagesRef = useRef([]);
+
+	useEffect(() => {
+		composerImagesRef.current = composerImages;
+	}, [composerImages]);
+
+	useEffect(() => () => {
+		for (const item of composerImagesRef.current) {
+			if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+		}
+	}, []);
 	const [replyingTo, setReplyingTo] = useState(null);
 	const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
+	const [reactionPickerAnchor, setReactionPickerAnchor] = useState(null);
+	const reactionPickerMessageRef = useRef(null);
+	const skipReactionPickerCloseRef = useRef(false);
 	const [reactingMessageIds, setReactingMessageIds] = useState(() => new Set());
 	const [actionMessageId, setActionMessageId] = useState(null);
 	const [actionMessageAnchor, setActionMessageAnchor] = useState(null);
@@ -4034,6 +4240,7 @@ function WhatsAppWorkspaceContent() {
 		messagesReady: Boolean(conversationId) && !loadingMessages,
 	});
 	const fileRef = useRef(null);
+	const stickerButtonRef = useRef(null);
 	const messageBoxRef = useRef(null);
 	const longPressTimerRef = useRef(null);
 	const longPressOriginRef = useRef(null);
@@ -4062,6 +4269,8 @@ function WhatsAppWorkspaceContent() {
 	const syncingInboxRef = useRef(false);
 	const previousAccountIdRef = useRef(null);
 	const conversationIdRef = useRef(null);
+	const activeTabRef = useRef(activeTab);
+	activeTabRef.current = activeTab;
 	// Which conversation the rendered `messages` array belongs to. Never read
 	// conversationIdRef inside a setState updater for this — updaters run during
 	// the next render, by which point the ref already points at the new chat.
@@ -4168,6 +4377,15 @@ function WhatsAppWorkspaceContent() {
 			demo.settings.enabled,
 		],
 	);
+	const reactionPickerMessage = useMemo(() => {
+		if (!reactionPickerMessageId) return null;
+		return (
+			effectiveMessages.find(item => item.id === reactionPickerMessageId) ||
+			(reactionPickerMessageRef.current?.id === reactionPickerMessageId
+				? reactionPickerMessageRef.current
+				: null)
+		);
+	}, [effectiveMessages, reactionPickerMessageId]);
 	const selectedConversationSource = resolveConversationSource(selectedConversation);
 	const selectedDemoRuntimeId =
 		selectedConversation?.demoOverlayId || selectedConversation?.rawDemoId || '';
@@ -4222,6 +4440,8 @@ function WhatsAppWorkspaceContent() {
 		setRegisteredChatImages({});
 		setReplyingTo(null);
 		setReactionPickerMessageId(null);
+		setReactionPickerAnchor(null);
+		reactionPickerMessageRef.current = null;
 		setActionMessageId(null);
 		setActionMessageAnchor(null);
 		setForwardingMessage(null);
@@ -4274,18 +4494,43 @@ function WhatsAppWorkspaceContent() {
 	useEffect(() => {
 		if (!reactionPickerMessageId) return undefined;
 		const closePickerOutside = event => {
+			if (skipReactionPickerCloseRef.current) return;
 			if (
 				event.target.closest(
-					'[data-message-reaction-picker], [data-message-actions-trigger]',
+					'[data-message-reaction-picker], [data-message-reaction-trigger], [data-message-actions-trigger]',
 				)
 			) {
 				return;
 			}
 			setReactionPickerMessageId(null);
+			setReactionPickerAnchor(null);
+			reactionPickerMessageRef.current = null;
 		};
 		document.addEventListener('pointerdown', closePickerOutside);
 		return () => document.removeEventListener('pointerdown', closePickerOutside);
 	}, [reactionPickerMessageId]);
+
+	useEffect(() => {
+		if (!localStorage.getItem('accessToken')) return undefined;
+		let cancelled = false;
+		fetchVoiceChangerSettings()
+			.then(data => {
+				if (cancelled) return;
+				voiceChangerSettingsRef.current = data;
+				setVoiceChangerSettings(data);
+			})
+			.catch(() => {
+				if (cancelled) return;
+				voiceChangerSettingsRef.current = {
+					configured: true,
+					enabled: false,
+					provider: 'off',
+				};
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	useEffect(() => {
 		if (!showNotes) return undefined;
@@ -4316,6 +4561,17 @@ function WhatsAppWorkspaceContent() {
 	}, []);
 
 	useEffect(() => {
+		if (!currentUserId || currentUserId === 'anonymous') return;
+		if (!restoredTabRef.current) {
+			restoredTabRef.current = true;
+			const stored =
+				readStoredWhatsAppActiveTab(currentUserId) ||
+				readStoredWhatsAppActiveTab(null);
+			if (stored && stored !== activeTab) {
+				setActiveTab(stored);
+				return;
+			}
+		}
 		writeStoredWhatsAppActiveTab(activeTab, currentUserId);
 	}, [activeTab, currentUserId]);
 
@@ -4956,11 +5212,11 @@ function WhatsAppWorkspaceContent() {
 	// refetching the whole list — avoids the flicker/scroll-jump of a full reload
 	// for the common case of "a new message arrived somewhere in this account".
 	const applyConversationPreview = useCallback(payload => {
-		const openId = conversationIdRef.current;
-		const nextPayload =
-			openId && payload?.conversationId === openId
-				? { ...payload, unreadCount: 0 }
-				: payload;
+		const viewingOpenChat =
+			payload?.conversationId &&
+			payload.conversationId === conversationIdRef.current &&
+			activeTabRef.current === 'chats';
+		const nextPayload = viewingOpenChat ? { ...payload, unreadCount: 0 } : payload;
 		setConversations(current => {
 			const next = updateConversationPreview(current, nextPayload);
 			if (next === current) return current;
@@ -5138,7 +5394,7 @@ function WhatsAppWorkspaceContent() {
 			// Provider history sync is NOT re-run on every open — live rows
 			// arrive via socket; Postgres is the durable cache.
 			if (cacheIsFresh && !forceProvider && cached.items.length >= MESSAGE_PAGE_SIZE) {
-				if (canSync) {
+				if (canSync && activeTabRef.current === 'chats') {
 					api
 						.post(`/whatsapp/conversations/${id}/read`)
 						.then(() => {
@@ -5209,7 +5465,7 @@ function WhatsAppWorkspaceContent() {
 				setMessagesSyncHint('');
 				if (items.length > 0) scrollMessagesToBottom();
 			}
-			if (canSync) {
+			if (canSync && activeTabRef.current === 'chats') {
 				api
 					.post(`/whatsapp/conversations/${id}/read`)
 					.then(() => {
@@ -5573,7 +5829,7 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		setHasMoreMessages(true);
-		if (!isDemoId(conversationId)) {
+		if (!isDemoId(conversationId) && activeTabRef.current === 'chats') {
 			setConversationUnreadCount(conversationId, 0);
 			notifyWhatsAppUnreadChanged();
 		}
@@ -5747,7 +6003,10 @@ function WhatsAppWorkspaceContent() {
 						mergeMessages(current, [event.payload], targetConversationId),
 					);
 				}
-				if (targetConversationId === activeConversationId) {
+				const viewingLiveThread =
+					targetConversationId === activeConversationId &&
+					activeTabRef.current === 'chats';
+				if (viewingLiveThread) {
 					setConversationUnreadCount(targetConversationId, 0);
 					api
 						.post(`/whatsapp/conversations/${targetConversationId}/read`)
@@ -5757,7 +6016,7 @@ function WhatsAppWorkspaceContent() {
 				const inbound =
 					event.payload?.direction === 'inbound' ||
 					event.payload?.fromMe === false;
-				if (inbound && !alreadyKnown && targetConversationId !== activeConversationId) {
+				if (inbound && !alreadyKnown && !viewingLiveThread) {
 					const peer = conversationsRef.current.find(
 						item => item.id === targetConversationId,
 					);
@@ -6430,6 +6689,23 @@ function WhatsAppWorkspaceContent() {
 
 	const sendMessage = async event => {
 		event.preventDefault();
+		if (recordingVoice) {
+			stopVoiceRecording(true);
+			return;
+		}
+		if (composerImages.length) {
+			if (!conversationId || sending) return;
+			for (const item of composerImages) {
+				const sent = await sendFile(item.file, 'image');
+				if (!sent) return;
+				setComposerImages(current => {
+					const next = current.filter(entry => entry.id !== item.id);
+					if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+					return next;
+				});
+			}
+			return;
+		}
 		if (!conversationId || !draft.trim() || sending) return;
 		const targetConversationId = conversationId;
 		const text = draft.trim();
@@ -6546,8 +6822,24 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
-	const sendFile = async (file, forcedType) => {
-		if (!file || !conversationId || !accountId) return;
+	const persistConversationMessages = (targetConversationId, updater) => {
+		const previous = messagesCacheRef.current.get(targetConversationId);
+		const nextItems = updater(previous?.items || []);
+		messagesCacheRef.current.set(targetConversationId, {
+			...previous,
+			items: nextItems,
+			hasMore: previous?.hasMore ?? true,
+			cachedAt: Date.now(),
+		});
+		if (conversationIdRef.current === targetConversationId) {
+			writeConversationMessages(targetConversationId, current => updater(current));
+		}
+	};
+
+	const sendFile = async (file, forcedType, options = {}) => {
+		if (!file || !accountId) return false;
+		const targetConversationId = options.conversationId || conversationId;
+		if (!targetConversationId) return false;
 		if (demo.settings.enabled) {
 			toast.error(
 				locale === 'ar'
@@ -6555,18 +6847,51 @@ function WhatsAppWorkspaceContent() {
 					: 'Demo media is deferred. Nothing was sent to WhatsApp.',
 			);
 			if (fileRef.current) fileRef.current.value = '';
-			return;
+			return false;
 		}
 		if (file.size > 25 * 1024 * 1024) {
 			toast.error('File size must not exceed 25 MB');
 			if (fileRef.current) fileRef.current.value = '';
-			return;
+			if (options.optimisticMessage) {
+				releaseOptimisticMediaPreview(options.optimisticMessage);
+				persistConversationMessages(targetConversationId, current =>
+					current.filter(message => message.id !== options.optimisticMessage.id),
+				);
+			}
+			return false;
 		}
-		const targetConversationId = conversationId;
 		const targetAccountId = accountId;
-		const caption = draft.trim();
-		const replySnapshot = replyingTo;
+		const type = outgoingMediaType(file, forcedType);
+		const caption =
+			type === 'sticker'
+				? ''
+				: options.caption !== undefined
+					? options.caption
+					: draft.trim();
+		const replySnapshot =
+			options.replySnapshot !== undefined ? options.replySnapshot : replyingTo;
+		const clientMessageId = options.clientMessageId || newClientMessageId();
+		let optimisticMessage = options.optimisticMessage || null;
 		let uploadedFileId = null;
+
+		if (isOptimisticVoiceType(type) && !optimisticMessage) {
+			optimisticMessage = buildOptimisticMediaMessage({
+				conversationId: targetConversationId,
+				clientMessageId,
+				type: type === 'audio' ? 'audio' : 'voice',
+				file,
+				previewUrl: URL.createObjectURL(file),
+				caption: '',
+				replySnapshot,
+			});
+			persistConversationMessages(targetConversationId, current =>
+				mergeMessages(current, [optimisticMessage], targetConversationId),
+			);
+			if (conversationIdRef.current === targetConversationId) {
+				setReplyingTo(null);
+			}
+		}
+
 		setSending(true);
 		try {
 			const form = new FormData();
@@ -6576,20 +6901,11 @@ function WhatsAppWorkspaceContent() {
 				form,
 			);
 			uploadedFileId = uploaded.fileId;
-			const type =
-				forcedType ||
-				(file.type.startsWith('image/')
-					? 'image'
-					: file.type.startsWith('video/')
-						? 'video'
-						: file.type.startsWith('audio/')
-							? 'audio'
-							: 'document');
 			const { data } = await api.post(`/whatsapp/conversations/${targetConversationId}/messages`, {
 				type,
 				fileId: uploaded.fileId,
 				caption: caption || undefined,
-				clientMessageId: newClientMessageId(),
+				clientMessageId,
 				quotedProviderMessageId: replySnapshot?.providerMessageId || undefined,
 			});
 			uploadedFileId = null;
@@ -6597,20 +6913,19 @@ function WhatsAppWorkspaceContent() {
 				...data.message,
 				replyTo: data.message?.replyTo || replySnapshot || null,
 			};
-			const previous = messagesCacheRef.current.get(targetConversationId);
-			const cachedMessages = mergeMessages(previous?.items || [], [confirmedMessage]);
-			messagesCacheRef.current.set(targetConversationId, {
-				items: cachedMessages,
-				hasMore: previous?.hasMore ?? true,
-				cachedAt: Date.now(),
-			});
-			if (conversationIdRef.current === targetConversationId) {
+			if (optimisticMessage) releaseOptimisticMediaPreview(optimisticMessage);
+			persistConversationMessages(targetConversationId, current =>
+				mergeMessages(
+					current.filter(message => !optimisticMessage || message.id !== optimisticMessage.id),
+					[confirmedMessage],
+					targetConversationId,
+				),
+			);
+			if (conversationIdRef.current === targetConversationId && !isOptimisticVoiceType(type)) {
 				setDraft(current => (current.trim() === caption ? '' : current));
 				setReplyingTo(null);
-				writeConversationMessages(targetConversationId, current =>
-					mergeMessages(current, [confirmedMessage], targetConversationId),
-				);
 			}
+			return true;
 		} catch (error) {
 			if (uploadedFileId) {
 				void api
@@ -6619,11 +6934,129 @@ function WhatsAppWorkspaceContent() {
 					})
 					.catch(() => { });
 			}
+			if (optimisticMessage) {
+				releaseOptimisticMediaPreview(optimisticMessage);
+				persistConversationMessages(targetConversationId, current =>
+					current.filter(message => message.id !== optimisticMessage.id),
+				);
+				if (conversationIdRef.current === targetConversationId) {
+					setReplyingTo(current => current || replySnapshot);
+				}
+			}
 			toast.error(error.response?.data?.message || 'Media message failed');
+			return false;
 		} finally {
 			setSending(false);
 			if (fileRef.current) fileRef.current.value = '';
 		}
+	};
+
+	const queueComposerImages = files => {
+		const current = composerImagesRef.current;
+		const next = [...current];
+		for (const file of files) {
+			if (file.size > 25 * 1024 * 1024) {
+				toast.error('File size must not exceed 25 MB');
+				continue;
+			}
+			if (next.some(item => item.file.size === file.size && item.file.type === file.type)) {
+				continue;
+			}
+			if (next.length >= 10) {
+				toast.error(locale === 'ar' ? 'يمكن إرفاق 10 صور كحد أقصى' : 'You can attach up to 10 images');
+				break;
+			}
+			next.push({
+				id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+				file,
+				previewUrl: URL.createObjectURL(file),
+			});
+		}
+		if (next.length === current.length) return;
+		composerImagesRef.current = next;
+		setComposerImages(next);
+	};
+
+	const removeComposerImage = id => {
+		setComposerImages(current => {
+			const target = current.find(item => item.id === id);
+			if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+			return current.filter(item => item.id !== id);
+		});
+	};
+
+	const handleComposerPaste = event => {
+		if (event.defaultPrevented || !conversationId || sending || recordingVoice) return;
+		const files = clipboardImageFiles(event);
+		if (!files.length) return;
+		event.preventDefault();
+		event.stopPropagation();
+		queueComposerImages(files);
+	};
+
+	const sendRecordedVoice = async file => {
+		if (!file || !conversationId || !accountId) return false;
+		if (file.size > 25 * 1024 * 1024) {
+			toast.error('File size must not exceed 25 MB');
+			return false;
+		}
+		const targetConversationId = conversationId;
+		const replySnapshot = replyingTo;
+		const clientMessageId = newClientMessageId();
+		const optimisticMessage = buildOptimisticMediaMessage({
+			conversationId: targetConversationId,
+			clientMessageId,
+			type: 'voice',
+			file,
+			previewUrl: URL.createObjectURL(file),
+			replySnapshot,
+		});
+		persistConversationMessages(targetConversationId, current =>
+			mergeMessages(current, [optimisticMessage], targetConversationId),
+		);
+		if (conversationIdRef.current === targetConversationId) {
+			setReplyingTo(null);
+		}
+
+		const settings = voiceChangerSettingsRef.current;
+		const provider = String(settings?.provider || 'off');
+		const useChanger = Boolean(settings?.enabled) && provider !== 'off';
+		let outgoing = file;
+		if (useChanger) {
+			setVoiceChanging(true);
+			toast.loading(t.voiceChanging, { id: 'whatsapp-voice-changer' });
+			try {
+				outgoing = await transformVoiceNote(file, {
+					provider: settings.provider,
+					preset: settings.preset,
+					pitchSemitones: settings.pitchSemitones,
+					voiceId: settings.voiceId,
+				});
+				toast.dismiss('whatsapp-voice-changer');
+			} catch (error) {
+				releaseOptimisticMediaPreview(optimisticMessage);
+				persistConversationMessages(targetConversationId, current =>
+					current.filter(message => message.id !== optimisticMessage.id),
+				);
+				if (conversationIdRef.current === targetConversationId) {
+					setReplyingTo(current => current || replySnapshot);
+				}
+				toast.error((await readVoiceChangerError(error, locale)) || t.voiceChanging, {
+					id: 'whatsapp-voice-changer',
+				});
+				return false;
+			} finally {
+				setVoiceChanging(false);
+			}
+		}
+
+		return sendFile(outgoing, 'voice', {
+			clientMessageId,
+			optimisticMessage,
+			conversationId: targetConversationId,
+			replySnapshot,
+			caption: '',
+		});
 	};
 
 	const collectDownloadableAttachments = useCallback((messageList = []) => {
@@ -6705,6 +7138,12 @@ function WhatsAppWorkspaceContent() {
 		setDownloadingSelectedMedia(false);
 		setTicketSelectMode(false);
 		setSelectedMessageIds(new Set());
+		setComposerImages(current => {
+			for (const item of current) {
+				if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+			}
+			return [];
+		});
 	}, [conversationId]);
 
 	const selectableTranscriptMessages = useMemo(
@@ -6727,6 +7166,19 @@ function WhatsAppWorkspaceContent() {
 		setTicketSelectMode(true);
 	};
 
+	useEffect(() => {
+		if (!ticketSelectMode && !mediaSelectMode) return undefined;
+		const onKeyDown = event => {
+			if (event.key !== 'Escape' || event.defaultPrevented) return;
+			setTicketSelectMode(false);
+			setSelectedMessageIds(new Set());
+			setMediaSelectMode(false);
+			setSelectedMediaIds(new Set());
+		};
+		window.addEventListener('keydown', onKeyDown);
+		return () => window.removeEventListener('keydown', onKeyDown);
+	}, [mediaSelectMode, ticketSelectMode]);
+
 	const openSelectedTranscriptBundle = () => {
 		const selected = selectableTranscriptMessages.filter(item => selectedMessageIds.has(item.id));
 		if (!selected.length) {
@@ -6738,6 +7190,31 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		setTranscriptionSources(selected.map(toTranscriptSource));
+	};
+
+	const closeReactionPicker = () => {
+		skipReactionPickerCloseRef.current = false;
+		reactionPickerMessageRef.current = null;
+		setReactionPickerMessageId(null);
+		setReactionPickerAnchor(null);
+	};
+
+	const toggleReactionPicker = (message, rect) => {
+		skipReactionPickerCloseRef.current = true;
+		window.setTimeout(() => {
+			skipReactionPickerCloseRef.current = false;
+		}, 0);
+		setActionMessageId(null);
+		setReactionPickerMessageId(current => {
+			if (current === message.id) {
+				reactionPickerMessageRef.current = null;
+				setReactionPickerAnchor(null);
+				return null;
+			}
+			reactionPickerMessageRef.current = message;
+			setReactionPickerAnchor(rect || null);
+			return message.id;
+		});
 	};
 
 	const reactToMessage = async (message, emoji) => {
@@ -6763,8 +7240,7 @@ function WhatsAppWorkspaceContent() {
 				? [{ id: `pending-reaction:${message.id}`, actorKey: 'me', emoji: nextEmoji }]
 				: []),
 		];
-		setReactionPickerMessageId(null);
-		setReactingMessageIds(current => new Set(current).add(message.id));
+		closeReactionPicker();
 		updateCachedMessage(targetConversationId, message.id, current => ({
 			...current,
 			reactions: optimisticReactions,
@@ -6802,10 +7278,59 @@ function WhatsAppWorkspaceContent() {
 		});
 	};
 
+	const applyMessageSelection = (message, { toggle = true } = {}) => {
+		if (!message || !isSelectableTranscriptMessage(message)) return false;
+		setMediaSelectMode(false);
+		setSelectedMediaIds(new Set());
+		setTicketSelectMode(true);
+		setActionMessageId(null);
+		setActionMessageAnchor(null);
+		closeReactionPicker();
+		setSelectedMessageIds(current => {
+			const next = new Set(current);
+			if (toggle && next.has(message.id)) {
+				next.delete(message.id);
+				return next;
+			}
+			if (next.has(message.id)) return current;
+			if (next.size >= MAX_TRANSCRIPT_BUNDLE_ITEMS) {
+				toast.error(
+					t.tooManySelected.replace('{count}', String(MAX_TRANSCRIPT_BUNDLE_ITEMS)),
+				);
+				return current;
+			}
+			next.add(message.id);
+			return next;
+		});
+		return true;
+	};
+
+	const applyMediaSelection = downloadableAttachments => {
+		if (!downloadableAttachments?.length) return false;
+		setTicketSelectMode(false);
+		setSelectedMessageIds(new Set());
+		setMediaSelectMode(true);
+		setActionMessageId(null);
+		setActionMessageAnchor(null);
+		closeReactionPicker();
+		setSelectedMediaIds(current => {
+			const next = new Set(current);
+			const alreadyAll = downloadableAttachments.every(item => next.has(item.id));
+			for (const item of downloadableAttachments) {
+				if (alreadyAll) next.delete(item.id);
+				else next.add(item.id);
+			}
+			return next;
+		});
+		return true;
+	};
+
 	const handleMessageAction = async (message, action) => {
 		if (!message || message.optimistic) return;
 		setActionMessageId(null);
-		setActionMessageAnchor(null);
+		if (action !== 'react') {
+			setActionMessageAnchor(null);
+		}
 		if (action === 'reply') {
 			setReplyingTo({
 				id: message.id,
@@ -6817,6 +7342,12 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		if (action === 'react') {
+			skipReactionPickerCloseRef.current = true;
+			window.setTimeout(() => {
+				skipReactionPickerCloseRef.current = false;
+			}, 0);
+			reactionPickerMessageRef.current = message;
+			setReactionPickerAnchor(actionMessageAnchor);
 			setReactionPickerMessageId(message.id);
 			return;
 		}
@@ -6833,20 +7364,7 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		if (action === 'select') {
-			if (!isSelectableTranscriptMessage(message)) return;
-			setMediaSelectMode(false);
-			setSelectedMediaIds(new Set());
-			setTicketSelectMode(true);
-			setSelectedMessageIds(current => {
-				if (current.has(message.id)) return current;
-				if (current.size >= MAX_TRANSCRIPT_BUNDLE_ITEMS) {
-					toast.error(
-						t.tooManySelected.replace('{count}', String(MAX_TRANSCRIPT_BUNDLE_ITEMS)),
-					);
-					return current;
-				}
-				return new Set(current).add(message.id);
-			});
+			applyMessageSelection(message, { toggle: false });
 			return;
 		}
 		if (demo.settings.enabled) {
@@ -7010,7 +7528,7 @@ function WhatsAppWorkspaceContent() {
 	};
 
 	const startVoiceRecording = async () => {
-		if (!conversationId || sending || recordingVoice) return;
+		if (!conversationId || sending || recordingVoice || voiceChanging) return;
 		setAttachmentSheetOpen(false);
 		setStickerPanelOpen(false);
 		if (demo.settings.enabled) {
@@ -7086,7 +7604,7 @@ function WhatsAppWorkspaceContent() {
 				const file = new File([blob], `voice-${durationSec}s.${extension}`, {
 					type: recordedType.split(';')[0] || recordedType,
 				});
-				void sendFile(file, 'voice');
+				void sendRecordedVoice(file);
 			};
 
 			recorder.start(250);
@@ -7119,6 +7637,24 @@ function WhatsAppWorkspaceContent() {
 			);
 		}
 	};
+
+	useEffect(() => {
+		if (!recordingVoice) return undefined;
+		const onKeyDown = event => {
+			if (event.key !== 'Enter' || event.shiftKey || event.altKey || event.metaKey || event.ctrlKey) return;
+			if (event.repeat || event.isComposing || event.keyCode === 229) return;
+			const target = event.target;
+			if (target instanceof HTMLElement) {
+				const tag = target.tagName;
+				if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) return;
+				if (target.closest('[role="dialog"]')) return;
+			}
+			event.preventDefault();
+			stopVoiceRecording(true);
+		};
+		window.addEventListener('keydown', onKeyDown);
+		return () => window.removeEventListener('keydown', onKeyDown);
+	}, [recordingVoice]);
 
 	useEffect(() => {
 		return () => {
@@ -8171,7 +8707,15 @@ function WhatsAppWorkspaceContent() {
 						})
 				}
 			/>
-			<MobileStickerPanel open={stickerPanelOpen} onClose={() => setStickerPanelOpen(false)} onInsert={emoji => setDraft(current => `${current}${emoji}`)} />
+			<StickersPanel
+				open={stickerPanelOpen}
+				onClose={() => setStickerPanelOpen(false)}
+				onInsertEmoji={emoji => setDraft(current => `${current}${emoji}`)}
+				onSendSticker={file => sendFile(file, 'sticker')}
+				accountId={accountId}
+				locale={locale}
+				anchorRef={stickerButtonRef}
+			/>
 			<PhoneSyncGate
 				open={syncingInbox || syncPhoneClosed}
 				progress={syncProgress}
@@ -8602,7 +9146,7 @@ function WhatsAppWorkspaceContent() {
 							)}
 						</Card>
 					</div>
-				)}
+				)} 
 
 				{activeTab === 'chats' && (
 					<Card className={`wa-chat-card grid h-full min-h-[600px] overflow-hidden max-[768px]:min-h-0 max-[768px]:rounded-none max-[768px]:border-0 ${
@@ -9486,21 +10030,7 @@ function WhatsAppWorkspaceContent() {
 
 										</div>
 									</header>
-									<div className="wa-e2e-banner hidden min-[769px]:flex">
-										<span className="wa-e2e-banner__icon" aria-hidden="true">
-											<svg width="14" height="16" viewBox="0 0 14 16" fill="none">
-												<path
-													d="M7 0C4.8 0 3 1.8 3 4v2H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1V4C11 1.8 9.2 0 7 0Zm0 2c1.1 0 2 .9 2 2v2H5V4c0-1.1.9-2 2-2Z"
-													fill="#667781"
-												/>
-											</svg>
-										</span>
-										<p>
-											{locale === 'ar'
-												? 'الرسائل مشفّرة من طرف إلى طرف. لا أحد خارج هذه المحادثة — حتى واتساب — يمكنه قراءتها أو الاستماع إليها.'
-												: 'Messages are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them.'}
-										</p>
-									</div>
+									 
 									<div
 										ref={messageBoxRef}
 										onScroll={event => {
@@ -9680,8 +10210,11 @@ function WhatsAppWorkspaceContent() {
 														? row.attachments
 														: message.attachments;
 													const mine = message.direction === 'outbound';
-													const textPresentation = messageTextPresentation(message.text);
 													const visibleText = visibleMessageText(message.text);
+													const captionText = firstMessageLink(visibleText)
+														? textWithoutFirstLink(visibleText)
+														: visibleText;
+													const textPresentation = messageTextPresentation(captionText || visibleText);
 													const isDeleted =
 														message.deletedMode && message.deletedMode !== 'none';
 													const attachmentTypes = (attachments || []).map(attachment => String(attachment.type || '').toLowerCase());
@@ -9727,34 +10260,10 @@ function WhatsAppWorkspaceContent() {
 																		aria-label={ticketSelectMode ? t.selectMessages : t.selectMedia}
 																		onClick={() => {
 																			if (selectableInTicketMode) {
-																				setSelectedMessageIds(current => {
-																					const next = new Set(current);
-																					if (messageSelected) {
-																						next.delete(message.id);
-																						return next;
-																					}
-																					if (current.size >= MAX_TRANSCRIPT_BUNDLE_ITEMS) {
-																						toast.error(
-																							t.tooManySelected.replace(
-																								'{count}',
-																								String(MAX_TRANSCRIPT_BUNDLE_ITEMS),
-																							),
-																						);
-																						return current;
-																					}
-																					next.add(message.id);
-																					return next;
-																				});
+																				applyMessageSelection(message);
 																				return;
 																			}
-																			setSelectedMediaIds(current => {
-																				const next = new Set(current);
-																				for (const item of downloadableAttachments) {
-																					if (allSelected) next.delete(item.id);
-																					else next.add(item.id);
-																				}
-																				return next;
-																			});
+																			applyMediaSelection(downloadableAttachments);
 																		}}
 																		className={`mt-2 grid h-6 w-6 shrink-0 place-items-center rounded-full border ${
 																			isChecked
@@ -9767,43 +10276,41 @@ function WhatsAppWorkspaceContent() {
 																)}
 																<div
 																	onPointerDown={event => {
+																		if (isMultiSelectClick(event)) {
+																			event.preventDefault();
+																			cancelMessageLongPress(event);
+																			return;
+																		}
 																		if (mediaSelectMode || ticketSelectMode) return;
 																		startMessageLongPress(event, message);
 																	}}
 																	onPointerMove={cancelMessageLongPress}
 																	onPointerUp={cancelMessageLongPress}
 																	onPointerCancel={cancelMessageLongPress}
+																	onClickCapture={event => {
+																		if (!isMultiSelectClick(event) || message.optimistic) return;
+																		event.preventDefault();
+																		event.stopPropagation();
+																		if (mediaSelectMode) {
+																			applyMediaSelection(downloadableAttachments);
+																			return;
+																		}
+																		if (
+																			ticketSelectMode ||
+																			(!groupedImages && isSelectableTranscriptMessage(message))
+																		) {
+																			applyMessageSelection(message);
+																			return;
+																		}
+																		applyMediaSelection(downloadableAttachments);
+																	}}
 																	onClick={() => {
 																		if (selectableInTicketMode) {
-																			setSelectedMessageIds(current => {
-																				const next = new Set(current);
-																				if (messageSelected) {
-																					next.delete(message.id);
-																					return next;
-																				}
-																				if (current.size >= MAX_TRANSCRIPT_BUNDLE_ITEMS) {
-																					toast.error(
-																						t.tooManySelected.replace(
-																							'{count}',
-																							String(MAX_TRANSCRIPT_BUNDLE_ITEMS),
-																						),
-																					);
-																					return current;
-																				}
-																				next.add(message.id);
-																				return next;
-																			});
+																			applyMessageSelection(message);
 																			return;
 																		}
 																		if (!selectableInMediaMode) return;
-																		setSelectedMediaIds(current => {
-																			const next = new Set(current);
-																			for (const item of downloadableAttachments) {
-																				if (allSelected) next.delete(item.id);
-																				else next.add(item.id);
-																			}
-																			return next;
-																		});
+																		applyMediaSelection(downloadableAttachments);
 																	}}
 																	onContextMenu={event => {
 																		if (mediaSelectMode || ticketSelectMode) {
@@ -9878,14 +10385,16 @@ function WhatsAppWorkspaceContent() {
 																	) : visibleText ? (
 																		<>
 																			<MessageLinkPreview text={visibleText} labels={t} />
-																			<p
-																				dir={textPresentation.dir}
-																				lang={textPresentation.lang}
-																				style={textPresentation.style}
-																				className={`wa-message-text whitespace-pre-wrap wrap-break-word leading-relaxed ${textPresentation.className || ''}`}
-																			>
-																				<WhatsAppFormattedText text={visibleText} />
-																			</p>
+																			{captionText ? (
+																				<p
+																					dir={textPresentation.dir}
+																					lang={textPresentation.lang}
+																					style={textPresentation.style}
+																					className={`wa-message-text whitespace-pre-wrap wrap-break-word leading-relaxed ${textPresentation.className || ''}`}
+																				>
+																					<WhatsAppFormattedText text={captionText} />
+																				</p>
+																			) : null}
 																		</>
 																	) : null}
 															<div className={`wa-message-meta flex items-center justify-end gap-0.5 ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
@@ -9932,15 +10441,15 @@ function WhatsAppWorkspaceContent() {
 																				actionMessageId === message.id ||
 																				reactionPickerMessageId === message.id
 																			}
+																			emojiOpen={reactionPickerMessageId === message.id}
+																			showTranscribe={isVoiceMessage}
 																			onEmoji={event => {
 																				event.preventDefault();
 																				event.stopPropagation();
-																				setActionMessageId(null);
-																				setActionMessageAnchor(
-																					event.currentTarget.getBoundingClientRect(),
-																				);
-																				setReactionPickerMessageId(current =>
-																					current === message.id ? null : message.id,
+																				const bar = event.currentTarget.closest('.wa-message-hover-actions');
+																				toggleReactionPicker(
+																					message,
+																					(bar || event.currentTarget).getBoundingClientRect(),
 																				);
 																			}}
 																			onReply={event => {
@@ -9948,33 +10457,23 @@ function WhatsAppWorkspaceContent() {
 																				event.stopPropagation();
 																				void handleMessageAction(message, 'reply');
 																			}}
+																			onTranscribe={event => {
+																				event.preventDefault();
+																				event.stopPropagation();
+																				void handleMessageAction(message, 'transcribe');
+																			}}
 																			onMore={event => {
 																				event.preventDefault();
 																				event.stopPropagation();
+																				closeReactionPicker();
 																				const rect =
 																					event.currentTarget.getBoundingClientRect();
-																				setReactionPickerMessageId(null);
 																				setActionMessageAnchor(rect);
 																				setActionMessageId(current =>
 																					current === message.id ? null : message.id,
 																				);
 																			}}
 																		/>
-																		{reactionPickerMessageId === message.id && (
-																			<div data-message-reaction-picker className={`absolute top-8 z-30 flex gap-1 rounded-full border border-black/10 bg-white p-1.5 shadow-xl ${mine ? 'end-0' : 'start-0'}`}>
-																				{['👍', '❤️', '😂', '😮', '😢', '🙏'].map(emoji => (
-																					<button
-																						key={emoji}
-																						type="button"
-																						onClick={() => void reactToMessage(message, emoji)}
-																						disabled={reactingMessageIds.has(message.id)}
-																						className="grid h-8 w-8 place-items-center rounded-full text-lg hover:bg-slate-100 disabled:opacity-50"
-																					>
-																						{emoji}
-																					</button>
-																				))}
-																			</div>
-																		)}
 																		<MessageActionMenu
 																			open={actionMessageId === message.id}
 																			message={message}
@@ -10050,7 +10549,7 @@ function WhatsAppWorkspaceContent() {
 										onSelect={suggestion => setDraft(suggestion)}
 									/>
 									{canComposeInConversation ? (
-										<form onSubmit={sendMessage} className="wa-composer flex flex-wrap items-end gap-2 border-t border-slate-100 p-3 dark:border-slate-800">
+										<form onSubmit={sendMessage} onPaste={handleComposerPaste} className={`wa-composer flex flex-wrap items-end gap-2 border-t border-slate-100 p-3 dark:border-slate-800 ${recordingVoice ? 'is-recording' : ''}`}>
 											<input
 												ref={fileRef}
 												type="file"
@@ -10082,6 +10581,27 @@ function WhatsAppWorkspaceContent() {
 													</button>
 												</div>
 											)}
+											{composerImages.length > 0 && (
+												<div className="wa-composer-paste-preview flex min-w-0 basis-full gap-2 overflow-x-auto pb-1">
+													{composerImages.map(item => (
+														<div key={item.id} className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-black/5">
+															<img
+																src={item.previewUrl}
+																alt=""
+																className="h-full w-full object-cover"
+															/>
+															<button
+																type="button"
+																onClick={() => removeComposerImage(item.id)}
+																aria-label={locale === 'ar' ? 'إزالة الصورة' : 'Remove image'}
+																className="absolute end-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-black/65 text-white hover:bg-black/80"
+															>
+																<X size={12} strokeWidth={2.4} />
+															</button>
+														</div>
+													))}
+												</div>
+											)}
 											<button
 												ref={attachButtonRef}
 												type="button"
@@ -10097,38 +10617,19 @@ function WhatsAppWorkspaceContent() {
 												<Plus size={22} strokeWidth={2.25} />
 											</button>
 											{recordingVoice ? (
-												<>
-											<div className="wa-recording-panel flex min-h-11 flex-1 items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3.5 dark:border-rose-900/50 dark:bg-rose-950/30">
-														<span className="relative flex h-3 w-3">
-															<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-70" />
-															<span className="relative inline-flex h-3 w-3 rounded-full bg-rose-500" />
-														</span>
-														<span className="flex-1 text-sm font-bold text-rose-600 dark:text-rose-300">
-															{t.recordingVoice}
-														</span>
-														<span className="font-mono text-sm font-black tabular-nums text-rose-600 dark:text-rose-300">
-															{formatRecordingDuration(recordingSeconds)}
-														</span>
-													</div>
-													<button
-														type="button"
-														title={t.cancelRecording}
-														aria-label={t.cancelRecording}
-														onClick={() => stopVoiceRecording(false)}
-												className="wa-recording-cancel grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-													>
-														<X size={18} />
-													</button>
-													<button
-														type="button"
-														title={t.sendRecording}
-														aria-label={t.sendRecording}
-														onClick={() => stopVoiceRecording(true)}
-												className="wa-recording-stop grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-rose-500 text-white shadow-lg shadow-rose-500/25 transition-transform hover:-translate-y-px"
-													>
-														<Square size={16} fill="currentColor" />
-													</button>
-												</>
+												<VoiceRecordingBar
+													seconds={recordingSeconds}
+													labels={t}
+													onCancel={() => stopVoiceRecording(false)}
+													onStop={() => stopVoiceRecording(true)}
+												/>
+											) : voiceChanging ? (
+												<div className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 dark:border-emerald-900/50 dark:bg-emerald-950/30">
+													<Loader2 size={16} className="animate-spin text-emerald-600" />
+													<span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
+														{t.voiceChanging}
+													</span>
+												</div>
 											) : (
 												<div className="flex min-w-0 flex-1 items-center gap-1">
 													<div className="wa-input-pill flex min-w-0 flex-1 items-end !bg-white rounded-full !border !border-slate-200 dark:border-slate-700">
@@ -10157,7 +10658,7 @@ function WhatsAppWorkspaceContent() {
 													placeholder={t.message}
 															className={`wa-composer-input max-h-28 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-3.5 py-2 outline-none ${draftPresentation.className || ''}`}
 														/>
-												<button type="button" aria-label="Stickers" title="Emoji, GIF and stickers" onClick={() => { setAttachmentSheetOpen(false); setStickerPanelOpen(current => !current); }} className="wa-sticker-button wa-input-action grid h-9 w-8 shrink-0 place-items-center text-[#8696A0]">
+												<button type="button" ref={stickerButtonRef} aria-label="Stickers" title="Emoji, GIF and stickers" onClick={() => { setAttachmentSheetOpen(false); setStickerPanelOpen(current => !current); }} className="wa-sticker-button wa-input-action grid h-9 w-8 shrink-0 place-items-center text-[#8696A0]">
 															<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 																<path fillRule="evenodd" clipRule="evenodd" d="M11.6154 2.89991L13.9358 2.89991C14.4593 2.8999 14.7592 2.8999 15.0178 2.92026C18.2543 3.17497 20.8249 5.7456 21.0797 8.98208C21.1 9.24075 21.1 9.54062 21.1 10.0641V10.1375C21.1 10.9379 21.1 11.377 21.0704 11.7531C20.6999 16.4607 16.9608 20.1998 12.2532 20.5703C11.8771 20.5999 11.438 20.5999 10.6376 20.5999H10.2524C9.55427 20.5999 9.15433 20.5999 8.81011 20.5638C5.71094 20.238 3.26189 17.789 2.93616 14.6898C2.89998 14.3456 2.89999 13.9457 2.9 13.2477L2.9 11.6154C2.8999 9.64928 2.89984 8.52143 3.1842 7.58403C3.82407 5.47466 5.47475 3.82397 7.58412 3.1841C8.52152 2.89975 9.64937 2.89981 11.6154 2.89991ZM11.75 4.09991C9.61283 4.09991 8.67748 4.10643 7.93247 4.33243C6.20662 4.85596 4.85605 6.20653 4.33252 7.93237C4.10653 8.67739 4.1 9.61273 4.1 11.7499V13.1999C4.1 13.9582 4.10083 14.2908 4.12958 14.5644C4.3961 17.1001 6.39986 19.1038 8.93555 19.3703C9.2091 19.3991 9.54174 19.3999 10.3 19.3999H10.6C11.4472 19.3999 11.836 19.3994 12.1591 19.374C12.2949 19.3633 12.3998 19.2475 12.3994 19.1065C12.3993 19.073 12.3992 19.0395 12.3991 19.0059C12.3968 18.2485 12.3944 17.4838 12.4565 16.7239C12.514 16.0197 12.6331 15.438 12.9014 14.9115C13.3424 14.046 14.0461 13.3423 14.9116 12.9013C15.4381 12.633 16.0198 12.5139 16.7239 12.4564C17.5478 12.3891 18.376 12.3928 19.1977 12.3973C19.4427 12.3987 19.5331 12.3969 19.6099 12.361C19.6767 12.3297 19.7451 12.2681 19.7831 12.2049C19.827 12.132 19.8371 12.0506 19.8592 11.8267C19.8647 11.771 19.8697 11.7151 19.8741 11.659C19.8995 11.3359 19.9 10.9471 19.9 10.0999C19.9 9.53129 19.8995 9.28181 19.8834 9.07623C19.6749 6.4282 17.5717 4.32496 14.9237 4.11656C14.7181 4.10038 14.4686 4.09991 13.9 4.09991H11.75ZM18.9751 13.5977C18.2535 13.5944 17.5348 13.5941 16.8217 13.6524C16.1917 13.7039 15.7856 13.8028 15.4564 13.9705C14.8167 14.2965 14.2965 14.8166 13.9706 15.4563C13.8029 15.7855 13.704 16.1917 13.6525 16.8216C13.6128 17.3078 13.6031 17.8966 13.6007 18.6525C13.6004 18.7573 13.6003 18.8287 13.6054 18.8834C13.6103 18.9368 13.6195 18.9631 13.6308 18.981C13.6562 19.0214 13.7033 19.0559 13.7494 19.068C13.7706 19.0735 13.7977 19.0743 13.8468 19.0639C13.8977 19.0531 13.9619 19.0328 14.0567 19.0025C16.4656 18.234 18.3983 16.4129 19.3177 14.0764C19.3562 13.9785 19.3823 13.9119 19.3971 13.8589C19.4116 13.8076 19.4123 13.7794 19.4077 13.7575C19.3975 13.7092 19.3639 13.6596 19.3227 13.6322C19.3049 13.6203 19.2775 13.6103 19.2206 13.6045C19.1626 13.5986 19.0863 13.5982 18.9751 13.5977Z" fill="#0A0A0A" />
 															</svg>
@@ -10171,7 +10672,7 @@ function WhatsAppWorkspaceContent() {
 														</svg>
 
 													</button>
-													{draft.trim() ? (
+													{draft.trim() || composerImages.length ? (
 													<button
 														type="submit"
 														aria-label={t.send}
@@ -10182,6 +10683,21 @@ function WhatsAppWorkspaceContent() {
 														{sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
 													</button>
 													) : (
+													<div className="flex shrink-0 items-center gap-1">
+													<button
+														type="button"
+														disabled={sending}
+														title={t.voiceChanger}
+														aria-label={t.voiceChanger}
+														onClick={() => setVoiceChangerOpen(true)}
+														className={`grid h-9 w-9 place-items-center rounded-full border shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+															voiceChangerSettings?.enabled
+																? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+																: 'border-slate-200 bg-white text-[#54656F] hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800'
+														}`}
+													>
+														<AudioLines size={16} />
+													</button>
 													<button
 														type="button"
 														disabled={sending}
@@ -10197,6 +10713,7 @@ function WhatsAppWorkspaceContent() {
 															/>
 														</svg>
 													</button>
+													</div>
 													)}
 												</div>
 											)}
@@ -11193,6 +11710,21 @@ function WhatsAppWorkspaceContent() {
 					unreadCount={unreadConversationCount}
 				/>
 			)}
+			<MessageReactionPicker
+				open={Boolean(reactionPickerMessage)}
+				locale={locale}
+				mine={reactionPickerMessage?.direction === 'outbound'}
+				busy={
+					Boolean(reactionPickerMessage) &&
+					reactingMessageIds.has(reactionPickerMessage.id)
+				}
+				anchorRect={reactionPickerAnchor}
+				activeEmoji={ownReactionEmoji(reactionPickerMessage)}
+				onReact={emoji => {
+					if (reactionPickerMessage) void reactToMessage(reactionPickerMessage, emoji);
+				}}
+				onClose={closeReactionPicker}
+			/>
 			<ConversationActionMenu
 				conversation={conversationActionTarget}
 				anchorRect={conversationActionAnchor}
@@ -11362,6 +11894,15 @@ function WhatsAppWorkspaceContent() {
 					</div>
 				</div>
 			)}
+			<VoiceChangerDialog
+				open={voiceChangerOpen}
+				onOpenChange={setVoiceChangerOpen}
+				locale={locale}
+				onSaved={data => {
+					voiceChangerSettingsRef.current = data;
+					setVoiceChangerSettings(data);
+				}}
+			/>
 			<TranscriptionDialog
 				open={Boolean(transcriptionSources?.length)}
 				onOpenChange={open => {
@@ -11379,3 +11920,4 @@ function WhatsAppWorkspaceContent() {
 		</div>
 	);
 }
+
