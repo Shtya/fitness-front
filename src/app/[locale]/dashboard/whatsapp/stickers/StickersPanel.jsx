@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
-import { Image as ImageIcon, Loader2, Smile, Sticker, Upload, X } from 'lucide-react';
+import { Check, Copy, Image as ImageIcon, Loader2, Smile, Sparkles, Sticker, Upload, X } from 'lucide-react';
 import api from '@/utils/axios';
 import { clipboardImageFiles } from '../whatsapp-utils';
+import { STICKER_PROMPT_CARDS } from './sticker-chatgpt-prompt';
 
 const STICKER_EDGE = 512;
 const STICKER_TARGET_BYTES = 480 * 1024;
@@ -114,13 +115,27 @@ export default function StickersPanel({
 	const [loading, setLoading] = useState(false);
 	const [syncing, setSyncing] = useState(false);
 	const [uploading, setUploading] = useState(false);
+	const [deletingId, setDeletingId] = useState(null);
+	const [promptOpen, setPromptOpen] = useState(false);
+	const [promptCopiedId, setPromptCopiedId] = useState(null);
+	const [promptCardId, setPromptCardId] = useState('concept');
 	const panelRef = useRef(null);
 	const fileRef = useRef(null);
+	const actionBtnClass =
+		'inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-lg px-2.5 text-[11px] font-bold leading-none disabled:opacity-50';
 	const tabs = [
 		['emoji', Smile, ar ? 'إيموجي' : 'Emoji'],
 		['gif', ImageIcon, 'GIF'],
 		['sticker', Sticker, ar ? 'ستيكرز' : 'Stickers'],
 	];
+
+	useEffect(() => {
+		if (!open) {
+			setPromptOpen(false);
+			setPromptCopiedId(null);
+			setPromptCardId('concept');
+		}
+	}, [open]);
 
 	useEffect(() => {
 		if (!open) return undefined;
@@ -285,6 +300,39 @@ export default function StickersPanel({
 		}
 	};
 
+	const deleteSticker = async item => {
+		if (!accountId || !item?.id || deletingId) return;
+		setDeletingId(item.id);
+		try {
+			await api.delete(`/whatsapp/accounts/${accountId}/stickers/${item.id}`);
+			setStickers(current => current.filter(sticker => sticker.id !== item.id));
+			setPreviews(current => {
+				const next = { ...current };
+				if (next[item.id]) {
+					URL.revokeObjectURL(next[item.id]);
+					delete next[item.id];
+				}
+				return next;
+			});
+			toast.success(ar ? 'تم حذف الستيكر' : 'Sticker deleted');
+		} catch (error) {
+			toast.error(error.response?.data?.message || (ar ? 'فشل حذف الستيكر' : 'Could not delete sticker'));
+		} finally {
+			setDeletingId(null);
+		}
+	};
+
+	const copyPrompt = async card => {
+		try {
+			await navigator.clipboard.writeText(card.text);
+			setPromptCopiedId(card.id);
+			toast.success(ar ? 'تم نسخ برومبت ChatGPT' : 'ChatGPT prompt copied');
+			window.setTimeout(() => setPromptCopiedId(current => (current === card.id ? null : current)), 1600);
+		} catch {
+			window.prompt(ar ? 'انسخ البرومبت:' : 'Copy this prompt:', card.text);
+		}
+	};
+
 	if (!open || typeof document === 'undefined') return null;
 
 	const style =
@@ -359,24 +407,36 @@ export default function StickersPanel({
 				</div>
 			) : (
 				<div className="flex min-h-0 flex-1 flex-col">
-					<div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
+					<div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-3 py-2">
 						<button
 							type="button"
 							onClick={syncStickers}
 							disabled={syncing || !accountId}
-							className="inline-flex h-8 items-center rounded-lg bg-emerald-50 px-2.5 text-[11px] font-bold text-emerald-700 disabled:opacity-50"
+							className={`${actionBtnClass} bg-emerald-50 text-emerald-700`}
 						>
-							{syncing ? <Loader2 size={12} className="me-1 animate-spin" /> : null}
+							{syncing ? <Loader2 size={12} className="animate-spin" /> : null}
 							{ar ? 'مزامنة واتساب' : 'Sync WhatsApp'}
 						</button>
 						<button
 							type="button"
 							onClick={() => fileRef.current?.click()}
 							disabled={uploading || !accountId}
-							className="inline-flex h-8 items-center gap-1 rounded-lg bg-slate-100 px-2.5 text-[11px] font-bold text-slate-700 disabled:opacity-50"
+							className={`${actionBtnClass} bg-slate-100 text-slate-700`}
 						>
 							{uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
 							{ar ? 'رفع' : 'Upload'}
+						</button>
+						<button
+							type="button"
+							onClick={() => setPromptOpen(current => !current)}
+							aria-pressed={promptOpen}
+							title={ar ? 'برومبت توليد استيكر بـ ChatGPT' : 'ChatGPT sticker generation prompt'}
+							className={`${actionBtnClass} ${
+								promptOpen ? 'bg-violet-100 text-violet-800' : 'bg-violet-50 text-violet-700'
+							}`}
+						>
+							<Sparkles size={12} />
+							{ar ? 'برومبت' : 'Prompt'}
 						</button>
 						<input
 							ref={fileRef}
@@ -401,26 +461,89 @@ export default function StickersPanel({
 							));
 						}}
 					>
-						{loading ? (
+						{promptOpen ? (
+							<div className="flex h-full min-h-0 flex-col gap-2">
+								{STICKER_PROMPT_CARDS.map(card => {
+									const expanded = promptCardId === card.id;
+									const copied = promptCopiedId === card.id;
+									return (
+										<article
+											key={card.id}
+											className={`flex min-h-0 flex-col overflow-hidden rounded-xl border ${
+												expanded
+													? 'flex-1 border-violet-200 bg-violet-50/70'
+													: 'shrink-0 border-slate-200 bg-white'
+											}`}
+										>
+											<div className="flex items-start justify-between gap-2 px-2.5 py-2">
+												<button
+													type="button"
+													onClick={() => setPromptCardId(card.id)}
+													className="min-w-0 flex-1 text-start"
+												>
+													<p className="text-[11px] font-bold text-slate-800">
+														{ar ? card.titleAr : card.titleEn}
+													</p>
+													<p className="mt-0.5 text-[10px] leading-4 text-slate-500">
+														{ar ? card.hintAr : card.hintEn}
+													</p>
+												</button>
+												<button
+													type="button"
+													onClick={() => void copyPrompt(card)}
+													className={`${actionBtnClass} bg-emerald-50 text-emerald-700`}
+												>
+													{copied ? <Check size={12} /> : <Copy size={12} />}
+													{copied ? (ar ? 'تم' : 'Copied') : (ar ? 'نسخ' : 'Copy')}
+												</button>
+											</div>
+											{expanded ? (
+												<pre
+													dir="rtl"
+													className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap border-t border-violet-100 bg-white p-2.5 text-right text-[11px] leading-5 text-slate-700"
+												>
+													{card.text}
+												</pre>
+											) : null}
+										</article>
+									);
+								})}
+							</div>
+						) : loading ? (
 							<div className="grid h-full place-items-center text-[#667781]">
 								<Loader2 className="animate-spin" />
 							</div>
 						) : stickers.length ? (
 							<div className="grid grid-cols-4 gap-1.5">
 								{stickers.map(item => (
-									<button
-										key={item.id}
-										type="button"
-										title={ar ? 'إرسال الستيكر' : 'Send sticker'}
-										onClick={() => void sendSticker(item)}
-										className="aspect-square overflow-hidden rounded-xl bg-[#F0F2F5] p-1 transition hover:bg-emerald-50"
-									>
-										{previews[item.id] ? (
-											<img src={previews[item.id]} alt="" className="h-full w-full object-contain" />
-										) : (
-											<Sticker className="mx-auto mt-4 text-slate-300" size={22} />
-										)}
-									</button>
+									<div key={item.id} className="group relative aspect-square">
+										<button
+											type="button"
+											title={ar ? 'إرسال الستيكر' : 'Send sticker'}
+											onClick={() => void sendSticker(item)}
+											className="h-full w-full overflow-hidden rounded-xl bg-[#F0F2F5] p-1 transition hover:bg-emerald-50"
+										>
+											{previews[item.id] ? (
+												<img src={previews[item.id]} alt="" className="h-full w-full object-contain" />
+											) : (
+												<Sticker className="mx-auto mt-4 text-slate-300" size={22} />
+											)}
+										</button>
+										<button
+											type="button"
+											aria-label={ar ? 'حذف الستيكر' : 'Delete sticker'}
+											title={ar ? 'حذف الستيكر' : 'Delete sticker'}
+											disabled={deletingId === item.id}
+											onClick={event => {
+												event.preventDefault();
+												event.stopPropagation();
+												void deleteSticker(item);
+											}}
+											className="absolute right-1 top-1 z-10 grid h-5 w-5 place-items-center rounded-full bg-black/60 text-white opacity-0 shadow-sm transition hover:bg-rose-600 group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-60 max-[768px]:opacity-100"
+										>
+											{deletingId === item.id ? <Loader2 size={10} className="animate-spin" /> : <X size={11} strokeWidth={2.6} />}
+										</button>
+									</div>
 								))}
 							</div>
 						) : (

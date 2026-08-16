@@ -42,6 +42,10 @@ import {
 	MessageCircle,
 	Mic,
 	MoreHorizontal,
+	PanelLeft,
+	PanelLeftClose,
+	PanelRight,
+	PanelRightClose,
 	Pause,
 	Pin,
 	Play,
@@ -115,6 +119,13 @@ import DemoModeSettings from './demo/components/DemoModeSettings';
 import { demoApi } from './demo/demo-api';
 import WhatsAppSplitPane from './WhatsAppSplitPane';
 import { VoiceRecordingBar } from './VoiceRecordingBar';
+import {
+	VOICE_NOTE_MAX_SECONDS,
+	buildVoiceNoteFile,
+	createVoiceMediaRecorder,
+	getVoiceMediaStream,
+	mediaUploadFailedMessage,
+} from './whatsapp-voice-recorder';
 import WhatsAppDesktopRail from './WhatsAppDesktopRail';
 import { WaCustomSelect } from './WaCustomSelect';
 import {
@@ -142,6 +153,7 @@ import { useWhatsAppAi } from './ai/use-whatsapp-ai';
 const EMPTY_MESSAGES = [];
 const WHATSAPP_SELECTED_ACCOUNT_KEY = 'wa-selected-account-id';
 const WHATSAPP_ACTIVE_TAB_KEY = 'wa-active-tab';
+const WHATSAPP_CHAT_LIST_COLLAPSED_KEY = 'wa-chat-list-collapsed';
 const WHATSAPP_PERSISTED_TABS = new Set([
 	'accounts',
 	'chats',
@@ -153,11 +165,21 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'settings',
 ]);
 
+function resolveWhatsAppStorageUserId(userId) {
+	const fromArg = String(userId || '').trim();
+	if (fromArg && fromArg !== 'anonymous') return fromArg;
+	return resolveStoredWhatsAppUserId();
+}
+
 function readStoredWhatsAppAccountId(userId) {
 	if (typeof window === 'undefined') return null;
 	try {
-		if (userId) {
-			return window.localStorage.getItem(`${WHATSAPP_SELECTED_ACCOUNT_KEY}:${userId}`) || null;
+		const scopedUserId = resolveWhatsAppStorageUserId(userId);
+		if (scopedUserId) {
+			const scoped = window.localStorage.getItem(
+				`${WHATSAPP_SELECTED_ACCOUNT_KEY}:${scopedUserId}`,
+			);
+			if (scoped) return scoped;
 		}
 		return window.localStorage.getItem(WHATSAPP_SELECTED_ACCOUNT_KEY) || null;
 	} catch {
@@ -165,13 +187,28 @@ function readStoredWhatsAppAccountId(userId) {
 	}
 }
 
+function writeWhatsAppAccountToLocation(accountId) {
+	if (typeof window === 'undefined' || !accountId) return;
+	try {
+		const url = new URL(window.location.href);
+		if (url.searchParams.get('accountId') === String(accountId)) return;
+		url.searchParams.set('accountId', String(accountId));
+		window.history.replaceState(
+			window.history.state,
+			'',
+			`${url.pathname}${url.search}${url.hash}`,
+		);
+	} catch {
+		// Ignore history failures.
+	}
+}
+
 function writeStoredWhatsAppAccountId(accountId, userId) {
 	if (typeof window === 'undefined' || !accountId) return;
 	try {
-		if (userId) {
-			window.localStorage.setItem(`${WHATSAPP_SELECTED_ACCOUNT_KEY}:${userId}`, accountId);
-			// Drop legacy unscoped key so another browser profile user cannot
-			// inherit this selection as a default.
+		const scopedUserId = resolveWhatsAppStorageUserId(userId);
+		if (scopedUserId) {
+			window.localStorage.setItem(`${WHATSAPP_SELECTED_ACCOUNT_KEY}:${scopedUserId}`, accountId);
 			window.localStorage.removeItem(WHATSAPP_SELECTED_ACCOUNT_KEY);
 			return;
 		}
@@ -184,14 +221,15 @@ function writeStoredWhatsAppAccountId(accountId, userId) {
 function clearStoredWhatsAppAccountId(accountId, userId) {
 	if (typeof window === 'undefined') return;
 	try {
-		const scopedKey = userId
-			? `${WHATSAPP_SELECTED_ACCOUNT_KEY}:${userId}`
+		const scopedUserId = resolveWhatsAppStorageUserId(userId);
+		const scopedKey = scopedUserId
+			? `${WHATSAPP_SELECTED_ACCOUNT_KEY}:${scopedUserId}`
 			: WHATSAPP_SELECTED_ACCOUNT_KEY;
 		const current = window.localStorage.getItem(scopedKey);
 		if (!accountId || current === accountId) {
 			window.localStorage.removeItem(scopedKey);
 		}
-		if (!userId) {
+		if (!scopedUserId) {
 			window.localStorage.removeItem(WHATSAPP_SELECTED_ACCOUNT_KEY);
 		}
 	} catch {
@@ -368,10 +406,13 @@ const translations = {
 		recordVoice: 'Record voice message',
 		recordingVoice: 'Recording voice message...',
 		recordingLive: 'LIVE',
+		recordingPaused: 'PAUSED',
 		recordingCancel: 'Cancel',
 		cancelRecording: 'Cancel recording',
 		stopRecording: 'Stop recording',
-		sendRecording: 'Stop and send',
+		recordingPause: 'Pause',
+		recordingResume: 'Resume',
+		sendRecording: 'Send',
 		microphoneDenied: 'Microphone permission was denied',
 		microphoneUnavailable: 'No microphone is available',
 		recordingUnsupported: 'Voice recording is not supported in this browser',
@@ -436,6 +477,8 @@ const translations = {
 		noNotes: 'No internal notes yet',
 		noteSaved: 'Note added',
 		search: 'Search conversations',
+		collapseChatList: 'Collapse chat list',
+		expandChatList: 'Expand chat list',
 		allChats: 'All',
 		unreadChats: 'Unread',
 		favoriteChats: 'Favorites',
@@ -623,10 +666,13 @@ const translations = {
 		recordVoice: 'تسجيل رسالة صوتية',
 		recordingVoice: 'جارِ تسجيل رسالة صوتية...',
 		recordingLive: 'مباشر',
+		recordingPaused: 'متوقف',
 		recordingCancel: 'إلغاء',
 		cancelRecording: 'إلغاء التسجيل',
 		stopRecording: 'إيقاف التسجيل',
-		sendRecording: 'إيقاف وإرسال',
+		recordingPause: 'إيقاف',
+		recordingResume: 'متابعة',
+		sendRecording: 'إرسال',
 		microphoneDenied: 'تم رفض إذن استخدام الميكروفون',
 		microphoneUnavailable: 'لا يوجد ميكروفون متاح',
 		recordingUnsupported: 'تسجيل الصوت غير مدعوم في هذا المتصفح',
@@ -691,6 +737,8 @@ const translations = {
 		noNotes: 'لا توجد ملاحظات داخلية بعد',
 		noteSaved: 'تمت إضافة الملاحظة',
 		search: 'بحث في المحادثات',
+		collapseChatList: 'طي قائمة المحادثات',
+		expandChatList: 'توسيع قائمة المحادثات',
 		allChats: 'الكل',
 		unreadChats: 'غير مقروءة',
 		favoriteChats: 'المفضلة',
@@ -2102,8 +2150,6 @@ function VoiceMessage({
 							loading={loadingPlayback}
 							onSeek={seekTo}
 						/>
-					</div>
-					<div className="wa-voice-track-meta">
 						<span className="wa-voice-duration">
 							{loadFailed && !playbackUrl
 								? 'Failed'
@@ -3866,18 +3912,18 @@ function ConversationFilterDropdown({ value, onChange, labels }) {
 	}, [open]);
 
 	return (
-		<div ref={rootRef} className="wa-desktop-filter relative w-[116px] shrink-0">
+		<div ref={rootRef} className="wa-desktop-filter relative w-max max-w-[60px] shrink-0">
 			<button
 				ref={buttonRef}
 				type="button"
 				aria-haspopup="listbox"
 				aria-expanded={open}
 				onClick={() => setOpen(current => !current)}
-				className="wa-btn-3d flex h-10 w-full items-center justify-between gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-bold text-[#111b21] outline-none transition-colors hover:border-[var(--color-primary-300)] focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+				className="wa-btn-3d flex h-8 w-full min-w-0 items-center justify-between gap-0.5 rounded-lg border border-slate-200 bg-white px-1.5 text-[10px] font-bold leading-none text-[#111b21] outline-none transition-colors hover:border-[var(--color-primary-300)] focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
 			>
-				<span className="truncate">{selected.label}</span>
+				<span className="min-w-0 truncate">{selected.label}</span>
 				<ChevronDown
-					size={14}
+					size={12}
 					className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
 				/>
 			</button>
@@ -4154,7 +4200,9 @@ function WhatsAppWorkspaceContent() {
 	const [bootStatus, setBootStatus] = useState('loading');
 	const [bootError, setBootError] = useState('');
 	const [isAdmin, setIsAdmin] = useState(false);
-	const [currentUserId, setCurrentUserId] = useState('anonymous');
+	const [currentUserId, setCurrentUserId] = useState(
+		() => resolveStoredWhatsAppUserId() || 'anonymous',
+	);
 	const [tabLoading, setTabLoading] = useState(false);
 	const [tabError, setTabError] = useState('');
 	const [accountBusy, setAccountBusy] = useState(false);
@@ -4164,6 +4212,7 @@ function WhatsAppWorkspaceContent() {
 	const [loadingMessages, setLoadingMessages] = useState(false);
 	const [messagesSyncHint, setMessagesSyncHint] = useState('');
 	const [recordingVoice, setRecordingVoice] = useState(false);
+	const [recordingPaused, setRecordingPaused] = useState(false);
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
 	const [voiceChangerOpen, setVoiceChangerOpen] = useState(false);
 	const [voiceChanging, setVoiceChanging] = useState(false);
@@ -4211,8 +4260,16 @@ function WhatsAppWorkspaceContent() {
 	const [viewedStatusIds, setViewedStatusIds] = useState(() => new Set());
 	const [newAccountName, setNewAccountName] = useState('');
 	const [chatSearch, setChatSearch] = useState('');
+	const [chatListCollapsed, setChatListCollapsed] = useState(() => {
+		if (typeof window === 'undefined') return false;
+		try {
+			return window.localStorage.getItem(WHATSAPP_CHAT_LIST_COLLAPSED_KEY) === '1';
+		} catch {
+			return false;
+		}
+	});
+	const [collapsedChatTip, setCollapsedChatTip] = useState(null);
 	const [searchOpen, setSearchOpen] = useState(false);
-	const [searchFocused, setSearchFocused] = useState(false);
 	const [conversationFilter, setConversationFilter] = useState('all');
 	const [pendingPreferenceActions, setPendingPreferenceActions] = useState(() => new Set());
 	const [assignmentFilter, setAssignmentFilter] = useState('');
@@ -4452,17 +4509,6 @@ function WhatsAppWorkspaceContent() {
 
 	useEffect(() => {
 		if (typeof window === 'undefined') return undefined;
-		const media = window.matchMedia('(min-width: 769px)');
-		const syncDesktopSearch = () => {
-			if (media.matches) setSearchOpen(true);
-		};
-		syncDesktopSearch();
-		media.addEventListener('change', syncDesktopSearch);
-		return () => media.removeEventListener('change', syncDesktopSearch);
-	}, []);
-
-	useEffect(() => {
-		if (typeof window === 'undefined') return undefined;
 		if (activeTab !== 'calls') return undefined;
 		const media = window.matchMedia('(min-width: 769px)');
 		const leaveCallsOnDesktop = () => {
@@ -4574,6 +4620,18 @@ function WhatsAppWorkspaceContent() {
 		}
 		writeStoredWhatsAppActiveTab(activeTab, currentUserId);
 	}, [activeTab, currentUserId]);
+
+	useEffect(() => {
+		try {
+			window.localStorage.setItem(
+				WHATSAPP_CHAT_LIST_COLLAPSED_KEY,
+				chatListCollapsed ? '1' : '0',
+			);
+		} catch {
+			// Ignore quota / private-mode failures.
+		}
+		if (!chatListCollapsed) setCollapsedChatTip(null);
+	}, [chatListCollapsed]);
 
 	const subscribeToWhatsAppPush = useCallback(
 		async requestPermission => {
@@ -4862,22 +4920,26 @@ function WhatsAppWorkspaceContent() {
 		const storedAccountId = readStoredWhatsAppAccountId(currentUserId);
 		const storedAccount = list.find(item => item.id === storedAccountId);
 		setAccounts(list);
-		const currentAccount = list.find(item => item.id === accountIdRef.current);
 		const nextAccountId =
 			requestedAccount?.id ||
-			currentAccount?.id ||
 			storedAccount?.id ||
+			list.find(item => item.id === accountIdRef.current)?.id ||
 			list[0]?.id ||
 			null;
 		setAccountId(current => {
-			const stillExists = list.some(item => item.id === current);
+			const currentStillExists = list.some(item => item.id === current);
 			const resolved =
 				requestedAccount?.id ||
-				(stillExists ? current : null) ||
 				storedAccount?.id ||
+				(currentStillExists ? current : null) ||
 				list[0]?.id ||
 				null;
-			if (resolved) writeStoredWhatsAppAccountId(resolved, currentUserId);
+			if (resolved) {
+				if (requestedAccount || !storedAccount) {
+					writeStoredWhatsAppAccountId(resolved, currentUserId);
+				}
+				writeWhatsAppAccountToLocation(resolved);
+			}
 			return resolved;
 		});
 		const activeAccount = list.find(item => item.id === nextAccountId);
@@ -4894,6 +4956,7 @@ function WhatsAppWorkspaceContent() {
 			if (!nextAccountId) return;
 			setAccountId(nextAccountId);
 			writeStoredWhatsAppAccountId(nextAccountId, currentUserId);
+			writeWhatsAppAccountToLocation(nextAccountId);
 		},
 		[currentUserId],
 	);
@@ -6899,6 +6962,7 @@ function WhatsAppWorkspaceContent() {
 			const { data: uploaded } = await api.post(
 				`/whatsapp/accounts/${targetAccountId}/media`,
 				form,
+				{ maxBodyLength: Infinity, maxContentLength: Infinity },
 			);
 			uploadedFileId = uploaded.fileId;
 			const { data } = await api.post(`/whatsapp/conversations/${targetConversationId}/messages`, {
@@ -6943,7 +7007,7 @@ function WhatsAppWorkspaceContent() {
 					setReplyingTo(current => current || replySnapshot);
 				}
 			}
-			toast.error(error.response?.data?.message || 'Media message failed');
+			toast.error(mediaUploadFailedMessage(error, locale));
 			return false;
 		} finally {
 			setSending(false);
@@ -7524,7 +7588,31 @@ function WhatsAppWorkspaceContent() {
 		const recorder = mediaRecorderRef.current;
 		if (!recorder || recorder.state === 'inactive') return;
 		discardRecordingRef.current = !send;
+		setRecordingPaused(false);
 		recorder.stop();
+	};
+
+	const pauseVoiceRecording = () => {
+		const recorder = mediaRecorderRef.current;
+		if (!recorder || recorder.state !== 'recording') return;
+		try {
+			if (typeof recorder.requestData === 'function') recorder.requestData();
+			recorder.pause();
+			setRecordingPaused(true);
+		} catch {
+			toast.error(t.recordingFailed);
+		}
+	};
+
+	const resumeVoiceRecording = () => {
+		const recorder = mediaRecorderRef.current;
+		if (!recorder || recorder.state !== 'paused') return;
+		try {
+			recorder.resume();
+			setRecordingPaused(false);
+		} catch {
+			toast.error(t.recordingFailed);
+		}
 	};
 
 	const startVoiceRecording = async () => {
@@ -7549,20 +7637,15 @@ function WhatsAppWorkspaceContent() {
 		}
 		let stream = null;
 		try {
-			stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-			const supportedTypes = [
-				'audio/webm;codecs=opus',
-				'audio/ogg;codecs=opus',
-				'audio/webm',
-			];
-			const mimeType = supportedTypes.find(type => MediaRecorder.isTypeSupported(type));
-			const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+			stream = await getVoiceMediaStream();
+			const recorder = createVoiceMediaRecorder(stream);
 			recordingStreamRef.current = stream;
 			mediaRecorderRef.current = recorder;
 			recordingChunksRef.current = [];
 			discardRecordingRef.current = false;
 			recordingSecondsRef.current = 0;
 			setRecordingSeconds(0);
+			setRecordingPaused(false);
 			setRecordingVoice(true);
 
 			recorder.ondataavailable = event => {
@@ -7587,6 +7670,7 @@ function WhatsAppWorkspaceContent() {
 				mediaRecorderRef.current = null;
 				const durationSec = Math.max(1, recordingSecondsRef.current || 1);
 				setRecordingVoice(false);
+				setRecordingPaused(false);
 				setRecordingSeconds(0);
 				recordingSecondsRef.current = 0;
 
@@ -7595,24 +7679,18 @@ function WhatsAppWorkspaceContent() {
 				recordingChunksRef.current = [];
 				if (discard || chunks.length === 0) return;
 
-				const recordedType = recorder.mimeType || chunks[0]?.type || 'audio/webm';
-				const extension = recordedType.includes('ogg') ? 'ogg' : 'webm';
-				const blob = new Blob(chunks, { type: recordedType.split(';')[0] || recordedType });
-				if (!blob.size) return;
-				// Encode length in the name so the bubble can show duration even when
-				// the browser reports Infinity/NaN for webm metadata.
-				const file = new File([blob], `voice-${durationSec}s.${extension}`, {
-					type: recordedType.split(';')[0] || recordedType,
-				});
+				const file = buildVoiceNoteFile(chunks, recorder, durationSec);
+				if (!file) return;
 				void sendRecordedVoice(file);
 			};
 
 			recorder.start(250);
 			recordingTimerRef.current = setInterval(() => {
+				if (mediaRecorderRef.current?.state !== 'recording') return;
 				recordingSecondsRef.current += 1;
 				const next = recordingSecondsRef.current;
 				setRecordingSeconds(next);
-				if (next >= 299 && recorder.state !== 'inactive') {
+				if (next >= VOICE_NOTE_MAX_SECONDS && recorder.state !== 'inactive') {
 					discardRecordingRef.current = false;
 					recorder.stop();
 				}
@@ -7624,6 +7702,7 @@ function WhatsAppWorkspaceContent() {
 			mediaRecorderRef.current = null;
 			recordingChunksRef.current = [];
 			setRecordingVoice(false);
+			setRecordingPaused(false);
 			const permissionDenied = ['NotAllowedError', 'SecurityError'].includes(error?.name);
 			const microphoneUnavailable = ['NotFoundError', 'DevicesNotFoundError'].includes(
 				error?.name,
@@ -9091,6 +9170,7 @@ function WhatsAppWorkspaceContent() {
 											)}
 										{linkMode === 'qr' && qr && canManageWhatsApp && (
 											<div className="mx-auto max-w-sm text-center">
+												
 												<div className="mb-4 flex items-center justify-center gap-2">
 													<span className="relative flex h-2 w-2">
 														<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
@@ -9098,6 +9178,7 @@ function WhatsAppWorkspaceContent() {
 													</span>
 													<p className="text-sm font-black">{t.scanQr}</p>
 												</div>
+												
 												<div className="relative mx-auto w-fit rounded-2xl bg-white p-4 shadow-[0_20px_50px_-15px_rgba(37,211,102,0.35)] dark:bg-slate-800">
 													<span className="absolute -start-1.5 -top-1.5 h-6 w-6 rounded-tl-xl border-s-4 border-t-4 border-[var(--color-primary-500)]" />
 													<span className="absolute -end-1.5 -top-1.5 h-6 w-6 rounded-tr-xl border-e-4 border-t-4 border-[var(--color-primary-500)]" />
@@ -9150,11 +9231,17 @@ function WhatsAppWorkspaceContent() {
 
 				{activeTab === 'chats' && (
 					<Card className={`wa-chat-card grid h-full min-h-[600px] overflow-hidden max-[768px]:min-h-0 max-[768px]:rounded-none max-[768px]:border-0 ${
+						chatListCollapsed ? 'is-list-collapsed' : ''
+					} ${
 						secondaryConversationId
-							? 'min-[769px]:grid-cols-[minmax(280px,320px)_minmax(0,1fr)_minmax(0,1fr)]'
-							: 'min-[769px]:grid-cols-[minmax(280px,320px)_1fr]'
+							? chatListCollapsed
+								? 'min-[769px]:grid-cols-[72px_minmax(0,1fr)_minmax(0,1fr)]'
+								: 'min-[769px]:grid-cols-[minmax(220px,250px)_minmax(0,1fr)_minmax(0,1fr)]'
+							: chatListCollapsed
+								? 'min-[769px]:grid-cols-[72px_1fr]'
+								: 'min-[769px]:grid-cols-[minmax(220px,250px)_1fr]'
 					}`}>
-						<aside className={`wa-chat-list ${conversationId ? 'hidden min-[769px]:flex' : 'flex'} min-h-0 flex-col border-e border-slate-200 dark:border-slate-700`}>
+						<aside className={`wa-chat-list ${chatListCollapsed ? 'is-collapsed' : ''} ${conversationId ? 'hidden min-[769px]:flex' : 'flex'} min-h-0 flex-col border-e border-slate-200 dark:border-slate-700`}>
 							<div
 								className="wa-chat-list-scroll min-h-0 flex-1 min-[769px]:flex min-[769px]:flex-col min-[769px]:overflow-hidden"
 								onScroll={event => setMobileHeaderScrolled(event.currentTarget.scrollTop > 0)}
@@ -9203,43 +9290,80 @@ function WhatsAppWorkspaceContent() {
 											)}
 										</div>
 									)}
-									<div className="wa-desktop-chat-list-tools flex items-center justify-between">
-										<h2 className="font-black">{t.chats}</h2>
-										<div className="flex items-center gap-1.5">
-											{searchOpen ? (
-												<button
-													type="button"
-													onClick={() => {
+									<div className="wa-desktop-chat-list-tools flex flex-nowrap items-center gap-1.5">
+										{searchOpen ? (
+											<div className="wa-desktop-search-field relative min-w-0 flex-1">
+												<Search size={14} className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+												<input
+													autoFocus
+													aria-label={t.search}
+													value={chatSearch}
+													onChange={event => setChatSearch(event.target.value)}
+													placeholder={
+														locale === 'ar'
+															? 'ابحث أو ابدأ محادثة جديدة'
+															: 'Search or start a new chat'
+													}
+													className="wa-input-3d h-8 w-full rounded-xl border border-slate-200 bg-white ps-8 pe-7 text-[13px] text-slate-800 outline-none transition-colors focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+												/>
+												{searchingConversations && (
+													<Loader2 size={13} className="absolute end-2 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />
+												)}
+											</div>
+										) : (
+											<h2 className="min-w-0 flex-1 truncate font-black">{t.chats}</h2>
+										)}
+										<ConversationFilterDropdown
+											value={conversationFilter}
+											onChange={setConversationFilter}
+											labels={{
+												all: t.allChats,
+												unread: t.unreadChats,
+												favorites: t.favoriteChats,
+											}}
+										/>
+										<div className="flex shrink-0 items-center gap-1">
+											<button
+												type="button"
+												onClick={() => {
+													setChatListCollapsed(current => !current);
+													if (!chatListCollapsed) {
 														setSearchOpen(false);
 														setChatSearch('');
-													}}
-													aria-label="Close search"
-													className="wa-btn-3d rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
-												>
-													<X size={17} />
-												</button>
-											) : (
-												<>
-													<button
-														type="button"
-														onClick={() => setSearchOpen(true)}
-														aria-label={t.search}
-														className="wa-btn-3d rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
-													>
-														<Search size={17} />
-													</button>
-													{canUseWhatsApp && isAccountConnected && (
-														<button
-															type="button"
-															onClick={() => syncAccount()}
-															aria-label={t.sync}
-															className="wa-btn-3d rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
-														>
-															<RefreshCw size={17} />
-														</button>
-													)}
-												</>
-											)}
+													}
+												}}
+												aria-label={chatListCollapsed ? t.expandChatList : t.collapseChatList}
+												title={chatListCollapsed ? t.expandChatList : t.collapseChatList}
+												className="wa-btn-3d wa-chat-list-collapse hidden rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-50 min-[769px]:grid dark:hover:bg-slate-800"
+											>
+												{chatListCollapsed
+													? locale === 'ar'
+														? <PanelRight size={17} />
+														: <PanelLeft size={17} />
+													: locale === 'ar'
+														? <PanelRightClose size={17} />
+														: <PanelLeftClose size={17} />}
+											</button>
+											<button
+												type="button"
+												onClick={() => {
+													if (searchOpen) {
+														setSearchOpen(false);
+														setChatSearch('');
+														return;
+													}
+													setChatListCollapsed(false);
+													setSearchOpen(true);
+												}}
+												aria-label={t.search}
+												aria-pressed={searchOpen}
+												title={t.search}
+												className={`wa-btn-3d wa-chat-list-search-toggle rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 ${
+													searchOpen ? 'is-active' : ''
+												}`}
+											>
+												<Search size={17} />
+											</button>
 										</div>
 									</div>
 									<div className="wa-mobile-chat-tools hidden">
@@ -9310,51 +9434,6 @@ function WhatsAppWorkspaceContent() {
 											</div>
 										</div>
 									)}
-									<div
-										data-desktop-chat-search
-										className={`grid transition-all duration-300 ease-out ${searchOpen
-											? 'mt-3 grid-rows-[1fr] opacity-100'
-											: 'grid-rows-[0fr] opacity-0'
-											}`}
-									>
-										<div className="min-h-0 overflow-hidden">
-											<div
-												className={`wa-desktop-search-row flex items-center gap-2 ${
-													searchFocused ? 'is-search-focused' : ''
-												}`}
-											>
-												<div className="wa-desktop-search-field relative min-w-0 flex-1">
-													<Search size={15} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
-													<input
-														autoFocus={searchOpen}
-														aria-label={t.search}
-														value={chatSearch}
-														onChange={event => setChatSearch(event.target.value)}
-														onFocus={() => setSearchFocused(true)}
-														onBlur={() => setSearchFocused(false)}
-														placeholder={
-															locale === 'ar'
-																? 'ابحث أو ابدأ محادثة جديدة'
-																: 'Search or start a new chat'
-														}
-														className="wa-input-3d h-10 w-full rounded-xl border border-slate-200 bg-white ps-9 pe-8 text-sm text-slate-800 outline-none transition-colors focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-													/>
-													{searchingConversations && (
-														<Loader2 size={14} className="absolute end-2.5 top-3 animate-spin text-slate-400" />
-													)}
-												</div>
-												<ConversationFilterDropdown
-													value={conversationFilter}
-													onChange={setConversationFilter}
-													labels={{
-														all: t.allChats,
-														unread: t.unreadChats,
-														favorites: t.favoriteChats,
-													}}
-												/>
-											</div>
-										</div>
-									</div>
 								</div>
 								<div
 									className="wa-conversation-list min-h-0 flex-1 overflow-y-auto p-2 nice-scroll"
@@ -9364,6 +9443,7 @@ function WhatsAppWorkspaceContent() {
 											window.clearTimeout(hoverPrefetchTimerRef.current);
 											hoverPrefetchTimerRef.current = null;
 										}
+										if (collapsedChatTip) setCollapsedChatTip(null);
 										const node = event.currentTarget;
 										if (
 											!accountId ||
@@ -9385,7 +9465,7 @@ function WhatsAppWorkspaceContent() {
 														key={`wa-sync-skel-${index}`}
 														className="flex animate-pulse items-center gap-3 rounded-xl p-3"
 													>
-														<div className="h-12 w-12 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700" />
+														<div className="h-11 w-11 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700" />
 														<div className="min-w-0 flex-1 space-y-2">
 															<div className="h-3 w-2/3 rounded bg-slate-200 dark:bg-slate-700" />
 															<div className="h-2.5 w-full rounded bg-slate-100 dark:bg-slate-800" />
@@ -9529,14 +9609,33 @@ function WhatsAppWorkspaceContent() {
 															cancelIdleMessagePrefetch(conversation.id);
 															setConversationId(conversation.id);
 														}}
-														onPointerEnter={() => {
+														onPointerEnter={event => {
 															scheduleConversationPrefetch(conversation.id);
+															if (!chatListCollapsed) return;
+															const rect = event.currentTarget.getBoundingClientRect();
+															const isRtl = locale === 'ar';
+															setCollapsedChatTip({
+																title,
+																preview: typing
+																	? locale === 'ar'
+																		? 'يكتب الآن…'
+																		: 'typing…'
+																	: previewText,
+																unread: unreadCount,
+																top: rect.top + rect.height / 2,
+																left: isRtl ? rect.left - 8 : rect.right + 8,
+																align: isRtl ? 'end' : 'start',
+																dir: titlePresentation.dir,
+															});
 														}}
 														onPointerDown={event => startConversationLongPress(event, conversation)}
 														onPointerMove={cancelConversationLongPress}
 														onPointerUp={cancelConversationLongPress}
 														onPointerCancel={cancelConversationLongPress}
-														onPointerLeave={cancelConversationLongPress}
+														onPointerLeave={() => {
+															cancelConversationLongPress();
+															if (chatListCollapsed) setCollapsedChatTip(null);
+														}}
 														onContextMenu={event => {
 															event.preventDefault();
 															suppressConversationClickRef.current = true;
@@ -9575,11 +9674,11 @@ function WhatsAppWorkspaceContent() {
 																style={{ background: GRADIENT }}
 															/>
 														)}
-														<div className="wa-conversation-avatar relative grid h-14 w-14 shrink-0 place-items-center">
+														<div className="wa-conversation-avatar relative grid h-11 w-11 shrink-0 place-items-center">
 															{story ? (
 																<>
 																	<StoryRing
-																		size={56}
+																		size={chatListCollapsed ? 44 : 48}
 																		strokeWidth={2}
 																		segmentsViewed={story.items.map(item =>
 																			viewedStatusIds.has(item.id),
@@ -9593,11 +9692,11 @@ function WhatsAppWorkspaceContent() {
 																			event.stopPropagation();
 																			openStoryGroup(story);
 																		}}
-																		className="relative z-1 grid h-12 w-12 place-items-center rounded-full bg-white"
+																		className="relative z-1 grid h-9 w-9 place-items-center rounded-full bg-white"
 																	>
 																		<Avatar
 																			label={title}
-																			size={12}
+																			size={9}
 																			isGroup={isGroup}
 																			src={conversationAvatarUrl(conversation)}
 																			className="!ring-0"
@@ -9607,10 +9706,18 @@ function WhatsAppWorkspaceContent() {
 															) : (
 																<Avatar
 																	label={title}
-																	size={14}
+																	size={11}
 																	isGroup={isGroup}
 																	src={conversationAvatarUrl(conversation)}
 																/>
+															)}
+															{unread && (
+																<span
+																	className="wa-unread-avatar-badge"
+																	style={{ background: GRADIENT }}
+																>
+																	{unreadCount > 99 ? '99+' : unreadCount}
+																</span>
 															)}
 														</div>
 														<div className="min-w-0 flex-1">
@@ -9634,13 +9741,13 @@ function WhatsAppWorkspaceContent() {
 																		aria-label={
 																			conversation.isPinned ? t.unpinChat : t.pinChat
 																		}
-																		className={`wa-conversation-preference rounded p-0.5 disabled:opacity-50 ${conversation.isPinned
-																			? 'text-[var(--color-primary-500)]'
-																			: 'text-slate-300 hover:text-[var(--color-primary-500)]'
-																			}`}
+																		className={`wa-conversation-preference wa-conversation-pin rounded p-0.5 disabled:opacity-50 ${
+																			conversation.isPinned ? 'is-on text-[var(--color-primary-500)]' : 'text-slate-400 hover:text-[var(--color-primary-500)]'
+																		}`}
 																	>
 																		<Pin
-																			size={13}
+																			size={15}
+																			strokeWidth={2.2}
 																			fill={
 																				conversation.isPinned
 																					? 'currentColor'
@@ -9735,6 +9842,31 @@ function WhatsAppWorkspaceContent() {
 									)}
 								</div>
 							</div>
+							{chatListCollapsed &&
+								collapsedChatTip &&
+								typeof document !== 'undefined' &&
+								createPortal(
+									<div
+										className={`wa-collapsed-chat-tip ${collapsedChatTip.align === 'end' ? 'is-end' : ''}`}
+										style={{
+											top: collapsedChatTip.top,
+											left: collapsedChatTip.left,
+										}}
+									>
+										<p
+											className="wa-collapsed-chat-tip-title"
+											dir={collapsedChatTip.dir || undefined}
+										>
+											{collapsedChatTip.title}
+										</p>
+										{collapsedChatTip.preview ? (
+											<p className="wa-collapsed-chat-tip-preview">
+												{collapsedChatTip.preview}
+											</p>
+										) : null}
+									</div>,
+									document.body,
+								)}
 						</aside>
 						<section className={`${!conversationId ? 'hidden min-[769px]:flex' : 'flex'} min-h-0 min-w-0 flex-col overflow-hidden`}>
 							{!selectedConversation ? (
@@ -9745,8 +9877,8 @@ function WhatsAppWorkspaceContent() {
 								} />
 							) : (
 								<>
-									<header className="wa-chat-toolbar flex items-center justify-between border-b border-slate-100 p-3 dark:border-slate-800">
-										<div className="flex min-w-0 items-center gap-2.5">
+									<header className="wa-chat-toolbar flex items-center justify-between border-b border-slate-100 px-3 py-2 dark:border-slate-800">
+										<div className="flex min-w-0 items-center gap-2">
 											<button type="button" aria-label="Back to chats" onClick={() => setConversationId(null)} className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#0A0A0A] min-[769px]:hidden">
 												{locale === 'ar' ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
 											</button>
@@ -9758,20 +9890,20 @@ function WhatsAppWorkspaceContent() {
 											<div className="wa-chat-avatar-ring shrink-0">
 												<Avatar
 													label={conversationTitle(selectedConversation)}
-													size={6}
+													size={8}
 													isGroup={selectedConversation.type === 'group'}
 													src={conversationAvatarUrl(selectedConversation)}
 												/>
 											</div>
 											<div className="wa-chat-contact min-w-0">
 												<h3
-													className={`truncate font-black ${selectedChatTitlePresentation.className}`}
+													className={`truncate text-sm font-semibold tracking-tight ${selectedChatTitlePresentation.className}`}
 													dir={selectedChatTitlePresentation.dir}
 													lang={selectedChatTitlePresentation.lang}
 												>
 													{selectedChatTitle}
 												</h3>
-												<p className="wa-chat-assignee text-xs text-slate-500">
+												<p className="wa-chat-assignee mt-px text-[11px] leading-4 text-slate-500">
 													{selectedConversation.isTyping ||
 													selectedConversation.typing ||
 													selectedConversation.presence?.typing
@@ -9847,7 +9979,7 @@ function WhatsAppWorkspaceContent() {
 												)}
 											</button>
 										</div>
-										<div className="hidden items-center gap-1.5 min-[769px]:flex">
+										<div className="hidden items-center gap-1 min-[769px]:flex">
 											<button
 												type="button"
 												disabled={demo.settings.enabled}
@@ -9868,16 +10000,16 @@ function WhatsAppWorkspaceContent() {
 												}}
 												aria-label={mediaSelectMode ? t.cancelSelectMedia : t.selectMedia}
 												title={mediaSelectMode ? t.cancelSelectMedia : t.selectMedia}
-												className={`wa-toolbar-icon-btn grid h-9 w-9 place-items-center rounded-lg border transition-colors disabled:opacity-50 ${
+												className={`wa-toolbar-icon-btn grid h-7 w-7 place-items-center rounded-md border transition-colors disabled:opacity-50 ${
 													mediaSelectMode
 														? 'is-active border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)]'
 														: 'border-slate-200 bg-white text-[#54656f] hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
 												}`}
 											>
 												{mediaSelectMode ? (
-													<X size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
+													<X size={13} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
 												) : (
-													<Images size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
+													<Images size={13} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
 												)}
 											</button>
 											<button
@@ -9885,16 +10017,16 @@ function WhatsAppWorkspaceContent() {
 												onClick={toggleTicketSelectMode}
 												aria-label={ticketSelectMode ? t.cancelSelectMessages : t.selectMessages}
 												title={ticketSelectMode ? t.cancelSelectMessages : t.selectMessages}
-												className={`wa-toolbar-icon-btn grid h-9 w-9 place-items-center rounded-lg border transition-colors disabled:opacity-50 ${
+												className={`wa-toolbar-icon-btn grid h-7 w-7 place-items-center rounded-md border transition-colors disabled:opacity-50 ${
 													ticketSelectMode
 														? 'is-active border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)]'
 														: 'border-slate-200 bg-white text-[#54656f] hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
 												}`}
 											>
 												{ticketSelectMode ? (
-													<X size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
+													<X size={13} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
 												) : (
-													<ListChecks size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
+													<ListChecks size={13} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
 												)}
 											</button>
 											<button
@@ -9911,13 +10043,13 @@ function WhatsAppWorkspaceContent() {
 												title={
 													selectedConversation.isPinned ? t.unpinChat : t.pinChat
 												}
-												className={`wa-toolbar-icon-btn grid h-9 w-9 place-items-center rounded-lg border transition-colors disabled:opacity-50 ${selectedConversation.isPinned
+												className={`wa-toolbar-icon-btn grid h-7 w-7 place-items-center rounded-md border transition-colors disabled:opacity-50 ${selectedConversation.isPinned
 													? 'is-active border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-500)] dark:bg-slate-800'
 													: 'border-slate-200 bg-white text-[#54656f] hover:text-[var(--color-primary-500)] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
 													}`}
 											>
 												<Pin
-													size={16}
+													size={13}
 													strokeWidth={2.25}
 													className="shrink-0"
 													aria-hidden="true"
@@ -9938,13 +10070,13 @@ function WhatsAppWorkspaceContent() {
 												}
 												aria-label={t.favoriteChats}
 												title={t.favoriteChats}
-												className={`wa-toolbar-icon-btn grid h-9 w-9 place-items-center rounded-lg border transition-colors disabled:opacity-50 ${selectedConversation.isFavorite
+												className={`wa-toolbar-icon-btn grid h-7 w-7 place-items-center rounded-md border transition-colors disabled:opacity-50 ${selectedConversation.isFavorite
 													? 'is-active border-amber-300 bg-amber-50 text-amber-500 dark:bg-amber-950/30'
 													: 'border-slate-200 bg-white text-[#54656f] hover:text-amber-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
 													}`}
 											>
 												<Star
-													size={16}
+													size={13}
 													strokeWidth={2.25}
 													className="shrink-0"
 													aria-hidden="true"
@@ -9967,7 +10099,7 @@ function WhatsAppWorkspaceContent() {
 													setSplitPickMode(true);
 													toast(t.splitPickHint, { icon: '▦' });
 												}}
-												className={`wa-toolbar-icon-btn hidden h-9 w-9 place-items-center rounded-lg border transition-colors disabled:opacity-50 min-[769px]:grid ${
+												className={`wa-toolbar-icon-btn hidden h-7 w-7 place-items-center rounded-md border transition-colors disabled:opacity-50 min-[769px]:grid ${
 													secondaryConversationId || splitPickMode
 														? 'is-active border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)]'
 														: 'border-slate-200 bg-white text-[#54656f] hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
@@ -9983,29 +10115,30 @@ function WhatsAppWorkspaceContent() {
 														: t.openSplitChat
 												}
 											>
-												<Columns2 size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
+												<Columns2 size={13} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
 											</button>
 											{!demo.settings.enabled && canUseWhatsApp &&
 												selectedAccount?.privacySettings?.readReceiptMode === 'manual' && (
 													<button
 														type="button"
 														onClick={markConversationReadManually}
-														className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+														className="h-7 rounded-md border border-slate-200 bg-white px-2 text-[11px] font-bold transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
 													>
 														{t.markRead}
 													</button>
 												)}
 											{!demo.settings.enabled && canAssignWhatsApp && (
-												<div className="relative inline-flex max-w-[13rem] items-center">
-													<span className="pointer-events-none absolute -top-2 start-2 z-1 rounded bg-white px-1 text-[9px] font-black uppercase tracking-wide text-slate-400 dark:bg-slate-900">
+												<div className="relative inline-flex max-w-[9.5rem] items-center">
+													<span className="pointer-events-none absolute -top-1.5 start-2 z-1 rounded bg-white px-1 text-[8px] font-black uppercase tracking-wide text-slate-400 dark:bg-slate-900">
 														{t.assignedTo}
 													</span>
 													<WaCustomSelect
 														ariaLabel={t.assignedTo}
 														value={selectedConversation.assignedUserId || ''}
 														onChange={assignConversation}
-														className="w-[13rem]"
-														buttonClassName="h-9 text-[#111b21]"
+														size="sm"
+														className="w-[9.5rem]"
+														buttonClassName="h-7 rounded-md px-2 text-[11px] text-[#111b21]"
 														options={[
 															{ value: '', label: t.unassign },
 															...staff.map(user => ({
@@ -10602,26 +10735,15 @@ function WhatsAppWorkspaceContent() {
 													))}
 												</div>
 											)}
-											<button
-												ref={attachButtonRef}
-												type="button"
-												aria-label={locale === 'ar' ? 'المزيد من الخيارات' : 'More options'}
-												disabled={sending || recordingVoice}
-												onClick={() => {
-													setStickerPanelOpen(false);
-													setAttachmentSheetOpen(true);
-												}}
-												title={locale === 'ar' ? 'المزيد من الخيارات' : 'More options'}
-												className="wa-attach-button grid h-9 w-9 shrink-0 place-items-center rounded-full text-[#54656F] transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800"
-											>
-												<Plus size={22} strokeWidth={2.25} />
-											</button>
 											{recordingVoice ? (
 												<VoiceRecordingBar
 													seconds={recordingSeconds}
+													paused={recordingPaused}
 													labels={t}
 													onCancel={() => stopVoiceRecording(false)}
-													onStop={() => stopVoiceRecording(true)}
+													onPause={pauseVoiceRecording}
+													onResume={resumeVoiceRecording}
+													onSend={() => stopVoiceRecording(true)}
 												/>
 											) : voiceChanging ? (
 												<div className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 dark:border-emerald-900/50 dark:bg-emerald-950/30">
@@ -10631,8 +10753,26 @@ function WhatsAppWorkspaceContent() {
 													</span>
 												</div>
 											) : (
-												<div className="flex min-w-0 flex-1 items-center gap-1">
-													<div className="wa-input-pill flex min-w-0 flex-1 items-end !bg-white rounded-full !border !border-slate-200 dark:border-slate-700">
+												<div dir="ltr" className="wa-input-pill flex min-h-10 min-w-0 flex-1 items-center gap-0.5 rounded-full px-1 py-1 !border !border-slate-200 !bg-white dark:border-slate-700">
+													<button
+														ref={attachButtonRef}
+														type="button"
+														aria-label={locale === 'ar' ? 'المزيد من الخيارات' : 'More options'}
+														disabled={sending}
+														onClick={() => {
+															setStickerPanelOpen(false);
+															setAttachmentSheetOpen(true);
+														}}
+														title={locale === 'ar' ? 'المزيد من الخيارات' : 'More options'}
+														className="wa-attach-button grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#54656F] transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800"
+													>
+														<Plus size={20} strokeWidth={2.25} />
+													</button>
+													<button type="button" ref={stickerButtonRef} aria-label="Stickers" title="Emoji, GIF and stickers" onClick={() => { setAttachmentSheetOpen(false); setStickerPanelOpen(current => !current); }} className="wa-sticker-button wa-input-action grid h-8 w-8 shrink-0 place-items-center text-[#8696A0]">
+														<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+															<path fillRule="evenodd" clipRule="evenodd" d="M11.6154 2.89991L13.9358 2.89991C14.4593 2.8999 14.7592 2.8999 15.0178 2.92026C18.2543 3.17497 20.8249 5.7456 21.0797 8.98208C21.1 9.24075 21.1 9.54062 21.1 10.0641V10.1375C21.1 10.9379 21.1 11.377 21.0704 11.7531C20.6999 16.4607 16.9608 20.1998 12.2532 20.5703C11.8771 20.5999 11.438 20.5999 10.6376 20.5999H10.2524C9.55427 20.5999 9.15433 20.5999 8.81011 20.5638C5.71094 20.238 3.26189 17.789 2.93616 14.6898C2.89998 14.3456 2.89999 13.9457 2.9 13.2477L2.9 11.6154C2.8999 9.64928 2.89984 8.52143 3.1842 7.58403C3.82407 5.47466 5.47475 3.82397 7.58412 3.1841C8.52152 2.89975 9.64937 2.89981 11.6154 2.89991ZM11.75 4.09991C9.61283 4.09991 8.67748 4.10643 7.93247 4.33243C6.20662 4.85596 4.85605 6.20653 4.33252 7.93237C4.10653 8.67739 4.1 9.61273 4.1 11.7499V13.1999C4.1 13.9582 4.10083 14.2908 4.12958 14.5644C4.3961 17.1001 6.39986 19.1038 8.93555 19.3703C9.2091 19.3991 9.54174 19.3999 10.3 19.3999H10.6C11.4472 19.3999 11.836 19.3994 12.1591 19.374C12.2949 19.3633 12.3998 19.2475 12.3994 19.1065C12.3993 19.073 12.3992 19.0395 12.3991 19.0059C12.3968 18.2485 12.3944 17.4838 12.4565 16.7239C12.514 16.0197 12.6331 15.438 12.9014 14.9115C13.3424 14.046 14.0461 13.3423 14.9116 12.9013C15.4381 12.633 16.0198 12.5139 16.7239 12.4564C17.5478 12.3891 18.376 12.3928 19.1977 12.3973C19.4427 12.3987 19.5331 12.3969 19.6099 12.361C19.6767 12.3297 19.7451 12.2681 19.7831 12.2049C19.827 12.132 19.8371 12.0506 19.8592 11.8267C19.8647 11.771 19.8697 11.7151 19.8741 11.659C19.8995 11.3359 19.9 10.9471 19.9 10.0999C19.9 9.53129 19.8995 9.28181 19.8834 9.07623C19.6749 6.4282 17.5717 4.32496 14.9237 4.11656C14.7181 4.10038 14.4686 4.09991 13.9 4.09991H11.75ZM18.9751 13.5977C18.2535 13.5944 17.5348 13.5941 16.8217 13.6524C16.1917 13.7039 15.7856 13.8028 15.4564 13.9705C14.8167 14.2965 14.2965 14.8166 13.9706 15.4563C13.8029 15.7855 13.704 16.1917 13.6525 16.8216C13.6128 17.3078 13.6031 17.8966 13.6007 18.6525C13.6004 18.7573 13.6003 18.8287 13.6054 18.8834C13.6103 18.9368 13.6195 18.9631 13.6308 18.981C13.6562 19.0214 13.7033 19.0559 13.7494 19.068C13.7706 19.0735 13.7977 19.0743 13.8468 19.0639C13.8977 19.0531 13.9619 19.0328 14.0567 19.0025C16.4656 18.234 18.3983 16.4129 19.3177 14.0764C19.3562 13.9785 19.3823 13.9119 19.3971 13.8589C19.4116 13.8076 19.4123 13.7794 19.4077 13.7575C19.3975 13.7092 19.3639 13.6596 19.3227 13.6322C19.3049 13.6203 19.2775 13.6103 19.2206 13.6045C19.1626 13.5986 19.0863 13.5982 18.9751 13.5977Z" fill="currentColor" />
+														</svg>
+													</button>
 														<textarea
 															aria-label={t.message}
 													value={draft}
@@ -10656,17 +10796,9 @@ function WhatsAppWorkspaceContent() {
 													lang={draftPresentation.lang}
 													style={draftPresentation.style}
 													placeholder={t.message}
-															className={`wa-composer-input max-h-28 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-3.5 py-2 outline-none ${draftPresentation.className || ''}`}
+															className={`wa-composer-input max-h-28 min-h-8 min-w-0 flex-1 resize-none bg-transparent px-1.5 leading-5 outline-none ${draftPresentation.className || ''}`}
 														/>
-												<button type="button" ref={stickerButtonRef} aria-label="Stickers" title="Emoji, GIF and stickers" onClick={() => { setAttachmentSheetOpen(false); setStickerPanelOpen(current => !current); }} className="wa-sticker-button wa-input-action grid h-9 w-8 shrink-0 place-items-center text-[#8696A0]">
-															<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-																<path fillRule="evenodd" clipRule="evenodd" d="M11.6154 2.89991L13.9358 2.89991C14.4593 2.8999 14.7592 2.8999 15.0178 2.92026C18.2543 3.17497 20.8249 5.7456 21.0797 8.98208C21.1 9.24075 21.1 9.54062 21.1 10.0641V10.1375C21.1 10.9379 21.1 11.377 21.0704 11.7531C20.6999 16.4607 16.9608 20.1998 12.2532 20.5703C11.8771 20.5999 11.438 20.5999 10.6376 20.5999H10.2524C9.55427 20.5999 9.15433 20.5999 8.81011 20.5638C5.71094 20.238 3.26189 17.789 2.93616 14.6898C2.89998 14.3456 2.89999 13.9457 2.9 13.2477L2.9 11.6154C2.8999 9.64928 2.89984 8.52143 3.1842 7.58403C3.82407 5.47466 5.47475 3.82397 7.58412 3.1841C8.52152 2.89975 9.64937 2.89981 11.6154 2.89991ZM11.75 4.09991C9.61283 4.09991 8.67748 4.10643 7.93247 4.33243C6.20662 4.85596 4.85605 6.20653 4.33252 7.93237C4.10653 8.67739 4.1 9.61273 4.1 11.7499V13.1999C4.1 13.9582 4.10083 14.2908 4.12958 14.5644C4.3961 17.1001 6.39986 19.1038 8.93555 19.3703C9.2091 19.3991 9.54174 19.3999 10.3 19.3999H10.6C11.4472 19.3999 11.836 19.3994 12.1591 19.374C12.2949 19.3633 12.3998 19.2475 12.3994 19.1065C12.3993 19.073 12.3992 19.0395 12.3991 19.0059C12.3968 18.2485 12.3944 17.4838 12.4565 16.7239C12.514 16.0197 12.6331 15.438 12.9014 14.9115C13.3424 14.046 14.0461 13.3423 14.9116 12.9013C15.4381 12.633 16.0198 12.5139 16.7239 12.4564C17.5478 12.3891 18.376 12.3928 19.1977 12.3973C19.4427 12.3987 19.5331 12.3969 19.6099 12.361C19.6767 12.3297 19.7451 12.2681 19.7831 12.2049C19.827 12.132 19.8371 12.0506 19.8592 11.8267C19.8647 11.771 19.8697 11.7151 19.8741 11.659C19.8995 11.3359 19.9 10.9471 19.9 10.0999C19.9 9.53129 19.8995 9.28181 19.8834 9.07623C19.6749 6.4282 17.5717 4.32496 14.9237 4.11656C14.7181 4.10038 14.4686 4.09991 13.9 4.09991H11.75ZM18.9751 13.5977C18.2535 13.5944 17.5348 13.5941 16.8217 13.6524C16.1917 13.7039 15.7856 13.8028 15.4564 13.9705C14.8167 14.2965 14.2965 14.8166 13.9706 15.4563C13.8029 15.7855 13.704 16.1917 13.6525 16.8216C13.6128 17.3078 13.6031 17.8966 13.6007 18.6525C13.6004 18.7573 13.6003 18.8287 13.6054 18.8834C13.6103 18.9368 13.6195 18.9631 13.6308 18.981C13.6562 19.0214 13.7033 19.0559 13.7494 19.068C13.7706 19.0735 13.7977 19.0743 13.8468 19.0639C13.8977 19.0531 13.9619 19.0328 14.0567 19.0025C16.4656 18.234 18.3983 16.4129 19.3177 14.0764C19.3562 13.9785 19.3823 13.9119 19.3971 13.8589C19.4116 13.8076 19.4123 13.7794 19.4077 13.7575C19.3975 13.7092 19.3639 13.6596 19.3227 13.6322C19.3049 13.6203 19.2775 13.6103 19.2206 13.6045C19.1626 13.5986 19.0863 13.5982 18.9751 13.5977Z" fill="#0A0A0A" />
-															</svg>
-
-														</button>
-
-													</div>
-											<button type="button" aria-label="Camera" title="Camera or photo picker" onClick={() => openComposerFilePicker({ accept: 'image/*', capture: 'environment' })} className="wa-camera-button wa-input-action grid h-10 w-8 shrink-0 place-items-center text-[#8696A0] min-[769px]:hidden">
+												<button type="button" aria-label="Camera" title="Camera or photo picker" onClick={() => openComposerFilePicker({ accept: 'image/*', capture: 'environment' })} className="wa-camera-button wa-input-action grid h-8 w-8 shrink-0 place-items-center text-[#8696A0] min-[769px]:hidden">
 														<svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
 															<path fillRule="evenodd" clipRule="evenodd" d="M12.3302 7.08112C12.8052 6.52227 13.5016 6.2002 14.235 6.2002H17.762C18.4954 6.2002 19.1918 6.52228 19.6668 7.08112L20.3484 7.88312C20.5193 8.08427 20.77 8.2002 21.034 8.2002H24.7499C26.4344 8.2002 27.7999 9.56573 27.7999 11.2502V21.2502C27.7999 22.9347 26.4344 24.3002 24.75 24.3002H7.24995C5.56548 24.3002 4.19995 22.9347 4.19995 21.2502V11.2502C4.19995 9.56573 5.56548 8.2002 7.24995 8.2002H10.963C11.227 8.2002 11.4777 8.08427 11.6486 7.88312L12.3302 7.08112ZM14.235 7.8002C13.971 7.8002 13.7203 7.91612 13.5494 8.11727L12.8678 8.91927C12.3928 9.47812 11.6964 9.8002 10.963 9.8002H7.24995C6.44914 9.8002 5.79995 10.4494 5.79995 11.2502V21.2502C5.79995 22.051 6.44914 22.7002 7.24995 22.7002H24.75C25.5508 22.7002 26.2 22.051 26.2 21.2502V11.2502C26.2 10.4494 25.5508 9.8002 24.7499 9.8002H21.034C20.3006 9.8002 19.6041 9.47812 19.1292 8.91927L18.4476 8.11727C18.2766 7.91612 18.026 7.8002 17.762 7.8002H14.235ZM15.9984 12.8002C14.0934 12.8002 12.549 14.3445 12.549 16.2496C12.549 18.1546 14.0934 19.6989 15.9984 19.6989C17.9034 19.6989 19.4478 18.1546 19.4478 16.2496C19.4478 14.3445 17.9034 12.8002 15.9984 12.8002ZM10.949 16.2496C10.949 13.4609 13.2097 11.2002 15.9984 11.2002C18.7871 11.2002 21.0478 13.4609 21.0478 16.2496C21.0478 19.0382 18.7871 21.2989 15.9984 21.2989C13.2097 21.2989 10.949 19.0382 10.949 16.2496ZM22.65 13.8002C23.3404 13.8002 23.9 13.2405 23.9 12.5502C23.9 11.8598 23.3404 11.3002 22.65 11.3002C21.9597 11.3002 21.4 11.8598 21.4 12.5502C21.4 13.2405 21.9597 13.8002 22.65 13.8002Z" fill="currentColor" />
 														</svg>
@@ -10677,23 +10809,23 @@ function WhatsAppWorkspaceContent() {
 														type="submit"
 														aria-label={t.send}
 														disabled={sending}
-														className="wa-send-button grid h-10 w-10 shrink-0 place-items-center rounded-full text-white transition-transform hover:-translate-y-px disabled:translate-y-0 disabled:opacity-40"
-														style={{ background: GRADIENT, boxShadow: GLOW }}
+														className="wa-send-button grid h-8 w-8 shrink-0 place-items-center rounded-full text-white disabled:opacity-40"
+														style={{ background: GRADIENT }}
 													>
-														{sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+														{sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
 													</button>
 													) : (
-													<div className="flex shrink-0 items-center gap-1">
+													<div className="flex shrink-0 items-center gap-0.5">
 													<button
 														type="button"
 														disabled={sending}
 														title={t.voiceChanger}
 														aria-label={t.voiceChanger}
 														onClick={() => setVoiceChangerOpen(true)}
-														className={`grid h-9 w-9 place-items-center rounded-full border shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+														className={`wa-voice-changer-button grid h-8 w-8 shrink-0 place-items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
 															voiceChangerSettings?.enabled
-																? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
-																: 'border-slate-200 bg-white text-[#54656F] hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800'
+																? 'text-emerald-600 dark:text-emerald-300'
+																: 'text-[#54656F] hover:bg-slate-100 dark:hover:bg-slate-800'
 														}`}
 													>
 														<AudioLines size={16} />
@@ -10704,7 +10836,7 @@ function WhatsAppWorkspaceContent() {
 														title={t.recordVoice}
 														aria-label={t.recordVoice}
 														onClick={startVoiceRecording}
-														className="wa-mic-button grid h-10 w-10 shrink-0 place-items-center rounded-full border border-slate-200 bg-white text-[#54656F] shadow-sm transition-colors hover:border-[var(--color-primary-300)] hover:bg-[var(--color-primary-50)] hover:text-[var(--color-primary-600)] disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+														className="wa-mic-button grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#54656F] transition-colors hover:bg-slate-100 hover:text-[var(--color-primary-600)] disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800"
 													>
 														<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
 															<path

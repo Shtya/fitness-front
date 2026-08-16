@@ -59,6 +59,17 @@ export async function removeVoiceChangerCredential(provider) {
 	return data;
 }
 
+export async function cloneVoiceFromSamples({ name, files, consent }) {
+	const form = new FormData();
+	form.append('name', String(name || '').trim());
+	form.append('consent', consent ? 'true' : 'false');
+	for (const file of files || []) form.append('files', file);
+	const { data } = await api.post('/whatsapp/voice-changer/clone', form, {
+		timeout: 120000,
+	});
+	return data;
+}
+
 export async function transformVoiceNote(file, options = {}) {
 	const form = new FormData();
 	form.append('file', file);

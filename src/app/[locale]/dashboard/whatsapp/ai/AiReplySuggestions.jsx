@@ -14,32 +14,32 @@ import {
 
 const COPY = {
 	en: {
-		title: 'AI reply suggestions',
+		title: 'AI suggestions',
 		regenerate: 'Regenerate suggestions',
 		retry: 'Retry',
-		hint: 'Select a suggestion to edit it before sending.',
+		hint: 'Tap a suggestion to edit it before sending.',
 		prompt: 'Instructions',
 		enableTitle: 'AI suggestions are off',
 		enableHint: 'Turn on FitCoach reply ideas for this WhatsApp account.',
 		enable: 'Enable AI suggestions',
 		empty: 'No suggestions yet. Tap regenerate.',
-		waitingMessages: 'Waiting for messages to load…',
+		waitingMessages: 'Waiting for messages…',
 		waitingMessagesHint: 'Suggestions unlock after the chat history is ready.',
 		hidden: 'AI suggestions are hidden',
 		show: 'Show',
 		noPrompts: 'No saved instructions',
 	},
 	ar: {
-		title: 'اقتراحات الرد بالذكاء الاصطناعي',
+		title: 'اقتراحات AI',
 		regenerate: 'إنشاء اقتراحات جديدة',
 		retry: 'إعادة المحاولة',
-		hint: 'اختر اقتراحًا لتعديله قبل الإرسال.',
+		hint: 'اضغط اقتراحًا لتعديله قبل الإرسال.',
 		prompt: 'التعليمات',
 		enableTitle: 'اقتراحات الذكاء الاصطناعي متوقفة',
 		enableHint: 'فعّل اقتراحات FitCoach لهذا حساب واتساب.',
 		enable: 'تفعيل الاقتراحات',
 		empty: 'لا توجد اقتراحات بعد. اضغط تحديث.',
-		waitingMessages: 'بانتظار تحميل الرسائل…',
+		waitingMessages: 'بانتظار الرسائل…',
 		waitingMessagesHint: 'تُفعَّل الاقتراحات بعد جاهزية سجل المحادثة.',
 		hidden: 'اقتراحات الذكاء الاصطناعي مخفية',
 		show: 'إظهار',
@@ -120,7 +120,7 @@ export function PromptInstructionsDropdown({
 				aria-label={label}
 				disabled={disabled}
 				onClick={() => setOpen(current => !current)}
-				className="flex h-8 min-w-[7.5rem] max-w-[13rem] items-center justify-between gap-1.5 rounded-full border border-violet-200 bg-white px-2.5 text-xs font-bold text-slate-700 outline-none transition hover:border-violet-400 focus-visible:ring-2 focus-visible:ring-violet-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-violet-900 dark:bg-slate-900 dark:text-slate-200"
+				className="flex h-7 min-w-[6.5rem] max-w-[11rem] items-center justify-between gap-1 rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700 outline-none transition hover:border-violet-300 focus-visible:ring-2 focus-visible:ring-violet-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
 			>
 				<span className="truncate">{selected?.name || emptyLabel}</span>
 				<ChevronDown
@@ -210,15 +210,15 @@ export default function AiReplySuggestions({
 	return (
 		<section
 			aria-label={text.title}
-			className={`wa-ai-suggestions border-t border-slate-100 bg-gradient-to-b from-violet-50/70 to-white/95 px-3 py-2.5 backdrop-blur dark:border-slate-800 dark:from-violet-950/20 dark:to-slate-950/95 ${
+			className={`wa-ai-suggestions border-t border-slate-200/80 bg-[#F0F2F5] px-3 py-1.5 dark:border-slate-800 dark:bg-slate-950 ${
 				repliesOnly ? 'wa-ai-suggestions--replies-only' : ''
 			}`}
 		>
 			{!settingsEnabled ? (
-				<div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-violet-200/80 bg-white/90 px-3 py-2.5 shadow-sm dark:border-violet-900 dark:bg-slate-900/80">
+				<div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/80 px-2.5 py-2 dark:bg-slate-900/80">
 					<div className="min-w-0">
-						<div className="flex items-center gap-1.5 text-xs font-black text-violet-700 dark:text-violet-300">
-							<Sparkles size={14} aria-hidden="true" />
+						<div className="flex items-center gap-1.5 text-[11px] font-semibold text-violet-700 dark:text-violet-300">
+							<Sparkles size={13} aria-hidden="true" />
 							<span>{text.enableTitle}</span>
 						</div>
 						<p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
@@ -229,7 +229,7 @@ export default function AiReplySuggestions({
 						type="button"
 						onClick={onEnable}
 						disabled={enabling || !onEnable}
-						className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-violet-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+						className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-violet-600 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						{enabling ? (
 							<RefreshCw size={13} className="animate-spin" />
@@ -241,23 +241,18 @@ export default function AiReplySuggestions({
 				</div>
 			) : (
 				<>
-					<div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-						<div className="min-w-0">
-							<div className="flex items-center gap-1.5 text-xs font-black text-violet-700 dark:text-violet-300">
-								<Sparkles size={14} aria-hidden="true" />
-								<span>{text.title}</span>
-								{!messagesReady ? (
-									<span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-										<Loader2 size={11} className="animate-spin" />
-										{text.waitingMessages}
-									</span>
-								) : null}
-							</div>
-							{!repliesOnly ? (
-								<p className="mt-0.5 truncate text-[10px] text-slate-400">{text.hint}</p>
+					<div className="flex items-center gap-2">
+						<div className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+							<Sparkles size={13} aria-hidden="true" className="text-violet-600 dark:text-violet-300" />
+							<span className="truncate text-violet-700 dark:text-violet-300" title={text.hint}>{text.title}</span>
+							{!messagesReady ? (
+								<span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+									<Loader2 size={10} className="animate-spin" />
+									{text.waitingMessages}
+								</span>
 							) : null}
 						</div>
-						<div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+						<div className="ms-auto flex min-w-0 shrink-0 items-center gap-1.5">
 							{prompts.length > 0 ? (
 								<PromptInstructionsDropdown
 									prompts={prompts}
@@ -276,69 +271,64 @@ export default function AiReplySuggestions({
 								title={
 									!messagesReady ? text.waitingMessagesHint : text.regenerate
 								}
-								className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full text-violet-600 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-violet-300 dark:hover:bg-violet-950/40"
+								className="grid h-7 w-7 shrink-0 cursor-pointer place-items-center rounded-full text-slate-500 transition hover:bg-white hover:text-violet-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-violet-300"
 							>
-								<RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+								<RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
 							</button>
 						</div>
 					</div>
 
 					{!messagesReady ? (
-						<div className="flex items-center gap-2 rounded-2xl border border-dashed border-violet-200 bg-white/70 px-3 py-2.5 text-xs text-slate-500 dark:border-violet-900 dark:bg-slate-900/50 dark:text-slate-400">
-							<Loader2 size={14} className="shrink-0 animate-spin text-violet-500" />
-							<div className="min-w-0">
-								<p className="font-bold text-slate-600 dark:text-slate-300">
-									{text.waitingMessages}
-								</p>
-								<p className="mt-0.5 text-[10px] opacity-80">{text.waitingMessagesHint}</p>
-							</div>
-						</div>
+						<p className="mt-1.5 truncate text-[11px] text-slate-500 dark:text-slate-400">
+							{text.waitingMessagesHint}
+						</p>
 					) : showLoading ? (
-						<div className="flex gap-2 overflow-hidden" aria-busy="true">
-							{[72, 96, 80].map(width => (
+						<div className="wa-ai-suggestions-scroller mt-1.5" aria-busy="true">
+							{[168, 132, 148].map(width => (
 								<div
 									key={width}
-									className="h-9 shrink-0 animate-pulse rounded-full bg-violet-100/80 dark:bg-violet-950/40"
-									style={{ width: `${width * 1.5}px` }}
+									className="h-8 shrink-0 animate-pulse rounded-full bg-white/80 dark:bg-slate-800"
+									style={{ width: `${width}px` }}
 								/>
 							))}
 						</div>
 					) : error ? (
-						<div className="flex items-start justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
-							<span className="flex min-w-0 items-start gap-2">
-								<AlertCircle size={14} className="mt-0.5 shrink-0" />
-								<span className="break-words leading-5">{error}</span>
+						<div className="mt-1.5 flex items-center justify-between gap-2 rounded-xl bg-rose-50 px-2.5 py-1.5 text-[11px] text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
+							<span className="flex min-w-0 items-center gap-1.5">
+								<AlertCircle size={13} className="shrink-0" />
+								<span className="truncate">{error}</span>
 							</span>
 							<button
 								type="button"
 								onClick={onRegenerate}
 								disabled={!canUseSuggestions}
-								className="shrink-0 cursor-pointer font-black underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+								className="shrink-0 cursor-pointer font-semibold underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 							>
 								{text.retry}
 							</button>
 						</div>
 					) : items.length ? (
-						<div className="nice-scroll flex max-w-full gap-2 overflow-x-auto pb-1">
+						<div className="wa-ai-suggestions-scroller mt-1.5">
 							{items.map((suggestion, index) => (
 								<button
 									key={`${index}-${suggestion}`}
 									type="button"
+									title={suggestion}
 									onClick={() => onSelect?.(suggestion)}
-									className="max-w-[min(32rem,82vw)] shrink-0 cursor-pointer whitespace-normal rounded-2xl border border-violet-200 bg-white px-3.5 py-2 text-start text-xs font-semibold leading-5 text-slate-700 shadow-sm transition hover:-translate-y-px hover:border-violet-400 hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:border-violet-900 dark:bg-violet-950/30 dark:text-slate-200 dark:hover:border-violet-700"
+									className="wa-ai-suggestion-chip"
 								>
-									{suggestion}
+									<span className="line-clamp-2">{suggestion}</span>
 								</button>
 							))}
 						</div>
 					) : (
-						<div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-violet-200 bg-white/60 px-3 py-2 text-xs text-slate-500 dark:border-violet-900 dark:bg-slate-900/40">
+						<div className="mt-1.5 flex items-center justify-between gap-2 px-0.5 text-[11px] text-slate-500">
 							<span>{text.empty}</span>
 							<button
 								type="button"
 								onClick={onRegenerate}
 								disabled={!canUseSuggestions}
-								className="cursor-pointer font-bold text-violet-600 underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:text-violet-300"
+								className="cursor-pointer font-semibold text-violet-600 underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:text-violet-300"
 							>
 								{text.regenerate}
 							</button>

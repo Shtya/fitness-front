@@ -19,9 +19,19 @@ export function WaCustomSelect({
 	const rootRef = useRef(null);
 	const buttonRef = useRef(null);
 	const menuRef = useRef(null);
-	const selected = options.find(option => String(option.value) === String(value)) || options[0];
+	const selected =
+		options.find(option => String(option.value) === String(value)) ||
+		(value == null || value === '' ? options[0] : null);
 	const hasDescriptions = options.some(option => option.description);
 	const compact = size === 'sm';
+
+	const pickOption = (event, option) => {
+		event.preventDefault();
+		event.stopPropagation();
+		if (option?.disabled) return;
+		onChange?.(option.value);
+		setOpen(false);
+	};
 
 	useEffect(() => {
 		if (!open) return undefined;
@@ -96,43 +106,66 @@ export function WaCustomSelect({
 				position &&
 				typeof document !== 'undefined' &&
 				createPortal(
-					<div
-						ref={menuRef}
-						role="listbox"
-						aria-label={ariaLabel}
-						className="fixed z-[1400] overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_rgba(11,20,26,0.18)] dark:border-slate-700 dark:bg-slate-900"
-						style={position}
-					>
-						{options.map(option => (
-							<button
-								key={String(option.value)}
-								type="button"
-								role="option"
-								aria-selected={String(option.value) === String(value)}
-								onClick={() => {
-									onChange(option.value);
-									setOpen(false);
-								}}
-								className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-start transition-colors ${
-									String(option.value) === String(value)
-										? 'bg-emerald-50 text-emerald-700 dark:bg-slate-800 dark:text-emerald-300'
-										: 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
-								}`}
-							>
-								<span className="min-w-0 flex-1">
-									<span className="block truncate text-xs font-bold">{option.label}</span>
-									{option.description ? (
-										<span className="mt-0.5 block truncate text-[10px] font-medium text-slate-400">
-											{option.description}
+					<>
+						<div
+							aria-hidden="true"
+							data-wa-select-menu="true"
+							className="fixed inset-0 z-[1399]"
+							style={{ pointerEvents: 'auto' }}
+							onPointerDown={event => {
+								event.preventDefault();
+								event.stopPropagation();
+								setOpen(false);
+							}}
+						/>
+						<div
+							ref={menuRef}
+							role="listbox"
+							data-wa-select-menu="true"
+							aria-label={ariaLabel}
+							onPointerDown={event => event.stopPropagation()}
+							className="fixed z-[1400] overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_rgba(11,20,26,0.18)] dark:border-slate-700 dark:bg-slate-900"
+							style={{ ...position, pointerEvents: 'auto' }}
+						>
+							{options.map(option => {
+								const isSelected = String(option.value) === String(value);
+								const isDisabled = Boolean(option.disabled);
+								return (
+									<button
+										key={String(option.value)}
+										type="button"
+										role="option"
+										disabled={isDisabled}
+										aria-disabled={isDisabled || undefined}
+										aria-selected={isSelected}
+										onPointerDown={event => pickOption(event, option)}
+										onClick={event => pickOption(event, option)}
+										className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-start leading-none transition-colors ${
+											isDisabled
+												? 'cursor-not-allowed text-slate-300 opacity-50 dark:text-slate-600'
+												: isSelected
+													? 'bg-emerald-50 text-emerald-700 dark:bg-slate-800 dark:text-emerald-300'
+													: 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
+										}`}
+									>
+										<span className="min-w-0 flex-1">
+											<span className="block truncate text-xs font-semibold leading-4">{option.label}</span>
+											{option.description ? (
+												<span className="mt-0.5 block truncate text-[10px] font-medium leading-4 text-slate-400">
+													{option.description}
+												</span>
+											) : null}
 										</span>
-									) : null}
-								</span>
-								{String(option.value) === String(value) ? (
-									<Check size={14} className="ms-2 shrink-0 text-emerald-600" />
-								) : null}
-							</button>
-						))}
-					</div>,
+										<span className="grid h-4 w-4 shrink-0 place-items-center">
+											{isSelected && !isDisabled ? (
+												<Check size={14} className="text-emerald-600" />
+											) : null}
+										</span>
+									</button>
+								);
+							})}
+						</div>
+					</>,
 					document.body,
 				)}
 		</div>

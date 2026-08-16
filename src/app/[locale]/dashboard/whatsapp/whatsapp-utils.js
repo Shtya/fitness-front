@@ -349,6 +349,11 @@ export function messageTextPresentation(text) {
 			direction: 'ltr',
 			textAlign: 'start',
 			unicodeBidi: 'plaintext',
+			fontFamily:
+				'var(--font-inter), "SF Pro Text", "Segoe UI Variable Text", "Helvetica Neue", system-ui, sans-serif',
+			fontWeight: 400,
+			letterSpacing: '-0.011em',
+			fontFeatureSettings: '"cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1, "ss01" 1',
 		},
 	};
 }

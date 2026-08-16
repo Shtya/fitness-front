@@ -2951,32 +2951,35 @@ function SidebarEdgeControls({ collapsed, focusMode, setCollapsed, setFocusMode,
 
   return (
     <div
-      className={`sidebar-edge-dock hidden lg:flex ${focusMode ? 'is-offset' : ''}`}
+      className={`sidebar-edge-dock hidden lg:flex ${focusMode ? 'is-offset is-restore-only' : ''}`}
       style={{
         position: 'fixed',
-        top: EDGE_DOCK_TOP,
-        [isRTL ? 'right' : 'left']: edgeInset,
+        top: focusMode ? 5 : EDGE_DOCK_TOP,
+        [isRTL ? 'right' : 'left']: focusMode ? 5 : edgeInset,
         zIndex: 1001,
-        transition: `${isRTL ? 'right' : 'left'} .28s cubic-bezier(0.22,1,0.36,1)`,
+        transition: `${isRTL ? 'right' : 'left'} .28s cubic-bezier(0.22,1,0.36,1), top .28s cubic-bezier(0.22,1,0.36,1)`,
       }}
     >
-      <motion.button
-        type="button"
-        className="sidebar-edge-btn"
-        onClick={handleCollapseClick}
-        whileHover={{ scale: 1.06 }}
-        whileTap={{ scale: 0.92 }}
-        aria-label={collapseLabel}
-        title={collapseLabel}
-      >
-        {collapsed ? (
-          <ChevronRight className="rtl:scale-x-[-1]" style={{ width: 14, height: 14 }} strokeWidth={2.5} />
-        ) : (
-          <ChevronLeft className="rtl:scale-x-[-1]" style={{ width: 14, height: 14 }} strokeWidth={2.5} />
-        )}
-      </motion.button>
-
-      <span className="sidebar-edge-divider" aria-hidden="true" />
+      {!focusMode ? (
+        <>
+          <motion.button
+            type="button"
+            className="sidebar-edge-btn"
+            onClick={handleCollapseClick}
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.92 }}
+            aria-label={collapseLabel}
+            title={collapseLabel}
+          >
+            {collapsed ? (
+              <ChevronRight className="rtl:scale-x-[-1]" style={{ width: 14, height: 14 }} strokeWidth={2.5} />
+            ) : (
+              <ChevronLeft className="rtl:scale-x-[-1]" style={{ width: 14, height: 14 }} strokeWidth={2.5} />
+            )}
+          </motion.button>
+          <span className="sidebar-edge-divider" aria-hidden="true" />
+        </>
+      ) : null}
 
       <motion.button
         type="button"

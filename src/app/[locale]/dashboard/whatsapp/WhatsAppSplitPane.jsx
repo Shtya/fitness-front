@@ -17,6 +17,13 @@ import {
 import api from '@/utils/axios';
 import { VoiceRecordingBar } from './VoiceRecordingBar';
 import {
+	VOICE_NOTE_MAX_SECONDS,
+	buildVoiceNoteFile,
+	createVoiceMediaRecorder,
+	getVoiceMediaStream,
+	mediaUploadFailedMessage,
+} from './whatsapp-voice-recorder';
+import {
 	conversationTitle,
 	conversationAvatarUrl,
 	buildOptimisticMediaMessage,
@@ -212,6 +219,7 @@ export default function WhatsAppSplitPane({
 	const [draft, setDraft] = useState('');
 	const [sending, setSending] = useState(false);
 	const [recordingVoice, setRecordingVoice] = useState(false);
+	const [recordingPaused, setRecordingPaused] = useState(false);
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
 	const scrollRef = useRef(null);
 	const loadingOlderRef = useRef(false);
@@ -430,7 +438,10 @@ export default function WhatsAppSplitPane({
 		try {
 			const form = new FormData();
 			form.append('file', file);
-			const { data: uploaded } = await api.post(`/whatsapp/accounts/${accountId}/media`, form);
+			const { data: uploaded } = await api.post(`/whatsapp/accounts/${accountId}/media`, form, {
+				maxBodyLength: Infinity,
+				maxContentLength: Infinity,
+			});
 			const { data } = await api.post(`/whatsapp/conversations/${conversationId}/messages`, {
 				type: 'voice',
 				fileId: uploaded.fileId,
@@ -445,7 +456,7 @@ export default function WhatsAppSplitPane({
 		} catch (error) {
 			setMessages(current => current.filter(item => item.id !== optimistic.id));
 			toast.error(
-				error.response?.data?.message ||
+				mediaUploadFailedMessage(error, locale) ||
 					(ar ? 'تعذر إرسال الرسالة الصوتية' : 'Could not send voice message'),
 			);
 		} finally {
@@ -458,7 +469,31 @@ export default function WhatsAppSplitPane({
 		const recorder = mediaRecorderRef.current;
 		if (!recorder || recorder.state === 'inactive') return;
 		discardRecordingRef.current = !send;
+		setRecordingPaused(false);
 		recorder.stop();
+	};
+
+	const pauseVoiceRecording = () => {
+		const recorder = mediaRecorderRef.current;
+		if (!recorder || recorder.state !== 'recording') return;
+		try {
+			if (typeof recorder.requestData === 'function') recorder.requestData();
+			recorder.pause();
+			setRecordingPaused(true);
+		} catch {
+			toast.error(ar ? 'تعذر إيقاف التسجيل' : 'Could not pause recording');
+		}
+	};
+
+	const resumeVoiceRecording = () => {
+		const recorder = mediaRecorderRef.current;
+		if (!recorder || recorder.state !== 'paused') return;
+		try {
+			recorder.resume();
+			setRecordingPaused(false);
+		} catch {
+			toast.error(ar ? 'تعذر استكمال التسجيل' : 'Could not resume recording');
+		}
 	};
 
 	const startVoiceRecording = async () => {
@@ -473,16 +508,15 @@ export default function WhatsAppSplitPane({
 		}
 		let stream = null;
 		try {
-			stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-			const supportedTypes = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/webm'];
-			const mimeType = supportedTypes.find(type => MediaRecorder.isTypeSupported(type));
-			const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+			stream = await getVoiceMediaStream();
+			const recorder = createVoiceMediaRecorder(stream);
 			recordingStreamRef.current = stream;
 			mediaRecorderRef.current = recorder;
 			recordingChunksRef.current = [];
 			discardRecordingRef.current = false;
 			recordingSecondsRef.current = 0;
 			setRecordingSeconds(0);
+			setRecordingPaused(false);
 			setRecordingVoice(true);
 
 			recorder.ondataavailable = event => {
@@ -496,26 +530,23 @@ export default function WhatsAppSplitPane({
 				mediaRecorderRef.current = null;
 				const durationSec = Math.max(1, recordingSecondsRef.current || 1);
 				setRecordingVoice(false);
+				setRecordingPaused(false);
 				setRecordingSeconds(0);
 				recordingSecondsRef.current = 0;
 				const discard = discardRecordingRef.current;
 				const chunks = recordingChunksRef.current;
 				recordingChunksRef.current = [];
 				if (discard || !chunks.length) return;
-				const recordedType = recorder.mimeType || chunks[0]?.type || 'audio/webm';
-				const extension = recordedType.includes('ogg') ? 'ogg' : 'webm';
-				const blob = new Blob(chunks, { type: recordedType.split(';')[0] || recordedType });
-				if (!blob.size) return;
-				const file = new File([blob], `voice-${durationSec}s.${extension}`, {
-					type: recordedType.split(';')[0] || recordedType,
-				});
+				const file = buildVoiceNoteFile(chunks, recorder, durationSec);
+				if (!file) return;
 				void sendVoiceFile(file);
 			};
 			recorder.start(250);
 			recordingTimerRef.current = setInterval(() => {
+				if (mediaRecorderRef.current?.state !== 'recording') return;
 				recordingSecondsRef.current += 1;
 				setRecordingSeconds(recordingSecondsRef.current);
-				if (recordingSecondsRef.current >= 299 && recorder.state !== 'inactive') {
+				if (recordingSecondsRef.current >= VOICE_NOTE_MAX_SECONDS && recorder.state !== 'inactive') {
 					discardRecordingRef.current = false;
 					recorder.stop();
 				}
@@ -523,6 +554,7 @@ export default function WhatsAppSplitPane({
 		} catch {
 			stream?.getTracks().forEach(track => track.stop());
 			setRecordingVoice(false);
+			setRecordingPaused(false);
 			toast.error(ar ? 'تعذر الوصول للميكروفون' : 'Microphone access failed');
 		}
 	};
@@ -662,9 +694,12 @@ export default function WhatsAppSplitPane({
 					{recordingVoice ? (
 						<VoiceRecordingBar
 							seconds={recordingSeconds}
+							paused={recordingPaused}
 							labels={labels}
 							onCancel={() => stopVoiceRecording(false)}
-							onStop={() => stopVoiceRecording(true)}
+							onPause={pauseVoiceRecording}
+							onResume={resumeVoiceRecording}
+							onSend={() => stopVoiceRecording(true)}
 						/>
 					) : (
 						<>
