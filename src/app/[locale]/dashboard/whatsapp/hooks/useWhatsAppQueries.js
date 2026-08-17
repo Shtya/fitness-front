@@ -51,6 +51,10 @@ export async function fetchConversations(accountId, params = {}) {
 		page: data?.page || page,
 		total,
 		scope: data?.scope || 'all',
+		archivedCount:
+			typeof data?.archivedCount === 'number' && Number.isFinite(data.archivedCount)
+				? data.archivedCount
+				: 0,
 		cachedAt: Date.now(),
 	};
 }

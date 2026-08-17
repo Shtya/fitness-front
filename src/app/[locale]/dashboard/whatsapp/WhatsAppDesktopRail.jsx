@@ -4,8 +4,10 @@ import {
 	BarChart3,
 	Bell,
 	MessageCircle,
+	Radio,
 	Settings,
 	Smartphone,
+	User,
 	Users,
 	Zap,
 } from 'lucide-react';
@@ -14,7 +16,7 @@ import {
  * Desktop-only left rail matching the provided WhatsApp Web HTML mock.
  * Hidden below 769px so the phone UI stays unchanged.
  *
- * Primary: Chats / Updates / Groups
+ * Primary: Chats / Channels / Updates / Groups
  * Utility (below): Accounts / Notifications / Reports
  * Footer: Settings + profile
  * (Calls stays mobile-only.)
@@ -24,6 +26,7 @@ export default function WhatsAppDesktopRail({
 	onSelect,
 	labels = {},
 	unreadCount = 0,
+	channelUnreadCount = 0,
 	locale = 'en',
 	onOpenSettings,
 	onOpenProfile,
@@ -41,6 +44,12 @@ export default function WhatsAppDesktopRail({
 			label: labels.chats || (ar ? 'المحادثات' : 'Chats'),
 			icon: MessageCircle,
 			badge: unreadCount,
+		},
+		{
+			id: 'channels',
+			label: labels.channels || (ar ? 'القنوات' : 'Channels'),
+			icon: Radio,
+			badge: channelUnreadCount,
 		},
 		{
 			id: 'statuses',
@@ -135,21 +144,24 @@ export default function WhatsAppDesktopRail({
 				) : null}
 				<button
 					type="button"
-					className="wa-desktop-rail__avatar-btn"
+					className={`wa-desktop-rail__item wa-desktop-rail__avatar-btn ${activeTab === 'profile' ? 'is-active' : ''}`}
 					onClick={onOpenProfile}
 					aria-label={ar ? 'الملف الشخصي' : 'Profile'}
+					aria-current={activeTab === 'profile' ? 'page' : undefined}
 				>
 					<span className="wa-desktop-rail__avatar">
 						{avatarUrl ? (
 							// eslint-disable-next-line @next/next/no-img-element
 							<img src={avatarUrl} alt="" />
 						) : (
-							<span className="wa-desktop-rail__avatar-fallback" />
+							<span className="wa-desktop-rail__avatar-fallback" aria-hidden="true">
+								<User size={18} strokeWidth={2} />
+							</span>
 						)}
 						{connected ? <span className="wa-desktop-rail__online-dot" /> : null}
 					</span>
 					<span className="wa-desktop-rail__label">
-						{ar ? 'الشخصية' : labels.profile || 'Profile'}
+						{labels.profile || (ar ? 'الملف الشخصي' : 'Profile')}
 					</span>
 				</button>
 			</div>

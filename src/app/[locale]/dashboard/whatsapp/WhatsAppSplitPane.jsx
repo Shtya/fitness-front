@@ -603,12 +603,7 @@ export default function WhatsAppSplitPane({
 
 			<div
 				ref={scrollRef}
-				className="wa-message-wallpaper min-h-0 flex-1 overflow-x-hidden overflow-y-auto bg-[#0B141A] p-3 nice-scroll"
-				style={{
-					backgroundImage: "url('/bg-whatsapp.svg')",
-					backgroundRepeat: 'repeat',
-					backgroundSize: 'auto, 360px 360px',
-				}}
+				className="wa-message-wallpaper min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-3 nice-scroll"
 				onScroll={event => {
 					const node = event.currentTarget;
 					stickToBottomRef.current =

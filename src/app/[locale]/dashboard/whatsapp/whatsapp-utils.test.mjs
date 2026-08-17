@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
 	conversationTitle,
+	isChannelConversation,
 	firstMessageLink,
 	textWithoutFirstLink,
 	groupConsecutiveImageMessages,
@@ -14,9 +15,15 @@ import {
 	messageMatchesAckTarget,
 	messageTextSegments,
 	messageTextPresentation,
+	groupSenderIdentity,
+	quotedMessageLabel,
+	quotedPreviewFromMessage,
+	inboxAvatarForWaId,
 	normalizeWhatsAppIdentity,
 	parseWhatsAppBold,
 	relativeTime,
+	resolveWhatsAppMentionLabel,
+	buildWhatsAppMentionDirectory,
 	scopeMessagesToConversation,
 	seekRatio,
 	sortConversationsByActivity,
@@ -315,6 +322,14 @@ test('conversationTitle prefers alias names and formats the phone otherwise', ()
 		}),
 		'Channel',
 	);
+	assert.equal(
+		isChannelConversation({ providerChatId: '120363163799333272@newsletter' }),
+		true,
+	);
+	assert.equal(
+		isChannelConversation({ providerChatId: '201000000000@c.us' }),
+		false,
+	);
 });
 
 test('normalizeWhatsAppIdentity matches contact, chat and status identifiers', () => {
@@ -494,6 +509,7 @@ test('image galleries support one, two, three and four image layouts', () => {
 test('messageTextPresentation handles Arabic, English and mixed text', () => {
 	const arabic = messageTextPresentation('رسالة عربية');
 	assert.equal(arabic.dir, 'rtl');
+	assert.equal(arabic.style.textAlign, 'right');
 	assert.match(arabic.style.fontFamily, /--font-arabic/);
 	assert.equal(arabic.style.fontWeight, 500);
 	assert.equal(messageTextPresentation('English message').dir, 'ltr');
@@ -523,6 +539,116 @@ test('message links are segmented and normalized for safe previews', () => {
 	assert.equal(
 		textWithoutFirstLink('Check this https://example.com/path now'),
 		'Check this now',
+	);
+});
+
+test('numeric WhatsApp mentions are segmented separately from plain text', () => {
+	assert.deepEqual(
+		messageTextSegments('Please check @246896262172848 now'),
+		[
+			{ type: 'text', text: 'Please check ' },
+			{ type: 'mention', text: '@246896262172848' },
+			{ type: 'text', text: ' now' },
+		],
+	);
+	assert.equal(
+		messageTextSegments('email me at user@example.com')[0].type,
+		'text',
+	);
+	assert.deepEqual(
+		messageTextSegments('hello 🙈 there'),
+		[
+			{ type: 'text', text: 'hello ' },
+			{ type: 'emoji', text: '🙈' },
+			{ type: 'text', text: ' there' },
+		],
+	);
+});
+
+test('mention labels resolve WhatsApp LID ids to a name or phone', () => {
+	const directory = buildWhatsAppMentionDirectory({
+		conversations: [
+			{
+				type: 'chat',
+				contact: {
+					waId: '246896262172848@lid',
+					name: 'Sara',
+					phoneNumber: '201000000000',
+				},
+			},
+		],
+		messages: [
+			{
+				senderWaId: '246896262172848@lid',
+				senderName: 'Sara',
+			},
+		],
+	});
+	assert.equal(
+		resolveWhatsAppMentionLabel('@246896262172848', directory),
+		'@Sara',
+	);
+	assert.equal(
+		resolveWhatsAppMentionLabel('@246896262172848', new Map(), {
+			'246896262172848': 'Adam',
+		}),
+		'@Adam',
+	);
+	assert.equal(
+		resolveWhatsAppMentionLabel(
+			'@111222333444',
+			buildWhatsAppMentionDirectory({
+				conversations: [
+					{
+						contact: {
+							waId: '111222333444@lid',
+							name: null,
+							phoneNumber: '201555555555',
+						},
+					},
+				],
+			}),
+		),
+		'@+201555555555',
+	);
+});
+
+test('group sender identity prefers stored name over raw WhatsApp id', () => {
+	const sender = groupSenderIdentity({
+		senderWaId: '246896262172848@lid',
+		senderName: 'Ahmed',
+		senderAvatarUrl: 'https://example.com/a.jpg',
+	});
+	assert.equal(sender.name, 'Ahmed');
+	assert.equal(sender.avatarUrl, 'https://example.com/a.jpg');
+	assert.equal(sender.key, '246896262172848@lid');
+	assert.match(sender.color, /^#/);
+});
+
+test('inbox avatar lookup uses a matching direct chat photo', () => {
+	assert.equal(
+		inboxAvatarForWaId(
+			[
+				{
+					type: 'chat',
+					contact: { waId: '201000000000@c.us', avatarUrl: 'https://cdn/a.jpg' },
+				},
+			],
+			'201000000000@c.us',
+		),
+		'https://cdn/a.jpg',
+	);
+	assert.equal(inboxAvatarForWaId([], '201000000000@c.us'), '');
+});
+
+test('quoted image labels and previews do not fall back to the word image', () => {
+	assert.equal(quotedMessageLabel({ type: 'image' }, 'en'), 'Photo');
+	assert.equal(quotedMessageLabel({ type: 'image' }, 'ar'), 'صورة');
+	assert.equal(
+		quotedPreviewFromMessage({
+			replyTo: { type: 'image', previewDataUrl: 'data:image/jpeg;base64,abc' },
+		}),
+		'data:image/jpeg;base64,abc',
 	);
 });
 

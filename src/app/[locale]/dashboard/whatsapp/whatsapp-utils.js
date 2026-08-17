@@ -348,11 +348,30 @@ export function conversationAvatarUrl(conversation) {
 	).trim();
 }
 
+export function inboxAvatarForWaId(conversations, waId) {
+	const id = String(waId || '').trim();
+	if (!id) return '';
+	const digits = id.replace(/@.*$/, '').replace(/\D/g, '');
+	const match = (conversations || []).find(item => {
+		if (item?.type === 'group') return false;
+		const contactId = String(item?.contact?.waId || item?.providerChatId || '');
+		if (contactId === id) return true;
+		return Boolean(digits) && contactId.replace(/@.*$/, '').replace(/\D/g, '') === digits;
+	});
+	return conversationAvatarUrl(match);
+}
+
+export function isChannelConversation(conversation) {
+	const chatId = String(conversation?.providerChatId || '').toLowerCase();
+	const waId = String(conversation?.contact?.waId || '').toLowerCase();
+	return chatId.endsWith('@newsletter') || waId.endsWith('@newsletter');
+}
+
 export function conversationTitle(conversation) {
 	const chatId = String(conversation?.providerChatId || '');
 	const isGroup =
 		conversation?.type === 'group' || chatId.endsWith('@g.us');
-	const isChannel = chatId.endsWith('@newsletter');
+	const isChannel = isChannelConversation(conversation);
 	const phone = String(conversation?.contact?.phoneNumber || '').trim();
 	const contactName = String(conversation?.contact?.name || '').trim();
 	const groupSubject = String(conversation?.group?.subject || '').trim();
@@ -536,8 +555,8 @@ export function messageTextPresentation(text) {
 		fontFeatureSettings: '"kern" 1, "liga" 1',
 		lineHeight: 1.85,
 		direction: 'rtl',
-		unicodeBidi: 'plaintext',
-		textAlign: 'start',
+		unicodeBidi: 'isolate',
+		textAlign: 'right',
 	};
 	if (mostlyArabic || (hasArabic && !hasLatin)) {
 		return {
@@ -556,7 +575,8 @@ export function messageTextPresentation(text) {
 			className: 'wa-message-text--ar',
 			style: {
 				...arabicStyle,
-				direction: 'auto',
+				direction: 'rtl',
+				textAlign: 'right',
 			},
 		};
 	}
@@ -602,6 +622,9 @@ export function parseWhatsAppBold(text) {
 const MESSAGE_URL_PATTERN =
 	/(?:https?:\/\/|www\.)[^\s<>"']+|(?:(?:m\.|www\.)?(?:facebook|instagram|youtube|tiktok|twitter|x)\.com|fb\.watch|youtu\.be)\/[^\s<>"']+/gi;
 const TRAILING_URL_PUNCTUATION = /[),.!?;:\]}]+$/;
+const MESSAGE_MENTION_PATTERN = /@\d{8,32}\b/g;
+const MESSAGE_EMOJI_PATTERN =
+	/\p{Extended_Pictographic}(?:\uFE0F|\u20E3)?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\u20E3)?)*/gu;
 
 export function normalizeHttpUrl(value) {
 	const trimmed = String(value || '').trim();
@@ -609,6 +632,151 @@ export function normalizeHttpUrl(value) {
 	if (/^https?:\/\//i.test(trimmed)) return trimmed;
 	if (trimmed.startsWith('//')) return `https:${trimmed}`;
 	return `https://${trimmed.replace(/^\/+/, '')}`;
+}
+
+function pushTextWithEmojis(segments, text) {
+	const value = String(text || '');
+	if (!value) return;
+	MESSAGE_EMOJI_PATTERN.lastIndex = 0;
+	let cursor = 0;
+	let match;
+	while ((match = MESSAGE_EMOJI_PATTERN.exec(value)) !== null) {
+		if (match.index > cursor) {
+			segments.push({ type: 'text', text: value.slice(cursor, match.index) });
+		}
+		segments.push({ type: 'emoji', text: match[0] });
+		cursor = match.index + match[0].length;
+	}
+	if (cursor < value.length) {
+		segments.push({ type: 'text', text: value.slice(cursor) });
+	}
+}
+
+function pushTextWithMentions(segments, text) {
+	const value = String(text || '');
+	if (!value) return;
+	MESSAGE_MENTION_PATTERN.lastIndex = 0;
+	let cursor = 0;
+	let match;
+	while ((match = MESSAGE_MENTION_PATTERN.exec(value)) !== null) {
+		if (match.index > cursor) {
+			pushTextWithEmojis(segments, value.slice(cursor, match.index));
+		}
+		segments.push({ type: 'mention', text: match[0] });
+		cursor = match.index + match[0].length;
+	}
+	if (cursor < value.length) {
+		pushTextWithEmojis(segments, value.slice(cursor));
+	}
+}
+
+export function whatsAppIdDigits(value) {
+	return String(value || '')
+		.replace(/^@/, '')
+		.replace(/@.*$/, '')
+		.replace(/\D/g, '');
+}
+
+function isWeakMentionLabel(value, waId, phone) {
+	const n = String(value || '').trim();
+	if (!n) return true;
+	const digits = whatsAppIdDigits(n);
+	const idDigits = whatsAppIdDigits(waId);
+	const phoneDigits = String(phone || '').replace(/\D/g, '');
+	if (idDigits && digits === idDigits) return true;
+	if (phoneDigits && digits === phoneDigits && /^\+?\d[\d\s-]*$/.test(n)) return true;
+	return /^\d{8,32}$/.test(n);
+}
+
+function rememberMentionIdentity(directory, waId, name, phone) {
+	const digits = whatsAppIdDigits(waId);
+	if (!digits) return;
+	const current = directory.get(digits) || { name: '', phone: '' };
+	if (!current.name && name && !isWeakMentionLabel(name, waId, phone)) {
+		current.name = String(name).trim();
+	}
+	const phoneDigits = String(phone || '').replace(/\D/g, '');
+	if (
+		!current.phone &&
+		phoneDigits &&
+		phoneDigits !== digits &&
+		phoneDigits.length >= 8 &&
+		phoneDigits.length <= 15
+	) {
+		current.phone = phoneDigits;
+	}
+	directory.set(digits, current);
+}
+
+export function mentionedJidsFromRaw(raw) {
+	const info =
+		raw?.message?.extendedTextMessage?.contextInfo ||
+		raw?.message?.imageMessage?.contextInfo ||
+		raw?.message?.videoMessage?.contextInfo ||
+		raw?.extendedTextMessage?.contextInfo ||
+		raw?.contextInfo ||
+		{};
+	return Array.isArray(info.mentionedJid) ? info.mentionedJid.filter(Boolean) : [];
+}
+
+export function buildWhatsAppMentionDirectory({
+	conversations = [],
+	messages = [],
+	participants = [],
+	mentionLabels = {},
+} = {}) {
+	const directory = new Map();
+	for (const [id, label] of Object.entries(mentionLabels || {})) {
+		rememberMentionIdentity(directory, id, label, '');
+	}
+	for (const conversation of conversations) {
+		rememberMentionIdentity(
+			directory,
+			conversation?.contact?.waId || conversation?.providerChatId,
+			conversation?.contact?.name,
+			conversation?.contact?.phoneNumber,
+		);
+		for (const participant of conversation?.group?.participants || []) {
+			rememberMentionIdentity(directory, participant?.waId, participant?.displayName, '');
+		}
+	}
+	for (const participant of participants) {
+		rememberMentionIdentity(directory, participant?.waId, participant?.displayName, '');
+	}
+	for (const message of messages) {
+		const sender = groupSenderIdentity(message);
+		rememberMentionIdentity(
+			directory,
+			message?.senderWaId || sender.key,
+			sender.name,
+			'',
+		);
+		for (const [id, label] of Object.entries(message?.mentionLabels || {})) {
+			rememberMentionIdentity(directory, id, label, '');
+		}
+		for (const jid of mentionedJidsFromRaw(message?.raw)) {
+			rememberMentionIdentity(directory, jid, '', '');
+		}
+	}
+	return directory;
+}
+
+export function resolveWhatsAppMentionLabel(mentionText, directory, mentionLabels) {
+	const digits = whatsAppIdDigits(mentionText);
+	const override =
+		mentionLabels?.[digits] ||
+		mentionLabels?.[mentionText] ||
+		mentionLabels?.[String(mentionText || '').replace(/^@/, '')];
+	if (override && !isWeakMentionLabel(override, mentionText)) {
+		const label = String(override).trim();
+		return label.startsWith('@') ? label : `@${label}`;
+	}
+	const hit = directory instanceof Map ? directory.get(digits) : directory?.[digits];
+	if (hit?.name) return `@${hit.name}`;
+	if (hit?.phone) return `@${formatWhatsAppPhone(hit.phone)}`;
+	return String(mentionText || '').startsWith('@')
+		? String(mentionText)
+		: `@${mentionText || ''}`;
 }
 
 export function messageTextSegments(text) {
@@ -620,7 +788,7 @@ export function messageTextSegments(text) {
 
 	while ((match = MESSAGE_URL_PATTERN.exec(value)) !== null) {
 		if (match.index > cursor) {
-			segments.push({ type: 'text', text: value.slice(cursor, match.index) });
+			pushTextWithMentions(segments, value.slice(cursor, match.index));
 		}
 		const raw = match[0];
 		const trailing = raw.match(TRAILING_URL_PUNCTUATION)?.[0] || '';
@@ -632,11 +800,11 @@ export function messageTextSegments(text) {
 				href: normalizeHttpUrl(linkText),
 			});
 		}
-		if (trailing) segments.push({ type: 'text', text: trailing });
+		if (trailing) pushTextWithMentions(segments, trailing);
 		cursor = match.index + raw.length;
 	}
 	if (cursor < value.length) {
-		segments.push({ type: 'text', text: value.slice(cursor) });
+		pushTextWithMentions(segments, value.slice(cursor));
 	}
 	return segments.length ? segments : [{ type: 'text', text: value }];
 }
@@ -854,28 +1022,115 @@ function imageAttachmentsForMessage(message) {
 	}));
 }
 
-function mediaPreviewFromRaw(raw) {
-	if (!raw || typeof raw !== 'object') return null;
-	const message = raw.message || null;
-	if (!message) return null;
-	const content =
-		message.ephemeralMessage?.message ||
-		message.viewOnceMessage?.message ||
-		message.viewOnceMessageV2?.message ||
-		message.viewOnceMessageV2Extension?.message ||
-		message;
-	const node =
-		content?.imageMessage ||
-		content?.videoMessage ||
-		content?.stickerMessage ||
-		content?.documentMessage ||
-		null;
-	const thumb = node?.jpegThumbnail;
+function jpegThumbnailToDataUrl(thumb) {
 	if (!thumb) return null;
 	if (typeof thumb === 'string' && thumb.length) {
 		return thumb.startsWith('data:') ? thumb : `data:image/jpeg;base64,${thumb}`;
 	}
 	return null;
+}
+
+function baileysContentFromRaw(raw) {
+	if (!raw || typeof raw !== 'object') return null;
+	const message = raw.message || null;
+	if (!message) return null;
+	return (
+		message.ephemeralMessage?.message ||
+		message.viewOnceMessage?.message ||
+		message.viewOnceMessageV2?.message ||
+		message.viewOnceMessageV2Extension?.message ||
+		message.documentWithCaptionMessage?.message ||
+		message.editedMessage?.message ||
+		message
+	);
+}
+
+function baileysContextInfoFromRaw(raw) {
+	const content = baileysContentFromRaw(raw);
+	if (!content || typeof content !== 'object') return null;
+	return (
+		content.extendedTextMessage?.contextInfo ||
+		content.imageMessage?.contextInfo ||
+		content.videoMessage?.contextInfo ||
+		content.audioMessage?.contextInfo ||
+		content.documentMessage?.contextInfo ||
+		content.stickerMessage?.contextInfo ||
+		null
+	);
+}
+
+function mediaPreviewFromContent(content) {
+	if (!content || typeof content !== 'object') return null;
+	const node =
+		content.imageMessage ||
+		content.videoMessage ||
+		content.stickerMessage ||
+		content.documentMessage ||
+		null;
+	return jpegThumbnailToDataUrl(node?.jpegThumbnail);
+}
+
+export function mediaPreviewFromRaw(raw) {
+	return mediaPreviewFromContent(baileysContentFromRaw(raw));
+}
+
+export function quotedMediaPreviewFromRaw(raw) {
+	return mediaPreviewFromContent(baileysContextInfoFromRaw(raw)?.quotedMessage);
+}
+
+const GROUP_SENDER_COLORS = [
+	'#e17076',
+	'#00a884',
+	'#7bc86c',
+	'#6bcbef',
+	'#ee7aae',
+	'#e5a95e',
+	'#a695e7',
+	'#02a698',
+];
+
+export function groupSenderIdentity(message) {
+	const waId = String(message?.senderWaId || '').trim();
+	const name = String(
+		message?.senderName ||
+			message?.contactName ||
+			message?.raw?.pushName ||
+			message?.senderUser?.name ||
+			'',
+	).trim();
+	const fallback = waId ? waId.replace(/@.*$/, '') : '';
+	const label = name || fallback;
+	const seed = waId || label;
+	let hash = 0;
+	for (let i = 0; i < seed.length; i += 1) {
+		hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+	}
+	return {
+		key: waId || label || String(message?.id || ''),
+		name: label,
+		avatarUrl: String(message?.senderAvatarUrl || '').trim(),
+		color: GROUP_SENDER_COLORS[hash % GROUP_SENDER_COLORS.length],
+	};
+}
+
+export function quotedPreviewFromMessage(message) {
+	return (
+		message?.replyTo?.previewDataUrl ||
+		quotedMediaPreviewFromRaw(message?.raw) ||
+		null
+	);
+}
+
+export function quotedMessageLabel(replyTo, locale = 'en') {
+	const text = String(replyTo?.text || '').trim();
+	if (text) return text;
+	const type = String(replyTo?.type || '').toLowerCase();
+	const arabic = locale === 'ar';
+	if (['image', 'sticker'].includes(type)) return arabic ? 'صورة' : 'Photo';
+	if (type === 'video') return arabic ? 'فيديو' : 'Video';
+	if (['audio', 'ptt', 'voice'].includes(type)) return arabic ? 'رسالة صوتية' : 'Voice message';
+	if (type === 'document') return arabic ? 'مستند' : 'Document';
+	return type || (arabic ? 'رسالة' : 'Message');
 }
 
 export function groupConsecutiveImageMessages(messages = []) {

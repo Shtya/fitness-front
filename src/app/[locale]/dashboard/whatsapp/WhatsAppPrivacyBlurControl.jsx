@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 function OptionRow({ checked, label, hint, onChange }) {
 	return (
@@ -90,12 +90,11 @@ export default function WhatsAppPrivacyBlurControl({
 				aria-label={labels.blurOptions}
 				title={labels.blurToggleHint}
 				onClick={() => setOpen(current => !current)}
-				className={`wa-btn-3d wa-privacy-blur-toggle rounded-lg text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 ${
+				className={`wa-btn-3d wa-privacy-blur-toggle rounded-full text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 ${
 					enabled ? 'is-active' : ''
 				} ${open ? 'is-open' : ''}`}
 			>
-				{enabled ? <EyeOff size={17} /> : <Eye size={17} />}
-				<ChevronDown size={12} className={open ? 'rotate-180' : ''} />
+				{enabled ? <EyeOff size={16} /> : <Eye size={16} />}
 			</button>
 			{open &&
 				position &&
