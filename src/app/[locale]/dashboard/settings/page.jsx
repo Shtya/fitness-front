@@ -22,10 +22,7 @@ import {
 	ChevronDown,
 	X,
 	Trash2,
-	Eye,
-	EyeOff,
 	Plus,
-	Zap,
 } from 'lucide-react';
 import Select from '@/components/atoms/Select';
 import Input from '@/components/atoms/Input';
@@ -34,6 +31,7 @@ import { Switcher } from '@/components/atoms/Switcher';
 import DhikrLoading from '@/components/molecules/DhikrLoading';
 import api from '@/utils/axios';
 import { useTheme, COLOR_PALETTES } from '@/app/[locale]/theme';
+import AiModulePanel from './AiModulePanel';
 
 /* ============================================================================
    ANIMATION CONFIGS
@@ -567,6 +565,7 @@ export default function SettingsPage() {
 
 	/* Accordion control */
 	const sections = { org: 'org', site: 'site', loader: 'loader', dhikr: 'dhikr', theme: 'theme', reports: 'reports', reminders: 'reminders', ai: 'ai' };
+	const [pageTab, setPageTab] = useState('ai');
 	const [openKey, setOpenKey] = useState(() => {
 		if (typeof window === 'undefined') return sections.theme;
 		return localStorage.getItem('settings.openKey') || sections.theme;
@@ -578,6 +577,10 @@ export default function SettingsPage() {
 	useEffect(() => {
 		if (typeof window !== 'undefined') localStorage.setItem('settings.openKey', openKey || '');
 	}, [openKey]);
+
+	useEffect(() => {
+		if (typeof window !== 'undefined') localStorage.setItem('settings.pageTab', pageTab);
+	}, [pageTab]);
 
 	/* State */
 	const tzOptions = useMemo(
@@ -596,7 +599,6 @@ export default function SettingsPage() {
 	const [ogPreviewUrl, setOgPreviewUrl] = useState('');
 	const [loader, setLoader] = useState({ enabled: true, message: '', durationSec: 2 });
 	const [loaderPreviewOpen, setLoaderPreviewOpen] = useState(false);
-	const [showAiKey, setShowAiKey] = useState(false);
 	const [dhikrEnabled, setDhikrEnabled] = useState(true);
 	const [dhikrItems, setDhikrItems] = useState([
 		{ id: 1, text: 'سُبْحَانَ اللَّهِ' },
@@ -771,6 +773,7 @@ export default function SettingsPage() {
 
 			<div className="relative z-10  space-y-6 ">
 				{/* Header */}
+				{pageTab === 'general' ? (
 				<motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between mb-8">
 					<div>
 						<h1 className="text-3xl font-black text-slate-900">{t('title')}</h1>
@@ -792,7 +795,6 @@ export default function SettingsPage() {
 						)}
 					</div>
 
-					{/* Quick actions */}
 					<div className="flex items-center gap-3">
 						<Button color="neutral" onClick={() => window.location.reload()}>
 							{t("close")}
@@ -803,7 +805,40 @@ export default function SettingsPage() {
 						</Button>
 					</div>
 				</motion.div>
+				) : null}
 
+				<div
+					className="mb-8 flex w-fit gap-1 rounded-xl bg-slate-100 p-1"
+					role="tablist"
+					aria-label={t('title')}>
+					{[
+						{ id: 'ai', label: t('pageTabs.ai') },
+						{ id: 'general', label: t('pageTabs.general') },
+					].map((tab) => {
+						const active = pageTab === tab.id;
+						return (
+							<button
+								key={tab.id}
+								type="button"
+								role="tab"
+								aria-selected={active}
+								onClick={() => setPageTab(tab.id)}
+								className="rounded-lg px-4 py-2 text-sm font-semibold transition"
+								style={
+									active
+										? { background: '#fff', color: '#0f172a', boxShadow: '0 1px 2px rgba(15,23,42,0.08)' }
+										: { background: 'transparent', color: '#64748b' }
+								}>
+								{tab.label}
+							</button>
+						);
+					})}
+				</div>
+
+				{pageTab === 'ai' ? <AiModulePanel /> : null}
+
+				{pageTab === 'general' ? (
+				<>
 				{/* Theme Palette Selector - Featured */}
 				<CardShell title={t('branding.title')} desc={t('branding.desc')} open={isOpen(sections.theme)} onToggle={() => toggleOpen(sections.theme)} icon={Palette}>
 					<Row label={t('branding.palette')} hint="Choose a color palette for your application">
@@ -893,48 +928,6 @@ export default function SettingsPage() {
 								<Link2 className="w-4 h-4" />
 								{t('org.homeSlug.preview')}
 							</Button>
-						</div>
-					</Row>
-				</CardShell>
-
-				{/* AI Secret Key */}
-				<CardShell title={t('ai.title')} desc={t('ai.desc')} open={isOpen('ai')} onToggle={() => toggleOpen('ai')} icon={Zap}>
-					<Row label={t('ai.secretKey.label')} hint={t('ai.secretKey.hint')}>
-						<div className="space-y-3">
-							<div className="flex gap-2">
-								<Input
-									type={showAiKey ? 'text' : 'password'}
-									value={aiSecretKey}
-									onChange={setAiSecretKey}
-									placeholder={t('ai.secretKey.placeholder')}
-									className="flex-1 font-mono text-sm"
-								/>
-								<Button color="neutral" onClick={() => setShowAiKey(!showAiKey)} type="button">
-									{showAiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-									{showAiKey ? t('ai.secretKey.hide') : t('ai.secretKey.show')}
-								</Button>
-							</div>
-
-							<Help>
-								<div className="space-y-2 text-sm">
-									<p className="font-bold">{t('ai.steps.title')}</p>
-									<ol className="list-decimal list-inside space-y-1.5 pl-2">
-										<li>
-											{t('ai.steps.step1')}
-											<a className="font-bold underline" style={{ color: 'var(--color-primary-700)' }} href="https://openrouter.ai/settings/keys" target="_blank">
-												{t('ai.form_here')}
-											</a>
-										</li>
-										<li>{t('ai.steps.step2')}</li>
-										<li>{t('ai.steps.step3')}</li>
-										<li>{t('ai.steps.step4')}</li>
-										<li>{t('ai.steps.step5')}</li>
-										<li>{t('ai.steps.step6')}</li>
-										<li>{t('ai.steps.step7')}</li>
-									</ol>
-									<p className="text-red-600 font-bold mt-3">{t('ai.steps.warning')}</p>
-								</div>
-							</Help>
 						</div>
 					</Row>
 				</CardShell>
@@ -1086,9 +1079,12 @@ export default function SettingsPage() {
 						<Help>{t('reminders.firebaseNote')}</Help>
 					</Row>
 				</CardShell>
+				</>
+				) : null}
 			</div>
 
 			{/* Sticky Footer */}
+			{pageTab === 'general' ? (
 			<motion.div
 				initial={{ opacity: 0, y: 20 }}
 				animate={{ opacity: 1, y: 0 }}
@@ -1111,6 +1107,7 @@ export default function SettingsPage() {
 					</div>
 				</div>
 			</motion.div>
+			) : null}
 
 			{/* Loader Preview Modal */}
 			<Modal open={loaderPreviewOpen} onClose={() => setLoaderPreviewOpen(false)} title="Loader Preview">

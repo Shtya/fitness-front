@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
-import { Check, Copy, Image as ImageIcon, Loader2, Smile, Sparkles, Sticker, Upload, X } from 'lucide-react';
+import { Copy, Image as ImageIcon, Loader2, Smile, Sparkles, Sticker, Upload, X } from 'lucide-react';
 import api from '@/utils/axios';
 import { clipboardImageFiles } from '../whatsapp-utils';
-import { STICKER_PROMPT_CARDS } from './sticker-chatgpt-prompt';
+import AiGenerateForm from './AiGenerateForm';
+import StickerPromptStudio from './StickerPromptStudio';
 
 const STICKER_EDGE = 512;
 const STICKER_TARGET_BYTES = 480 * 1024;
@@ -17,11 +18,43 @@ async function canvasToBlob(canvas, type, quality) {
 	});
 }
 
-async function minimizeStickerFile(file) {
+function knockoutNearWhite(context, width, height, threshold = 242) {
+	const image = context.getImageData(0, 0, width, height);
+	const data = image.data;
+	const seen = new Uint8Array(width * height);
+	const stack = [];
+	const push = (x, y) => {
+		if (x < 0 || y < 0 || x >= width || y >= height) return;
+		const index = y * width + x;
+		if (seen[index]) return;
+		seen[index] = 1;
+		stack.push(index);
+	};
+	push(0, 0);
+	push(width - 1, 0);
+	push(0, height - 1);
+	push(width - 1, height - 1);
+	while (stack.length) {
+		const index = stack.pop();
+		const pixel = index * 4;
+		if (data[pixel] < threshold || data[pixel + 1] < threshold || data[pixel + 2] < threshold) continue;
+		data[pixel + 3] = 0;
+		const x = index % width;
+		const y = (index / width) | 0;
+		push(x - 1, y);
+		push(x + 1, y);
+		push(x, y - 1);
+		push(x, y + 1);
+	}
+	context.putImageData(image, 0, 0);
+}
+
+async function minimizeStickerFile(file, options = {}) {
 	if (!file) return file;
 	const type = String(file.type || '').toLowerCase();
+	const knockoutBackground = Boolean(options.knockoutBackground);
 	if (type.includes('gif')) return file;
-	if (file.size <= STICKER_TARGET_BYTES && type.includes('webp')) return file;
+	if (!knockoutBackground && file.size <= STICKER_TARGET_BYTES && type.includes('webp')) return file;
 	if (typeof createImageBitmap !== 'function') return file;
 	let bitmap = null;
 	try {
@@ -36,15 +69,16 @@ async function minimizeStickerFile(file) {
 		if (!context) return file;
 		context.clearRect(0, 0, width, height);
 		context.drawImage(bitmap, 0, 0, width, height);
+		if (knockoutBackground) knockoutNearWhite(context, width, height);
 		let quality = 0.82;
 		let blob = (await canvasToBlob(canvas, 'image/webp', quality)) ||
-			(await canvasToBlob(canvas, 'image/jpeg', quality));
+			(await canvasToBlob(canvas, 'image/png'));
 		while (blob && blob.size > STICKER_TARGET_BYTES && quality > 0.38) {
 			quality -= 0.14;
 			blob = (await canvasToBlob(canvas, blob.type || 'image/webp', quality)) || blob;
 		}
 		if (!blob || !blob.size) return file;
-		const extension = String(blob.type || '').includes('jpeg') ? 'jpg' : 'webp';
+		const extension = String(blob.type || '').includes('png') ? 'png' : 'webp';
 		return new File([blob], String(file.name || 'sticker').replace(/\.[^.]+$/, `.${extension}`), {
 			type: blob.type || 'image/webp',
 		});
@@ -61,15 +95,15 @@ const EMOJIS = [
 	'👀', '✨', '😅', '🙌', '🤝', '💯', '🫡', '🌹',
 ];
 
-function computePanelPosition(anchorRect) {
+function computePanelPosition(anchorRect, { wide = false, tall = false } = {}) {
 	const margin = 12;
 	const viewportW = window.innerWidth || 1280;
 	const viewportH = window.innerHeight || 720;
 	if (viewportW < 769) {
 		return { mode: 'sheet' };
 	}
-	const width = Math.min(360, viewportW - margin * 2);
-	const height = Math.min(420, viewportH - margin * 2);
+	const width = Math.min(wide ? 560 : 420, viewportW - margin * 2);
+	const height = Math.min(tall ? 680 : 520, viewportH - margin * 2);
 	const gap = 8;
 	const rect = anchorRect || {
 		top: viewportH - 64,
@@ -98,6 +132,27 @@ async function fetchStickerBlob(accountId, stickerId) {
 	return new File([data], 'sticker.webp', { type });
 }
 
+async function loadPreviewMap(accountId, items, onBatch, isCancelled) {
+	const next = {};
+	const batchSize = 32;
+	for (let index = 0; index < items.length; index += batchSize) {
+		if (isCancelled?.()) return next;
+		await Promise.all(
+			items.slice(index, index + batchSize).map(async item => {
+				if (item.available === false) return;
+				try {
+					const file = await fetchStickerBlob(accountId, item.id);
+					next[item.id] = URL.createObjectURL(file);
+				} catch {
+					/* skip broken sticker file */
+				}
+			}),
+		);
+		onBatch?.({ ...next });
+	}
+	return next;
+}
+
 export default function StickersPanel({
 	open,
 	onClose,
@@ -117,11 +172,11 @@ export default function StickersPanel({
 	const [uploading, setUploading] = useState(false);
 	const [deletingId, setDeletingId] = useState(null);
 	const [promptOpen, setPromptOpen] = useState(false);
-	const [promptCopiedId, setPromptCopiedId] = useState(null);
-	const [promptCardId, setPromptCardId] = useState('concept');
+	const [stickerMode, setStickerMode] = useState('library');
 	const panelRef = useRef(null);
 	const fileRef = useRef(null);
 	const autoHealRef = useRef('');
+	const previewsRef = useRef({});
 	const actionBtnClass =
 		'inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-lg px-2.5 text-[11px] font-bold leading-none disabled:opacity-50';
 	const tabs = [
@@ -137,14 +192,28 @@ export default function StickersPanel({
 	useEffect(() => {
 		if (!open) {
 			setPromptOpen(false);
-			setPromptCopiedId(null);
-			setPromptCardId('concept');
+			setStickerMode('library');
 		}
 	}, [open]);
 
 	useEffect(() => {
 		if (!open) return undefined;
-		const update = () => setPosition(computePanelPosition(anchorRef?.current?.getBoundingClientRect()));
+		const previous = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+		return () => {
+			document.body.style.overflow = previous;
+		};
+	}, [open]);
+
+	useEffect(() => {
+		if (!open) return undefined;
+		const update = () =>
+			setPosition(
+				computePanelPosition(anchorRef?.current?.getBoundingClientRect(), {
+					wide: stickerMode === 'ai' || promptOpen,
+					tall: stickerMode === 'ai' || promptOpen || tab === 'sticker',
+				}),
+			);
 		update();
 		window.addEventListener('resize', update);
 		window.addEventListener('scroll', update, true);
@@ -152,11 +221,12 @@ export default function StickersPanel({
 			window.removeEventListener('resize', update);
 			window.removeEventListener('scroll', update, true);
 		};
-	}, [open, anchorRef]);
+	}, [open, anchorRef, stickerMode, promptOpen, tab]);
 
 	useEffect(() => {
 		if (!open) return undefined;
 		const onPointer = event => {
+			if (event.target?.closest?.('[data-wa-select-menu]')) return;
 			if (panelRef.current?.contains(event.target) || anchorRef?.current?.contains(event.target)) return;
 			onClose?.();
 		};
@@ -186,7 +256,9 @@ export default function StickersPanel({
 					autoHealRef.current = healKey;
 					setSyncing(true);
 					try {
-						const synced = await api.post(`/whatsapp/accounts/${accountId}/stickers/sync`);
+						const synced = await api.post(`/whatsapp/accounts/${accountId}/stickers/sync`, null, {
+							timeout: 120000,
+						});
 						if (cancelled) return;
 						items = synced.data?.items || items;
 					} catch {
@@ -196,25 +268,21 @@ export default function StickersPanel({
 					}
 				}
 				setStickers(items);
-				const next = {};
-				await Promise.all(
-					items.map(async item => {
-						if (item.available === false) return;
-						try {
-							const file = await fetchStickerBlob(accountId, item.id);
-							if (cancelled) return;
-							next[item.id] = URL.createObjectURL(file);
-						} catch {
-							/* skip broken sticker file */
-						}
-					}),
+				await loadPreviewMap(
+					accountId,
+					items,
+					batch => {
+						if (cancelled) return;
+						setPreviews(current => {
+							Object.values(current).forEach(url => {
+								if (!Object.values(batch).includes(url)) URL.revokeObjectURL(url);
+							});
+							previewsRef.current = batch;
+							return batch;
+						});
+					},
+					() => cancelled,
 				);
-				if (!cancelled) {
-					setPreviews(current => {
-						Object.values(current).forEach(url => URL.revokeObjectURL(url));
-						return next;
-					});
-				}
 			} catch {
 				if (!cancelled) toast.error(ar ? 'تعذر تحميل الستيكرز' : 'Could not load stickers');
 			} finally {
@@ -229,26 +297,18 @@ export default function StickersPanel({
 
 	useEffect(() => {
 		return () => {
-			Object.values(previews).forEach(url => URL.revokeObjectURL(url));
+			Object.values(previewsRef.current).forEach(url => URL.revokeObjectURL(url));
 		};
-	}, [previews]);
+	}, []);
 
 	const refreshStickers = async items => {
 		setStickers(items);
-		const next = {};
-		await Promise.all(
-			items.map(async item => {
-				if (item.available === false) return;
-				try {
-					const file = await fetchStickerBlob(accountId, item.id);
-					next[item.id] = URL.createObjectURL(file);
-				} catch {
-					/* skip */
-				}
-			}),
-		);
+		const next = await loadPreviewMap(accountId, items);
 		setPreviews(current => {
-			Object.values(current).forEach(url => URL.revokeObjectURL(url));
+			Object.values(current).forEach(url => {
+				if (!Object.values(next).includes(url)) URL.revokeObjectURL(url);
+			});
+			previewsRef.current = next;
 			return next;
 		});
 	};
@@ -298,19 +358,24 @@ export default function StickersPanel({
 		if (!accountId) return;
 		setSyncing(true);
 		try {
-			const { data } = await api.post(`/whatsapp/accounts/${accountId}/stickers/sync`);
+			const { data } = await api.post(`/whatsapp/accounts/${accountId}/stickers/sync`, null, {
+				timeout: 120000,
+			});
 			await refreshStickers(data?.items || []);
+			const pending = Number(data?.pending || 0);
+			const imported = Number(data?.imported || 0);
+			const repaired = Number(data?.repaired || 0);
 			toast.success(
 				ar
-					? data?.imported
-						? `تمت إضافة ${data.imported} ستيكر جديد من واتساب`
-						: data?.repaired
-							? `تم إصلاح ${data.repaired} ستيكر على هذا الجهاز`
+					? pending
+						? `المكتبة: ${(data?.items || []).length} ستيكر. اتعمل استيراد ${imported}. لسه ${pending} مش محمّلين، اضغط مزامنة تاني وواتساب متصل.`
+						: imported || repaired
+							? `تمت المزامنة: +${imported} جديد${repaired ? `، إصلاح ${repaired}` : ''} (${(data?.items || []).length})`
 							: `المكتبة محدّثة (${(data?.items || []).length} ستيكر)`
-					: data?.imported
-						? `Synced ${data.imported} new stickers from WhatsApp`
-						: data?.repaired
-							? `Restored ${data.repaired} stickers on this machine`
+					: pending
+						? `Library: ${(data?.items || []).length} stickers. Imported ${imported}. ${pending} still need WhatsApp download — sync again while connected.`
+						: imported || repaired
+							? `Synced: +${imported} new${repaired ? `, repaired ${repaired}` : ''} (${(data?.items || []).length})`
 							: `Sticker library is up to date (${(data?.items || []).length})`,
 			);
 		} catch (error) {
@@ -351,17 +416,6 @@ export default function StickersPanel({
 		}
 	};
 
-	const copyPrompt = async card => {
-		try {
-			await navigator.clipboard.writeText(card.text);
-			setPromptCopiedId(card.id);
-			toast.success(ar ? 'تم نسخ برومبت ChatGPT' : 'ChatGPT prompt copied');
-			window.setTimeout(() => setPromptCopiedId(current => (current === card.id ? null : current)), 1600);
-		} catch {
-			window.prompt(ar ? 'انسخ البرومبت:' : 'Copy this prompt:', card.text);
-		}
-	};
-
 	if (!open || typeof document === 'undefined') return null;
 
 	const style =
@@ -391,27 +445,36 @@ export default function StickersPanel({
 			}}
 			className={
 				position?.mode === 'sheet'
-					? 'wa-sticker-panel fixed inset-x-0 bottom-[88px] z-[1400] mx-auto flex h-[48dvh] max-w-[430px] flex-col overflow-hidden border border-slate-200 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.12)]'
-					: 'wa-sticker-panel flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_40px_rgba(11,20,26,0.18)]'
+					? `wa-sticker-panel fixed inset-x-0 bottom-[88px] z-[1400] mx-auto flex ${stickerMode === 'ai' || promptOpen ? 'h-[80dvh]' : 'h-[62dvh]'} max-w-[560px] flex-col overflow-hidden border border-slate-200 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.12)] dark:border-slate-700 dark:bg-slate-900`
+					: 'wa-sticker-panel flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_40px_rgba(11,20,26,0.18)] dark:border-slate-700 dark:bg-slate-900'
 			}
 			style={style}
 		>
-			<div className="flex h-12 shrink-0 items-center border-b border-slate-100 px-2">
-				{tabs.map(([id, Icon, label]) => (
-					<button
-						key={id}
-						type="button"
-						aria-label={label}
-						aria-pressed={tab === id}
-						onClick={() => setTab(id)}
-						className={`grid h-11 flex-1 place-items-center border-b-2 ${
-							tab === id ? 'border-[#16B96B] text-[#16B96B]' : 'border-transparent text-[#667781]'
-						}`}
-					>
-						<Icon size={22} />
-					</button>
-				))}
-				<button type="button" aria-label="Close" onClick={onClose} className="grid h-11 w-11 place-items-center text-[#667781]">
+			<div className="flex h-14 shrink-0 items-stretch border-b border-slate-100 dark:border-slate-800">
+				<div className="grid min-w-0 flex-1 grid-cols-3">
+					{tabs.map(([id, Icon, label]) => (
+						<button
+							key={id}
+							type="button"
+							aria-label={label}
+							aria-pressed={tab === id}
+							onClick={() => {
+								setTab(id);
+								if (id !== 'sticker') {
+									setStickerMode('library');
+									setPromptOpen(false);
+								}
+							}}
+							className={`grid h-full place-items-center gap-0.5 border-b-2 px-1 text-[10px] font-bold ${
+								tab === id ? 'border-[#16B96B] text-[#16B96B]' : 'border-transparent text-[#667781]'
+							}`}
+						>
+							<Icon size={20} />
+							<span className="leading-none">{label}</span>
+						</button>
+					))}
+				</div>
+				<button type="button" aria-label="Close" onClick={onClose} className="grid h-full w-12 shrink-0 place-items-center text-[#667781]">
 					<X size={21} />
 				</button>
 			</div>
@@ -436,7 +499,22 @@ export default function StickersPanel({
 				</div>
 			) : (
 				<div className="flex min-h-0 flex-1 flex-col">
-					<div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-3 py-2">
+					<div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-slate-800">
+						{stickerMode === 'ai' ? (
+							<>
+								<button
+									type="button"
+									onClick={() => setStickerMode('library')}
+									className={`${actionBtnClass} bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200`}
+								>
+									{ar ? 'المكتبة' : 'Library'}
+								</button>
+								<span className="text-xs font-bold text-slate-700 dark:text-slate-100">
+									{ar ? 'ستيكر AI' : 'AI Sticker'}
+								</span>
+							</>
+						) : (
+							<>
 						<button
 							type="button"
 							onClick={syncStickers}
@@ -457,16 +535,36 @@ export default function StickersPanel({
 						</button>
 						<button
 							type="button"
-							onClick={() => setPromptOpen(current => !current)}
+							onClick={() => {
+								setPromptOpen(false);
+								setStickerMode(current => (current === 'ai' ? 'library' : 'ai'));
+							}}
+							aria-pressed={stickerMode === 'ai'}
+							title={ar ? 'توليد ستيكر بالذكاء الاصطناعي' : 'Generate an AI sticker'}
+							className={`${actionBtnClass} ${
+								stickerMode === 'ai' ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-50 text-emerald-700'
+							}`}
+						>
+							<Sparkles size={12} />
+							{ar ? 'ستيكر AI' : 'AI Sticker'}
+						</button>
+						<button
+							type="button"
+							onClick={() => {
+								setStickerMode('library');
+								setPromptOpen(current => !current);
+							}}
 							aria-pressed={promptOpen}
 							title={ar ? 'برومبت توليد استيكر بـ ChatGPT' : 'ChatGPT sticker generation prompt'}
 							className={`${actionBtnClass} ${
 								promptOpen ? 'bg-violet-100 text-violet-800' : 'bg-violet-50 text-violet-700'
 							}`}
 						>
-							<Sparkles size={12} />
+							<Copy size={12} />
 							{ar ? 'برومبت' : 'Prompt'}
 						</button>
+							</>
+						)}
 						<input
 							ref={fileRef}
 							type="file"
@@ -481,63 +579,32 @@ export default function StickersPanel({
 						/>
 					</div>
 					<div
-						className="min-h-0 flex-1 overflow-y-auto p-2"
+						className={`min-h-0 flex-1 ${stickerMode === 'ai' || promptOpen ? 'flex overflow-hidden p-0' : 'overflow-y-auto p-2'}`}
 						onDragOver={event => event.preventDefault()}
 						onDrop={event => {
+							if (stickerMode === 'ai') return;
 							event.preventDefault();
 							void addFiles([...(event.dataTransfer?.files || [])].filter(file =>
 								String(file.type || '').startsWith('image/'),
 							));
 						}}
 					>
-						{promptOpen ? (
-							<div className="flex h-full min-h-0 flex-col gap-2">
-								{STICKER_PROMPT_CARDS.map(card => {
-									const expanded = promptCardId === card.id;
-									const copied = promptCopiedId === card.id;
-									return (
-										<article
-											key={card.id}
-											className={`flex min-h-0 flex-col overflow-hidden rounded-xl border ${
-												expanded
-													? 'flex-1 border-violet-200 bg-violet-50/70'
-													: 'shrink-0 border-slate-200 bg-white'
-											}`}
-										>
-											<div className="flex items-start justify-between gap-2 px-2.5 py-2">
-												<button
-													type="button"
-													onClick={() => setPromptCardId(card.id)}
-													className="min-w-0 flex-1 text-start"
-												>
-													<p className="text-[11px] font-bold text-slate-800">
-														{ar ? card.titleAr : card.titleEn}
-													</p>
-													<p className="mt-0.5 text-[10px] leading-4 text-slate-500">
-														{ar ? card.hintAr : card.hintEn}
-													</p>
-												</button>
-												<button
-													type="button"
-													onClick={() => void copyPrompt(card)}
-													className={`${actionBtnClass} bg-emerald-50 text-emerald-700`}
-												>
-													{copied ? <Check size={12} /> : <Copy size={12} />}
-													{copied ? (ar ? 'تم' : 'Copied') : (ar ? 'نسخ' : 'Copy')}
-												</button>
-											</div>
-											{expanded ? (
-												<pre
-													dir="rtl"
-													className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap border-t border-violet-100 bg-white p-2.5 text-right text-[11px] leading-5 text-slate-700"
-												>
-													{card.text}
-												</pre>
-											) : null}
-										</article>
-									);
-								})}
-							</div>
+						{stickerMode === 'ai' ? (
+							<AiGenerateForm
+								kind="sticker"
+								accountId={accountId}
+								locale={locale}
+								stickers={stickers}
+								previews={previews}
+								disabled={!accountId}
+								onUse={async file => {
+									const prepared = await minimizeStickerFile(file, { knockoutBackground: true });
+									const sent = await onSendSticker?.(prepared);
+									if (sent !== false) onClose?.();
+								}}
+							/>
+						) : promptOpen ? (
+							<StickerPromptStudio locale={locale} actionBtnClass={actionBtnClass} />
 						) : loading ? (
 							<div className="grid h-full place-items-center text-[#667781]">
 								<Loader2 className="animate-spin" />

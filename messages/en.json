@@ -2883,6 +2883,10 @@
 		"cancel": "Cancel",
 		"add": "Add",
 		"close": "Close",
+		"pageTabs": {
+			"general": "General",
+			"ai": "AI Integrations"
+		},
 		"ai": {
 			"title": "AI settings",
 			"desc": "Add your AI key to use all advanced features.",
@@ -2904,6 +2908,287 @@
 				"step6": "Paste the key in the field above.",
 				"step7": "Save changes.",
 				"warning": "⚠️ Keep this key secret — do not share it with anyone."
+			}
+		},
+		"aiModule": {
+			"title": "AI Integrations",
+			"desc": "Pick default models for every feature, track cost, and store provider keys. Features never see API keys.",
+			"loading": "Loading AI settings…",
+			"tabs": {
+				"defaults": "Defaults",
+				"keys": "Provider",
+				"models": "Models",
+				"usage": "Usage",
+				"limits": "Limits"
+			},
+			"badges": {
+				"free": "FREE",
+				"freeTier": "FREE TIER",
+				"paid": "PAID",
+				"premium": "PREMIUM",
+				"freeHint": "No API key. $0. Public/free endpoints.",
+				"freeTierHint": "Needs an API key. Uses the provider's free quota first.",
+				"paidHint": "Needs an API key. Billed by the provider after the free quota."
+			},
+			"pages": {
+				"whatsapp": "WhatsApp",
+				"transcript": "Transcript",
+				"fitcoach": "Fit Coach",
+				"emailMemo": "Email memo",
+				"studio": "Content Studio",
+				"open": "Open page",
+				"parts": "{count} parts",
+				"empty": "No AI parts on this page.",
+				"syncHint": "These defaults apply from Settings and from the page itself."
+			},
+			"features": {
+				"chooseModel": "AI / model",
+				"saved": "Feature default saved",
+				"whatsappReplies": "Reply suggestions",
+				"whatsappImage": "Images & stickers",
+				"whatsappVoice": "Voice changer",
+				"whatsappTranscript": "Voice transcripts",
+				"transcriptionStt": "Speech to text",
+				"transcriptionEnhance": "Transcript cleanup",
+				"fitcoachChat": "Fit Coach chat",
+				"exerciseForm": "Exercise AI fill",
+				"emailMemo": "Email memo",
+				"studioTopic": "Studio topic",
+				"studioContent": "Studio content",
+				"studioImage": "Studio image",
+				"hints": {
+					"generic": "Used when this part runs.",
+					"whatsappReplies": "Suggested replies while chatting.",
+					"whatsappImage": "AI images and stickers.",
+					"whatsappVoice": "Voice changer / clone playback.",
+					"whatsappTranscript": "Transcribe incoming voice notes.",
+					"transcriptionStt": "Speech-to-text on the Transcript page.",
+					"transcriptionEnhance": "Cleanup and rewrite of transcripts.",
+					"fitcoachChat": "Fit Coach chat answers.",
+					"exerciseForm": "Auto-fill exercise and nutrition fields.",
+					"emailMemo": "Turn Gmail into WhatsApp memos.",
+					"studioTopic": "Content Studio topic ideas.",
+					"studioContent": "Content Studio copy.",
+					"studioImage": "Content Studio visuals."
+				}
+			},
+			"keys": {
+				"save": "Save key",
+				"test": "Test connection",
+				"remove": "Remove key",
+				"placeholder": "Paste API key",
+				"saved": "API key saved",
+				"tested": "Connection succeeded",
+				"testFailed": "Connection failed",
+				"removed": "API key removed",
+				"configured": "Connected",
+				"missing": "Not connected",
+				"savedAs": "Key ending in {last4}",
+				"pasteFirst": "Paste an API key first",
+				"comingSoon": "Coming soon",
+				"comingSoonHint": "Key storage for this provider is coming soon. You can still follow the setup steps and use the links.",
+				"futureProvider": "This provider can be added later without changing features.",
+				"apiKey": "API key",
+				"onlyLast4": "The full key is encrypted on the server. The UI only shows the last 4 characters.",
+				"later": "Later",
+				"noKey": "No API key",
+				"noKeyHint": "This provider does not need an API key. Pick its models in the Defaults tab.",
+				"noKeyBadge": "No key needed",
+				"chooseProvider": "Choose a provider",
+				"showSteps": "Setup steps",
+				"hideSteps": "Hide setup steps",
+				"setupTitle": "Get a {name} API key",
+				"setupHint": "Follow these steps, then paste the key in Provider.",
+				"guides": {
+					"gemini": {
+						"intro": [
+							"Connect Gemini with a Google AI Studio API key. Free-tier catalog models still need this key."
+						],
+						"steps": [
+							"Open Google AI Studio (the link is also shown below)",
+							"Sign in with your Google account",
+							"Click Get API key → Create API key",
+							"Copy the key",
+							"Paste it below and press Save",
+							"Keep the key secret"
+						]
+					},
+					"openai": {
+						"intro": [
+							"Connect OpenAI with a platform API key. Usage is billed on OpenAI's side."
+						],
+						"steps": [
+							"Open the OpenAI API keys page (the link is also shown below)",
+							"Sign in to your OpenAI account",
+							"Click Create new secret key",
+							"Copy the key immediately — it is shown only once",
+							"Paste it below and press Save",
+							"Keep the key secret"
+						]
+					},
+					"anthropic": {
+						"intro": [
+							"Connect Anthropic (Claude) with a Console API key."
+						],
+						"steps": [
+							"Open the Anthropic Console keys page (the link is also shown below)",
+							"Sign in to your Anthropic account",
+							"Create a new API key",
+							"Copy the key",
+							"Paste it below and press Save",
+							"Keep the key secret"
+						]
+					},
+					"groq": {
+						"intro": [
+							"Connect Groq with a console API key for fast open models."
+						],
+						"steps": [
+							"Open the Groq Console keys page (the link is also shown below)",
+							"Sign in to your Groq account",
+							"Create an API key",
+							"Copy the key",
+							"Paste it below and press Save",
+							"Keep the key secret"
+						]
+					},
+					"openrouter": {
+						"intro": [
+							"Connect OpenRouter with an API key. Credits are billed on OpenRouter."
+						],
+						"steps": [
+							"Open the OpenRouter keys page (the link is also shown below)",
+							"Sign in to OpenRouter",
+							"Create an API key",
+							"Copy the key",
+							"Paste it below and press Save",
+							"Add credits if you plan to use paid models",
+							"Keep the key secret"
+						]
+					},
+					"llm7-free": {
+						"intro": [
+							"LLM7 Free does not need an API key. Just pick its models in Defaults."
+						],
+						"steps": [
+							"No API key is required",
+							"Open the Models tab and enable an LLM7 model if needed",
+							"Choose that model in Defaults for the features you want",
+							"Visit LLM7 if you want to learn more about the service"
+						]
+					},
+					"pollinations-free": {
+						"intro": [
+							"Pollinations free text does not need an API key. Just pick its models in Defaults."
+						],
+						"steps": [
+							"No API key is required",
+							"Enable a Pollinations text model in the Models tab",
+							"Choose that model in Defaults",
+							"Visit Pollinations.ai for service details"
+						]
+					},
+					"pollinations-image": {
+						"intro": [
+							"Pollinations free image does not need an API key. Just pick its image models in Defaults."
+						],
+						"steps": [
+							"No API key is required",
+							"Enable a Pollinations image model in the Models tab",
+							"Choose that model as the image default in Defaults",
+							"Visit Pollinations.ai for service details"
+						]
+					},
+					"ai-free": {
+						"intro": [
+							"AI Free Auto routes across free providers. No API key is stored here."
+						],
+						"steps": [
+							"No API key is required",
+							"Enable the AI Free models you want in the Models tab",
+							"Pick them in Defaults",
+							"Paid providers stay optional"
+						]
+					},
+					"browser-chatgpt": {
+						"intro": [
+							"Browser ChatGPT uses ChatGPT in the browser. No API key is stored here."
+						],
+						"steps": [
+							"No API key is required in So7baFit",
+							"You may need to be signed in at ChatGPT in your browser",
+							"Pick the Browser ChatGPT model in Defaults if it is available",
+							"Open ChatGPT if you need to check your session"
+						]
+					}
+				}
+			},
+			"links": {
+				"studio": "Get API key",
+				"billing": "Billing",
+				"pricing": "Pricing",
+				"docs": "Docs"
+			},
+			"models": {
+				"name": "Name",
+				"id": "Model ID",
+				"provider": "Provider",
+				"type": "Type",
+				"pricing": "Pricing",
+				"enabled": "Enabled",
+				"default": "Default",
+				"delete": "Delete",
+				"addTitle": "Add a model",
+				"add": "Add model",
+				"cancel": "Cancel",
+				"added": "Model added",
+				"removed": "Model removed",
+				"required": "Model ID and name are required",
+				"inputPrice": "Input $ / 1M tokens",
+				"outputPrice": "Output $ / 1M tokens",
+				"imagePrice": "Image $ / unit",
+				"makeDefault": "Set as default for this type",
+				"freeGroup": "Free models",
+				"paidGroup": "Paid models",
+				"usedByNone": "Not assigned to a feature yet",
+				"usedBy": "Used by",
+				"audio": "Audio / transcription",
+				"needsKey": "Save API key first",
+				"getKey": "Get API key",
+				"types": {
+					"text": "Text",
+					"image": "Image",
+					"audio": "Audio"
+				}
+			},
+			"usage": {
+				"cost": "Monthly cost",
+				"requests": "Requests",
+				"images": "Images",
+				"period": "Period",
+				"used": "Used this month",
+				"empty": "No AI usage this month yet.",
+				"warn80": "You have used 80% of a monthly AI limit.",
+				"warn90": "You have used 90% of a monthly AI limit.",
+				"hardStop": "Monthly AI limit reached. New requests are blocked on the server."
+			},
+			"limits": {
+				"workspace": "Workspace limits",
+				"perProvider": "Per AI provider",
+				"perProviderHint": "Cap a paid/integrated provider so one AI cannot burn the whole workspace budget. 0 means no extra cap.",
+				"cost": "Monthly cost limit (USD)",
+				"requests": "Monthly request limit",
+				"images": "Monthly image limit",
+				"buffer": "Safety buffer (%)",
+				"warnings": "Usage warnings",
+				"warningsHint": "Show alerts at 80%, 90%, and a hard stop at 100%.",
+				"save": "Save limits",
+				"saved": "Limits saved"
+			},
+			"errors": {
+				"load": "Could not load AI settings",
+				"offline": "Cannot reach the backend. Start it with npm run start:dev in backend (port 8083), then refresh.",
+				"generic": "AI settings request failed"
 			}
 		},
 		"org": {

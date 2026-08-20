@@ -987,6 +987,8 @@ export const STICKER_PROMPT_CARDS = [
 		titleEn: 'Sticker concept prompt',
 		hintAr: 'افكار + 3 نسخ + النسخة النهائية',
 		hintEn: 'Ideas, 3 variants, then a final concept',
+		prompt:
+			'Egyptian comic WhatsApp sticker, sarcastic street reaction, die-cut, transparent background, bold outlines, square composition',
 		text: STICKER_CHATGPT_PROMPT,
 	},
 	{
@@ -995,7 +997,30 @@ export const STICKER_PROMPT_CARDS = [
 		titleEn: 'Egyptian Master Prompt',
 		hintAr: 'ثقافة الشارع + الميمز + 5 أفكار + تقييم',
 		hintEn: 'Street culture, memes, 5 ideas, scoring',
+		prompt:
+			'Egyptian street-culture WhatsApp sticker, meme reaction, bold character, transparent background, high contrast, sticker-ready',
 		text: STICKER_MASTER_PROMPT,
 	},
 ];
+
+export const IMAGE_AI_PRESETS = [
+	{ id: 'nile', ar: 'غروب على النيل', en: 'Nile sunset', prompt: 'cinematic sunset over the Nile in Cairo, warm golden light, realistic photo' },
+	{ id: 'cairo', ar: 'شارع قاهري', en: 'Cairo street', prompt: 'lively Cairo street at dusk, neon shops, people walking, realistic photo' },
+	{ id: 'cat', ar: 'قطة كيوت', en: 'Cute cat', prompt: 'adorable fluffy cat looking at the camera, soft studio light' },
+	{ id: 'food', ar: 'أكل مصري', en: 'Egyptian food', prompt: 'top-down photo of Egyptian koshari bowl, fresh and appetizing' },
+	{ id: 'gym', ar: 'تمرين', en: 'Workout', prompt: 'motivational gym photo, athlete training, dramatic lighting' },
+	{ id: 'ramadan', ar: 'رمضان', en: 'Ramadan', prompt: 'cozy Ramadan night table with lanterns and dates, warm lighting' },
+];
+
+export const STICKER_AI_PRESETS = [
+	{ id: 'khalas', ar: 'خلاص يا عم', en: 'Enough already', prompt: 'Egyptian comic sticker of a tired man waving his hand, sleepy eyes, sticker text خلاص يا عم' },
+	{ id: 'mesh-far2a', ar: 'مش فارقة', en: "Don't care", prompt: 'Egyptian comic sticker, unimpressed face, sticker text مش فارقة' },
+	{ id: 'ya-nahar', ar: 'يا نهار أبيض', en: 'Oh my god', prompt: 'Egyptian comic sticker, shocked character, sticker text يا نهار أبيض' },
+	{ id: 'enta-bt2ol', ar: 'إنت بتقول إيه؟', en: 'What did you say?', prompt: 'Egyptian comic sticker, confused roast face, sticker text إنت بتقول إيه؟' },
+	{ id: 'ana-mali', ar: 'أنا مالي بس', en: 'Not my problem', prompt: 'Egyptian comic sticker, shrugging character, sticker text أنا مالي بس' },
+	{ id: 'ok', ar: 'ماشي', en: 'Okay fine', prompt: 'Egyptian comic sticker, reluctant thumbs up, sticker text ماشي' },
+	{ id: 'sleep', ar: 'تصبح على خير', en: 'Good night', prompt: 'cute sleepy cat WhatsApp sticker saying good night' },
+	{ id: 'love', ar: 'بحبك', en: 'Love you', prompt: 'cute WhatsApp sticker blowing a kiss, sticker text بحبك' },
+];
+
 

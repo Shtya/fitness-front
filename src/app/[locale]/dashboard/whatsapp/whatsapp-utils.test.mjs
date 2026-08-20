@@ -7,6 +7,9 @@ import {
 	textWithoutFirstLink,
 	groupConsecutiveImageMessages,
 	isRenderableWhatsAppMessage,
+	isWhatsAppLocationMessage,
+	whatsAppLocationFromMessage,
+	whatsAppLocationHref,
 	mergeMessages,
 	buildOptimisticMediaMessage,
 	messageDeliveryState,
@@ -18,6 +21,8 @@ import {
 	groupSenderIdentity,
 	quotedMessageLabel,
 	quotedPreviewFromMessage,
+	quotedTargetFromMessage,
+	messageMatchesQuotedTarget,
 	inboxAvatarForWaId,
 	normalizeWhatsAppIdentity,
 	parseWhatsAppBold,
@@ -644,6 +649,8 @@ test('inbox avatar lookup uses a matching direct chat photo', () => {
 test('quoted image labels and previews do not fall back to the word image', () => {
 	assert.equal(quotedMessageLabel({ type: 'image' }, 'en'), 'Photo');
 	assert.equal(quotedMessageLabel({ type: 'image' }, 'ar'), 'صورة');
+	assert.equal(quotedMessageLabel({ type: 'location' }, 'en'), 'Location');
+	assert.equal(quotedMessageLabel({ type: 'location' }, 'ar'), 'موقع');
 	assert.equal(
 		quotedPreviewFromMessage({
 			replyTo: { type: 'image', previewDataUrl: 'data:image/jpeg;base64,abc' },
@@ -685,6 +692,37 @@ test('isRenderableWhatsAppMessage removes empty provider placeholders', () => {
 			attachments: [{ type: 'ptt', key: 'live-att:1', providerMediaId: 'abc' }],
 		}),
 		true,
+	);
+	assert.equal(isRenderableWhatsAppMessage({ id: 'location', type: 'location' }), true);
+	assert.equal(isWhatsAppLocationMessage({ type: 'location' }), true);
+	assert.equal(
+		whatsAppLocationFromMessage({
+			type: 'location',
+			raw: {
+				message: {
+					locationMessage: {
+						degreesLatitude: 30.0444,
+						degreesLongitude: 31.2357,
+						name: 'Cairo',
+					},
+				},
+			},
+		})?.name,
+		'Cairo',
+	);
+	assert.equal(
+		whatsAppLocationHref({
+			type: 'location',
+			location: { latitude: 30.0444, longitude: 31.2357 },
+		}),
+		'https://www.google.com/maps?q=30.0444%2C31.2357',
+	);
+	assert.equal(
+		whatsAppLocationHref({
+			type: 'location',
+			text: 'https://www.google.com/maps?q=30.04,31.23',
+		}),
+		'https://www.google.com/maps?q=30.04,31.23',
 	);
 });
 
@@ -732,4 +770,35 @@ test('updateConversationPreview clears unread when the latest message is from us
 	});
 	assert.equal(result[0].unreadCount, 0);
 	assert.equal(result[0].lastMessage.direction, 'outbound');
+});
+
+test('quotedTargetFromMessage reads reply ids', () => {
+	assert.deepEqual(
+		quotedTargetFromMessage({
+			replyTo: { id: 'msg-1', providerMessageId: 'ABC' },
+		}),
+		{ id: 'msg-1', providerMessageId: 'ABC' },
+	);
+	assert.deepEqual(
+		quotedTargetFromMessage({
+			quotedProviderMessageId: 'XYZ',
+			replyToId: 'msg-2',
+		}),
+		{ id: 'msg-2', providerMessageId: 'XYZ' },
+	);
+	assert.equal(
+		messageMatchesQuotedTarget({ id: 'msg-1', providerMessageId: 'ABC' }, { id: 'msg-1' }),
+		true,
+	);
+	assert.equal(
+		messageMatchesQuotedTarget(
+			{ id: 'other', providerMessageId: 'ABC' },
+			{ providerMessageId: 'ABC' },
+		),
+		true,
+	);
+	assert.equal(
+		messageMatchesQuotedTarget({ id: 'msg-1' }, { id: 'msg-9', providerMessageId: 'NO' }),
+		false,
+	);
 });

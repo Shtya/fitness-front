@@ -81,6 +81,7 @@ import { notifyWhatsAppUnreadChanged } from '@/lib/outreach-unread';
 import TranscriptionDialog from '../transcript/transcription-dialog';
 import VoiceChangerDialog from './voice-changer/VoiceChangerDialog';
 import StickersPanel from './stickers/StickersPanel';
+import AiImageComposerPanel from './stickers/AiImageComposerPanel';
 import {
 	fetchVoiceChangerSettings,
 	readVoiceChangerError,
@@ -106,6 +107,9 @@ import {
 	groupConsecutiveImageMessages,
 	groupSenderIdentity,
 	isRenderableWhatsAppMessage,
+	isWhatsAppLocationMessage,
+	whatsAppLocationFromMessage,
+	whatsAppLocationHref,
 	mediaPreviewFromRaw,
 	mergeMessages,
 	buildOptimisticMediaMessage,
@@ -118,6 +122,8 @@ import {
 	parseWhatsAppBold,
 	quotedMessageLabel,
 	quotedPreviewFromMessage,
+	quotedTargetFromMessage,
+	messageMatchesQuotedTarget,
 	messageTextSegments,
 	relativeTime,
 	scopeMessagesToConversation,
@@ -162,6 +168,7 @@ import {
 } from './demo/demo-command-adapter';
 import AiReplySuggestions, { PromptInstructionsDropdown } from './ai/AiReplySuggestions';
 import WhatsAppAiSettings from './ai/WhatsAppAiSettings';
+import WhatsAppWorkspaceAiParts from './ai/WhatsAppWorkspaceAiParts';
 import { useWhatsAppAi } from './ai/use-whatsapp-ai';
 import WhatsAppPrivacyBlurControl from './WhatsAppPrivacyBlurControl';
 import ExpandableMessageText from './ExpandableMessageText';
@@ -535,6 +542,12 @@ const translations = {
 		allChats: 'All',
 		unreadChats: 'Unread',
 		favoriteChats: 'Favorites',
+		importantChats: 'Important',
+		importantOnlyBanner: 'Showing important messages only',
+		saveAsImportant: 'Save as important',
+		removeImportant: 'Remove from important',
+		noImportantConversations: 'No chats with important messages',
+		noImportantMessages: 'No important messages in this chat',
 		archived: 'Archived',
 		archivedChats: 'Archived chats',
 		archiveChat: 'Archive chat',
@@ -862,6 +875,12 @@ const translations = {
 		allChats: 'الكل',
 		unreadChats: 'غير مقروءة',
 		favoriteChats: 'المفضلة',
+		importantChats: 'مهم',
+		importantOnlyBanner: 'عرض الرسائل المهمة فقط',
+		saveAsImportant: 'حفظ كمهم',
+		removeImportant: 'إزالة من المهم',
+		noImportantConversations: 'لا توجد محادثات فيها عناصر مهمة',
+		noImportantMessages: 'لا توجد رسائل مهمة في هذه المحادثة',
 		archived: 'مؤرشفة',
 		archivedChats: 'المحادثات المؤرشفة',
 		archiveChat: 'أرشفة المحادثة',
@@ -1339,6 +1358,149 @@ function ImageMessage({
 					<Expand size={15} strokeWidth={2.4} />
 				</span>
 			)}
+		</button>
+	);
+}
+
+function openStreetMapTileUrl(lat, lng, zoom = 15) {
+	const n = 2 ** zoom;
+	const latRad = (lat * Math.PI) / 180;
+	const x = Math.floor(((lng + 180) / 360) * n);
+	const y = Math.floor(
+		((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n,
+	);
+	if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+	return `https://tile.openstreetmap.org/${zoom}/${x}/${y}.png`;
+}
+
+function LocationMessage({ message, location, type, locale = 'en', conversationId = null }) {
+	const [mapFailed, setMapFailed] = useState(false);
+	const [opening, setOpening] = useState(false);
+	const resolved = location || whatsAppLocationFromMessage(message);
+	const isLive =
+		Boolean(resolved?.isLive) ||
+		['live_location', 'livelocation'].includes(String(type || message?.type || '').toLowerCase());
+	const arabic = String(locale).toLowerCase().startsWith('ar');
+	const fallbackLabel = arabic
+		? isLive
+			? 'موقع مباشر'
+			: 'موقع'
+		: isLive
+			? 'Live location'
+			: 'Location';
+	const lat = Number(resolved?.latitude);
+	const lng = Number(resolved?.longitude);
+	const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
+	const title = String(resolved?.name || '').trim() || fallbackLabel;
+	const address = String(resolved?.address || '').trim();
+	const href = whatsAppLocationHref(message, resolved);
+	const subtitle =
+		address ||
+		(arabic ? 'عرض على الخريطة' : 'Open in Maps');
+	const preview = resolved?.previewDataUrl;
+	const tileUrl = hasCoords && !preview ? openStreetMapTileUrl(lat, lng) : null;
+	const showPin = Boolean((tileUrl && !mapFailed) || (!preview && !tileUrl) || (preview && mapFailed));
+	const openMaps = async event => {
+		event.preventDefault();
+		event.stopPropagation();
+		let mapsHref = href;
+		if (
+			!mapsHref &&
+			conversationId &&
+			message?.id &&
+			!String(message.id).startsWith('live:') &&
+			!String(message.id).startsWith('pending:')
+		) {
+			setOpening(true);
+			let authFailed = false;
+			let apiFailed = false;
+			let notConnected = false;
+			try {
+				const { data } = await api.get(
+					`/whatsapp/conversations/${conversationId}/messages/${message.id}/location`,
+					{ timeout: 45000 },
+				);
+				const location = data?.location || data?.data?.location || null;
+				mapsHref = whatsAppLocationHref({ ...message, location }, location);
+			} catch (error) {
+				authFailed = Number(error?.response?.status) === 401;
+				const apiMessage = String(
+					error?.response?.data?.message || error?.message || '',
+				).toLowerCase();
+				notConnected = apiMessage.includes('not connected');
+				apiFailed = true;
+				mapsHref = null;
+			} finally {
+				setOpening(false);
+			}
+			if (!mapsHref && authFailed) return;
+			if (!mapsHref && notConnected) {
+				toast.error(
+					arabic
+						? 'اربط واتساب أولاً ثم أعد فتح الموقع'
+						: 'Link WhatsApp first, then open this location again',
+				);
+				return;
+			}
+			if (!mapsHref && apiFailed) {
+				toast.error(
+					arabic
+						? 'إحداثيات هذه الرسالة غير محفوظة. اطلب إرسال الموقع مرة أخرى'
+						: 'This location was not saved. Ask them to send it again',
+				);
+				return;
+			}
+		}
+		if (!mapsHref) {
+			toast.error(arabic ? 'لا يمكن فتح هذا الموقع' : 'This location cannot be opened');
+			return;
+		}
+		window.open(mapsHref, '_blank', 'noopener,noreferrer');
+	};
+	const map = (
+		<div className="wa-location-map">
+			{preview && !mapFailed ? (
+				<img
+					src={preview}
+					alt=""
+					className="wa-location-map-media"
+					onError={() => setMapFailed(true)}
+				/>
+			) : tileUrl && !mapFailed ? (
+				<img
+					src={tileUrl}
+					alt=""
+					className="wa-location-map-media"
+					onError={() => setMapFailed(true)}
+				/>
+			) : (
+				<div className="wa-location-map-fallback" aria-hidden="true">
+					<span className="wa-location-map-roads" />
+				</div>
+			)}
+			{showPin ? (
+				<span className="wa-location-map-pin" aria-hidden="true">
+					<MapPin size={26} strokeWidth={2.2} />
+				</span>
+			) : null}
+		</div>
+	);
+	return (
+		<button
+			type="button"
+			className="wa-location-link"
+			onPointerDown={event => event.stopPropagation()}
+			onClick={openMaps}
+			disabled={opening}
+			aria-label={subtitle || title}
+		>
+			<div className="wa-location-card">
+				{map}
+				<div className="wa-location-copy">
+					<p className="wa-location-title">{title}</p>
+					{subtitle ? <p className="wa-location-sub">{subtitle}</p> : null}
+				</div>
+			</div>
 		</button>
 	);
 }
@@ -3065,7 +3227,13 @@ function MessageActionMenu({
 		{ id: 'info', label: ar ? 'معلومات' : 'Info', icon: MessageCircle },
 		{
 			id: 'star',
-			label: message.isStarred ? (ar ? 'إلغاء النجمة' : 'Unstar') : ar ? 'تمييز بنجمة' : 'Star',
+			label: message.isStarred
+				? ar
+					? 'إزالة من المهم'
+					: 'Remove from important'
+				: ar
+					? 'حفظ كمهم'
+					: 'Save as important',
 			icon: Star,
 		},
 		{
@@ -4117,6 +4285,7 @@ function ConversationFilterDropdown({ value, onChange, labels }) {
 		{ value: 'all', label: labels.all },
 		{ value: 'unread', label: labels.unread },
 		{ value: 'favorites', label: labels.favorites },
+		{ value: 'important', label: labels.important },
 	];
 	const selected = options.find(option => option.value === value) || options[0];
 
@@ -4390,6 +4559,8 @@ function WhatsAppWorkspaceContent() {
 	const [messagesOwnerId, setMessagesOwnerId] = useState(null);
 	const conversationMessages =
 		messagesOwnerId && messagesOwnerId === conversationId ? messages : EMPTY_MESSAGES;
+	const conversationMessagesRef = useRef(conversationMessages);
+	conversationMessagesRef.current = conversationMessages;
 	const [groups, setGroups] = useState([]);
 	const [selectedGroup, setSelectedGroup] = useState(null);
 	const [loadingGroup, setLoadingGroup] = useState(false);
@@ -4457,6 +4628,8 @@ function WhatsAppWorkspaceContent() {
 	const [sending, setSending] = useState(false);
 	const [loadingOlder, setLoadingOlder] = useState(false);
 	const [hasMoreMessages, setHasMoreMessages] = useState(true);
+	const hasMoreMessagesRef = useRef(true);
+	hasMoreMessagesRef.current = hasMoreMessages;
 	const [loadingMessages, setLoadingMessages] = useState(false);
 	const [messagesSyncHint, setMessagesSyncHint] = useState('');
 	const [recordingVoice, setRecordingVoice] = useState(false);
@@ -4489,6 +4662,8 @@ function WhatsAppWorkspaceContent() {
 	const [actionMessageAnchor, setActionMessageAnchor] = useState(null);
 	const [pendingMessageActions, setPendingMessageActions] = useState(() => new Set());
 	const [forwardingMessage, setForwardingMessage] = useState(null);
+	const [highlightedMessageKey, setHighlightedMessageKey] = useState(null);
+	const highlightTimerRef = useRef(null);
 	const [messageInfo, setMessageInfo] = useState(null);
 	const [loadingMessageInfo, setLoadingMessageInfo] = useState(false);
 	const [deleteMessageTarget, setDeleteMessageTarget] = useState(null);
@@ -4540,6 +4715,7 @@ function WhatsAppWorkspaceContent() {
 	const attachButtonRef = useRef(null);
 	const [aiSuggestionsVisible, setAiSuggestionsVisible] = useState(true);
 	const [stickerPanelOpen, setStickerPanelOpen] = useState(false);
+	const [aiImagePanelOpen, setAiImagePanelOpen] = useState(false);
 	const whatsappAi = useWhatsAppAi({
 		accountId,
 		conversationId,
@@ -4549,6 +4725,7 @@ function WhatsAppWorkspaceContent() {
 	});
 	const fileRef = useRef(null);
 	const stickerButtonRef = useRef(null);
+	const aiImageButtonRef = useRef(null);
 	const messageBoxRef = useRef(null);
 	const longPressTimerRef = useRef(null);
 	const longPressOriginRef = useRef(null);
@@ -5762,6 +5939,11 @@ function WhatsAppWorkspaceContent() {
 	const loadMessages = useCallback(async (id, canSync, options = {}) => {
 		if (!id) return;
 		const forceProvider = Boolean(options.forceProvider);
+		const starredOnly =
+			Boolean(options.starredOnly) ||
+			conversationFilterRef.current === 'important' ||
+			conversationFilterRef.current === 'starred';
+		const cacheKey = starredOnly ? `${id}:important` : id;
 		const requestId = ++messagesRequestId.current;
 		const isCurrentRequest = () =>
 			messagesRequestId.current === requestId &&
@@ -5774,11 +5956,11 @@ function WhatsAppWorkspaceContent() {
 			queryKey: ['whatsapp', 'messages'],
 			predicate: query => String(query.queryKey[2] || '') !== String(id),
 		});
-		const cached = messagesCacheRef.current.get(id);
+		const cached = messagesCacheRef.current.get(cacheKey);
 		const cacheIsFresh =
 			Boolean(cached?.items?.length) &&
 			Date.now() - cached.cachedAt < MESSAGES_CACHE_TTL;
-		if (cached?.items?.length) {
+		if (cached?.items?.length && !starredOnly) {
 			writeConversationMessages(id, () => cached.items);
 			setHasMoreMessages(cached.hasMore);
 			setLoadingMessages(false);
@@ -5799,18 +5981,35 @@ function WhatsAppWorkspaceContent() {
 				}
 				return;
 			}
+		} else if (starredOnly && cached?.items) {
+			writeConversationMessages(id, () =>
+				(cached.items || []).filter(item => item?.isStarred),
+			);
+			setHasMoreMessages(Boolean(cached.hasMore));
+			setLoadingMessages(false);
+			setMessagesSyncHint('');
+			scrollMessagesToBottom();
+			if (cacheIsFresh && !forceProvider) return;
 		} else {
 			setLoadingMessages(true);
 			// Keeps this chat's already-rendered messages (no blank flash) while
 			// dropping anything that belonged to the chat the user just left.
-			writeConversationMessages(id, current => current);
+			if (!starredOnly) {
+				writeConversationMessages(id, current => current);
+			} else {
+				writeConversationMessages(id, () => []);
+			}
 			setHasMoreMessages(false);
 		}
 		try {
 			const storedItems = await queryClient.fetchQuery({
-				queryKey: whatsappKeys.messages(id),
+				queryKey: whatsappKeys.messages(id, { starredOnly }),
 				queryFn: async ({ signal }) => {
-					const items = await fetchMessages(id, { limit: MESSAGE_PAGE_SIZE, signal });
+					const items = await fetchMessages(id, {
+						limit: MESSAGE_PAGE_SIZE,
+						signal,
+						starredOnly,
+					});
 					return {
 						items,
 						hasMore: items.length >= MESSAGE_PAGE_SIZE,
@@ -5823,25 +6022,28 @@ function WhatsAppWorkspaceContent() {
 			const pageItems = Array.isArray(storedItems)
 				? storedItems
 				: storedItems?.items || [];
-			const currentCache = messagesCacheRef.current.get(id);
+			const currentCache = messagesCacheRef.current.get(cacheKey);
 			let items = mergeMessages(
-				currentCache?.items || cached?.items || [],
+				starredOnly ? [] : currentCache?.items || cached?.items || [],
 				pageItems,
 				id,
 			);
+			if (starredOnly) {
+				items = items.filter(item => item?.isStarred);
+			}
 			const storedPageIsFull = pageItems.length >= MESSAGE_PAGE_SIZE;
 			const initialHasMore =
 				Boolean(currentCache?.hasMore ?? cached?.hasMore ?? storedItems?.hasMore) ||
 				storedPageIsFull;
 			setHasMoreMessages(initialHasMore);
-			messagesCacheRef.current.set(id, {
+			messagesCacheRef.current.set(cacheKey, {
 				items,
 				hasMore: initialHasMore,
 				cachedAt: Date.now(),
 				providerHydratedAt: currentCache?.providerHydratedAt || cached?.providerHydratedAt || 0,
 			});
-			writeConversationMessages(id, current => mergeMessages(current, items, id));
-			if (!items.length && isCurrentRequest()) {
+			writeConversationMessages(id, () => items);
+			if (!items.length && isCurrentRequest() && !starredOnly) {
 				const preview = conversationsRef.current.find(item => item.id === id)?.lastMessage;
 				if (preview && isRenderableWhatsAppMessage(preview)) {
 					items = [
@@ -5870,8 +6072,8 @@ function WhatsAppWorkspaceContent() {
 			}
 
 			const applySynced = synced => {
-				if (!isCurrentRequest()) return;
-				const latestCache = messagesCacheRef.current.get(id);
+				if (!isCurrentRequest() || starredOnly) return;
+				const latestCache = messagesCacheRef.current.get(cacheKey);
 				items = mergeMessages(latestCache?.items || items, synced?.items || [], id);
 				writeConversationMessages(id, current =>
 					mergeMessages(current, synced?.items || [], id),
@@ -5881,7 +6083,7 @@ function WhatsAppWorkspaceContent() {
 						? synced.hasMore
 						: items.length >= MESSAGE_PAGE_SIZE;
 				setHasMoreMessages(hasMore);
-				messagesCacheRef.current.set(id, {
+				messagesCacheRef.current.set(cacheKey, {
 					items,
 					hasMore,
 					cachedAt: Date.now(),
@@ -5895,6 +6097,7 @@ function WhatsAppWorkspaceContent() {
 			// Pull WhatsApp history whenever this thread is still short. A single
 			// leftover DB row used to skip sync and leave the chat looking empty.
 			const needsProviderBackfill =
+				!starredOnly &&
 				canSync &&
 				items.length < MESSAGE_PAGE_SIZE &&
 				(!historySyncBlocked || forceProvider);
@@ -6235,6 +6438,7 @@ function WhatsAppWorkspaceContent() {
 	}, [
 		clearConversationMessages,
 		conversationId,
+		conversationFilter,
 		canUseWhatsApp,
 		demo.settings.enabled,
 		loadMessages,
@@ -6242,6 +6446,11 @@ function WhatsAppWorkspaceContent() {
 		selectedConversationSource,
 		setConversationUnreadCount,
 	]);
+
+	useEffect(() => {
+		setStickerPanelOpen(false);
+		setAiImagePanelOpen(false);
+	}, [conversationId]);
 
 	useLayoutEffect(() => {
 		const latest = effectiveMessages[effectiveMessages.length - 1];
@@ -6427,9 +6636,14 @@ function WhatsAppWorkspaceContent() {
 					cachedAt: Date.now(),
 				});
 				if (targetConversationId === activeConversationId) {
-					writeConversationMessages(targetConversationId, current =>
-						mergeMessages(current, [event.payload], targetConversationId),
-					);
+					const importantView =
+						conversationFilterRef.current === 'important' ||
+						conversationFilterRef.current === 'starred';
+					if (!importantView || event.payload?.isStarred) {
+						writeConversationMessages(targetConversationId, current =>
+							mergeMessages(current, [event.payload], targetConversationId),
+						);
+					}
 				}
 				const viewingLiveThread =
 					targetConversationId === activeConversationId &&
@@ -6539,11 +6753,28 @@ function WhatsAppWorkspaceContent() {
 				event.event === 'message_updated' &&
 				eventConversationId === activeConversationId
 			) {
-				updateCachedMessage(
-					activeConversationId,
-					event.payload.messageId,
-					message => ({ ...message, ...(event.payload.changes || {}) }),
-				);
+				const changes = event.payload.changes || {};
+				const importantView =
+					conversationFilterRef.current === 'important' ||
+					conversationFilterRef.current === 'starred';
+				if (importantView && changes.isStarred === false) {
+					writeConversationMessages(activeConversationId, current =>
+						(current || []).filter(
+							item =>
+								item?.id !== event.payload.messageId &&
+								item?.providerMessageId !== event.payload.messageId,
+						),
+					);
+				} else {
+					updateCachedMessage(
+						activeConversationId,
+						event.payload.messageId,
+						message => ({ ...message, ...changes }),
+					);
+					if (importantView && changes.isStarred === true) {
+						void loadMessagesRef.current?.(activeConversationId, false)?.catch?.(() => {});
+					}
+				}
 			}
 			if (event.event === 'conversation_updated' && event.payload?.preview && accountIdRef.current) {
 				// Common case: a message arrived somewhere in this account — patch
@@ -7890,8 +8121,25 @@ function WhatsAppWorkspaceContent() {
 		if (!['star', 'pin'].includes(action)) return;
 		const field = action === 'star' ? 'isStarred' : 'isPinned';
 		const enabled = !message[field];
+		const importantView =
+			conversationFilterRef.current === 'important' ||
+			conversationFilterRef.current === 'starred';
 		markMessageActionPending(message.id, true);
 		updateCachedMessage(conversationId, message.id, current => ({ ...current, [field]: enabled }));
+		if (action === 'star' && importantView && !enabled) {
+			writeConversationMessages(conversationId, current =>
+				(current || []).filter(item => item?.id !== message.id),
+			);
+			const cacheKey = `${conversationId}:important`;
+			const cached = messagesCacheRef.current.get(cacheKey);
+			if (cached) {
+				messagesCacheRef.current.set(cacheKey, {
+					...cached,
+					items: (cached.items || []).filter(item => item?.id !== message.id),
+					cachedAt: Date.now(),
+				});
+			}
+		}
 		try {
 			const { data } = await api.put(
 				`/whatsapp/conversations/${conversationId}/messages/${message.id}/${action}`,
@@ -7901,6 +8149,19 @@ function WhatsAppWorkspaceContent() {
 				...current,
 				...(data.changes || { [field]: enabled }),
 			}));
+			if (action === 'star' && importantView && !enabled) {
+				const remaining = (messagesCacheRef.current.get(`${conversationId}:important`)?.items || [])
+					.filter(item => item?.id !== message.id);
+				if (!remaining.length && accountId) {
+					setConversations(current => current.filter(item => item.id !== conversationId));
+				}
+			}
+			if (action === 'star' && importantView && enabled) {
+				void loadConversations(accountId, 1, false, {
+					force: true,
+					filter: 'important',
+				}).catch(() => {});
+			}
 		} catch (error) {
 			updateCachedMessage(conversationId, message.id, current => ({ ...current, [field]: message[field] }));
 			toast.error(error.response?.data?.message || `Could not ${action} message`);
@@ -8055,6 +8316,7 @@ function WhatsAppWorkspaceContent() {
 		if (!conversationId || sending || recordingVoice || voiceChanging) return;
 		setAttachmentSheetOpen(false);
 		setStickerPanelOpen(false);
+		setAiImagePanelOpen(false);
 		if (demo.settings.enabled) {
 			toast.error(
 				locale === 'ar'
@@ -8182,24 +8444,34 @@ function WhatsAppWorkspaceContent() {
 
 	useEffect(() => {
 		if (recordingVoice) stopVoiceRecording(false);
+		setHighlightedMessageKey(null);
+		if (highlightTimerRef.current) {
+			clearTimeout(highlightTimerRef.current);
+			highlightTimerRef.current = null;
+		}
 		// Stop and discard if the operator switches conversations.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [conversationId]);
 
-	const loadOlder = async () => {
-		const oldest = conversationMessages[0];
+	const loadOlder = async (options = {}) => {
+		const preserveScroll = options.preserveScroll !== false;
+		const ignoreThrottle = Boolean(options.ignoreThrottle);
+		const oldest = conversationMessagesRef.current[0];
+		const starredOnly =
+			conversationFilterRef.current === 'important' ||
+			conversationFilterRef.current === 'starred';
+		const cacheKey = starredOnly ? `${conversationId}:important` : conversationId;
 		if (
 			!conversationId ||
 			isDemoId(conversationId) ||
 			loadingOlderRef.current ||
-			loadingOlder ||
 			loadingMessages ||
-			!hasMoreMessages ||
+			!hasMoreMessagesRef.current ||
 			!oldest?.id
 		) {
-			return;
+			return false;
 		}
-		if (Date.now() - loadOlderAtRef.current < 500) return;
+		if (!ignoreThrottle && Date.now() - loadOlderAtRef.current < 500) return false;
 		loadOlderAtRef.current = Date.now();
 		const targetConversationId = conversationId;
 		const requestId = ++olderRequestId.current;
@@ -8211,20 +8483,27 @@ function WhatsAppWorkspaceContent() {
 			const { data } = await api.get(
 				`/whatsapp/conversations/${targetConversationId}/messages`,
 				{
-					params: { before: oldest?.id, limit: MESSAGE_PAGE_SIZE, live: 0 },
+					params: {
+						before: oldest?.id,
+						limit: MESSAGE_PAGE_SIZE,
+						live: 0,
+						starredOnly: starredOnly ? 1 : undefined,
+					},
 				},
 			);
 			if (
 				requestId !== olderRequestId.current ||
 				conversationIdRef.current !== targetConversationId
 			) {
-				return;
+				return false;
 			}
 			let local = Array.isArray(data) ? data : [];
+			if (starredOnly) local = local.filter(item => item?.isStarred);
 			let provider = null;
 			// Prefer Postgres page. Only ask WhatsApp Web for older history when
 			// the DB page is empty/short (first-time backfill), not on every scroll.
 			if (
+				!starredOnly &&
 				canUseWhatsApp &&
 				!demo.settings.enabled &&
 				local.length < MESSAGE_PAGE_SIZE
@@ -8242,7 +8521,8 @@ function WhatsAppWorkspaceContent() {
 			}
 			if (!local.length && !provider?.items?.length) {
 				setHasMoreMessages(false);
-				return;
+				hasMoreMessagesRef.current = false;
+				return false;
 			}
 			const incoming = [...local, ...(provider?.items || [])];
 			const hasMore =
@@ -8250,31 +8530,101 @@ function WhatsAppWorkspaceContent() {
 					? provider.hasMore
 					: local.length >= MESSAGE_PAGE_SIZE;
 			setHasMoreMessages(hasMore);
-			writeConversationMessages(targetConversationId, current => {
-				const next = mergeMessages(incoming, current, targetConversationId);
-				const previous = messagesCacheRef.current.get(targetConversationId);
-				messagesCacheRef.current.set(targetConversationId, {
-					items: next,
-					hasMore,
-					cachedAt: Date.now(),
-					providerHydratedAt: previous?.providerHydratedAt || 0,
+			hasMoreMessagesRef.current = hasMore;
+			const previousCache = messagesCacheRef.current.get(cacheKey);
+			const previousItems = previousCache?.items || conversationMessagesRef.current;
+			const next = mergeMessages(incoming, previousItems, targetConversationId);
+			messagesCacheRef.current.set(cacheKey, {
+				items: next,
+				hasMore,
+				cachedAt: Date.now(),
+				providerHydratedAt: previousCache?.providerHydratedAt || 0,
+			});
+			writeConversationMessages(targetConversationId, next);
+			if (preserveScroll) {
+				requestAnimationFrame(() => {
+					const currentBox = messageBoxRef.current;
+					if (currentBox) currentBox.scrollTop += currentBox.scrollHeight - previousHeight;
 				});
-				return next;
-			});
-			requestAnimationFrame(() => {
-				const currentBox = messageBoxRef.current;
-				if (currentBox) currentBox.scrollTop += currentBox.scrollHeight - previousHeight;
-			});
+			}
+			return incoming.length > 0;
 		} catch (error) {
 			if (conversationIdRef.current === targetConversationId) {
 				toast.error(error.response?.data?.message || 'Could not load older messages');
 			}
+			return false;
 		} finally {
 			if (requestId === olderRequestId.current) {
 				loadingOlderRef.current = false;
 				setLoadingOlder(false);
 			}
 		}
+	};
+
+	const scrollAndHighlightQuotedMessage = target => {
+		const key = String(target?.id || target?.providerMessageId || '').trim();
+		if (!key) return;
+		setHighlightedMessageKey(null);
+		const apply = () => {
+			const box = messageBoxRef.current;
+			if (!box) return;
+			const selectors = [];
+			if (target.id) {
+				const id = CSS.escape(String(target.id));
+				selectors.push(`[data-wa-message-id="${id}"]`, `[data-wa-message-ids~="${id}"]`);
+			}
+			if (target.providerMessageId) {
+				const providerId = CSS.escape(String(target.providerMessageId));
+				selectors.push(
+					`[data-wa-provider-id="${providerId}"]`,
+					`[data-wa-provider-ids~="${providerId}"]`,
+				);
+			}
+			const el = selectors.map(selector => box.querySelector(selector)).find(Boolean);
+			el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			setHighlightedMessageKey(key);
+			if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+			highlightTimerRef.current = window.setTimeout(() => {
+				setHighlightedMessageKey(current => (current === key ? null : current));
+			}, 2200);
+		};
+		requestAnimationFrame(() => requestAnimationFrame(apply));
+	};
+
+	const jumpToQuotedMessage = async sourceMessage => {
+		const target = quotedTargetFromMessage(sourceMessage);
+		if (!target.id && !target.providerMessageId) {
+			toast.error(
+				locale === 'ar' ? 'الرسالة الأصلية غير متاحة' : 'Original message is not available',
+			);
+			return;
+		}
+		const inView = conversationMessagesRef.current.some(item =>
+			messageMatchesQuotedTarget(item, target),
+		);
+		if (inView) {
+			scrollAndHighlightQuotedMessage(target);
+			return;
+		}
+		let pages = 0;
+		while (pages < 12 && hasMoreMessagesRef.current && !isDemoId(conversationId)) {
+			pages += 1;
+			const loaded = await loadOlder({ preserveScroll: false, ignoreThrottle: true });
+			if (conversationIdRef.current !== conversationId) return;
+			const next =
+				messagesCacheRef.current.get(conversationId)?.items ||
+				conversationMessagesRef.current;
+			if (next.some(item => messageMatchesQuotedTarget(item, target))) {
+				window.setTimeout(() => scrollAndHighlightQuotedMessage(target), 60);
+				return;
+			}
+			if (!loaded) break;
+		}
+		toast.error(
+			locale === 'ar'
+				? 'تعذر العثور على الرسالة الأصلية'
+				: 'Could not find the original message',
+		);
 	};
 
 	const assignConversationTarget = async (targetConversationId, userId) => {
@@ -9368,6 +9718,15 @@ function WhatsAppWorkspaceContent() {
 				locale={locale}
 				anchorRef={stickerButtonRef}
 			/>
+			<AiImageComposerPanel
+				open={aiImagePanelOpen}
+				onClose={() => setAiImagePanelOpen(false)}
+				onSendImage={file => sendFile(file, 'image')}
+				accountId={accountId}
+				locale={locale}
+				anchorRef={aiImageButtonRef}
+				disabled={!canComposeInConversation || sending}
+			/>
 			<PhoneSyncGate
 				open={syncPhoneClosed && conversations.length === 0}
 				progress={syncProgress}
@@ -9963,6 +10322,7 @@ function WhatsAppWorkspaceContent() {
 															all: t.allChats,
 															unread: t.unreadChats,
 															favorites: t.favoriteChats,
+															important: t.importantChats,
 														}}
 													/>
 													<WhatsAppPrivacyBlurControl
@@ -10043,6 +10403,7 @@ function WhatsAppWorkspaceContent() {
 												['all', t.allChats],
 												['unread', t.unreadChats],
 												['favorites', t.favoriteChats],
+												['important', t.importantChats],
 											].map(([value, label]) => (
 												<button
 													key={value}
@@ -10243,6 +10604,8 @@ function WhatsAppWorkspaceContent() {
 														: t.syncingChats
 														: conversationFilter === 'archived'
 															? t.noArchivedConversations
+															: conversationFilter === 'important'
+																? t.noImportantConversations
 														: conversationScope === 'assigned'
 															? t.noAssignedConversations
 															: activeTab === 'channels'
@@ -10900,6 +11263,12 @@ function WhatsAppWorkspaceContent() {
 
 										</div>
 									</header>
+									{(conversationFilter === 'important' || conversationFilter === 'starred') && conversationId ? (
+										<div className="flex shrink-0 items-center gap-2 border-b border-amber-100 bg-amber-50 px-4 py-2 text-[12px] font-semibold text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
+											<Star size={14} fill="currentColor" />
+											<span>{t.importantOnlyBanner}</span>
+										</div>
+									) : null}
 									 
 									<div
 										ref={messageBoxRef}
@@ -10942,7 +11311,9 @@ function WhatsAppWorkspaceContent() {
 												<p className="text-sm font-semibold text-slate-500">
 													{loadingMessages || messagesSyncHint
 														? (messagesSyncHint ? t.messagesStillSyncing : t.loadingMessages)
-														: t.noMessagesYet}
+														: conversationFilter === 'important' || conversationFilter === 'starred'
+															? t.noImportantMessages
+															: t.noMessagesYet}
 												</p>
 											</div>
 										) : (
@@ -11106,6 +11477,8 @@ function WhatsAppWorkspaceContent() {
 														!groupedImages &&
 														(attachmentTypes.some(type => ['audio', 'ptt', 'voice'].includes(type)) ||
 															['audio', 'ptt', 'voice'].includes(String(message.type || '').toLowerCase()));
+													const isLocationMessage =
+														!isDeleted && isWhatsAppLocationMessage(message);
 													const downloadableAttachments = collectDownloadableAttachments([
 														groupedImages
 															? { ...message, attachments: attachments || [] }
@@ -11146,6 +11519,20 @@ function WhatsAppWorkspaceContent() {
 													const groupSenderAvatarSrc =
 														sender.avatarUrl || inboxAvatarForWaId(conversations, sender.key);
 													const quotePreview = quotedPreviewFromMessage(message);
+													const rowItems = groupedImages ? row.messages : [message];
+													const rowMessageIds = rowItems
+														.map(item => item?.id)
+														.filter(Boolean)
+														.join(' ');
+													const rowProviderIds = rowItems
+														.map(item => item?.providerMessageId)
+														.filter(Boolean)
+														.join(' ');
+													const isQuotedHighlight = rowItems.some(
+														item =>
+															item?.id === highlightedMessageKey ||
+															item?.providerMessageId === highlightedMessageKey,
+													);
 													const fallbackMediaPreview =
 														!attachments?.length &&
 														['image', 'sticker', 'video'].includes(
@@ -11154,7 +11541,18 @@ function WhatsAppWorkspaceContent() {
 															? mediaPreviewFromRaw(message.raw)
 															: null;
 													return (
-														<div key={row.key} className="wa-message-row min-w-0 max-w-full [content-visibility:auto] [contain-intrinsic-size:80px]">
+														<div
+															key={row.key}
+															className={`wa-message-row min-w-0 max-w-full ${
+																isQuotedHighlight
+																	? 'wa-message-highlighted'
+																	: '[content-visibility:auto] [contain-intrinsic-size:80px]'
+															}`}
+															data-wa-message-id={message.id || undefined}
+															data-wa-message-ids={rowMessageIds || undefined}
+															data-wa-provider-id={message.providerMessageId || undefined}
+															data-wa-provider-ids={rowProviderIds || undefined}
+														>
 															{dayLabel && dayLabel !== previousDayLabel && (
 																<div className="wa-date-separator mx-auto mb-3 mt-4 w-fit rounded-lg border border-black/5 bg-white/90 px-3.5 py-1 text-center text-xs font-semibold text-[#54656F] shadow-sm">
 																	{dayLabel}
@@ -11245,7 +11643,7 @@ function WhatsAppWorkspaceContent() {
 																			setActionMessageId(message.id);
 																		}
 																	}}
-															className={`wa-message-bubble relative w-fit ${mine ? 'wa-message-mine' : 'wa-message-other'} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${mine
+															className={`wa-message-bubble relative w-fit ${mine ? 'wa-message-mine' : 'wa-message-other'} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${mine
 																		? 'bg-[#d9fdd3] text-slate-900 dark:bg-[#005c4b] dark:text-white'
 																		: 'bg-white text-slate-900 dark:bg-slate-800 dark:text-white'
 																		} ${isChecked ? 'ring-2 ring-[var(--color-primary-400)]' : ''}`}
@@ -11264,7 +11662,18 @@ function WhatsAppWorkspaceContent() {
 																		</p>
 																	)}
 																	{message.replyTo && (
-																		<div className="wa-reply-quote mb-2 flex overflow-hidden rounded-lg border-s-4 border-emerald-500 bg-black/5">
+																		<button
+																			type="button"
+																			className="wa-reply-quote mb-2 flex overflow-hidden rounded-lg border-s-4 border-emerald-500 bg-black/5"
+																			aria-label={locale === 'ar' ? 'الانتقال إلى الرسالة الأصلية' : 'Go to original message'}
+																			onPointerDown={event => event.stopPropagation()}
+																			onClick={event => {
+																				event.preventDefault();
+																				event.stopPropagation();
+																				if (mediaSelectMode || ticketSelectMode) return;
+																				void jumpToQuotedMessage(message);
+																			}}
+																		>
 																			<div className="min-w-0 flex-1 px-2 py-1 text-xs opacity-80">
 																				{quotedMessageLabel(message.replyTo, locale)}
 																			</div>
@@ -11275,7 +11684,7 @@ function WhatsAppWorkspaceContent() {
 																					className="h-12 w-12 shrink-0 object-cover"
 																				/>
 																			) : null}
-																		</div>
+																		</button>
 																	)}
 																	{!isDeleted && attachments?.length
 																		? (
@@ -11315,18 +11724,14 @@ function WhatsAppWorkspaceContent() {
 																		<p className="italic opacity-60">
 																			{locale === 'ar' ? 'تم حذف هذه الرسالة' : 'This message was deleted'}
 																		</p>
-																	) : message.location ? (
-																		<a
-																			href={`https://www.google.com/maps?q=${encodeURIComponent(
-																				`${message.location.latitude},${message.location.longitude}`,
-																			)}`}
-																			target="_blank"
-																			rel="noreferrer"
-																			className="block rounded-lg bg-black/5 p-3 font-bold text-emerald-700 underline"
-																		>
-																			{message.location.name ||
-																				`${message.location.latitude}, ${message.location.longitude}`}
-																		</a>
+																	) : isWhatsAppLocationMessage(message) ? (
+																		<LocationMessage
+																			message={message}
+																			location={whatsAppLocationFromMessage(message)}
+																			type={message.type}
+																			locale={locale}
+																			conversationId={conversationId || selectedConversation?.id}
+																		/>
 																	) : visibleText ? (
 																		<>
 																			<MessageLinkPreview text={visibleText} labels={t} />
@@ -11589,6 +11994,7 @@ function WhatsAppWorkspaceContent() {
 														disabled={sending}
 														onClick={() => {
 															setStickerPanelOpen(false);
+															setAiImagePanelOpen(false);
 															setAttachmentSheetOpen(true);
 														}}
 														title={locale === 'ar' ? 'المزيد من الخيارات' : 'More options'}
@@ -11596,10 +12002,24 @@ function WhatsAppWorkspaceContent() {
 													>
 														<Plus size={20} strokeWidth={2.25} />
 													</button>
-													<button type="button" ref={stickerButtonRef} aria-label="Stickers" title="Emoji, GIF and stickers" onClick={() => { setAttachmentSheetOpen(false); setStickerPanelOpen(current => !current); }} className="wa-sticker-button wa-input-action grid h-8 w-8 shrink-0 place-items-center text-[#8696A0]">
+													<button type="button" ref={stickerButtonRef} aria-label="Stickers" title="Emoji, GIF and stickers" onClick={() => { setAttachmentSheetOpen(false); setAiImagePanelOpen(false); setStickerPanelOpen(current => !current); }} className="wa-sticker-button wa-input-action grid h-8 w-8 shrink-0 place-items-center text-[#8696A0]">
 														<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 															<path fillRule="evenodd" clipRule="evenodd" d="M11.6154 2.89991L13.9358 2.89991C14.4593 2.8999 14.7592 2.8999 15.0178 2.92026C18.2543 3.17497 20.8249 5.7456 21.0797 8.98208C21.1 9.24075 21.1 9.54062 21.1 10.0641V10.1375C21.1 10.9379 21.1 11.377 21.0704 11.7531C20.6999 16.4607 16.9608 20.1998 12.2532 20.5703C11.8771 20.5999 11.438 20.5999 10.6376 20.5999H10.2524C9.55427 20.5999 9.15433 20.5999 8.81011 20.5638C5.71094 20.238 3.26189 17.789 2.93616 14.6898C2.89998 14.3456 2.89999 13.9457 2.9 13.2477L2.9 11.6154C2.8999 9.64928 2.89984 8.52143 3.1842 7.58403C3.82407 5.47466 5.47475 3.82397 7.58412 3.1841C8.52152 2.89975 9.64937 2.89981 11.6154 2.89991ZM11.75 4.09991C9.61283 4.09991 8.67748 4.10643 7.93247 4.33243C6.20662 4.85596 4.85605 6.20653 4.33252 7.93237C4.10653 8.67739 4.1 9.61273 4.1 11.7499V13.1999C4.1 13.9582 4.10083 14.2908 4.12958 14.5644C4.3961 17.1001 6.39986 19.1038 8.93555 19.3703C9.2091 19.3991 9.54174 19.3999 10.3 19.3999H10.6C11.4472 19.3999 11.836 19.3994 12.1591 19.374C12.2949 19.3633 12.3998 19.2475 12.3994 19.1065C12.3993 19.073 12.3992 19.0395 12.3991 19.0059C12.3968 18.2485 12.3944 17.4838 12.4565 16.7239C12.514 16.0197 12.6331 15.438 12.9014 14.9115C13.3424 14.046 14.0461 13.3423 14.9116 12.9013C15.4381 12.633 16.0198 12.5139 16.7239 12.4564C17.5478 12.3891 18.376 12.3928 19.1977 12.3973C19.4427 12.3987 19.5331 12.3969 19.6099 12.361C19.6767 12.3297 19.7451 12.2681 19.7831 12.2049C19.827 12.132 19.8371 12.0506 19.8592 11.8267C19.8647 11.771 19.8697 11.7151 19.8741 11.659C19.8995 11.3359 19.9 10.9471 19.9 10.0999C19.9 9.53129 19.8995 9.28181 19.8834 9.07623C19.6749 6.4282 17.5717 4.32496 14.9237 4.11656C14.7181 4.10038 14.4686 4.09991 13.9 4.09991H11.75ZM18.9751 13.5977C18.2535 13.5944 17.5348 13.5941 16.8217 13.6524C16.1917 13.7039 15.7856 13.8028 15.4564 13.9705C14.8167 14.2965 14.2965 14.8166 13.9706 15.4563C13.8029 15.7855 13.704 16.1917 13.6525 16.8216C13.6128 17.3078 13.6031 17.8966 13.6007 18.6525C13.6004 18.7573 13.6003 18.8287 13.6054 18.8834C13.6103 18.9368 13.6195 18.9631 13.6308 18.981C13.6562 19.0214 13.7033 19.0559 13.7494 19.068C13.7706 19.0735 13.7977 19.0743 13.8468 19.0639C13.8977 19.0531 13.9619 19.0328 14.0567 19.0025C16.4656 18.234 18.3983 16.4129 19.3177 14.0764C19.3562 13.9785 19.3823 13.9119 19.3971 13.8589C19.4116 13.8076 19.4123 13.7794 19.4077 13.7575C19.3975 13.7092 19.3639 13.6596 19.3227 13.6322C19.3049 13.6203 19.2775 13.6103 19.2206 13.6045C19.1626 13.5986 19.0863 13.5982 18.9751 13.5977Z" fill="currentColor" />
 														</svg>
+													</button>
+													<button
+														type="button"
+														ref={aiImageButtonRef}
+														aria-label={locale === 'ar' ? 'توليد صورة بالذكاء الاصطناعي' : 'AI image'}
+														title={locale === 'ar' ? 'توليد صورة بالذكاء الاصطناعي' : 'Generate an image with AI'}
+														onClick={() => {
+															setAttachmentSheetOpen(false);
+															setStickerPanelOpen(false);
+															setAiImagePanelOpen(current => !current);
+														}}
+														className="wa-sticker-button wa-input-action grid h-8 w-8 shrink-0 place-items-center text-[#8696A0]"
+													>
+														<Sparkles size={16} />
 													</button>
 														<textarea
 															aria-label={t.message}
@@ -12409,6 +12829,12 @@ function WhatsAppWorkspaceContent() {
 							</div>
 
 							{settingsSection === 'ai' && accountId && (
+								<>
+									<WhatsAppWorkspaceAiParts
+										onRepliesAssigned={({ provider, model }) =>
+											whatsappAi.saveSettings({ provider, model })
+										}
+									/>
 								<WhatsAppAiSettings
 									locale={locale}
 									settings={whatsappAi.settings}
@@ -12417,6 +12843,7 @@ function WhatsAppWorkspaceContent() {
 									error={whatsappAi.settingsError}
 									onSave={whatsappAi.saveSettings}
 								/>
+								</>
 							)}
 							{settingsSection === 'demo' && (
 								<DemoModeSettings

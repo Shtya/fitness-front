@@ -110,7 +110,7 @@ export function WaCustomSelect({
 						<div
 							aria-hidden="true"
 							data-wa-select-menu="true"
-							className="fixed inset-0 z-[1399]"
+							className="fixed inset-0 z-[1599]"
 							style={{ pointerEvents: 'auto' }}
 							onPointerDown={event => {
 								event.preventDefault();
@@ -124,7 +124,7 @@ export function WaCustomSelect({
 							data-wa-select-menu="true"
 							aria-label={ariaLabel}
 							onPointerDown={event => event.stopPropagation()}
-							className="fixed z-[1400] overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_rgba(11,20,26,0.18)] dark:border-slate-700 dark:bg-slate-900"
+							className="fixed z-[1600] overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_rgba(11,20,26,0.18)] dark:border-slate-700 dark:bg-slate-900"
 							style={{ ...position, pointerEvents: 'auto' }}
 						>
 							{options.map(option => {

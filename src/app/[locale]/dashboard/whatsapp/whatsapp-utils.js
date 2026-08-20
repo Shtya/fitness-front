@@ -933,6 +933,8 @@ const DISPLAYABLE_MEDIA_TYPES = new Set([
 	'ptt',
 	'voice',
 	'document',
+	'location',
+	'live_location',
 ]);
 
 const INVISIBLE_MESSAGE_CHARS_RE = /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF\u00AD]/g;
@@ -952,12 +954,111 @@ function hasRenderableAttachment(attachment) {
 	);
 }
 
+function jpegThumbnailToDataUrl(thumb) {
+	if (thumb == null) return null;
+	if (typeof thumb === 'string' && thumb.length) {
+		if (thumb.startsWith('data:')) return thumb;
+		return `data:image/jpeg;base64,${thumb}`;
+	}
+	return null;
+}
+
+function toLocationCoord(value) {
+	const n = Number(value);
+	return Number.isFinite(n) ? n : null;
+}
+
+function locationPayloadFromNode(node, isLive = false) {
+	if (!node || typeof node !== 'object') return null;
+	const latitude = toLocationCoord(node.degreesLatitude ?? node.latitude ?? node.lat);
+	const longitude = toLocationCoord(node.degreesLongitude ?? node.longitude ?? node.lng ?? node.lon);
+	if (latitude == null || longitude == null) return null;
+	return {
+		latitude,
+		longitude,
+		name: String(node.name || node.caption || node.loc || '').trim() || null,
+		address: String(node.address || '').trim() || null,
+		comment: String(node.comment || '').trim() || null,
+		url: String(node.url || '').trim() || null,
+		isLive: Boolean(isLive || node.isLive),
+		previewDataUrl: node.previewDataUrl || jpegThumbnailToDataUrl(node.jpegThumbnail),
+	};
+}
+
+function locationFromMapsUrl(value) {
+	const text = String(value || '');
+	if (!text) return null;
+	const at = text.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+	if (at) {
+		const latitude = toLocationCoord(at[1]);
+		const longitude = toLocationCoord(at[2]);
+		if (latitude != null && longitude != null) return { latitude, longitude, url: text.match(/https?:\/\/\S+/i)?.[0] || null };
+	}
+	const query = text.match(/[?&](?:q|query|ll|center)=(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/i);
+	if (query) {
+		const latitude = toLocationCoord(query[1]);
+		const longitude = toLocationCoord(query[2]);
+		if (latitude != null && longitude != null) return { latitude, longitude, url: text.match(/https?:\/\/\S+/i)?.[0] || null };
+	}
+	const maps = text.match(/https?:\/\/(?:www\.)?(?:google\.com\/maps|maps\.google\.com|maps\.app\.goo\.gl|goo\.gl\/maps)\S*/i);
+	if (maps) return { url: maps[0] };
+	return null;
+}
+
+export function isWhatsAppLocationMessage(message) {
+	const type = String(message?.type || '').toLowerCase();
+	if (type === 'location' || type === 'live_location' || type === 'livelocation') return true;
+	return Boolean(whatsAppLocationFromMessage(message));
+}
+
+export function whatsAppLocationFromMessage(message) {
+	if (!message || typeof message !== 'object') return null;
+	const direct = locationPayloadFromNode(message.location, Boolean(message.location?.isLive));
+	if (direct) return direct;
+	const content = baileysContentFromRaw(message.raw);
+	if (content?.liveLocationMessage) {
+		const live = locationPayloadFromNode(content.liveLocationMessage, true);
+		if (live) return live;
+	}
+	if (content?.locationMessage) {
+		const pinned = locationPayloadFromNode(content.locationMessage, false);
+		if (pinned) return pinned;
+	}
+	const fromRaw = locationPayloadFromNode(
+		message.raw,
+		String(message.type || '').toLowerCase() === 'live_location',
+	);
+	if (fromRaw) return fromRaw;
+	const stored = locationPayloadFromNode(
+		message.raw?.location,
+		Boolean(message.raw?.location?.isLive),
+	);
+	if (stored) return stored;
+	return locationFromMapsUrl(message.text || message.location?.url || message.raw?.url || '');
+}
+
+export function whatsAppLocationHref(message, location = null) {
+	const loc = location || whatsAppLocationFromMessage(message);
+	if (loc?.url && /^https?:\/\//i.test(String(loc.url))) return String(loc.url);
+	const latitude = toLocationCoord(loc?.latitude);
+	const longitude = toLocationCoord(loc?.longitude);
+	if (latitude != null && longitude != null) {
+		return `https://www.google.com/maps?q=${encodeURIComponent(`${latitude},${longitude}`)}`;
+	}
+	const fromText = locationFromMapsUrl(message?.text || '');
+	if (fromText?.url) return fromText.url;
+	if (fromText?.latitude != null && fromText?.longitude != null) {
+		return `https://www.google.com/maps?q=${encodeURIComponent(`${fromText.latitude},${fromText.longitude}`)}`;
+	}
+	return null;
+}
+
 export function isRenderableWhatsAppMessage(message) {
 	if (!message) return false;
 	const deleted = message.deletedMode && message.deletedMode !== 'none';
 	if (deleted) return true;
 	if (visibleMessageText(message.text)) return true;
-	if (message.location?.latitude != null && message.location?.longitude != null) return true;
+	if (isWhatsAppLocationMessage(message)) return true;
 	if (
 		Array.isArray(message.attachments) &&
 		message.attachments.some(hasRenderableAttachment)
@@ -1022,14 +1123,6 @@ function imageAttachmentsForMessage(message) {
 	}));
 }
 
-function jpegThumbnailToDataUrl(thumb) {
-	if (!thumb) return null;
-	if (typeof thumb === 'string' && thumb.length) {
-		return thumb.startsWith('data:') ? thumb : `data:image/jpeg;base64,${thumb}`;
-	}
-	return null;
-}
-
 function baileysContentFromRaw(raw) {
 	if (!raw || typeof raw !== 'object') return null;
 	const message = raw.message || null;
@@ -1055,6 +1148,8 @@ function baileysContextInfoFromRaw(raw) {
 		content.audioMessage?.contextInfo ||
 		content.documentMessage?.contextInfo ||
 		content.stickerMessage?.contextInfo ||
+		content.locationMessage?.contextInfo ||
+		content.liveLocationMessage?.contextInfo ||
 		null
 	);
 }
@@ -1066,6 +1161,8 @@ function mediaPreviewFromContent(content) {
 		content.videoMessage ||
 		content.stickerMessage ||
 		content.documentMessage ||
+		content.locationMessage ||
+		content.liveLocationMessage ||
 		null;
 	return jpegThumbnailToDataUrl(node?.jpegThumbnail);
 }
@@ -1121,6 +1218,30 @@ export function quotedPreviewFromMessage(message) {
 	);
 }
 
+export function quotedTargetFromMessage(message) {
+	const reply = message?.replyTo || {};
+	const id = String(reply.id || message?.replyToId || '').trim() || null;
+	const providerMessageId =
+		String(
+			reply.providerMessageId ||
+				message?.quotedProviderMessageId ||
+				'',
+		).trim() || null;
+	return { id, providerMessageId };
+}
+
+export function messageMatchesQuotedTarget(message, target) {
+	if (!message || !target) return false;
+	if (target.id && String(message.id) === String(target.id)) return true;
+	if (
+		target.providerMessageId &&
+		String(message.providerMessageId || '') === String(target.providerMessageId)
+	) {
+		return true;
+	}
+	return false;
+}
+
 export function quotedMessageLabel(replyTo, locale = 'en') {
 	const text = String(replyTo?.text || '').trim();
 	if (text) return text;
@@ -1130,6 +1251,9 @@ export function quotedMessageLabel(replyTo, locale = 'en') {
 	if (type === 'video') return arabic ? 'فيديو' : 'Video';
 	if (['audio', 'ptt', 'voice'].includes(type)) return arabic ? 'رسالة صوتية' : 'Voice message';
 	if (type === 'document') return arabic ? 'مستند' : 'Document';
+	if (['location', 'live_location', 'livelocation'].includes(type)) {
+		return arabic ? 'موقع' : 'Location';
+	}
 	return type || (arabic ? 'رسالة' : 'Message');
 }
 

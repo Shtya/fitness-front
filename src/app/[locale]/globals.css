@@ -2019,6 +2019,156 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   margin-inline-start: auto;
 }
 
+.wa-message-bubble.wa-message-location {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 240px;
+  max-width: min(85%, 240px) !important;
+  padding: 3px 3px 2px !important;
+  overflow: hidden;
+}
+
+.wa-message-bubble.wa-message-location .wa-message-meta {
+  float: none;
+  clear: both;
+  position: static;
+  align-self: flex-end;
+  margin: 2px 4px 2px auto !important;
+  padding: 0 !important;
+  background: transparent !important;
+  color: var(--wa-secondary) !important;
+  text-shadow: none;
+}
+
+.wa-location-link {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.wa-location-link:hover .wa-location-sub {
+  text-decoration: underline;
+}
+
+.wa-location-card {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgba(11, 20, 26, 0.04);
+}
+
+.wa-location-map {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: 118px;
+  overflow: hidden;
+  background: #cfdcc8;
+}
+
+.wa-location-map-media {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  border: 0;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.wa-location-map-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #1daa61;
+}
+
+.wa-location-map-roads {
+  position: absolute;
+  inset: -20%;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.55) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(rgba(255, 255, 255, 0.45) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(135deg, #d7e6cf 0%, #c3d7b8 48%, #e7f0df 100%);
+}
+
+.wa-location-map-fallback svg {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 1px 1px rgba(11, 20, 26, 0.2));
+}
+
+.wa-location-map-pin {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  z-index: 1;
+  color: #e53935;
+  pointer-events: none;
+  transform: translate(-50%, -92%);
+  filter: drop-shadow(0 1px 1px rgba(11, 20, 26, 0.28));
+}
+
+.wa-location-copy {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px 8px 6px;
+}
+
+.wa-location-title,
+.wa-location-sub {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wa-location-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.wa-location-sub {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--wa-secondary);
+}
+
+.dark .wa-location-card,
+html.dark .wa-location-card {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dark .wa-location-map,
+html.dark .wa-location-map {
+  background: #2f4636;
+}
+
 .wa-file-card {
   display: flex;
   flex-direction: column;
@@ -2368,8 +2518,57 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	background: rgba(83, 189, 235, 0.16);
 }
 
+.wa-reply-quote {
+	cursor: pointer;
+	width: 100%;
+	text-align: inherit;
+	appearance: none;
+}
+
+.wa-reply-quote:hover {
+	background: rgba(0, 0, 0, 0.08);
+}
+
+.dark .wa-reply-quote:hover {
+	background: rgba(255, 255, 255, 0.08);
+}
+
 .wa-reply-quote img {
 	background: #d1d7db;
+}
+
+.wa-message-row.wa-message-highlighted {
+	content-visibility: visible;
+	border-radius: 12px;
+	animation: wa-quoted-flash 2.2s ease;
+}
+
+@keyframes wa-quoted-flash {
+	0% {
+		background-color: rgba(37, 211, 102, 0.42);
+	}
+	40% {
+		background-color: rgba(37, 211, 102, 0.2);
+	}
+	100% {
+		background-color: transparent;
+	}
+}
+
+.dark .wa-message-row.wa-message-highlighted {
+	animation-name: wa-quoted-flash-dark;
+}
+
+@keyframes wa-quoted-flash-dark {
+	0% {
+		background-color: rgba(37, 211, 102, 0.32);
+	}
+	40% {
+		background-color: rgba(37, 211, 102, 0.16);
+	}
+	100% {
+		background-color: transparent;
+	}
 }
 
 .wa-voice-track {
@@ -4058,6 +4257,11 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-web-desktop .wa-message-bubble.wa-message-media {
 		max-width: min(76%, 384px) !important;
+	}
+
+	.wa-web-desktop .wa-message-bubble.wa-message-location {
+		width: 240px;
+		max-width: min(76%, 240px) !important;
 	}
 
 	.wa-web-desktop .wa-media-gallery:not(.wa-media-gallery-single) {

@@ -54,40 +54,6 @@ const COPY = {
 	},
 };
 
-const PROVIDERS = [
-	{ value: 'ai-free', label: 'FitCoach Free (auto fallback)' },
-	{ value: 'llm7-free', label: 'LLM7 Free' },
-	{ value: 'pollinations-free', label: 'Pollinations Free' },
-	{ value: 'browser-chatgpt', label: 'Browser ChatGPT' },
-	{ value: 'dragify-free', label: 'Legacy Free (same as FitCoach)' },
-];
-
-const CHAIN_MODELS = [
-	{ value: 'auto', label: 'Auto' },
-	{ value: 'gpt-oss:20b', label: 'GPT-OSS 20B' },
-	{ value: 'gpt-4o-mini', label: 'GPT-4o mini' },
-	{ value: 'llama-3.3-70b-instruct', label: 'Llama 3.3 70B' },
-	{ value: 'mistral-small-3.1-24b-instruct', label: 'Mistral Small' },
-	{ value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-];
-
-const MODELS_BY_PROVIDER = {
-	'ai-free': CHAIN_MODELS,
-	'dragify-free': CHAIN_MODELS,
-	'llm7-free': CHAIN_MODELS,
-	'pollinations-free': [
-		{ value: 'auto', label: 'Auto' },
-		{ value: 'openai', label: 'OpenAI' },
-		{ value: 'openai-fast', label: 'OpenAI Fast' },
-		{ value: 'openai-large', label: 'OpenAI Large' },
-	],
-	'browser-chatgpt': [
-		{ value: 'auto', label: 'Auto (ChatGPT)' },
-		{ value: 'gpt-4o', label: 'GPT-4o' },
-		{ value: 'gpt-4o-mini', label: 'GPT-4o mini' },
-	],
-};
-
 const TONE_OPTIONS = [
 	{ value: 'professional', label: 'Professional' },
 	{ value: 'friendly', label: 'Friendly' },
@@ -102,18 +68,6 @@ const GLOW = '0 10px 24px -10px var(--color-primary-400)';
 
 const fieldClass =
 	'wa-input-3d w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--color-primary-400)] dark:border-slate-700 dark:bg-slate-900';
-
-const sectionLabelClass =
-	'text-[11px] font-bold uppercase tracking-wider text-slate-400';
-
-function modelsForProvider(provider, currentModel) {
-	const list = MODELS_BY_PROVIDER[provider] || CHAIN_MODELS;
-	const current = String(currentModel || 'auto').trim() || 'auto';
-	if (!list.some(option => option.value === current)) {
-		return [...list, { value: current, label: current }];
-	}
-	return list;
-}
 
 function promptId() {
 	if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
@@ -182,17 +136,6 @@ export default function WhatsAppAiSettings({
 		);
 	};
 
-	const changeProvider = provider => {
-		setSaved(false);
-		setDraft(current => {
-			const known = MODELS_BY_PROVIDER[provider] || CHAIN_MODELS;
-			const model = known.some(option => option.value === current.model)
-				? current.model
-				: known[0]?.value || 'auto';
-			return { ...current, provider, model };
-		});
-	};
-
 	const addPrompt = () => {
 		if ((draft.promptPresets || []).length >= 20) return;
 		const id = promptId();
@@ -241,7 +184,6 @@ export default function WhatsAppAiSettings({
 		}
 	};
 
-	const modelOptions = modelsForProvider(draft.provider || 'ai-free', draft.model);
 	const prompts = draft.promptPresets || [];
 
 	return (
@@ -271,26 +213,7 @@ export default function WhatsAppAiSettings({
 				/>
 			</div>
 
-			<p className={`mb-2 ${sectionLabelClass}`}>{text.sectionProvider}</p>
 			<div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-				<label className="space-y-1 text-xs font-bold">
-					<span>{text.provider}</span>
-					<WaCustomSelect
-						ariaLabel={text.provider}
-						value={draft.provider || 'ai-free'}
-						onChange={changeProvider}
-						options={PROVIDERS}
-					/>
-				</label>
-				<label className="space-y-1 text-xs font-bold">
-					<span>{text.model}</span>
-					<WaCustomSelect
-						ariaLabel={text.model}
-						value={draft.model || 'auto'}
-						onChange={value => update('model', value)}
-						options={modelOptions}
-					/>
-				</label>
 				<label className="space-y-1 text-xs font-bold">
 					<span>{text.tone}</span>
 					<WaCustomSelect
