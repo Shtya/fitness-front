@@ -31,6 +31,7 @@ import {
 	EyeOff,
 	ExternalLink,
 	FileText,
+	FolderKanban,
 	Globe2,
 	Image as ImageIcon,
 	Images,
@@ -148,6 +149,15 @@ import {
 import WhatsAppDesktopRail from './WhatsAppDesktopRail';
 import { WhatsAppReportsTab, staffAssignHint } from './WhatsAppReportsTab';
 import { WaCustomSelect } from './WaCustomSelect';
+import {
+	addMessagesToChatGroup,
+	createChatMessageGroup,
+	deleteChatMessageGroup,
+	fetchChatMessageGroupMessages,
+	listChatMessageGroupMembership,
+	listChatMessageGroups,
+	removeMessagesFromChatGroup,
+} from './message-groups-api';
 import {
 	fetchConversations,
 	fetchMessages,
@@ -548,6 +558,25 @@ const translations = {
 		removeImportant: 'Remove from important',
 		noImportantConversations: 'No chats with important messages',
 		noImportantMessages: 'No important messages in this chat',
+		messageGroups: 'Message groups',
+		messageGroupsHint: 'Group selected messages under a project name in this chat',
+		selectForGroup: 'Select for group',
+		cancelGroupSelect: 'Cancel',
+		addToGroup: 'Add to group',
+		removeFromGroup: 'Remove from group',
+		createGroup: 'Create group',
+		newGroupName: 'Group name (e.g. Al-Huda)',
+		groupCreated: 'Group created',
+		messagesAddedToGroup: 'Messages added to group',
+		messagesRemovedFromGroup: 'Messages removed from group',
+		groupDeleted: 'Group deleted',
+		noMessageGroups: 'No groups in this chat yet',
+		viewingGroupBanner: 'Showing group: {name}',
+		backToChat: 'Back to full chat',
+		deleteGroup: 'Delete group',
+		openGroup: 'Open',
+		selectMessagesFirst: 'Select messages first',
+		chooseOrCreateGroup: 'Choose a group or create one',
 		archived: 'Archived',
 		archivedChats: 'Archived chats',
 		archiveChat: 'Archive chat',
@@ -881,6 +910,25 @@ const translations = {
 		removeImportant: 'إزالة من المهم',
 		noImportantConversations: 'لا توجد محادثات فيها عناصر مهمة',
 		noImportantMessages: 'لا توجد رسائل مهمة في هذه المحادثة',
+		messageGroups: 'مجموعات الرسائل',
+		messageGroupsHint: 'اجمع الرسائل المحددة تحت اسم مشروع جوّه نفس الشات',
+		selectForGroup: 'تحديد لمجموعة',
+		cancelGroupSelect: 'إلغاء',
+		addToGroup: 'إضافة للمجموعة',
+		removeFromGroup: 'إزالة من المجموعة',
+		createGroup: 'إنشاء مجموعة',
+		newGroupName: 'اسم المجموعة (مثال: الهدى)',
+		groupCreated: 'تم إنشاء المجموعة',
+		messagesAddedToGroup: 'تمت إضافة الرسائل للمجموعة',
+		messagesRemovedFromGroup: 'تمت إزالة الرسائل من المجموعة',
+		groupDeleted: 'تم حذف المجموعة',
+		noMessageGroups: 'لا توجد مجموعات في هذا الشات بعد',
+		viewingGroupBanner: 'عرض المجموعة: {name}',
+		backToChat: 'العودة لكل الرسائل',
+		deleteGroup: 'حذف المجموعة',
+		openGroup: 'فتح',
+		selectMessagesFirst: 'حدّد رسائل أولاً',
+		chooseOrCreateGroup: 'اختار مجموعة أو أنشئ واحدة',
 		archived: 'مؤرشفة',
 		archivedChats: 'المحادثات المؤرشفة',
 		archiveChat: 'أرشفة المحادثة',
@@ -4709,6 +4757,15 @@ function WhatsAppWorkspaceContent() {
 	const [downloadingSelectedMedia, setDownloadingSelectedMedia] = useState(false);
 	const [ticketSelectMode, setTicketSelectMode] = useState(false);
 	const [selectedMessageIds, setSelectedMessageIds] = useState(() => new Set());
+	const [groupSelectMode, setGroupSelectMode] = useState(false);
+	const [messageGroups, setMessageGroups] = useState([]);
+	const [messageGroupMembership, setMessageGroupMembership] = useState({});
+	const [messageGroupsOpen, setMessageGroupsOpen] = useState(false);
+	const [activeMessageGroup, setActiveMessageGroup] = useState(null);
+	const [groupViewMessages, setGroupViewMessages] = useState(null);
+	const [groupPickerOpen, setGroupPickerOpen] = useState(false);
+	const [newGroupName, setNewGroupName] = useState('');
+	const [messageGroupsBusy, setMessageGroupsBusy] = useState(false);
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const [mobileHeaderScrolled, setMobileHeaderScrolled] = useState(false);
 	const [attachmentSheetOpen, setAttachmentSheetOpen] = useState(false);
@@ -4849,7 +4906,7 @@ function WhatsAppWorkspaceContent() {
 			effectiveConversations.find(item => item.id === secondaryConversationId) || null,
 		[effectiveConversations, secondaryConversationId],
 	);
-	const effectiveMessages = useMemo(
+	const baseEffectiveMessages = useMemo(
 		() =>
 			buildEffectiveMessages({
 				realMessages: conversationMessages,
@@ -4866,6 +4923,10 @@ function WhatsAppWorkspaceContent() {
 			demo.settings.enabled,
 		],
 	);
+	const effectiveMessages = useMemo(() => {
+		if (activeMessageGroup && Array.isArray(groupViewMessages)) return groupViewMessages;
+		return baseEffectiveMessages;
+	}, [activeMessageGroup, groupViewMessages, baseEffectiveMessages]);
 	const mentionDirectory = useMemo(
 		() =>
 			buildWhatsAppMentionDirectory({
@@ -7894,21 +7955,234 @@ function WhatsAppWorkspaceContent() {
 		}
 		setMediaSelectMode(false);
 		setSelectedMediaIds(new Set());
+		setGroupSelectMode(false);
+		setGroupPickerOpen(false);
 		setTicketSelectMode(true);
 	};
 
+	const refreshMessageGroups = useCallback(async (id = conversationId) => {
+		if (!id || isDemoId(id) || demo.settings.enabled) {
+			setMessageGroups([]);
+			setMessageGroupMembership({});
+			return;
+		}
+		try {
+			const [groups, membership] = await Promise.all([
+				listChatMessageGroups(id),
+				listChatMessageGroupMembership(id),
+			]);
+			if (conversationIdRef.current !== id) return;
+			setMessageGroups(groups);
+			setMessageGroupMembership(membership);
+		} catch {
+			if (conversationIdRef.current === id) {
+				setMessageGroups([]);
+				setMessageGroupMembership({});
+			}
+		}
+	}, [conversationId, demo.settings.enabled]);
+
 	useEffect(() => {
-		if (!ticketSelectMode && !mediaSelectMode) return undefined;
+		setGroupSelectMode(false);
+		setSelectedMessageIds(new Set());
+		setMessageGroupsOpen(false);
+		setGroupPickerOpen(false);
+		setNewGroupName('');
+		setActiveMessageGroup(null);
+		setGroupViewMessages(null);
+		if (!conversationId || isDemoId(conversationId) || demo.settings.enabled) {
+			setMessageGroups([]);
+			setMessageGroupMembership({});
+			return;
+		}
+		void refreshMessageGroups(conversationId);
+	}, [conversationId, demo.settings.enabled, refreshMessageGroups]);
+
+	const clearActiveMessageGroup = () => {
+		setActiveMessageGroup(null);
+		setGroupViewMessages(null);
+		if (conversationId && !isDemoId(conversationId)) {
+			void loadMessages(conversationId, canUseWhatsApp && !demo.settings.enabled)?.catch?.(() => {});
+		}
+	};
+
+	const openMessageGroup = async group => {
+		if (!conversationId || !group?.id) return;
+		setMessageGroupsBusy(true);
+		try {
+			const data = await fetchChatMessageGroupMessages(conversationId, group.id);
+			setActiveMessageGroup({
+				id: data.id || group.id,
+				name: data.name || group.name,
+				messageCount: data.messageCount ?? (data.messages || []).length,
+			});
+			setGroupViewMessages(Array.isArray(data.messages) ? data.messages : []);
+			setHasMoreMessages(false);
+			setMessageGroupsOpen(false);
+			setGroupSelectMode(false);
+			setSelectedMessageIds(new Set());
+			scrollMessagesToBottom();
+		} catch (error) {
+			toast.error(error.response?.data?.message || (locale === 'ar' ? 'تعذر فتح المجموعة' : 'Could not open group'));
+		} finally {
+			setMessageGroupsBusy(false);
+		}
+	};
+
+	const toggleGroupSelectMode = () => {
+		if (groupSelectMode) {
+			setGroupSelectMode(false);
+			setSelectedMessageIds(new Set());
+			setGroupPickerOpen(false);
+			return;
+		}
+		setMediaSelectMode(false);
+		setSelectedMediaIds(new Set());
+		setTicketSelectMode(false);
+		setGroupSelectMode(true);
+		setMessageGroupsOpen(false);
+		setGroupPickerOpen(false);
+	};
+
+	const applyGroupMessageSelection = (message, { toggle = true } = {}) => {
+		if (!message?.id || message.optimistic) return false;
+		setMediaSelectMode(false);
+		setSelectedMediaIds(new Set());
+		setTicketSelectMode(false);
+		setGroupSelectMode(true);
+		setActionMessageId(null);
+		setActionMessageAnchor(null);
+		closeReactionPicker();
+		setSelectedMessageIds(current => {
+			const next = new Set(current);
+			if (toggle && next.has(message.id)) {
+				next.delete(message.id);
+				return next;
+			}
+			next.add(message.id);
+			return next;
+		});
+		return true;
+	};
+
+	const createAndAssignGroup = async () => {
+		const ids = [...selectedMessageIds];
+		if (!conversationId || !ids.length) {
+			toast.error(t.selectMessagesFirst);
+			return;
+		}
+		const name = newGroupName.trim();
+		if (!name) {
+			toast.error(t.newGroupName);
+			return;
+		}
+		setMessageGroupsBusy(true);
+		try {
+			const group = await createChatMessageGroup(conversationId, name);
+			await addMessagesToChatGroup(conversationId, group.id, ids);
+			setNewGroupName('');
+			setGroupPickerOpen(false);
+			setGroupSelectMode(false);
+			setSelectedMessageIds(new Set());
+			await refreshMessageGroups(conversationId);
+			toast.success(t.messagesAddedToGroup);
+		} catch (error) {
+			toast.error(error.response?.data?.message || (locale === 'ar' ? 'فشل حفظ المجموعة' : 'Could not save group'));
+		} finally {
+			setMessageGroupsBusy(false);
+		}
+	};
+
+	const assignSelectedToGroup = async groupId => {
+		const ids = [...selectedMessageIds];
+		if (!conversationId || !ids.length || !groupId) {
+			toast.error(t.selectMessagesFirst);
+			return;
+		}
+		setMessageGroupsBusy(true);
+		try {
+			await addMessagesToChatGroup(conversationId, groupId, ids);
+			setGroupPickerOpen(false);
+			setGroupSelectMode(false);
+			setSelectedMessageIds(new Set());
+			await refreshMessageGroups(conversationId);
+			if (activeMessageGroup) {
+				await openMessageGroup(activeMessageGroup);
+			}
+			toast.success(t.messagesAddedToGroup);
+		} catch (error) {
+			toast.error(error.response?.data?.message || (locale === 'ar' ? 'فشل الإضافة للمجموعة' : 'Could not add to group'));
+		} finally {
+			setMessageGroupsBusy(false);
+		}
+	};
+
+	const removeSelectedFromGroups = async () => {
+		const ids = [...selectedMessageIds];
+		if (!conversationId || !ids.length) {
+			toast.error(t.selectMessagesFirst);
+			return;
+		}
+		const byGroup = new Map();
+		for (const id of ids) {
+			const info = messageGroupMembership[id];
+			if (!info?.groupId) continue;
+			const list = byGroup.get(info.groupId) || [];
+			list.push(id);
+			byGroup.set(info.groupId, list);
+		}
+		if (!byGroup.size) {
+			toast.error(locale === 'ar' ? 'الرسائل المحددة مش في مجموعة' : 'Selected messages are not in a group');
+			return;
+		}
+		setMessageGroupsBusy(true);
+		try {
+			for (const [groupId, messageIds] of byGroup.entries()) {
+				await removeMessagesFromChatGroup(conversationId, groupId, messageIds);
+			}
+			setGroupSelectMode(false);
+			setSelectedMessageIds(new Set());
+			await refreshMessageGroups(conversationId);
+			if (activeMessageGroup) {
+				await openMessageGroup(activeMessageGroup);
+			}
+			toast.success(t.messagesRemovedFromGroup);
+		} catch (error) {
+			toast.error(error.response?.data?.message || (locale === 'ar' ? 'فشل الإزالة من المجموعة' : 'Could not remove from group'));
+		} finally {
+			setMessageGroupsBusy(false);
+		}
+	};
+
+	const deleteActiveOrListedGroup = async group => {
+		if (!conversationId || !group?.id) return;
+		setMessageGroupsBusy(true);
+		try {
+			await deleteChatMessageGroup(conversationId, group.id);
+			if (activeMessageGroup?.id === group.id) clearActiveMessageGroup();
+			await refreshMessageGroups(conversationId);
+			toast.success(t.groupDeleted);
+		} catch (error) {
+			toast.error(error.response?.data?.message || (locale === 'ar' ? 'فشل حذف المجموعة' : 'Could not delete group'));
+		} finally {
+			setMessageGroupsBusy(false);
+		}
+	};
+
+	useEffect(() => {
+		if (!ticketSelectMode && !mediaSelectMode && !groupSelectMode) return undefined;
 		const onKeyDown = event => {
 			if (event.key !== 'Escape' || event.defaultPrevented) return;
 			setTicketSelectMode(false);
 			setSelectedMessageIds(new Set());
 			setMediaSelectMode(false);
 			setSelectedMediaIds(new Set());
+			setGroupSelectMode(false);
+			setGroupPickerOpen(false);
 		};
 		window.addEventListener('keydown', onKeyDown);
 		return () => window.removeEventListener('keydown', onKeyDown);
-	}, [mediaSelectMode, ticketSelectMode]);
+	}, [mediaSelectMode, ticketSelectMode, groupSelectMode]);
 
 	const openSelectedTranscriptBundle = () => {
 		const selected = selectableTranscriptMessages.filter(item => selectedMessageIds.has(item.id));
@@ -11074,6 +11348,35 @@ function WhatsAppWorkspaceContent() {
 													<ListChecks size={16} strokeWidth={2.25} aria-hidden="true" />
 												)}
 											</button>
+											<button
+												type="button"
+												disabled={demo.settings.enabled || !conversationId || isDemoId(conversationId)}
+												onClick={() => {
+													if (groupSelectMode) {
+														toggleGroupSelectMode();
+														return;
+													}
+													setMessageGroupsOpen(current => !current);
+													setGroupPickerOpen(false);
+													void refreshMessageGroups(conversationId);
+												}}
+												aria-label={
+													groupSelectMode
+														? t.cancelGroupSelect
+														: t.messageGroups
+												}
+												className={`grid h-8 w-8 place-items-center rounded-full ${
+													messageGroupsOpen || activeMessageGroup || groupSelectMode
+														? 'bg-sky-50 text-sky-700'
+														: 'text-[#0A0A0A]'
+												}`}
+											>
+												{groupSelectMode ? (
+													<X size={16} strokeWidth={2.25} aria-hidden="true" />
+												) : (
+													<FolderKanban size={16} strokeWidth={2.25} aria-hidden="true" />
+												)}
+											</button>
 										</div>
 										<div className="hidden items-center gap-1 min-[769px]:flex">
 											<button
@@ -11185,6 +11488,38 @@ function WhatsAppWorkspaceContent() {
 											</button>
 											<button
 												type="button"
+												disabled={demo.settings.enabled || !conversationId || isDemoId(conversationId)}
+												onClick={() => {
+													setMessageGroupsOpen(current => !current);
+													setGroupPickerOpen(false);
+													void refreshMessageGroups(conversationId);
+												}}
+												aria-label={t.messageGroups}
+												title={t.messageGroups}
+												className={`wa-toolbar-icon-btn grid h-7 w-7 place-items-center rounded-md border transition-colors disabled:opacity-50 ${
+													messageGroupsOpen || activeMessageGroup
+														? 'is-active border-sky-300 bg-sky-50 text-sky-700 dark:bg-sky-950/30'
+														: 'border-slate-200 bg-white text-[#54656f] hover:text-sky-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+												}`}
+											>
+												<FolderKanban size={13} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
+											</button>
+											<button
+												type="button"
+												disabled={demo.settings.enabled || !conversationId || isDemoId(conversationId)}
+												onClick={toggleGroupSelectMode}
+												aria-label={groupSelectMode ? t.cancelGroupSelect : t.selectForGroup}
+												title={groupSelectMode ? t.cancelGroupSelect : t.selectForGroup}
+												className={`wa-toolbar-icon-btn grid h-7 w-7 place-items-center rounded-md border transition-colors disabled:opacity-50 ${
+													groupSelectMode
+														? 'is-active border-sky-300 bg-sky-50 text-sky-700'
+														: 'border-slate-200 bg-white text-[#54656f] hover:text-sky-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+												}`}
+											>
+												<ListChecks size={13} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
+											</button>
+											<button
+												type="button"
 												disabled={demo.settings.enabled}
 												onClick={() => {
 													if (secondaryConversationId) {
@@ -11263,10 +11598,80 @@ function WhatsAppWorkspaceContent() {
 
 										</div>
 									</header>
-									{(conversationFilter === 'important' || conversationFilter === 'starred') && conversationId ? (
+									{(conversationFilter === 'important' || conversationFilter === 'starred') && conversationId && !activeMessageGroup ? (
 										<div className="flex shrink-0 items-center gap-2 border-b border-amber-100 bg-amber-50 px-4 py-2 text-[12px] font-semibold text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
 											<Star size={14} fill="currentColor" />
 											<span>{t.importantOnlyBanner}</span>
+										</div>
+									) : null}
+									{activeMessageGroup ? (
+										<div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-sky-100 bg-sky-50 px-4 py-2 text-[12px] font-semibold text-sky-800 dark:border-sky-900/40 dark:bg-sky-950/40 dark:text-sky-200">
+											<FolderKanban size={14} />
+											<span>{t.viewingGroupBanner.replace('{name}', activeMessageGroup.name)}</span>
+											<button
+												type="button"
+												onClick={clearActiveMessageGroup}
+												className="rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-bold text-sky-700"
+											>
+												{t.backToChat}
+											</button>
+										</div>
+									) : null}
+									{messageGroupsOpen && conversationId && !demo.settings.enabled ? (
+										<div className="shrink-0 border-b border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
+											<p className="mb-1 text-[11px] font-bold text-slate-600 dark:text-slate-300">{t.messageGroups}</p>
+											<p className="mb-2 text-[10px] text-slate-400">{t.messageGroupsHint}</p>
+											{messageGroups.length ? (
+												<div className="flex max-h-40 flex-col gap-1 overflow-y-auto">
+													{messageGroups.map(group => (
+														<div key={group.id} className="flex items-center gap-2 rounded-lg border border-slate-200 px-2 py-1.5 dark:border-slate-700">
+															<button
+																type="button"
+																disabled={messageGroupsBusy}
+																onClick={() => void openMessageGroup(group)}
+																className="min-w-0 flex-1 text-start"
+															>
+																<p className="truncate text-[12px] font-bold text-slate-800 dark:text-slate-100">{group.name}</p>
+																<p className="text-[10px] text-slate-400">{group.messageCount || 0}</p>
+															</button>
+															<button
+																type="button"
+																disabled={messageGroupsBusy}
+																onClick={() => void openMessageGroup(group)}
+																className="rounded-md bg-sky-50 px-2 py-1 text-[10px] font-bold text-sky-700"
+															>
+																{t.openGroup}
+															</button>
+															<button
+																type="button"
+																disabled={messageGroupsBusy}
+																onClick={() => void deleteActiveOrListedGroup(group)}
+																className="rounded-md bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700"
+															>
+																{t.deleteGroup}
+															</button>
+														</div>
+													))}
+												</div>
+											) : (
+												<p className="text-[11px] text-slate-400">{t.noMessageGroups}</p>
+											)}
+											<div className="mt-2 flex gap-2">
+												<button
+													type="button"
+													onClick={toggleGroupSelectMode}
+													className="rounded-lg bg-sky-50 px-2.5 py-1.5 text-[11px] font-bold text-sky-700"
+												>
+													{t.selectForGroup}
+												</button>
+												<button
+													type="button"
+													onClick={() => setMessageGroupsOpen(false)}
+													className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-600"
+												>
+													{t.cancelGroupSelect}
+												</button>
+											</div>
 										</div>
 									) : null}
 									 
@@ -11311,6 +11716,8 @@ function WhatsAppWorkspaceContent() {
 												<p className="text-sm font-semibold text-slate-500">
 													{loadingMessages || messagesSyncHint
 														? (messagesSyncHint ? t.messagesStillSyncing : t.loadingMessages)
+														: activeMessageGroup
+															? t.noMessagesYet
 														: conversationFilter === 'important' || conversationFilter === 'starred'
 															? t.noImportantMessages
 															: t.noMessagesYet}
@@ -11418,7 +11825,88 @@ function WhatsAppWorkspaceContent() {
 														</button>
 													</div>
 												)}
-												{hasMoreMessages && !loadingOlder && (
+												{groupSelectMode && (
+													<div className="sticky top-0 z-20 mx-auto mb-2 flex w-fit max-w-full flex-col items-center gap-2 rounded-2xl bg-white/95 px-3 py-2 text-[11px] font-semibold text-slate-600 shadow-sm dark:bg-slate-800/95">
+														<div className="flex flex-wrap items-center justify-center gap-2">
+															<button
+																type="button"
+																className="rounded-full px-2 py-0.5 hover:bg-slate-100 dark:hover:bg-slate-700"
+																onClick={() => {
+																	const ids = effectiveMessages
+																		.filter(item => item?.id && !item.optimistic)
+																		.map(item => item.id);
+																	setSelectedMessageIds(new Set(ids));
+																}}
+															>
+																{t.selectAllMessages}
+															</button>
+															<span className="opacity-50">·</span>
+															<span>{t.selectedMessagesCount.replace('{count}', String(selectedMessageIds.size))}</span>
+															<button
+																type="button"
+																disabled={!selectedMessageIds.size || messageGroupsBusy}
+																onClick={() => setGroupPickerOpen(current => !current)}
+																className="inline-flex items-center gap-1 rounded-full bg-sky-600 px-2.5 py-0.5 text-white disabled:opacity-50"
+															>
+																<FolderKanban size={12} />
+																{t.addToGroup}
+															</button>
+															<button
+																type="button"
+																disabled={!selectedMessageIds.size || messageGroupsBusy}
+																onClick={() => void removeSelectedFromGroups()}
+																className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-rose-700 disabled:opacity-50"
+															>
+																{t.removeFromGroup}
+															</button>
+															<button
+																type="button"
+																onClick={() => {
+																	setGroupSelectMode(false);
+																	setSelectedMessageIds(new Set());
+																	setGroupPickerOpen(false);
+																}}
+																className="rounded-full px-2 py-0.5 hover:bg-slate-100 dark:hover:bg-slate-700"
+															>
+																{t.cancelGroupSelect}
+															</button>
+														</div>
+														{groupPickerOpen ? (
+															<div className="w-[min(320px,90vw)] rounded-xl border border-slate-200 bg-white p-2 text-start dark:border-slate-700 dark:bg-slate-900">
+																<p className="mb-1 text-[10px] font-bold text-slate-500">{t.chooseOrCreateGroup}</p>
+																{messageGroups.map(group => (
+																	<button
+																		key={group.id}
+																		type="button"
+																		disabled={messageGroupsBusy}
+																		onClick={() => void assignSelectedToGroup(group.id)}
+																		className="mb-1 flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-[11px] font-semibold hover:bg-sky-50 dark:hover:bg-slate-800"
+																	>
+																		<span className="truncate">{group.name}</span>
+																		<span className="text-slate-400">{group.messageCount || 0}</span>
+																	</button>
+																))}
+																<div className="mt-1 flex gap-1">
+																	<input
+																		value={newGroupName}
+																		onChange={event => setNewGroupName(event.target.value)}
+																		placeholder={t.newGroupName}
+																		className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-1 text-[11px] outline-none dark:border-slate-700 dark:bg-slate-950"
+																	/>
+																	<button
+																		type="button"
+																		disabled={messageGroupsBusy || !newGroupName.trim()}
+																		onClick={() => void createAndAssignGroup()}
+																		className="rounded-lg bg-sky-600 px-2 py-1 text-[11px] font-bold text-white disabled:opacity-50"
+																	>
+																		{t.createGroup}
+																	</button>
+																</div>
+															</div>
+														) : null}
+													</div>
+												)}
+												{hasMoreMessages && !loadingOlder && !activeMessageGroup && (
 													<button
 														onClick={loadOlder}
 														disabled={loadingOlder}
@@ -11490,15 +11978,20 @@ function WhatsAppWorkspaceContent() {
 														ticketSelectMode &&
 														!groupedImages &&
 														isSelectableTranscriptMessage(message);
+													const selectableInGroupMode =
+														groupSelectMode && !groupedImages && message?.id && !message.optimistic;
 													const allSelected =
 														selectableInMediaMode &&
 														downloadableAttachments.every(item =>
 															selectedMediaIds.has(item.id),
 														);
 													const messageSelected =
-														selectableInTicketMode && selectedMessageIds.has(message.id);
-													const showSelectCheck = selectableInMediaMode || selectableInTicketMode;
+														(selectableInTicketMode || selectableInGroupMode) &&
+														selectedMessageIds.has(message.id);
+													const showSelectCheck =
+														selectableInMediaMode || selectableInTicketMode || selectableInGroupMode;
 													const isChecked = allSelected || messageSelected;
+													const membership = messageGroupMembership[message.id];
 													const isGroupChat =
 														selectedConversation?.type === 'group' ||
 														String(selectedConversation?.providerChatId || '').endsWith('@g.us');
@@ -11564,8 +12057,18 @@ function WhatsAppWorkspaceContent() {
 																	<button
 																		type="button"
 																		aria-pressed={isChecked}
-																		aria-label={ticketSelectMode ? t.selectMessages : t.selectMedia}
+																		aria-label={
+																			groupSelectMode
+																				? t.selectForGroup
+																				: ticketSelectMode
+																					? t.selectMessages
+																					: t.selectMedia
+																		}
 																		onClick={() => {
+																			if (selectableInGroupMode) {
+																				applyGroupMessageSelection(message);
+																				return;
+																			}
 																			if (selectableInTicketMode) {
 																				applyMessageSelection(message);
 																				return;
@@ -11600,7 +12103,7 @@ function WhatsAppWorkspaceContent() {
 																			cancelMessageLongPress(event);
 																			return;
 																		}
-																		if (mediaSelectMode || ticketSelectMode) return;
+																		if (mediaSelectMode || ticketSelectMode || groupSelectMode) return;
 																		startMessageLongPress(event, message);
 																	}}
 																	onPointerMove={cancelMessageLongPress}
@@ -11610,6 +12113,10 @@ function WhatsAppWorkspaceContent() {
 																		if (!isMultiSelectClick(event) || message.optimistic) return;
 																		event.preventDefault();
 																		event.stopPropagation();
+																		if (groupSelectMode) {
+																			applyGroupMessageSelection(message);
+																			return;
+																		}
 																		if (mediaSelectMode) {
 																			applyMediaSelection(downloadableAttachments);
 																			return;
@@ -11624,6 +12131,10 @@ function WhatsAppWorkspaceContent() {
 																		applyMediaSelection(downloadableAttachments);
 																	}}
 																	onClick={() => {
+																		if (selectableInGroupMode) {
+																			applyGroupMessageSelection(message);
+																			return;
+																		}
 																		if (selectableInTicketMode) {
 																			applyMessageSelection(message);
 																			return;
@@ -11632,7 +12143,7 @@ function WhatsAppWorkspaceContent() {
 																		applyMediaSelection(downloadableAttachments);
 																	}}
 																	onContextMenu={event => {
-																		if (mediaSelectMode || ticketSelectMode) {
+																		if (mediaSelectMode || ticketSelectMode || groupSelectMode) {
 																			event.preventDefault();
 																			return;
 																		}
@@ -11648,6 +12159,22 @@ function WhatsAppWorkspaceContent() {
 																		: 'bg-white text-slate-900 dark:bg-slate-800 dark:text-white'
 																		} ${isChecked ? 'ring-2 ring-[var(--color-primary-400)]' : ''}`}
 																>
+																	{membership?.groupName ? (
+																		<button
+																			type="button"
+																			onClick={event => {
+																				event.stopPropagation();
+																				void openMessageGroup({
+																					id: membership.groupId,
+																					name: membership.groupName,
+																				});
+																			}}
+																			className="mb-1 inline-flex max-w-full items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700 dark:bg-sky-950/40 dark:text-sky-300"
+																		>
+																			<FolderKanban size={10} />
+																			<span className="truncate">{membership.groupName}</span>
+																		</button>
+																	) : null}
 																	{showGroupSenderMeta && (
 																		<p
 																			className="wa-group-sender-name"
@@ -11670,7 +12197,7 @@ function WhatsAppWorkspaceContent() {
 																			onClick={event => {
 																				event.preventDefault();
 																				event.stopPropagation();
-																				if (mediaSelectMode || ticketSelectMode) return;
+																				if (mediaSelectMode || ticketSelectMode || groupSelectMode) return;
 																				void jumpToQuotedMessage(message);
 																			}}
 																		>
@@ -11795,7 +12322,10 @@ function WhatsAppWorkspaceContent() {
 																		</div>
 																	)}
 																</div>
-																{!message.optimistic && (
+																{!message.optimistic &&
+																	!mediaSelectMode &&
+																	!ticketSelectMode &&
+																	!groupSelectMode && (
 																	<div className="wa-message-hover-wrap">
 																		<MessageHoverActions
 																			mine={mine}
