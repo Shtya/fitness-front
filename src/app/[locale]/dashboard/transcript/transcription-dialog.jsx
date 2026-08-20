@@ -36,6 +36,7 @@ import {
 	storeTranscriptionProvider,
 	timestampMs,
 	TRANSCRIPTION_PROVIDERS,
+	transcriptionErrorMessage,
 } from './transcription-client';
 
 const labels = {
@@ -51,8 +52,9 @@ const labels = {
 		method: 'Transcription method',
 		transcribe: 'Transcribe',
 		uploading: 'Uploading',
-		processing: 'Transcribing audio…',
+		processing: 'Transcribing audio… this can take a few minutes for long voice notes.',
 		failed: 'Transcription failed.',
+		timedOut: 'Transcription timed out. Keep the page open and try again.',
 		groqTooLarge: 'Groq free tier accepts files up to 25 MB.',
 		result: 'Transcript',
 		copy: 'Copy',
@@ -86,8 +88,9 @@ const labels = {
 		method: 'طريقة التحويل',
 		transcribe: 'تحويل إلى نص',
 		uploading: 'جارٍ الرفع',
-		processing: 'جارٍ تحويل الصوت إلى نص…',
+		processing: 'جارٍ تحويل الصوت إلى نص… الرسائل الطويلة قد تستغرق دقائق.',
 		failed: 'فشل تحويل الرسالة الصوتية.',
+		timedOut: 'انتهت مهلة التحويل. اترك الصفحة مفتوحة وحاول مرة أخرى.',
 		groqTooLarge: 'خطة Groq المجانية تقبل ملفات حتى 25 ميجابايت.',
 		result: 'النص',
 		copy: 'نسخ',
@@ -301,13 +304,16 @@ export default function TranscriptionDialog({
 				const data = await createTranscription({
 					file,
 					provider,
-					language: 'auto',
+					language: locale === 'ar' ? 'ar' : 'auto',
 					customVocabulary: '',
 					onUploadProgress: event => {
-						if (!event.total) return;
+						if (!event.total) {
+							setStatus('processing');
+							return;
+						}
 						const next = Math.min(100, Math.round((event.loaded * 100) / event.total));
 						setProgress(next);
-						if (next >= 100) setStatus('processing');
+						if (next >= 95) setStatus('processing');
 					},
 				});
 				const nextText = String(data?.text || '').trim();
@@ -317,7 +323,11 @@ export default function TranscriptionDialog({
 				onCompleted?.(nextText, data);
 			} catch (error) {
 				setStatus('error');
-				toast.error(error.response?.data?.message || t.failed);
+				const fallback =
+					error?.code === 'ECONNABORTED' || /timeout/i.test(String(error?.message || ''))
+						? t.timedOut
+						: t.failed;
+				toast.error(transcriptionErrorMessage(error, fallback));
 			}
 			return;
 		}
@@ -352,13 +362,16 @@ export default function TranscriptionDialog({
 				const data = await createTranscription({
 					file: nextFile,
 					provider,
-					language: 'auto',
+					language: locale === 'ar' ? 'ar' : 'auto',
 					customVocabulary: '',
 					onUploadProgress: event => {
-						if (!event.total) return;
+						if (!event.total) {
+							setStatus('processing');
+							return;
+						}
 						const next = Math.min(100, Math.round((event.loaded * 100) / event.total));
 						setProgress(next);
-						if (next >= 100) setStatus('processing');
+						if (next >= 95) setStatus('processing');
 					},
 				});
 				createdRecords.push(data);
@@ -376,7 +389,7 @@ export default function TranscriptionDialog({
 					audioIndex: source.audioIndex,
 					text: t.missingVoice,
 				});
-				toast.error(error?.response?.data?.message || error?.message || t.failed);
+				toast.error(transcriptionErrorMessage(error, t.failed));
 			}
 		}
 
@@ -416,7 +429,7 @@ export default function TranscriptionDialog({
 			}
 		} catch (error) {
 			setStatus('error');
-			toast.error(error?.response?.data?.message || t.failed);
+			toast.error(transcriptionErrorMessage(error, t.failed));
 		}
 	};
 
@@ -430,7 +443,7 @@ export default function TranscriptionDialog({
 			onCompleted?.(data.text || '', data);
 			toast.success(t.saved);
 		} catch (error) {
-			toast.error(error.response?.data?.message || t.failed);
+			toast.error(transcriptionErrorMessage(error, t.failed));
 		} finally {
 			setSaving(false);
 		}

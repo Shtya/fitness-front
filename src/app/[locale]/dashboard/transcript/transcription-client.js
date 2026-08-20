@@ -6,6 +6,8 @@ export const TRANSCRIPTION_ACCEPT = ACCEPTED_TRANSCRIPTION_EXTENSIONS
 	.join(',');
 export const MAX_TRANSCRIPTION_FILE_SIZE = 500 * 1024 * 1024;
 export const GROQ_FREE_MAX_FILE_SIZE = 25 * 1024 * 1024;
+/** Cloud STT (especially long WhatsApp notes) can take several minutes. */
+export const TRANSCRIPTION_REQUEST_TIMEOUT_MS = 30 * 60 * 1000;
 export const TRANSCRIPTION_PROVIDER_STORAGE_KEY = 'transcript:provider';
 export const TRANSCRIPTION_PROVIDERS = [
 	{
@@ -90,11 +92,26 @@ export async function createTranscription({
 	const vocabulary = String(customVocabulary || '').trim();
 	if (vocabulary) form.append('customVocabulary', vocabulary);
 	const { data } = await api.post('/transcriptions', form, {
-		headers: { 'Content-Type': 'multipart/form-data' },
-		timeout: 0,
+		// Let the browser set multipart boundary; do not force Content-Type.
+		timeout: TRANSCRIPTION_REQUEST_TIMEOUT_MS,
 		onUploadProgress,
 	});
 	return data;
+}
+
+export function transcriptionErrorMessage(error, fallback = 'Transcription failed.') {
+	const data = error?.response?.data;
+	const raw = data?.message ?? data?.error ?? error?.message;
+	if (Array.isArray(raw)) return raw.map(String).filter(Boolean).join(', ') || fallback;
+	if (typeof raw === 'string' && raw.trim()) return raw.trim();
+	if (raw && typeof raw === 'object' && typeof raw.message === 'string' && raw.message.trim()) {
+		return raw.message.trim();
+	}
+	if (error?.code === 'ECONNABORTED' || /timeout/i.test(String(error?.message || ''))) {
+		return 'Transcription timed out. Try again, or use a shorter clip.';
+	}
+	if (!error?.response && error?.message) return error.message;
+	return fallback;
 }
 
 export async function enhanceTranscription(id, payload = {}) {
