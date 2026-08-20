@@ -37,13 +37,17 @@ import TranscriptionAiPanel from './transcription-ai-panel';
 import {
 	ACCEPTED_TRANSCRIPTION_EXTENSIONS as ACCEPTED_EXTENSIONS,
 	CLOUD_TRANSCRIPTION_PROVIDER_IDS as CLOUD_PROVIDER_IDS,
-	createTranscription,
+	createChunkedTranscription,
+	getStoredTranscriptionChunkSeconds,
 	getStoredTranscriptionProvider,
 	GROQ_FREE_MAX_FILE_SIZE,
 	MAX_TRANSCRIPTION_FILE_SIZE as MAX_FILE_SIZE,
+	storeTranscriptionChunkSeconds,
 	storeTranscriptionProvider,
 	TRANSCRIPTION_ACCEPT as ACCEPT,
+	TRANSCRIPTION_CHUNK_PRESETS,
 	TRANSCRIPTION_PROVIDERS as PROVIDERS,
+	transcriptionErrorMessage,
 } from './transcription-client';
 
 const copy = {
@@ -78,6 +82,9 @@ const copy = {
 		stop: 'Stop',
 		cancel: 'Cancel',
 		language: 'Language',
+		chunkLength: 'Chunk length',
+		chunkLengthHint: 'Long audio is split and sent one chunk per request (default 3.5 min).',
+		chunkProgress: 'Chunk {current} of {total}',
 		method: 'Transcription method',
 		localMethod: 'Local · Private',
 		groqMethod: 'Groq · Fast cloud',
@@ -169,6 +176,9 @@ const copy = {
 		stop: 'إنهاء',
 		cancel: 'إلغاء',
 		language: 'اللغة',
+		chunkLength: 'طول القطعة',
+		chunkLengthHint: 'الصوت الطويل يتقسم ويتبعت قطعة في كل طلب (الافتراضي 3.5 دقايق).',
+		chunkProgress: 'قطعة {current} من {total}',
 		method: 'طريقة التحويل',
 		localMethod: 'محلي · خاص',
 		groqMethod: 'Groq · سحابي سريع',
@@ -273,6 +283,8 @@ export default function TranscriptWorkspace() {
 	const [files, setFiles] = useState([]);
 	const [previewUrls, setPreviewUrls] = useState([]);
 	const [provider, setProvider] = useState('local');
+	const [chunkSeconds, setChunkSeconds] = useState(() => getStoredTranscriptionChunkSeconds());
+	const [chunkProgress, setChunkProgress] = useState({ current: 0, total: 0 });
 	const [language, setLanguage] = useState('auto');
 	const [customVocabulary, setCustomVocabulary] = useState('');
 	const [recordingState, setRecordingState] = useState('idle');
@@ -349,6 +361,7 @@ export default function TranscriptWorkspace() {
 
 	useEffect(() => {
 		setProvider(getStoredTranscriptionProvider());
+		setChunkSeconds(getStoredTranscriptionChunkSeconds());
 	}, []);
 
 	const loadProviderCredential = useCallback(async () => {
@@ -565,6 +578,7 @@ export default function TranscriptWorkspace() {
 		const queue = [...files];
 		setBatchTotal(queue.length);
 		setBatchIndex(0);
+		setChunkProgress({ current: 0, total: 0 });
 		const created = [];
 		let lastError = null;
 
@@ -574,17 +588,26 @@ export default function TranscriptWorkspace() {
 			setStatus('uploading');
 			setProgress(0);
 			setProcessingElapsed(0);
+			setChunkProgress({ current: 0, total: 0 });
 			try {
-				const data = await createTranscription({
+				const data = await createChunkedTranscription({
 					file: currentFile,
 					provider,
 					language,
 					customVocabulary,
+					chunkSeconds,
+					onChunkProgress: ({ chunkIndex, chunkTotal }) => {
+						setChunkProgress({ current: chunkIndex, total: chunkTotal });
+						if (chunkTotal > 1) setStatus('processing');
+					},
 					onUploadProgress: event => {
-						if (!event.total) return;
+						if (!event.total) {
+							setStatus('processing');
+							return;
+						}
 						const next = Math.min(100, Math.round((event.loaded * 100) / event.total));
 						setProgress(next);
-						if (next >= 100) setStatus('processing');
+						if (next >= 95) setStatus('processing');
 					},
 				});
 				created.push(data);
@@ -628,7 +651,9 @@ export default function TranscriptWorkspace() {
 				});
 			} catch (error) {
 				lastError = error;
-				toast.error(`${currentFile.name}: ${error.response?.data?.message || t.failed}`);
+				toast.error(
+					`${currentFile.name}: ${transcriptionErrorMessage(error, t.failed)}`,
+				);
 			}
 		}
 
@@ -687,6 +712,10 @@ export default function TranscriptWorkspace() {
 		setProviderCredential(null);
 		setShowCredentialModal(false);
 		storeTranscriptionProvider(nextProvider);
+	};
+
+	const selectChunkSeconds = value => {
+		setChunkSeconds(storeTranscriptionChunkSeconds(value));
 	};
 
 	const saveProviderKey = async () => {
@@ -969,7 +998,7 @@ export default function TranscriptWorkspace() {
 							</div>
 						)}
 
-						<div className="mt-4 grid gap-3 sm:grid-cols-[220px_minmax(0,1fr)]">
+						<div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[180px_200px_minmax(0,1fr)]">
 							<label className="grid gap-1.5 text-sm font-bold text-slate-700">
 								{t.language}
 								<select
@@ -984,6 +1013,21 @@ export default function TranscriptWorkspace() {
 								</select>
 							</label>
 							<label className="grid gap-1.5 text-sm font-bold text-slate-700">
+								{t.chunkLength}
+								<select
+									value={chunkSeconds}
+									onChange={event => selectChunkSeconds(event.target.value)}
+									disabled={busy || recording}
+									className="h-11 rounded-xl border bg-white px-3 text-sm outline-none focus:border-[var(--color-primary-400)]"
+								>
+									{TRANSCRIPTION_CHUNK_PRESETS.map(item => (
+										<option key={item.value} value={item.value}>
+											{isArabic ? item.labelAr : item.labelEn}
+										</option>
+									))}
+								</select>
+ 							</label>
+							<label className="grid gap-1.5 text-sm font-bold text-slate-700 sm:col-span-2 lg:col-span-1">
 								{t.vocabulary}
 								<input
 									value={customVocabulary}
@@ -1001,14 +1045,18 @@ export default function TranscriptWorkspace() {
 								<div className="flex items-center justify-between text-sm font-bold text-blue-800">
 									<span className="flex items-center gap-2">
 										<LoaderCircle className="size-4 animate-spin" />
-										{status === 'uploading'
-											? t.uploading
-											: {
-													groq: t.groqProcessing,
-													deepgram: t.deepgramProcessing,
-													assemblyai: t.assemblyProcessing,
-													local: t.localProcessing,
-												}[provider]}
+										{chunkProgress.total > 1
+											? t.chunkProgress
+												.replace('{current}', String(chunkProgress.current || 1))
+												.replace('{total}', String(chunkProgress.total))
+											: status === 'uploading'
+												? t.uploading
+												: {
+														groq: t.groqProcessing,
+														deepgram: t.deepgramProcessing,
+														assemblyai: t.assemblyProcessing,
+														local: t.localProcessing,
+													}[provider]}
 									</span>
 									<span>
 										{status === 'uploading'

@@ -29,12 +29,15 @@ import TranscriptVoicePlayer from './transcript-voice-player';
 import {
 	buildTimelineTranscript,
 	createTextTranscription,
-	createTranscription,
+	createChunkedTranscription,
 	formatTimestampWithMs,
+	getStoredTranscriptionChunkSeconds,
 	getStoredTranscriptionProvider,
 	GROQ_FREE_MAX_FILE_SIZE,
+	storeTranscriptionChunkSeconds,
 	storeTranscriptionProvider,
 	timestampMs,
+	TRANSCRIPTION_CHUNK_PRESETS,
 	TRANSCRIPTION_PROVIDERS,
 	transcriptionErrorMessage,
 } from './transcription-client';
@@ -50,6 +53,9 @@ const labels = {
 		fileError: 'Could not load this voice message.',
 		voiceFile: 'Voice message',
 		method: 'Transcription method',
+		chunkLength: 'Chunk length',
+		chunkLengthHint: 'Long voice notes are split and sent one chunk at a time.',
+		chunkProgress: 'Chunk {current} of {total}',
 		transcribe: 'Transcribe',
 		uploading: 'Uploading',
 		processing: 'Transcribing audio… this can take a few minutes for long voice notes.',
@@ -86,6 +92,9 @@ const labels = {
 		fileError: 'تعذر تحميل الرسالة الصوتية.',
 		voiceFile: 'رسالة صوتية',
 		method: 'طريقة التحويل',
+		chunkLength: 'طول القطعة',
+		chunkLengthHint: 'الرسائل الطويلة تتقسم وتتبعث قطعة قطعة.',
+		chunkProgress: 'قطعة {current} من {total}',
 		transcribe: 'تحويل إلى نص',
 		uploading: 'جارٍ الرفع',
 		processing: 'جارٍ تحويل الصوت إلى نص… الرسائل الطويلة قد تستغرق دقائق.',
@@ -174,6 +183,8 @@ export default function TranscriptionDialog({
 	const [file, setFile] = useState(null);
 	const [fileError, setFileError] = useState('');
 	const [provider, setProvider] = useState('local');
+	const [chunkSeconds, setChunkSeconds] = useState(() => getStoredTranscriptionChunkSeconds());
+	const [chunkProgress, setChunkProgress] = useState({ current: 0, total: 0 });
 	const [status, setStatus] = useState('idle');
 	const [progress, setProgress] = useState(0);
 	const [elapsed, setElapsed] = useState(0);
@@ -201,6 +212,8 @@ export default function TranscriptionDialog({
 		if (!open) return undefined;
 		let cancelled = false;
 		setProvider(getStoredTranscriptionProvider());
+		setChunkSeconds(getStoredTranscriptionChunkSeconds());
+		setChunkProgress({ current: 0, total: 0 });
 		setFile(null);
 		setFileError('');
 		setResult(null);
@@ -261,6 +274,11 @@ export default function TranscriptionDialog({
 		storeTranscriptionProvider(value);
 	};
 
+	const selectChunkSeconds = value => {
+		const next = storeTranscriptionChunkSeconds(value);
+		setChunkSeconds(next);
+	};
+
 	const resolveVoiceLoader = source => {
 		if (typeof source?.loadFile === 'function') return source.loadFile;
 		if (typeof loadFile === 'function' && sources.length === 1) return loadFile;
@@ -300,12 +318,18 @@ export default function TranscriptionDialog({
 			setStatus('uploading');
 			setProgress(0);
 			setElapsed(0);
+			setChunkProgress({ current: 0, total: 0 });
 			try {
-				const data = await createTranscription({
+				const data = await createChunkedTranscription({
 					file,
 					provider,
 					language: locale === 'ar' ? 'ar' : 'auto',
 					customVocabulary: '',
+					chunkSeconds,
+					onChunkProgress: ({ chunkIndex, chunkTotal }) => {
+						setChunkProgress({ current: chunkIndex, total: chunkTotal });
+						if (chunkTotal > 1) setStatus('processing');
+					},
 					onUploadProgress: event => {
 						if (!event.total) {
 							setStatus('processing');
@@ -359,11 +383,16 @@ export default function TranscriptionDialog({
 				if (provider === 'groq' && nextFile.size > GROQ_FREE_MAX_FILE_SIZE) {
 					throw new Error(t.groqTooLarge);
 				}
-				const data = await createTranscription({
+				const data = await createChunkedTranscription({
 					file: nextFile,
 					provider,
 					language: locale === 'ar' ? 'ar' : 'auto',
 					customVocabulary: '',
+					chunkSeconds,
+					onChunkProgress: ({ chunkIndex, chunkTotal }) => {
+						setChunkProgress({ current: chunkIndex, total: chunkTotal });
+						if (chunkTotal > 1) setStatus('processing');
+					},
 					onUploadProgress: event => {
 						if (!event.total) {
 							setStatus('processing');
@@ -584,18 +613,39 @@ export default function TranscriptionDialog({
 							/>
 						</label>
 
+						<label className="grid gap-1.5 text-[13px] font-semibold text-slate-700">
+							{t.chunkLength}
+							<select
+								value={chunkSeconds}
+								onChange={event => selectChunkSeconds(event.target.value)}
+								disabled={busy}
+								aria-label={t.chunkLength}
+								className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-800 outline-none focus:border-[var(--color-primary-400)]"
+							>
+								{TRANSCRIPTION_CHUNK_PRESETS.map(item => (
+									<option key={item.value} value={item.value}>
+										{locale === 'ar' ? item.labelAr : item.labelEn}
+									</option>
+								))}
+							</select>
+ 						</label>
+
 						{['uploading', 'processing'].includes(status) && (
 							<div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
 								<div className="flex items-center justify-between text-[13px] font-semibold text-slate-700">
 									<span className="flex items-center gap-2">
 										<Loader2 className="size-4 animate-spin text-[var(--color-primary-600)]" />
-										{isBundle && voiceSources.length
-											? t.batchProgress
-												.replace('{current}', String(batchIndex || 1))
-												.replace('{total}', String(voiceSources.length))
-											: status === 'uploading'
-												? t.uploading
-												: t.processing}
+										{chunkProgress.total > 1
+											? t.chunkProgress
+												.replace('{current}', String(chunkProgress.current || 1))
+												.replace('{total}', String(chunkProgress.total))
+											: isBundle && voiceSources.length
+												? t.batchProgress
+													.replace('{current}', String(batchIndex || 1))
+													.replace('{total}', String(voiceSources.length))
+												: status === 'uploading'
+													? t.uploading
+													: t.processing}
 									</span>
 									<span className="tabular-nums text-slate-500">
 										{status === 'uploading' ? `${progress}%` : `${elapsed}s`}

@@ -1,4 +1,19 @@
 import api from '@/utils/axios';
+import {
+	getStoredTranscriptionChunkSeconds,
+	splitAudioFileForTranscription,
+} from './transcription-audio-chunks';
+
+export {
+	DEFAULT_TRANSCRIPTION_CHUNK_SECONDS,
+	MAX_TRANSCRIPTION_CHUNK_SECONDS,
+	MIN_TRANSCRIPTION_CHUNK_SECONDS,
+	TRANSCRIPTION_CHUNK_PRESETS,
+	TRANSCRIPTION_CHUNK_STORAGE_KEY,
+	getStoredTranscriptionChunkSeconds,
+	normalizeTranscriptionChunkSeconds,
+	storeTranscriptionChunkSeconds,
+} from './transcription-audio-chunks';
 
 export const ACCEPTED_TRANSCRIPTION_EXTENSIONS = ['mp3', 'wav', 'm4a', 'webm', 'ogg', 'mp4'];
 export const TRANSCRIPTION_ACCEPT = ACCEPTED_TRANSCRIPTION_EXTENSIONS
@@ -97,6 +112,116 @@ export async function createTranscription({
 		onUploadProgress,
 	});
 	return data;
+}
+
+/**
+ * Splits long audio into timed chunks (configurable), transcribes each request,
+ * then merges into one transcription record.
+ */
+export async function createChunkedTranscription({
+	file,
+	provider,
+	language = 'auto',
+	customVocabulary = '',
+	chunkSeconds = getStoredTranscriptionChunkSeconds(),
+	onUploadProgress,
+	onChunkProgress,
+}) {
+	let parts = [file];
+	try {
+		parts = await splitAudioFileForTranscription(file, chunkSeconds);
+	} catch {
+		parts = [file];
+	}
+
+	if (provider === 'groq') {
+		const oversized = parts.find(part => part.size > GROQ_FREE_MAX_FILE_SIZE);
+		if (oversized) {
+			const error = new Error(
+				'A transcription chunk is larger than Groq free tier allows (25 MB). Use a shorter chunk length.',
+			);
+			error.code = 'GROQ_CHUNK_TOO_LARGE';
+			throw error;
+		}
+	}
+
+	const records = [];
+	for (let index = 0; index < parts.length; index += 1) {
+		onChunkProgress?.({
+			chunkIndex: index + 1,
+			chunkTotal: parts.length,
+			fileName: parts[index]?.name,
+		});
+		const data = await createTranscription({
+			file: parts[index],
+			provider,
+			language,
+			customVocabulary,
+			onUploadProgress:
+				parts.length === 1
+					? onUploadProgress
+					: event => {
+							if (!event?.total) return;
+							const local = Math.min(100, Math.round((event.loaded * 100) / event.total));
+							const overall = Math.min(
+								100,
+								Math.round(((index + local / 100) / parts.length) * 100),
+							);
+							onUploadProgress?.({
+								...event,
+								loaded: overall,
+								total: 100,
+								chunkIndex: index + 1,
+								chunkTotal: parts.length,
+							});
+						},
+		});
+		records.push(data);
+	}
+
+	if (records.length === 1) return records[0];
+
+	const combinedText = records
+		.map(item => String(item?.text || '').trim())
+		.filter(Boolean)
+		.join('\n\n');
+	const durationSeconds = records.reduce(
+		(sum, item) => sum + (Number(item.durationSeconds) || 0),
+		0,
+	);
+	const processingTimeSeconds = records.reduce(
+		(sum, item) => sum + (Number(item.processingTimeSeconds) || 0),
+		0,
+	);
+	const extras = records.slice(1);
+	let merged = {
+		...records[0],
+		text: combinedText,
+		originalFileName: file?.name || records[0].originalFileName,
+		durationSeconds,
+		processingTimeSeconds,
+		chunkCount: records.length,
+	};
+	try {
+		const { data } = await api.patch(
+			`/transcriptions/${records[0].id}`,
+			{ text: combinedText },
+			{ timeout: TRANSCRIPTION_REQUEST_TIMEOUT_MS },
+		);
+		merged = {
+			...data,
+			originalFileName: file?.name || data.originalFileName,
+			durationSeconds,
+			processingTimeSeconds,
+			chunkCount: records.length,
+		};
+	} catch {
+		/* keep local merge if patch fails */
+	}
+	if (extras.length) {
+		await Promise.allSettled(extras.map(item => api.delete(`/transcriptions/${item.id}`)));
+	}
+	return merged;
 }
 
 export function transcriptionErrorMessage(error, fallback = 'Transcription failed.') {
