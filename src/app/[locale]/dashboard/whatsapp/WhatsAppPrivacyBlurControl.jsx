@@ -94,7 +94,11 @@ export default function WhatsAppPrivacyBlurControl({
 					enabled ? 'is-active' : ''
 				} ${open ? 'is-open' : ''}`}
 			>
-				{enabled ? <EyeOff size={16} /> : <Eye size={16} />}
+				{enabled ? (
+					<EyeOff size={18} strokeWidth={2.25} absoluteStrokeWidth />
+				) : (
+					<Eye size={18} strokeWidth={2.25} absoluteStrokeWidth />
+				)}
 			</button>
 			{open &&
 				position &&

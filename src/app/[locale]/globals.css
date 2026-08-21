@@ -2007,16 +2007,30 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 }
 
 .wa-message-bubble.wa-message-file {
+  position: relative;
   display: flex;
   flex-direction: column;
-  min-width: min(280px, calc(100% - 16px));
+  min-width: min(300px, calc(100% - 16px));
+  max-width: min(330px, calc(100% - 12px)) !important;
+  padding: 4px 4px 0 !important;
+  overflow: hidden;
 }
 
 .wa-message-bubble.wa-message-file .wa-message-meta {
+  position: absolute;
+  z-index: 2;
+  bottom: 50px;
+  inset-inline-end: 14px;
   float: none;
-  clear: both;
-  align-self: flex-end;
-  margin-inline-start: auto;
+  clear: none;
+  align-self: auto;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  color: #667781 !important;
+  font-size: 11px !important;
+  line-height: 1 !important;
+  text-shadow: none;
 }
 
 .wa-message-bubble.wa-message-location {
@@ -2173,20 +2187,23 @@ html.dark .wa-location-map {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  width: 268px;
+  width: min(310px, 100%);
   max-width: 100%;
-  margin-bottom: 6px;
+  margin-bottom: 0;
   overflow: hidden;
   isolation: isolate;
-  border: 1px solid rgba(11, 20, 26, 0.08);
-  border-radius: 10px;
-  background: rgba(11, 20, 26, 0.045);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
 }
 
-.dark .wa-file-card,
-html.dark .wa-file-card {
-  border-color: rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.07);
+.wa-file-card.is-incoming {
+  background: rgba(11, 20, 26, 0.04);
+}
+
+.dark .wa-file-card.is-incoming,
+html.dark .wa-file-card.is-incoming {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .wa-file-card-head,
@@ -2199,52 +2216,71 @@ html.dark .wa-file-card {
 
 .wa-file-card-head {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 10px 9px;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px 18px;
 }
 
 .wa-file-card-icon {
   position: relative;
   display: grid;
-  width: 42px;
-  height: 42px;
+  width: 34px;
+  height: 40px;
   flex-shrink: 0;
   place-items: center;
-  overflow: hidden;
-  border-radius: 10px;
-  background: #ffffff;
-  color: #027eb5;
-  box-shadow: 0 1px 1px rgba(11, 20, 26, 0.06);
+  overflow: visible;
+  border-radius: 4px;
+  background: #2b579a;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.wa-file-card-icon[data-ext='pdf'] {
+  background: #e5252a;
+}
+
+.wa-file-card-icon[data-ext='xls'],
+.wa-file-card-icon[data-ext='xlsx'],
+.wa-file-card-icon[data-ext='csv'] {
+  background: #1a7f37;
+}
+
+.wa-file-card-icon[data-ext='doc'],
+.wa-file-card-icon[data-ext='docx'] {
+  background: transparent;
+}
+
+.wa-file-type-glyph {
+  display: block;
+  width: 28px;
+  height: 32px;
 }
 
 .dark .wa-file-card-icon,
 html.dark .wa-file-card-icon {
-  background: #334155;
-  color: #53bdeb;
+  color: #ffffff;
 }
 
 .wa-file-card-ext {
-  position: absolute;
-  bottom: 3px;
-  max-width: calc(100% - 6px);
+  position: static;
+  max-width: none;
   overflow: hidden;
-  border-radius: 3px;
-  padding: 0 4px;
-  background: #027eb5;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
   color: #ffffff;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.02em;
-  line-height: 1.35;
+  line-height: 1.1;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .dark .wa-file-card-ext,
 html.dark .wa-file-card-ext {
-  background: #53bdeb;
-  color: #0f172a;
+  background: transparent;
+  color: #ffffff;
 }
 
 .wa-file-card-copy {
@@ -2252,7 +2288,8 @@ html.dark .wa-file-card-ext {
   min-width: 0;
   flex: 1;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  padding-inline-end: 4px;
 }
 
 .wa-file-card-name,
@@ -2264,58 +2301,76 @@ html.dark .wa-file-card-ext {
 }
 
 .wa-file-card-name {
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.25;
+  color: inherit;
+  font-size: 14.2px;
+  font-weight: 500;
+  line-height: 1.3;
 }
 
 .wa-file-card-details {
-  font-size: 11px;
+  color: #667781;
+  font-size: 12px;
+  font-weight: 400;
   line-height: 1.2;
-  opacity: 0.6;
+  opacity: 1;
+}
+
+.wa-message-mine .wa-file-card-details,
+.wa-file-card.is-outgoing .wa-file-card-details {
+  color: #54656f;
 }
 
 .wa-file-card-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border-top: 1px solid rgba(11, 20, 26, 0.08);
+  border-top: 1px solid rgba(11, 20, 26, 0.1);
+}
+
+.wa-message-mine .wa-file-card-actions,
+.wa-file-card.is-outgoing .wa-file-card-actions {
+  border-top-color: rgba(7, 94, 84, 0.18);
 }
 
 .dark .wa-file-card-actions,
 html.dark .wa-file-card-actions {
-  border-top-color: rgba(255, 255, 255, 0.1);
+  border-top-color: rgba(255, 255, 255, 0.12);
 }
 
 .wa-file-card-action {
   display: flex;
-  height: 38px;
+  height: 42px;
   align-items: center;
   justify-content: center;
   gap: 6px;
   min-width: 0;
   border: 0;
   background: transparent;
-  color: #027eb5;
-  font-size: 12px;
-  font-weight: 700;
+  color: #027a69;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .wa-file-card-action + .wa-file-card-action {
-  border-inline-start: 1px solid rgba(11, 20, 26, 0.08);
+  border-inline-start: 1px solid rgba(11, 20, 26, 0.1);
+}
+
+.wa-message-mine .wa-file-card-action + .wa-file-card-action,
+.wa-file-card.is-outgoing .wa-file-card-action + .wa-file-card-action {
+  border-inline-start-color: rgba(7, 94, 84, 0.18);
 }
 
 .dark .wa-file-card-action,
 html.dark .wa-file-card-action {
-  color: #53bdeb;
+  color: #25d366;
 }
 
 .dark .wa-file-card-action + .wa-file-card-action,
 html.dark .wa-file-card-action + .wa-file-card-action {
-  border-inline-start-color: rgba(255, 255, 255, 0.1);
+  border-inline-start-color: rgba(255, 255, 255, 0.12);
 }
 
 .wa-file-card-action:hover:not(:disabled) {
-  background: rgba(11, 20, 26, 0.05);
+  background: rgba(11, 20, 26, 0.04);
 }
 
 .wa-file-card-action:disabled {
@@ -3277,9 +3332,9 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 }
 
 @media (min-width: 769px) {
-	/* Dashboard WhatsApp shell: full-bleed with asymmetric inset + visible frame. */
+	/* Dashboard WhatsApp shell: full-bleed WhatsApp Web surface. */
 	#body:has(.wa-mobile-shell) {
-		padding: 12px !important;
+		padding: 0 !important;
 		box-sizing: border-box;
 	}
 
@@ -3335,8 +3390,12 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-composer {
-		padding: 12px 16px 14px !important;
-		gap: 8px;
+		padding: 11px 18px !important;
+		gap: 13px;
+		min-height: 72px !important;
+		height: auto !important;
+		border-top: 0 !important;
+		background: #ffffff !important;
 	}
 
 	/* Solid mic glyph (not Lucide stroke) */
@@ -3356,83 +3415,71 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 			0 1px 4px rgba(11, 20, 26, 0.08);
 	}
 
-	/* ——— Desktop WhatsApp Web theme (from provided HTML mock) ——— */
+	/* ——— Desktop WhatsApp Web theme (reference reconstruction) ——— */
 	.wa-web-desktop.wa-mobile-shell {
 		width: 100% !important;
 		max-width: none !important;
-		height: calc(100vh - 24px) !important;
-		border: 1px solid color-mix(in srgb, #111b21 10%, transparent);
-		border-radius: 18px;
-		box-shadow:
-			0 1px 0 rgba(255, 255, 255, 0.7) inset,
-			0 10px 28px -18px rgba(11, 20, 26, 0.28),
-			0 2px 8px rgba(11, 20, 26, 0.06);
+		height: 100% !important;
+		min-height: 0 !important;
+		border: 0 !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
 		overflow: hidden !important;
 		background: #ffffff !important;
-		--wa-btn-3d:
-			inset 0 1px 0 rgba(255, 255, 255, 0.95),
-			0 1px 0 #e5e7eb,
-			0 3px 0 #d1d5db,
-			0 8px 14px -8px rgba(15, 23, 42, 0.28);
-		--wa-btn-3d-primary:
-			inset 0 1px 0 rgba(255, 255, 255, 0.28),
-			0 1px 0 #0e7566,
-			0 3px 0 #075e54,
-			0 10px 18px -8px rgba(18, 140, 126, 0.55);
+		--wa-green: #00a884;
+		--wa-green-dark: #008069;
+		--wa-green-soft: #d9fdd3;
+		--wa-text: #111b21;
+		--wa-muted: #667781;
+		--wa-border: #e9edef;
+		--wa-chat: #efeae2;
+		--wa-btn-3d: none;
+		--wa-btn-3d-primary: none;
 	}
 
 	.wa-avatar-3d {
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.55),
-			0 1px 0 #d4d7de,
-			0 3px 0 #c4c8d0,
-			0 8px 16px -8px rgba(15, 23, 42, 0.38);
+		box-shadow: none;
 	}
 
 	.wa-input-3d,
 	.wa-web-desktop .wa-input-3d,
 	.wa-web-desktop .wa-desktop-search-field input {
-		border: 1px solid #e5e7eb !important;
-		border-radius: 10px !important;
+		border: 1px solid #e2e6e8 !important;
+		border-radius: 25px !important;
 		background: #ffffff !important;
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.95),
-			0 1px 0 #e5e7eb,
-			0 3px 0 #d1d5db,
-			0 8px 14px -8px rgba(15, 23, 42, 0.28) !important;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 	}
 
 	.wa-input-3d:focus,
 	.wa-web-desktop .wa-input-3d:focus,
 	.wa-web-desktop .wa-desktop-search-field input:focus {
-		border-color: #97e5ac !important;
+		border-color: #00a884 !important;
 	}
 
 	.wa-btn-3d,
 	.wa-web-desktop .wa-btn-3d {
-		border: 1px solid #e5e7eb !important;
-		border-radius: 10px !important;
-		background: #ffffff !important;
-		box-shadow: var(--wa-btn-3d) !important;
-		transition: transform 120ms ease, box-shadow 120ms ease;
+		border: 0 !important;
+		border-radius: 999px !important;
+		background: transparent !important;
+		box-shadow: none !important;
+		transition: background 120ms ease, color 120ms ease;
 	}
 
 	.wa-btn-3d:hover {
-		transform: translateY(-1px);
+		background: #f0f2f5 !important;
+		transform: none;
 	}
 
 	.wa-btn-3d:active {
-		transform: translateY(2px);
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.9),
-			0 1px 0 #e5e7eb !important;
+		transform: none;
+		box-shadow: none !important;
 	}
 
 	.wa-btn-3d-primary {
-		border-color: #0e7566 !important;
-		background: linear-gradient(180deg, #25d366 0%, #128c7e 100%) !important;
+		border-color: transparent !important;
+		background: #00a884 !important;
 		color: #ffffff !important;
-		box-shadow: var(--wa-btn-3d-primary) !important;
+		box-shadow: none !important;
 	}
 
 	.wa-web-workspace {
@@ -3443,14 +3490,13 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-desktop-rail {
 		display: flex;
-		width: 88px;
+		width: 84px;
 		flex-shrink: 0;
 		flex-direction: column;
 		align-items: center;
-		justify-content: space-between;
-		padding: 14px 8px 18px;
-		border-inline-end: 1px solid #eceef1;
-		background: #f7f8fa;
+		padding: 0;
+		border-inline-end: 1px solid #e5e9eb;
+		background: #ffffff;
 		overflow-y: auto;
 	}
 
@@ -3460,87 +3506,47 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		width: 100%;
 		flex-direction: column;
 		align-items: center;
-		gap: 8px;
+		gap: 4px;
 	}
 
-	.wa-desktop-rail__divider {
-		width: 28px;
-		height: 1px;
-		margin: 4px 0;
-		background: #e4e7ec;
+	.wa-desktop-rail__footer {
+		gap: 16px;
+		padding-bottom: 14px;
 	}
 
-	.wa-desktop-rail__item {
-		display: flex;
-		width: 100%;
-		flex-direction: column;
-		align-items: center;
-		gap: 6px;
-		padding: 2px 0;
-		border: 0;
-		background: transparent;
-		color: #54656f;
-		cursor: pointer;
-	}
-
-	.wa-desktop-rail__icon-wrap {
-		position: relative;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
+	/* Flat rail icons — override older 3D icon chrome */
 	.wa-desktop-rail__icon {
-		display: grid;
-		width: 44px;
-		height: 44px;
+		display: grid !important;
+		width: auto !important;
+		height: auto !important;
 		place-items: center;
-		border: 1px solid #e5e7eb;
-		border-radius: 12px;
-		background: #ffffff;
-		color: #54656f;
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.95),
-			0 1px 0 #e5e7eb,
-			0 3px 0 #d1d5db,
-			0 8px 14px -8px rgba(15, 23, 42, 0.24);
-		transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+		border: 0 !important;
+		border-radius: 0 !important;
+		background: transparent !important;
+		box-shadow: none !important;
+		color: inherit !important;
 	}
 
-	.wa-desktop-rail__item:hover .wa-desktop-rail__icon {
-		transform: translateY(-1px);
-		color: #111b21;
-	}
-
-	.wa-desktop-rail__item:active .wa-desktop-rail__icon {
-		transform: translateY(2px);
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.9),
-			0 1px 0 #e5e7eb;
-	}
-
+	.wa-desktop-rail__item:hover .wa-desktop-rail__icon,
+	.wa-desktop-rail__item:active .wa-desktop-rail__icon,
 	.wa-desktop-rail__item.is-active .wa-desktop-rail__icon {
-		background: linear-gradient(180deg, #e7f8ec 0%, #d9fdd3 100%);
-		border-color: #97e5ac;
-		color: #075e54;
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.88),
-			0 1px 0 #86efac,
-			0 3px 0 #4ade80,
-			0 10px 16px -8px rgba(18, 140, 126, 0.42);
+		transform: none !important;
+		background: transparent !important;
+		border: 0 !important;
+		box-shadow: none !important;
+		color: inherit !important;
 	}
 
 	.wa-desktop-rail__item.is-active .wa-desktop-rail__label {
-		color: #075e54;
+		color: #00a884;
 	}
 
 	.wa-desktop-rail__label {
-		max-width: 80px;
+		max-width: 72px;
 		overflow: hidden;
-		color: #667781;
+		color: inherit;
 		font-size: 11px;
 		font-weight: 600;
-		letter-spacing: 0;
 		line-height: 14px;
 		text-align: center;
 		text-overflow: ellipsis;
@@ -3549,50 +3555,33 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-desktop-rail__badge {
 		position: absolute;
-		top: -4px;
-		inset-inline-end: -2px;
-		min-width: 16px;
-		max-width: 34px;
-		padding: 0 4px;
-		border-radius: 100px;
+		top: -7px;
+		inset-inline-end: -4px;
+		min-width: 24px;
+		height: 24px;
+		padding: 0 6px;
+		border: 2px solid #fff;
+		border-radius: 13px;
 		background: #25d366;
 		color: #fff;
-		font-size: 10px;
+		font-size: 12px;
 		font-weight: 700;
-		line-height: 16px;
-		letter-spacing: 0;
+		line-height: 20px;
 		text-align: center;
-		box-shadow: 0 2px 0 #128c7e;
-	}
-
-	.wa-desktop-rail__avatar-btn {
-		display: flex;
-		width: 100%;
-		flex-direction: column;
-		align-items: center;
-		gap: 6px;
-		margin-top: 6px;
-		padding: 2px 0;
-		border: 0;
-		background: transparent;
-		cursor: pointer;
+		box-shadow: none;
 	}
 
 	.wa-desktop-rail__avatar {
 		position: relative;
 		display: grid;
 		place-items: center;
-		width: 44px;
-		height: 44px;
+		width: 38px;
+		height: 38px;
 		overflow: hidden;
-		border: 1px solid #e5e7eb;
+		border: 1px solid #ddd;
 		border-radius: 999px;
 		background: #f0f2f5;
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.9),
-			0 1px 0 #e5e7eb,
-			0 3px 0 #d1d5db,
-			0 8px 14px -8px rgba(15, 23, 42, 0.22);
+		box-shadow: none;
 	}
 
 	.wa-desktop-rail__avatar img {
@@ -3601,24 +3590,15 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		object-fit: cover;
 	}
 
-	.wa-desktop-rail__avatar-fallback {
-		display: grid;
-		place-items: center;
-		width: 100%;
-		height: 100%;
-		color: #667781;
-		background: linear-gradient(135deg, #dfe5e7, #c5cdd0);
-	}
-
 	.wa-desktop-rail__online-dot {
 		position: absolute;
-		right: 2px;
-		bottom: 2px;
-		width: 11px;
-		height: 11px;
-		border: 1px solid #fff;
+		inset-inline-end: 0;
+		bottom: 0;
+		width: 9px;
+		height: 9px;
+		border: 2px solid #fff;
 		border-radius: 999px;
-		background: #24d366;
+		background: #25d366;
 	}
 
 	.wa-web-main {
@@ -3658,41 +3638,38 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		height: 100%;
 		overflow: visible;
 		background: #ffffff !important;
-		border-color: #e9edef !important;
+		border-color: #dfe3e5 !important;
 	}
 
 	.wa-web-desktop .wa-chat-list-collapse-float {
 		position: absolute;
-		top: 8px;
-		inset-inline-end: -14px;
+		/* Align with chat-list tools + conversation header avatar (76px band) */
+		top: 22px;
+		inset-inline-end: -16px;
 		z-index: 30;
 		display: grid;
-		width: 28px;
-		height: 28px;
+		width: 32px;
+		height: 32px;
 		place-items: center;
 		padding: 0;
 		border: 1px solid #e5e7eb;
 		border-radius: 999px;
 		background: #ffffff;
 		color: #54656f;
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.95),
-			0 1px 0 #e5e7eb,
-			0 3px 0 #d1d5db,
-			0 8px 14px -8px rgba(15, 23, 42, 0.22);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 		cursor: pointer;
 	}
 
 	.wa-web-desktop .wa-chat-list-collapse-float:hover {
 		color: #111b21;
-		transform: translateY(-1px);
+		transform: none;
+		background: #f0f2f5;
 	}
 
 	.wa-web-desktop .wa-chat-list-collapse-float:active {
-		transform: translateY(1px);
+		transform: none;
 	}
 
-	/* `contents` breaks flex height for the conversation list on desktop. */
 	.wa-web-desktop .wa-chat-list-scroll {
 		display: flex !important;
 		flex: 1 1 auto;
@@ -3703,7 +3680,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-web-desktop .wa-chat-list-header {
 		border-bottom: 0 !important;
-		padding: 10px 10px 8px !important;
+		padding: 0 18px 10px 26px !important;
 		background: #ffffff;
 	}
 
@@ -3717,11 +3694,12 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		margin-bottom: 0;
 		min-width: 0;
 		overflow: visible;
-		padding-bottom: 4px;
+		min-height: 76px;
+		padding-block: 0;
 	}
 
 	.wa-web-desktop .wa-desktop-chat-list-tools.is-searching {
-		display: block !important;
+		display: flex !important;
 	}
 
 	.wa-web-desktop .wa-desktop-chat-list-actions {
@@ -3729,7 +3707,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		flex-wrap: nowrap;
 		align-items: center;
 		justify-content: flex-end;
-		gap: 6px;
+		gap: 12px;
 		min-width: 0;
 	}
 
@@ -3739,17 +3717,17 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		flex: 0 0 auto;
 		width: auto;
 		white-space: nowrap;
-		font-size: 22px !important;
+		font-size: 21px !important;
 		font-weight: 700 !important;
-		letter-spacing: -0.3px;
-		line-height: 22px;
+		letter-spacing: 0;
+		line-height: 26px;
 		color: #111b21 !important;
 	}
 
 	.wa-web-desktop .wa-desktop-chat-list-title-wrap {
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: 7px;
 		min-width: 0;
 	}
 
@@ -3761,42 +3739,34 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		flex: 1 1 auto;
 	}
 
+	.wa-web-desktop .wa-unread-total {
+		background: #25d366 !important;
+		color: #fff !important;
+		font-size: 12px !important;
+		line-height: 20px !important;
+		height: 20px !important;
+		min-width: 31px !important;
+		border-radius: 11px !important;
+		padding: 0 7px !important;
+		box-shadow: none !important;
+	}
+
 	.wa-web-desktop .wa-desktop-chat-list-tools button {
 		display: grid;
-		width: 28px;
-		height: 28px;
+		width: 24px;
+		height: 24px;
 		place-items: center;
 		padding: 0;
 		border-radius: 999px;
-		color: #54656f;
+		color: #17232a;
 	}
 
 	.wa-web-desktop .wa-desktop-filter {
-		width: auto;
-		max-width: none;
-		flex: 0 0 auto;
+		display: none !important;
 	}
 
-	.wa-web-desktop .wa-desktop-filter > button,
-	.wa-web-desktop .wa-desktop-chat-list-tools .wa-btn-3d {
-		display: grid !important;
-		width: 28px !important;
-		height: 28px !important;
-		min-width: 28px;
-		padding: 0 !important;
-		color: #54656f !important;
-		border-radius: 999px !important;
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.95),
-			0 1px 0 #e5e7eb,
-			0 2px 0 #d1d5db,
-			0 6px 10px -8px rgba(15, 23, 42, 0.2) !important;
-	}
-
-	.wa-web-desktop .wa-desktop-chat-list-tools button.is-active {
-		background: #e7f8ec !important;
-		border-color: #97e5ac !important;
-		color: #075e54 !important;
+	.wa-web-desktop .wa-desktop-filter-pills {
+		padding-inline: 6px 0;
 	}
 
 	.wa-web-desktop .wa-desktop-chat-list-tools .wa-privacy-blur-control {
@@ -3808,20 +3778,48 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-web-desktop .wa-desktop-chat-list-tools .wa-privacy-blur-toggle {
 		display: grid !important;
-		width: 28px !important;
-		min-width: 28px;
-		height: 28px !important;
+		width: 34px !important;
+		min-width: 34px;
+		height: 34px !important;
 		place-items: center;
 		padding: 0 !important;
+		border: 1px solid #e5e7eb !important;
 		border-radius: 999px !important;
+		background: #ffffff !important;
+		color: #54656f !important;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
 	}
 
-	.wa-web-desktop .wa-desktop-search-inline {
+	.wa-web-desktop .wa-desktop-chat-list-tools .wa-privacy-blur-toggle:hover {
+		background: #f0f2f5 !important;
+		color: #111b21 !important;
+	}
+
+	.wa-web-desktop .wa-desktop-chat-list-tools .wa-privacy-blur-toggle.is-active,
+	.wa-web-desktop .wa-desktop-chat-list-tools .wa-privacy-blur-toggle.is-open {
+		border-color: rgba(0, 168, 132, 0.35) !important;
+		background: #e7f8f3 !important;
+		color: #008069 !important;
+	}
+
+	.wa-web-desktop .wa-desktop-chat-list-tools .wa-privacy-blur-toggle svg {
+		width: 18px !important;
+		height: 18px !important;
+		stroke-width: 2.25 !important;
+	}
+
+	.wa-web-desktop .wa-desktop-search-inline,
+	.wa-web-desktop .wa-desktop-search-always {
 		position: relative;
-		display: flex;
+		display: flex !important;
 		align-items: center;
 		width: 100%;
 		min-width: 0;
+		height: 42px;
+		padding-inline: 16px;
+		border-radius: 22px;
+		background: #f0f2f5;
+		color: #667781;
 	}
 
 	.wa-web-desktop .wa-desktop-search-inline__icon,
@@ -3833,29 +3831,29 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-web-desktop .wa-desktop-search-inline__icon {
-		inset-inline-start: 10px;
+		inset-inline-start: 16px;
 	}
 
 	.wa-web-desktop .wa-desktop-search-inline__spin {
-		inset-inline-end: 32px;
+		inset-inline-end: 36px;
 	}
 
 	.wa-web-desktop .wa-desktop-search-inline input {
 		width: 100%;
-		height: 28px !important;
-		padding-inline: 30px 30px !important;
+		height: 42px !important;
+		padding-inline: 36px 32px !important;
 		border: 0 !important;
-		border-radius: 999px !important;
-		background: #f0f2f5 !important;
-		color: #111b21 !important;
-		font-size: 13px !important;
+		border-radius: 22px !important;
+		background: transparent !important;
+		color: #3b4a52 !important;
+		font-size: 14px !important;
 		font-weight: 400 !important;
 		box-shadow: none !important;
 	}
 
 	.wa-web-desktop .wa-desktop-search-inline__close {
 		position: absolute;
-		inset-inline-end: 5px;
+		inset-inline-end: 10px;
 		z-index: 2;
 		display: grid !important;
 		width: 18px !important;
@@ -3863,14 +3861,11 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		min-width: 18px;
 		place-items: center;
 		padding: 0 !important;
-		border: 1px solid #e5e7eb !important;
+		border: 0 !important;
 		border-radius: 999px !important;
-		background: #ffffff !important;
-		color: #54656f !important;
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.95),
-			0 1px 0 #e5e7eb,
-			0 2px 0 #d1d5db !important;
+		background: transparent !important;
+		color: #667781 !important;
+		box-shadow: none !important;
 		cursor: pointer;
 	}
 
@@ -3879,64 +3874,92 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-web-desktop .wa-toolbar-icon-btn {
-		width: 28px !important;
-		height: 28px !important;
-		border-radius: 8px !important;
+		width: 34px !important;
+		height: 34px !important;
+		min-width: 34px !important;
+		border: 1px solid #e5e7eb !important;
+		border-radius: 10px !important;
+		background: #ffffff !important;
 		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.95),
-			0 1px 0 #e5e7eb,
-			0 2px 0 #d1d5db,
-			0 5px 10px -7px rgba(15, 23, 42, 0.18) !important;
+			0 1px 0 #eef0f2,
+			0 2px 6px -2px rgba(15, 23, 42, 0.12) !important;
+		color: #1f2d34 !important;
+	}
+
+	.wa-web-desktop .wa-toolbar-icon-btn:hover {
+		background: #f0f2f5 !important;
+		color: #111b21 !important;
 	}
 
 	.wa-web-desktop .wa-toolbar-icon-btn.is-active {
-		background: #e7f8ec !important;
+		background: #e7f7ef !important;
 		border-color: #97e5ac !important;
-		color: #075e54 !important;
+		color: #008069 !important;
+		box-shadow: 0 1px 0 #d9fdd3 !important;
 	}
 
 	.wa-web-desktop .wa-chat-toolbar .wa-btn-3d {
-		height: 28px !important;
-		min-height: 28px !important;
-		padding-inline: 8px !important;
-		border-radius: 8px !important;
-		font-size: 11px !important;
+		height: 34px !important;
+		min-height: 34px !important;
+		padding-inline: 10px !important;
+		border: 1px solid #e5e7eb !important;
+		border-radius: 10px !important;
+		background: #ffffff !important;
+		box-shadow: 0 1px 0 #eef0f2 !important;
+		font-size: 12px !important;
+		color: #1f2d34 !important;
+	}
+
+	.wa-web-desktop .wa-chat-toolbar .hidden.min-\[769px\]\:flex {
+		gap: 8px !important;
 	}
 
 	.wa-web-desktop .wa-chat-list-header input {
-		height: 28px !important;
+		height: 42px !important;
 		border: 0 !important;
-		border-radius: 999px !important;
-		background: #f0f2f5 !important;
-		color: #111b21 !important;
-		font-size: 13px !important;
+		border-radius: 22px !important;
+		background: transparent !important;
+		color: #3b4a52 !important;
+		font-size: 14px !important;
 		font-weight: 400 !important;
 		box-shadow: none !important;
 	}
 
 	.wa-web-desktop .wa-chat-list-header input::placeholder {
-		color: #677882 !important;
+		color: #667781 !important;
 	}
 
 	.wa-web-desktop .wa-conversation-list {
 		flex: 1 1 auto;
 		min-height: 0;
-		padding: 8px 8px 12px !important;
-		gap: 10px;
+		padding: 0 !important;
+		gap: 0;
 		overflow-y: auto;
 	}
 
 	.wa-web-desktop .wa-conversation-row {
-		margin: 0 0 2px !important;
-		min-height: 0;
+		margin: 0 !important;
+		min-height: 67px !important;
+		height: 67px;
 		align-items: center !important;
-		gap: 12px !important;
-		padding: 4px 6px !important;
-		border-radius: 7px !important;
+		gap: 13px !important;
+		padding: 0 17px 0 20px !important;
+		border-radius: 0 !important;
 		color: #3b4a54;
 		background: transparent !important;
 		cursor: pointer !important;
 		user-select: none;
+	}
+
+	.wa-web-desktop .wa-conversation-row:hover {
+		background: #f5f6f6 !important;
+	}
+
+	.wa-web-desktop .wa-conversation-row.is-active,
+	.wa-web-desktop .wa-conversation-row[aria-current='true'],
+	.wa-web-desktop .wa-conversation-row.selected,
+	.wa-web-desktop .wa-conversation-row[data-selected='true'] {
+		background: #e8f8ef !important;
 	}
 
 	.wa-web-desktop .wa-conversation-row,
@@ -3950,10 +3973,10 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-web-desktop .wa-conversation-row > .wa-conversation-avatar {
-		width: 44px !important;
-		height: 44px !important;
-		min-width: 44px;
-		min-height: 44px;
+		width: 49px !important;
+		height: 49px !important;
+		min-width: 49px;
+		min-height: 49px;
 	}
 
 	.wa-unread-avatar-badge {
@@ -3968,20 +3991,106 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		display: none !important;
 	}
 
-	.wa-web-desktop .wa-chat-list.is-collapsed .wa-chat-list-header > :not(.wa-desktop-chat-list-tools) {
+	.wa-web-desktop .wa-chat-list.is-collapsed .wa-desktop-chat-list-tools,
+	.wa-web-desktop .wa-chat-list.is-collapsed .wa-desktop-search-always,
+	.wa-web-desktop .wa-chat-list.is-collapsed .wa-desktop-filter-pills {
 		display: none !important;
 	}
 
-	.wa-web-desktop .wa-chat-list.is-collapsed .wa-desktop-chat-list-tools {
-		display: none !important;
+	.wa-web-desktop .wa-archived-row {
+		height: 48px;
+		min-height: 48px;
+		padding: 0 20px 0 30px;
+		border-bottom: 1px solid #e7eaec;
+		gap: 16px;
+		font-weight: 600;
 	}
 
-	.wa-web-desktop .wa-chat-list.is-collapsed .wa-desktop-chat-list-actions,
-	.wa-web-desktop .wa-chat-list.is-collapsed .wa-desktop-filter,
-	.wa-web-desktop .wa-chat-list.is-collapsed .wa-privacy-blur-control,
-	.wa-web-desktop .wa-chat-list.is-collapsed .wa-chat-list-search-toggle,
-	.wa-web-desktop .wa-chat-list.is-collapsed .wa-desktop-search-inline {
-		display: none !important;
+	.wa-web-desktop section.flex.min-h-0.min-w-0.flex-col,
+	.wa-web-desktop .wa-chat-thread-pane {
+		background: #efeae2 !important;
+	}
+
+	.wa-web-desktop .wa-chat-toolbar {
+		min-height: 76px !important;
+		height: 76px !important;
+		padding: 0 18px !important;
+		border: 0 !important;
+		border-bottom: 1px solid #e5e8ea !important;
+		background: #ffffff !important;
+		box-shadow: none !important;
+		color: #111b21;
+		z-index: 3;
+	}
+
+	.wa-web-desktop .wa-chat-toolbar > div:first-child {
+		gap: 12px !important;
+	}
+
+	.wa-web-desktop .wa-chat-contact h3 {
+		color: #111b21 !important;
+		font-size: 16px !important;
+		font-weight: 700 !important;
+		line-height: 20px !important;
+		letter-spacing: 0;
+	}
+
+	.wa-web-desktop .wa-chat-assignee,
+	.wa-web-desktop .wa-online-status {
+		color: #667781 !important;
+		font-size: 13px !important;
+		font-weight: 400 !important;
+		line-height: 16px !important;
+		margin-top: 5px;
+	}
+
+	.wa-online-dot {
+		display: inline-block;
+		width: 8px;
+		height: 8px;
+		border-radius: 999px;
+		background: #25d366;
+	}
+
+	.wa-e2e-banner {
+		align-items: center;
+		gap: 10px;
+		align-self: center;
+		max-width: 520px;
+		margin: 12px auto 4px;
+		padding: 12px 24px;
+		border-radius: 12px;
+		background: #feecdc;
+		color: #3b4a54;
+		font-size: 10px;
+		font-weight: 400;
+		line-height: 1.35;
+	}
+
+	.wa-e2e-banner__icon {
+		display: grid;
+		flex-shrink: 0;
+		place-items: center;
+	}
+
+	.wa-web-desktop .wa-message-wallpaper {
+		padding: 24px 38px 20px !important;
+		background-color: #efeae2 !important;
+	}
+
+	.wa-web-desktop .wa-day-chip,
+	.wa-web-desktop .wa-date-separator,
+	.wa-web-desktop .wa-message-wallpaper .sticky,
+	.wa-web-desktop .wa-message-thread .mx-auto.mb-2.w-fit {
+		background: #ffffff !important;
+		color: #54636b !important;
+		border: 0 !important;
+		border-radius: 9px !important;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+		font-size: 12px !important;
+		font-weight: 600 !important;
+		line-height: 1.3 !important;
+		padding: 7px 13px !important;
 	}
 
 	.wa-chat-thread-pane {
@@ -4063,10 +4172,6 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		box-shadow: 0 0 0 2px #ffffff;
 	}
 
-	.wa-web-desktop .wa-conversation-row > span.absolute {
-		display: none !important;
-	}
-
 	.wa-web-desktop .wa-conversation-preference {
 		display: none !important;
 	}
@@ -4089,26 +4194,26 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	.wa-web-desktop .wa-conversation-row.bg-gradient-to-r,
 	.wa-web-desktop .wa-conversation-row[class*='from-[var(--color-primary-50)]'],
 	.wa-web-desktop .wa-conversation-row.ring-1 {
-		background: #f0f2f5 !important;
+		background: #e8f8ef !important;
 		box-shadow: none !important;
 	}
 
 	.wa-web-desktop .wa-conversation-row .title-chat {
-		color: #3b4a54 !important;
-		font-size: 16px !important;
+		color: #111b21 !important;
+		font-size: 15px !important;
 		font-weight: 700 !important;
-		line-height: 24px !important;
+		line-height: 20px !important;
 	}
 
 	.wa-web-desktop .wa-conversation-row .desc-chat {
-		color: #3b4a54 !important;
-		font-size: 12px !important;
-		font-weight: 500 !important;
-		line-height: 16px !important;
+		color: #667781 !important;
+		font-size: 13px !important;
+		font-weight: 400 !important;
+		line-height: 18px !important;
 	}
 
 	.wa-web-desktop .wa-conversation-row .desc-chat.text-\[\#667781\] {
-		color: #3b4a54 !important;
+		color: #667781 !important;
 	}
 
 	.wa-web-desktop .wa-conversation-row .title-chat.\!font-black,
@@ -4117,29 +4222,33 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-web-desktop .wa-conversation-row .time-chat {
-		color: #829c99 !important;
-		font-size: 10px !important;
+		color: #54636b !important;
+		font-size: 12px !important;
 		font-weight: 400 !important;
 		line-height: 16px !important;
 	}
 
 	.wa-web-desktop .wa-conversation-row .time-chat.\!text-\[\#1DAB61\],
 	.wa-web-desktop .wa-conversation-row .time-chat.\!font-bold {
-		color: #1da855 !important;
-		font-weight: 500 !important;
+		color: #00a884 !important;
+		font-weight: 700 !important;
+	}
+
+	.wa-web-desktop .wa-conversation-row > span.absolute {
+		display: none !important;
 	}
 
 	.wa-web-desktop .wa-conversation-row .rounded-full.text-white {
-		width: 20px !important;
-		min-width: 20px !important;
-		height: 20px !important;
-		padding: 0 !important;
-		border-radius: 9999px !important;
-		background: #24d366 !important;
-		font-family: 'Plus Jakarta Sans', 'Helvetica Neue', sans-serif;
-		font-size: 10px !important;
+		width: 21px !important;
+		min-width: 21px !important;
+		height: 21px !important;
+		padding: 0 6px !important;
+		border-radius: 12px !important;
+		background: #25d366 !important;
+		font-size: 11px !important;
 		font-weight: 700 !important;
-		line-height: 16px !important;
+		line-height: 21px !important;
+		box-shadow: none !important;
 	}
 
 	.wa-web-desktop .wa-chat-avatar-ring {
@@ -4230,21 +4339,23 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	}
 
 	.wa-web-desktop .wa-message-wallpaper {
-		padding: 12px 24px 16px !important;
+		padding: 24px 38px 20px !important;
+		background-color: #efeae2 !important;
 	}
 
 	.wa-web-desktop .wa-day-chip,
 	.wa-web-desktop .wa-date-separator,
 	.wa-web-desktop .wa-message-wallpaper .sticky,
 	.wa-web-desktop .wa-message-thread .mx-auto.mb-2.w-fit {
-		background: rgba(255, 255, 255, 0.95) !important;
-		color: #54656f !important;
+		background: #ffffff !important;
+		color: #54636b !important;
 		border: 0 !important;
-		border-radius: 7.5px !important;
-		box-shadow: 0px 1px 0.5px rgba(11, 20, 26, 0.13);
-		font-size: 12.5px !important;
-		font-weight: 400 !important;
-		line-height: 21px !important;
+		border-radius: 9px !important;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+		font-size: 12px !important;
+		font-weight: 600 !important;
+		line-height: 1.3 !important;
+		padding: 7px 13px !important;
 	}
 
 	.wa-web-desktop .wa-message-bubble {
@@ -4285,12 +4396,162 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-web-desktop .wa-message-mine {
 		background: #d9fdd3 !important;
-		border-radius: 8px !important;
+		border-radius: 9px !important;
 	}
 
 	.wa-web-desktop .wa-message-other {
 		background: #ffffff !important;
+		border-radius: 9px !important;
+	}
+
+	.wa-web-desktop .wa-file-card {
+		width: min(310px, 100%) !important;
+		max-width: 310px !important;
+		margin-bottom: 0 !important;
+		border: 0 !important;
 		border-radius: 8px !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
+	.wa-web-desktop .wa-file-card.is-incoming {
+		background: rgba(11, 20, 26, 0.04) !important;
+	}
+
+	.wa-web-desktop .wa-message-mine .wa-file-card,
+	.wa-web-desktop .wa-file-card.is-outgoing {
+		background: transparent !important;
+	}
+
+	.wa-web-desktop .wa-file-card-head {
+		gap: 12px !important;
+		padding: 10px 12px 18px !important;
+		align-items: flex-start !important;
+	}
+
+	.wa-web-desktop .wa-file-card-icon {
+		width: 34px !important;
+		height: 40px !important;
+		border-radius: 4px !important;
+		background: #2b579a !important;
+		color: #fff !important;
+		box-shadow: none !important;
+	}
+
+	.wa-web-desktop .wa-file-card-icon[data-ext='pdf'],
+	.wa-web-desktop .wa-file-card[data-ext='pdf'] .wa-file-card-icon {
+		background: #e5252a !important;
+	}
+
+	.wa-web-desktop .wa-file-card-icon[data-ext='xls'],
+	.wa-web-desktop .wa-file-card-icon[data-ext='xlsx'],
+	.wa-web-desktop .wa-file-card-icon[data-ext='csv'],
+	.wa-web-desktop .wa-file-card[data-ext='xls'] .wa-file-card-icon,
+	.wa-web-desktop .wa-file-card[data-ext='xlsx'] .wa-file-card-icon,
+	.wa-web-desktop .wa-file-card[data-ext='csv'] .wa-file-card-icon {
+		background: #1a7f37 !important;
+	}
+
+	.wa-web-desktop .wa-file-card-icon[data-ext='doc'],
+	.wa-web-desktop .wa-file-card-icon[data-ext='docx'],
+	.wa-web-desktop .wa-file-card[data-ext='doc'] .wa-file-card-icon,
+	.wa-web-desktop .wa-file-card[data-ext='docx'] .wa-file-card-icon {
+		background: transparent !important;
+	}
+
+	.wa-web-desktop .wa-file-card-ext {
+		position: static !important;
+		inset: auto !important;
+		bottom: auto !important;
+		max-width: none !important;
+		padding: 0 !important;
+		border-radius: 0 !important;
+		background: transparent !important;
+		color: #fff !important;
+		font-size: 9px !important;
+		font-weight: 800 !important;
+		letter-spacing: 0.02em;
+		line-height: 1.1 !important;
+	}
+
+	.wa-web-desktop .wa-file-card-name {
+		font-size: 14.2px !important;
+		font-weight: 500 !important;
+		color: inherit !important;
+	}
+
+	.wa-web-desktop .wa-file-card-details {
+		margin-top: 0 !important;
+		font-size: 12px !important;
+		color: #54656f !important;
+		opacity: 1 !important;
+	}
+
+	.wa-web-desktop .wa-file-card-actions {
+		height: auto !important;
+		border-top: 1px solid rgba(7, 94, 84, 0.18) !important;
+	}
+
+	.wa-web-desktop .wa-file-card.is-incoming .wa-file-card-actions {
+		border-top-color: rgba(11, 20, 26, 0.1) !important;
+	}
+
+	.wa-web-desktop .wa-file-card-action {
+		height: 42px !important;
+		gap: 6px !important;
+		color: #027a69 !important;
+		font-size: 14px !important;
+		font-weight: 500 !important;
+	}
+
+	.wa-web-desktop .wa-file-card-action + .wa-file-card-action {
+		border-inline-start: 1px solid rgba(7, 94, 84, 0.18) !important;
+	}
+
+	.wa-web-desktop .wa-message-bubble.wa-message-file .wa-message-meta {
+		bottom: 50px !important;
+		inset-inline-end: 14px !important;
+		color: #667781 !important;
+	}
+
+	.wa-web-desktop .wa-voice-message {
+		width: min(350px, 100%) !important;
+		min-height: 80px !important;
+		border-radius: 9px !important;
+		background: #ffffff !important;
+		box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08) !important;
+		padding-inline: 15px !important;
+		gap: 12px !important;
+	}
+
+	.wa-web-desktop .wa-message-mine .wa-voice-message,
+	.wa-web-desktop .wa-voice-message.is-outgoing {
+		background: #d9fdd3 !important;
+	}
+
+	.wa-web-desktop .wa-voice-play {
+		width: 29px !important;
+		height: 29px !important;
+		color: #00a884 !important;
+		background: transparent !important;
+		box-shadow: none !important;
+	}
+
+	.wa-web-desktop .wa-voice-waveform-bars > .wa-voice-bar {
+		width: 2px !important;
+		border-radius: 2px !important;
+		background: #8b9ba2 !important;
+	}
+
+	.wa-web-desktop .wa-message-mine .wa-voice-waveform-bars > .wa-voice-bar,
+	.wa-web-desktop .wa-voice-message.is-outgoing .wa-voice-waveform-bars > .wa-voice-bar {
+		background: #76b99d !important;
+	}
+
+	.wa-web-desktop .wa-voice-duration,
+	.wa-web-desktop .wa-voice-track-meta {
+		font-size: 11px !important;
+		color: #667781 !important;
 	}
 
 	.wa-web-desktop .wa-message-meta {
@@ -4302,24 +4563,28 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	.wa-web-desktop .wa-composer,
 	.wa-web-desktop .wa-composer-stack {
 		border: 0 !important;
-		background: #f0f2f5 !important;
-		padding: 12px 16px 14px !important;
+		border-top: 0 !important;
+		background: #ffffff !important;
+		padding: 11px 18px !important;
+		min-height: 72px !important;
 	}
 
 	.wa-web-desktop .wa-composer.is-recording {
-		background: #f0f2f5 !important;
-		padding: 12px 16px 14px !important;
+		background: #ffffff !important;
+		padding: 11px 18px !important;
 		border: 0 !important;
+		border-top: 0 !important;
 	}
 
 	.wa-web-desktop .wa-input-pill,
 	.wa-web-desktop .wa-composer .wa-input-pill {
-		border: 0 !important;
-		border-radius: 24px !important;
+		border: 1px solid #e2e6e8 !important;
+		border-radius: 25px !important;
 		background: #ffffff !important;
-		box-shadow: none !important;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+		min-height: 48px !important;
 		color: #111b21 !important;
-		padding: 4px !important;
+		padding: 4px 8px !important;
 		align-items: center !important;
 	}
 

@@ -1,0 +1,197 @@
+/* WhatsApp in-app document viewer styles (ported from dragify-bid) */
+
+.wa-doc-viewer-panel {
+	position: fixed;
+	inset-block: 0;
+	inset-inline-end: 0;
+	z-index: 420;
+	display: flex;
+	width: min(100vw, 520px);
+	flex-direction: column;
+	background: #fff;
+	box-shadow: -8px 0 32px rgba(15, 23, 42, 0.18);
+}
+
+@media (min-width: 900px) {
+	.wa-doc-viewer-panel {
+		width: min(54vw, 720px);
+	}
+}
+
+.wa-doc-viewer-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 410;
+	background: rgba(15, 23, 42, 0.35);
+}
+
+.wa-doc-viewer-body.docx-bg {
+	background: #e8eaed;
+}
+
+.wa-doc-viewer-body {
+	min-height: 0;
+	flex: 1;
+	overflow: auto;
+	background: #f8fafc;
+}
+
+.docx-preview-host header,
+.docx-preview-host footer {
+	overflow: visible;
+}
+.docx-preview-styles {
+	display: none;
+}
+.docx-preview-host .docx-wrapper img,
+.docx-preview-host section.docx img,
+.docx-preview-host header img,
+.docx-preview-host footer img {
+	max-width: none;
+	max-height: none;
+}
+.docx-preview-host svg image {
+	max-width: none;
+	max-height: none;
+}
+
+.xlsx-preview-table {
+	width: max-content;
+	min-width: 100%;
+}
+.xlsx-preview-corner,
+.xlsx-preview-col-head,
+.xlsx-preview-row-head {
+	position: sticky;
+	z-index: 2;
+	background: #f0f0f0;
+	border: 1px solid #d4d4d4;
+	color: #444;
+	font-weight: 600;
+	text-align: center;
+	white-space: nowrap;
+}
+.xlsx-preview-corner {
+	left: 0;
+	top: 0;
+	z-index: 4;
+	min-width: 42px;
+	width: 42px;
+}
+.xlsx-preview-col-head {
+	top: 0;
+	z-index: 3;
+	min-width: 88px;
+	padding: 4px 8px;
+	font-size: 11px;
+}
+.xlsx-preview-row-head {
+	left: 0;
+	z-index: 3;
+	min-width: 42px;
+	width: 42px;
+	padding: 4px 6px;
+	font-size: 11px;
+}
+.xlsx-preview-cell {
+	border: 1px solid #e2e2e2;
+	padding: 4px 8px;
+	background: #fff;
+	color: #111;
+	vertical-align: middle;
+	white-space: pre-wrap;
+	min-width: 88px;
+	max-width: 360px;
+}
+.xlsx-preview-cell-header {
+	background: #f8faf8;
+	font-weight: 600;
+}
+.xlsx-preview-cell-number {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.wa-doc-markdown {
+	max-width: 48rem;
+	margin: 0 auto;
+	color: #0f172a;
+	font-size: 14px;
+	line-height: 1.7;
+}
+.wa-doc-markdown h1,
+.wa-doc-markdown h2,
+.wa-doc-markdown h3,
+.wa-doc-markdown h4 {
+	font-weight: 600;
+	line-height: 1.3;
+	margin: 1.5em 0 0.6em;
+}
+.wa-doc-markdown h1 {
+	font-size: 1.75rem;
+}
+.wa-doc-markdown h2 {
+	font-size: 1.35rem;
+}
+.wa-doc-markdown h3 {
+	font-size: 1.15rem;
+}
+.wa-doc-markdown p,
+.wa-doc-markdown ul,
+.wa-doc-markdown ol,
+.wa-doc-markdown blockquote,
+.wa-doc-markdown pre {
+	margin: 0.75em 0;
+}
+.wa-doc-markdown ul,
+.wa-doc-markdown ol {
+	padding-inline-start: 1.5rem;
+}
+.wa-doc-markdown a {
+	color: #0d9488;
+	text-decoration: underline;
+}
+.wa-doc-markdown blockquote {
+	border-inline-start: 3px solid #e2e8f0;
+	padding-inline-start: 1rem;
+	color: #64748b;
+}
+.wa-doc-markdown code {
+	font-family: ui-monospace, monospace;
+	font-size: 0.9em;
+	background: #f1f5f9;
+	border-radius: 4px;
+	padding: 0.15em 0.35em;
+}
+.wa-doc-markdown pre {
+	overflow-x: auto;
+	background: #1e1e1e;
+	color: #f3f3f3;
+	border-radius: 8px;
+	padding: 1rem;
+}
+.wa-doc-markdown pre code {
+	background: transparent;
+	padding: 0;
+	color: inherit;
+}
+.wa-doc-markdown table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13px;
+}
+.wa-doc-markdown th,
+.wa-doc-markdown td {
+	border: 1px solid #e2e8f0;
+	padding: 0.5rem 0.75rem;
+	text-align: start;
+}
+.wa-doc-markdown th {
+	background: #f8fafc;
+	font-weight: 600;
+}
+.wa-doc-markdown img {
+	max-width: 100%;
+	height: auto;
+	border-radius: 6px;
+}

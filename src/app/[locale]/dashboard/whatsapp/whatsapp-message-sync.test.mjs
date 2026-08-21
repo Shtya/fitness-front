@@ -1,0 +1,88 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {
+	MESSAGE_PAGE_SIZE,
+	PROVIDER_SYNC_FRESH_MS,
+	shouldProviderBackfill,
+	shouldSkipOpenChatNetwork,
+} from './whatsapp-message-sync.js';
+
+const now = 1_700_000_000_000;
+
+test('short hydrated thread does not backfill on reopen', () => {
+	const result = shouldProviderBackfill({
+		canSync: true,
+		itemCount: 15,
+		providerHydratedAt: now - 60_000,
+		now,
+	});
+	assert.equal(result.needed, false);
+	assert.equal(result.reason, 'fresh');
+});
+
+test('empty thread still requests first hydrate', () => {
+	const result = shouldProviderBackfill({
+		canSync: true,
+		itemCount: 0,
+		now,
+	});
+	assert.equal(result.needed, true);
+	assert.equal(result.reason, 'empty_thread');
+});
+
+test('never-hydrated short thread requests one provider pass', () => {
+	const result = shouldProviderBackfill({
+		canSync: true,
+		itemCount: 12,
+		now,
+	});
+	assert.equal(result.needed, true);
+	assert.equal(result.reason, 'first_hydrate');
+});
+
+test('stale hydration requests catch-up', () => {
+	const result = shouldProviderBackfill({
+		canSync: true,
+		itemCount: 40,
+		providerHydratedAt: now - PROVIDER_SYNC_FRESH_MS - 1,
+		now,
+	});
+	assert.equal(result.needed, true);
+	assert.equal(result.reason, 'stale');
+});
+
+test('page-full warm cache skips open-chat network', () => {
+	assert.equal(
+		shouldSkipOpenChatNetwork({
+			cacheIsFresh: true,
+			itemCount: MESSAGE_PAGE_SIZE,
+			now,
+		}),
+		true,
+	);
+});
+
+test('short warm hydrated cache skips open-chat network', () => {
+	assert.equal(
+		shouldSkipOpenChatNetwork({
+			cacheIsFresh: true,
+			itemCount: 8,
+			providerHydratedAt: now - 10_000,
+			now,
+		}),
+		true,
+	);
+});
+
+test('force provider never skips network', () => {
+	assert.equal(
+		shouldSkipOpenChatNetwork({
+			cacheIsFresh: true,
+			forceProvider: true,
+			itemCount: 100,
+			providerHydratedAt: now,
+			now,
+		}),
+		false,
+	);
+});

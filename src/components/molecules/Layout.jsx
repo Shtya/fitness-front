@@ -21,6 +21,7 @@ import { LogIn, LogOut, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { IMPERSONATION_EVENT, notifyImpersonationChanged } from '@/lib/impersonation';
 import { shouldUseCompactTopNav } from '@/lib/nav-access';
+import { SidebarChromeProvider } from './SidebarChromeContext';
 import './sidebar-glass.css';
 
 const Sidebar = dynamic(() => import('./Sidebar'), { ssr: false });
@@ -313,6 +314,18 @@ export default function Layout({ children }) {
 		} catch {}
 	}, [focusMode]);
 
+	/* WhatsApp is a dedicated full-bleed surface: hide app sidebar by default. */
+	useEffect(() => {
+		if (!isWhatsAppRoute) return;
+		setFocusMode(true);
+	}, [isWhatsAppRoute]);
+
+	const sidebarChromeValue = {
+		focusMode,
+		setFocusMode,
+		hideEdgeDock: isWhatsAppRoute,
+	};
+
 	// ── Mobile block screen ─────────────────────────────────────────────────
 	// if (blockFormOnMobile) {
 	// 	return (
@@ -377,6 +390,7 @@ export default function Layout({ children }) {
 			<Providers>
 				<TenantThemeProvider>
 				<ThemeProvider>
+				<SidebarChromeProvider value={sidebarChromeValue}>
 					{isBareViewport ? (
 					<div className="relative h-dvh w-full overflow-hidden bg-[#0b1220]">
 						{children}
@@ -415,7 +429,7 @@ export default function Layout({ children }) {
 									isAppShell ? 'flex h-full min-h-0 flex-col overflow-hidden' : 'overflow-x-hidden',
 								].filter(Boolean).join(' ')}
 								data-dashboard-content
-								data-sidebar-offset={focusMode && !useCompactNav ? 'true' : undefined}
+								data-sidebar-offset={focusMode && !useCompactNav && !isWhatsAppRoute ? 'true' : undefined}
 								data-compact-nav={useCompactNav ? 'true' : undefined}
 							>
 								{!isAuthRoute && useCompactNav && (
@@ -454,7 +468,7 @@ export default function Layout({ children }) {
 												isAppShell
 													? [
 														'min-h-0 flex-1 overflow-x-hidden overscroll-y-contain',
-														isMetaWhatsAppRoute
+														isWhatsAppRoute || isMetaWhatsAppRoute
 															? 'overflow-hidden p-0'
 															: isImmersiveRoute
 																// Avoid `p-0` + pe/ps conflict (shorthand can wipe end padding).
@@ -494,6 +508,7 @@ export default function Layout({ children }) {
 					{!isBareViewport ? <QuranMiniPlayer /> : null}
 					{!isBareViewport ? <LastRouteTracker /> : null}
 					{!isBareViewport ? <LastRouteRestorer /> : null}
+				</SidebarChromeProvider>
 				</ThemeProvider>
 				</TenantThemeProvider>
 			</Providers>

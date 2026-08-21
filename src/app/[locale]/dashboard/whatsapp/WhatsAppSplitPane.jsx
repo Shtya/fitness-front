@@ -32,9 +32,11 @@ import {
 	isSelfChatConversation,
 	messageTextPresentation,
 } from './whatsapp-utils';
+import {
+	MESSAGE_PAGE_SIZE,
+	shouldProviderBackfill,
+} from './whatsapp-message-sync';
 import ExpandableMessageText from './ExpandableMessageText';
-
-const MESSAGE_PAGE_SIZE = 100;
 
 function newClientMessageId() {
 	if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -232,6 +234,11 @@ export default function WhatsAppSplitPane({
 	const recordingSecondsRef = useRef(0);
 	const discardRecordingRef = useRef(false);
 	const stickToBottomRef = useRef(true);
+	const hydrationRef = useRef({
+		conversationId: null,
+		providerHydratedAt: 0,
+		lastProviderSyncAt: null,
+	});
 
 	const loadMessages = useCallback(async () => {
 		if (!conversationId) return;
@@ -248,9 +255,25 @@ export default function WhatsAppSplitPane({
 					: [];
 			let next = local;
 			let providerHasMore;
-			// Prefer Postgres page. Ask WhatsApp for older history when the local
-			// page is still short, not only when it is completely empty.
-			if (accountId && canCompose && local.length < MESSAGE_PAGE_SIZE) {
+			if (hydrationRef.current.conversationId !== conversationId) {
+				hydrationRef.current = {
+					conversationId,
+					providerHydratedAt: 0,
+					lastProviderSyncAt: conversation?.lastProviderSyncAt || null,
+				};
+			} else if (conversation?.lastProviderSyncAt) {
+				hydrationRef.current.lastProviderSyncAt = conversation.lastProviderSyncAt;
+			}
+			const backfill = shouldProviderBackfill({
+				canSync: Boolean(accountId && canCompose),
+				itemCount: local.length,
+				providerHydratedAt: hydrationRef.current.providerHydratedAt,
+				lastProviderSyncAt:
+					hydrationRef.current.lastProviderSyncAt || conversation?.lastProviderSyncAt,
+			});
+			// Prefer Postgres page. Ask WhatsApp only when hydration policy says so —
+			// never because the thread is simply shorter than one page.
+			if (backfill.needed) {
 				try {
 					const synced = await api.post(
 						`/whatsapp/conversations/${conversationId}/sync/latest`,
@@ -265,9 +288,15 @@ export default function WhatsAppSplitPane({
 						: [];
 					next = mergeMessages(local, syncedItems);
 					providerHasMore = synced?.data?.hasMore;
+					hydrationRef.current.providerHydratedAt = Date.now();
+					hydrationRef.current.lastProviderSyncAt =
+						synced?.data?.lastProviderSyncAt || new Date().toISOString();
 				} catch {
 					/* keep DB/local result */
 				}
+			} else if (local.length > 0) {
+				hydrationRef.current.providerHydratedAt =
+					hydrationRef.current.providerHydratedAt || Date.now();
 			}
 			setMessages(next);
 			setHasMore(
@@ -284,7 +313,7 @@ export default function WhatsAppSplitPane({
 		} finally {
 			setLoading(false);
 		}
-	}, [accountId, ar, canCompose, conversationId]);
+	}, [accountId, ar, canCompose, conversation?.lastProviderSyncAt, conversationId]);
 
 	const loadOlder = useCallback(async () => {
 		if (!conversationId || loadingOlderRef.current || !hasMore || !messages.length) return;
@@ -685,7 +714,7 @@ export default function WhatsAppSplitPane({
 			{canCompose ? (
 				<form
 					onSubmit={sendText}
-					className={`flex shrink-0 items-center gap-2 border-t border-slate-100 p-2.5 dark:border-slate-800 wa-composer ${recordingVoice ? 'is-recording' : ''}`}
+					className={`flex shrink-0 items-center gap-2 border-0 border-t-0 p-2.5 wa-composer ${recordingVoice ? 'is-recording' : ''}`}
 				>
 					{recordingVoice ? (
 						<div dir="ltr" className="wa-input-pill wa-recording-pill flex min-h-10 min-w-0 flex-1 items-center rounded-full px-1 py-1">

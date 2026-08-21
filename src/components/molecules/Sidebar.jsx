@@ -9,7 +9,7 @@ import { LayoutDashboard, Users, User as UserIcon, Apple, MessageSquare, Message
 import { useSearchParams, useRouter as useNextRouter } from 'next/navigation';
 import { usePathname as useNextPathname } from '@/i18n/navigation';
 import { useUser } from '@/hooks/useUser';
-import { FaInbox, FaUsers, FaWpforms } from 'react-icons/fa';
+import { FaInbox, FaUsers, FaWpforms, FaWhatsapp } from 'react-icons/fa';
 import { useTranslations } from 'next-intl';
 import { useValues } from '@/context/GlobalContext';
 import { useTheme, COLOR_PALETTES } from '@/app/[locale]/theme';
@@ -21,6 +21,7 @@ import {
 	WHATSAPP_UNREAD_EVENT,
 	META_WHATSAPP_UNREAD_EVENT,
 } from '@/lib/outreach-unread';
+import { useSidebarChrome } from './SidebarChromeContext';
 import './sidebar-glass.css';
 
 /* ─── Constants ─────────────────────────────────────────────── */
@@ -251,7 +252,7 @@ export const ITEM_META = {
   todos: { id: 'todos', nameKey: 'todos', href: '/workspace?tab=tasks', icon: ListTodo, descKey: 'descriptions.todos', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
   calendar: { id: 'calendar', nameKey: 'calendar', href: '/workspace?tab=calendar', icon: CalendarDays, descKey: 'descriptions.calendar', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
   messages: { id: 'messages', nameKey: 'messages', href: '/dashboard/chat', icon: MessageSquare, descKey: 'descriptions.messages', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
-  whatsapp: { id: 'whatsapp', nameKey: 'whatsapp', href: '/dashboard/whatsapp', icon: MessageCircle, descKey: 'descriptions.whatsapp', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
+  whatsapp: { id: 'whatsapp', nameKey: 'whatsapp', href: '/dashboard/whatsapp', icon: FaWhatsapp, descKey: 'descriptions.whatsapp', group: 'outreach', defaultVisible: false, required: false, marketplace: true },
   transcript: { id: 'transcript', nameKey: 'transcript', href: '/dashboard/transcript', icon: AudioLines, descKey: 'descriptions.transcript', group: 'workspace', defaultVisible: false, required: false, marketplace: true },
   calorieCalculator: { id: 'calorieCalculator', nameKey: 'calorieCalculator', href: '/dashboard/calculator', icon: Calculator, descKey: 'descriptions.calorieCalculator', group: 'tools', defaultVisible: true, required: false },
   aiFree: { id: 'aiFree', nameKey: 'aiFree', href: '/dashboard/ai-free', icon: BrainCircuit, descKey: 'descriptions.aiFree', group: 'tools', defaultVisible: true, required: false },
@@ -3059,17 +3060,20 @@ export default function Sidebar({ open, setOpen, collapsed: collapsedProp, setCo
   const sidebarEdge = SIDEBAR_MARGIN + (collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W);
   // ~40px dock — sit on the sidebar edge, slightly inset (not floating outside)
   const edgeInset = focusMode ? 10 : sidebarEdge - 30;
+  const { hideEdgeDock } = useSidebarChrome();
   const DesktopSidebar = (
     <>
-      <SidebarEdgeControls
-        collapsed={collapsed}
-        focusMode={focusMode}
-        setCollapsed={setCollapsed}
-        setFocusMode={setFocusMode}
-        edgeInset={edgeInset}
-        isRTL={isRTL}
-        locale={locale}
-      />
+      {!hideEdgeDock ? (
+        <SidebarEdgeControls
+          collapsed={collapsed}
+          focusMode={focusMode}
+          setCollapsed={setCollapsed}
+          setFocusMode={setFocusMode}
+          edgeInset={edgeInset}
+          isRTL={isRTL}
+          locale={locale}
+        />
+      ) : null}
       <aside
       className={`sidebar-shell sidebar-glass hidden lg:flex flex-col shrink-0 ${focusMode ? '' : 'ltr:ml-4 rtl:mr-4 ltr:mr-6 rtl:ml-6'}`}
       style={{
