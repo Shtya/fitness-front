@@ -12,7 +12,7 @@ import './chat-document-viewer.css';
 const DOCX_VIEWER_STYLE_OVERRIDES = `
 .docx-preview-host .docx-wrapper {
   background: #e8eaed !important;
-  padding: 28px 20px 40px !important;
+  padding: 32px clamp(16px, 4vw, 48px) 48px !important;
   display: flex !important;
   flex-flow: column !important;
   align-items: center !important;
@@ -22,15 +22,17 @@ const DOCX_VIEWER_STYLE_OVERRIDES = `
 }
 .docx-preview-host .docx-wrapper > section.docx {
   background: #ffffff !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
-  margin: 0 0 24px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+  margin: 0 auto 28px !important;
   border: 1px solid rgba(0, 0, 0, 0.06) !important;
   flex-shrink: 0;
   overflow: hidden !important;
   position: relative;
+  max-width: min(100%, 816px);
+  width: 100%;
 }
 .docx-preview-host .docx-wrapper > section.docx:last-child {
-  margin-bottom: 12px !important;
+  margin-bottom: 20px !important;
 }
 `;
 
@@ -93,13 +95,36 @@ function appendDocxViewerOverrides(styleContainer) {
 }
 
 function useObjectUrl(blob) {
-	const [objectUrl] = useState(() => (blob ? URL.createObjectURL(blob) : ''));
+	const [objectUrl, setObjectUrl] = useState('');
 	useEffect(() => {
-		if (!blob) return undefined;
-		return () => URL.revokeObjectURL(objectUrl);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+		if (!blob) {
+			setObjectUrl('');
+			return undefined;
+		}
+		const url = URL.createObjectURL(blob);
+		setObjectUrl(url);
+		return () => URL.revokeObjectURL(url);
+	}, [blob]);
 	return objectUrl;
+}
+
+function asTypedBlob(blob, mimeType) {
+	if (!blob) return null;
+	const type = String(blob.type || '').toLowerCase();
+	const wanted = String(mimeType || '').toLowerCase();
+	if (!wanted || type === wanted) return blob;
+	return blob.slice(0, blob.size, mimeType);
+}
+
+async function blobStartsWithPdf(blob) {
+	if (!blob || blob.size < 5) return false;
+	const head = new Uint8Array(await blob.slice(0, 5).arrayBuffer());
+	// Allow leading whitespace before %PDF
+	const text = String.fromCharCode(...head);
+	if (text.startsWith('%PDF')) return true;
+	const wider = new Uint8Array(await blob.slice(0, 1024).arrayBuffer());
+	const probe = String.fromCharCode(...wider);
+	return probe.includes('%PDF');
 }
 
 async function loadArrayBuffer(blob) {
@@ -154,22 +179,71 @@ function Unsupported({ message }) {
 	);
 }
 
-function PdfPreview({ blob, name }) {
-	const objectUrl = useObjectUrl(blob);
-	if (!objectUrl) return <Loading />;
-	return <iframe title={name} src={objectUrl} className="h-full min-h-[70vh] w-full border-0 bg-white" />;
+function PdfPreview({ blob, name, t }) {
+	const [pdfBlob] = useState(() => asTypedBlob(blob, 'application/pdf'));
+	const objectUrl = useObjectUrl(pdfBlob);
+	const [status, setStatus] = useState('loading');
+
+	useEffect(() => {
+		let cancelled = false;
+		setStatus('loading');
+		if (!pdfBlob) {
+			setStatus('error');
+			return undefined;
+		}
+		blobStartsWithPdf(pdfBlob)
+			.then(ok => {
+				if (!cancelled) setStatus(ok ? 'ready' : 'error');
+			})
+			.catch(() => {
+				if (!cancelled) setStatus('error');
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [pdfBlob]);
+
+	if (status === 'loading' || !objectUrl) return <Loading />;
+	if (status === 'error') {
+		return (
+			<div className="flex h-full min-h-[40vh] flex-col items-center justify-center gap-3 bg-[#f8fafc] px-6 text-center text-sm text-slate-500">
+				<p>{t.loadError}</p>
+				{objectUrl ? (
+					<a
+						href={objectUrl}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+					>
+						{t.download}
+					</a>
+				) : null}
+			</div>
+		);
+	}
+
+	return (
+		<div className="wa-pdf-preview">
+			<embed
+				title={name}
+				src={objectUrl}
+				type="application/pdf"
+				className="wa-pdf-preview-iframe"
+			/>
+		</div>
+	);
 }
 
 function ImagePreview({ blob, name, t }) {
 	const objectUrl = useObjectUrl(blob);
 	if (!objectUrl) return <Loading />;
 	return (
-		<div className="flex min-h-[50vh] items-center justify-center bg-[#f4f4f5] p-6">
+		<div className="flex h-full min-h-full items-center justify-center bg-[#f4f4f5] p-6">
 			{/* eslint-disable-next-line @next/next/no-img-element */}
 			<img
 				src={objectUrl}
 				alt={name}
-				className="max-h-[70vh] max-w-full rounded-sm border border-slate-200 bg-white object-contain shadow-sm"
+				className="max-h-[calc(100dvh-5.5rem)] max-w-full rounded-sm border border-slate-200 bg-white object-contain shadow-sm"
 				onError={event => {
 					event.currentTarget.replaceWith(
 						Object.assign(document.createElement('div'), {
@@ -362,7 +436,7 @@ function XlsxPreview({ blob, t }) {
 	const grid = current.grid;
 
 	return (
-		<div className="flex h-full min-h-[70vh] flex-col bg-[#f3f3f3]">
+		<div className="flex h-full min-h-full flex-col bg-[#f3f3f3]">
 			{sheets.length > 1 ? (
 				<div className="flex gap-0.5 overflow-x-auto border-b border-[#c8c8c8] bg-[#e6e6e6] px-1 py-1">
 					{sheets.map((sheet, index) => (
@@ -489,7 +563,7 @@ function TextPreview({ blob, t }) {
 function PreviewBody({ kind, name, blob, t }) {
 	if (!blob) return <Unsupported message={t.loadError} />;
 	if (kind === 'image') return <ImagePreview blob={blob} name={name} t={t} />;
-	if (kind === 'pdf') return <PdfPreview blob={blob} name={name} />;
+	if (kind === 'pdf') return <PdfPreview blob={blob} name={name} t={t} />;
 	if (kind === 'docx') return <DocxPreview blob={blob} t={t} />;
 	if (kind === 'xlsx') return <XlsxPreview blob={blob} t={t} />;
 	if (kind === 'markdown') return <MarkdownPreview blob={blob} t={t} />;
@@ -499,7 +573,7 @@ function PreviewBody({ kind, name, blob, t }) {
 }
 
 /**
- * Side-panel document preview for WhatsApp chat attachments.
+ * Fullscreen document preview for WhatsApp chat attachments.
  * file: { name, mimeType?, blob }
  */
 export function ChatDocumentViewer({ open, onClose, file, locale = 'en' }) {
@@ -515,8 +589,13 @@ export function ChatDocumentViewer({ open, onClose, file, locale = 'en' }) {
 		const onKeyDown = event => {
 			if (event.key === 'Escape') onClose?.();
 		};
+		const previousOverflow = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
 		window.addEventListener('keydown', onKeyDown);
-		return () => window.removeEventListener('keydown', onKeyDown);
+		return () => {
+			document.body.style.overflow = previousOverflow;
+			window.removeEventListener('keydown', onKeyDown);
+		};
 	}, [open, onClose]);
 
 	if (!open || !file) return null;
@@ -539,10 +618,10 @@ export function ChatDocumentViewer({ open, onClose, file, locale = 'en' }) {
 				aria-label={t.close}
 				onClick={onClose}
 			/>
-			<aside className="wa-doc-viewer-panel" role="dialog" aria-modal="true" aria-label={name}>
-				<header className="flex shrink-0 items-start gap-2 border-b border-slate-200 px-3 py-3">
+			<div className="wa-doc-viewer-panel" role="dialog" aria-modal="true" aria-label={name}>
+				<header className="wa-doc-viewer-header">
 					<div className="min-w-0 flex-1">
-						<p className="truncate text-sm font-bold text-slate-900" title={name}>
+						<p className="truncate text-[15px] font-bold tracking-tight text-slate-900" title={name}>
 							{name}
 						</p>
 						<p className="mt-0.5 font-mono text-[11px] uppercase tracking-wide text-slate-400">
@@ -553,7 +632,7 @@ export function ChatDocumentViewer({ open, onClose, file, locale = 'en' }) {
 						type="button"
 						onClick={download}
 						disabled={!blob}
-						className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+						className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
 					>
 						<Download size={14} />
 						{t.download}
@@ -561,16 +640,23 @@ export function ChatDocumentViewer({ open, onClose, file, locale = 'en' }) {
 					<button
 						type="button"
 						onClick={onClose}
-						className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"
+						className="grid h-9 w-9 place-items-center rounded-xl text-slate-500 hover:bg-slate-100"
 						aria-label={t.close}
 					>
-						<X size={16} />
+						<X size={18} />
 					</button>
 				</header>
-				<div className={cn('wa-doc-viewer-body', kind === 'docx' && 'docx-bg')}>
+				<div
+					className={cn(
+						'wa-doc-viewer-body',
+						kind === 'docx' && 'docx-bg',
+						kind === 'pdf' && 'is-pdf',
+						kind === 'xlsx' && 'is-xlsx',
+					)}
+				>
 					<PreviewBody key={previewKey} kind={kind} name={name} blob={blob} t={t} />
 				</div>
-			</aside>
+			</div>
 		</>
 	);
 }

@@ -94,6 +94,8 @@ function playAt(verseIndex, verseRepeat = 1, completedRepeats = 0, { autoplay = 
 	el.src = url;
 	el.volume = state.muted ? 0 : state.volume;
 	el.load();
+	// HTMLAudioElement may reset volume after load()/src change.
+	el.volume = state.muted ? 0 : state.volume;
 
 	if (autoplay) {
 		const p = el.play();

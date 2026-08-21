@@ -503,6 +503,37 @@ export function conversationUnreadCount(conversation) {
 	return Math.max(0, Number(conversation?.unreadCount) || 0);
 }
 
+/** Chip filters that can be applied to the already-loaded All inbox. */
+export const WHATSAPP_INBOX_CHIP_FILTERS = new Set([
+	'unread',
+	'favorites',
+	'important',
+	'starred',
+]);
+
+/**
+ * Client-side match for All / Unread / Favorites / Important chips.
+ * Important uses hasImportantMessages (set when starring or after a background important fetch).
+ */
+export function conversationMatchesInboxFilter(conversation, filter = 'all', options = {}) {
+	const normalized = String(filter || 'all').toLowerCase();
+	if (!normalized || normalized === 'all') return true;
+	if (normalized === 'unread') return conversationUnreadCount(conversation) > 0;
+	if (normalized === 'favorites') return Boolean(conversation?.isFavorite);
+	if (normalized === 'important' || normalized === 'starred') {
+		if (conversation?.hasImportantMessages) return true;
+		const messagesCache = options.messagesCache;
+		if (!messagesCache || typeof messagesCache.get !== 'function' || !conversation?.id) {
+			return false;
+		}
+		const main = messagesCache.get(conversation.id);
+		if ((main?.items || []).some(item => item?.isStarred)) return true;
+		const important = messagesCache.get(`${conversation.id}:important`);
+		return (important?.items || []).length > 0;
+	}
+	return true;
+}
+
 export function seekRatio(clientX, left, width, isRtl = false) {
 	if (!(width > 0)) return 0;
 	const physicalRatio = (clientX - left) / width;

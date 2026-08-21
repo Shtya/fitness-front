@@ -736,10 +736,12 @@ export default function QuranRevisionStudio({
 	const cloudReadyRef = useRef(false);
 	const cloudPutRef = useRef(createDebouncedPutter(750));
 	const speedRef = useRef(speed);
+	const volumeRef = useRef({ volume, muted });
 	const prevSurahModeRef = useRef({ surahId: null, mode: null });
 	const unitSelectionsRef = useRef(unitSelections);
 	unitSelectionsRef.current = unitSelections;
 	speedRef.current = speed;
+	volumeRef.current = { volume, muted };
 
 	useEffect(() => {
 		let cancelled = false;
@@ -798,7 +800,8 @@ export default function QuranRevisionStudio({
 			setShowTafsir(prefs.showTafsir === true);
 			setIsMemorizationMode(prefs.isMemorizationMode);
 			setHideParts(normalizeHideParts(prefs.hideParts, prefs.hideMode ?? prefs.memoLevel));
-			setVolume(prefs.volume);
+			const nextVolume = Math.min(1, Math.max(0, Number(prefs.volume)));
+			setVolume(Number.isFinite(nextVolume) ? nextVolume : 0.85);
 			setSpeed(prefs.speed);
 			setYtPlayMode(prefs.ytPlayMode === 'video' ? 'video' : 'audio');
 
@@ -1272,11 +1275,18 @@ export default function QuranRevisionStudio({
 		const seekRatio = typeof opts.seekRatio === 'number' ? opts.seekRatio : 0;
 		const shouldPlay = opts.autoplay !== false;
 
+		const applyOutputLevel = () => {
+			const { volume: vol, muted: isMuted } = volumeRef.current;
+			el.volume = isMuted ? 0 : Math.min(1, Math.max(0, Number(vol) || 0));
+		};
+
 		setAudioError('');
 		el.pause();
 		el.src = url;
-		el.volume = muted ? 0 : volume;
+		applyOutputLevel();
 		el.load();
+		// Some browsers reset HTMLAudioElement.volume after load()/src change.
+		applyOutputLevel();
 
 		const applyRate = () => {
 			try { el.playbackRate = speedRef.current; } catch { /* ignore */ }
@@ -1284,12 +1294,16 @@ export default function QuranRevisionStudio({
 
 		el.onloadedmetadata = () => {
 			applyRate();
+			applyOutputLevel();
 			setAudioDuration(el.duration || 0);
 			if (seekRatio > 0.02 && seekRatio < 0.98 && el.duration) {
 				try { el.currentTime = el.duration * seekRatio; } catch { /* ignore */ }
 			}
 		};
-		el.oncanplay = () => applyRate();
+		el.oncanplay = () => {
+			applyRate();
+			applyOutputLevel();
+		};
 		el.ontimeupdate = () => {
 			if (!el.duration) return;
 			setVerseProgress((el.currentTime / el.duration) * 100);
@@ -1347,6 +1361,7 @@ export default function QuranRevisionStudio({
 		};
 
 		applyRate();
+		applyOutputLevel();
 		if (shouldPlay) {
 			const p = el.play();
 			if (p?.catch) p.catch(() => setAudioError(t.audioError));
@@ -1354,12 +1369,13 @@ export default function QuranRevisionStudio({
 		} else {
 			setIsPlaying(false);
 		}
-	}, [muted, volume, t.audioError]);
+	}, [t.audioError]);
 
 	useEffect(() => {
 		const el = audioRef.current;
 		if (!el) return;
-		el.volume = muted ? 0 : volume;
+		const { volume: vol, muted: isMuted } = volumeRef.current;
+		el.volume = isMuted ? 0 : Math.min(1, Math.max(0, Number(vol) || 0));
 		try { el.playbackRate = speed; } catch { /* ignore */ }
 	}, [volume, muted, speed]);
 

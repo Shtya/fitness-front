@@ -34,6 +34,7 @@ import {
 	sortConversationsByActivity,
 	updateConversationPreview,
 	conversationUnreadCount,
+	conversationMatchesInboxFilter,
 } from './whatsapp-utils.js';
 
 test('mergeMessages deduplicates provider messages and sorts chronologically', () => {
@@ -741,6 +742,34 @@ test('conversationUnreadCount follows CRM unreadCount, not last-message directio
 		}),
 		2,
 	);
+});
+
+test('conversationMatchesInboxFilter applies unread/favorites/important locally', () => {
+	assert.equal(
+		conversationMatchesInboxFilter({ unreadCount: 2 }, 'unread'),
+		true,
+	);
+	assert.equal(
+		conversationMatchesInboxFilter({ unreadCount: 0 }, 'unread'),
+		false,
+	);
+	assert.equal(
+		conversationMatchesInboxFilter({ isFavorite: true }, 'favorites'),
+		true,
+	);
+	assert.equal(
+		conversationMatchesInboxFilter({ isFavorite: false }, 'favorites'),
+		false,
+	);
+	assert.equal(
+		conversationMatchesInboxFilter({ hasImportantMessages: true }, 'important'),
+		true,
+	);
+	assert.equal(
+		conversationMatchesInboxFilter({ id: 'c1' }, 'important'),
+		false,
+	);
+	assert.equal(conversationMatchesInboxFilter({ unreadCount: 0 }, 'all'), true);
 });
 
 test('updateConversationPreview clears unread when the latest message is from us', () => {

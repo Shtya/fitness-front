@@ -103,6 +103,8 @@ import {
 	buildWhatsAppMentionDirectory,
 	resolveWhatsAppMentionLabel,
 	conversationUnreadCount,
+	conversationMatchesInboxFilter,
+	WHATSAPP_INBOX_CHIP_FILTERS,
 	isChannelConversation,
 	firstMessageLink,
 	textWithoutFirstLink,
@@ -2779,11 +2781,23 @@ export function MediaAttachment({
 				anchor.click();
 				window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 			} else if (typeof onOpenDocument === 'function') {
+				const fileName = attachment.fileName || labels.fileAttachment || 'attachment';
+				const extension = String(attachmentExtension(fileName, attachment.mimeType) || '')
+					.toLowerCase()
+					.replace(/[^a-z0-9]/g, '');
+				let previewBlob = blob;
+				let previewMime = attachment.mimeType || blob?.type || '';
+				if (extension === 'pdf') {
+					previewMime = 'application/pdf';
+					if (!String(blob?.type || '').toLowerCase().includes('pdf')) {
+						previewBlob = blob.slice(0, blob.size, 'application/pdf');
+					}
+				}
 				onOpenDocument({
-					name: attachment.fileName || labels.fileAttachment || 'attachment',
+					name: fileName,
 					fileName: attachment.fileName,
-					mimeType: attachment.mimeType || blob?.type,
-					blob,
+					mimeType: previewMime,
+					blob: previewBlob,
 					attachmentId: attachment.id,
 				});
 			} else {
@@ -5526,11 +5540,28 @@ function WhatsAppWorkspaceContent() {
 
 	const filteredConversations = useMemo(() => {
 		const archivedView = conversationFilter === 'archived';
+		const chipFilter = WHATSAPP_INBOX_CHIP_FILTERS.has(conversationFilter)
+			? conversationFilter
+			: 'all';
 		const scoped = effectiveConversations.filter(conversation => {
 			if (activeTab === 'channels' ? !isChannelConversation(conversation) : isChannelConversation(conversation)) {
 				return false;
 			}
-			return archivedView ? Boolean(conversation.isArchived) : !conversation.isArchived;
+			if (archivedView ? !conversation.isArchived : conversation.isArchived) {
+				return false;
+			}
+			// Chip filters (Unread / Favorites / Important) apply to the loaded All inbox
+			// immediately — no waiting on a server round-trip.
+			if (
+				!archivedView &&
+				chipFilter !== 'all' &&
+				!conversationMatchesInboxFilter(conversation, chipFilter, {
+					messagesCache: messagesCacheRef.current,
+				})
+			) {
+				return false;
+			}
+			return true;
 		});
 		const sorted = [...scoped].sort((a, b) => {
 			if (Boolean(a.isPinned) !== Boolean(b.isPinned)) return a.isPinned ? -1 : 1;
@@ -5648,7 +5679,12 @@ function WhatsAppWorkspaceContent() {
 		const filter = options.filter || conversationFilterRef.current || 'all';
 		const assignedUserId =
 			options.assignedUserId ?? assignmentFilterRef.current ?? '';
-		const useCache = !search && filter === 'all' && !assignedUserId;
+		const chipBackfill =
+			Boolean(options.mergeIntoInbox) &&
+			WHATSAPP_INBOX_CHIP_FILTERS.has(filter) &&
+			!search &&
+			!assignedUserId;
+		const useCache = !search && filter === 'all' && !assignedUserId && !chipBackfill;
 		// Always read conversations from DB — even when the live session is offline —
 		// so the inbox stays usable after a browser/session drop.
 		const cached = useCache ? conversationsCacheRef.current.get(id) : null;
@@ -5663,7 +5699,13 @@ function WhatsAppWorkspaceContent() {
 			Date.now() - cached.cachedAt < CONVERSATIONS_CACHE_TTL;
 		// Stale-while-revalidate: paint known rows immediately, then always refresh
 		// unless a forced reload cleared the cache intentionally.
-		if (isFirstPage && cacheHasRows && !options.force && accountIdRef.current === id) {
+		if (
+			isFirstPage &&
+			cacheHasRows &&
+			!options.force &&
+			!chipBackfill &&
+			accountIdRef.current === id
+		) {
 			setConversations(sortConversationsByActivity(cachedItems));
 			const requestedConversationId =
 				typeof window !== 'undefined'
@@ -5693,7 +5735,7 @@ function WhatsAppWorkspaceContent() {
 				return cached;
 			}
 		}
-		if (options.force && !options.background) {
+		if (options.force && !options.background && !chipBackfill) {
 			await resetConversationsCache(id);
 		}
 		const queryKey = whatsappKeys.conversations(id, {
@@ -5714,7 +5756,7 @@ function WhatsAppWorkspaceContent() {
 						filter,
 						assignedUserId,
 					}),
-				staleTime: options.force || options.background ? 0 : CONVERSATIONS_CACHE_TTL,
+				staleTime: options.force || options.background || chipBackfill ? 0 : CONVERSATIONS_CACHE_TTL,
 			});
 		} catch (error) {
 			// Cancelled by a newer force reload / account switch — ignore, do not clear UI.
@@ -5736,16 +5778,53 @@ function WhatsAppWorkspaceContent() {
 		const items = sortConversationsByActivity(
 			Array.isArray(data?.items) ? data.items : [],
 		);
+		const markImportant = filter === 'important' || filter === 'starred';
+		const annotateChipFields = item =>
+			markImportant ? { ...item, hasImportantMessages: true } : item;
 		const previousItems = append
 			? (conversationsCacheRef.current.get(id)?.items ||
 				(accountIdRef.current === id ? conversationsRef.current : []) ||
 				[])
 			: [];
-		const nextItems = append
+		let nextItems = append
 			? sortConversationsByActivity([
-					...new Map([...previousItems, ...items].map(item => [item.id, item])).values(),
+					...new Map(
+						[...previousItems, ...items.map(annotateChipFields)].map(item => [item.id, item]),
+					).values(),
 				])
-			: items;
+			: items.map(annotateChipFields);
+
+		// Chip filters: merge missing rows into the All inbox instead of replacing it.
+		if (chipBackfill) {
+			const inboxBase =
+				conversationsCacheRef.current.get(id)?.items ||
+				(accountIdRef.current === id ? conversationsRef.current : []) ||
+				[];
+			const byId = new Map(inboxBase.map(item => [item.id, item]));
+			items.forEach(item => {
+				const annotated = annotateChipFields(item);
+				const live = byId.get(item.id);
+				if (!live) {
+					byId.set(item.id, annotated);
+					return;
+				}
+				byId.set(item.id, {
+					...live,
+					...annotated,
+					isTyping: live.isTyping,
+					typing: live.typing,
+					presence: live.presence,
+					unreadCount:
+						live.unreadCount == null ? annotated.unreadCount : live.unreadCount,
+					hasImportantMessages:
+						Boolean(live.hasImportantMessages) || Boolean(annotated.hasImportantMessages),
+					isFavorite:
+						annotated.isFavorite == null ? live.isFavorite : annotated.isFavorite,
+				});
+			});
+			nextItems = sortConversationsByActivity([...byId.values()]);
+		}
+
 		const next = {
 			items: nextItems,
 			page: data?.page || page,
@@ -5759,15 +5838,24 @@ function WhatsAppWorkspaceContent() {
 			accountIdRef.current === id && conversationsRequestId.current === requestId;
 		// Only the latest request may write cache — superseded empty responses
 		// were poisoning TanStack and later hydrating the UI to [].
-		if (useCache && isCurrent) {
-			conversationsCacheRef.current.set(id, next);
+		// Chip backfills always update the All inbox cache.
+		if ((useCache || chipBackfill) && isCurrent) {
+			const existingCache = conversationsCacheRef.current.get(id);
+			conversationsCacheRef.current.set(id, {
+				...(existingCache || {}),
+				...next,
+				page: chipBackfill ? existingCache?.page || next.page : next.page,
+				total: chipBackfill
+					? Math.max(existingCache?.total || 0, nextItems.length)
+					: next.total,
+			});
 		}
 		if (!isCurrent) {
 			return next;
 		}
 		// Background revalidation must not wipe a newer live preview patch with
 		// an older network snapshot that raced past a socket update.
-		if (options.background) {
+		if (options.background && !chipBackfill) {
 			const liveById = new Map((conversationsRef.current || []).map(item => [item.id, item]));
 			const merged = sortConversationsByActivity(
 				nextItems.map(item => {
@@ -5812,9 +5900,12 @@ function WhatsAppWorkspaceContent() {
 			const requested = nextItems.find(item => item.id === requestedConversationId);
 			setActiveTab(isChannelConversation(requested) ? 'channels' : 'chats');
 		}
-		setConversationPage(next.page);
-		setConversationTotal(next.total);
-		setConversationScope(next.scope);
+		// Chip backfill must not reset All-inbox pagination / totals.
+		if (!chipBackfill) {
+			setConversationPage(next.page);
+			setConversationTotal(next.total);
+			setConversationScope(next.scope);
+		}
 		if (typeof next.archivedCount === 'number') {
 			setArchivedCount(next.archivedCount);
 		}
@@ -5825,11 +5916,28 @@ function WhatsAppWorkspaceContent() {
 		if (!accountId || loadingMoreConversations || conversations.length >= conversationTotal) return;
 		setLoadingMoreConversations(true);
 		try {
+			const search = chatSearchRef.current;
+			const assignment = assignmentFilterRef.current;
+			const filter = conversationFilterRef.current;
+			const chipOnly =
+				WHATSAPP_INBOX_CHIP_FILTERS.has(filter) && !search && !assignment;
+			// Extend the All inbox so local chip filters keep working without
+			// replacing the list with a filtered-only page.
 			await loadConversations(accountId, conversationPage + 1, true, {
-				search: chatSearchRef.current,
-				filter: conversationFilterRef.current,
-				assignedUserId: assignmentFilterRef.current,
+				search,
+				filter: chipOnly ? 'all' : filter,
+				assignedUserId: assignment,
 			});
+			if (chipOnly) {
+				void loadConversations(accountId, 1, false, {
+					background: true,
+					mergeIntoInbox: true,
+					force: false,
+					search: '',
+					filter,
+					assignedUserId: '',
+				}).catch(() => {});
+			}
 		} catch (error) {
 			toast.error(error.response?.data?.message || 'Could not load more conversations');
 		} finally {
@@ -5846,12 +5954,30 @@ function WhatsAppWorkspaceContent() {
 			if (reloadConversationsTimer.current) clearTimeout(reloadConversationsTimer.current);
 			reloadConversationsTimer.current = setTimeout(() => {
 				if (syncingInboxRef.current) return;
+				const search = chatSearchRef.current;
+				const assignment = assignmentFilterRef.current;
+				const filter = conversationFilterRef.current;
+				const chipOnly =
+					WHATSAPP_INBOX_CHIP_FILTERS.has(filter) && !search && !assignment;
+				// Always refresh the All inbox first so chip filters stay instant.
 				loadConversations(id, 1, false, {
 					force: true,
-					search: chatSearchRef.current,
-					filter: conversationFilterRef.current,
-					assignedUserId: assignmentFilterRef.current,
-				}).catch(() => { });
+					search,
+					filter: chipOnly ? 'all' : filter,
+					assignedUserId: assignment,
+				})
+					.then(() => {
+						if (!chipOnly || accountIdRef.current !== id) return;
+						return loadConversations(id, 1, false, {
+							background: true,
+							mergeIntoInbox: true,
+							force: false,
+							search: '',
+							filter,
+							assignedUserId: '',
+						});
+					})
+					.catch(() => { });
 			}, 800);
 		},
 		[loadConversations],
@@ -5863,14 +5989,15 @@ function WhatsAppWorkspaceContent() {
 		assignmentFilterRef.current = assignmentFilter;
 		if (!accountId) return undefined;
 		const searchRequestId = ++conversationSearchRequestId.current;
-		const hasActiveSearch =
-			Boolean(chatSearchRef.current) ||
-			conversationFilter !== 'all' ||
-			Boolean(assignmentFilter);
+		const hasTextSearch = Boolean(chatSearchRef.current);
+		const hasAssignment = Boolean(assignmentFilter);
+		const needsServerSearch = hasTextSearch || hasAssignment;
+		const needsChipBackfill =
+			!needsServerSearch && WHATSAPP_INBOX_CHIP_FILTERS.has(conversationFilter);
 		const timer = window.setTimeout(async () => {
 			// Account switching already reloads via the accountId effect. Forcing a
 			// second cancel+refetch here races and surfaces "Could not search conversations".
-			if (!hasActiveSearch) {
+			if (!needsServerSearch && !needsChipBackfill) {
 				if (
 					accountIdRef.current === accountId &&
 					conversationSearchRequestId.current === searchRequestId
@@ -5879,6 +6006,31 @@ function WhatsAppWorkspaceContent() {
 				}
 				return;
 			}
+
+			// Chip filters: UI already filtered the loaded All list. Backfill missing
+			// chats (e.g. unread not in the first All page) quietly in the background.
+			if (needsChipBackfill) {
+				if (
+					accountIdRef.current === accountId &&
+					conversationSearchRequestId.current === searchRequestId
+				) {
+					setSearchingConversations(false);
+				}
+				try {
+					await loadConversations(accountId, 1, false, {
+						background: true,
+						mergeIntoInbox: true,
+						force: false,
+						search: '',
+						filter: conversationFilterRef.current,
+						assignedUserId: '',
+					});
+				} catch {
+					// Silent — local filter already shows what we have.
+				}
+				return;
+			}
+
 			setSearchingConversations(true);
 			try {
 				await loadConversations(accountId, 1, false, {
@@ -5900,7 +6052,7 @@ function WhatsAppWorkspaceContent() {
 					setSearchingConversations(false);
 				}
 			}
-		}, 300);
+		}, needsChipBackfill ? 0 : 300);
 		return () => window.clearTimeout(timer);
 	}, [
 		accountId,
@@ -8601,13 +8753,29 @@ function WhatsAppWorkspaceContent() {
 			if (action === 'star' && importantView && !enabled) {
 				const remaining = (messagesCacheRef.current.get(`${conversationId}:important`)?.items || [])
 					.filter(item => item?.id !== message.id);
-				if (!remaining.length && accountId) {
-					setConversations(current => current.filter(item => item.id !== conversationId));
+				if (!remaining.length) {
+					setConversations(current =>
+						current.map(item =>
+							item.id === conversationId
+								? { ...item, hasImportantMessages: false }
+								: item,
+						),
+					);
 				}
 			}
-			if (action === 'star' && importantView && enabled) {
+			if (action === 'star' && enabled) {
+				setConversations(current =>
+					current.map(item =>
+						item.id === conversationId
+							? { ...item, hasImportantMessages: true }
+							: item,
+					),
+				);
+			}
+			if (action === 'star' && importantView && enabled && accountId) {
 				void loadConversations(accountId, 1, false, {
-					force: true,
+					background: true,
+					mergeIntoInbox: true,
 					filter: 'important',
 				}).catch(() => {});
 			}

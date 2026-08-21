@@ -4,6 +4,24 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
 
+function clamp(value, min, max) {
+	return Math.min(max, Math.max(min, value));
+}
+
+/**
+ * Radix Dialog uses react-remove-scroll, which preventDefault()s wheel/touchmove
+ * on portaled menus outside the dialog. Manually apply the delta so the list still scrolls.
+ */
+function scrollNodeByDelta(node, deltaY) {
+	if (!node) return false;
+	const maxScroll = node.scrollHeight - node.clientHeight;
+	if (maxScroll <= 0) return false;
+	const next = clamp(node.scrollTop + deltaY, 0, maxScroll);
+	if (next === node.scrollTop) return false;
+	node.scrollTop = next;
+	return true;
+}
+
 export function WaCustomSelect({
 	value,
 	onChange,
@@ -19,6 +37,7 @@ export function WaCustomSelect({
 	const rootRef = useRef(null);
 	const buttonRef = useRef(null);
 	const menuRef = useRef(null);
+	const touchYRef = useRef(null);
 	const selected =
 		options.find(option => String(option.value) === String(value)) ||
 		(value == null || value === '' ? options[0] : null);
@@ -43,19 +62,19 @@ export function WaCustomSelect({
 			const viewportH = window.innerHeight || 720;
 			const viewportW = window.innerWidth || 1280;
 			const width = Math.min(Math.max(rect.width, compact ? 200 : 180), viewportW - margin * 2);
-			const rowHeight = hasDescriptions ? 52 : 36;
-			const estimatedHeight = Math.min(options.length * rowHeight + 8, 280);
-			const spaceBelow = viewportH - rect.bottom - margin;
-			const openUp = spaceBelow < estimatedHeight && rect.top > spaceBelow;
-			let top = openUp ? rect.top - gap - estimatedHeight : rect.bottom + gap;
-			top = Math.max(margin, Math.min(top, viewportH - estimatedHeight - margin));
+			const spaceBelow = Math.max(0, viewportH - rect.bottom - margin - gap);
+			const spaceAbove = Math.max(0, rect.top - margin - gap);
+			const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
+			const available = Math.max(120, openUp ? spaceAbove : spaceBelow);
+			const maxHeight = Math.min(320, available);
+			const top = openUp ? Math.max(margin, rect.top - gap - maxHeight) : rect.bottom + gap;
 			let left = rect.left;
 			left = Math.max(margin, Math.min(left, viewportW - width - margin));
 			setPosition({
 				top,
 				left,
 				width,
-				maxHeight: Math.min(280, viewportH - margin * 2),
+				maxHeight,
 			});
 		};
 		updatePosition();
@@ -70,13 +89,45 @@ export function WaCustomSelect({
 		const closeOnEscape = event => {
 			if (event.key === 'Escape') setOpen(false);
 		};
+		// Capture-phase wheel so we scroll even when Dialog's remove-scroll cancels the event.
+		const onWheelCapture = event => {
+			const menu = menuRef.current;
+			if (!menu || !menu.contains(event.target)) return;
+			if (scrollNodeByDelta(menu, event.deltaY)) {
+				event.preventDefault();
+			}
+			event.stopPropagation();
+		};
+		const onTouchStartCapture = event => {
+			const menu = menuRef.current;
+			if (!menu || !menu.contains(event.target)) return;
+			touchYRef.current = event.touches[0]?.clientY ?? null;
+		};
+		const onTouchMoveCapture = event => {
+			const menu = menuRef.current;
+			if (!menu || !menu.contains(event.target) || touchYRef.current == null) return;
+			const y = event.touches[0]?.clientY;
+			if (y == null) return;
+			const deltaY = touchYRef.current - y;
+			touchYRef.current = y;
+			if (scrollNodeByDelta(menu, deltaY)) {
+				event.preventDefault();
+			}
+			event.stopPropagation();
+		};
 		document.addEventListener('pointerdown', closeOnOutsideClick);
 		document.addEventListener('keydown', closeOnEscape);
+		document.addEventListener('wheel', onWheelCapture, { capture: true, passive: false });
+		document.addEventListener('touchstart', onTouchStartCapture, { capture: true, passive: true });
+		document.addEventListener('touchmove', onTouchMoveCapture, { capture: true, passive: false });
 		window.addEventListener('resize', updatePosition);
 		window.addEventListener('scroll', updatePosition, true);
 		return () => {
 			document.removeEventListener('pointerdown', closeOnOutsideClick);
 			document.removeEventListener('keydown', closeOnEscape);
+			document.removeEventListener('wheel', onWheelCapture, true);
+			document.removeEventListener('touchstart', onTouchStartCapture, true);
+			document.removeEventListener('touchmove', onTouchMoveCapture, true);
 			window.removeEventListener('resize', updatePosition);
 			window.removeEventListener('scroll', updatePosition, true);
 		};
@@ -124,8 +175,15 @@ export function WaCustomSelect({
 							data-wa-select-menu="true"
 							aria-label={ariaLabel}
 							onPointerDown={event => event.stopPropagation()}
-							className="fixed z-[1600] overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_rgba(11,20,26,0.18)] dark:border-slate-700 dark:bg-slate-900"
-							style={{ ...position, pointerEvents: 'auto' }}
+							className="fixed z-[1600] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_rgba(11,20,26,0.18)] dark:border-slate-700 dark:bg-slate-900"
+							style={{
+								top: position.top,
+								left: position.left,
+								width: position.width,
+								maxHeight: position.maxHeight,
+								pointerEvents: 'auto',
+								WebkitOverflowScrolling: 'touch',
+							}}
 						>
 							{options.map(option => {
 								const isSelected = String(option.value) === String(value);
