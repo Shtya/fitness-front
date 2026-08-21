@@ -121,6 +121,7 @@ import {
 	messageDeliveryState,
 	preferWhatsAppAckStatus,
 	isSelfChatConversation,
+	isEmailMemoAiConversation,
 	messageMatchesAckTarget,
 	messageTextPresentation,
 	normalizeWhatsAppIdentity,
@@ -5070,7 +5071,8 @@ function WhatsAppWorkspaceContent() {
 	const canComposeInConversation =
 		(canUseWhatsApp || demo.settings.enabled) &&
 		canRouteDemoWrite(demo.settings.enabled, selectedConversation) &&
-		(!demo.settings.enabled || demo.settings.featureFlags.useFakeMessages !== false);
+		(!demo.settings.enabled || demo.settings.featureFlags.useFakeMessages !== false) &&
+		!isEmailMemoAiConversation(selectedConversation);
 	const availableTabs = useMemo(
 		() =>
 			tabs.filter(([key]) => {
@@ -6265,6 +6267,8 @@ function WhatsAppWorkspaceContent() {
 			conversationIdRef.current === id;
 		const conversationMeta =
 			conversationsRef.current.find(item => item.id === id) || null;
+		const allowProviderSync =
+			Boolean(canSync) && !isEmailMemoAiConversation(conversationMeta);
 		if (hoverPrefetchTimerRef.current) {
 			window.clearTimeout(hoverPrefetchTimerRef.current);
 			hoverPrefetchTimerRef.current = null;
@@ -6447,7 +6451,7 @@ function WhatsAppWorkspaceContent() {
 			const historySyncBlocked =
 				Date.now() < providerHistorySyncBlockedUntilRef.current;
 			const backfill = shouldProviderBackfill({
-				canSync,
+				canSync: allowProviderSync,
 				starredOnly,
 				forceProvider,
 				historySyncBlocked,
@@ -13034,7 +13038,11 @@ function WhatsAppWorkspaceContent() {
 										</form>
 									) : (
 										<div className="border-t border-slate-100 p-3 text-center text-sm font-bold text-slate-400 dark:border-slate-800">
-											{t.readOnly}
+											{isEmailMemoAiConversation(selectedConversation)
+												? locale === 'ar'
+													? 'محادثة AI لمذكرات الإيميل — للعرض فقط'
+													: 'Email Memo AI inbox — view only'
+												: t.readOnly}
 										</div>
 									)}
 									</div>

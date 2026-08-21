@@ -1963,23 +1963,59 @@ export default function EmailMemoWorkspace() {
 						{settingsTab === 'wa' && (
 							<div className="space-y-3 text-sm">
 								<p className="rounded-[14px] border border-[#E5E7EB] bg-slate-50 px-3 py-2 text-[12px] leading-relaxed text-[#6B7280]">{t('waSendHint')}</p>
-								<label className="block">
-									<div className="mb-1 font-semibold">{t('targetChat')}</div>
-									<EmailMemoSelect
-										ariaLabel={t('targetChat')}
-										searchable={chats.length > 6}
-										value={settings.targetChatId || ''}
-										onChange={(id) => {
-											const chat = chats.find((item) => item.id === id);
-											setSettings({ ...settings, targetChatId: id || null, targetChatName: chat?.name || t('selfChat') });
-										}}
-										options={[
-											{ value: '', label: t('selfChat') },
-											...chats.map((chat) => ({ value: chat.id, label: chat.name })),
-										]}
-									/>
-								</label>
-								<Toggle row={settings} set={setSettings} field="whatsappEnabled" label={t('enableNotif')} />
+								<div>
+									<div className="mb-2 font-semibold">{t('deliveryDestination')}</div>
+									<div className="space-y-2">
+										{[
+											['in_site', t('deliveryInSite')],
+											['whatsapp', t('deliveryWhatsApp')],
+											['both', t('deliveryBoth')],
+										].map(([id, label]) => (
+											<label key={id} className="flex items-start gap-2">
+												<input
+													type="radio"
+													className="mt-1"
+													checked={(settings.deliveryDestination || 'whatsapp') === id}
+													onChange={() =>
+														setSettings({ ...settings, deliveryDestination: id })
+													}
+												/>
+												<span>{label}</span>
+											</label>
+										))}
+									</div>
+									{(settings.deliveryDestination === 'in_site' ||
+										settings.deliveryDestination === 'both') && (
+										<p className="mt-2 rounded-[12px] border border-emerald-100 bg-emerald-50/80 px-3 py-2 text-[11px] leading-relaxed text-emerald-900">
+											{t('deliveryInSiteHint')}
+										</p>
+									)}
+								</div>
+								{(settings.deliveryDestination || 'whatsapp') !== 'in_site' && (
+									<>
+										<label className="block">
+											<div className="mb-1 font-semibold">{t('targetChat')}</div>
+											<EmailMemoSelect
+												ariaLabel={t('targetChat')}
+												searchable={chats.length > 6}
+												value={settings.targetChatId || ''}
+												onChange={(id) => {
+													const chat = chats.find((item) => item.id === id);
+													setSettings({
+														...settings,
+														targetChatId: id || null,
+														targetChatName: chat?.name || t('selfChat'),
+													});
+												}}
+												options={[
+													{ value: '', label: t('selfChat') },
+													...chats.map((chat) => ({ value: chat.id, label: chat.name })),
+												]}
+											/>
+										</label>
+										<Toggle row={settings} set={setSettings} field="whatsappEnabled" label={t('enableNotif')} />
+									</>
+								)}
 								<Toggle row={settings} set={setSettings} field="onlyImportant" label={t('onlyImportant')} />
 								<div className="font-semibold">{t('notificationMode')}</div>
 								{[

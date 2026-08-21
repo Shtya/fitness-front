@@ -368,6 +368,7 @@ export function isChannelConversation(conversation) {
 }
 
 export function conversationTitle(conversation) {
+	if (isEmailMemoAiConversation(conversation)) return 'AI';
 	const chatId = String(conversation?.providerChatId || '');
 	const isGroup =
 		conversation?.type === 'group' || chatId.endsWith('@g.us');
@@ -393,6 +394,14 @@ export function conversationTitle(conversation) {
 	);
 }
 
+export const EMAIL_MEMO_AI_CHAT_ID = 'email-memo-ai@so7ba.internal';
+
+export function isEmailMemoAiConversation(conversation) {
+	if (!conversation) return false;
+	if (conversation.isEmailMemoAi) return true;
+	return String(conversation.providerChatId || '') === EMAIL_MEMO_AI_CHAT_ID;
+}
+
 export function normalizeWhatsAppIdentity(value) {
 	return String(value || '')
 		.trim()
@@ -414,6 +423,9 @@ function conversationSortTime(conversation) {
  *  message updates the row in place without bubbling the chat up. */
 export function sortConversationsByActivity(conversations = []) {
 	return [...conversations].sort((a, b) => {
+		const aAi = isEmailMemoAiConversation(a);
+		const bAi = isEmailMemoAiConversation(b);
+		if (aAi !== bAi) return aAi ? -1 : 1;
 		if (Boolean(a?.isPinned) !== Boolean(b?.isPinned)) return a?.isPinned ? -1 : 1;
 		const difference = conversationSortTime(b) - conversationSortTime(a);
 		if (difference) return difference;
