@@ -449,9 +449,11 @@ const translations = {
 		downloadSelectedMedia: 'Download selected',
 		selectAllMedia: 'Select all media',
 		noMediaToSelect: 'No downloadable media in this chat',
-		downloadingSelectedMedia: 'Downloading selected files…',
-		selectedMediaDownloaded: 'Downloaded {count} files',
-		selectedMediaPartialFail: 'Downloaded {ok} files, {failed} failed',
+		downloadingSelectedMedia: 'Preparing zip download…',
+		selectedMediaDownloaded: 'Downloaded {count} files as zip',
+		selectedMediaPartialFail: 'Zip ready with {ok} files, {failed} failed',
+		selectedMediaZipEmpty: 'Could not download the selected files',
+		selectedMediaZipName: 'whatsapp-media',
 		selectMessages: 'Select messages',
 		cancelSelectMessages: 'Cancel',
 		selectAllMessages: 'Select all',
@@ -802,9 +804,11 @@ const translations = {
 		downloadSelectedMedia: 'تنزيل المحدد',
 		selectAllMedia: 'تحديد كل الوسائط',
 		noMediaToSelect: 'لا توجد وسائط قابلة للتنزيل في هذه المحادثة',
-		downloadingSelectedMedia: 'جارِ تنزيل الملفات المحددة…',
-		selectedMediaDownloaded: 'تم تنزيل {count} ملف',
-		selectedMediaPartialFail: 'تم تنزيل {ok} ملف، وفشل {failed}',
+		downloadingSelectedMedia: 'جارِ تجهيز ملف ZIP…',
+		selectedMediaDownloaded: 'تم تنزيل {count} ملف في ZIP',
+		selectedMediaPartialFail: 'تم تجهيز ZIP بـ {ok} ملف، وفشل {failed}',
+		selectedMediaZipEmpty: 'تعذر تنزيل الملفات المحددة',
+		selectedMediaZipName: 'وسائط-واتساب',
 		selectMessages: 'تحديد رسائل',
 		cancelSelectMessages: 'إلغاء',
 		selectAllMessages: 'تحديد الكل',
@@ -8205,50 +8209,120 @@ function WhatsAppWorkspaceContent() {
 		const catalog = collectDownloadableAttachments(effectiveMessages);
 		const byId = new Map(catalog.map(item => [item.id, item]));
 		setDownloadingSelectedMedia(true);
-		toast(t.downloadingSelectedMedia);
+		const loadingToast = toast.loading(t.downloadingSelectedMedia);
 		let ok = 0;
 		let failed = 0;
-		for (const id of selected) {
-			const meta = byId.get(id);
-			try {
-				const blob = meta?.demoAttachment
-					? await demoApi.getMedia(rawDemoId(id))
-					: await requestAttachmentBlob(id, { timeout: 90_000, priority: true });
-				if (!blob || blob.size < 8) throw new Error('empty');
-				const objectUrl = URL.createObjectURL(blob);
+		const usedNames = new Set();
+		const uniqueName = fileName => {
+			const raw = String(fileName || 'file').replace(/[\\/:*?"<>|]/g, '_').trim() || 'file';
+			if (!usedNames.has(raw)) {
+				usedNames.add(raw);
+				return raw;
+			}
+			const dot = raw.lastIndexOf('.');
+			const base = dot > 0 ? raw.slice(0, dot) : raw;
+			const ext = dot > 0 ? raw.slice(dot) : '';
+			let index = 2;
+			let next = `${base} (${index})${ext}`;
+			while (usedNames.has(next)) {
+				index += 1;
+				next = `${base} (${index})${ext}`;
+			}
+			usedNames.add(next);
+			return next;
+		};
+
+		try {
+			const entries = [];
+			for (const id of selected) {
+				const meta = byId.get(id);
+				try {
+					const blob = meta?.demoAttachment
+						? await demoApi.getMedia(rawDemoId(id))
+						: await requestAttachmentBlob(id, { timeout: 90_000, priority: true });
+					if (!blob || blob.size < 8) throw new Error('empty');
+					entries.push({
+						name: uniqueName(meta?.fileName || `whatsapp-${id.slice(0, 8)}`),
+						blob,
+					});
+					ok += 1;
+				} catch {
+					failed += 1;
+				}
+			}
+
+			if (!entries.length) {
+				toast.error(t.selectedMediaZipEmpty, { id: loadingToast });
+				return;
+			}
+
+			// Single file: keep a normal download. Multiple: one zip.
+			if (entries.length === 1) {
+				const objectUrl = URL.createObjectURL(entries[0].blob);
 				const anchor = document.createElement('a');
 				anchor.href = objectUrl;
-				anchor.download = meta?.fileName || `whatsapp-${id.slice(0, 8)}`;
+				anchor.download = entries[0].name;
 				document.body.appendChild(anchor);
 				anchor.click();
 				anchor.remove();
 				window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-				ok += 1;
-				await new Promise(resolve => window.setTimeout(resolve, 350));
-			} catch {
-				failed += 1;
+			} else {
+				const JSZip = (await import('jszip')).default;
+				const zip = new JSZip();
+				for (const entry of entries) {
+					zip.file(entry.name, entry.blob);
+				}
+				const zipBlob = await zip.generateAsync({
+					type: 'blob',
+					compression: 'DEFLATE',
+					compressionOptions: { level: 6 },
+				});
+				const stamp = new Date().toISOString().slice(0, 10);
+				const chatLabel = String(selectedChatTitle || t.selectedMediaZipName)
+					.replace(/[\\/:*?"<>|]+/g, ' ')
+					.trim()
+					.slice(0, 40);
+				const zipName = `${chatLabel || t.selectedMediaZipName}-${stamp}.zip`;
+				const objectUrl = URL.createObjectURL(zipBlob);
+				const anchor = document.createElement('a');
+				anchor.href = objectUrl;
+				anchor.download = zipName;
+				document.body.appendChild(anchor);
+				anchor.click();
+				anchor.remove();
+				window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 			}
-		}
-		setDownloadingSelectedMedia(false);
-		if (failed === 0) {
-			toast.success(t.selectedMediaDownloaded.replace('{count}', String(ok)));
-			setMediaSelectMode(false);
-			setSelectedMediaIds(new Set());
-		} else {
-			toast.error(
-				t.selectedMediaPartialFail
-					.replace('{ok}', String(ok))
-					.replace('{failed}', String(failed)),
-			);
+
+			if (failed === 0) {
+				toast.success(t.selectedMediaDownloaded.replace('{count}', String(ok)), {
+					id: loadingToast,
+				});
+				setMediaSelectMode(false);
+				setSelectedMediaIds(new Set());
+			} else {
+				toast.error(
+					t.selectedMediaPartialFail
+						.replace('{ok}', String(ok))
+						.replace('{failed}', String(failed)),
+					{ id: loadingToast },
+				);
+			}
+		} catch {
+			toast.error(t.selectedMediaZipEmpty, { id: loadingToast });
+		} finally {
+			setDownloadingSelectedMedia(false);
 		}
 	}, [
 		collectDownloadableAttachments,
 		downloadingSelectedMedia,
 		effectiveMessages,
+		selectedChatTitle,
 		selectedMediaIds,
 		t.downloadingSelectedMedia,
 		t.selectedMediaDownloaded,
 		t.selectedMediaPartialFail,
+		t.selectedMediaZipEmpty,
+		t.selectedMediaZipName,
 	]);
 
 	useEffect(() => {
