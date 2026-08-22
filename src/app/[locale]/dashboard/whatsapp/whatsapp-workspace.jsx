@@ -71,6 +71,7 @@ import {
 	TrendingUp,
 	User,
 	UserPlus,
+	UserCircle2,
 	Users,
 	Video,
 	Wifi,
@@ -82,6 +83,11 @@ import api from '@/utils/axios';
 import { notifyWhatsAppUnreadChanged } from '@/lib/outreach-unread';
 import TranscriptionDialog from '../transcript/transcription-dialog';
 import VoiceChangerDialog from './voice-changer/VoiceChangerDialog';
+import CloneChatVoicePanel from './voice-changer/CloneChatVoicePanel';
+import {
+	loadConversationHistoryForClone,
+	loadMoreConversationHistoryForClone,
+} from './voice-changer/voice-clone-chat-samples';
 import StickersPanel from './stickers/StickersPanel';
 import AiImageComposerPanel from './stickers/AiImageComposerPanel';
 import { ChatDocumentViewer } from './document-viewer/chat-document-viewer';
@@ -144,6 +150,7 @@ import DemoModeSettings from './demo/components/DemoModeSettings';
 import { demoApi } from './demo/demo-api';
 import WhatsAppSplitPane from './WhatsAppSplitPane';
 import { VoiceRecordingBar } from './VoiceRecordingBar';
+import { useVoiceRecordingPreview } from './use-voice-recording-preview';
 import {
 	VOICE_NOTE_MAX_SECONDS,
 	buildVoiceNoteFile,
@@ -154,6 +161,7 @@ import {
 import WhatsAppDesktopRail from './WhatsAppDesktopRail';
 import { WhatsAppReportsTab, staffAssignHint } from './WhatsAppReportsTab';
 import { WaCustomSelect } from './WaCustomSelect';
+import { WaActionMenu } from './WaActionMenu';
 import {
 	addMessagesToChatGroup,
 	createChatMessageGroup,
@@ -483,6 +491,16 @@ const translations = {
 		recordingPause: 'Pause',
 		recordingResume: 'Resume',
 		sendRecording: 'Send',
+		recordingPreview: 'Listen',
+		recordingPreviewStop: 'Stop preview',
+		recordingPreviewMode: 'Preview',
+		recordingPreviewPlaying: 'Playing',
+		recordingPreviewPaused: 'Paused',
+		recordingPreviewPause: 'Pause preview',
+		recordingPreviewResume: 'Resume preview',
+		recordingPreviewSeek: 'Preview progress',
+		recordingPreviewEmpty: 'Nothing recorded yet',
+		recordingPreviewFailed: 'Could not play preview',
 		microphoneDenied: 'Microphone permission was denied',
 		microphoneUnavailable: 'No microphone is available',
 		recordingUnsupported: 'Voice recording is not supported in this browser',
@@ -539,6 +557,11 @@ const translations = {
 		notes: 'Internal notes',
 		openSplitChat: 'Open second chat',
 		splitPickHint: 'Pick another chat from the list to open beside this one',
+		cloneVoicePickHint: 'Pick a chat from the list — only voice notes will show for cloning',
+		cloneVoicePickDone: 'Back to voice settings',
+		cloneVoicePickCancel: 'Cancel',
+		cloneVoicePickIdle: 'Choose a chat from the sidebar',
+		cloneVoicePickIdleHint: 'Voice notes from that chat will appear here. You can pick another chat anytime.',
 		closeSplitChat: 'Close second chat',
 		splitChat: 'Split chat',
 		notesHint: 'Visible to staff only — never sent on WhatsApp',
@@ -598,6 +621,7 @@ const translations = {
 		archiveUpdated: 'Archived chats updated',
 		noArchivedConversations: 'No archived chats',
 		assignedTo: 'Assigned to',
+		chatActions: 'Chat actions',
 		allAssignees: 'All assignees',
 		favoriteUpdated: 'Favorite updated',
 		pinChat: 'Pin chat',
@@ -838,6 +862,16 @@ const translations = {
 		recordingPause: 'إيقاف',
 		recordingResume: 'متابعة',
 		sendRecording: 'إرسال',
+		recordingPreview: 'استمع',
+		recordingPreviewStop: 'إيقاف المعاينة',
+		recordingPreviewMode: 'معاينة',
+		recordingPreviewPlaying: 'تشغيل',
+		recordingPreviewPaused: 'متوقف',
+		recordingPreviewPause: 'إيقاف المعاينة',
+		recordingPreviewResume: 'متابعة المعاينة',
+		recordingPreviewSeek: 'تقدم المعاينة',
+		recordingPreviewEmpty: 'مفيش تسجيل لسه',
+		recordingPreviewFailed: 'تعذر تشغيل المعاينة',
 		microphoneDenied: 'تم رفض إذن استخدام الميكروفون',
 		microphoneUnavailable: 'لا يوجد ميكروفون متاح',
 		recordingUnsupported: 'تسجيل الصوت غير مدعوم في هذا المتصفح',
@@ -894,6 +928,11 @@ const translations = {
 		notes: 'ملاحظات داخلية',
 		openSplitChat: 'فتح شات ثاني',
 		splitPickHint: 'اختر شات آخر من القائمة لفتحه بجانب الحالي',
+		cloneVoicePickHint: 'اختَر محادثة من القائمة — هتظهر رسائل صوتية بس للاستنساخ',
+		cloneVoicePickDone: 'رجوع لإعدادات الصوت',
+		cloneVoicePickCancel: 'إلغاء',
+		cloneVoicePickIdle: 'اختَر محادثة من القائمة الجانبية',
+		cloneVoicePickIdleHint: 'هتظهر رسائل صوتية المحادثة هنا. تقدر تختار شات تاني في أي وقت.',
 		closeSplitChat: 'إغلاق الشات الثاني',
 		splitChat: 'شات مقسوم',
 		notesHint: 'ظاهرة للموظفين فقط — لا تُرسل على واتساب',
@@ -953,6 +992,7 @@ const translations = {
 		archiveUpdated: 'تم تحديث المحادثات المؤرشفة',
 		noArchivedConversations: 'لا توجد محادثات مؤرشفة',
 		assignedTo: 'المسند إلى',
+		chatActions: 'إجراءات المحادثة',
 		allAssignees: 'كل الموظفين',
 		favoriteUpdated: 'تم تحديث المفضلة',
 		pinChat: 'تثبيت المحادثة',
@@ -4799,6 +4839,11 @@ function WhatsAppWorkspaceContent() {
 	const [recordingPaused, setRecordingPaused] = useState(false);
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
 	const [voiceChangerOpen, setVoiceChangerOpen] = useState(false);
+	const [cloneVoicePickMode, setCloneVoicePickMode] = useState(false);
+	const [cloneVoicePickSampleBase, setCloneVoicePickSampleBase] = useState(0);
+	const [pendingCloneSampleTick, setPendingCloneSampleTick] = useState(0);
+	const pendingCloneSamplesRef = useRef([]);
+	const cloneVoiceHistoryRef = useRef(new Map());
 	const [voiceChanging, setVoiceChanging] = useState(false);
 	const [voiceChangerSettings, setVoiceChangerSettings] = useState(null);
 	const voiceChangerSettingsRef = useRef({ configured: true, enabled: false, provider: 'off' });
@@ -4942,6 +4987,21 @@ function WhatsAppWorkspaceContent() {
 	const recordingTimerRef = useRef(null);
 	const recordingSecondsRef = useRef(0);
 	const discardRecordingRef = useRef(false);
+	const {
+		voicePreviewActive,
+		voicePreviewPlaying,
+		voicePreviewProgress,
+		voicePreviewCurrentTime,
+		voicePreviewDuration,
+		clearVoicePreview,
+		toggleVoicePreview,
+		seekVoicePreview,
+	} = useVoiceRecordingPreview({
+		mediaRecorderRef,
+		recordingChunksRef,
+		setRecordingPaused,
+		labels: t,
+	});
 	const statusMediaUrlRef = useRef(null);
 	const autoConnectAttemptedRef = useRef(null);
 	const autoCreateAccountAttemptedRef = useRef(false);
@@ -8449,6 +8509,38 @@ function WhatsAppWorkspaceContent() {
 		setGroupPickerOpen(false);
 	};
 
+	const toggleMediaSelectMode = useCallback(() => {
+		const catalog = collectDownloadableAttachments(effectiveMessages);
+		if (!catalog.length) {
+			toast.error(t.noMediaToSelect);
+			return;
+		}
+		if (mediaSelectMode) {
+			setMediaSelectMode(false);
+			setSelectedMediaIds(new Set());
+			return;
+		}
+		setTicketSelectMode(false);
+		setSelectedMessageIds(new Set());
+		setMediaSelectMode(true);
+	}, [effectiveMessages, mediaSelectMode, t]);
+
+	const toggleMessageGroupsPanel = useCallback(() => {
+		setMessageGroupsOpen(current => !current);
+		setGroupPickerOpen(false);
+		if (conversationId) void refreshMessageGroups(conversationId);
+	}, [conversationId, refreshMessageGroups]);
+
+	const toggleSplitChat = useCallback(() => {
+		if (secondaryConversationId) {
+			setSecondaryConversationId(null);
+			setSplitPickMode(false);
+			return;
+		}
+		setSplitPickMode(true);
+		toast(t.splitPickHint, { icon: '▦' });
+	}, [secondaryConversationId, t]);
+
 	const applyGroupMessageSelection = (message, { toggle = true } = {}) => {
 		if (!message?.id || message.optimistic) return false;
 		setMediaSelectMode(false);
@@ -8924,6 +9016,248 @@ function WhatsAppWorkspaceContent() {
 		);
 	}, []);
 
+	const buildCloneVoiceFetchers = useCallback(
+		targetConversationId => ({
+			fetchPage: async ({ before, limit }) => {
+				const { data } = await api.get(
+					`/whatsapp/conversations/${targetConversationId}/messages`,
+					{
+						params: {
+							limit,
+							before: before || undefined,
+							live: 0,
+						},
+					},
+				);
+				return Array.isArray(data) ? data : [];
+			},
+			primeSync:
+				canUseWhatsApp && !demo.settings.enabled
+					? async ({ limit }) => {
+							const synced = await api.post(
+								`/whatsapp/conversations/${targetConversationId}/sync/latest`,
+								null,
+								{
+									params: {
+										limit: Math.min(limit || MESSAGE_PAGE_SIZE, 200),
+										force: 1,
+									},
+									timeout: 12_000,
+								},
+							);
+							return synced?.data;
+						}
+					: undefined,
+			syncOlderPage:
+				canUseWhatsApp && !demo.settings.enabled
+					? async ({ limit }) => {
+							const synced = await api.post(
+								`/whatsapp/conversations/${targetConversationId}/sync/older`,
+								null,
+								{ params: { limit: Math.min(limit || MESSAGE_PAGE_SIZE, 200), force: 1 } },
+							);
+							return synced?.data;
+						}
+					: undefined,
+			mergePage: (incoming, previous, conversationId) =>
+				mergeMessages(incoming, previous, conversationId),
+		}),
+		[canUseWhatsApp, demo.settings.enabled],
+	);
+
+	const fetchInitialChatMessagesForClone = useCallback(
+		async targetConversationId => {
+			if (!targetConversationId) return { messages: [], hasMore: false };
+			if (isDemoId(targetConversationId)) {
+				const cached = messagesCacheRef.current.get(targetConversationId);
+				const messages = cached?.items?.length
+					? cached.items
+					: await buildCloneVoiceFetchers(targetConversationId).fetchPage({
+							limit: MESSAGE_PAGE_SIZE,
+						});
+				return {
+					messages,
+					hasMore: messages.length >= MESSAGE_PAGE_SIZE,
+				};
+			}
+
+			const remembered = cloneVoiceHistoryRef.current.get(targetConversationId);
+			if (remembered?.messages?.length) {
+				return {
+					messages: remembered.messages,
+					hasMore: Boolean(remembered.hasMore || remembered.providerHasMore),
+				};
+			}
+
+			const fetchers = buildCloneVoiceFetchers(targetConversationId);
+			const inboxCached = messagesCacheRef.current.get(targetConversationId);
+			let messages = inboxCached?.items || [];
+			if (
+				conversationIdRef.current === targetConversationId &&
+				conversationMessagesRef.current?.length
+			) {
+				messages = mergeMessages(
+					conversationMessagesRef.current,
+					messages,
+					targetConversationId,
+				);
+			}
+
+			if (messages.length) {
+				if (typeof fetchers.primeSync === 'function') {
+					try {
+						const synced = await fetchers.primeSync({ limit: MESSAGE_PAGE_SIZE });
+						const syncedItems = Array.isArray(synced) ? synced : synced?.items || [];
+						if (syncedItems.length) {
+							messages = mergeMessages(syncedItems, messages, targetConversationId);
+						}
+					} catch {
+						/* keep cached page */
+					}
+				}
+
+				const shallow = messages.length < MESSAGE_PAGE_SIZE * 4;
+				const deeper = await loadMoreConversationHistoryForClone({
+					conversationId: targetConversationId,
+					existingItems: messages,
+					before: messages[0]?.id || null,
+					providerHasMore: true,
+					pageSize: MESSAGE_PAGE_SIZE,
+					maxRounds: shallow ? 8 : 3,
+					...fetchers,
+				});
+				messages = deeper.messages;
+				const hasMore = Boolean(deeper.hasMore || deeper.providerHasMore);
+				cloneVoiceHistoryRef.current.set(targetConversationId, {
+					messages,
+					before: deeper.before,
+					hasMore,
+					providerHasMore: deeper.providerHasMore,
+				});
+				return { messages, hasMore };
+			}
+
+			messages = await loadConversationHistoryForClone({
+				conversationId: targetConversationId,
+				pageSize: MESSAGE_PAGE_SIZE,
+				maxPages: 8,
+				...fetchers,
+			});
+			const hasMore = messages.length >= MESSAGE_PAGE_SIZE;
+			cloneVoiceHistoryRef.current.set(targetConversationId, {
+				messages,
+				before: messages[0]?.id || null,
+				hasMore,
+				providerHasMore: true,
+			});
+			return { messages, hasMore };
+		},
+		[buildCloneVoiceFetchers],
+	);
+
+	const syncMoreChatMessagesForClone = useCallback(
+		async targetConversationId => {
+			if (!targetConversationId || isDemoId(targetConversationId)) {
+				return { messages: [], hasMore: false, addedCount: 0, addedMessages: 0 };
+			}
+
+			const state = cloneVoiceHistoryRef.current.get(targetConversationId) || {
+				messages: [],
+				before: null,
+				hasMore: true,
+				providerHasMore: true,
+			};
+			const previousCount = state.messages.length;
+			const fetchers = buildCloneVoiceFetchers(targetConversationId);
+			const result = await loadMoreConversationHistoryForClone({
+				conversationId: targetConversationId,
+				existingItems: state.messages,
+				before: state.before,
+				providerHasMore: state.providerHasMore !== false,
+				pageSize: MESSAGE_PAGE_SIZE,
+				maxRounds: 12,
+				...fetchers,
+			});
+
+			cloneVoiceHistoryRef.current.set(targetConversationId, {
+				messages: result.messages,
+				before: result.before,
+				hasMore: result.hasMore,
+				providerHasMore: result.providerHasMore,
+			});
+
+			const addedMessages = Math.max(
+				0,
+				Number(result.addedMessages) || result.messages.length - previousCount,
+			);
+			return {
+				messages: result.messages,
+				hasMore: result.hasMore,
+				addedCount: addedMessages,
+				addedMessages,
+			};
+		},
+		[buildCloneVoiceFetchers],
+	);
+
+	const loadVoiceFromMessageForClone = useCallback(
+		async message => loadTranscriptionSourceFile(toTranscriptSource(message)),
+		[loadTranscriptionSourceFile],
+	);
+
+	const probeCloneVoiceMedia = useCallback(async message => {
+		const source = toTranscriptSource(message);
+		const attachment = source?.attachment;
+		if (!attachment?.id) return false;
+		if (String(attachment.downloadStatus || '').toLowerCase() === 'downloaded') return true;
+		try {
+			await api.post(`/whatsapp/attachments/${attachment.id}/download`, null, {
+				timeout: 120_000,
+			});
+			return true;
+		} catch {
+			return false;
+		}
+	}, []);
+
+	const startCloneVoicePick = useCallback(({ cloneName, sampleCount } = {}) => {
+		setCloneVoicePickSampleBase(Math.max(0, Number(sampleCount) || 0));
+		pendingCloneSamplesRef.current = [];
+		setPendingCloneSampleTick(0);
+		setCloneVoicePickMode(true);
+		setVoiceChangerOpen(false);
+		setConversationId(null);
+		setChatListCollapsed(false);
+		if (cloneName) {
+			/* clone name stays in VoiceChangerDialog state until reopened */
+		}
+		toast(t.cloneVoicePickHint, { icon: '🎙️' });
+	}, [t.cloneVoicePickHint]);
+
+	const finishCloneVoicePick = useCallback(() => {
+		setCloneVoicePickMode(false);
+		setVoiceChangerOpen(true);
+	}, []);
+
+	const cancelCloneVoicePick = useCallback(() => {
+		pendingCloneSamplesRef.current = [];
+		cloneVoiceHistoryRef.current.clear();
+		setPendingCloneSampleTick(0);
+		setCloneVoicePickMode(false);
+		setVoiceChangerOpen(true);
+	}, []);
+
+	const appendPendingCloneSamples = useCallback(files => {
+		const room = Math.max(0, 10 - cloneVoicePickSampleBase);
+		if (!room || !files?.length) return;
+		pendingCloneSamplesRef.current = [...pendingCloneSamplesRef.current, ...files].slice(0, room);
+		setPendingCloneSampleTick(tick => tick + 1);
+	}, [cloneVoicePickSampleBase]);
+
+	const pendingCloneSampleCount =
+		cloneVoicePickSampleBase + (pendingCloneSamplesRef.current?.length || 0);
+	void pendingCloneSampleTick;
+
 	const startMessageLongPress = (event, message) => {
 		if (typeof window === 'undefined' || window.innerWidth > 768) return;
 		if (event.target.closest('button, a, audio, input, textarea, [role="button"]')) return;
@@ -8977,6 +9311,7 @@ function WhatsAppWorkspaceContent() {
 	};
 
 	const stopVoiceRecording = (send = true) => {
+		clearVoicePreview();
 		const recorder = mediaRecorderRef.current;
 		if (!recorder || recorder.state === 'inactive') return;
 		discardRecordingRef.current = !send;
@@ -8985,6 +9320,7 @@ function WhatsAppWorkspaceContent() {
 	};
 
 	const pauseVoiceRecording = () => {
+		clearVoicePreview();
 		const recorder = mediaRecorderRef.current;
 		if (!recorder || recorder.state !== 'recording') return;
 		try {
@@ -8997,6 +9333,7 @@ function WhatsAppWorkspaceContent() {
 	};
 
 	const resumeVoiceRecording = () => {
+		clearVoicePreview();
 		const recorder = mediaRecorderRef.current;
 		if (!recorder || recorder.state !== 'paused') return;
 		try {
@@ -9029,6 +9366,7 @@ function WhatsAppWorkspaceContent() {
 			return;
 		}
 		let stream = null;
+		clearVoicePreview();
 		try {
 			stream = await getVoiceMediaStream();
 			const recorder = createVoiceMediaRecorder(stream);
@@ -9130,6 +9468,7 @@ function WhatsAppWorkspaceContent() {
 
 	useEffect(() => {
 		return () => {
+			clearVoicePreview();
 			discardRecordingRef.current = true;
 			if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
 			if (mediaRecorderRef.current?.state !== 'inactive') mediaRecorderRef.current?.stop();
@@ -9456,6 +9795,114 @@ function WhatsAppWorkspaceContent() {
 			});
 		}
 	};
+
+	const chatToolbarActions = useMemo(() => {
+		if (!selectedConversation) return [];
+		const demoBlocked = demo.settings.enabled;
+		const demoChat = isDemoId(conversationId);
+		return [
+			{
+				id: 'media',
+				label: mediaSelectMode ? t.cancelSelectMedia : t.selectMedia,
+				icon: mediaSelectMode ? X : Images,
+				active: mediaSelectMode,
+				disabled: demoBlocked,
+				onClick: toggleMediaSelectMode,
+			},
+			{
+				id: 'messages',
+				label: ticketSelectMode ? t.cancelSelectMessages : t.selectMessages,
+				icon: ticketSelectMode ? X : ListChecks,
+				active: ticketSelectMode,
+				disabled: demoBlocked,
+				onClick: toggleTicketSelectMode,
+			},
+			{
+				id: 'pin',
+				label: selectedConversation.isPinned ? t.unpinChat : t.pinChat,
+				icon: Pin,
+				iconFill: selectedConversation.isPinned,
+				active: selectedConversation.isPinned,
+				disabled:
+					demoBlocked ||
+					pendingPreferenceActions.has(`pin:${selectedConversation.id}`),
+				onClick: event => toggleConversationPinned(selectedConversation, event),
+			},
+			{
+				id: 'favorite',
+				label: t.favoriteChats,
+				icon: Star,
+				iconFill: selectedConversation.isFavorite,
+				active: selectedConversation.isFavorite,
+				disabled:
+					demoBlocked ||
+					pendingPreferenceActions.has(`favorite:${selectedConversation.id}`),
+				onClick: event => toggleConversationFavorite(selectedConversation, event),
+			},
+			{
+				id: 'groups',
+				label: t.messageGroups,
+				description: t.messageGroupsHint,
+				icon: FolderKanban,
+				active: messageGroupsOpen || Boolean(activeMessageGroup),
+				disabled: demoBlocked || demoChat || !conversationId,
+				onClick: toggleMessageGroupsPanel,
+			},
+			{
+				id: 'group-select',
+				label: groupSelectMode ? t.cancelGroupSelect : t.selectForGroup,
+				icon: ListChecks,
+				active: groupSelectMode,
+				disabled: demoBlocked || demoChat || !conversationId,
+				onClick: toggleGroupSelectMode,
+			},
+			{
+				id: 'split',
+				label: secondaryConversationId ? t.closeSplitChat : t.openSplitChat,
+				description: t.splitChat,
+				icon: Columns2,
+				active: Boolean(secondaryConversationId || splitPickMode),
+				disabled: demoBlocked,
+				onClick: toggleSplitChat,
+			},
+		];
+	}, [
+		activeMessageGroup,
+		conversationId,
+		demo.settings.enabled,
+		groupSelectMode,
+		mediaSelectMode,
+		messageGroupsOpen,
+		pendingPreferenceActions,
+		secondaryConversationId,
+		selectedConversation,
+		splitPickMode,
+		t,
+		ticketSelectMode,
+		toggleConversationFavorite,
+		toggleConversationPinned,
+		toggleGroupSelectMode,
+		toggleMediaSelectMode,
+		toggleMessageGroupsPanel,
+		toggleSplitChat,
+		toggleTicketSelectMode,
+	]);
+
+	const assignStaffOptions = useMemo(
+		() => [
+			{ value: '', label: t.unassign, icon: UserCircle2 },
+			...staff.map(user => {
+				const sla = report?.staff?.find(item => item.userId === user.id);
+				return {
+					value: user.id,
+					label: user.name,
+					icon: Users,
+					description: staffAssignHint(sla, locale) || undefined,
+				};
+			}),
+		],
+		[locale, report?.staff, staff, t.unassign],
+	);
 
 	const toggleConversationArchived = async (conversation, event) => {
 		event?.stopPropagation?.();
@@ -10908,6 +11355,30 @@ function WhatsAppWorkspaceContent() {
 											</button>
 										</div>
 									)}
+									{cloneVoicePickMode && (
+										<div className="mb-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-[11px] font-semibold text-violet-900 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-100">
+											{t.cloneVoicePickHint}
+											<div className="mt-1.5 flex flex-wrap gap-2">
+												<button
+													type="button"
+													className="rounded-md bg-violet-600 px-2 py-0.5 text-[10px] font-bold text-white"
+													onClick={finishCloneVoicePick}
+												>
+													{t.cloneVoicePickDone}
+													{pendingCloneSampleCount > 0
+														? ` (${pendingCloneSampleCount})`
+														: ''}
+												</button>
+												<button
+													type="button"
+													className="underline opacity-80"
+													onClick={cancelCloneVoicePick}
+												>
+													{t.cloneVoicePickCancel}
+												</button>
+											</div>
+										</div>
+									)}
 									{/* {pushPermission !== 'granted' &&
 										pushPermission !== 'unsupported' &&
 										pushPermission !== 'checking' && (
@@ -11352,6 +11823,15 @@ function WhatsAppWorkspaceContent() {
 																);
 																return;
 															}
+															if (cloneVoicePickMode) {
+																cancelIdleMessagePrefetch(conversation.id);
+																setConversationId(conversation.id);
+																void loadMessagesRef.current?.(
+																	conversation.id,
+																	canUseWhatsApp && !demo.settings.enabled,
+																)?.catch?.(() => {});
+																return;
+															}
 															cancelIdleMessagePrefetch(conversation.id);
 															setConversationId(conversation.id);
 														}}
@@ -11409,6 +11889,14 @@ function WhatsAppWorkspaceContent() {
 																	}
 																	setSecondaryConversationId(conversation.id);
 																	setSplitPickMode(false);
+																	return;
+																}
+																if (cloneVoicePickMode) {
+																	setConversationId(conversation.id);
+																	void loadMessagesRef.current?.(
+																		conversation.id,
+																		canUseWhatsApp && !demo.settings.enabled,
+																	)?.catch?.(() => {});
 																	return;
 																}
 																setConversationId(conversation.id);
@@ -11633,14 +12121,18 @@ function WhatsAppWorkspaceContent() {
 							{!selectedConversation ? (
 								<ChatIdlePane
 									title={
-										!isAccountConnected && !demo.settings.enabled
-											? (accountBusy || qr ? t.autoConnecting : t.connectToSeeChats)
-											: t.selectConversation
+										cloneVoicePickMode
+											? t.cloneVoicePickIdle
+											: !isAccountConnected && !demo.settings.enabled
+												? (accountBusy || qr ? t.autoConnecting : t.connectToSeeChats)
+												: t.selectConversation
 									}
 									hint={
-										!isAccountConnected && !demo.settings.enabled
-											? null
-											: t.selectConversationHint
+										cloneVoicePickMode
+											? t.cloneVoicePickIdleHint
+											: !isAccountConnected && !demo.settings.enabled
+												? null
+												: t.selectConversationHint
 									}
 									unreadLabel={
 										unreadConversationCount > 0
@@ -11707,254 +12199,24 @@ function WhatsAppWorkspaceContent() {
 												</p>
 											</div>
 										</div>
-										<div className="flex items-center gap-0.5 min-[769px]:hidden">
-											<button
-												type="button"
+										<div className="flex items-center gap-1 min-[769px]:hidden">
+											<WaActionMenu
+												actions={chatToolbarActions}
+												ariaLabel={t.chatActions}
+												triggerLabel={t.chatActions}
+												size="sm"
 												disabled={demo.settings.enabled}
-												onClick={() => {
-													const catalog = collectDownloadableAttachments(effectiveMessages);
-													if (!catalog.length) {
-														toast.error(t.noMediaToSelect);
-														return;
-													}
-													if (mediaSelectMode) {
-														setMediaSelectMode(false);
-														setSelectedMediaIds(new Set());
-														return;
-													}
-													setTicketSelectMode(false);
-													setSelectedMessageIds(new Set());
-													setMediaSelectMode(true);
-												}}
-												aria-label={mediaSelectMode ? t.cancelSelectMedia : t.selectMedia}
-												className={`grid h-8 w-8 place-items-center rounded-full ${
-													mediaSelectMode
-														? 'bg-black/5 text-[#0A0A0A]'
-														: 'text-[#0A0A0A]'
-												}`}
-											>
-												{mediaSelectMode ? (
-													<X size={16} strokeWidth={2.25} aria-hidden="true" />
-												) : (
-													<Images size={16} strokeWidth={2.25} aria-hidden="true" />
-												)}
-											</button>
-											<button
-												type="button"
-												onClick={toggleTicketSelectMode}
-												aria-label={ticketSelectMode ? t.cancelSelectMessages : t.selectMessages}
-												className={`grid h-8 w-8 place-items-center rounded-full ${
-													ticketSelectMode
-														? 'bg-black/5 text-[#0A0A0A]'
-														: 'text-[#0A0A0A]'
-												}`}
-											>
-												{ticketSelectMode ? (
-													<X size={16} strokeWidth={2.25} aria-hidden="true" />
-												) : (
-													<ListChecks size={16} strokeWidth={2.25} aria-hidden="true" />
-												)}
-											</button>
-											<button
-												type="button"
-												disabled={demo.settings.enabled || !conversationId || isDemoId(conversationId)}
-												onClick={() => {
-													if (groupSelectMode) {
-														toggleGroupSelectMode();
-														return;
-													}
-													setMessageGroupsOpen(current => !current);
-													setGroupPickerOpen(false);
-													void refreshMessageGroups(conversationId);
-												}}
-												aria-label={
-													groupSelectMode
-														? t.cancelGroupSelect
-														: t.messageGroups
-												}
-												className={`grid h-8 w-8 place-items-center rounded-full ${
-													messageGroupsOpen || activeMessageGroup || groupSelectMode
-														? 'bg-sky-50 text-sky-700'
-														: 'text-[#0A0A0A]'
-												}`}
-											>
-												{groupSelectMode ? (
-													<X size={16} strokeWidth={2.25} aria-hidden="true" />
-												) : (
-													<FolderKanban size={16} strokeWidth={2.25} aria-hidden="true" />
-												)}
-											</button>
+												buttonClassName="shadow-none"
+											/>
 										</div>
-										<div className="hidden items-center gap-2 min-[769px]:flex">
-											<button
-												type="button"
+										<div className="wa-chat-toolbar-actions hidden items-center gap-2 min-[769px]:flex">
+											<WaActionMenu
+												actions={chatToolbarActions}
+												ariaLabel={t.chatActions}
+												triggerLabel={t.chatActions}
+												size="sm"
 												disabled={demo.settings.enabled}
-												onClick={() => {
-													const catalog = collectDownloadableAttachments(effectiveMessages);
-													if (!catalog.length) {
-														toast.error(t.noMediaToSelect);
-														return;
-													}
-													if (mediaSelectMode) {
-														setMediaSelectMode(false);
-														setSelectedMediaIds(new Set());
-														return;
-													}
-													setTicketSelectMode(false);
-													setSelectedMessageIds(new Set());
-													setMediaSelectMode(true);
-												}}
-												aria-label={mediaSelectMode ? t.cancelSelectMedia : t.selectMedia}
-												title={mediaSelectMode ? t.cancelSelectMedia : t.selectMedia}
-												className={`wa-toolbar-icon-btn grid h-9 w-9 place-items-center rounded-md border transition-colors disabled:opacity-50 ${
-													mediaSelectMode
-														? 'is-active border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)]'
-														: 'border-slate-200 bg-white text-[#54656f] hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
-												}`}
-											>
-												{mediaSelectMode ? (
-													<X size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
-												) : (
-													<Images size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
-												)}
-											</button>
-											<button
-												type="button"
-												onClick={toggleTicketSelectMode}
-												aria-label={ticketSelectMode ? t.cancelSelectMessages : t.selectMessages}
-												title={ticketSelectMode ? t.cancelSelectMessages : t.selectMessages}
-												className={`wa-toolbar-icon-btn grid h-9 w-9 place-items-center rounded-md border transition-colors disabled:opacity-50 ${
-													ticketSelectMode
-														? 'is-active border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)]'
-														: 'border-slate-200 bg-white text-[#54656f] hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
-												}`}
-											>
-												{ticketSelectMode ? (
-													<X size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
-												) : (
-													<ListChecks size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
-												)}
-											</button>
-											<button
-												type="button"
-												disabled={demo.settings.enabled || pendingPreferenceActions.has(
-													`pin:${selectedConversation.id}`,
-												)}
-												onClick={event =>
-													toggleConversationPinned(selectedConversation, event)
-												}
-												aria-label={
-													selectedConversation.isPinned ? t.unpinChat : t.pinChat
-												}
-												title={
-													selectedConversation.isPinned ? t.unpinChat : t.pinChat
-												}
-												className={`wa-toolbar-icon-btn grid h-9 w-9 place-items-center rounded-md border transition-colors disabled:opacity-50 ${selectedConversation.isPinned
-													? 'is-active border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-500)] dark:bg-slate-800'
-													: 'border-slate-200 bg-white text-[#54656f] hover:text-[var(--color-primary-500)] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
-													}`}
-											>
-												<Pin
-													size={16}
-													strokeWidth={2.25}
-													className="shrink-0"
-													aria-hidden="true"
-													fill={
-														selectedConversation.isPinned
-															? 'currentColor'
-															: 'none'
-													}
-												/>
-											</button>
-											<button
-												type="button"
-												disabled={demo.settings.enabled || pendingPreferenceActions.has(
-													`favorite:${selectedConversation.id}`,
-												)}
-												onClick={event =>
-													toggleConversationFavorite(selectedConversation, event)
-												}
-												aria-label={t.favoriteChats}
-												title={t.favoriteChats}
-												className={`wa-toolbar-icon-btn grid h-9 w-9 place-items-center rounded-md border transition-colors disabled:opacity-50 ${selectedConversation.isFavorite
-													? 'is-active border-amber-300 bg-amber-50 text-amber-500 dark:bg-amber-950/30'
-													: 'border-slate-200 bg-white text-[#54656f] hover:text-amber-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
-													}`}
-											>
-												<Star
-													size={16}
-													strokeWidth={2.25}
-													className="shrink-0"
-													aria-hidden="true"
-													fill={
-														selectedConversation.isFavorite
-															? 'currentColor'
-															: 'none'
-													}
-												/>
-											</button>
-											<button
-												type="button"
-												disabled={demo.settings.enabled || !conversationId || isDemoId(conversationId)}
-												onClick={() => {
-													setMessageGroupsOpen(current => !current);
-													setGroupPickerOpen(false);
-													void refreshMessageGroups(conversationId);
-												}}
-												aria-label={t.messageGroups}
-												title={t.messageGroups}
-												className={`wa-toolbar-icon-btn grid h-9 w-9 place-items-center rounded-md border transition-colors disabled:opacity-50 ${
-													messageGroupsOpen || activeMessageGroup
-														? 'is-active border-sky-300 bg-sky-50 text-sky-700 dark:bg-sky-950/30'
-														: 'border-slate-200 bg-white text-[#54656f] hover:text-sky-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
-												}`}
-											>
-												<FolderKanban size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
-											</button>
-											<button
-												type="button"
-												disabled={demo.settings.enabled || !conversationId || isDemoId(conversationId)}
-												onClick={toggleGroupSelectMode}
-												aria-label={groupSelectMode ? t.cancelGroupSelect : t.selectForGroup}
-												title={groupSelectMode ? t.cancelGroupSelect : t.selectForGroup}
-												className={`wa-toolbar-icon-btn grid h-9 w-9 place-items-center rounded-md border transition-colors disabled:opacity-50 ${
-													groupSelectMode
-														? 'is-active border-sky-300 bg-sky-50 text-sky-700'
-														: 'border-slate-200 bg-white text-[#54656f] hover:text-sky-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
-												}`}
-											>
-												<ListChecks size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
-											</button>
-											<button
-												type="button"
-												disabled={demo.settings.enabled}
-												onClick={() => {
-													if (secondaryConversationId) {
-														setSecondaryConversationId(null);
-														setSplitPickMode(false);
-														return;
-													}
-													setSplitPickMode(true);
-													toast(t.splitPickHint, { icon: '▦' });
-												}}
-												className={`wa-toolbar-icon-btn hidden h-9 w-9 place-items-center rounded-md border transition-colors disabled:opacity-50 min-[769px]:grid ${
-													secondaryConversationId || splitPickMode
-														? 'is-active border-[var(--color-primary-300)] bg-[var(--color-primary-50)] text-[var(--color-primary-700)]'
-														: 'border-slate-200 bg-white text-[#54656f] hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
-												}`}
-												title={
-													secondaryConversationId
-														? t.closeSplitChat
-														: t.openSplitChat
-												}
-												aria-label={
-													secondaryConversationId
-														? t.closeSplitChat
-														: t.openSplitChat
-												}
-											>
-												<Columns2 size={16} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
-											</button>
+											/>
 											{!demo.settings.enabled && canUseWhatsApp &&
 												selectedAccount?.privacySettings?.readReceiptMode === 'manual' && (
 													<button
@@ -11966,7 +12228,7 @@ function WhatsAppWorkspaceContent() {
 													</button>
 												)}
 											{!demo.settings.enabled && canAssignWhatsApp && (
-												<div className="relative inline-flex max-w-[13.5rem] items-center">
+												<div className="wa-chat-assign-field relative inline-flex items-center">
 													<span className="pointer-events-none absolute -top-1.5 start-2 z-1 rounded bg-white px-1 text-[8px] font-black uppercase tracking-wide text-slate-400 dark:bg-slate-900">
 														{t.assignedTo}
 													</span>
@@ -11975,19 +12237,10 @@ function WhatsAppWorkspaceContent() {
 														value={selectedConversation.assignedUserId || ''}
 														onChange={assignConversation}
 														size="sm"
-														className="w-[13.5rem]"
-														buttonClassName="h-9 rounded-[10px] border border-[#e5e7eb] bg-white px-2.5 text-[12px] font-semibold text-[#111b21] shadow-[0_1px_0_#eef0f2]"
-														options={[
-															{ value: '', label: t.unassign },
-															...staff.map(user => {
-																const sla = report?.staff?.find(item => item.userId === user.id);
-																return {
-																	value: user.id,
-																	label: user.name,
-																	description: staffAssignHint(sla, locale) || undefined,
-																};
-															}),
-														]}
+														fitContent
+														className="w-auto"
+														buttonClassName="h-9 w-auto min-w-[7.75rem] max-w-[9.5rem] rounded-[10px] border border-[#e5e7eb] bg-white px-2 text-[12px] font-semibold text-[#111b21] shadow-[0_1px_0_#eef0f2]"
+														options={assignStaffOptions}
 													/>
 												</div>
 											)}
@@ -12081,7 +12334,26 @@ function WhatsAppWorkspaceContent() {
 											</div>
 										</div>
 									) : null}
-									 
+									{cloneVoicePickMode && conversationId ? (
+										<CloneChatVoicePanel
+											ar={locale === 'ar'}
+											chatTitle={selectedChatTitle}
+											conversationId={conversationId}
+											fetchChatMessages={fetchInitialChatMessagesForClone}
+											syncMoreChatMessages={syncMoreChatMessagesForClone}
+											loadVoiceFile={loadVoiceFromMessageForClone}
+											probeVoiceMedia={probeCloneVoiceMedia}
+											whatsAppConnected={
+												canUseWhatsApp &&
+												!demo.settings.enabled &&
+												selectedAccount?.status === 'connected'
+											}
+											maxSamples={10}
+											currentSampleCount={pendingCloneSampleCount}
+											onSamplesAdded={appendPendingCloneSamples}
+										/>
+									) : (
+									<>
 									<div
 										ref={messageBoxRef}
 										onScroll={event => {
@@ -12913,6 +13185,13 @@ function WhatsAppWorkspaceContent() {
 														onCancel={() => stopVoiceRecording(false)}
 														onPause={pauseVoiceRecording}
 														onResume={resumeVoiceRecording}
+														onPreview={() => void toggleVoicePreview()}
+														previewActive={voicePreviewActive}
+														previewPlaying={voicePreviewPlaying}
+														previewProgress={voicePreviewProgress}
+														previewCurrentTime={voicePreviewCurrentTime}
+														previewDuration={voicePreviewDuration}
+														onPreviewSeek={seekVoicePreview}
 														onSend={() => stopVoiceRecording(true)}
 													/>
 												</div>
@@ -13040,12 +13319,14 @@ function WhatsAppWorkspaceContent() {
 										<div className="border-t border-slate-100 p-3 text-center text-sm font-bold text-slate-400 dark:border-slate-800">
 											{isEmailMemoAiConversation(selectedConversation)
 												? locale === 'ar'
-													? 'محادثة AI لمذكرات الإيميل — للعرض فقط'
-													: 'Email Memo AI inbox — view only'
+													? 'محادثة AI Memo Emails — للعرض فقط'
+													: 'AI Memo Emails inbox — view only'
 												: t.readOnly}
 										</div>
 									)}
 									</div>
+								</>
+									)}
 								</>
 							)}
 						</section>
@@ -14201,6 +14482,8 @@ function WhatsAppWorkspaceContent() {
 				open={voiceChangerOpen}
 				onOpenChange={setVoiceChangerOpen}
 				locale={locale}
+				onChooseChat={startCloneVoicePick}
+				pendingCloneSamplesRef={pendingCloneSamplesRef}
 				onSaved={data => {
 					voiceChangerSettingsRef.current = data;
 					setVoiceChangerSettings(data);

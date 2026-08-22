@@ -31,12 +31,26 @@ export function createVoiceMediaRecorder(stream) {
 	});
 }
 
-export function buildVoiceNoteFile(chunks, recorder, durationSec) {
+export function buildVoicePreviewBlob(chunks, recorder) {
 	if (!chunks?.length) return null;
 	const recordedType = recorder?.mimeType || chunks[0]?.type || 'audio/webm';
 	const mime = recordedType.split(';')[0] || recordedType;
 	const blob = new Blob(chunks, { type: mime });
 	if (!blob.size) return null;
+	return blob;
+}
+
+export function buildVoicePreviewUrl(chunks, recorder) {
+	const blob = buildVoicePreviewBlob(chunks, recorder);
+	if (!blob || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') return null;
+	return URL.createObjectURL(blob);
+}
+
+export function buildVoiceNoteFile(chunks, recorder, durationSec) {
+	const blob = buildVoicePreviewBlob(chunks, recorder);
+	if (!blob) return null;
+	const recordedType = recorder?.mimeType || chunks[0]?.type || 'audio/webm';
+	const mime = recordedType.split(';')[0] || recordedType;
 	const seconds = Math.max(1, Number(durationSec) || 1);
 	const extension = mime.includes('ogg') ? 'ogg' : 'webm';
 	return new File([blob], `voice-${seconds}s.${extension}`, { type: mime });

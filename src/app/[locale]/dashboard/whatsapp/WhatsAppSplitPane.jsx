@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import api from '@/utils/axios';
 import { VoiceRecordingBar } from './VoiceRecordingBar';
+import { useVoiceRecordingPreview } from './use-voice-recording-preview';
 import {
 	VOICE_NOTE_MAX_SECONDS,
 	buildVoiceNoteFile,
@@ -233,6 +234,21 @@ export default function WhatsAppSplitPane({
 	const recordingTimerRef = useRef(null);
 	const recordingSecondsRef = useRef(0);
 	const discardRecordingRef = useRef(false);
+	const {
+		voicePreviewActive,
+		voicePreviewPlaying,
+		voicePreviewProgress,
+		voicePreviewCurrentTime,
+		voicePreviewDuration,
+		clearVoicePreview,
+		toggleVoicePreview,
+		seekVoicePreview,
+	} = useVoiceRecordingPreview({
+		mediaRecorderRef,
+		recordingChunksRef,
+		setRecordingPaused,
+		labels,
+	});
 	const stickToBottomRef = useRef(true);
 	const hydrationRef = useRef({
 		conversationId: null,
@@ -388,6 +404,7 @@ export default function WhatsAppSplitPane({
 
 	useEffect(
 		() => () => {
+			clearVoicePreview();
 			if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
 			recordingStreamRef.current?.getTracks().forEach(track => track.stop());
 			if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -491,6 +508,7 @@ export default function WhatsAppSplitPane({
 	};
 
 	const stopVoiceRecording = (send = true) => {
+		clearVoicePreview();
 		const recorder = mediaRecorderRef.current;
 		if (!recorder || recorder.state === 'inactive') return;
 		discardRecordingRef.current = !send;
@@ -499,6 +517,7 @@ export default function WhatsAppSplitPane({
 	};
 
 	const pauseVoiceRecording = () => {
+		clearVoicePreview();
 		const recorder = mediaRecorderRef.current;
 		if (!recorder || recorder.state !== 'recording') return;
 		try {
@@ -511,6 +530,7 @@ export default function WhatsAppSplitPane({
 	};
 
 	const resumeVoiceRecording = () => {
+		clearVoicePreview();
 		const recorder = mediaRecorderRef.current;
 		if (!recorder || recorder.state !== 'paused') return;
 		try {
@@ -532,6 +552,7 @@ export default function WhatsAppSplitPane({
 			return;
 		}
 		let stream = null;
+		clearVoicePreview();
 		try {
 			stream = await getVoiceMediaStream();
 			const recorder = createVoiceMediaRecorder(stream);
@@ -725,6 +746,13 @@ export default function WhatsAppSplitPane({
 								onCancel={() => stopVoiceRecording(false)}
 								onPause={pauseVoiceRecording}
 								onResume={resumeVoiceRecording}
+								onPreview={() => void toggleVoicePreview()}
+								previewActive={voicePreviewActive}
+								previewPlaying={voicePreviewPlaying}
+								previewProgress={voicePreviewProgress}
+								previewCurrentTime={voicePreviewCurrentTime}
+								previewDuration={voicePreviewDuration}
+								onPreviewSeek={seekVoicePreview}
 								onSend={() => stopVoiceRecording(true)}
 							/>
 						</div>

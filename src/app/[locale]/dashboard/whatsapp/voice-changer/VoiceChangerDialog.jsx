@@ -12,6 +12,7 @@ import {
 	KeyRound,
 	Loader2,
 	Mic,
+	MessageCircle,
 	Pause,
 	Play,
 	Sparkles,
@@ -244,6 +245,11 @@ const copy = {
 		guideHover: 'How to record and clean samples so the AI can clone the voice clearly.',
 		guideHide: 'Hide tips',
 		guideOpenInClone: 'Open full clone instructions',
+		cloneFromChat: 'From chat',
+		cloneFromUpload: 'Upload',
+		cloneFromRecord: 'Record',
+		chooseChat: 'Choose chat',
+		chooseChatHint: 'Closes this window and opens the chat list. Pick any chat — only voice notes will appear.',
 	},
 	ar: {
 		title: 'الرسالة الصوتية',
@@ -307,6 +313,11 @@ const copy = {
 		guideHover: 'ازاي تسجّل وتنضّف العيّنات عشان الذكاء الاصطناعي يفهم الصوت ويستنسخه كويس.',
 		guideHide: 'إخفاء التعليمات',
 		guideOpenInClone: 'فتح كل تعليمات الاستنساخ',
+		cloneFromChat: 'من المحادثة',
+		cloneFromUpload: 'رفع',
+		cloneFromRecord: 'تسجيل',
+		chooseChat: 'اختَر محادثة',
+		chooseChatHint: 'هيقفل النافذة ويفتح قائمة المحادثات. اختَر أي شات — هتظهر رسائل صوتية بس.',
 	},
 };
 
@@ -360,7 +371,14 @@ function VoiceCloneGuide({ ar }) {
 	);
 }
 
-export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', onSaved }) {
+export default function VoiceChangerDialog({
+	open,
+	onOpenChange,
+	locale = 'en',
+	onSaved,
+	onChooseChat,
+	pendingCloneSamplesRef,
+}) {
 	const ar = locale === 'ar';
 	const t = ar ? copy.ar : copy.en;
 	const [loading, setLoading] = useState(false);
@@ -378,6 +396,7 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 	const [cloneSamples, setCloneSamples] = useState([]);
 	const [cloneConsent, setCloneConsent] = useState(false);
 	const [cloneError, setCloneError] = useState('');
+	const [cloneSampleMode, setCloneSampleMode] = useState('upload');
 	const [cloning, setCloning] = useState(false);
 	const [guideOpen, setGuideOpen] = useState(false);
 	const [recording, setRecording] = useState(false);
@@ -442,7 +461,10 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 				setEditingKey(false);
 				setCloneError('');
 			})
-			.catch(error => toast.error(error.response?.data?.message || 'Could not load voice settings'))
+			.catch(error => {
+				if (cancelled) return;
+				toast.error(error.response?.data?.message || 'Could not load voice settings');
+			})
 			.finally(() => {
 				if (!cancelled) setLoading(false);
 			});
@@ -450,6 +472,16 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 			cancelled = true;
 		};
 	}, [open]);
+
+	useEffect(() => {
+		if (!open) return undefined;
+		const pending = pendingCloneSamplesRef?.current;
+		if (pending?.length) {
+			setCloneSamples(current => [...current, ...pending].slice(0, 10));
+			pendingCloneSamplesRef.current = [];
+		}
+		return undefined;
+	}, [open, pendingCloneSamplesRef]);
 
 	useEffect(() => {
 		if (open) return undefined;
@@ -467,6 +499,7 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 		setDuration(0);
 		setPreviewUrl('');
 		setGuideOpen(false);
+		setCloneSampleMode('upload');
 		return undefined;
 	}, [open]);
 
@@ -1029,6 +1062,47 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 						{t.guideOpenInClone}
 					</button>
 					<p className="text-[10px] leading-4 text-slate-500">{ar ? item.keyHintAr : item.keyHint}</p>
+					<div className="flex flex-wrap gap-1">
+						{[
+							{ id: 'upload', label: t.cloneFromUpload },
+							{ id: 'record', label: t.cloneFromRecord },
+							{ id: 'chat', label: t.cloneFromChat },
+						].map(option => (
+							<button
+								key={option.id}
+								type="button"
+								onClick={() => setCloneSampleMode(option.id)}
+								disabled={cloning}
+								className={`inline-flex h-7 items-center rounded-lg px-2 text-[10px] font-bold transition ${
+									cloneSampleMode === option.id
+										? 'bg-violet-600 text-white'
+										: 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+								}`}
+							>
+								{option.label}
+							</button>
+						))}
+					</div>
+					{cloneSampleMode === 'chat' ? (
+						<div className="space-y-2 rounded-xl border border-violet-200 bg-violet-50/60 p-2.5 dark:border-violet-800 dark:bg-violet-950/25">
+							<p className="text-[10px] leading-4 text-slate-600 dark:text-slate-300">{t.chooseChatHint}</p>
+							<button
+								type="button"
+								onClick={() =>
+									onChooseChat?.({
+										cloneName: cloneName.trim(),
+										sampleCount: cloneSamples.length,
+									})
+								}
+								disabled={cloning || !onChooseChat}
+								className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-violet-300 bg-white text-[12px] font-bold text-violet-800 shadow-sm transition hover:bg-violet-50 disabled:opacity-50 dark:border-violet-700 dark:bg-violet-950/40 dark:text-violet-100"
+							>
+								<MessageCircle size={14} />
+								{t.chooseChat}
+							</button>
+						</div>
+					) : null}
+					{cloneSampleMode === 'upload' ? (
 					<div className="flex items-center gap-1.5">
 						<button
 							type="button"
@@ -1038,17 +1112,6 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 						>
 							<Upload size={12} />
 							{t.cloneUpload}
-						</button>
-						<button
-							type="button"
-							onClick={() => startPreviewRecording(true)}
-							disabled={cloning || converting}
-							className={`inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold leading-none text-white ${
-								recording && cloneCaptureRef.current ? 'bg-rose-600' : 'bg-emerald-600'
-							}`}
-						>
-							{recording && cloneCaptureRef.current ? <Square size={11} /> : <Mic size={13} />}
-							{recording && cloneCaptureRef.current ? `${t.stop} ${recordLeft}` : t.cloneRecord}
 						</button>
 						<input
 							ref={cloneFileRef}
@@ -1064,6 +1127,20 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 							}}
 						/>
 					</div>
+					) : null}
+					{cloneSampleMode === 'record' ? (
+						<button
+							type="button"
+							onClick={() => startPreviewRecording(true)}
+							disabled={cloning || converting}
+							className={`inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold leading-none text-white ${
+								recording && cloneCaptureRef.current ? 'bg-rose-600' : 'bg-emerald-600'
+							}`}
+						>
+							{recording && cloneCaptureRef.current ? <Square size={11} /> : <Mic size={13} />}
+							{recording && cloneCaptureRef.current ? `${t.stop} ${recordLeft}` : t.cloneRecord}
+						</button>
+					) : null}
 					{cloneSamples.length ? (
 						<ul className="max-h-24 space-y-1 overflow-y-auto">
 							{cloneSamples.map((file, index) => (
@@ -1289,10 +1366,10 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 							<AudioLines size={14} />
 						</span>
 						{t.title}
+						{/* <DialogDescription className="min-w-0 flex-1 text-[11px] leading-4 text-slate-500">{t.subtitle}</DialogDescription> */}
 					</DialogTitle>
 					<div className="flex items-start justify-between gap-2">
-						<DialogDescription className="min-w-0 flex-1 text-[11px] leading-4 text-slate-500">{t.subtitle}</DialogDescription>
-						<button
+						{/* <button
 							type="button"
 							title={t.guideHover}
 							aria-expanded={guideOpen}
@@ -1305,12 +1382,12 @@ export default function VoiceChangerDialog({ open, onOpenChange, locale = 'en', 
 						>
 							<HelpCircle size={13} />
 							{guideOpen ? t.guideHide : t.guideButton}
-						</button>
+						</button> */}
 					</div>
-					<p className="text-[10px] leading-4 text-amber-700/90 dark:text-amber-300/80">{t.disclaimer}</p>
-					{provider === 'off' ? (
+					{/* <p className="text-[10px] leading-4 text-amber-700/90 dark:text-amber-300/80">{t.disclaimer}</p> */}
+					{/* {provider === 'off' ? (
 						<p className="text-[10px] font-semibold leading-4 text-emerald-700 dark:text-emerald-300">{t.noneSelected}</p>
-					) : null}
+					) : null} */}
 				</DialogHeader>
 
 				{loading ? (

@@ -368,7 +368,10 @@ export function isChannelConversation(conversation) {
 }
 
 export function conversationTitle(conversation) {
-	if (isEmailMemoAiConversation(conversation)) return 'AI';
+	if (isEmailMemoAiConversation(conversation)) {
+		const name = String(conversation?.contact?.name || '').trim();
+		return name || 'AI Memo Emails';
+	}
 	const chatId = String(conversation?.providerChatId || '');
 	const isGroup =
 		conversation?.type === 'group' || chatId.endsWith('@g.us');

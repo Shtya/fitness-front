@@ -3151,6 +3151,102 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	background: #eab308;
 }
 
+.wa-recording-panel.is-preview .wa-recording-mic {
+	background: #4338ca;
+	box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.14);
+}
+
+.wa-recording-panel.is-preview .wa-recording-live {
+	background: #eef2ff;
+	color: #4338ca;
+}
+
+.wa-recording-panel.is-preview .wa-recording-live-dot {
+	background: #6366f1;
+	animation: wa-recording-blink 1s infinite;
+}
+
+.wa-recording-preview-track {
+	position: relative;
+	min-width: 0;
+	flex: 1;
+	height: 18px;
+	display: flex;
+	align-items: center;
+}
+
+.wa-recording-preview-fill {
+	position: absolute;
+	inset-block: 6px;
+	inset-inline-start: 0;
+	border-radius: 999px;
+	background: linear-gradient(90deg, #818cf8, #4338ca);
+	pointer-events: none;
+	max-width: 100%;
+}
+
+.wa-recording-preview-range {
+	position: relative;
+	z-index: 1;
+	width: 100%;
+	height: 18px;
+	margin: 0;
+	appearance: none;
+	background: transparent;
+	cursor: pointer;
+}
+
+.wa-recording-preview-range::-webkit-slider-runnable-track {
+	height: 6px;
+	border-radius: 999px;
+	background: rgba(67, 56, 202, 0.16);
+}
+
+.wa-recording-preview-range::-webkit-slider-thumb {
+	appearance: none;
+	width: 12px;
+	height: 12px;
+	margin-top: -3px;
+	border-radius: 50%;
+	border: 2px solid #fff;
+	background: #4338ca;
+	box-shadow: 0 1px 4px rgba(67, 56, 202, 0.35);
+}
+
+.wa-recording-preview-range::-moz-range-track {
+	height: 6px;
+	border-radius: 999px;
+	background: rgba(67, 56, 202, 0.16);
+}
+
+.wa-recording-preview-range::-moz-range-thumb {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	border: 2px solid #fff;
+	background: #4338ca;
+	box-shadow: 0 1px 4px rgba(67, 56, 202, 0.35);
+}
+
+.wa-recording-panel.is-preview .wa-recording-timer {
+	min-width: 74px;
+	font-size: 10px;
+}
+
+.dark .wa-recording-panel.is-preview .wa-recording-live {
+	background: rgba(67, 56, 202, 0.18);
+	color: #c7d2fe;
+}
+
+.dark .wa-recording-preview-fill {
+	background: linear-gradient(90deg, #6366f1, #4338ca);
+}
+
+.dark .wa-recording-preview-range::-webkit-slider-runnable-track,
+.dark .wa-recording-preview-range::-moz-range-track {
+	background: rgba(99, 102, 241, 0.24);
+}
+
 .wa-recording-live {
 	display: inline-flex;
 	align-items: center;
@@ -3190,6 +3286,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 .wa-recording-cancel,
 .wa-recording-pause,
+.wa-recording-preview,
 .wa-recording-send {
 	width: 32px;
 	height: 32px;
@@ -3202,7 +3299,8 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 }
 
 .wa-recording-cancel,
-.wa-recording-pause {
+.wa-recording-pause,
+.wa-recording-preview {
 	background: #fff !important;
 	color: #54656f !important;
 	border: 1px solid #e5e7eb !important;
@@ -3226,8 +3324,25 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 	box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1) !important;
 }
 
+.wa-recording-preview:hover,
+.wa-recording-preview:focus-visible {
+	background: #eef2ff !important;
+	color: #4338ca !important;
+	border-color: #c7d2fe !important;
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(67, 56, 202, 0.14) !important;
+}
+
+.wa-recording-preview.is-playing {
+	background: #4338ca !important;
+	color: #fff !important;
+	border-color: #4338ca !important;
+	box-shadow: 0 4px 12px rgba(67, 56, 202, 0.28) !important;
+}
+
 .wa-recording-cancel:active,
 .wa-recording-pause:active,
+.wa-recording-preview:active,
 .wa-recording-send:active {
 	transform: scale(0.94);
 }
@@ -3267,10 +3382,17 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 }
 
 .dark .wa-recording-cancel,
-.dark .wa-recording-pause {
+.dark .wa-recording-pause,
+.dark .wa-recording-preview {
 	background: #1e2430 !important;
 	border-color: #334155 !important;
 	color: #94a3b8 !important;
+}
+
+.dark .wa-recording-preview.is-playing {
+	background: #4338ca !important;
+	border-color: #4338ca !important;
+	color: #fff !important;
 }
 
 .dark .wa-recording-panel {
@@ -4025,6 +4147,26 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
 	.wa-web-desktop .wa-chat-toolbar > div:first-child {
 		gap: 12px !important;
+	}
+
+	.wa-web-desktop .wa-chat-toolbar-actions {
+		gap: 10px !important;
+	}
+
+	.wa-web-desktop .wa-action-menu-trigger,
+	.wa-web-desktop .wa-chat-assign-field .wa-btn-3d {
+		box-shadow: 0 1px 0 #eef0f2 !important;
+	}
+
+	.wa-web-desktop .wa-chat-assign-field .wa-btn-3d {
+		width: auto !important;
+		min-width: 7.75rem !important;
+		max-width: 9.5rem !important;
+		padding-inline: 8px !important;
+	}
+
+	.wa-web-desktop .wa-action-menu-panel {
+		min-width: 260px;
 	}
 
 	.wa-web-desktop .wa-chat-contact h3 {

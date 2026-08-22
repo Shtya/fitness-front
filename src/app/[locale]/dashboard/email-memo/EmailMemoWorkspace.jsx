@@ -647,6 +647,20 @@ export default function EmailMemoWorkspace() {
 		);
 	};
 
+	const saveDeliveryDestination = (nextDestination) => {
+		if (!settings || nextDestination === (settings.deliveryDestination || 'whatsapp')) return;
+		const nextSettings = { ...settings, deliveryDestination: nextDestination };
+		setSettings(nextSettings);
+		return run(
+			'wa-delivery',
+			async () => {
+				const res = await emailMemoApi.saveSettings(nextSettings);
+				setSettings(res.data || nextSettings);
+			},
+			t('saved'),
+		);
+	};
+
 	const excludePicked = () => {
 		const emails = [...pickExclude].map((email) => String(email || '').trim()).filter(Boolean);
 		if (!emails.length) return;
@@ -674,37 +688,6 @@ export default function EmailMemoWorkspace() {
 			else next.add(key);
 			return next;
 		});
-	};
-
-	const sendNow = () => {
-		if (!waOk) {
-			toast.error(t('connectWhatsApp'));
-			return;
-		}
-		const initial = { phase: 'collect', current: 0, total: 0 };
-		sendProgressRef.current = initial;
-		setSendProgress(initial);
-		setBusy('send-now');
-		(async () => {
-			try {
-				const res = await emailMemoApi.sendNow({ limit: 100 });
-				const sent = Number(res.data?.sent || 0);
-				const processed = Number(res.data?.processed || 0);
-				const total = Number(res.data?.total || 0);
-				if (sent > 0) toast.success(t('sendNowOk', { n: sent }));
-				else if (processed > 0 || total > 0) toast.success(t('sendNowPartial', { n: sent, total: total || processed }));
-				else toast.success(t('sendNowNone'));
-			} catch (error) {
-				toast.error(error.response?.data?.message || error.message);
-			} finally {
-				setBusy('');
-				await load().catch(() => {});
-				window.setTimeout(() => {
-					sendProgressRef.current = null;
-					setSendProgress(null);
-				}, 900);
-			}
-		})();
 	};
 
 	const loadInbox = (fromStart = false) => {
@@ -747,6 +730,62 @@ export default function EmailMemoWorkspace() {
 	const maxAccounts = oauth.maxAccounts || 5;
 	const waMax = overview.whatsapp?.maxAccounts || 5;
 	const targetPhoneValue = displayWhatsAppPhone(settings?.targetChatId);
+	const deliveryDestination = settings?.deliveryDestination || 'whatsapp';
+	const deliveryUsesPhone =
+		deliveryDestination === 'whatsapp' || deliveryDestination === 'both';
+	const deliveryUsesInSite =
+		deliveryDestination === 'in_site' || deliveryDestination === 'both';
+	const deliveryDestinationLabel =
+		deliveryDestination === 'in_site'
+			? t('deliveryInSite')
+			: deliveryDestination === 'both'
+				? t('deliveryBoth')
+				: t('deliveryWhatsApp');
+
+	const sendOne = (row) => {
+		if (deliveryUsesPhone && !waOk) {
+			toast.error(t('connectWhatsApp'));
+			return;
+		}
+		return run(`send-${row.id}`, async () => {
+			const res = await emailMemoApi.sendNow({ ids: [row.id] });
+			const sent = Number(res.data?.sent || 0);
+			if (sent > 0) toast.success(t('sendOneOk'));
+			else toast.error(t('sendOneSkip'));
+		});
+	};
+
+	const sendNow = () => {
+		if (deliveryUsesPhone && !waOk) {
+			toast.error(t('connectWhatsApp'));
+			return;
+		}
+		const initial = { phase: 'collect', current: 0, total: 0 };
+		sendProgressRef.current = initial;
+		setSendProgress(initial);
+		setBusy('send-now');
+		(async () => {
+			try {
+				const res = await emailMemoApi.sendNow({ limit: 100 });
+				const sent = Number(res.data?.sent || 0);
+				const processed = Number(res.data?.processed || 0);
+				const total = Number(res.data?.total || 0);
+				if (sent > 0) toast.success(t('sendNowOk', { n: sent }));
+				else if (processed > 0 || total > 0) toast.success(t('sendNowPartial', { n: sent, total: total || processed }));
+				else toast.success(t('sendNowNone'));
+			} catch (error) {
+				toast.error(error.response?.data?.message || error.message);
+			} finally {
+				setBusy('');
+				await load().catch(() => {});
+				window.setTimeout(() => {
+					sendProgressRef.current = null;
+					setSendProgress(null);
+				}, 900);
+			}
+		})();
+	};
+
 	const linkedPhoneSummary = waAccounts
 		.map((item) => item.phoneNumber || item.label)
 		.filter(Boolean)
@@ -849,7 +888,7 @@ export default function EmailMemoWorkspace() {
 							{busy === 'import-inbox' ? <Loader2 className="animate-spin" size={13} /> : t('loadInbox')}
 						</StudioButton>
 					) : null}
-					<StudioButton primary disabled={busy === 'send-now' || !waOk} onClick={sendNow}>
+					<StudioButton primary disabled={busy === 'send-now' || (deliveryUsesPhone && !waOk)} onClick={sendNow}>
 						{busy === 'send-now' ? <Loader2 className="animate-spin" size={13} /> : <Send size={13} />}
 						{t('sendNow')}
 					</StudioButton>
@@ -1125,7 +1164,9 @@ export default function EmailMemoWorkspace() {
 									</span>
 								</div>
 								<p className="mt-2 truncate text-[12px] text-[#6B7280]">
-									{[linkedPhoneSummary, targetPhoneValue].filter(Boolean).join(' → ') || t('waSendHint')}
+									{deliveryDestinationLabel}
+									{deliveryUsesPhone && targetPhoneValue ? ` → ${targetPhoneValue}` : ''}
+									{!deliveryUsesPhone && !deliveryUsesInSite ? ` · ${t('waSendHint')}` : ''}
 								</p>
 							</div>
 						}
@@ -1282,28 +1323,77 @@ export default function EmailMemoWorkspace() {
 						) : null}
 
 						{settings ? (
-							<div className="mt-4 space-y-2">
-								<label className="block">
-									<div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#71717a]">{t('targetPhone')}</div>
-									<div className="flex gap-2">
-										<input
-											dir="ltr"
-											className={FOCUS}
-											value={targetPhoneValue}
-											onChange={(e) => setSettings({ ...settings, targetChatId: e.target.value })}
-											placeholder={t('targetPhonePlaceholder')}
-											autoComplete="tel"
-										/>
-										<StudioButton primary disabled={busy === 'wa-target'} onClick={saveTargetPhone}>
-											{busy === 'wa-target' ? <Loader2 className="animate-spin" size={14} /> : t('saveTarget')}
-										</StudioButton>
+							<div className="mt-4 space-y-3">
+								<div>
+									<p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#71717a]">
+										{t('deliveryDestination')}
+									</p>
+									<div className="flex flex-wrap gap-1.5">
+										{[
+											['in_site', t('deliveryInSite')],
+											['whatsapp', t('deliveryWhatsApp')],
+											['both', t('deliveryBoth')],
+										].map(([id, label]) => (
+											<button
+												key={id}
+												type="button"
+												disabled={busy === 'wa-delivery'}
+												onClick={() => saveDeliveryDestination(id)}
+												className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+													deliveryDestination === id
+														? 'text-white'
+														: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+												}`}
+												style={
+													deliveryDestination === id
+														? { background: STUDIO.gradient }
+														: undefined
+												}
+											>
+												{label}
+											</button>
+										))}
 									</div>
-									<p className="mt-1 text-[11px] text-[#6B7280]">{t('targetPhoneHint')}</p>
-								</label>
+									{deliveryUsesInSite ? (
+										<div className="mt-2 space-y-2 rounded-[12px] border border-emerald-100 bg-emerald-50/80 px-3 py-2 text-[11px] leading-relaxed text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-100">
+											<p>{t('deliveryInSiteHint')}</p>
+											<a
+												href={`/${locale}/dashboard/whatsapp`}
+												className="inline-flex items-center gap-1 font-semibold text-emerald-800 underline underline-offset-2 dark:text-emerald-200"
+											>
+												{t('openAiMemoChat')} <ExternalLink size={11} />
+											</a>
+										</div>
+									) : null}
+								</div>
+
+								{deliveryUsesPhone ? (
+									<label className="block">
+										<div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#71717a]">{t('targetPhone')}</div>
+										<div className="flex gap-2">
+											<input
+												dir="ltr"
+												className={FOCUS}
+												value={targetPhoneValue}
+												onChange={(e) => setSettings({ ...settings, targetChatId: e.target.value })}
+												placeholder={t('targetPhonePlaceholder')}
+												autoComplete="tel"
+											/>
+											<StudioButton primary disabled={busy === 'wa-target'} onClick={saveTargetPhone}>
+												{busy === 'wa-target' ? <Loader2 className="animate-spin" size={14} /> : t('saveTarget')}
+											</StudioButton>
+										</div>
+										<p className="mt-1 text-[11px] text-[#6B7280]">{t('targetPhoneHint')}</p>
+									</label>
+								) : null}
 							</div>
 						) : null}
 
-						<p className="mt-4 text-[12px] leading-relaxed text-[#6B7280]">{t('waSendHint')}</p>
+						<p className="mt-4 text-[12px] leading-relaxed text-[#6B7280]">
+							{deliveryUsesInSite && !deliveryUsesPhone
+								? t('deliveryInSiteOnlyHint')
+								: t('waSendHint')}
+						</p>
 					</CollapsibleCard>
 					</div>
 
@@ -1627,7 +1717,7 @@ export default function EmailMemoWorkspace() {
 										<th className="px-2 py-2">{t('subject')}</th>
 										<th className="px-2 py-2">{t('whatsappStatus')}</th>
 										<th className="px-2 py-2">{t('received')}</th>
-										<th className="w-24 px-2 py-2 text-end">{t('actions')}</th>
+										<th className="w-28 px-2 py-2 text-end">{t('actions')}</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -1708,27 +1798,23 @@ export default function EmailMemoWorkspace() {
 														>
 															<Eye size={14} />
 														</button>
-														{row.status === 'FAILED' ? (
+														{!waSent && !excluded ? (
 															<button
 																type="button"
 																onClick={(e) => {
 																	e.preventDefault();
 																	e.stopPropagation();
-																	run(
-																		`retry-${row.id}`,
-																		() => emailMemoApi.retry(row.id),
-																		t('retryOk'),
-																	);
+																	sendOne(row);
 																}}
 																disabled={Boolean(busy)}
-																className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-50"
-																aria-label={t('retry')}
-																title={t('retry')}
+																className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
+																aria-label={t('sendOne')}
+																title={t('sendOne')}
 															>
-																{busy === `retry-${row.id}` ? (
+																{busy === `send-${row.id}` ? (
 																	<Loader2 size={13} className="animate-spin" />
 																) : (
-																	<RotateCcw size={13} />
+																	<Send size={13} />
 																)}
 															</button>
 														) : null}
