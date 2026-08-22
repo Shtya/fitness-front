@@ -685,14 +685,12 @@ export default function WhatsAppSplitPane({
 						return (
 							<div
 								key={message.id}
-								className={`flex ${mine ? 'justify-end' : 'justify-start'} ${message.optimistic ? 'opacity-70' : ''}`}
+								className={`wa-message-line flex min-w-0 max-w-full ${mine ? 'justify-end' : 'justify-start'} ${message.optimistic ? 'opacity-70' : ''}`}
 							>
 								<div
-									className={`max-w-[88%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
-										mine
-											? 'bg-[#d9fdd3] text-slate-900'
-											: 'border border-black/5 bg-white text-slate-900'
-									}`}
+									className={`wa-message-bubble ${mine ? 'wa-message-mine' : 'wa-message-other'} ${
+										attachments.length ? 'wa-message-media' : ''
+									} ${mine ? 'bg-[#d9fdd3] text-slate-900' : 'bg-white text-slate-900'}`}
 								>
 									{attachments.map(attachment => (
 										<SplitAttachment
@@ -712,7 +710,7 @@ export default function WhatsAppSplitPane({
 											readMoreLabel={labels.readMore || (ar ? 'اقرأ المزيد' : 'Read more')}
 										/>
 									) : null}
-									<div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-500">
+									<div className={`wa-message-meta ${mine ? 'text-slate-500' : 'text-slate-400'}`}>
 										{new Date(message.providerTimestamp || message.created_at).toLocaleTimeString([], {
 											hour: '2-digit',
 											minute: '2-digit',

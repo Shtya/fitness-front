@@ -519,9 +519,15 @@ test('messageTextPresentation handles Arabic, English and mixed text', () => {
 	assert.match(arabic.style.fontFamily, /--font-arabic/);
 	assert.equal(arabic.style.fontWeight, 500);
 	assert.equal(messageTextPresentation('English message').dir, 'ltr');
-	const mixed = messageTextPresentation('Hello مرحباً');
-	assert.equal(mixed.dir, 'auto');
-	assert.match(mixed.style.fontFamily, /Tajawal/);
+	const mixedArabic = messageTextPresentation('Hello مرحباً');
+	assert.equal(mixedArabic.dir, 'rtl');
+	assert.match(mixedArabic.style.fontFamily, /Tajawal/);
+	const mostlyEnglish = messageTextPresentation(
+		'New Email\nFrom: Admin\nReceived: السبت، ٢٢ أغسطس في ٣:٤٣ م',
+	);
+	assert.equal(mostlyEnglish.dir, 'ltr');
+	assert.equal(mostlyEnglish.className, 'wa-message-text--en');
+	assert.equal(mostlyEnglish.style.textAlign, 'start');
 });
 
 test('message links are segmented and normalized for safe previews', () => {

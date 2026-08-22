@@ -604,6 +604,16 @@ export function messageTextPresentation(text) {
 		unicodeBidi: 'isolate',
 		textAlign: 'right',
 	};
+	const englishStyle = {
+		direction: 'ltr',
+		textAlign: 'start',
+		unicodeBidi: 'plaintext',
+		fontFamily:
+			'var(--font-inter), "SF Pro Text", "Segoe UI Variable Text", "Helvetica Neue", system-ui, sans-serif',
+		fontWeight: 400,
+		letterSpacing: '-0.011em',
+		fontFeatureSettings: '"cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1, "ss01" 1',
+	};
 	if (mostlyArabic || (hasArabic && !hasLatin)) {
 		return {
 			dir: 'rtl',
@@ -613,34 +623,12 @@ export function messageTextPresentation(text) {
 			style: arabicStyle,
 		};
 	}
-	if (hasArabic && hasLatin) {
-		return {
-			dir: 'auto',
-			lang: 'ar',
-			isArabic: true,
-			className: 'wa-message-text--ar',
-			style: {
-				...arabicStyle,
-				direction: 'rtl',
-				textAlign: 'right',
-			},
-		};
-	}
 	return {
 		dir: 'ltr',
 		lang: 'en',
 		isArabic: false,
 		className: 'wa-message-text--en',
-		style: {
-			direction: 'ltr',
-			textAlign: 'start',
-			unicodeBidi: 'plaintext',
-			fontFamily:
-				'var(--font-inter), "SF Pro Text", "Segoe UI Variable Text", "Helvetica Neue", system-ui, sans-serif',
-			fontWeight: 400,
-			letterSpacing: '-0.011em',
-			fontFeatureSettings: '"cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1, "ss01" 1',
-		},
+		style: englishStyle,
 	};
 }
 

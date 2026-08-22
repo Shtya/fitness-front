@@ -84,6 +84,8 @@ import { notifyWhatsAppUnreadChanged } from '@/lib/outreach-unread';
 import TranscriptionDialog from '../transcript/transcription-dialog';
 import VoiceChangerDialog from './voice-changer/VoiceChangerDialog';
 import CloneChatVoicePanel from './voice-changer/CloneChatVoicePanel';
+import ScheduleMessageDialog from './schedule-message/ScheduleMessageDialog';
+import ScheduledMessagesPanel from './schedule-message/ScheduledMessagesPanel';
 import {
 	loadConversationHistoryForClone,
 	loadMoreConversationHistoryForClone,
@@ -4848,6 +4850,10 @@ function WhatsAppWorkspaceContent() {
 	const [voiceChangerSettings, setVoiceChangerSettings] = useState(null);
 	const voiceChangerSettingsRef = useRef({ configured: true, enabled: false, provider: 'off' });
 	const [draft, setDraft] = useState('');
+	const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+	const [messageSchedules, setMessageSchedules] = useState([]);
+	const [messageSchedulesLoading, setMessageSchedulesLoading] = useState(false);
+	const [messageScheduleBusyId, setMessageScheduleBusyId] = useState('');
 	const [composerImages, setComposerImages] = useState([]);
 	const composerImagesRef = useRef([]);
 
@@ -5077,6 +5083,14 @@ function WhatsAppWorkspaceContent() {
 		? conversationTitle(selectedConversation)
 		: '';
 	const selectedChatTitlePresentation = messageTextPresentation(selectedChatTitle);
+	const scheduleConversationOptions = useMemo(
+		() =>
+			effectiveConversations.map(item => ({
+				id: item.id,
+				title: conversationTitle(item),
+			})),
+		[effectiveConversations],
+	);
 	const selectedSecondaryConversation = useMemo(
 		() =>
 			effectiveConversations.find(item => item.id === secondaryConversationId) || null,
@@ -6905,6 +6919,75 @@ function WhatsAppWorkspaceContent() {
 		setDocumentPreview(null);
 	}, [conversationId]);
 
+	const loadMessageSchedules = useCallback(async targetConversationId => {
+		if (!targetConversationId || isDemoId(targetConversationId)) {
+			setMessageSchedules([]);
+			return;
+		}
+		setMessageSchedulesLoading(true);
+		try {
+			const { data } = await api.get(
+				`/whatsapp/conversations/${targetConversationId}/message-schedules`,
+			);
+			setMessageSchedules(Array.isArray(data) ? data : []);
+		} catch {
+			setMessageSchedules([]);
+		} finally {
+			setMessageSchedulesLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		if (!conversationId || demo.settings.enabled) {
+			setMessageSchedules([]);
+			return;
+		}
+		void loadMessageSchedules(conversationId);
+	}, [conversationId, demo.settings.enabled, loadMessageSchedules]);
+
+	const pauseMessageSchedule = useCallback(async schedule => {
+		if (!schedule?.id) return;
+		setMessageScheduleBusyId(schedule.id);
+		try {
+			await api.post(`/whatsapp/message-schedules/${schedule.id}/pause`);
+			if (conversationId) await loadMessageSchedules(conversationId);
+		} catch (error) {
+			toast.error(error?.response?.data?.message || 'Could not pause schedule');
+		} finally {
+			setMessageScheduleBusyId('');
+		}
+	}, [conversationId, loadMessageSchedules]);
+
+	const resumeMessageSchedule = useCallback(async schedule => {
+		if (!schedule?.id) return;
+		setMessageScheduleBusyId(schedule.id);
+		try {
+			await api.post(`/whatsapp/message-schedules/${schedule.id}/resume`);
+			if (conversationId) await loadMessageSchedules(conversationId);
+		} catch (error) {
+			toast.error(error?.response?.data?.message || 'Could not resume schedule');
+		} finally {
+			setMessageScheduleBusyId('');
+		}
+	}, [conversationId, loadMessageSchedules]);
+
+	const cancelMessageSchedule = useCallback(async schedule => {
+		if (!schedule?.id) return;
+		setMessageScheduleBusyId(schedule.id);
+		try {
+			await api.delete(`/whatsapp/message-schedules/${schedule.id}`);
+			if (conversationId) await loadMessageSchedules(conversationId);
+			toast.success(locale === 'ar' ? 'تم إلغاء الجدولة' : 'Schedule cancelled');
+		} catch (error) {
+			toast.error(error?.response?.data?.message || 'Could not cancel schedule');
+		} finally {
+			setMessageScheduleBusyId('');
+		}
+	}, [conversationId, loadMessageSchedules, locale]);
+
+	const loadMessageSchedulesRef = useRef(loadMessageSchedules);
+	loadMessageSchedulesRef.current = loadMessageSchedules;
+
 	useLayoutEffect(() => {
 		const latest = effectiveMessages[effectiveMessages.length - 1];
 		if (!latest?.id) return;
@@ -7140,6 +7223,15 @@ function WhatsAppWorkspaceContent() {
 						locale,
 					});
 				}
+			}
+			if (
+				['schedule_created', 'schedule_updated', 'schedule_cancelled', 'schedule_run_completed'].includes(
+					event.event,
+				)
+			) {
+				const openId = conversationIdRef.current;
+				if (openId) void loadMessageSchedulesRef.current?.(openId);
+				return;
 			}
 			if (event.event === 'message_status' && eventConversationId) {
 				const nextStatus = event.payload?.status;
@@ -12258,6 +12350,15 @@ function WhatsAppWorkspaceContent() {
 
 										</div>
 									</header>
+									<ScheduledMessagesPanel
+										ar={locale === 'ar'}
+										schedules={messageSchedules}
+										loading={messageSchedulesLoading}
+										busyId={messageScheduleBusyId}
+										onPause={pauseMessageSchedule}
+										onResume={resumeMessageSchedule}
+										onCancel={cancelMessageSchedule}
+									/>
 									{(conversationFilter === 'important' || conversationFilter === 'starred') && conversationId && !activeMessageGroup ? (
 										<div className="flex shrink-0 items-center gap-2 border-b border-amber-100 bg-amber-50 px-4 py-2 text-[12px] font-semibold text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
 											<Star size={14} fill="currentColor" />
@@ -12948,7 +13049,7 @@ function WhatsAppWorkspaceContent() {
 																					dir={textPresentation.dir}
 																					lang={textPresentation.lang}
 																					style={textPresentation.style}
-																					className={`wa-message-text whitespace-pre-wrap wrap-break-word leading-relaxed ${textPresentation.className || ''}`}
+																					className={`wa-message-text whitespace-pre-wrap wrap-break-word ${textPresentation.className || ''}`}
 																					readMoreLabel={t.readMore}
 																					renderText={value => (
 																						<WhatsAppFormattedText
@@ -12961,7 +13062,7 @@ function WhatsAppWorkspaceContent() {
 																			) : null}
 																		</>
 																	) : null}
-															<div className={`wa-message-meta flex items-center justify-end gap-0.5 ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
+															<div className={`wa-message-meta ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
 																		{message.isStarred && <Star size={11} fill="currentColor" />}
 																		{message.isPinned && <Pin size={11} fill="currentColor" />}
 																		{new Date(message.providerTimestamp || message.timestamp || message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -13270,6 +13371,17 @@ function WhatsAppWorkspaceContent() {
 
 													</button>
 													{draft.trim() || composerImages.length ? (
+													<>
+													<button
+														type="button"
+														disabled={sending || !draft.trim() || demo.settings.enabled}
+														title={locale === 'ar' ? 'جدولة الرسالة' : 'Schedule message'}
+														aria-label={locale === 'ar' ? 'جدولة الرسالة' : 'Schedule message'}
+														onClick={() => setScheduleDialogOpen(true)}
+														className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#54656F] hover:bg-slate-100 disabled:opacity-40 dark:hover:bg-slate-800"
+													>
+														<Clock size={16} />
+													</button>
 													<button
 														type="submit"
 														aria-label={t.send}
@@ -13279,6 +13391,7 @@ function WhatsAppWorkspaceContent() {
 													>
 														{sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
 													</button>
+													</>
 													) : (
 													<div className="flex shrink-0 items-center gap-0.5">
 													<button
@@ -14478,6 +14591,18 @@ function WhatsAppWorkspaceContent() {
 					</div>
 				</div>
 			)}
+			<ScheduleMessageDialog
+				open={scheduleDialogOpen}
+				onOpenChange={setScheduleDialogOpen}
+				ar={locale === 'ar'}
+				accountId={accountId}
+				conversations={scheduleConversationOptions}
+				initialConversationId={conversationId}
+				initialText={draft}
+				onCreated={() => {
+					if (conversationId) void loadMessageSchedules(conversationId);
+				}}
+			/>
 			<VoiceChangerDialog
 				open={voiceChangerOpen}
 				onOpenChange={setVoiceChangerOpen}
