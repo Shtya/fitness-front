@@ -48,7 +48,7 @@ export default function ExpandableMessageText({
 	const remaining = full.length - visible.length;
 
 	return (
-		<p dir={dir} lang={lang} style={style} className={className}>
+		<span dir={dir} lang={lang} style={style} className={className}>
 			{renderText ? renderText(visible) : visible}
 			{remaining > 0 ? (
 				<>
@@ -67,6 +67,6 @@ export default function ExpandableMessageText({
 					</button>
 				</>
 			) : null}
-		</p>
+		</span>
 	);
 }

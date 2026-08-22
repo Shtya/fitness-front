@@ -36,6 +36,7 @@ import {
 	Globe2,
 	Image as ImageIcon,
 	Images,
+	LayoutGrid,
 	ListChecks,
 	ListFilter,
 	Loader2,
@@ -162,6 +163,8 @@ import {
 } from './whatsapp-voice-recorder';
 import WhatsAppDesktopRail from './WhatsAppDesktopRail';
 import { WhatsAppReportsTab, staffAssignHint } from './WhatsAppReportsTab';
+import { WhatsAppBoardTab } from './WhatsAppBoardTab';
+import { createBoardCardFromMessages } from './whatsapp-board-api';
 import { WaCustomSelect } from './WaCustomSelect';
 import { WaActionMenu } from './WaActionMenu';
 import {
@@ -223,6 +226,7 @@ const WHATSAPP_PERSISTED_TABS = new Set([
 	'statuses',
 	'notifications',
 	'reports',
+	'board',
 	'settings',
 	'profile',
 ]);
@@ -387,6 +391,12 @@ const translations = {
 		statuses: 'Stories',
 		notifications: 'Notifications',
 		reports: 'Reports',
+		board: 'Tasks board',
+		boardHint: 'Trello-style tasks for this WhatsApp account. Drag cards, add checklists, and link chats.',
+		addToBoard: 'Add to tasks board',
+		addToBoardHint: 'Create a board card from selected messages, text, or voice notes',
+		sentToBoard: 'Added to tasks board',
+		openBoardTab: 'Open tasks board',
 		settings: 'Settings',
 		settingsAi: 'AI replies',
 		settingsDemo: 'Demo mode',
@@ -758,6 +768,12 @@ const translations = {
 		statuses: 'الحالات',
 		notifications: 'الإشعارات',
 		reports: 'التقارير',
+		board: 'لوحة المهام',
+		boardHint: 'مهام على شكل Trello لهذا الحساب. اسحب البطاقات، أضف قوائم، واربط الشات.',
+		addToBoard: 'إضافة للوحة المهام',
+		addToBoardHint: 'أنشئ بطاقة من الرسائل المحددة (نص أو تسجيل صوتي)',
+		sentToBoard: 'تمت الإضافة للوحة المهام',
+		openBoardTab: 'فتح لوحة المهام',
 		settings: 'الإعدادات',
 		settingsAi: 'ردود الذكاء الاصطناعي',
 		settingsDemo: 'الوضع التجريبي',
@@ -1121,6 +1137,7 @@ const tabs = [
 	['groups', Users],
 	['notifications', Bell],
 	['reports', BarChart3],
+	['board', LayoutGrid],
 	['settings', Settings],
 ];
 
@@ -5152,6 +5169,7 @@ function WhatsAppWorkspaceContent() {
 			tabs.filter(([key]) => {
 				if (key === 'settings') return canManageWhatsApp || isAdmin;
 				if (key === 'reports') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
+				if (key === 'board') return canManageWhatsApp || canAssignWhatsApp || isAdmin;
 				return true;
 			}),
 		[canAssignWhatsApp, canManageWhatsApp, isAdmin],
@@ -6594,59 +6612,67 @@ function WhatsAppWorkspaceContent() {
 						loadMessagesRef.current?.(id, true, { forceProvider: true })?.catch?.(() => { });
 					}, waitMs);
 				};
-				try {
-					const synced = await runSyncOnce();
-					if (synced?.syncSkipped || synced?.syncError) {
-						const cooldown = Number(synced?.cooldownMs) || 0;
-						if (cooldown > 0) {
-							providerHistorySyncBlockedUntilRef.current =
-								Date.now() + Math.min(30_000, Math.max(3_000, cooldown));
+				const finishProviderSync = async () => {
+					try {
+						const synced = await runSyncOnce();
+						if (!isCurrentRequest() || starredOnly) return;
+						if (synced?.syncSkipped || synced?.syncError) {
+							const cooldown = Number(synced?.cooldownMs) || 0;
+							if (cooldown > 0) {
+								providerHistorySyncBlockedUntilRef.current =
+									Date.now() + Math.min(30_000, Math.max(3_000, cooldown));
+							}
+							if (synced?.syncReason === 'fresh' || synced?.syncError === 'fresh') {
+								applySynced(synced);
+								setMessagesSyncHint('');
+								messageHistoryRetryRef.current.attempts = 0;
+							} else if (Array.isArray(synced?.items) && synced.items.length) {
+								applySynced(synced);
+								setMessagesSyncHint('');
+								messageHistoryRetryRef.current.attempts = 0;
+							} else if (items.length === 0 && isCurrentRequest()) {
+								setMessagesSyncHint('');
+								setLoadingMessages(false);
+								scheduleBackgroundRetry(cooldown || 4_000);
+							} else if (items.length > 0 && isCurrentRequest()) {
+								// Keep local paint; mark hydrated so we do not storm the phone.
+								const latestCache = messagesCacheRef.current.get(cacheKey);
+								messagesCacheRef.current.set(cacheKey, {
+									...(latestCache || { items, hasMore: initialHasMore }),
+									cachedAt: Date.now(),
+									providerHydratedAt: Date.now(),
+									lastProviderSyncAt:
+										synced?.lastProviderSyncAt ||
+										latestCache?.lastProviderSyncAt ||
+										seededLastSync,
+									lastSyncReason: synced?.syncReason || synced?.syncError || backfill.reason,
+								});
+							}
+						} else {
+							providerHistorySyncBlockedUntilRef.current = 0;
+							messageHistoryRetryRef.current.attempts = 0;
+							setMessagesSyncHint('');
+							applySynced(synced);
 						}
-						if (synced?.syncReason === 'fresh' || synced?.syncError === 'fresh') {
-							applySynced(synced);
-							setMessagesSyncHint('');
-							messageHistoryRetryRef.current.attempts = 0;
-						} else if (Array.isArray(synced?.items) && synced.items.length) {
-							applySynced(synced);
-							setMessagesSyncHint('');
-							messageHistoryRetryRef.current.attempts = 0;
-						} else if (items.length === 0 && isCurrentRequest()) {
+					} catch (error) {
+						providerHistorySyncBlockedUntilRef.current = Date.now() + 8_000;
+						if (isCurrentRequest() && !items.length) {
 							setMessagesSyncHint('');
 							setLoadingMessages(false);
-							scheduleBackgroundRetry(cooldown || 4_000);
-						} else if (items.length > 0 && isCurrentRequest()) {
-							// Keep local paint; mark hydrated so we do not storm the phone.
-							const latestCache = messagesCacheRef.current.get(cacheKey);
-							messagesCacheRef.current.set(cacheKey, {
-								...(latestCache || { items, hasMore: initialHasMore }),
-								cachedAt: Date.now(),
-								providerHydratedAt: Date.now(),
-								lastProviderSyncAt:
-									synced?.lastProviderSyncAt ||
-									latestCache?.lastProviderSyncAt ||
-									seededLastSync,
-								lastSyncReason: synced?.syncReason || synced?.syncError || backfill.reason,
-							});
-						}
-					} else {
-						providerHistorySyncBlockedUntilRef.current = 0;
-						messageHistoryRetryRef.current.attempts = 0;
-						setMessagesSyncHint('');
-						applySynced(synced);
-					}
-				} catch (error) {
-					providerHistorySyncBlockedUntilRef.current = Date.now() + 8_000;
-					if (isCurrentRequest() && !items.length) {
-						setMessagesSyncHint('');
-						setLoadingMessages(false);
-						const firstFailure = messageHistoryRetryRef.current.attempts === 0;
-						scheduleBackgroundRetry(8_000);
-						if (firstFailure) {
-							toast.error(
-								error.response?.data?.message || 'Could not synchronize message history',
-							);
+							const firstFailure = messageHistoryRetryRef.current.attempts === 0;
+							scheduleBackgroundRetry(8_000);
+							if (firstFailure) {
+								toast.error(
+									error.response?.data?.message || 'Could not synchronize message history',
+								);
+							}
 						}
 					}
+				};
+				if (items.length > 0) {
+					void finishProviderSync();
+				} else {
+					await finishProviderSync();
 				}
 			} else if (isCurrentRequest()) {
 				// Trust DB/cache — remember hydration so the next open stays soft.
@@ -6705,6 +6731,7 @@ function WhatsAppWorkspaceContent() {
 
 	const scheduleConversationPrefetch = useCallback((id) => {
 		if (!id || id === conversationIdRef.current) return;
+		if (messageSyncInFlightRef.current.size > 0) return;
 		if (Date.now() < listScrollPrefetchBlockedUntilRef.current) return;
 		const cached = messagesCacheRef.current.get(id);
 		if (cached?.items?.length) return;
@@ -6856,9 +6883,18 @@ function WhatsAppWorkspaceContent() {
 		const switchedConversation = conversationIdRef.current !== conversationId;
 		conversationIdRef.current = conversationId;
 		if (switchedConversation) {
-			clearConversationMessages(conversationId);
-			setHasMoreMessages(true);
-			setLoadingMessages(Boolean(conversationId));
+			const warmCache = conversationId
+				? messagesCacheRef.current.get(conversationId)
+				: null;
+			if (warmCache?.items?.length) {
+				writeConversationMessages(conversationId, () => warmCache.items);
+				setHasMoreMessages(Boolean(warmCache.hasMore));
+				setLoadingMessages(false);
+			} else {
+				clearConversationMessages(conversationId);
+				setHasMoreMessages(true);
+				setLoadingMessages(Boolean(conversationId));
+			}
 			lastAutoScrolledMessageRef.current = null;
 			pinThreadToBottomRef.current = true;
 		}
@@ -6911,6 +6947,7 @@ function WhatsAppWorkspaceContent() {
 		selectedDemoRuntimeId,
 		selectedConversationSource,
 		setConversationUnreadCount,
+		writeConversationMessages,
 	]);
 
 	useEffect(() => {
@@ -8706,6 +8743,32 @@ function WhatsAppWorkspaceContent() {
 		}
 	};
 
+	const sendSelectedToBoard = async () => {
+		const ids = [...selectedMessageIds];
+		if (!accountId || !conversationId || !ids.length) {
+			toast.error(t.selectMessagesFirst);
+			return;
+		}
+		setMessageGroupsBusy(true);
+		try {
+			await createBoardCardFromMessages(accountId, {
+				conversationId,
+				messageIds: ids,
+			});
+			setTicketSelectMode(false);
+			setGroupSelectMode(false);
+			setSelectedMessageIds(new Set());
+			toast.success(t.sentToBoard);
+		} catch (error) {
+			toast.error(
+				error.response?.data?.message ||
+					(locale === 'ar' ? 'فشل الإضافة للوحة المهام' : 'Could not add to tasks board'),
+			);
+		} finally {
+			setMessageGroupsBusy(false);
+		}
+	};
+
 	const removeSelectedFromGroups = async () => {
 		const ids = [...selectedMessageIds];
 		if (!conversationId || !ids.length) {
@@ -9932,6 +9995,25 @@ function WhatsAppWorkspaceContent() {
 				onClick: event => toggleConversationFavorite(selectedConversation, event),
 			},
 			{
+				id: 'board',
+				label: t.addToBoard,
+				description: t.addToBoardHint,
+				icon: LayoutGrid,
+				disabled: demoBlocked || demoChat || !conversationId || !accountId,
+				onClick: () => {
+					if (selectedMessageIds.size > 0) {
+						void sendSelectedToBoard();
+						return;
+					}
+					setTicketSelectMode(true);
+					toast.success(
+						locale === 'ar'
+							? 'حدد الرسائل ثم اضغط إضافة للوحة المهام'
+							: 'Select messages, then add to tasks board',
+					);
+				},
+			},
+			{
 				id: 'groups',
 				label: t.messageGroups,
 				description: t.messageGroupsHint,
@@ -9959,15 +10041,19 @@ function WhatsAppWorkspaceContent() {
 			},
 		];
 	}, [
+		accountId,
 		activeMessageGroup,
 		conversationId,
 		demo.settings.enabled,
 		groupSelectMode,
+		locale,
 		mediaSelectMode,
 		messageGroupsOpen,
 		pendingPreferenceActions,
 		secondaryConversationId,
 		selectedConversation,
+		selectedMessageIds,
+		sendSelectedToBoard,
 		splitPickMode,
 		t,
 		ticketSelectMode,
@@ -10319,7 +10405,7 @@ function WhatsAppWorkspaceContent() {
 	useEffect(() => {
 		if (
 			!accountId ||
-			!['groups', 'calls', 'notifications', 'reports', 'settings'].includes(activeTab)
+			!['groups', 'calls', 'notifications', 'reports', 'board', 'settings'].includes(activeTab)
 		) {
 			return;
 		}
@@ -10998,12 +11084,13 @@ function WhatsAppWorkspaceContent() {
 					showAccounts
 					showNotifications
 					showReports
+					showBoard={canManageWhatsApp || canAssignWhatsApp || isAdmin}
 					onOpenSettings={() => void loadTabData('settings')}
 					onOpenProfile={() => void loadTabData('profile')}
 				/>
 			<div className={`wa-web-main min-h-0 flex-1 overflow-y-auto nice-scroll max-[768px]:min-h-0 ${isConversationWorkspaceTab(activeTab) ? 'wa-chat-workspace-scroll' : ''}`}>
 				{/* Compact account switcher for desktop utility tabs (replaces PageHeader actions). */}
-				{['accounts', 'notifications', 'reports', 'settings', 'profile'].includes(activeTab) ? (
+				{['accounts', 'notifications', 'reports', 'board', 'settings', 'profile'].includes(activeTab) ? (
 					<div className="mb-4 hidden items-center justify-between gap-3 min-[769px]:flex">
 						<div>
 							<h2 className="text-lg font-black text-slate-900 dark:text-white">
@@ -12586,6 +12673,15 @@ function WhatsAppWorkspaceContent() {
 														<span>{t.selectedMessagesCount.replace('{count}', String(selectedMessageIds.size))}</span>
 														<button
 															type="button"
+															disabled={!selectedMessageIds.size || messageGroupsBusy}
+															onClick={() => void sendSelectedToBoard()}
+															className="inline-flex items-center gap-1 rounded-full bg-sky-600 px-2.5 py-0.5 text-white disabled:opacity-50"
+														>
+															<LayoutGrid size={12} />
+															{t.addToBoard}
+														</button>
+														<button
+															type="button"
 															disabled={!selectedMessageIds.size}
 															onClick={openSelectedTranscriptBundle}
 															className="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary-500)] px-2.5 py-0.5 text-white disabled:opacity-50"
@@ -12934,7 +13030,7 @@ function WhatsAppWorkspaceContent() {
 																			setActionMessageId(message.id);
 																		}
 																	}}
-															className={`wa-message-bubble relative w-fit ${mine ? 'wa-message-mine' : 'wa-message-other'} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${mine
+															className={`wa-message-bubble relative w-fit ${mine ? 'wa-message-mine' : 'wa-message-other'} ${isStickerMessage ? 'wa-message-sticker' : ''} ${isVisualMediaMessage || groupedImages ? 'wa-message-media' : ''} ${captionText && (isVisualMediaMessage || groupedImages) ? 'wa-message-has-caption' : ''} ${isDocumentMessage ? 'wa-message-file' : ''} ${isVoiceMessage ? 'wa-message-voice' : ''} ${isLocationMessage ? 'wa-message-location' : ''} ${mine
 																		? 'bg-[#d9fdd3] text-slate-900 dark:bg-[#005c4b] dark:text-white'
 																		: 'bg-white text-slate-900 dark:bg-slate-800 dark:text-white'
 																		} ${isChecked ? 'ring-2 ring-[var(--color-primary-400)]' : ''}`}
@@ -13029,19 +13125,51 @@ function WhatsAppWorkspaceContent() {
 																			</div>
 																		)}
 																	{isDeleted ? (
-																		<p className="italic opacity-60">
-																			{locale === 'ar' ? 'تم حذف هذه الرسالة' : 'This message was deleted'}
-																		</p>
+																		<div className="wa-message-copy">
+																			<p className="wa-message-text italic opacity-60">
+																				{locale === 'ar' ? 'تم حذف هذه الرسالة' : 'This message was deleted'}
+																			</p>
+																			<div className={`wa-message-meta ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
+																				{message.isStarred && <Star size={11} fill="currentColor" />}
+																				{message.isPinned && <Pin size={11} fill="currentColor" />}
+																				{new Date(message.providerTimestamp || message.timestamp || message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+																				{mine && message.showReadReceipt !== false && (
+																					<DeliveryTicks
+																						message={message}
+																						selfChat={isSelfChatConversation(
+																							selectedConversation,
+																							selectedAccount,
+																						)}
+																					/>
+																				)}
+																			</div>
+																		</div>
 																	) : isWhatsAppLocationMessage(message) ? (
-																		<LocationMessage
-																			message={message}
-																			location={whatsAppLocationFromMessage(message)}
-																			type={message.type}
-																			locale={locale}
-																			conversationId={conversationId || selectedConversation?.id}
-																		/>
-																	) : visibleText ? (
 																		<>
+																			<LocationMessage
+																				message={message}
+																				location={whatsAppLocationFromMessage(message)}
+																				type={message.type}
+																				locale={locale}
+																				conversationId={conversationId || selectedConversation?.id}
+																			/>
+																			<div className={`wa-message-meta ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
+																				{message.isStarred && <Star size={11} fill="currentColor" />}
+																				{message.isPinned && <Pin size={11} fill="currentColor" />}
+																				{new Date(message.providerTimestamp || message.timestamp || message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+																				{mine && message.showReadReceipt !== false && (
+																					<DeliveryTicks
+																						message={message}
+																						selfChat={isSelfChatConversation(
+																							selectedConversation,
+																							selectedAccount,
+																						)}
+																					/>
+																				)}
+																			</div>
+																		</>
+																	) : visibleText ? (
+																		<div className="wa-message-copy">
 																			<MessageLinkPreview text={visibleText} labels={t} />
 																			{captionText ? (
 																				<ExpandableMessageText
@@ -13060,22 +13188,37 @@ function WhatsAppWorkspaceContent() {
 																					)}
 																				/>
 																			) : null}
-																		</>
-																	) : null}
-															<div className={`wa-message-meta ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
-																		{message.isStarred && <Star size={11} fill="currentColor" />}
-																		{message.isPinned && <Pin size={11} fill="currentColor" />}
-																		{new Date(message.providerTimestamp || message.timestamp || message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-																		{mine && message.showReadReceipt !== false && (
-																			<DeliveryTicks
-																			message={message}
-																			selfChat={isSelfChatConversation(
-																				selectedConversation,
-																				selectedAccount,
+																			<div className={`wa-message-meta ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
+																				{message.isStarred && <Star size={11} fill="currentColor" />}
+																				{message.isPinned && <Pin size={11} fill="currentColor" />}
+																				{new Date(message.providerTimestamp || message.timestamp || message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+																				{mine && message.showReadReceipt !== false && (
+																					<DeliveryTicks
+																						message={message}
+																						selfChat={isSelfChatConversation(
+																							selectedConversation,
+																							selectedAccount,
+																						)}
+																					/>
+																				)}
+																			</div>
+																		</div>
+																	) : (
+																		<div className={`wa-message-meta ${mine ? 'text-slate-500 dark:text-white/60' : 'text-slate-400'}`}>
+																			{message.isStarred && <Star size={11} fill="currentColor" />}
+																			{message.isPinned && <Pin size={11} fill="currentColor" />}
+																			{new Date(message.providerTimestamp || message.timestamp || message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+																			{mine && message.showReadReceipt !== false && (
+																				<DeliveryTicks
+																					message={message}
+																					selfChat={isSelfChatConversation(
+																						selectedConversation,
+																						selectedAccount,
+																					)}
+																				/>
 																			)}
-																		/>
-																		)}
-																	</div>
+																		</div>
+																	)}
 																	{Array.isArray(message.reactions) && message.reactions.length > 0 && (
 																		<div className={`wa-message-reactions ${mine ? 'is-outgoing' : 'is-incoming'}`}>
 																			{Object.values(
@@ -14099,6 +14242,16 @@ function WhatsAppWorkspaceContent() {
 							</div>
 						)}
 					</Card>
+				)}
+
+				{activeTab === 'board' && (
+					<div className="h-[calc(100vh-8rem)] min-h-[520px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+						<WhatsAppBoardTab
+							accountId={accountId}
+							locale={locale}
+							onOpenConversation={openConversationFromReport}
+						/>
+					</div>
 				)}
 
 				{activeTab === 'reports' && (

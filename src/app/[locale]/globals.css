@@ -1003,7 +1003,7 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--ar {
   font-weight: 500 !important;
   line-height: 1.85 !important;
   direction: rtl;
-  unicode-bidi: isolate;
+  unicode-bidi: plaintext;
   text-align: right !important;
 }
 
@@ -1931,21 +1931,32 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   font-size: 14.2px;
   line-height: 19px;
   vertical-align: top;
+  text-align: start;
 }
 
-.wa-message-bubble:not(.wa-message-media):not(.wa-message-voice):not(.wa-message-file):not(.wa-message-location)
-  .wa-message-text::after {
-  content: '\00a0';
+.wa-message-copy {
   display: inline-block;
-  width: var(--wa-meta-spacer, 4.25rem);
-  height: 0;
-  vertical-align: bottom;
-  pointer-events: none;
+  max-width: 100%;
+  min-width: 0;
+  vertical-align: top;
 }
 
-.wa-message-bubble.wa-message-mine:not(.wa-message-media):not(.wa-message-voice):not(.wa-message-file):not(.wa-message-location)
-  .wa-message-text::after {
-  width: var(--wa-meta-spacer-out, 5rem);
+.wa-message-copy .wa-message-text {
+  display: inline;
+}
+
+.wa-message-copy .wa-message-text.wa-message-text--ar,
+.wa-message-copy .wa-message-text[lang='ar'] {
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: plaintext;
+}
+
+.wa-message-copy .wa-message-text.wa-message-text--en,
+.wa-message-copy .wa-message-text[lang='en'] {
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: plaintext;
 }
 
 .wa-message-emoji {
@@ -1989,16 +2000,37 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
 }
 
 .wa-message-bubble:not(.wa-message-media):not(.wa-message-voice):not(.wa-message-file):not(.wa-message-location)
-  .wa-message-meta {
+  .wa-message-copy
+  .wa-message-meta,
+.wa-message-bubble.wa-message-has-caption .wa-message-copy .wa-message-meta {
   float: right;
   clear: none;
   position: relative;
-  top: 0.35em;
-  height: 0;
-  margin-left: 6px;
-  margin-top: 0;
-  margin-bottom: 0;
-  align-items: flex-end;
+  top: 0;
+  height: auto;
+  margin: 5px 0 0 6px;
+  align-items: center;
+  line-height: 15px;
+}
+
+.wa-message-bubble.wa-message-has-caption {
+  width: fit-content;
+  max-width: min(88%, 360px) !important;
+}
+
+.wa-message-bubble.wa-message-has-caption .wa-message-copy {
+  display: block;
+  width: 100%;
+  padding: 2px 4px 0;
+}
+
+.wa-message-bubble.wa-message-has-caption .wa-message-meta {
+  position: static;
+  float: right;
+  margin: 4px 0 0 6px !important;
+  color: var(--wa-secondary) !important;
+  text-shadow: none;
+  pointer-events: auto;
 }
 
 .wa-message-bubble.wa-message-voice .wa-message-meta {
@@ -2033,6 +2065,16 @@ body .wa-mobile-shell .wa-composer-input.wa-message-text--en,
   width: 14px;
   height: 14px;
   flex-shrink: 0;
+}
+
+.wa-message-bubble.wa-message-media.wa-message-has-caption .wa-message-copy .wa-message-meta {
+  position: static !important;
+  float: right;
+  inset: auto !important;
+  margin: 4px 0 0 6px !important;
+  color: var(--wa-secondary) !important;
+  text-shadow: none !important;
+  pointer-events: auto;
 }
 
 .wa-message-bubble.wa-message-file {
@@ -3109,25 +3151,28 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 .wa-recording-bar {
 	display: flex;
 	align-items: center;
-	gap: 4px;
+	gap: 6px;
 	width: 100%;
 	min-width: 0;
-	height: 32px;
-	max-height: 32px;
+	height: 100%;
+	min-height: 32px;
+	max-height: 36px;
 	flex-wrap: nowrap;
 }
 
 .wa-recording-panel {
 	min-width: 0;
-	flex: 1;
+	flex: 1 1 auto;
 	height: 32px;
+	min-height: 32px;
 	max-height: 32px;
 	display: flex;
 	align-items: center;
 	gap: 6px;
-	padding: 0 4px;
+	padding: 0 6px;
 	border-radius: 999px;
-	background: transparent;
+	background: rgba(11, 20, 26, 0.04);
+	overflow: hidden;
 }
 
 .wa-recording-mic {
@@ -3317,9 +3362,9 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 .wa-recording-pause,
 .wa-recording-preview,
 .wa-recording-send {
-	width: 32px;
-	height: 32px;
-	flex: 0 0 32px;
+	width: 30px;
+	height: 30px;
+	flex: 0 0 30px;
 	display: grid;
 	place-items: center;
 	border-radius: 50% !important;
@@ -5261,7 +5306,7 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		font-weight: 400 !important;
 		line-height: 1.5 !important;
 		direction: rtl !important;
-		unicode-bidi: isolate;
+		unicode-bidi: plaintext;
 		text-align: right !important;
 	}
 
@@ -5288,14 +5333,38 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		vertical-align: bottom;
 	}
 
+	.wa-message-copy {
+		display: inline-block;
+		max-width: 100%;
+		min-width: 0;
+		vertical-align: top;
+	}
+
+	.wa-message-copy .wa-message-text.wa-message-text--ar,
+	.wa-message-copy .wa-message-text[lang='ar'] {
+		direction: rtl !important;
+		text-align: right !important;
+		unicode-bidi: plaintext !important;
+	}
+
+	.wa-message-copy .wa-message-text.wa-message-text--en,
+	.wa-message-copy .wa-message-text[lang='en'] {
+		direction: ltr !important;
+		text-align: left !important;
+		unicode-bidi: plaintext !important;
+	}
+
 	.wa-message-bubble:not(.wa-message-media):not(.wa-message-voice):not(.wa-message-file):not(.wa-message-location)
-		.wa-message-meta {
+		.wa-message-copy
+		.wa-message-meta,
+	.wa-message-bubble.wa-message-has-caption .wa-message-copy .wa-message-meta {
 		float: right;
 		position: relative;
-		top: 0.35em;
-		height: 0;
-		margin-left: 6px !important;
-		align-items: flex-end;
+		top: 0;
+		height: auto;
+		margin: 5px 0 0 6px !important;
+		align-items: center;
+		line-height: 15px !important;
 	}
 
 	.wa-message-mine .wa-message-meta {
@@ -5490,6 +5559,15 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 		pointer-events: none;
 	}
 
+	.wa-message-media.wa-message-has-caption .wa-message-copy .wa-message-meta {
+		position: static !important;
+		float: right;
+		margin: 4px 0 0 6px !important;
+		color: #667781 !important;
+		text-shadow: none !important;
+		pointer-events: auto;
+	}
+
 	.wa-composer-stack {
 		position: fixed;
 		left: 50%;
@@ -5559,22 +5637,30 @@ html.dark .wa-file-card-action + .wa-file-card-action {
 
   .wa-input-pill,
   .wa-recording-pill {
-		height: 40px;
-		min-height: 40px;
-		max-height: 40px;
+		height: 42px;
+		min-height: 42px;
+		max-height: 42px;
 		flex-wrap: nowrap !important;
 		align-items: center !important;
 		border: 1px solid #D1D7DB !important;
 		border-radius: 22px !important;
 		background: #FFFFFF !important;
 		overflow: hidden;
-		padding: 4px !important;
+		padding: 5px 6px !important;
   }
 
-	.wa-recording-pill .wa-recording-bar,
+	.wa-recording-pill .wa-recording-bar {
+		height: 100%;
+		max-height: none;
+		gap: 5px;
+	}
+
 	.wa-recording-pill .wa-recording-panel {
-		height: 32px;
-		max-height: 32px;
+		height: 30px;
+		min-height: 30px;
+		max-height: 30px;
+		padding: 0 8px;
+		background: rgba(11, 20, 26, 0.05);
 	}
 
 	.wa-recording-pill .wa-recording-live {

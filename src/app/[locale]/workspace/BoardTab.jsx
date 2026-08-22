@@ -547,17 +547,23 @@ function SortableList({
 /** =========================
  *  Main Board / Todos Tab
  *  ========================= */
-export default function BoardTab() {
+export default function BoardTab({
+	accountId = null,
+	embedded = false,
+	boardApi = null,
+	onOpenConversation = null,
+} = {}) {
 	const t = useTranslations('board');
+	const apiMode = Boolean(boardApi);
 
-	const [lists, setLists] = useState([
+	const [localLists, setLocalLists] = useState([
 		{ id: makeListId(1), title: 'To Do' },
 		{ id: makeListId(2), title: 'In Progress' },
 		{ id: makeListId(3), title: 'Review' },
 		{ id: makeListId(4), title: 'Done' },
 	]);
 
-	const [cards, setCards] = useState([
+	const [localCards, setLocalCards] = useState([
 		{
 			id: makeCardId(1),
 			listId: makeListId(1),
@@ -615,6 +621,11 @@ export default function BoardTab() {
 			attachments: [],
 		},
 	]);
+
+	const lists = apiMode ? boardApi.lists : localLists;
+	const setLists = apiMode ? boardApi.setLists : setLocalLists;
+	const cards = apiMode ? boardApi.cards : localCards;
+	const setCards = apiMode ? boardApi.setCards : setLocalCards;
 
 	const [activeCardId, setActiveCardId] = useState(null);
 	const [activeListSortableId, setActiveListSortableId] = useState(null);
@@ -748,7 +759,9 @@ export default function BoardTab() {
 			const overIndex = lists.findIndex((l) => l.id === overListId);
 
 			if (activeIndex !== -1 && overIndex !== -1 && activeIndex !== overIndex) {
-				setLists((prev) => arrayMove(prev, activeIndex, overIndex));
+				const nextLists = arrayMove(lists, activeIndex, overIndex);
+				setLists(nextLists);
+				if (apiMode) void boardApi.persistColumnOrder(nextLists);
 			}
 			return;
 		}
@@ -772,13 +785,30 @@ export default function BoardTab() {
 
 					if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
 						const reordered = arrayMove(listCards, oldIndex, newIndex);
-						setCards([...otherCards, ...reordered]);
+						const nextCards = [...otherCards, ...reordered];
+						setCards(nextCards);
+						if (apiMode) {
+							void boardApi.persistCardMove(
+								active.id,
+								listId,
+								reordered.map(item => item.id),
+							);
+						}
 					}
 				}
 				return;
 			}
 
 			if (overData?.type === 'column') {
+				if (apiMode) {
+					const cardIds = cards
+						.filter(item => item.listId === overData.listId)
+						.map(item => item.id);
+					void boardApi.persistCardMove(active.id, overData.listId, [
+						...cardIds.filter(id => id !== active.id),
+						active.id,
+					]);
+				}
 				return;
 			}
 		}
@@ -786,6 +816,13 @@ export default function BoardTab() {
 
 	const handleAddList = () => {
 		if (newListTitle.trim()) {
+			if (apiMode) {
+				void boardApi.addList(newListTitle.trim()).then(() => {
+					setNewListTitle('');
+					setIsAddingList(false);
+				});
+				return;
+			}
 			const newList = {
 				id: `list-${Date.now()}`,
 				title: newListTitle.trim(),
@@ -797,6 +834,10 @@ export default function BoardTab() {
 	};
 
 	const handleAddCard = (listId, title, images = []) => {
+		if (apiMode) {
+			void boardApi.addCard(listId, title, images);
+			return;
+		}
 		const newCard = {
 			id: `card-${Date.now()}`,
 			listId,
@@ -813,11 +854,19 @@ export default function BoardTab() {
 	};
 
 	const handleDeleteList = (listId) => {
+		if (apiMode) {
+			void boardApi.removeList(listId);
+			return;
+		}
 		setLists((prev) => prev.filter((l) => l.id !== listId));
 		setCards((prev) => prev.filter((c) => c.listId !== listId));
 	};
 
 	const handleUpdateList = (listId, updates) => {
+		if (apiMode) {
+			void boardApi.updateList(listId, updates);
+			return;
+		}
 		setLists((prev) => prev.map((l) => (l.id === listId ? { ...l, ...updates } : l)));
 	};
 
@@ -832,9 +881,17 @@ export default function BoardTab() {
 		setSelectedCard((prev) =>
 			prev ? { ...prev, card: { ...prev.card, ...updates } } : prev
 		);
+		if (apiMode && selectedCard?.card?.id) {
+			void boardApi.patchCard(selectedCard.card.id, updates);
+		}
 	};
 
 	const handleDeleteCard = () => {
+		if (apiMode && selectedCard?.card?.id) {
+			void boardApi.removeCard(selectedCard.card.id);
+			setSelectedCard(null);
+			return;
+		}
 		setCards((prev) => prev.filter((c) => c.id !== selectedCard.card.id));
 		setSelectedCard(null);
 	};
@@ -1011,7 +1068,7 @@ export default function BoardTab() {
 			: null;
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+		<div className={embedded ? 'h-full min-h-0 bg-gradient-to-br from-gray-50 via-white to-gray-50' : 'min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50'}>
 			{/* Improved Filters Bar */}
 			<div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
 				<div className="max-w-[2000px] mx-auto px-6 py-4">

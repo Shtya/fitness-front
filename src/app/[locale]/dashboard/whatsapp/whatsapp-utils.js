@@ -601,7 +601,7 @@ export function messageTextPresentation(text) {
 		fontFeatureSettings: '"kern" 1, "liga" 1',
 		lineHeight: 1.85,
 		direction: 'rtl',
-		unicodeBidi: 'isolate',
+		unicodeBidi: 'plaintext',
 		textAlign: 'right',
 	};
 	const englishStyle = {

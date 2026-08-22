@@ -3,6 +3,7 @@
 import {
 	BarChart3,
 	Bell,
+	LayoutGrid,
 	MessageCircle,
 	PanelLeftClose,
 	PanelLeftOpen,
@@ -34,8 +35,9 @@ export default function WhatsAppDesktopRail({
 	showSettings = true,
 	showAccounts = true,
 	showNotifications = true,
-	showReports = true,
-}) {
+		showReports = true,
+		showBoard = true,
+	}) {
 	const ar = String(locale).toLowerCase().startsWith('ar');
 	const { focusMode, setFocusMode, hideEdgeDock } = useSidebarChrome();
 
@@ -84,6 +86,13 @@ export default function WhatsAppDesktopRail({
 					id: 'reports',
 					label: labels.reports || (ar ? 'التقارير' : 'Reports'),
 					icon: BarChart3,
+				}
+			: null,
+		showBoard
+			? {
+					id: 'board',
+					label: labels.board || (ar ? 'لوحة المهام' : 'Tasks'),
+					icon: LayoutGrid,
 				}
 			: null,
 	].filter(Boolean);

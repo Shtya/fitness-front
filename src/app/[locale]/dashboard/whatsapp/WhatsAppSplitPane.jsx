@@ -701,27 +701,42 @@ export default function WhatsAppSplitPane({
 										/>
 									))}
 									{message.text ? (
-										<ExpandableMessageText
-											text={message.text}
-											dir={presentation.dir}
-											lang={presentation.lang}
-											style={presentation.style}
-											className={`wa-message-text whitespace-pre-wrap wrap-break-word ${presentation.className || ''}`}
-											readMoreLabel={labels.readMore || (ar ? 'اقرأ المزيد' : 'Read more')}
-										/>
-									) : null}
-									<div className={`wa-message-meta ${mine ? 'text-slate-500' : 'text-slate-400'}`}>
-										{new Date(message.providerTimestamp || message.created_at).toLocaleTimeString([], {
-											hour: '2-digit',
-											minute: '2-digit',
-										})}
-										{mine ? (
-											<DeliveryTicks
-												message={message}
-												selfChat={isSelfChatConversation(conversation)}
+										<div className="wa-message-copy">
+											<ExpandableMessageText
+												text={message.text}
+												dir={presentation.dir}
+												lang={presentation.lang}
+												style={presentation.style}
+												className={`wa-message-text whitespace-pre-wrap wrap-break-word ${presentation.className || ''}`}
+												readMoreLabel={labels.readMore || (ar ? 'اقرأ المزيد' : 'Read more')}
 											/>
-										) : null}
-									</div>
+											<div className={`wa-message-meta ${mine ? 'text-slate-500' : 'text-slate-400'}`}>
+												{new Date(message.providerTimestamp || message.created_at).toLocaleTimeString([], {
+													hour: '2-digit',
+													minute: '2-digit',
+												})}
+												{mine ? (
+													<DeliveryTicks
+														message={message}
+														selfChat={isSelfChatConversation(conversation)}
+													/>
+												) : null}
+											</div>
+										</div>
+									) : (
+										<div className={`wa-message-meta ${mine ? 'text-slate-500' : 'text-slate-400'}`}>
+											{new Date(message.providerTimestamp || message.created_at).toLocaleTimeString([], {
+												hour: '2-digit',
+												minute: '2-digit',
+											})}
+											{mine ? (
+												<DeliveryTicks
+													message={message}
+													selfChat={isSelfChatConversation(conversation)}
+												/>
+											) : null}
+										</div>
+									)}
 								</div>
 							</div>
 						);
